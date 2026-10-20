@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import Page from '@/app/(front)/(site)/politique-de-confidentialite/page'
 import { GOOGLE_ISSUER, UMAMI_ORIGIN_DEFAULT } from '@/lib/env'
 import { HEBERGEUR } from '@/lib/legal'
-import { JOURS_AVANT_EFFACEMENT_DES_PHOTOS, PRESTATAIRES } from '@/lib/providers'
+import { PHOTO_ERASURE_DAYS, PROVIDERS } from '@/lib/providers'
 import { PURGE_DELAY_DAYS } from '@/lib/tasks/unconfirmed-accounts'
 import { texteDePage } from '../outils/texte-de-page'
 
@@ -18,20 +18,20 @@ import { texteDePage } from '../outils/texte-de-page'
 
 const lire = (fichier: string): string => readFileSync(path.join(process.cwd(), fichier), 'utf8')
 const texte = texteDePage(renderToStaticMarkup(<Page />))
-const parId = (id: string) => PRESTATAIRES.find(prestataire => prestataire.id === id)
+const parId = (id: string) => PROVIDERS.find(prestataire => prestataire.id === id)
 
 describe('la liste des sous-traitants', () => {
 	test('la page montre chaque entrée de la liste, et rien d’autre', () => {
 		const lignes = texte.split('\n')
 		const debut = lignes.findIndex(ligne => ligne === 'Hébergement et prestataires')
-		const liste = lignes.slice(debut + 1, debut + 1 + PRESTATAIRES.length)
+		const liste = lignes.slice(debut + 1, debut + 1 + PROVIDERS.length)
 
-		expect(liste).toEqual(PRESTATAIRES.map(({ nom, phrase }) => `${nom} : ${phrase}`))
-		expect(renderToStaticMarkup(<Page />).match(/<li[\s>]/g)).toHaveLength(PRESTATAIRES.length)
+		expect(liste).toEqual(PROVIDERS.map(({ nom, phrase }) => `${nom} : ${phrase}`))
+		expect(renderToStaticMarkup(<Page />).match(/<li[\s>]/g)).toHaveLength(PROVIDERS.length)
 	})
 
 	test('une seule entrée par rôle, les cinq rôles du site', () => {
-		expect(PRESTATAIRES.map(({ id }) => id).sort()).toEqual(['email', 'google', 'hebergement', 'mesure', 'photos'])
+		expect(PROVIDERS.map(({ id }) => id).sort()).toEqual(['email', 'google', 'hebergement', 'mesure', 'photos'])
 	})
 
 	test('l’hébergeur est celui des mentions légales', () => {
@@ -85,9 +85,7 @@ describe('les engagements que le code tient', () => {
 	})
 
 	test('une photo retirée est effacée du stockage au bout de 30 jours, comme la règle de la corbeille', () => {
-		expect(texte).toContain(
-			`effacée définitivement de notre stockage au bout de ${JOURS_AVANT_EFFACEMENT_DES_PHOTOS} jours`
-		)
+		expect(texte).toContain(`effacée définitivement de notre stockage au bout de ${PHOTO_ERASURE_DAYS} jours`)
 		expect(lire('src/lib/trash.ts')).toContain('erases what is there 30 days later')
 		expect(lire('README.md')).toContain('efface la corbeille au bout de 30 jours')
 	})

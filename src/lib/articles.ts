@@ -1,6 +1,6 @@
 import { type FieldHook, type FilterOptionsProps, type PayloadRequest, ValidationError, type Where } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
-import { estAdmin, identifiantPossible, MEDIAS_DE_LA_REDACTION } from './access'
+import { EDITORIAL_MEDIA, isAdmin, possibleId } from './access'
 import { namedPhotos } from './profile/photos'
 
 /**
@@ -29,12 +29,12 @@ export const IMAGES: Where = { mimeType: { in: [...TYPES_D_IMAGE] } }
  * belong to nobody. The photo of a makeup artist is never offered.
  *
  * `admin` reads every media: the owner is part of the filter. `editor` reads only the media of
- * the newsroom (`lectureDesMedias`), and may not filter on the owner, a field it does not read:
+ * the newsroom (`mediaRead`), and may not filter on the owner, a field it does not read:
  * Payload would find nothing, and refuse every photo. Payload plays the same filter again when it
  * validates a published save, with the access rules of the request.
  */
 export const imagesDeLaRedaction = ({ req }: Pick<FilterOptionsProps, 'req'>): Where =>
-	estAdmin(req.user) ? { and: [IMAGES, MEDIAS_DE_LA_REDACTION] } : IMAGES
+	isAdmin(req.user) ? { and: [IMAGES, EDITORIAL_MEDIA] } : IMAGES
 
 /**
  * Whether every media these identifiers name is an image of the newsroom: an image that belongs to
@@ -46,7 +46,7 @@ export const imagesDeLaRedaction = ({ req }: Pick<FilterOptionsProps, 'req'>): W
  */
 export async function queDesImagesDeLaRedaction(ids: (number | string)[], req: PayloadRequest): Promise<boolean> {
 	if (ids.length === 0) return true
-	if (!ids.every(identifiantPossible)) return false
+	if (!ids.every(possibleId)) return false
 	const { docs } = await req.payload.find({
 		collection: 'media',
 		depth: 0,
@@ -67,7 +67,7 @@ export async function queDesImagesDeLaRedaction(ids: (number | string)[], req: P
  * `beforeChange` of the gallery: a save that names anything but images of the newsroom is refused
  * (400), with the French message on the field. A hook, not `validate`: Payload skips the validation
  * of a draft, and a draft must hold neither a PDF nor the photo of a makeup artist, which publishing
- * the article would make public (`lectureDesMedias`, src/lib/access.ts).
+ * the article would make public (`mediaRead`, src/lib/access.ts).
  *
  * Every entry of the gallery is looked at: one that names no identifier at all is refused too.
  *

@@ -342,7 +342,7 @@ Les types de compte sont déclarés dans `TYPES_DE_COMPTE` (`tests/outils/fabriq
 | `redaction` | `admins` | Un compte de l'administration avec le rôle `editor` : articles et talents, et son propre compte |
 | `maquilleuse` | `pros` | Le compte d'une maquilleuse, adresse confirmée, avec son profil vide, comme à l'inscription. Deux appels donnent « A » et « B » |
 | `maquilleuse-non-verifiee` | `pros` | Le compte d'une maquilleuse qui n'a pas confirmé son adresse. Il ne peut pas se connecter : `session` vaut `null` |
-| `maquilleuse-sans-profil` | `pros` | Le compte d'une maquilleuse sans profil, comme certains comptes de l'ancien site. Sa création porte `CONTEXTE_SANS_PROFIL` (`src/collections/Profiles.ts`) |
+| `maquilleuse-sans-profil` | `pros` | Le compte d'une maquilleuse sans profil, comme certains comptes de l'ancien site. Sa création porte `NO_PROFILE_CONTEXT` (`src/collections/Profiles.ts`) |
 | `maquilleuse-bloquee` | `pros` | Le compte d'une maquilleuse bloquée par l'admin (`blocked` vrai), avec son profil. `session` vaut `null` : bloquer ferme les sessions, et la connexion la refusera (ticket 089) |
 | `reprise-avec-hash` | `pros` | Un compte repris de l'ancien site avec son hash bcrypt, le hash de fixture. Il se connectera par le chemin hérité du site (ticket 087) : d'ici là, `session` vaut `null` |
 | `reprise-google` | `pros` | Un ancien compte Google, sans mot de passe. Sa session est ouverte sans mot de passe, comme par la connexion Google |
@@ -437,7 +437,7 @@ const { profils, crees, presents } = await poserLesProfilsDuJeu(await payloadDeT
 
 | Ce qui est fixe | Valeur |
 |---|---|
-| Le compte de chaque maquilleuse | `jeu-profil-<cle>@example.test` (`adresseDuProfil(cle)`), confirmé, sous le nom du tableau. Son mot de passe est tiré au hasard et oublié aussitôt : un test qui veut sa session l'ouvre par `ouvrirSessionSansMotDePasse` |
+| Le compte de chaque maquilleuse | `jeu-profil-<cle>@example.test` (`profileUrl(cle)`), confirmé, sous le nom du tableau. Son mot de passe est tiré au hasard et oublié aussitôt : un test qui veut sa session l'ouvre par `ouvrirSessionSansMotDePasse` |
 | Les identifiants | Les mêmes sur une base vide : les types sont créés un par un, dans l'ordre du tableau. Après les comptes du jeu, ils les suivent |
 | Les photos | Six fichiers WebP de 400 × 400 pixels, moins de 30 Ko chacun, sans métadonnées, dans `src/demo-data/photos/`. Ils sont tirés des illustrations de `dev-assets/illustration/` : des visages dessinés, aucune personne réelle |
 | Les objets du stockage | Chaque photo d'un profil est un média à elle, qui appartient au compte de la maquilleuse, sous la clé `media/jeu-<cle>-principale.webp` ou `media/jeu-<cle>-galerie-<rang>.webp` : la même à chaque chargement |
@@ -447,11 +447,11 @@ const { profils, crees, presents } = await poserLesProfilsDuJeu(await payloadDeT
 - **Rejouer le jeu ne crée rien.** Un type se retrouve par l'adresse de son compte ; s'il est là, il est laissé tel quel (`presents`), même s'il a changé.
 - **Chaque type s'écrit dans une transaction.** Interrompu, il ne laisse ni compte, ni profil, ni média. Les photos déjà envoyées restent dans le stockage jusqu'au chargement suivant, qui réécrit les mêmes clés : il ne reste alors aucun objet orphelin.
 - **Aucun mail ne part** : la confirmation d'un compte neuf n'est pas envoyée.
-- **Hors du banc, rien n'est lu ni écrit** (`src/demo-data/guard.ts`). Le jeu accepte `APP_ENV=test` avec une base de ce poste en `_test`, le stockage de ce poste dans un espace en `-test` et aucune adresse déployée. Il refuse `APP_ENV=prod`, l'adresse du site en ligne, un `APP_ENV` absent (comme dans un `.env` de développement) ou inconnu, l'absence de stockage d'objets sur le banc, et un Payload branché sur une autre base que `DATABASE_URI`. Le refus (`JeuFictifRefuse`) nomme la variable, jamais sa valeur.
+- **Hors du banc, rien n'est lu ni écrit** (`src/demo-data/guard.ts`). Le jeu accepte `APP_ENV=test` avec une base de ce poste en `_test`, le stockage de ce poste dans un espace en `-test` et aucune adresse déployée. Il refuse `APP_ENV=prod`, l'adresse du site en ligne, un `APP_ENV` absent (comme dans un `.env` de développement) ou inconnu, l'absence de stockage d'objets sur le banc, et un Payload branché sur une autre base que `DATABASE_URI`. Le refus (`DemoDataRefused`) nomme la variable, jamais sa valeur.
 - **Avec les comptes du jeu, la base tient 19 profils** : les 12 types, et les profils vides des sept comptes de maquilleuse du jeu qui en ont un (voir « Le banc complet »).
 - Un chargement sur une base vide prend environ 4 secondes, et 20 à 40 millisecondes sur une base déjà remplie (mesuré le 14/10/2026, deux passages : 3,9 s et 4,0 s, puis 36 ms et 23 ms).
 
-Les données sont dans `src/demo-data/profiles.ts` (`PROFILS_DU_JEU`), avec, pour chaque type, ce que le serveur doit calculer (`attendu`). Le jeu vit sous `src/` et non sous `tests/`, parce que les collections et les outils du banc le chargent sans passer par Next, et que l'image Docker ne contient pas `tests/`.
+Les données sont dans `src/demo-data/profiles.ts` (`DEMO_PROFILES`), avec, pour chaque type, ce que le serveur doit calculer (`attendu`). Le jeu vit sous `src/` et non sous `tests/`, parce que les collections et les outils du banc le chargent sans passer par Next, et que l'image Docker ne contient pas `tests/`.
 
 `tests/unit/jeu-fictif.test.ts` vérifie le jeu sans le banc : les douze types, l'état que leur donne la règle unique, les longueurs du profil aux textes maximaux, les six photos et la garde. `tests/integration/banc-profils-types.test.ts` le charge sur le banc : chaque profil relié à sa maquilleuse, l'état enregistré, les photos et leurs objets, le rechargement.
 

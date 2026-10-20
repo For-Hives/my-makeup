@@ -16,7 +16,7 @@
  * CLI, outside of Next.
  */
 
-import { estMontantDePrix } from '../price'
+import { isPriceAmount } from '../price'
 import { completeness, type ProfileFields, usableCity } from './completeness'
 import {
 	INITIAL_CHOICE,
@@ -82,7 +82,7 @@ function cityName(commune: ProfileDocument['city']): string | null {
  *   photo; the gallery as its list.
  * - The price of an offer is its amount (`priceFrom`, read from the text typed by the same
  *   rule, src/lib/price.ts): an offer with a text and no amount (« Sur devis ») has no numeric price,
- *   as for the cards (`prixMinimal`). The options of an offer do not count, as on the old site.
+ *   as for the cards (`minimumPrice`). The options of an offer do not count, as on the old site.
  * - The phone and the email count as contact channels only when she shows them (`publicContact`):
  *   a channel nobody sees is no channel.
  */
@@ -105,7 +105,7 @@ export function profileFields(document: ProfileDocument | null | undefined): Pro
 		language: d.languages,
 		service_offers: (d.serviceOffers ?? []).map(offre => {
 			const amount = offre?.priceFrom
-			return { price: estMontantDePrix(amount) ? String(amount) : null }
+			return { price: isPriceAmount(amount) ? String(amount) : null }
 		}),
 		network: {
 			youtube: networks.youtube,

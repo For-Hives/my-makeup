@@ -2,7 +2,7 @@ import { HEBERGEUR } from './legal'
 
 /**
  * The processors the privacy policy names, in one place (ticket 189). The page
- * `/politique-de-confidentialite` draws its list of providers from `PRESTATAIRES` and nothing else;
+ * `/politique-de-confidentialite` draws its list of providers from `PROVIDERS` and nothing else;
  * tests/unit/politique-prestataires.test.ts compares each entry to the service the code is
  * configured for (the host of the site, the Umami instance, the S3 storage, the SMTP relay, the
  * Google issuer), so that adding or replacing a service without editing this list fails the CI.
@@ -10,10 +10,10 @@ import { HEBERGEUR } from './legal'
  * Plain data, no import of the server: the page is static.
  */
 
-export type IdentifiantDePrestataire = 'hebergement' | 'mesure' | 'photos' | 'email' | 'google'
+export type ProviderId = 'hebergement' | 'mesure' | 'photos' | 'email' | 'google'
 
-export type Prestataire = {
-	id: IdentifiantDePrestataire
+export type Provider = {
+	id: ProviderId
 	/** The company, as the policy names it. */
 	nom: string
 	/** The sentence of the list, after the name (French, « vous » register of the legal pages). */
@@ -26,9 +26,9 @@ export type Prestataire = {
 }
 
 /** Days an object waits in the bin of the photo storage before its rule erases it (README, « corbeille »; ticket 205). */
-export const JOURS_AVANT_EFFACEMENT_DES_PHOTOS = 30
+export const PHOTO_ERASURE_DAYS = 30
 
-export const PRESTATAIRES: readonly Prestataire[] = [
+export const PROVIDERS: readonly Provider[] = [
 	{
 		id: 'hebergement',
 		nom: 'netcup GmbH (Allemagne)',

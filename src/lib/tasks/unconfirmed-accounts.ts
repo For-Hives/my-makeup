@@ -11,7 +11,7 @@ import type { DailyTask } from './daily'
  * - an account whose profile holds anything (an admin filled it in): it is left for a person to decide;
  * - an account confirmed, even if it never came back.
  *
- * The profile goes first, then the account (`compteSansProfilAvantSuppression`). One account at a
+ * The profile goes first, then the account (`accountWithoutProfileBeforeDeletion`). One account at a
  * time, so that a failure leaves the others alone. A run removes 500 accounts at most; the next
  * day takes the rest. It reports a number, never a row.
  */

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import { ValidationError } from 'payload'
-import { CONTEXTE_SANS_PROFIL } from '@/collections/Profiles'
+import { NO_PROFILE_CONTEXT } from '@/collections/Profiles'
 import { ZONE_MESSAGES } from '@/lib/profile/zone'
 import { type CompteDeTest, creerCompte, motDePasseAleatoire } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
@@ -272,7 +272,7 @@ describe('Une zone mal formée est refusée en français, et rien ne change', ()
 		const compte = await payload.create({
 			collection: 'pros',
 			data: { email: `zone-${crypto.randomUUID()}@example.test`, password: motDePasseAleatoire(), _verified: true },
-			context: CONTEXTE_SANS_PROFIL,
+			context: NO_PROFILE_CONTEXT,
 			disableVerificationEmail: true,
 		})
 

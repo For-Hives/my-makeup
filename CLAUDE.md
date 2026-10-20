@@ -183,6 +183,9 @@ Le même mot français a le même mot anglais partout (source : `PLAN-ANGLAIS.md
 | tâches (dossier `src/lib/tasks`) / planificateur | `tasks` / `scheduler` | marque (de connexion) / opposition (à la mesure) | `mark` (`sign-in-mark`) / `optOut` |
 | échec (d'envoi) / doublon | `failure` / `duplicate` | frein (d'un contact) / reprise | `rateLimit` / `retry` |
 | purge / conservation | `purge` / `retention` | chargeur (du script de mesure) / valeurs | `loader` / `values` |
+| accès / médias | `access` / `media` | stockage / prestataire | `storage` / `provider` |
+| prix / montant | `price` / `amount` | rédaction (contenu : articles, talents) | `editorial` (dossier `src/demo-data/editorial.ts`) |
+| requête bornée / étiquette (cache) | `boundedQuery` / `tag` | rafraîchissement (du cache) | `refresh` / `revalidate` |
 
 ## Pièges
 

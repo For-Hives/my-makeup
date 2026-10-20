@@ -1,9 +1,9 @@
 import type { CollectionBeforeChangeHook, Payload } from 'payload'
 // Relative import on purpose: this file is also loaded by the Payload CLI, outside of Next.
-import { adminOuRedaction } from './access'
+import { adminOrEditor } from './access'
 
 /** The slug of the collection Payload keeps its editing locks in. */
-export const COLLECTION_DES_VERROUS = 'payload-locked-documents'
+export const LOCKS_COLLECTION = 'payload-locked-documents'
 
 /**
  * A lock is always in the name of the account that sends the request (ticket 094). Whatever `user`
@@ -11,7 +11,7 @@ export const COLLECTION_DES_VERROUS = 'payload-locked-documents'
  * admin. The take-over of the admin panel is a change of `user` to the account that takes over, so
  * it still goes through. Without a session (the Local API of the server), the data stays as given.
  */
-export const verrouAuNomDeLaSession: CollectionBeforeChangeHook = ({ data, req: { user } }) =>
+export const lockInSessionName: CollectionBeforeChangeHook = ({ data, req: { user } }) =>
 	user ? { ...data, user: { relationTo: user.collection, value: user.id } } : data
 
 /**
@@ -21,19 +21,18 @@ export const verrouAuNomDeLaSession: CollectionBeforeChangeHook = ({ data, req: 
  * account, rules active), and every lock carries the account of the session.
  *
  * Payload builds this collection itself, after the plugins: it is changed once Payload is built
- * (`onInit`, before any request), like `bornerLesCollectionsDePayload`.
+ * (`onInit`, before any request), like `boundPayloadCollections`.
  */
-export function reserverLesVerrousAuxAdmins(payload: Pick<Payload, 'collections'>): void {
-	const verrous = payload.collections[COLLECTION_DES_VERROUS]
-	if (!verrous) return
-	const { config } = verrous
+export function reserveLocksToAdmins(payload: Pick<Payload, 'collections'>): void {
+	const locks = payload.collections[LOCKS_COLLECTION]
+	if (!locks) return
+	const { config } = locks
 	config.access = {
 		...config.access,
-		create: adminOuRedaction,
-		delete: adminOuRedaction,
-		read: adminOuRedaction,
-		update: adminOuRedaction,
+		create: adminOrEditor,
+		delete: adminOrEditor,
+		read: adminOrEditor,
+		update: adminOrEditor,
 	}
-	if (!config.hooks.beforeChange.includes(verrouAuNomDeLaSession))
-		config.hooks.beforeChange.push(verrouAuNomDeLaSession)
+	if (!config.hooks.beforeChange.includes(lockInSessionName)) config.hooks.beforeChange.push(lockInSessionName)
 }

@@ -1,7 +1,7 @@
 import type { PayloadRequest, Where } from 'payload'
 // Relative import on purpose: this file is also loaded by the Payload CLI, outside of Next.
-import { identifiantPossible } from '../access'
-import { GALERIE_MAX } from '../media'
+import { possibleId } from '../access'
+import { GALLERY_MAX } from '../media'
 
 /**
  * The photos of a profile (ticket 043): its main photo and its gallery, in order, 10 photos at most.
@@ -53,7 +53,7 @@ interface ValidationOptions {
  * Refused, with the same message and before any query (ticket 133, addendum of 14/10/2026):
  * - an entry that names no identifier (`true`, `{}`, `{ relationTo, value }`), instead of ignoring
  *   it, and a list given to a field that holds one photo;
- * - a new photo whose identifier no media can have (`identifiantPossible`): Postgres would fail on
+ * - a new photo whose identifier no media can have (`possibleId`): Postgres would fail on
  *   it and the request end in a 500.
  *
  * The media are read without access control: the rule is the owner, not what the request may read.
@@ -67,11 +67,11 @@ export async function validateProfilePhotos(
 	const entries = (Array.isArray(valeur) ? valeur : [valeur]).filter(entree => entree !== undefined && entree !== null)
 	const all = namedPhotos(entries)
 	if (all.length !== entries.length) return PHOTO_MESSAGES.photoRefusee
-	if (all.length > GALERIE_MAX) return PHOTO_MESSAGES.galeriePleine
+	if (all.length > GALLERY_MAX) return PHOTO_MESSAGES.galeriePleine
 	const alreadyThere = new Set(namedPhotos(previousValue).map(String))
 	const ids = all.filter(id => !alreadyThere.has(String(id)))
 	if (ids.length === 0) return true
-	if (!ids.every(identifiantPossible)) return PHOTO_MESSAGES.photoRefusee
+	if (!ids.every(possibleId)) return PHOTO_MESSAGES.photoRefusee
 	const pro = idOf((data as { pro?: unknown } | undefined)?.pro)
 	const { docs } = await req.payload.find({
 		collection: 'media',

@@ -3,32 +3,32 @@ import { text } from 'payload/shared'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { MAX_TITLE, TALENT_MIN_TITLE } from '../lib/seo/text'
 import {
-	ACCES_REDACTION,
-	champPublieLe,
-	champSlug,
-	champStrapiId,
-	datePremierePublication,
-	VERSIONS_REDACTION,
+	EDITOR_ACCESS,
+	EDITOR_VERSIONS,
+	firstPublicationDate,
+	publishedAtFieldDef,
+	slugFieldDef,
+	strapiIdFieldDef,
 } from './editor'
-import { rafraichissement } from './revalidate'
+import { refresh } from './revalidate'
 
 /** The refresh of its page, of the pages that list the talents and of the sitemap (ticket 047). */
-const RAFRAICHISSEMENT = rafraichissement('talents')
+const REFRESH = refresh('talents')
 
 /**
  * The title of the page (the tab, the search results) of a talent, written by the newsroom (ticket 108):
  * left empty, or from 50 to 60 characters and different from the title shown at the top of the page
  * (`seo_title`, the h1). Bing flags the short titles of these pages; the h1 stays the one of the site online.
  */
-export const validerTitreDeLaPage: TextFieldSingleValidation = (valeur, args) => {
+export const validatePageTitle: TextFieldSingleValidation = (valeur, args) => {
 	const base = text(valeur, args)
 	if (base !== true || typeof valeur !== 'string' || valeur.trim() === '') return base
-	const titre = valeur.trim()
-	if (titre.length < TALENT_MIN_TITLE || titre.length > MAX_TITLE)
-		return `Le titre de la page fait de ${TALENT_MIN_TITLE} à ${MAX_TITLE} caractères ; celui-ci en compte ${titre.length}.`
-	const titreAffiche = (args.siblingData as { seo_title?: unknown } | undefined)?.seo_title
-	const h1 = typeof titreAffiche === 'string' ? titreAffiche.trim() : ''
-	if (titre === h1) return 'Le titre de la page doit être différent du titre affiché en haut de la page.'
+	const title = valeur.trim()
+	if (title.length < TALENT_MIN_TITLE || title.length > MAX_TITLE)
+		return `Le titre de la page fait de ${TALENT_MIN_TITLE} à ${MAX_TITLE} caractères ; celui-ci en compte ${title.length}.`
+	const displayedTitle = (args.siblingData as { seo_title?: unknown } | undefined)?.seo_title
+	const h1 = typeof displayedTitle === 'string' ? displayedTitle.trim() : ''
+	if (title === h1) return 'Le titre de la page doit être différent du titre affiché en haut de la page.'
 	return true
 }
 
@@ -48,23 +48,23 @@ export const Talents: CollectionConfig<'talents'> = {
 	slug: 'talents',
 	labels: { singular: 'Talent', plural: 'Talents' },
 	admin: { useAsTitle: 'title', defaultColumns: ['title', 'slug', '_status', 'updatedAt'] },
-	access: ACCES_REDACTION,
-	versions: VERSIONS_REDACTION,
+	access: EDITOR_ACCESS,
+	versions: EDITOR_VERSIONS,
 	hooks: {
-		beforeChange: [RAFRAICHISSEMENT.avantEcriture, datePremierePublication],
-		afterChange: [RAFRAICHISSEMENT.apresEcriture],
-		beforeDelete: [RAFRAICHISSEMENT.avantSuppression],
-		afterDelete: [RAFRAICHISSEMENT.apresSuppression],
+		beforeChange: [REFRESH.avantEcriture, firstPublicationDate],
+		afterChange: [REFRESH.apresEcriture],
+		beforeDelete: [REFRESH.avantSuppression],
+		afterDelete: [REFRESH.apresSuppression],
 	},
 	fields: [
 		{ name: 'title', label: 'Titre', type: 'text', required: true },
-		champSlug('/talent'),
+		slugFieldDef('/talent'),
 		{ name: 'seo_title', label: 'Titre pour les moteurs de recherche', type: 'text' },
 		{
 			name: 'pageTitle',
 			label: 'Titre de la page (onglet et résultats de recherche)',
 			type: 'text',
-			validate: validerTitreDeLaPage,
+			validate: validatePageTitle,
 			admin: {
 				description: `De ${TALENT_MIN_TITLE} à ${MAX_TITLE} caractères, différent du titre affiché en haut de la page. Vide : le titre du talent, suivi du nom du site.`,
 			},
@@ -77,7 +77,7 @@ export const Talents: CollectionConfig<'talents'> = {
 			type: 'code',
 			admin: { language: 'markdown', description: 'En markdown.' },
 		},
-		champPublieLe,
-		champStrapiId,
+		publishedAtFieldDef,
+		strapiIdFieldDef,
 	],
 }

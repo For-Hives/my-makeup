@@ -13,7 +13,7 @@ import { FAILURE_MESSAGE, payloadFailure, type SaveResult } from './result'
  * - the profile written is hers, found by her account (I02);
  * - the write goes through the access rules and the hooks of the collection, as herself: the
  *   server dates the choice when she shows them, and empties the date when she hides them
- *   (`consentementTrace`, src/collections/Profiles.ts); it recomputes whether the profile is
+ *   (`consentTrace`, src/collections/Profiles.ts); it recomputes whether the profile is
  *   publishable, since a phone or an email counts as a channel of contact only while shown;
  * - the values given back, the date included, are those the database stored. A failure gives back
  *   a message in French and no value.

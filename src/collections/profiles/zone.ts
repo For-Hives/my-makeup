@@ -20,10 +20,10 @@ import {
  * import's included: a value sent for it is replaced, so it is never out of step with the code. A
  * code that is not well formed gives null, and the check of the code refuses the save anyway.
  */
-const departementDuCode: FieldHook = ({ siblingData }) => departmentOfInseeCode((siblingData as CityInput).inseeCode)
+const departmentOfCode: FieldHook = ({ siblingData }) => departmentOfInseeCode((siblingData as CityInput).inseeCode)
 
 /** The check of one field of the commune, which reads its sibling fields (src/lib/profile/zone.ts). */
-const verdictDe =
+const verdictOf =
 	(champ: keyof CityErrors) =>
 	(_valeur: unknown, { siblingData }: { siblingData: unknown }): true | string =>
 		cityErrors(siblingData as CityInput)[champ] ?? true
@@ -47,7 +47,7 @@ const verdictDe =
  * (ticket 021): the commune, its INSEE code, its département and the coordinates of its centre,
  * to about 1 km, are public reference data, not personal data.
  */
-export const champsDeLaZone: Field[] = [
+export const zoneFields: Field[] = [
 	{
 		name: 'city',
 		label: 'Commune',
@@ -64,20 +64,20 @@ export const champsDeLaZone: Field[] = [
 				type: 'text',
 				maxLength: CITY_NAME_MAX,
 				hooks: { beforeValidate: [({ value }) => normalizedName(value)] },
-				validate: verdictDe('name'),
+				validate: verdictOf('name'),
 			},
 			{
 				name: 'inseeCode',
 				label: 'Code INSEE',
 				type: 'text',
 				hooks: { beforeValidate: [({ value }) => normalizedInseeCode(value)] },
-				validate: verdictDe('inseeCode'),
+				validate: verdictOf('inseeCode'),
 			},
 			{
 				name: 'department',
 				label: 'Département',
 				type: 'text',
-				hooks: { beforeChange: [departementDuCode] },
+				hooks: { beforeChange: [departmentOfCode] },
 				admin: { readOnly: true, description: 'Calculé depuis le code INSEE.' },
 			},
 			// The centre of the commune, to about 1 km: never a point that locates a home.
@@ -86,14 +86,14 @@ export const champsDeLaZone: Field[] = [
 				label: 'Latitude',
 				type: 'number',
 				hooks: { beforeValidate: [({ value }) => roundedCoordinate(value)] },
-				validate: verdictDe('latitude'),
+				validate: verdictOf('latitude'),
 			},
 			{
 				name: 'longitude',
 				label: 'Longitude',
 				type: 'number',
 				hooks: { beforeValidate: [({ value }) => roundedCoordinate(value)] },
-				validate: verdictDe('longitude'),
+				validate: verdictOf('longitude'),
 			},
 		],
 	},

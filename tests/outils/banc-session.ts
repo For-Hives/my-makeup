@@ -14,7 +14,7 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import type { AuthCollectionSlug, Payload } from 'payload'
-import { adresseDuProfil, PROFILS_DU_JEU } from '../../src/demo-data/profiles'
+import { DEMO_PROFILES, profileUrl } from '../../src/demo-data/profiles'
 import { adresseDuJeu, TYPES_DU_JEU } from '../fixtures/comptes'
 import { BancRefuse, RACINE } from './banc'
 import { TYPES_DE_COMPTE } from './fabrique-comptes'
@@ -25,7 +25,7 @@ import { ouvrirSessionSansMotDePasse, type Session } from './session'
 export const DOSSIER_DES_SESSIONS = '.banc/sessions'
 
 /** The accounts a name can designate, for the message that refuses another one. */
-export const NOMS_DES_COMPTES = [...TYPES_DU_JEU, ...PROFILS_DU_JEU.map(({ cle }) => `profil-${cle}`)]
+export const NOMS_DES_COMPTES = [...TYPES_DU_JEU, ...DEMO_PROFILES.map(({ cle }) => `profil-${cle}`)]
 
 /** Where to look for an account, from the name the person gave. */
 export interface Recherche {
@@ -44,8 +44,8 @@ export function rechercheDuCompte(demande: string): Recherche | undefined {
 	const type = TYPES_DU_JEU.find(cle => cle === nom)
 	if (type) return { email: adresseDuJeu(type), collection: TYPES_DE_COMPTE[type].collection, nom }
 	const cle = nom.startsWith('profil-') ? nom.slice('profil-'.length) : undefined
-	if (cle !== undefined && PROFILS_DU_JEU.some(profil => profil.cle === cle))
-		return { email: adresseDuProfil(cle), collection: 'pros', nom }
+	if (cle !== undefined && DEMO_PROFILES.some(profil => profil.cle === cle))
+		return { email: profileUrl(cle), collection: 'pros', nom }
 	if (ADRESSE.test(nom)) return { email: nom.toLowerCase(), nom: nom.replace(/[^a-z0-9.-]+/gi, '_') }
 	return undefined
 }

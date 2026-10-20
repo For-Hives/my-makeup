@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { ProfileView } from '@/components/profile/ProfileView'
-import { PROFILS_DU_JEU, type ProfilDuJeu } from '@/demo-data/profiles'
+import { DEMO_PROFILES, type DemoProfile } from '@/demo-data/profiles'
 import { displayedArtistName } from '@/lib/profile/public-view'
 import { type ProfilePageData, type PublicProfile, publicProfileOf } from '@/services/public/profiles'
 
@@ -14,7 +14,7 @@ import { type ProfilePageData, type PublicProfile, publicProfileOf } from '@/ser
 const ADRESSE_DE_PHOTO = 'https://photos.example.test/media'
 
 /** A profile of the set as the public reading holds it: what the set writes, plus a main photo when it has one. */
-function lireLeType(type: ProfilDuJeu, surcharge: Partial<ProfilePageData> = {}): PublicProfile {
+function lireLeType(type: DemoProfile, surcharge: Partial<ProfilePageData> = {}): PublicProfile {
 	const doc: ProfilePageData = {
 		slug: type.attendu.slug,
 		status: type.attendu.status,
@@ -38,8 +38,8 @@ function lireLeType(type: ProfilDuJeu, surcharge: Partial<ProfilePageData> = {})
 
 const rendre = (profil: PublicProfile): string => renderToStaticMarkup(<ProfileView profil={profil} />)
 
-const type = (cle: string): ProfilDuJeu => {
-	const trouve = PROFILS_DU_JEU.find(profil => profil.cle === cle)
+const type = (cle: string): DemoProfile => {
+	const trouve = DEMO_PROFILES.find(profil => profil.cle === cle)
 	if (!trouve) throw new Error(`pas de profil type « ${cle} »`)
 	return trouve
 }
@@ -235,8 +235,8 @@ describe('E44 : les sections du profil', () => {
 	})
 
 	test('les douze profils types : ni « undefined » ni « null », un seul h1, aucun titre sans contenu', () => {
-		expect(PROFILS_DU_JEU).toHaveLength(12)
-		for (const profilType of PROFILS_DU_JEU) {
+		expect(DEMO_PROFILES).toHaveLength(12)
+		for (const profilType of DEMO_PROFILES) {
 			const html = rendre(lireLeType(profilType))
 			const texte = html.replace(/<[^>]+>/g, ' ')
 

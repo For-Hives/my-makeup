@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import sharp from 'sharp'
-import { poserLeProfil, profilPresent } from '../../src/demo-data/loading'
-import type { ProfilDuJeu } from '../../src/demo-data/profiles'
+import { placeProfile, profilePresent } from '../../src/demo-data/loading'
+import type { DemoProfile } from '../../src/demo-data/profiles'
 import { type ProfilDePage, poserLesProfilsDePage, profilsDePageSousLePrefixe } from '../fixtures/profils-de-page'
 import { creerContenu, supprimerContenu } from '../outils/pages-publiques'
 import { payloadDeTest } from '../outils/payload-test'
@@ -24,7 +24,7 @@ let profils: ReadonlyMap<string, ProfilDePage>
 let grande: ProfilDePage
 
 /** The big-photo profile: a variant of the reference type with one very large photo and no gallery. */
-function typeDeLaGrandePhoto(base: ProfilDuJeu): ProfilDuJeu {
+function typeDeLaGrandePhoto(base: DemoProfile): DemoProfile {
 	return {
 		...base,
 		cle: 'og-grande-photo',
@@ -54,7 +54,7 @@ test.beforeAll(async ({ request }) => {
 	expect(octets.length, 'l’original doit peser bien plus que 300 Ko').toBeGreaterThan(POIDS_MAX * 4)
 	const posee = await sousVerrou('profil-og-grande-photo', async () => {
 		const payload = await payloadDeTest()
-		return (await profilPresent(payload, type)) ?? (await poserLeProfil(payload, type, async () => octets, false))
+		return (await profilePresent(payload, type)) ?? (await placeProfile(payload, type, async () => octets, false))
 	})
 	grande = { id: posee.profil, slug: posee.slug, type }
 	for (const [rang, slug] of talents.entries())

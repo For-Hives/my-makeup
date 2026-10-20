@@ -3,19 +3,19 @@ import { readdirSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
 import type { Field, Payload } from 'payload'
 import { Profiles } from '@/collections/Profiles'
-import { exigerLaCibleDuJeu, poserLesProfilsDuJeu } from '@/demo-data/loading'
-import { cibleDuJeu, JeuFictifRefuse, ORIGINE_DU_SITE } from '@/demo-data/guard'
+import { DemoDataRefused, demoTarget, SITE_ORIGIN } from '@/demo-data/guard'
+import { placeDemoProfiles, requireDemoTarget } from '@/demo-data/loading'
 import {
-	adresseDuProfil,
-	CONSENTEMENT_DU_JEU,
-	LONGUEURS_DU_JEU,
-	PHOTOS_DU_JEU,
-	POIDS_MAX_D_UNE_PHOTO,
-	PROFILS_DU_JEU,
-	type ProfilDuJeu,
+	DEMO_CONSENT,
+	DEMO_LENGTHS,
+	DEMO_PHOTOS,
+	DEMO_PROFILES,
+	type DemoProfile,
+	PHOTO_MAX_WEIGHT,
+	profileUrl,
 } from '@/demo-data/profiles'
 import { DEPLOYED_ORIGINS } from '@/lib/env'
-import { GALERIE_MAX } from '@/lib/media'
+import { GALLERY_MAX } from '@/lib/media'
 import { DESCRIPTION_MAX_LENGTH, NAME_MAX_LENGTH } from '@/lib/profile/lists'
 import { profileState, statusAfter } from '@/lib/profile/state'
 import { RADIUS_BOUNDS_KM } from '@/lib/profile/zone'
@@ -30,14 +30,14 @@ import { environnementDuBanc, RACINE } from '../outils/banc'
 
 const DOSSIER_DES_PHOTOS = path.join(RACINE, 'src/demo-data/photos')
 
-const type = (cle: string): ProfilDuJeu => {
-	const trouve = PROFILS_DU_JEU.find(profil => profil.cle === cle)
+const type = (cle: string): DemoProfile => {
+	const trouve = DEMO_PROFILES.find(profil => profil.cle === cle)
 	if (!trouve) throw new Error(`pas de profil type « ${cle} »`)
 	return trouve
 }
 
 /** The state the single rule gives a profile of the set, its photos counted as the server counts them. */
-function etatSelonLaRegle({ profil, photos }: ProfilDuJeu) {
+function etatSelonLaRegle({ profil, photos }: DemoProfile) {
 	const document = {
 		...profil,
 		mainPicture: photos.principale === null ? null : 1,
@@ -63,7 +63,7 @@ const refus = (essai: () => unknown): string => {
 	try {
 		essai()
 	} catch (erreur) {
-		if (erreur instanceof JeuFictifRefuse) return erreur.message
+		if (erreur instanceof DemoDataRefused) return erreur.message
 		throw erreur
 	}
 	throw new Error('rien n’a été refusé')
@@ -71,26 +71,26 @@ const refus = (essai: () => unknown): string => {
 
 describe('Les 12 profils types du plan 02 §6', () => {
 	test('douze types, dans l’ordre du plan, chacun avec sa maquilleuse fictive en @example.test', () => {
-		expect(PROFILS_DU_JEU.map(({ numero }) => numero)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
-		expect(new Set(PROFILS_DU_JEU.map(({ cle }) => cle)).size).toBe(12)
-		for (const { cle, compte } of PROFILS_DU_JEU) {
-			expect(compte.email).toBe(adresseDuProfil(cle))
+		expect(DEMO_PROFILES.map(({ numero }) => numero)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+		expect(new Set(DEMO_PROFILES.map(({ cle }) => cle)).size).toBe(12)
+		for (const { cle, compte } of DEMO_PROFILES) {
+			expect(compte.email).toBe(profileUrl(cle))
 			expect(compte.email).toMatch(/^jeu-profil-[a-z-]+@example\.test$/)
 		}
-		expect(new Set(PROFILS_DU_JEU.map(({ compte }) => compte.nom)).size).toBe(12)
+		expect(new Set(DEMO_PROFILES.map(({ compte }) => compte.nom)).size).toBe(12)
 	})
 
 	test('le slug attendu est celui que la règle tire du nom du compte, sans collision', () => {
-		for (const { cle, compte, attendu } of PROFILS_DU_JEU)
+		for (const { cle, compte, attendu } of DEMO_PROFILES)
 			expect({ cle, slug: slugifier(compte.nom) }).toEqual({ cle, slug: attendu.slug })
-		expect(new Set(PROFILS_DU_JEU.map(({ attendu }) => attendu.slug)).size).toBe(12)
+		expect(new Set(DEMO_PROFILES.map(({ attendu }) => attendu.slug)).size).toBe(12)
 		// The examples of the frozen URL table (ticket 033) name this profile.
 		expect(type('ancien-nom-accentue').attendu.slug).toBe('zoe-lefevre')
 		expect(type('ancien-nom-accentue').profil.legacyUsername).toBe('zoé lefèvre')
 	})
 
 	test('l’état attendu de chaque type est celui de la règle unique', () => {
-		for (const profil of PROFILS_DU_JEU) {
+		for (const profil of DEMO_PROFILES) {
 			const { slug: _slug, ...attendu } = profil.attendu
 			expect({ cle: profil.cle, etat: etatSelonLaRegle(profil) }).toEqual({ cle: profil.cle, etat: attendu })
 		}
@@ -120,11 +120,11 @@ describe('Les 12 profils types du plan 02 §6', () => {
 		expect(reference.publicContact).toBe(true)
 		expect(reference.contactDetails?.phone).toBe('06 39 98 10 01')
 		expect(reference.contactDetails?.email).toEndWith('.example.test')
-		expect(reference.consentedAt).toBe(CONSENTEMENT_DU_JEU)
+		expect(reference.consentedAt).toBe(DEMO_CONSENT)
 		expect(reference.consentSource).toBe('artist')
 		expect(type('reference').photos.galerie).toHaveLength(6)
 		expect(reference.serviceOffers?.filter(({ priceFrom }) => typeof priceFrom === 'number')).toHaveLength(3)
-		for (const { profil } of PROFILS_DU_JEU) {
+		for (const { profil } of DEMO_PROFILES) {
 			const telephone = profil.contactDetails?.phone
 			if (telephone) expect(telephone).toMatch(/^(?:0|\+33 \(0\))6 39 98 /)
 			const email = profil.contactDetails?.email
@@ -145,9 +145,9 @@ describe('Les 12 profils types du plan 02 §6', () => {
 		expect(type('masquee').profil.chosenStatus).toBe('hidden')
 		expect(type('verifiee').profil).toMatchObject({ verified: true, superArtist: true })
 		// The status is chosen for the hidden profile only: every other one follows the rule (ticket 044).
-		const choisis = PROFILS_DU_JEU.filter(({ profil }) => profil.chosenStatus !== undefined).map(({ cle }) => cle)
+		const choisis = DEMO_PROFILES.filter(({ profil }) => profil.chosenStatus !== undefined).map(({ cle }) => cle)
 		expect(choisis).toEqual(['masquee'])
-		for (const { profil } of PROFILS_DU_JEU) expect('status' in profil).toBe(false)
+		for (const { profil } of DEMO_PROFILES) expect('status' in profil).toBe(false)
 	})
 
 	test('le profil aux textes maximaux porte chaque texte à la borne du serveur', () => {
@@ -160,7 +160,7 @@ describe('Les 12 profils types du plan 02 §6', () => {
 		for (const nom of ['firstName', 'lastName', 'artistName', 'specialty', 'description'] as const)
 			expect({ nom, longueur: profil[nom]?.length }).toEqual({ nom, longueur: borne(nom) })
 		expect(profil.radiusKm).toBe(RADIUS_BOUNDS_KM.max)
-		expect(photos.galerie).toHaveLength(GALERIE_MAX)
+		expect(photos.galerie).toHaveLength(GALLERY_MAX)
 		for (const prestation of profil.serviceOffers ?? []) {
 			expect([prestation.name?.length, prestation.priceText?.length]).toEqual([NAME_MAX_LENGTH, NAME_MAX_LENGTH])
 			expect(prestation.description?.length).toBe(DESCRIPTION_MAX_LENGTH)
@@ -172,10 +172,10 @@ describe('Les 12 profils types du plan 02 §6', () => {
 				])
 		}
 		for (const lien of Object.values(profil.networks ?? {})) expect(lien?.length).toBe(200)
-		for (const { valeur, maximum } of Object.values(LONGUEURS_DU_JEU)) expect(valeur.length).toBe(maximum)
+		for (const { valeur, maximum } of Object.values(DEMO_LENGTHS)) expect(valeur.length).toBe(maximum)
 		expect(profil.contactDetails).toEqual({
-			phone: LONGUEURS_DU_JEU.telephone.valeur,
-			email: LONGUEURS_DU_JEU.email.valeur,
+			phone: DEMO_LENGTHS.telephone.valeur,
+			email: DEMO_LENGTHS.email.valeur,
 		})
 		// The longest slug: the name of the account is cut at 70 characters.
 		expect(type('textes-maximaux').attendu.slug).toHaveLength(70)
@@ -184,37 +184,37 @@ describe('Les 12 profils types du plan 02 §6', () => {
 
 describe('Les six photos du jeu', () => {
 	test('six fichiers WebP de moins de 30 Ko, sans métadonnées, et rien d’autre dans le dossier', () => {
-		expect(readdirSync(DOSSIER_DES_PHOTOS).sort()).toEqual([...PHOTOS_DU_JEU])
-		for (const photo of PHOTOS_DU_JEU) {
+		expect(readdirSync(DOSSIER_DES_PHOTOS).sort()).toEqual([...DEMO_PHOTOS])
+		for (const photo of DEMO_PHOTOS) {
 			const chemin = path.join(DOSSIER_DES_PHOTOS, photo)
 			const octets = readFileSync(chemin)
 
-			expect({ photo, poids: statSync(chemin).size < POIDS_MAX_D_UNE_PHOTO }).toEqual({ photo, poids: true })
+			expect({ photo, poids: statSync(chemin).size < PHOTO_MAX_WEIGHT }).toEqual({ photo, poids: true })
 			expect(octets.subarray(0, 4).toString('latin1')).toBe('RIFF')
 			expect(octets.subarray(8, 12).toString('latin1')).toBe('WEBP')
 			// The simple format, a lossy image and nothing else: no EXIF, XMP nor ICC chunk can follow.
 			expect(octets.subarray(12, 16).toString('latin1')).toBe('VP8 ')
 		}
-		expect(POIDS_MAX_D_UNE_PHOTO).toBe(30_000)
+		expect(PHOTO_MAX_WEIGHT).toBe(30_000)
 	})
 
 	test('chaque photo sert à un profil au moins, et chaque profil ne montre que des photos du jeu', () => {
-		const servies = new Set(PROFILS_DU_JEU.flatMap(({ photos }) => [photos.principale, ...photos.galerie]))
+		const servies = new Set(DEMO_PROFILES.flatMap(({ photos }) => [photos.principale, ...photos.galerie]))
 
-		for (const photo of PHOTOS_DU_JEU) expect(servies.has(photo)).toBe(true)
-		for (const servie of servies) if (servie !== null) expect(PHOTOS_DU_JEU).toContain(servie)
-		for (const { photos } of PROFILS_DU_JEU) expect(photos.galerie.length).toBeLessThanOrEqual(GALERIE_MAX)
+		for (const photo of DEMO_PHOTOS) expect(servies.has(photo)).toBe(true)
+		for (const servie of servies) if (servie !== null) expect(DEMO_PHOTOS).toContain(servie)
+		for (const { photos } of DEMO_PROFILES) expect(photos.galerie.length).toBeLessThanOrEqual(GALLERY_MAX)
 	})
 })
 
 describe('Le jeu ne se charge que sur le banc', () => {
 	test('la seule adresse déployée que connaît l’application est celle du site', () => {
-		expect(DEPLOYED_ORIGINS).toEqual([ORIGINE_DU_SITE])
+		expect(DEPLOYED_ORIGINS).toEqual([SITE_ORIGIN])
 	})
 
 	test('le banc de test est accepté, quelle que soit son instance', () => {
-		expect(cibleDuJeu(BANC)).toBe('banc')
-		expect(cibleDuJeu(environnementDuBanc({ nom: 'mm-051', decalage: 451 }))).toBe('banc')
+		expect(demoTarget(BANC)).toBe('banc')
+		expect(demoTarget(environnementDuBanc({ nom: 'mm-051', decalage: 451 }))).toBe('banc')
 	})
 
 	test.each([
@@ -231,10 +231,10 @@ describe('Le jeu ne se charge que sur le banc', () => {
 		],
 		[
 			'l’adresse du site en ligne, même déclarée préprod',
-			{ ...ANCIENNE_PREPROD, NEXT_PUBLIC_SITE_URL: ORIGINE_DU_SITE },
+			{ ...ANCIENNE_PREPROD, NEXT_PUBLIC_SITE_URL: SITE_ORIGIN },
 			'site en ligne',
 		],
-		['l’adresse du site en ligne sur le banc', { ...BANC, NEXT_PUBLIC_SITE_URL: ORIGINE_DU_SITE }, 'site en ligne'],
+		['l’adresse du site en ligne sur le banc', { ...BANC, NEXT_PUBLIC_SITE_URL: SITE_ORIGIN }, 'site en ligne'],
 		['un environnement sans APP_ENV (un .env de développement)', { ...BANC, APP_ENV: undefined }, 'APP_ENV manque'],
 		['un APP_ENV inconnu', { ...BANC, APP_ENV: 'staging' }, 'APP_ENV n’est pas « test »'],
 		[
@@ -266,7 +266,7 @@ describe('Le jeu ne se charge que sur le banc', () => {
 			'NEXT_PUBLIC_SITE_URL',
 		],
 	])('refusé : %s', (_cas, variables, motif) => {
-		const message = refus(() => cibleDuJeu(variables))
+		const message = refus(() => demoTarget(variables))
 
 		expect(message).toStartWith('Jeu fictif refusé : ')
 		expect(message).toContain(motif)
@@ -303,18 +303,18 @@ describe('Le jeu ne se charge que sur le banc', () => {
 		const { appels, payload } = fauxPayload(ANCIENNE_PREPROD.DATABASE_URI)
 
 		await expect(
-			poserLesProfilsDuJeu(payload, { variables: { ...ANCIENNE_PREPROD, APP_ENV: 'prod' } })
-		).rejects.toBeInstanceOf(JeuFictifRefuse)
+			placeDemoProfiles(payload, { variables: { ...ANCIENNE_PREPROD, APP_ENV: 'prod' } })
+		).rejects.toBeInstanceOf(DemoDataRefused)
 		expect(appels).toEqual([])
 	})
 
 	test('quand Payload est branché ailleurs que l’environnement ne le dit, rien n’est lu ni écrit', async () => {
 		const { appels, payload } = fauxPayload('postgres://mymakeup:local-dev-only@127.0.0.1:5442/mymakeup_dev')
 
-		expect(refus(() => exigerLaCibleDuJeu(payload, BANC))).toContain(
+		expect(refus(() => requireDemoTarget(payload, BANC))).toContain(
 			'Payload n’est pas branché sur la base que DATABASE_URI désigne.'
 		)
-		await expect(poserLesProfilsDuJeu(payload, { variables: BANC })).rejects.toBeInstanceOf(JeuFictifRefuse)
+		await expect(placeDemoProfiles(payload, { variables: BANC })).rejects.toBeInstanceOf(DemoDataRefused)
 		expect(appels).toEqual([])
 	})
 
@@ -323,7 +323,7 @@ describe('Le jeu ne se charge que sur le banc', () => {
 		// to its first read, which it refuses.
 		const { appels, payload } = fauxPayload(BANC.DATABASE_URI)
 
-		await expect(poserLesProfilsDuJeu(payload, { variables: BANC })).rejects.toThrow('find ne devait pas être appelé')
+		await expect(placeDemoProfiles(payload, { variables: BANC })).rejects.toThrow('find ne devait pas être appelé')
 		expect(appels).toEqual(['find'])
 	})
 })

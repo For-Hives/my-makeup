@@ -18,16 +18,16 @@
 import { isLocalDatabase } from '../lib/env'
 
 /** Where the set is loaded: the test bench. */
-export type CibleDuJeu = 'banc'
+export type DemoTarget = 'banc'
 
 /** What the guard reads: the environment of the process, or what a test gives. */
-export type VariablesDuJeu = Readonly<Record<string, string | undefined>>
+export type DemoVariables = Readonly<Record<string, string | undefined>>
 
 /** The address of the site in production: the set never goes there. */
-export const ORIGINE_DU_SITE = 'https://my-makeup.fr'
+export const SITE_ORIGIN = 'https://my-makeup.fr'
 
 /** The set refuses to run here: nothing has been read nor written. */
-export class JeuFictifRefuse extends Error {
+export class DemoDataRefused extends Error {
 	override name = 'JeuFictifRefuse'
 
 	constructor(raison: string) {
@@ -35,24 +35,24 @@ export class JeuFictifRefuse extends Error {
 	}
 }
 
-const refuser = (raison: string): never => {
-	throw new JeuFictifRefuse(raison)
+const refuse = (raison: string): never => {
+	throw new DemoDataRefused(raison)
 }
 
-const LOCAUX = new Set(['localhost', '127.0.0.1', '::1', '[::1]'])
+const LOCAL = new Set(['localhost', '127.0.0.1', '::1', '[::1]'])
 
 /** True when the address can only be one of this machine. Anything unreadable is not. */
-function adresseLocale(valeur: string | undefined): boolean {
+function localAddress(valeur: string | undefined): boolean {
 	if (valeur === undefined) return false
 	try {
-		return LOCAUX.has(new URL(valeur).hostname)
+		return LOCAL.has(new URL(valeur).hostname)
 	} catch {
 		return false
 	}
 }
 
 /** The name of the database a connection string opens, or nothing when it names none. */
-function nomDeLaBase(uri: string): string {
+function databaseName(uri: string): string {
 	try {
 		return decodeURIComponent(new URL(uri).pathname.slice(1))
 	} catch {
@@ -61,41 +61,41 @@ function nomDeLaBase(uri: string): string {
 }
 
 /** The bench: everything the set writes stays on this machine, in what is made to be thrown away. */
-function verifierLeBanc(variables: VariablesDuJeu): void {
+function checkBench(variables: DemoVariables): void {
 	const base = variables.DATABASE_URI ?? ''
-	if (!isLocalDatabase(base) || !nomDeLaBase(base).endsWith('_test'))
-		refuser(
+	if (!isLocalDatabase(base) || !databaseName(base).endsWith('_test'))
+		refuse(
 			'avec APP_ENV=test, DATABASE_URI doit désigner une base de ce poste dont le nom finit par « _test » : la base du banc de test.'
 		)
-	if (!adresseLocale(variables.S3_ENDPOINT) || !variables.S3_BUCKET?.endsWith('-test'))
-		refuser(
+	if (!localAddress(variables.S3_ENDPOINT) || !variables.S3_BUCKET?.endsWith('-test'))
+		refuse(
 			'avec APP_ENV=test, S3_ENDPOINT doit désigner le stockage de ce poste, et S3_BUCKET un espace dont le nom finit par « -test » : le stockage du banc de test.'
 		)
 	const site = variables.NEXT_PUBLIC_SITE_URL
-	if (site !== undefined && site !== '' && !adresseLocale(site))
-		refuser('avec APP_ENV=test, NEXT_PUBLIC_SITE_URL doit être une adresse de ce poste.')
+	if (site !== undefined && site !== '' && !localAddress(site))
+		refuse('avec APP_ENV=test, NEXT_PUBLIC_SITE_URL doit être une adresse de ce poste.')
 }
 
 /**
- * Where the set may be loaded in this environment, or `JeuFictifRefuse`. Called before anything is
- * read or written; `poserLesProfilsDuJeu` (./chargement.ts) also checks the database Payload is
+ * Where the set may be loaded in this environment, or `DemoDataRefused`. Called before anything is
+ * read or written; `placeDemoProfiles` (./chargement.ts) also checks the database Payload is
  * really connected to.
  */
-export function cibleDuJeu(variables: VariablesDuJeu = process.env): CibleDuJeu {
-	const environnement = variables.APP_ENV
-	if (environnement === 'prod') refuser('APP_ENV vaut « prod » : le jeu fictif ne va jamais sur le site en ligne.')
-	if (variables.NEXT_PUBLIC_SITE_URL === ORIGINE_DU_SITE)
-		refuser('NEXT_PUBLIC_SITE_URL est l’adresse du site en ligne : le jeu fictif n’y va jamais.')
-	if (!variables.DATABASE_URI) refuser('DATABASE_URI manque.')
-	if (environnement === 'test') {
+export function demoTarget(variables: DemoVariables = process.env): DemoTarget {
+	const environment = variables.APP_ENV
+	if (environment === 'prod') refuse('APP_ENV vaut « prod » : le jeu fictif ne va jamais sur le site en ligne.')
+	if (variables.NEXT_PUBLIC_SITE_URL === SITE_ORIGIN)
+		refuse('NEXT_PUBLIC_SITE_URL est l’adresse du site en ligne : le jeu fictif n’y va jamais.')
+	if (!variables.DATABASE_URI) refuse('DATABASE_URI manque.')
+	if (environment === 'test') {
 		// The bench always has its storage.
 		if (!variables.S3_ENDPOINT)
-			refuser('S3_ENDPOINT manque : les photos du jeu vont dans le stockage d’objets, et l’application n’en a pas.')
-		verifierLeBanc(variables)
+			refuse('S3_ENDPOINT manque : les photos du jeu vont dans le stockage d’objets, et l’application n’en a pas.')
+		checkBench(variables)
 		return 'banc'
 	}
-	return refuser(
-		environnement === undefined || environnement === ''
+	return refuse(
+		environment === undefined || environment === ''
 			? 'APP_ENV manque : le jeu fictif ne se charge que sur le banc de test (APP_ENV=test).'
 			: 'APP_ENV n’est pas « test » : le jeu fictif ne se charge que sur le banc de test.'
 	)

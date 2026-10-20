@@ -37,8 +37,8 @@
 
 import { randomUUID } from 'node:crypto'
 import type { Payload, RequiredDataFromCollectionSlug, Where } from 'payload'
-import { CONTEXTE_SANS_PROFIL } from '@/collections/Profiles'
-import { PROFILS_PUBLIES } from '@/lib/access'
+import { NO_PROFILE_CONTEXT } from '@/collections/Profiles'
+import { PUBLISHED_PROFILES } from '@/lib/access'
 import { INITIAL_STATUS, PUBLISHED_STATUS } from '@/lib/profile/status'
 import { creerCompte, DOMAINE_DES_COMPTES, motDePasseAleatoire, type TypeAvecSession } from './fabrique-comptes'
 import { payloadDeTest } from './payload-test'
@@ -182,7 +182,7 @@ const compteSansProfil = async (payload: Payload, prefixe: string): Promise<numb
 		await payload.create({
 			collection: 'pros',
 			data: compteDeMaquilleuse(prefixe),
-			context: CONTEXTE_SANS_PROFIL,
+			context: NO_PROFILE_CONTEXT,
 			disableVerificationEmail: true,
 		})
 	).id
@@ -299,7 +299,7 @@ const PORTRAITS: Record<CollectionDeLaMatrice, Portrait> = {
 					data: { pro: await compteSansProfil(payload, 'jetable') } as RequiredDataFromCollectionSlug<'profiles'>,
 				})
 			).id,
-		publics: PROFILS_PUBLIES,
+		publics: PUBLISHED_PROFILES,
 	},
 	media: {
 		champ: 'alt',

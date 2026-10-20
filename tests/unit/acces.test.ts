@@ -1,54 +1,54 @@
 import { describe, expect, test } from 'bun:test'
 import { initI18n } from '@payloadcms/translations'
 import { type PayloadRequest, ValidationError } from 'payload'
-import { Admins, DUREE_SESSION_ADMIN_S, sessionsFermees } from '@/collections/Admins'
+import { ADMIN_SESSION_DURATION_S, Admins, closedSessions } from '@/collections/Admins'
 import { Articles } from '@/collections/Articles'
 import { AuthEvents } from '@/collections/AuthEvents'
 import { ContactRequests } from '@/collections/ContactRequests'
 import {
-	ACCES_REDACTION,
-	champPublieLe,
-	champStrapiId,
-	datePremierePublication,
-	VERSIONS_REDACTION,
+	EDITOR_ACCESS,
+	EDITOR_VERSIONS,
+	firstPublicationDate,
+	publishedAtFieldDef,
+	strapiIdFieldDef,
 } from '@/collections/editor'
 import {
-	aucunEnvoiSansStockage,
-	COORDONNEES_DU_FICHIER,
-	champsDuStockageFermes,
-	coordonneesParLeServeur,
+	closedStorageFields,
+	FILE_METADATA_FIELDS,
+	fileMetadataSetByServer,
 	Media,
-	proprietaireALEnvoi,
-	versLAdressePublique,
+	noUploadWithoutStorage,
+	ownerOnUpload,
+	toPublicUrl,
 } from '@/collections/Media'
-import { CONTEXTE_SANS_PROFIL, consentementTrace, Profiles, profilALaCreationDuCompte } from '@/collections/Profiles'
-import { compteSansProfilAvantSuppression, firstClosedAccount, Pros } from '@/collections/Pros'
+import { consentTrace, NO_PROFILE_CONTEXT, Profiles, profileOnAccountCreation } from '@/collections/Profiles'
+import { accountWithoutProfileBeforeDeletion, firstClosedAccount, Pros } from '@/collections/Pros'
 import { Talents } from '@/collections/Talents'
 import {
-	AUCUN_DOCUMENT,
-	adminOuProprietaire,
-	adminOuProprietaireDuMedia,
-	adminOuRedaction,
-	adminOuSoiMeme,
-	adminRedactionOuMaquilleuse,
-	adminRedactionOuPublies,
-	adminSeulement,
-	cacheeSaufAdmin,
-	champAdminOuRedaction,
-	champAdminSeulement,
-	champDuMediaAdminOuProprietaire,
-	champDuProfilAdminOuProprietaire,
-	estAdmin,
-	estAdminOuRedaction,
-	estMaquilleuse,
-	estRedaction,
-	identifiantPossible,
-	jamais,
-	lectureDesMedias,
-	MEDIAS_DE_LA_REDACTION,
-	PROFILS_PUBLIES,
-	profilPublieOuProprietaire,
-	SEULEMENT_PUBLIES,
+	adminEditorOrArtist,
+	adminEditorOrPublished,
+	adminOnly,
+	adminOrEditor,
+	adminOrMediaOwner,
+	adminOrOwner,
+	adminOrSelf,
+	EDITORIAL_MEDIA,
+	fieldAdminOnly,
+	fieldAdminOrEditor,
+	hiddenExceptAdmin,
+	isAdmin,
+	isAdminOrEditor,
+	isArtist,
+	isEditor,
+	mediaFieldAdminOrOwner,
+	mediaRead,
+	NO_DOCUMENT,
+	neverAllowed,
+	ONLY_PUBLISHED,
+	PUBLISHED_PROFILES,
+	possibleId,
+	profileFieldAdminOrOwner,
+	publishedProfileOrOwner,
 } from '@/lib/access'
 import {
 	estUneImage,
@@ -58,7 +58,7 @@ import {
 	MESSAGE_GALERIE_IMAGES,
 	TYPES_D_IMAGE,
 } from '@/lib/articles'
-import { LANGUE_DE_PAYLOAD } from '@/lib/payload-language'
+import { PAYLOAD_LANGUAGE } from '@/lib/payload-language'
 import { validateProfilePhotos } from '@/lib/profile/photos'
 import { PROFILE_STATUSES } from '@/lib/profile/status'
 
@@ -112,23 +112,21 @@ export const IDENTIFIANTS_IMPOSSIBLES = [
 
 describe('Un identifiant possible : ce qu’une règle passe à la base', () => {
 	test('un entier de 1 au plus grand entier de 32 bits, en nombre ou en chiffres', () => {
-		expect([1, 12, 2_147_483_647, '1', '12', '007', '2147483647'].map(identifiantPossible)).toEqual(Array(7).fill(true))
-		expect(IDENTIFIANTS_IMPOSSIBLES.map(identifiantPossible)).toEqual(
-			Array(IDENTIFIANTS_IMPOSSIBLES.length).fill(false)
-		)
+		expect([1, 12, 2_147_483_647, '1', '12', '007', '2147483647'].map(possibleId)).toEqual(Array(7).fill(true))
+		expect(IDENTIFIANTS_IMPOSSIBLES.map(possibleId)).toEqual(Array(IDENTIFIANTS_IMPOSSIBLES.length).fill(false))
 	})
 })
 
 describe('Un identifiant impossible : refusé par chaque règle, avant la base (ticket 048)', () => {
 	const REGLES = {
-		adminSeulement,
-		'adminOuSoiMeme(admins)': adminOuSoiMeme('admins'),
-		'adminOuSoiMeme(pros)': adminOuSoiMeme('pros'),
-		adminOuProprietaire,
-		profilPublieOuProprietaire,
-		adminOuProprietaireDuMedia,
-		adminOuRedaction,
-		adminRedactionOuPublies,
+		adminSeulement: adminOnly,
+		'adminOuSoiMeme(admins)': adminOrSelf('admins'),
+		'adminOuSoiMeme(pros)': adminOrSelf('pros'),
+		adminOuProprietaire: adminOrOwner,
+		profilPublieOuProprietaire: publishedProfileOrOwner,
+		adminOuProprietaireDuMedia: adminOrMediaOwner,
+		adminOuRedaction: adminOrEditor,
+		adminRedactionOuPublies: adminEditorOrPublished,
 	}
 
 	test('pour chaque compte, anonyme compris : refusé, sans condition à passer à la base', () => {
@@ -140,13 +138,13 @@ describe('Un identifiant impossible : refusé par chaque règle, avant la base (
 
 	test('un identifiant possible, ou aucun (une liste, une création) : la règle décide comme avant', () => {
 		for (const id of [12, '12', undefined]) {
-			expect(adminSeulement({ req: { user: admin } as PayloadRequest, id } as never)).toBe(true)
-			expect(adminOuRedaction({ req: { user: redaction } as PayloadRequest, id } as never)).toBe(true)
-			expect(adminRedactionOuPublies({ req: { user: null } as PayloadRequest, id } as never)).toEqual(SEULEMENT_PUBLIES)
-			expect(adminOuSoiMeme('pros')({ req: { user: maquilleuse } as PayloadRequest, id } as never)).toEqual({
+			expect(adminOnly({ req: { user: admin } as PayloadRequest, id } as never)).toBe(true)
+			expect(adminOrEditor({ req: { user: redaction } as PayloadRequest, id } as never)).toBe(true)
+			expect(adminEditorOrPublished({ req: { user: null } as PayloadRequest, id } as never)).toEqual(ONLY_PUBLISHED)
+			expect(adminOrSelf('pros')({ req: { user: maquilleuse } as PayloadRequest, id } as never)).toEqual({
 				id: { equals: 7 },
 			})
-			expect(adminOuProprietaire({ req: { user: maquilleuse } as PayloadRequest, id } as never)).toEqual({
+			expect(adminOrOwner({ req: { user: maquilleuse } as PayloadRequest, id } as never)).toEqual({
 				pro: { equals: 7 },
 			})
 		}
@@ -155,7 +153,7 @@ describe('Un identifiant impossible : refusé par chaque règle, avant la base (
 
 describe('U59 : le panneau de la rédaction ne montre que les articles, les talents et les médias', () => {
 	test('seul un admin voit les collections masquées', () => {
-		expect([admin, redaction, maquilleuse, null].map(user => cacheeSaufAdmin({ user }))).toEqual([
+		expect([admin, redaction, maquilleuse, null].map(user => hiddenExceptAdmin({ user }))).toEqual([
 			false,
 			true,
 			true,
@@ -165,7 +163,7 @@ describe('U59 : le panneau de la rédaction ne montre que les articles, les tale
 
 	test('les comptes, les profils, les maquilleuses, les demandes et le journal sont masqués à la rédaction', () => {
 		for (const collection of [Admins, Profiles, Pros, ContactRequests, AuthEvents])
-			expect(collection.admin?.hidden, collection.slug).toBe(cacheeSaufAdmin)
+			expect(collection.admin?.hidden, collection.slug).toBe(hiddenExceptAdmin)
 	})
 
 	test('les articles, les talents et les médias restent dans le menu de la rédaction', () => {
@@ -176,18 +174,18 @@ describe('U59 : le panneau de la rédaction ne montre que les articles, les tale
 
 describe('Les rôles', () => {
 	test('admin et redaction sont deux comptes de la collection admins', () => {
-		expect([admin, redaction, autreCollection, null].map(estAdmin)).toEqual([true, false, false, false])
-		expect([admin, redaction, autreCollection, null].map(estRedaction)).toEqual([false, true, false, false])
+		expect([admin, redaction, autreCollection, null].map(isAdmin)).toEqual([true, false, false, false])
+		expect([admin, redaction, autreCollection, null].map(isEditor)).toEqual([false, true, false, false])
 	})
 
 	test('une maquilleuse est un compte de la collection pros', () => {
-		expect([admin, redaction, maquilleuse, null].map(estMaquilleuse)).toEqual([false, false, true, false])
+		expect([admin, redaction, maquilleuse, null].map(isArtist)).toEqual([false, false, true, false])
 	})
 
 	test('un rôle inconnu n’ouvre rien', () => {
 		const inconnu = { ...admin, role: 'superadmin' } as unknown as Utilisateur
-		expect(estAdmin(inconnu)).toBe(false)
-		expect(estRedaction(inconnu)).toBe(false)
+		expect(isAdmin(inconnu)).toBe(false)
+		expect(isEditor(inconnu)).toBe(false)
 	})
 })
 
@@ -205,7 +203,7 @@ describe('La collection admins (ticket 018)', () => {
 
 	test('créer, supprimer, déverrouiller : admin seulement', () => {
 		for (const regle of [regles.create, regles.delete, regles.unlock]) {
-			expect(regle).toBe(adminSeulement)
+			expect(regle).toBe(adminOnly)
 			expect([admin, redaction, autreCollection, null].map(user => regle?.(appel(user) as never))).toEqual([
 				true,
 				false,
@@ -239,16 +237,16 @@ describe('La collection admins (ticket 018)', () => {
 	})
 
 	test('une session dure 8 heures', () => {
-		expect(DUREE_SESSION_ADMIN_S).toBe(28_800)
+		expect(ADMIN_SESSION_DURATION_S).toBe(28_800)
 		expect(Admins.auth).toMatchObject({ tokenExpiration: 28_800 })
 	})
 
 	test('les sessions d’un compte ne sortent jamais, pas même pour ce compte', () => {
 		// Found by its name: once the configuration is loaded, Payload has merged it with its own field.
 		const sessions = Admins.fields.find(champ => 'name' in champ && champ.name === 'sessions')
-		expect(sessions).toMatchObject({ type: 'array', access: { read: jamais } })
-		expect(sessionsFermees).toMatchObject({ name: 'sessions', access: { read: jamais } })
-		expect(jamais(appel(admin) as never)).toBe(false)
+		expect(sessions).toMatchObject({ type: 'array', access: { read: neverAllowed } })
+		expect(closedSessions).toMatchObject({ name: 'sessions', access: { read: neverAllowed } })
+		expect(neverAllowed(appel(admin) as never)).toBe(false)
 	})
 })
 
@@ -265,7 +263,7 @@ describe('La collection pros (ticket 019)', () => {
 	})
 
 	test('créer, supprimer, déverrouiller : admin seulement ; personne n’ouvre le back-office par ce compte', () => {
-		for (const regle of [regles.create, regles.delete, regles.unlock]) expect(regle).toBe(adminSeulement)
+		for (const regle of [regles.create, regles.delete, regles.unlock]) expect(regle).toBe(adminOnly)
 		expect([admin, redaction, maquilleuse, null].map(user => regles.admin?.(appel(user) as never))).toEqual([
 			false,
 			false,
@@ -278,18 +276,18 @@ describe('La collection pros (ticket 019)', () => {
 		expect(champ(Pros.fields, 'legacyBcrypt')).toMatchObject({
 			type: 'text',
 			hidden: true,
-			access: { read: jamais, create: jamais, update: jamais },
+			access: { read: neverAllowed, create: neverAllowed, update: neverAllowed },
 		})
 	})
 
 	test('bloqué et vérifié : admin seulement ; fournisseur d’origine et strapiId : jamais par une API', () => {
 		for (const nom of ['blocked', '_verified'])
 			expect(champ(Pros.fields, nom)?.access).toMatchObject({
-				create: champAdminSeulement,
-				update: champAdminSeulement,
+				create: fieldAdminOnly,
+				update: fieldAdminOnly,
 			})
 		for (const nom of ['legacyProvider', 'strapiId'])
-			expect(champ(Pros.fields, nom)?.access).toMatchObject({ create: jamais, update: jamais })
+			expect(champ(Pros.fields, nom)?.access).toMatchObject({ create: neverAllowed, update: neverAllowed })
 		expect(champ(Pros.fields, 'strapiId')?.unique).toBe(true)
 	})
 
@@ -311,7 +309,7 @@ describe('La collection profils (ticket 020)', () => {
 
 	test('modifier : son seul profil pour une maquilleuse, tout pour admin, rien pour les autres (U54)', () => {
 		const regle = regles.update
-		expect(regle).toBe(adminOuProprietaire)
+		expect(regle).toBe(adminOrOwner)
 		expect(regle?.(appel(maquilleuse) as never)).toEqual({ pro: { equals: 7 } })
 		expect(regle?.(appel(admin) as never)).toBe(true)
 		expect(regle?.(appel(redaction) as never)).toBe(false)
@@ -320,8 +318,8 @@ describe('La collection profils (ticket 020)', () => {
 
 	test('lire : les profils publiés pour l’anonyme et redaction (U53), plus le sien pour une maquilleuse, tout pour admin', () => {
 		const regle = regles.read
-		expect(regle).toBe(profilPublieOuProprietaire)
-		expect(PROFILS_PUBLIES).toEqual({ status: { equals: 'published' } })
+		expect(regle).toBe(publishedProfileOrOwner)
+		expect(PUBLISHED_PROFILES).toEqual({ status: { equals: 'published' } })
 		expect(regle?.(appel(null) as never)).toEqual({ status: { equals: 'published' } })
 		expect(regle?.(appel(redaction) as never)).toEqual({ status: { equals: 'published' } })
 		expect(regle?.(appel(maquilleuse) as never)).toEqual({
@@ -333,18 +331,18 @@ describe('La collection profils (ticket 020)', () => {
 	test('lire un profil par un identifiant qu’aucun document ne peut porter : refusé à tous, avant la base', () => {
 		for (const id of IDENTIFIANTS_IMPOSSIBLES)
 			for (const user of [null, redaction, maquilleuse, admin])
-				expect([id, profilPublieOuProprietaire({ req: { user } as PayloadRequest, id } as never)]).toEqual([id, false])
+				expect([id, publishedProfileOrOwner({ req: { user } as PayloadRequest, id } as never)]).toEqual([id, false])
 		// A possible identifier keeps the rule of the role.
-		expect(profilPublieOuProprietaire({ req: { user: null } as PayloadRequest, id: 12 } as never)).toEqual(
-			PROFILS_PUBLIES
+		expect(publishedProfileOrOwner({ req: { user: null } as PayloadRequest, id: 12 } as never)).toEqual(
+			PUBLISHED_PROFILES
 		)
-		expect(profilPublieOuProprietaire({ req: { user: admin } as PayloadRequest, id: '12' } as never)).toBe(true)
+		expect(publishedProfileOrOwner({ req: { user: admin } as PayloadRequest, id: '12' } as never)).toBe(true)
 	})
 
 	test('les champs réservés : statut, motif, vérifiée et SIRET, lus par admin et la propriétaire seulement', () => {
 		// Read as Payload reads a field of a document: the request, and the document itself.
 		const lire = (user: Utilisateur | null, doc: Record<string, unknown>) =>
-			champDuProfilAdminOuProprietaire({ req: { user } as PayloadRequest, doc } as never)
+			profileFieldAdminOrOwner({ req: { user } as PayloadRequest, doc } as never)
 		expect(lire(admin, { pro: 9 })).toBe(true)
 		expect(lire(maquilleuse, { pro: 7 })).toBe(true)
 		// The account populated, as a read at depth 1 gives it.
@@ -357,9 +355,8 @@ describe('La collection profils (ticket 020)', () => {
 		expect(lire(maquilleuse, {})).toBe(false)
 
 		for (const nom of ['status', 'reason', 'verified', 'verifiedAt', 'siret', 'pro', 'legacyUsername', 'strapiId'])
-			expect(champ(Profiles.fields, nom)?.access?.read).toBe(champDuProfilAdminOuProprietaire)
-		for (const nom of ['internalNote', 'score'])
-			expect(champ(Profiles.fields, nom)?.access?.read).toBe(champAdminSeulement)
+			expect(champ(Profiles.fields, nom)?.access?.read).toBe(profileFieldAdminOrOwner)
+		for (const nom of ['internalNote', 'score']) expect(champ(Profiles.fields, nom)?.access?.read).toBe(fieldAdminOnly)
 		// The badge of the search is public.
 		expect(champ(Profiles.fields, 'superArtist')?.access?.read).toBeUndefined()
 	})
@@ -383,7 +380,7 @@ describe('La collection profils (ticket 020)', () => {
 				false,
 				false,
 			])
-			expect(acces.create as unknown).toBe(champAdminSeulement)
+			expect(acces.create as unknown).toBe(fieldAdminOnly)
 		}
 		// The status itself is computed by the server from that choice (ticket 044): no API writes it.
 		const statut = champ(Profiles.fields, 'status')?.access as Record<string, (args: unknown) => boolean>
@@ -406,27 +403,27 @@ describe('La collection profils (ticket 020)', () => {
 
 	test('les coordonnées et le choix de les montrer : lus par admin et la propriétaire seulement, jamais par redaction (U59)', () => {
 		for (const nom of ['contactDetails', 'publicContact', 'consentedAt', 'consentSource'])
-			expect(champ(Profiles.fields, nom)?.access?.read).toBe(champDuProfilAdminOuProprietaire)
-		expect(
-			champDuProfilAdminOuProprietaire({ req: { user: redaction } as PayloadRequest, doc: { pro: 2 } } as never)
-		).toBe(false)
+			expect(champ(Profiles.fields, nom)?.access?.read).toBe(profileFieldAdminOrOwner)
+		expect(profileFieldAdminOrOwner({ req: { user: redaction } as PayloadRequest, doc: { pro: 2 } } as never)).toBe(
+			false
+		)
 		// The networks are public.
 		expect(champ(Profiles.fields, 'networks')?.access?.read).toBeUndefined()
 	})
 
 	test('la date et la source du consentement : jamais écrites par une API, posées par le serveur', () => {
 		for (const nom of ['consentedAt', 'consentSource'])
-			expect(champ(Profiles.fields, nom)?.access).toMatchObject({ create: jamais, update: jamais })
-		expect(Profiles.hooks?.beforeChange).toContain(consentementTrace)
+			expect(champ(Profiles.fields, nom)?.access).toMatchObject({ create: neverAllowed, update: neverAllowed })
+		expect(Profiles.hooks?.beforeChange).toContain(consentTrace)
 	})
 
 	test('créer et supprimer un profil : admin seulement ; le serveur le crée avec le compte', () => {
-		expect(regles.create).toBe(adminSeulement)
-		expect(regles.delete).toBe(adminSeulement)
+		expect(regles.create).toBe(adminOnly)
+		expect(regles.delete).toBe(adminOnly)
 		// The profile creation, then the erasing of the old-site hash after a new password (ticket 087).
-		expect(Pros.hooks?.afterChange).toContain(profilALaCreationDuCompte)
+		expect(Pros.hooks?.afterChange).toContain(profileOnAccountCreation)
 		expect(Pros.hooks?.afterChange?.length).toBe(3)
-		expect(CONTEXTE_SANS_PROFIL).toEqual({ profilAutomatique: false })
+		expect(NO_PROFILE_CONTEXT).toEqual({ profilAutomatique: false })
 	})
 
 	test('un seul compte par profil, un seul profil par compte, un slug unique', () => {
@@ -436,15 +433,15 @@ describe('La collection profils (ticket 020)', () => {
 
 	test('le compte : admin seulement ; slug, strapiId et ancien nom d’utilisateur : jamais par une API', () => {
 		expect(champ(Profiles.fields, 'pro')?.access).toMatchObject({
-			create: champAdminSeulement,
-			update: champAdminSeulement,
+			create: fieldAdminOnly,
+			update: fieldAdminOnly,
 		})
 		for (const nom of ['slug', 'strapiId', 'legacyUsername'])
-			expect(champ(Profiles.fields, nom)?.access).toMatchObject({ create: jamais, update: jamais })
+			expect(champ(Profiles.fields, nom)?.access).toMatchObject({ create: neverAllowed, update: neverAllowed })
 	})
 
 	test('un compte qui a encore un profil n’est pas supprimé', () => {
-		expect(Pros.hooks?.beforeDelete).toContain(compteSansProfilAvantSuppression)
+		expect(Pros.hooks?.beforeDelete).toContain(accountWithoutProfileBeforeDeletion)
 	})
 })
 
@@ -453,24 +450,24 @@ describe('La collection talents (ticket 022) : la rédaction écrit, le public l
 	const tousLesComptes = [admin, redaction, maquilleuse, autreCollection, null]
 
 	test('admin et redaction forment la rédaction ; une maquilleuse et un anonyme n’en sont pas', () => {
-		expect(tousLesComptes.map(estAdminOuRedaction)).toEqual([true, true, false, false, false])
+		expect(tousLesComptes.map(isAdminOrEditor)).toEqual([true, true, false, false, false])
 	})
 
 	test('lire : tout pour la rédaction, brouillons compris ; les talents publiés seulement pour les autres', () => {
-		expect(regles.read).toBe(adminRedactionOuPublies)
-		expect(SEULEMENT_PUBLIES).toEqual({ _status: { equals: 'published' } })
+		expect(regles.read).toBe(adminEditorOrPublished)
+		expect(ONLY_PUBLISHED).toEqual({ _status: { equals: 'published' } })
 		expect(tousLesComptes.map(user => regles.read?.(appel(user) as never))).toEqual([
 			true,
 			true,
-			SEULEMENT_PUBLIES,
-			SEULEMENT_PUBLIES,
-			SEULEMENT_PUBLIES,
+			ONLY_PUBLISHED,
+			ONLY_PUBLISHED,
+			ONLY_PUBLISHED,
 		])
 	})
 
 	test('créer, modifier (donc publier), supprimer, lire les versions : la rédaction seulement', () => {
 		for (const regle of [regles.create, regles.update, regles.delete, regles.readVersions]) {
-			expect(regle).toBe(adminOuRedaction)
+			expect(regle).toBe(adminOrEditor)
 			expect(tousLesComptes.map(user => regle?.(appel(user) as never))).toEqual([true, true, false, false, false])
 		}
 	})
@@ -479,9 +476,9 @@ describe('La collection talents (ticket 022) : la rédaction écrit, le public l
 		// Loading the Payload configuration (tests/unit/payload-config.test.ts, in the same process,
 		// sometimes first) gives the collection a completed copy of its rules and completes the
 		// versions in place: the rules and the drafts are compared, not the objects as written.
-		expect(Talents.access).toMatchObject(ACCES_REDACTION)
-		expect(Talents.versions).toBe(VERSIONS_REDACTION)
-		expect(VERSIONS_REDACTION.drafts).toBeTruthy()
+		expect(Talents.access).toMatchObject(EDITOR_ACCESS)
+		expect(Talents.versions).toBe(EDITOR_VERSIONS)
+		expect(EDITOR_VERSIONS.drafts).toBeTruthy()
 	})
 
 	test('un slug unique, requis pour publier ; un titre requis pour publier', () => {
@@ -490,13 +487,13 @@ describe('La collection talents (ticket 022) : la rédaction écrit, le public l
 	})
 
 	test('strapiId : écrit par l’import seulement, lu par la rédaction seulement', () => {
-		expect(champ(Talents.fields, 'strapiId')).toBe(champStrapiId as never)
-		expect(champStrapiId).toMatchObject({
+		expect(champ(Talents.fields, 'strapiId')).toBe(strapiIdFieldDef as never)
+		expect(strapiIdFieldDef).toMatchObject({
 			type: 'number',
 			unique: true,
-			access: { read: champAdminOuRedaction, create: jamais, update: jamais },
+			access: { read: fieldAdminOrEditor, create: neverAllowed, update: neverAllowed },
 		})
-		expect(tousLesComptes.map(user => champAdminOuRedaction(appel(user) as never))).toEqual([
+		expect(tousLesComptes.map(user => fieldAdminOrEditor(appel(user) as never))).toEqual([
 			true,
 			true,
 			false,
@@ -506,7 +503,7 @@ describe('La collection talents (ticket 022) : la rédaction écrit, le public l
 	})
 
 	test('la date de publication n’est écrite par aucune API', () => {
-		expect(champ(Talents.fields, 'publishedAt')?.access).toMatchObject({ create: jamais, update: jamais })
+		expect(champ(Talents.fields, 'publishedAt')?.access).toMatchObject({ create: neverAllowed, update: neverAllowed })
 	})
 })
 
@@ -515,13 +512,13 @@ describe('La collection articles (ticket 046) : les règles des talents (U59)', 
 	const tousLesComptes = [admin, redaction, maquilleuse, autreCollection, null]
 
 	test('lire : tout pour la rédaction, brouillons compris ; les articles publiés seulement pour les autres', () => {
-		expect(regles.read).toBe(adminRedactionOuPublies)
+		expect(regles.read).toBe(adminEditorOrPublished)
 		expect(tousLesComptes.map(user => regles.read?.(appel(user) as never))).toEqual([
 			true,
 			true,
-			SEULEMENT_PUBLIES,
-			SEULEMENT_PUBLIES,
-			SEULEMENT_PUBLIES,
+			ONLY_PUBLISHED,
+			ONLY_PUBLISHED,
+			ONLY_PUBLISHED,
 		])
 	})
 
@@ -533,10 +530,10 @@ describe('La collection articles (ticket 046) : les règles des talents (U59)', 
 	test('les règles et les brouillons de la rédaction, comme les talents', () => {
 		// The rules and the drafts are compared, not the objects as written: loading the Payload
 		// configuration in the same process completes them in place (see the talents).
-		expect(Articles.access).toMatchObject(ACCES_REDACTION)
-		expect(Articles.versions).toBe(VERSIONS_REDACTION)
+		expect(Articles.access).toMatchObject(EDITOR_ACCESS)
+		expect(Articles.versions).toBe(EDITOR_VERSIONS)
 		// Beside the refresh of its pages (ticket 047, tests/unit/revalidation.test.ts).
-		expect(Articles.hooks?.beforeChange).toContain(datePremierePublication)
+		expect(Articles.hooks?.beforeChange).toContain(firstPublicationDate)
 	})
 
 	test('les champs de l’ancien site : titre et slug requis pour publier, le slug sous /blog, SEO bornés à 70 et 155', () => {
@@ -557,8 +554,8 @@ describe('La collection articles (ticket 046) : les règles des talents (U59)', 
 	})
 
 	test('strapiId : écrit par l’import, lu par la rédaction ; la date de publication n’est écrite par aucune API', () => {
-		expect(champ(Articles.fields, 'strapiId')).toBe(champStrapiId as never)
-		expect(champ(Articles.fields, 'publishedAt')).toBe(champPublieLe as never)
+		expect(champ(Articles.fields, 'strapiId')).toBe(strapiIdFieldDef as never)
+		expect(champ(Articles.fields, 'publishedAt')).toBe(publishedAtFieldDef as never)
 	})
 
 	test('la galerie : des médias, plusieurs, des images de la rédaction seulement, brouillons compris', async () => {
@@ -574,15 +571,13 @@ describe('La collection articles (ticket 046) : les règles des talents (U59)', 
 		expect(offertes(admin)).toEqual({ and: [IMAGES, { owner: { exists: false } }] })
 		// `editor` only reads those (its read rule), and may not filter on the owner, a field it does not read.
 		expect(offertes(redaction)).toEqual(IMAGES)
-		expect(await lectureDesMedias({ req: { user: redaction } as PayloadRequest } as never)).toEqual(
-			MEDIAS_DE_LA_REDACTION
-		)
+		expect(await mediaRead({ req: { user: redaction } as PayloadRequest } as never)).toEqual(EDITORIAL_MEDIA)
 	})
 })
 
 describe('La galerie d’un article ne prend que des images de la rédaction (ticket 046)', () => {
 	/** Payload’s translations in the one language the site gives them (src/lib/payload-language.ts). */
-	const enFrancais = initI18n({ config: LANGUE_DE_PAYLOAD, context: 'api', language: 'fr' })
+	const enFrancais = initI18n({ config: PAYLOAD_LANGUAGE, context: 'api', language: 'fr' })
 
 	/**
 	 * The hook as Payload calls it: on the field of the gallery, with a request in French and a
@@ -719,16 +714,16 @@ describe('La collection media (ticket 043)', () => {
 				return Promise.resolve({ totalDocs: oui ? 1 : 0 })
 			},
 		}
-		const resultat = lectureDesMedias({ req: { user, payload } as unknown as PayloadRequest, id } as never)
+		const resultat = mediaRead({ req: { user, payload } as unknown as PayloadRequest, id } as never)
 		return { resultat, appels }
 	}
 
 	test('lister : refusé à l’anonyme ; ses médias pour une maquilleuse ; ceux de la rédaction pour redaction ; tout pour admin (U56)', async () => {
-		expect(regles.read).toBe(lectureDesMedias)
+		expect(regles.read).toBe(mediaRead)
 		expect(await lecture(null, undefined, true).resultat).toBe(false)
 		// The photos of the articles: those nobody owns (ticket 046).
-		expect(MEDIAS_DE_LA_REDACTION).toEqual({ owner: { exists: false } })
-		expect(await lecture(redaction, undefined, true).resultat).toEqual(MEDIAS_DE_LA_REDACTION)
+		expect(EDITORIAL_MEDIA).toEqual({ owner: { exists: false } })
+		expect(await lecture(redaction, undefined, true).resultat).toEqual(EDITORIAL_MEDIA)
 		expect(await lecture(maquilleuse, undefined, true).resultat).toEqual({ owner: { equals: 7 } })
 		expect(await lecture(admin, undefined, false).resultat).toBe(true)
 	})
@@ -741,13 +736,13 @@ describe('La collection media (ticket 043)', () => {
 				collection: 'profiles',
 				overrideAccess: true,
 				where: {
-					and: [PROFILS_PUBLIES, { or: [{ mainPicture: { equals: 12 } }, { gallery: { in: [12] } }] }],
+					and: [PUBLISHED_PROFILES, { or: [{ mainPicture: { equals: 12 } }, { gallery: { in: [12] } }] }],
 				},
 			}),
 		])
-		expect(await lecture(null, 12, false).resultat).toEqual(AUCUN_DOCUMENT)
+		expect(await lecture(null, 12, false).resultat).toEqual(NO_DOCUMENT)
 		// The newsroom also reads its own photos, attached or not.
-		expect(await lecture(redaction, 12, false).resultat).toEqual(MEDIAS_DE_LA_REDACTION)
+		expect(await lecture(redaction, 12, false).resultat).toEqual(EDITORIAL_MEDIA)
 		// Her own media, attached or not.
 		expect(await lecture(maquilleuse, 12, false).resultat).toEqual({ owner: { equals: 7 } })
 	})
@@ -755,22 +750,22 @@ describe('La collection media (ticket 043)', () => {
 	test('lire un média : lu s’il est une photo de la rédaction dans la galerie d’un article publié, introuvable sinon (ticket 046)', async () => {
 		const dUnArticle = lecture(null, 12, { articles: true })
 		// Only if it belongs to nobody: an article never opens the photo of a makeup artist.
-		expect(await dUnArticle.resultat).toEqual(MEDIAS_DE_LA_REDACTION)
+		expect(await dUnArticle.resultat).toEqual(EDITORIAL_MEDIA)
 		expect(dUnArticle.appels).toEqual([
 			expect.objectContaining({ collection: 'profiles' }),
 			expect.objectContaining({
 				collection: 'articles',
 				overrideAccess: true,
 				// The published version of the article: a draft never opens its photos.
-				where: { and: [SEULEMENT_PUBLIES, { gallery: { in: [12] } }] },
+				where: { and: [ONLY_PUBLISHED, { gallery: { in: [12] } }] },
 			}),
 		])
-		expect(await lecture(redaction, 12, { articles: true }).resultat).toEqual(MEDIAS_DE_LA_REDACTION)
+		expect(await lecture(redaction, 12, { articles: true }).resultat).toEqual(EDITORIAL_MEDIA)
 		// A makeup artist: the photos of the newsroom of a published article, and her own.
 		expect(await lecture(maquilleuse, 12, { articles: true }).resultat).toEqual({
-			or: [{ owner: { equals: 7 } }, MEDIAS_DE_LA_REDACTION],
+			or: [{ owner: { equals: 7 } }, EDITORIAL_MEDIA],
 		})
-		expect(await lecture(null, 12, { articles: false, profiles: false }).resultat).toEqual(AUCUN_DOCUMENT)
+		expect(await lecture(null, 12, { articles: false, profiles: false }).resultat).toEqual(NO_DOCUMENT)
 	})
 
 	test('lire, modifier ou supprimer un média par un identifiant qu’aucun document ne peut porter : refusé à tous, sans requête', async () => {
@@ -779,7 +774,7 @@ describe('La collection media (ticket 043)', () => {
 				const { resultat, appels } = lecture(user, id as never, true)
 				expect([id, await resultat]).toEqual([id, false])
 				expect(appels).toEqual([])
-				expect([id, adminOuProprietaireDuMedia({ req: { user } as PayloadRequest, id } as never)]).toEqual([id, false])
+				expect([id, adminOrMediaOwner({ req: { user } as PayloadRequest, id } as never)]).toEqual([id, false])
 			}
 	})
 
@@ -798,7 +793,7 @@ describe('La collection media (ticket 043)', () => {
 					},
 				},
 			}) as unknown as PayloadRequest
-		const gestionnaire = versLAdressePublique(base)
+		const gestionnaire = toPublicUrl(base)
 		const servir = async (...args: Parameters<typeof gestionnaire>) => (await gestionnaire(...args)) as Response
 		const params = { collection: 'media', filename: 'photo.png' }
 
@@ -822,32 +817,35 @@ describe('La collection media (ticket 043)', () => {
 	})
 
 	test('envoyer : une maquilleuse, admin ou redaction ; modifier et supprimer : sa propriétaire, admin, ou redaction pour les photos de la rédaction', () => {
-		expect(regles.create).toBe(adminRedactionOuMaquilleuse)
-		expect(
-			[admin, redaction, maquilleuse, null].map(user => adminRedactionOuMaquilleuse(appel(user) as never))
-		).toEqual([true, true, true, false])
+		expect(regles.create).toBe(adminEditorOrArtist)
+		expect([admin, redaction, maquilleuse, null].map(user => adminEditorOrArtist(appel(user) as never))).toEqual([
+			true,
+			true,
+			true,
+			false,
+		])
 		for (const regle of [regles.update, regles.delete]) {
-			expect(regle).toBe(adminOuProprietaireDuMedia)
+			expect(regle).toBe(adminOrMediaOwner)
 			expect(regle?.(appel(maquilleuse) as never)).toEqual({ owner: { equals: 7 } })
 			expect(regle?.(appel(admin) as never)).toBe(true)
-			expect(regle?.(appel(redaction) as never)).toEqual(MEDIAS_DE_LA_REDACTION)
+			expect(regle?.(appel(redaction) as never)).toEqual(EDITORIAL_MEDIA)
 			expect(regle?.(appel(null) as never)).toBe(false)
 		}
 	})
 
 	test('le propriétaire : posé par le serveur à l’envoi, lu par lui et admin, écrit par admin seulement', () => {
 		const envoi = (user: Utilisateur | null, operation: string) =>
-			proprietaireALEnvoi({ data: { owner: 99, alt: 'x' }, operation, req: { user } } as never)
+			ownerOnUpload({ data: { owner: 99, alt: 'x' }, operation, req: { user } } as never)
 		expect(envoi(maquilleuse, 'create')).toEqual({ owner: 7, alt: 'x' })
 		expect(envoi(admin, 'create')).toEqual({ owner: 99, alt: 'x' })
 		expect(envoi(maquilleuse, 'update')).toEqual({ owner: 99, alt: 'x' })
 		expect(champ(Media.fields, 'owner')?.access).toMatchObject({
-			read: champDuMediaAdminOuProprietaire,
-			create: champAdminSeulement,
-			update: champAdminSeulement,
+			read: mediaFieldAdminOrOwner,
+			create: fieldAdminOnly,
+			update: fieldAdminOnly,
 		})
 		const lire = (user: Utilisateur | null, doc: Record<string, unknown>) =>
-			champDuMediaAdminOuProprietaire({ req: { user } as PayloadRequest, doc } as never)
+			mediaFieldAdminOrOwner({ req: { user } as PayloadRequest, doc } as never)
 		expect([lire(maquilleuse, { owner: 7 }), lire(maquilleuse, { owner: 8 }), lire(null, { owner: 7 })]).toEqual([
 			true,
 			false,
@@ -856,16 +854,16 @@ describe('La collection media (ticket 043)', () => {
 	})
 
 	test('l’objet d’un média : ses coordonnées sont écrites par le serveur, jamais par une requête', () => {
-		const data = Object.fromEntries([...COORDONNEES_DU_FICHIER.map(cle => [cle, 'envoyé']), ['alt', 'gardé']])
-		const args = coordonneesParLeServeur({ args: { data }, operation: 'update', req: { user: maquilleuse } } as never)
+		const data = Object.fromEntries([...FILE_METADATA_FIELDS.map(cle => [cle, 'envoyé']), ['alt', 'gardé']])
+		const args = fileMetadataSetByServer({ args: { data }, operation: 'update', req: { user: maquilleuse } } as never)
 		expect((args as { data: unknown }).data).toEqual({ alt: 'gardé' })
 		// The server, without a session (the import), writes them.
 		const serveur = { data: { prefix: '', filename: 'a.jpg' } }
-		expect(coordonneesParLeServeur({ args: serveur, operation: 'create', req: {} } as never) as unknown).toEqual(
+		expect(fileMetadataSetByServer({ args: serveur, operation: 'create', req: {} } as never) as unknown).toEqual(
 			serveur
 		)
 
-		const config = champsDuStockageFermes({
+		const config = closedStorageFields({
 			collections: [
 				{
 					slug: 'media',
@@ -877,23 +875,23 @@ describe('La collection media (ticket 043)', () => {
 			],
 		} as never)
 		for (const field of (config as { collections: { fields: { access?: unknown }[] }[] }).collections[0]?.fields ?? [])
-			expect(field.access).toEqual({ create: jamais, update: jamais })
+			expect(field.access).toEqual({ create: neverAllowed, update: neverAllowed })
 	})
 
 	test('sans stockage, aucune photo n’est reçue', () => {
 		expect(() =>
-			aucunEnvoiSansStockage({ args: {}, operation: 'create', req: { file: { name: 'a.png' } } } as never)
+			noUploadWithoutStorage({ args: {}, operation: 'create', req: { file: { name: 'a.png' } } } as never)
 		).toThrow('Le stockage des photos n’est pas configuré')
 		const args = { data: { alt: 'x' } }
-		expect(aucunEnvoiSansStockage({ args, operation: 'update', req: {} } as never) as unknown).toBe(args)
+		expect(noUploadWithoutStorage({ args, operation: 'update', req: {} } as never) as unknown).toBe(args)
 	})
 
 	test('le strapiId et les formats de l’ancien site : lus par admin seulement, jamais écrits par une API', () => {
 		for (const nom of ['strapiId', 'strapiFormats'])
 			expect(champ(Media.fields, nom)?.access).toMatchObject({
-				read: champAdminSeulement,
-				create: jamais,
-				update: jamais,
+				read: fieldAdminOnly,
+				create: neverAllowed,
+				update: neverAllowed,
 			})
 	})
 })
@@ -996,11 +994,11 @@ describe('Les photos d’un profil (ticket 043)', () => {
 
 describe('Les règles réutilisables', () => {
 	test('adminOuSoiMeme compare la collection avant le numéro', () => {
-		const surAdmins = adminOuSoiMeme('admins')
+		const surAdmins = adminOrSelf('admins')
 		// Same number as the admin, other collection: nothing.
 		expect(surAdmins(appel({ ...autreCollection, id: 2 } as unknown as Utilisateur) as never)).toBe(false)
 		expect(surAdmins(appel(redaction) as never)).toEqual({ id: { equals: 2 } })
-		const surPros = adminOuSoiMeme('pros')
+		const surPros = adminOrSelf('pros')
 		expect(surPros(appel({ ...redaction, id: 7 } as unknown as Utilisateur) as never)).toBe(false)
 	})
 })

@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
-import { estAdmin } from '@/lib/access'
+import { isAdmin } from '@/lib/access'
 import { lireLeDelta } from '@/lib/bascule/export-delta'
 import { repondreAuDelta } from '@/lib/bascule/reponse-delta'
 import { creerCompte } from '../outils/fabrique-comptes'
@@ -194,7 +194,7 @@ describe('l’export du delta, sur le banc', () => {
 					basculeLe: undefined,
 					estAdmin: async () => {
 						const { user } = await payload.auth({ headers: new Headers(enTetes) })
-						return user ? estAdmin(user) : 'anonyme'
+						return user ? isAdmin(user) : 'anonyme'
 					},
 					lire: debut => lireLeDelta(payload, debut),
 					journal: ligne => lignes.push(ligne),

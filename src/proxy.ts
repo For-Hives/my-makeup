@@ -48,40 +48,43 @@ import { type CheckedFamily, urlToCheck } from '@/lib/urls/unknown-page'
  * - Every other response gets the robots directive (ticket 070). The paths of the account and of the
  *   search answer noindex everywhere.
  */
-function proxyDuSite(requete: NextRequest) {
+function siteProxy(requete: NextRequest) {
 	const { pathname, search } = requete.nextUrl
-	if (pathname.startsWith('/api/') && !decodable(pathname)) {
+	if (pathname.startsWith('/api/') && !canDecode(pathname)) {
 		// Under the API Next would answer a 500 and an error-level line: a client error is a 400 in JSON.
-		const refus = NextResponse.json({ errors: [{ message: 'Adresse illisible.' }] }, { status: 400 })
-		refus.headers.set('X-Robots-Tag', 'noindex')
-		return refus
+		const refusal = NextResponse.json({ errors: [{ message: 'Adresse illisible.' }] }, { status: 400 })
+		refusal.headers.set('X-Robots-Tag', 'noindex')
+		return refusal
 	}
-	if (cheminIllisible(pathname)) {
+	if (unreadablePath(pathname)) {
 		// An address Next cannot decode answers its own error page: the 404 of the site is what a visitor expects.
-		const introuvable = NextResponse.rewrite(new URL(CHEMIN_INTROUVABLE, requete.url ?? requete.nextUrl.href))
-		introuvable.headers.set('X-Robots-Tag', 'noindex')
-		return introuvable
+		const notFound = NextResponse.rewrite(new URL(NOT_FOUND_PATH, requete.url ?? requete.nextUrl.href))
+		notFound.headers.set('X-Robots-Tag', 'noindex')
+		return notFound
 	}
 	// The path as the visitor wrote it: `nextUrl.pathname` may already have lost a repeated slash.
-	const forme = shapeRedirect(cheminEcrit(requete.url ?? requete.nextUrl.href) ?? pathname)
-	if (forme) {
+	const shape = shapeRedirect(writtenPath(requete.url ?? requete.nextUrl.href) ?? pathname)
+	if (shape) {
 		// A new URL on the host of the request: cloning `nextUrl` would keep the final slash it had.
-		const redirectionDeForme = NextResponse.redirect(
-			new URL(`${forme.chemin}${search}`, requete.url ?? requete.nextUrl.href),
-			forme.status
+		const shapeRedirect = NextResponse.redirect(
+			new URL(`${shape.chemin}${search}`, requete.url ?? requete.nextUrl.href),
+			shape.status
 		)
-		const consigneDeForme = robotsForPath(pathname)
-		if (consigneDeForme) redirectionDeForme.headers.set('X-Robots-Tag', consigneDeForme)
-		return redirectionDeForme
+		const shapeDirective = robotsForPath(pathname)
+		if (shapeDirective) shapeRedirect.headers.set('X-Robots-Tag', shapeDirective)
+		return shapeRedirect
 	}
-	const freinee = rateLimitSearch({ chemin: pathname, methode: requete.method, entetes: requete.headers })
-	if (freinee) {
-		const reponseFreinee = new NextResponse(freinee.corps, { status: freinee.status, headers: freinee.entetes })
-		const consigneFreinee = robotsForPath(pathname)
-		if (consigneFreinee) reponseFreinee.headers.set('X-Robots-Tag', consigneFreinee)
-		return reponseFreinee
+	const throttled = rateLimitSearch({ chemin: pathname, methode: requete.method, entetes: requete.headers })
+	if (throttled) {
+		const throttledResponse = new NextResponse(throttled.corps, {
+			status: throttled.status,
+			headers: throttled.entetes,
+		})
+		const throttledDirective = robotsForPath(pathname)
+		if (throttledDirective) throttledResponse.headers.set('X-Robots-Tag', throttledDirective)
+		return throttledResponse
 	}
-	const nettoyage = cleanupPlan({
+	const cleanup = cleanupPlan({
 		chemin: pathname,
 		noms: requete.cookies.getAll().map(cookie => cookie.name),
 		prechargement: requete.headers.has('next-router-prefetch') || requete.headers.get('purpose') === 'prefetch',
@@ -89,9 +92,9 @@ function proxyDuSite(requete: NextRequest) {
 		basculeLe: process.env[CUTOVER_VARIABLE],
 	})
 	// The header is the proxy's alone: whatever a visitor sends under that name is dropped.
-	const entetes = new Headers(requete.headers)
-	entetes.delete(MESSAGE_HEADER)
-	if (nettoyage.afficherLeMessage) entetes.set(MESSAGE_HEADER, '1')
+	const headers = new Headers(requete.headers)
+	headers.delete(MESSAGE_HEADER)
+	if (cleanup.afficherLeMessage) headers.set(MESSAGE_HEADER, '1')
 	if (
 		requete.method === 'POST' &&
 		pathname === SIGN_UP_PATH &&
@@ -101,12 +104,12 @@ function proxyDuSite(requete: NextRequest) {
 		// itself, so the request is sent to the route that does, before the action runs.
 		return NextResponse.rewrite(new URL(REFUSAL_PATH, requete.url ?? requete.nextUrl.href))
 	}
-	const avecLeNettoyage = (reponse: NextResponse): NextResponse => {
-		if (nettoyage.aEffacer.length > 0 || nettoyage.retenirLeMessage || nettoyage.oublierLeMessage)
+	const withCleanup = (reponse: NextResponse): NextResponse => {
+		if (cleanup.aEffacer.length > 0 || cleanup.retenirLeMessage || cleanup.oublierLeMessage)
 			// A page that sets a cookie is for this visitor alone (ticket 223).
 			reponse.headers.set('Cache-Control', 'private, no-store')
-		for (const nom of nettoyage.aEffacer) reponse.cookies.set(clearingCookie(nom))
-		if (nettoyage.retenirLeMessage)
+		for (const name of cleanup.aEffacer) reponse.cookies.set(clearingCookie(name))
+		if (cleanup.retenirLeMessage)
 			reponse.cookies.set({
 				name: MESSAGE_COOKIE,
 				value: '1',
@@ -116,7 +119,7 @@ function proxyDuSite(requete: NextRequest) {
 				sameSite: 'lax',
 				secure: process.env.NODE_ENV === 'production',
 			})
-		if (nettoyage.oublierLeMessage)
+		if (cleanup.oublierLeMessage)
 			reponse.cookies.set({
 				name: MESSAGE_COOKIE,
 				value: '',
@@ -129,70 +132,70 @@ function proxyDuSite(requete: NextRequest) {
 			})
 		return reponse
 	}
-	const lien = linkPlan(pathname, requete.nextUrl.searchParams)
-	if (lien) {
-		const cible = requete.nextUrl.clone()
-		cible.pathname = lien.aller
-		cible.search = ''
+	const link = linkPlan(pathname, requete.nextUrl.searchParams)
+	if (link) {
+		const target = requete.nextUrl.clone()
+		target.pathname = link.aller
+		target.search = ''
 		// 303: whatever the method, the next request is a GET of the bare page.
-		const redirection = NextResponse.redirect(cible, 303)
+		const redirection = NextResponse.redirect(target, 303)
 		redirection.cookies.set({
 			name: PASSWORD_RESET_COOKIE,
-			value: lien.cookie.valeur,
-			maxAge: lien.cookie.maxAgeS,
-			path: lien.aller,
+			value: link.cookie.valeur,
+			maxAge: link.cookie.maxAgeS,
+			path: link.aller,
 			httpOnly: true,
 			sameSite: 'lax',
 			secure: process.env.NODE_ENV === 'production',
 		})
 		redirection.headers.set('Cache-Control', 'private, no-store')
 		redirection.headers.set('Referrer-Policy', 'no-referrer')
-		const consigneDuLien = robotsForPath(pathname)
-		if (consigneDuLien) redirection.headers.set('X-Robots-Tag', consigneDuLien)
-		return avecLeNettoyage(redirection)
+		const linkDirective = robotsForPath(pathname)
+		if (linkDirective) redirection.headers.set('X-Robots-Tag', linkDirective)
+		return withCleanup(redirection)
 	}
-	const vers = dashboardDecision(
+	const to = dashboardDecision(
 		pathname,
 		search,
 		requete.cookies.get(SESSION_COOKIE)?.value,
 		Math.floor(Date.now() / 1000),
 		requete.method
 	)
-	if (vers) {
+	if (to) {
 		// Built from the URL of the request, so the host is the one the visitor used (the Host header the proxy forwards).
-		const cible = requete.nextUrl.clone()
-		const [chemin = '', recherche = ''] = vers.split('?')
-		cible.pathname = chemin
-		cible.search = recherche ? `?${recherche}` : ''
-		const redirection = NextResponse.redirect(cible, 307)
-		const consigneRedirection = robotsForPath(pathname)
-		if (consigneRedirection) redirection.headers.set('X-Robots-Tag', consigneRedirection)
-		return avecLeNettoyage(redirection)
+		const target = requete.nextUrl.clone()
+		const [path = '', searchQuery = ''] = to.split('?')
+		target.pathname = path
+		target.search = searchQuery ? `?${searchQuery}` : ''
+		const redirection = NextResponse.redirect(target, 307)
+		const redirectDirective = robotsForPath(pathname)
+		if (redirectDirective) redirection.headers.set('X-Robots-Tag', redirectDirective)
+		return withCleanup(redirection)
 	}
 	if (requete.method === 'GET' && isPrivatePage(pathname) && comesFromOtherSite(requete.headers)) {
 		// She comes from another site with a session cookie that Payload would ignore (ticket 223): the
 		// relay page restarts the navigation from this site, where the cookie counts.
-		const relais = new NextResponse(relayPage(`${pathname}${search}`), { status: 200, headers: RELAY_HEADERS })
-		const consigneDuRelais = robotsForPath(pathname)
-		if (consigneDuRelais) relais.headers.set('X-Robots-Tag', consigneDuRelais)
-		return avecLeNettoyage(relais)
+		const relay = new NextResponse(relayPage(`${pathname}${search}`), { status: 200, headers: RELAY_HEADERS })
+		const relayDirective = robotsForPath(pathname)
+		if (relayDirective) relay.headers.set('X-Robots-Tag', relayDirective)
+		return withCleanup(relay)
 	}
-	const reponse = avecLeNettoyage(NextResponse.next({ request: { headers: entetes } }))
-	const consigne = robotsForPath(pathname)
-	if (consigne) reponse.headers.set('X-Robots-Tag', consigne)
-	return reponse
+	const response = withCleanup(NextResponse.next({ request: { headers: headers } }))
+	const robotsDirective = robotsForPath(pathname)
+	if (robotsDirective) response.headers.set('X-Robots-Tag', robotsDirective)
+	return response
 }
 
 /** Where an address that does not decode is sent: no page lives there, so Next answers its 404 page. */
-const CHEMIN_INTROUVABLE = '/unknown-page'
+const NOT_FOUND_PATH = '/unknown-page'
 
 /** True when the path has a percent sequence that does not decode, outside the API and Next's own files. */
-function cheminIllisible(chemin: string): boolean {
+function unreadablePath(chemin: string): boolean {
 	if (chemin.startsWith('/api/') || chemin.startsWith('/_next/')) return false
-	return !decodable(chemin)
+	return !canDecode(chemin)
 }
 
-function decodable(chemin: string): boolean {
+function canDecode(chemin: string): boolean {
 	try {
 		decodeURIComponent(chemin)
 		return true
@@ -202,41 +205,41 @@ function decodable(chemin: string): boolean {
 }
 
 /** The path of a request URL, with its repeated slashes: `new URL` keeps them, but not a base that swallows them. */
-function cheminEcrit(url: string): string | undefined {
-	const debut = url.indexOf('://')
-	if (debut === -1) return undefined
-	const reste = url.slice(url.indexOf('/', debut + 3))
-	return reste.split(/[?#]/, 1)[0]
+function writtenPath(url: string): string | undefined {
+	const start = url.indexOf('://')
+	if (start === -1) return undefined
+	const rest = url.slice(url.indexOf('/', start + 3))
+	return rest.split(/[?#]/, 1)[0]
 }
 
 /**
  * Next calls this and awaits what it returns. The type says `NextResponse`, as every path but one answers at
  * once; a contact POST answers a promise of one (the mailbox is read from the body), which only Next
- * and `proxyDuContact` rely on.
+ * and `contactProxy` rely on.
  */
 export function proxy(requete: NextRequest): NextResponse
 export function proxy(requete: NextRequest): NextResponse | Promise<NextResponse> {
-	const reponse = proxyDuSite(requete)
+	const response = siteProxy(requete)
 	if (requete.method !== 'POST' || requete.nextUrl.pathname !== CONTACT_PATH) {
 		// An answer of its own (redirect, rewrite, brake, relay page) comes first; only a plain pass-through is checked.
-		if (!passeTelQuel(reponse)) return reponse
+		if (!passesAsIs(response)) return response
 		const a = urlToCheck(requete.nextUrl.pathname, requete.method)
-		return a ? proxyDeLAdresseInconnue(requete, reponse, a) : reponse
+		return a ? unknownAddressProxy(requete, response, a) : response
 	}
 	// A redirect of form (repeated or final slash) comes first, as for every other path.
-	if (reponse.headers.has('location')) return reponse
-	return proxyDuContact(requete, reponse)
+	if (response.headers.has('location')) return response
+	return contactProxy(requete, response)
 }
 
 /** True when the response lets the request through to the page: no status of its own. */
-function passeTelQuel(reponse: NextResponse): boolean {
+function passesAsIs(reponse: NextResponse): boolean {
 	return reponse.status === 200 && reponse.headers.has('x-middleware-next')
 }
 
-type ExistenceDUnePage = (famille: CheckedFamily, segment: string) => Promise<boolean>
+type PageExistence = (famille: CheckedFamily, segment: string) => Promise<boolean>
 
 /** The real lookup, loaded on first use: the proxy of every other path never loads Payload. */
-const existenceReelle: ExistenceDUnePage = async (famille, segment) =>
+const realExistence: PageExistence = async (famille, segment) =>
 	(await import('@/services/public/exists')).pageExists(famille, segment)
 
 /**
@@ -244,29 +247,29 @@ const existenceReelle: ExistenceDUnePage = async (famille, segment) =>
  * page's own reads, and what exists is remembered for a minute (src/lib/urls/unknown-page.ts).
  * Any failure (a database that does not answer) leaves the page to answer, as before.
  */
-export async function proxyDeLAdresseInconnue(
+export async function unknownAddressProxy(
 	requete: NextRequest,
 	reponse: NextResponse,
 	{ famille, segment }: { famille: CheckedFamily; segment: string },
-	existe: ExistenceDUnePage = existenceReelle
+	existe: PageExistence = realExistence
 ): Promise<NextResponse> {
 	try {
 		if (await existe(famille, segment)) return reponse
 	} catch {
 		return reponse
 	}
-	const introuvable = NextResponse.rewrite(new URL(CHEMIN_INTROUVABLE, requete.url ?? requete.nextUrl.href))
-	introuvable.headers.set('X-Robots-Tag', 'noindex')
+	const notFound = NextResponse.rewrite(new URL(NOT_FOUND_PATH, requete.url ?? requete.nextUrl.href))
+	notFound.headers.set('X-Robots-Tag', 'noindex')
 	// What the first response set (the cookies of the cleaning and their `Cache-Control`) leaves with this one.
-	for (const cookie of reponse.cookies.getAll()) introuvable.cookies.set(cookie)
+	for (const cookie of reponse.cookies.getAll()) notFound.cookies.set(cookie)
 	const cache = reponse.headers.get('cache-control')
-	if (cache) introuvable.headers.set('Cache-Control', cache)
-	return introuvable
+	if (cache) notFound.headers.set('Cache-Control', cache)
+	return notFound
 }
 
 /** The contact POST: past a brake (ticket 161), the request is rewritten to the route that answers 429 (same device as the sign-up, ticket 084). */
-export async function proxyDuContact(requete: NextRequest, reponse = proxyDuSite(requete)): Promise<NextResponse> {
-	const attente = await secondsBeforeThisRequestMessage(requete, ipClient(requete.headers))
-	if (attente === undefined) return reponse
+export async function contactProxy(requete: NextRequest, reponse = siteProxy(requete)): Promise<NextResponse> {
+	const pending = await secondsBeforeThisRequestMessage(requete, ipClient(requete.headers))
+	if (pending === undefined) return reponse
 	return NextResponse.rewrite(new URL(CONTACT_THROTTLED_PATH, requete.url ?? requete.nextUrl.href))
 }

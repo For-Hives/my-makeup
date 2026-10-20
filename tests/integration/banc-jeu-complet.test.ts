@@ -3,8 +3,8 @@ import { mkdtemp, readFile, rm, stat } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import type { Payload } from 'payload'
-import { adresseDuProfil } from '../../src/demo-data/profiles'
-import { ARTICLES_DU_JEU, TALENTS_DU_JEU } from '../../src/demo-data/editorial'
+import { DEMO_ARTICLES, DEMO_TALENTS } from '../../src/demo-data/editorial'
+import { profileUrl } from '../../src/demo-data/profiles'
 import { CONTENU_DU_BANC, poserLeJeuDuBanc } from '../fixtures/jeu-du-banc'
 import { RACINE } from '../outils/banc'
 import { ecrireLaSession } from '../outils/banc-session'
@@ -57,8 +57,8 @@ describe('Le jeu complet du banc', () => {
 		expect(brouillons.totalDocs).toBe(CONTENU_DU_BANC.brouillons)
 		expect(await nombreDe('admins')).toBe(2)
 		expect(bilan.jeu.profils.crees).toHaveLength(12)
-		expect(bilan.jeu.redaction.talentsCrees).toEqual(TALENTS_DU_JEU.map(({ slug }) => slug))
-		expect(bilan.jeu.redaction.articlesCrees).toEqual(ARTICLES_DU_JEU.map(({ slug }) => slug))
+		expect(bilan.jeu.redaction.talentsCrees).toEqual(DEMO_TALENTS.map(({ slug }) => slug))
+		expect(bilan.jeu.redaction.articlesCrees).toEqual(DEMO_ARTICLES.map(({ slug }) => slug))
 	}, 60_000)
 
 	test('chargé une seconde fois, il ne crée rien : ni doublon, ni second brouillon', async () => {
@@ -81,12 +81,12 @@ describe('Le jeu complet du banc', () => {
 		const slugs = lus.docs.map(({ slug }) => slug).sort()
 
 		expect(slugs).toEqual(
-			ARTICLES_DU_JEU.filter(({ statut }) => statut === 'published')
+			DEMO_ARTICLES.filter(({ statut }) => statut === 'published')
 				.map(({ slug }) => slug)
 				.sort()
 		)
 		const talents = await payload.find({ collection: 'talents', overrideAccess: false, user: null, depth: 0 })
-		expect(talents.totalDocs).toBe(TALENTS_DU_JEU.length)
+		expect(talents.totalDocs).toBe(DEMO_TALENTS.length)
 	})
 })
 
@@ -163,7 +163,7 @@ describe('Les commandes du banc', () => {
 			expect(reconnu.user?.email).toBe('jeu-admin@example.test')
 			const reconnue = await payload.auth({ headers: await enTetesDuFichier(maquilleuse.entetes) })
 			expect(reconnue.user?.collection).toBe('pros')
-			expect(reconnue.user?.email).toBe(adresseDuProfil('reference'))
+			expect(reconnue.user?.email).toBe(profileUrl('reference'))
 			// Readable by its owner only.
 			expect((await stat(admin.entetes)).mode & 0o077).toBe(0)
 			expect((await stat(admin.etatDeNavigateur)).mode & 0o077).toBe(0)

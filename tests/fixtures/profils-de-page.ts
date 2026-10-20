@@ -12,8 +12,8 @@
  * Loaded alone (a lock between the processes of the run) and for good: a second load creates nothing.
  */
 
-import { lirePhotoDuJeu, poserLeProfil, profilPresent } from '../../src/demo-data/loading'
-import { PROFILS_DU_JEU, type ProfilDuJeu } from '../../src/demo-data/profiles'
+import { placeProfile, profilePresent, readDemoPhoto } from '../../src/demo-data/loading'
+import { DEMO_PROFILES, type DemoProfile } from '../../src/demo-data/profiles'
 import { payloadDeTest } from '../outils/payload-test'
 import { sousVerrou } from '../outils/verrou'
 
@@ -38,7 +38,7 @@ function sansAncienNom<T extends { legacyUsername?: unknown }>(profil: T): T {
 	return reste as T
 }
 
-function variante(type: ProfilDuJeu, prefixe = 'Page'): ProfilDuJeu {
+function variante(type: DemoProfile, prefixe = 'Page'): DemoProfile {
 	const minuscule = prefixe.toLowerCase()
 	const nom = NOMS[type.cle]
 	if (!nom) throw new Error(`Pas de nom de page pour le profil type « ${type.cle} ».`)
@@ -59,34 +59,34 @@ function variante(type: ProfilDuJeu, prefixe = 'Page'): ProfilDuJeu {
 }
 
 /** The profile types of the page, by the key of the type of the set they come from. */
-export const PROFILS_DE_PAGE: ReadonlyMap<string, ProfilDuJeu> = new Map(
-	PROFILS_DU_JEU.map(type => [type.cle, variante(type)])
+export const PROFILS_DE_PAGE: ReadonlyMap<string, DemoProfile> = new Map(
+	DEMO_PROFILES.map(type => [type.cle, variante(type)])
 )
 
 /**
  * The same twelve types under another first name, for a spec that cannot share its profiles with the page
  * spec: each one takes its own away at its end, and the two run side by side (one per screen size).
  */
-export const profilsDePageSousLePrefixe = (prefixe: string): ReadonlyMap<string, ProfilDuJeu> =>
-	new Map(PROFILS_DU_JEU.map(type => [type.cle, variante(type, prefixe)]))
+export const profilsDePageSousLePrefixe = (prefixe: string): ReadonlyMap<string, DemoProfile> =>
+	new Map(DEMO_PROFILES.map(type => [type.cle, variante(type, prefixe)]))
 
 /** A profile type as it is in the bench. */
 export interface ProfilDePage {
 	id: number
 	slug: string
 	/** The type it was made from. */
-	type: ProfilDuJeu
+	type: DemoProfile
 }
 
 /** Loads the profiles that are not in the bench yet, and says where each one is. */
 export async function poserLesProfilsDePage(
-	types: ReadonlyMap<string, ProfilDuJeu> = PROFILS_DE_PAGE
+	types: ReadonlyMap<string, DemoProfile> = PROFILS_DE_PAGE
 ): Promise<ReadonlyMap<string, ProfilDePage>> {
 	return sousVerrou('profils-de-page', async () => {
 		const payload = await payloadDeTest()
 		const posees = new Map<string, ProfilDePage>()
 		for (const [cle, type] of types) {
-			const profil = (await profilPresent(payload, type)) ?? (await poserLeProfil(payload, type, lirePhotoDuJeu, false))
+			const profil = (await profilePresent(payload, type)) ?? (await placeProfile(payload, type, readDemoPhoto, false))
 			posees.set(cle, { id: profil.profil, slug: profil.slug, type })
 		}
 		return posees

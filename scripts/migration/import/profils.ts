@@ -42,7 +42,7 @@
  *   no date, no source. The report counts them, never shows them.
  */
 
-import { estMontantDePrix, parsePrice, prixMinimal } from '../../../src/lib/price'
+import { isPriceAmount, minimumPrice, parsePrice } from '../../../src/lib/price'
 import { isFullyEmpty, type ProfileFields, type ProfileNetworks } from '../../../src/lib/profile/completeness'
 import { validateContactEmail, validatePhone } from '../../../src/lib/profile/contact-details'
 import { type ProfileDocument, profileState, statusAfter } from '../../../src/lib/profile/state'
@@ -407,12 +407,12 @@ function prixDesPrestations(prestations: unknown): PrixEcrit[] {
 
 /**
  * Whether the source gives a priced offer to a profile and the target holds none: the smallest
- * price of a card counts the offers only, never their options (`prixMinimal`, ticket 032). So an
+ * price of a card counts the offers only, never their options (`minimumPrice`, ticket 032). So an
  * option with an amount does not hide an offer that lost its own.
  */
 export function offreChiffreePerdue(prixDuSource: readonly (string | null)[], ecrites: readonly PrixEcrit[]): boolean {
 	const chiffreeALaSource = prixDuSource.some(price => parsePrice(price).priceFrom !== null)
-	return chiffreeALaSource && prixMinimal(ecrites) === null
+	return chiffreeALaSource && minimumPrice(ecrites) === null
 }
 
 export interface ProfilsAttendus {
@@ -547,7 +547,7 @@ export function profilsAttendus(
 			else if ((priceText?.trim() ?? '') === '') prix.sansTexte += 1
 			else prix.textesLibres += 1
 		}
-		if (ecrits.some(({ priceFrom }) => estMontantDePrix(priceFrom)))
+		if (ecrits.some(({ priceFrom }) => isPriceAmount(priceFrom)))
 			ecarts.push({ champ: 'serviceOffers', reference: REFERENCES.prixNumerique })
 		const prixDesOffres = sections.prestations.map(({ price }) => price)
 		if (prixDesOffres.some(price => parsePrice(price).priceFrom !== null)) prix.profilsAvecOffreChiffree += 1

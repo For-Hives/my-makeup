@@ -11,7 +11,7 @@
 
 import type { Profile } from '@/payload-types'
 import { rayonKm } from '../format-zone'
-import { formatPrix } from '../price'
+import { formatPrice } from '../price'
 import { text } from '../profile/display-name'
 import { monthYear, period } from '../profile/public-view'
 import { AVAILABLE_TEXT, isAvailable, OUT_OF_SEARCH_TEXT, UNAVAILABLE_TEXT } from './availability'
@@ -194,7 +194,7 @@ export function profileCards(profil: DashboardProfile): Card[] {
 			titre: 'Prestations',
 			lignes: listRows(
 				(profil.serviceOffers ?? []).map(({ name, priceText, priceFrom }) =>
-					gather([name, formatPrix({ priceText, priceFrom }).replace(/\n/g, ', ')], ' - ')
+					gather([name, formatPrice({ priceText, priceFrom }).replace(/\n/g, ', ')], ' - ')
 				)
 			),
 		},

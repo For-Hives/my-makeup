@@ -1,26 +1,26 @@
 import type { CollectionBeforeChangeHook, Field, FieldAccess } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
-import { champDuProfilAdminOuProprietaire, jamais } from '../../lib/access'
+import { neverAllowed, profileFieldAdminOrOwner } from '../../lib/access'
 import { stateAfterSave } from '../../lib/profile/state'
 
 /** Written by the server only, at every save: what any request sends on it is ignored. */
-const CALCULE: { create: FieldAccess; update: FieldAccess } = { create: jamais, update: jamais }
+const COMPUTED: { create: FieldAccess; update: FieldAccess } = { create: neverAllowed, update: neverAllowed }
 
 /** A flag of the state, read by everyone who reads the profile. */
-const drapeau = (name: string, label: string, description: string): Field => ({
+const flag = (name: string, label: string, description: string): Field => ({
 	name,
 	label,
 	type: 'checkbox',
-	access: CALCULE,
+	access: COMPUTED,
 	admin: { readOnly: true, position: 'sidebar', description },
 })
 
 /** The date a flag took its current value, read by the owner and an admin only. */
-const depuis = (name: string, label: string): Field => ({
+const since = (name: string, label: string): Field => ({
 	name,
 	label,
 	type: 'date',
-	access: { read: champDuProfilAdminOuProprietaire, ...CALCULE },
+	access: { read: profileFieldAdminOrOwner, ...COMPUTED },
 	admin: {
 		readOnly: true,
 		position: 'sidebar',
@@ -38,24 +38,24 @@ const depuis = (name: string, label: string): Field => ({
  * reader does not see already (the phone and the email count only when shown), and the public
  * pages filter on them (noindex, sitemap, search). The dates are read by the owner and an admin.
  */
-export const CHAMPS_DE_L_ETAT: Field[] = [
+export const STATE_FIELDS: Field[] = [
 	{
 		name: 'completeness',
 		label: 'Complétude',
 		type: 'number',
-		access: CALCULE,
+		access: COMPUTED,
 		admin: { readOnly: true, position: 'sidebar', description: 'Critères remplis, sur 13. Calculée par le serveur.' },
 	},
-	drapeau('active', 'Actif', 'Photo principale, ville et spécialité. Calculé par le serveur.'),
-	depuis('activeSince', 'Actif ou non depuis le'),
-	drapeau('publishable', 'Publiable', 'Les six conditions du profil publiable. Calculé par le serveur.'),
-	depuis('publishableSince', 'Publiable ou non depuis le'),
-	drapeau(
+	flag('active', 'Actif', 'Photo principale, ville et spécialité. Calculé par le serveur.'),
+	since('activeSince', 'Actif ou non depuis le'),
+	flag('publishable', 'Publiable', 'Les six conditions du profil publiable. Calculé par le serveur.'),
+	since('publishableSince', 'Publiable ou non depuis le'),
+	flag(
 		'fullyEmpty',
 		'Entièrement vide',
 		'Aucune des six conditions : le profil reste en brouillon. Calculé par le serveur.'
 	),
-	depuis('fullyEmptySince', 'Entièrement vide ou non depuis le'),
+	since('fullyEmptySince', 'Entièrement vide ou non depuis le'),
 ]
 
 /**
@@ -63,7 +63,7 @@ export const CHAMPS_DE_L_ETAT: Field[] = [
  * src/lib/profile/state.ts, from what the save holds once the access rules have run (`data` holds
  * every field: Payload fills what a request leaves out with the stored value).
  */
-export const etatAvantEcriture: CollectionBeforeChangeHook = ({ data, operation, originalDoc }) => ({
+export const stateBeforeWrite: CollectionBeforeChangeHook = ({ data, operation, originalDoc }) => ({
 	...data,
 	...stateAfterSave({
 		avant: operation === 'update' ? originalDoc : undefined,

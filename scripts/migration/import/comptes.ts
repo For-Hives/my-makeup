@@ -13,7 +13,7 @@
  */
 
 import { randomBytes } from 'node:crypto'
-import { CONTEXTE_SANS_PROFIL } from '../../../src/collections/Profiles'
+import { NO_PROFILE_CONTEXT } from '../../../src/collections/Profiles'
 import { type ApplicationDesDecisions, appliquerLesDecisions, type Decisions } from './decisions'
 import { REFERENCES } from './ecarts'
 import type { Adaptateur, Attendu, Ecart } from './moteur'
@@ -61,7 +61,7 @@ export const ADAPTATEUR_COMPTES: Adaptateur = {
 		updatedAt: 'date',
 	},
 	// No confirmation email, and no automatic empty profile: the profile comes from the source.
-	options: () => ({ disableVerificationEmail: true, contexte: CONTEXTE_SANS_PROFIL }),
+	options: () => ({ disableVerificationEmail: true, contexte: NO_PROFILE_CONTEXT }),
 }
 
 /**

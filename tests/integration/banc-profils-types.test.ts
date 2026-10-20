@@ -1,9 +1,9 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'bun:test'
 import { createHash } from 'node:crypto'
 import sharp from 'sharp'
-import { type BilanDesProfils, lirePhotoDuJeu, nomDuFichier, poserLesProfilsDuJeu } from '@/demo-data/loading'
-import { type PhotoDuJeu, POIDS_MAX_D_UNE_PHOTO, PROFILS_DU_JEU, type ProfilDuJeu } from '@/demo-data/profiles'
-import { cleDuMedia, PREFIXE_DES_ENVOIS } from '@/lib/media'
+import { fileName, type ProfilesSummary, placeDemoProfiles, readDemoPhoto } from '@/demo-data/loading'
+import { DEMO_PROFILES, type DemoPhoto, type DemoProfile, PHOTO_MAX_WEIGHT } from '@/demo-data/profiles'
+import { mediaKey, UPLOAD_PREFIX } from '@/lib/media'
 import { profileState } from '@/lib/profile/state'
 import type { Media, Pro, Profile } from '@/payload-types'
 import { compterLesDocuments, compterLesLignes, payloadDeTest, viderLaBase } from '../outils/payload-test'
@@ -15,10 +15,10 @@ import { lireUnObjet, listerLesObjets, viderLeStockage } from '../outils/s3'
  * and the same content at every load. The set without the bench: tests/unit/jeu-fictif.test.ts.
  */
 
-const CLES = PROFILS_DU_JEU.map(({ cle }) => cle)
+const CLES = DEMO_PROFILES.map(({ cle }) => cle)
 
 /** How many photos the set sends: one media each. */
-const PHOTOS_ENVOYEES = PROFILS_DU_JEU.reduce(
+const PHOTOS_ENVOYEES = DEMO_PROFILES.reduce(
 	(total, { photos }) => total + (photos.principale ? 1 : 0) + photos.galerie.length,
 	0
 )
@@ -31,7 +31,7 @@ const remettreAZero = () => Promise.all([viderLaBase(), viderLeStockage()])
 const empreinte = (octets: Uint8Array) => createHash('sha256').update(octets).digest('hex')
 
 /** The profile of a type, as the database holds it, read with every right. */
-async function profilDu(bilan: BilanDesProfils, type: ProfilDuJeu): Promise<Profile> {
+async function profilDu(bilan: ProfilesSummary, type: DemoProfile): Promise<Profile> {
 	const pose = bilan.profils.find(({ cle }) => cle === type.cle)
 	if (!pose) throw new Error(`le profil type « ${type.cle} » manque au bilan`)
 	const payload = await payloadDeTest()
@@ -65,17 +65,17 @@ function sansIdentite(valeur: unknown): unknown {
  * load to the next by nature (identifiers, dates of the server): each account, its profile, and
  * each photo with the bytes of its object.
  */
-async function contenuDuJeu(bilan: BilanDesProfils) {
+async function contenuDuJeu(bilan: ProfilesSummary) {
 	const payload = await payloadDeTest()
 	const medias = new Map((await lesMedias()).map(media => [media.id, media]))
 	const photo = async (id: number | null | undefined) => {
 		const media = id === null || id === undefined ? undefined : medias.get(id)
 		if (!media?.filename) return null
-		const objet = await lireUnObjet(cleDuMedia(media.prefix, media.filename))
+		const objet = await lireUnObjet(mediaKey(media.prefix, media.filename))
 		return { ...(sansIdentite(media) as object), owner: undefined, objet: objet ? empreinte(objet.octets) : null }
 	}
 	return Promise.all(
-		PROFILS_DU_JEU.map(async type => {
+		DEMO_PROFILES.map(async type => {
 			const profil = await profilDu(bilan, type)
 			const compte: Pro = await payload.findByID({ collection: 'pros', id: Number(idDe(profil.pro)), depth: 0 })
 			return {
@@ -94,11 +94,11 @@ beforeAll(async () => {
 })
 
 describe('Le jeu du banc : les 12 profils types', () => {
-	let bilan: BilanDesProfils
+	let bilan: ProfilesSummary
 
 	beforeAll(async () => {
 		await remettreAZero()
-		bilan = await poserLesProfilsDuJeu(await payloadDeTest())
+		bilan = await placeDemoProfiles(await payloadDeTest())
 	}, CHARGEMENT_MS)
 
 	afterAll(remettreAZero)
@@ -111,7 +111,7 @@ describe('Le jeu du banc : les 12 profils types', () => {
 		expect(bilan.presents).toEqual([])
 		expect((await payload.count({ collection: 'profiles' })).totalDocs).toBe(12)
 		expect((await payload.count({ collection: 'pros' })).totalDocs).toBe(12)
-		for (const type of PROFILS_DU_JEU) {
+		for (const type of DEMO_PROFILES) {
 			const profil = await profilDu(bilan, type)
 			const compte = await payload.findByID({ collection: 'pros', id: Number(idDe(profil.pro)), depth: 0 })
 			expect({ cle: type.cle, email: compte.email, nom: compte.name, confirme: compte._verified }).toEqual({
@@ -130,7 +130,7 @@ describe('Le jeu du banc : les 12 profils types', () => {
 	})
 
 	test('états calculés conformes aux fixtures : la référence publiable, le profil vide ni actif ni publiable', async () => {
-		for (const type of PROFILS_DU_JEU) {
+		for (const type of DEMO_PROFILES) {
 			const profil = await profilDu(bilan, type)
 			const { slug: _slug, ...attendu } = type.attendu
 			const stocke = {
@@ -152,12 +152,12 @@ describe('Le jeu du banc : les 12 profils types', () => {
 			}).toEqual({ completeness, active, publishable, fullyEmpty })
 		}
 
-		const reference = await profilDu(bilan, PROFILS_DU_JEU[0] as ProfilDuJeu)
+		const reference = await profilDu(bilan, DEMO_PROFILES[0] as DemoProfile)
 		expect({ publishable: reference.publishable, status: reference.status }).toEqual({
 			publishable: true,
 			status: 'published',
 		})
-		const vide = await profilDu(bilan, PROFILS_DU_JEU[5] as ProfilDuJeu)
+		const vide = await profilDu(bilan, DEMO_PROFILES[5] as DemoProfile)
 		expect({ active: vide.active, publishable: vide.publishable, status: vide.status }).toEqual({
 			active: false,
 			publishable: false,
@@ -167,7 +167,7 @@ describe('Le jeu du banc : les 12 profils types', () => {
 
 	test('ce que chaque type porte est enregistré tel quel : contact de la référence, disponibilité, ancien nom, masque', async () => {
 		const parCle = new Map(
-			await Promise.all(PROFILS_DU_JEU.map(async type => [type.cle, await profilDu(bilan, type)] as const))
+			await Promise.all(DEMO_PROFILES.map(async type => [type.cle, await profilDu(bilan, type)] as const))
 		)
 		const lire = (cle: string) => {
 			const profil = parCle.get(cle)
@@ -195,7 +195,7 @@ describe('Le jeu du banc : les 12 profils types', () => {
 		expect(lire('vide')).toMatchObject({ chosenStatus: 'automatic', firstName: null, gallery: [] })
 		// Every text of the longest profile went through the bounds of the server, and kept its length.
 		const longue = lire('textes-maximaux')
-		const fixture = PROFILS_DU_JEU[11]?.profil
+		const fixture = DEMO_PROFILES[11]?.profil
 		expect([longue.firstName, longue.description, longue.contactDetails?.email]).toEqual([
 			fixture?.firstName,
 			fixture?.description,
@@ -207,7 +207,7 @@ describe('Le jeu du banc : les 12 profils types', () => {
 	test('photos fictives de moins de 30 Ko, chacune servie par son profil ; 0 objet orphelin', async () => {
 		const medias = await lesMedias()
 		const objets = await listerLesObjets()
-		const profils = await Promise.all(PROFILS_DU_JEU.map(type => profilDu(bilan, type)))
+		const profils = await Promise.all(DEMO_PROFILES.map(type => profilDu(bilan, type)))
 		const servies = profils.flatMap(profil =>
 			[profil.mainPicture, ...(profil.gallery ?? [])]
 				.filter(photo => photo !== null && photo !== undefined)
@@ -219,10 +219,10 @@ describe('Le jeu du banc : les 12 profils types', () => {
 		expect(
 			medias
 				.flatMap(media => [
-					{ cle: cleDuMedia(media.prefix, media.filename ?? ''), taille: media.filesize },
+					{ cle: mediaKey(media.prefix, media.filename ?? ''), taille: media.filesize },
 					// The derived sizes (ticket 133), next to the original.
 					...Object.values(media.sizes ?? {}).flatMap(taille =>
-						taille?.filename ? [{ cle: cleDuMedia(media.prefix, taille.filename), taille: taille.filesize }] : []
+						taille?.filename ? [{ cle: mediaKey(media.prefix, taille.filename), taille: taille.filesize }] : []
 					),
 				])
 				// The order of the storage: byte by byte.
@@ -235,17 +235,15 @@ describe('Le jeu du banc : les 12 profils types', () => {
 		// The photos of the set weigh less than 30 KB; Payload re-encodes a WebP it stores (it reads
 		// the type as possibly animated), so the stored object may weigh a little more, never twice as much.
 		for (const { cle, taille } of objets) {
-			expect([cle, taille < 2 * POIDS_MAX_D_UNE_PHOTO]).toEqual([cle, true])
-			expect(cle).toStartWith(`${PREFIXE_DES_ENVOIS}/jeu-`)
+			expect([cle, taille < 2 * PHOTO_MAX_WEIGHT]).toEqual([cle, true])
+			expect(cle).toStartWith(`${UPLOAD_PREFIX}/jeu-`)
 		}
 		// Each object is the photo of the set, byte for byte, under the name the set gives it.
-		for (const type of PROFILS_DU_JEU) {
-			const profil = profils[PROFILS_DU_JEU.indexOf(type)]
+		for (const type of DEMO_PROFILES) {
+			const profil = profils[DEMO_PROFILES.indexOf(type)]
 			const attendues = [
-				...(type.photos.principale
-					? [{ photo: type.photos.principale, nom: nomDuFichier(type.cle, 'principale') }]
-					: []),
-				...type.photos.galerie.map((photo, rang) => ({ photo, nom: nomDuFichier(type.cle, rang + 1) })),
+				...(type.photos.principale ? [{ photo: type.photos.principale, nom: fileName(type.cle, 'principale') }] : []),
+				...type.photos.galerie.map((photo, rang) => ({ photo, nom: fileName(type.cle, rang + 1) })),
 			]
 			const montrees = [profil?.mainPicture, ...(profil?.gallery ?? [])].filter(
 				photo => photo !== null && photo !== undefined
@@ -254,9 +252,9 @@ describe('Le jeu du banc : les 12 profils types', () => {
 			for (const [rang, { photo, nom }] of attendues.entries()) {
 				const media = medias.find(({ id }) => id === idDe(montrees[rang]))
 				expect({ nom: media?.filename, type: media?.mimeType }).toEqual({ nom, type: 'image/webp' })
-				const objet = await lireUnObjet(cleDuMedia(media?.prefix, nom))
-				const source = await lirePhotoDuJeu(photo)
-				expect(source.length).toBeLessThan(POIDS_MAX_D_UNE_PHOTO)
+				const objet = await lireUnObjet(mediaKey(media?.prefix, nom))
+				const source = await readDemoPhoto(photo)
+				expect(source.length).toBeLessThan(PHOTO_MAX_WEIGHT)
 				// The same picture: Payload re-encodes a WebP, so the bytes are not the same, the dimensions are.
 				const [stocke, deLOrigine] = [
 					await sharp(objet?.octets ?? new Uint8Array()).metadata(),
@@ -271,9 +269,9 @@ describe('Le jeu du banc : les 12 profils types', () => {
 		}
 		// Each photo says whose it is, in French.
 		const altDe = (nom: string) => medias.find(({ filename }) => filename === nom)?.alt
-		expect(altDe(nomDuFichier('reference', 'principale'))).toBe('Portrait d’Inès Morel')
-		expect(altDe(nomDuFichier('reference', 2))).toBe('Réalisation d’Inès Morel, photo 2')
-		expect(altDe(nomDuFichier('ville-voisine', 'principale'))).toBe('Portrait de Léa Garnier')
+		expect(altDe(fileName('reference', 'principale'))).toBe('Portrait d’Inès Morel')
+		expect(altDe(fileName('reference', 2))).toBe('Réalisation d’Inès Morel, photo 2')
+		expect(altDe(fileName('ville-voisine', 'principale'))).toBe('Portrait de Léa Garnier')
 	})
 })
 
@@ -285,12 +283,12 @@ describe('Rejouer le jeu', () => {
 		async () => {
 			await remettreAZero()
 			const payload = await payloadDeTest()
-			const premier = await poserLesProfilsDuJeu(payload)
+			const premier = await placeDemoProfiles(payload)
 			const contenu = await contenuDuJeu(premier)
 			const lignes = await compterLesLignes()
 			const objets = await listerLesObjets()
 
-			const second = await poserLesProfilsDuJeu(payload)
+			const second = await placeDemoProfiles(payload)
 
 			expect(second.crees).toEqual([])
 			expect(second.presents).toEqual(CLES)
@@ -299,7 +297,7 @@ describe('Rejouer le jeu', () => {
 			expect(await listerLesObjets()).toEqual(objets)
 
 			await remettreAZero()
-			const apresRemiseAZero = await poserLesProfilsDuJeu(payload)
+			const apresRemiseAZero = await placeDemoProfiles(payload)
 
 			expect(apresRemiseAZero.crees).toEqual(CLES)
 			// On an empty bench: the same identifiers, the same slugs…
@@ -317,25 +315,24 @@ describe('Rejouer le jeu', () => {
 			const payload = await payloadDeTest()
 			const panne = new Error('photo illisible')
 			// The reference shows the six photos: it fails at the last one, after five of its photos are sent.
-			const lirePhoto = (photo: PhotoDuJeu) =>
-				photo === 'photo-6.webp' ? Promise.reject(panne) : lirePhotoDuJeu(photo)
+			const lirePhoto = (photo: DemoPhoto) => (photo === 'photo-6.webp' ? Promise.reject(panne) : readDemoPhoto(photo))
 
-			await expect(poserLesProfilsDuJeu(payload, { lirePhoto })).rejects.toBe(panne)
+			await expect(placeDemoProfiles(payload, { lirePhoto })).rejects.toBe(panne)
 
 			// Its account, its profile and its media went with the transaction…
 			expect(await compterLesDocuments()).toMatchObject({ pros: 0, profiles: 0, media: 0 })
 			// …but the objects already sent are still in the storage.
 			const envoyes = await listerLesObjets()
 			// Each photo with its derived size (ticket 133).
-			const nomsEnvoyes = ([1, 2, 3, 4, 5, 'principale'] as const).map(place => nomDuFichier('reference', place))
+			const nomsEnvoyes = ([1, 2, 3, 4, 5, 'principale'] as const).map(place => fileName('reference', place))
 			expect(envoyes.map(({ cle }) => cle)).toEqual(
 				nomsEnvoyes
 					.flatMap(nom => [nom, nom.replace(/\.webp$/, '-245x245.webp')])
-					.map(nom => `${PREFIXE_DES_ENVOIS}/${nom}`)
+					.map(nom => `${UPLOAD_PREFIX}/${nom}`)
 					.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))
 			)
 
-			const bilan = await poserLesProfilsDuJeu(payload)
+			const bilan = await placeDemoProfiles(payload)
 
 			// The next load writes the same keys again: every object has its media, and nothing more.
 			expect(bilan.crees).toEqual(CLES)
@@ -344,9 +341,9 @@ describe('Rejouer le jeu', () => {
 			expect((await listerLesObjets()).map(({ cle }) => cle)).toEqual(
 				medias
 					.flatMap(media => [
-						cleDuMedia(media.prefix, media.filename ?? ''),
+						mediaKey(media.prefix, media.filename ?? ''),
 						...Object.values(media.sizes ?? {}).flatMap(taille =>
-							taille?.filename ? [cleDuMedia(media.prefix, taille.filename)] : []
+							taille?.filename ? [mediaKey(media.prefix, taille.filename)] : []
 						),
 					])
 					.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))

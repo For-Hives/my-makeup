@@ -10,14 +10,8 @@ import {
 } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { estUnImport } from '../lib/contexte-import'
-import {
-	clesDesObjets,
-	deplacerVersLaCorbeille,
-	type ObjetsDUnMedia,
-	PanneDuStockage,
-	type StockageDesObjets,
-} from '../lib/trash'
 import { idOf, namedPhotos } from '../lib/profile/photos'
+import { type MediaObjects, moveToTrash, type ObjectStorage, objectKeys, StorageOutage } from '../lib/trash'
 
 /**
  * A photo that no longer serves goes to the bin, never to a direct deletion (ticket 045; plan 01
@@ -45,38 +39,38 @@ import { idOf, namedPhotos } from '../lib/profile/photos'
  * That holds for an operation on one document only. Payload runs an operation on several documents
  * at once (by a `where`, as the list view of the admin panel deletes) document by document, keeps
  * the error of one of them in its answer, and commits the writes of all the others, and of that
- * one. So `media` and `profils` refuse it (`unALaFois`), by every API, outside the import; the
+ * one. So `media` and `profils` refuse it (`oneAtATime`), by every API, outside the import; the
  * admin panel no longer offers it.
  *
  * The storage plugin deletes the objects itself, after a deletion or a replacement: its own
- * deletions are taken away (`sansSuppressionDuGreffon`). `avecLaCorbeille` wraps the plugin, and
+ * deletions are taken away (`withoutPluginDeletion`). `withTrash` wraps the plugin, and
  * src/payload.config.ts uses nothing else.
  */
 
 /** The answer to a request whose photos the storage could not move: nothing was changed. */
-export const MESSAGE_PANNE_DU_STOCKAGE =
+export const STORAGE_OUTAGE_MESSAGE =
 	'Le stockage des photos ne répond pas : rien n’a été modifié. Réessaie dans quelques minutes.'
 
 /** The answer to a deletion or a change of several media, or of several profiles, at once. */
-export const MESSAGE_UN_A_LA_FOIS =
+export const ONE_AT_A_TIME_MESSAGE =
 	'Les photos et les profils se suppriment et se modifient un par un, depuis leur fiche : rien n’a été modifié.'
 
-/** The objects of one request that wait for the bin while a caller holds it (`corbeilleRetenue`). */
-interface Attente {
+/** The objects of one request that wait for the bin while a caller holds it (`heldTrash`). */
+interface Pending {
 	cles: string[]
 	/** How many callers hold the bin: the objects move when the last one lets go. */
 	retenue: number
-	stockage: StockageDesObjets | undefined
+	stockage: ObjectStorage | undefined
 }
 
 /** Keyed by the request itself: every nested operation of the Local API gets the same object. */
-const ATTENTES = new WeakMap<PayloadRequest, Attente>()
+const PENDING = new WeakMap<PayloadRequest, Pending>()
 
 /** The name of an error, and the status the storage gave: never its message, which may name a key. */
-function resumeDeLErreur(erreur: unknown): string {
+function errorSummary(erreur: unknown): string {
 	const { name, $metadata } = (erreur ?? {}) as { name?: unknown; $metadata?: { httpStatusCode?: unknown } }
-	const statut = typeof $metadata?.httpStatusCode === 'number' ? ` (${$metadata.httpStatusCode})` : ''
-	return `${typeof name === 'string' ? name : 'Error'}${statut}`
+	const status = typeof $metadata?.httpStatusCode === 'number' ? ` (${$metadata.httpStatusCode})` : ''
+	return `${typeof name === 'string' ? name : 'Error'}${status}`
 }
 
 /**
@@ -84,7 +78,7 @@ function resumeDeLErreur(erreur: unknown): string {
  * to move: a log line says so. When the storage fails, the error the request gets is a 503 in
  * French; the log says how many objects were put back, never which.
  */
-async function deplacer(req: PayloadRequest, stockage: StockageDesObjets | undefined, cles: string[], sujet: string) {
+async function moveObjects(req: PayloadRequest, stockage: ObjectStorage | undefined, cles: string[], sujet: string) {
 	if (cles.length === 0) return
 	const { logger } = req.payload
 	if (!stockage) {
@@ -92,33 +86,33 @@ async function deplacer(req: PayloadRequest, stockage: StockageDesObjets | undef
 		return
 	}
 	try {
-		const { deplacees, absentes } = await deplacerVersLaCorbeille(stockage, cles)
+		const { deplacees, absentes } = await moveToTrash(stockage, cles)
 		logger.info(
 			`[corbeille] ${sujet}: ${deplacees.length} object(s) moved to the bin${absentes.length > 0 ? `, ${absentes.length} already missing` : ''}`
 		)
-	} catch (erreur) {
-		const panne = erreur instanceof PanneDuStockage ? erreur : undefined
+	} catch (error) {
+		const outage = error instanceof StorageOutage ? error : undefined
 		logger.error(
-			`[corbeille] ${sujet}: the storage failed (${resumeDeLErreur(panne?.cause ?? erreur)}); ${panne?.remises.length ?? 0} object(s) put back, ${panne?.nonRemises.length ?? 0} left in the bin`
+			`[corbeille] ${sujet}: the storage failed (${errorSummary(outage?.cause ?? error)}); ${outage?.remises.length ?? 0} object(s) put back, ${outage?.nonRemises.length ?? 0} left in the bin`
 		)
-		throw new APIError(MESSAGE_PANNE_DU_STOCKAGE, 503)
+		throw new APIError(STORAGE_OUTAGE_MESSAGE, 503)
 	}
 }
 
 /** Sends these objects to the bin: now, or when the caller that holds the bin lets go. */
-async function versLaCorbeille(
+async function toTrash(
 	req: PayloadRequest,
-	stockage: StockageDesObjets | undefined,
+	stockage: ObjectStorage | undefined,
 	cles: string[],
 	sujet: string
 ): Promise<void> {
-	const attente = ATTENTES.get(req)
-	if (attente && attente.retenue > 0) {
-		attente.cles.push(...cles)
-		attente.stockage ??= stockage
+	const pending = PENDING.get(req)
+	if (pending && pending.retenue > 0) {
+		pending.cles.push(...cles)
+		pending.stockage ??= stockage
 		return
 	}
-	await deplacer(req, stockage, cles, sujet)
+	await moveObjects(req, stockage, cles, sujet)
 }
 
 /**
@@ -129,28 +123,28 @@ async function versLaCorbeille(
  *
  * The holds of one request run one inside the other, never side by side: a failed `travail` drops
  * every move asked since it began. Payload would run them side by side for the documents of one
- * operation on several at once, which `unALaFois` refuses on `media` and `profils`.
+ * operation on several at once, which `oneAtATime` refuses on `media` and `profils`.
  */
-export async function corbeilleRetenue<T>(req: PayloadRequest, sujet: string, travail: () => Promise<T>): Promise<T> {
-	const attente = ATTENTES.get(req) ?? { cles: [], retenue: 0, stockage: undefined }
-	ATTENTES.set(req, attente)
-	const debut = attente.cles.length
-	attente.retenue += 1
-	let resultat: T
+export async function heldTrash<T>(req: PayloadRequest, sujet: string, travail: () => Promise<T>): Promise<T> {
+	const pending = PENDING.get(req) ?? { cles: [], retenue: 0, stockage: undefined }
+	PENDING.set(req, pending)
+	const start = pending.cles.length
+	pending.retenue += 1
+	let result: T
 	try {
-		resultat = await travail()
-	} catch (erreur) {
-		attente.cles.length = debut
-		throw erreur
+		result = await travail()
+	} catch (error) {
+		pending.cles.length = start
+		throw error
 	} finally {
-		attente.retenue -= 1
+		pending.retenue -= 1
 	}
-	if (attente.retenue === 0) await deplacer(req, attente.stockage, attente.cles.splice(0), sujet)
-	return resultat
+	if (pending.retenue === 0) await moveObjects(req, pending.stockage, pending.cles.splice(0), sujet)
+	return result
 }
 
 /** The photos of a profile, main photo first, by identifier: the profile as Payload hands it, populated or not. */
-const photosDuProfil = (profil: { mainPicture?: unknown; gallery?: unknown } | undefined): (number | string)[] => [
+const profilePhotos = (profil: { mainPicture?: unknown; gallery?: unknown } | undefined): (number | string)[] => [
 	...namedPhotos(profil?.mainPicture),
 	...namedPhotos(profil?.gallery),
 ]
@@ -161,26 +155,26 @@ const photosDuProfil = (profil: { mainPicture?: unknown; gallery?: unknown } | u
  * draft, a version an admin may restore). Read in the transaction of the request, without access
  * control.
  */
-async function encoreReferencees(req: PayloadRequest, ids: (number | string)[]): Promise<Set<string>> {
-	const lecture = { depth: 0, overrideAccess: true, pagination: false, req } as const
-	const [profils, articles, versions] = await Promise.all([
+async function stillReferenced(req: PayloadRequest, ids: (number | string)[]): Promise<Set<string>> {
+	const readOptions = { depth: 0, overrideAccess: true, pagination: false, req } as const
+	const [profiles, articles, versions] = await Promise.all([
 		req.payload.find({
-			...lecture,
+			...readOptions,
 			collection: 'profiles',
 			select: { mainPicture: true, gallery: true },
 			where: { or: [{ mainPicture: { in: ids } }, { gallery: { in: ids } }] },
 		}),
 		req.payload.find({
-			...lecture,
+			...readOptions,
 			collection: 'articles',
 			select: { gallery: true },
 			where: { gallery: { in: ids } },
 		}),
-		req.payload.findVersions({ ...lecture, collection: 'articles', where: { 'version.gallery': { in: ids } } }),
+		req.payload.findVersions({ ...readOptions, collection: 'articles', where: { 'version.gallery': { in: ids } } }),
 	])
 	return new Set(
 		[
-			...profils.docs.flatMap(photosDuProfil),
+			...profiles.docs.flatMap(profilePhotos),
 			...articles.docs.flatMap(({ gallery }) => namedPhotos(gallery)),
 			...versions.docs.flatMap(({ version }) => namedPhotos(version?.gallery)),
 		].map(String)
@@ -193,9 +187,9 @@ async function encoreReferencees(req: PayloadRequest, ids: (number | string)[]):
  * left alone. Without a storage, no media is deleted: its object could not move, and the record is
  * all that would still say where it is.
  */
-async function menage(
+async function cleanup(
 	req: PayloadRequest,
-	stockage: StockageDesObjets | undefined,
+	stockage: ObjectStorage | undefined,
 	candidates: (number | string)[],
 	sujet: string
 ): Promise<void> {
@@ -207,9 +201,9 @@ async function menage(
 		)
 		return
 	}
-	const referencees = await encoreReferencees(req, ids)
-	const inutiles = ids.filter(id => !referencees.has(String(id)))
-	if (inutiles.length === 0) return
+	const referenced = await stillReferenced(req, ids)
+	const unused = ids.filter(id => !referenced.has(String(id)))
+	if (unused.length === 0) return
 	const { docs } = await req.payload.find({
 		collection: 'media',
 		depth: 0,
@@ -217,9 +211,9 @@ async function menage(
 		pagination: false,
 		req,
 		select: { filename: true },
-		where: { id: { in: inutiles } },
+		where: { id: { in: unused } },
 	})
-	await corbeilleRetenue(req, sujet, async () => {
+	await heldTrash(req, sujet, async () => {
 		// One by one: a deletion that fails throws, where a deletion of several would only list it.
 		for (const { id } of docs)
 			await req.payload.delete({ collection: 'media', id, depth: 0, overrideAccess: true, req })
@@ -227,24 +221,24 @@ async function menage(
 }
 
 /** `afterChange` of `profils`: the photos a save takes out of the profile go through the clean-up. */
-export const menageApresEnregistrement =
-	(stockage: StockageDesObjets | undefined): CollectionAfterChangeHook =>
+export const cleanupAfterSave =
+	(stockage: ObjectStorage | undefined): CollectionAfterChangeHook =>
 	async ({ context, doc, operation, previousDoc, req }) => {
 		if (operation !== 'update' || estUnImport(context)) return doc
-		const gardees = new Set(photosDuProfil(doc).map(String))
-		const retirees = photosDuProfil(previousDoc).filter(id => !gardees.has(String(id)))
-		await menage(req, stockage, retirees, `profile ${doc.id}`)
+		const kept = new Set(profilePhotos(doc).map(String))
+		const removed = profilePhotos(previousDoc).filter(id => !kept.has(String(id)))
+		await cleanup(req, stockage, removed, `profile ${doc.id}`)
 		return doc
 	}
 
 /** `afterDelete` of `profils`: its photos, and every photo of its account, go through the clean-up. */
-export const menageApresSuppression =
-	(stockage: StockageDesObjets | undefined): CollectionAfterDeleteHook =>
+export const cleanupAfterDeletion =
+	(stockage: ObjectStorage | undefined): CollectionAfterDeleteHook =>
 	async ({ context, doc, id, req }) => {
 		if (estUnImport(context)) return doc
-		const compte = idOf((doc as { pro?: unknown }).pro)
-		const duCompte =
-			compte === undefined || !stockage
+		const account = idOf((doc as { pro?: unknown }).pro)
+		const accountPhotos =
+			account === undefined || !stockage
 				? []
 				: (
 						await req.payload.find({
@@ -254,10 +248,10 @@ export const menageApresSuppression =
 							pagination: false,
 							req,
 							select: { owner: true },
-							where: { owner: { equals: compte } },
+							where: { owner: { equals: account } },
 						})
 					).docs.map(media => media.id)
-		await menage(req, stockage, [...photosDuProfil(doc), ...duCompte], `profile ${id}`)
+		await cleanup(req, stockage, [...profilePhotos(doc), ...accountPhotos], `profile ${id}`)
 		return doc
 	}
 
@@ -266,8 +260,8 @@ export const menageApresSuppression =
  * clean-up, before the database clears its owner. An account with a profile has them taken by the
  * deletion of the profile; this is for an account without one (ticket 167: no orphan photo).
  */
-export const menageAvantSuppressionDuCompte =
-	(stockage: StockageDesObjets | undefined): CollectionBeforeDeleteHook =>
+export const cleanupBeforeAccountDeletion =
+	(stockage: ObjectStorage | undefined): CollectionBeforeDeleteHook =>
 	async ({ context, id, req }) => {
 		if (estUnImport(context) || !stockage) return
 		const { docs } = await req.payload.find({
@@ -279,7 +273,7 @@ export const menageAvantSuppressionDuCompte =
 			select: {},
 			where: { owner: { equals: id } },
 		})
-		await menage(
+		await cleanup(
 			req,
 			stockage,
 			docs.map(media => media.id),
@@ -294,18 +288,18 @@ export const menageAvantSuppressionDuCompte =
  * Payload would commit it even when the storage fails for one of its documents. The import, which
  * moves nothing, writes as it likes.
  */
-export const unALaFois: CollectionBeforeOperationHook = ({ args, context, operation }) => {
+export const oneAtATime: CollectionBeforeOperationHook = ({ args, context, operation }) => {
 	if (estUnImport(context) || (operation !== 'delete' && operation !== 'update')) return args
 	if ((args as { id?: unknown }).id !== undefined) return args
-	throw new APIError(MESSAGE_UN_A_LA_FOIS, 403, null, true)
+	throw new APIError(ONE_AT_A_TIME_MESSAGE, 403, null, true)
 }
 
 /** `afterDelete` of `media`: its objects go to the bin. */
-export const aLaSuppression =
-	(stockage: StockageDesObjets | undefined): CollectionAfterDeleteHook =>
+export const onDeletion =
+	(stockage: ObjectStorage | undefined): CollectionAfterDeleteHook =>
 	async ({ context, doc, id, req }) => {
 		if (estUnImport(context)) return doc
-		await versLaCorbeille(req, stockage, clesDesObjets(doc as ObjetsDUnMedia), `media ${id}`)
+		await toTrash(req, stockage, objectKeys(doc as MediaObjects), `media ${id}`)
 		return doc
 	}
 
@@ -314,20 +308,20 @@ export const aLaSuppression =
  * bin. It comes after the hook of the storage plugin, once the new file is written. An internal
  * write of the plugin (`skipCloudStorage`) moves nothing: it does not change the file.
  */
-export const auRemplacement =
-	(stockage: StockageDesObjets | undefined): CollectionAfterChangeHook =>
+export const onReplacement =
+	(stockage: ObjectStorage | undefined): CollectionAfterChangeHook =>
 	async ({ context, doc, operation, previousDoc, req }) => {
 		if (operation !== 'update' || estUnImport(context) || context.skipCloudStorage) return doc
-		const gardees = new Set(clesDesObjets(doc as ObjetsDUnMedia))
-		const anciennes = clesDesObjets(previousDoc as ObjetsDUnMedia).filter(cle => !gardees.has(cle))
-		await versLaCorbeille(req, stockage, anciennes, `media ${doc.id}`)
+		const kept = new Set(objectKeys(doc as MediaObjects))
+		const previousKeys = objectKeys(previousDoc as MediaObjects).filter(cle => !kept.has(cle))
+		await toTrash(req, stockage, previousKeys, `media ${doc.id}`)
 		return doc
 	}
 
-type Crochets = NonNullable<CollectionConfig['hooks']>
+type Hooks = NonNullable<CollectionConfig['hooks']>
 
 /** Hides the former document from a hook of the storage plugin: it then uploads, and deletes nothing. */
-const sansDocumentPrecedent =
+const withoutPreviousDoc =
 	(crochet: CollectionAfterChangeHook): CollectionAfterChangeHook =>
 	args =>
 		crochet({ ...args, previousDoc: undefined as unknown as typeof args.previousDoc })
@@ -338,19 +332,19 @@ const sansDocumentPrecedent =
  * file and then delete the former one, no longer see the former document. `avant` is the collection
  * before the plugin: a hook it already had is left as it is.
  */
-export function sansSuppressionDuGreffon(collection: CollectionConfig, avant: Crochets | undefined): CollectionConfig {
-	const ajoutes = (nom: 'afterChange' | 'afterDelete'): Set<unknown> =>
+export function withoutPluginDeletion(collection: CollectionConfig, avant: Hooks | undefined): CollectionConfig {
+	const added = (nom: 'afterChange' | 'afterDelete'): Set<unknown> =>
 		new Set((collection.hooks?.[nom] ?? []).filter(crochet => !(avant?.[nom] ?? []).some(ancien => ancien === crochet)))
-	const [deChangement, deSuppression] = [ajoutes('afterChange'), ajoutes('afterDelete')]
-	if (deChangement.size === 0 && deSuppression.size === 0) return collection
+	const [changeHooks, deletionHooks] = [added('afterChange'), added('afterDelete')]
+	if (changeHooks.size === 0 && deletionHooks.size === 0) return collection
 	return {
 		...collection,
 		hooks: {
 			...collection.hooks,
 			afterChange: (collection.hooks?.afterChange ?? []).map(crochet =>
-				deChangement.has(crochet) ? sansDocumentPrecedent(crochet) : crochet
+				changeHooks.has(crochet) ? withoutPreviousDoc(crochet) : crochet
 			),
-			afterDelete: (collection.hooks?.afterDelete ?? []).filter(crochet => !deSuppression.has(crochet)),
+			afterDelete: (collection.hooks?.afterDelete ?? []).filter(crochet => !deletionHooks.has(crochet)),
 		},
 	}
 }
@@ -359,18 +353,18 @@ export function sansSuppressionDuGreffon(collection: CollectionConfig, avant: Cr
  * Gives a collection the bin: one document at a time first, before its own `beforeOperation`
  * hooks; these hooks after its own `afterChange` and `afterDelete`, so that the bin comes last.
  * The list view of the admin panel no longer offers to delete or change several documents at once
- * (`disableBulkDelete`, `disableBulkEdit`): Payload then refuses it by REST too, before `unALaFois`.
+ * (`disableBulkDelete`, `disableBulkEdit`): Payload then refuses it by REST too, before `oneAtATime`.
  */
-const avecLesCrochets = (
+const withHooks = (
 	collection: CollectionConfig,
-	crochets: Pick<Crochets, 'afterChange' | 'afterDelete'>
+	crochets: Pick<Hooks, 'afterChange' | 'afterDelete'>
 ): CollectionConfig => ({
 	...collection,
 	disableBulkDelete: true,
 	disableBulkEdit: true,
 	hooks: {
 		...collection.hooks,
-		beforeOperation: [unALaFois, ...(collection.hooks?.beforeOperation ?? [])],
+		beforeOperation: [oneAtATime, ...(collection.hooks?.beforeOperation ?? [])],
 		afterChange: [...(collection.hooks?.afterChange ?? []), ...(crochets.afterChange ?? [])],
 		afterDelete: [...(collection.hooks?.afterDelete ?? []), ...(crochets.afterDelete ?? [])],
 	},
@@ -379,37 +373,37 @@ const avecLesCrochets = (
 /**
  * The storage plugin (`greffon`, `@payloadcms/storage-s3`), with the bin in place of its
  * deletions: its own deletions are taken away from every collection it touches, then `media` and
- * `profils` get the bin (`avecLesCrochets`). `stockage` is the storage the bin moves the objects
+ * `profils` get the bin (`withHooks`). `stockage` is the storage the bin moves the objects
  * in, or nothing when the application has none.
  */
-export const avecLaCorbeille =
-	(greffon: Plugin, stockage: StockageDesObjets | undefined): Plugin =>
+export const withTrash =
+	(greffon: Plugin, stockage: ObjectStorage | undefined): Plugin =>
 	async config => {
-		const avant = new Map((config.collections ?? []).map(collection => [collection.slug, collection.hooks]))
-		const configuree = await greffon(config)
+		const before = new Map((config.collections ?? []).map(collection => [collection.slug, collection.hooks]))
+		const configured = await greffon(config)
 		return {
-			...configuree,
-			collections: (configuree.collections ?? []).map(collection => {
-				const sans = sansSuppressionDuGreffon(collection, avant.get(collection.slug))
-				if (sans.slug === 'media')
-					return avecLesCrochets(sans, {
-						afterChange: [auRemplacement(stockage)],
-						afterDelete: [aLaSuppression(stockage)],
+			...configured,
+			collections: (configured.collections ?? []).map(collection => {
+				const withoutPlugin = withoutPluginDeletion(collection, before.get(collection.slug))
+				if (withoutPlugin.slug === 'media')
+					return withHooks(withoutPlugin, {
+						afterChange: [onReplacement(stockage)],
+						afterDelete: [onDeletion(stockage)],
 					})
-				if (sans.slug === 'profiles')
-					return avecLesCrochets(sans, {
-						afterChange: [menageApresEnregistrement(stockage)],
-						afterDelete: [menageApresSuppression(stockage)],
+				if (withoutPlugin.slug === 'profiles')
+					return withHooks(withoutPlugin, {
+						afterChange: [cleanupAfterSave(stockage)],
+						afterDelete: [cleanupAfterDeletion(stockage)],
 					})
-				if (sans.slug === 'pros')
+				if (withoutPlugin.slug === 'pros')
 					return {
-						...sans,
+						...withoutPlugin,
 						hooks: {
-							...sans.hooks,
-							beforeDelete: [...(sans.hooks?.beforeDelete ?? []), menageAvantSuppressionDuCompte(stockage)],
+							...withoutPlugin.hooks,
+							beforeDelete: [...(withoutPlugin.hooks?.beforeDelete ?? []), cleanupBeforeAccountDeletion(stockage)],
 						},
 					}
-				return sans
+				return withoutPlugin
 			}),
 		}
 	}

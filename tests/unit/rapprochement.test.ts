@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'bun:test'
-import { type MediaLu, raconterLeRapprochement, rapprocher } from '@/lib/reconciliation'
+import { describeReconciliation, type ReadMedia, reconcile } from '@/lib/reconciliation'
 
 /** The dry reconciliation of the storage and the database (ticket 137; plan 02 I27). */
 
 const objet = (cle: string) => ({ cle, taille: 10 })
-const media = (id: number, filename: string, extra: Partial<MediaLu> = {}): MediaLu => ({
+const media = (id: number, filename: string, extra: Partial<ReadMedia> = {}): ReadMedia => ({
 	id,
 	prefix: 'media',
 	filename,
@@ -13,7 +13,7 @@ const media = (id: number, filename: string, extra: Partial<MediaLu> = {}): Medi
 
 describe('I27 : les orphelins sont nommés exactement', () => {
 	test('un stockage et une base d’accord : 0 orphelin', () => {
-		const rapport = rapprocher({
+		const rapport = reconcile({
 			objets: [objet('media/a.webp'), objet('media/a-500.webp')],
 			medias: [media(1, 'a.webp', { sizes: { small: { filename: 'a-500.webp' } } })],
 			mediasUtilises: new Set(['1']),
@@ -23,7 +23,7 @@ describe('I27 : les orphelins sont nommés exactement', () => {
 	})
 
 	test('les trois sortes d’orphelins, et la corbeille comptée à part', () => {
-		const rapport = rapprocher({
+		const rapport = reconcile({
 			objets: [
 				objet('media/a.webp'),
 				objet('media/seul.webp'),
@@ -45,7 +45,7 @@ describe('I27 : les orphelins sont nommés exactement', () => {
 	})
 
 	test('un média de l’ancien site à la racine ou sous son préfixe est reconnu par sa clé', () => {
-		const rapport = rapprocher({
+		const rapport = reconcile({
 			objets: [objet('photo_a.jpg'), objet('1/photo_b.jpg')],
 			medias: [media(1, 'photo_a.jpg', { prefix: '' }), media(2, 'photo_b.jpg', { prefix: '1' })],
 			mediasUtilises: new Set(['1', '2']),
@@ -54,7 +54,7 @@ describe('I27 : les orphelins sont nommés exactement', () => {
 	})
 
 	test('les vignettes de l’ancien site sont comptées à part, pas des orphelines', () => {
-		const rapport = rapprocher({
+		const rapport = reconcile({
 			objets: [objet('photo_a.jpg'), objet('thumbnail_photo_a.jpg'), objet('autre.jpg')],
 			medias: [
 				media(1, 'photo_a.jpg', {
@@ -71,7 +71,7 @@ describe('I27 : les orphelins sont nommés exactement', () => {
 	test('un média adopté de l’ancien site est listé, mais ne compte pas « hors import » ; un média de la v3 compte toujours', () => {
 		const adopte = media(1, 'vieux.jpg', { prefix: '', strapiId: 7 })
 		const objets = [objet('media/neuf.webp')]
-		const surImport = rapprocher({ objets: [], medias: [adopte], mediasUtilises: new Set() })
+		const surImport = reconcile({ objets: [], medias: [adopte], mediasUtilises: new Set() })
 		expect(surImport).toMatchObject({
 			sansOrphelin: false,
 			sansOrphelinHorsImport: true,
@@ -79,16 +79,16 @@ describe('I27 : les orphelins sont nommés exactement', () => {
 			mediasSansObjet: [{ id: '1', cles: ['vieux.jpg'] }],
 			mediasSansProfil: ['1'],
 		})
-		const surNeuf = rapprocher({ objets, medias: [media(2, 'autre.webp')], mediasUtilises: new Set() })
+		const surNeuf = reconcile({ objets, medias: [media(2, 'autre.webp')], mediasUtilises: new Set() })
 		expect(surNeuf.sansOrphelinHorsImport).toBe(false)
 		expect(surNeuf.importes).toEqual([])
 		// A stray object is never excused by the import.
-		expect(rapprocher({ objets, medias: [adopte], mediasUtilises: new Set(['1']) }).sansOrphelinHorsImport).toBe(false)
+		expect(reconcile({ objets, medias: [adopte], mediasUtilises: new Set(['1']) }).sansOrphelinHorsImport).toBe(false)
 	})
 
 	test('la sortie ne porte que des clés, des identifiants et des comptes', () => {
-		const texte = raconterLeRapprochement(
-			rapprocher({ objets: [objet('media/seul.webp')], medias: [media(5, 'x.webp')], mediasUtilises: new Set() })
+		const texte = describeReconciliation(
+			reconcile({ objets: [objet('media/seul.webp')], medias: [media(5, 'x.webp')], mediasUtilises: new Set() })
 		)
 		expect(texte).toContain('media/seul.webp')
 		expect(texte).toContain('média 5 : media/x.webp')

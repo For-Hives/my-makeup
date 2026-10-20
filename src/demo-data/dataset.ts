@@ -2,7 +2,7 @@
  * The whole fictional set, loaded in one call (tickets 052 and 053): the twelve profile types
  * (./chargement.ts), then three talents and three articles, one of them a draft (./redaction.ts).
  *
- *   const bilan = await poserLeJeu(payload)
+ *   const bilan = await placeDemoData(payload)
  *
  * The call fills the local test bench, and nowhere else: the guard
  * (./garde.ts) is asked before anything is read or written.
@@ -19,10 +19,10 @@
 
 import type { Payload } from 'payload'
 import { CONTEXTE_IMPORT } from '../lib/contexte-import'
-import { type BilanDesProfils, exigerLaCibleDuJeu, type OptionsDuChargement, poserLesProfilsDuJeu } from './loading'
-import { ARTICLES_DU_JEU, TALENTS_DU_JEU } from './editorial'
+import { DEMO_ARTICLES, DEMO_TALENTS } from './editorial'
+import { type LoadingOptions, type ProfilesSummary, placeDemoProfiles, requireDemoTarget } from './loading'
 
-export interface BilanDeLaRedaction {
+export interface EditorialSummary {
 	/** The slugs of the talents this load created. */
 	talentsCrees: string[]
 	/** The slugs of the articles this load created. */
@@ -31,13 +31,13 @@ export interface BilanDeLaRedaction {
 	presents: string[]
 }
 
-export interface BilanDuJeu {
-	profils: BilanDesProfils
-	redaction: BilanDeLaRedaction
+export interface DemoSummary {
+	profils: ProfilesSummary
+	redaction: EditorialSummary
 }
 
 /** True when a document of this collection already carries the slug, a draft included. */
-async function existe(payload: Payload, collection: 'talents' | 'articles', slug: string): Promise<boolean> {
+async function exists(payload: Payload, collection: 'talents' | 'articles', slug: string): Promise<boolean> {
 	const { totalDocs } = await payload.find({
 		collection,
 		depth: 0,
@@ -51,18 +51,18 @@ async function existe(payload: Payload, collection: 'talents' | 'articles', slug
 }
 
 /**
- * Loads the talents and the articles of the set that are not there yet. Outside the bench, it stops before it reads or writes anything (`JeuFictifRefuse`).
+ * Loads the talents and the articles of the set that are not there yet. Outside the bench, it stops before it reads or writes anything (`DemoDataRefused`).
  */
-export async function poserLaRedactionDuJeu(
+export async function placeDemoEditorial(
 	payload: Payload,
-	{ variables = process.env }: Pick<OptionsDuChargement, 'variables'> = {}
-): Promise<BilanDeLaRedaction> {
-	exigerLaCibleDuJeu(payload, variables)
-	const bilan: BilanDeLaRedaction = { talentsCrees: [], articlesCrees: [], presents: [] }
+	{ variables = process.env }: Pick<LoadingOptions, 'variables'> = {}
+): Promise<EditorialSummary> {
+	requireDemoTarget(payload, variables)
+	const summary: EditorialSummary = { talentsCrees: [], articlesCrees: [], presents: [] }
 
-	for (const talent of TALENTS_DU_JEU) {
-		if (await existe(payload, 'talents', talent.slug)) {
-			bilan.presents.push(talent.slug)
+	for (const talent of DEMO_TALENTS) {
+		if (await exists(payload, 'talents', talent.slug)) {
+			summary.presents.push(talent.slug)
 			continue
 		}
 		await payload.create({
@@ -71,28 +71,28 @@ export async function poserLaRedactionDuJeu(
 			data: { ...talent, _status: 'published' },
 			depth: 0,
 		})
-		bilan.talentsCrees.push(talent.slug)
+		summary.talentsCrees.push(talent.slug)
 	}
 
-	for (const { statut, ...article } of ARTICLES_DU_JEU) {
-		if (await existe(payload, 'articles', article.slug)) {
-			bilan.presents.push(article.slug)
+	for (const { statut: status, ...article } of DEMO_ARTICLES) {
+		if (await exists(payload, 'articles', article.slug)) {
+			summary.presents.push(article.slug)
 			continue
 		}
 		await payload.create({
 			collection: 'articles',
 			context: CONTEXTE_IMPORT,
-			data: { ...article, _status: statut },
+			data: { ...article, _status: status },
 			depth: 0,
 		})
-		bilan.articlesCrees.push(article.slug)
+		summary.articlesCrees.push(article.slug)
 	}
-	return bilan
+	return summary
 }
 
 /** The profile types, then the newsroom: the whole set, on an empty database or on a filled one. */
-export async function poserLeJeu(payload: Payload, options: OptionsDuChargement = {}): Promise<BilanDuJeu> {
-	const profils = await poserLesProfilsDuJeu(payload, options)
-	const redaction = await poserLaRedactionDuJeu(payload, options)
-	return { profils, redaction }
+export async function placeDemoData(payload: Payload, options: LoadingOptions = {}): Promise<DemoSummary> {
+	const profiles = await placeDemoProfiles(payload, options)
+	const editorial = await placeDemoEditorial(payload, options)
+	return { profils: profiles, redaction: editorial }
 }

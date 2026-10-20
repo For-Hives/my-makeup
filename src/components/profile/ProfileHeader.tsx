@@ -1,5 +1,5 @@
 import Image from 'next/image'
-import { ratioMedia, sizesBoite } from '@/lib/image-size'
+import { ratioMedia, sizesBox } from '@/lib/image-size'
 import type { PublicProfile } from '@/services/public/profiles'
 
 /** The photo shown when the profile has none: the picture of the site. */
@@ -51,7 +51,7 @@ export function ProfileHeader({ profil }: { profil: PublicProfile }) {
 						alt={photo ? `Photo de ${name}` : ''}
 						priority
 						fill
-						sizes={sizesBoite({
+						sizes={sizesBox({
 							largeur: PHOTO_SIDE,
 							hauteur: PHOTO_SIDE,
 							ratio: photo ? ratioMedia(photo) : 1,

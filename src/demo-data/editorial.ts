@@ -13,17 +13,17 @@
 import type { Article, Talent } from '../payload-types'
 
 /** What the set writes on a talent: what the newsroom writes. */
-export type TalentDuJeu = Required<Pick<Talent, 'title' | 'slug' | 'description' | 'content'>> &
+export type DemoTalent = Required<Pick<Talent, 'title' | 'slug' | 'description' | 'content'>> &
 	Pick<Talent, 'seo_title' | 'seo_description'>
 
 /** What the set writes on an article: what the newsroom writes. */
-export type ArticleDuJeu = Required<Pick<Article, 'title' | 'slug' | 'author' | 'excerpt' | 'content'>> &
+export type DemoArticle = Required<Pick<Article, 'title' | 'slug' | 'author' | 'excerpt' | 'content'>> &
 	Pick<Article, 'seo_title' | 'seo_description'> & { statut: 'published' | 'draft' }
 
 /** The signature of every article of the set. */
-export const AUTEUR_DU_JEU = 'La rédaction fictive'
+export const DEMO_AUTHOR = 'La rédaction fictive'
 
-export const TALENTS_DU_JEU: readonly TalentDuJeu[] = [
+export const DEMO_TALENTS: readonly DemoTalent[] = [
 	{
 		title: 'Maquillage de mariée',
 		slug: 'maquillage-mariee',
@@ -53,11 +53,11 @@ export const TALENTS_DU_JEU: readonly TalentDuJeu[] = [
 	},
 ]
 
-export const ARTICLES_DU_JEU: readonly ArticleDuJeu[] = [
+export const DEMO_ARTICLES: readonly DemoArticle[] = [
 	{
 		title: 'Bien préparer sa peau avant un maquillage',
 		slug: 'preparer-sa-peau-avant-un-maquillage',
-		author: AUTEUR_DU_JEU,
+		author: DEMO_AUTHOR,
 		excerpt: 'Trois gestes simples pour que le maquillage tienne mieux et se pose uniformément.',
 		seo_title: 'Préparer sa peau avant un maquillage',
 		seo_description: 'Nettoyer, hydrater et protéger : les trois gestes qui préparent la peau à un maquillage.',
@@ -68,7 +68,7 @@ export const ARTICLES_DU_JEU: readonly ArticleDuJeu[] = [
 	{
 		title: 'Choisir sa maquilleuse pour un mariage',
 		slug: 'choisir-sa-maquilleuse-pour-un-mariage',
-		author: AUTEUR_DU_JEU,
+		author: DEMO_AUTHOR,
 		excerpt: 'Les questions à poser, l’essai et le calendrier, pour un jour J sans mauvaise surprise.',
 		seo_title: 'Choisir sa maquilleuse pour un mariage',
 		seo_description: 'Essai, déplacement, retouches : ce qu’il faut voir avec la maquilleuse avant le mariage.',
@@ -79,7 +79,7 @@ export const ARTICLES_DU_JEU: readonly ArticleDuJeu[] = [
 	{
 		title: 'Les tendances maquillage de la saison',
 		slug: 'tendances-maquillage-de-la-saison',
-		author: AUTEUR_DU_JEU,
+		author: DEMO_AUTHOR,
 		excerpt: 'Brouillon en cours de rédaction : il ne doit jamais être visible du public.',
 		seo_title: 'Les tendances maquillage de la saison',
 		seo_description: 'Brouillon fictif du banc de test.',

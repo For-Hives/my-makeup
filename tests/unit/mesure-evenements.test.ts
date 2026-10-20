@@ -316,7 +316,7 @@ describe('un seul chemin vers Umami (test statique)', () => {
 		const importeurs = sources('src')
 			.filter(fichier => !fichier.startsWith('src/lib/analytics/'))
 			.filter(fichier =>
-				/from ['"](@\/lib\/analytics\/(umami|relais)|\.\.?\/.*analytics\/(umami|relais))['"]/.test(
+				/from ['"](@\/lib\/analytics\/(umami|relay)|\.\.?\/.*analytics\/(umami|relay))['"]/.test(
 					readFileSync(path.join(RACINE, fichier), 'utf8')
 				)
 			)

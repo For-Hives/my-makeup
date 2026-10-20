@@ -8,7 +8,7 @@
  */
 
 /** Départements: code → name (96 of mainland France and Corsica, 5 overseas) */
-export const DEPARTEMENTS: Readonly<Record<string, string>> = {
+export const DEPARTMENTS: Readonly<Record<string, string>> = {
 	'01': 'Ain',
 	'02': 'Aisne',
 	'03': 'Allier',
@@ -112,21 +112,21 @@ export const DEPARTEMENTS: Readonly<Record<string, string>> = {
 	976: 'Mayotte',
 }
 
-const ABREVIATIONS: Readonly<Record<string, string>> = {
+const ABBREVIATIONS: Readonly<Record<string, string>> = {
 	st: 'saint',
 	ste: 'sainte',
 	sts: 'saints',
 	stes: 'saintes',
 }
 
-const HORS_LETTRES_ET_CHIFFRES = /[^a-z0-9]+/
+const NOT_LETTERS_OR_DIGITS = /[^a-z0-9]+/
 const CODE_POSTAL = /^\d{5}$/
 
 /**
  * A place as compared: lower case, without accents, hyphens nor apostrophes, « St » written
  * « saint ». « Saint-Julien-en-Genevois » → 'saint julien en genevois'.
  */
-export function normaliserLieu(v: unknown): string {
+export function normalizePlace(v: unknown): string {
 	if (typeof v !== 'string') return ''
 	return v
 		.normalize('NFD')
@@ -134,18 +134,18 @@ export function normaliserLieu(v: unknown): string {
 		.toLowerCase()
 		.replace(/œ/g, 'oe')
 		.replace(/æ/g, 'ae')
-		.split(HORS_LETTRES_ET_CHIFFRES)
+		.split(NOT_LETTERS_OR_DIGITS)
 		.filter(Boolean)
-		.map(mot => ABREVIATIONS[mot] ?? mot)
+		.map(mot => ABBREVIATIONS[mot] ?? mot)
 		.join(' ')
 }
 
 /** Département of a French postal code: '74000' → '74', '20090' → '2A', '97411' → '974'. */
-export function departementDuCodePostal(code: unknown): string | null {
+export function departmentOfPostalCode(code: unknown): string | null {
 	if (typeof code !== 'string' || !CODE_POSTAL.test(code)) return null
 	if (code.startsWith('20')) return Number(code) < 20200 ? '2A' : '2B'
-	const outreMer = code.slice(0, 3)
-	if (code.startsWith('97')) return DEPARTEMENTS[outreMer] ? outreMer : null
-	const departement = code.slice(0, 2)
-	return DEPARTEMENTS[departement] ? departement : null
+	const overseas = code.slice(0, 3)
+	if (code.startsWith('97')) return DEPARTMENTS[overseas] ? overseas : null
+	const department = code.slice(0, 2)
+	return DEPARTMENTS[department] ? department : null
 }

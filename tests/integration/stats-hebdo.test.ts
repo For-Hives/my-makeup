@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { GET, POST } from '@/app/api/stats/weekly/route'
 import { WeeklyStats } from '@/lib/weekly-stats'
-import { PROFILS_DU_JEU } from '../../src/demo-data/profiles'
+import { DEMO_PROFILES } from '../../src/demo-data/profiles'
 import { COMPTES_DU_JEU, TYPES_DU_JEU } from '../fixtures/comptes'
 import { poserLeJeuDuBanc } from '../fixtures/jeu-du-banc'
 import { TYPES_DE_COMPTE } from '../outils/fabrique-comptes'
@@ -40,7 +40,7 @@ describe('Les statistiques hebdomadaires sur le jeu du banc', () => {
 	test('les nombres exacts, tirés de ce que le jeu promet de chaque profil', async () => {
 		const profilsDesComptes = TYPES_DU_JEU.filter(type => TYPES_DE_COMPTE[type].collection === 'pros').length
 		const sansProfil = TYPES_DU_JEU.filter(type => type === 'maquilleuse-sans-profil').length
-		const types = PROFILS_DU_JEU
+		const types = DEMO_PROFILES
 		const vusParLeServeur = types.filter(({ attendu }) => attendu.status === 'published' && attendu.publishable)
 
 		const reponse = await appeler(SEMAINE)
@@ -78,7 +78,7 @@ describe('Les statistiques hebdomadaires sur le jeu du banc', () => {
 	test('ni « @ », ni 9 chiffres, ni nom du jeu hors de la liste des adresses publiques', async () => {
 		const stats = WeeklyStats.parse(await (await appeler(SEMAINE)).json())
 		const sansAdresses = JSON.stringify({ ...stats, publishable: { ...stats.publishable, slugs: [] } })
-		const noms = PROFILS_DU_JEU.flatMap(({ profil, compte }) => [
+		const noms = DEMO_PROFILES.flatMap(({ profil, compte }) => [
 			profil.firstName,
 			profil.lastName,
 			profil.artistName,

@@ -8,7 +8,7 @@
  * - A section with nothing to show is not shown.
  */
 
-import { lignesDePrix } from '../price'
+import { priceRows } from '../price'
 import { fullName, type ProfileNames, text } from './display-name'
 
 /**
@@ -164,7 +164,7 @@ export interface PublicOption {
 	nom: string
 	/** One paragraph per line typed. */
 	description: string[]
-	/** The price, one entry per line (src/lib/price.ts, `lignesDePrix`). */
+	/** The price, one entry per line (src/lib/price.ts, `priceRows`). */
 	prix: string[]
 }
 
@@ -202,7 +202,7 @@ function publicOption(ligne: Row): PublicOption | null {
 	return {
 		nom: name,
 		description: rows(ligne?.description),
-		prix: lignesDePrix({
+		prix: priceRows({
 			priceFrom: typeof ligne?.priceFrom === 'number' ? ligne.priceFrom : null,
 			priceText: typeof ligne?.priceText === 'string' ? ligne.priceText : null,
 		}),

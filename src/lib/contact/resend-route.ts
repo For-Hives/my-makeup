@@ -1,5 +1,5 @@
 import { type Endpoint, Forbidden } from 'payload'
-import { estAdmin } from '../access'
+import { isAdmin } from '../access'
 import { payloadSendEmail } from '../emails/send'
 import { serverEnv } from '../env'
 import { payloadStorage } from './payload-send'
@@ -18,7 +18,7 @@ export const resendEmail: Endpoint = {
 	path: '/:id/resend',
 	method: 'post',
 	handler: async req => {
-		if (!estAdmin(req.user)) throw new Forbidden(req.t)
+		if (!isAdmin(req.user)) throw new Forbidden(req.t)
 		const id = Number(req.routeParams?.id)
 		if (!Number.isSafeInteger(id) || id < 1) return Response.json({ code: 'introuvable' }, { status: 404 })
 

@@ -1,6 +1,6 @@
 import config from '@payload-config'
 import { getPayload } from 'payload'
-import { estAdmin } from '@/lib/access'
+import { isAdmin } from '@/lib/access'
 import { lireLeDelta } from '@/lib/bascule/export-delta'
 import { lieuDeLExport, methodeNonPermise, repondreAuDelta } from '@/lib/bascule/reponse-delta'
 
@@ -31,7 +31,7 @@ export async function GET(request: Request): Promise<Response> {
 		basculeLe: process.env.BASCULE_LE,
 		estAdmin: async () => {
 			const { user } = await payload.auth({ headers: request.headers })
-			return user ? estAdmin(user) : 'anonyme'
+			return user ? isAdmin(user) : 'anonyme'
 		},
 		lire: depuis => lireLeDelta(payload, depuis),
 		journal: ligne => payload.logger.info(ligne),

@@ -15,44 +15,44 @@
  */
 
 /** Screens whose photos are asked below their density (3x phones). */
-export const ECRAN_TRES_DENSE = '(min-resolution: 2.5dppx)'
+export const VERY_DENSE_SCREEN = '(min-resolution: 2.5dppx)'
 
 /** Part of the drawn width asked on those screens: 2.25x on a 3x screen. */
-export const FACTEUR_TRES_DENSE = 0.75
+export const VERY_DENSE_FACTOR = 0.75
 
 /**
  * The ratio assumed for a photo without dimensions: a 4:3 landscape, the costliest common shape.
  */
-export const RATIO_PAR_DEFAUT = 4 / 3
+export const DEFAULT_RATIO = 4 / 3
 
-const positif = (valeur: unknown): number | null =>
+const positive = (valeur: unknown): number | null =>
 	typeof valeur === 'number' && Number.isFinite(valeur) && valeur > 0 ? valeur : null
 
 /** Width over height of a photo, `null` when one of the two is unknown. */
 export function ratioMedia(media: { width?: unknown; height?: unknown } | null | undefined): number | null {
-	const largeur = positif(media?.width)
-	const hauteur = positif(media?.height)
-	return largeur && hauteur ? largeur / hauteur : null
+	const width = positive(media?.width)
+	const height = positive(media?.height)
+	return width && height ? width / height : null
 }
 
 /** The width of a photo of that ratio drawn at that height, in whole px. */
-const largeurDessinee = (hauteur: number, ratio: number | null | undefined): number =>
-	Math.ceil(hauteur * (positif(ratio) ?? RATIO_PAR_DEFAUT))
+const drawnWidth = (hauteur: number, ratio: number | null | undefined): number =>
+	Math.ceil(hauteur * (positive(ratio) ?? DEFAULT_RATIO))
 
 /**
  * `sizes` of a photo drawn with `object-fit: cover` in a box of fixed size, or in a box of its own
  * ratio (`largeur` 0: only the height counts). For example `(min-resolution: 2.5dppx) 201px, 267px`.
  */
-export function sizesBoite({
-	largeur = 0,
-	hauteur,
+export function sizesBox({
+	largeur: width = 0,
+	hauteur: height,
 	ratio,
 }: {
 	largeur?: number
 	hauteur: number
 	ratio?: number | null
 }): string {
-	const px = Math.max(Math.ceil(largeur), largeurDessinee(hauteur, ratio))
-	const dense = `${ECRAN_TRES_DENSE} ${Math.ceil(px * FACTEUR_TRES_DENSE)}px`
+	const px = Math.max(Math.ceil(width), drawnWidth(height, ratio))
+	const dense = `${VERY_DENSE_SCREEN} ${Math.ceil(px * VERY_DENSE_FACTOR)}px`
 	return `${dense}, ${px}px`
 }

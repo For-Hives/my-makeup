@@ -9,18 +9,10 @@ import type {
 	Config,
 	Plugin,
 } from 'payload'
-import { avecLaCorbeille, MESSAGE_UN_A_LA_FOIS, sansSuppressionDuGreffon, unALaFois } from '@/collections/trash'
+import { ONE_AT_A_TIME_MESSAGE, oneAtATime, withoutPluginDeletion, withTrash } from '@/collections/trash'
 import { CONTEXTE_IMPORT } from '@/lib/contexte-import'
-import {
-	cleEnCorbeille,
-	clesDesObjets,
-	deplacerVersLaCorbeille,
-	estEnCorbeille,
-	PanneDuStockage,
-	remettreEnPlace,
-	type StockageDesObjets,
-} from '@/lib/trash'
-import { sourceDeLaCopie } from '@/lib/storage'
+import { copySource } from '@/lib/storage'
+import { isInTrash, moveToTrash, type ObjectStorage, objectKeys, restore, StorageOutage, trashKey } from '@/lib/trash'
 import { type CommandeS3, suppressionsSansCorbeille } from '../outils/espion-s3'
 
 /**
@@ -30,7 +22,7 @@ import { type CommandeS3, suppressionsSansCorbeille } from '../outils/espion-s3'
  */
 
 /** A storage in memory that writes down every operation, and fails on demand. */
-class StockageEnMemoire implements StockageDesObjets {
+class StockageEnMemoire implements ObjectStorage {
 	readonly objets = new Map<string, Uint8Array>()
 	readonly operations: string[] = []
 	/** An operation for which this is true fails, as when the storage is down. */
@@ -77,15 +69,15 @@ class StockageEnMemoire implements StockageDesObjets {
 
 describe('Les clés d’un média : l’original et chaque taille dérivée, dans son dossier', () => {
 	test('à la racine, sous un préfixe, sous un préfixe imbriqué', () => {
-		expect(clesDesObjets({ prefix: '', filename: 'a.png' })).toEqual(['a.png'])
-		expect(clesDesObjets({ prefix: null, filename: 'a.png' })).toEqual(['a.png'])
-		expect(clesDesObjets({ prefix: 'media', filename: 'a.png' })).toEqual(['media/a.png'])
-		expect(clesDesObjets({ prefix: 'ancien/dossier', filename: 'a.png' })).toEqual(['ancien/dossier/a.png'])
+		expect(objectKeys({ prefix: '', filename: 'a.png' })).toEqual(['a.png'])
+		expect(objectKeys({ prefix: null, filename: 'a.png' })).toEqual(['a.png'])
+		expect(objectKeys({ prefix: 'media', filename: 'a.png' })).toEqual(['media/a.png'])
+		expect(objectKeys({ prefix: 'ancien/dossier', filename: 'a.png' })).toEqual(['ancien/dossier/a.png'])
 	})
 
 	test('les tailles dérivées suivent l’original, sans doublon ni nom vide', () => {
 		expect(
-			clesDesObjets({
+			objectKeys({
 				prefix: 'media',
 				filename: 'a.webp',
 				sizes: {
@@ -100,15 +92,15 @@ describe('Les clés d’un média : l’original et chaque taille dérivée, dan
 	})
 
 	test('le dossier d’un envoi direct du navigateur (`_objectKey`) s’ajoute au préfixe ; sans nom, aucune clé', () => {
-		expect(clesDesObjets({ prefix: 'media', _objectKey: 'k1', filename: 'a.png' })).toEqual(['media/k1/a.png'])
-		expect(clesDesObjets({ prefix: 'media', filename: null })).toEqual([])
+		expect(objectKeys({ prefix: 'media', _objectKey: 'k1', filename: 'a.png' })).toEqual(['media/k1/a.png'])
+		expect(objectKeys({ prefix: 'media', filename: null })).toEqual([])
 	})
 
 	test('la corbeille est le dossier deleted/, à la racine, et la clé d’origine suit', () => {
-		expect(cleEnCorbeille('media/a.png')).toBe('deleted/media/a.png')
-		expect(cleEnCorbeille('a.png')).toBe('deleted/a.png')
-		expect(estEnCorbeille('deleted/media/a.png')).toBe(true)
-		for (const cle of ['media/a.png', 'deleted.png', 'media/deleted/a.png']) expect(estEnCorbeille(cle)).toBe(false)
+		expect(trashKey('media/a.png')).toBe('deleted/media/a.png')
+		expect(trashKey('a.png')).toBe('deleted/a.png')
+		expect(isInTrash('deleted/media/a.png')).toBe(true)
+		for (const cle of ['media/a.png', 'deleted.png', 'media/deleted/a.png']) expect(isInTrash(cle)).toBe(false)
 	})
 })
 
@@ -116,7 +108,7 @@ describe('Un objet passe à la corbeille : copié, vérifié, puis retiré de sa
 	test('chaque objet passe sous deleted/, octet pour octet ; rien d’autre ne bouge', async () => {
 		const stockage = new StockageEnMemoire({ 'media/a.png': 'AAAA', 'media/a-300.png': 'aa', 'media/b.png': 'BB' })
 
-		const bilan = await deplacerVersLaCorbeille(stockage, ['media/a.png', 'media/a-300.png'])
+		const bilan = await moveToTrash(stockage, ['media/a.png', 'media/a-300.png'])
 
 		expect(bilan).toEqual({ deplacees: ['media/a.png', 'media/a-300.png'], absentes: [], dejaEnCorbeille: [] })
 		expect([...stockage.objets.keys()].sort()).toEqual([
@@ -131,7 +123,7 @@ describe('Un objet passe à la corbeille : copié, vérifié, puis retiré de sa
 	test('l’original n’est retiré qu’après la copie et la vérification de sa taille', async () => {
 		const stockage = new StockageEnMemoire({ 'media/a.png': 'AAAA' })
 
-		await deplacerVersLaCorbeille(stockage, ['media/a.png'])
+		await moveToTrash(stockage, ['media/a.png'])
 
 		expect(stockage.operations).toEqual([
 			'taille media/a.png',
@@ -144,7 +136,7 @@ describe('Un objet passe à la corbeille : copié, vérifié, puis retiré de sa
 	test('un objet absent n’est pas une erreur ; un objet déjà en corbeille y reste ; une clé donnée deux fois, une fois', async () => {
 		const stockage = new StockageEnMemoire({ 'media/a.png': 'A', 'deleted/media/z.png': 'Z' })
 
-		const bilan = await deplacerVersLaCorbeille(stockage, [
+		const bilan = await moveToTrash(stockage, [
 			'media/absente.png',
 			'media/a.png',
 			'media/a.png',
@@ -164,7 +156,7 @@ describe('Un objet passe à la corbeille : copié, vérifié, puis retiré de sa
 		const stockage = new StockageEnMemoire({ 'media/a.png': 'AAAA' })
 		stockage.copieTronquee = () => true
 
-		await expect(deplacerVersLaCorbeille(stockage, ['media/a.png'])).rejects.toBeInstanceOf(PanneDuStockage)
+		await expect(moveToTrash(stockage, ['media/a.png'])).rejects.toBeInstanceOf(StorageOutage)
 
 		expect(stockage.contenu('media/a.png')).toBe('AAAA')
 		expect(stockage.des('retirer')).toEqual([])
@@ -179,11 +171,9 @@ describe('Panne du stockage : ce qui a bougé est remis en place, une fois, et l
 		const stockage = troisObjets()
 		stockage.panne = operation => operation === 'copier media/2.png deleted/media/2.png'
 
-		const erreur = await deplacerVersLaCorbeille(stockage, ['media/1.png', 'media/2.png', 'media/3.png']).catch(
-			(e: unknown) => e
-		)
+		const erreur = await moveToTrash(stockage, ['media/1.png', 'media/2.png', 'media/3.png']).catch((e: unknown) => e)
 
-		expect(erreur).toBeInstanceOf(PanneDuStockage)
+		expect(erreur).toBeInstanceOf(StorageOutage)
 		expect(erreur).toMatchObject({ remises: ['media/1.png'], nonRemises: [] })
 		for (const [cle, contenu] of [
 			['media/1.png', 'un'],
@@ -204,7 +194,7 @@ describe('Panne du stockage : ce qui a bougé est remis en place, une fois, et l
 		stockage.panne = operation =>
 			operation === 'copier media/2.png deleted/media/2.png' || operation === 'copier deleted/media/1.png media/1.png'
 
-		const erreur = await deplacerVersLaCorbeille(stockage, ['media/1.png', 'media/2.png']).catch((e: unknown) => e)
+		const erreur = await moveToTrash(stockage, ['media/1.png', 'media/2.png']).catch((e: unknown) => e)
 
 		expect(erreur).toMatchObject({ name: 'PanneDuStockage', remises: [], nonRemises: ['media/1.png'] })
 		expect(stockage.des('copier').filter(op => op.startsWith('copier deleted/'))).toHaveLength(1)
@@ -215,7 +205,7 @@ describe('Panne du stockage : ce qui a bougé est remis en place, une fois, et l
 		const stockage = troisObjets()
 		stockage.panne = operation => operation === 'retirer media/1.png'
 
-		const erreur = await deplacerVersLaCorbeille(stockage, ['media/1.png']).catch((e: unknown) => e)
+		const erreur = await moveToTrash(stockage, ['media/1.png']).catch((e: unknown) => e)
 
 		expect(erreur).toMatchObject({ remises: ['media/1.png'], nonRemises: [] })
 		expect(stockage.contenu('media/1.png')).toBe('un')
@@ -226,7 +216,7 @@ describe('Panne du stockage : ce qui a bougé est remis en place, une fois, et l
 		const stockage = troisObjets()
 		stockage.panne = () => true
 
-		const erreur = await deplacerVersLaCorbeille(stockage, ['media/1.png']).catch((e: unknown) => e)
+		const erreur = await moveToTrash(stockage, ['media/1.png']).catch((e: unknown) => e)
 
 		expect(erreur).toMatchObject({ remises: [], nonRemises: [] })
 		expect((erreur as Error).message).not.toContain('media/1.png')
@@ -237,9 +227,9 @@ describe('Panne du stockage : ce qui a bougé est remis en place, une fois, et l
 describe('La remise en place d’un objet de la corbeille', () => {
 	test('l’objet revient à sa place ; sa copie reste dans la corbeille ; rien n’est retiré', async () => {
 		const stockage = new StockageEnMemoire({ 'media/a.png': 'AAAA' })
-		await deplacerVersLaCorbeille(stockage, ['media/a.png'])
+		await moveToTrash(stockage, ['media/a.png'])
 
-		const bilan = await remettreEnPlace(stockage, ['media/a.png'])
+		const bilan = await restore(stockage, ['media/a.png'])
 
 		expect(bilan).toEqual({ remises: ['media/a.png'], nonRemises: [] })
 		expect(stockage.contenu('media/a.png')).toBe('AAAA')
@@ -250,7 +240,7 @@ describe('La remise en place d’un objet de la corbeille', () => {
 	test('un objet déjà à sa place n’est pas réécrit ; sans copie dans la corbeille, il est listé', async () => {
 		const stockage = new StockageEnMemoire({ 'media/a.png': 'neuf', 'deleted/media/a.png': 'ancien' })
 
-		const bilan = await remettreEnPlace(stockage, ['media/a.png', 'media/inconnue.png'])
+		const bilan = await restore(stockage, ['media/a.png', 'media/inconnue.png'])
 
 		expect(bilan).toEqual({ remises: ['media/a.png'], nonRemises: ['media/inconnue.png'] })
 		expect(stockage.contenu('media/a.png')).toBe('neuf')
@@ -265,7 +255,7 @@ describe('Un test échoue si une suppression d’objet est appelée (l’espion 
 		reussie,
 	})
 	const copieEnCorbeille = (cle: string, reussie = true) =>
-		commande('CopyObject', { Bucket: 'b', Key: cleEnCorbeille(cle), CopySource: sourceDeLaCopie('b', cle) }, reussie)
+		commande('CopyObject', { Bucket: 'b', Key: trashKey(cle), CopySource: copySource('b', cle) }, reussie)
 
 	test('un déplacement vers la corbeille n’est pas une suppression', () => {
 		expect(
@@ -287,7 +277,7 @@ describe('Un test échoue si une suppression d’objet est appelée (l’espion 
 			suppressionsSansCorbeille([
 				copieEnCorbeille('media/a.png', false),
 				commande('DeleteObject', { Key: 'media/a.png' }),
-				commande('CopyObject', { Key: 'ailleurs/b.png', CopySource: sourceDeLaCopie('b', 'media/b.png') }),
+				commande('CopyObject', { Key: 'ailleurs/b.png', CopySource: copySource('b', 'media/b.png') }),
 				commande('DeleteObject', { Key: 'media/b.png' }),
 				commande('DeleteObject', { Key: 'deleted/media/c.png' }),
 				commande('DeleteObjects', { Delete: { Objects: [] } }),
@@ -355,7 +345,7 @@ describe('Le greffon de stockage perd ses suppressions ; media et profils reçoi
 	test('après le greffon : ses suppressions retirées, ses envois gardés, les crochets de la collection d’abord, la corbeille en dernier', async () => {
 		const fausse = faussePlugin()
 
-		const config = (await avecLaCorbeille(fausse.plugin, undefined)({ collections: collections() } as Config))
+		const config = (await withTrash(fausse.plugin, undefined)({ collections: collections() } as Config))
 			.collections as CollectionConfig[]
 		const [media, profils, talents] = config
 
@@ -373,7 +363,7 @@ describe('Le greffon de stockage perd ses suppressions ; media et profils reçoi
 	test('media et profils : un document à la fois, d’abord ; la liste de l’administration n’offre plus d’agir sur plusieurs', async () => {
 		const avant: CollectionBeforeOperationHook = ({ args }) => args
 		const [media, profils, talents] = (
-			await avecLaCorbeille(
+			await withTrash(
 				faussePlugin().plugin,
 				undefined
 			)({
@@ -385,8 +375,8 @@ describe('Le greffon de stockage perd ses suppressions ; media et profils reçoi
 			} as Config)
 		).collections as CollectionConfig[]
 
-		expect(media?.hooks?.beforeOperation).toEqual([unALaFois, avant])
-		expect(profils?.hooks?.beforeOperation).toEqual([unALaFois])
+		expect(media?.hooks?.beforeOperation).toEqual([oneAtATime, avant])
+		expect(profils?.hooks?.beforeOperation).toEqual([oneAtATime])
 		for (const collection of [media, profils])
 			expect(collection).toMatchObject({ disableBulkDelete: true, disableBulkEdit: true })
 		expect(talents?.disableBulkDelete).toBeUndefined()
@@ -396,7 +386,7 @@ describe('Le greffon de stockage perd ses suppressions ; media et profils reçoi
 	test('l’envoi du greffon ne voit plus le document précédent : il ne peut plus effacer l’ancien fichier', async () => {
 		const fausse = faussePlugin()
 		const [media] =
-			sansSuppressionDuGreffon(
+			withoutPluginDeletion(
 				{
 					slug: 'media',
 					fields: [],
@@ -420,13 +410,13 @@ describe('Le greffon de stockage perd ses suppressions ; media et profils reçoi
 
 	test('un greffon qui n’ajoute rien (stockage absent) : la collection reste telle quelle', () => {
 		const collection: CollectionConfig = { slug: 'media', fields: [], hooks: { afterChange: [propre] } }
-		expect(sansSuppressionDuGreffon(collection, collection.hooks)).toBe(collection)
+		expect(withoutPluginDeletion(collection, collection.hooks)).toBe(collection)
 	})
 })
 
 describe('Plusieurs médias ou profils à la fois : refusé avant toute écriture, sauf pour l’import', () => {
 	const operation = (nom: string, args: Record<string, unknown>, context: Record<string, unknown> = {}) =>
-		unALaFois({
+		oneAtATime({
 			args: args as never,
 			collection: {} as never,
 			context,
@@ -443,7 +433,7 @@ describe('Plusieurs médias ou profils à la fois : refusé avant toute écritur
 			} catch (e) {
 				erreur = e
 			}
-			expect(erreur).toMatchObject({ message: MESSAGE_UN_A_LA_FOIS, status: 403, isPublic: true })
+			expect(erreur).toMatchObject({ message: ONE_AT_A_TIME_MESSAGE, status: 403, isPublic: true })
 		}
 	})
 
@@ -491,9 +481,9 @@ describe('Sans stockage d’objets, le ménage d’un profil ne supprime aucun m
 	}
 
 	/** The hooks of the bin on `profils`, as src/payload.config.ts sets them, with this storage or none. */
-	async function crochetsDesProfils(stockage: StockageDesObjets | undefined) {
+	async function crochetsDesProfils(stockage: ObjectStorage | undefined) {
 		const profilsSeuls: CollectionConfig[] = [{ slug: 'profiles', fields: [] }]
-		const config = await avecLaCorbeille(config => config, stockage)({ collections: profilsSeuls } as Config)
+		const config = await withTrash(config => config, stockage)({ collections: profilsSeuls } as Config)
 		const [profils] = config.collections as CollectionConfig[]
 		const [apresEnregistrement] = profils?.hooks?.afterChange ?? []
 		const [apresSuppression] = profils?.hooks?.afterDelete ?? []

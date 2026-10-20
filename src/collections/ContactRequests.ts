@@ -1,6 +1,6 @@
 import { type CollectionBeforeChangeHook, type CollectionConfig, ValidationError } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
-import { adminSeulement, cacheeSaufAdmin, jamais } from '../lib/access'
+import { adminOnly, hiddenExceptAdmin, neverAllowed } from '../lib/access'
 import { CONTACT_LIMITS } from '../lib/contact/message'
 import { resendEmail } from '../lib/contact/resend-route'
 import { isRequestStatus, MAIL_STATES, REQUEST_STATUSES, REQUEST_TYPES, transitionAllowed } from '../lib/contact/states'
@@ -65,7 +65,7 @@ const keepTheCycle: CollectionBeforeChangeHook = ({ data: recu, originalDoc, ope
 }
 
 /** Everything but the status is what the visitor typed, or what the server wrote: no request changes it. */
-const frozen = { update: jamais }
+const frozen = { update: neverAllowed }
 
 /**
  * The messages sent through the contact form (tickets 158 and 159; plan 01 §5 P8; docs/migration/SCHEMA.md).
@@ -85,7 +85,7 @@ export const ContactRequests: CollectionConfig<'contact-requests'> = {
 	labels: { singular: 'Message de contact', plural: 'Messages de contact' },
 	admin: {
 		defaultColumns: ['createdAt', 'type', 'status', 'mailStatus', 'firstName', 'lastName'],
-		hidden: cacheeSaufAdmin,
+		hidden: hiddenExceptAdmin,
 		useAsTitle: 'lastName',
 		components: { beforeListTable: ['/components/admin/SendFailures#SendFailures'] },
 	},
@@ -93,9 +93,9 @@ export const ContactRequests: CollectionConfig<'contact-requests'> = {
 	hooks: { beforeChange: [keepTheCycle] },
 	defaultSort: '-createdAt',
 	access: {
-		read: adminSeulement,
+		read: adminOnly,
 		create: () => false,
-		update: adminSeulement,
+		update: adminOnly,
 		delete: () => false,
 	},
 	fields: [

@@ -15,7 +15,7 @@ import type { Config } from 'payload'
  * without it, Payload writes its message in English (`new ValidationError(…, req.t)`,
  * `new Forbidden(req.t)`).
  */
-export const LANGUE_DE_PAYLOAD = {
+export const PAYLOAD_LANGUAGE = {
 	fallbackLanguage: 'fr',
 	supportedLanguages: { fr },
 } satisfies NonNullable<Config['i18n']>

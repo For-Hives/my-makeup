@@ -13,7 +13,7 @@ import {
 	secondsBeforeMessage,
 	takeContactSlot,
 } from '@/lib/contact/rate-limit'
-import { proxy, proxyDuContact } from '@/proxy'
+import { contactProxy, proxy } from '@/proxy'
 
 /** The brakes of the contact form (ticket 161; plan 02 U77), then the trap field and the proxy that answers 429. */
 
@@ -215,9 +215,9 @@ describe('le proxy renvoie un 429 en français à la sixième demande', () => {
 	test('la vingt et unième demande du jour pour une boîte est réécrite vers la route de refus, d’où qu’elle vienne', async () => {
 		for (let i = 0; i < 20; i++) contactRateLimitByEmail.prendre(mailboxKey('boite.pleine@example.test'))
 		// The same mailbox, written otherwise, from an address that has sent nothing.
-		const refusee = await proxyDuContact(action('203.0.113.5', ' Boite.Pleine@Example.test '))
+		const refusee = await contactProxy(action('203.0.113.5', ' Boite.Pleine@Example.test '))
 		expect(refusee.headers.get('x-middleware-rewrite')).toContain('/contact/throttled')
-		const libre = await proxyDuContact(action('203.0.113.5', 'autre@example.test'))
+		const libre = await contactProxy(action('203.0.113.5', 'autre@example.test'))
 		expect(libre.headers.get('x-middleware-rewrite')).toBeNull()
 		// The proxy only reads: the brake still holds 20 places for the pleine mailbox, none for the other.
 		expect(secondsBeforeMailbox('autre@example.test')).toBeUndefined()
@@ -225,9 +225,9 @@ describe('le proxy renvoie un 429 en français à la sixième demande', () => {
 
 	test('une adresse locale ou sans corps lisible n’est refusée par la boîte que si le corps le permet', async () => {
 		for (let i = 0; i < 20; i++) contactRateLimitByEmail.prendre(mailboxKey('boite.pleine@example.test'))
-		const sansCorps = await proxyDuContact(requete('POST', '127.0.0.1'))
+		const sansCorps = await contactProxy(requete('POST', '127.0.0.1'))
 		expect(sansCorps.headers.get('x-middleware-rewrite')).toBeNull()
-		const pleine = await proxyDuContact(action('127.0.0.1', 'boite.pleine@example.test'))
+		const pleine = await contactProxy(action('127.0.0.1', 'boite.pleine@example.test'))
 		expect(pleine.headers.get('x-middleware-rewrite')).toContain('/contact/throttled')
 	})
 

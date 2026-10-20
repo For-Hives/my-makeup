@@ -6,61 +6,61 @@
 import type { Payload } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { namedPhotos } from './profile/photos'
-import { type MediaLu, type Rapprochement, rapprocher } from './reconciliation'
-import type { ObjetDuStockage } from './storage'
+import { type ReadMedia, type Reconciliation, reconcile } from './reconciliation'
+import type { StorageObject } from './storage'
 
 const PAGE = 500
 
 /** Every document of a collection, page after page. */
-async function toutLire<T>(lire: (page: number) => Promise<{ docs: T[]; hasNextPage: boolean }>): Promise<T[]> {
+async function readAll<T>(lire: (page: number) => Promise<{ docs: T[]; hasNextPage: boolean }>): Promise<T[]> {
 	const docs: T[] = []
 	for (let page = 1; ; page++) {
-		const lue = await lire(page)
-		docs.push(...lue.docs)
-		if (!lue.hasNextPage) return docs
+		const readItem = await lire(page)
+		docs.push(...readItem.docs)
+		if (!readItem.hasNextPage) return docs
 	}
 }
 
 /** The media, the identifiers a profile or an article uses (an article in any version), and the storage, compared. */
-export async function rapprocherLeStockageEtLaBase(
+export async function reconcileStorageAndDatabase(
 	payload: Payload,
-	lister: () => Promise<readonly ObjetDuStockage[]>
-): Promise<Rapprochement> {
-	const lecture = { depth: 0, limit: PAGE, overrideAccess: true } as const
-	const [objets, medias, profils, articles, versions] = await Promise.all([
+	lister: () => Promise<readonly StorageObject[]>
+): Promise<Reconciliation> {
+	const reading = { depth: 0, limit: PAGE, overrideAccess: true } as const
+	const [objects, media, profiles, articles, versions] = await Promise.all([
 		lister(),
-		toutLire<MediaLu>(async page => {
+		readAll<ReadMedia>(async page => {
 			const { docs, hasNextPage } = await payload.find({
-				...lecture,
+				...reading,
 				collection: 'media',
 				page,
 				select: { prefix: true, _objectKey: true, filename: true, sizes: true, strapiFormats: true, strapiId: true },
 				sort: 'id',
 			})
-			return { docs: docs as MediaLu[], hasNextPage }
+			return { docs: docs as ReadMedia[], hasNextPage }
 		}),
-		toutLire<{ mainPicture?: unknown; gallery?: unknown }>(page =>
+		readAll<{ mainPicture?: unknown; gallery?: unknown }>(page =>
 			payload.find({
-				...lecture,
+				...reading,
 				collection: 'profiles',
 				page,
 				select: { mainPicture: true, gallery: true },
 				sort: 'id',
 			})
 		),
-		toutLire<{ gallery?: unknown }>(page =>
-			payload.find({ ...lecture, collection: 'articles', page, select: { gallery: true }, sort: 'id' })
+		readAll<{ gallery?: unknown }>(page =>
+			payload.find({ ...reading, collection: 'articles', page, select: { gallery: true }, sort: 'id' })
 		),
-		toutLire<{ version?: { gallery?: unknown } }>(page =>
-			payload.findVersions({ ...lecture, collection: 'articles', page, sort: 'id' })
+		readAll<{ version?: { gallery?: unknown } }>(page =>
+			payload.findVersions({ ...reading, collection: 'articles', page, sort: 'id' })
 		),
 	])
-	const utilises = new Set(
+	const used = new Set(
 		[
-			...profils.flatMap(({ mainPicture, gallery }) => [...namedPhotos(mainPicture), ...namedPhotos(gallery)]),
+			...profiles.flatMap(({ mainPicture, gallery }) => [...namedPhotos(mainPicture), ...namedPhotos(gallery)]),
 			...articles.flatMap(({ gallery }) => namedPhotos(gallery)),
 			...versions.flatMap(({ version }) => namedPhotos(version?.gallery)),
 		].map(String)
 	)
-	return rapprocher({ objets, medias, mediasUtilises: utilises })
+	return reconcile({ objets: objects, medias: media, mediasUtilises: used })
 }

@@ -1,6 +1,6 @@
 import type { CollectionConfig } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
-import { adminSeulement, cacheeSaufAdmin } from '../lib/access'
+import { adminOnly, hiddenExceptAdmin } from '../lib/access'
 
 /**
  * The accounts of the old site that were deleted in the v3 (ticket 227; docs/migration/SCHEMA.md).
@@ -18,14 +18,14 @@ export const DeletedAccounts: CollectionConfig<'deleted-accounts'> = {
 	labels: { singular: 'Compte supprimé', plural: 'Comptes supprimés' },
 	admin: {
 		defaultColumns: ['strapiId', 'date'],
-		hidden: cacheeSaufAdmin,
+		hidden: hiddenExceptAdmin,
 		description:
 			'Les comptes de l’ancien site supprimés dans la v3. L’import ne les reprend jamais : leur identifiant seul est gardé.',
 	},
 	defaultSort: '-date',
 	timestamps: false,
 	access: {
-		read: adminSeulement,
+		read: adminOnly,
 		create: () => false,
 		update: () => false,
 		delete: () => false,

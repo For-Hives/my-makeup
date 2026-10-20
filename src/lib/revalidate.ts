@@ -5,7 +5,7 @@
  * The public pages are rendered by the server and kept in Next's cache; a save tells Next which of
  * them to render again (src/collections/revalidate.ts). Each one is named twice:
  * - by its path (`revalidatePath`): `/profil/<slug>`, `/search`, `/sitemap.xml`…;
- * - by a tag (`revalidateTag`), which a cached read of the data carries (`ETIQUETTES`): every page
+ * - by a tag (`revalidateTag`), which a cached read of the data carries (`TAGS`): every page
  *   that reads a profile, a talent or an article is then refreshed, whichever page it is.
  *
  * Nothing is refreshed when the document is public neither before nor after the save: a draft that
@@ -17,10 +17,10 @@
 import { estUnSlug } from './slug'
 
 /** The collections whose documents have a public page. */
-export type ContenuPublic = 'profiles' | 'articles' | 'talents'
+export type PublicContent = 'profiles' | 'articles' | 'talents'
 
 /** What the public sees of a document, read from its stored row. */
-export interface EtatPublic {
+export interface PublicState {
 	/** The end of the address of its page. */
 	slug: string
 	/** Shown to the public: a published profile (`status`), a published article or talent (`_status`). */
@@ -37,7 +37,7 @@ export interface EtatPublic {
  * of its collection for a read of several documents (the search, the sitemap, the plan of the
  * site, the home page), and the tag of the document for a read of one.
  */
-export const ETIQUETTES = {
+export const TAGS = {
 	profils: 'profils',
 	profil: (slug: string) => `profil:${slug}`,
 	articles: 'articles',
@@ -47,7 +47,7 @@ export const ETIQUETTES = {
 } as const
 
 /** The pages of the site that show the documents of a collection. */
-interface PagesDuContenu {
+interface ContentPages {
 	/** The page of one document. */
 	page: (slug: string) => string
 	/** The tag of the read of one document. */
@@ -65,29 +65,29 @@ const PLANS = ['/site-map', '/sitemap.xml'] as const
  * Where each collection is shown. A profile is listed by the search, the plan of the site and the
  * sitemap; an article by the blog; a talent by the home page. The search lists profiles only.
  */
-export const PAGES_PUBLIQUES: Readonly<Record<ContenuPublic, PagesDuContenu>> = {
+export const PUBLIC_PAGES: Readonly<Record<PublicContent, ContentPages>> = {
 	profiles: {
 		page: slug => `/profil/${slug}`,
-		etiquette: ETIQUETTES.profil,
-		etiquetteDeLaListe: ETIQUETTES.profils,
+		etiquette: TAGS.profil,
+		etiquetteDeLaListe: TAGS.profils,
 		listes: ['/search', ...PLANS],
 	},
 	articles: {
 		page: slug => `/blog/${slug}`,
-		etiquette: ETIQUETTES.article,
-		etiquetteDeLaListe: ETIQUETTES.articles,
+		etiquette: TAGS.article,
+		etiquetteDeLaListe: TAGS.articles,
 		listes: ['/blog', ...PLANS],
 	},
 	talents: {
 		page: slug => `/talent/${slug}`,
-		etiquette: ETIQUETTES.talent,
-		etiquetteDeLaListe: ETIQUETTES.talents,
+		etiquette: TAGS.talent,
+		etiquetteDeLaListe: TAGS.talents,
 		listes: ['/', ...PLANS],
 	},
 }
 
 /** What a save makes stale: paths for `revalidatePath`, tags for `revalidateTag`. */
-export interface Cibles {
+export interface Targets {
 	chemins: string[]
 	etiquettes: string[]
 }
@@ -104,11 +104,11 @@ export interface Cibles {
  *
  * A slug that is not a real one (the provisional slug of a profile being created) gives no page.
  */
-export function ciblesDuChangement(contenu: ContenuPublic, avant: EtatPublic | null, apres: EtatPublic | null): Cibles {
-	const publics = [avant, apres].filter((etat): etat is EtatPublic => etat?.visible === true)
-	if (publics.length === 0) return { chemins: [], etiquettes: [] }
-	const pages = PAGES_PUBLIQUES[contenu]
-	const slugs = [...new Set(publics.map(({ slug }) => slug))].filter(estUnSlug)
+export function changeTargets(contenu: PublicContent, avant: PublicState | null, apres: PublicState | null): Targets {
+	const publicOnes = [avant, apres].filter((etat): etat is PublicState => etat?.visible === true)
+	if (publicOnes.length === 0) return { chemins: [], etiquettes: [] }
+	const pages = PUBLIC_PAGES[contenu]
+	const slugs = [...new Set(publicOnes.map(({ slug }) => slug))].filter(estUnSlug)
 	return {
 		chemins: [...slugs.map(pages.page), ...pages.listes],
 		etiquettes: [...slugs.map(pages.etiquette), pages.etiquetteDeLaListe],

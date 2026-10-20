@@ -136,10 +136,10 @@ describe('rien de saisi ne part : lecture du code', () => {
 
 	test('la page de recherche ne donne au navigateur que deux faits et une empreinte', () => {
 		const page = lire('src/app/(front)/(site)/search/page.tsx')
-		const balise = page.match(/<MesureDeRecherche[\s\S]*?\/>/)?.[0] ?? ''
+		const balise = page.match(/<SearchAnalytics[\s\S]*?\/>/)?.[0] ?? ''
 		expect(balise).toContain("aUneVille={city !== ''}")
-		expect(balise).toContain('trancheDeResultats(all.length)')
-		expect(balise).toContain('empreinte(')
+		expect(balise).toContain('resultBucket(all.length)')
+		expect(balise).toContain('fingerprint(')
 		expect(balise).not.toMatch(/search=\{search\}|city=\{city\}|recherche=/)
 	})
 
@@ -152,7 +152,7 @@ describe('rien de saisi ne part : lecture du code', () => {
 		expect(lire('src/components/blocks/Cta.tsx')).toContain("where: 'cta_inscription'")
 		expect(lire('src/components/layout/Nav.tsx')).toContain("nom: 'nav_recherche'")
 		expect(lire('src/components/search/ResultCard.tsx')).toContain("nom: 'search_result_click'")
-		expect(lire('src/app/(front)/(site)/not-found.tsx')).toContain('<MesureDePageIntrouvable />')
+		expect(lire('src/app/(front)/(site)/not-found.tsx')).toContain('<NotFoundAnalytics />')
 		expect(lire('src/app/(front)/(site)/error.tsx')).toContain('scope="site"')
 		expect(lire('src/app/(front)/(dashboard)/auth/error.tsx')).toContain('scope="espace"')
 		expect(lire('src/app/global-error.tsx')).toContain('scope="global"')

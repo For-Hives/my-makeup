@@ -12,7 +12,7 @@
 
 import type { APIRequestContext, APIResponse } from '@playwright/test'
 import type { Payload } from 'payload'
-import { CONTEXTE_SANS_PROFIL } from '../../src/collections/Profiles'
+import { NO_PROFILE_CONTEXT } from '../../src/collections/Profiles'
 import { creerCompte } from './fabrique-comptes'
 
 /** Communes of the official list, with their INSEE code and the centre of the commune. */
@@ -125,7 +125,7 @@ export async function fabriquerDesProfils(
 				name: `Générée ${rang}`,
 				_verified: true,
 			},
-			context: CONTEXTE_SANS_PROFIL,
+			context: NO_PROFILE_CONTEXT,
 			disableVerificationEmail: true,
 		})
 		await payload.create({ collection: 'profiles', data: { ...profil, slug, pro: pro.id } })

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
-import { PROFILS_DU_JEU } from '../../src/demo-data/profiles'
-import { ARTICLES_DU_JEU, TALENTS_DU_JEU } from '../../src/demo-data/editorial'
+import { DEMO_ARTICLES, DEMO_TALENTS } from '../../src/demo-data/editorial'
+import { DEMO_PROFILES } from '../../src/demo-data/profiles'
 import { CONTENU_DU_BANC, poserLeJeuDuBanc } from '../fixtures/jeu-du-banc'
 import { payloadDeTest } from '../outils/payload-test'
 import { ouvrirSessionSansMotDePasse } from '../outils/session'
@@ -25,18 +25,17 @@ test.describe('Le jeu du banc dans l’administration', () => {
 
 		await page.goto('/admin/collections/profiles?limit=100')
 		// The list shows the slug of a profile, no longer the address of its account (ticket 165).
-		for (const { attendu } of PROFILS_DU_JEU)
+		for (const { attendu } of DEMO_PROFILES)
 			await expect(page.getByRole('link', { name: attendu.slug, exact: true })).toHaveCount(1)
-		expect(PROFILS_DU_JEU).toHaveLength(CONTENU_DU_BANC.profilsTypes)
+		expect(DEMO_PROFILES).toHaveLength(CONTENU_DU_BANC.profilsTypes)
 
 		await page.goto('/admin/collections/talents?limit=100')
-		for (const { slug } of TALENTS_DU_JEU)
-			await expect(page.locator('tbody tr').filter({ hasText: slug })).toHaveCount(1)
+		for (const { slug } of DEMO_TALENTS) await expect(page.locator('tbody tr').filter({ hasText: slug })).toHaveCount(1)
 
 		await page.goto('/admin/collections/articles?limit=100')
-		for (const { slug } of ARTICLES_DU_JEU)
+		for (const { slug } of DEMO_ARTICLES)
 			await expect(page.locator('tbody tr').filter({ hasText: slug })).toHaveCount(1)
-		const brouillon = ARTICLES_DU_JEU.find(({ statut }) => statut === 'draft')
+		const brouillon = DEMO_ARTICLES.find(({ statut }) => statut === 'draft')
 		if (!brouillon) throw new Error('le jeu du banc ne contient pas son brouillon')
 		await expect(page.locator('tbody tr').filter({ hasText: brouillon.slug })).toContainText('Brouillon')
 	})

@@ -4,44 +4,44 @@
  * The application never erases an object. A photo that no longer serves moves, with each of its
  * derived sizes, under `deleted/`, at the same key behind it: `media/a1b2.webp` becomes
  * `deleted/media/a1b2.webp`. A rule of the storage erases what is there 30 days later (set in R2
- * by hand, ticket 205); until then, `remettreEnPlace` puts an object back where it was.
+ * by hand, ticket 205); until then, `restore` puts an object back where it was.
  *
  * A move is a copy into the bin, a check that the copy has the size of the original, and only then
  * the removal of the original (`retirer`): the only removal in the whole application. An object
  * is always in one of the two places, and its bytes are never lost.
  *
  * Should the storage fail in the middle of a move, what has already moved is put back, each object
- * tried once, and the error goes up (`PanneDuStockage`): the caller then leaves its documents as
+ * tried once, and the error goes up (`StorageOutage`): the caller then leaves its documents as
  * they were, so that no document names an object that has gone.
  *
- * No Payload and no S3 client here: the storage is an interface (`StockageDesObjets`), which
+ * No Payload and no S3 client here: the storage is an interface (`ObjectStorage`), which
  * src/lib/storage.ts gives for R2 and the simulator of the bench, and a test for its fake.
  */
 
 // Relative import on purpose: this file is also loaded by the Payload CLI, outside of Next.
-import { cleDuMedia } from './media'
+import { mediaKey } from './media'
 
 /** The folder of the bin, at the root of the storage. */
-export const PREFIXE_DE_LA_CORBEILLE = 'deleted'
+export const TRASH_PREFIX = 'deleted'
 
 /** Where the object of this key waits in the bin. */
-export const cleEnCorbeille = (cle: string): string => `${PREFIXE_DE_LA_CORBEILLE}/${cle}`
+export const trashKey = (cle: string): string => `${TRASH_PREFIX}/${cle}`
 
 /** True for the key of an object that is already in the bin. */
-export const estEnCorbeille = (cle: string): boolean => cle.startsWith(`${PREFIXE_DE_LA_CORBEILLE}/`)
+export const isInTrash = (cle: string): boolean => cle.startsWith(`${TRASH_PREFIX}/`)
 
 /** What the bin needs from a storage, and nothing more. */
-export interface StockageDesObjets {
+export interface ObjectStorage {
 	/** The size in bytes of the object of this key; nothing when the storage holds no such object. Throws when the storage fails. */
 	taille(cle: string): Promise<number | undefined>
 	/** Copies the object of `source` to `destination`, in place of the object that had that key. */
 	copier(source: string, destination: string): Promise<void>
-	/** Removes the object of this key. Called by `deplacerVersLaCorbeille` only, once the copy in the bin is checked. */
+	/** Removes the object of this key. Called by `moveToTrash` only, once the copy in the bin is checked. */
 	retirer(cle: string): Promise<void>
 }
 
 /** What a media says about where its objects are: its prefix, its file name, and the name of each derived size. */
-export interface ObjetsDUnMedia {
+export interface MediaObjects {
 	prefix?: string | null
 	/** The folder of a photo sent straight from a browser, under its prefix (`@payloadcms/storage-s3`): unused today. */
 	_objectKey?: string | null
@@ -51,23 +51,23 @@ export interface ObjetsDUnMedia {
 
 /**
  * The keys of the objects of a media: the original, then each derived size, all in its folder, as
- * its public address names them (`cleDuMedia`, src/lib/media.ts). No key twice, none for an empty
+ * its public address names them (`mediaKey`, src/lib/media.ts). No key twice, none for an empty
  * name. The thumbnails of the old site (`strapiFormats`) are not among them: they stay where they
  * are, and the control of the media before any purge counts them (tickets 197 and 205).
  */
-export function clesDesObjets(media: ObjetsDUnMedia): string[] {
-	const dossier = [media.prefix, media._objectKey]
+export function objectKeys(media: MediaObjects): string[] {
+	const folder = [media.prefix, media._objectKey]
 		.filter(partie => typeof partie === 'string' && partie !== '')
 		.join('/')
-	const noms = [media.filename, ...Object.values(media.sizes ?? {}).map(taille => taille?.filename)]
-	const cles = noms
+	const names = [media.filename, ...Object.values(media.sizes ?? {}).map(taille => taille?.filename)]
+	const keys = names
 		.filter((nom): nom is string => typeof nom === 'string' && nom !== '')
-		.map(nom => cleDuMedia(dossier, nom))
-	return [...new Set(cles)]
+		.map(nom => mediaKey(folder, nom))
+	return [...new Set(keys)]
 }
 
 /** What a move did. */
-export interface Bilan {
+export interface Summary {
 	/** Moved to the bin. */
 	deplacees: string[]
 	/** No object under this key: nothing to move (an object missing since the old site, for one). */
@@ -77,7 +77,7 @@ export interface Bilan {
 }
 
 /** What putting objects back did. Each object is tried once, never again. */
-export interface BilanDeRemise {
+export interface RestoreSummary {
 	/** Back where it was, or already there. */
 	remises: string[]
 	/** Still in the bin: the storage failed, or the bin holds no copy of it. */
@@ -88,7 +88,7 @@ export interface BilanDeRemise {
  * The storage failed during a move: the objects already moved were put back, each tried once.
  * Its message names no key: a key of the old site may hold the name of the file someone sent.
  */
-export class PanneDuStockage extends Error {
+export class StorageOutage extends Error {
 	override readonly name = 'PanneDuStockage'
 
 	constructor(
@@ -109,40 +109,38 @@ export class PanneDuStockage extends Error {
  * Moves these objects to the bin, one after the other: copy, check of the size of the copy, then
  * removal of the original. An object the storage does not hold is not an error: there is nothing
  * to move. When the storage fails, the objects whose copy was made are put back, once
- * (`remettreEnPlace`), and `PanneDuStockage` is thrown.
+ * (`restore`), and `StorageOutage` is thrown.
  */
-export async function deplacerVersLaCorbeille(stockage: StockageDesObjets, cles: readonly string[]): Promise<Bilan> {
-	const bilan: Bilan = { deplacees: [], absentes: [], dejaEnCorbeille: [] }
+export async function moveToTrash(stockage: ObjectStorage, cles: readonly string[]): Promise<Summary> {
+	const summary: Summary = { deplacees: [], absentes: [], dejaEnCorbeille: [] }
 	// Every key whose copy in the bin is checked: the original may be gone, even when the storage
 	// failed on its removal (a removal done, whose answer was lost).
-	const copiees: string[] = []
+	const copied: string[] = []
 	try {
-		for (const cle of new Set(cles)) {
-			if (estEnCorbeille(cle)) {
-				bilan.dejaEnCorbeille.push(cle)
+		for (const key of new Set(cles)) {
+			if (isInTrash(key)) {
+				summary.dejaEnCorbeille.push(key)
 				continue
 			}
-			const taille = await stockage.taille(cle)
-			if (taille === undefined) {
-				bilan.absentes.push(cle)
+			const size = await stockage.taille(key)
+			if (size === undefined) {
+				summary.absentes.push(key)
 				continue
 			}
-			const destination = cleEnCorbeille(cle)
-			await stockage.copier(cle, destination)
-			const copie = await stockage.taille(destination)
-			if (copie !== taille)
-				throw new Error(
-					`The copy in the bin has ${copie ?? 'no'} byte(s), the original ${taille}: the original is kept.`
-				)
-			copiees.push(cle)
-			await stockage.retirer(cle)
-			bilan.deplacees.push(cle)
+			const destination = trashKey(key)
+			await stockage.copier(key, destination)
+			const copy = await stockage.taille(destination)
+			if (copy !== size)
+				throw new Error(`The copy in the bin has ${copy ?? 'no'} byte(s), the original ${size}: the original is kept.`)
+			copied.push(key)
+			await stockage.retirer(key)
+			summary.deplacees.push(key)
 		}
-	} catch (erreur) {
-		const { remises, nonRemises } = await remettreEnPlace(stockage, copiees.reverse())
-		throw new PanneDuStockage(erreur, remises, nonRemises)
+	} catch (error) {
+		const { remises: restored, nonRemises: notRestored } = await restore(stockage, copied.reverse())
+		throw new StorageOutage(error, restored, notRestored)
 	}
-	return bilan
+	return summary
 }
 
 /**
@@ -153,26 +151,26 @@ export async function deplacerVersLaCorbeille(stockage: StockageDesObjets, cles:
  * Each object is tried once, never again; this function never throws. What could not be put back
  * is listed in `nonRemises`.
  */
-export async function remettreEnPlace(stockage: StockageDesObjets, cles: readonly string[]): Promise<BilanDeRemise> {
-	const bilan: BilanDeRemise = { remises: [], nonRemises: [] }
-	for (const cle of new Set(cles)) {
+export async function restore(stockage: ObjectStorage, cles: readonly string[]): Promise<RestoreSummary> {
+	const summary: RestoreSummary = { remises: [], nonRemises: [] }
+	for (const key of new Set(cles)) {
 		try {
-			if ((await stockage.taille(cle)) !== undefined) {
-				bilan.remises.push(cle)
+			if ((await stockage.taille(key)) !== undefined) {
+				summary.remises.push(key)
 				continue
 			}
-			const enCorbeille = cleEnCorbeille(cle)
-			const taille = await stockage.taille(enCorbeille)
-			if (taille === undefined) {
-				bilan.nonRemises.push(cle)
+			const inTrash = trashKey(key)
+			const size = await stockage.taille(inTrash)
+			if (size === undefined) {
+				summary.nonRemises.push(key)
 				continue
 			}
-			await stockage.copier(enCorbeille, cle)
-			if ((await stockage.taille(cle)) === taille) bilan.remises.push(cle)
-			else bilan.nonRemises.push(cle)
+			await stockage.copier(inTrash, key)
+			if ((await stockage.taille(key)) === size) summary.remises.push(key)
+			else summary.nonRemises.push(key)
 		} catch {
-			bilan.nonRemises.push(cle)
+			summary.nonRemises.push(key)
 		}
 	}
-	return bilan
+	return summary
 }

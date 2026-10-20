@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
-import { CONTEXTE_SANS_PROFIL } from '@/collections/Profiles'
-import { LIMITE_REST_MAX, LIMITE_REST_PAR_DEFAUT, lectureEnListeBornee } from '@/lib/bounded-query'
+import { NO_PROFILE_CONTEXT } from '@/collections/Profiles'
+import { boundedListRead, REST_LIMIT_DEFAULT, REST_LIMIT_MAX } from '@/lib/bounded-query'
 import type { Article, Media } from '@/payload-types'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
@@ -16,7 +16,7 @@ import { viderLeStockage } from '../outils/s3'
  * of everything, one more than the cap.
  */
 
-const TOTAL = LIMITE_REST_MAX + 1
+const TOTAL = REST_LIMIT_MAX + 1
 
 let payload: Payload
 let redaction: Awaited<ReturnType<typeof creerCompte<'redaction'>>>
@@ -46,7 +46,7 @@ beforeAll(async () => {
 		const pro = await payload.create({
 			collection: 'pros',
 			data: { email: `bornes-${i}@example.test`, password: `Banc-${i}-${crypto.randomUUID()}`, name: `Bornée ${i}` },
-			context: CONTEXTE_SANS_PROFIL,
+			context: NO_PROFILE_CONTEXT,
 		})
 		const profil = await payload.create({
 			collection: 'profiles',
@@ -92,7 +92,7 @@ describe('Anonyme : au plus 100 profils par lecture REST, 10 sans limit', () => 
 	test('limit=0&pagination=false : 100 documents sur 101, une page suivante', async () => {
 		const { statut, liste } = await lire('/api/profiles?limit=0&pagination=false&depth=0')
 		expect(statut).toBe(200)
-		expect(liste.docs).toHaveLength(LIMITE_REST_MAX)
+		expect(liste.docs).toHaveLength(REST_LIMIT_MAX)
 		expect(liste.hasNextPage).toBe(true)
 		expect(liste.totalDocs).toBe(TOTAL)
 	})
@@ -100,9 +100,9 @@ describe('Anonyme : au plus 100 profils par lecture REST, 10 sans limit', () => 
 	test('limit=1000 puis limit=-1 : 100 au plus ; sans limit : 10 ; une limite entre les deux est respectée', async () => {
 		for (const limite of [1000, -1, 101])
 			expect((await lire(`/api/profiles?limit=${limite}&depth=0`)).liste.docs, String(limite)).toHaveLength(100)
-		expect((await lire('/api/profiles?depth=0')).liste.docs).toHaveLength(LIMITE_REST_PAR_DEFAUT)
+		expect((await lire('/api/profiles?depth=0')).liste.docs).toHaveLength(REST_LIMIT_DEFAULT)
 		expect((await lire('/api/profiles?limit=7&depth=0')).liste.docs).toHaveLength(7)
-		expect((await lire('/api/profiles?limit=abc&depth=0')).liste.docs).toHaveLength(LIMITE_REST_PAR_DEFAUT)
+		expect((await lire('/api/profiles?limit=abc&depth=0')).liste.docs).toHaveLength(REST_LIMIT_DEFAULT)
 	})
 
 	test('la page 2 donne le reste : la lecture reste complète, page après page', async () => {
@@ -116,11 +116,11 @@ describe('Anonyme : au plus 100 profils par lecture REST, 10 sans limit', () => 
 			const { liste } = await lire(`/api/${collection}?limit=0&pagination=false&depth=0`)
 			expect([collection, liste.docs.length, liste.totalDocs, liste.hasNextPage]).toEqual([
 				collection,
-				LIMITE_REST_MAX,
+				REST_LIMIT_MAX,
 				TOTAL,
 				true,
 			])
-			expect((await lire(`/api/${collection}?depth=0`)).liste.docs).toHaveLength(LIMITE_REST_PAR_DEFAUT)
+			expect((await lire(`/api/${collection}?depth=0`)).liste.docs).toHaveLength(REST_LIMIT_DEFAULT)
 		}
 	})
 })
@@ -135,7 +135,7 @@ describe('Les verrous de Payload et l’admin', () => {
 		const enTetes = redaction.session.enTetes
 		const tout = await lire('/api/payload-locked-documents?limit=0&pagination=false&depth=0', enTetes)
 		expect(tout.statut).toBe(200)
-		expect(tout.liste.docs).toHaveLength(LIMITE_REST_MAX)
+		expect(tout.liste.docs).toHaveLength(REST_LIMIT_MAX)
 		expect(tout.liste.totalDocs).toBe(TOTAL)
 		expect((await lire('/api/payload-locked-documents?depth=0', enTetes)).liste.docs).toHaveLength(10)
 	})
@@ -151,7 +151,7 @@ describe('Les verrous de Payload et l’admin', () => {
 
 	test('la rédaction, qui n’est pas admin, est plafonnée comme tout le monde', async () => {
 		const { liste } = await lire('/api/profiles?limit=0&pagination=false&depth=0', redaction.session.enTetes)
-		expect(liste.docs).toHaveLength(LIMITE_REST_MAX)
+		expect(liste.docs).toHaveLength(REST_LIMIT_MAX)
 	})
 })
 
@@ -238,7 +238,7 @@ describe('Hors REST, rien n’est plafonné', () => {
 			// A collection without any REST endpoint (the bookkeeping of the migrations) has no list to bound.
 			if (config.endpoints === false) continue
 			const endpoints = config.endpoints || []
-			expect([slug, endpoints.find(e => e.method === 'get' && e.path === '/')]).toEqual([slug, lectureEnListeBornee])
+			expect([slug, endpoints.find(e => e.method === 'get' && e.path === '/')]).toEqual([slug, boundedListRead])
 		}
 	})
 })

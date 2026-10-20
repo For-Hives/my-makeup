@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
-import { validerTitreDeLaPage } from '@/collections/Talents'
+import { validatePageTitle } from '@/collections/Talents'
 import { editorialMetadata } from '@/lib/seo/metadata'
 import { MAX_TITLE, TALENT_MIN_TITLE } from '@/lib/seo/text'
 import { readTalent, TALENT_PAGE_FIELDS } from '@/services/public/talents'
@@ -88,17 +88,17 @@ describe('validerTitreDeLaPage : de 50 à 60 caractères, différent du h1', () 
 	const de = (n: number) => `${'Titre '.repeat(20)}`.slice(0, n).trim().padEnd(n, 'x')
 
 	test('vide : accepté, la page garde le titre du site actuel', () => {
-		for (const vide of [undefined, null, '', '   ']) expect(validerTitreDeLaPage(vide, arguments_())).toBe(true)
+		for (const vide of [undefined, null, '', '   ']) expect(validatePageTitle(vide, arguments_())).toBe(true)
 	})
 
 	test('50 à 60 caractères : accepté', () => {
 		for (const n of [TALENT_MIN_TITLE, 55, MAX_TITLE])
-			expect(validerTitreDeLaPage(de(n), arguments_()), String(n)).toBe(true)
+			expect(validatePageTitle(de(n), arguments_()), String(n)).toBe(true)
 	})
 
 	test('49 ou 61 caractères : refusé, avec la longueur dite', () => {
 		for (const n of [49, 61, 10]) {
-			const message = validerTitreDeLaPage(de(n), arguments_())
+			const message = validatePageTitle(de(n), arguments_())
 			expect(message).toContain(`de ${TALENT_MIN_TITLE} à ${MAX_TITLE} caractères`)
 			expect(message).toContain(`en compte ${n}`)
 		}
@@ -106,8 +106,8 @@ describe('validerTitreDeLaPage : de 50 à 60 caractères, différent du h1', () 
 
 	test('identique au h1 : refusé', () => {
 		const titre = de(55)
-		expect(validerTitreDeLaPage(titre, arguments_(titre))).toContain('différent')
-		expect(validerTitreDeLaPage(titre, arguments_(`${titre.slice(1)}z`))).toBe(true)
+		expect(validatePageTitle(titre, arguments_(titre))).toContain('différent')
+		expect(validatePageTitle(titre, arguments_(`${titre.slice(1)}z`))).toBe(true)
 	})
 })
 

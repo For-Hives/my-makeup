@@ -10,7 +10,7 @@ import type {
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { estUnImport } from '../lib/contexte-import'
 import { PUBLISHED_STATUS } from '../lib/profile/status'
-import { type Cibles, type ContenuPublic, ciblesDuChangement, type EtatPublic } from '../lib/revalidate'
+import { changeTargets, type PublicContent, type PublicState, type Targets } from '../lib/revalidate'
 import { changedUrls, keyIfSubmitAllowed, reportLater } from '../lib/seo/indexnow'
 
 /**
@@ -30,36 +30,36 @@ import { changedUrls, keyIfSubmitAllowed, reportLater } from '../lib/seo/indexno
  */
 
 /** The field of the stored row that says whether the document is shown, and its public value. */
-const VISIBILITE: Readonly<Record<ContenuPublic, { champ: 'status' | '_status'; valeur: string }>> = {
+const VISIBILITY: Readonly<Record<PublicContent, { champ: 'status' | '_status'; valeur: string }>> = {
 	profiles: { champ: 'status', valeur: PUBLISHED_STATUS },
 	articles: { champ: '_status', valeur: 'published' },
 	talents: { champ: '_status', valeur: 'published' },
 }
 
-type LigneStockee = { id: number | string; slug?: unknown; publishable?: unknown } & Partial<
+type StoredRow = { id: number | string; slug?: unknown; publishable?: unknown } & Partial<
 	Record<'status' | '_status', unknown>
 >
 
 /** The public state of a document, from its stored row; `null` when there is no row. */
-async function lireEtatPublic(
+async function readPublicState(
 	req: PayloadRequest,
-	contenu: ContenuPublic,
+	contenu: PublicContent,
 	id: number | string
-): Promise<EtatPublic | null> {
-	const { champ, valeur } = VISIBILITE[contenu]
-	const ligne = await req.payload.db.findOne<LigneStockee>({
+): Promise<PublicState | null> {
+	const { champ: field, valeur: value } = VISIBILITY[contenu]
+	const row = await req.payload.db.findOne<StoredRow>({
 		collection: contenu,
 		req,
-		select: { slug: true, [champ]: true, ...(contenu === 'profiles' && { publishable: true }) },
+		select: { slug: true, [field]: true, ...(contenu === 'profiles' && { publishable: true }) },
 		where: { id: { equals: id } },
 	})
-	if (!ligne) return null
-	const visible = ligne[champ] === valeur
+	if (!row) return null
+	const visible = row[field] === value
 	// A profile is in the sitemap when it is publishable (IndexNow, ticket 219); the others when published.
 	return {
-		slug: String(ligne.slug ?? ''),
+		slug: String(row.slug ?? ''),
 		visible,
-		indexable: contenu === 'profiles' ? ligne.publishable === true : visible,
+		indexable: contenu === 'profiles' ? row.publishable === true : visible,
 	}
 }
 
@@ -67,45 +67,45 @@ async function lireEtatPublic(
  * Where the state read before a write waits for the hook that runs after it: in the context of
  * the request, which Payload hands to both hooks, nested writes included.
  */
-const CLE_DU_CONTEXTE = 'etatsPublicsAvantEcriture'
+const CONTEXT_KEY = 'etatsPublicsAvantEcriture'
 
-function etatsRetenus(context: RequestContext): Map<string, EtatPublic | null> {
-	const retenus = context[CLE_DU_CONTEXTE]
-	if (retenus instanceof Map) return retenus as Map<string, EtatPublic | null>
-	const nouveaux = new Map<string, EtatPublic | null>()
-	context[CLE_DU_CONTEXTE] = nouveaux
-	return nouveaux
+function keptStates(context: RequestContext): Map<string, PublicState | null> {
+	const kept = context[CONTEXT_KEY]
+	if (kept instanceof Map) return kept as Map<string, PublicState | null>
+	const fresh = new Map<string, PublicState | null>()
+	context[CONTEXT_KEY] = fresh
+	return fresh
 }
 
-const cle = (contenu: ContenuPublic, id: number | string) => `${contenu}:${id}`
+const key = (contenu: PublicContent, id: number | string) => `${contenu}:${id}`
 
 /** The state read before the write of this document, once: `null` when none was read. */
-function reprendre(context: RequestContext, contenu: ContenuPublic, id: number | string): EtatPublic | null {
-	const retenus = etatsRetenus(context)
-	const etat = retenus.get(cle(contenu, id)) ?? null
-	retenus.delete(cle(contenu, id))
-	return etat
+function resume(context: RequestContext, contenu: PublicContent, id: number | string): PublicState | null {
+	const kept = keptStates(context)
+	const state = kept.get(key(contenu, id)) ?? null
+	kept.delete(key(contenu, id))
+	return state
 }
 
 /** True for the refusal of Next outside one of its requests (`E263`, « static generation store missing »). */
-export const horsDUneRequeteDeNext = (erreur: unknown): boolean =>
+export const outsideNextRequest = (erreur: unknown): boolean =>
 	erreur instanceof Error && '__NEXT_ERROR_CODE' in erreur && erreur.__NEXT_ERROR_CODE === 'E263'
 
 /**
  * Tells Next which pages are stale. A tag expires at once, rather than being served stale one last
  * time: a profile hidden, or contact details withdrawn, leave at the next visit.
  */
-export function revalider(req: PayloadRequest, { chemins, etiquettes }: Cibles): void {
+export function revalidateChange(req: PayloadRequest, { chemins, etiquettes }: Targets): void {
 	if (chemins.length === 0 && etiquettes.length === 0) return
 	try {
-		for (const etiquette of etiquettes) revalidateTag(etiquette, { expire: 0 })
-		for (const chemin of chemins) revalidatePath(chemin)
-	} catch (erreur) {
-		if (horsDUneRequeteDeNext(erreur)) {
+		for (const tag of etiquettes) revalidateTag(tag, { expire: 0 })
+		for (const path of chemins) revalidatePath(path)
+	} catch (error) {
+		if (outsideNextRequest(error)) {
 			req.payload.logger.debug('[revalidation] written outside of a request of Next: no page refreshed')
 			return
 		}
-		req.payload.logger.error({ err: erreur, msg: '[revalidation] the public pages of this write were not refreshed' })
+		req.payload.logger.error({ err: error, msg: '[revalidation] the public pages of this write were not refreshed' })
 	}
 }
 
@@ -114,29 +114,29 @@ export function revalider(req: PayloadRequest, { chemins, etiquettes }: Cibles):
  * without the key, off the site itself, or during the import (which never gets here). The request leaves
  * a few seconds later and never holds the save: a failure is logged by the queue.
  */
-export function signalerAuxMoteurs(
+export function notifyEngines(
 	req: PayloadRequest,
-	contenu: ContenuPublic,
-	avant: EtatPublic | null,
-	apres: EtatPublic | null
+	contenu: PublicContent,
+	avant: PublicState | null,
+	apres: PublicState | null
 ): void {
-	const cle = keyIfSubmitAllowed()
-	if (cle === undefined) return
+	const key = keyIfSubmitAllowed()
+	if (key === undefined) return
 	try {
 		reportLater(changedUrls(contenu, avant, apres), {
-			cle,
+			cle: key,
 			journal: {
 				info: message => req.payload.logger.info(message),
 				error: message => req.payload.logger.error(message),
 			},
 		})
-	} catch (erreur) {
-		req.payload.logger.error({ err: erreur, msg: '[indexnow] the addresses of this write were not queued' })
+	} catch (error) {
+		req.payload.logger.error({ err: error, msg: '[indexnow] the addresses of this write were not queued' })
 	}
 }
 
 /** The hooks of the refresh of one collection, to add to its own. */
-export interface HooksDeRafraichissement {
+export interface RefreshHooks {
 	/** `beforeChange`: reads the public state before an update. */
 	avantEcriture: CollectionBeforeChangeHook
 	/** `afterChange`, after the hooks that change the document (the fallback slug of a profile). */
@@ -147,31 +147,31 @@ export interface HooksDeRafraichissement {
 	apresSuppression: CollectionAfterDeleteHook
 }
 
-export function rafraichissement(contenu: ContenuPublic): HooksDeRafraichissement {
+export function refresh(contenu: PublicContent): RefreshHooks {
 	return {
 		avantEcriture: async ({ context, data, operation, originalDoc, req }) => {
 			const id = originalDoc?.id
 			if (estUnImport(context) || operation !== 'update' || id === undefined) return data
-			etatsRetenus(context).set(cle(contenu, id), await lireEtatPublic(req, contenu, id))
+			keptStates(context).set(key(contenu, id), await readPublicState(req, contenu, id))
 			return data
 		},
 		apresEcriture: async ({ context, doc, operation, req }) => {
 			if (estUnImport(context)) return doc
-			const avant = operation === 'create' ? null : reprendre(context, contenu, doc.id)
-			const apres = await lireEtatPublic(req, contenu, doc.id)
-			revalider(req, ciblesDuChangement(contenu, avant, apres))
-			signalerAuxMoteurs(req, contenu, avant, apres)
+			const before = operation === 'create' ? null : resume(context, contenu, doc.id)
+			const after = await readPublicState(req, contenu, doc.id)
+			revalidateChange(req, changeTargets(contenu, before, after))
+			notifyEngines(req, contenu, before, after)
 			return doc
 		},
 		avantSuppression: async ({ context, id, req }) => {
 			if (estUnImport(context)) return
-			etatsRetenus(context).set(cle(contenu, id), await lireEtatPublic(req, contenu, id))
+			keptStates(context).set(key(contenu, id), await readPublicState(req, contenu, id))
 		},
 		apresSuppression: ({ context, doc, id, req }) => {
 			if (estUnImport(context)) return doc
-			const avant = reprendre(context, contenu, id)
-			revalider(req, ciblesDuChangement(contenu, avant, null))
-			signalerAuxMoteurs(req, contenu, avant, null)
+			const before = resume(context, contenu, id)
+			revalidateChange(req, changeTargets(contenu, before, null))
+			notifyEngines(req, contenu, before, null)
 			return doc
 		},
 	}

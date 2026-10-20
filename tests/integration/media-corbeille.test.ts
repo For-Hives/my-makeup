@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
-import { MESSAGE_PANNE_DU_STOCKAGE, MESSAGE_UN_A_LA_FOIS } from '@/collections/trash'
+import { ONE_AT_A_TIME_MESSAGE, STORAGE_OUTAGE_MESSAGE } from '@/collections/trash'
 import { CONTEXTE_IMPORT } from '@/lib/contexte-import'
-import { remettreEnPlace } from '@/lib/trash'
 import { serverEnv } from '@/lib/env'
-import { stockageS3 } from '@/lib/storage'
+import { createObjectStorage } from '@/lib/storage'
+import { restore } from '@/lib/trash'
 import type { Media } from '@/payload-types'
 import { type Espion, espionnerLeStockage, sourceDe, suppressionsSansCorbeille } from '../outils/espion-s3'
 import { creerCompte } from '../outils/fabrique-comptes'
@@ -232,7 +232,7 @@ describe('Panne du stockage : document et objet intacts, erreur remontée', () =
 		const { statut, texte } = await enregistrer(compte, { mainPicture: nouvelle.id })
 
 		expect(statut).toBe(503)
-		expect(texte).toContain(MESSAGE_PANNE_DU_STOCKAGE)
+		expect(texte).toContain(STORAGE_OUTAGE_MESSAGE)
 		expect((await profilDe(compte)).mainPicture).toBe(ancienne.id)
 		expect(await stocke(ancienne.id)).not.toBeNull()
 		expect(await octets(cle(ancienne))).toBeDefined()
@@ -250,7 +250,7 @@ describe('Panne du stockage : document et objet intacts, erreur remontée', () =
 		})
 
 		expect(statut).toBe(503)
-		expect(texte).toContain(MESSAGE_PANNE_DU_STOCKAGE)
+		expect(texte).toContain(STORAGE_OUTAGE_MESSAGE)
 		expect(await stocke(media.id)).not.toBeNull()
 		expect(await octets(cle(media))).toBeDefined()
 	})
@@ -342,7 +342,7 @@ describe('Panne du stockage : plusieurs documents à la fois sont refusés, rien
 			() => payload.delete(profils),
 			() => payload.update({ ...profils, data: { mainPicture: null } }),
 		])
-			await expect(operation()).rejects.toThrow(MESSAGE_UN_A_LA_FOIS)
+			await expect(operation()).rejects.toThrow(ONE_AT_A_TIME_MESSAGE)
 
 		const gardee = await stocke(photo.id)
 		expect(gardee).not.toBeNull()
@@ -397,7 +397,7 @@ describe('Un test échoue si une suppression d’objet est appelée ; la remise 
 		const stockage = serverEnv().storage
 		if (!stockage) throw new Error('Le banc n’a pas de stockage : lance les tests par « bun run test:integration ».')
 
-		const bilan = await remettreEnPlace(stockageS3(stockage), [cle(ancienne)])
+		const bilan = await restore(createObjectStorage(stockage), [cle(ancienne)])
 
 		expect(bilan).toEqual({ remises: [cle(ancienne)], nonRemises: [] })
 		expect(await statutPublic(ancienne)).toBe(200)

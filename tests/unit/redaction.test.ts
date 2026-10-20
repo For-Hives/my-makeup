@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { champSlug, datePremierePublication, validerSlug } from '@/collections/editor'
+import { firstPublicationDate, slugFieldDef, validateSlug } from '@/collections/editor'
 import { estUnSlug, SLUG_MAX } from '@/lib/slug'
 
 /**
@@ -38,26 +38,26 @@ describe('Un slug de la rédaction a déjà la forme d’une adresse', () => {
 	})
 
 	test('la validation refuse sans corriger, et propose la bonne forme', () => {
-		expect(validerSlug('maquillage-mariee', argumentsDeValidation)).toBe(true)
-		const message = validerSlug('Maquillage Mariée', argumentsDeValidation)
+		expect(validateSlug('maquillage-mariee', argumentsDeValidation)).toBe(true)
+		const message = validateSlug('Maquillage Mariée', argumentsDeValidation)
 		expect(message).toContain('minuscules')
 		expect(message).toContain('« maquillage-mariee »')
 		// Nothing usable in it: no proposal, still a refusal.
-		expect(validerSlug('💄', argumentsDeValidation)).not.toContain('Par exemple')
-		expect(validerSlug('💄', argumentsDeValidation)).not.toBe(true)
+		expect(validateSlug('💄', argumentsDeValidation)).not.toContain('Par exemple')
+		expect(validateSlug('💄', argumentsDeValidation)).not.toBe(true)
 	})
 
 	test('un slug manquant est refusé par la règle « requis » de Payload', () => {
-		expect(validerSlug(undefined, argumentsDeValidation)).not.toBe(true)
-		expect(validerSlug('', argumentsDeValidation)).not.toBe(true)
+		expect(validateSlug(undefined, argumentsDeValidation)).not.toBe(true)
+		expect(validateSlug('', argumentsDeValidation)).not.toBe(true)
 	})
 
 	test('le champ dit à quelle adresse répond la page', () => {
-		expect(champSlug('/talent')).toMatchObject({
+		expect(slugFieldDef('/talent')).toMatchObject({
 			name: 'slug',
 			required: true,
 			unique: true,
-			validate: validerSlug,
+			validate: validateSlug,
 			admin: { description: expect.stringContaining('/talent/<adresse>') },
 		})
 	})
@@ -65,7 +65,7 @@ describe('Un slug de la rédaction a déjà la forme d’une adresse', () => {
 
 describe('La date de la première publication', () => {
 	const appel = (data: Record<string, unknown>) =>
-		datePremierePublication({ data, operation: 'update' } as never) as Record<string, unknown>
+		firstPublicationDate({ data, operation: 'update' } as never) as Record<string, unknown>
 
 	test('un document publié sans date reçoit la date du moment', () => {
 		const avant = Date.now()

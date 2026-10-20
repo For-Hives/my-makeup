@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, setSystemTime, test } from 'bun:test'
 import { z } from 'zod'
-import { DUREE_SESSION_ADMIN_S } from '@/collections/Admins'
+import { ADMIN_SESSION_DURATION_S } from '@/collections/Admins'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 import { appelerRest } from '../outils/rest'
@@ -42,7 +42,7 @@ describe('Les comptes admins : deux rôles, une session de 8 heures', () => {
 		const debut = Date.now()
 		const { email, session } = await creerCompte('admin')
 
-		expect(DUREE_SESSION_ADMIN_S).toBe(8 * 3600)
+		expect(ADMIN_SESSION_DURATION_S).toBe(8 * 3600)
 		const { exp } = await monCompte(session.enTetes)
 		// The token is signed for 8 hours from its opening, to the second.
 		expect((exp ?? 0) - Math.floor(debut / 1000)).toBeGreaterThanOrEqual(8 * 3600 - 5)

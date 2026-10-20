@@ -11,25 +11,19 @@ import { Articles } from './collections/Articles'
 import { AuthEvents } from './collections/AuthEvents'
 import { ContactRequests } from './collections/ContactRequests'
 import { DeletedAccounts } from './collections/DeletedAccounts'
-import {
-	aucunEnvoiSansStockage,
-	champsDuStockageFermes,
-	Media,
-	UPLOAD_DES_MEDIAS,
-	versLAdressePublique,
-} from './collections/Media'
+import { closedStorageFields, MEDIA_UPLOAD, Media, noUploadWithoutStorage, toPublicUrl } from './collections/Media'
 import { Profiles } from './collections/Profiles'
 import { Pros } from './collections/Pros'
 import { Talents } from './collections/Talents'
-import { avecLaCorbeille } from './collections/trash'
+import { withTrash } from './collections/trash'
+import { boundedQueries } from './lib/bounded-query'
 import { adapterWithoutRelay, transportOptions } from './lib/emails/relay'
 import { mediaBaseUrl, serverEnv } from './lib/env'
-import { LANGUE_DE_PAYLOAD } from './lib/payload-language'
-import { adresseDuMedia, PREFIXE_DES_ENVOIS } from './lib/media'
+import { mediaUrl, UPLOAD_PREFIX } from './lib/media'
+import { PAYLOAD_LANGUAGE } from './lib/payload-language'
+import { reserveLocksToAdmins } from './lib/payload-locks'
 import { avecLEcouteDuPool, reglagesDuPool } from './lib/pool-base'
-import { requetesBornees } from './lib/bounded-query'
-import { stockageS3 } from './lib/storage'
-import { reserverLesVerrousAuxAdmins } from './lib/payload-locks'
+import { createObjectStorage } from './lib/storage'
 import { lancerLImportALaDemande } from './migration/import-a-la-demande'
 import { migrations } from './migrations'
 
@@ -40,24 +34,24 @@ const dirname = path.dirname(fileURLToPath(import.meta.url))
 const env = serverEnv()
 
 // Where the photos are served from: the public origin of the bucket, or the simulator of the test bench.
-const baseDesMedias = mediaBaseUrl(process.env.R2_PUBLIC_URL, env.storage)
+const mediaBase = mediaBaseUrl(process.env.R2_PUBLIC_URL, env.storage)
 
 // Payload's own route for the file of a media sends to its public address: no photo is on this disk.
-const mediaServie: CollectionConfig<'media'> = {
+const servedMedia: CollectionConfig<'media'> = {
 	...Media,
-	upload: { ...UPLOAD_DES_MEDIAS, handlers: [versLAdressePublique(baseDesMedias)] },
+	upload: { ...MEDIA_UPLOAD, handlers: [toPublicUrl(mediaBase)] },
 }
 
 // Without an object storage, the media collection keeps its fields but receives no photo.
 const media: CollectionConfig<'media'> = env.storage
-	? mediaServie
+	? servedMedia
 	: {
-			...mediaServie,
-			hooks: { ...Media.hooks, beforeOperation: [...(Media.hooks?.beforeOperation ?? []), aucunEnvoiSansStockage] },
+			...servedMedia,
+			hooks: { ...Media.hooks, beforeOperation: [...(Media.hooks?.beforeOperation ?? []), noUploadWithoutStorage] },
 		}
 
 // Payload types the keys as its own error names, and reads them by the `name` of the error that is thrown.
-const niveauxDeJournal = {
+const logLevels = {
 	APIError: 'info',
 	AuthenticationError: 'info',
 	CompteBloque: 'info',
@@ -69,7 +63,7 @@ export default buildConfig({
 	// application error: the weekly report counts the error-level lines (decisions 2026-10-13).
 	// CompteBloque (ticket 089) sets its own `name`, so `APIError` does not cover it (ticket 223). Payload's
 	// « Missing ID » refusal is a plain APIError: already `info`, a test holds it.
-	loggingLevels: niveauxDeJournal,
+	loggingLevels: logLevels,
 	admin: {
 		// Without it the admin panel asks gravatar.com for an image computed from the admin's email: a
 		// fingerprint of the address sent to a third party (ticket 223).
@@ -114,11 +108,11 @@ export default buildConfig({
 	graphQL: { disable: true },
 	// Payload speaks French only: its errors, its own messages and the admin panel, whatever
 	// language a request asks for (src/lib/payload-language.ts, ticket 221).
-	i18n: LANGUE_DE_PAYLOAD,
+	i18n: PAYLOAD_LANGUAGE,
 	// Once Payload has started and played its migrations.
 	onInit: payload => {
 		// Payload's document locks are reserved to the accounts of the admin panel (ticket 094).
-		reserverLesVerrousAuxAdmins(payload)
+		reserveLocksToAdmins(payload)
 		// The import of the old site, once per new IMPORT_JETON, on the site only; not awaited, so that the
 		// first request does not wait for it. Without a token nothing is read (ticket 233).
 		lancerLImportALaDemande(payload, env)
@@ -133,16 +127,16 @@ export default buildConfig({
 		// The plugin never deletes an object: a photo that no longer serves goes to the bin of the
 		// storage, `deleted/`, and the profiles clean up the photos they no longer reference
 		// (src/collections/trash.ts, ticket 045).
-		avecLaCorbeille(
+		withTrash(
 			s3Storage({
 				enabled: env.storage !== undefined,
 				alwaysInsertFields: true,
 				bucket: env.storage?.bucket ?? '',
 				collections: {
 					media: {
-						prefix: PREFIXE_DES_ENVOIS,
+						prefix: UPLOAD_PREFIX,
 						disablePayloadAccessControl: true,
-						generateFileURL: ({ filename, prefix }) => adresseDuMedia(baseDesMedias, prefix, filename),
+						generateFileURL: ({ filename, prefix }) => mediaUrl(mediaBase, prefix, filename),
 					},
 				},
 				config: env.storage
@@ -156,12 +150,12 @@ export default buildConfig({
 						}
 					: {},
 			}),
-			env.storage && stockageS3(env.storage)
+			env.storage && createObjectStorage(env.storage)
 		),
-		champsDuStockageFermes,
+		closedStorageFields,
 		// Last, so that it sees every collection: a request too large, or that filters or sorts on a
 		// private field, is refused before the database (src/lib/bounded-query.ts, ticket 048).
-		requetesBornees,
+		boundedQueries,
 	],
 	secret: env.payloadSecret,
 	// Derived sizes of a photo (ticket 133): without it, Payload makes none.

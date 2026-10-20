@@ -1,6 +1,6 @@
 import { type APIRequestContext, expect, test } from '@playwright/test'
-import { lirePhotoDuJeu, poserLeProfil } from '../../src/demo-data/loading'
-import { PROFILS_DU_JEU, type ProfilDuJeu } from '../../src/demo-data/profiles'
+import { placeProfile, readDemoPhoto } from '../../src/demo-data/loading'
+import { DEMO_PROFILES, type DemoProfile } from '../../src/demo-data/profiles'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { creerContenu, supprimerContenu } from '../outils/pages-publiques'
 import { payloadDeTest } from '../outils/payload-test'
@@ -22,8 +22,8 @@ test.describe.configure({ mode: 'serial' })
 /** Within a minute, the promise of the ticket. */
 const UNE_MINUTE = 60_000
 
-function typeDuJeu(cle: string): ProfilDuJeu {
-	const type = PROFILS_DU_JEU.find(autre => autre.cle === cle)
+function typeDuJeu(cle: string): DemoProfile {
+	const type = DEMO_PROFILES.find(autre => autre.cle === cle)
 	if (!type) throw new Error(`Le profil type « ${cle} » du jeu fictif manque.`)
 	return type
 }
@@ -44,14 +44,14 @@ interface ProfilDeFraicheur {
 async function poserUnProfil(): Promise<ProfilDeFraicheur> {
 	const suffixe = `${Date.now().toString(36)}${Math.floor(Math.random() * 1000).toString(36)}`
 	const mot = `Fraicheur${suffixe}`
-	const type: ProfilDuJeu = {
+	const type: DemoProfile = {
 		...MODELE,
 		cle: `essai-fraicheur-${suffixe}`,
 		compte: { email: `essai-fraicheur-${suffixe}@example.test`, nom: `Essai ${mot}` },
 		profil: { ...MODELE.profil, firstName: 'Essai', lastName: mot, artistName: `Essai ${mot} Maquillage` },
 		photos: { principale: MODELE.photos.principale, galerie: [] },
 	}
-	const pose = await poserLeProfil(await payloadDeTest(), type, lirePhotoDuJeu, false)
+	const pose = await placeProfile(await payloadDeTest(), type, readDemoPhoto, false)
 	const admin = await creerCompte('admin')
 	return { id: pose.profil, pro: pose.compte, slug: pose.slug, mot, entetes: admin.session.enTetes }
 }

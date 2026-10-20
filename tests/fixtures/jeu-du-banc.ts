@@ -14,20 +14,20 @@
  * Not a test of the suite: nothing in its name makes bun or Playwright pick it up.
  */
 
-import { type BilanDuJeu as BilanDeLaRedactionEtDesProfils, poserLeJeu } from '../../src/demo-data/dataset'
-import { PROFILS_DU_JEU } from '../../src/demo-data/profiles'
-import { ARTICLES_DU_JEU, TALENTS_DU_JEU } from '../../src/demo-data/editorial'
+import { type DemoSummary as BilanDeLaRedactionEtDesProfils, placeDemoData } from '../../src/demo-data/dataset'
+import { DEMO_ARTICLES, DEMO_TALENTS } from '../../src/demo-data/editorial'
+import { DEMO_PROFILES } from '../../src/demo-data/profiles'
 import { payloadDeTest } from '../outils/payload-test'
 import { type BilanDuJeu as BilanDesComptes, poserLesComptesDuJeu } from './comptes'
 
 /** What the admin panel counts after a load of the set on an empty bench. */
 export const CONTENU_DU_BANC = {
 	/** The profile types: the accounts `jeu-profil-*`. */
-	profilsTypes: PROFILS_DU_JEU.length,
-	talents: TALENTS_DU_JEU.length,
-	articles: ARTICLES_DU_JEU.length,
+	profilsTypes: DEMO_PROFILES.length,
+	talents: DEMO_TALENTS.length,
+	articles: DEMO_ARTICLES.length,
 	/** Of which drafts. */
-	brouillons: ARTICLES_DU_JEU.filter(({ statut }) => statut === 'draft').length,
+	brouillons: DEMO_ARTICLES.filter(({ statut }) => statut === 'draft').length,
 } as const
 
 export interface BilanDuBanc {
@@ -38,6 +38,6 @@ export interface BilanDuBanc {
 /** Loads the fixed accounts, then the set. The accounts come first: nothing of the set depends on them. */
 export async function poserLeJeuDuBanc(): Promise<BilanDuBanc> {
 	const comptes = await poserLesComptesDuJeu()
-	const jeu = await poserLeJeu(await payloadDeTest())
+	const jeu = await placeDemoData(await payloadDeTest())
 	return { comptes, jeu }
 }

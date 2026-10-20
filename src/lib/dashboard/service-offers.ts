@@ -14,7 +14,7 @@
  *   `options` for an offer keeps the stored ones.
  */
 
-import { formatMontant, formatPrix, parsePrice } from '../price'
+import { formatAmount, formatPrice, parsePrice } from '../price'
 import { text } from '../profile/display-name'
 import { DESCRIPTION_MAX_LENGTH, NAME_MAX_LENGTH, textMessage } from '../profile/lists'
 import type { ListDefinition, RowErrors, RowValues } from './list'
@@ -66,7 +66,7 @@ const SHARED = {
 	],
 	bornes: bounds,
 	resume: (valeurs: RowValues) =>
-		[valeurs.name, formatPrix(storedPrice(valeurs.price)).replace(/\n/g, ', ')].map(text).filter(Boolean).join(' - '),
+		[valeurs.name, formatPrice(storedPrice(valeurs.price)).replace(/\n/g, ', ')].map(text).filter(Boolean).join(' - '),
 	nom: (valeurs: RowValues) => text(valeurs.name),
 	depuisLeStockage: (stockee: Readonly<Record<string, unknown>>) => ({
 		name: text(stockee.name),
@@ -89,7 +89,7 @@ const SHARED = {
 		const { priceFrom } = storedPrice(valeurs.price)
 		return priceFrom === null
 			? SERVICE_OFFERS_MESSAGES.sansMontant
-			: SERVICE_OFFERS_MESSAGES.montant(formatMontant(priceFrom))
+			: SERVICE_OFFERS_MESSAGES.montant(formatAmount(priceFrom))
 	},
 } as const
 

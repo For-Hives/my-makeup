@@ -1,5 +1,5 @@
 import type { CollectionBeforeChangeHook, DateField, Field, NumberField, TextareaField, TextField } from 'payload'
-import { PRIX_MAX, PRIX_MIN } from '../lib/price'
+import { PRICE_MAX, PRICE_MIN } from '../lib/price'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import {
 	DESCRIPTION_MAX_LENGTH,
@@ -27,7 +27,7 @@ import {
  */
 
 /** A text of a row, refused in French beyond `maximum` characters. */
-const texte = (name: string, label: string, maximum = NAME_MAX_LENGTH): TextField => ({
+const text = (name: string, label: string, maximum = NAME_MAX_LENGTH): TextField => ({
 	name,
 	label,
 	type: 'text',
@@ -45,7 +45,7 @@ const description = (): TextareaField => ({
 })
 
 /** A day without an hour, stored at 12:00 UTC (`dayDate`). */
-const jour = (name: string, label: string, validate: DateField['validate']): DateField => ({
+const day = (name: string, label: string, validate: DateField['validate']): DateField => ({
 	name,
 	label,
 	type: 'date',
@@ -55,35 +55,35 @@ const jour = (name: string, label: string, validate: DateField['validate']): Dat
 })
 
 /** The two fields of a price (SCHEMA.md §6.6): the text as typed, and the amount it gives, if any. */
-const prix = (): Field[] => [
-	texte('priceText', 'Prix, tel que saisi'),
+const price = (): Field[] => [
+	text('priceText', 'Prix, tel que saisi'),
 	{
 		name: 'priceFrom',
 		label: 'Prix à partir de (€)',
 		type: 'number',
-		min: PRIX_MIN,
-		max: PRIX_MAX,
+		min: PRICE_MIN,
+		max: PRICE_MAX,
 		admin: { description: 'De 5 à 10 000 €. Vide quand le prix saisi n’a pas de montant (« Sur devis »).' },
 		validate: valeur => priceMessage(valeur) ?? true,
 	} satisfies NumberField,
 ]
 
-export const CHAMPS_LISTES: Field[] = [
+export const LIST_FIELDS: Field[] = [
 	{
 		name: 'serviceOffers',
 		label: 'Prestations',
 		labels: { singular: 'Prestation', plural: 'Prestations' },
 		type: 'array',
 		fields: [
-			texte('name', 'Nom'),
+			text('name', 'Nom'),
 			description(),
-			...prix(),
+			...price(),
 			{
 				name: 'options',
 				label: 'Options',
 				labels: { singular: 'Option', plural: 'Options' },
 				type: 'array',
-				fields: [texte('name', 'Nom'), description(), ...prix()],
+				fields: [text('name', 'Nom'), description(), ...price()],
 			},
 		],
 	},
@@ -92,14 +92,14 @@ export const CHAMPS_LISTES: Field[] = [
 		label: 'Compétences',
 		labels: { singular: 'Compétence', plural: 'Compétences' },
 		type: 'array',
-		fields: [texte('name', 'Nom'), description()],
+		fields: [text('name', 'Nom'), description()],
 	},
 	{
 		name: 'languages',
 		label: 'Langues',
 		labels: { singular: 'Langue', plural: 'Langues' },
 		type: 'array',
-		fields: [texte('name', 'Nom')],
+		fields: [text('name', 'Nom')],
 	},
 	{
 		name: 'courses',
@@ -107,9 +107,9 @@ export const CHAMPS_LISTES: Field[] = [
 		labels: { singular: 'Formation', plural: 'Formations' },
 		type: 'array',
 		fields: [
-			texte('diploma', 'Diplôme'),
-			texte('school', 'École'),
-			jour('graduatedAt', 'Obtenu le', valeur => obtainMessage(valeur, new Date()) ?? true),
+			text('diploma', 'Diplôme'),
+			text('school', 'École'),
+			day('graduatedAt', 'Obtenu le', valeur => obtainMessage(valeur, new Date()) ?? true),
 			description(),
 		],
 	},
@@ -119,11 +119,11 @@ export const CHAMPS_LISTES: Field[] = [
 		labels: { singular: 'Expérience', plural: 'Expériences' },
 		type: 'array',
 		fields: [
-			texte('company', 'Entreprise'),
-			texte('jobTitle', 'Poste'),
-			texte('city', 'Ville'),
-			jour('startDate', 'Début', valeur => dateMessage(valeur) ?? true),
-			jour(
+			text('company', 'Entreprise'),
+			text('jobTitle', 'Poste'),
+			text('city', 'Ville'),
+			day('startDate', 'Début', valeur => dateMessage(valeur) ?? true),
+			day(
 				'endDate',
 				'Fin',
 				(valeur, { siblingData }) => endMessage(valeur, (siblingData as { startDate?: unknown }).startDate) ?? true
@@ -137,5 +137,5 @@ export const CHAMPS_LISTES: Field[] = [
  * Before a profile is written: the identity of the rows of its lists. A row sent back with the
  * identifier the server gave it keeps it; any other row is new and gets one from Payload.
  */
-export const identitesDesLignesAvantEcriture: CollectionBeforeChangeHook = ({ data, originalDoc }) =>
+export const rowIdentitiesBeforeWrite: CollectionBeforeChangeHook = ({ data, originalDoc }) =>
 	rowIdentities(data, originalDoc)

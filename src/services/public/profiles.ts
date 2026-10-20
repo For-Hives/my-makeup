@@ -25,7 +25,7 @@
 import type { Payload } from 'payload'
 import { type Pid, profilePid } from '@/lib/analytics/pid'
 import { formatZone, rayonKm, villeAffichee } from '@/lib/format-zone'
-import { estMontantDePrix, prixMinimal } from '@/lib/price'
+import { isPriceAmount, minimumPrice } from '@/lib/price'
 import { displayName, text } from '@/lib/profile/display-name'
 import { profilePid as pidDeLaPage } from '@/lib/profile/pid'
 import {
@@ -149,7 +149,7 @@ export interface PublicProfile {
 	coordonnees: PublicContactDetails | null
 	/** The offers with a name, with their amount in euros (what the structured data prices; no option). */
 	offres: PricedOffer[]
-	/** The lowest amount of her offers (src/lib/price.ts, `prixMinimal`, U37), or `null`. */
+	/** The lowest amount of her offers (src/lib/price.ts, `minimumPrice`, U37), or `null`. */
 	prixMinimal: number | null
 }
 
@@ -495,7 +495,7 @@ export function publicProfileOf(
 		indexable: isIndexable(profil),
 		coordonnees: lu.coordonnees,
 		offres: pricedOffers(profil.serviceOffers),
-		prixMinimal: prixMinimal(profil.serviceOffers),
+		prixMinimal: minimumPrice(profil.serviceOffers),
 	}
 }
 
@@ -509,7 +509,7 @@ function pricedOffers(stockees: ProfilePageData['serviceOffers']): PricedOffer[]
 			{
 				nom: name,
 				description: rows(ligne?.description).join(' '),
-				montant: estMontantDePrix(amount) ? amount : null,
+				montant: isPriceAmount(amount) ? amount : null,
 			},
 		]
 	})

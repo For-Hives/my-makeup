@@ -19,7 +19,7 @@
  * CLI, outside of Next.
  */
 
-import { DEPARTEMENTS } from '../departments'
+import { DEPARTMENTS } from '../departments'
 
 /**
  * The radius a profile accepts, in whole kilometres (plan 01 §3.3 P7.4). The display keeps its
@@ -94,7 +94,7 @@ export function departmentOfInseeCode(code: unknown): string | null {
 	const department = overseas ?? metropole
 	const number = overseasNumber ?? mainlandNumber
 	if (department === undefined || number === undefined || /^0+$/.test(number)) return null
-	return Object.hasOwn(DEPARTEMENTS, department) || Object.hasOwn(OVERSEAS_COLLECTIVITIES, department)
+	return Object.hasOwn(DEPARTMENTS, department) || Object.hasOwn(OVERSEAS_COLLECTIVITIES, department)
 		? department
 		: null
 }

@@ -92,7 +92,7 @@ const absoluteUrl = (adresse: string | null | undefined): string =>
 
 /**
  * The structured data of the page of a profile: a `ProfilePage` whose main entity is the `Person`,
- * and the breadcrumb. The offers are in euros; the lowest amount among them is `profil.prixMinimal`.
+ * and the breadcrumb. The offers are in euros; the lowest amount among them is `profil.minimumPrice`.
  */
 export function profileStructuredData(profil: PublicProfile) {
 	const url = canonicalUrl(profilePath(profil.slug))

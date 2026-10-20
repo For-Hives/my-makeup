@@ -1,5 +1,5 @@
 import { SITE_ORIGIN } from '../frozen-urls'
-import { type ContenuPublic, type EtatPublic, PAGES_PUBLIQUES } from '../revalidate'
+import { PUBLIC_PAGES, type PublicContent, type PublicState } from '../revalidate'
 import { estUnSlug } from '../slug'
 import { canonicalUrl } from './url'
 
@@ -83,12 +83,12 @@ export function isSiteUrl(adresse: string): boolean {
  * one when the slug changed, and the address of a page that leaves the sitemap. Never a list page.
  * Nothing when the document was and is out of the sitemap, or has no real slug yet.
  */
-export function changedUrls(contenu: ContenuPublic, avant: EtatPublic | null, apres: EtatPublic | null): string[] {
+export function changedUrls(contenu: PublicContent, avant: PublicState | null, apres: PublicState | null): string[] {
 	const inSitemap = [avant, apres].filter(
-		(etat): etat is EtatPublic => etat !== null && etat.indexable !== false && etat.visible
+		(etat): etat is PublicState => etat !== null && etat.indexable !== false && etat.visible
 	)
 	const slugs = [...new Set(inSitemap.map(({ slug }) => slug))].filter(estUnSlug)
-	return slugs.map(slug => canonicalUrl(PAGES_PUBLIQUES[contenu].page(slug))).filter(isSiteUrl)
+	return slugs.map(slug => canonicalUrl(PUBLIC_PAGES[contenu].page(slug))).filter(isSiteUrl)
 }
 
 /** The addresses a sitemap lists (`<loc>`), the ones of the main host only. */

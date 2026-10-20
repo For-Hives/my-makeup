@@ -7,16 +7,16 @@ import {
 	type PayloadRequest,
 } from 'payload'
 // Relative import on purpose: the bin is the one in the collections, and this file may be loaded outside of Next.
-import { corbeilleRetenue } from '../../collections/trash'
+import { heldTrash } from '../../collections/trash'
 
 /**
  * The deletion of an account and everything that hangs on it (ticket 141; plan 01 AUTH-13, P7.7;
  * plan 02 I36, I38). The one mechanism: the makeup artist who deletes her account uses it, and the
  * admin who deletes a fake account uses it too (ticket 167, `DELETE /api/pros/:id`, src/lib/account/deletion-route.ts).
  *
- * In ONE transaction, under ONE hold of the bin (`corbeilleRetenue`):
+ * In ONE transaction, under ONE hold of the bin (`heldTrash`):
  * 1. her profile, by identifier. Deleting it sends to the bin every photo of the account that
- *    nothing references any more (`menageApresSuppression`), and refreshes the public pages;
+ *    nothing references any more (`cleanupAfterDeletion`), and refreshes the public pages;
  * 2. her account. Its sessions are rows of the same document: they go with it, so that an old
  *    token opens nothing.
  * Only then do the objects move to the bin, and only then does the transaction commit. When the
@@ -44,7 +44,7 @@ import { corbeilleRetenue } from '../../collections/trash'
  * The ticket that adds requests to a makeup artist adds their anonymisation here.
  *
  * The photos of an account without a profile are taken by the `beforeDelete` hook of `pros`
- * (`menageAvantSuppressionDuCompte`, src/collections/trash.ts), under the same hold of the bin.
+ * (`cleanupBeforeAccountDeletion`, src/collections/trash.ts), under the same hold of the bin.
  */
 
 /** What the deletion did. `supprime: false`: the account did not exist (any more). */
@@ -84,7 +84,7 @@ async function remove(payload: Payload, id: number | string): Promise<DeletionSu
 	const req = await createLocalReq({}, payload)
 	const owner = await initTransaction(req)
 	try {
-		const summary = await corbeilleRetenue(req, `account ${id}`, async (): Promise<DeletionSummary> => {
+		const summary = await heldTrash(req, `account ${id}`, async (): Promise<DeletionSummary> => {
 			const account = await payload.findByID({
 				collection: 'pros',
 				depth: 0,

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import { PROFILS_DU_JEU, type ProfilDuJeu } from '@/demo-data/profiles'
-import { prixMinimal } from '@/lib/price'
+import { DEMO_PROFILES, type DemoProfile } from '@/demo-data/profiles'
+import { minimumPrice } from '@/lib/price'
 import { serializeJsonLd } from '@/lib/seo/json-ld'
 import { profileBreadcrumb, profileMetadata, profileStructuredData, profileTitle } from '@/lib/seo/profile'
 import { DESCRIPTION_MAX, DESCRIPTION_MIN, MAX_TITLE } from '@/lib/seo/text'
@@ -13,7 +13,7 @@ import { schemaDuProfil } from '../outils/schema-profil-json-ld'
  * no database.
  */
 
-function lireLeType(type: ProfilDuJeu, surcharge: Partial<ProfilePageData> = {}): PublicProfile {
+function lireLeType(type: DemoProfile, surcharge: Partial<ProfilePageData> = {}): PublicProfile {
 	const doc: ProfilePageData = {
 		slug: type.attendu.slug,
 		status: type.attendu.status,
@@ -29,15 +29,15 @@ function lireLeType(type: ProfilDuJeu, surcharge: Partial<ProfilePageData> = {})
 	return publicProfileOf(doc, { photo, galerie: [], coordonnees })
 }
 
-const type = (cle: string): ProfilDuJeu => {
-	const trouve = PROFILS_DU_JEU.find(profil => profil.cle === cle)
+const type = (cle: string): DemoProfile => {
+	const trouve = DEMO_PROFILES.find(profil => profil.cle === cle)
 	if (!trouve) throw new Error(`pas de profil type « ${cle} »`)
 	return trouve
 }
 
 describe('titre et description du profil', () => {
 	test('les douze profils types : titre de 60 caractères au plus, description de 70 à 155, jamais « null »', () => {
-		for (const profilType of PROFILS_DU_JEU) {
+		for (const profilType of DEMO_PROFILES) {
 			const meta = profileMetadata(lireLeType(profilType))
 			const titre = String((meta.title as { absolute: string }).absolute)
 			expect(titre.length, profilType.cle).toBeLessThanOrEqual(MAX_TITLE)
@@ -73,7 +73,7 @@ describe('titre et description du profil', () => {
 
 describe('U47 : ProfilePage → Person, avec des Offer en euros', () => {
 	test('les douze profils types : le schéma strict passe', () => {
-		for (const profilType of PROFILS_DU_JEU) {
+		for (const profilType of DEMO_PROFILES) {
 			const donnees = profileStructuredData(lireLeType(profilType))
 			expect(() => schemaDuProfil.parse(JSON.parse(serializeJsonLd(donnees))), profilType.cle).not.toThrow()
 		}
@@ -107,7 +107,7 @@ describe('U47 : ProfilePage → Person, avec des Offer en euros', () => {
 		expect(prix.length).toBeGreaterThan(1)
 		expect(Math.min(...prix)).toBe(profil.prixMinimal ?? Number.NaN)
 		expect(profil.prixMinimal).toBe(45)
-		expect(profil.prixMinimal).toBe(prixMinimal([{ priceFrom: 150 }, { priceFrom: 45 }, { priceFrom: null }]))
+		expect(profil.prixMinimal).toBe(minimumPrice([{ priceFrom: 150 }, { priceFrom: 45 }, { priceFrom: null }]))
 	})
 
 	test('une offre sans montant reste une offre, sans prix ni devise', () => {
@@ -129,7 +129,7 @@ describe('U47 : ProfilePage → Person, avec des Offer en euros', () => {
 
 describe('U48 : rien de non public, rien de nul', () => {
 	test('ni email, ni téléphone, ni adresse postale, ni note, quel que soit le profil, même publié', () => {
-		for (const profilType of PROFILS_DU_JEU) {
+		for (const profilType of DEMO_PROFILES) {
 			const profil = lireLeType(profilType)
 			const texte = JSON.stringify(profileStructuredData(profil))
 			for (const interdit of [

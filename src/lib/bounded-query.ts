@@ -11,7 +11,7 @@ import {
 	parseParams,
 } from 'payload'
 // Relative import on purpose: this file is also loaded by the Payload CLI, outside of Next.
-import { estAdmin } from './access'
+import { isAdmin } from './access'
 
 /**
  * Every request on a collection is bounded before it reaches the database (ticket 048; plan 02
@@ -19,9 +19,9 @@ import { estAdmin } from './access'
  *
  * - **At most `CONDITIONS_MAX` conditions** in a filter, for anyone but `admin`: a condition is one
  *   operator on one field, wherever it sits in the `and` and the `or`.
- * - **Never a secret of an account** (`CHAMPS_SECRETS`), for anyone, `admin` included: as a
+ * - **Never a secret of an account** (`SECRET_FIELDS`), for anyone, `admin` included: as a
  *   filter, as a sort, through a relation (`pro.hash`) or in a nested filter.
- * - **Never a private field** (`CHAMPS_PRIVES`) for anyone but `admin`: the address of an account,
+ * - **Never a private field** (`PRIVATE_FIELDS`) for anyone but `admin`: the address of an account,
  *   the contact details, the internal note and the score of a profile.
  *
  * A field is named by any segment of a path: `pro.email`, `contactDetails.phone`,
@@ -36,9 +36,9 @@ import { estAdmin } from './access'
  * request of a visitor.
  *
  * - **A list read over REST is capped** (ticket 071, default pending Andy's word in
- *   plans/decisions.md): for anyone but `admin`, at most `LIMITE_REST_MAX` documents, and
- *   `LIMITE_REST_PAR_DEFAUT` without a `limit`. `limit=0`, `pagination=false`, a negative or a huge
- *   `limit` no longer hand over a whole collection. The cap sits on the route (`lectureEnListeBornee`,
+ *   plans/decisions.md): for anyone but `admin`, at most `REST_LIMIT_MAX` documents, and
+ *   `REST_LIMIT_DEFAULT` without a `limit`. `limit=0`, `pagination=false`, a negative or a huge
+ *   `limit` no longer hand over a whole collection. The cap sits on the route (`boundedListRead`,
  *   the first `GET /` of every collection), not in `beforeOperation`: the local API, the relation
  *   checks of Payload and the population of media are not requests of a visitor and stay whole.
  */
@@ -47,13 +47,13 @@ import { estAdmin } from './access'
 export const CONDITIONS_MAX = 20
 
 /** The most documents a list read over REST gives for anyone but `admin`. */
-export const LIMITE_REST_MAX = 100
+export const REST_LIMIT_MAX = 100
 
 /** The size of a page of a list read over REST without a `limit`, for anyone but `admin`. */
-export const LIMITE_REST_PAR_DEFAUT = 10
+export const REST_LIMIT_DEFAULT = 10
 
 /** The secrets of an account: never a filter nor a sort, for anyone. */
-export const CHAMPS_SECRETS = [
+export const SECRET_FIELDS = [
 	'hash',
 	'salt',
 	'sessions',
@@ -68,13 +68,13 @@ export const CHAMPS_SECRETS = [
 ] as const
 
 /** What only `admin` filters or sorts on. */
-export const CHAMPS_PRIVES = ['email', 'contactDetails', 'internalNote', 'score'] as const
+export const PRIVATE_FIELDS = ['email', 'contactDetails', 'internalNote', 'score'] as const
 
-export const MESSAGE_TROP_DE_CONDITIONS = `Cette recherche compte trop de conditions : ${CONDITIONS_MAX} au plus.`
-export const MESSAGE_CHAMP_PRIVE = 'Cette recherche porte sur un champ qui ne sert ni de filtre ni de tri.'
+export const TOO_MANY_CONDITIONS_MESSAGE = `Cette recherche compte trop de conditions : ${CONDITIONS_MAX} au plus.`
+export const PRIVATE_FIELD_MESSAGE = 'Cette recherche porte sur un champ qui ne sert ni de filtre ni de tri.'
 
 /** What a request asks of the database, as Payload hands it to an operation. */
-export interface Requete {
+export interface Query {
 	where?: unknown
 	sort?: unknown
 	/** The field of a `distinct` read. */
@@ -83,122 +83,122 @@ export interface Requete {
 	joins?: unknown
 }
 
-const estUnObjet = (valeur: unknown): valeur is Record<string, unknown> =>
+const isObject = (valeur: unknown): valeur is Record<string, unknown> =>
 	typeof valeur === 'object' && valeur !== null && !Array.isArray(valeur)
 
 /** `and` and `or`, in any case, as Payload reads them. */
-const estUnLien = (cle: string): boolean => ['and', 'or'].includes(cle.toLowerCase())
+const isLink = (cle: string): boolean => ['and', 'or'].includes(cle.toLowerCase())
 
 /** The filters an `and` or an `or` holds: a list, or an object with numbered keys once a list is too long. */
-const filtresDe = (valeur: unknown): unknown[] =>
-	Array.isArray(valeur) ? valeur : estUnObjet(valeur) ? Object.values(valeur) : []
+const filtersOf = (valeur: unknown): unknown[] =>
+	Array.isArray(valeur) ? valeur : isObject(valeur) ? Object.values(valeur) : []
 
 /**
  * The conditions of a filter: one per operator on a field, wherever it sits; a `contains` that
  * holds a filter of its own (the photos of a profile) adds that filter's conditions.
  */
-export function compterLesConditions(filtre: unknown): number {
-	if (!estUnObjet(filtre)) return 0
+export function countConditions(filtre: unknown): number {
+	if (!isObject(filtre)) return 0
 	let total = 0
-	for (const [cle, valeur] of Object.entries(filtre)) {
-		if (estUnLien(cle)) {
-			for (const sous of filtresDe(valeur)) total += compterLesConditions(sous)
+	for (const [key, value] of Object.entries(filtre)) {
+		if (isLink(key)) {
+			for (const sub of filtersOf(value)) total += countConditions(sub)
 			continue
 		}
-		if (!estUnObjet(valeur)) {
+		if (!isObject(value)) {
 			total += 1
 			continue
 		}
-		for (const [operateur, operande] of Object.entries(valeur)) {
+		for (const [operator, operande] of Object.entries(value)) {
 			total += 1
-			if (operateur === 'contains' && estUnObjet(operande)) total += compterLesConditions(operande)
+			if (operator === 'contains' && isObject(operande)) total += countConditions(operande)
 		}
 	}
 	return total
 }
 
 /** The paths of the fields a filter names, nested filters of a `contains` included. */
-export function cheminsDuFiltre(filtre: unknown): string[] {
-	if (!estUnObjet(filtre)) return []
-	return Object.entries(filtre).flatMap(([cle, valeur]) => {
-		if (estUnLien(cle)) return filtresDe(valeur).flatMap(cheminsDuFiltre)
-		const imbriques = estUnObjet(valeur)
-			? Object.entries(valeur).flatMap(([operateur, operande]) =>
-					operateur === 'contains' && estUnObjet(operande) ? cheminsDuFiltre(operande) : []
+export function filterPaths(filtre: unknown): string[] {
+	if (!isObject(filtre)) return []
+	return Object.entries(filtre).flatMap(([key, value]) => {
+		if (isLink(key)) return filtersOf(value).flatMap(filterPaths)
+		const nested = isObject(value)
+			? Object.entries(value).flatMap(([operator, operande]) =>
+					operator === 'contains' && isObject(operande) ? filterPaths(operande) : []
 				)
 			: []
-		return [cle, ...imbriques]
+		return [key, ...nested]
 	})
 }
 
 /** The paths of the fields a sort names: `-score`, `title,-score` or a list of them. */
-export function cheminsDuTri(tri: unknown): string[] {
-	const champs = Array.isArray(tri) ? tri : typeof tri === 'string' ? tri.split(',') : []
-	return champs
+export function sortPaths(tri: unknown): string[] {
+	const fields = Array.isArray(tri) ? tri : typeof tri === 'string' ? tri.split(',') : []
+	return fields
 		.filter((champ): champ is string => typeof champ === 'string')
 		.map(champ => champ.trim().replace(/^[-+]/, ''))
 		.filter(champ => champ !== '')
 }
 
 /** Every path a request names: its filter, its sort, the field of a `distinct`, its joins. */
-export function cheminsDeLaRequete({ where, sort, field, joins }: Requete): string[] {
-	const jointures = estUnObjet(joins) ? Object.values(joins).filter(estUnObjet) : []
+export function queryPaths({ where, sort, field, joins }: Query): string[] {
+	const joinPaths = isObject(joins) ? Object.values(joins).filter(isObject) : []
 	return [
-		...cheminsDuFiltre(where),
-		...cheminsDuTri(sort),
+		...filterPaths(where),
+		...sortPaths(sort),
 		...(typeof field === 'string' ? [field] : []),
-		...jointures.flatMap(jointure => [...cheminsDuFiltre(jointure.where), ...cheminsDuTri(jointure.sort)]),
+		...joinPaths.flatMap(jointure => [...filterPaths(jointure.where), ...sortPaths(jointure.sort)]),
 	]
 }
 
 /** The conditions of a request: its filter and those of its joins. */
-const conditionsDeLaRequete = ({ where, joins }: Requete): number =>
-	compterLesConditions(where) +
-	(estUnObjet(joins)
-		? Object.values(joins).reduce<number>((n, j) => n + compterLesConditions(estUnObjet(j) ? j.where : undefined), 0)
+const queryConditions = ({ where, joins }: Query): number =>
+	countConditions(where) +
+	(isObject(joins)
+		? Object.values(joins).reduce<number>((n, j) => n + countConditions(isObject(j) ? j.where : undefined), 0)
 		: 0)
 
 /** The segments of a path: `pro.email`, `pro__email` (GraphQL's way) and `pro.email.fr` give `pro`, `email`… */
-const segmentsDe = (chemin: string): string[] => chemin.replace(/__/g, '.').split('.')
+const segmentsOf = (chemin: string): string[] => chemin.replace(/__/g, '.').split('.')
 
 /**
  * Why this request is refused to this account, or nothing when it passes (U60). `admin` passes
  * the bound and the private fields, never the secrets.
  */
-export function refusDeLaRequete(requete: Requete, user: PayloadRequest['user'] | undefined): string | undefined {
-	const admin = estAdmin(user)
-	if (!admin && conditionsDeLaRequete(requete) > CONDITIONS_MAX) return MESSAGE_TROP_DE_CONDITIONS
-	const interdits: readonly string[] = admin ? CHAMPS_SECRETS : [...CHAMPS_SECRETS, ...CHAMPS_PRIVES]
-	const nomme = cheminsDeLaRequete(requete).some(chemin => segmentsDe(chemin).some(s => interdits.includes(s)))
-	return nomme ? MESSAGE_CHAMP_PRIVE : undefined
+export function queryRefusal(requete: Query, user: PayloadRequest['user'] | undefined): string | undefined {
+	const admin = isAdmin(user)
+	if (!admin && queryConditions(requete) > CONDITIONS_MAX) return TOO_MANY_CONDITIONS_MESSAGE
+	const forbidden: readonly string[] = admin ? SECRET_FIELDS : [...SECRET_FIELDS, ...PRIVATE_FIELDS]
+	const named = queryPaths(requete).some(chemin => segmentsOf(chemin).some(s => forbidden.includes(s)))
+	return named ? PRIVATE_FIELD_MESSAGE : undefined
 }
 
 /**
  * `beforeOperation` of every collection: the first thing an operation does, before its access
  * rules and before the database. Throws a 400 when the request is refused.
  */
-export const requeteBornee: CollectionBeforeOperationHook = ({ args, overrideAccess, req }) => {
+export const boundedQuery: CollectionBeforeOperationHook = ({ args, overrideAccess, req }) => {
 	if (overrideAccess ?? (args as { overrideAccess?: boolean }).overrideAccess) return args
-	const refus = refusDeLaRequete(args as Requete, req.user)
-	if (refus) throw new APIError(refus, 400, null, true)
+	const refusal = queryRefusal(args as Query, req.user)
+	if (refusal) throw new APIError(refusal, 400, null, true)
 	return args
 }
 
 /**
  * The `limit` a list read over REST is given for anyone but `admin`: absent (or not a number) is
- * `LIMITE_REST_PAR_DEFAUT`; 0, negative or above `LIMITE_REST_MAX` is `LIMITE_REST_MAX`.
+ * `REST_LIMIT_DEFAULT`; 0, negative or above `REST_LIMIT_MAX` is `REST_LIMIT_MAX`.
  */
-export function limiteRestBornee(limite: unknown): number {
-	if (typeof limite !== 'number' || !Number.isFinite(limite)) return LIMITE_REST_PAR_DEFAUT
-	return limite <= 0 || limite > LIMITE_REST_MAX ? LIMITE_REST_MAX : Math.trunc(limite)
+export function boundedRestLimit(limite: unknown): number {
+	if (typeof limite !== 'number' || !Number.isFinite(limite)) return REST_LIMIT_DEFAULT
+	return limite <= 0 || limite > REST_LIMIT_MAX ? REST_LIMIT_MAX : Math.trunc(limite)
 }
 
 /**
  * `GET /` of a collection, the list read, bounded: Payload's own handler with the cap above for
  * anyone but `admin`, which is read as it asks. The access rules and the bounds of
- * `requeteBornee` apply as ever.
+ * `boundedQuery` apply as ever.
  */
-export const lectureEnListeBornee: Endpoint = {
+export const boundedListRead: Endpoint = {
 	method: 'get',
 	path: '/',
 	handler: async req => {
@@ -209,15 +209,15 @@ export const lectureEnListeBornee: Endpoint = {
 		const { depth, draft, joins, limit, page, pagination, populate, select, sort, trash, where } = parseParams(
 			req.query
 		)
-		const borne = !estAdmin(req.user)
-		const resultat = await findOperation({
+		const bound = !isAdmin(req.user)
+		const result = await findOperation({
 			collection,
 			depth,
 			draft,
 			joins,
-			limit: borne ? limiteRestBornee(limit) : limit,
+			limit: bound ? boundedRestLimit(limit) : limit,
 			page,
-			pagination: borne ? true : pagination,
+			pagination: bound ? true : pagination,
 			populate,
 			req,
 			select,
@@ -225,50 +225,50 @@ export const lectureEnListeBornee: Endpoint = {
 			trash,
 			where,
 		})
-		return Response.json(resultat, { headers: headersWithCors({ headers: new Headers(), req }), status: 200 })
+		return Response.json(result, { headers: headersWithCors({ headers: new Headers(), req }), status: 200 })
 	},
 }
 
-/** `lectureEnListeBornee` first in the endpoints of a collection, unless it is there or endpoints are off. */
-const avecLectureBornee = (endpoints: Endpoint[] | false | undefined): Endpoint[] | false =>
+/** `boundedListRead` first in the endpoints of a collection, unless it is there or endpoints are off. */
+const withBoundedRead = (endpoints: Endpoint[] | false | undefined): Endpoint[] | false =>
 	endpoints === false
 		? false
-		: endpoints?.includes(lectureEnListeBornee)
+		: endpoints?.includes(boundedListRead)
 			? endpoints
-			: [lectureEnListeBornee, ...(endpoints ?? [])]
+			: [boundedListRead, ...(endpoints ?? [])]
 
 /**
- * Puts `requeteBornee` and the bounded list read first in every collection Payload built that does not have them yet: Payload's
+ * Puts `boundedQuery` and the bounded list read first in every collection Payload built that does not have them yet: Payload's
  * own collections (document locks, preferences, migrations), which it adds after the plugins. The
  * document locks are open to any account (ticket 094): bounded too.
  */
-export function bornerLesCollectionsDePayload(payload: Pick<Payload, 'collections'>): void {
+export function boundPayloadCollections(payload: Pick<Payload, 'collections'>): void {
 	for (const { config } of Object.values(payload.collections)) {
-		const crochets = config.hooks.beforeOperation
-		if (!crochets.includes(requeteBornee)) crochets.unshift(requeteBornee)
-		const endpoints = avecLectureBornee(config.endpoints)
+		const brackets = config.hooks.beforeOperation
+		if (!brackets.includes(boundedQuery)) brackets.unshift(boundedQuery)
+		const endpoints = withBoundedRead(config.endpoints)
 		if (endpoints !== config.endpoints) config.endpoints = endpoints
 	}
 }
 
 /**
- * Puts `requeteBornee` first in the `beforeOperation` of every collection of the configuration,
+ * Puts `boundedQuery` first in the `beforeOperation` of every collection of the configuration,
  * those of later tickets included; once Payload is built (`onInit`, before any request), in its
- * own collections too (`bornerLesCollectionsDePayload`). The `onInit` of the configuration runs
+ * own collections too (`boundPayloadCollections`). The `onInit` of the configuration runs
  * afterwards, as it was.
  */
-export const requetesBornees: Plugin = config => ({
+export const boundedQueries: Plugin = config => ({
 	...config,
 	collections: config.collections?.map(collection => ({
 		...collection,
 		hooks: {
 			...collection.hooks,
-			beforeOperation: [requeteBornee, ...(collection.hooks?.beforeOperation ?? [])],
+			beforeOperation: [boundedQuery, ...(collection.hooks?.beforeOperation ?? [])],
 		},
-		endpoints: avecLectureBornee(collection.endpoints),
+		endpoints: withBoundedRead(collection.endpoints),
 	})),
 	onInit: async payload => {
-		bornerLesCollectionsDePayload(payload)
+		boundPayloadCollections(payload)
 		await config.onInit?.(payload)
 	},
 })
