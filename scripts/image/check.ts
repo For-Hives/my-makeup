@@ -190,7 +190,24 @@ async function engineHealth(container: string): Promise<string | undefined> {
 	return ran.code === 0 && ran.out !== '' ? ran.out : undefined
 }
 
+/** The variables renamed in ticket 245: old name, new name. An old name is refused, never read. */
+export const RENAMED_VARIABLES: readonly (readonly [string, string])[] = [
+	['CONTROLE_IMAGE_NOM', 'IMAGE_CHECK_NAME'],
+	['CONTROLE_IMAGE_PORT', 'IMAGE_CHECK_PORT'],
+	['CONTROLE_IMAGE_COMMIT', 'IMAGE_CHECK_COMMIT'],
+	['CONTROLE_IMAGE_PHOTOS', 'IMAGE_CHECK_PHOTOS'],
+]
+
+/** One message per variable set under an old name (a blank value is ignored). The value is never shown. */
+export function renamedVariableProblems(environment: Readonly<Record<string, string | undefined>>): string[] {
+	return RENAMED_VARIABLES.filter(([old]) => (environment[old]?.trim() ?? '') !== '').map(
+		([old, current]) => `${old} est un ancien nom, refusé : cette variable s’appelle maintenant ${current}.`
+	)
+}
+
 async function main(): Promise<void> {
+	const renamed = renamedVariableProblems(process.env)
+	if (renamed.length > 0) throw new CheckFailed(renamed.join(' '))
 	const image = process.argv[2] ?? DEFAULT_IMAGE
 	const prefix = process.env.IMAGE_CHECK_NAME?.trim() || DEFAULT_PREFIX
 	const wantedPort = process.env.IMAGE_CHECK_PORT?.trim() ?? ''

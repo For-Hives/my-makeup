@@ -27,7 +27,7 @@ import { type MediaObjects, moveToTrash, type ObjectStorage, objectKeys, Storage
  *   that nothing references any more (no profile, no article, no version of an article) is deleted,
  *   and its objects move to the bin. A photo still referenced stays where it is. A deleted profile
  *   takes with it every photo of its account that nothing references.
- * - **Under the context of the import** (`estUnImport`), nothing of this happens: no media is
+ * - **Under the context of the import** (`isImport`), nothing of this happens: no media is
  *   deleted, no object moves.
  * - **Without an object storage** (S3_ENDPOINT not set), no object can move: the clean-up of a
  *   profile deletes no media, so that no record is lost while its object stays where it is.

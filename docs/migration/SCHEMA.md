@@ -355,7 +355,7 @@ Règles du ticket 045, pour tout `media` :
 - **Si le stockage tombe pendant un déplacement**, ce qui avait déjà bougé est remis en place, une fois, et la requête échoue (503) sans rien changer : documents et objets restent comme avant.
 - **`media` et `profils` se suppriment et se modifient un par un**, par leur identifiant. Une opération sur plusieurs documents à la fois (un filtre `where`) est refusée (403) avant toute écriture, par toutes les API et pour tous les rôles, l'API locale sans contrôle d'accès comprise : Payload enregistre une telle opération même quand l'un de ses documents échoue. La liste de l'administration n'offre plus ces actions sur ces deux collections (`disableBulkDelete`, `disableBulkEdit`). Un code serveur qui supprime plusieurs profils ou plusieurs photos les supprime un par un, sous `heldTrash` (`src/collections/trash.ts`).
 - **Sans stockage d'objets**, le ménage d'un profil ne supprime aucun média : son objet ne pourrait pas bouger.
-- **Sous le contexte d'import** (`CONTEXTE_IMPORT`), rien de tout cela : aucun média n'est supprimé par ce ménage, aucun objet ne bouge.
+- **Sous le contexte d'import** (`IMPORT_CONTEXT`), rien de tout cela : aucun média n'est supprimé par ce ménage, aucun objet ne bouge.
 
 ## 9. Champs de Payload sans source dans Strapi
 

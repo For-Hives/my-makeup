@@ -7,7 +7,7 @@ import type { Payload } from 'payload'
  *
  * - **An allow-list for the accounts and the photos** (`select`): a field that is added later is not exported
  *   until it is named here. The profiles and the messages are exported whole, and every record goes through
- *   `retirerLesSecrets`, which drops any key that looks like a password, a hash, a salt or a token.
+ *   `removeSecrets`, which drops any key that looks like a password, a hash, a salt or a token.
  * - **Deterministic**: no clock, no random value. The same database and the same `since` give the same text.
  * - **What a deletion leaves**: an account of the old site deleted on the v3 leaves its old identifier in
  *   `deleted-accounts`. A photo or an account that came from the v3 alone and was deleted leaves nothing, and

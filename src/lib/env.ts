@@ -199,7 +199,7 @@ export const UMAMI_ORIGIN_DEFAULT = 'https://umami.wadefade.fr'
 export const IMPORT_TOKEN_PATTERN = /^[a-z0-9][a-z0-9-]{7,63}$/
 
 /** The values of IMPORT_MODE. */
-const MODES_D_IMPORT: readonly string[] = ['dry-run', 'real', 'check']
+const IMPORT_MODES: readonly string[] = ['dry-run', 'real', 'check']
 
 /** The values of APP_ENV the application knows: the bench and the site. Nothing else. */
 const APP_ENVIRONMENTS: readonly string[] = ['test', 'prod']
@@ -662,7 +662,7 @@ function importEnv(raw: RawEnv, problems: { variable: string; problem: string }[
 	const renamedMode = RENAMED_MODES.find(([old]) => old === mode)
 	if (renamedMode)
 		refuse('IMPORT_MODE', `ancienne valeur, refusée : « ${renamedMode[0]} » s’appelle maintenant « ${renamedMode[1]} »`)
-	else if (!MODES_D_IMPORT.includes(mode)) refuse('IMPORT_MODE')
+	else if (!IMPORT_MODES.includes(mode)) refuse('IMPORT_MODE')
 	const targetInService = raw.IMPORT_TARGET_IN_SERVICE?.trim()
 	if (targetInService !== undefined && targetInService !== 'oui') refuse('IMPORT_TARGET_IN_SERVICE')
 	else if (targetInService === 'oui' && mode === 'check')
@@ -908,11 +908,15 @@ const RENAMED_MODES: readonly (readonly [string, string])[] = [
 	['controle', 'check'],
 ]
 
-/** One problem per variable that is set under an old name. The value is never shown. */
+/**
+ * One problem per variable that is set under an old name. The value is never shown. A value that is empty
+ * once its spaces are cut is ignored, like a new name left blank: the old `.env.exemple` listed these
+ * variables empty, and a `.env` copied from it must still start.
+ */
 export function renamedVariableProblems(
 	environment: Readonly<Record<string, string | undefined>> = process.env
 ): { variable: string; problem: string }[] {
-	return RENAMED_VARIABLES.filter(([old]) => environment[old] !== undefined).map(([old, current]) => ({
+	return RENAMED_VARIABLES.filter(([old]) => (environment[old]?.trim() ?? '') !== '').map(([old, current]) => ({
 		variable: old,
 		problem: `ancien nom, refusé : cette variable s’appelle maintenant ${current}. Renomme-la, rien n’est lu sous l’ancien nom.`,
 	}))

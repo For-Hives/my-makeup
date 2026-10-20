@@ -1032,6 +1032,16 @@ describe('the import of the old site runs on the site only, once per token (tick
 		expect(renamedVariableProblems({})).toEqual([])
 	})
 
+	test('an old variable name left empty, or with spaces only, is ignored; a filled one is refused', () => {
+		for (const [old] of RENAMED_VARIABLES) {
+			for (const blank of ['', '   ', '\t']) {
+				expect(renamedVariableProblems({ [old]: blank })).toEqual([])
+				expect(() => serverEnv(valid, { [old]: blank })).not.toThrow()
+			}
+			expect(renamedVariableProblems({ [old]: ' x ' }).map(({ variable }) => variable)).toEqual([old])
+		}
+	})
+
 	test.each([
 		['a-blanc', 'dry-run'],
 		['reel', 'real'],

@@ -8,6 +8,8 @@ import {
 	expectedVersion,
 	imageConfigProblems,
 	photosPolicyProblems,
+	RENAMED_VARIABLES,
+	renamedVariableProblems,
 } from '../../scripts/image/check'
 import {
 	citedVariables,
@@ -228,5 +230,25 @@ describe('the photos of the environment are given to the build of the image', ()
 		expect(photosPolicyProblems(`img-src 'self' ${AUTRE_PHOTOS} ${MEDIA_ORIGIN_DEFAULT}`, AUTRE_PHOTOS)).toHaveLength(1)
 		expect(photosPolicyProblems("img-src 'self' data:", AUTRE_PHOTOS)).toHaveLength(1)
 		expect(photosPolicyProblems(null, AUTRE_PHOTOS)).toHaveLength(1)
+	})
+})
+
+describe('the old names of the image check variables', () => {
+	test('each old name is refused with the new one, its value never shown; a blank one is ignored', () => {
+		expect(RENAMED_VARIABLES.map(([old]) => old).sort()).toEqual([
+			'CONTROLE_IMAGE_COMMIT',
+			'CONTROLE_IMAGE_NOM',
+			'CONTROLE_IMAGE_PHOTOS',
+			'CONTROLE_IMAGE_PORT',
+		])
+		for (const [old, current] of RENAMED_VARIABLES) {
+			const problems = renamedVariableProblems({ [old]: 'valeur-temoin' })
+			expect(problems).toHaveLength(1)
+			expect(problems[0]).toContain(old)
+			expect(problems[0]).toContain(current)
+			expect(problems[0]).not.toContain('valeur-temoin')
+			expect(renamedVariableProblems({ [old]: '  ' })).toEqual([])
+		}
+		expect(renamedVariableProblems({})).toEqual([])
 	})
 })

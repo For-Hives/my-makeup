@@ -21,6 +21,27 @@
 		"tests/unit",
 		"!tests/unit/naming"
 	],
+	"owners": {
+		"package.json": 254,
+		"scripts/banc.ts": 246,
+		"src/app/(front)/globals.css": 254,
+		"src/app/(front)/layout.tsx": 254,
+		"src/app/(payload)": 254,
+		"src/app/api": 254,
+		"src/app/global-error.tsx": 254,
+		"src/app/global-not-found.tsx": 254,
+		"src/app/robots.ts": 254,
+		"src/app/sitemap.xml": 254,
+		"src/app/u": 254,
+		"src/payload-types.ts": 254,
+		"tests/ci": 254,
+		"tests/e2e": 248,
+		"tests/fixtures": 246,
+		"tests/integration": 248,
+		"tests/outils": 246,
+		"tests/sondes": 246,
+		"tests/unit": 247
+	},
 	"exceptions": {
 		"paths": [
 			{

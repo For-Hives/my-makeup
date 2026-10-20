@@ -136,7 +136,7 @@ describe('la réponse', () => {
 })
 
 describe('les secrets', () => {
-	test('retirerLesSecrets enlève toute clé de mot de passe, hash, sel, jeton ou session, à toute profondeur', () => {
+	test('removeSecrets enlève toute clé de mot de passe, hash, sel, jeton ou session, à toute profondeur', () => {
 		const propre = removeSecrets({
 			email: 'a@example.test',
 			hash: 'x',
