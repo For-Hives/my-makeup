@@ -23,7 +23,7 @@ import { DEPARTMENTS } from '../departments'
 
 /**
  * The radius a profile accepts, in whole kilometres (plan 01 §3.3 P7.4). The display keeps its
- * own bound (`RAYON_MAX_KM`, src/lib/format-zone.ts, 1 000 km as on the old site), which is not
+ * own bound (`RADIUS_MAX_KM`, src/lib/format-zone.ts, 1 000 km as on the old site), which is not
  * this one.
  */
 export const RADIUS_BOUNDS_KM = { min: 0, max: 200 } as const

@@ -14,7 +14,7 @@
  * No `next` import: the rule is pure, and tested without Next.
  */
 
-import { estUnSlug } from './slug'
+import { isSlug } from './slug'
 
 /** The collections whose documents have a public page. */
 export type PublicContent = 'profiles' | 'articles' | 'talents'
@@ -108,7 +108,7 @@ export function changeTargets(contenu: PublicContent, avant: PublicState | null,
 	const publicOnes = [avant, apres].filter((etat): etat is PublicState => etat?.visible === true)
 	if (publicOnes.length === 0) return { chemins: [], etiquettes: [] }
 	const pages = PUBLIC_PAGES[contenu]
-	const slugs = [...new Set(publicOnes.map(({ slug }) => slug))].filter(estUnSlug)
+	const slugs = [...new Set(publicOnes.map(({ slug }) => slug))].filter(isSlug)
 	return {
 		chemins: [...slugs.map(pages.page), ...pages.listes],
 		etiquettes: [...slugs.map(pages.etiquette), pages.etiquetteDeLaListe],

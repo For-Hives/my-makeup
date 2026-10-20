@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { AnalyticsOptOut } from '@/components/analytics/AnalyticsOptOut'
 import { LegalPage } from '@/components/legal/LegalPage'
-import { EDITEUR, formatSiret } from '@/lib/legal'
+import { formatSiret, PUBLISHER } from '@/lib/legal'
 import { PHOTO_ERASURE_DAYS, PROVIDERS } from '@/lib/providers'
 import { pageMetadata } from '@/lib/seo/metadata'
 import { PURGE_DELAY_DAYS } from '@/lib/tasks/unconfirmed-accounts'
@@ -35,8 +35,8 @@ export default function PrivacyPolicyPage() {
 
 			<h2>Responsable du traitement</h2>
 			<p>
-				{`${EDITEUR.nom}, ${EDITEUR.forme} (SIRET ${formatSiret(EDITEUR.siret)}), ${EDITEUR.adresse}. Contact : `}
-				<a href={`mailto:${EDITEUR.email}`}>{EDITEUR.email}</a>
+				{`${PUBLISHER.nom}, ${PUBLISHER.forme} (SIRET ${formatSiret(PUBLISHER.siret)}), ${PUBLISHER.adresse}. Contact : `}
+				<a href={`mailto:${PUBLISHER.email}`}>{PUBLISHER.email}</a>
 				{'. Voir aussi les '}
 				<Link href={'/mentions-legales'}>mentions légales</Link>
 				{'.'}
@@ -118,7 +118,7 @@ export default function PrivacyPolicyPage() {
 			<h2>Vos droits</h2>
 			<p>
 				{`Vous pouvez accéder à vos données, les rectifier, les faire effacer, en recevoir une copie, vous opposer à un traitement, en demander la limitation ou retirer votre consentement à tout moment. Écrivez-nous à `}
-				<a href={`mailto:${EDITEUR.email}`}>{EDITEUR.email}</a>
+				<a href={`mailto:${PUBLISHER.email}`}>{PUBLISHER.email}</a>
 				{` : nous répondons dans un délai d'un mois. Vous pouvez aussi adresser une réclamation à la CNIL (`}
 				<a href={'https://www.cnil.fr'} rel={'noopener nofollow noreferrer'} target={'_blank'}>
 					www.cnil.fr

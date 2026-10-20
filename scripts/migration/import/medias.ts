@@ -29,7 +29,7 @@
  * No `bun` import here: the import can run under Node too.
  */
 
-import { estUneImage } from '../../../src/lib/articles'
+import { isImage } from '../../../src/lib/articles'
 import { mediaUrl } from '../../../src/lib/media'
 import { ImportRefuse } from './cible'
 import { REFERENCES } from './ecarts'
@@ -216,7 +216,7 @@ export function classerLesFichiers(
 			continue
 		}
 		classement.designes++
-		if (!estUneImage(fichier.mime)) {
+		if (!isImage(fichier.mime)) {
 			classement.nonAdoptes.push({ fichier: fichier.id, motif: 'pas-une-image' })
 			continue
 		}

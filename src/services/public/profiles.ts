@@ -24,7 +24,7 @@
 
 import type { Payload } from 'payload'
 import { type Pid, profilePid } from '@/lib/analytics/pid'
-import { formatZone, rayonKm, villeAffichee } from '@/lib/format-zone'
+import { displayedCity, formatZone, radiusKm } from '@/lib/format-zone'
 import { isPriceAmount, minimumPrice } from '@/lib/price'
 import { displayName, text } from '@/lib/profile/display-name'
 import { profilePid as pidDeLaPage } from '@/lib/profile/pid'
@@ -46,7 +46,7 @@ import { urlTarget, valuesToSearch } from '@/lib/profile/url'
 import { isIndexable, LISTED_FILTER } from '@/lib/profile/visibility'
 import type { ProfilePlace } from '@/lib/search/place'
 import { type NormalizedTexts, normalizeTexts } from '@/lib/search/relevance'
-import { estUnSlug } from '@/lib/slug'
+import { isSlug } from '@/lib/slug'
 import type { Profile } from '@/payload-types'
 
 /** The fields of a profile a public page reads, and nothing else. */
@@ -429,7 +429,7 @@ const CANDIDATES_LIMIT = 20
 
 /** The profile at this slug, or `null`: unknown, hidden, or a slug that is not the profile's own. */
 export async function readPublicProfile(payload: Payload, slug: string): Promise<PublicProfile | null> {
-	if (!estUnSlug(slug)) return null
+	if (!isSlug(slug)) return null
 	const target = await readProfileUrlTarget(payload, slug)
 	return target.type === 'profil' ? target.profil : null
 }
@@ -479,8 +479,8 @@ export function publicProfileOf(
 		disponible: profil.available !== false,
 		photo: lu.photo,
 		galerie: lu.galerie,
-		lieu: villeAffichee(profil.city?.name) || null,
-		seDeplace: villeAffichee(profil.city?.name) !== '' && rayonKm(profil.radiusKm) !== null,
+		lieu: displayedCity(profil.city?.name) || null,
+		seDeplace: displayedCity(profil.city?.name) !== '' && radiusKm(profil.radiusKm) !== null,
 		prestations: serviceOffers(profil.serviceOffers),
 		competences: names(profil.skills),
 		langues: names(profil.languages),
@@ -617,7 +617,7 @@ export async function readDirectory(
 				carte: cardOf(profile, photos, pids),
 				ville: text(profile.city?.name) || null,
 				departement: text(profile.city?.department) || null,
-				seDeplace: text(profile.city?.name) !== '' && rayonKm(profile.radiusKm) !== null,
+				seDeplace: text(profile.city?.name) !== '' && radiusKm(profile.radiusKm) !== null,
 				...(avecLesTextes && { textes: textsOf(profile) }),
 			})
 		if (!result.hasNextPage) break

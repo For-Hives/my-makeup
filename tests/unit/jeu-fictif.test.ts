@@ -19,7 +19,7 @@ import { GALLERY_MAX } from '@/lib/media'
 import { DESCRIPTION_MAX_LENGTH, NAME_MAX_LENGTH } from '@/lib/profile/lists'
 import { profileState, statusAfter } from '@/lib/profile/state'
 import { RADIUS_BOUNDS_KM } from '@/lib/profile/zone'
-import { slugifier } from '@/lib/slug'
+import { slugify } from '@/lib/slug'
 import { environnementDuBanc, RACINE } from '../outils/banc'
 
 /**
@@ -82,7 +82,7 @@ describe('Les 12 profils types du plan 02 §6', () => {
 
 	test('le slug attendu est celui que la règle tire du nom du compte, sans collision', () => {
 		for (const { cle, compte, attendu } of DEMO_PROFILES)
-			expect({ cle, slug: slugifier(compte.nom) }).toEqual({ cle, slug: attendu.slug })
+			expect({ cle, slug: slugify(compte.nom) }).toEqual({ cle, slug: attendu.slug })
 		expect(new Set(DEMO_PROFILES.map(({ attendu }) => attendu.slug)).size).toBe(12)
 		// The examples of the frozen URL table (ticket 033) name this profile.
 		expect(type('ancien-nom-accentue').attendu.slug).toBe('zoe-lefevre')

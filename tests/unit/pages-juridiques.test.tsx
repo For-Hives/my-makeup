@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { AnalyticsOptOut } from '@/components/analytics/AnalyticsOptOut'
 import { FOOTER_COLUMNS } from '@/components/layout/links'
 import { analyticsRefused, OPT_OUT_KEY, refuseAnalytics } from '@/lib/analytics/opt-out'
-import { EDITEUR, formatSiren, formatSiret, HEBERGEUR, luhnValid } from '@/lib/legal'
+import { formatSiren, formatSiret, HOST, luhnValid, PUBLISHER } from '@/lib/legal'
 import { ouvrirFenetre } from '../outils/dom-react'
 import { empreinteDuTexte, texteDePage } from '../outils/texte-de-page'
 
@@ -76,12 +76,12 @@ describe('le texte des trois pages', () => {
 
 describe('l’identité légale vient d’une seule source', () => {
 	test('les numéros sont valides et s’impriment à la française', () => {
-		expect(luhnValid(EDITEUR.siren)).toBe(true)
-		expect(luhnValid(EDITEUR.siret)).toBe(true)
-		expect(EDITEUR.siret.startsWith(EDITEUR.siren)).toBe(true)
-		expect(formatSiren(EDITEUR.siren)).toMatch(/^\d{3} \d{3} \d{3}$/)
-		expect(formatSiret(EDITEUR.siret)).toMatch(/^\d{3} \d{3} \d{3} \d{5}$/)
-		expect(formatSiret(EDITEUR.siret).replaceAll(' ', '')).toBe(EDITEUR.siret)
+		expect(luhnValid(PUBLISHER.siren)).toBe(true)
+		expect(luhnValid(PUBLISHER.siret)).toBe(true)
+		expect(PUBLISHER.siret.startsWith(PUBLISHER.siren)).toBe(true)
+		expect(formatSiren(PUBLISHER.siren)).toMatch(/^\d{3} \d{3} \d{3}$/)
+		expect(formatSiret(PUBLISHER.siret)).toMatch(/^\d{3} \d{3} \d{3} \d{5}$/)
+		expect(formatSiret(PUBLISHER.siret).replaceAll(' ', '')).toBe(PUBLISHER.siret)
 		expect(luhnValid('12a')).toBe(false)
 	})
 
@@ -93,12 +93,12 @@ describe('l’identité légale vient d’une seule source', () => {
 			.filter(entree => entree.isFile() && /\.tsx?$/.test(entree.name))
 			.map(entree => readFileSync(path.join(entree.parentPath, entree.name), 'utf8'))
 		const valeurs = [
-			EDITEUR.siren,
-			EDITEUR.siret,
-			EDITEUR.adresse,
-			EDITEUR.telephone,
-			HEBERGEUR.adresse,
-			HEBERGEUR.telephone,
+			PUBLISHER.siren,
+			PUBLISHER.siret,
+			PUBLISHER.adresse,
+			PUBLISHER.telephone,
+			HOST.adresse,
+			HOST.telephone,
 		]
 		for (const source of sources) for (const valeur of valeurs) expect(source).not.toContain(valeur)
 	})
@@ -108,16 +108,16 @@ describe('l’identité légale vient d’une seule source', () => {
 		const texte = texteDePage(renderToStaticMarkup(<Page />))
 
 		for (const ligne of [
-			`SIREN : ${formatSiren(EDITEUR.siren)}`,
-			`SIRET : ${formatSiret(EDITEUR.siret)}`,
-			`Adresse : ${EDITEUR.adresse}`,
-			`Email : ${EDITEUR.email}`,
-			`Téléphone : ${EDITEUR.telephone}`,
-			HEBERGEUR.adresse,
-			`Téléphone : ${HEBERGEUR.telephone}`,
+			`SIREN : ${formatSiren(PUBLISHER.siren)}`,
+			`SIRET : ${formatSiret(PUBLISHER.siret)}`,
+			`Adresse : ${PUBLISHER.adresse}`,
+			`Email : ${PUBLISHER.email}`,
+			`Téléphone : ${PUBLISHER.telephone}`,
+			HOST.adresse,
+			`Téléphone : ${HOST.telephone}`,
 		])
 			expect(texte).toContain(ligne)
-		expect(texte).toContain(`édité par ${EDITEUR.nom}, ${EDITEUR.forme}.`)
+		expect(texte).toContain(`édité par ${PUBLISHER.nom}, ${PUBLISHER.forme}.`)
 	})
 })
 

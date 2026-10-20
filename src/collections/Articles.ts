@@ -1,6 +1,6 @@
 import type { CollectionConfig } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
-import { galerieDImages, imagesDeLaRedaction } from '../lib/articles'
+import { editorialImages, imageGallery } from '../lib/articles'
 import {
 	EDITOR_ACCESS,
 	EDITOR_VERSIONS,
@@ -25,7 +25,7 @@ const REFRESH = refresh('articles')
  * - `content` is markdown, in a `code` field, without a length limit: Payload limits `text` and
  *   `textarea` to 40 000 characters.
  * - The gallery holds images of the newsroom only, never a PDF nor the photo of a makeup artist
- *   (`galerieDImages`), drafts and the import included. Its photos belong to nobody: the newsroom
+ *   (`imageGallery`), drafts and the import included. Its photos belong to nobody: the newsroom
  *   sends them, and the public reads one when it is in the gallery of a published article
  *   (`mediaRead`, src/lib/access.ts).
  * - A save or a deletion of an article that is or was published refreshes its page, the blog and
@@ -67,8 +67,8 @@ export const Articles: CollectionConfig<'articles'> = {
 			type: 'upload',
 			relationTo: 'media',
 			hasMany: true,
-			filterOptions: imagesDeLaRedaction,
-			hooks: { beforeChange: [galerieDImages] },
+			filterOptions: editorialImages,
+			hooks: { beforeChange: [imageGallery] },
 			admin: {
 				description: 'Des images de la rédaction, jamais la photo d’une maquilleuse : JPEG, PNG, WebP, GIF ou AVIF.',
 			},

@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, spyOn, test } from 'bun:test'
 import type { Payload } from 'payload'
 import { GET as sante } from '@/app/api/health/route'
-import { DELAI_CONNEXION_MS } from '@/lib/pool-base'
+import { CONNECTION_TIMEOUT_MS } from '@/lib/pool-base'
 import { payloadDeTest } from '../outils/payload-test'
 
 /**
@@ -22,7 +22,7 @@ afterAll(() => {
 
 describe('le pool de la base ne bloque pas pour toujours (ticket 222)', () => {
 	test('le pool de Payload porte le délai', () => {
-		expect(payload.db.pool.options.connectionTimeoutMillis).toBe(DELAI_CONNEXION_MS)
+		expect(payload.db.pool.options.connectionTimeoutMillis).toBe(CONNECTION_TIMEOUT_MS)
 	})
 
 	test('toutes les connexions prises : une requête de plus échoue dans le délai, puis l’application répond', async () => {
@@ -34,8 +34,8 @@ describe('le pool de la base ne bloque pas pour toujours (ticket 222)', () => {
 		const debut = performance.now()
 		await expect(payload.db.pool.query('SELECT 1')).rejects.toThrow(/timeout/i)
 		const duree = performance.now() - debut
-		expect(duree).toBeGreaterThanOrEqual(DELAI_CONNEXION_MS - 200)
-		expect(duree).toBeLessThan(DELAI_CONNEXION_MS + 3000)
+		expect(duree).toBeGreaterThanOrEqual(CONNECTION_TIMEOUT_MS - 200)
+		expect(duree).toBeLessThan(CONNECTION_TIMEOUT_MS + 3000)
 
 		for (const connexion of gardees.splice(0)) connexion.release()
 		const reponse = await sante()

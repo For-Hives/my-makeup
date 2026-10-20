@@ -13,7 +13,7 @@
  * Relative imports on purpose: shared with the unit tests, no `next` import.
  */
 
-import { slugifier } from '../slug'
+import { slugify } from '../slug'
 import { type DocumentVisible, isVisible } from './visibility'
 
 /** The longest segment worth looking up: a slug has 70 characters, an old username fewer than 100. */
@@ -49,7 +49,7 @@ export const searchableSegment = (segment: unknown): segment is string =>
  */
 export function valuesToSearch(segment: unknown): { segment: string; slugifie: string } | null {
 	if (!searchableSegment(segment)) return null
-	const slugified = slugifier(segment)
+	const slugified = slugify(segment)
 	return slugified === '' ? null : { segment, slugifie: slugified }
 }
 

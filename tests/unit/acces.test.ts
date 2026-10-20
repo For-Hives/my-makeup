@@ -50,14 +50,7 @@ import {
 	profileFieldAdminOrOwner,
 	publishedProfileOrOwner,
 } from '@/lib/access'
-import {
-	estUneImage,
-	galerieDImages,
-	IMAGES,
-	imagesDeLaRedaction,
-	MESSAGE_GALERIE_IMAGES,
-	TYPES_D_IMAGE,
-} from '@/lib/articles'
+import { editorialImages, GALLERY_IMAGES_MESSAGE, IMAGES, imageGallery, isImage, TYPES_D_IMAGE } from '@/lib/articles'
 import { PAYLOAD_LANGUAGE } from '@/lib/payload-language'
 import { validateProfilePhotos } from '@/lib/profile/photos'
 import { PROFILE_STATUSES } from '@/lib/profile/status'
@@ -562,11 +555,11 @@ describe('La collection articles (ticket 046) : les règles des talents (U59)', 
 		expect(champ(Articles.fields, 'gallery')).toMatchObject({
 			type: 'upload',
 			hasMany: true,
-			filterOptions: imagesDeLaRedaction,
-			hooks: { beforeChange: [galerieDImages] },
+			filterOptions: editorialImages,
+			hooks: { beforeChange: [imageGallery] },
 		})
 		expect(IMAGES).toEqual({ mimeType: { in: [...TYPES_D_IMAGE] } })
-		const offertes = (user: Utilisateur) => imagesDeLaRedaction({ req: { user } } as never)
+		const offertes = (user: Utilisateur) => editorialImages({ req: { user } } as never)
 		// The admin panel offers `admin` the images that belong to nobody: never the photo of a makeup artist.
 		expect(offertes(admin)).toEqual({ and: [IMAGES, { owner: { exists: false } }] })
 		// `editor` only reads those (its read rule), and may not filter on the owner, a field it does not read.
@@ -592,7 +585,7 @@ describe('La galerie d’un article ne prend que des images de la rédaction (ti
 			},
 		}
 		const resultat = enFrancais.then(({ t }) =>
-			galerieDImages({
+			imageGallery({
 				field: champ(Articles.fields, 'gallery'),
 				value: valeur,
 				req: { payload, t } as unknown as PayloadRequest,
@@ -612,13 +605,13 @@ describe('La galerie d’un article ne prend que des images de la rédaction (ti
 		// Payload's French puts a no-break space before the colon.
 		expect((refus as ValidationError).message).toBe('Le champ suivant n’est pas valide\u00a0: Galerie')
 		expect((refus as ValidationError).data.errors).toEqual([
-			{ label: 'Galerie', message: MESSAGE_GALERIE_IMAGES, path: 'gallery' },
+			{ label: 'Galerie', message: GALLERY_IMAGES_MESSAGE, path: 'gallery' },
 		])
 	})
 
 	test('JPEG, PNG, WebP, GIF et AVIF sont des images ; un PDF, une vidéo, un SVG, rien du tout n’en sont pas', () => {
 		for (const type of ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'])
-			expect([type, estUneImage(type)]).toEqual([type, true])
+			expect([type, isImage(type)]).toEqual([type, true])
 		for (const type of [
 			'application/pdf',
 			'video/mp4',
@@ -629,7 +622,7 @@ describe('La galerie d’un article ne prend que des images de la rédaction (ti
 			null,
 			undefined,
 		])
-			expect([type, estUneImage(type)]).toEqual([type, false])
+			expect([type, isImage(type)]).toEqual([type, false])
 	})
 
 	test('une galerie d’images est gardée telle quelle, dans son ordre ; une galerie vide ne demande rien', async () => {
@@ -662,7 +655,7 @@ describe('La galerie d’un article ne prend que des images de la rédaction (ti
 		] as const)
 			await expect(enregistrer(valeur, [...media]).resultat).rejects.toMatchObject({
 				status: 400,
-				data: { errors: [{ message: MESSAGE_GALERIE_IMAGES, path: 'gallery' }] },
+				data: { errors: [{ message: GALLERY_IMAGES_MESSAGE, path: 'gallery' }] },
 			})
 	})
 
@@ -676,9 +669,9 @@ describe('La galerie d’un article ne prend que des images de la rédaction (ti
 		)
 		await expect(resultat).rejects.toMatchObject({
 			status: 400,
-			data: { errors: [{ message: MESSAGE_GALERIE_IMAGES, path: 'gallery' }] },
+			data: { errors: [{ message: GALLERY_IMAGES_MESSAGE, path: 'gallery' }] },
 		})
-		expect(MESSAGE_GALERIE_IMAGES).toContain('jamais la photo d’une maquilleuse')
+		expect(GALLERY_IMAGES_MESSAGE).toContain('jamais la photo d’une maquilleuse')
 	})
 
 	test('un identifiant qu’aucun média ne peut porter, ou une entrée qui n’en nomme aucun : refusé, sans requête', async () => {

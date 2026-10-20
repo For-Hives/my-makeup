@@ -9,7 +9,7 @@
 
 import type { Payload } from 'payload'
 import { text } from '@/lib/profile/display-name'
-import { estUnSlug } from '@/lib/slug'
+import { isSlug } from '@/lib/slug'
 
 /** The fields of an article a public page reads, and nothing else. */
 export const ARTICLE_FIELDS = {
@@ -43,7 +43,7 @@ export interface ArticlePublic {
 
 /** The published article of this slug, or `null`: unknown, a draft, or not even a slug. */
 export async function readPublicArticle(payload: Payload, slug: string): Promise<ArticlePublic | null> {
-	if (!estUnSlug(slug)) return null
+	if (!isSlug(slug)) return null
 	const { docs } = await payload.find({
 		collection: 'articles',
 		where: { slug: { equals: slug } },
@@ -54,7 +54,7 @@ export async function readPublicArticle(payload: Payload, slug: string): Promise
 		overrideAccess: false,
 	})
 	const article = docs[0]
-	if (!article || !estUnSlug(article.slug) || !text(article.title)) return null
+	if (!article || !isSlug(article.slug) || !text(article.title)) return null
 	return {
 		slug: article.slug,
 		titre: text(article.title),

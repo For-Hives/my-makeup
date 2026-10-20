@@ -2,7 +2,7 @@ import type { CollectionBeforeChangeHook, CollectionConfig, Field, TextFieldSing
 import { text } from 'payload/shared'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { adminEditorOrPublished, adminOrEditor, fieldAdminOrEditor, neverAllowed } from '../lib/access'
-import { estUnSlug, SLUG_MAX, slugifier } from '../lib/slug'
+import { isSlug, SLUG_MAX, slugify } from '../lib/slug'
 
 /**
  * The rules of writing of the newsroom, shared by its collections: the talents (ticket 022), then
@@ -33,8 +33,8 @@ export const EDITOR_VERSIONS = { drafts: true } satisfies NonNullable<Collection
  */
 export const validateSlug: TextFieldSingleValidation = (value, args) => {
 	const base = text(value, args)
-	if (base !== true || typeof value !== 'string' || value === '' || estUnSlug(value)) return base
-	const suggestion = slugifier(value)
+	if (base !== true || typeof value !== 'string' || value === '' || isSlug(value)) return base
+	const suggestion = slugify(value)
 	return [
 		`Une adresse s’écrit en minuscules, sans accent ni espace, les mots séparés par un tiret, ${SLUG_MAX} caractères au plus.`,
 		suggestion ? `Par exemple : « ${suggestion} ».` : '',

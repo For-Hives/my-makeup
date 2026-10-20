@@ -5,7 +5,7 @@ import path from 'node:path'
 import { SQL } from 'bun'
 import { PROFILS_DU_SPAM } from '../../scripts/migration/import/profils'
 import { CONTEXTE_IMPORT } from '../../src/lib/contexte-import'
-import { attribuerSlugs } from '../../src/lib/slug'
+import { assignSlugs } from '../../src/lib/slug'
 import { PUBLIC_PROFILE_FIELDS, readPublicProfile } from '../../src/services/public/profiles'
 import { commandeDImport, DECISIONS_DU_BANC, FICHIER_DES_DECISIONS_DU_BANC, importerSurLeBanc } from '../outils/import'
 import { compterLesMails, viderLeCapteur } from '../outils/mailpit'
@@ -55,7 +55,7 @@ const PRIS = lignes.makeup_artistes.filter(profil => {
 
 /** The slugs of the old site, computed on every profile of the source. */
 const SLUGS = new Map(
-	attribuerSlugs(
+	assignSlugs(
 		lignes.makeup_artistes.map(({ id, username, created_at }) => ({
 			id: Number(id),
 			username: String(username),

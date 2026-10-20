@@ -10,7 +10,7 @@
  * addresses (tests/sondes/contenu.ts).
  */
 
-import { cheminProfil } from '../../src/lib/slug'
+import { profilePath } from '../../src/lib/slug'
 import { cheminsDeProfils, empreinte } from './contenu'
 import { CHEMIN_DES_STATS, RequeteInterdite } from './garde'
 import type { Lecteur } from './lecteur'
@@ -109,7 +109,7 @@ export async function sondeR02(lecteur: Lecteur, { jeton, maintenant }: OptionsR
 				constats: ['la réponse des statistiques n’a pas la forme attendue (publiables.slugs)'],
 			}
 
-		const { egal, constats } = comparer(cheminsDeProfils(sitemap.corps), slugs.map(cheminProfil))
+		const { egal, constats } = comparer(cheminsDeProfils(sitemap.corps), slugs.map(profilePath))
 		return { verdict: egal ? 'vert' : 'rouge', constats }
 	} catch (erreur) {
 		if (erreur instanceof RequeteInterdite) throw erreur

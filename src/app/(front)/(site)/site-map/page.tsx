@@ -4,7 +4,7 @@ import { Cta } from '@/components/blocks/Cta'
 import { Hero } from '@/components/blocks/Hero'
 import { pageMetadata } from '@/lib/seo/metadata'
 import { deliveredStaticPages, SITE_MAP_GROUPS } from '@/lib/seo/sitemap'
-import { cheminProfil } from '@/lib/slug'
+import { profilePath } from '@/lib/slug'
 import { cachedIndexablePages } from '@/services/public/cached'
 
 // Read at each request: the build runs without a database. The reading is the one of the sitemap, kept in
@@ -95,7 +95,7 @@ export default async function SiteMapPage() {
 										{byName.map(profil => (
 											// No prefetch: a visit of this page must not render every profile.
 											<li key={profil.slug}>
-												<Link href={cheminProfil(profil.slug)} prefetch={false}>
+												<Link href={profilePath(profil.slug)} prefetch={false}>
 													{profil.nom}
 												</Link>
 											</li>

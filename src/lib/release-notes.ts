@@ -12,7 +12,7 @@
  * of its own pull request, not the publication.
  */
 
-import { slugifier } from './slug'
+import { slugify } from './slug'
 
 /** Where the notes live, from the root of the repository. */
 export const CHANGELOG_FILE = 'src/content/changelog.json'
@@ -211,7 +211,7 @@ const allIds = (changelog: Changelog): Set<string> =>
 /** An identifier made from the sentence, unique in the file: « …-2 », « …-3 » when it is taken. */
 function newId(text: string, taken: Set<string>): string {
 	const base =
-		slugifier(text)
+		slugify(text)
 			.slice(0, ID_MAX_LENGTH - 3)
 			.replace(/-+$/, '') || 'note'
 	if (!taken.has(base)) return base

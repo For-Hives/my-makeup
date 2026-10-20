@@ -8,7 +8,7 @@
 
 import type { Payload } from 'payload'
 import { text } from '@/lib/profile/display-name'
-import { estUnSlug } from '@/lib/slug'
+import { isSlug } from '@/lib/slug'
 
 /** The fields of a talent a public page reads, and nothing else. */
 export const TALENT_FIELDS = { slug: true, title: true } as const
@@ -38,7 +38,7 @@ export async function listTalents(payload: Payload): Promise<TalentPublic[]> {
 		overrideAccess: false,
 	})
 	return docs.flatMap(talent =>
-		estUnSlug(talent.slug) && text(talent.title) ? [{ slug: talent.slug, titre: text(talent.title) }] : []
+		isSlug(talent.slug) && text(talent.title) ? [{ slug: talent.slug, titre: text(talent.title) }] : []
 	)
 }
 
@@ -70,7 +70,7 @@ export interface TalentPageData {
 
 /** The published talent of this slug, or `null`: unknown, a draft, or not even a slug. */
 export async function readTalent(payload: Payload, slug: string): Promise<TalentPageData | null> {
-	if (!estUnSlug(slug)) return null
+	if (!isSlug(slug)) return null
 	const { docs } = await payload.find({
 		collection: 'talents',
 		where: { slug: { equals: slug } },
@@ -82,7 +82,7 @@ export async function readTalent(payload: Payload, slug: string): Promise<Talent
 	})
 	const talent = docs[0]
 	const title = text(talent?.title)
-	if (!talent || !estUnSlug(talent.slug) || !title) return null
+	if (!talent || !isSlug(talent.slug) || !title) return null
 	return {
 		slug: talent.slug,
 		titre: title,

@@ -11,14 +11,14 @@ import { namedPhotos } from './profile/photos'
 export const TYPES_D_IMAGE = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'] as const
 
 /** True for the type of a file the gallery of an article holds. */
-export const estUneImage = (type: unknown): boolean =>
+export const isImage = (type: unknown): boolean =>
 	typeof type === 'string' && (TYPES_D_IMAGE as readonly string[]).includes(type)
 
 /**
  * The message of a gallery that names anything but an image of the newsroom. One message for every
  * refusal: a save never tells whether a media it may not read exists, nor whose it is.
  */
-export const MESSAGE_GALERIE_IMAGES =
+export const GALLERY_IMAGES_MESSAGE =
 	'La galerie d’un article ne prend que des images envoyées par la rédaction (JPEG, PNG, WebP, GIF ou AVIF), jamais la photo d’une maquilleuse.'
 
 /** The media that are images. */
@@ -33,7 +33,7 @@ export const IMAGES: Where = { mimeType: { in: [...TYPES_D_IMAGE] } }
  * Payload would find nothing, and refuse every photo. Payload plays the same filter again when it
  * validates a published save, with the access rules of the request.
  */
-export const imagesDeLaRedaction = ({ req }: Pick<FilterOptionsProps, 'req'>): Where =>
+export const editorialImages = ({ req }: Pick<FilterOptionsProps, 'req'>): Where =>
 	isAdmin(req.user) ? { and: [IMAGES, EDITORIAL_MEDIA] } : IMAGES
 
 /**
@@ -44,7 +44,7 @@ export const imagesDeLaRedaction = ({ req }: Pick<FilterOptionsProps, 'req'>): W
  * One query, without access control: the rule is the file and its owner, not what the request may
  * read.
  */
-export async function queDesImagesDeLaRedaction(ids: (number | string)[], req: PayloadRequest): Promise<boolean> {
+export async function onlyEditorialImages(ids: (number | string)[], req: PayloadRequest): Promise<boolean> {
 	if (ids.length === 0) return true
 	if (!ids.every(possibleId)) return false
 	const { docs } = await req.payload.find({
@@ -56,10 +56,10 @@ export async function queDesImagesDeLaRedaction(ids: (number | string)[], req: P
 		select: { mimeType: true, owner: true },
 		where: { id: { in: ids } },
 	})
-	const trouves = new Map(docs.map(media => [String(media.id), media]))
+	const found = new Map(docs.map(media => [String(media.id), media]))
 	return ids.every(id => {
-		const media = trouves.get(String(id))
-		return media !== undefined && estUneImage(media.mimeType) && (media.owner ?? null) === null
+		const media = found.get(String(id))
+		return media !== undefined && isImage(media.mimeType) && (media.owner ?? null) === null
 	})
 }
 
@@ -75,14 +75,14 @@ export async function queDesImagesDeLaRedaction(ids: (number | string)[], req: P
  * ticket 221), and names the field by its label, as Payload does for a field it refuses itself:
  * « Le champ suivant n’est pas valide : Galerie ».
  */
-export const galerieDImages: FieldHook = async ({ field, value, req }) => {
-	const entrees = value === undefined || value === null ? [] : Array.isArray(value) ? value : [value]
-	const ids = namedPhotos(entrees)
-	if (ids.length !== entrees.length || !(await queDesImagesDeLaRedaction(ids, req)))
+export const imageGallery: FieldHook = async ({ field, value, req }) => {
+	const entries = value === undefined || value === null ? [] : Array.isArray(value) ? value : [value]
+	const ids = namedPhotos(entries)
+	if (ids.length !== entries.length || !(await onlyEditorialImages(ids, req)))
 		throw new ValidationError(
 			{
 				collection: 'articles',
-				errors: [{ label: field.label || undefined, message: MESSAGE_GALERIE_IMAGES, path: 'gallery' }],
+				errors: [{ label: field.label || undefined, message: GALLERY_IMAGES_MESSAGE, path: 'gallery' }],
 			},
 			req.t
 		)

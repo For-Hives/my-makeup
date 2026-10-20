@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { formatZone, rayonKm, villeAffichee } from '@/lib/format-zone'
+import { displayedCity, formatZone, radiusKm } from '@/lib/format-zone'
 
 // Ported from the « formatZone » block of tests/unit/profil-public.test.mjs of the old site
 // (branch main): same cases, same expected values.
@@ -25,8 +25,8 @@ describe('formatZone (plans/02 U14)', () => {
 		expect(formatZone({ city: 'Annecy', radius: 0 })).toBe('Annecy')
 		expect(formatZone({ city: 'Annecy', radius: null })).toBe('Annecy')
 		expect(formatZone({ city: '', radius: 30 })).toBe('')
-		expect(villeAffichee('null')).toBe('')
-		expect(rayonKm(2000)).toBeNull()
+		expect(displayedCity('null')).toBe('')
+		expect(radiusKm(2000)).toBeNull()
 	})
 
 	// Two guards of the port that U14 only checks as « no forbidden word »: the exact answers of the
@@ -35,7 +35,7 @@ describe('formatZone (plans/02 U14)', () => {
 		expect(formatZone({ city: 'Annecy', radius: -5 })).toBe('Annecy')
 		expect(formatZone({ city: 42, radius: 30 })).toBe('')
 		expect(formatZone({ city: {}, radius: 30 })).toBe('')
-		expect(rayonKm(-5)).toBeNull()
-		expect(villeAffichee(42)).toBe('')
+		expect(radiusKm(-5)).toBeNull()
+		expect(displayedCity(42)).toBe('')
 	})
 })

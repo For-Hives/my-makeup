@@ -1,5 +1,5 @@
 /**
- * The text of an article or of a talent, already turned into HTML by `markdownEnHtml`
+ * The text of an article or of a talent, already turned into HTML by `markdownToHtml`
  * (src/lib/markdown.ts), which sanitizes it and leaves no h1. The styles are written here, on the
  * elements the markdown can produce: the project has no typography plugin.
  */
@@ -22,7 +22,7 @@ export function MarkdownContent({ html }: { html: string }) {
 				'[&_code]:rounded [&_code]:bg-gray-100 [&_code]:px-1 [&_pre]:my-4 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-gray-100 [&_pre]:p-4',
 				'break-words',
 			].join(' ')}
-			// the HTML comes from markdownEnHtml, which sanitizes it (rehype-sanitize).
+			// the HTML comes from markdownToHtml, which sanitizes it (rehype-sanitize).
 			dangerouslySetInnerHTML={{ __html: html }}
 		/>
 	)

@@ -7,7 +7,7 @@ import { cache } from 'react'
 import { Cta } from '@/components/blocks/Cta'
 import { Hero } from '@/components/blocks/Hero'
 import { MarkdownContent } from '@/components/content/MarkdownContent'
-import { markdownEnHtml } from '@/lib/markdown'
+import { markdownToHtml } from '@/lib/markdown'
 import { breadcrumbStructuredData, SITE_NAME, serializeJsonLd } from '@/lib/seo/json-ld'
 import { editorialMetadata } from '@/lib/seo/metadata'
 import { canonicalUrl } from '@/lib/seo/url'
@@ -44,7 +44,7 @@ export default async function TalentPage({ params }: PageProps<'/talent/[slug]'>
 	const { slug } = await params
 	const talent = await readTalentOnce(slug)
 	if (!talent) notFound()
-	const html = await markdownEnHtml(talent.contenu)
+	const html = await markdownToHtml(talent.contenu)
 	const breadcrumb = breadcrumbStructuredData([
 		{ nom: 'Accueil', url: canonicalUrl('/') },
 		{ nom: talent.titre, url: canonicalUrl(`/talent/${talent.slug}`) },

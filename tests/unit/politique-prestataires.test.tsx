@@ -4,7 +4,7 @@ import path from 'node:path'
 import { renderToStaticMarkup } from 'react-dom/server'
 import Page from '@/app/(front)/(site)/politique-de-confidentialite/page'
 import { GOOGLE_ISSUER, UMAMI_ORIGIN_DEFAULT } from '@/lib/env'
-import { HEBERGEUR } from '@/lib/legal'
+import { HOST } from '@/lib/legal'
 import { PHOTO_ERASURE_DAYS, PROVIDERS } from '@/lib/providers'
 import { PURGE_DELAY_DAYS } from '@/lib/tasks/unconfirmed-accounts'
 import { texteDePage } from '../outils/texte-de-page'
@@ -35,8 +35,8 @@ describe('la liste des sous-traitants', () => {
 	})
 
 	test('l’hébergeur est celui des mentions légales', () => {
-		expect(parId('hebergement')?.configuration).toBe(HEBERGEUR.nom)
-		expect(parId('hebergement')?.nom.startsWith(HEBERGEUR.nom)).toBe(true)
+		expect(parId('hebergement')?.configuration).toBe(HOST.nom)
+		expect(parId('hebergement')?.nom.startsWith(HOST.nom)).toBe(true)
 	})
 
 	test('la mesure est l’instance Umami que le site relaie', () => {

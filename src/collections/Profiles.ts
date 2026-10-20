@@ -41,7 +41,7 @@ import {
 	STATUS_CHOICES,
 	STATUS_LABELS,
 } from '../lib/profile/status'
-import { premierSlugLibre, slugDeRepli, slugifier } from '../lib/slug'
+import { fallbackSlug, firstFreeSlug, slugify } from '../lib/slug'
 import { LIST_FIELDS, rowIdentitiesBeforeWrite } from './profile-lists'
 import { STATE_FIELDS, stateBeforeWrite } from './profiles/state'
 import { zoneFields } from './profiles/zone'
@@ -117,16 +117,16 @@ export const slugOnCreate: CollectionBeforeChangeHook = async ({ data, operation
 				req,
 			})
 		: null
-	const base = slugifier(account?.name)
+	const base = slugify(account?.name)
 	if (!base) return { ...data, slug: `${PROVISIONAL_PREFIX}${randomUUID()}` }
 	await reserveBase(req, base)
-	return { ...data, slug: await premierSlugLibre(base, takenSlugs(req)) }
+	return { ...data, slug: await firstFreeSlug(base, takenSlugs(req)) }
 }
 
 /** The fallback slug, `maquilleuse-<id>`, written as soon as the profile has its identifier. */
 export const fallbackSlugAfterCreate: CollectionAfterChangeHook = async ({ doc, operation, req }) => {
 	if (operation !== 'create' || !String(doc.slug).startsWith(PROVISIONAL_PREFIX)) return doc
-	const slug = await premierSlugLibre(slugDeRepli(doc.id), takenSlugs(req))
+	const slug = await firstFreeSlug(fallbackSlug(doc.id), takenSlugs(req))
 	await req.payload.update({ collection: 'profiles', data: { slug }, depth: 0, id: doc.id, overrideAccess: true, req })
 	return { ...doc, slug }
 }

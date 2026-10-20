@@ -17,7 +17,7 @@ import { unstable_cache } from 'next/cache'
 import { getPayload, type Payload } from 'payload'
 import { valuesToSearch } from '@/lib/profile/url'
 import { TAGS } from '@/lib/revalidate'
-import { estUnSlug } from '@/lib/slug'
+import { isSlug } from '@/lib/slug'
 import { listArticles } from './article-list'
 import { type ArticlePublic, readPublicArticle } from './articles'
 import { readIndexablePages } from './indexable-pages'
@@ -109,7 +109,7 @@ async function cachedIfFound<T, E>(
  */
 export async function cachedProfileUrl(payload: Payload, segment: string): Promise<ProfileUrlTarget> {
 	const slug = valuesToSearch(segment)?.segment
-	if (slug === undefined || !estUnSlug(slug)) return readProfileUrlTarget(payload, segment)
+	if (slug === undefined || !isSlug(slug)) return readProfileUrlTarget(payload, segment)
 	const reading = await cachedIfFound<ProfileUrlTarget & { type: 'profil' }, ProfileUrlTarget>(
 		['public:profil', slug],
 		TAGS.profil(slug),
@@ -125,7 +125,7 @@ export async function cachedProfileUrl(payload: Payload, segment: string): Promi
 
 /** The published talent of this slug, kept under `talent:<slug>`; `null` (unknown, a draft) is not kept. */
 export async function cachedTalent(payload: Payload, slug: string): Promise<TalentPageData | null> {
-	if (!estUnSlug(slug)) return null
+	if (!isSlug(slug)) return null
 	const reading = await cachedIfFound<TalentPageData, null>(['public:talent', slug], TAGS.talent(slug), async () => {
 		const talent = await readTalent(payload, slug)
 		return talent ? { garder: talent } : { ecart: null }
@@ -135,7 +135,7 @@ export async function cachedTalent(payload: Payload, slug: string): Promise<Tale
 
 /** The published article of this slug, kept under `article:<slug>`; `null` (unknown, a draft) is not kept. */
 export async function cachedArticle(payload: Payload, slug: string): Promise<ArticlePublic | null> {
-	if (!estUnSlug(slug)) return null
+	if (!isSlug(slug)) return null
 	const reading = await cachedIfFound<ArticlePublic, null>(['public:article', slug], TAGS.article(slug), async () => {
 		const article = await readPublicArticle(payload, slug)
 		return article ? { garder: article } : { ecart: null }

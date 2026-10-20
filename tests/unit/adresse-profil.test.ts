@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { SEGMENT_MAX, type UrlCandidate, urlTarget, valuesToSearch } from '@/lib/profile/url'
-import { slugifier } from '@/lib/slug'
+import { slugify } from '@/lib/slug'
 
 /**
  * What the address of a profile leads to (ticket 104; plan 02 U13 and U61 on the rule the page applies):
@@ -19,7 +19,7 @@ const profil = (id: number, slug: string, reste: Partial<UrlCandidate> = {}): Ur
 /** The candidates a read gives for a segment: the profiles whose slug or old username it names. */
 const candidatsPour = (segment: string, profils: readonly UrlCandidate[]): UrlCandidate[] =>
 	profils.filter(
-		({ slug, legacyUsername }) => slug === segment || slug === slugifier(segment) || legacyUsername === segment
+		({ slug, legacyUsername }) => slug === segment || slug === slugify(segment) || legacyUsername === segment
 	)
 
 const jeu = [

@@ -7,7 +7,7 @@ import type { DatabaseAdapterObj } from 'payload'
  */
 
 /** Connections per process, not the 10 of `pg`: a build and a server run several processes at once. */
-export const CONNEXIONS_MAX = 5
+export const CONNECTIONS_MAX = 5
 
 /**
  * Longest wait for a free connection, in milliseconds. `pg` waits for ever by default: if every
@@ -17,24 +17,24 @@ export const CONNEXIONS_MAX = 5
  * the next ones as soon as a connection is back. Long enough for a busy moment, short enough for
  * a visitor and for the health check to see an error rather than a hang.
  */
-export const DELAI_CONNEXION_MS = 5000
+export const CONNECTION_TIMEOUT_MS = 5000
 
-export interface ReglagesDuPool {
+export interface PoolSettings {
 	connectionString: string
 	connectionTimeoutMillis: number
 	max: number
 }
 
-export function reglagesDuPool(connectionString: string): ReglagesDuPool {
-	return { connectionString, connectionTimeoutMillis: DELAI_CONNEXION_MS, max: CONNEXIONS_MAX }
+export function poolSettings(connectionString: string): PoolSettings {
+	return { connectionString, connectionTimeoutMillis: CONNECTION_TIMEOUT_MS, max: CONNECTIONS_MAX }
 }
 
 /** What the listener needs of a pool: `pg`'s `Pool` is an event emitter. */
-export interface PoolEcoutable {
+export interface ListenablePool {
 	on(evenement: 'error', ecouteur: (erreur: Error & { code?: string }) => void): unknown
 }
 
-const POOLS_ECOUTES = new WeakSet<object>()
+const LISTENED_POOLS = new WeakSet<object>()
 
 /**
  * Listens to the `'error'` event of the pool (ticket 223). A connection that sits idle in a pool and
@@ -47,10 +47,10 @@ const POOLS_ECOUTES = new WeakSet<object>()
  * such as « connect ECONNREFUSED 10.0.0.5:5432 » carries the address of the database. Once per pool,
  * whatever the number of times Payload starts (hot reload in development).
  */
-export function ecouterLePool(pool: PoolEcoutable, ligne: (texte: string) => void): void {
+export function listenToPool(pool: ListenablePool, ligne: (texte: string) => void): void {
 	// A pool that cannot be listened to (a stand-in in a test) has no event to fail on.
-	if (typeof pool.on !== 'function' || POOLS_ECOUTES.has(pool)) return
-	POOLS_ECOUTES.add(pool)
+	if (typeof pool.on !== 'function' || LISTENED_POOLS.has(pool)) return
+	LISTENED_POOLS.add(pool)
 	pool.on('error', erreur => {
 		ligne(
 			`Connexion à la base perdue (code ${typeof erreur?.code === 'string' ? erreur.code : 'inconnu'}), elle sera rouverte à la prochaine requête.`
@@ -60,24 +60,22 @@ export function ecouterLePool(pool: PoolEcoutable, ligne: (texte: string) => voi
 
 /**
  * The database adapter of Payload, listening to the errors of its pool from the moment it connects
- * (`ecouterLePool`). Everything else is the adapter itself: the same object, only `connect` is wrapped.
+ * (`listenToPool`). Everything else is the adapter itself: the same object, only `connect` is wrapped.
  * Done on the adapter and not in `onInit`, which reads nothing of `payload.db` on the site.
  */
-export function avecLEcouteDuPool(
-	adaptateur: DatabaseAdapterObj<PostgresAdapter>
-): DatabaseAdapterObj<PostgresAdapter> {
+export function withPoolListener(adaptateur: DatabaseAdapterObj<PostgresAdapter>): DatabaseAdapterObj<PostgresAdapter> {
 	return {
 		...adaptateur,
 		init: args => {
 			const db = adaptateur.init(args)
-			const connecter = db.connect
-			if (!connecter) return db
+			const connect = db.connect
+			if (!connect) return db
 			db.connect = async parametres => {
 				try {
-					await connecter.call(db, parametres)
+					await connect.call(db, parametres)
 				} finally {
 					// Even when the first connection fails: the pool exists, and its idle connections will be cut too.
-					if (db.pool) ecouterLePool(db.pool, ligne => db.payload.logger.warn(ligne))
+					if (db.pool) listenToPool(db.pool, ligne => db.payload.logger.warn(ligne))
 				}
 			}
 			return db

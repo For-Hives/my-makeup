@@ -6,24 +6,24 @@
  * the same text.
  */
 
-const VIDES = new Set(['null', 'undefined', '-', '.', 'nan'])
+const EMPTY = new Set(['null', 'undefined', '-', '.', 'nan'])
 
 /** Largest radius shown; above, the value is a typo */
-export const RAYON_MAX_KM = 1000
+export const RADIUS_MAX_KM = 1000
 
 /** The city as typed, trimmed, or '' when nothing usable. */
-export function villeAffichee(city: unknown): string {
+export function displayedCity(city: unknown): string {
 	if (typeof city !== 'string') return ''
 	const v = city.trim().replace(/\s+/g, ' ')
-	return VIDES.has(v.toLowerCase()) ? '' : v
+	return EMPTY.has(v.toLowerCase()) ? '' : v
 }
 
 /** Radius in km, or null when 0, empty or absurd. */
-export function rayonKm(radius: unknown): number | null {
+export function radiusKm(radius: unknown): number | null {
 	const n = typeof radius === 'string' && radius.trim() !== '' ? Number(radius) : radius
 	if (typeof n !== 'number' || !Number.isFinite(n)) return null
 	const km = Math.round(n)
-	return km > 0 && km <= RAYON_MAX_KM ? km : null
+	return km > 0 && km <= RADIUS_MAX_KM ? km : null
 }
 
 /**
@@ -31,8 +31,8 @@ export function rayonKm(radius: unknown): number | null {
  * nothing).
  */
 export function formatZone({ city, radius }: { city?: unknown; radius?: unknown } = {}): string {
-	const ville = villeAffichee(city)
-	const km = rayonKm(radius)
-	if (!ville) return ''
-	return km ? `${ville} et ${km} km autour` : ville
+	const cityName = displayedCity(city)
+	const km = radiusKm(radius)
+	if (!cityName) return ''
+	return km ? `${cityName} et ${km} km autour` : cityName
 }

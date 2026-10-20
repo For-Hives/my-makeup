@@ -1,4 +1,4 @@
-import { HEBERGEUR } from './legal'
+import { HOST } from './legal'
 
 /**
  * The processors the privacy policy names, in one place (ticket 189). The page
@@ -33,7 +33,7 @@ export const PROVIDERS: readonly Provider[] = [
 		id: 'hebergement',
 		nom: 'netcup GmbH (Allemagne)',
 		phrase: 'hébergement du site.',
-		configuration: HEBERGEUR.nom,
+		configuration: HOST.nom,
 	},
 	{
 		id: 'mesure',

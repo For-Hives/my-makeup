@@ -22,7 +22,7 @@ import { mediaBaseUrl, serverEnv } from './lib/env'
 import { mediaUrl, UPLOAD_PREFIX } from './lib/media'
 import { PAYLOAD_LANGUAGE } from './lib/payload-language'
 import { reserveLocksToAdmins } from './lib/payload-locks'
-import { avecLEcouteDuPool, reglagesDuPool } from './lib/pool-base'
+import { poolSettings, withPoolListener } from './lib/pool-base'
 import { createObjectStorage } from './lib/storage'
 import { lancerLImportALaDemande } from './migration/import-a-la-demande'
 import { migrations } from './migrations'
@@ -79,13 +79,13 @@ export default buildConfig({
 	// A session cookie is accepted from these origins only (src/lib/env.ts).
 	csrf: env.trustedOrigins,
 	// A connection of the pool that PostgreSQL cuts must not kill the server (ticket 223).
-	db: avecLEcouteDuPool(
+	db: withPoolListener(
 		postgresAdapter({
 			// Outside this machine, a database that does not exist is an error: Payload must not create an empty one.
 			disableCreateDatabase: !env.localDatabase,
 			migrationDir: path.resolve(dirname, 'migrations'),
 			// 5 connections per process and a wait limit for a free one (src/lib/pool-base.ts, ticket 222).
-			pool: reglagesDuPool(env.databaseUri),
+			pool: poolSettings(env.databaseUri),
 			// Everywhere else, the schema changes by these migrations: Payload plays them when it starts in production.
 			prodMigrations: migrations,
 			// The schema is pushed into a database of this machine only. Payload never pushes in production.

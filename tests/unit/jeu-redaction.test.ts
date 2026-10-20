@@ -5,7 +5,7 @@ import { Talents } from '@/collections/Talents'
 import { placeDemoData, placeDemoEditorial } from '@/demo-data/dataset'
 import { DEMO_ARTICLES, DEMO_TALENTS } from '@/demo-data/editorial'
 import { DemoDataRefused } from '@/demo-data/guard'
-import { estUnSlug } from '@/lib/slug'
+import { isSlug } from '@/lib/slug'
 import { definitionDeLaSource } from '../outils/source-strapi/donnees'
 
 /**
@@ -31,7 +31,7 @@ describe('Les talents et les articles du jeu', () => {
 	test('chaque adresse est une adresse que le serveur accepte telle quelle, et aucune n’est partagée', () => {
 		for (const liste of [DEMO_TALENTS, DEMO_ARTICLES]) {
 			const slugs = liste.map(({ slug }) => slug)
-			for (const slug of slugs) expect(estUnSlug(slug), slug).toBe(true)
+			for (const slug of slugs) expect(isSlug(slug), slug).toBe(true)
 			expect(new Set(slugs).size).toBe(slugs.length)
 		}
 	})

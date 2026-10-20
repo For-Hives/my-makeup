@@ -48,7 +48,7 @@ import { validateContactEmail, validatePhone } from '../../../src/lib/profile/co
 import { type ProfileDocument, profileState, statusAfter } from '../../../src/lib/profile/state'
 import { INITIAL_CHOICE, type ProfileStatus } from '../../../src/lib/profile/status'
 import { RADIUS_BOUNDS_KM } from '../../../src/lib/profile/zone'
-import { attribuerSlugs } from '../../../src/lib/slug'
+import { assignSlugs } from '../../../src/lib/slug'
 import type { CommuneAttendue } from './communes'
 import { REFERENCES } from './ecarts'
 import { type PhotoNonReprise, photosDeLEntree } from './medias'
@@ -464,7 +464,7 @@ export function profilsAttendus(
 	const nonPris = new Set([...laisses.ecartes, ...laisses.spam])
 	// The slugs of the old site, computed on every profile of the source, as the old site did.
 	const slugs = new Map(
-		attribuerSlugs(profils.map(({ id, username, created_at }) => ({ id, username, createdAt: created_at }))).map(
+		assignSlugs(profils.map(({ id, username, created_at }) => ({ id, username, createdAt: created_at }))).map(
 			({ id, slug }) => [Number(id), slug]
 		)
 	)

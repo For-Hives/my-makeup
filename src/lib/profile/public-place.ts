@@ -42,7 +42,7 @@
 
 // Relative imports on purpose: read by the completeness rule, which the collection `profils` calls.
 import { DEPARTMENTS, departmentOfPostalCode, normalizePlace } from '../departments'
-import { villeAffichee } from '../format-zone'
+import { displayedCity } from '../format-zone'
 
 /** Types of street and parts of an address (lower case, no accents) */
 const STREETS = new Set([
@@ -419,7 +419,7 @@ const NONE: PublicPlace = { texte: '', commune: '', departement: null, adresse: 
 
 /** The public place of a city field, as typed in the profile or already public. */
 export function publicPlace(city: unknown): PublicPlace {
-	const raw = villeAffichee(city).replace(POSTAL_CODE_SPACE, '$1$2')
+	const raw = displayedCity(city).replace(POSTAL_CODE_SPACE, '$1$2')
 	if (!raw) return NONE
 
 	if (isAddress(raw)) return addressPlace(raw)

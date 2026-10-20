@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { firstPublicationDate, slugFieldDef, validateSlug } from '@/collections/editor'
-import { estUnSlug, SLUG_MAX } from '@/lib/slug'
+import { isSlug, SLUG_MAX } from '@/lib/slug'
 
 /**
  * The rules of writing of the newsroom (src/collections/editor.ts), without a database: the
@@ -17,7 +17,7 @@ const argumentsDeValidation = {
 describe('Un slug de la rédaction a déjà la forme d’une adresse', () => {
 	test('minuscules, chiffres, mots séparés par un seul tiret : accepté', () => {
 		for (const slug of ['maquillage-mariee', 'maquillage-fx', 'talent-2', 'a'.repeat(SLUG_MAX)])
-			expect(estUnSlug(slug), slug).toBe(true)
+			expect(isSlug(slug), slug).toBe(true)
 	})
 
 	test('majuscule, accent, espace, tiret en trop, trop long, vide ou autre chose qu’un texte : refusé', () => {
@@ -34,7 +34,7 @@ describe('Un slug de la rédaction a déjà la forme d’une adresse', () => {
 			null,
 			42,
 		])
-			expect(estUnSlug(slug), String(slug)).toBe(false)
+			expect(isSlug(slug), String(slug)).toBe(false)
 	})
 
 	test('la validation refuse sans corriger, et propose la bonne forme', () => {

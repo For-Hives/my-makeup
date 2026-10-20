@@ -1,6 +1,6 @@
 import { SITE_ORIGIN } from '../frozen-urls'
 import { PUBLIC_PAGES, type PublicContent, type PublicState } from '../revalidate'
-import { estUnSlug } from '../slug'
+import { isSlug } from '../slug'
 import { canonicalUrl } from './url'
 
 /**
@@ -87,7 +87,7 @@ export function changedUrls(contenu: PublicContent, avant: PublicState | null, a
 	const inSitemap = [avant, apres].filter(
 		(etat): etat is PublicState => etat !== null && etat.indexable !== false && etat.visible
 	)
-	const slugs = [...new Set(inSitemap.map(({ slug }) => slug))].filter(estUnSlug)
+	const slugs = [...new Set(inSitemap.map(({ slug }) => slug))].filter(isSlug)
 	return slugs.map(slug => canonicalUrl(PUBLIC_PAGES[contenu].page(slug))).filter(isSiteUrl)
 }
 
