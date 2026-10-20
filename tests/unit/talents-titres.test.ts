@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import { champsDifferents, planifier } from '../../scripts/migration/import/engine'
-import { ADAPTATEUR_TALENTS, type LigneTalent, talentAttendu } from '../../scripts/migration/import/talents'
+import { differentFields, planActions } from '../../scripts/migration/import/engine'
+import { expectedTalent, TALENTS_ADAPTER, type TalentRow } from '../../scripts/migration/import/talents'
 import { validatePageTitle } from '../../src/collections/Talents'
 import { TALENT_PAGE_TITLES } from '../../src/content/talent-titles'
 import { MAX_TITLE, pageTitle, TALENT_MIN_TITLE } from '../../src/lib/seo/text'
@@ -55,7 +55,7 @@ describe('les 14 titres d’onglet des pages talent', () => {
 })
 
 describe('l’import des titres d’onglet', () => {
-	const ligne = (id: number, slug: string): LigneTalent => ({
+	const ligne = (id: number, slug: string): TalentRow => ({
 		id,
 		title: 'Talent',
 		seo_title: null,
@@ -69,29 +69,27 @@ describe('l’import des titres d’onglet', () => {
 	})
 
 	test('un talent des 14 reçoit son titre et l’écart est annoncé ; un autre talent n’en reçoit pas', () => {
-		const connu = talentAttendu(ligne(1, 'maquillage-mariee'))
+		const connu = expectedTalent(ligne(1, 'maquillage-mariee'))
 		expect(connu.valeurs.pageTitle).toBe(TALENT_PAGE_TITLES['maquillage-mariee'])
 		expect(connu.ecarts).toEqual([{ champ: 'pageTitle', reference: 'titre-page-talent' }])
-		const inconnu = talentAttendu(ligne(2, 'effets-speciaux'))
+		const inconnu = expectedTalent(ligne(2, 'effets-speciaux'))
 		expect(inconnu.valeurs).not.toHaveProperty('pageTitle')
 		expect(inconnu.ecarts).toEqual([])
 	})
 
 	test('le titre n’est écrit que s’il manque : jamais par-dessus un titre saisi dans l’administration', () => {
-		const attendu = talentAttendu(ligne(1, 'maquillage-mariee'))
+		const attendu = expectedTalent(ligne(1, 'maquillage-mariee'))
 		const valeurs = { ...attendu.valeurs }
 		const existant = (titreDeLaPage: unknown) => ({ id: 7, valeurs: { ...valeurs, pageTitle: titreDeLaPage } })
-		expect(champsDifferents(ADAPTATEUR_TALENTS, attendu, existant(null))).toEqual(['pageTitle'])
-		expect(champsDifferents(ADAPTATEUR_TALENTS, attendu, existant(''))).toEqual(['pageTitle'])
+		expect(differentFields(TALENTS_ADAPTER, attendu, existant(null))).toEqual(['pageTitle'])
+		expect(differentFields(TALENTS_ADAPTER, attendu, existant(''))).toEqual(['pageTitle'])
 		expect(
-			champsDifferents(ADAPTATEUR_TALENTS, attendu, existant('Un titre saisi par la rédaction, de bonne longueur'))
+			differentFields(TALENTS_ADAPTER, attendu, existant('Un titre saisi par la rédaction, de bonne longueur'))
 		).toEqual([])
-		expect(champsDifferents(ADAPTATEUR_TALENTS, attendu, existant(valeurs.pageTitle))).toEqual([])
+		expect(differentFields(TALENTS_ADAPTER, attendu, existant(valeurs.pageTitle))).toEqual([])
 		// A talent with no title to give leaves an empty one alone.
-		const sans = talentAttendu(ligne(2, 'effets-speciaux'))
-		expect(
-			champsDifferents(ADAPTATEUR_TALENTS, sans, { id: 8, valeurs: { ...sans.valeurs, pageTitle: null } })
-		).toEqual([])
-		expect(planifier(ADAPTATEUR_TALENTS, [attendu], [existant('Saisi')]).actions[0]?.genre).toBe('inchange')
+		const sans = expectedTalent(ligne(2, 'effets-speciaux'))
+		expect(differentFields(TALENTS_ADAPTER, sans, { id: 8, valeurs: { ...sans.valeurs, pageTitle: null } })).toEqual([])
+		expect(planActions(TALENTS_ADAPTER, [attendu], [existant('Saisi')]).actions[0]?.genre).toBe('inchange')
 	})
 })

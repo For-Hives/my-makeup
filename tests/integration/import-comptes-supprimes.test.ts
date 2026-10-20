@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
+import { exitCode } from '../../scripts/migration/import/report'
 import { ImportRefuse } from '../../scripts/migration/import/target'
-import { codeDeSortie } from '../../scripts/migration/import/report'
 import { deleteAccountAndDependents } from '../../src/lib/account/deletion'
 import { importerSurLeBanc } from '../outils/import'
 import { seConnecter } from '../outils/parcours-herites'
@@ -64,7 +64,7 @@ describe('Sur une cible en service, un profil déjà repris reste tel que la maq
 		const rapport = await importerSurLeBanc('reel', { cibleEnService: true })
 
 		expect(rapport.collections.profiles).toMatchObject({ crees: 0, modifies: 0, refuses: [] })
-		expect(codeDeSortie(rapport)).toBe(0)
+		expect(exitCode(rapport)).toBe(0)
 		const apres = await profils()
 		expect(apres).toEqual(avant)
 		expect(apres.find(({ id }) => id === profil.id)).toMatchObject({ publicContact: false })
@@ -128,7 +128,7 @@ describe('Un compte supprimé dans la v3 ne revient pas à un rejeu (ticket 227)
 		expect(rapport.collections.profiles).toMatchObject({ crees: 0, modifies: 0, refuses: [] })
 		expect(rapport.parite?.pros).toMatchObject({ differents: [], manquants: [], enTrop: [] })
 		expect(rapport.parite?.profiles).toMatchObject({ differents: [], manquants: [], enTrop: [] })
-		expect(codeDeSortie(rapport)).toBe(0)
+		expect(exitCode(rapport)).toBe(0)
 		expect((await comptes()).some(({ strapiId }) => strapiId === LOCAL?.strapiId)).toBe(false)
 		expect((await profils()).some(({ strapiId }) => strapiId === profilSupprime)).toBe(false)
 	}, 60_000)

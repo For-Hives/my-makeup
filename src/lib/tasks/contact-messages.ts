@@ -1,5 +1,5 @@
 import type { Payload } from 'payload'
-import { importEnCours } from '../import-context'
+import { importInProgress } from '../import-context'
 import type { DailyTask } from './daily'
 
 /**
@@ -33,7 +33,7 @@ export function contactPurgeThreshold(maintenant: Date): Date {
 export const purgeContactMessages: DailyTask = {
 	nom: 'purge-messages-contact',
 	executer: async (payload: Payload, maintenant) => {
-		if (importEnCours()) return 0
+		if (importInProgress()) return 0
 		const { docs } = await payload.delete({
 			collection: 'contact-requests',
 			depth: 0,

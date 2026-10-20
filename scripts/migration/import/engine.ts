@@ -18,7 +18,7 @@
 
 import { createHash } from 'node:crypto'
 import { type CollectionSlug, type Payload, type RequestContext, ValidationError } from 'payload'
-import { CONTEXTE_IMPORT } from '../../../src/lib/import-context'
+import { IMPORT_CONTEXT } from '../../../src/lib/import-context'
 
 /**
  * How two values of a field are said equal. `objet` is a group of fields (the commune of a
@@ -27,55 +27,55 @@ import { CONTEXTE_IMPORT } from '../../../src/lib/import-context'
  * the rows are, in the same order, whatever identifier each row got from Payload. `json` is a
  * value kept as it is (the formats of a file of the old site), its keys in any order.
  */
-export type Genre = 'texte' | 'date' | 'booleen' | 'nombre' | 'relation' | 'relations' | 'objet' | 'liste' | 'json'
+export type Kind = 'texte' | 'date' | 'booleen' | 'nombre' | 'relation' | 'relations' | 'objet' | 'liste' | 'json'
 
 /** The collections the import writes. */
-export type CollectionImportee = Extract<CollectionSlug, 'pros' | 'media' | 'profiles' | 'articles' | 'talents'>
+export type ImportedCollection = Extract<CollectionSlug, 'pros' | 'media' | 'profiles' | 'articles' | 'talents'>
 
 /**
  * A transformation made on purpose: the field, and where the rule is written. A key of the
  * register of intended changes (`slug-stocke`), or a section of the frozen schema
  * (`SCHEMA.md §5.1`) for the two transformations that change no page.
  */
-export interface Ecart {
+export interface Gap {
 	champ: string
 	reference: string
 }
 
 /** A document of the source, as the target must hold it. */
-export interface Attendu {
+export interface Expected {
 	strapiId: number
 	/** The values of the compared fields, under the names of Payload. */
 	valeurs: Readonly<Record<string, unknown>>
 	/** Given at the creation only, never compared nor reported: the random password of an account. */
 	aLaCreation?: Readonly<Record<string, unknown>>
 	/** The transformations made on this document. */
-	ecarts: readonly Ecart[]
+	ecarts: readonly Gap[]
 }
 
 /** A document the target refuses: its identifier, why, and the fields at fault. Never a value. */
-export interface Refus {
+export interface Refusal {
 	strapiId: number
 	motif: string
 	champs?: string[]
 }
 
 /** A document of the target that holds a `strapiId`. */
-export interface Existant {
+export interface Existing {
 	id: number
 	valeurs: Readonly<Record<string, unknown>>
 }
 
 export type Action =
-	| { genre: 'creation'; attendu: Attendu }
-	| { genre: 'modification'; attendu: Attendu; id: number; champs: string[] }
-	| { genre: 'inchange'; attendu: Attendu; id: number }
+	| { genre: 'creation'; attendu: Expected }
+	| { genre: 'modification'; attendu: Expected; id: number; champs: string[] }
+	| { genre: 'inchange'; attendu: Expected; id: number }
 
 /** What the import knows of a collection, besides its data. */
-export interface Adaptateur {
-	collection: CollectionImportee
+export interface Adapter {
+	collection: ImportedCollection
 	/** The compared fields and their kind. `createdAt` and `updatedAt` are restored after an update. */
-	champs: Readonly<Record<string, Genre>>
+	champs: Readonly<Record<string, Kind>>
 	/**
 	 * Compared fields the server computes at every save (the status of a profile): never written by
 	 * the import, at the creation as at an update. Their expected value is what the server must
@@ -95,10 +95,10 @@ export interface Adaptateur {
 	 */
 	figes?: readonly string[]
 	/** Options of the writes of one document: a draft, no confirmation email, more context. */
-	options?: (attendu: Attendu) => OptionsDEcriture
+	options?: (attendu: Expected) => WriteOptions
 }
 
-export interface OptionsDEcriture {
+export interface WriteOptions {
 	/**
 	 * Created as a draft, without the validation of a published document. An update always writes
 	 * the document itself (`draft: false`), whatever its status: a draft update of Payload would
@@ -119,11 +119,11 @@ export interface Plan {
 }
 
 /** What a run did in a collection. */
-export interface Bilan {
+export interface Summary {
 	crees: number
 	modifies: number
 	inchanges: number
-	refuses: Refus[]
+	refuses: Refusal[]
 }
 
 const DATES = new Set(['createdAt', 'updatedAt'])
@@ -133,23 +133,23 @@ const DATES = new Set(['createdAt', 'updatedAt'])
  * counts as an absent one, and a group with no filled field is `null`, as Payload reads back an
  * empty group.
  */
-function groupeNormalise(valeur: object): string | null {
-	const champs = Object.entries(valeur)
+function normalizedGroup(valeur: object): string | null {
+	const fields = Object.entries(valeur)
 		.filter(([, sous]) => sous !== null && sous !== undefined)
 		.sort(([a], [b]) => a.localeCompare(b))
-	return champs.length === 0 ? null : JSON.stringify(champs)
+	return fields.length === 0 ? null : JSON.stringify(fields)
 }
 
 /** Compares two names the same way on every machine: by their code units, never by a locale. */
-const parNom = ([a]: [string, unknown], [b]: [string, unknown]): number => (a < b ? -1 : a > b ? 1 : 0)
+const byName = ([a]: [string, unknown], [b]: [string, unknown]): number => (a < b ? -1 : a > b ? 1 : 0)
 
 /** A value with the keys of each of its objects sorted, at every depth: two equal values give the same JSON. */
-function clesTriees(valeur: unknown): unknown {
-	if (Array.isArray(valeur)) return valeur.map(clesTriees)
+function sortedKeys(valeur: unknown): unknown {
+	if (Array.isArray(valeur)) return valeur.map(sortedKeys)
 	if (typeof valeur !== 'object' || valeur === null) return valeur
 	return Object.entries(valeur)
-		.sort(parNom)
-		.map(([cle, sous]) => [cle, clesTriees(sous)])
+		.sort(byName)
+		.map(([cle, sous]) => [cle, sortedKeys(sous)])
 }
 
 /**
@@ -158,7 +158,7 @@ function clesTriees(valeur: unknown): unknown {
  * the rows in their order. The values themselves are compared as they are: the import gives them
  * in the form Payload reads back (a day of these lists at 12:00 UTC, src/lib/profile/lists.ts).
  */
-function lignesNormalisees(lignes: readonly unknown[]): unknown[] {
+function normalizedRows(lignes: readonly unknown[]): unknown[] {
 	return lignes.map(ligne => {
 		if (typeof ligne !== 'object' || ligne === null || Array.isArray(ligne)) return ligne
 		return Object.entries(ligne)
@@ -166,26 +166,26 @@ function lignesNormalisees(lignes: readonly unknown[]): unknown[] {
 				([champ, sous]) =>
 					champ !== 'id' && sous !== null && sous !== undefined && !(Array.isArray(sous) && sous.length === 0)
 			)
-			.sort(parNom)
-			.map(([champ, sous]) => [champ, Array.isArray(sous) ? lignesNormalisees(sous) : sous])
+			.sort(byName)
+			.map(([champ, sous]) => [champ, Array.isArray(sous) ? normalizedRows(sous) : sous])
 	})
 }
 
 /** A value as it is compared: `undefined` is `null`, a date is an ISO string, a relation is an id. */
-export function normaliser(genre: Genre, valeur: unknown): unknown {
+export function normalize(genre: Kind, valeur: unknown): unknown {
 	if (valeur === undefined || valeur === null) return null
 	switch (genre) {
 		case 'objet':
-			return typeof valeur === 'object' ? groupeNormalise(valeur) : valeur
+			return typeof valeur === 'object' ? normalizedGroup(valeur) : valeur
 		case 'relations': {
-			const ids = (Array.isArray(valeur) ? valeur : [valeur]).map(id => normaliser('relation', id))
+			const ids = (Array.isArray(valeur) ? valeur : [valeur]).map(id => normalize('relation', id))
 			return ids.length === 0 ? null : JSON.stringify(ids)
 		}
 		case 'liste':
 			if (!Array.isArray(valeur)) return valeur
-			return valeur.length === 0 ? null : JSON.stringify(lignesNormalisees(valeur))
+			return valeur.length === 0 ? null : JSON.stringify(normalizedRows(valeur))
 		case 'json':
-			return JSON.stringify(clesTriees(valeur))
+			return JSON.stringify(sortedKeys(valeur))
 		case 'date': {
 			const date = valeur instanceof Date ? valeur : new Date(String(valeur))
 			return Number.isNaN(date.getTime()) ? String(valeur) : date.toISOString()
@@ -200,50 +200,50 @@ export function normaliser(genre: Genre, valeur: unknown): unknown {
 }
 
 /** The fields whose value in the target differs from the expected one. */
-export function champsDifferents(adaptateur: Adaptateur, attendu: Attendu, existant: Existant): string[] {
-	const amorces = new Set(adaptateur.amorces ?? [])
-	const figes = new Set(adaptateur.figes ?? [])
-	const vide = (valeur: unknown) => valeur === null || valeur === ''
+export function differentFields(adaptateur: Adapter, attendu: Expected, existant: Existing): string[] {
+	const seeds = new Set(adaptateur.amorces ?? [])
+	const frozen = new Set(adaptateur.figes ?? [])
+	const empty = (valeur: unknown) => valeur === null || valeur === ''
 	return Object.entries(adaptateur.champs)
 		.filter(([champ, genre]) => {
-			if (figes.has(champ)) return false
-			const voulu = normaliser(genre, attendu.valeurs[champ])
-			const present = normaliser(genre, existant.valeurs[champ])
+			if (frozen.has(champ)) return false
+			const intended = normalize(genre, attendu.valeurs[champ])
+			const present = normalize(genre, existant.valeurs[champ])
 			// A field the import only fills in differs when it is missing in the target, nothing else.
-			if (amorces.has(champ)) return !vide(voulu) && vide(present)
-			return voulu !== present
+			if (seeds.has(champ)) return !empty(intended) && empty(present)
+			return intended !== present
 		})
 		.map(([champ]) => champ)
 }
 
 /** What to do with each expected document, given what the target holds. */
-export function planifier(adaptateur: Adaptateur, attendus: readonly Attendu[], existants: readonly Existant[]): Plan {
-	const parStrapiId = new Map<number, Existant>()
-	for (const existant of existants) parStrapiId.set(Number(existant.valeurs.strapiId), existant)
-	const nommes = new Set(attendus.map(({ strapiId }) => strapiId))
+export function planActions(adaptateur: Adapter, attendus: readonly Expected[], existants: readonly Existing[]): Plan {
+	const byStrapiId = new Map<number, Existing>()
+	for (const existing of existants) byStrapiId.set(Number(existing.valeurs.strapiId), existing)
+	const named = new Set(attendus.map(({ strapiId }) => strapiId))
 	const actions = attendus.map((attendu): Action => {
-		const existant = parStrapiId.get(attendu.strapiId)
-		if (!existant) return { genre: 'creation', attendu }
-		const champs = champsDifferents(adaptateur, attendu, existant)
-		return champs.length === 0
-			? { genre: 'inchange', attendu, id: existant.id }
-			: { genre: 'modification', attendu, id: existant.id, champs }
+		const existing = byStrapiId.get(attendu.strapiId)
+		if (!existing) return { genre: 'creation', attendu }
+		const fields = differentFields(adaptateur, attendu, existing)
+		return fields.length === 0
+			? { genre: 'inchange', attendu, id: existing.id }
+			: { genre: 'modification', attendu, id: existing.id, champs: fields }
 	})
-	const enTrop = [...parStrapiId.keys()].filter(strapiId => !nommes.has(strapiId)).sort((a, b) => a - b)
-	return { actions, enTrop }
+	const extra = [...byStrapiId.keys()].filter(strapiId => !named.has(strapiId)).sort((a, b) => a - b)
+	return { actions, enTrop: extra }
 }
 
 /** The plan in numbers, before anything is written: what a run would do. */
-export function bilanDuPlan(plan: Plan): Bilan {
-	const compter = (genre: Action['genre']) => plan.actions.filter(action => action.genre === genre).length
-	return { crees: compter('creation'), modifies: compter('modification'), inchanges: compter('inchange'), refuses: [] }
+export function planSummary(plan: Plan): Summary {
+	const count = (genre: Action['genre']) => plan.actions.filter(action => action.genre === genre).length
+	return { crees: count('creation'), modifies: count('modification'), inchanges: count('inchange'), refuses: [] }
 }
 
 /**
  * Every document of the target that holds a `strapiId`, with the compared fields. Hidden fields
  * are read too (the legacy hash of an account): they stay in memory, for the comparison only.
  */
-export async function lireLaCible(payload: Payload, adaptateur: Adaptateur): Promise<Existant[]> {
+export async function readTarget(payload: Payload, adaptateur: Adapter): Promise<Existing[]> {
 	const select = Object.fromEntries([...Object.keys(adaptateur.champs), 'strapiId'].map(champ => [champ, true]))
 	const { docs } = await payload.find({
 		collection: adaptateur.collection,
@@ -258,8 +258,8 @@ export async function lireLaCible(payload: Payload, adaptateur: Adaptateur): Pro
 }
 
 /** The Local API, called the same way for the three collections; each adapter has typed its data. */
-type Ecrire = (options: {
-	collection: CollectionImportee
+type Write = (options: {
+	collection: ImportedCollection
 	id?: number
 	data: Record<string, unknown>
 	context: RequestContext
@@ -269,29 +269,29 @@ type Ecrire = (options: {
 	overrideAccess: true
 }) => Promise<{ id: number | string }>
 
-const choisir = (valeurs: Readonly<Record<string, unknown>>, champs: readonly string[]) =>
+const choose = (valeurs: Readonly<Record<string, unknown>>, champs: readonly string[]) =>
 	Object.fromEntries(champs.filter(champ => champ in valeurs).map(champ => [champ, valeurs[champ]]))
 
 /** The refusal of a document by Payload, by field path. */
-function refusDePayload(strapiId: number, erreur: ValidationError): Refus {
-	const champs = [...new Set(erreur.data.errors.map(({ path }) => path))].sort()
-	return { strapiId, motif: 'refuse-par-payload', champs }
+function payloadRefusal(strapiId: number, erreur: ValidationError): Refusal {
+	const fields = [...new Set(erreur.data.errors.map(({ path }) => path))].sort()
+	return { strapiId, motif: 'refuse-par-payload', champs: fields }
 }
 
 /** A code is printed only when it has the form of one: capitals, digits and `_`, never a value. */
-const FORME_DE_CODE = /^[0-9A-Z_]{5,40}$/
+const CODE_SHAPE = /^[0-9A-Z_]{5,40}$/
 
 /**
  * The code of an error of the database (its SQLSTATE, `23514`), or of the system (`ECONNRESET`),
  * read on the error or on one of its causes. Never its message nor its detail: the error of a
  * query carries the query and its parameters, an email or a hash among them.
  */
-export function codeDeLErreur(erreur: unknown): string | undefined {
-	let courante = erreur
-	for (let profondeur = 0; profondeur < 5 && typeof courante === 'object' && courante !== null; profondeur++) {
-		const { code } = courante as { code?: unknown }
-		if (typeof code === 'string' && FORME_DE_CODE.test(code)) return code
-		courante = (courante as { cause?: unknown }).cause
+export function errorCode(erreur: unknown): string | undefined {
+	let current = erreur
+	for (let depth = 0; depth < 5 && typeof current === 'object' && current !== null; depth++) {
+		const { code } = current as { code?: unknown }
+		if (typeof code === 'string' && CODE_SHAPE.test(code)) return code
+		current = (current as { cause?: unknown }).cause
 	}
 	return undefined
 }
@@ -300,9 +300,9 @@ export function codeDeLErreur(erreur: unknown): string | undefined {
  * What the command says of an error the import did not write itself: its type and its code,
  * never its message, which may carry the values of a query.
  */
-export function messageDUneErreurInattendue(erreur: unknown): string {
+export function unexpectedErrorMessage(erreur: unknown): string {
 	const type = erreur instanceof Error && /^\w{1,60}$/.test(erreur.name) ? erreur.name : 'erreur sans type'
-	const code = codeDeLErreur(erreur)
+	const code = errorCode(erreur)
 	return [
 		`L’import s’est arrêté sur une erreur inattendue (${type}${code ? `, code ${code}` : ''}).`,
 		'Son texte n’est pas affiché : il peut porter des valeurs de la base.',
@@ -316,11 +316,11 @@ export function messageDUneErreurInattendue(erreur: unknown): string {
  * collection, the document and the code of the error, never the error itself, which is not kept.
  * What was written before stays written: the next run takes up from there.
  */
-export class ImportInterrompu extends Error {
+export class InterruptedImport extends Error {
 	override readonly name = 'ImportInterrompu'
 
 	constructor(
-		readonly collection: CollectionImportee,
+		readonly collection: ImportedCollection,
 		readonly strapiId: number,
 		readonly code: string | undefined
 	) {
@@ -340,54 +340,54 @@ export class ImportInterrompu extends Error {
  * context. Payload replaces `updatedAt` at each update: the dates of the source are written back
  * afterwards, by the adapter of the database, so that the next run finds them equal.
  */
-export async function ecrire(payload: Payload, adaptateur: Adaptateur, plan: Plan): Promise<Bilan> {
-	const bilan: Bilan = { crees: 0, modifies: 0, inchanges: 0, refuses: [] }
-	const creer = payload.create.bind(payload) as unknown as Ecrire
-	const modifier = payload.update.bind(payload) as unknown as Ecrire
+export async function write(payload: Payload, adaptateur: Adapter, plan: Plan): Promise<Summary> {
+	const summary: Summary = { crees: 0, modifies: 0, inchanges: 0, refuses: [] }
+	const create = payload.create.bind(payload) as unknown as Write
+	const update = payload.update.bind(payload) as unknown as Write
 	// What the server computes is never sent: server code that writes it would make it a decision.
-	const calcules = new Set(adaptateur.calcules ?? [])
-	const ecrits = (valeurs: Readonly<Record<string, unknown>>) =>
-		Object.fromEntries(Object.entries(valeurs).filter(([champ]) => !calcules.has(champ)))
+	const computed = new Set(adaptateur.calcules ?? [])
+	const written = (valeurs: Readonly<Record<string, unknown>>) =>
+		Object.fromEntries(Object.entries(valeurs).filter(([champ]) => !computed.has(champ)))
 	for (const action of plan.actions) {
-		const { attendu } = action
+		const { attendu: expected } = action
 		if (action.genre === 'inchange') {
-			bilan.inchanges++
+			summary.inchanges++
 			continue
 		}
-		const options = adaptateur.options?.(attendu) ?? {}
-		const commun = {
+		const options = adaptateur.options?.(expected) ?? {}
+		const common = {
 			collection: adaptateur.collection,
-			context: { ...CONTEXTE_IMPORT, ...options.contexte },
+			context: { ...IMPORT_CONTEXT, ...options.contexte },
 			depth: 0 as const,
 			overrideAccess: true as const,
 		}
 		try {
 			if (action.genre === 'creation') {
-				await creer({
-					...commun,
-					data: { ...ecrits(attendu.valeurs), ...attendu.aLaCreation },
+				await create({
+					...common,
+					data: { ...written(expected.valeurs), ...expected.aLaCreation },
 					draft: options.brouillon === true,
 					disableVerificationEmail: options.disableVerificationEmail,
 				})
-				bilan.crees++
+				summary.crees++
 				continue
 			}
-			const champs = action.champs.filter(champ => !DATES.has(champ) && !calcules.has(champ))
-			if (champs.length > 0)
-				await modifier({ ...commun, id: action.id, data: choisir(attendu.valeurs, champs), draft: false })
-			const dates = choisir(attendu.valeurs, ['createdAt', 'updatedAt'])
+			const fields = action.champs.filter(champ => !DATES.has(champ) && !computed.has(champ))
+			if (fields.length > 0)
+				await update({ ...common, id: action.id, data: choose(expected.valeurs, fields), draft: false })
+			const dates = choose(expected.valeurs, ['createdAt', 'updatedAt'])
 			if (Object.keys(dates).length > 0)
 				await payload.db.updateOne({ collection: adaptateur.collection, id: action.id, data: dates })
-			bilan.modifies++
-		} catch (erreur) {
+			summary.modifies++
+		} catch (error) {
 			// A value Payload refuses is listed, and the run goes on. Anything else stops it, and the
 			// error of the database is dropped here: its message holds the values of the query.
-			if (!(erreur instanceof ValidationError))
-				throw new ImportInterrompu(adaptateur.collection, attendu.strapiId, codeDeLErreur(erreur))
-			bilan.refuses.push(refusDePayload(attendu.strapiId, erreur))
+			if (!(error instanceof ValidationError))
+				throw new InterruptedImport(adaptateur.collection, expected.strapiId, errorCode(error))
+			summary.refuses.push(payloadRefusal(expected.strapiId, error))
 		}
 	}
-	return bilan
+	return summary
 }
 
 /**
@@ -395,23 +395,20 @@ export async function ecrire(payload: Payload, adaptateur: Adaptateur, plan: Pla
  * the order of their `strapiId`. The expected documents and the target give the same one when
  * every value is equal. Only the fingerprint leaves the import, never a value.
  */
-export function empreinteDesDocuments(
-	adaptateur: Adaptateur,
+export function documentsFingerprint(
+	adaptateur: Adapter,
 	documents: readonly { strapiId: number; valeurs: Readonly<Record<string, unknown>> }[]
 ): string {
-	const amorces = new Set([...(adaptateur.amorces ?? []), ...(adaptateur.figes ?? [])])
-	const champs = Object.keys(adaptateur.champs)
-		.filter(champ => !amorces.has(champ))
+	const seeds = new Set([...(adaptateur.amorces ?? []), ...(adaptateur.figes ?? [])])
+	const fields = Object.keys(adaptateur.champs)
+		.filter(champ => !seeds.has(champ))
 		.sort()
-	const lignes = [...documents]
+	const rows = [...documents]
 		.sort((a, b) => a.strapiId - b.strapiId)
 		.map(({ strapiId, valeurs }) =>
-			JSON.stringify([
-				strapiId,
-				...champs.map(champ => normaliser(adaptateur.champs[champ] ?? 'texte', valeurs[champ])),
-			])
+			JSON.stringify([strapiId, ...fields.map(champ => normalize(adaptateur.champs[champ] ?? 'texte', valeurs[champ]))])
 		)
-	return createHash('sha256').update(lignes.join('\n')).digest('hex')
+	return createHash('sha256').update(rows.join('\n')).digest('hex')
 }
 
 /**
@@ -419,7 +416,7 @@ export function empreinteDesDocuments(
  * the target, with the same values. A document refused, before the write or by Payload, counts:
  * it is expected, and the target does not hold it as the source gives it.
  */
-export interface Parite {
+export interface Parity {
 	/** The documents of the source the import takes, the refused ones included. */
 	attendus: number
 	/** Expected documents found in the target by their `strapiId`, the refused ones aside. */
@@ -444,34 +441,34 @@ export interface Parite {
  * documents are counted apart: whatever the target holds for one of them (nothing, or the values
  * of an earlier run) is neither missing, nor different, nor more.
  */
-export function parite(
-	adaptateur: Adaptateur,
-	attendus: readonly Attendu[],
-	existants: readonly Existant[],
-	refus: readonly Refus[] = []
-): Parite {
+export function parity(
+	adaptateur: Adapter,
+	attendus: readonly Expected[],
+	existants: readonly Existing[],
+	refus: readonly Refusal[] = []
+): Parity {
 	const refuses = [...new Set(refus.map(({ strapiId }) => strapiId))].sort((a, b) => a - b)
-	const ecartes = new Set(refuses)
-	const compares = attendus.filter(({ strapiId }) => !ecartes.has(strapiId))
-	const plan = planifier(adaptateur, compares, existants)
+	const excluded = new Set(refuses)
+	const compares = attendus.filter(({ strapiId }) => !excluded.has(strapiId))
+	const plan = planActions(adaptateur, compares, existants)
 	const ids = (genre: Action['genre']) =>
-		plan.actions.filter(action => action.genre === genre).map(({ attendu }) => attendu.strapiId)
-	const differents = ids('modification')
-	const manquants = ids('creation')
+		plan.actions.filter(action => action.genre === genre).map(({ attendu: expected }) => expected.strapiId)
+	const different = ids('modification')
+	const missing = ids('creation')
 	return {
 		attendus: compares.length + refuses.length,
-		presents: compares.length - manquants.length,
+		presents: compares.length - missing.length,
 		egaux: ids('inchange').length,
 		refuses,
-		differents,
-		manquants,
-		enTrop: plan.enTrop.filter(strapiId => !ecartes.has(strapiId)),
-		empreinteAttendue: empreinteDesDocuments(adaptateur, compares),
-		empreinteCible: empreinteDesDocuments(
+		differents: different,
+		manquants: missing,
+		enTrop: plan.enTrop.filter(strapiId => !excluded.has(strapiId)),
+		empreinteAttendue: documentsFingerprint(adaptateur, compares),
+		empreinteCible: documentsFingerprint(
 			adaptateur,
 			existants
 				.map(({ valeurs }) => ({ strapiId: Number(valeurs.strapiId), valeurs }))
-				.filter(({ strapiId }) => !ecartes.has(strapiId))
+				.filter(({ strapiId }) => !excluded.has(strapiId))
 		),
 	}
 }
@@ -480,11 +477,11 @@ export function parite(
  * True when nothing but the refused documents separates the target from the source: nothing
  * different, nothing missing, nothing more, the same fingerprint.
  */
-export const sansEcartInexplique = (p: Parite): boolean =>
+export const withoutUnexplainedGap = (p: Parity): boolean =>
 	p.differents.length === 0 &&
 	p.manquants.length === 0 &&
 	p.enTrop.length === 0 &&
 	p.empreinteAttendue === p.empreinteCible
 
 /** True when a parity is complete: no document refused, and nothing else between the target and the source. */
-export const pariteComplete = (p: Parite): boolean => p.refuses.length === 0 && sansEcartInexplique(p)
+export const parityComplete = (p: Parity): boolean => p.refuses.length === 0 && withoutUnexplainedGap(p)

@@ -24,13 +24,13 @@ import { departmentOfInseeCode } from '../../../src/lib/profile/zone'
 import { ImportRefuse } from './target'
 
 /** The public address of the referential. */
-export const ADRESSE_DU_REFERENTIEL = 'https://geo.api.gouv.fr'
+export const REFERENCE_ADDRESS = 'https://geo.api.gouv.fr'
 
 /** How long the import waits for one answer. */
-export const DELAI_DU_REFERENTIEL_MS = 10_000
+export const REFERENCE_TIMEOUT_MS = 10_000
 
 /** A commune as the referential gives it: public reference data, never a personal one. */
-export interface CommuneDuReferentiel {
+export interface ReferenceCity {
 	nom: string
 	/** The INSEE code. */
 	code: string
@@ -48,15 +48,15 @@ export interface Question {
 }
 
 /** The key of a question among the kept answers: `nom:annecy`, `codePostal:74000`, `code:74010`. */
-export const cleDeLaQuestion = ({ genre, valeur }: Question): string => `${genre}:${valeur}`
+export const questionKey = ({ genre, valeur }: Question): string => `${genre}:${valeur}`
 
 /** The referential, as the import reads it: one question, its communes. */
-export interface Referentiel {
-	repondre(question: Question): Promise<CommuneDuReferentiel[]>
+export interface Reference {
+	repondre(question: Question): Promise<ReferenceCity[]>
 }
 
 /** What the referential sends for a commune, the fields the import asks for. */
-const COMMUNE_DE_L_API = z.object({
+const API_CITY = z.object({
 	nom: z.string().min(1),
 	code: z.string().min(1),
 	codeDepartement: z.string().optional(),
@@ -64,9 +64,9 @@ const COMMUNE_DE_L_API = z.object({
 	centre: z.object({ coordinates: z.tuple([z.number(), z.number()]) }).optional(),
 })
 
-const CHAMPS_DEMANDES = 'nom,code,codesPostaux,codeDepartement,centre'
+const REQUESTED_FIELDS = 'nom,code,codesPostaux,codeDepartement,centre'
 
-function communeDeLApi(commune: z.infer<typeof COMMUNE_DE_L_API>): CommuneDuReferentiel {
+function apiCity(commune: z.infer<typeof API_CITY>): ReferenceCity {
 	const [longitude, latitude] = commune.centre?.coordinates ?? [null, null]
 	return {
 		nom: commune.nom,
@@ -79,7 +79,7 @@ function communeDeLApi(commune: z.infer<typeof COMMUNE_DE_L_API>): CommuneDuRefe
 }
 
 /** The referential does not answer: the run stops before any write, the answers received stay kept. */
-const indisponible = (raison: string): ImportRefuse =>
+const unavailable = (raison: string): ImportRefuse =>
 	new ImportRefuse(
 		[
 			`Le référentiel des communes (geo.api.gouv.fr) ne répond pas : ${raison}. Rien n’est écrit.`,
@@ -88,10 +88,10 @@ const indisponible = (raison: string): ImportRefuse =>
 	)
 
 /** The address of a question: `/communes?nom=…`, `/communes?codePostal=…`, `/communes/<code>`. */
-function adresseDeLaQuestion(adresse: string, { genre, valeur }: Question): URL {
+function questionAddress(adresse: string, { genre, valeur }: Question): URL {
 	const url = new URL(genre === 'code' ? `/communes/${encodeURIComponent(valeur)}` : '/communes', adresse)
 	if (genre !== 'code') url.searchParams.set(genre, valeur)
-	url.searchParams.set('fields', CHAMPS_DEMANDES)
+	url.searchParams.set('fields', REQUESTED_FIELDS)
 	return url
 }
 
@@ -99,45 +99,45 @@ function adresseDeLaQuestion(adresse: string, { genre, valeur }: Question): URL 
  * The referential itself, asked by `fetch`. A commune unknown by its INSEE code (404) is an empty
  * answer; any other error stops the run (`ImportRefuse`), saying why without the question.
  */
-export function referentielGeoApi({
-	adresse = ADRESSE_DU_REFERENTIEL,
-	delaiMs = DELAI_DU_REFERENTIEL_MS,
+export function geoApiReference({
+	adresse = REFERENCE_ADDRESS,
+	delaiMs = REFERENCE_TIMEOUT_MS,
 }: {
 	adresse?: string
 	delaiMs?: number
-} = {}): Referentiel {
+} = {}): Reference {
 	return {
 		async repondre(question) {
 			// A timer and an AbortController: `AbortSignal.timeout` is not kept by every path of
 			// `fetch` under bun (docs/tests/http-sortant.md, « Limites »).
-			const arret = new AbortController()
-			const minuteur = setTimeout(() => arret.abort(), delaiMs)
+			const halt = new AbortController()
+			const timer = setTimeout(() => halt.abort(), delaiMs)
 			let corps: unknown
 			try {
-				const reponse = await fetch(adresseDeLaQuestion(adresse, question), {
+				const response = await fetch(questionAddress(adresse, question), {
 					headers: { accept: 'application/json' },
-					signal: arret.signal,
+					signal: halt.signal,
 				})
-				if (question.genre === 'code' && reponse.status === 404) return []
-				if (!reponse.ok) throw indisponible(`réponse ${reponse.status}`)
-				corps = await reponse.json().catch(() => undefined)
-			} catch (erreur) {
-				if (erreur instanceof ImportRefuse) throw erreur
-				throw indisponible(arret.signal.aborted ? `pas de réponse en ${delaiMs / 1000} s` : 'réseau injoignable')
+				if (question.genre === 'code' && response.status === 404) return []
+				if (!response.ok) throw unavailable(`réponse ${response.status}`)
+				corps = await response.json().catch(() => undefined)
+			} catch (error) {
+				if (error instanceof ImportRefuse) throw error
+				throw unavailable(halt.signal.aborted ? `pas de réponse en ${delaiMs / 1000} s` : 'réseau injoignable')
 			} finally {
-				clearTimeout(minuteur)
+				clearTimeout(timer)
 			}
-			const lu = (question.genre === 'code' ? COMMUNE_DE_L_API : z.array(COMMUNE_DE_L_API)).safeParse(corps)
-			if (!lu.success) throw indisponible('sa réponse n’est pas une liste de communes')
-			return (Array.isArray(lu.data) ? lu.data : [lu.data]).map(communeDeLApi)
+			const read = (question.genre === 'code' ? API_CITY : z.array(API_CITY)).safeParse(corps)
+			if (!read.success) throw unavailable('sa réponse n’est pas une liste de communes')
+			return (Array.isArray(read.data) ? read.data : [read.data]).map(apiCity)
 		},
 	}
 }
 
 /** The kept answers, by the key of their question. */
-export type ReponsesGardees = Map<string, CommuneDuReferentiel[]>
+export type KeptAnswers = Map<string, ReferenceCity[]>
 
-const COMMUNE_GARDEE = z
+const KEPT_CITY = z
 	.object({
 		nom: z.string(),
 		code: z.string(),
@@ -148,16 +148,16 @@ const COMMUNE_GARDEE = z
 	})
 	.strict()
 
-const FICHIER_DES_REPONSES = z
+const ANSWERS_FILE = z
 	.object({
 		version: z.literal(1),
-		source: z.literal(ADRESSE_DU_REFERENTIEL),
-		reponses: z.record(z.string().regex(/^(?:nom|codePostal|code):\S/), z.array(COMMUNE_GARDEE)),
+		source: z.literal(REFERENCE_ADDRESS),
+		reponses: z.record(z.string().regex(/^(?:nom|codePostal|code):\S/), z.array(KEPT_CITY)),
 	})
 	.strict()
 
 /** The kept answers read from the text of their file, or `ImportRefuse` with what is wrong. */
-export function lireLesReponses(texte: string): ReponsesGardees {
+export function readAnswers(texte: string): KeptAnswers {
 	let json: unknown
 	try {
 		json = JSON.parse(texte)
@@ -166,23 +166,23 @@ export function lireLesReponses(texte: string): ReponsesGardees {
 			'Le fichier des réponses du référentiel des communes n’est pas un JSON valide : rien n’est écrit.'
 		)
 	}
-	const lu = FICHIER_DES_REPONSES.safeParse(json)
-	if (!lu.success)
+	const read = ANSWERS_FILE.safeParse(json)
+	if (!read.success)
 		throw new ImportRefuse(
 			'Le fichier des réponses du référentiel des communes n’a pas la forme attendue : rien n’est écrit.'
 		)
-	return new Map(Object.entries(lu.data.reponses))
+	return new Map(Object.entries(read.data.reponses))
 }
 
 /** The kept answers as the text of their file: the questions sorted, so that two runs write the same file. */
-export function reponsesEnTexte(reponses: ReponsesGardees): string {
-	const triees = Object.fromEntries([...reponses.entries()].sort(([a], [b]) => a.localeCompare(b)))
-	return `${JSON.stringify({ version: 1, source: ADRESSE_DU_REFERENTIEL, reponses: triees }, null, '\t')}\n`
+export function answersAsText(reponses: KeptAnswers): string {
+	const sorted = Object.fromEntries([...reponses.entries()].sort(([a], [b]) => a.localeCompare(b)))
+	return `${JSON.stringify({ version: 1, source: REFERENCE_ADDRESS, reponses: sorted }, null, '\t')}\n`
 }
 
 /** A referential that keeps its answers, and says how many it received during the run. */
-export interface ReferentielGarde extends Referentiel {
-	readonly reponses: ReponsesGardees
+export interface KeptReference extends Reference {
+	readonly reponses: KeptAnswers
 	/** Answers received during this run, added to the kept ones. */
 	nouvelles(): number
 }
@@ -192,15 +192,15 @@ export interface ReferentielGarde extends Referentiel {
  * question goes to `referentiel` and its answer is kept. Offline (`referentiel` is `null`), such a
  * question stops the run before any write.
  */
-export function referentielGarde(reponses: ReponsesGardees, referentiel: Referentiel | null): ReferentielGarde {
-	let nouvelles = 0
+export function keptReference(reponses: KeptAnswers, referentiel: Reference | null): KeptReference {
+	let fresh = 0
 	return {
 		reponses,
-		nouvelles: () => nouvelles,
+		nouvelles: () => fresh,
 		async repondre(question) {
-			const cle = cleDeLaQuestion(question)
-			const gardee = reponses.get(cle)
-			if (gardee) return gardee
+			const key = questionKey(question)
+			const kept = reponses.get(key)
+			if (kept) return kept
 			if (!referentiel)
 				throw new ImportRefuse(
 					[
@@ -208,10 +208,10 @@ export function referentielGarde(reponses: ReponsesGardees, referentiel: Referen
 						'rien n’est écrit. Relance sans --hors-ligne pour la demander au référentiel.',
 					].join(' ')
 				)
-			const reponse = await referentiel.repondre(question)
-			reponses.set(cle, reponse)
-			nouvelles++
-			return reponse
+			const response = await referentiel.repondre(question)
+			reponses.set(key, response)
+			fresh++
+			return response
 		},
 	}
 }

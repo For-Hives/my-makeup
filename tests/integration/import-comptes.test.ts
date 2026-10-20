@@ -4,7 +4,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { SQL } from 'bun'
-import { AUCUNE_DECISION } from '../../scripts/migration/import/decisions'
+import { NO_DECISION } from '../../scripts/migration/import/decisions'
 import { NO_PROFILE_CONTEXT } from '../../src/collections/Profiles'
 import { commandeDImport, DECISIONS_DU_BANC, FICHIER_DES_DECISIONS_DU_BANC, importerSurLeBanc } from '../outils/import'
 import { compterLesMails, viderLeCapteur } from '../outils/mailpit'
@@ -329,7 +329,7 @@ describe('Critère 4 : même email sans décision, arrêt et rapport par identif
 	test('sans table de décision, l’import s’arrête avant toute écriture et liste le groupe par identifiants', async () => {
 		const avant = await empreinteDeLaSource()
 
-		const rapport = await importerSurLeBanc('reel', { decisions: AUCUNE_DECISION })
+		const rapport = await importerSurLeBanc('reel', { decisions: NO_DECISION })
 
 		expect(rapport.arret).toEqual({
 			emailsPartages: [[9, 10, 11, 12]],

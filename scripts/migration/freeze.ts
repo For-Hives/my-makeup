@@ -10,7 +10,7 @@
 
 import { spawnSync } from 'node:child_process'
 import { parseArgs } from 'node:util'
-import { lireLeJournalGit, verifierLesReferences, verifierLHistorique } from './freeze-rules'
+import { readGitLog, verifyHistory, verifyReferences } from './freeze-rules'
 
 const { values } = parseArgs({
 	options: {
@@ -40,15 +40,15 @@ if (git.status !== 0) {
 	process.exit(2)
 }
 
-const rapport = verifierLHistorique(lireLeJournalGit(git.stdout), values.debut)
-const references = verifierLesReferences(values.debut, [
+const report = verifyHistory(readGitLog(git.stdout), values.debut)
+const references = verifyReferences(values.debut, [
 	{ nom: 'capture de référence', prisLe: values.capture },
 	{ nom: 'inventaire des adresses', prisLe: values.inventaire },
 ])
 
 console.log(
-	`Gel commencé le ${rapport.debut} : ${rapport.apresLeGel.length} commit(s) depuis, ${rapport.interdits.length} interdit(s).`
+	`Gel commencé le ${report.debut} : ${report.apresLeGel.length} commit(s) depuis, ${report.interdits.length} interdit(s).`
 )
-for (const verdict of rapport.interdits) console.log(`  INTERDIT ${verdict.sha.slice(0, 9)} ${verdict.subject}`)
-for (const ligne of references) console.log(`  RÉFÉRENCE ${ligne}`)
-process.exit(rapport.interdits.length + references.length === 0 ? 0 : 1)
+for (const verdict of report.interdits) console.log(`  INTERDIT ${verdict.sha.slice(0, 9)} ${verdict.subject}`)
+for (const row of references) console.log(`  RÉFÉRENCE ${row}`)
+process.exit(report.interdits.length + references.length === 0 ? 0 : 1)

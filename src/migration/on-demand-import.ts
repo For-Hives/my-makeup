@@ -28,61 +28,61 @@
  */
 
 import type { Payload } from 'payload'
-import { ImportRefuse, verifierLeSchemaDeLaCible } from '../../scripts/migration/import/target'
-import { AUCUNE_DECISION, type Decisions, lireLesDecisions } from '../../scripts/migration/import/decisions'
-import type { Sonde } from '../../scripts/migration/import/media'
-import { codeDeLErreur, ImportInterrompu } from '../../scripts/migration/import/engine'
-import type { Referentiel } from '../../scripts/migration/import/reference'
+import { type Decisions, NO_DECISION, readDecisions } from '../../scripts/migration/import/decisions'
+import { errorCode, InterruptedImport } from '../../scripts/migration/import/engine'
+import type { Probe } from '../../scripts/migration/import/media'
+import type { Reference } from '../../scripts/migration/import/reference'
 import type { Source } from '../../scripts/migration/import/source'
+import { ImportRefuse, verifyTargetSchema } from '../../scripts/migration/import/target'
 import { EnvError, type ImportEnv, isLocalDatabase, mediaBaseUrl, type ServerEnv, SITE_ORIGIN } from '../lib/env'
 
 /** What the module reads of the environment: where it runs, and what the import needs. */
-export type EnvDeLImport = Pick<ServerEnv, 'databaseUri' | 'importation' | 'sourceStrapi' | 'storage'>
+export type OnDemandImportEnv = Pick<ServerEnv, 'databaseUri' | 'importation' | 'sourceStrapi' | 'storage'>
 
 /** Where the process runs: the site, or anywhere else. */
-export type Lieu = 'site' | 'autre'
+export type Place = 'site' | 'autre'
 
 /** What the module reads of `process.env` to know where it runs. */
-export type VariablesDuLieu = Readonly<
+export type PlaceVariables = Readonly<
 	Partial<Record<'APP_ENV' | 'NEXT_PUBLIC_SITE_URL' | 'NODE_ENV', string | undefined>>
 >
 
 /** The marker written before the played tokens, in the comment of the schema. */
-export const MARQUE_DES_JETONS = 'my-makeup, import à la demande, jetons joués : '
+export const TOKENS_MARKER = 'my-makeup, import à la demande, jetons joués : '
 
 /** The lock that serialises two containers claiming a token (an arbitrary constant). */
-const VERROU_DES_JETONS = 'my-makeup:import-a-la-demande'
+const TOKENS_LOCK = 'my-makeup:import-a-la-demande'
 
 /** The comment PostgreSQL gives the schema `public` itself. */
-const COMMENTAIRE_DE_POSTGRES = 'standard public schema'
+const POSTGRES_COMMENT = 'standard public schema'
 
 /** The schema Payload builds its tables in. */
 const SCHEMA = 'public'
 
 /** A line of the log is prefixed once, here. */
-export const PREFIXE_DU_JOURNAL = '[import] '
+export const LOG_PREFIX = '[import] '
 
 /** The token alone is no secret (it is chosen to be read in Coolify), but nothing else may reach the log. */
-const INTERDIT_DANS_LE_JOURNAL = /@|\$2[abxy]\$/
+const FORBIDDEN_IN_LOG = /@|\$2[abxy]\$/
 
 /** Why the import did not run, or what it did. */
-export type IssueDeLImport =
+export type ImportOutcome =
 	| { etat: 'sans-jeton' }
 	| { etat: 'refuse'; raison: string }
 	| { etat: 'deja-joue'; jeton: string }
 	| { etat: 'termine'; code: number }
 
-export interface OptionsDeLImport {
+export interface ImportOptions {
 	/** Where the process runs. Read from `process.env` by default; a test gives `'site'` to stand for the site. */
-	lieu?: Lieu
+	lieu?: Place
 	/** Receives each line of the log, without the prefix. Printed with the prefix by default. */
 	journal?: (ligne: string) => void
 	/** The referential of the communes. By default the kept answers of IMPORT_COMMUNES, then the official list online. */
-	referentiel?: Referentiel
+	referentiel?: Reference
 	/** The public base of the photos. By default `mediaBaseUrl(R2_PUBLIC_URL, storage)`, as the application gives their addresses. */
 	baseDesMedias?: string
 	/** How the headers of an object of the storage are read. `HEAD` by default. */
-	sonder?: Sonde
+	sonder?: Probe
 	/** Opens the source at this address. The `pg` reader of Payload's client by default. */
 	ouvrirLaSource?: (adresse: string, payload: Payload) => Promise<Source> | Source
 	/** The day the run is made. Given by a test only. */
@@ -90,16 +90,16 @@ export interface OptionsDeLImport {
 }
 
 /** Where the process runs, from its environment. */
-export function lieuDuProcessus(variables: VariablesDuLieu = process.env): Lieu {
-	const surLeSite =
+export function placeOfProcess(variables: PlaceVariables = process.env): Place {
+	const onSite =
 		variables.NODE_ENV === 'production' &&
 		variables.APP_ENV?.trim() === 'prod' &&
 		variables.NEXT_PUBLIC_SITE_URL === SITE_ORIGIN
-	return surLeSite ? 'site' : 'autre'
+	return onSite ? 'site' : 'autre'
 }
 
 /** The pass is refused anywhere else than on the site. */
-export function exigerLeSite(lieu: Lieu): void {
+export function requireSite(lieu: Place): void {
 	if (lieu !== 'site')
 		throw new ImportRefuse(
 			`L’import à la demande ne tourne que sur le site (NODE_ENV=production, APP_ENV=prod, NEXT_PUBLIC_SITE_URL=${SITE_ORIGIN}). Rien n’est lu ni écrit.`
@@ -114,34 +114,34 @@ function designation(adresse: string): string | undefined {
 	} catch {
 		return undefined
 	}
-	const hotes = [url.hostname, ...url.searchParams.getAll('host')].map(hote =>
+	const hosts = [url.hostname, ...url.searchParams.getAll('host')].map(hote =>
 		hote.toLowerCase().replace(/^\[(.+)\]$/, '$1')
 	)
-	return `${hotes.join(',')}:${url.port === '' ? '5432' : url.port}/${decodeURIComponent(url.pathname.slice(1))}`
+	return `${hosts.join(',')}:${url.port === '' ? '5432' : url.port}/${decodeURIComponent(url.pathname.slice(1))}`
 }
 
 /** The source must not be the database Payload writes to. An address that cannot be read is no proof of a difference. */
-export function exigerUneSourceAUtreQueLaCible(sourceStrapi: string, databaseUri: string): void {
+export function requireSourceOtherThanTarget(sourceStrapi: string, databaseUri: string): void {
 	const source = designation(sourceStrapi)
-	const cible = designation(databaseUri)
-	if (source === undefined || cible === undefined || source === cible)
+	const target = designation(databaseUri)
+	if (source === undefined || target === undefined || source === target)
 		throw new ImportRefuse(
 			'STRAPI_SOURCE_URI désigne la base de Payload (DATABASE_URI), ou ne se lit pas : l’import lit la base Strapi, jamais celle qu’il remplit. Rien n’est lu ni écrit.'
 		)
 }
 
 /** The tokens played so far, from the comment of the schema. */
-export function lireLesJetons(commentaire: string | null | undefined): string[] {
-	if (commentaire == null || commentaire === '' || commentaire === COMMENTAIRE_DE_POSTGRES) return []
-	if (!commentaire.startsWith(MARQUE_DES_JETONS))
+export function readTokens(commentaire: string | null | undefined): string[] {
+	if (commentaire == null || commentaire === '' || commentaire === POSTGRES_COMMENT) return []
+	if (!commentaire.startsWith(TOKENS_MARKER))
 		throw new ImportRefuse('Le schéma de la base porte un commentaire que l’import ne connaît pas : rien n’est écrit.')
 	return commentaire
-		.slice(MARQUE_DES_JETONS.length)
+		.slice(TOKENS_MARKER.length)
 		.split(' ')
 		.filter(jeton => jeton !== '')
 }
 
-const litteral = (texte: string): string => `'${texte.replaceAll("'", "''")}'`
+const literal = (texte: string): string => `'${texte.replaceAll("'", "''")}'`
 
 /** What a pool of `pg` gives: a client to run the statements of the claim on. */
 interface PoolPg {
@@ -156,86 +156,82 @@ interface PoolPg {
  * this call is the one that claimed it: the import may run. Two containers started together, or
  * the same container started twice, cannot both claim the same token.
  */
-export async function reserverLeJeton(pool: PoolPg, jeton: string): Promise<boolean> {
+export async function reserveToken(pool: PoolPg, jeton: string): Promise<boolean> {
 	const client = await pool.connect()
 	try {
 		await client.query('BEGIN')
-		await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [VERROU_DES_JETONS])
+		await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [TOKENS_LOCK])
 		const { rows } = await client.query('SELECT obj_description(to_regnamespace($1), $2) AS marque', [
 			SCHEMA,
 			'pg_namespace',
 		])
-		const [ligne] = rows as { marque?: string | null }[]
-		const jetons = lireLesJetons(ligne?.marque)
-		if (jetons.includes(jeton)) {
+		const [row] = rows as { marque?: string | null }[]
+		const tokens = readTokens(row?.marque)
+		if (tokens.includes(jeton)) {
 			await client.query('COMMIT')
 			return false
 		}
 		// The token is checked against the form of src/lib/env.ts before it gets here: letters, digits, hyphens.
-		await client.query(
-			`COMMENT ON SCHEMA ${SCHEMA} IS ${litteral(`${MARQUE_DES_JETONS}${[...jetons, jeton].join(' ')}`)}`
-		)
+		await client.query(`COMMENT ON SCHEMA ${SCHEMA} IS ${literal(`${TOKENS_MARKER}${[...tokens, jeton].join(' ')}`)}`)
 		await client.query('COMMIT')
 		return true
-	} catch (erreur) {
+	} catch (error) {
 		await client.query('ROLLBACK').catch(() => undefined)
-		throw erreur
+		throw error
 	} finally {
 		client.release()
 	}
 }
 
 /** The type and the code of an error that is not ours: never its text, which may carry values of a database. */
-function typeEtCode(erreur: unknown): string {
+function typeAndCode(erreur: unknown): string {
 	const type = erreur instanceof Error && /^\w{1,60}$/.test(erreur.name) ? erreur.name : 'erreur sans type'
-	const code = codeDeLErreur(erreur)
+	const code = errorCode(erreur)
 	return `${type}${code ? `, code ${code}` : ''}`
 }
 
 /** The message of an error the import or this module wrote; else its type and its code only. */
-function messageDeLErreur(erreur: unknown): string {
-	if (erreur instanceof ImportRefuse || erreur instanceof ImportInterrompu || erreur instanceof EnvError)
+function errorMessage(erreur: unknown): string {
+	if (erreur instanceof ImportRefuse || erreur instanceof InterruptedImport || erreur instanceof EnvError)
 		return erreur.message
-	return `L’import s’est arrêté sur une erreur inattendue (${typeEtCode(erreur)}). Son texte n’est pas affiché : il peut porter des valeurs de la base. Ce qui était écrit reste écrit ; un jeton nouveau reprend à partir de là.`
+	return `L’import s’est arrêté sur une erreur inattendue (${typeAndCode(erreur)}). Son texte n’est pas affiché : il peut porter des valeurs de la base. Ce qui était écrit reste écrit ; un jeton nouveau reprend à partir de là.`
 }
 
 /** The table of decisions of IMPORT_DECISIONS, or none. Its errors never repeat what the table holds. */
-function lireLesDecisionsDeLEnvironnement(texte: string | undefined): Decisions {
-	return texte === undefined ? AUCUNE_DECISION : lireLesDecisions(texte)
+function readEnvironmentDecisions(texte: string | undefined): Decisions {
+	return texte === undefined ? NO_DECISION : readDecisions(texte)
 }
 
 /** The date of the switch, as the import reads it (`--consentement-le`). */
-async function lireLaDateDeBascule(texte: string | undefined): Promise<string | undefined> {
+async function readCutoverDate(texte: string | undefined): Promise<string | undefined> {
 	if (texte === undefined) return undefined
-	const { dateDeBascule } = await import('../../scripts/migration/import/profiles')
-	const date = dateDeBascule(texte)
+	const { cutoverDate } = await import('../../scripts/migration/import/profiles')
+	const date = cutoverDate(texte)
 	if (date === null) throw new ImportRefuse('La date de IMPORT_CONSENTEMENT_LE n’est pas une date : rien n’est écrit.')
 	return date
 }
 
 /** The referential: the kept answers of IMPORT_COMMUNES first, the official list online for the rest. */
-async function lireLeReferentiel(importation: ImportEnv, donne: Referentiel | undefined): Promise<Referentiel> {
+async function readReference(importation: ImportEnv, donne: Reference | undefined): Promise<Reference> {
 	if (donne) return donne
-	const { lireLesReponses, referentielGarde, referentielGeoApi } = await import(
-		'../../scripts/migration/import/reference'
-	)
-	let reponses: ReturnType<typeof lireLesReponses>
+	const { readAnswers, keptReference, geoApiReference } = await import('../../scripts/migration/import/reference')
+	let answers: ReturnType<typeof readAnswers>
 	try {
-		reponses = importation.communes === undefined ? new Map() : lireLesReponses(importation.communes)
-	} catch (erreur) {
-		if (erreur instanceof ImportRefuse) throw erreur
+		answers = importation.communes === undefined ? new Map() : readAnswers(importation.communes)
+	} catch (error) {
+		if (error instanceof ImportRefuse) throw error
 		throw new ImportRefuse(
 			'IMPORT_COMMUNES ne se lit pas comme des réponses du référentiel des communes : rien n’est écrit.'
 		)
 	}
-	return referentielGarde(reponses, referentielGeoApi())
+	return keptReference(answers, geoApiReference())
 }
 
-async function ouvrirLaSourceDeLApplication(adresse: string, payload: Payload): Promise<Source> {
-	const { ouvrirLaSourcePg } = await import('../../scripts/migration/import/source-pg')
+async function openApplicationSource(adresse: string, payload: Payload): Promise<Source> {
+	const { openSourcePg } = await import('../../scripts/migration/import/source-pg')
 	if (!payload.db.pg)
 		throw new ImportRefuse('L’adaptateur de Payload ne donne pas son client PostgreSQL : rien n’est fait.')
-	return ouvrirLaSourcePg(adresse, payload.db.pg)
+	return openSourcePg(adresse, payload.db.pg)
 }
 
 /**
@@ -244,94 +240,92 @@ async function ouvrirLaSourceDeLApplication(adresse: string, payload: Payload): 
  *
  * Nothing is read from the database, nor from anywhere, when no token is set.
  */
-export async function importALaDemande(
+export async function importOnDemand(
 	payload: Payload,
-	env: EnvDeLImport,
-	options: OptionsDeLImport = {}
-): Promise<IssueDeLImport> {
+	env: OnDemandImportEnv,
+	options: ImportOptions = {}
+): Promise<ImportOutcome> {
 	const { importation } = env
 	if (!importation) return { etat: 'sans-jeton' }
-	const ecrire = (ligne: string): void => {
+	const write = (ligne: string): void => {
 		// Whatever its origin, a line that could carry an email or a hash does not reach the log.
-		const sure = INTERDIT_DANS_LE_JOURNAL.test(ligne)
+		const sure = FORBIDDEN_IN_LOG.test(ligne)
 			? 'Une ligne du journal portait une valeur privée : elle est retenue.'
 			: ligne
 		if (options.journal) options.journal(sure)
-		else console.log(`${PREFIXE_DU_JOURNAL}${sure}`)
+		else console.log(`${LOG_PREFIX}${sure}`)
 	}
-	const dire = (texte: string): void => {
-		for (const ligne of texte.split('\n')) if (ligne.trim() !== '') ecrire(ligne)
+	const say = (texte: string): void => {
+		for (const row of texte.split('\n')) if (row.trim() !== '') write(row)
 	}
 	let source: Source | undefined
 	try {
-		exigerLeSite(options.lieu ?? lieuDuProcessus())
+		requireSite(options.lieu ?? placeOfProcess())
 		if (env.sourceStrapi === undefined)
 			throw new ImportRefuse(
 				'STRAPI_SOURCE_URI manque : l’import ne sait pas quelle base Strapi lire. Rien n’est écrit.'
 			)
-		exigerUneSourceAUtreQueLaCible(env.sourceStrapi, env.databaseUri)
+		requireSourceOtherThanTarget(env.sourceStrapi, env.databaseUri)
 		// No storage, no pass: every photo would be « sans-stockage », and none adopted.
 		if (!env.storage)
 			throw new ImportRefuse(
 				'Le stockage des photos n’est pas réglé (S3_*) : l’import n’adopte aucune photo sans lui. Rien n’est écrit.'
 			)
-		const baseDesMedias = options.baseDesMedias ?? mediaBaseUrl(process.env.R2_PUBLIC_URL, env.storage)
-		await verifierLeSchemaDeLaCible(payload)
+		const mediaBase = options.baseDesMedias ?? mediaBaseUrl(process.env.R2_PUBLIC_URL, env.storage)
+		await verifyTargetSchema(payload)
 		// Everything that can be wrong in the variables is checked before the token is used.
-		const decisions = lireLesDecisionsDeLEnvironnement(importation.decisions)
-		const consentiLe = await lireLaDateDeBascule(importation.consentiLe)
-		const referentiel = await lireLeReferentiel(importation, options.referentiel)
+		const decisions = readEnvironmentDecisions(importation.decisions)
+		const consentDate = await readCutoverDate(importation.consentiLe)
+		const reference = await readReference(importation, options.referentiel)
 
-		if (!(await reserverLeJeton(payload.db.pool, importation.jeton))) {
-			ecrire(`Le jeton « ${importation.jeton} » a déjà été joué : rien n’est lu ni écrit.`)
+		if (!(await reserveToken(payload.db.pool, importation.jeton))) {
+			write(`Le jeton « ${importation.jeton} » a déjà été joué : rien n’est lu ni écrit.`)
 			return { etat: 'deja-joue', jeton: importation.jeton }
 		}
-		ecrire(`Jeton « ${importation.jeton} » : passage ${importation.mode} commencé.`)
+		write(`Jeton « ${importation.jeton} » : passage ${importation.mode} commencé.`)
 		const { importer } = await import('../../scripts/migration/import/importer')
-		const { codeDeSortie, codeDuControle, controleEnTexte, rapportEnTexte } = await import(
-			'../../scripts/migration/import/report'
-		)
-		source = await (options.ouvrirLaSource ?? ouvrirLaSourceDeLApplication)(env.sourceStrapi, payload)
-		const rapport = await importer({
+		const { exitCode, checkExitCode, checkAsText, reportAsText } = await import('../../scripts/migration/import/report')
+		source = await (options.ouvrirLaSource ?? openApplicationSource)(env.sourceStrapi, payload)
+		const report = await importer({
 			payload,
 			source,
 			mode: importation.mode === 'reel' ? 'reel' : 'a-blanc',
 			cible: isLocalDatabase(env.databaseUri) ? 'locale' : 'distante',
 			decisions,
-			referentiel,
+			referentiel: reference,
 			cibleEnService: importation.cibleEnService,
-			medias: { base: baseDesMedias, ...(options.sonder && { sonder: options.sonder }) },
-			...(consentiLe !== undefined && { consentiLe }),
+			medias: { base: mediaBase, ...(options.sonder && { sonder: options.sonder }) },
+			...(consentDate !== undefined && { consentiLe: consentDate }),
 			...(options.maintenant && { maintenant: options.maintenant }),
 		})
-		dire(rapportEnTexte(rapport))
-		const controle = importation.mode === 'controle'
-		if (controle) dire(controleEnTexte(rapport))
-		const code = controle ? codeDuControle(rapport) : codeDeSortie(rapport)
-		ecrire(`Passage ${importation.mode} fini, code ${code}.`)
+		say(reportAsText(report))
+		const check = importation.mode === 'controle'
+		if (check) say(checkAsText(report))
+		const code = check ? checkExitCode(report) : exitCode(report)
+		write(`Passage ${importation.mode} fini, code ${code}.`)
 		return { etat: 'termine', code }
-	} catch (erreur) {
-		const raison = messageDeLErreur(erreur)
-		ecrire(`Passage refusé ou arrêté. ${raison}`)
-		return { etat: 'refuse', raison }
+	} catch (error) {
+		const reason = errorMessage(error)
+		write(`Passage refusé ou arrêté. ${reason}`)
+		return { etat: 'refuse', raison: reason }
 	} finally {
 		await source?.fermer().catch(() => undefined)
 	}
 }
 
 /** Jetons already launched by this process: `onInit` may run again on a hot reload, never twice for one start. */
-const lances = new Set<string>()
+const started = new Set<string>()
 
 /**
  * The call of `onInit` (src/payload.config.ts): starts the import without waiting for it, so that
  * the first request is not held for the 25 to 45 seconds a pass takes. Does nothing without a token,
  * while Payload itself migrates (`PAYLOAD_MIGRATING`), or twice for one token in one process.
  */
-export function lancerLImportALaDemande(payload: Payload, env: EnvDeLImport): void {
-	const jeton = env.importation?.jeton
-	if (jeton === undefined || process.env.PAYLOAD_MIGRATING === 'true' || lances.has(jeton)) return
-	lances.add(jeton)
-	importALaDemande(payload, env).catch(erreur => {
-		console.log(`${PREFIXE_DU_JOURNAL}Passage arrêté. ${messageDeLErreur(erreur)}`)
+export function runOnDemandImport(payload: Payload, env: OnDemandImportEnv): void {
+	const token = env.importation?.jeton
+	if (token === undefined || process.env.PAYLOAD_MIGRATING === 'true' || started.has(token)) return
+	started.add(token)
+	importOnDemand(payload, env).catch(erreur => {
+		console.log(`${LOG_PREFIX}Passage arrêté. ${errorMessage(erreur)}`)
 	})
 }

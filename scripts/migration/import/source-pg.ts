@@ -13,13 +13,13 @@
  */
 
 import type { PostgresAdapter } from '@payloadcms/db-postgres'
-import type { Requete, Source } from './source'
+import type { Query, Source } from './source'
 
 /** The `pg` module, as Payload's adapter gives it. */
 export type ClientPg = PostgresAdapter['pg']
 
 /** Opens the source at this address. The caller closes it (`await source.fermer()`). */
-export function ouvrirLaSourcePg(adresse: string, pg: ClientPg): Source {
+export function openSourcePg(adresse: string, pg: ClientPg): Source {
 	const pool = new pg.Pool({
 		connectionString: adresse,
 		max: 1,
@@ -28,18 +28,18 @@ export function ouvrirLaSourcePg(adresse: string, pg: ClientPg): Source {
 	return {
 		lire: async travail => {
 			const client = await pool.connect()
-			let fini = false
+			let finished = false
 			try {
 				await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY')
-				const requete: Requete = async <Ligne extends object>(texte: string, parametres: readonly unknown[] = []) =>
+				const query: Query = async <Ligne extends object>(texte: string, parametres: readonly unknown[] = []) =>
 					(await client.query(texte, [...parametres])).rows as Ligne[]
-				const resultat = await travail(requete)
+				const result = await travail(query)
 				await client.query('COMMIT')
-				fini = true
-				return resultat
+				finished = true
+				return result
 			} finally {
 				// A reading that failed ends its transaction before the connection goes back to the pool.
-				if (!fini) await client.query('ROLLBACK').catch(() => undefined)
+				if (!finished) await client.query('ROLLBACK').catch(() => undefined)
 				client.release()
 			}
 		},

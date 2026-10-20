@@ -16,7 +16,7 @@
  */
 
 import { isLocalDatabase } from '../../src/lib/env'
-import { configurationSansChangementDeSchema } from '../migration/import/target'
+import { configurationWithoutSchemaChange } from '../migration/import/target'
 import { lireUnSecret } from './clavier'
 import { type Comptes, CreationRefusee, creerLeCompte, DRAPEAU_CIBLE_DISTANTE, lireLesArguments, USAGE } from './compte'
 
@@ -39,7 +39,7 @@ async function principal(argv: string[]): Promise<number> {
 
 	const [{ getPayload }, { default: config }] = await Promise.all([import('payload'), import('@payload-config')])
 	// The schema is never changed from here: Payload connects to the tables the application built.
-	const payload = await getPayload({ config: configurationSansChangementDeSchema(await config) })
+	const payload = await getPayload({ config: configurationWithoutSchemaChange(await config) })
 	try {
 		const comptes: Comptes = {
 			existe: async email =>

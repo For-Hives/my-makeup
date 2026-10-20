@@ -6,15 +6,15 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
-	type CommitDeLAncienSite,
-	categorieDuCommit,
-	lireLeJournalGit,
-	verifierLesReferences,
-	verifierLHistorique,
+	commitCategory,
+	type OldSiteCommit,
+	readGitLog,
+	verifyHistory,
+	verifyReferences,
 } from '../../scripts/migration/freeze-rules'
 
 const DEBUT = '2026-12-01T09:00:00Z'
-const commit = (subject: string, date: string, extra: Partial<CommitDeLAncienSite> = {}): CommitDeLAncienSite => ({
+const commit = (subject: string, date: string, extra: Partial<OldSiteCommit> = {}): OldSiteCommit => ({
 	body: '',
 	date,
 	parents: 1,
@@ -25,19 +25,19 @@ const commit = (subject: string, date: string, extra: Partial<CommitDeLAncienSit
 
 describe('categorieDuCommit', () => {
 	test('security, banner, read-only and contents are allowed, by scope or by type', () => {
-		expect(categorieDuCommit(commit('fix(security): close the redirect', DEBUT))).toBe('securite')
-		expect(categorieDuCommit(commit('feat(bandeau): announce the switch', DEBUT))).toBe('bandeau')
-		expect(categorieDuCommit(commit('feat(lecture-seule): close the writes', DEBUT))).toBe('lecture-seule')
-		expect(categorieDuCommit(commit('content: new article', DEBUT))).toBe('contenus')
+		expect(commitCategory(commit('fix(security): close the redirect', DEBUT))).toBe('securite')
+		expect(commitCategory(commit('feat(bandeau): announce the switch', DEBUT))).toBe('bandeau')
+		expect(commitCategory(commit('feat(lecture-seule): close the writes', DEBUT))).toBe('lecture-seule')
+		expect(commitCategory(commit('content: new article', DEBUT))).toBe('contenus')
 	})
 	test('a Gel trailer puts a commit in a category', () => {
-		expect(categorieDuCommit(commit('chore(deps): bump x', DEBUT, { body: 'CVE\n\nGel: security\n' }))).toBe('securite')
-		expect(categorieDuCommit(commit('chore(deps): bump x', DEBUT, { body: 'Gel: anything\n' }))).toBeNull()
+		expect(commitCategory(commit('chore(deps): bump x', DEBUT, { body: 'CVE\n\nGel: security\n' }))).toBe('securite')
+		expect(commitCategory(commit('chore(deps): bump x', DEBUT, { body: 'Gel: anything\n' }))).toBeNull()
 	})
 	test('features and fixes of the product are not allowed', () => {
-		expect(categorieDuCommit(commit('feat(search): new filter', DEBUT))).toBeNull()
-		expect(categorieDuCommit(commit('fix(profil): focus', DEBUT))).toBeNull()
-		expect(categorieDuCommit(commit('whatever', DEBUT))).toBeNull()
+		expect(commitCategory(commit('feat(search): new filter', DEBUT))).toBeNull()
+		expect(commitCategory(commit('fix(profil): focus', DEBUT))).toBeNull()
+		expect(commitCategory(commit('whatever', DEBUT))).toBeNull()
 	})
 })
 
@@ -49,21 +49,21 @@ describe('verifierLHistorique', () => {
 		commit('Merge pull request #1', '2026-12-04T10:00:00Z', { parents: 2 }),
 	]
 	test('only the commits at or after the start count, merges left out', () => {
-		const rapport = verifierLHistorique(commits, DEBUT)
+		const rapport = verifyHistory(commits, DEBUT)
 		expect(rapport.apresLeGel.map(v => v.subject)).toEqual(['fix(security): after', 'feat(search): after, forbidden'])
 		expect(rapport.interdits.map(v => v.subject)).toEqual(['feat(search): after, forbidden'])
 	})
 	test('a commit exactly at the start is inside the freeze', () => {
-		expect(verifierLHistorique([commit('feat(x): at start', DEBUT)], DEBUT).interdits).toHaveLength(1)
+		expect(verifyHistory([commit('feat(x): at start', DEBUT)], DEBUT).interdits).toHaveLength(1)
 	})
 	test('an unreadable start is refused', () => {
-		expect(() => verifierLHistorique([], 'demain')).toThrow()
+		expect(() => verifyHistory([], 'demain')).toThrow()
 	})
 })
 
 describe('verifierLesReferences', () => {
 	test('a capture or an inventory taken before the freeze, or undated, is reported', () => {
-		const erreurs = verifierLesReferences(DEBUT, [
+		const erreurs = verifyReferences(DEBUT, [
 			{ nom: 'capture', prisLe: '2026-11-30T10:00:00Z' },
 			{ nom: 'inventaire', prisLe: undefined },
 			{ nom: 'bonne', prisLe: '2026-12-01T10:00:00Z' },
@@ -77,7 +77,7 @@ describe('lireLeJournalGit', () => {
 	test('reads the format of the command', () => {
 		const sortie =
 			'a1\x1f2026-12-02T10:00:00+01:00\x1fp1\x1ffix(security): x\x1fGel: security\n\x1e\nb2\x1f2026-12-03T10:00:00+01:00\x1fp1 p2\x1fMerge\x1f\x1e'
-		const lus = lireLeJournalGit(sortie)
+		const lus = readGitLog(sortie)
 		expect(lus.map(c => [c.sha, c.parents])).toEqual([
 			['a1', 1],
 			['b2', 2],

@@ -1,24 +1,24 @@
 import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import { lireLesArguments } from '../../scripts/migration/import/arguments'
-import { ImportRefuse } from '../../scripts/migration/import/target'
+import { readArguments } from '../../scripts/migration/import/arguments'
 import {
-	communeAttendue,
-	communesDesProfils,
-	nomCompare,
-	rechercheDeLaVille,
-	resoudreLaVille,
+	citySearch,
+	comparableName,
+	expectedCity,
+	profileCities,
+	resolveCity,
 } from '../../scripts/migration/import/cities'
-import { lireLesDecisions } from '../../scripts/migration/import/decisions'
+import { readDecisions } from '../../scripts/migration/import/decisions'
 import {
-	ADRESSE_DU_REFERENTIEL,
-	type CommuneDuReferentiel,
-	lireLesReponses,
-	referentielGarde,
-	referentielGeoApi,
-	reponsesEnTexte,
+	answersAsText,
+	geoApiReference,
+	keptReference,
+	REFERENCE_ADDRESS,
+	type ReferenceCity,
+	readAnswers,
 } from '../../scripts/migration/import/reference'
+import { ImportRefuse } from '../../scripts/migration/import/target'
 import { delay, HttpResponse, http, simuler } from '../outils/http-sortant'
 import { definitionDeLaSource } from '../outils/source-strapi/donnees'
 
@@ -67,9 +67,9 @@ type Journal = string[]
  */
 function simulerLeReferentiel(communes: CommuneSimulee[] = COMMUNES): Journal {
 	const journal: Journal = []
-	const plier = (texte: string) => nomCompare(texte)
+	const plier = (texte: string) => comparableName(texte)
 	simuler(
-		http.get(`${ADRESSE_DU_REFERENTIEL}/communes`, ({ request }) => {
+		http.get(`${REFERENCE_ADDRESS}/communes`, ({ request }) => {
 			journal.push(request.url)
 			const parametres = new URL(request.url).searchParams
 			const nom = parametres.get('nom')
@@ -77,7 +77,7 @@ function simulerLeReferentiel(communes: CommuneSimulee[] = COMMUNES): Journal {
 			if (nom) return HttpResponse.json(communes.filter(c => plier(c.nom).includes(plier(nom))))
 			return HttpResponse.json(communes.filter(c => codePostal !== null && c.codesPostaux.includes(codePostal)))
 		}),
-		http.get(`${ADRESSE_DU_REFERENTIEL}/communes/:code`, ({ request, params }) => {
+		http.get(`${REFERENCE_ADDRESS}/communes/:code`, ({ request, params }) => {
 			journal.push(request.url)
 			const trouvee = communes.find(({ code }) => code === params.code)
 			return trouvee ? HttpResponse.json(trouvee) : HttpResponse.json({ code: 404 }, { status: 404 })
@@ -86,80 +86,80 @@ function simulerLeReferentiel(communes: CommuneSimulee[] = COMMUNES): Journal {
 	return journal
 }
 
-const codes = (communes: readonly Pick<CommuneDuReferentiel, 'code'>[]): string[] => communes.map(({ code }) => code)
+const codes = (communes: readonly Pick<ReferenceCity, 'code'>[]): string[] => communes.map(({ code }) => code)
 
 describe('ce que l’import cherche dans une ville saisie : un nom, un code postal, jamais une rue', () => {
 	test('vide : rien à chercher', () => {
-		for (const ville of [null, '', '   ']) expect(rechercheDeLaVille(ville), String(ville)).toBeNull()
+		for (const ville of [null, '', '   ']) expect(citySearch(ville), String(ville)).toBeNull()
 	})
 
 	test('une commune simple, avec son code postal, avec son département', () => {
-		expect(rechercheDeLaVille('Bourg-Fictif')).toEqual({
+		expect(citySearch('Bourg-Fictif')).toEqual({
 			nom: 'bourg-fictif',
 			codePostal: null,
 			departement: null,
 			adresse: false,
 		})
-		expect(rechercheDeLaVille('74900 Bourg-Fictif')).toEqual({
+		expect(citySearch('74900 Bourg-Fictif')).toEqual({
 			nom: 'bourg-fictif',
 			codePostal: '74900',
 			departement: '74',
 			adresse: false,
 		})
-		expect(rechercheDeLaVille('bourg-fictif ')?.nom).toBe('bourg-fictif')
-		expect(rechercheDeLaVille('Val-Imaginaire (31)')).toMatchObject({ nom: 'val-imaginaire', departement: '31' })
-		expect(rechercheDeLaVille('75901')).toMatchObject({ nom: null, codePostal: '75901' })
+		expect(citySearch('bourg-fictif ')?.nom).toBe('bourg-fictif')
+		expect(citySearch('Val-Imaginaire (31)')).toMatchObject({ nom: 'val-imaginaire', departement: '31' })
+		expect(citySearch('75901')).toMatchObject({ nom: null, codePostal: '75901' })
 	})
 
 	test('une adresse postale : la commune et le code postal, jamais la rue', () => {
-		const recherche = rechercheDeLaVille('3 impasse des Pinceaux, 74900 Bourg-Fictif')
+		const recherche = citySearch('3 impasse des Pinceaux, 74900 Bourg-Fictif')
 
 		expect(recherche).toEqual({ nom: 'bourg-fictif', codePostal: '74900', departement: '74', adresse: true })
 		expect(JSON.stringify(recherche)).not.toMatch(/impasse|pinceaux|\b3\b/i)
 		// Without a postal code nor a commune after the street: nothing at all is asked.
-		expect(rechercheDeLaVille('12 rue des Lilas')).toMatchObject({ nom: null, codePostal: null, adresse: true })
+		expect(citySearch('12 rue des Lilas')).toMatchObject({ nom: null, codePostal: null, adresse: true })
 	})
 
 	test('un numéro de département en tête est retiré : « 74 Bourg-Fictif » est une commune, pas une adresse (ticket 226)', () => {
 		// The number is the département: the commune is looked for there only.
-		expect(rechercheDeLaVille('74 Bourg-Fictif')).toEqual({
+		expect(citySearch('74 Bourg-Fictif')).toEqual({
 			nom: 'bourg-fictif',
 			codePostal: null,
 			departement: '74',
 			adresse: false,
 		})
-		expect(rechercheDeLaVille('2a Bourg-Fictif')).toMatchObject({
+		expect(citySearch('2a Bourg-Fictif')).toMatchObject({
 			nom: 'bourg-fictif',
 			departement: '2A',
 			adresse: false,
 		})
-		expect(rechercheDeLaVille('974  Bourg-Fictif ')).toMatchObject({
+		expect(citySearch('974  Bourg-Fictif ')).toMatchObject({
 			nom: 'bourg-fictif',
 			departement: '974',
 			adresse: false,
 		})
 		// The case of the name does not matter: « 74 annecy » is the same place as « 74 Annecy ».
 		for (const ville of ['74 bourg-fictif', '74 BOURG-FICTIF', '74 Bourg-fictif'])
-			expect(rechercheDeLaVille(ville), ville).toEqual({
+			expect(citySearch(ville), ville).toEqual({
 				nom: 'bourg-fictif',
 				codePostal: null,
 				departement: '74',
 				adresse: false,
 			})
-		expect(rechercheDeLaVille('2a bourg-fictif')).toMatchObject({ departement: '2A', adresse: false })
-		expect(rechercheDeLaVille('13 marseille')).toMatchObject({ nom: 'marseille', departement: '13', adresse: false })
+		expect(citySearch('2a bourg-fictif')).toMatchObject({ departement: '2A', adresse: false })
+		expect(citySearch('13 marseille')).toMatchObject({ nom: 'marseille', departement: '13', adresse: false })
 		// Not a département (no such code), or not one place after it: read as before.
-		expect(rechercheDeLaVille('00 Bourg-Fictif')).toMatchObject({ adresse: true })
-		expect(rechercheDeLaVille('74 et alentours')).toMatchObject({ nom: null })
-		expect(rechercheDeLaVille('12 Les Marais, Bourg-Fictif')).toMatchObject({ nom: 'bourg-fictif', adresse: true })
-		expect(rechercheDeLaVille('3 impasse des Pinceaux')).toMatchObject({ nom: null, adresse: true })
+		expect(citySearch('00 Bourg-Fictif')).toMatchObject({ adresse: true })
+		expect(citySearch('74 et alentours')).toMatchObject({ nom: null })
+		expect(citySearch('12 Les Marais, Bourg-Fictif')).toMatchObject({ nom: 'bourg-fictif', adresse: true })
+		expect(citySearch('3 impasse des Pinceaux')).toMatchObject({ nom: null, adresse: true })
 	})
 
 	test('une ville précédée de son département n’est plus listée sous « adresses » (ticket 226)', async () => {
 		simulerLeReferentiel()
-		const { communes, bilan } = await communesDesProfils(
+		const { communes, bilan } = await profileCities(
 			[{ id: 1, city: '74 Bourg-Fictif', videALaSource: false }],
-			referentielGeoApi()
+			geoApiReference()
 		)
 
 		expect(communes.get(1)?.inseeCode).toBe('74901')
@@ -168,12 +168,12 @@ describe('ce que l’import cherche dans une ville saisie : un nom, un code post
 
 	test('le numéro de tête est un département, pas un numéro de rue : « 01 Bourg-Fictif » ne prend pas la commune du 74', async () => {
 		simulerLeReferentiel()
-		const { communes, bilan } = await communesDesProfils(
+		const { communes, bilan } = await profileCities(
 			[
 				{ id: 1, city: '74 Bourg-Fictif', videALaSource: false },
 				{ id: 2, city: '01 Bourg-Fictif', videALaSource: false },
 			],
-			referentielGeoApi()
+			geoApiReference()
 		)
 
 		expect(communes.get(1)?.inseeCode).toBe('74901')
@@ -185,28 +185,28 @@ describe('ce que l’import cherche dans une ville saisie : un nom, un code post
 
 	test('ce qui n’est pas une commune ne se cherche pas : un pays, une liste, une phrase, un numéro', () => {
 		for (const ville of ['France', 'Toute la France', 'Paris, Lyon et Annecy', '74'])
-			expect(rechercheDeLaVille(ville), ville).toMatchObject({ nom: null, codePostal: null })
+			expect(citySearch(ville), ville).toMatchObject({ nom: null, codePostal: null })
 	})
 
 	test('« St » s’écrit « saint », un arrondissement donne sa ville', () => {
-		expect(rechercheDeLaVille('St Exemple')?.nom).toBe('saint exemple')
-		expect(rechercheDeLaVille('Ste-Foy')?.nom).toBe('sainte-foy')
-		expect(rechercheDeLaVille('Paris 16e')?.nom).toBe('paris')
-		expect(nomCompare('Saint-Exemple')).toBe(nomCompare('st exemple'))
-		expect(nomCompare('L’Œuf-d’Été')).toBe('l oeuf d ete')
+		expect(citySearch('St Exemple')?.nom).toBe('saint exemple')
+		expect(citySearch('Ste-Foy')?.nom).toBe('sainte-foy')
+		expect(citySearch('Paris 16e')?.nom).toBe('paris')
+		expect(comparableName('Saint-Exemple')).toBe(comparableName('st exemple'))
+		expect(comparableName('L’Œuf-d’Été')).toBe('l oeuf d ete')
 	})
 })
 
 describe('la ville devient une commune du référentiel (simulé)', () => {
 	test('commune simple, avec code postal, et adresse postale : la bonne commune, sans rue demandée', async () => {
 		const journal = simulerLeReferentiel()
-		const referentiel = referentielGeoApi()
+		const referentiel = geoApiReference()
 
 		for (const ville of ['Bourg-Fictif', '74900 Bourg-Fictif', '3 impasse des Pinceaux, 74900 Bourg-Fictif']) {
-			const resolution = await resoudreLaVille(ville, referentiel)
+			const resolution = await resolveCity(ville, referentiel)
 			expect(resolution, ville).toMatchObject({ genre: 'commune', commune: { code: '74901', nom: 'Bourg-Fictif' } })
 		}
-		expect(await resoudreLaVille('3 impasse des Pinceaux, 74900 Bourg-Fictif', referentiel)).toMatchObject({
+		expect(await resolveCity('3 impasse des Pinceaux, 74900 Bourg-Fictif', referentiel)).toMatchObject({
 			adresse: true,
 		})
 		for (const adresse of journal) expect(decodeURIComponent(adresse)).not.toMatch(/impasse|pinceaux/i)
@@ -214,42 +214,42 @@ describe('la ville devient une commune du référentiel (simulé)', () => {
 
 	test('le département ou le code postal départagent deux communes de même nom', async () => {
 		simulerLeReferentiel()
-		const referentiel = referentielGeoApi()
+		const referentiel = geoApiReference()
 
-		expect(await resoudreLaVille('Val-Imaginaire (31)', referentiel)).toMatchObject({ commune: { code: '31901' } })
-		expect(await resoudreLaVille('69990 Val-Imaginaire', referentiel)).toMatchObject({ commune: { code: '69901' } })
+		expect(await resolveCity('Val-Imaginaire (31)', referentiel)).toMatchObject({ commune: { code: '31901' } })
+		expect(await resolveCity('69990 Val-Imaginaire', referentiel)).toMatchObject({ commune: { code: '69901' } })
 	})
 
 	test('un code postal seul, ou avec le nom d’une commune qui n’existe plus, donne la commune qui le porte', async () => {
 		simulerLeReferentiel()
-		const referentiel = referentielGeoApi()
+		const referentiel = geoApiReference()
 
-		expect(await resoudreLaVille('75901', referentiel)).toMatchObject({ commune: { code: '75901' } })
-		expect(await resoudreLaVille('Ancienne-Fusion 44990', referentiel)).toMatchObject({
+		expect(await resolveCity('75901', referentiel)).toMatchObject({ commune: { code: '75901' } })
+		expect(await resolveCity('Ancienne-Fusion 44990', referentiel)).toMatchObject({
 			commune: { code: '44901', nom: 'Nouvelle-Fusion' },
 		})
 	})
 
 	test('cas ambigu : homonymes, introuvable ou pas une commune, avec les communes possibles', async () => {
 		const journal = simulerLeReferentiel()
-		const referentiel = referentielGeoApi()
+		const referentiel = geoApiReference()
 
-		const homonymes = await resoudreLaVille('Saint-Exemple', referentiel)
+		const homonymes = await resolveCity('Saint-Exemple', referentiel)
 		expect(homonymes).toMatchObject({ genre: 'a-revoir', motif: 'homonymes' })
 		expect(homonymes.genre === 'a-revoir' && codes(homonymes.candidats)).toEqual(['01901', '26901'])
-		expect(await resoudreLaVille('Inconnue-sur-Rien', referentiel)).toMatchObject({
+		expect(await resolveCity('Inconnue-sur-Rien', referentiel)).toMatchObject({
 			genre: 'a-revoir',
 			motif: 'introuvable',
 		})
 		const avant = journal.length
-		expect(await resoudreLaVille('France', referentiel)).toMatchObject({ genre: 'a-revoir', motif: 'pas-une-commune' })
+		expect(await resolveCity('France', referentiel)).toMatchObject({ genre: 'a-revoir', motif: 'pas-une-commune' })
 		expect(journal).toHaveLength(avant)
 	})
 
 	test('la commune d’un profil : son nom, son code, son département, son centre à deux décimales', () => {
 		const [bourg] = COMMUNES
 		expect(
-			communeAttendue({
+			expectedCity({
 				nom: bourg?.nom ?? '',
 				code: bourg?.code ?? '',
 				departement: '74',
@@ -275,7 +275,7 @@ describe('les villes des profils, la liste de revue et la table de décision', (
 	test('sans décision : zone vide et profil à revoir ; la part des villes rattachées en nombres', async () => {
 		simulerLeReferentiel()
 
-		const { communes, revue, bilan, sansObjet } = await communesDesProfils(profils, referentielGeoApi())
+		const { communes, revue, bilan, sansObjet } = await profileCities(profils, geoApiReference())
 
 		expect([...communes.entries()].map(([id, c]) => [id, c?.inseeCode ?? null])).toEqual([
 			[1, '74901'],
@@ -310,7 +310,7 @@ describe('les villes des profils, la liste de revue et la table de décision', (
 	test('avec sa ligne de décision : la commune choisie, ou aucune ; une ligne sans cas est sans objet', async () => {
 		const journal = simulerLeReferentiel()
 
-		const { communes, revue, bilan, sansObjet } = await communesDesProfils(profils, referentielGeoApi(), [
+		const { communes, revue, bilan, sansObjet } = await profileCities(profils, geoApiReference(), [
 			{ profil: 2, codeInsee: '26901' },
 			{ profil: 3, codeInsee: null },
 			// Not among the candidates of 4: asked by its INSEE code.
@@ -341,7 +341,7 @@ describe('les villes des profils, la liste de revue et la table de décision', (
 	test('une ligne qui donne une commune que le référentiel ne connaît pas arrête l’import avant toute écriture', async () => {
 		simulerLeReferentiel()
 
-		const echec = communesDesProfils(profils, referentielGeoApi(), [{ profil: 2, codeInsee: '74999' }])
+		const echec = profileCities(profils, geoApiReference(), [{ profil: 2, codeInsee: '74999' }])
 
 		await expect(echec).rejects.toBeInstanceOf(ImportRefuse)
 		await expect(echec).rejects.toThrow('profil 2 une commune que le référentiel ne connaît pas (code INSEE 74999)')
@@ -356,45 +356,45 @@ describe('les réponses du référentiel sont gardées : deux passages identique
 			{ id: 2, city: '74900 Bourg-Fictif', videALaSource: false },
 			{ id: 3, city: 'Saint-Exemple', videALaSource: false },
 		]
-		const premier = referentielGarde(new Map(), referentielGeoApi())
-		const avant = await communesDesProfils(profils, premier)
+		const premier = keptReference(new Map(), geoApiReference())
+		const avant = await profileCities(profils, premier)
 		expect(premier.nouvelles()).toBe(journal.length)
 		expect(journal).toHaveLength(3)
 
 		// The referential changes: Bourg-Fictif is gone. The kept answers, read back from their file, still say it.
 		const nouveauJournal = simulerLeReferentiel(COMMUNES.slice(1))
-		const texte = reponsesEnTexte(premier.reponses)
-		const second = referentielGarde(lireLesReponses(texte), referentielGeoApi())
-		const apres = await communesDesProfils(profils, second)
+		const texte = answersAsText(premier.reponses)
+		const second = keptReference(readAnswers(texte), geoApiReference())
+		const apres = await profileCities(profils, second)
 
 		expect(apres).toEqual(avant)
 		expect(nouveauJournal).toHaveLength(0)
 		expect(second.nouvelles()).toBe(0)
-		expect(reponsesEnTexte(second.reponses)).toBe(texte)
+		expect(answersAsText(second.reponses)).toBe(texte)
 	})
 
 	test('le fichier range ses questions dans l’ordre, et refuse ce qui n’est pas une réponse gardée', () => {
-		const texte = reponsesEnTexte(
+		const texte = answersAsText(
 			new Map([
 				['nom:bourg-fictif', []],
 				['codePostal:74900', []],
 			])
 		)
 		expect(Object.keys(JSON.parse(texte).reponses)).toEqual(['codePostal:74900', 'nom:bourg-fictif'])
-		expect([...lireLesReponses(texte).keys()]).toEqual(['codePostal:74900', 'nom:bourg-fictif'])
+		expect([...readAnswers(texte).keys()]).toEqual(['codePostal:74900', 'nom:bourg-fictif'])
 		for (const faux of [
 			'pas du json',
 			'{}',
 			'{"version":1,"source":"https://geo.api.gouv.fr","reponses":{"rue:x":[]}}',
 		])
-			expect(() => lireLesReponses(faux), faux).toThrow(ImportRefuse)
+			expect(() => readAnswers(faux), faux).toThrow(ImportRefuse)
 	})
 
 	test('hors ligne, une réponse qui n’est pas gardée arrête l’import ; rien n’est demandé', async () => {
 		const journal = simulerLeReferentiel()
-		const horsLigne = referentielGarde(new Map(), null)
+		const horsLigne = keptReference(new Map(), null)
 
-		await expect(resoudreLaVille('Bourg-Fictif', horsLigne)).rejects.toThrow(
+		await expect(resolveCity('Bourg-Fictif', horsLigne)).rejects.toThrow(
 			'Hors ligne (--hors-ligne), une réponse du référentiel des communes n’est pas dans le fichier des réponses gardées'
 		)
 		expect(journal).toHaveLength(0)
@@ -402,7 +402,7 @@ describe('les réponses du référentiel sont gardées : deux passages identique
 
 	test('les réponses du banc couvrent chaque ville de la fausse base Strapi, hors ligne', async () => {
 		const { lignes } = definitionDeLaSource('http://127.0.0.1:9090/mymakeup-test')
-		const reponses = lireLesReponses(
+		const reponses = readAnswers(
 			readFileSync(path.join(RACINE, 'tests/fixtures/import/referentiel-du-banc.json'), 'utf8')
 		)
 		const profils = lignes.makeup_artistes.map(({ id, city }) => ({
@@ -411,7 +411,7 @@ describe('les réponses du référentiel sont gardées : deux passages identique
 			videALaSource: false,
 		}))
 
-		const { communes, bilan } = await communesDesProfils(profils, referentielGarde(reponses, null))
+		const { communes, bilan } = await profileCities(profils, keptReference(reponses, null))
 
 		const parCode = Object.fromEntries([...communes.entries()].map(([id, c]) => [id, c?.inseeCode ?? null]))
 		expect(parCode).toMatchObject({
@@ -432,17 +432,17 @@ describe('les réponses du référentiel sont gardées : deux passages identique
 })
 
 describe('le référentiel qui ne répond pas arrête l’import avant toute écriture', () => {
-	const adresse = `${ADRESSE_DU_REFERENTIEL}/communes`
+	const adresse = `${REFERENCE_ADDRESS}/communes`
 
 	test('une panne, un réseau coupé, une réponse qui n’est pas une liste de communes, un service muet', async () => {
 		simuler(http.get(adresse, () => new HttpResponse(null, { status: 500 })))
-		await expect(referentielGeoApi().repondre({ genre: 'nom', valeur: 'x' })).rejects.toThrow('réponse 500')
+		await expect(geoApiReference().repondre({ genre: 'nom', valeur: 'x' })).rejects.toThrow('réponse 500')
 
 		simuler(http.get(adresse, () => HttpResponse.error()))
-		await expect(referentielGeoApi().repondre({ genre: 'nom', valeur: 'x' })).rejects.toThrow('réseau injoignable')
+		await expect(geoApiReference().repondre({ genre: 'nom', valeur: 'x' })).rejects.toThrow('réseau injoignable')
 
 		simuler(http.get(adresse, () => HttpResponse.json({ message: 'pas une liste' })))
-		await expect(referentielGeoApi().repondre({ genre: 'nom', valeur: 'x' })).rejects.toThrow(
+		await expect(geoApiReference().repondre({ genre: 'nom', valeur: 'x' })).rejects.toThrow(
 			'sa réponse n’est pas une liste de communes'
 		)
 
@@ -452,21 +452,21 @@ describe('le référentiel qui ne répond pas arrête l’import avant toute éc
 				return HttpResponse.json([])
 			})
 		)
-		await expect(referentielGeoApi({ delaiMs: 50 }).repondre({ genre: 'nom', valeur: 'x' })).rejects.toThrow(
+		await expect(geoApiReference({ delaiMs: 50 }).repondre({ genre: 'nom', valeur: 'x' })).rejects.toThrow(
 			'pas de réponse en 0.05 s'
 		)
 	})
 
 	test('une commune inconnue par son code INSEE est une réponse vide', async () => {
 		simulerLeReferentiel()
-		expect(await referentielGeoApi().repondre({ genre: 'code', valeur: '74999' })).toEqual([])
+		expect(await geoApiReference().repondre({ genre: 'code', valeur: '74999' })).toEqual([])
 	})
 })
 
 describe('la table de décision et la ligne de commande', () => {
 	test('une ligne par profil à revoir : un code INSEE bien formé, ou aucun', () => {
 		expect(
-			lireLesDecisions('{ "communes": [{ "profil": 28, "codeInsee": "2A004" }, { "profil": 26, "codeInsee": null }] }')
+			readDecisions('{ "communes": [{ "profil": 28, "codeInsee": "2A004" }, { "profil": 26, "codeInsee": null }] }')
 		).toEqual({
 			emailsPartages: [],
 			profilsEcartes: [],
@@ -482,11 +482,11 @@ describe('la table de décision et la ligne de commande', () => {
 			'{ "communes": [{ "profil": 28 }] }',
 			'{ "communes": [{ "profil": 28, "codeInsee": null, "ville": "x" }] }',
 		])
-			expect(() => lireLesDecisions(faux), faux).toThrow(ImportRefuse)
+			expect(() => readDecisions(faux), faux).toThrow(ImportRefuse)
 	})
 
 	test('--communes, --hors-ligne et --revue', () => {
-		expect(lireLesArguments(['--communes', 'c.json', '--hors-ligne', '--revue', 'v.json'])).toEqual({
+		expect(readArguments(['--communes', 'c.json', '--hors-ligne', '--revue', 'v.json'])).toEqual({
 			mode: 'a-blanc',
 			cibleDistante: false,
 			communes: 'c.json',
@@ -494,6 +494,6 @@ describe('la table de décision et la ligne de commande', () => {
 			revue: 'v.json',
 		})
 		for (const ligne of [['--communes'], ['--revue', '--reel'], ['--hors-ligne', '--hors-ligne']])
-			expect(lireLesArguments(ligne), ligne.join(' ')).toBeNull()
+			expect(readArguments(ligne), ligne.join(' ')).toBeNull()
 	})
 })

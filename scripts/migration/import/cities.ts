@@ -28,11 +28,11 @@ import {
 	looksLikeAnAddress,
 	roundedCoordinate,
 } from '../../../src/lib/profile/zone'
+import type { Reference, ReferenceCity } from './reference'
 import { ImportRefuse } from './target'
-import type { CommuneDuReferentiel, Referentiel } from './reference'
 
 /** The commune a profile must hold, as the collection stores it (`profiles.city`). */
-export interface CommuneAttendue {
+export interface ExpectedCity {
 	name: string
 	inseeCode: string
 	department: string | null
@@ -41,7 +41,7 @@ export interface CommuneAttendue {
 }
 
 /** What the import looks for in a city typed: a name, a postal code, a département. Never a street. */
-export interface Recherche {
+export interface Search {
 	/** The name of commune asked, in lower case, « St » written « saint ». */
 	nom: string | null
 	codePostal: string | null
@@ -51,36 +51,36 @@ export interface Recherche {
 }
 
 /** Why a city is « à revoir ». */
-export type MotifARevoir = 'homonymes' | 'introuvable' | 'pas-une-commune'
+export type ReasonToReview = 'homonymes' | 'introuvable' | 'pas-une-commune'
 
 /** What a city typed gives. */
 export type Resolution =
 	| { genre: 'vide' }
-	| { genre: 'commune'; commune: CommuneDuReferentiel; adresse: boolean }
+	| { genre: 'commune'; commune: ReferenceCity; adresse: boolean }
 	| {
 			genre: 'a-revoir'
-			motif: MotifARevoir
-			candidats: CommuneDuReferentiel[]
+			motif: ReasonToReview
+			candidats: ReferenceCity[]
 			adresse: boolean
-			recherche: Recherche
+			recherche: Search
 	  }
 
 /** The words of a name that many people abbreviate: « St Julien », « Ste-Foy ». */
-const SAINTS: Readonly<Record<string, string>> = { st: 'saint', 'st.': 'saint', ste: 'sainte', 'ste.': 'sainte' }
+const SAINT_WORDS: Readonly<Record<string, string>> = { st: 'saint', 'st.': 'saint', ste: 'sainte', 'ste.': 'sainte' }
 
 /** « Paris 16e », « Lyon 3ème arrondissement »: the commune is the city. */
-const ARRONDISSEMENT = /\s+\d{1,2}\s*(?:er|e|eme|ème)(?:\s+arr(?:ondissement|\.)?)?$/i
+const DISTRICT = /\s+\d{1,2}\s*(?:er|e|eme|ème)(?:\s+arr(?:ondissement|\.)?)?$/i
 
 /** A name with its abbreviated « Saint » written out: « St Julien » → « saint Julien ». */
-const sansAbreviation = (nom: string): string =>
+const withoutAbbreviation = (nom: string): string =>
 	nom
 		.split(/(\s+|-)/)
-		.map(mot => SAINTS[mot.toLowerCase()] ?? mot)
+		.map(mot => SAINT_WORDS[mot.toLowerCase()] ?? mot)
 		.join('')
 
 /** A name as it is compared with the referential's: no accent, no case, hyphens and apostrophes as spaces. */
-export function nomCompare(nom: string): string {
-	return sansAbreviation(nom)
+export function comparableName(nom: string): string {
+	return withoutAbbreviation(nom)
 		.normalize('NFD')
 		.replace(/[̀-ͯ]/g, '')
 		.replace(/œ/gi, 'oe')
@@ -91,7 +91,7 @@ export function nomCompare(nom: string): string {
 }
 
 /** A code of département in front of a place and nothing else: « 74 Annecy », « 2A Ajaccio ». */
-const DEPARTEMENT_EN_TETE = /^(\d{2}|2[AB]|97\d)\s+(\D+)$/i
+const LEADING_DEPARTMENT = /^(\d{2}|2[AB]|97\d)\s+(\D+)$/i
 
 /**
  * The city typed without a code of département in front of a place (« 74 Annecy » → « Annecy »),
@@ -102,20 +102,20 @@ const DEPARTEMENT_EN_TETE = /^(\d{2}|2[AB]|97\d)\s+(\D+)$/i
  * number goes here, before the city is read, only when that is all the text holds. Any other text
  * (« 74 et alentours », « 12 Les Marais, Annecy ») is kept as typed, without a département.
  */
-export function departementEnTete(texte: string): { texte: string; departement: string | null } {
-	const inchange = { texte, departement: null }
-	const trouve = DEPARTEMENT_EN_TETE.exec(texte)
-	const departement = (trouve?.[1] ?? '').toUpperCase()
-	if (!trouve || !Object.hasOwn(DEPARTMENTS, departement)) return inchange
-	const reste = (trouve[2] ?? '').trim()
-	if (/[,;:/|+()[\]]/.test(reste)) return inchange
-	const avecLeNumero = publicPlace(texte)
-	const sansLeNumero = publicPlace(reste)
-	return avecLeNumero.adresse &&
-		!sansLeNumero.adresse &&
-		nomCompare(avecLeNumero.commune) === nomCompare(sansLeNumero.commune)
-		? { texte: reste, departement }
-		: inchange
+export function extractLeadingDepartment(texte: string): { texte: string; departement: string | null } {
+	const unchanged = { texte, departement: null }
+	const found = LEADING_DEPARTMENT.exec(texte)
+	const department = (found?.[1] ?? '').toUpperCase()
+	if (!found || !Object.hasOwn(DEPARTMENTS, department)) return unchanged
+	const rest = (found[2] ?? '').trim()
+	if (/[,;:/|+()[\]]/.test(rest)) return unchanged
+	const withNumber = publicPlace(texte)
+	const withoutNumber = publicPlace(rest)
+	return withNumber.adresse &&
+		!withoutNumber.adresse &&
+		comparableName(withNumber.commune) === comparableName(withoutNumber.commune)
+		? { texte: rest, departement: department }
+		: unchanged
 }
 
 /** The last postal code of a text: five digits alone. */
@@ -127,28 +127,28 @@ const CODE_POSTAL = /(?<!\d)\d{5}(?!\d)/g
  * commune: letters, no more than six words, nothing that looks like an address, a list or a
  * sentence. A city that is not one for the old site (« France », « 74 ») gives no name.
  */
-export function rechercheDeLaVille(ville: string | null): Recherche | null {
-	const { texte, departement: dEnTete } = departementEnTete(ville?.trim() ?? '')
-	if (texte === '') return null
-	const lieu = publicPlace(texte)
-	const codePostal = [...texte.matchAll(CODE_POSTAL)].at(-1)?.[0] ?? null
-	const nom = sansAbreviation(lieu.commune.replace(ARRONDISSEMENT, '')).replace(/\s+/g, ' ').trim()
-	const cherchable =
-		usableCity(texte) &&
-		/\p{L}/u.test(nom) &&
-		nom.length <= CITY_NAME_MAX &&
-		nom.split(' ').length <= 6 &&
-		hasNameCharacters(nom) &&
-		!looksLikeAnAddress(nom)
+export function citySearch(ville: string | null): Search | null {
+	const { texte: text, departement: leadingDepartment } = extractLeadingDepartment(ville?.trim() ?? '')
+	if (text === '') return null
+	const place = publicPlace(text)
+	const codePostal = [...text.matchAll(CODE_POSTAL)].at(-1)?.[0] ?? null
+	const name = withoutAbbreviation(place.commune.replace(DISTRICT, '')).replace(/\s+/g, ' ').trim()
+	const searchable =
+		usableCity(text) &&
+		/\p{L}/u.test(name) &&
+		name.length <= CITY_NAME_MAX &&
+		name.split(' ').length <= 6 &&
+		hasNameCharacters(name) &&
+		!looksLikeAnAddress(name)
 	return {
-		nom: cherchable ? nom.toLowerCase() : null,
+		nom: searchable ? name.toLowerCase() : null,
 		codePostal,
-		departement: lieu.departement ?? dEnTete,
-		adresse: lieu.adresse,
+		departement: place.departement ?? leadingDepartment,
+		adresse: place.adresse,
 	}
 }
 
-const unique = (communes: readonly CommuneDuReferentiel[]): CommuneDuReferentiel[] =>
+const unique = (communes: readonly ReferenceCity[]): ReferenceCity[] =>
 	communes.filter((commune, rang) => communes.findIndex(({ code }) => code === commune.code) === rang)
 
 /** How many communes the review shows for a name the referential does not give as it is. */
@@ -158,79 +158,79 @@ const SUGGESTIONS = 5
  * What a city typed gives, asking the referential for the communes of its name and of its postal
  * code (see the top of this file).
  */
-export async function resoudreLaVille(ville: string | null, referentiel: Referentiel): Promise<Resolution> {
-	const recherche = rechercheDeLaVille(ville)
-	if (!recherche) return { genre: 'vide' }
-	const { nom, codePostal, departement, adresse } = recherche
-	const aRevoir = (motif: MotifARevoir, candidats: CommuneDuReferentiel[]): Resolution => ({
+export async function resolveCity(ville: string | null, referentiel: Reference): Promise<Resolution> {
+	const search = citySearch(ville)
+	if (!search) return { genre: 'vide' }
+	const { nom: name, codePostal, departement: department, adresse: address } = search
+	const toReview = (motif: ReasonToReview, candidats: ReferenceCity[]): Resolution => ({
 		genre: 'a-revoir',
 		motif,
 		candidats: unique(candidats),
-		adresse,
-		recherche,
+		adresse: address,
+		recherche: search,
 	})
-	const commune = (trouvee: CommuneDuReferentiel): Resolution => ({ genre: 'commune', commune: trouvee, adresse })
+	const cityRecord = (trouvee: ReferenceCity): Resolution => ({ genre: 'commune', commune: trouvee, adresse: address })
 
-	const reponseDuNom = nom ? await referentiel.repondre({ genre: 'nom', valeur: nom }) : []
-	const duNom = nom ? reponseDuNom.filter(c => nomCompare(c.nom) === nomCompare(nom)) : []
-	const duCode = codePostal ? await referentiel.repondre({ genre: 'codePostal', valeur: codePostal }) : []
+	const nameAnswers = name ? await referentiel.repondre({ genre: 'nom', valeur: name }) : []
+	const matchesByName = name ? nameAnswers.filter(c => comparableName(c.nom) === comparableName(name)) : []
+	const matchesByCode = codePostal ? await referentiel.repondre({ genre: 'codePostal', valeur: codePostal }) : []
 
-	if (!nom && !codePostal) return aRevoir('pas-une-commune', [])
-	if (codePostal && !nom) {
-		const [seule] = duCode
-		if (seule && duCode.length === 1) return commune(seule)
-		return aRevoir(duCode.length > 1 ? 'homonymes' : 'introuvable', duCode)
+	if (!name && !codePostal) return toReview('pas-une-commune', [])
+	if (codePostal && !name) {
+		const [sole] = matchesByCode
+		if (sole && matchesByCode.length === 1) return cityRecord(sole)
+		return toReview(matchesByCode.length > 1 ? 'homonymes' : 'introuvable', matchesByCode)
 	}
 	if (codePostal) {
-		const croisees = duNom.filter(c => duCode.some(({ code }) => code === c.code))
-		const [seule] = croisees
-		if (seule && croisees.length === 1) return commune(seule)
-		if (croisees.length > 1) return aRevoir('homonymes', croisees)
+		const crossed = matchesByName.filter(c => matchesByCode.some(({ code }) => code === c.code))
+		const [sole] = crossed
+		if (sole && crossed.length === 1) return cityRecord(sole)
+		if (crossed.length > 1) return toReview('homonymes', crossed)
 		// The name is no commune of today (a former commune, merged since), and one commune holds the postal code.
-		const [duCodeSeule] = duCode
-		if (duNom.length === 0 && duCodeSeule && duCode.length === 1) return commune(duCodeSeule)
-		return aRevoir('introuvable', [...duNom, ...duCode, ...reponseDuNom.slice(0, SUGGESTIONS)])
+		const [soleCodeMatch] = matchesByCode
+		if (matchesByName.length === 0 && soleCodeMatch && matchesByCode.length === 1) return cityRecord(soleCodeMatch)
+		return toReview('introuvable', [...matchesByName, ...matchesByCode, ...nameAnswers.slice(0, SUGGESTIONS)])
 	}
-	const retenues = departement ? duNom.filter(c => c.departement === departement) : duNom
-	const [seule] = retenues
-	if (seule && retenues.length === 1) return commune(seule)
-	if (retenues.length > 1) return aRevoir('homonymes', retenues)
-	return aRevoir('introuvable', [...duNom, ...reponseDuNom.slice(0, SUGGESTIONS)])
+	const kept = department ? matchesByName.filter(c => c.departement === department) : matchesByName
+	const [sole] = kept
+	if (sole && kept.length === 1) return cityRecord(sole)
+	if (kept.length > 1) return toReview('homonymes', kept)
+	return toReview('introuvable', [...matchesByName, ...nameAnswers.slice(0, SUGGESTIONS)])
 }
 
 /** The commune of the referential as the profile stores it: the centre rounded to about 1 km. */
-export function communeAttendue(commune: CommuneDuReferentiel): CommuneAttendue {
-	const arrondie = (valeur: number | null): number | null =>
+export function expectedCity(commune: ReferenceCity): ExpectedCity {
+	const rounded = (valeur: number | null): number | null =>
 		valeur === null ? null : (roundedCoordinate(valeur) as number)
 	return {
 		name: commune.nom,
 		inseeCode: commune.code,
 		department: departmentOfInseeCode(commune.code),
-		latitude: arrondie(commune.latitude),
-		longitude: arrondie(commune.longitude),
+		latitude: rounded(commune.latitude),
+		longitude: rounded(commune.longitude),
 	}
 }
 
 /** A profile « à revoir », as the private list of review gives it: never the text typed. */
-export interface CasARevoir {
+export interface CaseToReview {
 	profil: number
-	motif: MotifARevoir
+	motif: ReasonToReview
 	/** The text was read as a postal address: its street was never asked nor kept. */
 	adresse: boolean
 	/** What the import asked the referential. */
-	recherche: Recherche
+	recherche: Search
 	/** The communes it could be, from the referential. */
-	candidats: Pick<CommuneDuReferentiel, 'nom' | 'code' | 'departement' | 'codesPostaux'>[]
+	candidats: Pick<ReferenceCity, 'nom' | 'code' | 'departement' | 'codesPostaux'>[]
 }
 
 /** A line of the table of decisions for a profile « à revoir »: the commune of this INSEE code, or none. */
-export interface DecisionDeCommune {
+export interface CityDecision {
 	profil: number
 	codeInsee: string | null
 }
 
 /** What the communes of a run give, in numbers and identifiers. */
-export interface BilanDesCommunes {
+export interface CitiesSummary {
 	/** Profiles taken whose city is not empty at the source. */
 	villesRenseignees: number
 	/** Among them, the profiles that hold a commune. */
@@ -249,12 +249,12 @@ export interface BilanDesCommunes {
 	decidees: number[]
 }
 
-export interface CommunesDesProfils {
+export interface ProfileCities {
 	/** For each profile taken, its commune, or `null`. */
-	communes: Map<number, CommuneAttendue | null>
+	communes: Map<number, ExpectedCity | null>
 	/** The private list of review: the profiles « à revoir », with what was asked and the communes they could be. */
-	revue: CasARevoir[]
-	bilan: BilanDesCommunes
+	revue: CaseToReview[]
+	bilan: CitiesSummary
 	/** Lines of the table that name no profile « à revoir »: without effect. */
 	sansObjet: number
 }
@@ -264,71 +264,71 @@ export interface CommunesDesProfils {
  * decisions applied to the profiles « à revoir ». A line that gives an INSEE code the referential
  * does not know stops the run before any write (`ImportRefuse`).
  */
-export async function communesDesProfils(
+export async function profileCities(
 	profils: readonly { id: number; city: string | null; videALaSource: boolean }[],
-	referentiel: Referentiel,
-	decisions: readonly DecisionDeCommune[] = []
-): Promise<CommunesDesProfils> {
-	const communes = new Map<number, CommuneAttendue | null>()
-	const aRevoir = new Map<number, Extract<Resolution, { genre: 'a-revoir' }>>()
-	const adresses: number[] = []
+	referentiel: Reference,
+	decisions: readonly CityDecision[] = []
+): Promise<ProfileCities> {
+	const cities = new Map<number, ExpectedCity | null>()
+	const toReview = new Map<number, Extract<Resolution, { genre: 'a-revoir' }>>()
+	const addresses: number[] = []
 	for (const { id, city } of [...profils].sort((a, b) => a.id - b.id)) {
-		const resolution = await resoudreLaVille(city, referentiel)
-		if (resolution.genre !== 'vide' && resolution.adresse) adresses.push(id)
-		if (resolution.genre === 'a-revoir') aRevoir.set(id, resolution)
-		communes.set(id, resolution.genre === 'commune' ? communeAttendue(resolution.commune) : null)
+		const resolution = await resolveCity(city, referentiel)
+		if (resolution.genre !== 'vide' && resolution.adresse) addresses.push(id)
+		if (resolution.genre === 'a-revoir') toReview.set(id, resolution)
+		cities.set(id, resolution.genre === 'commune' ? expectedCity(resolution.commune) : null)
 	}
 
-	const decidees: number[] = []
-	let sansObjet = 0
-	for (const { profil, codeInsee } of decisions) {
-		const cas = aRevoir.get(profil)
-		if (!cas) {
-			sansObjet++
+	const decided: number[] = []
+	let pointless = 0
+	for (const { profil: profile, codeInsee } of decisions) {
+		const reviewCase = toReview.get(profile)
+		if (!reviewCase) {
+			pointless++
 			continue
 		}
-		let choisie: CommuneDuReferentiel | undefined
+		let chosen: ReferenceCity | undefined
 		if (codeInsee !== null) {
-			choisie =
-				cas.candidats.find(({ code }) => code === codeInsee) ??
+			chosen =
+				reviewCase.candidats.find(({ code }) => code === codeInsee) ??
 				(await referentiel.repondre({ genre: 'code', valeur: codeInsee }))[0]
-			if (!choisie)
+			if (!chosen)
 				throw new ImportRefuse(
-					`La table de décision donne au profil ${profil} une commune que le référentiel ne connaît pas (code INSEE ${codeInsee}) : rien n’est écrit.`
+					`La table de décision donne au profil ${profile} une commune que le référentiel ne connaît pas (code INSEE ${codeInsee}) : rien n’est écrit.`
 				)
 		}
-		communes.set(profil, choisie ? communeAttendue(choisie) : null)
-		aRevoir.delete(profil)
-		decidees.push(profil)
+		cities.set(profile, chosen ? expectedCity(chosen) : null)
+		toReview.delete(profile)
+		decided.push(profile)
 	}
 
-	const renseignees = profils.filter(({ city }) => (city?.trim() ?? '') !== '')
-	const rattachees = renseignees.filter(({ id }) => communes.get(id)).length
-	const nonVides = profils.filter(({ videALaSource }) => !videALaSource)
+	const filled = profils.filter(({ city }) => (city?.trim() ?? '') !== '')
+	const attached = filled.filter(({ id }) => cities.get(id)).length
+	const notEmpty = profils.filter(({ videALaSource }) => !videALaSource)
 	return {
-		communes,
-		revue: [...aRevoir.entries()].map(([profil, { motif, adresse, recherche, candidats }]) => ({
-			profil,
+		communes: cities,
+		revue: [...toReview.entries()].map(([profile, { motif, adresse: address, recherche: search, candidats }]) => ({
+			profil: profile,
 			motif,
-			adresse,
-			recherche,
-			candidats: candidats.map(({ nom, code, departement, codesPostaux }) => ({
-				nom,
+			adresse: address,
+			recherche: search,
+			candidats: candidats.map(({ nom: name, code, departement: department, codesPostaux }) => ({
+				nom: name,
 				code,
-				departement,
+				departement: department,
 				codesPostaux,
 			})),
 		})),
 		bilan: {
-			villesRenseignees: renseignees.length,
-			rattachees,
-			part: renseignees.length === 0 ? null : Math.round((rattachees / renseignees.length) * 1000) / 10,
-			profilsNonVides: nonVides.length,
-			profilsNonVidesAvecCommune: nonVides.filter(({ id }) => communes.get(id)).length,
-			aRevoir: [...aRevoir.keys()],
-			adresses,
-			decidees: decidees.sort((a, b) => a - b),
+			villesRenseignees: filled.length,
+			rattachees: attached,
+			part: filled.length === 0 ? null : Math.round((attached / filled.length) * 1000) / 10,
+			profilsNonVides: notEmpty.length,
+			profilsNonVidesAvecCommune: notEmpty.filter(({ id }) => cities.get(id)).length,
+			aRevoir: [...toReview.keys()],
+			adresses: addresses,
+			decidees: decided.sort((a, b) => a - b),
 		},
-		sansObjet,
+		sansObjet: pointless,
 	}
 }

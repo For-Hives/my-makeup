@@ -13,23 +13,23 @@ import { BancRefuse, DATE_DE_BASCULE_DU_BANC } from '../../tests/outils/banc'
 import { bancCourant, exigerBancDebout } from '../banc'
 
 try {
-	const banc = bancCourant()
-	await exigerBancDebout(banc)
+	const bench = bancCourant()
+	await exigerBancDebout(bench)
 	// Set before the import loads the configuration of Payload: it reads the environment then.
-	Object.assign(process.env, banc.environnement)
-} catch (erreur) {
-	if (!(erreur instanceof BancRefuse)) throw erreur
-	console.error(erreur.message)
+	Object.assign(process.env, bench.environnement)
+} catch (error) {
+	if (!(error instanceof BancRefuse)) throw error
+	console.error(error.message)
 	process.exit(1)
 }
 
 /** The table of decisions of the bench: of the four accounts of the fake source that share one email, 9 is kept. */
-const DECISIONS_DU_BANC = 'tests/fixtures/import/decisions-du-banc.json'
-if (!process.argv.includes('--decisions')) process.argv.push('--decisions', DECISIONS_DU_BANC)
+const BENCH_DECISIONS = 'tests/fixtures/import/decisions-du-banc.json'
+if (!process.argv.includes('--decisions')) process.argv.push('--decisions', BENCH_DECISIONS)
 
 /** The answers of the referential of the communes for the cities of the fake source, read offline. */
-const REFERENTIEL_DU_BANC = 'tests/fixtures/import/referentiel-du-banc.json'
-if (!process.argv.includes('--communes')) process.argv.push('--communes', REFERENTIEL_DU_BANC, '--hors-ligne')
+const BENCH_REFERENCE = 'tests/fixtures/import/referentiel-du-banc.json'
+if (!process.argv.includes('--communes')) process.argv.push('--communes', BENCH_REFERENCE, '--hors-ligne')
 
 /** The date of the switch of the bench: the consent date of the fictional profiles that show contact details. */
 if (!process.argv.includes('--consentement-le')) process.argv.push('--consentement-le', DATE_DE_BASCULE_DU_BANC)

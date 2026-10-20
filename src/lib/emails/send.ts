@@ -17,8 +17,8 @@
  * No `next` import: the scripts and the tests load this file too.
  */
 import type { Payload, RequestContext } from 'payload'
-import { estUnImport } from '../import-context'
 import type { ServerEnv } from '../env'
+import { isImport } from '../import-context'
 import { InvalidEmail, requireOneLine } from './layout'
 
 /** A mail ready to leave: the output of `composerEmail`, and the one address it goes to. */
@@ -80,7 +80,7 @@ function failureKind(erreur: unknown): string {
 
 export function createSendEmail({ relais, journal }: { relais: Relay | undefined; journal: Log }): SendEmail {
 	return async (email, options = {}) => {
-		if (estUnImport(options.context)) return
+		if (isImport(options.context)) return
 
 		// A malformed mail is a bug of the caller, not a failure of the relay: it is thrown as it is.
 		if (!ADDRESS.test(email.a)) throw new InvalidEmail('L’adresse du destinataire est illisible.')

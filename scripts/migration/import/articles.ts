@@ -13,13 +13,13 @@
  * No `bun` import here: the import can run under Node too.
  */
 
-import { type LienDeFichier, type PhotoNonReprise, photosDeLEntree, TYPE_ARTICLE } from './media'
-import type { Adaptateur, Attendu, Refus } from './engine'
-import { iso, type Requete } from './source'
-import { repartirParSlug } from './talents'
+import type { Adapter, Expected, Refusal } from './engine'
+import { entryPhotos, type FileLink, type PhotoNotCarriedOver, TYPE_ARTICLE } from './media'
+import { iso, type Query } from './source'
+import { splitBySlug } from './talents'
 
 /** A row of `articles`, as the import reads it. */
-export interface LigneArticle {
+export interface ArticleRow {
 	id: number
 	title: string | null
 	content: string | null
@@ -33,14 +33,13 @@ export interface LigneArticle {
 	published_at: string | null
 }
 
-const LECTURE_DES_ARTICLES = `SELECT id, title, content, author, seo_title, seo_description, slug, excerpt,
+const ARTICLES_QUERY = `SELECT id, title, content, author, seo_title, seo_description, slug, excerpt,
 	${iso('created_at')} AS created_at, ${iso('updated_at')} AS updated_at, ${iso('published_at')} AS published_at
 	FROM articles ORDER BY id`
 
-export const lireLesArticles = (requete: Requete): Promise<LigneArticle[]> =>
-	requete<LigneArticle>(LECTURE_DES_ARTICLES)
+export const readArticles = (requete: Query): Promise<ArticleRow[]> => requete<ArticleRow>(ARTICLES_QUERY)
 
-export const ADAPTATEUR_ARTICLES: Adaptateur = {
+export const ARTICLES_ADAPTER: Adapter = {
 	collection: 'articles',
 	champs: {
 		title: 'texte',
@@ -60,26 +59,26 @@ export const ADAPTATEUR_ARTICLES: Adaptateur = {
 }
 
 /** The articles of the source split in two by their slug, as the talents are (`repartirParSlug`). */
-export const articlesRepartis = (lignes: readonly LigneArticle[]): { pris: LigneArticle[]; refuses: Refus[] } =>
-	repartirParSlug(lignes)
+export const splitArticles = (lignes: readonly ArticleRow[]): { pris: ArticleRow[]; refuses: Refusal[] } =>
+	splitBySlug(lignes)
 
 /**
  * The articles the target must hold, with the images of their gallery. `liens` are the links of
  * the files of the source, in order; `medias` gives, for each file adopted, its identifier in
  * Payload, or `null` while it is still to be created (a dry run).
  */
-export function articlesAttendus(
-	pris: readonly LigneArticle[],
-	liens: readonly LienDeFichier[],
+export function expectedArticles(
+	pris: readonly ArticleRow[],
+	liens: readonly FileLink[],
 	medias: ReadonlyMap<number, number | null> = new Map()
-): { attendus: Attendu[]; photosNonReprises: PhotoNonReprise[] } {
-	const photosNonReprises: PhotoNonReprise[] = []
-	const attendus = pris.map((ligne): Attendu => {
-		const fichiers = liens
+): { attendus: Expected[]; photosNonReprises: PhotoNotCarriedOver[] } {
+	const photosNotCarriedOver: PhotoNotCarriedOver[] = []
+	const expected = pris.map((ligne): Expected => {
+		const files = liens
 			.filter(({ type, champ, entree }) => type === TYPE_ARTICLE && champ === 'galery' && entree === ligne.id)
-			.map(({ fichier }) => fichier)
-		const galerie = photosDeLEntree(fichiers, medias)
-		for (const fichier of galerie.nonReprises) photosNonReprises.push({ entree: ligne.id, fichier })
+			.map(({ fichier: file }) => file)
+		const gallery = entryPhotos(files, medias)
+		for (const file of gallery.nonReprises) photosNotCarriedOver.push({ entree: ligne.id, fichier: file })
 		return {
 			strapiId: ligne.id,
 			valeurs: {
@@ -91,7 +90,7 @@ export function articlesAttendus(
 				seo_title: ligne.seo_title,
 				seo_description: ligne.seo_description,
 				content: ligne.content,
-				gallery: galerie.ids,
+				gallery: gallery.ids,
 				_status: ligne.published_at === null ? 'draft' : 'published',
 				publishedAt: ligne.published_at,
 				createdAt: ligne.created_at,
@@ -100,5 +99,5 @@ export function articlesAttendus(
 			ecarts: [],
 		}
 	})
-	return { attendus, photosNonReprises }
+	return { attendus: expected, photosNonReprises: photosNotCarriedOver }
 }

@@ -9,7 +9,7 @@ import {
 	type Plugin,
 } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
-import { estUnImport } from '../lib/import-context'
+import { isImport } from '../lib/import-context'
 import { idOf, namedPhotos } from '../lib/profile/photos'
 import { type MediaObjects, moveToTrash, type ObjectStorage, objectKeys, StorageOutage } from '../lib/trash'
 
@@ -224,7 +224,7 @@ async function cleanup(
 export const cleanupAfterSave =
 	(stockage: ObjectStorage | undefined): CollectionAfterChangeHook =>
 	async ({ context, doc, operation, previousDoc, req }) => {
-		if (operation !== 'update' || estUnImport(context)) return doc
+		if (operation !== 'update' || isImport(context)) return doc
 		const kept = new Set(profilePhotos(doc).map(String))
 		const removed = profilePhotos(previousDoc).filter(id => !kept.has(String(id)))
 		await cleanup(req, stockage, removed, `profile ${doc.id}`)
@@ -235,7 +235,7 @@ export const cleanupAfterSave =
 export const cleanupAfterDeletion =
 	(stockage: ObjectStorage | undefined): CollectionAfterDeleteHook =>
 	async ({ context, doc, id, req }) => {
-		if (estUnImport(context)) return doc
+		if (isImport(context)) return doc
 		const account = idOf((doc as { pro?: unknown }).pro)
 		const accountPhotos =
 			account === undefined || !stockage
@@ -263,7 +263,7 @@ export const cleanupAfterDeletion =
 export const cleanupBeforeAccountDeletion =
 	(stockage: ObjectStorage | undefined): CollectionBeforeDeleteHook =>
 	async ({ context, id, req }) => {
-		if (estUnImport(context) || !stockage) return
+		if (isImport(context) || !stockage) return
 		const { docs } = await req.payload.find({
 			collection: 'media',
 			depth: 0,
@@ -289,7 +289,7 @@ export const cleanupBeforeAccountDeletion =
  * moves nothing, writes as it likes.
  */
 export const oneAtATime: CollectionBeforeOperationHook = ({ args, context, operation }) => {
-	if (estUnImport(context) || (operation !== 'delete' && operation !== 'update')) return args
+	if (isImport(context) || (operation !== 'delete' && operation !== 'update')) return args
 	if ((args as { id?: unknown }).id !== undefined) return args
 	throw new APIError(ONE_AT_A_TIME_MESSAGE, 403, null, true)
 }
@@ -298,7 +298,7 @@ export const oneAtATime: CollectionBeforeOperationHook = ({ args, context, opera
 export const onDeletion =
 	(stockage: ObjectStorage | undefined): CollectionAfterDeleteHook =>
 	async ({ context, doc, id, req }) => {
-		if (estUnImport(context)) return doc
+		if (isImport(context)) return doc
 		await toTrash(req, stockage, objectKeys(doc as MediaObjects), `media ${id}`)
 		return doc
 	}
@@ -311,7 +311,7 @@ export const onDeletion =
 export const onReplacement =
 	(stockage: ObjectStorage | undefined): CollectionAfterChangeHook =>
 	async ({ context, doc, operation, previousDoc, req }) => {
-		if (operation !== 'update' || estUnImport(context) || context.skipCloudStorage) return doc
+		if (operation !== 'update' || isImport(context) || context.skipCloudStorage) return doc
 		const kept = new Set(objectKeys(doc as MediaObjects))
 		const previousKeys = objectKeys(previousDoc as MediaObjects).filter(cle => !kept.has(cle))
 		await toTrash(req, stockage, previousKeys, `media ${doc.id}`)

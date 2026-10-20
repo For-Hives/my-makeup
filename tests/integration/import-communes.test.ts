@@ -2,9 +2,9 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import type { CasARevoir } from '../../scripts/migration/import/cities'
+import type { CaseToReview } from '../../scripts/migration/import/cities'
 import type { Decisions } from '../../scripts/migration/import/decisions'
-import { ADRESSE_DU_REFERENTIEL, referentielGarde, referentielGeoApi } from '../../scripts/migration/import/reference'
+import { geoApiReference, keptReference, REFERENCE_ADDRESS } from '../../scripts/migration/import/reference'
 import { HttpResponse, http, simuler } from '../outils/http-sortant'
 import {
 	commandeDImport,
@@ -40,7 +40,7 @@ const DECISIONS_DES_COMMUNES: Decisions = {
 	],
 }
 
-let revue: CasARevoir[] = []
+let revue: CaseToReview[] = []
 let premier: Awaited<ReturnType<typeof importerSurLeBanc>>
 
 beforeAll(async () => {
@@ -178,7 +178,7 @@ describe('Le référentiel simulé, et ses réponses gardées pour deux passages
 		const reponses = referentielDuBanc().reponses
 		const journal: string[] = []
 		simuler(
-			http.get(`${ADRESSE_DU_REFERENTIEL}/communes`, ({ request }) => {
+			http.get(`${REFERENCE_ADDRESS}/communes`, ({ request }) => {
 				journal.push(request.url)
 				const parametres = new URL(request.url).searchParams
 				const [genre, valeur] = parametres.has('nom')
@@ -198,7 +198,7 @@ describe('Le référentiel simulé, et ses réponses gardées pour deux passages
 
 	test('un premier passage demande chaque ville une fois ; le second ne demande rien et donne la même chose', async () => {
 		const journal = simulerAvecLesReponsesDuBanc()
-		const garde = referentielGarde(new Map(), referentielGeoApi())
+		const garde = keptReference(new Map(), geoApiReference())
 
 		const un = await importerSurLeBanc('a-blanc', { decisions: DECISIONS_DES_COMMUNES, referentiel: garde })
 		const demandes = journal.length
@@ -233,7 +233,7 @@ describe('La commande', () => {
 		expect(sortie).toContain('villes à revoir, zone vide (liste de revue privée, --revue) : 26, 28')
 		expect(sortie).toContain('adresses postales, dont seule la commune est reprise : 23')
 		expect(statSync(fichier).mode & 0o777).toBe(0o600)
-		const liste = JSON.parse(readFileSync(fichier, 'utf8')) as CasARevoir[]
+		const liste = JSON.parse(readFileSync(fichier, 'utf8')) as CaseToReview[]
 		expect(liste.map(({ profil }) => profil)).toEqual([26, 28])
 		expect(readFileSync(fichier, 'utf8')).not.toMatch(/France|Pinceaux/)
 	}, 60_000)

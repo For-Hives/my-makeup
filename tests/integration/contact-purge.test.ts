@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from 'bun:test'
-import { marquerUnImportEnCours } from '@/lib/import-context'
+import { markImportInProgress } from '@/lib/import-context'
 import { purgeContactMessages } from '@/lib/tasks/contact-messages'
 import { runDailyTasks } from '@/lib/tasks/daily'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
@@ -60,7 +60,7 @@ describe('la purge à 12 mois, sur une horloge simulée', () => {
 	test('pendant un import, rien ne part ; le lendemain de l’import, ce qui est dû part', async () => {
 		const payload = await payloadDeTest()
 		const vieux = await ecrire('2024-06-01T00:00:00.000Z')
-		const fin = marquerUnImportEnCours()
+		const fin = markImportInProgress()
 		const pendant = await runDailyTasks(payload, MAINTENANT, [purgeContactMessages])
 		fin()
 		expect(pendant).toEqual([{ nom: 'purge-messages-contact', supprimes: 0 }])

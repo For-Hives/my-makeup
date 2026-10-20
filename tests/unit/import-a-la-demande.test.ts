@@ -3,14 +3,14 @@ import type { Payload } from 'payload'
 import { ImportRefuse } from '../../scripts/migration/import/target'
 import type { ImportEnv } from '../../src/lib/env'
 import {
-	type EnvDeLImport,
-	exigerLeSite,
-	exigerUneSourceAUtreQueLaCible,
-	importALaDemande,
-	lieuDuProcessus,
-	lireLesJetons,
-	MARQUE_DES_JETONS,
-	reserverLeJeton,
+	importOnDemand,
+	type OnDemandImportEnv,
+	placeOfProcess,
+	readTokens,
+	requireSite,
+	requireSourceOtherThanTarget,
+	reserveToken,
+	TOKENS_MARKER,
 } from '../../src/migration/on-demand-import'
 
 /**
@@ -28,7 +28,7 @@ const STOCKAGE = {
 	local: false,
 }
 const DEMANDE: ImportEnv = { jeton: '2026-11-05-passage-a', mode: 'a-blanc', cibleEnService: false }
-const ENV: EnvDeLImport = { databaseUri: CIBLE, importation: DEMANDE, sourceStrapi: SOURCE, storage: STOCKAGE }
+const ENV: OnDemandImportEnv = { databaseUri: CIBLE, importation: DEMANDE, sourceStrapi: SOURCE, storage: STOCKAGE }
 
 /** A Payload that fails the test when anything reads from it: no token, no refusal reads the database. */
 const payloadInterdit = new Proxy(
@@ -80,8 +80,8 @@ describe('où tourne le processus : le site, ou ailleurs', () => {
 	const site = { NODE_ENV: 'production', APP_ENV: 'prod', NEXT_PUBLIC_SITE_URL: 'https://my-makeup.fr' }
 
 	test('le site : production, APP_ENV=prod et l’adresse du site, ensemble', () => {
-		expect(lieuDuProcessus(site)).toBe('site')
-		expect(() => exigerLeSite('site')).not.toThrow()
+		expect(placeOfProcess(site)).toBe('site')
+		expect(() => requireSite('site')).not.toThrow()
 	})
 
 	test.each([
@@ -93,24 +93,24 @@ describe('où tourne le processus : le site, ou ailleurs', () => {
 		['l’adresse du banc', { ...site, NEXT_PUBLIC_SITE_URL: 'http://localhost:3100' }],
 		['rien', {}],
 	])('ailleurs : %s', (_cas, variables) => {
-		expect(lieuDuProcessus(variables)).toBe('autre')
-		expect(() => exigerLeSite('autre')).toThrow(ImportRefuse)
+		expect(placeOfProcess(variables)).toBe('autre')
+		expect(() => requireSite('autre')).toThrow(ImportRefuse)
 	})
 })
 
 describe('la source n’est jamais la base de Payload', () => {
 	test('une autre base, ou un autre hôte, passe', () => {
-		expect(() => exigerUneSourceAUtreQueLaCible(SOURCE, CIBLE)).not.toThrow()
+		expect(() => requireSourceOtherThanTarget(SOURCE, CIBLE)).not.toThrow()
 		// Same host and database name on two servers: not the same database.
 		expect(() =>
-			exigerUneSourceAUtreQueLaCible(
+			requireSourceOtherThanTarget(
 				'postgres://a:b@strapi.example.test/mymakeup',
 				'postgres://a:b@payload.example.test/mymakeup'
 			)
 		).not.toThrow()
 		// Same server, another database.
 		expect(() =>
-			exigerUneSourceAUtreQueLaCible(
+			requireSourceOtherThanTarget(
 				'postgres://a:b@hote.example.test/strapi',
 				'postgres://a:b@hote.example.test/payload'
 			)
@@ -134,7 +134,7 @@ describe('la source n’est jamais la base de Payload', () => {
 	])('refuse : %s', (_cas, source, cible) => {
 		let message = ''
 		try {
-			exigerUneSourceAUtreQueLaCible(source, cible)
+			requireSourceOtherThanTarget(source, cible)
 		} catch (erreur) {
 			expect(erreur).toBeInstanceOf(ImportRefuse)
 			message = (erreur as Error).message
@@ -147,35 +147,35 @@ describe('la source n’est jamais la base de Payload', () => {
 
 describe('les jetons joués, gardés dans le commentaire du schéma', () => {
 	test('aucun commentaire, ou celui de PostgreSQL, ne porte aucun jeton', () => {
-		for (const vide of [null, undefined, '', 'standard public schema']) expect(lireLesJetons(vide)).toEqual([])
+		for (const vide of [null, undefined, '', 'standard public schema']) expect(readTokens(vide)).toEqual([])
 	})
 
 	test('les jetons se lisent dans l’ordre où ils ont été joués', () => {
-		expect(lireLesJetons(`${MARQUE_DES_JETONS}2026-11-05-passage-a 2026-11-05-passage-b`)).toEqual([
+		expect(readTokens(`${TOKENS_MARKER}2026-11-05-passage-a 2026-11-05-passage-b`)).toEqual([
 			'2026-11-05-passage-a',
 			'2026-11-05-passage-b',
 		])
 	})
 
 	test('un commentaire d’un autre auteur est refusé : il n’est jamais écrasé', () => {
-		expect(() => lireLesJetons('le commentaire de quelqu’un d’autre')).toThrow(ImportRefuse)
+		expect(() => readTokens('le commentaire de quelqu’un d’autre')).toThrow(ImportRefuse)
 	})
 
 	test('un jeton nouveau est réservé une fois, et le même jeton ne l’est plus', async () => {
 		const { etat, pool } = fausseBase()
 
-		expect(await reserverLeJeton(pool, '2026-11-05-passage-a')).toBe(true)
-		expect(await reserverLeJeton(pool, '2026-11-05-passage-a')).toBe(false)
-		expect(etat.commentaire).toBe(`${MARQUE_DES_JETONS}2026-11-05-passage-a`)
+		expect(await reserveToken(pool, '2026-11-05-passage-a')).toBe(true)
+		expect(await reserveToken(pool, '2026-11-05-passage-a')).toBe(false)
+		expect(etat.commentaire).toBe(`${TOKENS_MARKER}2026-11-05-passage-a`)
 	})
 
 	test('chaque jeton joué reste gardé : un ancien jeton ne rejoue pas non plus', async () => {
 		const { etat, pool } = fausseBase()
 
 		for (const jeton of ['2026-11-05-passage-a', '2026-11-05-passage-b', '2026-11-05-passage-c'])
-			expect(await reserverLeJeton(pool, jeton)).toBe(true)
-		expect(await reserverLeJeton(pool, '2026-11-05-passage-a')).toBe(false)
-		expect(lireLesJetons(etat.commentaire)).toEqual([
+			expect(await reserveToken(pool, jeton)).toBe(true)
+		expect(await reserveToken(pool, '2026-11-05-passage-a')).toBe(false)
+		expect(readTokens(etat.commentaire)).toEqual([
 			'2026-11-05-passage-a',
 			'2026-11-05-passage-b',
 			'2026-11-05-passage-c',
@@ -185,7 +185,7 @@ describe('les jetons joués, gardés dans le commentaire du schéma', () => {
 	test('la réservation se fait sous verrou, dans une transaction, et rend sa connexion', async () => {
 		const { etat, pool } = fausseBase()
 
-		await reserverLeJeton(pool, '2026-11-05-passage-a')
+		await reserveToken(pool, '2026-11-05-passage-a')
 
 		expect(etat.journal[0]).toBe('BEGIN')
 		expect(etat.journal[1]).toBe('SELECT pg_advisory_xact_lock(hashtext($1))')
@@ -196,7 +196,7 @@ describe('les jetons joués, gardés dans le commentaire du schéma', () => {
 	test('un commentaire inconnu ne perd pas la connexion : retour en arrière, rien n’est écrit', async () => {
 		const { etat, pool } = fausseBase('le commentaire de quelqu’un d’autre')
 
-		await expect(reserverLeJeton(pool, '2026-11-05-passage-a')).rejects.toBeInstanceOf(ImportRefuse)
+		await expect(reserveToken(pool, '2026-11-05-passage-a')).rejects.toBeInstanceOf(ImportRefuse)
 
 		expect(etat.commentaire).toBe('le commentaire de quelqu’un d’autre')
 		expect(etat.journal.at(-1)).toBe('ROLLBACK')
@@ -213,7 +213,7 @@ describe('importALaDemande : ce qu’elle refuse, sans rien lire quand il n’y 
 	test('sans jeton, elle ne fait rien et ne touche à rien', async () => {
 		const { lignes, options } = avecJournal()
 
-		const issue = await importALaDemande(
+		const issue = await importOnDemand(
 			payloadInterdit,
 			{ ...ENV, importation: undefined },
 			{ ...options, lieu: 'site' }
@@ -226,7 +226,7 @@ describe('importALaDemande : ce qu’elle refuse, sans rien lire quand il n’y 
 	test('hors du site, elle refuse avant toute lecture, même avec un jeton', async () => {
 		const { lignes, options } = avecJournal()
 
-		const issue = await importALaDemande(payloadInterdit, ENV, { ...options, lieu: 'autre' })
+		const issue = await importOnDemand(payloadInterdit, ENV, { ...options, lieu: 'autre' })
 
 		expect(issue.etat).toBe('refuse')
 		expect(lignes.join('\n')).toContain('ne tourne que sur le site')
@@ -235,17 +235,17 @@ describe('importALaDemande : ce qu’elle refuse, sans rien lire quand il n’y 
 	test('sans lieu donné, elle lit l’environnement du processus : celui des tests n’est pas le site', async () => {
 		const { options } = avecJournal()
 
-		expect((await importALaDemande(payloadInterdit, ENV, options)).etat).toBe('refuse')
+		expect((await importOnDemand(payloadInterdit, ENV, options)).etat).toBe('refuse')
 	})
 
 	test('sans source, ou avec la base de Payload pour source, elle refuse avant toute lecture', async () => {
 		const { lignes, options } = avecJournal()
 
 		expect(
-			(await importALaDemande(payloadInterdit, { ...ENV, sourceStrapi: undefined }, { ...options, lieu: 'site' })).etat
+			(await importOnDemand(payloadInterdit, { ...ENV, sourceStrapi: undefined }, { ...options, lieu: 'site' })).etat
 		).toBe('refuse')
 		expect(
-			(await importALaDemande(payloadInterdit, { ...ENV, sourceStrapi: CIBLE }, { ...options, lieu: 'site' })).etat
+			(await importOnDemand(payloadInterdit, { ...ENV, sourceStrapi: CIBLE }, { ...options, lieu: 'site' })).etat
 		).toBe('refuse')
 		expect(lignes.join('\n')).toContain('STRAPI_SOURCE_URI manque')
 		expect(lignes.join('\n')).toContain('désigne la base de Payload')
@@ -254,7 +254,7 @@ describe('importALaDemande : ce qu’elle refuse, sans rien lire quand il n’y 
 	test('sans stockage des photos, elle refuse avant toute lecture', async () => {
 		const { lignes, options } = avecJournal()
 
-		const issue = await importALaDemande(payloadInterdit, { ...ENV, storage: undefined }, { ...options, lieu: 'site' })
+		const issue = await importOnDemand(payloadInterdit, { ...ENV, storage: undefined }, { ...options, lieu: 'site' })
 
 		expect(issue.etat).toBe('refuse')
 		expect(lignes.join('\n')).toContain('stockage des photos')
@@ -268,7 +268,7 @@ describe('importALaDemande : ce qu’elle refuse, sans rien lire quand il n’y 
 		const { etat, pool } = fausseBase()
 		const { lignes, options } = avecJournal()
 
-		const issue = await importALaDemande(payloadAvecSchema(pool), { ...ENV, importation }, { ...options, lieu: 'site' })
+		const issue = await importOnDemand(payloadAvecSchema(pool), { ...ENV, importation }, { ...options, lieu: 'site' })
 
 		expect(issue.etat).toBe('refuse')
 		expect(etat.connexions).toBe(0)
@@ -277,11 +277,11 @@ describe('importALaDemande : ce qu’elle refuse, sans rien lire quand il n’y 
 	})
 
 	test('un jeton déjà joué ne rouvre pas la source', async () => {
-		const { pool } = fausseBase(`${MARQUE_DES_JETONS}${DEMANDE.jeton}`)
+		const { pool } = fausseBase(`${TOKENS_MARKER}${DEMANDE.jeton}`)
 		const { lignes, options } = avecJournal()
 		let ouverte = false
 
-		const issue = await importALaDemande(payloadAvecSchema(pool), ENV, {
+		const issue = await importOnDemand(payloadAvecSchema(pool), ENV, {
 			...options,
 			lieu: 'site',
 			ouvrirLaSource: () => {
@@ -306,7 +306,7 @@ describe('importALaDemande : ce qu’elle refuse, sans rien lire quand il n’y 
 			}
 		)
 
-		const issue = await importALaDemande(payloadAvecSchema(pool), ENV, {
+		const issue = await importOnDemand(payloadAvecSchema(pool), ENV, {
 			...options,
 			lieu: 'site',
 			baseDesMedias: 'https://stockage.example.test/photos-factices',
@@ -330,7 +330,7 @@ describe('importALaDemande : ce qu’elle refuse, sans rien lire quand il n’y 
 		const { lignes, options } = avecJournal()
 		const { ImportRefuse: Refus } = await import('../../scripts/migration/import/target')
 
-		await importALaDemande(payloadAvecSchema(pool), ENV, {
+		await importOnDemand(payloadAvecSchema(pool), ENV, {
 			...options,
 			lieu: 'site',
 			baseDesMedias: 'https://stockage.example.test/photos-factices',

@@ -1,5 +1,5 @@
 import type { Payload } from 'payload'
-import { importEnCours } from '../import-context'
+import { importInProgress } from '../import-context'
 import type { DailyTask } from './daily'
 
 /**
@@ -27,7 +27,7 @@ export const retryThreshold = (maintenant: Date): Date => new Date(maintenant.ge
 export const retryStuckMessages: DailyTask = {
 	nom: 'reprise-messages-contact-bloques',
 	executer: async (payload: Payload, maintenant) => {
-		if (importEnCours()) return 0
+		if (importInProgress()) return 0
 		const { docs } = await payload.update({
 			collection: 'contact-requests',
 			depth: 0,

@@ -16,7 +16,7 @@ import { SITE_ORIGIN } from '../../src/lib/frozen-urls'
 import { lireLeCsv } from '../../tests/outils/parite-urls'
 import { FROZEN_INVENTORY } from './urls-doc'
 
-const SORTIE = fileURLToPath(new URL('../../tests/fixtures/parite-urls-h1.json', import.meta.url))
+const OUTPUT = fileURLToPath(new URL('../../tests/fixtures/parite-urls-h1.json', import.meta.url))
 
 const [source] = process.argv.slice(2)
 if (!source) {
@@ -24,19 +24,19 @@ if (!source) {
 	process.exit(1)
 }
 
-const lignes = lireLeCsv(readFileSync(source, 'utf8'))
-const parUrl = new Map(lignes.map(ligne => [ligne.url ?? '', ligne]))
-const adresses = [
+const rows = lireLeCsv(readFileSync(source, 'utf8'))
+const byUrl = new Map(rows.map(ligne => [ligne.url ?? '', ligne]))
+const addresses = [
 	...FROZEN_INVENTORY.addresses.map(({ address }) => address),
 	...FROZEN_INVENTORY.complements.flatMap(({ address }) => (address ? [address] : [])),
 ]
 
-const resultat: Record<string, { n: number; sha: string | null }> = {}
-for (const adresse of adresses) {
-	if (!adresse.startsWith('/')) continue
-	const ligne = parUrl.get(`${SITE_ORIGIN}${adresse}`)
-	if (!ligne || ligne.type !== 'html') continue
-	resultat[adresse] = { n: Number(ligne.h1_nb), sha: ligne.h1_sha256 || null }
+const result: Record<string, { n: number; sha: string | null }> = {}
+for (const pageUrl of addresses) {
+	if (!pageUrl.startsWith('/')) continue
+	const row = byUrl.get(`${SITE_ORIGIN}${pageUrl}`)
+	if (!row || row.type !== 'html') continue
+	result[pageUrl] = { n: Number(row.h1_nb), sha: row.h1_sha256 || null }
 }
-writeFileSync(SORTIE, `${JSON.stringify(resultat, null, '\t')}\n`)
-console.log(`${Object.keys(resultat).length} adresses écrites dans tests/fixtures/parite-urls-h1.json`)
+writeFileSync(OUTPUT, `${JSON.stringify(result, null, '\t')}\n`)
+console.log(`${Object.keys(result).length} adresses écrites dans tests/fixtures/parite-urls-h1.json`)

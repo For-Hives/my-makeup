@@ -18,7 +18,7 @@
  */
 
 import type { Payload } from 'payload'
-import { CONTEXTE_IMPORT } from '../lib/import-context'
+import { IMPORT_CONTEXT } from '../lib/import-context'
 import { DEMO_ARTICLES, DEMO_TALENTS } from './editorial'
 import { type LoadingOptions, type ProfilesSummary, placeDemoProfiles, requireDemoTarget } from './loading'
 
@@ -67,7 +67,7 @@ export async function placeDemoEditorial(
 		}
 		await payload.create({
 			collection: 'talents',
-			context: CONTEXTE_IMPORT,
+			context: IMPORT_CONTEXT,
 			data: { ...talent, _status: 'published' },
 			depth: 0,
 		})
@@ -81,7 +81,7 @@ export async function placeDemoEditorial(
 		}
 		await payload.create({
 			collection: 'articles',
-			context: CONTEXTE_IMPORT,
+			context: IMPORT_CONTEXT,
 			data: { ...article, _status: status },
 			depth: 0,
 		})

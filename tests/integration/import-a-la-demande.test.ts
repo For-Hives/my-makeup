@@ -3,11 +3,11 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { type ImportEnv, serverEnv } from '../../src/lib/env'
 import {
-	type EnvDeLImport,
-	importALaDemande,
-	lireLesJetons,
-	type OptionsDeLImport,
-	reserverLeJeton,
+	type ImportOptions,
+	importOnDemand,
+	type OnDemandImportEnv,
+	readTokens,
+	reserveToken,
 } from '../../src/migration/on-demand-import'
 import { DATE_DE_BASCULE_DU_BANC, RACINE } from '../outils/banc'
 import { FICHIER_DES_DECISIONS_DU_BANC, referentielDuBanc } from '../outils/import'
@@ -38,7 +38,7 @@ let numero = 0
 const nouveauJeton = (): string => `essai-233-${(++numero).toString(36)}-${Date.now().toString(36)}`
 
 /** The environment the module reads: the bench's own, the fake source, and the request. */
-function env(importation: Partial<ImportEnv> = {}, surcharge: Partial<EnvDeLImport> = {}): EnvDeLImport {
+function env(importation: Partial<ImportEnv> = {}, surcharge: Partial<OnDemandImportEnv> = {}): OnDemandImportEnv {
 	return {
 		...serverEnv(),
 		sourceStrapi: sourceDuBanc().lecture,
@@ -57,9 +57,9 @@ function env(importation: Partial<ImportEnv> = {}, surcharge: Partial<EnvDeLImpo
 /** Every line the module wrote, over all the passes of the file. */
 const toutLeJournal: string[] = []
 
-async function passer(importation: Partial<ImportEnv> = {}, options: OptionsDeLImport = {}) {
+async function passer(importation: Partial<ImportEnv> = {}, options: ImportOptions = {}) {
 	const lignes: string[] = []
-	const issue = await importALaDemande(await payloadDeTest(), env(importation), {
+	const issue = await importOnDemand(await payloadDeTest(), env(importation), {
 		lieu: 'site',
 		referentiel: referentielDuBanc(),
 		baseDesMedias: sourceDuBanc().medias,
@@ -172,7 +172,7 @@ describe('un même jeton ne rejoue rien', () => {
 			"SELECT obj_description(to_regnamespace('public'), 'pg_namespace') AS marque"
 		)
 
-		expect(lireLesJetons(rows[0]?.marque)).toEqual(expect.arrayContaining([un, deux]))
+		expect(readTokens(rows[0]?.marque)).toEqual(expect.arrayContaining([un, deux]))
 	})
 
 	test('rejoué avec le même jeton, même sur une cible vidée, le passage ne lit rien et n’écrit rien', async () => {
@@ -202,7 +202,7 @@ describe('un même jeton ne rejoue rien', () => {
 		const payload = await payloadDeTest()
 		const jeton = nouveauJeton()
 
-		const reponses = await Promise.all(Array.from({ length: 5 }, () => reserverLeJeton(payload.db.pool, jeton)))
+		const reponses = await Promise.all(Array.from({ length: 5 }, () => reserveToken(payload.db.pool, jeton)))
 
 		expect(reponses.filter(Boolean)).toHaveLength(1)
 	})
@@ -259,7 +259,7 @@ describe('les refus du lieu, de la source et du stockage', () => {
 
 	test('sans lieu donné, le processus de test n’est pas le site', async () => {
 		const lignes: string[] = []
-		const issue = await importALaDemande(await payloadDeTest(), env({ mode: 'reel' }), { journal: l => lignes.push(l) })
+		const issue = await importOnDemand(await payloadDeTest(), env({ mode: 'reel' }), { journal: l => lignes.push(l) })
 
 		expect(issue.etat).toBe('refuse')
 		expect(await nombres()).toEqual(VIDE)
@@ -269,7 +269,7 @@ describe('les refus du lieu, de la source et du stockage', () => {
 		const payload = await payloadDeTest()
 		const lignes: string[] = []
 
-		const issue = await importALaDemande(
+		const issue = await importOnDemand(
 			payload,
 			{ ...env({ mode: 'reel' }), sourceStrapi: serverEnv().databaseUri },
 			{
@@ -286,7 +286,7 @@ describe('les refus du lieu, de la source et du stockage', () => {
 	test('sans stockage des photos, le passage est refusé : aucune photo ne serait adoptée', async () => {
 		const lignes: string[] = []
 
-		const issue = await importALaDemande(await payloadDeTest(), env({ mode: 'reel' }, { storage: undefined }), {
+		const issue = await importOnDemand(await payloadDeTest(), env({ mode: 'reel' }, { storage: undefined }), {
 			lieu: 'site',
 			journal: l => lignes.push(l),
 		})
@@ -319,7 +319,7 @@ describe('le journal ne porte que des nombres', () => {
 		const injoignable = 'postgres://lecture_strapi:mot-de-passe-factice@hote-inconnu.example.test:5432/strapi'
 		const lignes: string[] = []
 
-		const issue = await importALaDemande(
+		const issue = await importOnDemand(
 			await payloadDeTest(),
 			env({ jeton: nouveauJeton(), mode: 'a-blanc' }, { sourceStrapi: injoignable }),
 			{

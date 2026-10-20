@@ -19,70 +19,70 @@
  */
 
 import type { Payload } from 'payload'
-import { marquerUnImportEnCours } from '../../../src/lib/import-context'
-import { ADAPTATEUR_ARTICLES, articlesAttendus, articlesRepartis, lireLesArticles } from './articles'
-import { type GenreDeCible, ImportRefuse } from './target'
-import { type CasARevoir, communesDesProfils } from './cities'
+import { markImportInProgress } from '../../../src/lib/import-context'
 import {
-	ADAPTATEUR_COMPTES,
-	ADAPTATEUR_COMPTES_EN_SERVICE,
-	comptesAttendus,
-	lireLesComptes,
-	repartitionDesComptes,
+	ACCOUNTS_ADAPTER,
+	ACCOUNTS_IN_SERVICE_ADAPTER,
+	accountDistribution,
+	expectedAccounts,
+	readAccounts,
 } from './accounts'
-import { AUCUNE_DECISION, type Decisions } from './decisions'
-import { REFERENCES } from './gaps'
-import { comptesSupprimesDansLaV3, refuserUneCibleEnService, sansLesComptesSupprimes } from './cutover-guard'
+import { ARTICLES_ADAPTER, expectedArticles, readArticles, splitArticles } from './articles'
+import { type CaseToReview, profileCities } from './cities'
+import { deletedAccountsInV3, refuseTargetInService, withoutDeletedAccounts } from './cutover-guard'
+import { type Decisions, NO_DECISION } from './decisions'
 import {
-	ADAPTATEUR_MEDIAS,
-	bilanDesFichiers,
-	classerLesFichiers,
-	lireLesFichiers,
-	mediasAttendus,
+	type Adapter,
+	type Expected,
+	parity,
+	planActions,
+	planSummary,
+	type Refusal,
+	readTarget,
+	write,
+} from './engine'
+import { REFERENCES } from './gaps'
+import {
+	classifyFiles,
+	expectedMedia,
+	filesSummary,
+	httpProbe,
+	MEDIA_ADAPTER,
 	type Presence,
-	type Sonde,
-	sondeHttp,
-	sonderLesObjets,
+	type Probe,
+	probeObjects,
+	readFiles,
 } from './media'
 import {
-	type Adaptateur,
-	type Attendu,
-	bilanDuPlan,
-	ecrire,
-	lireLaCible,
-	parite,
-	planifier,
-	type Refus,
-} from './engine'
-import {
-	ADAPTATEUR_PROFILS,
-	ADAPTATEUR_PROFILS_EN_SERVICE,
-	affichesALaSource,
-	consentementsGardes,
-	lireLesProfils,
-	profilsAttendus,
-	profilsLaisses,
-	videALaSource,
+	emptyToSource,
+	expectedProfiles,
+	keptConsents,
+	PROFILES_ADAPTER,
+	PROFILES_IN_SERVICE_ADAPTER,
+	readProfiles,
+	shownToSource,
+	skippedProfiles,
 } from './profiles'
-import type { BilanDeCollection, Mode, PariteDeCollection, Rapport } from './report'
-import type { Referentiel } from './reference'
-import { empreinteDesTables, memesTables, type Source } from './source'
-import { ADAPTATEUR_TALENTS, lireLesTalents, talentsAttendus } from './talents'
+import type { Reference } from './reference'
+import type { CollectionParity, CollectionSummary, Mode, Report } from './report'
+import { type Source, sameTables, tablesFingerprint } from './source'
+import { expectedTalents, readTalents, TALENTS_ADAPTER } from './talents'
+import { ImportRefuse, type TargetKind } from './target'
 
 export interface OptionsDImport {
 	payload: Payload
 	source: Source
 	mode: Mode
-	cible: GenreDeCible
+	cible: TargetKind
 	/** The table of decisions (./decisions.ts). None: every case to decide stops the run. */
 	decisions?: Decisions
 	/** The official list of the communes (./referentiel.ts): the referential, or its kept answers. */
-	referentiel: Referentiel
+	referentiel: Reference
 	/**
 	 * Receives the private list of review: the profiles whose city is « à revoir », with what was
 	 * asked and the communes they could be. The command writes it where `--revue` says.
 	 */
-	surLaRevue?: (revue: CasARevoir[]) => void
+	surLaRevue?: (revue: CaseToReview[]) => void
 	/**
 	 * The date of the switch, an ISO string (`dateDeBascule`, ./profils.ts): the date of the consent of
 	 * the profiles that show a phone or an email on the old site (ticket 064). Required as soon as
@@ -106,38 +106,38 @@ export interface OptionsDImport {
 	 * src/lib/env.ts), and how the headers of an object are read (`HEAD` by default). None: the run
 	 * has no storage, and no file is adopted.
 	 */
-	medias?: OptionsDesMedias
+	medias?: MediaOptions
 }
 
-export interface OptionsDesMedias {
+export interface MediaOptions {
 	base: string
-	sonder?: Sonde
+	sonder?: Probe
 }
 
 /** Counts the transformations of the expected documents, by reference. */
-function compterLesEcarts(ecarts: Record<string, number>, attendus: readonly Attendu[]): void {
-	for (const { ecarts: duDocument } of attendus)
-		for (const { reference } of duDocument) ecarts[reference] = (ecarts[reference] ?? 0) + 1
+function countGaps(ecarts: Record<string, number>, attendus: readonly Expected[]): void {
+	for (const { ecarts: documentGaps } of attendus)
+		for (const { reference } of documentGaps) ecarts[reference] = (ecarts[reference] ?? 0) + 1
 }
 
 /**
  * The collections whose documents are all the import's: one that holds no `strapiId` was added by hand.
  * Media is left out on purpose: a photo uploaded in the v3 legitimately has none (IMPORT.md).
  */
-const COLLECTIONS_SANS_ORIGINE = new Set<string>(['pros', 'profiles', 'articles', 'talents'])
+const COLLECTIONS_WITHOUT_ORIGIN = new Set<string>(['pros', 'profiles', 'articles', 'talents'])
 
 /** Plans one collection, writes it when the run is real, and gives what it did or would do. */
-async function importerLaCollection(
+async function importerCollection(
 	{ payload, mode }: OptionsDImport,
-	adaptateur: Adaptateur,
+	adaptateur: Adapter,
 	source: number,
-	attendus: readonly Attendu[],
-	refuses: readonly Refus[] = []
-): Promise<BilanDeCollection> {
-	const plan = planifier(adaptateur, attendus, await lireLaCible(payload, adaptateur))
-	const bilan = mode === 'reel' ? await ecrire(payload, adaptateur, plan) : bilanDuPlan(plan)
+	attendus: readonly Expected[],
+	refuses: readonly Refusal[] = []
+): Promise<CollectionSummary> {
+	const plan = planActions(adaptateur, attendus, await readTarget(payload, adaptateur))
+	const summary = mode === 'reel' ? await write(payload, adaptateur, plan) : planSummary(plan)
 	// A document added by hand holds no `strapiId`: the plan never sees it, the check must count it.
-	const sansOrigine = COLLECTIONS_SANS_ORIGINE.has(adaptateur.collection)
+	const withoutOrigin = COLLECTIONS_WITHOUT_ORIGIN.has(adaptateur.collection)
 		? (
 				await payload.count({
 					collection: adaptateur.collection,
@@ -146,18 +146,24 @@ async function importerLaCollection(
 				})
 			).totalDocs
 		: 0
-	return { ...bilan, refuses: [...refuses, ...bilan.refuses], source, enTrop: plan.enTrop, sansOrigine }
+	return {
+		...summary,
+		refuses: [...refuses, ...summary.refuses],
+		source,
+		enTrop: plan.enTrop,
+		sansOrigine: withoutOrigin,
+	}
 }
 
 /** The parity of a collection: the expected documents, and those refused before or while writing, counted apart. */
-async function pariteDe(
+async function parityOf(
 	payload: Payload,
-	adaptateur: Adaptateur,
-	attendus: readonly Attendu[],
-	bilan: BilanDeCollection
-): Promise<{ parite: PariteDeCollection; cible: Awaited<ReturnType<typeof lireLaCible>> }> {
-	const cible = await lireLaCible(payload, adaptateur)
-	return { parite: parite(adaptateur, attendus, cible, bilan.refuses), cible }
+	adaptateur: Adapter,
+	attendus: readonly Expected[],
+	bilan: CollectionSummary
+): Promise<{ parite: CollectionParity; cible: Awaited<ReturnType<typeof readTarget>> }> {
+	const target = await readTarget(payload, adaptateur)
+	return { parite: parity(adaptateur, attendus, target, bilan.refuses), cible: target }
 }
 
 /**
@@ -165,264 +171,249 @@ async function pariteDe(
  * `null` for a document still to be created, in a dry run. A document Payload refused while
  * writing is left out: nothing may point at it.
  */
-async function idsDansLaCible(
+async function idsInTarget(
 	payload: Payload,
-	adaptateur: Adaptateur,
-	attendus: readonly Attendu[],
-	refuses: readonly Refus[] = []
+	adaptateur: Adapter,
+	attendus: readonly Expected[],
+	refuses: readonly Refusal[] = []
 ): Promise<Map<number, number | null>> {
-	const existants = new Map(
-		(await lireLaCible(payload, adaptateur)).map(({ id, valeurs }) => [Number(valeurs.strapiId), id])
+	const existing = new Map(
+		(await readTarget(payload, adaptateur)).map(({ id, valeurs: values }) => [Number(values.strapiId), id])
 	)
-	const refusesParPayload = new Set(refuses.map(({ strapiId }) => strapiId))
+	const refusedByPayload = new Set(refuses.map(({ strapiId }) => strapiId))
 	return new Map(
 		attendus
-			.filter(({ strapiId }) => !refusesParPayload.has(strapiId))
-			.map(({ strapiId }) => [strapiId, existants.get(strapiId) ?? null])
+			.filter(({ strapiId }) => !refusedByPayload.has(strapiId))
+			.map(({ strapiId }) => [strapiId, existing.get(strapiId) ?? null])
 	)
 }
 
 /** How many documents of the target per status. */
-function statutsDe(documents: readonly { valeurs: Readonly<Record<string, unknown>> }[]): Record<string, number> {
-	const statuts: Record<string, number> = {}
-	for (const { valeurs } of documents) statuts[String(valeurs.status)] = (statuts[String(valeurs.status)] ?? 0) + 1
-	return statuts
+function statusesOf(documents: readonly { valeurs: Readonly<Record<string, unknown>> }[]): Record<string, number> {
+	const statuses: Record<string, number> = {}
+	for (const { valeurs: values } of documents)
+		statuses[String(values.status)] = (statuses[String(values.status)] ?? 0) + 1
+	return statuses
 }
 
-export async function importer(options: OptionsDImport): Promise<Rapport> {
+export async function importer(options: OptionsDImport): Promise<Report> {
 	// The daily purges of the application wait while an import runs in this process (ticket 162).
-	const finDeLImport = marquerUnImportEnCours()
+	const importEnd = markImportInProgress()
 	try {
-		return await passerLImport(options)
+		return await runImport(options)
 	} finally {
-		finDeLImport()
+		importEnd()
 	}
 }
 
-async function passerLImport(options: OptionsDImport): Promise<Rapport> {
+async function runImport(options: OptionsDImport): Promise<Report> {
 	const {
 		payload,
 		source,
 		mode,
-		cible,
-		decisions = AUCUNE_DECISION,
-		referentiel,
-		surLaRevue,
-		tirerMotDePasse,
-		medias,
-		consentiLe = null,
-		maintenant = new Date(),
-		cibleEnService = false,
+		cible: target,
+		decisions = NO_DECISION,
+		referentiel: cityReference,
+		surLaRevue: onReview,
+		tirerMotDePasse: drawPassword,
+		medias: mediaDocs,
+		consentiLe: consentDate = null,
+		maintenant: now = new Date(),
+		cibleEnService: targetInService = false,
 	} = options
-	const adaptateurDesComptes = cibleEnService ? ADAPTATEUR_COMPTES_EN_SERVICE : ADAPTATEUR_COMPTES
-	const avant = await source.lire(requete => empreinteDesTables(requete))
-	const luBrut = await source.lire(async requete => ({
-		comptes: await lireLesComptes(requete),
-		fichiers: await lireLesFichiers(requete),
-		profils: await lireLesProfils(requete),
-		articles: await lireLesArticles(requete),
-		talents: await lireLesTalents(requete),
+	const accountsAdapter = targetInService ? ACCOUNTS_IN_SERVICE_ADAPTER : ACCOUNTS_ADAPTER
+	const before = await source.lire(requete => tablesFingerprint(requete))
+	const rawRead = await source.lire(async requete => ({
+		comptes: await readAccounts(requete),
+		fichiers: await readFiles(requete),
+		profils: await readProfiles(requete),
+		articles: await readArticles(requete),
+		talents: await readTalents(requete),
 	}))
 
 	// An account deleted in the v3 is gone for good: on a target in service the run neither takes it nor its profile.
-	const supprimes = await comptesSupprimesDansLaV3(payload)
-	const lu = cibleEnService ? sansLesComptesSupprimes(luBrut, supprimes) : luBrut
-	const adaptateurDesProfils = cibleEnService ? ADAPTATEUR_PROFILS_EN_SERVICE : ADAPTATEUR_PROFILS
+	const deleted = await deletedAccountsInV3(payload)
+	const read = targetInService ? withoutDeletedAccounts(rawRead, deleted) : rawRead
+	const profilesAdapter = targetInService ? PROFILES_IN_SERVICE_ADAPTER : PROFILES_ADAPTER
 
-	const rapport: Rapport = {
+	const report: Report = {
 		mode,
-		cible,
+		cible: target,
 		arret: null,
-		source: { avant, apres: avant, inchangee: true },
+		source: { avant: before, apres: before, inchangee: true },
 		collections: {},
 		ecarts: {},
 		decisionsSansObjet: 0,
 		parite: null,
 	}
 
-	const comptes = comptesAttendus(lu.comptes, decisions, tirerMotDePasse)
-	const laisses = profilsLaisses(lu.profils, {
-		comptesDeLaSource: new Set(lu.comptes.map(({ id }) => id)),
-		comptesEcartes: comptes.ecartes,
+	const accounts = expectedAccounts(read.comptes, decisions, drawPassword)
+	const skipped = skippedProfiles(read.profils, {
+		comptesDeLaSource: new Set(read.comptes.map(({ id }) => id)),
+		comptesEcartes: accounts.ecartes,
 		profilsEcartes: decisions.profilsEcartes,
 	})
 	// Before any write, dry or real: a target the v3 already uses would get the old hash and email back.
-	if (!cibleEnService)
-		await refuserUneCibleEnService(
+	if (!targetInService)
+		await refuseTargetInService(
 			payload,
-			comptes.attendus,
-			luBrut.comptes.map(({ id }) => id)
+			accounts.attendus,
+			rawRead.comptes.map(({ id }) => id)
 		)
-	rapport.decisionsSansObjet = comptes.sansObjet + laisses.sansObjet
-	if (comptes.sansDecision.length > 0 || laisses.deComptesEcartes.length > 0 || laisses.sansCompte.length > 0) {
-		rapport.arret = {
-			emailsPartages: comptes.sansDecision,
-			profilsDeComptesEcartes: laisses.deComptesEcartes,
-			profilsSansCompte: laisses.sansCompte,
+	report.decisionsSansObjet = accounts.sansObjet + skipped.sansObjet
+	if (accounts.sansDecision.length > 0 || skipped.deComptesEcartes.length > 0 || skipped.sansCompte.length > 0) {
+		report.arret = {
+			emailsPartages: accounts.sansDecision,
+			profilsDeComptesEcartes: skipped.deComptesEcartes,
+			profilsSansCompte: skipped.sansCompte,
 		}
-		rapport.collections.pros = {
-			...bilanDuPlan({ actions: [], enTrop: [] }),
-			source: lu.comptes.length,
+		report.collections.pros = {
+			...planSummary({ actions: [], enTrop: [] }),
+			source: read.comptes.length,
 			enTrop: [],
 		}
 	} else {
-		const talents = talentsAttendus(lu.talents)
-		const articles = articlesRepartis(lu.articles)
-		for (const { attendus } of [comptes, talents]) compterLesEcarts(rapport.ecarts, attendus)
+		const talents = expectedTalents(read.talents)
+		const articles = splitArticles(read.articles)
+		for (const { attendus: expected } of [accounts, talents]) countGaps(report.ecarts, expected)
 		// This line of the register counts the accounts set aside, not the kept accounts that took a hash.
-		if (comptes.ecartes.length > 0) rapport.ecarts[REFERENCES.comptesEmailPartage] = comptes.ecartes.length
+		if (accounts.ecartes.length > 0) report.ecarts[REFERENCES.comptesEmailPartage] = accounts.ecartes.length
 
 		// Before any write: the referential may not answer, or a line of the table name an unknown commune.
-		const nonPris = new Set<number>([...laisses.ecartes, ...laisses.spam])
+		const notTaken = new Set<number>([...skipped.ecartes, ...skipped.spam])
 		// Before any write: the consent of a profile that shows contact details needs its date.
-		if (consentiLe === null && lu.profils.some(profil => !nonPris.has(profil.id) && affichesALaSource(profil)))
+		if (consentDate === null && read.profils.some(profil => !notTaken.has(profil.id) && shownToSource(profil)))
 			throw new ImportRefuse(
 				'Des profils affichent un téléphone ou un email sur l’ancien site : la date de bascule manque (--consentement-le). Rien n’est écrit.'
 			)
-		const communes = await communesDesProfils(
-			lu.profils
-				.filter(({ id }) => !nonPris.has(id))
-				.map(profil => ({ id: profil.id, city: profil.city, videALaSource: videALaSource(profil) })),
-			referentiel,
+		const cities = await profileCities(
+			read.profils
+				.filter(({ id }) => !notTaken.has(id))
+				.map(profil => ({ id: profil.id, city: profil.city, videALaSource: emptyToSource(profil) })),
+			cityReference,
 			decisions.communes
 		)
-		rapport.decisionsSansObjet += communes.sansObjet
-		surLaRevue?.(communes.revue)
+		report.decisionsSansObjet += cities.sansObjet
+		onReview?.(cities.revue)
 
 		// Before any write: which files are adopted, and what the storage holds of their objects, read
 		// by requests for headers only. A storage that does not answer stops the run here.
-		const profilsPris = new Map(
-			lu.profils.flatMap(({ id, compte }) => (nonPris.has(id) || compte === null ? [] : [[id, compte] as const]))
+		const takenProfiles = new Map(
+			read.profils.flatMap(({ id, compte }) => (notTaken.has(id) || compte === null ? [] : [[id, compte] as const]))
 		)
-		const classement = classerLesFichiers(
-			lu.fichiers,
+		const classification = classifyFiles(
+			read.fichiers,
 			{
-				profils: profilsPris,
+				profils: takenProfiles,
 				articles: new Set(articles.pris.map(({ id }) => id)),
-				profilsDeLaSource: new Set(luBrut.profils.map(({ id }) => id)),
-				articlesDeLaSource: new Set(lu.articles.map(({ id }) => id)),
+				profilsDeLaSource: new Set(rawRead.profils.map(({ id }) => id)),
+				articlesDeLaSource: new Set(read.articles.map(({ id }) => id)),
 			},
-			medias?.base ?? null
+			mediaDocs?.base ?? null
 		)
-		const presences: Map<number, Presence> = medias
-			? await sonderLesObjets(classement.adoptables, medias.base, medias.sonder ?? sondeHttp)
+		const presences: Map<number, Presence> = mediaDocs
+			? await probeObjects(classification.adoptables, mediaDocs.base, mediaDocs.sonder ?? httpProbe)
 			: new Map()
-		const nonImages = classement.nonAdoptes.filter(({ motif }) => motif === 'pas-une-image').length
-		if (nonImages > 0) rapport.ecarts[REFERENCES.fichiersNonImages] = nonImages
+		const nonImages = classification.nonAdoptes.filter(({ motif }) => motif === 'pas-une-image').length
+		if (nonImages > 0) report.ecarts[REFERENCES.fichiersNonImages] = nonImages
 
-		rapport.collections.pros = {
-			...(await importerLaCollection(options, adaptateurDesComptes, lu.comptes.length, comptes.attendus)),
-			ecartes: comptes.ecartes,
-			hashRattaches: comptes.hashRattaches,
-			hashNonRattaches: comptes.hashNonRattaches,
-			nonConfirmes: comptes.nonConfirmes,
-			repartition: repartitionDesComptes(comptes.attendus),
-			supprimesDansLaV3: cibleEnService
-				? [...supprimes].filter(id => luBrut.comptes.some(c => c.id === id)).sort((a, b) => a - b)
+		report.collections.pros = {
+			...(await importerCollection(options, accountsAdapter, read.comptes.length, accounts.attendus)),
+			ecartes: accounts.ecartes,
+			hashRattaches: accounts.hashRattaches,
+			hashNonRattaches: accounts.hashNonRattaches,
+			nonConfirmes: accounts.nonConfirmes,
+			repartition: accountDistribution(accounts.attendus),
+			supprimesDansLaV3: targetInService
+				? [...deleted].filter(id => rawRead.comptes.some(c => c.id === id)).sort((a, b) => a - b)
 				: [],
 		}
 
 		// Each profile, and each media of a profile, points at its account in Payload, read once the
 		// accounts are written.
-		const idsDesComptes = await idsDansLaCible(payload, adaptateurDesComptes, comptes.attendus)
+		const accountIds = await idsInTarget(payload, accountsAdapter, accounts.attendus)
 		// A file whose account Payload refused is not adopted: written without an owner, it would pass
 		// for a newsroom photo. It is listed, and the next run takes it once the account exists.
-		const comptesRefuses = new Set(rapport.collections.pros.refuses.map(({ strapiId }) => strapiId))
-		const adoptables = classement.adoptables.filter(({ fichier, compte }) => {
-			const refuse = compte !== null && comptesRefuses.has(compte)
-			if (refuse) classement.nonAdoptes.push({ fichier: fichier.id, motif: 'compte-refuse' })
+		const refusedAccounts = new Set(report.collections.pros.refuses.map(({ strapiId }) => strapiId))
+		const adoptable = classification.adoptables.filter(({ fichier, compte }) => {
+			const refuse = compte !== null && refusedAccounts.has(compte)
+			if (refuse) classification.nonAdoptes.push({ fichier: fichier.id, motif: 'compte-refuse' })
 			return !refuse
 		})
-		const lesMedias = mediasAttendus(adoptables, presences, idsDesComptes)
-		compterLesEcarts(rapport.ecarts, lesMedias)
-		rapport.collections.media = {
-			...(await importerLaCollection(
+		const allMedia = expectedMedia(adoptable, presences, accountIds)
+		countGaps(report.ecarts, allMedia)
+		report.collections.media = {
+			...(await importerCollection(
 				options,
-				ADAPTATEUR_MEDIAS,
-				lu.fichiers.fichiers.length,
-				lesMedias,
-				classement.refuses
+				MEDIA_ADAPTER,
+				read.fichiers.fichiers.length,
+				allMedia,
+				classification.refuses
 			)),
-			fichiers: bilanDesFichiers(classement, presences, medias === undefined),
+			fichiers: filesSummary(classification, presences, mediaDocs === undefined),
 		}
 
 		// Each photo points at its media in Payload, read once the media are written.
-		const idsDesMedias = await idsDansLaCible(payload, ADAPTATEUR_MEDIAS, lesMedias, rapport.collections.media.refuses)
-		const profils = profilsAttendus(
-			lu.profils,
-			idsDesComptes,
-			laisses,
-			communes.communes,
-			idsDesMedias,
-			consentiLe,
-			maintenant
-		)
-		if (laisses.spam.length > 0) rapport.ecarts[REFERENCES.profilsDuSpam] = laisses.spam.length
-		const consentements = cibleEnService
-			? []
-			: consentementsGardes(profils.attendus, await lireLaCible(payload, ADAPTATEUR_PROFILS))
-		const bilanDesProfils = await importerLaCollection(
-			options,
-			adaptateurDesProfils,
-			lu.profils.length,
-			profils.attendus
-		)
+		const mediaIds = await idsInTarget(payload, MEDIA_ADAPTER, allMedia, report.collections.media.refuses)
+		const profiles = expectedProfiles(read.profils, accountIds, skipped, cities.communes, mediaIds, consentDate, now)
+		if (skipped.spam.length > 0) report.ecarts[REFERENCES.profilsDuSpam] = skipped.spam.length
+		const consents = targetInService ? [] : keptConsents(profiles.attendus, await readTarget(payload, PROFILES_ADAPTER))
+		const profilesSummary = await importerCollection(options, profilesAdapter, read.profils.length, profiles.attendus)
 		// Only the profiles the target holds are counted: a refused one carries no difference.
-		compterLesEcarts(
-			rapport.ecarts,
-			profils.attendus.filter(({ strapiId }) => !bilanDesProfils.refuses.some(refus => refus.strapiId === strapiId))
+		countGaps(
+			report.ecarts,
+			profiles.attendus.filter(({ strapiId }) => !profilesSummary.refuses.some(refus => refus.strapiId === strapiId))
 		)
-		rapport.collections.profiles = {
-			...bilanDesProfils,
-			ecartes: laisses.ecartes,
-			spam: laisses.spam,
-			statuts: profils.statuts,
-			statutsDifferentsDeLaSource: profils.statutsDifferentsDeLaSource,
-			communes: communes.bilan,
-			photosNonReprises: profils.photosNonReprises,
-			liensSansLigne: profils.liensSansLigne,
-			prix: profils.prix,
-			coordonneesARevoir: profils.coordonneesARevoir,
-			consentementsGardes: consentements,
-			rayonsARevoir: profils.rayonsARevoir,
-			lignesLaissees: profils.lignesLaissees,
+		report.collections.profiles = {
+			...profilesSummary,
+			ecartes: skipped.ecartes,
+			spam: skipped.spam,
+			statuts: profiles.statuts,
+			statutsDifferentsDeLaSource: profiles.statutsDifferentsDeLaSource,
+			communes: cities.bilan,
+			photosNonReprises: profiles.photosNonReprises,
+			liensSansLigne: profiles.liensSansLigne,
+			prix: profiles.prix,
+			coordonneesARevoir: profiles.coordonneesARevoir,
+			consentementsGardes: consents,
+			rayonsARevoir: profiles.rayonsARevoir,
+			lignesLaissees: profiles.lignesLaissees,
 		}
 
-		const lesArticles = articlesAttendus(articles.pris, lu.fichiers.liens, idsDesMedias)
-		rapport.collections.articles = {
-			...(await importerLaCollection(
+		const allArticles = expectedArticles(articles.pris, read.fichiers.liens, mediaIds)
+		report.collections.articles = {
+			...(await importerCollection(
 				options,
-				ADAPTATEUR_ARTICLES,
-				lu.articles.length,
-				lesArticles.attendus,
+				ARTICLES_ADAPTER,
+				read.articles.length,
+				allArticles.attendus,
 				articles.refuses
 			)),
-			photosNonReprises: lesArticles.photosNonReprises,
+			photosNonReprises: allArticles.photosNonReprises,
 		}
 
-		rapport.collections.talents = await importerLaCollection(
+		report.collections.talents = await importerCollection(
 			options,
-			ADAPTATEUR_TALENTS,
-			lu.talents.length,
+			TALENTS_ADAPTER,
+			read.talents.length,
 			talents.attendus,
 			talents.refuses
 		)
 
 		if (mode === 'reel') {
-			const pros = await pariteDe(payload, adaptateurDesComptes, comptes.attendus, rapport.collections.pros)
-			const lesProfils = await pariteDe(payload, adaptateurDesProfils, profils.attendus, rapport.collections.profiles)
-			rapport.parite = {
-				pros: { ...pros.parite, repartition: repartitionDesComptes(pros.cible) },
-				media: (await pariteDe(payload, ADAPTATEUR_MEDIAS, lesMedias, rapport.collections.media)).parite,
-				profiles: { ...lesProfils.parite, statuts: statutsDe(lesProfils.cible) },
-				articles: (await pariteDe(payload, ADAPTATEUR_ARTICLES, lesArticles.attendus, rapport.collections.articles))
-					.parite,
-				talents: (await pariteDe(payload, ADAPTATEUR_TALENTS, talents.attendus, rapport.collections.talents)).parite,
+			const pros = await parityOf(payload, accountsAdapter, accounts.attendus, report.collections.pros)
+			const allProfiles = await parityOf(payload, profilesAdapter, profiles.attendus, report.collections.profiles)
+			report.parite = {
+				pros: { ...pros.parite, repartition: accountDistribution(pros.cible) },
+				media: (await parityOf(payload, MEDIA_ADAPTER, allMedia, report.collections.media)).parite,
+				profiles: { ...allProfiles.parite, statuts: statusesOf(allProfiles.cible) },
+				articles: (await parityOf(payload, ARTICLES_ADAPTER, allArticles.attendus, report.collections.articles)).parite,
+				talents: (await parityOf(payload, TALENTS_ADAPTER, talents.attendus, report.collections.talents)).parite,
 			}
 		}
 	}
 
-	const apres = await source.lire(requete => empreinteDesTables(requete))
-	rapport.source = { avant, apres, inchangee: memesTables(avant, apres) }
-	return rapport
+	const after = await source.lire(requete => tablesFingerprint(requete))
+	report.source = { avant: before, apres: after, inchangee: sameTables(before, after) }
+	return report
 }

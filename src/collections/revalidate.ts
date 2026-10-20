@@ -8,7 +8,7 @@ import type {
 	RequestContext,
 } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
-import { estUnImport } from '../lib/import-context'
+import { isImport } from '../lib/import-context'
 import { PUBLISHED_STATUS } from '../lib/profile/status'
 import { changeTargets, type PublicContent, type PublicState, type Targets } from '../lib/revalidate'
 import { changedUrls, keyIfSubmitAllowed, reportLater } from '../lib/seo/indexnow'
@@ -151,12 +151,12 @@ export function refresh(contenu: PublicContent): RefreshHooks {
 	return {
 		avantEcriture: async ({ context, data, operation, originalDoc, req }) => {
 			const id = originalDoc?.id
-			if (estUnImport(context) || operation !== 'update' || id === undefined) return data
+			if (isImport(context) || operation !== 'update' || id === undefined) return data
 			keptStates(context).set(key(contenu, id), await readPublicState(req, contenu, id))
 			return data
 		},
 		apresEcriture: async ({ context, doc, operation, req }) => {
-			if (estUnImport(context)) return doc
+			if (isImport(context)) return doc
 			const before = operation === 'create' ? null : resume(context, contenu, doc.id)
 			const after = await readPublicState(req, contenu, doc.id)
 			revalidateChange(req, changeTargets(contenu, before, after))
@@ -164,11 +164,11 @@ export function refresh(contenu: PublicContent): RefreshHooks {
 			return doc
 		},
 		avantSuppression: async ({ context, id, req }) => {
-			if (estUnImport(context)) return
+			if (isImport(context)) return
 			keptStates(context).set(key(contenu, id), await readPublicState(req, contenu, id))
 		},
 		apresSuppression: ({ context, doc, id, req }) => {
-			if (estUnImport(context)) return doc
+			if (isImport(context)) return doc
 			const before = resume(context, contenu, id)
 			revalidateChange(req, changeTargets(contenu, before, null))
 			notifyEngines(req, contenu, before, null)

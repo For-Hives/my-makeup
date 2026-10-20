@@ -12,26 +12,26 @@ import type { RequestContext } from 'payload'
  *
  * No `next` import: this file is loaded by the import, outside of Next, and by the collections.
  */
-export const CONTEXTE_IMPORT = { import: true } as const satisfies RequestContext
+export const IMPORT_CONTEXT = { import: true } as const satisfies RequestContext
 
 /** True when the write comes from the import: a hook then does nothing beyond the data itself. */
-export const estUnImport = (context: RequestContext | undefined): boolean => context?.import === true
+export const isImport = (context: RequestContext | undefined): boolean => context?.import === true
 
-let importsEnCours = 0
+let importsInProgress = 0
 
 /**
  * Marks an import as running in this process; gives the function that ends the mark. The daily
  * tasks (src/lib/tasks/) read it and wait for the next day rather than delete under the import.
  */
-export function marquerUnImportEnCours(): () => void {
-	importsEnCours++
-	let termine = false
+export function markImportInProgress(): () => void {
+	importsInProgress++
+	let finished = false
 	return () => {
-		if (termine) return
-		termine = true
-		importsEnCours--
+		if (finished) return
+		finished = true
+		importsInProgress--
 	}
 }
 
 /** True while an import runs in this process. */
-export const importEnCours = (): boolean => importsEnCours > 0
+export const importInProgress = (): boolean => importsInProgress > 0

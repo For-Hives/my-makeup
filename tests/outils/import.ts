@@ -16,11 +16,11 @@
 
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import { type Decisions, lireLesDecisions } from '../../scripts/migration/import/decisions'
+import { type Decisions, readDecisions } from '../../scripts/migration/import/decisions'
 import { importer, type OptionsDImport } from '../../scripts/migration/import/importer'
-import type { Mode, Rapport } from '../../scripts/migration/import/report'
-import { lireLesReponses, type ReferentielGarde, referentielGarde } from '../../scripts/migration/import/reference'
-import { ouvrirLaSourceBun } from '../../scripts/migration/import/source-bun'
+import { type KeptReference, keptReference, readAnswers } from '../../scripts/migration/import/reference'
+import type { Mode, Report } from '../../scripts/migration/import/report'
+import { openSourceBun } from '../../scripts/migration/import/source-bun'
 import { DATE_DE_BASCULE_DU_BANC, RACINE } from './banc'
 import { payloadDeTest } from './payload-test'
 import { sourceDuBanc } from './source-strapi'
@@ -31,7 +31,7 @@ import { sourceDuBanc } from './source-strapi'
  */
 export const FICHIER_DES_DECISIONS_DU_BANC = 'tests/fixtures/import/decisions-du-banc.json'
 
-export const DECISIONS_DU_BANC: Decisions = lireLesDecisions(
+export const DECISIONS_DU_BANC: Decisions = readDecisions(
 	readFileSync(path.join(RACINE, FICHIER_DES_DECISIONS_DU_BANC), 'utf8')
 )
 
@@ -42,8 +42,8 @@ export const DECISIONS_DU_BANC: Decisions = lireLesDecisions(
 export const FICHIER_DU_REFERENTIEL_DU_BANC = 'tests/fixtures/import/referentiel-du-banc.json'
 
 /** The referential of the bench: its kept answers, offline. A question it does not keep stops the run. */
-export const referentielDuBanc = (): ReferentielGarde =>
-	referentielGarde(lireLesReponses(readFileSync(path.join(RACINE, FICHIER_DU_REFERENTIEL_DU_BANC), 'utf8')), null)
+export const referentielDuBanc = (): KeptReference =>
+	keptReference(readAnswers(readFileSync(path.join(RACINE, FICHIER_DU_REFERENTIEL_DU_BANC), 'utf8')), null)
 
 /**
  * Runs the import in this process, against the source and the database of the bench, with the
@@ -52,9 +52,9 @@ export const referentielDuBanc = (): ReferentielGarde =>
 export async function importerSurLeBanc(
 	mode: Mode = 'reel',
 	options: Partial<Omit<OptionsDImport, 'payload' | 'source' | 'mode'>> = {}
-): Promise<Rapport> {
+): Promise<Report> {
 	const payload = await payloadDeTest()
-	const source = ouvrirLaSourceBun(sourceDuBanc().lecture)
+	const source = openSourceBun(sourceDuBanc().lecture)
 	try {
 		return await importer({
 			payload,

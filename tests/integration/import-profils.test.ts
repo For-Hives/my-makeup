@@ -3,8 +3,8 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { SQL } from 'bun'
-import { PROFILS_DU_SPAM } from '../../scripts/migration/import/profiles'
-import { CONTEXTE_IMPORT } from '../../src/lib/import-context'
+import { SPAM_PROFILES } from '../../scripts/migration/import/profiles'
+import { IMPORT_CONTEXT } from '../../src/lib/import-context'
 import { assignSlugs } from '../../src/lib/slug'
 import { PUBLIC_PROFILE_FIELDS, readPublicProfile } from '../../src/services/public/profiles'
 import { commandeDImport, DECISIONS_DU_BANC, FICHIER_DES_DECISIONS_DU_BANC, importerSurLeBanc } from '../outils/import'
@@ -119,7 +119,7 @@ describe('Après l’import de la source factice', () => {
 			crees: 13,
 			refuses: [],
 			ecartes: [29],
-			spam: [...PROFILS_DU_SPAM],
+			spam: [...SPAM_PROFILES],
 		})
 		expect(premier.decisionsSansObjet).toBe(0)
 		expect(await compterLesMails()).toBe(0)
@@ -131,7 +131,7 @@ describe('Après l’import de la source factice', () => {
 
 		expect(lignes.makeup_artistes).toHaveLength(27)
 		expect((bilan?.ecartes?.length ?? 0) + (bilan?.spam?.length ?? 0) + cible.length).toBe(bilan?.source ?? -1)
-		for (const id of PROFILS_DU_SPAM)
+		for (const id of SPAM_PROFILES)
 			expect(
 				cible.some(({ strapiId }) => strapiId === id),
 				String(id)
@@ -219,7 +219,7 @@ describe('Un choix du statut fixé par un passage précédent', () => {
 			id: zoe?.id ?? 0,
 			data: { status: 'draft' },
 			overrideAccess: true,
-			context: CONTEXTE_IMPORT,
+			context: IMPORT_CONTEXT,
 		})
 		expect((await profilsDeLaCible()).find(({ strapiId }) => strapiId === 21)).toMatchObject({
 			status: 'draft',

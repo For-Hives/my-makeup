@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { SQL } from 'bun'
+import type { Report } from '../../scripts/migration/import/report'
 import { ImportRefuse } from '../../scripts/migration/import/target'
-import type { Rapport } from '../../scripts/migration/import/report'
 import type { Profile } from '../../src/payload-types'
 import { DATE_DE_BASCULE_DU_BANC } from '../outils/banc'
 import { importerSurLeBanc } from '../outils/import'
@@ -61,7 +61,7 @@ async function avecLeProprietaire<T>(travail: (sql: SQL) => Promise<T>): Promise
 	}
 }
 
-let premier: Rapport
+let premier: Report
 
 beforeAll(async () => {
 	await viderLaBase()

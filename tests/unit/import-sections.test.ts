@@ -1,11 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import { type ProfilLu, profilsAttendus } from '../../scripts/migration/import/profiles'
-import {
-	lignesDansLesBornes,
-	SECTIONS_VIDES,
-	type SectionsLues,
-	valeursDesListes,
-} from '../../scripts/migration/import/sections'
+import { expectedProfiles, type ReadProfile } from '../../scripts/migration/import/profiles'
+import { EMPTY_SECTIONS, listsValues, type ReadSections, rowsInBounds } from '../../scripts/migration/import/sections'
 
 /**
  * Ticket 060: what the import makes of the sections of a profile of the old site, before and
@@ -14,14 +9,14 @@ import {
  * value here is fictional.
  */
 
-const sections = (modif: Partial<SectionsLues> = {}): SectionsLues => ({
-	...SECTIONS_VIDES,
+const sections = (modif: Partial<ReadSections> = {}): ReadSections => ({
+	...EMPTY_SECTIONS,
 	photoPrincipale: [],
 	galerie: [],
 	...modif,
 })
 
-const profil = (id: number, modif: Partial<SectionsLues> = {}): ProfilLu => {
+const profil = (id: number, modif: Partial<ReadSections> = {}): ReadProfile => {
 	const lues = sections(modif)
 	return {
 		id,
@@ -47,7 +42,7 @@ const profil = (id: number, modif: Partial<SectionsLues> = {}): ProfilLu => {
 
 describe('les listes d’un profil, sous les noms de Payload', () => {
 	test('chaque ligne dans son ordre, chaque valeur telle quelle ; un jour à midi UTC', () => {
-		const valeurs = valeursDesListes(
+		const valeurs = listsValues(
 			sections({
 				competences: [
 					{ name: 'Maquillage mariée', description: null },
@@ -152,7 +147,7 @@ describe('les listes d’un profil, sous les noms de Payload', () => {
 			'',
 			null,
 		]
-		const { serviceOffers: prestations } = valeursDesListes(
+		const { serviceOffers: prestations } = listsValues(
 			sections({
 				prestations: saisies.map((price, i) => ({
 					id: i + 1,
@@ -191,7 +186,7 @@ describe('les listes d’un profil, sous les noms de Payload', () => {
 
 	test('le bilan des prix compte en nombres et liste les profils, sans jamais citer un texte', () => {
 		const offre = (id: number, price: string | null) => ({ id, name: 'Offre', description: null, price, options: [] })
-		const { prix, attendus } = profilsAttendus(
+		const { prix, attendus } = expectedProfiles(
 			[
 				profil(1, { prestations: [offre(1, '80'), offre(2, 'Sur devis')] }),
 				profil(2, { prestations: [offre(3, '2 h : 150 €')] }),
@@ -226,7 +221,7 @@ describe('les listes d’un profil, sous les noms de Payload', () => {
 	})
 
 	test('un profil sans section n’a que des listes vides, et pas de réseaux', () => {
-		expect(valeursDesListes(sections())).toEqual({
+		expect(listsValues(sections())).toEqual({
 			skills: [],
 			languages: [],
 			courses: [],
@@ -251,7 +246,7 @@ describe('les photos d’un profil sont les médias adoptés de ses fichiers', (
 			[3, 13],
 		])
 
-		const { attendus, photosNonReprises } = profilsAttendus(
+		const { attendus, photosNonReprises } = expectedProfiles(
 			[profil(21, { photoPrincipale: [1], galerie: [3, 9, 2] }), profil(22, { photoPrincipale: [8] })],
 			comptes,
 			undefined,
@@ -270,7 +265,7 @@ describe('les photos d’un profil sont les médias adoptés de ses fichiers', (
 	})
 
 	test('le statut lit si la photo principale est adoptée, même avant que son média existe (à blanc)', () => {
-		const { attendus, statuts, statutsDifferentsDeLaSource } = profilsAttendus(
+		const { attendus, statuts, statutsDifferentsDeLaSource } = expectedProfiles(
 			[profil(21, { photoPrincipale: [1] }), profil(22, { photoPrincipale: [2] }), profil(23)],
 			comptes,
 			undefined,
@@ -289,7 +284,7 @@ describe('les photos d’un profil sont les médias adoptés de ses fichiers', (
 	})
 
 	test('un lien de liste sans ligne est signalé par son profil', () => {
-		const { liensSansLigne } = profilsAttendus([profil(21, { liensSansLigne: 2 }), profil(22)], comptes)
+		const { liensSansLigne } = expectedProfiles([profil(21, { liensSansLigne: 2 }), profil(22)], comptes)
 
 		expect(liensSansLigne).toEqual([21])
 	})
@@ -311,7 +306,7 @@ describe('une ligne hors d’une borne de la v3 est laissée de côté et listé
 		date_graduation: jour,
 		course_description: null,
 	})
-	const offre = (id: number, modif: Partial<SectionsLues['prestations'][number]> = {}) => ({
+	const offre = (id: number, modif: Partial<ReadSections['prestations'][number]> = {}) => ({
 		id,
 		name: `Offre ${id}`,
 		description: null,
@@ -321,7 +316,7 @@ describe('une ligne hors d’une borne de la v3 est laissée de côté et listé
 	})
 
 	test('une fin d’expérience avant son début : la ligne part, les autres restent à leur rang', () => {
-		const { sections: gardees, laissees } = lignesDansLesBornes(
+		const { sections: gardees, laissees } = rowsInBounds(
 			sections({
 				experiences: [
 					experience('2020-01-01', '2021-01-01'),
@@ -338,7 +333,7 @@ describe('une ligne hors d’une borne de la v3 est laissée de côté et listé
 	})
 
 	test('une formation datée de plus d’un an après le jour part ; un an exactement reste', () => {
-		const { sections: gardees, laissees } = lignesDansLesBornes(
+		const { sections: gardees, laissees } = rowsInBounds(
 			sections({
 				formations: [formation('2027-10-16'), formation('2027-10-17'), formation('2018-06-30'), formation(null)],
 			}),
@@ -350,7 +345,7 @@ describe('une ligne hors d’une borne de la v3 est laissée de côté et listé
 	})
 
 	test('un nom de plus de 70 caractères et une description de plus de 2 000 : à 70 et 2 000 ils restent', () => {
-		const { sections: gardees, laissees } = lignesDansLesBornes(
+		const { sections: gardees, laissees } = rowsInBounds(
 			sections({
 				prestations: [
 					offre(1, { name: 'x'.repeat(70), description: 'y'.repeat(2000) }),
@@ -382,7 +377,7 @@ describe('une ligne hors d’une borne de la v3 est laissée de côté et listé
 	})
 
 	test('une offre laissée de côté emporte ses options, chacune listée', () => {
-		const { sections: gardees, laissees } = lignesDansLesBornes(
+		const { sections: gardees, laissees } = rowsInBounds(
 			sections({
 				prestations: [
 					offre(1, {
@@ -408,8 +403,8 @@ describe('une ligne hors d’une borne de la v3 est laissée de côté et listé
 			prestations: [offre(1)],
 		})
 
-		expect(lignesDansLesBornes(lues, AUJOURD_HUI)).toEqual({ sections: lues, laissees: [] })
-		const { laissees } = lignesDansLesBornes(sections({ langues: [{ name: 'Secret'.repeat(20) }] }), AUJOURD_HUI)
+		expect(rowsInBounds(lues, AUJOURD_HUI)).toEqual({ sections: lues, laissees: [] })
+		const { laissees } = rowsInBounds(sections({ langues: [{ name: 'Secret'.repeat(20) }] }), AUJOURD_HUI)
 		expect(JSON.stringify(laissees)).not.toContain('Secret')
 	})
 
@@ -418,7 +413,7 @@ describe('une ligne hors d’une borne de la v3 est laissée de côté et listé
 			experiences: [experience('2022-05-01', '2021-01-01')],
 			prestations: [offre(1, { description: 'y'.repeat(2001), price: '80 €' }), offre(2, { price: '60 €' })],
 		})
-		const { attendus, lignesLaissees, prix } = profilsAttendus(
+		const { attendus, lignesLaissees, prix } = expectedProfiles(
 			[profil(1, lues)],
 			new Map([[101, 1]]),
 			undefined,

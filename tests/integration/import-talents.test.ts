@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { SQL } from 'bun'
-import { codeDeSortie } from '../../scripts/migration/import/report'
+import { exitCode } from '../../scripts/migration/import/report'
 import { TALENT_PAGE_TITLES } from '../../src/content/talent-titles'
 import { commandeDImport, FICHIER_DES_DECISIONS_DU_BANC, importerSurLeBanc } from '../outils/import'
 import { compterLesMails, viderLeCapteur } from '../outils/mailpit'
@@ -186,7 +186,7 @@ describe('Critère 2 : passage réel, autant de talents, champs égaux, slug ide
 		expect((await talentsDeLaCible())[0]?.title).toBe('Maquillage de mariage')
 		// Refused, they count: the parity says it is incomplete by them, and by nothing else.
 		expect(rapport.parite?.talents).toMatchObject({ attendus: 5, egaux: 3, refuses: [5, 6], manquants: [] })
-		expect(codeDeSortie(rapport)).toBe(5)
+		expect(exitCode(rapport)).toBe(5)
 	})
 })
 

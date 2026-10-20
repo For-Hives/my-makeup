@@ -33,19 +33,19 @@ import {
 	obtainMessage,
 	textMessage,
 } from '../../../src/lib/profile/lists'
-import { TYPE_PROFIL } from './media'
-import type { Requete } from './source'
+import { PROFILE_TYPE } from './media'
+import type { Query } from './source'
 
-export interface Competence {
+export interface Skill {
 	name: string | null
 	description: string | null
 }
 
-export interface Langue {
+export interface Language {
 	name: string | null
 }
 
-export interface Formation {
+export interface Course {
 	diploma: string | null
 	school: string | null
 	/** « YYYY-MM-DD », the day of the old site. */
@@ -62,28 +62,28 @@ export interface Experience {
 	description: string | null
 }
 
-export interface OptionDePrestation {
+export interface ServiceOfferOption {
 	name: string | null
 	description: string | null
 	price: string | null
 }
 
-export interface Prestation {
+export interface ServiceOffer {
 	/** The row of Strapi: its options hang on it. */
 	id: number
 	name: string | null
 	description: string | null
 	price: string | null
-	options: OptionDePrestation[]
+	options: ServiceOfferOption[]
 }
 
 /** The sections of one profile of the source, in their order, under the names of Strapi. */
-export interface SectionsLues {
-	competences: Competence[]
-	langues: Langue[]
-	formations: Formation[]
+export interface ReadSections {
+	competences: Skill[]
+	langues: Language[]
+	formations: Course[]
 	experiences: Experience[]
-	prestations: Prestation[]
+	prestations: ServiceOffer[]
 	/** The single network row of the profile, phone and email included (read, never written here). */
 	reseau: ProfileNetworks | null
 	/** The files of its main picture and of its gallery, in order. */
@@ -93,7 +93,7 @@ export interface SectionsLues {
 	liensSansLigne: number
 }
 
-export const SECTIONS_VIDES: SectionsLues = {
+export const EMPTY_SECTIONS: ReadSections = {
 	competences: [],
 	langues: [],
 	formations: [],
@@ -106,182 +106,176 @@ export const SECTIONS_VIDES: SectionsLues = {
 }
 
 /** A day of the old site, as text: a `date` column read by both clients the same way. */
-const jour = (colonne: string): string => `to_char(c.${colonne}, 'YYYY-MM-DD') AS ${colonne}`
+const dayColumn = (colonne: string): string => `to_char(c.${colonne}, 'YYYY-MM-DD') AS ${colonne}`
 
 /**
  * The rows of one list of the entries of `liens`, in their order, the link kept even when its row
  * is missing (`ligne` is then null). The names here are constants of this file, never a value.
  */
-const lectureDUneListe = (liens: string, table: string, type: string, champ: string, colonnes: readonly string[]) =>
+const listQuery = (liens: string, table: string, type: string, champ: string, colonnes: readonly string[]) =>
 	`SELECT l.entity_id AS entree, c.id AS ligne, ${colonnes.join(', ')}
 	FROM ${liens} l LEFT JOIN ${table} c ON c.id = l.component_id
 	WHERE l.component_type = '${type}' AND l.field = '${champ}' ORDER BY l.entity_id, l."order", l.id`
 
-const LIENS_DES_PROFILS = 'makeup_artistes_components'
+const PROFILES_LINKS = 'makeup_artistes_components'
 
-const LECTURES = {
-	competences: lectureDUneListe(
-		LIENS_DES_PROFILS,
-		'components_makeupartists_skills',
-		'makeupartists.skills',
-		'skills',
-		['c.name', 'c.description']
-	),
-	langues: lectureDUneListe(
-		LIENS_DES_PROFILS,
-		'components_makeupartists_languages',
-		'makeupartists.language',
-		'language',
-		['c.name']
-	),
-	formations: lectureDUneListe(
-		LIENS_DES_PROFILS,
-		'components_makeupartists_courses',
-		'makeupartists.courses',
-		'courses',
-		['c.diploma', 'c.school', jour('date_graduation'), 'c.course_description']
-	),
-	experiences: lectureDUneListe(
-		LIENS_DES_PROFILS,
+const QUERIES = {
+	competences: listQuery(PROFILES_LINKS, 'components_makeupartists_skills', 'makeupartists.skills', 'skills', [
+		'c.name',
+		'c.description',
+	]),
+	langues: listQuery(PROFILES_LINKS, 'components_makeupartists_languages', 'makeupartists.language', 'language', [
+		'c.name',
+	]),
+	formations: listQuery(PROFILES_LINKS, 'components_makeupartists_courses', 'makeupartists.courses', 'courses', [
+		'c.diploma',
+		'c.school',
+		dayColumn('date_graduation'),
+		'c.course_description',
+	]),
+	experiences: listQuery(
+		PROFILES_LINKS,
 		'components_makeupartists_experiences',
 		'makeupartists.experiences',
 		'experiences',
-		['c.company', 'c.job_name', 'c.city', jour('date_start'), jour('date_end'), 'c.description']
+		['c.company', 'c.job_name', 'c.city', dayColumn('date_start'), dayColumn('date_end'), 'c.description']
 	),
-	prestations: lectureDUneListe(
-		LIENS_DES_PROFILS,
+	prestations: listQuery(
+		PROFILES_LINKS,
 		'components_makeupartists_service_offers',
 		'makeupartists.service-offers',
 		'service_offers',
 		['c.name', 'c.description', 'c.price']
 	),
-	options: lectureDUneListe(
+	options: listQuery(
 		'components_makeupartists_service_offers_components',
 		'components_service_offers_options',
 		'service-offers.options',
 		'options',
 		['c.name', 'c.description', 'c.price']
 	),
-	reseaux: lectureDUneListe(
-		LIENS_DES_PROFILS,
-		'components_makeupartists_networks',
-		'makeupartists.network',
-		'network',
-		['c.youtube', 'c.facebook', 'c.instagram', 'c.website', 'c.linkedin', 'c.phone', 'c.email']
-	),
+	reseaux: listQuery(PROFILES_LINKS, 'components_makeupartists_networks', 'makeupartists.network', 'network', [
+		'c.youtube',
+		'c.facebook',
+		'c.instagram',
+		'c.website',
+		'c.linkedin',
+		'c.phone',
+		'c.email',
+	]),
 	photos: `SELECT related_id AS entree, file_id AS fichier, field AS champ FROM files_related_morphs
-		WHERE related_type = '${TYPE_PROFIL}' AND field IN ('main_picture', 'image_gallery')
+		WHERE related_type = '${PROFILE_TYPE}' AND field IN ('main_picture', 'image_gallery')
 		ORDER BY related_id, field, "order", id`,
 } as const
 
-type LigneLue<T> = T & { entree: number; ligne: number | null }
+type ReadRow<T> = T & { entree: number; ligne: number | null }
 
 /** The rows of each entry, in order; a link without its row counted apart. */
-function parEntree<T extends object>(lignes: readonly LigneLue<T>[], sansLigne: Map<number, number>): Map<number, T[]> {
-	const parId = new Map<number, T[]>()
-	for (const { entree, ligne, ...valeurs } of lignes) {
-		const id = Number(entree)
-		if (ligne === null) {
+function byEntry<T extends object>(lignes: readonly ReadRow<T>[], sansLigne: Map<number, number>): Map<number, T[]> {
+	const byId = new Map<number, T[]>()
+	for (const { entree: entry, ligne: row, ...values } of lignes) {
+		const id = Number(entry)
+		if (row === null) {
 			sansLigne.set(id, (sansLigne.get(id) ?? 0) + 1)
 			continue
 		}
-		parId.set(id, [...(parId.get(id) ?? []), valeurs as unknown as T])
+		byId.set(id, [...(byId.get(id) ?? []), values as unknown as T])
 	}
-	return parId
+	return byId
 }
 
 /** The sections of every profile of the source that has one, by its identifier. */
-export async function lireLesSections(requete: Requete): Promise<Map<number, SectionsLues>> {
-	const sansLigne = new Map<number, number>()
-	const sansLigneDesOffres = new Map<number, number>()
-	const competences = parEntree(await requete<LigneLue<Competence>>(LECTURES.competences), sansLigne)
-	const langues = parEntree(await requete<LigneLue<Langue>>(LECTURES.langues), sansLigne)
-	const formations = parEntree(await requete<LigneLue<Formation>>(LECTURES.formations), sansLigne)
-	const experiences = parEntree(await requete<LigneLue<Experience>>(LECTURES.experiences), sansLigne)
-	const reseaux = parEntree(await requete<LigneLue<ProfileNetworks>>(LECTURES.reseaux), sansLigne)
-	const prestationsLues = await requete<LigneLue<Omit<Prestation, 'id' | 'options'>>>(LECTURES.prestations)
+export async function readSections(requete: Query): Promise<Map<number, ReadSections>> {
+	const withoutRow = new Map<number, number>()
+	const withoutOffersRow = new Map<number, number>()
+	const skills = byEntry(await requete<ReadRow<Skill>>(QUERIES.competences), withoutRow)
+	const languages = byEntry(await requete<ReadRow<Language>>(QUERIES.langues), withoutRow)
+	const courses = byEntry(await requete<ReadRow<Course>>(QUERIES.formations), withoutRow)
+	const experiences = byEntry(await requete<ReadRow<Experience>>(QUERIES.experiences), withoutRow)
+	const networks = byEntry(await requete<ReadRow<ProfileNetworks>>(QUERIES.reseaux), withoutRow)
+	const readServiceOffers = await requete<ReadRow<Omit<ServiceOffer, 'id' | 'options'>>>(QUERIES.prestations)
 	// The options hang on the row of their offer, by its identifier in Strapi.
-	const options = parEntree(await requete<LigneLue<OptionDePrestation>>(LECTURES.options), sansLigneDesOffres)
-	const prestations = parEntree(
-		prestationsLues.map(lue => ({ ...lue, id: lue.ligne, options: [] as OptionDePrestation[] })),
-		sansLigne
+	const options = byEntry(await requete<ReadRow<ServiceOfferOption>>(QUERIES.options), withoutOffersRow)
+	const serviceOffers = byEntry(
+		readServiceOffers.map(lue => ({ ...lue, id: lue.ligne, options: [] as ServiceOfferOption[] })),
+		withoutRow
 	)
-	const photos = await requete<{ entree: number; fichier: number; champ: string }>(LECTURES.photos)
+	const photos = await requete<{ entree: number; fichier: number; champ: string }>(QUERIES.photos)
 
-	const sections = new Map<number, SectionsLues>()
-	const de = (id: number): SectionsLues => {
-		let lues = sections.get(id)
-		if (!lues) {
-			lues = { ...SECTIONS_VIDES, photoPrincipale: [], galerie: [] }
-			sections.set(id, lues)
+	const sections = new Map<number, ReadSections>()
+	const sectionsOf = (id: number): ReadSections => {
+		let read = sections.get(id)
+		if (!read) {
+			read = { ...EMPTY_SECTIONS, photoPrincipale: [], galerie: [] }
+			sections.set(id, read)
 		}
-		return lues
+		return read
 	}
-	for (const [id, lignes] of competences) de(id).competences = lignes
-	for (const [id, lignes] of langues) de(id).langues = lignes
-	for (const [id, lignes] of formations) de(id).formations = lignes
-	for (const [id, lignes] of experiences) de(id).experiences = lignes
-	for (const [id, [premier]] of reseaux) de(id).reseau = premier ?? null
-	for (const [id, lignes] of prestations)
-		de(id).prestations = lignes.map(prestation => ({
+	for (const [id, rows] of skills) sectionsOf(id).competences = rows
+	for (const [id, rows] of languages) sectionsOf(id).langues = rows
+	for (const [id, rows] of courses) sectionsOf(id).formations = rows
+	for (const [id, rows] of experiences) sectionsOf(id).experiences = rows
+	for (const [id, [first]] of networks) sectionsOf(id).reseau = first ?? null
+	for (const [id, rows] of serviceOffers)
+		sectionsOf(id).prestations = rows.map(prestation => ({
 			...prestation,
 			id: Number(prestation.id),
 			options: options.get(Number(prestation.id)) ?? [],
 		}))
-	for (const { entree, fichier, champ } of photos) {
-		const lues = de(Number(entree))
-		if (champ === 'main_picture') lues.photoPrincipale.push(Number(fichier))
-		else lues.galerie.push(Number(fichier))
+	for (const { entree: entry, fichier: file, champ: field } of photos) {
+		const read = sectionsOf(Number(entry))
+		if (field === 'main_picture') read.photoPrincipale.push(Number(file))
+		else read.galerie.push(Number(file))
 	}
-	for (const [id, nombre] of sansLigne) de(id).liensSansLigne += nombre
+	for (const [id, count] of withoutRow) sectionsOf(id).liensSansLigne += count
 	// A link of an option without its row belongs to the profile of its offer.
-	for (const [offre, nombre] of sansLigneDesOffres) {
-		const profil = [...sections].find(([, lues]) => lues.prestations.some(({ id }) => id === offre))?.[0]
-		if (profil !== undefined) de(profil).liensSansLigne += nombre
+	for (const [offer, count] of withoutOffersRow) {
+		const profile = [...sections].find(([, read]) => read.prestations.some(({ id }) => id === offer))?.[0]
+		if (profile !== undefined) sectionsOf(profile).liensSansLigne += count
 	}
 	return sections
 }
 
 /** A list whose rows the import may leave out when one of their values is outside a bound of the v3. */
-export type ListeBornee = 'competences' | 'langues' | 'formations' | 'experiences' | 'prestations' | 'options'
+export type BoundedList = 'competences' | 'langues' | 'formations' | 'experiences' | 'prestations' | 'options'
 
 /**
  * A row left out of its profile, by list and rank (1 for the first row of the list, in the order of
  * the source). Never its text. For an option: `prestation` is the rank of its offer, `rang` its own
  * rank among the options of that offer.
  */
-export interface LigneLaissee {
-	liste: ListeBornee
+export interface SkippedRow {
+	liste: BoundedList
 	rang: number
 	prestation?: number
 }
 
-const horsTexte = (valeur: string | null, maximum: number): boolean => textMessage(valeur, maximum) !== null
-const horsNom = (valeur: string | null): boolean => horsTexte(valeur, NAME_MAX_LENGTH)
-const horsDescription = (valeur: string | null): boolean => horsTexte(valeur, DESCRIPTION_MAX_LENGTH)
+const outsideText = (valeur: string | null, maximum: number): boolean => textMessage(valeur, maximum) !== null
+const outsideName = (valeur: string | null): boolean => outsideText(valeur, NAME_MAX_LENGTH)
+const outsideDescription = (valeur: string | null): boolean => outsideText(valeur, DESCRIPTION_MAX_LENGTH)
 
 /**
  * Whether the server (src/collections/profile-lists.ts) would refuse a row, and with it the whole
  * profile: a text longer than its bound, a course obtained more than a year after `maintenant`,
  * an experience that ends before it starts. These bounds are the v3's, stricter than Strapi's.
  */
-const horsBornes = {
-	competences: (c: Competence) => horsNom(c.name) || horsDescription(c.description),
-	langues: (l: Langue) => horsNom(l.name),
-	formations: (f: Formation, maintenant: Date) =>
-		horsNom(f.diploma) ||
-		horsNom(f.school) ||
-		horsDescription(f.course_description) ||
+const outsideBounds = {
+	competences: (c: Skill) => outsideName(c.name) || outsideDescription(c.description),
+	langues: (l: Language) => outsideName(l.name),
+	formations: (f: Course, maintenant: Date) =>
+		outsideName(f.diploma) ||
+		outsideName(f.school) ||
+		outsideDescription(f.course_description) ||
 		obtainMessage(f.date_graduation, maintenant) !== null,
 	experiences: (e: Experience) =>
-		horsNom(e.company) ||
-		horsNom(e.job_name) ||
-		horsNom(e.city) ||
-		horsDescription(e.description) ||
+		outsideName(e.company) ||
+		outsideName(e.job_name) ||
+		outsideName(e.city) ||
+		outsideDescription(e.description) ||
 		dateMessage(e.date_start) !== null ||
 		endMessage(e.date_end, e.date_start) !== null,
-	prestations: (p: Pick<OptionDePrestation, 'name' | 'description' | 'price'>) =>
-		horsNom(p.name) || horsDescription(p.description) || horsNom(p.price),
+	prestations: (p: Pick<ServiceOfferOption, 'name' | 'description' | 'price'>) =>
+		outsideName(p.name) || outsideDescription(p.description) || outsideName(p.price),
 } as const
 
 /**
@@ -289,41 +283,42 @@ const horsBornes = {
  * and listed, never corrected). The rest of the profile is taken. An offer left out takes its
  * options with it, and each of them is listed too.
  */
-export function lignesDansLesBornes(
-	sections: SectionsLues,
+export function rowsInBounds(
+	sections: ReadSections,
 	maintenant: Date
-): { sections: SectionsLues; laissees: LigneLaissee[] } {
-	const laissees: LigneLaissee[] = []
-	const garder = <T>(liste: ListeBornee, lignes: readonly T[], horsDesBornes: (ligne: T) => boolean): T[] =>
+): { sections: ReadSections; laissees: SkippedRow[] } {
+	const skipped: SkippedRow[] = []
+	const keep = <T>(liste: BoundedList, lignes: readonly T[], horsDesBornes: (ligne: T) => boolean): T[] =>
 		lignes.filter((ligne, rang) => {
-			const hors = horsDesBornes(ligne)
-			if (hors) laissees.push({ liste, rang: rang + 1 })
-			return !hors
+			const outside = horsDesBornes(ligne)
+			if (outside) skipped.push({ liste, rang: rang + 1 })
+			return !outside
 		})
-	const prestations = sections.prestations.flatMap((offre, rangDeLOffre): Prestation[] => {
-		const prestation = rangDeLOffre + 1
+	const serviceOffers = sections.prestations.flatMap((offre, rangDeLOffre): ServiceOffer[] => {
+		const serviceOffer = rangDeLOffre + 1
 		const options = offre.options.map((option, rang) => ({ option, rang: rang + 1 }))
-		if (horsBornes.prestations(offre)) {
-			laissees.push({ liste: 'prestations', rang: prestation })
-			for (const { rang } of options) laissees.push({ liste: 'options', rang, prestation })
+		if (outsideBounds.prestations(offre)) {
+			skipped.push({ liste: 'prestations', rang: serviceOffer })
+			for (const { rang: position } of options)
+				skipped.push({ liste: 'options', rang: position, prestation: serviceOffer })
 			return []
 		}
-		const gardees = options.filter(({ option, rang }) => {
-			const hors = horsBornes.prestations(option)
-			if (hors) laissees.push({ liste: 'options', rang, prestation })
-			return !hors
+		const keptItems = options.filter(({ option, rang: position }) => {
+			const outside = outsideBounds.prestations(option)
+			if (outside) skipped.push({ liste: 'options', rang: position, prestation: serviceOffer })
+			return !outside
 		})
-		return [{ ...offre, options: gardees.map(({ option }) => option) }]
+		return [{ ...offre, options: keptItems.map(({ option }) => option) }]
 	})
-	const gardees: SectionsLues = {
+	const keptItems: ReadSections = {
 		...sections,
-		competences: garder('competences', sections.competences, horsBornes.competences),
-		langues: garder('langues', sections.langues, horsBornes.langues),
-		formations: garder('formations', sections.formations, f => horsBornes.formations(f, maintenant)),
-		experiences: garder('experiences', sections.experiences, horsBornes.experiences),
-		prestations,
+		competences: keep('competences', sections.competences, outsideBounds.competences),
+		langues: keep('langues', sections.langues, outsideBounds.langues),
+		formations: keep('formations', sections.formations, f => outsideBounds.formations(f, maintenant)),
+		experiences: keep('experiences', sections.experiences, outsideBounds.experiences),
+		prestations: serviceOffers,
 	}
-	const ordre: readonly ListeBornee[] = [
+	const order: readonly BoundedList[] = [
 		'competences',
 		'langues',
 		'formations',
@@ -331,21 +326,21 @@ export function lignesDansLesBornes(
 		'prestations',
 		'options',
 	]
-	laissees.sort(
+	skipped.sort(
 		(a, b) =>
-			ordre.indexOf(a.liste) - ordre.indexOf(b.liste) || (a.prestation ?? 0) - (b.prestation ?? 0) || a.rang - b.rang
+			order.indexOf(a.liste) - order.indexOf(b.liste) || (a.prestation ?? 0) - (b.prestation ?? 0) || a.rang - b.rang
 	)
-	return { sections: gardees, laissees }
+	return { sections: keptItems, laissees: skipped }
 }
 
 /** A day of these lists as the collection stores it, or null. */
-const leJour = (date: string | null): unknown => (date === null ? null : dayDate(date))
+const toDay = (date: string | null): unknown => (date === null ? null : dayDate(date))
 
 /**
  * A price of the source: the text byte for byte (not trimmed: rule 2), and the amount the single
  * rule reads in it, or null.
  */
-const prixDeLaSource = (saisie: string | null) => ({
+const sourcePrice = (saisie: string | null) => ({
 	priceText: saisie,
 	priceFrom: parsePrice(saisie).priceFrom,
 })
@@ -354,42 +349,42 @@ const prixDeLaSource = (saisie: string | null) => ({
  * The lists and the networks of a profile, under the names of Payload, in the order of the old
  * site, each value as it is. The rows carry no identifier: Payload gives one.
  */
-export function valeursDesListes(sections: SectionsLues): Record<string, unknown> {
-	const reseau = sections.reseau
+export function listsValues(sections: ReadSections): Record<string, unknown> {
+	const network = sections.reseau
 	return {
 		skills: sections.competences.map(({ name, description }) => ({ name, description })),
 		languages: sections.langues.map(({ name }) => ({ name })),
 		courses: sections.formations.map(({ diploma, school, date_graduation, course_description }) => ({
 			diploma,
 			school,
-			graduatedAt: leJour(date_graduation),
+			graduatedAt: toDay(date_graduation),
 			description: course_description,
 		})),
 		experiences: sections.experiences.map(({ company, job_name, city, date_start, date_end, description }) => ({
 			company,
 			jobTitle: job_name,
 			city,
-			startDate: leJour(date_start),
-			endDate: leJour(date_end),
+			startDate: toDay(date_start),
+			endDate: toDay(date_end),
 			description,
 		})),
 		serviceOffers: sections.prestations.map(({ name, description, price, options }) => ({
 			name,
 			description,
-			...prixDeLaSource(price),
+			...sourcePrice(price),
 			options: options.map(option => ({
 				name: option.name,
 				description: option.description,
-				...prixDeLaSource(option.price),
+				...sourcePrice(option.price),
 			})),
 		})),
-		networks: reseau
+		networks: network
 			? {
-					youtube: reseau.youtube ?? null,
-					facebook: reseau.facebook ?? null,
-					instagram: reseau.instagram ?? null,
-					website: reseau.website ?? null,
-					linkedin: reseau.linkedin ?? null,
+					youtube: network.youtube ?? null,
+					facebook: network.facebook ?? null,
+					instagram: network.instagram ?? null,
+					website: network.website ?? null,
+					linkedin: network.linkedin ?? null,
 				}
 			: null,
 	}

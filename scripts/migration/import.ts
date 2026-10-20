@@ -38,45 +38,45 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { EnvError, mediaBaseUrl, serverEnv } from '../../src/lib/env'
-import { FICHIER_DES_COMMUNES_PAR_DEFAUT, lireLesArguments, USAGE } from './import/arguments'
-import {
-	configurationSansChangementDeSchema,
-	ImportRefuse,
-	verifierLaBaseAttendue,
-	verifierLaCible,
-	verifierLeSchemaDeLaCible,
-} from './import/target'
-import { AUCUNE_DECISION, type Decisions, lireLesDecisions } from './import/decisions'
+import { DEFAULT_CITIES_FILE, readArguments, USAGE } from './import/arguments'
+import { type Decisions, NO_DECISION, readDecisions } from './import/decisions'
+import { InterruptedImport, unexpectedErrorMessage } from './import/engine'
 import { importer } from './import/importer'
-import { ImportInterrompu, messageDUneErreurInattendue } from './import/engine'
-import { dateDeBascule } from './import/profiles'
-import { codeDeSortie, codeDuControle, controleEnTexte, rapportEnTexte } from './import/report'
+import { cutoverDate } from './import/profiles'
 import {
-	lireLesReponses,
-	type ReferentielGarde,
-	type ReponsesGardees,
-	referentielGarde,
-	referentielGeoApi,
-	reponsesEnTexte,
+	answersAsText,
+	geoApiReference,
+	type KeptAnswers,
+	type KeptReference,
+	keptReference,
+	readAnswers,
 } from './import/reference'
-import { ouvrirLaSourceBun } from './import/source-bun'
+import { checkAsText, checkExitCode, exitCode, reportAsText } from './import/report'
+import { openSourceBun } from './import/source-bun'
+import {
+	configurationWithoutSchemaChange,
+	ImportRefuse,
+	verifyExpectedDatabase,
+	verifyTarget,
+	verifyTargetSchema,
+} from './import/target'
 
 /** The table of decisions from its file. The file is not printed: an error says what is wrong in it. */
-function lireLeFichierDesDecisions(fichier: string): Decisions {
-	let texte: string
+function readDecisionsFile(fichier: string): Decisions {
+	let text: string
 	try {
-		texte = readFileSync(fichier, 'utf8')
+		text = readFileSync(fichier, 'utf8')
 	} catch {
 		throw new ImportRefuse('La table de décision donnée par --decisions ne se lit pas : rien n’est écrit.')
 	}
-	return lireLesDecisions(texte)
+	return readDecisions(text)
 }
 
 /**
  * The kept answers of the referential from their file: none when it does not exist yet, unless the
  * run is offline, which needs them all.
  */
-function lireLeFichierDesReponses(fichier: string, horsLigne: boolean): ReponsesGardees {
+function readAnswersFile(fichier: string, horsLigne: boolean): KeptAnswers {
 	if (!existsSync(fichier)) {
 		if (horsLigne)
 			throw new ImportRefuse(
@@ -85,51 +85,51 @@ function lireLeFichierDesReponses(fichier: string, horsLigne: boolean): Reponses
 		return new Map()
 	}
 	try {
-		return lireLesReponses(readFileSync(fichier, 'utf8'))
-	} catch (erreur) {
-		if (erreur instanceof ImportRefuse) throw erreur
+		return readAnswers(readFileSync(fichier, 'utf8'))
+	} catch (error) {
+		if (error instanceof ImportRefuse) throw error
 		throw new ImportRefuse('Le fichier des réponses du référentiel des communes ne se lit pas : rien n’est écrit.')
 	}
 }
 
 /** Keeps the answers received during the run, even when it stopped: the next run asks them no more. */
-function garderLesReponses(fichier: string, referentiel: ReferentielGarde): void {
+function keepAnswers(fichier: string, referentiel: KeptReference): void {
 	if (referentiel.nouvelles() === 0) return
 	mkdirSync(path.dirname(fichier), { recursive: true })
-	writeFileSync(fichier, reponsesEnTexte(referentiel.reponses), { mode: 0o600 })
+	writeFileSync(fichier, answersAsText(referentiel.reponses), { mode: 0o600 })
 }
 
 async function principal(argumentsDeLaCommande: string[]): Promise<number> {
-	const options = lireLesArguments(argumentsDeLaCommande)
+	const options = readArguments(argumentsDeLaCommande)
 	if (!options) {
 		console.error(USAGE)
 		return 2
 	}
 	// Before anything is loaded: the configuration of Payload connects to whatever DATABASE_URI names.
-	const cible = verifierLaCible(process.env.DATABASE_URI, options)
-	const adresseDeLaSource = process.env.STRAPI_SOURCE_URI
-	if (!adresseDeLaSource)
+	const target = verifyTarget(process.env.DATABASE_URI, options)
+	const sourceAddress = process.env.STRAPI_SOURCE_URI
+	if (!sourceAddress)
 		throw new ImportRefuse('STRAPI_SOURCE_URI manque : l’import ne sait pas quelle base Strapi lire. Rien n’est écrit.')
-	const consentiLe = options.consentiLe === undefined ? undefined : dateDeBascule(options.consentiLe)
-	if (consentiLe === null)
+	const consentDate = options.consentiLe === undefined ? undefined : cutoverDate(options.consentiLe)
+	if (consentDate === null)
 		throw new ImportRefuse(
 			'La date de --consentement-le n’est pas une date (2026-11-02, ou 2026-11-02T08:00:00Z) : rien n’est écrit.'
 		)
-	const decisions = options.decisions ? lireLeFichierDesDecisions(options.decisions) : AUCUNE_DECISION
-	const fichierDesCommunes = options.communes ?? FICHIER_DES_COMMUNES_PAR_DEFAUT
-	const referentiel = referentielGarde(
-		lireLeFichierDesReponses(fichierDesCommunes, options.horsLigne === true),
-		options.horsLigne ? null : referentielGeoApi()
+	const decisions = options.decisions ? readDecisionsFile(options.decisions) : NO_DECISION
+	const citiesFile = options.communes ?? DEFAULT_CITIES_FILE
+	const reference = keptReference(
+		readAnswersFile(citiesFile, options.horsLigne === true),
+		options.horsLigne ? null : geoApiReference()
 	)
 
 	const [{ getPayload }, { default: config }] = await Promise.all([import('payload'), import('@payload-config')])
-	const payload = await getPayload({ config: configurationSansChangementDeSchema(await config) })
+	const payload = await getPayload({ config: configurationWithoutSchemaChange(await config) })
 	// Named by `--base-attendue` (required with `--cible-distante`): checked before the first read.
-	if (options.baseAttendue !== undefined) await verifierLaBaseAttendue(payload, options.baseAttendue)
-	await verifierLeSchemaDeLaCible(payload)
+	if (options.baseAttendue !== undefined) await verifyExpectedDatabase(payload, options.baseAttendue)
+	await verifyTargetSchema(payload)
 	// Where the photos are served from, as the application gives their addresses (src/payload.config.ts).
 	// `--sans-photos`: no storage at all; nothing is asked of any host.
-	const baseDesMedias = options.sansPhotos ? null : mediaBaseUrl(process.env.R2_PUBLIC_URL, serverEnv().storage)
+	const mediaBase = options.sansPhotos ? null : mediaBaseUrl(process.env.R2_PUBLIC_URL, serverEnv().storage)
 	// A check without storage cannot conclude on the photos: every file is « sans-stockage », so no
 	// media document is expected and the verdict would be a false green. Refused outright.
 	if (options.sansPhotos && options.controle)
@@ -144,42 +144,42 @@ async function principal(argumentsDeLaCommande: string[]): Promise<number> {
 				'--sans-photos ne va pas avec --reel sur une cible qui garde déjà des médias : le passage retirerait les photos des profils. Rien n’est écrit ; relance avec le stockage, sans --sans-photos.'
 			)
 	}
-	const source = ouvrirLaSourceBun(adresseDeLaSource)
+	const source = openSourceBun(sourceAddress)
 	try {
-		const rapport = await importer({
+		const report = await importer({
 			payload,
 			source,
 			mode: options.mode,
-			cible,
+			cible: target,
 			decisions,
-			consentiLe,
+			consentiLe: consentDate,
 			cibleEnService: options.cibleEnService === true,
-			referentiel,
-			medias: baseDesMedias === null ? undefined : { base: baseDesMedias },
+			referentiel: reference,
+			medias: mediaBase === null ? undefined : { base: mediaBase },
 			// Read by its owner only: what was asked of the referential for each city to review.
 			surLaRevue: revue => {
 				if (options.revue) writeFileSync(options.revue, `${JSON.stringify(revue, null, '\t')}\n`, { mode: 0o600 })
 			},
 		})
-		console.log(rapportEnTexte(rapport))
-		if (options.controle) console.log(controleEnTexte(rapport))
+		console.log(reportAsText(report))
+		if (options.controle) console.log(checkAsText(report))
 		// Read by its owner only: it lists identifiers of the old base.
-		if (options.rapport) writeFileSync(options.rapport, `${JSON.stringify(rapport, null, '\t')}\n`, { mode: 0o600 })
-		return options.controle ? codeDuControle(rapport) : codeDeSortie(rapport)
+		if (options.rapport) writeFileSync(options.rapport, `${JSON.stringify(report, null, '\t')}\n`, { mode: 0o600 })
+		return options.controle ? checkExitCode(report) : exitCode(report)
 	} finally {
-		garderLesReponses(fichierDesCommunes, referentiel)
+		keepAnswers(citiesFile, reference)
 		await source.fermer()
 	}
 }
 
 try {
 	process.exit(await principal(process.argv.slice(2)))
-} catch (erreur) {
+} catch (error) {
 	// These messages are written by the import or the application, and name no value.
-	if (erreur instanceof ImportRefuse || erreur instanceof EnvError) {
-		console.error(erreur.message)
+	if (error instanceof ImportRefuse || error instanceof EnvError) {
+		console.error(error.message)
 		process.exit(1)
 	}
-	console.error(erreur instanceof ImportInterrompu ? erreur.message : messageDUneErreurInattendue(erreur))
+	console.error(error instanceof InterruptedImport ? error.message : unexpectedErrorMessage(error))
 	process.exit(6)
 }

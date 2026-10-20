@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test'
-import { CONTEXTE_IMPORT } from '@/lib/import-context'
 import { absoluteLink, composerEmail, EMAIL_FOOTER, InvalidEmail } from '@/lib/emails/layout'
 import { adapterWithoutRelay, RELAY_TIMEOUT_MS, transportOptions } from '@/lib/emails/relay'
 import { createSendEmail, EmailSendFailed, type Log, NO_RELAY, type RelayMessage } from '@/lib/emails/send'
+import { IMPORT_CONTEXT } from '@/lib/import-context'
 
 // Made-up values only: the domain is reserved for tests, the token is not one.
 const SITE = 'https://site.exemple.test'
@@ -119,8 +119,8 @@ describe('le point d’envoi unique', () => {
 		const { journal, lignes } = journalEnregistre()
 		const envoyer = createSendEmail({ relais: async message => void reçus.push(message), journal })
 
-		await envoyer(email, { context: CONTEXTE_IMPORT })
-		await envoyer({ ...email, a: 'illisible' }, { context: CONTEXTE_IMPORT })
+		await envoyer(email, { context: IMPORT_CONTEXT })
+		await envoyer({ ...email, a: 'illisible' }, { context: IMPORT_CONTEXT })
 
 		expect(reçus).toEqual([])
 		expect(lignes).toEqual([])

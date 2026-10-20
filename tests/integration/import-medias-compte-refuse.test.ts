@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { randomBytes } from 'node:crypto'
-import { TYPE_PROFIL } from '../../scripts/migration/import/media'
-import type { Rapport } from '../../scripts/migration/import/report'
+import { PROFILE_TYPE } from '../../scripts/migration/import/media'
+import type { Report } from '../../scripts/migration/import/report'
 import { NO_PROFILE_CONTEXT } from '../../src/collections/Profiles'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { importerSurLeBanc } from '../outils/import'
@@ -31,10 +31,10 @@ const PROFILS_DU_COMPTE = new Set(
 
 /** The files the profiles of that account designate. */
 const FICHIERS_DU_COMPTE = lignes.files_related_morphs
-	.filter(lien => lien.related_type === TYPE_PROFIL && PROFILS_DU_COMPTE.has(Number(lien.related_id)))
+	.filter(lien => lien.related_type === PROFILE_TYPE && PROFILS_DU_COMPTE.has(Number(lien.related_id)))
 	.map(lien => Number(lien.file_id))
 
-let rapport: Rapport
+let rapport: Report
 
 beforeAll(async () => {
 	await viderLaBase()

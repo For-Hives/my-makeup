@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { SQL } from 'bun'
 import { TYPE_ARTICLE } from '../../scripts/migration/import/media'
-import type { Rapport } from '../../scripts/migration/import/report'
+import type { Report } from '../../scripts/migration/import/report'
 import type { Article, Media } from '../../src/payload-types'
 import { importerSurLeBanc } from '../outils/import'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
@@ -87,7 +87,7 @@ async function articlesDeLaCible(): Promise<Article[]> {
 	return docs
 }
 
-let premier: Rapport
+let premier: Report
 
 beforeAll(async () => {
 	await viderLaBase()

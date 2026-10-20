@@ -24,7 +24,7 @@ import { PAYLOAD_LANGUAGE } from './lib/payload-language'
 import { reserveLocksToAdmins } from './lib/payload-locks'
 import { poolSettings, withPoolListener } from './lib/pool-base'
 import { createObjectStorage } from './lib/storage'
-import { lancerLImportALaDemande } from './migration/on-demand-import'
+import { runOnDemandImport } from './migration/on-demand-import'
 import { migrations } from './migrations'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -115,7 +115,7 @@ export default buildConfig({
 		reserveLocksToAdmins(payload)
 		// The import of the old site, once per new IMPORT_JETON, on the site only; not awaited, so that the
 		// first request does not wait for it. Without a token nothing is read (ticket 233).
-		lancerLImportALaDemande(payload, env)
+		runOnDemandImport(payload, env)
 	},
 	plugins: [
 		// The photos go to the object storage the environment names (src/lib/env.ts): R2 on the site,

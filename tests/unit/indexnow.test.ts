@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test'
 import type { PayloadRequest, RequestContext } from 'payload'
 import { GET as servirLaCle } from '@/app/api/indexnow/[key]/route'
 import { refresh } from '../../src/collections/revalidate'
-import { CONTEXTE_IMPORT } from '../../src/lib/import-context'
 import { type EnvError, parseServerEnv } from '../../src/lib/env'
+import { IMPORT_CONTEXT } from '../../src/lib/import-context'
 import {
 	changedUrls,
 	flushQueue,
@@ -311,7 +311,7 @@ describe('les crochets de Payload', () => {
 
 	test('pendant l’import : rien dans la file, rien ne part', async () => {
 		const { req } = requete([ligne('published', true), ligne('published', true)])
-		await enregistrer(req, { ...CONTEXTE_IMPORT })
+		await enregistrer(req, { ...IMPORT_CONTEXT })
 		expect(pendingUrls()).toEqual([])
 		await flushQueue()
 		expect(faux.appels).toEqual([])

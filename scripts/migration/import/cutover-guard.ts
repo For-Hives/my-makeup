@@ -25,12 +25,12 @@
 
 import type { Payload } from 'payload'
 import { AUTH_LOG_COLLECTION } from '../../../src/lib/auth/auth-log'
-import { DRAPEAU_CIBLE_EN_SERVICE, ImportRefuse } from './target'
-import { ADAPTATEUR_COMPTES } from './accounts'
-import { type Attendu, lireLaCible } from './engine'
+import { ACCOUNTS_ADAPTER } from './accounts'
+import { type Expected, readTarget } from './engine'
+import { ImportRefuse, TARGET_IN_SERVICE_FLAG } from './target'
 
 /** What the target shows of its use by the v3. */
-export interface TracesDeLaBascule {
+export interface CutoverTraces {
 	/** Sign-ins and new passwords that succeeded in the v3, read in the journal. */
 	connexions: number
 	/** Accounts that hold a date of last sign-in: set by the v3 only, and kept after the journal is purged. */
@@ -42,7 +42,7 @@ export interface TracesDeLaBascule {
 }
 
 /** The identifiers on the old site of the accounts deleted in the v3: all that is left of them. */
-export async function comptesSupprimesDansLaV3(payload: Payload): Promise<Set<number>> {
+export async function deletedAccountsInV3(payload: Payload): Promise<Set<number>> {
 	const { docs } = await payload.find({
 		collection: 'deleted-accounts',
 		depth: 0,
@@ -55,70 +55,70 @@ export async function comptesSupprimesDansLaV3(payload: Payload): Promise<Set<nu
 }
 
 /** Reads the traces of the use of the v3 on the target. Writes nothing. */
-export async function tracesDeLaBascule(
+export async function cutoverTraces(
 	payload: Payload,
-	comptes: readonly Attendu[],
+	comptes: readonly Expected[],
 	idsDeLaSource: readonly number[] = comptes.map(({ strapiId }) => strapiId)
-): Promise<TracesDeLaBascule> {
+): Promise<CutoverTraces> {
 	const { totalDocs } = await payload.count({
 		collection: AUTH_LOG_COLLECTION,
 		where: { and: [{ type: { in: ['sign-in', 'password-reset'] } }, { code: { in: ['ok', 'heritee'] } }] },
 		overrideAccess: true,
 	})
-	const { totalDocs: comptesConnectes } = await payload.count({
+	const { totalDocs: connectedAccounts } = await payload.count({
 		collection: 'pros',
 		where: { lastSignInAt: { exists: true } },
 		overrideAccess: true,
 	})
-	const dansLaCible = new Map(
-		(await lireLaCible(payload, ADAPTATEUR_COMPTES)).map(({ valeurs }) => [Number(valeurs.strapiId), valeurs])
+	const inTarget = new Map(
+		(await readTarget(payload, ACCOUNTS_ADAPTER)).map(({ valeurs }) => [Number(valeurs.strapiId), valeurs])
 	)
-	const vide = (valeur: unknown) => valeur === null || valeur === undefined || valeur === ''
-	const hashEfface = comptes
+	const empty = (valeur: unknown) => valeur === null || valeur === undefined || valeur === ''
+	const erasedHash = comptes
 		.filter(({ strapiId, valeurs }) => {
-			const present = dansLaCible.get(strapiId)
-			return present !== undefined && !vide(valeurs.legacyBcrypt) && vide(present.legacyBcrypt)
+			const present = inTarget.get(strapiId)
+			return present !== undefined && !empty(valeurs.legacyBcrypt) && empty(present.legacyBcrypt)
 		})
 		.map(({ strapiId }) => strapiId)
 		.sort((a, b) => a - b)
-	const retires = await comptesSupprimesDansLaV3(payload)
-	const supprimes = idsDeLaSource.filter(id => retires.has(id)).sort((a, b) => a - b)
-	return { connexions: totalDocs, comptesConnectes, hashEfface, supprimes }
+	const removed = await deletedAccountsInV3(payload)
+	const deleted = idsDeLaSource.filter(id => removed.has(id)).sort((a, b) => a - b)
+	return { connexions: totalDocs, comptesConnectes: connectedAccounts, hashEfface: erasedHash, supprimes: deleted }
 }
 
 /** Why the run refuses the target, or `null` when it shows no trace of the v3 in use. */
-export function messageDeLaBascule({
+export function cutoverMessage({
 	connexions,
-	comptesConnectes,
-	hashEfface,
-	supprimes,
-}: TracesDeLaBascule): string | null {
-	if (connexions === 0 && comptesConnectes === 0 && hashEfface.length === 0 && supprimes.length === 0) return null
+	comptesConnectes: connectedAccounts,
+	hashEfface: erasedHash,
+	supprimes: deleted,
+}: CutoverTraces): string | null {
+	if (connexions === 0 && connectedAccounts === 0 && erasedHash.length === 0 && deleted.length === 0) return null
 	const s = (nombre: number) => (nombre > 1 ? 's' : '')
 	const traces = [
 		connexions > 0 &&
 			`${connexions} connexion${s(connexions)} ou nouveau${connexions > 1 ? 'x' : ''} mot${s(connexions)} de passe réussi${s(connexions)} dans la v3 (journal d’authentification)`,
-		comptesConnectes > 0 &&
-			`${comptesConnectes} compte${s(comptesConnectes)} avec une date de dernière connexion dans la v3`,
-		hashEfface.length > 0 &&
-			`${hashEfface.length} compte${s(hashEfface.length)} dont le hash hérité a déjà été effacé (anciens identifiants : ${hashEfface.join(', ')})`,
-		supprimes.length > 0 &&
-			`${supprimes.length} compte${s(supprimes.length)} de l’ancien site supprimé${s(supprimes.length)} dans la v3 (anciens identifiants : ${supprimes.join(', ')})`,
+		connectedAccounts > 0 &&
+			`${connectedAccounts} compte${s(connectedAccounts)} avec une date de dernière connexion dans la v3`,
+		erasedHash.length > 0 &&
+			`${erasedHash.length} compte${s(erasedHash.length)} dont le hash hérité a déjà été effacé (anciens identifiants : ${erasedHash.join(', ')})`,
+		deleted.length > 0 &&
+			`${deleted.length} compte${s(deleted.length)} de l’ancien site supprimé${s(deleted.length)} dans la v3 (anciens identifiants : ${deleted.join(', ')})`,
 	].filter(Boolean)
 	return [
 		`La cible est déjà utilisée par la v3 : ${traces.join(' ; ')}.`,
 		'Un nouveau passage remettrait le hash et l’email de l’ancien site sur des comptes que leurs propriétaires ont changés, et ramènerait les comptes qu’elles ont supprimés.',
-		`Rien n’est écrit. Pour rejouer l’import quand même, sans toucher aux comptes ni aux profils déjà repris, et sans ramener un compte supprimé, ajoute ${DRAPEAU_CIBLE_EN_SERVICE} (docs/migration/IMPORT.md).`,
+		`Rien n’est écrit. Pour rejouer l’import quand même, sans toucher aux comptes ni aux profils déjà repris, et sans ramener un compte supprimé, ajoute ${TARGET_IN_SERVICE_FLAG} (docs/migration/IMPORT.md).`,
 	].join(' ')
 }
 
 /** Refuses a target the v3 already uses (`ImportRefuse`, exit code 1), before any write. */
-export async function refuserUneCibleEnService(
+export async function refuseTargetInService(
 	payload: Payload,
-	comptes: readonly Attendu[],
+	comptes: readonly Expected[],
 	idsDeLaSource?: readonly number[]
 ): Promise<void> {
-	const message = messageDeLaBascule(await tracesDeLaBascule(payload, comptes, idsDeLaSource))
+	const message = cutoverMessage(await cutoverTraces(payload, comptes, idsDeLaSource))
 	if (message !== null) throw new ImportRefuse(message)
 }
 
@@ -127,7 +127,7 @@ export async function refuserUneCibleEnService(
  * `--cible-en-service` never brings them back. The photos stay in the list of the files, and are
  * counted as those of a profile that is not taken.
  */
-export function sansLesComptesSupprimes<T extends { comptes: { id: number }[]; profils: { compte: number | null }[] }>(
+export function withoutDeletedAccounts<T extends { comptes: { id: number }[]; profils: { compte: number | null }[] }>(
 	lu: T,
 	supprimes: ReadonlySet<number>
 ): T {

@@ -1,8 +1,8 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { createHash } from 'node:crypto'
 import { MissingFile } from 'payload'
-import { TYPE_PROFIL } from '../../scripts/migration/import/media'
-import type { Rapport } from '../../scripts/migration/import/report'
+import { PROFILE_TYPE } from '../../scripts/migration/import/media'
+import type { Report } from '../../scripts/migration/import/report'
 import type { Media } from '../../src/payload-types'
 import { espionnerLeStockage } from '../outils/espion-s3'
 import { creerCompte } from '../outils/fabrique-comptes'
@@ -66,8 +66,8 @@ async function mediasDeLaCible(): Promise<Media[]> {
 
 let stockageAvant: string[] = []
 let empreinteAvant = ''
-let aBlanc: Rapport
-let premier: Rapport
+let aBlanc: Report
+let premier: Report
 let journalDuStockage: string[] = []
 
 beforeAll(async () => {
@@ -117,7 +117,7 @@ describe('Les photos référencées sont adoptées là où elles sont (ticket 05
 		const compteEnPayload = new Map(comptes.map(({ id, strapiId }) => [Number(strapiId), id]))
 		for (const media of medias) {
 			const lien = lignes.files_related_morphs.find(
-				l => Number(l.file_id) === media.strapiId && l.related_type === TYPE_PROFIL
+				l => Number(l.file_id) === media.strapiId && l.related_type === PROFILE_TYPE
 			)
 			const compte = COMPTE_DU_PROFIL.get(Number(lien?.related_id))
 			expect(media.owner, String(media.strapiId)).toBe(compteEnPayload.get(compte ?? -1) ?? -1)

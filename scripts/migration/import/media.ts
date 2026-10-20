@@ -31,23 +31,23 @@
 
 import { isImage } from '../../../src/lib/articles'
 import { mediaUrl } from '../../../src/lib/media'
-import { ImportRefuse } from './target'
+import type { Adapter, Expected, Gap, Refusal } from './engine'
 import { REFERENCES } from './gaps'
-import type { Adaptateur, Attendu, Ecart, Refus } from './engine'
-import { iso, type Requete } from './source'
+import { iso, type Query } from './source'
+import { ImportRefuse } from './target'
 
 /** The type Strapi gives a profile, then an article, in the links of its files. */
-export const TYPE_PROFIL = 'api::makeup-artiste.makeup-artiste'
+export const PROFILE_TYPE = 'api::makeup-artiste.makeup-artiste'
 export const TYPE_ARTICLE = 'api::article.article'
 
 /** The fields of an entry that designate a file, by type of entry (SCHEMA.md §5.2 and §5.3). */
-export const CHAMPS_DE_PHOTOS: Readonly<Record<string, readonly string[]>> = {
-	[TYPE_PROFIL]: ['main_picture', 'image_gallery'],
+export const PHOTOS_FIELDS: Readonly<Record<string, readonly string[]>> = {
+	[PROFILE_TYPE]: ['main_picture', 'image_gallery'],
 	[TYPE_ARTICLE]: ['galery'],
 }
 
 /** A row of `files`, as the import reads it. `formats` is the JSON of Strapi, as text. */
-export interface LigneFichier {
+export interface FileRow {
 	id: number
 	alternative_text: string | null
 	width: number | null
@@ -63,33 +63,33 @@ export interface LigneFichier {
 }
 
 /** A row of `files_related_morphs`: the file `fichier` is designated by the entry `entree` of `type`, in its field `champ`. */
-export interface LienDeFichier {
+export interface FileLink {
 	fichier: number
 	entree: number
 	type: string
 	champ: string
 }
 
-export interface FichiersLus {
-	fichiers: LigneFichier[]
+export interface ReadFiles {
+	fichiers: FileRow[]
 	/** In the order of each field of each entry (`order`, then the link). */
-	liens: LienDeFichier[]
+	liens: FileLink[]
 }
 
 // The JSON of the formats is read as text: both clients of the import then give the same value.
-const LECTURE_DES_FICHIERS = `SELECT id, alternative_text, width, height, formats::text AS formats, hash, ext, mime, url,
+const FILES_QUERY = `SELECT id, alternative_text, width, height, formats::text AS formats, hash, ext, mime, url,
 	uploaded_by, ${iso('created_at')} AS created_at, ${iso('updated_at')} AS updated_at FROM files ORDER BY id`
 
-const LECTURE_DES_LIENS = `SELECT file_id AS fichier, related_id AS entree, related_type AS type, field AS champ
+const LINKS_QUERY = `SELECT file_id AS fichier, related_id AS entree, related_type AS type, field AS champ
 	FROM files_related_morphs ORDER BY related_type, related_id, field, "order", id`
 
-export async function lireLesFichiers(requete: Requete): Promise<FichiersLus> {
-	const fichiers = await requete<LigneFichier>(LECTURE_DES_FICHIERS)
-	const liens = await requete<LienDeFichier>(LECTURE_DES_LIENS)
+export async function readFiles(requete: Query): Promise<ReadFiles> {
+	const files = await requete<FileRow>(FILES_QUERY)
+	const links = await requete<FileLink>(LINKS_QUERY)
 	return {
-		fichiers,
-		liens: liens.map(({ fichier, entree, type, champ }) => ({
-			fichier: Number(fichier),
+		fichiers: files,
+		liens: links.map(({ fichier: file, entree, type, champ }) => ({
+			fichier: Number(file),
 			entree: Number(entree),
 			type,
 			champ,
@@ -98,11 +98,11 @@ export async function lireLesFichiers(requete: Requete): Promise<FichiersLus> {
 }
 
 /** Whether a link designates a file through a field the import reads. */
-export const lienDePhoto = ({ type, champ }: Pick<LienDeFichier, 'type' | 'champ'>): boolean =>
-	CHAMPS_DE_PHOTOS[type]?.includes(champ) ?? false
+export const photoLink = ({ type, champ }: Pick<FileLink, 'type' | 'champ'>): boolean =>
+	PHOTOS_FIELDS[type]?.includes(champ) ?? false
 
 /** Where an object is, as a `media` names it: its folder (empty at the root of the storage) and its name. */
-export interface Emplacement {
+export interface Location {
 	prefix: string
 	filename: string
 }
@@ -113,7 +113,7 @@ export interface Emplacement {
  * the v3 composes again from them (`mediaUrl`) is not the same, character for character: a
  * query, an empty folder, a character the v3 would write another way.
  */
-export function emplacementDansLAdresse(adresse: string | null, base: string): Emplacement | null {
+export function locationInAddress(adresse: string | null, base: string): Location | null {
 	if (adresse === null || !adresse.startsWith(`${base}/`)) return null
 	let segments: string[]
 	try {
@@ -131,13 +131,13 @@ export function emplacementDansLAdresse(adresse: string | null, base: string): E
 }
 
 /** Why a designated file is not adopted. */
-export type MotifDeNonAdoption = 'pas-une-image' | 'sans-stockage' | 'compte-refuse'
+export type NonAdoptionReason = 'pas-une-image' | 'sans-stockage' | 'compte-refuse'
 
 /** Why a designated file is refused: it waits for a decision (ticket 066). */
-export type MotifDeRefus = 'adresse-hors-de-la-base' | 'plusieurs-proprietaires'
+export type RefusalReason = 'adresse-hors-de-la-base' | 'plusieurs-proprietaires'
 
 /** What the entries the import takes are: the profiles with their account, the articles. */
-export interface EntreesPrises {
+export interface TakenEntries {
 	/** Profile of the source taken → its account in the old base. */
 	profils: ReadonlyMap<number, number>
 	articles: ReadonlySet<number>
@@ -148,19 +148,19 @@ export interface EntreesPrises {
 
 /** A file to adopt: its row, where its object is, and the account it belongs to in the old base (none for an article). */
 export interface Adoptable {
-	fichier: LigneFichier
-	emplacement: Emplacement
+	fichier: FileRow
+	emplacement: Location
 	compte: number | null
 }
 
 /** What the import makes of the files of the source, before it reads the storage. */
-export interface ClassementDesFichiers {
+export interface FilesClassification {
 	source: number
 	adoptables: Adoptable[]
 	/** Designated, not adopted by rule: listed. */
-	nonAdoptes: { fichier: number; motif: MotifDeNonAdoption }[]
+	nonAdoptes: { fichier: number; motif: NonAdoptionReason }[]
 	/** Designated, refused: listed, they wait for a decision. */
-	refuses: Refus[]
+	refuses: Refusal[]
 	/** Files an entry the import takes designates. */
 	designes: number
 	/** Files designated only by an entry the source holds and the import does not take (a profile set aside). */
@@ -180,12 +180,8 @@ export interface ClassementDesFichiers {
  * import takes. `base` is the public base of the photos, `null` when the run has no storage:
  * then no file is adopted.
  */
-export function classerLesFichiers(
-	lus: FichiersLus,
-	entrees: EntreesPrises,
-	base: string | null
-): ClassementDesFichiers {
-	const classement: ClassementDesFichiers = {
+export function classifyFiles(lus: ReadFiles, entrees: TakenEntries, base: string | null): FilesClassification {
+	const classification: FilesClassification = {
 		source: lus.fichiers.length,
 		adoptables: [],
 		nonAdoptes: [],
@@ -197,57 +193,56 @@ export function classerLesFichiers(
 		nomsDifferents: [],
 		envoyesParUnAutreCompte: [],
 	}
-	const liensDe = new Map<number, LienDeFichier[]>()
-	for (const lien of lus.liens) liensDe.set(lien.fichier, [...(liensDe.get(lien.fichier) ?? []), lien])
-	const pris = (lien: LienDeFichier): boolean =>
-		lienDePhoto(lien) &&
-		(lien.type === TYPE_PROFIL ? entrees.profils.has(lien.entree) : entrees.articles.has(lien.entree))
-	const presente = (lien: LienDeFichier): boolean =>
-		lienDePhoto(lien) &&
-		(lien.type === TYPE_PROFIL ? entrees.profilsDeLaSource : entrees.articlesDeLaSource).has(lien.entree)
+	const linksOf = new Map<number, FileLink[]>()
+	for (const link of lus.liens) linksOf.set(link.fichier, [...(linksOf.get(link.fichier) ?? []), link])
+	const taken = (lien: FileLink): boolean =>
+		photoLink(lien) &&
+		(lien.type === PROFILE_TYPE ? entrees.profils.has(lien.entree) : entrees.articles.has(lien.entree))
+	const present = (lien: FileLink): boolean =>
+		photoLink(lien) &&
+		(lien.type === PROFILE_TYPE ? entrees.profilsDeLaSource : entrees.articlesDeLaSource).has(lien.entree)
 
-	for (const fichier of [...lus.fichiers].sort((a, b) => a.id - b.id)) {
-		const liens = liensDe.get(fichier.id) ?? []
-		const designants = liens.filter(pris)
-		if (designants.length === 0) {
-			if (liens.length === 0) classement.sansLien++
-			else if (liens.some(presente)) classement.deEntreesNonPrises++
-			else classement.deEntreesDisparues++
+	for (const file of [...lus.fichiers].sort((a, b) => a.id - b.id)) {
+		const links = linksOf.get(file.id) ?? []
+		const pointing = links.filter(taken)
+		if (pointing.length === 0) {
+			if (links.length === 0) classification.sansLien++
+			else if (links.some(present)) classification.deEntreesNonPrises++
+			else classification.deEntreesDisparues++
 			continue
 		}
-		classement.designes++
-		if (!isImage(fichier.mime)) {
-			classement.nonAdoptes.push({ fichier: fichier.id, motif: 'pas-une-image' })
+		classification.designes++
+		if (!isImage(file.mime)) {
+			classification.nonAdoptes.push({ fichier: file.id, motif: 'pas-une-image' })
 			continue
 		}
 		if (base === null) {
-			classement.nonAdoptes.push({ fichier: fichier.id, motif: 'sans-stockage' })
+			classification.nonAdoptes.push({ fichier: file.id, motif: 'sans-stockage' })
 			continue
 		}
 		// The account of each entry that designates it: an article has none.
-		const comptes = new Set(
-			designants.map(({ type, entree }) => (type === TYPE_PROFIL ? (entrees.profils.get(entree) ?? null) : null))
+		const accounts = new Set(
+			pointing.map(({ type, entree }) => (type === PROFILE_TYPE ? (entrees.profils.get(entree) ?? null) : null))
 		)
-		if (comptes.size > 1) {
-			classement.refuses.push({ strapiId: fichier.id, motif: 'plusieurs-proprietaires', champs: ['owner'] })
+		if (accounts.size > 1) {
+			classification.refuses.push({ strapiId: file.id, motif: 'plusieurs-proprietaires', champs: ['owner'] })
 			continue
 		}
-		const emplacement = emplacementDansLAdresse(fichier.url, base)
-		if (!emplacement) {
-			classement.refuses.push({
-				strapiId: fichier.id,
+		const location = locationInAddress(file.url, base)
+		if (!location) {
+			classification.refuses.push({
+				strapiId: file.id,
 				motif: 'adresse-hors-de-la-base',
 				champs: ['prefix', 'filename'],
 			})
 			continue
 		}
-		const compte = [...comptes][0] ?? null
-		if (emplacement.filename !== `${fichier.hash ?? ''}${fichier.ext ?? ''}`) classement.nomsDifferents.push(fichier.id)
-		if (fichier.uploaded_by !== null && fichier.uploaded_by !== compte)
-			classement.envoyesParUnAutreCompte.push(fichier.id)
-		classement.adoptables.push({ fichier, emplacement, compte })
+		const account = [...accounts][0] ?? null
+		if (location.filename !== `${file.hash ?? ''}${file.ext ?? ''}`) classification.nomsDifferents.push(file.id)
+		if (file.uploaded_by !== null && file.uploaded_by !== account) classification.envoyesParUnAutreCompte.push(file.id)
+		classification.adoptables.push({ fichier: file, emplacement: location, compte: account })
 	}
-	return classement
+	return classification
 }
 
 /** What a request for the headers of an object says: whether it exists, and its size in bytes when given. */
@@ -257,63 +252,63 @@ export interface Presence {
 }
 
 /** Reads the headers of the object at this public address. Throws `ImportRefuse` on anything but 200 or 404. */
-export type Sonde = (adresse: string) => Promise<Presence>
+export type Probe = (adresse: string) => Promise<Presence>
 
 /** How long a request for headers may take. */
-const DELAI_DE_LA_SONDE = 10_000
+const PROBE_TIMEOUT = 10_000
 
 /**
  * The request for headers (`HEAD`) at the public address of an object, by `fetch`, never followed
  * to another address. 200: present, with its `Content-Length`; 404: absent. Anything else, a time
  * limit or no answer stops the import before any write: the storage cannot say what it holds.
  */
-export const sondeHttp: Sonde = async adresse => {
-	let reponse: Response
+export const httpProbe: Probe = async adresse => {
+	let response: Response
 	try {
-		reponse = await fetch(adresse, {
+		response = await fetch(adresse, {
 			method: 'HEAD',
 			redirect: 'manual',
-			signal: AbortSignal.timeout(DELAI_DE_LA_SONDE),
+			signal: AbortSignal.timeout(PROBE_TIMEOUT),
 		})
 	} catch {
 		throw new ImportRefuse(
 			'Le stockage des photos ne répond pas à une requête d’en-tête, ou pas dans les 10 secondes : rien n’est écrit.'
 		)
 	}
-	if (reponse.status === 404) return { present: false, taille: null }
-	if (reponse.status !== 200)
+	if (response.status === 404) return { present: false, taille: null }
+	if (response.status !== 200)
 		throw new ImportRefuse(
-			`Le stockage des photos répond ${reponse.status} à une requête d’en-tête, ni 200 ni 404 : rien n’est écrit.`
+			`Le stockage des photos répond ${response.status} à une requête d’en-tête, ni 200 ni 404 : rien n’est écrit.`
 		)
-	const longueur = reponse.headers.get('content-length')
-	return { present: true, taille: longueur !== null && /^\d{1,15}$/.test(longueur) ? Number(longueur) : null }
+	const length = response.headers.get('content-length')
+	return { present: true, taille: length !== null && /^\d{1,15}$/.test(length) ? Number(length) : null }
 }
 
 /** How many requests for headers leave at once. */
-const SONDES_DE_FRONT = 6
+const FRONT_PROBES = 6
 
 /** The presence of the object of each file to adopt, by its identifier, read before any write. */
-export async function sonderLesObjets(
+export async function probeObjects(
 	adoptables: readonly Adoptable[],
 	base: string,
-	sonde: Sonde
+	sonde: Probe
 ): Promise<Map<number, Presence>> {
 	const presences = new Map<number, Presence>()
-	for (let debut = 0; debut < adoptables.length; debut += SONDES_DE_FRONT) {
-		const lot = adoptables.slice(debut, debut + SONDES_DE_FRONT)
-		const lues = await Promise.all(
-			lot.map(({ emplacement }) => sonde(mediaUrl(base, emplacement.prefix, emplacement.filename)))
+	for (let start = 0; start < adoptables.length; start += FRONT_PROBES) {
+		const batch = adoptables.slice(start, start + FRONT_PROBES)
+		const read = await Promise.all(
+			batch.map(({ emplacement: location }) => sonde(mediaUrl(base, location.prefix, location.filename)))
 		)
-		lot.forEach(({ fichier }, rang) => {
-			const presence = lues[rang]
-			if (presence) presences.set(fichier.id, presence)
+		batch.forEach(({ fichier: file }, rang) => {
+			const presence = read[rang]
+			if (presence) presences.set(file.id, presence)
 		})
 	}
 	return presences
 }
 
 /** The JSON of the formats of Strapi, kept as it is, or null when it does not read. */
-function formatsDe(texte: string | null): unknown {
+function formatsOf(texte: string | null): unknown {
 	if (texte === null) return null
 	try {
 		return JSON.parse(texte)
@@ -322,7 +317,7 @@ function formatsDe(texte: string | null): unknown {
 	}
 }
 
-export const ADAPTATEUR_MEDIAS: Adaptateur = {
+export const MEDIA_ADAPTER: Adapter = {
 	collection: 'media',
 	champs: {
 		alt: 'texte',
@@ -346,55 +341,55 @@ export const ADAPTATEUR_MEDIAS: Adaptateur = {
  * identifier in Payload, or `null` while it is still to be created (a dry run). `presences` gives
  * what the storage said of each object.
  */
-export function mediasAttendus(
+export function expectedMedia(
 	adoptables: readonly Adoptable[],
 	presences: ReadonlyMap<number, Presence>,
 	comptes: ReadonlyMap<number, number | null>
-): Attendu[] {
-	return adoptables.map(({ fichier, emplacement, compte }) => {
-		const presence = presences.get(fichier.id)
-		const ecarts: Ecart[] = [{ champ: 'filesize', reference: REFERENCES.tailleEnOctets }]
+): Expected[] {
+	return adoptables.map(({ fichier: file, emplacement: location, compte: account }) => {
+		const presence = presences.get(file.id)
+		const gaps: Gap[] = [{ champ: 'filesize', reference: REFERENCES.tailleEnOctets }]
 		return {
-			strapiId: fichier.id,
+			strapiId: file.id,
 			valeurs: {
-				strapiId: fichier.id,
-				alt: fichier.alternative_text,
-				filename: emplacement.filename,
-				prefix: emplacement.prefix,
-				mimeType: fichier.mime,
+				strapiId: file.id,
+				alt: file.alternative_text,
+				filename: location.filename,
+				prefix: location.prefix,
+				mimeType: file.mime,
 				filesize: presence?.taille ?? null,
-				width: fichier.width,
-				height: fichier.height,
-				strapiFormats: formatsDe(fichier.formats),
-				owner: compte === null ? null : (comptes.get(compte) ?? null),
-				createdAt: fichier.created_at,
-				updatedAt: fichier.updated_at,
+				width: file.width,
+				height: file.height,
+				strapiFormats: formatsOf(file.formats),
+				owner: account === null ? null : (comptes.get(account) ?? null),
+				createdAt: file.created_at,
+				updatedAt: file.updated_at,
 			},
-			ecarts,
+			ecarts: gaps,
 		}
 	})
 }
 
 /** The files of the source in the report: numbers and identifiers, never an address. */
-export interface BilanDesFichiers {
+export interface FilesSummary {
 	designes: number
 	deEntreesNonPrises: number
 	deEntreesDisparues: number
 	sansLien: number
 	/** No storage was given to the run: no file is adopted. */
 	sansStockage: boolean
-	nonAdoptes: { fichier: number; motif: MotifDeNonAdoption }[]
+	nonAdoptes: { fichier: number; motif: NonAdoptionReason }[]
 	/** Adopted, their object missing in the storage: the « 404 connus ». */
 	introuvables: number[]
 	nomsDifferents: number[]
 	envoyesParUnAutreCompte: number[]
 }
 
-export function bilanDesFichiers(
-	classement: ClassementDesFichiers,
+export function filesSummary(
+	classement: FilesClassification,
 	presences: ReadonlyMap<number, Presence>,
 	sansStockage: boolean
-): BilanDesFichiers {
+): FilesSummary {
 	return {
 		designes: classement.designes,
 		deEntreesNonPrises: classement.deEntreesNonPrises,
@@ -403,15 +398,15 @@ export function bilanDesFichiers(
 		sansStockage,
 		nonAdoptes: classement.nonAdoptes,
 		introuvables: classement.adoptables
-			.filter(({ fichier }) => presences.get(fichier.id)?.present === false)
-			.map(({ fichier }) => fichier.id),
+			.filter(({ fichier: file }) => presences.get(file.id)?.present === false)
+			.map(({ fichier: file }) => file.id),
 		nomsDifferents: classement.nomsDifferents,
 		envoyesParUnAutreCompte: classement.envoyesParUnAutreCompte,
 	}
 }
 
 /** A photo of an entry whose file is not adopted: reported, never invented. */
-export interface PhotoNonReprise {
+export interface PhotoNotCarriedOver {
 	/** The profile, or the article, by its identifier in the old base. */
 	entree: number
 	fichier: number
@@ -423,21 +418,21 @@ export interface PhotoNonReprise {
  * invented: `nonReprises` lists it. `medias` gives the identifier in Payload of each adopted file,
  * `null` while it is still to be created (a dry run).
  */
-export function photosDeLEntree(
+export function entryPhotos(
 	fichiers: readonly number[],
 	medias: ReadonlyMap<number, number | null>
 ): { ids: number[]; adoptees: number; nonReprises: number[] } {
 	const ids: number[] = []
-	const nonReprises: number[] = []
+	const notCarriedOver: number[] = []
 	let adoptees = 0
-	for (const fichier of fichiers) {
-		if (!medias.has(fichier)) {
-			nonReprises.push(fichier)
+	for (const file of fichiers) {
+		if (!medias.has(file)) {
+			notCarriedOver.push(file)
 			continue
 		}
 		adoptees++
-		const id = medias.get(fichier)
+		const id = medias.get(file)
 		if (id !== null && id !== undefined) ids.push(id)
 	}
-	return { ids, adoptees, nonReprises }
+	return { ids, adoptees, nonReprises: notCarriedOver }
 }

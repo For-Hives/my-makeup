@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
+import { exitCode, type Report } from '../../scripts/migration/import/report'
 import { ImportRefuse } from '../../scripts/migration/import/target'
-import { codeDeSortie, type Rapport } from '../../scripts/migration/import/report'
 import { DATE_DE_BASCULE_DU_BANC } from '../outils/banc'
 import { commandeDImport, FICHIER_DES_DECISIONS_DU_BANC, importerSurLeBanc } from '../outils/import'
 import { seConnecter } from '../outils/parcours-herites'
@@ -56,7 +56,7 @@ const compteDeFixture = async () => {
 	return compte
 }
 
-let premier: Rapport
+let premier: Report
 let sourceAvant: string
 
 beforeAll(async () => {
@@ -88,7 +88,7 @@ describe('Un second passage avec une autre date de bascule garde la date de cons
 		)
 		// Not an unexplained difference: the parity is complete and the exit code is 0.
 		expect(second.parite?.profiles).toMatchObject({ differents: [], manquants: [], enTrop: [] })
-		expect(codeDeSortie(second)).toBe(0)
+		expect(exitCode(second)).toBe(0)
 		expect(await profils()).toEqual(avant)
 		for (const profil of await profils())
 			if (profil.publicContact === true) expect(profil.consentedAt).toBe(DATE_DE_BASCULE_DU_BANC)
@@ -158,7 +158,7 @@ describe('Un import contre une v3 en service est refusé avant toute écriture (
 		const rapport = await importerSurLeBanc('reel', { cibleEnService: true })
 
 		expect(rapport.collections.pros).toMatchObject({ crees: 0, modifies: 0, refuses: [] })
-		expect(codeDeSortie(rapport)).toBe(0)
+		expect(exitCode(rapport)).toBe(0)
 		const apres = await compteDeFixture()
 		expect(apres.legacyBcrypt ?? null).toBeNull()
 		expect(apres.email).toBe('nouvelle.adresse.fictive@example.test')

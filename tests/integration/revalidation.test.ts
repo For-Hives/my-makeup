@@ -1,6 +1,6 @@
 import { afterAll, afterEach, describe, expect, setDefaultTimeout, test } from 'bun:test'
 import type { CollectionSlug } from 'payload'
-import { CONTEXTE_IMPORT } from '@/lib/import-context'
+import { IMPORT_CONTEXT } from '@/lib/import-context'
 import type { Profile } from '@/payload-types'
 import { espionnerLeCache, type Rafraichi } from '../outils/espion-cache'
 import { creerCompte } from '../outils/fabrique-comptes'
@@ -284,18 +284,18 @@ describe('Avec le contexte d’import : aucune invalidation, aucun mail capté',
 				collection: 'profiles',
 				id: profil.id,
 				data: { description: 'Reprise de l’ancien site.' },
-				context: CONTEXTE_IMPORT,
+				context: IMPORT_CONTEXT,
 			})
 			for (const collection of ['articles', 'talents'] as const) {
 				const cree = await payload.create({
 					collection,
 					data: { title: 'Repris', slug: `repris-${collection}`, _status: 'published' },
-					context: CONTEXTE_IMPORT,
+					context: IMPORT_CONTEXT,
 				})
-				await payload.update({ collection, id: cree.id, data: { title: 'Repris encore' }, context: CONTEXTE_IMPORT })
-				await payload.delete({ collection, id: cree.id, context: CONTEXTE_IMPORT })
+				await payload.update({ collection, id: cree.id, data: { title: 'Repris encore' }, context: IMPORT_CONTEXT })
+				await payload.delete({ collection, id: cree.id, context: IMPORT_CONTEXT })
 			}
-			await payload.delete({ collection: 'profiles', id: profil.id, context: CONTEXTE_IMPORT })
+			await payload.delete({ collection: 'profiles', id: profil.id, context: IMPORT_CONTEXT })
 		})
 
 		expect(cibles(rafraichi)).toEqual(RIEN)

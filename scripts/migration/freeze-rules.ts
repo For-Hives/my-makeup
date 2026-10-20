@@ -7,11 +7,11 @@
  * commits that are about security, the switch banner, the read-only mode, or contents.
  */
 
-export const CATEGORIES_DU_GEL = ['securite', 'bandeau', 'lecture-seule', 'contenus'] as const
-export type CategorieDuGel = (typeof CATEGORIES_DU_GEL)[number]
+export const FREEZE_CATEGORIES = ['securite', 'bandeau', 'lecture-seule', 'contenus'] as const
+export type FreezeCategory = (typeof FREEZE_CATEGORIES)[number]
 
 /** Scopes (`type(scope): subject`) and `Gel:` trailer values that put a commit in a category. */
-const ALIAS: Record<string, CategorieDuGel> = {
+const ALIAS: Record<string, FreezeCategory> = {
 	banner: 'bandeau',
 	bandeau: 'bandeau',
 	content: 'contenus',
@@ -26,7 +26,7 @@ const ALIAS: Record<string, CategorieDuGel> = {
 	sécurité: 'securite',
 }
 
-export type CommitDeLAncienSite = {
+export type OldSiteCommit = {
 	sha: string
 	/** Committer date, ISO 8601. */
 	date: string
@@ -36,24 +36,24 @@ export type CommitDeLAncienSite = {
 	parents: number
 }
 
-export type Verdict = { sha: string; subject: string; categorie: CategorieDuGel | null; raison: string }
+export type Verdict = { sha: string; subject: string; categorie: FreezeCategory | null; raison: string }
 
-const ENTETE = /^(?<type>[a-z]+)(?:\((?<scope>[^)]+)\))?!?:\s/u
+const HEADER = /^(?<type>[a-z]+)(?:\((?<scope>[^)]+)\))?!?:\s/u
 
 /** The category of a commit, or null when it is not one of the four allowed during the freeze. */
-export function categorieDuCommit(commit: Pick<CommitDeLAncienSite, 'subject' | 'body'>): CategorieDuGel | null {
+export function commitCategory(commit: Pick<OldSiteCommit, 'subject' | 'body'>): FreezeCategory | null {
 	const trailer = /^Gel:\s*(?<valeur>\S+)\s*$/imu.exec(commit.body)?.groups?.valeur?.toLowerCase()
 	if (trailer) return ALIAS[trailer] ?? null
-	const entete = ENTETE.exec(commit.subject)?.groups
-	if (!entete) return null
-	for (const mot of [entete.scope, entete.type]) {
-		const categorie = mot ? ALIAS[mot.toLowerCase()] : undefined
-		if (categorie) return categorie
+	const header = HEADER.exec(commit.subject)?.groups
+	if (!header) return null
+	for (const password of [header.scope, header.type]) {
+		const category = password ? ALIAS[password.toLowerCase()] : undefined
+		if (category) return category
 	}
 	return null
 }
 
-export type RapportDuGel = {
+export type FreezeReport = {
 	debut: string
 	/** Commits dated at or after the start of the freeze, merges left out. */
 	apresLeGel: Verdict[]
@@ -62,28 +62,25 @@ export type RapportDuGel = {
 }
 
 /** Checks a history against the start of the freeze. A merge commit carries no change of its own. */
-export function verifierLHistorique(commits: CommitDeLAncienSite[], debut: string): RapportDuGel {
+export function verifyHistory(commits: OldSiteCommit[], debut: string): FreezeReport {
 	const t0 = Date.parse(debut)
 	if (Number.isNaN(t0)) throw new Error(`début du gel illisible : ${debut}`)
-	const apresLeGel = commits
+	const afterFreeze = commits
 		.filter(commit => commit.parents < 2 && Date.parse(commit.date) >= t0)
 		.map<Verdict>(commit => {
-			const categorie = categorieDuCommit(commit)
+			const category = commitCategory(commit)
 			return {
-				categorie,
-				raison: categorie ? `permis : ${categorie}` : 'ni sécurité, ni bandeau, ni lecture seule, ni contenus',
+				categorie: category,
+				raison: category ? `permis : ${category}` : 'ni sécurité, ni bandeau, ni lecture seule, ni contenus',
 				sha: commit.sha,
 				subject: commit.subject,
 			}
 		})
-	return { apresLeGel, debut, interdits: apresLeGel.filter(verdict => !verdict.categorie) }
+	return { apresLeGel: afterFreeze, debut, interdits: afterFreeze.filter(verdict => !verdict.categorie) }
 }
 
 /** Reference captures must be taken after the start of the freeze, or they describe a site that moved. */
-export function verifierLesReferences(
-	debut: string,
-	references: { nom: string; prisLe: string | undefined }[]
-): string[] {
+export function verifyReferences(debut: string, references: { nom: string; prisLe: string | undefined }[]): string[] {
 	const t0 = Date.parse(debut)
 	return references.flatMap(({ nom, prisLe }) => {
 		if (!prisLe) return [`${nom} : date non donnée`]
@@ -94,7 +91,7 @@ export function verifierLesReferences(
 }
 
 /** Lines of `git log --format=%H%x1f%cI%x1f%P%x1f%s%x1f%b%x1e` into commits. */
-export function lireLeJournalGit(sortie: string): CommitDeLAncienSite[] {
+export function readGitLog(sortie: string): OldSiteCommit[] {
 	return sortie
 		.split('\x1e')
 		.map(bloc => bloc.replace(/^\n/u, ''))

@@ -11,37 +11,37 @@
 
 import type { Payload, SanitizedConfig } from 'payload'
 import { isLocalDatabase } from '../../../src/lib/env'
-import type { CollectionImportee } from './engine'
+import type { ImportedCollection } from './engine'
 
 /** The import does not start: the message says why and what to do, never a value. */
 export class ImportRefuse extends Error {
 	override readonly name = 'ImportRefuse'
 }
 
-export type GenreDeCible = 'locale' | 'distante'
+export type TargetKind = 'locale' | 'distante'
 
 /** The flag that lets the import write into a database that is not on this machine. */
-export const DRAPEAU_CIBLE_DISTANTE = '--cible-distante'
+export const REMOTE_TARGET_FLAG = '--cible-distante'
 
 /** The flag that names the database the target must be (`current_database()`): required with `--cible-distante`. */
-export const DRAPEAU_BASE_ATTENDUE = '--base-attendue'
+export const EXPECTED_DATABASE_FLAG = '--base-attendue'
 
 /** The flag that lets the import run on a target the v3 already uses (./garde-bascule.ts, ticket 227). */
-export const DRAPEAU_CIBLE_EN_SERVICE = '--cible-en-service'
+export const TARGET_IN_SERVICE_FLAG = '--cible-en-service'
 
 /**
  * Which kind of database the import is about to write into, or `ImportRefuse` when it must not:
  * no database named, or a database elsewhere than on this machine without the flag.
  */
-export function verifierLaCible(
+export function verifyTarget(
 	databaseUri: string | undefined,
 	{ cibleDistante, baseAttendue }: { cibleDistante: boolean; baseAttendue?: string | undefined }
-): GenreDeCible {
+): TargetKind {
 	// A remote target is named twice, by its address and by its database: an address that points at
 	// the database of another site by mistake is caught by `verifierLaBaseAttendue` (ticket 233, L9).
 	if (cibleDistante && !baseAttendue)
 		throw new ImportRefuse(
-			`${DRAPEAU_CIBLE_DISTANTE} exige ${DRAPEAU_BASE_ATTENDUE} <nom> : le nom que la base de la cible doit donner. Rien n’est écrit.`
+			`${REMOTE_TARGET_FLAG} exige ${EXPECTED_DATABASE_FLAG} <nom> : le nom que la base de la cible doit donner. Rien n’est écrit.`
 		)
 	if (!databaseUri) throw new ImportRefuse('DATABASE_URI manque : l’import ne sait pas où écrire. Rien n’est écrit.')
 	if (isLocalDatabase(databaseUri)) return 'locale'
@@ -49,7 +49,7 @@ export function verifierLaCible(
 	throw new ImportRefuse(
 		[
 			'DATABASE_URI ne désigne pas une base de ce poste : l’import refuse d’y écrire, et rien n’est écrit.',
-			`Pour écrire dans une base distante, la commande le dit elle-même : ${DRAPEAU_CIBLE_DISTANTE}.`,
+			`Pour écrire dans une base distante, la commande le dit elle-même : ${REMOTE_TARGET_FLAG}.`,
 		].join(' ')
 	)
 }
@@ -59,11 +59,11 @@ export function verifierLaCible(
  * database is not the one `--base-attendue` names (ticket 233, L9). The refusal names the expected
  * database only: what the target really is stays unsaid.
  */
-export async function verifierLaBaseAttendue(payload: Payload, attendue: string): Promise<void> {
+export async function verifyExpectedDatabase(payload: Payload, attendue: string): Promise<void> {
 	const { rows } = await payload.db.pool.query<{ base: string }>('SELECT current_database() AS base')
 	if (rows[0]?.base === attendue) return
 	throw new ImportRefuse(
-		`La base de DATABASE_URI n’est pas « ${attendue} » (${DRAPEAU_BASE_ATTENDUE}) : l’import refuse d’y lire ou d’y écrire. Rien n’est écrit.`
+		`La base de DATABASE_URI n’est pas « ${attendue} » (${EXPECTED_DATABASE_FLAG}) : l’import refuse d’y lire ou d’y écrire. Rien n’est écrit.`
 	)
 }
 
@@ -77,7 +77,7 @@ export async function verifierLaBaseAttendue(payload: Payload, attendue: string)
  *   process, where Payload reads it when it connects;
  * - in production, the migrations not yet played: they are taken out of the adapter.
  */
-export function configurationSansChangementDeSchema(config: SanitizedConfig): SanitizedConfig {
+export function configurationWithoutSchemaChange(config: SanitizedConfig): SanitizedConfig {
 	process.env.PAYLOAD_MIGRATING = 'true'
 	const { init } = config.db
 	return {
@@ -90,23 +90,23 @@ export function configurationSansChangementDeSchema(config: SanitizedConfig): Sa
  * The collections the import writes, in the order it writes them (plan 01 §5, P4). Their tables
  * keep the name Payload gives them from their slug. A database where all of them are empty is an empty one.
  */
-export const COLLECTIONS_ECRITES: readonly CollectionImportee[] = ['pros', 'media', 'profiles', 'articles', 'talents']
+export const WRITTEN_COLLECTIONS: readonly ImportedCollection[] = ['pros', 'media', 'profiles', 'articles', 'talents']
 
 /**
  * Refuses a target that does not hold the tables the import writes: the import creates none
  * (`configurationSansChangementDeSchema`). Run once Payload is connected, before anything is read.
  */
-export async function verifierLeSchemaDeLaCible(payload: Payload): Promise<void> {
-	const tables = COLLECTIONS_ECRITES.map(collection => payload.db.tableNameMap.get(collection) ?? collection)
+export async function verifyTargetSchema(payload: Payload): Promise<void> {
+	const tables = WRITTEN_COLLECTIONS.map(collection => payload.db.tableNameMap.get(collection) ?? collection)
 	const { rows } = await payload.db.pool.query<{ table: string }>(
 		'SELECT nom AS table FROM unnest($1::text[]) AS nom WHERE to_regclass(quote_ident(nom)) IS NULL ORDER BY nom',
 		[tables]
 	)
 	if (rows.length === 0) return
-	const manquantes = rows.map(({ table }) => `« ${table} »`).join(', ')
+	const missing = rows.map(({ table }) => `« ${table} »`).join(', ')
 	throw new ImportRefuse(
 		[
-			`La base de DATABASE_URI n’a pas le schéma de la v3 : ${rows.length > 1 ? 'il manque les tables' : 'il manque la table'} ${manquantes}.`,
+			`La base de DATABASE_URI n’a pas le schéma de la v3 : ${rows.length > 1 ? 'il manque les tables' : 'il manque la table'} ${missing}.`,
 			'L’import ne crée ni ne change aucune table : l’application les crée par ses migrations quand elle démarre sur cette base',
 			'(sur le banc : bun run banc:prepare). Rien n’est écrit.',
 		].join(' ')

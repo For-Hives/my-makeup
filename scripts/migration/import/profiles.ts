@@ -49,29 +49,22 @@ import { type ProfileDocument, profileState, statusAfter } from '../../../src/li
 import { INITIAL_CHOICE, type ProfileStatus } from '../../../src/lib/profile/status'
 import { RADIUS_BOUNDS_KM } from '../../../src/lib/profile/zone'
 import { assignSlugs } from '../../../src/lib/slug'
-import type { CommuneAttendue } from './cities'
+import type { ExpectedCity } from './cities'
+import { type Adapter, type Expected, type Gap, normalize } from './engine'
 import { REFERENCES } from './gaps'
-import { type PhotoNonReprise, photosDeLEntree } from './media'
-import { type Adaptateur, type Attendu, type Ecart, normaliser } from './engine'
-import {
-	type LigneLaissee,
-	lignesDansLesBornes,
-	lireLesSections,
-	SECTIONS_VIDES,
-	type SectionsLues,
-	valeursDesListes,
-} from './sections'
-import { iso, type Requete } from './source'
+import { entryPhotos, type PhotoNotCarriedOver } from './media'
+import { EMPTY_SECTIONS, listsValues, type ReadSections, readSections, rowsInBounds, type SkippedRow } from './sections'
+import { iso, type Query } from './source'
 
 /**
  * The profiles the spam of 10/10/2026 left without an account, empty, never modified
  * (docs/migration/SCHEMA.md §4.1; decision of 13/10/2026): set aside by the import itself. The
  * list never grows on its own: any other profile without an account stops the import.
  */
-export const PROFILS_DU_SPAM: readonly number[] = [67, 74, 76, 77, 78, 79, 87, 88, 94, 95, 96, 104, 108]
+export const SPAM_PROFILES: readonly number[] = [67, 74, 76, 77, 78, 79, 87, 88, 94, 95, 96, 104, 108]
 
 /** A row of `makeup_artistes`, as the import reads it. */
-export interface LigneProfil {
+export interface ProfileRow {
 	id: number
 	first_name: string | null
 	last_name: string | null
@@ -92,41 +85,40 @@ export interface LigneProfil {
 }
 
 /** What a profile of the source holds besides its row: its account, its sections, and what tells whether it is empty. */
-export interface ProfilLu extends LigneProfil {
+export interface ReadProfile extends ProfileRow {
 	/** The account it is linked to (`makeup_artistes_user_links`), or none. */
 	compte: number | null
 	aPhotoPrincipale: boolean
 	prix: (string | null)[]
 	reseaux: ProfileNetworks | null
 	/** Its lists, its networks and its photos, in their order (./sections.ts). */
-	sections: SectionsLues
+	sections: ReadSections
 }
 
-const LECTURE_DES_PROFILS = `SELECT id, first_name, last_name, company_artist_name, speciality, description, city, action_radius, username,
+const PROFILES_QUERY = `SELECT id, first_name, last_name, company_artist_name, speciality, description, city, action_radius, username,
 	score, available, pro, ${iso('created_at')} AS created_at, ${iso('updated_at')} AS updated_at
 	FROM makeup_artistes ORDER BY id`
 
-const LECTURE_DES_LIENS =
-	'SELECT makeup_artiste_id AS profil, user_id AS compte FROM makeup_artistes_user_links ORDER BY id'
+const LINKS_QUERY = 'SELECT makeup_artiste_id AS profil, user_id AS compte FROM makeup_artistes_user_links ORDER BY id'
 
 /**
  * The profiles of the source, each one with its account, its sections, and what tells whether it is
  * empty: the main picture, the prices and the networks are read in its sections.
  */
-export async function lireLesProfils(requete: Requete): Promise<ProfilLu[]> {
-	const lignes = await requete<LigneProfil>(LECTURE_DES_PROFILS)
-	const liens = await requete<{ profil: number; compte: number }>(LECTURE_DES_LIENS)
-	const sections = await lireLesSections(requete)
-	const compteDe = new Map(liens.map(({ profil, compte }) => [Number(profil), Number(compte)]))
-	return lignes.map(ligne => {
-		const lues = sections.get(ligne.id) ?? SECTIONS_VIDES
+export async function readProfiles(requete: Query): Promise<ReadProfile[]> {
+	const rows = await requete<ProfileRow>(PROFILES_QUERY)
+	const links = await requete<{ profil: number; compte: number }>(LINKS_QUERY)
+	const sections = await readSections(requete)
+	const accountOf = new Map(links.map(({ profil: profile, compte: account }) => [Number(profile), Number(account)]))
+	return rows.map(ligne => {
+		const read = sections.get(ligne.id) ?? EMPTY_SECTIONS
 		return {
 			...ligne,
-			compte: compteDe.get(ligne.id) ?? null,
-			aPhotoPrincipale: lues.photoPrincipale.length > 0,
-			prix: lues.prestations.map(({ price }) => price),
-			reseaux: lues.reseau,
-			sections: lues,
+			compte: accountOf.get(ligne.id) ?? null,
+			aPhotoPrincipale: read.photoPrincipale.length > 0,
+			prix: read.prestations.map(({ price }) => price),
+			reseaux: read.reseau,
+			sections: read,
 		}
 	})
 }
@@ -135,7 +127,7 @@ export async function lireLesProfils(requete: Requete): Promise<ProfilLu[]> {
  * What the single rule of completeness reads of a profile of the source, under the names of the
  * old site, as the old site reads it: main picture, city, speciality, offers, description, networks.
  */
-export const champsDeLaSource = (profil: ProfilLu): ProfileFields => ({
+export const sourceFields = (profil: ReadProfile): ProfileFields => ({
 	first_name: profil.first_name,
 	last_name: profil.last_name,
 	company_artist_name: profil.company_artist_name,
@@ -148,24 +140,24 @@ export const champsDeLaSource = (profil: ProfilLu): ProfileFields => ({
 })
 
 /** Whether the source itself says a profile is entirely empty: none of the six conditions. */
-export const videALaSource = (profil: ProfilLu): boolean => isFullyEmpty(champsDeLaSource(profil))
+export const emptyToSource = (profil: ReadProfile): boolean => isFullyEmpty(sourceFields(profil))
 
 /**
  * The status the server computes for a profile from what the import writes, by its own rule
  * (src/lib/profile/state.ts), the choice of the status left to the rule: a draft when entirely empty,
  * published otherwise.
  */
-export function statutCalcule(valeurs: Readonly<Record<string, unknown>>): ProfileStatus {
+export function computedStatus(valeurs: Readonly<Record<string, unknown>>): ProfileStatus {
 	const { fullyEmpty } = profileState(valeurs as ProfileDocument)
 	return statusAfter({ apres: { chosenStatus: INITIAL_CHOICE }, fullyEmpty }).status
 }
 
 /** A `decimal` of Strapi as a number, or `null`. */
-const nombre = (valeur: string | number | null | undefined): number | null =>
+const count = (valeur: string | number | null | undefined): number | null =>
 	valeur === null || valeur === undefined ? null : Number(valeur)
 
 /** A radius of the source that the v3 does not take: the profile, and the value (a distance, nothing personal). */
-export type RayonARevoir = { profil: number; rayonKm: number }
+export type RadiusToReview = { profil: number; rayonKm: number }
 
 /**
  * The radius of action of a profile of the source (register, `rayon-200-km`): a whole number of
@@ -173,32 +165,32 @@ export type RayonARevoir = { profil: number; rayonKm: number }
  * (above 200 km: the old site accepted up to 1 000, and the real base held 400) is never brought
  * back to 200 in silence: the field stays empty and `rayonsARevoir` lists the profile.
  */
-export function rayonDeLaSource(profil: Pick<LigneProfil, 'action_radius'>): number | null {
-	const rayon = nombre(profil.action_radius)
-	if (rayon === null) return null
-	return Number.isInteger(rayon) && rayon >= RADIUS_BOUNDS_KM.min && rayon <= RADIUS_BOUNDS_KM.max ? rayon : null
+export function sourceRadius(profil: Pick<ProfileRow, 'action_radius'>): number | null {
+	const radius = count(profil.action_radius)
+	if (radius === null) return null
+	return Number.isInteger(radius) && radius >= RADIUS_BOUNDS_KM.min && radius <= RADIUS_BOUNDS_KM.max ? radius : null
 }
 
 /** The radius of the source that `rayonDeLaSource` leaves out, for the report. */
-export function rayonARevoir(profil: Pick<LigneProfil, 'id' | 'action_radius'>): RayonARevoir | null {
-	const rayon = nombre(profil.action_radius)
-	return rayon !== null && rayonDeLaSource(profil) === null ? { profil: profil.id, rayonKm: rayon } : null
+export function radiusToReview(profil: Pick<ProfileRow, 'id' | 'action_radius'>): RadiusToReview | null {
+	const radius = count(profil.action_radius)
+	return radius !== null && sourceRadius(profil) === null ? { profil: profil.id, rayonKm: radius } : null
 }
 
 /** The words the old site reads as no value (`texte()`, src/lib/profil/vue-publique.js). */
-const MOTS_VIDES = new Set(['null', 'undefined'])
+const EMPTY_WORDS = new Set(['null', 'undefined'])
 
 /**
  * A contact detail as the old site reads it: trimmed, and nothing when it is blank or only the word
  * `null` or `undefined`, in any case. Such a value shows nothing on the old site, so it is no value.
  */
-const coordonnee = (valeur: string | null | undefined): string | null => {
-	const texte = valeur?.trim() ?? ''
-	return texte === '' || MOTS_VIDES.has(texte.toLowerCase()) ? null : texte
+const contactDetail = (valeur: string | null | undefined): string | null => {
+	const text = valeur?.trim() ?? ''
+	return text === '' || EMPTY_WORDS.has(text.toLowerCase()) ? null : text
 }
 
 /** A contact detail the old site showed and the server would refuse (padding aside): which one, never its value. */
-export type CoordonneeARevoir = { profil: number; champ: 'telephone' | 'email' }
+export type ContactDetailToReview = { profil: number; champ: 'telephone' | 'email' }
 
 /**
  * The phone and the email of contact of a profile of the source, under the names of Payload. A value
@@ -206,34 +198,34 @@ export type CoordonneeARevoir = { profil: number; champ: 'telephone' | 'email' }
  * characters) is left out, so that the whole profile is not refused for it: it is listed by
  * `coordonneesARevoir`, and it does not open the contact details.
  */
-export function coordonneesDeLaSource(profil: ProfilLu): { telephone: string | null; email: string | null } {
-	const telephone = coordonnee(profil.reseaux?.phone)
-	const email = coordonnee(profil.reseaux?.email)
+export function sourceContactDetails(profil: ReadProfile): { telephone: string | null; email: string | null } {
+	const phone = contactDetail(profil.reseaux?.phone)
+	const email = contactDetail(profil.reseaux?.email)
 	return {
-		telephone: validatePhone(telephone) === true ? telephone : null,
+		telephone: validatePhone(phone) === true ? phone : null,
 		email: validateContactEmail(email) === true ? email : null,
 	}
 }
 
 /** The contact details of a profile that are left out because the server would refuse them. */
-export function coordonneesARevoir(profil: ProfilLu): CoordonneeARevoir[] {
-	const lues = { telephone: coordonnee(profil.reseaux?.phone), email: coordonnee(profil.reseaux?.email) }
-	const gardees = coordonneesDeLaSource(profil)
+export function contactDetailsToReview(profil: ReadProfile): ContactDetailToReview[] {
+	const read = { telephone: contactDetail(profil.reseaux?.phone), email: contactDetail(profil.reseaux?.email) }
+	const keptItems = sourceContactDetails(profil)
 	return (['telephone', 'email'] as const)
-		.filter(champ => lues[champ] !== null && gardees[champ] === null)
+		.filter(champ => read[champ] !== null && keptItems[champ] === null)
 		.map(champ => ({ profil: profil.id, champ }))
 }
 
 /** The contact details as the collection stores them (`contactDetails`): the phone, the email. */
-export function detailsDeContactDeLaSource(profil: ProfilLu): { phone: string | null; email: string | null } {
-	const { telephone, email } = coordonneesDeLaSource(profil)
-	return { phone: telephone, email }
+export function sourceContactInfo(profil: ReadProfile): { phone: string | null; email: string | null } {
+	const { telephone: phone, email } = sourceContactDetails(profil)
+	return { phone: phone, email }
 }
 
 /** Whether the old site shows a phone or an email for this profile. */
-export const affichesALaSource = (profil: ProfilLu): boolean => {
-	const { telephone, email } = coordonneesDeLaSource(profil)
-	return telephone !== null || email !== null
+export const shownToSource = (profil: ReadProfile): boolean => {
+	const { telephone: phone, email } = sourceContactDetails(profil)
+	return phone !== null || email !== null
 }
 
 /**
@@ -241,16 +233,16 @@ export const affichesALaSource = (profil: ProfilLu): boolean => {
  * or an instant with its zone (`2026-11-02T08:00:00Z`), as an ISO string. `null` when it is
  * neither, or not a real date.
  */
-export function dateDeBascule(texte: string): string | null {
+export function cutoverDate(texte: string): string | null {
 	if (!/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2}))?$/.test(texte)) return null
 	// `Date` lets 30 February through (it reads 2 March): the day must exist in its month.
-	const [annee = 0, mois = 0, jour = 0] = texte.slice(0, 10).split('-').map(Number)
-	if (new Date(Date.UTC(annee, mois - 1, jour)).getUTCDate() !== jour) return null
+	const [year = 0, month = 0, day = 0] = texte.slice(0, 10).split('-').map(Number)
+	if (new Date(Date.UTC(year, month - 1, day)).getUTCDate() !== day) return null
 	const date = new Date(texte)
 	return Number.isNaN(date.getTime()) ? null : date.toISOString()
 }
 
-export const ADAPTATEUR_PROFILS: Adaptateur = {
+export const PROFILES_ADAPTER: Adapter = {
 	collection: 'profiles',
 	champs: {
 		pro: 'relation',
@@ -297,34 +289,34 @@ export const ADAPTATEUR_PROFILS: Adaptateur = {
  * moved her commune or changed her lists and photos in the v3 would otherwise get the old site back,
  * with a public phone and the consent of the import. Only a profile the target misses is created.
  */
-export const ADAPTATEUR_PROFILS_EN_SERVICE: Adaptateur = {
-	...ADAPTATEUR_PROFILS,
-	figes: Object.keys(ADAPTATEUR_PROFILS.champs),
+export const PROFILES_IN_SERVICE_ADAPTER: Adapter = {
+	...PROFILES_ADAPTER,
+	figes: Object.keys(PROFILES_ADAPTER.champs),
 }
 
 /**
  * The profiles whose date of consent differs from the date this run asks for: the target keeps the
  * date it holds (`amorces`), the run counts the difference. Identifiers only.
  */
-export function consentementsGardes(
-	attendus: readonly Attendu[],
+export function keptConsents(
+	attendus: readonly Expected[],
 	existants: readonly { valeurs: Readonly<Record<string, unknown>> }[]
 ): number[] {
-	const gardees = new Map(
-		existants.map(({ valeurs }) => [Number(valeurs.strapiId), normaliser('date', valeurs.consentedAt)] as const)
+	const keptItems = new Map(
+		existants.map(({ valeurs: values }) => [Number(values.strapiId), normalize('date', values.consentedAt)] as const)
 	)
 	return attendus
-		.filter(({ strapiId, valeurs }) => {
-			const demandee = normaliser('date', valeurs.consentedAt)
-			const gardee = gardees.get(strapiId)
-			return demandee !== null && gardee !== undefined && gardee !== null && gardee !== demandee
+		.filter(({ strapiId, valeurs: values }) => {
+			const requested = normalize('date', values.consentedAt)
+			const kept = keptItems.get(strapiId)
+			return requested !== null && kept !== undefined && kept !== null && kept !== requested
 		})
 		.map(({ strapiId }) => strapiId)
 		.sort((a, b) => a - b)
 }
 
 /** The profiles the import does not take, and those that stop it, split by what the table says of them. */
-export interface ProfilsLaisses {
+export interface SkippedProfiles {
 	/** Profiles a decision leaves aside (`profilsEcartes`): with their account set aside, or without an account. */
 	ecartes: number[]
 	/** The profiles of the spam (`PROFILS_DU_SPAM`) the source holds without an account: set aside, counted. */
@@ -347,8 +339,8 @@ export interface ProfilsLaisses {
  * - A decision is without effect when it names none of these cases: a profile of the spam, of an
  *   account that is taken, or that the source no longer holds.
  */
-export function profilsLaisses(
-	profils: readonly ProfilLu[],
+export function skippedProfiles(
+	profils: readonly ReadProfile[],
 	{
 		comptesDeLaSource,
 		comptesEcartes,
@@ -358,27 +350,27 @@ export function profilsLaisses(
 		comptesEcartes: readonly number[]
 		profilsEcartes: readonly number[]
 	}
-): ProfilsLaisses {
-	const ecartesParDecision = new Set(comptesEcartes)
+): SkippedProfiles {
+	const excludedByDecision = new Set(comptesEcartes)
 	const decides = new Set(profilsEcartes)
-	const spamListe = new Set(PROFILS_DU_SPAM)
-	const laisses: ProfilsLaisses = { ecartes: [], spam: [], deComptesEcartes: [], sansCompte: [], sansObjet: 0 }
-	const concernes = new Set<number>()
-	for (const { id, compte } of [...profils].sort((a, b) => a.id - b.id)) {
-		const sansCompte = compte === null || !comptesDeLaSource.has(compte)
-		if (sansCompte && spamListe.has(id)) laisses.spam.push(id)
-		else if (sansCompte || (compte !== null && ecartesParDecision.has(compte))) {
-			concernes.add(id)
-			if (decides.has(id)) laisses.ecartes.push(id)
-			else laisses[sansCompte ? 'sansCompte' : 'deComptesEcartes'].push(id)
+	const spamList = new Set(SPAM_PROFILES)
+	const skipped: SkippedProfiles = { ecartes: [], spam: [], deComptesEcartes: [], sansCompte: [], sansObjet: 0 }
+	const concerned = new Set<number>()
+	for (const { id, compte: account } of [...profils].sort((a, b) => a.id - b.id)) {
+		const withoutAccount = account === null || !comptesDeLaSource.has(account)
+		if (withoutAccount && spamList.has(id)) skipped.spam.push(id)
+		else if (withoutAccount || (account !== null && excludedByDecision.has(account))) {
+			concerned.add(id)
+			if (decides.has(id)) skipped.ecartes.push(id)
+			else skipped[withoutAccount ? 'sansCompte' : 'deComptesEcartes'].push(id)
 		}
 	}
-	laisses.sansObjet = [...decides].filter(id => !concernes.has(id)).length
-	return laisses
+	skipped.sansObjet = [...decides].filter(id => !concerned.has(id)).length
+	return skipped
 }
 
 /** What the prices of a run give, in numbers and identifiers (ticket 062). */
-export interface BilanDesPrix {
+export interface PriceSummary {
 	/** Prices of the profiles taken: one per offer and one per option. */
 	prix: number
 	/** Among them, the prices that give an amount. */
@@ -395,11 +387,11 @@ export interface BilanDesPrix {
 	chiffresNonLus: number[]
 }
 
-type PrixEcrit = { priceText?: string | null; priceFrom?: number | null }
+type PriceWritten = { priceText?: string | null; priceFrom?: number | null }
 
 /** The prices written for one profile: its offers, then their options. */
-function prixDesPrestations(prestations: unknown): PrixEcrit[] {
-	return ((prestations ?? []) as (PrixEcrit & { options?: PrixEcrit[] })[]).flatMap(offre => [
+function serviceOffersPrice(prestations: unknown): PriceWritten[] {
+	return ((prestations ?? []) as (PriceWritten & { options?: PriceWritten[] })[]).flatMap(offre => [
 		offre,
 		...(offre.options ?? []),
 	])
@@ -410,13 +402,13 @@ function prixDesPrestations(prestations: unknown): PrixEcrit[] {
  * price of a card counts the offers only, never their options (`minimumPrice`, ticket 032). So an
  * option with an amount does not hide an offer that lost its own.
  */
-export function offreChiffreePerdue(prixDuSource: readonly (string | null)[], ecrites: readonly PrixEcrit[]): boolean {
-	const chiffreeALaSource = prixDuSource.some(price => parsePrice(price).priceFrom !== null)
-	return chiffreeALaSource && minimumPrice(ecrites) === null
+export function lostPricedOffer(prixDuSource: readonly (string | null)[], ecrites: readonly PriceWritten[]): boolean {
+	const pricedToSource = prixDuSource.some(price => parsePrice(price).priceFrom !== null)
+	return pricedToSource && minimumPrice(ecrites) === null
 }
 
-export interface ProfilsAttendus {
-	attendus: Attendu[]
+export interface ExpectedProfiles {
+	attendus: Expected[]
 	/** How many profiles the run takes per status, as the server computes it. */
 	statuts: Record<string, number>
 	/**
@@ -426,21 +418,21 @@ export interface ProfilsAttendus {
 	 */
 	statutsDifferentsDeLaSource: number[]
 	/** Photos of the profiles taken whose file is not adopted. */
-	photosNonReprises: PhotoNonReprise[]
+	photosNonReprises: PhotoNotCarriedOver[]
 	/** Profiles taken with a link of a list that names no row. */
 	liensSansLigne: number[]
 	/** The prices, in numbers and identifiers. */
-	prix: BilanDesPrix
+	prix: PriceSummary
 	/** Contact details left out because the server would refuse them: by profile and field, never the value. */
-	coordonneesARevoir: CoordonneeARevoir[]
+	coordonneesARevoir: ContactDetailToReview[]
 	/** Radii above the 200 km of the v3: the field is empty, the profile is taken (register, `rayon-200-km`). */
-	rayonsARevoir: RayonARevoir[]
+	rayonsARevoir: RadiusToReview[]
 	/** Rows of a list outside a bound of the v3, left out of their profile: by profile, list and rank, never the text. */
-	lignesLaissees: LigneLaisseeDUnProfil[]
+	lignesLaissees: SkippedProfileRow[]
 }
 
 /** A row of a profile left out because the server would refuse the whole profile for it. */
-export type LigneLaisseeDUnProfil = LigneLaissee & { profil: number }
+export type SkippedProfileRow = SkippedRow & { profil: number }
 
 /**
  * The profiles the target must hold. `comptes` gives, for each account the import takes, its
@@ -452,28 +444,28 @@ export type LigneLaisseeDUnProfil = LigneLaissee & { profil: number }
  * created; a file it does not name is not adopted. `consentiLe` is the date of the switch, an ISO
  * string (`dateDeBascule`): given whenever a profile shows contact details at the source.
  */
-export function profilsAttendus(
-	profils: readonly ProfilLu[],
+export function expectedProfiles(
+	profils: readonly ReadProfile[],
 	comptes: ReadonlyMap<number, number | null>,
-	laisses: Pick<ProfilsLaisses, 'ecartes' | 'spam'> = { ecartes: [], spam: [] },
-	communes: ReadonlyMap<number, CommuneAttendue | null> = new Map(),
+	laisses: Pick<SkippedProfiles, 'ecartes' | 'spam'> = { ecartes: [], spam: [] },
+	communes: ReadonlyMap<number, ExpectedCity | null> = new Map(),
 	medias: ReadonlyMap<number, number | null> = new Map(),
 	consentiLe: string | null = null,
 	maintenant: Date = new Date()
-): ProfilsAttendus {
-	const nonPris = new Set([...laisses.ecartes, ...laisses.spam])
+): ExpectedProfiles {
+	const notTaken = new Set([...laisses.ecartes, ...laisses.spam])
 	// The slugs of the old site, computed on every profile of the source, as the old site did.
 	const slugs = new Map(
 		assignSlugs(profils.map(({ id, username, created_at }) => ({ id, username, createdAt: created_at }))).map(
 			({ id, slug }) => [Number(id), slug]
 		)
 	)
-	const attendus: Attendu[] = []
-	const statuts: Record<string, number> = {}
-	const statutsDifferentsDeLaSource: number[] = []
-	const photosNonReprises: PhotoNonReprise[] = []
-	const liensSansLigne: number[] = []
-	const prix: BilanDesPrix = {
+	const expected: Expected[] = []
+	const statuses: Record<string, number> = {}
+	const sourceDifferentStatuses: number[] = []
+	const photosNotCarriedOver: PhotoNotCarriedOver[] = []
+	const linksWithoutRow: number[] = []
+	const prices: PriceSummary = {
 		prix: 0,
 		avecMontant: 0,
 		textesLibres: 0,
@@ -482,100 +474,100 @@ export function profilsAttendus(
 		offresChiffreesPerdues: [],
 		chiffresNonLus: [],
 	}
-	const aRevoir: CoordonneeARevoir[] = []
-	const rayonsARevoir: RayonARevoir[] = []
-	const lignesLaissees: LigneLaisseeDUnProfil[] = []
-	for (const profil of profils) {
-		if (nonPris.has(profil.id)) continue
-		if (profil.compte === null || !comptes.has(profil.compte))
-			throw new Error(`Le profil ${profil.id} n’a pas de compte repris : l’import aurait dû s’arrêter avant.`)
-		const slug = slugs.get(profil.id) ?? null
-		const { sections } = profil
+	const toReview: ContactDetailToReview[] = []
+	const radiiToReview: RadiusToReview[] = []
+	const skippedRows: SkippedProfileRow[] = []
+	for (const profile of profils) {
+		if (notTaken.has(profile.id)) continue
+		if (profile.compte === null || !comptes.has(profile.compte))
+			throw new Error(`Le profil ${profile.id} n’a pas de compte repris : l’import aurait dû s’arrêter avant.`)
+		const slug = slugs.get(profile.id) ?? null
+		const { sections } = profile
 		// The main picture is the first file of its field; Strapi holds one.
-		const principale = photosDeLEntree(sections.photoPrincipale.slice(0, 1), medias)
-		const galerie = photosDeLEntree(sections.galerie, medias)
-		for (const fichier of [...principale.nonReprises, ...galerie.nonReprises])
-			photosNonReprises.push({ entree: profil.id, fichier })
-		if (sections.liensSansLigne > 0) liensSansLigne.push(profil.id)
-		aRevoir.push(...coordonneesARevoir(profil))
-		const rayon = rayonARevoir(profil)
-		if (rayon) rayonsARevoir.push(rayon)
+		const main = entryPhotos(sections.photoPrincipale.slice(0, 1), medias)
+		const gallery = entryPhotos(sections.galerie, medias)
+		for (const file of [...main.nonReprises, ...gallery.nonReprises])
+			photosNotCarriedOver.push({ entree: profile.id, fichier: file })
+		if (sections.liensSansLigne > 0) linksWithoutRow.push(profile.id)
+		toReview.push(...contactDetailsToReview(profile))
+		const radius = radiusToReview(profile)
+		if (radius) radiiToReview.push(radius)
 		// A row outside a bound of the v3 is left out and listed: kept, it would make the server refuse the whole profile.
-		const bornees = lignesDansLesBornes(sections, maintenant)
-		lignesLaissees.push(...bornees.laissees.map(ligne => ({ profil: profil.id, ...ligne })))
-		const affiche = affichesALaSource(profil)
-		if (affiche && consentiLe === null)
+		const bounded = rowsInBounds(sections, maintenant)
+		skippedRows.push(...bounded.laissees.map(ligne => ({ profil: profile.id, ...ligne })))
+		const shown = shownToSource(profile)
+		if (shown && consentiLe === null)
 			throw new Error(
-				`Le profil ${profil.id} affiche des coordonnées : la date de bascule manquait, l’import aurait dû s’arrêter avant.`
+				`Le profil ${profile.id} affiche des coordonnées : la date de bascule manquait, l’import aurait dû s’arrêter avant.`
 			)
-		const valeurs: Record<string, unknown> = {
-			strapiId: profil.id,
-			pro: comptes.get(profil.compte) ?? null,
+		const values: Record<string, unknown> = {
+			strapiId: profile.id,
+			pro: comptes.get(profile.compte) ?? null,
 			slug,
-			legacyUsername: profil.username,
-			firstName: profil.first_name,
-			lastName: profil.last_name,
-			artistName: profil.company_artist_name,
-			specialty: profil.speciality,
-			description: profil.description,
-			city: communes.get(profil.id) ?? null,
-			radiusKm: rayonDeLaSource(profil),
-			available: profil.available ?? true,
-			score: nombre(profil.score),
-			superArtist: profil.pro,
-			mainPicture: principale.ids[0] ?? null,
-			gallery: galerie.ids,
-			...valeursDesListes(bornees.sections),
-			contactDetails: detailsDeContactDeLaSource(profil),
-			publicContact: affiche,
-			consentedAt: affiche ? consentiLe : null,
-			consentSource: affiche ? 'import' : null,
+			legacyUsername: profile.username,
+			firstName: profile.first_name,
+			lastName: profile.last_name,
+			artistName: profile.company_artist_name,
+			specialty: profile.speciality,
+			description: profile.description,
+			city: communes.get(profile.id) ?? null,
+			radiusKm: sourceRadius(profile),
+			available: profile.available ?? true,
+			score: count(profile.score),
+			superArtist: profile.pro,
+			mainPicture: main.ids[0] ?? null,
+			gallery: gallery.ids,
+			...listsValues(bounded.sections),
+			contactDetails: sourceContactInfo(profile),
+			publicContact: shown,
+			consentedAt: shown ? consentiLe : null,
+			consentSource: shown ? 'import' : null,
 			chosenStatus: INITIAL_CHOICE,
-			createdAt: profil.created_at,
-			updatedAt: profil.updated_at,
+			createdAt: profile.created_at,
+			updatedAt: profile.updated_at,
 		}
 		// The status reads whether the main picture is adopted, even before its media exists (a dry run).
-		const statut = statutCalcule({ ...valeurs, mainPicture: principale.adoptees > 0 ? true : null })
-		valeurs.status = statut
-		statuts[statut] = (statuts[statut] ?? 0) + 1
-		if ((statut === 'draft') !== videALaSource(profil)) statutsDifferentsDeLaSource.push(profil.id)
-		const ecarts: Ecart[] = []
-		const ecrits = prixDesPrestations(valeurs.serviceOffers)
-		for (const { priceText, priceFrom } of ecrits) {
-			prix.prix += 1
-			if (priceFrom !== null && priceFrom !== undefined) prix.avecMontant += 1
-			else if ((priceText?.trim() ?? '') === '') prix.sansTexte += 1
-			else prix.textesLibres += 1
+		const status = computedStatus({ ...values, mainPicture: main.adoptees > 0 ? true : null })
+		values.status = status
+		statuses[status] = (statuses[status] ?? 0) + 1
+		if ((status === 'draft') !== emptyToSource(profile)) sourceDifferentStatuses.push(profile.id)
+		const gaps: Gap[] = []
+		const written = serviceOffersPrice(values.serviceOffers)
+		for (const { priceText, priceFrom } of written) {
+			prices.prix += 1
+			if (priceFrom !== null && priceFrom !== undefined) prices.avecMontant += 1
+			else if ((priceText?.trim() ?? '') === '') prices.sansTexte += 1
+			else prices.textesLibres += 1
 		}
-		if (ecrits.some(({ priceFrom }) => isPriceAmount(priceFrom)))
-			ecarts.push({ champ: 'serviceOffers', reference: REFERENCES.prixNumerique })
-		const prixDesOffres = sections.prestations.map(({ price }) => price)
-		if (prixDesOffres.some(price => parsePrice(price).priceFrom !== null)) prix.profilsAvecOffreChiffree += 1
-		if (offreChiffreePerdue(prixDesOffres, (valeurs.serviceOffers ?? []) as PrixEcrit[]))
-			prix.offresChiffreesPerdues.push(profil.id)
-		if (ecrits.some(({ priceText, priceFrom }) => priceFrom === null && /\d/.test(priceText ?? '')))
-			prix.chiffresNonLus.push(profil.id)
-		if (rayon) ecarts.push({ champ: 'radiusKm', reference: REFERENCES.rayon200Km })
-		if (slug !== profil.username) ecarts.push({ champ: 'slug', reference: REFERENCES.slugStocke })
-		if ((profil.city?.trim() ?? '') !== '') ecarts.push({ champ: 'city', reference: REFERENCES.villeEnCommune })
-		if (profil.available === null) ecarts.push({ champ: 'available', reference: REFERENCES.disponibiliteParDefaut })
-		if (statut === 'draft')
-			ecarts.push({
+		if (written.some(({ priceFrom }) => isPriceAmount(priceFrom)))
+			gaps.push({ champ: 'serviceOffers', reference: REFERENCES.prixNumerique })
+		const offersPrice = sections.prestations.map(({ price }) => price)
+		if (offersPrice.some(price => parsePrice(price).priceFrom !== null)) prices.profilsAvecOffreChiffree += 1
+		if (lostPricedOffer(offersPrice, (values.serviceOffers ?? []) as PriceWritten[]))
+			prices.offresChiffreesPerdues.push(profile.id)
+		if (written.some(({ priceText, priceFrom }) => priceFrom === null && /\d/.test(priceText ?? '')))
+			prices.chiffresNonLus.push(profile.id)
+		if (radius) gaps.push({ champ: 'radiusKm', reference: REFERENCES.rayon200Km })
+		if (slug !== profile.username) gaps.push({ champ: 'slug', reference: REFERENCES.slugStocke })
+		if ((profile.city?.trim() ?? '') !== '') gaps.push({ champ: 'city', reference: REFERENCES.villeEnCommune })
+		if (profile.available === null) gaps.push({ champ: 'available', reference: REFERENCES.disponibiliteParDefaut })
+		if (status === 'draft')
+			gaps.push({
 				champ: 'status',
-				reference: videALaSource(profil) ? REFERENCES.profilVideEnBrouillon : REFERENCES.profilNonVideEnBrouillon,
+				reference: emptyToSource(profile) ? REFERENCES.profilVideEnBrouillon : REFERENCES.profilNonVideEnBrouillon,
 			})
-		if (affiche) ecarts.push({ champ: 'publicContact', reference: REFERENCES.coordonneesConsenties })
-		attendus.push({ strapiId: profil.id, valeurs, ecarts })
+		if (shown) gaps.push({ champ: 'publicContact', reference: REFERENCES.coordonneesConsenties })
+		expected.push({ strapiId: profile.id, valeurs: values, ecarts: gaps })
 	}
 	return {
-		attendus,
-		statuts,
-		statutsDifferentsDeLaSource,
-		photosNonReprises,
-		liensSansLigne,
-		prix,
-		coordonneesARevoir: aRevoir,
-		rayonsARevoir,
-		lignesLaissees,
+		attendus: expected,
+		statuts: statuses,
+		statutsDifferentsDeLaSource: sourceDifferentStatuses,
+		photosNonReprises: photosNotCarriedOver,
+		liensSansLigne: linksWithoutRow,
+		prix: prices,
+		coordonneesARevoir: toReview,
+		rayonsARevoir: radiiToReview,
+		lignesLaissees: skippedRows,
 	}
 }
