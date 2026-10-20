@@ -4,7 +4,7 @@
  * password read from a pipe, a file or the environment would leave a trace in a history or a log.
  */
 
-import { CreationRefusee } from './compte'
+import { CreationRefusee } from './account'
 
 /** The characters a line of raw input holds, once its control keys are handled. */
 export type Touche = { fin: true; saisie: string } | { annule: true } | { saisie: string }

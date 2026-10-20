@@ -44,7 +44,7 @@ import {
 	type LectureGardee,
 	RequeteInterdite,
 	type Transport,
-} from './garde-hote'
+} from './host-guard'
 
 export { CibleRefusee, RequeteInterdite }
 

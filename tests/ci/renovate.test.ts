@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
-import { CONFIG_FILE, VALIDATOR_IMAGE, validatorArguments } from '../../scripts/ci/renovate-valide'
+import { CONFIG_FILE, VALIDATOR_IMAGE, validatorArguments } from '../../scripts/ci/renovate-validate'
 import { readWorkflow } from '../outils/garde-fous-ci'
 import {
 	allows,

@@ -21,7 +21,7 @@
  */
 
 import type { Payload } from 'payload'
-import { ambiguites, type Derive, type Instantane } from '../../scripts/ci/derive-schema'
+import { ambiguites, type Derive, type Instantane } from '../../scripts/ci/schema-drift'
 import { BancRefuse } from './banc'
 
 /** The batch Payload gives to the row it writes when it pushes the schema of the code. */

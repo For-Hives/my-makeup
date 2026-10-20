@@ -5,14 +5,14 @@ import {
 	FORMAT_DU_DELTA,
 	journalDuDelta,
 	retirerLesSecrets,
-} from '@/lib/bascule/export-delta'
+} from '@/lib/cutover/export-delta'
 import {
 	debutDeLaBascule,
 	lieuDeLExport,
 	lireLInstant,
 	methodeNonPermise,
 	repondreAuDelta,
-} from '@/lib/bascule/reponse-delta'
+} from '@/lib/cutover/delta-response'
 
 /** Ticket 234: the answer of the export of the delta, with what it reads given by the test. */
 

@@ -1,5 +1,5 @@
 /** The entry of `bun run bascule:controle` (ticket 173): see scripts/bascule/controle-hote.ts. */
-import { lancer } from './controle-hote'
+import { lancer } from './host-check'
 
 process.exit(
 	await lancer({

@@ -16,7 +16,7 @@ import {
 	PUBLIC_BUILD_VARIABLES,
 	readDockerfile,
 	runtimeVariables,
-} from '../../scripts/image/regles'
+} from '../../scripts/image/rules'
 
 /** The two images the Dockerfile may start from, and where the version of each one is written. */
 const BASE_IMAGES = { bun: 'oven/bun', node: 'node' } as const

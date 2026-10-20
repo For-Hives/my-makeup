@@ -8,7 +8,7 @@ import {
 	expectedVersion,
 	imageConfigProblems,
 	photosPolicyProblems,
-} from '../../scripts/image/controle'
+} from '../../scripts/image/check'
 import {
 	citedVariables,
 	declaredVariables,
@@ -16,7 +16,7 @@ import {
 	PUBLIC_BUILD_VARIABLES,
 	readDockerfile,
 	runtimeVariables,
-} from '../../scripts/image/regles'
+} from '../../scripts/image/rules'
 import { MEDIA_ORIGIN_DEFAULT } from '../../src/lib/env'
 import { contentSecurityPolicy } from '../../src/lib/security-headers'
 

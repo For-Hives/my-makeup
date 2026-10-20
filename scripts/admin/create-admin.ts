@@ -17,8 +17,8 @@
 
 import { isLocalDatabase } from '../../src/lib/env'
 import { configurationWithoutSchemaChange } from '../migration/import/target'
-import { lireUnSecret } from './clavier'
-import { type Comptes, CreationRefusee, creerLeCompte, DRAPEAU_CIBLE_DISTANTE, lireLesArguments, USAGE } from './compte'
+import { lireUnSecret } from './keyboard'
+import { type Comptes, CreationRefusee, creerLeCompte, DRAPEAU_CIBLE_DISTANTE, lireLesArguments, USAGE } from './account'
 
 async function principal(argv: string[]): Promise<number> {
 	const demande = lireLesArguments(argv)

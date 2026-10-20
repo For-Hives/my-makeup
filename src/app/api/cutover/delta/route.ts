@@ -1,8 +1,8 @@
 import config from '@payload-config'
 import { getPayload } from 'payload'
 import { isAdmin } from '@/lib/access'
-import { lireLeDelta } from '@/lib/bascule/export-delta'
-import { lieuDeLExport, methodeNonPermise, repondreAuDelta } from '@/lib/bascule/reponse-delta'
+import { lireLeDelta } from '@/lib/cutover/export-delta'
+import { lieuDeLExport, methodeNonPermise, repondreAuDelta } from '@/lib/cutover/delta-response'
 
 // Never prerendered, never cached: each request reads the database again.
 export const dynamic = 'force-dynamic'

@@ -10,7 +10,7 @@ import {
 	lireLesReglages,
 	type Outils,
 	type Reglages,
-} from '../../scripts/bascule/controle-hote'
+} from '../../scripts/cutover/host-check'
 import {
 	AGENT_DU_CONTROLE,
 	CibleRefusee,
@@ -19,7 +19,7 @@ import {
 	garder,
 	RequeteInterdite,
 	type Transport,
-} from '../../scripts/bascule/garde-hote'
+} from '../../scripts/cutover/host-guard'
 import { casDuBanc } from '../outils/parite-urls'
 
 /**

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { controlerLHote, ecrireLeRapport } from '../../scripts/bascule/controle-hote'
+import { controlerLHote, ecrireLeRapport } from '../../scripts/cutover/host-check'
 import { poserLesProfilsDeRecherche } from '../fixtures/profils-de-recherche'
 import { creerContenu, rafraichirLesPagesDesProfils, supprimerContenu } from '../outils/pages-publiques'
 

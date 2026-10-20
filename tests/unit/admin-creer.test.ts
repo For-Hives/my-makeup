@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import { appliquer } from '../../scripts/admin/clavier'
+import { appliquer } from '../../scripts/admin/keyboard'
 import {
 	type Comptes,
 	CreationRefusee,
@@ -9,7 +9,7 @@ import {
 	LONGUEUR_MINIMALE_DU_MOT_DE_PASSE,
 	lireLesArguments,
 	refusDuMotDePasse,
-} from '../../scripts/admin/compte'
+} from '../../scripts/admin/account'
 
 /**
  * The operating procedure that creates an account of the admin panel (ticket 094): no password in an

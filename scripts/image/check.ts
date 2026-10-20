@@ -24,7 +24,7 @@ import path from 'node:path'
 import sharp from 'sharp'
 import { MEDIA_ORIGIN_DEFAULT, mediaOrigin } from '../../src/lib/env'
 import { migrations } from '../../src/migrations'
-import { citedVariables, HEALTH_PATH, IMAGE_ENVIRONMENT, runtimeVariables } from './regles'
+import { citedVariables, HEALTH_PATH, IMAGE_ENVIRONMENT, runtimeVariables } from './rules'
 
 const ROOT = path.resolve(import.meta.dir, '../..')
 const DEFAULT_IMAGE = 'my-makeup:local'

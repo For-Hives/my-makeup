@@ -9,7 +9,7 @@ import {
 	type Instantane,
 	lireArguments,
 	verdict,
-} from '../../scripts/ci/derive-schema'
+} from '../../scripts/ci/schema-drift'
 import { readWorkflow, SCHEMA_DRIFT, schemaDriftProblems } from '../outils/garde-fous-ci'
 
 /**
