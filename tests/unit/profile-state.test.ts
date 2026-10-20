@@ -438,18 +438,19 @@ describe('une zone de pays lue par la règle unique (ticket 260)', () => {
 		// Before this ticket the rule read the name of the commune, next to its INSEE code, with the spaced
 		// hyphens joined when the rule of the old site refused the name.
 		const before = (document: ProfileDocument): string | null => {
-			const commune = document.city
-			if (!commune?.inseeCode || typeof commune.name !== 'string') return null
-			return usableCity(commune.name) ? commune.name : commune.name.replace(/\s+-\s+/g, '-')
+			const place = document.city
+			if (!place?.inseeCode || typeof place.name !== 'string') return null
+			return usableCity(place.name) ? place.name : place.name.replace(/\s+-\s+/g, '-')
 		}
 		expect(DEMO_PROFILES.length).toBeGreaterThan(0)
-		for (const { cle, profil } of DEMO_PROFILES) {
-			const document = profil as ProfileDocument
-			expect(profileFields(document).city, cle).toBe(before(document))
-			expect(profileFields({ ...document, zoneKind: 'city' }), cle).toEqual(profileFields(document))
-			expect(profileFields({ ...document, zoneKind: 'city', countries: [] }), cle).toEqual(profileFields(document))
+		for (const demo of DEMO_PROFILES) {
+			const key = demo.cle
+			const document = demo.profil as ProfileDocument
+			expect(profileFields(document).city, key).toBe(before(document))
+			expect(profileFields({ ...document, zoneKind: 'city' }), key).toEqual(profileFields(document))
+			expect(profileFields({ ...document, zoneKind: 'city', countries: [] }), key).toEqual(profileFields(document))
 			const state = profileState({ ...document, zoneKind: 'city' })
-			expect(state, cle).toEqual(profileState(document))
+			expect(state, key).toEqual(profileState(document))
 		}
 	})
 })

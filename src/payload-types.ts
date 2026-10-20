@@ -241,10 +241,6 @@ export interface Profile {
   artistName?: string | null;
   specialty?: string | null;
   /**
-   * Une zone est une commune de la liste officielle, ou un à cinq pays dont un étranger. Le serveur vide les champs de l’autre type.
-   */
-  zoneKind?: ('city' | 'countries') | null;
-  /**
    * Une commune de la liste officielle, avec son code INSEE. Jamais une adresse.
    */
   city?: {
@@ -261,6 +257,15 @@ export interface Profile {
      */
     postalCodes?: string[] | null;
   };
+  radiusKm?: number | null;
+  /**
+   * Se déplace chez la cliente. Vide tant que la maquilleuse ne l’a pas dit.
+   */
+  homeService?: boolean | null;
+  /**
+   * Une zone est une commune de la liste officielle, ou un à cinq pays dont un étranger. Le serveur vide les champs de l’autre type.
+   */
+  zoneKind?: ('city' | 'countries') | null;
   /**
    * De un à cinq codes de pays (BE, IT…), dont un étranger : la France seule se dit par sa commune.
    */
@@ -269,11 +274,6 @@ export interface Profile {
    * Facultative, et seulement quand un seul pays étranger est choisi. Jamais une adresse.
    */
   town?: string | null;
-  radiusKm?: number | null;
-  /**
-   * Se déplace chez la cliente. Vide tant que la maquilleuse ne l’a pas dit.
-   */
-  homeService?: boolean | null;
   /**
    * Posée par l’import quand la zone n’a pas pu être reprise de l’ancien site. Vidée dès qu’une zone est enregistrée.
    */
@@ -826,7 +826,6 @@ export interface ProfilesSelect<T extends boolean = true> {
   lastName?: T;
   artistName?: T;
   specialty?: T;
-  zoneKind?: T;
   city?:
     | T
     | {
@@ -837,10 +836,11 @@ export interface ProfilesSelect<T extends boolean = true> {
         longitude?: T;
         postalCodes?: T;
       };
-  countries?: T;
-  town?: T;
   radiusKm?: T;
   homeService?: T;
+  zoneKind?: T;
+  countries?: T;
+  town?: T;
   zoneReview?:
     | T
     | {

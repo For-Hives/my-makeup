@@ -69,21 +69,6 @@ const REVIEW_LABELS: Record<(typeof ZONE_REVIEW_REASONS)[number], string> = {
  */
 export const zoneFields: Field[] = [
 	{
-		name: 'zoneKind',
-		label: 'Type de zone',
-		type: 'select',
-		defaultValue: INITIAL_ZONE_KIND,
-		options: [
-			{ label: 'Commune', value: 'city' },
-			{ label: 'Pays', value: 'countries' },
-		],
-		validate: zoneKindVerdict,
-		admin: {
-			description:
-				'Une zone est une commune de la liste officielle, ou un à cinq pays dont un étranger. Le serveur vide les champs de l’autre type.',
-		},
-	},
-	{
 		name: 'city',
 		label: 'Commune',
 		type: 'group',
@@ -146,6 +131,36 @@ export const zoneFields: Field[] = [
 			},
 		],
 	},
+	{
+		name: 'radiusKm',
+		label: 'Rayon d’action (km)',
+		type: 'number',
+		min: RADIUS_BOUNDS_KM.min,
+		max: RADIUS_BOUNDS_KM.max,
+		admin: { step: 1 },
+		validate: radiusVerdict,
+	},
+	{
+		name: 'homeService',
+		label: 'À domicile',
+		type: 'checkbox',
+		admin: { description: 'Se déplace chez la cliente. Vide tant que la maquilleuse ne l’a pas dit.' },
+	},
+	{
+		name: 'zoneKind',
+		label: 'Type de zone',
+		type: 'select',
+		defaultValue: INITIAL_ZONE_KIND,
+		options: [
+			{ label: 'Commune', value: 'city' },
+			{ label: 'Pays', value: 'countries' },
+		],
+		validate: zoneKindVerdict,
+		admin: {
+			description:
+				'Une zone est une commune de la liste officielle, ou un à cinq pays dont un étranger. Le serveur vide les champs de l’autre type.',
+		},
+	},
 	// Countries and town: a zone outside of France (ticket 259; PLAN-ZONES.md §3.2). The codes are
 	// those of the list of src/lib/countries.ts, in capitals.
 	{
@@ -172,21 +187,6 @@ export const zoneFields: Field[] = [
 			description: 'Facultative, et seulement quand un seul pays étranger est choisi. Jamais une adresse.',
 			condition: data => data?.zoneKind === 'countries',
 		},
-	},
-	{
-		name: 'radiusKm',
-		label: 'Rayon d’action (km)',
-		type: 'number',
-		min: RADIUS_BOUNDS_KM.min,
-		max: RADIUS_BOUNDS_KM.max,
-		admin: { step: 1 },
-		validate: radiusVerdict,
-	},
-	{
-		name: 'homeService',
-		label: 'À domicile',
-		type: 'checkbox',
-		admin: { description: 'Se déplace chez la cliente. Vide tant que la maquilleuse ne l’a pas dit.' },
 	},
 	// What the import could not decide about the zone (ticket 259): read by an admin and the owner,
 	// written by no API, only by the import; emptied by the server as soon as a zone is saved.

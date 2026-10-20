@@ -615,3 +615,19 @@ describe('La revue de zone (ticket 259) : posée par l’import seul, vidée par
 		expect((await storedAbroad(profile)).zoneReview).toEqual(REVIEW)
 	})
 })
+
+describe('Les filtres de la liste des profils sur la zone (ticket 259)', () => {
+	test('un type de zone ou un motif inconnu est refusé par une phrase, jamais par une erreur de la base', async () => {
+		const admin = await createAccount('admin')
+
+		for (const where of ['where[zoneKind][equals]=region', 'where[zoneReview.reason][equals]=zz']) {
+			const refusal = await callRest('GET', `/api/profiles?depth=0&${where}`, { enTetes: admin.session.enTetes })
+			expect(refusal.statut, where).toBe(400)
+			expect(refusal.texte, where).toContain('n’existe pas')
+		}
+		for (const where of ['where[zoneKind][equals]=countries', 'where[zoneReview.reason][exists]=true']) {
+			const answer = await callRest('GET', `/api/profiles?depth=0&${where}`, { enTetes: admin.session.enTetes })
+			expect(answer.statut, where).toBe(200)
+		}
+	})
+})

@@ -41,6 +41,7 @@ import {
 	STATUS_CHOICES,
 	STATUS_LABELS,
 } from '../lib/profile/status'
+import { ZONE_KINDS, ZONE_REVIEW_REASONS } from '../lib/profile/zone'
 import { fallbackSlug, firstFreeSlug, slugify } from '../lib/slug'
 import { LIST_FIELDS, rowIdentitiesBeforeWrite } from './profile-lists'
 import { STATE_FIELDS, stateBeforeWrite } from './profiles/state'
@@ -177,7 +178,11 @@ const validateStatusChoice: Validate = value => (isStatusChoice(value) ? true : 
 const VALUES_BY_FIELD: Record<string, readonly string[]> = {
 	status: PROFILE_STATUSES,
 	chosenStatus: STATUS_CHOICES,
+	// The enumerations of the zone (ticket 259) fail the same way on an unknown value.
+	zoneKind: ZONE_KINDS,
+	'zoneReview.reason': ZONE_REVIEW_REASONS,
 }
+const ZONE_FILTER_KEYS = ['zoneKind', 'zoneReview.reason']
 const VALUE_OPERATORS = ['equals', 'not_equals', 'in', 'not_in', 'like', 'contains'] as const
 
 /** Every value a `where` compares a status field with, whatever the nesting of `and` and `or`. */
@@ -207,7 +212,10 @@ export function unknownValues(where: unknown, trouvees: string[] = []): string[]
  */
 export const refuseFilterOnUnknownStatus: CollectionBeforeOperationHook = ({ args, operation }) => {
 	if (operation !== 'read' && operation !== 'count') return args
-	if (unknownValues((args as { where?: unknown }).where).length > 0)
+	const unknown = unknownValues((args as { where?: unknown }).where)
+	if (unknown.some(value => ZONE_FILTER_KEYS.some(key => value.startsWith(`${key} :`))))
+		throw new APIError('Ce filtre nomme un type de zone ou un motif de revue qui n’existe pas.', 400)
+	if (unknown.length > 0)
 		throw new APIError('Ce filtre nomme un statut qui n’existe pas : brouillon, publié ou masqué.', 400)
 	return args
 }
