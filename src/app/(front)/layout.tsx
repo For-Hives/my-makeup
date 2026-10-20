@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 
 // The measure of the audience (ticket 111): the version of the build tags every event, and the
 // domains Umami counts on come from the build too. Both are frozen when the pages are built.
-const MESURE = umamiLoaderScript(
+const ANALYTICS_SCRIPT = umamiLoaderScript(
 	umamiScriptAttributes({
 		domains: process.env.NEXT_PUBLIC_UMAMI_DOMAINS,
 		version: { ...versionEnv(), packageVersion: packageJson.version },
@@ -32,7 +32,7 @@ export default function FrontLayout({ children }: { children: ReactNode }) {
 		<html lang="fr">
 			<head>
 				{/* Inline and first: the filter of the measure exists before the Umami script does. */}
-				<script dangerouslySetInnerHTML={{ __html: MESURE }} />
+				<script dangerouslySetInnerHTML={{ __html: ANALYTICS_SCRIPT }} />
 			</head>
 			<body className="bg-neutral-50 text-neutral-900 antialiased">
 				<WebVitals />

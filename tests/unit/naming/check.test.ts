@@ -133,10 +133,10 @@ describe('naming check: what is read', () => {
 			config()
 		)
 		expect(report.failures.filter(f => f.kind === 'option').map(f => f.file)).toEqual(['scripts/tool.ts'])
-		const scripts = collectFromPackageScripts('package.json', '{"scripts":{"notes:ajouter":"x","build":"y"}}')
-		expect(scripts.map(n => n.name)).toEqual(['notes:ajouter', 'build'])
+		const scripts = collectFromPackageScripts('package.json', '{"scripts":{"stats:calculer":"x","build":"y"}}')
+		expect(scripts.map(n => n.name)).toEqual(['stats:calculer', 'build'])
 		const names = evaluate(scripts, config(), words).failures
-		expect(names.map(f => f.name)).toEqual(['notes:ajouter'])
+		expect(names.map(f => f.name)).toEqual(['stats:calculer'])
 	})
 })
 
@@ -218,7 +218,7 @@ describe('naming check: waiting list and exceptions', () => {
 
 	test('the committed configuration is well formed and its exceptions carry a reason', () => {
 		const committed = loadConfig()
-		expect(committed.waiting.length).toBeGreaterThan(0)
+		expect(committed.waiting).toEqual([])
 		for (const rule of [...committed.exceptions.paths, ...committed.exceptions.words]) {
 			expect(rule.reason.length).toBeGreaterThan(10)
 		}
