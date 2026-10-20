@@ -8,7 +8,7 @@ import {
 	LIMITE_DES_ARTICLES,
 	listerLesArticles,
 	parRecence,
-} from '../../src/services/public/liste-articles'
+} from '../../src/services/public/article-list'
 
 /** The list of the blog (ticket 107), without a database. The run on the bench: tests/integration/blog-liste.test.ts. */
 

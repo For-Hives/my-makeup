@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
 import { type DashboardUser, profileId } from '@/lib/dashboard/my-profile'
-import { lireLAdresseDeProfil, lireLApercuDuProfil } from '@/services/public/profils'
+import { lireLAdresseDeProfil, lireLApercuDuProfil } from '@/services/public/profiles'
 import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 

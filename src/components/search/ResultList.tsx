@@ -1,5 +1,5 @@
-import type { CarteDeProfil } from '@/services/public/profils'
-import { CarteDeResultat } from './CarteDeResultat'
+import type { CarteDeProfil } from '@/services/public/profiles'
+import { CarteDeResultat } from './ResultCard'
 
 /** One list of cards. The first card of the page loads at once: it is the biggest picture above the fold of a phone. */
 export function ListeDeResultats({

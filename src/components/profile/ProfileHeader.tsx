@@ -1,6 +1,6 @@
 import Image from 'next/image'
 import { ratioMedia, sizesBoite } from '@/lib/taille-image'
-import type { ProfilPublic } from '@/services/public/profils'
+import type { ProfilPublic } from '@/services/public/profiles'
 
 /** The photo shown when the profile has none: the picture of the site. */
 export const PHOTO_PAR_DEFAUT = '/assets/pp_makeup.webp'

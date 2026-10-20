@@ -15,8 +15,8 @@
  */
 
 import { formatMontant, formatPrix, parsePrice } from '../prix'
-import { LONGUEUR_DESCRIPTION, LONGUEUR_NOM, messageDeTexte } from '../profile/listes'
-import { texte } from '../profile/nom-affiche'
+import { LONGUEUR_DESCRIPTION, LONGUEUR_NOM, messageDeTexte } from '../profile/lists'
+import { texte } from '../profile/display-name'
 import type { ListDefinition, RowErrors, RowValues } from './list'
 
 /** The price as typed (« ; » between several), as the one text that is stored (one per line). */

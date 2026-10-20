@@ -17,7 +17,7 @@
  */
 
 import { estMontantDePrix } from '../prix'
-import { type ChampsDuProfil, completude, villeExploitable } from './completude'
+import { type ChampsDuProfil, completude, villeExploitable } from './completeness'
 import {
 	CHOIX_DU_STATUT,
 	CHOIX_INITIAL,
@@ -25,7 +25,7 @@ import {
 	STATUT_INITIAL,
 	STATUTS_DU_PROFIL,
 	type StatutDuProfil,
-} from './statut'
+} from './status'
 
 /** The networks of a profile, as the collection names them. */
 interface ReseauxDuDocument {

@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { type BilanDesProfils, poserLesProfilsDuJeu } from '@/jeu-fictif/chargement'
-import { lireLAdresseDeProfil, lireLeProfilPublic, listerLesProfils } from '@/services/public/profils'
+import { lireLAdresseDeProfil, lireLeProfilPublic, listerLesProfils } from '@/services/public/profiles'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 import { viderLeStockage } from '../outils/s3'
 

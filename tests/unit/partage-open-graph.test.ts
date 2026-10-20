@@ -12,7 +12,7 @@ import {
 	QUALITE_DE_PARTAGE,
 } from '../../src/lib/seo/partage'
 import { metadonneesDuProfil } from '../../src/lib/seo/profil'
-import type { ProfilPublic } from '../../src/services/public/profils'
+import type { ProfilPublic } from '../../src/services/public/profiles'
 
 const ABSOLUE = /^https:\/\/my-makeup\.fr\//
 

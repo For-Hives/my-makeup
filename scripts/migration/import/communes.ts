@@ -19,8 +19,8 @@
  */
 
 import { DEPARTEMENTS } from '../../../src/lib/departements'
-import { villeExploitable } from '../../../src/lib/profile/completude'
-import { lieuPublic } from '../../../src/lib/profile/lieu-public'
+import { villeExploitable } from '../../../src/lib/profile/completeness'
+import { lieuPublic } from '../../../src/lib/profile/public-place'
 import {
 	aLesCaracteresDUnNom,
 	coordonneeArrondie,

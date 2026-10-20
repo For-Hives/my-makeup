@@ -6,8 +6,8 @@
 import { describe, expect, test } from 'bun:test'
 import { NextRequest } from 'next/server'
 import { createRateLimit } from '@/lib/auth/rate-limit'
-import { freinerLaRecherche, RECHERCHES_PAR_MINUTE } from '@/lib/search/frein'
-import { DELAI_DE_LECTURE_MS, lireSansBloquer } from '@/lib/search/lecture'
+import { freinerLaRecherche, RECHERCHES_PAR_MINUTE } from '@/lib/search/rate-limit'
+import { DELAI_DE_LECTURE_MS, lireSansBloquer } from '@/lib/search/read'
 import { PAR_PAGE, paginer, sectionsDeLaPage } from '@/lib/search/pagination'
 import { proxy } from '@/proxy'
 

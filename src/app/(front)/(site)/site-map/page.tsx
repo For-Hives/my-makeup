@@ -5,7 +5,7 @@ import { Hero } from '@/components/blocs/Hero'
 import { metadonnees } from '@/lib/seo/metadonnees'
 import { GROUPES_DU_PLAN, pagesFixesLivrees } from '@/lib/seo/sitemap'
 import { cheminProfil } from '@/lib/slug'
-import { lesPagesIndexablesEnCache } from '@/services/public/en-cache'
+import { lesPagesIndexablesEnCache } from '@/services/public/cached'
 
 // Read at each request: the build runs without a database. The reading is the one of the sitemap, kept in
 // Next's cache and refreshed by a save of a profile, a talent or an article (ticket 047).

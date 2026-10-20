@@ -1,8 +1,8 @@
-import { lignes } from '@/lib/profile/vue-publique'
-import type { ProfilPublic } from '@/services/public/profils'
-import { EnTeteDuProfil } from './EnTeteDuProfil'
-import { GalerieDuProfil } from './GalerieDuProfil'
-import { SectionDuProfil } from './SectionDuProfil'
+import { lignes } from '@/lib/profile/public-view'
+import type { ProfilPublic } from '@/services/public/profiles'
+import { EnTeteDuProfil } from './ProfileHeader'
+import { GalerieDuProfil } from './ProfileGallery'
+import { SectionDuProfil } from './ProfileSection'
 import {
 	SectionCompetences,
 	SectionContacts,
@@ -12,7 +12,7 @@ import {
 	SectionLangues,
 	SectionLocalisation,
 	SectionPrestations,
-} from './SectionsDuProfil'
+} from './ProfileSections'
 
 /**
  * The content of the page of a profile (tickets 101 to 103): the top, then the cards that have

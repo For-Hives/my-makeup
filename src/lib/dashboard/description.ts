@@ -15,7 +15,7 @@
  */
 
 import { z } from 'zod'
-import { DESCRIPTION_MIN, longueurDescription } from '../profile/completude'
+import { DESCRIPTION_MIN, longueurDescription } from '../profile/completeness'
 
 /** The longest description: the bound of the collection `profils`. */
 export const DESCRIPTION_MAX = 2000

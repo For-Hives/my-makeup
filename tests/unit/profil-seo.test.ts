@@ -4,7 +4,7 @@ import { prixMinimal } from '@/lib/prix'
 import { serializeJsonLd } from '@/lib/seo/json-ld'
 import { donneesStructureesDuProfil, filDArianeDuProfil, metadonneesDuProfil, titreDuProfil } from '@/lib/seo/profil'
 import { DESCRIPTION_MAX, DESCRIPTION_MIN, TITRE_MAX } from '@/lib/seo/texte'
-import { type ProfilDeLaPage, type ProfilPublic, profilPublicDe } from '@/services/public/profils'
+import { type ProfilDeLaPage, type ProfilPublic, profilPublicDe } from '@/services/public/profiles'
 import { schemaDuProfil } from '../outils/schema-profil-json-ld'
 
 /**

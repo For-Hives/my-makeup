@@ -10,7 +10,7 @@
  * No `next` import: read by the page and by the tests.
  */
 
-import { lireLieu } from './lieu'
+import { lireLieu } from './place'
 
 export const LONGUEUR_MAX_DE_LA_SAISIE = 100
 

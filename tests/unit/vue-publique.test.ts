@@ -10,7 +10,7 @@ import {
 	periode,
 	prestations,
 	urlReseau,
-} from '@/lib/profile/vue-publique'
+} from '@/lib/profile/public-view'
 
 /**
  * What the page of a profile shows, computed from the profile as the public reading gives it

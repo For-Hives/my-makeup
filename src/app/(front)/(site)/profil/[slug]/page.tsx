@@ -3,13 +3,13 @@ import type { Metadata } from 'next'
 import { notFound, permanentRedirect } from 'next/navigation'
 import { getPayload } from 'payload'
 import { cache } from 'react'
-import { VueDuProfil } from '@/components/profile/VueDuProfil'
+import { VueDuProfil } from '@/components/profile/ProfileView'
 import { serializeJsonLd } from '@/lib/seo/json-ld'
 import { donneesStructureesDuProfil, metadonneesDuProfil } from '@/lib/seo/profil'
 import { cheminProfil } from '@/lib/slug'
 import { segmentEcrit } from '@/lib/urls/page-inconnue'
-import { lAdresseDeProfilEnCache } from '@/services/public/en-cache'
-import type { AdresseDeProfil } from '@/services/public/profils'
+import { lAdresseDeProfilEnCache } from '@/services/public/cached'
+import type { AdresseDeProfil } from '@/services/public/profiles'
 
 // Rendered at each request: the build runs without a database. The profile is read through the cache of
 // Next, under its tag `profil:<slug>` (ticket 117): a save refreshes it (ticket 047), and two visits of a

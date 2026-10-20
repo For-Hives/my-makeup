@@ -11,7 +11,7 @@ import { markdownEnHtml } from '@/lib/markdown'
 import { donneesStructureesDuFilDAriane, NOM_DU_SITE, serializeJsonLd } from '@/lib/seo/json-ld'
 import { metadonneesEditoriales } from '@/lib/seo/metadonnees'
 import { urlCanonique } from '@/lib/seo/url'
-import { leTalentEnCache } from '@/services/public/en-cache'
+import { leTalentEnCache } from '@/services/public/cached'
 
 // Rendered at each request: the build runs without a database. The talent is read through the cache of
 // Next, under its tag `talent:<slug>`: a save of a talent refreshes it (tickets 047 and 117).

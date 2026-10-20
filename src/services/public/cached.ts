@@ -15,13 +15,13 @@
 import config from '@payload-config'
 import { unstable_cache } from 'next/cache'
 import { getPayload, type Payload } from 'payload'
-import { valeursARechercher } from '@/lib/profile/adresse'
+import { valeursARechercher } from '@/lib/profile/url'
 import { ETIQUETTES } from '@/lib/revalidation'
 import { estUnSlug } from '@/lib/slug'
 import { type ArticlePublic, lireUnArticlePublic } from './articles'
-import { listerLesArticles } from './liste-articles'
-import { lireLesPagesIndexables } from './pages-indexables'
-import { type AdresseDeProfil, lireLAdresseDeProfil, lireLAnnuaire } from './profils'
+import { listerLesArticles } from './article-list'
+import { lireLesPagesIndexables } from './indexable-pages'
+import { type AdresseDeProfil, lireLAdresseDeProfil, lireLAnnuaire } from './profiles'
 import { lireLeTalent, listerLesTalents, type TalentDeLaPage } from './talents'
 
 const UNE_HEURE = 60 * 60

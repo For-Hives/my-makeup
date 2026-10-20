@@ -25,9 +25,9 @@
 
 import { GALERIE_MAX } from '../lib/medias'
 import { parsePrice } from '../lib/prix'
-import { LONGUEUR_MAX_EMAIL, LONGUEUR_MAX_LIEN, LONGUEUR_MAX_TELEPHONE } from '../lib/profile/coordonnees'
-import { LONGUEUR_DESCRIPTION, LONGUEUR_NOM } from '../lib/profile/listes'
-import type { StatutDuProfil } from '../lib/profile/statut'
+import { LONGUEUR_MAX_EMAIL, LONGUEUR_MAX_LIEN, LONGUEUR_MAX_TELEPHONE } from '../lib/profile/contact-details'
+import { LONGUEUR_DESCRIPTION, LONGUEUR_NOM } from '../lib/profile/lists'
+import type { StatutDuProfil } from '../lib/profile/status'
 import { BORNES_DU_RAYON_KM } from '../lib/profile/zone'
 import type { Profile } from '../payload-types'
 

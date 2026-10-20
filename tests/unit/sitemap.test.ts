@@ -20,7 +20,7 @@ import {
 	lireLesProfilsIndexables,
 	PAGES_MAX,
 	TAILLE_DE_LA_PAGE,
-} from '../../src/services/public/pages-indexables'
+} from '../../src/services/public/indexable-pages'
 
 /**
  * The sitemap (tickets 113 and 114; plan 02 U38 to U43): the pure module, the table of the fixed pages

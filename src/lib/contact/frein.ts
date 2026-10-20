@@ -1,6 +1,6 @@
 import { mailboxKey } from '../auth/canonical-email'
 import { createRateLimit, type RateLimit } from '../auth/rate-limit'
-import { estUneAdresseLocale } from '../search/frein'
+import { estUneAdresseLocale } from '../search/rate-limit'
 
 /**
  * The brakes of the contact form (ticket 161; plan 02 U77), the protection kept for the switch-over,

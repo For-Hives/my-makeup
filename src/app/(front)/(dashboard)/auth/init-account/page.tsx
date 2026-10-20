@@ -8,7 +8,7 @@ import { cityLabel } from '@/lib/dashboard/location'
 import { artistProfile } from '@/lib/dashboard/my-profile'
 import { onboardingPosition } from '@/lib/dashboard/onboarding'
 import { requestUser } from '@/lib/dashboard/request'
-import { texte } from '@/lib/profile/nom-affiche'
+import { texte } from '@/lib/profile/display-name'
 import { findMyCities, saveMyLocation } from '../profil/location-actions'
 import { saveMyOnboardingIdentity, saveMyOnboardingPhoto } from './actions'
 

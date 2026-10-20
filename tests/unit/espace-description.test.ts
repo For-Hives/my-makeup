@@ -8,7 +8,7 @@ import {
 	removeHtml,
 	strictDescriptionSchema,
 } from '@/lib/dashboard/description'
-import { longueurDescription } from '@/lib/profile/completude'
+import { longueurDescription } from '@/lib/profile/completeness'
 
 /** The rules of the description form (ticket 122; plan 02 U05, U27, U32). */
 

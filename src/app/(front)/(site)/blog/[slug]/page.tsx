@@ -15,7 +15,7 @@ import {
 } from '@/lib/seo/json-ld'
 import { metadonneesEditoriales } from '@/lib/seo/metadonnees'
 import { urlCanonique } from '@/lib/seo/url'
-import { lArticleEnCache } from '@/services/public/en-cache'
+import { lArticleEnCache } from '@/services/public/cached'
 
 // Rendered at each request: the build runs without a database. The article is read through the cache of
 // Next, under its tag `article:<slug>`: a save of an article refreshes it (tickets 047 and 117).

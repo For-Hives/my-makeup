@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { type CandidatDeLAdresse, cibleDeLAdresse, SEGMENT_MAX, valeursARechercher } from '@/lib/profile/adresse'
+import { type CandidatDeLAdresse, cibleDeLAdresse, SEGMENT_MAX, valeursARechercher } from '@/lib/profile/url'
 import { slugifier } from '@/lib/slug'
 
 /**

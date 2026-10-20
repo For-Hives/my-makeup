@@ -9,7 +9,7 @@
  */
 
 import { lignesDePrix } from '../prix'
-import { type NomsDuProfil, nomComplet, texte } from './nom-affiche'
+import { type NomsDuProfil, nomComplet, texte } from './display-name'
 
 /**
  * The line under the name, when the profile has an artist name of its own: shown only if it differs

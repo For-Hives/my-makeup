@@ -17,7 +17,7 @@ import {
 	CHEMIN_DU_REFUS_DE_CONTACT,
 	secondesAvantUnMessageDeCetteRequete,
 } from '@/lib/contact/frein'
-import { freinerLaRecherche } from '@/lib/search/frein'
+import { freinerLaRecherche } from '@/lib/search/rate-limit'
 import { robotsPourChemin } from '@/lib/seo/robots'
 import { redirectionDeForme } from '@/lib/urls/forme'
 import { adresseAVerifier, type FamilleVerifiee } from '@/lib/urls/page-inconnue'
@@ -241,7 +241,7 @@ type ExistenceDUnePage = (famille: FamilleVerifiee, segment: string) => Promise<
 
 /** The real lookup, loaded on first use: the proxy of every other path never loads Payload. */
 const existenceReelle: ExistenceDUnePage = async (famille, segment) =>
-	(await import('@/services/public/existe')).existeUnePage(famille, segment)
+	(await import('@/services/public/exists')).existeUnePage(famille, segment)
 
 /**
  * An unknown profile, talent or article answers the 404 page of the site, in full (ticket 231). The lookup is the

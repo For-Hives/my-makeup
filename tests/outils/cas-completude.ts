@@ -8,7 +8,7 @@
  */
 
 import { parsePrice } from '@/lib/prix'
-import { aMedia, type ChampsDuProfil, type Completude, completude } from '@/lib/profile/completude'
+import { aMedia, type ChampsDuProfil, type Completude, completude } from '@/lib/profile/completeness'
 import ancienSite from '../unit/fixtures/completude-ancien-site.json'
 import casPartages from '../unit/fixtures/completude-cas.json'
 

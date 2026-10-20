@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import type { ArticleDeLaListe } from '@/services/public/liste-articles'
+import type { ArticleDeLaListe } from '@/services/public/article-list'
 
 /** « 14 octobre 2026 », in the Paris time zone; '' for a missing or unreadable date. */
 export function dateDeLArticle(date: string | null): string {

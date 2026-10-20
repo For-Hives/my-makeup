@@ -8,7 +8,7 @@ import { Hero } from '@/components/blocs/Hero'
 import { RESEAUX } from '@/components/gabarit/liens'
 import { donneesStructureesDeLAccueil, serializeJsonLd } from '@/lib/seo/json-ld'
 import { metadonnees } from '@/lib/seo/metadonnees'
-import { lesTalentsEnCache } from '@/services/public/en-cache'
+import { lesTalentsEnCache } from '@/services/public/cached'
 import type { TalentPublic } from '@/services/public/talents'
 
 // Rendered at each request: the build runs without a database. The talents are read through the cache of

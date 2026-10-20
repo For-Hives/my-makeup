@@ -29,7 +29,7 @@
 // Relative imports on purpose: the collection `profils` calls this file at every save (ticket 044),
 // and the collections are also loaded by the Payload CLI, outside of Next.
 import { parsePrice } from '../prix'
-import { villePublique } from './lieu-public'
+import { villePublique } from './public-place'
 
 /** The 13 criteria of the progress bar, in display order */
 export const CRITERES = [

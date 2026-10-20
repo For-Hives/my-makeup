@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { Cta } from '@/components/blocs/Cta'
 import { ListeDesArticles } from '@/components/blog/ListeDesArticles'
 import { metadonnees } from '@/lib/seo/metadonnees'
-import { lesArticlesEnCache } from '@/services/public/en-cache'
+import { lesArticlesEnCache } from '@/services/public/cached'
 
 // Rendered at each request: the build runs without a database. The articles are read through the cache
 // of Next, tagged `articles`: a save of an article in the admin panel refreshes the list (tickets 047 and 117), and a

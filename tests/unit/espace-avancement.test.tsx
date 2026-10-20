@@ -3,7 +3,7 @@ import { ProfileProgress } from '@/components/dashboard/ProfileProgress'
 import type { DashboardProfile } from '@/lib/dashboard/cards'
 import { SECTIONS } from '@/lib/dashboard/cards'
 import { profileProgress } from '@/lib/dashboard/progress'
-import { CRITERES } from '@/lib/profile/completude'
+import { CRITERES } from '@/lib/profile/completeness'
 import { ANNECY, CAS_PARTAGES, completudeEnV3, documentDuCas } from '../outils/cas-completude'
 import { ouvrirFenetre } from '../outils/dom-react'
 

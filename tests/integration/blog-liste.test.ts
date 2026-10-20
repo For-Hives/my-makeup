@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test'
-import { listerLesArticles } from '@/services/public/liste-articles'
+import { listerLesArticles } from '@/services/public/article-list'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 
 /**

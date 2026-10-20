@@ -1,7 +1,7 @@
 import type { CollectionBeforeChangeHook, Field, FieldAccess } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { champDuProfilAdminOuProprietaire, jamais } from '../../lib/acces'
-import { etatApresSauvegarde } from '../../lib/profile/etat'
+import { etatApresSauvegarde } from '../../lib/profile/state'
 
 /** Written by the server only, at every save: what any request sends on it is ignored. */
 const CALCULE: { create: FieldAccess; update: FieldAccess } = { create: jamais, update: jamais }

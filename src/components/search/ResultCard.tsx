@@ -1,6 +1,6 @@
 import Image from 'next/image'
 import { LienSuivi } from '@/components/analytics/LienSuivi'
-import type { CarteDeProfil } from '@/services/public/profils'
+import type { CarteDeProfil } from '@/services/public/profiles'
 
 /** The picture of a card whose artist has no photo yet: the one of the site online. */
 export const PHOTO_PAR_DEFAUT = '/assets/pp_makeup.webp'

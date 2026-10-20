@@ -16,7 +16,7 @@ import {
 	normaliser,
 	prixNumerique,
 	villeExploitable,
-} from '@/lib/profile/completude'
+} from '@/lib/profile/completeness'
 import ancienSite from './fixtures/completude-ancien-site.json'
 import casPartages from './fixtures/completude-cas.json'
 

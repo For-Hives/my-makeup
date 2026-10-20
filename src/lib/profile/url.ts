@@ -14,7 +14,7 @@
  */
 
 import { slugifier } from '../slug'
-import { type DocumentVisible, estVisible } from './visibilite'
+import { type DocumentVisible, estVisible } from './visibility'
 
 /** The longest segment worth looking up: a slug has 70 characters, an old username fewer than 100. */
 export const SEGMENT_MAX = 200

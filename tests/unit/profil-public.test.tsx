@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { VueDuProfil } from '@/components/profile/VueDuProfil'
+import { VueDuProfil } from '@/components/profile/ProfileView'
 import { PROFILS_DU_JEU, type ProfilDuJeu } from '@/jeu-fictif/profils'
-import { nomDArtisteAffiche } from '@/lib/profile/vue-publique'
-import { type ProfilDeLaPage, type ProfilPublic, profilPublicDe } from '@/services/public/profils'
+import { nomDArtisteAffiche } from '@/lib/profile/public-view'
+import { type ProfilDeLaPage, type ProfilPublic, profilPublicDe } from '@/services/public/profiles'
 
 /**
  * The page of a public profile, rendered from the profile the public reading gives, on the twelve

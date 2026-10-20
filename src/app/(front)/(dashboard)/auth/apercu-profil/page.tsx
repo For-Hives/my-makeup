@@ -1,12 +1,12 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { PreviewBanner } from '@/components/dashboard/PreviewBanner'
-import { VueDuProfil } from '@/components/profile/VueDuProfil'
+import { VueDuProfil } from '@/components/profile/ProfileView'
 import { requireArtist } from '@/lib/auth/session'
 import { profileId } from '@/lib/dashboard/my-profile'
 import { DASHBOARD_PATH, PREVIEW_PATH, previewState } from '@/lib/dashboard/preview'
 import { requestUser } from '@/lib/dashboard/request'
-import { lireLApercuDuProfil } from '@/services/public/profils'
+import { lireLApercuDuProfil } from '@/services/public/profiles'
 
 // Read per request: it depends on the session, and the build has no database. Private and never
 // indexed: the headers of `/auth/*` (`private, no-store`, `noindex`) and the tag below.

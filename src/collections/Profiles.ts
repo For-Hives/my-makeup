@@ -30,7 +30,7 @@ import {
 	validerEmailDeContact,
 	validerLienDeReseau,
 	validerTelephone,
-} from '../lib/profile/coordonnees'
+} from '../lib/profile/contact-details'
 import { photosDeLaProprietaire, validerGalerie, validerPhotoPrincipale } from '../lib/profile/photos'
 import { validerSiret } from '../lib/profile/siret'
 import {
@@ -40,7 +40,7 @@ import {
 	LIBELLES_DES_STATUTS,
 	STATUT_INITIAL,
 	STATUTS_DU_PROFIL,
-} from '../lib/profile/statut'
+} from '../lib/profile/status'
 import { premierSlugLibre, slugDeRepli, slugifier } from '../lib/slug'
 import { CHAMPS_LISTES, identitesDesLignesAvantEcriture } from './profile-lists'
 import { CHAMPS_DE_L_ETAT, etatAvantEcriture } from './profiles/etat'

@@ -18,7 +18,7 @@
  */
 
 import { z } from 'zod'
-import { jourCalendaire } from '../profile/listes'
+import { jourCalendaire } from '../profile/lists'
 
 export type FieldKind = 'texte' | 'date' | 'long'
 

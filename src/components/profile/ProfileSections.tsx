@@ -6,10 +6,10 @@ import type {
 	LienDeContact,
 	OptionPublique,
 	PrestationPublique,
-} from '@/lib/profile/vue-publique'
-import { LIBELLES_DES_CANAUX } from '@/lib/profile/vue-publique'
-import { LienDeContactMesure } from './LienDeContactMesure'
-import { SectionDuProfil } from './SectionDuProfil'
+} from '@/lib/profile/public-view'
+import { LIBELLES_DES_CANAUX } from '@/lib/profile/public-view'
+import { LienDeContactMesure } from './TrackedContactLink'
+import { SectionDuProfil } from './ProfileSection'
 
 /**
  * The cards of the page of a profile, one component each (ticket 102). They are server components

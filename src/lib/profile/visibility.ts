@@ -18,7 +18,7 @@
  */
 
 import type { Where } from 'payload'
-import type { StatutDuProfil } from './statut'
+import type { StatutDuProfil } from './status'
 
 /** What the rules read of a profile; any field may be absent or null. */
 export interface DocumentVisible {

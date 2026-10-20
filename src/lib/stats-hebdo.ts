@@ -25,8 +25,8 @@ import { createHash, timingSafeEqual } from 'node:crypto'
 import { z } from 'zod'
 import { EVENT_CODES, EVENT_TYPES } from './auth/auth-log'
 import { ETATS_DU_MAIL, STATUTS_DE_DEMANDE } from './contact/etats'
-import { completude } from './profile/completude'
-import { champsDuProfil, type DocumentDuProfil } from './profile/etat'
+import { completude } from './profile/completeness'
+import { champsDuProfil, type DocumentDuProfil } from './profile/state'
 
 /** A published profile has this status; the rest is a draft or hidden. */
 const STATUT_PUBLIE = 'published'

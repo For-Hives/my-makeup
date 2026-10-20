@@ -7,7 +7,7 @@
  */
 
 import type { Payload } from 'payload'
-import { texte } from '@/lib/profile/nom-affiche'
+import { texte } from '@/lib/profile/display-name'
 import { estUnSlug } from '@/lib/slug'
 
 /** The fields of an article the list reads, and nothing else. */

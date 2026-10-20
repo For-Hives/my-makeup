@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test'
-import type { StatutDuProfil } from '@/lib/profile/statut'
+import type { StatutDuProfil } from '@/lib/profile/status'
 import type { Profile } from '@/payload-types'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'

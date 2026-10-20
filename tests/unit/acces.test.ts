@@ -60,7 +60,7 @@ import {
 } from '@/lib/articles'
 import { LANGUE_DE_PAYLOAD } from '@/lib/langue-payload'
 import { validerPhotosDuProfil } from '@/lib/profile/photos'
-import { STATUTS_DU_PROFIL } from '@/lib/profile/statut'
+import { STATUTS_DU_PROFIL } from '@/lib/profile/status'
 
 /**
  * The access rules, called as Payload calls them, without a database: who reaches what. The

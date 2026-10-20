@@ -1,5 +1,5 @@
 import { entreesDuSitemap, sitemapXml } from '@/lib/seo/sitemap'
-import { lesPagesIndexablesEnCache } from '@/services/public/en-cache'
+import { lesPagesIndexablesEnCache } from '@/services/public/cached'
 
 // Read at each request: the build runs without a database. The reading is kept in Next's cache, tagged by
 // the three collections it lists, so a save refreshes it (ticket 047).

@@ -7,7 +7,7 @@
  * that fails gives the message, from the most serious to the lightest.
  */
 
-import { type DocumentVisible, estIndexable, estListe, estVisible } from '../profile/visibilite'
+import { type DocumentVisible, estIndexable, estListe, estVisible } from '../profile/visibility'
 
 export const PREVIEW_PATH = '/auth/apercu-profil'
 export const DASHBOARD_PATH = '/auth/profil'

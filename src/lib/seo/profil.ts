@@ -10,7 +10,7 @@
  */
 
 import type { Metadata } from 'next'
-import type { ProfilPublic } from '@/services/public/profils'
+import type { ProfilPublic } from '@/services/public/profiles'
 import { SITE_ORIGIN } from '../urls-gelees'
 import { NOM_DU_SITE } from './json-ld'
 import { metadonnees } from './metadonnees'

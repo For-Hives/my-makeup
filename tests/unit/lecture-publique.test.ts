@@ -2,8 +2,8 @@ import { describe, expect, test } from 'bun:test'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import type { Payload } from 'payload'
-import { estIndexable, estListe, estVisible, FILTRE_INDEXABLE, FILTRE_LISTE } from '@/lib/profile/visibilite'
-import { LIMITE_MAX_DE_LA_LISTE, listerLesProfils } from '@/services/public/profils'
+import { estIndexable, estListe, estVisible, FILTRE_INDEXABLE, FILTRE_LISTE } from '@/lib/profile/visibility'
+import { LIMITE_MAX_DE_LA_LISTE, listerLesProfils } from '@/services/public/profiles'
 
 /**
  * The public reading of the profiles, without a database (ticket 071; plan 02 §7.2, U20 and U22):

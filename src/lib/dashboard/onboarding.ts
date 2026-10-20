@@ -11,8 +11,8 @@
 
 import { z } from 'zod'
 import { ORIGINES_DECLAREES } from '../analytics/events'
-import { completude } from '../profile/completude'
-import { champsDuProfil, type DocumentDuProfil } from '../profile/etat'
+import { completude } from '../profile/completeness'
+import { champsDuProfil, type DocumentDuProfil } from '../profile/state'
 import { IDENTITY_MAX, identitySchema, strictIdentitySchema } from './identity'
 
 export const STEPS = [1, 2, 3] as const

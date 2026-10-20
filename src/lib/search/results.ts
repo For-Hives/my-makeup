@@ -7,9 +7,9 @@
  * No `next` import: read by the page and by the tests.
  */
 
-import { type PlaceDuProfil, type ProfilsParLieu, sectionsParLieu } from './lieu'
-import { classerParPertinence, normaliserLesTextes, type TextesNormalises } from './pertinence'
-import { type Recherche, rechercheParMot } from './saisie'
+import { type PlaceDuProfil, type ProfilsParLieu, sectionsParLieu } from './place'
+import { classerParPertinence, normaliserLesTextes, type TextesNormalises } from './relevance'
+import { type Recherche, rechercheParMot } from './input'
 
 /** A profile of the directory as the search reads it: where she works, and (for a word) what she wrote. */
 export interface ProfilCherchable extends PlaceDuProfil {

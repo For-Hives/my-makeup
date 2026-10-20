@@ -3,7 +3,7 @@ import type { Payload } from 'payload'
 import type { DashboardUser } from '@/lib/dashboard/my-profile'
 import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
 import { saveAvailability } from '@/lib/dashboard/save-availability'
-import { FILTRE_LISTE } from '@/lib/profile/visibilite'
+import { FILTRE_LISTE } from '@/lib/profile/visibility'
 import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 

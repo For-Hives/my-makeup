@@ -12,7 +12,7 @@ import {
 	messageDePrix,
 	messageDeTexte,
 	messageDObtention,
-} from '@/lib/profile/listes'
+} from '@/lib/profile/lists'
 
 /**
  * The rules of the list sections of a profile (ticket 040): the identity of each row (rule L1 of
