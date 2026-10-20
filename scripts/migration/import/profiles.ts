@@ -22,7 +22,7 @@
  * - The 13 empty profiles the spam of 10/10/2026 left without an account (SCHEMA.md §4.1) are set
  *   aside and counted, never taken (register, `profils-spam-non-repris`). Any other profile without
  *   an account in the source stops the import before any write, until the table of decisions
- *   leaves it aside (`profilsEcartes`).
+ *   leaves it aside (`excludedProfiles`).
  * - A profile whose account the table of decisions sets aside stops the import too, until the
  *   table leaves it aside with its account (SCHEMA.md §11).
  *
@@ -317,7 +317,7 @@ export function keptConsents(
 
 /** The profiles the import does not take, and those that stop it, split by what the table says of them. */
 export interface SkippedProfiles {
-	/** Profiles a decision leaves aside (`profilsEcartes`): with their account set aside, or without an account. */
+	/** Profiles a decision leaves aside (`excludedProfiles`): with their account set aside, or without an account. */
 	excluded: number[]
 	/** The profiles of the spam (`PROFILS_DU_SPAM`) the source holds without an account: set aside, counted. */
 	spam: number[]

@@ -1,23 +1,23 @@
 /**
  * The table of decisions of the import: what a person decided for the cases the import cannot
  * decide alone (ticket 066). It is a JSON file outside the repository for the real data, given to
- * the command by `--decisions <fichier>`; on the bench, a fixture of fictional identifiers.
+ * the command by `--decisions <file>`; on the bench, a fixture of fictional identifiers.
  *
  * It names documents by their identifier in the old base, never by a value:
  *
- *   { "emailsPartages": [{ "comptes": [9, 10, 11, 12], "retenu": 9 }], "profilsEcartes": [29],
- *     "communes": [{ "profil": 28, "codeInsee": "74243" }] }
+ *   { "sharedEmails": [{ "accounts": [9, 10, 11, 12], "kept": 9 }], "excludedProfiles": [29],
+ *     "cities": [{ "profile": 28, "inseeCode": "74243" }] }
  *
- * - `emailsPartages`: accounts of the old site that share one email (edge spaces and capitals
- *   aside). The v3 has one account per email: only `retenu` is taken, the others are set aside; the kept account without a legacy hash takes
+ * - `sharedEmails`: accounts of the old site that share one email (edge spaces and capitals
+ *   aside). The v3 has one account per email: only `kept` is taken, the others are set aside; the kept account without a legacy hash takes
  *   the one of the first account set aside that has one (ticket 066 default), but only when the kept account is a local one: the old site never verified emails, so a password must not open a Google or Facebook account that had none.
- *   `"pretDuHash": false` on a group refuses the loan; `true` grants it to a kept account that is not local (a person confirmed both accounts are the same one).
+ *   `"lendHash": false` on a group refuses the loan; `true` grants it to a kept account that is not local (a person confirmed both accounts are the same one).
  *   A group the source holds without its decision stops the import before any write.
- * - `profilsEcartes`: profiles a person decided to leave aside: a profile whose account a decision
+ * - `excludedProfiles`: profiles a person decided to leave aside: a profile whose account a decision
  *   above sets aside, or a profile without an account in the source that is not one of the 13
  *   profiles of the spam (SCHEMA.md §4.1). Such a profile without its decision stops the import
  *   before any write (docs/migration/SCHEMA.md, §11).
- * - `communes`: for a profile whose city the import leaves « à revoir » (ticket 063), the commune a
+ * - `cities`: for a profile whose city the import leaves « à revoir » (ticket 063), the commune a
  *   person chose, by its INSEE code, or `null` for none: the zone stays empty, and the profile is no
  *   longer « à revoir ». A line for a profile that is not « à revoir » is without effect.
  */
