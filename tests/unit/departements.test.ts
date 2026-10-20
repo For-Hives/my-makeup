@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { DEPARTEMENTS, departementDuCodePostal, normaliserLieu } from '@/lib/departements'
+import { DEPARTEMENTS, departementDuCodePostal, normaliserLieu } from '@/lib/departments'
 
 // Ported from tests/unit/lieu.test.mjs of the old site (branch main), for the part of
 // src/lib/lieu.js that is ported: same cases, same expected values.

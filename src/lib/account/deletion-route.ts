@@ -1,5 +1,5 @@
 import { type Endpoint, Forbidden } from 'payload'
-import { estAdmin, identifiantPossible } from '../acces'
+import { estAdmin, identifiantPossible } from '../access'
 import { deleteAccountAndDependents } from './deletion'
 
 /**

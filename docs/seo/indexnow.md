@@ -1,6 +1,6 @@
 # IndexNow : prévenir les moteurs quand une page publique change
 
-Le ticket 219 prévient Bing et les autres moteurs du protocole IndexNow (Yandex, Seznam, Naver, Yep ; pas Google) quand une page publique change. L'envoi part du même endroit que le rafraîchissement des pages (`src/collections/revalidation.ts`).
+Le ticket 219 prévient Bing et les autres moteurs du protocole IndexNow (Yandex, Seznam, Naver, Yep ; pas Google) quand une page publique change. L'envoi part du même endroit que le rafraîchissement des pages (`src/collections/revalidate.ts`).
 
 ## Ce qui est envoyé, et quand
 

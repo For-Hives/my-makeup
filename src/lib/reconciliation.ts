@@ -11,9 +11,9 @@
  *
  * The bin (`deleted/`) is counted apart: it is not an orphan, it waits for the rule of the storage
  * that empties it. The thumbnails of the old site (`strapiFormats`) are counted apart too: they
- * stay where they are and belong to no document of the v3 (src/lib/corbeille.ts).
+ * stay where they are and belong to no document of the v3 (src/lib/trash.ts).
  */
-import { clesDesObjets, estEnCorbeille, type ObjetsDUnMedia } from './corbeille'
+import { clesDesObjets, estEnCorbeille, type ObjetsDUnMedia } from './trash'
 
 /** A media as the reconciliation reads it. */
 export interface MediaLu extends ObjetsDUnMedia {

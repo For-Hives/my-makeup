@@ -4,7 +4,7 @@
  *
  * - Required, for the row she adds or edits: the name. The description and the price may stay empty.
  * - The price is one text, as typed: « 80 », « 80 € », « à partir de 80 » or « sur devis ». The server
- *   reads the amount from it by the single price rule (`parsePrice`, src/lib/prix.ts) and stores both:
+ *   reads the amount from it by the single price rule (`parsePrice`, src/lib/price.ts) and stores both:
  *   the text as typed and the amount, if there is one. The amount makes the offer count towards a
  *   publishable profile (U04). A request cannot carry an amount: the schema has no such field.
  * - Several prices of one offer are typed with « ; » between them, and stored one per line, as on
@@ -14,7 +14,7 @@
  *   `options` for an offer keeps the stored ones.
  */
 
-import { formatMontant, formatPrix, parsePrice } from '../prix'
+import { formatMontant, formatPrix, parsePrice } from '../price'
 import { text } from '../profile/display-name'
 import { DESCRIPTION_MAX_LENGTH, NAME_MAX_LENGTH, textMessage } from '../profile/lists'
 import type { ListDefinition, RowErrors, RowValues } from './list'

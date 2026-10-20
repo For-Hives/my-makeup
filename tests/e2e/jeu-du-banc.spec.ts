@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
-import { PROFILS_DU_JEU } from '../../src/jeu-fictif/profils'
-import { ARTICLES_DU_JEU, TALENTS_DU_JEU } from '../../src/jeu-fictif/redaction'
+import { PROFILS_DU_JEU } from '../../src/demo-data/profiles'
+import { ARTICLES_DU_JEU, TALENTS_DU_JEU } from '../../src/demo-data/editorial'
 import { CONTENU_DU_BANC, poserLeJeuDuBanc } from '../fixtures/jeu-du-banc'
 import { payloadDeTest } from '../outils/payload-test'
 import { ouvrirSessionSansMotDePasse } from '../outils/session'

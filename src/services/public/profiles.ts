@@ -25,7 +25,7 @@
 import type { Payload } from 'payload'
 import { type Pid, profilePid } from '@/lib/analytics/pid'
 import { formatZone, rayonKm, villeAffichee } from '@/lib/format-zone'
-import { estMontantDePrix, prixMinimal } from '@/lib/prix'
+import { estMontantDePrix, prixMinimal } from '@/lib/price'
 import { displayName, text } from '@/lib/profile/display-name'
 import { profilePid as pidDeLaPage } from '@/lib/profile/pid'
 import {
@@ -149,7 +149,7 @@ export interface PublicProfile {
 	coordonnees: PublicContactDetails | null
 	/** The offers with a name, with their amount in euros (what the structured data prices; no option). */
 	offres: PricedOffer[]
-	/** The lowest amount of her offers (src/lib/prix.ts, `prixMinimal`, U37), or `null`. */
+	/** The lowest amount of her offers (src/lib/price.ts, `prixMinimal`, U37), or `null`. */
 	prixMinimal: number | null
 }
 
@@ -369,7 +369,7 @@ export async function readProfileUrlTarget(payload: Payload, segment: string): P
 	if (target.type !== 'profil') return target
 	return {
 		type: 'profil',
-		// Only a published profile is refreshed by a save (src/lib/revalidation.ts): the page keeps it in the cache.
+		// Only a published profile is refreshed by a save (src/lib/revalidate.ts): the page keeps it in the cache.
 		publie: target.profil.status === PUBLISHED_STATUS,
 		profil: await publicProfileRead(payload, target.profil),
 	}

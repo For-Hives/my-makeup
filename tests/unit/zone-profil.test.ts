@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import type { Field } from 'payload'
 import { Profiles } from '@/collections/Profiles'
-import { DEPARTEMENTS } from '@/lib/departements'
+import { DEPARTEMENTS } from '@/lib/departments'
 import {
 	CITY_FIELDS,
 	type CityInput,

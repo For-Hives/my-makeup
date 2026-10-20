@@ -19,8 +19,8 @@ import {
 	estMaquilleuse,
 	jamais,
 	lectureDesMedias,
-} from '../lib/acces'
-import { adresseDuMedia } from '../lib/medias'
+} from '../lib/access'
+import { adresseDuMedia } from '../lib/media'
 import { judge, NAMED_FILE_CONTEXT, unpredictableName } from '../lib/photo-upload'
 
 /**

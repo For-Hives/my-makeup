@@ -1,6 +1,6 @@
 import type { CollectionBeforeChangeHook, Payload } from 'payload'
 // Relative import on purpose: this file is also loaded by the Payload CLI, outside of Next.
-import { adminOuRedaction } from './acces'
+import { adminOuRedaction } from './access'
 
 /** The slug of the collection Payload keeps its editing locks in. */
 export const COLLECTION_DES_VERROUS = 'payload-locked-documents'

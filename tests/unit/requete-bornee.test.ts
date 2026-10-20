@@ -15,7 +15,7 @@ import {
 	refusDeLaRequete,
 	requeteBornee,
 	requetesBornees,
-} from '@/lib/requete-bornee'
+} from '@/lib/bounded-query'
 
 /**
  * The bound of every request (ticket 048; plan 02 §7.2, U60), without a database: what a filter

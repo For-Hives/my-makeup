@@ -1,5 +1,5 @@
 import { type Endpoint, Forbidden } from 'payload'
-import { estAdmin } from '../acces'
+import { estAdmin } from '../access'
 import { payloadSendEmail } from '../emails/send'
 import { serverEnv } from '../env'
 import { payloadStorage } from './payload-send'

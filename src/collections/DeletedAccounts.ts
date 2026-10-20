@@ -1,6 +1,6 @@
 import type { CollectionConfig } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
-import { adminSeulement, cacheeSaufAdmin } from '../lib/acces'
+import { adminSeulement, cacheeSaufAdmin } from '../lib/access'
 
 /**
  * The accounts of the old site that were deleted in the v3 (ticket 227; docs/migration/SCHEMA.md).

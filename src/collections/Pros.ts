@@ -1,5 +1,5 @@
 import { APIError, type CollectionBeforeDeleteHook, type CollectionConfig } from 'payload'
-import { adminOuSoiMeme, adminSeulement, cacheeSaufAdmin, champAdminSeulement, jamais } from '../lib/acces'
+import { adminOuSoiMeme, adminSeulement, cacheeSaufAdmin, champAdminSeulement, jamais } from '../lib/access'
 import { deleteAccount } from '../lib/account/deletion-route'
 import {
 	recordLastSignIn,

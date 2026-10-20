@@ -1,12 +1,12 @@
 import { SITE_ORIGIN } from '../frozen-urls'
-import { type ContenuPublic, type EtatPublic, PAGES_PUBLIQUES } from '../revalidation'
+import { type ContenuPublic, type EtatPublic, PAGES_PUBLIQUES } from '../revalidate'
 import { estUnSlug } from '../slug'
 import { canonicalUrl } from './url'
 
 /**
  * IndexNow (ticket 219; plan 03 SEO-28): when a public page changes, the engines of the protocol
  * (Bing, Yandex, Seznam, Naver, Yep; not Google) are told its address, where the refresh of the pages
- * happens (src/collections/revalidation.ts).
+ * happens (src/collections/revalidate.ts).
  *
  * - The key is the variable INDEXNOW_KEY, never a file of the repository. The site serves it at
  *   `/<key>.txt` (src/app/api/indexnow/[key]/route.ts). Without the variable, nothing is served and

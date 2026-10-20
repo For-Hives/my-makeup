@@ -9,7 +9,7 @@ import {
 	PRIX_MIN,
 	parsePrice,
 	prixMinimal,
-} from '@/lib/prix'
+} from '@/lib/price'
 import jeu from './fixtures/prix-ancien-site.json'
 
 // The two spaces of an amount, written as escapes so that a regular space can never pass for them

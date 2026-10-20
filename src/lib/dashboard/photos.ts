@@ -1,5 +1,5 @@
 import type { Payload } from 'payload'
-import { identifiantPossible } from '../acces'
+import { identifiantPossible } from '../access'
 import { namedPhotos } from '../profile/photos'
 import type { DashboardProfile } from './cards'
 

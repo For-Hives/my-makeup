@@ -6,7 +6,7 @@ import { appelerRest } from '../outils/rest'
 /**
  * Payload answers in French only (ticket 221): the envelope of a refusal, its own refusals and its
  * default messages, by REST as by the Local API, whatever language the request asks for. The
- * setting is src/lib/langue-payload.ts; the admin panel is checked in a browser
+ * setting is src/lib/payload-language.ts; the admin panel is checked in a browser
  * (tests/e2e/administration-francais.spec.ts).
  */
 

@@ -16,7 +16,7 @@
  * CLI, outside of Next.
  */
 
-import { estMontantDePrix } from '../prix'
+import { estMontantDePrix } from '../price'
 import { completeness, type ProfileFields, usableCity } from './completeness'
 import {
 	INITIAL_CHOICE,
@@ -81,7 +81,7 @@ function cityName(commune: ProfileDocument['city']): string | null {
  * - A photo is passed as an object, never as a bare identifier, which the rule would count as no
  *   photo; the gallery as its list.
  * - The price of an offer is its amount (`priceFrom`, read from the text typed by the same
- *   rule, src/lib/prix.ts): an offer with a text and no amount (« Sur devis ») has no numeric price,
+ *   rule, src/lib/price.ts): an offer with a text and no amount (« Sur devis ») has no numeric price,
  *   as for the cards (`prixMinimal`). The options of an offer do not count, as on the old site.
  * - The phone and the email count as contact channels only when she shows them (`publicContact`):
  *   a channel nobody sees is no channel.

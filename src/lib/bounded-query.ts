@@ -11,7 +11,7 @@ import {
 	parseParams,
 } from 'payload'
 // Relative import on purpose: this file is also loaded by the Payload CLI, outside of Next.
-import { estAdmin } from './acces'
+import { estAdmin } from './access'
 
 /**
  * Every request on a collection is bounded before it reaches the database (ticket 048; plan 02

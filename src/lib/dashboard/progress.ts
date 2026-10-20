@@ -9,7 +9,7 @@
  * no server code: the page and the tests call them.
  */
 
-import { PRIX_MAX, PRIX_MIN } from '../prix'
+import { PRIX_MAX, PRIX_MIN } from '../price'
 import {
 	type Completeness,
 	CRITERIA,

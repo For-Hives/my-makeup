@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
-import { lirePhotoDuJeu, poserLeProfil } from '../../src/jeu-fictif/chargement'
-import { PROFILS_DU_JEU, type ProfilDuJeu } from '../../src/jeu-fictif/profils'
+import { lirePhotoDuJeu, poserLeProfil } from '../../src/demo-data/loading'
+import { PROFILS_DU_JEU, type ProfilDuJeu } from '../../src/demo-data/profiles'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { sansLeReseauDuDehors } from '../outils/hors-reseau'
 import { payloadDeTest } from '../outils/payload-test'

@@ -3,7 +3,7 @@
  * article as the admin panel does, and refresh the pages that list the profiles.
  *
  * Why through the application: the pages keep their data in the cache of Next, tagged by what they read
- * (src/lib/revalidation.ts). A save that goes through the application refreshes it; a save made by the
+ * (src/lib/revalidate.ts). A save that goes through the application refreshes it; a save made by the
  * test process, with its own Payload, does not reach the server's cache. A test that loaded data that way
  * asks the application to refresh, or it would read what an earlier request saw.
  */

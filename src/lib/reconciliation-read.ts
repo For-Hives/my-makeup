@@ -1,13 +1,13 @@
 /**
- * Reads what the reconciliation (src/lib/rapprochement.ts) compares: the media, what uses them,
+ * Reads what the reconciliation (src/lib/reconciliation.ts) compares: the media, what uses them,
  * and the objects of the storage. Read only, without access control: it is a tool of the
  * operators, never an answer to a request. Ticket 137.
  */
 import type { Payload } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { namedPhotos } from './profile/photos'
-import { type MediaLu, type Rapprochement, rapprocher } from './rapprochement'
-import type { ObjetDuStockage } from './stockage'
+import { type MediaLu, type Rapprochement, rapprocher } from './reconciliation'
+import type { ObjetDuStockage } from './storage'
 
 const PAGE = 500
 

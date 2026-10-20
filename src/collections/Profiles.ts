@@ -20,8 +20,8 @@ import {
 	champDuProfilAdminOuProprietaire,
 	jamais,
 	profilPublieOuProprietaire,
-} from '../lib/acces'
-import { GALERIE_MAX } from '../lib/medias'
+} from '../lib/access'
+import { GALERIE_MAX } from '../lib/media'
 import {
 	CONSENT_SOURCES,
 	consentAfter,
@@ -43,9 +43,9 @@ import {
 } from '../lib/profile/status'
 import { premierSlugLibre, slugDeRepli, slugifier } from '../lib/slug'
 import { CHAMPS_LISTES, identitesDesLignesAvantEcriture } from './profile-lists'
-import { CHAMPS_DE_L_ETAT, etatAvantEcriture } from './profiles/etat'
+import { CHAMPS_DE_L_ETAT, etatAvantEcriture } from './profiles/state'
 import { champsDeLaZone } from './profiles/zone'
-import { rafraichissement } from './revalidation'
+import { rafraichissement } from './revalidate'
 
 /** The refresh of the page of a profile, the search and the sitemap (ticket 047). */
 const RAFRAICHISSEMENT = rafraichissement('profiles')
@@ -265,11 +265,11 @@ const INTERNE = { read: champAdminSeulement, create: champAdminSeulement, update
  * - Its zone is a commune with its INSEE code, a radius of 0 to 200 km and « à domicile », never a
  *   postal address (src/collections/profiles/zone.ts, ticket 041).
  * - At every save, the server computes and stores its completeness, whether it is active,
- *   publishable or entirely empty, and since when (src/collections/profiles/etat.ts, ticket 044).
+ *   publishable or entirely empty, and since when (src/collections/profiles/state.ts, ticket 044).
  *   Its status follows: an entirely empty profile is a draft, any other is published, unless an
  *   admin chose another status (`chosenStatus`); a hidden profile stays hidden whatever the save.
  * - A save or a deletion of a profile that is or was published refreshes its page, the search and
- *   the sitemap; the import refreshes nothing (src/collections/revalidation.ts, ticket 047).
+ *   the sitemap; the import refreshes nothing (src/collections/revalidate.ts, ticket 047).
  */
 export const Profiles: CollectionConfig<'profiles'> = {
 	slug: 'profiles',

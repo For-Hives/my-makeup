@@ -30,7 +30,7 @@
  */
 
 import { estUneImage } from '../../../src/lib/articles'
-import { adresseDuMedia } from '../../../src/lib/medias'
+import { adresseDuMedia } from '../../../src/lib/media'
 import { ImportRefuse } from './cible'
 import { REFERENCES } from './ecarts'
 import type { Adaptateur, Attendu, Ecart, Refus } from './moteur'

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import { PROFILS_DU_JEU, type ProfilDuJeu } from '@/jeu-fictif/profils'
-import { prixMinimal } from '@/lib/prix'
+import { PROFILS_DU_JEU, type ProfilDuJeu } from '@/demo-data/profiles'
+import { prixMinimal } from '@/lib/price'
 import { serializeJsonLd } from '@/lib/seo/json-ld'
 import { profileBreadcrumb, profileMetadata, profileStructuredData, profileTitle } from '@/lib/seo/profile'
 import { DESCRIPTION_MAX, DESCRIPTION_MIN, MAX_TITLE } from '@/lib/seo/text'

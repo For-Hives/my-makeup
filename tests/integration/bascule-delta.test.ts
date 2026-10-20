@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
-import { estAdmin } from '@/lib/acces'
+import { estAdmin } from '@/lib/access'
 import { lireLeDelta } from '@/lib/bascule/export-delta'
 import { repondreAuDelta } from '@/lib/bascule/reponse-delta'
 import { creerCompte } from '../outils/fabrique-comptes'

@@ -5,13 +5,13 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import Page from '@/app/(front)/(site)/politique-de-confidentialite/page'
 import { GOOGLE_ISSUER, UMAMI_ORIGIN_DEFAULT } from '@/lib/env'
 import { HEBERGEUR } from '@/lib/legal'
-import { JOURS_AVANT_EFFACEMENT_DES_PHOTOS, PRESTATAIRES } from '@/lib/prestataires'
+import { JOURS_AVANT_EFFACEMENT_DES_PHOTOS, PRESTATAIRES } from '@/lib/providers'
 import { PURGE_DELAY_DAYS } from '@/lib/tasks/unconfirmed-accounts'
 import { texteDePage } from '../outils/texte-de-page'
 
 /**
  * The privacy policy says what is true on the day of the switch (ticket 189): the providers come
- * from one list (src/lib/prestataires.ts), compared here to the services the code is configured
+ * from one list (src/lib/providers.ts), compared here to the services the code is configured
  * for; the old email provider and the quote tool are gone; the confirmation of the email and the
  * delay of the photos are the ones the code applies.
  */
@@ -88,7 +88,7 @@ describe('les engagements que le code tient', () => {
 		expect(texte).toContain(
 			`effacée définitivement de notre stockage au bout de ${JOURS_AVANT_EFFACEMENT_DES_PHOTOS} jours`
 		)
-		expect(lire('src/lib/corbeille.ts')).toContain('erases what is there 30 days later')
+		expect(lire('src/lib/trash.ts')).toContain('erases what is there 30 days later')
 		expect(lire('README.md')).toContain('efface la corbeille au bout de 30 jours')
 	})
 

@@ -1,5 +1,5 @@
 import type { Payload } from 'payload'
-import { COLLECTION_PROS } from '../acces'
+import { COLLECTION_PROS } from '../access'
 import type { DashboardProfile } from './cards'
 import { checkAdminDoesNotHoldProfile } from './lock'
 

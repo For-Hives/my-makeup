@@ -599,7 +599,7 @@ function mailEnv(raw: RawEnv, problems: { variable: string; problem: string }[],
 
 /**
  * APP_ENV says where the application believes it runs; the fictional set reads it too
- * (src/jeu-fictif/garde.ts). Only « test » and « prod » exist: there is no staging
+ * (src/demo-data/guard.ts). Only « test » and « prod » exist: there is no staging
  * environment (ticket 232), so any other value is unreadable. The refusal names the
  * variable, never what it holds.
  */

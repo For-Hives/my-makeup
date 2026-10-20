@@ -1,6 +1,6 @@
 import { type FieldHook, type FilterOptionsProps, type PayloadRequest, ValidationError, type Where } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
-import { estAdmin, identifiantPossible, MEDIAS_DE_LA_REDACTION } from './acces'
+import { estAdmin, identifiantPossible, MEDIAS_DE_LA_REDACTION } from './access'
 import { namedPhotos } from './profile/photos'
 
 /**
@@ -67,11 +67,11 @@ export async function queDesImagesDeLaRedaction(ids: (number | string)[], req: P
  * `beforeChange` of the gallery: a save that names anything but images of the newsroom is refused
  * (400), with the French message on the field. A hook, not `validate`: Payload skips the validation
  * of a draft, and a draft must hold neither a PDF nor the photo of a makeup artist, which publishing
- * the article would make public (`lectureDesMedias`, src/lib/acces.ts).
+ * the article would make public (`lectureDesMedias`, src/lib/access.ts).
  *
  * Every entry of the gallery is looked at: one that names no identifier at all is refused too.
  *
- * The envelope of the refusal is in the language of the request, French (src/lib/langue-payload.ts,
+ * The envelope of the refusal is in the language of the request, French (src/lib/payload-language.ts,
  * ticket 221), and names the field by its label, as Payload does for a field it refuses itself:
  * « Le champ suivant n’est pas valide : Galerie ».
  */

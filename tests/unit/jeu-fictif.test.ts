@@ -3,8 +3,8 @@ import { readdirSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
 import type { Field, Payload } from 'payload'
 import { Profiles } from '@/collections/Profiles'
-import { exigerLaCibleDuJeu, poserLesProfilsDuJeu } from '@/jeu-fictif/chargement'
-import { cibleDuJeu, JeuFictifRefuse, ORIGINE_DU_SITE } from '@/jeu-fictif/garde'
+import { exigerLaCibleDuJeu, poserLesProfilsDuJeu } from '@/demo-data/loading'
+import { cibleDuJeu, JeuFictifRefuse, ORIGINE_DU_SITE } from '@/demo-data/guard'
 import {
 	adresseDuProfil,
 	CONSENTEMENT_DU_JEU,
@@ -13,9 +13,9 @@ import {
 	POIDS_MAX_D_UNE_PHOTO,
 	PROFILS_DU_JEU,
 	type ProfilDuJeu,
-} from '@/jeu-fictif/profils'
+} from '@/demo-data/profiles'
 import { DEPLOYED_ORIGINS } from '@/lib/env'
-import { GALERIE_MAX } from '@/lib/medias'
+import { GALERIE_MAX } from '@/lib/media'
 import { DESCRIPTION_MAX_LENGTH, NAME_MAX_LENGTH } from '@/lib/profile/lists'
 import { profileState, statusAfter } from '@/lib/profile/state'
 import { RADIUS_BOUNDS_KM } from '@/lib/profile/zone'
@@ -28,7 +28,7 @@ import { environnementDuBanc, RACINE } from '../outils/banc'
  * that keeps it off the site. The same set loaded on the bench: tests/integration/banc-profils-types.test.ts.
  */
 
-const DOSSIER_DES_PHOTOS = path.join(RACINE, 'src/jeu-fictif/photos')
+const DOSSIER_DES_PHOTOS = path.join(RACINE, 'src/demo-data/photos')
 
 const type = (cle: string): ProfilDuJeu => {
 	const trouve = PROFILS_DU_JEU.find(profil => profil.cle === cle)

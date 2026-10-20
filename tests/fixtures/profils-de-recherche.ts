@@ -11,8 +11,8 @@
  * Loaded alone (a lock between the processes of the run) and for good: a second load creates nothing.
  */
 
-import { lirePhotoDuJeu, poserLeProfil, profilPresent } from '../../src/jeu-fictif/chargement'
-import { PROFILS_DU_JEU, type ProfilDuJeu } from '../../src/jeu-fictif/profils'
+import { lirePhotoDuJeu, poserLeProfil, profilPresent } from '../../src/demo-data/loading'
+import { PROFILS_DU_JEU, type ProfilDuJeu } from '../../src/demo-data/profiles'
 import { payloadDeTest } from '../outils/payload-test'
 import { sousVerrou } from '../outils/verrou'
 

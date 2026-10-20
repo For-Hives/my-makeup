@@ -10,7 +10,7 @@
  * completeness. No rule is written again here.
  */
 
-import { parsePrice } from '@/lib/prix'
+import { parsePrice } from '@/lib/price'
 import { completeness, type ProfileFields, usableCity } from '@/lib/profile/completeness'
 import { DESCRIPTION_MAX_LENGTH, endMessage, NAME_MAX_LENGTH, obtainMessage, textMessage } from '@/lib/profile/lists'
 import { publicPlace } from '@/lib/profile/public-place'

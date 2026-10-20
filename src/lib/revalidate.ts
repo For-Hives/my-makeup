@@ -3,7 +3,7 @@
  * document, and the pages that list the documents of its collection, the sitemap among them.
  *
  * The public pages are rendered by the server and kept in Next's cache; a save tells Next which of
- * them to render again (src/collections/revalidation.ts). Each one is named twice:
+ * them to render again (src/collections/revalidate.ts). Each one is named twice:
  * - by its path (`revalidatePath`): `/profil/<slug>`, `/search`, `/sitemap.xml`…;
  * - by a tag (`revalidateTag`), which a cached read of the data carries (`ETIQUETTES`): every page
  *   that reads a profile, a talent or an article is then refreshed, whichever page it is.

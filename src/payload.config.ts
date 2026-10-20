@@ -24,12 +24,12 @@ import { Talents } from './collections/Talents'
 import { avecLaCorbeille } from './collections/trash'
 import { adapterWithoutRelay, transportOptions } from './lib/emails/relay'
 import { mediaBaseUrl, serverEnv } from './lib/env'
-import { LANGUE_DE_PAYLOAD } from './lib/langue-payload'
-import { adresseDuMedia, PREFIXE_DES_ENVOIS } from './lib/medias'
+import { LANGUE_DE_PAYLOAD } from './lib/payload-language'
+import { adresseDuMedia, PREFIXE_DES_ENVOIS } from './lib/media'
 import { avecLEcouteDuPool, reglagesDuPool } from './lib/pool-base'
-import { requetesBornees } from './lib/requete-bornee'
-import { stockageS3 } from './lib/stockage'
-import { reserverLesVerrousAuxAdmins } from './lib/verrous-payload'
+import { requetesBornees } from './lib/bounded-query'
+import { stockageS3 } from './lib/storage'
+import { reserverLesVerrousAuxAdmins } from './lib/payload-locks'
 import { lancerLImportALaDemande } from './migration/import-a-la-demande'
 import { migrations } from './migrations'
 
@@ -113,7 +113,7 @@ export default buildConfig({
 	// REST and the Local API are the only ways in. The two GraphQL routes answer 404 by themselves.
 	graphQL: { disable: true },
 	// Payload speaks French only: its errors, its own messages and the admin panel, whatever
-	// language a request asks for (src/lib/langue-payload.ts, ticket 221).
+	// language a request asks for (src/lib/payload-language.ts, ticket 221).
 	i18n: LANGUE_DE_PAYLOAD,
 	// Once Payload has started and played its migrations.
 	onInit: payload => {
@@ -127,7 +127,7 @@ export default buildConfig({
 		// The photos go to the object storage the environment names (src/lib/env.ts): R2 on the site,
 		// the S3 simulator on the test bench. Each media keeps its own prefix: `media/` for a photo
 		// sent in the v3, the folder of the old site for an adopted one. The public address is
-		// direct, never through Payload: the base of the photos, then the key (src/lib/medias.ts).
+		// direct, never through Payload: the base of the photos, then the key (src/lib/media.ts).
 		// Without a storage the plugin is off, but its fields stay: the schema never depends on the
 		// environment.
 		// The plugin never deletes an object: a photo that no longer serves goes to the bin of the
@@ -160,7 +160,7 @@ export default buildConfig({
 		),
 		champsDuStockageFermes,
 		// Last, so that it sees every collection: a request too large, or that filters or sorts on a
-		// private field, is refused before the database (src/lib/requete-bornee.ts, ticket 048).
+		// private field, is refused before the database (src/lib/bounded-query.ts, ticket 048).
 		requetesBornees,
 	],
 	secret: env.payloadSecret,

@@ -9,7 +9,7 @@ import {
 	datePremierePublication,
 	VERSIONS_REDACTION,
 } from './editor'
-import { rafraichissement } from './revalidation'
+import { rafraichissement } from './revalidate'
 
 /** The refresh of its page, of the pages that list the articles and of the sitemap (ticket 047). */
 const RAFRAICHISSEMENT = rafraichissement('articles')
@@ -27,9 +27,9 @@ const RAFRAICHISSEMENT = rafraichissement('articles')
  * - The gallery holds images of the newsroom only, never a PDF nor the photo of a makeup artist
  *   (`galerieDImages`), drafts and the import included. Its photos belong to nobody: the newsroom
  *   sends them, and the public reads one when it is in the gallery of a published article
- *   (`lectureDesMedias`, src/lib/acces.ts).
+ *   (`lectureDesMedias`, src/lib/access.ts).
  * - A save or a deletion of an article that is or was published refreshes its page, the blog and
- *   the sitemap; the import refreshes nothing (src/collections/revalidation.ts, ticket 047).
+ *   the sitemap; the import refreshes nothing (src/collections/revalidate.ts, ticket 047).
  */
 export const Articles: CollectionConfig<'articles'> = {
 	slug: 'articles',

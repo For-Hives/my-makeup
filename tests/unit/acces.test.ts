@@ -49,7 +49,7 @@ import {
 	PROFILS_PUBLIES,
 	profilPublieOuProprietaire,
 	SEULEMENT_PUBLIES,
-} from '@/lib/acces'
+} from '@/lib/access'
 import {
 	estUneImage,
 	galerieDImages,
@@ -58,7 +58,7 @@ import {
 	MESSAGE_GALERIE_IMAGES,
 	TYPES_D_IMAGE,
 } from '@/lib/articles'
-import { LANGUE_DE_PAYLOAD } from '@/lib/langue-payload'
+import { LANGUE_DE_PAYLOAD } from '@/lib/payload-language'
 import { validateProfilePhotos } from '@/lib/profile/photos'
 import { PROFILE_STATUSES } from '@/lib/profile/status'
 
@@ -581,7 +581,7 @@ describe('La collection articles (ticket 046) : les règles des talents (U59)', 
 })
 
 describe('La galerie d’un article ne prend que des images de la rédaction (ticket 046)', () => {
-	/** Payload’s translations in the one language the site gives them (src/lib/langue-payload.ts). */
+	/** Payload’s translations in the one language the site gives them (src/lib/payload-language.ts). */
 	const enFrancais = initI18n({ config: LANGUE_DE_PAYLOAD, context: 'api', language: 'fr' })
 
 	/**

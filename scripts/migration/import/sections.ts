@@ -22,7 +22,7 @@
  * No `bun` import here: the import can run under Node too.
  */
 
-import { parsePrice } from '../../../src/lib/prix'
+import { parsePrice } from '../../../src/lib/price'
 import type { ProfileNetworks } from '../../../src/lib/profile/completeness'
 import {
 	DESCRIPTION_MAX_LENGTH,

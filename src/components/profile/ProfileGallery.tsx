@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import { type KeyboardEvent, useCallback, useEffect, useRef, useState } from 'react'
 import { altWork } from '@/lib/profile/public-view'
-import { RATIO_PAR_DEFAUT, ratioMedia, sizesBoite } from '@/lib/taille-image'
+import { RATIO_PAR_DEFAUT, ratioMedia, sizesBoite } from '@/lib/image-size'
 
 /** The height of a photo of the portfolio, in px: its width follows the shape of the photo. */
 const PHOTO_HEIGHT = 500

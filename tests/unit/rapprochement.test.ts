@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { type MediaLu, raconterLeRapprochement, rapprocher } from '@/lib/rapprochement'
+import { type MediaLu, raconterLeRapprochement, rapprocher } from '@/lib/reconciliation'
 
 /** The dry reconciliation of the storage and the database (ticket 137; plan 02 I27). */
 

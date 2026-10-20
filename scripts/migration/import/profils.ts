@@ -30,7 +30,7 @@
  *   (./sections.ts, ticket 060): a photo whose file is not adopted (./medias.ts) is reported, never
  *   invented.
  *
- * - Its prices keep the text typed and gain the amount the single rule reads in it (src/lib/prix.ts,
+ * - Its prices keep the text typed and gain the amount the single rule reads in it (src/lib/price.ts,
  *   ticket 062): `bilanDesPrix` counts them, and lists the profiles that would lose their priced
  *   offer or hold digits the rule does not read.
  *
@@ -42,7 +42,7 @@
  *   no date, no source. The report counts them, never shows them.
  */
 
-import { estMontantDePrix, parsePrice, prixMinimal } from '../../../src/lib/prix'
+import { estMontantDePrix, parsePrice, prixMinimal } from '../../../src/lib/price'
 import { isFullyEmpty, type ProfileFields, type ProfileNetworks } from '../../../src/lib/profile/completeness'
 import { validateContactEmail, validatePhone } from '../../../src/lib/profile/contact-details'
 import { type ProfileDocument, profileState, statusAfter } from '../../../src/lib/profile/state'

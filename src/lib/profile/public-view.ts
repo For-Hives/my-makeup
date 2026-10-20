@@ -8,7 +8,7 @@
  * - A section with nothing to show is not shown.
  */
 
-import { lignesDePrix } from '../prix'
+import { lignesDePrix } from '../price'
 import { fullName, type ProfileNames, text } from './display-name'
 
 /**
@@ -164,7 +164,7 @@ export interface PublicOption {
 	nom: string
 	/** One paragraph per line typed. */
 	description: string[]
-	/** The price, one entry per line (src/lib/prix.ts, `lignesDePrix`). */
+	/** The price, one entry per line (src/lib/price.ts, `lignesDePrix`). */
 	prix: string[]
 }
 

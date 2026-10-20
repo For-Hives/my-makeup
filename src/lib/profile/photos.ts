@@ -1,7 +1,7 @@
 import type { PayloadRequest, Where } from 'payload'
 // Relative import on purpose: this file is also loaded by the Payload CLI, outside of Next.
-import { identifiantPossible } from '../acces'
-import { GALERIE_MAX } from '../medias'
+import { identifiantPossible } from '../access'
+import { GALERIE_MAX } from '../media'
 
 /**
  * The photos of a profile (ticket 043): its main photo and its gallery, in order, 10 photos at most.

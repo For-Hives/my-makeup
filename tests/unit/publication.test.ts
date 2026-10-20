@@ -15,7 +15,7 @@ import {
 	requiredWorkflowChecks,
 	takenByTags,
 } from '../../scripts/release/publication'
-import { CHANGELOG_FILE, type Changelog, parseChangelog } from '../../src/lib/notes-de-version'
+import { CHANGELOG_FILE, type Changelog, parseChangelog } from '../../src/lib/release-notes'
 import { HttpResponse, http, simuler } from '../outils/http-sortant'
 
 /**

@@ -1,14 +1,14 @@
 import { describe, expect, mock, test } from 'bun:test'
 import { revalidateTag } from 'next/cache.js'
 import type { PayloadRequest, RequestContext } from 'payload'
-import { horsDUneRequeteDeNext, rafraichissement } from '../../src/collections/revalidation'
+import { horsDUneRequeteDeNext, rafraichissement } from '../../src/collections/revalidate'
 import { CONTEXTE_IMPORT } from '../../src/lib/contexte-import'
-import { ciblesDuChangement, ETIQUETTES, type EtatPublic, PAGES_PUBLIQUES } from '../../src/lib/revalidation'
+import { ciblesDuChangement, ETIQUETTES, type EtatPublic, PAGES_PUBLIQUES } from '../../src/lib/revalidate'
 import { espionnerLeCache } from '../outils/espion-cache'
 
 /**
- * Ticket 047: which pages a save makes stale (src/lib/revalidation.ts), and the hooks that tell
- * Next (src/collections/revalidation.ts), without a database. The same, through Payload and the
+ * Ticket 047: which pages a save makes stale (src/lib/revalidate.ts), and the hooks that tell
+ * Next (src/collections/revalidate.ts), without a database. The same, through Payload and the
  * REST API on the bench: tests/integration/revalidation.test.ts (I21).
  */
 

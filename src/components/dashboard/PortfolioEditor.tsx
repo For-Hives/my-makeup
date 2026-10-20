@@ -15,7 +15,7 @@ import {
 } from '@/lib/dashboard/photos-upload'
 import type { PortfolioValues } from '@/lib/dashboard/portfolio'
 import type { SaveResult } from '@/lib/dashboard/result'
-import { GALERIE_MAX } from '@/lib/medias'
+import { GALERIE_MAX } from '@/lib/media'
 import { EditingPanel } from './EditingPanel'
 import { localPreview, releasePreview } from './PhotoEditor'
 

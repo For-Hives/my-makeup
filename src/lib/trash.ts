@@ -15,11 +15,11 @@
  * they were, so that no document names an object that has gone.
  *
  * No Payload and no S3 client here: the storage is an interface (`StockageDesObjets`), which
- * src/lib/stockage.ts gives for R2 and the simulator of the bench, and a test for its fake.
+ * src/lib/storage.ts gives for R2 and the simulator of the bench, and a test for its fake.
  */
 
 // Relative import on purpose: this file is also loaded by the Payload CLI, outside of Next.
-import { cleDuMedia } from './medias'
+import { cleDuMedia } from './media'
 
 /** The folder of the bin, at the root of the storage. */
 export const PREFIXE_DE_LA_CORBEILLE = 'deleted'
@@ -51,7 +51,7 @@ export interface ObjetsDUnMedia {
 
 /**
  * The keys of the objects of a media: the original, then each derived size, all in its folder, as
- * its public address names them (`cleDuMedia`, src/lib/medias.ts). No key twice, none for an empty
+ * its public address names them (`cleDuMedia`, src/lib/media.ts). No key twice, none for an empty
  * name. The thumbnails of the old site (`strapiFormats`) are not among them: they stay where they
  * are, and the control of the media before any purge counts them (tickets 197 and 205).
  */

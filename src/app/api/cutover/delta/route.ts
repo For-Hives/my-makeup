@@ -1,6 +1,6 @@
 import config from '@payload-config'
 import { getPayload } from 'payload'
-import { estAdmin } from '@/lib/acces'
+import { estAdmin } from '@/lib/access'
 import { lireLeDelta } from '@/lib/bascule/export-delta'
 import { lieuDeLExport, methodeNonPermise, repondreAuDelta } from '@/lib/bascule/reponse-delta'
 

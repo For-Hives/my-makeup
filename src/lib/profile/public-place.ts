@@ -41,7 +41,7 @@
  */
 
 // Relative imports on purpose: read by the completeness rule, which the collection `profils` calls.
-import { DEPARTEMENTS, departementDuCodePostal, normaliserLieu } from '../departements'
+import { DEPARTEMENTS, departementDuCodePostal, normaliserLieu } from '../departments'
 import { villeAffichee } from '../format-zone'
 
 /** Types of street and parts of an address (lower case, no accents) */

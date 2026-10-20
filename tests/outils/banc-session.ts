@@ -3,7 +3,7 @@
  * `bun run banc:session <compte>` writes the session to files and prints where they are.
  *
  *   admin                       an account of the fixed set (tests/fixtures/comptes.ts), by its type
- *   profil-reference            the makeup artist of a profile type (src/jeu-fictif/profils.ts)
+ *   profil-reference            the makeup artist of a profile type (src/demo-data/profiles.ts)
  *   jeu-admin@example.test      any account of the bench, by its address
  *
  * The session is a real one, opened the way a login opens it (tests/outils/session.ts). Nothing
@@ -14,7 +14,7 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import type { AuthCollectionSlug, Payload } from 'payload'
-import { adresseDuProfil, PROFILS_DU_JEU } from '../../src/jeu-fictif/profils'
+import { adresseDuProfil, PROFILS_DU_JEU } from '../../src/demo-data/profiles'
 import { adresseDuJeu, TYPES_DU_JEU } from '../fixtures/comptes'
 import { BancRefuse, RACINE } from './banc'
 import { TYPES_DE_COMPTE } from './fabrique-comptes'

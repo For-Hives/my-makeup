@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test'
 import type { PayloadRequest, RequestContext } from 'payload'
 import { GET as servirLaCle } from '@/app/api/indexnow/[key]/route'
-import { rafraichissement } from '../../src/collections/revalidation'
+import { rafraichissement } from '../../src/collections/revalidate'
 import { CONTEXTE_IMPORT } from '../../src/lib/contexte-import'
 import { type EnvError, parseServerEnv } from '../../src/lib/env'
 import {

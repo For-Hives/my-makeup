@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { AnalyticsOptOut } from '@/components/analytics/AnalyticsOptOut'
 import { LegalPage } from '@/components/legal/LegalPage'
 import { EDITEUR, formatSiret } from '@/lib/legal'
-import { JOURS_AVANT_EFFACEMENT_DES_PHOTOS, PRESTATAIRES } from '@/lib/prestataires'
+import { JOURS_AVANT_EFFACEMENT_DES_PHOTOS, PRESTATAIRES } from '@/lib/providers'
 import { pageMetadata } from '@/lib/seo/metadata'
 import { PURGE_DELAY_DAYS } from '@/lib/tasks/unconfirmed-accounts'
 
@@ -104,7 +104,7 @@ export default function PrivacyPolicyPage() {
 			</p>
 
 			<h2>Hébergement et prestataires</h2>
-			{/* The list comes from src/lib/prestataires.ts, which a test compares to the configured
+			{/* The list comes from src/lib/providers.ts, which a test compares to the configured
 			    services: edit it there, never here. */}
 			<ul>
 				{PRESTATAIRES.map(({ id, nom, phrase }) => (

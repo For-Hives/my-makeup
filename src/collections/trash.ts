@@ -16,13 +16,13 @@ import {
 	type ObjetsDUnMedia,
 	PanneDuStockage,
 	type StockageDesObjets,
-} from '../lib/corbeille'
+} from '../lib/trash'
 import { idOf, namedPhotos } from '../lib/profile/photos'
 
 /**
  * A photo that no longer serves goes to the bin, never to a direct deletion (ticket 045; plan 01
  * §1.8; docs/migration/SCHEMA.md, §8). The rule of the bin itself, the move and the putting back,
- * is in src/lib/corbeille.ts; this file decides when a photo no longer serves.
+ * is in src/lib/trash.ts; this file decides when a photo no longer serves.
  *
  * - **A media deleted** (by its owner, by an admin, by the newsroom, or by the clean-up below): its
  *   objects, the original and each derived size, move to the bin.

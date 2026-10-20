@@ -18,7 +18,7 @@
  *   INSEE code, or none. A line that names a profile not « à revoir » is without effect.
  */
 
-import { DEPARTEMENTS } from '../../../src/lib/departements'
+import { DEPARTEMENTS } from '../../../src/lib/departments'
 import { usableCity } from '../../../src/lib/profile/completeness'
 import { publicPlace } from '../../../src/lib/profile/public-place'
 import {

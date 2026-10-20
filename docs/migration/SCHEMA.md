@@ -264,7 +264,7 @@ Table `components_makeupartists_service_offers`, 118 lignes.
 | `name` | `string`, 70 caractères au plus | `profiles.serviceOffers.name` (`text`) | Repris tel quel. |
 | `description` | `text` | `profiles.serviceOffers.description` (`textarea`, 2 000 caractères au plus) | Repris tel quel. Strapi ne borne pas ce texte, le serveur de la v3 le borne à 2 000 : une prestation plus longue est laissée de côté avec ses options et listée par profil et par rang, le reste du profil est repris (ticket 226, §11). |
 | `options` | `component` répétable `service-offers.options` | `profiles.serviceOffers.options` (`array` imbriqué) | Lignes du §6.7, dans l'ordre de `components_makeupartists_service_offers_components`. |
-| `price` | `text`, 70 caractères au plus | `profiles.serviceOffers.priceText` (`text`) et `profiles.serviceOffers.priceFrom` (`number`) | `priceText` : repris tel quel, à l'octet près. `priceFrom` : transformé (plan `01` §6.2, ticket 062), le nombre lu par la règle de prix unique (`src/lib/prix.ts`, ticket 032), nul quand le texte n'a pas de nombre lisible. |
+| `price` | `text`, 70 caractères au plus | `profiles.serviceOffers.priceText` (`text`) et `profiles.serviceOffers.priceFrom` (`number`) | `priceText` : repris tel quel, à l'octet près. `priceFrom` : transformé (plan `01` §6.2, ticket 062), le nombre lu par la règle de prix unique (`src/lib/price.ts`, ticket 032), nul quand le texte n'a pas de nombre lisible. |
 
 ### 6.7 Option d'une prestation : `service-offers.options` → `profiles.serviceOffers.options`
 
@@ -334,7 +334,7 @@ Les nouveaux fichiers, envoyés dans la v3, suivent d'autres règles (préfixe `
 
 Règles du ticket 043, pour tout `media` :
 
-- **Chaque document porte le préfixe de son objet** (`media.prefix`, vide à la racine du stockage) et son nom de fichier (`media.filename`, unique dans la collection). La clé de l'objet est le préfixe, puis le nom ; l'adresse publique est la base des photos (`R2_PUBLIC_URL`), puis cette clé (`src/lib/medias.ts`). Une photo envoyée dans la v3 est rangée sous `media/` ; une photo adoptée garde le préfixe lu dans son adresse, à la racine ou non.
+- **Chaque document porte le préfixe de son objet** (`media.prefix`, vide à la racine du stockage) et son nom de fichier (`media.filename`, unique dans la collection). La clé de l'objet est le préfixe, puis le nom ; l'adresse publique est la base des photos (`R2_PUBLIC_URL`), puis cette clé (`src/lib/media.ts`). Une photo envoyée dans la v3 est rangée sous `media/` ; une photo adoptée garde le préfixe lu dans son adresse, à la racine ou non.
 - **Le serveur seul écrit où est l'objet** : ce qu'une requête dit du nom, du préfixe, de l'adresse, du type ou de la taille est ignoré. L'import adopte un fichier sans le copier par l'API locale, sans compte, avec le contexte `skipCloudStorage` du greffon de stockage, qui ne touche alors ni au préfixe ni au stockage.
 - **`media.owner`** est posé par le serveur : la maquilleuse qui envoie la photo, quel que soit le propriétaire que dit sa requête. Seul un admin le change. Il n'est pas lu par le public.
 - **Un profil n'accepte que des photos de son compte** : `profiles.mainPicture` et `profiles.gallery` (10 photos au plus, dans l'ordre) ne désignent que des médias dont `owner` est le compte du profil. Une photo que le profil a déjà reste, comme sur l'ancienne API, qui ne vérifie que les fichiers nouveaux.

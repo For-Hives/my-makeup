@@ -10,7 +10,7 @@ import {
 	datePremierePublication,
 	VERSIONS_REDACTION,
 } from './editor'
-import { rafraichissement } from './revalidation'
+import { rafraichissement } from './revalidate'
 
 /** The refresh of its page, of the pages that list the talents and of the sitemap (ticket 047). */
 const RAFRAICHISSEMENT = rafraichissement('talents')
@@ -42,7 +42,7 @@ export const validerTitreDeLaPage: TextFieldSingleValidation = (valeur, args) =>
  * - `content` is markdown, in a `code` field: Payload limits `text` and `textarea` to 40 000
  *   characters.
  * - A save or a deletion of a talent that is or was published refreshes its page, the home page
- *   and the sitemap; the import refreshes nothing (src/collections/revalidation.ts, ticket 047).
+ *   and the sitemap; the import refreshes nothing (src/collections/revalidate.ts, ticket 047).
  */
 export const Talents: CollectionConfig<'talents'> = {
 	slug: 'talents',

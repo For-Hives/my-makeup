@@ -33,7 +33,7 @@ import {
 	parseVersion,
 	promotePending,
 	serializeChangelog,
-} from '../../src/lib/notes-de-version'
+} from '../../src/lib/release-notes'
 
 /** The file Coolify watches (Watch Paths) to deploy the production. */
 export const RELEASE_FILE = '.release/version.json'

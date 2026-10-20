@@ -11,7 +11,7 @@
  * Every message is in French: it is what the artist reads when the server refuses a value.
  */
 
-import { estMontantDePrix, formatMontant, PRIX_MAX, PRIX_MIN } from '../prix'
+import { estMontantDePrix, formatMontant, PRIX_MAX, PRIX_MIN } from '../price'
 
 /** Longest name, title or price text of a row (the bounds of the old API and of its forms). */
 export const NAME_MAX_LENGTH = 70
@@ -112,7 +112,7 @@ export function textMessage(valeur: unknown, maximum: number): string | null {
 
 /**
  * Null when the amount of a price is absent (an offer « sur devis », in free text) or counts as a
- * price (src/lib/prix.ts: between PRIX_MIN and PRIX_MAX), else the refusal: a negative amount,
+ * price (src/lib/price.ts: between PRIX_MIN and PRIX_MAX), else the refusal: a negative amount,
  * zero, an amount out of bounds, anything that is not a number.
  */
 export function priceMessage(valeur: unknown): string | null {

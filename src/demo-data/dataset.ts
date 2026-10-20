@@ -19,8 +19,8 @@
 
 import type { Payload } from 'payload'
 import { CONTEXTE_IMPORT } from '../lib/contexte-import'
-import { type BilanDesProfils, exigerLaCibleDuJeu, type OptionsDuChargement, poserLesProfilsDuJeu } from './chargement'
-import { ARTICLES_DU_JEU, TALENTS_DU_JEU } from './redaction'
+import { type BilanDesProfils, exigerLaCibleDuJeu, type OptionsDuChargement, poserLesProfilsDuJeu } from './loading'
+import { ARTICLES_DU_JEU, TALENTS_DU_JEU } from './editorial'
 
 export interface BilanDeLaRedaction {
 	/** The slugs of the talents this load created. */

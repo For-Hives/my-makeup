@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import { PROFILS_DU_JEU } from '@/jeu-fictif/profils'
+import { PROFILS_DU_JEU } from '@/demo-data/profiles'
 import { TYPES_DU_JEU } from '../fixtures/comptes'
 import { RACINE } from '../outils/banc'
 import {

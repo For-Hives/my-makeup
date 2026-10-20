@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import type { CollectionSlug, Payload, Where } from 'payload'
-import { CONDITIONS_MAX, MESSAGE_CHAMP_PRIVE, MESSAGE_TROP_DE_CONDITIONS, requeteBornee } from '@/lib/requete-bornee'
+import { CONDITIONS_MAX, MESSAGE_CHAMP_PRIVE, MESSAGE_TROP_DE_CONDITIONS, requeteBornee } from '@/lib/bounded-query'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 import { appelerRest } from '../outils/rest'

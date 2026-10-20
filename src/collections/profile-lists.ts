@@ -1,5 +1,5 @@
 import type { CollectionBeforeChangeHook, DateField, Field, NumberField, TextareaField, TextField } from 'payload'
-import { PRIX_MAX, PRIX_MIN } from '../lib/prix'
+import { PRIX_MAX, PRIX_MIN } from '../lib/price'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import {
 	DESCRIPTION_MAX_LENGTH,

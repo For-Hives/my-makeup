@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { adresseDuMedia, cleDuMedia, GALERIE_MAX, PREFIXE_DES_ENVOIS } from '@/lib/medias'
+import { adresseDuMedia, cleDuMedia, GALERIE_MAX, PREFIXE_DES_ENVOIS } from '@/lib/media'
 
 /** Where the object of a media is, and its public address (ticket 043). */
 

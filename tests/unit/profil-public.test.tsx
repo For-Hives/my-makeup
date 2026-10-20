@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { ProfileView } from '@/components/profile/ProfileView'
-import { PROFILS_DU_JEU, type ProfilDuJeu } from '@/jeu-fictif/profils'
+import { PROFILS_DU_JEU, type ProfilDuJeu } from '@/demo-data/profiles'
 import { displayedArtistName } from '@/lib/profile/public-view'
 import { type ProfilePageData, type PublicProfile, publicProfileOf } from '@/services/public/profiles'
 

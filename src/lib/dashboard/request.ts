@@ -1,7 +1,7 @@
 import config from '@payload-config'
 import { headers } from 'next/headers'
 import { getPayload, type Payload } from 'payload'
-import { COLLECTION_PROS } from '../acces'
+import { COLLECTION_PROS } from '../access'
 import type { DashboardUser } from './my-profile'
 
 /** The session of the request as a user of Payload, or nothing: for a page and an action of the space. */

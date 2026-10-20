@@ -1,5 +1,5 @@
 import Image from 'next/image'
-import { ratioMedia, sizesBoite } from '@/lib/taille-image'
+import { ratioMedia, sizesBoite } from '@/lib/image-size'
 import type { PublicProfile } from '@/services/public/profiles'
 
 /** The photo shown when the profile has none: the picture of the site. */

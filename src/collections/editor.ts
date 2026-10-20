@@ -1,7 +1,7 @@
 import type { CollectionBeforeChangeHook, CollectionConfig, Field, TextFieldSingleValidation } from 'payload'
 import { text } from 'payload/shared'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
-import { adminOuRedaction, adminRedactionOuPublies, champAdminOuRedaction, jamais } from '../lib/acces'
+import { adminOuRedaction, adminRedactionOuPublies, champAdminOuRedaction, jamais } from '../lib/access'
 import { estUnSlug, SLUG_MAX, slugifier } from '../lib/slug'
 
 /**

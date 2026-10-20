@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { Profiles } from '../../src/collections/Profiles'
-import { PROFILS_DU_JEU } from '../../src/jeu-fictif/profils'
+import { PROFILS_DU_JEU } from '../../src/demo-data/profiles'
 import { poserLeJeuDuBanc } from '../fixtures/jeu-du-banc'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
@@ -13,7 +13,7 @@ import { viderLeStockage } from '../outils/s3'
  * value that is not a choice is refused with a message. The admin hides a profile from its sheet
  * (`chosenStatus`), and publishing it again brings it back; the editorial role changes no status.
  * The twelve profiles of the set of the bench are the base: their expected state is in
- * src/jeu-fictif/profils.ts.
+ * src/demo-data/profiles.ts.
  */
 
 const remettreAZero = () => Promise.all([viderLaBase(), viderLeStockage()])

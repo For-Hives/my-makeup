@@ -13,7 +13,7 @@ import {
 	parseChangelog,
 	promotePending,
 	serializeChangelog,
-} from '../../src/lib/notes-de-version'
+} from '../../src/lib/release-notes'
 
 /**
  * The release notes (ticket 036): the rule of a note, the changelog that holds them, and the

@@ -23,8 +23,8 @@
  * Relative imports on purpose: like the collections, this file must load outside of Next.
  */
 
-import { GALERIE_MAX } from '../lib/medias'
-import { parsePrice } from '../lib/prix'
+import { GALERIE_MAX } from '../lib/media'
+import { parsePrice } from '../lib/price'
 import { EMAIL_MAX_LENGTH, LINK_MAX_LENGTH, PHONE_MAX_LENGTH } from '../lib/profile/contact-details'
 import { DESCRIPTION_MAX_LENGTH, NAME_MAX_LENGTH } from '../lib/profile/lists'
 import type { ProfileStatus } from '../lib/profile/status'
@@ -121,7 +121,7 @@ const COMMUNES = {
 	},
 } as const
 
-/** A price as the space will store it: the text typed, and its amount by the single rule (src/lib/prix.ts). */
+/** A price as the space will store it: the text typed, and its amount by the single rule (src/lib/price.ts). */
 const prix = (texte: string) => parsePrice(texte)
 
 /** A text of exactly `longueur` characters: `debut`, repeated. */

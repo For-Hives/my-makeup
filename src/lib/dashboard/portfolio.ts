@@ -9,7 +9,7 @@
  */
 
 import { z } from 'zod'
-import { GALERIE_MAX } from '../medias'
+import { GALERIE_MAX } from '../media'
 import { PHOTO_MESSAGES } from '../profile/photos'
 import { isPhotoId, type PhotoId } from './photos'
 

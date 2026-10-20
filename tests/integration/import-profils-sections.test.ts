@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { SQL } from 'bun'
 import type { Rapport } from '../../scripts/migration/import/rapport'
-import { parsePrice, prixMinimal } from '../../src/lib/prix'
+import { parsePrice, prixMinimal } from '../../src/lib/price'
 import type { Profile } from '../../src/payload-types'
 import { importerSurLeBanc } from '../outils/import'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'

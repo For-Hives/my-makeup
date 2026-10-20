@@ -26,7 +26,7 @@ import {
 	PutObjectCommand,
 	S3Client,
 } from '@aws-sdk/client-s3'
-import { cleEnCorbeille, estEnCorbeille } from '@/lib/corbeille'
+import { cleEnCorbeille, estEnCorbeille } from '@/lib/trash'
 
 /** One request to the storage, as the spy saw it. */
 export interface CommandeS3 {

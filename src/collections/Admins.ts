@@ -7,7 +7,7 @@ import {
 	jamais,
 	ROLES_ADMIN,
 	type RoleAdmin,
-} from '../lib/acces'
+} from '../lib/access'
 import { firstClosedAccount } from '../lib/auth/closed-first-account'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { rateLimitSignIn, releaseSignInSlot } from '../lib/auth/rate-limit-payload'

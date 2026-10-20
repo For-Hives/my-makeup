@@ -1,6 +1,6 @@
 import { type CollectionBeforeChangeHook, type CollectionConfig, ValidationError } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
-import { adminSeulement, cacheeSaufAdmin, jamais } from '../lib/acces'
+import { adminSeulement, cacheeSaufAdmin, jamais } from '../lib/access'
 import { CONTACT_LIMITS } from '../lib/contact/message'
 import { resendEmail } from '../lib/contact/resend-route'
 import { isRequestStatus, MAIL_STATES, REQUEST_STATUSES, REQUEST_TYPES, transitionAllowed } from '../lib/contact/states'

@@ -19,8 +19,8 @@ import {
 	PanneDuStockage,
 	remettreEnPlace,
 	type StockageDesObjets,
-} from '@/lib/corbeille'
-import { sourceDeLaCopie } from '@/lib/stockage'
+} from '@/lib/trash'
+import { sourceDeLaCopie } from '@/lib/storage'
 import { type CommandeS3, suppressionsSansCorbeille } from '../outils/espion-s3'
 
 /**
@@ -307,12 +307,12 @@ describe('L’application n’efface jamais un objet : une seule suppression dan
 			motif.test(readFileSync(path.join(racine, fichier), 'utf8'))
 		)
 
-	test('une requête de suppression du stockage n’existe que dans src/lib/stockage.ts', () => {
-		expect(contenant(/DeleteObjects?Command|\.deleteObjects?\s*\(/)).toEqual(['src/lib/stockage.ts'])
+	test('une requête de suppression du stockage n’existe que dans src/lib/storage.ts', () => {
+		expect(contenant(/DeleteObjects?Command|\.deleteObjects?\s*\(/)).toEqual(['src/lib/storage.ts'])
 	})
 
 	test('et elle n’est appelée que par le déplacement vers la corbeille', () => {
-		expect(contenant(/\.retirer\s*\(/)).toEqual(['src/lib/corbeille.ts'])
+		expect(contenant(/\.retirer\s*\(/)).toEqual(['src/lib/trash.ts'])
 	})
 })
 

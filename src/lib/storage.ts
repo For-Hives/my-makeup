@@ -1,5 +1,5 @@
 /**
- * The object storage of the photos as the bin reaches it (src/lib/corbeille.ts, ticket 045):
+ * The object storage of the photos as the bin reaches it (src/lib/trash.ts, ticket 045):
  * Cloudflare R2 on the site, the S3 simulator on the test bench, through the S3 API.
  *
  * `@payloadcms/storage-s3` writes the photos; this client only moves them to the bin and back.
@@ -18,7 +18,7 @@ import {
 	S3Client,
 } from '@aws-sdk/client-s3'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
-import type { StockageDesObjets } from './corbeille'
+import type { StockageDesObjets } from './trash'
 import type { StorageEnv } from './env'
 
 /**

@@ -34,9 +34,9 @@ try {
 
 const { payloadDeTest } = await import('../../tests/outils/payload-test')
 const { serverEnv } = await import('../../src/lib/env')
-const { listerLeStockage } = await import('../../src/lib/stockage')
-const { raconterLeRapprochement } = await import('../../src/lib/rapprochement')
-const { rapprocherLeStockageEtLaBase } = await import('../../src/lib/rapprochement-lecture')
+const { listerLeStockage } = await import('../../src/lib/storage')
+const { raconterLeRapprochement } = await import('../../src/lib/reconciliation')
+const { rapprocherLeStockageEtLaBase } = await import('../../src/lib/reconciliation-read')
 
 const storage = serverEnv().storage
 if (!storage) {

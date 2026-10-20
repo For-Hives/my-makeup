@@ -10,7 +10,7 @@
  * nothing of where; a country or a region only counts when nothing more precise was typed.
  */
 
-import { DEPARTEMENTS, departementDuCodePostal, normaliserLieu } from '../departements'
+import { DEPARTEMENTS, departementDuCodePostal, normaliserLieu } from '../departments'
 
 const DEPARTMENT_NAMES = new Map<string, string[]>([
 	...Object.entries(DEPARTEMENTS).map(([code, nom]): [string, string[]] => [normaliserLieu(nom), [code]]),

@@ -1,7 +1,7 @@
 /**
  * The whole set of the bench (ticket 052): the fixed accounts of the site (./comptes.ts), the
  * twelve profile types with their photos, the three talents and the three articles, one of them a
- * draft (src/jeu-fictif/). `bun run banc:complet` and `bun run banc:reinitialiser` load it; a test
+ * draft (src/demo-data/). `bun run banc:complet` and `bun run banc:reinitialiser` load it; a test
  * that wants it calls `poserLeJeuDuBanc()`.
  *
  * Loaded on an empty bench it always gives the same content. Loaded on a filled one it creates
@@ -14,9 +14,9 @@
  * Not a test of the suite: nothing in its name makes bun or Playwright pick it up.
  */
 
-import { type BilanDuJeu as BilanDeLaRedactionEtDesProfils, poserLeJeu } from '../../src/jeu-fictif/jeu'
-import { PROFILS_DU_JEU } from '../../src/jeu-fictif/profils'
-import { ARTICLES_DU_JEU, TALENTS_DU_JEU } from '../../src/jeu-fictif/redaction'
+import { type BilanDuJeu as BilanDeLaRedactionEtDesProfils, poserLeJeu } from '../../src/demo-data/dataset'
+import { PROFILS_DU_JEU } from '../../src/demo-data/profiles'
+import { ARTICLES_DU_JEU, TALENTS_DU_JEU } from '../../src/demo-data/editorial'
 import { payloadDeTest } from '../outils/payload-test'
 import { type BilanDuJeu as BilanDesComptes, poserLesComptesDuJeu } from './comptes'
 

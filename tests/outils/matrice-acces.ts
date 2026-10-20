@@ -38,7 +38,7 @@
 import { randomUUID } from 'node:crypto'
 import type { Payload, RequiredDataFromCollectionSlug, Where } from 'payload'
 import { CONTEXTE_SANS_PROFIL } from '@/collections/Profiles'
-import { PROFILS_PUBLIES } from '@/lib/acces'
+import { PROFILS_PUBLIES } from '@/lib/access'
 import { INITIAL_STATUS, PUBLISHED_STATUS } from '@/lib/profile/status'
 import { creerCompte, DOMAINE_DES_COMPTES, motDePasseAleatoire, type TypeAvecSession } from './fabrique-comptes'
 import { payloadDeTest } from './payload-test'

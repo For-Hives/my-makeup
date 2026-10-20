@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { ECRAN_TRES_DENSE, FACTEUR_TRES_DENSE, RATIO_PAR_DEFAUT, ratioMedia, sizesBoite } from '@/lib/taille-image'
+import { ECRAN_TRES_DENSE, FACTEUR_TRES_DENSE, RATIO_PAR_DEFAUT, ratioMedia, sizesBoite } from '@/lib/image-size'
 
 /**
  * The width the photos of the makeup artists are asked at (plan 01 §3.2 UI-09): ported from

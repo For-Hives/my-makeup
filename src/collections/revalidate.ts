@@ -10,13 +10,13 @@ import type {
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { estUnImport } from '../lib/contexte-import'
 import { PUBLISHED_STATUS } from '../lib/profile/status'
-import { type Cibles, type ContenuPublic, ciblesDuChangement, type EtatPublic } from '../lib/revalidation'
+import { type Cibles, type ContenuPublic, ciblesDuChangement, type EtatPublic } from '../lib/revalidate'
 import { changedUrls, keyIfSubmitAllowed, reportLater } from '../lib/seo/indexnow'
 
 /**
  * The refresh of the public pages (ticket 047): when a profile, an article or a talent is created,
  * changed or deleted, the server tells Next which cached pages are stale, by the rule of
- * src/lib/revalidation.ts: the page of the document, the pages that list its collection, the
+ * src/lib/revalidate.ts: the page of the document, the pages that list its collection, the
  * sitemap.
  *
  * - The public state is read from the stored row, before and after the write, in the transaction
