@@ -13,7 +13,7 @@ import {
 	textRadius,
 } from '@/lib/dashboard/location'
 import { FAILURE_MESSAGE, type SaveResult } from '@/lib/dashboard/result'
-import { BORNES_DU_RAYON_KM } from '@/lib/profil/zone'
+import { BORNES_DU_RAYON_KM } from '@/lib/profile/zone'
 import { type CitiesSearch, CityField } from './CityField'
 import { EditingPanel } from './EditingPanel'
 

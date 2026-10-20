@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import { villeExploitable } from '@/lib/profil/completude'
-import { lieuPublic, villePublique } from '@/lib/profil/lieu-public'
+import { villeExploitable } from '@/lib/profile/completude'
+import { lieuPublic, villePublique } from '@/lib/profile/lieu-public'
 
 // Ported from the « villePublique » block of tests/unit/lieu-public.test.mjs of the old site
 // (branch main): same cases, same expected values.

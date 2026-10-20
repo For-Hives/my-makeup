@@ -13,7 +13,7 @@ import {
 } from '@/lib/dashboard/location'
 import { STEPS_TITLES } from '@/lib/dashboard/onboarding'
 import { FAILURE_MESSAGE, type SaveResult } from '@/lib/dashboard/result'
-import { BORNES_DU_RAYON_KM } from '@/lib/profil/zone'
+import { BORNES_DU_RAYON_KM } from '@/lib/profile/zone'
 import { type CitiesSearch, CityField } from '../CityField'
 import type { LocationUpload } from '../LocationEditor'
 import { BUTTON, FailureMessage, FIELD, MAIN_BUTTON, StepFrame } from './shared'

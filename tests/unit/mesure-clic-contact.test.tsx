@@ -2,11 +2,11 @@ import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { VueDuProfil } from '@/components/profil/VueDuProfil'
+import { VueDuProfil } from '@/components/profile/VueDuProfil'
 import { clicAMesurer, mesurerUnClicDeContact } from '@/lib/analytics/contact-click'
 import type { Pid } from '@/lib/analytics/events'
 import { creerTrack, type Execution, type FenetreMesuree } from '@/lib/analytics/track'
-import { pidDuProfil } from '@/lib/profil/pid'
+import { pidDuProfil } from '@/lib/profile/pid'
 import { type ProfilPublic, profilPublicDe } from '@/services/public/profils'
 
 /**

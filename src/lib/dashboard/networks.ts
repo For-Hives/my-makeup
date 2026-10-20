@@ -15,9 +15,9 @@
  */
 
 import { z } from 'zod'
-import { LONGUEUR_MAX_LIEN } from '../profil/coordonnees'
-import { texte } from '../profil/nom-affiche'
-import { urlReseau } from '../profil/vue-publique'
+import { LONGUEUR_MAX_LIEN } from '../profile/coordonnees'
+import { texte } from '../profile/nom-affiche'
+import { urlReseau } from '../profile/vue-publique'
 
 /** The five fields, in display order. `siteWeb` is the key of the collection. */
 export const NETWORKS_FIELDS = ['instagram', 'facebook', 'youtube', 'linkedin', 'siteWeb'] as const

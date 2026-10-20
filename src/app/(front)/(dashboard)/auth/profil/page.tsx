@@ -32,7 +32,7 @@ import { PREVIEW_PATH } from '@/lib/dashboard/preview'
 import { profileProgress } from '@/lib/dashboard/progress'
 import { requestUser } from '@/lib/dashboard/request'
 import { SERVICE_OFFERS } from '@/lib/dashboard/service-offers'
-import { texte } from '@/lib/profil/nom-affiche'
+import { texte } from '@/lib/profile/nom-affiche'
 import {
 	saveMyAvailability,
 	saveMyContactDetails,

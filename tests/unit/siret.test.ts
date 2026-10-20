@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { MESSAGE_SIRET, validerSiret } from '@/lib/profil/siret'
+import { MESSAGE_SIRET, validerSiret } from '@/lib/profile/siret'
 
 describe('Le SIRET d’un profil (ticket 021)', () => {
 	test('vide : accepté, la plupart des profils n’en ont pas', () => {

@@ -16,8 +16,8 @@
  */
 
 import { z } from 'zod'
-import { LONGUEUR_NOM } from '../profil/listes'
-import { texte } from '../profil/nom-affiche'
+import { LONGUEUR_NOM } from '../profile/listes'
+import { texte } from '../profile/nom-affiche'
 
 export const BULLET_LENGTH = LONGUEUR_NOM
 /** More chips than any makeup artist lists: a request beyond it is not a list she edited. */

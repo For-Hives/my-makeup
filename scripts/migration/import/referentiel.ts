@@ -20,7 +20,7 @@
  */
 
 import { z } from 'zod'
-import { departementDuCodeInsee } from '../../../src/lib/profil/zone'
+import { departementDuCodeInsee } from '../../../src/lib/profile/zone'
 import { ImportRefuse } from './cible'
 
 /** The public address of the referential. */

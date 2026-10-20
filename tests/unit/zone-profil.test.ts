@@ -18,7 +18,7 @@ import {
 	ressembleAUneAdresse,
 	verdictDeLaCommune,
 	verdictDuRayon,
-} from '@/lib/profil/zone'
+} from '@/lib/profile/zone'
 
 /**
  * The zone of a profile as the server stores it (ticket 041): the INSEE code of a commune and the

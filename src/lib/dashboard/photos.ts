@@ -1,6 +1,6 @@
 import type { Payload } from 'payload'
 import { identifiantPossible } from '../acces'
-import { photosNommees } from '../profil/photos'
+import { photosNommees } from '../profile/photos'
 import type { DashboardProfile } from './cards'
 
 /** An identifier of a media, as Payload gives it (a number) or a request spells it (digits). */

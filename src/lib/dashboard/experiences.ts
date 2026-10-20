@@ -10,9 +10,9 @@
  * - Texts: 70 characters at most, 2 000 for the description; dates are days (« YYYY-MM-DD »).
  */
 
-import { LONGUEUR_DESCRIPTION, LONGUEUR_NOM, messageDeDate, messageDeFin, messageDeTexte } from '../profil/listes'
-import { texte } from '../profil/nom-affiche'
-import { periode } from '../profil/vue-publique'
+import { LONGUEUR_DESCRIPTION, LONGUEUR_NOM, messageDeDate, messageDeFin, messageDeTexte } from '../profile/listes'
+import { texte } from '../profile/nom-affiche'
+import { periode } from '../profile/vue-publique'
 import { formDay, type ListDefinition, type RowErrors, type RowValues } from './list'
 
 const TEXTS: readonly [string, number][] = [

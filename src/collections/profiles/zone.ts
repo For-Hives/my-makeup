@@ -13,7 +13,7 @@ import {
 	nomNormalise,
 	verdictDeLaCommune,
 	verdictDuRayon,
-} from '../../lib/profil/zone'
+} from '../../lib/profile/zone'
 
 /**
  * The département of a commune, computed by the server from its INSEE code at every save, the

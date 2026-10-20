@@ -1,5 +1,5 @@
-import { duDepartement } from '@/lib/recherche/lieu'
-import { type Recherche, urlPageRecherche } from '@/lib/recherche/saisie'
+import { duDepartement } from '@/lib/search/lieu'
+import { type Recherche, urlPageRecherche } from '@/lib/search/saisie'
 
 const COLONNE = 'mx-auto flex w-full max-w-2xl flex-col items-center gap-4 px-4 py-24 text-center'
 const LIEN = 'font-semibold text-indigo-900 underline'

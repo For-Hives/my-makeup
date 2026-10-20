@@ -7,7 +7,7 @@
  */
 
 import type { Payload } from 'payload'
-import { texte } from '@/lib/profil/nom-affiche'
+import { texte } from '@/lib/profile/nom-affiche'
 import { estUnSlug } from '@/lib/slug'
 
 /** The fields of a talent a public page reads, and nothing else. */

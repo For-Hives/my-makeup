@@ -15,7 +15,7 @@
 import config from '@payload-config'
 import { unstable_cache } from 'next/cache'
 import { getPayload, type Payload } from 'payload'
-import { valeursARechercher } from '@/lib/profil/adresse'
+import { valeursARechercher } from '@/lib/profile/adresse'
 import { ETIQUETTES } from '@/lib/revalidation'
 import { estUnSlug } from '@/lib/slug'
 import { type ArticlePublic, lireUnArticlePublic } from './articles'

@@ -17,7 +17,7 @@ import {
 	PanneDuStockage,
 	type StockageDesObjets,
 } from '../lib/corbeille'
-import { identifiantDe, photosNommees } from '../lib/profil/photos'
+import { identifiantDe, photosNommees } from '../lib/profile/photos'
 
 /**
  * A photo that no longer serves goes to the bin, never to a direct deletion (ticket 045; plan 01

@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers'
 import { SESSION_COOKIE } from '@/lib/auth/closed-dashboard'
 import { requestUser } from '@/lib/dashboard/request'
-import { pidDuProfil } from '@/lib/profil/pid'
+import { pidDuProfil } from '@/lib/profile/pid'
 
 // Read per request: it depends on the session, and the build has no database.
 export const dynamic = 'force-dynamic'

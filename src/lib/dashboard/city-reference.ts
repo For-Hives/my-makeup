@@ -16,7 +16,7 @@
 
 import { z } from 'zod'
 import { DEPLOYED_ORIGINS } from '../env'
-import { aLesCaracteresDUnNom, departementDuCodeInsee, ressembleAUneAdresse } from '../profil/zone'
+import { aLesCaracteresDUnNom, departementDuCodeInsee, ressembleAUneAdresse } from '../profile/zone'
 import { cityLabel, SEARCH_MAX, SEARCH_MIN } from './location'
 
 /** The public address of the list. */

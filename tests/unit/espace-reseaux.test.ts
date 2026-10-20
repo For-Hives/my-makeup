@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { NETWORKS_FIELDS, normalizeNetwork, readNetworks, strictNetworksSchema } from '@/lib/dashboard/networks'
-import { urlReseau } from '@/lib/profil/vue-publique'
+import { urlReseau } from '@/lib/profile/vue-publique'
 
 /** The networks she edits in her space (ticket 125; plan 02 U28, E30): one stored address per network. */
 

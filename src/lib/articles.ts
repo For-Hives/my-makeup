@@ -1,7 +1,7 @@
 import { type FieldHook, type FilterOptionsProps, type PayloadRequest, ValidationError, type Where } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { estAdmin, identifiantPossible, MEDIAS_DE_LA_REDACTION } from './acces'
-import { photosNommees } from './profil/photos'
+import { photosNommees } from './profile/photos'
 
 /**
  * The gallery of an article (ticket 046; docs/migration/SCHEMA.md, §5.3): images only. The old site

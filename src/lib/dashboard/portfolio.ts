@@ -10,7 +10,7 @@
 
 import { z } from 'zod'
 import { GALERIE_MAX } from '../medias'
-import { MESSAGES_DES_PHOTOS } from '../profil/photos'
+import { MESSAGES_DES_PHOTOS } from '../profile/photos'
 import { isPhotoId, type PhotoId } from './photos'
 
 export interface PortfolioValues extends Record<string, unknown> {

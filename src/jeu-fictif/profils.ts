@@ -25,10 +25,10 @@
 
 import { GALERIE_MAX } from '../lib/medias'
 import { parsePrice } from '../lib/prix'
-import { LONGUEUR_MAX_EMAIL, LONGUEUR_MAX_LIEN, LONGUEUR_MAX_TELEPHONE } from '../lib/profil/coordonnees'
-import { LONGUEUR_DESCRIPTION, LONGUEUR_NOM } from '../lib/profil/listes'
-import type { StatutDuProfil } from '../lib/profil/statut'
-import { BORNES_DU_RAYON_KM } from '../lib/profil/zone'
+import { LONGUEUR_MAX_EMAIL, LONGUEUR_MAX_LIEN, LONGUEUR_MAX_TELEPHONE } from '../lib/profile/coordonnees'
+import { LONGUEUR_DESCRIPTION, LONGUEUR_NOM } from '../lib/profile/listes'
+import type { StatutDuProfil } from '../lib/profile/statut'
+import { BORNES_DU_RAYON_KM } from '../lib/profile/zone'
 import type { Profile } from '../payload-types'
 
 /** The photos of the set, in ./photos/: 400 × 400, WebP, under 30 KB each. */

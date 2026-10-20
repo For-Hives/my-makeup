@@ -30,9 +30,9 @@ import {
 	validerEmailDeContact,
 	validerLienDeReseau,
 	validerTelephone,
-} from '../lib/profil/coordonnees'
-import { photosDeLaProprietaire, validerGalerie, validerPhotoPrincipale } from '../lib/profil/photos'
-import { validerSiret } from '../lib/profil/siret'
+} from '../lib/profile/coordonnees'
+import { photosDeLaProprietaire, validerGalerie, validerPhotoPrincipale } from '../lib/profile/photos'
+import { validerSiret } from '../lib/profile/siret'
 import {
 	CHOIX_DU_STATUT,
 	CHOIX_INITIAL,
@@ -40,7 +40,7 @@ import {
 	LIBELLES_DES_STATUTS,
 	STATUT_INITIAL,
 	STATUTS_DU_PROFIL,
-} from '../lib/profil/statut'
+} from '../lib/profile/statut'
 import { premierSlugLibre, slugDeRepli, slugifier } from '../lib/slug'
 import { CHAMPS_LISTES, identitesDesLignesAvantEcriture } from './profile-lists'
 import { CHAMPS_DE_L_ETAT, etatAvantEcriture } from './profiles/etat'

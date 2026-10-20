@@ -14,8 +14,8 @@
  */
 
 import type { Payload } from 'payload'
-import { nomAffiche, texte } from '@/lib/profil/nom-affiche'
-import { FILTRE_INDEXABLE } from '@/lib/profil/visibilite'
+import { nomAffiche, texte } from '@/lib/profile/nom-affiche'
+import { FILTRE_INDEXABLE } from '@/lib/profile/visibilite'
 import { estUnSlug } from '@/lib/slug'
 
 /** The size of a page of the reading, and the number of pages past which it fails: 10 000 documents. */

@@ -11,15 +11,15 @@
  */
 
 import { parsePrice } from '@/lib/prix'
-import { type ChampsDuProfil, completude, villeExploitable } from '@/lib/profil/completude'
-import { lieuPublic } from '@/lib/profil/lieu-public'
+import { type ChampsDuProfil, completude, villeExploitable } from '@/lib/profile/completude'
+import { lieuPublic } from '@/lib/profile/lieu-public'
 import {
 	LONGUEUR_DESCRIPTION,
 	LONGUEUR_NOM,
 	messageDeFin,
 	messageDeTexte,
 	messageDObtention,
-} from '@/lib/profil/listes'
+} from '@/lib/profile/listes'
 import { attribuerSlugs, slugDeRepli, slugifier } from '@/lib/slug'
 import {
 	COMPTES_DE_FIXTURE,

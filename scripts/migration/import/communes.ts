@@ -19,15 +19,15 @@
  */
 
 import { DEPARTEMENTS } from '../../../src/lib/departements'
-import { villeExploitable } from '../../../src/lib/profil/completude'
-import { lieuPublic } from '../../../src/lib/profil/lieu-public'
+import { villeExploitable } from '../../../src/lib/profile/completude'
+import { lieuPublic } from '../../../src/lib/profile/lieu-public'
 import {
 	aLesCaracteresDUnNom,
 	coordonneeArrondie,
 	departementDuCodeInsee,
 	NOM_DE_COMMUNE_MAX,
 	ressembleAUneAdresse,
-} from '../../../src/lib/profil/zone'
+} from '../../../src/lib/profile/zone'
 import { ImportRefuse } from './cible'
 import type { CommuneDuReferentiel, Referentiel } from './referentiel'
 

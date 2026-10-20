@@ -26,11 +26,11 @@ import type { Payload } from 'payload'
 import { type Pid, pidDuProfil } from '@/lib/analytics/pid'
 import { formatZone, rayonKm, villeAffichee } from '@/lib/format-zone'
 import { estMontantDePrix, prixMinimal } from '@/lib/prix'
-import { cibleDeLAdresse, valeursARechercher } from '@/lib/profil/adresse'
-import { nomAffiche, texte } from '@/lib/profil/nom-affiche'
-import { pidDuProfil as pidDeLaPage } from '@/lib/profil/pid'
-import { STATUT_PUBLIE } from '@/lib/profil/statut'
-import { estIndexable, FILTRE_LISTE } from '@/lib/profil/visibilite'
+import { cibleDeLAdresse, valeursARechercher } from '@/lib/profile/adresse'
+import { nomAffiche, texte } from '@/lib/profile/nom-affiche'
+import { pidDuProfil as pidDeLaPage } from '@/lib/profile/pid'
+import { STATUT_PUBLIE } from '@/lib/profile/statut'
+import { estIndexable, FILTRE_LISTE } from '@/lib/profile/visibilite'
 import {
 	contacts,
 	type ExperiencePublique,
@@ -43,9 +43,9 @@ import {
 	noms,
 	type PrestationPublique,
 	prestations,
-} from '@/lib/profil/vue-publique'
-import type { PlaceDuProfil } from '@/lib/recherche/lieu'
-import { normaliserLesTextes, type TextesNormalises } from '@/lib/recherche/pertinence'
+} from '@/lib/profile/vue-publique'
+import type { PlaceDuProfil } from '@/lib/search/lieu'
+import { normaliserLesTextes, type TextesNormalises } from '@/lib/search/pertinence'
 import { estUnSlug } from '@/lib/slug'
 import type { Profile } from '@/payload-types'
 

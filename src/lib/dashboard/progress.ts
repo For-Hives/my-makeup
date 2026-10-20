@@ -17,8 +17,8 @@ import {
 	completude,
 	DESCRIPTION_MIN,
 	longueurDescription,
-} from '../profil/completude'
-import { champsDuProfil } from '../profil/etat'
+} from '../profile/completude'
+import { champsDuProfil } from '../profile/etat'
 import { isAvailable } from './availability'
 import type { DashboardProfile, Section } from './cards'
 

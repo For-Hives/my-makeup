@@ -1,5 +1,5 @@
 import type { Payload } from 'payload'
-import { identifiantDe } from '../profil/photos'
+import { identifiantDe } from '../profile/photos'
 import { type PhotoValues, photoSchema } from './main-picture'
 import { type DashboardUser, profileIdToWrite } from './my-profile'
 import { FAILURE_MESSAGE, payloadFailure, type SaveResult } from './result'

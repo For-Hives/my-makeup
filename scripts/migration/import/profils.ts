@@ -43,11 +43,11 @@
  */
 
 import { estMontantDePrix, parsePrice, prixMinimal } from '../../../src/lib/prix'
-import { type ChampsDuProfil, estEntierementVide, type ReseauxDuProfil } from '../../../src/lib/profil/completude'
-import { validerEmailDeContact, validerTelephone } from '../../../src/lib/profil/coordonnees'
-import { type DocumentDuProfil, etatDuProfil, statutApres } from '../../../src/lib/profil/etat'
-import { CHOIX_INITIAL, type StatutDuProfil } from '../../../src/lib/profil/statut'
-import { BORNES_DU_RAYON_KM } from '../../../src/lib/profil/zone'
+import { type ChampsDuProfil, estEntierementVide, type ReseauxDuProfil } from '../../../src/lib/profile/completude'
+import { validerEmailDeContact, validerTelephone } from '../../../src/lib/profile/coordonnees'
+import { type DocumentDuProfil, etatDuProfil, statutApres } from '../../../src/lib/profile/etat'
+import { CHOIX_INITIAL, type StatutDuProfil } from '../../../src/lib/profile/statut'
+import { BORNES_DU_RAYON_KM } from '../../../src/lib/profile/zone'
 import { attribuerSlugs } from '../../../src/lib/slug'
 import type { CommuneAttendue } from './communes'
 import { REFERENCES } from './ecarts'

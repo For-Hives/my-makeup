@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { VueDuProfil } from '@/components/profil/VueDuProfil'
+import { VueDuProfil } from '@/components/profile/VueDuProfil'
 import { artistProfile, type DashboardUser } from '@/lib/dashboard/my-profile'
 import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
 import { saveContactDetails } from '@/lib/dashboard/save-contact-details'

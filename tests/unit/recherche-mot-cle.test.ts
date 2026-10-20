@@ -16,8 +16,8 @@ import {
 	SEUIL,
 	sansAccents,
 	type TextesDeRecherche,
-} from '@/lib/recherche/pertinence'
-import { chercher, type ProfilCherchable } from '@/lib/recherche/resultats'
+} from '@/lib/search/pertinence'
+import { chercher, type ProfilCherchable } from '@/lib/search/resultats'
 
 const textes = (partiels: Partial<TextesDeRecherche>) =>
 	normaliserLesTextes({

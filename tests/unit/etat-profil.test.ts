@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import type { Field } from 'payload'
 import { Profiles } from '@/collections/Profiles'
 import { CHAMPS_DE_L_ETAT } from '@/collections/profiles/etat'
-import { completude, conditionsPubliable } from '@/lib/profil/completude'
+import { completude, conditionsPubliable } from '@/lib/profile/completude'
 import {
 	champsDuProfil,
 	DATES_DE_PASSAGE,
@@ -10,7 +10,7 @@ import {
 	etatApresSauvegarde,
 	etatDuProfil,
 	statutApres,
-} from '@/lib/profil/etat'
+} from '@/lib/profile/etat'
 import {
 	ANNECY,
 	CAS_PARTAGES,

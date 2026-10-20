@@ -1,4 +1,4 @@
-import { type Recherche, urlPageRecherche } from '@/lib/recherche/saisie'
+import { type Recherche, urlPageRecherche } from '@/lib/search/saisie'
 
 /**
  * The links between the pages of the results (ticket 100): « Page précédente », « Page 2 sur 3 »,

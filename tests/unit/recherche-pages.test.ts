@@ -6,9 +6,9 @@
 import { describe, expect, test } from 'bun:test'
 import { NextRequest } from 'next/server'
 import { createRateLimit } from '@/lib/auth/rate-limit'
-import { freinerLaRecherche, RECHERCHES_PAR_MINUTE } from '@/lib/recherche/frein'
-import { DELAI_DE_LECTURE_MS, lireSansBloquer } from '@/lib/recherche/lecture'
-import { PAR_PAGE, paginer, sectionsDeLaPage } from '@/lib/recherche/pagination'
+import { freinerLaRecherche, RECHERCHES_PAR_MINUTE } from '@/lib/search/frein'
+import { DELAI_DE_LECTURE_MS, lireSansBloquer } from '@/lib/search/lecture'
+import { PAR_PAGE, paginer, sectionsDeLaPage } from '@/lib/search/pagination'
 import { proxy } from '@/proxy'
 
 describe('U18 et E41 : les pages de 20, sans doublon', () => {

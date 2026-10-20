@@ -9,7 +9,7 @@ import {
 	REFUSED_ADDRESS_MESSAGE,
 } from '@/lib/dashboard/location'
 import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
-import { MESSAGES_DE_LA_ZONE } from '@/lib/profil/zone'
+import { MESSAGES_DE_LA_ZONE } from '@/lib/profile/zone'
 import { ouvrirFenetre } from '../outils/dom-react'
 
 /**

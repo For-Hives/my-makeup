@@ -11,7 +11,7 @@ import {
 	messageDePrix,
 	messageDeTexte,
 	messageDObtention,
-} from '../lib/profil/listes'
+} from '../lib/profile/listes'
 
 /**
  * The list sections of a profile (plan 01 §6.1; docs/migration/SCHEMA.md §6.1 to §6.7): offers

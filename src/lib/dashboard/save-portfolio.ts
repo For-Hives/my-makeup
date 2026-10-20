@@ -1,5 +1,5 @@
 import type { Payload } from 'payload'
-import { MESSAGES_DES_PHOTOS, photosNommees } from '../profil/photos'
+import { MESSAGES_DES_PHOTOS, photosNommees } from '../profile/photos'
 import { type DashboardUser, profileIdToWrite } from './my-profile'
 import { type PortfolioValues, portfolioSchema } from './portfolio'
 import { FAILURE_MESSAGE, payloadFailure, type SaveResult } from './result'

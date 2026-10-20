@@ -6,7 +6,7 @@ import {
 	validerEmailDeContact,
 	validerLienDeReseau,
 	validerTelephone,
-} from '@/lib/profil/coordonnees'
+} from '@/lib/profile/coordonnees'
 
 /** The networks and contact details of a profile, and the trace of the consent (ticket 042). */
 

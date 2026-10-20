@@ -17,7 +17,7 @@ import {
 	CHEMIN_DU_REFUS_DE_CONTACT,
 	secondesAvantUnMessageDeCetteRequete,
 } from '@/lib/contact/frein'
-import { freinerLaRecherche } from '@/lib/recherche/frein'
+import { freinerLaRecherche } from '@/lib/search/frein'
 import { robotsPourChemin } from '@/lib/seo/robots'
 import { redirectionDeForme } from '@/lib/urls/forme'
 import { adresseAVerifier, type FamilleVerifiee } from '@/lib/urls/page-inconnue'

@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import { type KeyboardEvent, useCallback, useEffect, useRef, useState } from 'react'
-import { altRealisation } from '@/lib/profil/vue-publique'
+import { altRealisation } from '@/lib/profile/vue-publique'
 import { RATIO_PAR_DEFAUT, ratioMedia, sizesBoite } from '@/lib/taille-image'
 
 /** The height of a photo of the portfolio, in px: its width follows the shape of the photo. */

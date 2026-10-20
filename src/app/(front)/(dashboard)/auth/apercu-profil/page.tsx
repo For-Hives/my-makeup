@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { PreviewBanner } from '@/components/dashboard/PreviewBanner'
-import { VueDuProfil } from '@/components/profil/VueDuProfil'
+import { VueDuProfil } from '@/components/profile/VueDuProfil'
 import { requireArtist } from '@/lib/auth/session'
 import { profileId } from '@/lib/dashboard/my-profile'
 import { DASHBOARD_PATH, PREVIEW_PATH, previewState } from '@/lib/dashboard/preview'

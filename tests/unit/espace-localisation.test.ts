@@ -9,7 +9,7 @@ import {
 	textRadius,
 } from '@/lib/dashboard/location'
 import { payloadFailure } from '@/lib/dashboard/result'
-import { MESSAGES_DE_LA_ZONE } from '@/lib/profil/zone'
+import { MESSAGES_DE_LA_ZONE } from '@/lib/profile/zone'
 
 /**
  * The rules of the location form (ticket 123; plan 02 U14, U15, U16): the label of a commune, the

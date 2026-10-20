@@ -16,9 +16,9 @@ import {
 } from '@/jeu-fictif/profils'
 import { DEPLOYED_ORIGINS } from '@/lib/env'
 import { GALERIE_MAX } from '@/lib/medias'
-import { etatDuProfil, statutApres } from '@/lib/profil/etat'
-import { LONGUEUR_DESCRIPTION, LONGUEUR_NOM } from '@/lib/profil/listes'
-import { BORNES_DU_RAYON_KM } from '@/lib/profil/zone'
+import { etatDuProfil, statutApres } from '@/lib/profile/etat'
+import { LONGUEUR_DESCRIPTION, LONGUEUR_NOM } from '@/lib/profile/listes'
+import { BORNES_DU_RAYON_KM } from '@/lib/profile/zone'
 import { slugifier } from '@/lib/slug'
 import { environnementDuBanc, RACINE } from '../outils/banc'
 

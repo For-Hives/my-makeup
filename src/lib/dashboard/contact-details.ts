@@ -12,7 +12,7 @@
  */
 
 import { z } from 'zod'
-import { LONGUEUR_MAX_EMAIL, LONGUEUR_MAX_TELEPHONE } from '../profil/coordonnees'
+import { LONGUEUR_MAX_EMAIL, LONGUEUR_MAX_TELEPHONE } from '../profile/coordonnees'
 
 export const CONTACT_DETAILS_FIELDS = ['telephone', 'email', 'contactPublic'] as const
 export type ContactDetailsField = (typeof CONTACT_DETAILS_FIELDS)[number]

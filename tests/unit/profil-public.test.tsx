@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { VueDuProfil } from '@/components/profil/VueDuProfil'
+import { VueDuProfil } from '@/components/profile/VueDuProfil'
 import { PROFILS_DU_JEU, type ProfilDuJeu } from '@/jeu-fictif/profils'
-import { nomDArtisteAffiche } from '@/lib/profil/vue-publique'
+import { nomDArtisteAffiche } from '@/lib/profile/vue-publique'
 import { type ProfilDeLaPage, type ProfilPublic, profilPublicDe } from '@/services/public/profils'
 
 /**

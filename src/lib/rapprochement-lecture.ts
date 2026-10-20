@@ -5,7 +5,7 @@
  */
 import type { Payload } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
-import { photosNommees } from './profil/photos'
+import { photosNommees } from './profile/photos'
 import { type MediaLu, type Rapprochement, rapprocher } from './rapprochement'
 import type { ObjetDuStockage } from './stockage'
 

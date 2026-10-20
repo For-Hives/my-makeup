@@ -19,7 +19,7 @@ import {
 	videALaSource,
 } from '../../scripts/migration/import/profils'
 import { SECTIONS_VIDES } from '../../scripts/migration/import/sections'
-import { NOM_NEUTRE, nomAffiche, nomComplet, texte } from '../../src/lib/profil/nom-affiche'
+import { NOM_NEUTRE, nomAffiche, nomComplet, texte } from '../../src/lib/profile/nom-affiche'
 import { CHAMPS_PUBLICS_DU_PROFIL } from '../../src/services/public/profils'
 
 /**

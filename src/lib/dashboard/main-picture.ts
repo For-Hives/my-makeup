@@ -5,7 +5,7 @@
  */
 
 import { z } from 'zod'
-import { MESSAGES_DES_PHOTOS } from '../profil/photos'
+import { MESSAGES_DES_PHOTOS } from '../profile/photos'
 import { isPhotoId, type PhotoId } from './photos'
 
 export interface PhotoValues extends Record<string, unknown> {

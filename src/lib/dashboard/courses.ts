@@ -9,9 +9,9 @@
  *   far ahead.
  */
 
-import { LONGUEUR_DESCRIPTION, LONGUEUR_NOM, messageDeTexte, messageDObtention } from '../profil/listes'
-import { texte } from '../profil/nom-affiche'
-import { moisAnnee } from '../profil/vue-publique'
+import { LONGUEUR_DESCRIPTION, LONGUEUR_NOM, messageDeTexte, messageDObtention } from '../profile/listes'
+import { texte } from '../profile/nom-affiche'
+import { moisAnnee } from '../profile/vue-publique'
 import { formDay, type ListDefinition, type RowErrors, type RowValues } from './list'
 
 function bounds(valeurs: RowValues, maintenant: Date): RowErrors {

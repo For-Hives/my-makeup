@@ -6,7 +6,7 @@
 
 import { describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
-import { correspondanceLieu, lieuDuProfil, lireLieu, type PlaceDuProfil, sectionsParLieu } from '@/lib/recherche/lieu'
+import { correspondanceLieu, lieuDuProfil, lireLieu, type PlaceDuProfil, sectionsParLieu } from '@/lib/search/lieu'
 import {
 	champ,
 	LONGUEUR_MAX_DE_LA_SAISIE,
@@ -18,7 +18,7 @@ import {
 	rechercheValide,
 	titreDesResultats,
 	urlPageRecherche,
-} from '@/lib/recherche/saisie'
+} from '@/lib/search/saisie'
 import { lireLAnnuaire } from '@/services/public/profils'
 
 /** A profile for the sections: its commune, its département, and whether she travels. */

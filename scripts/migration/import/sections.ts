@@ -23,7 +23,7 @@
  */
 
 import { parsePrice } from '../../../src/lib/prix'
-import type { ReseauxDuProfil } from '../../../src/lib/profil/completude'
+import type { ReseauxDuProfil } from '../../../src/lib/profile/completude'
 import {
 	dateDuJour,
 	LONGUEUR_DESCRIPTION,
@@ -32,7 +32,7 @@ import {
 	messageDeFin,
 	messageDeTexte,
 	messageDObtention,
-} from '../../../src/lib/profil/listes'
+} from '../../../src/lib/profile/listes'
 import { TYPE_PROFIL } from './medias'
 import type { Requete } from './source'
 

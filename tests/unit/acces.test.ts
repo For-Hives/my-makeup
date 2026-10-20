@@ -59,8 +59,8 @@ import {
 	TYPES_D_IMAGE,
 } from '@/lib/articles'
 import { LANGUE_DE_PAYLOAD } from '@/lib/langue-payload'
-import { validerPhotosDuProfil } from '@/lib/profil/photos'
-import { STATUTS_DU_PROFIL } from '@/lib/profil/statut'
+import { validerPhotosDuProfil } from '@/lib/profile/photos'
+import { STATUTS_DU_PROFIL } from '@/lib/profile/statut'
 
 /**
  * The access rules, called as Payload calls them, without a database: who reaches what. The

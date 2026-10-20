@@ -9,7 +9,7 @@ import type {
 } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { estUnImport } from '../lib/contexte-import'
-import { STATUT_PUBLIE } from '../lib/profil/statut'
+import { STATUT_PUBLIE } from '../lib/profile/statut'
 import { type Cibles, type ContenuPublic, ciblesDuChangement, type EtatPublic } from '../lib/revalidation'
 import { adressesDuChangement, cleSiLEnvoiEstPermis, signalerPlusTard } from '../lib/seo/indexnow'
 

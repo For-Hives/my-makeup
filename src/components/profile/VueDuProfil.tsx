@@ -1,4 +1,4 @@
-import { lignes } from '@/lib/profil/vue-publique'
+import { lignes } from '@/lib/profile/vue-publique'
 import type { ProfilPublic } from '@/services/public/profils'
 import { EnTeteDuProfil } from './EnTeteDuProfil'
 import { GalerieDuProfil } from './GalerieDuProfil'

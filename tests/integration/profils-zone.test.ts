@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import { ValidationError } from 'payload'
 import { CONTEXTE_SANS_PROFIL } from '@/collections/Profiles'
-import { MESSAGES_DE_LA_ZONE } from '@/lib/profil/zone'
+import { MESSAGES_DE_LA_ZONE } from '@/lib/profile/zone'
 import { type CompteDeTest, creerCompte, motDePasseAleatoire } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 import { appelerRest } from '../outils/rest'

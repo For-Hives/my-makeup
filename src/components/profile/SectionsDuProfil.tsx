@@ -6,8 +6,8 @@ import type {
 	LienDeContact,
 	OptionPublique,
 	PrestationPublique,
-} from '@/lib/profil/vue-publique'
-import { LIBELLES_DES_CANAUX } from '@/lib/profil/vue-publique'
+} from '@/lib/profile/vue-publique'
+import { LIBELLES_DES_CANAUX } from '@/lib/profile/vue-publique'
 import { LienDeContactMesure } from './LienDeContactMesure'
 import { SectionDuProfil } from './SectionDuProfil'
 
