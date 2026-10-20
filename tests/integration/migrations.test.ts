@@ -4,7 +4,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { type MigrateUpArgs, sql } from '@payloadcms/db-postgres'
 import type { Payload } from 'payload'
-import { DOSSIER_DES_MIGRATIONS } from '../../scripts/ci/derive-schema'
+import { MIGRATIONS_FOLDER } from '../../scripts/ci/schema-drift'
 import { migrations } from '../../src/migrations'
 import { BancRefuse, RACINE } from '../outils/banc'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
@@ -100,7 +100,7 @@ async function schemaDeLaBase(): Promise<string[]> {
 
 /** The SQL of `up` in the file of `init`, as it is versioned. */
 function sqlDeInit(): string {
-	const texte = readFileSync(path.join(DOSSIER_DES_MIGRATIONS, `${INIT}.ts`), 'utf8')
+	const texte = readFileSync(path.join(MIGRATIONS_FOLDER, `${INIT}.ts`), 'utf8')
 	const trouve = /export async function up[\s\S]*?sql`([\s\S]*?)`\)/.exec(texte)?.[1]
 	if (!trouve) throw new Error(`no SQL found in the up of ${INIT}`)
 	return trouve
@@ -173,8 +173,8 @@ describe('I22 : la migration init, sur une base effacée, puis rejouée', () => 
 		// Payload's own function, the one its command calls, on a copy of the snapshots: nothing is
 		// written next to the versioned migrations, even if the check were to fail.
 		const dossier = mkdtempSync(path.join(os.tmpdir(), 'migrations-i22-'))
-		for (const fichier of readdirSync(DOSSIER_DES_MIGRATIONS).filter(nom => nom.endsWith('.json')))
-			copyFileSync(path.join(DOSSIER_DES_MIGRATIONS, fichier), path.join(dossier, fichier))
+		for (const fichier of readdirSync(MIGRATIONS_FOLDER).filter(nom => nom.endsWith('.json')))
+			copyFileSync(path.join(MIGRATIONS_FOLDER, fichier), path.join(dossier, fichier))
 		const avant = readdirSync(dossier).sort()
 		const dossierDOrigine = payload.db.migrationDir
 		payload.db.migrationDir = dossier

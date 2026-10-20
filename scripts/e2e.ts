@@ -44,26 +44,26 @@ import { bancCourant, effacerLeSchema, exigerBancDebout, viderCeQueLaBaseNeConti
 
 /** Playwright runs under Node: its test runner does not support bun. */
 const NODE = 'node'
-const CLI_DE_PLAYWRIGHT = path.join(RACINE, 'node_modules/@playwright/test/cli.js')
+const PLAYWRIGHT_CLI = path.join(RACINE, 'node_modules/@playwright/test/cli.js')
 
 /** The signals that stop a run: Ctrl+C, and what a tool sends to end a command. */
-const ARRETS = ['SIGINT', 'SIGTERM', 'SIGHUP'] as const
+const STOP_SIGNALS = ['SIGINT', 'SIGTERM', 'SIGHUP'] as const
 
 /** Set when a stop was asked for: the run that follows the interrupted one does not start. */
-let arretDemande = false
+let stopRequested = false
 
-const introuvable = (commande: string) =>
+const notFound = (commande: string) =>
 	new BancRefuse(`La commande « ${commande} » est introuvable sur ce poste : les essais en ont besoin.`)
 
-const estIntrouvable = (erreur: unknown) => erreur instanceof Error && 'code' in erreur && erreur.code === 'ENOENT'
+const isNotFound = (erreur: unknown) => erreur instanceof Error && 'code' in erreur && erreur.code === 'ENOENT'
 
 /** Runs a command in the repository, shows what it prints, and gives back its exit code. */
-async function lancer(commande: string[], env: Record<string, string>): Promise<number> {
+async function run(commande: string[], env: Record<string, string>): Promise<number> {
 	try {
 		return await Bun.spawn(commande, { cwd: RACINE, env, stdio: ['inherit', 'inherit', 'inherit'] }).exited
-	} catch (erreur) {
-		if (estIntrouvable(erreur)) throw introuvable(commande[0] ?? '')
-		throw erreur
+	} catch (error) {
+		if (isNotFound(error)) throw notFound(commande[0] ?? '')
+		throw error
 	}
 }
 
@@ -77,51 +77,51 @@ async function lancer(commande: string[], env: Record<string, string>): Promise<
  * starts the real Node as its child, and passes nothing on to it. If this command is killed
  * outright, Playwright, alone in its group, finishes and stops the application by itself.
  */
-async function lancerPlaywright(argumentsDuTest: string[], env: Record<string, string>): Promise<number> {
+async function runPlaywright(argumentsDuTest: string[], env: Record<string, string>): Promise<number> {
 	let playwright: Bun.Subprocess
 	try {
-		playwright = Bun.spawn([NODE, CLI_DE_PLAYWRIGHT, ...argumentsDuTest], {
+		playwright = Bun.spawn([NODE, PLAYWRIGHT_CLI, ...argumentsDuTest], {
 			cwd: RACINE,
 			env,
 			stdio: ['ignore', 'inherit', 'inherit'],
 			detached: true,
 		})
-	} catch (erreur) {
-		if (estIntrouvable(erreur)) throw introuvable(NODE)
-		throw erreur
+	} catch (error) {
+		if (isNotFound(error)) throw notFound(NODE)
+		throw error
 	}
-	const interrompre = () => {
-		arretDemande = true
+	const interrupt = () => {
+		stopRequested = true
 		if (playwright.exitCode === null) process.kill(-playwright.pid, 'SIGINT')
 	}
-	for (const signal of ARRETS) process.on(signal, interrompre)
+	for (const signal of STOP_SIGNALS) process.on(signal, interrupt)
 	try {
 		return await playwright.exited
 	} finally {
-		for (const signal of ARRETS) process.off(signal, interrompre)
+		for (const signal of STOP_SIGNALS) process.off(signal, interrupt)
 	}
 }
 
 async function principal(demandes: string[]): Promise<number> {
-	const banc = bancCourant()
-	const adresse = exigerCibleDuBanc(process.env, banc.environnement)
+	const bench = bancCourant()
+	const address = exigerCibleDuBanc(process.env, bench.environnement)
 	// The guard of the tests, asked here before anything is built or emptied.
-	cibleDesEssais({ ...process.env, BASE_URL: adresse })
+	cibleDesEssais({ ...process.env, BASE_URL: address })
 
-	await exigerBancDebout(banc)
-	const port = portDeLApplication(adresse)
+	await exigerBancDebout(bench)
+	const port = portDeLApplication(address)
 	if (await portOuvert(port)) throw new BancRefuse(messagePortPris(port))
-	await effacerLeSchema(banc)
-	await viderCeQueLaBaseNeContientPas(banc)
+	await effacerLeSchema(bench)
+	await viderCeQueLaBaseNeContientPas(bench)
 
 	// The data cache of Next (`unstable_cache`, tickets 097 and 098) lives on the disk, in .next/cache, and
 	// outlives a build: an entry of the last run, made before its data existed, would answer this run's pages.
 	rmSync(path.join(RACINE, '.next/cache/fetch-cache'), { recursive: true, force: true })
 
-	console.log(`Essais de bout en bout sur le banc « ${banc.instance.nom} » : build de l’application, puis ${adresse}.`)
-	const build = await lancer(
+	console.log(`Essais de bout en bout sur le banc « ${bench.instance.nom} » : build de l’application, puis ${address}.`)
+	const build = await run(
 		[process.execPath, '--no-env-file', 'run', 'build'],
-		environnementDuBuild(process.env, banc.environnement)
+		environnementDuBuild(process.env, bench.environnement)
 	)
 	if (build !== 0)
 		throw new BancRefuse(
@@ -130,16 +130,16 @@ async function principal(demandes: string[]): Promise<number> {
 
 	// Two runs, one after the other (ticket 225): everything, then the one test that needs the bench to itself.
 	// The second one runs even when the first one failed, so that one run shows every red test.
-	const environnement = environnementDePlaywright(process.env, banc.instance, banc.environnement)
-	const { principale, finale } = phasesDePlaywright(demandes)
+	const environment = environnementDePlaywright(process.env, bench.instance, bench.environnement)
+	const { principale: main, finale } = phasesDePlaywright(demandes)
 	let code = 0
-	for (const argumentsDuTest of [principale, finale]) {
-		if (!argumentsDuTest || arretDemande) continue
+	for (const testArguments of [main, finale]) {
+		if (!testArguments || stopRequested) continue
 		// The pages of the first run (« zoe-lefevre » of the set, for one) must not answer the second one, which writes
 		// its own data without going through the application: the cache on the disk is emptied again.
 		rmSync(path.join(RACINE, '.next/cache/fetch-cache'), { recursive: true, force: true })
-		const fin = await lancerPlaywright(argumentsDuTest, environnement)
-		if (code === 0) code = fin
+		const end = await runPlaywright(testArguments, environment)
+		if (code === 0) code = end
 	}
 	if (code !== 0)
 		console.error(
@@ -154,8 +154,8 @@ async function principal(demandes: string[]): Promise<number> {
 
 try {
 	process.exit(await principal(process.argv.slice(2)))
-} catch (erreur) {
-	if (!(erreur instanceof BancRefuse) && !(erreur instanceof EnvironnementRefuse)) throw erreur
-	console.error(erreur.message)
+} catch (error) {
+	if (!(error instanceof BancRefuse) && !(error instanceof EnvironnementRefuse)) throw error
+	console.error(error.message)
 	process.exit(1)
 }

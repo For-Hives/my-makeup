@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { isAdmin } from '@/lib/access'
-import { lireLeDelta } from '@/lib/bascule/export-delta'
-import { repondreAuDelta } from '@/lib/bascule/reponse-delta'
+import { respondToDelta } from '@/lib/cutover/delta-response'
+import { readDelta } from '@/lib/cutover/export-delta'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 import { fichierPourPayload } from '../outils/photos'
@@ -116,23 +116,23 @@ const idsDe = (liste: { id: number }[]) => liste.map(({ id }) => id).sort((a, b)
 
 describe('l’export du delta, sur le banc', () => {
 	test('ce qui est créé ou modifié après la date y est, ce qui est importé et inchangé n’y est pas', async () => {
-		const delta = await lireLeDelta(await payloadDeTest(), depuis)
-		expect(idsDe(delta.comptes)).toEqual(
+		const delta = await readDelta(await payloadDeTest(), depuis)
+		expect(idsDe(delta.accounts)).toEqual(
 			[ids.compteModifie, ids.compteNeuf].sort((a, b) => (a ?? 0) - (b ?? 0)) as number[]
 		)
-		expect(delta.comptes.find(({ id }) => id === ids.compteNeuf)?.depuisLaBascule).toBe('cree')
-		expect(delta.comptes.find(({ id }) => id === ids.compteModifie)?.depuisLaBascule).toBe('modifie')
-		expect(idsDe(delta.profils)).toEqual(
+		expect(delta.accounts.find(({ id }) => id === ids.compteNeuf)?.sinceCutover).toBe('created')
+		expect(delta.accounts.find(({ id }) => id === ids.compteModifie)?.sinceCutover).toBe('updated')
+		expect(idsDe(delta.profiles)).toEqual(
 			[ids.profilModifie, ids.profilNeuf].sort((a, b) => (a ?? 0) - (b ?? 0)) as number[]
 		)
-		expect(delta.profils.find(({ id }) => id === ids.profilModifie)?.depuisLaBascule).toBe('modifie')
-		expect(delta.profils.find(({ id }) => id === ids.profilModifie)?.specialty).toBe('Mariage')
+		expect(delta.profiles.find(({ id }) => id === ids.profilModifie)?.sinceCutover).toBe('updated')
+		expect(delta.profiles.find(({ id }) => id === ids.profilModifie)?.specialty).toBe('Mariage')
 		expect(idsDe(delta.photos)).toEqual([ids.photoNeuve as number])
 		expect(delta.photos[0]?.owner).toBe(ids.compteNeuf)
 		expect(idsDe(delta.messages)).toEqual([ids.messageNeuf as number])
 		expect(delta.messages[0]?.message).toBe('Écrit après la bascule.')
-		expect(delta.comptesSupprimes.map(({ strapiId }) => strapiId)).toEqual([4199])
-		expect(delta.nombres).toEqual({ comptes: 2, profils: 2, photos: 1, messages: 1, comptesSupprimes: 1 })
+		expect(delta.deletedAccounts.map(({ strapiId }) => strapiId)).toEqual([4199])
+		expect(delta.counts).toEqual({ accounts: 2, profiles: 2, photos: 1, messages: 1, deletedAccounts: 1 })
 		// The imported ones that nobody touched are nowhere in the file.
 		const texte = JSON.stringify(delta)
 		expect(texte).not.toContain('Écrit avant la bascule')
@@ -141,16 +141,16 @@ describe('l’export du delta, sur le banc', () => {
 
 	test('deux lancements donnent le même texte tant que rien n’a changé', async () => {
 		const payload = await payloadDeTest()
-		const un = JSON.stringify(await lireLeDelta(payload, depuis))
-		const deux = JSON.stringify(await lireLeDelta(payload, depuis))
+		const un = JSON.stringify(await readDelta(payload, depuis))
+		const deux = JSON.stringify(await readDelta(payload, depuis))
 		expect(un).toBe(deux)
 	})
 
 	test('aucun champ secret n’est exporté : ni clé de mot de passe, hash, sel, jeton ou session, ni leur valeur', async () => {
 		const payload = await payloadDeTest()
 		// The imported account with a hash is in the file here (its date is brought forward), to show the hash stays out.
-		const avecHash = await lireLeDelta(payload, new Date(ANCIEN))
-		expect(avecHash.comptes.some(({ id }) => id === ids.compteImporte)).toBe(true)
+		const avecHash = await readDelta(payload, new Date(ANCIEN))
+		expect(avecHash.accounts.some(({ id }) => id === ids.compteImporte)).toBe(true)
 		const stocke = await payload.db.findOne<{ id: number; sessions?: { id: string }[]; salt?: string; hash?: string }>({
 			collection: 'pros',
 			where: { id: { equals: ids.compteNeuf } },
@@ -177,7 +177,7 @@ describe('l’export du delta, sur le banc', () => {
 		])
 			if (valeur) expect(texte.includes(valeur)).toBe(false)
 		// What a replay needs is there.
-		const compte = avecHash.comptes.find(({ id }) => id === ids.compteNeuf)
+		const compte = avecHash.accounts.find(({ id }) => id === ids.compteNeuf)
 		expect(compte).toMatchObject({ email: expect.stringContaining('@example.test'), strapiId: null })
 	})
 
@@ -187,17 +187,17 @@ describe('l’export du delta, sur le banc', () => {
 		const maquilleuse = await creerCompte('maquilleuse')
 		const repondre = async (enTetes: Record<string, string> | undefined) => {
 			const lignes: string[] = []
-			const reponse = await repondreAuDelta(
+			const reponse = await respondToDelta(
 				new Request(`https://my-makeup.fr/api/cutover/delta?since=${depuis.toISOString()}`),
 				{
-					lieu: 'site',
-					basculeLe: undefined,
-					estAdmin: async () => {
+					place: 'site',
+					cutoverDate: undefined,
+					isAdmin: async () => {
 						const { user } = await payload.auth({ headers: new Headers(enTetes) })
 						return user ? isAdmin(user) : 'anonyme'
 					},
-					lire: debut => lireLeDelta(payload, debut),
-					journal: ligne => lignes.push(ligne),
+					read: debut => readDelta(payload, debut),
+					log: ligne => lignes.push(ligne),
 				}
 			)
 			return { reponse, lignes }
@@ -206,9 +206,9 @@ describe('l’export du delta, sur le banc', () => {
 		expect((await repondre(maquilleuse.session.enTetes)).reponse.status).toBe(403)
 		const { reponse, lignes } = await repondre(admin.session.enTetes)
 		expect(reponse.status).toBe(200)
-		const corps = (await reponse.json()) as { nombres: { comptes: number } }
+		const corps = (await reponse.json()) as { counts: { accounts: number } }
 		// The two accounts of the test itself (admin excluded: another collection) add to the three above.
-		expect(corps.nombres.comptes).toBeGreaterThanOrEqual(3)
+		expect(corps.counts.accounts).toBeGreaterThanOrEqual(3)
 		expect(lignes.join('\n')).not.toMatch(/@/)
 	})
 })

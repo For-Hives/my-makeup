@@ -98,7 +98,7 @@ Une règle que la configuration ne dit pas : `dangerouslySetInnerHTML` n'est acc
 
 ## 6. Les deux checks requis
 
-La protection de la branche `v3` exige deux checks. Leur liste est dans `ci/checks-requis.json`.
+La protection de la branche `v3` exige deux checks. Leur liste est dans `ci/required-checks.json`.
 
 | Check | D'où il vient | Ce qu'il dit |
 |---|---|---|
@@ -140,7 +140,7 @@ Au 14/10/2026, tout ce document a été vérifié sur un poste de développement
 
 Au premier passage, le job `build` a été vert sur le Docker de GitHub. Avant lui, ces trois points n'avaient tourné que derrière Podman : s'il passe au rouge sans que l'image ait changé, les regarder d'abord.
 
-- `scripts/image/controle.ts`, `startApplication` : le contrôle lance le conteneur avec `--health-interval=2s` en gardant la commande de santé de l'image. Docker l'accepte, Podman le refuse : seul le repli (le rythme de l'image, 30 secondes) a été joué.
+- `scripts/image/check.ts`, `startApplication` : le contrôle lance le conteneur avec `--health-interval=2s` en gardant la commande de santé de l'image. Docker l'accepte, Podman le refuse : seul le repli (le rythme de l'image, 30 secondes) a été joué.
 - Le même fichier, `UNHEALTHY_ANSWER_MAX_MS` : base arrêtée, le premier 503 doit arriver en moins de 3 secondes. La route abandonne la base au bout de 2 secondes ; le relevé local est de 1,7 à 1,8 seconde.
 - `bun run image:build` : un « docker build » avec BuildKit, sur la machine de GitHub.
 
@@ -150,9 +150,9 @@ La CI se lance à chaque pull request et à chaque poussée sur `v3`. Cinq jobs 
 
 | Job | Ce qu'il lance | Limite |
 |---|---|---|
-| `qualite` | Les fichiers générés par Payload sont à jour ; aucune dérive de schéma (`bun run schema:derive`) ; `bun run typecheck` ; `bun run ci:biome` ; `bun run test:ci-garde` ; `bun run names:check` (aucun nom français hors liste d'attente et exceptions, `docs/noms.md`) | 10 min |
+| `qualite` | Les fichiers générés par Payload sont à jour ; aucune dérive de schéma (`bun run schema:drift`) ; `bun run typecheck` ; `bun run ci:biome` ; `bun run test:ci-guard` ; `bun run names:check` (aucun nom français hors liste d'attente et exceptions, `docs/noms.md`) | 10 min |
 | `unit` | `bun run test:unit` | 10 min |
-| `build` | `bun run image:build`, sans secret ni base, puis `bun run image:controle` | 12 min |
+| `build` | `bun run image:build`, sans secret ni base, puis `bun run image:check` | 12 min |
 | `integration` | En trois lots côte à côte, de `integration (1/3)` à `integration (3/3)`. Chacun lance `bun run banc:up`, puis `bun run test:integration --shard=N/3` : un tiers des fichiers de tests d'intégration, sur son propre banc de test ([`docs/tests/banc.md`](tests/banc.md)) | 10 min par lot |
 | `e2e` | En quatre lots côte à côte, de `e2e (1/4)` à `e2e (4/4)`. Chacun installe le Chromium de Playwright, lance `bun run banc:up`, puis `bun run test:e2e --shard=N/4` sur son quart des essais ([`docs/tests/e2e.md`](tests/e2e.md)) | 10 min par lot |
 | `ci-ok` | Rouge si l'un des cinq a échoué, a été annulé ou a été sauté | 2 min |
@@ -211,13 +211,13 @@ Son script est testé tel quel : le test le lit dans `ci.yml` et le lance avec c
 
 ## 8. Les garde-fous
 
-Chaque garde-fou est joué deux fois : sur les fichiers du dépôt, où il ne doit rien trouver, et sur un exemple fautif fabriqué à partir de ces mêmes fichiers, où il doit trouver la faute. Lancer : `bun run test:ci-garde`.
+Chaque garde-fou est joué deux fois : sur les fichiers du dépôt, où il ne doit rien trouver, et sur un exemple fautif fabriqué à partir de ces mêmes fichiers, où il doit trouver la faute. Lancer : `bun run test:ci-guard`.
 
 | Garde | Ce qu'elle refuse | État |
 |---|---|---|
 | C01 | `continue-on-error` ; un workflow sans `defaults: run: shell: bash`, donc sans `pipefail` ; un `shell` propre à une étape ou à un job ; les façons connues d'avaler un échec : `\|\|` suivi d'autre chose que `exit 1`, `set +e`, `set +o pipefail`, une commande `true`, `:` ou `exit 0` seule | En place |
 | C02 | Une étape qui dépend de `cache-hit` ; un cache d'autre chose que `.next/cache` | En place |
-| C03 | Un check de `ci/checks-requis.json` absent ou renommé ; un second job affiché sous le nom `ci-ok`, dans n'importe quel workflow ; un job nommé `CodeQL` ; une analyse CodeQL écrite dans un workflow | En place |
+| C03 | Un check de `ci/required-checks.json` absent ou renommé ; un second job affiché sous le nom `ci-ok`, dans n'importe quel workflow ; un job nommé `CodeQL` ; une analyse CodeQL écrite dans un workflow | En place |
 | C04 | Des versions de Node ou de bun qui diffèrent entre `.nvmrc`, `engines`, `packageManager`, le `Dockerfile` et les workflows ; une image sans digest | En place |
 | C05 | Un test en `.only` ; un test sauté sans son ticket : `.skip`, `.fixme`, `.todo`, `.skipIf(true)`, `.if(false)`. Le ticket s'écrit `// issue #N`, sur une ligne de l'appel ou sur la ligne du dessus | En place |
 | C06 | Une attente fixe dans `tests/e2e` : `waitForTimeout`, le minuteur `setTimeout` (nu ou de la page), sa forme en promesse (`timers/promises`). `test.setTimeout`, qui fixe la durée maximale d'un essai, n'en est pas une | En place |
@@ -233,7 +233,7 @@ Le même fichier garde aussi :
 - `ci-ok` : il tourne toujours et attend tous les jobs. Aucun job n'est sous condition. Une commande (`run`) ne porte que `always()` ou `!cancelled()`, qui la font tourner plus souvent, jamais moins. `failure()` est réservé aux actions (`uses`) qui envoient un rapport : sous cette condition, une commande serait sautée quand tout va bien, et le job resterait vert sans elle ;
 - les durées : chaque job a sa limite, et la somme des limites de la plus longue chaîne reste sous 15 minutes (voir « Durée de la CI ») ;
 - le banc de test en CI : les jobs `integration` et `e2e` existent ; chacun lance `bun run banc:up` avant ses tests, chaque commande seule dans son étape ; chacun tourne en lots, trois pour `integration`, quatre pour `e2e` (`matrix: shard: [1, …, N]`, et rien d'autre ; le même N dans le nom du job et dans le diviseur de `--shard`), sans qu'un lot en échec annule les autres (`fail-fast: false`), et la limite d'un lot ne dépasse pas 10 minutes ; `e2e` tourne sous Node, avec le Chromium de Playwright ;
-- l'image Docker : variables publiques seulement (`NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_APP_VERSION`, `SOURCE_COMMIT` et `R2_PUBLIC_URL`, la liste de `scripts/image/regles.ts`), quelle que soit la casse de leur nom, utilisateur sans droits, contrôle de santé, contexte de build en liste blanche (voir le README, « Image Docker »).
+- l'image Docker : variables publiques seulement (`NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_APP_VERSION`, `SOURCE_COMMIT` et `R2_PUBLIC_URL`, la liste de `scripts/image/rules.ts`), quelle que soit la casse de leur nom, utilisateur sans droits, contrôle de santé, contexte de build en liste blanche (voir le README, « Image Docker »).
 
 ### Ce que les garde-fous ne voient pas
 
@@ -270,7 +270,7 @@ Les actions utilisées, vérifiées le 14/10/2026 (date de publication, base d'a
 
 Un check requis qui ne peut pas échouer ne protège rien. Le canari est une pull request cassée exprès : un test faux, une erreur de type, une erreur Biome et un essai de bout en bout faux. GitHub doit refuser de la fusionner, même à un administrateur. Il se joue une fois dès que `v3` est protégée, puis une fois par trimestre.
 
-`bun run ci:canari` écrit les quatre fichiers fautifs. Il refuse d'écrire ailleurs que sur une branche dont le nom commence par `canari-`. Il n'écrit que ces fichiers : il ne commite rien et ne pousse rien.
+`bun run ci:canary` écrit les quatre fichiers fautifs. Il refuse d'écrire ailleurs que sur une branche dont le nom commence par `canari-`. Il n'écrit que ces fichiers : il ne commite rien et ne pousse rien.
 
 | Fichier | Faute | Ce qui doit passer au rouge |
 |---|---|---|
@@ -288,7 +288,7 @@ Il faut que `v3` soit protégée : `ci-ok` et `CodeQL` requis, administrateurs s
 ```sh
 git fetch origin
 git switch -c canari-2026-10 origin/v3
-bun run ci:canari
+bun run ci:canary
 git add tests/unit/canari.test.ts tests/ci/canari-types.ts tests/ci/canari-biome.ts tests/e2e/canari.spec.ts
 git commit -m "test(v3): canary, four faults on purpose, never merge"
 git push -u origin canari-2026-10
@@ -400,7 +400,7 @@ Chaque règle de `renovate.json` dit sa raison dans son champ `description`.
 
 ### La garde
 
-`tests/ci/renovate.test.ts` fige ces règles. Il tourne avec les autres garde-fous : `bun run test:ci-garde`, ou seul : `bun --no-env-file test tests/ci/renovate.test.ts`.
+`tests/ci/renovate.test.ts` fige ces règles. Il tourne avec les autres garde-fous : `bun run test:ci-guard`, ou seul : `bun --no-env-file test tests/ci/renovate.test.ts`.
 
 - Il lit les règles comme Renovate les applique : toutes celles qui correspondent, dans l'ordre du fichier, la dernière l'emporte. Déplacer une règle peut donc changer la réponse, et la garde le voit.
 - Il pose la question pour chaque dépendance du dépôt et chaque type de mise à jour : les paquets de `package.json`, les images du `Dockerfile` et des fichiers compose, le Node de `.nvmrc`, les actions de la CI. Une dépendance ajoutée demain est contrôlée sans toucher au test.
@@ -419,13 +419,13 @@ Ce que la garde ne voit pas :
 2. Demander à Renovate s'il sait lire le fichier :
 
    ```sh
-   bun run renovate:valide
+   bun run renovate:validate
    ```
 
-   La commande lance le validateur de Renovate en mode strict : une option inconnue, un horaire ou une expression illisibles, ou un réglage écrit à l'ancienne façon la font échouer. Il lui faut la commande `docker`, et rien d'autre. Avec Podman : `DOCKER_HOST=unix://$XDG_RUNTIME_DIR/podman/podman.sock bun run renovate:valide`.
+   La commande lance le validateur de Renovate en mode strict : une option inconnue, un horaire ou une expression illisibles, ou un réglage écrit à l'ancienne façon la font échouer. Il lui faut la commande `docker`, et rien d'autre. Avec Podman : `DOCKER_HOST=unix://$XDG_RUNTIME_DIR/podman/podman.sock bun run renovate:validate`.
 3. Relancer la garde.
 
-Le validateur tourne dans l'image officielle de Renovate, figée par son étiquette et son empreinte dans `scripts/ci/renovate-valide.ts`. Le conteneur n'a ni réseau ni dossier de ce poste : il reçoit le fichier sur son entrée, et rien d'autre. Le premier lancement télécharge l'image, environ 440 Mo.
+Le validateur tourne dans l'image officielle de Renovate, figée par son étiquette et son empreinte dans `scripts/ci/renovate-validate.ts`. Le conteneur n'a ni réseau ni dossier de ce poste : il reçoit le fichier sur son entrée, et rien d'autre. Le premier lancement télécharge l'image, environ 440 Mo.
 
 - **Monter l'image du validateur** : choisir une version d'au moins 7 jours, sans avis de sécurité ouvert (base de GitHub et avis du dépôt renovatebot/renovate), et changer l'étiquette et l'empreinte ensemble. Rien ne la monte seule : à faire avant la bascule, puis quand le fichier change.
 - **Ne pas chercher le validateur sous son nom dans le registre npm** : le paquet `renovate-config-validator` appartient à un tiers. Le vrai validateur est livré dans le paquet `renovate`.
@@ -443,7 +443,7 @@ Le validateur tourne dans l'image officielle de Renovate, figée par son étique
 
 | Date | Contrôle | Résultat |
 |---|---|---|
-| 14/10/2026 | `bun run renovate:valide`, Renovate 44.140.0, mode strict | Valide. Le même validateur refuse une option inconnue, un horaire illisible, une expression fausse et un réglage écrit à l'ancienne façon (quatre essais) |
+| 14/10/2026 | `bun run renovate:validate`, Renovate 44.140.0, mode strict | Valide. Le même validateur refuse une option inconnue, un horaire illisible, une expression fausse et un réglage écrit à l'ancienne façon (quatre essais) |
 | 14/10/2026 | Renovate 44.140.0 lancé à blanc sur une copie du dépôt : il lit et cherche les versions, il n'écrit rien et n'a reçu aucun jeton | Il lit `package.json` et `bun.lock`, le `Dockerfile`, les deux fichiers compose, `.nvmrc` et `ci.yml`. Il ne propose ni Next 16.4, ni TypeScript 7, et ne touche pas à `engines.node`. bun 1.4 arrive dans une seule proposition pour `packageManager`, l'image et les types. Cinq versions de moins de 7 jours sont retenues. |
 | 14/10/2026 | Le moteur de Renovate 44.140.0, préréglages compris, interrogé sur chaque dépendance du dépôt et chaque type de mise à jour | 608 réponses, les mêmes que celles de la garde. Rien n'est fusionné seul hors des mineures, correctifs et empreintes ; aucune majeure sans approbation ; aucun correctif de sécurité fusionné seul |
 
@@ -454,14 +454,14 @@ Ce que ces relevés ne montrent pas : les actions de la CI n'ont pas été cherc
 La dérive, c'est l'écart entre le schéma que décrivent les collections du code et celui que créent les migrations versionnées. Une collection changée sans sa migration, c'est une base de prod qui ne suit plus le code.
 
 ```sh
-bun run schema:derive
+bun run schema:drift
 ```
 
 - La commande compare les collections du code à l'instantané que Payload a rangé avec la dernière migration (`src/migrations/*.json`). C'est la réponse de `migrate:create --skip-empty`, sans rien écrire.
 - Code de sortie 0 : « Aucune dérive de schéma ». Code de sortie 1 : elle liste le SQL qu'une migration contiendrait, puis dit d'écrire la migration par `bun run payload:migrate:create` et d'en relire le SQL.
 - Elle n'ouvre aucune base et ne lit aucun secret : Payload est chargé sans connexion, et les deux variables que réclame sa configuration reçoivent des valeurs de remplissage. Elle tourne en moins d'une seconde.
 - Un nom qui n'existe que d'un côté, alors que d'autres n'existent que de l'autre (une colonne renommée, ou retirée pendant qu'une autre était ajoutée), est une dérive en soi. La commande le dit tout de suite. Sans ce contrôle, drizzle-kit poserait la question « renommée ? » sur le terminal et attendrait pour toujours dans une CI : essayé le 14/10/2026, le processus a été arrêté au bout de 15 secondes sans réponse.
-- `--avant <instantane.json>` compare à un autre instantané que celui de la dernière migration, et `--instantane <fichier.json>` écrit celui des collections : ce sont les outils de son test, `tests/ci/derive-schema.test.ts`.
+- `--before <instantane.json>` compare à un autre instantané que celui de la dernière migration, et `--snapshot <fichier.json>` écrit celui des collections : ce sont les outils de son test, `tests/ci/derive-schema.test.ts`.
 
 ### Bloquante depuis la migration `init`
 
@@ -470,7 +470,7 @@ Le schéma de P3 est figé dans une seule migration, `init` (ticket 049), qui a 
 ```yaml
       - name: Schema drift
         if: ${{ !cancelled() }}
-        run: bun run schema:derive
+        run: bun run schema:drift
 ```
 
 - Une collection changée sans sa migration rend le job `qualite` rouge, donc `ci-ok`. La garde des fichiers générés et cette étape disent ensemble : un changement de collection vient avec ses types et sa migration, dans le même commit.

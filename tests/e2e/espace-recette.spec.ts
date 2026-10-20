@@ -18,7 +18,7 @@ import { payloadDeTest } from '../outils/payload-test'
  *   on the page and in every panel.
  *
  * The orphans of the storage after the whole suite are not counted here but by the step that follows the
- * end-to-end tests in the CI (`bun run banc:rapprocher --hors-import`, ticket 137).
+ * end-to-end tests in the CI (`bun run banc:rapprocher --outside-import`, ticket 137).
  *
  * The brake of the sign-in counts by client address: each test sends its own made-up address.
  */

@@ -59,7 +59,7 @@ jobs:
       # command sets its own placeholders (docs/qualite.md, « La dérive de schéma »).
       - name: Schema drift
         if: ${{ !cancelled() }}
-        run: bun run schema:derive
+        run: bun run schema:drift
       - name: Types
         if: ${{ !cancelled() }}
         run: bun run typecheck
@@ -68,7 +68,7 @@ jobs:
         run: bun run ci:biome
       - name: Guard rails of the CI
         if: ${{ !cancelled() }}
-        run: bun run test:ci-garde
+        run: bun run test:ci-guard
       # A French name in the code (files, folders, declared names, scripts, variables, options) makes
       # this step, then ci-ok, red. The waiting list and the named exceptions are in
       # scripts/naming/config.json (docs/noms.md). No new required check: the step is in `qualite`.
@@ -109,7 +109,7 @@ jobs:
       - name: Build the image
         run: bun run image:build --build-arg "SOURCE_COMMIT=$GITHUB_SHA"
       - name: Check the image against a throwaway database
-        run: CONTROLE_IMAGE_COMMIT="$GITHUB_SHA" bun run image:controle
+        run: IMAGE_CHECK_COMMIT="$GITHUB_SHA" bun run image:check
 
   # The integration tests, against the containers of the test bench (compose.test.yml): the
   # same commands as on a developer's machine (docs/tests/banc.md), in three shards side by side.
@@ -172,10 +172,10 @@ jobs:
         run: bun run test:e2e --shard=${{ matrix.shard }}/4
       # Ticket 137: after the journeys, the objects of the storage outside the bin must be exactly
       # those of the photos the profiles and articles name. An orphan makes this step, then ci-ok, red.
-      # It reads and removes nothing. `--hors-import`: the media the import adopted from the fake source
+      # It reads and removes nothing. `--outside-import`: the media the import adopted from the fake source
       # (erased at the end of its test) do not count; what the v3 wrote does. No `continue-on-error`.
       - name: Reconcile the storage and the database
-        run: bun run banc:rapprocher --hors-import
+        run: bun run banc:rapprocher --outside-import
       # Trace, video and screenshot of each failed test, and the report: sent only after a failure.
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: failure()

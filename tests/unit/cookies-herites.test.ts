@@ -95,16 +95,16 @@ describe('la durée de 90 jours, comptée depuis la date de bascule', () => {
 		expect(cleanupEnd('demain')).toBeUndefined()
 	})
 
-	test('BASCULE_LE illisible arrête le démarrage, par son nom', () => {
+	test('CUTOVER_DATE illisible arrête le démarrage, par son nom', () => {
 		const base = { DATABASE_URI: 'postgres://u:p@127.0.0.1:5432/db', PAYLOAD_SECRET: 'x'.repeat(32) }
-		expect(() => parseServerEnv({ ...base, BASCULE_LE: '2027-02-01' })).not.toThrow()
-		expect(() => parseServerEnv({ ...base, BASCULE_LE: '' })).not.toThrow()
+		expect(() => parseServerEnv({ ...base, CUTOVER_DATE: '2027-02-01' })).not.toThrow()
+		expect(() => parseServerEnv({ ...base, CUTOVER_DATE: '' })).not.toThrow()
 		try {
-			parseServerEnv({ ...base, BASCULE_LE: '01/02/2027' })
+			parseServerEnv({ ...base, CUTOVER_DATE: '01/02/2027' })
 			throw new Error('should have thrown')
 		} catch (error) {
 			expect(error).toBeInstanceOf(EnvError)
-			expect((error as EnvError).variables).toEqual(['BASCULE_LE'])
+			expect((error as EnvError).variables).toEqual(['CUTOVER_DATE'])
 			expect((error as EnvError).message).not.toContain('01/02/2027')
 		}
 	})
@@ -152,14 +152,14 @@ const requete = (chemin: string, cookies: string[], entetes: Record<string, stri
 const setCookies = (reponse: Response) => reponse.headers.getSetCookie()
 
 describe('le proxy : le nettoyage à la première requête', () => {
-	const avant = process.env.BASCULE_LE
+	const avant = process.env.CUTOVER_DATE
 	afterEach(() => {
-		if (avant === undefined) delete process.env.BASCULE_LE
-		else process.env.BASCULE_LE = avant
+		if (avant === undefined) delete process.env.CUTOVER_DATE
+		else process.env.CUTOVER_DATE = avant
 	})
 
 	test('une page du site : chaque cookie hérité expiré, un rappel posé, pas de redirection', () => {
-		delete process.env.BASCULE_LE
+		delete process.env.CUTOVER_DATE
 		const reponse = proxy(requete('/a-propos', HERITES))
 		expect(reponse.status).toBe(200)
 		const lignes = setCookies(reponse)
@@ -176,7 +176,7 @@ describe('le proxy : le nettoyage à la première requête', () => {
 	})
 
 	test('la connexion directement : le message est dû tout de suite, sans rappel', () => {
-		delete process.env.BASCULE_LE
+		delete process.env.CUTOVER_DATE
 		const reponse = proxy(requete('/auth/signin', HERITES))
 		expect(reponse.status).toBe(200)
 		expect(reponse.headers.get('x-middleware-request-x-mm-signed-out')).toBe('1')
@@ -184,7 +184,7 @@ describe('le proxy : le nettoyage à la première requête', () => {
 	})
 
 	test('une page privée : une seule redirection vers la connexion, les cookies expirés au passage (pas de boucle)', () => {
-		delete process.env.BASCULE_LE
+		delete process.env.CUTOVER_DATE
 		const reponse = proxy(requete('/auth/profil', HERITES))
 		expect(reponse.status).toBe(307)
 		expect(reponse.headers.get('location')).toBe(`${SITE}/auth/signin?callbackUrl=%2Fauth%2Fprofil`)
@@ -196,7 +196,7 @@ describe('le proxy : le nettoyage à la première requête', () => {
 	})
 
 	test('le message ne s’affiche qu’une fois : le rappel est effacé en le servant, et sans rappel rien ne s’affiche', () => {
-		delete process.env.BASCULE_LE
+		delete process.env.CUTOVER_DATE
 		const premiere = proxy(requete('/auth/signin', [MESSAGE_COOKIE]))
 		expect(setCookies(premiere).find(l => l.startsWith(`${MESSAGE_COOKIE}=;`))).toContain('Max-Age=0')
 		const seconde = proxy(requete('/auth/signin', []))
@@ -205,32 +205,32 @@ describe('le proxy : le nettoyage à la première requête', () => {
 	})
 
 	test('un préchargement ne montre pas le message et ne l’use pas', () => {
-		delete process.env.BASCULE_LE
+		delete process.env.CUTOVER_DATE
 		const reponse = proxy(requete('/auth/signin', [MESSAGE_COOKIE], { 'next-router-prefetch': '1' }))
 		expect(reponse.headers.get('x-middleware-request-x-mm-signed-out')).toBeNull()
 		expect(setCookies(reponse)).toEqual([])
 	})
 
 	test('l’en-tête du message envoyé par un visiteur est retiré', () => {
-		delete process.env.BASCULE_LE
+		delete process.env.CUTOVER_DATE
 		const reponse = proxy(requete('/auth/signin', [], { [MESSAGE_HEADER]: '1' }))
 		expect(reponse.headers.get('x-middleware-request-x-mm-signed-out')).toBeNull()
 	})
 
 	test('le back-office, l’API et les fichiers : aucun Set-Cookie', () => {
-		delete process.env.BASCULE_LE
+		delete process.env.CUTOVER_DATE
 		for (const chemin of ['/admin', '/api/pros/me', '/_next/static/a.js', '/robots.txt'])
 			expect(setCookies(proxy(requete(chemin, HERITES)))).toEqual([])
 	})
 
 	test('passé les 90 jours, plus rien n’est touché', () => {
-		process.env.BASCULE_LE = '2020-01-01'
+		process.env.CUTOVER_DATE = '2020-01-01'
 		const reponse = proxy(requete('/a-propos', HERITES))
 		expect(setCookies(reponse)).toEqual([])
 	})
 
 	test('sans cookie hérité, rien n’est posé', () => {
-		delete process.env.BASCULE_LE
+		delete process.env.CUTOVER_DATE
 		expect(setCookies(proxy(requete('/', ['payload-token'])))).toEqual([])
 	})
 })

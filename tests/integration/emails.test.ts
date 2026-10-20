@@ -1,11 +1,11 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { createServer } from 'node:net'
 import { nodemailerAdapter } from '@payloadcms/email-nodemailer'
-import { CONTEXTE_IMPORT } from '@/lib/contexte-import'
 import { composerEmail } from '@/lib/emails/layout'
 import { transportOptions } from '@/lib/emails/relay'
 import { createSendEmail, EmailSendFailed, payloadSendEmail } from '@/lib/emails/send'
 import { serverEnv } from '@/lib/env'
+import { IMPORT_CONTEXT } from '@/lib/import-context'
 import { attendreLeMail, compterLesMails, lienDuMail, mailsRecus, viderLeCapteur } from '../outils/mailpit'
 import { payloadDeTest } from '../outils/payload-test'
 
@@ -66,7 +66,7 @@ describe('un email transactionnel part de la v3 et se lit dans le capteur du ban
 		const adresse = adresseFictive('import')
 		const avant = await compterLesMails()
 
-		await envoyer({ a: adresse, ...composerEmail(contenu, SITE) }, { context: CONTEXTE_IMPORT })
+		await envoyer({ a: adresse, ...composerEmail(contenu, SITE) }, { context: IMPORT_CONTEXT })
 		// A mail that was going to arrive has arrived by now; a second one proves the catcher is alive.
 		const temoin = adresseFictive('temoin')
 		await envoyer({ a: temoin, ...composerEmail(contenu, SITE) })

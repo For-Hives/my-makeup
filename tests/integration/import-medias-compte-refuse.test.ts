@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { randomBytes } from 'node:crypto'
-import { TYPE_PROFIL } from '../../scripts/migration/import/medias'
-import type { Rapport } from '../../scripts/migration/import/rapport'
+import { PROFILE_TYPE } from '../../scripts/migration/import/media'
+import type { Report } from '../../scripts/migration/import/report'
 import { NO_PROFILE_CONTEXT } from '../../src/collections/Profiles'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { importerSurLeBanc } from '../outils/import'
@@ -31,10 +31,10 @@ const PROFILS_DU_COMPTE = new Set(
 
 /** The files the profiles of that account designate. */
 const FICHIERS_DU_COMPTE = lignes.files_related_morphs
-	.filter(lien => lien.related_type === TYPE_PROFIL && PROFILS_DU_COMPTE.has(Number(lien.related_id)))
+	.filter(lien => lien.related_type === PROFILE_TYPE && PROFILS_DU_COMPTE.has(Number(lien.related_id)))
 	.map(lien => Number(lien.file_id))
 
-let rapport: Rapport
+let rapport: Report
 
 beforeAll(async () => {
 	await viderLaBase()
@@ -60,10 +60,12 @@ afterAll(async () => {
 describe('Un compte que la cible refuse n’emporte pas ses photos (ticket 058, I39)', () => {
 	test('le fichier du compte refusé est listé « compte-refuse », jamais écrit, sans média sans propriétaire', async () => {
 		expect(FICHIERS_DU_COMPTE.length).toBeGreaterThan(0)
-		expect(rapport.collections.pros?.refuses.map(({ strapiId }) => strapiId)).toEqual([COMPTE_REFUSE])
-		expect(rapport.collections.media?.refuses).toEqual([])
-		const refuses = rapport.collections.media?.fichiers?.nonAdoptes.filter(({ motif }) => motif === 'compte-refuse')
-		expect(refuses?.map(({ fichier }) => fichier).sort()).toEqual([...FICHIERS_DU_COMPTE].sort())
+		expect(rapport.collections.pros?.refused.map(({ strapiId }) => strapiId)).toEqual([COMPTE_REFUSE])
+		expect(rapport.collections.media?.refused).toEqual([])
+		const refuses = rapport.collections.media?.files?.notAdopted.filter(
+			({ reason: motif }) => motif === 'compte-refuse'
+		)
+		expect(refuses?.map(({ file: fichier }) => fichier).sort()).toEqual([...FICHIERS_DU_COMPTE].sort())
 
 		const payload = await payloadDeTest()
 		const { docs } = await payload.find({

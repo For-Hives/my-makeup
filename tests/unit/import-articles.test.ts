@@ -1,11 +1,11 @@
 import { describe, expect, test } from 'bun:test'
 import {
-	ADAPTATEUR_ARTICLES,
-	articlesAttendus,
-	articlesRepartis,
-	type LigneArticle,
+	ARTICLES_ADAPTER,
+	type ArticleRow,
+	expectedArticles,
+	splitArticles,
 } from '../../scripts/migration/import/articles'
-import { TYPE_ARTICLE, TYPE_PROFIL } from '../../scripts/migration/import/medias'
+import { PROFILE_TYPE, TYPE_ARTICLE } from '../../scripts/migration/import/media'
 
 /**
  * Ticket 061: what the import makes of an article of the old site, before and without the database.
@@ -13,7 +13,7 @@ import { TYPE_ARTICLE, TYPE_PROFIL } from '../../scripts/migration/import/medias
  * fictional.
  */
 
-const article = (id: number, modif: Partial<LigneArticle> = {}): LigneArticle => ({
+const article = (id: number, modif: Partial<ArticleRow> = {}): ArticleRow => ({
 	id,
 	title: `Article ${id}`,
 	content: '## Titre\r\n\nUn texte fictif.  \n',
@@ -30,7 +30,7 @@ const article = (id: number, modif: Partial<LigneArticle> = {}): LigneArticle =>
 
 describe('les articles attendus', () => {
 	test('chaque champ tel quel ; publié avec sa date, ou brouillon sans date', () => {
-		const { attendus } = articlesAttendus(
+		const { expected: attendus } = expectedArticles(
 			[article(1), article(2, { published_at: null, title: null, excerpt: '' })],
 			[]
 		)
@@ -38,7 +38,7 @@ describe('les articles attendus', () => {
 		expect(attendus).toEqual([
 			{
 				strapiId: 1,
-				valeurs: {
+				values: {
 					strapiId: 1,
 					title: 'Article 1',
 					slug: 'article-1',
@@ -53,17 +53,14 @@ describe('les articles attendus', () => {
 					createdAt: '2024-01-01T10:00:00.000Z',
 					updatedAt: '2024-02-01T10:00:00.000Z',
 				},
-				ecarts: [],
+				gaps: [],
 			},
 			expect.objectContaining({
 				strapiId: 2,
-				valeurs: expect.objectContaining({ title: null, excerpt: '', _status: 'draft', publishedAt: null }),
+				values: expect.objectContaining({ title: null, excerpt: '', _status: 'draft', publishedAt: null }),
 			}),
 		])
-		expect(attendus.map(attendu => ADAPTATEUR_ARTICLES.options?.(attendu))).toEqual([
-			{ brouillon: false },
-			{ brouillon: true },
-		])
+		expect(attendus.map(attendu => ARTICLES_ADAPTER.options?.(attendu))).toEqual([{ draft: false }, { draft: true }])
 	})
 
 	test('la galerie : les images adoptées dans l’ordre ; un fichier non adopté est signalé, pas inventé', () => {
@@ -72,10 +69,10 @@ describe('les articles attendus', () => {
 			{ fichier: 30, entree: 1, type: TYPE_ARTICLE, champ: 'galery' },
 			{ fichier: 32, entree: 1, type: TYPE_ARTICLE, champ: 'galery' },
 			// The same identifier, for a profile: not a file of the article.
-			{ fichier: 33, entree: 1, type: TYPE_PROFIL, champ: 'image_gallery' },
+			{ fichier: 33, entree: 1, type: PROFILE_TYPE, champ: 'image_gallery' },
 		]
 
-		const { attendus, photosNonReprises } = articlesAttendus(
+		const { expected: attendus, photosNotCarriedOver: photosNonReprises } = expectedArticles(
 			[article(1)],
 			liens,
 			new Map([
@@ -85,12 +82,12 @@ describe('les articles attendus', () => {
 			])
 		)
 
-		expect(attendus[0]?.valeurs.gallery).toEqual([310, 300])
-		expect(photosNonReprises).toEqual([{ entree: 1, fichier: 32 }])
+		expect(attendus[0]?.values.gallery).toEqual([310, 300])
+		expect(photosNonReprises).toEqual([{ entry: 1, file: 32 }])
 	})
 
 	test('un slug qui n’est pas une adresse, ou en double, est refusé et listé ; jamais corrigé', () => {
-		const { pris, refuses } = articlesRepartis([
+		const { taken: pris, refused: refuses } = splitArticles([
 			article(3, { slug: 'article-1' }),
 			article(1),
 			article(2, { slug: 'Article Deux' }),
@@ -99,9 +96,9 @@ describe('les articles attendus', () => {
 
 		expect(pris.map(({ id }) => id)).toEqual([1])
 		expect(refuses).toEqual([
-			{ strapiId: 2, motif: 'slug-pas-une-adresse', champs: ['slug'] },
-			{ strapiId: 3, motif: 'slug-en-double', champs: ['slug'] },
-			{ strapiId: 4, motif: 'slug-pas-une-adresse', champs: ['slug'] },
+			{ strapiId: 2, reason: 'slug-pas-une-adresse', fields: ['slug'] },
+			{ strapiId: 3, reason: 'slug-en-double', fields: ['slug'] },
+			{ strapiId: 4, reason: 'slug-pas-une-adresse', fields: ['slug'] },
 		])
 	})
 })

@@ -1,8 +1,8 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { createHash } from 'node:crypto'
 import { MissingFile } from 'payload'
-import { TYPE_PROFIL } from '../../scripts/migration/import/medias'
-import type { Rapport } from '../../scripts/migration/import/rapport'
+import { PROFILE_TYPE } from '../../scripts/migration/import/media'
+import type { Report } from '../../scripts/migration/import/report'
 import type { Media } from '../../src/payload-types'
 import { espionnerLeStockage } from '../outils/espion-s3'
 import { creerCompte } from '../outils/fabrique-comptes'
@@ -66,8 +66,8 @@ async function mediasDeLaCible(): Promise<Media[]> {
 
 let stockageAvant: string[] = []
 let empreinteAvant = ''
-let aBlanc: Rapport
-let premier: Rapport
+let aBlanc: Report
+let premier: Report
 let journalDuStockage: string[] = []
 
 beforeAll(async () => {
@@ -79,7 +79,7 @@ beforeAll(async () => {
 	empreinteAvant = (await empreinteDeLaSource()).empreinte
 	const espion = espionnerLeStockage()
 	try {
-		aBlanc = await importerSurLeBanc('a-blanc')
+		aBlanc = await importerSurLeBanc('dry-run')
 		premier = await importerSurLeBanc()
 	} finally {
 		espion.arreter()
@@ -97,27 +97,27 @@ describe('Les photos référencées sont adoptées là où elles sont (ticket 05
 		const medias = await mediasDeLaCible()
 
 		expect(medias.map(({ strapiId }) => strapiId)).toEqual(ADOPTES)
-		expect(premier.collections.media).toMatchObject({ source: 13, crees: 8, modifies: 0, refuses: [] })
-		expect(premier.collections.media?.fichiers).toEqual({
-			designes: 9,
-			deEntreesNonPrises: 0,
-			deEntreesDisparues: 2,
-			sansLien: 2,
-			sansStockage: false,
-			nonAdoptes: [{ fichier: 108, motif: 'pas-une-image' }],
-			introuvables: [107],
-			nomsDifferents: [],
-			envoyesParUnAutreCompte: [],
+		expect(premier.collections.media).toMatchObject({ source: 13, created: 8, updated: 0, refused: [] })
+		expect(premier.collections.media?.files).toEqual({
+			pointed: 9,
+			ofEntriesNotTaken: 0,
+			ofVanishedEntries: 2,
+			withoutLink: 2,
+			withoutStorage: false,
+			notAdopted: [{ file: 108, reason: 'pas-une-image' }],
+			notFound: [107],
+			differentNames: [],
+			uploadedByAnotherAccount: [],
 		})
-		expect(premier.parite?.media).toMatchObject({ attendus: 8, egaux: 8, differents: [], manquants: [], enTrop: [] })
-		expect(premier.ecarts).toMatchObject({ 'SCHEMA.md §8 (size)': 8, 'fichiers-non-images-non-repris': 1 })
+		expect(premier.parity?.media).toMatchObject({ expected: 8, equal: 8, different: [], missing: [], extra: [] })
+		expect(premier.gaps).toMatchObject({ 'SCHEMA.md §8 (size)': 8, 'fichiers-non-images-non-repris': 1 })
 		// Each media belongs to the account of the profile that designates it.
 		const payload = await payloadDeTest()
 		const { docs: comptes } = await payload.find({ collection: 'pros', depth: 0, pagination: false })
 		const compteEnPayload = new Map(comptes.map(({ id, strapiId }) => [Number(strapiId), id]))
 		for (const media of medias) {
 			const lien = lignes.files_related_morphs.find(
-				l => Number(l.file_id) === media.strapiId && l.related_type === TYPE_PROFIL
+				l => Number(l.file_id) === media.strapiId && l.related_type === PROFILE_TYPE
 			)
 			const compte = COMPTE_DU_PROFIL.get(Number(lien?.related_id))
 			expect(media.owner, String(media.strapiId)).toBe(compteEnPayload.get(compte ?? -1) ?? -1)
@@ -125,8 +125,8 @@ describe('Les photos référencées sont adoptées là où elles sont (ticket 05
 	})
 
 	test('le passage à blanc annonce les mêmes adoptions et n’écrit rien', () => {
-		expect(aBlanc.collections.media).toMatchObject({ source: 13, crees: 8, modifies: 0, refuses: [] })
-		expect(aBlanc.collections.media?.fichiers).toEqual(premier.collections.media?.fichiers)
+		expect(aBlanc.collections.media).toMatchObject({ source: 13, created: 8, updated: 0, refused: [] })
+		expect(aBlanc.collections.media?.files).toEqual(premier.collections.media?.files)
 	})
 
 	test('le stockage est identique avant et après : aucune écriture, aucun appel du client S3 de l’application', async () => {
@@ -177,8 +177,8 @@ describe('Les photos référencées sont adoptées là où elles sont (ticket 05
 		const photo = ines?.mainPicture as Media | undefined
 
 		expect(photo?.strapiId).toBe(107)
-		expect(premier.collections.media?.fichiers?.introuvables).toEqual([107])
-		expect(premier.collections.media?.crees).toBe(8)
+		expect(premier.collections.media?.files?.notFound).toEqual([107])
+		expect(premier.collections.media?.created).toBe(8)
 	})
 
 	test('second passage : 0 création, 0 mise à jour', async () => {
@@ -186,7 +186,7 @@ describe('Les photos référencées sont adoptées là où elles sont (ticket 05
 
 		const second = await importerSurLeBanc()
 
-		expect(second.collections.media).toMatchObject({ crees: 0, modifies: 0, inchanges: 8, refuses: [] })
+		expect(second.collections.media).toMatchObject({ created: 0, updated: 0, unchanged: 8, refused: [] })
 		expect(await mediasDeLaCible()).toEqual(avant)
 		expect(await etatDuStockage()).toEqual(stockageAvant)
 	})

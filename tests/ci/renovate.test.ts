@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
-import { CONFIG_FILE, VALIDATOR_IMAGE, validatorArguments } from '../../scripts/ci/renovate-valide'
+import { CONFIG_FILE, VALIDATOR_IMAGE, validatorArguments } from '../../scripts/ci/renovate-validate'
 import { readWorkflow } from '../outils/garde-fous-ci'
 import {
 	allows,
@@ -30,7 +30,7 @@ import {
  * Every check is run on the real file, where it finds nothing, and on a faulty example made
  * from that file, where it must find the fault.
  *
- * The file itself is validated by Renovate with `bun run renovate:valide`, after every change
+ * The file itself is validated by Renovate with `bun run renovate:validate`, after every change
  * (docs/qualite.md, « Renovate »). What the guard answers was compared once with Renovate's
  * own engine, version 44.140.0, on 14/10/2026: the same answer for every dependency of the
  * repository and every kind of update.
@@ -855,7 +855,7 @@ describe('renovate.json: the rules Renovate will follow', () => {
 	})
 })
 
-describe('bun run renovate:valide asks Renovate itself, in a container that sees nothing of this machine', () => {
+describe('bun run renovate:validate asks Renovate itself, in a container that sees nothing of this machine', () => {
 	const args = validatorArguments()
 
 	test('the image of the validator is pinned by its exact version and its digest', () => {
@@ -875,6 +875,6 @@ describe('bun run renovate:valide asks Renovate itself, in a container that sees
 	})
 
 	test('the command is a script of package.json', () => {
-		expect(packageJson.scripts?.['renovate:valide']).toBe('bun --no-env-file scripts/ci/renovate-valide.ts')
+		expect(packageJson.scripts?.['renovate:validate']).toBe('bun --no-env-file scripts/ci/renovate-validate.ts')
 	})
 })

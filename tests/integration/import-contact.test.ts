@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { SQL } from 'bun'
-import { ImportRefuse } from '../../scripts/migration/import/cible'
-import type { Rapport } from '../../scripts/migration/import/rapport'
+import type { Report } from '../../scripts/migration/import/report'
+import { ImportRefuse } from '../../scripts/migration/import/target'
 import type { Profile } from '../../src/payload-types'
 import { DATE_DE_BASCULE_DU_BANC } from '../outils/banc'
 import { importerSurLeBanc } from '../outils/import'
@@ -61,15 +61,15 @@ async function avecLeProprietaire<T>(travail: (sql: SQL) => Promise<T>): Promise
 	}
 }
 
-let premier: Rapport
+let premier: Report
 
 beforeAll(async () => {
 	await viderLaBase()
 	await viderLeStockage()
 	await creerLaSourceStrapi()
 	// Without the date of the switch, a source that shows contact details stops the run, dry or real.
-	for (const mode of ['a-blanc', 'reel'] as const)
-		await expect(importerSurLeBanc(mode, { consentiLe: undefined })).rejects.toBeInstanceOf(ImportRefuse)
+	for (const mode of ['dry-run', 'real'] as const)
+		await expect(importerSurLeBanc(mode, { consentDate: undefined })).rejects.toBeInstanceOf(ImportRefuse)
 	expect(await profilsDeLaCible()).toEqual([])
 	premier = await importerSurLeBanc()
 }, 60_000)
@@ -95,7 +95,7 @@ describe('Les coordonnées déjà publiées restent publiques, avec un consentem
 			expect(profil?.consentedAt, String(id)).toBe(DATE_DE_BASCULE_DU_BANC)
 			expect(profil?.consentSource, String(id)).toBe('import')
 		}
-		expect(premier.ecarts['coordonnees-consentement']).toBe(AFFICHENT.length)
+		expect(premier.gaps['coordonnees-consentement']).toBe(AFFICHENT.length)
 	})
 
 	test('sans coordonnée : contactPublic faux, sans date et sans source', async () => {
@@ -110,7 +110,7 @@ describe('Les coordonnées déjà publiées restent publiques, avec un consentem
 			expect(profil?.contactDetails?.phone ?? null, String(id)).toBeNull()
 			expect(profil?.contactDetails?.email ?? null, String(id)).toBeNull()
 		}
-		expect(premier.parite?.profiles).toMatchObject({ differents: [], manquants: [], refuses: [] })
+		expect(premier.parity?.profiles).toMatchObject({ different: [], missing: [], refused: [] })
 	})
 
 	test('lecture anonyme : jamais de coordonnées, de choix ni de trace du consentement', async () => {
@@ -144,7 +144,7 @@ describe('Un second passage (ticket 064)', () => {
 
 		const second = await importerSurLeBanc()
 
-		expect(second.collections.profiles).toMatchObject({ crees: 0, modifies: 0, inchanges: PRIS.length, refuses: [] })
+		expect(second.collections.profiles).toMatchObject({ created: 0, updated: 0, unchanged: PRIS.length, refused: [] })
 		expect(await profilsDeLaCible()).toEqual(avant)
 	})
 })
@@ -171,7 +171,7 @@ describe('Une source qui change après le premier passage (ticket 064)', () => {
 
 		const rapport = await importerSurLeBanc()
 
-		expect(rapport.collections.profiles).toMatchObject({ crees: 0, modifies: 1, refuses: [] })
+		expect(rapport.collections.profiles).toMatchObject({ created: 0, updated: 1, refused: [] })
 		const zoe = (await profilsDeLaCible()).find(({ strapiId }) => strapiId === 21)
 		expect(zoe?.contactDetails?.phone).toBe('06 39 98 99 99')
 		expect(zoe).toMatchObject({
@@ -192,7 +192,7 @@ describe('Une source qui change après le premier passage (ticket 064)', () => {
 
 		const rapport = await importerSurLeBanc()
 
-		expect(rapport.collections.profiles).toMatchObject({ crees: 0, modifies: 1, refuses: [] })
+		expect(rapport.collections.profiles).toMatchObject({ created: 0, updated: 1, refused: [] })
 		const hugo = (await profilsDeLaCible()).find(({ strapiId }) => strapiId === 23)
 		expect(hugo?.publicContact).toBe(false)
 		expect(hugo?.consentedAt ?? null).toBeNull()
@@ -223,7 +223,7 @@ describe('Une coordonnée que le serveur refuserait ne fait pas perdre le profil
 
 		const rapport = await importerSurLeBanc()
 
-		expect(rapport.collections.profiles?.refuses).toEqual([])
+		expect(rapport.collections.profiles?.refused).toEqual([])
 		const profil = await profilCible(22)
 		expect(profil?.contactDetails?.phone ?? null).toBeNull()
 		expect(profil?.contactDetails?.email ?? null).toBeNull()
@@ -237,7 +237,7 @@ describe('Une coordonnée que le serveur refuserait ne fait pas perdre le profil
 
 		const rapport = await importerSurLeBanc()
 
-		expect(rapport.collections.profiles?.refuses).toEqual([])
+		expect(rapport.collections.profiles?.refused).toEqual([])
 		const profil = await profilCible(30)
 		expect(profil?.contactDetails?.email).toBe('emma@example.test')
 		expect(profil).toMatchObject({
@@ -253,11 +253,11 @@ describe('Une coordonnée que le serveur refuserait ne fait pas perdre le profil
 
 		const rapport = await importerSurLeBanc()
 
-		expect(rapport.collections.profiles?.refuses).toEqual([])
-		expect(rapport.parite?.profiles).toMatchObject({ differents: [], manquants: [], refuses: [] })
-		expect(rapport.collections.profiles?.coordonneesARevoir).toEqual([
-			{ profil: 33, champ: 'telephone' },
-			{ profil: 33, champ: 'email' },
+		expect(rapport.collections.profiles?.refused).toEqual([])
+		expect(rapport.parity?.profiles).toMatchObject({ different: [], missing: [], refused: [] })
+		expect(rapport.collections.profiles?.contactDetailsToReview).toEqual([
+			{ profile: 33, field: 'telephone' },
+			{ profile: 33, field: 'email' },
 		])
 		// Never the value, in the report.
 		expect(JSON.stringify(rapport)).not.toContain('Insta')
@@ -272,6 +272,6 @@ describe('Une coordonnée que le serveur refuserait ne fait pas perdre le profil
 		const rapport = await importerSurLeBanc()
 
 		const ouverts = (await profilsDeLaCible()).filter(({ publicContact }) => publicContact).length
-		expect(rapport.ecarts['coordonnees-consentement']).toBe(ouverts)
+		expect(rapport.gaps['coordonnees-consentement']).toBe(ouverts)
 	})
 })

@@ -1,23 +1,23 @@
 import { describe, expect, test } from 'bun:test'
-import { ImportRefuse } from '../../scripts/migration/import/cible'
+import { normalize } from '../../scripts/migration/import/engine'
 import {
-	ADAPTATEUR_MEDIAS,
 	type Adoptable,
-	classerLesFichiers,
-	type EntreesPrises,
-	emplacementDansLAdresse,
-	type FichiersLus,
-	type LienDeFichier,
-	type LigneFichier,
-	mediasAttendus,
-	photosDeLEntree,
-	sondeHttp,
-	sonderLesObjets,
+	classifyFiles,
+	entryPhotos,
+	expectedMedia,
+	type FileLink,
+	type FileRow,
+	httpProbe,
+	locationInAddress,
+	MEDIA_ADAPTER,
+	PROFILE_TYPE,
+	probeObjects,
+	type ReadFiles,
+	type TakenEntries,
 	TYPE_ARTICLE,
-	TYPE_PROFIL,
-} from '../../scripts/migration/import/medias'
-import { normaliser } from '../../scripts/migration/import/moteur'
-import { codeDeSortie, type Rapport, rapportEnTexte } from '../../scripts/migration/import/rapport'
+} from '../../scripts/migration/import/media'
+import { exitCode, type Report, reportAsText } from '../../scripts/migration/import/report'
+import { ImportRefuse } from '../../scripts/migration/import/target'
 import { fileOnCreate } from '../../src/collections/Media'
 import { HttpResponse, http, simuler } from '../outils/http-sortant'
 
@@ -30,7 +30,7 @@ import { HttpResponse, http, simuler } from '../outils/http-sortant'
 
 const BASE = 'https://photos.example.test'
 
-const fichier = (id: number, modif: Partial<LigneFichier> = {}): LigneFichier => ({
+const fichier = (id: number, modif: Partial<FileRow> = {}): FileRow => ({
 	id,
 	alternative_text: null,
 	width: 40,
@@ -46,7 +46,7 @@ const fichier = (id: number, modif: Partial<LigneFichier> = {}): LigneFichier =>
 	...modif,
 })
 
-const lien = (fichier: number, entree: number, champ = 'image_gallery', type = TYPE_PROFIL): LienDeFichier => ({
+const lien = (fichier: number, entree: number, champ = 'image_gallery', type = PROFILE_TYPE): FileLink => ({
 	fichier,
 	entree,
 	type,
@@ -54,7 +54,7 @@ const lien = (fichier: number, entree: number, champ = 'image_gallery', type = T
 })
 
 /** Profiles 21 (account 1) and 22 (account 2) taken; profile 29 in the source, set aside; article 7 taken. */
-const ENTREES: EntreesPrises = {
+const ENTREES: TakenEntries = {
 	profils: new Map([
 		[21, 1],
 		[22, 2],
@@ -66,11 +66,11 @@ const ENTREES: EntreesPrises = {
 
 describe('le dossier et le nom d’un objet se lisent dans son adresse', () => {
 	test('à la racine, sous un préfixe, sous plusieurs dossiers', () => {
-		expect(emplacementDansLAdresse(`${BASE}/photo_1.png`, BASE)).toEqual({ prefix: '', filename: 'photo_1.png' })
-		expect(emplacementDansLAdresse(`${BASE}/1/photo_1.png`, BASE)).toEqual({ prefix: '1', filename: 'photo_1.png' })
-		expect(emplacementDansLAdresse(`${BASE}/a/b/photo.webp`, BASE)).toEqual({ prefix: 'a/b', filename: 'photo.webp' })
+		expect(locationInAddress(`${BASE}/photo_1.png`, BASE)).toEqual({ prefix: '', filename: 'photo_1.png' })
+		expect(locationInAddress(`${BASE}/1/photo_1.png`, BASE)).toEqual({ prefix: '1', filename: 'photo_1.png' })
+		expect(locationInAddress(`${BASE}/a/b/photo.webp`, BASE)).toEqual({ prefix: 'a/b', filename: 'photo.webp' })
 		// A character the v3 encodes the same way: the address comes back character for character.
-		expect(emplacementDansLAdresse(`${BASE}/1/photo%20d%C3%A9t%C3%A9.png`, BASE)).toEqual({
+		expect(locationInAddress(`${BASE}/1/photo%20d%C3%A9t%C3%A9.png`, BASE)).toEqual({
 			prefix: '1',
 			filename: 'photo dété.png',
 		})
@@ -87,16 +87,16 @@ describe('le dossier et le nom d’un objet se lisent dans son adresse', () => {
 			`${BASE}/1/photo%zz.png`,
 			BASE,
 		])
-			expect(emplacementDansLAdresse(adresse, BASE), adresse).toBeNull()
-		expect(emplacementDansLAdresse(null, BASE)).toBeNull()
+			expect(locationInAddress(adresse, BASE), adresse).toBeNull()
+		expect(locationInAddress(null, BASE)).toBeNull()
 	})
 })
 
 describe('les fichiers de la source sont adoptés, signalés ou refusés', () => {
-	const lus = (fichiers: LigneFichier[], liens: LienDeFichier[]): FichiersLus => ({ fichiers, liens })
+	const lus = (fichiers: FileRow[], liens: FileLink[]): ReadFiles => ({ fichiers, liens })
 
 	test('une image désignée par un profil repris est adoptée, au compte de ce profil ; une image d’article sans propriétaire', () => {
-		const { adoptables, designes } = classerLesFichiers(
+		const { adoptables, pointed: designes } = classifyFiles(
 			lus(
 				[fichier(1), fichier(2), fichier(3, { url: `${BASE}/photo_3.png` })],
 				[lien(1, 21, 'main_picture'), lien(2, 22), lien(3, 7, 'galery', TYPE_ARTICLE)]
@@ -114,7 +114,7 @@ describe('les fichiers de la source sont adoptés, signalés ou refusés', () =>
 	})
 
 	test('aucun orphelin : ni fichier sans lien, ni fichier d’une entrée disparue ou non reprise (I39)', () => {
-		const classement = classerLesFichiers(
+		const classement = classifyFiles(
 			lus(
 				[fichier(1), fichier(2), fichier(3), fichier(4), fichier(5)],
 				[
@@ -132,10 +132,10 @@ describe('les fichiers de la source sont adoptés, signalés ou refusés', () =>
 		expect(classement).toMatchObject({
 			source: 5,
 			adoptables: [],
-			designes: 0,
-			deEntreesNonPrises: 1,
-			deEntreesDisparues: 3,
-			sansLien: 1,
+			pointed: 0,
+			ofEntriesNotTaken: 1,
+			ofVanishedEntries: 3,
+			withoutLink: 1,
 		})
 	})
 
@@ -145,26 +145,26 @@ describe('les fichiers de la source sont adoptés, signalés ou refusés', () =>
 			[lien(1, 21), lien(2, 21), lien(3, 21)]
 		)
 
-		expect(classerLesFichiers(source, ENTREES, BASE)).toMatchObject({
+		expect(classifyFiles(source, ENTREES, BASE)).toMatchObject({
 			adoptables: [{ fichier: { id: 3 } }],
-			nonAdoptes: [
-				{ fichier: 1, motif: 'pas-une-image' },
-				{ fichier: 2, motif: 'pas-une-image' },
+			notAdopted: [
+				{ file: 1, reason: 'pas-une-image' },
+				{ file: 2, reason: 'pas-une-image' },
 			],
-			refuses: [],
+			refused: [],
 		})
-		expect(classerLesFichiers(source, ENTREES, null)).toMatchObject({
+		expect(classifyFiles(source, ENTREES, null)).toMatchObject({
 			adoptables: [],
-			nonAdoptes: [
-				{ fichier: 1, motif: 'pas-une-image' },
-				{ fichier: 2, motif: 'pas-une-image' },
-				{ fichier: 3, motif: 'sans-stockage' },
+			notAdopted: [
+				{ file: 1, reason: 'pas-une-image' },
+				{ file: 2, reason: 'pas-une-image' },
+				{ file: 3, reason: 'sans-stockage' },
 			],
 		})
 	})
 
 	test('une adresse hors de la base des photos, ou un fichier de deux comptes, est refusé et attend une décision', () => {
-		const { adoptables, refuses } = classerLesFichiers(
+		const { adoptables, refused: refuses } = classifyFiles(
 			lus(
 				[fichier(1, { url: 'https://ailleurs.example.test/1/photo_1.png' }), fichier(2), fichier(3)],
 				[lien(1, 21), lien(2, 21), lien(2, 22), lien(3, 21), lien(3, 7, 'galery', TYPE_ARTICLE)]
@@ -175,14 +175,14 @@ describe('les fichiers de la source sont adoptés, signalés ou refusés', () =>
 
 		expect(adoptables).toEqual([])
 		expect(refuses).toEqual([
-			{ strapiId: 1, motif: 'adresse-hors-de-la-base', champs: ['prefix', 'filename'] },
-			{ strapiId: 2, motif: 'plusieurs-proprietaires', champs: ['owner'] },
-			{ strapiId: 3, motif: 'plusieurs-proprietaires', champs: ['owner'] },
+			{ strapiId: 1, reason: 'adresse-hors-de-la-base', fields: ['prefix', 'filename'] },
+			{ strapiId: 2, reason: 'plusieurs-proprietaires', fields: ['owner'] },
+			{ strapiId: 3, reason: 'plusieurs-proprietaires', fields: ['owner'] },
 		])
 	})
 
 	test('le nom de l’objet autre que hash + ext, ou un envoi par un autre compte, est signalé et le fichier adopté', () => {
-		const classement = classerLesFichiers(
+		const classement = classifyFiles(
 			lus(
 				[fichier(1, { hash: 'autre_nom' }), fichier(2, { uploaded_by: 9 }), fichier(3, { uploaded_by: 1 })],
 				[lien(1, 21), lien(2, 21), lien(3, 21)]
@@ -192,8 +192,8 @@ describe('les fichiers de la source sont adoptés, signalés ou refusés', () =>
 		)
 
 		expect(classement.adoptables.map(({ fichier }) => fichier.id)).toEqual([1, 2, 3])
-		expect(classement.nomsDifferents).toEqual([1])
-		expect(classement.envoyesParUnAutreCompte).toEqual([2])
+		expect(classement.differentNames).toEqual([1])
+		expect(classement.uploadedByAnotherAccount).toEqual([2])
 	})
 })
 
@@ -206,8 +206,8 @@ describe('le stockage n’est lu que par des requêtes d’en-tête', () => {
 			http.head(`${BASE}/1/absente.png`, () => new HttpResponse(null, { status: 404 }))
 		)
 
-		expect(await sondeHttp(adresse)).toEqual({ present: true, taille: 1234 })
-		expect(await sondeHttp(`${BASE}/1/absente.png`)).toEqual({ present: false, taille: null })
+		expect(await httpProbe(adresse)).toEqual({ present: true, taille: 1234 })
+		expect(await httpProbe(`${BASE}/1/absente.png`)).toEqual({ present: false, taille: null })
 	})
 
 	test('toute autre réponse, ou aucune, arrête l’import avant toute écriture, sans dire l’adresse', async () => {
@@ -218,7 +218,7 @@ describe('le stockage n’est lu que par des requêtes d’en-tête', () => {
 			() => HttpResponse.error(),
 		]) {
 			simuler(http.head(adresse, reponse))
-			const essai = sondeHttp(adresse)
+			const essai = httpProbe(adresse)
 			await expect(essai).rejects.toBeInstanceOf(ImportRefuse)
 			await expect(essai).rejects.toThrow('rien n’est écrit')
 			await expect(essai).rejects.not.toThrow('photo_1')
@@ -233,7 +233,7 @@ describe('le stockage n’est lu que par des requêtes d’en-tête', () => {
 			compte: 1,
 		}))
 
-		const presences = await sonderLesObjets(adoptables, BASE, async adresse => {
+		const presences = await probeObjects(adoptables, BASE, async adresse => {
 			demandees.push(adresse)
 			return { present: !adresse.endsWith('2.png'), taille: 10 }
 		})
@@ -250,7 +250,7 @@ describe('le stockage n’est lu que par des requêtes d’en-tête', () => {
 describe('les médias attendus', () => {
 	test('chaque colonne tel quel ; la taille est celle de l’objet ; le propriétaire, le compte du profil dans Payload', () => {
 		const formats = { thumbnail: { url: `${BASE}/thumbnail_photo_1.png`, size: 0.33, width: 13 } }
-		const [media, sansObjet] = mediasAttendus(
+		const [media, sansObjet] = expectedMedia(
 			[
 				{
 					fichier: fichier(1, { alternative_text: 'Texte fictif', formats: JSON.stringify(formats) }),
@@ -268,7 +268,7 @@ describe('les médias attendus', () => {
 
 		expect(media).toEqual({
 			strapiId: 1,
-			valeurs: {
+			values: {
 				strapiId: 1,
 				alt: 'Texte fictif',
 				filename: 'photo_1.png',
@@ -282,10 +282,10 @@ describe('les médias attendus', () => {
 				createdAt: '2024-01-01T10:00:00.000Z',
 				updatedAt: '2024-01-02T10:00:00.000Z',
 			},
-			ecarts: [{ champ: 'filesize', reference: 'SCHEMA.md §8 (size)' }],
+			gaps: [{ field: 'filesize', reference: 'SCHEMA.md §8 (size)' }],
 		})
-		expect(sansObjet?.valeurs).toMatchObject({ prefix: '', filesize: null, owner: null })
-		expect(ADAPTATEUR_MEDIAS.options?.(media as never)).toEqual({ contexte: { skipCloudStorage: true } })
+		expect(sansObjet?.values).toMatchObject({ prefix: '', filesize: null, owner: null })
+		expect(MEDIA_ADAPTER.options?.(media as never)).toEqual({ context: { skipCloudStorage: true } })
 	})
 
 	test('une photo dont le fichier n’est pas adopté est signalée, pas inventée ; à blanc, son média n’a pas encore d’identifiant', () => {
@@ -294,15 +294,15 @@ describe('les médias attendus', () => {
 			[2, null],
 		])
 
-		expect(photosDeLEntree([1, 3, 2], medias)).toEqual({ ids: [11], adoptees: 2, nonReprises: [3] })
+		expect(entryPhotos([1, 3, 2], medias)).toEqual({ ids: [11], adoptees: 2, nonReprises: [3] })
 	})
 })
 
 describe('la comparaison des listes, des galeries et des valeurs gardées telles quelles', () => {
 	test('une galerie se compare dans son ordre ; vide, elle ne vaut rien', () => {
-		expect(normaliser('relations', [3, { id: 1 }])).toBe('[3,1]')
-		expect(normaliser('relations', [1, 3])).not.toBe(normaliser('relations', [3, 1]))
-		expect(normaliser('relations', [])).toBeNull()
+		expect(normalize('relations', [3, { id: 1 }])).toBe('[3,1]')
+		expect(normalize('relations', [1, 3])).not.toBe(normalize('relations', [3, 1]))
+		expect(normalize('relations', [])).toBeNull()
 	})
 
 	test('une liste se compare sans l’identifiant de ses lignes, champs vides à part, dans son ordre', () => {
@@ -312,20 +312,20 @@ describe('la comparaison des listes, des galeries et des valeurs gardées telles
 			{ id: 'b2', description: undefined, nom: 'Mariage' },
 		]
 
-		expect(normaliser('liste', relue)).toBe(normaliser('liste', ecrite))
-		expect(normaliser('liste', [...relue].reverse())).not.toBe(normaliser('liste', ecrite))
-		expect(normaliser('liste', [{ priceText: '' }])).not.toBe(normaliser('liste', [{ priceText: null }]))
-		expect(normaliser('liste', [{ options: [{ id: 'x', nom: 'A' }] }])).toBe(
-			normaliser('liste', [{ options: [{ nom: 'A' }] }])
+		expect(normalize('liste', relue)).toBe(normalize('liste', ecrite))
+		expect(normalize('liste', [...relue].reverse())).not.toBe(normalize('liste', ecrite))
+		expect(normalize('liste', [{ priceText: '' }])).not.toBe(normalize('liste', [{ priceText: null }]))
+		expect(normalize('liste', [{ options: [{ id: 'x', nom: 'A' }] }])).toBe(
+			normalize('liste', [{ options: [{ nom: 'A' }] }])
 		)
-		expect(normaliser('liste', [])).toBeNull()
+		expect(normalize('liste', [])).toBeNull()
 	})
 
 	test('une valeur JSON se compare quel que soit l’ordre de ses clés', () => {
-		expect(normaliser('json', { b: 1, a: { d: [1, 2], c: null } })).toBe(
-			normaliser('json', { a: { c: null, d: [1, 2] }, b: 1 })
+		expect(normalize('json', { b: 1, a: { d: [1, 2], c: null } })).toBe(
+			normalize('json', { a: { c: null, d: [1, 2] }, b: 1 })
 		)
-		expect(normaliser('json', { a: [1, 2] })).not.toBe(normaliser('json', { a: [2, 1] }))
+		expect(normalize('json', { a: [1, 2] })).not.toBe(normalize('json', { a: [2, 1] }))
 	})
 })
 
@@ -345,50 +345,50 @@ describe('un média nomme toujours son objet', () => {
 })
 
 describe('le rapport des fichiers et des photos', () => {
-	const vide = { lignes: 0, empreinte: '' }
-	const rapport: Rapport = {
-		mode: 'reel',
-		cible: 'locale',
-		arret: null,
-		decisionsSansObjet: 0,
-		source: { avant: { files: vide }, apres: { files: vide }, inchangee: true },
+	const vide = { rows: 0, fingerprint: '' }
+	const rapport: Report = {
+		mode: 'real',
+		target: 'local',
+		halt: null,
+		pointlessDecisions: 0,
+		source: { before: { files: vide }, after: { files: vide }, unchanged: true },
 		collections: {
 			media: {
 				source: 13,
-				crees: 8,
-				modifies: 0,
-				inchanges: 0,
-				refuses: [],
-				enTrop: [],
-				fichiers: {
-					designes: 9,
-					deEntreesNonPrises: 0,
-					deEntreesDisparues: 2,
-					sansLien: 2,
-					sansStockage: false,
-					nonAdoptes: [{ fichier: 108, motif: 'pas-une-image' }],
-					introuvables: [107],
-					nomsDifferents: [104],
-					envoyesParUnAutreCompte: [109],
+				created: 8,
+				updated: 0,
+				unchanged: 0,
+				refused: [],
+				extra: [],
+				files: {
+					pointed: 9,
+					ofEntriesNotTaken: 0,
+					ofVanishedEntries: 2,
+					withoutLink: 2,
+					withoutStorage: false,
+					notAdopted: [{ file: 108, reason: 'pas-une-image' }],
+					notFound: [107],
+					differentNames: [104],
+					uploadedByAnotherAccount: [109],
 				},
 			},
 			profiles: {
 				source: 27,
-				crees: 13,
-				modifies: 0,
-				inchanges: 0,
-				refuses: [],
-				enTrop: [],
-				photosNonReprises: [{ entree: 24, fichier: 108 }],
-				liensSansLigne: [22],
+				created: 13,
+				updated: 0,
+				unchanged: 0,
+				refused: [],
+				extra: [],
+				photosNotCarriedOver: [{ entry: 24, file: 108 }],
+				linksWithoutRow: [22],
 			},
 		},
-		ecarts: { 'SCHEMA.md §8 (size)': 8, 'fichiers-non-images-non-repris': 1 },
-		parite: null,
+		gaps: { 'SCHEMA.md §8 (size)': 8, 'fichiers-non-images-non-repris': 1 },
+		parity: null,
 	}
 
 	test('en nombres et en identifiants de l’ancienne base, jamais une adresse ; un fichier signalé ne change pas le code', () => {
-		const texte = rapportEnTexte(rapport)
+		const texte = reportAsText(rapport)
 
 		expect(texte.split('\n')).toEqual(
 			expect.arrayContaining([
@@ -404,20 +404,23 @@ describe('le rapport des fichiers et des photos', () => {
 			])
 		)
 		expect(texte).not.toMatch(/https?:|\.png/)
-		expect(codeDeSortie(rapport)).toBe(0)
+		expect(exitCode(rapport)).toBe(0)
 	})
 
 	test('un fichier refusé (adresse hors de la base, deux comptes) attend une décision : code 5', () => {
 		const media = rapport.collections.media
-		const refuse: Rapport = {
+		const refuse: Report = {
 			...rapport,
 			collections: {
 				...rapport.collections,
-				media: media && { ...media, refuses: [{ strapiId: 110, motif: 'plusieurs-proprietaires', champs: ['owner'] }] },
+				media: media && {
+					...media,
+					refused: [{ strapiId: 110, reason: 'plusieurs-proprietaires', fields: ['owner'] }],
+				},
 			},
 		}
 
-		expect(rapportEnTexte(refuse)).toContain('  - refusé : 110 (plusieurs-proprietaires : owner)')
-		expect(codeDeSortie(refuse)).toBe(5)
+		expect(reportAsText(refuse)).toContain('  - refusé : 110 (plusieurs-proprietaires : owner)')
+		expect(exitCode(refuse)).toBe(5)
 	})
 })

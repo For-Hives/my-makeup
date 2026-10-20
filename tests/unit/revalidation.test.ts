@@ -2,7 +2,7 @@ import { describe, expect, mock, test } from 'bun:test'
 import { revalidateTag } from 'next/cache.js'
 import type { PayloadRequest, RequestContext } from 'payload'
 import { outsideNextRequest, refresh } from '../../src/collections/revalidate'
-import { CONTEXTE_IMPORT } from '../../src/lib/contexte-import'
+import { IMPORT_CONTEXT } from '../../src/lib/import-context'
 import { changeTargets, PUBLIC_PAGES, type PublicState, TAGS } from '../../src/lib/revalidate'
 import { espionnerLeCache } from '../outils/espion-cache'
 
@@ -125,7 +125,7 @@ describe('les crochets de Payload', () => {
 
 	test('le contexte d’import : rien n’est lu, rien n’est rafraîchi, l’écriture passe telle quelle', async () => {
 		const { req, findOne } = requete([{ id: 7, slug: 'zoe-lefevre', status: 'published' }])
-		const context: RequestContext = { ...CONTEXTE_IMPORT }
+		const context: RequestContext = { ...IMPORT_CONTEXT }
 
 		const { appels } = await espionnerLeCache(async () => {
 			const { avant, apres, data } = await mettreAJour(req, context)
@@ -137,7 +137,7 @@ describe('les crochets de Payload', () => {
 
 		expect(findOne).not.toHaveBeenCalled()
 		expect(appels).toEqual([])
-		expect(context).toEqual({ ...CONTEXTE_IMPORT })
+		expect(context).toEqual({ ...IMPORT_CONTEXT })
 	})
 
 	test('hors d’une requête de Next, l’enregistrement passe : rien n’est rafraîchi, rien n’est levé', async () => {

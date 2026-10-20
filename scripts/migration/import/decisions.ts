@@ -24,85 +24,85 @@
 
 import { z } from 'zod'
 import { departmentOfInseeCode } from '../../../src/lib/profile/zone'
-import { ImportRefuse } from './cible'
+import { ImportRefuse } from './target'
 
-const identifiant = z.number().int().positive()
+const identifier = z.number().int().positive()
 
-const SCHEMA_DES_DECISIONS = z
+const DECISIONS_SCHEMA = z
 	.object({
-		emailsPartages: z
+		sharedEmails: z
 			.array(
 				z
-					.object({ comptes: z.array(identifiant).min(2), retenu: identifiant, pretDuHash: z.boolean().optional() })
+					.object({ accounts: z.array(identifier).min(2), kept: identifier, lendHash: z.boolean().optional() })
 					.strict()
-					.refine(({ comptes, retenu }) => comptes.includes(retenu), {
+					.refine(({ accounts: comptes, kept: retenu }) => comptes.includes(retenu), {
 						message: 'le compte retenu doit être l’un des comptes du groupe',
 					})
-					.refine(({ comptes }) => new Set(comptes).size === comptes.length, {
+					.refine(({ accounts: comptes }) => new Set(comptes).size === comptes.length, {
 						message: 'un compte est nommé deux fois',
 					})
 			)
 			.default([]),
-		profilsEcartes: z
-			.array(identifiant)
+		excludedProfiles: z
+			.array(identifier)
 			.refine(profils => new Set(profils).size === profils.length, { message: 'un profil est nommé deux fois' })
 			.default([]),
-		communes: z
+		cities: z
 			.array(
 				z
 					.object({
-						profil: identifiant,
-						codeInsee: z
+						profile: identifier,
+						inseeCode: z
 							.string()
 							.refine(code => departmentOfInseeCode(code) !== null, { message: 'code INSEE mal formé' })
 							.nullable(),
 					})
 					.strict()
 			)
-			.refine(lignes => new Set(lignes.map(({ profil }) => profil)).size === lignes.length, {
+			.refine(lignes => new Set(lignes.map(({ profile: profil }) => profil)).size === lignes.length, {
 				message: 'un profil est nommé deux fois',
 			})
 			.optional(),
 	})
 	.strict()
 
-export type Decisions = z.infer<typeof SCHEMA_DES_DECISIONS>
+export type Decisions = z.infer<typeof DECISIONS_SCHEMA>
 
 /** No decision at all: every case the import cannot decide stops it. */
-export const AUCUNE_DECISION: Decisions = { emailsPartages: [], profilsEcartes: [] }
+export const NO_DECISION: Decisions = { sharedEmails: [], excludedProfiles: [] }
 
 /** The table of decisions read from the text of its file, or `ImportRefuse` with what is wrong, never a value. */
-export function lireLesDecisions(texte: string): Decisions {
+export function readDecisions(texte: string): Decisions {
 	let json: unknown
 	try {
 		json = JSON.parse(texte)
 	} catch {
 		throw new ImportRefuse('La table de décision n’est pas un JSON valide : rien n’est écrit.')
 	}
-	const lu = SCHEMA_DES_DECISIONS.safeParse(json)
-	if (lu.success) {
-		const nommes = lu.data.emailsPartages.flatMap(({ comptes }) => comptes)
-		if (new Set(nommes).size !== nommes.length)
+	const read = DECISIONS_SCHEMA.safeParse(json)
+	if (read.success) {
+		const named = read.data.sharedEmails.flatMap(({ accounts: comptes }) => comptes)
+		if (new Set(named).size !== named.length)
 			throw new ImportRefuse('La table de décision nomme un compte dans deux groupes : rien n’est écrit.')
-		return lu.data
+		return read.data
 	}
-	const problemes = lu.error.issues.map(({ path, message }) => `${path.join('.') || '(racine)'} : ${message}`)
-	throw new ImportRefuse(`La table de décision est refusée : ${problemes.join(' ; ')}. Rien n’est écrit.`)
+	const problems = read.error.issues.map(({ path, message }) => `${path.join('.') || '(racine)'} : ${message}`)
+	throw new ImportRefuse(`La table de décision est refusée : ${problems.join(' ; ')}. Rien n’est écrit.`)
 }
 
 /** Two lists of identifiers that name the same accounts. */
-const memesComptes = (a: readonly number[], b: readonly number[]): boolean =>
+const sameAccounts = (a: readonly number[], b: readonly number[]): boolean =>
 	a.length === b.length && [...a].sort((x, y) => x - y).every((id, rang) => id === [...b].sort((x, y) => x - y)[rang])
 
-export interface ApplicationDesDecisions {
+export interface DecisionsApplication {
 	/** The accounts set aside by a decision. */
-	ecartes: number[]
+	excluded: number[]
 	/** For each group decided, the account kept and the accounts set aside in its favour. */
-	rattaches: { retenu: number; ecartes: number[]; pretDuHash: boolean | undefined }[]
+	attached: { kept: number; excluded: number[]; lendHash: boolean | undefined }[]
 	/** The groups the source holds that no decision names exactly: the import stops. */
-	sansDecision: number[][]
+	withoutDecision: number[][]
 	/** Decisions that name no group of the source: they have no effect. */
-	sansObjet: number
+	pointless: number
 }
 
 /**
@@ -110,30 +110,30 @@ export interface ApplicationDesDecisions {
  * when it names exactly its accounts: a group that changed since the decision was written (an
  * account added or deleted) is a new case, and stops the import.
  */
-export function appliquerLesDecisions(
+export function applyDecisions(
 	groupes: readonly number[][],
-	decisions: Pick<Decisions, 'emailsPartages'>
-): ApplicationDesDecisions {
-	const ecartes: number[] = []
-	const rattaches: ApplicationDesDecisions['rattaches'] = []
-	const sansDecision: number[][] = []
-	const appliquees = new Set<number>()
-	for (const groupe of groupes) {
-		const rang = decisions.emailsPartages.findIndex(({ comptes }) => memesComptes(comptes, groupe))
-		const decision = decisions.emailsPartages[rang]
+	decisions: Pick<Decisions, 'sharedEmails'>
+): DecisionsApplication {
+	const excluded: number[] = []
+	const attached: DecisionsApplication['attached'] = []
+	const withoutDecision: number[][] = []
+	const applied = new Set<number>()
+	for (const group of groupes) {
+		const position = decisions.sharedEmails.findIndex(({ accounts: comptes }) => sameAccounts(comptes, group))
+		const decision = decisions.sharedEmails[position]
 		if (!decision) {
-			sansDecision.push(groupe)
+			withoutDecision.push(group)
 			continue
 		}
-		appliquees.add(rang)
-		const autres = groupe.filter(id => id !== decision.retenu)
-		ecartes.push(...autres)
-		rattaches.push({ retenu: decision.retenu, ecartes: autres, pretDuHash: decision.pretDuHash })
+		applied.add(position)
+		const others = group.filter(id => id !== decision.kept)
+		excluded.push(...others)
+		attached.push({ kept: decision.kept, excluded: others, lendHash: decision.lendHash })
 	}
 	return {
-		ecartes: ecartes.sort((a, b) => a - b),
-		rattaches,
-		sansDecision,
-		sansObjet: decisions.emailsPartages.length - appliquees.size,
+		excluded: excluded.sort((a, b) => a - b),
+		attached: attached,
+		withoutDecision: withoutDecision,
+		pointless: decisions.sharedEmails.length - applied.size,
 	}
 }

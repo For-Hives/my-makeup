@@ -12,7 +12,7 @@
  * the real file, then on a faulty example made from it.
  */
 
-import { readDockerfile } from '../../scripts/image/regles'
+import { readDockerfile } from '../../scripts/image/rules'
 import type { Workflow } from './garde-fous-ci'
 
 /* ------------------------------------------------------------------------------------------

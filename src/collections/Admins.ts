@@ -43,7 +43,7 @@ export const closedSessions: Field = {
  * - The sign-in is braked by client address, like the one of the makeup artists (ticket 094), and
  *   the account itself is never locked: knocking on someone's email must not shut her out.
  * - `/api/admins/first-register` is closed, even on an empty table: the accounts are created by
- *   the operating procedure (`bun run admin:creer`, scripts/admin/), never by a visitor, never
+ *   the operating procedure (`bun run admin:create`, scripts/admin/), never by a visitor, never
  *   imported (docs/migration/SCHEMA.md, §4.2).
  */
 export const Admins: CollectionConfig<'admins'> = {

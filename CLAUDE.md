@@ -45,25 +45,25 @@ Tout se lance depuis la racine du dépôt. La table complète est dans le README
 | `bun run ci:biome` | Biome en lecture seule. |
 | `bun run typecheck` | Types de routes de Next, puis `tsc` sans sortie. |
 | `bun run test` | Les tests unitaires : ceux qui tournent sans le banc de test, et sans le `.env` de travail. |
-| `bun run test:ci-garde` | Les garde-fous de la CI, du `Dockerfile`, des tests sautés et de `renovate.json`. La CI les lance sur chaque PR. |
-| `bun run renovate:valide` | Après un changement de `renovate.json` : Renovate dit s'il sait lire le fichier. Il lui faut `docker`. |
+| `bun run test:ci-guard` | Les garde-fous de la CI, du `Dockerfile`, des tests sautés et de `renovate.json`. La CI les lance sur chaque PR. |
+| `bun run renovate:validate` | Après un changement de `renovate.json` : Renovate dit s'il sait lire le fichier. Il lui faut `docker`. |
 | `bun run banc:up` | Démarre le banc de test en conteneurs : base, capteur de mails, stockage d'objets, faux Google. `bun run banc:down` l'arrête et efface tout. |
 | `bun run banc:complet` | Le banc complet en une commande : pile, base par les migrations, comptes types, 12 profils types, 3 talents, 3 articles dont un brouillon, puis l'application sur le port du banc (3100, au premier plan : lance-la en arrière-plan). `--sans-application` s'arrête avant. |
 | `bun run banc:reinitialiser` | Remet le banc à son état de départ en une dizaine de secondes : base, stockage, capteur de mails, jeu. Les sessions ouvertes sont perdues. |
 | `bun run banc:session <compte>` | La session d'un compte du banc (`admin`, `redaction`, `maquilleuse`, `profil-reference`, une adresse…), écrite dans `.banc/sessions/` : état d'un navigateur Playwright et en-têtes pour `curl -H @fichier`. Le jeton n'est jamais affiché. |
 | `bun run test:integration` | Les tests d'intégration, sur le banc démarré. Avec un chemin : ce fichier seul. Chaque lancement vide la base du banc. |
 | `bun run test:e2e` | Les essais de bout en bout, banc démarré : build de production, puis Playwright à 1440 et 390 px. Avec un chemin : ce fichier seul. Chaque lancement vide la base du banc. Le navigateur s'installe une fois par `bunx playwright install chromium`. |
-| `bun run admin:creer <email>` | Crée un compte de l'administration : la seule façon d'avoir le premier ; ensuite un admin crée les autres dans l'administration. Le mot de passe se tape au clavier, jamais en argument. |
+| `bun run admin:create <email>` | Crée un compte de l'administration : la seule façon d'avoir le premier ; ensuite un admin crée les autres dans l'administration. Le mot de passe se tape au clavier, jamais en argument. |
 | `bun run build` | Build de production. Il passe sans base ni secret. |
 | `bun run payload:types` | Après un changement de collection : régénère `src/payload-types.ts`. |
 | `bun run payload:importmap` | Après l'ajout d'un composant d'administration. |
 | `bun run payload:migrate:create` | Écrit une migration depuis les collections (voir « Schéma »). |
-| `bun run schema:derive` | Dit s'il manque une migration aux collections du code, sans base ni secret. Bloquant en CI depuis la migration `init` (ticket 049) : une collection changée sans sa migration rend le job `qualite` rouge. |
+| `bun run schema:drift` | Dit s'il manque une migration aux collections du code, sans base ni secret. Bloquant en CI depuis la migration `init` (ticket 049) : une collection changée sans sa migration rend le job `qualite` rouge. |
 | `bun scripts/migration/urls-doc.ts` | Après un changement de la table des URL (voir « URL »). Avec `--check`, il dit seulement si le document suit la table. |
-| `bun run notes:ajouter <type> "<phrase>"` | Un changement qui se remarque par rapport au site en ligne : sa note de version, dans le même commit. Type `ajout`, `amelioration` ou `correction` (voir `docs/publication.md`). |
+| `bun run notes:add <type> "<phrase>"` | Un changement qui se remarque par rapport au site en ligne : sa note de version, dans le même commit. Type `ajout`, `amelioration` ou `correction` (voir `docs/publication.md`). |
 | `bun run names:check [dossier…]` | Liste les noms encore français (fichiers, dossiers, noms déclarés, scripts, variables d'environnement, options), hors liste d'attente et exceptions. Code de sortie 1 s'il en reste. `--no-waiting` ignore la liste d'attente, `--summary` donne les nombres (voir « Conventions » et [`docs/noms.md`](docs/noms.md)). Tourne dans la CI (job `qualite`), avec la liste d'attente tant qu'elle n'est pas vide. |
 | `bun run names:rename <table.json>` | Déplace des fichiers ou des dossiers et renomme des noms par le service de langage de TypeScript : tous les importeurs suivent. `--dry-run` montre sans écrire. Outil des lots de renommage, retiré au ticket 254 ([`docs/noms.md`](docs/noms.md)). |
-| `bun run release:publier --a-blanc` | Montre ce que ferait la prochaine publication : le numéro, les notes rangées dessous. N'écrit rien. Seul le workflow `release.yml` publie. |
+| `bun run release:publish --dry-run` | Montre ce que ferait la prochaine publication : le numéro, les notes rangées dessous. N'écrit rien. Seul le workflow `release.yml` publie. |
 
 ### Un compte en ligne n'est jamais nécessaire : les quatre gestes du banc
 
@@ -94,11 +94,11 @@ Ce qui existe aujourd'hui est décrit dans le README, « Ce que contient le sque
 
 Ces règles n'ont pas d'exception. Si une tâche semble en demander une, arrête-toi et dis-le.
 
-1. **Aucune base de prod.** La v3 n'a pas de préprod : un seul environnement en ligne, la production, et le banc local (décision d'Andy du 16/10/2026, ticket 232). La seule base de travail est celle de `docker-compose.yml`, sur ce poste. L'adresse d'une base distante n'entre ni dans un `.env`, ni dans une commande, ni dans un test. La règle vise une base qu'on ouvrirait vers ce poste ; elle ferme la préprod disparue, et n'empêche pas l'import de production : il tourne dans le conteneur déployé, lit la base Strapi par le réseau interne avec un rôle en lecture seule et écrit dans la base de Payload par son adresse interne, sans qu'aucune base soit ouverte sur Internet (`docs/migration/IMPORT.md`, « En production », ticket 233). `--cible-distante` exige alors `--base-attendue`. Les tests ne connaissent qu'une base locale dont le nom finit par `_test`.
+1. **Aucune base de prod.** La v3 n'a pas de préprod : un seul environnement en ligne, la production, et le banc local (décision d'Andy du 16/10/2026, ticket 232). La seule base de travail est celle de `docker-compose.yml`, sur ce poste. L'adresse d'une base distante n'entre ni dans un `.env`, ni dans une commande, ni dans un test. La règle vise une base qu'on ouvrirait vers ce poste ; elle ferme la préprod disparue, et n'empêche pas l'import de production : il tourne dans le conteneur déployé, lit la base Strapi par le réseau interne avec un rôle en lecture seule et écrit dans la base de Payload par son adresse interne, sans qu'aucune base soit ouverte sur Internet (`docs/migration/IMPORT.md`, « En production », ticket 233). `--remote-target` exige alors `--expected-database`. Les tests ne connaissent qu'une base locale dont le nom finit par `_test`.
 2. **Aucune poussée de schéma hors de ce poste.** Payload ne pousse son schéma que dans une base locale (`localhost`, `127.0.0.1`, `::1`). Partout ailleurs, le schéma change par une migration versionnée et relue, que l'application joue à son démarrage. Aucune commande `payload` ne se lance contre une base distante.
 3. **Aucune donnée personnelle dans les tests**, ni dans les fixtures, les journaux, les documents ou les messages de commit. Tout y est fictif : noms inventés, adresses en `@example.test`, téléphones de la plage réservée à la fiction. Un vrai profil ou un vrai compte se désigne par son identifiant numérique, jamais par un nom, un email, un pseudo ou l'adresse de sa page.
 4. **Aucun secret dans le dépôt.** `.env.exemple` liste les variables sans aucune valeur. Un message d'erreur nomme la variable, jamais sa valeur.
-5. **Rien vers le site en ligne.** Jusqu'à la bascule, `main` ne reçoit aucun commit d'ici. Aucune écriture et aucun email ne vise `my-makeup.fr`, et les tests ne visent que le banc local. Les seules exceptions sont une sonde en lecture seule, rangée dans `tests/sondes/`, et le contrôle d'un hôte, lui aussi en lecture seule, rangé dans `scripts/bascule/`.
+5. **Rien vers le site en ligne.** Jusqu'à la bascule, `main` ne reçoit aucun commit d'ici. Aucune écriture et aucun email ne vise `my-makeup.fr`, et les tests ne visent que le banc local. Les seules exceptions sont une sonde en lecture seule, rangée dans `tests/sondes/`, et le contrôle d'un hôte, lui aussi en lecture seule, rangé dans `scripts/cutover/`.
 6. **Les coordonnées d'une maquilleuse ne s'affichent au public que si elle l'a choisi.** Une page publique les lit par `src/services/public/`, qui ne les rend que si `publicContact` est vrai. Ni téléphone ni email dans un journal ou un événement de mesure.
 7. **Aucune dépendance ajoutée en passant.** Une dépendance nouvelle a une version exacte, publiée depuis 7 jours au moins, sans avis de sécurité ouvert : ni dans la base de GitHub, ni parmi les avis de son propre dépôt, que les outils d'audit ne lisent pas. Elle est annoncée dans le compte rendu, avec la façon dont elle a été vérifiée.
 
@@ -107,7 +107,7 @@ Ces règles n'ont pas d'exception. Si une tâche semble en demander une, arrête
 - Les noms des collections et des champs sont ceux de [`docs/migration/SCHEMA.md`](docs/migration/SCHEMA.md). S'en écarter, c'est modifier ce document dans le même changement.
 - Tout changement de collection se termine par `bun run payload:types`. Le fichier généré est versionné, et relancer la commande ne le change plus.
 - Une migration s'écrit avec `bun run payload:migrate:create`. **Lis son SQL avant de la versionner** : elle contient ce que ton changement demande, rien d'autre, et aucune suppression que tu n'as pas voulue. Relancée aussitôt, la commande ne trouve plus aucun changement de schéma : c'est la preuve qu'il n'y a pas de dérive.
-- Le schéma de P3 est figé dans une seule migration, `init` (ticket 049, regroupée au ticket 249). **Tant qu'aucune base de production ne l'a jouée, `init` se réécrit à chaque changement de collection** (`docs/tests/banc.md`, « Réécrire la migration `init` et vider une base ») ; ensuite, **tout changement de collection vient avec sa migration, dans le même commit** : la CI le vérifie (`bun run schema:derive`), et le banc de test refuse de lancer ses tests sur une base que les migrations ne construisent pas comme le code la décrit.
+- Le schéma de P3 est figé dans une seule migration, `init` (ticket 049, regroupée au ticket 249). **Tant qu'aucune base de production ne l'a jouée, `init` se réécrit à chaque changement de collection** (`docs/tests/banc.md`, « Réécrire la migration `init` et vider une base ») ; ensuite, **tout changement de collection vient avec sa migration, dans le même commit** : la CI le vérifie (`bun run schema:drift`), et le banc de test refuse de lancer ses tests sur une base que les migrations ne construisent pas comme le code la décrit.
 - Le banc de test ne pousse jamais le schéma : sa base est construite par les migrations versionnées seules, comme celle de la production. Seule la base de développement de `docker-compose.yml` reçoit encore le schéma poussé par `bun run dev`.
 
 ## URL
@@ -186,6 +186,9 @@ Le même mot français a le même mot anglais partout (source : `PLAN-ANGLAIS.md
 | accès / médias | `access` / `media` | stockage / prestataire | `storage` / `provider` |
 | prix / montant | `price` / `amount` | rédaction (contenu : articles, talents) | `editorial` (dossier `src/demo-data/editorial.ts`) |
 | requête bornée / étiquette (cache) | `boundedQuery` / `tag` | rafraîchissement (du cache) | `refresh` / `revalidate` |
+| référentiel (des communes) / hors ligne | `reference` / `offline` | revue (liste des villes à revoir) / décisions (table) | `review` / `decisions` |
+| prêt (d'un hash) / à revoir | `lend` / `toReview` | canari (test de la CI) / dérive (du schéma) | `canary` / `drift` |
+| valider / contrôler (un hôte, une image) | `validate` / `check` | delta (export du retour arrière) / depuis la bascule | `delta` / `sinceCutover` |
 
 ## Pièges
 

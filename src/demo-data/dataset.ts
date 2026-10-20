@@ -9,7 +9,7 @@
  *
  * - A talent or an article is found by its slug. One that is there is left as it is, a draft
  *   included: a second load creates nothing.
- * - Written like the import writes, with its context (src/lib/contexte-import.ts): no page of the
+ * - Written like the import writes, with its context (src/lib/import-context.ts): no page of the
  *   site is refreshed, and no mail leaves.
  * - It holds no admin account: the admin accounts of the bench are the set of the tests
  *   (tests/fixtures/comptes.ts).
@@ -18,7 +18,7 @@
  */
 
 import type { Payload } from 'payload'
-import { CONTEXTE_IMPORT } from '../lib/contexte-import'
+import { IMPORT_CONTEXT } from '../lib/import-context'
 import { DEMO_ARTICLES, DEMO_TALENTS } from './editorial'
 import { type LoadingOptions, type ProfilesSummary, placeDemoProfiles, requireDemoTarget } from './loading'
 
@@ -67,7 +67,7 @@ export async function placeDemoEditorial(
 		}
 		await payload.create({
 			collection: 'talents',
-			context: CONTEXTE_IMPORT,
+			context: IMPORT_CONTEXT,
 			data: { ...talent, _status: 'published' },
 			depth: 0,
 		})
@@ -81,7 +81,7 @@ export async function placeDemoEditorial(
 		}
 		await payload.create({
 			collection: 'articles',
-			context: CONTEXTE_IMPORT,
+			context: IMPORT_CONTEXT,
 			data: { ...article, _status: status },
 			depth: 0,
 		})

@@ -16,7 +16,7 @@ import {
 	PUBLIC_BUILD_VARIABLES,
 	readDockerfile,
 	runtimeVariables,
-} from '../../scripts/image/regles'
+} from '../../scripts/image/rules'
 
 /** The two images the Dockerfile may start from, and where the version of each one is written. */
 const BASE_IMAGES = { bun: 'oven/bun', node: 'node' } as const
@@ -92,7 +92,7 @@ export function imageProblems(dockerfile: string, envExample: string): string[] 
 	const args = [...globalArgs, ...stages.flatMap(stage => stage.args)]
 	for (const name of args)
 		if (!PUBLIC_BUILD_VARIABLES.includes(name))
-			problems.push(`ARG ${name} : seules les variables publiques de build sont admises (scripts/image/regles.ts).`)
+			problems.push(`ARG ${name} : seules les variables publiques de build sont admises (scripts/image/rules.ts).`)
 
 	const instructions = dockerfile
 		.split('\n')
@@ -103,7 +103,7 @@ export function imageProblems(dockerfile: string, envExample: string): string[] 
 
 	for (const name of last?.env ?? [])
 		if (!IMAGE_ENVIRONMENT.includes(name))
-			problems.push(`ENV ${name} dans la dernière étape : hors de la liste admise (scripts/image/regles.ts).`)
+			problems.push(`ENV ${name} dans la dernière étape : hors de la liste admise (scripts/image/rules.ts).`)
 
 	const user = last?.user?.split(':')[0]
 	if (user === undefined || user === 'root' || user === '0')
@@ -180,12 +180,12 @@ export interface Workflow {
 	jobs: Record<string, Job>
 }
 
-/** A check the protection of the branch requires, as listed in ci/checks-requis.json. */
+/** A check the protection of the branch requires, as listed in ci/required-checks.json. */
 export interface RequiredCheck {
-	nom: string
+	name: string
 	/** `workflow`: a job of this repository. `github`: a check GitHub creates by itself. */
 	source: string
-	fichier?: string
+	file?: string
 	job?: string
 }
 
@@ -335,32 +335,32 @@ export function requiredCheckProblems(required: readonly RequiredCheck[], workfl
 	const jobNames = workflows.flatMap(workflow =>
 		Object.entries(workflow.jobs).map(([id, job]) => ({ file: workflow.file, id, name: String(job.name ?? id) }))
 	)
-	const sameName = (name: string, check: RequiredCheck) => name.toLowerCase() === check.nom.toLowerCase()
+	const sameName = (name: string, check: RequiredCheck) => name.toLowerCase() === check.name.toLowerCase()
 	for (const check of required) {
 		if (check.source === 'workflow') {
 			// GitHub knows a required check by its name alone: any other job shown under it would do.
 			for (const homonym of jobNames.filter(
-				job => sameName(job.name, check) && !(job.file === check.fichier && job.id === check.job)
+				job => sameName(job.name, check) && !(job.file === check.file && job.id === check.job)
 			))
 				problems.push(
-					`${homonym.file}, job ${homonym.id} : il s’affiche lui aussi sous le nom « ${homonym.name} », et passerait pour le check requis « ${check.nom} ».`
+					`${homonym.file}, job ${homonym.id} : il s’affiche lui aussi sous le nom « ${homonym.name} », et passerait pour le check requis « ${check.name} ».`
 				)
-			const workflow = workflows.find(candidate => candidate.file === check.fichier)
+			const workflow = workflows.find(candidate => candidate.file === check.file)
 			const job = workflow?.jobs[check.job ?? '']
-			if (!workflow) problems.push(`Check requis « ${check.nom} » : le fichier ${check.fichier} n’existe pas.`)
-			else if (!job) problems.push(`Check requis « ${check.nom} » : ${check.fichier} n’a pas de job « ${check.job} ».`)
-			else if ((job.name ?? check.job) !== check.nom)
-				problems.push(`Check requis « ${check.nom} » : le job s’affiche sous le nom « ${job.name} » dans GitHub.`)
+			if (!workflow) problems.push(`Check requis « ${check.name} » : le fichier ${check.file} n’existe pas.`)
+			else if (!job) problems.push(`Check requis « ${check.name} » : ${check.file} n’a pas de job « ${check.job} ».`)
+			else if ((job.name ?? check.job) !== check.name)
+				problems.push(`Check requis « ${check.name} » : le job s’affiche sous le nom « ${job.name} » dans GitHub.`)
 			else if (job.strategy !== undefined)
-				problems.push(`Check requis « ${check.nom} » : une matrice change le nom du check.`)
+				problems.push(`Check requis « ${check.name} » : une matrice change le nom du check.`)
 		} else if (check.source === 'github') {
 			for (const homonym of jobNames.filter(job => sameName(job.name, check)))
 				problems.push(
-					`${homonym.file} : un job nommé « ${homonym.name} » passerait pour le check « ${check.nom} » de GitHub.`
+					`${homonym.file} : un job nommé « ${homonym.name} » passerait pour le check « ${check.name} » de GitHub.`
 				)
-		} else problems.push(`Check requis « ${check.nom} » : source « ${check.source} » inconnue.`)
+		} else problems.push(`Check requis « ${check.name} » : source « ${check.source} » inconnue.`)
 	}
-	if (required.some(check => check.nom === 'CodeQL' && check.source === 'github'))
+	if (required.some(check => check.name === 'CodeQL' && check.source === 'github'))
 		for (const workflow of workflows)
 			for (const { step, where } of allSteps(workflow))
 				if (step.uses?.startsWith('github/codeql-action/'))
@@ -879,11 +879,11 @@ export function absoluteNavigations(files: readonly { file: string; text: string
  * ---------------------------------------------------------------------------------------- */
 
 /** The job that checks the schema, and the command that does it (docs/qualite.md, « La dérive de schéma »). */
-export const SCHEMA_DRIFT = { job: 'qualite', command: 'bun run schema:derive', after: 'bun install --frozen-lockfile' }
+export const SCHEMA_DRIFT = { job: 'qualite', command: 'bun run schema:drift', after: 'bun install --frozen-lockfile' }
 
 /**
  * Since the `init` migration (ticket 049), a collection changed without its migration makes the
- * CI red: the job `qualite` runs `bun run schema:derive`, alone in its step, once the dependencies
+ * CI red: the job `qualite` runs `bun run schema:drift`, alone in its step, once the dependencies
  * are installed, under no condition that could skip it.
  */
 export function schemaDriftProblems(workflow: Workflow): string[] {

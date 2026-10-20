@@ -9,12 +9,12 @@
 
 import { TALENT_PAGE_TITLES } from '../../../src/content/talent-titles'
 import { isSlug } from '../../../src/lib/slug'
-import { REFERENCES } from './ecarts'
-import type { Adaptateur, Attendu, Refus } from './moteur'
-import { iso, type Requete } from './source'
+import type { Adapter, Expected, Refusal } from './engine'
+import { REFERENCES } from './gaps'
+import { iso, type Query } from './source'
 
 /** A row of `talents`, as the import reads it. */
-export interface LigneTalent {
+export interface TalentRow {
 	id: number
 	title: string | null
 	seo_title: string | null
@@ -27,15 +27,15 @@ export interface LigneTalent {
 	published_at: string | null
 }
 
-export const LECTURE_DES_TALENTS = `SELECT id, title, seo_title, description, seo_description, content, slug,
+export const TALENTS_QUERY = `SELECT id, title, seo_title, description, seo_description, content, slug,
 	${iso('created_at')} AS created_at, ${iso('updated_at')} AS updated_at, ${iso('published_at')} AS published_at
 	FROM talents ORDER BY id`
 
-export const lireLesTalents = (requete: Requete): Promise<LigneTalent[]> => requete<LigneTalent>(LECTURE_DES_TALENTS)
+export const readTalents = (requete: Query): Promise<TalentRow[]> => requete<TalentRow>(TALENTS_QUERY)
 
-export const ADAPTATEUR_TALENTS: Adaptateur = {
+export const TALENTS_ADAPTER: Adapter = {
 	collection: 'talents',
-	champs: {
+	fields: {
 		title: 'texte',
 		slug: 'texte',
 		seo_title: 'texte',
@@ -49,16 +49,16 @@ export const ADAPTATEUR_TALENTS: Adaptateur = {
 		updatedAt: 'date',
 	},
 	// The source has no title for the tab: the import fills it in, and keeps what the newsroom typed.
-	amorces: ['pageTitle'],
-	options: attendu => ({ brouillon: attendu.valeurs._status === 'draft' }),
+	seeds: ['pageTitle'],
+	options: attendu => ({ draft: attendu.values._status === 'draft' }),
 }
 
 /** The talent the target must hold: the same values, under the same names. */
-export function talentAttendu(ligne: LigneTalent): Attendu {
-	const titreDeLaPage = ligne.slug === null ? undefined : TALENT_PAGE_TITLES[ligne.slug]
+export function expectedTalent(ligne: TalentRow): Expected {
+	const pageTitle = ligne.slug === null ? undefined : TALENT_PAGE_TITLES[ligne.slug]
 	return {
 		strapiId: ligne.id,
-		valeurs: {
+		values: {
 			strapiId: ligne.id,
 			title: ligne.title,
 			slug: ligne.slug,
@@ -70,9 +70,9 @@ export function talentAttendu(ligne: LigneTalent): Attendu {
 			publishedAt: ligne.published_at,
 			createdAt: ligne.created_at,
 			updatedAt: ligne.updated_at,
-			...(titreDeLaPage === undefined ? {} : { pageTitle: titreDeLaPage }),
+			...(pageTitle === undefined ? {} : { pageTitle: pageTitle }),
 		},
-		ecarts: titreDeLaPage === undefined ? [] : [{ champ: 'pageTitle', reference: REFERENCES.titreDesPagesTalent }],
+		gaps: pageTitle === undefined ? [] : [{ field: 'pageTitle', reference: REFERENCES.titreDesPagesTalent }],
 	}
 }
 
@@ -82,25 +82,25 @@ export function talentAttendu(ligne: LigneTalent): Attendu {
  * refused; a slug two documents share stays with the oldest one (the smallest id), and the next
  * ones are refused.
  */
-export function repartirParSlug<Ligne extends { id: number; slug: string | null }>(
+export function splitBySlug<Ligne extends { id: number; slug: string | null }>(
 	lignes: readonly Ligne[]
-): { pris: Ligne[]; refuses: Refus[] } {
-	const pris: Ligne[] = []
-	const refuses: Refus[] = []
+): { taken: Ligne[]; refused: Refusal[] } {
+	const taken: Ligne[] = []
+	const refused: Refusal[] = []
 	const slugs = new Set<string>()
-	for (const ligne of [...lignes].sort((a, b) => a.id - b.id)) {
-		if (!isSlug(ligne.slug)) refuses.push({ strapiId: ligne.id, motif: 'slug-pas-une-adresse', champs: ['slug'] })
-		else if (slugs.has(ligne.slug)) refuses.push({ strapiId: ligne.id, motif: 'slug-en-double', champs: ['slug'] })
+	for (const row of [...lignes].sort((a, b) => a.id - b.id)) {
+		if (!isSlug(row.slug)) refused.push({ strapiId: row.id, reason: 'slug-pas-une-adresse', fields: ['slug'] })
+		else if (slugs.has(row.slug)) refused.push({ strapiId: row.id, reason: 'slug-en-double', fields: ['slug'] })
 		else {
-			slugs.add(ligne.slug)
-			pris.push(ligne)
+			slugs.add(row.slug)
+			taken.push(row)
 		}
 	}
-	return { pris, refuses }
+	return { taken, refused }
 }
 
 /** The talents of the source split in two by their slug (`repartirParSlug`). */
-export function talentsAttendus(lignes: readonly LigneTalent[]): { attendus: Attendu[]; refuses: Refus[] } {
-	const { pris, refuses } = repartirParSlug(lignes)
-	return { attendus: pris.map(talentAttendu), refuses }
+export function expectedTalents(lignes: readonly TalentRow[]): { expected: Expected[]; refused: Refusal[] } {
+	const { taken, refused } = splitBySlug(lignes)
+	return { expected: taken.map(expectedTalent), refused }
 }

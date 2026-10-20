@@ -3,13 +3,13 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import {
-	ambiguites,
-	type Derive,
-	derniereMigration,
-	type Instantane,
-	lireArguments,
+	ambiguities,
+	type Drift,
+	lastMigration,
+	readArguments,
+	type Snapshot,
 	verdict,
-} from '../../scripts/ci/derive-schema'
+} from '../../scripts/ci/schema-drift'
 import { readWorkflow, SCHEMA_DRIFT, schemaDriftProblems } from '../outils/garde-fous-ci'
 
 /**
@@ -30,9 +30,9 @@ const COLONNE = 'email'
 
 let dossier = ''
 
-/** Runs the command as `bun run schema:derive` does, with an environment that holds nothing else. */
+/** Runs the command as `bun run schema:drift` does, with an environment that holds nothing else. */
 async function deriver(...args: string[]): Promise<{ code: number; sortie: string }> {
-	const enfant = Bun.spawn([process.execPath, '--no-env-file', 'scripts/ci/derive-schema.ts', ...args], {
+	const enfant = Bun.spawn([process.execPath, '--no-env-file', 'scripts/ci/schema-drift.ts', ...args], {
 		cwd: ROOT,
 		env: { PATH: process.env.PATH ?? '' },
 		stdin: 'ignore',
@@ -47,26 +47,26 @@ async function deriver(...args: string[]): Promise<{ code: number; sortie: strin
 	return { code, sortie: out + err }
 }
 
-const lire = (fichier: string): Instantane => JSON.parse(readFileSync(fichier, 'utf8')) as Instantane
-const ecrire = (nom: string, instantane: Instantane): string => {
+const lire = (fichier: string): Snapshot => JSON.parse(readFileSync(fichier, 'utf8')) as Snapshot
+const ecrire = (nom: string, instantane: Snapshot): string => {
 	const fichier = path.join(dossier, nom)
 	writeFileSync(fichier, JSON.stringify(instantane))
 	return fichier
 }
 /** The columns of a table of a snapshot, to take apart. */
-const colonnes = (instantane: Instantane, table = TABLE): Record<string, Record<string, unknown>> => {
+const colonnes = (instantane: Snapshot, table = TABLE): Record<string, Record<string, unknown>> => {
 	const trouvees = instantane.tables?.[table]?.columns
 	if (!trouvees) throw new Error(`no table ${table} in the snapshot`)
 	return trouvees as Record<string, Record<string, unknown>>
 }
 
-let duCode: Instantane
+let duCode: Snapshot
 let surLeDepot: { code: number; sortie: string }
 
 beforeAll(async () => {
 	dossier = mkdtempSync(path.join(os.tmpdir(), 'derive-'))
 	const instantane = path.join(dossier, 'code.json')
-	const [ecrit, depot] = await Promise.all([deriver('--instantane', instantane), deriver()])
+	const [ecrit, depot] = await Promise.all([deriver('--snapshot', instantane), deriver()])
 	expect(ecrit.code).toBe(0)
 	duCode = lire(instantane)
 	surLeDepot = depot
@@ -78,7 +78,7 @@ afterAll(() => {
 
 describe('the command, against snapshots made from the schema of the collections', () => {
 	test('no drift against the schema of the collections themselves: no false alarm', async () => {
-		const { code, sortie } = await deriver('--avant', path.join(dossier, 'code.json'))
+		const { code, sortie } = await deriver('--before', path.join(dossier, 'code.json'))
 
 		expect(sortie).toContain('Aucune dérive de schéma : les collections du code décrivent le schéma de l’instantané')
 		expect(code).toBe(0)
@@ -88,7 +88,7 @@ describe('the command, against snapshots made from the schema of the collections
 		const sansLaColonne = structuredClone(duCode)
 		delete colonnes(sansLaColonne)[COLONNE]
 
-		const { code, sortie } = await deriver('--avant', ecrire('sans-colonne.json', sansLaColonne))
+		const { code, sortie } = await deriver('--before', ecrire('sans-colonne.json', sansLaColonne))
 
 		expect(sortie).toContain('Dérive de schéma : les collections du code ne décrivent plus le schéma')
 		expect(sortie).toContain('Une migration contiendrait cette instruction :')
@@ -101,7 +101,7 @@ describe('the command, against snapshots made from the schema of the collections
 		const sansLaTable = structuredClone(duCode)
 		delete sansLaTable.tables?.['public.payload_kv']
 
-		const { code, sortie } = await deriver('--avant', ecrire('sans-table.json', sansLaTable))
+		const { code, sortie } = await deriver('--before', ecrire('sans-table.json', sansLaTable))
 
 		expect(sortie).toContain('CREATE TABLE "payload_kv"')
 		expect(code).toBe(1)
@@ -116,7 +116,7 @@ describe('the command, against snapshots made from the schema of the collections
 		colonnes(renomme).courriel = { ...definition, name: 'courriel' }
 
 		const debut = performance.now()
-		const { code, sortie } = await deriver('--avant', ecrire('renomme.json', renomme))
+		const { code, sortie } = await deriver('--before', ecrire('renomme.json', renomme))
 
 		expect(sortie).toContain(
 			`- colonnes de « ${TABLE} » : « ${COLONNE} » dans le code seulement ; « courriel » dans la migration seulement`
@@ -126,7 +126,7 @@ describe('the command, against snapshots made from the schema of the collections
 	}, 20_000)
 
 	test('on the repository: no drift against the last migration, every collection has its migration', () => {
-		const derniere = derniereMigration()
+		const derniere = lastMigration()
 
 		expect(derniere?.nom).toMatch(/^\d{8}_\d{6}_\w+$/)
 		expect(surLeDepot.sortie).toContain(
@@ -136,9 +136,9 @@ describe('the command, against snapshots made from the schema of the collections
 	})
 
 	test('a wrong use is refused before anything is loaded', async () => {
-		const { code, sortie } = await deriver('--avant')
+		const { code, sortie } = await deriver('--before')
 
-		expect(sortie).toContain('Usage : bun run schema:derive')
+		expect(sortie).toContain('Usage : bun run schema:drift')
 		expect(code).toBe(2)
 	})
 })
@@ -153,7 +153,7 @@ describe('the CI runs the check, and is red when it is', () => {
 		return texte.replace(avant, apres)
 	}
 
-	test('the job qualite runs « bun run schema:derive », alone in its step, after the installation', () => {
+	test('the job qualite runs « bun run schema:drift », alone in its step, after the installation', () => {
 		expect(texte).toContain(ETAPE)
 		expect(schemaDriftProblems(ci())).toEqual([])
 	})
@@ -162,17 +162,17 @@ describe('the CI runs the check, and is red when it is', () => {
 		[
 			'the step removed',
 			() => change(ETAPE, ''),
-			'job qualite : il doit lancer « bun run schema:derive », seule dans son étape',
+			'job qualite : il doit lancer « bun run schema:drift », seule dans son étape',
 		],
 		[
 			'the command with an option that compares with something else',
-			() => change(`run: ${SCHEMA_DRIFT.command}\n`, `run: ${SCHEMA_DRIFT.command} --avant ancien.json\n`),
-			'job qualite : il doit lancer « bun run schema:derive », seule dans son étape',
+			() => change(`run: ${SCHEMA_DRIFT.command}\n`, `run: ${SCHEMA_DRIFT.command} --before ancien.json\n`),
+			'job qualite : il doit lancer « bun run schema:drift », seule dans son étape',
 		],
 		[
 			'the step skipped on a condition',
 			() => change(ETAPE, ETAPE.replace('!cancelled()', "github.event_name == 'push'")),
-			"« bun run schema:derive » ne tourne que sous « github.event_name == 'push' »",
+			"« bun run schema:drift » ne tourne que sous « github.event_name == 'push' »",
 		],
 		[
 			'the step before the installation',
@@ -181,7 +181,7 @@ describe('the CI runs the check, and is red when it is', () => {
 					'      - name: Install\n        run: bun install --frozen-lockfile\n',
 					`${ETAPE}      - name: Install\n        run: bun install --frozen-lockfile\n`
 				),
-			'« bun run schema:derive » doit venir après « bun install --frozen-lockfile »',
+			'« bun run schema:drift » doit venir après « bun install --frozen-lockfile »',
 		],
 	])('red on %s', (_faute, fautif, attendu) => {
 		expect(schemaDriftProblems(ci(fautif())).join('\n')).toContain(attendu)
@@ -189,7 +189,7 @@ describe('the CI runs the check, and is red when it is', () => {
 })
 
 describe('the names drizzle-kit would ask about are found from the two snapshots', () => {
-	const instantane = (tables: Record<string, string[]>, enums: string[] = []): Instantane => ({
+	const instantane = (tables: Record<string, string[]>, enums: string[] = []): Snapshot => ({
 		version: '7',
 		tables: Object.fromEntries(
 			Object.entries(tables).map(([table, noms]) => [
@@ -203,9 +203,9 @@ describe('the names drizzle-kit would ask about are found from the two snapshots
 	test('nothing to ask when names only appear, or only disappear', () => {
 		const avant = instantane({ 'public.a': ['id', 'nom'] })
 
-		expect(ambiguites(avant, avant)).toEqual([])
-		expect(ambiguites(avant, instantane({ 'public.a': ['id', 'nom', 'ville'], 'public.b': ['id'] }))).toEqual([])
-		expect(ambiguites(avant, instantane({ 'public.a': ['id'] }))).toEqual([])
+		expect(ambiguities(avant, avant)).toEqual([])
+		expect(ambiguities(avant, instantane({ 'public.a': ['id', 'nom', 'ville'], 'public.b': ['id'] }))).toEqual([])
+		expect(ambiguities(avant, instantane({ 'public.a': ['id'] }))).toEqual([])
 	})
 
 	test.each([
@@ -228,12 +228,12 @@ describe('the names drizzle-kit would ask about are found from the two snapshots
 			'types énumérés : « public.enum_roles » dans le code seulement ; « public.enum_role » dans la migration seulement',
 		],
 	])('found: %s', (_cas, avant, apres, attendue) => {
-		expect(ambiguites(avant, apres)).toEqual([attendue])
+		expect(ambiguities(avant, apres)).toEqual([attendue])
 	})
 })
 
 describe('the verdict, in French', () => {
-	const sans: Derive = { instructions: [], ambiguites: [] }
+	const sans: Drift = { instructions: [], ambiguites: [] }
 
 	test('no drift: exit code 0', () => {
 		expect(verdict(sans, 'la dernière migration (x)')).toEqual({
@@ -254,7 +254,7 @@ describe('the verdict, in French', () => {
 			'Une migration contiendrait ces 2 instructions :',
 			'  CREATE TABLE "a" ();',
 			'  ALTER TABLE "b" ADD COLUMN "c" varchar;',
-			'Écris la migration par « bun run payload:migrate:create », relis son SQL, puis relance « bun run schema:derive ».',
+			'Écris la migration par « bun run payload:migrate:create », relis son SQL, puis relance « bun run schema:drift ».',
 		])
 	})
 
@@ -269,18 +269,18 @@ describe('the verdict, in French', () => {
 describe('the options of the command', () => {
 	test.each([
 		[[], {}],
-		[['--avant', 'a.json'], { avant: 'a.json' }],
-		[['--instantane', 'b.json'], { instantane: 'b.json' }],
+		[['--before', 'a.json'], { avant: 'a.json' }],
+		[['--snapshot', 'b.json'], { instantane: 'b.json' }],
 	])('read: %p', (args, attendu) => {
-		expect(lireArguments(args)).toEqual(attendu)
+		expect(readArguments(args)).toEqual(attendu)
 	})
 
 	test.each([
-		[['--avant']],
-		[['--avant', '--instantane']],
-		[['--avant', 'a.json', 'b.json']],
+		[['--before']],
+		[['--before', '--snapshot']],
+		[['--before', 'a.json', 'b.json']],
 		[['--tout']],
 	])('refused: %p', args => {
-		expect(lireArguments(args)).toBeUndefined()
+		expect(readArguments(args)).toBeUndefined()
 	})
 })

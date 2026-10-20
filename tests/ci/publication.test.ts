@@ -30,7 +30,7 @@ const CI = '.github/workflows/ci.yml'
 const releaseText = read(RELEASE)
 const release = readWorkflow(RELEASE, releaseText)
 const ci = readWorkflow(CI, read(CI))
-const required = (JSON.parse(read('ci/checks-requis.json')) as { checks: RequiredCheck[] }).checks
+const required = (JSON.parse(read('ci/required-checks.json')) as { checks: RequiredCheck[] }).checks
 
 /** The publication workflow with one thing changed in its text. Fails when the text to change is gone. */
 function broken(from: string | RegExp, to: string): Workflow {
@@ -86,7 +86,7 @@ describe('the publication depends on ci-ok', () => {
 	test('the workflow it waits for is the one that holds ci-ok, under its exact name', () => {
 		const [check] = required.filter(candidate => candidate.source === 'workflow')
 
-		expect(check?.fichier).toBe(CI)
+		expect(check?.file).toBe(CI)
 		expect(ci.jobs[check?.job ?? '']).toBeDefined()
 		expect((ci.document as { name?: string }).name).toBe('CI')
 	})
@@ -94,7 +94,7 @@ describe('the publication depends on ci-ok', () => {
 	test('the command of the job is the publication script, run by bun alone', () => {
 		const scripts = (JSON.parse(read('package.json')) as { scripts: Record<string, string> }).scripts
 
-		expect(scripts['release:publier']).toBe('bun --no-env-file scripts/release/publication.ts')
+		expect(scripts['release:publish']).toBe('bun --no-env-file scripts/release/publication.ts')
 	})
 
 	test.each([
@@ -166,7 +166,7 @@ describe('the publication depends on ci-ok', () => {
 			'      - name: Install\n        run: bun install --frozen-lockfile\n      - name: Publish the version\n',
 			'une seule commande',
 		],
-		['another command', RUN_LINE, '        run: bun scripts/release/publication.ts --pousser\n', 'une seule commande'],
+		['another command', RUN_LINE, '        run: bun scripts/release/publication.ts --push\n', 'une seule commande'],
 		[
 			'another action given the token',
 			'      - name: Publish the version\n',

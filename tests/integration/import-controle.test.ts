@@ -6,7 +6,7 @@ import { viderLaBase } from '../outils/payload-test'
 import { creerLaSourceStrapi, effacerLaSourceStrapi, sourceDuBanc } from '../outils/source-strapi'
 
 /**
- * Ticket 067: the check of the parity (`--controle`). A dry run that says whether the target is the
+ * Ticket 067: the check of the parity (`--check`). A dry run that says whether the target is the
  * source, and exits 4 as soon as it is not: an account removed by hand, an email changed by hand, a
  * document the source does not give. The runs of the import itself are in the other import tests.
  */
@@ -15,7 +15,7 @@ const source = sourceDuBanc()
 
 /** The command of the check, against the bench, with the table of decisions of the bench. */
 const controler = (...options: string[]) =>
-	commandeDImport(['--controle', '--decisions', FICHIER_DES_DECISIONS_DU_BANC, ...options])
+	commandeDImport(['--check', '--decisions', FICHIER_DES_DECISIONS_DU_BANC, ...options])
 
 /** A write by the owner of the bench database, as a person with access to it would make. */
 async function ecrireDansLaCible(requete: string): Promise<void> {
@@ -105,36 +105,36 @@ describe('le contrôle de la parité (I39, I40, I43)', () => {
 	}, 60_000)
 
 	test('une commande qui demande à la fois d’écrire et de contrôler n’est pas comprise, et n’écrit rien', async () => {
-		const { code, sortie } = await controler('--reel')
+		const { code, sortie } = await controler('--real')
 
 		expect(code).toBe(2)
 		expect(sortie).toContain('Usage')
 		expect(await comptesDeLaCible()).toBe(0)
 	}, 60_000)
 
-	test('--sans-photos avec --reel est refusé sur une cible qui garde des médias : rien n’est retiré', async () => {
+	test('--without-photos avec --real est refusé sur une cible qui garde des médias : rien n’est retiré', async () => {
 		await importerSurLeBanc()
 		const avant = await photosDeLaCible()
 		expect(avant.principales).toBeGreaterThan(0)
 		expect(avant.medias).toBeGreaterThan(0)
 
 		const { code, sortie } = await commandeDImport([
-			'--reel',
-			'--sans-photos',
+			'--real',
+			'--without-photos',
 			'--decisions',
 			FICHIER_DES_DECISIONS_DU_BANC,
 		])
 
 		expect(code, sortie).toBe(1)
-		expect(sortie).toContain('--sans-photos ne va pas avec --reel sur une cible')
+		expect(sortie).toContain('--without-photos ne va pas avec --real sur une cible')
 		expect(await photosDeLaCible()).toEqual(avant)
 	}, 60_000)
 
-	test('--sans-photos avec --controle est refusé, même sur une cible sans média : pas de faux vert', async () => {
-		const { code, sortie } = await controler('--sans-photos')
+	test('--without-photos avec --check est refusé, même sur une cible sans média : pas de faux vert', async () => {
+		const { code, sortie } = await controler('--without-photos')
 
 		expect(code, sortie).toBe(1)
-		expect(sortie).toContain('--sans-photos ne va pas avec --controle')
+		expect(sortie).toContain('--without-photos ne va pas avec --check')
 		expect(sortie).not.toContain('la cible est la source')
 	}, 60_000)
 
@@ -176,7 +176,7 @@ describe('le contrôle de la parité (I39, I40, I43)', () => {
 			expect(code, sortie).toBe(4)
 			expect(sortie).toMatch(new RegExp(`${nom} : .* 1 document sans origine`))
 
-			const reel = await commandeDImport(['--reel', '--decisions', FICHIER_DES_DECISIONS_DU_BANC])
+			const reel = await commandeDImport(['--real', '--decisions', FICHIER_DES_DECISIONS_DU_BANC])
 			const ligne = reel.sortie.split('\n').find(l => l.startsWith(`${nom} : `) && l.includes('égaux'))
 			expect(ligne, reel.sortie).toContain('parité incomplète')
 			expect(ligne).not.toContain('parité complète')

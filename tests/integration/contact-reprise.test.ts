@@ -2,7 +2,7 @@ import { afterAll, describe, expect, test } from 'bun:test'
 import { payloadStorage } from '@/lib/contact/payload-send'
 import { payloadResendStorage, resendMessageEmail } from '@/lib/contact/resend'
 import type { MailState } from '@/lib/contact/states'
-import { marquerUnImportEnCours } from '@/lib/contexte-import'
+import { markImportInProgress } from '@/lib/import-context'
 import { runDailyTasks } from '@/lib/tasks/daily'
 import { RETRY_DELAY_MS, retryStuckMessages } from '@/lib/tasks/stuck-messages'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
@@ -83,7 +83,7 @@ describe('la reprise des messages restés en cours d’envoi, sur une horloge si
 	test('pendant un import rien ne bouge', async () => {
 		const payload = await payloadDeTest()
 		const bloque = await ecrire('pending')
-		const fin = marquerUnImportEnCours()
+		const fin = markImportInProgress()
 		const pendant = await runDailyTasks(payload, apres(RETRY_DELAY_MS + 60_000), [retryStuckMessages])
 		fin()
 		expect(pendant).toEqual([{ nom: 'reprise-messages-contact-bloques', supprimes: 0 }])

@@ -4,7 +4,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { SQL } from 'bun'
-import { AUCUNE_DECISION } from '../../scripts/migration/import/decisions'
+import { NO_DECISION } from '../../scripts/migration/import/decisions'
 import { NO_PROFILE_CONTEXT } from '../../src/collections/Profiles'
 import { commandeDImport, DECISIONS_DU_BANC, FICHIER_DES_DECISIONS_DU_BANC, importerSurLeBanc } from '../outils/import'
 import { compterLesMails, viderLeCapteur } from '../outils/mailpit'
@@ -102,9 +102,9 @@ describe('Critère 1 : autant de comptes qu’à la source, hors comptes écart�
 				createdAt: enIso(ligne.created_at),
 				updatedAt: enIso(ligne.updated_at),
 			})
-		expect(rapport.collections.pros).toMatchObject({ source: 17, crees: 14, refuses: [], ecartes: ECARTES })
+		expect(rapport.collections.pros).toMatchObject({ source: 17, created: 14, refused: [], excluded: ECARTES })
 		// The email of account 7 had capitals and edge spaces: one transformation, by its rule.
-		expect(rapport.ecarts['SCHEMA.md §5.1 (email)']).toBe(1)
+		expect(rapport.gaps['SCHEMA.md §5.1 (email)']).toBe(1)
 	})
 
 	test('la répartition par fournisseur de la cible est celle de la source, comptes écartés retirés', async () => {
@@ -119,8 +119,8 @@ describe('Critère 1 : autant de comptes qu’à la source, hors comptes écart�
 
 		expect(attendue).toEqual({ local: 7, google: 5, facebook: 2 })
 		expect(cible).toEqual(attendue)
-		expect(rapport.parite?.pros?.repartition?.fournisseurs).toEqual(attendue)
-		expect(rapport.parite?.pros).toMatchObject({ attendus: 14, egaux: 14, differents: [], manquants: [], enTrop: [] })
+		expect(rapport.parity?.pros?.distribution?.providers).toEqual(attendue)
+		expect(rapport.parity?.pros).toMatchObject({ expected: 14, equal: 14, different: [], missing: [], extra: [] })
 	})
 
 	test('un compte arrive confirmé, sans session, avec un mot de passe que personne ne connaît, et sans email envoyé', async () => {
@@ -147,8 +147,8 @@ describe('Critère 1 : autant de comptes qu’à la source, hors comptes écart�
 
 		const rapport = await importerSurLeBanc()
 
-		expect(rapport.collections.pros?.nonConfirmes).toEqual([14])
-		expect(rapport.ecarts['confirmation-email']).toBe(1)
+		expect(rapport.collections.pros?.unconfirmed).toEqual([14])
+		expect(rapport.gaps['confirmation-email']).toBe(1)
 		expect((await comptesDeLaCible()).find(({ strapiId }) => strapiId === 14)?._verified).toBe(true)
 	})
 })
@@ -171,8 +171,8 @@ describe('Critère 2 : autant de hash hérités que de comptes source avec un ha
 			const hash = cible.find(compte => compte.strapiId === strapiId)?.legacyBcrypt ?? ''
 			expect(await Bun.password.verify(motDePasse, hash), String(strapiId)).toBe(true)
 		}
-		expect(rapport.collections.pros?.repartition?.hashHerites).toBe(8)
-		expect(rapport.parite?.pros?.repartition?.hashHerites).toBe(8)
+		expect(rapport.collections.pros?.distribution?.legacyHashes).toBe(8)
+		expect(rapport.parity?.pros?.distribution?.legacyHashes).toBe(8)
 	})
 
 	test('un mot de passe qui n’est pas un hash bcrypt complet ne donne aucun hash hérité', async () => {
@@ -181,8 +181,8 @@ describe('Critère 2 : autant de hash hérités que de comptes source avec un ha
 		const rapport = await importerSurLeBanc()
 
 		expect((await comptesDeLaCible()).find(({ strapiId }) => strapiId === 17)?.legacyBcrypt ?? null).toBeNull()
-		expect(rapport.ecarts['SCHEMA.md §5.1 (password)']).toBe(1)
-		expect(rapport.parite?.pros?.repartition?.hashHerites).toBe(7)
+		expect(rapport.gaps['SCHEMA.md §5.1 (password)']).toBe(1)
+		expect(rapport.parity?.pros?.distribution?.legacyHashes).toBe(7)
 	})
 
 	test('le compte gardé sans hash prend celui d’un compte écarté : écrit en base, compté, jamais dans le rapport (prêt de 066)', async () => {
@@ -196,8 +196,8 @@ describe('Critère 2 : autant de hash hérités que de comptes source avec un ha
 
 		const cible = await comptesDeLaCible()
 		expect(cible.find(({ strapiId }) => strapiId === 9)?.legacyBcrypt).toBe(hashes.get(10) ?? 'absent')
-		expect(rapport.collections.pros?.hashRattaches).toEqual([9])
-		expect(rapport.ecarts['comptes-email-partage']).toBeGreaterThanOrEqual(1)
+		expect(rapport.collections.pros?.attachedHashes).toEqual([9])
+		expect(rapport.gaps['comptes-email-partage']).toBeGreaterThanOrEqual(1)
 		// Account 10 is set aside: its hash is on account 9 only, so the count is one more than without the loan.
 		expect(cible.filter(({ legacyBcrypt }) => typeof legacyBcrypt === 'string')).toHaveLength(8)
 		expect(JSON.stringify(rapport)).not.toMatch(/\$2[aby]\$/)
@@ -209,17 +209,17 @@ describe('Critère 2 : autant de hash hérités que de comptes source avec un ha
 			await sql.unsafe('UPDATE up_users SET password = (SELECT password FROM up_users WHERE id = 1) WHERE id = 10')
 		})
 
-		const rapport = await importerSurLeBanc('reel', {
+		const rapport = await importerSurLeBanc('real', {
 			decisions: {
 				...DECISIONS_DU_BANC,
-				emailsPartages: [{ comptes: [9, 10, 11, 12], retenu: 9, pretDuHash: false }],
+				sharedEmails: [{ accounts: [9, 10, 11, 12], kept: 9, lendHash: false }],
 			},
 		})
 
 		const cible = await comptesDeLaCible()
 		expect(cible.find(({ strapiId }) => strapiId === 9)?.legacyBcrypt ?? null).toBeNull()
-		expect(rapport.collections.pros?.hashRattaches ?? []).toEqual([])
-		expect(rapport.collections.pros?.hashNonRattaches).toBeGreaterThanOrEqual(1)
+		expect(rapport.collections.pros?.attachedHashes ?? []).toEqual([])
+		expect(rapport.collections.pros?.unattachedHashes).toBeGreaterThanOrEqual(1)
 	})
 
 	test('ni la sortie de la commande ni son rapport JSON ne portent un hash, un email ou un nom', async () => {
@@ -227,10 +227,10 @@ describe('Critère 2 : autant de hash hérités que de comptes source avec un ha
 		try {
 			const fichier = path.join(dossier, 'rapport.json')
 			const { code, sortie } = await commandeDImport([
-				'--reel',
+				'--real',
 				'--decisions',
 				FICHIER_DES_DECISIONS_DU_BANC,
-				'--rapport',
+				'--report',
 				fichier,
 			])
 			const json = readFileSync(fichier, 'utf8')
@@ -261,7 +261,7 @@ describe('Critère 2 : autant de hash hérités que de comptes source avec un ha
 			'CREATE TRIGGER banc_refus_d_un_compte BEFORE INSERT ON pros FOR EACH ROW EXECUTE FUNCTION banc_refus_d_un_compte()'
 		)
 		try {
-			const { code, sortie } = await commandeDImport(['--reel', '--decisions', FICHIER_DES_DECISIONS_DU_BANC])
+			const { code, sortie } = await commandeDImport(['--real', '--decisions', FICHIER_DES_DECISIONS_DU_BANC])
 
 			expect(code).toBe(6)
 			expect(sortie).toContain(`le document ${compte} de « pros »`)
@@ -290,7 +290,7 @@ describe('Un compte que la cible refuse : listé, et la parité le dit (I39)', (
 			overrideAccess: true,
 		})
 
-		const { code, sortie } = await commandeDImport(['--reel', '--decisions', FICHIER_DES_DECISIONS_DU_BANC])
+		const { code, sortie } = await commandeDImport(['--real', '--decisions', FICHIER_DES_DECISIONS_DU_BANC])
 
 		expect(code, sortie).toBe(5)
 		expect(sortie).toContain('  - refusé : 4 (refuse-par-payload : email)')
@@ -329,14 +329,14 @@ describe('Critère 4 : même email sans décision, arrêt et rapport par identif
 	test('sans table de décision, l’import s’arrête avant toute écriture et liste le groupe par identifiants', async () => {
 		const avant = await empreinteDeLaSource()
 
-		const rapport = await importerSurLeBanc('reel', { decisions: AUCUNE_DECISION })
+		const rapport = await importerSurLeBanc('real', { decisions: NO_DECISION })
 
-		expect(rapport.arret).toEqual({
-			emailsPartages: [[9, 10, 11, 12]],
-			profilsDeComptesEcartes: [],
-			profilsSansCompte: [],
+		expect(rapport.halt).toEqual({
+			sharedEmails: [[9, 10, 11, 12]],
+			profilesOfExcludedAccounts: [],
+			profilesWithoutAccount: [],
 		})
-		expect(rapport.parite).toBeNull()
+		expect(rapport.parity).toBeNull()
 		expect(await comptesDeLaCible()).toEqual([])
 		const payload = await payloadDeTest()
 		expect((await payload.count({ collection: 'talents', overrideAccess: true })).totalDocs).toBe(0)
@@ -344,7 +344,7 @@ describe('Critère 4 : même email sans décision, arrêt et rapport par identif
 	})
 
 	test('la commande sans table sort en 3, nomme le groupe par identifiants, et ne dit aucun email', async () => {
-		const { code, sortie } = await commandeDImport(['--reel'])
+		const { code, sortie } = await commandeDImport(['--real'])
 
 		expect(code).toBe(3)
 		expect(sortie).toContain('Import arrêté avant toute écriture')
@@ -355,26 +355,26 @@ describe('Critère 4 : même email sans décision, arrêt et rapport par identif
 
 	test('avec la table, seul le compte retenu est repris, quel qu’il soit', async () => {
 		// Account 9 is set aside this time: the table says what becomes of its profile, 28.
-		const rapport = await importerSurLeBanc('reel', {
-			decisions: { emailsPartages: [{ comptes: [12, 11, 10, 9], retenu: 11 }], profilsEcartes: [28] },
+		const rapport = await importerSurLeBanc('real', {
+			decisions: { sharedEmails: [{ accounts: [12, 11, 10, 9], kept: 11 }], excludedProfiles: [28] },
 		})
 
 		const groupe = (await comptesDeLaCible()).filter(({ strapiId }) => [9, 10, 11, 12].includes(Number(strapiId)))
 		expect(groupe.map(({ strapiId }) => strapiId)).toEqual([11])
-		expect(rapport.collections.profiles?.ecartes).toEqual([28])
+		expect(rapport.collections.profiles?.excluded).toEqual([28])
 	})
 
 	test('une décision qui ne nomme pas exactement le groupe ne vaut pas : l’import s’arrête', async () => {
-		const rapport = await importerSurLeBanc('reel', {
-			decisions: { emailsPartages: [{ comptes: [9, 10, 11], retenu: 9 }], profilsEcartes: [] },
+		const rapport = await importerSurLeBanc('real', {
+			decisions: { sharedEmails: [{ accounts: [9, 10, 11], kept: 9 }], excludedProfiles: [] },
 		})
 
-		expect(rapport.arret).toEqual({
-			emailsPartages: [[9, 10, 11, 12]],
-			profilsDeComptesEcartes: [],
-			profilsSansCompte: [],
+		expect(rapport.halt).toEqual({
+			sharedEmails: [[9, 10, 11, 12]],
+			profilesOfExcludedAccounts: [],
+			profilesWithoutAccount: [],
 		})
-		expect(rapport.decisionsSansObjet).toBe(1)
+		expect(rapport.pointlessDecisions).toBe(1)
 		expect(await comptesDeLaCible()).toEqual([])
 	})
 
@@ -382,9 +382,9 @@ describe('Critère 4 : même email sans décision, arrêt et rapport par identif
 		const dossier = mkdtempSync(path.join(tmpdir(), 'decisions-import-'))
 		try {
 			const fichier = path.join(dossier, 'decisions.json')
-			writeFileSync(fichier, JSON.stringify({ emailsPartages: [{ comptes: [9, 10, 11, 12], retenu: 13 }] }))
+			writeFileSync(fichier, JSON.stringify({ sharedEmails: [{ accounts: [9, 10, 11, 12], kept: 13 }] }))
 
-			const { code, sortie } = await commandeDImport(['--reel', '--decisions', fichier])
+			const { code, sortie } = await commandeDImport(['--real', '--decisions', fichier])
 
 			expect(code).toBe(1)
 			expect(sortie).toContain('La table de décision est refusée')
@@ -402,10 +402,10 @@ describe('Critère 5 : second passage, 0 création, 0 mise à jour', () => {
 
 		const second = await importerSurLeBanc()
 
-		expect(second.collections.pros).toMatchObject({ crees: 0, modifies: 0, inchanges: 14, refuses: [] })
-		expect(second.collections.talents).toMatchObject({ crees: 0, modifies: 0 })
+		expect(second.collections.pros).toMatchObject({ created: 0, updated: 0, unchanged: 14, refused: [] })
+		expect(second.collections.talents).toMatchObject({ created: 0, updated: 0 })
 		expect(await comptesDeLaCible()).toEqual(cible)
-		expect(second.source.inchangee).toBe(true)
+		expect(second.source.unchanged).toBe(true)
 	})
 
 	test('un email changé à la source est mis à jour une fois, sans toucher au mot de passe, puis plus rien', async () => {
@@ -420,10 +420,10 @@ describe('Critère 5 : second passage, 0 création, 0 mise à jour', () => {
 		const apresChangement = await importerSurLeBanc()
 		const troisieme = await importerSurLeBanc()
 
-		expect(apresChangement.collections.pros).toMatchObject({ crees: 0, modifies: 1, inchanges: 13 })
+		expect(apresChangement.collections.pros).toMatchObject({ created: 0, updated: 1, unchanged: 13 })
 		const apres = (await comptesDeLaCible()).find(({ strapiId }) => strapiId === 4)
 		expect(apres).toMatchObject({ email: 'camille.b@example.test', updatedAt: '2026-10-02T10:00:00.000Z' })
 		expect([apres?.hash, apres?.salt]).toEqual([avant?.hash, avant?.salt])
-		expect(troisieme.collections.pros).toMatchObject({ crees: 0, modifies: 0, inchanges: 14 })
+		expect(troisieme.collections.pros).toMatchObject({ created: 0, updated: 0, unchanged: 14 })
 	})
 })

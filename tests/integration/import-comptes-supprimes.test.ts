@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
-import { ImportRefuse } from '../../scripts/migration/import/cible'
-import { codeDeSortie } from '../../scripts/migration/import/rapport'
+import { exitCode } from '../../scripts/migration/import/report'
+import { ImportRefuse } from '../../scripts/migration/import/target'
 import { deleteAccountAndDependents } from '../../src/lib/account/deletion'
 import { importerSurLeBanc } from '../outils/import'
 import { seConnecter } from '../outils/parcours-herites'
@@ -12,7 +12,7 @@ import { COMPTES_DE_FIXTURE, creerLaSourceStrapi, effacerLaSourceStrapi } from '
  * Ticket 227: a rerun never brings back an account its owner deleted in the v3, nor its profile with
  * the phone and the email it showed. The deletion leaves its identifier on the old site in
  * `deleted-accounts`, which the journal purge (90 days) does not touch; the import reads it. On a target
- * in service (`--cible-en-service`) the profiles the target holds are left as they are, too.
+ * in service (`--target-in-service`) the profiles the target holds are left as they are, too.
  */
 
 const LOCAL = COMPTES_DE_FIXTURE.find(({ provider }) => provider === 'local') ?? COMPTES_DE_FIXTURE[0]
@@ -61,16 +61,16 @@ describe('Sur une cible en service, un profil déjà repris reste tel que la maq
 		const avant = await profils()
 		expect(avant.find(({ id }) => id === profil.id)?.publicContact).toBe(false)
 
-		const rapport = await importerSurLeBanc('reel', { cibleEnService: true })
+		const rapport = await importerSurLeBanc('real', { targetInService: true })
 
-		expect(rapport.collections.profiles).toMatchObject({ crees: 0, modifies: 0, refuses: [] })
-		expect(codeDeSortie(rapport)).toBe(0)
+		expect(rapport.collections.profiles).toMatchObject({ created: 0, updated: 0, refused: [] })
+		expect(exitCode(rapport)).toBe(0)
 		const apres = await profils()
 		expect(apres).toEqual(avant)
 		expect(apres.find(({ id }) => id === profil.id)).toMatchObject({ publicContact: false })
 		// Without the option the run, which follows the source, would open them again.
-		const sansOption = await importerSurLeBanc('a-blanc')
-		expect(sansOption.collections.profiles?.modifies).toBeGreaterThan(0)
+		const sansOption = await importerSurLeBanc('dry-run')
+		expect(sansOption.collections.profiles?.updated).toBeGreaterThan(0)
 	}, 90_000)
 })
 
@@ -102,7 +102,7 @@ describe('Un compte supprimé dans la v3 ne revient pas à un rejeu (ticket 227)
 		const avantComptes = await comptes()
 		const avantProfils = await profils()
 
-		for (const mode of ['a-blanc', 'reel'] as const) {
+		for (const mode of ['dry-run', 'real'] as const) {
 			const refus = await importerSurLeBanc(mode).catch((erreur: unknown) => erreur)
 			expect(refus).toBeInstanceOf(ImportRefuse)
 			const message = (refus as ImportRefuse).message
@@ -116,19 +116,19 @@ describe('Un compte supprimé dans la v3 ne revient pas à un rejeu (ticket 227)
 		expect(avantComptes.some(({ strapiId }) => strapiId === LOCAL?.strapiId)).toBe(false)
 	}, 60_000)
 
-	test('avec --cible-en-service, ni le compte ni son profil ne sont recréés ; le rapport le dit, le code de sortie est 0', async () => {
-		const rapport = await importerSurLeBanc('reel', { cibleEnService: true })
+	test('avec --target-in-service, ni le compte ni son profil ne sont recréés ; le rapport le dit, le code de sortie est 0', async () => {
+		const rapport = await importerSurLeBanc('real', { targetInService: true })
 
 		expect(rapport.collections.pros).toMatchObject({
-			crees: 0,
-			modifies: 0,
-			refuses: [],
-			supprimesDansLaV3: [LOCAL?.strapiId],
+			created: 0,
+			updated: 0,
+			refused: [],
+			deletedInV3: [LOCAL?.strapiId],
 		})
-		expect(rapport.collections.profiles).toMatchObject({ crees: 0, modifies: 0, refuses: [] })
-		expect(rapport.parite?.pros).toMatchObject({ differents: [], manquants: [], enTrop: [] })
-		expect(rapport.parite?.profiles).toMatchObject({ differents: [], manquants: [], enTrop: [] })
-		expect(codeDeSortie(rapport)).toBe(0)
+		expect(rapport.collections.profiles).toMatchObject({ created: 0, updated: 0, refused: [] })
+		expect(rapport.parity?.pros).toMatchObject({ different: [], missing: [], extra: [] })
+		expect(rapport.parity?.profiles).toMatchObject({ different: [], missing: [], extra: [] })
+		expect(exitCode(rapport)).toBe(0)
 		expect((await comptes()).some(({ strapiId }) => strapiId === LOCAL?.strapiId)).toBe(false)
 		expect((await profils()).some(({ strapiId }) => strapiId === profilSupprime)).toBe(false)
 	}, 60_000)

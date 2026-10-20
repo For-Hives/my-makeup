@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
-import { ImportRefuse } from '../../scripts/migration/import/cible'
-import { codeDeSortie, type Rapport } from '../../scripts/migration/import/rapport'
+import { exitCode, type Report } from '../../scripts/migration/import/report'
+import { ImportRefuse } from '../../scripts/migration/import/target'
 import { DATE_DE_BASCULE_DU_BANC } from '../outils/banc'
 import { commandeDImport, FICHIER_DES_DECISIONS_DU_BANC, importerSurLeBanc } from '../outils/import'
 import { seConnecter } from '../outils/parcours-herites'
@@ -16,7 +16,7 @@ import {
 /**
  * Ticket 227: a run of the import does not undo what the v3 wrote. The date of consent a profile
  * already holds is kept by a run with another date of the switch; a target a makeup artist has signed
- * in to is refused before any write, unless the run says `--cible-en-service`, and then the accounts
+ * in to is refused before any write, unless the run says `--target-in-service`, and then the accounts
  * it holds are left as they are (docs/migration/IMPORT.md, « Jusqu'à la bascule seulement »).
  *
  * One import for the file; the tests follow one another on the same target.
@@ -56,7 +56,7 @@ const compteDeFixture = async () => {
 	return compte
 }
 
-let premier: Rapport
+let premier: Report
 let sourceAvant: string
 
 beforeAll(async () => {
@@ -80,20 +80,20 @@ describe('Un second passage avec une autre date de bascule garde la date de cons
 		expect(affichent.length).toBeGreaterThan(0)
 		for (const profil of affichent) expect(profil.consentedAt).toBe(DATE_DE_BASCULE_DU_BANC)
 
-		const second = await importerSurLeBanc('reel', { consentiLe: AUTRE_DATE })
+		const second = await importerSurLeBanc('real', { consentDate: AUTRE_DATE })
 
-		expect(second.collections.profiles).toMatchObject({ crees: 0, modifies: 0, refuses: [] })
-		expect(second.collections.profiles?.consentementsGardes).toEqual(
+		expect(second.collections.profiles).toMatchObject({ created: 0, updated: 0, refused: [] })
+		expect(second.collections.profiles?.keptConsents).toEqual(
 			affichent.map(({ strapiId }) => Number(strapiId)).sort((a, b) => a - b)
 		)
 		// Not an unexplained difference: the parity is complete and the exit code is 0.
-		expect(second.parite?.profiles).toMatchObject({ differents: [], manquants: [], enTrop: [] })
-		expect(codeDeSortie(second)).toBe(0)
+		expect(second.parity?.profiles).toMatchObject({ different: [], missing: [], extra: [] })
+		expect(exitCode(second)).toBe(0)
 		expect(await profils()).toEqual(avant)
 		for (const profil of await profils())
 			if (profil.publicContact === true) expect(profil.consentedAt).toBe(DATE_DE_BASCULE_DU_BANC)
 		// The same date again: nothing to count.
-		expect((await importerSurLeBanc()).collections.profiles?.consentementsGardes).toEqual([])
+		expect((await importerSurLeBanc()).collections.profiles?.keptConsents).toEqual([])
 	}, 60_000)
 })
 
@@ -101,8 +101,8 @@ describe('Un import contre une v3 en service est refusé avant toute écriture (
 	test('avant toute connexion, un second passage écrit 0 document et n’est pas refusé', async () => {
 		const second = await importerSurLeBanc()
 
-		expect(second.collections.pros).toMatchObject({ crees: 0, modifies: 0, refuses: [] })
-		expect(premier.collections.pros?.crees).toBeGreaterThan(0)
+		expect(second.collections.pros).toMatchObject({ created: 0, updated: 0, refused: [] })
+		expect(premier.collections.pros?.created).toBeGreaterThan(0)
 	})
 
 	test('une connexion réussie dans la v3 efface le hash, et le passage suivant est refusé, à blanc comme en réel', async () => {
@@ -122,13 +122,13 @@ describe('Un import contre une v3 en service est refusé avant toute écriture (
 		const avantComptes = await comptes()
 		const avantProfils = await profils()
 
-		for (const mode of ['a-blanc', 'reel'] as const) {
+		for (const mode of ['dry-run', 'real'] as const) {
 			const refus = await importerSurLeBanc(mode).catch((erreur: unknown) => erreur)
 			expect(refus).toBeInstanceOf(ImportRefuse)
 			const message = (refus as ImportRefuse).message
 			expect(message).toContain('déjà utilisée par la v3')
 			expect(message).toContain('Rien n’est écrit')
-			expect(message).toContain('--cible-en-service')
+			expect(message).toContain('--target-in-service')
 			expect(message).not.toMatch(/\$2[aby]\$|@/)
 		}
 
@@ -137,12 +137,12 @@ describe('Un import contre une v3 en service est refusé avant toute écriture (
 		expect(await profils()).toEqual(avantProfils)
 		expect((await empreinteDeLaSource()).empreinte).toBe(sourceAvant)
 		// The command itself says it and exits with 1.
-		const commande = await commandeDImport(['--reel', '--decisions', FICHIER_DES_DECISIONS_DU_BANC])
+		const commande = await commandeDImport(['--real', '--decisions', FICHIER_DES_DECISIONS_DU_BANC])
 		expect(commande.code).toBe(1)
-		expect(commande.sortie).toContain('--cible-en-service')
+		expect(commande.sortie).toContain('--target-in-service')
 	}, 90_000)
 
-	test('avec --cible-en-service, il passe sans réécrire le hash effacé ni l’email changé dans la v3', async () => {
+	test('avec --target-in-service, il passe sans réécrire le hash effacé ni l’email changé dans la v3', async () => {
 		const payload = await payloadDeTest()
 		const compte = await compteDeFixture()
 		// Written below Payload's hooks, as a change of email made in the v3 would be stored.
@@ -155,19 +155,19 @@ describe('Un import contre une v3 en service est refusé avant toute écriture (
 		expect(avant.legacyBcrypt ?? null).toBeNull()
 		expect(avant.email).toBe('nouvelle.adresse.fictive@example.test')
 
-		const rapport = await importerSurLeBanc('reel', { cibleEnService: true })
+		const rapport = await importerSurLeBanc('real', { targetInService: true })
 
-		expect(rapport.collections.pros).toMatchObject({ crees: 0, modifies: 0, refuses: [] })
-		expect(codeDeSortie(rapport)).toBe(0)
+		expect(rapport.collections.pros).toMatchObject({ created: 0, updated: 0, refused: [] })
+		expect(exitCode(rapport)).toBe(0)
 		const apres = await compteDeFixture()
 		expect(apres.legacyBcrypt ?? null).toBeNull()
 		expect(apres.email).toBe('nouvelle.adresse.fictive@example.test')
 		// A profile of the source is still compared and kept equal.
-		expect(rapport.collections.profiles).toMatchObject({ crees: 0, modifies: 0, refuses: [] })
-		expect(rapport.parite?.pros).toMatchObject({ differents: [], manquants: [], enTrop: [] })
+		expect(rapport.collections.profiles).toMatchObject({ created: 0, updated: 0, refused: [] })
+		expect(rapport.parity?.pros).toMatchObject({ different: [], missing: [], extra: [] })
 		const commande = await commandeDImport([
-			'--reel',
-			'--cible-en-service',
+			'--real',
+			'--target-in-service',
 			'--decisions',
 			FICHIER_DES_DECISIONS_DU_BANC,
 		])
@@ -179,7 +179,7 @@ describe('Un import contre une v3 en service est refusé avant toute écriture (
 		await payload.delete({ collection: 'auth-events', where: { id: { exists: true } }, overrideAccess: true })
 		expect((await payload.count({ collection: 'auth-events', overrideAccess: true })).totalDocs).toBe(0)
 
-		const refus = await importerSurLeBanc('a-blanc').catch((erreur: unknown) => erreur)
+		const refus = await importerSurLeBanc('dry-run').catch((erreur: unknown) => erreur)
 
 		expect(refus).toBeInstanceOf(ImportRefuse)
 		expect((refus as ImportRefuse).message).toContain('dont le hash hérité a déjà été effacé')
@@ -193,7 +193,7 @@ describe('Un import contre une v3 en service est refusé avant toute écriture (
 		expect((await payload.count({ collection: 'auth-events', overrideAccess: true })).totalDocs).toBe(0)
 		expect((await compteDeFixture()).lastSignInAt).toBeTruthy()
 
-		const refus = await importerSurLeBanc('a-blanc').catch((erreur: unknown) => erreur)
+		const refus = await importerSurLeBanc('dry-run').catch((erreur: unknown) => erreur)
 
 		expect(refus).toBeInstanceOf(ImportRefuse)
 		const message = (refus as ImportRefuse).message

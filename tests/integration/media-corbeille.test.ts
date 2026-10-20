@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import { ONE_AT_A_TIME_MESSAGE, STORAGE_OUTAGE_MESSAGE } from '@/collections/trash'
-import { CONTEXTE_IMPORT } from '@/lib/contexte-import'
 import { serverEnv } from '@/lib/env'
+import { IMPORT_CONTEXT } from '@/lib/import-context'
 import { createObjectStorage } from '@/lib/storage'
 import { restore } from '@/lib/trash'
 import type { Media } from '@/payload-types'
@@ -418,7 +418,7 @@ describe('Avec le contexte d’import, rien n’est déplacé', () => {
 			collection: 'profiles',
 			id: profil.id,
 			data: { mainPicture: nouvelle.id },
-			context: CONTEXTE_IMPORT,
+			context: IMPORT_CONTEXT,
 		})
 
 		expect((await profilDe(compte)).mainPicture).toBe(nouvelle.id)
@@ -433,7 +433,7 @@ describe('Avec le contexte d’import, rien n’est déplacé', () => {
 		const media = await envoyer(compte)
 		const avant = espion.journal.length
 
-		await payload.delete({ collection: 'media', id: media.id, context: CONTEXTE_IMPORT })
+		await payload.delete({ collection: 'media', id: media.id, context: IMPORT_CONTEXT })
 
 		expect(await stocke(media.id)).toBeNull()
 		expect(await octets(cle(media))).toBeDefined()
@@ -446,7 +446,7 @@ describe('Avec le contexte d’import, rien n’est déplacé', () => {
 		const media = await envoyer(compte)
 		const avant = espion.journal.length
 
-		await payload.delete({ collection: 'media', where: { id: { equals: media.id } }, context: CONTEXTE_IMPORT })
+		await payload.delete({ collection: 'media', where: { id: { equals: media.id } }, context: IMPORT_CONTEXT })
 
 		expect(await stocke(media.id)).toBeNull()
 		expect(await octets(cle(media))).toBeDefined()

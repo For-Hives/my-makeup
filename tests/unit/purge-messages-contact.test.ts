@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
-import { importEnCours, marquerUnImportEnCours } from '@/lib/contexte-import'
+import { importInProgress, markImportInProgress } from '@/lib/import-context'
 import { contactPurgeThreshold, purgeContactMessages } from '@/lib/tasks/contact-messages'
 import { DAILY_TASKS, runDailyTasks } from '@/lib/tasks/daily'
 
@@ -50,13 +50,13 @@ describe('la tâche', () => {
 
 	test('elle ne fait rien pendant un import, et reprend quand il est fini', async () => {
 		const { payload, appels } = payloadEspion()
-		const fin = marquerUnImportEnCours()
-		expect(importEnCours()).toBe(true)
+		const fin = markImportInProgress()
+		expect(importInProgress()).toBe(true)
 		expect(await purgeContactMessages.executer(payload, MOMENT)).toBe(0)
 		expect(appels).toHaveLength(0)
 		fin()
 		fin() // ending twice does not end another import
-		expect(importEnCours()).toBe(false)
+		expect(importInProgress()).toBe(false)
 		expect(await purgeContactMessages.executer(payload, MOMENT)).toBe(2)
 	})
 
@@ -74,15 +74,15 @@ describe('l’import marque son passage (importer lui-même)', () => {
 		const vu: { pendant: boolean | null } = { pendant: null }
 		const source = {
 			lire: async () => {
-				vu.pendant = importEnCours()
+				vu.pendant = importInProgress()
 				throw new Error('stop')
 			},
 		}
-		const options = { payload: {}, source, mode: 'essai', cible: 'locale' } as unknown as Parameters<typeof importer>[0]
+		const options = { payload: {}, source, mode: 'essai', cible: 'local' } as unknown as Parameters<typeof importer>[0]
 
 		await expect(importer(options)).rejects.toThrow('stop')
 		expect(vu.pendant).toBe(true)
-		expect(importEnCours()).toBe(false)
+		expect(importInProgress()).toBe(false)
 	})
 })
 

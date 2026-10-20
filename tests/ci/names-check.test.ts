@@ -29,7 +29,7 @@ describe('the names check in the CI', () => {
 	})
 
 	test('no new job and no new required check: the step lives in qualite', () => {
-		const required = JSON.parse(readFileSync(path.join(ROOT, 'ci/checks-requis.json'), 'utf8')) as unknown
+		const required = JSON.parse(readFileSync(path.join(ROOT, 'ci/required-checks.json'), 'utf8')) as unknown
 		expect(JSON.stringify(required)).not.toMatch(/names|noms/i)
 	})
 })

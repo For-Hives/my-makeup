@@ -8,7 +8,7 @@ import { adminOnly, hiddenExceptAdmin } from '../lib/access'
  * - One row for each deleted account that came from the old site: its identifier on the old site and the
  *   day of the deletion, nothing else. No email, no name, no token: a deleted account leaves nothing
  *   of her behind but the fact that she asked to be forgotten.
- * - The import reads it (scripts/migration/import/garde-bascule.ts) so that a rerun never brings her
+ * - The import reads it (scripts/migration/import/cutover-guard.ts) so that a rerun never brings her
  *   account and her profile back from the source, which still holds them.
  * - The server writes it, in the transaction of the deletion (src/lib/account/deletion.ts). Only an
  *   admin reads it, and nobody writes it through an API, an admin included. It is never purged.

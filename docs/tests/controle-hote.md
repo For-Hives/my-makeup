@@ -7,18 +7,18 @@ Les adresses et les réponses attendues sont celles de la table des URL gelées 
 ## Lancer
 
 ```sh
-CONTROLE_HOTE_CIBLE=http://127.0.0.1:3100 bun run bascule:controle   # le banc, un build de ce poste
-CONTROLE_HOTE_CIBLE=https://my-makeup.fr bun run bascule:controle     # le site, lectures seules
-CONTROLE_HOTE_ACCES_UTILISATEUR=… CONTROLE_HOTE_ACCES_MOT_DE_PASSE=… \
-  CONTROLE_HOTE_CIBLE=https://v3.my-makeup.fr bun run bascule:controle   # l'hôte temporaire, avant l'échange des domaines
+HOST_CHECK_TARGET=http://127.0.0.1:3100 bun run cutover:check   # le banc, un build de ce poste
+HOST_CHECK_TARGET=https://my-makeup.fr bun run cutover:check     # le site, lectures seules
+HOST_CHECK_ACCESS_USER=… HOST_CHECK_ACCESS_PASSWORD=… \
+  HOST_CHECK_TARGET=https://v3.my-makeup.fr bun run cutover:check   # l'hôte temporaire, avant l'échange des domaines
 ```
 
 | Variable | Rôle |
 |---|---|
-| `CONTROLE_HOTE_CIBLE` | Obligatoire. Une origine seule, et un hôte de **production** : `https://my-makeup.fr` ou `https://v3.my-makeup.fr` (l'hôte temporaire de la production, avant l'échange des domaines), ou `http://` sur ce poste (`localhost`, `127.0.0.1`, `::1`) pour le banc. Tout autre hôte, `www` et l'ancienne préprod compris, est refusé avant toute requête. Un chemin, un paramètre ou un identifiant est refusé |
-| `CONTROLE_HOTE_ACCES_UTILISATEUR`, `CONTROLE_HOTE_ACCES_MOT_DE_PASSE` | Facultatives : l'accès protégé de l'hôte temporaire, quand il est actif. Les deux ensemble ou aucune ; refusées pour tout autre hôte. Ils ne partent que vers `https://v3.my-makeup.fr`, dans un seul en-tête, jamais vers `my-makeup.fr`, et ne s'écrivent jamais |
+| `HOST_CHECK_TARGET` | Obligatoire. Une origine seule, et un hôte de **production** : `https://my-makeup.fr` ou `https://v3.my-makeup.fr` (l'hôte temporaire de la production, avant l'échange des domaines), ou `http://` sur ce poste (`localhost`, `127.0.0.1`, `::1`) pour le banc. Tout autre hôte, `www` et l'ancienne préprod compris, est refusé avant toute requête. Un chemin, un paramètre ou un identifiant est refusé |
+| `HOST_CHECK_ACCESS_USER`, `HOST_CHECK_ACCESS_PASSWORD` | Facultatives : l'accès protégé de l'hôte temporaire, quand il est actif. Les deux ensemble ou aucune ; refusées pour tout autre hôte. Ils ne partent que vers `https://v3.my-makeup.fr`, dans un seul en-tête, jamais vers `my-makeup.fr`, et ne s'écrivent jamais |
 | `INDEXNOW_KEY` | Facultative. La clé IndexNow de l'hôte, pour lire son fichier de clé. Sans elle, cette adresse n'est pas lue et le rapport le dit |
-| `CONTROLE_HOTE_SORTIE` | Facultative. Un fichier où écrire aussi le rapport, en JSON |
+| `HOST_CHECK_OUTPUT` | Facultative. Un fichier où écrire aussi le rapport, en JSON |
 
 La commande ne lit aucun fichier `.env`.
 
@@ -43,7 +43,7 @@ Une redirection n'est jamais suivie : la première réponse est lue, puis sa des
 
 ## La garde
 
-Toute requête passe par `garder()` (`scripts/bascule/garde-hote.ts`), qui laisse passer une lecture et rien d'autre :
+Toute requête passe par `garder()` (`scripts/cutover/host-guard.ts`), qui laisse passer une lecture et rien d'autre :
 
 - **GET seulement, sans corps.** Toute autre méthode est interrompue avant de quitter le poste.
 - **La cible seulement.** Une adresse s'écrit après l'origine telle quelle : `//x` est un chemin du site, jamais un autre hôte.

@@ -7,7 +7,7 @@ import { type Endpoint, Forbidden } from 'payload'
  * account through REST, even on an empty database.
  *
  * - `pros`: a makeup artist never opens the admin panel, whose first screen the route serves.
- * - `admins`: the first admin is created by the operating procedure (`bun run admin:creer`,
+ * - `admins`: the first admin is created by the operating procedure (`bun run admin:create`,
  *   README), which reads the password at the keyboard. The screen of the first account stays
  *   closed to the public, who would otherwise race the owner to a new database.
  *

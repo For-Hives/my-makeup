@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { SQL } from 'bun'
-import { TYPE_ARTICLE } from '../../scripts/migration/import/medias'
-import type { Rapport } from '../../scripts/migration/import/rapport'
+import { TYPE_ARTICLE } from '../../scripts/migration/import/media'
+import type { Report } from '../../scripts/migration/import/report'
 import type { Article, Media } from '../../src/payload-types'
 import { importerSurLeBanc } from '../outils/import'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
@@ -87,7 +87,7 @@ async function articlesDeLaCible(): Promise<Article[]> {
 	return docs
 }
 
-let premier: Rapport
+let premier: Report
 
 beforeAll(async () => {
 	await viderLaBase()
@@ -126,8 +126,8 @@ describe('Les articles sont repris à l’identique, brouillons compris (ticket 
 		const cible = await articlesDeLaCible()
 
 		expect(cible.map(({ strapiId }) => strapiId)).toEqual([1, 7, BROUILLON])
-		expect(premier.collections.articles).toMatchObject({ source: 3, crees: 3, modifies: 0, refuses: [] })
-		expect(premier.parite?.articles).toMatchObject({ attendus: 3, egaux: 3, differents: [], manquants: [], enTrop: [] })
+		expect(premier.collections.articles).toMatchObject({ source: 3, created: 3, updated: 0, refused: [] })
+		expect(premier.parity?.articles).toMatchObject({ expected: 3, equal: 3, different: [], missing: [], extra: [] })
 		const octets = (texte: unknown) => Buffer.from(String(texte), 'utf8')
 		for (const article of cible) {
 			const ligne = ARTICLES_DE_LA_SOURCE.find(({ id }) => id === article.strapiId)
@@ -173,8 +173,8 @@ describe('Les articles sont repris à l’identique, brouillons compris (ticket 
 		expect(image).toMatchObject({ owner: null, mimeType: 'image/png', url: `${source.medias}/${CLE_DE_L_IMAGE}` })
 		expect(cible.find(({ strapiId }) => strapiId === 1)?.gallery).toEqual([image?.id ?? -1])
 		expect(cible.find(({ strapiId }) => strapiId === 7)?.gallery ?? []).toEqual([])
-		expect(premier.collections.articles?.photosNonReprises).toEqual([{ entree: 7, fichier: PDF }])
-		expect(premier.collections.media?.fichiers?.nonAdoptes).toContainEqual({ fichier: PDF, motif: 'pas-une-image' })
+		expect(premier.collections.articles?.photosNotCarriedOver).toEqual([{ entry: 7, file: PDF }])
+		expect(premier.collections.media?.files?.notAdopted).toContainEqual({ file: PDF, reason: 'pas-une-image' })
 	})
 
 	test('second passage : 0 création, 0 mise à jour', async () => {
@@ -182,7 +182,7 @@ describe('Les articles sont repris à l’identique, brouillons compris (ticket 
 
 		const second = await importerSurLeBanc()
 
-		expect(second.collections.articles).toMatchObject({ crees: 0, modifies: 0, inchanges: 3, refuses: [] })
+		expect(second.collections.articles).toMatchObject({ created: 0, updated: 0, unchanged: 3, refused: [] })
 		expect(await articlesDeLaCible()).toEqual(avant)
 	})
 })

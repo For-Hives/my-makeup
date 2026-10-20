@@ -3,8 +3,8 @@
  * source of the bench (docs/tests/source-strapi.md) and writes into the bench database.
  *
  *   await importerSurLeBanc()            a real run, in this process, with the Payload of the tests
- *   await importerSurLeBanc('a-blanc')   a dry run
- *   await commandeDImport(['--reel'])    the command itself, as a person runs it
+ *   await importerSurLeBanc('dry-run')   a dry run
+ *   await commandeDImport(['--real'])    the command itself, as a person runs it
  *
  * Both read the kept answers of the referential of the communes for the fake source
  * (tests/fixtures/import/referentiel-du-banc.json), offline: no test calls the Internet. A test
@@ -16,11 +16,11 @@
 
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import { type Decisions, lireLesDecisions } from '../../scripts/migration/import/decisions'
-import { importer, type OptionsDImport } from '../../scripts/migration/import/importer'
-import type { Mode, Rapport } from '../../scripts/migration/import/rapport'
-import { lireLesReponses, type ReferentielGarde, referentielGarde } from '../../scripts/migration/import/referentiel'
-import { ouvrirLaSourceBun } from '../../scripts/migration/import/source-bun'
+import { type Decisions, readDecisions } from '../../scripts/migration/import/decisions'
+import { importer, type RunOptions } from '../../scripts/migration/import/importer'
+import { type KeptReference, keptReference, readAnswers } from '../../scripts/migration/import/reference'
+import type { Mode, Report } from '../../scripts/migration/import/report'
+import { openSourceBun } from '../../scripts/migration/import/source-bun'
 import { DATE_DE_BASCULE_DU_BANC, RACINE } from './banc'
 import { payloadDeTest } from './payload-test'
 import { sourceDuBanc } from './source-strapi'
@@ -31,7 +31,7 @@ import { sourceDuBanc } from './source-strapi'
  */
 export const FICHIER_DES_DECISIONS_DU_BANC = 'tests/fixtures/import/decisions-du-banc.json'
 
-export const DECISIONS_DU_BANC: Decisions = lireLesDecisions(
+export const DECISIONS_DU_BANC: Decisions = readDecisions(
 	readFileSync(path.join(RACINE, FICHIER_DES_DECISIONS_DU_BANC), 'utf8')
 )
 
@@ -42,29 +42,29 @@ export const DECISIONS_DU_BANC: Decisions = lireLesDecisions(
 export const FICHIER_DU_REFERENTIEL_DU_BANC = 'tests/fixtures/import/referentiel-du-banc.json'
 
 /** The referential of the bench: its kept answers, offline. A question it does not keep stops the run. */
-export const referentielDuBanc = (): ReferentielGarde =>
-	referentielGarde(lireLesReponses(readFileSync(path.join(RACINE, FICHIER_DU_REFERENTIEL_DU_BANC), 'utf8')), null)
+export const referentielDuBanc = (): KeptReference =>
+	keptReference(readAnswers(readFileSync(path.join(RACINE, FICHIER_DU_REFERENTIEL_DU_BANC), 'utf8')), null)
 
 /**
  * Runs the import in this process, against the source and the database of the bench, with the
  * table of decisions and the referential of the bench unless the test gives others.
  */
 export async function importerSurLeBanc(
-	mode: Mode = 'reel',
-	options: Partial<Omit<OptionsDImport, 'payload' | 'source' | 'mode'>> = {}
-): Promise<Rapport> {
+	mode: Mode = 'real',
+	options: Partial<Omit<RunOptions, 'payload' | 'source' | 'mode'>> = {}
+): Promise<Report> {
 	const payload = await payloadDeTest()
-	const source = ouvrirLaSourceBun(sourceDuBanc().lecture)
+	const source = openSourceBun(sourceDuBanc().lecture)
 	try {
 		return await importer({
 			payload,
 			source,
 			mode,
-			cible: 'locale',
+			target: 'local',
 			decisions: DECISIONS_DU_BANC,
-			referentiel: referentielDuBanc(),
-			medias: { base: sourceDuBanc().medias },
-			consentiLe: DATE_DE_BASCULE_DU_BANC,
+			reference: referentielDuBanc(),
+			media: { base: sourceDuBanc().medias },
+			consentDate: DATE_DE_BASCULE_DU_BANC,
 			...options,
 		})
 	} finally {
@@ -81,8 +81,8 @@ export async function commandeDImport(
 	options: readonly string[],
 	environnement: Readonly<Record<string, string | undefined>> = process.env
 ): Promise<{ code: number; sortie: string }> {
-	const communes = options.includes('--communes') ? [] : ['--communes', FICHIER_DU_REFERENTIEL_DU_BANC, '--hors-ligne']
-	const bascule = options.includes('--consentement-le') ? [] : ['--consentement-le', DATE_DE_BASCULE_DU_BANC]
+	const communes = options.includes('--cities') ? [] : ['--cities', FICHIER_DU_REFERENTIEL_DU_BANC, '--offline']
+	const bascule = options.includes('--consent-date') ? [] : ['--consent-date', DATE_DE_BASCULE_DU_BANC]
 	const ligne = [process.execPath, '--no-env-file', 'scripts/migration/import.ts', ...options, ...communes, ...bascule]
 	const enfant = Bun.spawn(ligne, {
 		cwd: RACINE,

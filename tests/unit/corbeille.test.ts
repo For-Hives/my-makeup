@@ -10,7 +10,7 @@ import type {
 	Plugin,
 } from 'payload'
 import { ONE_AT_A_TIME_MESSAGE, oneAtATime, withoutPluginDeletion, withTrash } from '@/collections/trash'
-import { CONTEXTE_IMPORT } from '@/lib/contexte-import'
+import { IMPORT_CONTEXT } from '@/lib/import-context'
 import { copySource } from '@/lib/storage'
 import { isInTrash, moveToTrash, type ObjectStorage, objectKeys, restore, StorageOutage, trashKey } from '@/lib/trash'
 import { type CommandeS3, suppressionsSansCorbeille } from '../outils/espion-s3'
@@ -450,8 +450,8 @@ describe('Plusieurs médias ou profils à la fois : refusé avant toute écritur
 
 	test('sous le contexte d’import : passent aussi, l’import ne déplace rien', () => {
 		const args = { where: { id: { in: [1, 2] } } }
-		expect(operation('delete', args, CONTEXTE_IMPORT)).toBe(args as never)
-		expect(operation('update', args, CONTEXTE_IMPORT)).toBe(args as never)
+		expect(operation('delete', args, IMPORT_CONTEXT)).toBe(args as never)
+		expect(operation('update', args, IMPORT_CONTEXT)).toBe(args as never)
 	})
 })
 

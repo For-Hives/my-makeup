@@ -8,7 +8,7 @@ import type {
 	RequestContext,
 } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
-import { estUnImport } from '../lib/contexte-import'
+import { isImport } from '../lib/import-context'
 import { PUBLISHED_STATUS } from '../lib/profile/status'
 import { changeTargets, type PublicContent, type PublicState, type Targets } from '../lib/revalidate'
 import { changedUrls, keyIfSubmitAllowed, reportLater } from '../lib/seo/indexnow'
@@ -22,7 +22,7 @@ import { changedUrls, keyIfSubmitAllowed, reportLater } from '../lib/seo/indexno
  * - The public state is read from the stored row, before and after the write, in the transaction
  *   of the request: what the public is shown, whatever the request selected or may read. For an
  *   article or a talent, it is the published document, never a draft version saved over it.
- * - The import (src/lib/contexte-import.ts) refreshes nothing, and reads nothing for it.
+ * - The import (src/lib/import-context.ts) refreshes nothing, and reads nothing for it.
  * - Next can only take a revalidation inside one of its requests: the REST API, the admin panel, a
  *   Server Action. A write outside of one (a script, a test, a job) is saved, and the pages keep
  *   their cache until it expires.
@@ -151,12 +151,12 @@ export function refresh(contenu: PublicContent): RefreshHooks {
 	return {
 		avantEcriture: async ({ context, data, operation, originalDoc, req }) => {
 			const id = originalDoc?.id
-			if (estUnImport(context) || operation !== 'update' || id === undefined) return data
+			if (isImport(context) || operation !== 'update' || id === undefined) return data
 			keptStates(context).set(key(contenu, id), await readPublicState(req, contenu, id))
 			return data
 		},
 		apresEcriture: async ({ context, doc, operation, req }) => {
-			if (estUnImport(context)) return doc
+			if (isImport(context)) return doc
 			const before = operation === 'create' ? null : resume(context, contenu, doc.id)
 			const after = await readPublicState(req, contenu, doc.id)
 			revalidateChange(req, changeTargets(contenu, before, after))
@@ -164,11 +164,11 @@ export function refresh(contenu: PublicContent): RefreshHooks {
 			return doc
 		},
 		avantSuppression: async ({ context, id, req }) => {
-			if (estUnImport(context)) return
+			if (isImport(context)) return
 			keptStates(context).set(key(contenu, id), await readPublicState(req, contenu, id))
 		},
 		apresSuppression: ({ context, doc, id, req }) => {
-			if (estUnImport(context)) return doc
+			if (isImport(context)) return doc
 			const before = resume(context, contenu, id)
 			revalidateChange(req, changeTargets(contenu, before, null))
 			notifyEngines(req, contenu, before, null)

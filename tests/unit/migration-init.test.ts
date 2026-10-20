@@ -6,7 +6,7 @@ import { migrations } from '@/migrations'
 /**
  * The `init` migration (ticket 049), read as it is versioned: the first migration of the
  * repository, written from an empty schema, which only creates. Its SQL creates every table and
- * every column its snapshot declares: the snapshot is what `bun run schema:derive` compares the
+ * every column its snapshot declares: the snapshot is what `bun run schema:drift` compares the
  * collections with, the SQL is what the databases receive.
  *
  * That it builds the schema of the code on a real database, and plays again without effect, is

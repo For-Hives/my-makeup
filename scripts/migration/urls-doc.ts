@@ -43,7 +43,7 @@ export interface InventoryProfileCase {
 	final: number
 }
 
-export interface InventoryComplement {
+export interface InventoryAddendum {
 	/** Left out for the IndexNow key file: its address is the key. */
 	address?: string
 	/** null when the table does not freeze the address. */
@@ -64,7 +64,7 @@ export interface FrozenInventory {
 	/** The addresses made from a real profile, as numbers only. */
 	profiles: InventoryProfileCase[]
 	/** Technical addresses read by hand, outside the inventory tool. */
-	complements: InventoryComplement[]
+	complements: InventoryAddendum[]
 }
 
 export const FROZEN_INVENTORY: FrozenInventory = inventoryJson

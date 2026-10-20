@@ -11,14 +11,14 @@
  */
 
 /** One SQL query of the source, its rows. */
-export type Requete = <Ligne extends object = Record<string, unknown>>(
+export type Query = <Ligne extends object = Record<string, unknown>>(
 	texte: string,
 	parametres?: readonly unknown[]
 ) => Promise<Ligne[]>
 
 export interface Source {
 	/** Runs `travail` in one read-only transaction: every query of it sees the same snapshot. */
-	lire<T>(travail: (requete: Requete) => Promise<T>): Promise<T>
+	lire<T>(travail: (requete: Query) => Promise<T>): Promise<T>
 	fermer(): Promise<void>
 }
 
@@ -29,7 +29,7 @@ export const iso = (colonne: string): string => `to_char(${colonne}, 'YYYY-MM-DD
  * The tables the import reads, in the order it reads them. The fingerprint of the source covers
  * them: the import proves at each run that it changed none of them (plan 02, I43).
  */
-export const TABLES_LUES = [
+export const READ_TABLES = [
 	'up_users',
 	'files',
 	'files_related_morphs',
@@ -49,53 +49,53 @@ export const TABLES_LUES = [
 ] as const
 
 /** Columns never read, not even to fingerprint them: the one-time tokens of the accounts (SCHEMA.md, rule 4). */
-const COLONNES_JAMAIS_LUES: Readonly<Record<string, readonly string[]>> = {
+const NEVER_READ_COLUMNS: Readonly<Record<string, readonly string[]>> = {
 	up_users: ['reset_password_token', 'confirmation_token'],
 }
 
-export interface EmpreinteDeTable {
-	lignes: number
+export interface TableFingerprint {
+	rows: number
 	/** SHA-256 of the rows, computed by PostgreSQL: no value leaves the source. */
-	empreinte: string
+	fingerprint: string
 }
 
-export type EmpreinteDesTables = Record<string, EmpreinteDeTable>
+export type TablesFingerprint = Record<string, TableFingerprint>
 
 /** The entry of the fingerprint that stands for the large objects of the database. */
-export const GRANDS_OBJETS = 'pg_largeobject_metadata'
+export const LARGE_OBJECTS = 'pg_largeobject_metadata'
 
-const IDENTIFIANT = /^[a-z_][a-z0-9_]*$/
+const IDENTIFIER = /^[a-z_][a-z0-9_]*$/
 
 /**
  * The fingerprint of each table the import reads: its number of rows, and a SHA-256 of its rows,
  * each one serialised and hashed by PostgreSQL. Two fingerprints are equal when nothing changed.
  */
-export async function empreinteDesTables(
-	requete: Requete,
-	tables: readonly string[] = TABLES_LUES
-): Promise<EmpreinteDesTables> {
-	const empreintes: EmpreinteDesTables = {}
+export async function tablesFingerprint(
+	requete: Query,
+	tables: readonly string[] = READ_TABLES
+): Promise<TablesFingerprint> {
+	const fingerprints: TablesFingerprint = {}
 	for (const table of tables) {
-		if (!IDENTIFIANT.test(table)) throw new Error(`Nom de table refusé : ${table}.`)
-		const retirees = (COLONNES_JAMAIS_LUES[table] ?? []).map(colonne => ` - '${colonne}'`).join('')
-		const [ligne] = await requete<{ lignes: number; empreinte: string }>(
+		if (!IDENTIFIER.test(table)) throw new Error(`Nom de table refusé : ${table}.`)
+		const removed = (NEVER_READ_COLUMNS[table] ?? []).map(colonne => ` - '${colonne}'`).join('')
+		const [row] = await requete<{ lignes: number; empreinte: string }>(
 			`SELECT count(*)::int AS lignes,
 				coalesce(encode(sha256(convert_to(string_agg(h, E'\\n' ORDER BY h COLLATE "C"), 'UTF8')), 'hex'), '') AS empreinte
-			FROM (SELECT encode(sha256(convert_to((to_jsonb(t)${retirees})::text, 'UTF8')), 'hex') AS h FROM public."${table}" t) s`
+			FROM (SELECT encode(sha256(convert_to((to_jsonb(t)${removed})::text, 'UTF8')), 'hex') AS h FROM public."${table}" t) s`
 		)
-		empreintes[table] = { lignes: ligne?.lignes ?? 0, empreinte: ligne?.empreinte ?? '' }
+		fingerprints[table] = { rows: row?.lignes ?? 0, fingerprint: row?.empreinte ?? '' }
 	}
 	// Large objects live outside the tables: a role that could create one would change the source
 	// without a row moving. Their identifiers are fingerprinted like a table (ticket 227).
-	const [grandsObjets] = await requete<{ lignes: number; empreinte: string }>(
+	const [largeObjects] = await requete<{ lignes: number; empreinte: string }>(
 		`SELECT count(*)::int AS lignes,
 			coalesce(encode(sha256(convert_to(string_agg(oid::text, ',' ORDER BY oid), 'UTF8')), 'hex'), '') AS empreinte
 		FROM pg_catalog.pg_largeobject_metadata`
 	)
-	empreintes[GRANDS_OBJETS] = { lignes: grandsObjets?.lignes ?? 0, empreinte: grandsObjets?.empreinte ?? '' }
-	return empreintes
+	fingerprints[LARGE_OBJECTS] = { rows: largeObjects?.lignes ?? 0, fingerprint: largeObjects?.empreinte ?? '' }
+	return fingerprints
 }
 
 /** True when two fingerprints of the source say the same thing, table by table. */
-export const memesTables = (avant: EmpreinteDesTables, apres: EmpreinteDesTables): boolean =>
+export const sameTables = (avant: TablesFingerprint, apres: TablesFingerprint): boolean =>
 	JSON.stringify(Object.entries(avant).sort()) === JSON.stringify(Object.entries(apres).sort())

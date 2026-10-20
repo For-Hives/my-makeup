@@ -2,37 +2,31 @@ import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import type { SanitizedConfig } from 'payload'
-import { lireLesArguments } from '../../scripts/migration/import/arguments'
+import { readArguments, renamedOptionHint } from '../../scripts/migration/import/arguments'
 import {
-	configurationSansChangementDeSchema,
+	type Adapter,
+	documentsFingerprint,
+	type Existing,
+	type Expected,
+	errorCode,
+	InterruptedImport,
+	normalize,
+	parity,
+	parityComplete,
+	planActions,
+	unexpectedErrorMessage,
+	withoutUnexplainedGap,
+} from '../../scripts/migration/import/engine'
+import { checkAsText, checkExitCode, exitCode, type Report, reportAsText } from '../../scripts/migration/import/report'
+import { sameTables } from '../../scripts/migration/import/source'
+import { expectedTalent, expectedTalents, type TalentRow } from '../../scripts/migration/import/talents'
+import {
+	configurationWithoutSchemaChange,
 	ImportRefuse,
-	verifierLaBaseAttendue,
-	verifierLaCible,
-} from '../../scripts/migration/import/cible'
-import {
-	type Adaptateur,
-	type Attendu,
-	codeDeLErreur,
-	type Existant,
-	empreinteDesDocuments,
-	ImportInterrompu,
-	messageDUneErreurInattendue,
-	normaliser,
-	parite,
-	pariteComplete,
-	planifier,
-	sansEcartInexplique,
-} from '../../scripts/migration/import/moteur'
-import {
-	codeDeSortie,
-	codeDuControle,
-	controleEnTexte,
-	type Rapport,
-	rapportEnTexte,
-} from '../../scripts/migration/import/rapport'
-import { memesTables } from '../../scripts/migration/import/source'
-import { type LigneTalent, talentAttendu, talentsAttendus } from '../../scripts/migration/import/talents'
-import { CONTEXTE_IMPORT, estUnImport } from '../../src/lib/contexte-import'
+	verifyExpectedDatabase,
+	verifyTarget,
+} from '../../scripts/migration/import/target'
+import { IMPORT_CONTEXT, isImport } from '../../src/lib/import-context'
 
 /**
  * Ticket 024: the parts of the import that need no database. The runs themselves are in
@@ -42,9 +36,9 @@ import { CONTEXTE_IMPORT, estUnImport } from '../../src/lib/contexte-import'
 describe('la cible : une base de ce poste, ou une base distante que la commande nomme', () => {
 	test('une base locale est acceptée, avec ou sans drapeau', () => {
 		for (const hote of ['127.0.0.1:5443', 'localhost:5442', '[::1]:5432'])
-			expect(verifierLaCible(`postgres://u:p@${hote}/base`, { cibleDistante: false })).toBe('locale')
-		expect(verifierLaCible('postgres://u:p@127.0.0.1/base', { cibleDistante: true, baseAttendue: 'base' })).toBe(
-			'locale'
+			expect(verifyTarget(`postgres://u:p@${hote}/base`, { remoteTarget: false })).toBe('local')
+		expect(verifyTarget('postgres://u:p@127.0.0.1/base', { remoteTarget: true, expectedDatabase: 'base' })).toBe(
+			'local'
 		)
 	})
 
@@ -57,8 +51,8 @@ describe('la cible : une base de ce poste, ou une base distante que la commande 
 			'pas une adresse',
 		]
 		for (const adresse of distantes) {
-			expect(() => verifierLaCible(adresse, { cibleDistante: false }), adresse).toThrow(ImportRefuse)
-			expect(verifierLaCible(adresse, { cibleDistante: true, baseAttendue: 'prod' }), adresse).toBe('distante')
+			expect(() => verifyTarget(adresse, { remoteTarget: false }), adresse).toThrow(ImportRefuse)
+			expect(verifyTarget(adresse, { remoteTarget: true, expectedDatabase: 'prod' }), adresse).toBe('remote')
 		}
 	})
 
@@ -69,7 +63,7 @@ describe('la cible : une base de ce poste, ou une base distante que la commande 
 		const config = { db: { name: 'postgres', init: () => adaptateur } } as unknown as SanitizedConfig
 		try {
 			delete process.env.PAYLOAD_MIGRATING
-			const pourLImport = configurationSansChangementDeSchema(config)
+			const pourLImport = configurationWithoutSchemaChange(config)
 
 			// Payload's own switch: no push of the schema when it connects.
 			expect(interrupteur()).toBe('true')
@@ -89,178 +83,186 @@ describe('la cible : une base de ce poste, ou une base distante que la commande 
 		const adresse = 'postgres://utilisateur:secret-de-test@base.example.test:5432/prod'
 		let message = ''
 		try {
-			verifierLaCible(adresse, { cibleDistante: false })
+			verifyTarget(adresse, { remoteTarget: false })
 		} catch (erreur) {
 			message = (erreur as Error).message
 		}
 		expect(message).toContain('DATABASE_URI')
-		expect(message).toContain('--cible-distante')
+		expect(message).toContain('--remote-target')
 		for (const morceau of ['base.example.test', 'secret-de-test', 'utilisateur']) expect(message).not.toContain(morceau)
-		expect(() => verifierLaCible(undefined, { cibleDistante: true, baseAttendue: 'prod' })).toThrow(
+		expect(() => verifyTarget(undefined, { remoteTarget: true, expectedDatabase: 'prod' })).toThrow(
 			'DATABASE_URI manque'
 		)
 	})
 })
 
-describe('L9 (ticket 233) : --cible-distante exige --base-attendue, et la base doit porter ce nom', () => {
-	test('--cible-distante sans --base-attendue est refusé (code 1), avant la lecture de l’adresse', () => {
+describe('L9 (ticket 233) : --remote-target exige --expected-database, et la base doit porter ce nom', () => {
+	test('--remote-target sans --expected-database est refusé (code 1), avant la lecture de l’adresse', () => {
 		for (const adresse of ['postgres://u:p@base.example.test:5432/prod', 'postgres://u:p@127.0.0.1/base', undefined]) {
 			let message = ''
 			try {
-				verifierLaCible(adresse, { cibleDistante: true })
+				verifyTarget(adresse, { remoteTarget: true })
 			} catch (erreur) {
 				expect(erreur).toBeInstanceOf(ImportRefuse)
 				message = (erreur as Error).message
 			}
-			expect(message, String(adresse)).toContain('--cible-distante exige --base-attendue')
+			expect(message, String(adresse)).toContain('--remote-target exige --expected-database')
 			expect(message).not.toContain('example.test')
 		}
 		expect(() =>
-			verifierLaCible('postgres://u:p@base.example.test/prod', { cibleDistante: true, baseAttendue: '' })
+			verifyTarget('postgres://u:p@base.example.test/prod', { remoteTarget: true, expectedDatabase: '' })
 		).toThrow(ImportRefuse)
 	})
 
 	test('une base locale sans le drapeau n’a pas besoin du nom', () => {
-		expect(verifierLaCible('postgres://u:p@127.0.0.1/base', { cibleDistante: false })).toBe('locale')
+		expect(verifyTarget('postgres://u:p@127.0.0.1/base', { remoteTarget: false })).toBe('local')
 	})
 
-	test('--base-attendue prend un nom, et ne se répète pas', () => {
-		expect(lireLesArguments(['--base-attendue'])).toBeNull()
-		expect(lireLesArguments(['--base-attendue', '--reel'])).toBeNull()
-		expect(lireLesArguments(['--base-attendue', 'a', '--base-attendue', 'b'])).toBeNull()
+	test('an old name of an option is refused with the new name', () => {
+		expect(readArguments(['--reel'])).toBeNull()
+		expect(renamedOptionHint(['--reel', '--controle'])).toBe(
+			'--reel s’appelle maintenant --real.\n--controle s’appelle maintenant --check.'
+		)
+		expect(renamedOptionHint(['--real', '--check'])).toBeNull()
+	})
+
+	test('--expected-database prend un nom, et ne se répète pas', () => {
+		expect(readArguments(['--expected-database'])).toBeNull()
+		expect(readArguments(['--expected-database', '--real'])).toBeNull()
+		expect(readArguments(['--expected-database', 'a', '--expected-database', 'b'])).toBeNull()
 	})
 
 	const payloadDont = (base: string | undefined) =>
 		({
 			db: { pool: { query: async () => ({ rows: base === undefined ? [] : [{ base }] }) } },
-		}) as unknown as Parameters<typeof verifierLaBaseAttendue>[0]
+		}) as unknown as Parameters<typeof verifyExpectedDatabase>[0]
 
 	test('la base qui donne le nom attendu passe ; une autre est refusée sans dire laquelle', async () => {
-		await expect(verifierLaBaseAttendue(payloadDont('mymakeup_v3'), 'mymakeup_v3')).resolves.toBeUndefined()
+		await expect(verifyExpectedDatabase(payloadDont('mymakeup_v3'), 'mymakeup_v3')).resolves.toBeUndefined()
 		let message = ''
 		try {
-			await verifierLaBaseAttendue(payloadDont('mymakeup_preprod_ancienne'), 'mymakeup_v3')
+			await verifyExpectedDatabase(payloadDont('mymakeup_preprod_ancienne'), 'mymakeup_v3')
 		} catch (erreur) {
 			expect(erreur).toBeInstanceOf(ImportRefuse)
 			message = (erreur as Error).message
 		}
 		expect(message).toContain('« mymakeup_v3 »')
-		expect(message).toContain('--base-attendue')
+		expect(message).toContain('--expected-database')
 		expect(message).not.toContain('mymakeup_preprod_ancienne')
-		await expect(verifierLaBaseAttendue(payloadDont(undefined), 'mymakeup_v3')).rejects.toBeInstanceOf(ImportRefuse)
+		await expect(verifyExpectedDatabase(payloadDont(undefined), 'mymakeup_v3')).rejects.toBeInstanceOf(ImportRefuse)
 	})
 })
 
 describe('L1 (ticket 233) : les deux scripts qui écrivent dans une base ne lisent jamais le .env de travail', () => {
-	test('migration:import et admin:creer portent --no-env-file', () => {
+	test('migration:import et admin:create portent --no-env-file', () => {
 		const { scripts } = JSON.parse(readFileSync(path.join(import.meta.dir, '../../package.json'), 'utf8')) as {
 			scripts: Record<string, string>
 		}
 		expect(scripts['migration:import']).toBe('bun --no-env-file scripts/migration/import.ts')
-		expect(scripts['admin:creer']).toBe('bun --no-env-file scripts/admin/creer-admin.ts')
+		expect(scripts['admin:create']).toBe('bun --no-env-file scripts/admin/create-admin.ts')
 	})
 
 	test('banc:import (qui n’est pas migration:import) le porte aussi, et charge import.ts en direct', () => {
 		const { scripts } = JSON.parse(readFileSync(path.join(import.meta.dir, '../../package.json'), 'utf8')) as {
 			scripts: Record<string, string>
 		}
-		expect(scripts['banc:import']).toBe('bun --no-env-file scripts/migration/banc-import.ts')
+		expect(scripts['banc:import']).toBe('bun --no-env-file scripts/migration/bench-import.ts')
 	})
 })
 
 describe('la ligne de commande : à blanc par défaut', () => {
-	test('sans option, rien n’est écrit ; --reel écrit', () => {
-		expect(lireLesArguments([])).toEqual({ mode: 'a-blanc', cibleDistante: false })
-		expect(lireLesArguments(['--reel', '--cible-distante', '--rapport', 'r.json'])).toEqual({
-			mode: 'reel',
-			cibleDistante: true,
-			rapport: 'r.json',
+	test('sans option, rien n’est écrit ; --real écrit', () => {
+		expect(readArguments([])).toEqual({ mode: 'dry-run', remoteTarget: false })
+		expect(readArguments(['--real', '--remote-target', '--report', 'r.json'])).toEqual({
+			mode: 'real',
+			remoteTarget: true,
+			report: 'r.json',
 		})
-		expect(lireLesArguments(['--cible-distante', '--base-attendue', 'mymakeup_v3'])).toEqual({
-			mode: 'a-blanc',
-			cibleDistante: true,
-			baseAttendue: 'mymakeup_v3',
+		expect(readArguments(['--remote-target', '--expected-database', 'mymakeup_v3'])).toEqual({
+			mode: 'dry-run',
+			remoteTarget: true,
+			expectedDatabase: 'mymakeup_v3',
 		})
 	})
 
-	test('--sans-photos ne prend pas de valeur et ne se répète pas', () => {
-		expect(lireLesArguments(['--sans-photos'])).toEqual({ mode: 'a-blanc', cibleDistante: false, sansPhotos: true })
-		expect(lireLesArguments(['--sans-photos', '--sans-photos'])).toBeNull()
+	test('--without-photos ne prend pas de valeur et ne se répète pas', () => {
+		expect(readArguments(['--without-photos'])).toEqual({ mode: 'dry-run', remoteTarget: false, withoutPhotos: true })
+		expect(readArguments(['--without-photos', '--without-photos'])).toBeNull()
 	})
 
-	test('--controle est un passage à blanc : il ne va pas avec --reel', () => {
-		expect(lireLesArguments(['--controle'])).toEqual({ mode: 'a-blanc', cibleDistante: false, controle: true })
-		expect(lireLesArguments(['--controle', '--reel'])).toBeNull()
-		expect(lireLesArguments(['--reel', '--controle'])).toBeNull()
+	test('--check est un passage à blanc : il ne va pas avec --real', () => {
+		expect(readArguments(['--check'])).toEqual({ mode: 'dry-run', remoteTarget: false, check: true })
+		expect(readArguments(['--check', '--real'])).toBeNull()
+		expect(readArguments(['--real', '--check'])).toBeNull()
 	})
 
 	test('une option inconnue, répétée ou sans sa valeur n’est pas comprise', () => {
-		for (const ligne of [['--prod'], ['--reel', '--reel'], ['--rapport'], ['--rapport', '--reel'], ['reel']])
-			expect(lireLesArguments(ligne), ligne.join(' ')).toBeNull()
+		for (const ligne of [['--prod'], ['--real', '--real'], ['--report'], ['--report', '--real'], ['real']])
+			expect(readArguments(ligne), ligne.join(' ')).toBeNull()
 	})
 })
 
 describe('le contexte d’import', () => {
 	test('il se reconnaît, et rien d’autre ne passe pour lui', () => {
-		expect(estUnImport(CONTEXTE_IMPORT)).toBe(true)
-		expect(estUnImport({ ...CONTEXTE_IMPORT, profilAutomatique: false })).toBe(true)
-		for (const autre of [undefined, {}, { import: 'true' }, { import: 1 }]) expect(estUnImport(autre)).toBe(false)
+		expect(isImport(IMPORT_CONTEXT)).toBe(true)
+		expect(isImport({ ...IMPORT_CONTEXT, profilAutomatique: false })).toBe(true)
+		for (const autre of [undefined, {}, { import: 'true' }, { import: 1 }]) expect(isImport(autre)).toBe(false)
 	})
 })
 
-const ADAPTATEUR: Adaptateur = {
+const ADAPTATEUR: Adapter = {
 	collection: 'talents',
-	champs: { title: 'texte', publishedAt: 'date', strapiId: 'nombre' },
+	fields: { title: 'texte', publishedAt: 'date', strapiId: 'nombre' },
 }
 
-const attendu = (strapiId: number, title: string | null, publishedAt: string | null = null): Attendu => ({
+const attendu = (strapiId: number, title: string | null, publishedAt: string | null = null): Expected => ({
 	strapiId,
-	valeurs: { strapiId, title, publishedAt },
-	ecarts: [],
+	values: { strapiId, title, publishedAt },
+	gaps: [],
 })
 
-const existant = (id: number, strapiId: number, title?: string | null, publishedAt?: string | null): Existant => ({
+const existant = (id: number, strapiId: number, title?: string | null, publishedAt?: string | null): Existing => ({
 	id,
-	valeurs: { strapiId, title, publishedAt },
+	values: { strapiId, title, publishedAt },
 })
 
 describe('le moteur : chaque document retrouvé par son strapiId', () => {
 	test('une valeur se compare normalisée : vide et nul se valent, une date est un instant', () => {
-		expect(normaliser('texte', undefined)).toBeNull()
-		expect(normaliser('date', '2023-04-01T09:00:00Z')).toBe('2023-04-01T09:00:00.000Z')
-		expect(normaliser('date', new Date('2023-04-01T09:00:00.000Z'))).toBe('2023-04-01T09:00:00.000Z')
-		expect(normaliser('relation', { id: 4, email: 'x' })).toBe(4)
-		expect(normaliser('relation', '4')).toBe(4)
-		expect(normaliser('nombre', '12.50')).toBe(12.5)
+		expect(normalize('texte', undefined)).toBeNull()
+		expect(normalize('date', '2023-04-01T09:00:00Z')).toBe('2023-04-01T09:00:00.000Z')
+		expect(normalize('date', new Date('2023-04-01T09:00:00.000Z'))).toBe('2023-04-01T09:00:00.000Z')
+		expect(normalize('relation', { id: 4, email: 'x' })).toBe(4)
+		expect(normalize('relation', '4')).toBe(4)
+		expect(normalize('nombre', '12.50')).toBe(12.5)
 	})
 
 	test('absent : création ; autre valeur : mise à jour des seuls champs différents ; même valeur : rien', () => {
-		const plan = planifier(
+		const plan = planActions(
 			ADAPTATEUR,
 			[attendu(1, 'Un'), attendu(2, 'Deux', '2023-04-01T09:00:00.000Z'), attendu(3, null)],
 			[existant(10, 2, 'Deux', '2023-04-01T09:00:00Z'), existant(11, 3, 'Trois'), existant(12, 9, 'Neuf')]
 		)
 
-		expect(plan.actions.map(action => [action.attendu.strapiId, action.genre])).toEqual([
+		expect(plan.actions.map(action => [action.expected.strapiId, action.kind])).toEqual([
 			[1, 'creation'],
 			[2, 'inchange'],
 			[3, 'modification'],
 		])
-		expect(plan.actions[2]).toMatchObject({ id: 11, champs: ['title'] })
+		expect(plan.actions[2]).toMatchObject({ id: 11, fields: ['title'] })
 		// Never deleted: listed.
-		expect(plan.enTrop).toEqual([9])
+		expect(plan.extra).toEqual([9])
 	})
 
 	test('la parité est complète quand la cible tient exactement les documents attendus', () => {
 		const attendus = [attendu(1, 'Un'), attendu(2, 'Deux')]
-		const complete = parite(ADAPTATEUR, attendus, [existant(5, 2, 'Deux'), existant(4, 1, 'Un')])
-		expect(complete).toMatchObject({ attendus: 2, presents: 2, egaux: 2, differents: [], manquants: [], enTrop: [] })
-		expect(complete.empreinteCible).toBe(complete.empreinteAttendue)
-		expect(pariteComplete(complete)).toBe(true)
+		const complete = parity(ADAPTATEUR, attendus, [existant(5, 2, 'Deux'), existant(4, 1, 'Un')])
+		expect(complete).toMatchObject({ expected: 2, present: 2, equal: 2, different: [], missing: [], extra: [] })
+		expect(complete.targetFingerprint).toBe(complete.expectedFingerprint)
+		expect(parityComplete(complete)).toBe(true)
 
-		const incomplete = parite(ADAPTATEUR, attendus, [existant(4, 1, 'Un modifié'), existant(6, 7, 'Sept')])
-		expect(incomplete).toMatchObject({ presents: 1, egaux: 0, differents: [1], manquants: [2], enTrop: [7] })
-		expect(pariteComplete(incomplete)).toBe(false)
+		const incomplete = parity(ADAPTATEUR, attendus, [existant(4, 1, 'Un modifié'), existant(6, 7, 'Sept')])
+		expect(incomplete).toMatchObject({ present: 1, equal: 0, different: [1], missing: [2], extra: [7] })
+		expect(parityComplete(incomplete)).toBe(false)
 	})
 
 	test('un document refusé compte : la parité le dit incomplète, sans le prendre pour un manquant ni un écart', () => {
@@ -268,38 +270,38 @@ describe('le moteur : chaque document retrouvé par son strapiId', () => {
 		// Document 2 was refused by Payload, its earlier values stay; document 5 was refused before the write.
 		const cible = [existant(4, 1, 'Un'), existant(6, 2, 'Deux d’avant')]
 		const refus = [
-			{ strapiId: 2, motif: 'refuse-par-payload', champs: ['title'] },
-			{ strapiId: 5, motif: 'slug-en-double', champs: ['slug'] },
+			{ strapiId: 2, reason: 'refuse-par-payload', fields: ['title'] },
+			{ strapiId: 5, reason: 'slug-en-double', fields: ['slug'] },
 		]
 
-		const avecRefus = parite(ADAPTATEUR, attendus, cible, refus)
+		const avecRefus = parity(ADAPTATEUR, attendus, cible, refus)
 
 		expect(avecRefus).toMatchObject({
-			attendus: 3,
-			presents: 1,
-			egaux: 1,
-			refuses: [2, 5],
-			differents: [],
-			manquants: [],
-			enTrop: [],
+			expected: 3,
+			present: 1,
+			equal: 1,
+			refused: [2, 5],
+			different: [],
+			missing: [],
+			extra: [],
 		})
-		expect(avecRefus.empreinteCible).toBe(avecRefus.empreinteAttendue)
-		expect(sansEcartInexplique(avecRefus)).toBe(true)
-		expect(pariteComplete(avecRefus)).toBe(false)
+		expect(avecRefus.targetFingerprint).toBe(avecRefus.expectedFingerprint)
+		expect(withoutUnexplainedGap(avecRefus)).toBe(true)
+		expect(parityComplete(avecRefus)).toBe(false)
 		// Without refusal, the same target is simply not equal.
-		expect(pariteComplete(parite(ADAPTATEUR, attendus, cible))).toBe(false)
-		expect(parite(ADAPTATEUR, attendus, cible)).toMatchObject({ refuses: [], differents: [2] })
+		expect(parityComplete(parity(ADAPTATEUR, attendus, cible))).toBe(false)
+		expect(parity(ADAPTATEUR, attendus, cible)).toMatchObject({ refused: [], different: [2] })
 	})
 
 	test('l’empreinte ne dépend pas de l’ordre, et change avec la moindre valeur', () => {
-		const a = empreinteDesDocuments(ADAPTATEUR, [attendu(1, 'Un'), attendu(2, 'Deux')])
-		expect(empreinteDesDocuments(ADAPTATEUR, [attendu(2, 'Deux'), attendu(1, 'Un')])).toBe(a)
-		expect(empreinteDesDocuments(ADAPTATEUR, [attendu(1, 'Un'), attendu(2, 'deux')])).not.toBe(a)
+		const a = documentsFingerprint(ADAPTATEUR, [attendu(1, 'Un'), attendu(2, 'Deux')])
+		expect(documentsFingerprint(ADAPTATEUR, [attendu(2, 'Deux'), attendu(1, 'Un')])).toBe(a)
+		expect(documentsFingerprint(ADAPTATEUR, [attendu(1, 'Un'), attendu(2, 'deux')])).not.toBe(a)
 		expect(a).toMatch(/^[0-9a-f]{64}$/)
 	})
 })
 
-const ligneTalent = (id: number, slug: string | null, publie = true): LigneTalent => ({
+const ligneTalent = (id: number, slug: string | null, publie = true): TalentRow => ({
 	id,
 	title: `Talent ${id}`,
 	seo_title: null,
@@ -314,9 +316,9 @@ const ligneTalent = (id: number, slug: string | null, publie = true): LigneTalen
 
 describe('les talents : repris tels quels', () => {
 	test('un talent garde chaque valeur, ses dates, et nul reste nul', () => {
-		expect(talentAttendu(ligneTalent(3, 'effets-speciaux'))).toEqual({
+		expect(expectedTalent(ligneTalent(3, 'effets-speciaux'))).toEqual({
 			strapiId: 3,
-			valeurs: {
+			values: {
 				strapiId: 3,
 				title: 'Talent 3',
 				slug: 'effets-speciaux',
@@ -329,16 +331,16 @@ describe('les talents : repris tels quels', () => {
 				createdAt: '2023-04-01T09:00:00.000Z',
 				updatedAt: '2024-05-02T10:00:00.000Z',
 			},
-			ecarts: [],
+			gaps: [],
 		})
-		expect(talentAttendu(ligneTalent(4, 'brouillon', false)).valeurs).toMatchObject({
+		expect(expectedTalent(ligneTalent(4, 'brouillon', false)).values).toMatchObject({
 			_status: 'draft',
 			publishedAt: null,
 		})
 	})
 
 	test('un slug qui n’est pas une adresse, ou déjà pris par un talent plus ancien, est refusé', () => {
-		const { attendus, refuses } = talentsAttendus([
+		const { expected: attendus, refused: refuses } = expectedTalents([
 			ligneTalent(3, 'mariage'),
 			ligneTalent(1, 'mariage'),
 			ligneTalent(2, 'Maquillage Mode'),
@@ -346,65 +348,65 @@ describe('les talents : repris tels quels', () => {
 		])
 		expect(attendus.map(({ strapiId }) => strapiId)).toEqual([1])
 		expect(refuses).toEqual([
-			{ strapiId: 2, motif: 'slug-pas-une-adresse', champs: ['slug'] },
-			{ strapiId: 3, motif: 'slug-en-double', champs: ['slug'] },
-			{ strapiId: 4, motif: 'slug-pas-une-adresse', champs: ['slug'] },
+			{ strapiId: 2, reason: 'slug-pas-une-adresse', fields: ['slug'] },
+			{ strapiId: 3, reason: 'slug-en-double', fields: ['slug'] },
+			{ strapiId: 4, reason: 'slug-pas-une-adresse', fields: ['slug'] },
 		])
 	})
 })
 
 describe('le rapport', () => {
-	const rapport = (modif: Partial<Rapport> = {}): Rapport => ({
-		mode: 'reel',
-		cible: 'locale',
-		arret: null,
-		decisionsSansObjet: 0,
+	const rapport = (modif: Partial<Report> = {}): Report => ({
+		mode: 'real',
+		target: 'local',
+		halt: null,
+		pointlessDecisions: 0,
 		source: {
-			avant: { talents: { lignes: 3, empreinte: 'a'.repeat(64) } },
-			apres: { talents: { lignes: 3, empreinte: 'a'.repeat(64) } },
-			inchangee: true,
+			before: { talents: { rows: 3, fingerprint: 'a'.repeat(64) } },
+			after: { talents: { rows: 3, fingerprint: 'a'.repeat(64) } },
+			unchanged: true,
 		},
 		collections: {
 			talents: {
 				source: 4,
-				crees: 2,
-				modifies: 1,
-				inchanges: 0,
-				refuses: [{ strapiId: 4, motif: 'slug-en-double', champs: ['slug'] }],
-				enTrop: [9],
+				created: 2,
+				updated: 1,
+				unchanged: 0,
+				refused: [{ strapiId: 4, reason: 'slug-en-double', fields: ['slug'] }],
+				extra: [9],
 			},
 		},
-		ecarts: {},
-		parite: {
+		gaps: {},
+		parity: {
 			talents: {
-				attendus: 4,
-				presents: 3,
-				egaux: 3,
-				refuses: [4],
-				differents: [],
-				manquants: [],
-				enTrop: [],
-				empreinteAttendue: 'b'.repeat(64),
-				empreinteCible: 'b'.repeat(64),
+				expected: 4,
+				present: 3,
+				equal: 3,
+				refused: [4],
+				different: [],
+				missing: [],
+				extra: [],
+				expectedFingerprint: 'b'.repeat(64),
+				targetFingerprint: 'b'.repeat(64),
 			},
 		},
 		...modif,
 	})
 
 	/** The same run, where nothing was refused. */
-	const sansRefus = (modif: Partial<Rapport> = {}): Rapport => {
+	const sansRefus = (modif: Partial<Report> = {}): Report => {
 		const base = rapport()
 		const talents = base.collections.talents ?? ({} as never)
-		const parite = base.parite?.talents ?? ({} as never)
+		const parite = base.parity?.talents ?? ({} as never)
 		return rapport({
-			collections: { talents: { ...talents, refuses: [] } },
-			parite: { talents: { ...parite, attendus: 3, refuses: [] } },
+			collections: { talents: { ...talents, refused: [] } },
+			parity: { talents: { ...parite, expected: 3, refused: [] } },
 			...modif,
 		})
 	}
 
 	test('il se lit en français, en nombres et en identifiants', () => {
-		expect(rapportEnTexte(rapport()).split('\n')).toEqual([
+		expect(reportAsText(rapport()).split('\n')).toEqual([
 			'Import réel.',
 			'Cible : une base de ce poste.',
 			'',
@@ -419,97 +421,100 @@ describe('le rapport', () => {
 			'',
 			'Source : 1 table lue, 3 lignes, inchangée par l’import.',
 		])
-		expect(rapportEnTexte(sansRefus())).toContain('Talents : 3 sur 3 égaux, parité complète, empreinte bbbbbbbbbbbb…')
-		expect(rapportEnTexte(rapport({ mode: 'a-blanc', parite: null }))).toContain(
+		expect(reportAsText(sansRefus())).toContain('Talents : 3 sur 3 égaux, parité complète, empreinte bbbbbbbbbbbb…')
+		expect(reportAsText(rapport({ mode: 'dry-run', parity: null }))).toContain(
 			'Talents : 4 à la source ; 2 créations annoncées, 1 mise à jour annoncée'
 		)
 	})
 
 	test('le code de sortie : 0 fini, 3 arrêté, 4 un écart inexpliqué ou la source changée, 5 des refusés', () => {
-		expect(codeDeSortie(sansRefus())).toBe(0)
-		expect(codeDeSortie(sansRefus({ mode: 'a-blanc', parite: null }))).toBe(0)
+		expect(exitCode(sansRefus())).toBe(0)
+		expect(exitCode(sansRefus({ mode: 'dry-run', parity: null }))).toBe(0)
 		// A refused document is never read as a complete run, dry or real.
-		expect(codeDeSortie(rapport())).toBe(5)
-		expect(codeDeSortie(rapport({ mode: 'a-blanc', parite: null }))).toBe(5)
-		expect(codeDeSortie(sansRefus({ source: { ...rapport().source, inchangee: false } }))).toBe(4)
-		const talents = rapport().parite?.talents ?? ({} as never)
-		expect(codeDeSortie(rapport({ parite: { talents: { ...talents, manquants: [2] } } }))).toBe(4)
-		expect(codeDeSortie(rapport({ parite: { talents: { ...talents, empreinteCible: 'c'.repeat(64) } } }))).toBe(4)
+		expect(exitCode(rapport())).toBe(5)
+		expect(exitCode(rapport({ mode: 'dry-run', parity: null }))).toBe(5)
+		expect(exitCode(sansRefus({ source: { ...rapport().source, unchanged: false } }))).toBe(4)
+		const talents = rapport().parity?.talents ?? ({} as never)
+		expect(exitCode(rapport({ parity: { talents: { ...talents, missing: [2] } } }))).toBe(4)
+		expect(exitCode(rapport({ parity: { talents: { ...talents, targetFingerprint: 'c'.repeat(64) } } }))).toBe(4)
 		expect(
-			codeDeSortie(
-				rapport({ arret: { emailsPartages: [[9, 10]], profilsDeComptesEcartes: [], profilsSansCompte: [] } })
+			exitCode(
+				rapport({ halt: { sharedEmails: [[9, 10]], profilesOfExcludedAccounts: [], profilesWithoutAccount: [] } })
 			)
 		).toBe(3)
 	})
 
 	test('le contrôle : 0 si la cible est la source, 4 dès qu’un passage réel écrirait ou qu’un document est en trop', () => {
-		const talentsPropres = (bilan: object): Rapport => {
-			const base = sansRefus({ mode: 'a-blanc', parite: null })
-			const talents = { ...(base.collections.talents ?? ({} as never)), crees: 0, modifies: 0, enTrop: [], ...bilan }
-			return { ...base, collections: { talents } } as Rapport
+		const talentsPropres = (bilan: object): Report => {
+			const base = sansRefus({ mode: 'dry-run', parity: null })
+			const talents = { ...(base.collections.talents ?? ({} as never)), created: 0, updated: 0, extra: [], ...bilan }
+			return { ...base, collections: { talents } } as Report
 		}
 		const propre = talentsPropres({})
-		expect(codeDuControle(propre)).toBe(0)
-		expect(controleEnTexte(propre)).toBe(
+		expect(checkExitCode(propre)).toBe(0)
+		expect(checkAsText(propre)).toBe(
 			'Contrôle : la cible est la source (0 création, 0 mise à jour, 0 document en trop).'
 		)
 		// A document removed by hand is a creation to make, a value changed by hand an update, an extra one a document too many.
-		for (const bilan of [{ crees: 1 }, { modifies: 1 }, { enTrop: [9] }]) {
-			expect(codeDuControle(talentsPropres(bilan)), JSON.stringify(bilan)).toBe(4)
-			expect(controleEnTexte(talentsPropres(bilan))).toContain('Contrôle : la cible n’est PAS la source.')
+		for (const bilan of [{ created: 1 }, { updated: 1 }, { extra: [9] }]) {
+			expect(checkExitCode(talentsPropres(bilan)), JSON.stringify(bilan)).toBe(4)
+			expect(checkAsText(talentsPropres(bilan))).toContain('Contrôle : la cible n’est PAS la source.')
 		}
-		expect(controleEnTexte(talentsPropres({ crees: 2, modifies: 1 }))).toContain(
+		expect(checkAsText(talentsPropres({ created: 2, updated: 1 }))).toContain(
 			'Talents : 2 créations à faire, 1 mise à jour à faire, 0 document en trop'
 		)
 		// The codes of a dry run are kept: stopped, a source that moved, a document refused.
-		expect(codeDuControle(rapport({ mode: 'a-blanc', parite: null }))).toBe(5)
-		expect(codeDuControle(talentsPropres({ crees: 1, refuses: [{ strapiId: 4, motif: 'slug-en-double' }] }))).toBe(5)
+		expect(checkExitCode(rapport({ mode: 'dry-run', parity: null }))).toBe(5)
+		expect(checkExitCode(talentsPropres({ created: 1, refused: [{ strapiId: 4, reason: 'slug-en-double' }] }))).toBe(5)
 		expect(
-			codeDuControle(
-				rapport({ arret: { emailsPartages: [[9, 10]], profilsDeComptesEcartes: [], profilsSansCompte: [] } })
+			checkExitCode(
+				rapport({ halt: { sharedEmails: [[9, 10]], profilesOfExcludedAccounts: [], profilesWithoutAccount: [] } })
 			)
 		).toBe(3)
 	})
 
 	test('le contrôle ne dit « la cible est la source » que s’il a pu comparer (codes 3, 4 et 5)', () => {
 		const arrete = rapport({
-			mode: 'a-blanc',
-			parite: null,
-			arret: { emailsPartages: [[9, 10]], profilsDeComptesEcartes: [], profilsSansCompte: [] },
+			mode: 'dry-run',
+			parity: null,
+			halt: { sharedEmails: [[9, 10]], profilesOfExcludedAccounts: [], profilesWithoutAccount: [] },
 		})
-		expect(controleEnTexte(arrete)).toContain('sans conclusion')
-		expect(controleEnTexte(arrete)).toContain('code 3')
-		expect(controleEnTexte(arrete)).not.toContain('la cible est la source')
+		expect(checkAsText(arrete)).toContain('sans conclusion')
+		expect(checkAsText(arrete)).toContain('code 3')
+		expect(checkAsText(arrete)).not.toContain('la cible est la source')
 
-		const base = sansRefus({ mode: 'a-blanc', parite: null })
-		const talents = { ...(base.collections.talents ?? ({} as never)), crees: 0, modifies: 0, enTrop: [] }
+		const base = sansRefus({ mode: 'dry-run', parity: null })
+		const talents = { ...(base.collections.talents ?? ({} as never)), created: 0, updated: 0, extra: [] }
 		const refuse = {
 			...base,
-			collections: { talents: { ...talents, refuses: [{ strapiId: 4, motif: 'slug-en-double' }] } },
-		} as Rapport
-		expect(codeDuControle(refuse)).toBe(5)
-		expect(controleEnTexte(refuse)).toContain('code 5')
-		expect(controleEnTexte(refuse)).not.toContain('la cible est la source')
+			collections: { talents: { ...talents, refused: [{ strapiId: 4, reason: 'slug-en-double' }] } },
+		} as Report
+		expect(checkExitCode(refuse)).toBe(5)
+		expect(checkAsText(refuse)).toContain('code 5')
+		expect(checkAsText(refuse)).not.toContain('la cible est la source')
 
-		const bouge = { ...base, collections: { talents }, source: { ...base.source, inchangee: false } } as Rapport
-		expect(codeDuControle(bouge)).toBe(4)
-		expect(controleEnTexte(bouge)).toContain('code 4')
-		expect(controleEnTexte(bouge)).not.toContain('la cible est la source')
+		const bouge = { ...base, collections: { talents }, source: { ...base.source, unchanged: false } } as Report
+		expect(checkExitCode(bouge)).toBe(4)
+		expect(checkAsText(bouge)).toContain('code 4')
+		expect(checkAsText(bouge)).not.toContain('la cible est la source')
 	})
 
 	test('l’arrêt nomme chaque cas par identifiants : les comptes au même email, les profils d’un compte écarté ou sans compte', () => {
-		const texte = rapportEnTexte(
+		const texte = reportAsText(
 			rapport({
-				arret: { emailsPartages: [[9, 10, 11, 12]], profilsDeComptesEcartes: [28, 29], profilsSansCompte: [] },
-				parite: null,
+				halt: { sharedEmails: [[9, 10, 11, 12]], profilesOfExcludedAccounts: [28, 29], profilesWithoutAccount: [] },
+				parity: null,
 			})
 		)
 		expect(texte).toContain('Import arrêté avant toute écriture : rien n’est écrit.')
 		expect(texte).toContain('Groupes, par identifiant : [9, 10, 11, 12].')
 		expect(texte).toContain('Profils, par identifiant : 28, 29.')
 		expect(texte).not.toContain('aucun compte dans la source')
-		const sansCompte = rapportEnTexte(
-			rapport({ arret: { emailsPartages: [], profilsDeComptesEcartes: [29], profilsSansCompte: [40] }, parite: null })
+		const sansCompte = reportAsText(
+			rapport({
+				halt: { sharedEmails: [], profilesOfExcludedAccounts: [29], profilesWithoutAccount: [40] },
+				parity: null,
+			})
 		)
 		expect(sansCompte).not.toContain('Groupes')
 		expect(sansCompte).toContain(
@@ -518,11 +523,11 @@ describe('le rapport', () => {
 	})
 
 	test('deux empreintes de la source se comparent table par table', () => {
-		const une = { talents: { lignes: 3, empreinte: 'a' }, up_users: { lignes: 1, empreinte: 'b' } }
-		expect(memesTables(une, { up_users: { lignes: 1, empreinte: 'b' }, talents: { lignes: 3, empreinte: 'a' } })).toBe(
+		const une = { talents: { rows: 3, fingerprint: 'a' }, up_users: { rows: 1, fingerprint: 'b' } }
+		expect(sameTables(une, { up_users: { rows: 1, fingerprint: 'b' }, talents: { rows: 3, fingerprint: 'a' } })).toBe(
 			true
 		)
-		expect(memesTables(une, { ...une, talents: { lignes: 3, empreinte: 'c' } })).toBe(false)
+		expect(sameTables(une, { ...une, talents: { rows: 3, fingerprint: 'c' } })).toBe(false)
 	})
 })
 
@@ -538,30 +543,29 @@ describe('une erreur de la base : nommée par son code, jamais par son texte', (
 	}
 
 	test('le code se lit sur l’erreur ou sur l’une de ses causes, et seulement s’il a la forme d’un code', () => {
-		expect(codeDeLErreur(erreurDeRequete())).toBe('P0001')
-		expect(codeDeLErreur(Object.assign(new Error('x'), { code: 'ECONNRESET' }))).toBe('ECONNRESET')
-		expect(codeDeLErreur(Object.assign(new Error('x'), { code: 'zoe@example.test' }))).toBeUndefined()
-		for (const autre of [undefined, null, 'texte', 42, new Error('sans code')])
-			expect(codeDeLErreur(autre)).toBeUndefined()
+		expect(errorCode(erreurDeRequete())).toBe('P0001')
+		expect(errorCode(Object.assign(new Error('x'), { code: 'ECONNRESET' }))).toBe('ECONNRESET')
+		expect(errorCode(Object.assign(new Error('x'), { code: 'zoe@example.test' }))).toBeUndefined()
+		for (const autre of [undefined, null, 'texte', 42, new Error('sans code')]) expect(errorCode(autre)).toBeUndefined()
 	})
 
 	test('une écriture interrompue dit la collection, le document et le code, et ne garde pas l’erreur', () => {
-		const interrompu = new ImportInterrompu('pros', 2, 'P0001')
+		const interrompu = new InterruptedImport('pros', 2, 'P0001')
 
 		expect(interrompu.message).toContain('la base n’a pas écrit le document 2 de « pros » (code P0001)')
 		expect(interrompu.cause).toBeUndefined()
-		expect(new ImportInterrompu('talents', 3, undefined).message).not.toContain('code')
+		expect(new InterruptedImport('talents', 3, undefined).message).not.toContain('code')
 	})
 
 	test('une erreur inattendue se dit par son type et son code : ni requête, ni valeur', () => {
-		const message = messageDUneErreurInattendue(erreurDeRequete())
+		const message = unexpectedErrorMessage(erreurDeRequete())
 
 		expect(message).toContain('(DrizzleQueryError, code P0001)')
 		for (const morceau of ['$2a$', '@example.test', 'insert into', 'refus du banc', 'Key (email)'])
 			expect(message).not.toContain(morceau)
 		// A type that is not a plain name is not printed either.
 		const etrange = Object.assign(new Error('x'), { name: 'zoe@example.test' })
-		expect(messageDUneErreurInattendue(etrange)).not.toContain('example.test')
-		expect(messageDUneErreurInattendue('texte jeté')).not.toContain('texte jeté')
+		expect(unexpectedErrorMessage(etrange)).not.toContain('example.test')
+		expect(unexpectedErrorMessage('texte jeté')).not.toContain('texte jeté')
 	})
 })

@@ -42,17 +42,17 @@ Valeurs acceptées : `security` (ou `securite`), `bandeau` (ou `banner`), `lectu
 ## Le contrôle
 
 ```
-bun --no-env-file scripts/migration/gel.ts \
-  --debut 2026-12-01T09:00:00Z \
-  --depot <chemin du dépôt de l'ancien site> \
+bun --no-env-file scripts/migration/freeze.ts \
+  --start 2026-12-01T09:00:00Z \
+  --repository <chemin du dépôt de l'ancien site> \
   [--ref origin/main] \
   [--capture <date de la capture de référence>] \
-  [--inventaire <date de l'inventaire>]
+  [--inventory <date de l'inventaire>]
 ```
 
-(ou `bun run migration:gel -- …`). Il lit `git log` du dépôt donné, sans rien écrire. Il sort en code 1 et liste chaque commit interdit si un commit daté du début du gel ou après n'est dans aucune des quatre catégories, ou si la capture ou l'inventaire donnés sont plus anciens que le gel. Le dépôt de l'API se contrôle de la même façon, avec son chemin.
+(ou `bun run migration:freeze -- …`). Il lit `git log` du dépôt donné, sans rien écrire. Il sort en code 1 et liste chaque commit interdit si un commit daté du début du gel ou après n'est dans aucune des quatre catégories, ou si la capture ou l'inventaire donnés sont plus anciens que le gel. Le dépôt de l'API se contrôle de la même façon, avec son chemin.
 
-Les règles sont dans `scripts/migration/gel-regles.ts`, leurs tests dans `tests/unit/gel.test.ts`.
+Les règles sont dans `scripts/migration/freeze-rules.ts`, leurs tests dans `tests/unit/gel.test.ts`.
 
 ## Ce que ce document ne fait pas
 
