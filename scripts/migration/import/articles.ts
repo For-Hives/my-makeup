@@ -7,7 +7,7 @@
  * - Published when the source has a publication date, with that date; a draft otherwise (§7).
  * - A slug that does not already have the form of an address, or that two articles share, is
  *   refused before any write and listed (rule 5), as for the talents: it is never corrected.
- * - An image of the gallery is attached when its file is adopted (./medias.ts): a media of the
+ * - An image of the gallery is attached when its file is adopted (./media.ts): a media of the
  *   newsroom, without an owner. A file not adopted (a PDF, a video) is reported, never invented.
  *
  * No `bun` import here: the import can run under Node too.
@@ -41,7 +41,7 @@ export const readArticles = (requete: Query): Promise<ArticleRow[]> => requete<A
 
 export const ARTICLES_ADAPTER: Adapter = {
 	collection: 'articles',
-	champs: {
+	fields: {
 		title: 'texte',
 		slug: 'texte',
 		author: 'texte',
@@ -55,11 +55,11 @@ export const ARTICLES_ADAPTER: Adapter = {
 		createdAt: 'date',
 		updatedAt: 'date',
 	},
-	options: attendu => ({ brouillon: attendu.valeurs._status === 'draft' }),
+	options: attendu => ({ draft: attendu.values._status === 'draft' }),
 }
 
 /** The articles of the source split in two by their slug, as the talents are (`repartirParSlug`). */
-export const splitArticles = (lignes: readonly ArticleRow[]): { pris: ArticleRow[]; refuses: Refusal[] } =>
+export const splitArticles = (lignes: readonly ArticleRow[]): { taken: ArticleRow[]; refused: Refusal[] } =>
 	splitBySlug(lignes)
 
 /**
@@ -71,17 +71,17 @@ export function expectedArticles(
 	pris: readonly ArticleRow[],
 	liens: readonly FileLink[],
 	medias: ReadonlyMap<number, number | null> = new Map()
-): { attendus: Expected[]; photosNonReprises: PhotoNotCarriedOver[] } {
+): { expected: Expected[]; photosNotCarriedOver: PhotoNotCarriedOver[] } {
 	const photosNotCarriedOver: PhotoNotCarriedOver[] = []
 	const expected = pris.map((ligne): Expected => {
 		const files = liens
 			.filter(({ type, champ, entree }) => type === TYPE_ARTICLE && champ === 'galery' && entree === ligne.id)
 			.map(({ fichier: file }) => file)
 		const gallery = entryPhotos(files, medias)
-		for (const file of gallery.nonReprises) photosNotCarriedOver.push({ entree: ligne.id, fichier: file })
+		for (const file of gallery.nonReprises) photosNotCarriedOver.push({ entry: ligne.id, file: file })
 		return {
 			strapiId: ligne.id,
-			valeurs: {
+			values: {
 				strapiId: ligne.id,
 				title: ligne.title,
 				slug: ligne.slug,
@@ -96,8 +96,8 @@ export function expectedArticles(
 				createdAt: ligne.created_at,
 				updatedAt: ligne.updated_at,
 			},
-			ecarts: [],
+			gaps: [],
 		}
 	})
-	return { attendus: expected, photosNonReprises: photosNotCarriedOver }
+	return { expected, photosNotCarriedOver }
 }

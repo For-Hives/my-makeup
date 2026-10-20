@@ -245,12 +245,12 @@ describe('Le rôle en lecture seule ne crée pas de grand objet, et son verrou s
 		const requete = (texte: string, parametres?: readonly unknown[]) =>
 			lecture().unsafe(texte, parametres ? [...parametres] : undefined)
 		const avant = await tablesFingerprint(requete as Query)
-		expect(avant[LARGE_OBJECTS]?.lignes).toBe(0)
+		expect(avant[LARGE_OBJECTS]?.rows).toBe(0)
 
 		await avecLeProprietaire(source.administration, sql => sql.unsafe('SELECT lo_create(0)'))
 		const apres = await tablesFingerprint(requete as Query)
 
-		expect(apres[LARGE_OBJECTS]?.lignes).toBe(1)
+		expect(apres[LARGE_OBJECTS]?.rows).toBe(1)
 		expect(sameTables(avant, apres)).toBe(false)
 		await creerLaSourceStrapi()
 		expect(sameTables(avant, await tablesFingerprint(requete as Query))).toBe(true)

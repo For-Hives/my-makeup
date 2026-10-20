@@ -10,7 +10,7 @@
  *   nothing at all.
  * - Nothing is deleted: a document of the target that the source no longer gives is listed.
  * - Every write goes through the Local API of Payload, with the import context
- *   (src/lib/contexte-import.ts). A value the target refuses is listed by identifier and by
+ *   (src/lib/import-context.ts). A value the target refuses is listed by identifier and by
  *   field, never with the value itself (SCHEMA.md, rule 5).
  *
  * No `bun` import here: the import can run under Node too.
@@ -38,7 +38,7 @@ export type ImportedCollection = Extract<CollectionSlug, 'pros' | 'media' | 'pro
  * (`SCHEMA.md §5.1`) for the two transformations that change no page.
  */
 export interface Gap {
-	champ: string
+	field: string
 	reference: string
 }
 
@@ -46,54 +46,54 @@ export interface Gap {
 export interface Expected {
 	strapiId: number
 	/** The values of the compared fields, under the names of Payload. */
-	valeurs: Readonly<Record<string, unknown>>
+	values: Readonly<Record<string, unknown>>
 	/** Given at the creation only, never compared nor reported: the random password of an account. */
-	aLaCreation?: Readonly<Record<string, unknown>>
+	onCreation?: Readonly<Record<string, unknown>>
 	/** The transformations made on this document. */
-	ecarts: readonly Gap[]
+	gaps: readonly Gap[]
 }
 
 /** A document the target refuses: its identifier, why, and the fields at fault. Never a value. */
 export interface Refusal {
 	strapiId: number
-	motif: string
-	champs?: string[]
+	reason: string
+	fields?: string[]
 }
 
 /** A document of the target that holds a `strapiId`. */
 export interface Existing {
 	id: number
-	valeurs: Readonly<Record<string, unknown>>
+	values: Readonly<Record<string, unknown>>
 }
 
 export type Action =
-	| { genre: 'creation'; attendu: Expected }
-	| { genre: 'modification'; attendu: Expected; id: number; champs: string[] }
-	| { genre: 'inchange'; attendu: Expected; id: number }
+	| { kind: 'creation'; expected: Expected }
+	| { kind: 'modification'; expected: Expected; id: number; fields: string[] }
+	| { kind: 'inchange'; expected: Expected; id: number }
 
 /** What the import knows of a collection, besides its data. */
 export interface Adapter {
 	collection: ImportedCollection
 	/** The compared fields and their kind. `createdAt` and `updatedAt` are restored after an update. */
-	champs: Readonly<Record<string, Kind>>
+	fields: Readonly<Record<string, Kind>>
 	/**
 	 * Compared fields the server computes at every save (the status of a profile): never written by
 	 * the import, at the creation as at an update. Their expected value is what the server must
 	 * compute from the written ones: a difference on them is a difference all the same.
 	 */
-	calcules?: readonly string[]
+	computed?: readonly string[]
 	/**
 	 * Compared fields the import only fills in: written when the target holds nothing for them, never
 	 * over a value already there (a title the newsroom typed in the admin). An empty expected value
 	 * writes nothing. They are left out of the fingerprint, which a later edit would change.
 	 */
-	amorces?: readonly string[]
+	seeds?: readonly string[]
 	/**
 	 * Compared fields of a document the target already holds that the import leaves exactly as they
 	 * are: never compared, never written, left out of the fingerprint. Only a missing document is
 	 * created, with all its fields. Used on a target the v3 is already using (ticket 227).
 	 */
-	figes?: readonly string[]
+	frozen?: readonly string[]
 	/** Options of the writes of one document: a draft, no confirmation email, more context. */
 	options?: (attendu: Expected) => WriteOptions
 }
@@ -104,26 +104,26 @@ export interface WriteOptions {
 	 * the document itself (`draft: false`), whatever its status: a draft update of Payload would
 	 * only write a new version, and the next run would find the document unchanged.
 	 */
-	brouillon?: boolean
+	draft?: boolean
 	/** No confirmation email for a new account. */
 	disableVerificationEmail?: boolean
 	/** Context added to the import context. */
-	contexte?: RequestContext
+	context?: RequestContext
 }
 
 /** The plan of a collection: what to write, and what the target holds that the source does not give. */
 export interface Plan {
 	actions: Action[]
 	/** `strapiId` of the documents of the target that no expected document names. Never deleted. */
-	enTrop: number[]
+	extra: number[]
 }
 
 /** What a run did in a collection. */
 export interface Summary {
-	crees: number
-	modifies: number
-	inchanges: number
-	refuses: Refusal[]
+	created: number
+	updated: number
+	unchanged: number
+	refused: Refusal[]
 }
 
 const DATES = new Set(['createdAt', 'updatedAt'])
@@ -201,14 +201,14 @@ export function normalize(genre: Kind, valeur: unknown): unknown {
 
 /** The fields whose value in the target differs from the expected one. */
 export function differentFields(adaptateur: Adapter, attendu: Expected, existant: Existing): string[] {
-	const seeds = new Set(adaptateur.amorces ?? [])
-	const frozen = new Set(adaptateur.figes ?? [])
+	const seeds = new Set(adaptateur.seeds ?? [])
+	const frozen = new Set(adaptateur.frozen ?? [])
 	const empty = (valeur: unknown) => valeur === null || valeur === ''
-	return Object.entries(adaptateur.champs)
+	return Object.entries(adaptateur.fields)
 		.filter(([champ, genre]) => {
 			if (frozen.has(champ)) return false
-			const intended = normalize(genre, attendu.valeurs[champ])
-			const present = normalize(genre, existant.valeurs[champ])
+			const intended = normalize(genre, attendu.values[champ])
+			const present = normalize(genre, existant.values[champ])
 			// A field the import only fills in differs when it is missing in the target, nothing else.
 			if (seeds.has(champ)) return !empty(intended) && empty(present)
 			return intended !== present
@@ -219,24 +219,24 @@ export function differentFields(adaptateur: Adapter, attendu: Expected, existant
 /** What to do with each expected document, given what the target holds. */
 export function planActions(adaptateur: Adapter, attendus: readonly Expected[], existants: readonly Existing[]): Plan {
 	const byStrapiId = new Map<number, Existing>()
-	for (const existing of existants) byStrapiId.set(Number(existing.valeurs.strapiId), existing)
+	for (const existing of existants) byStrapiId.set(Number(existing.values.strapiId), existing)
 	const named = new Set(attendus.map(({ strapiId }) => strapiId))
 	const actions = attendus.map((attendu): Action => {
 		const existing = byStrapiId.get(attendu.strapiId)
-		if (!existing) return { genre: 'creation', attendu }
+		if (!existing) return { kind: 'creation', expected: attendu }
 		const fields = differentFields(adaptateur, attendu, existing)
 		return fields.length === 0
-			? { genre: 'inchange', attendu, id: existing.id }
-			: { genre: 'modification', attendu, id: existing.id, champs: fields }
+			? { kind: 'inchange', expected: attendu, id: existing.id }
+			: { kind: 'modification', expected: attendu, id: existing.id, fields: fields }
 	})
 	const extra = [...byStrapiId.keys()].filter(strapiId => !named.has(strapiId)).sort((a, b) => a - b)
-	return { actions, enTrop: extra }
+	return { actions, extra: extra }
 }
 
 /** The plan in numbers, before anything is written: what a run would do. */
 export function planSummary(plan: Plan): Summary {
-	const count = (genre: Action['genre']) => plan.actions.filter(action => action.genre === genre).length
-	return { crees: count('creation'), modifies: count('modification'), inchanges: count('inchange'), refuses: [] }
+	const count = (genre: Action['kind']) => plan.actions.filter(action => action.kind === genre).length
+	return { created: count('creation'), updated: count('modification'), unchanged: count('inchange'), refused: [] }
 }
 
 /**
@@ -244,7 +244,7 @@ export function planSummary(plan: Plan): Summary {
  * are read too (the legacy hash of an account): they stay in memory, for the comparison only.
  */
 export async function readTarget(payload: Payload, adaptateur: Adapter): Promise<Existing[]> {
-	const select = Object.fromEntries([...Object.keys(adaptateur.champs), 'strapiId'].map(champ => [champ, true]))
+	const select = Object.fromEntries([...Object.keys(adaptateur.fields), 'strapiId'].map(champ => [champ, true]))
 	const { docs } = await payload.find({
 		collection: adaptateur.collection,
 		where: { strapiId: { exists: true } },
@@ -254,7 +254,7 @@ export async function readTarget(payload: Payload, adaptateur: Adapter): Promise
 		overrideAccess: true,
 		showHiddenFields: true,
 	})
-	return docs.map(doc => ({ id: Number(doc.id), valeurs: { ...doc } }))
+	return docs.map(doc => ({ id: Number(doc.id), values: { ...doc } }))
 }
 
 /** The Local API, called the same way for the three collections; each adapter has typed its data. */
@@ -275,7 +275,7 @@ const choose = (valeurs: Readonly<Record<string, unknown>>, champs: readonly str
 /** The refusal of a document by Payload, by field path. */
 function payloadRefusal(strapiId: number, erreur: ValidationError): Refusal {
 	const fields = [...new Set(erreur.data.errors.map(({ path }) => path))].sort()
-	return { strapiId, motif: 'refuse-par-payload', champs: fields }
+	return { strapiId, reason: 'refuse-par-payload', fields: fields }
 }
 
 /** A code is printed only when it has the form of one: capitals, digits and `_`, never a value. */
@@ -341,50 +341,50 @@ export class InterruptedImport extends Error {
  * afterwards, by the adapter of the database, so that the next run finds them equal.
  */
 export async function write(payload: Payload, adaptateur: Adapter, plan: Plan): Promise<Summary> {
-	const summary: Summary = { crees: 0, modifies: 0, inchanges: 0, refuses: [] }
+	const summary: Summary = { created: 0, updated: 0, unchanged: 0, refused: [] }
 	const create = payload.create.bind(payload) as unknown as Write
 	const update = payload.update.bind(payload) as unknown as Write
 	// What the server computes is never sent: server code that writes it would make it a decision.
-	const computed = new Set(adaptateur.calcules ?? [])
+	const computed = new Set(adaptateur.computed ?? [])
 	const written = (valeurs: Readonly<Record<string, unknown>>) =>
 		Object.fromEntries(Object.entries(valeurs).filter(([champ]) => !computed.has(champ)))
 	for (const action of plan.actions) {
-		const { attendu: expected } = action
-		if (action.genre === 'inchange') {
-			summary.inchanges++
+		const { expected } = action
+		if (action.kind === 'inchange') {
+			summary.unchanged++
 			continue
 		}
 		const options = adaptateur.options?.(expected) ?? {}
 		const common = {
 			collection: adaptateur.collection,
-			context: { ...IMPORT_CONTEXT, ...options.contexte },
+			context: { ...IMPORT_CONTEXT, ...options.context },
 			depth: 0 as const,
 			overrideAccess: true as const,
 		}
 		try {
-			if (action.genre === 'creation') {
+			if (action.kind === 'creation') {
 				await create({
 					...common,
-					data: { ...written(expected.valeurs), ...expected.aLaCreation },
-					draft: options.brouillon === true,
+					data: { ...written(expected.values), ...expected.onCreation },
+					draft: options.draft === true,
 					disableVerificationEmail: options.disableVerificationEmail,
 				})
-				summary.crees++
+				summary.created++
 				continue
 			}
-			const fields = action.champs.filter(champ => !DATES.has(champ) && !computed.has(champ))
+			const fields = action.fields.filter(champ => !DATES.has(champ) && !computed.has(champ))
 			if (fields.length > 0)
-				await update({ ...common, id: action.id, data: choose(expected.valeurs, fields), draft: false })
-			const dates = choose(expected.valeurs, ['createdAt', 'updatedAt'])
+				await update({ ...common, id: action.id, data: choose(expected.values, fields), draft: false })
+			const dates = choose(expected.values, ['createdAt', 'updatedAt'])
 			if (Object.keys(dates).length > 0)
 				await payload.db.updateOne({ collection: adaptateur.collection, id: action.id, data: dates })
-			summary.modifies++
+			summary.updated++
 		} catch (error) {
 			// A value Payload refuses is listed, and the run goes on. Anything else stops it, and the
 			// error of the database is dropped here: its message holds the values of the query.
 			if (!(error instanceof ValidationError))
 				throw new InterruptedImport(adaptateur.collection, expected.strapiId, errorCode(error))
-			summary.refuses.push(payloadRefusal(expected.strapiId, error))
+			summary.refused.push(payloadRefusal(expected.strapiId, error))
 		}
 	}
 	return summary
@@ -397,16 +397,16 @@ export async function write(payload: Payload, adaptateur: Adapter, plan: Plan): 
  */
 export function documentsFingerprint(
 	adaptateur: Adapter,
-	documents: readonly { strapiId: number; valeurs: Readonly<Record<string, unknown>> }[]
+	documents: readonly { strapiId: number; values: Readonly<Record<string, unknown>> }[]
 ): string {
-	const seeds = new Set([...(adaptateur.amorces ?? []), ...(adaptateur.figes ?? [])])
-	const fields = Object.keys(adaptateur.champs)
+	const seeds = new Set([...(adaptateur.seeds ?? []), ...(adaptateur.frozen ?? [])])
+	const fields = Object.keys(adaptateur.fields)
 		.filter(champ => !seeds.has(champ))
 		.sort()
 	const rows = [...documents]
 		.sort((a, b) => a.strapiId - b.strapiId)
-		.map(({ strapiId, valeurs }) =>
-			JSON.stringify([strapiId, ...fields.map(champ => normalize(adaptateur.champs[champ] ?? 'texte', valeurs[champ]))])
+		.map(({ strapiId, values: valeurs }) =>
+			JSON.stringify([strapiId, ...fields.map(champ => normalize(adaptateur.fields[champ] ?? 'texte', valeurs[champ]))])
 		)
 	return createHash('sha256').update(rows.join('\n')).digest('hex')
 }
@@ -418,22 +418,22 @@ export function documentsFingerprint(
  */
 export interface Parity {
 	/** The documents of the source the import takes, the refused ones included. */
-	attendus: number
+	expected: number
 	/** Expected documents found in the target by their `strapiId`, the refused ones aside. */
-	presents: number
+	present: number
 	/** Found, with every compared value equal. */
-	egaux: number
+	equal: number
 	/** `strapiId` of the documents refused during the run: listed, they wait for a decision (ticket 066). */
-	refuses: number[]
+	refused: number[]
 	/** `strapiId` of the documents found with another value, the refused ones aside. */
-	differents: number[]
+	different: number[]
 	/** `strapiId` of the expected documents the target does not hold, the refused ones aside. */
-	manquants: number[]
+	missing: number[]
 	/** `strapiId` of the documents of the target that no expected document names. */
-	enTrop: number[]
+	extra: number[]
 	/** The fingerprints of the expected documents and of the target, the refused ones aside on both sides. */
-	empreinteAttendue: string
-	empreinteCible: string
+	expectedFingerprint: string
+	targetFingerprint: string
 }
 
 /**
@@ -451,23 +451,23 @@ export function parity(
 	const excluded = new Set(refuses)
 	const compares = attendus.filter(({ strapiId }) => !excluded.has(strapiId))
 	const plan = planActions(adaptateur, compares, existants)
-	const ids = (genre: Action['genre']) =>
-		plan.actions.filter(action => action.genre === genre).map(({ attendu: expected }) => expected.strapiId)
+	const ids = (genre: Action['kind']) =>
+		plan.actions.filter(action => action.kind === genre).map(({ expected }) => expected.strapiId)
 	const different = ids('modification')
 	const missing = ids('creation')
 	return {
-		attendus: compares.length + refuses.length,
-		presents: compares.length - missing.length,
-		egaux: ids('inchange').length,
-		refuses,
-		differents: different,
-		manquants: missing,
-		enTrop: plan.enTrop.filter(strapiId => !excluded.has(strapiId)),
-		empreinteAttendue: documentsFingerprint(adaptateur, compares),
-		empreinteCible: documentsFingerprint(
+		expected: compares.length + refuses.length,
+		present: compares.length - missing.length,
+		equal: ids('inchange').length,
+		refused: refuses,
+		different: different,
+		missing: missing,
+		extra: plan.extra.filter(strapiId => !excluded.has(strapiId)),
+		expectedFingerprint: documentsFingerprint(adaptateur, compares),
+		targetFingerprint: documentsFingerprint(
 			adaptateur,
 			existants
-				.map(({ valeurs }) => ({ strapiId: Number(valeurs.strapiId), valeurs }))
+				.map(({ values: valeurs }) => ({ strapiId: Number(valeurs.strapiId), values: valeurs }))
 				.filter(({ strapiId }) => !excluded.has(strapiId))
 		),
 	}
@@ -478,10 +478,10 @@ export function parity(
  * different, nothing missing, nothing more, the same fingerprint.
  */
 export const withoutUnexplainedGap = (p: Parity): boolean =>
-	p.differents.length === 0 &&
-	p.manquants.length === 0 &&
-	p.enTrop.length === 0 &&
-	p.empreinteAttendue === p.empreinteCible
+	p.different.length === 0 &&
+	p.missing.length === 0 &&
+	p.extra.length === 0 &&
+	p.expectedFingerprint === p.targetFingerprint
 
 /** True when a parity is complete: no document refused, and nothing else between the target and the source. */
-export const parityComplete = (p: Parity): boolean => p.refuses.length === 0 && withoutUnexplainedGap(p)
+export const parityComplete = (p: Parity): boolean => p.refused.length === 0 && withoutUnexplainedGap(p)

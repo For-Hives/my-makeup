@@ -5,17 +5,17 @@
  * - Three questions: the communes of a name (`nom`), of a postal code (`codePostal`), and the
  *   commune of an INSEE code (`code`). An answer is a list of communes: their name, INSEE code,
  *   département, postal codes and centre.
- * - Every answer is kept, by its question, in a file the command names (`--communes`): a second
+ * - Every answer is kept, by its question, in a file the command names (`--cities`): a second
  *   run reads the kept answers and asks nothing again, so that two runs on the same source give the
  *   same communes, whatever the referential says in between.
- * - Offline (`--hors-ligne`), nothing is asked: a question whose answer is not kept stops the run
+ * - Offline (`--offline`), nothing is asked: a question whose answer is not kept stops the run
  *   before any write. The bench and the tests run so, with the answers of
  *   tests/fixtures/import/referentiel-du-banc.json: no test calls the Internet.
  * - A referential that does not answer, answers an error or something that is not a list of
  *   communes stops the run before any write. The answers already received stay kept.
  *
  * The questions hold a name of commune or a postal code, never a street: the import never asks
- * with what it read as an address (./communes.ts). The referential is called by `fetch`, the one
+ * with what it read as an address (./cities.ts). The referential is called by `fetch`, the one
  * outgoing call the tests simulate (docs/tests/http-sortant.md).
  */
 
@@ -204,8 +204,8 @@ export function keptReference(reponses: KeptAnswers, referentiel: Reference | nu
 			if (!referentiel)
 				throw new ImportRefuse(
 					[
-						'Hors ligne (--hors-ligne), une réponse du référentiel des communes n’est pas dans le fichier des réponses gardées :',
-						'rien n’est écrit. Relance sans --hors-ligne pour la demander au référentiel.',
+						'Hors ligne (--offline), une réponse du référentiel des communes n’est pas dans le fichier des réponses gardées :',
+						'rien n’est écrit. Relance sans --offline pour la demander au référentiel.',
 					].join(' ')
 				)
 			const response = await referentiel.repondre(question)

@@ -37,11 +37,11 @@ export type RawEnv = Partial<
 		| 'GOOGLE_CLIENT_ID'
 		| 'GOOGLE_CLIENT_SECRET'
 		| 'GOOGLE_OIDC_ISSUER'
-		| 'IMPORT_CIBLE_EN_SERVICE'
-		| 'IMPORT_COMMUNES'
-		| 'IMPORT_CONSENTEMENT_LE'
+		| 'IMPORT_TARGET_IN_SERVICE'
+		| 'IMPORT_CITIES'
+		| 'IMPORT_CONSENT_DATE'
 		| 'IMPORT_DECISIONS'
-		| 'IMPORT_JETON'
+		| 'IMPORT_TOKEN'
 		| 'IMPORT_MODE'
 		| 'INDEXNOW_KEY'
 		| 'NEXT_PHASE'
@@ -91,24 +91,24 @@ export type StorageEnv = {
 
 /**
  * The import of the old site that the deployed container runs on demand (ticket 233,
- * src/migration/import-a-la-demande.ts): asked for by a token, only on the site.
+ * src/migration/on-demand-import.ts): asked for by a token, only on the site.
  */
 export type ImportEnv = {
-	/** The token of IMPORT_JETON: a token that was already played does nothing. */
-	jeton: string
-	/** `a-blanc` writes nothing, `reel` writes and reads again, `controle` is a dry run that says whether the target is the source. */
+	/** The token of IMPORT_TOKEN: a token that was already played does nothing. */
+	token: string
+	/** `dry-run` writes nothing, `real` writes and reads again, `check` is a dry run that says whether the target is the source. */
 	mode: ImportMode
 	/** The table of decisions, as JSON text (identifiers only). Read by the import, which refuses a table it cannot read. */
 	decisions?: string
 	/** The date of the switch (`2026-11-02`, or with a time and a zone). */
-	consentiLe?: string
+	consentDate?: string
 	/** The kept answers of the referential of the communes, as JSON text. Optional. */
-	communes?: string
-	/** `IMPORT_CIBLE_EN_SERVICE=oui`: run on a target the v3 already uses. Never with `controle`. */
-	cibleEnService: boolean
+	cities?: string
+	/** `IMPORT_TARGET_IN_SERVICE=oui`: run on a target the v3 already uses. Never with `check`. */
+	targetInService: boolean
 }
 
-export type ImportMode = 'a-blanc' | 'reel' | 'controle'
+export type ImportMode = 'dry-run' | 'real' | 'check'
 
 /** The Umami instance the `/u` relay talks to. */
 export type UmamiEnv = {
@@ -133,7 +133,7 @@ export type ServerEnv = {
 	authVerify: boolean
 	databaseUri: string
 	/**
-	 * Set only on the site, when IMPORT_JETON is: the import the container runs once for this token
+	 * Set only on the site, when IMPORT_TOKEN is: the import the container runs once for this token
 	 * (ticket 233). Nothing anywhere else, and never while Next builds.
 	 */
 	importation?: ImportEnv
@@ -193,16 +193,16 @@ export const SITE_ORIGIN = 'https://my-makeup.fr'
 export const UMAMI_ORIGIN_DEFAULT = 'https://umami.wadefade.fr'
 
 /**
- * A token of IMPORT_JETON: lower case letters, digits and hyphens, 8 to 64 characters, such as
+ * A token of IMPORT_TOKEN: lower case letters, digits and hyphens, 8 to 64 characters, such as
  * « 2026-11-02-essai-1 ». A token that was already played does nothing (it is kept in the database).
  */
-export const JETON_D_IMPORT = /^[a-z0-9][a-z0-9-]{7,63}$/
+export const IMPORT_TOKEN_PATTERN = /^[a-z0-9][a-z0-9-]{7,63}$/
 
 /** The values of IMPORT_MODE. */
-const MODES_D_IMPORT: readonly string[] = ['a-blanc', 'reel', 'controle']
+const MODES_D_IMPORT: readonly string[] = ['dry-run', 'real', 'check']
 
 /** The values of APP_ENV the application knows: the bench and the site. Nothing else. */
-const APP_ENVS: readonly string[] = ['test', 'prod']
+const APP_ENVIRONMENTS: readonly string[] = ['test', 'prod']
 
 /** Google's own OpenID Connect issuer: the only one a deployed site talks to. */
 export const GOOGLE_ISSUER = 'https://accounts.google.com'
@@ -255,12 +255,12 @@ const EXPECTED = {
 	GOOGLE_CLIENT_ID: 'l’identifiant du client OAuth de la console Google, avec GOOGLE_CLIENT_SECRET',
 	GOOGLE_CLIENT_SECRET: 'le secret de ce client OAuth, avec GOOGLE_CLIENT_ID',
 	GOOGLE_OIDC_ISSUER: `${GOOGLE_ISSUER}, ou sur ce poste l’adresse du faux Google du banc de test, comme http://127.0.0.1:7080, sans « / » final`,
-	IMPORT_CIBLE_EN_SERVICE: '« oui » seulement, et jamais avec IMPORT_MODE=controle',
-	IMPORT_COMMUNES: 'un texte JSON',
-	IMPORT_CONSENTEMENT_LE: 'une date comme « 2026-11-02 », ou avec heure et fuseau comme « 2026-11-02T08:00:00Z »',
+	IMPORT_TARGET_IN_SERVICE: '« oui » seulement, et jamais avec IMPORT_MODE=check',
+	IMPORT_CITIES: 'un texte JSON',
+	IMPORT_CONSENT_DATE: 'une date comme « 2026-11-02 », ou avec heure et fuseau comme « 2026-11-02T08:00:00Z »',
 	IMPORT_DECISIONS: 'un texte JSON (la table de décision, des identifiants seulement)',
-	IMPORT_JETON: `un jeton de 8 à 64 caractères, minuscules, chiffres et tirets, comme « 2026-11-02-essai-1 », et seulement sur le site (${SITE_ORIGIN}, en production, APP_ENV=prod)`,
-	IMPORT_MODE: '« a-blanc » (la valeur par défaut), « reel » ou « controle »',
+	IMPORT_TOKEN: `un jeton de 8 à 64 caractères, minuscules, chiffres et tirets, comme « 2026-11-02-essai-1 », et seulement sur le site (${SITE_ORIGIN}, en production, APP_ENV=prod)`,
+	IMPORT_MODE: '« dry-run » (la valeur par défaut), « real » ou « check »',
 	INDEXNOW_KEY: '32 caractères hexadécimaux en minuscules, comme la sortie de « openssl rand -hex 16 »',
 	NEXT_PUBLIC_SITE_URL: `${DEPLOYED_ORIGINS.join(', ')} ou une adresse de ce poste comme http://localhost:${DEFAULT_PORT}, sans « / » final`,
 	PAYLOAD_SECRET: `au moins ${SECRET_MIN_LENGTH} caractères, par exemple la sortie de « openssl rand -hex 32 »`,
@@ -605,7 +605,7 @@ function mailEnv(raw: RawEnv, problems: { variable: string; problem: string }[],
  */
 function appEnvProblem(raw: RawEnv, problems: { variable: string; problem: string }[]): void {
 	const appEnv = raw.APP_ENV?.trim()
-	if (appEnv !== undefined && !APP_ENVS.includes(appEnv))
+	if (appEnv !== undefined && !APP_ENVIRONMENTS.includes(appEnv))
 		problems.push({ variable: 'APP_ENV', problem: `illisible. Attendu : ${EXPECTED.APP_ENV}.` })
 }
 
@@ -620,7 +620,7 @@ function isJson(text: string): boolean {
 }
 
 /** A date written the way the import reads it: a day, or a day with a time and a zone. */
-const DATE_DE_BASCULE = /^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2}))?$/
+const CUTOVER_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2}))?$/
 
 /**
  * The import the container runs on demand (ticket 233), or nothing. It runs on the site only:
@@ -630,11 +630,11 @@ const DATE_DE_BASCULE = /^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})
  */
 function importEnv(raw: RawEnv, problems: { variable: string; problem: string }[]): ImportEnv | undefined {
 	const names = [
-		'IMPORT_CIBLE_EN_SERVICE',
-		'IMPORT_COMMUNES',
-		'IMPORT_CONSENTEMENT_LE',
+		'IMPORT_TARGET_IN_SERVICE',
+		'IMPORT_CITIES',
+		'IMPORT_CONSENT_DATE',
 		'IMPORT_DECISIONS',
-		'IMPORT_JETON',
+		'IMPORT_TOKEN',
 		'IMPORT_MODE',
 	] as const
 	const set = names.filter(name => raw[name] !== undefined)
@@ -652,40 +652,43 @@ function importEnv(raw: RawEnv, problems: { variable: string; problem: string }[
 	const before = problems.length
 	const refuse = (variable: (typeof names)[number], problem = 'illisible') =>
 		problems.push({ variable, problem: `${problem}. Attendu : ${EXPECTED[variable]}.` })
-	const jeton = raw.IMPORT_JETON?.trim()
-	if (jeton === undefined) {
-		for (const variable of set) refuse(variable, `refusée, car IMPORT_JETON est ${ABSENT}`)
+	const importToken = raw.IMPORT_TOKEN?.trim()
+	if (importToken === undefined) {
+		for (const variable of set) refuse(variable, `refusée, car IMPORT_TOKEN est ${ABSENT}`)
 		return undefined
 	}
-	if (!JETON_D_IMPORT.test(jeton)) refuse('IMPORT_JETON')
-	const mode = raw.IMPORT_MODE?.trim() ?? 'a-blanc'
-	if (!MODES_D_IMPORT.includes(mode)) refuse('IMPORT_MODE')
-	const cibleEnService = raw.IMPORT_CIBLE_EN_SERVICE?.trim()
-	if (cibleEnService !== undefined && cibleEnService !== 'oui') refuse('IMPORT_CIBLE_EN_SERVICE')
-	else if (cibleEnService === 'oui' && mode === 'controle')
+	if (!IMPORT_TOKEN_PATTERN.test(importToken)) refuse('IMPORT_TOKEN')
+	const mode = raw.IMPORT_MODE?.trim() ?? 'dry-run'
+	const renamedMode = RENAMED_MODES.find(([old]) => old === mode)
+	if (renamedMode)
+		refuse('IMPORT_MODE', `ancienne valeur, refusée : « ${renamedMode[0]} » s’appelle maintenant « ${renamedMode[1]} »`)
+	else if (!MODES_D_IMPORT.includes(mode)) refuse('IMPORT_MODE')
+	const targetInService = raw.IMPORT_TARGET_IN_SERVICE?.trim()
+	if (targetInService !== undefined && targetInService !== 'oui') refuse('IMPORT_TARGET_IN_SERVICE')
+	else if (targetInService === 'oui' && mode === 'check')
 		refuse(
-			'IMPORT_CIBLE_EN_SERVICE',
-			'refusée avec IMPORT_MODE=controle, qui ne compare pas les comptes laissés tels quels'
+			'IMPORT_TARGET_IN_SERVICE',
+			'refusée avec IMPORT_MODE=check, qui ne compare pas les comptes laissés tels quels'
 		)
-	if (raw.IMPORT_CONSENTEMENT_LE !== undefined) {
-		const date = raw.IMPORT_CONSENTEMENT_LE.trim()
-		if (!DATE_DE_BASCULE.test(date) || Number.isNaN(Date.parse(date))) refuse('IMPORT_CONSENTEMENT_LE')
+	if (raw.IMPORT_CONSENT_DATE !== undefined) {
+		const date = raw.IMPORT_CONSENT_DATE.trim()
+		if (!CUTOVER_DATE_PATTERN.test(date) || Number.isNaN(Date.parse(date))) refuse('IMPORT_CONSENT_DATE')
 	}
-	for (const variable of ['IMPORT_DECISIONS', 'IMPORT_COMMUNES'] as const)
+	for (const variable of ['IMPORT_DECISIONS', 'IMPORT_CITIES'] as const)
 		if (raw[variable] !== undefined && !isJson(raw[variable])) refuse(variable)
 	if (raw.STRAPI_SOURCE_URI === undefined)
 		problems.push({
 			variable: 'STRAPI_SOURCE_URI',
-			problem: `${ABSENT}, alors qu’IMPORT_JETON est réglée. Attendu : ${EXPECTED.STRAPI_SOURCE_URI}.`,
+			problem: `${ABSENT}, alors qu’IMPORT_TOKEN est réglée. Attendu : ${EXPECTED.STRAPI_SOURCE_URI}.`,
 		})
 	if (problems.length > before) return undefined
 	return {
-		jeton,
+		token: importToken,
 		mode: mode as ImportMode,
 		...(raw.IMPORT_DECISIONS !== undefined && { decisions: raw.IMPORT_DECISIONS }),
-		...(raw.IMPORT_CONSENTEMENT_LE !== undefined && { consentiLe: raw.IMPORT_CONSENTEMENT_LE.trim() }),
-		...(raw.IMPORT_COMMUNES !== undefined && { communes: raw.IMPORT_COMMUNES }),
-		cibleEnService: cibleEnService === 'oui',
+		...(raw.IMPORT_CONSENT_DATE !== undefined && { consentDate: raw.IMPORT_CONSENT_DATE.trim() }),
+		...(raw.IMPORT_CITIES !== undefined && { cities: raw.IMPORT_CITIES }),
+		targetInService: targetInService === 'oui',
 	}
 }
 
@@ -858,11 +861,11 @@ function processEnv(): RawEnv {
 		GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
 		GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
 		GOOGLE_OIDC_ISSUER: process.env.GOOGLE_OIDC_ISSUER,
-		IMPORT_CIBLE_EN_SERVICE: process.env.IMPORT_CIBLE_EN_SERVICE,
-		IMPORT_COMMUNES: process.env.IMPORT_COMMUNES,
-		IMPORT_CONSENTEMENT_LE: process.env.IMPORT_CONSENTEMENT_LE,
+		IMPORT_TARGET_IN_SERVICE: process.env.IMPORT_TARGET_IN_SERVICE,
+		IMPORT_CITIES: process.env.IMPORT_CITIES,
+		IMPORT_CONSENT_DATE: process.env.IMPORT_CONSENT_DATE,
 		IMPORT_DECISIONS: process.env.IMPORT_DECISIONS,
-		IMPORT_JETON: process.env.IMPORT_JETON,
+		IMPORT_TOKEN: process.env.IMPORT_TOKEN,
 		IMPORT_MODE: process.env.IMPORT_MODE,
 		INDEXNOW_KEY: process.env.INDEXNOW_KEY,
 		NEXT_PHASE: process.env.NEXT_PHASE,
@@ -886,6 +889,35 @@ function processEnv(): RawEnv {
 }
 
 /**
+ * The variables the English-names lot renamed (ticket 244): old name, new name. A variable under its old
+ * name is refused at the start, so that an import is never asked for under a name nobody reads any more.
+ * Plain pairs, not a Record: the old names are no variable of ours any more.
+ */
+export const RENAMED_VARIABLES: readonly (readonly [string, string])[] = [
+	['IMPORT_JETON', 'IMPORT_TOKEN'],
+	['IMPORT_CIBLE_EN_SERVICE', 'IMPORT_TARGET_IN_SERVICE'],
+	['IMPORT_COMMUNES', 'IMPORT_CITIES'],
+	['IMPORT_CONSENTEMENT_LE', 'IMPORT_CONSENT_DATE'],
+]
+
+/** The values of IMPORT_MODE that were renamed: old value, new value. */
+const RENAMED_MODES: readonly (readonly [string, string])[] = [
+	['a-blanc', 'dry-run'],
+	['reel', 'real'],
+	['controle', 'check'],
+]
+
+/** One problem per variable that is set under an old name. The value is never shown. */
+export function renamedVariableProblems(
+	environment: Readonly<Record<string, string | undefined>> = process.env
+): { variable: string; problem: string }[] {
+	return RENAMED_VARIABLES.filter(([old]) => environment[old] !== undefined).map(([old, current]) => ({
+		variable: old,
+		problem: `ancien nom, refusé : cette variable s’appelle maintenant ${current}. Renomme-la, rien n’est lu sous l’ancien nom.`,
+	}))
+}
+
+/**
  * The checked environment of this process.
  *
  * `next build` is the one exception: it loads the Payload configuration to compile the routes, and
@@ -894,8 +926,15 @@ function processEnv(): RawEnv {
  * A build sends no mail either: it gets no relay, whatever its environment holds; and no storage.
  * Nothing is imported or reset while Next builds.
  */
-export function serverEnv(source: RawEnv = processEnv()): ServerEnv {
-	if (source.NEXT_PHASE !== BUILD_PHASE) return parseServerEnv(source)
+export function serverEnv(
+	source: RawEnv = processEnv(),
+	environment: Readonly<Record<string, string | undefined>> = process.env
+): ServerEnv {
+	if (source.NEXT_PHASE !== BUILD_PHASE) {
+		const renamed = renamedVariableProblems(environment)
+		if (renamed.length > 0) throw new EnvError(renamed)
+		return parseServerEnv(source)
+	}
 	const raw = withoutBlanks(source)
 	const site = raw.NEXT_PUBLIC_SITE_URL === undefined ? undefined : siteOrigin(raw.NEXT_PUBLIC_SITE_URL)
 	return {

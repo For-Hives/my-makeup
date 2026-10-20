@@ -186,7 +186,7 @@ describe('les listes d’un profil, sous les noms de Payload', () => {
 
 	test('le bilan des prix compte en nombres et liste les profils, sans jamais citer un texte', () => {
 		const offre = (id: number, price: string | null) => ({ id, name: 'Offre', description: null, price, options: [] })
-		const { prix, attendus } = expectedProfiles(
+		const { prices: prix, expected: attendus } = expectedProfiles(
 			[
 				profil(1, { prestations: [offre(1, '80'), offre(2, 'Sur devis')] }),
 				profil(2, { prestations: [offre(3, '2 h : 150 €')] }),
@@ -204,17 +204,17 @@ describe('les listes d’un profil, sous les noms de Payload', () => {
 		)
 
 		expect(prix).toEqual({
-			prix: 7,
-			avecMontant: 2,
-			textesLibres: 3,
-			sansTexte: 2,
-			profilsAvecOffreChiffree: 1,
-			offresChiffreesPerdues: [],
-			chiffresNonLus: [2],
+			prices: 7,
+			withAmount: 2,
+			freeTexts: 3,
+			withoutText: 2,
+			profilesWithPricedOffer: 1,
+			lostPricedOffers: [],
+			unreadDigits: [2],
 		})
 		// The register line is counted once per profile that gains an amount, options included.
 		const comptes = attendus.map(
-			({ ecarts }) => ecarts.filter(({ reference }) => reference === 'prix-numerique').length
+			({ gaps: ecarts }) => ecarts.filter(({ reference }) => reference === 'prix-numerique').length
 		)
 		expect(comptes).toEqual([1, 0, 0, 1])
 		expect(JSON.stringify(prix)).not.toContain('Sur devis')
@@ -246,7 +246,7 @@ describe('les photos d’un profil sont les médias adoptés de ses fichiers', (
 			[3, 13],
 		])
 
-		const { attendus, photosNonReprises } = expectedProfiles(
+		const { expected: attendus, photosNotCarriedOver: photosNonReprises } = expectedProfiles(
 			[profil(21, { photoPrincipale: [1], galerie: [3, 9, 2] }), profil(22, { photoPrincipale: [8] })],
 			comptes,
 			undefined,
@@ -254,18 +254,22 @@ describe('les photos d’un profil sont les médias adoptés de ses fichiers', (
 			medias
 		)
 
-		expect(attendus.map(({ valeurs }) => [valeurs.mainPicture, valeurs.gallery])).toEqual([
+		expect(attendus.map(({ values: valeurs }) => [valeurs.mainPicture, valeurs.gallery])).toEqual([
 			[11, [13, 12]],
 			[null, []],
 		])
 		expect(photosNonReprises).toEqual([
-			{ entree: 21, fichier: 9 },
-			{ entree: 22, fichier: 8 },
+			{ entry: 21, file: 9 },
+			{ entry: 22, file: 8 },
 		])
 	})
 
 	test('le statut lit si la photo principale est adoptée, même avant que son média existe (à blanc)', () => {
-		const { attendus, statuts, statutsDifferentsDeLaSource } = expectedProfiles(
+		const {
+			expected: attendus,
+			statuses: statuts,
+			statusesDifferingFromSource: statutsDifferentsDeLaSource,
+		} = expectedProfiles(
 			[profil(21, { photoPrincipale: [1] }), profil(22, { photoPrincipale: [2] }), profil(23)],
 			comptes,
 			undefined,
@@ -273,7 +277,7 @@ describe('les photos d’un profil sont les médias adoptés de ses fichiers', (
 			new Map([[1, null]])
 		)
 
-		expect(attendus.map(({ valeurs }) => [valeurs.mainPicture, valeurs.status])).toEqual([
+		expect(attendus.map(({ values: valeurs }) => [valeurs.mainPicture, valeurs.status])).toEqual([
 			[null, 'published'],
 			[null, 'draft'],
 			[null, 'draft'],
@@ -284,7 +288,10 @@ describe('les photos d’un profil sont les médias adoptés de ses fichiers', (
 	})
 
 	test('un lien de liste sans ligne est signalé par son profil', () => {
-		const { liensSansLigne } = expectedProfiles([profil(21, { liensSansLigne: 2 }), profil(22)], comptes)
+		const { linksWithoutRow: liensSansLigne } = expectedProfiles(
+			[profil(21, { liensSansLigne: 2 }), profil(22)],
+			comptes
+		)
 
 		expect(liensSansLigne).toEqual([21])
 	})
@@ -413,23 +420,19 @@ describe('une ligne hors d’une borne de la v3 est laissée de côté et listé
 			experiences: [experience('2022-05-01', '2021-01-01')],
 			prestations: [offre(1, { description: 'y'.repeat(2001), price: '80 €' }), offre(2, { price: '60 €' })],
 		})
-		const { attendus, lignesLaissees, prix } = expectedProfiles(
-			[profil(1, lues)],
-			new Map([[101, 1]]),
-			undefined,
-			undefined,
-			undefined,
-			null,
-			AUJOURD_HUI
-		)
+		const {
+			expected: attendus,
+			skippedRows: lignesLaissees,
+			prices: prix,
+		} = expectedProfiles([profil(1, lues)], new Map([[101, 1]]), undefined, undefined, undefined, null, AUJOURD_HUI)
 
 		expect(lignesLaissees).toEqual([
-			{ profil: 1, liste: 'experiences', rang: 1 },
-			{ profil: 1, liste: 'prestations', rang: 1 },
+			{ profile: 1, liste: 'experiences', rang: 1 },
+			{ profile: 1, liste: 'prestations', rang: 1 },
 		])
-		expect(attendus[0]?.valeurs.experiences).toEqual([])
-		expect((attendus[0]?.valeurs.serviceOffers as unknown[]).length).toBe(1)
-		expect(prix.prix).toBe(1)
-		expect(prix.offresChiffreesPerdues).toEqual([])
+		expect(attendus[0]?.values.experiences).toEqual([])
+		expect((attendus[0]?.values.serviceOffers as unknown[]).length).toBe(1)
+		expect(prix.prices).toBe(1)
+		expect(prix.lostPricedOffers).toEqual([])
 	})
 })

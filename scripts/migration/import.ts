@@ -2,25 +2,25 @@
  * Command line of the import of the old site (docs/migration/IMPORT.md).
  *
  *   bun scripts/migration/import.ts                    dry run: what it would write, nothing written
- *   bun scripts/migration/import.ts --reel             writes, then reads the target again (parity)
- *   bun scripts/migration/import.ts --rapport r.json   also writes the report as JSON
+ *   bun scripts/migration/import.ts --real             writes, then reads the target again (parity)
+ *   bun scripts/migration/import.ts --report r.json   also writes the report as JSON
  *   bun scripts/migration/import.ts --decisions d.json the table of decisions (accounts that share an email)
- *   bun scripts/migration/import.ts --revue v.json     also writes the private list of the cities to review
- *   bun scripts/migration/import.ts --controle         dry run that says whether the target is the source: exit 4 if not
- *   bun scripts/migration/import.ts --sans-photos      no storage of the photos: none is read, none adopted (a rehearsal with no network)
- *   bun scripts/migration/import.ts --consentement-le 2026-11-02   the date of the switch: the consent date of the profiles that show a phone or an email today
- *   bun scripts/migration/import.ts --cible-en-service  on a target the v3 already uses: the accounts it holds are left as they are (without it, such a target is refused)
+ *   bun scripts/migration/import.ts --review v.json     also writes the private list of the cities to review
+ *   bun scripts/migration/import.ts --check         dry run that says whether the target is the source: exit 4 if not
+ *   bun scripts/migration/import.ts --without-photos      no storage of the photos: none is read, none adopted (a rehearsal with no network)
+ *   bun scripts/migration/import.ts --consent-date 2026-11-02   the date of the switch: the consent date of the profiles that show a phone or an email today
+ *   bun scripts/migration/import.ts --target-in-service  on a target the v3 already uses: the accounts it holds are left as they are (without it, such a target is refused)
  *
  * The cities become communes of the official list (geo.api.gouv.fr). Its answers are kept in a
- * file (`--communes`, by default .migration/referentiel-communes.json, never versioned): a second
- * run asks nothing again. `--hors-ligne` asks nothing at all, and stops on an answer not kept.
+ * file (`--cities`, by default .migration/cities-reference.json, never versioned): a second
+ * run asks nothing again. `--offline` asks nothing at all, and stops on an answer not kept.
  *
  * It reads the Strapi database of STRAPI_SOURCE_URI, read-only, and writes into the database of
  * Payload that DATABASE_URI names, through the Local API. The photos are adopted where they are:
  * their objects are read by requests for headers at the public base of the photos of the
  * application (R2_PUBLIC_URL, or the storage of the bench), never written. A database that is not on this machine
- * is refused unless the command says `--cible-distante`, before Payload is even loaded; that flag
- * demands `--base-attendue <name>`, and a target whose `current_database()` differs is refused
+ * is refused unless the command says `--remote-target`, before Payload is even loaded; that flag
+ * demands `--expected-database <name>`, and a target whose `current_database()` differs is refused
  * before the first read (ticket 233). The
  * schema of the target is never changed: a target without the tables of the v3 is refused.
  *
@@ -38,7 +38,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { EnvError, mediaBaseUrl, serverEnv } from '../../src/lib/env'
-import { DEFAULT_CITIES_FILE, readArguments, USAGE } from './import/arguments'
+import { DEFAULT_CITIES_FILE, readArguments, renamedOptionHint, USAGE } from './import/arguments'
 import { type Decisions, NO_DECISION, readDecisions } from './import/decisions'
 import { InterruptedImport, unexpectedErrorMessage } from './import/engine'
 import { importer } from './import/importer'
@@ -80,7 +80,7 @@ function readAnswersFile(fichier: string, horsLigne: boolean): KeptAnswers {
 	if (!existsSync(fichier)) {
 		if (horsLigne)
 			throw new ImportRefuse(
-				'Hors ligne (--hors-ligne), le fichier des réponses gardées du référentiel des communes n’existe pas : rien n’est écrit.'
+				'Hors ligne (--offline), le fichier des réponses gardées du référentiel des communes n’existe pas : rien n’est écrit.'
 			)
 		return new Map()
 	}
@@ -102,6 +102,8 @@ function keepAnswers(fichier: string, referentiel: KeptReference): void {
 async function principal(argumentsDeLaCommande: string[]): Promise<number> {
 	const options = readArguments(argumentsDeLaCommande)
 	if (!options) {
+		const hint = renamedOptionHint(argumentsDeLaCommande)
+		if (hint) console.error(hint)
 		console.error(USAGE)
 		return 2
 	}
@@ -110,38 +112,38 @@ async function principal(argumentsDeLaCommande: string[]): Promise<number> {
 	const sourceAddress = process.env.STRAPI_SOURCE_URI
 	if (!sourceAddress)
 		throw new ImportRefuse('STRAPI_SOURCE_URI manque : l’import ne sait pas quelle base Strapi lire. Rien n’est écrit.')
-	const consentDate = options.consentiLe === undefined ? undefined : cutoverDate(options.consentiLe)
+	const consentDate = options.consentDate === undefined ? undefined : cutoverDate(options.consentDate)
 	if (consentDate === null)
 		throw new ImportRefuse(
-			'La date de --consentement-le n’est pas une date (2026-11-02, ou 2026-11-02T08:00:00Z) : rien n’est écrit.'
+			'La date de --consent-date n’est pas une date (2026-11-02, ou 2026-11-02T08:00:00Z) : rien n’est écrit.'
 		)
 	const decisions = options.decisions ? readDecisionsFile(options.decisions) : NO_DECISION
-	const citiesFile = options.communes ?? DEFAULT_CITIES_FILE
+	const citiesFile = options.cities ?? DEFAULT_CITIES_FILE
 	const reference = keptReference(
-		readAnswersFile(citiesFile, options.horsLigne === true),
-		options.horsLigne ? null : geoApiReference()
+		readAnswersFile(citiesFile, options.offline === true),
+		options.offline ? null : geoApiReference()
 	)
 
 	const [{ getPayload }, { default: config }] = await Promise.all([import('payload'), import('@payload-config')])
 	const payload = await getPayload({ config: configurationWithoutSchemaChange(await config) })
-	// Named by `--base-attendue` (required with `--cible-distante`): checked before the first read.
-	if (options.baseAttendue !== undefined) await verifyExpectedDatabase(payload, options.baseAttendue)
+	// Named by `--expected-database` (required with `--remote-target`): checked before the first read.
+	if (options.expectedDatabase !== undefined) await verifyExpectedDatabase(payload, options.expectedDatabase)
 	await verifyTargetSchema(payload)
 	// Where the photos are served from, as the application gives their addresses (src/payload.config.ts).
-	// `--sans-photos`: no storage at all; nothing is asked of any host.
-	const mediaBase = options.sansPhotos ? null : mediaBaseUrl(process.env.R2_PUBLIC_URL, serverEnv().storage)
+	// `--without-photos`: no storage at all; nothing is asked of any host.
+	const mediaBase = options.withoutPhotos ? null : mediaBaseUrl(process.env.R2_PUBLIC_URL, serverEnv().storage)
 	// A check without storage cannot conclude on the photos: every file is « sans-stockage », so no
 	// media document is expected and the verdict would be a false green. Refused outright.
-	if (options.sansPhotos && options.controle)
+	if (options.withoutPhotos && options.check)
 		throw new ImportRefuse(
-			'--sans-photos ne va pas avec --controle : sans stockage, aucune photo n’est comparée et le contrôle ne pourrait pas conclure sur les médias. Rien n’est écrit ; relance avec le stockage, sans --sans-photos.'
+			'--without-photos ne va pas avec --check : sans stockage, aucune photo n’est comparée et le contrôle ne pourrait pas conclure sur les médias. Rien n’est écrit ; relance avec le stockage, sans --without-photos.'
 		)
 	// Without storage, a real pass would drop every photo link of the profiles and leave the media behind.
-	if (options.sansPhotos && options.mode === 'reel') {
+	if (options.withoutPhotos && options.mode === 'real') {
 		const { totalDocs } = await payload.count({ collection: 'media', overrideAccess: true })
 		if (totalDocs > 0)
 			throw new ImportRefuse(
-				'--sans-photos ne va pas avec --reel sur une cible qui garde déjà des médias : le passage retirerait les photos des profils. Rien n’est écrit ; relance avec le stockage, sans --sans-photos.'
+				'--without-photos ne va pas avec --real sur une cible qui garde déjà des médias : le passage retirerait les photos des profils. Rien n’est écrit ; relance avec le stockage, sans --without-photos.'
 			)
 	}
 	const source = openSourceBun(sourceAddress)
@@ -150,22 +152,22 @@ async function principal(argumentsDeLaCommande: string[]): Promise<number> {
 			payload,
 			source,
 			mode: options.mode,
-			cible: target,
+			target: target,
 			decisions,
-			consentiLe: consentDate,
-			cibleEnService: options.cibleEnService === true,
-			referentiel: reference,
-			medias: mediaBase === null ? undefined : { base: mediaBase },
+			consentDate: consentDate,
+			targetInService: options.targetInService === true,
+			reference: reference,
+			media: mediaBase === null ? undefined : { base: mediaBase },
 			// Read by its owner only: what was asked of the referential for each city to review.
-			surLaRevue: revue => {
-				if (options.revue) writeFileSync(options.revue, `${JSON.stringify(revue, null, '\t')}\n`, { mode: 0o600 })
+			onReview: revue => {
+				if (options.review) writeFileSync(options.review, `${JSON.stringify(revue, null, '\t')}\n`, { mode: 0o600 })
 			},
 		})
 		console.log(reportAsText(report))
-		if (options.controle) console.log(checkAsText(report))
+		if (options.check) console.log(checkAsText(report))
 		// Read by its owner only: it lists identifiers of the old base.
-		if (options.rapport) writeFileSync(options.rapport, `${JSON.stringify(report, null, '\t')}\n`, { mode: 0o600 })
-		return options.controle ? checkExitCode(report) : exitCode(report)
+		if (options.report) writeFileSync(options.report, `${JSON.stringify(report, null, '\t')}\n`, { mode: 0o600 })
+		return options.check ? checkExitCode(report) : exitCode(report)
 	} finally {
 		keepAnswers(citiesFile, reference)
 		await source.fermer()

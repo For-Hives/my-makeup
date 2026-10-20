@@ -11,7 +11,7 @@
  * - An availability never set (`null`) is « available » (register, `disponibilite-par-defaut`):
  *   the only exception to « null stays null » (SCHEMA.md, rule 2).
  * - The city typed becomes a commune of the official list, with its INSEE code, never an address
- *   (./communes.ts, ticket 063; register, `ville-en-commune`): the text typed is never copied.
+ *   (./cities.ts, ticket 063; register, `ville-en-commune`): the text typed is never copied.
  * - The status is never written: the server computes it at every save from what the import writes
  *   (ticket 044). An entirely empty profile is a draft (register, `profils-vides-brouillon`), any
  *   other is published. The import leaves the choice of the status to the rule (`automatique`): a
@@ -27,7 +27,7 @@
  *   table leaves it aside with its account (SCHEMA.md §11).
  *
  * - Its lists, its networks and its photos are those of the old site, in their order
- *   (./sections.ts, ticket 060): a photo whose file is not adopted (./medias.ts) is reported, never
+ *   (./sections.ts, ticket 060): a photo whose file is not adopted (./media.ts) is reported, never
  *   invented.
  *
  * - Its prices keep the text typed and gain the amount the single rule reads in it (src/lib/price.ts,
@@ -157,7 +157,7 @@ const count = (valeur: string | number | null | undefined): number | null =>
 	valeur === null || valeur === undefined ? null : Number(valeur)
 
 /** A radius of the source that the v3 does not take: the profile, and the value (a distance, nothing personal). */
-export type RadiusToReview = { profil: number; rayonKm: number }
+export type RadiusToReview = { profile: number; radiusKm: number }
 
 /**
  * The radius of action of a profile of the source (register, `rayon-200-km`): a whole number of
@@ -174,7 +174,7 @@ export function sourceRadius(profil: Pick<ProfileRow, 'action_radius'>): number 
 /** The radius of the source that `rayonDeLaSource` leaves out, for the report. */
 export function radiusToReview(profil: Pick<ProfileRow, 'id' | 'action_radius'>): RadiusToReview | null {
 	const radius = count(profil.action_radius)
-	return radius !== null && sourceRadius(profil) === null ? { profil: profil.id, rayonKm: radius } : null
+	return radius !== null && sourceRadius(profil) === null ? { profile: profil.id, radiusKm: radius } : null
 }
 
 /** The words the old site reads as no value (`texte()`, src/lib/profil/vue-publique.js). */
@@ -190,7 +190,7 @@ const contactDetail = (valeur: string | null | undefined): string | null => {
 }
 
 /** A contact detail the old site showed and the server would refuse (padding aside): which one, never its value. */
-export type ContactDetailToReview = { profil: number; champ: 'telephone' | 'email' }
+export type ContactDetailToReview = { profile: number; field: 'telephone' | 'email' }
 
 /**
  * The phone and the email of contact of a profile of the source, under the names of Payload. A value
@@ -213,7 +213,7 @@ export function contactDetailsToReview(profil: ReadProfile): ContactDetailToRevi
 	const keptItems = sourceContactDetails(profil)
 	return (['telephone', 'email'] as const)
 		.filter(champ => read[champ] !== null && keptItems[champ] === null)
-		.map(champ => ({ profil: profil.id, champ }))
+		.map(champ => ({ profile: profil.id, field: champ }))
 }
 
 /** The contact details as the collection stores them (`contactDetails`): the phone, the email. */
@@ -244,7 +244,7 @@ export function cutoverDate(texte: string): string | null {
 
 export const PROFILES_ADAPTER: Adapter = {
 	collection: 'profiles',
-	champs: {
+	fields: {
 		pro: 'relation',
 		slug: 'texte',
 		legacyUsername: 'texte',
@@ -276,22 +276,22 @@ export const PROFILES_ADAPTER: Adapter = {
 		updatedAt: 'date',
 	},
 	// Computed by the server at every save (ticket 044): compared, never sent.
-	calcules: ['status'],
+	computed: ['status'],
 	// The date of the consent is the one of the first run that gave it: a later run with another date of
 	// the switch keeps it (ticket 227). The server dates it again when the contact details are closed
 	// then opened (src/lib/profile/contact-details.ts), and the field is empty then, so the run fills it in.
-	amorces: ['consentedAt'],
+	seeds: ['consentedAt'],
 }
 
 /**
- * The profiles on a target the v3 already uses (`--cible-en-service`, ticket 227): a profile the target
+ * The profiles on a target the v3 already uses (`--target-in-service`, ticket 227): a profile the target
  * holds is left exactly as it is, every field of it. A makeup artist who closed her phone or her email,
  * moved her commune or changed her lists and photos in the v3 would otherwise get the old site back,
  * with a public phone and the consent of the import. Only a profile the target misses is created.
  */
 export const PROFILES_IN_SERVICE_ADAPTER: Adapter = {
 	...PROFILES_ADAPTER,
-	figes: Object.keys(PROFILES_ADAPTER.champs),
+	frozen: Object.keys(PROFILES_ADAPTER.fields),
 }
 
 /**
@@ -300,13 +300,13 @@ export const PROFILES_IN_SERVICE_ADAPTER: Adapter = {
  */
 export function keptConsents(
 	attendus: readonly Expected[],
-	existants: readonly { valeurs: Readonly<Record<string, unknown>> }[]
+	existants: readonly { values: Readonly<Record<string, unknown>> }[]
 ): number[] {
 	const keptItems = new Map(
-		existants.map(({ valeurs: values }) => [Number(values.strapiId), normalize('date', values.consentedAt)] as const)
+		existants.map(({ values }) => [Number(values.strapiId), normalize('date', values.consentedAt)] as const)
 	)
 	return attendus
-		.filter(({ strapiId, valeurs: values }) => {
+		.filter(({ strapiId, values }) => {
 			const requested = normalize('date', values.consentedAt)
 			const kept = keptItems.get(strapiId)
 			return requested !== null && kept !== undefined && kept !== null && kept !== requested
@@ -318,15 +318,15 @@ export function keptConsents(
 /** The profiles the import does not take, and those that stop it, split by what the table says of them. */
 export interface SkippedProfiles {
 	/** Profiles a decision leaves aside (`profilsEcartes`): with their account set aside, or without an account. */
-	ecartes: number[]
+	excluded: number[]
 	/** The profiles of the spam (`PROFILS_DU_SPAM`) the source holds without an account: set aside, counted. */
 	spam: number[]
 	/** Profiles of an account a decision sets aside, that no decision names: they stop the import (SCHEMA.md §11). */
-	deComptesEcartes: number[]
+	ofExcludedAccounts: number[]
 	/** Profiles without an account in the source, out of the list of the spam, that no decision names: they stop it. */
-	sansCompte: number[]
+	withoutAccount: number[]
 	/** Decisions that name none of these profiles: without effect. */
-	sansObjet: number
+	pointless: number
 }
 
 /**
@@ -342,49 +342,49 @@ export interface SkippedProfiles {
 export function skippedProfiles(
 	profils: readonly ReadProfile[],
 	{
-		comptesDeLaSource,
-		comptesEcartes,
-		profilsEcartes,
+		sourceAccounts: comptesDeLaSource,
+		excludedAccounts: comptesEcartes,
+		excludedProfiles: profilsEcartes,
 	}: {
-		comptesDeLaSource: ReadonlySet<number>
-		comptesEcartes: readonly number[]
-		profilsEcartes: readonly number[]
+		sourceAccounts: ReadonlySet<number>
+		excludedAccounts: readonly number[]
+		excludedProfiles: readonly number[]
 	}
 ): SkippedProfiles {
 	const excludedByDecision = new Set(comptesEcartes)
 	const decides = new Set(profilsEcartes)
 	const spamList = new Set(SPAM_PROFILES)
-	const skipped: SkippedProfiles = { ecartes: [], spam: [], deComptesEcartes: [], sansCompte: [], sansObjet: 0 }
+	const skipped: SkippedProfiles = { excluded: [], spam: [], ofExcludedAccounts: [], withoutAccount: [], pointless: 0 }
 	const concerned = new Set<number>()
 	for (const { id, compte: account } of [...profils].sort((a, b) => a.id - b.id)) {
 		const withoutAccount = account === null || !comptesDeLaSource.has(account)
 		if (withoutAccount && spamList.has(id)) skipped.spam.push(id)
 		else if (withoutAccount || (account !== null && excludedByDecision.has(account))) {
 			concerned.add(id)
-			if (decides.has(id)) skipped.ecartes.push(id)
-			else skipped[withoutAccount ? 'sansCompte' : 'deComptesEcartes'].push(id)
+			if (decides.has(id)) skipped.excluded.push(id)
+			else skipped[withoutAccount ? 'withoutAccount' : 'ofExcludedAccounts'].push(id)
 		}
 	}
-	skipped.sansObjet = [...decides].filter(id => !concerned.has(id)).length
+	skipped.pointless = [...decides].filter(id => !concerned.has(id)).length
 	return skipped
 }
 
 /** What the prices of a run give, in numbers and identifiers (ticket 062). */
 export interface PriceSummary {
 	/** Prices of the profiles taken: one per offer and one per option. */
-	prix: number
+	prices: number
 	/** Among them, the prices that give an amount. */
-	avecMontant: number
+	withAmount: number
 	/** The prices in free text: the text is kept, the amount is empty. */
-	textesLibres: number
+	freeTexts: number
 	/** The prices with nothing typed. */
-	sansTexte: number
+	withoutText: number
 	/** Profiles taken whose offers hold an amount at the source, by the rule of the old site. */
-	profilsAvecOffreChiffree: number
+	profilesWithPricedOffer: number
 	/** Profiles that hold an amount at the source and have none in the target: the gaps, listed. */
-	offresChiffreesPerdues: number[]
+	lostPricedOffers: number[]
 	/** Profiles with a text that holds digits and gives no amount (« 2 h : 150 € »): the text is kept, listed. */
-	chiffresNonLus: number[]
+	unreadDigits: number[]
 }
 
 type PriceWritten = { priceText?: string | null; priceFrom?: number | null }
@@ -408,52 +408,52 @@ export function lostPricedOffer(prixDuSource: readonly (string | null)[], ecrite
 }
 
 export interface ExpectedProfiles {
-	attendus: Expected[]
+	expected: Expected[]
 	/** How many profiles the run takes per status, as the server computes it. */
-	statuts: Record<string, number>
+	statuses: Record<string, number>
 	/**
 	 * Profiles whose status, as the server computes it from what the import writes, is not the one
 	 * the source gives (a draft when entirely empty at the source, published otherwise): a section
 	 * the import does not take yet, or a city that gives no commune.
 	 */
-	statutsDifferentsDeLaSource: number[]
+	statusesDifferingFromSource: number[]
 	/** Photos of the profiles taken whose file is not adopted. */
-	photosNonReprises: PhotoNotCarriedOver[]
+	photosNotCarriedOver: PhotoNotCarriedOver[]
 	/** Profiles taken with a link of a list that names no row. */
-	liensSansLigne: number[]
+	linksWithoutRow: number[]
 	/** The prices, in numbers and identifiers. */
-	prix: PriceSummary
+	prices: PriceSummary
 	/** Contact details left out because the server would refuse them: by profile and field, never the value. */
-	coordonneesARevoir: ContactDetailToReview[]
+	contactDetailsToReview: ContactDetailToReview[]
 	/** Radii above the 200 km of the v3: the field is empty, the profile is taken (register, `rayon-200-km`). */
-	rayonsARevoir: RadiusToReview[]
+	radiiToReview: RadiusToReview[]
 	/** Rows of a list outside a bound of the v3, left out of their profile: by profile, list and rank, never the text. */
-	lignesLaissees: SkippedProfileRow[]
+	skippedRows: SkippedProfileRow[]
 }
 
 /** A row of a profile left out because the server would refuse the whole profile for it. */
-export type SkippedProfileRow = SkippedRow & { profil: number }
+export type SkippedProfileRow = SkippedRow & { profile: number }
 
 /**
  * The profiles the target must hold. `comptes` gives, for each account the import takes, its
  * identifier in Payload, or `null` while it is still to be created (a dry run). `laisses` names
  * the profiles the import does not take (`profilsLaisses`): a profile out of both is linked to an
  * account the import takes, or the import stopped before. `communes` gives the commune of each
- * profile taken (./communes.ts); a profile it does not name has none. `medias` gives, for each
- * file adopted (./medias.ts), its identifier in Payload, or `null` while it is still to be
+ * profile taken (./cities.ts); a profile it does not name has none. `medias` gives, for each
+ * file adopted (./media.ts), its identifier in Payload, or `null` while it is still to be
  * created; a file it does not name is not adopted. `consentiLe` is the date of the switch, an ISO
  * string (`dateDeBascule`): given whenever a profile shows contact details at the source.
  */
 export function expectedProfiles(
 	profils: readonly ReadProfile[],
 	comptes: ReadonlyMap<number, number | null>,
-	laisses: Pick<SkippedProfiles, 'ecartes' | 'spam'> = { ecartes: [], spam: [] },
+	laisses: Pick<SkippedProfiles, 'excluded' | 'spam'> = { excluded: [], spam: [] },
 	communes: ReadonlyMap<number, ExpectedCity | null> = new Map(),
 	medias: ReadonlyMap<number, number | null> = new Map(),
 	consentiLe: string | null = null,
 	maintenant: Date = new Date()
 ): ExpectedProfiles {
-	const notTaken = new Set([...laisses.ecartes, ...laisses.spam])
+	const notTaken = new Set([...laisses.excluded, ...laisses.spam])
 	// The slugs of the old site, computed on every profile of the source, as the old site did.
 	const slugs = new Map(
 		assignSlugs(profils.map(({ id, username, created_at }) => ({ id, username, createdAt: created_at }))).map(
@@ -466,13 +466,13 @@ export function expectedProfiles(
 	const photosNotCarriedOver: PhotoNotCarriedOver[] = []
 	const linksWithoutRow: number[] = []
 	const prices: PriceSummary = {
-		prix: 0,
-		avecMontant: 0,
-		textesLibres: 0,
-		sansTexte: 0,
-		profilsAvecOffreChiffree: 0,
-		offresChiffreesPerdues: [],
-		chiffresNonLus: [],
+		prices: 0,
+		withAmount: 0,
+		freeTexts: 0,
+		withoutText: 0,
+		profilesWithPricedOffer: 0,
+		lostPricedOffers: [],
+		unreadDigits: [],
 	}
 	const toReview: ContactDetailToReview[] = []
 	const radiiToReview: RadiusToReview[] = []
@@ -487,14 +487,14 @@ export function expectedProfiles(
 		const main = entryPhotos(sections.photoPrincipale.slice(0, 1), medias)
 		const gallery = entryPhotos(sections.galerie, medias)
 		for (const file of [...main.nonReprises, ...gallery.nonReprises])
-			photosNotCarriedOver.push({ entree: profile.id, fichier: file })
+			photosNotCarriedOver.push({ entry: profile.id, file: file })
 		if (sections.liensSansLigne > 0) linksWithoutRow.push(profile.id)
 		toReview.push(...contactDetailsToReview(profile))
 		const radius = radiusToReview(profile)
 		if (radius) radiiToReview.push(radius)
 		// A row outside a bound of the v3 is left out and listed: kept, it would make the server refuse the whole profile.
 		const bounded = rowsInBounds(sections, maintenant)
-		skippedRows.push(...bounded.laissees.map(ligne => ({ profil: profile.id, ...ligne })))
+		skippedRows.push(...bounded.laissees.map(ligne => ({ profile: profile.id, ...ligne })))
 		const shown = shownToSource(profile)
 		if (shown && consentiLe === null)
 			throw new Error(
@@ -534,40 +534,40 @@ export function expectedProfiles(
 		const gaps: Gap[] = []
 		const written = serviceOffersPrice(values.serviceOffers)
 		for (const { priceText, priceFrom } of written) {
-			prices.prix += 1
-			if (priceFrom !== null && priceFrom !== undefined) prices.avecMontant += 1
-			else if ((priceText?.trim() ?? '') === '') prices.sansTexte += 1
-			else prices.textesLibres += 1
+			prices.prices += 1
+			if (priceFrom !== null && priceFrom !== undefined) prices.withAmount += 1
+			else if ((priceText?.trim() ?? '') === '') prices.withoutText += 1
+			else prices.freeTexts += 1
 		}
 		if (written.some(({ priceFrom }) => isPriceAmount(priceFrom)))
-			gaps.push({ champ: 'serviceOffers', reference: REFERENCES.prixNumerique })
+			gaps.push({ field: 'serviceOffers', reference: REFERENCES.prixNumerique })
 		const offersPrice = sections.prestations.map(({ price }) => price)
-		if (offersPrice.some(price => parsePrice(price).priceFrom !== null)) prices.profilsAvecOffreChiffree += 1
+		if (offersPrice.some(price => parsePrice(price).priceFrom !== null)) prices.profilesWithPricedOffer += 1
 		if (lostPricedOffer(offersPrice, (values.serviceOffers ?? []) as PriceWritten[]))
-			prices.offresChiffreesPerdues.push(profile.id)
+			prices.lostPricedOffers.push(profile.id)
 		if (written.some(({ priceText, priceFrom }) => priceFrom === null && /\d/.test(priceText ?? '')))
-			prices.chiffresNonLus.push(profile.id)
-		if (radius) gaps.push({ champ: 'radiusKm', reference: REFERENCES.rayon200Km })
-		if (slug !== profile.username) gaps.push({ champ: 'slug', reference: REFERENCES.slugStocke })
-		if ((profile.city?.trim() ?? '') !== '') gaps.push({ champ: 'city', reference: REFERENCES.villeEnCommune })
-		if (profile.available === null) gaps.push({ champ: 'available', reference: REFERENCES.disponibiliteParDefaut })
+			prices.unreadDigits.push(profile.id)
+		if (radius) gaps.push({ field: 'radiusKm', reference: REFERENCES.rayon200Km })
+		if (slug !== profile.username) gaps.push({ field: 'slug', reference: REFERENCES.slugStocke })
+		if ((profile.city?.trim() ?? '') !== '') gaps.push({ field: 'city', reference: REFERENCES.villeEnCommune })
+		if (profile.available === null) gaps.push({ field: 'available', reference: REFERENCES.disponibiliteParDefaut })
 		if (status === 'draft')
 			gaps.push({
-				champ: 'status',
+				field: 'status',
 				reference: emptyToSource(profile) ? REFERENCES.profilVideEnBrouillon : REFERENCES.profilNonVideEnBrouillon,
 			})
-		if (shown) gaps.push({ champ: 'publicContact', reference: REFERENCES.coordonneesConsenties })
-		expected.push({ strapiId: profile.id, valeurs: values, ecarts: gaps })
+		if (shown) gaps.push({ field: 'publicContact', reference: REFERENCES.coordonneesConsenties })
+		expected.push({ strapiId: profile.id, values: values, gaps: gaps })
 	}
 	return {
-		attendus: expected,
-		statuts: statuses,
-		statutsDifferentsDeLaSource: sourceDifferentStatuses,
-		photosNonReprises: photosNotCarriedOver,
-		liensSansLigne: linksWithoutRow,
-		prix: prices,
-		coordonneesARevoir: toReview,
-		rayonsARevoir: radiiToReview,
-		lignesLaissees: skippedRows,
+		expected: expected,
+		statuses: statuses,
+		statusesDifferingFromSource: sourceDifferentStatuses,
+		photosNotCarriedOver: photosNotCarriedOver,
+		linksWithoutRow: linksWithoutRow,
+		prices: prices,
+		contactDetailsToReview: toReview,
+		radiiToReview: radiiToReview,
+		skippedRows: skippedRows,
 	}
 }

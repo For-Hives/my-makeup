@@ -1,7 +1,7 @@
 /**
  * Where the import writes: the database of Payload that `DATABASE_URI` names. A database of this
  * machine is the usual target (the bench, the development database, a restored copy). Any other
- * one is refused unless the person says so with `--cible-distante`: the check runs before the
+ * one is refused unless the person says so with `--remote-target`: the check runs before the
  * configuration of Payload is even loaded, so nothing connects to it and nothing is written.
  *
  * The import writes documents, never the schema: the tables are the application's, built by its
@@ -18,16 +18,16 @@ export class ImportRefuse extends Error {
 	override readonly name = 'ImportRefuse'
 }
 
-export type TargetKind = 'locale' | 'distante'
+export type TargetKind = 'local' | 'remote'
 
 /** The flag that lets the import write into a database that is not on this machine. */
-export const REMOTE_TARGET_FLAG = '--cible-distante'
+export const REMOTE_TARGET_FLAG = '--remote-target'
 
-/** The flag that names the database the target must be (`current_database()`): required with `--cible-distante`. */
-export const EXPECTED_DATABASE_FLAG = '--base-attendue'
+/** The flag that names the database the target must be (`current_database()`): required with `--remote-target`. */
+export const EXPECTED_DATABASE_FLAG = '--expected-database'
 
-/** The flag that lets the import run on a target the v3 already uses (./garde-bascule.ts, ticket 227). */
-export const TARGET_IN_SERVICE_FLAG = '--cible-en-service'
+/** The flag that lets the import run on a target the v3 already uses (./cutover-guard.ts, ticket 227). */
+export const TARGET_IN_SERVICE_FLAG = '--target-in-service'
 
 /**
  * Which kind of database the import is about to write into, or `ImportRefuse` when it must not:
@@ -35,17 +35,17 @@ export const TARGET_IN_SERVICE_FLAG = '--cible-en-service'
  */
 export function verifyTarget(
 	databaseUri: string | undefined,
-	{ cibleDistante, baseAttendue }: { cibleDistante: boolean; baseAttendue?: string | undefined }
+	{ remoteTarget, expectedDatabase }: { remoteTarget: boolean; expectedDatabase?: string | undefined }
 ): TargetKind {
 	// A remote target is named twice, by its address and by its database: an address that points at
 	// the database of another site by mistake is caught by `verifierLaBaseAttendue` (ticket 233, L9).
-	if (cibleDistante && !baseAttendue)
+	if (remoteTarget && !expectedDatabase)
 		throw new ImportRefuse(
 			`${REMOTE_TARGET_FLAG} exige ${EXPECTED_DATABASE_FLAG} <nom> : le nom que la base de la cible doit donner. Rien n’est écrit.`
 		)
 	if (!databaseUri) throw new ImportRefuse('DATABASE_URI manque : l’import ne sait pas où écrire. Rien n’est écrit.')
-	if (isLocalDatabase(databaseUri)) return 'locale'
-	if (cibleDistante) return 'distante'
+	if (isLocalDatabase(databaseUri)) return 'local'
+	if (remoteTarget) return 'remote'
 	throw new ImportRefuse(
 		[
 			'DATABASE_URI ne désigne pas une base de ce poste : l’import refuse d’y écrire, et rien n’est écrit.',
@@ -56,7 +56,7 @@ export function verifyTarget(
 
 /**
  * Refuses, once Payload is connected and before anything is read or written, a target whose
- * database is not the one `--base-attendue` names (ticket 233, L9). The refusal names the expected
+ * database is not the one `--expected-database` names (ticket 233, L9). The refusal names the expected
  * database only: what the target really is stays unsaid.
  */
 export async function verifyExpectedDatabase(payload: Payload, attendue: string): Promise<void> {

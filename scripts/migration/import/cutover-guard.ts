@@ -17,9 +17,9 @@
  *   deletion itself and never purged): the source still holds it, and a run would bring it back with its
  *   public profile.
  *
- * `--cible-en-service` lifts the guard on purpose, and then the import leaves every account it
- * already took exactly as it is (`ADAPTATEUR_COMPTES_EN_SERVICE`, ./comptes.ts) and the profiles it holds
- * as they are (`ADAPTATEUR_PROFILS_EN_SERVICE`, ./profils.ts): it only creates the missing ones, and never an
+ * `--target-in-service` lifts the guard on purpose, and then the import leaves every account it
+ * already took exactly as it is (`ADAPTATEUR_COMPTES_EN_SERVICE`, ./accounts.ts) and the profiles it holds
+ * as they are (`ADAPTATEUR_PROFILS_EN_SERVICE`, ./profiles.ts): it only creates the missing ones, and never an
  * account deleted in the v3 nor its profile (`sansLesComptesSupprimes`). The message names counts and identifiers of the old base, never a value.
  */
 
@@ -71,11 +71,11 @@ export async function cutoverTraces(
 		overrideAccess: true,
 	})
 	const inTarget = new Map(
-		(await readTarget(payload, ACCOUNTS_ADAPTER)).map(({ valeurs }) => [Number(valeurs.strapiId), valeurs])
+		(await readTarget(payload, ACCOUNTS_ADAPTER)).map(({ values: valeurs }) => [Number(valeurs.strapiId), valeurs])
 	)
 	const empty = (valeur: unknown) => valeur === null || valeur === undefined || valeur === ''
 	const erasedHash = comptes
-		.filter(({ strapiId, valeurs }) => {
+		.filter(({ strapiId, values: valeurs }) => {
 			const present = inTarget.get(strapiId)
 			return present !== undefined && !empty(valeurs.legacyBcrypt) && empty(present.legacyBcrypt)
 		})
@@ -124,7 +124,7 @@ export async function refuseTargetInService(
 
 /**
  * What the source gives, less the accounts deleted in the v3 and their profiles: the run with
- * `--cible-en-service` never brings them back. The photos stay in the list of the files, and are
+ * `--target-in-service` never brings them back. The photos stay in the list of the files, and are
  * counted as those of a profile that is not taken.
  */
 export function withoutDeletedAccounts<T extends { comptes: { id: number }[]; profils: { compte: number | null }[] }>(

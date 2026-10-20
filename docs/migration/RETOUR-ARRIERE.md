@@ -71,7 +71,7 @@ Il porte des emails, des téléphones et des messages de visiteuses : c'est une 
 
 ## Ce qu'il ne faut pas faire
 
-- Ne jamais relancer l'import vers la v3 pour « resynchroniser » après le retour : l'ancien site a changé et la v3 aussi (garde du ticket 227, `--cible-en-service`).
+- Ne jamais relancer l'import vers la v3 pour « resynchroniser » après le retour : l'ancien site a changé et la v3 aussi (garde du ticket 227, `--target-in-service`).
 - Ne pas diffuser le fichier, ni le garder dans le dépôt, dans Coolify ou dans un ticket.
 
 ## Ce qui est testé

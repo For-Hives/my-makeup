@@ -12,7 +12,7 @@ import { keptConsents, PROFILES_ADAPTER, PROFILES_IN_SERVICE_ADAPTER } from '../
 
 /**
  * Ticket 227: a run of the import does not undo what the v3 wrote. The guard of a target in service,
- * the accounts left as they are with `--cible-en-service`, and the date of consent kept. No database:
+ * the accounts left as they are with `--target-in-service`, and the date of consent kept. No database:
  * the runs are in tests/integration/import-rejeux.test.ts. Every value here is fictional.
  */
 
@@ -27,7 +27,7 @@ describe('la garde d’une cible déjà utilisée par la v3 (ticket 227)', () =>
 
 		expect(connexions).toContain('3 connexions')
 		expect(connexions).toContain('Rien n’est écrit')
-		expect(connexions).toContain('--cible-en-service')
+		expect(connexions).toContain('--target-in-service')
 		expect(hash).toContain('2 comptes dont le hash hérité a déjà été effacé')
 		expect(hash).toContain('1, 4')
 		expect(cutoverMessage({ connexions: 1, comptesConnectes: 0, hashEfface: [7], supprimes: [] })).toMatch(
@@ -40,21 +40,21 @@ describe('la garde d’une cible déjà utilisée par la v3 (ticket 227)', () =>
 	})
 
 	test('l’option se lit sur la ligne de commande, une seule fois', () => {
-		expect(readArguments(['--reel', '--cible-en-service'])).toMatchObject({ mode: 'reel', cibleEnService: true })
-		expect(readArguments(['--reel'])?.cibleEnService).toBeUndefined()
-		expect(readArguments(['--cible-en-service', '--cible-en-service'])).toBeNull()
+		expect(readArguments(['--real', '--target-in-service'])).toMatchObject({ mode: 'real', targetInService: true })
+		expect(readArguments(['--real'])?.targetInService).toBeUndefined()
+		expect(readArguments(['--target-in-service', '--target-in-service'])).toBeNull()
 	})
 
-	test('--controle avec --cible-en-service est refusé : les comptes ne sont pas comparés, le contrôle serait un faux vert', () => {
-		expect(readArguments(['--controle', '--cible-en-service'])).toBeNull()
-		expect(readArguments(['--controle'])).toMatchObject({ controle: true })
+	test('--check avec --target-in-service est refusé : les comptes ne sont pas comparés, le contrôle serait un faux vert', () => {
+		expect(readArguments(['--check', '--target-in-service'])).toBeNull()
+		expect(readArguments(['--check'])).toMatchObject({ check: true })
 	})
 })
 
 describe('sur une cible en service, un compte déjà repris reste tel quel (ticket 227)', () => {
 	const compte = (valeurs: Record<string, unknown>, strapiId = 1): Expected => ({
 		strapiId,
-		valeurs: {
+		values: {
 			strapiId,
 			email: 'ancien@example.test',
 			name: 'Ancien nom',
@@ -66,7 +66,7 @@ describe('sur une cible en service, un compte déjà repris reste tel quel (tick
 			updatedAt: '2024-02-01T10:00:00.000Z',
 			...valeurs,
 		},
-		ecarts: [],
+		gaps: [],
 	})
 	const devenu = compte({
 		email: 'nouveau@example.test',
@@ -78,7 +78,7 @@ describe('sur une cible en service, un compte déjà repris reste tel quel (tick
 	test('par défaut, la source fait loi : l’email et le hash reviennent', () => {
 		const attendu = compte({})
 
-		expect(differentFields(ACCOUNTS_ADAPTER, attendu, { id: 5, valeurs: devenu.valeurs })).toEqual([
+		expect(differentFields(ACCOUNTS_ADAPTER, attendu, { id: 5, values: devenu.values })).toEqual([
 			'email',
 			'legacyBcrypt',
 			'blocked',
@@ -89,19 +89,15 @@ describe('sur une cible en service, un compte déjà repris reste tel quel (tick
 	test('en service, aucun champ du compte n’est comparé ni réécrit', () => {
 		const attendu = compte({})
 
-		expect(differentFields(ACCOUNTS_IN_SERVICE_ADAPTER, attendu, { id: 5, valeurs: devenu.valeurs })).toEqual([])
-		const plan = planActions(
-			ACCOUNTS_IN_SERVICE_ADAPTER,
-			[attendu, compte({}, 2)],
-			[{ id: 5, valeurs: devenu.valeurs }]
-		)
+		expect(differentFields(ACCOUNTS_IN_SERVICE_ADAPTER, attendu, { id: 5, values: devenu.values })).toEqual([])
+		const plan = planActions(ACCOUNTS_IN_SERVICE_ADAPTER, [attendu, compte({}, 2)], [{ id: 5, values: devenu.values }])
 		// The account the target holds is untouched; the one it misses is still created.
-		expect(plan.actions.map(({ genre }) => genre)).toEqual(['inchange', 'creation'])
+		expect(plan.actions.map(({ kind: genre }) => genre)).toEqual(['inchange', 'creation'])
 	})
 
 	test('l’empreinte ne compte pas les champs laissés tels quels : le contrôle ne voit pas la v3 comme un écart', () => {
-		const source = [{ strapiId: 1, valeurs: compte({}).valeurs }]
-		const cible = [{ strapiId: 1, valeurs: devenu.valeurs }]
+		const source = [{ strapiId: 1, values: compte({}).values }]
+		const cible = [{ strapiId: 1, values: devenu.values }]
 
 		expect(documentsFingerprint(ACCOUNTS_IN_SERVICE_ADAPTER, cible)).toBe(
 			documentsFingerprint(ACCOUNTS_IN_SERVICE_ADAPTER, source)
@@ -115,24 +111,24 @@ describe('la date de consentement déjà posée est gardée (ticket 227)', () =>
 	const AUTRE = '2026-11-09T08:00:00.000Z'
 	const profil = (strapiId: number, consentiLe: string | null): Expected => ({
 		strapiId,
-		valeurs: { strapiId, publicContact: consentiLe !== null, consentedAt: consentiLe },
-		ecarts: [],
+		values: { strapiId, publicContact: consentiLe !== null, consentedAt: consentiLe },
+		gaps: [],
 	})
 
 	test('la date est une amorce : écrite sur un profil qui n’en a pas, jamais par-dessus une date posée', () => {
-		expect(PROFILES_ADAPTER.amorces).toContain('consentedAt')
+		expect(PROFILES_ADAPTER.seeds).toContain('consentedAt')
 		const existants = [
-			{ id: 1, valeurs: { strapiId: 1, publicContact: true, consentedAt: PREMIERE } },
-			{ id: 2, valeurs: { strapiId: 2, publicContact: false, consentedAt: null } },
+			{ id: 1, values: { strapiId: 1, publicContact: true, consentedAt: PREMIERE } },
+			{ id: 2, values: { strapiId: 2, publicContact: false, consentedAt: null } },
 		]
 
 		const plan = planActions(
-			{ ...PROFILES_ADAPTER, champs: { publicContact: 'booleen', consentedAt: 'date' } },
+			{ ...PROFILES_ADAPTER, fields: { publicContact: 'booleen', consentedAt: 'date' } },
 			[profil(1, AUTRE), profil(2, AUTRE)],
 			existants
 		)
 
-		expect(plan.actions.map(action => [action.genre, 'champs' in action ? action.champs : []])).toEqual([
+		expect(plan.actions.map(action => [action.kind, 'fields' in action ? action.fields : []])).toEqual([
 			['inchange', []],
 			['modification', ['publicContact', 'consentedAt']],
 		])
@@ -140,10 +136,10 @@ describe('la date de consentement déjà posée est gardée (ticket 227)', () =>
 
 	test('le rapport compte les profils dont la date demandée diffère de la date gardée, par identifiant', () => {
 		const existants = [
-			{ valeurs: { strapiId: 1, consentedAt: PREMIERE } },
-			{ valeurs: { strapiId: 2, consentedAt: new Date(PREMIERE) } },
-			{ valeurs: { strapiId: 3, consentedAt: null } },
-			{ valeurs: { strapiId: 4, consentedAt: PREMIERE } },
+			{ values: { strapiId: 1, consentedAt: PREMIERE } },
+			{ values: { strapiId: 2, consentedAt: new Date(PREMIERE) } },
+			{ values: { strapiId: 3, consentedAt: null } },
+			{ values: { strapiId: 4, consentedAt: PREMIERE } },
 		]
 		const attendus = [profil(4, AUTRE), profil(1, AUTRE), profil(2, PREMIERE), profil(3, AUTRE), profil(5, AUTRE)]
 
@@ -160,7 +156,7 @@ describe('un compte supprimé dans la v3 ne revient pas (ticket 227)', () => {
 		expect(message).toContain('2 comptes de l’ancien site supprimés dans la v3')
 		expect(message).toContain('5, 9')
 		expect(message).toContain('Rien n’est écrit')
-		expect(message).toContain('--cible-en-service')
+		expect(message).toContain('--target-in-service')
 		expect(message).not.toMatch(/\$2[aby]\$|@/)
 	})
 
@@ -187,10 +183,10 @@ describe('un compte supprimé dans la v3 ne revient pas (ticket 227)', () => {
 describe('sur une cible en service, un profil déjà repris reste tel quel (ticket 227)', () => {
 	const profil = (valeurs: Record<string, unknown>): Expected => ({
 		strapiId: 1,
-		valeurs: { strapiId: 1, ...valeurs },
-		ecarts: [],
+		values: { strapiId: 1, ...valeurs },
+		gaps: [],
 	})
-	const existant = { id: 7, valeurs: { strapiId: 1, publicContact: false, contactDetails: { phone: null } } }
+	const existant = { id: 7, values: { strapiId: 1, publicContact: false, contactDetails: { phone: null } } }
 
 	test('ce que la maquilleuse a fermé dans la v3 n’est pas rouvert : aucun champ n’est comparé', () => {
 		const attendu = profil({
@@ -202,12 +198,12 @@ describe('sur une cible en service, un profil déjà repris reste tel quel (tick
 		expect(differentFields(PROFILES_ADAPTER, attendu, existant)).toContain('publicContact')
 		expect(differentFields(PROFILES_IN_SERVICE_ADAPTER, attendu, existant)).toEqual([])
 		const plan = planActions(PROFILES_IN_SERVICE_ADAPTER, [attendu], [existant])
-		expect(plan.actions.map(({ genre }) => genre)).toEqual(['inchange'])
+		expect(plan.actions.map(({ kind: genre }) => genre)).toEqual(['inchange'])
 	})
 
 	test('un profil qui manque est créé, avec tous ses champs', () => {
 		const plan = planActions(PROFILES_IN_SERVICE_ADAPTER, [profil({ publicContact: false })], [])
 
-		expect(plan.actions.map(({ genre }) => genre)).toEqual(['creation'])
+		expect(plan.actions.map(({ kind: genre }) => genre)).toEqual(['creation'])
 	})
 })

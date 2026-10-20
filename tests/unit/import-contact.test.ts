@@ -7,7 +7,7 @@ import { cutoverDate } from '../../scripts/migration/import/profiles'
  * site, is a parameter of the run. The runs themselves are in tests/integration/import-contact.test.ts.
  */
 
-describe('la date de bascule (--consentement-le)', () => {
+describe('la date de bascule (--consent-date)', () => {
 	test('un jour vaut minuit UTC ; un instant garde son fuseau', () => {
 		expect(cutoverDate('2026-11-02')).toBe('2026-11-02T00:00:00.000Z')
 		expect(cutoverDate('2026-11-02T08:00:00Z')).toBe('2026-11-02T08:00:00.000Z')
@@ -28,12 +28,12 @@ describe('la date de bascule (--consentement-le)', () => {
 	})
 
 	test('la ligne de commande la lit comme un fichier : une valeur est obligatoire', () => {
-		expect(readArguments(['--reel', '--consentement-le', '2026-11-02'])).toEqual({
-			mode: 'reel',
-			cibleDistante: false,
-			consentiLe: '2026-11-02',
+		expect(readArguments(['--real', '--consent-date', '2026-11-02'])).toEqual({
+			mode: 'real',
+			remoteTarget: false,
+			consentDate: '2026-11-02',
 		})
-		expect(readArguments(['--consentement-le'])).toBeNull()
-		expect(readArguments(['--consentement-le', '--reel'])).toBeNull()
+		expect(readArguments(['--consent-date'])).toBeNull()
+		expect(readArguments(['--consent-date', '--real'])).toBeNull()
 	})
 })

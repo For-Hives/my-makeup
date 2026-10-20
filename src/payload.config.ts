@@ -113,7 +113,7 @@ export default buildConfig({
 	onInit: payload => {
 		// Payload's document locks are reserved to the accounts of the admin panel (ticket 094).
 		reserveLocksToAdmins(payload)
-		// The import of the old site, once per new IMPORT_JETON, on the site only; not awaited, so that the
+		// The import of the old site, once per new IMPORT_TOKEN, on the site only; not awaited, so that the
 		// first request does not wait for it. Without a token nothing is read (ticket 233).
 		runOnDemandImport(payload, env)
 	},

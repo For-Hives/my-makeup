@@ -32,11 +32,11 @@ import { creerLaSourceStrapi, effacerLaSourceStrapi, empreinteDeLaSource } from 
 /** The decision lines a person would write after reading the private list of review. */
 const DECISIONS_DES_COMMUNES: Decisions = {
 	...DECISIONS_DU_BANC,
-	communes: [
+	cities: [
 		// The Saint-Julien of the Rhône, one of the six candidates.
-		{ profil: 28, codeInsee: '69215' },
+		{ profile: 28, inseeCode: '69215' },
 		// « France » is no commune: the zone stays empty, reviewed.
-		{ profil: 26, codeInsee: null },
+		{ profile: 26, inseeCode: null },
 	],
 }
 
@@ -46,8 +46,8 @@ let premier: Awaited<ReturnType<typeof importerSurLeBanc>>
 beforeAll(async () => {
 	await viderLaBase()
 	await creerLaSourceStrapi()
-	premier = await importerSurLeBanc('reel', {
-		surLaRevue: cas => {
+	premier = await importerSurLeBanc('real', {
+		onReview: cas => {
 			revue = cas
 		},
 	})
@@ -102,7 +102,7 @@ describe('Commune simple, avec code postal, et adresse postale : la bonne commun
 		const tout = JSON.stringify(await profils())
 
 		for (const morceau of ['impasse', 'Pinceaux', '74000']) expect(tout).not.toContain(morceau)
-		expect(premier.collections.profiles?.communes?.adresses).toEqual([23])
+		expect(premier.collections.profiles?.cities?.addresses).toEqual([23])
 		// The public reads the commune of a published profile, and no street.
 		const publics = await profils(false)
 		expect(publics.find(({ slug }) => slug === 'zoe-lefevre')?.city).toMatchObject({
@@ -113,18 +113,18 @@ describe('Commune simple, avec code postal, et adresse postale : la bonne commun
 	})
 
 	test('la part des villes renseignées rattachées à une commune est donnée en nombres (cible 90 %)', () => {
-		expect(premier.collections.profiles?.communes).toEqual({
-			villesRenseignees: 11,
-			rattachees: 9,
+		expect(premier.collections.profiles?.cities).toEqual({
+			filledCities: 11,
+			attached: 9,
 			part: 81.8,
-			profilsNonVides: 12,
-			profilsNonVidesAvecCommune: 9,
-			aRevoir: [26, 28],
-			adresses: [23],
-			decidees: [],
+			nonEmptyProfiles: 12,
+			nonEmptyProfilesWithCity: 9,
+			toReview: [26, 28],
+			addresses: [23],
+			decided: [],
 		})
-		expect(premier.ecarts['ville-en-commune']).toBe(11)
-		expect(premier.parite?.profiles).toMatchObject({ attendus: 13, egaux: 13, differents: [] })
+		expect(premier.gaps['ville-en-commune']).toBe(11)
+		expect(premier.parity?.profiles).toMatchObject({ expected: 13, equal: 13, different: [] })
 	})
 })
 
@@ -143,9 +143,9 @@ describe('Cas ambigu : zone vide, profil « à revoir » ; avec sa ligne de déc
 	})
 
 	test('avec sa ligne de décision : la commune choisie, ou aucune, et le profil n’est plus à revoir', async () => {
-		const rapport = await importerSurLeBanc('reel', { decisions: DECISIONS_DES_COMMUNES })
+		const rapport = await importerSurLeBanc('real', { decisions: DECISIONS_DES_COMMUNES })
 
-		expect(rapport.collections.profiles).toMatchObject({ crees: 0, modifies: 1 })
+		expect(rapport.collections.profiles).toMatchObject({ created: 0, updated: 1 })
 		expect(await communeDe(28)).toEqual({
 			name: 'Saint-Julien',
 			inseeCode: '69215',
@@ -153,21 +153,21 @@ describe('Cas ambigu : zone vide, profil « à revoir » ; avec sa ligne de déc
 			latitude: 46.03,
 			longitude: 4.65,
 		})
-		expect(rapport.collections.profiles?.communes).toMatchObject({
-			rattachees: 10,
+		expect(rapport.collections.profiles?.cities).toMatchObject({
+			attached: 10,
 			part: 90.9,
-			aRevoir: [],
-			decidees: [26, 28],
+			toReview: [],
+			decided: [26, 28],
 		})
-		expect(rapport.decisionsSansObjet).toBe(0)
+		expect(rapport.pointlessDecisions).toBe(0)
 	})
 
 	test('second passage avec les mêmes décisions : 0 création, 0 mise à jour', async () => {
 		const avant = await profils()
 
-		const second = await importerSurLeBanc('reel', { decisions: DECISIONS_DES_COMMUNES })
+		const second = await importerSurLeBanc('real', { decisions: DECISIONS_DES_COMMUNES })
 
-		expect(second.collections.profiles).toMatchObject({ crees: 0, modifies: 0, refuses: [] })
+		expect(second.collections.profiles).toMatchObject({ created: 0, updated: 0, refused: [] })
 		expect(await profils()).toEqual(avant)
 	})
 })
@@ -200,16 +200,16 @@ describe('Le référentiel simulé, et ses réponses gardées pour deux passages
 		const journal = simulerAvecLesReponsesDuBanc()
 		const garde = keptReference(new Map(), geoApiReference())
 
-		const un = await importerSurLeBanc('a-blanc', { decisions: DECISIONS_DES_COMMUNES, referentiel: garde })
+		const un = await importerSurLeBanc('dry-run', { decisions: DECISIONS_DES_COMMUNES, reference: garde })
 		const demandes = journal.length
-		const deux = await importerSurLeBanc('a-blanc', { decisions: DECISIONS_DES_COMMUNES, referentiel: garde })
+		const deux = await importerSurLeBanc('dry-run', { decisions: DECISIONS_DES_COMMUNES, reference: garde })
 
 		// annecy, 74000, toulouse, 75116, saint-julien, lyon, nantes, annemasse.
 		expect(demandes).toBe(8)
 		expect(garde.nouvelles()).toBe(8)
 		expect(journal).toHaveLength(demandes)
 		expect(deux.collections.profiles).toEqual(un.collections.profiles)
-		expect(un.collections.profiles).toMatchObject({ crees: 0, modifies: 0 })
+		expect(un.collections.profiles).toMatchObject({ created: 0, updated: 0 })
 	})
 })
 
@@ -222,15 +222,15 @@ describe('La commande', () => {
 
 	afterAll(() => rmSync(dossier, { recursive: true, force: true }))
 
-	test('--revue écrit la liste de revue privée, lisible par son seul propriétaire, sans le texte saisi', async () => {
+	test('--review écrit la liste de revue privée, lisible par son seul propriétaire, sans le texte saisi', async () => {
 		const fichier = path.join(dossier, 'revue.json')
 
 		// A dry run, with the table of the bench, which settles no city.
-		const { code, sortie } = await commandeDImport(['--decisions', FICHIER_DES_DECISIONS_DU_BANC, '--revue', fichier])
+		const { code, sortie } = await commandeDImport(['--decisions', FICHIER_DES_DECISIONS_DU_BANC, '--review', fichier])
 
 		expect(code, sortie).toBe(0)
 		expect(sortie).toContain('communes : 9 sur 11 villes renseignées (81,8 %, cible 90 %)')
-		expect(sortie).toContain('villes à revoir, zone vide (liste de revue privée, --revue) : 26, 28')
+		expect(sortie).toContain('villes à revoir, zone vide (liste de revue privée, --review) : 26, 28')
 		expect(sortie).toContain('adresses postales, dont seule la commune est reprise : 23')
 		expect(statSync(fichier).mode & 0o777).toBe(0o600)
 		const liste = JSON.parse(readFileSync(fichier, 'utf8')) as CaseToReview[]
@@ -247,17 +247,17 @@ describe('La commande', () => {
 		writeFileSync(partiel, JSON.stringify(reponses))
 
 		const decisions = ['--decisions', FICHIER_DES_DECISIONS_DU_BANC]
-		const manque = await commandeDImport(['--reel', ...decisions, '--communes', partiel, '--hors-ligne'])
+		const manque = await commandeDImport(['--real', ...decisions, '--cities', partiel, '--offline'])
 		const absent = await commandeDImport([
-			'--reel',
+			'--real',
 			...decisions,
-			'--communes',
+			'--cities',
 			path.join(dossier, 'absent.json'),
-			'--hors-ligne',
+			'--offline',
 		])
 
 		expect(manque.code, manque.sortie).toBe(1)
-		expect(manque.sortie).toContain('Hors ligne (--hors-ligne), une réponse du référentiel des communes')
+		expect(manque.sortie).toContain('Hors ligne (--offline), une réponse du référentiel des communes')
 		expect(absent.code, absent.sortie).toBe(1)
 		expect(absent.sortie).toContain('le fichier des réponses gardées du référentiel des communes n’existe pas')
 		expect(await profils()).toEqual(avant)

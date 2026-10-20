@@ -3,7 +3,7 @@
  * docs/migration/IMPORT.md, « En production »).
  *
  * The image holds neither bun nor `scripts/`, and there is no SSH: the import runs in the process
- * of the application, under Node, when Andy sets a token that was never played (IMPORT_JETON in
+ * of the application, under Node, when Andy sets a token that was never played (IMPORT_TOKEN in
  * Coolify, then a redeploy). It reads the Strapi database through a read-only role on the internal
  * network (STRAPI_SOURCE_URI), never a database opened on the Internet.
  *
@@ -67,26 +67,26 @@ const FORBIDDEN_IN_LOG = /@|\$2[abxy]\$/
 
 /** Why the import did not run, or what it did. */
 export type ImportOutcome =
-	| { etat: 'sans-jeton' }
-	| { etat: 'refuse'; raison: string }
-	| { etat: 'deja-joue'; jeton: string }
-	| { etat: 'termine'; code: number }
+	| { state: 'sans-jeton' }
+	| { state: 'refuse'; reason: string }
+	| { state: 'deja-joue'; token: string }
+	| { state: 'termine'; code: number }
 
 export interface ImportOptions {
 	/** Where the process runs. Read from `process.env` by default; a test gives `'site'` to stand for the site. */
-	lieu?: Place
+	place?: Place
 	/** Receives each line of the log, without the prefix. Printed with the prefix by default. */
-	journal?: (ligne: string) => void
-	/** The referential of the communes. By default the kept answers of IMPORT_COMMUNES, then the official list online. */
-	referentiel?: Reference
+	log?: (ligne: string) => void
+	/** The referential of the communes. By default the kept answers of IMPORT_CITIES, then the official list online. */
+	reference?: Reference
 	/** The public base of the photos. By default `mediaBaseUrl(R2_PUBLIC_URL, storage)`, as the application gives their addresses. */
-	baseDesMedias?: string
+	mediaBase?: string
 	/** How the headers of an object of the storage are read. `HEAD` by default. */
-	sonder?: Probe
+	probe?: Probe
 	/** Opens the source at this address. The `pg` reader of Payload's client by default. */
-	ouvrirLaSource?: (adresse: string, payload: Payload) => Promise<Source> | Source
+	openSource?: (adresse: string, payload: Payload) => Promise<Source> | Source
 	/** The day the run is made. Given by a test only. */
-	maintenant?: Date
+	now?: Date
 }
 
 /** Where the process runs, from its environment. */
@@ -202,26 +202,26 @@ function readEnvironmentDecisions(texte: string | undefined): Decisions {
 	return texte === undefined ? NO_DECISION : readDecisions(texte)
 }
 
-/** The date of the switch, as the import reads it (`--consentement-le`). */
+/** The date of the switch, as the import reads it (`--consent-date`). */
 async function readCutoverDate(texte: string | undefined): Promise<string | undefined> {
 	if (texte === undefined) return undefined
 	const { cutoverDate } = await import('../../scripts/migration/import/profiles')
 	const date = cutoverDate(texte)
-	if (date === null) throw new ImportRefuse('La date de IMPORT_CONSENTEMENT_LE n’est pas une date : rien n’est écrit.')
+	if (date === null) throw new ImportRefuse('La date de IMPORT_CONSENT_DATE n’est pas une date : rien n’est écrit.')
 	return date
 }
 
-/** The referential: the kept answers of IMPORT_COMMUNES first, the official list online for the rest. */
+/** The referential: the kept answers of IMPORT_CITIES first, the official list online for the rest. */
 async function readReference(importation: ImportEnv, donne: Reference | undefined): Promise<Reference> {
 	if (donne) return donne
 	const { readAnswers, keptReference, geoApiReference } = await import('../../scripts/migration/import/reference')
 	let answers: ReturnType<typeof readAnswers>
 	try {
-		answers = importation.communes === undefined ? new Map() : readAnswers(importation.communes)
+		answers = importation.cities === undefined ? new Map() : readAnswers(importation.cities)
 	} catch (error) {
 		if (error instanceof ImportRefuse) throw error
 		throw new ImportRefuse(
-			'IMPORT_COMMUNES ne se lit pas comme des réponses du référentiel des communes : rien n’est écrit.'
+			'IMPORT_CITIES ne se lit pas comme des réponses du référentiel des communes : rien n’est écrit.'
 		)
 	}
 	return keptReference(answers, geoApiReference())
@@ -246,13 +246,13 @@ export async function importOnDemand(
 	options: ImportOptions = {}
 ): Promise<ImportOutcome> {
 	const { importation } = env
-	if (!importation) return { etat: 'sans-jeton' }
+	if (!importation) return { state: 'sans-jeton' }
 	const write = (ligne: string): void => {
 		// Whatever its origin, a line that could carry an email or a hash does not reach the log.
 		const sure = FORBIDDEN_IN_LOG.test(ligne)
 			? 'Une ligne du journal portait une valeur privée : elle est retenue.'
 			: ligne
-		if (options.journal) options.journal(sure)
+		if (options.log) options.log(sure)
 		else console.log(`${LOG_PREFIX}${sure}`)
 	}
 	const say = (texte: string): void => {
@@ -260,7 +260,7 @@ export async function importOnDemand(
 	}
 	let source: Source | undefined
 	try {
-		requireSite(options.lieu ?? placeOfProcess())
+		requireSite(options.place ?? placeOfProcess())
 		if (env.sourceStrapi === undefined)
 			throw new ImportRefuse(
 				'STRAPI_SOURCE_URI manque : l’import ne sait pas quelle base Strapi lire. Rien n’est écrit.'
@@ -271,43 +271,43 @@ export async function importOnDemand(
 			throw new ImportRefuse(
 				'Le stockage des photos n’est pas réglé (S3_*) : l’import n’adopte aucune photo sans lui. Rien n’est écrit.'
 			)
-		const mediaBase = options.baseDesMedias ?? mediaBaseUrl(process.env.R2_PUBLIC_URL, env.storage)
+		const mediaBase = options.mediaBase ?? mediaBaseUrl(process.env.R2_PUBLIC_URL, env.storage)
 		await verifyTargetSchema(payload)
 		// Everything that can be wrong in the variables is checked before the token is used.
 		const decisions = readEnvironmentDecisions(importation.decisions)
-		const consentDate = await readCutoverDate(importation.consentiLe)
-		const reference = await readReference(importation, options.referentiel)
+		const consentDate = await readCutoverDate(importation.consentDate)
+		const reference = await readReference(importation, options.reference)
 
-		if (!(await reserveToken(payload.db.pool, importation.jeton))) {
-			write(`Le jeton « ${importation.jeton} » a déjà été joué : rien n’est lu ni écrit.`)
-			return { etat: 'deja-joue', jeton: importation.jeton }
+		if (!(await reserveToken(payload.db.pool, importation.token))) {
+			write(`Le jeton « ${importation.token} » a déjà été joué : rien n’est lu ni écrit.`)
+			return { state: 'deja-joue', token: importation.token }
 		}
-		write(`Jeton « ${importation.jeton} » : passage ${importation.mode} commencé.`)
+		write(`Jeton « ${importation.token} » : passage ${importation.mode} commencé.`)
 		const { importer } = await import('../../scripts/migration/import/importer')
 		const { exitCode, checkExitCode, checkAsText, reportAsText } = await import('../../scripts/migration/import/report')
-		source = await (options.ouvrirLaSource ?? openApplicationSource)(env.sourceStrapi, payload)
+		source = await (options.openSource ?? openApplicationSource)(env.sourceStrapi, payload)
 		const report = await importer({
 			payload,
 			source,
-			mode: importation.mode === 'reel' ? 'reel' : 'a-blanc',
-			cible: isLocalDatabase(env.databaseUri) ? 'locale' : 'distante',
+			mode: importation.mode === 'real' ? 'real' : 'dry-run',
+			target: isLocalDatabase(env.databaseUri) ? 'local' : 'remote',
 			decisions,
-			referentiel: reference,
-			cibleEnService: importation.cibleEnService,
-			medias: { base: mediaBase, ...(options.sonder && { sonder: options.sonder }) },
-			...(consentDate !== undefined && { consentiLe: consentDate }),
-			...(options.maintenant && { maintenant: options.maintenant }),
+			reference: reference,
+			targetInService: importation.targetInService,
+			media: { base: mediaBase, ...(options.probe && { probe: options.probe }) },
+			...(consentDate !== undefined && { consentDate: consentDate }),
+			...(options.now && { now: options.now }),
 		})
 		say(reportAsText(report))
-		const check = importation.mode === 'controle'
+		const check = importation.mode === 'check'
 		if (check) say(checkAsText(report))
 		const code = check ? checkExitCode(report) : exitCode(report)
 		write(`Passage ${importation.mode} fini, code ${code}.`)
-		return { etat: 'termine', code }
+		return { state: 'termine', code }
 	} catch (error) {
 		const reason = errorMessage(error)
 		write(`Passage refusé ou arrêté. ${reason}`)
-		return { etat: 'refuse', raison: reason }
+		return { state: 'refuse', reason: reason }
 	} finally {
 		await source?.fermer().catch(() => undefined)
 	}
@@ -322,7 +322,7 @@ const started = new Set<string>()
  * while Payload itself migrates (`PAYLOAD_MIGRATING`), or twice for one token in one process.
  */
 export function runOnDemandImport(payload: Payload, env: OnDemandImportEnv): void {
-	const token = env.importation?.jeton
+	const token = env.importation?.token
 	if (token === undefined || process.env.PAYLOAD_MIGRATING === 'true' || started.has(token)) return
 	started.add(token)
 	importOnDemand(payload, env).catch(erreur => {

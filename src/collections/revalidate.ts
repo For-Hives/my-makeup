@@ -22,7 +22,7 @@ import { changedUrls, keyIfSubmitAllowed, reportLater } from '../lib/seo/indexno
  * - The public state is read from the stored row, before and after the write, in the transaction
  *   of the request: what the public is shown, whatever the request selected or may read. For an
  *   article or a talent, it is the published document, never a draft version saved over it.
- * - The import (src/lib/contexte-import.ts) refreshes nothing, and reads nothing for it.
+ * - The import (src/lib/import-context.ts) refreshes nothing, and reads nothing for it.
  * - Next can only take a revalidation inside one of its requests: the REST API, the admin panel, a
  *   Server Action. A write outside of one (a script, a test, a job) is saved, and the pages keep
  *   their cache until it expires.

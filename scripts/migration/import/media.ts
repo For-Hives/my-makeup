@@ -158,21 +158,21 @@ export interface FilesClassification {
 	source: number
 	adoptables: Adoptable[]
 	/** Designated, not adopted by rule: listed. */
-	nonAdoptes: { fichier: number; motif: NonAdoptionReason }[]
+	notAdopted: { file: number; reason: NonAdoptionReason }[]
 	/** Designated, refused: listed, they wait for a decision. */
-	refuses: Refusal[]
+	refused: Refusal[]
 	/** Files an entry the import takes designates. */
-	designes: number
+	pointed: number
 	/** Files designated only by an entry the source holds and the import does not take (a profile set aside). */
-	deEntreesNonPrises: number
+	ofEntriesNotTaken: number
 	/** Files linked only to an entry the source no longer holds, or by a field the import does not read. */
-	deEntreesDisparues: number
+	ofVanishedEntries: number
 	/** Files no link names. */
-	sansLien: number
+	withoutLink: number
 	/** Adopted files whose object is not named `hash` followed by `ext`. */
-	nomsDifferents: number[]
+	differentNames: number[]
 	/** Adopted files `uploaded_by` says another account sent. */
-	envoyesParUnAutreCompte: number[]
+	uploadedByAnotherAccount: number[]
 }
 
 /**
@@ -184,14 +184,14 @@ export function classifyFiles(lus: ReadFiles, entrees: TakenEntries, base: strin
 	const classification: FilesClassification = {
 		source: lus.fichiers.length,
 		adoptables: [],
-		nonAdoptes: [],
-		refuses: [],
-		designes: 0,
-		deEntreesNonPrises: 0,
-		deEntreesDisparues: 0,
-		sansLien: 0,
-		nomsDifferents: [],
-		envoyesParUnAutreCompte: [],
+		notAdopted: [],
+		refused: [],
+		pointed: 0,
+		ofEntriesNotTaken: 0,
+		ofVanishedEntries: 0,
+		withoutLink: 0,
+		differentNames: [],
+		uploadedByAnotherAccount: [],
 	}
 	const linksOf = new Map<number, FileLink[]>()
 	for (const link of lus.liens) linksOf.set(link.fichier, [...(linksOf.get(link.fichier) ?? []), link])
@@ -206,18 +206,18 @@ export function classifyFiles(lus: ReadFiles, entrees: TakenEntries, base: strin
 		const links = linksOf.get(file.id) ?? []
 		const pointing = links.filter(taken)
 		if (pointing.length === 0) {
-			if (links.length === 0) classification.sansLien++
-			else if (links.some(present)) classification.deEntreesNonPrises++
-			else classification.deEntreesDisparues++
+			if (links.length === 0) classification.withoutLink++
+			else if (links.some(present)) classification.ofEntriesNotTaken++
+			else classification.ofVanishedEntries++
 			continue
 		}
-		classification.designes++
+		classification.pointed++
 		if (!isImage(file.mime)) {
-			classification.nonAdoptes.push({ fichier: file.id, motif: 'pas-une-image' })
+			classification.notAdopted.push({ file: file.id, reason: 'pas-une-image' })
 			continue
 		}
 		if (base === null) {
-			classification.nonAdoptes.push({ fichier: file.id, motif: 'sans-stockage' })
+			classification.notAdopted.push({ file: file.id, reason: 'sans-stockage' })
 			continue
 		}
 		// The account of each entry that designates it: an article has none.
@@ -225,21 +225,21 @@ export function classifyFiles(lus: ReadFiles, entrees: TakenEntries, base: strin
 			pointing.map(({ type, entree }) => (type === PROFILE_TYPE ? (entrees.profils.get(entree) ?? null) : null))
 		)
 		if (accounts.size > 1) {
-			classification.refuses.push({ strapiId: file.id, motif: 'plusieurs-proprietaires', champs: ['owner'] })
+			classification.refused.push({ strapiId: file.id, reason: 'plusieurs-proprietaires', fields: ['owner'] })
 			continue
 		}
 		const location = locationInAddress(file.url, base)
 		if (!location) {
-			classification.refuses.push({
+			classification.refused.push({
 				strapiId: file.id,
-				motif: 'adresse-hors-de-la-base',
-				champs: ['prefix', 'filename'],
+				reason: 'adresse-hors-de-la-base',
+				fields: ['prefix', 'filename'],
 			})
 			continue
 		}
 		const account = [...accounts][0] ?? null
-		if (location.filename !== `${file.hash ?? ''}${file.ext ?? ''}`) classification.nomsDifferents.push(file.id)
-		if (file.uploaded_by !== null && file.uploaded_by !== account) classification.envoyesParUnAutreCompte.push(file.id)
+		if (location.filename !== `${file.hash ?? ''}${file.ext ?? ''}`) classification.differentNames.push(file.id)
+		if (file.uploaded_by !== null && file.uploaded_by !== account) classification.uploadedByAnotherAccount.push(file.id)
 		classification.adoptables.push({ fichier: file, emplacement: location, compte: account })
 	}
 	return classification
@@ -319,7 +319,7 @@ function formatsOf(texte: string | null): unknown {
 
 export const MEDIA_ADAPTER: Adapter = {
 	collection: 'media',
-	champs: {
+	fields: {
 		alt: 'texte',
 		filename: 'texte',
 		prefix: 'texte',
@@ -333,7 +333,7 @@ export const MEDIA_ADAPTER: Adapter = {
 		updatedAt: 'date',
 	},
 	// The storage plugin leaves the prefix and the storage alone: nothing is sent, nothing is moved.
-	options: () => ({ contexte: { skipCloudStorage: true } }),
+	options: () => ({ context: { skipCloudStorage: true } }),
 }
 
 /**
@@ -348,10 +348,10 @@ export function expectedMedia(
 ): Expected[] {
 	return adoptables.map(({ fichier: file, emplacement: location, compte: account }) => {
 		const presence = presences.get(file.id)
-		const gaps: Gap[] = [{ champ: 'filesize', reference: REFERENCES.tailleEnOctets }]
+		const gaps: Gap[] = [{ field: 'filesize', reference: REFERENCES.tailleEnOctets }]
 		return {
 			strapiId: file.id,
-			valeurs: {
+			values: {
 				strapiId: file.id,
 				alt: file.alternative_text,
 				filename: location.filename,
@@ -365,24 +365,24 @@ export function expectedMedia(
 				createdAt: file.created_at,
 				updatedAt: file.updated_at,
 			},
-			ecarts: gaps,
+			gaps,
 		}
 	})
 }
 
 /** The files of the source in the report: numbers and identifiers, never an address. */
 export interface FilesSummary {
-	designes: number
-	deEntreesNonPrises: number
-	deEntreesDisparues: number
-	sansLien: number
+	pointed: number
+	ofEntriesNotTaken: number
+	ofVanishedEntries: number
+	withoutLink: number
 	/** No storage was given to the run: no file is adopted. */
-	sansStockage: boolean
-	nonAdoptes: { fichier: number; motif: NonAdoptionReason }[]
+	withoutStorage: boolean
+	notAdopted: { file: number; reason: NonAdoptionReason }[]
 	/** Adopted, their object missing in the storage: the « 404 connus ». */
-	introuvables: number[]
-	nomsDifferents: number[]
-	envoyesParUnAutreCompte: number[]
+	notFound: number[]
+	differentNames: number[]
+	uploadedByAnotherAccount: number[]
 }
 
 export function filesSummary(
@@ -391,25 +391,25 @@ export function filesSummary(
 	sansStockage: boolean
 ): FilesSummary {
 	return {
-		designes: classement.designes,
-		deEntreesNonPrises: classement.deEntreesNonPrises,
-		deEntreesDisparues: classement.deEntreesDisparues,
-		sansLien: classement.sansLien,
-		sansStockage,
-		nonAdoptes: classement.nonAdoptes,
-		introuvables: classement.adoptables
+		pointed: classement.pointed,
+		ofEntriesNotTaken: classement.ofEntriesNotTaken,
+		ofVanishedEntries: classement.ofVanishedEntries,
+		withoutLink: classement.withoutLink,
+		withoutStorage: sansStockage,
+		notAdopted: classement.notAdopted,
+		notFound: classement.adoptables
 			.filter(({ fichier: file }) => presences.get(file.id)?.present === false)
 			.map(({ fichier: file }) => file.id),
-		nomsDifferents: classement.nomsDifferents,
-		envoyesParUnAutreCompte: classement.envoyesParUnAutreCompte,
+		differentNames: classement.differentNames,
+		uploadedByAnotherAccount: classement.uploadedByAnotherAccount,
 	}
 }
 
 /** A photo of an entry whose file is not adopted: reported, never invented. */
 export interface PhotoNotCarriedOver {
 	/** The profile, or the article, by its identifier in the old base. */
-	entree: number
-	fichier: number
+	entry: number
+	file: number
 }
 
 /**

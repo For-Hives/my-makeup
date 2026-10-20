@@ -2,7 +2,7 @@
  * Writes tests/fixtures/parite-urls-h1.json: the h1 of the old site for the clear addresses of the
  * frozen inventory, as the measuring tool counted them (ticket 072; plan 02 I45).
  *
- *   bun --no-env-file scripts/migration/parite-urls-h1.ts <baseline-2026-10.csv>
+ *   bun --no-env-file scripts/migration/parity-urls-h1.ts <baseline-2026-10.csv>
  *
  * Reads the private baseline of the measuring tool, which holds real profile addresses, and keeps
  * only the addresses the repository already writes in clear (docs/migration/urls-inventaire.json):
@@ -20,7 +20,7 @@ const OUTPUT = fileURLToPath(new URL('../../tests/fixtures/parite-urls-h1.json',
 
 const [source] = process.argv.slice(2)
 if (!source) {
-	console.error('Usage : bun --no-env-file scripts/migration/parite-urls-h1.ts <baseline-2026-10.csv>')
+	console.error('Usage : bun --no-env-file scripts/migration/parity-urls-h1.ts <baseline-2026-10.csv>')
 	process.exit(1)
 }
 

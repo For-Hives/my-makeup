@@ -163,7 +163,7 @@ describe('ce que l’import cherche dans une ville saisie : un nom, un code post
 		)
 
 		expect(communes.get(1)?.inseeCode).toBe('74901')
-		expect(bilan.adresses).toEqual([])
+		expect(bilan.addresses).toEqual([])
 	})
 
 	test('le numéro de tête est un département, pas un numéro de rue : « 01 Bourg-Fictif » ne prend pas la commune du 74', async () => {
@@ -179,8 +179,8 @@ describe('ce que l’import cherche dans une ville saisie : un nom, un code post
 		expect(communes.get(1)?.inseeCode).toBe('74901')
 		// Ain holds no such commune: « à revoir », never the commune of another département.
 		expect(communes.get(2)).toBeNull()
-		expect(bilan.aRevoir).toEqual([2])
-		expect(bilan.adresses).toEqual([])
+		expect(bilan.toReview).toEqual([2])
+		expect(bilan.addresses).toEqual([])
 	})
 
 	test('ce qui n’est pas une commune ne se cherche pas : un pays, une liste, une phrase, un numéro', () => {
@@ -287,14 +287,14 @@ describe('les villes des profils, la liste de revue et la table de décision', (
 			[7, null],
 		])
 		expect(bilan).toEqual({
-			villesRenseignees: 5,
-			rattachees: 2,
+			filledCities: 5,
+			attached: 2,
 			part: 40,
-			profilsNonVides: 5,
-			profilsNonVidesAvecCommune: 2,
-			aRevoir: [2, 3, 4],
-			adresses: [5],
-			decidees: [],
+			nonEmptyProfiles: 5,
+			nonEmptyProfilesWithCity: 2,
+			toReview: [2, 3, 4],
+			addresses: [5],
+			decided: [],
 		})
 		expect(sansObjet).toBe(0)
 		expect(revue.map(({ profil, motif }) => [profil, motif])).toEqual([
@@ -311,13 +311,13 @@ describe('les villes des profils, la liste de revue et la table de décision', (
 		const journal = simulerLeReferentiel()
 
 		const { communes, revue, bilan, sansObjet } = await profileCities(profils, geoApiReference(), [
-			{ profil: 2, codeInsee: '26901' },
-			{ profil: 3, codeInsee: null },
+			{ profile: 2, inseeCode: '26901' },
+			{ profile: 3, inseeCode: null },
 			// Not among the candidates of 4: asked by its INSEE code.
-			{ profil: 4, codeInsee: '74901' },
+			{ profile: 4, inseeCode: '74901' },
 			// 1 is not « à revoir », 99 is no profile.
-			{ profil: 1, codeInsee: '01901' },
-			{ profil: 99, codeInsee: null },
+			{ profile: 1, inseeCode: '01901' },
+			{ profile: 99, inseeCode: null },
 		])
 
 		expect(communes.get(2)).toEqual({
@@ -328,7 +328,7 @@ describe('les villes des profils, la liste de revue et la table de décision', (
 			longitude: 5,
 		})
 		expect([communes.get(1)?.inseeCode, communes.get(3), communes.get(4)?.inseeCode]).toEqual(['74901', null, '74901'])
-		expect(bilan).toMatchObject({ rattachees: 4, part: 80, aRevoir: [], decidees: [2, 3, 4] })
+		expect(bilan).toMatchObject({ attached: 4, part: 80, toReview: [], decided: [2, 3, 4] })
 		expect(revue).toEqual([])
 		expect(sansObjet).toBe(2)
 		expect(
@@ -341,7 +341,7 @@ describe('les villes des profils, la liste de revue et la table de décision', (
 	test('une ligne qui donne une commune que le référentiel ne connaît pas arrête l’import avant toute écriture', async () => {
 		simulerLeReferentiel()
 
-		const echec = profileCities(profils, geoApiReference(), [{ profil: 2, codeInsee: '74999' }])
+		const echec = profileCities(profils, geoApiReference(), [{ profile: 2, inseeCode: '74999' }])
 
 		await expect(echec).rejects.toBeInstanceOf(ImportRefuse)
 		await expect(echec).rejects.toThrow('profil 2 une commune que le référentiel ne connaît pas (code INSEE 74999)')
@@ -395,7 +395,7 @@ describe('les réponses du référentiel sont gardées : deux passages identique
 		const horsLigne = keptReference(new Map(), null)
 
 		await expect(resolveCity('Bourg-Fictif', horsLigne)).rejects.toThrow(
-			'Hors ligne (--hors-ligne), une réponse du référentiel des communes n’est pas dans le fichier des réponses gardées'
+			'Hors ligne (--offline), une réponse du référentiel des communes n’est pas dans le fichier des réponses gardées'
 		)
 		expect(journal).toHaveLength(0)
 	})
@@ -427,7 +427,7 @@ describe('les réponses du référentiel sont gardées : deux passages identique
 			33: '44109',
 			34: '74012',
 		})
-		expect(bilan).toMatchObject({ aRevoir: [26, 28], adresses: [23] })
+		expect(bilan).toMatchObject({ toReview: [26, 28], addresses: [23] })
 	})
 })
 
@@ -466,34 +466,34 @@ describe('le référentiel qui ne répond pas arrête l’import avant toute éc
 describe('la table de décision et la ligne de commande', () => {
 	test('une ligne par profil à revoir : un code INSEE bien formé, ou aucun', () => {
 		expect(
-			readDecisions('{ "communes": [{ "profil": 28, "codeInsee": "2A004" }, { "profil": 26, "codeInsee": null }] }')
+			readDecisions('{ "cities": [{ "profile": 28, "inseeCode": "2A004" }, { "profile": 26, "inseeCode": null }] }')
 		).toEqual({
-			emailsPartages: [],
-			profilsEcartes: [],
-			communes: [
-				{ profil: 28, codeInsee: '2A004' },
-				{ profil: 26, codeInsee: null },
+			sharedEmails: [],
+			excludedProfiles: [],
+			cities: [
+				{ profile: 28, inseeCode: '2A004' },
+				{ profile: 26, inseeCode: null },
 			],
 		})
 		for (const faux of [
-			'{ "communes": [{ "profil": 28, "codeInsee": "74" }] }',
-			'{ "communes": [{ "profil": 28, "codeInsee": "Annecy" }] }',
-			'{ "communes": [{ "profil": 28, "codeInsee": "74010" }, { "profil": 28, "codeInsee": null }] }',
+			'{ "cities": [{ "profile": 28, "inseeCode": "74" }] }',
+			'{ "cities": [{ "profile": 28, "inseeCode": "Annecy" }] }',
+			'{ "cities": [{ "profile": 28, "inseeCode": "74010" }, { "profile": 28, "inseeCode": null }] }',
 			'{ "communes": [{ "profil": 28 }] }',
-			'{ "communes": [{ "profil": 28, "codeInsee": null, "ville": "x" }] }',
+			'{ "cities": [{ "profile": 28, "inseeCode": null, "ville": "x" }] }',
 		])
 			expect(() => readDecisions(faux), faux).toThrow(ImportRefuse)
 	})
 
-	test('--communes, --hors-ligne et --revue', () => {
-		expect(readArguments(['--communes', 'c.json', '--hors-ligne', '--revue', 'v.json'])).toEqual({
-			mode: 'a-blanc',
-			cibleDistante: false,
-			communes: 'c.json',
-			horsLigne: true,
-			revue: 'v.json',
+	test('--cities, --offline et --review', () => {
+		expect(readArguments(['--cities', 'c.json', '--offline', '--review', 'v.json'])).toEqual({
+			mode: 'dry-run',
+			remoteTarget: false,
+			cities: 'c.json',
+			offline: true,
+			review: 'v.json',
 		})
-		for (const ligne of [['--communes'], ['--revue', '--reel'], ['--hors-ligne', '--hors-ligne']])
+		for (const ligne of [['--cities'], ['--review', '--real'], ['--offline', '--offline']])
 			expect(readArguments(ligne), ligne.join(' ')).toBeNull()
 	})
 })

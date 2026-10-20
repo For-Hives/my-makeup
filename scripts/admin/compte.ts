@@ -14,7 +14,7 @@ export class CreationRefusee extends Error {
 }
 
 /** The flag that lets the command write into a database that is not on this machine. */
-export const DRAPEAU_CIBLE_DISTANTE = '--cible-distante'
+export const DRAPEAU_CIBLE_DISTANTE = '--remote-target'
 
 /** The shortest password of an admin account. No rule of composition: length is what counts. */
 export const LONGUEUR_MINIMALE_DU_MOT_DE_PASSE = 12
@@ -23,7 +23,7 @@ export const LONGUEUR_MINIMALE_DU_MOT_DE_PASSE = 12
 export const LONGUEUR_MAXIMALE_DU_MOT_DE_PASSE = 200
 
 export const USAGE = [
-	'Usage : bun run admin:creer <email> [--role=admin|editor] [--cible-distante]',
+	'Usage : bun run admin:creer <email> [--role=admin|editor] [--remote-target]',
 	'',
 	'  <email>             l’adresse du compte, en argument (ce n’est pas un secret)',
 	'  --role=…            admin (par défaut) ou editor (la rédaction)',

@@ -50,11 +50,11 @@ describe('verifierLHistorique', () => {
 	]
 	test('only the commits at or after the start count, merges left out', () => {
 		const rapport = verifyHistory(commits, DEBUT)
-		expect(rapport.apresLeGel.map(v => v.subject)).toEqual(['fix(security): after', 'feat(search): after, forbidden'])
-		expect(rapport.interdits.map(v => v.subject)).toEqual(['feat(search): after, forbidden'])
+		expect(rapport.afterFreeze.map(v => v.subject)).toEqual(['fix(security): after', 'feat(search): after, forbidden'])
+		expect(rapport.forbidden.map(v => v.subject)).toEqual(['feat(search): after, forbidden'])
 	})
 	test('a commit exactly at the start is inside the freeze', () => {
-		expect(verifyHistory([commit('feat(x): at start', DEBUT)], DEBUT).interdits).toHaveLength(1)
+		expect(verifyHistory([commit('feat(x): at start', DEBUT)], DEBUT).forbidden).toHaveLength(1)
 	})
 	test('an unreadable start is refused', () => {
 		expect(() => verifyHistory([], 'demain')).toThrow()
@@ -64,9 +64,9 @@ describe('verifierLHistorique', () => {
 describe('verifierLesReferences', () => {
 	test('a capture or an inventory taken before the freeze, or undated, is reported', () => {
 		const erreurs = verifyReferences(DEBUT, [
-			{ nom: 'capture', prisLe: '2026-11-30T10:00:00Z' },
-			{ nom: 'inventaire', prisLe: undefined },
-			{ nom: 'bonne', prisLe: '2026-12-01T10:00:00Z' },
+			{ name: 'capture', takenAt: '2026-11-30T10:00:00Z' },
+			{ name: 'inventaire', takenAt: undefined },
+			{ name: 'bonne', takenAt: '2026-12-01T10:00:00Z' },
 		])
 		expect(erreurs).toHaveLength(2)
 		expect(erreurs[0]).toContain('à refaire')
@@ -104,16 +104,16 @@ describe('the command on a real throwaway repository', () => {
 					'bun',
 					[
 						'--no-env-file',
-						join(import.meta.dir, '../../scripts/migration/gel.ts'),
-						'--debut',
+						join(import.meta.dir, '../../scripts/migration/freeze.ts'),
+						'--start',
 						DEBUT,
-						'--depot',
+						'--repository',
 						dir,
 						'--ref',
 						'main',
 						'--capture',
 						'2026-12-05T00:00:00Z',
-						'--inventaire',
+						'--inventory',
 						'2026-12-05T00:00:00Z',
 					],
 					{ encoding: 'utf8' }

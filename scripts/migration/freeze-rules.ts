@@ -1,7 +1,7 @@
 /**
  * The rules of the freeze of the current site (ticket 172; plan 01 section 0 rule 4, decision of
  * 2026-10-14: the freeze is a step, not a date). Pure functions, no I/O: the command is
- * scripts/migration/gel.ts, the procedure is docs/migration/GEL.md.
+ * scripts/migration/freeze.ts, the procedure is docs/migration/GEL.md.
  *
  * From the moment the rehearsal of the switch starts, the history of the old site may only gain
  * commits that are about security, the switch banner, the read-only mode, or contents.
@@ -36,7 +36,7 @@ export type OldSiteCommit = {
 	parents: number
 }
 
-export type Verdict = { sha: string; subject: string; categorie: FreezeCategory | null; raison: string }
+export type Verdict = { sha: string; subject: string; category: FreezeCategory | null; reason: string }
 
 const HEADER = /^(?<type>[a-z]+)(?:\((?<scope>[^)]+)\))?!?:\s/u
 
@@ -54,11 +54,11 @@ export function commitCategory(commit: Pick<OldSiteCommit, 'subject' | 'body'>):
 }
 
 export type FreezeReport = {
-	debut: string
+	start: string
 	/** Commits dated at or after the start of the freeze, merges left out. */
-	apresLeGel: Verdict[]
+	afterFreeze: Verdict[]
 	/** The ones among them that no category covers. */
-	interdits: Verdict[]
+	forbidden: Verdict[]
 }
 
 /** Checks a history against the start of the freeze. A merge commit carries no change of its own. */
@@ -70,19 +70,19 @@ export function verifyHistory(commits: OldSiteCommit[], debut: string): FreezeRe
 		.map<Verdict>(commit => {
 			const category = commitCategory(commit)
 			return {
-				categorie: category,
-				raison: category ? `permis : ${category}` : 'ni sécurité, ni bandeau, ni lecture seule, ni contenus',
+				category: category,
+				reason: category ? `permis : ${category}` : 'ni sécurité, ni bandeau, ni lecture seule, ni contenus',
 				sha: commit.sha,
 				subject: commit.subject,
 			}
 		})
-	return { apresLeGel: afterFreeze, debut, interdits: afterFreeze.filter(verdict => !verdict.categorie) }
+	return { afterFreeze, start: debut, forbidden: afterFreeze.filter(verdict => !verdict.category) }
 }
 
 /** Reference captures must be taken after the start of the freeze, or they describe a site that moved. */
-export function verifyReferences(debut: string, references: { nom: string; prisLe: string | undefined }[]): string[] {
+export function verifyReferences(debut: string, references: { name: string; takenAt: string | undefined }[]): string[] {
 	const t0 = Date.parse(debut)
-	return references.flatMap(({ nom, prisLe }) => {
+	return references.flatMap(({ name: nom, takenAt: prisLe }) => {
 		if (!prisLe) return [`${nom} : date non donnée`]
 		const t = Date.parse(prisLe)
 		if (Number.isNaN(t)) return [`${nom} : date illisible (${prisLe})`]

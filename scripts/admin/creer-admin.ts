@@ -3,7 +3,7 @@
  *
  *   bun run admin:creer <email>                   an `admin`, in the database of DATABASE_URI
  *   bun run admin:creer <email> --role=editor     an `editor` account
- *   bun run admin:creer <email> --cible-distante  when DATABASE_URI is not on this machine
+ *   bun run admin:creer <email> --remote-target  when DATABASE_URI is not on this machine
  *
  * The first screen of the admin panel does not create the first account any more
  * (`/api/admins/first-register` answers 403, ticket 094): this command does, through the Local

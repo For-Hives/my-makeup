@@ -59,16 +59,16 @@ function bun(...ligne: string[]): Promise<{ code: number | null; sortie: string 
 async function importer(rapport: string) {
 	const { code, sortie } = await bun(
 		'scripts/migration/import.ts',
-		'--reel',
+		'--real',
 		'--decisions',
 		DECISIONS_DU_BANC,
-		'--communes',
+		'--cities',
 		REFERENTIEL_DU_BANC,
-		'--hors-ligne',
+		'--offline',
 		// Profile 21 of the fake source shows contact details: the import needs the date of the switch.
-		'--consentement-le',
+		'--consent-date',
 		'2026-11-02T08:00:00Z',
-		'--rapport',
+		'--report',
 		rapport
 	)
 	expect(code, sortie).toBe(0)

@@ -3,8 +3,8 @@
  * source of the bench (docs/tests/source-strapi.md) and writes into the bench database.
  *
  *   await importerSurLeBanc()            a real run, in this process, with the Payload of the tests
- *   await importerSurLeBanc('a-blanc')   a dry run
- *   await commandeDImport(['--reel'])    the command itself, as a person runs it
+ *   await importerSurLeBanc('dry-run')   a dry run
+ *   await commandeDImport(['--real'])    the command itself, as a person runs it
  *
  * Both read the kept answers of the referential of the communes for the fake source
  * (tests/fixtures/import/referentiel-du-banc.json), offline: no test calls the Internet. A test
@@ -17,7 +17,7 @@
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { type Decisions, readDecisions } from '../../scripts/migration/import/decisions'
-import { importer, type OptionsDImport } from '../../scripts/migration/import/importer'
+import { importer, type RunOptions } from '../../scripts/migration/import/importer'
 import { type KeptReference, keptReference, readAnswers } from '../../scripts/migration/import/reference'
 import type { Mode, Report } from '../../scripts/migration/import/report'
 import { openSourceBun } from '../../scripts/migration/import/source-bun'
@@ -50,8 +50,8 @@ export const referentielDuBanc = (): KeptReference =>
  * table of decisions and the referential of the bench unless the test gives others.
  */
 export async function importerSurLeBanc(
-	mode: Mode = 'reel',
-	options: Partial<Omit<OptionsDImport, 'payload' | 'source' | 'mode'>> = {}
+	mode: Mode = 'real',
+	options: Partial<Omit<RunOptions, 'payload' | 'source' | 'mode'>> = {}
 ): Promise<Report> {
 	const payload = await payloadDeTest()
 	const source = openSourceBun(sourceDuBanc().lecture)
@@ -60,11 +60,11 @@ export async function importerSurLeBanc(
 			payload,
 			source,
 			mode,
-			cible: 'locale',
+			target: 'local',
 			decisions: DECISIONS_DU_BANC,
-			referentiel: referentielDuBanc(),
-			medias: { base: sourceDuBanc().medias },
-			consentiLe: DATE_DE_BASCULE_DU_BANC,
+			reference: referentielDuBanc(),
+			media: { base: sourceDuBanc().medias },
+			consentDate: DATE_DE_BASCULE_DU_BANC,
 			...options,
 		})
 	} finally {
@@ -81,8 +81,8 @@ export async function commandeDImport(
 	options: readonly string[],
 	environnement: Readonly<Record<string, string | undefined>> = process.env
 ): Promise<{ code: number; sortie: string }> {
-	const communes = options.includes('--communes') ? [] : ['--communes', FICHIER_DU_REFERENTIEL_DU_BANC, '--hors-ligne']
-	const bascule = options.includes('--consentement-le') ? [] : ['--consentement-le', DATE_DE_BASCULE_DU_BANC]
+	const communes = options.includes('--cities') ? [] : ['--cities', FICHIER_DU_REFERENTIEL_DU_BANC, '--offline']
+	const bascule = options.includes('--consent-date') ? [] : ['--consent-date', DATE_DE_BASCULE_DU_BANC]
 	const ligne = [process.execPath, '--no-env-file', 'scripts/migration/import.ts', ...options, ...communes, ...bascule]
 	const enfant = Bun.spawn(ligne, {
 		cwd: RACINE,

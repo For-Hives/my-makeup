@@ -116,12 +116,12 @@ describe('Après l’import de la source factice', () => {
 		// profiles of the spam have no account at all, and are set aside by the import itself.
 		expect(premier.collections.profiles).toMatchObject({
 			source: 27,
-			crees: 13,
-			refuses: [],
-			ecartes: [29],
+			created: 13,
+			refused: [],
+			excluded: [29],
 			spam: [...SPAM_PROFILES],
 		})
-		expect(premier.decisionsSansObjet).toBe(0)
+		expect(premier.pointlessDecisions).toBe(0)
 		expect(await compterLesMails()).toBe(0)
 	})
 
@@ -130,19 +130,19 @@ describe('Après l’import de la source factice', () => {
 		const bilan = premier.collections.profiles
 
 		expect(lignes.makeup_artistes).toHaveLength(27)
-		expect((bilan?.ecartes?.length ?? 0) + (bilan?.spam?.length ?? 0) + cible.length).toBe(bilan?.source ?? -1)
+		expect((bilan?.excluded?.length ?? 0) + (bilan?.spam?.length ?? 0) + cible.length).toBe(bilan?.source ?? -1)
 		for (const id of SPAM_PROFILES)
 			expect(
 				cible.some(({ strapiId }) => strapiId === id),
 				String(id)
 			).toBe(false)
-		expect(premier.ecarts['profils-spam-non-repris']).toBe(13)
-		expect(premier.parite?.profiles).toMatchObject({
-			attendus: 13,
-			egaux: 13,
-			differents: [],
-			manquants: [],
-			enTrop: [],
+		expect(premier.gaps['profils-spam-non-repris']).toBe(13)
+		expect(premier.parity?.profiles).toMatchObject({
+			expected: 13,
+			equal: 13,
+			different: [],
+			missing: [],
+			extra: [],
 		})
 	})
 
@@ -180,7 +180,7 @@ describe('Après l’import de la source factice', () => {
 		// 2023-05-12 for its creation, 2026-09-28 for its last change, never the day of the import.
 		expect(parId.get(21)?.updatedAt).toBe('2026-09-28T10:11:12.131Z')
 		const nuls = PRIS.filter(({ available }) => available === null).length
-		expect(premier.ecarts['disponibilite-par-defaut']).toBe(nuls)
+		expect(premier.gaps['disponibilite-par-defaut']).toBe(nuls)
 	})
 
 	test('le statut est calculé par le serveur : le profil entièrement vide en brouillon, les autres publiés, le choix laissé à la règle', async () => {
@@ -191,10 +191,10 @@ describe('Après l’import de la source factice', () => {
 		expect(cible.every(({ chosenStatus }) => chosenStatus === 'automatic')).toBe(true)
 		// 32 has a city and nothing else: published by its commune (ticket 063), as at the source.
 		expect(statuts[32]).toBe('published')
-		expect(premier.collections.profiles?.statutsDifferentsDeLaSource).toEqual([])
+		expect(premier.collections.profiles?.statusesDifferingFromSource).toEqual([])
 		expect(Object.entries(statuts).filter(([, statut]) => statut === 'published')).toHaveLength(12)
-		expect(premier.ecarts).toMatchObject({ 'profils-vides-brouillon': 1, 'slug-stocke': 12 })
-		expect(premier.parite?.profiles).toMatchObject({ attendus: 13, egaux: 13, statuts: { published: 12, draft: 1 } })
+		expect(premier.gaps).toMatchObject({ 'profils-vides-brouillon': 1, 'slug-stocke': 12 })
+		expect(premier.parity?.profiles).toMatchObject({ expected: 13, equal: 13, statuts: { published: 12, draft: 1 } })
 	})
 
 	test('second passage : 0 création, 0 mise à jour, et la source n’a pas bougé', async () => {
@@ -203,7 +203,7 @@ describe('Après l’import de la source factice', () => {
 		const second = await importerSurLeBanc()
 
 		for (const collection of ['pros', 'profiles', 'talents'] as const)
-			expect(second.collections[collection], collection).toMatchObject({ crees: 0, modifies: 0, refuses: [] })
+			expect(second.collections[collection], collection).toMatchObject({ created: 0, updated: 0, refused: [] })
 		expect(await profilsDeLaCible()).toEqual(cible)
 		expect((await empreinteDeLaSource()).empreinte).toBe(empreinteAvant)
 	})
@@ -229,13 +229,13 @@ describe('Un choix du statut fixé par un passage précédent', () => {
 		const apres = await importerSurLeBanc()
 		const troisieme = await importerSurLeBanc()
 
-		expect(apres.collections.profiles).toMatchObject({ crees: 0, modifies: 1 })
+		expect(apres.collections.profiles).toMatchObject({ created: 0, updated: 1 })
 		expect((await profilsDeLaCible()).find(({ strapiId }) => strapiId === 21)).toMatchObject({
 			status: 'published',
 			chosenStatus: 'automatic',
 			updatedAt: '2026-09-28T10:11:12.131Z',
 		})
-		expect(troisieme.collections.profiles).toMatchObject({ crees: 0, modifies: 0 })
+		expect(troisieme.collections.profiles).toMatchObject({ created: 0, updated: 0 })
 	})
 })
 
@@ -256,7 +256,7 @@ describe('Un profil sans compte, hors des 13 profils du spam (SCHEMA.md §4.1)',
 	test('sans décision, la commande s’arrête avant toute écriture et le nomme par identifiant', async () => {
 		const cible = await profilsDeLaCible()
 
-		const { code, sortie } = await commandeDImport(['--reel', '--decisions', FICHIER_DES_DECISIONS_DU_BANC])
+		const { code, sortie } = await commandeDImport(['--real', '--decisions', FICHIER_DES_DECISIONS_DU_BANC])
 
 		expect(code, sortie).toBe(3)
 		expect(sortie).toContain('Import arrêté avant toute écriture')
@@ -267,12 +267,12 @@ describe('Un profil sans compte, hors des 13 profils du spam (SCHEMA.md §4.1)',
 	}, 60_000)
 
 	test('avec sa décision, il est écarté et compté, et rien d’autre ne change', async () => {
-		const rapport = await importerSurLeBanc('reel', {
-			decisions: { ...DECISIONS_DU_BANC, profilsEcartes: [...DECISIONS_DU_BANC.profilsEcartes, ORPHELIN] },
+		const rapport = await importerSurLeBanc('real', {
+			decisions: { ...DECISIONS_DU_BANC, excludedProfiles: [...DECISIONS_DU_BANC.excludedProfiles, ORPHELIN] },
 		})
 
-		expect(rapport.arret).toBeNull()
-		expect(rapport.collections.profiles).toMatchObject({ source: 28, crees: 0, modifies: 0, ecartes: [29, ORPHELIN] })
+		expect(rapport.halt).toBeNull()
+		expect(rapport.collections.profiles).toMatchObject({ source: 28, created: 0, updated: 0, excluded: [29, ORPHELIN] })
 		expect((await profilsDeLaCible()).some(({ strapiId }) => strapiId === ORPHELIN)).toBe(false)
 	})
 })
@@ -284,9 +284,9 @@ describe('Un profil dont la table de décision écarte le compte (SCHEMA.md §11
 		try {
 			// The accounts that share one email are decided, profile 29 of account 11 is not.
 			const fichier = path.join(dossier, 'decisions.json')
-			writeFileSync(fichier, JSON.stringify({ emailsPartages: [{ comptes: [9, 10, 11, 12], retenu: 9 }] }))
+			writeFileSync(fichier, JSON.stringify({ sharedEmails: [{ accounts: [9, 10, 11, 12], kept: 9 }] }))
 
-			const { code, sortie } = await commandeDImport(['--reel', '--decisions', fichier])
+			const { code, sortie } = await commandeDImport(['--real', '--decisions', fichier])
 
 			expect(code, sortie).toBe(3)
 			expect(sortie).toContain('Import arrêté avant toute écriture')

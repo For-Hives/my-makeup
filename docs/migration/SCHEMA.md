@@ -88,7 +88,7 @@ Identifiants (`makeup_artistes.id`) : 67, 74, 76, 77, 78, 79, 87, 88, 94, 95, 96
 
 - L'import les compte « écartés » ; ils sont absents de Payload, avec leurs lignes de composants.
 - Aucun fichier n'est référencé par eux.
-- Tout autre profil sans compte arrête l'import (ticket 059) : la liste ne s'allonge pas toute seule. Seule une décision par profil de la table de décision de l'import l'écarte (`profilsEcartes`, `docs/migration/IMPORT.md`).
+- Tout autre profil sans compte arrête l'import (ticket 059) : la liste ne s'allonge pas toute seule. Seule une décision par profil de la table de décision de l'import l'écarte (`excludedProfiles`, `docs/migration/IMPORT.md`).
 - Leurs adresses répondent 404 dans la v3 (ticket 104).
 - Si ces profils sont supprimés de Strapi avant la bascule, la liste ne désigne plus rien et reste sans effet.
 
@@ -454,7 +454,7 @@ Noms fixés par ce document, parce que le plan ne les donnait pas : `profiles.le
 | 14/10/2026 | Communes à l'import (ticket 063), sans changer un nom de champ : une adresse postale donne sa commune, jamais sa rue (§5.2) ; un texte de ville à revoir se tranche par la table de décision de l'import (§11). |
 | 14/10/2026 | Migration `init` (ticket 049), sans changer un nom de champ : le schéma de P3 est figé dans une seule migration, `20261014_134242_init`, qui remplace les douze migrations provisoires ; son instantané est celui de la dernière d'entre elles. Tout changement d'une collection vient désormais avec sa migration, dans le même commit (`CLAUDE.md`, « Schéma »). |
 | 14/10/2026 | Photos à l'import (ticket 058), sans changer un nom de champ : une image est un fichier JPEG, PNG, WebP, GIF ou AVIF ; un fichier désigné dont l'objet manque est adopté sans taille et listé en « 404 connus » (§4.3) ; un fichier dont l'adresse n'est pas la base des photos suivie d'une clé que la v3 redonne à l'identique, ou que désignent les entrées de plusieurs comptes, est refusé et attend une décision (§11). Hors de l'import, un média se crée toujours avec son fichier (§8). |
-| 14/10/2026 | Coordonnées à l'import (ticket 064), sans changer un nom de champ : une valeur de téléphone ou d'email faite d'espaces est vide ; `contactPublic` vrai dès que l'un des deux est rempli, avec la date de bascule donnée à la commande (`--consentement-le`). |
+| 14/10/2026 | Coordonnées à l'import (ticket 064), sans changer un nom de champ : une valeur de téléphone ou d'email faite d'espaces est vide ; `contactPublic` vrai dès que l'un des deux est rempli, avec la date de bascule donnée à la commande (`--consent-date`). |
 | 15/10/2026 | Talents (ticket 108) : `talents.titreDeLaPage` est créé (§5.4), le titre de la page de 50 à 60 caractères que Bing demande ; les autres champs ne changent pas. |
 | 14/10/2026 | Sections des profils à l'import (ticket 060), sans changer un nom de champ : un lien de liste qui ne nomme aucune ligne est signalé, rien n'est inventé à sa place (§7) ; `prixAPartirDe` reste vide jusqu'au ticket 062, le téléphone et l'email de contact jusqu'au ticket 064. |
 | 14/10/2026 | Articles à l'import (ticket 061), sans changer un nom de champ : une image de la galerie est rattachée si son fichier est adopté, un autre fichier est signalé (§5.3). |

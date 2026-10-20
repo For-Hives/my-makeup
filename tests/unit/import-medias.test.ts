@@ -96,7 +96,7 @@ describe('les fichiers de la source sont adoptés, signalés ou refusés', () =>
 	const lus = (fichiers: FileRow[], liens: FileLink[]): ReadFiles => ({ fichiers, liens })
 
 	test('une image désignée par un profil repris est adoptée, au compte de ce profil ; une image d’article sans propriétaire', () => {
-		const { adoptables, designes } = classifyFiles(
+		const { adoptables, pointed: designes } = classifyFiles(
 			lus(
 				[fichier(1), fichier(2), fichier(3, { url: `${BASE}/photo_3.png` })],
 				[lien(1, 21, 'main_picture'), lien(2, 22), lien(3, 7, 'galery', TYPE_ARTICLE)]
@@ -132,10 +132,10 @@ describe('les fichiers de la source sont adoptés, signalés ou refusés', () =>
 		expect(classement).toMatchObject({
 			source: 5,
 			adoptables: [],
-			designes: 0,
-			deEntreesNonPrises: 1,
-			deEntreesDisparues: 3,
-			sansLien: 1,
+			pointed: 0,
+			ofEntriesNotTaken: 1,
+			ofVanishedEntries: 3,
+			withoutLink: 1,
 		})
 	})
 
@@ -147,24 +147,24 @@ describe('les fichiers de la source sont adoptés, signalés ou refusés', () =>
 
 		expect(classifyFiles(source, ENTREES, BASE)).toMatchObject({
 			adoptables: [{ fichier: { id: 3 } }],
-			nonAdoptes: [
-				{ fichier: 1, motif: 'pas-une-image' },
-				{ fichier: 2, motif: 'pas-une-image' },
+			notAdopted: [
+				{ file: 1, reason: 'pas-une-image' },
+				{ file: 2, reason: 'pas-une-image' },
 			],
-			refuses: [],
+			refused: [],
 		})
 		expect(classifyFiles(source, ENTREES, null)).toMatchObject({
 			adoptables: [],
-			nonAdoptes: [
-				{ fichier: 1, motif: 'pas-une-image' },
-				{ fichier: 2, motif: 'pas-une-image' },
-				{ fichier: 3, motif: 'sans-stockage' },
+			notAdopted: [
+				{ file: 1, reason: 'pas-une-image' },
+				{ file: 2, reason: 'pas-une-image' },
+				{ file: 3, reason: 'sans-stockage' },
 			],
 		})
 	})
 
 	test('une adresse hors de la base des photos, ou un fichier de deux comptes, est refusé et attend une décision', () => {
-		const { adoptables, refuses } = classifyFiles(
+		const { adoptables, refused: refuses } = classifyFiles(
 			lus(
 				[fichier(1, { url: 'https://ailleurs.example.test/1/photo_1.png' }), fichier(2), fichier(3)],
 				[lien(1, 21), lien(2, 21), lien(2, 22), lien(3, 21), lien(3, 7, 'galery', TYPE_ARTICLE)]
@@ -175,9 +175,9 @@ describe('les fichiers de la source sont adoptés, signalés ou refusés', () =>
 
 		expect(adoptables).toEqual([])
 		expect(refuses).toEqual([
-			{ strapiId: 1, motif: 'adresse-hors-de-la-base', champs: ['prefix', 'filename'] },
-			{ strapiId: 2, motif: 'plusieurs-proprietaires', champs: ['owner'] },
-			{ strapiId: 3, motif: 'plusieurs-proprietaires', champs: ['owner'] },
+			{ strapiId: 1, reason: 'adresse-hors-de-la-base', fields: ['prefix', 'filename'] },
+			{ strapiId: 2, reason: 'plusieurs-proprietaires', fields: ['owner'] },
+			{ strapiId: 3, reason: 'plusieurs-proprietaires', fields: ['owner'] },
 		])
 	})
 
@@ -192,8 +192,8 @@ describe('les fichiers de la source sont adoptés, signalés ou refusés', () =>
 		)
 
 		expect(classement.adoptables.map(({ fichier }) => fichier.id)).toEqual([1, 2, 3])
-		expect(classement.nomsDifferents).toEqual([1])
-		expect(classement.envoyesParUnAutreCompte).toEqual([2])
+		expect(classement.differentNames).toEqual([1])
+		expect(classement.uploadedByAnotherAccount).toEqual([2])
 	})
 })
 
@@ -268,7 +268,7 @@ describe('les médias attendus', () => {
 
 		expect(media).toEqual({
 			strapiId: 1,
-			valeurs: {
+			values: {
 				strapiId: 1,
 				alt: 'Texte fictif',
 				filename: 'photo_1.png',
@@ -282,10 +282,10 @@ describe('les médias attendus', () => {
 				createdAt: '2024-01-01T10:00:00.000Z',
 				updatedAt: '2024-01-02T10:00:00.000Z',
 			},
-			ecarts: [{ champ: 'filesize', reference: 'SCHEMA.md §8 (size)' }],
+			gaps: [{ field: 'filesize', reference: 'SCHEMA.md §8 (size)' }],
 		})
-		expect(sansObjet?.valeurs).toMatchObject({ prefix: '', filesize: null, owner: null })
-		expect(MEDIA_ADAPTER.options?.(media as never)).toEqual({ contexte: { skipCloudStorage: true } })
+		expect(sansObjet?.values).toMatchObject({ prefix: '', filesize: null, owner: null })
+		expect(MEDIA_ADAPTER.options?.(media as never)).toEqual({ context: { skipCloudStorage: true } })
 	})
 
 	test('une photo dont le fichier n’est pas adopté est signalée, pas inventée ; à blanc, son média n’a pas encore d’identifiant', () => {
@@ -345,46 +345,46 @@ describe('un média nomme toujours son objet', () => {
 })
 
 describe('le rapport des fichiers et des photos', () => {
-	const vide = { lignes: 0, empreinte: '' }
+	const vide = { rows: 0, fingerprint: '' }
 	const rapport: Report = {
-		mode: 'reel',
-		cible: 'locale',
-		arret: null,
-		decisionsSansObjet: 0,
-		source: { avant: { files: vide }, apres: { files: vide }, inchangee: true },
+		mode: 'real',
+		target: 'local',
+		halt: null,
+		pointlessDecisions: 0,
+		source: { before: { files: vide }, after: { files: vide }, unchanged: true },
 		collections: {
 			media: {
 				source: 13,
-				crees: 8,
-				modifies: 0,
-				inchanges: 0,
-				refuses: [],
-				enTrop: [],
-				fichiers: {
-					designes: 9,
-					deEntreesNonPrises: 0,
-					deEntreesDisparues: 2,
-					sansLien: 2,
-					sansStockage: false,
-					nonAdoptes: [{ fichier: 108, motif: 'pas-une-image' }],
-					introuvables: [107],
-					nomsDifferents: [104],
-					envoyesParUnAutreCompte: [109],
+				created: 8,
+				updated: 0,
+				unchanged: 0,
+				refused: [],
+				extra: [],
+				files: {
+					pointed: 9,
+					ofEntriesNotTaken: 0,
+					ofVanishedEntries: 2,
+					withoutLink: 2,
+					withoutStorage: false,
+					notAdopted: [{ file: 108, reason: 'pas-une-image' }],
+					notFound: [107],
+					differentNames: [104],
+					uploadedByAnotherAccount: [109],
 				},
 			},
 			profiles: {
 				source: 27,
-				crees: 13,
-				modifies: 0,
-				inchanges: 0,
-				refuses: [],
-				enTrop: [],
-				photosNonReprises: [{ entree: 24, fichier: 108 }],
-				liensSansLigne: [22],
+				created: 13,
+				updated: 0,
+				unchanged: 0,
+				refused: [],
+				extra: [],
+				photosNotCarriedOver: [{ entry: 24, file: 108 }],
+				linksWithoutRow: [22],
 			},
 		},
-		ecarts: { 'SCHEMA.md §8 (size)': 8, 'fichiers-non-images-non-repris': 1 },
-		parite: null,
+		gaps: { 'SCHEMA.md §8 (size)': 8, 'fichiers-non-images-non-repris': 1 },
+		parity: null,
 	}
 
 	test('en nombres et en identifiants de l’ancienne base, jamais une adresse ; un fichier signalé ne change pas le code', () => {
@@ -413,7 +413,10 @@ describe('le rapport des fichiers et des photos', () => {
 			...rapport,
 			collections: {
 				...rapport.collections,
-				media: media && { ...media, refuses: [{ strapiId: 110, motif: 'plusieurs-proprietaires', champs: ['owner'] }] },
+				media: media && {
+					...media,
+					refused: [{ strapiId: 110, reason: 'plusieurs-proprietaires', fields: ['owner'] }],
+				},
 			},
 		}
 

@@ -16,7 +16,7 @@
  * - **The networks** are the five links of the profile. The phone and the email of the same row of
  *   Strapi are read into memory only, to tell whether the profile has a contact channel at the
  *   source; their place in the v3 is ticket 064.
- * - **The photos** are the media adopted for the files the profile designates (./medias.ts): a
+ * - **The photos** are the media adopted for the files the profile designates (./media.ts): a
  *   file not adopted is reported, never invented.
  *
  * No `bun` import here: the import can run under Node too.

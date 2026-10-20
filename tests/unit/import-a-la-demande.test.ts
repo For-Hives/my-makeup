@@ -27,7 +27,7 @@ const STOCKAGE = {
 	secretAccessKey: 'y',
 	local: false,
 }
-const DEMANDE: ImportEnv = { jeton: '2026-11-05-passage-a', mode: 'a-blanc', cibleEnService: false }
+const DEMANDE: ImportEnv = { token: '2026-11-05-passage-a', mode: 'dry-run', targetInService: false }
 const ENV: OnDemandImportEnv = { databaseUri: CIBLE, importation: DEMANDE, sourceStrapi: SOURCE, storage: STOCKAGE }
 
 /** A Payload that fails the test when anything reads from it: no token, no refusal reads the database. */
@@ -42,13 +42,13 @@ const payloadInterdit = new Proxy(
 
 /** The comment of the schema `public`, the pool of `pg` just enough for `reserverLeJeton`. */
 function fausseBase(commentaire: string | null = 'standard public schema') {
-	const etat = { commentaire, journal: [] as string[], connexions: 0, relachees: 0 }
+	const etat = { commentaire, log: [] as string[], connexions: 0, relachees: 0 }
 	const pool = {
 		async connect() {
 			etat.connexions++
 			return {
 				async query(texte: string, parametres: unknown[] = []) {
-					etat.journal.push(texte.split(' ').slice(0, 2).join(' '))
+					etat.log.push(texte.split(' ').slice(0, 2).join(' '))
 					if (texte.startsWith('SELECT obj_description')) {
 						expect(parametres).toEqual(['public', 'pg_namespace'])
 						return { rows: [{ marque: etat.commentaire }] }
@@ -187,9 +187,9 @@ describe('les jetons joués, gardés dans le commentaire du schéma', () => {
 
 		await reserveToken(pool, '2026-11-05-passage-a')
 
-		expect(etat.journal[0]).toBe('BEGIN')
-		expect(etat.journal[1]).toBe('SELECT pg_advisory_xact_lock(hashtext($1))')
-		expect(etat.journal.at(-1)).toBe('COMMIT')
+		expect(etat.log[0]).toBe('BEGIN')
+		expect(etat.log[1]).toBe('SELECT pg_advisory_xact_lock(hashtext($1))')
+		expect(etat.log.at(-1)).toBe('COMMIT')
 		expect(etat.connexions).toBe(etat.relachees)
 	})
 
@@ -199,7 +199,7 @@ describe('les jetons joués, gardés dans le commentaire du schéma', () => {
 		await expect(reserveToken(pool, '2026-11-05-passage-a')).rejects.toBeInstanceOf(ImportRefuse)
 
 		expect(etat.commentaire).toBe('le commentaire de quelqu’un d’autre')
-		expect(etat.journal.at(-1)).toBe('ROLLBACK')
+		expect(etat.log.at(-1)).toBe('ROLLBACK')
 		expect(etat.connexions).toBe(etat.relachees)
 	})
 })
@@ -207,97 +207,97 @@ describe('les jetons joués, gardés dans le commentaire du schéma', () => {
 describe('importALaDemande : ce qu’elle refuse, sans rien lire quand il n’y a rien à faire', () => {
 	function avecJournal() {
 		const lignes: string[] = []
-		return { lignes, options: { journal: (ligne: string) => lignes.push(ligne) } }
+		return { rows: lignes, options: { log: (ligne: string) => lignes.push(ligne) } }
 	}
 
 	test('sans jeton, elle ne fait rien et ne touche à rien', async () => {
-		const { lignes, options } = avecJournal()
+		const { rows: lignes, options } = avecJournal()
 
 		const issue = await importOnDemand(
 			payloadInterdit,
 			{ ...ENV, importation: undefined },
-			{ ...options, lieu: 'site' }
+			{ ...options, place: 'site' }
 		)
 
-		expect(issue).toEqual({ etat: 'sans-jeton' })
+		expect(issue).toEqual({ state: 'sans-jeton' })
 		expect(lignes).toEqual([])
 	})
 
 	test('hors du site, elle refuse avant toute lecture, même avec un jeton', async () => {
-		const { lignes, options } = avecJournal()
+		const { rows: lignes, options } = avecJournal()
 
-		const issue = await importOnDemand(payloadInterdit, ENV, { ...options, lieu: 'autre' })
+		const issue = await importOnDemand(payloadInterdit, ENV, { ...options, place: 'autre' })
 
-		expect(issue.etat).toBe('refuse')
+		expect(issue.state).toBe('refuse')
 		expect(lignes.join('\n')).toContain('ne tourne que sur le site')
 	})
 
 	test('sans lieu donné, elle lit l’environnement du processus : celui des tests n’est pas le site', async () => {
 		const { options } = avecJournal()
 
-		expect((await importOnDemand(payloadInterdit, ENV, options)).etat).toBe('refuse')
+		expect((await importOnDemand(payloadInterdit, ENV, options)).state).toBe('refuse')
 	})
 
 	test('sans source, ou avec la base de Payload pour source, elle refuse avant toute lecture', async () => {
-		const { lignes, options } = avecJournal()
+		const { rows: lignes, options } = avecJournal()
 
 		expect(
-			(await importOnDemand(payloadInterdit, { ...ENV, sourceStrapi: undefined }, { ...options, lieu: 'site' })).etat
+			(await importOnDemand(payloadInterdit, { ...ENV, sourceStrapi: undefined }, { ...options, place: 'site' })).state
 		).toBe('refuse')
 		expect(
-			(await importOnDemand(payloadInterdit, { ...ENV, sourceStrapi: CIBLE }, { ...options, lieu: 'site' })).etat
+			(await importOnDemand(payloadInterdit, { ...ENV, sourceStrapi: CIBLE }, { ...options, place: 'site' })).state
 		).toBe('refuse')
 		expect(lignes.join('\n')).toContain('STRAPI_SOURCE_URI manque')
 		expect(lignes.join('\n')).toContain('désigne la base de Payload')
 	})
 
 	test('sans stockage des photos, elle refuse avant toute lecture', async () => {
-		const { lignes, options } = avecJournal()
+		const { rows: lignes, options } = avecJournal()
 
-		const issue = await importOnDemand(payloadInterdit, { ...ENV, storage: undefined }, { ...options, lieu: 'site' })
+		const issue = await importOnDemand(payloadInterdit, { ...ENV, storage: undefined }, { ...options, place: 'site' })
 
-		expect(issue.etat).toBe('refuse')
+		expect(issue.state).toBe('refuse')
 		expect(lignes.join('\n')).toContain('stockage des photos')
 	})
 
 	test.each([
-		['une table de décision illisible', { ...DEMANDE, decisions: '{"emailsPartages": "non"}' }],
-		['une date qui n’en est pas une', { ...DEMANDE, consentiLe: '2026-02-31' }],
-		['des réponses gardées illisibles', { ...DEMANDE, communes: '{"pas": "des réponses"}' }],
+		['une table de décision illisible', { ...DEMANDE, decisions: '{"sharedEmails": "non"}' }],
+		['une date qui n’en est pas une', { ...DEMANDE, consentDate: '2026-02-31' }],
+		['des réponses gardées illisibles', { ...DEMANDE, cities: '{"pas": "des réponses"}' }],
 	])('%s : refusé AVANT que le jeton soit écrit', async (_cas, importation) => {
 		const { etat, pool } = fausseBase()
-		const { lignes, options } = avecJournal()
+		const { rows: lignes, options } = avecJournal()
 
-		const issue = await importOnDemand(payloadAvecSchema(pool), { ...ENV, importation }, { ...options, lieu: 'site' })
+		const issue = await importOnDemand(payloadAvecSchema(pool), { ...ENV, importation }, { ...options, place: 'site' })
 
-		expect(issue.etat).toBe('refuse')
+		expect(issue.state).toBe('refuse')
 		expect(etat.connexions).toBe(0)
 		expect(etat.commentaire).toBe('standard public schema')
 		expect(lignes.join('\n')).toContain('Passage refusé ou arrêté')
 	})
 
 	test('un jeton déjà joué ne rouvre pas la source', async () => {
-		const { pool } = fausseBase(`${TOKENS_MARKER}${DEMANDE.jeton}`)
-		const { lignes, options } = avecJournal()
+		const { pool } = fausseBase(`${TOKENS_MARKER}${DEMANDE.token}`)
+		const { rows: lignes, options } = avecJournal()
 		let ouverte = false
 
 		const issue = await importOnDemand(payloadAvecSchema(pool), ENV, {
 			...options,
-			lieu: 'site',
-			ouvrirLaSource: () => {
+			place: 'site',
+			openSource: () => {
 				ouverte = true
 				throw new Error('ne devait pas s’ouvrir')
 			},
 		})
 
-		expect(issue).toEqual({ etat: 'deja-joue', jeton: DEMANDE.jeton })
+		expect(issue).toEqual({ state: 'deja-joue', token: DEMANDE.token })
 		expect(ouverte).toBe(false)
 		expect(lignes.join('\n')).toContain('a déjà été joué')
 	})
 
 	test('une erreur de la base est dite par son type et son code, jamais par son texte, et le journal reste propre', async () => {
 		const { pool } = fausseBase()
-		const { lignes, options } = avecJournal()
+		const { rows: lignes, options } = avecJournal()
 		const erreur = Object.assign(
 			new Error('password authentication failed for user "lecture_strapi" at pers@example.test $2a$10$abcdefghij'),
 			{
@@ -308,16 +308,16 @@ describe('importALaDemande : ce qu’elle refuse, sans rien lire quand il n’y 
 
 		const issue = await importOnDemand(payloadAvecSchema(pool), ENV, {
 			...options,
-			lieu: 'site',
-			baseDesMedias: 'https://stockage.example.test/photos-factices',
-			referentiel: { repondre: async () => [] },
-			ouvrirLaSource: () => {
+			place: 'site',
+			mediaBase: 'https://stockage.example.test/photos-factices',
+			reference: { repondre: async () => [] },
+			openSource: () => {
 				throw erreur
 			},
 		})
 
 		const journal = lignes.join('\n')
-		expect(issue.etat).toBe('refuse')
+		expect(issue.state).toBe('refuse')
 		expect(journal).toContain('code 28P01')
 		expect(journal).not.toContain('pers@')
 		expect(journal).not.toContain('$2a$')
@@ -327,15 +327,15 @@ describe('importALaDemande : ce qu’elle refuse, sans rien lire quand il n’y 
 
 	test('une ligne qui porterait un @ ou un hash est retenue, d’où qu’elle vienne', async () => {
 		const { pool } = fausseBase()
-		const { lignes, options } = avecJournal()
+		const { rows: lignes, options } = avecJournal()
 		const { ImportRefuse: Refus } = await import('../../scripts/migration/import/target')
 
 		await importOnDemand(payloadAvecSchema(pool), ENV, {
 			...options,
-			lieu: 'site',
-			baseDesMedias: 'https://stockage.example.test/photos-factices',
-			referentiel: { repondre: async () => [] },
-			ouvrirLaSource: () => {
+			place: 'site',
+			mediaBase: 'https://stockage.example.test/photos-factices',
+			reference: { repondre: async () => [] },
+			openSource: () => {
 				throw new Refus('quelqu’un@example.test $2a$10$abcdefghij')
 			},
 		})

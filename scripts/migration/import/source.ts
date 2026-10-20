@@ -54,9 +54,9 @@ const NEVER_READ_COLUMNS: Readonly<Record<string, readonly string[]>> = {
 }
 
 export interface TableFingerprint {
-	lignes: number
+	rows: number
 	/** SHA-256 of the rows, computed by PostgreSQL: no value leaves the source. */
-	empreinte: string
+	fingerprint: string
 }
 
 export type TablesFingerprint = Record<string, TableFingerprint>
@@ -83,7 +83,7 @@ export async function tablesFingerprint(
 				coalesce(encode(sha256(convert_to(string_agg(h, E'\\n' ORDER BY h COLLATE "C"), 'UTF8')), 'hex'), '') AS empreinte
 			FROM (SELECT encode(sha256(convert_to((to_jsonb(t)${removed})::text, 'UTF8')), 'hex') AS h FROM public."${table}" t) s`
 		)
-		fingerprints[table] = { lignes: row?.lignes ?? 0, empreinte: row?.empreinte ?? '' }
+		fingerprints[table] = { rows: row?.lignes ?? 0, fingerprint: row?.empreinte ?? '' }
 	}
 	// Large objects live outside the tables: a role that could create one would change the source
 	// without a row moving. Their identifiers are fingerprinted like a table (ticket 227).
@@ -92,7 +92,7 @@ export async function tablesFingerprint(
 			coalesce(encode(sha256(convert_to(string_agg(oid::text, ',' ORDER BY oid), 'UTF8')), 'hex'), '') AS empreinte
 		FROM pg_catalog.pg_largeobject_metadata`
 	)
-	fingerprints[LARGE_OBJECTS] = { lignes: largeObjects?.lignes ?? 0, empreinte: largeObjects?.empreinte ?? '' }
+	fingerprints[LARGE_OBJECTS] = { rows: largeObjects?.lignes ?? 0, fingerprint: largeObjects?.empreinte ?? '' }
 	return fingerprints
 }
 

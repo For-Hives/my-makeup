@@ -78,7 +78,7 @@ describe('l’import marque son passage (importer lui-même)', () => {
 				throw new Error('stop')
 			},
 		}
-		const options = { payload: {}, source, mode: 'essai', cible: 'locale' } as unknown as Parameters<typeof importer>[0]
+		const options = { payload: {}, source, mode: 'essai', cible: 'local' } as unknown as Parameters<typeof importer>[0]
 
 		await expect(importer(options)).rejects.toThrow('stop')
 		expect(vu.pendant).toBe(true)

@@ -10,6 +10,8 @@ import {
 	mediaBaseUrl,
 	parseServerEnv,
 	type RawEnv,
+	RENAMED_VARIABLES,
+	renamedVariableProblems,
 	SECRET_MIN_LENGTH,
 	serverEnv,
 	statsTokenFromEnv,
@@ -900,7 +902,7 @@ describe('the import of the old site runs on the site only, once per token (tick
 		NODE_ENV: 'production',
 		STRAPI_SOURCE_URI: SOURCE,
 	}
-	const demande: RawEnv = { ...site, IMPORT_JETON: '2026-11-05-passage-a' }
+	const demande: RawEnv = { ...site, IMPORT_TOKEN: '2026-11-05-passage-a' }
 
 	test('STRAPI_SOURCE_URI is known to the application: read as an address, kept apart, never refused for being local', () => {
 		expect(parseServerEnv(site).sourceStrapi).toBe(SOURCE)
@@ -916,9 +918,9 @@ describe('the import of the old site runs on the site only, once per token (tick
 
 	test('a token alone is a dry run, read with the defaults', () => {
 		expect(parseServerEnv(demande).importation).toEqual({
-			jeton: '2026-11-05-passage-a',
-			mode: 'a-blanc',
-			cibleEnService: false,
+			token: '2026-11-05-passage-a',
+			mode: 'dry-run',
+			targetInService: false,
 		})
 	})
 
@@ -927,19 +929,19 @@ describe('the import of the old site runs on the site only, once per token (tick
 		expect(
 			parseServerEnv({
 				...demande,
-				IMPORT_CIBLE_EN_SERVICE: 'oui',
-				IMPORT_COMMUNES: '[]',
-				IMPORT_CONSENTEMENT_LE: '2026-11-02T08:00:00Z',
+				IMPORT_TARGET_IN_SERVICE: 'oui',
+				IMPORT_CITIES: '[]',
+				IMPORT_CONSENT_DATE: '2026-11-02T08:00:00Z',
 				IMPORT_DECISIONS: decisions,
-				IMPORT_MODE: 'reel',
+				IMPORT_MODE: 'real',
 			}).importation
 		).toEqual({
-			cibleEnService: true,
-			communes: '[]',
-			consentiLe: '2026-11-02T08:00:00Z',
+			targetInService: true,
+			cities: '[]',
+			consentDate: '2026-11-02T08:00:00Z',
 			decisions,
-			jeton: '2026-11-05-passage-a',
-			mode: 'reel',
+			token: '2026-11-05-passage-a',
+			mode: 'real',
 		})
 	})
 
@@ -954,39 +956,39 @@ describe('the import of the old site runs on the site only, once per token (tick
 		['the test bench', { ...demande, APP_ENV: 'test' }],
 	])('refused on %s, naming the variable and never its value', (_cas, env) => {
 		const error = refusal(env)
-		expect(error.variables).toContain('IMPORT_JETON')
-		expect(error.message).toContain('- IMPORT_JETON : refusée, car ce n’est pas le site')
+		expect(error.variables).toContain('IMPORT_TOKEN')
+		expect(error.message).toContain('- IMPORT_TOKEN : refusée, car ce n’est pas le site')
 		expect(error.message).not.toContain('2026-11-05-passage-a')
 		expect(error.message).not.toContain('MOT-DE-PASSE-TEMOIN')
 	})
 
 	test('any other IMPORT_* variable is refused off the site too, token or not', () => {
 		for (const [variable, valeur] of [
-			['IMPORT_MODE', 'reel'],
+			['IMPORT_MODE', 'real'],
 			['IMPORT_DECISIONS', '{}'],
-			['IMPORT_CONSENTEMENT_LE', '2026-11-02'],
-			['IMPORT_COMMUNES', '[]'],
-			['IMPORT_CIBLE_EN_SERVICE', 'oui'],
+			['IMPORT_CONSENT_DATE', '2026-11-02'],
+			['IMPORT_CITIES', '[]'],
+			['IMPORT_TARGET_IN_SERVICE', 'oui'],
 		] as const)
 			expect(refusal({ ...valid, [variable]: valeur }).variables, variable).toEqual([variable])
 	})
 
 	test('a variable without the token is refused on the site: it would do nothing', () => {
-		const error = refusal({ ...site, IMPORT_MODE: 'reel' })
+		const error = refusal({ ...site, IMPORT_MODE: 'real' })
 		expect(error.variables).toEqual(['IMPORT_MODE'])
-		expect(error.message).toContain('IMPORT_JETON est absente')
+		expect(error.message).toContain('IMPORT_TOKEN est absente')
 	})
 
 	test.each([
-		['IMPORT_JETON', 'court'],
-		['IMPORT_JETON', 'MAJUSCULES-INTERDITES'],
-		['IMPORT_JETON', `${'a'.repeat(65)}`],
-		['IMPORT_MODE', 'dry-run'],
-		['IMPORT_CIBLE_EN_SERVICE', 'true'],
-		['IMPORT_CONSENTEMENT_LE', 'demain'],
-		['IMPORT_CONSENTEMENT_LE', '2026-13-45'],
+		['IMPORT_TOKEN', 'court'],
+		['IMPORT_TOKEN', 'MAJUSCULES-INTERDITES'],
+		['IMPORT_TOKEN', `${'a'.repeat(65)}`],
+		['IMPORT_MODE', 'sec'],
+		['IMPORT_TARGET_IN_SERVICE', 'true'],
+		['IMPORT_CONSENT_DATE', 'demain'],
+		['IMPORT_CONSENT_DATE', '2026-13-45'],
 		['IMPORT_DECISIONS', '{pas du json'],
-		['IMPORT_COMMUNES', 'pas du json'],
+		['IMPORT_CITIES', 'pas du json'],
 	])('%s = « %s » is unreadable', (variable, valeur) => {
 		const error = refusal({ ...demande, [variable]: valeur })
 		expect(error.variables).toEqual([variable])
@@ -994,13 +996,49 @@ describe('the import of the old site runs on the site only, once per token (tick
 	})
 
 	test('a check does not go with a target left as it is', () => {
-		const error = refusal({ ...demande, IMPORT_MODE: 'controle', IMPORT_CIBLE_EN_SERVICE: 'oui' })
-		expect(error.variables).toEqual(['IMPORT_CIBLE_EN_SERVICE'])
+		const error = refusal({ ...demande, IMPORT_MODE: 'check', IMPORT_TARGET_IN_SERVICE: 'oui' })
+		expect(error.variables).toEqual(['IMPORT_TARGET_IN_SERVICE'])
 	})
 
 	test('the token needs a source to read', () => {
 		const error = refusal({ ...demande, STRAPI_SOURCE_URI: undefined })
 		expect(error.variables).toEqual(['STRAPI_SOURCE_URI'])
+	})
+
+	test('an old IMPORT_* name is refused at the start, with the new name, and its value is never shown', () => {
+		expect(RENAMED_VARIABLES.map(([old]) => old).sort()).toEqual([
+			'IMPORT_CIBLE_EN_SERVICE',
+			'IMPORT_COMMUNES',
+			'IMPORT_CONSENTEMENT_LE',
+			'IMPORT_JETON',
+		])
+		for (const [old, current] of RENAMED_VARIABLES) {
+			const problems = renamedVariableProblems({ [old]: 'valeur-temoin' })
+			expect(problems.map(({ variable }) => variable)).toEqual([old])
+			expect(problems[0]?.problem).toContain(current)
+			expect(problems[0]?.problem).not.toContain('valeur-temoin')
+			let error: unknown
+			try {
+				serverEnv(valid, { [old]: 'valeur-temoin' })
+			} catch (thrown) {
+				error = thrown
+			}
+			expect(error).toBeInstanceOf(EnvError)
+			expect((error as EnvError).variables).toEqual([old])
+			expect((error as EnvError).message).toContain(current)
+			expect((error as EnvError).message).not.toContain('valeur-temoin')
+		}
+		expect(renamedVariableProblems({})).toEqual([])
+	})
+
+	test.each([
+		['a-blanc', 'dry-run'],
+		['reel', 'real'],
+		['controle', 'check'],
+	])('the old IMPORT_MODE value « %s » is refused and the message gives « %s »', (old, current) => {
+		const error = refusal({ ...demande, IMPORT_MODE: old })
+		expect(error.variables).toEqual(['IMPORT_MODE'])
+		expect(error.message).toContain(`« ${current} »`)
 	})
 
 	test('next build reads no import: nothing runs while Next builds', () => {

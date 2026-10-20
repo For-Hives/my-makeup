@@ -70,17 +70,17 @@ describe('l’import des titres d’onglet', () => {
 
 	test('un talent des 14 reçoit son titre et l’écart est annoncé ; un autre talent n’en reçoit pas', () => {
 		const connu = expectedTalent(ligne(1, 'maquillage-mariee'))
-		expect(connu.valeurs.pageTitle).toBe(TALENT_PAGE_TITLES['maquillage-mariee'])
-		expect(connu.ecarts).toEqual([{ champ: 'pageTitle', reference: 'titre-page-talent' }])
+		expect(connu.values.pageTitle).toBe(TALENT_PAGE_TITLES['maquillage-mariee'])
+		expect(connu.gaps).toEqual([{ field: 'pageTitle', reference: 'titre-page-talent' }])
 		const inconnu = expectedTalent(ligne(2, 'effets-speciaux'))
-		expect(inconnu.valeurs).not.toHaveProperty('pageTitle')
-		expect(inconnu.ecarts).toEqual([])
+		expect(inconnu.values).not.toHaveProperty('pageTitle')
+		expect(inconnu.gaps).toEqual([])
 	})
 
 	test('le titre n’est écrit que s’il manque : jamais par-dessus un titre saisi dans l’administration', () => {
 		const attendu = expectedTalent(ligne(1, 'maquillage-mariee'))
-		const valeurs = { ...attendu.valeurs }
-		const existant = (titreDeLaPage: unknown) => ({ id: 7, valeurs: { ...valeurs, pageTitle: titreDeLaPage } })
+		const valeurs = { ...attendu.values }
+		const existant = (titreDeLaPage: unknown) => ({ id: 7, values: { ...valeurs, pageTitle: titreDeLaPage } })
 		expect(differentFields(TALENTS_ADAPTER, attendu, existant(null))).toEqual(['pageTitle'])
 		expect(differentFields(TALENTS_ADAPTER, attendu, existant(''))).toEqual(['pageTitle'])
 		expect(
@@ -89,7 +89,7 @@ describe('l’import des titres d’onglet', () => {
 		expect(differentFields(TALENTS_ADAPTER, attendu, existant(valeurs.pageTitle))).toEqual([])
 		// A talent with no title to give leaves an empty one alone.
 		const sans = expectedTalent(ligne(2, 'effets-speciaux'))
-		expect(differentFields(TALENTS_ADAPTER, sans, { id: 8, valeurs: { ...sans.valeurs, pageTitle: null } })).toEqual([])
-		expect(planActions(TALENTS_ADAPTER, [attendu], [existant('Saisi')]).actions[0]?.genre).toBe('inchange')
+		expect(differentFields(TALENTS_ADAPTER, sans, { id: 8, values: { ...sans.values, pageTitle: null } })).toEqual([])
+		expect(planActions(TALENTS_ADAPTER, [attendu], [existant('Saisi')]).actions[0]?.kind).toBe('inchange')
 	})
 })

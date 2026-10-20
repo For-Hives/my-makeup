@@ -9,7 +9,7 @@
  *
  * - A talent or an article is found by its slug. One that is there is left as it is, a draft
  *   included: a second load creates nothing.
- * - Written like the import writes, with its context (src/lib/contexte-import.ts): no page of the
+ * - Written like the import writes, with its context (src/lib/import-context.ts): no page of the
  *   site is refreshed, and no mail leaves.
  * - It holds no admin account: the admin accounts of the bench are the set of the tests
  *   (tests/fixtures/comptes.ts).

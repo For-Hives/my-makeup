@@ -50,7 +50,7 @@ export const randomPassword = (): string => randomBytes(32).toString('base64url'
 
 export const ACCOUNTS_ADAPTER: Adapter = {
 	collection: 'pros',
-	champs: {
+	fields: {
 		email: 'texte',
 		name: 'texte',
 		legacyProvider: 'texte',
@@ -61,18 +61,18 @@ export const ACCOUNTS_ADAPTER: Adapter = {
 		updatedAt: 'date',
 	},
 	// No confirmation email, and no automatic empty profile: the profile comes from the source.
-	options: () => ({ disableVerificationEmail: true, contexte: NO_PROFILE_CONTEXT }),
+	options: () => ({ disableVerificationEmail: true, context: NO_PROFILE_CONTEXT }),
 }
 
 /**
- * The accounts on a target the v3 already uses (`--cible-en-service`, ticket 227): an account the
+ * The accounts on a target the v3 already uses (`--target-in-service`, ticket 227): an account the
  * target holds is left exactly as it is, every field of it, so that the import puts back neither the
  * legacy hash a sign-in erased, nor the email, the confirmation or the block the v3 changed. Only an
  * account the target misses is created.
  */
 export const ACCOUNTS_IN_SERVICE_ADAPTER: Adapter = {
 	...ACCOUNTS_ADAPTER,
-	figes: Object.keys(ACCOUNTS_ADAPTER.champs),
+	frozen: Object.keys(ACCOUNTS_ADAPTER.fields),
 }
 
 /** The account the target must hold. The password is given at the creation only. */
@@ -80,12 +80,12 @@ export function expectedAccount(ligne: AccountRow, tirer: () => string = randomP
 	const email = normalizedEmail(ligne.email)
 	const legacyBcrypt = ligne.password !== null && FULL_BCRYPT_HASH.test(ligne.password) ? ligne.password : null
 	const gaps: Gap[] = []
-	if (email !== ligne.email) gaps.push({ champ: 'email', reference: REFERENCES.emailEnMinuscules })
-	if (legacyBcrypt !== ligne.password) gaps.push({ champ: 'legacyBcrypt', reference: REFERENCES.hashIncomplet })
-	if (ligne.confirmed !== true) gaps.push({ champ: '_verified', reference: REFERENCES.compteConfirme })
+	if (email !== ligne.email) gaps.push({ field: 'email', reference: REFERENCES.emailEnMinuscules })
+	if (legacyBcrypt !== ligne.password) gaps.push({ field: 'legacyBcrypt', reference: REFERENCES.hashIncomplet })
+	if (ligne.confirmed !== true) gaps.push({ field: '_verified', reference: REFERENCES.compteConfirme })
 	return {
 		strapiId: ligne.id,
-		valeurs: {
+		values: {
 			strapiId: ligne.id,
 			email,
 			name: ligne.username,
@@ -96,8 +96,8 @@ export function expectedAccount(ligne: AccountRow, tirer: () => string = randomP
 			createdAt: ligne.created_at,
 			updatedAt: ligne.updated_at,
 		},
-		aLaCreation: { password: tirer() },
-		ecarts: gaps,
+		onCreation: { password: tirer() },
+		gaps: gaps,
 	}
 }
 
@@ -113,29 +113,29 @@ export function sharedEmailGroups(lignes: readonly AccountRow[]): number[][] {
 }
 
 export interface ExpectedAccounts extends DecisionsApplication {
-	attendus: Expected[]
+	expected: Expected[]
 	/** Kept accounts that received the legacy hash of an account set aside (ticket 066). */
-	hashRattaches: number[]
+	attachedHashes: number[]
 	/** Legacy hashes of accounts set aside that no kept account could take. */
-	hashNonRattaches: number
+	unattachedHashes: number
 	/** Accounts not confirmed at the source: taken confirmed, and listed. */
-	nonConfirmes: number[]
+	unconfirmed: number[]
 }
 
 /** The accounts the import takes, those the decisions set aside, and the groups that stop it. */
 export function expectedAccounts(
 	lignes: readonly AccountRow[],
-	decisions: Pick<Decisions, 'emailsPartages'>,
+	decisions: Pick<Decisions, 'sharedEmails'>,
 	tirer: () => string = randomPassword
 ): ExpectedAccounts {
 	const application = applyDecisions(sharedEmailGroups(lignes), decisions)
-	const pending = new Set([...application.ecartes, ...application.sansDecision.flat()])
+	const pending = new Set([...application.excluded, ...application.withoutDecision.flat()])
 	const taken = lignes.filter(({ id }) => !pending.has(id))
 	const byId = new Map(lignes.map(ligne => [ligne.id, ligne]))
 	// The kept account that has no hash of its own takes the one of the first account set aside (lowest identifier) that has one.
 	const borrowedHashes = new Map<number, string>()
 	let unattachedHashes = 0
-	for (const { retenu: kept, ecartes: excluded, pretDuHash: lendHash } of application.rattaches) {
+	for (const { kept, excluded, lendHash } of application.attached) {
 		const excludedHashes = excluded.flatMap(id => {
 			const password = byId.get(id)?.password
 			return password != null && FULL_BCRYPT_HASH.test(password) ? [password] : []
@@ -152,33 +152,33 @@ export function expectedAccounts(
 	}
 	return {
 		...application,
-		hashRattaches: [...borrowedHashes.keys()].sort((a, b) => a - b),
-		hashNonRattaches: unattachedHashes,
-		attendus: taken.map(ligne => {
+		attachedHashes: [...borrowedHashes.keys()].sort((a, b) => a - b),
+		unattachedHashes: unattachedHashes,
+		expected: taken.map(ligne => {
 			const expected = expectedAccount(ligne, tirer)
 			const borrowed = borrowedHashes.get(ligne.id)
 			if (borrowed === undefined) return expected
 			return {
 				...expected,
-				valeurs: { ...expected.valeurs, legacyBcrypt: borrowed },
-				ecarts: [...expected.ecarts, { champ: 'legacyBcrypt', reference: REFERENCES.comptesEmailPartage }],
+				values: { ...expected.values, legacyBcrypt: borrowed },
+				gaps: [...expected.gaps, { field: 'legacyBcrypt', reference: REFERENCES.comptesEmailPartage }],
 			}
 		}),
-		nonConfirmes: taken.filter(({ confirmed }) => confirmed !== true).map(({ id }) => id),
+		unconfirmed: taken.filter(({ confirmed }) => confirmed !== true).map(({ id }) => id),
 	}
 }
 
 /** How many accounts per provider of the old site, and how many legacy hashes, among these values. */
-export function accountDistribution(documents: readonly { valeurs: Readonly<Record<string, unknown>> }[]): {
-	fournisseurs: Record<string, number>
-	hashHerites: number
+export function accountDistribution(documents: readonly { values: Readonly<Record<string, unknown>> }[]): {
+	providers: Record<string, number>
+	legacyHashes: number
 } {
 	const providers: Record<string, number> = {}
 	let legacyHash = 0
-	for (const { valeurs: values } of documents) {
+	for (const { values } of documents) {
 		const provider = String(values.legacyProvider ?? 'aucun')
 		providers[provider] = (providers[provider] ?? 0) + 1
 		if (typeof values.legacyBcrypt === 'string' && FULL_BCRYPT_HASH.test(values.legacyBcrypt)) legacyHash++
 	}
-	return { fournisseurs: providers, hashHerites: legacyHash }
+	return { providers, legacyHashes: legacyHash }
 }

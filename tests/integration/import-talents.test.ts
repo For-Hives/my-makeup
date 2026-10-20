@@ -77,11 +77,11 @@ afterAll(async () => {
 
 describe('Critère 1 : à blanc, les créations sont annoncées et la base cible reste vide', () => {
 	test('un passage à blanc annonce les trois talents et n’écrit rien', async () => {
-		const rapport = await importerSurLeBanc('a-blanc')
+		const rapport = await importerSurLeBanc('dry-run')
 
-		expect(rapport.mode).toBe('a-blanc')
-		expect(rapport.collections.talents).toMatchObject({ source: 3, crees: 3, modifies: 0, inchanges: 0, refuses: [] })
-		expect(rapport.parite).toBeNull()
+		expect(rapport.mode).toBe('dry-run')
+		expect(rapport.collections.talents).toMatchObject({ source: 3, created: 3, updated: 0, unchanged: 0, refused: [] })
+		expect(rapport.parity).toBeNull()
 		expect(await talentsDeLaCible()).toEqual([])
 		expect(await compterLesMails()).toBe(0)
 	})
@@ -112,7 +112,7 @@ describe('Critère 2 : passage réel, autant de talents, champs égaux, slug ide
 	test('chaque talent de la source est dans la cible, champ par champ, publié comme à la source', async () => {
 		const rapport = await importerSurLeBanc()
 
-		expect(rapport.collections.talents).toMatchObject({ source: 3, crees: 3, modifies: 0, inchanges: 0, refuses: [] })
+		expect(rapport.collections.talents).toMatchObject({ source: 3, created: 3, updated: 0, unchanged: 0, refused: [] })
 		const cible = await talentsDeLaCible()
 		expect(cible).toHaveLength(TALENTS_DE_LA_SOURCE.length)
 		for (const [rang, ligne] of TALENTS_DE_LA_SOURCE.entries()) {
@@ -133,8 +133,8 @@ describe('Critère 2 : passage réel, autant de talents, champs égaux, slug ide
 		}
 		// Null stays null: the description for the search engines of talent 3.
 		expect(cible[2]?.seo_description ?? null).toBeNull()
-		expect(rapport.parite?.talents).toMatchObject({ attendus: 3, presents: 3, egaux: 3, differents: [], manquants: [] })
-		expect(rapport.parite?.talents?.empreinteCible).toBe(rapport.parite?.talents?.empreinteAttendue ?? '')
+		expect(rapport.parity?.talents).toMatchObject({ expected: 3, present: 3, equal: 3, different: [], missing: [] })
+		expect(rapport.parity?.talents?.targetFingerprint).toBe(rapport.parity?.talents?.expectedFingerprint ?? '')
 		// The import context: nobody is told.
 		expect(await compterLesMails()).toBe(0)
 	})
@@ -160,12 +160,12 @@ describe('Critère 2 : passage réel, autant de talents, champs égaux, slug ide
 
 		const rapport = await importerSurLeBanc()
 
-		expect(rapport.collections.talents).toMatchObject({ source: 4, crees: 4, refuses: [] })
+		expect(rapport.collections.talents).toMatchObject({ source: 4, created: 4, refused: [] })
 		const brouillon = (await talentsDeLaCible()).find(talent => talent.strapiId === 4)
 		expect(brouillon).toMatchObject({ _status: 'draft', slug: 'maquillage-scene', publishedAt: null })
 		const { corps } = await appelerRest('GET', '/api/talents?where[slug][equals]=maquillage-scene')
 		expect((corps as { totalDocs: number }).totalDocs).toBe(0)
-		expect(rapport.parite?.talents).toMatchObject({ attendus: 4, egaux: 4 })
+		expect(rapport.parity?.talents).toMatchObject({ expected: 4, equal: 4 })
 	})
 
 	test('un slug qui n’est pas une adresse, ou que deux talents portent, est refusé et listé, jamais corrigé', async () => {
@@ -177,15 +177,15 @@ describe('Critère 2 : passage réel, autant de talents, champs égaux, slug ide
 
 		const rapport = await importerSurLeBanc()
 
-		expect(rapport.collections.talents?.refuses).toEqual([
-			{ strapiId: 5, motif: 'slug-pas-une-adresse', champs: ['slug'] },
-			{ strapiId: 6, motif: 'slug-en-double', champs: ['slug'] },
+		expect(rapport.collections.talents?.refused).toEqual([
+			{ strapiId: 5, reason: 'slug-pas-une-adresse', fields: ['slug'] },
+			{ strapiId: 6, reason: 'slug-en-double', fields: ['slug'] },
 		])
 		expect((await talentsDeLaCible()).map(({ strapiId }) => strapiId)).toEqual([1, 2, 3])
 		// The talent that keeps the slug is the oldest one, untouched.
 		expect((await talentsDeLaCible())[0]?.title).toBe('Maquillage de mariage')
 		// Refused, they count: the parity says it is incomplete by them, and by nothing else.
-		expect(rapport.parite?.talents).toMatchObject({ attendus: 5, egaux: 3, refuses: [5, 6], manquants: [] })
+		expect(rapport.parity?.talents).toMatchObject({ expected: 5, equal: 3, refused: [5, 6], missing: [] })
 		expect(exitCode(rapport)).toBe(5)
 	})
 })
@@ -205,10 +205,10 @@ describe('Ticket 108 : le titre d’onglet des pages talent', () => {
 		await payload.update({ collection: 'talents', id: Number(artistique?.id), data: { pageTitle: saisi } })
 		const second = await importerSurLeBanc()
 		// The edit moved the date of the update, which the import puts back; the title is not touched.
-		expect(second.collections.talents).toMatchObject({ crees: 0, modifies: 1, inchanges: 2, refuses: [] })
+		expect(second.collections.talents).toMatchObject({ created: 0, updated: 1, unchanged: 2, refused: [] })
 		expect((await parSlug('maquillage-artistique'))?.pageTitle).toBe(saisi)
 		const troisieme = await importerSurLeBanc()
-		expect(troisieme.collections.talents).toMatchObject({ crees: 0, modifies: 0, inchanges: 3, refuses: [] })
+		expect(troisieme.collections.talents).toMatchObject({ created: 0, updated: 0, unchanged: 3, refused: [] })
 		expect((await parSlug('maquillage-artistique'))?.pageTitle).toBe(saisi)
 	}, 60_000)
 })
@@ -221,12 +221,12 @@ describe('Critère 3 : second passage, 0 création, 0 mise à jour, source incha
 
 		const second = await importerSurLeBanc()
 
-		expect(second.collections.talents).toMatchObject({ crees: 0, modifies: 0, inchanges: 3, refuses: [] })
+		expect(second.collections.talents).toMatchObject({ created: 0, updated: 0, unchanged: 3, refused: [] })
 		// Not even a date of the target moved.
 		expect(await talentsDeLaCible()).toEqual(cible)
 		expect((await empreinteDeLaSource()).empreinte).toBe(avant.empreinte)
-		expect(second.source.inchangee).toBe(true)
-		expect(second.source.apres).toEqual(second.source.avant)
+		expect(second.source.unchanged).toBe(true)
+		expect(second.source.after).toEqual(second.source.before)
 	})
 
 	test('une valeur changée à la source est mise à jour une fois, avec la date de la source, puis plus rien', async () => {
@@ -238,14 +238,14 @@ describe('Critère 3 : second passage, 0 création, 0 mise à jour, source incha
 		const apresChangement = await importerSurLeBanc()
 		const troisieme = await importerSurLeBanc()
 
-		expect(apresChangement.collections.talents).toMatchObject({ crees: 0, modifies: 1, inchanges: 2 })
+		expect(apresChangement.collections.talents).toMatchObject({ created: 0, updated: 1, unchanged: 2 })
 		expect((await talentsDeLaCible())[0]).toMatchObject({
 			title: 'Maquillage de mariée',
 			updatedAt: '2026-10-01T08:30:00.250Z',
 			createdAt: '2023-04-01T09:00:00.000Z',
 		})
-		expect(troisieme.collections.talents).toMatchObject({ crees: 0, modifies: 0, inchanges: 3 })
-		expect(troisieme.parite?.talents).toMatchObject({ egaux: 3, differents: [] })
+		expect(troisieme.collections.talents).toMatchObject({ created: 0, updated: 0, unchanged: 3 })
+		expect(troisieme.parity?.talents).toMatchObject({ equal: 3, different: [] })
 	})
 
 	test('un talent que la source ne donne plus reste dans la cible, et il est listé', async () => {
@@ -254,15 +254,15 @@ describe('Critère 3 : second passage, 0 création, 0 mise à jour, source incha
 
 		const rapport = await importerSurLeBanc()
 
-		expect(rapport.collections.talents).toMatchObject({ source: 2, inchanges: 2, enTrop: [2] })
+		expect(rapport.collections.talents).toMatchObject({ source: 2, unchanged: 2, extra: [2] })
 		expect((await talentsDeLaCible()).map(({ strapiId }) => strapiId)).toEqual([1, 2, 3])
-		expect(rapport.parite?.talents?.enTrop).toEqual([2])
+		expect(rapport.parity?.talents?.extra).toEqual([2])
 	})
 })
 
 describe('Critère 4 : une cible non locale, sans drapeau, est refusée avant toute écriture', () => {
 	test('la commande refuse une base distante et ne touche à rien ; le drapeau est dit dans le message', async () => {
-		const { code, sortie } = await commandeDImport(['--reel'], {
+		const { code, sortie } = await commandeDImport(['--real'], {
 			...process.env,
 			// A host that does not exist: had the import tried to connect, the message would be another one.
 			DATABASE_URI: 'postgres://banc:mot-de-passe-factice@base-distante.example.test:5432/mymakeup_test',
@@ -270,22 +270,22 @@ describe('Critère 4 : une cible non locale, sans drapeau, est refusée avant to
 
 		expect(code).toBe(1)
 		expect(sortie).toContain('DATABASE_URI ne désigne pas une base de ce poste')
-		expect(sortie).toContain('--cible-distante')
+		expect(sortie).toContain('--remote-target')
 		expect(sortie).not.toContain('base-distante.example.test')
 		expect(await talentsDeLaCible()).toEqual([])
 	})
 
-	test('L9 (ticket 233) : --cible-distante exige --base-attendue, et la base doit porter ce nom, avant toute lecture', async () => {
+	test('L9 (ticket 233) : --remote-target exige --expected-database, et la base doit porter ce nom, avant toute lecture', async () => {
 		const base = decodeURIComponent(new URL(source.maintenance).pathname.slice(1))
 
-		const sansNom = await commandeDImport(['--reel', '--cible-distante', '--decisions', FICHIER_DES_DECISIONS_DU_BANC])
+		const sansNom = await commandeDImport(['--real', '--remote-target', '--decisions', FICHIER_DES_DECISIONS_DU_BANC])
 		expect(sansNom.code, sansNom.sortie).toBe(1)
-		expect(sansNom.sortie).toContain('--cible-distante exige --base-attendue')
+		expect(sansNom.sortie).toContain('--remote-target exige --expected-database')
 
 		const autreNom = await commandeDImport([
-			'--reel',
-			'--cible-distante',
-			'--base-attendue',
+			'--real',
+			'--remote-target',
+			'--expected-database',
 			'mymakeup_une_autre_base',
 			'--decisions',
 			FICHIER_DES_DECISIONS_DU_BANC,
@@ -296,8 +296,8 @@ describe('Critère 4 : une cible non locale, sans drapeau, est refusée avant to
 		expect(await talentsDeLaCible()).toEqual([])
 
 		const bonNom = await commandeDImport([
-			'--cible-distante',
-			'--base-attendue',
+			'--remote-target',
+			'--expected-database',
 			base,
 			'--decisions',
 			FICHIER_DES_DECISIONS_DU_BANC,
@@ -316,7 +316,7 @@ describe('Critère 4 : une cible non locale, sans drapeau, est refusée avant to
 			await sql.unsafe(`CREATE DATABASE ${nom}`)
 		})
 		try {
-			const { code, sortie } = await commandeDImport(['--reel', '--decisions', FICHIER_DES_DECISIONS_DU_BANC], {
+			const { code, sortie } = await commandeDImport(['--real', '--decisions', FICHIER_DES_DECISIONS_DU_BANC], {
 				...process.env,
 				DATABASE_URI: sansSchema.href,
 			})
@@ -334,7 +334,7 @@ describe('Critère 4 : une cible non locale, sans drapeau, est refusée avant to
 	}, 60_000)
 
 	test('sans source nommée, la commande s’arrête aussi avant d’écrire', async () => {
-		const { code, sortie } = await commandeDImport(['--reel'], { ...process.env, STRAPI_SOURCE_URI: '' })
+		const { code, sortie } = await commandeDImport(['--real'], { ...process.env, STRAPI_SOURCE_URI: '' })
 
 		expect(code).toBe(1)
 		expect(sortie).toContain('STRAPI_SOURCE_URI manque')
@@ -348,17 +348,17 @@ describe('Critère 5 : le rapport, en nombres, identifiants et empreintes seulem
 		try {
 			const fichier = path.join(dossier, 'rapport.json')
 			const { code, sortie } = await commandeDImport([
-				'--reel',
+				'--real',
 				'--decisions',
 				FICHIER_DES_DECISIONS_DU_BANC,
-				'--rapport',
+				'--report',
 				fichier,
 			])
 			const json = readFileSync(fichier, 'utf8')
 
 			expect(code).toBe(0)
 			expect(sortie).toContain('Talents : 3 sur 3 égaux, parité complète')
-			expect(JSON.parse(json)).toMatchObject({ mode: 'reel', arret: null, source: { inchangee: true } })
+			expect(JSON.parse(json)).toMatchObject({ mode: 'real', arret: null, source: { inchangee: true } })
 			for (const texte of [sortie, json])
 				for (const ligne of TALENTS_DE_LA_SOURCE)
 					for (const valeur of [ligne.title, ligne.slug, ligne.description, ligne.content])

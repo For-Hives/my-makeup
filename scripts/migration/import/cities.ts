@@ -1,7 +1,7 @@
 /**
  * The city typed in a profile of the old site becomes a commune of the official list, with its
  * INSEE code (plan 01 §6.2 « Ville »; plan 03 SEO-24; docs/migration/SCHEMA.md §5.2; register,
- * `ville-en-commune`). All of France: the referential is geo.api.gouv.fr (./referentiel.ts).
+ * `ville-en-commune`). All of France: the referential is geo.api.gouv.fr (./reference.ts).
  *
  * - The text typed is never copied into the profile: only the commune of the referential, its name,
  *   INSEE code, département and centre (rounded to about 1 km by the collection).
@@ -66,7 +66,12 @@ export type Resolution =
 	  }
 
 /** The words of a name that many people abbreviate: « St Julien », « Ste-Foy ». */
-const SAINT_WORDS: Readonly<Record<string, string>> = { st: 'saint', 'st.': 'saint', ste: 'sainte', 'ste.': 'sainte' }
+const ABBREVIATION_EXPANSIONS: Readonly<Record<string, string>> = {
+	st: 'saint',
+	'st.': 'saint',
+	ste: 'sainte',
+	'ste.': 'sainte',
+}
 
 /** « Paris 16e », « Lyon 3ème arrondissement »: the commune is the city. */
 const DISTRICT = /\s+\d{1,2}\s*(?:er|e|eme|ème)(?:\s+arr(?:ondissement|\.)?)?$/i
@@ -75,7 +80,7 @@ const DISTRICT = /\s+\d{1,2}\s*(?:er|e|eme|ème)(?:\s+arr(?:ondissement|\.)?)?$/
 const withoutAbbreviation = (nom: string): string =>
 	nom
 		.split(/(\s+|-)/)
-		.map(mot => SAINT_WORDS[mot.toLowerCase()] ?? mot)
+		.map(mot => ABBREVIATION_EXPANSIONS[mot.toLowerCase()] ?? mot)
 		.join('')
 
 /** A name as it is compared with the referential's: no accent, no case, hyphens and apostrophes as spaces. */
@@ -225,28 +230,28 @@ export interface CaseToReview {
 
 /** A line of the table of decisions for a profile « à revoir »: the commune of this INSEE code, or none. */
 export interface CityDecision {
-	profil: number
-	codeInsee: string | null
+	profile: number
+	inseeCode: string | null
 }
 
 /** What the communes of a run give, in numbers and identifiers. */
 export interface CitiesSummary {
 	/** Profiles taken whose city is not empty at the source. */
-	villesRenseignees: number
+	filledCities: number
 	/** Among them, the profiles that hold a commune. */
-	rattachees: number
+	attached: number
 	/** `rattachees` out of `villesRenseignees`, in percent, to one decimal (plan 03 SEO-24; target 90 %). */
 	part: number | null
 	/** Profiles taken that are not entirely empty at the source. */
-	profilsNonVides: number
+	nonEmptyProfiles: number
 	/** Among them, the profiles that hold a commune. */
-	profilsNonVidesAvecCommune: number
+	nonEmptyProfilesWithCity: number
 	/** Profiles « à revoir », by identifier: their zone stays empty. */
-	aRevoir: number[]
+	toReview: number[]
 	/** Profiles whose city was a postal address: its commune is taken, never its street. */
-	adresses: number[]
+	addresses: number[]
 	/** Profiles « à revoir » settled by a line of the table of decisions. */
-	decidees: number[]
+	decided: number[]
 }
 
 export interface ProfileCities {
@@ -281,7 +286,7 @@ export async function profileCities(
 
 	const decided: number[] = []
 	let pointless = 0
-	for (const { profil: profile, codeInsee } of decisions) {
+	for (const { profile, inseeCode: codeInsee } of decisions) {
 		const reviewCase = toReview.get(profile)
 		if (!reviewCase) {
 			pointless++
@@ -320,14 +325,14 @@ export async function profileCities(
 			})),
 		})),
 		bilan: {
-			villesRenseignees: filled.length,
-			rattachees: attached,
+			filledCities: filled.length,
+			attached: attached,
 			part: filled.length === 0 ? null : Math.round((attached / filled.length) * 1000) / 10,
-			profilsNonVides: notEmpty.length,
-			profilsNonVidesAvecCommune: notEmpty.filter(({ id }) => cities.get(id)).length,
-			aRevoir: [...toReview.keys()],
-			adresses: addresses,
-			decidees: decided.sort((a, b) => a - b),
+			nonEmptyProfiles: notEmpty.length,
+			nonEmptyProfilesWithCity: notEmpty.filter(({ id }) => cities.get(id)).length,
+			toReview: [...toReview.keys()],
+			addresses: addresses,
+			decided: decided.sort((a, b) => a - b),
 		},
 		sansObjet: pointless,
 	}

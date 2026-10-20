@@ -37,7 +37,7 @@ describe('Les arguments de la commande', () => {
 	})
 
 	test('le rôle et la cible distante se disent par des options', () => {
-		expect(lireLesArguments(['a@example.test', '--role=editor', '--cible-distante'])).toEqual({
+		expect(lireLesArguments(['a@example.test', '--role=editor', '--remote-target'])).toEqual({
 			email: 'a@example.test',
 			role: 'editor',
 			cibleDistante: true,
@@ -170,13 +170,13 @@ describe('La commande elle-même', () => {
 		expect(sortie + erreur).not.toContain(MOT_DE_PASSE)
 	})
 
-	test('une base qui n’est pas sur ce poste est refusée sans --cible-distante, avant toute saisie', async () => {
+	test('une base qui n’est pas sur ce poste est refusée sans --remote-target, avant toute saisie', async () => {
 		const { erreur, code } = await lancer(['a@example.test'], '', {
 			DATABASE_URI: 'postgres://utilisateur@base.example.test:5432/base_fictive',
 		})
 
 		expect(code).toBe(1)
-		expect(erreur).toContain('--cible-distante')
+		expect(erreur).toContain('--remote-target')
 	})
 
 	test('sans DATABASE_URI : refusé, rien n’est écrit', async () => {
