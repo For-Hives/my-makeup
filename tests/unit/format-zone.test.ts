@@ -90,6 +90,24 @@ describe('formatZone et une zone de pays (ticket 260)', () => {
 		expect(zoneSentence({ zoneKind: 'countries', countries: [] })).toBe('')
 	})
 
+	test('aucun texte rendu ne contient de drapeau ni de lettre indicatrice régionale (toute la liste)', () => {
+		const regional = /[\u{1F1E6}-\u{1F1FF}]/u
+		const codes = COUNTRIES.map(country => country.code)
+		for (const code of codes) {
+			const zones = [
+				{ zoneKind: 'countries', countries: [code] },
+				{ zoneKind: 'countries', countries: [code], town: 'Bruxelles', radius: 30 },
+				{ zoneKind: 'countries', countries: ['FR', code] },
+			]
+			for (const zone of zones) {
+				expect(formatZone(zone), code).not.toMatch(regional)
+				expect(zoneSentence(zone), code).not.toMatch(regional)
+			}
+		}
+		expect(formatZone({ zoneKind: 'countries', countries: codes.slice(0, 5) })).not.toMatch(regional)
+		expect(zoneSentence({ zoneKind: 'countries', countries: codes.slice(0, 5) })).not.toMatch(regional)
+	})
+
 	test('les drapeaux, dans l’ordre, sans doublon ; aucun pour une commune', () => {
 		expect(zoneFlags({ zoneKind: 'countries', countries: ['FR', 'IT'] })).toEqual(['🇫🇷', '🇮🇹'])
 		expect(zoneFlags({ zoneKind: 'countries', countries: ['be', 'BE'] })).toEqual(['🇧🇪'])

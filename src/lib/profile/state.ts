@@ -95,7 +95,12 @@ function countryCityName(countries: ProfileDocument['countries']): string | null
 
 /** The city the rule reads for the zone of a document: its commune, or the first foreign country of its countries. */
 function zoneCityName(document: ProfileDocument): string | null {
-	return document.zoneKind === 'countries' ? countryCityName(document.countries) : cityName(document.city)
+	// Same test as formatZone (zoneCountries): 'countries' reads the countries, 'city' the commune,
+	// and an empty type (null or absent) the commune when it has a name, the countries otherwise.
+	const cityText = cityName(document.city)
+	if (document.zoneKind === 'countries') return countryCityName(document.countries)
+	if (document.zoneKind === 'city' || cityText !== null) return cityText
+	return countryCityName(document.countries)
 }
 
 /**

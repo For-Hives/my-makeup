@@ -3,6 +3,7 @@ import type { Field } from 'payload'
 import { Profiles } from '@/collections/Profiles'
 import { STATE_FIELDS } from '@/collections/profiles/state'
 import { DEMO_PROFILES } from '@/demo-data/profiles'
+import { formatZone } from '@/lib/format-zone'
 import { completeness, publishableConditions, usableCity } from '@/lib/profile/completeness'
 import {
 	type ProfileDocument,
@@ -389,6 +390,18 @@ describe('une zone de pays lue par la règle unique (ticket 260)', () => {
 		expect(state).toMatchObject({ active: true, publishable: true, fullyEmpty: false })
 		expect(profileState({ ...ABROAD, zoneKind: 'countries', countries: ['BE'] }).completeness).toBe(
 			profileState(PUBLISHABLE).completeness
+		)
+	})
+
+	test('un type de zone vide (null) lit les pays comme le texte de la zone les montre', () => {
+		const document: ProfileDocument = { ...ABROAD, zoneKind: null, countries: ['BE'] }
+		expect(profileFields(document).city).toBe('Belgique')
+		expect(profileState(document)).toMatchObject({ active: true, publishable: true })
+		expect(formatZone({ zoneKind: null, countries: ['BE'] })).toBe('Belgique')
+		// A commune with no countries still reads its commune when the type is empty.
+		expect(profileFields({ ...PUBLISHABLE, zoneKind: null, countries: [] }).city).toBe(profileFields(PUBLISHABLE).city)
+		expect(profileFields({ ...PUBLISHABLE, zoneKind: 'city', countries: ['BE'] }).city).toBe(
+			profileFields(PUBLISHABLE).city
 		)
 	})
 

@@ -38,7 +38,11 @@ export interface ZoneInput {
 	/** The name of the commune. */
 	city?: unknown
 	radius?: unknown
-	/** `city` ignores the countries (they are empty on a stored commune); anything else reads them. */
+	/**
+	 * `city` ignores the countries (they are empty on a stored commune); `countries` reads them. An
+	 * empty type (null or absent) reads them only when there is no commune name: the same test as the
+	 * rule of the profile (src/lib/profile/state.ts).
+	 */
 	zoneKind?: unknown
 	/** The ISO codes of the countries, in the order of the makeup artist. */
 	countries?: unknown
@@ -47,8 +51,13 @@ export interface ZoneInput {
 }
 
 /** The countries of a zone: the known codes, in capitals, once each, in order. Nothing for a zone of communes. */
-export function zoneCountries({ zoneKind, countries }: Pick<ZoneInput, 'zoneKind' | 'countries'>): Country[] {
+export function zoneCountries({
+	zoneKind,
+	countries,
+	city,
+}: Pick<ZoneInput, 'zoneKind' | 'countries' | 'city'>): Country[] {
 	if (zoneKind === 'city' || !Array.isArray(countries)) return []
+	if (zoneKind !== 'countries' && displayedCity(city)) return []
 	const found = new Map<string, Country>()
 	for (const code of countries) {
 		const country = countryByCode(normalizedCountryCode(code))
@@ -77,7 +86,7 @@ function placeAbroad(countries: readonly Country[], town: unknown): string {
  * zone. The radius is read around a commune or a town abroad, never around a country or several.
  */
 export function formatZone({ city, radius, zoneKind, countries, town }: ZoneInput = {}): string {
-	const abroad = zoneCountries({ zoneKind, countries })
+	const abroad = zoneCountries({ zoneKind, countries, city })
 	if (abroad.length === 0) {
 		const cityName = displayedCity(city)
 		const km = radiusKm(radius)
@@ -94,7 +103,7 @@ export function formatZone({ city, radius, zoneKind, countries, town }: ZoneInpu
  * (Belgique) », « en Belgique », « aux Pays-Bas », « en France et en Italie »; '' for an empty zone.
  */
 export function zoneSentence({ city, zoneKind, countries, town }: ZoneInput = {}): string {
-	const abroad = zoneCountries({ zoneKind, countries })
+	const abroad = zoneCountries({ zoneKind, countries, city })
 	if (abroad.length === 0) {
 		const cityName = displayedCity(city)
 		return cityName ? `à ${cityName}` : ''
@@ -106,6 +115,6 @@ export function zoneSentence({ city, zoneKind, countries, town }: ZoneInput = {}
 }
 
 /** The flags of a zone of countries, in order, for the decorative display; empty for a commune. */
-export function zoneFlags(zone: Pick<ZoneInput, 'zoneKind' | 'countries'>): string[] {
+export function zoneFlags(zone: Pick<ZoneInput, 'zoneKind' | 'countries' | 'city'>): string[] {
 	return zoneCountries(zone).map(({ code }) => flag(code))
 }

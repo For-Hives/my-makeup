@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import { ValidationError } from 'payload'
 import { NO_PROFILE_CONTEXT } from '@/collections/Profiles'
+import { formatZone } from '@/lib/format-zone'
+import { profileFields } from '@/lib/profile/state'
 import { ABROAD_MESSAGES, ZONE_KIND_MESSAGES, ZONE_MESSAGES } from '@/lib/profile/zone'
 import type { Profile } from '@/payload-types'
 import { createAccount, randomPassword, type TestAccount } from '../support/account-factory'
@@ -407,6 +409,22 @@ describe('Les deux types de zone (ticket 259) : une commune, ou des pays', () =>
 		expect((await storedZone(profile)).city).toEqual(EMPTY_CITY)
 		// The radius and « à domicile » are common to both types.
 		expect((await storedZone(profile)).radiusKm).toBe(20)
+	})
+
+	test('un type de zone envoyé vide (null) : la règle et le texte de la zone lisent les mêmes pays', async () => {
+		const { compte: account, profil: profile } = await artistAndItsProfile()
+		await modify(account, profile, { countries: ['BE'] })
+
+		const saved = await modify(account, profile, { zoneKind: null })
+
+		expect(saved.statut).toBe(200)
+		const payload = await testPayload()
+		const stored = await payload.findByID({ collection: 'profiles', depth: 0, id: profile })
+		expect(stored.countries).toEqual(['BE'])
+		expect(profileFields(stored).city).toBe('Belgique')
+		expect(formatZone({ city: stored.city?.name, zoneKind: stored.zoneKind, countries: stored.countries })).toBe(
+			'Belgique'
+		)
 	})
 
 	test('une zone de plusieurs pays, dans l’ordre de la maquilleuse, sans ville', async () => {
