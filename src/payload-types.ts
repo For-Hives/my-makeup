@@ -252,12 +252,47 @@ export interface Profile {
     department?: string | null;
     latitude?: number | null;
     longitude?: number | null;
+    /**
+     * Donnés par la liste officielle avec la commune.
+     */
+    postalCodes?: string[] | null;
   };
   radiusKm?: number | null;
   /**
    * Se déplace chez la cliente. Vide tant que la maquilleuse ne l’a pas dit.
    */
   homeService?: boolean | null;
+  /**
+   * Une zone est une commune de la liste officielle, ou un à cinq pays dont un étranger. Le serveur vide les champs de l’autre type.
+   */
+  zoneKind?: ('city' | 'countries') | null;
+  /**
+   * De un à cinq codes de pays (BE, IT…), dont un étranger : la France seule se dit par sa commune.
+   */
+  countries?: string[] | null;
+  /**
+   * Facultative, et seulement quand un seul pays étranger est choisi. Jamais une adresse.
+   */
+  town?: string | null;
+  /**
+   * Posée par l’import quand la zone n’a pas pu être reprise de l’ancien site. Vidée dès qu’une zone est enregistrée.
+   */
+  zoneReview?: {
+    reason?: ('sharedPostalCode' | 'homonyms' | 'notFound' | 'notACity') | null;
+    postalCode?: string | null;
+    /**
+     * Code INSEE, nom et département de chaque commune possible.
+     */
+    candidates?:
+      | {
+          [k: string]: unknown;
+        }
+      | unknown[]
+      | string
+      | number
+      | boolean
+      | null;
+  };
   description?: string | null;
   available?: boolean | null;
   mainPicture?: (number | null) | Media;
@@ -799,9 +834,20 @@ export interface ProfilesSelect<T extends boolean = true> {
         department?: T;
         latitude?: T;
         longitude?: T;
+        postalCodes?: T;
       };
   radiusKm?: T;
   homeService?: T;
+  zoneKind?: T;
+  countries?: T;
+  town?: T;
+  zoneReview?:
+    | T
+    | {
+        reason?: T;
+        postalCode?: T;
+        candidates?: T;
+      };
   description?: T;
   available?: T;
   mainPicture?: T;

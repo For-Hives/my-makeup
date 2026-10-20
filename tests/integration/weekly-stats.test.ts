@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { GET, POST } from '@/app/api/stats/weekly/route'
 import { WeeklyStats } from '@/lib/weekly-stats'
-import { DEMO_PROFILES } from '../../src/demo-data/profiles'
+import { LOADED_DEMO_PROFILES } from '../../src/demo-data/profiles'
 import { DATASET_ACCOUNTS, DATASET_TYPES } from '../fixtures/accounts'
 import { setBenchDataset } from '../fixtures/bench-dataset'
 import { ACCOUNT_TYPES } from '../support/account-factory'
@@ -40,7 +40,7 @@ describe('Les statistiques hebdomadaires sur le jeu du banc', () => {
 	test('les nombres exacts, tirés de ce que le jeu promet de chaque profil', async () => {
 		const accountsProfiles = DATASET_TYPES.filter(type => ACCOUNT_TYPES[type].collection === 'pros').length
 		const withoutProfile = DATASET_TYPES.filter(type => type === 'maquilleuse-sans-profil').length
-		const types = DEMO_PROFILES
+		const types = LOADED_DEMO_PROFILES
 		const seenByServer = types.filter(({ attendu }) => attendu.status === 'published' && attendu.publishable)
 
 		const response = await call(WEEK)
@@ -78,7 +78,7 @@ describe('Les statistiques hebdomadaires sur le jeu du banc', () => {
 	test('ni « @ », ni 9 chiffres, ni nom du jeu hors de la liste des adresses publiques', async () => {
 		const stats = WeeklyStats.parse(await (await call(WEEK)).json())
 		const withoutUrls = JSON.stringify({ ...stats, publishable: { ...stats.publishable, slugs: [] } })
-		const names = DEMO_PROFILES.flatMap(({ profil, compte }) => [
+		const names = LOADED_DEMO_PROFILES.flatMap(({ profil, compte }) => [
 			profil.firstName,
 			profil.lastName,
 			profil.artistName,

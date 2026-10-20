@@ -5,6 +5,8 @@ import path from 'node:path'
 import { type MigrateUpArgs, sql } from '@payloadcms/db-postgres'
 import type { Payload } from 'payload'
 import { MIGRATIONS_FOLDER } from '../../scripts/ci/schema-drift'
+import { placeDemoProfiles } from '../../src/demo-data/loading'
+import { profileState } from '../../src/lib/profile/state'
 import { migrations } from '../../src/migrations'
 import { RefusedBench, ROOT } from '../support/bench'
 import {
@@ -18,6 +20,7 @@ import {
 	withoutOutput,
 } from '../support/bench-schema'
 import { emptyBase, testPayload } from '../support/payload-test'
+import { emptyStorage } from '../support/s3'
 
 /**
  * I22 (plan 02 §7.3), ticket 049: the schema of P3 lives in one migration, `init`. On an erased
@@ -285,4 +288,80 @@ describe('Avant le premier test ou essai, une base que les migrations n’ont pa
 			await resetBench()
 		}
 	})
+})
+
+describe('La migration de la zone (ticket 259) : des ajouts seulement, sur une base déjà remplie', () => {
+	const zone = migrations.find(({ name }) => name.endsWith('_zone_countries_postal_codes'))
+
+	/** What the rule stores of each profile, read from the table itself: nothing the migration adds. */
+	async function profileStates() {
+		const { rows } = await payload.db.pool.query(
+			'SELECT id, active, publishable, completeness, status, chosen_status FROM profiles ORDER BY id'
+		)
+		return rows
+	}
+
+	test('la migration existe, après init', () => {
+		expect(zone).toBeDefined()
+		expect(NAMES.indexOf(zone?.name ?? '')).toBeGreaterThan(0)
+	})
+
+	test('jouée sur le jeu du banc : rien d’existant ne change, chaque profil est de type city, et son down retire ses seuls objets', async () => {
+		if (!zone) throw new Error('la migration de la zone manque')
+		const args = { db: payload.db.drizzle, payload, req: {} as never }
+		try {
+			await eraseSchema()
+			// The first migration alone, as the production played it, then the one after it in its own batch.
+			expect(await runMigrations(payload, [init as Migration], 'test')).toEqual([INIT])
+			const afterInit = await baseSchema()
+			expect(await runMigrations(payload, migrations, 'test')).toEqual(NAMES.filter(name => name !== INIT))
+			const afterZone = await baseSchema()
+
+			// Additions only: every column, index, constraint and type of init is still there, as it was.
+			for (const line of afterInit) expect(afterZone, line).toContain(line)
+			const added = afterZone.filter(line => !afterInit.includes(line))
+			expect(added.length).toBeGreaterThan(0)
+			for (const line of added) expect(line, line).toMatch(/zone_kind|zone_review|profiles\.town|profiles_texts/)
+
+			// The set of the bench is loaded on the schema of the code, then the migration is played back
+			// on a table that holds its profiles: down, then up again.
+			const loaded = await placeDemoProfiles(payload)
+			expect(loaded.crees.length).toBeGreaterThan(0)
+			const before = await profileStates()
+			expect(before.length).toBe(loaded.crees.length)
+			// The set holds zones of countries: the rule, played again on what the server stored, gives
+			// the state it stored for every profile (ticket 260), the zones of countries included.
+			const kindsBefore = await payload.db.pool.query('SELECT DISTINCT zone_kind FROM profiles ORDER BY zone_kind')
+			expect(kindsBefore.rows).toEqual([{ zone_kind: 'city' }, { zone_kind: 'countries' }])
+			const textsBefore = await payload.db.pool.query('SELECT count(*)::int AS total FROM profiles_texts')
+			expect(textsBefore.rows[0]?.total).toBeGreaterThan(0)
+			const stored = await payload.find({ collection: 'profiles', depth: 0, limit: 100, pagination: false })
+			const countriesProfiles = stored.docs.filter(({ zoneKind }) => zoneKind === 'countries')
+			expect(countriesProfiles.length).toBeGreaterThan(0)
+			for (const doc of stored.docs) {
+				const state = profileState(doc)
+				expect({ id: doc.id, publishable: state.publishable, active: state.active }).toEqual({
+					id: doc.id,
+					publishable: doc.publishable === true,
+					active: doc.active === true,
+				})
+			}
+
+			await zone.down(args)
+			expect(await baseSchema()).toEqual(afterInit)
+			expect(await profileStates()).toEqual(before)
+
+			await zone.up(args)
+			expect(await baseSchema()).toEqual(afterZone)
+			expect(await profileStates()).toEqual(before)
+			const kinds = await payload.db.pool.query('SELECT DISTINCT zone_kind FROM profiles')
+			// Down drops the countries with their table, as its comment says: every zone is a commune again.
+			expect(kinds.rows).toEqual([{ zone_kind: 'city' }])
+			const texts = await payload.db.pool.query('SELECT count(*)::int AS total FROM profiles_texts')
+			expect(texts.rows).toEqual([{ total: 0 }])
+		} finally {
+			await emptyStorage()
+			await resetBench()
+		}
+	}, 120_000)
 })

@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { Profiles } from '../../src/collections/Profiles'
-import { DEMO_PROFILES } from '../../src/demo-data/profiles'
+import { DEMO_PROFILES, LOADED_DEMO_PROFILES } from '../../src/demo-data/profiles'
 import { setBenchDataset } from '../fixtures/bench-dataset'
 import { createAccount } from '../support/account-factory'
 import { emptyBase, testPayload } from '../support/payload-test'
@@ -30,7 +30,7 @@ interface List {
 	docs: { id: number; slug: string; status: string; updatedAt: string }[]
 }
 
-/** The twelve profiles of the set, among the profiles of the fixed accounts: the way the panel counts them. */
+/** The seventeen profiles of the set, among the profiles of the fixed accounts: the way the panel counts them. */
 const DATASET_FILTER = 'where[and][0][pro.email][like]=jeu-profil-'
 
 /** The list of profiles the admin panel asks for, with one `where` clause on the profiles of the set. */
@@ -46,30 +46,32 @@ async function listAll(enTetes: Record<string, string>, requete: string) {
 }
 
 /** The slugs the set expects for a filter on the expected state. */
-const expected = (garde: (profil: (typeof DEMO_PROFILES)[number]) => boolean) =>
-	DEMO_PROFILES.filter(garde)
+const expected = (garde: (profil: (typeof LOADED_DEMO_PROFILES)[number]) => boolean) =>
+	LOADED_DEMO_PROFILES.filter(garde)
 		.map(({ attendu }) => attendu.slug)
 		.sort()
 
 describe('La liste des profils de l’admin (ticket 165)', () => {
-	test('la liste montre l’adresse, la commune, la complétude, le caractère publiable, le statut et la dernière activité, la plus récente d’abord', () => {
+	test('la liste montre l’adresse, la commune, la complétude, le caractère publiable, le statut, la zone à revoir et la dernière activité, la plus récente d’abord', () => {
 		expect(Profiles.admin?.defaultColumns).toEqual([
 			'slug',
 			'city.name',
 			'completeness',
 			'publishable',
 			'status',
+			// The zone the import could not decide (ticket 259).
+			'zoneReview.reason',
 			'updatedAt',
 		])
 		expect(Profiles.defaultSort).toBe('-updatedAt')
 	})
 
-	test('chaque filtre rend le nombre attendu sur les 12 profils du banc', async () => {
+	test('chaque filtre rend le nombre attendu sur les 17 profils du banc', async () => {
 		const admin = await createAccount('admin')
 		const { enTetes: headers } = admin.session
 
 		const all = await listAll(headers, 'sort=slug')
-		expect(all.liste.totalDocs).toBe(12)
+		expect(all.liste.totalDocs).toBe(17)
 
 		const testCase: [string, string, string[]][] = [
 			['non publiables', 'where[publishable][equals]=false', expected(p => !p.attendu.publishable)],
@@ -89,13 +91,13 @@ describe('La liste des profils de l’admin (ticket 165)', () => {
 		}
 		// The set holds at least one profile of each of these, so that no filter passes by being empty.
 		for (const [, , slugs] of testCase) expect(slugs.length).toBeGreaterThan(0)
-		// The three statuses cover the twelve profiles.
+		// The three statuses cover the seventeen profiles.
 		const byStatus = await Promise.all(
 			['draft', 'published', 'hidden'].map(
 				async s => (await listAll(headers, `where[status][equals]=${s}`)).liste.totalDocs
 			)
 		)
-		expect(byStatus.reduce((a, b) => a + b, 0)).toBe(12)
+		expect(byStatus.reduce((a, b) => a + b, 0)).toBe(17)
 	}, 30_000)
 
 	test('la recherche du panneau retrouve un profil par son adresse ou sa commune', async () => {
@@ -108,7 +110,7 @@ describe('La liste des profils de l’admin (ticket 165)', () => {
 		expect(byUrl.liste.docs.map(({ slug }) => slug)).toEqual([reference.attendu.slug])
 		const cities = await listAll(headers, 'where[city.name][like]=Nantes')
 		expect(cities.liste.totalDocs).toBeGreaterThan(0)
-		expect(cities.liste.totalDocs).toBeLessThan(12)
+		expect(cities.liste.totalDocs).toBeLessThan(17)
 	})
 
 	test('le tri par dernière activité est juste, dans les deux sens, et un profil qu’on corrige remonte', async () => {

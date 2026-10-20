@@ -130,12 +130,12 @@ const DATES = new Set(['createdAt', 'updatedAt'])
 
 /**
  * A group of fields as it is compared: its filled fields sorted by name, in JSON. An empty field
- * counts as an absent one, and a group with no filled field is `null`, as Payload reads back an
- * empty group.
+ * (an empty list too: the postal codes of a commune that has none, ticket 259) counts as an
+ * absent one, and a group with no filled field is `null`, as Payload reads back an empty group.
  */
 function normalizedGroup(valeur: object): string | null {
 	const fields = Object.entries(valeur)
-		.filter(([, sous]) => sous !== null && sous !== undefined)
+		.filter(([, sous]) => sous !== null && sous !== undefined && !(Array.isArray(sous) && sous.length === 0))
 		.sort(([a], [b]) => a.localeCompare(b))
 	return fields.length === 0 ? null : JSON.stringify(fields)
 }

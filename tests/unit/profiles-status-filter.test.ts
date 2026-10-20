@@ -18,3 +18,13 @@ describe('Les valeurs de statut d’un filtre de la liste des profils', () => {
 		expect(unknownValues({ status: { equals: 12 } })).toEqual(['status : 12'])
 	})
 })
+
+describe('les filtres sur les énumérations de la zone (ticket 259)', () => {
+	test('un type de zone ou un motif de revue connus passent, les autres sont nommés', () => {
+		expect(unknownValues({ zoneKind: { equals: 'countries' } })).toEqual([])
+		expect(unknownValues({ 'zoneReview.reason': { in: ['notFound', 'homonyms'] } })).toEqual([])
+		expect(unknownValues({ 'zoneReview.reason': { exists: true } })).toEqual([])
+		expect(unknownValues({ zoneKind: { equals: 'region' } })).toEqual(['zoneKind : region'])
+		expect(unknownValues({ 'zoneReview.reason': { equals: 'zz' } })).toEqual(['zoneReview.reason : zz'])
+	})
+})

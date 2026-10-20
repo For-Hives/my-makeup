@@ -1,5 +1,5 @@
 /**
- * Loads the twelve profile types of the fictional set (./profils.ts; ticket 051) into the database
+ * Loads the profile types of the fictional set (twelve, and five for the zones) (./profils.ts; ticket 051) into the database
  * Payload is connected to, with their photos in the object storage: on the local test bench and
  * nowhere else (./garde.ts).
  *
@@ -26,7 +26,7 @@ import { readFile } from 'node:fs/promises'
 import { commitTransaction, createLocalReq, initTransaction, killTransaction, type Payload } from 'payload'
 import { NAMED_FILE_CONTEXT } from '../lib/photo-upload'
 import { DemoDataRefused, type DemoTarget, type DemoVariables, demoTarget } from './guard'
-import { DEMO_PROFILES, type DemoPhoto, type DemoProfile } from './profiles'
+import { type DemoPhoto, type DemoProfile, LOADED_DEMO_PROFILES } from './profiles'
 
 /** The type of every photo of the set. */
 export const PHOTO_TYPES = 'image/webp'
@@ -209,7 +209,7 @@ export async function placeDemoProfiles(
 	}
 
 	const summary: ProfilesSummary = { cible: target, profils: [], crees: [], presents: [] }
-	for (const type of DEMO_PROFILES) {
+	for (const type of LOADED_DEMO_PROFILES) {
 		const present = await profilePresent(payload, type)
 		if (present) {
 			summary.profils.push(present)

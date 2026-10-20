@@ -18,6 +18,13 @@ import { emptyStorage } from '../support/s3'
 /** The owner of a document and the role `admin`: who reads the private fields of a profile or a media. */
 const OWNER_AND_ADMIN: readonly Role[] = ['maquilleuse', 'admin']
 
+/** A review of the zone as a request may send it: no API writes it (ticket 259). */
+const SENT_REVIEW = {
+	reason: 'sharedPostalCode',
+	postalCode: '62149',
+	candidates: [{ inseeCode: '62200', name: 'Cambrin', department: '62' }],
+} as const
+
 /**
  * What a request may send on the state of A's profile, which only has a photo (ticket 044): each
  * value differs from what the server computes, so that a write that took would show.
@@ -294,6 +301,8 @@ const MATRIX: Line[] = [
 			['consentSource', 'import'],
 			// Computed by the server at every save (ticket 044); its choice, by an admin only.
 			['chosenStatus', 'hidden'],
+			// Written by the import alone (ticket 259).
+			['zoneReview', SENT_REVIEW],
 			...SENT_STATE,
 		] as const
 	).map(
@@ -307,11 +316,12 @@ const MATRIX: Line[] = [
 			attendu: 'ignore',
 		})
 	),
-	// Her contact details, and her choice to show them, are hers to write (ticket 042).
+	// Her contact details, and her choice to show them, are hers to write (ticket 042); so is her zone (ticket 259).
 	...(
 		[
 			['contactDetails', { phone: '06 39 98 11 11', email: 'contact-a@example.test' }],
 			['publicContact', true],
+			['countries', ['BE', 'IT']],
 		] as const
 	).map(
 		([champ, valeur]): Line => ({
@@ -394,6 +404,12 @@ const MATRIX: Line[] = [
 		['publicContact', OWNER_AND_ADMIN],
 		['consentedAt', OWNER_AND_ADMIN],
 		['consentSource', OWNER_AND_ADMIN],
+		// Its zone is public with the profile; its review only for her and the admin (259).
+		['zoneKind', ROLES],
+		['countries', ROLES],
+		['town', ROLES],
+		['city', ROLES],
+		['zoneReview', OWNER_AND_ADMIN],
 		// Its state, public; since when, and the status an admin chose, for her and the admin (044).
 		['completeness', ROLES],
 		['active', ROLES],
@@ -427,6 +443,8 @@ const MATRIX: Line[] = [
 			['contactDetails', { phone: '06 39 98 44 44', email: 'contact-admin@example.test' }, 'autorise'],
 			['consentedAt', '2020-01-01T00:00:00.000Z', 'ignore'],
 			['consentSource', 'import', 'ignore'],
+			// No API writes the review of the zone, an admin's included (ticket 259).
+			['zoneReview', SENT_REVIEW, 'ignore'],
 			// The state stays the server's (ticket 044).
 			...SENT_STATE.map(([champ, valeur]) => [champ, valeur, 'ignore'] as const),
 		] as const
