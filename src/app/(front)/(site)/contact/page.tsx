@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
-import { Cta } from '@/components/blocs/Cta'
-import { Hero } from '@/components/blocs/Hero'
+import { Cta } from '@/components/blocks/Cta'
+import { Hero } from '@/components/blocks/Hero'
 import { FormulaireDeContact } from '@/components/contact/FormulaireDeContact'
 import { metadonnees } from '@/lib/seo/metadonnees'
 import { envoyerUnMessage } from './actions'

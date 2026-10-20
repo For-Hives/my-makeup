@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
-import { GuideParticulier } from '@/components/pages-fixes/GuideParticulier'
-import { GUIDE_SOLUTIONS_PARTICULIERS } from '@/content/pages-fixes/guides-particuliers'
+import { GuideParticulier } from '@/components/static-pages/GuideParticulier'
+import { GUIDE_SOLUTIONS_PARTICULIERS } from '@/content/static-pages/guides-particuliers'
 import { metadonnees } from '@/lib/seo/metadonnees'
 
 // A fixed page: the same text for everyone, rendered once (the head block holds the search, a client component).

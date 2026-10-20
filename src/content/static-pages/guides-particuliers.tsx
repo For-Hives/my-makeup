@@ -1,4 +1,4 @@
-import type { ContenuDeGuide } from '@/components/pages-fixes/GuideParticulier'
+import type { ContenuDeGuide } from '@/components/static-pages/GuideParticulier'
 
 /**
  * The three guides and the page of solutions for the people looking for a makeup artist (ticket 109). The

@@ -1,8 +1,8 @@
 import './(front)/globals.css'
 import { MesureDePageIntrouvable } from '@/components/analytics/MesureDePage'
-import { Footer } from '@/components/gabarit/Footer'
-import { Nav } from '@/components/gabarit/Nav'
-import { PageIntrouvable } from '@/components/gabarit/PageIntrouvable'
+import { Footer } from '@/components/layout/Footer'
+import { Nav } from '@/components/layout/Nav'
+import { PageIntrouvable } from '@/components/layout/PageIntrouvable'
 import { metadonneesIntrouvable } from '@/lib/seo/metadonnees'
 
 export const metadata = metadonneesIntrouvable('Page non trouvée')

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Cta } from '@/components/blocs/Cta'
+import { Cta } from '@/components/blocks/Cta'
 import { ListeDesArticles } from '@/components/blog/ListeDesArticles'
 import { metadonnees } from '@/lib/seo/metadonnees'
 import { cachedArticles } from '@/services/public/cached'

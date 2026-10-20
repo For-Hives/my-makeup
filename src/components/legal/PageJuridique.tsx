@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Hero } from '@/components/blocs/Hero'
+import { Hero } from '@/components/blocks/Hero'
 
 interface PropsPageJuridique {
 	/** The only h1 of the page. */

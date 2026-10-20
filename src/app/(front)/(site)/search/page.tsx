@@ -1,6 +1,6 @@
 import Image from 'next/image'
 import { MesureDeRecherche } from '@/components/analytics/MesureDePage'
-import { BlocDeRecherche } from '@/components/blocs/BlocDeRecherche'
+import { BlocDeRecherche } from '@/components/blocks/BlocDeRecherche'
 import { NoResult, SearchFailed } from '@/components/search/SearchStates'
 import { ResultList } from '@/components/search/ResultList'
 import { ResultPages } from '@/components/search/ResultPages'

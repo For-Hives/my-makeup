@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
-import { Cta } from '@/components/blocs/Cta'
-import { Hero } from '@/components/blocs/Hero'
-import { ArticleDePage } from '@/components/pages-fixes/ArticleDePage'
-import { SOLUTIONS_MAQUILLEUSES } from '@/components/pages-fixes/textes-maquilleuses'
+import { Cta } from '@/components/blocks/Cta'
+import { Hero } from '@/components/blocks/Hero'
+import { ArticleDePage } from '@/components/static-pages/ArticleDePage'
+import { SOLUTIONS_MAQUILLEUSES } from '@/components/static-pages/textes-maquilleuses'
 import { metadonnees } from '@/lib/seo/metadonnees'
 
 export const metadata: Metadata = metadonnees({

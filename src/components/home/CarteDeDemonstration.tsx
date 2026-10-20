@@ -1,5 +1,5 @@
 import Image from 'next/image'
-import { IconeCoeur, IconeEtoile } from '@/components/blocs/icones'
+import { IconeCoeur, IconeEtoile } from '@/components/blocks/icones'
 
 /** A card drawn for the home page: grey bars where a real card has its texts, never a real profile. */
 export function CarteDeDemonstration({ src, coeur }: { src: string; coeur: boolean }) {

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
-import { Cta } from '@/components/blocs/Cta'
-import { Hero } from '@/components/blocs/Hero'
+import { Cta } from '@/components/blocks/Cta'
+import { Hero } from '@/components/blocks/Hero'
 
 /** One step of a guide: a heading, then its text. */
 export interface EtapeDeGuide {

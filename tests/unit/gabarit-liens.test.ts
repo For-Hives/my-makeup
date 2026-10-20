@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { COLONNES_DE_PIED, cheminsInternes, NAVIGATION, RESEAUX } from '../../src/components/gabarit/liens'
+import { COLONNES_DE_PIED, cheminsInternes, NAVIGATION, RESEAUX } from '../../src/components/layout/liens'
 import { anonymousStatus, familiesFor, SITE_ORIGIN } from '../../src/lib/urls-gelees'
 
 describe('liens du gabarit (068)', () => {

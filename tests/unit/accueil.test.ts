@@ -7,8 +7,8 @@ import { describe, expect, test } from 'bun:test'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import type { Payload } from 'payload'
-import { TALENTS_AVEC_ICONE } from '@/components/accueil/Talents'
-import { RESEAUX } from '@/components/gabarit/liens'
+import { TALENTS_AVEC_ICONE } from '@/components/home/Talents'
+import { RESEAUX } from '@/components/layout/liens'
 import {
 	donneesStructureesDeLAccueil,
 	IDENTIFIANT_DE_L_ORGANISATION,

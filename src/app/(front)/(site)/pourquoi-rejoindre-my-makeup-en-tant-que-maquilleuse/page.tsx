@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
-import { Cta } from '@/components/blocs/Cta'
-import { Hero } from '@/components/blocs/Hero'
-import { AvantagesMaquilleuses } from '@/components/pages-fixes/AvantagesMaquilleuses'
+import { Cta } from '@/components/blocks/Cta'
+import { Hero } from '@/components/blocks/Hero'
+import { AvantagesMaquilleuses } from '@/components/static-pages/AvantagesMaquilleuses'
 import { metadonnees } from '@/lib/seo/metadonnees'
 
 export const metadata: Metadata = metadonnees({

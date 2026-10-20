@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Hero } from '@/components/blocs/Hero'
+import { Hero } from '@/components/blocks/Hero'
 import { metadonnees } from '@/lib/seo/metadonnees'
 
 // The thank-you page: a page, but not one to find in a search engine. No canonical address, `noindex`.

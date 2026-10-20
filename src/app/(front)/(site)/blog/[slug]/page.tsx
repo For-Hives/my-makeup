@@ -4,8 +4,8 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getPayload } from 'payload'
 import { cache } from 'react'
-import { Cta } from '@/components/blocs/Cta'
-import { ContenuMarkdown } from '@/components/contenu/ContenuMarkdown'
+import { Cta } from '@/components/blocks/Cta'
+import { ContenuMarkdown } from '@/components/content/ContenuMarkdown'
 import { markdownEnHtml } from '@/lib/markdown'
 import {
 	donneesStructureesDeLArticle,
