@@ -184,6 +184,6 @@ describe('la page du profil', () => {
 		const p = profil({}, { telephone: '06 12 34 56 78', email: null })
 		expect(rendre(p, false)).toContain('href="tel:0612345678"')
 		const apercu = readFileSync(path.join(RACINE, 'src/app/(front)/(dashboard)/auth/apercu-profil/page.tsx'), 'utf8')
-		expect(apercu).toContain('<VueDuProfil profil={apercu.profil} mesure={false} />')
+		expect(apercu).toContain('<VueDuProfil profil={preview.profil} mesure={false} />')
 	})
 })
