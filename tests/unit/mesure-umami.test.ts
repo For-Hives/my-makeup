@@ -7,7 +7,7 @@ import {
 	enTetesDuRelais,
 	relayerLEnvoi,
 	relayerLeScript,
-} from '@/lib/analytics/relais'
+} from '@/lib/analytics/relay'
 import {
 	BEFORE_SEND_NAME,
 	DEFAULT_UMAMI_DOMAINS,

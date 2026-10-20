@@ -19,7 +19,7 @@
 import type { Payload, RequestContext } from 'payload'
 import { estUnImport } from '../contexte-import'
 import type { ServerEnv } from '../env'
-import { EmailInvalide, exigerUneLigne } from './gabarit'
+import { EmailInvalide, exigerUneLigne } from './layout'
 
 /** A mail ready to leave: the output of `composerEmail`, and the one address it goes to. */
 export type EmailAEnvoyer = {

@@ -7,7 +7,7 @@ import { getPayload } from 'payload'
 import type { ForgotPasswordState } from '@/components/auth/ForgotPasswordForm'
 import { authLog } from '@/lib/auth/auth-log'
 import { requestPasswordLink } from '@/lib/auth/password-reset-payload'
-import { envoiEmailDePayload } from '@/lib/emails/envoi'
+import { envoiEmailDePayload } from '@/lib/emails/send'
 import { serverEnv } from '@/lib/env'
 
 /**

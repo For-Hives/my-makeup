@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test'
-import type { EtatDuMail } from '@/lib/contact/etats'
+import type { EtatDuMail } from '@/lib/contact/states'
 import type { MessageDeContact } from '@/lib/contact/message'
-import { renvoyerLEmailDUnMessage, type StockageDuRenvoi } from '@/lib/contact/renvoi'
-import { type EmailAEnvoyer, EnvoiEmailEchoue, type EnvoyerEmail } from '@/lib/emails/envoi'
+import { renvoyerLEmailDUnMessage, type StockageDuRenvoi } from '@/lib/contact/resend'
+import { type EmailAEnvoyer, EnvoiEmailEchoue, type EnvoyerEmail } from '@/lib/emails/send'
 
 /** The re-send of an admin (ticket 163), with doubles for the store and the door. The real ones: tests/integration/contact-admin.test.ts. */
 

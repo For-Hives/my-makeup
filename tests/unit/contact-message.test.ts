@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import { LIMITES_DU_CONTACT, saisieDuContact, validerLeMessage } from '@/lib/contact/message'
 import { contenuEmailContact, SUJET_DU_CONTACT } from '@/lib/emails/contact'
-import { creerEnvoiEmail, type Journal, type MessageDuRelais } from '@/lib/emails/envoi'
-import { composerEmail, EmailInvalide, PIED_DE_EMAIL } from '@/lib/emails/gabarit'
+import { creerEnvoiEmail, type Journal, type MessageDuRelais } from '@/lib/emails/send'
+import { composerEmail, EmailInvalide, PIED_DE_EMAIL } from '@/lib/emails/layout'
 
 /**
  * The rules of the contact form and the mail to the team (ticket 158; plan 02 U76 adapted).

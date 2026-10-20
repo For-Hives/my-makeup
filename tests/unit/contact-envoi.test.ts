@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'bun:test'
-import { enregistrerUnMessageDeContact, expedier, type StockageDesDemandes } from '@/lib/contact/envoi-payload'
-import type { EtatDuMail, StatutDeDemande } from '@/lib/contact/etats'
-import { creerFreinsDeContact } from '@/lib/contact/frein'
+import { enregistrerUnMessageDeContact, expedier, type StockageDesDemandes } from '@/lib/contact/payload-send'
+import type { EtatDuMail, StatutDeDemande } from '@/lib/contact/states'
+import { creerFreinsDeContact } from '@/lib/contact/rate-limit'
 import type { MessageDeContact } from '@/lib/contact/message'
-import { AUCUN_RELAIS, type EmailAEnvoyer, EnvoiEmailEchoue, type EnvoyerEmail } from '@/lib/emails/envoi'
+import { AUCUN_RELAIS, type EmailAEnvoyer, EnvoiEmailEchoue, type EnvoyerEmail } from '@/lib/emails/send'
 
 /**
  * The contact message, server side, with doubles for the store and the mail door (tickets 158 and 159; plan 02
@@ -149,7 +149,7 @@ describe('I33 adapté : un email en panne ne perd pas le message', () => {
 	})
 
 	test('le délai par défaut est sous les 10 secondes qu’une visiteuse attend au plus', async () => {
-		const { DELAI_DE_L_ENVOI_MS } = await import('@/lib/contact/envoi-payload')
+		const { DELAI_DE_L_ENVOI_MS } = await import('@/lib/contact/payload-send')
 		expect(DELAI_DE_L_ENVOI_MS).toBeLessThan(10_000)
 	})
 

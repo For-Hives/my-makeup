@@ -6,7 +6,7 @@ import Page from '@/app/(front)/(site)/politique-de-confidentialite/page'
 import { GOOGLE_ISSUER, UMAMI_ORIGIN_DEFAULT } from '@/lib/env'
 import { HEBERGEUR } from '@/lib/legal'
 import { JOURS_AVANT_EFFACEMENT_DES_PHOTOS, PRESTATAIRES } from '@/lib/prestataires'
-import { DELAI_AVANT_PURGE_JOURS } from '@/lib/taches/comptes-non-confirmes'
+import { DELAI_AVANT_PURGE_JOURS } from '@/lib/tasks/unconfirmed-accounts'
 import { texteDePage } from '../outils/texte-de-page'
 
 /**

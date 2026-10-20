@@ -2,11 +2,11 @@
 
 import { usePathname } from 'next/navigation'
 import { useEffect } from 'react'
-import { installerLaMesure } from '@/lib/analytics/chargeur'
-import { aEmettre, navigateurReel, soumissionDuFormulaire } from '@/lib/analytics/doublon'
+import { installerLaMesure } from '@/lib/analytics/loader'
+import { aEmettre, navigateurReel, soumissionDuFormulaire } from '@/lib/analytics/duplicate'
 import type { EvenementsMyMakeup } from '@/lib/analytics/events'
 import { track } from '@/lib/analytics/track'
-import { codeDErreur, genreDePageIntrouvable } from '@/lib/analytics/valeurs'
+import { codeDErreur, genreDePageIntrouvable } from '@/lib/analytics/values'
 
 /**
  * The search page counted once (event `search_submit`, ticket 145). The server gives two facts and

@@ -1,5 +1,5 @@
 import './(front)/globals.css'
-import { MesureDePageIntrouvable } from '@/components/analytics/MesureDePage'
+import { MesureDePageIntrouvable } from '@/components/analytics/PageAnalytics'
 import { Footer } from '@/components/layout/Footer'
 import { Nav } from '@/components/layout/Nav'
 import { NotFoundPage } from '@/components/layout/NotFoundPage'

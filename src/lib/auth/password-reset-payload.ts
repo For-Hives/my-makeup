@@ -6,9 +6,9 @@ import {
 	type Payload,
 	resetPasswordOperation,
 } from 'payload'
-import type { EnvoyerEmail } from '../emails/envoi'
-import { composerEmail } from '../emails/gabarit'
-import { contenuEmailReinitialisation } from '../emails/reinitialisation'
+import type { EnvoyerEmail } from '../emails/send'
+import { composerEmail } from '../emails/layout'
+import { contenuEmailReinitialisation } from '../emails/password-reset'
 import type { EventCode, Log } from './auth-log'
 import { ipClient } from './client-ip'
 import {

@@ -1,6 +1,6 @@
 import type { Payload } from 'payload'
 import { importEnCours } from '../contexte-import'
-import type { TacheQuotidienne } from './quotidiennes'
+import type { TacheQuotidienne } from './daily'
 
 /**
  * The purge of the contact messages (ticket 162): the privacy policy promises that a message of the

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
-import { ConnexionReussie } from '@/components/analytics/ConnexionReussie'
+import { ConnexionReussie } from '@/components/analytics/SignInSucceeded'
 import { WebVitals } from '@/components/analytics/WebVitals'
 import { umamiLoaderScript, umamiScriptAttributes } from '@/lib/analytics/umami'
 import { versionEnv } from '@/lib/env'

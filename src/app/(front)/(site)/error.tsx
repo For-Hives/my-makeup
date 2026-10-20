@@ -1,6 +1,6 @@
 'use client'
 
-import { MesureDErreur } from '@/components/analytics/MesureDePage'
+import { MesureDErreur } from '@/components/analytics/PageAnalytics'
 import { ErrorPage } from '@/components/layout/ErrorPage'
 
 // The message and the trace of the error stay on the server, in its log: the visitor reads a sentence.

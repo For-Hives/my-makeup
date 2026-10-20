@@ -4,7 +4,7 @@ import { createServer } from 'node:net'
 import { initI18n } from '@payloadcms/translations'
 import { Forbidden, getRequestLanguage, type Payload, type SanitizedConfig, ValidationError } from 'payload'
 import { BlockedAccount } from '@/lib/auth/blocked-account'
-import { adaptateurSansRelais } from '@/lib/emails/relais'
+import { adaptateurSansRelais } from '@/lib/emails/relay'
 import { EnvError, type RawEnv } from '@/lib/env'
 import { migrations } from '@/migrations'
 

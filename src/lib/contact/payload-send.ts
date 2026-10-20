@@ -1,10 +1,10 @@
 import type { Payload } from 'payload'
 import { contenuEmailContact } from '../emails/contact'
-import { AUCUN_RELAIS, type EnvoyerEmail, type Journal } from '../emails/envoi'
-import { composerEmail } from '../emails/gabarit'
+import { AUCUN_RELAIS, type EnvoyerEmail, type Journal } from '../emails/send'
+import { composerEmail } from '../emails/layout'
 import { SITE_ORIGIN } from '../env'
-import type { EtatDuMail, StatutDeDemande } from './etats'
-import { FREINS_DE_CONTACT, type FreinsDeContact, prendreUnePlaceDeContact } from './frein'
+import type { EtatDuMail, StatutDeDemande } from './states'
+import { FREINS_DE_CONTACT, type FreinsDeContact, prendreUnePlaceDeContact } from './rate-limit'
 import { CHAMP_PIEGE_DU_CONTACT, type ErreursDeContact, type MessageDeContact, validerLeMessage } from './message'
 
 /**

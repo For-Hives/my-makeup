@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
-import { stockageDePayload } from '@/lib/contact/envoi-payload'
+import { stockageDePayload } from '@/lib/contact/payload-send'
 import { serverEnv } from '@/lib/env'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { mailsRecus, viderLeCapteur } from '../outils/mailpit'

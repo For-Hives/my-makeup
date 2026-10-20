@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import { CONTEXTE_IMPORT } from '@/lib/contexte-import'
-import { AUCUN_RELAIS, creerEnvoiEmail, EnvoiEmailEchoue, type Journal, type MessageDuRelais } from '@/lib/emails/envoi'
-import { composerEmail, EmailInvalide, lienAbsolu, PIED_DE_EMAIL } from '@/lib/emails/gabarit'
-import { adaptateurSansRelais, DELAI_DU_RELAIS_MS, optionsDeTransport } from '@/lib/emails/relais'
+import { AUCUN_RELAIS, creerEnvoiEmail, EnvoiEmailEchoue, type Journal, type MessageDuRelais } from '@/lib/emails/send'
+import { composerEmail, EmailInvalide, lienAbsolu, PIED_DE_EMAIL } from '@/lib/emails/layout'
+import { adaptateurSansRelais, DELAI_DU_RELAIS_MS, optionsDeTransport } from '@/lib/emails/relay'
 
 // Made-up values only: the domain is reserved for tests, the token is not one.
 const SITE = 'https://site.exemple.test'

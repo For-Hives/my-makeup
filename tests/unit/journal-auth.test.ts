@@ -11,8 +11,8 @@ import {
 } from '@/lib/auth/auth-log'
 import { createRateLimit } from '@/lib/auth/rate-limit'
 import { signInWithPassword } from '@/lib/auth/sign-in'
-import { demarrerLesTachesQuotidiennes } from '@/lib/taches/planificateur'
-import { lancerLesTachesQuotidiennes, type TacheQuotidienne } from '@/lib/taches/quotidiennes'
+import { demarrerLesTachesQuotidiennes } from '@/lib/tasks/scheduler'
+import { lancerLesTachesQuotidiennes, type TacheQuotidienne } from '@/lib/tasks/daily'
 
 /** Tickets 077: the rows of the authentication journal, and the daily task that purges it. */
 

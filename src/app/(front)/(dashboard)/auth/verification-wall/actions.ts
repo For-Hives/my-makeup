@@ -9,7 +9,7 @@ import { ipClient } from '@/lib/auth/client-ip'
 import { RESEND_MESSAGES, resendConfirmation } from '@/lib/auth/resend'
 import { resendRateLimit } from '@/lib/auth/sign-up-rate-limits'
 import { logRefusal } from '@/lib/auth/sign-up-refusal'
-import { envoiEmailDePayload } from '@/lib/emails/envoi'
+import { envoiEmailDePayload } from '@/lib/emails/send'
 import { serverEnv } from '@/lib/env'
 
 /**

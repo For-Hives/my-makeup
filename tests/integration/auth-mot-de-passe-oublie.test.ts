@@ -5,7 +5,7 @@ import { linkStillValid, requestPasswordLink, resetPassword } from '@/lib/auth/p
 import { createRateLimit } from '@/lib/auth/rate-limit'
 import { signInWithPassword } from '@/lib/auth/sign-in'
 import { openWithPassword } from '@/lib/auth/token'
-import { envoiEmailDePayload } from '@/lib/emails/envoi'
+import { envoiEmailDePayload } from '@/lib/emails/send'
 import { serverEnv } from '@/lib/env'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { attendreLeMail, compterLesMails, mailsRecus, viderLeCapteur } from '../outils/mailpit'

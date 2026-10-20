@@ -7,9 +7,9 @@ import {
 	STATUTS_DE_DEMANDE,
 	TYPES_DE_DEMANDE,
 	transitionPermise,
-} from '../lib/contact/etats'
+} from '../lib/contact/states'
 import { LIMITES_DU_CONTACT } from '../lib/contact/message'
-import { renvoyerLEmail } from '../lib/contact/renvoi-route'
+import { renvoyerLEmail } from '../lib/contact/resend-route'
 
 const TYPE_LABELS: Record<(typeof TYPES_DE_DEMANDE)[number], string> = { contact: 'Message de contact' }
 

@@ -1,8 +1,8 @@
 import config from '@payload-config'
 import { getPayload } from 'payload'
 import { statsTokenFromEnv } from '@/lib/env'
-import { methodeNonPermise, repondreAuxStats } from '@/services/mesure/reponse-stats'
-import { lireLesStatsHebdo } from '@/services/mesure/stats-hebdo'
+import { methodeNonPermise, repondreAuxStats } from '@/services/analytics/stats-response'
+import { lireLesStatsHebdo } from '@/services/analytics/weekly-stats'
 
 // Never prerendered, never cached: each request reads the database again.
 export const dynamic = 'force-dynamic'

@@ -3,7 +3,7 @@
  * route wires the real token and the real database, a test wires its own.
  */
 
-import { jetonValide, lirePeriode, type Periode, type StatsHebdo } from '@/lib/stats-hebdo'
+import { jetonValide, lirePeriode, type Periode, type StatsHebdo } from '@/lib/weekly-stats'
 
 /** Never cached, never indexed, whatever the status. */
 export const ENTETES_STATS = { 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex' } as const

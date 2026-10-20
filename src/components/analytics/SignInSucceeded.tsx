@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation'
 import { useEffect } from 'react'
-import { COOKIE_DE_MARQUE_PERIME, methodeDeLaMarque } from '@/lib/analytics/marque-connexion'
+import { COOKIE_DE_MARQUE_PERIME, methodeDeLaMarque } from '@/lib/analytics/sign-in-mark'
 import { type Suivre, track } from '@/lib/analytics/track'
 
 /**

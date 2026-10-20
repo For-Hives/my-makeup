@@ -21,7 +21,7 @@ import {
 	type Periode,
 	type ProfilPourStats,
 	type StatsHebdo,
-} from '@/lib/stats-hebdo'
+} from '@/lib/weekly-stats'
 
 export async function lireLesStatsHebdo(
 	payload: Payload,

@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { GET, POST } from '@/app/api/stats/weekly/route'
-import { StatsHebdo } from '@/lib/stats-hebdo'
+import { StatsHebdo } from '@/lib/weekly-stats'
 import { PROFILS_DU_JEU } from '../../src/jeu-fictif/profils'
 import { COMPTES_DU_JEU, TYPES_DU_JEU } from '../fixtures/comptes'
 import { poserLeJeuDuBanc } from '../fixtures/jeu-du-banc'

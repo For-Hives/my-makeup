@@ -1,4 +1,4 @@
-import { MesureDePageIntrouvable } from '@/components/analytics/MesureDePage'
+import { MesureDePageIntrouvable } from '@/components/analytics/PageAnalytics'
 import { NotFoundPage } from '@/components/layout/NotFoundPage'
 import { notFoundMetadata } from '@/lib/seo/metadata'
 

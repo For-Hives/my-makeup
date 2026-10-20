@@ -5,9 +5,9 @@ import { headers } from 'next/headers'
 import { after } from 'next/server'
 import { getPayload } from 'payload'
 import { ipClient } from '@/lib/auth/client-ip'
-import { enregistrerUnMessageDeContact, stockageDePayload } from '@/lib/contact/envoi-payload'
+import { enregistrerUnMessageDeContact, stockageDePayload } from '@/lib/contact/payload-send'
 import { type EtatDuContact, saisieDuContact } from '@/lib/contact/message'
-import { envoiEmailDePayload } from '@/lib/emails/envoi'
+import { envoiEmailDePayload } from '@/lib/emails/send'
 import { serverEnv } from '@/lib/env'
 
 /**

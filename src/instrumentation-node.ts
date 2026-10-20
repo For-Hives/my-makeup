@@ -1,6 +1,6 @@
 import { EnvError, serverEnv } from './lib/env'
-import { demarrerLesTachesQuotidiennes } from './lib/taches/planificateur'
-import { lancerLesTachesQuotidiennes } from './lib/taches/quotidiennes'
+import { demarrerLesTachesQuotidiennes } from './lib/tasks/scheduler'
+import { lancerLesTachesQuotidiennes } from './lib/tasks/daily'
 
 /**
  * Ends the process when the environment is not valid. Loaded by src/instrumentation.ts on the

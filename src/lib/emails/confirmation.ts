@@ -1,4 +1,4 @@
-import type { ContenuEmail } from './gabarit'
+import type { ContenuEmail } from './layout'
 
 /**
  * The confirmation mail of a new account (ticket 082): what it says, and where its button leads.

@@ -13,8 +13,8 @@ import {
 import { closeForgotPasswordRestDoors } from '@/lib/auth/forgot-payload'
 import { requestPasswordLink } from '@/lib/auth/password-reset-payload'
 import { createRateLimit } from '@/lib/auth/rate-limit'
-import { composerEmail } from '@/lib/emails/gabarit'
-import { contenuEmailReinitialisation } from '@/lib/emails/reinitialisation'
+import { composerEmail } from '@/lib/emails/layout'
+import { contenuEmailReinitialisation } from '@/lib/emails/password-reset'
 
 /** Tickets 085 and 086: the rules of the forgotten password that need no database. */
 

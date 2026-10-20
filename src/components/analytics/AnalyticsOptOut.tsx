@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { mesureRefusee, refuserLaMesure } from '@/lib/analytics/opposition'
+import { mesureRefusee, refuserLaMesure } from '@/lib/analytics/opt-out'
 
 function stockageDuNavigateur(): Storage | undefined {
 	try {

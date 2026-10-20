@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, test } from 'bun:test'
 import { marquerUnImportEnCours } from '@/lib/contexte-import'
-import { purgeDesMessagesDeContact } from '@/lib/taches/messages-de-contact'
-import { lancerLesTachesQuotidiennes } from '@/lib/taches/quotidiennes'
+import { purgeDesMessagesDeContact } from '@/lib/tasks/contact-messages'
+import { lancerLesTachesQuotidiennes } from '@/lib/tasks/daily'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 
 /**

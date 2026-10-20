@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, test } from 'bun:test'
 import { NextRequest } from 'next/server'
 import { POST as refuser } from '@/app/(front)/(site)/contact/throttled/route'
 import { mailboxKey } from '@/lib/auth/canonical-email'
-import { enregistrerUnMessageDeContact, type StockageDesDemandes } from '@/lib/contact/envoi-payload'
+import { enregistrerUnMessageDeContact, type StockageDesDemandes } from '@/lib/contact/payload-send'
 import {
 	creerFreinsDeContact,
 	emailDuFormulaire,
@@ -11,7 +11,7 @@ import {
 	prendreUnePlaceDeContact,
 	secondesAvantUneBoite,
 	secondesAvantUnMessage,
-} from '@/lib/contact/frein'
+} from '@/lib/contact/rate-limit'
 import { CHAMP_PIEGE_DU_CONTACT, MESSAGE_TROP_DE_MESSAGES } from '@/lib/contact/message'
 import { proxy, proxyDuContact } from '@/proxy'
 

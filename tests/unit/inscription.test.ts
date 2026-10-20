@@ -8,7 +8,7 @@ import { failureCode } from '@/lib/auth/sign-in'
 import { SIGN_UP_FAILURE_MESSAGES, SIGN_UP_FIELDS, SIGN_UP_MESSAGES, validateSignUp } from '@/lib/auth/sign-up'
 import { failureCode as codeDeLEchecDInscription, isAddressAlreadyTaken } from '@/lib/auth/sign-up-payload'
 import { contenuEmailConfirmation } from '@/lib/emails/confirmation'
-import { composerEmail } from '@/lib/emails/gabarit'
+import { composerEmail } from '@/lib/emails/layout'
 
 const BON = { nom: 'Léa Fictive', email: 'lea@example.test', password: 'aaaaaaaa', cgu: 'on' }
 

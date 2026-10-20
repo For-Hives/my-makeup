@@ -1,4 +1,4 @@
-import type { ContenuEmail } from './gabarit'
+import type { ContenuEmail } from './layout'
 
 /**
  * The mail of an address that already has an account (ticket 083): what the real owner of the

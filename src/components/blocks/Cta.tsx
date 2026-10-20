@@ -1,5 +1,5 @@
 import Image from 'next/image'
-import { LienSuivi } from '@/components/analytics/LienSuivi'
+import { LienSuivi } from '@/components/analytics/TrackedLink'
 
 /** The call to action that closes the pages: look for a makeup artist, or be one. */
 export function Cta() {

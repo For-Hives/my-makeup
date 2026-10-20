@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
 import { importEnCours, marquerUnImportEnCours } from '@/lib/contexte-import'
-import { purgeDesMessagesDeContact, seuilDePurgeDuContact } from '@/lib/taches/messages-de-contact'
-import { lancerLesTachesQuotidiennes, TACHES_QUOTIDIENNES } from '@/lib/taches/quotidiennes'
+import { purgeDesMessagesDeContact, seuilDePurgeDuContact } from '@/lib/tasks/contact-messages'
+import { lancerLesTachesQuotidiennes, TACHES_QUOTIDIENNES } from '@/lib/tasks/daily'
 
 /** Ticket 162: the 12-month purge of the contact messages. The same lines against the real store: tests/integration/contact-purge.test.ts. */
 
@@ -88,7 +88,7 @@ describe('l’import marque son passage (importer lui-même)', () => {
 
 describe('la reprise des messages restés en cours d’envoi (ticket 224)', () => {
 	test('elle est dans les tâches quotidiennes et ne touche que les messages de contact « en-attente » plus vieux que le délai', async () => {
-		const { repriseDesMessagesBloques, DELAI_DE_REPRISE_MS } = await import('@/lib/taches/messages-bloques')
+		const { repriseDesMessagesBloques, DELAI_DE_REPRISE_MS } = await import('@/lib/tasks/stuck-messages')
 		expect(TACHES_QUOTIDIENNES).toContain(repriseDesMessagesBloques)
 		const appels: { data: unknown; where: unknown }[] = []
 		const payload = {

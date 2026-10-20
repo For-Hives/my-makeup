@@ -1,6 +1,6 @@
 import type { Payload } from 'payload'
 import { importEnCours } from '../contexte-import'
-import type { TacheQuotidienne } from './quotidiennes'
+import type { TacheQuotidienne } from './daily'
 
 /**
  * The recovery of the contact messages whose mail never got an answer (ticket 224, finding of tickets

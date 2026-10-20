@@ -16,7 +16,7 @@ import {
 	CHEMIN_DU_CONTACT,
 	CHEMIN_DU_REFUS_DE_CONTACT,
 	secondesAvantUnMessageDeCetteRequete,
-} from '@/lib/contact/frein'
+} from '@/lib/contact/rate-limit'
 import { rateLimitSearch } from '@/lib/search/rate-limit'
 import { robotsForPath } from '@/lib/seo/robots'
 import { shapeRedirect } from '@/lib/urls/shape'

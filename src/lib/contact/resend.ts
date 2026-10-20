@@ -1,7 +1,7 @@
 import type { PostgresAdapter } from '@payloadcms/db-postgres'
 import type { Payload } from 'payload'
-import { type EntreesDExpedition, expedier } from './envoi-payload'
-import type { EtatDuMail } from './etats'
+import { type EntreesDExpedition, expedier } from './payload-send'
+import type { EtatDuMail } from './states'
 import type { MessageDeContact } from './message'
 
 /**

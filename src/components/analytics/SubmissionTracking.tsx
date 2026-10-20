@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { navigateurReel, noterLaSoumission } from '@/lib/analytics/doublon'
+import { navigateurReel, noterLaSoumission } from '@/lib/analytics/duplicate'
 
 /**
  * Put inside the search form: notes that the visitor submitted it, so the page of results can tell a

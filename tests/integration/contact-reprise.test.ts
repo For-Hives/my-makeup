@@ -1,10 +1,10 @@
 import { afterAll, describe, expect, test } from 'bun:test'
-import { stockageDePayload } from '@/lib/contact/envoi-payload'
-import type { EtatDuMail } from '@/lib/contact/etats'
-import { renvoyerLEmailDUnMessage, stockageDuRenvoiDePayload } from '@/lib/contact/renvoi'
+import { stockageDePayload } from '@/lib/contact/payload-send'
+import type { EtatDuMail } from '@/lib/contact/states'
+import { renvoyerLEmailDUnMessage, stockageDuRenvoiDePayload } from '@/lib/contact/resend'
 import { marquerUnImportEnCours } from '@/lib/contexte-import'
-import { DELAI_DE_REPRISE_MS, repriseDesMessagesBloques } from '@/lib/taches/messages-bloques'
-import { lancerLesTachesQuotidiennes } from '@/lib/taches/quotidiennes'
+import { DELAI_DE_REPRISE_MS, repriseDesMessagesBloques } from '@/lib/tasks/stuck-messages'
+import { lancerLesTachesQuotidiennes } from '@/lib/tasks/daily'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 
 /**

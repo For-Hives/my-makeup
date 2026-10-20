@@ -1,6 +1,6 @@
 'use client'
 
-import { MesureDErreur } from '@/components/analytics/MesureDePage'
+import { MesureDErreur } from '@/components/analytics/PageAnalytics'
 import { MESSAGE_VERIFICATION_IMPOSSIBLE } from '@/lib/auth/errors'
 
 // The space cannot check the session for now (a passing outage): the cookie is untouched, nobody

@@ -7,7 +7,7 @@ import { requestPasswordLink, resetPassword } from '@/lib/auth/password-reset-pa
 import { createRateLimit } from '@/lib/auth/rate-limit'
 import { signInWithPassword } from '@/lib/auth/sign-in'
 import { openWithPassword } from '@/lib/auth/token'
-import { envoiEmailDePayload } from '@/lib/emails/envoi'
+import { envoiEmailDePayload } from '@/lib/emails/send'
 import { serverEnv } from '@/lib/env'
 import { fauxGoogle } from './faux-google'
 import { attendreLeMail } from './mailpit'

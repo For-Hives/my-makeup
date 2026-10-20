@@ -1,8 +1,8 @@
 import type { Payload } from 'payload'
 import { AUTH_LOG_COLLECTION, purgeThreshold } from '../auth/auth-log'
-import { purgeDesComptesNonConfirmes } from './comptes-non-confirmes'
-import { repriseDesMessagesBloques } from './messages-bloques'
-import { purgeDesMessagesDeContact } from './messages-de-contact'
+import { purgeDesComptesNonConfirmes } from './unconfirmed-accounts'
+import { repriseDesMessagesBloques } from './stuck-messages'
+import { purgeDesMessagesDeContact } from './contact-messages'
 
 /**
  * The daily tasks of the application (ticket 077): the purges that keep a retention promise, one

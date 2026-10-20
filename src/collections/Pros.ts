@@ -17,7 +17,7 @@ import { clearLegacyHashAfterPassword, clearLegacyHashOnRenewal } from '../lib/a
 import { rateLimitSignIn, releaseSignInSlot } from '../lib/auth/rate-limit-payload'
 import { extendUnderCap, refuseAfterCap, SESSION_DURATION_S } from '../lib/auth/sliding-session'
 import { contenuEmailConfirmation, SUJET_DE_CONFIRMATION } from '../lib/emails/confirmation'
-import { composerEmail } from '../lib/emails/gabarit'
+import { composerEmail } from '../lib/emails/layout'
 import { sessionsFermees } from './Admins'
 import { profilALaCreationDuCompte } from './Profiles'
 

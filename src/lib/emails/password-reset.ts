@@ -1,4 +1,4 @@
-import type { ContenuEmail } from './gabarit'
+import type { ContenuEmail } from './layout'
 
 /**
  * The mail of a forgotten password (ticket 085): what it says, and where its button leads.

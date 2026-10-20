@@ -10,8 +10,8 @@ import {
 	PERIODE_MAX_JOURS,
 	type ProfilPourStats,
 	StatsHebdo,
-} from '@/lib/stats-hebdo'
-import { methodeNonPermise, repondreAuxStats } from '@/services/mesure/reponse-stats'
+} from '@/lib/weekly-stats'
+import { methodeNonPermise, repondreAuxStats } from '@/services/analytics/stats-response'
 import exemple from '../../docs/mesure/stats-hebdo.exemple.json'
 
 const periode = { debut: new Date('2026-10-05T00:00:00+02:00'), fin: new Date('2026-10-12T00:00:00+02:00') }

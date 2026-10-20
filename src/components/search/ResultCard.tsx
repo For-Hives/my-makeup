@@ -1,5 +1,5 @@
 import Image from 'next/image'
-import { LienSuivi } from '@/components/analytics/LienSuivi'
+import { LienSuivi } from '@/components/analytics/TrackedLink'
 import type { ProfileCard } from '@/services/public/profiles'
 
 /** The picture of a card whose artist has no photo yet: the one of the site online. */

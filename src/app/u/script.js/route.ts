@@ -1,4 +1,4 @@
-import { relayerLeScript } from '@/lib/analytics/relais'
+import { relayerLeScript } from '@/lib/analytics/relay'
 import { umamiFromEnv } from '@/lib/env'
 
 // The tracker of the Umami instance, served from the site (ticket 111). Never prerendered: the

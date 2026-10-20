@@ -1,9 +1,9 @@
 import { type Endpoint, Forbidden } from 'payload'
 import { estAdmin } from '../acces'
-import { envoiEmailDePayload } from '../emails/envoi'
+import { envoiEmailDePayload } from '../emails/send'
 import { serverEnv } from '../env'
-import { stockageDePayload } from './envoi-payload'
-import { renvoyerLEmailDUnMessage, stockageDuRenvoiDePayload } from './renvoi'
+import { stockageDePayload } from './payload-send'
+import { renvoyerLEmailDUnMessage, stockageDuRenvoiDePayload } from './resend'
 
 /**
  * `POST /api/contact-requests/:id/resend`: an admin sends again the mail of a contact message whose mail failed

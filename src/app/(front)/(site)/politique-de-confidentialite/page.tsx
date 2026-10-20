@@ -1,10 +1,10 @@
 import Link from 'next/link'
-import { OppositionMesure } from '@/components/analytics/OppositionMesure'
+import { OppositionMesure } from '@/components/analytics/AnalyticsOptOut'
 import { LegalPage } from '@/components/legal/LegalPage'
 import { EDITEUR, formatSiret } from '@/lib/legal'
 import { JOURS_AVANT_EFFACEMENT_DES_PHOTOS, PRESTATAIRES } from '@/lib/prestataires'
 import { pageMetadata } from '@/lib/seo/metadata'
-import { DELAI_AVANT_PURGE_JOURS } from '@/lib/taches/comptes-non-confirmes'
+import { DELAI_AVANT_PURGE_JOURS } from '@/lib/tasks/unconfirmed-accounts'
 
 // Static: the text is in the code, and the page reads no cookie and no data (ticket 112).
 export const metadata = pageMetadata({

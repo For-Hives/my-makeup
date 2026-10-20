@@ -1,5 +1,5 @@
 import { ipClient } from '@/lib/auth/client-ip'
-import { secondesAvantUnMessageDeCetteRequete } from '@/lib/contact/frein'
+import { secondesAvantUnMessageDeCetteRequete } from '@/lib/contact/rate-limit'
 import { MESSAGE_TROP_DE_MESSAGES } from '@/lib/contact/message'
 
 export const dynamic = 'force-dynamic'

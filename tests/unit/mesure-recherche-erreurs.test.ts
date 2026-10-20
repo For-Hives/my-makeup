@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
-import { installerLaMesure, scriptDeMesure } from '@/lib/analytics/chargeur'
+import { installerLaMesure, scriptDeMesure } from '@/lib/analytics/loader'
 import {
 	aEmettre,
 	CLE_SOUMISSION_DU_FORMULAIRE,
@@ -8,10 +8,10 @@ import {
 	type Navigateur,
 	noterLaSoumission,
 	soumissionDuFormulaire,
-} from '@/lib/analytics/doublon'
+} from '@/lib/analytics/duplicate'
 import { donneesDEvenement } from '@/lib/analytics/events'
 import { pidDuProfil } from '@/lib/analytics/pid'
-import { codeDErreur, genreDePageIntrouvable, trancheDeResultats } from '@/lib/analytics/valeurs'
+import { codeDErreur, genreDePageIntrouvable, trancheDeResultats } from '@/lib/analytics/values'
 
 /** Plan 04 §3.3, events 4, 5, 6, 8 and 21 (ticket 145): the values they send, and that nothing typed goes. */
 

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { Cta } from '@/components/blocks/Cta'
 import { Hero } from '@/components/blocks/Hero'
-import { FormulaireDeContact } from '@/components/contact/FormulaireDeContact'
+import { FormulaireDeContact } from '@/components/contact/ContactForm'
 import { pageMetadata } from '@/lib/seo/metadata'
 import { sendMessage } from './actions'
 

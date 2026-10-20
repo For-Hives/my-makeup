@@ -1,5 +1,5 @@
 import type { MessageDeContact } from '../contact/message'
-import type { ContenuEmail } from './gabarit'
+import type { ContenuEmail } from './layout'
 
 /**
  * The mail of a contact message to the team (ticket 158): what it says. It leaves by the one door of

@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { type ActionDuContact, avecLEchecDuReseau, FormulaireDeContact } from '@/components/contact/FormulaireDeContact'
+import { type ActionDuContact, avecLEchecDuReseau, FormulaireDeContact } from '@/components/contact/ContactForm'
 import { type EtatDuContact, MESSAGE_TROP_DE_MESSAGES, type MessageDeContact } from '@/lib/contact/message'
 import { ouvrirFenetre } from '../outils/dom-react'
 

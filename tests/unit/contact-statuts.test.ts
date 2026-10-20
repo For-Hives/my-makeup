@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { estUnStatutDeDemande, STATUTS_DE_DEMANDE, transitionPermise } from '@/lib/contact/etats'
+import { estUnStatutDeDemande, STATUTS_DE_DEMANDE, transitionPermise } from '@/lib/contact/states'
 
 /**
  * U78, reduced to the contact message (ticket 163): `new` → `forwarded` → `answered`, and `spam`.

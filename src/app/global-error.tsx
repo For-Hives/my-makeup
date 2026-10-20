@@ -1,6 +1,6 @@
 'use client'
 
-import { MesureDErreur } from '@/components/analytics/MesureDePage'
+import { MesureDErreur } from '@/components/analytics/PageAnalytics'
 
 // The last resort, when the shell itself fails: no stylesheet, no component of the site.
 // The shell is gone, and so is the script of the head: the event is kept only if the tracker was

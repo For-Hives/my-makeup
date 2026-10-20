@@ -1,4 +1,4 @@
-import { SuiviDeLaSoumission } from '@/components/analytics/SuiviDeLaSoumission'
+import { SuiviDeLaSoumission } from '@/components/analytics/SubmissionTracking'
 import { MagnifierIcon, PlaceIcon } from './icons'
 
 const FIELD =

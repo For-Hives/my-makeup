@@ -24,7 +24,7 @@
 import { createHash, timingSafeEqual } from 'node:crypto'
 import { z } from 'zod'
 import { EVENT_CODES, EVENT_TYPES } from './auth/auth-log'
-import { ETATS_DU_MAIL, STATUTS_DE_DEMANDE } from './contact/etats'
+import { ETATS_DU_MAIL, STATUTS_DE_DEMANDE } from './contact/states'
 import { completeness } from './profile/completeness'
 import { type ProfileDocument, profileFields } from './profile/state'
 

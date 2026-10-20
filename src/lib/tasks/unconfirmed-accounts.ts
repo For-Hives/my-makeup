@@ -1,5 +1,5 @@
 import type { Payload } from 'payload'
-import type { TacheQuotidienne } from './quotidiennes'
+import type { TacheQuotidienne } from './daily'
 
 /**
  * The purge of the accounts that never confirmed their email (ticket 084): the fake sign-ups of
