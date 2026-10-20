@@ -176,9 +176,7 @@ function wordChunks(mot: string): string[] | null {
 	const typos = Math.floor(THRESHOLD * mot.length + 1e-9)
 	const chunks: string[] = []
 	for (let i = 0; i <= typos; i += 1)
-		chunks.push(
-			mot.slice(Math.floor((i * mot.length) / (typos + 1)), Math.floor(((i + 1) * mot.length) / (typos + 1)))
-		)
+		chunks.push(mot.slice(Math.floor((i * mot.length) / (typos + 1)), Math.floor(((i + 1) * mot.length) / (typos + 1))))
 	return chunks.every(morceau => morceau !== '') ? chunks : null
 }
 

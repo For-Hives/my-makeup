@@ -1,11 +1,11 @@
 import type { Metadata } from 'next'
 import { Cta } from '@/components/blocks/Cta'
 import { Hero } from '@/components/blocks/Hero'
-import { ArticleDePage } from '@/components/static-pages/PageArticle'
-import { SOLUTIONS_MAQUILLEUSES } from '@/components/static-pages/artist-texts'
-import { metadonnees } from '@/lib/seo/metadata'
+import { ARTIST_SOLUTIONS } from '@/components/static-pages/artist-texts'
+import { PageArticle } from '@/components/static-pages/PageArticle'
+import { pageMetadata } from '@/lib/seo/metadata'
 
-export const metadata: Metadata = metadonnees({
+export const metadata: Metadata = pageMetadata({
 	titre: 'Solutions My-Makeup pour les Maquilleuses !',
 	description: "Avec notre plateforme, donner un coup de boost à votre carrière n'a jamais été aussi simple !",
 	repli:
@@ -13,7 +13,7 @@ export const metadata: Metadata = metadonnees({
 	chemin: '/solutions/pour-les-maquilleuses',
 })
 
-export default function PageSolutionsMaquilleuses() {
+export default function ArtistSolutionsPage() {
 	return (
 		<main className="relative">
 			<Hero
@@ -29,7 +29,7 @@ export default function PageSolutionsMaquilleuses() {
 				recherche={false}
 				inscription
 			/>
-			<ArticleDePage contenu={SOLUTIONS_MAQUILLEUSES} />
+			<PageArticle contenu={ARTIST_SOLUTIONS} />
 			<Cta />
 		</main>
 	)

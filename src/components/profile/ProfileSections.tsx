@@ -1,15 +1,15 @@
 import Image from 'next/image'
 import type { Pid } from '@/lib/analytics/events'
 import type {
-	PublicExperience,
-	PublicCourse,
 	ContactLink,
+	PublicCourse,
+	PublicExperience,
 	PublicOption,
 	PublicServiceOffer,
 } from '@/lib/profile/public-view'
 import { CHANNEL_LABELS } from '@/lib/profile/public-view'
-import { TrackedContactLink } from './TrackedContactLink'
 import { ProfileSection } from './ProfileSection'
+import { TrackedContactLink } from './TrackedContactLink'
 
 /**
  * The cards of the page of a profile, one component each (ticket 102). They are server components
@@ -37,15 +37,7 @@ export function SectionDescription({ lignes }: { lignes: readonly string[] }) {
 	)
 }
 
-export function LocationSection({
-	lieu,
-	seDeplace,
-	zone,
-}: {
-	lieu: string
-	seDeplace: boolean
-	zone: string | null
-}) {
+export function LocationSection({ lieu, seDeplace, zone }: { lieu: string; seDeplace: boolean; zone: string | null }) {
 	return (
 		<ProfileSection titre="Localisation & département">
 			<div className="flex flex-col gap-1">

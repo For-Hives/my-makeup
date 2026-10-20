@@ -30,7 +30,13 @@ const LONGEST_NAMES = new Map(
 )
 
 /** The whole country: not a place to rank by. */
-const EVERYWHERE = new Set(['france', 'toute la france', 'france entiere', 'partout en france', 'france metropolitaine'])
+const EVERYWHERE = new Set([
+	'france',
+	'toute la france',
+	'france entiere',
+	'partout en france',
+	'france metropolitaine',
+])
 
 /** Countries and regions (those of 2016, the former ones still written): wider than a city or a département. */
 const LARGES = new Set([
@@ -148,7 +154,10 @@ export interface ProfilePlace {
 }
 
 /** The place of a profile, in the shape of what was typed. */
-export function profilePlace({ ville: city, departement: department }: Pick<ProfilePlace, 'ville' | 'departement'>): Place {
+export function profilePlace({
+	ville: city,
+	departement: department,
+}: Pick<ProfilePlace, 'ville' | 'departement'>): Place {
 	const read = readPlace(city)
 	return { segments: read.segments, departements: department ? [department] : [] }
 }

@@ -11,15 +11,9 @@
  */
 
 import { parsePrice } from '@/lib/prix'
-import { type ProfileFields, completeness, usableCity } from '@/lib/profile/completeness'
+import { completeness, type ProfileFields, usableCity } from '@/lib/profile/completeness'
+import { DESCRIPTION_MAX_LENGTH, endMessage, NAME_MAX_LENGTH, obtainMessage, textMessage } from '@/lib/profile/lists'
 import { publicPlace } from '@/lib/profile/public-place'
-import {
-	DESCRIPTION_MAX_LENGTH,
-	NAME_MAX_LENGTH,
-	endMessage,
-	textMessage,
-	obtainMessage,
-} from '@/lib/profile/lists'
 import { attribuerSlugs, slugDeRepli, slugifier } from '@/lib/slug'
 import {
 	COMPTES_DE_FIXTURE,

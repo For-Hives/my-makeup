@@ -1,10 +1,10 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
 import { CONTEXTE_SANS_PROFIL } from '@/collections/Profiles'
+import { readSearch } from '@/lib/search/input'
 import { PER_PAGE, paginate, sectionsOfPage } from '@/lib/search/pagination'
 import { find } from '@/lib/search/results'
-import { readSearch } from '@/lib/search/input'
-import { readDirectory, type DirectoryProfile } from '@/services/public/profiles'
+import { type DirectoryProfile, readDirectory } from '@/services/public/profiles'
 import { fabriquerDesProfils } from '../outils/fabrique-profils'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 

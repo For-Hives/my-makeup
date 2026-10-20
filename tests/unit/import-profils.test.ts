@@ -19,7 +19,7 @@ import {
 	videALaSource,
 } from '../../scripts/migration/import/profils'
 import { SECTIONS_VIDES } from '../../scripts/migration/import/sections'
-import { NEUTRAL_NAME, displayName, fullName, text } from '../../src/lib/profile/display-name'
+import { displayName, fullName, NEUTRAL_NAME, text } from '../../src/lib/profile/display-name'
 import { PUBLIC_PROFILE_FIELDS } from '../../src/services/public/profiles'
 
 /**

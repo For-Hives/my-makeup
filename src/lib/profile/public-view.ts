@@ -9,7 +9,7 @@
  */
 
 import { lignesDePrix } from '../prix'
-import { type ProfileNames, fullName, text } from './display-name'
+import { fullName, type ProfileNames, text } from './display-name'
 
 /**
  * The line under the name, when the profile has an artist name of its own: shown only if it differs
@@ -252,5 +252,4 @@ export function experiences(stockees: unknown): PublicExperience[] {
 }
 
 /** The names a photo of the portfolio is described with: « Réalisation de <nom> (n/N) », n from 1. */
-export const altWork = (nom: string, rang: number, total: number): string =>
-	`Réalisation de ${nom} (${rang}/${total})`
+export const altWork = (nom: string, rang: number, total: number): string => `Réalisation de ${nom} (${rang}/${total})`

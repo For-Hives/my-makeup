@@ -4,7 +4,7 @@ import Link from 'next/link'
  * The content of the error page (ticket 069): a sentence for the visitor, never the message or the
  * trace of the error. It asks the search engines to leave the page alone.
  */
-export function PageEnErreur({ reessayer }: { reessayer?: () => void }) {
+export function ErrorPage({ reessayer }: { reessayer?: () => void }) {
 	return (
 		<main className="mx-auto flex w-full max-w-7xl flex-1 flex-col justify-center px-4 py-16 sm:px-6 lg:px-20">
 			<meta name="robots" content="noindex, nofollow" />

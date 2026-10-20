@@ -1,20 +1,20 @@
 import { describe, expect, test } from 'bun:test'
 import {
-	hasContactChannel,
 	aMedia,
+	becomesPublishable,
 	CHANNELS,
-	type ProfileFields,
-	type PublishableConditions,
 	CRITERIA,
 	completeness,
-	publishableConditions,
 	DESCRIPTION_MIN,
-	becomesPublishable,
+	descriptionLength,
+	hasContactChannel,
 	isFullyEmpty,
 	isInternal,
-	descriptionLength,
 	normalize,
 	numericPrice,
+	type ProfileFields,
+	type PublishableConditions,
+	publishableConditions,
 	usableCity,
 } from '@/lib/profile/completeness'
 import ancienSite from './fixtures/completude-ancien-site.json'
@@ -221,7 +221,9 @@ describe('completude (plans/02 U01-U08)', () => {
 		expect(c.actif).toBe(true)
 		expect(c.publiable).toBe(false)
 		expect(c.conditions).toEqual(TOUTES)
-		expect(completeness({ ...complet, speciality: 'CEO/CTO My Makeup' }, { formulaireDevis: true }).publiable).toBe(false)
+		expect(completeness({ ...complet, speciality: 'CEO/CTO My Makeup' }, { formulaireDevis: true }).publiable).toBe(
+			false
+		)
 		expect(completeness({ ...complet, speciality: 'Maquillage mariée' }).interne).toBe(false)
 		for (const speciality of [
 			'ceo',

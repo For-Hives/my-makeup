@@ -7,9 +7,9 @@
  * No `next` import: read by the page and by the tests.
  */
 
-import { type ProfilePlace, type ProfilesByPlace, sectionsByPlace } from './place'
-import { rankByRelevance, normalizeTexts, type NormalizedTexts } from './relevance'
 import { type Search, searchByWord } from './input'
+import { type ProfilePlace, type ProfilesByPlace, sectionsByPlace } from './place'
+import { type NormalizedTexts, normalizeTexts, rankByRelevance } from './relevance'
 
 /** A profile of the directory as the search reads it: where she works, and (for a word) what she wrote. */
 export interface SearchableProfile extends ProfilePlace {
@@ -33,9 +33,7 @@ export function find<T extends SearchableProfile>(
 	recherche: Pick<Search, 'search' | 'city'>
 ): ProfilesByPlace<T> {
 	const found = searchByWord(recherche)
-		? rankByRelevance(annuaire, profil => profil.textes ?? NO_TEXT, recherche.search).map(
-				({ profil }) => profil
-			)
+		? rankByRelevance(annuaire, profil => profil.textes ?? NO_TEXT, recherche.search).map(({ profil }) => profil)
 		: annuaire
 	return sectionsByPlace(found, recherche.city)
 }

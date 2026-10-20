@@ -2,10 +2,10 @@ import type { Metadata } from 'next'
 import { Cta } from '@/components/blocks/Cta'
 import { Hero } from '@/components/blocks/Hero'
 import { FormulaireDeContact } from '@/components/contact/FormulaireDeContact'
-import { metadonnees } from '@/lib/seo/metadata'
-import { envoyerUnMessage } from './actions'
+import { pageMetadata } from '@/lib/seo/metadata'
+import { sendMessage } from './actions'
 
-export const metadata: Metadata = metadonnees({
+export const metadata: Metadata = pageMetadata({
 	titre: 'Contact',
 	description:
 		'Contactez-nous pour toute question, suggestion ou collaboration ! L’équipe My-Makeup est à votre écoute !',
@@ -14,7 +14,7 @@ export const metadata: Metadata = metadonnees({
 })
 
 /** The addresses of the team, as the live site lists them. No telephone number: see the register of intended changes (`contact-sans-telephone`). */
-const COORDONNEES = [
+const CONTACT_DETAILS = [
 	{ titre: 'Contact général', email: 'contact@my-makeup.fr' },
 	{ titre: 'Travailler avec nous', email: 'jobs@my-makeup.fr' },
 	{ titre: 'Relation entreprise', email: 'pro@my-makeup.fr' },
@@ -36,7 +36,7 @@ export default function PageContact() {
 					Une demande particulière, un bug, une idée ? N’hésitez pas à nous contacter via le formulaire ci-dessous !
 				</p>
 			</div>
-			<FormulaireDeContact action={envoyerUnMessage} />
+			<FormulaireDeContact action={sendMessage} />
 			<section className="relative py-20">
 				<div className="mx-auto flex max-w-7xl flex-col px-4 md:flex-row md:px-8 xl:px-0">
 					<div className="mx-auto mb-10 w-full md:w-1/2">
@@ -48,7 +48,7 @@ export default function PageContact() {
 						</p>
 					</div>
 					<div className="grid w-full grid-cols-1 gap-6 sm:grid-cols-2 md:w-1/2 lg:col-span-2 lg:gap-8">
-						{COORDONNEES.map(({ titre, email }) => (
+						{CONTACT_DETAILS.map(({ titre, email }) => (
 							<div key={email} className="rounded-2xl bg-gray-50 p-10">
 								<h3 className="font-semibold text-base text-gray-900 leading-7">{titre}</h3>
 								<dl className="mt-3 space-y-1 text-gray-600 text-sm leading-6">

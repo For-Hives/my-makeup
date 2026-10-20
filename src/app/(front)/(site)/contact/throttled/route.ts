@@ -13,17 +13,17 @@ export const dynamic = 'force-dynamic'
  * message of the failed action, and the form shows it with her typing kept (`avecLEchecDuReseau`).
  */
 export async function POST(requete: Request): Promise<Response> {
-	const attente = await secondesAvantUnMessageDeCetteRequete(requete, ipClient(requete.headers))
-	if (attente === undefined) return new Response(null, { status: 404 })
-	const entetes = { 'cache-control': 'no-store', 'retry-after': String(attente) }
+	const wait = await secondesAvantUnMessageDeCetteRequete(requete, ipClient(requete.headers))
+	if (wait === undefined) return new Response(null, { status: 404 })
+	const headers = { 'cache-control': 'no-store', 'retry-after': String(wait) }
 	// The script of Next reads the message of a failed action only from a response typed exactly `text/plain`.
 	if (requete.headers.has('next-action'))
 		return new Response(MESSAGE_TROP_DE_MESSAGES, {
 			status: 429,
-			headers: { ...entetes, 'content-type': 'text/plain' },
+			headers: { ...headers, 'content-type': 'text/plain' },
 		})
 	return new Response(
 		`<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="robots" content="noindex"><title>Trop de messages</title></head><body><p>${MESSAGE_TROP_DE_MESSAGES}</p></body></html>`,
-		{ status: 429, headers: { ...entetes, 'content-type': 'text/html; charset=utf-8' } }
+		{ status: 429, headers: { ...headers, 'content-type': 'text/html; charset=utf-8' } }
 	)
 }

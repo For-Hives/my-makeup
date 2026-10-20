@@ -20,44 +20,44 @@
 
 import { FROZEN_URL_FAMILIES, UNFROZEN_PREFIXES } from '../frozen-urls'
 
-export interface RedirectionDeForme {
+export interface ShapeRedirect {
 	/** The path to go to, with no query. */
 	chemin: string
 	status: 301 | 308
 }
 
 /** `/toutes-les-news` → `/blog`: the literal addresses the frozen table moves, read from it. */
-function lireLesRedirectionsDeChemin(): ReadonlyMap<string, string> {
-	const redirections = new Map<string, string>()
-	for (const famille of FROZEN_URL_FAMILIES) {
-		if (famille.rule !== undefined || famille.origins !== undefined || !famille.redirect) continue
-		const destination = /^`(\/[^`<>*]*)`$/.exec(famille.redirect.to)?.[1]
+function readPathRedirects(): ReadonlyMap<string, string> {
+	const redirects = new Map<string, string>()
+	for (const family of FROZEN_URL_FAMILIES) {
+		if (family.rule !== undefined || family.origins !== undefined || !family.redirect) continue
+		const destination = /^`(\/[^`<>*]*)`$/.exec(family.redirect.to)?.[1]
 		if (destination === undefined) continue
-		for (const modele of famille.patterns) {
-			if (!/[<>*]/.test(modele)) redirections.set(modele, destination)
+		for (const pattern of family.patterns) {
+			if (!/[<>*]/.test(pattern)) redirects.set(pattern, destination)
 		}
 	}
-	return redirections
+	return redirects
 }
 
 /** The addresses of the site the frozen table redirects to another address of the site. */
-export const REDIRECTIONS_DE_CHEMIN: ReadonlyMap<string, string> = lireLesRedirectionsDeChemin()
+export const PATH_REDIRECTS: ReadonlyMap<string, string> = readPathRedirects()
 
-const sousUnPrefixeLibre = (chemin: string): boolean =>
+const underFreePrefix = (chemin: string): boolean =>
 	UNFROZEN_PREFIXES.some(prefixe => chemin === prefixe || chemin.startsWith(`${prefixe}/`))
 
 /**
  * The redirect an address gets for its shape, or `null` when its shape is right (the page answers).
  * `chemin` is the path as the visitor wrote it, repeated slashes included.
  */
-export function redirectionDeForme(chemin: string): RedirectionDeForme | null {
-	const propre = chemin.replace(/\/{2,}/g, '/')
-	if (sousUnPrefixeLibre(propre)) return null
-	const doubleBarre = propre !== chemin
-	const barreFinale = propre.length > 1 && propre.endsWith('/')
-	const sansBarreFinale = barreFinale ? propre.replace(/\/+$/, '') || '/' : propre
-	const destination = REDIRECTIONS_DE_CHEMIN.get(sansBarreFinale)
-	if (destination !== undefined) return { chemin: destination, status: doubleBarre ? 301 : barreFinale ? 308 : 301 }
-	if (!doubleBarre && !barreFinale) return null
-	return { chemin: sansBarreFinale, status: doubleBarre ? 301 : 308 }
+export function shapeRedirect(chemin: string): ShapeRedirect | null {
+	const clean = chemin.replace(/\/{2,}/g, '/')
+	if (underFreePrefix(clean)) return null
+	const doubleSlash = clean !== chemin
+	const trailingSlash = clean.length > 1 && clean.endsWith('/')
+	const withoutTrailingSlash = trailingSlash ? clean.replace(/\/+$/, '') || '/' : clean
+	const destination = PATH_REDIRECTS.get(withoutTrailingSlash)
+	if (destination !== undefined) return { chemin: destination, status: doubleSlash ? 301 : trailingSlash ? 308 : 301 }
+	if (!doubleSlash && !trailingSlash) return null
+	return { chemin: withoutTrailingSlash, status: doubleSlash ? 301 : 308 }
 }

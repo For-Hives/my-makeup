@@ -225,7 +225,10 @@ export function isFullyEmpty(profil: ProfileFields | null | undefined): boolean 
 }
 
 /** The whole reading of a profile: score, missing criteria, conditions and flags. */
-export function completeness(profil: ProfileFields | null | undefined, options: CompletenessOptions = {}): Completeness {
+export function completeness(
+	profil: ProfileFields | null | undefined,
+	options: CompletenessOptions = {}
+): Completeness {
 	const p = profil ?? {}
 	const conditions = publishableConditions(p)
 	const presents: Record<Criterion, boolean> = {

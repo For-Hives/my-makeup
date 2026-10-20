@@ -1,11 +1,11 @@
 import { describe, expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { PageEnErreur } from '../../src/components/layout/ErrorPage'
-import { PageIntrouvable } from '../../src/components/layout/NotFoundPage'
+import { ErrorPage } from '../../src/components/layout/ErrorPage'
+import { NotFoundPage } from '../../src/components/layout/NotFoundPage'
 
 describe('pages d’erreur (069, E60)', () => {
 	test('la page d’erreur parle français, demande noindex et ne montre aucune trace', () => {
-		const html = renderToStaticMarkup(<PageEnErreur reessayer={() => undefined} />)
+		const html = renderToStaticMarkup(<ErrorPage reessayer={() => undefined} />)
 
 		expect(html).toContain('Un problème est survenu')
 		expect(html).toContain('<meta name="robots" content="noindex, nofollow"/>')
@@ -14,7 +14,7 @@ describe('pages d’erreur (069, E60)', () => {
 	})
 
 	test('la 404 a un seul h1 et un lien vers l’accueil', () => {
-		const html = renderToStaticMarkup(<PageIntrouvable />)
+		const html = renderToStaticMarkup(<NotFoundPage />)
 
 		expect(html.match(/<h1/g)).toHaveLength(1)
 		expect(html).toContain('404 - Page non trouvée')

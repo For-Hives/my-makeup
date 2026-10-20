@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next'
-import { reglesRobots } from '@/lib/seo/robots'
+import { robotsRules } from '@/lib/seo/robots'
 
 /**
  * /robots.txt (ticket 115): the only source, there is no public/robots.txt. Open to all except
@@ -7,5 +7,5 @@ import { reglesRobots } from '@/lib/seo/robots'
  * blocked page would never show (src/lib/seo/robots.ts).
  */
 export default function robots(): MetadataRoute.Robots {
-	return reglesRobots()
+	return robotsRules()
 }

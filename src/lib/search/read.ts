@@ -14,7 +14,10 @@ export const READ_TIMEOUT_MS = 8000
 
 export type ReadOutcome<T> = { reussie: true; valeur: T } | { reussie: false }
 
-export async function readWithoutBlocking<T>(lire: () => Promise<T>, delaiMs = READ_TIMEOUT_MS): Promise<ReadOutcome<T>> {
+export async function readWithoutBlocking<T>(
+	lire: () => Promise<T>,
+	delaiMs = READ_TIMEOUT_MS
+): Promise<ReadOutcome<T>> {
 	let timer: ReturnType<typeof setTimeout> | undefined
 	const timeout = new Promise<never>((_, rejeter) => {
 		timer = setTimeout(() => rejeter(new Error('delai')), delaiMs)

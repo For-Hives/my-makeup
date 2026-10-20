@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Cta } from '@/components/blocks/Cta'
 import { Hero } from '@/components/blocks/Hero'
-import { metadonnees } from '@/lib/seo/metadata'
-import { GROUPES_DU_PLAN, pagesFixesLivrees } from '@/lib/seo/sitemap'
+import { pageMetadata } from '@/lib/seo/metadata'
+import { deliveredStaticPages, SITE_MAP_GROUPS } from '@/lib/seo/sitemap'
 import { cheminProfil } from '@/lib/slug'
 import { cachedIndexablePages } from '@/services/public/cached'
 
@@ -11,7 +11,7 @@ import { cachedIndexablePages } from '@/services/public/cached'
 // Next's cache and refreshed by a save of a profile, a talent or an article (ticket 047).
 export const dynamic = 'force-dynamic'
 
-export const metadata: Metadata = metadonnees({
+export const metadata: Metadata = pageMetadata({
 	titre: 'Plan du site',
 	description: 'Le plan du site de My-Makeup',
 	repli:
@@ -24,11 +24,11 @@ export const metadata: Metadata = metadonnees({
  * talents and the publishable profiles, each by the address the sitemap lists for it. The profile links are
  * the only links of the site to the profiles that a crawler reads without running JavaScript.
  */
-export default async function PlanDuSite() {
-	const { profils, talents, articles } = await cachedIndexablePages()
-	const pages = pagesFixesLivrees()
+export default async function SiteMapPage() {
+	const { profils: profiles, talents, articles } = await cachedIndexablePages()
+	const pages = deliveredStaticPages()
 	// Her name, then her slug when two share a name.
-	const parNom = [...profils].sort((a, b) => a.nom.localeCompare(b.nom, 'fr') || a.slug.localeCompare(b.slug))
+	const byName = [...profiles].sort((a, b) => a.nom.localeCompare(b.nom, 'fr') || a.slug.localeCompare(b.slug))
 	return (
 		<main className="relative">
 			<Hero
@@ -50,7 +50,7 @@ export default async function PlanDuSite() {
 							</h2>
 						</header>
 						<div className="prose xl:prose-lg my-8">
-							{GROUPES_DU_PLAN.map(groupe => (
+							{SITE_MAP_GROUPS.map(groupe => (
 								<section key={groupe.id}>
 									<h3>{groupe.titre}</h3>
 									<ul>
@@ -88,11 +88,11 @@ export default async function PlanDuSite() {
 									</ul>
 								</section>
 							)}
-							{parNom.length > 0 && (
+							{byName.length > 0 && (
 								<section>
 									<h3>Maquilleuses</h3>
 									<ul data-testid="plan-des-profils">
-										{parNom.map(profil => (
+										{byName.map(profil => (
 											// No prefetch: a visit of this page must not render every profile.
 											<li key={profil.slug}>
 												<Link href={cheminProfil(profil.slug)} prefetch={false}>

@@ -17,14 +17,14 @@
  */
 
 import { estMontantDePrix } from '../prix'
-import { type ProfileFields, completeness, usableCity } from './completeness'
+import { completeness, type ProfileFields, usableCity } from './completeness'
 import {
-	STATUS_CHOICES,
 	INITIAL_CHOICE,
-	type StatusChoice,
 	INITIAL_STATUS,
 	PROFILE_STATUSES,
 	type ProfileStatus,
+	STATUS_CHOICES,
+	type StatusChoice,
 } from './status'
 
 /** The networks of a profile, as the collection names them. */
@@ -133,7 +133,12 @@ export interface ProfileState {
 
 /** The state of a profile, by the single rule (src/lib/profile/completeness.ts). */
 export function profileState(document: ProfileDocument | null | undefined): ProfileState {
-	const { score, actif: active, publiable: publishable, entierementVide: completelyEmpty } = completeness(profileFields(document))
+	const {
+		score,
+		actif: active,
+		publiable: publishable,
+		entierementVide: completelyEmpty,
+	} = completeness(profileFields(document))
 	return { completeness: score, active: active, publishable: publishable, fullyEmpty: completelyEmpty }
 }
 
@@ -153,8 +158,7 @@ export interface StoredStatus {
 	readonly chosenStatus?: unknown
 }
 
-const isStatus = (statut: unknown): statut is ProfileStatus =>
-	(PROFILE_STATUSES as readonly unknown[]).includes(statut)
+const isStatus = (statut: unknown): statut is ProfileStatus => (PROFILE_STATUSES as readonly unknown[]).includes(statut)
 
 const isChoice = (choix: unknown): choix is StatusChoice => (STATUS_CHOICES as readonly unknown[]).includes(choix)
 
@@ -188,7 +192,8 @@ export function statusAfter({
 }): { status: ProfileStatus; chosenStatus: StatusChoice } {
 	const storedStatus = isStatus(avant?.status) ? avant.status : INITIAL_STATUS
 	const storedChoice = isChoice(avant?.chosenStatus) ? avant.chosenStatus : INITIAL_CHOICE
-	const keptChoice: StatusChoice = storedStatus === 'hidden' && storedChoice === INITIAL_CHOICE ? 'hidden' : storedChoice
+	const keptChoice: StatusChoice =
+		storedStatus === 'hidden' && storedChoice === INITIAL_CHOICE ? 'hidden' : storedChoice
 	let chosenStatus = keptChoice
 	if (isChoice(apres.chosenStatus) && apres.chosenStatus !== storedChoice) chosenStatus = apres.chosenStatus
 	else if (isStatus(apres.status) && apres.status !== storedStatus) chosenStatus = apres.status

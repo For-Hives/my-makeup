@@ -2,7 +2,7 @@
 
 Une sonde lit le site en ligne comme une visiteuse anonyme, sans jamais rien y écrire. C'est la seule exception à la règle « rien vers le site en ligne » ([`CLAUDE.md`](../../CLAUDE.md), interdit 5) : tous les autres tests visent le banc local.
 
-Les adresses du site ne changent pas avec la v3 (`src/lib/urls-gelees.ts`) : les mêmes sondes lisent aujourd'hui le site actuel, et la v3 après la bascule.
+Les adresses du site ne changent pas avec la v3 (`src/lib/frozen-urls.ts`) : les mêmes sondes lisent aujourd'hui le site actuel, et la v3 après la bascule.
 
 ## Lancer
 

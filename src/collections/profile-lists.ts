@@ -2,15 +2,15 @@ import type { CollectionBeforeChangeHook, DateField, Field, NumberField, Textare
 import { PRIX_MAX, PRIX_MIN } from '../lib/prix'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import {
-	dayDate,
-	rowIdentities,
 	DESCRIPTION_MAX_LENGTH,
-	NAME_MAX_LENGTH,
 	dateMessage,
+	dayDate,
 	endMessage,
-	priceMessage,
-	textMessage,
+	NAME_MAX_LENGTH,
 	obtainMessage,
+	priceMessage,
+	rowIdentities,
+	textMessage,
 } from '../lib/profile/lists'
 
 /**

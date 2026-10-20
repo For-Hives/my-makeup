@@ -10,8 +10,8 @@
  * - Texts: 70 characters at most, 2 000 for the description; dates are days (« YYYY-MM-DD »).
  */
 
-import { DESCRIPTION_MAX_LENGTH, NAME_MAX_LENGTH, dateMessage, endMessage, textMessage } from '../profile/lists'
 import { text } from '../profile/display-name'
+import { DESCRIPTION_MAX_LENGTH, dateMessage, endMessage, NAME_MAX_LENGTH, textMessage } from '../profile/lists'
 import { period } from '../profile/public-view'
 import { formDay, type ListDefinition, type RowErrors, type RowValues } from './list'
 

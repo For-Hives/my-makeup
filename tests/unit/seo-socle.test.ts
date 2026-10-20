@@ -2,10 +2,10 @@ import { describe, expect, test } from 'bun:test'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { serializeJsonLd } from '../../src/lib/seo/json-ld'
-import { metadonnees } from '../../src/lib/seo/metadata'
-import { CHEMINS_NOINDEX, NOINDEX, reglesRobots, robotsPourChemin } from '../../src/lib/seo/robots'
-import { DESCRIPTION_MAX, DESCRIPTION_MIN, descriptionMeta, TITRE_MAX, titrePage } from '../../src/lib/seo/text'
-import { urlCanonique } from '../../src/lib/seo/url'
+import { pageMetadata } from '../../src/lib/seo/metadata'
+import { NOINDEX, NOINDEX_PATHS, robotsForPath, robotsRules } from '../../src/lib/seo/robots'
+import { DESCRIPTION_MAX, DESCRIPTION_MIN, descriptionMeta, MAX_TITLE, pageTitle } from '../../src/lib/seo/text'
+import { canonicalUrl } from '../../src/lib/seo/url'
 import { proxy } from '../../src/proxy'
 
 const RACINE = join(import.meta.dir, '../..')
@@ -13,17 +13,17 @@ const RACINE = join(import.meta.dir, '../..')
 describe('titres (U44)', () => {
 	test('jamais « null null » ni « undefined », même avec des valeurs vides', () => {
 		for (const valeur of [null, undefined, '', '  ', 'null null', 'undefined']) {
-			const titre = titrePage(valeur)
+			const titre = pageTitle(valeur)
 			expect(titre).toBe('My-Makeup')
 		}
-		expect(titrePage('Léa null Martin')).toBe('Léa Martin | My-Makeup')
+		expect(pageTitle('Léa null Martin')).toBe('Léa Martin | My-Makeup')
 	})
 
 	test('60 caractères au plus, la marque ajoutée quand elle tient', () => {
-		expect(titrePage('Blog')).toBe('Blog | My-Makeup')
+		expect(pageTitle('Blog')).toBe('Blog | My-Makeup')
 		const long = 'Maquilleuse de mariage à Annecy : des profils vérifiés, des tarifs et des disponibilités'
-		expect(titrePage(long).length).toBeLessThanOrEqual(TITRE_MAX)
-		expect(titrePage(long).endsWith('…')).toBe(true)
+		expect(pageTitle(long).length).toBeLessThanOrEqual(MAX_TITLE)
+		expect(pageTitle(long).endsWith('…')).toBe(true)
 	})
 })
 
@@ -53,14 +53,14 @@ describe('adresse canonique (U46)', () => {
 		['https://www.my-makeup.fr/profil/abc/?utm=1', 'https://my-makeup.fr/profil/abc'],
 		['//autre-hote.test/x', 'https://my-makeup.fr/autre-hote.test/x'],
 	])('%s', (entree, attendu) => {
-		expect(urlCanonique(entree)).toBe(attendu)
+		expect(canonicalUrl(entree)).toBe(attendu)
 	})
 
 	test('une page indexable porte sa canonique, une page noindex n’en a pas', () => {
-		const indexable = metadonnees({ titre: 'Blog', description: '', repli: 'x'.repeat(80), chemin: '/blog/' })
+		const indexable = pageMetadata({ titre: 'Blog', description: '', repli: 'x'.repeat(80), chemin: '/blog/' })
 		expect(indexable.alternates?.canonical).toBe('https://my-makeup.fr/blog')
 		expect(indexable.robots).toBeUndefined()
-		const exclue = metadonnees({
+		const exclue = pageMetadata({
 			titre: 'Blog',
 			description: '',
 			repli: 'x'.repeat(80),
@@ -82,15 +82,15 @@ describe('JSON-LD (U50)', () => {
 
 describe('robots (U52)', () => {
 	test('/auth et /search, sous-chemins compris, sans toucher aux autres', () => {
-		expect(CHEMINS_NOINDEX).toEqual(['/auth', '/search'])
+		expect(NOINDEX_PATHS).toEqual(['/auth', '/search'])
 		for (const chemin of ['/auth', '/auth/signin', '/search', '/search?city=Annecy'])
-			expect(robotsPourChemin(chemin)).toBe(NOINDEX)
+			expect(robotsForPath(chemin)).toBe(NOINDEX)
 		for (const chemin of ['/', '/authentique', '/searching', '/profil/abc'])
-			expect(robotsPourChemin(chemin)).toBeUndefined()
+			expect(robotsForPath(chemin)).toBeUndefined()
 	})
 
 	test('plus de noindex pour tout le site selon APP_ENV : il n’y a pas de préprod (ticket 232)', () => {
-		for (const chemin of ['/', '/profil/abc', '/api/health']) expect(robotsPourChemin(chemin)).toBeUndefined()
+		for (const chemin of ['/', '/profil/abc', '/api/health']) expect(robotsForPath(chemin)).toBeUndefined()
 	})
 
 	test('le proxy ne lit plus APP_ENV : même déclaré « preprod », il ne pose le noindex que sur /auth et /search', () => {
@@ -142,19 +142,19 @@ describe('reprise par les assistants', () => {
 
 describe('robots.txt (E63)', () => {
 	test('ouvre tout sauf l’API, avec le sitemap en adresse absolue', () => {
-		const { rules, sitemap } = reglesRobots()
+		const { rules, sitemap } = robotsRules()
 		expect(rules).toEqual({ userAgent: '*', allow: '/', disallow: ['/api/'] })
 		expect(sitemap).toBe('https://my-makeup.fr/sitemap.xml')
 	})
 
 	test('n’interdit ni /auth ni /search, et ne vise aucun robot d’assistant', () => {
-		const texte = JSON.stringify(reglesRobots())
-		for (const chemin of CHEMINS_NOINDEX) expect(texte).not.toContain(chemin)
+		const texte = JSON.stringify(robotsRules())
+		for (const chemin of NOINDEX_PATHS) expect(texte).not.toContain(chemin)
 		expect(texte).not.toMatch(/GPTBot|ClaudeBot|CCBot|Google-Extended|Perplexity|Claude-|OAI-/)
 	})
 
 	test('une seule source : la route lit reglesRobots, aucun fichier statique', () => {
 		expect(existsSync(join(RACINE, 'public/robots.txt'))).toBe(false)
-		expect(readFileSync(join(RACINE, 'src/app/robots.ts'), 'utf8')).toContain('reglesRobots()')
+		expect(readFileSync(join(RACINE, 'src/app/robots.ts'), 'utf8')).toContain('robotsRules()')
 	})
 })

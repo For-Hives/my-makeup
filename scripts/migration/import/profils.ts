@@ -43,7 +43,7 @@
  */
 
 import { estMontantDePrix, parsePrice, prixMinimal } from '../../../src/lib/prix'
-import { type ProfileFields, isFullyEmpty, type ProfileNetworks } from '../../../src/lib/profile/completeness'
+import { isFullyEmpty, type ProfileFields, type ProfileNetworks } from '../../../src/lib/profile/completeness'
 import { validateContactEmail, validatePhone } from '../../../src/lib/profile/contact-details'
 import { type ProfileDocument, profileState, statusAfter } from '../../../src/lib/profile/state'
 import { INITIAL_CHOICE, type ProfileStatus } from '../../../src/lib/profile/status'

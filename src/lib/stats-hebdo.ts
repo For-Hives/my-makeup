@@ -26,7 +26,7 @@ import { z } from 'zod'
 import { EVENT_CODES, EVENT_TYPES } from './auth/auth-log'
 import { ETATS_DU_MAIL, STATUTS_DE_DEMANDE } from './contact/etats'
 import { completeness } from './profile/completeness'
-import { profileFields, type ProfileDocument } from './profile/state'
+import { type ProfileDocument, profileFields } from './profile/state'
 
 /** A published profile has this status; the rest is a draft or hidden. */
 const STATUT_PUBLIE = 'published'

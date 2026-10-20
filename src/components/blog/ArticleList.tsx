@@ -2,7 +2,7 @@ import Link from 'next/link'
 import type { ListedArticle } from '@/services/public/article-list'
 
 /** « 14 octobre 2026 », in the Paris time zone; '' for a missing or unreadable date. */
-export function dateDeLArticle(date: string | null): string {
+export function articleDate(date: string | null): string {
 	if (!date) return ''
 	const instant = new Date(date)
 	if (Number.isNaN(instant.getTime())) return ''
@@ -15,13 +15,13 @@ export function dateDeLArticle(date: string | null): string {
 }
 
 /** The cards of the blog: date, title, excerpt and a link to the article. Server component. */
-export function ListeDesArticles({ articles }: { articles: readonly ListedArticle[] }) {
+export function ArticleList({ articles }: { articles: readonly ListedArticle[] }) {
 	if (articles.length === 0)
 		return <p className="text-gray-700">Aucun article n&apos;est publié pour le moment. Reviens bientôt !</p>
 	return (
 		<ul className="grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-4">
 			{articles.map(article => {
-				const date = dateDeLArticle(article.publieLe)
+				const date = articleDate(article.publieLe)
 				return (
 					<li key={article.slug} className="flex flex-col gap-2">
 						{date && (

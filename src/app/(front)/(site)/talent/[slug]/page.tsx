@@ -6,11 +6,11 @@ import { getPayload } from 'payload'
 import { cache } from 'react'
 import { Cta } from '@/components/blocks/Cta'
 import { Hero } from '@/components/blocks/Hero'
-import { ContenuMarkdown } from '@/components/content/MarkdownContent'
+import { MarkdownContent } from '@/components/content/MarkdownContent'
 import { markdownEnHtml } from '@/lib/markdown'
-import { donneesStructureesDuFilDAriane, NOM_DU_SITE, serializeJsonLd } from '@/lib/seo/json-ld'
-import { metadonneesEditoriales } from '@/lib/seo/metadata'
-import { urlCanonique } from '@/lib/seo/url'
+import { breadcrumbStructuredData, SITE_NAME, serializeJsonLd } from '@/lib/seo/json-ld'
+import { editorialMetadata } from '@/lib/seo/metadata'
+import { canonicalUrl } from '@/lib/seo/url'
 import { cachedTalent } from '@/services/public/cached'
 
 // Rendered at each request: the build runs without a database. The talent is read through the cache of
@@ -25,12 +25,12 @@ export async function generateMetadata({ params }: PageProps<'/talent/[slug]'>):
 	const talent = await readTalentOnce(slug)
 	// The page answers 404 below; its own metadata are those of the 404 page.
 	if (!talent) return {}
-	return metadonneesEditoriales({
+	return editorialMetadata({
 		// The title the newsroom wrote for the tab (50 to 60 characters); the short title of the talent until then.
 		titre: talent.titreDeLaPage || talent.titre,
 		descriptionRedigee: talent.descriptionSeo,
 		autres: [talent.presentation],
-		repli: `${talent.titre} : découvrez les maquilleuses professionnelles de cette spécialité sur ${NOM_DU_SITE}.`,
+		repli: `${talent.titre} : découvrez les maquilleuses professionnelles de cette spécialité sur ${SITE_NAME}.`,
 		chemin: `/talent/${talent.slug}`,
 	})
 }
@@ -45,9 +45,9 @@ export default async function TalentPage({ params }: PageProps<'/talent/[slug]'>
 	const talent = await readTalentOnce(slug)
 	if (!talent) notFound()
 	const html = await markdownEnHtml(talent.contenu)
-	const breadcrumb = donneesStructureesDuFilDAriane([
-		{ nom: 'Accueil', url: urlCanonique('/') },
-		{ nom: talent.titre, url: urlCanonique(`/talent/${talent.slug}`) },
+	const breadcrumb = breadcrumbStructuredData([
+		{ nom: 'Accueil', url: canonicalUrl('/') },
+		{ nom: talent.titre, url: canonicalUrl(`/talent/${talent.slug}`) },
 	])
 	return (
 		<main className="relative">
@@ -65,7 +65,7 @@ export default async function TalentPage({ params }: PageProps<'/talent/[slug]'>
 			<div className="relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0">
 				<div className="mx-auto max-w-2xl">
 					<article>
-						<ContenuMarkdown html={html} />
+						<MarkdownContent html={html} />
 						<Link href="/search" className="btn-primary">
 							Trouver une maquilleuse
 						</Link>

@@ -12,7 +12,7 @@
  */
 
 import { z } from 'zod'
-import { RADIUS_BOUNDS_KM, departmentOfInseeCode, ZONE_MESSAGES } from '../profile/zone'
+import { departmentOfInseeCode, RADIUS_BOUNDS_KM, ZONE_MESSAGES } from '../profile/zone'
 
 /** What the card and the panel call a commune: « Annecy (74) » (plan 02 U16). Never « Annecy () ». */
 export function cityLabel({ nom, departement }: { nom?: unknown; departement?: unknown }): string {

@@ -101,10 +101,7 @@ export default async function ProfilePage() {
 										proprietaire={String(artist.id)}
 									/>
 								) : carte.section === 'description' ? (
-									<DescriptionEditor
-										valeurs={{ description: text(profile.description) }}
-										envoyer={saveMyDescription}
-									/>
+									<DescriptionEditor valeurs={{ description: text(profile.description) }} envoyer={saveMyDescription} />
 								) : carte.section === 'localisation' ? (
 									<LocationEditor
 										valeurs={{

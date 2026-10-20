@@ -1,17 +1,17 @@
 import { rows } from '@/lib/profile/public-view'
 import type { PublicProfile } from '@/services/public/profiles'
-import { ProfileHeader } from './ProfileHeader'
 import { ProfileGallery } from './ProfileGallery'
+import { ProfileHeader } from './ProfileHeader'
 import { ProfileSection } from './ProfileSection'
 import {
-	SkillsSection,
-	SectionContacts,
-	SectionDescription,
-	SectionExperiences,
 	CoursesSection,
 	LanguagesSection,
 	LocationSection,
+	SectionContacts,
+	SectionDescription,
+	SectionExperiences,
 	ServiceOffersSection,
+	SkillsSection,
 } from './ProfileSections'
 
 /**

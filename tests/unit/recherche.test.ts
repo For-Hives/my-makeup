@@ -6,19 +6,19 @@
 
 import { describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
-import { placeMatch, profilePlace, readPlace, type ProfilePlace, sectionsByPlace } from '@/lib/search/place'
 import {
 	field,
 	INPUT_MAX_LENGTH,
+	PAGE_MAX,
 	readPage,
 	readSearch,
-	PAGE_MAX,
-	searchByWord,
-	searchByCity,
-	validSearch,
 	resultsTitle,
+	searchByCity,
+	searchByWord,
 	searchPageUrl,
+	validSearch,
 } from '@/lib/search/input'
+import { type ProfilePlace, placeMatch, profilePlace, readPlace, sectionsByPlace } from '@/lib/search/place'
 import { readDirectory } from '@/services/public/profiles'
 
 /** A profile for the sections: its commune, its département, and whether she travels. */
@@ -101,9 +101,7 @@ describe('U17 : la saisie, normalisée', () => {
 	test('un pays ou une région ne compte que si rien de plus précis n’est écrit', () => {
 		const annecy = profilePlace({ ville: 'Annecy', departement: '74' })
 		expect(placeMatch(annecy, readPlace('Annecy, Suisse'))).toBe('ville')
-		expect(placeMatch(profilePlace({ ville: 'Occitanie', departement: null }), readPlace('Occitanie'))).toBe(
-			'ville'
-		)
+		expect(placeMatch(profilePlace({ ville: 'Occitanie', departement: null }), readPlace('Occitanie'))).toBe('ville')
 	})
 })
 
@@ -245,9 +243,7 @@ describe('le titre et l’adresse', () => {
 	test('le titre dit ce qui a été tapé, jamais où sont les maquilleuses', () => {
 		expect(resultsTitle({ search: '', city: 'Annecy' }, 3)).toBe('3 résultats pour « Annecy »')
 		expect(resultsTitle({ search: 'annecy', city: 'Annecy' }, 1)).toBe('1 résultat pour « Annecy »')
-		expect(resultsTitle({ search: 'mariage', city: 'Annecy' }, 2)).toBe(
-			'2 résultats pour « mariage » à « Annecy »'
-		)
+		expect(resultsTitle({ search: 'mariage', city: 'Annecy' }, 2)).toBe('2 résultats pour « mariage » à « Annecy »')
 		expect(resultsTitle({ search: 'zzqq', city: '' }, 0)).toBe('Aucun résultat pour « zzqq »')
 	})
 

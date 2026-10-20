@@ -2,8 +2,8 @@ import { describe, expect, test } from 'bun:test'
 import { PROFILS_DU_JEU, type ProfilDuJeu } from '@/jeu-fictif/profils'
 import { prixMinimal } from '@/lib/prix'
 import { serializeJsonLd } from '@/lib/seo/json-ld'
-import { donneesStructureesDuProfil, filDArianeDuProfil, metadonneesDuProfil, titreDuProfil } from '@/lib/seo/profile'
-import { DESCRIPTION_MAX, DESCRIPTION_MIN, TITRE_MAX } from '@/lib/seo/text'
+import { profileBreadcrumb, profileMetadata, profileStructuredData, profileTitle } from '@/lib/seo/profile'
+import { DESCRIPTION_MAX, DESCRIPTION_MIN, MAX_TITLE } from '@/lib/seo/text'
 import { type ProfilePageData, type PublicProfile, publicProfileOf } from '@/services/public/profiles'
 import { schemaDuProfil } from '../outils/schema-profil-json-ld'
 
@@ -38,9 +38,9 @@ const type = (cle: string): ProfilDuJeu => {
 describe('titre et description du profil', () => {
 	test('les douze profils types : titre de 60 caractères au plus, description de 70 à 155, jamais « null »', () => {
 		for (const profilType of PROFILS_DU_JEU) {
-			const meta = metadonneesDuProfil(lireLeType(profilType))
+			const meta = profileMetadata(lireLeType(profilType))
 			const titre = String((meta.title as { absolute: string }).absolute)
-			expect(titre.length, profilType.cle).toBeLessThanOrEqual(TITRE_MAX)
+			expect(titre.length, profilType.cle).toBeLessThanOrEqual(MAX_TITLE)
 			expect(titre, profilType.cle).not.toMatch(/\b(?:null|undefined|NaN)\b/)
 			expect(String(meta.description).length, profilType.cle).toBeGreaterThanOrEqual(DESCRIPTION_MIN)
 			expect(String(meta.description).length, profilType.cle).toBeLessThanOrEqual(DESCRIPTION_MAX)
@@ -48,24 +48,24 @@ describe('titre et description du profil', () => {
 	})
 
 	test('le titre dit le nom, la spécialité et la ville, et la marque quand elle tient', () => {
-		expect(titreDuProfil({ nom: 'Léa Martin', specialite: 'Maquillage mariage', lieu: 'Annecy' })).toBe(
+		expect(profileTitle({ nom: 'Léa Martin', specialite: 'Maquillage mariage', lieu: 'Annecy' })).toBe(
 			'Léa Martin – Maquillage mariage à Annecy | My-Makeup'
 		)
-		expect(titreDuProfil({ nom: 'Léa Martin', specialite: null, lieu: 'Annecy' })).toBe(
+		expect(profileTitle({ nom: 'Léa Martin', specialite: null, lieu: 'Annecy' })).toBe(
 			'Léa Martin – maquilleuse à Annecy | My-Makeup'
 		)
-		expect(titreDuProfil({ nom: 'Léa Martin', specialite: null, lieu: null })).toBe(
+		expect(profileTitle({ nom: 'Léa Martin', specialite: null, lieu: null })).toBe(
 			'Léa Martin – maquilleuse professionnelle | My-Makeup'
 		)
-		const long = titreDuProfil({ nom: 'A'.repeat(70), specialite: 'x', lieu: null })
-		expect(long.length).toBeLessThanOrEqual(TITRE_MAX)
+		const long = profileTitle({ nom: 'A'.repeat(70), specialite: 'x', lieu: null })
+		expect(long.length).toBeLessThanOrEqual(MAX_TITLE)
 	})
 
 	test('publiable : adresse canonique absolue sans barre finale ; sinon noindex et pas de canonique', () => {
-		const publie = metadonneesDuProfil(lireLeType(type('reference')))
+		const publie = profileMetadata(lireLeType(type('reference')))
 		expect(publie.alternates?.canonical).toBe(`https://my-makeup.fr/profil/${type('reference').attendu.slug}`)
 		expect(publie.robots).toBeUndefined()
-		const brouillon = metadonneesDuProfil(lireLeType(type('actif-non-publiable')))
+		const brouillon = profileMetadata(lireLeType(type('actif-non-publiable')))
 		expect(brouillon.alternates).toBeUndefined()
 		expect(brouillon.robots).toEqual({ index: false, follow: true })
 	})
@@ -74,14 +74,14 @@ describe('titre et description du profil', () => {
 describe('U47 : ProfilePage → Person, avec des Offer en euros', () => {
 	test('les douze profils types : le schéma strict passe', () => {
 		for (const profilType of PROFILS_DU_JEU) {
-			const donnees = donneesStructureesDuProfil(lireLeType(profilType))
+			const donnees = profileStructuredData(lireLeType(profilType))
 			expect(() => schemaDuProfil.parse(JSON.parse(serializeJsonLd(donnees))), profilType.cle).not.toThrow()
 		}
 	})
 
 	test('le profil de référence : nom, spécialité, zone, photo, réseaux, compétences, langues, offres', () => {
 		const profil = lireLeType(type('reference'))
-		const donnees = donneesStructureesDuProfil(profil) as { '@graph': Record<string, unknown>[] }
+		const donnees = profileStructuredData(profil) as { '@graph': Record<string, unknown>[] }
 		const page = donnees['@graph'][0] as { mainEntity: Record<string, unknown> }
 		const personne = page.mainEntity
 		expect(personne).toMatchObject({ '@type': 'Person', name: profil.nom, jobTitle: profil.specialite })
@@ -100,7 +100,7 @@ describe('U47 : ProfilePage → Person, avec des Offer en euros', () => {
 
 	test('U37 : le prix du JSON-LD est le prix minimal du profil', () => {
 		const profil = lireLeType(type('reference'))
-		const donnees = donneesStructureesDuProfil(profil) as {
+		const donnees = profileStructuredData(profil) as {
 			'@graph': { mainEntity: { makesOffer: { price?: number }[] } }[]
 		}
 		const prix = (donnees['@graph'][0]?.mainEntity.makesOffer ?? []).flatMap(({ price }) => price ?? [])
@@ -117,7 +117,7 @@ describe('U47 : ProfilePage → Person, avec des Offer en euros', () => {
 				{ name: 'Soirée', priceText: '60 €', priceFrom: 60 },
 			],
 		})
-		const personne = (donneesStructureesDuProfil(profil) as { '@graph': { mainEntity: { makesOffer: object[] } }[] })[
+		const personne = (profileStructuredData(profil) as { '@graph': { mainEntity: { makesOffer: object[] } }[] })[
 			'@graph'
 		][0]?.mainEntity
 		expect(personne?.makesOffer).toHaveLength(2)
@@ -131,7 +131,7 @@ describe('U48 : rien de non public, rien de nul', () => {
 	test('ni email, ni téléphone, ni adresse postale, ni note, quel que soit le profil, même publié', () => {
 		for (const profilType of PROFILS_DU_JEU) {
 			const profil = lireLeType(profilType)
-			const texte = JSON.stringify(donneesStructureesDuProfil(profil))
+			const texte = JSON.stringify(profileStructuredData(profil))
 			for (const interdit of [
 				'AggregateRating',
 				'aggregateRating',
@@ -154,13 +154,13 @@ describe('U48 : rien de non public, rien de nul', () => {
 		const profilType = type('sans-contact-public')
 		const profil = lireLeType(profilType)
 		expect(profil.coordonnees).toBeNull()
-		const texte = JSON.stringify(donneesStructureesDuProfil(profil))
+		const texte = JSON.stringify(profileStructuredData(profil))
 		expect(texte).not.toContain(profilType.profil.contactDetails?.email ?? 'absent')
 		expect(texte).not.toContain(profilType.profil.contactDetails?.phone ?? 'absent')
 	})
 
 	test('un profil non publiable n’a que son fil d’Ariane, pas de personne', () => {
-		const donnees = donneesStructureesDuProfil(lireLeType(type('actif-non-publiable'))) as {
+		const donnees = profileStructuredData(lireLeType(type('actif-non-publiable'))) as {
 			'@graph': { '@type': string }[]
 		}
 		expect(donnees['@graph'].map(noeud => noeud['@type'])).toEqual(['BreadcrumbList'])
@@ -169,7 +169,7 @@ describe('U48 : rien de non public, rien de nul', () => {
 
 describe('U49 : fil d’Ariane', () => {
 	test('l’accueil, puis le profil, en adresses absolues et positions croissantes', () => {
-		const fil = filDArianeDuProfil({ nom: 'Léa Martin', slug: 'lea-martin' })
+		const fil = profileBreadcrumb({ nom: 'Léa Martin', slug: 'lea-martin' })
 		expect(fil.itemListElement).toEqual([
 			{ '@type': 'ListItem', position: 1, name: 'Accueil', item: 'https://my-makeup.fr' },
 			{ '@type': 'ListItem', position: 2, name: 'Léa Martin', item: 'https://my-makeup.fr/profil/lea-martin' },
@@ -188,7 +188,7 @@ describe('U50 : un texte avec une balise de fermeture de script', () => {
 			skills: [{ name: piege }],
 			serviceOffers: [{ name: piege, description: piege, priceFrom: 50, priceText: '50 €' }],
 		})
-		const donnees = donneesStructureesDuProfil(profil)
+		const donnees = profileStructuredData(profil)
 		const sortie = serializeJsonLd(donnees)
 		expect(sortie).not.toMatch(/[<>&]/)
 		expect(sortie.toLowerCase()).not.toContain('</script')

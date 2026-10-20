@@ -1,15 +1,15 @@
 import { MesureDePageIntrouvable } from '@/components/analytics/MesureDePage'
-import { PageIntrouvable } from '@/components/layout/NotFoundPage'
-import { metadonneesIntrouvable } from '@/lib/seo/metadata'
+import { NotFoundPage } from '@/components/layout/NotFoundPage'
+import { notFoundMetadata } from '@/lib/seo/metadata'
 
-export const metadata = metadonneesIntrouvable('Page non trouvée')
+export const metadata = notFoundMetadata('Page non trouvée')
 
 // The 404 counts itself once, with the kind of address it was (ticket 145).
-export default function PageNonTrouvee() {
+export default function NotFoundRoute() {
 	return (
 		<>
 			<MesureDePageIntrouvable />
-			<PageIntrouvable />
+			<NotFoundPage />
 		</>
 	)
 }

@@ -2,14 +2,14 @@ import { describe, expect, test } from 'bun:test'
 import {
 	altWork,
 	contacts,
-	experiences,
 	courses,
-	rows,
+	experiences,
 	monthYear,
 	names,
-	period,
-	serviceOffers,
 	networkUrl,
+	period,
+	rows,
+	serviceOffers,
 } from '@/lib/profile/public-view'
 
 /**

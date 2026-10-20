@@ -1,14 +1,14 @@
 /** The links of the shared template, taken from the site as it is online (ticket 068). */
 
-export interface LienDeMenu {
+export interface MenuLink {
 	nom: string
 	href: string
 	description: string
 }
 
-export type EntreeDeNav = { nom: string; href: string } | { nom: string; enfants: readonly LienDeMenu[] }
+export type NavEntry = { nom: string; href: string } | { nom: string; enfants: readonly MenuLink[] }
 
-export const NAVIGATION: readonly EntreeDeNav[] = [
+export const NAVIGATION: readonly NavEntry[] = [
 	{
 		nom: 'Particulier',
 		enfants: [
@@ -69,17 +69,17 @@ export const NAVIGATION: readonly EntreeDeNav[] = [
 	{ nom: 'Blog', href: '/blog' },
 ]
 
-export const LIEN_RECHERCHE = { nom: 'Trouver une maquilleuse', href: '/search' }
-export const LIEN_CONNEXION = { nom: 'Me connecter', href: '/auth/signin' }
+export const SEARCH_LINK = { nom: 'Trouver une maquilleuse', href: '/search' }
+export const SIGN_IN_LINK = { nom: 'Me connecter', href: '/auth/signin' }
 /** What the navigation shows instead of the sign-in link when a makeup artist is signed in (ticket 078). */
-export const LIEN_ESPACE = { nom: 'Mon espace', href: '/auth/profil' }
+export const DASHBOARD_LINK = { nom: 'Mon espace', href: '/auth/profil' }
 
-export interface ColonneDePied {
+export interface FooterColumn {
 	titre: string
 	liens: readonly { nom: string; href: string }[]
 }
 
-export const COLONNES_DE_PIED: readonly ColonneDePied[] = [
+export const FOOTER_COLUMNS: readonly FooterColumn[] = [
 	{
 		titre: 'Particuliers',
 		liens: [
@@ -117,7 +117,7 @@ export const COLONNES_DE_PIED: readonly ColonneDePied[] = [
 	},
 ]
 
-export const RESEAUX = [
+export const NETWORKS = [
 	{
 		nom: 'Instagram My-Makeup',
 		href: 'https://www.instagram.com/forhives.my_makeup.fr/',
@@ -137,12 +137,12 @@ export const RESEAUX = [
 ] as const
 
 /** Every address of the site the template links to. */
-export function cheminsInternes(): string[] {
-	const chemins = new Set<string>([LIEN_RECHERCHE.href, LIEN_CONNEXION.href, '/'])
-	for (const entree of NAVIGATION) {
-		if ('href' in entree) chemins.add(entree.href)
-		else for (const enfant of entree.enfants) chemins.add(enfant.href)
+export function internalPaths(): string[] {
+	const paths = new Set<string>([SEARCH_LINK.href, SIGN_IN_LINK.href, '/'])
+	for (const entry of NAVIGATION) {
+		if ('href' in entry) paths.add(entry.href)
+		else for (const child of entry.enfants) paths.add(child.href)
 	}
-	for (const colonne of COLONNES_DE_PIED) for (const lien of colonne.liens) chemins.add(lien.href)
-	return [...chemins]
+	for (const column of FOOTER_COLUMNS) for (const link of column.liens) paths.add(link.href)
+	return [...paths]
 }

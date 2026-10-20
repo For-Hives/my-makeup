@@ -1,25 +1,25 @@
 import Image from 'next/image'
 import { MesureDeRecherche } from '@/components/analytics/MesureDePage'
-import { BlocDeRecherche } from '@/components/blocks/SearchBlock'
-import { NoResult, SearchFailed } from '@/components/search/SearchStates'
+import { SearchBlock } from '@/components/blocks/SearchBlock'
 import { ResultList } from '@/components/search/ResultList'
 import { ResultPages } from '@/components/search/ResultPages'
+import { NoResult, SearchFailed } from '@/components/search/SearchStates'
 import { empreinte } from '@/lib/analytics/doublon'
 import { trancheDeResultats } from '@/lib/analytics/valeurs'
-import { readWithoutBlocking } from '@/lib/search/read'
-import { sectionsByPlace } from '@/lib/search/place'
+import { readSearch, resultsTitle, searchByCity, searchByWord } from '@/lib/search/input'
 import { paginate, sectionsOfPage } from '@/lib/search/pagination'
+import { sectionsByPlace } from '@/lib/search/place'
+import { readWithoutBlocking } from '@/lib/search/read'
 import { find } from '@/lib/search/results'
-import { readSearch, searchByWord, searchByCity, resultsTitle } from '@/lib/search/input'
-import { metadonnees } from '@/lib/seo/metadata'
-import { cachedDirectoryWithTexts, cachedDirectory } from '@/services/public/cached'
+import { pageMetadata } from '@/lib/seo/metadata'
+import { cachedDirectory, cachedDirectoryWithTexts } from '@/services/public/cached'
 
 // The address is the search: read at each request. The directory it ranks is read through the cache
 // of Next, tagged `profils` (ticket 047).
 export const dynamic = 'force-dynamic'
 
 // Never indexed: no canonical address, a noindex tag here and a noindex header from the proxy.
-export const metadata = metadonnees({
+export const metadata = pageMetadata({
 	titre: 'Recherche de maquilleuse',
 	description: 'Recherchez la maquilleuse professionnelle qui vous correspond en quelques clics sur My-Makeup.',
 	repli: 'Recherchez la maquilleuse professionnelle qui vous correspond en quelques clics sur My-Makeup.',
@@ -47,7 +47,7 @@ export default async function SearchPage({ searchParams }: PageProps<'/search'>)
 	if (!searchByCity(query) && !searchByWord(query)) {
 		return (
 			<main className="relative flex flex-1 flex-col">
-				<BlocDeRecherche search={search} city={city} surLaPageDeRecherche />
+				<SearchBlock search={search} city={city} surLaPageDeRecherche />
 				<div className="flex w-full flex-col items-center justify-center gap-4 px-4 py-8 md:py-16 2xl:py-32">
 					<h1 className="font-bold text-2xl text-gray-800">Rechercher une maquilleuse</h1>
 					<div className="flex flex-col items-center justify-center gap-8">
@@ -65,7 +65,7 @@ export default async function SearchPage({ searchParams }: PageProps<'/search'>)
 	if (!reading.reussie)
 		return (
 			<main className="relative flex flex-1 flex-col">
-				<BlocDeRecherche search={search} city={city} surLaPageDeRecherche />
+				<SearchBlock search={search} city={city} surLaPageDeRecherche />
 				<SearchFailed recherche={query} />
 			</main>
 		)
@@ -90,7 +90,7 @@ export default async function SearchPage({ searchParams }: PageProps<'/search'>)
 
 	return (
 		<main className="relative flex flex-1 flex-col">
-			<BlocDeRecherche search={search} city={city} surLaPageDeRecherche />
+			<SearchBlock search={search} city={city} surLaPageDeRecherche />
 			{/* Two facts and a hash: never the words (ticket 145). Page 1 and page 2 are the same search. */}
 			<MesureDeRecherche
 				aUneVille={city !== ''}

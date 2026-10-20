@@ -16,8 +16,8 @@
  */
 
 import { z } from 'zod'
-import { NAME_MAX_LENGTH } from '../profile/lists'
 import { text } from '../profile/display-name'
+import { NAME_MAX_LENGTH } from '../profile/lists'
 
 export const BULLET_LENGTH = NAME_MAX_LENGTH
 /** More chips than any makeup artist lists: a request beyond it is not a list she edited. */

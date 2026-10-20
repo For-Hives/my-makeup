@@ -1,10 +1,10 @@
 import type { Metadata } from 'next'
 import { Cta } from '@/components/blocks/Cta'
 import { Hero } from '@/components/blocks/Hero'
-import { AvantagesMaquilleuses } from '@/components/static-pages/ArtistBenefits'
-import { metadonnees } from '@/lib/seo/metadata'
+import { ArtistBenefits } from '@/components/static-pages/ArtistBenefits'
+import { pageMetadata } from '@/lib/seo/metadata'
 
-export const metadata: Metadata = metadonnees({
+export const metadata: Metadata = pageMetadata({
 	titre: 'Pourquoi My-Makeup ? en tant que maquilleuse',
 	description: 'Découvrez pourquoi vous devriez rejoindre My-Makeup en tant que maquilleuse professionnelle',
 	repli:
@@ -12,7 +12,7 @@ export const metadata: Metadata = metadonnees({
 	chemin: '/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse',
 })
 
-export default function PagePourquoiRejoindre() {
+export default function WhyJoinPage() {
 	return (
 		<main className="relative">
 			<Hero
@@ -27,7 +27,7 @@ export default function PagePourquoiRejoindre() {
 				recherche={false}
 				inscription
 			/>
-			<AvantagesMaquilleuses />
+			<ArtistBenefits />
 			<Cta />
 		</main>
 	)

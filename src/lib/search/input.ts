@@ -56,8 +56,7 @@ export function readSearch(parametres: Record<string, unknown> = {}): Search {
 }
 
 /** False when there is nothing to look for (U19): no term and no city. */
-export const validSearch = ({ search, city }: Pick<Search, 'search' | 'city'>): boolean =>
-	search !== '' || city !== ''
+export const validSearch = ({ search, city }: Pick<Search, 'search' | 'city'>): boolean => search !== '' || city !== ''
 
 /**
  * A search by a word, alone or with a city: a term that is not the city itself. The page of the results

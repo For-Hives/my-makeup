@@ -132,9 +132,7 @@ describe('Une zone mal formée est refusée en français, et rien ne change', ()
 		for (const radiusKm of [201, -1, 12.5, 1000]) {
 			const refus = await modifier(compte, profil, { radiusKm })
 			expect(refus.statut, String(radiusKm)).toBe(400)
-			expect(champsRefuses(refus.corps), String(radiusKm)).toEqual([
-				{ path: 'radiusKm', message: ZONE_MESSAGES.rayon },
-			])
+			expect(champsRefuses(refus.corps), String(radiusKm)).toEqual([{ path: 'radiusKm', message: ZONE_MESSAGES.rayon }])
 		}
 		expect(await zoneStockee(profil)).toEqual(avant)
 
@@ -229,9 +227,7 @@ describe('Une zone mal formée est refusée en français, et rien ne change', ()
 		])
 		const codeSeul = await modifier(compte, profil, { city: { inseeCode: '69123' } })
 		expect(codeSeul.statut).toBe(400)
-		expect(champsRefuses(codeSeul.corps)).toEqual([
-			{ path: 'city.name', message: ZONE_MESSAGES.codeInseeSansNom },
-		])
+		expect(champsRefuses(codeSeul.corps)).toEqual([{ path: 'city.name', message: ZONE_MESSAGES.codeInseeSansNom }])
 		expect((await zoneStockee(profil)).city).toEqual(ANNECY_STOCKEE)
 
 		// A new commune without coordinates does not keep those of the former one.
@@ -264,9 +260,7 @@ describe('Une zone mal formée est refusée en français, et rien ne change', ()
 		for (const nom of ['moi@exemple.test', 'www.site-fictif.test', 'St. Gervais', 'Annecy & alentours']) {
 			const refus = await modifier(compte, profil, { city: { ...ANNECY, name: nom } })
 			expect(refus.statut, nom).toBe(400)
-			expect(champsRefuses(refus.corps), nom).toEqual([
-				{ path: 'city.name', message: ZONE_MESSAGES.nomCaracteres },
-			])
+			expect(champsRefuses(refus.corps), nom).toEqual([{ path: 'city.name', message: ZONE_MESSAGES.nomCaracteres }])
 		}
 		expect((await zoneStockee(profil)).city).toEqual(ANNECY_STOCKEE)
 		// Its form only: whether the name is the one of its code, the list of the space and of the import says it.

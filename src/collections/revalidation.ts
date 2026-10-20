@@ -11,7 +11,7 @@ import type {
 import { estUnImport } from '../lib/contexte-import'
 import { PUBLISHED_STATUS } from '../lib/profile/status'
 import { type Cibles, type ContenuPublic, ciblesDuChangement, type EtatPublic } from '../lib/revalidation'
-import { adressesDuChangement, cleSiLEnvoiEstPermis, signalerPlusTard } from '../lib/seo/indexnow'
+import { changedUrls, keyIfSubmitAllowed, reportLater } from '../lib/seo/indexnow'
 
 /**
  * The refresh of the public pages (ticket 047): when a profile, an article or a talent is created,
@@ -120,10 +120,10 @@ export function signalerAuxMoteurs(
 	avant: EtatPublic | null,
 	apres: EtatPublic | null
 ): void {
-	const cle = cleSiLEnvoiEstPermis()
+	const cle = keyIfSubmitAllowed()
 	if (cle === undefined) return
 	try {
-		signalerPlusTard(adressesDuChangement(contenu, avant, apres), {
+		reportLater(changedUrls(contenu, avant, apres), {
 			cle,
 			journal: {
 				info: message => req.payload.logger.info(message),

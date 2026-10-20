@@ -6,9 +6,9 @@
 import { describe, expect, test } from 'bun:test'
 import { NextRequest } from 'next/server'
 import { createRateLimit } from '@/lib/auth/rate-limit'
+import { PER_PAGE, paginate, sectionsOfPage } from '@/lib/search/pagination'
 import { rateLimitSearch, SEARCHES_PER_MINUTE } from '@/lib/search/rate-limit'
 import { READ_TIMEOUT_MS, readWithoutBlocking } from '@/lib/search/read'
-import { PER_PAGE, paginate, sectionsOfPage } from '@/lib/search/pagination'
 import { proxy } from '@/proxy'
 
 describe('U18 et E41 : les pages de 20, sans doublon', () => {

@@ -1,7 +1,7 @@
 import type { CollectionConfig, TextFieldSingleValidation } from 'payload'
 import { text } from 'payload/shared'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
-import { TITRE_MAX, TITRE_MIN_DES_TALENTS } from '../lib/seo/text'
+import { MAX_TITLE, TALENT_MIN_TITLE } from '../lib/seo/text'
 import {
 	ACCES_REDACTION,
 	champPublieLe,
@@ -24,8 +24,8 @@ export const validerTitreDeLaPage: TextFieldSingleValidation = (valeur, args) =>
 	const base = text(valeur, args)
 	if (base !== true || typeof valeur !== 'string' || valeur.trim() === '') return base
 	const titre = valeur.trim()
-	if (titre.length < TITRE_MIN_DES_TALENTS || titre.length > TITRE_MAX)
-		return `Le titre de la page fait de ${TITRE_MIN_DES_TALENTS} à ${TITRE_MAX} caractères ; celui-ci en compte ${titre.length}.`
+	if (titre.length < TALENT_MIN_TITLE || titre.length > MAX_TITLE)
+		return `Le titre de la page fait de ${TALENT_MIN_TITLE} à ${MAX_TITLE} caractères ; celui-ci en compte ${titre.length}.`
 	const titreAffiche = (args.siblingData as { seo_title?: unknown } | undefined)?.seo_title
 	const h1 = typeof titreAffiche === 'string' ? titreAffiche.trim() : ''
 	if (titre === h1) return 'Le titre de la page doit être différent du titre affiché en haut de la page.'
@@ -66,7 +66,7 @@ export const Talents: CollectionConfig<'talents'> = {
 			type: 'text',
 			validate: validerTitreDeLaPage,
 			admin: {
-				description: `De ${TITRE_MIN_DES_TALENTS} à ${TITRE_MAX} caractères, différent du titre affiché en haut de la page. Vide : le titre du talent, suivi du nom du site.`,
+				description: `De ${TALENT_MIN_TITLE} à ${MAX_TITLE} caractères, différent du titre affiché en haut de la page. Vide : le titre du talent, suivi du nom du site.`,
 			},
 		},
 		{ name: 'description', label: 'Présentation', type: 'textarea' },

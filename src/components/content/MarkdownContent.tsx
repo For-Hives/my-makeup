@@ -3,7 +3,7 @@
  * (src/lib/markdown.ts), which sanitizes it and leaves no h1. The styles are written here, on the
  * elements the markdown can produce: the project has no typography plugin.
  */
-export function ContenuMarkdown({ html }: { html: string }) {
+export function MarkdownContent({ html }: { html: string }) {
 	if (html === '') return null
 	return (
 		<div

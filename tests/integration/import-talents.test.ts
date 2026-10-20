@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { SQL } from 'bun'
 import { codeDeSortie } from '../../scripts/migration/import/rapport'
-import { TITRES_DES_PAGES_TALENT } from '../../src/content/talent-titles'
+import { TALENT_PAGE_TITLES } from '../../src/content/talent-titles'
 import { commandeDImport, FICHIER_DES_DECISIONS_DU_BANC, importerSurLeBanc } from '../outils/import'
 import { compterLesMails, viderLeCapteur } from '../outils/mailpit'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
@@ -195,7 +195,7 @@ describe('Ticket 108 : le titre d’onglet des pages talent', () => {
 		await importerSurLeBanc()
 		const payload = await payloadDeTest()
 		const parSlug = async (slug: string) => (await talentsDeLaCible()).find(talent => talent.slug === slug)
-		expect((await parSlug('maquillage-artistique'))?.pageTitle).toBe(TITRES_DES_PAGES_TALENT['maquillage-artistique'])
+		expect((await parSlug('maquillage-artistique'))?.pageTitle).toBe(TALENT_PAGE_TITLES['maquillage-artistique'])
 		// A talent that is not one of the 14 has none.
 		expect((await parSlug('effets-speciaux'))?.pageTitle ?? null).toBeNull()
 

@@ -18,20 +18,19 @@ import { getPayload, type Payload } from 'payload'
 import { valuesToSearch } from '@/lib/profile/url'
 import { ETIQUETTES } from '@/lib/revalidation'
 import { estUnSlug } from '@/lib/slug'
-import { type ArticlePublic, readPublicArticle } from './articles'
 import { listArticles } from './article-list'
+import { type ArticlePublic, readPublicArticle } from './articles'
 import { readIndexablePages } from './indexable-pages'
-import { type ProfileUrlTarget, readProfileUrlTarget, readDirectory } from './profiles'
-import { readTalent, listTalents, type TalentPageData } from './talents'
+import { type ProfileUrlTarget, readDirectory, readProfileUrlTarget } from './profiles'
+import { listTalents, readTalent, type TalentPageData } from './talents'
 
 const ONE_HOUR = 60 * 60
 
 /** The talents of the home page. */
-export const cachedTalents = unstable_cache(
-	async () => listTalents(await getPayload({ config })),
-	['public:talents'],
-	{ tags: [ETIQUETTES.talents], revalidate: ONE_HOUR }
-)
+export const cachedTalents = unstable_cache(async () => listTalents(await getPayload({ config })), ['public:talents'], {
+	tags: [ETIQUETTES.talents],
+	revalidate: ONE_HOUR,
+})
 
 /** Every listed profile, with her place: what the search by city ranks. */
 export const cachedDirectory = unstable_cache(

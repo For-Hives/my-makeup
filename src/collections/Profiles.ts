@@ -23,10 +23,10 @@ import {
 } from '../lib/acces'
 import { GALERIE_MAX } from '../lib/medias'
 import {
+	CONSENT_SOURCES,
 	consentAfter,
 	emptyGroupIfNull,
 	SOURCE_LABELS,
-	CONSENT_SOURCES,
 	validateContactEmail,
 	validateNetworkLink,
 	validatePhone,
@@ -34,12 +34,12 @@ import {
 import { ownerPhotos, validateGallery, validateMainPhoto } from '../lib/profile/photos'
 import { validateSiret } from '../lib/profile/siret'
 import {
-	STATUS_CHOICES,
-	INITIAL_CHOICE,
 	CHOICE_LABELS,
-	STATUS_LABELS,
+	INITIAL_CHOICE,
 	INITIAL_STATUS,
 	PROFILE_STATUSES,
+	STATUS_CHOICES,
+	STATUS_LABELS,
 } from '../lib/profile/status'
 import { premierSlugLibre, slugDeRepli, slugifier } from '../lib/slug'
 import { CHAMPS_LISTES, identitesDesLignesAvantEcriture } from './profile-lists'

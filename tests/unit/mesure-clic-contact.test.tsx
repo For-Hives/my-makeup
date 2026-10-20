@@ -153,7 +153,10 @@ describe('pid du profil', () => {
 
 describe('la page du profil', () => {
 	const base = { slug: 'lea-exemple', prenom: 'Léa', nom: 'Exemple', statut: 'publie', publiable: true } as const
-	const profil = (surcharge: Partial<Parameters<typeof publicProfileOf>[0]>, coordonnees: PublicProfile['coordonnees']) =>
+	const profil = (
+		surcharge: Partial<Parameters<typeof publicProfileOf>[0]>,
+		coordonnees: PublicProfile['coordonnees']
+	) =>
 		publicProfileOf(
 			{ ...base, id: 8, strapiId: 77, networks: { instagram: 'https://instagram.com/lea.exemple' }, ...surcharge },
 			{ photo: null, galerie: [], coordonnees }

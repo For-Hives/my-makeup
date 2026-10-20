@@ -97,7 +97,5 @@ export const validateMainPhoto = (
 ): Promise<true | string> => validateProfilePhotos(valeur, { ...options, hasMany: false })
 
 /** `validate` of `galerie`: a list, in order. */
-export const validateGallery = (
-	valeur: unknown,
-	options: Omit<ValidationOptions, 'hasMany'>
-): Promise<true | string> => validateProfilePhotos(valeur, { ...options, hasMany: true })
+export const validateGallery = (valeur: unknown, options: Omit<ValidationOptions, 'hasMany'>): Promise<true | string> =>
+	validateProfilePhotos(valeur, { ...options, hasMany: true })

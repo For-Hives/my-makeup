@@ -1,11 +1,11 @@
 import type { Metadata } from 'next'
 import { Cta } from '@/components/blocks/Cta'
 import { Hero } from '@/components/blocks/Hero'
-import { ArticleDePage } from '@/components/static-pages/PageArticle'
-import { A_PROPOS } from '@/components/static-pages/artist-texts'
-import { metadonnees } from '@/lib/seo/metadata'
+import { ABOUT } from '@/components/static-pages/artist-texts'
+import { PageArticle } from '@/components/static-pages/PageArticle'
+import { pageMetadata } from '@/lib/seo/metadata'
 
-export const metadata: Metadata = metadonnees({
+export const metadata: Metadata = pageMetadata({
 	titre: 'My-Makeup la plateforme de recherche de maquilleuse !',
 	description:
 		'Apprenez-en plus sur My-Makeup, votre plateforme de mise en relation entre maquilleuses professionnelles et clients.',
@@ -13,7 +13,7 @@ export const metadata: Metadata = metadonnees({
 	chemin: '/a-propos',
 })
 
-export default function PageAPropos() {
+export default function AboutPage() {
 	return (
 		<main className="relative">
 			<Hero
@@ -27,7 +27,7 @@ export default function PageAPropos() {
 				recherche={false}
 				inscription
 			/>
-			<ArticleDePage contenu={A_PROPOS} />
+			<PageArticle contenu={ABOUT} />
 			<Cta />
 		</main>
 	)

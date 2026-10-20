@@ -1,18 +1,18 @@
 import type { Field, FieldHook } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import {
-	RADIUS_BOUNDS_KM,
-	type CityInput,
-	normalizedInseeCode,
-	cityToFields,
-	roundedCoordinate,
-	departmentOfInseeCode,
-	type CityErrors,
-	cityErrors,
 	CITY_NAME_MAX,
-	normalizedName,
+	type CityErrors,
+	type CityInput,
+	cityErrors,
+	cityToFields,
 	cityVerdict,
+	departmentOfInseeCode,
+	normalizedInseeCode,
+	normalizedName,
+	RADIUS_BOUNDS_KM,
 	radiusVerdict,
+	roundedCoordinate,
 } from '../../lib/profile/zone'
 
 /**
@@ -20,8 +20,7 @@ import {
  * import's included: a value sent for it is replaced, so it is never out of step with the code. A
  * code that is not well formed gives null, and the check of the code refuses the save anyway.
  */
-const departementDuCode: FieldHook = ({ siblingData }) =>
-	departmentOfInseeCode((siblingData as CityInput).inseeCode)
+const departementDuCode: FieldHook = ({ siblingData }) => departmentOfInseeCode((siblingData as CityInput).inseeCode)
 
 /** The check of one field of the commune, which reads its sibling fields (src/lib/profile/zone.ts). */
 const verdictDe =

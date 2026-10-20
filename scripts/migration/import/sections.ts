@@ -25,13 +25,13 @@
 import { parsePrice } from '../../../src/lib/prix'
 import type { ProfileNetworks } from '../../../src/lib/profile/completeness'
 import {
-	dayDate,
 	DESCRIPTION_MAX_LENGTH,
-	NAME_MAX_LENGTH,
 	dateMessage,
+	dayDate,
 	endMessage,
-	textMessage,
+	NAME_MAX_LENGTH,
 	obtainMessage,
+	textMessage,
 } from '../../../src/lib/profile/lists'
 import { TYPE_PROFIL } from './medias'
 import type { Requete } from './source'

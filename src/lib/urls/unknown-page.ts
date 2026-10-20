@@ -14,12 +14,12 @@
  * No `next` import: the proxy and the tests read this file.
  */
 
-export type FamilleVerifiee = 'profil' | 'talent' | 'blog'
+export type CheckedFamily = 'profil' | 'talent' | 'blog'
 
-const FAMILLES: readonly FamilleVerifiee[] = ['profil', 'talent', 'blog']
+const FAMILIES: readonly CheckedFamily[] = ['profil', 'talent', 'blog']
 
 /** The segment as the visitor wrote it: Next gives it decoded or not, depending on the path. */
-export function segmentEcrit(segment: string): string {
+export function writtenSegment(segment: string): string {
 	try {
 		return decodeURIComponent(segment)
 	} catch {
@@ -31,23 +31,20 @@ export function segmentEcrit(segment: string): string {
  * The family and the segment to look up for a request, or `null` when the proxy has nothing to check:
  * another path, a second segment (`/blog/a/b` has no route), an empty segment, or a method other than GET and HEAD.
  */
-export function adresseAVerifier(
-	chemin: string,
-	methode: string
-): { famille: FamilleVerifiee; segment: string } | null {
+export function urlToCheck(chemin: string, methode: string): { famille: CheckedFamily; segment: string } | null {
 	if (methode !== 'GET' && methode !== 'HEAD') return null
-	const morceaux = chemin.split('/')
+	const chunks = chemin.split('/')
 	// ['', 'profil', '<segment>']
-	if (morceaux.length !== 3 || morceaux[0] !== '') return null
-	const [, famille, segment] = morceaux
-	if (!segment || !FAMILLES.includes(famille as FamilleVerifiee)) return null
-	return { famille: famille as FamilleVerifiee, segment: segmentEcrit(segment) }
+	if (chunks.length !== 3 || chunks[0] !== '') return null
+	const [, family, segment] = chunks
+	if (!segment || !FAMILIES.includes(family as CheckedFamily)) return null
+	return { famille: family as CheckedFamily, segment: writtenSegment(segment) }
 }
 
 /** How long the proxy trusts « this page exists »: one minute. */
-export const DUREE_DE_MEMOIRE_MS = 60_000
+export const MEMORY_DURATION_MS = 60_000
 /** The most addresses the proxy remembers: only pages that exist are kept, so this is far above the catalogue. */
-export const TAILLE_MAX_DE_MEMOIRE = 5_000
+export const MEMORY_MAX_SIZE = 5_000
 
 /**
  * What the proxy remembers of the pages that exist (ticket 231). The reads of Next's cache (`unstable_cache`) do
@@ -57,32 +54,32 @@ export const TAILLE_MAX_DE_MEMOIRE = 5_000
  * visit, so that a page that appears is never answered 404, and a page hidden meanwhile still answers its
  * own 404 (the page keeps its `notFound()`).
  */
-export function memoireDesPagesQuiExistent(
-	{ dureeMs = DUREE_DE_MEMOIRE_MS, tailleMax = TAILLE_MAX_DE_MEMOIRE }: { dureeMs?: number; tailleMax?: number } = {},
+export function existingPagesMemory(
+	{ dureeMs = MEMORY_DURATION_MS, tailleMax = MEMORY_MAX_SIZE }: { dureeMs?: number; tailleMax?: number } = {},
 	maintenant: () => number = Date.now
 ) {
-	const finDeVie = new Map<string, number>()
+	const expiresAt = new Map<string, number>()
 	return {
 		/** True when the address was found to exist less than `dureeMs` ago. */
 		connait(cle: string): boolean {
-			const fin = finDeVie.get(cle)
-			if (fin === undefined) return false
-			if (fin > maintenant()) return true
-			finDeVie.delete(cle)
+			const end = expiresAt.get(cle)
+			if (end === undefined) return false
+			if (end > maintenant()) return true
+			expiresAt.delete(cle)
 			return false
 		},
 		retenir(cle: string): void {
 			const t = maintenant()
-			if (finDeVie.size >= tailleMax && !finDeVie.has(cle)) {
-				for (const [autre, fin] of finDeVie) if (fin <= t) finDeVie.delete(autre)
+			if (expiresAt.size >= tailleMax && !expiresAt.has(cle)) {
+				for (const [other, end] of expiresAt) if (end <= t) expiresAt.delete(other)
 				// Still full: the oldest entry goes (a Map keeps the order of insertion).
-				if (finDeVie.size >= tailleMax) finDeVie.delete(finDeVie.keys().next().value as string)
+				if (expiresAt.size >= tailleMax) expiresAt.delete(expiresAt.keys().next().value as string)
 			}
-			finDeVie.delete(cle)
-			finDeVie.set(cle, t + dureeMs)
+			expiresAt.delete(cle)
+			expiresAt.set(cle, t + dureeMs)
 		},
 		get taille(): number {
-			return finDeVie.size
+			return expiresAt.size
 		},
 	}
 }

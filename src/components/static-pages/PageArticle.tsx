@@ -1,20 +1,20 @@
-export interface PartieDePage {
+export interface PageSection {
 	titre: string
 	texte: string
 }
 
-export interface ContenuDePage {
+export interface PageContent {
 	/** The title of the article, under the head of the page: the head holds the only h1. */
 	titre: string
 	introduction: string
-	parties: readonly PartieDePage[]
+	parties: readonly PageSection[]
 }
 
 /**
  * The text of a fixed page: a title, a few lines, then the parts one under the other. It sits under the
  * `Hero` of the page, which carries the only h1; the old pages had a second h1 here (« 1 h1 par page »).
  */
-export function ArticleDePage({ contenu }: { contenu: ContenuDePage }) {
+export function PageArticle({ contenu }: { contenu: PageContent }) {
 	return (
 		<div className="relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0">
 			<div className="mx-auto max-w-2xl">

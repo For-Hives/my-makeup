@@ -6,10 +6,10 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { signOut } from '@/app/(front)/(dashboard)/auth/actions'
 import { LienSuivi } from '@/components/analytics/LienSuivi'
-import { LIEN_CONNEXION, LIEN_ESPACE, LIEN_RECHERCHE, NAVIGATION } from './links'
+import { DASHBOARD_LINK, NAVIGATION, SEARCH_LINK, SIGN_IN_LINK } from './links'
 
-const LIEN = 'font-semibold text-gray-900 text-sm leading-6'
-const ANNEAU = 'focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2'
+const LINK = 'font-semibold text-gray-900 text-sm leading-6'
+const RING = 'focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2'
 
 function Chevron() {
 	return (
@@ -29,82 +29,82 @@ function Chevron() {
  * neither read the cookie nor depend on it. Until the answer comes, and whenever it cannot come,
  * the visitor is taken for signed out, which is what a shared page says.
  */
-function useConnectee(chemin: string): boolean {
-	const [connectee, setConnectee] = useState(false)
+function useSignedIn(chemin: string): boolean {
+	const [signedIn, setSignedIn] = useState(false)
 	// A new page asks again: the visitor may have signed in or out since the last one.
 	useEffect(() => {
-		const arret = new AbortController()
-		fetch('/api/dashboard/session', { cache: 'no-store', credentials: 'same-origin', signal: arret.signal })
+		const stop = new AbortController()
+		fetch('/api/dashboard/session', { cache: 'no-store', credentials: 'same-origin', signal: stop.signal })
 			.then(reponse => (reponse.ok ? reponse.json() : { signedIn: false }))
-			.then((corps: { signedIn?: unknown }) => setConnectee(corps.signedIn === true))
+			.then((corps: { signedIn?: unknown }) => setSignedIn(corps.signedIn === true))
 			.catch(() => {
-				if (!arret.signal.aborted) setConnectee(false)
+				if (!stop.signal.aborted) setSignedIn(false)
 			})
-		return () => arret.abort()
+		return () => stop.abort()
 	}, [chemin])
-	return connectee
+	return signedIn
 }
 
 /**
  * The navigation of every public page. One markup for both widths: under 1024 px a button opens
  * the menu and the groups unfold in place; from 1024 px the menu is a row and the groups are
  * popovers. It reads no cookie and no session on the server: the page stays static, and the
- * signed-in state is read in the browser (`useConnectee`).
+ * signed-in state is read in the browser (`useSignedIn`).
  */
 export function Nav() {
-	const [menuOuvert, setMenuOuvert] = useState(false)
-	const [groupe, setGroupe] = useState<string | null>(null)
-	const racine = useRef<HTMLElement>(null)
-	const boutonMenu = useRef<HTMLButtonElement>(null)
-	const chemin = usePathname()
-	const connectee = useConnectee(chemin)
+	const [menuOpen, setMenuOpen] = useState(false)
+	const [group, setGroup] = useState<string | null>(null)
+	const root = useRef<HTMLElement>(null)
+	const menuButton = useRef<HTMLButtonElement>(null)
+	const path = usePathname()
+	const signedIn = useSignedIn(path)
 
 	useEffect(() => {
-		setMenuOuvert(false)
-		setGroupe(null)
-	}, [chemin])
+		setMenuOpen(false)
+		setGroup(null)
+	}, [path])
 
 	useEffect(() => {
-		if (!menuOuvert && groupe === null) return
-		const auClavier = (evenement: KeyboardEvent) => {
+		if (!menuOpen && group === null) return
+		const onKeyDown = (evenement: KeyboardEvent) => {
 			if (evenement.key !== 'Escape') return
-			if (groupe !== null) {
-				racine.current?.querySelector<HTMLElement>(`[data-groupe="${groupe}"]`)?.focus()
-				setGroupe(null)
+			if (group !== null) {
+				root.current?.querySelector<HTMLElement>(`[data-groupe="${group}"]`)?.focus()
+				setGroup(null)
 			} else {
-				boutonMenu.current?.focus()
-				setMenuOuvert(false)
+				menuButton.current?.focus()
+				setMenuOpen(false)
 			}
 		}
-		const auClic = (evenement: PointerEvent) => {
-			if (racine.current && !racine.current.contains(evenement.target as Node)) setGroupe(null)
+		const onClick = (evenement: PointerEvent) => {
+			if (root.current && !root.current.contains(evenement.target as Node)) setGroup(null)
 		}
-		document.addEventListener('keydown', auClavier)
-		document.addEventListener('pointerdown', auClic)
+		document.addEventListener('keydown', onKeyDown)
+		document.addEventListener('pointerdown', onClick)
 		return () => {
-			document.removeEventListener('keydown', auClavier)
-			document.removeEventListener('pointerdown', auClic)
+			document.removeEventListener('keydown', onKeyDown)
+			document.removeEventListener('pointerdown', onClick)
 		}
-	}, [menuOuvert, groupe])
+	}, [menuOpen, group])
 
 	return (
 		<header className="sticky top-0 z-30 border-gray-300 border-b bg-white">
 			<nav
-				ref={racine}
+				ref={root}
 				aria-label="Navigation principale"
 				className="relative mx-auto flex max-w-screen-2xl flex-wrap items-center justify-between gap-x-10 px-6 py-3 lg:flex-nowrap lg:px-16"
 			>
-				<Link href="/" className={`-m-1.5 p-1.5 ${ANNEAU}`}>
+				<Link href="/" className={`-m-1.5 p-1.5 ${RING}`}>
 					<span className="sr-only">My-Makeup</span>
 					<Image alt="Logo My-Makeup" width={50} height={50} src="/assets/logo.webp" priority />
 				</Link>
 				<button
-					ref={boutonMenu}
+					ref={menuButton}
 					type="button"
-					aria-expanded={menuOuvert}
+					aria-expanded={menuOpen}
 					aria-controls="menu-principal"
-					onClick={() => setMenuOuvert(!menuOuvert)}
-					className={`flex h-11 w-11 items-center justify-center rounded-lg lg:hidden ${ANNEAU}`}
+					onClick={() => setMenuOpen(!menuOpen)}
+					className={`flex h-11 w-11 items-center justify-center rounded-lg lg:hidden ${RING}`}
 				>
 					<span className="sr-only">Menu</span>
 					<svg
@@ -116,18 +116,18 @@ export function Nav() {
 						strokeWidth="2"
 						strokeLinecap="round"
 					>
-						{menuOuvert ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M4 7h16M4 17h16" />}
+						{menuOpen ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M4 7h16M4 17h16" />}
 					</svg>
 				</button>
 				<div
 					id="menu-principal"
-					className={`${menuOuvert ? 'flex' : 'hidden'} absolute inset-x-0 top-full max-h-[calc(100dvh-4.5rem)] flex-col gap-8 overflow-y-auto border-gray-300 border-b bg-white px-6 py-6 lg:static lg:flex lg:max-h-none lg:flex-1 lg:flex-row lg:items-center lg:justify-between lg:gap-10 lg:overflow-visible lg:border-0 lg:p-0`}
+					className={`${menuOpen ? 'flex' : 'hidden'} absolute inset-x-0 top-full max-h-[calc(100dvh-4.5rem)] flex-col gap-8 overflow-y-auto border-gray-300 border-b bg-white px-6 py-6 lg:static lg:flex lg:max-h-none lg:flex-1 lg:flex-row lg:items-center lg:justify-between lg:gap-10 lg:overflow-visible lg:border-0 lg:p-0`}
 				>
 					<ul className="flex flex-col gap-8 lg:flex-row lg:items-center lg:gap-10">
 						{NAVIGATION.map(entree => (
 							<li key={entree.nom} className="lg:relative">
 								{'href' in entree ? (
-									<Link href={entree.href} className={`${LIEN} ${ANNEAU}`}>
+									<Link href={entree.href} className={`${LINK} ${RING}`}>
 										{entree.nom}
 									</Link>
 								) : (
@@ -135,21 +135,21 @@ export function Nav() {
 										<button
 											type="button"
 											data-groupe={entree.nom}
-											aria-expanded={groupe === entree.nom}
+											aria-expanded={group === entree.nom}
 											aria-controls={`groupe-${entree.nom}`}
-											onClick={() => setGroupe(groupe === entree.nom ? null : entree.nom)}
-											className={`inline-flex items-center gap-x-1 ${LIEN} ${ANNEAU}`}
+											onClick={() => setGroup(group === entree.nom ? null : entree.nom)}
+											className={`inline-flex items-center gap-x-1 ${LINK} ${RING}`}
 										>
 											{entree.nom}
 											<Chevron />
 										</button>
 										<ul
 											id={`groupe-${entree.nom}`}
-											className={`${groupe === entree.nom ? 'flex' : 'hidden'} mt-4 flex-col gap-4 lg:absolute lg:top-full lg:left-0 lg:mt-3 lg:w-96 lg:rounded-3xl lg:bg-white lg:p-4 lg:shadow-lg lg:ring-1 lg:ring-gray-900/5`}
+											className={`${group === entree.nom ? 'flex' : 'hidden'} mt-4 flex-col gap-4 lg:absolute lg:top-full lg:left-0 lg:mt-3 lg:w-96 lg:rounded-3xl lg:bg-white lg:p-4 lg:shadow-lg lg:ring-1 lg:ring-gray-900/5`}
 										>
 											{entree.enfants.map(enfant => (
 												<li key={enfant.href} className="relative rounded-lg lg:p-4 lg:hover:bg-gray-50">
-													<Link href={enfant.href} className={`font-semibold text-gray-900 text-sm ${ANNEAU}`}>
+													<Link href={enfant.href} className={`font-semibold text-gray-900 text-sm ${RING}`}>
 														{enfant.nom}
 														<span className="absolute inset-0" />
 													</Link>
@@ -164,9 +164,9 @@ export function Nav() {
 					</ul>
 					<div className="flex flex-col items-start gap-8 lg:flex-row lg:items-center lg:gap-10">
 						<LienSuivi
-							href={LIEN_RECHERCHE.href}
+							href={SEARCH_LINK.href}
 							suivi={{ nom: 'nav_recherche' }}
-							className={`btn-primary-with-icon ${ANNEAU}`}
+							className={`btn-primary-with-icon ${RING}`}
 						>
 							<svg aria-hidden="true" className="mr-2 h-5 w-5 text-indigo-900" viewBox="0 0 20 20" fill="currentColor">
 								<path
@@ -175,22 +175,22 @@ export function Nav() {
 									clipRule="evenodd"
 								/>
 							</svg>
-							{LIEN_RECHERCHE.nom}
+							{SEARCH_LINK.nom}
 						</LienSuivi>
-						{connectee ? (
+						{signedIn ? (
 							<>
-								<Link href={LIEN_ESPACE.href} className={`${LIEN} ${ANNEAU}`}>
-									{LIEN_ESPACE.nom}
+								<Link href={DASHBOARD_LINK.href} className={`${LINK} ${RING}`}>
+									{DASHBOARD_LINK.nom}
 								</Link>
 								<form action={signOut}>
-									<button type="submit" className={`btn-primary-simple ${ANNEAU}`}>
+									<button type="submit" className={`btn-primary-simple ${RING}`}>
 										Me déconnecter
 									</button>
 								</form>
 							</>
 						) : (
-							<Link href={LIEN_CONNEXION.href} className={`btn-primary-simple ${ANNEAU}`}>
-								{LIEN_CONNEXION.nom}
+							<Link href={SIGN_IN_LINK.href} className={`btn-primary-simple ${RING}`}>
+								{SIGN_IN_LINK.nom}
 							</Link>
 						)}
 					</div>

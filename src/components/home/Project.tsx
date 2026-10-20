@@ -1,6 +1,6 @@
 import Image from 'next/image'
 
-const ONGLETS = [
+const TABS = [
 	{
 		titre: 'Contactez directement la maquilleuse',
 		contenu:
@@ -39,7 +39,7 @@ export function Project() {
 				<div className="mx-auto flex max-w-7xl flex-col-reverse gap-16 md:flex-row md:gap-32">
 					<div className="w-full md:w-1/2">
 						<div className="flex flex-col gap-2">
-							{ONGLETS.map(onglet => (
+							{TABS.map(onglet => (
 								<div key={onglet.titre}>
 									<div className="rounded-2xl border border-gray-200 bg-gray-50 p-10 shadow-lg transition-all duration-300 ease-in-out hover:bg-gray-50 hover:shadow-lg md:border-none md:bg-none md:shadow-none">
 										<h3 className="mb-4 font-bold text-gray-700 text-xl">{onglet.titre}</h3>

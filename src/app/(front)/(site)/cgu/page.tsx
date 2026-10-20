@@ -1,10 +1,10 @@
 import Link from 'next/link'
-import { PageJuridique } from '@/components/legal/LegalPage'
+import { LegalPage } from '@/components/legal/LegalPage'
 import { EDITEUR } from '@/lib/legal'
-import { metadonnees } from '@/lib/seo/metadata'
+import { pageMetadata } from '@/lib/seo/metadata'
 
 // Static: the text is in the code, and the page reads no cookie and no data (ticket 112).
-export const metadata = metadonnees({
+export const metadata = pageMetadata({
 	titre: "Conditions générales d'utilisation",
 	description:
 		"Les conditions générales d'utilisation de My-Makeup, l'annuaire gratuit de maquilleuses professionnelles.",
@@ -14,7 +14,7 @@ export const metadata = metadonnees({
 
 export default function Cgu() {
 	return (
-		<PageJuridique
+		<LegalPage
 			titre={
 				<>
 					CGU&nbsp;
@@ -105,6 +105,6 @@ export default function Cgu() {
 			<p>
 				{`Ces conditions sont soumises au droit français. En cas de litige, une solution amiable est recherchée en priorité ; à défaut, les tribunaux compétents sont ceux désignés par la loi.`}
 			</p>
-		</PageJuridique>
+		</LegalPage>
 	)
 }

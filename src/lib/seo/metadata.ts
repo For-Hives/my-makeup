@@ -1,9 +1,9 @@
 import type { Metadata } from 'next'
-import { balisesDePartage, type ImageDePartage, type TypeDePartage } from './share'
-import { descriptionEditoriale, descriptionMeta, titrePage } from './text'
-import { urlCanonique } from './url'
+import { type ShareImage, type ShareType, shareTags } from './share'
+import { descriptionMeta, editorialDescription, pageTitle } from './text'
+import { canonicalUrl } from './url'
 
-export interface EntreesDePage {
+export interface PageInputs {
 	/** The title of the page, without the brand: the helper adds it when it fits. */
 	titre: unknown
 	/** Candidate texts in order of preference. */
@@ -15,22 +15,22 @@ export interface EntreesDePage {
 	/** False for a page that must not be indexed: it then has no canonical address. */
 	indexable?: boolean
 	/** `og:type`: « website » unless the page is a profile or an article. */
-	typeDePartage?: TypeDePartage
+	typeDePartage?: ShareType
 	/** The picture of the shared link; the picture of the site when the page has none (ticket 116). */
-	image?: ImageDePartage
+	image?: ShareImage
 }
 
 /** The metadata of a page once its description is known. A page that is not indexed keeps its share tags. */
 function assembler(
-	{ titre, chemin, indexable = true, typeDePartage, image }: EntreesDePage,
+	{ titre, chemin, indexable = true, typeDePartage, image }: PageInputs,
 	description: string
 ): Metadata {
-	const titreComplet = titrePage(titre)
+	const fullTitle = pageTitle(titre)
 	return {
-		title: { absolute: titreComplet },
+		title: { absolute: fullTitle },
 		description,
-		...(indexable ? { alternates: { canonical: urlCanonique(chemin) } } : { robots: { index: false, follow: true } }),
-		...balisesDePartage({ titre: titreComplet, description, url: urlCanonique(chemin), type: typeDePartage, image }),
+		...(indexable ? { alternates: { canonical: canonicalUrl(chemin) } } : { robots: { index: false, follow: true } }),
+		...shareTags({ titre: fullTitle, description, url: canonicalUrl(chemin), type: typeDePartage, image }),
 	}
 }
 
@@ -38,21 +38,21 @@ function assembler(
  * What every page gets by default: title, description, canonical address, robots, and the tags of a shared
  * link (Open Graph and Twitter card).
  */
-export function metadonnees(entrees: EntreesDePage): Metadata {
+export function pageMetadata(entrees: PageInputs): Metadata {
 	return assembler(entrees, descriptionMeta(entrees.description, entrees.repli))
 }
 
 /** The not-found pages: titled, no canonical. Next adds their noindex tag by itself. */
-export const metadonneesIntrouvable = (titre: string): Metadata => ({ title: { absolute: titrePage(titre) } })
+export const notFoundMetadata = (titre: string): Metadata => ({ title: { absolute: pageTitle(titre) } })
 
 /**
  * The metadata of a page the newsroom writes (a talent, an article): the defaults, with the description
- * of `descriptionEditoriale` (the newsroom's own text kept as it is).
+ * of `editorialDescription` (the newsroom's own text kept as it is).
  */
-export function metadonneesEditoriales({
+export function editorialMetadata({
 	descriptionRedigee,
 	autres,
 	...entrees
-}: Omit<EntreesDePage, 'description'> & { descriptionRedigee: unknown; autres: readonly unknown[] }): Metadata {
-	return assembler({ ...entrees, description: [] }, descriptionEditoriale(descriptionRedigee, autres, entrees.repli))
+}: Omit<PageInputs, 'description'> & { descriptionRedigee: unknown; autres: readonly unknown[] }): Metadata {
+	return assembler({ ...entrees, description: [] }, editorialDescription(descriptionRedigee, autres, entrees.repli))
 }

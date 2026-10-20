@@ -1,13 +1,13 @@
 import type { Metadata } from 'next'
+import { Cta } from '@/components/blocks/Cta'
+import { Hero } from '@/components/blocks/Hero'
 import { Collaboration } from '@/components/home/Collaboration'
 import { Presentation } from '@/components/home/Presentation'
 import { Project } from '@/components/home/Project'
 import { Talents } from '@/components/home/Talents'
-import { Cta } from '@/components/blocks/Cta'
-import { Hero } from '@/components/blocks/Hero'
-import { RESEAUX } from '@/components/layout/links'
-import { donneesStructureesDeLAccueil, serializeJsonLd } from '@/lib/seo/json-ld'
-import { metadonnees } from '@/lib/seo/metadata'
+import { NETWORKS } from '@/components/layout/links'
+import { homeStructuredData, serializeJsonLd } from '@/lib/seo/json-ld'
+import { pageMetadata } from '@/lib/seo/metadata'
 import { cachedTalents } from '@/services/public/cached'
 import type { TalentPublic } from '@/services/public/talents'
 
@@ -16,39 +16,39 @@ import type { TalentPublic } from '@/services/public/talents'
 // a visit of a page that did not change reads nothing in the database.
 export const dynamic = 'force-dynamic'
 
-const TITRE = 'Maquilleuse professionnelle près de chez vous'
+const TITLE = 'Maquilleuse professionnelle près de chez vous'
 const DESCRIPTION =
 	'Trouvez une maquilleuse professionnelle à domicile près de chez vous, pour un mariage, une soirée ou un shooting. Comparez les profils et les tarifs.'
 
 // The preview of a shared link comes with the other tags: the picture of the site (ticket 116).
-export const metadata: Metadata = metadonnees({
-	titre: TITRE,
+export const metadata: Metadata = pageMetadata({
+	titre: TITLE,
 	description: DESCRIPTION,
 	repli:
 		'Annuaire de maquilleuses professionnelles indépendantes : trouvez celle qui vous correspond, près de chez vous.',
 	chemin: '/',
 })
 
-const RESEAUX_PUBLICS = RESEAUX.filter(({ href }) => href.startsWith('https://')).map(({ href }) => href)
+const PUBLIC_NETWORKS = NETWORKS.filter(({ href }) => href.startsWith('https://')).map(({ href }) => href)
 
 /** The talents, or none when the database does not answer: the home page stays a page, never a 500. */
-async function lireLesTalents(): Promise<readonly TalentPublic[]> {
+async function readTalents(): Promise<readonly TalentPublic[]> {
 	try {
 		return await cachedTalents()
-	} catch (erreur) {
-		console.error('[accueil] les talents ne se lisent pas :', erreur instanceof Error ? erreur.message : erreur)
+	} catch (error) {
+		console.error('[accueil] les talents ne se lisent pas :', error instanceof Error ? error.message : error)
 		return []
 	}
 }
 
-export default async function PageDAccueil() {
-	const talents = await lireLesTalents()
+export default async function HomePage() {
+	const talents = await readTalents()
 	return (
 		<main className="relative">
 			<script
 				type="application/ld+json"
 				// biome-ignore lint/security/noDangerouslySetInnerHtml: serializeJsonLd escapes <, > and &, so the data cannot close the tag.
-				dangerouslySetInnerHTML={{ __html: serializeJsonLd(donneesStructureesDeLAccueil(RESEAUX_PUBLICS)) }}
+				dangerouslySetInnerHTML={{ __html: serializeJsonLd(homeStructuredData(PUBLIC_NETWORKS)) }}
 			/>
 			<Hero
 				titre={<>Trouver la maquilleuse qui vous correspond n&apos;a jamais été aussi simple</>}

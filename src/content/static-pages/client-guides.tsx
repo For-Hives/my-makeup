@@ -1,4 +1,4 @@
-import type { ContenuDeGuide } from '@/components/static-pages/ClientGuide'
+import type { GuideContent } from '@/components/static-pages/ClientGuide'
 
 /**
  * The three guides and the page of solutions for the people looking for a makeup artist (ticket 109). The
@@ -6,7 +6,7 @@ import type { ContenuDeGuide } from '@/components/static-pages/ClientGuide'
  * CONF-01 (plan 01 §1.9). Changing a word here is a change a visitor sees.
  */
 
-export const GUIDE_TROUVER_UNE_MAQUILLEUSE: ContenuDeGuide = {
+export const GUIDE_FIND_AN_ARTIST: GuideContent = {
 	image: '/assets/back/maquilleuse_africaine_white.webp',
 	titre: (
 		<>
@@ -49,7 +49,7 @@ export const GUIDE_TROUVER_UNE_MAQUILLEUSE: ContenuDeGuide = {
 	],
 }
 
-export const GUIDE_CENTRALISER_SES_RECHERCHES: ContenuDeGuide = {
+export const GUIDE_GATHER_SEARCHES: GuideContent = {
 	image: '/assets/back/maquilleuse_africaine_white.webp',
 	titre: (
 		<>
@@ -97,7 +97,7 @@ export const GUIDE_CENTRALISER_SES_RECHERCHES: ContenuDeGuide = {
 	],
 }
 
-export const GUIDE_EXPLORER_LES_PROFILS: ContenuDeGuide = {
+export const GUIDE_EXPLORE_PROFILES: GuideContent = {
 	image: '/assets/back/maquilleuse_africaine_white.webp',
 	titre: (
 		<>
@@ -145,7 +145,7 @@ export const GUIDE_EXPLORER_LES_PROFILS: ContenuDeGuide = {
 	],
 }
 
-export const GUIDE_SOLUTIONS_PARTICULIERS: ContenuDeGuide = {
+export const GUIDE_CLIENT_SOLUTIONS: GuideContent = {
 	image: '/assets/back/maquilleuse_asiatique_white.webp',
 	titre: (
 		<>

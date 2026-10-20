@@ -21,15 +21,15 @@ import { serverEnv } from '@/lib/env'
  *
  * Whatever the mail does, a stored message is answered with the confirmation. Nothing she typed is logged.
  */
-export async function envoyerUnMessage(_precedent: EtatDuContact, formulaire: FormData): Promise<EtatDuContact> {
-	const valeurs = saisieDuContact(formulaire)
+export async function sendMessage(_precedent: EtatDuContact, formulaire: FormData): Promise<EtatDuContact> {
+	const values = saisieDuContact(formulaire)
 	const payload = await getPayload({ config })
-	const origine = (await headers()).get('origin')
-	if (origine !== null && !payload.config.csrf.includes(origine)) return { echec: true, valeurs }
+	const origin = (await headers()).get('origin')
+	if (origin !== null && !payload.config.csrf.includes(origin)) return { echec: true, valeurs: values }
 
 	const env = serverEnv()
 	const client = ipClient(await headers())
-	const resultat = await enregistrerUnMessageDeContact({
+	const result = await enregistrerUnMessageDeContact({
 		formulaire,
 		stockage: stockageDePayload(payload),
 		envoyer: envoiEmailDePayload(payload, env),
@@ -41,8 +41,8 @@ export async function envoyerUnMessage(_precedent: EtatDuContact, formulaire: Fo
 			erreur: ligne => payload.logger.error({ msg: ligne }),
 		},
 	})
-	if (resultat.ok) return { envoye: true }
-	if (resultat.code === 'trop-de-messages') return { limite: true, valeurs }
-	if (resultat.code === 'donnees-invalides') return { erreurs: resultat.erreurs, valeurs }
-	return { echec: true, valeurs }
+	if (result.ok) return { envoye: true }
+	if (result.code === 'trop-de-messages') return { limite: true, valeurs: values }
+	if (result.code === 'donnees-invalides') return { erreurs: result.erreurs, valeurs: values }
+	return { echec: true, valeurs: values }
 }

@@ -15,8 +15,8 @@
  */
 
 import { formatMontant, formatPrix, parsePrice } from '../prix'
-import { DESCRIPTION_MAX_LENGTH, NAME_MAX_LENGTH, textMessage } from '../profile/lists'
 import { text } from '../profile/display-name'
+import { DESCRIPTION_MAX_LENGTH, NAME_MAX_LENGTH, textMessage } from '../profile/lists'
 import type { ListDefinition, RowErrors, RowValues } from './list'
 
 /** The price as typed (« ; » between several), as the one text that is stored (one per line). */

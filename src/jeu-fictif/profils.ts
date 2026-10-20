@@ -563,7 +563,10 @@ export const PROFILS_DU_JEU: readonly ProfilDuJeu[] = [
 				name: texteDeLongueur(`Langue ${numero} : français, anglais, italien, espagnol, allemand`, NAME_MAX_LENGTH),
 			})),
 			courses: [1, 2, 3].map(numero => ({
-				diploma: texteDeLongueur(`Diplôme ${numero} : certificat de maquillage artistique et de scène`, NAME_MAX_LENGTH),
+				diploma: texteDeLongueur(
+					`Diplôme ${numero} : certificat de maquillage artistique et de scène`,
+					NAME_MAX_LENGTH
+				),
 				school: texteDeLongueur('École fictive supérieure des métiers du maquillage et de la beauté', NAME_MAX_LENGTH),
 				graduatedAt: `201${numero}-06-30`,
 				description: texteDeLongueur(LONGUE_DESCRIPTION, DESCRIPTION_MAX_LENGTH),

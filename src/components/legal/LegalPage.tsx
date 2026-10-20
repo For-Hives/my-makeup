@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Hero } from '@/components/blocks/Hero'
 
-interface PropsPageJuridique {
+interface LegalPageProps {
 	/** The only h1 of the page. */
 	titre: ReactNode
 	/** The line under the h1. */
@@ -17,7 +17,7 @@ interface PropsPageJuridique {
  * The shell of the three legal pages (ticket 112): the head of the page, then the text. The project
  * has no typography plugin, so the styles of the text are written here, on the elements the pages use.
  */
-export function PageJuridique({ titre, description, titreDuTexte, image, children }: PropsPageJuridique) {
+export function LegalPage({ titre, description, titreDuTexte, image, children }: LegalPageProps) {
 	return (
 		<main className="relative">
 			<Hero titre={titre} description={description} recherche={false} {...(image ? { image } : {})} />

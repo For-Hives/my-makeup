@@ -2,7 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 
 /** The content of the 404 page, in the template (ticket 069). The words are those of the site online. */
-export function PageIntrouvable() {
+export function NotFoundPage() {
 	return (
 		<main className="mx-auto flex w-full max-w-7xl flex-1 items-center gap-10 px-4 py-16 sm:px-6 lg:px-20">
 			<div className="mx-auto w-full max-w-sm lg:mx-0 lg:w-96">

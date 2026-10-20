@@ -1,10 +1,10 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import type { TalentPublic } from '@/services/public/talents'
-import { CarteDeDemonstration } from './DemoCard'
+import { DemoCard } from './DemoCard'
 
 /** The talents that have an icon under `public/assets/talents/`: a talent created later is shown without one. */
-export const TALENTS_AVEC_ICONE: ReadonlySet<string> = new Set([
+export const TALENTS_WITH_ICON: ReadonlySet<string> = new Set([
 	'maquillage-artistique',
 	'maquillage-beaute',
 	'maquillage-cinema',
@@ -39,10 +39,10 @@ export function Talents({ talents }: { talents: readonly TalentPublic[] }) {
 				<div className="mx-auto flex w-full flex-col md:flex-row md:gap-24">
 					<div className="relative flex h-auto items-center justify-center gap-2 pb-10 md:w-1/5 md:gap-0 md:p-0">
 						<div className="md:-translate-x-[40%] md:-translate-y-[40%] md:absolute md:top-1/2 md:left-1/2 md:z-20">
-							<CarteDeDemonstration src="/assets/Maquilleuse_Professionnelle.webp" coeur />
+							<DemoCard src="/assets/Maquilleuse_Professionnelle.webp" coeur />
 						</div>
 						<div className="md:-translate-x-[90%] md:-translate-y-[90%] md:absolute md:top-1/2 md:left-1/2 md:z-10">
-							<CarteDeDemonstration src="/assets/Maquilleuse_cinema.webp" coeur={false} />
+							<DemoCard src="/assets/Maquilleuse_cinema.webp" coeur={false} />
 						</div>
 					</div>
 					<ul className="xs:grid-cols-3 grid w-full grid-cols-2 gap-4 md:w-4/5 md:grid-cols-4 md:gap-8">
@@ -55,7 +55,7 @@ export function Talents({ talents }: { talents: readonly TalentPublic[] }) {
 									<span className="flex h-full min-h-[120px] w-full items-center justify-center rounded-xl border border-indigo-900/10 px-4 py-8 text-center font-semibold text-gray-900/70 transition duration-100 ease-in group-hover:opacity-0 group-focus-visible:opacity-0">
 										{talent.titre}
 									</span>
-									{TALENTS_AVEC_ICONE.has(talent.slug) && (
+									{TALENTS_WITH_ICON.has(talent.slug) && (
 										<span className="absolute top-0 left-0 flex h-full w-full items-center justify-center overflow-hidden rounded-xl">
 											<Image
 												src={`/assets/talents/${talent.slug}.svg`}

@@ -472,8 +472,7 @@ function cityWithPostalCode(t: string, cp: FoundPostalCode): AddressCity {
 	// « …, 74160 Haute-Savoie »: a département is no commune (Paris is
 	// both)
 	const department = departementDuCodePostal(cp.code)
-	if (city && department && department !== '75' && normaliserLieu(city) === departmentName(department))
-		city = ''
+	if (city && department && department !== '75' && normaliserLieu(city) === departmentName(department)) city = ''
 	if (!city) {
 		const chunks = t.slice(0, cp.index).split(/[,;]/)
 		const before = chunks.at(-1) ?? ''

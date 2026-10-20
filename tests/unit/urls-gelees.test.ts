@@ -509,7 +509,7 @@ describe('no real profile path in the repository', () => {
 		'audit-inexistant-zz9',
 		'profil-vide-non-repris',
 	])
-	const FILES = ['src/lib/urls-gelees.ts', 'docs/migration/urls-inventaire.json', 'docs/migration/URLS.md']
+	const FILES = ['src/lib/frozen-urls.ts', 'docs/migration/urls-inventaire.json', 'docs/migration/URLS.md']
 
 	for (const file of FILES) {
 		test(file, () => {
@@ -561,7 +561,7 @@ describe('the verification files of the search engines', () => {
 		const key = readFileSync(join(ROOT, '.env.exemple'), 'utf8').match(/^INDEXNOW_KEY=(.*)$/m)?.[1]
 		// The example file holds the name of the variable and no value; nothing of the repository holds a real key.
 		expect(key).toBe('')
-		for (const file of ['src/lib/urls-gelees.ts', 'docs/migration/urls-inventaire.json', 'docs/migration/URLS.md'])
+		for (const file of ['src/lib/frozen-urls.ts', 'docs/migration/urls-inventaire.json', 'docs/migration/URLS.md'])
 			expect(readFileSync(join(ROOT, file), 'utf8')).not.toMatch(/\b(?!0{32}\b)[0-9a-f]{32}\.txt/)
 	})
 

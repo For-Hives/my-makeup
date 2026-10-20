@@ -1,4 +1,4 @@
-import type { ContenuDePage } from './PageArticle'
+import type { PageContent } from './PageArticle'
 
 /**
  * The texts of the fixed pages for makeup artists and of « À propos », as the site online says them on
@@ -6,7 +6,7 @@ import type { ContenuDePage } from './PageArticle'
  * (title and line under it) is in the page itself.
  */
 
-export const A_PROPOS: ContenuDePage = {
+export const ABOUT: PageContent = {
 	titre: 'À Propos de My-Makeup : Votre Partenaire Beauté en ligne',
 	introduction:
 		'Bienvenue chez My-Makeup, votre partenaire beauté en ligne. Nous sommes une plateforme dédiée à la mise en relation de maquilleuses professionnelles et de clients à la recherche de services de maquillage personnalisés. Notre mission est simple : rendre la beauté accessible à tous.',
@@ -34,7 +34,7 @@ export const A_PROPOS: ContenuDePage = {
 	],
 }
 
-export const PARTENARIATS: ContenuDePage = {
+export const PARTNERSHIPS: PageContent = {
 	titre: 'Communauté et partenariat chez My-Makeup : une plateforme construite avec les maquilleuses',
 	introduction:
 		"Chez My-Makeup, nous voulons aider les maquilleuses professionnelles à se faire connaître des particuliers qui cherchent une maquilleuse. Voici ce que la plateforme vous apporte aujourd'hui.",
@@ -62,7 +62,7 @@ export const PARTENARIATS: ContenuDePage = {
 	],
 }
 
-export const SOLUTIONS_MAQUILLEUSES: ContenuDePage = {
+export const ARTIST_SOLUTIONS: PageContent = {
 	titre:
 		'Solutions My-Makeup pour les Maquilleuses : Présentez Votre Travail et Faites-vous Connaître des Particuliers',
 	introduction:
@@ -91,13 +91,13 @@ export const SOLUTIONS_MAQUILLEUSES: ContenuDePage = {
 	],
 }
 
-export interface Avantage {
+export interface Benefit {
 	titre: string
 	texte: string
 }
 
 /** « Pourquoi rejoindre My-Makeup » : the eight advantages, in the order of the site online. */
-export const AVANTAGES_MAQUILLEUSES: readonly Avantage[] = [
+export const ARTIST_BENEFITS: readonly Benefit[] = [
 	{
 		titre: 'Développez votre activité',
 		texte:

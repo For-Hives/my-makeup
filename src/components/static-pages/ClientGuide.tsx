@@ -3,13 +3,13 @@ import { Cta } from '@/components/blocks/Cta'
 import { Hero } from '@/components/blocks/Hero'
 
 /** One step of a guide: a heading, then its text. */
-export interface EtapeDeGuide {
+export interface GuideStep {
 	titre: string
 	texte: string
 }
 
 /** The text of a guide page for the people looking for a makeup artist (plan 01 §3.1). */
-export interface ContenuDeGuide {
+export interface GuideContent {
 	/** The only h1 of the page, in the head block. */
 	titre: ReactNode
 	description: ReactNode
@@ -18,14 +18,14 @@ export interface ContenuDeGuide {
 	/** The long title of the article: a h2, under the h1 of the head block. */
 	titreDeLArticle: string
 	introduction: string
-	etapes: readonly EtapeDeGuide[]
+	etapes: readonly GuideStep[]
 }
 
 /**
  * A guide page: the head block of the home page (its title is the only h1), the article, then the call
  * to action that closes the pages. The article title that was a second h1 on the site online is a h2.
  */
-export function GuideParticulier({ contenu }: { contenu: ContenuDeGuide }) {
+export function ClientGuide({ contenu }: { contenu: GuideContent }) {
 	return (
 		<main className="relative">
 			<Hero image={contenu.image} titre={contenu.titre} description={contenu.description} />

@@ -4,7 +4,7 @@
  * short titles of these pages. The import copies them into `pageTitle` when a talent has none; a title
  * typed in the admin is never overwritten.
  */
-export const TITRES_DES_PAGES_TALENT: Readonly<Record<string, string>> = {
+export const TALENT_PAGE_TITLES: Readonly<Record<string, string>> = {
 	'maquillage-mariee': 'Maquillage de mariée : trouvez votre maquilleuse pro',
 	'maquillage-fete': 'Maquillage de fête : des maquilleuses pour briller ce soir',
 	'maquillage-professionnel': 'Maquillage professionnel : maquilleuses indépendantes',

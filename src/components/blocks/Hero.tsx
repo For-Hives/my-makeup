@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { BlocDeRecherche } from './SearchBlock'
+import { SearchBlock } from './SearchBlock'
 
 interface PropsHero {
 	/** The only h1 of the page. */
@@ -30,7 +30,7 @@ export function Hero({
 		<div className="relative bg-white 2xl:pt-[90px]">
 			{recherche && (
 				<div className="absolute bottom-0 left-1/2 z-20 flex w-full -translate-x-1/2 transform items-end justify-center px-4">
-					<BlocDeRecherche />
+					<SearchBlock />
 				</div>
 			)}
 			<div className="mx-auto max-w-7xl">

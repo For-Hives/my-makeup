@@ -1,14 +1,14 @@
 /** Titles and descriptions (ticket 070, tests U44 and U45). */
 
-export const MARQUE = 'My-Makeup'
-export const TITRE_MAX = 60
+export const BRAND = 'My-Makeup'
+export const MAX_TITLE = 60
 /** The shortest title of the page of a talent the newsroom writes (ticket 108): Bing asks for 50 to 60. */
-export const TITRE_MIN_DES_TALENTS = 50
+export const TALENT_MIN_TITLE = 50
 export const DESCRIPTION_MIN = 70
 export const DESCRIPTION_MAX = 155
 
 /** What a value says as plain text: never « null » or « undefined », which old code let through. */
-export function texteSur(valeur: unknown): string {
+export function textAbout(valeur: unknown): string {
 	if (typeof valeur !== 'string' && typeof valeur !== 'number') return ''
 	return String(valeur)
 		.replace(/<[^>]*>/g, ' ')
@@ -19,32 +19,32 @@ export function texteSur(valeur: unknown): string {
 }
 
 /** Cut at a word boundary with an ellipsis, `max` characters at most. */
-export function tronquer(texte: string, max: number): string {
+export function truncate(texte: string, max: number): string {
 	if (texte.length <= max) return texte
-	const coupe = texte.slice(0, max - 1)
-	const mot = coupe.replace(/\s+\S*$/, '')
-	return `${(mot.length >= max / 2 ? mot : coupe).replace(/[\s,;:.–-]+$/, '')}…`
+	const cut = texte.slice(0, max - 1)
+	const word = cut.replace(/\s+\S*$/, '')
+	return `${(word.length >= max / 2 ? word : cut).replace(/[\s,;:.–-]+$/, '')}…`
 }
 
 /** « <title> | My-Makeup » when it fits in 60 characters; the brand alone when the title is empty. */
-export function titrePage(valeur: unknown): string {
-	const titre = texteSur(valeur) || MARQUE
-	if (titre.includes(MARQUE)) return tronquer(titre, TITRE_MAX)
-	const complet = `${titre} | ${MARQUE}`
-	return complet.length <= TITRE_MAX ? complet : tronquer(titre, TITRE_MAX)
+export function pageTitle(valeur: unknown): string {
+	const title = textAbout(valeur) || BRAND
+	if (title.includes(BRAND)) return truncate(title, MAX_TITLE)
+	const full = `${title} | ${BRAND}`
+	return full.length <= MAX_TITLE ? full : truncate(title, MAX_TITLE)
 }
 
 /** The first text of 70 characters or more, else the fallback; 155 characters at most, no HTML. */
 export function descriptionMeta(candidats: unknown, repli: string): string {
-	const liste = Array.isArray(candidats) ? candidats : [candidats]
-	const texte = liste.map(texteSur).find(candidat => candidat.length >= DESCRIPTION_MIN)
-	return tronquer(texte ?? texteSur(repli), DESCRIPTION_MAX)
+	const list = Array.isArray(candidats) ? candidats : [candidats]
+	const text = list.map(textAbout).find(candidat => candidat.length >= DESCRIPTION_MIN)
+	return truncate(text ?? textAbout(repli), DESCRIPTION_MAX)
 }
 
 /** Markdown or HTML reduced to plain text, for a description. */
-export function texteBrut(valeur: unknown): string {
+export function plainText(valeur: unknown): string {
 	if (typeof valeur !== 'string') return ''
-	return texteSur(
+	return textAbout(
 		valeur
 			.replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
 			.replace(/<[^>]*>/g, ' ')
@@ -58,8 +58,8 @@ export function texteBrut(valeur: unknown): string {
  * when it wrote none does the first text of 70 characters or more of `autres` serve (markdown reduced to
  * plain text), then the fallback.
  */
-export function descriptionEditoriale(redigee: unknown, autres: readonly unknown[], repli: string): string {
-	const texte = texteBrut(redigee)
-	if (texte) return tronquer(texte, DESCRIPTION_MAX)
-	return descriptionMeta(autres.map(texteBrut), repli)
+export function editorialDescription(redigee: unknown, autres: readonly unknown[], repli: string): string {
+	const text = plainText(redigee)
+	if (text) return truncate(text, DESCRIPTION_MAX)
+	return descriptionMeta(autres.map(plainText), repli)
 }

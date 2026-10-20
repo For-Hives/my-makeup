@@ -26,26 +26,26 @@ import type { Payload } from 'payload'
 import { type Pid, pidDuProfil } from '@/lib/analytics/pid'
 import { formatZone, rayonKm, villeAffichee } from '@/lib/format-zone'
 import { estMontantDePrix, prixMinimal } from '@/lib/prix'
-import { urlTarget, valuesToSearch } from '@/lib/profile/url'
 import { displayName, text } from '@/lib/profile/display-name'
 import { profilePid as pidDeLaPage } from '@/lib/profile/pid'
-import { PUBLISHED_STATUS } from '@/lib/profile/status'
-import { isIndexable, LISTED_FILTER } from '@/lib/profile/visibility'
 import {
-	contacts,
-	type PublicExperience,
-	experiences,
-	type PublicCourse,
-	courses,
 	type ContactLink,
-	rows,
+	contacts,
+	courses,
 	displayedArtistName,
+	experiences,
 	names,
+	type PublicCourse,
+	type PublicExperience,
 	type PublicServiceOffer,
+	rows,
 	serviceOffers,
 } from '@/lib/profile/public-view'
+import { PUBLISHED_STATUS } from '@/lib/profile/status'
+import { urlTarget, valuesToSearch } from '@/lib/profile/url'
+import { isIndexable, LISTED_FILTER } from '@/lib/profile/visibility'
 import type { ProfilePlace } from '@/lib/search/place'
-import { normalizeTexts, type NormalizedTexts } from '@/lib/search/relevance'
+import { type NormalizedTexts, normalizeTexts } from '@/lib/search/relevance'
 import { estUnSlug } from '@/lib/slug'
 import type { Profile } from '@/payload-types'
 

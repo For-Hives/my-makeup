@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 
-interface Bloc {
+interface Block {
 	titre: string
 	paragraphes: readonly string[]
 	bouton: { href: string; libelle: string }
@@ -11,7 +11,7 @@ interface Bloc {
 }
 
 // The texts are those of the home page online, word for word.
-const BLOCS: readonly Bloc[] = [
+const BLOCKS: readonly Block[] = [
 	{
 		titre: 'Boostez votre activité',
 		paragraphes: [
@@ -68,7 +68,7 @@ const BLOCS: readonly Bloc[] = [
 	},
 ]
 
-function ImageDuBloc({ image, cote }: { image: Bloc['image']; cote: 'gauche' | 'droite' }) {
+function BlockImage({ image, cote }: { image: Block['image']; cote: 'gauche' | 'droite' }) {
 	return (
 		<div className="flex h-[250px] w-full items-center justify-center md:h-auto md:w-3/5">
 			<div
@@ -90,12 +90,12 @@ export function Collaboration() {
 					</h2>
 				</div>
 			</div>
-			{BLOCS.map(bloc => (
+			{BLOCKS.map(bloc => (
 				<div key={bloc.titre} className="mx-auto mt-20 max-w-7xl">
 					<div
 						className={`mx-auto flex w-full gap-16 ${bloc.imageAGauche ? 'flex-col-reverse md:flex-row md:gap-0' : 'flex-col md:flex-row'}`}
 					>
-						{bloc.imageAGauche && <ImageDuBloc image={bloc.image} cote="gauche" />}
+						{bloc.imageAGauche && <BlockImage image={bloc.image} cote="gauche" />}
 						<div className="relative flex h-auto w-full flex-col items-start justify-center gap-8 md:w-2/5">
 							<h3 className="text-left font-bold text-4xl text-gray-900 tracking-tight sm:text-3xl">{bloc.titre}</h3>
 							<div className="flex flex-col gap-4">
@@ -109,7 +109,7 @@ export function Collaboration() {
 								</Link>
 							</div>
 						</div>
-						{!bloc.imageAGauche && <ImageDuBloc image={bloc.image} cote="droite" />}
+						{!bloc.imageAGauche && <BlockImage image={bloc.image} cote="droite" />}
 					</div>
 				</div>
 			))}

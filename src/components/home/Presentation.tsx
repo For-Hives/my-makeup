@@ -1,6 +1,6 @@
 import Image from 'next/image'
 
-const COLONNES = [
+const COLUMNS = [
 	{
 		image: '/assets/illustrations/illustration.webp',
 		alt: 'client à la recherche de maquilleuse',
@@ -36,7 +36,7 @@ export function Presentation() {
 			</div>
 			<div className="mx-auto mt-10 max-w-7xl">
 				<div className="mx-auto flex flex-col items-center justify-center gap-16 md:flex-row lg:gap-32">
-					{COLONNES.map(colonne => (
+					{COLUMNS.map(colonne => (
 						<div key={colonne.titre} className="flex flex-col items-center justify-center gap-2">
 							<Image alt={colonne.alt} src={colonne.image} width={140} height={140} />
 							<h3 className="text-center font-bold text-4xl text-gray-700 tracking-tight sm:text-xl">

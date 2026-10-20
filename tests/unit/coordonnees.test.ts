@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import {
+	CONTACT_DETAILS_MESSAGES,
 	consentAfter,
 	emptyGroupIfNull,
-	CONTACT_DETAILS_MESSAGES,
 	validateContactEmail,
 	validateNetworkLink,
 	validatePhone,
@@ -100,12 +100,10 @@ describe('La trace du consentement : posée par le serveur', () => {
 	})
 
 	test('ouvertes par un admin : la date du serveur, la source « admin »', () => {
-		expect(consentAfter({ avant: false, donnees: { publicContact: true }, compte: 'admins', maintenant })).toEqual(
-			{
-				consentedAt: maintenant.toISOString(),
-				consentSource: 'admin',
-			}
-		)
+		expect(consentAfter({ avant: false, donnees: { publicContact: true }, compte: 'admins', maintenant })).toEqual({
+			consentedAt: maintenant.toISOString(),
+			consentSource: 'admin',
+		})
 	})
 
 	test('déjà ouvertes : la trace ne bouge pas', () => {
@@ -128,9 +126,9 @@ describe('La trace du consentement : posée par le serveur', () => {
 				maintenant,
 			})
 		).toEqual({ consentedAt: autreDate, consentSource: 'import' })
-		expect(
-			consentAfter({ avant: undefined, donnees: { publicContact: true }, compte: undefined, maintenant })
-		).toEqual({ consentedAt: maintenant.toISOString(), consentSource: 'import' })
+		expect(consentAfter({ avant: undefined, donnees: { publicContact: true }, compte: undefined, maintenant })).toEqual(
+			{ consentedAt: maintenant.toISOString(), consentSource: 'import' }
+		)
 	})
 })
 

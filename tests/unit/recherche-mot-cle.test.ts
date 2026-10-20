@@ -9,13 +9,13 @@ import { readdirSync, readFileSync } from 'node:fs'
 import Fuse from 'fuse.js'
 import { CATALOGUE } from '@/lib/analytics/events'
 import {
-	rankByRelevance,
-	searchWords,
 	normalizeTexts,
-	WEIGHTS,
-	THRESHOLD,
-	withoutAccents,
+	rankByRelevance,
 	type SearchTexts,
+	searchWords,
+	THRESHOLD,
+	WEIGHTS,
+	withoutAccents,
 } from '@/lib/search/relevance'
 import { find, type SearchableProfile } from '@/lib/search/results'
 

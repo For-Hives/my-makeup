@@ -1,6 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { COLONNES_DE_PIED, RESEAUX } from './links'
+import { FOOTER_COLUMNS, NETWORKS } from './links'
 import { Signature } from './Signature'
 
 export function Footer() {
@@ -18,7 +18,7 @@ export function Footer() {
 						Haute-Savoie
 					</p>
 					<ul className="flex flex-row gap-3 md:flex-col lg:flex-row">
-						{RESEAUX.map(reseau => (
+						{NETWORKS.map(reseau => (
 							<li key={reseau.href}>
 								<Link href={reseau.href} rel="noopener nofollow noreferrer">
 									<Image src={reseau.icone} width={35} height={35} alt={reseau.nom} />
@@ -27,7 +27,7 @@ export function Footer() {
 						))}
 					</ul>
 				</div>
-				{COLONNES_DE_PIED.map(colonne => (
+				{FOOTER_COLUMNS.map(colonne => (
 					<nav key={colonne.titre} aria-label={colonne.titre} className="flex flex-col gap-6">
 						<p className="mb-2 font-bold text-indigo-800 text-xl">{colonne.titre}</p>
 						{colonne.liens.map(lien => (

@@ -4,12 +4,12 @@ import { Profiles } from '@/collections/Profiles'
 import { CHAMPS_DE_L_ETAT } from '@/collections/profiles/etat'
 import { completeness, publishableConditions } from '@/lib/profile/completeness'
 import {
-	profileFields,
-	TRANSITION_DATES,
 	type ProfileDocument,
-	stateAfterSave,
+	profileFields,
 	profileState,
+	stateAfterSave,
 	statusAfter,
+	TRANSITION_DATES,
 } from '@/lib/profile/state'
 import {
 	ANNECY,

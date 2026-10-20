@@ -1,6 +1,6 @@
-import { AVANTAGES_MAQUILLEUSES } from './artist-texts'
+import { ARTIST_BENEFITS } from './artist-texts'
 
-function IconeCoche() {
+function CheckIcon() {
 	return (
 		<svg
 			className="h-6 w-6 text-green-500"
@@ -18,7 +18,7 @@ function IconeCoche() {
 }
 
 /** The advantages of joining, on « Pourquoi rejoindre My-Makeup en tant que maquilleuse ». */
-export function AvantagesMaquilleuses() {
+export function ArtistBenefits() {
 	return (
 		<section className="bg-neutral-50 py-24">
 			<div className="overflow-hidden bg-neutral-50 px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
@@ -30,13 +30,13 @@ export function AvantagesMaquilleuses() {
 						</p>
 					</div>
 					<div className="mt-12 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-						{AVANTAGES_MAQUILLEUSES.map(avantage => (
+						{ARTIST_BENEFITS.map(avantage => (
 							<div key={avantage.titre} className="pt-6">
 								<div className="flow-root rounded-lg px-6 pb-8">
 									<div className="flex flex-col gap-4">
 										<div className="flex items-center">
 											<span className="inline-block rounded-md pr-3">
-												<IconeCoche />
+												<CheckIcon />
 											</span>
 											<h3 className="font-medium text-gray-900 text-lg tracking-tight">{avantage.titre}</h3>
 										</div>

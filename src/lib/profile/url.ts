@@ -67,10 +67,7 @@ const olderThan = (a: UrlCandidate, b: UrlCandidate): number =>
  * What the segment leads to, among the profiles that could be its target (those whose slug is the
  * segment or its slugified form, or whose old username is the segment).
  */
-export function urlTarget<T extends UrlCandidate>(
-	segment: unknown,
-	candidats: readonly T[]
-): UrlTarget<T> {
+export function urlTarget<T extends UrlCandidate>(segment: unknown, candidats: readonly T[]): UrlTarget<T> {
 	const values = valuesToSearch(segment)
 	if (!values) return UNKNOWN
 	const direct = candidats.find(({ slug }) => slug === values.segment)

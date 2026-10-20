@@ -1,5 +1,5 @@
-import { inDepartment } from '@/lib/search/place'
 import { type Search, searchPageUrl } from '@/lib/search/input'
+import { inDepartment } from '@/lib/search/place'
 
 const COLUMN = 'mx-auto flex w-full max-w-2xl flex-col items-center gap-4 px-4 py-24 text-center'
 const LINK = 'font-semibold text-indigo-900 underline'

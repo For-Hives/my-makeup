@@ -1,37 +1,37 @@
 import { SITE_ORIGIN } from '../frozen-urls'
 
 /** The names the structured data gives the site and its publisher. */
-export const NOM_DU_SITE = 'My-Makeup'
-export const IDENTIFIANT_DE_L_ORGANISATION = `${SITE_ORIGIN}/#organisation`
-export const IDENTIFIANT_DU_SITE = `${SITE_ORIGIN}/#site`
+export const SITE_NAME = 'My-Makeup'
+export const ORGANIZATION_ID = `${SITE_ORIGIN}/#organisation`
+export const SITE_ID = `${SITE_ORIGIN}/#site`
 
 /** The logo of the site, an absolute address (a crawler reads it away from the site). */
-export const LOGO_DU_SITE = `${SITE_ORIGIN}/assets/logo.webp`
+export const SITE_LOGO = `${SITE_ORIGIN}/assets/logo.webp`
 
 /**
  * The structured data of the home page (SEO-26): the organisation that publishes the site and the site.
  * Nothing that the site does not know or does not show: no rating, no postal address, no contact
  * detail of a makeup artist. `sameAs` lists the public pages of the brand on the networks.
  */
-export function donneesStructureesDeLAccueil(sameAs: readonly string[]) {
+export function homeStructuredData(sameAs: readonly string[]) {
 	return {
 		'@context': 'https://schema.org',
 		'@graph': [
 			{
 				'@type': 'Organization',
-				'@id': IDENTIFIANT_DE_L_ORGANISATION,
-				name: NOM_DU_SITE,
+				'@id': ORGANIZATION_ID,
+				name: SITE_NAME,
 				url: SITE_ORIGIN,
-				logo: LOGO_DU_SITE,
+				logo: SITE_LOGO,
 				sameAs: [...sameAs],
 			},
 			{
 				'@type': 'WebSite',
-				'@id': IDENTIFIANT_DU_SITE,
-				name: NOM_DU_SITE,
+				'@id': SITE_ID,
+				name: SITE_NAME,
 				url: SITE_ORIGIN,
 				inLanguage: 'fr-FR',
-				publisher: { '@id': IDENTIFIANT_DE_L_ORGANISATION },
+				publisher: { '@id': ORGANIZATION_ID },
 			},
 		],
 	}
@@ -48,13 +48,13 @@ export function serializeJsonLd(donnees: unknown): string {
 }
 
 /** One step of a breadcrumb: its name, and the absolute address it leads to. */
-export interface EtapeDuFilDAriane {
+export interface BreadcrumbStep {
 	nom: string
 	url: string
 }
 
 /** The breadcrumb of a page (SEO-26, test E65): the steps in order, from the home page to the page itself. */
-export function donneesStructureesDuFilDAriane(etapes: readonly EtapeDuFilDAriane[]) {
+export function breadcrumbStructuredData(etapes: readonly BreadcrumbStep[]) {
 	return {
 		'@context': 'https://schema.org',
 		'@type': 'BreadcrumbList',
@@ -68,7 +68,7 @@ export function donneesStructureesDuFilDAriane(etapes: readonly EtapeDuFilDArian
 }
 
 /** What the structured data of an article says: nothing the page does not show. */
-export interface EntreesDeLArticle {
+export interface ArticleInputs {
 	titre: string
 	description: string
 	/** The absolute address of the article. */
@@ -80,7 +80,7 @@ export interface EntreesDeLArticle {
 }
 
 /** `Article` of an article (SEO-26): never a rating, never an address. */
-export function donneesStructureesDeLArticle(entrees: EntreesDeLArticle) {
+export function articleStructuredData(entrees: ArticleInputs) {
 	return {
 		'@context': 'https://schema.org',
 		'@type': 'Article',
@@ -92,7 +92,7 @@ export function donneesStructureesDeLArticle(entrees: EntreesDeLArticle) {
 		mainEntityOfPage: { '@type': 'WebPage', '@id': entrees.url },
 		author: entrees.auteur
 			? { '@type': 'Person', name: entrees.auteur }
-			: { '@type': 'Organization', '@id': IDENTIFIANT_DE_L_ORGANISATION, name: NOM_DU_SITE },
-		publisher: { '@type': 'Organization', '@id': IDENTIFIANT_DE_L_ORGANISATION, name: NOM_DU_SITE, logo: LOGO_DU_SITE },
+			: { '@type': 'Organization', '@id': ORGANIZATION_ID, name: SITE_NAME },
+		publisher: { '@type': 'Organization', '@id': ORGANIZATION_ID, name: SITE_NAME, logo: SITE_LOGO },
 	}
 }

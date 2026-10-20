@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { act } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { ProfileGallery, type GalleryPhoto } from '@/components/profile/ProfileGallery'
+import { type GalleryPhoto, ProfileGallery } from '@/components/profile/ProfileGallery'
 import { ouvrirFenetre } from '../outils/dom-react'
 
 /**

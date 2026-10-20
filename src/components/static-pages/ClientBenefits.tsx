@@ -1,5 +1,5 @@
 /** The check mark in front of each advantage (heroicons 24, MIT), drawn inline. */
-function IconeCoche() {
+function CheckIcon() {
 	return (
 		<svg aria-hidden="true" className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
 			<path
@@ -12,7 +12,7 @@ function IconeCoche() {
 }
 
 /** The advantages of the service for the people looking for a makeup artist (CONF-01: no promise the service does not keep). */
-export const AVANTAGES_PARTICULIER: readonly { titre: string; description: string }[] = [
+export const CLIENT_BENEFITS: readonly { titre: string; description: string }[] = [
 	{
 		titre: 'Des maquilleuses professionnelles en un seul endroit',
 		description:
@@ -48,7 +48,7 @@ export const AVANTAGES_PARTICULIER: readonly { titre: string; description: strin
 	},
 ]
 
-export function AvantagesParticulier() {
+export function ClientBenefits() {
 	return (
 		<section className="bg-neutral-50 py-24">
 			<div className="overflow-hidden bg-neutral-50 px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
@@ -60,13 +60,13 @@ export function AvantagesParticulier() {
 						</p>
 					</div>
 					<div className="mt-12 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-						{AVANTAGES_PARTICULIER.map(avantage => (
+						{CLIENT_BENEFITS.map(avantage => (
 							<div key={avantage.titre} className="pt-6">
 								<div className="flow-root rounded-lg px-6 pb-8">
 									<div className="flex flex-col gap-4">
 										<div className="flex items-center">
 											<span className="inline-block pr-3 text-green-600">
-												<IconeCoche />
+												<CheckIcon />
 											</span>
 											<h3 className="font-medium text-gray-900 text-lg tracking-tight">{avantage.titre}</h3>
 										</div>

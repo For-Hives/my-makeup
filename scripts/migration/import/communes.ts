@@ -22,11 +22,11 @@ import { DEPARTEMENTS } from '../../../src/lib/departements'
 import { usableCity } from '../../../src/lib/profile/completeness'
 import { publicPlace } from '../../../src/lib/profile/public-place'
 import {
-	hasNameCharacters,
-	roundedCoordinate,
-	departmentOfInseeCode,
 	CITY_NAME_MAX,
+	departmentOfInseeCode,
+	hasNameCharacters,
 	looksLikeAnAddress,
+	roundedCoordinate,
 } from '../../../src/lib/profile/zone'
 import { ImportRefuse } from './cible'
 import type { CommuneDuReferentiel, Referentiel } from './referentiel'

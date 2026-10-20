@@ -140,9 +140,7 @@ export function cityToFields(commune: unknown): unknown {
  * ones stay, and its département would be lost.
  */
 export function cityVerdict(commune: unknown): true | string {
-	return commune === undefined || commune === null || plainObject(commune)
-		? true
-		: ZONE_MESSAGES.communeSansCodeInsee
+	return commune === undefined || commune === null || plainObject(commune) ? true : ZONE_MESSAGES.communeSansCodeInsee
 }
 
 /**
@@ -283,8 +281,7 @@ export function cityErrors(commune: CityInput | null | undefined): CityErrors {
 	const { name: cityName, inseeCode: codeInsee, latitude, longitude } = commune ?? {}
 	const errors: CityErrors = {}
 
-	if (!empty(codeInsee) && departmentOfInseeCode(codeInsee) === null)
-		errors.inseeCode = ZONE_MESSAGES.codeInseeMalForme
+	if (!empty(codeInsee) && departmentOfInseeCode(codeInsee) === null) errors.inseeCode = ZONE_MESSAGES.codeInseeMalForme
 	else if (empty(codeInsee) && !empty(cityName)) errors.inseeCode = ZONE_MESSAGES.communeSansCodeInsee
 
 	if (!empty(cityName) && (typeof cityName !== 'string' || cityName.trim().length > CITY_NAME_MAX))

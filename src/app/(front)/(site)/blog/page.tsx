@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { Cta } from '@/components/blocks/Cta'
-import { ListeDesArticles } from '@/components/blog/ArticleList'
-import { metadonnees } from '@/lib/seo/metadata'
+import { ArticleList } from '@/components/blog/ArticleList'
+import { pageMetadata } from '@/lib/seo/metadata'
 import { cachedArticles } from '@/services/public/cached'
 
 // Rendered at each request: the build runs without a database. The articles are read through the cache
@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic'
 
 // `/toutes-les-news` redirects here (ticket 072): the list shows every published article, not the
 // last three of the old page.
-export const metadata: Metadata = metadonnees({
+export const metadata: Metadata = pageMetadata({
 	titre: 'Blog et actualités',
 	description:
 		"L'actualité de My-Makeup, nos conseils pour choisir une maquilleuse professionnelle et les nouveautés qui arrivent bientôt.",
@@ -19,7 +19,7 @@ export const metadata: Metadata = metadonnees({
 	chemin: '/blog',
 })
 
-export default async function PageDuBlog() {
+export default async function BlogPage() {
 	const articles = await cachedArticles()
 	return (
 		<main className="relative">
@@ -32,7 +32,7 @@ export default async function PageDuBlog() {
 							arrivent bientôt !
 						</p>
 					</div>
-					<ListeDesArticles articles={articles} />
+					<ArticleList articles={articles} />
 				</div>
 			</section>
 			<Cta />

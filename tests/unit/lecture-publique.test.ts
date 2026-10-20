@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import type { Payload } from 'payload'
-import { isIndexable, isList, isVisible, INDEXABLE_FILTER, LISTED_FILTER } from '@/lib/profile/visibility'
+import { INDEXABLE_FILTER, isIndexable, isList, isVisible, LISTED_FILTER } from '@/lib/profile/visibility'
 import { LIST_MAX_LIMIT, listProfiles } from '@/services/public/profiles'
 
 /**

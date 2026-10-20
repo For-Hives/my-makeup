@@ -1,5 +1,5 @@
 /**
- * Writes the tables of docs/migration/URLS.md from the frozen table (src/lib/urls-gelees.ts)
+ * Writes the tables of docs/migration/URLS.md from the frozen table (src/lib/frozen-urls.ts)
  * and from the frozen inventory (docs/migration/urls-inventaire.json), so the document
  * cannot say anything else than what the tests read.
  *

@@ -12,7 +12,7 @@
 import { z } from 'zod'
 import { ORIGINES_DECLAREES } from '../analytics/events'
 import { completeness } from '../profile/completeness'
-import { profileFields, type ProfileDocument } from '../profile/state'
+import { type ProfileDocument, profileFields } from '../profile/state'
 import { IDENTITY_MAX, identitySchema, strictIdentitySchema } from './identity'
 
 export const STEPS = [1, 2, 3] as const

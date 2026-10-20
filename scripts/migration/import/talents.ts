@@ -7,7 +7,7 @@
  * before any write and listed (rule 5): it is never corrected.
  */
 
-import { TITRES_DES_PAGES_TALENT } from '../../../src/content/talent-titles'
+import { TALENT_PAGE_TITLES } from '../../../src/content/talent-titles'
 import { estUnSlug } from '../../../src/lib/slug'
 import { REFERENCES } from './ecarts'
 import type { Adaptateur, Attendu, Refus } from './moteur'
@@ -55,7 +55,7 @@ export const ADAPTATEUR_TALENTS: Adaptateur = {
 
 /** The talent the target must hold: the same values, under the same names. */
 export function talentAttendu(ligne: LigneTalent): Attendu {
-	const titreDeLaPage = ligne.slug === null ? undefined : TITRES_DES_PAGES_TALENT[ligne.slug]
+	const titreDeLaPage = ligne.slug === null ? undefined : TALENT_PAGE_TITLES[ligne.slug]
 	return {
 		strapiId: ligne.id,
 		valeurs: {

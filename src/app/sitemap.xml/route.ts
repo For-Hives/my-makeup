@@ -1,4 +1,4 @@
-import { entreesDuSitemap, sitemapXml } from '@/lib/seo/sitemap'
+import { sitemapEntries, sitemapXml } from '@/lib/seo/sitemap'
 import { cachedIndexablePages } from '@/services/public/cached'
 
 // Read at each request: the build runs without a database. The reading is kept in Next's cache, tagged by
@@ -11,6 +11,6 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET(): Promise<Response> {
 	const { profils, talents, articles } = await cachedIndexablePages()
-	const xml = sitemapXml(entreesDuSitemap({ profils, talents, articles }))
+	const xml = sitemapXml(sitemapEntries({ profils, talents, articles }))
 	return new Response(xml, { headers: { 'Content-Type': 'application/xml; charset=utf-8' } })
 }

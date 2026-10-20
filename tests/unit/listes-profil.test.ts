@@ -1,17 +1,17 @@
 import { describe, expect, test } from 'bun:test'
 import {
-	dayDate,
-	lastDayToObtain,
-	rowIdentities,
 	calendarDay,
 	DESCRIPTION_MAX_LENGTH,
-	NAME_MAX_LENGTH,
-	MESSAGES,
 	dateMessage,
+	dayDate,
 	endMessage,
-	priceMessage,
-	textMessage,
+	lastDayToObtain,
+	MESSAGES,
+	NAME_MAX_LENGTH,
 	obtainMessage,
+	priceMessage,
+	rowIdentities,
+	textMessage,
 } from '@/lib/profile/lists'
 
 /**

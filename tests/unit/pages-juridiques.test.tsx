@@ -3,7 +3,7 @@ import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { OppositionMesure } from '@/components/analytics/OppositionMesure'
-import { COLONNES_DE_PIED } from '@/components/layout/links'
+import { FOOTER_COLUMNS } from '@/components/layout/links'
 import { CLE_D_OPPOSITION, mesureRefusee, refuserLaMesure } from '@/lib/analytics/opposition'
 import { EDITEUR, formatSiren, formatSiret, HEBERGEUR, luhnValid } from '@/lib/legal'
 import { ouvrirFenetre } from '../outils/dom-react'
@@ -69,7 +69,7 @@ describe('le texte des trois pages', () => {
 	})
 
 	test('le pied de page mène aux trois pages', () => {
-		const liens = COLONNES_DE_PIED.flatMap(({ liens }) => liens.map(({ href }) => href))
+		const liens = FOOTER_COLUMNS.flatMap(({ liens }) => liens.map(({ href }) => href))
 		for (const { chemin } of PAGES) expect(liens).toContain(chemin)
 	})
 })

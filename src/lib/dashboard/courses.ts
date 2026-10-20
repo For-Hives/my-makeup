@@ -9,8 +9,8 @@
  *   far ahead.
  */
 
-import { DESCRIPTION_MAX_LENGTH, NAME_MAX_LENGTH, textMessage, obtainMessage } from '../profile/lists'
 import { text } from '../profile/display-name'
+import { DESCRIPTION_MAX_LENGTH, NAME_MAX_LENGTH, obtainMessage, textMessage } from '../profile/lists'
 import { monthYear } from '../profile/public-view'
 import { formDay, type ListDefinition, type RowErrors, type RowValues } from './list'
 

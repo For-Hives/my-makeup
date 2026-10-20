@@ -3,21 +3,21 @@ import type { Field } from 'payload'
 import { Profiles } from '@/collections/Profiles'
 import { DEPARTEMENTS } from '@/lib/departements'
 import {
-	RADIUS_BOUNDS_KM,
 	CITY_FIELDS,
-	OVERSEAS_COLLECTIVITIES,
 	type CityInput,
-	normalizedInseeCode,
-	cityToFields,
-	roundedCoordinate,
 	COORDINATE_DECIMALS,
-	departmentOfInseeCode,
 	cityErrors,
-	ZONE_MESSAGES,
-	normalizedName,
-	looksLikeAnAddress,
+	cityToFields,
 	cityVerdict,
+	departmentOfInseeCode,
+	looksLikeAnAddress,
+	normalizedInseeCode,
+	normalizedName,
+	OVERSEAS_COLLECTIVITIES,
+	RADIUS_BOUNDS_KM,
 	radiusVerdict,
+	roundedCoordinate,
+	ZONE_MESSAGES,
 } from '@/lib/profile/zone'
 
 /**
@@ -278,14 +278,10 @@ describe('la commune', () => {
 		expect(cityErrors(undefined)).toEqual({})
 		expect(cityErrors(null)).toEqual({})
 		expect(cityErrors({})).toEqual({})
-		expect(
-			cityErrors({ name: null, inseeCode: null, department: null, latitude: null, longitude: null })
-		).toEqual({})
+		expect(cityErrors({ name: null, inseeCode: null, department: null, latitude: null, longitude: null })).toEqual({})
 		expect(cityErrors(ANNECY)).toEqual({})
 		expect(cityErrors({ name: 'Annecy', inseeCode: '74010' })).toEqual({})
-		expect(cityErrors({ name: 'Saint-Remy-en-Bouzemont-Saint-Genest-et-Isson', inseeCode: '51513' })).toEqual(
-			{}
-		)
+		expect(cityErrors({ name: 'Saint-Remy-en-Bouzemont-Saint-Genest-et-Isson', inseeCode: '51513' })).toEqual({})
 		expect(cityErrors({ name: 'Ajaccio', inseeCode: '2A004', latitude: 0, longitude: 0 })).toEqual({})
 	})
 

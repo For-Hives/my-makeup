@@ -1,10 +1,10 @@
 import { SuiviDeLaSoumission } from '@/components/analytics/SuiviDeLaSoumission'
-import { IconeLieu, IconeLoupe } from './icons'
+import { MagnifierIcon, PlaceIcon } from './icons'
 
-const CHAMP =
+const FIELD =
 	'flex w-full items-center rounded-lg border-2 border-indigo-900 bg-transparent py-2 pr-6 pl-12 text-indigo-900 text-sm leading-6'
 
-interface PropsBlocDeRecherche {
+interface SearchBlockProps {
 	/** What the fields hold: the search of the address on the search page, nothing on the home page. */
 	search?: string
 	city?: string
@@ -17,9 +17,9 @@ interface PropsBlocDeRecherche {
  * online, `search` and `city`. It needs no JavaScript. A field left empty is sent empty, and the
  * search page reads an empty field as none; a city alone is a search.
  */
-export function BlocDeRecherche({ search = '', city = '', surLaPageDeRecherche = false }: PropsBlocDeRecherche) {
-	const prefixe = surLaPageDeRecherche ? 'recherche' : 'bloc'
-	const largeur = surLaPageDeRecherche ? 'lg:w-96' : 'lg:w-80'
+export function SearchBlock({ search = '', city = '', surLaPageDeRecherche = false }: SearchBlockProps) {
+	const prefix = surLaPageDeRecherche ? 'recherche' : 'bloc'
+	const width = surLaPageDeRecherche ? 'lg:w-96' : 'lg:w-80'
 	return (
 		<div
 			className={
@@ -39,33 +39,33 @@ export function BlocDeRecherche({ search = '', city = '', surLaPageDeRecherche =
 					<SuiviDeLaSoumission />
 					<div className="flex w-full flex-col gap-4 px-2 md:w-full md:flex-row lg:w-auto lg:gap-6 lg:px-0">
 						<div className="relative w-full md:w-full lg:w-auto">
-							<label htmlFor={`${prefixe}-prestation`} className="sr-only">
+							<label htmlFor={`${prefix}-prestation`} className="sr-only">
 								Prestation recherchée
 							</label>
-							<IconeLoupe className="absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 transform text-indigo-900" />
+							<MagnifierIcon className="absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 transform text-indigo-900" />
 							<input
-								id={`${prefixe}-prestation`}
+								id={`${prefix}-prestation`}
 								name="search"
 								type="search"
 								maxLength={100}
 								defaultValue={search}
-								className={`${CHAMP} ${largeur}`}
+								className={`${FIELD} ${width}`}
 								placeholder="Essayez 'Maquilleuse mariée', 'Maquilleuse événements'..."
 							/>
 						</div>
 						<div className="relative w-full md:w-full lg:w-auto">
-							<label htmlFor={`${prefixe}-ville`} className="sr-only">
+							<label htmlFor={`${prefix}-ville`} className="sr-only">
 								Ville de la prestation
 							</label>
-							<IconeLieu className="absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 transform text-indigo-900" />
+							<PlaceIcon className="absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 transform text-indigo-900" />
 							<input
-								id={`${prefixe}-ville`}
+								id={`${prefix}-ville`}
 								name="city"
 								type="text"
 								maxLength={100}
 								defaultValue={city}
 								autoComplete="address-level2"
-								className={`${CHAMP} ${largeur}`}
+								className={`${FIELD} ${width}`}
 								placeholder="Lieu de la mission (ex: Paris, Lyon, Marseille...)"
 							/>
 						</div>

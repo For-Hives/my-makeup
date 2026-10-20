@@ -21,7 +21,6 @@
 
 import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
-import { cleIndexNow } from '../../src/lib/seo/indexnow'
 import {
 	anonymousStatus,
 	FROZEN_URL_FAMILIES,
@@ -31,6 +30,7 @@ import {
 	SITE_ORIGIN,
 	splitAddress,
 } from '../../src/lib/frozen-urls'
+import { indexNowKey } from '../../src/lib/seo/indexnow'
 
 /* ------------------------------------------------------------------------------------------
  * Reading the h1 like the measuring tool
@@ -161,7 +161,7 @@ function inventoryFamily(entree: { address: string; first: number }): FrozenUrlF
  */
 function adresseDeLaCleIndexNow(adresse: string): string {
 	if (!/^\/0{32}\.txt$/.test(adresse)) return adresse
-	const cle = cleIndexNow()
+	const cle = indexNowKey()
 	return cle ? `/${cle}.txt` : adresse
 }
 

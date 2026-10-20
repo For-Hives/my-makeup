@@ -1,19 +1,19 @@
 /**
  * Does the page of this address exist? Asked by the proxy before the page runs (ticket 231). The reads are
  * those of the pages (src/services/public/cached.ts); what exists is remembered for a minute by the process
- * (`memoireDesPagesQuiExistent`), because Next's cache keeps nothing from the proxy. An unknown address is read
+ * (`existingPagesMemory`), because Next's cache keeps nothing from the proxy. An unknown address is read
  * at each visit, as the pages read it.
  */
 
 import config from '@payload-config'
 import { getPayload } from 'payload'
-import { type FamilleVerifiee, memoireDesPagesQuiExistent } from '@/lib/urls/unknown-page'
-import { cachedProfileUrl, cachedArticle, cachedTalent } from './cached'
+import { type CheckedFamily, existingPagesMemory } from '@/lib/urls/unknown-page'
+import { cachedArticle, cachedProfileUrl, cachedTalent } from './cached'
 
-const memory = memoireDesPagesQuiExistent()
+const memory = existingPagesMemory()
 
 /** False only for an address the page would answer with its 404; a redirection of a profile is a page. */
-export async function pageExists(famille: FamilleVerifiee, segment: string): Promise<boolean> {
+export async function pageExists(famille: CheckedFamily, segment: string): Promise<boolean> {
 	const key = `${famille}:${segment}`
 	if (memory.connait(key)) return true
 	const payload = await getPayload({ config })

@@ -5,9 +5,9 @@ import { getPayload } from 'payload'
 import { cache } from 'react'
 import { ProfileView } from '@/components/profile/ProfileView'
 import { serializeJsonLd } from '@/lib/seo/json-ld'
-import { donneesStructureesDuProfil, metadonneesDuProfil } from '@/lib/seo/profile'
+import { profileMetadata, profileStructuredData } from '@/lib/seo/profile'
 import { cheminProfil } from '@/lib/slug'
-import { segmentEcrit } from '@/lib/urls/unknown-page'
+import { writtenSegment } from '@/lib/urls/unknown-page'
 import { cachedProfileUrl } from '@/services/public/cached'
 import type { ProfileUrlTarget } from '@/services/public/profiles'
 
@@ -18,7 +18,7 @@ export const dynamic = 'force-dynamic'
 
 /** What the address leads to, read once for the metadata and the page of one request. */
 const profileUrlTarget = cache(async (segment: string): Promise<ProfileUrlTarget> => {
-	return cachedProfileUrl(await getPayload({ config }), segmentEcrit(segment))
+	return cachedProfileUrl(await getPayload({ config }), writtenSegment(segment))
 })
 
 /**
@@ -29,7 +29,7 @@ const profileUrlTarget = cache(async (segment: string): Promise<ProfileUrlTarget
 export async function generateMetadata({ params }: PageProps<'/profil/[slug]'>): Promise<Metadata> {
 	const { slug } = await params
 	const target = await profileUrlTarget(slug)
-	return target.type === 'profil' ? metadonneesDuProfil(target.profil) : {}
+	return target.type === 'profil' ? profileMetadata(target.profil) : {}
 }
 
 /**
@@ -54,7 +54,7 @@ export default async function ProfilePage({ params }: PageProps<'/profil/[slug]'
 			<script
 				type="application/ld+json"
 				// biome-ignore lint/security/noDangerouslySetInnerHtml: serializeJsonLd escapes <, > and &, so the data cannot close the tag.
-				dangerouslySetInnerHTML={{ __html: serializeJsonLd(donneesStructureesDuProfil(target.profil)) }}
+				dangerouslySetInnerHTML={{ __html: serializeJsonLd(profileStructuredData(target.profil)) }}
 			/>
 			<ProfileView profil={target.profil} />
 		</>

@@ -83,7 +83,7 @@ Ce qui existe aujourd'hui est décrit dans le README, « Ce que contient le sque
 - **Une application, trois zones**, sous `src/app/` : les pages publiques dans `(front)/(site)/`, l'espace maquilleuse dans `(front)/(dashboard)/auth/`, l'administration et l'API dans `(payload)/`, générées par Payload. Le groupe `(front)` donne une seule coquille HTML au site et à l'espace. Les plans écrivent ces chemins sans `(front)`.
 - **Deux collections de comptes.** `admins` ouvre l'administration (rôles `admin` et `editor`). `pros` porte les comptes des maquilleuses. Une maquilleuse n'entre jamais dans `/admin`.
 - **Un seul point de lecture publique** : `src/services/public/`. Une page publique lit ses données par ce module, qui choisit ses champs un par un. Les coordonnées d'une maquilleuse n'en sortent que si elle les publie (`publicContact`).
-- **Une seule règle par sujet**, dans `src/lib/`, testée en unitaire : complétude d'un profil (`src/lib/profile/completeness.ts`), slug (`src/lib/slug.ts`), zone (`src/lib/format-zone.ts`), prix (`src/lib/prix.ts`), URL gelées (`src/lib/urls-gelees.ts`), variables d'environnement (`src/lib/env.ts`). Le reste du code les appelle et ne refait pas le calcul.
+- **Une seule règle par sujet**, dans `src/lib/`, testée en unitaire : complétude d'un profil (`src/lib/profile/completeness.ts`), slug (`src/lib/slug.ts`), zone (`src/lib/format-zone.ts`), prix (`src/lib/prix.ts`), URL gelées (`src/lib/frozen-urls.ts`), variables d'environnement (`src/lib/env.ts`). Le reste du code les appelle et ne refait pas le calcul.
 - **Les accès se décident dans les collections**, par rôle et par propriétaire, et jusqu'au champ pour ce qui est privé. Le code serveur qui agit pour une visiteuse ou une maquilleuse garde les règles actives (`overrideAccess: false`). Les règles elles-mêmes sont dans `src/lib/acces.ts`, et toute règle d'accès ajoute ses lignes à la matrice d'accès (`tests/integration/payload-acces.test.ts`), jouée par l'API REST et par l'API locale ([`docs/tests/banc.md`](docs/tests/banc.md), « La matrice d'accès »).
 - **Les photos** vivent dans un stockage d'objets (Cloudflare R2, par `@payloadcms/storage-s3`). Une photo qui ne sert plus part à la corbeille, jamais à la suppression directe.
 - **Les pages publiques sont rendues côté serveur** et rafraîchies par étiquettes : publier ou modifier un contenu rafraîchit les pages qui le lisent. Les pages et les étiquettes de chaque collection sont dans `src/lib/revalidation.ts` : une lecture mise en cache porte les étiquettes de ce qu'elle lit, et l'import ne rafraîchit rien.
@@ -112,7 +112,7 @@ Ces règles n'ont pas d'exception. Si une tâche semble en demander une, arrête
 
 ## URL
 
-- La table qui fait foi est `src/lib/urls-gelees.ts` : chaque famille d'adresses et le code qu'elle répond. [`docs/migration/URLS.md`](docs/migration/URLS.md) en est la lecture.
+- La table qui fait foi est `src/lib/frozen-urls.ts` : chaque famille d'adresses et le code qu'elle répond. [`docs/migration/URLS.md`](docs/migration/URLS.md) en est la lecture.
 - Une adresse publique nouvelle, déplacée ou retirée a sa ligne dans la table et son test. Une adresse déplacée répond par une redirection permanente (308), en un seul saut.
 - `bun scripts/migration/urls-doc.ts` réécrit ensuite les tableaux du document. Un code qui change pour une visiteuse a aussi sa ligne au registre des changements voulus.
 - Aucune adresse de profil réel dans le dépôt : `/profil/<slug>`, ou un profil fictif du banc de test.
