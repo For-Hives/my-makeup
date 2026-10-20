@@ -118,7 +118,7 @@ export function problemsOf(markdown: string, root = ROOT): string[] {
 	else if (
 		Number(announced[1]) !== counted.vert ||
 		Number(announced[2]) !== counted['hors bascule'] ||
-		Number(announced[3]) !== counted['remplacé']
+		Number(announced[3]) !== counted.remplacé
 	)
 		problems.push(`Les décomptes annoncés ne sont pas ceux des lignes : ${JSON.stringify(counted)}`)
 	return problems
