@@ -21,6 +21,7 @@ import {
 	radiusVerdict,
 	roundedCoordinate,
 	townErrors,
+	withoutEmptyPostalCodes,
 	ZONE_REVIEW_REASONS,
 	zoneFilled,
 	zoneKindVerdict,
@@ -78,7 +79,11 @@ export const zoneFields: Field[] = [
 		},
 		// Before its fields are read: Payload stops with a 500 on a group sent as `null`, and fills
 		// what an object leaves out with the stored values.
-		hooks: { beforeValidate: [({ value }) => cityWithPostalCodes(value)] },
+		hooks: {
+			beforeValidate: [({ value }) => cityWithPostalCodes(value)],
+			// A commune with no postal code reads as before ticket 259: the group holds no empty list.
+			afterRead: [({ value }) => withoutEmptyPostalCodes(value)],
+		},
 		validate: cityVerdict,
 		fields: [
 			{
@@ -127,8 +132,6 @@ export const zoneFields: Field[] = [
 				hasMany: true,
 				hooks: {
 					beforeValidate: [({ value }) => normalizedPostalCodes(value)],
-					// A commune with no postal code reads as before ticket 259: the group holds no empty list.
-					afterRead: [({ value }) => (Array.isArray(value) && value.length === 0 ? undefined : value)],
 				},
 				validate: (value: unknown) => postalCodesErrors(value)[0] ?? true,
 				admin: { description: 'Donnés par la liste officielle avec la commune.' },

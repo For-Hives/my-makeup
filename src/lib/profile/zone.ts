@@ -521,3 +521,13 @@ export function zoneWrite(data: unknown): Record<string, unknown> | string | nul
 	if (kind === 'countries') return { ...clearCity }
 	return null
 }
+
+/**
+ * A commune as it is read back: without `postalCodes` when it has none, so a commune with no postal
+ * code reads exactly as it did before they existed. Anything but a plain object is left as it is.
+ */
+export function withoutEmptyPostalCodes(commune: unknown): unknown {
+	if (!plainObject(commune) || !Array.isArray(commune.postalCodes) || commune.postalCodes.length > 0) return commune
+	const { postalCodes: _empty, ...others } = commune
+	return others
+}
