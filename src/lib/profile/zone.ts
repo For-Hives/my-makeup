@@ -418,3 +418,97 @@ export function postalCodesErrors(codes: unknown): string[] {
 	else if (new Set(list).size !== list.length) errors.push(ABROAD_MESSAGES.postalCodeDuplicate)
 	return errors
 }
+
+// ---------------------------------------------------------------------------------------------
+// The zone as a whole (ticket 259): its type, and what the server empties when it is saved.
+// ---------------------------------------------------------------------------------------------
+
+/** The two types of zone: a commune of the official list, or one to five countries (`PLAN-ZONES.md` §3.2). */
+export const ZONE_KINDS = ['city', 'countries'] as const
+
+export type ZoneKind = (typeof ZONE_KINDS)[number]
+
+/** The zone type a profile has before anyone chooses one. */
+export const INITIAL_ZONE_KIND: ZoneKind = 'city'
+
+/** The reasons an import leaves a zone empty and the profile « to review » (`zoneReview.reason`). */
+export const ZONE_REVIEW_REASONS = ['sharedPostalCode', 'homonyms', 'notFound', 'notACity'] as const
+
+/** What the server answers, in French, to a zone that mixes the two types or names none. */
+export const ZONE_KIND_MESSAGES = {
+	mixed: 'Une zone est une commune ou des pays, pas les deux : enregistre l’une ou l’autre.',
+	unknown: 'Choisis un type de zone : une commune ou des pays.',
+} as const
+
+const isZoneKind = (value: unknown): value is ZoneKind => (ZONE_KINDS as readonly unknown[]).includes(value)
+
+/** The type of zone, or a message when the value is none of the two (empty is the default). */
+export function zoneKindVerdict(value: unknown): true | string {
+	return value === undefined || value === null || isZoneKind(value) ? true : ZONE_KIND_MESSAGES.unknown
+}
+
+/**
+ * A commune as the collection reads it, with its postal codes: `cityToFields`, then the postal
+ * codes the object gives, written without spaces and sorted, or none when it gives none: a commune
+ * is sent whole, so the codes of the commune it replaces never stay next to it. Anything that is
+ * not an object is left as `cityToFields` leaves it.
+ */
+export function cityWithPostalCodes(commune: unknown): unknown {
+	const fields = cityToFields(commune)
+	if (!plainObject(fields)) return fields
+	const given = plainObject(commune) ? commune.postalCodes : undefined
+	return { ...fields, postalCodes: given === undefined || given === null ? [] : normalizedPostalCodes(given) }
+}
+
+/** A list given, or a text typed: something is there. */
+const listed = (value: unknown): boolean => (Array.isArray(value) ? value.length > 0 : !empty(value))
+
+/** Whether the commune a request sends holds anything: a name, a code, coordinates or postal codes. */
+function cityGiven(commune: unknown): boolean {
+	if (commune === undefined || commune === null) return false
+	if (!plainObject(commune)) return listed(commune)
+	return [...CITY_FIELDS, 'postalCodes'].some(field => field !== 'department' && listed(commune[field]))
+}
+
+/**
+ * Whether a zone holds anything once saved: a commune (its name or its code) or countries. The
+ * server empties `zoneReview` as soon as it does.
+ */
+export function zoneFilled(zone: unknown): boolean {
+	if (!plainObject(zone)) return false
+	const commune = plainObject(zone.city) ? zone.city : {}
+	return (
+		!empty(commune.name) || !empty(commune.inseeCode) || (Array.isArray(zone.countries) && zone.countries.length > 0)
+	)
+}
+
+/**
+ * What the server writes on a zone so that it is saved whole, from what a request sends (before any
+ * stored value is merged into it): the fields of the other type are emptied, never left from the
+ * stored zone.
+ *
+ * - A commune given: the zone is a commune; countries and town are emptied.
+ * - Countries or a town given: the zone is countries; the commune is emptied.
+ * - Both given, or a type that contradicts what is given: refused, as a message.
+ * - Only a type given: the zone takes it and the fields of the other are emptied.
+ * - Nothing about the zone given: null, nothing to write. A commune or countries sent empty stay
+ *   as sent (they empty themselves) and do not change the type.
+ */
+export function zoneWrite(data: unknown): Record<string, unknown> | string | null {
+	if (!plainObject(data)) return null
+	const { zoneKind, city, countries, town } = data
+	if (zoneKind === undefined && city === undefined && countries === undefined && town === undefined) return null
+	if (zoneKindVerdict(zoneKind) !== true) return null
+	const kind = zoneKind === undefined || zoneKind === null ? undefined : zoneKind
+	const hasCity = cityGiven(city)
+	const hasCountries = listed(countries) || listed(town)
+	if (hasCity && hasCountries) return ZONE_KIND_MESSAGES.mixed
+	if ((hasCity && kind === 'countries') || (hasCountries && kind === 'city')) return ZONE_KIND_MESSAGES.mixed
+	const clearCity = { city: null }
+	const clearCountries = { countries: [], town: null }
+	if (hasCity) return { zoneKind: 'city', ...clearCountries }
+	if (hasCountries) return { zoneKind: 'countries', ...clearCity }
+	if (kind === 'city') return { ...clearCountries }
+	if (kind === 'countries') return { ...clearCity }
+	return null
+}

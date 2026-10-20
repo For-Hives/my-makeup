@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import { ValidationError } from 'payload'
 import { NO_PROFILE_CONTEXT } from '@/collections/Profiles'
-import { ZONE_MESSAGES } from '@/lib/profile/zone'
+import { ABROAD_MESSAGES, ZONE_KIND_MESSAGES, ZONE_MESSAGES } from '@/lib/profile/zone'
 import { createAccount, randomPassword, type TestAccount } from '../support/account-factory'
 import { emptyBase, testPayload } from '../support/payload-test'
 import { callRest } from '../support/rest'
@@ -41,11 +41,15 @@ async function artistAndItsProfile(): Promise<{ compte: Artist; profil: number }
 const modify = (compte: Artist, profil: number, corps: Record<string, unknown>) =>
 	callRest('PATCH', `/api/profiles/${profil}?depth=0`, { enTetes: compte.session.enTetes, corps })
 
-/** The zone as the database holds it, read without access control. */
+/**
+ * The zone of a commune as the database holds it, read without access control. The postal codes of
+ * the commune (ticket 259) are read apart, by `storedPostalCodes`: this view is the one of ticket 041.
+ */
 async function storedZone(profil: number) {
 	const payload = await testPayload()
 	const { city, radiusKm, homeService } = await payload.findByID({ collection: 'profiles', depth: 0, id: profil })
-	return { city, radiusKm, homeService }
+	const { postalCodes: _postalCodes, ...commune } = city ?? {}
+	return { city: commune, radiusKm, homeService }
 }
 
 /** What a REST refusal says, field by field. */
@@ -342,5 +346,271 @@ describe('Lecture anonyme : la commune et son département sortent avec le profi
 		}
 
 		expect((await callRest('GET', `/api/profiles/${draft.profil}`)).statut).toBe(404)
+	})
+})
+
+/** The zone as ticket 259 stores it, read without access control: type, countries, town, postal codes, review. */
+async function storedAbroad(profil: number) {
+	const payload = await testPayload()
+	const { zoneKind, countries, town, city, zoneReview } = await payload.findByID({
+		collection: 'profiles',
+		depth: 0,
+		id: profil,
+	})
+	return { zoneKind, countries, town, cityName: city?.name ?? null, postalCodes: city?.postalCodes, zoneReview }
+}
+
+const NO_REVIEW = { reason: null, postalCode: null, candidates: null } as const
+
+describe('Les deux types de zone (ticket 259) : une commune, ou des pays', () => {
+	test('constat : hasMany d’un text, dans le groupe city comme au premier niveau, s’enregistre et se relit (Payload 3.90.2, Postgres)', async () => {
+		const { compte: account, profil: profile } = await artistAndItsProfile()
+
+		const saved = await modify(account, profile, {
+			city: { ...ANNECY, postalCodes: ['74000', '74960', '74940'] },
+		})
+		expect(saved.statut).toBe(200)
+		expect((await storedAbroad(profile)).postalCodes).toEqual(['74000', '74940', '74960'])
+		const reread = await callRest('GET', `/api/profiles/${profile}?depth=0`)
+		expect((reread.corps as { city: { postalCodes: string[] } }).city.postalCodes).toEqual(['74000', '74940', '74960'])
+
+		const countries = await modify(account, profile, { countries: ['BE', 'IT'] })
+		expect(countries.statut).toBe(200)
+		expect((await storedAbroad(profile)).countries).toEqual(['BE', 'IT'])
+	})
+
+	test('un profil neuf est de type city, sans pays ni ville ni revue', async () => {
+		const { profil: profile } = await artistAndItsProfile()
+
+		expect(await storedAbroad(profile)).toEqual({
+			zoneKind: 'city',
+			countries: [],
+			town: null,
+			cityName: null,
+			postalCodes: [],
+			zoneReview: NO_REVIEW,
+		})
+	})
+
+	test('une zone de pays : un pays et sa ville, relus tels quels ; la commune est vidée', async () => {
+		const { compte: account, profil: profile } = await artistAndItsProfile()
+		await modify(account, profile, { city: { ...ANNECY, postalCodes: ['74000'] }, radiusKm: 20 })
+
+		const saved = await modify(account, profile, { countries: ['be'], town: ' Bruxelles ' })
+
+		expect(saved.statut).toBe(200)
+		expect(await storedAbroad(profile)).toEqual({
+			zoneKind: 'countries',
+			countries: ['BE'],
+			town: 'Bruxelles',
+			cityName: null,
+			postalCodes: [],
+			zoneReview: NO_REVIEW,
+		})
+		expect((await storedZone(profile)).city).toEqual(EMPTY_CITY)
+		// The radius and « à domicile » are common to both types.
+		expect((await storedZone(profile)).radiusKm).toBe(20)
+	})
+
+	test('une zone de plusieurs pays, dans l’ordre de la maquilleuse, sans ville', async () => {
+		const { compte: account, profil: profile } = await artistAndItsProfile()
+
+		expect((await modify(account, profile, { countries: ['FR', 'IT'] })).statut).toBe(200)
+		expect((await storedAbroad(profile)).countries).toEqual(['FR', 'IT'])
+		expect((await modify(account, profile, { countries: ['IT', 'FR', 'CH'] })).statut).toBe(200)
+		expect((await storedAbroad(profile)).countries).toEqual(['IT', 'FR', 'CH'])
+	})
+
+	test('revenir à une commune vide les pays et la ville', async () => {
+		const { compte: account, profil: profile } = await artistAndItsProfile()
+		await modify(account, profile, { countries: ['BE'], town: 'Bruxelles' })
+
+		expect((await modify(account, profile, { city: ANNECY })).statut).toBe(200)
+
+		expect(await storedAbroad(profile)).toMatchObject({
+			zoneKind: 'city',
+			countries: [],
+			town: null,
+			cityName: 'Annecy',
+		})
+	})
+
+	test('le type seul change la zone : il vide les champs de l’autre type', async () => {
+		const { compte: account, profil: profile } = await artistAndItsProfile()
+		await modify(account, profile, { city: ANNECY })
+
+		expect((await modify(account, profile, { zoneKind: 'countries' })).statut).toBe(200)
+		expect(await storedAbroad(profile)).toMatchObject({ zoneKind: 'countries', cityName: null, countries: [] })
+
+		await modify(account, profile, { countries: ['CH'], town: 'Genève' })
+		expect((await modify(account, profile, { zoneKind: 'city' })).statut).toBe(200)
+		expect(await storedAbroad(profile)).toMatchObject({ zoneKind: 'city', countries: [], town: null })
+	})
+
+	test('une sauvegarde d’un autre champ laisse la zone de pays telle quelle', async () => {
+		const { compte: account, profil: profile } = await artistAndItsProfile()
+		await modify(account, profile, { countries: ['BE'], town: 'Bruxelles' })
+
+		expect((await modify(account, profile, { firstName: 'Léa' })).statut).toBe(200)
+
+		expect(await storedAbroad(profile)).toMatchObject({ zoneKind: 'countries', countries: ['BE'], town: 'Bruxelles' })
+	})
+
+	test('une requête qui remplit les deux types est refusée en français, et rien ne change', async () => {
+		const { compte: account, profil: profile } = await artistAndItsProfile()
+		await modify(account, profile, { city: ANNECY })
+		const before = await storedAbroad(profile)
+
+		for (const body of [
+			{ city: ANNECY, countries: ['BE'] },
+			{ city: ANNECY, town: 'Bruxelles' },
+			{ zoneKind: 'city', countries: ['BE'] },
+			{ zoneKind: 'countries', city: ANNECY },
+		]) {
+			const refusal = await modify(account, profile, body)
+			expect(refusal.statut, JSON.stringify(body)).toBe(400)
+			expect(refusedFields(refusal.corps), JSON.stringify(body)).toEqual([
+				{ path: 'zoneKind', message: ZONE_KIND_MESSAGES.mixed },
+			])
+		}
+		expect(await storedAbroad(profile)).toEqual(before)
+
+		// The server is held by the same rule (the import's path).
+		const payload = await testPayload()
+		const byServer = await payload
+			.update({ collection: 'profiles', id: profile, data: { city: ANNECY, countries: ['BE'] } })
+			.catch((erreur: unknown) => erreur)
+		expect(byServer).toBeInstanceOf(ValidationError)
+		expect(await storedAbroad(profile)).toEqual(before)
+	})
+
+	test('la France seule est refusée ; un code inconnu, un doublon, plus de cinq pays aussi', async () => {
+		const { compte: account, profil: profile } = await artistAndItsProfile()
+		await modify(account, profile, { countries: ['BE'] })
+		const before = await storedAbroad(profile)
+
+		const cases: [string[], string][] = [
+			[['FR'], ABROAD_MESSAGES.countriesFranceOnly],
+			[['fr'], ABROAD_MESSAGES.countriesFranceOnly],
+			[['XX'], ABROAD_MESSAGES.countriesUnknown],
+			[['RE'], ABROAD_MESSAGES.countriesUnknown],
+			[['BE', 'be'], ABROAD_MESSAGES.countriesDuplicate],
+			[['BE', 'CH', 'LU', 'IT', 'ES', 'DE'], ABROAD_MESSAGES.countriesTooMany],
+		]
+		for (const [countries, message] of cases) {
+			const refusal = await modify(account, profile, { countries })
+			expect(refusal.statut, countries.join()).toBe(400)
+			expect(refusedFields(refusal.corps), countries.join()).toEqual([{ path: 'countries', message }])
+		}
+		expect(await storedAbroad(profile)).toEqual(before)
+	})
+
+	test('la ville à l’étranger : refusée si c’est une adresse, un chiffre, ou si elle n’a pas un seul pays étranger', async () => {
+		const { compte: account, profil: profile } = await artistAndItsProfile()
+		await modify(account, profile, { countries: ['BE'] })
+
+		const cases: [Record<string, unknown>, string][] = [
+			[{ town: '12 rue des Lilas' }, ABROAD_MESSAGES.townAddress],
+			[{ town: 'Bruxelles 1000' }, ABROAD_MESSAGES.townAddress],
+			[{ town: 'bruxelles@example.org' }, ABROAD_MESSAGES.townCharacters],
+			[{ town: 'a'.repeat(71) }, ABROAD_MESSAGES.townInvalid],
+			[{ countries: ['BE', 'NL'], town: 'Bruxelles' }, ABROAD_MESSAGES.townSeveralCountries],
+			[{ countries: ['FR', 'IT'], town: 'Rome' }, ABROAD_MESSAGES.townSeveralCountries],
+		]
+		for (const [body, message] of cases) {
+			const refusal = await modify(account, profile, body)
+			expect(refusal.statut, JSON.stringify(body)).toBe(400)
+			expect(refusedFields(refusal.corps), JSON.stringify(body)).toEqual([{ path: 'town', message }])
+		}
+		expect(await storedAbroad(profile)).toMatchObject({ countries: ['BE'], town: null })
+	})
+
+	test('les codes postaux de la commune : écrits sans espace et triés, un code mal formé ou répété est refusé', async () => {
+		const { compte: account, profil: profile } = await artistAndItsProfile()
+
+		expect((await modify(account, profile, { city: { ...ANNECY, postalCodes: ['74 960', '74000'] } })).statut).toBe(200)
+		expect((await storedAbroad(profile)).postalCodes).toEqual(['74000', '74960'])
+
+		for (const [codes, message] of [
+			[['7400'], ABROAD_MESSAGES.postalCodeInvalid],
+			[['74000', 'abcde'], ABROAD_MESSAGES.postalCodeInvalid],
+			[['74000', '74 000'], ABROAD_MESSAGES.postalCodeDuplicate],
+		] as const) {
+			const refusal = await modify(account, profile, { city: { ...ANNECY, postalCodes: codes } })
+			expect(refusal.statut, codes.join()).toBe(400)
+			expect(refusedFields(refusal.corps), codes.join()).toEqual([{ path: 'city.postalCodes', message }])
+		}
+		expect((await storedAbroad(profile)).postalCodes).toEqual(['74000', '74960'])
+	})
+
+	test('une commune envoyée sans codes postaux n’en garde pas ceux de la commune qu’elle remplace', async () => {
+		const { compte: account, profil: profile } = await artistAndItsProfile()
+		await modify(account, profile, { city: { ...ANNECY, postalCodes: ['74000'] } })
+
+		expect((await modify(account, profile, { city: { name: 'Lyon', inseeCode: '69123' } })).statut).toBe(200)
+
+		expect(await storedAbroad(profile)).toMatchObject({ cityName: 'Lyon', postalCodes: [] })
+	})
+})
+
+describe('La revue de zone (ticket 259) : posée par l’import seul, vidée par le serveur', () => {
+	const REVIEW = {
+		reason: 'sharedPostalCode',
+		postalCode: '62149',
+		candidates: [{ inseeCode: '62200', name: 'Cambrin', department: '62' }],
+	} as const
+
+	test('l’import la pose sur une zone vide ; elle se relit telle quelle', async () => {
+		const { profil: profile } = await artistAndItsProfile()
+		const payload = await testPayload()
+
+		await payload.update({ collection: 'profiles', id: profile, data: { zoneReview: REVIEW } })
+
+		expect((await storedAbroad(profile)).zoneReview).toEqual(REVIEW)
+	})
+
+	test('elle reste tant que la zone est vide, même si le profil est enregistré', async () => {
+		const { compte: account, profil: profile } = await artistAndItsProfile()
+		const payload = await testPayload()
+		await payload.update({ collection: 'profiles', id: profile, data: { zoneReview: REVIEW } })
+
+		expect((await modify(account, profile, { firstName: 'Léa', radiusKm: 10 })).statut).toBe(200)
+
+		expect((await storedAbroad(profile)).zoneReview).toEqual(REVIEW)
+	})
+
+	test('elle est vidée à l’enregistrement d’une commune, puis d’une zone de pays', async () => {
+		for (const zone of [{ city: ANNECY }, { countries: ['BE'] }]) {
+			const { compte: account, profil: profile } = await artistAndItsProfile()
+			const payload = await testPayload()
+			await payload.update({ collection: 'profiles', id: profile, data: { zoneReview: REVIEW } })
+
+			expect((await modify(account, profile, zone)).statut, JSON.stringify(zone)).toBe(200)
+
+			expect((await storedAbroad(profile)).zoneReview, JSON.stringify(zone)).toEqual(NO_REVIEW)
+		}
+	})
+
+	test('elle est vidée aussi quand le serveur enregistre la zone (l’import qui tranche)', async () => {
+		const { profil: profile } = await artistAndItsProfile()
+		const payload = await testPayload()
+		await payload.update({ collection: 'profiles', id: profile, data: { zoneReview: REVIEW } })
+
+		await payload.update({ collection: 'profiles', id: profile, data: { city: ANNECY } })
+
+		expect((await storedAbroad(profile)).zoneReview).toEqual(NO_REVIEW)
+	})
+
+	test('la maquilleuse ne l’écrit pas : sa requête est acceptée, la revue ne change pas', async () => {
+		const { compte: account, profil: profile } = await artistAndItsProfile()
+		const payload = await testPayload()
+		await payload.update({ collection: 'profiles', id: profile, data: { zoneReview: REVIEW } })
+
+		const sent = await modify(account, profile, {
+			zoneReview: { reason: 'notFound', postalCode: '75001', candidates: [] },
+		})
+
+		expect(sent.statut).toBe(200)
+		expect((await storedAbroad(profile)).zoneReview).toEqual(REVIEW)
 	})
 })

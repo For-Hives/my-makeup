@@ -10,6 +10,7 @@ import {
 	cityErrors,
 	cityToFields,
 	cityVerdict,
+	cityWithPostalCodes,
 	countriesErrors,
 	departmentOfInseeCode,
 	isPostalCode,
@@ -24,7 +25,11 @@ import {
 	radiusVerdict,
 	roundedCoordinate,
 	townErrors,
+	ZONE_KIND_MESSAGES,
 	ZONE_MESSAGES,
+	zoneFilled,
+	zoneKindVerdict,
+	zoneWrite,
 } from '@/lib/profile/zone'
 
 /**
@@ -352,11 +357,14 @@ describe('les champs de la zone dans la collection des profils', () => {
 	const fields = Profiles.fields.filter((champ): champ is Field & { name: string } => 'name' in champ)
 	const field = (nom: string) => fields.find(({ name }) => name === nom)
 
-	test('commune, rayonKm et aDomicile, aux noms de SCHEMA.md, après la spécialité', () => {
+	test('type, commune, pays, ville, rayonKm et aDomicile, aux noms de SCHEMA.md, après la spécialité', () => {
 		const names = fields.map(({ name }) => name)
-		expect(names.slice(names.indexOf('specialty'), names.indexOf('specialty') + 4)).toEqual([
+		expect(names.slice(names.indexOf('specialty'), names.indexOf('specialty') + 7)).toEqual([
 			'specialty',
+			'zoneKind',
 			'city',
+			'countries',
+			'town',
 			'radiusKm',
 			'homeService',
 		])
@@ -364,12 +372,13 @@ describe('les champs de la zone dans la collection des profils', () => {
 		expect(field('homeService')?.type).toBe('checkbox')
 	})
 
-	test('la commune n’a que ses cinq champs : aucune adresse postale', () => {
+	test('la commune n’a que ses cinq champs et ses codes postaux : aucune adresse postale', () => {
 		const city = field('city')
 		expect(city?.type).toBe('group')
 		const underFields = city && 'fields' in city ? city.fields : []
 		expect(underFields.map(sousChamp => ('name' in sousChamp ? sousChamp.name : sousChamp.type))).toEqual([
 			...CITY_FIELDS,
+			'postalCodes',
 		])
 	})
 
@@ -470,5 +479,59 @@ describe('une zone hors de France et les codes postaux (ticket 258)', () => {
 			expect(message).toMatch(/[.]$/)
 			expect(message).not.toMatch(/\bvous\b|\bvotre\b/i)
 		}
+	})
+})
+
+describe('la zone enregistrée entière (ticket 259)', () => {
+	test('le type d’une zone : city ou countries, vide pour le défaut', () => {
+		expect(zoneKindVerdict('city')).toBe(true)
+		expect(zoneKindVerdict('countries')).toBe(true)
+		expect(zoneKindVerdict(undefined)).toBe(true)
+		expect(zoneKindVerdict(null)).toBe(true)
+		expect(zoneKindVerdict('region')).toBe(ZONE_KIND_MESSAGES.unknown)
+		expect(zoneKindVerdict(1)).toBe(ZONE_KIND_MESSAGES.unknown)
+	})
+
+	test('une commune donnée vide les pays et la ville ; des pays donnés vident la commune', () => {
+		expect(zoneWrite({ city: ANNECY })).toEqual({ zoneKind: 'city', countries: [], town: null })
+		expect(zoneWrite({ countries: ['BE'] })).toEqual({ zoneKind: 'countries', city: null })
+		expect(zoneWrite({ town: 'Bruxelles' })).toEqual({ zoneKind: 'countries', city: null })
+		expect(zoneWrite({ city: ANNECY, zoneKind: 'city' })).toEqual({ zoneKind: 'city', countries: [], town: null })
+	})
+
+	test('les deux types donnés, ou un type qui contredit ce qui est donné : refusé', () => {
+		expect(zoneWrite({ city: ANNECY, countries: ['BE'] })).toBe(ZONE_KIND_MESSAGES.mixed)
+		expect(zoneWrite({ city: ANNECY, town: 'Bruxelles' })).toBe(ZONE_KIND_MESSAGES.mixed)
+		expect(zoneWrite({ zoneKind: 'countries', city: ANNECY })).toBe(ZONE_KIND_MESSAGES.mixed)
+		expect(zoneWrite({ zoneKind: 'city', countries: ['BE'] })).toBe(ZONE_KIND_MESSAGES.mixed)
+	})
+
+	test('le type seul vide l’autre type ; une commune ou des pays vides ne changent pas le type', () => {
+		expect(zoneWrite({ zoneKind: 'countries' })).toEqual({ city: null })
+		expect(zoneWrite({ zoneKind: 'city' })).toEqual({ countries: [], town: null })
+		expect(zoneWrite({ city: null })).toBeNull()
+		expect(zoneWrite({ city: { name: null, inseeCode: null } })).toBeNull()
+		expect(zoneWrite({ countries: [] })).toBeNull()
+		expect(zoneWrite({ firstName: 'Léa' })).toBeNull()
+		expect(zoneWrite(null)).toBeNull()
+		expect(zoneWrite({ zoneKind: 'region', countries: ['BE'] })).toBeNull()
+	})
+
+	test('la commune lue avec ses codes postaux : triés, sans espace, et vides quand elle n’en donne pas', () => {
+		expect(cityWithPostalCodes({ ...ANNECY, postalCodes: ['74 960', '74000'] })).toEqual({
+			...ANNECY,
+			postalCodes: ['74000', '74960'],
+		})
+		expect(cityWithPostalCodes(ANNECY)).toEqual({ ...ANNECY, postalCodes: [] })
+		expect(cityWithPostalCodes(null)).toMatchObject({ postalCodes: [] })
+		expect(cityWithPostalCodes([ANNECY])).toEqual([ANNECY])
+	})
+
+	test('une zone qui tient quelque chose : une commune ou des pays', () => {
+		expect(zoneFilled({ city: { name: 'Annecy', inseeCode: '74010' } })).toBe(true)
+		expect(zoneFilled({ countries: ['BE'] })).toBe(true)
+		expect(zoneFilled({ city: { name: null, inseeCode: null }, countries: [] })).toBe(false)
+		expect(zoneFilled({})).toBe(false)
+		expect(zoneFilled(null)).toBe(false)
 	})
 })

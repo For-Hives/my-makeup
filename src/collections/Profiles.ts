@@ -44,7 +44,7 @@ import {
 import { fallbackSlug, firstFreeSlug, slugify } from '../lib/slug'
 import { LIST_FIELDS, rowIdentitiesBeforeWrite } from './profile-lists'
 import { STATE_FIELDS, stateBeforeWrite } from './profiles/state'
-import { zoneFields } from './profiles/zone'
+import { clearZoneReview, wholeZone, zoneFields } from './profiles/zone'
 import { refresh } from './revalidate'
 
 /** The refresh of the page of a profile, the search and the sitemap (ticket 047). */
@@ -262,8 +262,9 @@ const INTERNAL = { read: fieldAdminOnly, create: fieldAdminOnly, update: fieldAd
  *   admin only (I03, U55): what a makeup artist sends on them is ignored. The status itself is
  *   computed by the server (ticket 044).
  * - Its lists keep their order and the identifier of each row (src/collections/profile-lists.ts).
- * - Its zone is a commune with its INSEE code, a radius of 0 to 200 km and « à domicile », never a
- *   postal address (src/collections/profiles/zone.ts, ticket 041).
+ * - Its zone is a commune with its INSEE code and postal codes, or one to five countries and a town
+ *   abroad, then a radius of 0 to 200 km and « à domicile », never a postal address
+ *   (src/collections/profiles/zone.ts, tickets 041 and 259). Its review (`zoneReview`) is private.
  * - At every save, the server computes and stores its completeness, whether it is active,
  *   publishable or entirely empty, and since when (src/collections/profiles/state.ts, ticket 044).
  *   Its status follows: an entirely empty profile is a draft, any other is published, unless an
@@ -281,7 +282,7 @@ export const Profiles: CollectionConfig<'profiles'> = {
 	// flags (`publishable`, `fullyEmpty`, `status`), so they cost no computation.
 	admin: {
 		useAsTitle: 'slug',
-		defaultColumns: ['slug', 'city.name', 'completeness', 'publishable', 'status', 'updatedAt'],
+		defaultColumns: ['slug', 'city.name', 'completeness', 'publishable', 'status', 'zoneReview.reason', 'updatedAt'],
 		listSearchableFields: ['slug', 'firstName', 'lastName', 'artistName', 'city.name'],
 		hidden: hiddenExceptAdmin,
 	},
@@ -292,11 +293,18 @@ export const Profiles: CollectionConfig<'profiles'> = {
 		delete: adminOnly,
 	},
 	hooks: {
-		beforeOperation: [refuseFilterOnUnknownStatus],
+		beforeOperation: [refuseFilterOnUnknownStatus, wholeZone],
 		beforeValidate: [refuseUnknownChoice],
 		// The state comes last: it reads the save as the other hooks leave it (ticket 044). The refresh
 		// reads the stored row, which no hook changes before the write.
-		beforeChange: [REFRESH.avantEcriture, rowIdentitiesBeforeWrite, slugOnCreate, consentTrace, stateBeforeWrite],
+		beforeChange: [
+			REFRESH.avantEcriture,
+			rowIdentitiesBeforeWrite,
+			slugOnCreate,
+			consentTrace,
+			clearZoneReview,
+			stateBeforeWrite,
+		],
 		// The refresh comes after the fallback slug: a profile created public gets its final address.
 		afterChange: [fallbackSlugAfterCreate, REFRESH.apresEcriture],
 		beforeDelete: [REFRESH.avantSuppression],

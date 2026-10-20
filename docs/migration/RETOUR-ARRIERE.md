@@ -65,6 +65,7 @@ Il porte des emails, des téléphones et des messages de visiteuses : c'est une 
    - `accounts` avec `created` : recréer le compte à l'identique (même email, même nom). Il n'y a **pas de mot de passe** dans le fichier : la maquilleuse passe par « Mot de passe oublié » de l'ancien site, et il faut que le mail parte. Dis-le-lui si tu la connais ;
    - `accounts` avec `updated` : reporter le changement (nom, blocage) sur le compte de même identifiant d'ancien site (`strapiId`) ;
    - `profiles` : recréer ou corriger le profil du compte (la clé `pro` est l'identifiant du compte dans la v3, à rapprocher de l'email dans `accounts`) ;
+   - la zone d'un profil : une commune revient sous son nom (`city.name`). Une zone de pays (`zoneKind` vaut `countries`) revient sous son libellé, écrit dans la ville de l'ancien site, que sa règle accepte : « Bruxelles (Belgique) » pour un pays et une ville (`town`, `countries`), « Belgique » pour un pays seul, « France et Italie » pour plusieurs pays. Le rayon, s'il y en a un, se reporte à part. `zoneReview` n'est pas à reporter : c'est une note de l'import, jamais lue par l'ancien site ;
    - `photos` : le fichier d'une photo envoyée dans la v3 vit sous `media/<nom de fichier>` dans le compartiment partagé, mais l'ancien site ne la connaît pas : la renvoyer par le profil, ou ajouter la ligne dans son admin ;
    - `messages` : les relire, et répondre à celles qui attendent.
 6. **Contrôler** : le compte des comptes de l'ancien site, l'accueil, un profil, la connexion d'un compte de test, la page de contact.
