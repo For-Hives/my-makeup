@@ -48,8 +48,8 @@ const modify = (compte: Artist, profil: number, corps: Record<string, unknown>) 
 async function storedZone(profil: number) {
 	const payload = await testPayload()
 	const { city, radiusKm, homeService } = await payload.findByID({ collection: 'profiles', depth: 0, id: profil })
-	const { postalCodes: _postalCodes, ...commune } = city ?? {}
-	return { city: commune, radiusKm, homeService }
+	const { postalCodes: _postalCodes, ...cityFields } = city ?? {}
+	return { city: cityFields, radiusKm, homeService }
 }
 
 /** What a REST refusal says, field by field. */

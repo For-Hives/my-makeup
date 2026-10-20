@@ -476,9 +476,11 @@ function cityGiven(commune: unknown): boolean {
  */
 export function zoneFilled(zone: unknown): boolean {
 	if (!plainObject(zone)) return false
-	const commune = plainObject(zone.city) ? zone.city : {}
+	const cityFields = plainObject(zone.city) ? zone.city : {}
 	return (
-		!empty(commune.name) || !empty(commune.inseeCode) || (Array.isArray(zone.countries) && zone.countries.length > 0)
+		!empty(cityFields.name) ||
+		!empty(cityFields.inseeCode) ||
+		(Array.isArray(zone.countries) && zone.countries.length > 0)
 	)
 }
 
