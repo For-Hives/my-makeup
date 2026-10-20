@@ -178,7 +178,7 @@ Le rapport compte les prix en nombres, sans en citer un seul : combien de prix, 
 
 ## La répétition sur une copie de la prod (ticket 065)
 
-La répétition rejoue l'import entier sur une sauvegarde de la vraie base Strapi, restaurée sur ce poste, sans réseau vers la prod, puis détruite. Elle ne lit que les seize tables de l'import (`pg_restore -t`, sans propriétaires ni droits) : ni jeton, ni compte d'administration. Elle ne tient dans aucune commande unique (ticket 180) ; voici ses étapes, avec le banc d'une instance à elle (`BENCH_INSTANCE=mm-065-067 BENCH_OFFSET=265`) :
+La répétition rejoue l'import entier sur une sauvegarde de la vraie base Strapi, restaurée sur ce poste, sans réseau vers la prod, puis détruite. Elle ne lit que les seize tables de l'import (`pg_restore -t`, sans propriétaires ni droits) : ni jeton, ni compte d'administration. Depuis le ticket 180, une commande la joue d'un bout à l'autre ([« La répétition complète en une commande »](#la-répétition-complète-en-une-commande-ticket-180), plus bas). Voici ses étapes à la main, avec le banc d'une instance à elle (`BENCH_INSTANCE=mm-065-067 BENCH_OFFSET=265`) :
 
 1. `bun run bench:up`, puis `bun run bench:prepare` : la cible, par les migrations, vide.
 2. Restaurer la sauvegarde dans une base du banc dont le nom finit par `_test`, lue par un rôle en lecture seule (celui de `STRAPI_SOURCE_URI`, comme sur la fausse source), avec `GRANT SELECT`, `default_transaction_read_only` (`ALTER ROLE … IN DATABASE … SET`, après un `ALTER ROLE … RESET ALL`) et `REVOKE EXECUTE … FROM PUBLIC` sur les fonctions qui créent un grand objet de la base restaurée (`pg_catalog.lo_create(oid)`, `lo_creat(integer)`, `lo_from_bytea(oid, bytea)`, `lo_import(text)`, `lo_import(text, oid)`), comme `tests/support/source-strapi/creation.ts` le fait pour la fausse source : sans ce retrait, le rôle peut créer des grands objets que l'empreinte des tables ne voit pas (ticket 227). Le retrait est vérifié (`has_function_privilege`) : il ne marche que fait par un super-utilisateur ou le propriétaire de `pg_catalog`, sinon PostgreSQL ne répond que par un avertissement et le rôle garde le droit (la création de la fausse source échoue alors en le disant). Le rôle garde la liberté de régler ses propres paramètres et de changer son mot de passe (`docs/tests/source-strapi.md`) : la copie est détruite après la répétition. Compter les lignes de la copie : c'est l'instantané auquel la parité se compare.
@@ -204,6 +204,44 @@ La répétition rejoue l'import entier sur une sauvegarde de la vraie base Strap
 - **Ce qui ne bloque pas 067** : le journal du 14/10/2026 ~02:05 traite 066 comme non bloquant, ses défauts s'appliquent aussi aux villes à revoir (la commune reste vide, le texte est gardé) et aux prix « chiffres non lus » (le texte est gardé). 067 n'attend donc que la copie du jour, le stockage réel et la remise du rapport.
 - **Prêts de hash à confirmer** : chaque compte gardé qui reçoit un hash d'un compte écarté est listé dans le rapport (« hash hérité d'un compte écarté, rattaché au compte gardé »). L'ancien site ne vérifiait pas les emails : quiconque avait créé le doublon écarté peut alors se connecter au compte gardé. Andy confirme chaque groupe (`pretDuHash` à vrai ou à faux) plutôt que de s'en remettre au défaut.
 - **Rester à faire** : la répétition sur une copie du jour, avec le stockage réel sondé, les fichiers privés écrits dans `~/my-makeup-prive/migration/`.
+
+## La répétition complète en une commande (ticket 180)
+
+```sh
+bun run rehearsal --dump <sauvegarde.dump> --decisions <décisions.json> --cities <communes.json> --consent-date <date>
+```
+
+Elle rejoue toute la migration à partir de la sauvegarde de la nuit (un fichier `pg_dump` au format personnalisé), sur un banc à elle (`mm-rehearsal`, décalage 180, ou celui de `BENCH_INSTANCE` et `BENCH_OFFSET`), et rend un rapport chronométré. Elle ne sort sur aucun réseau : le référentiel des communes est lu dans son fichier de réponses gardées, et la commande refuse de partir si ce fichier manque. Seul `--cities-online` l'autorise à demander au référentiel (`geo.api.gouv.fr`) les réponses qui manquent, pour construire ce fichier.
+
+| Étape (durée notée dans le rapport) | Ce qu'elle fait |
+|---|---|
+| Empreinte de la sauvegarde | SHA-256 du fichier, relu à la fin : la sauvegarde n'est jamais écrite |
+| Banc de test | Démarre le banc s'il ne tourne pas (et l'arrête à la fin, sauf `--keep-bench`) |
+| Cible vide, par les migrations | `bench:prepare` : la cible, comme en production |
+| Restauration hors réseau | Dans le conteneur PostgreSQL du banc, `pg_restore` des seize tables de l'import seulement (`--table`), sans propriétaire ni droit, dans la place de la fausse source (`strapi_source_test`). Une colonne que la sauvegarde n'a pas encore (`files.uploaded_by`) est ajoutée vide ; toute autre colonne manquante arrête la répétition. Le rôle `lecture_strapi` est ensuite verrouillé comme celui de la fausse source (lecture seule, aucun grand objet) |
+| Instantané de la copie | Lignes et empreinte de chacune des seize tables et des grands objets : c'est l'instantané auquel la parité se compare |
+| Import, premier passage | `bench:import --real --without-photos` : tables de décision, communes gardées, date de consentement données à la commande |
+| Import, second passage | Le même, qui ne doit rien créer ni modifier |
+| Parité | Relit l'instantané, compte dans la cible les profils de la liste du spam |
+| Destruction de la copie | Supprime la base de la copie et son rôle, vide la cible, arrête le banc qu'elle a démarré, puis demande au serveur s'il en reste |
+
+La destruction se fait toujours, même si une étape a échoué ou si la commande est interrompue (Ctrl+C). Elle est comptée dans le temps.
+
+**Ce que le rapport juge** (`rapport.json` et `rapport.md`, dans `--out`, par défaut `.migration/repetition-<horodatage>/`, mode 0600, hors du dépôt) :
+
+1. le temps total, de la sauvegarde à la destruction, contre `--max-minutes` (120 par défaut), avec la durée de chaque étape ;
+2. la parité complète du premier passage contre l'instantané : par collection, attendus = présents = égaux, aucun refusé, différent, manquant ni en trop, mêmes empreintes ; le nombre de documents de la source du rapport égal aux lignes de l'instantané (comptes, profils, articles, talents) ; la répartition des comptes par fournisseur et les hash hérités, relus dans la cible, égaux à ceux de la source (I39, I40, I41, I44) ;
+3. les 13 profils du spam (`SPAM_PROFILES`) absents de la cible (I39) ;
+4. le second passage à 0 création, 0 mise à jour, 0 refusé dans chaque collection ;
+5. la copie inchangée par les deux passages (mêmes empreintes avant et après, 0 grand objet : I43) ;
+6. aucun `@` ni hash bcrypt dans le rapport ni dans les rapports de l'import ; un fichier qui en porterait est retiré ;
+7. la copie, son rôle et la cible détruits, la sauvegarde inchangée.
+
+Le code de sortie est 0 si tout est vrai, 3 si l'import s'arrête sur des cas que seule une décision tranche, 4 si un critère n'est pas rempli, 1 si la commande est refusée ou échoue, 2 si la ligne de commande n'est pas comprise.
+
+**Ce qu'elle ne couvre pas.** Les photos ne sont pas sondées (`--without-photos`) : `--check` les exige et les requêtes d'en-tête sur le stockage réel (I42) restent à faire à part, avec l'import dans le conteneur de production. Elle ne compare pas la copie au site en ligne page par page (ticket 181). Les journaux de `pg_restore` (`pg-restore.log`) et d'une erreur inattendue (`erreur.log`) restent dans le dossier privé : ils peuvent citer une valeur, ne les recopie pas. Les fichiers de décision, de communes et de revue ne se rangent pas dans le dépôt.
+
+**Mesure du 20/10/2026**, sur la fausse source (204 lignes, 13 profils du spam) passée par `pg_dump`, banc démarré puis arrêté par la commande : 18 secondes en tout, dont 8 pour allumer le banc. Ce n'est pas la mesure du ticket : la durée sur la vraie sauvegarde de la nuit n'est pas établie, parce qu'aucun agent n'y a accès. Elle se lit dans le rapport du premier vrai passage.
 
 ## Jusqu'à la bascule seulement
 
@@ -236,5 +274,6 @@ L'import suit la source : chaque passage remet dans la cible ce que l'ancien sit
 - `tests/unit/import-articles.test.ts` et `tests/integration/import-articles.test.ts` : les articles à l'identique, un brouillon de plus de 60 000 caractères, l'état et la date de publication, l'image de galerie rattachée, le PDF signalé, le slug refusé, le second passage.
 - `tests/e2e/imported-profile-slice.spec.ts` : la première tranche de bout en bout, en un seul essai. La fausse base Strapi, l'import lancé comme une personne le lance, en production comme l'application, puis la page publique du profil fictif 21 dans l'application construite : 200, son nom dans le seul h1 du HTML du serveur, aucune coordonnée ni aucun champ réservé ; un slug inconnu en 404 ; un second import qui n'écrit rien. Ce que répond la page d'un brouillon (aujourd'hui 404, demain 200 en noindex) est au ticket 104.
 - `tests/integration/import-check.test.ts` (ticket 067) : le contrôle de la parité (`--check`) : une cible vide n'est pas la source, après un import réel elle l'est (code 0, deux fois de suite), un email changé à la main ou un compte retiré à la main le font échouer (code 4, en nombres), un compte, un profil, un article ou un talent ajouté à la main (sans identifiant de l'ancien site) le fait échouer aussi, et le rapport ne dit plus « parité complète » pour la collection, `--without-photos` avec `--check` est toujours refusé (pas de faux vert), et `--real` avec `--check` n'est pas compris. `tests/unit/import-base.test.ts` : les codes du contrôle et les arguments.
+- `tests/unit/rehearsal.test.ts` et `tests/integration/rehearsal.test.ts` (ticket 180) : la répétition complète. Unitaires : la ligne de commande, les arguments de `pg_restore` (les seize tables, rien d'autre), le temps, la recherche de données personnelles, et chaque critère jugé sur des rapports à la main (un compte manquant, un refusé, une empreinte, un hash hérité, un profil du spam, une création au second passage, une copie qui bouge). Intégration : une sauvegarde faite de la fausse source par `pg_dump` est répétée par la commande (code 0, sept critères remplis, durée de chaque étape, aucun `@` ni hash, sauvegarde et copie), puis sans table de décision (code 3, copie détruite), sans fichier de communes et sans sauvegarde (code 1)
 - `tests/integration/import-then-sign-in.test.ts` (ticket 095) : la répétition de ce que vivront les maquilleuses. Après l'import de la fausse source, le compte 1 (local) se connecte avec son mot de passe habituel et son hash hérité est remplacé, le compte 4 (Google, sans mot de passe) se connecte par le faux Google sans doublon, le compte 5 (Facebook) est refusé puis choisit son mot de passe par « Mot de passe oublié » et se connecte, avec le même profil. Le nombre de hash hérités baisse de 1 exactement, et la source est identique avant et après (I43). Il joue l'import entier et fait partie de la suite d'intégration complète (ticket 225) ; seul : `bun run test:integration tests/integration/import-then-sign-in.test.ts`.
 - Dans un test d'intégration, `importOnBench()` lance un passage dans le processus du test, et `importCommand([...])` lance la commande (`tests/support/import.ts`).

@@ -38,6 +38,7 @@
 		"bench:reset": "bun --no-env-file scripts/bench.ts reset",
 		"bench:session": "bun --no-env-file scripts/bench.ts session",
 		"migration:import": "bun --no-env-file scripts/migration/import.ts",
+		"rehearsal": "bun --no-env-file scripts/migration/rehearsal.ts",
 		"migration:freeze": "bun --no-env-file scripts/migration/freeze.ts",
 		"admin:create": "bun --no-env-file scripts/admin/create-admin.ts",
 		"test:integration": "bun --no-env-file scripts/bench.ts test",
