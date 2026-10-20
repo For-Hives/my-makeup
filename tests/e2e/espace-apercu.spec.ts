@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test'
-import { violationsGraves } from '../outils/axe'
-import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest } from '../outils/payload-test'
+import { createAccount, type TestAccount } from '../support/account-factory'
+import { violationsSevere } from '../support/axe'
+import { testPayload } from '../support/payload-test'
 
 /**
  * « Voir mon profil public » (ticket 139; plan 02 RG-06): a link that works at 390, 1024 and 1440 px,
@@ -16,7 +16,7 @@ test.beforeEach(({ context }) =>
 	context.setExtraHTTPHeaders({ 'x-forwarded-for': `192.0.2.${60 + (++compteur % 150)}` })
 )
 
-type Maquilleuse = CompteDeTest<'maquilleuse'>
+type Maquilleuse = TestAccount<'maquilleuse'>
 
 const COMPLET = {
 	firstName: 'Léa',
@@ -31,8 +31,8 @@ async function maquilleuse(
 	context: { addCookies: (c: Maquilleuse['session']['cookies']) => Promise<void> },
 	profil: Record<string, unknown>
 ): Promise<{ compte: Maquilleuse; slug: string }> {
-	const compte = await creerCompte('maquilleuse')
-	const payload = await payloadDeTest()
+	const compte = await createAccount('maquilleuse')
+	const payload = await testPayload()
 	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
 	const [fiche] = docs
 	if (!fiche) throw new Error('pas de profil')
@@ -95,7 +95,7 @@ test.describe('139 : voir mon profil public', { tag: '@mobile' }, () => {
 		expect(await page.locator('link[rel="canonical"]').count()).toBe(0)
 		expect(await page.locator('script[type="application/ld+json"]').count()).toBe(0)
 		expect(await page.getByRole('heading', { level: 1 }).count()).toBe(1)
-		expect(await violationsGraves(page)).toEqual([])
+		expect(await violationsSevere(page)).toEqual([])
 	})
 
 	test('profil non listé : l’aperçu s’ouvre pour sa propriétaire, avec le bandeau', async ({

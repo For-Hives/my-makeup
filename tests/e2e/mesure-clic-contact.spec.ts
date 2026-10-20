@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test'
-import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
-import { fauxUmami, type LectureFauxUmami, unAgentParEssai } from '../outils/faux-umami'
-import { payloadDeTest } from '../outils/payload-test'
+import { createAccount, type TestAccount } from '../support/account-factory'
+import { agentByTest, fakeUmami, type ReadingFakeUmami } from '../support/fake-umami'
+import { testPayload } from '../support/payload-test'
 
 /**
  * The click on a contact of a public profile, end to end (ticket 144; plan 02 E52): a real browser
@@ -17,28 +17,28 @@ const TELEPHONE = '06 12 34 56 78'
 const EMAIL = 'contact-mesure@example.test'
 const INSTAGRAM = 'https://instagram.com/mesure.exemple'
 
-let umami: LectureFauxUmami
-let compte: CompteDeTest<'maquilleuse'>
-let autre: CompteDeTest<'maquilleuse'>
+let umami: ReadingFakeUmami
+let compte: TestAccount<'maquilleuse'>
+let autre: TestAccount<'maquilleuse'>
 let slug: string
 let slugSansContact: string
 
 test.describe.configure({ mode: 'serial' })
 
 // An ordinary Chrome, with a mark of its own: the fake Umami is shared by every worker of the run, and each
-// test reads only what came from its browser (tests/outils/faux-umami.ts).
-test.use(unAgentParEssai())
+// test reads only what came from its browser (tests/support/fake-umami.ts).
+test.use(agentByTest())
 
 /** The brake of the sign-in counts by client address: this file sends its own made-up address. */
 test.beforeEach(async ({ context, userAgent }) => {
-	umami = fauxUmami().pourLAgent(userAgent)
+	umami = fakeUmami().pourLAgent(userAgent)
 	await context.addInitScript(() => {
 		Object.defineProperty(navigator, 'webdriver', { get: () => false })
 	})
 })
 
-async function profilDe(c: CompteDeTest<'maquilleuse'>) {
-	const payload = await payloadDeTest()
+async function profilDe(c: TestAccount<'maquilleuse'>) {
+	const payload = await testPayload()
 	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: c.id } } })
 	const [fiche] = docs
 	if (!fiche) throw new Error('pas de profil')
@@ -47,8 +47,8 @@ async function profilDe(c: CompteDeTest<'maquilleuse'>) {
 
 test.beforeAll(async () => {
 	test.setTimeout(120_000)
-	compte = await creerCompte('maquilleuse')
-	autre = await creerCompte('maquilleuse')
+	compte = await createAccount('maquilleuse')
+	autre = await createAccount('maquilleuse')
 	const { payload, fiche } = await profilDe(compte)
 	slug = fiche.slug
 	await payload.update({
@@ -69,7 +69,7 @@ test.beforeAll(async () => {
 
 test.afterAll(async () => {
 	test.setTimeout(120_000)
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	for (const c of [compte, autre]) {
 		const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: c.id } } })
 		for (const { id } of docs) await payload.delete({ collection: 'profiles', id })

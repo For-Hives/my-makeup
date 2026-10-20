@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { creerCompte } from '../outils/fabrique-comptes'
+import { createAccount } from '../support/account-factory'
 
 /**
  * The closed pages of the space (ticket 075; plan 02 E09, E16): one redirection without a session,
@@ -38,7 +38,7 @@ test.describe('Pages de l’espace sans session', { tag: '@mobile' }, () => {
 		context,
 		page,
 	}) => {
-		const compte = await creerCompte('maquilleuse')
+		const compte = await createAccount('maquilleuse')
 		const cookie = compte.session.cookies[0]
 		if (!cookie) throw new Error('pas de cookie')
 		await context.addCookies([{ ...cookie, value: 'pas-un-jeton' }])
@@ -53,7 +53,7 @@ test.describe('Pages de l’espace sans session', { tag: '@mobile' }, () => {
 		context,
 		page,
 	}) => {
-		const admin = await creerCompte('admin')
+		const admin = await createAccount('admin')
 		await context.addCookies(admin.session.cookies)
 
 		await page.goto('/auth/profil')
@@ -71,7 +71,7 @@ test.describe('Arrivée depuis un autre site (ticket 223)', () => {
 		context,
 		page,
 	}) => {
-		const compte = await creerCompte('maquilleuse')
+		const compte = await createAccount('maquilleuse')
 		await context.addCookies(compte.session.cookies)
 		await page.route(`${EXTERNE}/**`, route =>
 			route.fulfill({
@@ -121,7 +121,7 @@ test.describe('Arrivée depuis un autre site (ticket 223)', () => {
 
 test.describe('E09 : le retour après la connexion', () => {
 	test('une page interne est respectée', async ({ page }) => {
-		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
 
 		await page.goto('/auth/signin?callbackUrl=%2Fauth%2Fprofil%3Fvenue%3Dtest')
 		await page.getByLabel('Adresse email').fill(compte.email)
@@ -132,7 +132,7 @@ test.describe('E09 : le retour après la connexion', () => {
 	})
 
 	test('un retour vers un autre site est ignoré', async ({ page }) => {
-		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
 
 		for (const retour of ['https://evil.example/', '//evil.example']) {
 			await page.context().clearCookies()
@@ -145,7 +145,7 @@ test.describe('E09 : le retour après la connexion', () => {
 	})
 
 	test('déjà connectée, un retour à segment de points ne mène pas vers un autre site', async ({ page }) => {
-		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
 		await page.goto('/auth/signin')
 		await page.getByLabel('Adresse email').fill(compte.email)
 		await page.getByLabel('Mot de passe').fill(MOT_DE_PASSE)
@@ -163,7 +163,7 @@ test.describe('E09 : le retour après la connexion', () => {
 		page,
 		playwright,
 	}) => {
-		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
 		// A real submit, to learn what the browser sends for the action.
 		const envoi = page.waitForRequest(r => r.method() === 'POST' && new URL(r.url()).pathname === '/auth/signin')
 		await page.goto('/auth/signin')
@@ -203,7 +203,7 @@ test.describe('E16 : privé, sans stockage, aucun jeton', () => {
 		context,
 		request,
 	}) => {
-		const compte = await creerCompte('maquilleuse')
+		const compte = await createAccount('maquilleuse')
 		const cookie = compte.session.cookies[0]
 		if (!cookie) throw new Error('pas de cookie')
 		await context.addCookies(compte.session.cookies)

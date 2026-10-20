@@ -4,16 +4,16 @@ import { displayedCity, formatZone, radiusKm } from '@/lib/format-zone'
 // Ported from the « formatZone » block of tests/unit/profil-public.test.mjs of the old site
 // (branch main): same cases, same expected values.
 
-const INTERDIT = /\b(null|undefined|NaN|Invalid Date)\b|&\s*km|\bnullkm\b/
+const FORBIDDEN = /\b(null|undefined|NaN|Invalid Date)\b|&\s*km|\bnullkm\b/
 
 describe('formatZone (plans/02 U14)', () => {
 	test('U14 no city / radius combination gives « null », « undefined » or « & km »', () => {
-		const villes = ['Annecy', '  Annecy  ', '', '   ', null, undefined, 'null', 'undefined', 42, {}]
-		const rayons = [30, '30', 0, '0', null, undefined, '', 'abc', -5, 1e6, 12.6, Number.NaN]
-		for (const city of villes) {
-			for (const radius of rayons) {
+		const cities = ['Annecy', '  Annecy  ', '', '   ', null, undefined, 'null', 'undefined', 42, {}]
+		const radii = [30, '30', 0, '0', null, undefined, '', 'abc', -5, 1e6, 12.6, Number.NaN]
+		for (const city of cities) {
+			for (const radius of radii) {
 				const zone = formatZone({ city, radius })
-				expect(zone, `${city} / ${radius} → ${zone}`).not.toMatch(INTERDIT)
+				expect(zone, `${city} / ${radius} → ${zone}`).not.toMatch(FORBIDDEN)
 			}
 		}
 		expect(formatZone()).toBe('')

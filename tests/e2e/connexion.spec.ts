@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { creerCompte } from '../outils/fabrique-comptes'
+import { createAccount } from '../support/account-factory'
 
 /**
  * The sign-in of a makeup artist (ticket 074; plan 02 E05, E06) and the way back (E09).
@@ -24,7 +24,7 @@ test.describe('Connexion par email', { tag: '@mobile' }, () => {
 	test('E05 : une saisie juste mène à l’espace, par un seul cookie illisible par le JavaScript', {
 		tag: '@smoke',
 	}, async ({ context, page }) => {
-		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
 
 		await page.goto('/auth/signin')
 		await expect(page.getByRole('heading', { level: 1, name: 'Se connecter' })).toBeVisible()
@@ -43,7 +43,7 @@ test.describe('Connexion par email', { tag: '@mobile' }, () => {
 		context,
 		page,
 	}) => {
-		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
 
 		await page.goto('/auth/signin')
 		await seConnecter(page, compte.email, 'pas-le-bon')
@@ -61,7 +61,7 @@ test.describe('Connexion par email', { tag: '@mobile' }, () => {
 	})
 
 	test('l’email est insensible à la casse', async ({ page }) => {
-		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
 		await page.goto('/auth/signin')
 		await seConnecter(page, compte.email.toUpperCase(), MOT_DE_PASSE)
 		await expect(page).toHaveURL(/\/auth\/profil$/)
@@ -83,7 +83,7 @@ test.describe('Connexion par email', { tag: '@mobile' }, () => {
 	})
 
 	test('déjà connectée : la page de connexion renvoie vers l’espace', async ({ context, page }) => {
-		const compte = await creerCompte('maquilleuse')
+		const compte = await createAccount('maquilleuse')
 		await context.addCookies(compte.session.cookies)
 
 		await page.goto('/auth/signin')

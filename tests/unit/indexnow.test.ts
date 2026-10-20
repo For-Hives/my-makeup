@@ -23,42 +23,42 @@ import {
  * from, with a fake endpoint. Nothing here reaches the network.
  */
 
-const CLE = '0123456789abcdef0123456789abcdef'
+const KEY = '0123456789abcdef0123456789abcdef'
 const SITE = 'https://my-makeup.fr'
-const ENV_DU_SITE = { INDEXNOW_KEY: CLE, NEXT_PUBLIC_SITE_URL: SITE }
+const SITE_ENV = { INDEXNOW_KEY: KEY, NEXT_PUBLIC_SITE_URL: SITE }
 
-const publie = (slug: string, indexable = true) => ({ slug, visible: true, indexable })
+const published = (slug: string, indexable = true) => ({ slug, visible: true, indexable })
 const cache = (slug: string) => ({ slug, visible: false, indexable: false })
 
 describe('le fichier de clé', () => {
-	const avant = process.env.INDEXNOW_KEY
+	const before = process.env.INDEXNOW_KEY
 	afterEach(() => {
-		if (avant === undefined) delete process.env.INDEXNOW_KEY
-		else process.env.INDEXNOW_KEY = avant
+		if (before === undefined) delete process.env.INDEXNOW_KEY
+		else process.env.INDEXNOW_KEY = before
 	})
-	const demander = (cle: string) =>
+	const makeRequest = (cle: string) =>
 		servirLaCle(new Request(`${SITE}/api/indexnow/${cle}`), { params: Promise.resolve({ key: cle }) })
 
 	test('avec la variable : 200, la clé pour seul contenu', async () => {
-		process.env.INDEXNOW_KEY = CLE
-		const reponse = await demander(CLE)
-		expect(reponse.status).toBe(200)
-		expect(await reponse.text()).toBe(CLE)
-		expect(reponse.headers.get('content-type')).toContain('text/plain')
+		process.env.INDEXNOW_KEY = KEY
+		const response = await makeRequest(KEY)
+		expect(response.status).toBe(200)
+		expect(await response.text()).toBe(KEY)
+		expect(response.headers.get('content-type')).toContain('text/plain')
 	})
 
 	test('sans la variable, ou vide, ou illisible : rien n’est servi', async () => {
-		for (const valeur of [undefined, '', '   ', 'court', CLE.toUpperCase(), `${CLE}0`]) {
-			if (valeur === undefined) delete process.env.INDEXNOW_KEY
-			else process.env.INDEXNOW_KEY = valeur
-			expect((await demander(CLE)).status).toBe(404)
-			expect((await demander(valeur ?? 'x')).status).toBe(404)
+		for (const value of [undefined, '', '   ', 'court', KEY.toUpperCase(), `${KEY}0`]) {
+			if (value === undefined) delete process.env.INDEXNOW_KEY
+			else process.env.INDEXNOW_KEY = value
+			expect((await makeRequest(KEY)).status).toBe(404)
+			expect((await makeRequest(value ?? 'x')).status).toBe(404)
 		}
 	})
 
 	test('une autre clé que celle de la variable : 404', async () => {
-		process.env.INDEXNOW_KEY = CLE
-		expect((await demander('f'.repeat(32))).status).toBe(404)
+		process.env.INDEXNOW_KEY = KEY
+		expect((await makeRequest('f'.repeat(32))).status).toBe(404)
 	})
 })
 
@@ -68,96 +68,96 @@ describe('la variable INDEXNOW_KEY', () => {
 	test('absente ou vide : le démarrage passe ; une valeur illisible l’arrête, sans l’écrire', () => {
 		expect(() => parseServerEnv(base)).not.toThrow()
 		expect(() => parseServerEnv({ ...base, INDEXNOW_KEY: '  ' })).not.toThrow()
-		expect(() => parseServerEnv({ ...base, INDEXNOW_KEY: CLE })).not.toThrow()
-		const erreur = (() => {
+		expect(() => parseServerEnv({ ...base, INDEXNOW_KEY: KEY })).not.toThrow()
+		const error = (() => {
 			try {
 				parseServerEnv({ ...base, INDEXNOW_KEY: 'pas-une-cle-valable' })
 			} catch (e) {
 				return e as EnvError
 			}
 		})()
-		expect(erreur?.variables).toEqual(['INDEXNOW_KEY'])
-		expect(erreur?.message).not.toContain('pas-une-cle-valable')
+		expect(error?.variables).toEqual(['INDEXNOW_KEY'])
+		expect(error?.message).not.toContain('pas-une-cle-valable')
 	})
 
 	test('la clé lue : 32 caractères hexadécimaux en minuscules, rien d’autre', () => {
-		expect(indexNowKey(` ${CLE} `)).toBe(CLE)
-		for (const faux of [undefined, '', CLE.slice(1), `${CLE}a`, CLE.toUpperCase(), 'g'.repeat(32)])
-			expect(indexNowKey(faux)).toBeUndefined()
+		expect(indexNowKey(` ${KEY} `)).toBe(KEY)
+		for (const fake of [undefined, '', KEY.slice(1), `${KEY}a`, KEY.toUpperCase(), 'g'.repeat(32)])
+			expect(indexNowKey(fake)).toBeUndefined()
 	})
 })
 
 describe('où l’envoi est permis', () => {
 	test('le site, avec la clé : oui', () => {
-		expect(keyIfSubmitAllowed(ENV_DU_SITE)).toBe(CLE)
-		expect(keyIfSubmitAllowed({ ...ENV_DU_SITE, APP_ENV: 'prod' })).toBe(CLE)
+		expect(keyIfSubmitAllowed(SITE_ENV)).toBe(KEY)
+		expect(keyIfSubmitAllowed({ ...SITE_ENV, APP_ENV: 'prod' })).toBe(KEY)
 	})
 
 	test('sans clé, sur un hôte temporaire, sur un poste, sur le banc de test : non', () => {
 		expect(keyIfSubmitAllowed({ NEXT_PUBLIC_SITE_URL: SITE })).toBeUndefined()
-		expect(keyIfSubmitAllowed({ ...ENV_DU_SITE, NEXT_PUBLIC_SITE_URL: 'https://v3.my-makeup.fr' })).toBeUndefined()
-		expect(keyIfSubmitAllowed({ ...ENV_DU_SITE, NEXT_PUBLIC_SITE_URL: 'http://127.0.0.1:3419' })).toBeUndefined()
-		expect(keyIfSubmitAllowed({ INDEXNOW_KEY: CLE })).toBeUndefined()
-		expect(keyIfSubmitAllowed({ ...ENV_DU_SITE, APP_ENV: 'test' })).toBeUndefined()
+		expect(keyIfSubmitAllowed({ ...SITE_ENV, NEXT_PUBLIC_SITE_URL: 'https://v3.my-makeup.fr' })).toBeUndefined()
+		expect(keyIfSubmitAllowed({ ...SITE_ENV, NEXT_PUBLIC_SITE_URL: 'http://127.0.0.1:3419' })).toBeUndefined()
+		expect(keyIfSubmitAllowed({ INDEXNOW_KEY: KEY })).toBeUndefined()
+		expect(keyIfSubmitAllowed({ ...SITE_ENV, APP_ENV: 'test' })).toBeUndefined()
 	})
 })
 
 describe('les adresses d’un enregistrement', () => {
 	test('un profil qui devient publiable, qui cesse de l’être, qui change : son adresse définitive', () => {
-		const attendu = [`${SITE}/profil/zoe-lefevre`]
-		expect(changedUrls('profiles', cache('zoe-lefevre'), publie('zoe-lefevre'))).toEqual(attendu)
-		expect(changedUrls('profiles', publie('zoe-lefevre'), cache('zoe-lefevre'))).toEqual(attendu)
-		expect(changedUrls('profiles', publie('zoe-lefevre'), publie('zoe-lefevre'))).toEqual(attendu)
-		expect(changedUrls('profiles', null, publie('zoe-lefevre'))).toEqual(attendu)
-		expect(changedUrls('profiles', publie('zoe-lefevre'), null)).toEqual(attendu)
+		const expected = [`${SITE}/profil/zoe-lefevre`]
+		expect(changedUrls('profiles', cache('zoe-lefevre'), published('zoe-lefevre'))).toEqual(expected)
+		expect(changedUrls('profiles', published('zoe-lefevre'), cache('zoe-lefevre'))).toEqual(expected)
+		expect(changedUrls('profiles', published('zoe-lefevre'), published('zoe-lefevre'))).toEqual(expected)
+		expect(changedUrls('profiles', null, published('zoe-lefevre'))).toEqual(expected)
+		expect(changedUrls('profiles', published('zoe-lefevre'), null)).toEqual(expected)
 	})
 
 	test('un profil publié mais pas publiable, ou masqué qui le reste : rien', () => {
-		expect(changedUrls('profiles', publie('zoe', false), publie('zoe', false))).toEqual([])
+		expect(changedUrls('profiles', published('zoe', false), published('zoe', false))).toEqual([])
 		expect(changedUrls('profiles', cache('zoe'), cache('zoe'))).toEqual([])
 		expect(changedUrls('profiles', null, null)).toEqual([])
 	})
 
 	test('une adresse qui change : l’ancienne et la nouvelle, une seule fois chacune', () => {
-		expect(changedUrls('articles', publie('ancienne'), publie('nouvelle'))).toEqual([
+		expect(changedUrls('articles', published('ancienne'), published('nouvelle'))).toEqual([
 			`${SITE}/blog/ancienne`,
 			`${SITE}/blog/nouvelle`,
 		])
 	})
 
 	test('un article, un talent : sa page, jamais une liste ; un brouillon qui reste brouillon : rien', () => {
-		expect(changedUrls('articles', null, publie('un-article'))).toEqual([`${SITE}/blog/un-article`])
-		expect(changedUrls('talents', publie('mariee'), null)).toEqual([`${SITE}/talent/mariee`])
-		expect(changedUrls('talents', publie('mariee'), publie('mariee'))).toEqual([`${SITE}/talent/mariee`])
+		expect(changedUrls('articles', null, published('un-article'))).toEqual([`${SITE}/blog/un-article`])
+		expect(changedUrls('talents', published('mariee'), null)).toEqual([`${SITE}/talent/mariee`])
+		expect(changedUrls('talents', published('mariee'), published('mariee'))).toEqual([`${SITE}/talent/mariee`])
 		expect(changedUrls('articles', cache('brouillon'), cache('brouillon'))).toEqual([])
 	})
 
 	test('un slug qui n’en est pas un (slug provisoire d’un profil en création) : rien', () => {
-		expect(changedUrls('profiles', null, publie('_provisoire-1234'))).toEqual([])
+		expect(changedUrls('profiles', null, published('_provisoire-1234'))).toEqual([])
 	})
 })
 
 /** A fake endpoint: records the requests, answers what it is told. */
-function fauxPointDEnvoi(status = 202) {
-	const appels: { adresse: string; corps: { host: string; key: string; keyLocation: string; urlList: string[] } }[] = []
-	const chercher = mock(async (adresse: string, options: RequestInit) => {
-		appels.push({ adresse, corps: JSON.parse(String(options.body)) })
+function uploadFakePoint(status = 202) {
+	const calls: { adresse: string; corps: { host: string; key: string; keyLocation: string; urlList: string[] } }[] = []
+	const find = mock(async (adresse: string, options: RequestInit) => {
+		calls.push({ adresse, corps: JSON.parse(String(options.body)) })
 		return { status }
 	})
-	return { appels, chercher }
+	return { appels: calls, chercher: find }
 }
 
 describe('la requête', () => {
 	test('un envoi : l’hôte principal, la clé, son emplacement et les adresses, en https vers le point commun', async () => {
-		const { appels, chercher } = fauxPointDEnvoi()
-		await submitToIndexNow([`${SITE}/profil/zoe-lefevre`, `${SITE}/profil/zoe-lefevre`], CLE, chercher)
-		expect(appels).toEqual([
+		const { appels: calls, chercher: find } = uploadFakePoint()
+		await submitToIndexNow([`${SITE}/profil/zoe-lefevre`, `${SITE}/profil/zoe-lefevre`], KEY, find)
+		expect(calls).toEqual([
 			{
 				adresse: SUBMIT_ENDPOINT,
 				corps: {
 					host: 'my-makeup.fr',
-					key: CLE,
-					keyLocation: `${SITE}/${CLE}.txt`,
+					key: KEY,
+					keyLocation: `${SITE}/${KEY}.txt`,
 					urlList: [`${SITE}/profil/zoe-lefevre`],
 				},
 			},
@@ -166,7 +166,7 @@ describe('la requête', () => {
 	})
 
 	test('jamais d’adresse hors de l’hôte principal en https', async () => {
-		const { appels, chercher } = fauxPointDEnvoi()
+		const { appels: calls, chercher: find } = uploadFakePoint()
 		await submitToIndexNow(
 			[
 				`${SITE}/blog/ok`,
@@ -177,28 +177,28 @@ describe('la requête', () => {
 				'https://autre.test/blog/autre',
 				'pas une adresse',
 			],
-			CLE,
-			chercher
+			KEY,
+			find
 		)
-		expect(appels.flatMap(({ corps }) => corps.urlList)).toEqual([`${SITE}/blog/ok`])
-		const vide = fauxPointDEnvoi()
-		await submitToIndexNow(['https://autre.test/'], CLE, vide.chercher)
-		expect(vide.appels).toEqual([])
+		expect(calls.flatMap(({ corps }) => corps.urlList)).toEqual([`${SITE}/blog/ok`])
+		const empty = uploadFakePoint()
+		await submitToIndexNow(['https://autre.test/'], KEY, empty.chercher)
+		expect(empty.appels).toEqual([])
 	})
 
 	test('plus de 10 000 adresses : plusieurs requêtes', async () => {
-		const { appels, chercher } = fauxPointDEnvoi(200)
-		const adresses = Array.from({ length: URLS_PER_SUBMISSION + 1 }, (_, i) => `${SITE}/profil/p-${i}`)
-		await submitToIndexNow(adresses, CLE, chercher)
-		expect(appels.map(({ corps }) => corps.urlList.length)).toEqual([URLS_PER_SUBMISSION, 1])
+		const { appels: calls, chercher: find } = uploadFakePoint(200)
+		const urls = Array.from({ length: URLS_PER_SUBMISSION + 1 }, (_, i) => `${SITE}/profil/p-${i}`)
+		await submitToIndexNow(urls, KEY, find)
+		expect(calls.map(({ corps }) => corps.urlList.length)).toEqual([URLS_PER_SUBMISSION, 1])
 	})
 
 	test('un refus lève une erreur qui nomme le statut, jamais la clé', async () => {
-		const { chercher } = fauxPointDEnvoi(403)
-		const erreur = await submitToIndexNow([`${SITE}/blog/a`], CLE, chercher).catch(e => e as Error)
-		expect(erreur).toBeInstanceOf(Error)
-		expect((erreur as Error).message).toContain('403')
-		expect((erreur as Error).message).not.toContain(CLE)
+		const { chercher: find } = uploadFakePoint(403)
+		const error = await submitToIndexNow([`${SITE}/blog/a`], KEY, find).catch(e => e as Error)
+		expect(error).toBeInstanceOf(Error)
+		expect((error as Error).message).toContain('403')
+		expect((error as Error).message).not.toContain(KEY)
 	})
 
 	test('les adresses d’un sitemap : celles de l’hôte principal, décodées', () => {
@@ -209,85 +209,85 @@ describe('la requête', () => {
 })
 
 /** A request of Payload with the stored rows the hooks read, and a logger that records. */
-function requete(lignes: Record<string, unknown>[]) {
+function request(lignes: Record<string, unknown>[]) {
 	const findOne = mock(async () => lignes.shift() ?? null)
-	const journal = { debug: mock(() => {}), info: mock(() => {}), error: mock(() => {}) }
-	const req = { payload: { db: { findOne }, logger: journal } } as unknown as PayloadRequest
-	return { req, journal }
+	const log = { debug: mock(() => {}), info: mock(() => {}), error: mock(() => {}) }
+	const req = { payload: { db: { findOne }, logger: log } } as unknown as PayloadRequest
+	return { req, journal: log }
 }
 
 describe('les crochets de Payload', () => {
-	const avant = { cle: process.env.INDEXNOW_KEY, site: process.env.NEXT_PUBLIC_SITE_URL, appEnv: process.env.APP_ENV }
-	const vraiFetch = globalThis.fetch
-	let faux: ReturnType<typeof fauxPointDEnvoi>
+	const before = { cle: process.env.INDEXNOW_KEY, site: process.env.NEXT_PUBLIC_SITE_URL, appEnv: process.env.APP_ENV }
+	const trueFetch = globalThis.fetch
+	let fake: ReturnType<typeof uploadFakePoint>
 
 	beforeEach(() => {
 		forgetQueue()
-		process.env.INDEXNOW_KEY = CLE
+		process.env.INDEXNOW_KEY = KEY
 		process.env.NEXT_PUBLIC_SITE_URL = SITE
 		delete process.env.APP_ENV
-		faux = fauxPointDEnvoi()
-		globalThis.fetch = faux.chercher as unknown as typeof fetch
+		fake = uploadFakePoint()
+		globalThis.fetch = fake.chercher as unknown as typeof fetch
 	})
 	afterEach(() => {
 		forgetQueue()
-		globalThis.fetch = vraiFetch
-		for (const [nom, valeur] of [
-			['INDEXNOW_KEY', avant.cle],
-			['NEXT_PUBLIC_SITE_URL', avant.site],
-			['APP_ENV', avant.appEnv],
+		globalThis.fetch = trueFetch
+		for (const [name, value] of [
+			['INDEXNOW_KEY', before.cle],
+			['NEXT_PUBLIC_SITE_URL', before.site],
+			['APP_ENV', before.appEnv],
 		] as const) {
-			if (valeur === undefined) delete process.env[nom]
-			else process.env[nom] = valeur
+			if (value === undefined) delete process.env[name]
+			else process.env[name] = value
 		}
 	})
 
 	const HOOKS = refresh('profiles')
 
-	async function enregistrer(req: PayloadRequest, context: RequestContext, id = 7) {
+	async function save(req: PayloadRequest, context: RequestContext, id = 7) {
 		await HOOKS.avantEcriture({ context, data: {}, operation: 'update', originalDoc: { id }, req } as never)
 		await HOOKS.apresEcriture({ context, doc: { id }, operation: 'update', previousDoc: { id }, req } as never)
 	}
 
-	const ligne = (status: string, publishable: boolean) => ({ id: 7, slug: 'zoe-lefevre', status, publishable })
+	const line = (status: string, publishable: boolean) => ({ id: 7, slug: 'zoe-lefevre', status, publishable })
 
 	test('un profil publiable modifié : une seule requête, une seule adresse, après l’attente', async () => {
-		const { req, journal } = requete([ligne('published', true), ligne('published', true)])
-		await enregistrer(req, {})
+		const { req, journal: log } = request([line('published', true), line('published', true)])
+		await save(req, {})
 		// Nothing leaves while the save is still running.
-		expect(faux.appels).toEqual([])
+		expect(fake.appels).toEqual([])
 		expect(pendingUrls()).toEqual([`${SITE}/profil/zoe-lefevre`])
 
 		await flushQueue()
 
-		expect(faux.appels).toHaveLength(1)
-		expect(faux.appels[0]?.corps.urlList).toEqual([`${SITE}/profil/zoe-lefevre`])
-		expect(journal.info).toHaveBeenCalledTimes(1)
-		expect(journal.error).not.toHaveBeenCalled()
+		expect(fake.appels).toHaveLength(1)
+		expect(fake.appels[0]?.corps.urlList).toEqual([`${SITE}/profil/zoe-lefevre`])
+		expect(log.info).toHaveBeenCalledTimes(1)
+		expect(log.error).not.toHaveBeenCalled()
 	})
 
 	test('un profil qui devient publiable, qui cesse de l’être : son adresse part', async () => {
-		await enregistrer(requete([ligne('published', false), ligne('published', true)]).req, {})
+		await save(request([line('published', false), line('published', true)]).req, {})
 		await flushQueue()
-		await enregistrer(requete([ligne('published', true), ligne('published', false)]).req, {})
+		await save(request([line('published', true), line('published', false)]).req, {})
 		await flushQueue()
-		expect(faux.appels.map(({ corps }) => corps.urlList)).toEqual([
+		expect(fake.appels.map(({ corps }) => corps.urlList)).toEqual([
 			[`${SITE}/profil/zoe-lefevre`],
 			[`${SITE}/profil/zoe-lefevre`],
 		])
 	})
 
 	test('un profil qui n’est pas publiable avant ni après : rien ne part', async () => {
-		await enregistrer(requete([ligne('published', false), ligne('published', false)]).req, {})
+		await save(request([line('published', false), line('published', false)]).req, {})
 		expect(pendingUrls()).toEqual([])
 		await flushQueue()
-		expect(faux.appels).toEqual([])
+		expect(fake.appels).toEqual([])
 	})
 
 	test('plusieurs enregistrements proches : une requête pour tous', async () => {
-		await enregistrer(requete([ligne('published', true), ligne('published', true)]).req, {})
+		await save(request([line('published', true), line('published', true)]).req, {})
 		const talents = refresh('talents')
-		const { req } = requete([
+		const { req } = request([
 			{ id: 3, slug: 'mariee', _status: 'published' },
 			{ id: 3, slug: 'mariee', _status: 'published' },
 		])
@@ -295,59 +295,59 @@ describe('les crochets de Payload', () => {
 		await talents.avantEcriture({ context, data: {}, operation: 'update', originalDoc: { id: 3 }, req } as never)
 		await talents.apresEcriture({ context, doc: { id: 3 }, operation: 'update', previousDoc: { id: 3 }, req } as never)
 		await flushQueue()
-		expect(faux.appels).toHaveLength(1)
-		expect(faux.appels[0]?.corps.urlList).toEqual([`${SITE}/profil/zoe-lefevre`, `${SITE}/talent/mariee`])
+		expect(fake.appels).toHaveLength(1)
+		expect(fake.appels[0]?.corps.urlList).toEqual([`${SITE}/profil/zoe-lefevre`, `${SITE}/talent/mariee`])
 	})
 
 	test('un article publié, puis retiré (supprimé) : son adresse part', async () => {
 		const articles = refresh('articles')
-		const { req } = requete([{ id: 4, slug: 'un-article', _status: 'published' }])
+		const { req } = request([{ id: 4, slug: 'un-article', _status: 'published' }])
 		const context = {}
 		await articles.avantSuppression({ context, id: 4, req } as never)
 		await articles.apresSuppression({ context, doc: { id: 4 }, id: 4, req } as never)
 		await flushQueue()
-		expect(faux.appels[0]?.corps.urlList).toEqual([`${SITE}/blog/un-article`])
+		expect(fake.appels[0]?.corps.urlList).toEqual([`${SITE}/blog/un-article`])
 	})
 
 	test('pendant l’import : rien dans la file, rien ne part', async () => {
-		const { req } = requete([ligne('published', true), ligne('published', true)])
-		await enregistrer(req, { ...IMPORT_CONTEXT })
+		const { req } = request([line('published', true), line('published', true)])
+		await save(req, { ...IMPORT_CONTEXT })
 		expect(pendingUrls()).toEqual([])
 		await flushQueue()
-		expect(faux.appels).toEqual([])
+		expect(fake.appels).toEqual([])
 	})
 
 	test('sans clé, hors du site, sur le banc : rien ne part', async () => {
-		const lignes = () => requete([ligne('published', true), ligne('published', true)]).req
+		const lines = () => request([line('published', true), line('published', true)]).req
 		delete process.env.INDEXNOW_KEY
-		await enregistrer(lignes(), {})
-		process.env.INDEXNOW_KEY = CLE
+		await save(lines(), {})
+		process.env.INDEXNOW_KEY = KEY
 		process.env.NEXT_PUBLIC_SITE_URL = 'https://v3.my-makeup.fr'
-		await enregistrer(lignes(), {})
+		await save(lines(), {})
 		process.env.NEXT_PUBLIC_SITE_URL = SITE
 		process.env.APP_ENV = 'test'
-		await enregistrer(lignes(), {})
+		await save(lines(), {})
 		expect(pendingUrls()).toEqual([])
 		await flushQueue()
-		expect(faux.appels).toEqual([])
+		expect(fake.appels).toEqual([])
 	})
 
 	test('un envoi en échec n’empêche pas l’enregistrement et laisse une trace sans clé ni adresse', async () => {
 		globalThis.fetch = (async () => {
 			throw new Error('réseau coupé')
 		}) as unknown as typeof fetch
-		const { req, journal } = requete([ligne('published', true), ligne('published', true)])
-		await enregistrer(req, {})
+		const { req, journal: log } = request([line('published', true), line('published', true)])
+		await save(req, {})
 		await flushQueue()
-		expect(journal.error).toHaveBeenCalledTimes(1)
-		const [message] = journal.error.mock.calls[0] as unknown as [string]
+		expect(log.error).toHaveBeenCalledTimes(1)
+		const [message] = log.error.mock.calls[0] as unknown as [string]
 		expect(message).toContain('[indexnow]')
-		expect(message).not.toContain(CLE)
+		expect(message).not.toContain(KEY)
 		expect(message).not.toContain('zoe-lefevre')
 	})
 
 	test('la file elle-même ne garde que des adresses du site', () => {
-		reportLater(['https://autre.test/x', `${SITE}/blog/a`], { cle: CLE, journal: { info() {}, error() {} } })
+		reportLater(['https://autre.test/x', `${SITE}/blog/a`], { cle: KEY, journal: { info() {}, error() {} } })
 		expect(pendingUrls()).toEqual([`${SITE}/blog/a`])
 	})
 })

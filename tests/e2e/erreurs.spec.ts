@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { FROZEN_URL_FAMILIES } from '../../src/lib/frozen-urls'
 
-/** The 404 and the error pages (ticket 069, E59 and E61). The page of a dead database is E60: see tests/unit/pages-erreur.test.tsx. */
+/** The 404 and the error pages (ticket 069, E59 and E61). The page of a dead database is E60: see tests/unit/error-pages.test.tsx. */
 
 test.describe('Pages d’erreur', { tag: '@mobile' }, () => {
 	// E59

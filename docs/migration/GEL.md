@@ -52,7 +52,7 @@ bun --no-env-file scripts/migration/freeze.ts \
 
 (ou `bun run migration:freeze -- …`). Il lit `git log` du dépôt donné, sans rien écrire. Il sort en code 1 et liste chaque commit interdit si un commit daté du début du gel ou après n'est dans aucune des quatre catégories, ou si la capture ou l'inventaire donnés sont plus anciens que le gel. Le dépôt de l'API se contrôle de la même façon, avec son chemin.
 
-Les règles sont dans `scripts/migration/freeze-rules.ts`, leurs tests dans `tests/unit/gel.test.ts`.
+Les règles sont dans `scripts/migration/freeze-rules.ts`, leurs tests dans `tests/unit/freeze.test.ts`.
 
 ## Ce que ce document ne fait pas
 

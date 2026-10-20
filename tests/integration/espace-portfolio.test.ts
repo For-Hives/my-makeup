@@ -11,11 +11,11 @@ import { reconcileStorageAndDatabase } from '@/lib/reconciliation-read'
 import { listStorage } from '@/lib/storage'
 import type { Media } from '@/payload-types'
 import { readPublicProfile } from '@/services/public/profiles'
-import { type Espion, espionnerLeStockage, suppressionsSansCorbeille } from '../outils/espion-s3'
-import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { appelerRest, formulaireAvecFichier } from '../outils/rest'
-import { lireUnObjet, viderLeStockage } from '../outils/s3'
+import { createAccount, type TestAccount } from '../support/account-factory'
+import { emptyBase, testPayload } from '../support/payload-test'
+import { callRest, formWithFile } from '../support/rest'
+import { emptyStorage, readObject } from '../support/s3'
+import { deletionsWithoutTrash, type Spy, spyStorage } from '../support/s3-spy'
 
 // The bench is shared by every checkout of the machine, and a suite under load runs several times slower than alone:
 // the default 5 s is passed by the heaviest tests of this file (ticket 225). The delay bounds a call that hangs, it
@@ -32,18 +32,18 @@ setDefaultTimeout(30_000)
  * (ticket 045, « à savoir pour la suite »).
  */
 
-type Maquilleuse = CompteDeTest<'maquilleuse'>
+type Maquilleuse = TestAccount<'maquilleuse'>
 
-let espion: Espion
+let espion: Spy
 
 beforeEach(() => {
-	espion = espionnerLeStockage()
+	espion = spyStorage()
 })
 
 afterEach(async () => {
-	const fautes = suppressionsSansCorbeille(espion.journal)
+	const fautes = deletionsWithoutTrash(espion.journal)
 	espion.arreter()
-	await Promise.all([viderLaBase(), viderLeStockage()])
+	await Promise.all([emptyBase(), emptyStorage()])
 	expect(fautes).toEqual([])
 })
 
@@ -53,7 +53,7 @@ async function utilisateurDe(payload: Payload, compte: Maquilleuse): Promise<Das
 }
 
 async function profilDe(compte: Maquilleuse) {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	const [profil] = (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } }))
 		.docs
 	if (!profil) throw new Error('pas de profil')
@@ -61,8 +61,8 @@ async function profilDe(compte: Maquilleuse) {
 }
 
 async function maquilleuse(): Promise<Maquilleuse> {
-	const compte = await creerCompte('maquilleuse')
-	const payload = await payloadDeTest()
+	const compte = await createAccount('maquilleuse')
+	const payload = await testPayload()
 	await payload.update({
 		collection: 'profiles',
 		id: (await profilDe(compte)).id,
@@ -81,9 +81,9 @@ async function imageAssezGrande(): Promise<File> {
 
 /** A file sent to the media route as the browser sends it, with its default alternative text. */
 async function envoyer(compte: Maquilleuse, alt = 'Photo du portfolio'): Promise<Media> {
-	const { statut, corps, texte } = await appelerRest('POST', '/api/media?depth=0', {
+	const { statut, corps, texte } = await callRest('POST', '/api/media?depth=0', {
 		enTetes: compte.session.enTetes,
-		formulaire: formulaireAvecFichier(await imageAssezGrande(), { alt }),
+		formulaire: formWithFile(await imageAssezGrande(), { alt }),
 	})
 	if (statut !== 201) throw new Error(`Envoi refusé : ${statut} ${texte}`)
 	return (corps as { doc: Media }).doc
@@ -103,13 +103,13 @@ const envoyerTrois = async (compte: Maquilleuse): Promise<[Media, Media, Media]>
 ]
 
 const galerieDe = async (compte: Maquilleuse) => namedPhotos((await profilDe(compte)).gallery)
-const nombreDeMedias = async () => (await (await payloadDeTest()).count({ collection: 'media' })).totalDocs
+const nombreDeMedias = async () => (await (await testPayload()).count({ collection: 'media' })).totalDocs
 
 /** The reconciliation of the storage and the database: 0 orphan, or the list of what is wrong. */
 async function orphelins() {
 	const storage = serverEnv().storage
 	if (!storage) throw new Error('Pas de stockage sur le banc.')
-	const rapport = await reconcileStorageAndDatabase(await payloadDeTest(), () => listStorage(storage))
+	const rapport = await reconcileStorageAndDatabase(await testPayload(), () => listStorage(storage))
 	return {
 		objetsSansMedia: rapport.objetsSansMedia,
 		mediasSansObjet: rapport.mediasSansObjet,
@@ -121,7 +121,7 @@ const AUCUN = { objetsSansMedia: [], mediasSansObjet: [], mediasSansProfil: [] }
 describe('E34 : trois photos ajoutées sont dans la galerie, dans l’ordre, et sur le profil public', () => {
 	test('la galerie suit l’ordre d’ajout ; l’espace et le profil public montrent les trois ; alt par défaut stocké ; 0 orphelin', async () => {
 		const compte = await maquilleuse()
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const utilisateur = await utilisateurDe(payload, compte)
 		const [a, b, c] = await envoyerTrois(compte)
 		expect([a, b, c].map(m => m.alt)).toEqual(['Photo du portfolio', 'Photo du portfolio', 'Photo du portfolio'])
@@ -140,7 +140,7 @@ describe('E34 : trois photos ajoutées sont dans la galerie, dans l’ordre, et 
 
 	test('des photos ajoutées après celles qu’elle a déjà : les anciennes gardent leur place, les nouvelles suivent', async () => {
 		const compte = await maquilleuse()
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const utilisateur = await utilisateurDe(payload, compte)
 		const [a, b, c] = await envoyerTrois(compte)
 		await savePortfolio(payload, utilisateur, { galerie: [a.id, b.id] })
@@ -156,7 +156,7 @@ describe('E34 : trois photos ajoutées sont dans la galerie, dans l’ordre, et 
 describe('U80 : dix photos au plus', () => {
 	test('dix passent ; une onzième est refusée avec le message, la galerie reste intacte', async () => {
 		const compte = await maquilleuse()
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const utilisateur = await utilisateurDe(payload, compte)
 		const medias = await envoyerPlusieurs(compte, 11)
 		const dix = medias.slice(0, 10).map(m => m.id)
@@ -184,7 +184,7 @@ describe('la requête de l’action est lue strictement', () => {
 		['rien', () => ({})],
 	])('%s : refusé en français, jamais une erreur serveur, la galerie ne bouge pas', async (_nom, saisie) => {
 		const compte = await maquilleuse()
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const photo = await envoyer(compte)
 
 		const resultat = await savePortfolio(payload, await utilisateurDe(payload, compte), saisie(photo.id))
@@ -197,7 +197,7 @@ describe('la requête de l’action est lue strictement', () => {
 	test('la photo d’une autre maquilleuse est refusée, la galerie ne bouge pas', async () => {
 		const compte = await maquilleuse()
 		const autre = await maquilleuse()
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const mienne = await envoyer(compte)
 		const sienne = await envoyer(autre)
 
@@ -208,12 +208,12 @@ describe('la requête de l’action est lue strictement', () => {
 		expect(resultat).toMatchObject({ ok: false, champs: { galerie: PHOTO_MESSAGES.photoRefusee } })
 		expect(await galerieDe(compte)).toEqual([])
 		expect(await galerieDe(autre)).toEqual([])
-		expect(await lireUnObjet(`media/${sienne.filename}`)).toBeDefined()
+		expect(await readObject(`media/${sienne.filename}`)).toBeDefined()
 	})
 
 	test('un compte de l’administration n’a pas de portfolio à écrire', async () => {
-		const admin = await creerCompte('admin')
-		const payload = await payloadDeTest()
+		const admin = await createAccount('admin')
+		const payload = await testPayload()
 		const doc = await payload.findByID({ collection: 'admins', id: admin.id, depth: 0, overrideAccess: true })
 		const utilisateur = { ...doc, collection: 'admins' } as unknown as DashboardUser
 		expect(await savePortfolio(payload, utilisateur, { galerie: [] })).toEqual({
@@ -226,7 +226,7 @@ describe('la requête de l’action est lue strictement', () => {
 describe('E34 : fermer sans valider ne laisse rien', () => {
 	test('un panneau fermé n’a rien envoyé : ni média, ni objet, ni orphelin', async () => {
 		const compte = await maquilleuse()
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const a = await envoyer(compte)
 		await savePortfolio(payload, await utilisateurDe(payload, compte), { galerie: [a.id] })
 		const avant = await nombreDeMedias()
@@ -246,13 +246,13 @@ const clesDe = (media: Media): string[] => [
 describe('E35, I25 : une photo retirée disparaît partout, son objet part à la corbeille', () => {
 	test('retirer la 2e : galerie, espace et profil public sans elle ; l’original et ses tailles en deleted/ ; 0 orphelin', async () => {
 		const compte = await maquilleuse()
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const utilisateur = await utilisateurDe(payload, compte)
 		const [a, b, c] = await envoyerTrois(compte)
 		await savePortfolio(payload, utilisateur, { galerie: [a.id, b.id, c.id] })
 		const cles = clesDe(b)
 		expect(cles.length).toBeGreaterThan(1)
-		const avant = await Promise.all(cles.map(async cle => [cle, (await lireUnObjet(cle))?.octets] as const))
+		const avant = await Promise.all(cles.map(async cle => [cle, (await readObject(cle))?.octets] as const))
 		expect(avant.every(([, octets]) => octets !== undefined)).toBe(true)
 
 		const resultat = await savePortfolio(payload, utilisateur, { galerie: [a.id, c.id] })
@@ -267,18 +267,18 @@ describe('E35, I25 : une photo retirée disparaît partout, son objet part à la
 		] as string[])
 		expect(await payload.findByID({ collection: 'media', id: b.id, depth: 0, disableErrors: true })).toBeNull()
 		for (const [cle, octets] of avant) {
-			expect(await lireUnObjet(cle)).toBeUndefined()
-			expect((await lireUnObjet(`deleted/${cle}`))?.octets).toEqual(octets)
+			expect(await readObject(cle)).toBeUndefined()
+			expect((await readObject(`deleted/${cle}`))?.octets).toEqual(octets)
 		}
 		expect((await fetch(b.url ?? '')).status).not.toBe(200)
 		// The two that stay are untouched.
-		for (const cle of [...clesDe(a), ...clesDe(c)]) expect(await lireUnObjet(cle)).toBeDefined()
+		for (const cle of [...clesDe(a), ...clesDe(c)]) expect(await readObject(cle)).toBeDefined()
 		expect(await orphelins()).toEqual(AUCUN)
 	})
 
 	test('une photo retirée de la galerie mais encore photo principale reste en place (I25)', async () => {
 		const compte = await maquilleuse()
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const utilisateur = await utilisateurDe(payload, compte)
 		const [principale, autre] = [await envoyer(compte), await envoyer(compte)]
 		await payload.update({
@@ -292,14 +292,14 @@ describe('E35, I25 : une photo retirée disparaît partout, son objet part à la
 
 		expect(await galerieDe(compte)).toEqual([autre.id])
 		expect((await profilDe(compte)).mainPicture).toBe(principale.id)
-		for (const cle of clesDe(principale)) expect(await lireUnObjet(cle)).toBeDefined()
-		expect(await lireUnObjet(`deleted/media/${principale.filename}`)).toBeUndefined()
+		for (const cle of clesDe(principale)) expect(await readObject(cle)).toBeDefined()
+		expect(await readObject(`deleted/media/${principale.filename}`)).toBeUndefined()
 		expect(await orphelins()).toEqual(AUCUN)
 	})
 
 	test('tout retirer : liste vide, tous les objets en corbeille, 0 orphelin', async () => {
 		const compte = await maquilleuse()
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const utilisateur = await utilisateurDe(payload, compte)
 		const [a, b] = [await envoyer(compte), await envoyer(compte)]
 		await savePortfolio(payload, utilisateur, { galerie: [a.id, b.id] })
@@ -312,15 +312,15 @@ describe('E35, I25 : une photo retirée disparaît partout, son objet part à la
 		expect(await galerieDe(compte)).toEqual([])
 		expect(await nombreDeMedias()).toBe(0)
 		for (const cle of [...clesDe(a), ...clesDe(b)]) {
-			expect(await lireUnObjet(cle)).toBeUndefined()
-			expect(await lireUnObjet(`deleted/${cle}`)).toBeDefined()
+			expect(await readObject(cle)).toBeUndefined()
+			expect(await readObject(`deleted/${cle}`)).toBeDefined()
 		}
 		expect(await orphelins()).toEqual(AUCUN)
 	})
 
 	test('enregistrer deux fois la même liste ne déplace plus rien', async () => {
 		const compte = await maquilleuse()
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const utilisateur = await utilisateurDe(payload, compte)
 		const [a, b] = [await envoyer(compte), await envoyer(compte)]
 		await savePortfolio(payload, utilisateur, { galerie: [a.id, b.id] })
@@ -337,7 +337,7 @@ describe('E35, I25 : une photo retirée disparaît partout, son objet part à la
 	test('la photo de B ne peut pas être retirée par A : la liste de A n’y touche pas, et celle de B reste', async () => {
 		const compte = await maquilleuse()
 		const autre = await maquilleuse()
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const photoDeB = await envoyer(autre)
 		await savePortfolio(payload, await utilisateurDe(payload, autre), { galerie: [photoDeB.id] })
 		const photoDeA = await envoyer(compte)
@@ -346,7 +346,7 @@ describe('E35, I25 : une photo retirée disparaît partout, son objet part à la
 		await savePortfolio(payload, await utilisateurDe(payload, compte), { galerie: [] })
 
 		expect(await galerieDe(autre)).toEqual([photoDeB.id])
-		for (const cle of clesDe(photoDeB)) expect(await lireUnObjet(cle)).toBeDefined()
+		for (const cle of clesDe(photoDeB)) expect(await readObject(cle)).toBeDefined()
 		expect(await orphelins()).toEqual(AUCUN)
 	})
 })

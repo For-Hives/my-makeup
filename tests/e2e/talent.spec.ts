@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test'
-import { creerContenu, supprimerContenu } from '../outils/pages-publiques'
+import { createContent, deleteContent } from '../support/public-pages'
 
 /**
  * The page of a speciality, end to end (ticket 108; plan 02 E59 and E65): 200 with one h1 for a published
@@ -22,7 +22,7 @@ test.beforeAll(async ({ request }) => {
 	identifiants.push(
 		{
 			collection: 'talents',
-			id: await creerContenu(request, 'talents', {
+			id: await createContent(request, 'talents', {
 				title: `Talent ${suffixe}`,
 				slug: publie,
 				seo_title: `Le maquillage fictif ${suffixe}`,
@@ -35,7 +35,7 @@ test.beforeAll(async ({ request }) => {
 		},
 		{
 			collection: 'talents',
-			id: await creerContenu(request, 'talents', {
+			id: await createContent(request, 'talents', {
 				title: `Talent nu ${suffixe}`,
 				slug: sansTitre,
 				_status: 'published',
@@ -43,13 +43,13 @@ test.beforeAll(async ({ request }) => {
 		},
 		{
 			collection: 'talents',
-			id: await creerContenu(request, 'talents', { title: 'Brouillon', slug: brouillon, _status: 'draft' }),
+			id: await createContent(request, 'talents', { title: 'Brouillon', slug: brouillon, _status: 'draft' }),
 		}
 	)
 })
 
 test.afterAll(async ({ request }) => {
-	for (const { collection, id } of identifiants) await supprimerContenu(request, collection, id)
+	for (const { collection, id } of identifiants) await deleteContent(request, collection, id)
 })
 
 async function donneesStructurees(page: Page): Promise<Record<string, unknown>[]> {

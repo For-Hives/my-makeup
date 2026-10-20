@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { violationsGraves } from '../outils/axe'
+import { violationsSevere } from '../support/axe'
 
 /**
  * The exit of P5 (ticket 096): no « serious » or « critical » accessibility violation on the
@@ -25,7 +25,7 @@ test.describe('Accessibilité des pages d’authentification', { tag: '@mobile' 
 		test(`${nom} : aucune violation grave`, async ({ page }) => {
 			await page.goto(chemin)
 			await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
-			expect(await violationsGraves(page)).toEqual([])
+			expect(await violationsSevere(page)).toEqual([])
 		})
 	}
 
@@ -46,6 +46,6 @@ test.describe('Accessibilité des pages d’authentification', { tag: '@mobile' 
 		await page.goto('/auth/profil')
 		await expect(page).toHaveURL(/\/auth\/signin/)
 		await expect(page.getByTestId('message-reconnexion')).toBeVisible()
-		expect(await violationsGraves(page)).toEqual([])
+		expect(await violationsSevere(page)).toEqual([])
 	})
 })

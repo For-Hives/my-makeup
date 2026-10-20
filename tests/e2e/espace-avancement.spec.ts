@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
-import { violationsGraves } from '../outils/axe'
-import { creerCompte } from '../outils/fabrique-comptes'
+import { createAccount } from '../support/account-factory'
+import { violationsSevere } from '../support/axe'
 
 /**
  * The progress block at the top of her space (ticket 138; plan 02 U01, I20): an empty profile reads
@@ -20,7 +20,7 @@ test.describe('138 : où en est le profil', { tag: '@mobile' }, () => {
 		context,
 		page,
 	}) => {
-		const compte = await creerCompte('maquilleuse')
+		const compte = await createAccount('maquilleuse')
 		await context.addCookies(compte.session.cookies)
 		await page.goto('/auth/profil')
 
@@ -42,14 +42,14 @@ test.describe('138 : où en est le profil', { tag: '@mobile' }, () => {
 		await expect(page).toHaveURL(/#carte-photo$/)
 
 		expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
-		expect(await violationsGraves(page)).toEqual([])
+		expect(await violationsSevere(page)).toEqual([])
 	})
 
 	test('I20 : une description de 200 caractères enregistrée fait bouger le bloc sans recharger la page', async ({
 		context,
 		page,
 	}) => {
-		const compte = await creerCompte('maquilleuse')
+		const compte = await createAccount('maquilleuse')
 		await context.addCookies(compte.session.cookies)
 		await page.goto('/auth/profil')
 		await expect(page.getByTestId('avancement-score')).toHaveText('0 sur 13 (0 %)')

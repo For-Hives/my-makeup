@@ -3,7 +3,7 @@
  *
  * Ported as is from src/lib/slug.js of the old site (branch main): the same inputs give the same
  * slugs, so the URLs indexed before the switch stay the final ones. What the old code answers on
- * a fictitious set is frozen in tests/unit/fixtures/slugs-ancien-site.json.
+ * a fictitious set is frozen in tests/unit/fixtures/slugs-old-site.json.
  *
  * - slugifier: lower case ASCII, accents removed, every other character turned into a dash,
  *   dashes merged and trimmed, 70 characters at most;

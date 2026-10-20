@@ -16,8 +16,8 @@ const sections = (modif: Partial<ReadSections> = {}): ReadSections => ({
 	...modif,
 })
 
-const profil = (id: number, modif: Partial<ReadSections> = {}): ReadProfile => {
-	const lues = sections(modif)
+const profile = (id: number, modif: Partial<ReadSections> = {}): ReadProfile => {
+	const read = sections(modif)
 	return {
 		id,
 		first_name: 'Zoé',
@@ -33,16 +33,16 @@ const profil = (id: number, modif: Partial<ReadSections> = {}): ReadProfile => {
 		created_at: '2024-01-01T10:00:00.000Z',
 		updated_at: '2024-02-01T10:00:00.000Z',
 		compte: id + 100,
-		aPhotoPrincipale: lues.photoPrincipale.length > 0,
-		prix: lues.prestations.map(({ price }) => price),
-		reseaux: lues.reseau,
-		sections: lues,
+		aPhotoPrincipale: read.photoPrincipale.length > 0,
+		prix: read.prestations.map(({ price }) => price),
+		reseaux: read.reseau,
+		sections: read,
 	}
 }
 
 describe('les listes d’un profil, sous les noms de Payload', () => {
 	test('chaque ligne dans son ordre, chaque valeur telle quelle ; un jour à midi UTC', () => {
-		const valeurs = listsValues(
+		const values = listsValues(
 			sections({
 				competences: [
 					{ name: 'Maquillage mariée', description: null },
@@ -84,7 +84,7 @@ describe('les listes d’un profil, sous les noms de Payload', () => {
 			})
 		)
 
-		expect(valeurs).toEqual({
+		expect(values).toEqual({
 			skills: [
 				{ name: 'Maquillage mariée', description: null },
 				{ name: 'Coiffure', description: 'Chignons.' },
@@ -131,11 +131,11 @@ describe('les listes d’un profil, sous les noms de Payload', () => {
 				linkedin: null,
 			},
 		})
-		expect(JSON.stringify(valeurs)).not.toContain('06 39 98')
+		expect(JSON.stringify(values)).not.toContain('06 39 98')
 	})
 
 	test('le prix lu par la règle unique : le nombre quand il se lit, le texte toujours tel quel (ticket 062)', () => {
-		const saisies = [
+		const typed = [
 			'50',
 			'50€',
 			' 1 200 € ',
@@ -147,9 +147,9 @@ describe('les listes d’un profil, sous les noms de Payload', () => {
 			'',
 			null,
 		]
-		const { serviceOffers: prestations } = listsValues(
+		const { serviceOffers } = listsValues(
 			sections({
-				prestations: saisies.map((price, i) => ({
+				prestations: typed.map((price, i) => ({
 					id: i + 1,
 					name: `Offre ${i + 1}`,
 					description: null,
@@ -165,7 +165,7 @@ describe('les listes d’un profil, sous les noms de Payload', () => {
 			}[]
 		}
 
-		expect(prestations.map(({ priceText, priceFrom }) => [priceText, priceFrom])).toEqual([
+		expect(serviceOffers.map(({ priceText, priceFrom }) => [priceText, priceFrom])).toEqual([
 			['50', 50],
 			['50€', 50],
 			[' 1 200 € ', 1200],
@@ -180,19 +180,19 @@ describe('les listes d’un profil, sous les noms de Payload', () => {
 			[null, null],
 		])
 		// An option goes through the same rule as its offer.
-		const options = prestations.flatMap(({ options }) => options)
-		expect(options.map(({ priceFrom }) => priceFrom)).toEqual(prestations.map(({ priceFrom }) => priceFrom))
+		const options = serviceOffers.flatMap(({ options }) => options)
+		expect(options.map(({ priceFrom }) => priceFrom)).toEqual(serviceOffers.map(({ priceFrom }) => priceFrom))
 	})
 
 	test('le bilan des prix compte en nombres et liste les profils, sans jamais citer un texte', () => {
-		const offre = (id: number, price: string | null) => ({ id, name: 'Offre', description: null, price, options: [] })
-		const { prices: prix, expected: attendus } = expectedProfiles(
+		const offer = (id: number, price: string | null) => ({ id, name: 'Offre', description: null, price, options: [] })
+		const { prices: priceValue, expected } = expectedProfiles(
 			[
-				profil(1, { prestations: [offre(1, '80'), offre(2, 'Sur devis')] }),
-				profil(2, { prestations: [offre(3, '2 h : 150 €')] }),
-				profil(3, { prestations: [offre(4, null), offre(5, '')] }),
-				profil(4, {
-					prestations: [{ ...offre(6, 'Sur devis'), options: [{ name: 'Option', description: null, price: '15 €' }] }],
+				profile(1, { prestations: [offer(1, '80'), offer(2, 'Sur devis')] }),
+				profile(2, { prestations: [offer(3, '2 h : 150 €')] }),
+				profile(3, { prestations: [offer(4, null), offer(5, '')] }),
+				profile(4, {
+					prestations: [{ ...offer(6, 'Sur devis'), options: [{ name: 'Option', description: null, price: '15 €' }] }],
 				}),
 			],
 			new Map([
@@ -203,7 +203,7 @@ describe('les listes d’un profil, sous les noms de Payload', () => {
 			])
 		)
 
-		expect(prix).toEqual({
+		expect(priceValue).toEqual({
 			prices: 7,
 			withAmount: 2,
 			freeTexts: 3,
@@ -213,11 +213,11 @@ describe('les listes d’un profil, sous les noms de Payload', () => {
 			unreadDigits: [2],
 		})
 		// The register line is counted once per profile that gains an amount, options included.
-		const comptes = attendus.map(
+		const accounts = expected.map(
 			({ gaps: ecarts }) => ecarts.filter(({ reference }) => reference === 'prix-numerique').length
 		)
-		expect(comptes).toEqual([1, 0, 0, 1])
-		expect(JSON.stringify(prix)).not.toContain('Sur devis')
+		expect(accounts).toEqual([1, 0, 0, 1])
+		expect(JSON.stringify(priceValue)).not.toContain('Sur devis')
 	})
 
 	test('un profil sans section n’a que des listes vides, et pas de réseaux', () => {
@@ -233,32 +233,32 @@ describe('les listes d’un profil, sous les noms de Payload', () => {
 })
 
 describe('les photos d’un profil sont les médias adoptés de ses fichiers', () => {
-	const comptes = new Map([
+	const accounts = new Map([
 		[121, 501],
 		[122, 502],
 		[123, 503],
 	])
 
 	test('la photo principale et la galerie, dans l’ordre ; un fichier non adopté est signalé, pas inventé', () => {
-		const medias = new Map<number, number | null>([
+		const media = new Map<number, number | null>([
 			[1, 11],
 			[2, 12],
 			[3, 13],
 		])
 
-		const { expected: attendus, photosNotCarriedOver: photosNonReprises } = expectedProfiles(
-			[profil(21, { photoPrincipale: [1], galerie: [3, 9, 2] }), profil(22, { photoPrincipale: [8] })],
-			comptes,
+		const { expected, photosNotCarriedOver: unresumedPhotos } = expectedProfiles(
+			[profile(21, { photoPrincipale: [1], galerie: [3, 9, 2] }), profile(22, { photoPrincipale: [8] })],
+			accounts,
 			undefined,
 			undefined,
-			medias
+			media
 		)
 
-		expect(attendus.map(({ values: valeurs }) => [valeurs.mainPicture, valeurs.gallery])).toEqual([
+		expect(expected.map(({ values }) => [values.mainPicture, values.gallery])).toEqual([
 			[11, [13, 12]],
 			[null, []],
 		])
-		expect(photosNonReprises).toEqual([
+		expect(unresumedPhotos).toEqual([
 			{ entry: 21, file: 9 },
 			{ entry: 22, file: 8 },
 		])
@@ -266,39 +266,39 @@ describe('les photos d’un profil sont les médias adoptés de ses fichiers', (
 
 	test('le statut lit si la photo principale est adoptée, même avant que son média existe (à blanc)', () => {
 		const {
-			expected: attendus,
-			statuses: statuts,
-			statusesDifferingFromSource: statutsDifferentsDeLaSource,
+			expected,
+			statuses,
+			statusesDifferingFromSource: sourceStatusesDifferent,
 		} = expectedProfiles(
-			[profil(21, { photoPrincipale: [1] }), profil(22, { photoPrincipale: [2] }), profil(23)],
-			comptes,
+			[profile(21, { photoPrincipale: [1] }), profile(22, { photoPrincipale: [2] }), profile(23)],
+			accounts,
 			undefined,
 			undefined,
 			new Map([[1, null]])
 		)
 
-		expect(attendus.map(({ values: valeurs }) => [valeurs.mainPicture, valeurs.status])).toEqual([
+		expect(expected.map(({ values }) => [values.mainPicture, values.status])).toEqual([
 			[null, 'published'],
 			[null, 'draft'],
 			[null, 'draft'],
 		])
-		expect(statuts).toEqual({ published: 1, draft: 2 })
+		expect(statuses).toEqual({ published: 1, draft: 2 })
 		// 22 has a main picture at the source, whose file is not adopted: its status says so.
-		expect(statutsDifferentsDeLaSource).toEqual([22])
+		expect(sourceStatusesDifferent).toEqual([22])
 	})
 
 	test('un lien de liste sans ligne est signalé par son profil', () => {
-		const { linksWithoutRow: liensSansLigne } = expectedProfiles(
-			[profil(21, { liensSansLigne: 2 }), profil(22)],
-			comptes
+		const { linksWithoutRow: linksWithoutLine } = expectedProfiles(
+			[profile(21, { liensSansLigne: 2 }), profile(22)],
+			accounts
 		)
 
-		expect(liensSansLigne).toEqual([21])
+		expect(linksWithoutLine).toEqual([21])
 	})
 })
 
 describe('une ligne hors d’une borne de la v3 est laissée de côté et listée, le profil est repris (ticket 226)', () => {
-	const AUJOURD_HUI = new Date('2026-10-16T09:00:00.000Z')
+	const TODAY = new Date('2026-10-16T09:00:00.000Z')
 	const experience = (debut: string | null, fin: string | null) => ({
 		company: 'Studio',
 		job_name: 'Maquilleuse',
@@ -307,13 +307,13 @@ describe('une ligne hors d’une borne de la v3 est laissée de côté et listé
 		date_end: fin,
 		description: null,
 	})
-	const formation = (jour: string | null) => ({
+	const course = (jour: string | null) => ({
 		diploma: 'CAP',
 		school: null,
 		date_graduation: jour,
 		course_description: null,
 	})
-	const offre = (id: number, modif: Partial<ReadSections['prestations'][number]> = {}) => ({
+	const offer = (id: number, modif: Partial<ReadSections['prestations'][number]> = {}) => ({
 		id,
 		name: `Offre ${id}`,
 		description: null,
@@ -323,7 +323,7 @@ describe('une ligne hors d’une borne de la v3 est laissée de côté et listé
 	})
 
 	test('une fin d’expérience avant son début : la ligne part, les autres restent à leur rang', () => {
-		const { sections: gardees, laissees } = rowsInBounds(
+		const { sections: kept, laissees: left } = rowsInBounds(
 			sections({
 				experiences: [
 					experience('2020-01-01', '2021-01-01'),
@@ -332,32 +332,32 @@ describe('une ligne hors d’une borne de la v3 est laissée de côté et listé
 					experience(null, '2019-01-01'),
 				],
 			}),
-			AUJOURD_HUI
+			TODAY
 		)
 
-		expect(laissees).toEqual([{ liste: 'experiences', rang: 2 }])
-		expect(gardees.experiences.map(({ date_start }) => date_start)).toEqual(['2020-01-01', '2023-01-01', null])
+		expect(left).toEqual([{ liste: 'experiences', rang: 2 }])
+		expect(kept.experiences.map(({ date_start }) => date_start)).toEqual(['2020-01-01', '2023-01-01', null])
 	})
 
 	test('une formation datée de plus d’un an après le jour part ; un an exactement reste', () => {
-		const { sections: gardees, laissees } = rowsInBounds(
+		const { sections: kept, laissees: left } = rowsInBounds(
 			sections({
-				formations: [formation('2027-10-16'), formation('2027-10-17'), formation('2018-06-30'), formation(null)],
+				formations: [course('2027-10-16'), course('2027-10-17'), course('2018-06-30'), course(null)],
 			}),
-			AUJOURD_HUI
+			TODAY
 		)
 
-		expect(laissees).toEqual([{ liste: 'formations', rang: 2 }])
-		expect(gardees.formations).toHaveLength(3)
+		expect(left).toEqual([{ liste: 'formations', rang: 2 }])
+		expect(kept.formations).toHaveLength(3)
 	})
 
 	test('un nom de plus de 70 caractères et une description de plus de 2 000 : à 70 et 2 000 ils restent', () => {
-		const { sections: gardees, laissees } = rowsInBounds(
+		const { sections: kept, laissees: left } = rowsInBounds(
 			sections({
 				prestations: [
-					offre(1, { name: 'x'.repeat(70), description: 'y'.repeat(2000) }),
-					offre(2, { description: 'y'.repeat(2001) }),
-					offre(3, {
+					offer(1, { name: 'x'.repeat(70), description: 'y'.repeat(2000) }),
+					offer(2, { description: 'y'.repeat(2001) }),
+					offer(3, {
 						options: [
 							{ name: 'x'.repeat(70), description: null, price: null },
 							{ name: 'x'.repeat(71), description: null, price: null },
@@ -367,72 +367,72 @@ describe('une ligne hors d’une borne de la v3 est laissée de côté et listé
 				],
 				competences: [{ name: 'x'.repeat(71), description: null }],
 			}),
-			AUJOURD_HUI
+			TODAY
 		)
 
-		expect(laissees).toEqual([
+		expect(left).toEqual([
 			{ liste: 'competences', rang: 1 },
 			{ liste: 'prestations', rang: 2 },
 			{ liste: 'options', rang: 2, prestation: 3 },
 			{ liste: 'options', rang: 3, prestation: 3 },
 		])
-		expect(gardees.prestations.map(({ id, options }) => [id, options.length])).toEqual([
+		expect(kept.prestations.map(({ id, options }) => [id, options.length])).toEqual([
 			[1, 0],
 			[3, 1],
 		])
-		expect(gardees.competences).toEqual([])
+		expect(kept.competences).toEqual([])
 	})
 
 	test('une offre laissée de côté emporte ses options, chacune listée', () => {
-		const { sections: gardees, laissees } = rowsInBounds(
+		const { sections: kept, laissees: left } = rowsInBounds(
 			sections({
 				prestations: [
-					offre(1, {
+					offer(1, {
 						description: 'y'.repeat(2001),
 						options: [{ name: 'Option', description: null, price: '15 €' }],
 					}),
 				],
 			}),
-			AUJOURD_HUI
+			TODAY
 		)
 
-		expect(gardees.prestations).toEqual([])
-		expect(laissees).toEqual([
+		expect(kept.prestations).toEqual([])
+		expect(left).toEqual([
 			{ liste: 'prestations', rang: 1 },
 			{ liste: 'options', rang: 1, prestation: 1 },
 		])
 	})
 
 	test('rien n’est listé quand tout est dans les bornes, et la liste ne porte jamais un texte', () => {
-		const lues = sections({
+		const read = sections({
 			experiences: [experience('2020-01-01', '2020-01-01')],
-			formations: [formation('2026-10-16')],
-			prestations: [offre(1)],
+			formations: [course('2026-10-16')],
+			prestations: [offer(1)],
 		})
 
-		expect(rowsInBounds(lues, AUJOURD_HUI)).toEqual({ sections: lues, laissees: [] })
-		const { laissees } = rowsInBounds(sections({ langues: [{ name: 'Secret'.repeat(20) }] }), AUJOURD_HUI)
-		expect(JSON.stringify(laissees)).not.toContain('Secret')
+		expect(rowsInBounds(read, TODAY)).toEqual({ sections: read, laissees: [] })
+		const { laissees: left } = rowsInBounds(sections({ langues: [{ name: 'Secret'.repeat(20) }] }), TODAY)
+		expect(JSON.stringify(left)).not.toContain('Secret')
 	})
 
 	test('le profil est repris sans la ligne ; le bilan des prix ne compte que ce qui est écrit, et le dit à part', () => {
-		const lues = sections({
+		const read = sections({
 			experiences: [experience('2022-05-01', '2021-01-01')],
-			prestations: [offre(1, { description: 'y'.repeat(2001), price: '80 €' }), offre(2, { price: '60 €' })],
+			prestations: [offer(1, { description: 'y'.repeat(2001), price: '80 €' }), offer(2, { price: '60 €' })],
 		})
 		const {
-			expected: attendus,
-			skippedRows: lignesLaissees,
-			prices: prix,
-		} = expectedProfiles([profil(1, lues)], new Map([[101, 1]]), undefined, undefined, undefined, null, AUJOURD_HUI)
+			expected,
+			skippedRows: leftLines,
+			prices: priceValue,
+		} = expectedProfiles([profile(1, read)], new Map([[101, 1]]), undefined, undefined, undefined, null, TODAY)
 
-		expect(lignesLaissees).toEqual([
+		expect(leftLines).toEqual([
 			{ profile: 1, liste: 'experiences', rang: 1 },
 			{ profile: 1, liste: 'prestations', rang: 1 },
 		])
-		expect(attendus[0]?.values.experiences).toEqual([])
-		expect((attendus[0]?.values.serviceOffers as unknown[]).length).toBe(1)
-		expect(prix.prices).toBe(1)
-		expect(prix.lostPricedOffers).toEqual([])
+		expect(expected[0]?.values.experiences).toEqual([])
+		expect((expected[0]?.values.serviceOffers as unknown[]).length).toBe(1)
+		expect(priceValue.prices).toBe(1)
+		expect(priceValue.lostPricedOffers).toEqual([])
 	})
 })

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { violationsGraves } from '../outils/axe'
+import { violationsSevere } from '../support/axe'
 
 /**
  * The five fixed pages for the people looking for a makeup artist and the thank-you page, end to end
@@ -34,7 +34,7 @@ test.describe('Les pages pour les particuliers', { tag: '@mobile' }, () => {
 			await expect(page.getByRole('heading', { level: 1 })).toHaveText(h1)
 			await expect(page.getByRole('link', { name: 'Je cherche des maquilleuses' })).toHaveAttribute('href', '/search')
 			expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
-			expect(await violationsGraves(page)).toEqual([])
+			expect(await violationsSevere(page)).toEqual([])
 		})
 	}
 

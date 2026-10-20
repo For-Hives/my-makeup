@@ -37,5 +37,5 @@ next-env.d.ts
 *.pem
 .idea
 
-# sessions of the test bench, written by `bun run banc:session`
+# sessions of the test bench, written by `bun run bench:session`
 /.banc/

@@ -1,19 +1,19 @@
 import { describe, expect, test } from 'bun:test'
-import { environnementDuBanc, servicesDuBanc } from '../outils/banc'
-import { fauxGoogle, SCENARIOS } from '../outils/faux-google'
+import { benchEnvironment, benchServices } from '../support/bench'
+import { fakeGoogle, SCENARIOS } from '../support/fake-google'
 
 /**
- * The fake Google as it runs: the container `bun run banc:up` started, asked over HTTP from this
+ * The fake Google as it runs: the container `bun run bench:up` started, asked over HTTP from this
  * machine, through the environment the integration command gave to this process.
  */
-const services = servicesDuBanc(environnementDuBanc())
+const services = benchServices(benchEnvironment())
 
 /** One sign-in may take this long, from the authorization request to the profile. */
 const ALLER_RETOUR_MAX_MS = 5000
 
 describe('Test coquille : un aller-retour complet avec le faux Google du banc', () => {
 	test('ce lancement est réglé sur le faux Google de son instance, avec le client factice du banc', () => {
-		const google = fauxGoogle()
+		const google = fakeGoogle()
 
 		expect(google.emetteur).toBe(services.google.adresse)
 		expect(process.env.GOOGLE_OIDC_ISSUER).toBe(services.google.adresse)
@@ -22,7 +22,7 @@ describe('Test coquille : un aller-retour complet avec le faux Google du banc', 
 	})
 
 	test('email vérifié : demande, code, jetons, signature, profil, en moins de 5 secondes', async () => {
-		const google = fauxGoogle()
+		const google = fakeGoogle()
 		const choix = google.choisir({ email: 'lea.martin@example.test', prenom: 'Léa', nomDeFamille: 'Martin' })
 
 		const resultat = await google.allerRetour(choix)
@@ -41,7 +41,7 @@ describe('Test coquille : un aller-retour complet avec le faux Google du banc', 
 	})
 
 	test('les quatre scénarios se choisissent un par un, chacun en moins de 5 secondes', async () => {
-		const google = fauxGoogle()
+		const google = fakeGoogle()
 		const issues: Record<string, unknown> = {}
 
 		for (const scenario of SCENARIOS) {
@@ -64,7 +64,7 @@ describe('Test coquille : un aller-retour complet avec le faux Google du banc', 
 	})
 
 	test('premier et second passage : la même personne revient sous le même identifiant Google', async () => {
-		const google = fauxGoogle()
+		const google = fakeGoogle()
 		const choix = google.choisir({ email: 'zoe.lefevre@example.test' })
 
 		const [premier, second] = [await google.allerRetour(choix), await google.allerRetour(choix)]
@@ -75,7 +75,7 @@ describe('Test coquille : un aller-retour complet avec le faux Google du banc', 
 	})
 
 	test('un navigateur reçoit le choix par un cookie du fournisseur, à son adresse', async () => {
-		const google = fauxGoogle()
+		const google = fakeGoogle()
 		const [cookie] = google.choisir({ scenario: 'refus' }).cookies
 		const demande = new URL(`${google.emetteur}/o/oauth2/v2/auth`)
 		demande.search = new URLSearchParams({
@@ -100,7 +100,7 @@ describe('Test coquille : un aller-retour complet avec le faux Google du banc', 
 	})
 
 	test('il refuse un autre client que celui du banc, et un retour ailleurs que sur ce poste', async () => {
-		const google = fauxGoogle()
+		const google = fakeGoogle()
 		const demande = (parametres: Record<string, string>) => {
 			const url = new URL(`${google.emetteur}/o/oauth2/v2/auth`)
 			url.search = new URLSearchParams({ response_type: 'code', scope: 'openid', ...parametres }).toString()

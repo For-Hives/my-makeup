@@ -1,8 +1,8 @@
 import { expect, type Page, test } from '@playwright/test'
-import { violationsGraves } from '../outils/axe'
-import { fauxUmami, unAgentParEssai } from '../outils/faux-umami'
-import { type Mail, mailsRecus } from '../outils/mailpit'
-import { payloadDeTest } from '../outils/payload-test'
+import { violationsSevere } from '../support/axe'
+import { agentByTest, fakeUmami } from '../support/fake-umami'
+import { type Mail, mailReceived } from '../support/mailpit'
+import { testPayload } from '../support/payload-test'
 
 /**
  * The contact page, end to end (tickets 158 and 160; plan 02 E50, E51 and E69).
@@ -48,14 +48,14 @@ async function remplir(page: Page, s: Saisie) {
 }
 
 async function lignesDe(email: string) {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	return (
 		await payload.find({ collection: 'contact-requests', where: { email: { equals: email } }, depth: 0, limit: 30 })
 	).docs
 }
 
 async function mailsDe(email: string): Promise<Mail[]> {
-	return (await mailsRecus(EQUIPE)).filter(mail => mail.repondreA.some(({ adresse }) => adresse === email))
+	return (await mailReceived(EQUIPE)).filter(mail => mail.repondreA.some(({ adresse }) => adresse === email))
 }
 
 /** Nothing more comes: a count that must not pass `n` is watched for two seconds, without a fixed wait. */
@@ -94,11 +94,11 @@ test.describe('E50 : le message est écrit en base et envoyé à l’équipe', {
 
 	test('aucune violation grave d’accessibilité, avec le formulaire vide et avec ses erreurs', async ({ page }) => {
 		await ouvrir(page)
-		expect(await violationsGraves(page)).toEqual([])
+		expect(await violationsSevere(page)).toEqual([])
 
 		await page.getByRole('button', { name: 'Envoyer l’email' }).click()
 		await expect(page.getByTestId('erreur-prenom')).toHaveText('Le prénom est requis')
-		expect(await violationsGraves(page)).toEqual([])
+		expect(await violationsSevere(page)).toEqual([])
 	})
 })
 
@@ -204,8 +204,8 @@ test.describe('160 : un double clic ou Entrée maintenue n’envoient qu’un me
 test.describe('L’événement de contact', () => {
 	// The default user agent of the headless browser says « HeadlessChrome », which is not measured: an ordinary
 	// Chrome, with a mark of its own. The fake Umami is shared by every worker of the run, and the test reads
-	// only what came from its browser (tests/outils/faux-umami.ts).
-	test.use(unAgentParEssai())
+	// only what came from its browser (tests/support/fake-umami.ts).
+	test.use(agentByTest())
 
 	test('un message enregistré émet un événement, une fois, sans rien de ce qui a été saisi', async ({
 		context,
@@ -216,7 +216,7 @@ test.describe('L’événement de contact', () => {
 		await context.addInitScript(() => {
 			Object.defineProperty(navigator, 'webdriver', { get: () => false })
 		})
-		const umami = fauxUmami().pourLAgent(userAgent)
+		const umami = fakeUmami().pourLAgent(userAgent)
 		const evenements = async () => (await umami.envois('platform_contact_submit')).length
 		const avant = await evenements()
 		const s = saisie({ message: 'Un message très personnel MARQUEUR-ESSAI' })

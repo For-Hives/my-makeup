@@ -1,0 +1,101 @@
+import { describe, expect, test } from 'bun:test'
+import type { Payload } from 'payload'
+import { Articles } from '@/collections/Articles'
+import { Talents } from '@/collections/Talents'
+import { placeDemoData, placeDemoEditorial } from '@/demo-data/dataset'
+import { DEMO_ARTICLES, DEMO_TALENTS } from '@/demo-data/editorial'
+import { DemoDataRefused } from '@/demo-data/guard'
+import { isSlug } from '@/lib/slug'
+import { sourceDefinition } from '../support/source-strapi/data'
+
+/**
+ * The editorial part of the fictional set (ticket 052), without the bench: three talents, three
+ * articles one of which is a draft, fixed slugs that do not meet those of the fake Strapi source,
+ * texts that say they are made up, and the guard that keeps the load off the site. The same set
+ * loaded on the bench: tests/integration/banc-jeu-complet.test.ts.
+ */
+
+const maxLength = (collection: typeof Articles, nom: string): number | undefined => {
+	const field = collection.fields.find(f => 'name' in f && f.name === nom)
+	return field && 'maxLength' in field ? field.maxLength : undefined
+}
+
+describe('Les talents et les articles du jeu', () => {
+	test('trois talents et trois articles, dont un seul brouillon', () => {
+		expect(DEMO_TALENTS).toHaveLength(3)
+		expect(DEMO_ARTICLES).toHaveLength(3)
+		expect(DEMO_ARTICLES.filter(({ statut }) => statut === 'draft')).toHaveLength(1)
+		expect(DEMO_ARTICLES.filter(({ statut }) => statut === 'published')).toHaveLength(2)
+	})
+
+	test('chaque adresse est une adresse que le serveur accepte telle quelle, et aucune n’est partagée', () => {
+		for (const list of [DEMO_TALENTS, DEMO_ARTICLES]) {
+			const slugs = list.map(({ slug }) => slug)
+			for (const slug of slugs) expect(isSlug(slug), slug).toBe(true)
+			expect(new Set(slugs).size).toBe(slugs.length)
+		}
+	})
+
+	test('aucune adresse ne rencontre celles de la fausse source Strapi : les deux jeux se chargent côte à côte', () => {
+		const { lignes: lines } = sourceDefinition('https://medias.source-fictive.example.test')
+		const taken = new Set([...(lines.talents ?? []), ...(lines.articles ?? [])].map(ligne => String(ligne.slug)))
+
+		expect(taken.size).toBeGreaterThan(0)
+		for (const { slug } of [...DEMO_TALENTS, ...DEMO_ARTICLES]) expect(taken.has(slug), slug).toBe(false)
+	})
+
+	test('les textes pour les moteurs de recherche tiennent dans les bornes du serveur', () => {
+		const title = maxLength(Articles, 'seo_title')
+		const description = maxLength(Articles, 'seo_description')
+		expect(title).toBe(70)
+		expect(description).toBe(155)
+		for (const { seo_title, seo_description } of DEMO_ARTICLES) {
+			expect(seo_title?.length ?? 0).toBeLessThanOrEqual(title ?? 0)
+			expect(seo_description?.length ?? 0).toBeLessThanOrEqual(description ?? 0)
+		}
+		expect(Talents.fields.some(f => 'name' in f && f.name === 'seo_title')).toBe(true)
+	})
+
+	test('tout dit qu’il est fictif : signature, textes ; aucune adresse de messagerie, aucun lien', () => {
+		for (const article of DEMO_ARTICLES) {
+			expect(article.author).toContain('fictive')
+			expect(article.content).toMatch(/fictif/)
+		}
+		for (const talent of DEMO_TALENTS) expect(talent.content).toMatch(/fictif/)
+		const all = JSON.stringify([DEMO_TALENTS, DEMO_ARTICLES])
+		expect(all).not.toMatch(/@|https?:\/\//)
+	})
+})
+
+describe('Le chargement de la rédaction du jeu refuse hors du banc', () => {
+	/** A Payload that remembers every call and fails it: nothing may be read or written. */
+	function payloadSilent() {
+		const calls: string[] = []
+		const note = (operation: string) => () => {
+			calls.push(operation)
+			return Promise.reject(new Error(`${operation} ne devait pas être appelé`))
+		}
+		const payload = {
+			create: note('create'),
+			db: { poolOptions: { connectionString: 'postgres://u:p@h:5432/mymakeup' } },
+			find: note('find'),
+		} as unknown as Payload
+		return { appels: calls, payload }
+	}
+
+	test.each([
+		['la prod déclarée', { APP_ENV: 'prod', NEXT_PUBLIC_SITE_URL: 'https://my-makeup.fr' }],
+		['un environnement sans APP_ENV', { NEXT_PUBLIC_SITE_URL: 'https://v3.my-makeup.fr' }],
+	])('%s : ni lecture ni écriture, ni pour la rédaction ni pour le jeu entier', async (_cas, variables) => {
+		const { appels: calls, payload } = payloadSilent()
+		const environment = {
+			...variables,
+			DATABASE_URI: 'postgres://u:p@h:5432/mymakeup',
+			S3_ENDPOINT: 'https://compte-factice.r2.cloudflarestorage.com',
+		}
+
+		await expect(placeDemoEditorial(payload, { variables: environment })).rejects.toBeInstanceOf(DemoDataRefused)
+		await expect(placeDemoData(payload, { variables: environment })).rejects.toBeInstanceOf(DemoDataRefused)
+		expect(calls).toEqual([])
+	})
+})

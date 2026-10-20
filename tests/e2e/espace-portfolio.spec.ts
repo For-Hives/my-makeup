@@ -2,11 +2,11 @@ import { expect, type Page, test } from '@playwright/test'
 import sharp from 'sharp'
 import { MESSAGES_PHOTO } from '@/lib/dashboard/photo'
 import { namedPhotos } from '@/lib/profile/photos'
-import { violationsGraves } from '../outils/axe'
-import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest } from '../outils/payload-test'
-import { fichierPourPayload } from '../outils/photos'
-import { lireUnObjet } from '../outils/s3'
+import { createAccount, type TestAccount } from '../support/account-factory'
+import { violationsSevere } from '../support/axe'
+import { testPayload } from '../support/payload-test'
+import { fileForPayload } from '../support/photos'
+import { readObject } from '../support/s3'
 
 /**
  * The portfolio in her space (tickets 135 and 136; plan 02 E34, E35, E36, U80): several photos
@@ -27,7 +27,7 @@ const VILLE = { name: 'Lille', inseeCode: '59350' } as const
 const creees: number[] = []
 
 test.afterEach(async () => {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	for (const compte of creees.splice(0)) {
 		const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte } } })
 		for (const { id } of docs) await payload.delete({ collection: 'profiles', id }).catch(() => undefined)
@@ -40,16 +40,16 @@ test.beforeEach(({ context }) =>
 	context.setExtraHTTPHeaders({ 'x-forwarded-for': `192.0.2.${150 + (++compteur % 50)}` })
 )
 
-type Maquilleuse = CompteDeTest<'maquilleuse'>
+type Maquilleuse = TestAccount<'maquilleuse'>
 
 /** A makeup artist whose profile is published, with `deja` photos already in her portfolio. */
 async function maquilleuse(
 	context: { addCookies: (c: Maquilleuse['session']['cookies']) => Promise<void> },
 	deja = 0
 ): Promise<{ compte: Maquilleuse; slug: string }> {
-	const compte = await creerCompte('maquilleuse')
+	const compte = await createAccount('maquilleuse')
 	creees.push(Number(compte.id))
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
 	const [fiche] = docs
 	if (!fiche) throw new Error('pas de profil')
@@ -58,7 +58,7 @@ async function maquilleuse(
 		const media = await payload.create({
 			collection: 'media',
 			data: { owner: Number(compte.id), alt: 'Photo du portfolio' },
-			file: fichierPourPayload(),
+			file: fileForPayload(),
 		})
 		galerie.push(media.id)
 	}
@@ -72,7 +72,7 @@ async function maquilleuse(
 }
 
 async function profilStocke(compte: Maquilleuse) {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
 	const profil = docs[0]
 	if (!profil) throw new Error('pas de profil')
@@ -81,7 +81,7 @@ async function profilStocke(compte: Maquilleuse) {
 
 /** The media of this account only: the two projects share the bench and run side by side. */
 async function mediasDe(compte: Maquilleuse) {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	return (
 		await payload.find({ collection: 'media', depth: 0, pagination: false, where: { owner: { equals: compte.id } } })
 	).docs
@@ -147,7 +147,7 @@ test.describe('135 : le portfolio, ajouter des photos', { tag: '@mobile' }, () =
 		await expect(lignes(page)).toHaveCount(3, { timeout: 30_000 })
 		await expect(dialogue(page).getByText('À enregistrer')).toHaveCount(3)
 		expect(envoyes).toHaveLength(0)
-		expect(await violationsGraves(page)).toEqual([])
+		expect(await violationsSevere(page)).toEqual([])
 		await page.getByRole('button', { name: 'Enregistrer' }).click()
 
 		await expect(dialogue(page)).toHaveCount(0, { timeout: 60_000 })
@@ -158,7 +158,7 @@ test.describe('135 : le portfolio, ajouter des photos', { tag: '@mobile' }, () =
 
 		// Stored in the order they were added, with their default alternative text.
 		const profil = await profilStocke(compte)
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const stockees = await Promise.all(
 			namedPhotos(profil.gallery).map(id => payload.findByID({ collection: 'media', id: Number(id), depth: 0 }))
 		)
@@ -178,7 +178,7 @@ test.describe('135 : le portfolio, ajouter des photos', { tag: '@mobile' }, () =
 			await expect(image).toBeAttached()
 		}
 
-		const dossier = process.env.CAPTURES_ESPACE
+		const dossier = process.env.DASHBOARD_SCREENSHOTS
 		if (dossier) {
 			await page.goto('/auth/profil')
 			await ouvrir(page)
@@ -272,10 +272,10 @@ test.describe('136 : le portfolio, retirer une photo', { tag: '@mobile' }, () =>
 	}) => {
 		test.setTimeout(120_000)
 		const { compte, slug } = await maquilleuse(context, 3)
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const avant = namedPhotos((await profilStocke(compte)).gallery)
 		const retiree = await payload.findByID({ collection: 'media', id: Number(avant[1]), depth: 0 })
-		const octets = (await lireUnObjet(`media/${retiree.filename}`))?.octets
+		const octets = (await readObject(`media/${retiree.filename}`))?.octets
 		expect(octets).toBeDefined()
 		await page.goto('/auth/profil')
 		await expect(page.getByTestId('carte-portfolio')).toContainText('3 photos')
@@ -289,14 +289,14 @@ test.describe('136 : le portfolio, retirer une photo', { tag: '@mobile' }, () =>
 		// The focus stays in the panel, on the photo that takes the place of the one removed.
 		await expect(dialogue(page).getByRole('button', { name: 'Retirer la photo 2' })).toBeFocused()
 		expect(namedPhotos((await profilStocke(compte)).gallery)).toHaveLength(3)
-		expect(await violationsGraves(page)).toEqual([])
+		expect(await violationsSevere(page)).toEqual([])
 		await page.getByRole('button', { name: 'Enregistrer' }).click()
 
 		await expect(dialogue(page)).toHaveCount(0, { timeout: 60_000 })
 		await expect(page.getByTestId('carte-portfolio')).toContainText('2 photos')
 		expect(namedPhotos((await profilStocke(compte)).gallery)).toEqual([avant[0], avant[2]])
-		expect(await lireUnObjet(`media/${retiree.filename}`)).toBeUndefined()
-		expect((await lireUnObjet(`deleted/media/${retiree.filename}`))?.octets).toEqual(octets)
+		expect(await readObject(`media/${retiree.filename}`)).toBeUndefined()
+		expect((await readObject(`deleted/media/${retiree.filename}`))?.octets).toEqual(octets)
 		expect(await orphelinsDe(compte)).toEqual([])
 
 		await page.goto(`/profil/${slug}`)

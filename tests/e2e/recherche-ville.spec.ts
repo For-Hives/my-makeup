@@ -1,17 +1,17 @@
 import { expect, test } from '@playwright/test'
-import { MOT_DES_ESSAIS, type ProfilDeRecherche, poserLesProfilsDeRecherche } from '../fixtures/profils-de-recherche'
-import { rafraichirLesPagesDesProfils } from '../outils/pages-publiques'
+import { type SearchProfile, setSearchProfiles, TEST_WORD } from '../fixtures/search-profiles'
+import { refreshProfilePages } from '../support/public-pages'
 
 /**
  * The search by city (ticket 098; plan 02 E38 and E42). The bench is shared with the other tests, which
  * write their own profiles: the tests count the profiles they loaded themselves
- * (tests/fixtures/profils-de-recherche.ts), by their address.
+ * (tests/fixtures/search-profiles.ts), by their address.
  *
  * Every search carries the word only those profiles hold (ticket 225): the city places them, and no profile of
  * another test, in Annecy or anywhere, can change a count or push one of them onto a second page.
  */
 
-const MOT = encodeURIComponent(MOT_DES_ESSAIS)
+const MOT = encodeURIComponent(TEST_WORD)
 const chercher = (ville: string) => `/search?search=${MOT}&city=${encodeURIComponent(ville)}`
 
 // What the fixture holds, by the rule of the directory: listed, whatever the profile can be published or not.
@@ -35,8 +35,8 @@ const A_ANNECY = [
 	'verifiee',
 ] as const
 
-let profils: ReadonlyMap<string, ProfilDeRecherche>
-const profil = (cle: string): ProfilDeRecherche => {
+let profils: ReadonlyMap<string, SearchProfile>
+const profil = (cle: string): SearchProfile => {
 	const trouve = profils.get(cle)
 	if (!trouve) throw new Error(`pas de profil d’essai « ${cle} »`)
 	return trouve
@@ -45,13 +45,13 @@ const profil = (cle: string): ProfilDeRecherche => {
 test.describe('Recherche par ville', () => {
 	test.beforeAll(async () => {
 		test.setTimeout(180_000)
-		profils = await poserLesProfilsDeRecherche()
+		profils = await setSearchProfiles()
 	})
 
 	// The pages of the search keep the directory in the cache of Next: what an earlier request of the run saw
 	// is not what the fixture holds. The application refreshes it, as it does when a profile is saved.
 	test.beforeEach(async ({ request }) => {
-		await rafraichirLesPagesDesProfils(request, profil('reference'))
+		await refreshProfilePages(request, profil('reference'))
 	})
 
 	// E38
@@ -62,7 +62,7 @@ test.describe('Recherche par ville', () => {
 
 		const titre = page.getByRole('heading', { level: 1 })
 		await expect(titre).toHaveCount(1)
-		await expect(titre).toHaveText(`${A_ANNECY.length} résultats pour « ${MOT_DES_ESSAIS} » à « Annecy »`)
+		await expect(titre).toHaveText(`${A_ANNECY.length} résultats pour « ${TEST_WORD} » à « Annecy »`)
 		const compte = Number(((await titre.textContent()) ?? '').match(/^(\d+)/)?.[1])
 		// The title counts the artists of Annecy: the first list, before the first section.
 		expect(await page.locator('main ul').first().locator('> li').count()).toBe(compte)
@@ -110,7 +110,7 @@ test.describe('Recherche par ville', () => {
 		await page.goto(chercher('Haute-Savoie'))
 
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-			`${LISTES.length - 1} résultats pour « ${MOT_DES_ESSAIS} » à « Haute-Savoie »`
+			`${LISTES.length - 1} résultats pour « ${TEST_WORD} » à « Haute-Savoie »`
 		)
 		const premiere = page.locator('main ul').first()
 		for (const cle of [...A_ANNECY, 'ville-voisine', 'ancien-nom-accentue'] as const)
@@ -121,7 +121,7 @@ test.describe('Recherche par ville', () => {
 		await page.goto(chercher('Grenoble'))
 
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-			`Aucun résultat pour « ${MOT_DES_ESSAIS} » à « Grenoble »`
+			`Aucun résultat pour « ${TEST_WORD} » à « Grenoble »`
 		)
 		await expect(
 			page.getByText('Aucune maquilleuse n’indique « Grenoble » (ville ou département) dans son profil.')

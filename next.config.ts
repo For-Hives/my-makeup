@@ -15,7 +15,7 @@ const dirname = path.dirname(fileURLToPath(import.meta.url))
 const media = mediaOrigin(process.env.R2_PUBLIC_URL)
 // The local storage of the test bench, when the bench gives it (never in production): its photos are fetched
 // over http from the loopback interface. Null otherwise.
-const banc = benchImages(process.env.IMAGES_DU_BANC)
+const banc = benchImages(process.env.BENCH_IMAGES)
 // True under `next dev` only.
 const development = process.env.NODE_ENV === 'development'
 

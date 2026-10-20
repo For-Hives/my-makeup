@@ -6,8 +6,8 @@ import { transportOptions } from '@/lib/emails/relay'
 import { createSendEmail, EmailSendFailed, payloadSendEmail } from '@/lib/emails/send'
 import { serverEnv } from '@/lib/env'
 import { IMPORT_CONTEXT } from '@/lib/import-context'
-import { attendreLeMail, compterLesMails, lienDuMail, mailsRecus, viderLeCapteur } from '../outils/mailpit'
-import { payloadDeTest } from '../outils/payload-test'
+import { countMails, emptySink, mailLink, mailReceived, waitMail } from '../support/mailpit'
+import { testPayload } from '../support/payload-test'
 
 /** The address the application of the bench is served from: where the link of a mail must lead. */
 const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? ''
@@ -32,25 +32,25 @@ async function portFerme(): Promise<number> {
 	return adresse.port
 }
 
-beforeAll(viderLeCapteur)
-afterAll(viderLeCapteur)
+beforeAll(emptySink)
+afterAll(emptySink)
 
 describe('un email transactionnel part de la v3 et se lit dans le capteur du banc (ticket 073)', () => {
 	test('objet, expéditeur, lien absolu, texte et HTML se relisent tels qu’ils sont partis', async () => {
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const env = serverEnv()
 		const envoyer = payloadSendEmail(payload, env)
 		const adresse = adresseFictive('envoi')
 
 		await envoyer({ a: adresse, ...composerEmail(contenu, SITE) })
 
-		const mail = await attendreLeMail({ pour: adresse })
+		const mail = await waitMail({ pour: adresse })
 		expect(mail.sujet).toBe('Confirme ton adresse')
 		expect(mail.de).toEqual({ nom: env.mail?.fromName ?? '', adresse: env.mail?.fromAddress ?? '' })
 		expect(mail.de.adresse).toEndWith('@example.test')
 		expect(mail.destinataires).toEqual([{ nom: '', adresse }])
 
-		const lien = lienDuMail(mail, '/auth/confirmer')
+		const lien = mailLink(mail, '/auth/confirmer')
 		expect(lien).toBe(`${SITE}/auth/confirmer?code=jeton-factice-0123`)
 		expect(lien).toMatch(/^https?:\/\//)
 		expect(mail.texte).toContain(`Confirmer mon adresse : ${lien}`)
@@ -61,23 +61,23 @@ describe('un email transactionnel part de la v3 et se lit dans le capteur du ban
 	})
 
 	test('avec le contexte d’import, rien ne part', async () => {
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const envoyer = payloadSendEmail(payload, serverEnv())
 		const adresse = adresseFictive('import')
-		const avant = await compterLesMails()
+		const avant = await countMails()
 
 		await envoyer({ a: adresse, ...composerEmail(contenu, SITE) }, { context: IMPORT_CONTEXT })
 		// A mail that was going to arrive has arrived by now; a second one proves the catcher is alive.
 		const temoin = adresseFictive('temoin')
 		await envoyer({ a: temoin, ...composerEmail(contenu, SITE) })
-		await attendreLeMail({ pour: temoin })
+		await waitMail({ pour: temoin })
 
-		expect(await mailsRecus(adresse)).toEqual([])
-		expect(await compterLesMails()).toBe(avant + 1)
+		expect(await mailReceived(adresse)).toEqual([])
+		expect(await countMails()).toBe(avant + 1)
 	})
 
 	test('un relais qui ne répond pas : une erreur lisible, ni adresse ni jeton dans le journal', async () => {
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const mort = nodemailerAdapter({
 			defaultFromAddress: 'ne-pas-repondre@example.test',
 			defaultFromName: 'My Makeup',
@@ -120,7 +120,7 @@ describe('un relais qui se tait en route', () => {
 		await new Promise<void>(resolve => serveur.listen(0, '127.0.0.1', resolve))
 		const port = (serveur.address() as { port: number }).port
 		try {
-			const payload = await payloadDeTest()
+			const payload = await testPayload()
 			const adapter = await nodemailerAdapter({
 				defaultFromAddress: 'ne-pas-repondre@example.test',
 				defaultFromName: 'My Makeup',

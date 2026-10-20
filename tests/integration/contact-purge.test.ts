@@ -2,19 +2,19 @@ import { afterAll, describe, expect, test } from 'bun:test'
 import { markImportInProgress } from '@/lib/import-context'
 import { purgeContactMessages } from '@/lib/tasks/contact-messages'
 import { runDailyTasks } from '@/lib/tasks/daily'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
+import { emptyBase, testPayload } from '../support/payload-test'
 
 /**
  * The 12-month purge of the contact messages against the real store (ticket 162), on a simulated clock.
  * The same lines with a double: tests/unit/purge-messages-contact.test.ts.
  */
 
-afterAll(viderLaBase)
+afterAll(emptyBase)
 
 const MAINTENANT = new Date('2026-10-15T10:00:00.000Z')
 
 async function ecrire(createdAt: string) {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	return payload.create({
 		collection: 'contact-requests',
 		data: {
@@ -32,14 +32,14 @@ async function ecrire(createdAt: string) {
 }
 
 async function ids() {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	const { docs } = await payload.find({ collection: 'contact-requests', depth: 0, limit: 100, pagination: false })
 	return docs.map(({ id }) => id)
 }
 
 describe('la purge à 12 mois, sur une horloge simulée', () => {
 	test('12 mois et un jour : supprimé ; 11 mois : gardé ; une seconde passe ne change rien', async () => {
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const vieux = await ecrire('2025-10-14T09:59:00.000Z')
 		const tresVieux = await ecrire('2024-01-01T00:00:00.000Z')
 		const onzeMois = await ecrire('2025-11-15T10:00:00.000Z')
@@ -58,7 +58,7 @@ describe('la purge à 12 mois, sur une horloge simulée', () => {
 	})
 
 	test('pendant un import, rien ne part ; le lendemain de l’import, ce qui est dû part', async () => {
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const vieux = await ecrire('2024-06-01T00:00:00.000Z')
 		const fin = markImportInProgress()
 		const pendant = await runDailyTasks(payload, MAINTENANT, [purgeContactMessages])

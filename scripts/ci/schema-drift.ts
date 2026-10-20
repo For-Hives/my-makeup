@@ -17,7 +17,7 @@
  * A step of the job `qualite` of the CI since the `init` migration closed the schema (ticket 049):
  * a collection changed without its migration makes the CI red.
  *
- * Its names check (`ambiguites`) is also read by tests/outils/schema-du-banc.ts, which the
+ * Its names check (`ambiguites`) is also read by tests/support/bench-schema.ts, which the
  * global setup of Playwright loads under Node: this file finds its folder without `import.meta.dir`.
  */
 

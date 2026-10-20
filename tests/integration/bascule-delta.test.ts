@@ -2,10 +2,10 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { isAdmin } from '@/lib/access'
 import { respondToDelta } from '@/lib/cutover/delta-response'
 import { readDelta } from '@/lib/cutover/export-delta'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { fichierPourPayload } from '../outils/photos'
-import { viderLeStockage } from '../outils/s3'
+import { createAccount } from '../support/account-factory'
+import { emptyBase, testPayload } from '../support/payload-test'
+import { fileForPayload } from '../support/photos'
+import { emptyStorage } from '../support/s3'
 
 /**
  * Ticket 234 (PLAN-PROD-DIRECT §4.5, §7 L5): the export of what the v3 received since the switch, against the
@@ -22,16 +22,16 @@ const ids: Record<string, number> = {}
 
 /** Gives a record the dates of the old site, as the import writes them back. */
 async function vieillir(collection: 'pros' | 'profiles' | 'media' | 'contact-requests', id: number) {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	await payload.db.updateOne({ collection, id, data: { createdAt: ANCIEN, updatedAt: ANCIEN } })
 }
 
 beforeAll(async () => {
-	const payload = await payloadDeTest()
-	await Promise.all([viderLaBase(), viderLeStockage()])
+	const payload = await testPayload()
+	await Promise.all([emptyBase(), emptyStorage()])
 
 	// The imported ones, untouched since the old site.
-	const importe = await creerCompte('maquilleuse')
+	const importe = await createAccount('maquilleuse')
 	ids.compteImporte = Number(importe.id)
 	await payload.update({
 		collection: 'pros',
@@ -40,7 +40,7 @@ beforeAll(async () => {
 	})
 	const profilImporte = await payload.find({ collection: 'profiles', where: { pro: { equals: ids.compteImporte } } })
 	ids.profilImporte = profilImporte.docs[0]?.id as number
-	const photoImportee = await payload.create({ collection: 'media', data: {}, file: fichierPourPayload() })
+	const photoImportee = await payload.create({ collection: 'media', data: {}, file: fileForPayload() })
 	ids.photoImportee = photoImportee.id
 	const messageImporte = await payload.create({
 		collection: 'contact-requests',
@@ -57,7 +57,7 @@ beforeAll(async () => {
 	})
 	ids.messageImporte = messageImporte.id
 	// A second imported account, changed after the switch.
-	const modifie = await creerCompte('maquilleuse')
+	const modifie = await createAccount('maquilleuse')
 	ids.compteModifie = Number(modifie.id)
 	await payload.update({ collection: 'pros', id: ids.compteModifie, data: { strapiId: 4102 } })
 	const profilModifie = await payload.find({ collection: 'profiles', where: { pro: { equals: ids.compteModifie } } })
@@ -78,14 +78,14 @@ beforeAll(async () => {
 	await Bun.sleep(20)
 
 	// After it: an account and its profile, a photo, a message, a change to an imported account and profile, a deleted account.
-	const neuf = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE_FICTIF })
+	const neuf = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE_FICTIF })
 	ids.compteNeuf = Number(neuf.id)
 	const profilNeuf = await payload.find({ collection: 'profiles', where: { pro: { equals: ids.compteNeuf } } })
 	ids.profilNeuf = profilNeuf.docs[0]?.id as number
 	const photo = await payload.create({
 		collection: 'media',
 		data: { owner: ids.compteNeuf },
-		file: fichierPourPayload(),
+		file: fileForPayload(),
 	})
 	ids.photoNeuve = photo.id
 	const message = await payload.create({
@@ -109,14 +109,14 @@ beforeAll(async () => {
 }, 120_000)
 
 afterAll(async () => {
-	await Promise.all([viderLaBase(), viderLeStockage()])
+	await Promise.all([emptyBase(), emptyStorage()])
 })
 
 const idsDe = (liste: { id: number }[]) => liste.map(({ id }) => id).sort((a, b) => a - b)
 
 describe('l’export du delta, sur le banc', () => {
 	test('ce qui est créé ou modifié après la date y est, ce qui est importé et inchangé n’y est pas', async () => {
-		const delta = await readDelta(await payloadDeTest(), depuis)
+		const delta = await readDelta(await testPayload(), depuis)
 		expect(idsDe(delta.accounts)).toEqual(
 			[ids.compteModifie, ids.compteNeuf].sort((a, b) => (a ?? 0) - (b ?? 0)) as number[]
 		)
@@ -140,14 +140,14 @@ describe('l’export du delta, sur le banc', () => {
 	})
 
 	test('deux lancements donnent le même texte tant que rien n’a changé', async () => {
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const un = JSON.stringify(await readDelta(payload, depuis))
 		const deux = JSON.stringify(await readDelta(payload, depuis))
 		expect(un).toBe(deux)
 	})
 
 	test('aucun champ secret n’est exporté : ni clé de mot de passe, hash, sel, jeton ou session, ni leur valeur', async () => {
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		// The imported account with a hash is in the file here (its date is brought forward), to show the hash stays out.
 		const avecHash = await readDelta(payload, new Date(ANCIEN))
 		expect(avecHash.accounts.some(({ id }) => id === ids.compteImporte)).toBe(true)
@@ -182,9 +182,9 @@ describe('l’export du delta, sur le banc', () => {
 	})
 
 	test('la route : un admin reçoit le fichier, une maquilleuse et un visiteur non', async () => {
-		const payload = await payloadDeTest()
-		const admin = await creerCompte('admin')
-		const maquilleuse = await creerCompte('maquilleuse')
+		const payload = await testPayload()
+		const admin = await createAccount('admin')
+		const maquilleuse = await createAccount('maquilleuse')
 		const repondre = async (enTetes: Record<string, string> | undefined) => {
 			const lignes: string[] = []
 			const reponse = await respondToDelta(

@@ -3,11 +3,11 @@ import { SQL } from 'bun'
 import type { Report } from '../../scripts/migration/import/report'
 import { minimumPrice, parsePrice } from '../../src/lib/price'
 import type { Profile } from '../../src/payload-types'
-import { importerSurLeBanc } from '../outils/import'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { viderLeStockage } from '../outils/s3'
-import { creerLaSourceStrapi, effacerLaSourceStrapi, sourceDuBanc } from '../outils/source-strapi'
-import { definitionDeLaSource, type Ligne } from '../outils/source-strapi/donnees'
+import { importOnBench } from '../support/import'
+import { emptyBase, testPayload } from '../support/payload-test'
+import { emptyStorage } from '../support/s3'
+import { benchSource, createSourceStrapi, eraseSourceStrapi } from '../support/source-strapi'
+import { type Line, sourceDefinition } from '../support/source-strapi/data'
 
 /**
  * Ticket 060: the import takes the sections of each profile, in their order, with their photos:
@@ -19,8 +19,8 @@ import { definitionDeLaSource, type Ligne } from '../outils/source-strapi/donnee
  * tables, never by the code of the import. One import for the whole file.
  */
 
-const source = sourceDuBanc()
-const { lignes } = definitionDeLaSource(source.medias)
+const source = benchSource()
+const { lignes } = sourceDefinition(source.medias)
 
 /** The profiles the import takes: profile 29 is set aside by the table of decisions of the bench, the 13 of the spam have no account. */
 const PRIS = lignes.makeup_artistes_user_links.map(lien => Number(lien.makeup_artiste_id)).filter(id => id !== 29)
@@ -36,19 +36,19 @@ const HORS_BORNES = {
 	options: [4],
 } as const
 
-const sauf = (ids: readonly number[]) => (ligne: Ligne) => !ids.includes(Number(ligne.id))
+const sauf = (ids: readonly number[]) => (ligne: Line) => !ids.includes(Number(ligne.id))
 
 /** The rows of a component table, by identifier. */
-const parId = (table: readonly Ligne[]) => new Map(table.map(ligne => [Number(ligne.id), ligne]))
+const parId = (table: readonly Line[]) => new Map(table.map(ligne => [Number(ligne.id), ligne]))
 
 /** The rows a link table gives an entry for one field, in the order of the old site: `order`, then the link. */
 function lignesDe(
-	liens: readonly Ligne[],
-	composants: readonly Ligne[],
+	liens: readonly Line[],
+	composants: readonly Line[],
 	entree: number,
 	type: string,
 	champ: string
-): Ligne[] {
+): Line[] {
 	const rangees = parId(composants)
 	return liens
 		.filter(l => Number(l.entity_id) === entree && l.component_type === type && l.field === champ)
@@ -59,7 +59,7 @@ function lignesDe(
 		})
 }
 
-const deProfil = (id: number, table: readonly Ligne[], type: string, champ: string) =>
+const deProfil = (id: number, table: readonly Line[], type: string, champ: string) =>
 	lignesDe(lignes.makeup_artistes_components, table, id, type, champ)
 
 /** A day of the old site, as the collection stores it. */
@@ -148,7 +148,7 @@ const identifiantsDesLignes = (profils: Profile[]): string[] =>
 	)
 
 async function profilsDeLaCible(): Promise<Profile[]> {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	const { docs } = await payload.find({
 		collection: 'profiles',
 		depth: 0,
@@ -161,7 +161,7 @@ async function profilsDeLaCible(): Promise<Profile[]> {
 
 /** The media of each file adopted, by the identifier of the file. */
 async function mediasParFichier(): Promise<Map<number, number>> {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	const { docs } = await payload.find({ collection: 'media', depth: 0, pagination: false, overrideAccess: true })
 	return new Map(docs.map(({ id, strapiId }) => [Number(strapiId), id]))
 }
@@ -179,16 +179,16 @@ async function avecLeProprietaire<T>(travail: (sql: SQL) => Promise<T>): Promise
 let premier: Report
 
 beforeAll(async () => {
-	await viderLaBase()
+	await emptyBase()
 	// Before the source: emptying the bucket would take its objects away.
-	await viderLeStockage()
-	await creerLaSourceStrapi()
-	premier = await importerSurLeBanc()
+	await emptyStorage()
+	await createSourceStrapi()
+	premier = await importOnBench()
 }, 60_000)
 
 afterAll(async () => {
-	await viderLaBase()
-	await effacerLaSourceStrapi()
+	await emptyBase()
+	await eraseSourceStrapi()
 })
 
 describe('Les sections de chaque profil sont reprises dans leur ordre (ticket 060)', () => {
@@ -350,7 +350,7 @@ describe('Une ligne hors d’une borne de la v3 et un rayon au-dessus de 200 km 
 	})
 
 	test('un second passage ne crée ni ne modifie rien', async () => {
-		const second = await importerSurLeBanc()
+		const second = await importOnBench()
 
 		expect(second.collections.profiles).toMatchObject({ created: 0, updated: 0, refused: [] })
 		expect(second.collections.profiles?.skippedRows).toHaveLength(4)
@@ -393,7 +393,7 @@ describe('Un second passage (ticket 060)', () => {
 		const avant = await profilsDeLaCible()
 		const identifiants = identifiantsDesLignes(avant)
 
-		const second = await importerSurLeBanc()
+		const second = await importOnBench()
 
 		expect(second.collections.profiles).toMatchObject({ created: 0, updated: 0, unchanged: 13, refused: [] })
 		expect(identifiantsDesLignes(await profilsDeLaCible())).toEqual(identifiants)
@@ -419,7 +419,7 @@ describe('Un lien de liste qui ne nomme aucune ligne (SCHEMA.md §7)', () => {
 	test('il est signalé par son profil, et rien n’est inventé à sa place', async () => {
 		const avant = await profilsDeLaCible()
 
-		const rapport = await importerSurLeBanc()
+		const rapport = await importOnBench()
 
 		expect(rapport.collections.profiles).toMatchObject({ created: 0, updated: 0, linksWithoutRow: [22] })
 		expect(await profilsDeLaCible()).toEqual(avant)

@@ -3,13 +3,13 @@ import { randomBytes } from 'node:crypto'
 import { PROFILE_TYPE } from '../../scripts/migration/import/media'
 import type { Report } from '../../scripts/migration/import/report'
 import { NO_PROFILE_CONTEXT } from '../../src/collections/Profiles'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { importerSurLeBanc } from '../outils/import'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { appelerRest } from '../outils/rest'
-import { viderLeStockage } from '../outils/s3'
-import { creerLaSourceStrapi, effacerLaSourceStrapi, sourceDuBanc } from '../outils/source-strapi'
-import { definitionDeLaSource } from '../outils/source-strapi/donnees'
+import { createAccount } from '../support/account-factory'
+import { importOnBench } from '../support/import'
+import { emptyBase, testPayload } from '../support/payload-test'
+import { callRest } from '../support/rest'
+import { emptyStorage } from '../support/s3'
+import { benchSource, createSourceStrapi, eraseSourceStrapi } from '../support/source-strapi'
+import { sourceDefinition } from '../support/source-strapi/data'
 
 /**
  * Ticket 058: the photos of an account Payload refuses are not adopted. Written without an owner,
@@ -17,8 +17,8 @@ import { definitionDeLaSource } from '../outils/source-strapi/donnees'
  * and attach them to an article, which makes them public.
  */
 
-const source = sourceDuBanc()
-const { lignes } = definitionDeLaSource(source.medias)
+const source = benchSource()
+const { lignes } = sourceDefinition(source.medias)
 
 /** The account whose email is taken beforehand, so that Payload refuses it. */
 const COMPTE_REFUSE = 1
@@ -37,10 +37,10 @@ const FICHIERS_DU_COMPTE = lignes.files_related_morphs
 let rapport: Report
 
 beforeAll(async () => {
-	await viderLaBase()
-	await viderLeStockage()
-	await creerLaSourceStrapi()
-	const payload = await payloadDeTest()
+	await emptyBase()
+	await emptyStorage()
+	await createSourceStrapi()
+	const payload = await testPayload()
 	const ligne = lignes.up_users.find(({ id }) => Number(id) === COMPTE_REFUSE)
 	await payload.create({
 		collection: 'pros',
@@ -49,12 +49,12 @@ beforeAll(async () => {
 		disableVerificationEmail: true,
 		overrideAccess: true,
 	})
-	rapport = await importerSurLeBanc()
+	rapport = await importOnBench()
 }, 60_000)
 
 afterAll(async () => {
-	await viderLaBase()
-	await effacerLaSourceStrapi()
+	await emptyBase()
+	await eraseSourceStrapi()
 })
 
 describe('Un compte que la cible refuse n’emporte pas ses photos (ticket 058, I39)', () => {
@@ -67,7 +67,7 @@ describe('Un compte que la cible refuse n’emporte pas ses photos (ticket 058, 
 		)
 		expect(refuses?.map(({ file: fichier }) => fichier).sort()).toEqual([...FICHIERS_DU_COMPTE].sort())
 
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const { docs } = await payload.find({
 			collection: 'media',
 			depth: 0,
@@ -80,8 +80,8 @@ describe('Un compte que la cible refuse n’emporte pas ses photos (ticket 058, 
 	})
 
 	test('la rédaction ne lit aucune photo de ce compte', async () => {
-		const redaction = await creerCompte('redaction')
-		const liste = await appelerRest('GET', '/api/media?depth=0&limit=100', { enTetes: redaction.session.enTetes })
+		const redaction = await createAccount('redaction')
+		const liste = await callRest('GET', '/api/media?depth=0&limit=100', { enTetes: redaction.session.enTetes })
 		expect(liste.statut).toBe(200)
 		expect((liste.corps as { docs: unknown[] }).docs).toEqual([])
 	})

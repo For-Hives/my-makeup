@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
-import { violationsGraves } from '../outils/axe'
-import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest } from '../outils/payload-test'
+import { createAccount, type TestAccount } from '../support/account-factory'
+import { violationsSevere } from '../support/axe'
+import { testPayload } from '../support/payload-test'
 
 /**
  * The panels of the languages and of the skills (tickets 127 and 128; plan 02 E30, E31): Enter
@@ -17,19 +17,19 @@ test.beforeEach(({ context }) =>
 	context.setExtraHTTPHeaders({ 'x-forwarded-for': `192.0.2.${100 + (++compteur % 50)}` })
 )
 
-type Maquilleuse = CompteDeTest<'maquilleuse'>
+type Maquilleuse = TestAccount<'maquilleuse'>
 
 async function maquilleuse(context: {
 	addCookies: (c: Maquilleuse['session']['cookies']) => Promise<void>
 }): Promise<Maquilleuse> {
-	const compte = await creerCompte('maquilleuse')
+	const compte = await createAccount('maquilleuse')
 	await context.addCookies(compte.session.cookies)
 	await modifierLaFiche(compte, { firstName: 'Léa', lastName: 'Fictive', specialty: 'Maquillage mariée' })
 	return compte
 }
 
 async function ficheDe(compte: Maquilleuse) {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
 	const [fiche] = docs
 	if (!fiche) throw new Error('pas de profil')
@@ -37,7 +37,7 @@ async function ficheDe(compte: Maquilleuse) {
 }
 
 async function modifierLaFiche(compte: Maquilleuse, data: Record<string, unknown>) {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	await payload.update({ collection: 'profiles', id: (await ficheDe(compte)).id, data })
 }
 
@@ -65,11 +65,11 @@ test.describe('127 : les langues', { tag: '@mobile' }, () => {
 		await page.getByRole('button', { name: 'Retirer Anglais' }).press('Enter')
 		await expect(page.getByRole('dialog').getByRole('status')).toHaveText('Langue Anglais retirée')
 		await expect(page.getByRole('button', { name: 'Retirer Espagnol' })).toBeFocused()
-		expect(await violationsGraves(page)).toEqual([])
+		expect(await violationsSevere(page)).toEqual([])
 		// The refused name is still in the field: it would be added at the save.
 		await champ.fill('')
-		if (process.env.CAPTURE_PUCES)
-			await page.screenshot({ path: `${process.env.CAPTURE_PUCES}-${test.info().project.name}.png` })
+		if (process.env.BULLETS_SCREENSHOT)
+			await page.screenshot({ path: `${process.env.BULLETS_SCREENSHOT}-${test.info().project.name}.png` })
 
 		await page.getByRole('button', { name: 'Enregistrer' }).click()
 		await expect(page.getByRole('dialog')).toHaveCount(0)

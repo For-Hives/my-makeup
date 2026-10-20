@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { CONFIG_FILE, VALIDATOR_IMAGE, validatorArguments } from '../../scripts/ci/renovate-validate'
-import { readWorkflow } from '../outils/garde-fous-ci'
+import { readWorkflow } from '../support/ci-guardrails'
 import {
 	allows,
 	capProblems,
@@ -20,7 +20,7 @@ import {
 	settingsProblems,
 	UPDATE_TYPES,
 	type UpdateType,
-} from '../outils/renovate'
+} from '../support/renovate'
 
 /**
  * The guard of renovate.json (ticket 035): the rules Renovate will follow once this branch

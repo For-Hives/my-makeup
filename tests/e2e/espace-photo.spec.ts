@@ -1,16 +1,16 @@
 import { expect, type Page, test } from '@playwright/test'
 import { MESSAGES_PHOTO } from '@/lib/dashboard/photo'
-import { violationsGraves } from '../outils/axe'
-import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest } from '../outils/payload-test'
-import { photoDeHuitMo } from '../outils/photo-de-8-mo'
-import { fichierPourPayload } from '../outils/photos'
-import { lireUnObjet } from '../outils/s3'
+import { createAccount, type TestAccount } from '../support/account-factory'
+import { violationsSevere } from '../support/axe'
+import { testPayload } from '../support/payload-test'
+import { eightMbPhoto } from '../support/photo-8-mb'
+import { fileForPayload } from '../support/photos'
+import { readObject } from '../support/s3'
 
 /**
  * The main photo in her space (ticket 134; plan 02 E36, I24, U03): reduced in the browser before
  * it leaves, sent only at « Enregistrer », replaced with the former one in the bin, refused with a
- * message before anything is sent. A photo of 8 MiB is made up for the test (tests/outils/photo-de-8-mo.ts).
+ * message before anything is sent. A photo of 8 MiB is made up for the test (tests/support/photo-8-mb.ts).
  *
  * The brake of the sign-in counts by client address: each test sends its own made-up address.
  */
@@ -25,7 +25,7 @@ const VILLE = { name: 'Lille', inseeCode: '59350' } as const
 const creees: number[] = []
 
 test.afterEach(async () => {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	for (const compte of creees.splice(0)) {
 		const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte } } })
 		for (const { id } of docs) await payload.delete({ collection: 'profiles', id }).catch(() => undefined)
@@ -38,16 +38,16 @@ test.beforeEach(({ context }) =>
 	context.setExtraHTTPHeaders({ 'x-forwarded-for': `192.0.2.${100 + (++compteur % 50)}` })
 )
 
-type Maquilleuse = CompteDeTest<'maquilleuse'>
+type Maquilleuse = TestAccount<'maquilleuse'>
 
 /** A makeup artist whose profile is published, with or without a photo already (a former one). */
 async function maquilleuse(
 	context: { addCookies: (c: Maquilleuse['session']['cookies']) => Promise<void> },
 	avecPhoto = false
 ): Promise<{ compte: Maquilleuse; ancienne: number | null; slug: string }> {
-	const compte = await creerCompte('maquilleuse')
+	const compte = await createAccount('maquilleuse')
 	creees.push(Number(compte.id))
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
 	const [fiche] = docs
 	if (!fiche) throw new Error('pas de profil')
@@ -56,7 +56,7 @@ async function maquilleuse(
 		const media = await payload.create({
 			collection: 'media',
 			data: { owner: Number(compte.id), alt: 'Photo principale' },
-			file: fichierPourPayload(),
+			file: fileForPayload(),
 		})
 		ancienne = media.id
 	}
@@ -76,7 +76,7 @@ async function maquilleuse(
 }
 
 async function profilStocke(compte: Maquilleuse) {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
 	const profil = docs[0]
 	if (!profil) throw new Error('pas de profil')
@@ -85,7 +85,7 @@ async function profilStocke(compte: Maquilleuse) {
 
 /** The media of this account only: the two projects share the bench and run side by side. */
 const nombreDeMedias = async (compte: Maquilleuse) =>
-	(await (await payloadDeTest()).count({ collection: 'media', where: { owner: { equals: compte.id } } })).totalDocs
+	(await (await testPayload()).count({ collection: 'media', where: { owner: { equals: compte.id } } })).totalDocs
 const modifier = (page: Page) => page.getByRole('button', { name: 'Modifier ma photo principale' })
 const dialogue = (page: Page) => page.getByRole('dialog', { name: 'Modifier ma photo principale' })
 
@@ -111,7 +111,7 @@ test.describe('134 : la photo principale', { tag: '@mobile' }, () => {
 	}) => {
 		test.setTimeout(120_000)
 		const { compte, slug } = await maquilleuse(context)
-		const original = await photoDeHuitMo()
+		const original = await eightMbPhoto()
 		expect(original.length).toBeGreaterThan(7.5 * 1024 * 1024)
 		await page.goto('/auth/profil')
 		await ouvrir(page)
@@ -120,7 +120,7 @@ test.describe('134 : la photo principale', { tag: '@mobile' }, () => {
 			.getByLabel('Choisir une photo')
 			.setInputFiles({ name: 'grosse.jpg', mimeType: 'image/jpeg', buffer: original })
 		await expect(page.getByRole('img', { name: 'Aperçu de la photo choisie' })).toBeVisible({ timeout: 60_000 })
-		expect(await violationsGraves(page)).toEqual([])
+		expect(await violationsSevere(page)).toEqual([])
 		const envoyes = envois(page)
 		await page.getByRole('button', { name: 'Enregistrer' }).click()
 
@@ -132,11 +132,11 @@ test.describe('134 : la photo principale', { tag: '@mobile' }, () => {
 		// The object is the reduced file, under 1 MiB, though the server would have taken 8 MiB.
 		const profil = await profilStocke(compte)
 		expect(profil.active).toBe(true)
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const media = await payload.findByID({ collection: 'media', id: Number(profil.mainPicture), depth: 0 })
 		expect(media.filesize ?? 0).toBeGreaterThan(0)
 		expect(media.filesize ?? Number.POSITIVE_INFINITY).toBeLessThan(1024 * 1024)
-		const objet = await lireUnObjet(`media/${media.filename}`)
+		const objet = await readObject(`media/${media.filename}`)
 		expect(objet?.octets.length ?? Number.POSITIVE_INFINITY).toBeLessThan(1024 * 1024)
 		expect(Math.max(media.width ?? 0, media.height ?? 0)).toBeLessThanOrEqual(2000)
 
@@ -151,7 +151,7 @@ test.describe('134 : la photo principale', { tag: '@mobile' }, () => {
 		await expect(photo).toBeVisible()
 		expect(await photo.evaluate(img => (img as HTMLImageElement).naturalWidth)).toBeGreaterThan(0)
 
-		const dossier = process.env.CAPTURES_ESPACE
+		const dossier = process.env.DASHBOARD_SCREENSHOTS
 		if (dossier) await page.screenshot({ path: `${dossier}/photo-${test.info().project.name}.png` })
 	})
 
@@ -164,7 +164,7 @@ test.describe('134 : la photo principale', { tag: '@mobile' }, () => {
 		await page.getByLabel('Choisir une photo').setInputFiles({
 			name: 'a.jpg',
 			mimeType: 'image/jpeg',
-			buffer: await photoDeHuitMo(),
+			buffer: await eightMbPhoto(),
 		})
 		await expect(page.getByRole('img', { name: 'Aperçu de la photo choisie' })).toBeVisible({ timeout: 60_000 })
 		await page.getByRole('button', { name: 'Fermer' }).click()
@@ -182,10 +182,10 @@ test.describe('134 : la photo principale', { tag: '@mobile' }, () => {
 	}) => {
 		test.setTimeout(120_000)
 		const { compte, ancienne } = await maquilleuse(context, true)
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const vieille = await payload.findByID({ collection: 'media', id: Number(ancienne), depth: 0 })
 		const cleAncienne = `media/${vieille.filename}`
-		const octetsAvant = (await lireUnObjet(cleAncienne))?.octets
+		const octetsAvant = (await readObject(cleAncienne))?.octets
 		expect(octetsAvant).toBeDefined()
 		await page.goto('/auth/profil')
 		await ouvrir(page)
@@ -193,7 +193,7 @@ test.describe('134 : la photo principale', { tag: '@mobile' }, () => {
 		await page.getByLabel('Choisir une autre photo').setInputFiles({
 			name: 'nouvelle.jpg',
 			mimeType: 'image/jpeg',
-			buffer: await photoDeHuitMo(),
+			buffer: await eightMbPhoto(),
 		})
 		await expect(page.getByRole('img', { name: 'Aperçu de la photo choisie' })).toBeVisible({ timeout: 60_000 })
 		await page.getByRole('button', { name: 'Enregistrer' }).click()
@@ -201,8 +201,8 @@ test.describe('134 : la photo principale', { tag: '@mobile' }, () => {
 
 		const profil = await profilStocke(compte)
 		expect(profil.mainPicture).not.toBe(ancienne)
-		expect(await lireUnObjet(cleAncienne)).toBeUndefined()
-		expect((await lireUnObjet(`deleted/${cleAncienne}`))?.octets).toEqual(octetsAvant)
+		expect(await readObject(cleAncienne)).toBeUndefined()
+		expect((await readObject(`deleted/${cleAncienne}`))?.octets).toEqual(octetsAvant)
 		expect(
 			await payload.findByID({ collection: 'media', id: Number(ancienne), depth: 0, disableErrors: true })
 		).toBeNull()
@@ -240,7 +240,7 @@ test.describe('134 : la photo principale', { tag: '@mobile' }, () => {
 		await page.getByLabel('Choisir une autre photo').setInputFiles({
 			name: 'nouvelle.jpg',
 			mimeType: 'image/jpeg',
-			buffer: await photoDeHuitMo(),
+			buffer: await eightMbPhoto(),
 		})
 		await expect(page.getByRole('img', { name: 'Aperçu de la photo choisie' })).toBeVisible({ timeout: 60_000 })
 		await page.getByRole('button', { name: 'Enregistrer' }).click()

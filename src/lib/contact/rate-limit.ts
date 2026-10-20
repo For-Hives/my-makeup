@@ -117,7 +117,7 @@ const BODY_MAX_SIZE = 64 * 1024
 /**
  * The email field of a contact POST, whatever the encoding of the action. React prefixes the fields of a
  * Server Action in a multipart body (`1_email` once a state is bound; a plain form posts `email`), so the
- * name is matched by its end. `undefined` when there is none (a test in tests/unit/contact-frein.test.ts and
+ * name is matched by its end. `undefined` when there is none (a test in tests/unit/contact-rate-limit.test.ts and
  * the integration test I34 fail if a change of React's encoding makes the mailbox brake blind).
  */
 export function formEmail(formulaire: FormData): string | undefined {

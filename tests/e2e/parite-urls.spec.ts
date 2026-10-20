@@ -1,17 +1,17 @@
 import { readFileSync } from 'node:fs'
 import { expect, test } from '@playwright/test'
-import { poserLesProfilsDeRecherche } from '../fixtures/profils-de-recherche'
-import { creerContenu, rafraichirLesPagesDesProfils, supprimerContenu } from '../outils/pages-publiques'
+import { setSearchProfiles } from '../fixtures/search-profiles'
+import { createContent, deleteContent, refreshProfilePages } from '../support/public-pages'
 import {
-	bilan,
-	type CasDeParite,
-	casDuBanc,
-	type DonneesDuJeu,
-	ecrireLeBilan,
-	listePrivee,
-	type TitresDeLAncienSite,
-	verifier,
-} from '../outils/parite-urls'
+	benchCase,
+	check,
+	type DatasetData,
+	type OldSiteTitles,
+	type ParityCase,
+	privateList,
+	summary,
+	writeSummary,
+} from '../support/url-parity'
 
 /**
  * I45 (ticket 072, plan 02 §7.3): every frozen address answers what the table promises, with the
@@ -29,8 +29,8 @@ import {
  * answers right is counted green all the same.
  */
 // Playwright runs under Node, which wants an attribute on a JSON import: the file is read.
-const anciens: TitresDeLAncienSite = JSON.parse(
-	readFileSync(new URL('../fixtures/parite-urls-h1.json', import.meta.url), 'utf8')
+const anciens: OldSiteTitles = JSON.parse(
+	readFileSync(new URL('../fixtures/url-parity-h1.json', import.meta.url), 'utf8')
 )
 
 // Every family of the inventory is delivered. `slug-inconnu` came last (ticket 231): a 404 raised by `notFound()`
@@ -84,19 +84,19 @@ const PAGES_JURIDIQUES = ['/mentions-legales', '/cgu', '/politique-de-confidenti
 
 test('I45 : les adresses gelées répondent comme la table, avec le même h1', async ({ request, baseURL }) => {
 	test.setTimeout(300_000)
-	const privee = listePrivee()
+	const privee = privateList()
 	const contenus: { collection: 'talents' | 'articles'; id: number }[] = []
-	let cas: CasDeParite[]
+	let cas: ParityCase[]
 	if (privee) cas = privee
 	else {
 		// The bench holds made-up pages for the families that depend on the data.
-		const profils = await poserLesProfilsDeRecherche()
+		const profils = await setSearchProfiles()
 		const profil = (cle: string) => {
 			const trouve = profils.get(cle)
 			if (!trouve) throw new Error(`pas de profil d’essai « ${cle} »`)
 			return trouve
 		}
-		await rafraichirLesPagesDesProfils(request, profil('reference'))
+		await refreshProfilePages(request, profil('reference'))
 		const suffixe = Date.now().toString(36)
 		const talent = `essai-parite-${suffixe}`
 		const publie = `essai-parite-publie-${suffixe}`
@@ -104,18 +104,22 @@ test('I45 : les adresses gelées répondent comme la table, avec le même h1', a
 		contenus.push(
 			{
 				collection: 'talents',
-				id: await creerContenu(request, 'talents', { title: `Essai ${talent}`, slug: talent, _status: 'published' }),
+				id: await createContent(request, 'talents', { title: `Essai ${talent}`, slug: talent, _status: 'published' }),
 			},
 			{
 				collection: 'articles',
-				id: await creerContenu(request, 'articles', { title: `Essai ${publie}`, slug: publie, _status: 'published' }),
+				id: await createContent(request, 'articles', { title: `Essai ${publie}`, slug: publie, _status: 'published' }),
 			},
 			{
 				collection: 'articles',
-				id: await creerContenu(request, 'articles', { title: `Essai ${brouillon}`, slug: brouillon, _status: 'draft' }),
+				id: await createContent(request, 'articles', {
+					title: `Essai ${brouillon}`,
+					slug: brouillon,
+					_status: 'draft',
+				}),
 			}
 		)
-		const jeu: DonneesDuJeu = {
+		const jeu: DatasetData = {
 			profilsVisibles: [...profils.entries()].filter(([cle]) => cle !== 'masquee').map(([, { slug }]) => slug),
 			profilsMasques: [profil('masquee').slug],
 			ancienNom: { ecrit: encodeURIComponent('Essai Zoé'), slug: profil('ancien-nom-accentue').slug },
@@ -123,7 +127,7 @@ test('I45 : les adresses gelées répondent comme la table, avec le même h1', a
 			articlesPublies: [publie],
 			articlesBrouillons: [brouillon],
 		}
-		cas = casDuBanc(anciens, jeu)
+		cas = benchCase(anciens, jeu)
 	}
 	expect(cas.length).toBeGreaterThan(30)
 
@@ -131,7 +135,7 @@ test('I45 : les adresses gelées répondent comme la table, avec le même h1', a
 		const resultats = []
 		for (const unCas of cas) {
 			// `//x` is a path of the site: written after the origin, it is not read as a host.
-			const resultat = await verifier(unCas, async adresse => {
+			const resultat = await check(unCas, async adresse => {
 				const reponse = await request.get(`${baseURL}${adresse}`, { maxRedirects: 0, failOnStatusCode: false })
 				const entetes = reponse.headers()
 				return {
@@ -144,8 +148,8 @@ test('I45 : les adresses gelées répondent comme la table, avec le même h1', a
 			resultats.push({ cas: unCas, resultat })
 		}
 
-		const lignes = bilan(resultats, LIVREES)
-		console.log(`\n${ecrireLeBilan(lignes, LIVREES)}\n`)
+		const lignes = summary(resultats, LIVREES)
+		console.log(`\n${writeSummary(lignes, LIVREES)}\n`)
 		for (const { cas: unCas, resultat } of resultats)
 			if (resultat.etat === 'ecart') console.log(`I45 écart connu ${unCas.etiquette} : ${resultat.raison}`)
 		expect(lignes.flatMap(({ regressions }) => regressions)).toEqual([])
@@ -156,6 +160,6 @@ test('I45 : les adresses gelées répondent comme la table, avec le même h1', a
 				expect(trouve?.resultat.etat, adresse).toBe('vert')
 			}
 	} finally {
-		for (const { collection, id } of contenus) await supprimerContenu(request, collection, id)
+		for (const { collection, id } of contenus) await deleteContent(request, collection, id)
 	}
 })

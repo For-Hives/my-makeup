@@ -4,12 +4,12 @@
 # summary of the run. The weekly report of 07:30 reads the result through GitHub: the conclusion of
 # the latest run of this workflow (docs/tests/sondes.md, « Le lancement du lundi »).
 #
-# Rules, enforced by tests/unit/sondes-lundi-ci.test.ts and the guard rails of every workflow
-# (tests/ci/garde-fous-ci.test.ts):
+# Rules, enforced by tests/unit/probes-monday-ci.test.ts and the guard rails of every workflow
+# (tests/ci/ci-guardrails.test.ts):
 # - no secret of production, no token, no variable: the probes read as an anonymous visitor.
 #   R02 (sitemap against the publishable profiles) needs the token of the service, so here it
 #   stays « inconnu », which is not a failure; Andy plays it by hand with the token;
-# - a red probe, or a probe not run, fails the run (exit code 1 of `bun run sondes`): that is
+# - a red probe, or a probe not run, fails the run (exit code 1 of `bun run probes`): that is
 #   what the weekly report turns into an alert. Nothing here softens a failure (no
 #   `continue-on-error`, no `|| true`);
 # - the target is the live site, written in the probes, never an input of this file.
@@ -53,4 +53,4 @@ jobs:
           echo '### Sondes du site en ligne' >> "$GITHUB_STEP_SUMMARY"
           echo "Lancées le $(TZ=Europe/Paris date '+%d/%m/%Y à %H:%M') (heure de Paris)." >> "$GITHUB_STEP_SUMMARY"
           echo >> "$GITHUB_STEP_SUMMARY"
-          bun run sondes 2>&1 | sed 's/^/    /' | tee -a "$GITHUB_STEP_SUMMARY"
+          bun run probes 2>&1 | sed 's/^/    /' | tee -a "$GITHUB_STEP_SUMMARY"

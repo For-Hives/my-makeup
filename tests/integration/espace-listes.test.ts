@@ -7,11 +7,11 @@ import { artistProfile, type DashboardUser } from '@/lib/dashboard/my-profile'
 import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
 import { saveList } from '@/lib/dashboard/save-list'
 import { SERVICE_OFFERS } from '@/lib/dashboard/service-offers'
-import { ANNECY } from '../outils/cas-completude'
-import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { fichierPourPayload } from '../outils/photos'
-import { viderLeStockage } from '../outils/s3'
+import { createAccount, type TestAccount } from '../support/account-factory'
+import { ANNECY } from '../support/completeness-cases'
+import { emptyBase, testPayload } from '../support/payload-test'
+import { fileForPayload } from '../support/photos'
+import { emptyStorage } from '../support/s3'
 
 /**
  * The lists saved from her space (tickets 129 to 131; docs/qualite.md §3 L1, plan 02 U29, U30, U04,
@@ -20,10 +20,10 @@ import { viderLeStockage } from '../outils/s3'
  */
 
 afterEach(async () => {
-	await Promise.all([viderLaBase(), viderLeStockage()])
+	await Promise.all([emptyBase(), emptyStorage()])
 })
 
-type Maquilleuse = CompteDeTest<'maquilleuse'>
+type Maquilleuse = TestAccount<'maquilleuse'>
 
 async function profilStocke(payload: Payload, compte: Maquilleuse) {
 	const { docs } = await payload.find({
@@ -38,8 +38,8 @@ async function profilStocke(payload: Payload, compte: Maquilleuse) {
 }
 
 async function maquilleuse() {
-	const compte = await creerCompte('maquilleuse')
-	const payload = await payloadDeTest()
+	const compte = await createAccount('maquilleuse')
+	const payload = await testPayload()
 	const doc = await payload.findByID({ collection: 'pros', id: compte.id, depth: 0, overrideAccess: true })
 	const utilisateur = { ...doc, collection: 'pros' } as DashboardUser
 	const profil = await profilStocke(payload, compte)
@@ -186,7 +186,7 @@ describe('129 : les expériences', () => {
 		expect(resultat).toEqual({ ok: false, message: FAILURE_MESSAGE })
 		expect((await profilStocke(m.payload, m.compte)).experiences ?? []).toHaveLength(0)
 
-		const sansProfil = await creerCompte('maquilleuse-sans-profil')
+		const sansProfil = await createAccount('maquilleuse-sans-profil')
 		const doc = await m.payload.findByID({ collection: 'pros', id: sansProfil.id, depth: 0, overrideAccess: true })
 		expect(
 			await saveList(m.payload, { ...doc, collection: 'pros' } as DashboardUser, { lignes: [] }, EXPERIENCES)
@@ -345,7 +345,7 @@ describe('131 : les prestations', () => {
 			const photo = await m.payload.create({
 				collection: 'media',
 				data: { owner: Number(m.compte.id) },
-				file: fichierPourPayload(),
+				file: fileForPayload(),
 			})
 			await m.payload.update({
 				collection: 'profiles',

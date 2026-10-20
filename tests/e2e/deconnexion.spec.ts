@@ -1,6 +1,6 @@
 import { type Browser, type BrowserContext, expect, type Page, test } from '@playwright/test'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest } from '../outils/payload-test'
+import { createAccount } from '../support/account-factory'
+import { testPayload } from '../support/payload-test'
 
 /**
  * The sign-out (ticket 078; plan 02 E10, E11, E17) and the signed-in state of the navigation: the
@@ -38,7 +38,7 @@ test.describe('E10 : la déconnexion', { tag: '@mobile' }, () => {
 		context,
 		page,
 	}) => {
-		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
 		await seConnecter(page, compte.email)
 		expect(await cookieDeSession(context)).toBeDefined()
 
@@ -56,8 +56,8 @@ test.describe('E10 : la déconnexion', { tag: '@mobile' }, () => {
 	})
 
 	test('la déconnexion laisse une ligne « deconnexion » au journal', async ({ page }) => {
-		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
-		const payload = await payloadDeTest()
+		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const payload = await testPayload()
 		// The rows belong to nobody, and the other tests sign out at the same time: the exact count of
 		// one sign-out is the integration test's (tests/integration/auth-deconnexion.test.ts).
 		const depuis = new Date().toISOString()
@@ -79,7 +79,7 @@ test.describe('E10 : la déconnexion', { tag: '@mobile' }, () => {
 
 test.describe('E11 : l’ancien cookie réinjecté', () => {
 	test('dans un contexte neuf, il est refusé : on arrive sur la connexion', async ({ browser, context, page }) => {
-		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
 		await seConnecter(page, compte.email)
 		const ancien = await cookieDeSession(context)
 		if (!ancien) throw new Error('Pas de cookie de session après la connexion.')
@@ -104,7 +104,7 @@ test.describe('E11 : l’ancien cookie réinjecté', () => {
 
 test.describe('E17 : la déconnexion dans un onglet', () => {
 	test('l’autre onglet est renvoyé à la connexion à sa prochaine navigation', async ({ context, page }) => {
-		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
 		await seConnecter(page, compte.email)
 		const onglet = await context.newPage()
 		await onglet.goto('/auth/profil')
@@ -124,7 +124,7 @@ test.describe('Me déconnecter de tous les appareils', () => {
 		context,
 		page,
 	}) => {
-		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
 		await seConnecter(page, compte.email)
 		const autreAppareil = await browser.newContext({ extraHTTPHeaders: { 'x-forwarded-for': adresse() } })
 		const autre = await autreAppareil.newPage()
@@ -149,7 +149,7 @@ test.describe('Me déconnecter de tous les appareils', () => {
 	})
 
 	test('une action sans la confirmation ne ferme rien', async ({ page, request }) => {
-		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
 		await seConnecter(page, compte.email)
 		await page.getByRole('button', { name: 'Me déconnecter de tous les appareils' }).click()
 		// The confirmation field is the page's: take it out, and send the form.
@@ -174,7 +174,7 @@ test.describe('La Nav lit l’état connecté dans le navigateur', () => {
 		await expect(nav.getByRole('link', { name: 'Me connecter' })).toBeVisible()
 		await expect(nav.getByRole('link', { name: 'Mon espace' })).toHaveCount(0)
 
-		const compte = await creerCompte('maquilleuse')
+		const compte = await createAccount('maquilleuse')
 		await context.addCookies(compte.session.cookies)
 		await page.goto('/')
 
@@ -184,7 +184,7 @@ test.describe('La Nav lit l’état connecté dans le navigateur', () => {
 	})
 
 	test('la session d’un admin ne change pas la Nav', async ({ context, page }) => {
-		const admin = await creerCompte('admin')
+		const admin = await createAccount('admin')
 		await context.addCookies(admin.session.cookies)
 
 		await page.goto('/')
@@ -198,7 +198,7 @@ test.describe('La Nav lit l’état connecté dans le navigateur', () => {
 		playwright,
 		baseURL,
 	}) => {
-		const compte = await creerCompte('maquilleuse')
+		const compte = await createAccount('maquilleuse')
 		const cookie = compte.session.enTetes.Cookie
 		const lire = async (entetes: Record<string, string>) => {
 			const client = await playwright.request.newContext({ baseURL: baseURL ?? '', extraHTTPHeaders: entetes })
@@ -221,7 +221,7 @@ test.describe('La Nav lit l’état connecté dans le navigateur', () => {
 	})
 
 	test('la route de l’état ne répond qu’un booléen, jamais en cache', async ({ playwright, baseURL }) => {
-		const compte = await creerCompte('maquilleuse')
+		const compte = await createAccount('maquilleuse')
 		const client = await playwright.request.newContext({
 			baseURL: baseURL ?? '',
 			extraHTTPHeaders: { Cookie: compte.session.enTetes.Cookie, Origin: baseURL ?? '' },

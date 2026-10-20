@@ -8,13 +8,13 @@ import {
 	requiredCheckProblems,
 	toleratedFailures,
 	type Workflow,
-} from '../outils/garde-fous-ci'
+} from '../support/ci-guardrails'
 import {
 	dependencyImports,
 	dependencyImportsOnDisk,
 	PUBLICATION_COMMAND,
 	publicationWorkflowProblems,
-} from '../outils/garde-publication'
+} from '../support/publication-guard'
 
 /**
  * The publication workflow (ticket 036): it depends on ci-ok and passes the guard rails C01 to

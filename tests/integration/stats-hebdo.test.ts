@@ -2,12 +2,12 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { GET, POST } from '@/app/api/stats/weekly/route'
 import { WeeklyStats } from '@/lib/weekly-stats'
 import { DEMO_PROFILES } from '../../src/demo-data/profiles'
-import { COMPTES_DU_JEU, TYPES_DU_JEU } from '../fixtures/comptes'
-import { poserLeJeuDuBanc } from '../fixtures/jeu-du-banc'
-import { TYPES_DE_COMPTE } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { appelerRest } from '../outils/rest'
-import { viderLeStockage } from '../outils/s3'
+import { DATASET_ACCOUNTS, DATASET_TYPES } from '../fixtures/accounts'
+import { setBenchDataset } from '../fixtures/bench-dataset'
+import { ACCOUNT_TYPES } from '../support/account-factory'
+import { emptyBase, testPayload } from '../support/payload-test'
+import { callRest } from '../support/rest'
+import { emptyStorage } from '../support/s3'
 
 /**
  * Ticket 149 (plan 04 §3.6, RESTE MES-20): GET /api/stats/weekly on the set of the bench. Exact
@@ -25,21 +25,21 @@ const appeler = (requete: string, entetes: Record<string, string> = ENTETES) =>
 
 beforeAll(async () => {
 	process.env.STATS_TOKEN = JETON
-	await payloadDeTest()
-	await Promise.all([viderLaBase(), viderLeStockage()])
-	await poserLeJeuDuBanc()
+	await testPayload()
+	await Promise.all([emptyBase(), emptyStorage()])
+	await setBenchDataset()
 }, 120_000)
 
 afterAll(async () => {
 	if (avant === undefined) delete process.env.STATS_TOKEN
 	else process.env.STATS_TOKEN = avant
-	await Promise.all([viderLaBase(), viderLeStockage()])
+	await Promise.all([emptyBase(), emptyStorage()])
 }, 60_000)
 
 describe('Les statistiques hebdomadaires sur le jeu du banc', () => {
 	test('les nombres exacts, tirés de ce que le jeu promet de chaque profil', async () => {
-		const profilsDesComptes = TYPES_DU_JEU.filter(type => TYPES_DE_COMPTE[type].collection === 'pros').length
-		const sansProfil = TYPES_DU_JEU.filter(type => type === 'maquilleuse-sans-profil').length
+		const profilsDesComptes = DATASET_TYPES.filter(type => ACCOUNT_TYPES[type].collection === 'pros').length
+		const sansProfil = DATASET_TYPES.filter(type => type === 'maquilleuse-sans-profil').length
 		const types = DEMO_PROFILES
 		const vusParLeServeur = types.filter(({ attendu }) => attendu.status === 'published' && attendu.publishable)
 
@@ -62,7 +62,7 @@ describe('Les statistiques hebdomadaires sur le jeu du banc', () => {
 		expect(stats.accounts.new).toBe(0)
 		expect(stats.signUps).toEqual([])
 		expect(stats.cohort).toEqual({ profiles: 0, active: 0 })
-		expect(Object.keys(COMPTES_DU_JEU).length).toBeGreaterThan(0)
+		expect(Object.keys(DATASET_ACCOUNTS).length).toBeGreaterThan(0)
 	}, 60_000)
 
 	test('une période qui contient la création : les inscriptions et les comptes nouveaux', async () => {
@@ -113,11 +113,11 @@ describe('Les statistiques hebdomadaires sur le jeu du banc', () => {
 	}, 60_000)
 
 	test('le jeton ne vaut rien sur une autre route : l’API de Payload le lit comme une visiteuse', async () => {
-		const profils = await appelerRest('GET', '/api/profiles?limit=100', { enTetes: ENTETES })
-		const anonyme = await appelerRest('GET', '/api/profiles?limit=100')
+		const profils = await callRest('GET', '/api/profiles?limit=100', { enTetes: ENTETES })
+		const anonyme = await callRest('GET', '/api/profiles?limit=100')
 		expect(profils.statut).toBe(anonyme.statut)
 		expect(profils.texte).toBe(anonyme.texte)
-		const comptes = await appelerRest('GET', '/api/pros', { enTetes: ENTETES })
+		const comptes = await callRest('GET', '/api/pros', { enTetes: ENTETES })
 		expect(comptes.statut).toBe(403)
 	}, 60_000)
 })

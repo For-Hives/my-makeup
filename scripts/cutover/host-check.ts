@@ -10,7 +10,7 @@
  *   HOST_CHECK_TARGET=https://my-makeup.fr bun run cutover:check     # the live site, reads only
  *
  * - The addresses are those of the frozen table (src/lib/frozen-urls.ts) and of the inventory
- *   (docs/migration/urls-inventaire.json), checked like I45 (tests/outils/parite-urls.ts): the status
+ *   (docs/migration/urls-inventaire.json), checked like I45 (tests/support/url-parity.ts): the status
  *   the table promises, the single redirect, the same h1 as the old site. The profiles, talents and
  *   articles of the host are the ones its sitemap lists.
  * - Reads only, one request at a time, two per second at most (500 ms between two starts). Every
@@ -26,16 +26,16 @@
 
 import { createHash } from 'node:crypto'
 import { readFileSync, writeFileSync } from 'node:fs'
+import { type Clock, createReader, REAL_CLOCK, type Reader, shortestGap } from '../../tests/probes/reader'
 import {
-	bilan,
-	type CasDeParite,
-	casDuBanc,
-	type DonneesDuJeu,
-	type Resultat,
-	type TitresDeLAncienSite,
-	verifier,
-} from '../../tests/outils/parite-urls'
-import { creerLecteur, ecartLePlusCourt, HORLOGE_REELLE, type Horloge, type Lecteur } from '../../tests/sondes/lecteur'
+	benchCase,
+	check,
+	type DatasetData,
+	type OldSiteTitles,
+	type ParityCase,
+	type Result,
+	summary,
+} from '../../tests/support/url-parity'
 import {
 	checkTarget,
 	ForbiddenQuery,
@@ -142,7 +142,7 @@ const decoder = (segment: string): string => {
 }
 
 /** The profiles, talents and articles that a sitemap lists: the made-up set of the host. */
-export function sitemapSet(chemins: readonly string[]): DonneesDuJeu {
+export function sitemapSet(chemins: readonly string[]): DatasetData {
 	const after = (prefixe: string): string[] =>
 		chemins.flatMap(c => {
 			const [, first, slug, rest] = c.split('?', 1)[0]?.split('/') ?? []
@@ -200,13 +200,13 @@ export interface Report {
 export interface Tools {
 	/** What reaches the host: `fetch` for a run. */
 	transport?: Transport
-	horloge?: Horloge
+	horloge?: Clock
 	/** Milliseconds between two request starts. */
 	intervalleMs?: number
 	/** The date of the report. */
 	maintenant?: () => Date
-	/** The old site's h1, as hashes (tests/fixtures/parite-urls-h1.json). */
-	anciens?: TitresDeLAncienSite
+	/** The old site's h1, as hashes (tests/fixtures/url-parity-h1.json). */
+	anciens?: OldSiteTitles
 	/**
 	 * Families of the inventory that are not delivered yet in the code under test: their failures are
 	 * counted « à venir » and do not make the report non conform. A run on the day of the switch gives
@@ -215,8 +215,8 @@ export interface Tools {
 	aVenir?: ReadonlySet<string>
 }
 
-const defaultOldOnes = (): TitresDeLAncienSite =>
-	JSON.parse(readFileSync(new URL('../../tests/fixtures/parite-urls-h1.json', import.meta.url), 'utf8'))
+const defaultOldOnes = (): OldSiteTitles =>
+	JSON.parse(readFileSync(new URL('../../tests/fixtures/url-parity-h1.json', import.meta.url), 'utf8'))
 
 /** What went wrong with a request: its code, never its text. */
 function reason(erreur: unknown): string {
@@ -226,7 +226,7 @@ function reason(erreur: unknown): string {
 }
 
 /** The profile cases are named by a fingerprint. */
-function hideProfiles(cas: CasDeParite[], profils: readonly string[]): CasDeParite[] {
+function hideProfiles(cas: ParityCase[], profils: readonly string[]): ParityCase[] {
 	const addresses = new Set(profils.map(slug => `/profil/${slug}`))
 	return cas.map(c =>
 		addresses.has(c.adresse) ? { ...c, etiquette: `profil #${short(c.adresse)}`, masque: true as const } : c
@@ -234,7 +234,7 @@ function hideProfiles(cas: CasDeParite[], profils: readonly string[]): CasDePari
 }
 
 /** A sitemap address the inventory does not name: it answers 200 with one h1. */
-const sitemapOnlyCase = (adresse: string): CasDeParite => ({
+const sitemapOnlyCase = (adresse: string): ParityCase => ({
 	adresse,
 	etiquette: adresse,
 	famille: 'adresse-du-sitemap',
@@ -250,9 +250,9 @@ const sitemapOnlyCase = (adresse: string): CasDeParite => ({
 export async function checkHost(reglages: Settings, outils: Tools = {}): Promise<Report> {
 	const { cible: target, autorisation: authorization } = reglages
 	const reading: GuardedRead = keep(target, outils.transport, authorization)
-	const reader: Lecteur = creerLecteur({
+	const reader: Reader = createReader({
 		lecture: (adresse, init) => reading(String(adresse), init),
-		horloge: outils.horloge ?? HORLOGE_REELLE,
+		horloge: outils.horloge ?? REAL_CLOCK,
 		...(outils.intervalleMs === undefined ? {} : { intervalleMs: outils.intervalleMs }),
 	})
 	const statuses: number[] = []
@@ -305,7 +305,7 @@ export async function checkHost(reglages: Settings, outils: Tools = {}): Promise
 
 	// 3. The addresses of the inventory, and the ones of the sitemap.
 	const sample = sitemapSet(sitemapUrls)
-	let scenario = hideProfiles(casDuBanc(outils.anciens ?? defaultOldOnes(), sample), sample.profilsVisibles)
+	let scenario = hideProfiles(benchCase(outils.anciens ?? defaultOldOnes(), sample), sample.profilsVisibles)
 	// The key file of IndexNow is named by the key of the host: unknown, the address cannot be read.
 	// The operator gives it in INDEXNOW_KEY; without it, the address of the table (a key of zeros) is not read.
 	const notRead = scenario.filter(c => c.famille === 'verification-indexnow' && /^\/0{32}\.txt$/.test(c.adresse))
@@ -313,10 +313,10 @@ export async function checkHost(reglages: Settings, outils: Tools = {}): Promise
 	const known = new Set(scenario.map(c => c.adresse))
 	for (const address of new Set(sitemapUrls)) if (!known.has(address)) scenario.push(sitemapOnlyCase(address))
 	scenario = [...scenario]
-	const results: { cas: CasDeParite; resultat: Resultat }[] = []
+	const results: { cas: ParityCase; resultat: Result }[] = []
 	for (const oneScenario of scenario) {
 		try {
-			const result = await verifier(oneScenario, async adresse => {
+			const result = await check(oneScenario, async adresse => {
 				const page = await read(adresse)
 				return {
 					status: page.statut,
@@ -334,7 +334,7 @@ export async function checkHost(reglages: Settings, outils: Tools = {}): Promise
 	}
 	// Every family counts, but the ones the caller says are not delivered yet.
 	const upcoming = outils.aVenir ?? new Set<string>()
-	const lines = bilan(results, new Set(scenario.map(c => c.famille).filter(famille => !upcoming.has(famille))))
+	const lines = summary(results, new Set(scenario.map(c => c.famille).filter(famille => !upcoming.has(famille))))
 	const failed = lines.flatMap(({ regressions }) => regressions)
 	const pending = lines.reduce((total, { aVenir: n }) => total + n, 0)
 	const compliant = results.filter(({ resultat: result }) => result.etat === 'vert').length
@@ -452,7 +452,7 @@ export async function checkHost(reglages: Settings, outils: Tools = {}): Promise
 		},
 		reponses5xx: fiveHundred,
 		requetes: statuses.length,
-		ecartMinimalMs: ecartLePlusCourt(reader.departs),
+		ecartMinimalMs: shortestGap(reader.departs),
 		empreinte: fingerprint,
 		sections,
 		defauts: defaults,

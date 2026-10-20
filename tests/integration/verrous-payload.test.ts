@@ -1,8 +1,8 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { appelerRest } from '../outils/rest'
+import { createAccount } from '../support/account-factory'
+import { emptyBase, testPayload } from '../support/payload-test'
+import { callRest } from '../support/rest'
 
 /**
  * Payload's document locks, reserved to the accounts of the admin panel (ticket 094). The access
@@ -12,13 +12,13 @@ import { appelerRest } from '../outils/rest'
 
 const VERROUS = '/api/payload-locked-documents'
 
-type Compte = Awaited<ReturnType<typeof creerCompte<'admin'>>>
+type Compte = Awaited<ReturnType<typeof createAccount<'admin'>>>
 
 let payload: Payload
 let admin: Compte
 let autreAdmin: Compte
-let redaction: Awaited<ReturnType<typeof creerCompte<'redaction'>>>
-let maquilleuse: Awaited<ReturnType<typeof creerCompte<'maquilleuse'>>>
+let redaction: Awaited<ReturnType<typeof createAccount<'redaction'>>>
+let maquilleuse: Awaited<ReturnType<typeof createAccount<'maquilleuse'>>>
 let talent: number
 
 const auNomDe = (compte: { id: string | number }, collection: 'admins' | 'pros' = 'admins') => ({
@@ -33,12 +33,12 @@ async function titulaire(id: number) {
 }
 
 beforeAll(async () => {
-	payload = await payloadDeTest()
+	payload = await testPayload()
 	;[admin, autreAdmin, redaction, maquilleuse] = await Promise.all([
-		creerCompte('admin'),
-		creerCompte('admin'),
-		creerCompte('redaction'),
-		creerCompte('maquilleuse'),
+		createAccount('admin'),
+		createAccount('admin'),
+		createAccount('redaction'),
+		createAccount('maquilleuse'),
 	])
 	talent = (
 		await payload.create({
@@ -55,12 +55,12 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
-	await viderLaBase()
+	await emptyBase()
 })
 
 describe('Un verrou porte toujours le compte de la session (ticket 094)', () => {
 	test('un admin qui envoie le compte d’un autre admin pose un verrou à son propre nom', async () => {
-		const { statut, corps } = await appelerRest('POST', VERROUS, {
+		const { statut, corps } = await callRest('POST', VERROUS, {
 			enTetes: admin.session.enTetes,
 			corps: { document: { relationTo: 'talents', value: talent }, user: auNomDe(autreAdmin) },
 		})
@@ -76,7 +76,7 @@ describe('Un verrou porte toujours le compte de la session (ticket 094)', () => 
 			collection: 'admins' as const,
 		}
 
-		const { statut, corps } = await appelerRest('POST', VERROUS, {
+		const { statut, corps } = await callRest('POST', VERROUS, {
 			enTetes: redaction.session.enTetes,
 			corps: { globalSlug: 'verrou-redaction-rest', user: auNomDe(admin) },
 		})
@@ -99,14 +99,14 @@ describe('Un verrou porte toujours le compte de la session (ticket 094)', () => 
 		})
 
 		// What the panel sends to take a document over: the lock list, then a PATCH naming the new holder.
-		const liste = await appelerRest(
+		const liste = await callRest(
 			'GET',
 			`${VERROUS}?where[document.relationTo][equals]=talents&where[document.value][equals]=${talent}`,
 			{ enTetes: autreAdmin.session.enTetes }
 		)
 		expect(liste.statut).toBe(200)
 		expect((liste.corps as { docs: { id: number }[] }).docs.map(({ id }) => id)).toContain(verrou.id)
-		const reprise = await appelerRest('PATCH', `${VERROUS}/${verrou.id}`, {
+		const reprise = await callRest('PATCH', `${VERROUS}/${verrou.id}`, {
 			enTetes: autreAdmin.session.enTetes,
 			corps: { user: auNomDe(autreAdmin) },
 		})
@@ -114,9 +114,9 @@ describe('Un verrou porte toujours le compte de la session (ticket 094)', () => 
 		expect(reprise.statut).toBe(200)
 		expect(await titulaire(verrou.id)).toEqual(auNomDe(autreAdmin))
 		// And the lock is released by whoever holds the document.
-		expect(
-			(await appelerRest('DELETE', `${VERROUS}/${verrou.id}`, { enTetes: autreAdmin.session.enTetes })).statut
-		).toBe(200)
+		expect((await callRest('DELETE', `${VERROUS}/${verrou.id}`, { enTetes: autreAdmin.session.enTetes })).statut).toBe(
+			200
+		)
 	})
 
 	test('le serveur, sans session, écrit un verrou tel quel (le panneau le pose sans passer par les règles)', async () => {
@@ -138,11 +138,11 @@ describe('Une maquilleuse n’atteint pas les verrous (ticket 094)', () => {
 		const enTetes = maquilleuse.session.enTetes
 
 		const reponses = await Promise.all([
-			appelerRest('GET', VERROUS, { enTetes }),
-			appelerRest('GET', `${VERROUS}/${verrou.id}`, { enTetes }),
-			appelerRest('POST', VERROUS, { enTetes, corps: { globalSlug: 'intrus', user: auNomDe(admin) } }),
-			appelerRest('PATCH', `${VERROUS}/${verrou.id}`, { enTetes, corps: { user: auNomDe(maquilleuse, 'pros') } }),
-			appelerRest('DELETE', `${VERROUS}/${verrou.id}`, { enTetes }),
+			callRest('GET', VERROUS, { enTetes }),
+			callRest('GET', `${VERROUS}/${verrou.id}`, { enTetes }),
+			callRest('POST', VERROUS, { enTetes, corps: { globalSlug: 'intrus', user: auNomDe(admin) } }),
+			callRest('PATCH', `${VERROUS}/${verrou.id}`, { enTetes, corps: { user: auNomDe(maquilleuse, 'pros') } }),
+			callRest('DELETE', `${VERROUS}/${verrou.id}`, { enTetes }),
 		])
 
 		expect(reponses.map(({ statut }) => statut)).toEqual([403, 403, 403, 403, 403])
@@ -154,10 +154,10 @@ describe('Une maquilleuse n’atteint pas les verrous (ticket 094)', () => {
 	})
 
 	test('sans session : 403 aussi', async () => {
-		expect((await appelerRest('GET', VERROUS)).statut).toBe(403)
-		expect(
-			(await appelerRest('POST', VERROUS, { corps: { globalSlug: 'anonyme', user: auNomDe(admin) } })).statut
-		).toBe(403)
+		expect((await callRest('GET', VERROUS)).statut).toBe(403)
+		expect((await callRest('POST', VERROUS, { corps: { globalSlug: 'anonyme', user: auNomDe(admin) } })).statut).toBe(
+			403
+		)
 	})
 })
 
@@ -189,7 +189,7 @@ describe('Des enregistrements simultanés par REST ne bloquent pas l’applicati
 		)
 		const enregistrements = Promise.all(
 			talents.map(({ id }, rang) =>
-				appelerRest('PATCH', `/api/talents/${id}`, {
+				callRest('PATCH', `/api/talents/${id}`, {
 					enTetes: admin.session.enTetes,
 					corps: { description: `Une description changée, la ${rang + 1}e.` },
 				}).then(({ statut }) => statut)
@@ -206,12 +206,12 @@ describe('Des enregistrements simultanés par REST ne bloquent pas l’applicati
 			data: { document: { relationTo: 'talents', value: talent }, user: auNomDe(autreAdmin) },
 		})
 		try {
-			const refuse = await appelerRest('PATCH', `/api/talents/${talent}`, {
+			const refuse = await callRest('PATCH', `/api/talents/${talent}`, {
 				enTetes: admin.session.enTetes,
 				corps: { description: 'Un enregistrement sur un talent verrouillé par un autre.' },
 			})
 			expect(refuse.statut).toBe(423)
-			const titulaireEnregistre = await appelerRest('PATCH', `/api/talents/${talent}`, {
+			const titulaireEnregistre = await callRest('PATCH', `/api/talents/${talent}`, {
 				enTetes: autreAdmin.session.enTetes,
 				corps: { description: 'L’enregistrement du titulaire du verrou.' },
 			})

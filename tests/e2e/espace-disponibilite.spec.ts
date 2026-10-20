@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test'
-import { violationsGraves } from '../outils/axe'
-import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest } from '../outils/payload-test'
+import { createAccount, type TestAccount } from '../support/account-factory'
+import { violationsSevere } from '../support/axe'
+import { testPayload } from '../support/payload-test'
 
 /**
  * The availability in her space (ticket 124; plan 02 E19-E29): a switch that is saved for real, a
@@ -16,14 +16,14 @@ test.beforeEach(({ context }) =>
 	context.setExtraHTTPHeaders({ 'x-forwarded-for': `192.0.2.${100 + (++compteur % 100)}` })
 )
 
-type Maquilleuse = CompteDeTest<'maquilleuse'>
+type Maquilleuse = TestAccount<'maquilleuse'>
 
 async function maquilleuse(
 	context: { addCookies: (c: Maquilleuse['session']['cookies']) => Promise<void> },
 	disponible: boolean | null = true
 ): Promise<Maquilleuse> {
-	const compte = await creerCompte('maquilleuse')
-	const payload = await payloadDeTest()
+	const compte = await createAccount('maquilleuse')
+	const payload = await testPayload()
 	const fiche = await ficheDe(compte)
 	await payload.update({ collection: 'profiles', id: fiche.id, data: { firstName: 'Léa', lastName: 'Fictive' } })
 	// An imported profile has no value: written under the hooks, as the import does.
@@ -35,7 +35,7 @@ async function maquilleuse(
 }
 
 async function ficheDe(compte: Maquilleuse) {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
 	const [fiche] = docs
 	if (!fiche) throw new Error('pas de profil')
@@ -80,7 +80,7 @@ test.describe('124 : disponible ou indisponible', { tag: '@mobile' }, () => {
 		await expect(interrupteur(page)).toHaveAttribute('aria-checked', 'true')
 		await expect(carte(page)).not.toContainText('Pas disponible')
 		expect((await ficheDe(compte)).available).toBe(true)
-		expect(await violationsGraves(page)).toEqual([])
+		expect(await violationsSevere(page)).toEqual([])
 	})
 
 	test('un profil importé sans valeur est affiché « Disponible »', async ({ context, page }) => {

@@ -1,18 +1,18 @@
 import { afterEach, beforeAll, describe, expect, setDefaultTimeout, test } from 'bun:test'
 import { AuthenticationError, UnverifiedEmail } from 'payload'
 import { z } from 'zod'
-import { adresseDuJeu, COMPTES_DU_JEU, poserLesComptesDuJeu, TYPES_DU_JEU } from '../fixtures/comptes'
+import { DATASET_ACCOUNTS, DATASET_TYPES, datasetUrl, setDatasetAccounts } from '../fixtures/accounts'
 import {
-	type CompteFixe,
-	creerCompte,
-	type FournisseurHerite,
-	MOT_DE_PASSE_HERITE_DE_FIXTURE,
-	TYPES_DE_COMPTE,
-	type TypeDeCompte,
-} from '../outils/fabrique-comptes'
-import { compterLesLignes, payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { appelerRest } from '../outils/rest'
-import { HASH_BCRYPT_COMPLET } from '../outils/source-strapi/inventaire'
+	ACCOUNT_TYPES,
+	type AccountType,
+	createAccount,
+	FIXTURE_LEGACY_PASSWORD,
+	type FixedAccount,
+	type LegacyProvider,
+} from '../support/account-factory'
+import { countLines, emptyBase, testPayload } from '../support/payload-test'
+import { callRest } from '../support/rest'
+import { HASH_BCRYPT_FULL } from '../support/source-strapi/inventory'
 
 // The bench is shared by every checkout of the machine, and a suite under load runs several times slower than alone:
 // the default 5 s is passed by the heaviest tests of this file (ticket 225). The delay bounds a call that hangs, it
@@ -35,7 +35,7 @@ interface Attendu {
 	pro?: {
 		verifie: boolean
 		blocked: boolean
-		fournisseur: FournisseurHerite | null
+		fournisseur: LegacyProvider | null
 		hashHerite: boolean
 		profils: 0 | 1
 	}
@@ -50,7 +50,7 @@ const maquilleuse = (pro: Partial<NonNullable<Attendu['pro']>> = {}): NonNullabl
 	...pro,
 })
 
-const ATTENDU: Record<TypeDeCompte, Attendu> = {
+const ATTENDU: Record<AccountType, Attendu> = {
 	admin: { collection: 'admins', acces: 'mot-de-passe' },
 	redaction: { collection: 'admins', acces: 'mot-de-passe' },
 	maquilleuse: { collection: 'pros', acces: 'mot-de-passe', pro: maquilleuse() },
@@ -71,7 +71,7 @@ const ATTENDU: Record<TypeDeCompte, Attendu> = {
 	'reprise-facebook': { collection: 'pros', acces: 'aucun', pro: maquilleuse({ fournisseur: 'facebook' }) },
 }
 
-const TYPES = Object.keys(TYPES_DE_COMPTE) as TypeDeCompte[]
+const TYPES = Object.keys(ACCOUNT_TYPES) as AccountType[]
 
 const MonCompte = z.object({ user: z.object({ id: z.number(), email: z.string() }).nullable() })
 
@@ -90,30 +90,30 @@ interface Ligne {
 	strapiId?: number | null
 }
 
-async function ligneDu(compte: CompteFixe): Promise<Ligne> {
-	const payload = await payloadDeTest()
+async function ligneDu(compte: FixedAccount): Promise<Ligne> {
+	const payload = await testPayload()
 	const ligne = await payload.db.findOne<Ligne>({ collection: compte.collection, where: { id: { equals: compte.id } } })
 	if (!ligne) throw new Error(`le compte ${compte.type} n’est pas en base`)
 	return ligne
 }
 
 /** What a makeup artist holds, read in the database, in the shape of `Attendu['pro']`. */
-async function etatDeLaMaquilleuse(compte: CompteFixe) {
-	const payload = await payloadDeTest()
+async function etatDeLaMaquilleuse(compte: FixedAccount) {
+	const payload = await testPayload()
 	const ligne = await ligneDu(compte)
 	const { totalDocs } = await payload.count({ collection: 'profiles', where: { pro: { equals: compte.id } } })
 	return {
 		verifie: ligne._verified === true,
 		blocked: ligne.blocked === true,
-		fournisseur: (ligne.legacyProvider ?? null) as FournisseurHerite | null,
+		fournisseur: (ligne.legacyProvider ?? null) as LegacyProvider | null,
 		hashHerite: typeof ligne.legacyBcrypt === 'string',
 		profils: totalDocs,
 	}
 }
 
 /** The error Payload's own login throws for this address and password, or `null` when it lets the account in. */
-async function refusDeConnexion(compte: CompteFixe, motDePasse: string): Promise<unknown> {
-	const payload = await payloadDeTest()
+async function refusDeConnexion(compte: FixedAccount, motDePasse: string): Promise<unknown> {
+	const payload = await testPayload()
 	try {
 		await payload.login({ collection: compte.collection, data: { email: compte.email, password: motDePasse } })
 		return null
@@ -124,21 +124,21 @@ async function refusDeConnexion(compte: CompteFixe, motDePasse: string): Promise
 
 beforeAll(async () => {
 	// Payload starts before the clock of the first test does.
-	await payloadDeTest()
+	await testPayload()
 })
 
-afterEach(viderLaBase)
+afterEach(emptyBase)
 
 describe('La fabrique crée chaque type de compte du site', () => {
 	test('toutes les variantes créées puis vidées en moins de 5 secondes', async () => {
 		const debut = performance.now()
 
-		const comptes = await Promise.all(TYPES.map(type => creerCompte(type)))
-		await viderLaBase()
+		const comptes = await Promise.all(TYPES.map(type => createAccount(type)))
+		await emptyBase()
 
 		expect(performance.now() - debut).toBeLessThan(5_000)
 		expect(comptes.map(({ type }) => type)).toEqual(TYPES)
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		expect((await payload.count({ collection: 'admins' })).totalDocs).toBe(0)
 		expect((await payload.count({ collection: 'pros' })).totalDocs).toBe(0)
 	})
@@ -150,7 +150,7 @@ describe('La fabrique crée chaque type de compte du site', () => {
 		// The password this test knows: the factory gives it to every account that logs in by password.
 		const connu = `connu-${crypto.randomUUID()}`
 
-		const compte = await creerCompte(type, { motDePasse: () => connu })
+		const compte = await createAccount(type, { motDePasse: () => connu })
 		const ligne = await ligneDu(compte)
 
 		expect(compte.collection).toBe(attendu.collection)
@@ -160,7 +160,7 @@ describe('La fabrique crée chaque type de compte du site', () => {
 			expect(ligne.sessions ?? []).toEqual([])
 		} else {
 			// A real session: the route « mon compte » of the application answers with this account.
-			const { statut, corps } = await appelerRest('GET', `/api/${attendu.collection}/me`, {
+			const { statut, corps } = await callRest('GET', `/api/${attendu.collection}/me`, {
 				enTetes: compte.session?.enTetes ?? {},
 			})
 			expect({ statut, user: MonCompte.parse(corps).user }).toEqual({
@@ -177,7 +177,7 @@ describe('La fabrique crée chaque type de compte du site', () => {
 			// No password anybody knows opens it through Payload: neither the one this test chose,
 			// nor the one of the old site, which only the site's legacy path reads (ticket 087).
 			expect(await refusDeConnexion(compte, connu)).toBeInstanceOf(AuthenticationError)
-			expect(await refusDeConnexion(compte, MOT_DE_PASSE_HERITE_DE_FIXTURE)).toBeInstanceOf(AuthenticationError)
+			expect(await refusDeConnexion(compte, FIXTURE_LEGACY_PASSWORD)).toBeInstanceOf(AuthenticationError)
 			expect(ligne.strapiId).toBeGreaterThanOrEqual(1_000_000)
 		} else expect(ligne.strapiId ?? null).toBeNull()
 		if (type === 'maquilleuse-non-verifiee')
@@ -187,24 +187,24 @@ describe('La fabrique crée chaque type de compte du site', () => {
 
 	test('le hash hérité vient du mot de passe fictif de fixture ; pgcrypto ne reste pas dans la base', async () => {
 		const [locale, google, sansHash] = await Promise.all([
-			creerCompte('reprise-avec-hash'),
-			creerCompte('reprise-google-avec-hash'),
-			creerCompte('reprise-google'),
+			createAccount('reprise-avec-hash'),
+			createAccount('reprise-google-avec-hash'),
+			createAccount('reprise-google'),
 		])
 		const [hashLocal, hashGoogle] = [(await ligneDu(locale)).legacyBcrypt, (await ligneDu(google)).legacyBcrypt]
 
 		for (const hash of [hashLocal, hashGoogle]) {
-			expect(HASH_BCRYPT_COMPLET.test(hash ?? '')).toBe(true)
+			expect(HASH_BCRYPT_FULL.test(hash ?? '')).toBe(true)
 			// The format of every hash of the old site.
 			expect(hash?.startsWith('$2a$10$')).toBe(true)
-			expect(await Bun.password.verify(MOT_DE_PASSE_HERITE_DE_FIXTURE, hash ?? '')).toBe(true)
-			expect(await Bun.password.verify(`${MOT_DE_PASSE_HERITE_DE_FIXTURE}-faux`, hash ?? '')).toBe(false)
+			expect(await Bun.password.verify(FIXTURE_LEGACY_PASSWORD, hash ?? '')).toBe(true)
+			expect(await Bun.password.verify(`${FIXTURE_LEGACY_PASSWORD}-faux`, hash ?? '')).toBe(false)
 		}
 		// The same fixture hash, every time: a fixed salt and a fixed password.
 		expect(hashGoogle).toBe(hashLocal)
 		expect((await ligneDu(sansHash)).legacyBcrypt ?? null).toBeNull()
 		// The hash was worked out in a transaction that was rolled back: nothing of pgcrypto is left.
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const { rows } = await payload.db.pool.query<{ extensions: number; schemas: number }>(
 			`SELECT (SELECT count(*)::int FROM pg_extension WHERE extname = 'pgcrypto') AS extensions,
 			        (SELECT count(*)::int FROM pg_namespace WHERE nspname = 'fabrique_bcrypt') AS schemas`
@@ -215,12 +215,12 @@ describe('La fabrique crée chaque type de compte du site', () => {
 
 describe('Le jeu du banc : un compte fixe de chaque type', () => {
 	test('un exemplaire de chaque type, en @example.test, à l’état de son type', async () => {
-		const bilan = await poserLesComptesDuJeu()
+		const bilan = await setDatasetAccounts()
 
 		expect(bilan.crees).toEqual(TYPES)
 		expect(bilan.presents).toEqual([])
-		expect(TYPES_DU_JEU).toEqual(TYPES)
-		const payload = await payloadDeTest()
+		expect(DATASET_TYPES).toEqual(TYPES)
+		const payload = await testPayload()
 		expect((await payload.count({ collection: 'admins' })).totalDocs).toBe(2)
 		expect((await payload.count({ collection: 'pros' })).totalDocs).toBe(TYPES.length - 2)
 		for (const compte of bilan.comptes) {
@@ -228,7 +228,7 @@ describe('Le jeu du banc : un compte fixe de chaque type', () => {
 			expect({ type: compte.type, collection: compte.collection, email: compte.email }).toEqual({
 				type: compte.type,
 				collection: attendu.collection,
-				email: adresseDuJeu(compte.type),
+				email: datasetUrl(compte.type),
 			})
 			expect(compte.email).toEndWith('@example.test')
 			const ligne = await ligneDu(compte)
@@ -239,25 +239,25 @@ describe('Le jeu du banc : un compte fixe de chaque type', () => {
 				type: compte.type,
 				etat: attendu.pro,
 			})
-			const { nom, strapiId } = COMPTES_DU_JEU[compte.type]
+			const { nom, strapiId } = DATASET_ACCOUNTS[compte.type]
 			expect({ nom: ligne.name, strapiId: ligne.strapiId ?? undefined }).toEqual({ nom, strapiId })
 		}
 	})
 
 	test('rejouer le jeu ne crée aucun doublon et ne touche à rien ; sur une base vide, il redonne les mêmes comptes', async () => {
-		const premier = await poserLesComptesDuJeu()
-		const lignes = await compterLesLignes()
+		const premier = await setDatasetAccounts()
+		const lignes = await countLines()
 		const hashes = await Promise.all(premier.comptes.map(async compte => (await ligneDu(compte)).legacyBcrypt ?? null))
 
-		const second = await poserLesComptesDuJeu()
+		const second = await setDatasetAccounts()
 
 		expect(second.crees).toEqual([])
 		expect(second.presents).toEqual(TYPES)
 		expect(second.comptes).toEqual(premier.comptes)
-		expect(await compterLesLignes()).toEqual(lignes)
+		expect(await countLines()).toEqual(lignes)
 
-		await viderLaBase()
-		const apresRemiseAZero = await poserLesComptesDuJeu()
+		await emptyBase()
+		const apresRemiseAZero = await setDatasetAccounts()
 
 		expect(apresRemiseAZero.crees).toEqual(TYPES)
 		expect(apresRemiseAZero.comptes).toEqual(premier.comptes)

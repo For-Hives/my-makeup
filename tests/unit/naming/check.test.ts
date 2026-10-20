@@ -106,7 +106,7 @@ describe('naming check: what is read', () => {
 	test('environment variables and script options are read, with their shapes only', () => {
 		const source = [
 			'const jeton = process.env.IMPORT_JETON',
-			"const other = Bun.env['SONDES_CIBLE']",
+			"const other = Bun.env['PROBES_TARGET']",
 			'const { BASCULE_LE } = process.env',
 			"type Raw = Partial<Record<'APP_ENV' | 'IMPORT_COMMUNES', string>>",
 			"const a = args.includes('--a-blanc')",
@@ -120,7 +120,7 @@ describe('naming check: what is read', () => {
 				.filter(n => n.kind === 'env')
 				.map(n => n.name)
 				.sort()
-		).toEqual(['APP_ENV', 'BASCULE_LE', 'IMPORT_COMMUNES', 'IMPORT_JETON', 'SONDES_CIBLE'])
+		).toEqual(['APP_ENV', 'BASCULE_LE', 'IMPORT_COMMUNES', 'IMPORT_JETON', 'PROBES_TARGET'])
 		expect(names.filter(n => n.kind === 'option').map(n => n.name)).toEqual(['a-blanc', 'cible'])
 	})
 
@@ -133,10 +133,10 @@ describe('naming check: what is read', () => {
 			config()
 		)
 		expect(report.failures.filter(f => f.kind === 'option').map(f => f.file)).toEqual(['scripts/tool.ts'])
-		const scripts = collectFromPackageScripts('package.json', '{"scripts":{"banc:up":"x","build":"y"}}')
-		expect(scripts.map(n => n.name)).toEqual(['banc:up', 'build'])
+		const scripts = collectFromPackageScripts('package.json', '{"scripts":{"notes:ajouter":"x","build":"y"}}')
+		expect(scripts.map(n => n.name)).toEqual(['notes:ajouter', 'build'])
 		const names = evaluate(scripts, config(), words).failures
-		expect(names.map(f => f.name)).toEqual(['banc:up'])
+		expect(names.map(f => f.name)).toEqual(['notes:ajouter'])
 	})
 })
 

@@ -1,25 +1,25 @@
 import { randomInt } from 'node:crypto'
 import { gzipSync } from 'node:zlib'
 import { type APIRequestContext, expect, request as pwRequest, test } from '@playwright/test'
-import { MOT_DES_ESSAIS, type ProfilDeRecherche, poserLesProfilsDeRecherche } from '../fixtures/profils-de-recherche'
-import { COMMUNES_ELOIGNEES, fabriquerParLApplication, retirerParLApplication } from '../outils/fabrique-profils'
-import { rafraichirLesPagesDesProfils } from '../outils/pages-publiques'
+import { type SearchProfile, setSearchProfiles, TEST_WORD } from '../fixtures/search-profiles'
+import { buildByApplication, DISTANT_CITIES, removeByApplication } from '../support/profile-factory'
+import { refreshProfilePages } from '../support/public-pages'
 
 /**
  * The search by a word, its pages and its brake (tickets 099 and 100; plan 02 E39, E40, E41, I29 and
  * I30 through the running application). The bench is shared with the other tests, which write their
  * own profiles: the tests look for the profiles they loaded themselves, by their address
- * (tests/fixtures/profils-de-recherche.ts), and for the generated ones by a word of their own.
+ * (tests/fixtures/search-profiles.ts), and for the generated ones by a word of their own.
  */
 
 const GENEREES = 45
 
 // The word only the loaded profiles hold (ticket 225), with the word under test: a search for « mariage » alone
 // is cut at 20 results, and the profiles of the other tests that speak of marriage push these ones off the page.
-const MOT = encodeURIComponent(MOT_DES_ESSAIS)
+const MOT = encodeURIComponent(TEST_WORD)
 
-let profils: ReadonlyMap<string, ProfilDeRecherche>
-const profil = (cle: string): ProfilDeRecherche => {
+let profils: ReadonlyMap<string, SearchProfile>
+const profil = (cle: string): SearchProfile => {
 	const trouve = profils.get(cle)
 	if (!trouve) throw new Error(`pas de profil d’essai « ${cle} »`)
 	return trouve
@@ -29,12 +29,12 @@ const lien = (cle: string) => `a[href="/profil/${profil(cle).slug}"]`
 test.describe('Recherche par mot, par pages', () => {
 	test.beforeAll(async () => {
 		test.setTimeout(240_000)
-		profils = await poserLesProfilsDeRecherche()
+		profils = await setSearchProfiles()
 	})
 
 	// The pages keep the directory in the cache of Next: what an earlier request saw is not what the fixture holds.
 	test.beforeEach(async ({ request }) => {
-		await rafraichirLesPagesDesProfils(request, profil('reference'))
+		await refreshProfilePages(request, profil('reference'))
 	})
 
 	// E39, adapted: the decisions of 13/10 make it a word and a city (the speciality is a word), with the filters in the address.
@@ -42,14 +42,14 @@ test.describe('Recherche par mot, par pages', () => {
 		tag: ['@smoke', '@mobile'],
 	}, async ({ page }) => {
 		await page.goto('/search')
-		await page.getByLabel('Prestation recherchée').fill(`mariage ${MOT_DES_ESSAIS}`)
+		await page.getByLabel('Prestation recherchée').fill(`mariage ${TEST_WORD}`)
 		await page.getByLabel('Ville de la prestation').fill('Annecy')
 		await page.getByRole('button', { name: 'Trouver une maquilleuse' }).click()
 
 		await expect(page).toHaveURL(`/search?search=mariage+${MOT}&city=Annecy`)
 		const titre = page.getByRole('heading', { level: 1 })
 		await expect(titre).toHaveCount(1)
-		await expect(titre).toHaveText(`5 résultats pour « mariage ${MOT_DES_ESSAIS} » à « Annecy »`)
+		await expect(titre).toHaveText(`5 résultats pour « mariage ${TEST_WORD} » à « Annecy »`)
 		// The artists of Annecy whose profile speaks of marriage lead the list; the title counts them only.
 		const premiere = page.locator('main ul').first()
 		await expect(premiere.locator(lien('reference'))).toHaveCount(1)
@@ -59,7 +59,7 @@ test.describe('Recherche par mot, par pages', () => {
 		await expect(premiere.locator(lien('ville-eloignee'))).toHaveCount(0)
 		await expect(page.locator('main section').locator(lien('ville-eloignee'))).toHaveCount(1)
 		// The form keeps what was typed.
-		await expect(page.getByLabel('Prestation recherchée')).toHaveValue(`mariage ${MOT_DES_ESSAIS}`)
+		await expect(page.getByLabel('Prestation recherchée')).toHaveValue(`mariage ${TEST_WORD}`)
 		await expect(page.getByLabel('Ville de la prestation')).toHaveValue('Annecy')
 	})
 
@@ -69,7 +69,7 @@ test.describe('Recherche par mot, par pages', () => {
 		await page.goto(`/search?search=%C3%A9v%C3%A9nementiel+${MOT}&city=Annecy`)
 
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-			`Aucun résultat pour « événementiel ${MOT_DES_ESSAIS} » à « Annecy »`
+			`Aucun résultat pour « événementiel ${TEST_WORD} » à « Annecy »`
 		)
 		await expect(
 			page.getByText('Aucune maquilleuse n’indique « Annecy » (ville ou département) dans son profil.')
@@ -92,7 +92,7 @@ test.describe('Recherche par mot, par pages', () => {
 		await page.goto(`/search?search=je+cherche+une+maquilleuse+pour+mon+mariage+${MOT}`)
 
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-			new RegExp(`^\\d+ résultats? pour « je cherche une maquilleuse pour mon mariage ${MOT_DES_ESSAIS} »$`)
+			new RegExp(`^\\d+ résultats? pour « je cherche une maquilleuse pour mon mariage ${TEST_WORD} »$`)
 		)
 		await expect(page.locator(lien('reference'))).toHaveCount(1)
 	})
@@ -184,19 +184,19 @@ test.describe('Pages de résultats', () => {
 		const prefixe = `e41${projet.name.slice(0, 1)}`
 		// Two words that no typo links: a search for one never finds the profiles of the other project.
 		marqueur = projet.name === 'chromium' ? 'zyglotest' : 'quarkenstein'
-		profils = await poserLesProfilsDeRecherche()
+		profils = await setSearchProfiles()
 		contexte = await pwRequest.newContext({ baseURL: projet.use.baseURL })
-		creees = await fabriquerParLApplication(contexte, GENEREES, {
+		creees = await buildByApplication(contexte, GENEREES, {
 			prefixe,
 			marqueur,
-			communes: COMMUNES_ELOIGNEES,
+			communes: DISTANT_CITIES,
 			seDeplacent: false,
 		})
 	})
 
 	test.afterAll(async () => {
 		test.setTimeout(120_000)
-		if (contexte && creees) await retirerParLApplication(contexte, creees)
+		if (contexte && creees) await removeByApplication(contexte, creees)
 		await contexte?.dispose()
 	})
 

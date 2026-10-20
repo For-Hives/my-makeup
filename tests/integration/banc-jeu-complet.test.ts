@@ -5,22 +5,22 @@ import path from 'node:path'
 import type { Payload } from 'payload'
 import { DEMO_ARTICLES, DEMO_TALENTS } from '../../src/demo-data/editorial'
 import { profileUrl } from '../../src/demo-data/profiles'
-import { CONTENU_DU_BANC, poserLeJeuDuBanc } from '../fixtures/jeu-du-banc'
-import { RACINE } from '../outils/banc'
-import { ecrireLaSession } from '../outils/banc-session'
-import { compterLesDocuments, payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { listerLesObjets, viderLeStockage } from '../outils/s3'
+import { BENCH_CONTENT, setBenchDataset } from '../fixtures/bench-dataset'
+import { ROOT } from '../support/bench'
+import { writeSession } from '../support/bench-session'
+import { countDocuments, emptyBase, testPayload } from '../support/payload-test'
+import { emptyStorage, listObjects } from '../support/s3'
 
 /**
  * Ticket 052: the whole set of the bench, in one call and by the commands of the bench
- * (`bun run banc:reinitialiser`, `bun run banc:session`). Loaded twice it gives the same content;
+ * (`bun run bench:reset`, `bun run bench:session`). Loaded twice it gives the same content;
  * the command that puts the bench back to its starting state takes seconds, not minutes; the
  * session it hands out is a real one and its token is never printed.
  */
 
 let payload: Payload
 
-const remettreAZero = () => Promise.all([viderLaBase(), viderLeStockage()])
+const remettreAZero = () => Promise.all([emptyBase(), emptyStorage()])
 
 const nombreDe = async (collection: 'pros' | 'profiles' | 'admins' | 'talents' | 'articles'): Promise<number> =>
 	(await payload.count({ collection, overrideAccess: true })).totalDocs
@@ -36,7 +36,7 @@ const profilsTypes = async (): Promise<number> =>
 	).totalDocs
 
 beforeAll(async () => {
-	payload = await payloadDeTest()
+	payload = await testPayload()
 	await remettreAZero()
 })
 
@@ -44,17 +44,17 @@ afterAll(remettreAZero)
 
 describe('Le jeu complet du banc', () => {
 	test('12 profils types, 3 talents, 3 articles dont un brouillon, et les comptes de chaque type', async () => {
-		const bilan = await poserLeJeuDuBanc()
+		const bilan = await setBenchDataset()
 
-		expect(await profilsTypes()).toBe(CONTENU_DU_BANC.profilsTypes)
-		expect(await nombreDe('talents')).toBe(CONTENU_DU_BANC.talents)
-		expect(await nombreDe('articles')).toBe(CONTENU_DU_BANC.articles)
+		expect(await profilsTypes()).toBe(BENCH_CONTENT.profilsTypes)
+		expect(await nombreDe('talents')).toBe(BENCH_CONTENT.talents)
+		expect(await nombreDe('articles')).toBe(BENCH_CONTENT.articles)
 		const brouillons = await payload.count({
 			collection: 'articles',
 			overrideAccess: true,
 			where: { _status: { equals: 'draft' } },
 		})
-		expect(brouillons.totalDocs).toBe(CONTENU_DU_BANC.brouillons)
+		expect(brouillons.totalDocs).toBe(BENCH_CONTENT.brouillons)
 		expect(await nombreDe('admins')).toBe(2)
 		expect(bilan.jeu.profils.crees).toHaveLength(12)
 		expect(bilan.jeu.redaction.talentsCrees).toEqual(DEMO_TALENTS.map(({ slug }) => slug))
@@ -62,13 +62,13 @@ describe('Le jeu complet du banc', () => {
 	}, 60_000)
 
 	test('chargé une seconde fois, il ne crée rien : ni doublon, ni second brouillon', async () => {
-		const avant = await compterLesDocuments()
-		const objets = await listerLesObjets()
+		const avant = await countDocuments()
+		const objets = await listObjects()
 
-		const bilan = await poserLeJeuDuBanc()
+		const bilan = await setBenchDataset()
 
-		expect(await compterLesDocuments()).toEqual(avant)
-		expect(await listerLesObjets()).toEqual(objets)
+		expect(await countDocuments()).toEqual(avant)
+		expect(await listObjects()).toEqual(objets)
 		expect(bilan.comptes.crees).toEqual([])
 		expect(bilan.jeu.profils.crees).toEqual([])
 		expect(bilan.jeu.redaction.talentsCrees).toEqual([])
@@ -94,8 +94,8 @@ describe('Les commandes du banc', () => {
 	/** A command of the bench, as a person runs it: its own process, the environment of the bench. */
 	async function commande(...ligne: string[]) {
 		const debut = performance.now()
-		const enfant = Bun.spawn([process.execPath, '--no-env-file', 'scripts/banc.ts', ...ligne], {
-			cwd: RACINE,
+		const enfant = Bun.spawn([process.execPath, '--no-env-file', 'scripts/bench.ts', ...ligne], {
+			cwd: ROOT,
 			env: process.env,
 			stdin: 'ignore',
 			stdout: 'pipe',
@@ -109,9 +109,9 @@ describe('Les commandes du banc', () => {
 		return { code, sortie, erreurs, secondes: (performance.now() - debut) / 1000 }
 	}
 
-	test('banc:reinitialiser remet le banc à son état de départ en moins de 30 secondes, deux fois de suite à l’identique', async () => {
+	test('bench:reset remet le banc à son état de départ en moins de 30 secondes, deux fois de suite à l’identique', async () => {
 		await remettreAZero()
-		const premiere = await commande('reinitialiser')
+		const premiere = await commande('reset')
 		expect(premiere.code, premiere.erreurs).toBe(0)
 		expect(premiere.secondes).toBeLessThan(30)
 		const profils = await nombreDe('profiles')
@@ -119,7 +119,7 @@ describe('Les commandes du banc', () => {
 			await payload.find({ collection: 'profiles', depth: 0, sort: 'id', pagination: false })
 		).docs.map(({ id, slug }) => `${id}:${slug}`)
 
-		const seconde = await commande('reinitialiser')
+		const seconde = await commande('reset')
 
 		expect(seconde.code, seconde.erreurs).toBe(0)
 		expect(seconde.secondes).toBeLessThan(30)
@@ -146,7 +146,7 @@ describe('Les commandes du banc', () => {
 		return entetes
 	}
 
-	describe('banc:session', () => {
+	describe('bench:session', () => {
 		let dossier: string
 
 		beforeAll(async () => {
@@ -155,8 +155,8 @@ describe('Les commandes du banc', () => {
 		afterAll(() => rm(dossier, { recursive: true, force: true }))
 
 		test('une session de chaque côté : l’admin et une maquilleuse sont reconnus par Payload, le jeton va dans un fichier privé', async () => {
-			const admin = await ecrireLaSession(payload, 'admin', { dossier, instance: 'essai' })
-			const maquilleuse = await ecrireLaSession(payload, 'profil-reference', { dossier, instance: 'essai' })
+			const admin = await writeSession(payload, 'admin', { dossier, instance: 'essai' })
+			const maquilleuse = await writeSession(payload, 'profil-reference', { dossier, instance: 'essai' })
 
 			const reconnu = await payload.auth({ headers: await enTetesDuFichier(admin.entetes) })
 			expect(reconnu.user?.collection).toBe('admins')
@@ -178,7 +178,7 @@ describe('Les commandes du banc', () => {
 			expect(ok.sortie).toContain('Le jeton n’est pas affiché')
 			// A signed token starts with « eyJ »: neither the output nor the errors may hold one.
 			expect(ok.sortie + ok.erreurs).not.toMatch(/eyJ[A-Za-z0-9_-]{10,}/)
-			const fichier = path.join(RACINE, '.banc/sessions')
+			const fichier = path.join(ROOT, '.banc/sessions')
 			expect(ok.sortie).toContain(fichier)
 
 			const inconnu = await commande('session', 'personne')

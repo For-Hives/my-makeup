@@ -47,10 +47,10 @@ Tout se lance depuis la racine du dépôt. La table complète est dans le README
 | `bun run test` | Les tests unitaires : ceux qui tournent sans le banc de test, et sans le `.env` de travail. |
 | `bun run test:ci-guard` | Les garde-fous de la CI, du `Dockerfile`, des tests sautés et de `renovate.json`. La CI les lance sur chaque PR. |
 | `bun run renovate:validate` | Après un changement de `renovate.json` : Renovate dit s'il sait lire le fichier. Il lui faut `docker`. |
-| `bun run banc:up` | Démarre le banc de test en conteneurs : base, capteur de mails, stockage d'objets, faux Google. `bun run banc:down` l'arrête et efface tout. |
-| `bun run banc:complet` | Le banc complet en une commande : pile, base par les migrations, comptes types, 12 profils types, 3 talents, 3 articles dont un brouillon, puis l'application sur le port du banc (3100, au premier plan : lance-la en arrière-plan). `--sans-application` s'arrête avant. |
-| `bun run banc:reinitialiser` | Remet le banc à son état de départ en une dizaine de secondes : base, stockage, capteur de mails, jeu. Les sessions ouvertes sont perdues. |
-| `bun run banc:session <compte>` | La session d'un compte du banc (`admin`, `redaction`, `maquilleuse`, `profil-reference`, une adresse…), écrite dans `.banc/sessions/` : état d'un navigateur Playwright et en-têtes pour `curl -H @fichier`. Le jeton n'est jamais affiché. |
+| `bun run bench:up` | Démarre le banc de test en conteneurs : base, capteur de mails, stockage d'objets, faux Google. `bun run bench:down` l'arrête et efface tout. |
+| `bun run bench:full` | Le banc complet en une commande : pile, base par les migrations, comptes types, 12 profils types, 3 talents, 3 articles dont un brouillon, puis l'application sur le port du banc (3100, au premier plan : lance-la en arrière-plan). `--without-application` s'arrête avant. |
+| `bun run bench:reset` | Remet le banc à son état de départ en une dizaine de secondes : base, stockage, capteur de mails, jeu. Les sessions ouvertes sont perdues. |
+| `bun run bench:session <compte>` | La session d'un compte du banc (`admin`, `redaction`, `maquilleuse`, `profil-reference`, une adresse…), écrite dans `.banc/sessions/` : état d'un navigateur Playwright et en-têtes pour `curl -H @fichier`. Le jeton n'est jamais affiché. |
 | `bun run test:integration` | Les tests d'intégration, sur le banc démarré. Avec un chemin : ce fichier seul. Chaque lancement vide la base du banc. |
 | `bun run test:e2e` | Les essais de bout en bout, banc démarré : build de production, puis Playwright à 1440 et 390 px. Avec un chemin : ce fichier seul. Chaque lancement vide la base du banc. Le navigateur s'installe une fois par `bunx playwright install chromium`. |
 | `bun run admin:create <email>` | Crée un compte de l'administration : la seule façon d'avoir le premier ; ensuite un admin crée les autres dans l'administration. Le mot de passe se tape au clavier, jamais en argument. |
@@ -69,10 +69,10 @@ Tout se lance depuis la racine du dépôt. La table complète est dans le README
 
 Une tâche qui demandait un compte (voir une page connectée, l'administration, un parcours de maquilleuse) se fait sur le banc local, avec des comptes et des profils fictifs :
 
-1. **Monter** : `bun run banc:complet`. Il démarre la pile, charge le jeu et lance l'application sur `http://localhost:3100` (ou sur le port de l'instance : `BANC_INSTANCE=mon-banc BANC_DECALAGE=20`). Il reste au premier plan ; pour la suite d'une session d'agent, lance-le en arrière-plan et attends la ligne « Application prête ».
-2. **Obtenir une session** : `bun run banc:session admin` (ou `redaction`, `maquilleuse`, `profil-reference`…). Les fichiers sont dans `.banc/sessions/<banc>/` : `<compte>.etat.json` pour `browser.newContext({ storageState })`, `<compte>.entetes` pour `curl -H @fichier`. Aucun mot de passe n'existe, aucun jeton n'est affiché.
-3. **Remettre à zéro** : `bun run banc:reinitialiser` (environ 10 secondes). Les sessions d'avant ne valent plus : redemande-les. `bun run test:integration` et `bun run test:e2e` vident aussi le banc, et `test:e2e` refuse de démarrer quand l'application du banc tient déjà son port.
-4. **Arrêter** : `bun run banc:down` efface tout.
+1. **Monter** : `bun run bench:full`. Il démarre la pile, charge le jeu et lance l'application sur `http://localhost:3100` (ou sur le port de l'instance : `BENCH_INSTANCE=mon-banc BENCH_OFFSET=20`). Il reste au premier plan ; pour la suite d'une session d'agent, lance-le en arrière-plan et attends la ligne « Application prête ».
+2. **Obtenir une session** : `bun run bench:session admin` (ou `redaction`, `maquilleuse`, `profil-reference`…). Les fichiers sont dans `.banc/sessions/<banc>/` : `<compte>.etat.json` pour `browser.newContext({ storageState })`, `<compte>.entetes` pour `curl -H @fichier`. Aucun mot de passe n'existe, aucun jeton n'est affiché.
+3. **Remettre à zéro** : `bun run bench:reset` (environ 10 secondes). Les sessions d'avant ne valent plus : redemande-les. `bun run test:integration` et `bun run test:e2e` vident aussi le banc, et `test:e2e` refuse de démarrer quand l'application du banc tient déjà son port.
+4. **Arrêter** : `bun run bench:down` efface tout.
 
 Le jeu et ses chiffres : [`docs/tests/banc.md`](docs/tests/banc.md), « Le banc complet ». Tout est fictif ; rien n'est réel, rien ne sort du poste.
 
@@ -98,7 +98,7 @@ Ces règles n'ont pas d'exception. Si une tâche semble en demander une, arrête
 2. **Aucune poussée de schéma hors de ce poste.** Payload ne pousse son schéma que dans une base locale (`localhost`, `127.0.0.1`, `::1`). Partout ailleurs, le schéma change par une migration versionnée et relue, que l'application joue à son démarrage. Aucune commande `payload` ne se lance contre une base distante.
 3. **Aucune donnée personnelle dans les tests**, ni dans les fixtures, les journaux, les documents ou les messages de commit. Tout y est fictif : noms inventés, adresses en `@example.test`, téléphones de la plage réservée à la fiction. Un vrai profil ou un vrai compte se désigne par son identifiant numérique, jamais par un nom, un email, un pseudo ou l'adresse de sa page.
 4. **Aucun secret dans le dépôt.** `.env.exemple` liste les variables sans aucune valeur. Un message d'erreur nomme la variable, jamais sa valeur.
-5. **Rien vers le site en ligne.** Jusqu'à la bascule, `main` ne reçoit aucun commit d'ici. Aucune écriture et aucun email ne vise `my-makeup.fr`, et les tests ne visent que le banc local. Les seules exceptions sont une sonde en lecture seule, rangée dans `tests/sondes/`, et le contrôle d'un hôte, lui aussi en lecture seule, rangé dans `scripts/cutover/`.
+5. **Rien vers le site en ligne.** Jusqu'à la bascule, `main` ne reçoit aucun commit d'ici. Aucune écriture et aucun email ne vise `my-makeup.fr`, et les tests ne visent que le banc local. Les seules exceptions sont une sonde en lecture seule, rangée dans `tests/probes/`, et le contrôle d'un hôte, lui aussi en lecture seule, rangé dans `scripts/cutover/`.
 6. **Les coordonnées d'une maquilleuse ne s'affichent au public que si elle l'a choisi.** Une page publique les lit par `src/services/public/`, qui ne les rend que si `publicContact` est vrai. Ni téléphone ni email dans un journal ou un événement de mesure.
 7. **Aucune dépendance ajoutée en passant.** Une dépendance nouvelle a une version exacte, publiée depuis 7 jours au moins, sans avis de sécurité ouvert : ni dans la base de GitHub, ni parmi les avis de son propre dépôt, que les outils d'audit ne lisent pas. Elle est annoncée dans le compte rendu, avec la façon dont elle a été vérifiée.
 
@@ -189,6 +189,7 @@ Le même mot français a le même mot anglais partout (source : `PLAN-ANGLAIS.md
 | référentiel (des communes) / hors ligne | `reference` / `offline` | revue (liste des villes à revoir) / décisions (table) | `review` / `decisions` |
 | prêt (d'un hash) / à revoir | `lend` / `toReview` | canari (test de la CI) / dérive (du schéma) | `canary` / `drift` |
 | valider / contrôler (un hôte, une image) | `validate` / `check` | delta (export du retour arrière) / depuis la bascule | `delta` / `sinceCutover` |
+| jeu de données (du banc) / capture (d'écran) | `dataset` / `screenshot` | écoute (adresse d'un faux service) / décalage (de ports) | `listen` / `offset` |
 
 ## Pièges
 

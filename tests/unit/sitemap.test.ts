@@ -28,12 +28,12 @@ import {
  * The run against the running application: tests/e2e/sitemap.spec.ts (E62).
  */
 
-const RACINE = join(import.meta.dir, '../..')
+const ROOT = join(import.meta.dir, '../..')
 
 const locs = (xml: string): string[] => [...xml.matchAll(/<loc>([^<]*)<\/loc>/g)].map(m => m[1] ?? '')
 
 /** No `//` after the scheme, no space, no final slash but the origin's own. */
-function verifierLesAdresses(adresses: readonly string[]): void {
+function checkUrls(adresses: readonly string[]): void {
 	for (const loc of adresses) {
 		expect(loc.replace(/^https:\/\//, ''), loc).not.toContain('//')
 		expect(loc, loc).not.toMatch(/\s/)
@@ -44,20 +44,20 @@ function verifierLesAdresses(adresses: readonly string[]): void {
 
 describe('U38 : tous les profils publiables, sans troncature', () => {
 	test('150 profils publiables → 150 adresses de profil', () => {
-		const profils = Array.from({ length: 150 }, (_, i) => ({ slug: `profil-${i + 1}` }))
-		const xml = sitemapXml(sitemapEntries({ pages: [], profils }))
+		const profiles = Array.from({ length: 150 }, (_, i) => ({ slug: `profil-${i + 1}` }))
+		const xml = sitemapXml(sitemapEntries({ pages: [], profils: profiles }))
 		expect(locs(xml).filter(loc => loc.includes('/profil/'))).toHaveLength(150)
 	})
 
 	test('la lecture suit les pages de 100 : 150 profils → deux lectures, 150 profils', async () => {
-		const { payload, lectures } = payloadEspion({ profils: 150 })
-		const profils = await readIndexableProfiles(payload)
-		expect(profils).toHaveLength(150)
-		expect(lectures.map(({ page }) => page)).toEqual([1, 2])
+		const { payload, lectures: readings } = payloadSpy({ profils: 150 })
+		const profiles = await readIndexableProfiles(payload)
+		expect(profiles).toHaveLength(150)
+		expect(readings.map(({ page }) => page)).toEqual([1, 2])
 	})
 
 	test('une liste qui dépasse la borne fait échouer la lecture au lieu d’être coupée', async () => {
-		const { payload } = payloadEspion({ profils: (PAGES_MAX + 1) * PAGE_SIZE })
+		const { payload } = payloadSpy({ profils: (PAGES_MAX + 1) * PAGE_SIZE })
 		await expect(readIndexableProfiles(payload)).rejects.toThrow(/coupée/)
 	})
 })
@@ -74,7 +74,7 @@ describe('U39 : aucun « // » hors du schéma', () => {
 				articles: [{ slug: 'prix-mariee-2027' }],
 			})
 		)
-		verifierLesAdresses(locs(xml))
+		checkUrls(locs(xml))
 		expect(locs(xml)).toContain('https://my-makeup.fr')
 		expect(locs(xml)).toContain('https://my-makeup.fr/profil/zoe-lefevre')
 	})
@@ -115,25 +115,25 @@ describe('U41 : les exclus ne sont jamais là', () => {
 	})
 
 	test('la lecture ne demande que les profils publiables, avec les règles d’accès actives', async () => {
-		const { payload, lectures } = payloadEspion({ profils: 1 })
+		const { payload, lectures: readings } = payloadSpy({ profils: 1 })
 		await readIndexablePages(payload)
-		const [profils] = lectures.filter(({ collection }) => collection === 'profiles')
-		expect(profils).toMatchObject({ where: { publishable: { equals: true } }, overrideAccess: false })
-		for (const lecture of lectures) expect(lecture.overrideAccess, String(lecture.collection)).toBe(false)
+		const [profiles] = readings.filter(({ collection }) => collection === 'profiles')
+		expect(profiles).toMatchObject({ where: { publishable: { equals: true } }, overrideAccess: false })
+		for (const reading of readings) expect(reading.overrideAccess, String(reading.collection)).toBe(false)
 	})
 
 	test('la lecture ne prend aucun champ privé', async () => {
-		const { payload, lectures } = payloadEspion({ profils: 1 })
+		const { payload, lectures: readings } = payloadSpy({ profils: 1 })
 		await readIndexablePages(payload)
-		for (const lecture of lectures) {
-			const champs = Object.keys(lecture.select as object)
-			for (const prive of ['coordonnees', 'contactPublic', 'pro', 'email', 'statut', 'legacyUsername'])
-				expect(champs, String(lecture.collection)).not.toContain(prive)
+		for (const reading of readings) {
+			const fields = Object.keys(reading.select as object)
+			for (const privateOnes of ['coordonnees', 'contactPublic', 'pro', 'email', 'statut', 'legacyUsername'])
+				expect(fields, String(reading.collection)).not.toContain(privateOnes)
 		}
 	})
 
 	test('un profil dont le slug n’est pas une adresse est écarté : sa page ne répondrait pas', async () => {
-		const { payload } = payloadEspion({ profils: 0, profilsBruts: [{ slug: 'Slug Invalide' }, { slug: 'ok-un' }] })
+		const { payload } = payloadSpy({ profils: 0, profilsBruts: [{ slug: 'Slug Invalide' }, { slug: 'ok-un' }] })
 		expect((await readIndexableProfiles(payload)).map(({ slug }) => slug)).toEqual(['ok-un'])
 	})
 
@@ -151,7 +151,7 @@ describe('U42 : lastmod = la date réelle de la dernière modification', () => {
 	test('la date d’un document, en ISO ; rien quand elle manque ou n’est pas une date', () => {
 		expect(lastmod('2026-03-04T10:20:30.000Z')).toBe('2026-03-04T10:20:30.000Z')
 		expect(lastmod('2026-03-04')).toBe('2026-03-04T00:00:00.000Z')
-		for (const vide of [null, undefined, '', '  ', 'pas une date', 42]) expect(lastmod(vide)).toBeNull()
+		for (const empty of [null, undefined, '', '  ', 'pas une date', 42]) expect(lastmod(empty)).toBeNull()
 	})
 
 	test('une page fixe n’a pas de date, ni changefreq ni priority', () => {
@@ -183,17 +183,17 @@ describe('U43 : talents et articles par slug, pages fixes d’une table explicit
 	})
 
 	test('la table des pages fixes est celle des adresses gelées, ni plus ni moins', () => {
-		const gelees = FROZEN_URL_FAMILIES.filter(({ id }) =>
+		const frozen = FROZEN_URL_FAMILIES.filter(({ id }) =>
 			['accueil', 'pages-fixes', 'mentions-legales', 'blog'].includes(id)
 		).flatMap(({ patterns }) => patterns)
-		expect([...STATIC_PAGES.map(({ chemin }) => chemin)].sort()).toEqual([...gelees].sort())
+		expect([...STATIC_PAGES.map(({ chemin: filePath }) => filePath)].sort()).toEqual([...frozen].sort())
 	})
 
 	test('chaque page de la table a ses adresses sans doublon, et un groupe connu du plan', () => {
-		const chemins = STATIC_PAGES.map(({ chemin }) => chemin)
-		expect(new Set(chemins).size).toBe(chemins.length)
-		const groupes: readonly (string | null)[] = SITE_MAP_GROUPS.map(({ id }) => id)
-		for (const page of STATIC_PAGES) if (page.groupe !== null) expect(groupes, page.chemin).toContain(page.groupe)
+		const paths = STATIC_PAGES.map(({ chemin: filePath }) => filePath)
+		expect(new Set(paths).size).toBe(paths.length)
+		const groups: readonly (string | null)[] = SITE_MAP_GROUPS.map(({ id }) => id)
+		for (const page of STATIC_PAGES) if (page.groupe !== null) expect(groups, page.chemin).toContain(page.groupe)
 	})
 })
 
@@ -202,66 +202,66 @@ describe('U43 : talents et articles par slug, pages fixes d’une table explicit
  * ---------------------------------------------------------------------------------------- */
 
 /** The files of a folder, recursively. */
-const fichiersDe = (dossier: string): string[] =>
+const filesOf = (dossier: string): string[] =>
 	readdirSync(dossier).flatMap(nom => {
-		const chemin = join(dossier, nom)
-		return statSync(chemin).isDirectory() ? fichiersDe(chemin) : [chemin]
+		const filePath = join(dossier, nom)
+		return statSync(filePath).isDirectory() ? filesOf(filePath) : [filePath]
 	})
 
 /**
  * The addresses of the application, read from its files: a `page.tsx`, a `route.ts` and the metadata routes
  * (`robots.ts`) of `src/app`, the route groups removed. A route with a dynamic segment is returned apart.
  */
-function adressesDeLApplication(): { statiques: string[]; dynamiques: string[] } {
-	const statiques: string[] = []
-	const dynamiques: string[] = []
-	const dossier = join(RACINE, 'src/app')
-	for (const fichier of fichiersDe(dossier)) {
-		const relatif = fichier.slice(dossier.length + 1)
-		const segments = relatif.split('/')
-		const nom = segments.pop() ?? ''
-		if (!/^(page\.tsx|route\.ts|robots\.ts|sitemap\.ts)$/.test(nom)) continue
-		const chemin = segments.filter(segment => !/^\(.*\)$/.test(segment))
-		if (nom === 'robots.ts') chemin.push('robots.txt')
-		if (nom === 'sitemap.ts') chemin.push('sitemap.xml')
-		const adresse = `/${chemin.join('/')}`
-		if (adresse === '/admin' || adresse.startsWith('/admin/') || adresse.startsWith('/api')) continue
-		;(chemin.some(segment => /^\[.*\]$/.test(segment)) ? dynamiques : statiques).push(adresse)
+function applicationUrls(): { statiques: string[]; dynamiques: string[] } {
+	const staticOnes: string[] = []
+	const dynamic: string[] = []
+	const folder = join(ROOT, 'src/app')
+	for (const file of filesOf(folder)) {
+		const relative = file.slice(folder.length + 1)
+		const segments = relative.split('/')
+		const name = segments.pop() ?? ''
+		if (!/^(page\.tsx|route\.ts|robots\.ts|sitemap\.ts)$/.test(name)) continue
+		const filePath = segments.filter(segment => !/^\(.*\)$/.test(segment))
+		if (name === 'robots.ts') filePath.push('robots.txt')
+		if (name === 'sitemap.ts') filePath.push('sitemap.xml')
+		const url = `/${filePath.join('/')}`
+		if (url === '/admin' || url.startsWith('/admin/') || url.startsWith('/api')) continue
+		;(filePath.some(segment => /^\[.*\]$/.test(segment)) ? dynamic : staticOnes).push(url)
 	}
-	return { statiques, dynamiques }
+	return { statiques: staticOnes, dynamiques: dynamic }
 }
 
 describe('La table des pages fixes couvre les pages de l’application, dans les deux sens', () => {
-	const { statiques, dynamiques } = adressesDeLApplication()
-	const exclue = (chemin: string) =>
+	const { statiques: staticOnes, dynamiques: dynamic } = applicationUrls()
+	const excluded = (chemin: string) =>
 		EXCLUDED_PAGES.some(page => page.chemin === chemin) ||
 		EXCLUDED_PREFIXES.some(prefixe => chemin === prefixe || chemin.startsWith(`${prefixe}/`))
 
 	test('le parcours trouve les pages que l’on connaît', () => {
-		expect(statiques).toContain('/a-propos')
-		expect(statiques).toContain('/')
-		expect(dynamiques).toContain('/profil/[slug]')
+		expect(staticOnes).toContain('/a-propos')
+		expect(staticOnes).toContain('/')
+		expect(dynamic).toContain('/profil/[slug]')
 	})
 
 	test('une page de l’application est dans la table ou dans les exclusions, jamais dans aucune', () => {
-		const dansLaTable = new Set(STATIC_PAGES.map(({ chemin }) => chemin))
-		expect(statiques.filter(chemin => !dansLaTable.has(chemin) && !exclue(chemin))).toEqual([])
+		const inTable = new Set(STATIC_PAGES.map(({ chemin: filePath }) => filePath))
+		expect(staticOnes.filter(chemin => !inTable.has(chemin) && !excluded(chemin))).toEqual([])
 	})
 
 	test('une page de la table qui existe n’est pas marquée « à venir »', () => {
-		const existantes = new Set(statiques)
-		const faux = STATIC_PAGES.filter(page => page.aVenir !== undefined && existantes.has(page.chemin))
-		expect(faux.map(({ chemin }) => chemin)).toEqual([])
+		const existing = new Set(staticOnes)
+		const fake = STATIC_PAGES.filter(page => page.aVenir !== undefined && existing.has(page.chemin))
+		expect(fake.map(({ chemin: filePath }) => filePath)).toEqual([])
 	})
 
 	test('une page de la table qui n’existe pas est marquée « à venir » : sinon le sitemap listerait un 404', () => {
-		const existantes = new Set(statiques)
-		const manque = STATIC_PAGES.filter(page => page.aVenir === undefined && !existantes.has(page.chemin))
-		expect(manque.map(({ chemin }) => chemin)).toEqual([])
+		const existing = new Set(staticOnes)
+		const gap = STATIC_PAGES.filter(page => page.aVenir === undefined && !existing.has(page.chemin))
+		expect(gap.map(({ chemin: filePath }) => filePath)).toEqual([])
 	})
 
 	test('une route à segment dynamique est une famille à données : profil, talent, article', () => {
-		expect(dynamiques.filter(chemin => !exclue(chemin)).sort()).toEqual([
+		expect(dynamic.filter(chemin => !excluded(chemin)).sort()).toEqual([
 			'/blog/[slug]',
 			'/profil/[slug]',
 			'/talent/[slug]',
@@ -269,15 +269,15 @@ describe('La table des pages fixes couvre les pages de l’application, dans les
 	})
 
 	test('la table livrée ne garde que les pages qui existent', () => {
-		const existantes = new Set(statiques)
-		for (const page of deliveredStaticPages()) expect(existantes.has(page.chemin), page.chemin).toBe(true)
-		expect(existsSync(join(RACINE, 'src/app/sitemap.xml/route.ts'))).toBe(true)
+		const existing = new Set(staticOnes)
+		for (const page of deliveredStaticPages()) expect(existing.has(page.chemin), page.chemin).toBe(true)
+		expect(existsSync(join(ROOT, 'src/app/sitemap.xml/route.ts'))).toBe(true)
 	})
 
 	test('le contrôle voit une page absente des deux listes', () => {
-		const dansLaTable = new Set(STATIC_PAGES.map(({ chemin }) => chemin))
-		const inconnue = '/nouvelle-page-sans-ligne'
-		expect(!dansLaTable.has(inconnue) && !exclue(inconnue)).toBe(true)
+		const inTable = new Set(STATIC_PAGES.map(({ chemin: filePath }) => filePath))
+		const unknown = '/nouvelle-page-sans-ligne'
+		expect(!inTable.has(unknown) && !excluded(unknown)).toBe(true)
 	})
 })
 
@@ -285,29 +285,29 @@ describe('La table des pages fixes couvre les pages de l’application, dans les
  * A Payload that records the reads and answers fictional documents
  * ---------------------------------------------------------------------------------------- */
 
-interface ReglagesDuSpy {
+interface SpySettings {
 	profils: number
 	profilsBruts?: Record<string, unknown>[]
 }
 
-function payloadEspion({ profils, profilsBruts }: ReglagesDuSpy) {
-	const lectures: Record<string, unknown>[] = []
+function payloadSpy({ profils: profiles, profilsBruts }: SpySettings) {
+	const readings: Record<string, unknown>[] = []
 	const payload = {
 		find: async (options: Record<string, unknown>) => {
-			lectures.push(options)
+			readings.push(options)
 			const page = Number(options.page ?? 1)
-			const limite = Number(options.limit)
+			const limit = Number(options.limit)
 			if (options.collection === 'profiles') {
-				const tous =
+				const everyone =
 					profilsBruts ??
-					Array.from({ length: profils }, (_, i) => ({
+					Array.from({ length: profiles }, (_, i) => ({
 						slug: `profil-${String(i + 1).padStart(5, '0')}`,
 						firstName: 'Zoé',
 						lastName: `Fictive ${i + 1}`,
 						updatedAt: '2026-05-06T07:08:09.000Z',
 					}))
-				const docs = tous.slice((page - 1) * limite, page * limite)
-				return { docs, hasNextPage: page * limite < tous.length }
+				const docs = everyone.slice((page - 1) * limit, page * limit)
+				return { docs, hasNextPage: page * limit < everyone.length }
 			}
 			return {
 				docs: [{ slug: 'un-slug', title: 'Un titre', updatedAt: '2026-05-06T07:08:09.000Z' }],
@@ -315,5 +315,5 @@ function payloadEspion({ profils, profilsBruts }: ReglagesDuSpy) {
 			}
 		},
 	}
-	return { payload: payload as unknown as Payload, lectures }
+	return { payload: payload as unknown as Payload, lectures: readings }
 }

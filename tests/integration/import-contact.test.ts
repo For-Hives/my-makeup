@@ -3,13 +3,13 @@ import { SQL } from 'bun'
 import type { Report } from '../../scripts/migration/import/report'
 import { ImportRefuse } from '../../scripts/migration/import/target'
 import type { Profile } from '../../src/payload-types'
-import { DATE_DE_BASCULE_DU_BANC } from '../outils/banc'
-import { importerSurLeBanc } from '../outils/import'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { appelerRest } from '../outils/rest'
-import { viderLeStockage } from '../outils/s3'
-import { creerLaSourceStrapi, effacerLaSourceStrapi, sourceDuBanc } from '../outils/source-strapi'
-import { definitionDeLaSource } from '../outils/source-strapi/donnees'
+import { BENCH_CUTOVER_DATE } from '../support/bench'
+import { importOnBench } from '../support/import'
+import { emptyBase, testPayload } from '../support/payload-test'
+import { callRest } from '../support/rest'
+import { emptyStorage } from '../support/s3'
+import { benchSource, createSourceStrapi, eraseSourceStrapi } from '../support/source-strapi'
+import { sourceDefinition } from '../support/source-strapi/data'
 
 /**
  * Ticket 064: the phone and the email of contact go into the closed group of the profile; a
@@ -21,8 +21,8 @@ import { definitionDeLaSource } from '../outils/source-strapi/donnees'
  * the import. One import for the file.
  */
 
-const source = sourceDuBanc()
-const { lignes } = definitionDeLaSource(source.medias)
+const source = benchSource()
+const { lignes } = sourceDefinition(source.medias)
 
 /** The profiles the import takes: profile 29 is set aside by the table of decisions of the bench. */
 const PRIS = lignes.makeup_artistes_user_links.map(lien => Number(lien.makeup_artiste_id)).filter(id => id !== 29)
@@ -40,7 +40,7 @@ const AFFICHENT = PRIS.filter(id => Object.values(coordonneesDeLaSource(id)).som
 const SANS = PRIS.filter(id => !AFFICHENT.includes(id))
 
 async function profilsDeLaCible(): Promise<Profile[]> {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	const { docs } = await payload.find({
 		collection: 'profiles',
 		depth: 0,
@@ -64,19 +64,19 @@ async function avecLeProprietaire<T>(travail: (sql: SQL) => Promise<T>): Promise
 let premier: Report
 
 beforeAll(async () => {
-	await viderLaBase()
-	await viderLeStockage()
-	await creerLaSourceStrapi()
+	await emptyBase()
+	await emptyStorage()
+	await createSourceStrapi()
 	// Without the date of the switch, a source that shows contact details stops the run, dry or real.
 	for (const mode of ['dry-run', 'real'] as const)
-		await expect(importerSurLeBanc(mode, { consentDate: undefined })).rejects.toBeInstanceOf(ImportRefuse)
+		await expect(importOnBench(mode, { consentDate: undefined })).rejects.toBeInstanceOf(ImportRefuse)
 	expect(await profilsDeLaCible()).toEqual([])
-	premier = await importerSurLeBanc()
+	premier = await importOnBench()
 }, 60_000)
 
 afterAll(async () => {
-	await viderLaBase()
-	await effacerLaSourceStrapi()
+	await emptyBase()
+	await eraseSourceStrapi()
 })
 
 describe('Les coordonnées déjà publiées restent publiques, avec un consentement daté (ticket 064)', () => {
@@ -92,7 +92,7 @@ describe('Les coordonnées déjà publiées restent publiques, avec un consentem
 			const profil = cible.find(({ strapiId }) => strapiId === id)
 			expect(profil?.contactDetails, String(id)).toMatchObject(coordonneesDeLaSource(id))
 			expect(profil?.publicContact, String(id)).toBe(true)
-			expect(profil?.consentedAt, String(id)).toBe(DATE_DE_BASCULE_DU_BANC)
+			expect(profil?.consentedAt, String(id)).toBe(BENCH_CUTOVER_DATE)
 			expect(profil?.consentSource, String(id)).toBe('import')
 		}
 		expect(premier.gaps['coordonnees-consentement']).toBe(AFFICHENT.length)
@@ -118,15 +118,15 @@ describe('Les coordonnées déjà publiées restent publiques, avec un consentem
 			.filter(v => v !== null)
 			.map(String)
 		expect(secrets.length).toBeGreaterThan(2)
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const anonyme = await payload.find({ collection: 'profiles', depth: 0, pagination: false, overrideAccess: false })
 		// The public does not read `strapiId`: the profile is found by its slug.
 		const slug21 = (await profilsDeLaCible()).find(({ strapiId }) => strapiId === 21)?.slug ?? ''
 		expect(anonyme.docs.map(({ slug }) => slug)).toContain(slug21)
 
 		const reponses = [
-			await appelerRest('GET', '/api/profiles?depth=0&limit=100'),
-			...(await Promise.all(anonyme.docs.map(({ id }) => appelerRest('GET', `/api/profiles/${id}?depth=0`)))),
+			await callRest('GET', '/api/profiles?depth=0&limit=100'),
+			...(await Promise.all(anonyme.docs.map(({ id }) => callRest('GET', `/api/profiles/${id}?depth=0`)))),
 		]
 		const textes = [JSON.stringify(anonyme.docs), ...reponses.map(({ texte }) => texte)]
 		for (const reponse of reponses) expect(reponse.statut).toBe(200)
@@ -142,7 +142,7 @@ describe('Un second passage (ticket 064)', () => {
 	test('0 mise à jour, et le consentement reste celui du premier passage', async () => {
 		const avant = await profilsDeLaCible()
 
-		const second = await importerSurLeBanc()
+		const second = await importOnBench()
 
 		expect(second.collections.profiles).toMatchObject({ created: 0, updated: 0, unchanged: PRIS.length, refused: [] })
 		expect(await profilsDeLaCible()).toEqual(avant)
@@ -169,14 +169,14 @@ describe('Une source qui change après le premier passage (ticket 064)', () => {
 			)
 		)
 
-		const rapport = await importerSurLeBanc()
+		const rapport = await importOnBench()
 
 		expect(rapport.collections.profiles).toMatchObject({ created: 0, updated: 1, refused: [] })
 		const zoe = (await profilsDeLaCible()).find(({ strapiId }) => strapiId === 21)
 		expect(zoe?.contactDetails?.phone).toBe('06 39 98 99 99')
 		expect(zoe).toMatchObject({
 			publicContact: true,
-			consentedAt: DATE_DE_BASCULE_DU_BANC,
+			consentedAt: BENCH_CUTOVER_DATE,
 			consentSource: 'import',
 		})
 	})
@@ -190,7 +190,7 @@ describe('Une source qui change après le premier passage (ticket 064)', () => {
 			sql.unsafe(`UPDATE components_makeupartists_networks SET phone = '   ' WHERE id = ${Number(RESEAU_23)}`)
 		)
 
-		const rapport = await importerSurLeBanc()
+		const rapport = await importOnBench()
 
 		expect(rapport.collections.profiles).toMatchObject({ created: 0, updated: 1, refused: [] })
 		const hugo = (await profilsDeLaCible()).find(({ strapiId }) => strapiId === 23)
@@ -221,7 +221,7 @@ describe('Une coordonnée que le serveur refuserait ne fait pas perdre le profil
 		await ecrire(22, 'phone', 'undefined')
 		await ecrire(22, 'email', ' NULL ')
 
-		const rapport = await importerSurLeBanc()
+		const rapport = await importOnBench()
 
 		expect(rapport.collections.profiles?.refused).toEqual([])
 		const profil = await profilCible(22)
@@ -235,14 +235,14 @@ describe('Une coordonnée que le serveur refuserait ne fait pas perdre le profil
 	test('un email avec des espaces autour est repris sans eux, et le profil s’ouvre', async () => {
 		await ecrire(30, 'email', '  emma@example.test ')
 
-		const rapport = await importerSurLeBanc()
+		const rapport = await importOnBench()
 
 		expect(rapport.collections.profiles?.refused).toEqual([])
 		const profil = await profilCible(30)
 		expect(profil?.contactDetails?.email).toBe('emma@example.test')
 		expect(profil).toMatchObject({
 			publicContact: true,
-			consentedAt: DATE_DE_BASCULE_DU_BANC,
+			consentedAt: BENCH_CUTOVER_DATE,
 			consentSource: 'import',
 		})
 	})
@@ -251,7 +251,7 @@ describe('Une coordonnée que le serveur refuserait ne fait pas perdre le profil
 		await ecrire(33, 'email', 'Insta: @hugo')
 		await ecrire(33, 'phone', '01 23 45 67 89 01 23 45 67 89 01')
 
-		const rapport = await importerSurLeBanc()
+		const rapport = await importOnBench()
 
 		expect(rapport.collections.profiles?.refused).toEqual([])
 		expect(rapport.parity?.profiles).toMatchObject({ different: [], missing: [], refused: [] })
@@ -269,7 +269,7 @@ describe('Une coordonnée que le serveur refuserait ne fait pas perdre le profil
 	})
 
 	test('le décompte du registre ne compte que les profils écrits, et vaut le nombre de profils ouverts', async () => {
-		const rapport = await importerSurLeBanc()
+		const rapport = await importOnBench()
 
 		const ouverts = (await profilsDeLaCible()).filter(({ publicContact }) => publicContact).length
 		expect(rapport.gaps['coordonnees-consentement']).toBe(ouverts)

@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { evaluate, loadConfig, loadWords, type NamingConfig, namesOfPaths } from '../../scripts/naming/check'
-import { readWorkflow } from '../outils/garde-fous-ci'
+import { readWorkflow } from '../support/ci-guardrails'
 
 /**
  * The check of the French names (docs/noms.md) is a step of the job `qualite`, so `ci-ok` is red

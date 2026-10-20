@@ -4,11 +4,11 @@ import { type AuthEvent, log } from '@/lib/auth/auth-log'
 import { replaceLegacyHash } from '@/lib/auth/legacy'
 import { payloadStorage } from '@/lib/contact/payload-send'
 import { WeeklyStats } from '@/lib/weekly-stats'
-import { adresseDuJeu, TYPES_DU_JEU } from '../fixtures/comptes'
-import { poserLeJeuDuBanc } from '../fixtures/jeu-du-banc'
-import { MOT_DE_PASSE_HERITE_DE_FIXTURE, TYPES_DE_COMPTE } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { viderLeStockage } from '../outils/s3'
+import { DATASET_TYPES, datasetUrl } from '../fixtures/accounts'
+import { setBenchDataset } from '../fixtures/bench-dataset'
+import { ACCOUNT_TYPES, FIXTURE_LEGACY_PASSWORD } from '../support/account-factory'
+import { emptyBase, testPayload } from '../support/payload-test'
+import { emptyStorage } from '../support/s3'
 
 /**
  * Ticket 169 (plan 04 §3.6; plan 01 §2.4 M6): the contact messages, the sign-ins and the inherited
@@ -40,9 +40,9 @@ const CONNEXIONS: AuthEvent[] = [
 
 beforeAll(async () => {
 	process.env.STATS_TOKEN = JETON
-	const payload = await payloadDeTest()
-	await Promise.all([viderLaBase(), viderLeStockage()])
-	await poserLeJeuDuBanc()
+	const payload = await testPayload()
+	await Promise.all([emptyBase(), emptyStorage()])
+	await setBenchDataset()
 	// Creating the accounts of the set opened sessions: the journal and the messages start from zero.
 	await payload.delete({ collection: 'auth-events', where: { id: { exists: true } }, overrideAccess: true })
 	await payload.delete({ collection: 'contact-requests', where: { id: { exists: true } }, overrideAccess: true })
@@ -78,7 +78,7 @@ beforeAll(async () => {
 afterAll(async () => {
 	if (avant === undefined) delete process.env.STATS_TOKEN
 	else process.env.STATS_TOKEN = avant
-	await Promise.all([viderLaBase(), viderLeStockage()])
+	await Promise.all([emptyBase(), emptyStorage()])
 }, 60_000)
 
 describe('Les statistiques hebdomadaires : messages de contact, connexions, comptes hérités', () => {
@@ -132,7 +132,7 @@ describe('Les statistiques hebdomadaires : messages de contact, connexions, comp
 	}, 60_000)
 
 	test('les hash hérités restants et les comptes sans mot de passe, par fournisseur d’origine', async () => {
-		const promis = Object.values(TYPES_DE_COMPTE).flatMap(type =>
+		const promis = Object.values(ACCOUNT_TYPES).flatMap(type =>
 			'reprise' in type && type.reprise ? [type.reprise] : []
 		)
 		const attenduSansHash = (fournisseur: 'google' | 'facebook') =>
@@ -146,15 +146,15 @@ describe('Les statistiques hebdomadaires : messages de contact, connexions, comp
 			other: 0,
 		})
 		// The fixed set holds every type of account once.
-		expect(TYPES_DU_JEU.length).toBe(Object.keys(TYPES_DE_COMPTE).length)
+		expect(DATASET_TYPES.length).toBe(Object.keys(ACCOUNT_TYPES).length)
 	}, 60_000)
 
 	test('la première connexion avec l’ancien mot de passe fait baisser le nombre de hash restants, et rien d’autre', async () => {
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const avantLaConnexion = (await lire(...autour())).inherited
 		const accepte = await replaceLegacyHash(payload, {
-			email: adresseDuJeu('reprise-avec-hash'),
-			password: MOT_DE_PASSE_HERITE_DE_FIXTURE,
+			email: datasetUrl('reprise-avec-hash'),
+			password: FIXTURE_LEGACY_PASSWORD,
 		})
 		expect(accepte).toBe(true)
 		const apres = (await lire(...autour())).inherited

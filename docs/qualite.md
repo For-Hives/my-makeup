@@ -3,7 +3,7 @@
 Ce document garde les règles de qualité de la v3. Il a quatre parties :
 
 - **Les règles du travail, §1 à §5** : comment on teste, les sept règles des listes éditées en place, et ce qu'un écran doit tenir à 390 px. Ce sont des critères permanents : ils valent pour chaque ticket, sans être recopiés dans chacun.
-- **La CI, §6 à §10** : ce qui empêche une modification cassée d'entrer dans `v3`. Ces parties décrivent la CI de la v3, le check `ci-ok`, les garde-fous qui empêchent de rendre la CI menteuse, et le canari. Le fichier de la CI est `.github/workflows/ci.yml`. Les garde-fous sont dans `tests/ci/garde-fous-ci.test.ts`.
+- **La CI, §6 à §10** : ce qui empêche une modification cassée d'entrer dans `v3`. Ces parties décrivent la CI de la v3, le check `ci-ok`, les garde-fous qui empêchent de rendre la CI menteuse, et le canari. Le fichier de la CI est `.github/workflows/ci.yml`. Les garde-fous sont dans `tests/ci/ci-guardrails.test.ts`.
 - **Les mises à jour, §11** : les règles que Renovate suivra pour proposer les nouvelles versions, et pourquoi elles n'ont aucun effet avant la bascule. Le fichier est `renovate.json`. Sa garde est dans `tests/ci/renovate.test.ts`.
 - **La dérive de schéma, §12** : le contrôle qui dit si les collections du code et la dernière migration décrivent le même schéma. Il est prêt, et devient un contrôle bloquant de la CI à la clôture de P3.
 
@@ -153,14 +153,14 @@ La CI se lance à chaque pull request et à chaque poussée sur `v3`. Cinq jobs 
 | `qualite` | Les fichiers générés par Payload sont à jour ; aucune dérive de schéma (`bun run schema:drift`) ; `bun run typecheck` ; `bun run ci:biome` ; `bun run test:ci-guard` ; `bun run names:check` (aucun nom français hors liste d'attente et exceptions, `docs/noms.md`) | 10 min |
 | `unit` | `bun run test:unit` | 10 min |
 | `build` | `bun run image:build`, sans secret ni base, puis `bun run image:check` | 12 min |
-| `integration` | En trois lots côte à côte, de `integration (1/3)` à `integration (3/3)`. Chacun lance `bun run banc:up`, puis `bun run test:integration --shard=N/3` : un tiers des fichiers de tests d'intégration, sur son propre banc de test ([`docs/tests/banc.md`](tests/banc.md)) | 10 min par lot |
-| `e2e` | En quatre lots côte à côte, de `e2e (1/4)` à `e2e (4/4)`. Chacun installe le Chromium de Playwright, lance `bun run banc:up`, puis `bun run test:e2e --shard=N/4` sur son quart des essais ([`docs/tests/e2e.md`](tests/e2e.md)) | 10 min par lot |
+| `integration` | En trois lots côte à côte, de `integration (1/3)` à `integration (3/3)`. Chacun lance `bun run bench:up`, puis `bun run test:integration --shard=N/3` : un tiers des fichiers de tests d'intégration, sur son propre banc de test ([`docs/tests/banc.md`](tests/banc.md)) | 10 min par lot |
+| `e2e` | En quatre lots côte à côte, de `e2e (1/4)` à `e2e (4/4)`. Chacun installe le Chromium de Playwright, lance `bun run bench:up`, puis `bun run test:e2e --shard=N/4` sur son quart des essais ([`docs/tests/e2e.md`](tests/e2e.md)) | 10 min par lot |
 | `ci-ok` | Rouge si l'un des cinq a échoué, a été annulé ou a été sauté | 2 min |
 
 - Dans `qualite`, les six contrôles sont tous joués, même quand l'un échoue : une seule poussée montre toutes les fautes.
 - Un lot en échec n'arrête pas les autres (`fail-fast: false`). Pour `ci-ok`, les lots d'un job ne font qu'un : il est en échec dès qu'un lot l'est, annulé dès qu'un lot atteint sa limite. `needs` de `ci-ok` nomme donc les jobs, pas les lots.
 - Un lot `e2e` en échec envoie son rapport, ses traces, ses vidéos et ses captures : l'artefact `e2e-1` à `e2e-4` du passage, gardé 14 jours.
-- Le nombre de lots de chaque job est `SHARDS`, dans `tests/outils/garde-fous-ci.ts`. Pour le changer : la matrice (`shard: [1, …, N]`), le nom du job (`… (${{ matrix.shard }}/N)`), le diviseur de la commande (`--shard=${{ matrix.shard }}/N`) et `SHARDS`, dans le même commit. La garde refuse qu'un des quatre dise un autre nombre : une matrice et un diviseur différents perdraient des tests sans rien dire.
+- Le nombre de lots de chaque job est `SHARDS`, dans `tests/support/ci-guardrails.ts`. Pour le changer : la matrice (`shard: [1, …, N]`), le nom du job (`… (${{ matrix.shard }}/N)`), le diviseur de la commande (`--shard=${{ matrix.shard }}/N`) et `SHARDS`, dans le même commit. La garde refuse qu'un des quatre dise un autre nombre : une matrice et un diviseur différents perdraient des tests sans rien dire.
 - Pourquoi des lots : au 15/10/2026, environ 2 000 tests d'intégration et 450 essais de bout en bout. En un job, les tests d'intégration duraient 7 min 40 s et un lot `e2e` sur deux dépassait ses 10 minutes ; découpés, chaque lot reste loin de sa limite (« Durée de la CI »).
 - Les tests d'intégration et les essais de bout en bout tournent sur le même banc de test que sur un poste, avec les mêmes commandes : chaque job démarre le sien.
 - La plus longue chaîne, `build` puis `ci-ok`, est limitée à 14 minutes : voir « Durée de la CI ».
@@ -181,7 +181,7 @@ Les essais de bout en bout n'attendent pas `build`, contrairement au plan qui le
 Cette somme ne tiendra plus sous 15 le jour où un job s'enchaîne après un autre (`needs: [build]`, par exemple). Il faudrait des limites au ras des durées normales, et une machine lente rendrait la CI rouge sans raison. Ce jour-là :
 
 1. Donner au nouveau job une limite de coupe-circuit : deux à trois fois sa durée normale.
-2. Relever `CI_LIMIT_MINUTES`, dans `tests/ci/garde-fous-ci.test.ts`, à la somme des limites de la nouvelle chaîne. La garde borne alors les coupe-circuits, et non plus les 15 minutes.
+2. Relever `CI_LIMIT_MINUTES`, dans `tests/ci/ci-guardrails.test.ts`, à la somme des limites de la nouvelle chaîne. La garde borne alors les coupe-circuits, et non plus les 15 minutes.
 3. Lire les 15 minutes sur la durée mesurée d'une CI verte, avec la première commande ci-dessous, et dater le relevé dans le tableau.
 
 La durée de la dernière CI verte de `v3`, puis celle de chaque job d'une CI :
@@ -221,7 +221,7 @@ Chaque garde-fou est joué deux fois : sur les fichiers du dépôt, où il ne do
 | C04 | Des versions de Node ou de bun qui diffèrent entre `.nvmrc`, `engines`, `packageManager`, le `Dockerfile` et les workflows ; une image sans digest | En place |
 | C05 | Un test en `.only` ; un test sauté sans son ticket : `.skip`, `.fixme`, `.todo`, `.skipIf(true)`, `.if(false)`. Le ticket s'écrit `// issue #N`, sur une ligne de l'appel ou sur la ligne du dessus | En place |
 | C06 | Une attente fixe dans `tests/e2e` : `waitForTimeout`, le minuteur `setTimeout` (nu ou de la page), sa forme en promesse (`timers/promises`). `test.setTimeout`, qui fixe la durée maximale d'un essai, n'en est pas une | En place |
-| C07 | Une configuration Playwright qui peut viser la prod : `forbidOnly` faux en CI, des fichiers autres que `*.spec.ts`, une `baseURL` sur `my-makeup.fr` ou ses sous-domaines ; un réglage écrit dans `playwright.config.ts` au lieu de `tests/outils/e2e.ts` ; un essai qui ouvre une adresse complète au lieu d'un chemin. Playwright lancé vers la prod est joué pour de vrai : il s'arrête avant le premier essai | En place |
+| C07 | Une configuration Playwright qui peut viser la prod : `forbidOnly` faux en CI, des fichiers autres que `*.spec.ts`, une `baseURL` sur `my-makeup.fr` ou ses sous-domaines ; un réglage écrit dans `playwright.config.ts` au lieu de `tests/support/e2e.ts` ; un essai qui ouvre une adresse complète au lieu d'un chemin. Playwright lancé vers la prod est joué pour de vrai : il s'arrête avant le premier essai | En place |
 | C08 | Un fichier JavaScript écrit à la main (seul `importMap.js`, généré par Payload, est admis) | En place |
 
 Le même fichier garde aussi :
@@ -232,7 +232,7 @@ Le même fichier garde aussi :
 - les permissions : `ci.yml` lit le dépôt, rien de plus. Le workflow de publication donne l'écriture à son seul job ; `tests/ci/publication.test.ts` le garde, avec sa dépendance à `ci-ok` ;
 - `ci-ok` : il tourne toujours et attend tous les jobs. Aucun job n'est sous condition. Une commande (`run`) ne porte que `always()` ou `!cancelled()`, qui la font tourner plus souvent, jamais moins. `failure()` est réservé aux actions (`uses`) qui envoient un rapport : sous cette condition, une commande serait sautée quand tout va bien, et le job resterait vert sans elle ;
 - les durées : chaque job a sa limite, et la somme des limites de la plus longue chaîne reste sous 15 minutes (voir « Durée de la CI ») ;
-- le banc de test en CI : les jobs `integration` et `e2e` existent ; chacun lance `bun run banc:up` avant ses tests, chaque commande seule dans son étape ; chacun tourne en lots, trois pour `integration`, quatre pour `e2e` (`matrix: shard: [1, …, N]`, et rien d'autre ; le même N dans le nom du job et dans le diviseur de `--shard`), sans qu'un lot en échec annule les autres (`fail-fast: false`), et la limite d'un lot ne dépasse pas 10 minutes ; `e2e` tourne sous Node, avec le Chromium de Playwright ;
+- le banc de test en CI : les jobs `integration` et `e2e` existent ; chacun lance `bun run bench:up` avant ses tests, chaque commande seule dans son étape ; chacun tourne en lots, trois pour `integration`, quatre pour `e2e` (`matrix: shard: [1, …, N]`, et rien d'autre ; le même N dans le nom du job et dans le diviseur de `--shard`), sans qu'un lot en échec annule les autres (`fail-fast: false`), et la limite d'un lot ne dépasse pas 10 minutes ; `e2e` tourne sous Node, avec le Chromium de Playwright ;
 - l'image Docker : variables publiques seulement (`NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_APP_VERSION`, `SOURCE_COMMIT` et `R2_PUBLIC_URL`, la liste de `scripts/image/rules.ts`), quelle que soit la casse de leur nom, utilisateur sans droits, contrôle de santé, contexte de build en liste blanche (voir le README, « Image Docker »).
 
 ### Ce que les garde-fous ne voient pas
@@ -337,11 +337,11 @@ Ce n'est pas le canari : rien n'a été poussé, aucune pull request n'a été o
 | `bun --no-env-file test`, sur le fichier fautif `tests/unit/canari.test.ts` | 1 test en échec, code de sortie 1 |
 | `bun run ci:biome` | `noUnusedVariables` sur `tests/ci/canari-biome.ts`, et rien d'autre ; code de sortie 1 |
 | `bun run typecheck` | `TS2322` sur `tests/ci/canari-types.ts`, et rien d'autre ; code de sortie 2 |
-| Le script de `ci-ok`, avec un job en `failure` | Code de sortie 1 (test de `tests/ci/garde-fous-ci.test.ts`) |
+| Le script de `ci-ok`, avec un job en `failure` | Code de sortie 1 (test de `tests/ci/ci-guardrails.test.ts`) |
 | `CI=true bun run test:e2e --shard=1/2`, puis `--shard=2/2`, l'essai faux `tests/e2e/canari.spec.ts` posé, banc démarré | Lot 1 : l'essai faux en échec, puis rejoué deux fois, code de sortie 1. Lot 2 : 4 essais verts, code de sortie 0. Le job `e2e` aurait donc le résultat `failure` |
 | Le script de `ci-ok`, avec `success` pour les quatre premiers jobs et `failure` pour `e2e` | Code de sortie 1, « Un job n'a pas réussi (failure) : ci-ok est rouge. » |
 
-Le kit ne peut pas pourrir en silence : `tests/ci/canari.test.ts` rejoue les quatre fautes à chaque CI, dans un dossier temporaire, et échoue si l'une d'elles n'est plus une faute. L'essai faux y est lancé par Playwright lui-même, sans navigateur ni banc.
+Le kit ne peut pas pourrir en silence : `tests/ci/canary.test.ts` rejoue les quatre fautes à chaque CI, dans un dossier temporaire, et échoue si l'une d'elles n'est plus une faute. L'essai faux y est lancé par Playwright lui-même, sans navigateur ni banc.
 
 ## 11. Renovate : les mises à jour des dépendances
 
@@ -404,7 +404,7 @@ Chaque règle de `renovate.json` dit sa raison dans son champ `description`.
 
 - Il lit les règles comme Renovate les applique : toutes celles qui correspondent, dans l'ordre du fichier, la dernière l'emporte. Déplacer une règle peut donc changer la réponse, et la garde le voit.
 - Il pose la question pour chaque dépendance du dépôt et chaque type de mise à jour : les paquets de `package.json`, les images du `Dockerfile` et des fichiers compose, le Node de `.nvmrc`, les actions de la CI. Une dépendance ajoutée demain est contrôlée sans toucher au test.
-- Un réglage ou un filtre que la garde ne connaît pas est une faute en soi. Pour s'en servir : l'ajouter à `tests/outils/renovate.ts` avec son contrôle, dans le même commit.
+- Un réglage ou un filtre que la garde ne connaît pas est une faute en soi. Pour s'en servir : l'ajouter à `tests/support/renovate.ts` avec son contrôle, dans le même commit.
 - Chaque contrôle est joué sur le fichier du dépôt, puis sur un exemple fautif fabriqué à partir de lui.
 
 Ce que la garde ne voit pas :
@@ -461,7 +461,7 @@ bun run schema:drift
 - Code de sortie 0 : « Aucune dérive de schéma ». Code de sortie 1 : elle liste le SQL qu'une migration contiendrait, puis dit d'écrire la migration par `bun run payload:migrate:create` et d'en relire le SQL.
 - Elle n'ouvre aucune base et ne lit aucun secret : Payload est chargé sans connexion, et les deux variables que réclame sa configuration reçoivent des valeurs de remplissage. Elle tourne en moins d'une seconde.
 - Un nom qui n'existe que d'un côté, alors que d'autres n'existent que de l'autre (une colonne renommée, ou retirée pendant qu'une autre était ajoutée), est une dérive en soi. La commande le dit tout de suite. Sans ce contrôle, drizzle-kit poserait la question « renommée ? » sur le terminal et attendrait pour toujours dans une CI : essayé le 14/10/2026, le processus a été arrêté au bout de 15 secondes sans réponse.
-- `--before <instantane.json>` compare à un autre instantané que celui de la dernière migration, et `--snapshot <fichier.json>` écrit celui des collections : ce sont les outils de son test, `tests/ci/derive-schema.test.ts`.
+- `--before <instantane.json>` compare à un autre instantané que celui de la dernière migration, et `--snapshot <fichier.json>` écrit celui des collections : ce sont les outils de son test, `tests/ci/schema-drift.test.ts`.
 
 ### Bloquante depuis la migration `init`
 
@@ -474,6 +474,6 @@ Le schéma de P3 est figé dans une seule migration, `init` (ticket 049), qui a 
 ```
 
 - Une collection changée sans sa migration rend le job `qualite` rouge, donc `ci-ok`. La garde des fichiers générés et cette étape disent ensemble : un changement de collection vient avec ses types et sa migration, dans le même commit.
-- La garde de `tests/ci/derive-schema.test.ts` garde l'étape : la commande exacte, seule dans son étape, après l'installation, sans condition qui la sauterait (`schemaDriftProblems`, `tests/outils/garde-fous-ci.ts`). Le même test prouve que la commande voit une colonne ajoutée, une table ajoutée et une colonne renommée, et qu'elle ne trouve aucune dérive sur le dépôt.
+- La garde de `tests/ci/schema-drift.test.ts` garde l'étape : la commande exacte, seule dans son étape, après l'installation, sans condition qui la sauterait (`schemaDriftProblems`, `tests/support/ci-guardrails.ts`). Le même test prouve que la commande voit une colonne ajoutée, une table ajoutée et une colonne renommée, et qu'elle ne trouve aucune dérive sur le dépôt.
 - La commande compare les collections à l'instantané de la dernière migration, pas au SQL de la migration. Une migration dont le SQL ne crée pas ce que son instantané déclare lui échappe : c'est le banc de test qui la voit, avant le premier test d'intégration et avant le premier essai de bout en bout ([`docs/tests/banc.md`](tests/banc.md), « Préparer la base du banc »).
 - Relevé du 14/10/2026 : aucune dérive, contre `20261014_134242_init` (depuis le 19/10/2026, contre l'`init` réécrite, ticket 249). Un champ ajouté à `talents` sans sa migration, essayé sur un poste puis retiré : code 1, avec les deux instructions qu'une migration contiendrait (la table et ses versions).

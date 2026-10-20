@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
-import { type ProfilDeRecherche, poserLesProfilsDeRecherche } from '../fixtures/profils-de-recherche'
-import { fauxUmami, type LectureFauxUmami, unAgentParEssai } from '../outils/faux-umami'
-import { rafraichirLesPagesDesProfils } from '../outils/pages-publiques'
+import { type SearchProfile, setSearchProfiles } from '../fixtures/search-profiles'
+import { agentByTest, fakeUmami, type ReadingFakeUmami } from '../support/fake-umami'
+import { refreshProfilePages } from '../support/public-pages'
 
 /**
  * The events of the search, the calls to action and the 404 (ticket 145; plan 04 §3.3, events 4 to 6
@@ -9,8 +9,8 @@ import { rafraichirLesPagesDesProfils } from '../outils/pages-publiques'
  * what the site relays. Nothing typed may reach it.
  */
 
-let umami: LectureFauxUmami
-let reference: ProfilDeRecherche
+let umami: ReadingFakeUmami
+let reference: SearchProfile
 
 test.describe.configure({ mode: 'serial' })
 
@@ -19,23 +19,23 @@ const donneesDe = (recu: { corps: unknown }): Donnees => (recu.corps as { payloa
 
 test.describe('La mesure de la recherche, des appels à l’action et de la 404', () => {
 	// An ordinary Chrome, with a mark of its own: the fake Umami is shared by every worker of the run, and the
-	// test reads only what came from its browser (tests/outils/faux-umami.ts).
-	test.use(unAgentParEssai())
+	// test reads only what came from its browser (tests/support/fake-umami.ts).
+	test.use(agentByTest())
 
 	test.beforeAll(async () => {
 		test.setTimeout(180_000)
-		const profils = await poserLesProfilsDeRecherche()
+		const profils = await setSearchProfiles()
 		const trouve = profils.get('reference')
 		if (!trouve) throw new Error('pas de profil d’essai « reference »')
 		reference = trouve
 	})
 
 	test.beforeEach(async ({ context, request, userAgent }) => {
-		await rafraichirLesPagesDesProfils(request, reference)
+		await refreshProfilePages(request, reference)
 		await context.addInitScript(() => {
 			Object.defineProperty(navigator, 'webdriver', { get: () => false })
 		})
-		umami = fauxUmami().pourLAgent(userAgent)
+		umami = fakeUmami().pourLAgent(userAgent)
 	})
 
 	test('la soumission du formulaire : une fois, la tranche et la ville, jamais le texte ; le clic donne rang et profil', async ({

@@ -19,7 +19,7 @@
  * where nothing turns it on, and it never counts among the six conditions.
  *
  * The fields keep their names of the old site (ProfileFields), so that the cases shared with it
- * (tests/unit/fixtures/completude-cas.json) run unchanged. A caller maps its own document to them.
+ * (tests/unit/fixtures/completeness-cases.json) run unchanged. A caller maps its own document to them.
  * A picture is an object or a list, never a bare id: the type refuses a number, and at run time a
  * number counts as no picture.
  *

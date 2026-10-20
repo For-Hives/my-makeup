@@ -1,6 +1,6 @@
 # The CI of the v3. One check is required to merge: ci-ok, the last job of this file.
 #
-# Rules, each of them enforced by tests/ci/garde-fous-ci.test.ts (docs/qualite.md):
+# Rules, each of them enforced by tests/ci/ci-guardrails.test.ts (docs/qualite.md):
 # - no path filter: a required check that does not run stays « pending », and a pending
 #   check ends up merged around;
 # - no step allowed to fail, no command under a condition that could skip it, no step that
@@ -133,7 +133,7 @@ jobs:
       - name: Install
         run: bun install --frozen-lockfile
       - name: Start the test bench
-        run: bun run banc:up
+        run: bun run bench:up
       - name: Integration tests
         run: bun run test:integration --shard=${{ matrix.shard }}/3
 
@@ -166,7 +166,7 @@ jobs:
       - name: Browser of Playwright
         run: bunx playwright install --with-deps chromium
       - name: Start the test bench
-        run: bun run banc:up
+        run: bun run bench:up
       # GitHub sets CI=true: a test left in `.only` fails the run, a failed test is retried twice.
       - name: End-to-end tests
         run: bun run test:e2e --shard=${{ matrix.shard }}/4
@@ -175,7 +175,7 @@ jobs:
       # It reads and removes nothing. `--outside-import`: the media the import adopted from the fake source
       # (erased at the end of its test) do not count; what the v3 wrote does. No `continue-on-error`.
       - name: Reconcile the storage and the database
-        run: bun run banc:rapprocher --outside-import
+        run: bun run bench:reconcile --outside-import
       # Trace, video and screenshot of each failed test, and the report: sent only after a failure.
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: failure()

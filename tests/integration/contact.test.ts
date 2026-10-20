@@ -6,19 +6,19 @@ import { type ContactRateLimits, createContactRateLimits } from '@/lib/contact/r
 import { transportOptions } from '@/lib/emails/relay'
 import { createSendEmail, payloadSendEmail, type SendEmail } from '@/lib/emails/send'
 import { serverEnv } from '@/lib/env'
-import { attendreLeMail, mailsRecus, viderLeCapteur } from '../outils/mailpit'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
+import { emptySink, mailReceived, waitMail } from '../support/mailpit'
+import { emptyBase, testPayload } from '../support/payload-test'
 
 /**
  * The contact message against the real store and the mail catcher of the bench (tickets 158 and 159;
  * plan 02 I32 and I33). The mails leave by SMTP, which no HTTP simulation reaches (ticket 037): an email
  * in panne is a door that fails, or a relay that never answers. The page and the form in a browser:
- * tests/e2e/contact.spec.ts. The same lines with doubles: tests/unit/contact-envoi.test.ts.
+ * tests/e2e/contact.spec.ts. The same lines with doubles: tests/unit/contact-send.test.ts.
  */
 
-beforeAll(viderLeCapteur)
+beforeAll(emptySink)
 afterAll(async () => {
-	await Promise.all([viderLaBase(), viderLeCapteur()])
+	await Promise.all([emptyBase(), emptySink()])
 })
 
 const unique = (prefixe: string) => `${prefixe}-${crypto.randomUUID()}@example.test`
@@ -37,7 +37,7 @@ function visiteuse(surcharge: Record<string, string> = {}) {
 }
 
 async function lignesDe(email: string) {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	return (
 		await payload.find({ collection: 'contact-requests', where: { email: { equals: email } }, limit: 30, depth: 0 })
 	).docs
@@ -47,7 +47,7 @@ async function envoyerLeFormulaire(
 	v: ReturnType<typeof visiteuse>,
 	options: { envoyer?: SendEmail; delaiMs?: number; client?: string; freins?: ContactRateLimits } = {}
 ) {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	const travaux: Promise<void>[] = []
 	const lignes: string[] = []
 	const resultat = await saveContactMessage({
@@ -67,7 +67,7 @@ async function envoyerLeFormulaire(
 describe('I32 adapté : le message est écrit avant l’envoi, puis marqué transmis', () => {
 	test('la ligne existe quand le mail part ; un seul mail, réponse vers l’adresse saisie', async () => {
 		const v = visiteuse()
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const porte = payloadSendEmail(payload, serverEnv())
 		let ligneAuDepart: unknown[] = []
 		const envoyer: SendEmail = async (email, options) => {
@@ -82,8 +82,8 @@ describe('I32 adapté : le message est écrit avant l’envoi, puis marqué tran
 		expect(ligneAuDepart).toHaveLength(1)
 		expect(ligneAuDepart[0]).toMatchObject({ status: 'new', mailStatus: 'pending', type: 'contact' })
 
-		const mail = await attendreLeMail({ pour: v.equipe })
-		expect(await mailsRecus(v.equipe)).toHaveLength(1)
+		const mail = await waitMail({ pour: v.equipe })
+		expect(await mailReceived(v.equipe)).toHaveLength(1)
 		expect(mail.sujet).toBe('Nouveau message de contact')
 		expect(mail.repondreA).toEqual([{ nom: '', adresse: v.champs.email as string }])
 		expect(mail.texte).toContain('une question sur le site.')
@@ -104,13 +104,13 @@ describe('I32 adapté : le message est écrit avant l’envoi, puis marqué tran
 		const v = visiteuse({ message: '<script>alert(1)</script>' })
 		const { termine } = await envoyerLeFormulaire(v)
 		await termine()
-		const mail = await attendreLeMail({ pour: v.equipe })
+		const mail = await waitMail({ pour: v.equipe })
 		expect(mail.html).not.toContain('<script>')
 		expect(mail.html).toContain('&lt;script&gt;')
 	})
 
 	test('un envoi direct invalide ne crée aucune ligne et ne sort aucun mail', async () => {
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const avant = (await payload.count({ collection: 'contact-requests' })).totalDocs
 		const v = visiteuse({ nom: '', telephone: '' })
 		const { resultat, termine } = await envoyerLeFormulaire(v)
@@ -118,11 +118,11 @@ describe('I32 adapté : le message est écrit avant l’envoi, puis marqué tran
 
 		expect(resultat).toMatchObject({ ok: false, code: 'donnees-invalides' })
 		expect((await payload.count({ collection: 'contact-requests' })).totalDocs).toBe(avant)
-		expect(await mailsRecus(v.equipe)).toEqual([])
+		expect(await mailReceived(v.equipe)).toEqual([])
 	})
 
 	test('même sans la validation du formulaire, la collection refuse un message trop long', async () => {
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const v = visiteuse()
 		await expect(
 			payloadStorage(payload).creer({
@@ -156,7 +156,7 @@ describe('I33 adapté : un email en panne ne perd pas le message', () => {
 		const stockees = await lignesDe(v.champs.email as string)
 		expect(stockees).toHaveLength(1)
 		expect(stockees[0]).toMatchObject({ status: 'new', mailStatus: 'failed' })
-		expect(await mailsRecus(v.equipe)).toEqual([])
+		expect(await mailReceived(v.equipe)).toEqual([])
 		// The log holds no field she typed, and no address.
 		const journal = [...lignes, ...lignesDuJournal].join('\n')
 		for (const saisi of [v.champs.email, v.equipe, 'Léa', 'Témoin', '01 99 00 12 34', 'question']) {
@@ -174,7 +174,7 @@ describe('I33 adapté : un email en panne ne perd pas le message', () => {
 		await new Promise<void>(resolve => serveur.listen(0, '127.0.0.1', resolve))
 		const port = (serveur.address() as { port: number }).port
 		try {
-			const payload = await payloadDeTest()
+			const payload = await testPayload()
 			const adapter = await nodemailerAdapter({
 				defaultFromAddress: 'ne-pas-repondre@example.test',
 				defaultFromName: 'My Makeup',
@@ -219,7 +219,7 @@ describe('I34 : champ piège rempli, demande invalide ou limite atteinte : aucun
 
 		expect(resultat).toEqual({ ok: true })
 		expect(await lignesDe(v.champs.email as string)).toEqual([])
-		expect(await mailsRecus(v.equipe)).toEqual([])
+		expect(await mailReceived(v.equipe)).toEqual([])
 	})
 
 	test('la sixième demande de l’heure d’une adresse est refusée : une ligne et un mail pour chacune des cinq, aucun pour la sixième', async () => {
@@ -240,7 +240,7 @@ describe('I34 : champ piège rempli, demande invalide ou limite atteinte : aucun
 		const sixieme = envois[5]
 		expect(sixieme?.resultat).toMatchObject({ ok: false, code: 'trop-de-messages' })
 		expect(await lignesDe(sixieme?.v.champs.email as string)).toEqual([])
-		expect(await mailsRecus(sixieme?.v.equipe as string)).toEqual([])
+		expect(await mailReceived(sixieme?.v.equipe as string)).toEqual([])
 
 		// Another address is free.
 		const autre = visiteuse()
@@ -266,6 +266,6 @@ describe('I34 : champ piège rempli, demande invalide ou limite atteinte : aucun
 
 		expect(resultat).toMatchObject({ ok: false, code: 'trop-de-messages' })
 		expect(await lignesDe(email)).toHaveLength(20)
-		expect(await mailsRecus(v.equipe)).toEqual([])
+		expect(await mailReceived(v.equipe)).toEqual([])
 	})
 })

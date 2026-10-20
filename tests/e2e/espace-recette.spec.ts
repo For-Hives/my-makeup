@@ -1,9 +1,9 @@
 import { expect, type Locator, type Page, test } from '@playwright/test'
 import sharp from 'sharp'
-import { violationsGraves } from '../outils/axe'
-import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
-import { profilGenere } from '../outils/fabrique-profils'
-import { payloadDeTest } from '../outils/payload-test'
+import { createAccount, type TestAccount } from '../support/account-factory'
+import { violationsSevere } from '../support/axe'
+import { testPayload } from '../support/payload-test'
+import { generatedProfile } from '../support/profile-factory'
 
 /**
  * The final check of her space (ticket 142; plan 02 §9 P7, E37, E67, E68): played once, at 390 and
@@ -18,7 +18,7 @@ import { payloadDeTest } from '../outils/payload-test'
  *   on the page and in every panel.
  *
  * The orphans of the storage after the whole suite are not counted here but by the step that follows the
- * end-to-end tests in the CI (`bun run banc:rapprocher --outside-import`, ticket 137).
+ * end-to-end tests in the CI (`bun run bench:reconcile --outside-import`, ticket 137).
  *
  * The brake of the sign-in counts by client address: each test sends its own made-up address.
  */
@@ -49,7 +49,7 @@ test.beforeEach(({ context }) =>
 /** The accounts a test made: their profiles would crowd the lists of the search specs. */
 const creees: number[] = []
 test.afterEach(async () => {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	for (const compte of creees.splice(0)) {
 		const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte } } })
 		for (const { id } of docs) await payload.delete({ collection: 'profiles', id }).catch(() => undefined)
@@ -57,7 +57,7 @@ test.afterEach(async () => {
 	}
 })
 
-type Maquilleuse = CompteDeTest<'maquilleuse'>
+type Maquilleuse = TestAccount<'maquilleuse'>
 
 const estMobile = () => test.info().project.name === 'mobile'
 const appuyer = (cible: Locator) => (estMobile() ? cible.tap() : cible.click())
@@ -66,14 +66,14 @@ const appuyer = (cible: Locator) => (estMobile() ? cible.tap() : cible.click())
 async function maquilleusePleine(context: {
 	addCookies: (c: Maquilleuse['session']['cookies']) => Promise<void>
 }): Promise<{ compte: Maquilleuse; slug: string }> {
-	const compte = await creerCompte('maquilleuse')
+	const compte = await createAccount('maquilleuse')
 	creees.push(Number(compte.id))
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
 	const [fiche] = docs
 	if (!fiche) throw new Error('pas de profil')
 	// A commune far from the cities the search specs look at.
-	const { slug: _, ...profil } = profilGenere(5, {
+	const { slug: _, ...profil } = generatedProfile(5, {
 		communes: [{ name: 'Lille', inseeCode: '59350', latitude: 50.63, longitude: 3.06 }],
 	})
 	const mis = await payload.update({ collection: 'profiles', id: fiche.id, data: profil })
@@ -161,23 +161,23 @@ test.describe('142 : la recette de l’espace', { tag: '@mobile' }, () => {
 			.locator('main button[aria-label^="Modifier m"]')
 			.evaluateAll(noeuds => noeuds.map(noeud => noeud.getAttribute('aria-label')).sort())
 		expect(boutons).toEqual([...PANNEAUX].sort())
-		expect(await violationsGraves(page)).toEqual([])
+		expect(await violationsSevere(page)).toEqual([])
 
 		await parcourirLesPanneaux(page, async nom => {
 			// Axe reads the dialog once the focus has moved into it.
 			await expect(page.locator('[role="dialog"] :focus, [role="dialog"]:focus').first(), nom).toBeAttached()
-			expect(await violationsGraves(page), nom).toEqual([])
+			expect(await violationsSevere(page), nom).toEqual([])
 		})
 
-		const dossier = process.env.CAPTURES_ESPACE
+		const dossier = process.env.DASHBOARD_SCREENSHOTS
 		if (dossier) await page.screenshot({ fullPage: true, path: `${dossier}/recette-${test.info().project.name}.png` })
 	})
 
 	test('E67 : l’accueil en trois étapes, à chaque étape : 0 violation grave', async ({ context, page }) => {
 		// A confirmed account whose profile is empty lands on the first step.
-		const compte = await creerCompte('maquilleuse')
+		const compte = await createAccount('maquilleuse')
 		creees.push(Number(compte.id))
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
 		for (const { id } of docs) await payload.delete({ collection: 'profiles', id })
 		await context.addCookies(compte.session.cookies)
@@ -185,14 +185,14 @@ test.describe('142 : la recette de l’espace', { tag: '@mobile' }, () => {
 		await page.goto('/auth/init-account')
 		await expect(page).toHaveTitle(/Prépare ton profil/)
 		await expect(page.locator('#accueil-titre-etape')).toBeVisible()
-		expect(await violationsGraves(page)).toEqual([])
+		expect(await violationsSevere(page)).toEqual([])
 
 		await page.getByLabel('Prénom').fill('Léa')
 		await page.getByLabel('Nom', { exact: true }).fill('Fictive')
 		await page.getByLabel(/Spécialité/).fill('Maquillage mariée')
 		await appuyer(page.getByRole('button', { name: /Continuer|Suivant|Enregistrer/ }).first())
 		await expect(page.getByRole('combobox', { name: 'Ta commune' })).toBeVisible()
-		expect(await violationsGraves(page)).toEqual([])
+		expect(await violationsSevere(page)).toEqual([])
 	})
 
 	test('E37 : la photo principale changée : le profil public et son og:image suivent', async ({ context, page }) => {

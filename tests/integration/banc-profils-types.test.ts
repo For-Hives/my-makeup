@@ -6,13 +6,13 @@ import { DEMO_PROFILES, type DemoPhoto, type DemoProfile, PHOTO_MAX_WEIGHT } fro
 import { mediaKey, UPLOAD_PREFIX } from '@/lib/media'
 import { profileState } from '@/lib/profile/state'
 import type { Media, Pro, Profile } from '@/payload-types'
-import { compterLesDocuments, compterLesLignes, payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { lireUnObjet, listerLesObjets, viderLeStockage } from '../outils/s3'
+import { countDocuments, countLines, emptyBase, testPayload } from '../support/payload-test'
+import { emptyStorage, listObjects, readObject } from '../support/s3'
 
 /**
  * The twelve profile types of the fictional set, loaded on the bench (ticket 051): each one tied
  * to its made-up makeup artist, its state as the server computes it, its photos in the storage,
- * and the same content at every load. The set without the bench: tests/unit/jeu-fictif.test.ts.
+ * and the same content at every load. The set without the bench: tests/unit/demo-data.test.ts.
  */
 
 const CLES = DEMO_PROFILES.map(({ cle }) => cle)
@@ -26,7 +26,7 @@ const PHOTOS_ENVOYEES = DEMO_PROFILES.reduce(
 /** The longest a load of the set may take: about 4 seconds on an empty bench (14/10/2026). */
 const CHARGEMENT_MS = 15_000
 
-const remettreAZero = () => Promise.all([viderLaBase(), viderLeStockage()])
+const remettreAZero = () => Promise.all([emptyBase(), emptyStorage()])
 
 const empreinte = (octets: Uint8Array) => createHash('sha256').update(octets).digest('hex')
 
@@ -34,13 +34,13 @@ const empreinte = (octets: Uint8Array) => createHash('sha256').update(octets).di
 async function profilDu(bilan: ProfilesSummary, type: DemoProfile): Promise<Profile> {
 	const pose = bilan.profils.find(({ cle }) => cle === type.cle)
 	if (!pose) throw new Error(`le profil type « ${type.cle} » manque au bilan`)
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	return payload.findByID({ collection: 'profiles', id: pose.profil, depth: 0 })
 }
 
 /** Every media of the bench, read with every right. */
 async function lesMedias(): Promise<Media[]> {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	return (await payload.find({ collection: 'media', depth: 0, pagination: false, sort: 'id' })).docs
 }
 
@@ -66,12 +66,12 @@ function sansIdentite(valeur: unknown): unknown {
  * each photo with the bytes of its object.
  */
 async function contenuDuJeu(bilan: ProfilesSummary) {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	const medias = new Map((await lesMedias()).map(media => [media.id, media]))
 	const photo = async (id: number | null | undefined) => {
 		const media = id === null || id === undefined ? undefined : medias.get(id)
 		if (!media?.filename) return null
-		const objet = await lireUnObjet(mediaKey(media.prefix, media.filename))
+		const objet = await readObject(mediaKey(media.prefix, media.filename))
 		return { ...(sansIdentite(media) as object), owner: undefined, objet: objet ? empreinte(objet.octets) : null }
 	}
 	return Promise.all(
@@ -90,7 +90,7 @@ async function contenuDuJeu(bilan: ProfilesSummary) {
 
 beforeAll(async () => {
 	// Payload starts before the first load.
-	await payloadDeTest()
+	await testPayload()
 })
 
 describe('Le jeu du banc : les 12 profils types', () => {
@@ -98,13 +98,13 @@ describe('Le jeu du banc : les 12 profils types', () => {
 
 	beforeAll(async () => {
 		await remettreAZero()
-		bilan = await placeDemoProfiles(await payloadDeTest())
+		bilan = await placeDemoProfiles(await testPayload())
 	}, CHARGEMENT_MS)
 
 	afterAll(remettreAZero)
 
 	test('12 profils, chacun relié à sa maquilleuse fictive, confirmée, sous le slug attendu', async () => {
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 
 		expect(bilan.cible).toBe('banc')
 		expect(bilan.crees).toEqual(CLES)
@@ -206,7 +206,7 @@ describe('Le jeu du banc : les 12 profils types', () => {
 
 	test('photos fictives de moins de 30 Ko, chacune servie par son profil ; 0 objet orphelin', async () => {
 		const medias = await lesMedias()
-		const objets = await listerLesObjets()
+		const objets = await listObjects()
 		const profils = await Promise.all(DEMO_PROFILES.map(type => profilDu(bilan, type)))
 		const servies = profils.flatMap(profil =>
 			[profil.mainPicture, ...(profil.gallery ?? [])]
@@ -252,7 +252,7 @@ describe('Le jeu du banc : les 12 profils types', () => {
 			for (const [rang, { photo, nom }] of attendues.entries()) {
 				const media = medias.find(({ id }) => id === idDe(montrees[rang]))
 				expect({ nom: media?.filename, type: media?.mimeType }).toEqual({ nom, type: 'image/webp' })
-				const objet = await lireUnObjet(mediaKey(media?.prefix, nom))
+				const objet = await readObject(mediaKey(media?.prefix, nom))
 				const source = await readDemoPhoto(photo)
 				expect(source.length).toBeLessThan(PHOTO_MAX_WEIGHT)
 				// The same picture: Payload re-encodes a WebP, so the bytes are not the same, the dimensions are.
@@ -282,19 +282,19 @@ describe('Rejouer le jeu', () => {
 		'un chargement sur base remplie ne crée rien ; deux chargements sur base vide donnent le même contenu',
 		async () => {
 			await remettreAZero()
-			const payload = await payloadDeTest()
+			const payload = await testPayload()
 			const premier = await placeDemoProfiles(payload)
 			const contenu = await contenuDuJeu(premier)
-			const lignes = await compterLesLignes()
-			const objets = await listerLesObjets()
+			const lignes = await countLines()
+			const objets = await listObjects()
 
 			const second = await placeDemoProfiles(payload)
 
 			expect(second.crees).toEqual([])
 			expect(second.presents).toEqual(CLES)
 			expect(second.profils).toEqual(premier.profils)
-			expect(await compterLesLignes()).toEqual(lignes)
-			expect(await listerLesObjets()).toEqual(objets)
+			expect(await countLines()).toEqual(lignes)
+			expect(await listObjects()).toEqual(objets)
 
 			await remettreAZero()
 			const apresRemiseAZero = await placeDemoProfiles(payload)
@@ -312,7 +312,7 @@ describe('Rejouer le jeu', () => {
 		'un chargement interrompu ne laisse aucun document ; le suivant reprend tout, sans objet orphelin',
 		async () => {
 			await remettreAZero()
-			const payload = await payloadDeTest()
+			const payload = await testPayload()
 			const panne = new Error('photo illisible')
 			// The reference shows the six photos: it fails at the last one, after five of its photos are sent.
 			const lirePhoto = (photo: DemoPhoto) => (photo === 'photo-6.webp' ? Promise.reject(panne) : readDemoPhoto(photo))
@@ -320,9 +320,9 @@ describe('Rejouer le jeu', () => {
 			await expect(placeDemoProfiles(payload, { lirePhoto })).rejects.toBe(panne)
 
 			// Its account, its profile and its media went with the transaction…
-			expect(await compterLesDocuments()).toMatchObject({ pros: 0, profiles: 0, media: 0 })
+			expect(await countDocuments()).toMatchObject({ pros: 0, profiles: 0, media: 0 })
 			// …but the objects already sent are still in the storage.
-			const envoyes = await listerLesObjets()
+			const envoyes = await listObjects()
 			// Each photo with its derived size (ticket 133).
 			const nomsEnvoyes = ([1, 2, 3, 4, 5, 'principale'] as const).map(place => fileName('reference', place))
 			expect(envoyes.map(({ cle }) => cle)).toEqual(
@@ -338,7 +338,7 @@ describe('Rejouer le jeu', () => {
 			expect(bilan.crees).toEqual(CLES)
 			const medias = await lesMedias()
 			expect(medias).toHaveLength(PHOTOS_ENVOYEES)
-			expect((await listerLesObjets()).map(({ cle }) => cle)).toEqual(
+			expect((await listObjects()).map(({ cle }) => cle)).toEqual(
 				medias
 					.flatMap(media => [
 						mediaKey(media.prefix, media.filename ?? ''),

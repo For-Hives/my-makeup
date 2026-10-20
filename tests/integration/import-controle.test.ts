@@ -1,9 +1,9 @@
 import { afterAll, beforeEach, describe, expect, test } from 'bun:test'
 import { SQL } from 'bun'
-import { commandeDImport, FICHIER_DES_DECISIONS_DU_BANC, importerSurLeBanc } from '../outils/import'
-import { viderLeCapteur } from '../outils/mailpit'
-import { viderLaBase } from '../outils/payload-test'
-import { creerLaSourceStrapi, effacerLaSourceStrapi, sourceDuBanc } from '../outils/source-strapi'
+import { BENCH_DECISION_FILE, importCommand, importOnBench } from '../support/import'
+import { emptySink } from '../support/mailpit'
+import { emptyBase } from '../support/payload-test'
+import { benchSource, createSourceStrapi, eraseSourceStrapi } from '../support/source-strapi'
 
 /**
  * Ticket 067: the check of the parity (`--check`). A dry run that says whether the target is the
@@ -11,11 +11,10 @@ import { creerLaSourceStrapi, effacerLaSourceStrapi, sourceDuBanc } from '../out
  * document the source does not give. The runs of the import itself are in the other import tests.
  */
 
-const source = sourceDuBanc()
+const source = benchSource()
 
 /** The command of the check, against the bench, with the table of decisions of the bench. */
-const controler = (...options: string[]) =>
-	commandeDImport(['--check', '--decisions', FICHIER_DES_DECISIONS_DU_BANC, ...options])
+const controler = (...options: string[]) => importCommand(['--check', '--decisions', BENCH_DECISION_FILE, ...options])
 
 /** A write by the owner of the bench database, as a person with access to it would make. */
 async function ecrireDansLaCible(requete: string): Promise<void> {
@@ -52,14 +51,14 @@ async function photosDeLaCible(): Promise<{ principales: number; liens: number; 
 }
 
 beforeEach(async () => {
-	await viderLaBase()
-	await viderLeCapteur()
-	await creerLaSourceStrapi()
+	await emptyBase()
+	await emptySink()
+	await createSourceStrapi()
 })
 
 afterAll(async () => {
-	await viderLaBase()
-	await effacerLaSourceStrapi()
+	await emptyBase()
+	await eraseSourceStrapi()
 })
 
 describe('le contrôle de la parité (I39, I40, I43)', () => {
@@ -73,7 +72,7 @@ describe('le contrôle de la parité (I39, I40, I43)', () => {
 	}, 60_000)
 
 	test('après un import réel, la cible est la source : code 0, et un second contrôle dit la même chose', async () => {
-		await importerSurLeBanc()
+		await importOnBench()
 
 		for (const _passage of [1, 2]) {
 			const { code, sortie } = await controler()
@@ -83,7 +82,7 @@ describe('le contrôle de la parité (I39, I40, I43)', () => {
 	}, 60_000)
 
 	test('un email changé à la main dans la cible fait échouer le contrôle, sans que le rapport le montre', async () => {
-		await importerSurLeBanc()
+		await importOnBench()
 		await ecrireDansLaCible("UPDATE pros SET email = 'modifie-a-la-main@example.test' WHERE strapi_id = 8")
 
 		const { code, sortie } = await controler()
@@ -94,7 +93,7 @@ describe('le contrôle de la parité (I39, I40, I43)', () => {
 	}, 60_000)
 
 	test('un compte retiré à la main de la cible fait échouer le contrôle', async () => {
-		await importerSurLeBanc()
+		await importOnBench()
 		// Account 8 has no profile: removing it leaves nothing else behind.
 		await ecrireDansLaCible('DELETE FROM pros WHERE strapi_id = 8')
 
@@ -113,17 +112,12 @@ describe('le contrôle de la parité (I39, I40, I43)', () => {
 	}, 60_000)
 
 	test('--without-photos avec --real est refusé sur une cible qui garde des médias : rien n’est retiré', async () => {
-		await importerSurLeBanc()
+		await importOnBench()
 		const avant = await photosDeLaCible()
 		expect(avant.principales).toBeGreaterThan(0)
 		expect(avant.medias).toBeGreaterThan(0)
 
-		const { code, sortie } = await commandeDImport([
-			'--real',
-			'--without-photos',
-			'--decisions',
-			FICHIER_DES_DECISIONS_DU_BANC,
-		])
+		const { code, sortie } = await importCommand(['--real', '--without-photos', '--decisions', BENCH_DECISION_FILE])
 
 		expect(code, sortie).toBe(1)
 		expect(sortie).toContain('--without-photos ne va pas avec --real sur une cible')
@@ -139,7 +133,7 @@ describe('le contrôle de la parité (I39, I40, I43)', () => {
 	}, 60_000)
 
 	test('un compte ajouté à la main, sans identifiant de l’ancien site, fait échouer le contrôle', async () => {
-		await importerSurLeBanc()
+		await importOnBench()
 		await ecrireDansLaCible("INSERT INTO pros (email) VALUES ('ajoute-a-la-main@example.test')")
 
 		const { code, sortie } = await controler()
@@ -152,7 +146,7 @@ describe('le contrôle de la parité (I39, I40, I43)', () => {
 	}, 60_000)
 
 	test('un profil ajouté à la main fait échouer le contrôle', async () => {
-		await importerSurLeBanc()
+		await importOnBench()
 		await ecrireDansLaCible(
 			"INSERT INTO profiles (pro_id, slug) SELECT id, 'ajoute-a-la-main' FROM pros WHERE strapi_id = 8"
 		)
@@ -169,14 +163,14 @@ describe('le contrôle de la parité (I39, I40, I43)', () => {
 	])(
 		'un document de %s ajouté à la main fait échouer le contrôle, et la parité ne se dit pas complète',
 		async (table, nom) => {
-			await importerSurLeBanc()
+			await importOnBench()
 			await ecrireDansLaCible(`INSERT INTO ${table} (slug, title) VALUES ('ajoute-a-la-main', 'x')`)
 
 			const { code, sortie } = await controler()
 			expect(code, sortie).toBe(4)
 			expect(sortie).toMatch(new RegExp(`${nom} : .* 1 document sans origine`))
 
-			const reel = await commandeDImport(['--real', '--decisions', FICHIER_DES_DECISIONS_DU_BANC])
+			const reel = await importCommand(['--real', '--decisions', BENCH_DECISION_FILE])
 			const ligne = reel.sortie.split('\n').find(l => l.startsWith(`${nom} : `) && l.includes('égaux'))
 			expect(ligne, reel.sortie).toContain('parité incomplète')
 			expect(ligne).not.toContain('parité complète')

@@ -1,9 +1,9 @@
 import { type APIRequestContext, expect, test } from '@playwright/test'
 import { placeProfile, readDemoPhoto } from '../../src/demo-data/loading'
 import { DEMO_PROFILES, type DemoProfile } from '../../src/demo-data/profiles'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { creerContenu, supprimerContenu } from '../outils/pages-publiques'
-import { payloadDeTest } from '../outils/payload-test'
+import { createAccount } from '../support/account-factory'
+import { testPayload } from '../support/payload-test'
+import { createContent, deleteContent } from '../support/public-pages'
 
 /**
  * The freshness of the public pages, end to end (ticket 117; plan 03 SEO-27, plan 02 I21): a change made
@@ -51,8 +51,8 @@ async function poserUnProfil(): Promise<ProfilDeFraicheur> {
 		profil: { ...MODELE.profil, firstName: 'Essai', lastName: mot, artistName: `Essai ${mot} Maquillage` },
 		photos: { principale: MODELE.photos.principale, galerie: [] },
 	}
-	const pose = await placeProfile(await payloadDeTest(), type, readDemoPhoto, false)
-	const admin = await creerCompte('admin')
+	const pose = await placeProfile(await testPayload(), type, readDemoPhoto, false)
+	const admin = await createAccount('admin')
 	return { id: pose.profil, pro: pose.compte, slug: pose.slug, mot, entetes: admin.session.enTetes }
 }
 
@@ -60,7 +60,7 @@ async function poserUnProfil(): Promise<ProfilDeFraicheur> {
 async function retirerLeProfil(request: APIRequestContext, profil: ProfilDeFraicheur): Promise<void> {
 	await request.delete(`/api/profiles/${profil.id}`, { headers: profil.entetes })
 	await request.delete(`/api/pros/${profil.pro}`, { headers: profil.entetes })
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	await payload.delete({ collection: 'media', where: { owner: { equals: profil.pro } } }).catch(() => undefined)
 }
 
@@ -173,7 +173,7 @@ test.describe('Fraîcheur des pages publiques (117)', () => {
 			// The page is in the cache. The database is then changed behind the back of the application (the
 			// Payload of the test is no request of Next, so nothing is refreshed): a page that read the database
 			// again would show it.
-			const payload = await payloadDeTest()
+			const payload = await testPayload()
 			const silencieux = `Description écrite en coulisse ${profil.mot}, que la base a et que la page ne doit pas montrer.`
 			await payload.update({ collection: 'profiles', id: profil.id, data: { description: silencieux }, depth: 0 })
 			const enBase = await payload.findByID({
@@ -209,20 +209,20 @@ test.describe('Fraîcheur des pages publiques (117)', () => {
 		const suffixe = Date.now().toString(36)
 		const talent = `essai-fraicheur-talent-${suffixe}`
 		const article = `essai-fraicheur-article-${suffixe}`
-		const idTalent = await creerContenu(request, 'talents', {
+		const idTalent = await createContent(request, 'talents', {
 			title: `Essai ${talent}`,
 			slug: talent,
 			description: 'Présentation de départ.',
 			_status: 'published',
 		})
-		const idArticle = await creerContenu(request, 'articles', {
+		const idArticle = await createContent(request, 'articles', {
 			title: `Essai ${article}`,
 			slug: article,
 			excerpt: 'Extrait de départ.',
 			_status: 'published',
 		})
 		try {
-			const payload = await payloadDeTest()
+			const payload = await testPayload()
 			for (const [chemin, collection, id, champ, depart] of [
 				[`/talent/${talent}`, 'talents', idTalent, 'description', 'Présentation de départ.'],
 				[`/blog/${article}`, 'articles', idArticle, 'excerpt', 'Extrait de départ.'],
@@ -234,7 +234,7 @@ test.describe('Fraîcheur des pages publiques (117)', () => {
 					expect(await (await request.get(chemin)).text(), chemin).toContain(depart)
 				// Through the application: it shows within a minute.
 				const reponse = await request.patch(`/api/${collection}/${id}`, {
-					headers: (await creerCompte('admin')).session.enTetes,
+					headers: (await createAccount('admin')).session.enTetes,
 					data: { [champ]: 'Texte changé par la rédaction.' },
 				})
 				expect(reponse.ok(), chemin).toBe(true)
@@ -245,8 +245,8 @@ test.describe('Fraîcheur des pages publiques (117)', () => {
 					.toBe(true)
 			}
 		} finally {
-			await supprimerContenu(request, 'talents', idTalent)
-			await supprimerContenu(request, 'articles', idArticle)
+			await deleteContent(request, 'talents', idTalent)
+			await deleteContent(request, 'articles', idArticle)
 		}
 	})
 })

@@ -5,7 +5,7 @@
 # production; no other push deploys it.
 #
 # Rules, enforced by tests/ci/publication.test.ts and by the guard rails of every workflow
-# (tests/ci/garde-fous-ci.test.ts, C01 to C03):
+# (tests/ci/ci-guardrails.test.ts, C01 to C03):
 # - triggered by the end of the CI only, on main, for a push of this repository;
 # - one publication at a time, never cancelled half-way;
 # - no `bun install`: no code of a dependency runs next to the token that pushes on main;

@@ -1,7 +1,7 @@
 import { type Browser, expect, type Page, test } from '@playwright/test'
-import { violationsGraves } from '../outils/axe'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { attendreLeMail, mailsRecus } from '../outils/mailpit'
+import { createAccount } from '../support/account-factory'
+import { violationsSevere } from '../support/axe'
+import { mailReceived, waitMail } from '../support/mailpit'
 
 /**
  * The forgotten password (tickets 085 and 086; plan 02 E08 and E15): she asks for a link, reads it in
@@ -26,7 +26,7 @@ async function demander(page: Page, email: string) {
 }
 
 const lienDuMail = async (email: string): Promise<string> => {
-	const mail = await attendreLeMail({ pour: email, sujet: /Réinitialise ton mot de passe/ })
+	const mail = await waitMail({ pour: email, sujet: /Réinitialise ton mot de passe/ })
 	const lien = mail.liens.find(l => new URL(l).pathname === '/auth/reinitialiser')
 	if (!lien) throw new Error('Le mail ne porte pas le lien.')
 	return lien
@@ -57,7 +57,7 @@ async function autreNavigateur(browser: Browser, email: string, motDePasse: stri
 
 test.describe('E08 : le mot de passe oublié de bout en bout', { tag: '@mobile' }, () => {
 	test('le lien du mail, un nouveau mot de passe, la connexion avec lui, l’ancien refusé', async ({ page }) => {
-		const compte = await creerCompte('maquilleuse', { motDePasse: () => ANCIEN })
+		const compte = await createAccount('maquilleuse', { motDePasse: () => ANCIEN })
 
 		// From the sign-in page, by the link.
 		await page.goto('/auth/signin')
@@ -87,7 +87,7 @@ test.describe('E08 : le mot de passe oublié de bout en bout', { tag: '@mobile' 
 		browser,
 		page,
 	}) => {
-		const compte = await creerCompte('maquilleuse', { motDePasse: () => ANCIEN })
+		const compte = await createAccount('maquilleuse', { motDePasse: () => ANCIEN })
 		await demander(page, compte.email)
 		const lien = await lienDuMail(compte.email)
 		await page.goto(lien)
@@ -104,7 +104,7 @@ test.describe('E08 : le mot de passe oublié de bout en bout', { tag: '@mobile' 
 	})
 
 	test('des mots de passe différents ou trop courts : un message, et le lien reste bon', async ({ page }) => {
-		const compte = await creerCompte('maquilleuse', { motDePasse: () => ANCIEN })
+		const compte = await createAccount('maquilleuse', { motDePasse: () => ANCIEN })
 		await demander(page, compte.email)
 		await page.goto(await lienDuMail(compte.email))
 
@@ -126,7 +126,7 @@ test.describe('E08 : le mot de passe oublié de bout en bout', { tag: '@mobile' 
 
 test.describe('E15 : choisir un nouveau mot de passe déconnecte l’autre navigateur', () => {
 	test('la session ouverte ailleurs est fermée', async ({ browser, page }) => {
-		const compte = await creerCompte('maquilleuse', { motDePasse: () => ANCIEN })
+		const compte = await createAccount('maquilleuse', { motDePasse: () => ANCIEN })
 		const ailleurs = await autreNavigateur(browser, compte.email, ANCIEN)
 
 		await demander(page, compte.email)
@@ -144,13 +144,13 @@ test.describe('E15 : choisir un nouveau mot de passe déconnecte l’autre navig
 test.describe('086 : la demande ne révèle aucun compte', () => {
 	test('une adresse sans compte reçoit la même phrase, et aucun mail ne part', async ({ page }) => {
 		const inconnue = `inconnue-${crypto.randomUUID()}@example.test`
-		const connue = await creerCompte('maquilleuse')
+		const connue = await createAccount('maquilleuse')
 		await demander(page, inconnue)
 		await page.goto('/auth/mot-de-passe-oublie')
 		await demander(page, connue.email)
 		// The mails leave after the answer, in order: once hers is there, the first request is done.
 		await lienDuMail(connue.email)
-		expect(await mailsRecus(inconnue)).toEqual([])
+		expect(await mailReceived(inconnue)).toEqual([])
 	})
 
 	test('une adresse mal écrite est refusée sur la page', async ({ page }) => {
@@ -189,7 +189,7 @@ test.describe('les pages', () => {
 			expect(reponse.headers()['x-robots-tag']).toContain('noindex')
 			expect(reponse.headers()['cache-control']).toContain('no-store')
 			await page.goto(chemin)
-			expect(await violationsGraves(page)).toEqual([])
+			expect(await violationsSevere(page)).toEqual([])
 		}
 		await page.goto('/auth/reinitialiser')
 		expect(await page.locator('meta[name="referrer"]').getAttribute('content')).toBe('no-referrer')

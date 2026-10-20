@@ -86,7 +86,7 @@ export function umamiScriptAttributes({
  *
  * Written as a string on purpose. It reaches every browser untranspiled, and the live site once
  * lost the visits of Safari before 13.4 to a single `?.` that a build had left inside such a script:
- * no syntax after ES2019 here (a test reads the text, tests/unit/mesure-umami.test.ts).
+ * no syntax after ES2019 here (a test reads the text, tests/unit/analytics-umami.test.ts).
  *
  * The filter. Umami calls `window.mmAvantEnvoi(type, payload)` before every send and sends nothing
  * when it gets a falsy value back. Nothing leaves:

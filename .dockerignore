@@ -6,7 +6,7 @@
 # the bench, which is fictional. They stay for the import that runs in the container of the site
 # (ticket 233); the pre-production that used them is gone (ticket 232).
 #
-# The list is frozen by tests/ci/garde-fous-ci.test.ts: a new line is added there too.
+# The list is frozen by tests/ci/ci-guardrails.test.ts: a new line is added there too.
 *
 !package.json
 !bun.lock
@@ -17,9 +17,9 @@
 !src
 !public
 !scripts/migration/import
-!tests/outils/source-strapi/creation.ts
-!tests/outils/source-strapi/donnees.ts
-!tests/outils/source-strapi/images.ts
-!tests/outils/source-strapi/schema.ts
-!tests/fixtures/import/decisions-du-banc.json
-!tests/fixtures/import/referentiel-du-banc.json
+!tests/support/source-strapi/creation.ts
+!tests/support/source-strapi/data.ts
+!tests/support/source-strapi/images.ts
+!tests/support/source-strapi/schema.ts
+!tests/fixtures/import/bench-decisions.json
+!tests/fixtures/import/bench-reference.json

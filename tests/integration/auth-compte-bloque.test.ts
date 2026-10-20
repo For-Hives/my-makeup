@@ -4,9 +4,9 @@ import { errorMessage } from '@/lib/auth/errors'
 import { createRateLimit } from '@/lib/auth/rate-limit'
 import { signInWithPassword } from '@/lib/auth/sign-in'
 import { openWithPassword } from '@/lib/auth/token'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { appelerRest } from '../outils/rest'
+import { createAccount } from '../support/account-factory'
+import { emptyBase, testPayload } from '../support/payload-test'
+import { callRest } from '../support/rest'
 
 /**
  * The account an admin has blocked (ticket 089; plan 01 §6.1). The page of the sign-in with its
@@ -15,7 +15,7 @@ import { appelerRest } from '../outils/rest'
  */
 
 afterAll(async () => {
-	await viderLaBase()
+	await emptyBase()
 })
 
 const MOT_DE_PASSE = 'aaaaaaaa'
@@ -24,7 +24,7 @@ let n = 0
 const adresse = () => new Headers({ 'x-forwarded-for': `192.0.2.${150 + (n++ % 100)}` })
 
 async function seConnecter(email: string, password: string) {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	return signInWithPassword({
 		ouvrir: data => openWithPassword(payload, 'pros', data),
 		headers: adresse(),
@@ -36,7 +36,7 @@ async function seConnecter(email: string, password: string) {
 }
 
 async function sessionsEnBase(id: number | string): Promise<number> {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	const ligne = await payload.db.findOne<{ id: number; sessions?: unknown[] }>({
 		collection: 'pros',
 		where: { id: { equals: id } },
@@ -45,21 +45,21 @@ async function sessionsEnBase(id: number | string): Promise<number> {
 }
 
 async function qui(enTetes: Record<string, string>) {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	return (await payload.auth({ headers: new Headers(enTetes) })).user
 }
 
 const journal = async () =>
 	(
 		await (
-			await payloadDeTest()
+			await testPayload()
 		).find({ collection: 'auth-events', depth: 0, limit: 1000, pagination: false, sort: 'id' })
 	).docs
 
 /** What an admin does in the panel: the update goes through the access rules of her account. */
 async function bloquerParUnAdmin(id: number | string, bloque: boolean) {
-	const payload = await payloadDeTest()
-	const admin = await creerCompte('admin')
+	const payload = await testPayload()
+	const admin = await createAccount('admin')
 	const user = await payload.findByID({ collection: 'admins', id: admin.id, depth: 0, overrideAccess: true })
 	await payload.update({
 		collection: 'pros',
@@ -73,7 +73,7 @@ async function bloquerParUnAdmin(id: number | string, bloque: boolean) {
 
 describe('un compte bloqué ne peut pas se connecter', () => {
 	test('bon mot de passe : le code « compte-bloque », son message, aucune session ouverte', async () => {
-		const compte = await creerCompte('maquilleuse-bloquee', { motDePasse: () => MOT_DE_PASSE })
+		const compte = await createAccount('maquilleuse-bloquee', { motDePasse: () => MOT_DE_PASSE })
 		expect(await sessionsEnBase(compte.id)).toBe(0)
 
 		const reponse = await seConnecter(compte.email, MOT_DE_PASSE)
@@ -84,7 +84,7 @@ describe('un compte bloqué ne peut pas se connecter', () => {
 	})
 
 	test('mauvais mot de passe : le message générique, comme pour une adresse inconnue', async () => {
-		const compte = await creerCompte('maquilleuse-bloquee', { motDePasse: () => MOT_DE_PASSE })
+		const compte = await createAccount('maquilleuse-bloquee', { motDePasse: () => MOT_DE_PASSE })
 
 		expect(await seConnecter(compte.email, 'mauvais-mot-de-passe')).toEqual({
 			ok: false,
@@ -97,10 +97,10 @@ describe('un compte bloqué ne peut pas se connecter', () => {
 	})
 
 	test('la porte REST refuse aussi, en 403 et en français ; une ligne « compte-bloque » au journal', async () => {
-		const compte = await creerCompte('maquilleuse-bloquee', { motDePasse: () => MOT_DE_PASSE })
+		const compte = await createAccount('maquilleuse-bloquee', { motDePasse: () => MOT_DE_PASSE })
 		const avant = (await journal()).length
 
-		const { statut, enTetes, texte } = await appelerRest('POST', '/api/pros/login', {
+		const { statut, enTetes, texte } = await callRest('POST', '/api/pros/login', {
 			corps: { email: compte.email, password: MOT_DE_PASSE },
 			enTetes: { 'x-forwarded-for': '192.0.2.99' },
 		})
@@ -112,7 +112,7 @@ describe('un compte bloqué ne peut pas se connecter', () => {
 	})
 
 	test('le formulaire laisse la même ligne au journal', async () => {
-		const compte = await creerCompte('maquilleuse-bloquee', { motDePasse: () => MOT_DE_PASSE })
+		const compte = await createAccount('maquilleuse-bloquee', { motDePasse: () => MOT_DE_PASSE })
 		const avant = (await journal()).length
 
 		await seConnecter(compte.email, MOT_DE_PASSE)
@@ -123,8 +123,8 @@ describe('un compte bloqué ne peut pas se connecter', () => {
 
 describe('bloquer ferme les sessions, débloquer rend l’accès', () => {
 	test('les sessions du compte sont fermées, celles des autres comptes intactes, puis le déblocage rouvre la connexion', async () => {
-		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
-		const autre = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const autre = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
 		const { enTetes } = compte.session
 		expect((await qui(enTetes))?.id).toBe(Number(compte.id))
 		expect(await sessionsEnBase(compte.id)).toBeGreaterThan(0)
@@ -150,7 +150,7 @@ describe('bloquer ferme les sessions, débloquer rend l’accès', () => {
 	}, 30_000)
 
 	test('enregistrer un compte déjà bloqué ne laisse pas de ligne de plus', async () => {
-		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
 		await bloquerParUnAdmin(compte.id, true)
 		const avant = (await journal()).length
 
@@ -162,9 +162,9 @@ describe('bloquer ferme les sessions, débloquer rend l’accès', () => {
 
 describe('seul l’admin change le blocage', () => {
 	test('la maquilleuse ne se débloque pas elle-même, et ne se bloque pas non plus par erreur de rôle', async () => {
-		const payload = await payloadDeTest()
-		const bloquee = await creerCompte('maquilleuse-bloquee', { motDePasse: () => MOT_DE_PASSE })
-		const libre = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const payload = await testPayload()
+		const bloquee = await createAccount('maquilleuse-bloquee', { motDePasse: () => MOT_DE_PASSE })
+		const libre = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
 		const comme = async (id: number | string) => ({
 			...(await payload.findByID({ collection: 'pros', id, depth: 0, overrideAccess: true })),
 			collection: 'pros' as const,

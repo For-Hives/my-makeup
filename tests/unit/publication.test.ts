@@ -16,7 +16,7 @@ import {
 	takenByTags,
 } from '../../scripts/release/publication'
 import { CHANGELOG_FILE, type Changelog, parseChangelog } from '../../src/lib/release-notes'
-import { HttpResponse, http, simuler } from '../outils/http-sortant'
+import { HttpResponse, http, simulate } from '../support/outgoing-http'
 
 /**
  * The publication of a version (ticket 036). The git parts run for real, on repositories made
@@ -393,7 +393,7 @@ describe('the publication reads ci-ok on the commit before publishing', () => {
 	const CHECK_RUNS = `https://api.github.com/repos/${REPOSITORY}/commits/${COMMIT}/check-runs`
 	const ask = () =>
 		requiredChecksRefusal({ repository: REPOSITORY, commit: COMMIT, token: 'jeton-fictif', checks: ['ci-ok'] })
-	const answer = (runs: object[]) => simuler(http.get(CHECK_RUNS, () => HttpResponse.json({ check_runs: runs })))
+	const answer = (runs: object[]) => simulate(http.get(CHECK_RUNS, () => HttpResponse.json({ check_runs: runs })))
 	const ciOk = { name: 'ci-ok', status: 'completed', conclusion: 'success', app: { slug: 'github-actions' } }
 
 	test('the check it waits for is the one the protection of the branch requires', () => {
@@ -402,7 +402,7 @@ describe('the publication reads ci-ok on the commit before publishing', () => {
 
 	test('green ci-ok: it may publish, and it asked for that check on that commit, with the token', async () => {
 		let asked: Request | undefined
-		simuler(
+		simulate(
 			http.get(CHECK_RUNS, ({ request }) => {
 				asked = request
 				return HttpResponse.json({ check_runs: [ciOk] })
@@ -427,10 +427,10 @@ describe('the publication reads ci-ok on the commit before publishing', () => {
 	})
 
 	test('refused when GitHub refuses or does not answer', async () => {
-		simuler(http.get(CHECK_RUNS, () => new HttpResponse(null, { status: 403 })))
+		simulate(http.get(CHECK_RUNS, () => new HttpResponse(null, { status: 403 })))
 		expect(await ask()).toContain('GitHub refuse la lecture du check « ci-ok » (réponse 403)')
 
-		simuler(http.get(CHECK_RUNS, () => HttpResponse.error()))
+		simulate(http.get(CHECK_RUNS, () => HttpResponse.error()))
 		expect(await ask()).toContain('GitHub ne répond pas')
 	})
 })

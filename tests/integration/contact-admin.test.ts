@@ -1,10 +1,10 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { payloadStorage } from '@/lib/contact/payload-send'
 import { serverEnv } from '@/lib/env'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { mailsRecus, viderLeCapteur } from '../outils/mailpit'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { appelerRest } from '../outils/rest'
+import { createAccount } from '../support/account-factory'
+import { emptySink, mailReceived } from '../support/mailpit'
+import { emptyBase, testPayload } from '../support/payload-test'
+import { callRest } from '../support/rest'
 
 /**
  * The admin side of the contact messages (ticket 163; plan 02 E58, in its server half): the status
@@ -13,16 +13,16 @@ import { appelerRest } from '../outils/rest'
  * the matrix (tests/integration/payload-acces.test.ts).
  */
 
-beforeAll(viderLeCapteur)
+beforeAll(emptySink)
 afterAll(async () => {
-	await Promise.all([viderLaBase(), viderLeCapteur()])
+	await Promise.all([emptyBase(), emptySink()])
 })
 
 const unique = () => `visiteuse-${crypto.randomUUID()}@example.test`
 
 /** A stored message, the way the form stores it. `failed`: its mail did not leave. */
 async function messageEnBase(etatMail: 'failed' | 'sent' = 'failed') {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	const stockage = payloadStorage(payload)
 	const email = unique()
 	const id = await stockage.creer({
@@ -37,40 +37,40 @@ async function messageEnBase(etatMail: 'failed' | 'sent' = 'failed') {
 }
 
 const mailsPour = async (email: string) =>
-	(await mailsRecus(serverEnv().contactTo)).filter(mail => mail.repondreA.some(({ adresse }) => adresse === email))
+	(await mailReceived(serverEnv().contactTo)).filter(mail => mail.repondreA.some(({ adresse }) => adresse === email))
 
 describe('Le cycle des statuts, tenu par la collection', () => {
 	test('un admin marque un message répondu, puis spam ; il ne revient pas de « répondue » à « transmise »', async () => {
 		const { id } = await messageEnBase('sent')
-		const { session } = await creerCompte('admin')
+		const { session } = await createAccount('admin')
 		const enTetes = session.enTetes
 		const statut = async () =>
-			((await (await payloadDeTest()).findByID({ collection: 'contact-requests', id, depth: 0 })) as { status: string })
+			((await (await testPayload()).findByID({ collection: 'contact-requests', id, depth: 0 })) as { status: string })
 				.status
 
 		expect(
-			(await appelerRest('PATCH', `/api/contact-requests/${id}`, { enTetes, corps: { status: 'answered' } })).statut
+			(await callRest('PATCH', `/api/contact-requests/${id}`, { enTetes, corps: { status: 'answered' } })).statut
 		).toBe(200)
 		expect(await statut()).toBe('answered')
 
-		const refus = await appelerRest('PATCH', `/api/contact-requests/${id}`, { enTetes, corps: { status: 'forwarded' } })
+		const refus = await callRest('PATCH', `/api/contact-requests/${id}`, { enTetes, corps: { status: 'forwarded' } })
 		expect(refus.statut).toBe(400)
 		expect(refus.texte).toContain('ne peut pas passer à')
 		expect(await statut()).toBe('answered')
 
 		expect(
-			(await appelerRest('PATCH', `/api/contact-requests/${id}`, { enTetes, corps: { status: 'spam' } })).statut
+			(await callRest('PATCH', `/api/contact-requests/${id}`, { enTetes, corps: { status: 'spam' } })).statut
 		).toBe(200)
 		expect(await statut()).toBe('spam')
 	})
 
 	test('un admin ne réécrit pas la date de réception, ni ne dit « transmise » pour un email en échec', async () => {
 		const { id, payload } = await messageEnBase('failed')
-		const { session } = await creerCompte('admin')
+		const { session } = await createAccount('admin')
 		const enTetes = session.enTetes
 		const avant = (await payload.findByID({ collection: 'contact-requests', id, depth: 0 })).createdAt
 
-		const date = await appelerRest('PATCH', `/api/contact-requests/${id}`, {
+		const date = await callRest('PATCH', `/api/contact-requests/${id}`, {
 			enTetes,
 			corps: { createdAt: '2000-01-01T00:00:00.000Z', status: 'answered' },
 		})
@@ -80,7 +80,7 @@ describe('Le cycle des statuts, tenu par la collection', () => {
 		expect(apres.status).toBe('answered')
 
 		const autre = await messageEnBase('failed')
-		const refus = await appelerRest('PATCH', `/api/contact-requests/${autre.id}`, {
+		const refus = await callRest('PATCH', `/api/contact-requests/${autre.id}`, {
 			enTetes,
 			corps: { status: 'forwarded' },
 		})
@@ -94,8 +94,8 @@ describe('Le cycle des statuts, tenu par la collection', () => {
 
 	test('un « le mail est parti » tardif du serveur ne ramène pas un message répondu à « transmise »', async () => {
 		const { id, payload } = await messageEnBase('failed')
-		const { session } = await creerCompte('admin')
-		await appelerRest('PATCH', `/api/contact-requests/${id}`, {
+		const { session } = await createAccount('admin')
+		await callRest('PATCH', `/api/contact-requests/${id}`, {
 			enTetes: session.enTetes,
 			corps: { status: 'answered' },
 		})
@@ -110,9 +110,9 @@ describe('Le cycle des statuts, tenu par la collection', () => {
 describe('E58 (côté serveur) : le renvoi de l’email d’un message en échec', () => {
 	test('l’admin renvoie : un mail vers l’équipe, réponse vers la visiteuse, la ligne passe à envoyé et transmise', async () => {
 		const { id, email, payload } = await messageEnBase('failed')
-		const { session } = await creerCompte('admin')
+		const { session } = await createAccount('admin')
 
-		const reponse = await appelerRest('POST', `/api/contact-requests/${id}/resend`, { enTetes: session.enTetes })
+		const reponse = await callRest('POST', `/api/contact-requests/${id}/resend`, { enTetes: session.enTetes })
 
 		expect(reponse.statut).toBe(200)
 		expect(reponse.corps).toEqual({ mailStatus: 'sent' })
@@ -128,17 +128,17 @@ describe('E58 (côté serveur) : le renvoi de l’email d’un message en échec
 
 	test('double clic : deux demandes en même temps, un seul email, l’autre apprend que le message n’est plus en échec', async () => {
 		const { id, email } = await messageEnBase('failed')
-		const { session } = await creerCompte('admin')
+		const { session } = await createAccount('admin')
 
 		const [a, b] = await Promise.all([
-			appelerRest('POST', `/api/contact-requests/${id}/resend`, { enTetes: session.enTetes }),
-			appelerRest('POST', `/api/contact-requests/${id}/resend`, { enTetes: session.enTetes }),
+			callRest('POST', `/api/contact-requests/${id}/resend`, { enTetes: session.enTetes }),
+			callRest('POST', `/api/contact-requests/${id}/resend`, { enTetes: session.enTetes }),
 		])
 
 		expect([a.statut, b.statut].sort()).toEqual([200, 409])
 		expect(await mailsPour(email)).toHaveLength(1)
 		// A click that comes later still sends nothing.
-		expect((await appelerRest('POST', `/api/contact-requests/${id}/resend`, { enTetes: session.enTetes })).statut).toBe(
+		expect((await callRest('POST', `/api/contact-requests/${id}/resend`, { enTetes: session.enTetes })).statut).toBe(
 			409
 		)
 		expect(await mailsPour(email)).toHaveLength(1)
@@ -146,31 +146,29 @@ describe('E58 (côté serveur) : le renvoi de l’email d’un message en échec
 
 	test('un message dont l’email est déjà parti ne repart pas ; un message inconnu répond 404', async () => {
 		const { id, email } = await messageEnBase('sent')
-		const { session } = await creerCompte('admin')
+		const { session } = await createAccount('admin')
 
-		expect((await appelerRest('POST', `/api/contact-requests/${id}/resend`, { enTetes: session.enTetes })).statut).toBe(
+		expect((await callRest('POST', `/api/contact-requests/${id}/resend`, { enTetes: session.enTetes })).statut).toBe(
 			409
 		)
 		expect(
-			(await appelerRest('POST', `/api/contact-requests/${id + 100000}/resend`, { enTetes: session.enTetes })).statut
+			(await callRest('POST', `/api/contact-requests/${id + 100000}/resend`, { enTetes: session.enTetes })).statut
 		).toBe(404)
-		expect((await appelerRest('POST', '/api/contact-requests/abc/resend', { enTetes: session.enTetes })).statut).toBe(
-			404
-		)
+		expect((await callRest('POST', '/api/contact-requests/abc/resend', { enTetes: session.enTetes })).statut).toBe(404)
 		expect(await mailsPour(email)).toEqual([])
 	})
 
 	test('ni la rédaction, ni une maquilleuse, ni un visiteur ne renvoient : 403, aucun mail', async () => {
 		const { id, email } = await messageEnBase('failed')
-		const [redaction, maquilleuse] = await Promise.all([creerCompte('redaction'), creerCompte('maquilleuse')])
+		const [redaction, maquilleuse] = await Promise.all([createAccount('redaction'), createAccount('maquilleuse')])
 
 		for (const enTetes of [redaction.session.enTetes, maquilleuse.session.enTetes, undefined])
-			expect((await appelerRest('POST', `/api/contact-requests/${id}/resend`, enTetes ? { enTetes } : {})).statut).toBe(
+			expect((await callRest('POST', `/api/contact-requests/${id}/resend`, enTetes ? { enTetes } : {})).statut).toBe(
 				403
 			)
 
 		expect(await mailsPour(email)).toEqual([])
-		const ligne = await (await payloadDeTest()).findByID({ collection: 'contact-requests', id, depth: 0 })
+		const ligne = await (await testPayload()).findByID({ collection: 'contact-requests', id, depth: 0 })
 		expect(ligne.mailStatus).toBe('failed')
 	})
 })

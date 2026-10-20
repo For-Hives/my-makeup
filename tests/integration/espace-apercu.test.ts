@@ -2,8 +2,8 @@ import { afterEach, describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
 import { type DashboardUser, profileId } from '@/lib/dashboard/my-profile'
 import { readProfilePreview, readProfileUrlTarget } from '@/services/public/profiles'
-import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
+import { createAccount, type TestAccount } from '../support/account-factory'
+import { emptyBase, testPayload } from '../support/payload-test'
 
 /**
  * The preview of her own page (ticket 139; plan 02 RG-06): the same content as the public page for a
@@ -11,9 +11,9 @@ import { payloadDeTest, viderLaBase } from '../outils/payload-test'
  * still previewed, and the contact details only when she published them.
  */
 
-afterEach(viderLaBase)
+afterEach(emptyBase)
 
-type Maquilleuse = CompteDeTest<'maquilleuse'>
+type Maquilleuse = TestAccount<'maquilleuse'>
 
 async function ficheDe(payload: Payload, compte: Maquilleuse) {
 	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
@@ -41,8 +41,8 @@ const COMPLET = {
 
 describe('139 : l’aperçu est la page publique', () => {
 	test('profil complet : exactement le même profil que la lecture de l’adresse publique', async () => {
-		const compte = await creerCompte('maquilleuse')
-		const payload = await payloadDeTest()
+		const compte = await createAccount('maquilleuse')
+		const payload = await testPayload()
 		const fiche = await ficheDe(payload, compte)
 		await payload.update({ collection: 'profiles', id: fiche.id, data: COMPLET })
 		const slug = (await ficheDe(payload, compte)).slug
@@ -56,8 +56,8 @@ describe('139 : l’aperçu est la page publique', () => {
 	})
 
 	test('coordonnées non publiées : ni téléphone ni email dans l’aperçu, comme dans la page publique', async () => {
-		const compte = await creerCompte('maquilleuse')
-		const payload = await payloadDeTest()
+		const compte = await createAccount('maquilleuse')
+		const payload = await testPayload()
 		const fiche = await ficheDe(payload, compte)
 		await payload.update({ collection: 'profiles', id: fiche.id, data: { ...COMPLET, publicContact: false } })
 		const apercu = await readProfilePreview(payload, fiche.id)
@@ -66,8 +66,8 @@ describe('139 : l’aperçu est la page publique', () => {
 	})
 
 	test('profil vide (brouillon) : aperçu possible, état dit vide ; profil masqué : aperçu possible, état masqué', async () => {
-		const compte = await creerCompte('maquilleuse')
-		const payload = await payloadDeTest()
+		const compte = await createAccount('maquilleuse')
+		const payload = await testPayload()
 		const fiche = await ficheDe(payload, compte)
 		const vide = await readProfilePreview(payload, fiche.id)
 		expect(vide?.etat).toMatchObject({ status: 'draft', fullyEmpty: true })
@@ -86,16 +86,16 @@ describe('139 : l’aperçu est la page publique', () => {
 	})
 
 	test('un identifiant inconnu ne donne rien', async () => {
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		expect(await readProfilePreview(payload, 987_654)).toBeNull()
 	})
 })
 
 describe('139 : seulement le sien', () => {
 	test('l’identifiant vient de la session : A obtient son profil, B le sien, jamais l’autre', async () => {
-		const a = await creerCompte('maquilleuse')
-		const b = await creerCompte('maquilleuse')
-		const payload = await payloadDeTest()
+		const a = await createAccount('maquilleuse')
+		const b = await createAccount('maquilleuse')
+		const payload = await testPayload()
 		const ficheA = await ficheDe(payload, a)
 		const ficheB = await ficheDe(payload, b)
 		await payload.update({ collection: 'profiles', id: ficheB.id, data: { firstName: 'Bea', lastName: 'Autre' } })
@@ -109,8 +109,8 @@ describe('139 : seulement le sien', () => {
 	})
 
 	test('un compte sans profil n’a pas d’aperçu', async () => {
-		const compte = await creerCompte('maquilleuse-sans-profil')
-		const payload = await payloadDeTest()
+		const compte = await createAccount('maquilleuse-sans-profil')
+		const payload = await testPayload()
 		expect(await profileId(payload, await utilisateurDe(payload, compte as unknown as Maquilleuse))).toBeNull()
 	})
 })

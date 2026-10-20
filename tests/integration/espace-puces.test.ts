@@ -4,8 +4,8 @@ import { LANGUAGES, listBullets, SKILLS } from '@/lib/dashboard/bullets'
 import { artistProfile, type DashboardUser } from '@/lib/dashboard/my-profile'
 import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
 import { saveLanguages, saveSkills } from '@/lib/dashboard/save-bullets'
-import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
+import { createAccount, type TestAccount } from '../support/account-factory'
+import { emptyBase, testPayload } from '../support/payload-test'
 
 /**
  * The languages and the skills saved from her space (tickets 127 and 128; plan 02 E30, E31, I02):
@@ -14,9 +14,9 @@ import { payloadDeTest, viderLaBase } from '../outils/payload-test'
  * the description of a skill, which the chips do not show, survives a save. Made-up values only.
  */
 
-afterEach(viderLaBase)
+afterEach(emptyBase)
 
-type Maquilleuse = CompteDeTest<'maquilleuse'>
+type Maquilleuse = TestAccount<'maquilleuse'>
 
 async function utilisateurDe(payload: Payload, compte: Maquilleuse): Promise<DashboardUser> {
 	const doc = await payload.findByID({ collection: 'pros', id: compte.id, depth: 0, overrideAccess: true })
@@ -36,8 +36,8 @@ async function profilStocke(payload: Payload, compte: { id: number | string }) {
 }
 
 async function maquilleuse() {
-	const compte = await creerCompte('maquilleuse')
-	const payload = await payloadDeTest()
+	const compte = await createAccount('maquilleuse')
+	const payload = await testPayload()
 	return { compte, payload, utilisateur: await utilisateurDe(payload, compte) }
 }
 
@@ -167,8 +167,8 @@ describe('127 : les langues', () => {
 	})
 
 	test('un compte sans profil ne crée rien : message du site', async () => {
-		const payload = await payloadDeTest()
-		const sansProfil = await creerCompte('maquilleuse-sans-profil')
+		const payload = await testPayload()
+		const sansProfil = await createAccount('maquilleuse-sans-profil')
 		const doc = await payload.findByID({ collection: 'pros', id: sansProfil.id, depth: 0, overrideAccess: true })
 		const utilisateur = { ...doc, collection: 'pros' } as DashboardUser
 

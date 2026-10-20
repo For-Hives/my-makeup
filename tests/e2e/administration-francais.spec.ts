@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { creerCompte } from '../outils/fabrique-comptes'
+import { createAccount } from '../support/account-factory'
 
 /**
  * The admin panel speaks French (ticket 221; src/lib/payload-language.ts). Payload offers no other
@@ -10,7 +10,7 @@ test.describe('L’administration s’affiche en français', { tag: '@mobile' },
 
 	test('l’écran de connexion est en français, même pour un navigateur réglé en anglais', async ({ page }, testInfo) => {
 		// With no account at all, Payload would offer to create the first one instead.
-		await creerCompte('admin')
+		await createAccount('admin')
 
 		await page.goto('/admin/login')
 
@@ -33,7 +33,7 @@ test.describe('L’administration s’affiche en français', { tag: '@mobile' },
 
 	// Ticket 223, constat 5: no avatar from gravatar.com, which would receive a fingerprint of the admin's email.
 	test('l’administration ne demande aucune image à gravatar.com', async ({ context, page }) => {
-		const admin = await creerCompte('admin')
+		const admin = await createAccount('admin')
 		await context.addCookies(admin.session.cookies)
 		const demandes: string[] = []
 		page.on('request', requete => void demandes.push(requete.url()))

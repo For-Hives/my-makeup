@@ -1,8 +1,8 @@
 import { expect, test } from '@playwright/test'
 import { getFieldsToSign, jwtSign } from 'payload'
 import { tokenExpiration } from '@/lib/auth/sliding-session'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest } from '../outils/payload-test'
+import { createAccount } from '../support/account-factory'
+import { testPayload } from '../support/payload-test'
 
 /**
  * The sliding session (ticket 079; plan 02 E14): a makeup artist who visits her space with less
@@ -21,11 +21,11 @@ test.beforeEach(({ context }) =>
 
 /** A session of a new makeup artist whose token ends in `jours` days instead of 14. */
 async function sessionQuiFinitDans(jours: number) {
-	const compte = await creerCompte('maquilleuse')
+	const compte = await createAccount('maquilleuse')
 	const cookie = compte.session.cookies[0]
 	if (!cookie) throw new Error('pas de cookie')
 	const sid = /"sid":"([^"]+)"/.exec(Buffer.from(cookie.value.split('.')[1] ?? '', 'base64url').toString())?.[1]
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	const { docs } = await payload.find({
 		collection: 'pros',
 		where: { email: { equals: compte.email } },
@@ -78,7 +78,7 @@ test.describe('E14 : une activité régulière prolonge la session', { tag: '@le
 	})
 
 	test('une session toute neuve ne demande aucun renouvellement', async ({ context, page }) => {
-		const compte = await creerCompte('maquilleuse')
+		const compte = await createAccount('maquilleuse')
 		await context.addCookies(compte.session.cookies)
 		const demandes: string[] = []
 		page.on('request', requete => {

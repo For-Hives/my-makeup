@@ -3,11 +3,11 @@ import sharp from 'sharp'
 import { PHOTO_SIZE_MAX, UPLOAD_MESSAGES } from '@/lib/photo-upload'
 import { PHOTO_MESSAGES } from '@/lib/profile/photos'
 import type { Media } from '@/payload-types'
-import { type Espion, espionnerLeStockage, suppressionsSansCorbeille } from '../outils/espion-s3'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { appelerRest, formulaireAvecFichier } from '../outils/rest'
-import { listerLesObjets, viderLeStockage } from '../outils/s3'
+import { createAccount } from '../support/account-factory'
+import { emptyBase, testPayload } from '../support/payload-test'
+import { callRest, formWithFile } from '../support/rest'
+import { emptyStorage, listObjects } from '../support/s3'
+import { deletionsWithoutTrash, type Spy, spyStorage } from '../support/s3-spy'
 
 // The bench is shared by every checkout of the machine, and a suite under load runs several times slower than alone:
 // the default 5 s is passed by the heaviest tests of this file (ticket 225). The delay bounds a call that hangs, it
@@ -19,18 +19,18 @@ setDefaultTimeout(30_000)
  * I26; U79 to U81). Through the real REST API, against the S3 simulator of the bench.
  */
 
-type Compte = Awaited<ReturnType<typeof creerCompte<'maquilleuse'>>>
+type Compte = Awaited<ReturnType<typeof createAccount<'maquilleuse'>>>
 
-let espion: Espion
+let espion: Spy
 
 beforeEach(() => {
-	espion = espionnerLeStockage()
+	espion = spyStorage()
 })
 
 afterEach(async () => {
-	const fautes = suppressionsSansCorbeille(espion.journal)
+	const fautes = deletionsWithoutTrash(espion.journal)
 	espion.arreter()
-	await Promise.all([viderLaBase(), viderLeStockage()])
+	await Promise.all([emptyBase(), emptyStorage()])
 	expect(fautes).toEqual([])
 })
 
@@ -41,20 +41,20 @@ const image = (format: 'webp' | 'jpeg' | 'png') =>
 		.toBuffer()
 
 const envoyer = (compte: Compte | undefined, fichier: File) =>
-	appelerRest('POST', '/api/media?depth=0', {
+	callRest('POST', '/api/media?depth=0', {
 		enTetes: compte?.session.enTetes,
-		formulaire: formulaireAvecFichier(fichier),
+		formulaire: formWithFile(fichier),
 	})
 
 const fichier = (octets: Uint8Array, nom: string, type: string) => new File([Uint8Array.from(octets)], nom, { type })
 
-const nombreDeMedias = async () => (await (await payloadDeTest()).count({ collection: 'media' })).totalDocs
+const nombreDeMedias = async () => (await (await testPayload()).count({ collection: 'media' })).totalDocs
 
 const ecritures = () => espion.journal.filter(commande => commande.nom === 'PutObject')
 
 describe('I23 : une image valide est rangée sous une clé imprévisible, avec ses tailles', () => {
 	test('un WebP valide : objet sous media/<uuid>.webp, tailles dérivées à côté, média rattaché à sa propriétaire (U81)', async () => {
-		const compte = await creerCompte('maquilleuse')
+		const compte = await createAccount('maquilleuse')
 		const { statut, corps, texte } = await envoyer(
 			compte,
 			fichier(await image('webp'), 'Mon Selfie Marie.webp', 'image/webp')
@@ -69,12 +69,12 @@ describe('I23 : une image valide est rangée sous une clé imprévisible, avec s
 		expect(media.url).toContain(`/media/${media.filename}`)
 		const noms = Object.values(media.sizes ?? {}).map(taille => taille?.filename)
 		expect(noms.filter(Boolean).length).toBeGreaterThanOrEqual(3)
-		const cles = (await listerLesObjets('media/')).map(({ cle }) => cle).sort()
+		const cles = (await listObjects('media/')).map(({ cle }) => cle).sort()
 		expect(cles).toEqual([`media/${media.filename}`, ...noms.filter(nom => nom).map(nom => `media/${nom}`)].sort())
 	})
 
 	test('un JPEG et un PNG valides passent ; l’extension suit le contenu, pas le nom envoyé', async () => {
-		const compte = await creerCompte('maquilleuse')
+		const compte = await createAccount('maquilleuse')
 		const jpeg = await envoyer(compte, fichier(await image('jpeg'), 'photo.png', 'image/png'))
 		const png = await envoyer(compte, fichier(await image('png'), 'photo.jpg', 'image/jpeg'))
 		expect([jpeg.statut, png.statut]).toEqual([201, 201])
@@ -112,17 +112,17 @@ describe('I26 : PDF, SVG, HEIC, vidéo et 12 Mo sont refusés, rien n’est écr
 	]
 
 	test.each(refuses)('%s : refusé en 400, aucun objet écrit, aucun média créé', async (_nom, contenu, nom, type) => {
-		const compte = await creerCompte('maquilleuse')
+		const compte = await createAccount('maquilleuse')
 		const { statut, texte } = await envoyer(compte, fichier(contenu, nom, type))
 		expect(statut).toBe(400)
 		expect(texte).toContain(UPLOAD_MESSAGES.type)
 		expect(ecritures()).toEqual([])
-		expect(await listerLesObjets()).toEqual([])
+		expect(await listObjects()).toEqual([])
 		expect(await nombreDeMedias()).toBe(0)
 	})
 
 	test('une vraie image de 12 Mo : refusée en 400 avec le message de taille, rien d’écrit', async () => {
-		const compte = await creerCompte('maquilleuse')
+		const compte = await createAccount('maquilleuse')
 		const jpeg = await image('jpeg')
 		const gros = Buffer.concat([jpeg, Buffer.alloc(12 * 1024 * 1024 - jpeg.length)])
 		expect(gros.length).toBeGreaterThan(PHOTO_SIZE_MAX)
@@ -130,21 +130,21 @@ describe('I26 : PDF, SVG, HEIC, vidéo et 12 Mo sont refusés, rien n’est écr
 		expect(statut).toBe(400)
 		expect(texte).toContain(UPLOAD_MESSAGES.taille)
 		expect(ecritures()).toEqual([])
-		expect(await listerLesObjets()).toEqual([])
+		expect(await listObjects()).toEqual([])
 		expect(await nombreDeMedias()).toBe(0)
 	})
 
 	test('le remplacement du fichier d’un média par un PDF est refusé de même, l’objet reste', async () => {
-		const compte = await creerCompte('maquilleuse')
+		const compte = await createAccount('maquilleuse')
 		const { corps } = await envoyer(compte, fichier(await image('webp'), 'a.webp', 'image/webp'))
 		const media = (corps as { doc: Media }).doc
-		const avant = await listerLesObjets()
-		const reponse = await appelerRest('PATCH', `/api/media/${media.id}?depth=0`, {
+		const avant = await listObjects()
+		const reponse = await callRest('PATCH', `/api/media/${media.id}?depth=0`, {
 			enTetes: compte.session.enTetes,
-			formulaire: formulaireAvecFichier(fichier(Buffer.from('%PDF-1.7\n'), 'b.pdf', 'application/pdf')),
+			formulaire: formWithFile(fichier(Buffer.from('%PDF-1.7\n'), 'b.pdf', 'application/pdf')),
 		})
 		expect(reponse.statut).toBe(400)
-		expect(await listerLesObjets()).toEqual(avant)
+		expect(await listObjects()).toEqual(avant)
 	})
 })
 
@@ -159,7 +159,7 @@ describe('Anonyme refusé', () => {
 
 describe('Ajout du 14/10 : une photo au mauvais identifiant est refusée en 400, jamais en 500', () => {
 	async function profilDe(compte: Compte) {
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const [profil] = (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } }))
 			.docs
 		if (!profil) throw new Error('La fabrique n’a pas créé de profil.')
@@ -173,9 +173,9 @@ describe('Ajout du 14/10 : une photo au mauvais identifiant est refusée en 400,
 		['galerie d’un objet sans identifiant', { gallery: [{}] }],
 		['photo principale en liste', { mainPicture: [5] }],
 	])('%s : 400 avec le message français, le profil est inchangé', async (_nom, corps) => {
-		const compte = await creerCompte('maquilleuse')
+		const compte = await createAccount('maquilleuse')
 		const avant = await profilDe(compte)
-		const reponse = await appelerRest('PATCH', `/api/profiles/${avant.id}?depth=0`, {
+		const reponse = await callRest('PATCH', `/api/profiles/${avant.id}?depth=0`, {
 			enTetes: compte.session.enTetes,
 			corps,
 		})

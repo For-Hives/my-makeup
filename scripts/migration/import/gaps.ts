@@ -6,7 +6,7 @@
  *   page or a makeup artist can notice;
  * - a section of the frozen schema (docs/migration/SCHEMA.md), for a rule that changes no page.
  *
- * tests/unit/import-comptes.test.ts checks that each one exists in its document.
+ * tests/unit/import-accounts.test.ts checks that each one exists in its document.
  */
 export const REFERENCES = {
 	/** The login: edge spaces removed, lower case (SCHEMA.md §1 and §5.1). */

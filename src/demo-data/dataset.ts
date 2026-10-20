@@ -12,7 +12,7 @@
  * - Written like the import writes, with its context (src/lib/import-context.ts): no page of the
  *   site is refreshed, and no mail leaves.
  * - It holds no admin account: the admin accounts of the bench are the set of the tests
- *   (tests/fixtures/comptes.ts).
+ *   (tests/fixtures/accounts.ts).
  *
  * Relative imports on purpose: like the collections, this file must load outside of Next.
  */

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
-import { creerCompte, MOT_DE_PASSE_HERITE_DE_FIXTURE } from '../outils/fabrique-comptes'
-import { payloadDeTest } from '../outils/payload-test'
+import { createAccount, FIXTURE_LEGACY_PASSWORD } from '../support/account-factory'
+import { testPayload } from '../support/payload-test'
 
 /**
  * An account of the old site signs in with its usual password (tickets 087 and 088; plan 02 E73):
@@ -13,7 +13,7 @@ test.beforeEach(({ context }) =>
 )
 
 async function hashDe(id: number | string) {
-	const ligne = await (await payloadDeTest()).db.findOne<{ id: number; legacyBcrypt?: string | null; hash?: string }>({
+	const ligne = await (await testPayload()).db.findOne<{ id: number; legacyBcrypt?: string | null; hash?: string }>({
 		collection: 'pros',
 		where: { id: { equals: id } },
 	})
@@ -26,13 +26,13 @@ test.describe('Compte de l’ancien site', () => {
 		context,
 		page,
 	}) => {
-		const compte = await creerCompte('reprise-avec-hash')
+		const compte = await createAccount('reprise-avec-hash')
 		const avant = await hashDe(compte.id)
 		expect(avant.legacyBcrypt).toMatch(/^\$2a\$10\$/)
 
 		await page.goto('/auth/signin')
 		await page.getByLabel('Adresse email').fill(compte.email)
-		await page.getByLabel('Mot de passe').fill(MOT_DE_PASSE_HERITE_DE_FIXTURE)
+		await page.getByLabel('Mot de passe').fill(FIXTURE_LEGACY_PASSWORD)
 		await page.getByRole('button', { name: 'Se connecter' }).click()
 
 		await expect(page).toHaveURL(/\/auth\/profil$/)
@@ -43,7 +43,7 @@ test.describe('Compte de l’ancien site', () => {
 	})
 
 	test('un mauvais mot de passe : le message générique, et le hash hérité reste', async ({ page }) => {
-		const compte = await creerCompte('reprise-avec-hash')
+		const compte = await createAccount('reprise-avec-hash')
 		const avant = await hashDe(compte.id)
 
 		await page.goto('/auth/signin')

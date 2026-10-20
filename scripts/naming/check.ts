@@ -108,7 +108,7 @@ export function namesOfPaths(
 			names.push({ kind: 'directory', name: dir.slice(dir.lastIndexOf('/') + 1), file: dir })
 		}
 		names.push({ kind: 'file', name: fileStem(file), file })
-		const isOption = isUnder(file, 'scripts') || isUnder(file, 'tests/outils')
+		const isOption = isUnder(file, 'scripts') || isUnder(file, 'tests/support')
 		if (isSourceFile(file)) {
 			for (const entry of collectFromSource(file, read(file))) {
 				if (entry.kind === 'option' && !isOption) continue

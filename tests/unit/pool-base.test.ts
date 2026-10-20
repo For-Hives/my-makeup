@@ -23,30 +23,30 @@ describe('une connexion inactive coupée ne tue pas le serveur (ticket 223)', ()
 
 	test('avec l’écouteur, une ligne courte avec le code, jamais le message ni l’adresse de la base', () => {
 		const pool = new EventEmitter()
-		const lignes: string[] = []
-		listenToPool(pool, ligne => lignes.push(ligne))
+		const lines: string[] = []
+		listenToPool(pool, ligne => lines.push(ligne))
 
-		const erreur = Object.assign(new Error('connect ECONNREFUSED 10.20.30.40:5432'), { code: 'ECONNREFUSED' })
-		expect(() => pool.emit('error', erreur)).not.toThrow()
+		const error = Object.assign(new Error('connect ECONNREFUSED 10.20.30.40:5432'), { code: 'ECONNREFUSED' })
+		expect(() => pool.emit('error', error)).not.toThrow()
 		expect(() => pool.emit('error', new Error('sans code'))).not.toThrow()
 
-		expect(lignes).toHaveLength(2)
-		expect(lignes[0]).toContain('ECONNREFUSED')
-		expect(lignes[1]).toContain('inconnu')
-		for (const ligne of lignes) {
-			expect(ligne).not.toContain('10.20.30.40')
-			expect(ligne).not.toContain('5432')
-			expect(ligne.length).toBeLessThan(160)
+		expect(lines).toHaveLength(2)
+		expect(lines[0]).toContain('ECONNREFUSED')
+		expect(lines[1]).toContain('inconnu')
+		for (const line of lines) {
+			expect(line).not.toContain('10.20.30.40')
+			expect(line).not.toContain('5432')
+			expect(line.length).toBeLessThan(160)
 		}
 	})
 
 	test('une seule écoute par pool, même si Payload démarre plusieurs fois', () => {
 		const pool = new EventEmitter()
-		const lignes: string[] = []
-		listenToPool(pool, ligne => lignes.push(ligne))
-		listenToPool(pool, ligne => lignes.push(ligne))
+		const lines: string[] = []
+		listenToPool(pool, ligne => lines.push(ligne))
+		listenToPool(pool, ligne => lines.push(ligne))
 		pool.emit('error', new Error('x'))
 		expect(pool.listenerCount('error')).toBe(1)
-		expect(lignes).toHaveLength(1)
+		expect(lines).toHaveLength(1)
 	})
 })

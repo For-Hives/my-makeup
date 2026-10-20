@@ -3,9 +3,9 @@ import type { BrowserContext } from '@playwright/test'
 import { z } from 'zod'
 import { GET } from '@/app/(payload)/api/[...slug]/route'
 import { COOKIE_SURVIVAL_AFTER_END_S } from '@/lib/auth/session-state'
-import { RACINE } from '../outils/banc'
-import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
+import { createAccount, type TestAccount } from '../support/account-factory'
+import { ROOT } from '../support/bench'
+import { emptyBase, testPayload } from '../support/payload-test'
 
 const MonCompte = z.object({
 	user: z.object({ id: z.number(), email: z.string(), collection: z.string() }).nullable(),
@@ -21,17 +21,17 @@ async function monCompte(enTetes: Record<string, string>) {
 	return { status: reponse.status, compte: MonCompte.parse(await reponse.json()).user }
 }
 
-const cookieDe = (compte: CompteDeTest<'admin'>) => {
+const cookieDe = (compte: TestAccount<'admin'>) => {
 	const [cookie] = compte.session.cookies
 	if (!cookie) throw new Error('la session ne porte aucun cookie')
 	return cookie
 }
 
 describe('La fabrique de comptes : un compte de test et sa session, sans mot de passe saisi', () => {
-	afterEach(viderLaBase)
+	afterEach(emptyBase)
 
 	test('un appel crée un compte en @example.test et rend une session valide sur « mon compte »', async () => {
-		const compte = await creerCompte('admin')
+		const compte = await createAccount('admin')
 
 		expect(compte.email).toMatch(/^admin-[0-9a-f-]{36}@example\.test$/)
 		expect(await monCompte(compte.session.enTetes)).toEqual({
@@ -39,12 +39,12 @@ describe('La fabrique de comptes : un compte de test et sa session, sans mot de 
 			compte: { id: compte.id as number, email: compte.email, collection: 'admins' },
 		})
 		// The account is a real document of the bench database.
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		expect((await payload.findByID({ collection: 'admins', id: compte.id })).email).toBe(compte.email)
 	})
 
 	test('pour un client HTTP : le cookie et son Origin vont ensemble, le cookie seul est ignoré', async () => {
-		const { session } = await creerCompte('admin')
+		const { session } = await createAccount('admin')
 
 		expect(Object.keys(session.enTetes).sort()).toEqual(['Cookie', 'Origin'])
 		expect(session.enTetes.Origin).toBe(process.env.NEXT_PUBLIC_SITE_URL ?? '')
@@ -53,7 +53,7 @@ describe('La fabrique de comptes : un compte de test et sa session, sans mot de 
 	})
 
 	test('pour un navigateur : un cookie HttpOnly posé sur l’adresse du site, valable jusqu’à la fin de la session', async () => {
-		const compte = await creerCompte('admin')
+		const compte = await createAccount('admin')
 		const cookie = cookieDe(compte)
 		// Checked by the compiler: this is what Playwright's `context.addCookies()` takes.
 		const pourPlaywright: Parameters<BrowserContext['addCookies']>[0] = compte.session.cookies
@@ -78,7 +78,7 @@ describe('La fabrique de comptes : un compte de test et sa session, sans mot de 
 
 	test('deux tests en parallèle obtiennent deux comptes distincts, effacés à la remise à zéro', async () => {
 		// Two calls at the same moment, as two tests running side by side would make them.
-		const [une, autre] = await Promise.all([creerCompte('admin'), creerCompte('admin')])
+		const [une, autre] = await Promise.all([createAccount('admin'), createAccount('admin')])
 
 		expect(une.id).not.toBe(autre.id)
 		expect(une.email).not.toBe(autre.email)
@@ -86,9 +86,9 @@ describe('La fabrique de comptes : un compte de test et sa session, sans mot de 
 		expect((await monCompte(une.session.enTetes)).compte?.email).toBe(une.email)
 		expect((await monCompte(autre.session.enTetes)).compte?.email).toBe(autre.email)
 
-		await viderLaBase()
+		await emptyBase()
 
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		expect((await payload.count({ collection: 'admins' })).totalDocs).toBe(0)
 		// Their sessions went with them: the two cookies open nothing any more.
 		expect((await monCompte(une.session.enTetes)).compte).toBeNull()
@@ -99,9 +99,9 @@ describe('La fabrique de comptes : un compte de test et sa session, sans mot de 
 		// The factory runs in a child process, with a password this test chose: everything the
 		// child prints is read, the logs of Payload at their most talkative included.
 		const motDePasse = `mot-de-passe-temoin-${crypto.randomUUID()}`
-		const enfant = Bun.spawn([process.execPath, '--no-env-file', 'tests/fixtures/temoin-fabrique.ts'], {
-			cwd: RACINE,
-			env: { ...process.env, TEMOIN_MOT_DE_PASSE: motDePasse },
+		const enfant = Bun.spawn([process.execPath, '--no-env-file', 'tests/fixtures/factory-sentinel.ts'], {
+			cwd: ROOT,
+			env: { ...process.env, SENTINEL_PASSWORD: motDePasse },
 			stdout: 'pipe',
 			stderr: 'pipe',
 		})
@@ -117,7 +117,7 @@ describe('La fabrique de comptes : un compte de test et sa session, sans mot de 
 		expect(code).toBe(0)
 		expect(journaux).not.toContain(motDePasse)
 		// The witness is a fair one: this password is the one the account was created with.
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const connexion = await payload.login({ collection: 'admins', data: { email: compte.email, password: motDePasse } })
 		expect(connexion.user?.id).toBe(compte.id)
 	}, 20_000)

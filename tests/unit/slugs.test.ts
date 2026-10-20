@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { assignSlugs, profilePath, resolveProfile, SLUG_MAX, slugify, slugTable, slugWithSuffix } from '@/lib/slug'
-import jeu from './fixtures/slugs-ancien-site.json'
+import jeu from './fixtures/slugs-old-site.json'
 
 // Ported from tests/unit/slug.test.mjs of the old site (branch main): same cases, same expected values.
 
@@ -34,7 +34,7 @@ describe('slugifier (plans/02 U09-U10)', () => {
 
 describe('attribuerSlugs (plans/02 U11-U12)', () => {
 	test('U11 collisions: -2, -3 by creation date, whatever the order of the list', () => {
-		const profils = [
+		const profiles = [
 			{ id: 9, username: 'ZOE LEFEVRE', createdAt: '2024-03-01T10:00:00.000Z' },
 			{ id: 3, username: 'Zoé Lefèvre', createdAt: '2023-01-01T10:00:00.000Z' },
 			{
@@ -43,51 +43,51 @@ describe('attribuerSlugs (plans/02 U11-U12)', () => {
 				createdAt: '2025-06-01T10:00:00.000Z',
 			},
 		]
-		const attendu = {
+		const expected = {
 			3: 'zoe-lefevre',
 			9: 'zoe-lefevre-2',
 			12: 'zoe-lefevre-3',
 		}
-		for (const ordre of [profils, [...profils].reverse()]) {
-			const slugs = Object.fromEntries(assignSlugs(ordre).map(p => [p.id, p.slug]))
-			expect(slugs).toStrictEqual(attendu)
+		for (const order of [profiles, [...profiles].reverse()]) {
+			const slugs = Object.fromEntries(assignSlugs(order).map(p => [p.id, p.slug]))
+			expect(slugs).toStrictEqual(expected)
 		}
 		// Above, the ids grow with the dates: sorting by id would give the same slugs. Here the
 		// older profile has the larger id, and still keeps the slug (answer of the old site's slug.js).
-		const idsContreDates = [
+		const idsAgainstDates = [
 			{ id: 3, username: 'Zoé Lefèvre', createdAt: '2025-06-01T10:00:00.000Z' },
 			{ id: 12, username: 'ZOE LEFEVRE', createdAt: '2023-01-01T10:00:00.000Z' },
 		]
-		for (const ordre of [idsContreDates, [...idsContreDates].reverse()]) {
-			const slugs = Object.fromEntries(assignSlugs(ordre).map(p => [p.id, p.slug]))
+		for (const order of [idsAgainstDates, [...idsAgainstDates].reverse()]) {
+			const slugs = Object.fromEntries(assignSlugs(order).map(p => [p.id, p.slug]))
 			expect(slugs).toStrictEqual({ 12: 'zoe-lefevre', 3: 'zoe-lefevre-2' })
 		}
 	})
 
 	test('same date: the smaller id first; a new profile never changes older slugs', () => {
-		const avant = [
+		const before = [
 			{ id: 5, username: 'Ana', createdAt: '2024-01-01T00:00:00.000Z' },
 			{ id: 4, username: 'ana', createdAt: '2024-01-01T00:00:00.000Z' },
 		]
 		const slugs = (l: Parameters<typeof assignSlugs>[0]) => Object.fromEntries(assignSlugs(l).map(p => [p.id, p.slug]))
-		expect(slugs(avant)).toStrictEqual({ 4: 'ana', 5: 'ana-2' })
+		expect(slugs(before)).toStrictEqual({ 4: 'ana', 5: 'ana-2' })
 		// The ids are compared as numbers: as texts, « 10 » would come before « 9 » (answer of the
 		// old site's slug.js).
-		const neufEtDix = [
+		const newAndTen = [
 			{ id: 10, username: 'Ana', createdAt: '2024-01-01T00:00:00.000Z' },
 			{ id: 9, username: 'ana', createdAt: '2024-01-01T00:00:00.000Z' },
 		]
-		expect(slugs(neufEtDix)).toStrictEqual({ 9: 'ana', 10: 'ana-2' })
-		expect(slugs([...neufEtDix].reverse())).toStrictEqual({ 9: 'ana', 10: 'ana-2' })
-		const apres = [...avant, { id: 30, username: 'ana-2', createdAt: '2026-10-01T00:00:00.000Z' }]
-		expect(slugs(apres)).toStrictEqual({ 4: 'ana', 5: 'ana-2', 30: 'ana-2-2' })
+		expect(slugs(newAndTen)).toStrictEqual({ 9: 'ana', 10: 'ana-2' })
+		expect(slugs([...newAndTen].reverse())).toStrictEqual({ 9: 'ana', 10: 'ana-2' })
+		const after = [...before, { id: 30, username: 'ana-2', createdAt: '2026-10-01T00:00:00.000Z' }]
+		expect(slugs(after)).toStrictEqual({ 4: 'ana', 5: 'ana-2', 30: 'ana-2-2' })
 	})
 
 	test('a suffix keeps the slug within 70 characters', () => {
-		const nom = 'x'.repeat(80)
+		const name = 'x'.repeat(80)
 		const [a, b] = assignSlugs([
-			{ id: 1, username: nom, createdAt: '2024-01-01' },
-			{ id: 2, username: nom, createdAt: '2024-01-02' },
+			{ id: 1, username: name, createdAt: '2024-01-01' },
+			{ id: 2, username: name, createdAt: '2024-01-02' },
 		])
 		expect(a?.slug).toBe('x'.repeat(70))
 		expect(b?.slug).toBe(`${'x'.repeat(68)}-2`)
@@ -149,7 +149,7 @@ describe('resoudreProfil (plans/02 U13, U61)', () => {
 	})
 
 	test('known limit: a username equal to the slug of another profile serves that profile (the slug wins)', () => {
-		const avecHomonyme = slugTable([
+		const withHomonym = slugTable([
 			{ id: 1, username: 'Zoé Lefèvre', createdAt: '2023-01-01T00:00:00.000Z' },
 			{ id: 2, username: 'ZOE LEFEVRE', createdAt: '2024-01-01T00:00:00.000Z' },
 			{
@@ -159,12 +159,12 @@ describe('resoudreProfil (plans/02 U13, U61)', () => {
 			},
 		])
 		// the older slug keeps its profile, the newer one gets its own slug
-		expect(avecHomonyme.slugParId.get('2')).toBe('zoe-lefevre-2')
-		expect(avecHomonyme.slugParId.get('5')).toBe('zoe-lefevre-2-2')
-		const r = resolveProfile('zoe-lefevre-2', avecHomonyme)
+		expect(withHomonym.slugParId.get('2')).toBe('zoe-lefevre-2')
+		expect(withHomonym.slugParId.get('5')).toBe('zoe-lefevre-2-2')
+		const r = resolveProfile('zoe-lefevre-2', withHomonym)
 		expect(r?.profil.id).toBe(2)
 		expect(r?.redirection).toBe(false)
-		expect(resolveProfile('zoe-lefevre-2-2', avecHomonyme)?.profil.id).toBe(5)
+		expect(resolveProfile('zoe-lefevre-2-2', withHomonym)?.profil.id).toBe(5)
 	})
 
 	test('unknown → null (404)', () => {
@@ -193,26 +193,26 @@ describe('resoudreProfil (plans/02 U13, U61)', () => {
 //    that changed slug.js.
 // Never with src/lib/slug.ts: the port would be compared to itself.
 describe('same slugs as the old site on a fictitious set (plans/01 §6.2)', () => {
-	const profils = jeu.profils.map(({ id, username, createdAt }) => ({ id, username, createdAt }))
+	const profiles = jeu.profils.map(({ id, username, createdAt }) => ({ id, username, createdAt }))
 
 	test('each profile gets the slug the old site gives it, whatever the order of the list', () => {
-		const attendu = Object.fromEntries(jeu.profils.map(p => [p.id, p.slugAttendu]))
-		for (const ordre of [profils, [...profils].reverse()]) {
-			const slugs = Object.fromEntries(assignSlugs(ordre).map(p => [p.id, p.slug]))
-			expect(slugs).toStrictEqual(attendu)
+		const expected = Object.fromEntries(jeu.profils.map(p => [p.id, p.slugAttendu]))
+		for (const order of [profiles, [...profiles].reverse()]) {
+			const slugs = Object.fromEntries(assignSlugs(order).map(p => [p.id, p.slug]))
+			expect(slugs).toStrictEqual(expected)
 		}
 	})
 
 	test('the profiles come back in the same creation order', () => {
-		expect(assignSlugs(profils).map(p => p.id)).toStrictEqual(jeu.ordreDeCreation)
+		expect(assignSlugs(profiles).map(p => p.id)).toStrictEqual(jeu.ordreDeCreation)
 	})
 
 	test('a slug or an old username is served or redirected as on the old site', () => {
-		const table = slugTable(profils)
+		const table = slugTable(profiles)
 		for (const { segment, id, slug, redirection } of jeu.segments) {
 			const r = resolveProfile(segment, table)
-			const obtenu = r ? { id: r.profil.id, slug: r.slug, redirection: r.redirection } : null
-			expect(obtenu, segment).toStrictEqual(slug === null ? null : { id, slug, redirection })
+			const obtained = r ? { id: r.profil.id, slug: r.slug, redirection: r.redirection } : null
+			expect(obtained, segment).toStrictEqual(slug === null ? null : { id, slug, redirection })
 		}
 	})
 

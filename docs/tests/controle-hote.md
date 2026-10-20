@@ -2,7 +2,7 @@
 
 Une commande lit, sur un hôte donné, toutes les adresses de l'inventaire gelé, le sitemap, le fichier robots, les anciennes routes d'authentification et le script de mesure, et écrit un rapport daté. C'est le contrôle du jour de la bascule et de sa répétition. Elle ne fait que des lectures : comme les sondes, c'est une exception à « rien vers le site en ligne » ([`CLAUDE.md`](../../CLAUDE.md), interdit 5), et elle a sa propre garde.
 
-Les adresses et les réponses attendues sont celles de la table des URL gelées ([`../migration/URLS.md`](../migration/URLS.md), `src/lib/frozen-urls.ts`). La vérification est celle du test I45 ([`../../tests/outils/parite-urls.ts`](../../tests/outils/parite-urls.ts)) : le code que promet la table, la redirection en un saut, le même `h1` que l'ancien site (comparé par empreinte).
+Les adresses et les réponses attendues sont celles de la table des URL gelées ([`../migration/URLS.md`](../migration/URLS.md), `src/lib/frozen-urls.ts`). La vérification est celle du test I45 ([`../../tests/support/url-parity.ts`](../../tests/support/url-parity.ts)) : le code que promet la table, la redirection en un saut, le même `h1` que l'ancien site (comparé par empreinte).
 
 ## Lancer
 
@@ -53,7 +53,7 @@ Toute requête passe par `garder()` (`scripts/cutover/host-guard.ts`), qui laiss
 
 Une requête interdite arrête le contrôle : c'est un défaut de la commande, pas de l'hôte.
 
-Les requêtes partent **une à la fois, à 500 ms d'écart au moins** entre deux départs : 2 par seconde au plus, comme les sondes (`tests/sondes/lecteur.ts`). Une page qui n'est pas revenue en entier au bout de 15 secondes est abandonnée. Chaque requête se présente sous le nom `my-makeup-controle-hote/1 (lecture seule)`.
+Les requêtes partent **une à la fois, à 500 ms d'écart au moins** entre deux départs : 2 par seconde au plus, comme les sondes (`tests/probes/reader.ts`). Une page qui n'est pas revenue en entier au bout de 15 secondes est abandonnée. Chaque requête se présente sous le nom `my-makeup-controle-hote/1 (lecture seule)`.
 
 La commande n'importe aucune dépendance installée par `bun install` : la CI la lance sans l'installer, à côté des secrets.
 
@@ -64,9 +64,9 @@ Le rapport s'affiche dans le terminal : une ligne par partie (CONFORME ou NON CO
 - **Jamais l'adresse d'un profil** ([`CLAUDE.md`](../../CLAUDE.md), interdit 3). Un profil est désigné par `profil #xxxxxxxx`, les 8 premiers chiffres du SHA-256 de son chemin (voir [`sondes.md`](sondes.md) pour retrouver un profil sur son poste).
 - Le sitemap, le fichier robots et le script de mesure ont chacun leur empreinte (8 chiffres du SHA-256 du corps) : deux contrôles successifs d'un hôte qui n'a pas changé donnent les mêmes.
 - « Empreinte des adresses » résume l'état de toutes les adresses lues : elle change dès qu'une adresse change d'état.
-- Une adresse cassée exprès (`/a-propos` en 500, une ancienne route qui répond, un script absent) rend la partie concernée NON CONFORME, la nomme et fait sortir la commande en 1 (`tests/unit/bascule-controle-hote.test.ts`).
+- Une adresse cassée exprès (`/a-propos` en 500, une ancienne route qui répond, un script absent) rend la partie concernée NON CONFORME, la nomme et fait sortir la commande en 1 (`tests/unit/cutover-host-check.test.ts`).
 
 ## Les tests
 
-- `tests/unit/bascule-controle-hote.test.ts` : la garde (écritures, `/u`, double barre, cookie, accès protégé), les réglages, la lecture du sitemap, un hôte simulé conforme et des hôtes cassés exprès, le rapport sans adresse de profil, le rythme de 2 requêtes par seconde avec une horloge simulée. `bun --no-env-file test tests/unit/bascule-controle-hote.test.ts`.
+- `tests/unit/cutover-host-check.test.ts` : la garde (écritures, `/u`, double barre, cookie, accès protégé), les réglages, la lecture du sitemap, un hôte simulé conforme et des hôtes cassés exprès, le rapport sans adresse de profil, le rythme de 2 requêtes par seconde avec une horloge simulée. `bun --no-env-file test tests/unit/cutover-host-check.test.ts`.
 - `tests/e2e/controle-hote.spec.ts` (I45, U61 à U64) : la commande contre l'application du banc, avec des profils, un talent et un article d'essai dans le sitemap. Aucune famille n'y est comptée « à venir » : la page 404 d'un talent, d'un article ou d'un profil inconnu, la dernière, est livrée par le proxy avec son `h1` dans le HTML du serveur (ticket 231), et la commande n'en connaît aucune.

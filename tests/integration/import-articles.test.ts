@@ -3,12 +3,12 @@ import { SQL } from 'bun'
 import { TYPE_ARTICLE } from '../../scripts/migration/import/media'
 import type { Report } from '../../scripts/migration/import/report'
 import type { Article, Media } from '../../src/payload-types'
-import { importerSurLeBanc } from '../outils/import'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { deposerUnObjet, supprimerUnObjet, viderLeStockage } from '../outils/s3'
-import { creerLaSourceStrapi, effacerLaSourceStrapi, sourceDuBanc } from '../outils/source-strapi'
-import { definitionDeLaSource } from '../outils/source-strapi/donnees'
-import { pngUni } from '../outils/source-strapi/images'
+import { importOnBench } from '../support/import'
+import { emptyBase, testPayload } from '../support/payload-test'
+import { deleteObject, dropObject, emptyStorage } from '../support/s3'
+import { benchSource, createSourceStrapi, eraseSourceStrapi } from '../support/source-strapi'
+import { sourceDefinition } from '../support/source-strapi/data'
+import { pngPlain } from '../support/source-strapi/images'
 
 /**
  * Ticket 061: the articles are taken as they are, drafts included (docs/migration/SCHEMA.md §5.3;
@@ -20,8 +20,8 @@ import { pngUni } from '../outils/source-strapi/images'
  * One import for the whole file.
  */
 
-const source = sourceDuBanc()
-const { lignes } = definitionDeLaSource(source.medias)
+const source = benchSource()
+const { lignes } = sourceDefinition(source.medias)
 
 const BROUILLON = 12
 const IMAGE = 120
@@ -76,7 +76,7 @@ const enIso = (horodatage: unknown): string | null =>
 	horodatage === null ? null : `${String(horodatage).replace(' ', 'T')}Z`
 
 async function articlesDeLaCible(): Promise<Article[]> {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	const { docs } = await payload.find({
 		collection: 'articles',
 		depth: 0,
@@ -90,11 +90,11 @@ async function articlesDeLaCible(): Promise<Article[]> {
 let premier: Report
 
 beforeAll(async () => {
-	await viderLaBase()
+	await emptyBase()
 	// Before the source: emptying the bucket would take its objects away.
-	await viderLeStockage()
-	await creerLaSourceStrapi()
-	await deposerUnObjet(CLE_DE_L_IMAGE, pngUni(32, 24, { rouge: 200, vert: 120, bleu: 160 }), { type: 'image/png' })
+	await emptyStorage()
+	await createSourceStrapi()
+	await dropObject(CLE_DE_L_IMAGE, pngPlain(32, 24, { rouge: 200, vert: 120, bleu: 160 }), { type: 'image/png' })
 	await avecLeProprietaire(async sql => {
 		await sql`INSERT INTO articles (id, title, content, author, seo_title, seo_description, slug, excerpt,
 			created_at, updated_at, published_at)
@@ -112,13 +112,13 @@ beforeAll(async () => {
 			VALUES (900, ${IMAGE}, 1, '${TYPE_ARTICLE}', 'galery', 1), (901, ${PDF}, 7, '${TYPE_ARTICLE}', 'galery', 1)`
 		)
 	})
-	premier = await importerSurLeBanc()
+	premier = await importOnBench()
 }, 60_000)
 
 afterAll(async () => {
-	await viderLaBase()
-	await effacerLaSourceStrapi()
-	await supprimerUnObjet(CLE_DE_L_IMAGE)
+	await emptyBase()
+	await eraseSourceStrapi()
+	await deleteObject(CLE_DE_L_IMAGE)
 })
 
 describe('Les articles sont repris à l’identique, brouillons compris (ticket 061)', () => {
@@ -159,7 +159,7 @@ describe('Les articles sont repris à l’identique, brouillons compris (ticket 
 	})
 
 	test('une image de galerie est rattachée si son média est adopté ; un PDF est signalé, pas inventé', async () => {
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const cible = await articlesDeLaCible()
 		const { docs: medias } = await payload.find({
 			collection: 'media',
@@ -180,7 +180,7 @@ describe('Les articles sont repris à l’identique, brouillons compris (ticket 
 	test('second passage : 0 création, 0 mise à jour', async () => {
 		const avant = await articlesDeLaCible()
 
-		const second = await importerSurLeBanc()
+		const second = await importOnBench()
 
 		expect(second.collections.articles).toMatchObject({ created: 0, updated: 0, unchanged: 3, refused: [] })
 		expect(await articlesDeLaCible()).toEqual(avant)

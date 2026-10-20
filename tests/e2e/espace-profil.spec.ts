@@ -1,8 +1,8 @@
 import { expect, type Page, test } from '@playwright/test'
-import { violationsGraves } from '../outils/axe'
-import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest } from '../outils/payload-test'
-import { ouvrirSessionSansMotDePasse } from '../outils/session'
+import { createAccount, type TestAccount } from '../support/account-factory'
+import { violationsSevere } from '../support/axe'
+import { testPayload } from '../support/payload-test'
+import { openSessionWithoutPassword } from '../support/session'
 
 /**
  * The page of her space and the panel of her identity (tickets 118, 119, 120; plan 02 E16, E19, E30,
@@ -17,7 +17,7 @@ test.beforeEach(({ context }) =>
 	context.setExtraHTTPHeaders({ 'x-forwarded-for': `192.0.2.${40 + (++compteur % 150)}` })
 )
 
-type Maquilleuse = CompteDeTest<'maquilleuse'>
+type Maquilleuse = TestAccount<'maquilleuse'>
 
 const IDENTITE = { firstName: 'Léa', lastName: 'Fictive', artistName: 'Studio Fictif', specialty: 'Maquillage mariée' }
 
@@ -26,8 +26,8 @@ async function maquilleuse(
 	context: { addCookies: (c: Maquilleuse['session']['cookies']) => Promise<void> },
 	profil: Record<string, unknown> = IDENTITE
 ): Promise<Maquilleuse> {
-	const compte = await creerCompte('maquilleuse')
-	const payload = await payloadDeTest()
+	const compte = await createAccount('maquilleuse')
+	const payload = await testPayload()
 	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
 	const [fiche] = docs
 	if (!fiche) throw new Error('pas de profil')
@@ -37,7 +37,7 @@ async function maquilleuse(
 }
 
 async function ficheDe(compte: Maquilleuse) {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
 	const [fiche] = docs
 	if (!fiche) throw new Error('pas de profil')
@@ -92,15 +92,15 @@ test.describe('118 : la page de l’espace', { tag: '@mobile' }, () => {
 			return scrollWidth - clientWidth
 		})
 		expect(debordement).toBeLessThanOrEqual(0)
-		expect(await violationsGraves(page)).toEqual([])
+		expect(await violationsSevere(page)).toEqual([])
 
-		const dossier = process.env.CAPTURES_ESPACE
+		const dossier = process.env.DASHBOARD_SCREENSHOTS
 		if (dossier) await page.screenshot({ fullPage: true, path: `${dossier}/espace-${test.info().project.name}.png` })
 	})
 
 	test('U54 : A ne voit rien du profil de B, ni dans la page ni dans la charge RSC', async ({ context, page }) => {
-		const b = await creerCompte('maquilleuse')
-		const payload = await payloadDeTest()
+		const b = await createAccount('maquilleuse')
+		const payload = await testPayload()
 		const ficheB = await ficheDe(b)
 		await payload.update({
 			collection: 'profiles',
@@ -229,9 +229,9 @@ test.describe('120 : au doigt et au clavier', { tag: '@mobile' }, () => {
 			expect(boite.width).toBe(taille.width)
 			expect(boite.height).toBe(taille.height)
 		}
-		const dossier = process.env.CAPTURES_ESPACE
+		const dossier = process.env.DASHBOARD_SCREENSHOTS
 		if (dossier) await page.screenshot({ path: `${dossier}/panneau-${test.info().project.name}.png` })
-		expect(await violationsGraves(page)).toEqual([])
+		expect(await violationsSevere(page)).toEqual([])
 	})
 
 	test('E68 : parcours au clavier, le focus reste piégé, Échap ferme et rend le focus', async ({ context, page }) => {
@@ -320,7 +320,7 @@ test.describe('120 : au doigt et au clavier', { tag: '@mobile' }, () => {
 		const statut = page.getByRole('status').filter({ hasText: 'Ton identité est enregistrée.' })
 		await expect(statut).toBeVisible()
 		expect(await statut.evaluate(noeud => noeud.closest('[role="dialog"]') === null)).toBe(true)
-		expect(await violationsGraves(page)).toEqual([])
+		expect(await violationsSevere(page)).toEqual([])
 	})
 })
 
@@ -331,8 +331,8 @@ test.describe('121 : la session expire pendant l’édition', { tag: '@mobile' }
 		context,
 		page,
 	}) => {
-		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
-		const payload = await payloadDeTest()
+		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const payload = await testPayload()
 		const fiche = await ficheDe(compte)
 		await payload.update({ collection: 'profiles', id: fiche.id, data: IDENTITE })
 		await context.addCookies(compte.session.cookies)
@@ -349,7 +349,7 @@ test.describe('121 : la session expire pendant l’édition', { tag: '@mobile' }
 		await page.getByLabel('Spécialité').fill('Effets spéciaux')
 
 		// The session ends while she types: the browser now holds a token that has run out.
-		const expiree = await ouvrirSessionSansMotDePasse(payload, { collection: 'pros', id: compte.id }, process.env, {
+		const expiree = await openSessionWithoutPassword(payload, { collection: 'pros', id: compte.id }, process.env, {
 			dureeS: -60,
 		})
 		await context.clearCookies()

@@ -1,5 +1,5 @@
 /**
- * `bun run banc:rapprocher [--json] [--outside-import]`: the dry reconciliation of the storage and the database of the
+ * `bun run bench:reconcile [--json] [--outside-import]`: the dry reconciliation of the storage and the database of the
  * bench of this instance (ticket 137, docs/tests/banc.md). It compares the objects of the storage
  * with the media of the database and lists the orphans: objects without a media, media without an
  * object, media without a profile. The bin (`deleted/`) is counted apart.
@@ -14,25 +14,25 @@
  * erase that source: its adopted media have lost their objects on purpose. What the v3 itself wrote
  * stays strict. The full control before a purge runs without the option.
  *
- * The instance (name and ports) comes from BANC_INSTANCE and BANC_DECALAGE, as for every command of
+ * The instance (name and ports) comes from BENCH_INSTANCE and BENCH_OFFSET, as for every command of
  * the bench. Started with `--no-env-file`: a working `.env` never reaches the bench.
  */
 
-import { BancRefuse } from '../../tests/outils/banc'
-import { bancCourant, exigerBancDebout } from '../banc'
+import { RefusedBench } from '../../tests/support/bench'
+import { currentBench, requireRunningBench } from '../bench'
 
 try {
-	const bench = bancCourant()
-	await exigerBancDebout(bench)
+	const bench = currentBench()
+	await requireRunningBench(bench)
 	// Set before the configuration of Payload is loaded: it reads the environment then.
 	Object.assign(process.env, bench.environnement)
 } catch (error) {
-	if (!(error instanceof BancRefuse)) throw error
+	if (!(error instanceof RefusedBench)) throw error
 	console.error(error.message)
 	process.exit(2)
 }
 
-const { payloadDeTest: testPayload } = await import('../../tests/outils/payload-test')
+const { testPayload } = await import('../../tests/support/payload-test')
 const { serverEnv } = await import('../../src/lib/env')
 const { listStorage } = await import('../../src/lib/storage')
 const { describeReconciliation: tellReconciliation } = await import('../../src/lib/reconciliation')
