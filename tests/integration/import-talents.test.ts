@@ -358,7 +358,7 @@ describe('Critère 5 : le rapport, en nombres, identifiants et empreintes seulem
 
 			expect(code).toBe(0)
 			expect(sortie).toContain('Talents : 3 sur 3 égaux, parité complète')
-			expect(JSON.parse(json)).toMatchObject({ mode: 'real', arret: null, source: { inchangee: true } })
+			expect(JSON.parse(json)).toMatchObject({ mode: 'real', halt: null, source: { unchanged: true } })
 			for (const texte of [sortie, json])
 				for (const ligne of TALENTS_DE_LA_SOURCE)
 					for (const valeur of [ligne.title, ligne.slug, ligne.description, ligne.content])
