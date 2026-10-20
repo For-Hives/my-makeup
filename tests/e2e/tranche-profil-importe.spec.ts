@@ -73,7 +73,7 @@ async function importer(rapport: string) {
 	)
 	expect(code, sortie).toBe(0)
 	return JSON.parse(readFileSync(rapport, 'utf8')) as {
-		collections: Record<string, { crees: number; modifies: number }>
+		collections: Record<string, { created: number; updated: number }>
 	}
 }
 
@@ -93,7 +93,7 @@ test('un profil repris de la fausse base Strapi s’affiche sur sa page publique
 	expect(source.code, source.sortie).toBe(0)
 
 	const premier = await importer(testInfo.outputPath('rapport-1.json'))
-	expect(premier.collections.profiles).toMatchObject({ crees: 13, modifies: 0 })
+	expect(premier.collections.profiles).toMatchObject({ created: 13, updated: 0 })
 
 	// The HTML of the server, as a search engine reads it: 200, the name in the only h1.
 	const reponse = await request.get('/profil/zoe-lefevre')
@@ -125,5 +125,5 @@ test('un profil repris de la fausse base Strapi s’affiche sur sa page publique
 	// A second run of the import writes nothing.
 	const second = await importer(testInfo.outputPath('rapport-2.json'))
 	for (const collection of ['pros', 'profiles', 'talents'])
-		expect(second.collections[collection], collection).toMatchObject({ crees: 0, modifies: 0 })
+		expect(second.collections[collection], collection).toMatchObject({ created: 0, updated: 0 })
 })
