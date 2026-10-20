@@ -14,9 +14,9 @@ import type { MailEnv } from '../env'
  * nodemailer waits 30 s for the greeting, 2 min for the connection and 10 min on a silent socket: a form
  * request would time out behind the proxy long before the caller got its readable error.
  */
-export const DELAI_DU_RELAIS_MS = 10_000
+export const RELAY_TIMEOUT_MS = 10_000
 
-export type OptionsDeTransport = {
+export type TransportOptions = {
 	host: string
 	port: number
 	secure: boolean
@@ -27,14 +27,14 @@ export type OptionsDeTransport = {
 	socketTimeout: number
 }
 
-export function optionsDeTransport(mail: MailEnv): OptionsDeTransport {
+export function transportOptions(mail: MailEnv): TransportOptions {
 	return {
 		host: mail.host,
 		port: mail.port,
 		secure: mail.port === 465,
-		connectionTimeout: DELAI_DU_RELAIS_MS,
-		greetingTimeout: DELAI_DU_RELAIS_MS,
-		socketTimeout: DELAI_DU_RELAIS_MS,
+		connectionTimeout: RELAY_TIMEOUT_MS,
+		greetingTimeout: RELAY_TIMEOUT_MS,
+		socketTimeout: RELAY_TIMEOUT_MS,
 		...(mail.auth && { auth: mail.auth, requireTLS: true as const }),
 	}
 }
@@ -43,7 +43,7 @@ export function optionsDeTransport(mail: MailEnv): OptionsDeTransport {
  * What Payload sends its own mails through (verification, forgotten password) when no relay is set.
  * Payload's console adapter would log the recipient and the subject; this one writes a line with neither.
  */
-export const adaptateurSansRelais: EmailAdapter = ({ payload }) => {
+export const adapterWithoutRelay: EmailAdapter = ({ payload }) => {
 	return {
 		name: 'sans-relais',
 		defaultFromAddress: 'ne-pas-repondre@invalid',

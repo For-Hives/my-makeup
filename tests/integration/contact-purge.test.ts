@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, test } from 'bun:test'
 import { marquerUnImportEnCours } from '@/lib/contexte-import'
-import { purgeDesMessagesDeContact } from '@/lib/tasks/contact-messages'
-import { lancerLesTachesQuotidiennes } from '@/lib/tasks/daily'
+import { purgeContactMessages } from '@/lib/tasks/contact-messages'
+import { runDailyTasks } from '@/lib/tasks/daily'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 
 /**
@@ -45,7 +45,7 @@ describe('la purge à 12 mois, sur une horloge simulée', () => {
 		const onzeMois = await ecrire('2025-11-15T10:00:00.000Z')
 		const recent = await ecrire(MAINTENANT.toISOString())
 
-		const premiere = await lancerLesTachesQuotidiennes(payload, MAINTENANT, [purgeDesMessagesDeContact])
+		const premiere = await runDailyTasks(payload, MAINTENANT, [purgeContactMessages])
 		expect(premiere).toEqual([{ nom: 'purge-messages-contact', supprimes: 2 }])
 		const restants = await ids()
 		expect(restants).not.toContain(vieux.id)
@@ -53,7 +53,7 @@ describe('la purge à 12 mois, sur une horloge simulée', () => {
 		expect(restants).toContain(onzeMois.id)
 		expect(restants).toContain(recent.id)
 
-		const seconde = await lancerLesTachesQuotidiennes(payload, MAINTENANT, [purgeDesMessagesDeContact])
+		const seconde = await runDailyTasks(payload, MAINTENANT, [purgeContactMessages])
 		expect(seconde).toEqual([{ nom: 'purge-messages-contact', supprimes: 0 }])
 	})
 
@@ -61,11 +61,11 @@ describe('la purge à 12 mois, sur une horloge simulée', () => {
 		const payload = await payloadDeTest()
 		const vieux = await ecrire('2024-06-01T00:00:00.000Z')
 		const fin = marquerUnImportEnCours()
-		const pendant = await lancerLesTachesQuotidiennes(payload, MAINTENANT, [purgeDesMessagesDeContact])
+		const pendant = await runDailyTasks(payload, MAINTENANT, [purgeContactMessages])
 		fin()
 		expect(pendant).toEqual([{ nom: 'purge-messages-contact', supprimes: 0 }])
 		expect(await ids()).toContain(vieux.id)
-		await lancerLesTachesQuotidiennes(payload, MAINTENANT, [purgeDesMessagesDeContact])
+		await runDailyTasks(payload, MAINTENANT, [purgeContactMessages])
 		expect(await ids()).not.toContain(vieux.id)
 	})
 })

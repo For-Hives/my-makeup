@@ -14,7 +14,7 @@ import { signUpAccount } from '@/lib/auth/sign-up-payload'
 import { signUpRateLimit } from '@/lib/auth/sign-up-rate-limits'
 import { logRefusal } from '@/lib/auth/sign-up-refusal'
 import { openWithPassword } from '@/lib/auth/token'
-import { envoiEmailDePayload } from '@/lib/emails/send'
+import { payloadSendEmail } from '@/lib/emails/send'
 import { serverEnv } from '@/lib/env'
 
 const text = (valeur: FormDataEntryValue | null): string => (typeof valeur === 'string' ? valeur : '')
@@ -83,7 +83,7 @@ export async function signUp(_precedent: SignUpState, formulaire: FormData): Pro
 		payload,
 		donnees: validation.donnees,
 		verifier: env.authVerify,
-		envoyer: envoiEmailDePayload(payload, env),
+		envoyer: payloadSendEmail(payload, env),
 		site,
 		journal: log,
 	})

@@ -2,8 +2,8 @@
 
 import { usePathname } from 'next/navigation'
 import { useEffect } from 'react'
-import { COOKIE_DE_MARQUE_PERIME, methodeDeLaMarque } from '@/lib/analytics/sign-in-mark'
-import { type Suivre, track } from '@/lib/analytics/track'
+import { EXPIRED_MARK_COOKIE, markMethod } from '@/lib/analytics/sign-in-mark'
+import { type Track, track } from '@/lib/analytics/track'
 
 /**
  * Sends `login_result` for a sign-in that worked (ticket 146), email or Google, on the first page
@@ -13,18 +13,18 @@ import { type Suivre, track } from '@/lib/analytics/track'
  * It runs on every change of path: the password sign-in ends in a client-side navigation, which
  * does not mount the layout again.
  */
-export function ConnexionReussie({ suivre = track }: { suivre?: Suivre }) {
-	const chemin = usePathname()
+export function SignInSucceeded({ suivre = track }: { suivre?: Track }) {
+	const path = usePathname()
 	useEffect(() => {
 		try {
-			const methode = methodeDeLaMarque(document.cookie)
-			if (methode === null) return
+			const method = markMethod(document.cookie)
+			if (method === null) return
 			// biome-ignore lint/suspicious/noDocumentCookie: spending a cookie the server left readable on purpose
-			document.cookie = COOKIE_DE_MARQUE_PERIME
-			suivre('login_result', { method: methode, ok: true, code: 'ok' })
+			document.cookie = EXPIRED_MARK_COOKIE
+			suivre('login_result', { method: method, ok: true, code: 'ok' })
 		} catch {
 			// A measure never breaks a page.
 		}
-	}, [chemin, suivre])
+	}, [path, suivre])
 	return null
 }

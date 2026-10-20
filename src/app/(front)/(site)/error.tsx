@@ -1,6 +1,6 @@
 'use client'
 
-import { MesureDErreur } from '@/components/analytics/PageAnalytics'
+import { ErrorAnalytics } from '@/components/analytics/PageAnalytics'
 import { ErrorPage } from '@/components/layout/ErrorPage'
 
 // The message and the trace of the error stay on the server, in its log: the visitor reads a sentence.
@@ -14,7 +14,7 @@ export default function PageError({
 }) {
 	return (
 		<>
-			<MesureDErreur scope="site" erreur={error} />
+			<ErrorAnalytics scope="site" erreur={error} />
 			<ErrorPage reessayer={unstable_retry} />
 		</>
 	)

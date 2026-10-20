@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { signOut } from '@/app/(front)/(dashboard)/auth/actions'
-import { LienSuivi } from '@/components/analytics/TrackedLink'
+import { TrackedLink } from '@/components/analytics/TrackedLink'
 import { DASHBOARD_LINK, NAVIGATION, SEARCH_LINK, SIGN_IN_LINK } from './links'
 
 const LINK = 'font-semibold text-gray-900 text-sm leading-6'
@@ -163,7 +163,7 @@ export function Nav() {
 						))}
 					</ul>
 					<div className="flex flex-col items-start gap-8 lg:flex-row lg:items-center lg:gap-10">
-						<LienSuivi
+						<TrackedLink
 							href={SEARCH_LINK.href}
 							suivi={{ nom: 'nav_recherche' }}
 							className={`btn-primary-with-icon ${RING}`}
@@ -176,7 +176,7 @@ export function Nav() {
 								/>
 							</svg>
 							{SEARCH_LINK.nom}
-						</LienSuivi>
+						</TrackedLink>
 						{signedIn ? (
 							<>
 								<Link href={DASHBOARD_LINK.href} className={`${LINK} ${RING}`}>

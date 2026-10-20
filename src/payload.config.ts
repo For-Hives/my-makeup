@@ -22,7 +22,7 @@ import { Profiles } from './collections/Profiles'
 import { Pros } from './collections/Pros'
 import { Talents } from './collections/Talents'
 import { avecLaCorbeille } from './collections/trash'
-import { adaptateurSansRelais, optionsDeTransport } from './lib/emails/relay'
+import { adapterWithoutRelay, transportOptions } from './lib/emails/relay'
 import { mediaBaseUrl, serverEnv } from './lib/env'
 import { LANGUE_DE_PAYLOAD } from './lib/langue-payload'
 import { adresseDuMedia, PREFIXE_DES_ENVOIS } from './lib/medias'
@@ -107,9 +107,9 @@ export default buildConfig({
 				// Nothing connects while this file is loaded: the Payload CLI, the scripts and the tests
 				// load it too. An unreachable relay is an error of the mail that is sent, not of the start.
 				skipVerify: true,
-				transportOptions: optionsDeTransport(env.mail),
+				transportOptions: transportOptions(env.mail),
 			})
-		: adaptateurSansRelais,
+		: adapterWithoutRelay,
 	// REST and the Local API are the only ways in. The two GraphQL routes answer 404 by themselves.
 	graphQL: { disable: true },
 	// Payload speaks French only: its errors, its own messages and the admin panel, whatever

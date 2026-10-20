@@ -3,24 +3,24 @@
 import { type ReactNode, useActionState, useEffect, useMemo, useRef } from 'react'
 import { track } from '@/lib/analytics/track'
 import {
-	CHAMP_PIEGE_DU_CONTACT,
-	type ChampDuContact,
-	type EtatDuContact,
-	MESSAGE_ENVOYE,
-	MESSAGE_NON_ENREGISTRE,
-	MESSAGE_TROP_DE_MESSAGES,
-	RESUME_DES_ERREURS,
+	CONTACT_TRAP_FIELD,
+	type ContactField,
+	type ContactState,
+	ERRORS_SUMMARY,
+	MESSAGE_NOT_SAVED,
+	MESSAGE_SENT,
+	MESSAGE_TOO_MANY_MESSAGES,
 } from '@/lib/contact/message'
 
-export type ActionDuContact = (precedent: EtatDuContact, formulaire: FormData) => Promise<EtatDuContact>
+export type ContactAction = (precedent: ContactState, formulaire: FormData) => Promise<ContactState>
 
 /** What the form needs of the measure: `track`, and a double in a test. */
-export type SuivreLeContact = (nom: 'platform_contact_submit', proprietes: { ok: boolean; status: number }) => unknown
+export type TrackContact = (nom: 'platform_contact_submit', proprietes: { ok: boolean; status: number }) => unknown
 
-const CHAMP =
+const FIELD =
 	'block w-full rounded-md border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-600 sm:text-sm sm:leading-6'
 
-const LIBELLES: Record<ChampDuContact, string> = {
+const LABELS: Record<ContactField, string> = {
 	prenom: 'Prénom',
 	nom: 'Nom',
 	email: 'Email',
@@ -29,7 +29,7 @@ const LIBELLES: Record<ChampDuContact, string> = {
 }
 
 /** The outcome of one send, as the event counts it: stored or not, and an HTTP-like status. Never what was typed. */
-function issue(etat: Exclude<EtatDuContact, null>): { ok: boolean; status: number } {
+function issue(etat: Exclude<ContactState, null>): { ok: boolean; status: number } {
 	if ('envoye' in etat) return { ok: true, status: 200 }
 	if ('erreurs' in etat) return { ok: false, status: 400 }
 	if ('limite' in etat) return { ok: false, status: 429 }
@@ -40,37 +40,37 @@ function issue(etat: Exclude<EtatDuContact, null>): { ok: boolean; status: numbe
  * A request that fails on the way (the network, a proxy) throws in the client script of Next: it is turned
  * into the state of a failure, so that the form keeps what she typed and says so.
  */
-export function avecLEchecDuReseau(action: ActionDuContact): ActionDuContact {
+export function withNetworkFailure(action: ContactAction): ContactAction {
 	return async (precedent, formulaire) => {
 		try {
 			return await action(precedent, formulaire)
-		} catch (erreur) {
+		} catch (error) {
 			// The proxy's 429 (ticket 161) comes back as the message of the failed action.
-			const limite = erreur instanceof Error && erreur.message.includes(MESSAGE_TROP_DE_MESSAGES)
-			const texte = (cle: ChampDuContact) => {
-				const valeur = formulaire.get(cle)
-				return typeof valeur === 'string' ? valeur : ''
+			const limited = error instanceof Error && error.message.includes(MESSAGE_TOO_MANY_MESSAGES)
+			const text = (cle: ContactField) => {
+				const value = formulaire.get(cle)
+				return typeof value === 'string' ? value : ''
 			}
-			const valeurs = {
-				prenom: texte('prenom'),
-				nom: texte('nom'),
-				email: texte('email'),
-				telephone: texte('telephone'),
-				message: texte('message'),
+			const values = {
+				prenom: text('prenom'),
+				nom: text('nom'),
+				email: text('email'),
+				telephone: text('telephone'),
+				message: text('message'),
 			}
-			return limite ? { limite: true, valeurs } : { echec: true, reseau: true, valeurs }
+			return limited ? { limite: true, valeurs: values } : { echec: true, reseau: true, valeurs: values }
 		}
 	}
 }
 
 /** One field: its label, the control, and the sentence of its error. */
-function Champ({
+function Field({
 	champ,
 	large = true,
-	erreur,
+	erreur: error,
 	children,
 }: {
-	champ: ChampDuContact
+	champ: ContactField
 	large?: boolean
 	erreur: string | undefined
 	children: ReactNode
@@ -78,12 +78,12 @@ function Champ({
 	return (
 		<div className={large ? 'sm:col-span-2' : undefined}>
 			<label htmlFor={champ} className="block font-semibold text-gray-900 text-sm leading-6">
-				{LIBELLES[champ]}
+				{LABELS[champ]}
 			</label>
 			<div className="mt-2.5">
 				{children}
 				<p id={`erreur-${champ}`} data-testid={`erreur-${champ}`} className="mt-2 text-red-700 text-xs">
-					{erreur}
+					{error}
 				</p>
 			</div>
 		</div>
@@ -103,80 +103,80 @@ function Champ({
  *   answered, so the fields are remounted with each answer and take her typing back as their value.
  * - The event of the measure is sent once for each answer.
  */
-export function FormulaireDeContact({ action, suivre = track }: { action: ActionDuContact; suivre?: SuivreLeContact }) {
-	const [etat, envoyer, enCours] = useActionState(avecLEchecDuReseau(action), null)
-	const verrou = useRef(false)
-	const formulaire = useRef<HTMLFormElement>(null)
-	const compte = useRef<EtatDuContact>(null)
+export function ContactForm({ action, suivre = track }: { action: ContactAction; suivre?: TrackContact }) {
+	const [state, submit, pending] = useActionState(withNetworkFailure(action), null)
+	const lock = useRef(false)
+	const form = useRef<HTMLFormElement>(null)
+	const count = useRef<ContactState>(null)
 	const generations = useRef(0)
-	const erreurs = etat && 'erreurs' in etat ? etat.erreurs : undefined
+	const errors = state && 'erreurs' in state ? state.erreurs : undefined
 	// A new number for each answer: the fields are remounted, and take her typing back as their value.
-	const generation = useMemo(() => ++generations.current, [etat])
+	const generation = useMemo(() => ++generations.current, [state])
 
 	useEffect(() => {
-		if (!enCours) verrou.current = false
-	}, [enCours, etat])
+		if (!pending) lock.current = false
+	}, [pending, state])
 
 	// Once for each answer, never for a render.
 	useEffect(() => {
-		if (etat === null || compte.current === etat) return
-		compte.current = etat
-		suivre('platform_contact_submit', issue(etat))
-	}, [etat, suivre])
+		if (state === null || count.current === state) return
+		count.current = state
+		suivre('platform_contact_submit', issue(state))
+	}, [state, suivre])
 
 	// The first field in error takes the focus, once the fields are remounted.
 	useEffect(() => {
-		if (erreurs) formulaire.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus()
-	}, [erreurs])
+		if (errors) form.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus()
+	}, [errors])
 
-	if (etat && 'envoye' in etat)
+	if (state && 'envoye' in state)
 		return (
 			<p
 				role="status"
 				data-testid="contact-envoye"
 				className="mx-auto my-32 max-w-xl rounded-md bg-green-50 p-4 text-center font-semibold text-green-900 text-sm"
 			>
-				{MESSAGE_ENVOYE}
+				{MESSAGE_SENT}
 			</p>
 		)
 
-	const valeurs = etat && 'valeurs' in etat ? etat.valeurs : undefined
-	const proprietes = (champ: ChampDuContact) => ({
+	const values = state && 'valeurs' in state ? state.valeurs : undefined
+	const properties = (champ: ContactField) => ({
 		id: champ,
 		name: champ,
-		defaultValue: valeurs?.[champ],
-		'aria-invalid': erreurs?.[champ] ? (true as const) : undefined,
-		'aria-describedby': erreurs?.[champ] ? `erreur-${champ}` : undefined,
-		className: CHAMP,
+		defaultValue: values?.[champ],
+		'aria-invalid': errors?.[champ] ? (true as const) : undefined,
+		'aria-describedby': errors?.[champ] ? `erreur-${champ}` : undefined,
+		className: FIELD,
 	})
 
 	return (
 		<form
-			ref={formulaire}
-			action={envoyer}
+			ref={form}
+			action={submit}
 			noValidate
 			onSubmit={evenement => {
-				if (verrou.current) evenement.preventDefault()
-				else verrou.current = true
+				if (lock.current) evenement.preventDefault()
+				else lock.current = true
 			}}
 			className="relative mx-auto my-32 max-w-xl px-4 sm:mt-20 md:px-0"
 		>
 			<div key={generation} className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2">
-				<Champ champ="prenom" large={false} erreur={erreurs?.prenom}>
-					<input type="text" autoComplete="given-name" {...proprietes('prenom')} />
-				</Champ>
-				<Champ champ="nom" large={false} erreur={erreurs?.nom}>
-					<input type="text" autoComplete="family-name" {...proprietes('nom')} />
-				</Champ>
-				<Champ champ="email" erreur={erreurs?.email}>
-					<input type="email" inputMode="email" autoComplete="email" {...proprietes('email')} />
-				</Champ>
-				<Champ champ="telephone" erreur={erreurs?.telephone}>
-					<input type="tel" inputMode="tel" autoComplete="tel" {...proprietes('telephone')} />
-				</Champ>
-				<Champ champ="message" erreur={erreurs?.message}>
-					<textarea rows={4} {...proprietes('message')} />
-				</Champ>
+				<Field champ="prenom" large={false} erreur={errors?.prenom}>
+					<input type="text" autoComplete="given-name" {...properties('prenom')} />
+				</Field>
+				<Field champ="nom" large={false} erreur={errors?.nom}>
+					<input type="text" autoComplete="family-name" {...properties('nom')} />
+				</Field>
+				<Field champ="email" erreur={errors?.email}>
+					<input type="email" inputMode="email" autoComplete="email" {...properties('email')} />
+				</Field>
+				<Field champ="telephone" erreur={errors?.telephone}>
+					<input type="tel" inputMode="tel" autoComplete="tel" {...properties('telephone')} />
+				</Field>
+				<Field champ="message" erreur={errors?.message}>
+					<textarea rows={4} {...properties('message')} />
+				</Field>
 				<div className="sm:col-span-2">
 					<p className="text-gray-600 text-sm leading-6">
 						En envoyant votre message, vous acceptez notre{' '}
@@ -188,11 +188,11 @@ export function FormulaireDeContact({ action, suivre = track }: { action: Action
 			</div>
 			{/* The trap (ticket 161): out of sight and of the tab order, and hidden from screen readers. A person never fills it. */}
 			<div aria-hidden="true" className="absolute -left-[10000px] h-px w-px overflow-hidden">
-				<label htmlFor={CHAMP_PIEGE_DU_CONTACT}>
+				<label htmlFor={CONTACT_TRAP_FIELD}>
 					Laissez ce champ vide
 					<input
-						id={CHAMP_PIEGE_DU_CONTACT}
-						name={CHAMP_PIEGE_DU_CONTACT}
+						id={CONTACT_TRAP_FIELD}
+						name={CONTACT_TRAP_FIELD}
 						type="text"
 						tabIndex={-1}
 						autoComplete="off"
@@ -201,22 +201,22 @@ export function FormulaireDeContact({ action, suivre = track }: { action: Action
 				</label>
 			</div>
 			<div role="alert" data-testid="erreur-contact" className="mt-6 empty:hidden">
-				{erreurs ? <p className="rounded-md bg-red-50 p-3 text-red-800 text-sm">{RESUME_DES_ERREURS}</p> : null}
-				{etat && 'echec' in etat ? (
-					<p className="rounded-md bg-red-50 p-3 text-red-800 text-sm">{MESSAGE_NON_ENREGISTRE}</p>
+				{errors ? <p className="rounded-md bg-red-50 p-3 text-red-800 text-sm">{ERRORS_SUMMARY}</p> : null}
+				{state && 'echec' in state ? (
+					<p className="rounded-md bg-red-50 p-3 text-red-800 text-sm">{MESSAGE_NOT_SAVED}</p>
 				) : null}
-				{etat && 'limite' in etat ? (
-					<p className="rounded-md bg-red-50 p-3 text-red-800 text-sm">{MESSAGE_TROP_DE_MESSAGES}</p>
+				{state && 'limite' in state ? (
+					<p className="rounded-md bg-red-50 p-3 text-red-800 text-sm">{MESSAGE_TOO_MANY_MESSAGES}</p>
 				) : null}
 			</div>
 			<div className="mt-10">
 				<button
 					type="submit"
-					disabled={enCours}
-					aria-busy={enCours}
+					disabled={pending}
+					aria-busy={pending}
 					className="block w-full rounded-md bg-indigo-900 px-3.5 py-2.5 text-center font-semibold text-sm text-white shadow-sm hover:bg-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-900 focus-visible:outline-offset-2 disabled:cursor-wait disabled:opacity-60"
 				>
-					{enCours ? 'Envoi…' : 'Envoyer l’email'}
+					{pending ? 'Envoi…' : 'Envoyer l’email'}
 				</button>
 			</div>
 		</form>

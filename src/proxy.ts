@@ -12,11 +12,7 @@ import {
 } from '@/lib/auth/legacy-cookies'
 import { comesFromOtherSite, RELAY_HEADERS, relayPage } from '@/lib/auth/relay-page'
 import { REFUSAL_PATH, SIGN_UP_PATH, secondsBeforeSignUp } from '@/lib/auth/sign-up-refusal'
-import {
-	CHEMIN_DU_CONTACT,
-	CHEMIN_DU_REFUS_DE_CONTACT,
-	secondesAvantUnMessageDeCetteRequete,
-} from '@/lib/contact/rate-limit'
+import { CONTACT_PATH, CONTACT_THROTTLED_PATH, secondsBeforeThisRequestMessage } from '@/lib/contact/rate-limit'
 import { rateLimitSearch } from '@/lib/search/rate-limit'
 import { robotsForPath } from '@/lib/seo/robots'
 import { shapeRedirect } from '@/lib/urls/shape'
@@ -221,7 +217,7 @@ function cheminEcrit(url: string): string | undefined {
 export function proxy(requete: NextRequest): NextResponse
 export function proxy(requete: NextRequest): NextResponse | Promise<NextResponse> {
 	const reponse = proxyDuSite(requete)
-	if (requete.method !== 'POST' || requete.nextUrl.pathname !== CHEMIN_DU_CONTACT) {
+	if (requete.method !== 'POST' || requete.nextUrl.pathname !== CONTACT_PATH) {
 		// An answer of its own (redirect, rewrite, brake, relay page) comes first; only a plain pass-through is checked.
 		if (!passeTelQuel(reponse)) return reponse
 		const a = urlToCheck(requete.nextUrl.pathname, requete.method)
@@ -270,7 +266,7 @@ export async function proxyDeLAdresseInconnue(
 
 /** The contact POST: past a brake (ticket 161), the request is rewritten to the route that answers 429 (same device as the sign-up, ticket 084). */
 export async function proxyDuContact(requete: NextRequest, reponse = proxyDuSite(requete)): Promise<NextResponse> {
-	const attente = await secondesAvantUnMessageDeCetteRequete(requete, ipClient(requete.headers))
+	const attente = await secondsBeforeThisRequestMessage(requete, ipClient(requete.headers))
 	if (attente === undefined) return reponse
-	return NextResponse.rewrite(new URL(CHEMIN_DU_REFUS_DE_CONTACT, requete.url ?? requete.nextUrl.href))
+	return NextResponse.rewrite(new URL(CONTACT_THROTTLED_PATH, requete.url ?? requete.nextUrl.href))
 }

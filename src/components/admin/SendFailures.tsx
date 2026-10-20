@@ -5,7 +5,7 @@ import type { ServerProps } from 'payload'
  * failed, and the link that filters the list on them. The filter is the one of the panel
  * (`mailStatus` equals `failed`), so it can also be combined with the others.
  */
-export async function EchecsDEnvoi({ payload, user }: ServerProps) {
+export async function SendFailures({ payload, user }: ServerProps) {
 	const { totalDocs } = await payload.count({
 		collection: 'contact-requests',
 		where: { mailStatus: { equals: 'failed' } },

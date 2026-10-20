@@ -1,13 +1,13 @@
 import { expect, test } from 'bun:test'
-import { type ActionDuContact, avecLEchecDuReseau, FormulaireDeContact } from '@/components/contact/ContactForm'
-import { type EtatDuContact, MESSAGE_TROP_DE_MESSAGES, type MessageDeContact } from '@/lib/contact/message'
+import { type ContactAction, ContactForm, withNetworkFailure } from '@/components/contact/ContactForm'
+import { type ContactMessage, type ContactState, MESSAGE_TOO_MANY_MESSAGES } from '@/lib/contact/message'
 import { ouvrirFenetre } from '../outils/dom-react'
 
 /** The contact form alone, in a jsdom window (tickets 158 and 160; plan 02 E51 and E69 are played in a browser by tests/e2e/contact.spec.ts). */
 
 const fenetre = ouvrirFenetre()
 
-const VALEURS: MessageDeContact = {
+const VALEURS: ContactMessage = {
 	prenom: 'Léa',
 	nom: 'Témoin',
 	email: 'lea.temoin@example.test',
@@ -17,14 +17,14 @@ const VALEURS: MessageDeContact = {
 
 type Mesure = { nom: string; proprietes: { ok: boolean; status: number } }
 
-function monter(action: ActionDuContact) {
+function monter(action: ContactAction) {
 	const mesures: Mesure[] = []
 	const suivre = (nom: 'platform_contact_submit', proprietes: { ok: boolean; status: number }) =>
 		void mesures.push({ nom, proprietes })
-	return { mesures, element: <FormulaireDeContact action={action} suivre={suivre} /> }
+	return { mesures, element: <ContactForm action={action} suivre={suivre} /> }
 }
 
-async function remplir(valeurs: Partial<MessageDeContact> = {}) {
+async function remplir(valeurs: Partial<ContactMessage> = {}) {
 	const v = { ...VALEURS, ...valeurs }
 	await fenetre.saisir(fenetre.champ('Prénom'), v.prenom)
 	await fenetre.saisir(fenetre.champ('Nom'), v.nom)
@@ -133,7 +133,7 @@ test('160 : un double clic et Entrée maintenue n’envoient qu’un message', a
 	let repondre: () => void = () => {}
 	const { element } = monter(() => {
 		envois++
-		return new Promise<EtatDuContact>(fin => {
+		return new Promise<ContactState>(fin => {
 			repondre = () => fin({ envoye: true })
 		})
 	})
@@ -174,7 +174,7 @@ test('après une réponse, un nouvel envoi est possible', async () => {
 })
 
 test('l’événement de mesure part une fois par réponse, avec le résultat et jamais un texte saisi', async () => {
-	const reponses: EtatDuContact[] = [
+	const reponses: ContactState[] = [
 		{ erreurs: { nom: 'Le nom est requis' }, valeurs: VALEURS },
 		{ echec: true, valeurs: VALEURS },
 		{ envoye: true },
@@ -202,7 +202,7 @@ test('l’événement de mesure part une fois par réponse, avec le résultat et
 })
 
 test('avecLEchecDuReseau rend la saisie telle qu’elle a été tapée', async () => {
-	const action = avecLEchecDuReseau(async () => {
+	const action = withNetworkFailure(async () => {
 		throw new Error('réseau')
 	})
 	const formulaire = new FormData()
@@ -242,8 +242,8 @@ test('161 : une limite atteinte dit la phrase en français, garde la saisie et c
 })
 
 test('161 : le 429 du proxy, relevé par le script de Next, redevient une limite avec la saisie gardée', async () => {
-	const action = avecLEchecDuReseau(async () => {
-		throw new Error(MESSAGE_TROP_DE_MESSAGES)
+	const action = withNetworkFailure(async () => {
+		throw new Error(MESSAGE_TOO_MANY_MESSAGES)
 	})
 	const formulaire = new FormData()
 	for (const [cle, valeur] of Object.entries(VALEURS)) formulaire.set(cle, valeur)

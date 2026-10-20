@@ -2,9 +2,9 @@ import { describe, expect, test } from 'bun:test'
 import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { OppositionMesure } from '@/components/analytics/AnalyticsOptOut'
+import { AnalyticsOptOut } from '@/components/analytics/AnalyticsOptOut'
 import { FOOTER_COLUMNS } from '@/components/layout/links'
-import { CLE_D_OPPOSITION, mesureRefusee, refuserLaMesure } from '@/lib/analytics/opt-out'
+import { analyticsRefused, OPT_OUT_KEY, refuseAnalytics } from '@/lib/analytics/opt-out'
 import { EDITEUR, formatSiren, formatSiret, HEBERGEUR, luhnValid } from '@/lib/legal'
 import { ouvrirFenetre } from '../outils/dom-react'
 import { empreinteDuTexte, texteDePage } from '../outils/texte-de-page'
@@ -126,24 +126,24 @@ describe('l’opposition à la mesure', () => {
 
 	test('un clic coupe la mesure sur ce navigateur, un second la rétablit', async () => {
 		fenetre.w.localStorage.clear()
-		const zone = await fenetre.monter(<OppositionMesure />)
+		const zone = await fenetre.monter(<AnalyticsOptOut />)
 		const etat = () => zone.querySelector('[role="status"]')?.textContent
 
 		expect(etat()).toBe("La mesure d'audience est active sur ce navigateur.")
-		expect(fenetre.w.localStorage.getItem(CLE_D_OPPOSITION)).toBeNull()
+		expect(fenetre.w.localStorage.getItem(OPT_OUT_KEY)).toBeNull()
 
 		await fenetre.cliquer(fenetre.bouton('Ne plus mesurer mes visites'))
-		expect(fenetre.w.localStorage.getItem(CLE_D_OPPOSITION)).not.toBeNull()
+		expect(fenetre.w.localStorage.getItem(OPT_OUT_KEY)).not.toBeNull()
 		expect(etat()).toBe("La mesure d'audience est désactivée sur ce navigateur.")
 
 		await fenetre.cliquer(fenetre.bouton("Réactiver la mesure d'audience"))
-		expect(fenetre.w.localStorage.getItem(CLE_D_OPPOSITION)).toBeNull()
+		expect(fenetre.w.localStorage.getItem(OPT_OUT_KEY)).toBeNull()
 		expect(etat()).toBe("La mesure d'audience est active sur ce navigateur.")
 	})
 
 	test('une opposition déjà posée se lit à l’ouverture de la page', async () => {
-		fenetre.w.localStorage.setItem(CLE_D_OPPOSITION, '1')
-		const zone = await fenetre.monter(<OppositionMesure />)
+		fenetre.w.localStorage.setItem(OPT_OUT_KEY, '1')
+		const zone = await fenetre.monter(<AnalyticsOptOut />)
 		await fenetre.attendre(() => zone.querySelector('button'))
 
 		expect(zone.querySelector('[role="status"]')?.textContent).toBe(
@@ -165,17 +165,17 @@ describe('la clé d’opposition', () => {
 	}
 
 	test('c’est la clé qu’Umami lit lui-même, et le filtre de la page la lit aussi', () => {
-		expect(CLE_D_OPPOSITION).toBe('umami.disabled')
+		expect(OPT_OUT_KEY).toBe('umami.disabled')
 		const filtre = readFileSync(path.join(process.cwd(), 'src/lib/analytics/umami.ts'), 'utf8')
-		expect(filtre).toContain(`getItem('${CLE_D_OPPOSITION}')`)
+		expect(filtre).toContain(`getItem('${OPT_OUT_KEY}')`)
 	})
 
 	test('poser puis retirer la clé change l’état, et l’état se relit dans le stockage', () => {
 		const stockage = memoire()
-		expect(mesureRefusee(stockage)).toBe(false)
-		expect(refuserLaMesure(stockage, true)).toBe(true)
-		expect(mesureRefusee(stockage)).toBe(true)
-		expect(refuserLaMesure(stockage, false)).toBe(false)
+		expect(analyticsRefused(stockage)).toBe(false)
+		expect(refuseAnalytics(stockage, true)).toBe(true)
+		expect(analyticsRefused(stockage)).toBe(true)
+		expect(refuseAnalytics(stockage, false)).toBe(false)
 	})
 
 	test('un stockage absent ou qui refuse ne casse rien et ne compte pas pour une opposition', () => {
@@ -190,9 +190,9 @@ describe('la clé d’opposition', () => {
 				throw new Error('bloqué')
 			},
 		}
-		expect(mesureRefusee(undefined)).toBe(false)
-		expect(mesureRefusee(casse)).toBe(false)
-		expect(refuserLaMesure(casse, true)).toBe(false)
-		expect(refuserLaMesure(undefined, true)).toBe(false)
+		expect(analyticsRefused(undefined)).toBe(false)
+		expect(analyticsRefused(casse)).toBe(false)
+		expect(refuseAnalytics(casse, true)).toBe(false)
+		expect(refuseAnalytics(undefined, true)).toBe(false)
 	})
 })

@@ -1,9 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { mesureRefusee, refuserLaMesure } from '@/lib/analytics/opt-out'
+import { analyticsRefused, refuseAnalytics } from '@/lib/analytics/opt-out'
 
-function stockageDuNavigateur(): Storage | undefined {
+function browserStorage(): Storage | undefined {
 	try {
 		return window.localStorage
 	} catch {
@@ -16,30 +16,30 @@ function stockageDuNavigateur(): Storage | undefined {
  * (ticket 112). One click stops what the page sends to Umami, a second one brings it back. Nothing is
  * drawn on the server: the state lives in the browser.
  */
-export function OppositionMesure() {
-	const [pret, setPret] = useState(false)
-	const [refusee, setRefusee] = useState(false)
+export function AnalyticsOptOut() {
+	const [ready, setReady] = useState(false)
+	const [refused, setRefused] = useState(false)
 
 	useEffect(() => {
-		setRefusee(mesureRefusee(stockageDuNavigateur()))
-		setPret(true)
+		setRefused(analyticsRefused(browserStorage()))
+		setReady(true)
 	}, [])
 
-	if (!pret) return null
+	if (!ready) return null
 
 	return (
 		<span className="flex flex-col items-start gap-2">
 			<span className="text-gray-700 text-sm" role="status">
-				{refusee
+				{refused
 					? "La mesure d'audience est désactivée sur ce navigateur."
 					: "La mesure d'audience est active sur ce navigateur."}
 			</span>
 			<button
 				type="button"
 				className="btn-alt-primary"
-				onClick={() => setRefusee(refuserLaMesure(stockageDuNavigateur(), !refusee))}
+				onClick={() => setRefused(refuseAnalytics(browserStorage(), !refused))}
 			>
-				{refusee ? "Réactiver la mesure d'audience" : 'Ne plus mesurer mes visites'}
+				{refused ? "Réactiver la mesure d'audience" : 'Ne plus mesurer mes visites'}
 			</button>
 		</span>
 	)

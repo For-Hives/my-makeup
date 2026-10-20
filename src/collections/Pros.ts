@@ -16,7 +16,7 @@ import { clearLegacyHashAfterPassword, clearLegacyHashOnRenewal } from '../lib/a
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { rateLimitSignIn, releaseSignInSlot } from '../lib/auth/rate-limit-payload'
 import { extendUnderCap, refuseAfterCap, SESSION_DURATION_S } from '../lib/auth/sliding-session'
-import { contenuEmailConfirmation, SUJET_DE_CONFIRMATION } from '../lib/emails/confirmation'
+import { CONFIRMATION_SUBJECT, confirmationEmailContent } from '../lib/emails/confirmation'
 import { composerEmail } from '../lib/emails/layout'
 import { sessionsFermees } from './Admins'
 import { profilALaCreationDuCompte } from './Profiles'
@@ -79,19 +79,19 @@ export const Pros: CollectionConfig<'pros'> = {
 	labels: { singular: 'Compte maquilleuse', plural: 'Comptes maquilleuses' },
 	defaultSort: '-createdAt',
 	// The list of the admin (ticket 168): creation date, confirmed address, block, last sign-in and whether
-	// a profile exists, the newest account first. The filters are above the table (FiltresDesComptes).
+	// a profile exists, the newest account first. The filters are above the table (AccountFilters).
 	admin: {
 		useAsTitle: 'email',
 		defaultColumns: ['email', 'createdAt', '_verified', 'blocked', 'lastSignInAt', 'profile'],
 		hidden: cacheeSaufAdmin,
-		components: { beforeListTable: ['/components/admin/FiltresDesComptes#FiltresDesComptes'] },
+		components: { beforeListTable: ['/components/admin/AccountFilters#AccountFilters'] },
 	},
 	auth: {
 		verify: {
-			generateEmailSubject: () => SUJET_DE_CONFIRMATION,
+			generateEmailSubject: () => CONFIRMATION_SUBJECT,
 			generateEmailHTML: ({ token }) =>
 				composerEmail(
-					contenuEmailConfirmation(String(token)),
+					confirmationEmailContent(String(token)),
 					process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
 				).html,
 		},
@@ -207,7 +207,7 @@ export const Pros: CollectionConfig<'pros'> = {
 			maxDepth: 0,
 			access: { read: champAdminSeulement },
 			// The panel's filter builder cannot build a filter on a join field (it crashes): the filters are above the table.
-			admin: { components: { Cell: '/components/admin/ProfilDuCompte#ProfilDuCompte' }, disableListFilter: true },
+			admin: { components: { Cell: '/components/admin/AccountProfile#AccountProfile' }, disableListFilter: true },
 		},
 	],
 }

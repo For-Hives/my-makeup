@@ -1,6 +1,6 @@
 import type { Payload } from 'payload'
 import { importEnCours } from '../contexte-import'
-import type { TacheQuotidienne } from './daily'
+import type { DailyTask } from './daily'
 
 /**
  * The purge of the contact messages (ticket 162): the privacy policy promises that a message of the
@@ -16,21 +16,21 @@ import type { TacheQuotidienne } from './daily'
  * - It reports a number, never a row.
  */
 
-export const CONSERVATION_CONTACT_MOIS = 12
+export const CONTACT_RETENTION_MONTHS = 12
 
 /** The date before which a message is deleted: `maintenant` minus 12 calendar months, in UTC. */
-export function seuilDePurgeDuContact(maintenant: Date): Date {
-	const seuil = new Date(maintenant.getTime())
-	const jour = seuil.getUTCDate()
+export function contactPurgeThreshold(maintenant: Date): Date {
+	const threshold = new Date(maintenant.getTime())
+	const day = threshold.getUTCDate()
 	// Day 1 first, so that 31 March minus a month does not spill over into the month after.
-	seuil.setUTCDate(1)
-	seuil.setUTCMonth(seuil.getUTCMonth() - CONSERVATION_CONTACT_MOIS)
-	const dernierJour = new Date(Date.UTC(seuil.getUTCFullYear(), seuil.getUTCMonth() + 1, 0)).getUTCDate()
-	seuil.setUTCDate(Math.min(jour, dernierJour))
-	return seuil
+	threshold.setUTCDate(1)
+	threshold.setUTCMonth(threshold.getUTCMonth() - CONTACT_RETENTION_MONTHS)
+	const lastDay = new Date(Date.UTC(threshold.getUTCFullYear(), threshold.getUTCMonth() + 1, 0)).getUTCDate()
+	threshold.setUTCDate(Math.min(day, lastDay))
+	return threshold
 }
 
-export const purgeDesMessagesDeContact: TacheQuotidienne = {
+export const purgeContactMessages: DailyTask = {
 	nom: 'purge-messages-contact',
 	executer: async (payload: Payload, maintenant) => {
 		if (importEnCours()) return 0
@@ -42,7 +42,7 @@ export const purgeDesMessagesDeContact: TacheQuotidienne = {
 			where: {
 				and: [
 					{ type: { equals: 'contact' } },
-					{ createdAt: { less_than: seuilDePurgeDuContact(maintenant).toISOString() } },
+					{ createdAt: { less_than: contactPurgeThreshold(maintenant).toISOString() } },
 				],
 			},
 		})

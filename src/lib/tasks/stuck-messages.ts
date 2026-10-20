@@ -1,6 +1,6 @@
 import type { Payload } from 'payload'
 import { importEnCours } from '../contexte-import'
-import type { TacheQuotidienne } from './daily'
+import type { DailyTask } from './daily'
 
 /**
  * The recovery of the contact messages whose mail never got an answer (ticket 224, finding of tickets
@@ -9,7 +9,7 @@ import type { TacheQuotidienne } from './daily'
  * process stops between the two, nothing ever says: the row stays `pending`, the admin panel shows
  * « En cours d’envoi » for good, and the re-send only starts from `failed`.
  *
- * - A message `pending` for longer than `DELAI_DE_REPRISE_MS` (far above the 8 seconds of a send)
+ * - A message `pending` for longer than `RETRY_DELAY_MS` (far above the 8 seconds of a send)
  *   goes to `failed`, which an admin can send again. The age is counted from the last write of the row
  *   (`updatedAt`): the re-send of an admin takes the message back to `pending` and writes that date,
  *   so a send that is still running is never cut short.
@@ -19,12 +19,12 @@ import type { TacheQuotidienne } from './daily'
  */
 
 /** How long a mail may stay `pending`: 15 minutes, against the 8 seconds of the deadline of a send. */
-export const DELAI_DE_REPRISE_MS = 15 * 60 * 1000
+export const RETRY_DELAY_MS = 15 * 60 * 1000
 
 /** The date before which a `pending` row is stuck: `maintenant` minus the delay. */
-export const seuilDeReprise = (maintenant: Date): Date => new Date(maintenant.getTime() - DELAI_DE_REPRISE_MS)
+export const retryThreshold = (maintenant: Date): Date => new Date(maintenant.getTime() - RETRY_DELAY_MS)
 
-export const repriseDesMessagesBloques: TacheQuotidienne = {
+export const retryStuckMessages: DailyTask = {
 	nom: 'reprise-messages-contact-bloques',
 	executer: async (payload: Payload, maintenant) => {
 		if (importEnCours()) return 0
@@ -38,7 +38,7 @@ export const repriseDesMessagesBloques: TacheQuotidienne = {
 				and: [
 					{ type: { equals: 'contact' } },
 					{ mailStatus: { equals: 'pending' } },
-					{ updatedAt: { less_than: seuilDeReprise(maintenant).toISOString() } },
+					{ updatedAt: { less_than: retryThreshold(maintenant).toISOString() } },
 				],
 			},
 		})

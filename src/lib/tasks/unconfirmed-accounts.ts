@@ -1,5 +1,5 @@
 import type { Payload } from 'payload'
-import type { TacheQuotidienne } from './daily'
+import type { DailyTask } from './daily'
 
 /**
  * The purge of the accounts that never confirmed their email (ticket 084): the fake sign-ups of
@@ -16,13 +16,13 @@ import type { TacheQuotidienne } from './daily'
  * day takes the rest. It reports a number, never a row.
  */
 
-export const DELAI_AVANT_PURGE_JOURS = 7
-const PAR_PASSAGE = 500
+export const PURGE_DELAY_DAYS = 7
+const PER_PASS = 500
 
-const seuil = (maintenant: Date): Date => new Date(maintenant.getTime() - DELAI_AVANT_PURGE_JOURS * 24 * 60 * 60 * 1000)
+const threshold = (maintenant: Date): Date => new Date(maintenant.getTime() - PURGE_DELAY_DAYS * 24 * 60 * 60 * 1000)
 
-async function purgerUnCompte(payload: Payload, id: number): Promise<boolean> {
-	const profils = await payload.find({
+async function purgeAccount(payload: Payload, id: number): Promise<boolean> {
+	const profiles = await payload.find({
 		collection: 'profiles',
 		depth: 0,
 		limit: 10,
@@ -31,21 +31,21 @@ async function purgerUnCompte(payload: Payload, id: number): Promise<boolean> {
 		select: { fullyEmpty: true },
 		where: { pro: { equals: id } },
 	})
-	if (profils.docs.some(profil => profil.fullyEmpty !== true)) return false
-	for (const profil of profils.docs) {
-		await payload.delete({ collection: 'profiles', depth: 0, id: profil.id, overrideAccess: true })
+	if (profiles.docs.some(profil => profil.fullyEmpty !== true)) return false
+	for (const profile of profiles.docs) {
+		await payload.delete({ collection: 'profiles', depth: 0, id: profile.id, overrideAccess: true })
 	}
 	await payload.delete({ collection: 'pros', depth: 0, id, overrideAccess: true })
 	return true
 }
 
-export const purgeDesComptesNonConfirmes: TacheQuotidienne = {
+export const purgeUnconfirmedAccounts: DailyTask = {
 	nom: 'purge-comptes-non-confirmes',
 	executer: async (payload, maintenant) => {
 		const { docs } = await payload.find({
 			collection: 'pros',
 			depth: 0,
-			limit: PAR_PASSAGE,
+			limit: PER_PASS,
 			overrideAccess: true,
 			pagination: false,
 			select: { createdAt: true },
@@ -53,21 +53,21 @@ export const purgeDesComptesNonConfirmes: TacheQuotidienne = {
 			where: {
 				and: [
 					{ _verified: { not_equals: true } },
-					{ createdAt: { less_than: seuil(maintenant).toISOString() } },
+					{ createdAt: { less_than: threshold(maintenant).toISOString() } },
 					{ strapiId: { exists: false } },
 					{ legacyProvider: { exists: false } },
 				],
 			},
 		})
-		let supprimes = 0
+		let deleted = 0
 		for (const { id } of docs) {
 			try {
-				if (await purgerUnCompte(payload, id)) supprimes++
+				if (await purgeAccount(payload, id)) deleted++
 			} catch {
 				// One account that cannot go (its name is not logged: it may be a person's) leaves the rest alone.
 				payload.logger.error({ msg: 'Un compte jamais confirmé n’a pas pu être purgé.' })
 			}
 		}
-		return supprimes
+		return deleted
 	},
 }

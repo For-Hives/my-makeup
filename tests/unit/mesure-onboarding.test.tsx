@@ -9,8 +9,8 @@ import { Profiles } from '@/collections/Profiles'
 import { Pros } from '@/collections/Pros'
 import { Talents } from '@/collections/Talents'
 import { Onboarding } from '@/components/dashboard/onboarding/Onboarding'
-import { donneesDEvenement, ORIGINES_DECLAREES } from '@/lib/analytics/events'
-import type { Suivre } from '@/lib/analytics/track'
+import { DECLARED_ORIGINS, eventData } from '@/lib/analytics/events'
+import type { Track } from '@/lib/analytics/track'
 import { strictOnboardingIdentitySchema } from '@/lib/dashboard/onboarding'
 import { choisirDesFichiers } from '../outils/choisir-fichiers'
 import { ouvrirFenetre } from '../outils/dom-react'
@@ -28,7 +28,7 @@ function espion() {
 	const suivre = ((nom: string, proprietes: unknown = {}) => {
 		envois.push({ nom, proprietes })
 		return true
-	}) as unknown as Suivre
+	}) as unknown as Track
 	return { envois, suivre }
 }
 
@@ -166,9 +166,9 @@ describe('une émission par étape franchie, valeurs fermées', () => {
 
 	test('chaque étape et chaque origine passent le catalogue ; une valeur hors liste fait tomber l’événement', () => {
 		for (const step of ['identite', 'zone', 'photo', 'termine'])
-			expect(donneesDEvenement('onboarding_step', { step })).toEqual({ step })
-		expect(donneesDEvenement('onboarding_step', { step: 'prenom' })).toBeNull()
-		expect(donneesDEvenement('onboarding_step', { step: 'identite', pid: 3 })).toBeNull()
+			expect(eventData('onboarding_step', { step })).toEqual({ step })
+		expect(eventData('onboarding_step', { step: 'prenom' })).toBeNull()
+		expect(eventData('onboarding_step', { step: 'identite', pid: 3 })).toBeNull()
 	})
 })
 
@@ -190,9 +190,8 @@ describe('l’origine déclarée part une fois, seulement si elle est choisie', 
 	})
 
 	test('chacune des six réponses passe le catalogue', () => {
-		for (const source of ORIGINES_DECLAREES)
-			expect(donneesDEvenement('onboarding_source', { source })).toEqual({ source })
-		expect(donneesDEvenement('onboarding_source', { source: 'tiktok' })).toBeNull()
+		for (const source of DECLARED_ORIGINS) expect(eventData('onboarding_source', { source })).toEqual({ source })
+		expect(eventData('onboarding_source', { source: 'tiktok' })).toBeNull()
 	})
 
 	test('non choisie : aucun onboarding_source', async () => {

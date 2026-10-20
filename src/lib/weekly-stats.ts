@@ -4,11 +4,11 @@
  * see, which are public addresses already. No name, no email, no phone, no account identifier.
  *
  * Three pieces, none of which reads the database or the request:
- * - `StatsHebdo`, the schema of the answer, strict: an unknown key is refused. The report tool
+ * - `WeeklyStats`, the schema of the answer, strict: an unknown key is refused. The report tool
  *   (plans/mesures/outil) has no dependency and cannot import it; it validates the same shape by
  *   hand, and both sides test the published example (docs/mesure/stats-hebdo.exemple.json).
- * - `lirePeriode`, the period asked for.
- * - `agregerStats`, the counts, from the profiles and the account dates the caller read.
+ * - `readPeriod`, the period asked for.
+ * - `aggregateStats`, the counts, from the profiles and the account dates the caller read.
  *
  * Version 2 (ticket 253): the keys are English, and so are the keys of the counters that are values of
  * the closed lists of the database (renamed by tickets 250 to 252). The codes of the sign-in
@@ -24,65 +24,65 @@
 import { createHash, timingSafeEqual } from 'node:crypto'
 import { z } from 'zod'
 import { EVENT_CODES, EVENT_TYPES } from './auth/auth-log'
-import { ETATS_DU_MAIL, STATUTS_DE_DEMANDE } from './contact/states'
+import { MAIL_STATES, REQUEST_STATUSES } from './contact/states'
 import { completeness } from './profile/completeness'
 import { type ProfileDocument, profileFields } from './profile/state'
 
 /** A published profile has this status; the rest is a draft or hidden. */
-const STATUT_PUBLIE = 'published'
+const PUBLISHED_STATUS = 'published'
 
 export const VERSION_STATS = 2
 
 /** 28 days: the window of the cohort of chiffre 6, before the week. */
-const JOURS_DE_LA_COHORTE = 28
+const COHORT_DAYS = 28
 /** 90 days: « modified recently ». */
-const JOURS_DE_FRAICHEUR = 90
+const FRESHNESS_DAYS = 90
 /** The longest period the route answers for. */
-export const PERIODE_MAX_JOURS = 92
+export const PERIOD_MAX_DAYS = 92
 
-const JOUR_MS = 86_400_000
+const DAY_MS = 86_400_000
 
-const compte = z.number().int().nonnegative()
-const jour = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
+const account = z.number().int().nonnegative()
+const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 const instant = z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/)
 
-export const StatsHebdo = z.strictObject({
+export const WeeklyStats = z.strictObject({
 	version: z.literal(VERSION_STATS),
 	/** The period asked for, `start` included, `end` excluded, as UTC instants. */
 	period: z.strictObject({ start: instant, end: instant }),
 	generatedAt: instant,
 	accounts: z.strictObject({
-		total: compte,
+		total: account,
 		/** Created in the period. */
-		new: compte,
+		new: account,
 	}),
 	profiles: z.strictObject({
-		total: compte,
+		total: account,
 		/** None of the six conditions: counted apart, and inside `total`. */
-		fullyEmpty: compte,
+		fullyEmpty: account,
 		/** Main photo, usable city and speciality. */
-		active: compte,
+		active: account,
 		/** The six conditions AND shown on the site: a hidden or draft profile is not counted. */
-		publishable: compte,
+		publishable: account,
 		/** Hidden by an admin. */
-		hidden: compte,
+		hidden: account,
 		/** At least 11 criteria out of 13. */
-		complete11: compte,
+		complete11: account,
 		/** 2 criteria out of 13, or fewer. */
-		nearlyEmpty: compte,
+		nearlyEmpty: account,
 		/** No contact channel. */
-		noChannel: compte,
+		noChannel: account,
 		/** Modified in the 90 days before the end of the period. */
-		modified90d: compte,
+		modified90d: account,
 		/** Created in the period. */
-		created: compte,
+		created: account,
 	}),
 	/** The profiles created in the 28 days before the period, and how many are active today. */
-	cohort: z.strictObject({ profiles: compte, active: compte }),
+	cohort: z.strictObject({ profiles: account, active: account }),
 	/** The profiles created in the period, one by one: no name, only the state. */
 	signUps: z.array(
 		z.strictObject({
-			createdOn: jour,
+			createdOn: day,
 			completeness: z.number().int().min(0).max(13),
 			active: z.boolean(),
 			publishable: z.boolean(),
@@ -91,15 +91,15 @@ export const StatsHebdo = z.strictObject({
 	/** The only detail that is given on a profile, and only for those a visitor can see. */
 	publishable: z.strictObject({
 		/** Count by department code; `unknown` when the commune has none. */
-		byDepartment: z.record(z.string(), compte),
+		byDepartment: z.record(z.string(), account),
 		slugs: z.array(z.string()),
 	}),
 	/** Ticket 169. The contact messages received in the period: counts by status and by mail state. */
 	contact: z
 		.strictObject({
-			total: compte,
-			byStatus: z.record(z.string(), compte),
-			byMailState: z.record(z.string(), compte),
+			total: account,
+			byStatus: z.record(z.string(), account),
+			byMailState: z.record(z.string(), account),
 		})
 		.optional(),
 	/**
@@ -108,12 +108,12 @@ export const StatsHebdo = z.strictObject({
 	 */
 	auth: z
 		.strictObject({
-			byType: z.record(z.string(), compte),
+			byType: z.record(z.string(), account),
 			signIns: z.strictObject({
-				total: compte,
-				byCode: z.record(z.string(), compte),
+				total: account,
+				byCode: z.record(z.string(), account),
 				/** 95th percentile of the duration of a sign-in, in ms (nearest rank); null without any duration. */
-				durationP95Ms: compte.nullable(),
+				durationP95Ms: account.nullable(),
 			}),
 		})
 		.optional(),
@@ -124,27 +124,27 @@ export const StatsHebdo = z.strictObject({
 	 */
 	inherited: z
 		.strictObject({
-			remainingHashes: compte,
+			remainingHashes: account,
 			/**
 			 * Accounts of a provider other than `local` with no inherited hash, by `legacyProvider` (`google`,
 			 * `facebook`, `other`). Payload keeps no mark of a password set later (reset link): those stay counted.
 			 */
-			withoutPasswordByProvider: z.record(z.string(), compte),
+			withoutPasswordByProvider: z.record(z.string(), account),
 		})
 		.optional(),
 })
 
-export type StatsHebdo = z.infer<typeof StatsHebdo>
+export type WeeklyStats = z.infer<typeof WeeklyStats>
 
 /** The period asked for, as instants; `fin` is excluded. */
-export interface Periode {
+export interface Period {
 	debut: Date
 	fin: Date
 }
 
 const ISO_UTC = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/
 
-function lireInstant(valeur: string | null): Date | undefined {
+function readInstant(valeur: string | null): Date | undefined {
 	if (valeur === null || !ISO_UTC.test(valeur)) return undefined
 	const date = new Date(valeur)
 	return Number.isNaN(date.getTime()) ? undefined : date
@@ -154,17 +154,17 @@ function lireInstant(valeur: string | null): Date | undefined {
  * `from` and `to` of the query: two ISO 8601 instants with their offset, `from` before `to`, at
  * most 92 days apart. Anything else is refused (400): no default period.
  */
-export function lirePeriode(parametres: URLSearchParams): Periode | undefined {
+export function readPeriod(parametres: URLSearchParams): Period | undefined {
 	if (parametres.getAll('from').length !== 1 || parametres.getAll('to').length !== 1) return undefined
-	const debut = lireInstant(parametres.get('from'))
-	const fin = lireInstant(parametres.get('to'))
-	if (!debut || !fin || debut >= fin) return undefined
-	if (fin.getTime() - debut.getTime() > PERIODE_MAX_JOURS * JOUR_MS) return undefined
-	return { debut, fin }
+	const start = readInstant(parametres.get('from'))
+	const end = readInstant(parametres.get('to'))
+	if (!start || !end || start >= end) return undefined
+	if (end.getTime() - start.getTime() > PERIOD_MAX_DAYS * DAY_MS) return undefined
+	return { debut: start, fin: end }
 }
 
 /** What the aggregation reads of a profile. */
-export interface ProfilPourStats extends ProfileDocument {
+export interface ProfileForStats extends ProfileDocument {
 	slug?: string | null
 	createdAt: string
 	updatedAt: string
@@ -184,30 +184,30 @@ const PARIS = new Intl.DateTimeFormat('en-CA', {
 })
 
 /** The day of an instant in Paris, `AAAA-MM-JJ`. */
-export function jourParis(date: Date): string {
+export function parisDay(date: Date): string {
 	return PARIS.format(date)
 }
 
-const dans = (date: Date, debut: Date, fin: Date): boolean => date >= debut && date < fin
+const inside = (date: Date, debut: Date, fin: Date): boolean => date >= debut && date < fin
 
 /**
  * The counts. `maintenant` caps the end of the freshness window, so a period in the future does
  * not widen it.
  */
-export function agregerStats({
+export function aggregateStats({
 	profils,
 	datesDesComptes,
 	periode,
 	maintenant,
 }: {
-	profils: readonly ProfilPourStats[]
+	profils: readonly ProfileForStats[]
 	datesDesComptes: readonly string[]
-	periode: Periode
+	periode: Period
 	maintenant: Date
-}): StatsHebdo {
-	const finFraicheur = new Date(Math.min(periode.fin.getTime(), maintenant.getTime()))
-	const debutFraicheur = new Date(finFraicheur.getTime() - JOURS_DE_FRAICHEUR * JOUR_MS)
-	const debutCohorte = new Date(periode.debut.getTime() - JOURS_DE_LA_COHORTE * JOUR_MS)
+}): WeeklyStats {
+	const freshnessEnd = new Date(Math.min(periode.fin.getTime(), maintenant.getTime()))
+	const freshnessStart = new Date(freshnessEnd.getTime() - FRESHNESS_DAYS * DAY_MS)
+	const cohortStart = new Date(periode.debut.getTime() - COHORT_DAYS * DAY_MS)
 
 	const resume = {
 		total: profils.length,
@@ -221,37 +221,37 @@ export function agregerStats({
 		modified90d: 0,
 		created: 0,
 	}
-	const cohorte = { profiles: 0, active: 0 }
-	const inscriptions: StatsHebdo['signUps'] = []
-	const parDepartement: Record<string, number> = {}
+	const cohort = { profiles: 0, active: 0 }
+	const signUps: WeeklyStats['signUps'] = []
+	const byDepartment: Record<string, number> = {}
 	const slugs: string[] = []
 
-	for (const profil of profils) {
-		const lecture = completeness(profileFields(profil))
-		const creeLe = new Date(profil.createdAt)
-		const actif = profil.active === true
-		const publiable = profil.publishable === true
-		const score = typeof profil.completeness === 'number' ? profil.completeness : lecture.score
-		if (profil.fullyEmpty === true) resume.fullyEmpty++
-		if (actif) resume.active++
-		if (profil.status === 'hidden') resume.hidden++
+	for (const profile of profils) {
+		const reading = completeness(profileFields(profile))
+		const createdAt = new Date(profile.createdAt)
+		const active = profile.active === true
+		const publishable = profile.publishable === true
+		const score = typeof profile.completeness === 'number' ? profile.completeness : reading.score
+		if (profile.fullyEmpty === true) resume.fullyEmpty++
+		if (active) resume.active++
+		if (profile.status === 'hidden') resume.hidden++
 		if (score >= 11) resume.complete11++
 		if (score <= 2) resume.nearlyEmpty++
-		if (lecture.manquants.includes('reseaux')) resume.noChannel++
-		if (dans(new Date(profil.updatedAt), debutFraicheur, finFraicheur)) resume.modified90d++
-		if (dans(creeLe, periode.debut, periode.fin)) {
+		if (reading.manquants.includes('reseaux')) resume.noChannel++
+		if (inside(new Date(profile.updatedAt), freshnessStart, freshnessEnd)) resume.modified90d++
+		if (inside(createdAt, periode.debut, periode.fin)) {
 			resume.created++
-			inscriptions.push({ createdOn: jourParis(creeLe), completeness: score, active: actif, publishable: publiable })
+			signUps.push({ createdOn: parisDay(createdAt), completeness: score, active: active, publishable: publishable })
 		}
-		if (dans(creeLe, debutCohorte, periode.debut)) {
-			cohorte.profiles++
-			if (actif) cohorte.active++
+		if (inside(createdAt, cohortStart, periode.debut)) {
+			cohort.profiles++
+			if (active) cohort.active++
 		}
-		if (publiable && profil.status === STATUT_PUBLIE && typeof profil.slug === 'string') {
+		if (publishable && profile.status === PUBLISHED_STATUS && typeof profile.slug === 'string') {
 			resume.publishable++
-			slugs.push(profil.slug)
-			const departement = profil.city?.department || 'unknown'
-			parDepartement[departement] = (parDepartement[departement] ?? 0) + 1
+			slugs.push(profile.slug)
+			const department = profile.city?.department || 'unknown'
+			byDepartment[department] = (byDepartment[department] ?? 0) + 1
 		}
 	}
 
@@ -261,72 +261,72 @@ export function agregerStats({
 		generatedAt: maintenant.toISOString(),
 		accounts: {
 			total: datesDesComptes.length,
-			new: datesDesComptes.filter(date => dans(new Date(date), periode.debut, periode.fin)).length,
+			new: datesDesComptes.filter(date => inside(new Date(date), periode.debut, periode.fin)).length,
 		},
 		profiles: resume,
-		cohort: cohorte,
-		signUps: inscriptions.sort((a, b) => a.createdOn.localeCompare(b.createdOn) || a.completeness - b.completeness),
+		cohort: cohort,
+		signUps: signUps.sort((a, b) => a.createdOn.localeCompare(b.createdOn) || a.completeness - b.completeness),
 		publishable: {
-			byDepartment: Object.fromEntries(Object.entries(parDepartement).sort(([a], [b]) => a.localeCompare(b))),
+			byDepartment: Object.fromEntries(Object.entries(byDepartment).sort(([a], [b]) => a.localeCompare(b))),
 			slugs: slugs.sort(),
 		},
 	}
 }
 
 /** The closed lists, as counters at zero: a count that is zero is in the answer, not missing from it. */
-const compteurs = (cles: readonly string[]): Record<string, number> => Object.fromEntries(cles.map(cle => [cle, 0]))
+const counters = (cles: readonly string[]): Record<string, number> => Object.fromEntries(cles.map(cle => [cle, 0]))
 
 /** Adds one to a counter that is in the list; a key outside it is ignored. */
-function ajouter(compteur: Record<string, number>, cle: unknown): boolean {
+function add(compteur: Record<string, number>, cle: unknown): boolean {
 	if (typeof cle !== 'string' || !Object.hasOwn(compteur, cle)) return false
 	compteur[cle] = (compteur[cle] ?? 0) + 1
 	return true
 }
 
 /** What the count of the messages reads of a row of `contact-requests`: two closed lists, nothing typed by a visitor. */
-export interface DemandePourStats {
+export interface RequestForStats {
 	status?: string | null
 	mailStatus?: string | null
 }
 
 /** Contact messages received in the period (the caller read them): counts by status and by mail state. */
-export function agregerContact(demandes: readonly DemandePourStats[]): NonNullable<StatsHebdo['contact']> {
-	const byStatus = compteurs(STATUTS_DE_DEMANDE)
-	const byMailState = compteurs(ETATS_DU_MAIL)
+export function aggregateContact(demandes: readonly RequestForStats[]): NonNullable<WeeklyStats['contact']> {
+	const byStatus = counters(REQUEST_STATUSES)
+	const byMailState = counters(MAIL_STATES)
 	for (const { status, mailStatus } of demandes) {
-		ajouter(byStatus, status)
-		ajouter(byMailState, mailStatus)
+		add(byStatus, status)
+		add(byMailState, mailStatus)
 	}
 	return { total: demandes.length, byStatus, byMailState }
 }
 
 /** What the count of the sign-ins reads of a row of the journal. */
-export interface EvenementPourStats {
+export interface EventForStats {
 	type?: string | null
 	code?: string | null
 	durationMs?: number | null
 }
 
 /** Nearest-rank percentile of a list of durations; null for an empty list. */
-export function centile(valeurs: readonly number[], p: number): number | null {
+export function percentile(valeurs: readonly number[], p: number): number | null {
 	if (valeurs.length === 0) return null
 	const tries = [...valeurs].sort((a, b) => a - b)
 	return tries[Math.max(0, Math.ceil(p * tries.length) - 1)] ?? null
 }
 
 /** Authentication events of the period (the caller read them): by kind, and the sign-ins by outcome with their 95th percentile. */
-export function agregerAuth(evenements: readonly EvenementPourStats[]): NonNullable<StatsHebdo['auth']> {
-	const byType = compteurs(EVENT_TYPES)
-	const byCode = compteurs(EVENT_CODES)
-	const durees: number[] = []
+export function aggregateAuth(evenements: readonly EventForStats[]): NonNullable<WeeklyStats['auth']> {
+	const byType = counters(EVENT_TYPES)
+	const byCode = counters(EVENT_CODES)
+	const durations: number[] = []
 	let total = 0
 	for (const { type, code, durationMs } of evenements) {
-		if (!ajouter(byType, type) || type !== 'sign-in') continue
+		if (!add(byType, type) || type !== 'sign-in') continue
 		total++
-		ajouter(byCode, code)
-		if (typeof durationMs === 'number') durees.push(durationMs)
+		add(byCode, code)
+		if (typeof durationMs === 'number') durations.push(durationMs)
 	}
-	const p95 = centile(durees, 0.95)
+	const p95 = percentile(durations, 0.95)
 	return { byType, signIns: { total, byCode, durationP95Ms: p95 === null ? null : Math.round(p95) } }
 }
 
@@ -335,18 +335,18 @@ export function agregerAuth(evenements: readonly EvenementPourStats[]): NonNulla
  * but `local` is `other`. A `local` account has no place here: it had a password on the old site, so
  * once its hash is gone it has signed in and has a password of Payload's.
  */
-export const FOURNISSEURS_HERITES = ['google', 'facebook', 'other'] as const
+export const LEGACY_PROVIDERS = ['google', 'facebook', 'other'] as const
 
 /** The token of an `Authorization: Bearer` header, or nothing. */
-export function jetonDeLEntete(entete: string | null): string | undefined {
-	const [schema, jeton, ...reste] = (entete ?? '').split(' ')
-	return schema === 'Bearer' && jeton && reste.length === 0 ? jeton : undefined
+export function headerToken(entete: string | null): string | undefined {
+	const [schema, token, ...rest] = (entete ?? '').split(' ')
+	return schema === 'Bearer' && token && rest.length === 0 ? token : undefined
 }
 
 /** True when the header carries exactly the token of the service. Constant time; false without a configured token. */
-export function jetonValide(entete: string | null, attendu: string | undefined): boolean {
-	const recu = jetonDeLEntete(entete)
-	if (!attendu || !recu) return false
-	const empreinte = (texte: string) => createHash('sha256').update(texte).digest()
-	return timingSafeEqual(empreinte(recu), empreinte(attendu))
+export function tokenValid(entete: string | null, attendu: string | undefined): boolean {
+	const received = headerToken(entete)
+	if (!attendu || !received) return false
+	const fingerprint = (texte: string) => createHash('sha256').update(texte).digest()
+	return timingSafeEqual(fingerprint(received), fingerprint(attendu))
 }

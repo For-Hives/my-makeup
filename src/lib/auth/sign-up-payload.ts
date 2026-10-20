@@ -1,10 +1,10 @@
 import { en } from '@payloadcms/translations/languages/en'
 import { fr } from '@payloadcms/translations/languages/fr'
 import { commitTransaction, createLocalReq, initTransaction, killTransaction, type Payload } from 'payload'
-import { contenuEmailConfirmation } from '../emails/confirmation'
-import { contenuEmailDejaInscrite } from '../emails/already-registered'
-import { EnvoiEmailEchoue, type EnvoyerEmail } from '../emails/send'
+import { alreadyRegisteredEmailContent } from '../emails/already-registered'
+import { confirmationEmailContent } from '../emails/confirmation'
 import { composerEmail } from '../emails/layout'
+import { EmailSendFailed, type SendEmail } from '../emails/send'
 import { type AccountFound, findAccount } from './account-by-email'
 import type { EventCode, Log } from './auth-log'
 import { mailboxKey } from './canonical-email'
@@ -59,7 +59,7 @@ export interface SignUpInputs {
 	payload: Payload
 	donnees: SignUpData
 	verifier: boolean
-	envoyer: EnvoyerEmail
+	envoyer: SendEmail
 	/** The origin the links of the mail are built on: the address of the site. */
 	site: string
 	journal?: Log
@@ -105,7 +105,7 @@ export function isAddressAlreadyTaken(erreur: unknown): boolean {
 export function failureCode(erreur: unknown): AttemptCode {
 	if (isAddressAlreadyTaken(erreur)) return 'email-deja-pris'
 	if (isEmailError(erreur)) return 'email-invalide'
-	if (erreur instanceof EnvoiEmailEchoue) return 'email-non-envoye'
+	if (erreur instanceof EmailSendFailed) return 'email-non-envoye'
 	return 'service-indisponible'
 }
 
@@ -187,13 +187,13 @@ export async function signUpAccount({
 			// An account still waiting for its confirmation gets its link again (she lost the first mail);
 			// a confirmed one is told she has an account. The same choice as the resend (`resend.ts`).
 			const content =
-				!compte.verifie && compte.jeton ? contenuEmailConfirmation(compte.jeton) : contenuEmailDejaInscrite()
+				!compte.verifie && compte.jeton ? confirmationEmailContent(compte.jeton) : alreadyRegisteredEmailContent()
 			try {
 				await envoyer({ a: compte.email, ...composerEmail(content, site) })
 			} catch (error) {
 				// The same refusal as a new address whose mail cannot leave: a relay in trouble splits nothing.
 				await record('service-indisponible')
-				return { ok: false, code: error instanceof EnvoiEmailEchoue ? 'email-non-envoye' : 'service-indisponible' }
+				return { ok: false, code: error instanceof EmailSendFailed ? 'email-non-envoye' : 'service-indisponible' }
 			}
 		}
 		await record('email-deja-pris')
@@ -222,7 +222,7 @@ export async function signUpAccount({
 				})
 				if (!row?._verificationToken) throw new Error('Le jeton de confirmation manque.')
 				await envoyer(
-					{ a: donnees.email, ...composerEmail(contenuEmailConfirmation(row._verificationToken), site) },
+					{ a: donnees.email, ...composerEmail(confirmationEmailContent(row._verificationToken), site) },
 					{ context: req.context }
 				)
 			}

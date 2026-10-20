@@ -5,9 +5,9 @@ import { resendConfirmation } from '@/lib/auth/resend'
 import { SIGN_UP_MESSAGES } from '@/lib/auth/sign-up'
 import { SIGN_UP_FLOOR_MS, signUpAccount } from '@/lib/auth/sign-up-payload'
 import type { MailboxRateLimits } from '@/lib/auth/sign-up-rate-limits'
-import { envoiEmailDePayload } from '@/lib/emails/send'
+import { payloadSendEmail } from '@/lib/emails/send'
 import { serverEnv } from '@/lib/env'
-import { purgeDesComptesNonConfirmes } from '@/lib/tasks/unconfirmed-accounts'
+import { purgeUnconfirmedAccounts } from '@/lib/tasks/unconfirmed-accounts'
 import { attendreLeMail, mailsRecus, viderLeCapteur } from '../outils/mailpit'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 
@@ -59,7 +59,7 @@ async function inscription(
 		payload,
 		donnees: { nom: 'Léa Fictive', email, password: MOT_DE_PASSE },
 		verifier: options.verifier ?? true,
-		envoyer: envoiEmailDePayload(payload, serverEnv()),
+		envoyer: payloadSendEmail(payload, serverEnv()),
 		site: SITE,
 		journal: authLog(payload),
 		plancherMs: options.plancherMs ?? 0,
@@ -72,7 +72,7 @@ async function renvoi(email: string, freins: MailboxRateLimits) {
 	return resendConfirmation({
 		payload,
 		email,
-		envoyer: envoiEmailDePayload(payload, serverEnv()),
+		envoyer: payloadSendEmail(payload, serverEnv()),
 		site: SITE,
 		journal: authLog(payload),
 		plancherMs: 0,
@@ -449,7 +449,7 @@ describe('purge des comptes jamais confirmés (ticket 084)', () => {
 		const rempli = await creer({ jours: 30, profilRempli: true })
 		expect(rempli.profil?.id).toBeDefined()
 
-		const supprimes = await purgeDesComptesNonConfirmes.executer(payload, new Date())
+		const supprimes = await purgeUnconfirmedAccounts.executer(payload, new Date())
 
 		expect(supprimes).toBe(1)
 		expect(await existe('pros', perime.compte.id)).toBe(false)
@@ -465,8 +465,8 @@ describe('purge des comptes jamais confirmés (ticket 084)', () => {
 		const limite = await creer({ jours: 7 })
 		const juste = await creer({ jours: 6.9 })
 
-		const premiere = await purgeDesComptesNonConfirmes.executer(payload, new Date())
-		const seconde = await purgeDesComptesNonConfirmes.executer(payload, new Date())
+		const premiere = await purgeUnconfirmedAccounts.executer(payload, new Date())
+		const seconde = await purgeUnconfirmedAccounts.executer(payload, new Date())
 
 		expect(premiere).toBeGreaterThanOrEqual(1)
 		expect(seconde).toBe(0)

@@ -180,6 +180,9 @@ Le même mot français a le même mot anglais partout (source : `PLAN-ANGLAIS.md
 | lieu (ville ou département tapé) / annuaire (liste des profils) | `place` / `directory` | pertinence (classement par mots) / voie (rue) | `relevance` / `street` |
 | particulier (visiteur) / page d'accueil (publique) | `client` / `home` | gabarit (en-tête, pied) / blocs | `layout` / `blocks` |
 | pages fixes / fil d'Ariane | `static pages` (dossiers `static-pages`) / `breadcrumb` | métadonnées / partage (réseaux sociaux) | `metadata` / `share` |
+| tâches (dossier `src/lib/tasks`) / planificateur | `tasks` / `scheduler` | marque (de connexion) / opposition (à la mesure) | `mark` (`sign-in-mark`) / `optOut` |
+| échec (d'envoi) / doublon | `failure` / `duplicate` | frein (d'un contact) / reprise | `rateLimit` / `retry` |
+| purge / conservation | `purge` / `retention` | chargeur (du script de mesure) / valeurs | `loader` / `values` |
 
 ## Pièges
 

@@ -1,9 +1,9 @@
 import { type Endpoint, Forbidden } from 'payload'
 import { estAdmin } from '../acces'
-import { envoiEmailDePayload } from '../emails/send'
+import { payloadSendEmail } from '../emails/send'
 import { serverEnv } from '../env'
-import { stockageDePayload } from './payload-send'
-import { renvoyerLEmailDUnMessage, stockageDuRenvoiDePayload } from './resend'
+import { payloadStorage } from './payload-send'
+import { payloadResendStorage, resendMessageEmail } from './resend'
 
 /**
  * `POST /api/contact-requests/:id/resend`: an admin sends again the mail of a contact message whose mail failed
@@ -14,7 +14,7 @@ import { renvoyerLEmailDUnMessage, stockageDuRenvoiDePayload } from './resend'
  * 404 when the message does not exist, 409 when its mail is not in `failed` (already sent, or being sent by
  * another click).
  */
-export const renvoyerLEmail: Endpoint = {
+export const resendEmail: Endpoint = {
 	path: '/:id/resend',
 	method: 'post',
 	handler: async req => {
@@ -24,17 +24,17 @@ export const renvoyerLEmail: Endpoint = {
 
 		const { payload } = req
 		const env = serverEnv()
-		const resultat = await renvoyerLEmailDUnMessage(id, {
-			relecture: stockageDuRenvoiDePayload(payload),
-			stockage: stockageDePayload(payload),
-			envoyer: envoiEmailDePayload(payload, env),
+		const result = await resendMessageEmail(id, {
+			relecture: payloadResendStorage(payload),
+			stockage: payloadStorage(payload),
+			envoyer: payloadSendEmail(payload, env),
 			destinataire: env.contactTo,
 			journal: {
 				info: ligne => payload.logger.info({ msg: ligne }),
 				erreur: ligne => payload.logger.error({ msg: ligne }),
 			},
 		})
-		if (resultat.ok) return Response.json({ mailStatus: resultat.etatMail === 'envoye' ? 'sent' : 'failed' })
-		return Response.json({ code: resultat.code }, { status: resultat.code === 'introuvable' ? 404 : 409 })
+		if (result.ok) return Response.json({ mailStatus: result.etatMail === 'envoye' ? 'sent' : 'failed' })
+		return Response.json({ code: result.code }, { status: result.code === 'introuvable' ? 404 : 409 })
 	},
 }

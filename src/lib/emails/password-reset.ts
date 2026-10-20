@@ -1,4 +1,4 @@
-import type { ContenuEmail } from './layout'
+import type { EmailContent } from './layout'
 
 /**
  * The mail of a forgotten password (ticket 085): what it says, and where its button leads.
@@ -9,11 +9,11 @@ import type { ContenuEmail } from './layout'
  * Pure: no `next` import, no Payload.
  */
 
-export const SUJET_DE_REINITIALISATION = 'Réinitialise ton mot de passe My Makeup'
+export const PASSWORD_RESET_SUBJECT = 'Réinitialise ton mot de passe My Makeup'
 
-export function contenuEmailReinitialisation(jeton: string): ContenuEmail {
+export function passwordResetEmailContent(jeton: string): EmailContent {
 	return {
-		sujet: SUJET_DE_REINITIALISATION,
+		sujet: PASSWORD_RESET_SUBJECT,
 		titre: 'Choisis un nouveau mot de passe',
 		paragraphes: [
 			'Tu as demandé à changer ton mot de passe My Makeup. Clique sur le bouton pour en choisir un nouveau.',

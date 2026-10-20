@@ -1,6 +1,6 @@
 import { ipClient } from '@/lib/auth/client-ip'
-import { secondesAvantUnMessageDeCetteRequete } from '@/lib/contact/rate-limit'
-import { MESSAGE_TROP_DE_MESSAGES } from '@/lib/contact/message'
+import { MESSAGE_TOO_MANY_MESSAGES } from '@/lib/contact/message'
+import { secondsBeforeThisRequestMessage } from '@/lib/contact/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,20 +10,20 @@ export const dynamic = 'force-dynamic'
  * messages of the hour or the mailbox of the form its 20 of the day, and the route checks it again: for any other client it is a 404.
  *
  * The body is plain text for a Server Action on purpose: the client script of Next throws it as the
- * message of the failed action, and the form shows it with her typing kept (`avecLEchecDuReseau`).
+ * message of the failed action, and the form shows it with her typing kept (`withNetworkFailure`).
  */
 export async function POST(requete: Request): Promise<Response> {
-	const wait = await secondesAvantUnMessageDeCetteRequete(requete, ipClient(requete.headers))
+	const wait = await secondsBeforeThisRequestMessage(requete, ipClient(requete.headers))
 	if (wait === undefined) return new Response(null, { status: 404 })
 	const headers = { 'cache-control': 'no-store', 'retry-after': String(wait) }
 	// The script of Next reads the message of a failed action only from a response typed exactly `text/plain`.
 	if (requete.headers.has('next-action'))
-		return new Response(MESSAGE_TROP_DE_MESSAGES, {
+		return new Response(MESSAGE_TOO_MANY_MESSAGES, {
 			status: 429,
 			headers: { ...headers, 'content-type': 'text/plain' },
 		})
 	return new Response(
-		`<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="robots" content="noindex"><title>Trop de messages</title></head><body><p>${MESSAGE_TROP_DE_MESSAGES}</p></body></html>`,
+		`<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="robots" content="noindex"><title>Trop de messages</title></head><body><p>${MESSAGE_TOO_MANY_MESSAGES}</p></body></html>`,
 		{ status: 429, headers: { ...headers, 'content-type': 'text/html; charset=utf-8' } }
 	)
 }

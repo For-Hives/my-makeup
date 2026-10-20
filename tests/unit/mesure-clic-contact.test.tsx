@@ -3,9 +3,9 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { ProfileView } from '@/components/profile/ProfileView'
-import { clicAMesurer, mesurerUnClicDeContact } from '@/lib/analytics/contact-click'
+import { clickToMeasure, measureContactClick } from '@/lib/analytics/contact-click'
 import type { Pid } from '@/lib/analytics/events'
-import { creerTrack, type Execution, type FenetreMesuree } from '@/lib/analytics/track'
+import { createTrack, type Execution, type MeasuredWindow } from '@/lib/analytics/track'
 import { profilePid } from '@/lib/profile/pid'
 import { type PublicProfile, publicProfileOf } from '@/services/public/profiles'
 
@@ -22,28 +22,28 @@ const ANONYME = { recherche: '', referent: '', origine: ORIGINE }
 /** A production browser with a stub `window.umami`: what the events handed to it are kept. */
 function navigateur() {
 	const recus: Array<{ nom: string; donnees: Record<string, string | number | boolean> }> = []
-	const fenetre: FenetreMesuree = {
+	const fenetre: MeasuredWindow = {
 		navigator: { webdriver: false },
 		umami: { track: (nom, donnees) => void recus.push({ nom, donnees }) },
 	}
 	const execution: Execution = { fenetre, production: true }
-	return { recus, suivre: creerTrack(() => execution) }
+	return { recus, suivre: createTrack(() => execution) }
 }
 
 describe('U84 : pas de contact_click pour la propriétaire, ni depuis son espace, ni par une relance', () => {
 	test('une visiteuse quelconque est comptée', () => {
-		expect(clicAMesurer({ pid: 12, pidDeLaVisiteuse: null, ...ANONYME })).toBe(true)
-		expect(clicAMesurer({ pid: 12, pidDeLaVisiteuse: 99, ...ANONYME })).toBe(true)
-		expect(clicAMesurer({ pid: 'v3-4', pidDeLaVisiteuse: 12, ...ANONYME })).toBe(true)
+		expect(clickToMeasure({ pid: 12, pidDeLaVisiteuse: null, ...ANONYME })).toBe(true)
+		expect(clickToMeasure({ pid: 12, pidDeLaVisiteuse: 99, ...ANONYME })).toBe(true)
+		expect(clickToMeasure({ pid: 'v3-4', pidDeLaVisiteuse: 12, ...ANONYME })).toBe(true)
 	})
 
 	test('la propriétaire du profil ne l’est pas, pour un profil de l’ancien site comme pour un neuf', () => {
-		expect(clicAMesurer({ pid: 12, pidDeLaVisiteuse: 12, ...ANONYME })).toBe(false)
-		expect(clicAMesurer({ pid: 'v3-4', pidDeLaVisiteuse: 'v3-4', ...ANONYME })).toBe(false)
+		expect(clickToMeasure({ pid: 12, pidDeLaVisiteuse: 12, ...ANONYME })).toBe(false)
+		expect(clickToMeasure({ pid: 'v3-4', pidDeLaVisiteuse: 'v3-4', ...ANONYME })).toBe(false)
 	})
 
 	test('venir de son espace (/auth/...) : pas compté ; venir d’ailleurs : compté', () => {
-		const depuis = (referent: string) => clicAMesurer({ pid: 1, pidDeLaVisiteuse: null, ...ANONYME, referent })
+		const depuis = (referent: string) => clickToMeasure({ pid: 1, pidDeLaVisiteuse: null, ...ANONYME, referent })
 		expect(depuis(`${ORIGINE}/auth/profil`)).toBe(false)
 		expect(depuis(`${ORIGINE}/auth/apercu-profil`)).toBe(false)
 		expect(depuis(`${ORIGINE}/auth`)).toBe(false)
@@ -56,7 +56,7 @@ describe('U84 : pas de contact_click pour la propriétaire, ni depuis son espace
 	})
 
 	test('utm_campaign=relance : pas compté ; une autre campagne : compté', () => {
-		const avec = (recherche: string) => clicAMesurer({ pid: 1, pidDeLaVisiteuse: null, ...ANONYME, recherche })
+		const avec = (recherche: string) => clickToMeasure({ pid: 1, pidDeLaVisiteuse: null, ...ANONYME, recherche })
 		expect(avec('?utm_campaign=relance')).toBe(false)
 		expect(avec('?utm_source=email&utm_campaign=relance&utm_medium=mail')).toBe(false)
 		expect(avec('?utm_campaign=Relance')).toBe(false)
@@ -65,7 +65,7 @@ describe('U84 : pas de contact_click pour la propriétaire, ni depuis son espace
 	})
 
 	test('un profil sans identifiant connu n’émet rien', () => {
-		expect(clicAMesurer({ pid: null, pidDeLaVisiteuse: null, ...ANONYME })).toBe(false)
+		expect(clickToMeasure({ pid: null, pidDeLaVisiteuse: null, ...ANONYME })).toBe(false)
 	})
 })
 
@@ -80,7 +80,7 @@ describe('un clic de contact émet un événement, avec le bon canal', () => {
 		'website',
 	] as const)('%s : un événement, le profil et le canal', async canal => {
 		const { recus, suivre } = navigateur()
-		const emis = await mesurerUnClicDeContact({
+		const emis = await measureContactClick({
 			pid: 12,
 			canal,
 			lieu: ANONYME,
@@ -94,13 +94,13 @@ describe('un clic de contact émet un événement, avec le bon canal', () => {
 	test('la propriétaire, son espace, une relance : rien n’arrive à Umami', async () => {
 		const { recus, suivre } = navigateur()
 		const clic = { pid: 12 as Pid, canal: 'phone' as const, suivre }
-		await mesurerUnClicDeContact({ ...clic, lieu: ANONYME, monPid: Promise.resolve(12) })
-		await mesurerUnClicDeContact({
+		await measureContactClick({ ...clic, lieu: ANONYME, monPid: Promise.resolve(12) })
+		await measureContactClick({
 			...clic,
 			lieu: { ...ANONYME, referent: `${ORIGINE}/auth/profil` },
 			monPid: Promise.resolve(null),
 		})
-		await mesurerUnClicDeContact({
+		await measureContactClick({
 			...clic,
 			lieu: { ...ANONYME, recherche: '?utm_campaign=relance' },
 			monPid: Promise.resolve(null),
@@ -114,14 +114,14 @@ describe('un clic de contact émet un événement, avec le bon canal', () => {
 		const enRoute = new Promise<Pid | null>(resolve => {
 			repondre = resolve
 		})
-		const clic = mesurerUnClicDeContact({ pid: 12, canal: 'email', lieu: ANONYME, monPid: enRoute, suivre })
+		const clic = measureContactClick({ pid: 12, canal: 'email', lieu: ANONYME, monPid: enRoute, suivre })
 		await Promise.resolve()
 		expect(recus).toEqual([])
 		repondre(12)
 		expect(await clic).toBe(false)
 		expect(recus).toEqual([])
 
-		const panne = await mesurerUnClicDeContact({
+		const panne = await measureContactClick({
 			pid: 12,
 			canal: 'email',
 			lieu: ANONYME,
@@ -134,10 +134,10 @@ describe('un clic de contact émet un événement, avec le bon canal', () => {
 
 	test('sans Umami, en développement ou dans un navigateur automatisé : rien, et aucune erreur', async () => {
 		const clic = { pid: 12 as Pid, canal: 'phone' as const, lieu: ANONYME, monPid: Promise.resolve(null) }
-		const sans = creerTrack(() => ({ fenetre: {}, production: true }))
-		const dev = creerTrack(() => ({ fenetre: { umami: { track: () => 1 } }, production: false }))
-		expect(await mesurerUnClicDeContact({ ...clic, suivre: sans })).toBe(false)
-		expect(await mesurerUnClicDeContact({ ...clic, suivre: dev })).toBe(false)
+		const sans = createTrack(() => ({ fenetre: {}, production: true }))
+		const dev = createTrack(() => ({ fenetre: { umami: { track: () => 1 } }, production: false }))
+		expect(await measureContactClick({ ...clic, suivre: sans })).toBe(false)
+		expect(await measureContactClick({ ...clic, suivre: dev })).toBe(false)
 	})
 })
 

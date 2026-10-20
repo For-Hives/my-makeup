@@ -6,7 +6,7 @@ import Page from '@/app/(front)/(site)/politique-de-confidentialite/page'
 import { GOOGLE_ISSUER, UMAMI_ORIGIN_DEFAULT } from '@/lib/env'
 import { HEBERGEUR } from '@/lib/legal'
 import { JOURS_AVANT_EFFACEMENT_DES_PHOTOS, PRESTATAIRES } from '@/lib/prestataires'
-import { DELAI_AVANT_PURGE_JOURS } from '@/lib/tasks/unconfirmed-accounts'
+import { PURGE_DELAY_DAYS } from '@/lib/tasks/unconfirmed-accounts'
 import { texteDePage } from '../outils/texte-de-page'
 
 /**
@@ -80,8 +80,8 @@ describe('ce que la politique ne dit plus', () => {
 describe('les engagements que le code tient', () => {
 	test('l’email est confirmé à l’inscription, et un compte jamais confirmé part au bout du délai de la tâche', () => {
 		expect(texte).toContain("Confirmation de l'adresse email : à l'inscription, nous envoyons")
-		expect(texte).toContain(`au bout de ${DELAI_AVANT_PURGE_JOURS} jours`)
-		expect(DELAI_AVANT_PURGE_JOURS).toBe(7)
+		expect(texte).toContain(`au bout de ${PURGE_DELAY_DAYS} jours`)
+		expect(PURGE_DELAY_DAYS).toBe(7)
 	})
 
 	test('une photo retirée est effacée du stockage au bout de 30 jours, comme la règle de la corbeille', () => {

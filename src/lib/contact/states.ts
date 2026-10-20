@@ -10,11 +10,11 @@
  * `sent`, or `failed` when the relay did not take it (the message stays, an admin can see it).
  */
 
-export const TYPES_DE_DEMANDE = ['contact'] as const
-export type TypeDeDemande = (typeof TYPES_DE_DEMANDE)[number]
+export const REQUEST_TYPES = ['contact'] as const
+export type RequestType = (typeof REQUEST_TYPES)[number]
 
-export const STATUTS_DE_DEMANDE = ['new', 'forwarded', 'answered', 'spam'] as const
-export type StatutDeDemande = (typeof STATUTS_DE_DEMANDE)[number]
+export const REQUEST_STATUSES = ['new', 'forwarded', 'answered', 'spam'] as const
+export type RequestStatus = (typeof REQUEST_STATUSES)[number]
 
 /**
  * The cycle of a contact message: `new` → `forwarded` → `answered`, and `spam` from any of them.
@@ -23,7 +23,7 @@ export type StatutDeDemande = (typeof STATUTS_DE_DEMANDE)[number]
  * and may take a message back out of `spam` (it returns to `new`, the mail state tells the rest).
  * Going back from `answered` to `forwarded` is not allowed: an answer is not undone.
  */
-const SUIVANTS: Record<StatutDeDemande, readonly StatutDeDemande[]> = {
+const NEXT: Record<RequestStatus, readonly RequestStatus[]> = {
 	new: ['forwarded', 'answered', 'spam'],
 	forwarded: ['answered', 'spam'],
 	answered: ['spam'],
@@ -31,14 +31,14 @@ const SUIVANTS: Record<StatutDeDemande, readonly StatutDeDemande[]> = {
 }
 
 /** True when a message may go from `de` to `vers`. Staying where it is is always allowed. */
-export function transitionPermise(de: StatutDeDemande, vers: StatutDeDemande): boolean {
-	return de === vers || SUIVANTS[de].includes(vers)
+export function transitionAllowed(de: RequestStatus, vers: RequestStatus): boolean {
+	return de === vers || NEXT[de].includes(vers)
 }
 
 /** A string that is one of the statuses, or nothing. */
-export function estUnStatutDeDemande(valeur: unknown): valeur is StatutDeDemande {
-	return typeof valeur === 'string' && (STATUTS_DE_DEMANDE as readonly string[]).includes(valeur)
+export function isRequestStatus(valeur: unknown): valeur is RequestStatus {
+	return typeof valeur === 'string' && (REQUEST_STATUSES as readonly string[]).includes(valeur)
 }
 
-export const ETATS_DU_MAIL = ['pending', 'sent', 'failed'] as const
-export type EtatDuMail = (typeof ETATS_DU_MAIL)[number]
+export const MAIL_STATES = ['pending', 'sent', 'failed'] as const
+export type MailState = (typeof MAIL_STATES)[number]

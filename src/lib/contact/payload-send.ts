@@ -1,11 +1,11 @@
 import type { Payload } from 'payload'
-import { contenuEmailContact } from '../emails/contact'
-import { AUCUN_RELAIS, type EnvoyerEmail, type Journal } from '../emails/send'
+import { contactEmailContent } from '../emails/contact'
 import { composerEmail } from '../emails/layout'
+import { type Log, NO_RELAY, type SendEmail } from '../emails/send'
 import { SITE_ORIGIN } from '../env'
-import type { EtatDuMail, StatutDeDemande } from './states'
-import { FREINS_DE_CONTACT, type FreinsDeContact, prendreUnePlaceDeContact } from './rate-limit'
-import { CHAMP_PIEGE_DU_CONTACT, type ErreursDeContact, type MessageDeContact, validerLeMessage } from './message'
+import { CONTACT_TRAP_FIELD, type ContactErrors, type ContactMessage, validateMessage } from './message'
+import { CONTACT_RATE_LIMITS, type ContactRateLimits, takeContactSlot } from './rate-limit'
+import type { MailState, RequestStatus } from './states'
 
 /**
  * A contact message, server side (tickets 158 and 159). No `next` import: the Server Action calls it,
@@ -32,16 +32,16 @@ import { CHAMP_PIEGE_DU_CONTACT, type ErreursDeContact, type MessageDeContact, v
  */
 
 /** How long the mail to the team is given before the row says `failed`: under the 10 seconds a visitor may wait. */
-export const DELAI_DE_L_ENVOI_MS = 8_000
+export const SEND_TIMEOUT_MS = 8_000
 
-/** The two writes the flow makes in `contact-requests`. The real one is `stockageDePayload`; a test hands its own. */
-export interface StockageDesDemandes {
-	creer: (message: MessageDeContact) => Promise<number>
-	marquer: (id: number, mailStatus: EtatDuMail, status?: StatutDeDemande) => Promise<void>
+/** The two writes the flow makes in `contact-requests`. The real one is `payloadStorage`; a test hands its own. */
+export interface RequestStorage {
+	creer: (message: ContactMessage) => Promise<number>
+	marquer: (id: number, mailStatus: MailState, status?: RequestStatus) => Promise<void>
 }
 
 /** The store wired to a Payload instance: the Local API without access control, as the server writes the journal. */
-export function stockageDePayload(payload: Pick<Payload, 'create' | 'update'>): StockageDesDemandes {
+export function payloadStorage(payload: Pick<Payload, 'create' | 'update'>): RequestStorage {
 	return {
 		creer: async message =>
 			(
@@ -71,32 +71,32 @@ export function stockageDePayload(payload: Pick<Payload, 'create' | 'update'>): 
 	}
 }
 
-export type ResultatDuContact =
+export type ContactResult =
 	| { ok: true }
-	| { ok: false; code: 'donnees-invalides'; erreurs: ErreursDeContact }
+	| { ok: false; code: 'donnees-invalides'; erreurs: ContactErrors }
 	| { ok: false; code: 'enregistrement-impossible' }
 	| { ok: false; code: 'trop-de-messages'; reessayerDansS: number }
 
-export interface EntreesDuContact {
+export interface ContactInput {
 	/** What the form sent. */
 	formulaire: { get: (nom: string) => unknown }
-	stockage: StockageDesDemandes
+	stockage: RequestStorage
 	/** The door of the mails of the site. */
-	envoyer: EnvoyerEmail
+	envoyer: SendEmail
 	/** The address of the team. */
 	destinataire: string
 	/** Runs the work after the answer: `after` of Next in a Server Action. A test hands one that waits. */
 	apres: (travail: () => Promise<void>) => void
-	journal: Journal
+	journal: Log
 	delaiMs?: number
 	/** The client address as `ipClient` gives it: the key of the brake by address. */
 	client: string
 	/** The brakes in use; the shared ones by default. */
-	freins?: FreinsDeContact
+	freins?: ContactRateLimits
 }
 
 /** The kind of a failure, in a word: what a log may keep of an error that may quote what was typed. */
-function natureDeLEchec(erreur: unknown): string {
+function failureKind(erreur: unknown): string {
 	if (typeof erreur === 'object' && erreur !== null) {
 		if ('code' in erreur && typeof erreur.code === 'string' && /^[A-Za-z0-9_]{2,30}$/.test(erreur.code))
 			return erreur.code
@@ -106,43 +106,43 @@ function natureDeLEchec(erreur: unknown): string {
 }
 
 /** Resolves with `envoye` or `echec`, or with `delai` once `ms` have passed: the mail is then left to finish alone. */
-async function avecUnDelai(envoi: Promise<'envoye' | 'echec'>, ms: number): Promise<'envoye' | 'echec' | 'delai'> {
-	let minuteur: ReturnType<typeof setTimeout> | undefined
-	const delai = new Promise<'delai'>(fin => {
-		minuteur = setTimeout(() => fin('delai'), ms)
+async function withTimeout(envoi: Promise<'envoye' | 'echec'>, ms: number): Promise<'envoye' | 'echec' | 'delai'> {
+	let timer: ReturnType<typeof setTimeout> | undefined
+	const timeout = new Promise<'delai'>(fin => {
+		timer = setTimeout(() => fin('delai'), ms)
 	})
 	try {
-		return await Promise.race([envoi, delai])
+		return await Promise.race([envoi, timeout])
 	} finally {
-		clearTimeout(minuteur)
+		clearTimeout(timer)
 	}
 }
 
 /** What the mail to the team needs: the form and `apres` are the business of the first send only. */
-export type EntreesDExpedition = Omit<EntreesDuContact, 'formulaire' | 'apres' | 'client' | 'freins'>
+export type DispatchInput = Omit<ContactInput, 'formulaire' | 'apres' | 'client' | 'freins'>
 
 /**
  * Sends the mail to the team and tells the row how it went. Never throws. Gives the state the row was
  * left in: the first send and the re-send of an admin (ticket 163) share it.
  */
-export async function expedier(
+export async function dispatch(
 	id: number,
-	message: MessageDeContact,
-	{ stockage, envoyer, destinataire, journal, delaiMs = DELAI_DE_L_ENVOI_MS }: EntreesDExpedition
+	message: ContactMessage,
+	{ stockage, envoyer, destinataire, journal, delaiMs = SEND_TIMEOUT_MS }: DispatchInput
 ): Promise<'envoye' | 'echec'> {
-	const marquer = async (etat: EtatDuMail, statut?: StatutDeDemande) => {
+	const mark = async (etat: MailState, statut?: RequestStatus) => {
 		try {
 			await stockage.marquer(id, etat, statut)
-		} catch (erreur) {
+		} catch (error) {
 			journal.erreur(
-				`L’état de l’email d’un message de contact n’a pas pu être écrit (nature : ${natureDeLEchec(erreur)}).`
+				`L’état de l’email d’un message de contact n’a pas pu être écrit (nature : ${failureKind(error)}).`
 			)
 		}
 	}
-	const envoi: Promise<'envoye' | 'echec'> = (async () => {
-		const email = composerEmail(contenuEmailContact(message), SITE_ORIGIN)
+	const sending: Promise<'envoye' | 'echec'> = (async () => {
+		const email = composerEmail(contactEmailContent(message), SITE_ORIGIN)
 		const issue = await envoyer({ a: destinataire, repondreA: message.email, ...email })
-		if (issue === AUCUN_RELAIS) {
+		if (issue === NO_RELAY) {
 			// Nothing failed, and nothing left: the row must not say « transmise ». An admin sends it again once a relay is set.
 			journal.erreur('L’email d’un message de contact n’est pas parti : aucun relais d’envoi n’est réglé.')
 			return 'echec' as const
@@ -150,47 +150,47 @@ export async function expedier(
 		return 'envoye' as const
 	})().catch((erreur: unknown) => {
 		// The door already wrote its own line (kind of failure only); this one says which flow it was.
-		journal.erreur(`L’email d’un message de contact n’est pas parti (nature : ${natureDeLEchec(erreur)}).`)
+		journal.erreur(`L’email d’un message de contact n’est pas parti (nature : ${failureKind(erreur)}).`)
 		return 'echec' as const
 	})
 
-	const issue = await avecUnDelai(envoi, delaiMs)
+	const issue = await withTimeout(sending, delaiMs)
 	if (issue === 'envoye') {
-		await marquer('sent', 'forwarded')
+		await mark('sent', 'forwarded')
 		return 'envoye'
 	}
 	if (issue === 'echec') {
-		await marquer('failed')
+		await mark('failed')
 		return 'echec'
 	}
 	journal.erreur('L’email d’un message de contact n’est pas parti : le service d’envoi ne répond pas à temps.')
-	await marquer('failed')
+	await mark('failed')
 	// A relay that was only slow: if the mail leaves after all, the row says so.
-	void envoi.then(async fin => {
-		if (fin === 'envoye') await marquer('sent', 'forwarded')
+	void sending.then(async fin => {
+		if (fin === 'envoye') await mark('sent', 'forwarded')
 	})
 	return 'echec'
 }
 
-export async function enregistrerUnMessageDeContact(entrees: EntreesDuContact): Promise<ResultatDuContact> {
-	const piege = entrees.formulaire.get(CHAMP_PIEGE_DU_CONTACT)
+export async function saveContactMessage(entrees: ContactInput): Promise<ContactResult> {
+	const trap = entrees.formulaire.get(CONTACT_TRAP_FIELD)
 	// A script. It is shown the success of a person, which it cannot tell from a real one.
-	if (typeof piege === 'string' && piege.trim() !== '') return { ok: true }
+	if (typeof trap === 'string' && trap.trim() !== '') return { ok: true }
 
-	const verifie = validerLeMessage(entrees.formulaire)
-	if (!verifie.ok) return { ok: false, code: 'donnees-invalides', erreurs: verifie.erreurs }
+	const checked = validateMessage(entrees.formulaire)
+	if (!checked.ok) return { ok: false, code: 'donnees-invalides', erreurs: checked.erreurs }
 
-	const place = prendreUnePlaceDeContact(entrees.client, verifie.message.email, entrees.freins ?? FREINS_DE_CONTACT)
+	const place = takeContactSlot(entrees.client, checked.message.email, entrees.freins ?? CONTACT_RATE_LIMITS)
 	if (!place.autorise) return { ok: false, code: 'trop-de-messages', reessayerDansS: place.reessayerDansS }
 
 	let id: number
 	try {
-		id = await entrees.stockage.creer(verifie.message)
-	} catch (erreur) {
-		entrees.journal.erreur(`Un message de contact n’a pas pu être enregistré (nature : ${natureDeLEchec(erreur)}).`)
+		id = await entrees.stockage.creer(checked.message)
+	} catch (error) {
+		entrees.journal.erreur(`Un message de contact n’a pas pu être enregistré (nature : ${failureKind(error)}).`)
 		return { ok: false, code: 'enregistrement-impossible' }
 	}
 
-	entrees.apres(async () => void (await expedier(id, verifie.message, entrees)))
+	entrees.apres(async () => void (await dispatch(id, checked.message, entrees)))
 	return { ok: true }
 }

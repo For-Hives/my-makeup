@@ -1,33 +1,27 @@
 import { type CollectionBeforeChangeHook, type CollectionConfig, ValidationError } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { adminSeulement, cacheeSaufAdmin, jamais } from '../lib/acces'
-import {
-	ETATS_DU_MAIL,
-	estUnStatutDeDemande,
-	STATUTS_DE_DEMANDE,
-	TYPES_DE_DEMANDE,
-	transitionPermise,
-} from '../lib/contact/states'
-import { LIMITES_DU_CONTACT } from '../lib/contact/message'
-import { renvoyerLEmail } from '../lib/contact/resend-route'
+import { CONTACT_LIMITS } from '../lib/contact/message'
+import { resendEmail } from '../lib/contact/resend-route'
+import { isRequestStatus, MAIL_STATES, REQUEST_STATUSES, REQUEST_TYPES, transitionAllowed } from '../lib/contact/states'
 
-const TYPE_LABELS: Record<(typeof TYPES_DE_DEMANDE)[number], string> = { contact: 'Message de contact' }
+const TYPE_LABELS: Record<(typeof REQUEST_TYPES)[number], string> = { contact: 'Message de contact' }
 
-const STATUS_LABELS: Record<(typeof STATUTS_DE_DEMANDE)[number], string> = {
+const STATUS_LABELS: Record<(typeof REQUEST_STATUSES)[number], string> = {
 	new: 'Nouvelle',
 	forwarded: 'Transmise à l’équipe',
 	answered: 'Répondue',
 	spam: 'Spam',
 }
 
-const MAIL_STATUS_LABELS: Record<(typeof ETATS_DU_MAIL)[number], string> = {
+const MAIL_STATUS_LABELS: Record<(typeof MAIL_STATES)[number], string> = {
 	pending: 'En cours d’envoi',
 	sent: 'Envoyé',
 	failed: 'Échec de l’envoi',
 }
 
 /**
- * The cycle of the status (src/lib/contact/etats.ts, plan 02 U78), kept by the collection itself.
+ * The cycle of the status (src/lib/contact/states.ts, plan 02 U78), kept by the collection itself.
  * - An admin who asks for a move the cycle does not allow gets a sentence in French, and nothing changes.
  * - The server (no account on the request) only ever moves `new` to `forwarded`, once the mail has left.
  *   A late « the mail left » that arrives after an admin marked the message answered or spam changes nothing
@@ -43,10 +37,9 @@ const keepTheCycle: CollectionBeforeChangeHook = ({ data: recu, originalDoc, ope
 	}
 	const previousStatus: unknown = originalDoc.status
 	const nextStatus: unknown = data.status
-	if (!estUnStatutDeDemande(previousStatus) || !estUnStatutDeDemande(nextStatus) || previousStatus === nextStatus)
-		return data
+	if (!isRequestStatus(previousStatus) || !isRequestStatus(nextStatus) || previousStatus === nextStatus) return data
 	if (req.user) {
-		if (!transitionPermise(previousStatus, nextStatus))
+		if (!transitionAllowed(previousStatus, nextStatus))
 			throw new ValidationError({
 				errors: [
 					{
@@ -84,7 +77,7 @@ const frozen = { update: jamais }
  *   An admin changes its status (answered, spam) and nothing else: every other field is frozen. The rules
  *   stay active everywhere else, and the matrix of access plays this collection for every role.
  * - Ticket 163: the admin list filters the messages whose mail failed, and the button « Renvoyer l'email »
- *   of the message sends it again (src/lib/contact/renvoi.ts), once however many times it is clicked.
+ *   of the message sends it again (src/lib/contact/resend.ts), once however many times it is clicked.
  * - It holds what the visitor typed, so it is never in a log, a mail subject or a measure event.
  */
 export const ContactRequests: CollectionConfig<'contact-requests'> = {
@@ -94,9 +87,9 @@ export const ContactRequests: CollectionConfig<'contact-requests'> = {
 		defaultColumns: ['createdAt', 'type', 'status', 'mailStatus', 'firstName', 'lastName'],
 		hidden: cacheeSaufAdmin,
 		useAsTitle: 'lastName',
-		components: { beforeListTable: ['/components/admin/EchecsDEnvoi#EchecsDEnvoi'] },
+		components: { beforeListTable: ['/components/admin/SendFailures#SendFailures'] },
 	},
-	endpoints: [renvoyerLEmail],
+	endpoints: [resendEmail],
 	hooks: { beforeChange: [keepTheCycle] },
 	defaultSort: '-createdAt',
 	access: {
@@ -114,7 +107,7 @@ export const ContactRequests: CollectionConfig<'contact-requests'> = {
 			defaultValue: 'contact',
 			index: true,
 			access: frozen,
-			options: TYPES_DE_DEMANDE.map(type => ({ label: TYPE_LABELS[type], value: type })),
+			options: REQUEST_TYPES.map(type => ({ label: TYPE_LABELS[type], value: type })),
 		},
 		{
 			name: 'status',
@@ -123,7 +116,7 @@ export const ContactRequests: CollectionConfig<'contact-requests'> = {
 			required: true,
 			defaultValue: 'new',
 			index: true,
-			options: STATUTS_DE_DEMANDE.map(statut => ({ label: STATUS_LABELS[statut], value: statut })),
+			options: REQUEST_STATUSES.map(statut => ({ label: STATUS_LABELS[statut], value: statut })),
 			admin: {
 				description:
 					'Passe le message à « Répondue » quand tu as répondu à la personne, ou à « Spam » si ce n’est pas un vrai message.',
@@ -137,23 +130,23 @@ export const ContactRequests: CollectionConfig<'contact-requests'> = {
 			defaultValue: 'pending',
 			index: true,
 			access: frozen,
-			options: ETATS_DU_MAIL.map(etat => ({ label: MAIL_STATUS_LABELS[etat], value: etat })),
+			options: MAIL_STATES.map(etat => ({ label: MAIL_STATUS_LABELS[etat], value: etat })),
 		},
 		{
 			name: 'firstName',
 			label: 'Prénom',
 			type: 'text',
 			required: true,
-			maxLength: LIMITES_DU_CONTACT.prenom,
+			maxLength: CONTACT_LIMITS.prenom,
 			access: frozen,
 		},
-		{ name: 'lastName', label: 'Nom', type: 'text', required: true, maxLength: LIMITES_DU_CONTACT.nom, access: frozen },
+		{ name: 'lastName', label: 'Nom', type: 'text', required: true, maxLength: CONTACT_LIMITS.nom, access: frozen },
 		{
 			name: 'email',
 			label: 'Email',
 			type: 'text',
 			required: true,
-			maxLength: LIMITES_DU_CONTACT.email,
+			maxLength: CONTACT_LIMITS.email,
 			access: frozen,
 		},
 		{
@@ -161,7 +154,7 @@ export const ContactRequests: CollectionConfig<'contact-requests'> = {
 			label: 'Numéro de téléphone',
 			type: 'text',
 			required: true,
-			maxLength: LIMITES_DU_CONTACT.telephone,
+			maxLength: CONTACT_LIMITS.telephone,
 			access: frozen,
 		},
 		{
@@ -169,13 +162,13 @@ export const ContactRequests: CollectionConfig<'contact-requests'> = {
 			label: 'Message',
 			type: 'textarea',
 			required: true,
-			maxLength: LIMITES_DU_CONTACT.message,
+			maxLength: CONTACT_LIMITS.message,
 			access: frozen,
 		},
 		{
 			name: 'resend',
 			type: 'ui',
-			admin: { components: { Field: '/components/admin/RenvoyerLEmail#RenvoyerLEmail' } },
+			admin: { components: { Field: '/components/admin/ResendEmail#ResendEmail' } },
 		},
 	],
 }

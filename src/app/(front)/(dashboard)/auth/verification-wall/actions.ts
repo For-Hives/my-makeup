@@ -9,7 +9,7 @@ import { ipClient } from '@/lib/auth/client-ip'
 import { RESEND_MESSAGES, resendConfirmation } from '@/lib/auth/resend'
 import { resendRateLimit } from '@/lib/auth/sign-up-rate-limits'
 import { logRefusal } from '@/lib/auth/sign-up-refusal'
-import { envoiEmailDePayload } from '@/lib/emails/send'
+import { payloadSendEmail } from '@/lib/emails/send'
 import { serverEnv } from '@/lib/env'
 
 /**
@@ -36,7 +36,7 @@ export async function resendEmail(_precedent: ResendState, formulaire: FormData)
 	const result = await resendConfirmation({
 		payload,
 		email: value,
-		envoyer: envoiEmailDePayload(payload, serverEnv()),
+		envoyer: payloadSendEmail(payload, serverEnv()),
 		site: process.env.NEXT_PUBLIC_SITE_URL ?? requestOrigin ?? 'http://localhost',
 		journal: log,
 	})

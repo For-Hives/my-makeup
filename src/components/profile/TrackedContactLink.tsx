@@ -1,7 +1,7 @@
 'use client'
 
 import { type ComponentProps, useEffect } from 'react'
-import { type CanalDeContact, mesurerUnClicDeContact } from '@/lib/analytics/contact-click'
+import { type ContactChannel, measureContactClick } from '@/lib/analytics/contact-click'
 import type { Pid } from '@/lib/analytics/events'
 import { track } from '@/lib/analytics/track'
 
@@ -31,12 +31,12 @@ export function TrackedContactLink({
 	href,
 	children,
 	...lien
-}: { pid: Pid | null; canal: CanalDeContact; href: string } & Omit<ComponentProps<'a'>, 'onClick' | 'href'>) {
+}: { pid: Pid | null; canal: ContactChannel; href: string } & Omit<ComponentProps<'a'>, 'onClick' | 'href'>) {
 	useEffect(() => {
 		if (pid !== null) void myPid()
 	}, [pid])
 	const countClick = () => {
-		void mesurerUnClicDeContact({
+		void measureContactClick({
 			pid,
 			canal,
 			lieu: { recherche: location.search, referent: document.referrer, origine: location.origin },

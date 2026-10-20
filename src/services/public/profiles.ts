@@ -23,7 +23,7 @@
  */
 
 import type { Payload } from 'payload'
-import { type Pid, pidDuProfil } from '@/lib/analytics/pid'
+import { type Pid, profilePid } from '@/lib/analytics/pid'
 import { formatZone, rayonKm, villeAffichee } from '@/lib/format-zone'
 import { estMontantDePrix, prixMinimal } from '@/lib/prix'
 import { displayName, text } from '@/lib/profile/display-name'
@@ -253,7 +253,7 @@ async function readPids(payload: Payload, profils: readonly { id: number }[]): P
 		pagination: false,
 		overrideAccess: true,
 	})
-	for (const { id, strapiId } of docs) pid.set(id, pidDuProfil({ id, strapiId }))
+	for (const { id, strapiId } of docs) pid.set(id, profilePid({ id, strapiId }))
 	return pid
 }
 
@@ -262,7 +262,7 @@ function cardOf(profil: CardProfile, photos: PhotosById, pids: ReadonlyMap<numbe
 	const identifier = photoId(profil.mainPicture)
 	return {
 		slug: profil.slug,
-		pid: pids.get(profil.id) ?? pidDuProfil({ id: profil.id }),
+		pid: pids.get(profil.id) ?? profilePid({ id: profil.id }),
 		nom: displayName(profil),
 		specialite: text(profil.specialty) || null,
 		lieu: formatZone({ city: profil.city?.name, radius: profil.radiusKm }) || null,

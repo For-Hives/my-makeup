@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { type Suivre, track } from '@/lib/analytics/track'
+import { type Track, track } from '@/lib/analytics/track'
 import type { IdentityValues } from '@/lib/dashboard/identity'
 import type { LocationValues } from '@/lib/dashboard/location'
 import { type OnboardingStep, STEPS, STEPS_NAMES } from '@/lib/dashboard/onboarding'
@@ -61,7 +61,7 @@ export function Onboarding({
 	televerser?: (fichier: File, alt: string) => Promise<FileUploadResult>
 	supprimer?: (id: PhotoId) => Promise<unknown>
 	naviguer?: (url: string) => void
-	suivre?: Suivre
+	suivre?: Track
 }) {
 	const [step, setStep] = useState<OnboardingStep>(etapeInitiale)
 	const [identityValues, setIdentityValues] = useState(identite)

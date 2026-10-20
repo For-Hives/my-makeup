@@ -3,7 +3,7 @@
 import { usePathname } from 'next/navigation'
 import { useReportWebVitals } from 'next/web-vitals'
 import { useRef } from 'react'
-import { proprietesDeWebVital } from '@/lib/analytics/events'
+import { webVitalProperties } from '@/lib/analytics/events'
 import { track } from '@/lib/analytics/track'
 
 /**
@@ -15,10 +15,10 @@ import { track } from '@/lib/analytics/track'
  * visitor leaves, after any number of navigations inside the site.
  */
 export function WebVitals() {
-	const pageChargee = useRef(usePathname())
+	const loadedPage = useRef(usePathname())
 	useReportWebVitals(metrique => {
-		const proprietes = proprietesDeWebVital(metrique, pageChargee.current)
-		if (proprietes !== null) track('web-vitals', proprietes)
+		const properties = webVitalProperties(metrique, loadedPage.current)
+		if (properties !== null) track('web-vitals', properties)
 	})
 	return null
 }

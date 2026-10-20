@@ -1,10 +1,10 @@
 import Link from 'next/link'
-import { OppositionMesure } from '@/components/analytics/AnalyticsOptOut'
+import { AnalyticsOptOut } from '@/components/analytics/AnalyticsOptOut'
 import { LegalPage } from '@/components/legal/LegalPage'
 import { EDITEUR, formatSiret } from '@/lib/legal'
 import { JOURS_AVANT_EFFACEMENT_DES_PHOTOS, PRESTATAIRES } from '@/lib/prestataires'
 import { pageMetadata } from '@/lib/seo/metadata'
-import { DELAI_AVANT_PURGE_JOURS } from '@/lib/tasks/unconfirmed-accounts'
+import { PURGE_DELAY_DAYS } from '@/lib/tasks/unconfirmed-accounts'
 
 // Static: the text is in the code, and the page reads no cookie and no data (ticket 112).
 export const metadata = pageMetadata({
@@ -53,7 +53,7 @@ export default function PrivacyPolicyPage() {
 				{`Base légale : l'exécution des conditions d'utilisation que vous acceptez à l'inscription ; notre intérêt légitime pour les emails liés au service.`}
 			</p>
 			<p>
-				{`Confirmation de l'adresse email : à l'inscription, nous envoyons à l'adresse indiquée un email contenant un lien. Tant que vous ne l'avez pas suivi, le compte ne permet pas de se connecter, et un compte jamais confirmé est supprimé, avec son profil vide, au bout de ${DELAI_AVANT_PURGE_JOURS} jours.`}
+				{`Confirmation de l'adresse email : à l'inscription, nous envoyons à l'adresse indiquée un email contenant un lien. Tant que vous ne l'avez pas suivi, le compte ne permet pas de se connecter, et un compte jamais confirmé est supprimé, avec son profil vide, au bout de ${PURGE_DELAY_DAYS} jours.`}
 			</p>
 			<p>
 				{`Durée : tant que votre compte existe. Vous pouvez supprimer votre compte et votre profil depuis votre espace : votre profil, vos informations et vos photos disparaissent du site aussitôt. Une photo retirée ou remplacée, comme celles d'un compte supprimé, est ensuite effacée définitivement de notre stockage au bout de ${JOURS_AVANT_EFFACEMENT_DES_PHOTOS} jours ; pendant ce délai, elle n'est plus affichée (le cache du service de stockage peut cependant la servir encore quelques heures).`}
@@ -90,7 +90,7 @@ export default function PrivacyPolicyPage() {
 				{`Pourquoi : savoir ce qui aide vraiment les maquilleuses à être contactées (intérêt légitime). Cette mesure est limitée à des statistiques anonymes et ne nécessite donc pas votre consentement. Durée : les statistiques sont conservées 25 mois au plus, puis supprimées. Nous n'utilisons plus Google Analytics. Vous pouvez vous y opposer sur ce navigateur :`}
 			</p>
 			<div>
-				<OppositionMesure />
+				<AnalyticsOptOut />
 			</div>
 
 			<h2>Journaux techniques</h2>

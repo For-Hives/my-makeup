@@ -1,4 +1,4 @@
-import type { ContenuEmail } from './layout'
+import type { EmailContent } from './layout'
 
 /**
  * The mail of an address that already has an account (ticket 083): what the real owner of the
@@ -9,11 +9,11 @@ import type { ContenuEmail } from './layout'
  * Pure: no `next` import, no Payload.
  */
 
-export const SUJET_DEJA_INSCRITE = 'Tu as déjà un compte My Makeup'
+export const ALREADY_REGISTERED_SUBJECT = 'Tu as déjà un compte My Makeup'
 
-export function contenuEmailDejaInscrite(): ContenuEmail {
+export function alreadyRegisteredEmailContent(): EmailContent {
 	return {
-		sujet: SUJET_DEJA_INSCRITE,
+		sujet: ALREADY_REGISTERED_SUBJECT,
 		titre: 'Tu as déjà un compte My Makeup',
 		paragraphes: [
 			'Quelqu’un, peut-être toi, vient de s’inscrire sur My Makeup avec cette adresse email. Elle a déjà un compte : aucun second compte n’a été créé.',

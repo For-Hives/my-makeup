@@ -12,11 +12,11 @@
  * It never throws: a measure must not break a page.
  */
 
-import { donneesDEvenement, type EvenementsMyMakeup, type NomEvenement } from './events'
+import { type EventName, eventData, type MyMakeupEvents } from './events'
 import { WAITING_ROOM_NAME } from './umami'
 
 /** What of the browser `track` uses. */
-export interface FenetreMesuree {
+export interface MeasuredWindow {
 	navigator?: { webdriver?: boolean | undefined } | undefined
 	umami?: { track?: (nom: string, donnees: Record<string, string | number | boolean>) => unknown } | undefined
 	[salle: string]: unknown
@@ -24,37 +24,35 @@ export interface FenetreMesuree {
 
 export interface Execution {
 	/** Nothing without a window: the server renders the pages and measures nothing. */
-	fenetre: FenetreMesuree | undefined
+	fenetre: MeasuredWindow | undefined
 	/** True for a production build. */
 	production: boolean
 }
 
 /** The arguments after the name: the properties, optional for an event that has none. */
-export type ArgumentsDe<N extends NomEvenement> =
-	EvenementsMyMakeup[N] extends Record<string, never>
-		? [proprietes?: EvenementsMyMakeup[N]]
-		: [proprietes: EvenementsMyMakeup[N]]
+export type ArgumentsOf<N extends EventName> =
+	MyMakeupEvents[N] extends Record<string, never> ? [proprietes?: MyMakeupEvents[N]] : [proprietes: MyMakeupEvents[N]]
 
-export type Suivre = <N extends NomEvenement>(nom: N, ...proprietes: ArgumentsDe<N>) => boolean
+export type Track = <N extends EventName>(nom: N, ...proprietes: ArgumentsOf<N>) => boolean
 
-function passerAUmami(nom: string, donnees: Record<string, string | number | boolean>, execution: Execution): boolean {
-	const { fenetre, production } = execution
-	if (!production || !fenetre) return false
-	if (fenetre.navigator?.webdriver) return false
-	if (fenetre.umami && typeof fenetre.umami.track === 'function') {
-		fenetre.umami.track(nom, donnees)
+function passToUmami(nom: string, donnees: Record<string, string | number | boolean>, execution: Execution): boolean {
+	const { fenetre: browserWindow, production } = execution
+	if (!production || !browserWindow) return false
+	if (browserWindow.navigator?.webdriver) return false
+	if (browserWindow.umami && typeof browserWindow.umami.track === 'function') {
+		browserWindow.umami.track(nom, donnees)
 		return true
 	}
-	const salle = fenetre[WAITING_ROOM_NAME]
-	return typeof salle === 'function' && salle(nom, donnees) === true
+	const waitingRoom = browserWindow[WAITING_ROOM_NAME]
+	return typeof waitingRoom === 'function' && waitingRoom(nom, donnees) === true
 }
 
 /** `track` for a given browser: the tests give their own, the pages use `track` below. */
-export function creerTrack(execution: () => Execution): Suivre {
+export function createTrack(execution: () => Execution): Track {
 	return (nom, ...[proprietes]) => {
 		try {
-			const donnees = donneesDEvenement(nom, proprietes ?? {})
-			return donnees !== null && passerAUmami(nom, donnees, execution())
+			const data = eventData(nom, proprietes ?? {})
+			return data !== null && passToUmami(nom, data, execution())
 		} catch {
 			return false
 		}
@@ -66,7 +64,7 @@ export function creerTrack(execution: () => Execution): Suivre {
  *
  *   track('contact_click', { pid: 12, channel: 'phone' })
  */
-export const track: Suivre = creerTrack(() => ({
-	fenetre: typeof window === 'undefined' ? undefined : (window as unknown as FenetreMesuree),
+export const track: Track = createTrack(() => ({
+	fenetre: typeof window === 'undefined' ? undefined : (window as unknown as MeasuredWindow),
 	production: process.env.NODE_ENV === 'production',
 }))

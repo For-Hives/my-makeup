@@ -11,8 +11,8 @@ import {
 } from '@/lib/auth/auth-log'
 import { createRateLimit } from '@/lib/auth/rate-limit'
 import { signInWithPassword } from '@/lib/auth/sign-in'
-import { demarrerLesTachesQuotidiennes } from '@/lib/tasks/scheduler'
-import { lancerLesTachesQuotidiennes, type TacheQuotidienne } from '@/lib/tasks/daily'
+import { type DailyTask, runDailyTasks } from '@/lib/tasks/daily'
+import { scheduleDailyTasks } from '@/lib/tasks/scheduler'
 
 /** Tickets 077: the rows of the authentication journal, and the daily task that purges it. */
 
@@ -159,7 +159,7 @@ describe('les tâches quotidiennes', () => {
 
 	test('elles tournent l’une après l’autre, avec l’horloge donnée, et une tâche en échec ne bloque pas la suivante', async () => {
 		const vues: Date[] = []
-		const taches: TacheQuotidienne[] = [
+		const taches: DailyTask[] = [
 			{ nom: 'cassee', executer: () => Promise.reject(new Error('secret@example.test')) },
 			{
 				nom: 'bonne',
@@ -169,7 +169,7 @@ describe('les tâches quotidiennes', () => {
 				},
 			},
 		]
-		const resultats = await lancerLesTachesQuotidiennes(payload, MOMENT, taches)
+		const resultats = await runDailyTasks(payload, MOMENT, taches)
 		expect(resultats).toEqual([
 			{ nom: 'cassee', echec: true },
 			{ nom: 'bonne', supprimes: 3 },
@@ -181,7 +181,7 @@ describe('les tâches quotidiennes', () => {
 	test('le planificateur lance une première fois après le délai, puis à chaque intervalle, sans doubler une exécution en cours', async () => {
 		let lancements = 0
 		let liberer: () => void = () => undefined
-		const arret = demarrerLesTachesQuotidiennes({
+		const arret = scheduleDailyTasks({
 			lancer: () => {
 				lancements++
 				return new Promise<void>(resolve => {
@@ -205,7 +205,7 @@ describe('les tâches quotidiennes', () => {
 
 	test('un arrêt avant le premier lancement ne lance rien', async () => {
 		let lancements = 0
-		const arret = demarrerLesTachesQuotidiennes({
+		const arret = scheduleDailyTasks({
 			lancer: () => {
 				lancements++
 				return Promise.resolve()

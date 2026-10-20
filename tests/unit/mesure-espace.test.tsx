@@ -6,8 +6,8 @@ import { AvailabilitySwitch } from '@/components/dashboard/AvailabilitySwitch'
 import { DescriptionEditor } from '@/components/dashboard/DescriptionEditor'
 import { PhotoEditor } from '@/components/dashboard/PhotoEditor'
 import { ViewLink } from '@/components/dashboard/ViewLink'
-import { donneesDEvenement } from '@/lib/analytics/events'
-import type { Suivre } from '@/lib/analytics/track'
+import { eventData } from '@/lib/analytics/events'
+import type { Track } from '@/lib/analytics/track'
 import { holder } from '@/lib/dashboard/analytics'
 import { MESSAGES_PHOTO } from '@/lib/dashboard/photo'
 import { uploadPhoto } from '@/lib/dashboard/photos-upload'
@@ -31,7 +31,7 @@ beforeEach(() => {
 	holder.suivre = ((nom: string, proprietes: unknown = {}) => {
 		envois.push({ nom, proprietes })
 		return true
-	}) as unknown as Suivre
+	}) as unknown as Track
 })
 afterEach(() => {
 	holder.suivre = origine
@@ -49,16 +49,16 @@ describe('U82 : les propriétés restent dans les listes fermées', () => {
 		'portfolio',
 		'offres',
 	])('profile_save de la section %s passe', section => {
-		expect(donneesDEvenement('profile_save', { section, ok: true })).toEqual({ section, ok: true })
+		expect(eventData('profile_save', { section, ok: true })).toEqual({ section, ok: true })
 	})
 
 	test('un texte saisi, une cause inventée ou une propriété en trop fait tomber l’événement', () => {
-		expect(donneesDEvenement('profile_save', { section: 'Léa Fictive', ok: true })).toBeNull()
-		expect(donneesDEvenement('upload_error', { kind: 'photo.jpg' })).toBeNull()
-		expect(donneesDEvenement('profile_publiable', { section: 'identite' })).toBeNull()
-		expect(donneesDEvenement('account_delete', { email: 'lea@example.test' })).toBeNull()
-		expect(donneesDEvenement('profile_publiable', {})).toEqual({})
-		expect(donneesDEvenement('account_delete', {})).toEqual({})
+		expect(eventData('profile_save', { section: 'Léa Fictive', ok: true })).toBeNull()
+		expect(eventData('upload_error', { kind: 'photo.jpg' })).toBeNull()
+		expect(eventData('profile_publiable', { section: 'identite' })).toBeNull()
+		expect(eventData('account_delete', { email: 'lea@example.test' })).toBeNull()
+		expect(eventData('profile_publiable', {})).toEqual({})
+		expect(eventData('account_delete', {})).toEqual({})
 	})
 })
 

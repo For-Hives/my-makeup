@@ -1,8 +1,8 @@
 import config from '@payload-config'
 import { getPayload } from 'payload'
 import { statsTokenFromEnv } from '@/lib/env'
-import { methodeNonPermise, repondreAuxStats } from '@/services/analytics/stats-response'
-import { lireLesStatsHebdo } from '@/services/analytics/weekly-stats'
+import { methodNotAllowed, respondToStats } from '@/services/analytics/stats-response'
+import { readWeeklyStats } from '@/services/analytics/weekly-stats'
 
 // Never prerendered, never cached: each request reads the database again.
 export const dynamic = 'force-dynamic'
@@ -14,13 +14,13 @@ export const dynamic = 'force-dynamic'
  * period that cannot be read. This static segment wins over the catch-all REST route of Payload.
  */
 export function GET(request: Request): Promise<Response> {
-	return repondreAuxStats(request, {
+	return respondToStats(request, {
 		jeton: statsTokenFromEnv(),
-		lire: async periode => lireLesStatsHebdo(await getPayload({ config }), periode),
+		lire: async periode => readWeeklyStats(await getPayload({ config }), periode),
 	})
 }
 
-export const POST = methodeNonPermise
-export const PUT = methodeNonPermise
-export const PATCH = methodeNonPermise
-export const DELETE = methodeNonPermise
+export const POST = methodNotAllowed
+export const PUT = methodNotAllowed
+export const PATCH = methodNotAllowed
+export const DELETE = methodNotAllowed

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useActionState, useEffect, useRef } from 'react'
-import { type Suivre, track } from '@/lib/analytics/track'
+import { type Track, track } from '@/lib/analytics/track'
 import { type ErrorCode, errorMessage } from '@/lib/auth/errors'
 
 export type SignInState = { code: ErrorCode } | null
@@ -20,7 +20,7 @@ export function SignInForm({
 }: {
 	action: SignInAction
 	retour: string
-	suivre?: Suivre
+	suivre?: Track
 }) {
 	const [state, send, inProgress] = useActionState(action, null)
 	const lock = useRef(false)
@@ -30,7 +30,7 @@ export function SignInForm({
 	}, [inProgress, state])
 
 	// A refusal is a new state each time, so each one is sent once (ticket 146). A success ends in a
-	// redirection and never comes back here: the next page sends it (`ConnexionReussie`).
+	// redirection and never comes back here: the next page sends it (`SignInSucceeded`).
 	useEffect(() => {
 		if (state) suivre('login_result', { method: 'email', ok: false, code: state.code })
 	}, [state, suivre])

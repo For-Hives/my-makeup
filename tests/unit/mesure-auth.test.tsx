@@ -1,12 +1,12 @@
 import { describe, expect, test } from 'bun:test'
-import { ConnexionReussie } from '@/components/analytics/SignInSucceeded'
+import { SignInSucceeded } from '@/components/analytics/SignInSucceeded'
 import { GoogleLink } from '@/components/auth/GoogleLink'
 import { SignInForm } from '@/components/auth/SignInForm'
 import { SignInPageEvents } from '@/components/auth/SignInPageEvents'
 import { SignUpForm } from '@/components/auth/SignUpForm'
-import { CODES_D_ERREUR_D_AUTHENTIFICATION, donneesDEvenement } from '@/lib/analytics/events'
-import { methodeDeLaMarque } from '@/lib/analytics/sign-in-mark'
-import type { Suivre } from '@/lib/analytics/track'
+import { AUTH_ERROR_CODES, eventData } from '@/lib/analytics/events'
+import { markMethod } from '@/lib/analytics/sign-in-mark'
+import type { Track } from '@/lib/analytics/track'
 import { ERROR_CODES, GOOGLE_ERROR_CODES } from '@/lib/auth/errors'
 import { SIGN_UP_FAILURE_CODES } from '@/lib/auth/sign-up'
 import { ouvrirFenetre } from '../outils/dom-react'
@@ -23,21 +23,21 @@ function espion() {
 	const suivre = ((nom: string, proprietes: unknown = {}) => {
 		envois.push({ nom, proprietes })
 		return true
-	}) as unknown as Suivre
+	}) as unknown as Track
 	return { envois, suivre }
 }
 
 describe('le catalogue couvre tous les codes que les pages peuvent montrer', () => {
 	test('chaque code de connexion, de Google et d’inscription est dans la liste fermée', () => {
-		const liste: readonly string[] = CODES_D_ERREUR_D_AUTHENTIFICATION
+		const liste: readonly string[] = AUTH_ERROR_CODES
 		for (const code of [...ERROR_CODES, ...GOOGLE_ERROR_CODES, ...SIGN_UP_FAILURE_CODES])
 			expect(liste, code).toContain(code)
 	})
 
 	test('un code qui n’est pas de la liste fait tomber l’événement', () => {
-		expect(donneesDEvenement('login_result', { method: 'google', ok: false, code: 'google-annule' })).not.toBeNull()
-		expect(donneesDEvenement('login_result', { method: 'google', ok: false, code: 'a@example.test' })).toBeNull()
-		expect(donneesDEvenement('auth_error', { code: 'jeton-abc' })).toBeNull()
+		expect(eventData('login_result', { method: 'google', ok: false, code: 'google-annule' })).not.toBeNull()
+		expect(eventData('login_result', { method: 'google', ok: false, code: 'a@example.test' })).toBeNull()
+		expect(eventData('auth_error', { code: 'jeton-abc' })).toBeNull()
 	})
 })
 
@@ -73,23 +73,23 @@ describe('connexion par email', () => {
 describe('connexion réussie (email ou Google), sur la page d’arrivée', () => {
 	test('la marque du serveur donne un login_result ok, puis elle est dépensée', async () => {
 		const { envois, suivre } = espion()
-		document.cookie = 'mm-connexion=google; Path=/'
-		await fenetre.monter(<ConnexionReussie suivre={suivre} />)
+		document.cookie = 'mm-sign-in-mark=google; Path=/'
+		await fenetre.monter(<SignInSucceeded suivre={suivre} />)
 		expect(envois).toEqual([{ nom: 'login_result', proprietes: { method: 'google', ok: true, code: 'ok' } }])
-		expect(document.cookie).not.toContain('mm-connexion')
+		expect(document.cookie).not.toContain('mm-sign-in-mark')
 		// Mounted again: nothing left to send.
-		await fenetre.monter(<ConnexionReussie suivre={suivre} />)
+		await fenetre.monter(<SignInSucceeded suivre={suivre} />)
 		expect(envois).toHaveLength(1)
 	})
 
 	test('sans marque, ou avec une valeur inconnue, rien ne part', async () => {
 		const { envois, suivre } = espion()
-		document.cookie = 'mm-connexion=a@example.test; Path=/'
-		await fenetre.monter(<ConnexionReussie suivre={suivre} />)
+		document.cookie = 'mm-sign-in-mark=a@example.test; Path=/'
+		await fenetre.monter(<SignInSucceeded suivre={suivre} />)
 		expect(envois).toEqual([])
-		expect(methodeDeLaMarque('a=1; mm-connexion=email')).toBe('email')
-		expect(methodeDeLaMarque('a=1')).toBeNull()
-		document.cookie = 'mm-connexion=; Max-Age=0; Path=/'
+		expect(markMethod('a=1; mm-sign-in-mark=email')).toBe('email')
+		expect(markMethod('a=1')).toBeNull()
+		document.cookie = 'mm-sign-in-mark=; Max-Age=0; Path=/'
 	})
 })
 

@@ -12,16 +12,16 @@
  * when the tracker is there already, nor outside a production build.
  */
 
-import type { FenetreMesuree } from './track'
+import type { MeasuredWindow } from './track'
 import { umamiLoaderScript, umamiScriptAttributes, WAITING_ROOM_NAME } from './umami'
 
 /** What of the browser the installation uses; the tests give their own. */
-export interface FenetreInstallable extends FenetreMesuree {
+export interface InstallableWindow extends MeasuredWindow {
 	document?: { head?: { appendChild(noeud: unknown): unknown } | null; createElement(nom: string): { text: string } }
 }
 
 /** The script of the head, as the layout builds it. NEXT_PUBLIC_* and BUILD_SOURCE_COMMIT are read by their full names: Next freezes them into the bundles. */
-export function scriptDeMesure(): string {
+export function analyticsScript(): string {
 	return umamiLoaderScript(
 		umamiScriptAttributes({
 			domains: process.env.NEXT_PUBLIC_UMAMI_DOMAINS,
@@ -31,18 +31,18 @@ export function scriptDeMesure(): string {
 }
 
 /** True when the script was added. */
-export function installerLaMesure(
-	fenetre: FenetreInstallable | undefined = typeof window === 'undefined'
+export function installAnalytics(
+	fenetre: InstallableWindow | undefined = typeof window === 'undefined'
 		? undefined
-		: (window as unknown as FenetreInstallable),
+		: (window as unknown as InstallableWindow),
 	production: boolean = process.env.NODE_ENV === 'production'
 ): boolean {
 	try {
 		if (!production || !fenetre?.document?.head) return false
 		if (fenetre.umami || typeof fenetre[WAITING_ROOM_NAME] === 'function') return false
-		const balise = fenetre.document.createElement('script')
-		balise.text = scriptDeMesure()
-		fenetre.document.head.appendChild(balise)
+		const tag = fenetre.document.createElement('script')
+		tag.text = analyticsScript()
+		fenetre.document.head.appendChild(tag)
 		return true
 	} catch {
 		return false

@@ -20,43 +20,43 @@ const PHRASES: Record<Exclude<Phase, 'repos' | 'envoi'>, string> = {
 	deja: 'Cet email n’est plus en échec : il est déjà parti, ou un autre envoi est en cours.',
 }
 
-export function RenvoyerLEmail() {
+export function ResendEmail() {
 	const { id } = useDocumentInfo()
 	const mailStatus = useFormFields(([champs]) => champs.mailStatus?.value)
 	const router = useRouter()
-	const pris = useRef(false)
+	const taken = useRef(false)
 	const [phase, setPhase] = useState<Phase>('repos')
 
 	if (id === undefined) return null
 	// After a result, the panel keeps the answer on screen even though the state has changed under it.
 	if (mailStatus !== 'failed' && phase === 'repos') return null
 
-	async function renvoyer() {
-		if (pris.current) return
-		pris.current = true
+	async function resend() {
+		if (taken.current) return
+		taken.current = true
 		setPhase('envoi')
 		try {
-			const reponse = await fetch(`/api/contact-requests/${id}/resend`, { method: 'POST', credentials: 'same-origin' })
-			if (reponse.status === 409) setPhase('deja')
-			else if (!reponse.ok) setPhase('echec')
-			else setPhase(((await reponse.json()) as { mailStatus?: string }).mailStatus === 'sent' ? 'envoye' : 'echec')
+			const response = await fetch(`/api/contact-requests/${id}/resend`, { method: 'POST', credentials: 'same-origin' })
+			if (response.status === 409) setPhase('deja')
+			else if (!response.ok) setPhase('echec')
+			else setPhase(((await response.json()) as { mailStatus?: string }).mailStatus === 'sent' ? 'envoye' : 'echec')
 		} catch {
 			setPhase('echec')
 		}
-		pris.current = false
+		taken.current = false
 		router.refresh()
 	}
 
-	const enCours = phase === 'envoi'
+	const pending = phase === 'envoi'
 	return (
 		<div style={{ marginBottom: 'var(--base)' }}>
 			<Button
 				buttonStyle="secondary"
-				disabled={enCours || phase === 'envoye' || phase === 'deja'}
-				onClick={() => void renvoyer()}
+				disabled={pending || phase === 'envoye' || phase === 'deja'}
+				onClick={() => void resend()}
 				type="button"
 			>
-				{enCours ? 'Envoi en cours…' : 'Renvoyer l’email'}
+				{pending ? 'Envoi en cours…' : 'Renvoyer l’email'}
 			</Button>
 			<p data-testid="resultat-du-renvoi" role="status" style={{ margin: 'calc(var(--base) / 2) 0 0' }}>
 				{phase === 'repos' || phase === 'envoi' ? '' : PHRASES[phase]}

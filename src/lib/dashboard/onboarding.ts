@@ -10,7 +10,7 @@
  */
 
 import { z } from 'zod'
-import { ORIGINES_DECLAREES } from '../analytics/events'
+import { DECLARED_ORIGINS } from '../analytics/events'
 import { completeness } from '../profile/completeness'
 import { type ProfileDocument, profileFields } from '../profile/state'
 import { IDENTITY_MAX, identitySchema, strictIdentitySchema } from './identity'
@@ -66,7 +66,7 @@ export const onboardingIdentitySchema = identitySchema.extend({ specialite: requ
 export const strictOnboardingIdentitySchema = strictIdentitySchema.extend({ specialite: requiredSpecialty })
 
 /** The answers to « Comment as-tu connu My Makeup ? », as the old site words them. */
-export const ORIGINS_LABELS: Readonly<Record<(typeof ORIGINES_DECLAREES)[number], string>> = {
+export const ORIGINS_LABELS: Readonly<Record<(typeof DECLARED_ORIGINS)[number], string>> = {
 	instagram: 'Instagram',
 	google: 'Recherche Google',
 	'bouche-a-oreille': 'Bouche-à-oreille',
@@ -74,4 +74,4 @@ export const ORIGINS_LABELS: Readonly<Record<(typeof ORIGINES_DECLAREES)[number]
 	ia: 'Une IA (ChatGPT, Gemini…)',
 	autre: 'Autre',
 }
-export { ORIGINES_DECLAREES }
+export { DECLARED_ORIGINS as ORIGINES_DECLAREES }

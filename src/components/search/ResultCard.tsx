@@ -1,5 +1,5 @@
 import Image from 'next/image'
-import { LienSuivi } from '@/components/analytics/TrackedLink'
+import { TrackedLink } from '@/components/analytics/TrackedLink'
 import type { ProfileCard } from '@/services/public/profiles'
 
 /** The picture of a card whose artist has no photo yet: the one of the site online. */
@@ -54,7 +54,7 @@ export function ResultCard({
 }) {
 	const photo = carte.photo
 	return (
-		<LienSuivi
+		<TrackedLink
 			href={`/profil/${carte.slug}`}
 			suivi={{ nom: 'search_result_click', proprietes: { rank: rang, pid: carte.pid } }}
 			className="flex w-full flex-col items-center rounded border border-gray-300 bg-white focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2"
@@ -88,6 +88,6 @@ export function ResultCard({
 			<div className="flex w-full flex-col gap-4 p-4 pt-6">
 				{carte.specialite && <p className="font-bold text-gray-900 text-lg">{carte.specialite}</p>}
 			</div>
-		</LienSuivi>
+		</TrackedLink>
 	)
 }

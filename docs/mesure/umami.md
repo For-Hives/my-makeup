@@ -10,7 +10,7 @@ La mesure du site passe par Umami, servi par le site lui-même. Une visiteuse do
 | `POST /u/api/send` | Une mesure, relayée vers l'instance. Un `GET` répond 405 |
 | tout autre chemin sous `/u` (`/u`, `/u/login`, `/u/api/autre`, `/U/script.js`…) | 404. Le tableau de bord, la connexion et le reste de l'API de l'instance ne sont jamais servis |
 
-Le code : `src/app/u/` (trois fichiers de route) et `src/lib/analytics/relais.ts`.
+Le code : `src/app/u/` (trois fichiers de route) et `src/lib/analytics/relay.ts`.
 
 **Ce que l'instance reçoit** : seulement l'agent, le type de contenu, les langues acceptées, le jeton `x-umami-cache` que son traceur rend après un envoi, et l'adresse de la visiteuse, une fois, dans `True-Client-IP` (la dernière entrée de `X-Forwarded-For`, celle que le proxy a écrite). Ni cookie, ni autorisation, ni Referer, ni adresse ou lieu écrits par le navigateur. Ce qui revient perd son `Set-Cookie`. Une redirection de l'instance n'est pas suivie.
 
@@ -37,7 +37,7 @@ Le script est écrit en chaîne, sans syntaxe postérieure à ES2019 : un `?.` l
 
 ## L'opposition d'une visiteuse
 
-La politique de confidentialité (`/politique-de-confidentialite`) porte un bouton, « Ne plus mesurer mes visites » (`src/components/analytics/OppositionMesure.tsx`). Un clic pose la clé `umami.disabled` dans le `localStorage` du navigateur : le filtre de l'en-tête et le traceur d'Umami la lisent, et plus rien ne part vers le faux Umami ni vers l'instance. Le bouton devient « Réactiver la mesure d'audience » ; un second clic retire la clé. Le choix vaut pour ce navigateur, jusqu'à ce qu'on le retire. La clé et les deux gestes sont dans `src/lib/analytics/opposition.ts`. Un stockage bloqué (fenêtre privée, données coupées) ne casse rien et ne compte pas pour une opposition.
+La politique de confidentialité (`/politique-de-confidentialite`) porte un bouton, « Ne plus mesurer mes visites » (`src/components/analytics/AnalyticsOptOut.tsx`). Un clic pose la clé `umami.disabled` dans le `localStorage` du navigateur : le filtre de l'en-tête et le traceur d'Umami la lisent, et plus rien ne part vers le faux Umami ni vers l'instance. Le bouton devient « Réactiver la mesure d'audience » ; un second clic retire la clé. Le choix vaut pour ce navigateur, jusqu'à ce qu'on le retire. La clé et les deux gestes sont dans `src/lib/analytics/opt-out.ts`. Un stockage bloqué (fenêtre privée, données coupées) ne casse rien et ne compte pas pour une opposition.
 
 ## Le catalogue d'événements
 
@@ -53,7 +53,7 @@ track('profile_publiable') // un événement sans propriété n'en prend pas
 - Un nom inconnu, une propriété en trop ou manquante, une valeur hors de sa liste : le code ne compile pas. À l'exécution, l'événement tombe tout entier.
 - Rien n'est émis en développement ni dans les tests, ni sans Umami, ni depuis un navigateur automatisé. Rien ne lève. Pendant que le traceur charge, l'événement attend dans la salle d'attente.
 - Aucune donnée personnelle : des listes fermées, des booléens, des entiers, l'identifiant d'un profil (`pid` : l'identifiant de l'ancien site, ou `v3-<id>` pour un profil créé depuis), un chemin sans paramètre. Un texte qui ressemble à un email ou à un téléphone fait tomber l'événement.
-- Ajouter un événement : une ligne dans `CATALOGUE`, une ligne dans `EXEMPLES` de `tests/unit/mesure-evenements.test.ts`, et sa ligne dans le plan de mesure. Renommer une valeur coupe sa série dans Umami.
+- Ajouter un événement : une ligne dans `CATALOG`, une ligne dans `EXEMPLES` de `tests/unit/mesure-evenements.test.ts`, et sa ligne dans le plan de mesure. Renommer une valeur coupe sa série dans Umami.
 - Aucun appel direct à Umami hors de `src/lib/analytics/` : un test statique le garde.
 
 Les Web Vitals (`web-vitals`, un événement par mesure : `CLS`, `FCP`, `INP`, `LCP`, `TTFB`) partent de chaque page chargée, sans échantillon, depuis `src/components/analytics/WebVitals.tsx`. Le nom garde son tiret : la série existe déjà dans le rapport du lundi.
@@ -83,9 +83,9 @@ Un profil sans contact public n'a ni section ni lien, donc aucun événement. Le
 
 **Aucun texte saisi ne part.** La page de résultats ne donne au navigateur que deux faits (une ville, une tranche) et une empreinte courte des mots, qui sert à ne pas recompter la même recherche ; l'empreinte n'est jamais envoyée. Le message d'une erreur n'est jamais lu.
 
-**Aucun doublon.** Le navigateur retient, pour l'onglet (`sessionStorage`, clé `mm-mesure-dernier`), la dernière vue comptée. Une 404 ou une page d'erreur rechargée n'est pas recomptée ; une recherche revue (page suivante, retour) non plus, sauf si le formulaire vient d'être envoyé (`src/lib/analytics/doublon.ts`). Un stockage bloqué compte chaque vue.
+**Aucun doublon.** Le navigateur retient, pour l'onglet (`sessionStorage`, clé `mm-analytics-last`), la dernière vue comptée. Une 404 ou une page d'erreur rechargée n'est pas recomptée ; une recherche revue (page suivante, retour) non plus, sauf si le formulaire vient d'être envoyé (`src/lib/analytics/duplicate.ts`). Un stockage bloqué compte chaque vue.
 
-**Le traceur sur les pages qui l'ont perdu.** Le script de l'en-tête ne s'exécute pas quand le navigateur dessine lui-même la page après un échec du serveur : la 404 d'une adresse que rien ne sert (`src/app/global-not-found.tsx`), celle d'un profil, d'un talent ou d'un article inconnu, et toute page d'erreur. Ces pages ajoutent donc le traceur elles-mêmes avant d'émettre (`src/lib/analytics/chargeur.ts`), s'il n'est pas déjà là. La page d'erreur globale (`global-error.tsx`) fait de même.
+**Le traceur sur les pages qui l'ont perdu.** Le script de l'en-tête ne s'exécute pas quand le navigateur dessine lui-même la page après un échec du serveur : la 404 d'une adresse que rien ne sert (`src/app/global-not-found.tsx`), celle d'un profil, d'un talent ou d'un article inconnu, et toute page d'erreur. Ces pages ajoutent donc le traceur elles-mêmes avant d'émettre (`src/lib/analytics/loader.ts`), s'il n'est pas déjà là. La page d'erreur globale (`global-error.tsx`) fait de même.
 
 Le `pid` d'une carte (`ProfileCard.pid`) est lu à part, par les identifiants que la lecture publique a donnés (`readPids`) : l'ancien identifiant n'est pas un champ que le public lit.
 

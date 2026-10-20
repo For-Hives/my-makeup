@@ -1,7 +1,7 @@
 import type { ServerProps } from 'payload'
 import { FILTER_LABELS, type FilterKey, filterLink, filterWhere } from '../../lib/account/admin-filters'
 
-const CLES: FilterKey[] = ['non-confirmes', 'sans-profil', 'bloques']
+const KEYS: FilterKey[] = ['non-confirmes', 'sans-profil', 'bloques']
 
 /**
  * Above the list of the accounts (ticket 168): how many accounts are unconfirmed, without a profile
@@ -9,8 +9,8 @@ const CLES: FilterKey[] = ['non-confirmes', 'sans-profil', 'bloques']
  * combine with the others and can be bookmarked). It renders for an admin only: the list itself is
  * closed to everyone else, so the counts read with the rights of the server.
  */
-export async function FiltresDesComptes({ payload }: ServerProps) {
-	const profils = await payload.find({
+export async function AccountFilters({ payload }: ServerProps) {
+	const profiles = await payload.find({
 		collection: 'profiles',
 		depth: 0,
 		limit: 0,
@@ -18,11 +18,11 @@ export async function FiltresDesComptes({ payload }: ServerProps) {
 		overrideAccess: true,
 		select: { pro: true },
 	})
-	const proprietaires = profils.docs.map(({ pro }) => (typeof pro === 'object' ? pro.id : pro))
-	const nombres = await Promise.all(
-		CLES.map(cle =>
+	const owners = profiles.docs.map(({ pro }) => (typeof pro === 'object' ? pro.id : pro))
+	const counts = await Promise.all(
+		KEYS.map(cle =>
 			payload
-				.count({ collection: 'pros', where: filterWhere(cle, proprietaires), overrideAccess: true })
+				.count({ collection: 'pros', where: filterWhere(cle, owners), overrideAccess: true })
 				.then(({ totalDocs }) => totalDocs)
 		)
 	)
@@ -31,9 +31,9 @@ export async function FiltresDesComptes({ payload }: ServerProps) {
 			data-testid="filtres-des-comptes"
 			style={{ margin: '0 0 var(--base)', display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}
 		>
-			{CLES.map((cle, i) => (
-				<a data-testid={`filtre-${cle}`} href={filterLink(cle, proprietaires)} key={cle}>
-					{nombres[i]} {FILTER_LABELS[cle]}
+			{KEYS.map((cle, i) => (
+				<a data-testid={`filtre-${cle}`} href={filterLink(cle, owners)} key={cle}>
+					{counts[i]} {FILTER_LABELS[cle]}
 				</a>
 			))}
 		</p>

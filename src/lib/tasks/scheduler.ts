@@ -9,40 +9,40 @@
  * The runner is passed in, so that this file knows neither Payload nor the database.
  */
 
-export const DELAI_AVANT_LA_PREMIERE_EXECUTION_MS = 5 * 60 * 1000
-export const INTERVALLE_ENTRE_EXECUTIONS_MS = 24 * 60 * 60 * 1000
+export const FIRST_RUN_DELAY_MS = 5 * 60 * 1000
+export const RUN_INTERVAL_MS = 24 * 60 * 60 * 1000
 
-export interface OptionsDuPlanificateur {
+export interface SchedulerOptions {
 	lancer: () => Promise<unknown>
 	delaiInitialMs?: number
 	intervalleMs?: number
 }
 
 /** Starts the schedule; gives the function that stops it. */
-export function demarrerLesTachesQuotidiennes({
+export function scheduleDailyTasks({
 	lancer,
-	delaiInitialMs = DELAI_AVANT_LA_PREMIERE_EXECUTION_MS,
-	intervalleMs = INTERVALLE_ENTRE_EXECUTIONS_MS,
-}: OptionsDuPlanificateur): () => void {
-	let enCours = false
-	const executer = () => {
-		if (enCours) return
-		enCours = true
+	delaiInitialMs = FIRST_RUN_DELAY_MS,
+	intervalleMs = RUN_INTERVAL_MS,
+}: SchedulerOptions): () => void {
+	let running = false
+	const run = () => {
+		if (running) return
+		running = true
 		lancer()
 			.catch(() => undefined)
 			.finally(() => {
-				enCours = false
+				running = false
 			})
 	}
-	let repetition: ReturnType<typeof setInterval> | undefined
-	const premier = setTimeout(() => {
-		executer()
-		repetition = setInterval(executer, intervalleMs)
-		repetition.unref()
+	let repeat: ReturnType<typeof setInterval> | undefined
+	const first = setTimeout(() => {
+		run()
+		repeat = setInterval(run, intervalleMs)
+		repeat.unref()
 	}, delaiInitialMs)
-	premier.unref()
+	first.unref()
 	return () => {
-		clearTimeout(premier)
-		if (repetition) clearInterval(repetition)
+		clearTimeout(first)
+		if (repeat) clearInterval(repeat)
 	}
 }

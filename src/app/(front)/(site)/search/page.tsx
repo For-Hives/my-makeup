@@ -1,11 +1,11 @@
 import Image from 'next/image'
-import { MesureDeRecherche } from '@/components/analytics/PageAnalytics'
+import { SearchAnalytics } from '@/components/analytics/PageAnalytics'
 import { SearchBlock } from '@/components/blocks/SearchBlock'
 import { ResultList } from '@/components/search/ResultList'
 import { ResultPages } from '@/components/search/ResultPages'
 import { NoResult, SearchFailed } from '@/components/search/SearchStates'
-import { empreinte } from '@/lib/analytics/duplicate'
-import { trancheDeResultats } from '@/lib/analytics/values'
+import { fingerprint } from '@/lib/analytics/duplicate'
+import { resultBucket } from '@/lib/analytics/values'
 import { readSearch, resultsTitle, searchByCity, searchByWord } from '@/lib/search/input'
 import { paginate, sectionsOfPage } from '@/lib/search/pagination'
 import { sectionsByPlace } from '@/lib/search/place'
@@ -92,10 +92,10 @@ export default async function SearchPage({ searchParams }: PageProps<'/search'>)
 		<main className="relative flex flex-1 flex-col">
 			<SearchBlock search={search} city={city} surLaPageDeRecherche />
 			{/* Two facts and a hash: never the words (ticket 145). Page 1 and page 2 are the same search. */}
-			<MesureDeRecherche
+			<SearchAnalytics
 				aUneVille={city !== ''}
-				resultats={trancheDeResultats(all.length)}
-				empreinte={empreinte(`${search}|${city}`)}
+				resultats={resultBucket(all.length)}
+				empreinte={fingerprint(`${search}|${city}`)}
 			/>
 			{all.length === 0 ? (
 				<NoResult

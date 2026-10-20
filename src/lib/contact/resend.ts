@@ -1,8 +1,8 @@
 import type { PostgresAdapter } from '@payloadcms/db-postgres'
 import type { Payload } from 'payload'
-import { type EntreesDExpedition, expedier } from './payload-send'
-import type { EtatDuMail } from './states'
-import type { MessageDeContact } from './message'
+import type { ContactMessage } from './message'
+import { type DispatchInput, dispatch } from './payload-send'
+import type { MailState } from './states'
 
 /**
  * The re-send of the mail of a contact message by an admin (ticket 163). No `next` import: the route of
@@ -17,37 +17,37 @@ import type { MessageDeContact } from './message'
  *   `failed` again; the answer says which, so the panel shows the result.
  */
 
-export type ResultatDuRenvoi =
+export type ResendResult =
 	| { ok: true; etatMail: 'envoye' | 'echec' }
 	| { ok: false; code: 'introuvable' | 'pas-en-echec' }
 
-/** What the re-send reads and takes. The real one is `stockageDuRenvoiDePayload`. */
-export interface StockageDuRenvoi {
-	lire: (id: number) => Promise<{ message: MessageDeContact; etatMail: EtatDuMail } | null>
+/** What the re-send reads and takes. The real one is `payloadResendStorage`. */
+export interface ResendStorage {
+	lire: (id: number) => Promise<{ message: ContactMessage; etatMail: MailState } | null>
 	/** `failed` → `pending` in one step. True for the one caller that got it. */
 	reserver: (id: number) => Promise<boolean>
 }
 
-export async function renvoyerLEmailDUnMessage(
+export async function resendMessageEmail(
 	id: number,
-	rendu: { relecture: StockageDuRenvoi } & EntreesDExpedition
-): Promise<ResultatDuRenvoi> {
-	const { relecture, ...envoi } = rendu
-	const ligne = await relecture.lire(id)
-	if (ligne === null) return { ok: false, code: 'introuvable' }
-	if (ligne.etatMail !== 'failed' || !(await relecture.reserver(id))) return { ok: false, code: 'pas-en-echec' }
-	return { ok: true, etatMail: await expedier(id, ligne.message, envoi) }
+	rendu: { relecture: ResendStorage } & DispatchInput
+): Promise<ResendResult> {
+	const { relecture: reread, ...sending } = rendu
+	const row = await reread.lire(id)
+	if (row === null) return { ok: false, code: 'introuvable' }
+	if (row.etatMail !== 'failed' || !(await reread.reserver(id))) return { ok: false, code: 'pas-en-echec' }
+	return { ok: true, etatMail: await dispatch(id, row.message, sending) }
 }
 
 /** The reads and the take of the re-send, wired to a Payload instance (no access control: the route checked the admin). */
-export function stockageDuRenvoiDePayload(payload: Payload): StockageDuRenvoi {
+export function payloadResendStorage(payload: Payload): ResendStorage {
 	return {
 		lire: async id => {
-			const ligne = await payload
+			const row = await payload
 				.findByID({ collection: 'contact-requests', id, depth: 0, disableErrors: true })
 				.catch(() => null)
-			if (!ligne) return null
-			const { firstName, lastName, email, phone, message, mailStatus } = ligne
+			if (!row) return null
+			const { firstName, lastName, email, phone, message, mailStatus } = row
 			return {
 				message: { prenom: firstName, nom: lastName, email, telephone: phone, message },
 				etatMail: mailStatus,

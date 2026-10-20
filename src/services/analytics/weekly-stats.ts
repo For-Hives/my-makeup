@@ -2,7 +2,7 @@
  * The weekly statistics, read from the database (ticket 149). The only place that reads accounts
  * and profiles for the report: it reads with the access rules lifted (the route has checked the
  * service token), picks the fields one by one, and hands them to the aggregation
- * (src/lib/stats-hebdo.ts), which keeps counts and public slugs only.
+ * (src/lib/weekly-stats.ts), which keeps counts and public slugs only.
  *
  * The contact fields are read to know whether a profile has a contact channel, and go no further.
  *
@@ -14,22 +14,22 @@
 
 import type { Payload } from 'payload'
 import {
-	agregerAuth,
-	agregerContact,
-	agregerStats,
-	FOURNISSEURS_HERITES,
-	type Periode,
-	type ProfilPourStats,
-	type StatsHebdo,
+	aggregateAuth,
+	aggregateContact,
+	aggregateStats,
+	LEGACY_PROVIDERS,
+	type Period,
+	type ProfileForStats,
+	type WeeklyStats,
 } from '@/lib/weekly-stats'
 
-export async function lireLesStatsHebdo(
+export async function readWeeklyStats(
 	payload: Payload,
-	periode: Periode,
+	periode: Period,
 	maintenant: Date = new Date()
-): Promise<StatsHebdo> {
-	const dansLaPeriode = { greater_than_equal: periode.debut.toISOString(), less_than: periode.fin.toISOString() }
-	const [profils, comptes, demandes, evenements, hashRestants, sansHash] = await Promise.all([
+): Promise<WeeklyStats> {
+	const inPeriod = { greater_than_equal: periode.debut.toISOString(), less_than: periode.fin.toISOString() }
+	const [profiles, accounts, requests, events, remainingHashes, withoutHash] = await Promise.all([
 		payload.find({
 			collection: 'profiles',
 			select: {
@@ -59,7 +59,7 @@ export async function lireLesStatsHebdo(
 		}),
 		payload.find({
 			collection: 'contact-requests',
-			where: { createdAt: dansLaPeriode },
+			where: { createdAt: inPeriod },
 			select: { status: true, mailStatus: true },
 			depth: 0,
 			pagination: false,
@@ -67,7 +67,7 @@ export async function lireLesStatsHebdo(
 		}),
 		payload.find({
 			collection: 'auth-events',
-			where: { date: dansLaPeriode },
+			where: { date: inPeriod },
 			select: { type: true, code: true, durationMs: true },
 			depth: 0,
 			pagination: false,
@@ -79,18 +79,18 @@ export async function lireLesStatsHebdo(
 			overrideAccess: true,
 		}),
 		Promise.all(
-			FOURNISSEURS_HERITES.map(async fournisseur => {
-				const sansHash = { legacyBcrypt: { exists: false } }
+			LEGACY_PROVIDERS.map(async fournisseur => {
+				const withoutHash = { legacyBcrypt: { exists: false } }
 				const where =
 					fournisseur === 'other'
 						? {
 								and: [
-									sansHash,
+									withoutHash,
 									{ legacyProvider: { exists: true } },
 									{ legacyProvider: { not_in: ['local', 'google', 'facebook'] } },
 								],
 							}
-						: { and: [sansHash, { legacyProvider: { equals: fournisseur } }] }
+						: { and: [withoutHash, { legacyProvider: { equals: fournisseur } }] }
 				return [
 					fournisseur,
 					(await payload.count({ collection: 'pros', where, overrideAccess: true })).totalDocs,
@@ -98,16 +98,19 @@ export async function lireLesStatsHebdo(
 			})
 		),
 	])
-	const stats = agregerStats({
-		profils: profils.docs as ProfilPourStats[],
-		datesDesComptes: comptes.docs.map(compte => compte.createdAt),
+	const stats = aggregateStats({
+		profils: profiles.docs as ProfileForStats[],
+		datesDesComptes: accounts.docs.map(compte => compte.createdAt),
 		periode,
 		maintenant,
 	})
 	return {
 		...stats,
-		contact: agregerContact(demandes.docs),
-		auth: agregerAuth(evenements.docs),
-		inherited: { remainingHashes: hashRestants.totalDocs, withoutPasswordByProvider: Object.fromEntries(sansHash) },
+		contact: aggregateContact(requests.docs),
+		auth: aggregateAuth(events.docs),
+		inherited: {
+			remainingHashes: remainingHashes.totalDocs,
+			withoutPasswordByProvider: Object.fromEntries(withoutHash),
+		},
 	}
 }

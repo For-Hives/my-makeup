@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { Cta } from '@/components/blocks/Cta'
 import { Hero } from '@/components/blocks/Hero'
-import { FormulaireDeContact } from '@/components/contact/ContactForm'
+import { ContactForm } from '@/components/contact/ContactForm'
 import { pageMetadata } from '@/lib/seo/metadata'
 import { sendMessage } from './actions'
 
@@ -36,7 +36,7 @@ export default function PageContact() {
 					Une demande particulière, un bug, une idée ? N’hésitez pas à nous contacter via le formulaire ci-dessous !
 				</p>
 			</div>
-			<FormulaireDeContact action={sendMessage} />
+			<ContactForm action={sendMessage} />
 			<section className="relative py-20">
 				<div className="mx-auto flex max-w-7xl flex-col px-4 md:flex-row md:px-8 xl:px-0">
 					<div className="mx-auto mb-10 w-full md:w-1/2">

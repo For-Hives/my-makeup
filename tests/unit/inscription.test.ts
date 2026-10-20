@@ -7,7 +7,7 @@ import { errorMessage } from '@/lib/auth/errors'
 import { failureCode } from '@/lib/auth/sign-in'
 import { SIGN_UP_FAILURE_MESSAGES, SIGN_UP_FIELDS, SIGN_UP_MESSAGES, validateSignUp } from '@/lib/auth/sign-up'
 import { failureCode as codeDeLEchecDInscription, isAddressAlreadyTaken } from '@/lib/auth/sign-up-payload'
-import { contenuEmailConfirmation } from '@/lib/emails/confirmation'
+import { confirmationEmailContent } from '@/lib/emails/confirmation'
 import { composerEmail } from '@/lib/emails/layout'
 
 const BON = { nom: 'Léa Fictive', email: 'lea@example.test', password: 'aaaaaaaa', cgu: 'on' }
@@ -127,7 +127,7 @@ describe('l’email de confirmation', () => {
 	const JETON = 'ab12'.repeat(10)
 
 	test('un bouton « Confirmer mon adresse » vers la page de confirmation, lien absolu, tutoiement', () => {
-		const email = composerEmail(contenuEmailConfirmation(JETON), 'https://v3.my-makeup.fr')
+		const email = composerEmail(confirmationEmailContent(JETON), 'https://v3.my-makeup.fr')
 		expect(email.lien).toBe(`https://v3.my-makeup.fr/auth/verification-complete?code=${JETON}`)
 		expect(email.texte).toContain('Confirmer mon adresse')
 		expect(email.html).toContain('Confirme')
@@ -135,7 +135,7 @@ describe('l’email de confirmation', () => {
 	})
 
 	test('le lien ne mène jamais à l’administration', () => {
-		const email = composerEmail(contenuEmailConfirmation(JETON), 'https://my-makeup.fr')
+		const email = composerEmail(confirmationEmailContent(JETON), 'https://my-makeup.fr')
 		expect(email.lien).not.toContain('/admin')
 	})
 })

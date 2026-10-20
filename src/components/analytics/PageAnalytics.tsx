@@ -2,61 +2,60 @@
 
 import { usePathname } from 'next/navigation'
 import { useEffect } from 'react'
-import { installerLaMesure } from '@/lib/analytics/loader'
-import { aEmettre, navigateurReel, soumissionDuFormulaire } from '@/lib/analytics/duplicate'
-import type { EvenementsMyMakeup } from '@/lib/analytics/events'
+import { formSubmission, realBrowser, shouldEmit } from '@/lib/analytics/duplicate'
+import type { MyMakeupEvents } from '@/lib/analytics/events'
+import { installAnalytics } from '@/lib/analytics/loader'
 import { track } from '@/lib/analytics/track'
-import { codeDErreur, genreDePageIntrouvable } from '@/lib/analytics/values'
+import { errorCode, notFoundKind } from '@/lib/analytics/values'
 
 /**
  * The search page counted once (event `search_submit`, ticket 145). The server gives two facts and
- * nothing else: whether a city was typed, and the slice of the results. `empreinte` tells two
+ * nothing else: whether a city was typed, and the slice of the results. `fingerprint` tells two
  * searches apart (it is a hash made on the server, the words never reach the browser's storage).
  * Renders nothing.
  */
-export function MesureDeRecherche({
+export function SearchAnalytics({
 	aUneVille,
 	resultats,
 	empreinte,
 }: {
 	aUneVille: boolean
-	resultats: EvenementsMyMakeup['search_submit']['results']
+	resultats: MyMakeupEvents['search_submit']['results']
 	empreinte: string
 }) {
 	useEffect(() => {
-		const navigateur = navigateurReel()
-		const formulaire = soumissionDuFormulaire(navigateur)
-		if (!aEmettre('search_submit', empreinte, 'meme-vue', navigateur) && !formulaire) return
-		track('search_submit', { has_city: aUneVille, results: resultats, from: formulaire ? 'formulaire' : 'lien' })
+		const browser = realBrowser()
+		const form = formSubmission(browser)
+		if (!shouldEmit('search_submit', empreinte, 'meme-vue', browser) && !form) return
+		track('search_submit', { has_city: aUneVille, results: resultats, from: form ? 'formulaire' : 'lien' })
 	}, [aUneVille, resultats, empreinte])
 	return null
 }
 
 /** The 404 page counted once, with the kind of address it was (event `not_found`). Renders nothing. */
-export function MesureDePageIntrouvable() {
-	const chemin = usePathname()
+export function NotFoundAnalytics() {
+	const path = usePathname()
 	useEffect(() => {
-		installerLaMesure()
-		if (aEmettre('not_found', chemin, 'rechargement', navigateurReel()))
-			track('not_found', { kind: genreDePageIntrouvable(chemin) })
-	}, [chemin])
+		installAnalytics()
+		if (shouldEmit('not_found', path, 'rechargement', realBrowser())) track('not_found', { kind: notFoundKind(path) })
+	}, [path])
 	return null
 }
 
 /** An error page counted once (event `app_error`). Renders nothing. */
-export function MesureDErreur({
+export function ErrorAnalytics({
 	scope,
 	erreur,
 }: {
-	scope: EvenementsMyMakeup['app_error']['scope']
+	scope: MyMakeupEvents['app_error']['scope']
 	erreur: Error & { digest?: string }
 }) {
 	useEffect(() => {
 		// The digest names the error of the server; a client error has none, its message is not read.
-		installerLaMesure()
-		const vue = `${scope}:${erreur.digest ?? ''}:${window.location.pathname}`
-		if (aEmettre('app_error', vue, 'rechargement', navigateurReel()))
-			track('app_error', { scope, code: codeDErreur(erreur) })
+		installAnalytics()
+		const view = `${scope}:${erreur.digest ?? ''}:${window.location.pathname}`
+		if (shouldEmit('app_error', view, 'rechargement', realBrowser()))
+			track('app_error', { scope, code: errorCode(erreur) })
 	}, [scope, erreur])
 	return null
 }

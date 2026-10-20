@@ -6,9 +6,9 @@ import {
 	type Payload,
 	resetPasswordOperation,
 } from 'payload'
-import type { EnvoyerEmail } from '../emails/send'
 import { composerEmail } from '../emails/layout'
-import { contenuEmailReinitialisation } from '../emails/password-reset'
+import { passwordResetEmailContent } from '../emails/password-reset'
+import type { SendEmail } from '../emails/send'
 import type { EventCode, Log } from './auth-log'
 import { ipClient } from './client-ip'
 import {
@@ -55,7 +55,7 @@ export interface ForgotPasswordInputs {
 	/** Runs the work after the answer: `after` of Next in a Server Action. A test hands one that waits. */
 	apres: (travail: () => Promise<void>) => void
 	/** The door of the mails of the site. */
-	envoyer: EnvoyerEmail
+	envoyer: SendEmail
 	/** The address of the site, for the link of the mail. */
 	site: string
 	/** Minimum time between two mails to the same account. */
@@ -151,7 +151,7 @@ export async function requestPasswordLink({
 					data: { email: reservation.email },
 					disableEmail: true,
 				})
-				if (token) await envoyer({ a: reservation.email, ...composerEmail(contenuEmailReinitialisation(token), site) })
+				if (token) await envoyer({ a: reservation.email, ...composerEmail(passwordResetEmailContent(token), site) })
 			}
 		} catch {
 			// The mail did not leave: the place is given back, so that she can ask again at once.

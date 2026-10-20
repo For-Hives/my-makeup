@@ -1,4 +1,4 @@
-import { relayerLeScript } from '@/lib/analytics/relay'
+import { relayScript } from '@/lib/analytics/relay'
 import { umamiFromEnv } from '@/lib/env'
 
 // The tracker of the Umami instance, served from the site (ticket 111). Never prerendered: the
@@ -6,5 +6,5 @@ import { umamiFromEnv } from '@/lib/env'
 export const dynamic = 'force-dynamic'
 
 export function GET(requete: Request): Promise<Response> {
-	return relayerLeScript(requete, { umami: umamiFromEnv() })
+	return relayScript(requete, { umami: umamiFromEnv() })
 }
