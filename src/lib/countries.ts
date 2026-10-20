@@ -2,7 +2,8 @@
  * The countries a zone may name (plans/PLAN-ZONES.md §3.2 and §3.4; ticket 258): the 249 codes of
  * ISO 3166-1 alpha-2, less the twelve overseas codes that the official list of communes
  * (geo.api.gouv.fr) already holds as communes of France (RE, GP, MQ, GF, YT, PM, BL, MF, WF, PF,
- * NC, TF), so 237 countries, France included (for a list of several countries).
+ * NC, TF), less five territories without inhabitants (AQ, BV, GS, HM, UM), so 232 countries, France
+ * included (for a list of several countries).
  *
  * Each country has its French name, its preposition (« en Belgique », « au Luxembourg », « aux
  * Pays-Bas », « à Malte ») and a few other names the import recognises (« Angleterre », « Hollande »,
@@ -34,6 +35,9 @@ export interface Country {
 /** France: part of a list of several countries, never a zone alone (a commune says it). */
 export const FRANCE_CODE = 'FR'
 
+/** The territories without inhabitants left out: nobody lives or works there. */
+export const UNINHABITED_CODES: readonly string[] = ['AQ', 'BV', 'GS', 'HM', 'UM']
+
 /** The overseas codes left out: the official list of communes holds them (geo.api.gouv.fr). */
 export const OVERSEAS_CODES: readonly string[] = [
 	'RE',
@@ -60,7 +64,6 @@ export const COUNTRIES: readonly Country[] = [
 	{ code: 'AD', name: 'Andorre', preposition: 'en' },
 	{ code: 'AO', name: 'Angola', preposition: 'en' },
 	{ code: 'AI', name: 'Anguilla', preposition: 'à' },
-	{ code: 'AQ', name: 'Antarctique', preposition: 'en' },
 	{ code: 'AG', name: 'Antigua-et-Barbuda', preposition: 'à' },
 	{ code: 'SA', name: 'Arabie saoudite', preposition: 'en' },
 	{ code: 'AR', name: 'Argentine', preposition: 'en' },
@@ -82,7 +85,6 @@ export const COUNTRIES: readonly Country[] = [
 	{ code: 'BO', name: 'Bolivie', preposition: 'en' },
 	{ code: 'BA', name: 'Bosnie-Herzégovine', preposition: 'en' },
 	{ code: 'BW', name: 'Botswana', preposition: 'au' },
-	{ code: 'BV', name: 'Bouvet (île)', preposition: 'à' },
 	{ code: 'BR', name: 'Brésil', preposition: 'au' },
 	{ code: 'BN', name: 'Brunei', preposition: 'au' },
 	{ code: 'BG', name: 'Bulgarie', preposition: 'en' },
@@ -108,7 +110,7 @@ export const COUNTRIES: readonly Country[] = [
 	{ code: 'CU', name: 'Cuba', preposition: 'à' },
 	{ code: 'CW', name: 'Curaçao', preposition: 'à' },
 	{ code: 'DK', name: 'Danemark', preposition: 'au' },
-	{ code: 'DJ', name: 'Djibouti', preposition: 'en' },
+	{ code: 'DJ', name: 'Djibouti', preposition: 'à' },
 	{ code: 'DM', name: 'Dominique', preposition: 'en' },
 	{ code: 'EG', name: 'Égypte', preposition: 'en' },
 	{ code: 'AE', name: 'Émirats arabes unis', preposition: 'aux', aliases: ['Émirats', 'Dubaï', 'Emirats arabes unis'] },
@@ -125,7 +127,6 @@ export const COUNTRIES: readonly Country[] = [
 	{ code: 'GA', name: 'Gabon', preposition: 'au' },
 	{ code: 'GM', name: 'Gambie', preposition: 'en' },
 	{ code: 'GE', name: 'Géorgie', preposition: 'en' },
-	{ code: 'GS', name: 'Géorgie du Sud-et-Sandwich du Sud', preposition: 'en' },
 	{ code: 'GH', name: 'Ghana', preposition: 'au' },
 	{ code: 'GI', name: 'Gibraltar', preposition: 'à' },
 	{ code: 'GR', name: 'Grèce', preposition: 'en' },
@@ -147,11 +148,9 @@ export const COUNTRIES: readonly Country[] = [
 	{ code: 'CC', name: 'Îles Cocos', preposition: 'aux' },
 	{ code: 'CK', name: 'Îles Cook', preposition: 'aux' },
 	{ code: 'FO', name: 'Îles Féroé', preposition: 'aux' },
-	{ code: 'HM', name: 'Îles Heard-et-MacDonald', preposition: 'aux' },
 	{ code: 'FK', name: 'Îles Malouines', preposition: 'aux' },
 	{ code: 'MP', name: 'Îles Mariannes du Nord', preposition: 'aux' },
 	{ code: 'MH', name: 'Îles Marshall', preposition: 'aux' },
-	{ code: 'UM', name: 'Îles mineures éloignées des États-Unis', preposition: 'aux' },
 	{ code: 'PN', name: 'Îles Pitcairn', preposition: 'aux' },
 	{ code: 'SB', name: 'Îles Salomon', preposition: 'aux' },
 	{ code: 'TC', name: 'Îles Turques-et-Caïques', preposition: 'aux' },

@@ -9,6 +9,7 @@ import {
 	isCountryCode,
 	normalizedCountryCode,
 	OVERSEAS_CODES,
+	UNINHABITED_CODES,
 } from '@/lib/countries'
 import { usableCity } from '@/lib/profile/completeness'
 import { hasNameCharacters, looksLikeAnAddress } from '@/lib/profile/zone'
@@ -16,16 +17,18 @@ import { hasNameCharacters, looksLikeAnAddress } from '@/lib/profile/zone'
 /** The countries a zone may name (ticket 258): ISO 3166-1 less the twelve overseas codes. */
 
 describe('la liste des pays', () => {
-	test('237 pays, sans doublon de code ni de nom', () => {
-		expect(COUNTRIES).toHaveLength(237)
-		expect(new Set(COUNTRIES.map(country => country.code)).size).toBe(237)
-		expect(new Set(COUNTRIES.map(country => country.name)).size).toBe(237)
+	test('232 pays, sans doublon de code ni de nom', () => {
+		expect(COUNTRIES).toHaveLength(232)
+		expect(new Set(COUNTRIES.map(country => country.code)).size).toBe(232)
+		expect(new Set(COUNTRIES.map(country => country.name)).size).toBe(232)
 		for (const { code } of COUNTRIES) expect(code).toMatch(/^[A-Z]{2}$/)
 	})
 
-	test('aucun des douze codes d’outre-mer, la France y est', () => {
+	test('aucun des douze codes d’outre-mer ni des cinq territoires sans habitants, la France y est', () => {
 		expect(OVERSEAS_CODES).toHaveLength(12)
 		for (const code of OVERSEAS_CODES) expect(isCountryCode(code), code).toBe(false)
+		expect(UNINHABITED_CODES).toEqual(['AQ', 'BV', 'GS', 'HM', 'UM'])
+		for (const code of UNINHABITED_CODES) expect(isCountryCode(code), code).toBe(false)
 		expect(isCountryCode(FRANCE_CODE)).toBe(true)
 		expect(countryByCode('FR')?.name).toBe('France')
 	})
@@ -79,6 +82,7 @@ describe('la liste des pays', () => {
 			AD: 'en Andorre',
 			FR: 'en France',
 		}
+		expect(inCountry('DJ')).toBe('à Djibouti')
 		for (const [code, phrase] of Object.entries(expected)) expect(inCountry(code), code).toBe(phrase)
 		for (const { preposition } of COUNTRIES) expect(['en', 'au', 'aux', 'à']).toContain(preposition)
 	})
