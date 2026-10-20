@@ -10,7 +10,9 @@ import {
 	DEMO_LENGTHS,
 	DEMO_PHOTOS,
 	DEMO_PROFILES,
+	DEMO_ZONE_PROFILES,
 	type DemoProfile,
+	LOADED_DEMO_PROFILES,
 	PHOTO_MAX_WEIGHT,
 	profileUrl,
 } from '@/demo-data/profiles'
@@ -33,6 +35,12 @@ const PHOTO_FOLDER = path.join(ROOT, 'src/demo-data/photos')
 const type = (cle: string): DemoProfile => {
 	const found = DEMO_PROFILES.find(profil => profil.cle === cle)
 	if (!found) throw new Error(`pas de profil type « ${cle} »`)
+	return found
+}
+
+const zoneType = (cle: string): DemoProfile => {
+	const found = DEMO_ZONE_PROFILES.find(profil => profil.cle === cle)
+	if (!found) throw new Error(`pas de profil type de zone « ${cle} »`)
 	return found
 }
 
@@ -68,6 +76,53 @@ const refusal = (essai: () => unknown): string => {
 	}
 	throw new Error('rien n’a été refusé')
 }
+
+describe('Les cinq profils types des zones (tickets 258 à 260)', () => {
+	test('ils suivent les douze, avec leurs maquilleuses fictives et leurs slugs', () => {
+		expect(DEMO_ZONE_PROFILES.map(({ numero }) => numero)).toEqual([13, 14, 15, 16, 17])
+		expect(LOADED_DEMO_PROFILES).toHaveLength(17)
+		expect(new Set(LOADED_DEMO_PROFILES.map(({ cle: key }) => key)).size).toBe(17)
+		expect(new Set(LOADED_DEMO_PROFILES.map(({ compte: account }) => account.nom)).size).toBe(17)
+		for (const { cle: key, compte: account, attendu: expected } of DEMO_ZONE_PROFILES) {
+			expect(account.email).toBe(profileUrl(key))
+			expect(slugify(account.nom)).toBe(expected.slug)
+		}
+	})
+
+	test('l’état attendu de chacun est celui de la règle unique', () => {
+		for (const profile of DEMO_ZONE_PROFILES) {
+			const { slug: _slug, ...expected } = profile.attendu
+			expect({ cle: profile.cle, etat: statePerRule(profile) }).toEqual({ cle: profile.cle, etat: expected })
+		}
+	})
+
+	test('les communes du jeu portent leurs codes postaux ; deux communes fictives partagent le leur', () => {
+		for (const profile of DEMO_PROFILES) {
+			const city = profile.profil.city
+			if (city?.name) expect(city.postalCodes?.length, profile.cle).toBeGreaterThan(0)
+		}
+		const a = zoneType('code-postal-partage-a').profil.city
+		const b = zoneType('code-postal-partage-b').profil.city
+		expect(a?.inseeCode).not.toBe(b?.inseeCode)
+		expect(a?.postalCodes).toEqual(b?.postalCodes)
+		expect(a?.postalCodes).toHaveLength(1)
+	})
+
+	test('une zone [BE] avec une ville, une zone [FR, IT], une revue de code postal partagé', () => {
+		expect(zoneType('zone-belgique').profil).toMatchObject({
+			zoneKind: 'countries',
+			countries: ['BE'],
+			town: 'Bruxelles',
+		})
+		expect(zoneType('zone-belgique').attendu.publishable).toBe(true)
+		expect(zoneType('zone-france-italie').profil).toMatchObject({ zoneKind: 'countries', countries: ['FR', 'IT'] })
+		expect(zoneType('zone-france-italie').attendu.publishable).toBe(true)
+		const review = zoneType('zone-a-revoir')
+		expect(review.profil.zoneReview).toMatchObject({ reason: 'sharedPostalCode', postalCode: '74990' })
+		expect(review.profil.zoneReview?.candidates).toHaveLength(2)
+		expect(review.attendu.publishable).toBe(false)
+	})
+})
 
 describe('Les 12 profils types du plan 02 §6', () => {
 	test('douze types, dans l’ordre du plan, chacun avec sa maquilleuse fictive en @example.test', () => {

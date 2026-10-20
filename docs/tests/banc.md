@@ -409,9 +409,9 @@ const { comptes, crees, presents } = await setDatasetAccounts()
 
 Les profils types sont la section suivante. La commande qui charge le tout (ticket 052) viendra s'ajouter au jeu.
 
-## Le jeu du banc : les 12 profils types
+## Le jeu du banc : les 17 profils types
 
-Le jeu pose aussi douze profils fictifs, les types du plan `02` §6. Chacun a sa maquilleuse fictive et ses photos, et c'est toujours le même contenu.
+Le jeu pose aussi dix-sept profils fictifs : les douze types du plan `02` §6, puis cinq types pour les zones (tickets 258 à 260). Chacun a sa maquilleuse fictive et ses photos, et c'est toujours le même contenu.
 
 ```ts
 import { poserLesProfilsDuJeu } from '@/demo-data/loading'
@@ -434,6 +434,11 @@ const { profils, crees, presents } = await poserLesProfilsDuJeu(await testPayloa
 | 10 | `verifiee` | Emma Chevalier, `emma-chevalier` | Complet ; vérifiée par un admin, avec le badge des cartes de la recherche | Publiable, publié |
 | 11 | `masquee` | Alice Fontaine, `alice-fontaine` | Complet ; masqué par un admin (`chosenStatus`), avec un motif | Publiable, masqué |
 | 12 | `textes-maximaux` | Un nom de 141 caractères, et le slug le plus long : 70 caractères | Chaque texte à la borne du serveur, le rayon à 200 km, dix photos en galerie, la commune au nom le plus long de la liste officielle | Publiable, publié |
+| 13 | `code-postal-partage-a` | Océane Colin, `oceane-colin` | Complet, à Valbrume, commune fictive dont le code postal fictif 74990 est aussi celui de Hautcombe | Publiable, publié |
+| 14 | `code-postal-partage-b` | Sofia Lambert, `sofia-lambert` | Complet, à Hautcombe, l'autre commune du code postal 74990 | Publiable, publié |
+| 15 | `zone-belgique` | Camille Renard, `camille-renard` | Complet, zone de pays `[BE]` avec la ville Bruxelles, sans commune | Publiable, publié |
+| 16 | `zone-france-italie` | Elsa Marchand, `elsa-marchand` | Complet, zone de pays `[FR, IT]`, sans commune | Publiable, publié |
+| 17 | `zone-a-revoir` | Julie Perrin, `julie-perrin` | Zone vide et `zoneReview` posée comme l'import la pose : code postal partagé 74990, deux communes possibles | Non actif, pas publiable, publié, 11 sur 13 |
 
 | Ce qui est fixe | Valeur |
 |---|---|
@@ -448,12 +453,12 @@ const { profils, crees, presents } = await poserLesProfilsDuJeu(await testPayloa
 - **Chaque type s'écrit dans une transaction.** Interrompu, il ne laisse ni compte, ni profil, ni média. Les photos déjà envoyées restent dans le stockage jusqu'au chargement suivant, qui réécrit les mêmes clés : il ne reste alors aucun objet orphelin.
 - **Aucun mail ne part** : la confirmation d'un compte neuf n'est pas envoyée.
 - **Hors du banc, rien n'est lu ni écrit** (`src/demo-data/guard.ts`). Le jeu accepte `APP_ENV=test` avec une base de ce poste en `_test`, le stockage de ce poste dans un espace en `-test` et aucune adresse déployée. Il refuse `APP_ENV=prod`, l'adresse du site en ligne, un `APP_ENV` absent (comme dans un `.env` de développement) ou inconnu, l'absence de stockage d'objets sur le banc, et un Payload branché sur une autre base que `DATABASE_URI`. Le refus (`DemoDataRefused`) nomme la variable, jamais sa valeur.
-- **Avec les comptes du jeu, la base tient 19 profils** : les 12 types, et les profils vides des sept comptes de maquilleuse du jeu qui en ont un (voir « Le banc complet »).
+- **Avec les comptes du jeu, la base tient 24 profils** : les 17 types, et les profils vides des sept comptes de maquilleuse du jeu qui en ont un (voir « Le banc complet »).
 - Un chargement sur une base vide prend environ 4 secondes, et 20 à 40 millisecondes sur une base déjà remplie (mesuré le 14/10/2026, deux passages : 3,9 s et 4,0 s, puis 36 ms et 23 ms).
 
-Les données sont dans `src/demo-data/profiles.ts` (`DEMO_PROFILES`), avec, pour chaque type, ce que le serveur doit calculer (`attendu`). Le jeu vit sous `src/` et non sous `tests/`, parce que les collections et les outils du banc le chargent sans passer par Next, et que l'image Docker ne contient pas `tests/`.
+Les données sont dans `src/demo-data/profiles.ts` : `DEMO_PROFILES` (les douze premiers), `DEMO_ZONE_PROFILES` (les cinq des zones, à part parce que les pages et la recherche ne lisent une zone de pays qu'à partir des tickets 263 et 264) et `LOADED_DEMO_PROFILES` (les dix-sept, ce que le banc charge). Les communes du jeu portent leurs codes postaux, et la fausse liste des communes (`tests/support/fake-cities/provider.ts`) répond `codesPostaux`, avec Valbrume et Hautcombe, deux communes fictives d'un même code postal fictif. Pour chaque type, pour chaque type, ce que le serveur doit calculer (`attendu`). Le jeu vit sous `src/` et non sous `tests/`, parce que les collections et les outils du banc le chargent sans passer par Next, et que l'image Docker ne contient pas `tests/`.
 
-`tests/unit/demo-data.test.ts` vérifie le jeu sans le banc : les douze types, l'état que leur donne la règle unique, les longueurs du profil aux textes maximaux, les six photos et la garde. `tests/integration/bench-profile-types.test.ts` le charge sur le banc : chaque profil relié à sa maquilleuse, l'état enregistré, les photos et leurs objets, le rechargement.
+`tests/unit/demo-data.test.ts` vérifie le jeu sans le banc : les douze types, les cinq des zones, l'état que leur donne la règle unique, les longueurs du profil aux textes maximaux, les six photos et la garde. `tests/integration/bench-profile-types.test.ts` le charge sur le banc : chaque profil relié à sa maquilleuse, l'état enregistré, les photos et leurs objets, le rechargement.
 
 ## Le banc complet : une commande, la session dont on a besoin
 
@@ -482,7 +487,7 @@ L'application porte le nom et le port de l'instance (`BENCH_INSTANCE`, `BENCH_OF
 | Compte | Qui |
 |---|---|
 | `admin`, `redaction`, `maquilleuse`, `maquilleuse-non-verifiee`, `maquilleuse-sans-profil`, `maquilleuse-bloquee`, `reprise-avec-hash`, `reprise-google`, `reprise-google-avec-hash`, `reprise-facebook` | Le compte de ce type dans le jeu fixe (`jeu-<type>@example.test`) |
-| `profil-reference`, `profil-ville-voisine`… | La maquilleuse d'un des 12 profils types (`jeu-profil-<cle>@example.test`) |
+| `profil-reference`, `profil-ville-voisine`… | La maquilleuse d'un des 17 profils types (`jeu-profil-<cle>@example.test`) |
 | Une adresse | N'importe quel compte du banc, administration ou maquilleuse |
 
 - `<compte>.etat.json` : l'état d'un contexte de navigateur de Playwright, `browser.newContext({ storageState: '…' })`, puis `/admin` ou la page voulue.
@@ -494,7 +499,7 @@ La commande dit le compte, la fin de la session et les deux chemins. **Le jeton 
 
 - la base est effacée, puis reconstruite par les migrations versionnées, comme la production (voir « Préparer la base du banc ») ;
 - le stockage d'objets et le capteur de mails sont vidés ;
-- le jeu est chargé : un compte de chaque type du jeu fixe, les 12 profils types avec leurs photos, 3 talents, 3 articles dont un brouillon.
+- le jeu est chargé : un compte de chaque type du jeu fixe, les 17 profils types avec leurs photos, 3 talents, 3 articles dont un brouillon.
 
 Les identifiants sont les mêmes à chaque fois. Les sessions ouvertes avant ne valent plus (les comptes sont recréés) : redemande-les par `bench:session`. Une application qui tourne continue de servir la même base. Les tests d'intégration et les essais de bout en bout vident aussi le banc, sans recharger le jeu : ce qu'on y avait chargé à la main est perdu.
 
@@ -505,16 +510,16 @@ Les identifiants sont les mêmes à chaque fois. Les sessions ouvertes avant ne 
 | Quoi | Combien | Détail |
 |---|---|---|
 | Comptes d'administration | 2 | `jeu-admin@example.test` (rôle `admin`), `jeu-redaction@example.test` (rôle `editor`) |
-| Comptes de maquilleuses | 20 | 8 du jeu fixe (voir « Le jeu du banc : un compte fixe de chaque type ») et 12 des profils types |
-| Profils types | 12 | Les douze du tableau « Le jeu du banc : les 12 profils types », avec leurs photos |
+| Comptes de maquilleuses | 25 | 8 du jeu fixe (voir « Le jeu du banc : un compte fixe de chaque type ») et 17 des profils types |
+| Profils types | 17 | Les dix-sept du tableau « Le jeu du banc : les 17 profils types », avec leurs photos |
 | Talents | 3 | `maquillage-mariee`, `maquillage-soiree`, `maquillage-photo`, tous publiés |
 | Articles | 3 | `preparer-sa-peau-avant-un-maquillage` et `choisir-sa-maquilleuse-pour-un-mariage` (publiés), `tendances-maquillage-de-la-saison` (brouillon, jamais lu par le public) |
 
-Le critère « l'administration compte 12 profils » compte les **12 profils types**, ceux dont le compte est `jeu-profil-*`. La liste des profils en montre 19 : les 12 types, plus les profils vides que le serveur crée avec les 7 comptes de maquilleuse du jeu fixe qui en ont un (le compte « sans profil » n'en a pas). Le jeu fixe n'a pas été changé pour tomber sur 12 : ses comptes servent à essayer chaque type de session, et un compte de maquilleuse avec profil a son profil vide. Les talents et les articles du jeu sont écrits dans `src/demo-data/editorial.ts`, sous `src/` comme les profils, comme pour le reste du jeu. Les comptes d'administration, eux, ne sont que sur le banc.
+Le critère « l'administration compte 17 profils » compte les **17 profils types**, ceux dont le compte est `jeu-profil-*`. La liste des profils en montre 24 : les 17 types, plus les profils vides que le serveur crée avec les 7 comptes de maquilleuse du jeu fixe qui en ont un (le compte « sans profil » n'en a pas). Le jeu fixe n'a pas été changé pour tomber sur 17 : ses comptes servent à essayer chaque type de session, et un compte de maquilleuse avec profil a son profil vide. Les talents et les articles du jeu sont écrits dans `src/demo-data/editorial.ts`, sous `src/` comme les profils, comme pour le reste du jeu. Les comptes d'administration, eux, ne sont que sur le banc.
 
 Rejouer le chargement ne crée rien : un talent ou un article se retrouve par son adresse, brouillon compris, et reste tel qu'il est.
 
-Les tests : `tests/integration/bench-full-dataset.test.ts` (le jeu complet, rejoué sans doublon, les commandes `bench:reset` et `bench:session` lancées comme une personne les lance), `tests/e2e/bench-dataset.spec.ts` (l'administration, ouverte avec l'admin du jeu, compte les 12 profils types, les 3 talents et les 3 articles dont le brouillon), `tests/unit/editorial-data.test.ts` et `tests/unit/bench-full.test.ts` (sans le banc).
+Les tests : `tests/integration/bench-full-dataset.test.ts` (le jeu complet, rejoué sans doublon, les commandes `bench:reset` et `bench:session` lancées comme une personne les lance), `tests/e2e/bench-dataset.spec.ts` (l'administration, ouverte avec l'admin du jeu, compte les 17 profils types, les 3 talents et les 3 articles dont le brouillon), `tests/unit/editorial-data.test.ts` et `tests/unit/bench-full.test.ts` (sans le banc).
 
 ## La matrice d'accès
 

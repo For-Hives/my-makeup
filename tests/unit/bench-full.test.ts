@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import { DEMO_PROFILES } from '@/demo-data/profiles'
+import { LOADED_DEMO_PROFILES } from '@/demo-data/profiles'
 import { DATASET_TYPES } from '../fixtures/accounts'
 import { ROOT } from '../support/bench'
 import {
@@ -52,7 +52,7 @@ describe('Quel compte désigne un nom', () => {
 	})
 
 	test('chaque type du jeu fixe et chaque profil type a un nom', () => {
-		expect(ACCOUNT_NAMES).toHaveLength(DATASET_TYPES.length + DEMO_PROFILES.length)
+		expect(ACCOUNT_NAMES).toHaveLength(DATASET_TYPES.length + LOADED_DEMO_PROFILES.length)
 		for (const name of ACCOUNT_NAMES) expect(accountSearch(name), name).toBeDefined()
 	})
 

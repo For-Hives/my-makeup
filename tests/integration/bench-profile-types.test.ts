@@ -2,7 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, test } from 'bun:test
 import { createHash } from 'node:crypto'
 import sharp from 'sharp'
 import { fileName, type ProfilesSummary, placeDemoProfiles, readDemoPhoto } from '@/demo-data/loading'
-import { DEMO_PROFILES, type DemoPhoto, type DemoProfile, PHOTO_MAX_WEIGHT } from '@/demo-data/profiles'
+import { type DemoPhoto, type DemoProfile, LOADED_DEMO_PROFILES, PHOTO_MAX_WEIGHT } from '@/demo-data/profiles'
 import { mediaKey, UPLOAD_PREFIX } from '@/lib/media'
 import { profileState } from '@/lib/profile/state'
 import type { Media, Pro, Profile } from '@/payload-types'
@@ -15,16 +15,16 @@ import { emptyStorage, listObjects, readObject } from '../support/s3'
  * and the same content at every load. The set without the bench: tests/unit/demo-data.test.ts.
  */
 
-const KEYS = DEMO_PROFILES.map(({ cle: key }) => key)
+const KEYS = LOADED_DEMO_PROFILES.map(({ cle: key }) => key)
 
 /** How many photos the set sends: one media each. */
-const UPLOADED_PHOTOS = DEMO_PROFILES.reduce(
+const UPLOADED_PHOTOS = LOADED_DEMO_PROFILES.reduce(
 	(total, { photos }) => total + (photos.principale ? 1 : 0) + photos.galerie.length,
 	0
 )
 
-/** The longest a load of the set may take: about 4 seconds on an empty bench (14/10/2026). */
-const LOADING_MS = 15_000
+/** The longest a load of the set may take: about 4 seconds for the twelve types on an empty bench (14/10/2026), a little more for the seventeen. */
+const LOADING_MS = 30_000
 
 const resetToZero = () => Promise.all([emptyBase(), emptyStorage()])
 
@@ -79,7 +79,7 @@ async function datasetContent(bilan: ProfilesSummary) {
 		}
 	}
 	return Promise.all(
-		DEMO_PROFILES.map(async type => {
+		LOADED_DEMO_PROFILES.map(async type => {
 			const profile = await profileOf(bilan, type)
 			const account: Pro = await payload.findByID({ collection: 'pros', id: Number(idOf(profile.pro)), depth: 0 })
 			return {
@@ -97,7 +97,7 @@ beforeAll(async () => {
 	await testPayload()
 })
 
-describe('Le jeu du banc : les 12 profils types', () => {
+describe('Le jeu du banc : les 17 profils types', () => {
 	let summary: ProfilesSummary
 
 	beforeAll(async () => {
@@ -107,15 +107,15 @@ describe('Le jeu du banc : les 12 profils types', () => {
 
 	afterAll(resetToZero)
 
-	test('12 profils, chacun relié à sa maquilleuse fictive, confirmée, sous le slug attendu', async () => {
+	test('17 profils, chacun relié à sa maquilleuse fictive, confirmée, sous le slug attendu', async () => {
 		const payload = await testPayload()
 
 		expect(summary.cible).toBe('banc')
 		expect(summary.crees).toEqual(KEYS)
 		expect(summary.presents).toEqual([])
-		expect((await payload.count({ collection: 'profiles' })).totalDocs).toBe(12)
-		expect((await payload.count({ collection: 'pros' })).totalDocs).toBe(12)
-		for (const type of DEMO_PROFILES) {
+		expect((await payload.count({ collection: 'profiles' })).totalDocs).toBe(17)
+		expect((await payload.count({ collection: 'pros' })).totalDocs).toBe(17)
+		for (const type of LOADED_DEMO_PROFILES) {
 			const profile = await profileOf(summary, type)
 			const account = await payload.findByID({ collection: 'pros', id: Number(idOf(profile.pro)), depth: 0 })
 			expect({ cle: type.cle, email: account.email, nom: account.name, confirme: account._verified }).toEqual({
@@ -134,7 +134,7 @@ describe('Le jeu du banc : les 12 profils types', () => {
 	})
 
 	test('états calculés conformes aux fixtures : la référence publiable, le profil vide ni actif ni publiable', async () => {
-		for (const type of DEMO_PROFILES) {
+		for (const type of LOADED_DEMO_PROFILES) {
 			const profile = await profileOf(summary, type)
 			const { slug: _slug, ...expected } = type.attendu
 			const stored = {
@@ -156,12 +156,12 @@ describe('Le jeu du banc : les 12 profils types', () => {
 			}).toEqual({ completeness, active, publishable, fullyEmpty })
 		}
 
-		const reference = await profileOf(summary, DEMO_PROFILES[0] as DemoProfile)
+		const reference = await profileOf(summary, LOADED_DEMO_PROFILES[0] as DemoProfile)
 		expect({ publishable: reference.publishable, status: reference.status }).toEqual({
 			publishable: true,
 			status: 'published',
 		})
-		const empty = await profileOf(summary, DEMO_PROFILES[5] as DemoProfile)
+		const empty = await profileOf(summary, LOADED_DEMO_PROFILES[5] as DemoProfile)
 		expect({ active: empty.active, publishable: empty.publishable, status: empty.status }).toEqual({
 			active: false,
 			publishable: false,
@@ -171,7 +171,7 @@ describe('Le jeu du banc : les 12 profils types', () => {
 
 	test('ce que chaque type porte est enregistré tel quel : contact de la référence, disponibilité, ancien nom, masque', async () => {
 		const byKey = new Map(
-			await Promise.all(DEMO_PROFILES.map(async type => [type.cle, await profileOf(summary, type)] as const))
+			await Promise.all(LOADED_DEMO_PROFILES.map(async type => [type.cle, await profileOf(summary, type)] as const))
 		)
 		const read = (cle: string) => {
 			const profile = byKey.get(cle)
@@ -196,10 +196,20 @@ describe('Le jeu du banc : les 12 profils types', () => {
 		expect(read('ancien-nom-accentue')).toMatchObject({ slug: 'zoe-lefevre', legacyUsername: 'zoé lefèvre' })
 		expect(read('verifiee')).toMatchObject({ verified: true, superArtist: true })
 		expect(read('masquee')).toMatchObject({ chosenStatus: 'hidden', status: 'hidden', publishable: true })
+		// The profiles of the zones (tickets 258 to 260).
+		expect(read('code-postal-partage-a').city).toMatchObject({ name: 'Valbrume', postalCodes: ['74990'] })
+		expect(read('code-postal-partage-b').city).toMatchObject({ name: 'Hautcombe', postalCodes: ['74990'] })
+		expect(read('ville-voisine').city?.postalCodes).toEqual(['74100'])
+		expect(read('zone-belgique')).toMatchObject({ zoneKind: 'countries', countries: ['BE'], town: 'Bruxelles' })
+		expect(read('zone-belgique').city?.name).toBeNull()
+		expect(read('zone-france-italie')).toMatchObject({ zoneKind: 'countries', countries: ['FR', 'IT'] })
+		expect(read('zone-a-revoir').zoneReview).toMatchObject({ reason: 'sharedPostalCode', postalCode: '74990' })
+		expect(read('zone-a-revoir').zoneKind).toBe('city')
+		expect(read('reference').zoneReview?.reason ?? null).toBeNull()
 		expect(read('vide')).toMatchObject({ chosenStatus: 'automatic', firstName: null, gallery: [] })
 		// Every text of the longest profile went through the bounds of the server, and kept its length.
 		const long = read('textes-maximaux')
-		const fixture = DEMO_PROFILES[11]?.profil
+		const fixture = LOADED_DEMO_PROFILES[11]?.profil
 		expect([long.firstName, long.description, long.contactDetails?.email]).toEqual([
 			fixture?.firstName,
 			fixture?.description,
@@ -211,7 +221,7 @@ describe('Le jeu du banc : les 12 profils types', () => {
 	test('photos fictives de moins de 30 Ko, chacune servie par son profil ; 0 objet orphelin', async () => {
 		const mediaList = await allMedia()
 		const objects = await listObjects()
-		const profiles = await Promise.all(DEMO_PROFILES.map(type => profileOf(summary, type)))
+		const profiles = await Promise.all(LOADED_DEMO_PROFILES.map(type => profileOf(summary, type)))
 		const served = profiles.flatMap(profil =>
 			[profil.mainPicture, ...(profil.gallery ?? [])]
 				.filter(photo => photo !== null && photo !== undefined)
@@ -245,8 +255,8 @@ describe('Le jeu du banc : les 12 profils types', () => {
 			expect(key).toStartWith(`${UPLOAD_PREFIX}/jeu-`)
 		}
 		// Each object is the photo of the set, byte for byte, under the name the set gives it.
-		for (const type of DEMO_PROFILES) {
-			const profile = profiles[DEMO_PROFILES.indexOf(type)]
+		for (const type of LOADED_DEMO_PROFILES) {
+			const profile = profiles[LOADED_DEMO_PROFILES.indexOf(type)]
 			const expectedMany = [
 				...(type.photos.principale ? [{ photo: type.photos.principale, nom: fileName(type.cle, 'principale') }] : []),
 				...type.photos.galerie.map((photo, rang) => ({ photo, nom: fileName(type.cle, rang + 1) })),

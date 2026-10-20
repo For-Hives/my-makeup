@@ -6,6 +6,7 @@ import { type MigrateUpArgs, sql } from '@payloadcms/db-postgres'
 import type { Payload } from 'payload'
 import { MIGRATIONS_FOLDER } from '../../scripts/ci/schema-drift'
 import { placeDemoProfiles } from '../../src/demo-data/loading'
+import { profileState } from '../../src/lib/profile/state'
 import { migrations } from '../../src/migrations'
 import { RefusedBench, ROOT } from '../support/bench'
 import {
@@ -328,6 +329,23 @@ describe('La migration de la zone (ticket 259) : des ajouts seulement, sur une b
 			expect(loaded.crees.length).toBeGreaterThan(0)
 			const before = await profileStates()
 			expect(before.length).toBe(loaded.crees.length)
+			// The set holds zones of countries: the rule, played again on what the server stored, gives
+			// the state it stored for every profile (ticket 260), the zones of countries included.
+			const kindsBefore = await payload.db.pool.query('SELECT DISTINCT zone_kind FROM profiles ORDER BY zone_kind')
+			expect(kindsBefore.rows).toEqual([{ zone_kind: 'city' }, { zone_kind: 'countries' }])
+			const textsBefore = await payload.db.pool.query('SELECT count(*)::int AS total FROM profiles_texts')
+			expect(textsBefore.rows[0]?.total).toBeGreaterThan(0)
+			const stored = await payload.find({ collection: 'profiles', depth: 0, limit: 100, pagination: false })
+			const countriesProfiles = stored.docs.filter(({ zoneKind }) => zoneKind === 'countries')
+			expect(countriesProfiles.length).toBeGreaterThan(0)
+			for (const doc of stored.docs) {
+				const state = profileState(doc)
+				expect({ id: doc.id, publishable: state.publishable, active: state.active }).toEqual({
+					id: doc.id,
+					publishable: doc.publishable === true,
+					active: doc.active === true,
+				})
+			}
 
 			await zone.down(args)
 			expect(await baseSchema()).toEqual(afterInit)
@@ -337,6 +355,7 @@ describe('La migration de la zone (ticket 259) : des ajouts seulement, sur une b
 			expect(await baseSchema()).toEqual(afterZone)
 			expect(await profileStates()).toEqual(before)
 			const kinds = await payload.db.pool.query('SELECT DISTINCT zone_kind FROM profiles')
+			// Down drops the countries with their table, as its comment says: every zone is a commune again.
 			expect(kinds.rows).toEqual([{ zone_kind: 'city' }])
 			const texts = await payload.db.pool.query('SELECT count(*)::int AS total FROM profiles_texts')
 			expect(texts.rows).toEqual([{ total: 0 }])

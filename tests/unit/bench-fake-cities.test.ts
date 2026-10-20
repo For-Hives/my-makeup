@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { CITIES_ADDRESS, citiesAddress } from '@/lib/dashboard/city-reference'
-import { createFakeCities } from '../support/fake-cities/provider'
+import { CITIES, createFakeCities } from '../support/fake-cities/provider'
 
 /**
  * The fake list of the communes of the bench (CI of 15/10/2026): it answers the two questions of
@@ -41,6 +41,7 @@ describe('la fausse liste des communes', () => {
 			nom: 'Lille',
 			code: '59350',
 			codeDepartement: '59',
+			codesPostaux: ['59000', '59160', '59260', '59777', '59800'],
 			centre: { type: 'Point', coordinates: [3.0465, 50.6311] },
 		})
 		expect(((await read('/communes?nom=lille&limit=1')).corps as unknown[]).length).toBe(1)
@@ -56,8 +57,29 @@ describe('la fausse liste des communes', () => {
 			nom: 'Annecy',
 			code: '74010',
 		})
+		expect((await read('/communes/74010')).corps).toMatchObject({ codesPostaux: ['74000'] })
 		expect(await read('/communes/99999')).toEqual({ statut: 404, corps: 'Not Found' })
 		expect((await read('/dashboard')).statut).toBe(404)
+	})
+})
+
+describe('la fausse liste : un code postal partagé par deux communes fictives (ticket 259)', () => {
+	test('chaque commune répond ses codes postaux ; le code fictif 74990 en désigne deux', async () => {
+		const found = (await read('/communes?codePostal=74990')).corps as {
+			nom: string
+			code: string
+			codesPostaux: string[]
+		}[]
+		expect(found.map(({ nom }) => nom).sort()).toEqual(['Hautcombe', 'Valbrume'])
+		for (const entry of found) expect(entry.codesPostaux).toEqual(['74990'])
+		expect((await read('/communes/74991')).corps).toMatchObject({ nom: 'Hautcombe', codesPostaux: ['74990'] })
+	})
+
+	test('chaque commune de la liste a au moins un code postal de cinq chiffres', () => {
+		for (const { codesPostaux: codes } of CITIES) {
+			expect(codes.length).toBeGreaterThan(0)
+			for (const code of codes) expect(code).toMatch(/^\d{5}$/)
+		}
 	})
 })
 

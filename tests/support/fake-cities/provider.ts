@@ -128,6 +128,24 @@ export const CITIES: readonly City[] = [
 		centre: [5.3698, 43.2965],
 		population: 873_000,
 	},
+	// Two fictional communes that share one fictional postal code (ticket 259): a code that does not
+	// name one commune. Neither is a commune of France.
+	{
+		nom: 'Valbrume',
+		code: '74990',
+		codeDepartement: '74',
+		codesPostaux: ['74990'],
+		centre: [6.4, 45.95],
+		population: 1_200,
+	},
+	{
+		nom: 'Hautcombe',
+		code: '74991',
+		codeDepartement: '74',
+		codesPostaux: ['74990'],
+		centre: [6.43, 45.97],
+		population: 800,
+	},
 	{
 		nom: 'Saint-Remy-en-Bouzemont-Saint-Genest-et-Isson',
 		code: '51513',
@@ -146,10 +164,11 @@ const fold = (texte: string): string =>
 		.replace(/[\s'’-]+/g, ' ')
 		.trim()
 
-const inJson = ({ nom: name, code, codeDepartement, centre }: City) => ({
+const inJson = ({ nom: name, code, codeDepartement, codesPostaux, centre }: City) => ({
 	nom: name,
 	code,
 	codeDepartement,
+	codesPostaux,
 	centre: { type: 'Point', coordinates: centre },
 })
 

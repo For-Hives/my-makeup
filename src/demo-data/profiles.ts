@@ -108,16 +108,52 @@ export const DEMO_VERIFICATION = '2026-09-15T12:00:00.000Z'
 
 /** Communes of the official list (geo.api.gouv.fr, 14/10/2026), the centre rounded as the server keeps it. */
 const CITIES = {
-	annecy: { name: 'Annecy', inseeCode: '74010', latitude: 45.9, longitude: 6.13 },
-	annemasse: { name: 'Annemasse', inseeCode: '74012', latitude: 46.19, longitude: 6.25 },
-	thonon: { name: 'Thonon-les-Bains', inseeCode: '74281', latitude: 46.37, longitude: 6.48 },
-	nantes: { name: 'Nantes', inseeCode: '44109', latitude: 47.24, longitude: -1.56 },
+	annecy: { name: 'Annecy', inseeCode: '74010', latitude: 45.9, longitude: 6.13, postalCodes: ['74000'] as string[] },
+	annemasse: {
+		name: 'Annemasse',
+		inseeCode: '74012',
+		latitude: 46.19,
+		longitude: 6.25,
+		postalCodes: ['74100'] as string[],
+	},
+	thonon: {
+		name: 'Thonon-les-Bains',
+		inseeCode: '74281',
+		latitude: 46.37,
+		longitude: 6.48,
+		postalCodes: ['74200'] as string[],
+	},
+	nantes: {
+		name: 'Nantes',
+		inseeCode: '44109',
+		latitude: 47.24,
+		longitude: -1.56,
+		postalCodes: ['44000', '44100', '44200', '44300'] as string[],
+	},
 	// The longest name of the official list: 45 characters.
 	laPlusLongue: {
 		name: 'Saint-Remy-en-Bouzemont-Saint-Genest-et-Isson',
 		inseeCode: '51513',
 		latitude: 48.61,
 		longitude: 4.64,
+		postalCodes: ['51290'] as string[],
+	},
+	// Two fictional communes that share one fictional postal code (ticket 259): a code that does not
+	// name one commune. They exist only in the set and in the fake list of the bench
+	// (tests/support/fake-cities/provider.ts); neither is a commune of France.
+	valbrume: {
+		name: 'Valbrume',
+		inseeCode: '74990',
+		latitude: 45.95,
+		longitude: 6.4,
+		postalCodes: ['74990'] as string[],
+	},
+	hautcombe: {
+		name: 'Hautcombe',
+		inseeCode: '74991',
+		latitude: 45.97,
+		longitude: 6.43,
+		postalCodes: ['74990'] as string[],
 	},
 } as const
 
@@ -598,6 +634,143 @@ export const DEMO_PROFILES: readonly DemoProfile[] = [
 		},
 	},
 ]
+
+/**
+ * The five profile types that carry the zones of tickets 258 to 260, after the twelve: two
+ * communes that share a postal code, a zone of Belgium with a town, a zone of France and Italy, and
+ * a zone left to review (a shared postal code, as the import leaves it). They are loaded on the
+ * bench with the twelve (`LOADED_DEMO_PROFILES`) but kept apart: the pages and the search do not
+ * read a zone of countries until tickets 263 and 264, and the twelve are what they are tested on.
+ */
+export const DEMO_ZONE_PROFILES: readonly DemoProfile[] = [
+	{
+		numero: 13,
+		cle: 'code-postal-partage-a',
+		sertA:
+			'Complet, à Valbrume, commune fictive qui partage son code postal avec Hautcombe : un code postal sans commune unique.',
+		compte: { email: profileUrl('code-postal-partage-a'), nom: 'Océane Colin' },
+		profil: completeProfile({
+			firstName: 'Océane',
+			lastName: 'Colin',
+			artistName: 'Océane Colin Maquillage',
+			specialty: 'Maquillage mariage',
+			city: CITIES.valbrume,
+			description:
+				'Maquilleuse à Valbrume, je prépare les mariées du haut pays : essai chez vous, maquillage du jour J et retouches. Je travaille avec des produits choisis pour tenir toute la journée, en photo comme à l’œil nu, et je me déplace avec tout mon matériel.',
+			pseudo: 'oceane.colin',
+		}),
+		photos: { principale: 'photo-1.webp', galerie: ['photo-2.webp'] },
+		attendu: { slug: 'oceane-colin', ...PUBLISHED_COMPLETE },
+	},
+	{
+		numero: 14,
+		cle: 'code-postal-partage-b',
+		sertA: 'Complet, à Hautcombe, l’autre commune fictive du même code postal.',
+		compte: { email: profileUrl('code-postal-partage-b'), nom: 'Sofia Lambert' },
+		profil: completeProfile({
+			firstName: 'Sofia',
+			lastName: 'Lambert',
+			artistName: 'Sofia Lambert Beauté',
+			specialty: 'Maquillage soirée',
+			city: CITIES.hautcombe,
+			description:
+				'Maquilleuse à Hautcombe, je maquille pour les soirées, les séances photo et les mariages en montagne. Teint lumineux, regard travaillé : je prends le temps d’un essai pour que le jour J se passe sans surprise, avec des produits adaptés à chaque peau.',
+			pseudo: 'sofia.lambert',
+		}),
+		photos: { principale: 'photo-3.webp', galerie: ['photo-4.webp'] },
+		attendu: { slug: 'sofia-lambert', ...PUBLISHED_COMPLETE },
+	},
+	{
+		numero: 15,
+		cle: 'zone-belgique',
+		sertA:
+			'Complet, zone de pays [BE] avec une ville (Bruxelles) : la règle lit le nom du pays, le texte de zone dit « Bruxelles (Belgique) ».',
+		compte: { email: profileUrl('zone-belgique'), nom: 'Camille Renard' },
+		profil: {
+			...completeProfile({
+				firstName: 'Camille',
+				lastName: 'Renard',
+				artistName: 'Camille Renard Make-up',
+				specialty: 'Maquillage mariage',
+				city: CITIES.annecy,
+				description:
+					'Maquilleuse installée à Bruxelles, je me déplace dans toute la Belgique pour les mariages, les soirées et les séances photo. Je propose un essai, puis le maquillage du jour J avec des retouches, et je travaille en français comme en anglais.',
+				pseudo: 'camille.renard',
+			}),
+			city: {},
+			radiusKm: null,
+			zoneKind: 'countries',
+			countries: ['BE'],
+			town: 'Bruxelles',
+		},
+		photos: { principale: 'photo-5.webp', galerie: ['photo-6.webp'] },
+		attendu: { slug: 'camille-renard', ...PUBLISHED_COMPLETE },
+	},
+	{
+		numero: 16,
+		cle: 'zone-france-italie',
+		sertA: 'Complet, zone de pays [FR, IT] : la France s’y dit avec l’Italie, la règle lit le premier pays étranger.',
+		compte: { email: profileUrl('zone-france-italie'), nom: 'Elsa Marchand' },
+		profil: {
+			...completeProfile({
+				firstName: 'Elsa',
+				lastName: 'Marchand',
+				artistName: 'Elsa Marchand Maquillage',
+				specialty: 'Maquillage mariage',
+				city: CITIES.annecy,
+				description:
+					'Maquilleuse entre la France et l’Italie, je me déplace des Alpes jusqu’au Piémont pour les mariages et les tournages. Je prépare chaque maquillage avec vous, de l’essai au jour J, en français, en italien et en anglais.',
+				pseudo: 'elsa.marchand',
+			}),
+			city: {},
+			radiusKm: null,
+			zoneKind: 'countries',
+			countries: ['FR', 'IT'],
+		},
+		photos: { principale: 'photo-6.webp', galerie: ['photo-1.webp'] },
+		attendu: { slug: 'elsa-marchand', ...PUBLISHED_COMPLETE },
+	},
+	{
+		numero: 17,
+		cle: 'zone-a-revoir',
+		sertA:
+			'Zone à revoir : l’import n’a pas pu choisir entre deux communes du même code postal ; la zone est vide, la revue est privée.',
+		compte: { email: profileUrl('zone-a-revoir'), nom: 'Julie Perrin' },
+		profil: {
+			...completeProfile({
+				firstName: 'Julie',
+				lastName: 'Perrin',
+				artistName: 'Julie Perrin Maquillage',
+				specialty: 'Maquillage mariage',
+				city: CITIES.annecy,
+				description:
+					'Maquilleuse dans le haut pays, je prépare les mariées et leurs invitées chez elles ou sur le lieu de la fête. Je viens avec tout mon matériel et je prends le temps d’un essai pour que le jour J se passe sans surprise, avec des produits adaptés.',
+				pseudo: 'julie.perrin',
+			}),
+			city: {},
+			radiusKm: null,
+			zoneReview: {
+				reason: 'sharedPostalCode',
+				postalCode: '74990',
+				candidates: [
+					{ inseeCode: '74990', name: 'Valbrume', department: '74' },
+					{ inseeCode: '74991', name: 'Hautcombe', department: '74' },
+				],
+			},
+		},
+		photos: { principale: 'photo-2.webp', galerie: [] },
+		attendu: {
+			slug: 'julie-perrin',
+			...PUBLISHED_COMPLETE,
+			completeness: 11,
+			active: false,
+			publishable: false,
+		},
+	},
+]
+
+/** The profile types the bench loads: the twelve, then those of the zones (tickets 258 to 260). */
+export const LOADED_DEMO_PROFILES: readonly DemoProfile[] = [...DEMO_PROFILES, ...DEMO_ZONE_PROFILES]
 
 /** The longest values of the profile with every text at its longest, for the checks of its lengths. */
 export const DEMO_LENGTHS = {

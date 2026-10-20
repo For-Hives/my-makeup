@@ -14,7 +14,7 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import type { AuthCollectionSlug, Payload } from 'payload'
-import { DEMO_PROFILES, profileUrl } from '../../src/demo-data/profiles'
+import { LOADED_DEMO_PROFILES, profileUrl } from '../../src/demo-data/profiles'
 import { DATASET_TYPES, datasetUrl } from '../fixtures/accounts'
 import { ACCOUNT_TYPES } from './account-factory'
 import { RefusedBench, ROOT } from './bench'
@@ -25,7 +25,7 @@ import { openSessionWithoutPassword, type Session } from './session'
 export const SESSION_FOLDER = '.banc/sessions'
 
 /** The accounts a name can designate, for the message that refuses another one. */
-export const ACCOUNT_NAMES = [...DATASET_TYPES, ...DEMO_PROFILES.map(({ cle: key }) => `profil-${key}`)]
+export const ACCOUNT_NAMES = [...DATASET_TYPES, ...LOADED_DEMO_PROFILES.map(({ cle: key }) => `profil-${key}`)]
 
 /** Where to look for an account, from the name the person gave. */
 export interface Search {
@@ -44,7 +44,7 @@ export function accountSearch(demande: string): Search | undefined {
 	const type = DATASET_TYPES.find(cle => cle === name)
 	if (type) return { email: datasetUrl(type), collection: ACCOUNT_TYPES[type].collection, nom: name }
 	const key = name.startsWith('profil-') ? name.slice('profil-'.length) : undefined
-	if (key !== undefined && DEMO_PROFILES.some(profil => profil.cle === key))
+	if (key !== undefined && LOADED_DEMO_PROFILES.some(profil => profil.cle === key))
 		return { email: profileUrl(key), collection: 'pros', nom: name }
 	if (EMAIL_PATTERN.test(name)) return { email: name.toLowerCase(), nom: name.replace(/[^a-z0-9.-]+/gi, '_') }
 	return undefined

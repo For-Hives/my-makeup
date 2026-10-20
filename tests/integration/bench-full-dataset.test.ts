@@ -43,7 +43,7 @@ beforeAll(async () => {
 afterAll(resetToZero)
 
 describe('Le jeu complet du banc', () => {
-	test('12 profils types, 3 talents, 3 articles dont un brouillon, et les comptes de chaque type', async () => {
+	test('17 profils types, 3 talents, 3 articles dont un brouillon, et les comptes de chaque type', async () => {
 		const summary = await setBenchDataset()
 
 		expect(await profilesTypes()).toBe(BENCH_CONTENT.profilsTypes)
@@ -56,7 +56,7 @@ describe('Le jeu complet du banc', () => {
 		})
 		expect(drafts.totalDocs).toBe(BENCH_CONTENT.brouillons)
 		expect(await countOf('admins')).toBe(2)
-		expect(summary.jeu.profils.crees).toHaveLength(12)
+		expect(summary.jeu.profils.crees).toHaveLength(17)
 		expect(summary.jeu.redaction.talentsCrees).toEqual(DEMO_TALENTS.map(({ slug }) => slug))
 		expect(summary.jeu.redaction.articlesCrees).toEqual(DEMO_ARTICLES.map(({ slug }) => slug))
 	}, 60_000)
@@ -123,7 +123,7 @@ describe('Les commandes du banc', () => {
 
 		expect(second.code, second.erreurs).toBe(0)
 		expect(second.secondes).toBeLessThan(30)
-		expect(await profilesTypes()).toBe(12)
+		expect(await profilesTypes()).toBe(17)
 		expect(await countOf('talents')).toBe(3)
 		expect(await countOf('articles')).toBe(3)
 		expect(await countOf('profiles')).toBe(profiles)
@@ -132,7 +132,7 @@ describe('Les commandes du banc', () => {
 				({ id, slug }) => `${id}:${slug}`
 			)
 		).toEqual(identifiers)
-		expect(second.sortie).toContain('12 profils types')
+		expect(second.sortie).toContain('17 profils types')
 		expect(second.sortie).toContain('3 talents, 3 articles dont un brouillon')
 	}, 120_000)
 

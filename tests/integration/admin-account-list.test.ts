@@ -48,10 +48,10 @@ describe('La liste des comptes de l’admin (ticket 168)', () => {
 		expect(Pros.defaultSort).toBe('-createdAt')
 	})
 
-	test('chaque filtre rend le nombre attendu sur les 20 comptes du banc', async () => {
+	test('chaque filtre rend le nombre attendu sur les 25 comptes du banc', async () => {
 		const { session } = await createAccount('admin')
 		const all = await listAll(session.enTetes, 'sort=-createdAt')
-		expect(all.liste.totalDocs).toBe(20)
+		expect(all.liste.totalDocs).toBe(25)
 		const dates = all.liste.docs.map(({ createdAt }) => createdAt)
 		expect(dates).toEqual([...dates].sort().reverse())
 
@@ -61,7 +61,7 @@ describe('La liste des comptes de l’admin (ticket 168)', () => {
 		expect(await emails('where[_verified][equals]=false')).toEqual(['jeu-maquilleuse-non-verifiee@example.test'])
 		expect(await emails('where[profile][exists]=false')).toEqual(['jeu-maquilleuse-sans-profil@example.test'])
 		expect(await emails('where[blocked][equals]=true')).toEqual(['jeu-maquilleuse-bloquee@example.test'])
-		expect((await listAll(session.enTetes, 'where[profile][exists]=true')).liste.totalDocs).toBe(19)
+		expect((await listAll(session.enTetes, 'where[profile][exists]=true')).liste.totalDocs).toBe(24)
 		// The link of the panel (« without profile » by the owners of the profiles) holds the same account.
 		const payload = await testPayload()
 		const profiles = await payload.find({
