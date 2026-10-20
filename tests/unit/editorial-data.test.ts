@@ -12,7 +12,7 @@ import { sourceDefinition } from '../support/source-strapi/data'
  * The editorial part of the fictional set (ticket 052), without the bench: three talents, three
  * articles one of which is a draft, fixed slugs that do not meet those of the fake Strapi source,
  * texts that say they are made up, and the guard that keeps the load off the site. The same set
- * loaded on the bench: tests/integration/banc-jeu-complet.test.ts.
+ * loaded on the bench: tests/integration/bench-full-dataset.test.ts.
  */
 
 const maxLength = (collection: typeof Articles, nom: string): number | undefined => {

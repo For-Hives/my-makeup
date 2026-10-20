@@ -15,100 +15,100 @@ import { largePhotoSynthetic } from '../support/synthetic-photo'
  * sends its own made-up address.
  */
 
-const MOT_DE_PASSE = 'motdepasse-fictif'
+const PASSWORD = 'motdepasse-fictif'
 const PAGE = '/auth/init-account'
 
-let compteur = 0
+let counter = 0
 test.beforeEach(({ context }) =>
-	context.setExtraHTTPHeaders({ 'x-forwarded-for': `203.0.113.${100 + (++compteur % 100)}` })
+	context.setExtraHTTPHeaders({ 'x-forwarded-for': `203.0.113.${100 + (++counter % 100)}` })
 )
 
-const creees: string[] = []
+const created: string[] = []
 test.afterEach(async () => {
 	const payload = await testPayload()
-	for (const email of creees.splice(0)) {
+	for (const email of created.splice(0)) {
 		const { docs } = await payload.find({ collection: 'pros', depth: 0, where: { email: { equals: email } } })
-		for (const compte of docs) {
-			const profils = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
-			for (const { id } of profils.docs) await payload.delete({ collection: 'profiles', id }).catch(() => undefined)
-			await payload.delete({ collection: 'pros', id: compte.id }).catch(() => undefined)
+		for (const account of docs) {
+			const profiles = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: account.id } } })
+			for (const { id } of profiles.docs) await payload.delete({ collection: 'profiles', id }).catch(() => undefined)
+			await payload.delete({ collection: 'pros', id: account.id }).catch(() => undefined)
 		}
 	}
 })
 
-const aleatoireEnLettres = () =>
+const randomInLetters = () =>
 	crypto
 		.randomUUID()
 		.replace(/-/g, '')
 		.replace(/[0-9]/g, chiffre => 'ghijklmnop'.charAt(Number(chiffre)))
 
 /** A confirmed account made by the server, as the sign-up leaves it: with its empty profile. */
-async function nouveauCompte(): Promise<string> {
+async function newAccount(): Promise<string> {
 	const email = `accueil-${crypto.randomUUID()}@example.test`
 	const payload = await testPayload()
 	await payload.create({
 		collection: 'pros',
-		data: { email, password: MOT_DE_PASSE, name: `Accueil ${aleatoireEnLettres()}`, _verified: true },
+		data: { email, password: PASSWORD, name: `Accueil ${randomInLetters()}`, _verified: true },
 		disableVerificationEmail: true,
 		overrideAccess: true,
 	})
-	creees.push(email)
+	created.push(email)
 	return email
 }
 
-async function seConnecter(page: Page, email: string) {
+async function signInAction(page: Page, email: string) {
 	await page.goto(`/auth/signin?callbackUrl=${encodeURIComponent(PAGE)}`)
 	await page.waitForLoadState('networkidle')
 	await page.getByLabel('Adresse email').fill(email)
-	await page.getByLabel('Mot de passe').fill(MOT_DE_PASSE)
+	await page.getByLabel('Mot de passe').fill(PASSWORD)
 	await page.getByRole('button', { name: 'Se connecter' }).click()
 	await expect(page).toHaveURL(new RegExp(`${PAGE}$`))
 }
 
 /** Axe reads the page once: wait for the title of the page, which Next streams after a transition. */
-async function violationsApresLeTitre(page: Page) {
+async function violationsAfterTitle(page: Page) {
 	await expect(page).toHaveTitle(/Prépare ton profil/)
 	return violationsSevere(page)
 }
 
 /** A capture of the page as it is, when DASHBOARD_SCREENSHOTS names a folder (the check of ticket 140 at 390 px). */
-async function capturer(page: Page, nom: string) {
-	const dossier = process.env.DASHBOARD_SCREENSHOTS
-	if (dossier)
-		await page.screenshot({ path: `${dossier}/accueil-${nom}-${test.info().project.name}.png`, fullPage: true })
+async function takeScreenshot(page: Page, nom: string) {
+	const folder = process.env.DASHBOARD_SCREENSHOTS
+	if (folder)
+		await page.screenshot({ path: `${folder}/accueil-${nom}-${test.info().project.name}.png`, fullPage: true })
 }
 
 /** A finger on a phone, a click elsewhere. */
-const appuyer = (cible: Locator) => (test.info().project.name === 'mobile' ? cible.tap() : cible.click())
+const press = (cible: Locator) => (test.info().project.name === 'mobile' ? cible.tap() : cible.click())
 
-const titre = (page: Page) => page.locator('#accueil-titre-etape')
+const title = (page: Page) => page.locator('#accueil-titre-etape')
 
-async function profilDe(email: string) {
+async function profileOf(email: string) {
 	const payload = await testPayload()
-	const compte = (await payload.find({ collection: 'pros', depth: 0, where: { email: { equals: email } } })).docs[0]
-	const profil = (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte?.id } } }))
+	const account = (await payload.find({ collection: 'pros', depth: 0, where: { email: { equals: email } } })).docs[0]
+	const profile = (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: account?.id } } }))
 		.docs[0]
-	if (!profil) throw new Error('pas de profil')
-	return profil
+	if (!profile) throw new Error('pas de profil')
+	return profile
 }
 
-async function remplirIdentite(page: Page) {
+async function fillIdentity(page: Page) {
 	await page.getByLabel('Prénom').fill('Léa')
 	await page.getByLabel('Nom', { exact: true }).fill('Fictive')
 	await page.getByLabel(/Spécialité/).fill('Maquillage mariée')
 }
 
-async function choisirLille(page: Page) {
-	const champ = page.getByRole('combobox', { name: 'Ta commune' })
-	await champ.fill('Lille')
-	await appuyer(page.getByRole('option', { name: /^Lille \(59\)/ }).first())
+async function chooseLille(page: Page) {
+	const field = page.getByRole('combobox', { name: 'Ta commune' })
+	await field.fill('Lille')
+	await press(page.getByRole('option', { name: /^Lille \(59\)/ }).first())
 }
 
-async function choisirLaPhoto(page: Page) {
-	const octets = await largePhotoSynthetic()
+async function choosePhoto(page: Page) {
+	const bytes = await largePhotoSynthetic()
 	await page
 		.getByLabel('Choisir une photo')
-		.setInputFiles({ name: 'accueil.webp', mimeType: 'image/webp', buffer: Buffer.from(octets) })
+		.setInputFiles({ name: 'accueil.webp', mimeType: 'image/webp', buffer: Buffer.from(bytes) })
 	await expect(page.getByRole('img', { name: 'Aperçu de la photo choisie' })).toBeVisible({ timeout: 60_000 })
 }
 
@@ -116,23 +116,23 @@ async function choisirLaPhoto(page: Page) {
  * Holds every server action of the page, as a very slow server would, until the test releases the
  * oldest one: the state is asserted while the server has not answered, never after a fixed time.
  */
-async function retenirLesActions(page: Page) {
-	const portes: (() => void)[] = []
-	let armee = false
+async function keepActions(page: Page) {
+	const carried: (() => void)[] = []
+	let armed = false
 	await page.route(`**${PAGE}`, async route => {
-		const requete = route.request()
-		if (armee && requete.method() === 'POST' && requete.headers()['next-action'])
-			await new Promise<void>(resolve => portes.push(resolve))
+		const request = route.request()
+		if (armed && request.method() === 'POST' && request.headers()['next-action'])
+			await new Promise<void>(resolve => carried.push(resolve))
 		await route.continue()
 	})
 	return {
 		// The searches of communes are server actions too: only the save that follows is held.
 		armer: () => {
-			armee = true
+			armed = true
 		},
 		liberer: () => {
-			armee = false
-			portes.shift()?.()
+			armed = false
+			carried.shift()?.()
 		},
 	}
 }
@@ -140,53 +140,53 @@ async function retenirLesActions(page: Page) {
 test.describe('E02 : l’accueil en trois étapes', { tag: '@mobile' }, () => {
 	test('identité, zone, photo : profil actif, arrivée dans l’espace', async ({ page }) => {
 		test.setTimeout(150_000)
-		const email = await nouveauCompte()
-		await seConnecter(page, email)
+		const email = await newAccount()
+		await signInAction(page, email)
 
 		// Step 1: the speciality is required, and nothing is sent without it.
 		await expect(page.getByRole('heading', { level: 1, name: 'Prépare ton profil' })).toBeVisible()
-		await expect(titre(page)).toHaveText('Ton identité')
+		await expect(title(page)).toHaveText('Ton identité')
 		await page.waitForLoadState('networkidle')
-		await appuyer(page.getByRole('button', { name: 'Suivant' }))
+		await press(page.getByRole('button', { name: 'Suivant' }))
 		await expect(page.getByText('Indique ton prénom.')).toBeVisible()
 		await expect(page.getByText('Indique ta spécialité.')).toBeVisible()
-		expect((await profilDe(email)).firstName ?? null).toBeNull()
-		expect(await violationsApresLeTitre(page)).toEqual([])
-		await remplirIdentite(page)
-		await capturer(page, 'etape-1')
-		await appuyer(page.getByRole('button', { name: 'Suivant' }))
+		expect((await profileOf(email)).firstName ?? null).toBeNull()
+		expect(await violationsAfterTitle(page)).toEqual([])
+		await fillIdentity(page)
+		await takeScreenshot(page, 'etape-1')
+		await press(page.getByRole('button', { name: 'Suivant' }))
 
 		// Step 2: the identity is stored before the zone opens, and the title has the focus.
-		await expect(titre(page)).toHaveText('Ta zone')
-		await expect(titre(page)).toBeFocused()
-		expect(await profilDe(email)).toMatchObject({
+		await expect(title(page)).toHaveText('Ta zone')
+		await expect(title(page)).toBeFocused()
+		expect(await profileOf(email)).toMatchObject({
 			firstName: 'Léa',
 			lastName: 'Fictive',
 			specialty: 'Maquillage mariée',
 		})
 		// A commune typed but not chosen in the list is no commune.
 		await page.getByRole('combobox', { name: 'Ta commune' }).fill('Lille')
-		await appuyer(page.getByRole('button', { name: 'Suivant' }))
+		await press(page.getByRole('button', { name: 'Suivant' }))
 		await expect(page.getByText('Choisis ta commune dans la liste')).toBeVisible()
-		await choisirLille(page)
-		await capturer(page, 'etape-2')
-		expect(await violationsApresLeTitre(page)).toEqual([])
-		await appuyer(page.getByRole('button', { name: 'Suivant' }))
+		await chooseLille(page)
+		await takeScreenshot(page, 'etape-2')
+		expect(await violationsAfterTitle(page)).toEqual([])
+		await press(page.getByRole('button', { name: 'Suivant' }))
 
 		// Step 3.
-		await expect(titre(page)).toHaveText('Ta photo principale')
-		expect((await profilDe(email)).city?.inseeCode).toBe('59350')
-		await choisirLaPhoto(page)
-		await capturer(page, 'etape-3')
-		expect(await violationsApresLeTitre(page)).toEqual([])
-		await appuyer(page.getByRole('button', { name: 'Terminer' }))
+		await expect(title(page)).toHaveText('Ta photo principale')
+		expect((await profileOf(email)).city?.inseeCode).toBe('59350')
+		await choosePhoto(page)
+		await takeScreenshot(page, 'etape-3')
+		expect(await violationsAfterTitle(page)).toEqual([])
+		await press(page.getByRole('button', { name: 'Terminer' }))
 
 		// The server saw the three steps done: she arrives in her space, with an active, published profile.
 		await expect(page).toHaveURL(/\/auth\/profil$/, { timeout: 60_000 })
 		await expect(page.getByRole('heading', { name: 'Mon espace' })).toBeVisible()
-		const profil = await profilDe(email)
-		expect(profil.active).toBe(true)
-		expect(profil.status).toBe('published')
+		const profile = await profileOf(email)
+		expect(profile.active).toBe(true)
+		expect(profile.status).toBe('published')
 
 		// The onboarding has nothing left for an active profile.
 		await page.goto(PAGE)
@@ -195,81 +195,81 @@ test.describe('E02 : l’accueil en trois étapes', { tag: '@mobile' }, () => {
 
 	test('RG-07 : un serveur qui tarde ne montre ni arrivée ni étape suivante avant sa réponse', async ({ page }) => {
 		test.setTimeout(150_000)
-		const email = await nouveauCompte()
-		await seConnecter(page, email)
+		const email = await newAccount()
+		await signInAction(page, email)
 		await page.waitForLoadState('networkidle')
-		const serveur = await retenirLesActions(page)
+		const server = await keepActions(page)
 
-		await remplirIdentite(page)
-		serveur.armer()
-		await appuyer(page.getByRole('button', { name: 'Suivant' }))
+		await fillIdentity(page)
+		server.armer()
+		await press(page.getByRole('button', { name: 'Suivant' }))
 		// The server has not answered: the step says so, and nothing else opens.
 		await expect(page.getByRole('button', { name: 'Enregistrement…' })).toBeDisabled()
-		await expect(titre(page)).toHaveText('Ton identité')
-		expect((await profilDe(email)).firstName ?? null).toBeNull()
-		serveur.liberer()
-		await expect(titre(page)).toHaveText('Ta zone')
+		await expect(title(page)).toHaveText('Ton identité')
+		expect((await profileOf(email)).firstName ?? null).toBeNull()
+		server.liberer()
+		await expect(title(page)).toHaveText('Ta zone')
 
-		await choisirLille(page)
-		serveur.armer()
-		await appuyer(page.getByRole('button', { name: 'Suivant' }))
+		await chooseLille(page)
+		server.armer()
+		await press(page.getByRole('button', { name: 'Suivant' }))
 		await expect(page.getByRole('button', { name: 'Enregistrement…' })).toBeDisabled()
-		await expect(titre(page)).toHaveText('Ta zone')
-		serveur.liberer()
-		await expect(titre(page)).toHaveText('Ta photo principale')
+		await expect(title(page)).toHaveText('Ta zone')
+		server.liberer()
+		await expect(title(page)).toHaveText('Ta photo principale')
 
-		await choisirLaPhoto(page)
-		serveur.armer()
-		await appuyer(page.getByRole('button', { name: 'Terminer' }))
+		await choosePhoto(page)
+		server.armer()
+		await press(page.getByRole('button', { name: 'Terminer' }))
 		// The last answer has not come: she is still on the step, no arrival is claimed.
 		await expect(page.getByRole('button', { name: 'Enregistrement…' })).toBeDisabled()
 		await expect(page).toHaveURL(/\/auth\/init-account$/)
-		await expect.poll(async () => (await profilDe(email)).mainPicture ?? null, { timeout: 5000 }).toBeNull()
-		serveur.liberer()
+		await expect.poll(async () => (await profileOf(email)).mainPicture ?? null, { timeout: 5000 }).toBeNull()
+		server.liberer()
 		await expect(page).toHaveURL(/\/auth\/profil$/, { timeout: 60_000 })
-		expect((await profilDe(email)).active).toBe(true)
+		expect((await profileOf(email)).active).toBe(true)
 	})
 
 	test('un échec reste sur l’étape, la saisie est gardée, puis ça passe ; reprise à l’étape 2 après un départ', async ({
 		page,
 	}) => {
 		test.setTimeout(120_000)
-		const email = await nouveauCompte()
-		await seConnecter(page, email)
+		const email = await newAccount()
+		await signInAction(page, email)
 		await page.waitForLoadState('networkidle')
 
 		// The network fails on the first save.
 		await page.route(`**${PAGE}`, route =>
 			route.request().method() === 'POST' && route.request().headers()['next-action'] ? route.abort() : route.continue()
 		)
-		await remplirIdentite(page)
-		await appuyer(page.getByRole('button', { name: 'Suivant' }))
+		await fillIdentity(page)
+		await press(page.getByRole('button', { name: 'Suivant' }))
 		await expect(page.getByRole('alert').filter({ hasText: 'n’a pas abouti' })).toBeVisible()
-		await expect(titre(page)).toHaveText('Ton identité')
+		await expect(title(page)).toHaveText('Ton identité')
 		await expect(page.getByLabel('Prénom')).toHaveValue('Léa')
 		await expect(page.getByLabel(/Spécialité/)).toHaveValue('Maquillage mariée')
-		expect((await profilDe(email)).firstName ?? null).toBeNull()
+		expect((await profileOf(email)).firstName ?? null).toBeNull()
 
 		// The network is back: the same form passes.
 		await page.unroute(`**${PAGE}`)
-		await appuyer(page.getByRole('button', { name: 'Suivant' }))
-		await expect(titre(page)).toHaveText('Ta zone')
+		await press(page.getByRole('button', { name: 'Suivant' }))
+		await expect(title(page)).toHaveText('Ta zone')
 
 		// She leaves, and comes back later: step 2, not step 1.
 		await page.goto('/auth/profil')
 		await expect(page.getByRole('heading', { name: 'Mon espace' })).toBeVisible()
 		await page.goto(PAGE)
-		await expect(titre(page)).toHaveText('Ta zone')
+		await expect(title(page)).toHaveText('Ta zone')
 		await expect(page.locator('[aria-current="step"]')).toContainText('Zone')
 		await page.reload()
-		await expect(titre(page)).toHaveText('Ta zone')
+		await expect(title(page)).toHaveText('Ta zone')
 	})
 
 	test('au clavier : Entrée envoie l’étape, les flèches choisissent la commune, le focus suit le titre', async ({
 		page,
 	}) => {
-		const email = await nouveauCompte()
-		await seConnecter(page, email)
+		const email = await newAccount()
+		await signInAction(page, email)
 		await page.waitForLoadState('networkidle')
 
 		await page.getByLabel('Prénom').focus()
@@ -280,8 +280,8 @@ test.describe('E02 : l’accueil en trois étapes', { tag: '@mobile' }, () => {
 		await page.keyboard.press('Tab')
 		await page.keyboard.type('Maquillage mariée')
 		await page.keyboard.press('Enter')
-		await expect(titre(page)).toHaveText('Ta zone')
-		await expect(titre(page)).toBeFocused()
+		await expect(title(page)).toHaveText('Ta zone')
+		await expect(title(page)).toBeFocused()
 
 		await page.getByRole('combobox', { name: 'Ta commune' }).focus()
 		await page.keyboard.type('Lille')
@@ -291,33 +291,33 @@ test.describe('E02 : l’accueil en trois étapes', { tag: '@mobile' }, () => {
 		await expect(page.getByRole('combobox', { name: 'Ta commune' })).toHaveValue(/Lille/)
 		await page.getByRole('button', { name: 'Suivant' }).focus()
 		await page.keyboard.press('Enter')
-		await expect(titre(page)).toHaveText('Ta photo principale')
-		await expect(titre(page)).toBeFocused()
-		expect(await violationsApresLeTitre(page)).toEqual([])
+		await expect(title(page)).toHaveText('Ta photo principale')
+		await expect(title(page)).toBeFocused()
+		expect(await violationsAfterTitle(page)).toEqual([])
 	})
 
 	test('un compte venu sans profil : le profil vide est créé côté serveur, puis l’accueil', async ({
 		context,
 		page,
 	}) => {
-		const compte = await createAccount('maquilleuse-sans-profil')
-		await context.addCookies(compte.session.cookies)
+		const account = await createAccount('maquilleuse-sans-profil')
+		await context.addCookies(account.session.cookies)
 		const payload = await testPayload()
-		const profils = () =>
-			payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } }).then(r => r.docs)
-		expect(await profils()).toHaveLength(0)
+		const profiles = () =>
+			payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: account.id } } }).then(r => r.docs)
+		expect(await profiles()).toHaveLength(0)
 		try {
 			await page.goto('/auth/profil')
 			// Her space sends her to the onboarding, which makes the profile.
 			await expect(page).toHaveURL(/\/auth\/init-account$/)
-			await expect(titre(page)).toHaveText('Ton identité')
-			const apres = await profils()
-			expect(apres).toHaveLength(1)
+			await expect(title(page)).toHaveText('Ton identité')
+			const after = await profiles()
+			expect(after).toHaveLength(1)
 			await page.reload()
-			expect(await profils()).toHaveLength(1)
+			expect(await profiles()).toHaveLength(1)
 		} finally {
-			for (const { id } of await profils()) await payload.delete({ collection: 'profiles', id }).catch(() => undefined)
-			await payload.delete({ collection: 'pros', id: compte.id }).catch(() => undefined)
+			for (const { id } of await profiles()) await payload.delete({ collection: 'profiles', id }).catch(() => undefined)
+			await payload.delete({ collection: 'pros', id: account.id }).catch(() => undefined)
 		}
 	})
 })

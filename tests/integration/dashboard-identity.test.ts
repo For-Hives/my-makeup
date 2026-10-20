@@ -14,27 +14,27 @@ import { emptyBase, testPayload } from '../support/payload-test'
 
 afterEach(emptyBase)
 
-type Maquilleuse = TestAccount<'maquilleuse'>
+type Artist = TestAccount<'maquilleuse'>
 
 /** The account as Payload hands it to a request: what the access rules read. */
-async function utilisateurDe(payload: Payload, compte: Maquilleuse): Promise<DashboardUser> {
+async function userOf(payload: Payload, compte: Artist): Promise<DashboardUser> {
 	const doc = await payload.findByID({ collection: 'pros', id: compte.id, depth: 0, overrideAccess: true })
 	return { ...doc, collection: 'pros' } as DashboardUser
 }
 
-async function profilStocke(payload: Payload, compte: Maquilleuse) {
+async function storedProfile(payload: Payload, compte: Artist) {
 	const { docs } = await payload.find({
 		collection: 'profiles',
 		depth: 0,
 		overrideAccess: true,
 		where: { pro: { equals: compte.id } },
 	})
-	const profil = docs[0]
-	if (!profil) throw new Error('pas de profil')
-	return profil
+	const profile = docs[0]
+	if (!profile) throw new Error('pas de profil')
+	return profile
 }
 
-const IDENTITE = { prenom: 'Léa', nom: 'Fictive', nomArtiste: 'Studio Fictif', specialite: 'Maquillage mariée' }
+const IDENTITY = { prenom: 'Léa', nom: 'Fictive', nomArtiste: 'Studio Fictif', specialite: 'Maquillage mariée' }
 
 describe('U54 : la page ne lit que le profil de la maquilleuse connectée', () => {
 	test('A lit le sien, jamais celui de B', async () => {
@@ -43,32 +43,32 @@ describe('U54 : la page ne lit que le profil de la maquilleuse connectée', () =
 		const payload = await testPayload()
 		await payload.update({
 			collection: 'profiles',
-			id: (await profilStocke(payload, b)).id,
+			id: (await storedProfile(payload, b)).id,
 			data: {
-				firstName: IDENTITE.prenom,
-				lastName: IDENTITE.nom,
-				artistName: IDENTITE.nomArtiste,
-				specialty: IDENTITE.specialite,
+				firstName: IDENTITY.prenom,
+				lastName: IDENTITY.nom,
+				artistName: IDENTITY.nomArtiste,
+				specialty: IDENTITY.specialite,
 			},
 		})
 
-		const profilDeA = await artistProfile(payload, await utilisateurDe(payload, a))
+		const profileOfA = await artistProfile(payload, await userOf(payload, a))
 
-		expect(profilDeA?.id).toBe((await profilStocke(payload, a)).id)
-		expect(profilDeA?.lastName).not.toBe('Fictive')
-		expect(JSON.stringify(profilDeA)).not.toContain('Studio Fictif')
+		expect(profileOfA?.id).toBe((await storedProfile(payload, a)).id)
+		expect(profileOfA?.lastName).not.toBe('Fictive')
+		expect(JSON.stringify(profileOfA)).not.toContain('Studio Fictif')
 		// Nothing the cards do not show: no account, no internal field, no slug.
-		expect(Object.keys(profilDeA ?? {}).sort()).not.toContain('pro')
-		expect(profilDeA).not.toHaveProperty('internalNote')
-		expect(profilDeA).not.toHaveProperty('score')
+		expect(Object.keys(profileOfA ?? {}).sort()).not.toContain('pro')
+		expect(profileOfA).not.toHaveProperty('internalNote')
+		expect(profileOfA).not.toHaveProperty('score')
 	})
 
 	test('un compte de l’administration n’a pas de profil de maquilleuse', async () => {
 		const admin = await createAccount('admin')
 		const payload = await testPayload()
 		const doc = await payload.findByID({ collection: 'admins', id: admin.id, depth: 0, overrideAccess: true })
-		const utilisateur = { ...doc, collection: 'admins' } as unknown as DashboardUser
-		expect(await artistProfile(payload, utilisateur)).toBeNull()
+		const user = { ...doc, collection: 'admins' } as unknown as DashboardUser
+		expect(await artistProfile(payload, user)).toBeNull()
 	})
 })
 
@@ -77,21 +77,21 @@ describe('E19 : l’identité enregistrée est celle de la base', () => {
 		const a = await createAccount('maquilleuse')
 		const b = await createAccount('maquilleuse')
 		const payload = await testPayload()
-		const avantB = await profilStocke(payload, b)
+		const beforeB = await storedProfile(payload, b)
 
-		const resultat = await saveIdentity(payload, await utilisateurDe(payload, a), {
-			...IDENTITE,
+		const result = await saveIdentity(payload, await userOf(payload, a), {
+			...IDENTITY,
 			prenom: '  Léa  ',
 		})
 
-		expect(resultat).toEqual({ ok: true, valeurs: IDENTITE })
-		expect(await profilStocke(payload, a)).toMatchObject({
+		expect(result).toEqual({ ok: true, valeurs: IDENTITY })
+		expect(await storedProfile(payload, a)).toMatchObject({
 			firstName: 'Léa',
 			lastName: 'Fictive',
 			artistName: 'Studio Fictif',
 			specialty: 'Maquillage mariée',
 		})
-		expect(await profilStocke(payload, b)).toMatchObject({ firstName: avantB.firstName, lastName: avantB.lastName })
+		expect(await storedProfile(payload, b)).toMatchObject({ firstName: beforeB.firstName, lastName: beforeB.lastName })
 	})
 })
 
@@ -107,49 +107,49 @@ describe('U32, I03, I02 : une requête forgée est refusée, rien ne change', ()
 	])('la clé réservée %s refuse la requête entière', async (cle, valeur) => {
 		const a = await createAccount('maquilleuse')
 		const payload = await testPayload()
-		const avant = await profilStocke(payload, a)
+		const before = await storedProfile(payload, a)
 
-		const resultat = await saveIdentity(payload, await utilisateurDe(payload, a), {
-			...IDENTITE,
+		const result = await saveIdentity(payload, await userOf(payload, a), {
+			...IDENTITY,
 			[cle]: valeur,
 		})
 
-		expect(resultat).toEqual({ ok: false, message: FAILURE_MESSAGE })
-		const apres = await profilStocke(payload, a)
-		expect(apres.updatedAt).toBe(avant.updatedAt)
-		expect(apres.firstName).toBe(avant.firstName)
-		expect(apres.slug).toBe(avant.slug)
-		expect(apres.status).toBe(avant.status)
-		expect(apres.verified).toBe(avant.verified)
+		expect(result).toEqual({ ok: false, message: FAILURE_MESSAGE })
+		const after = await storedProfile(payload, a)
+		expect(after.updatedAt).toBe(before.updatedAt)
+		expect(after.firstName).toBe(before.firstName)
+		expect(after.slug).toBe(before.slug)
+		expect(after.status).toBe(before.status)
+		expect(after.verified).toBe(before.verified)
 	})
 
 	test('hors bornes : le message est sous le champ et la base ne bouge pas', async () => {
 		const a = await createAccount('maquilleuse')
 		const payload = await testPayload()
-		const avant = await profilStocke(payload, a)
+		const before = await storedProfile(payload, a)
 
-		const resultat = await saveIdentity(payload, await utilisateurDe(payload, a), {
-			...IDENTITE,
+		const result = await saveIdentity(payload, await userOf(payload, a), {
+			...IDENTITY,
 			nom: 'A',
 			specialite: 'x'.repeat(71),
 		})
 
-		expect(resultat).toMatchObject({
+		expect(result).toMatchObject({
 			ok: false,
 			champs: {
 				nom: 'Ton nom doit contenir au moins 2 caractères.',
 				specialite: 'Ta spécialité ne doit pas dépasser 70 caractères.',
 			},
 		})
-		expect((await profilStocke(payload, a)).updatedAt).toBe(avant.updatedAt)
+		expect((await storedProfile(payload, a)).updatedAt).toBe(before.updatedAt)
 	})
 
 	test('un compte sans profil ne crée rien : message du site', async () => {
-		const sansProfil = await createAccount('maquilleuse-sans-profil')
+		const withoutProfile = await createAccount('maquilleuse-sans-profil')
 		const payload = await testPayload()
-		const doc = await payload.findByID({ collection: 'pros', id: sansProfil.id, depth: 0, overrideAccess: true })
-		const resultat = await saveIdentity(payload, { ...doc, collection: 'pros' } as DashboardUser, IDENTITE)
-		expect(resultat).toEqual({ ok: false, message: FAILURE_MESSAGE })
+		const doc = await payload.findByID({ collection: 'pros', id: withoutProfile.id, depth: 0, overrideAccess: true })
+		const result = await saveIdentity(payload, { ...doc, collection: 'pros' } as DashboardUser, IDENTITY)
+		expect(result).toEqual({ ok: false, message: FAILURE_MESSAGE })
 		expect((await payload.count({ collection: 'profiles', overrideAccess: true })).totalDocs).toBe(0)
 	})
 })
@@ -158,16 +158,16 @@ describe('I19 : changer de nom ne change pas l’adresse du profil', () => {
 	test('deux enregistrements de suite, le slug est celui de la création', async () => {
 		const a = await createAccount('maquilleuse')
 		const payload = await testPayload()
-		const utilisateur = await utilisateurDe(payload, a)
-		const slug = (await profilStocke(payload, a)).slug
+		const user = await userOf(payload, a)
+		const slug = (await storedProfile(payload, a)).slug
 
 		await Promise.all([
-			saveIdentity(payload, utilisateur, IDENTITE),
-			saveIdentity(payload, utilisateur, { ...IDENTITE, nom: 'Autre', prenom: 'Zoé' }),
+			saveIdentity(payload, user, IDENTITY),
+			saveIdentity(payload, user, { ...IDENTITY, nom: 'Autre', prenom: 'Zoé' }),
 		])
 
-		const apres = await profilStocke(payload, a)
-		expect(apres.slug).toBe(slug)
-		expect(['Fictive', 'Autre']).toContain(apres.lastName ?? '')
+		const after = await storedProfile(payload, a)
+		expect(after.slug).toBe(slug)
+		expect(['Fictive', 'Autre']).toContain(after.lastName ?? '')
 	})
 })

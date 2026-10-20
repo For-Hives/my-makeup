@@ -5,12 +5,12 @@ import { expect, test } from '@playwright/test'
  * and one word of explanation on the sign-in page, once.
  */
 
-let compteur = 0
+let counter = 0
 test.beforeEach(({ context }) =>
-	context.setExtraHTTPHeaders({ 'x-forwarded-for': `192.0.2.${150 + (++compteur % 80)}` })
+	context.setExtraHTTPHeaders({ 'x-forwarded-for': `192.0.2.${150 + (++counter % 80)}` })
 )
 
-const NOMS = [
+const NAMES = [
 	'__Secure-next-auth.session-token.0',
 	'__Secure-next-auth.session-token.1',
 	'__Host-next-auth.csrf-token',
@@ -24,7 +24,7 @@ test.describe('E18 : les cookies hérités', { tag: '@mobile' }, () => {
 		page,
 	}) => {
 		await context.addCookies(
-			NOMS.map(name => ({
+			NAMES.map(name => ({
 				name,
 				value: 'ancienne-valeur',
 				domain: new URL(baseURL ?? '').hostname,
@@ -61,13 +61,13 @@ test.describe('E18 : les cookies hérités', { tag: '@mobile' }, () => {
 
 	// Ticket 223, constat 8: a response that carries a cookie is for this visitor alone.
 	test('une page publique qui efface un cookie hérité n’est gardée par aucun cache partagé', async ({ request }) => {
-		const avec = await request.get('/contact', { headers: { cookie: `${NOMS[0]}=ancienne-valeur` } })
-		expect(avec.status()).toBe(200)
-		expect(avec.headers()['set-cookie']).toContain('Max-Age=0')
-		expect(avec.headers()['cache-control']).toBe('private, no-store')
+		const withValue = await request.get('/contact', { headers: { cookie: `${NAMES[0]}=ancienne-valeur` } })
+		expect(withValue.status()).toBe(200)
+		expect(withValue.headers()['set-cookie']).toContain('Max-Age=0')
+		expect(withValue.headers()['cache-control']).toBe('private, no-store')
 
-		const sans = await request.get('/contact')
-		expect(sans.headers()['set-cookie']).toBeUndefined()
-		expect(sans.headers()['cache-control'] ?? '').not.toContain('private')
+		const without = await request.get('/contact')
+		expect(without.headers()['set-cookie']).toBeUndefined()
+		expect(without.headers()['cache-control'] ?? '').not.toContain('private')
 	})
 })

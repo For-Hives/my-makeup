@@ -8,13 +8,13 @@ import { createAccount } from '../support/account-factory'
  * sends its own made-up address (192.0.2.x, reserved for documentation) as the proxy would.
  */
 
-const MOT_DE_PASSE = 'motdepasse-fictif'
-let compteur = 0
-const adresseDuTest = () => `192.0.2.${100 + (++compteur % 100)}`
+const PASSWORD = 'motdepasse-fictif'
+let counter = 0
+const testUrl = () => `192.0.2.${100 + (++counter % 100)}`
 
-test.beforeEach(({ context }) => context.setExtraHTTPHeaders({ 'x-forwarded-for': adresseDuTest() }))
+test.beforeEach(({ context }) => context.setExtraHTTPHeaders({ 'x-forwarded-for': testUrl() }))
 
-async function seConnecter(page: import('@playwright/test').Page, email: string, motDePasse: string) {
+async function signInAction(page: import('@playwright/test').Page, email: string, motDePasse: string) {
 	await page.getByLabel('Adresse email').fill(email)
 	await page.getByLabel('Mot de passe').fill(motDePasse)
 	await page.getByRole('button', { name: 'Se connecter' }).click()
@@ -24,12 +24,12 @@ test.describe('Connexion par email', { tag: '@mobile' }, () => {
 	test('E05 : une saisie juste mène à l’espace, par un seul cookie illisible par le JavaScript', {
 		tag: '@smoke',
 	}, async ({ context, page }) => {
-		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const account = await createAccount('maquilleuse', { motDePasse: () => PASSWORD })
 
 		await page.goto('/auth/signin')
 		await expect(page.getByRole('heading', { level: 1, name: 'Se connecter' })).toBeVisible()
 		await page.screenshot({ path: `test-results/essais/connexion-signin-${test.info().project.name}.png` })
-		await seConnecter(page, compte.email, MOT_DE_PASSE)
+		await signInAction(page, account.email, PASSWORD)
 
 		await expect(page).toHaveURL(/\/auth\/profil$/)
 		await expect(page.getByRole('heading', { level: 1, name: 'Mon espace' })).toBeVisible()
@@ -43,34 +43,34 @@ test.describe('Connexion par email', { tag: '@mobile' }, () => {
 		context,
 		page,
 	}) => {
-		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const account = await createAccount('maquilleuse', { motDePasse: () => PASSWORD })
 
 		await page.goto('/auth/signin')
-		await seConnecter(page, compte.email, 'pas-le-bon')
+		await signInAction(page, account.email, 'pas-le-bon')
 
-		const alerte = page.getByTestId('erreur-connexion')
-		await expect(alerte).toHaveText('Email ou mot de passe incorrect.')
+		const alert = page.getByTestId('erreur-connexion')
+		await expect(alert).toHaveText('Email ou mot de passe incorrect.')
 		await expect(page).toHaveURL(/\/auth\/signin$/)
 		expect(await context.cookies()).toEqual([])
 	})
 
 	test('une adresse inconnue donne le même message', async ({ page }) => {
 		await page.goto('/auth/signin')
-		await seConnecter(page, 'personne@example.test', MOT_DE_PASSE)
+		await signInAction(page, 'personne@example.test', PASSWORD)
 		await expect(page.getByTestId('erreur-connexion')).toHaveText('Email ou mot de passe incorrect.')
 	})
 
 	test('l’email est insensible à la casse', async ({ page }) => {
-		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const account = await createAccount('maquilleuse', { motDePasse: () => PASSWORD })
 		await page.goto('/auth/signin')
-		await seConnecter(page, compte.email.toUpperCase(), MOT_DE_PASSE)
+		await signInAction(page, account.email.toUpperCase(), PASSWORD)
 		await expect(page).toHaveURL(/\/auth\/profil$/)
 	})
 
 	test('Entrée maintenue : un seul envoi', async ({ page }) => {
-		const envois: string[] = []
+		const uploads: string[] = []
 		page.on('request', requete => {
-			if (requete.method() === 'POST' && new URL(requete.url()).pathname === '/auth/signin') envois.push(requete.url())
+			if (requete.method() === 'POST' && new URL(requete.url()).pathname === '/auth/signin') uploads.push(requete.url())
 		})
 		await page.goto('/auth/signin')
 		await page.getByLabel('Adresse email').fill('personne@example.test')
@@ -79,12 +79,12 @@ test.describe('Connexion par email', { tag: '@mobile' }, () => {
 		for (let i = 0; i < 6; i++) await page.keyboard.press('Enter')
 
 		await expect(page.getByTestId('erreur-connexion')).toHaveText('Email ou mot de passe incorrect.')
-		expect(envois).toHaveLength(1)
+		expect(uploads).toHaveLength(1)
 	})
 
 	test('déjà connectée : la page de connexion renvoie vers l’espace', async ({ context, page }) => {
-		const compte = await createAccount('maquilleuse')
-		await context.addCookies(compte.session.cookies)
+		const account = await createAccount('maquilleuse')
+		await context.addCookies(account.session.cookies)
 
 		await page.goto('/auth/signin')
 
@@ -92,8 +92,8 @@ test.describe('Connexion par email', { tag: '@mobile' }, () => {
 	})
 
 	test('les pages d’authentification sont en noindex', async ({ page, request }) => {
-		const reponse = await request.get('/auth/signin')
-		expect(reponse.headers()['x-robots-tag']).toContain('noindex')
+		const response = await request.get('/auth/signin')
+		expect(response.headers()['x-robots-tag']).toContain('noindex')
 		await page.goto('/auth/signin')
 		await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/)
 	})

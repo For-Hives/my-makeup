@@ -136,7 +136,7 @@ Au 14/10/2026, tout ce document a été vérifié sur un poste de développement
 | `ci-ok` rouge sur une pull request cassée, fusion bloquée pour un administrateur aussi | Dès que `v3` est protégée | « Canari », plus bas | Pas encore |
 | La CI à cinq jobs tourne : `integration` et les deux lots `e2e` verts, puis `ci-ok` vert | À la première poussée de `v3` qui contient ces deux jobs | `gh run view NUMERO`, puis la seconde commande de « Durée de la CI » | 14/10/2026 : CI 38512540493, sur le commit `1016d81`, les sept jobs verts (46 tests d'intégration, 4 essais par lot `e2e`) |
 | Une CI verte dure moins de 15 minutes, et chaque lot `e2e` moins de 10 | Au même passage | Les deux commandes de « Durée de la CI » | 14/10/2026 : 1 min 52 s ; chaque lot `e2e` 1 min 44 s |
-| Un essai de bout en bout faux exprès rend `e2e`, puis `ci-ok`, rouges | Au canari, ou sur toute pull request qui porte la faute `tests/e2e/canari.spec.ts` | « Canari », plus bas : la ligne `e2e` | Oui, le 14/10/2026 : pull request #975, fermée sans fusion, CI 38513184222 ; `e2e (1/2)` rouge sur cet essai (3 tentatives), `e2e (2/2)` vert, puis `ci-ok` rouge, « Un job n'a pas réussi (failure) » |
+| Un essai de bout en bout faux exprès rend `e2e`, puis `ci-ok`, rouges | Au canari, ou sur toute pull request qui porte la faute `tests/e2e/canary.spec.ts` | « Canari », plus bas : la ligne `e2e` | Oui, le 14/10/2026 : pull request #975, fermée sans fusion, CI 38513184222 ; `e2e (1/2)` rouge sur cet essai (3 tentatives), `e2e (2/2)` vert, puis `ci-ok` rouge, « Un job n'a pas réussi (failure) » |
 
 Au premier passage, le job `build` a été vert sur le Docker de GitHub. Avant lui, ces trois points n'avaient tourné que derrière Podman : s'il passe au rouge sans que l'image ait changé, les regarder d'abord.
 
@@ -274,10 +274,10 @@ Un check requis qui ne peut pas échouer ne protège rien. Le canari est une pul
 
 | Fichier | Faute | Ce qui doit passer au rouge |
 |---|---|---|
-| `tests/unit/canari.test.ts` | Un test faux | Job `unit` |
-| `tests/ci/canari-types.ts` | Une erreur de type | Job `qualite`, étape « Types » |
-| `tests/ci/canari-biome.ts` | Une variable jamais lue | Job `qualite`, étape « Biome » |
-| `tests/e2e/canari.spec.ts` | Un essai de bout en bout faux | Job `e2e`, étape « End-to-end tests », dans le lot qui le reçoit |
+| `tests/unit/canary.test.ts` | Un test faux | Job `unit` |
+| `tests/ci/canary-types.ts` | Une erreur de type | Job `qualite`, étape « Types » |
+| `tests/ci/canary-biome.ts` | Une variable jamais lue | Job `qualite`, étape « Biome » |
+| `tests/e2e/canary.spec.ts` | Un essai de bout en bout faux | Job `e2e`, étape « End-to-end tests », dans le lot qui le reçoit |
 
 Les quatre fichiers sont sous `tests/`, hors de l'image Docker : le job `build` reste vert, et chaque rouge désigne un seul outil. L'essai faux n'ouvre aucune page : il échoue de la même façon dans chaque lot, et se rejoue sans navigateur.
 
@@ -289,7 +289,7 @@ Il faut que `v3` soit protégée : `ci-ok` et `CodeQL` requis, administrateurs s
 git fetch origin
 git switch -c canari-2026-10 origin/v3
 bun run ci:canary
-git add tests/unit/canari.test.ts tests/ci/canari-types.ts tests/ci/canari-biome.ts tests/e2e/canari.spec.ts
+git add tests/unit/canary.test.ts tests/ci/canary-types.ts tests/ci/canary-biome.ts tests/e2e/canary.spec.ts
 git commit -m "test(v3): canary, four faults on purpose, never merge"
 git push -u origin canari-2026-10
 gh pr create --base v3 --title "Canari : ne pas fusionner" --body "Quatre fautes posées exprès (docs/qualite.md, « Canari »). À fermer sans fusion."
@@ -334,11 +334,11 @@ Ce n'est pas le canari : rien n'a été poussé, aucune pull request n'a été o
 
 | Commande | Résultat |
 |---|---|
-| `bun --no-env-file test`, sur le fichier fautif `tests/unit/canari.test.ts` | 1 test en échec, code de sortie 1 |
-| `bun run ci:biome` | `noUnusedVariables` sur `tests/ci/canari-biome.ts`, et rien d'autre ; code de sortie 1 |
-| `bun run typecheck` | `TS2322` sur `tests/ci/canari-types.ts`, et rien d'autre ; code de sortie 2 |
+| `bun --no-env-file test`, sur le fichier fautif `tests/unit/canary.test.ts` | 1 test en échec, code de sortie 1 |
+| `bun run ci:biome` | `noUnusedVariables` sur `tests/ci/canary-biome.ts`, et rien d'autre ; code de sortie 1 |
+| `bun run typecheck` | `TS2322` sur `tests/ci/canary-types.ts`, et rien d'autre ; code de sortie 2 |
 | Le script de `ci-ok`, avec un job en `failure` | Code de sortie 1 (test de `tests/ci/ci-guardrails.test.ts`) |
-| `CI=true bun run test:e2e --shard=1/2`, puis `--shard=2/2`, l'essai faux `tests/e2e/canari.spec.ts` posé, banc démarré | Lot 1 : l'essai faux en échec, puis rejoué deux fois, code de sortie 1. Lot 2 : 4 essais verts, code de sortie 0. Le job `e2e` aurait donc le résultat `failure` |
+| `CI=true bun run test:e2e --shard=1/2`, puis `--shard=2/2`, l'essai faux `tests/e2e/canary.spec.ts` posé, banc démarré | Lot 1 : l'essai faux en échec, puis rejoué deux fois, code de sortie 1. Lot 2 : 4 essais verts, code de sortie 0. Le job `e2e` aurait donc le résultat `failure` |
 | Le script de `ci-ok`, avec `success` pour les quatre premiers jobs et `failure` pour `e2e` | Code de sortie 1, « Un job n'a pas réussi (failure) : ci-ok est rouge. » |
 
 Le kit ne peut pas pourrir en silence : `tests/ci/canary.test.ts` rejoue les quatre fautes à chaque CI, dans un dossier temporaire, et échoue si l'une d'elles n'est plus une faute. L'essai faux y est lancé par Playwright lui-même, sans navigateur ni banc.

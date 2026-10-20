@@ -13,51 +13,50 @@ import { callRest } from '../support/rest'
 
 afterEach(emptyBase)
 
-type Listes = Pick<Profile, 'serviceOffers' | 'skills' | 'languages' | 'courses' | 'experiences'>
+type Lists = Pick<Profile, 'serviceOffers' | 'skills' | 'languages' | 'courses' | 'experiences'>
 
 /** Identifiers as Payload gives them to a row. */
-const IDENTIFIANT = /^[0-9a-f]{24}$/
+const IDENTIFIER = /^[0-9a-f]{24}$/
 
 /** A makeup artist with her empty profile and her session. */
-async function maquilleuse() {
-	const compte = await createAccount('maquilleuse')
+async function artist() {
+	const account = await createAccount('maquilleuse')
 	const payload = await testPayload()
-	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
-	const profil = docs[0]
-	if (!profil) throw new Error('La fabrique devait créer le profil de la maquilleuse.')
-	return { compte, profil: profil.id }
+	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: account.id } } })
+	const profile = docs[0]
+	if (!profile) throw new Error('La fabrique devait créer le profil de la maquilleuse.')
+	return { compte: account, profil: profile.id }
 }
 
-type Maquilleuse = Awaited<ReturnType<typeof maquilleuse>>
+type Artist = Awaited<ReturnType<typeof artist>>
 
 /** Her profile as she reads it, by REST. */
-async function lire({ compte, profil }: Maquilleuse): Promise<Profile> {
-	const { statut, corps } = await callRest('GET', `/api/profiles/${profil}?depth=0`, {
-		enTetes: compte.session.enTetes,
+async function read({ compte: account, profil: profile }: Artist): Promise<Profile> {
+	const { statut: status, corps } = await callRest('GET', `/api/profiles/${profile}?depth=0`, {
+		enTetes: account.session.enTetes,
 	})
-	expect(statut).toBe(200)
+	expect(status).toBe(200)
 	return corps as Profile
 }
 
 /** A save of her profile, by REST, as her space will send it. */
-const enregistrer = ({ compte, profil }: Maquilleuse, donnees: Partial<Profile>) =>
-	callRest('PATCH', `/api/profiles/${profil}?depth=0`, { enTetes: compte.session.enTetes, corps: donnees })
+const save = ({ compte: account, profil: profile }: Artist, donnees: Partial<Profile>) =>
+	callRest('PATCH', `/api/profiles/${profile}?depth=0`, { enTetes: account.session.enTetes, corps: donnees })
 
 /** The profile as stored, read without access control. */
-const stocke = async (profil: number) =>
+const stored = async (profil: number) =>
 	(await testPayload()).findByID({ collection: 'profiles', id: profil, depth: 0 })
 
 /** The refusals of a REST answer: where, and what the artist reads. */
-function refus(corps: unknown): { path: string; message: string }[] {
-	const erreurs = (corps as { errors?: { data?: { errors?: { path: string; message: string }[] } }[] }).errors ?? []
-	return erreurs.flatMap(({ data }) => (data?.errors ?? []).map(({ path, message }) => ({ path, message })))
+function refusal(corps: unknown): { path: string; message: string }[] {
+	const errors = (corps as { errors?: { data?: { errors?: { path: string; message: string }[] } }[] }).errors ?? []
+	return errors.flatMap(({ data }) => (data?.errors ?? []).map(({ path, message }) => ({ path, message })))
 }
 
-const identifiants = (lignes: readonly { id?: string | null }[] | null | undefined) =>
-	(lignes ?? []).map(({ id }) => id)
+const identifiers = (lignes: readonly { id?: string | null }[] | null | undefined) => (lignes ?? []).map(({ id }) => id)
 
 /** Three offers, the second with two options, in an order no sort would give. */
-const TROIS_PRESTATIONS: NonNullable<Profile['serviceOffers']> = [
+const THREE_SERVICE_OFFERS: NonNullable<Profile['serviceOffers']> = [
 	{ name: 'Mariée', description: 'Essai compris.', priceText: 'à partir de 180 €', priceFrom: 180 },
 	{
 		name: 'Soirée',
@@ -73,28 +72,28 @@ const TROIS_PRESTATIONS: NonNullable<Profile['serviceOffers']> = [
 
 describe('Les sections en liste gardent leur ordre et l’identité de chaque ligne', () => {
 	test('3 prestations dont une à 2 options : même ordre et mêmes identifiants après deux sauvegardes', async () => {
-		const a = await maquilleuse()
+		const a = await artist()
 
-		expect((await enregistrer(a, { serviceOffers: TROIS_PRESTATIONS })).statut).toBe(200)
-		const premiere = (await lire(a)).serviceOffers ?? []
+		expect((await save(a, { serviceOffers: THREE_SERVICE_OFFERS })).statut).toBe(200)
+		const first = (await read(a)).serviceOffers ?? []
 
-		expect(premiere.map(({ name }) => name)).toEqual(['Mariée', 'Soirée', 'Cours d’auto-maquillage'])
-		expect(premiere[1]?.options?.map(({ name }) => name)).toEqual(['Faux cils', 'Déplacement'])
-		const tous = [...identifiants(premiere), ...identifiants(premiere[1]?.options)]
-		for (const id of tous) expect(id).toMatch(IDENTIFIANT)
-		expect(new Set(tous).size).toBe(5)
+		expect(first.map(({ name }) => name)).toEqual(['Mariée', 'Soirée', 'Cours d’auto-maquillage'])
+		expect(first[1]?.options?.map(({ name }) => name)).toEqual(['Faux cils', 'Déplacement'])
+		const all = [...identifiers(first), ...identifiers(first[1]?.options)]
+		for (const id of all) expect(id).toMatch(IDENTIFIER)
+		expect(new Set(all).size).toBe(5)
 
 		// First save: the list sent back as read. Second save: another field only.
-		expect((await enregistrer(a, { serviceOffers: premiere })).statut).toBe(200)
-		expect((await lire(a)).serviceOffers).toEqual(premiere)
-		expect((await enregistrer(a, { firstName: 'Zoé' })).statut).toBe(200)
-		expect((await lire(a)).serviceOffers).toEqual(premiere)
+		expect((await save(a, { serviceOffers: first })).statut).toBe(200)
+		expect((await read(a)).serviceOffers).toEqual(first)
+		expect((await save(a, { firstName: 'Zoé' })).statut).toBe(200)
+		expect((await read(a)).serviceOffers).toEqual(first)
 	})
 
 	test('les cinq listes gardent leurs lignes, leur ordre et leurs identifiants, par REST puis par l’API locale', async () => {
-		const a = await maquilleuse()
-		const listes: Listes = {
-			serviceOffers: TROIS_PRESTATIONS,
+		const a = await artist()
+		const lists: Lists = {
+			serviceOffers: THREE_SERVICE_OFFERS,
 			skills: [{ name: 'Mariage', description: 'Depuis 2015.' }, { name: 'Effets spéciaux' }],
 			languages: [{ name: 'Italien' }, { name: 'Anglais' }, { name: 'Espagnol' }],
 			courses: [
@@ -117,10 +116,10 @@ describe('Les sections en liste gardent leur ordre et l’identité de chaque li
 			],
 		}
 
-		expect((await enregistrer(a, listes)).statut).toBe(200)
-		const lu = await lire(a)
+		expect((await save(a, lists)).statut).toBe(200)
+		const fetched = await read(a)
 
-		expect(lu).toMatchObject({
+		expect(fetched).toMatchObject({
 			skills: [
 				{ name: 'Mariage', description: 'Depuis 2015.' },
 				{ name: 'Effets spéciaux', description: null },
@@ -138,178 +137,178 @@ describe('Les sections en liste gardent leur ordre et l’identité de chaque li
 				{ company: 'Studio fictif', city: null, startDate: '2020-07-01T12:00:00.000Z', endDate: null },
 			],
 		})
-		const relues: Listes = {
-			serviceOffers: lu.serviceOffers,
-			skills: lu.skills,
-			languages: lu.languages,
-			courses: lu.courses,
-			experiences: lu.experiences,
+		const reread: Lists = {
+			serviceOffers: fetched.serviceOffers,
+			skills: fetched.skills,
+			languages: fetched.languages,
+			courses: fetched.courses,
+			experiences: fetched.experiences,
 		}
 
 		const payload = await testPayload()
-		const utilisateur = {
+		const user = {
 			...(await payload.findByID({ collection: 'pros', id: Number(a.compte.id) })),
 			collection: 'pros',
 		}
 		await payload.update({
 			collection: 'profiles',
 			id: a.profil,
-			data: relues,
+			data: reread,
 			overrideAccess: false,
-			user: utilisateur,
+			user: user,
 		})
 
-		expect(await lire(a)).toMatchObject(relues)
+		expect(await read(a)).toMatchObject(reread)
 	})
 
 	test('retirer une ligne ne décale aucun identifiant', async () => {
-		const a = await maquilleuse()
-		await enregistrer(a, {
-			serviceOffers: TROIS_PRESTATIONS,
+		const a = await artist()
+		await save(a, {
+			serviceOffers: THREE_SERVICE_OFFERS,
 			languages: [{ name: 'Italien' }, { name: 'Anglais' }, { name: 'Espagnol' }],
 		})
-		const avant = await lire(a)
-		const [mariee, soiree, cours] = avant.serviceOffers ?? []
-		const [italien, anglais, espagnol] = avant.languages ?? []
-		if (!mariee || !soiree || !cours || !italien || !anglais || !espagnol) throw new Error('Lignes attendues.')
-		const [, deplacement] = soiree.options ?? []
+		const before = await read(a)
+		const [bride, evening, ongoing] = before.serviceOffers ?? []
+		const [italien, english, espagnol] = before.languages ?? []
+		if (!bride || !evening || !ongoing || !italien || !english || !espagnol) throw new Error('Lignes attendues.')
+		const [, move] = evening.options ?? []
 
 		// The middle offer goes, and so does the first option of « Soirée »; the first language goes.
 		expect(
 			(
-				await enregistrer(a, {
-					serviceOffers: [mariee, { ...soiree, options: deplacement ? [deplacement] : [] }, cours],
-					languages: [anglais, espagnol],
+				await save(a, {
+					serviceOffers: [bride, { ...evening, options: move ? [move] : [] }, ongoing],
+					languages: [english, espagnol],
 				})
 			).statut
 		).toBe(200)
-		expect((await enregistrer(a, { serviceOffers: [mariee, cours] })).statut).toBe(200)
+		expect((await save(a, { serviceOffers: [bride, ongoing] })).statut).toBe(200)
 
-		const apres = await lire(a)
-		expect(apres.serviceOffers).toEqual([mariee, cours])
-		expect(apres.languages).toEqual([anglais, espagnol])
+		const after = await read(a)
+		expect(after.serviceOffers).toEqual([bride, ongoing])
+		expect(after.languages).toEqual([english, espagnol])
 	})
 
 	test('L1. deux lignes de même contenu ont chacune leur identifiant : retirer l’une laisse l’autre', async () => {
-		const a = await maquilleuse()
-		await enregistrer(a, { languages: [{ name: 'Anglais' }, { name: 'Anglais' }] })
-		const [premiere, seconde] = (await lire(a)).languages ?? []
-		expect(premiere?.id).not.toBe(seconde?.id)
+		const a = await artist()
+		await save(a, { languages: [{ name: 'Anglais' }, { name: 'Anglais' }] })
+		const [first, second] = (await read(a)).languages ?? []
+		expect(first?.id).not.toBe(second?.id)
 
-		await enregistrer(a, { languages: seconde ? [seconde] : [] })
+		await save(a, { languages: second ? [second] : [] })
 
-		expect((await lire(a)).languages).toEqual(seconde ? [seconde] : [])
+		expect((await read(a)).languages).toEqual(second ? [second] : [])
 	})
 
 	test('L1. un identifiant tiré du contenu, copié d’une autre ligne ou pris à un autre profil n’est pas repris', async () => {
-		const [a, b] = await Promise.all([maquilleuse(), maquilleuse()])
-		await enregistrer(a, { languages: [{ name: 'Anglais' }] })
-		const [anglaisDeA] = (await lire(a)).languages ?? []
-		if (!anglaisDeA?.id) throw new Error('Ligne attendue.')
+		const [a, b] = await Promise.all([artist(), artist()])
+		await save(a, { languages: [{ name: 'Anglais' }] })
+		const [englishOfA] = (await read(a)).languages ?? []
+		if (!englishOfA?.id) throw new Error('Ligne attendue.')
 
-		const deB = await enregistrer(b, {
+		const ofB = await save(b, {
 			languages: [
-				{ id: anglaisDeA.id, name: 'Anglais' },
+				{ id: englishOfA.id, name: 'Anglais' },
 				{ id: 'italien', name: 'Italien' },
 			],
 		})
-		expect(deB.statut).toBe(200)
-		const [anglaisDeB, italienDeB] = (await lire(b)).languages ?? []
-		for (const ligne of [anglaisDeB, italienDeB]) expect(ligne?.id).toMatch(IDENTIFIANT)
-		expect(anglaisDeB?.id).not.toBe(anglaisDeA.id)
-		expect((await lire(a)).languages).toEqual([anglaisDeA])
+		expect(ofB.statut).toBe(200)
+		const [englishOfB, italianOfB] = (await read(b)).languages ?? []
+		for (const line of [englishOfB, italianOfB]) expect(line?.id).toMatch(IDENTIFIER)
+		expect(englishOfB?.id).not.toBe(englishOfA.id)
+		expect((await read(a)).languages).toEqual([englishOfA])
 
 		// The same row twice in one save: the copy becomes a new row.
-		await enregistrer(a, { languages: [anglaisDeA, anglaisDeA] })
-		const [garde, copie] = (await lire(a)).languages ?? []
-		expect(garde).toEqual(anglaisDeA)
-		expect(copie?.id).toMatch(IDENTIFIANT)
-		expect(copie?.id).not.toBe(anglaisDeA.id)
+		await save(a, { languages: [englishOfA, englishOfA] })
+		const [guard, copy] = (await read(a)).languages ?? []
+		expect(guard).toEqual(englishOfA)
+		expect(copy?.id).toMatch(IDENTIFIER)
+		expect(copy?.id).not.toBe(englishOfA.id)
 	})
 
 	test('une autre maquilleuse ne touche pas aux listes d’un profil qui n’est pas le sien', async () => {
-		const [a, b] = await Promise.all([maquilleuse(), maquilleuse()])
-		await enregistrer(a, { languages: [{ name: 'Anglais' }] })
-		const avant = (await stocke(a.profil)).languages
+		const [a, b] = await Promise.all([artist(), artist()])
+		await save(a, { languages: [{ name: 'Anglais' }] })
+		const before = (await stored(a.profil)).languages
 
-		const essai = await callRest('PATCH', `/api/profiles/${a.profil}`, {
+		const test = await callRest('PATCH', `/api/profiles/${a.profil}`, {
 			enTetes: b.compte.session.enTetes,
 			corps: { languages: [] },
 		})
 
-		expect([403, 404]).toContain(essai.statut)
-		expect((await stocke(a.profil)).languages).toEqual(avant)
+		expect([403, 404]).toContain(test.statut)
+		expect((await stored(a.profil)).languages).toEqual(before)
 	})
 })
 
 describe('Le serveur valide les bornes, et refuse en français', () => {
 	test('un prix négatif est refusé en français, pour une prestation comme pour une option ; rien n’est écrit', async () => {
-		const a = await maquilleuse()
-		await enregistrer(a, { serviceOffers: TROIS_PRESTATIONS })
-		const avant = (await stocke(a.profil)).serviceOffers
+		const a = await artist()
+		await save(a, { serviceOffers: THREE_SERVICE_OFFERS })
+		const before = (await stored(a.profil)).serviceOffers
 
-		const prestation = await enregistrer(a, { serviceOffers: [{ name: 'Mariée', priceText: '-50', priceFrom: -50 }] })
-		const option = await enregistrer(a, {
+		const serviceOffer = await save(a, { serviceOffers: [{ name: 'Mariée', priceText: '-50', priceFrom: -50 }] })
+		const option = await save(a, {
 			serviceOffers: [{ name: 'Soirée', options: [{ name: 'Faux cils', priceFrom: -15 }] }],
 		})
 
 		const message = 'Le prix doit être un montant entre 5 € et 10 000 €.'
-		expect(prestation.statut).toBe(400)
-		expect(refus(prestation.corps)).toEqual([{ path: 'serviceOffers.0.priceFrom', message }])
+		expect(serviceOffer.statut).toBe(400)
+		expect(refusal(serviceOffer.corps)).toEqual([{ path: 'serviceOffers.0.priceFrom', message }])
 		expect(option.statut).toBe(400)
-		expect(refus(option.corps)).toEqual([{ path: 'serviceOffers.0.options.0.priceFrom', message }])
-		expect((await stocke(a.profil)).serviceOffers).toEqual(avant)
+		expect(refusal(option.corps)).toEqual([{ path: 'serviceOffers.0.options.0.priceFrom', message }])
+		expect((await stored(a.profil)).serviceOffers).toEqual(before)
 	})
 
 	test('un prix vide avec un texte libre est accepté', async () => {
-		const a = await maquilleuse()
+		const a = await artist()
 
-		const reponse = await enregistrer(a, {
+		const response = await save(a, {
 			serviceOffers: [{ name: 'Maquillage artistique', priceText: 'Sur devis, selon le projet', priceFrom: null }],
 		})
 
-		expect(reponse.statut).toBe(200)
-		expect((await lire(a)).serviceOffers).toMatchObject([
+		expect(response.statut).toBe(200)
+		expect((await read(a)).serviceOffers).toMatchObject([
 			{ name: 'Maquillage artistique', priceText: 'Sur devis, selon le projet', priceFrom: null },
 		])
 	})
 
 	test('la fin d’une expérience avant son début est refusée, en français ; le même jour passe', async () => {
-		const a = await maquilleuse()
+		const a = await artist()
 
-		const avantLeDebut = await enregistrer(a, {
+		const beforeStart = await save(a, {
 			experiences: [{ company: 'Studio fictif', startDate: '2023-06-01', endDate: '2023-05-31' }],
 		})
-		const leMemeJour = await enregistrer(a, {
+		const sameDay = await save(a, {
 			experiences: [
 				{ company: 'Studio fictif', startDate: '2023-06-01T20:00:00+02:00', endDate: '2023-06-01T08:00:00+02:00' },
 			],
 		})
 
-		expect(avantLeDebut.statut).toBe(400)
-		expect(refus(avantLeDebut.corps)).toEqual([
+		expect(beforeStart.statut).toBe(400)
+		expect(refusal(beforeStart.corps)).toEqual([
 			{ path: 'experiences.0.endDate', message: 'La fin d’une expérience ne peut pas précéder son début.' },
 		])
-		expect(leMemeJour.statut).toBe(200)
-		expect((await lire(a)).experiences).toMatchObject([
+		expect(sameDay.statut).toBe(200)
+		expect((await read(a)).experiences).toMatchObject([
 			{ startDate: '2023-06-01T12:00:00.000Z', endDate: '2023-06-01T12:00:00.000Z' },
 		])
 	})
 
 	test('un texte trop long, une date qui n’existe pas ou une formation à plus d’un an sont refusés, en français', async () => {
-		const a = await maquilleuse()
-		const dansDeuxAns = `${new Date().getUTCFullYear() + 2}-01-15`
+		const a = await artist()
+		const inTwoYears = `${new Date().getUTCFullYear() + 2}-01-15`
 
-		const reponse = await enregistrer(a, {
+		const response = await save(a, {
 			skills: [{ name: 'a'.repeat(71) }],
 			languages: [{ name: 'a'.repeat(70) }],
 			serviceOffers: [{ name: 'Mariée', description: 'a'.repeat(2001) }],
 			experiences: [{ company: 'Studio fictif', startDate: '2023-02-30' }],
-			courses: [{ diploma: 'CAP Esthétique', graduatedAt: dansDeuxAns }],
+			courses: [{ diploma: 'CAP Esthétique', graduatedAt: inTwoYears }],
 		})
 
-		expect(reponse.statut).toBe(400)
-		expect(refus(reponse.corps).sort((x, y) => x.path.localeCompare(y.path))).toEqual([
+		expect(response.statut).toBe(400)
+		expect(refusal(response.corps).sort((x, y) => x.path.localeCompare(y.path))).toEqual([
 			{ path: 'courses.0.graduatedAt', message: 'Une date d’obtention ne peut pas dépasser d’un an la date du jour.' },
 			{ path: 'experiences.0.startDate', message: 'Cette date n’est pas valide.' },
 			{ path: 'serviceOffers.0.description', message: 'Ce texte ne doit pas dépasser 2000 caractères.' },
@@ -318,34 +317,34 @@ describe('Le serveur valide les bornes, et refuse en français', () => {
 	})
 
 	test('une date de l’an 0, que PostgreSQL ne stocke pas, est refusée en 400 et non en 500 (ticket 224)', async () => {
-		const a = await maquilleuse()
+		const a = await artist()
 
-		const reponse = await enregistrer(a, {
+		const response = await save(a, {
 			experiences: [{ company: 'Studio fictif', startDate: '0000-01-01' }],
 			courses: [{ diploma: 'CAP Esthétique', graduatedAt: '0000-12-31T00:00:00.000Z' }],
 		})
 
-		expect(reponse.statut).toBe(400)
-		expect(refus(reponse.corps).sort((x, y) => x.path.localeCompare(y.path))).toEqual([
+		expect(response.statut).toBe(400)
+		expect(refusal(response.corps).sort((x, y) => x.path.localeCompare(y.path))).toEqual([
 			{ path: 'courses.0.graduatedAt', message: 'Cette date n’est pas valide.' },
 			{ path: 'experiences.0.startDate', message: 'Cette date n’est pas valide.' },
 		])
-		expect((await stocke(a.profil)).experiences ?? []).toEqual([])
+		expect((await stored(a.profil)).experiences ?? []).toEqual([])
 	})
 
 	test('une sauvegarde refusée ne vide aucune section déjà enregistrée', async () => {
-		const a = await maquilleuse()
-		await enregistrer(a, { serviceOffers: TROIS_PRESTATIONS, languages: [{ name: 'Anglais' }] })
-		const avant = await stocke(a.profil)
+		const a = await artist()
+		await save(a, { serviceOffers: THREE_SERVICE_OFFERS, languages: [{ name: 'Anglais' }] })
+		const before = await stored(a.profil)
 
-		const reponse = await enregistrer(a, {
+		const response = await save(a, {
 			serviceOffers: [{ name: 'Nouvelle' }],
 			languages: [],
 			experiences: [{ company: 'Studio fictif', startDate: '2023-06-01', endDate: '2022-01-01' }],
 		})
 
-		expect(reponse.statut).toBe(400)
-		const apres = await stocke(a.profil)
-		expect([apres.serviceOffers, apres.languages]).toEqual([avant.serviceOffers, avant.languages])
+		expect(response.statut).toBe(400)
+		const after = await stored(a.profil)
+		expect([after.serviceOffers, after.languages]).toEqual([before.serviceOffers, before.languages])
 	})
 })

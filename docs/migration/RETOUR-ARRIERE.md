@@ -20,7 +20,7 @@ Les champs d'un enregistrement portent les noms anglais de la base (ticket 250) 
 
 Chaque enregistrement porte `sinceCutover` : `created` s'il a été créé après la date, `updated` s'il existait avant et a changé depuis.
 
-**Jamais dans le fichier :** mot de passe, hash (le hash hérité de l'ancien site non plus), sel, jeton de confirmation ou de réinitialisation, identifiant de session. Les comptes et les photos sont choisis champ par champ (une liste blanche) ; tout enregistrement passe en plus par un filtre qui retire toute clé nommée comme un mot de passe, un hash, un sel, un jeton, un secret ou une session. Un test le vérifie (`tests/integration/bascule-delta.test.ts`).
+**Jamais dans le fichier :** mot de passe, hash (le hash hérité de l'ancien site non plus), sel, jeton de confirmation ou de réinitialisation, identifiant de session. Les comptes et les photos sont choisis champ par champ (une liste blanche) ; tout enregistrement passe en plus par un filtre qui retire toute clé nommée comme un mot de passe, un hash, un sel, un jeton, un secret ou une session. Un test le vérifie (`tests/integration/cutover-delta.test.ts`).
 
 **Ce que l'export ne voit pas :**
 
@@ -77,4 +77,4 @@ Il porte des emails, des téléphones et des messages de visiteuses : c'est une 
 ## Ce qui est testé
 
 - `tests/unit/cutover-delta.test.ts` : refus hors du site, 401 et 403, 400, en-têtes, journal sans email, mêmes octets au second appel, filtre des secrets.
-- `tests/integration/bascule-delta.test.ts`, sur le banc : un profil créé après la date apparaît, un profil importé et inchangé n'apparaît pas, un compte modifié apparaît en `updated`, aucune clé ni valeur de mot de passe, hash, sel ou session dans le fichier, et la route avec une vraie session admin, une session de maquilleuse et sans session.
+- `tests/integration/cutover-delta.test.ts`, sur le banc : un profil créé après la date apparaît, un profil importé et inchangé n'apparaît pas, un compte modifié apparaît en `updated`, aucune clé ni valeur de mot de passe, hash, sel ou session dans le fichier, et la route avec une vraie session admin, une session de maquilleuse et sans session.

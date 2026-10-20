@@ -9,15 +9,15 @@ import { openSessionWithoutPassword } from '../support/session'
  * expirée », the way back, and nothing to loop on.
  */
 
-const MOT_DE_PASSE = 'motdepasse-fictif'
+const PASSWORD = 'motdepasse-fictif'
 const MESSAGE = 'Ta session a expiré, reconnecte-toi.'
-let compteur = 0
+let counter = 0
 test.beforeEach(({ context }) =>
-	context.setExtraHTTPHeaders({ 'x-forwarded-for': `192.0.2.${150 + (++compteur % 80)}` })
+	context.setExtraHTTPHeaders({ 'x-forwarded-for': `192.0.2.${150 + (++counter % 80)}` })
 )
 
 /** The cookie of a session whose token ends `dureeS` seconds from now, with the end date the site gives its cookie (it outlives the token). */
-async function cookieDeSession(compte: Awaited<ReturnType<typeof createAccount<'maquilleuse'>>>, dureeS: number) {
+async function sessionCookie(compte: Awaited<ReturnType<typeof createAccount<'maquilleuse'>>>, dureeS: number) {
 	const payload = await testPayload()
 	const session = await openSessionWithoutPassword(payload, { collection: 'pros', id: compte.id }, process.env, {
 		dureeS,
@@ -33,14 +33,14 @@ async function cookieDeSession(compte: Awaited<ReturnType<typeof createAccount<'
  * Playwright reports that replay as a redirection to the same address: it is not one, and the
  * same redirection would be counted twice.
  */
-function suivreLesRedirections(page: Page): Set<string> {
-	const depart = new Set<string>()
+function followRedirects(page: Page): Set<string> {
+	const start = new Set<string>()
 	page.on('response', reponse => {
 		if (reponse.request().resourceType() !== 'document' || reponse.status() < 300 || reponse.status() >= 400) return
-		const vers = new URL(reponse.headers().location ?? '', reponse.url())
-		if (vers.href !== reponse.url()) depart.add(new URL(reponse.url()).pathname)
+		const to = new URL(reponse.headers().location ?? '', reponse.url())
+		if (to.href !== reponse.url()) start.add(new URL(reponse.url()).pathname)
 	})
-	return depart
+	return start
 }
 
 test.describe('E12 : un jeton expiré', { tag: '@mobile' }, () => {
@@ -48,35 +48,35 @@ test.describe('E12 : un jeton expiré', { tag: '@mobile' }, () => {
 		context,
 		page,
 	}) => {
-		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
-		await context.addCookies([await cookieDeSession(compte, -60)])
-		const redirections = suivreLesRedirections(page)
+		const account = await createAccount('maquilleuse', { motDePasse: () => PASSWORD })
+		await context.addCookies([await sessionCookie(account, -60)])
+		const redirects = followRedirects(page)
 
 		await page.goto('/auth/profil')
 
 		await expect(page).toHaveURL(/\/auth\/signin\?callbackUrl=%2Fauth%2Fprofil&error=session-expiree$/)
 		await expect(page.getByTestId('session-expiree')).toHaveText(MESSAGE)
 		await expect(page.getByRole('button', { name: 'Se connecter' })).toBeVisible()
-		expect([...redirections]).toEqual(['/auth/profil'])
+		expect([...redirects]).toEqual(['/auth/profil'])
 		// The form does not send her anywhere on account of the dead cookie: reloading stays on it.
 		await page.reload()
 		await expect(page.getByRole('button', { name: 'Se connecter' })).toBeVisible()
 		await expect(page).toHaveURL(/\/auth\/signin\?callbackUrl=%2Fauth%2Fprofil&error=session-expiree$/)
-		expect([...redirections]).toEqual(['/auth/profil'])
+		expect([...redirects]).toEqual(['/auth/profil'])
 	})
 
 	test('la réponse brute : un 307 vers la connexion, et la connexion répond 200', async ({ playwright, baseURL }) => {
-		const compte = await createAccount('maquilleuse')
-		const jeton = (await cookieDeSession(compte, -60)).value
+		const account = await createAccount('maquilleuse')
+		const token = (await sessionCookie(account, -60)).value
 		const client = await playwright.request.newContext({
 			baseURL,
-			extraHTTPHeaders: { cookie: `payload-token=${jeton}`, 'x-forwarded-for': '192.0.2.250' },
+			extraHTTPHeaders: { cookie: `payload-token=${token}`, 'x-forwarded-for': '192.0.2.250' },
 		})
 
-		const reponse = await client.get('/auth/profil?onglet=photos', { maxRedirects: 0 })
+		const response = await client.get('/auth/profil?onglet=photos', { maxRedirects: 0 })
 
-		expect(reponse.status()).toBe(307)
-		expect(reponse.headers().location).toBe(
+		expect(response.status()).toBe(307)
+		expect(response.headers().location).toBe(
 			'/auth/signin?callbackUrl=%2Fauth%2Fprofil%3Fonglet%3Dphotos&error=session-expiree'
 		)
 		const suite = await client.get('/auth/signin?callbackUrl=%2Fauth%2Fprofil&error=session-expiree', {
@@ -87,13 +87,13 @@ test.describe('E12 : un jeton expiré', { tag: '@mobile' }, () => {
 	})
 
 	test('après la reconnexion, la page voulue s’ouvre', async ({ page, context }) => {
-		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
-		await context.addCookies([await cookieDeSession(compte, -60)])
+		const account = await createAccount('maquilleuse', { motDePasse: () => PASSWORD })
+		await context.addCookies([await sessionCookie(account, -60)])
 
 		await page.goto('/auth/profil?onglet=photos')
 		await expect(page.getByTestId('session-expiree')).toHaveText(MESSAGE)
-		await page.getByLabel('Adresse email').fill(compte.email)
-		await page.getByLabel('Mot de passe').fill(MOT_DE_PASSE)
+		await page.getByLabel('Adresse email').fill(account.email)
+		await page.getByLabel('Mot de passe').fill(PASSWORD)
 		await page.getByRole('button', { name: 'Se connecter' }).click()
 
 		await expect(page).toHaveURL(/\/auth\/profil\?onglet=photos$/)
@@ -103,15 +103,15 @@ test.describe('E12 : un jeton expiré', { tag: '@mobile' }, () => {
 	})
 
 	test('un code inconnu dans l’adresse n’est jamais recopié, ni en texte ni en balise', async ({ page }) => {
-		const piege = encodeURIComponent('<b>Ton compte est piraté</b> appelle le 0 800 000 000')
-		await page.goto(`/auth/signin?error=${piege}`)
+		const trap = encodeURIComponent('<b>Ton compte est piraté</b> appelle le 0 800 000 000')
+		await page.goto(`/auth/signin?error=${trap}`)
 
 		await expect(page.getByRole('button', { name: 'Se connecter' })).toBeVisible()
 		await expect(page.getByTestId('session-expiree')).toHaveCount(0)
 		// What is on the screen: Next's own page data repeats the address, but nothing of it is displayed or built into the page.
-		const texte = await page.innerText('body')
-		expect(texte).not.toContain('piraté')
-		expect(texte).not.toContain('0 800')
+		const text = await page.innerText('body')
+		expect(text).not.toContain('piraté')
+		expect(text).not.toContain('0 800')
 		await expect(page.locator('main b')).toHaveCount(0)
 		// The known code, and only it, speaks.
 		await page.goto('/auth/signin?error=OAuthCallback')
@@ -126,16 +126,16 @@ test.describe('E13 : une expiration réelle', () => {
 		tag: '@lent',
 	}, async ({ context, page }) => {
 		test.setTimeout(60_000)
-		const compte = await createAccount('maquilleuse')
-		await context.addCookies([await cookieDeSession(compte, 8)])
+		const account = await createAccount('maquilleuse')
+		await context.addCookies([await sessionCookie(account, 8)])
 		// A visit to the space renews a session that has less than 7 days left (ticket 079): this one must
 		// run out by itself, so the renewal is cut off.
 		await page.route('**/api/pros/refresh-token', route => route.abort())
-		const redirections = suivreLesRedirections(page)
+		const redirects = followRedirects(page)
 
 		await page.goto('/auth/profil')
 		await expect(page.getByRole('heading', { level: 1, name: 'Mon espace' })).toBeVisible()
-		expect([...redirections]).toEqual([])
+		expect([...redirects]).toEqual([])
 
 		// The clock does the rest: no cookie was touched between the visits. Wait on the state, not on a duration.
 		await expect
@@ -150,7 +150,7 @@ test.describe('E13 : une expiration réelle', () => {
 		// The browser still holds the cookie the site set: it outlives its token, which is why the server can tell.
 		expect((await context.cookies()).map(c => c.name)).toEqual(['payload-token'])
 		await expect(page.getByTestId('session-expiree')).toHaveText(MESSAGE)
-		expect([...redirections]).toEqual(['/auth/profil'])
+		expect([...redirects]).toEqual(['/auth/profil'])
 	})
 })
 
@@ -159,19 +159,19 @@ test.describe('le cookie posé par la connexion', () => {
 		context,
 		page,
 	}) => {
-		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const account = await createAccount('maquilleuse', { motDePasse: () => PASSWORD })
 
 		await page.goto('/auth/signin')
-		await page.getByLabel('Adresse email').fill(compte.email)
-		await page.getByLabel('Mot de passe').fill(MOT_DE_PASSE)
+		await page.getByLabel('Adresse email').fill(account.email)
+		await page.getByLabel('Mot de passe').fill(PASSWORD)
 		await page.getByRole('button', { name: 'Se connecter' }).click()
 		await expect(page).toHaveURL(/\/auth\/profil$/)
 
 		const cookie = (await context.cookies()).find(c => c.name === 'payload-token')
 		if (!cookie) throw new Error('pas de cookie de session')
-		const finDuJeton = readExpiration(cookie.value)
-		if (finDuJeton === null) throw new Error('jeton illisible')
+		const tokenEnd = readExpiration(cookie.value)
+		if (tokenEnd === null) throw new Error('jeton illisible')
 		// 90 days of grace, give or take the clock of the browser.
-		expect(cookie.expires - finDuJeton).toBeGreaterThan(COOKIE_SURVIVAL_AFTER_END_S - 60)
+		expect(cookie.expires - tokenEnd).toBeGreaterThan(COOKIE_SURVIVAL_AFTER_END_S - 60)
 	})
 })

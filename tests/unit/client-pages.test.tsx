@@ -19,7 +19,7 @@ import PageSolutions, {
 
 /**
  * The five fixed pages for the people looking for a makeup artist and the thank-you page (ticket 109;
- * plan 02 I45 on the bench: tests/e2e/pages-particuliers.spec.ts). No database, no server.
+ * plan 02 I45 on the bench: tests/e2e/client-pages.spec.ts). No database, no server.
  */
 
 const PAGES = [

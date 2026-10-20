@@ -11,7 +11,7 @@ import { callRest } from '../support/rest'
  */
 
 /** Creates the account of a makeup artist with this name, as the server will at the sign-up. */
-async function creerMaquilleuse(nom: string | undefined, contexte?: typeof NO_PROFILE_CONTEXT) {
+async function createArtist(nom: string | undefined, contexte?: typeof NO_PROFILE_CONTEXT) {
 	const payload = await testPayload()
 	return payload.create({
 		collection: 'pros',
@@ -27,7 +27,7 @@ async function creerMaquilleuse(nom: string | undefined, contexte?: typeof NO_PR
 }
 
 /** The profiles of an account. */
-async function profilsDe(compte: number) {
+async function profilesOf(compte: number) {
 	const payload = await testPayload()
 	return (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte } } })).docs
 }
@@ -38,12 +38,12 @@ afterEach(async () => {
 
 describe('Un compte créé reçoit son profil vide, avec un slug unique (I18)', () => {
 	test('le profil est relié au compte, vide, avec le slug calculé du nom', async () => {
-		const compte = await creerMaquilleuse('Zoé Lefèvre')
+		const account = await createArtist('Zoé Lefèvre')
 
-		const [profil, ...autres] = await profilsDe(compte.id)
-		expect(autres).toEqual([])
-		expect(profil).toMatchObject({
-			pro: compte.id,
+		const [profile, ...others] = await profilesOf(account.id)
+		expect(others).toEqual([])
+		expect(profile).toMatchObject({
+			pro: account.id,
 			slug: 'zoe-lefevre',
 			firstName: null,
 			lastName: null,
@@ -57,87 +57,85 @@ describe('Un compte créé reçoit son profil vide, avec un slug unique (I18)', 
 	})
 
 	test('les doublons reçoivent -2, puis -3, dans l’ordre de création', async () => {
-		const premiere = await creerMaquilleuse('Zoé Lefèvre')
-		const deuxieme = await creerMaquilleuse('ZOE LEFEVRE')
-		const troisieme = await creerMaquilleuse('zoé  lefèvre')
+		const first = await createArtist('Zoé Lefèvre')
+		const second = await createArtist('ZOE LEFEVRE')
+		const third = await createArtist('zoé  lefèvre')
 
-		const slugs = await Promise.all(
-			[premiere, deuxieme, troisieme].map(async ({ id }) => (await profilsDe(id))[0]?.slug)
-		)
+		const slugs = await Promise.all([first, second, third].map(async ({ id }) => (await profilesOf(id))[0]?.slug))
 		expect(slugs).toEqual(['zoe-lefevre', 'zoe-lefevre-2', 'zoe-lefevre-3'])
 	})
 
 	test('un nom qui ne donne aucun slug donne maquilleuse-<identifiant du profil>, jamais un slug vide', async () => {
-		const emojis = await creerMaquilleuse('💄💋')
-		const sansNom = await creerMaquilleuse(undefined)
+		const emojis = await createArtist('💄💋')
+		const withoutName = await createArtist(undefined)
 
-		for (const compte of [emojis, sansNom]) {
-			const [profil] = await profilsDe(compte.id)
-			expect(profil?.slug).toBe(`maquilleuse-${profil?.id}`)
+		for (const account of [emojis, withoutName]) {
+			const [profile] = await profilesOf(account.id)
+			expect(profile?.slug).toBe(`maquilleuse-${profile?.id}`)
 		}
 	})
 
 	test('un compte créé par un admin, par REST, reçoit aussi son profil, et la réponse le dit vide', async () => {
 		const admin = await createAccount('admin')
 
-		const { statut, corps } = await callRest('POST', '/api/pros', {
+		const { statut: status, corps } = await callRest('POST', '/api/pros', {
 			enTetes: admin.session.enTetes,
 			corps: { email: `rest-${crypto.randomUUID()}@example.test`, password: randomPassword(), name: 'Inès Morel' },
 		})
 
-		expect(statut).toBe(201)
+		expect(status).toBe(201)
 		const id = (corps as { doc: { id: number } }).doc.id
-		expect((await profilsDe(id)).map(({ slug }) => slug)).toEqual(['ines-morel'])
+		expect((await profilesOf(id)).map(({ slug }) => slug)).toEqual(['ines-morel'])
 	})
 
 	test('la création porte CONTEXTE_SANS_PROFIL : le compte reste sans profil', async () => {
-		const compte = await creerMaquilleuse('Sans Profil', NO_PROFILE_CONTEXT)
+		const account = await createArtist('Sans Profil', NO_PROFILE_CONTEXT)
 
-		expect(await profilsDe(compte.id)).toEqual([])
+		expect(await profilesOf(account.id)).toEqual([])
 	})
 
 	test('un compte n’a qu’un profil : un second profil pour le même compte est refusé', async () => {
-		const compte = await creerMaquilleuse('Une Seule')
+		const account = await createArtist('Une Seule')
 		const payload = await testPayload()
 
 		await expect(
-			payload.create({ collection: 'profiles', data: { pro: compte.id, slug: 'une-seule-bis' } })
+			payload.create({ collection: 'profiles', data: { pro: account.id, slug: 'une-seule-bis' } })
 		).rejects.toThrow()
-		expect((await profilsDe(compte.id)).length).toBe(1)
+		expect((await profilesOf(account.id)).length).toBe(1)
 	})
 
 	test('un slug donné par le serveur lui-même, comme à l’import, est gardé tel quel', async () => {
-		const compte = await creerMaquilleuse('Nouveau Nom', NO_PROFILE_CONTEXT)
+		const account = await createArtist('Nouveau Nom', NO_PROFILE_CONTEXT)
 		const payload = await testPayload()
 
-		const profil = await payload.create({
+		const profile = await payload.create({
 			collection: 'profiles',
-			data: { pro: compte.id, slug: 'ancien-slug', legacyUsername: 'Ancien Slug', strapiId: 12 },
+			data: { pro: account.id, slug: 'ancien-slug', legacyUsername: 'Ancien Slug', strapiId: 12 },
 		})
 
-		expect(profil).toMatchObject({ slug: 'ancien-slug', legacyUsername: 'Ancien Slug', strapiId: 12 })
+		expect(profile).toMatchObject({ slug: 'ancien-slug', legacyUsername: 'Ancien Slug', strapiId: 12 })
 	})
 })
 
 describe('Le slug ne change plus (I19)', () => {
 	test('changer le nom du compte, le prénom ou le nom du profil laisse le slug identique', async () => {
 		const a = await createAccount('maquilleuse')
-		const [profil] = await profilsDe(Number(a.id))
-		const slug = profil?.slug ?? ''
+		const [profile] = await profilesOf(Number(a.id))
+		const slug = profile?.slug ?? ''
 		expect(slug).toMatch(/^maquilleuse-[0-9a-f]{8}$/)
 
-		const surLeCompte = await callRest('PATCH', `/api/pros/${a.id}`, {
+		const onAccount = await callRest('PATCH', `/api/pros/${a.id}`, {
 			enTetes: a.session.enTetes,
 			corps: { nom: 'Camille Bernard' },
 		})
-		const surLeProfil = await callRest('PATCH', `/api/profiles/${profil?.id}`, {
+		const onProfile = await callRest('PATCH', `/api/profiles/${profile?.id}`, {
 			enTetes: a.session.enTetes,
 			corps: { firstName: 'Camille', lastName: 'Bernard', artistName: 'Camille B.', slug: 'camille-bernard' },
 		})
 
-		expect([surLeCompte.statut, surLeProfil.statut]).toEqual([200, 200])
-		const [apres] = await profilsDe(Number(a.id))
-		expect(apres).toMatchObject({ slug, firstName: 'Camille', lastName: 'Bernard', artistName: 'Camille B.' })
+		expect([onAccount.statut, onProfile.statut]).toEqual([200, 200])
+		const [after] = await profilesOf(Number(a.id))
+		expect(after).toMatchObject({ slug, firstName: 'Camille', lastName: 'Bernard', artistName: 'Camille B.' })
 	})
 })
 
@@ -158,11 +156,11 @@ describe('Un compte qui a encore un profil n’est pas supprimé tout seul', () 
 
 		expect((await callRest('DELETE', `/api/pros/${a.id}`, { enTetes: admin.session.enTetes })).statut).toBe(200)
 		expect((await payload.count({ collection: 'pros', where: { id: { equals: a.id } } })).totalDocs).toBe(0)
-		expect((await profilsDe(Number(a.id))).length).toBe(0)
+		expect((await profilesOf(Number(a.id))).length).toBe(0)
 
 		// A profile deleted first leaves an account without a profile, which goes as well.
-		const [profil] = await profilsDe(Number(b.id))
-		expect((await callRest('DELETE', `/api/profiles/${profil?.id}`, { enTetes: admin.session.enTetes })).statut).toBe(
+		const [profile] = await profilesOf(Number(b.id))
+		expect((await callRest('DELETE', `/api/profiles/${profile?.id}`, { enTetes: admin.session.enTetes })).statut).toBe(
 			200
 		)
 		expect((await callRest('DELETE', `/api/pros/${b.id}`, { enTetes: admin.session.enTetes })).statut).toBe(200)

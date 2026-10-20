@@ -16,13 +16,13 @@ import { emptyBase } from '../support/payload-test'
 import { emptyStorage } from '../support/s3'
 
 /** The owner of a document and the role `admin`: who reads the private fields of a profile or a media. */
-const PROPRIETAIRE_ET_ADMIN: readonly Role[] = ['maquilleuse', 'admin']
+const OWNER_AND_ADMIN: readonly Role[] = ['maquilleuse', 'admin']
 
 /**
  * What a request may send on the state of A's profile, which only has a photo (ticket 044): each
  * value differs from what the server computes, so that a write that took would show.
  */
-const ETAT_ENVOYE = [
+const SENT_STATE = [
 	['completeness', 13],
 	['active', true],
 	['publishable', true],
@@ -37,7 +37,7 @@ const ETAT_ENVOYE = [
  * photo is its main photo): for each field, the roles that read it; every other role reads the
  * document without it. One line per field and per role.
  */
-const lecturesDesChamps = (collection: MatrixCollection, lecteurs: [string, readonly Role[]][]): Line[] =>
+const fieldsReads = (collection: MatrixCollection, lecteurs: [string, readonly Role[]][]): Line[] =>
 	lecteurs.flatMap(([champ, quiLit]) =>
 		ROLES.map(
 			(role): Line => ({
@@ -57,7 +57,7 @@ const lecturesDesChamps = (collection: MatrixCollection, lecteurs: [string, read
  * drafts too; everyone else, a makeup artist as an anonymous visitor, reads the published documents
  * only and writes nothing (U59). Nobody writes `strapiId`. Talents (ticket 022), articles (046).
  */
-const lignesDeLaRedaction = (collection: CollectionEditorial): Line[] => [
+const editorLines = (collection: CollectionEditorial): Line[] => [
 	...(['anonyme', 'maquilleuse', 'autreMaquilleuse', 'sansProfil'] as const).flatMap((role): Line[] => [
 		{ role, collection, operation: 'lister', attendu: 'publies' },
 		{ role, collection, operation: 'lire', document: 'publie', attendu: 'autorise' },
@@ -131,7 +131,7 @@ const lignesDeLaRedaction = (collection: CollectionEditorial): Line[] => [
  * Each line is played twice, through REST and through the Local API with the rules active, and
  * gives one test per way in. A rule added without its lines is a rule nobody checks.
  */
-const MATRICE: Line[] = [
+const MATRIX: Line[] = [
 	// admins (ticket 018): the role `admin` does everything; `editor` reaches its own account
 	// only, and never its role; nobody else reaches any account.
 	{ role: 'anonyme', collection: 'admins', operation: 'lister', attendu: 'refuse' },
@@ -294,7 +294,7 @@ const MATRICE: Line[] = [
 			['consentSource', 'import'],
 			// Computed by the server at every save (ticket 044); its choice, by an admin only.
 			['chosenStatus', 'hidden'],
-			...ETAT_ENVOYE,
+			...SENT_STATE,
 		] as const
 	).map(
 		([champ, valeur]): Line => ({
@@ -371,38 +371,38 @@ const MATRICE: Line[] = [
 	},
 	{ role: 'redaction', collection: 'profiles', operation: 'supprimer', document: 'maquilleuse', attendu: 'refuse' },
 	// What each role reads of A's published profile, field by field (tickets 021, 042 and 043).
-	...lecturesDesChamps('profiles', [
+	...fieldsReads('profiles', [
 		// Public: her networks (042), her photos (043), the badge of the search (021).
 		['networks', ROLES],
 		['mainPicture', ROLES],
 		['gallery', ROLES],
 		['superArtist', ROLES],
 		// Her account, what the import wrote, what an admin decided (021, I01).
-		['pro', PROPRIETAIRE_ET_ADMIN],
-		['strapiId', PROPRIETAIRE_ET_ADMIN],
-		['legacyUsername', PROPRIETAIRE_ET_ADMIN],
-		['status', PROPRIETAIRE_ET_ADMIN],
-		['reason', PROPRIETAIRE_ET_ADMIN],
-		['verified', PROPRIETAIRE_ET_ADMIN],
-		['verifiedAt', PROPRIETAIRE_ET_ADMIN],
-		['siret', PROPRIETAIRE_ET_ADMIN],
+		['pro', OWNER_AND_ADMIN],
+		['strapiId', OWNER_AND_ADMIN],
+		['legacyUsername', OWNER_AND_ADMIN],
+		['status', OWNER_AND_ADMIN],
+		['reason', OWNER_AND_ADMIN],
+		['verified', OWNER_AND_ADMIN],
+		['verifiedAt', OWNER_AND_ADMIN],
+		['siret', OWNER_AND_ADMIN],
 		// For the admin panel only (021).
 		['internalNote', ['admin']],
 		['score', ['admin']],
 		// Her contact details, her choice to show them and its trace (042, U59, I07).
-		['contactDetails', PROPRIETAIRE_ET_ADMIN],
-		['publicContact', PROPRIETAIRE_ET_ADMIN],
-		['consentedAt', PROPRIETAIRE_ET_ADMIN],
-		['consentSource', PROPRIETAIRE_ET_ADMIN],
+		['contactDetails', OWNER_AND_ADMIN],
+		['publicContact', OWNER_AND_ADMIN],
+		['consentedAt', OWNER_AND_ADMIN],
+		['consentSource', OWNER_AND_ADMIN],
 		// Its state, public; since when, and the status an admin chose, for her and the admin (044).
 		['completeness', ROLES],
 		['active', ROLES],
 		['publishable', ROLES],
 		['fullyEmpty', ROLES],
-		['activeSince', PROPRIETAIRE_ET_ADMIN],
-		['publishableSince', PROPRIETAIRE_ET_ADMIN],
-		['fullyEmptySince', PROPRIETAIRE_ET_ADMIN],
-		['chosenStatus', PROPRIETAIRE_ET_ADMIN],
+		['activeSince', OWNER_AND_ADMIN],
+		['publishableSince', OWNER_AND_ADMIN],
+		['fullyEmptySince', OWNER_AND_ADMIN],
+		['chosenStatus', OWNER_AND_ADMIN],
 	]),
 	{ role: 'admin', collection: 'profiles', operation: 'lister', attendu: 'tous' },
 	{ role: 'admin', collection: 'profiles', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
@@ -428,7 +428,7 @@ const MATRICE: Line[] = [
 			['consentedAt', '2020-01-01T00:00:00.000Z', 'ignore'],
 			['consentSource', 'import', 'ignore'],
 			// The state stays the server's (ticket 044).
-			...ETAT_ENVOYE.map(([champ, valeur]) => [champ, valeur, 'ignore'] as const),
+			...SENT_STATE.map(([champ, valeur]) => [champ, valeur, 'ignore'] as const),
 		] as const
 	).map(
 		([champ, valeur, attendu]): Line => ({
@@ -519,10 +519,10 @@ const MATRICE: Line[] = [
 		{ role, collection: 'media', operation: 'supprimer', document: 'publie', attendu: 'refuse' },
 	]),
 	// What each role reads of A's photo, field by field (ticket 043).
-	...lecturesDesChamps('media', [
+	...fieldsReads('media', [
 		['url', ROLES],
 		['alt', ROLES],
-		['owner', PROPRIETAIRE_ET_ADMIN],
+		['owner', OWNER_AND_ADMIN],
 		['strapiId', ['admin']],
 		['strapiFormats', ['admin']],
 	]),
@@ -619,10 +619,10 @@ const MATRICE: Line[] = [
 	// an API, an admin included. The server writes it, and purges it after 90 days.
 	...ROLES.flatMap((role): Line[] => {
 		const collection = 'auth-events'
-		const lit = role === 'admin'
+		const reads = role === 'admin'
 		return [
-			{ role, collection, operation: 'lister', attendu: lit ? 'tous' : 'refuse' },
-			{ role, collection, operation: 'lire', attendu: lit ? 'autorise' : 'refuse' },
+			{ role, collection, operation: 'lister', attendu: reads ? 'tous' : 'refuse' },
+			{ role, collection, operation: 'lire', attendu: reads ? 'autorise' : 'refuse' },
 			{ role, collection, operation: 'creer', attendu: 'refuse' },
 			{ role, collection, operation: 'modifier', attendu: 'refuse' },
 			{ role, collection, operation: 'supprimer', attendu: 'refuse' },
@@ -633,10 +633,10 @@ const MATRICE: Line[] = [
 	// writes them through an API, an admin included. The server writes the row when an account goes.
 	...ROLES.flatMap((role): Line[] => {
 		const collection = 'deleted-accounts'
-		const lit = role === 'admin'
+		const reads = role === 'admin'
 		return [
-			{ role, collection, operation: 'lister', attendu: lit ? 'tous' : 'refuse' },
-			{ role, collection, operation: 'lire', attendu: lit ? 'autorise' : 'refuse' },
+			{ role, collection, operation: 'lister', attendu: reads ? 'tous' : 'refuse' },
+			{ role, collection, operation: 'lire', attendu: reads ? 'autorise' : 'refuse' },
 			{ role, collection, operation: 'creer', attendu: 'refuse' },
 			{ role, collection, operation: 'modifier', attendu: 'refuse' },
 			{ role, collection, operation: 'supprimer', attendu: 'refuse' },
@@ -650,15 +650,15 @@ const MATRICE: Line[] = [
 	// does not see this collection.
 	...ROLES.flatMap((role): Line[] => {
 		const collection = 'contact-requests'
-		const lit = role === 'admin'
+		const reads = role === 'admin'
 		return [
-			{ role, collection, operation: 'lister', attendu: lit ? 'tous' : 'refuse' },
-			{ role, collection, operation: 'lire', attendu: lit ? 'autorise' : 'refuse' },
-			{ role, collection, operation: 'lire', champ: 'message', attendu: lit ? 'visible' : 'refuse' },
+			{ role, collection, operation: 'lister', attendu: reads ? 'tous' : 'refuse' },
+			{ role, collection, operation: 'lire', attendu: reads ? 'autorise' : 'refuse' },
+			{ role, collection, operation: 'lire', champ: 'message', attendu: reads ? 'visible' : 'refuse' },
 			{ role, collection, operation: 'creer', attendu: 'refuse' },
-			{ role, collection, operation: 'modifier', attendu: lit ? 'autorise' : 'refuse' },
+			{ role, collection, operation: 'modifier', attendu: reads ? 'autorise' : 'refuse' },
 			{ role, collection, operation: 'supprimer', attendu: 'refuse' },
-			...(lit
+			...(reads
 				? ([
 						{ role, collection, operation: 'modifier', champ: 'message', valeur: 'Texte réécrit', attendu: 'ignore' },
 						{ role, collection, operation: 'modifier', champ: 'mailStatus', valeur: 'sent', attendu: 'ignore' },
@@ -684,8 +684,8 @@ const MATRICE: Line[] = [
 	}),
 
 	// talents (ticket 022) and articles (ticket 046): the rules of the newsroom.
-	...lignesDeLaRedaction('talents'),
-	...lignesDeLaRedaction('articles'),
+	...editorLines('talents'),
+	...editorLines('articles'),
 	// Payload's document locks (ticket 094): reserved to the accounts of the admin panel. A makeup
 	// artist, a visitor and an account without a profile reach nothing; `editor` and `admin` list,
 	// read, take, change and release a lock, the lock of the other admin included (a take-over).
@@ -720,9 +720,9 @@ afterAll(async () => {
 })
 
 describe('La matrice d’accès, par l’API REST et par l’API locale avec les règles actives', () => {
-	for (const ligne of MATRICE)
-		for (const voie of STREETS)
-			test(describeName(ligne, voie), async () => {
-				expect(await run(ligne, voie, distribution)).toBe(ligne.attendu)
+	for (const line of MATRIX)
+		for (const street of STREETS)
+			test(describeName(line, street), async () => {
+				expect(await run(line, street, distribution)).toBe(line.attendu)
 			})
 })

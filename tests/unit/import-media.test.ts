@@ -24,7 +24,7 @@ import { HttpResponse, http, simulate } from '../support/outgoing-http'
 /**
  * Ticket 058: what the import makes of the files of the old site, before and without the database:
  * which ones it adopts, where their object is read from their address, what a request for headers
- * says. The runs on the bench are in tests/integration/import-medias.test.ts. Every value here is
+ * says. The runs on the bench are in tests/integration/import-media.test.ts. Every value here is
  * fictional; the addresses are on a domain reserved for tests.
  */
 

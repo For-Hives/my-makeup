@@ -17,16 +17,16 @@ import { COMPTES_DE_FIXTURE, createSourceStrapi, eraseSourceStrapi } from '../su
 
 const LOCAL = COMPTES_DE_FIXTURE.find(({ provider }) => provider === 'local') ?? COMPTES_DE_FIXTURE[0]
 
-let profilSupprime: number | null = null
+let deletedProfile: number | null = null
 
-async function comptes() {
+async function accounts() {
 	const payload = await testPayload()
 	return (
 		await payload.find({ collection: 'pros', depth: 0, pagination: false, overrideAccess: true, sort: 'strapiId' })
 	).docs
 }
 
-async function profils() {
+async function profiles() {
 	const payload = await testPayload()
 	return (
 		await payload.find({ collection: 'profiles', depth: 0, pagination: false, overrideAccess: true, sort: 'strapiId' })
@@ -48,49 +48,49 @@ afterAll(async () => {
 describe('Sur une cible en service, un profil déjà repris reste tel que la maquilleuse l’a laissé (ticket 227)', () => {
 	test('coordonnées fermées dans la v3 : un passage avec l’option n’y touche pas', async () => {
 		const payload = await testPayload()
-		const compte = (await comptes()).find(({ strapiId }) => strapiId === LOCAL?.strapiId)
-		const ouverts = (await profils()).filter(({ publicContact }) => publicContact === true)
-		const profil = ouverts.find(({ pro }) => pro !== compte?.id) ?? ouverts[0]
-		if (!profil) throw new Error('Aucun profil de fixture n’affiche ses coordonnées.')
+		const account = (await accounts()).find(({ strapiId }) => strapiId === LOCAL?.strapiId)
+		const open = (await profiles()).filter(({ publicContact }) => publicContact === true)
+		const profile = open.find(({ pro }) => pro !== account?.id) ?? open[0]
+		if (!profile) throw new Error('Aucun profil de fixture n’affiche ses coordonnées.')
 		await payload.update({
 			collection: 'profiles',
-			id: profil.id,
+			id: profile.id,
 			data: { publicContact: false },
 			overrideAccess: true,
 		})
-		const avant = await profils()
-		expect(avant.find(({ id }) => id === profil.id)?.publicContact).toBe(false)
+		const before = await profiles()
+		expect(before.find(({ id }) => id === profile.id)?.publicContact).toBe(false)
 
-		const rapport = await importOnBench('real', { targetInService: true })
+		const report = await importOnBench('real', { targetInService: true })
 
-		expect(rapport.collections.profiles).toMatchObject({ created: 0, updated: 0, refused: [] })
-		expect(exitCode(rapport)).toBe(0)
-		const apres = await profils()
-		expect(apres).toEqual(avant)
-		expect(apres.find(({ id }) => id === profil.id)).toMatchObject({ publicContact: false })
+		expect(report.collections.profiles).toMatchObject({ created: 0, updated: 0, refused: [] })
+		expect(exitCode(report)).toBe(0)
+		const after = await profiles()
+		expect(after).toEqual(before)
+		expect(after.find(({ id }) => id === profile.id)).toMatchObject({ publicContact: false })
 		// Without the option the run, which follows the source, would open them again.
-		const sansOption = await importOnBench('dry-run')
-		expect(sansOption.collections.profiles?.updated).toBeGreaterThan(0)
+		const withoutOption = await importOnBench('dry-run')
+		expect(withoutOption.collections.profiles?.updated).toBeGreaterThan(0)
 	}, 90_000)
 })
 
 describe('Un compte supprimé dans la v3 ne revient pas à un rejeu (ticket 227)', () => {
 	test('la suppression laisse l’identifiant de l’ancien site, rien d’autre', async () => {
 		const payload = await testPayload()
-		const compte = (await comptes()).find(({ strapiId }) => strapiId === LOCAL?.strapiId)
-		if (!compte) throw new Error('Le compte local de fixture manque.')
+		const account = (await accounts()).find(({ strapiId }) => strapiId === LOCAL?.strapiId)
+		if (!account) throw new Error('Le compte local de fixture manque.')
 		expect(await connect(LOCAL?.email ?? '', LOCAL?.motDePasse ?? '')).toMatchObject({ ok: true })
 
-		profilSupprime = (await profils()).find(({ pro }) => pro === compte.id)?.strapiId ?? null
-		expect(profilSupprime).not.toBeNull()
-		const bilan = await deleteAccountAndDependents(payload, compte.id)
+		deletedProfile = (await profiles()).find(({ pro }) => pro === account.id)?.strapiId ?? null
+		expect(deletedProfile).not.toBeNull()
+		const summary = await deleteAccountAndDependents(payload, account.id)
 
-		expect(bilan).toMatchObject({ supprime: true, profils: 1 })
+		expect(summary).toMatchObject({ supprime: true, profils: 1 })
 		const { docs } = await payload.find({ collection: 'deleted-accounts', overrideAccess: true, depth: 0 })
 		expect(docs.map(({ strapiId }) => strapiId)).toEqual([Number(LOCAL?.strapiId)])
 		expect(Object.keys(docs[0] ?? {}).sort()).toEqual(['date', 'id', 'strapiId'])
 		// A second call finds nothing: no second row.
-		await deleteAccountAndDependents(payload, compte.id)
+		await deleteAccountAndDependents(payload, account.id)
 		expect((await payload.count({ collection: 'deleted-accounts', overrideAccess: true })).totalDocs).toBe(1)
 	}, 60_000)
 
@@ -99,37 +99,37 @@ describe('Un compte supprimé dans la v3 ne revient pas à un rejeu (ticket 227)
 		await payload.delete({ collection: 'auth-events', where: { id: { exists: true } }, overrideAccess: true })
 		expect((await payload.count({ collection: 'auth-events', overrideAccess: true })).totalDocs).toBe(0)
 		expect((await payload.count({ collection: 'pros', where: { lastSignInAt: { exists: true } } })).totalDocs).toBe(0)
-		const avantComptes = await comptes()
-		const avantProfils = await profils()
+		const beforeAccounts = await accounts()
+		const beforeProfiles = await profiles()
 
 		for (const mode of ['dry-run', 'real'] as const) {
-			const refus = await importOnBench(mode).catch((erreur: unknown) => erreur)
-			expect(refus).toBeInstanceOf(ImportRefuse)
-			const message = (refus as ImportRefuse).message
+			const refusal = await importOnBench(mode).catch((erreur: unknown) => erreur)
+			expect(refusal).toBeInstanceOf(ImportRefuse)
+			const message = (refusal as ImportRefuse).message
 			expect(message).toContain('1 compte de l’ancien site supprimé dans la v3')
 			expect(message).toContain(String(LOCAL?.strapiId))
 			expect(message).not.toMatch(/\$2[aby]\$|@/)
 		}
 
-		expect(await comptes()).toEqual(avantComptes)
-		expect(await profils()).toEqual(avantProfils)
-		expect(avantComptes.some(({ strapiId }) => strapiId === LOCAL?.strapiId)).toBe(false)
+		expect(await accounts()).toEqual(beforeAccounts)
+		expect(await profiles()).toEqual(beforeProfiles)
+		expect(beforeAccounts.some(({ strapiId }) => strapiId === LOCAL?.strapiId)).toBe(false)
 	}, 60_000)
 
 	test('avec --target-in-service, ni le compte ni son profil ne sont recréés ; le rapport le dit, le code de sortie est 0', async () => {
-		const rapport = await importOnBench('real', { targetInService: true })
+		const report = await importOnBench('real', { targetInService: true })
 
-		expect(rapport.collections.pros).toMatchObject({
+		expect(report.collections.pros).toMatchObject({
 			created: 0,
 			updated: 0,
 			refused: [],
 			deletedInV3: [LOCAL?.strapiId],
 		})
-		expect(rapport.collections.profiles).toMatchObject({ created: 0, updated: 0, refused: [] })
-		expect(rapport.parity?.pros).toMatchObject({ different: [], missing: [], extra: [] })
-		expect(rapport.parity?.profiles).toMatchObject({ different: [], missing: [], extra: [] })
-		expect(exitCode(rapport)).toBe(0)
-		expect((await comptes()).some(({ strapiId }) => strapiId === LOCAL?.strapiId)).toBe(false)
-		expect((await profils()).some(({ strapiId }) => strapiId === profilSupprime)).toBe(false)
+		expect(report.collections.profiles).toMatchObject({ created: 0, updated: 0, refused: [] })
+		expect(report.parity?.pros).toMatchObject({ different: [], missing: [], extra: [] })
+		expect(report.parity?.profiles).toMatchObject({ different: [], missing: [], extra: [] })
+		expect(exitCode(report)).toBe(0)
+		expect((await accounts()).some(({ strapiId }) => strapiId === LOCAL?.strapiId)).toBe(false)
+		expect((await profiles()).some(({ strapiId }) => strapiId === deletedProfile)).toBe(false)
 	}, 60_000)
 })

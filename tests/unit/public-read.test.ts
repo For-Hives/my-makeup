@@ -8,7 +8,7 @@ import { LIST_MAX_LIMIT, listProfiles } from '@/services/public/profiles'
 /**
  * The public reading of the profiles, without a database (ticket 071; plan 02 §7.2, U20 and U22):
  * the three rules, the keys of a card, and the guard that keeps every public page behind the
- * module. The runs against the bench: tests/integration/lecture-publique.test.ts.
+ * module. The runs against the bench: tests/integration/public-read.test.ts.
  */
 
 describe('U20 : listé, indexable, visible', () => {

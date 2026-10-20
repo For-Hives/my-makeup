@@ -6,7 +6,7 @@ import { DASHBOARD_PATH, PREVIEW_PATH, previewState } from '@/lib/dashboard/prev
 /**
  * The preview of her own page (ticket 139; plan 02 RG-06): the banner says where her profile stands,
  * from the three rules of the public reading, and leads back to her space. The page itself is checked
- * on the bench (tests/integration/espace-apercu.test.ts, tests/e2e/espace-apercu.spec.ts).
+ * on the bench (tests/integration/dashboard-preview.test.ts, tests/e2e/dashboard-preview.spec.ts).
  */
 
 const FULL = { status: 'published', available: true, fullyEmpty: false, publishable: true } as const

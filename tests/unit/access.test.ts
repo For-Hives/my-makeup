@@ -57,7 +57,7 @@ import { PROFILE_STATUSES } from '@/lib/profile/status'
 
 /**
  * The access rules, called as Payload calls them, without a database: who reaches what. The
- * access matrix plays the same rules through the real APIs (tests/integration/payload-acces.test.ts).
+ * access matrix plays the same rules through the real APIs (tests/integration/payload-access.test.ts).
  */
 
 type User = PayloadRequest['user']

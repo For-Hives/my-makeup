@@ -7,18 +7,18 @@ import { testPayload } from '../support/payload-test'
  * the form, then the hash of Payload in the database, and the old one gone.
  */
 
-let compteur = 0
+let counter = 0
 test.beforeEach(({ context }) =>
-	context.setExtraHTTPHeaders({ 'x-forwarded-for': `192.0.2.${150 + (++compteur % 50)}` })
+	context.setExtraHTTPHeaders({ 'x-forwarded-for': `192.0.2.${150 + (++counter % 50)}` })
 )
 
-async function hashDe(id: number | string) {
-	const ligne = await (await testPayload()).db.findOne<{ id: number; legacyBcrypt?: string | null; hash?: string }>({
+async function hashOf(id: number | string) {
+	const line = await (await testPayload()).db.findOne<{ id: number; legacyBcrypt?: string | null; hash?: string }>({
 		collection: 'pros',
 		where: { id: { equals: id } },
 	})
-	if (!ligne) throw new Error('le compte n’est pas en base')
-	return ligne
+	if (!line) throw new Error('le compte n’est pas en base')
+	return line
 }
 
 test.describe('Compte de l’ancien site', () => {
@@ -26,32 +26,32 @@ test.describe('Compte de l’ancien site', () => {
 		context,
 		page,
 	}) => {
-		const compte = await createAccount('reprise-avec-hash')
-		const avant = await hashDe(compte.id)
-		expect(avant.legacyBcrypt).toMatch(/^\$2a\$10\$/)
+		const account = await createAccount('reprise-avec-hash')
+		const before = await hashOf(account.id)
+		expect(before.legacyBcrypt).toMatch(/^\$2a\$10\$/)
 
 		await page.goto('/auth/signin')
-		await page.getByLabel('Adresse email').fill(compte.email)
+		await page.getByLabel('Adresse email').fill(account.email)
 		await page.getByLabel('Mot de passe').fill(FIXTURE_LEGACY_PASSWORD)
 		await page.getByRole('button', { name: 'Se connecter' }).click()
 
 		await expect(page).toHaveURL(/\/auth\/profil$/)
 		expect((await context.cookies()).map(c => c.name)).toEqual(['payload-token'])
-		const apres = await hashDe(compte.id)
-		expect(apres.legacyBcrypt ?? null).toBeNull()
-		expect(apres.hash).not.toBe(avant.hash)
+		const after = await hashOf(account.id)
+		expect(after.legacyBcrypt ?? null).toBeNull()
+		expect(after.hash).not.toBe(before.hash)
 	})
 
 	test('un mauvais mot de passe : le message générique, et le hash hérité reste', async ({ page }) => {
-		const compte = await createAccount('reprise-avec-hash')
-		const avant = await hashDe(compte.id)
+		const account = await createAccount('reprise-avec-hash')
+		const before = await hashOf(account.id)
 
 		await page.goto('/auth/signin')
-		await page.getByLabel('Adresse email').fill(compte.email)
+		await page.getByLabel('Adresse email').fill(account.email)
 		await page.getByLabel('Mot de passe').fill('pas-le-bon')
 		await page.getByRole('button', { name: 'Se connecter' }).click()
 
 		await expect(page.getByTestId('erreur-connexion')).toHaveText('Email ou mot de passe incorrect.')
-		expect(await hashDe(compte.id)).toEqual(avant)
+		expect(await hashOf(account.id)).toEqual(before)
 	})
 })

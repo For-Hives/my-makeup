@@ -9,9 +9,7 @@
 		"src/app/robots.ts",
 		"src/app/sitemap.xml",
 		"src/app/u",
-		"src/payload-types.ts",
-		"tests/e2e",
-		"tests/integration"
+		"src/payload-types.ts"
 	],
 	"owners": {
 		"src/app/(front)/globals.css": 254,
@@ -23,9 +21,7 @@
 		"src/app/robots.ts": 254,
 		"src/app/sitemap.xml": 254,
 		"src/app/u": 254,
-		"src/payload-types.ts": 254,
-		"tests/e2e": 248,
-		"tests/integration": 248
+		"src/payload-types.ts": 254
 	},
 	"exceptions": {
 		"paths": [

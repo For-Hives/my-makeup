@@ -6,35 +6,35 @@ import { callRest } from '../support/rest'
 
 /**
  * Payload's document locks, reserved to the accounts of the admin panel (ticket 094). The access
- * matrix (payload-acces.test.ts) plays who may do what; these tests play what it cannot: the lock
+ * matrix (payload-access.test.ts) plays who may do what; these tests play what it cannot: the lock
  * carries the account of the session, and the panel's own flow (open a document, take it over).
  */
 
-const VERROUS = '/api/payload-locked-documents'
+const LOCKS = '/api/payload-locked-documents'
 
-type Compte = Awaited<ReturnType<typeof createAccount<'admin'>>>
+type Account = Awaited<ReturnType<typeof createAccount<'admin'>>>
 
 let payload: Payload
-let admin: Compte
-let autreAdmin: Compte
-let redaction: Awaited<ReturnType<typeof createAccount<'redaction'>>>
-let maquilleuse: Awaited<ReturnType<typeof createAccount<'maquilleuse'>>>
+let admin: Account
+let otherAdmin: Account
+let editor: Awaited<ReturnType<typeof createAccount<'redaction'>>>
+let artist: Awaited<ReturnType<typeof createAccount<'maquilleuse'>>>
 let talent: number
 
-const auNomDe = (compte: { id: string | number }, collection: 'admins' | 'pros' = 'admins') => ({
+const onBehalfOf = (compte: { id: string | number }, collection: 'admins' | 'pros' = 'admins') => ({
 	relationTo: collection,
 	value: Number(compte.id),
 })
 
 /** The account a lock is in the name of, read in the database. */
-async function titulaire(id: number) {
-	const verrou = await payload.findByID({ collection: 'payload-locked-documents', id, depth: 0 })
-	return verrou.user
+async function holder(id: number) {
+	const lock = await payload.findByID({ collection: 'payload-locked-documents', id, depth: 0 })
+	return lock.user
 }
 
 beforeAll(async () => {
 	payload = await testPayload()
-	;[admin, autreAdmin, redaction, maquilleuse] = await Promise.all([
+	;[admin, otherAdmin, editor, artist] = await Promise.all([
 		createAccount('admin'),
 		createAccount('admin'),
 		createAccount('redaction'),
@@ -60,93 +60,91 @@ afterAll(async () => {
 
 describe('Un verrou porte toujours le compte de la session (ticket 094)', () => {
 	test('un admin qui envoie le compte d’un autre admin pose un verrou à son propre nom', async () => {
-		const { statut, corps } = await callRest('POST', VERROUS, {
+		const { statut: status, corps } = await callRest('POST', LOCKS, {
 			enTetes: admin.session.enTetes,
-			corps: { document: { relationTo: 'talents', value: talent }, user: auNomDe(autreAdmin) },
+			corps: { document: { relationTo: 'talents', value: talent }, user: onBehalfOf(otherAdmin) },
 		})
 
-		expect(statut).toBe(201)
+		expect(status).toBe(201)
 		const id = (corps as { doc: { id: number } }).doc.id
-		expect(await titulaire(id)).toEqual(auNomDe(admin))
+		expect(await holder(id)).toEqual(onBehalfOf(admin))
 	})
 
 	test('un compte redaction ne peut pas non plus poser un verrou au nom d’un admin, par REST ni par l’API locale', async () => {
-		const utilisateur = {
-			...(await payload.findByID({ collection: 'admins', id: Number(redaction.id), depth: 0 })),
+		const user = {
+			...(await payload.findByID({ collection: 'admins', id: Number(editor.id), depth: 0 })),
 			collection: 'admins' as const,
 		}
 
-		const { statut, corps } = await callRest('POST', VERROUS, {
-			enTetes: redaction.session.enTetes,
-			corps: { globalSlug: 'verrou-redaction-rest', user: auNomDe(admin) },
+		const { statut: status, corps } = await callRest('POST', LOCKS, {
+			enTetes: editor.session.enTetes,
+			corps: { globalSlug: 'verrou-redaction-rest', user: onBehalfOf(admin) },
 		})
 		const locale = await payload.create({
 			collection: 'payload-locked-documents',
-			data: { globalSlug: 'verrou-redaction-locale', user: auNomDe(admin) },
+			data: { globalSlug: 'verrou-redaction-locale', user: onBehalfOf(admin) },
 			overrideAccess: false,
-			user: utilisateur,
+			user: user,
 		})
 
-		expect(statut).toBe(201)
-		expect(await titulaire((corps as { doc: { id: number } }).doc.id)).toEqual(auNomDe(redaction))
-		expect(await titulaire(locale.id)).toEqual(auNomDe(redaction))
+		expect(status).toBe(201)
+		expect(await holder((corps as { doc: { id: number } }).doc.id)).toEqual(onBehalfOf(editor))
+		expect(await holder(locale.id)).toEqual(onBehalfOf(editor))
 	})
 
 	test('la reprise en main du panneau marche : un second admin remplace le titulaire par lui-même', async () => {
-		const verrou = await payload.create({
+		const lock = await payload.create({
 			collection: 'payload-locked-documents',
-			data: { document: { relationTo: 'talents', value: talent }, user: auNomDe(admin) },
+			data: { document: { relationTo: 'talents', value: talent }, user: onBehalfOf(admin) },
 		})
 
 		// What the panel sends to take a document over: the lock list, then a PATCH naming the new holder.
-		const liste = await callRest(
+		const list = await callRest(
 			'GET',
-			`${VERROUS}?where[document.relationTo][equals]=talents&where[document.value][equals]=${talent}`,
-			{ enTetes: autreAdmin.session.enTetes }
+			`${LOCKS}?where[document.relationTo][equals]=talents&where[document.value][equals]=${talent}`,
+			{ enTetes: otherAdmin.session.enTetes }
 		)
-		expect(liste.statut).toBe(200)
-		expect((liste.corps as { docs: { id: number }[] }).docs.map(({ id }) => id)).toContain(verrou.id)
-		const reprise = await callRest('PATCH', `${VERROUS}/${verrou.id}`, {
-			enTetes: autreAdmin.session.enTetes,
-			corps: { user: auNomDe(autreAdmin) },
+		expect(list.statut).toBe(200)
+		expect((list.corps as { docs: { id: number }[] }).docs.map(({ id }) => id)).toContain(lock.id)
+		const retry = await callRest('PATCH', `${LOCKS}/${lock.id}`, {
+			enTetes: otherAdmin.session.enTetes,
+			corps: { user: onBehalfOf(otherAdmin) },
 		})
 
-		expect(reprise.statut).toBe(200)
-		expect(await titulaire(verrou.id)).toEqual(auNomDe(autreAdmin))
+		expect(retry.statut).toBe(200)
+		expect(await holder(lock.id)).toEqual(onBehalfOf(otherAdmin))
 		// And the lock is released by whoever holds the document.
-		expect((await callRest('DELETE', `${VERROUS}/${verrou.id}`, { enTetes: autreAdmin.session.enTetes })).statut).toBe(
-			200
-		)
+		expect((await callRest('DELETE', `${LOCKS}/${lock.id}`, { enTetes: otherAdmin.session.enTetes })).statut).toBe(200)
 	})
 
 	test('le serveur, sans session, écrit un verrou tel quel (le panneau le pose sans passer par les règles)', async () => {
-		const verrou = await payload.create({
+		const lock = await payload.create({
 			collection: 'payload-locked-documents',
-			data: { globalSlug: 'verrou-du-serveur', user: auNomDe(autreAdmin) },
+			data: { globalSlug: 'verrou-du-serveur', user: onBehalfOf(otherAdmin) },
 		})
 
-		expect(await titulaire(verrou.id)).toEqual(auNomDe(autreAdmin))
+		expect(await holder(lock.id)).toEqual(onBehalfOf(otherAdmin))
 	})
 })
 
 describe('Une maquilleuse n’atteint pas les verrous (ticket 094)', () => {
 	test('sur une table vide comme pleine : 403 en lecture, en pose, en changement et en retrait', async () => {
-		const verrou = await payload.create({
+		const lock = await payload.create({
 			collection: 'payload-locked-documents',
-			data: { globalSlug: 'verrou-protege', user: auNomDe(admin) },
+			data: { globalSlug: 'verrou-protege', user: onBehalfOf(admin) },
 		})
-		const enTetes = maquilleuse.session.enTetes
+		const headers = artist.session.enTetes
 
-		const reponses = await Promise.all([
-			callRest('GET', VERROUS, { enTetes }),
-			callRest('GET', `${VERROUS}/${verrou.id}`, { enTetes }),
-			callRest('POST', VERROUS, { enTetes, corps: { globalSlug: 'intrus', user: auNomDe(admin) } }),
-			callRest('PATCH', `${VERROUS}/${verrou.id}`, { enTetes, corps: { user: auNomDe(maquilleuse, 'pros') } }),
-			callRest('DELETE', `${VERROUS}/${verrou.id}`, { enTetes }),
+		const responses = await Promise.all([
+			callRest('GET', LOCKS, { enTetes: headers }),
+			callRest('GET', `${LOCKS}/${lock.id}`, { enTetes: headers }),
+			callRest('POST', LOCKS, { enTetes: headers, corps: { globalSlug: 'intrus', user: onBehalfOf(admin) } }),
+			callRest('PATCH', `${LOCKS}/${lock.id}`, { enTetes: headers, corps: { user: onBehalfOf(artist, 'pros') } }),
+			callRest('DELETE', `${LOCKS}/${lock.id}`, { enTetes: headers }),
 		])
 
-		expect(reponses.map(({ statut }) => statut)).toEqual([403, 403, 403, 403, 403])
-		expect(await titulaire(verrou.id)).toEqual(auNomDe(admin))
+		expect(responses.map(({ statut: status }) => status)).toEqual([403, 403, 403, 403, 403])
+		expect(await holder(lock.id)).toEqual(onBehalfOf(admin))
 		expect(
 			(await payload.count({ collection: 'payload-locked-documents', where: { globalSlug: { equals: 'intrus' } } }))
 				.totalDocs
@@ -154,8 +152,8 @@ describe('Une maquilleuse n’atteint pas les verrous (ticket 094)', () => {
 	})
 
 	test('sans session : 403 aussi', async () => {
-		expect((await callRest('GET', VERROUS)).statut).toBe(403)
-		expect((await callRest('POST', VERROUS, { corps: { globalSlug: 'anonyme', user: auNomDe(admin) } })).statut).toBe(
+		expect((await callRest('GET', LOCKS)).statut).toBe(403)
+		expect((await callRest('POST', LOCKS, { corps: { globalSlug: 'anonyme', user: onBehalfOf(admin) } })).statut).toBe(
 			403
 		)
 	})
@@ -170,11 +168,11 @@ describe('Une maquilleuse n’atteint pas les verrous (ticket 094)', () => {
  */
 describe('Des enregistrements simultanés par REST ne bloquent pas l’application (CI du 15/10/2026)', () => {
 	/** More saves at once than the 5 connections of the pool. */
-	const SIMULTANES = 12
+	const SIMULTANEOUS = 12
 
-	test(`${SIMULTANES} enregistrements à la fois, par l’administration : tous répondent, en quelques secondes`, async () => {
+	test(`${SIMULTANEOUS} enregistrements à la fois, par l’administration : tous répondent, en quelques secondes`, async () => {
 		const talents = await Promise.all(
-			Array.from({ length: SIMULTANES }, (_, rang) =>
+			Array.from({ length: SIMULTANEOUS }, (_, rang) =>
 				payload.create({
 					collection: 'talents',
 					data: {
@@ -187,23 +185,23 @@ describe('Des enregistrements simultanés par REST ne bloquent pas l’applicati
 				})
 			)
 		)
-		const enregistrements = Promise.all(
+		const records = Promise.all(
 			talents.map(({ id }, rang) =>
 				callRest('PATCH', `/api/talents/${id}`, {
 					enTetes: admin.session.enTetes,
 					corps: { description: `Une description changée, la ${rang + 1}e.` },
-				}).then(({ statut }) => statut)
+				}).then(({ statut: status }) => status)
 			)
 		)
-		const bloque = new Promise<'bloqué'>(fin => setTimeout(() => fin('bloqué'), 15_000))
+		const blocked = new Promise<'bloqué'>(fin => setTimeout(() => fin('bloqué'), 15_000))
 
-		expect(await Promise.race([enregistrements, bloque])).toEqual(Array(SIMULTANES).fill(200))
+		expect(await Promise.race([records, blocked])).toEqual(Array(SIMULTANEOUS).fill(200))
 	}, 30_000)
 
 	test('le verrou d’un autre compte refuse toujours l’enregistrement, et celui du titulaire le laisse passer', async () => {
-		const verrou = await payload.create({
+		const lock = await payload.create({
 			collection: 'payload-locked-documents',
-			data: { document: { relationTo: 'talents', value: talent }, user: auNomDe(autreAdmin) },
+			data: { document: { relationTo: 'talents', value: talent }, user: onBehalfOf(otherAdmin) },
 		})
 		try {
 			const refuse = await callRest('PATCH', `/api/talents/${talent}`, {
@@ -211,13 +209,13 @@ describe('Des enregistrements simultanés par REST ne bloquent pas l’applicati
 				corps: { description: 'Un enregistrement sur un talent verrouillé par un autre.' },
 			})
 			expect(refuse.statut).toBe(423)
-			const titulaireEnregistre = await callRest('PATCH', `/api/talents/${talent}`, {
-				enTetes: autreAdmin.session.enTetes,
+			const savedHolder = await callRest('PATCH', `/api/talents/${talent}`, {
+				enTetes: otherAdmin.session.enTetes,
 				corps: { description: 'L’enregistrement du titulaire du verrou.' },
 			})
-			expect(titulaireEnregistre.statut).toBe(200)
+			expect(savedHolder.statut).toBe(200)
 		} finally {
-			await payload.delete({ collection: 'payload-locked-documents', where: { id: { equals: verrou.id } } })
+			await payload.delete({ collection: 'payload-locked-documents', where: { id: { equals: lock.id } } })
 		}
 	})
 })

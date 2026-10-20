@@ -29,7 +29,7 @@ const RESERVE = {
  * (ticket 042), its photos (ticket 043), its lists (ticket 040), its zone (ticket 041), its state (ticket 044), the badge
  * of the search and Payload's dates. A new public field of the profile is added here on purpose.
  */
-const CLES_PUBLIQUES = [
+const PUBLIC_KEYS = [
 	'active',
 	'artistName',
 	'available',
@@ -59,45 +59,45 @@ const CLES_PUBLIQUES = [
 ]
 
 /** The identifier of the old site is unique: each profile of a test gets its own. */
-let dernierStrapiId: number = RESERVE.strapiId
+let lastStrapiId: number = RESERVE.strapiId
 
 /** The account of a makeup artist, with her profile in this status and every reserved field filled. */
-async function maquilleuseAvecProfil(statut: ProfileStatus) {
-	const compte = await createAccount('maquilleuse')
+async function artistWithProfile(statut: ProfileStatus) {
+	const account = await createAccount('maquilleuse')
 	const payload = await testPayload()
-	const [profil] = (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } }))
+	const [profile] = (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: account.id } } }))
 		.docs
-	if (!profil) throw new Error('La fabrique n’a pas créé de profil.')
-	dernierStrapiId += 1
-	const rempli = await payload.update({
+	if (!profile) throw new Error('La fabrique n’a pas créé de profil.')
+	lastStrapiId += 1
+	const filled = await payload.update({
 		collection: 'profiles',
-		id: profil.id,
+		id: profile.id,
 		data: {
 			...RESERVE,
-			strapiId: dernierStrapiId,
+			strapiId: lastStrapiId,
 			status: statut,
 			firstName: 'Prénom',
 			lastName: 'Fictif',
 			superArtist: true,
 		},
 	})
-	return { compte, profil: rempli }
+	return { compte: account, profil: filled }
 }
 
 /** The profile as the database holds it, read without access control. */
-async function stocke(id: number): Promise<Profile> {
+async function stored(id: number): Promise<Profile> {
 	const payload = await testPayload()
 	return payload.findByID({ collection: 'profiles', id, depth: 0 })
 }
 
-const identifiants = (corps: unknown) => (corps as { docs: { id: number }[] }).docs.map(({ id }) => id)
+const identifiers = (corps: unknown) => (corps as { docs: { id: number }[] }).docs.map(({ id }) => id)
 
 describe('Lecture anonyme : seuls les profils publiés sortent (I01, U53)', () => {
 	test('par REST et par l’API locale, un profil publié sur trois', async () => {
-		const [publie, brouillon, masque] = await Promise.all([
-			maquilleuseAvecProfil('published'),
-			maquilleuseAvecProfil('draft'),
-			maquilleuseAvecProfil('hidden'),
+		const [published, draft, hidden] = await Promise.all([
+			artistWithProfile('published'),
+			artistWithProfile('draft'),
+			artistWithProfile('hidden'),
 		])
 		const payload = await testPayload()
 
@@ -105,84 +105,84 @@ describe('Lecture anonyme : seuls les profils publiés sortent (I01, U53)', () =
 		const locale = await payload.find({ collection: 'profiles', depth: 0, overrideAccess: false })
 
 		expect(rest.statut).toBe(200)
-		expect(identifiants(rest.corps)).toEqual([publie.profil.id])
-		expect(locale.docs.map(({ id }) => id)).toEqual([publie.profil.id])
-		for (const cache of [brouillon, masque])
+		expect(identifiers(rest.corps)).toEqual([published.profil.id])
+		expect(locale.docs.map(({ id }) => id)).toEqual([published.profil.id])
+		for (const cache of [draft, hidden])
 			expect((await callRest('GET', `/api/profiles/${cache.profil.id}`)).statut).toBe(404)
 	})
 })
 
 describe('Instantané des clés : aucun champ réservé, ni compte relié, ni strapiId', () => {
 	test('un profil publié lu par un anonyme, à toutes les profondeurs, en liste et seul', async () => {
-		const { profil } = await maquilleuseAvecProfil('published')
+		const { profil: profile } = await artistWithProfile('published')
 
-		for (const chemin of [
-			`/api/profiles/${profil.id}?depth=0`,
-			`/api/profiles/${profil.id}?depth=2`,
+		for (const path of [
+			`/api/profiles/${profile.id}?depth=0`,
+			`/api/profiles/${profile.id}?depth=2`,
 			'/api/profiles?depth=1',
 		]) {
-			const { statut, corps, texte } = await callRest('GET', chemin)
-			expect(statut).toBe(200)
+			const { statut: status, corps, texte: text } = await callRest('GET', path)
+			expect(status).toBe(200)
 			const document = 'docs' in (corps as object) ? (corps as { docs: object[] }).docs[0] : corps
-			expect(Object.keys(document as object).sort()).toEqual(CLES_PUBLIQUES)
-			for (const valeur of [RESERVE.internalNote, RESERVE.siret, RESERVE.reason, RESERVE.legacyUsername])
-				expect(texte).not.toContain(valeur)
+			expect(Object.keys(document as object).sort()).toEqual(PUBLIC_KEYS)
+			for (const value of [RESERVE.internalNote, RESERVE.siret, RESERVE.reason, RESERVE.legacyUsername])
+				expect(text).not.toContain(value)
 		}
 	})
 
 	test('lu par une autre maquilleuse ou par redaction : les mêmes clés', async () => {
-		const { profil } = await maquilleuseAvecProfil('published')
-		const [autre, redaction] = await Promise.all([createAccount('maquilleuse'), createAccount('redaction')])
+		const { profil: profile } = await artistWithProfile('published')
+		const [other, editor] = await Promise.all([createAccount('maquilleuse'), createAccount('redaction')])
 
-		for (const lecteur of [autre, redaction]) {
-			const { statut, corps } = await callRest('GET', `/api/profiles/${profil.id}?depth=0`, {
-				enTetes: lecteur.session.enTetes,
+		for (const reader of [other, editor]) {
+			const { statut: status, corps } = await callRest('GET', `/api/profiles/${profile.id}?depth=0`, {
+				enTetes: reader.session.enTetes,
 			})
-			expect(statut).toBe(200)
-			expect(Object.keys(corps as object).sort()).toEqual(CLES_PUBLIQUES)
+			expect(status).toBe(200)
+			expect(Object.keys(corps as object).sort()).toEqual(PUBLIC_KEYS)
 		}
 	})
 
 	test('la propriétaire lit son statut, son motif, sa vérification et son SIRET, jamais la note interne ni le score', async () => {
-		const { compte, profil } = await maquilleuseAvecProfil('hidden')
+		const { compte: account, profil: profile } = await artistWithProfile('hidden')
 
-		const { statut, corps } = await callRest('GET', `/api/profiles/${profil.id}?depth=0`, {
-			enTetes: compte.session.enTetes,
+		const { statut: status, corps } = await callRest('GET', `/api/profiles/${profile.id}?depth=0`, {
+			enTetes: account.session.enTetes,
 		})
 
-		expect(statut).toBe(200)
+		expect(status).toBe(200)
 		expect(corps).toMatchObject({
 			status: 'hidden',
 			reason: RESERVE.reason,
 			verified: true,
 			verifiedAt: RESERVE.verifiedAt,
 			siret: RESERVE.siret,
-			pro: Number(compte.id),
+			pro: Number(account.id),
 			legacyUsername: RESERVE.legacyUsername,
-			strapiId: profil.strapiId,
+			strapiId: profile.strapiId,
 		})
 		expect(corps).not.toHaveProperty('internalNote')
 		expect(corps).not.toHaveProperty('score')
 	})
 
 	test('l’admin lit tout', async () => {
-		const { profil } = await maquilleuseAvecProfil('published')
+		const { profil: profile } = await artistWithProfile('published')
 		const admin = await createAccount('admin')
 
-		const { corps } = await callRest('GET', `/api/profiles/${profil.id}?depth=0`, { enTetes: admin.session.enTetes })
+		const { corps } = await callRest('GET', `/api/profiles/${profile.id}?depth=0`, { enTetes: admin.session.enTetes })
 
-		expect(corps).toMatchObject({ ...RESERVE, strapiId: profil.strapiId, status: 'published', superArtist: true })
+		expect(corps).toMatchObject({ ...RESERVE, strapiId: profile.strapiId, status: 'published', superArtist: true })
 	})
 })
 
 describe('Statut, vérifié et score envoyés par la maquilleuse restent inchangés (I03, U55)', () => {
 	test('la modification passe pour son identité, les champs réservés gardent leur valeur', async () => {
-		const { compte, profil } = await maquilleuseAvecProfil('draft')
-		const autre = await createAccount('maquilleuse-sans-profil')
-		const avant = await stocke(profil.id)
+		const { compte: account, profil: profile } = await artistWithProfile('draft')
+		const other = await createAccount('maquilleuse-sans-profil')
+		const before = await stored(profile.id)
 
-		const { statut } = await callRest('PATCH', `/api/profiles/${profil.id}`, {
-			enTetes: compte.session.enTetes,
+		const { statut: status } = await callRest('PATCH', `/api/profiles/${profile.id}`, {
+			enTetes: account.session.enTetes,
 			corps: {
 				firstName: 'Nouveau Prénom',
 				status: 'published',
@@ -193,13 +193,13 @@ describe('Statut, vérifié et score envoyés par la maquilleuse restent inchang
 				siret: '98765432109876',
 				internalNote: 'Envoyée par la maquilleuse',
 				superArtist: false,
-				pro: Number(autre.id),
+				pro: Number(other.id),
 			},
 		})
 
-		expect(statut).toBe(200)
-		const apres = await stocke(profil.id)
-		expect(apres.firstName).toBe('Nouveau Prénom')
+		expect(status).toBe(200)
+		const after = await stored(profile.id)
+		expect(after.firstName).toBe('Nouveau Prénom')
 		const reserves = [
 			'status',
 			'verified',
@@ -211,53 +211,53 @@ describe('Statut, vérifié et score envoyés par la maquilleuse restent inchang
 			'superArtist',
 			'pro',
 		] as const
-		for (const champ of reserves) expect([champ, apres[champ]]).toEqual([champ, avant[champ]])
+		for (const field of reserves) expect([field, after[field]]).toEqual([field, before[field]])
 	})
 
 	test('un SIRET mal formé est refusé en français, même pour un admin', async () => {
-		const { profil } = await maquilleuseAvecProfil('published')
+		const { profil: profile } = await artistWithProfile('published')
 		const admin = await createAccount('admin')
 
-		const { statut, texte } = await callRest('PATCH', `/api/profiles/${profil.id}`, {
+		const { statut: status, texte: text } = await callRest('PATCH', `/api/profiles/${profile.id}`, {
 			enTetes: admin.session.enTetes,
 			corps: { siret: '123 456 789' },
 		})
 
-		expect(statut).toBe(400)
-		expect(texte).toContain('Le SIRET compte 14 chiffres, sans espace.')
-		expect((await stocke(profil.id)).siret).toBe(RESERVE.siret)
+		expect(status).toBe(400)
+		expect(text).toContain('Le SIRET compte 14 chiffres, sans espace.')
+		expect((await stored(profile.id)).siret).toBe(RESERVE.siret)
 	})
 })
 
 describe('L’admin masque un profil : la lecture anonyme suivante ne le rend plus', () => {
 	test('lu par son identifiant et dans la liste avant ; introuvable et absent de la liste après', async () => {
-		const { profil } = await maquilleuseAvecProfil('published')
+		const { profil: profile } = await artistWithProfile('published')
 		const admin = await createAccount('admin')
-		expect((await callRest('GET', `/api/profiles/${profil.id}`)).statut).toBe(200)
+		expect((await callRest('GET', `/api/profiles/${profile.id}`)).statut).toBe(200)
 
-		const masquage = await callRest('PATCH', `/api/profiles/${profil.id}`, {
+		const hiding = await callRest('PATCH', `/api/profiles/${profile.id}`, {
 			enTetes: admin.session.enTetes,
 			corps: { chosenStatus: 'hidden', reason: 'Masqué pour le test' },
 		})
 
-		expect(masquage.statut).toBe(200)
-		expect((await callRest('GET', `/api/profiles/${profil.id}`)).statut).toBe(404)
-		expect(identifiants((await callRest('GET', '/api/profiles?depth=0')).corps)).toEqual([])
+		expect(hiding.statut).toBe(200)
+		expect((await callRest('GET', `/api/profiles/${profile.id}`)).statut).toBe(404)
+		expect(identifiers((await callRest('GET', '/api/profiles?depth=0')).corps)).toEqual([])
 	})
 })
 
 /** Addresses a robot tries: none names an identifier a profile or a media can have. */
-const IDENTIFIANTS_MAL_FORMES = ['abc', 'wp-login.php', '1e999', '99999999999', '1.5']
+const MALFORMED_IDENTIFIERS = ['abc', 'wp-login.php', '1e999', '99999999999', '1.5']
 
 describe('Un identifiant de profil mal formé : refusé avant la base, jamais une erreur 500', () => {
 	test('par REST pour l’anonyme, une maquilleuse et l’admin ; par l’API locale avec les règles actives', async () => {
-		const [maquilleuse, admin] = await Promise.all([createAccount('maquilleuse'), createAccount('admin')])
+		const [artist, admin] = await Promise.all([createAccount('maquilleuse'), createAccount('admin')])
 		const payload = await testPayload()
 
-		for (const enTetes of [{}, maquilleuse.session.enTetes, admin.session.enTetes])
-			for (const id of IDENTIFIANTS_MAL_FORMES)
-				expect([id, (await callRest('GET', `/api/profiles/${id}`, { enTetes })).statut]).toEqual([id, 403])
-		for (const id of IDENTIFIANTS_MAL_FORMES)
+		for (const headers of [{}, artist.session.enTetes, admin.session.enTetes])
+			for (const id of MALFORMED_IDENTIFIERS)
+				expect([id, (await callRest('GET', `/api/profiles/${id}`, { enTetes: headers })).statut]).toEqual([id, 403])
+		for (const id of MALFORMED_IDENTIFIERS)
 			await expect(payload.findByID({ collection: 'profiles', id, overrideAccess: false })).rejects.toMatchObject({
 				status: 403,
 			})

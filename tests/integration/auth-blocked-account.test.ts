@@ -18,38 +18,38 @@ afterAll(async () => {
 	await emptyBase()
 })
 
-const MOT_DE_PASSE = 'aaaaaaaa'
-const frein = createRateLimit({ nom: 'essai-int-bloque', limite: 1000, fenetreMs: 60_000 })
+const PASSWORD = 'aaaaaaaa'
+const rateLimit = createRateLimit({ nom: 'essai-int-bloque', limite: 1000, fenetreMs: 60_000 })
 let n = 0
-const adresse = () => new Headers({ 'x-forwarded-for': `192.0.2.${150 + (n++ % 100)}` })
+const url = () => new Headers({ 'x-forwarded-for': `192.0.2.${150 + (n++ % 100)}` })
 
-async function seConnecter(email: string, password: string) {
+async function signInAction(email: string, password: string) {
 	const payload = await testPayload()
 	return signInWithPassword({
 		ouvrir: data => openWithPassword(payload, 'pros', data),
-		headers: adresse(),
+		headers: url(),
 		email,
 		password,
-		frein,
+		frein: rateLimit,
 		journal: authLog(payload),
 	})
 }
 
-async function sessionsEnBase(id: number | string): Promise<number> {
+async function sessionsInBase(id: number | string): Promise<number> {
 	const payload = await testPayload()
-	const ligne = await payload.db.findOne<{ id: number; sessions?: unknown[] }>({
+	const line = await payload.db.findOne<{ id: number; sessions?: unknown[] }>({
 		collection: 'pros',
 		where: { id: { equals: id } },
 	})
-	return ligne?.sessions?.length ?? 0
+	return line?.sessions?.length ?? 0
 }
 
-async function qui(enTetes: Record<string, string>) {
+async function which(enTetes: Record<string, string>) {
 	const payload = await testPayload()
 	return (await payload.auth({ headers: new Headers(enTetes) })).user
 }
 
-const journal = async () =>
+const log = async () =>
 	(
 		await (
 			await testPayload()
@@ -57,7 +57,7 @@ const journal = async () =>
 	).docs
 
 /** What an admin does in the panel: the update goes through the access rules of her account. */
-async function bloquerParUnAdmin(id: number | string, bloque: boolean) {
+async function blockByAdmin(id: number | string, bloque: boolean) {
 	const payload = await testPayload()
 	const admin = await createAccount('admin')
 	const user = await payload.findByID({ collection: 'admins', id: admin.id, depth: 0, overrideAccess: true })
@@ -73,75 +73,79 @@ async function bloquerParUnAdmin(id: number | string, bloque: boolean) {
 
 describe('un compte bloqué ne peut pas se connecter', () => {
 	test('bon mot de passe : le code « compte-bloque », son message, aucune session ouverte', async () => {
-		const compte = await createAccount('maquilleuse-bloquee', { motDePasse: () => MOT_DE_PASSE })
-		expect(await sessionsEnBase(compte.id)).toBe(0)
+		const account = await createAccount('maquilleuse-bloquee', { motDePasse: () => PASSWORD })
+		expect(await sessionsInBase(account.id)).toBe(0)
 
-		const reponse = await seConnecter(compte.email, MOT_DE_PASSE)
+		const response = await signInAction(account.email, PASSWORD)
 
-		expect(reponse).toEqual({ ok: false, code: 'compte-bloque' })
+		expect(response).toEqual({ ok: false, code: 'compte-bloque' })
 		expect(errorMessage('compte-bloque')).toContain('bloqué')
-		expect(await sessionsEnBase(compte.id)).toBe(0)
+		expect(await sessionsInBase(account.id)).toBe(0)
 	})
 
 	test('mauvais mot de passe : le message générique, comme pour une adresse inconnue', async () => {
-		const compte = await createAccount('maquilleuse-bloquee', { motDePasse: () => MOT_DE_PASSE })
+		const account = await createAccount('maquilleuse-bloquee', { motDePasse: () => PASSWORD })
 
-		expect(await seConnecter(compte.email, 'mauvais-mot-de-passe')).toEqual({
+		expect(await signInAction(account.email, 'mauvais-mot-de-passe')).toEqual({
 			ok: false,
 			code: 'identifiants-invalides',
 		})
-		expect(await seConnecter(`inconnue-${compte.email}`, MOT_DE_PASSE)).toEqual({
+		expect(await signInAction(`inconnue-${account.email}`, PASSWORD)).toEqual({
 			ok: false,
 			code: 'identifiants-invalides',
 		})
 	})
 
 	test('la porte REST refuse aussi, en 403 et en français ; une ligne « compte-bloque » au journal', async () => {
-		const compte = await createAccount('maquilleuse-bloquee', { motDePasse: () => MOT_DE_PASSE })
-		const avant = (await journal()).length
+		const account = await createAccount('maquilleuse-bloquee', { motDePasse: () => PASSWORD })
+		const before = (await log()).length
 
-		const { statut, enTetes, texte } = await callRest('POST', '/api/pros/login', {
-			corps: { email: compte.email, password: MOT_DE_PASSE },
+		const {
+			statut: status,
+			enTetes: headers,
+			texte: text,
+		} = await callRest('POST', '/api/pros/login', {
+			corps: { email: account.email, password: PASSWORD },
 			enTetes: { 'x-forwarded-for': '192.0.2.99' },
 		})
 
-		expect(statut).toBe(403)
-		expect(enTetes.get('set-cookie') ?? '').not.toContain('payload-token=')
-		expect(texte).toContain(errorMessage('compte-bloque'))
-		expect((await journal()).slice(avant).map(({ type, code }) => [type, code])).toEqual([['sign-in', 'compte-bloque']])
+		expect(status).toBe(403)
+		expect(headers.get('set-cookie') ?? '').not.toContain('payload-token=')
+		expect(text).toContain(errorMessage('compte-bloque'))
+		expect((await log()).slice(before).map(({ type, code }) => [type, code])).toEqual([['sign-in', 'compte-bloque']])
 	})
 
 	test('le formulaire laisse la même ligne au journal', async () => {
-		const compte = await createAccount('maquilleuse-bloquee', { motDePasse: () => MOT_DE_PASSE })
-		const avant = (await journal()).length
+		const account = await createAccount('maquilleuse-bloquee', { motDePasse: () => PASSWORD })
+		const before = (await log()).length
 
-		await seConnecter(compte.email, MOT_DE_PASSE)
+		await signInAction(account.email, PASSWORD)
 
-		expect((await journal()).slice(avant).map(({ type, code }) => [type, code])).toEqual([['sign-in', 'compte-bloque']])
+		expect((await log()).slice(before).map(({ type, code }) => [type, code])).toEqual([['sign-in', 'compte-bloque']])
 	})
 })
 
 describe('bloquer ferme les sessions, débloquer rend l’accès', () => {
 	test('les sessions du compte sont fermées, celles des autres comptes intactes, puis le déblocage rouvre la connexion', async () => {
-		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
-		const autre = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
-		const { enTetes } = compte.session
-		expect((await qui(enTetes))?.id).toBe(Number(compte.id))
-		expect(await sessionsEnBase(compte.id)).toBeGreaterThan(0)
-		const avant = (await journal()).length
+		const account = await createAccount('maquilleuse', { motDePasse: () => PASSWORD })
+		const other = await createAccount('maquilleuse', { motDePasse: () => PASSWORD })
+		const { enTetes: headers } = account.session
+		expect((await which(headers))?.id).toBe(Number(account.id))
+		expect(await sessionsInBase(account.id)).toBeGreaterThan(0)
+		const before = (await log()).length
 
-		await bloquerParUnAdmin(compte.id, true)
+		await blockByAdmin(account.id, true)
 
-		expect(await sessionsEnBase(compte.id)).toBe(0)
-		expect(await qui(enTetes)).toBeNull()
-		expect((await qui(autre.session.enTetes))?.id).toBe(Number(autre.id))
-		expect(await seConnecter(compte.email, MOT_DE_PASSE)).toEqual({ ok: false, code: 'compte-bloque' })
+		expect(await sessionsInBase(account.id)).toBe(0)
+		expect(await which(headers)).toBeNull()
+		expect((await which(other.session.enTetes))?.id).toBe(Number(other.id))
+		expect(await signInAction(account.email, PASSWORD)).toEqual({ ok: false, code: 'compte-bloque' })
 
-		await bloquerParUnAdmin(compte.id, false)
+		await blockByAdmin(account.id, false)
 
-		const rouverte = await seConnecter(compte.email, MOT_DE_PASSE)
-		expect(rouverte.ok).toBe(true)
-		expect((await journal()).slice(avant).map(({ type, code }) => [type, code])).toEqual([
+		const reopened = await signInAction(account.email, PASSWORD)
+		expect(reopened.ok).toBe(true)
+		expect((await log()).slice(before).map(({ type, code }) => [type, code])).toEqual([
 			['block', 'ok'],
 			['sign-in', 'compte-bloque'],
 			['unblock', 'ok'],
@@ -150,22 +154,22 @@ describe('bloquer ferme les sessions, débloquer rend l’accès', () => {
 	}, 30_000)
 
 	test('enregistrer un compte déjà bloqué ne laisse pas de ligne de plus', async () => {
-		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
-		await bloquerParUnAdmin(compte.id, true)
-		const avant = (await journal()).length
+		const account = await createAccount('maquilleuse', { motDePasse: () => PASSWORD })
+		await blockByAdmin(account.id, true)
+		const before = (await log()).length
 
-		await bloquerParUnAdmin(compte.id, true)
+		await blockByAdmin(account.id, true)
 
-		expect((await journal()).length).toBe(avant)
+		expect((await log()).length).toBe(before)
 	})
 })
 
 describe('seul l’admin change le blocage', () => {
 	test('la maquilleuse ne se débloque pas elle-même, et ne se bloque pas non plus par erreur de rôle', async () => {
 		const payload = await testPayload()
-		const bloquee = await createAccount('maquilleuse-bloquee', { motDePasse: () => MOT_DE_PASSE })
-		const libre = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
-		const comme = async (id: number | string) => ({
+		const blocked = await createAccount('maquilleuse-bloquee', { motDePasse: () => PASSWORD })
+		const free = await createAccount('maquilleuse', { motDePasse: () => PASSWORD })
+		const as = async (id: number | string) => ({
 			...(await payload.findByID({ collection: 'pros', id, depth: 0, overrideAccess: true })),
 			collection: 'pros' as const,
 		})
@@ -173,28 +177,28 @@ describe('seul l’admin change le blocage', () => {
 		await payload
 			.update({
 				collection: 'pros',
-				id: bloquee.id,
+				id: blocked.id,
 				data: { blocked: false },
 				depth: 0,
 				overrideAccess: false,
-				user: await comme(bloquee.id),
+				user: await as(blocked.id),
 			})
 			.catch(() => undefined)
 		await payload.update({
 			collection: 'pros',
-			id: libre.id,
+			id: free.id,
 			data: { blocked: true, name: 'Nom changé' },
 			depth: 0,
 			overrideAccess: false,
-			user: await comme(libre.id),
+			user: await as(free.id),
 		})
 
-		const lu = async (id: number | string) =>
+		const read = async (id: number | string) =>
 			payload.findByID({ collection: 'pros', id, depth: 0, overrideAccess: true })
-		expect((await lu(bloquee.id)).blocked).toBe(true)
-		const apres = await lu(libre.id)
-		expect(apres.blocked).toBe(false)
-		expect(apres.name).toBe('Nom changé')
-		expect(await sessionsEnBase(libre.id)).toBeGreaterThan(0)
+		expect((await read(blocked.id)).blocked).toBe(true)
+		const after = await read(free.id)
+		expect(after.blocked).toBe(false)
+		expect(after.name).toBe('Nom changé')
+		expect(await sessionsInBase(free.id)).toBeGreaterThan(0)
 	})
 })

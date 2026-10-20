@@ -21,7 +21,7 @@ import {
  * - On the bench: the clear addresses of the inventory, the examples of the table, and the fictional
  *   set for the pages that depend on the data.
  * - On demand, on the imported copy: `PARITE_URLS_LISTE=<baseline csv of the measuring tool> bun run
- *   test:e2e tests/e2e/parite-urls.spec.ts`. Real profile addresses are requested and never written:
+ *   test:e2e tests/e2e/url-parity.spec.ts`. Real profile addresses are requested and never written:
  *   they show as « profil #n ».
  *
  * A type is delivered once its ticket is done: it joins the list below in the same commit, and an
@@ -29,14 +29,12 @@ import {
  * answers right is counted green all the same.
  */
 // Playwright runs under Node, which wants an attribute on a JSON import: the file is read.
-const anciens: OldSiteTitles = JSON.parse(
-	readFileSync(new URL('../fixtures/url-parity-h1.json', import.meta.url), 'utf8')
-)
+const old: OldSiteTitles = JSON.parse(readFileSync(new URL('../fixtures/url-parity-h1.json', import.meta.url), 'utf8'))
 
 // Every family of the inventory is delivered. `slug-inconnu` came last (ticket 231): a 404 raised by `notFound()`
 // reaches the browser as a stream with no h1 in the HTML of the server, so the proxy answers an unknown slug itself
 // (src/proxy.ts, src/lib/urls/unknown-page.ts).
-const LIVREES: ReadonlySet<string> = new Set([
+const DELIVERED: ReadonlySet<string> = new Set([
 	'accueil',
 	'recherche',
 	'adresse-inconnue',
@@ -80,86 +78,90 @@ const LIVREES: ReadonlySet<string> = new Set([
  * `/cgu` and `/politique-de-confidentialite` belong to the family of the fixed pages, which is delivered:
  * they are held green one by one here all the same, on a bench with the whole inventory.
  */
-const PAGES_JURIDIQUES = ['/mentions-legales', '/cgu', '/politique-de-confidentialite']
+const LEGAL_PAGES = ['/mentions-legales', '/cgu', '/politique-de-confidentialite']
 
 test('I45 : les adresses gelées répondent comme la table, avec le même h1', async ({ request, baseURL }) => {
 	test.setTimeout(300_000)
-	const privee = privateList()
-	const contenus: { collection: 'talents' | 'articles'; id: number }[] = []
-	let cas: ParityCase[]
-	if (privee) cas = privee
+	const privateValue = privateList()
+	const contents: { collection: 'talents' | 'articles'; id: number }[] = []
+	let caseOf: ParityCase[]
+	if (privateValue) caseOf = privateValue
 	else {
 		// The bench holds made-up pages for the families that depend on the data.
-		const profils = await setSearchProfiles()
-		const profil = (cle: string) => {
-			const trouve = profils.get(cle)
-			if (!trouve) throw new Error(`pas de profil d’essai « ${cle} »`)
-			return trouve
+		const profiles = await setSearchProfiles()
+		const profile = (cle: string) => {
+			const found = profiles.get(cle)
+			if (!found) throw new Error(`pas de profil d’essai « ${cle} »`)
+			return found
 		}
-		await refreshProfilePages(request, profil('reference'))
-		const suffixe = Date.now().toString(36)
-		const talent = `essai-parite-${suffixe}`
-		const publie = `essai-parite-publie-${suffixe}`
-		const brouillon = `essai-parite-brouillon-${suffixe}`
-		contenus.push(
+		await refreshProfilePages(request, profile('reference'))
+		const suffix = Date.now().toString(36)
+		const talent = `essai-parite-${suffix}`
+		const published = `essai-parite-publie-${suffix}`
+		const draft = `essai-parite-brouillon-${suffix}`
+		contents.push(
 			{
 				collection: 'talents',
 				id: await createContent(request, 'talents', { title: `Essai ${talent}`, slug: talent, _status: 'published' }),
 			},
 			{
 				collection: 'articles',
-				id: await createContent(request, 'articles', { title: `Essai ${publie}`, slug: publie, _status: 'published' }),
+				id: await createContent(request, 'articles', {
+					title: `Essai ${published}`,
+					slug: published,
+					_status: 'published',
+				}),
 			},
 			{
 				collection: 'articles',
 				id: await createContent(request, 'articles', {
-					title: `Essai ${brouillon}`,
-					slug: brouillon,
+					title: `Essai ${draft}`,
+					slug: draft,
 					_status: 'draft',
 				}),
 			}
 		)
-		const jeu: DatasetData = {
-			profilsVisibles: [...profils.entries()].filter(([cle]) => cle !== 'masquee').map(([, { slug }]) => slug),
-			profilsMasques: [profil('masquee').slug],
-			ancienNom: { ecrit: encodeURIComponent('Essai Zoé'), slug: profil('ancien-nom-accentue').slug },
+		const dataset: DatasetData = {
+			profilsVisibles: [...profiles.entries()].filter(([cle]) => cle !== 'masquee').map(([, { slug }]) => slug),
+			profilsMasques: [profile('masquee').slug],
+			ancienNom: { ecrit: encodeURIComponent('Essai Zoé'), slug: profile('ancien-nom-accentue').slug },
 			talents: [talent],
-			articlesPublies: [publie],
-			articlesBrouillons: [brouillon],
+			articlesPublies: [published],
+			articlesBrouillons: [draft],
 		}
-		cas = benchCase(anciens, jeu)
+		caseOf = benchCase(old, dataset)
 	}
-	expect(cas.length).toBeGreaterThan(30)
+	expect(caseOf.length).toBeGreaterThan(30)
 
 	try {
-		const resultats = []
-		for (const unCas of cas) {
+		const results = []
+		for (const oneCase of caseOf) {
 			// `//x` is a path of the site: written after the origin, it is not read as a host.
-			const resultat = await check(unCas, async adresse => {
-				const reponse = await request.get(`${baseURL}${adresse}`, { maxRedirects: 0, failOnStatusCode: false })
-				const entetes = reponse.headers()
+			const result = await check(oneCase, async adresse => {
+				const response = await request.get(`${baseURL}${adresse}`, { maxRedirects: 0, failOnStatusCode: false })
+				const headers = response.headers()
 				return {
-					status: reponse.status(),
-					location: entetes.location ?? null,
-					contentType: entetes['content-type'] ?? null,
-					corps: () => reponse.text(),
+					status: response.status(),
+					location: headers.location ?? null,
+					contentType: headers['content-type'] ?? null,
+					corps: () => response.text(),
 				}
 			})
-			resultats.push({ cas: unCas, resultat })
+			results.push({ cas: oneCase, resultat: result })
 		}
 
-		const lignes = summary(resultats, LIVREES)
-		console.log(`\n${writeSummary(lignes, LIVREES)}\n`)
-		for (const { cas: unCas, resultat } of resultats)
-			if (resultat.etat === 'ecart') console.log(`I45 écart connu ${unCas.etiquette} : ${resultat.raison}`)
-		expect(lignes.flatMap(({ regressions }) => regressions)).toEqual([])
-		if (!privee)
-			for (const adresse of PAGES_JURIDIQUES) {
-				const trouve = resultats.find(({ cas: unCas }) => unCas.adresse === adresse)
-				expect(trouve, `${adresse} est dans les cas`).toBeDefined()
-				expect(trouve?.resultat.etat, adresse).toBe('vert')
+		const lines = summary(results, DELIVERED)
+		console.log(`\n${writeSummary(lines, DELIVERED)}\n`)
+		for (const { cas: oneCase, resultat: result } of results)
+			if (result.etat === 'ecart') console.log(`I45 écart connu ${oneCase.etiquette} : ${result.raison}`)
+		expect(lines.flatMap(({ regressions }) => regressions)).toEqual([])
+		if (!privateValue)
+			for (const url of LEGAL_PAGES) {
+				const found = results.find(({ cas: oneCase }) => oneCase.adresse === url)
+				expect(found, `${url} est dans les cas`).toBeDefined()
+				expect(found?.resultat.etat, url).toBe('vert')
 			}
 	} finally {
-		for (const { collection, id } of contenus) await deleteContent(request, collection, id)
+		for (const { collection, id } of contents) await deleteContent(request, collection, id)
 	}
 })

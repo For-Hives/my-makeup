@@ -20,99 +20,99 @@ import { type Line, sourceDefinition } from '../support/source-strapi/data'
  */
 
 const source = benchSource()
-const { lignes } = sourceDefinition(source.medias)
+const { lignes: lines } = sourceDefinition(source.medias)
 
 /** The profiles the import takes: profile 29 is set aside by the table of decisions of the bench, the 13 of the spam have no account. */
-const PRIS = lignes.makeup_artistes_user_links.map(lien => Number(lien.makeup_artiste_id)).filter(id => id !== 29)
+const TAKEN = lines.makeup_artistes_user_links.map(lien => Number(lien.makeup_artiste_id)).filter(id => id !== 29)
 
 /**
  * The rows of the fake source that sit outside a bound of the v3 (ticket 226): the import leaves
  * them out of their profile and lists them. Written here by identifier, never computed by the import.
  */
-const HORS_BORNES = {
+const OUT_OF_BOUNDS = {
 	experiences: [4],
 	formations: [3],
 	prestations: [12],
 	options: [4],
 } as const
 
-const sauf = (ids: readonly number[]) => (ligne: Line) => !ids.includes(Number(ligne.id))
+const except = (ids: readonly number[]) => (ligne: Line) => !ids.includes(Number(ligne.id))
 
 /** The rows of a component table, by identifier. */
-const parId = (table: readonly Line[]) => new Map(table.map(ligne => [Number(ligne.id), ligne]))
+const byId = (table: readonly Line[]) => new Map(table.map(ligne => [Number(ligne.id), ligne]))
 
 /** The rows a link table gives an entry for one field, in the order of the old site: `order`, then the link. */
-function lignesDe(
+function linesOf(
 	liens: readonly Line[],
 	composants: readonly Line[],
 	entree: number,
 	type: string,
 	champ: string
 ): Line[] {
-	const rangees = parId(composants)
+	const ranked = byId(composants)
 	return liens
 		.filter(l => Number(l.entity_id) === entree && l.component_type === type && l.field === champ)
 		.sort((a, b) => Number(a.order) - Number(b.order) || Number(a.id) - Number(b.id))
 		.flatMap(l => {
-			const ligne = rangees.get(Number(l.component_id))
-			return ligne ? [ligne] : []
+			const line = ranked.get(Number(l.component_id))
+			return line ? [line] : []
 		})
 }
 
-const deProfil = (id: number, table: readonly Line[], type: string, champ: string) =>
-	lignesDe(lignes.makeup_artistes_components, table, id, type, champ)
+const ofProfile = (id: number, table: readonly Line[], type: string, champ: string) =>
+	linesOf(lines.makeup_artistes_components, table, id, type, champ)
 
 /** A day of the old site, as the collection stores it. */
-const jour = (date: unknown) => (date === null ? null : `${String(date)}T12:00:00.000Z`)
+const day = (date: unknown) => (date === null ? null : `${String(date)}T12:00:00.000Z`)
 
 /** What each list of a profile must hold, row by row, without the identifiers Payload gives. */
-function listesAttendues(id: number) {
+function expectedLists(id: number) {
 	return {
-		skills: deProfil(id, lignes.components_makeupartists_skills, 'makeupartists.skills', 'skills').map(c => ({
+		skills: ofProfile(id, lines.components_makeupartists_skills, 'makeupartists.skills', 'skills').map(c => ({
 			name: c.name,
 			description: c.description,
 		})),
-		languages: deProfil(id, lignes.components_makeupartists_languages, 'makeupartists.language', 'language').map(c => ({
+		languages: ofProfile(id, lines.components_makeupartists_languages, 'makeupartists.language', 'language').map(c => ({
 			name: c.name,
 		})),
-		courses: deProfil(id, lignes.components_makeupartists_courses, 'makeupartists.courses', 'courses')
-			.filter(sauf(HORS_BORNES.formations))
+		courses: ofProfile(id, lines.components_makeupartists_courses, 'makeupartists.courses', 'courses')
+			.filter(except(OUT_OF_BOUNDS.formations))
 			.map(c => ({
 				diploma: c.diploma,
 				school: c.school,
-				graduatedAt: jour(c.date_graduation),
+				graduatedAt: day(c.date_graduation),
 				description: c.course_description,
 			})),
-		experiences: deProfil(id, lignes.components_makeupartists_experiences, 'makeupartists.experiences', 'experiences')
-			.filter(sauf(HORS_BORNES.experiences))
+		experiences: ofProfile(id, lines.components_makeupartists_experiences, 'makeupartists.experiences', 'experiences')
+			.filter(except(OUT_OF_BOUNDS.experiences))
 			.map(c => ({
 				company: c.company,
 				jobTitle: c.job_name,
 				city: c.city,
-				startDate: jour(c.date_start),
-				endDate: jour(c.date_end),
+				startDate: day(c.date_start),
+				endDate: day(c.date_end),
 				description: c.description,
 			})),
-		serviceOffers: deProfil(
+		serviceOffers: ofProfile(
 			id,
-			lignes.components_makeupartists_service_offers,
+			lines.components_makeupartists_service_offers,
 			'makeupartists.service-offers',
 			'service_offers'
 		)
-			.filter(sauf(HORS_BORNES.prestations))
+			.filter(except(OUT_OF_BOUNDS.prestations))
 			.map(offre => ({
 				name: offre.name,
 				description: offre.description,
 				priceText: offre.price,
 				priceFrom: parsePrice(offre.price).priceFrom,
-				options: lignesDe(
-					lignes.components_makeupartists_service_offers_components,
-					lignes.components_service_offers_options,
+				options: linesOf(
+					lines.components_makeupartists_service_offers_components,
+					lines.components_service_offers_options,
 					Number(offre.id),
 					'service-offers.options',
 					'options'
 				)
-					.filter(sauf(HORS_BORNES.options))
+					.filter(except(OUT_OF_BOUNDS.options))
 					.map(option => ({
 						name: option.name,
 						description: option.description,
@@ -124,19 +124,19 @@ function listesAttendues(id: number) {
 }
 
 /** A list read back, without the identifiers of its rows. */
-const sansIdentifiants = (valeur: unknown): unknown =>
+const withoutIdentifiers = (valeur: unknown): unknown =>
 	Array.isArray(valeur)
-		? valeur.map(sansIdentifiants)
+		? valeur.map(withoutIdentifiers)
 		: typeof valeur === 'object' && valeur !== null
 			? Object.fromEntries(
 					Object.entries(valeur)
 						.filter(([cle]) => cle !== 'id')
-						.map(([cle, sous]) => [cle, sansIdentifiants(sous)])
+						.map(([cle, sous]) => [cle, withoutIdentifiers(sous)])
 				)
 			: valeur
 
 /** The identifiers Payload gave the rows of every list of every profile, options included. */
-const identifiantsDesLignes = (profils: Profile[]): string[] =>
+const linesIdentifiers = (profils: Profile[]): string[] =>
 	profils.flatMap(profil =>
 		[
 			...(profil.skills ?? []),
@@ -147,7 +147,7 @@ const identifiantsDesLignes = (profils: Profile[]): string[] =>
 		].map(ligne => `${profil.strapiId}:${ligne.id}`)
 	)
 
-async function profilsDeLaCible(): Promise<Profile[]> {
+async function targetProfiles(): Promise<Profile[]> {
 	const payload = await testPayload()
 	const { docs } = await payload.find({
 		collection: 'profiles',
@@ -160,30 +160,30 @@ async function profilsDeLaCible(): Promise<Profile[]> {
 }
 
 /** The media of each file adopted, by the identifier of the file. */
-async function mediasParFichier(): Promise<Map<number, number>> {
+async function mediaByFile(): Promise<Map<number, number>> {
 	const payload = await testPayload()
 	const { docs } = await payload.find({ collection: 'media', depth: 0, pagination: false, overrideAccess: true })
 	return new Map(docs.map(({ id, strapiId }) => [Number(strapiId), id]))
 }
 
 /** As the owner of the bench, the only one who may write into the source. */
-async function avecLeProprietaire<T>(travail: (sql: SQL) => Promise<T>): Promise<T> {
-	const proprietaire = new SQL({ url: source.administration, max: 1 })
+async function withOwner<T>(travail: (sql: SQL) => Promise<T>): Promise<T> {
+	const owner = new SQL({ url: source.administration, max: 1 })
 	try {
-		return await travail(proprietaire)
+		return await travail(owner)
 	} finally {
-		await proprietaire.close()
+		await owner.close()
 	}
 }
 
-let premier: Report
+let first: Report
 
 beforeAll(async () => {
 	await emptyBase()
 	// Before the source: emptying the bucket would take its objects away.
 	await emptyStorage()
 	await createSourceStrapi()
-	premier = await importOnBench()
+	first = await importOnBench()
 }, 60_000)
 
 afterAll(async () => {
@@ -193,28 +193,28 @@ afterAll(async () => {
 
 describe('Les sections de chaque profil sont reprises dans leur ordre (ticket 060)', () => {
 	test('même nombre de lignes par section, même ordre, options comprises (I40)', async () => {
-		const cible = await profilsDeLaCible()
+		const target = await targetProfiles()
 
-		expect(cible.map(({ strapiId }) => strapiId)).toEqual(PRIS)
-		for (const profil of cible) {
-			const attendues = listesAttendues(Number(profil.strapiId))
+		expect(target.map(({ strapiId }) => strapiId)).toEqual(TAKEN)
+		for (const profile of target) {
+			const expected = expectedLists(Number(profile.strapiId))
 			expect(
-				sansIdentifiants({
-					skills: profil.skills,
-					languages: profil.languages,
-					courses: profil.courses,
-					experiences: profil.experiences,
-					serviceOffers: profil.serviceOffers,
+				withoutIdentifiers({
+					skills: profile.skills,
+					languages: profile.languages,
+					courses: profile.courses,
+					experiences: profile.experiences,
+					serviceOffers: profile.serviceOffers,
 				}),
-				String(profil.strapiId)
-			).toEqual(attendues)
+				String(profile.strapiId)
+			).toEqual(expected)
 		}
-		expect(premier.parity?.profiles).toMatchObject({ expected: 13, equal: 13, different: [], missing: [] })
-		expect(premier.collections.profiles).toMatchObject({ refused: [], linksWithoutRow: [] })
+		expect(first.parity?.profiles).toMatchObject({ expected: 13, equal: 13, different: [], missing: [] })
+		expect(first.collections.profiles).toMatchObject({ refused: [], linksWithoutRow: [] })
 	})
 
 	test('l’ordre est celui de la table de liens, jamais celui des identifiants ; une ligne en double reste en double', async () => {
-		const zoe = (await profilsDeLaCible()).find(({ strapiId }) => strapiId === 21)
+		const zoe = (await targetProfiles()).find(({ strapiId }) => strapiId === 21)
 
 		// The links of these skills are written backwards: their `order` says 1, 2, 3.
 		expect(zoe?.skills?.map(({ name }) => name)).toEqual(['Maquillage mariée', 'Coiffure', 'Maquillage mariée'])
@@ -227,85 +227,83 @@ describe('Les sections de chaque profil sont reprises dans leur ordre (ticket 06
 			['2022-09-01T12:00:00.000Z', null],
 		])
 		// A row no link names belongs to no profile: skill 6, language 4, offer 11.
-		const cible = await profilsDeLaCible()
-		const noms = (liste: (p: Profile) => { name?: string | null }[] | null | undefined) =>
-			cible.flatMap(profil => (liste(profil) ?? []).map(({ name }) => name))
-		expect(noms(p => p.skills)).not.toContain('Maquillage invitée')
-		expect(noms(p => p.languages)).not.toContain('Italien')
-		expect(noms(p => p.serviceOffers)).not.toContain('Maquillage soirée')
+		const target = await targetProfiles()
+		const names = (liste: (p: Profile) => { name?: string | null }[] | null | undefined) =>
+			target.flatMap(profil => (liste(profil) ?? []).map(({ name }) => name))
+		expect(names(p => p.skills)).not.toContain('Maquillage invitée')
+		expect(names(p => p.languages)).not.toContain('Italien')
+		expect(names(p => p.serviceOffers)).not.toContain('Maquillage soirée')
 	})
 
 	test('le texte de prix est la saisie, à l’octet près ; le montant est lu par la règle unique (062)', async () => {
-		const prixDeLaSource = [
-			...lignes.components_makeupartists_service_offers.filter(sauf([11, ...HORS_BORNES.prestations])),
-			...lignes.components_service_offers_options.filter(sauf(HORS_BORNES.options)),
+		const sourcePrice = [
+			...lines.components_makeupartists_service_offers.filter(except([11, ...OUT_OF_BOUNDS.prestations])),
+			...lines.components_service_offers_options.filter(except(OUT_OF_BOUNDS.options)),
 		].map(({ price }) => price)
-		const prixDeLaCible = (await profilsDeLaCible())
+		const targetPrice = (await targetProfiles())
 			.flatMap(({ serviceOffers }) => serviceOffers ?? [])
 			.flatMap(offre => [offre, ...(offre.options ?? [])])
 
-		expect(prixDeLaCible.map(({ priceText }) => priceText).sort()).toEqual(
-			[...prixDeLaSource].sort() as (string | null)[]
-		)
-		for (const { priceText } of prixDeLaCible)
-			if (typeof priceText === 'string') expect(prixDeLaSource.some(prix => prix === priceText)).toBe(true)
+		expect(targetPrice.map(({ priceText }) => priceText).sort()).toEqual([...sourcePrice].sort() as (string | null)[])
+		for (const { priceText } of targetPrice)
+			if (typeof priceText === 'string') expect(sourcePrice.some(prix => prix === priceText)).toBe(true)
 		const encode = (texte: unknown) => [...new TextEncoder().encode(String(texte))]
-		const kaci = (await profilsDeLaCible()).find(({ strapiId }) => strapiId === 25)
+		const kaci = (await targetProfiles()).find(({ strapiId }) => strapiId === 25)
 		// A null price stays null, an empty one stays empty (rule 2).
 		expect(kaci?.serviceOffers?.map(({ priceText }) => priceText)).toEqual([null, ''])
-		const zoe = (await profilsDeLaCible()).find(({ strapiId }) => strapiId === 21)
+		const zoe = (await targetProfiles()).find(({ strapiId }) => strapiId === 21)
 		expect(encode(zoe?.serviceOffers?.[0]?.priceText)).toEqual(encode('à partir de 120 €'))
 		// 062: the amount is there when the text reads, empty otherwise (the text stays either way).
-		for (const { priceText, priceFrom } of prixDeLaCible)
+		for (const { priceText, priceFrom } of targetPrice)
 			expect(priceFrom ?? null, String(priceText)).toBe(parsePrice(priceText).priceFrom)
 		expect(zoe?.serviceOffers?.map(({ priceFrom }) => priceFrom)).toEqual([120, 80, null])
 		expect(zoe?.serviceOffers?.[0]?.options?.map(({ priceFrom }) => priceFrom)).toEqual([15, null])
 		// A free text keeps its text and has no amount; digits the rule does not read stay readable.
-		const libres = prixDeLaCible.filter(({ priceFrom }) => priceFrom === null)
-		expect(libres.map(({ priceText }) => priceText)).toContain('Sur devis')
-		expect(libres.map(({ priceText }) => priceText)).toContain('2 h : 150 €')
+		const free = targetPrice.filter(({ priceFrom }) => priceFrom === null)
+		expect(free.map(({ priceText }) => priceText)).toContain('Sur devis')
+		expect(free.map(({ priceText }) => priceText)).toContain('2 h : 150 €')
 	})
 
 	test('aucun profil ne perd son offre chiffrée, et le rapport le dit en nombres (062)', async () => {
-		const cible = await profilsDeLaCible()
-		for (const profil of cible) {
-			const offres = listesAttendues(Number(profil.strapiId)).serviceOffers
-			const chiffreeALaSource = offres.some(({ priceFrom }) => priceFrom !== null)
-			expect(minimumPrice(profil.serviceOffers) !== null, String(profil.strapiId)).toBe(chiffreeALaSource)
+		const target = await targetProfiles()
+		for (const profile of target) {
+			const offers = expectedLists(Number(profile.strapiId)).serviceOffers
+			const numberedAtSource = offers.some(({ priceFrom }) => priceFrom !== null)
+			expect(minimumPrice(profile.serviceOffers) !== null, String(profile.strapiId)).toBe(numberedAtSource)
 		}
-		const { prices: prix } = premier.collections.profiles ?? {}
-		const lignesDePrix = cible.flatMap(({ serviceOffers }) =>
+		const { prices: priceValue } = first.collections.profiles ?? {}
+		const priceLines = target.flatMap(({ serviceOffers }) =>
 			(serviceOffers ?? []).flatMap(o => [o, ...(o.options ?? [])])
 		)
-		expect(prix).toMatchObject({
-			prices: lignesDePrix.length,
-			withAmount: lignesDePrix.filter(({ priceFrom }) => priceFrom !== null).length,
+		expect(priceValue).toMatchObject({
+			prices: priceLines.length,
+			withAmount: priceLines.filter(({ priceFrom }) => priceFrom !== null).length,
 			lostPricedOffers: [],
 		})
 		// Profile 23 (60 is read) is no écart; 22 (an option at 0,50 € / km, under 5 €) and 24 (« 2 h : 150 € ») are listed.
-		expect(prix?.unreadDigits).toEqual([22, 24])
-		expect(premier.gaps['prix-numerique']).toBe(
-			cible.filter(({ serviceOffers }) =>
+		expect(priceValue?.unreadDigits).toEqual([22, 24])
+		expect(first.gaps['prix-numerique']).toBe(
+			target.filter(({ serviceOffers }) =>
 				(serviceOffers ?? []).some(o => [o, ...(o.options ?? [])].some(({ priceFrom }) => priceFrom !== null))
 			).length
 		)
-		expect(JSON.stringify(premier)).not.toContain('Sur devis')
+		expect(JSON.stringify(first)).not.toContain('Sur devis')
 	})
 
 	test('les réseaux sont les liens de l’ancien site ; téléphone et email sont au ticket 064', async () => {
-		for (const profil of await profilsDeLaCible()) {
-			const [reseau] = deProfil(
-				Number(profil.strapiId),
-				lignes.components_makeupartists_networks,
+		for (const profile of await targetProfiles()) {
+			const [network] = ofProfile(
+				Number(profile.strapiId),
+				lines.components_makeupartists_networks,
 				'makeupartists.network',
 				'network'
 			)
-			expect(profil.networks as unknown, String(profil.strapiId)).toEqual({
-				youtube: reseau?.youtube ?? null,
-				facebook: reseau?.facebook ?? null,
-				instagram: reseau?.instagram ?? null,
-				website: reseau?.website ?? null,
-				linkedin: reseau?.linkedin ?? null,
+			expect(profile.networks as unknown, String(profile.strapiId)).toEqual({
+				youtube: network?.youtube ?? null,
+				facebook: network?.facebook ?? null,
+				instagram: network?.instagram ?? null,
+				website: network?.website ?? null,
+				linkedin: network?.linkedin ?? null,
 			})
 		}
 	})
@@ -313,7 +311,7 @@ describe('Les sections de chaque profil sont reprises dans leur ordre (ticket 06
 
 describe('Une ligne hors d’une borne de la v3 et un rayon au-dessus de 200 km (ticket 226)', () => {
 	test('le profil 33 est repris sans ses quatre lignes hors bornes, qui sont listées par rang, jamais par texte', async () => {
-		const hugo = (await profilsDeLaCible()).find(({ strapiId }) => strapiId === 33)
+		const hugo = (await targetProfiles()).find(({ strapiId }) => strapiId === 33)
 
 		expect(hugo?.experiences ?? []).toEqual([])
 		expect(hugo?.courses ?? []).toEqual([])
@@ -322,31 +320,31 @@ describe('Une ligne hors d’une borne de la v3 et un rayon au-dessus de 200 km 
 			['Cours particulier', 0],
 		])
 		expect(hugo?.status).toBe('published')
-		expect(premier.collections.profiles).toMatchObject({ refused: [] })
-		expect(premier.collections.profiles?.skippedRows).toEqual([
+		expect(first.collections.profiles).toMatchObject({ refused: [] })
+		expect(first.collections.profiles?.skippedRows).toEqual([
 			{ profile: 33, liste: 'formations', rang: 1 },
 			{ profile: 33, liste: 'experiences', rang: 1 },
 			{ profile: 33, liste: 'prestations', rang: 2 },
 			{ profile: 33, liste: 'options', rang: 1, prestation: 1 },
 		])
-		const texte = JSON.stringify(premier)
-		expect(texte).not.toContain('Maison Fictive')
-		expect(texte).not.toContain('Option au nom trop long')
-		expect(texte).not.toContain('Une phrase de remplissage')
+		const text = JSON.stringify(first)
+		expect(text).not.toContain('Maison Fictive')
+		expect(text).not.toContain('Option au nom trop long')
+		expect(text).not.toContain('Une phrase de remplissage')
 	})
 
 	test('le rayon de 0 à 200 km est repris ; au-dessus, le champ reste vide et le profil est listé avec la valeur', async () => {
-		const cible = await profilsDeLaCible()
-		const rayon = (id: number) => cible.find(({ strapiId }) => strapiId === id)?.radiusKm ?? null
+		const target = await targetProfiles()
+		const radius = (id: number) => target.find(({ strapiId }) => strapiId === id)?.radiusKm ?? null
 
-		expect([21, 22, 23, 24].map(rayon)).toEqual([30, 50, 20, null])
+		expect([21, 22, 23, 24].map(radius)).toEqual([30, 50, 20, null])
 		// 26 holds 400 km at the source: its zone stays empty, it is taken, and listed with the value.
-		expect(rayon(26)).toBeNull()
-		expect(cible.some(({ strapiId }) => strapiId === 26)).toBe(true)
-		expect(premier.collections.profiles?.radiiToReview).toEqual([{ profile: 26, radiusKm: 400 }])
-		expect(premier.gaps['rayon-200-km']).toBe(1)
+		expect(radius(26)).toBeNull()
+		expect(target.some(({ strapiId }) => strapiId === 26)).toBe(true)
+		expect(first.collections.profiles?.radiiToReview).toEqual([{ profile: 26, radiusKm: 400 }])
+		expect(first.gaps['rayon-200-km']).toBe(1)
 		// Parity: the radius is a compared field, and explained.
-		expect(premier.parity?.profiles).toMatchObject({ different: [], missing: [], extra: [] })
+		expect(first.parity?.profiles).toMatchObject({ different: [], missing: [], extra: [] })
 	})
 
 	test('un second passage ne crée ni ne modifie rien', async () => {
@@ -359,69 +357,69 @@ describe('Une ligne hors d’une borne de la v3 et un rayon au-dessus de 200 km 
 
 describe('Les photos de chaque profil (ticket 060)', () => {
 	test('la photo principale et la galerie, dans l’ordre, sont les médias adoptés de ses fichiers', async () => {
-		const medias = await mediasParFichier()
-		const parProfil = Object.fromEntries(
-			(await profilsDeLaCible()).map(({ strapiId, mainPicture, gallery }) => [
+		const media = await mediaByFile()
+		const byProfile = Object.fromEntries(
+			(await targetProfiles()).map(({ strapiId, mainPicture, gallery }) => [
 				strapiId,
 				{ principale: mainPicture ?? null, gallery: gallery ?? [] },
 			])
 		)
 
 		// The links of the gallery of 21 are written out of order: `order` says 102, 103, 104.
-		expect(parProfil[21]).toEqual({
-			principale: medias.get(101) ?? -1,
-			gallery: [medias.get(102), medias.get(103), medias.get(104)],
+		expect(byProfile[21]).toEqual({
+			principale: media.get(101) ?? -1,
+			gallery: [media.get(102), media.get(103), media.get(104)],
 		})
-		expect(parProfil[22]).toEqual({ principale: medias.get(105) ?? -1, gallery: [medias.get(106)] })
+		expect(byProfile[22]).toEqual({ principale: media.get(105) ?? -1, gallery: [media.get(106)] })
 		// The object of 107 is missing from the storage: adopted all the same, a « 404 connu ».
-		expect(parProfil[23]).toEqual({ principale: medias.get(107) ?? -1, gallery: [] })
-		expect(parProfil[25]).toEqual({ principale: null, gallery: [medias.get(109)] })
+		expect(byProfile[23]).toEqual({ principale: media.get(107) ?? -1, gallery: [] })
+		expect(byProfile[25]).toEqual({ principale: null, gallery: [media.get(109)] })
 	})
 
 	test('une photo dont le média n’est pas adopté est signalée, pas inventée', async () => {
-		const camille = (await profilsDeLaCible()).find(({ strapiId }) => strapiId === 24)
+		const camille = (await targetProfiles()).find(({ strapiId }) => strapiId === 24)
 
 		// 108 is a PDF: not adopted, so the gallery of 24 is empty in the v3.
 		expect(camille?.gallery ?? []).toEqual([])
-		expect(premier.collections.profiles?.photosNotCarriedOver).toEqual([{ entry: 24, file: 108 }])
-		expect(premier.collections.profiles?.statusesDifferingFromSource).toEqual([])
+		expect(first.collections.profiles?.photosNotCarriedOver).toEqual([{ entry: 24, file: 108 }])
+		expect(first.collections.profiles?.statusesDifferingFromSource).toEqual([])
 	})
 })
 
 describe('Un second passage (ticket 060)', () => {
 	test('0 mise à jour, et chaque ligne de liste garde son identifiant', async () => {
-		const avant = await profilsDeLaCible()
-		const identifiants = identifiantsDesLignes(avant)
+		const before = await targetProfiles()
+		const identifiers = linesIdentifiers(before)
 
 		const second = await importOnBench()
 
 		expect(second.collections.profiles).toMatchObject({ created: 0, updated: 0, unchanged: 13, refused: [] })
-		expect(identifiantsDesLignes(await profilsDeLaCible())).toEqual(identifiants)
-		expect(identifiants.length).toBeGreaterThan(10)
-		expect(await profilsDeLaCible()).toEqual(avant)
+		expect(linesIdentifiers(await targetProfiles())).toEqual(identifiers)
+		expect(identifiers.length).toBeGreaterThan(10)
+		expect(await targetProfiles()).toEqual(before)
 	})
 })
 
 describe('Un lien de liste qui ne nomme aucune ligne (SCHEMA.md §7)', () => {
-	const LIEN = 900
+	const LINK = 900
 
 	beforeAll(() =>
-		avecLeProprietaire(sql =>
+		withOwner(sql =>
 			sql.unsafe(
 				`INSERT INTO makeup_artistes_components (id, entity_id, component_id, component_type, field, "order")
-				VALUES (${LIEN}, 22, 999, 'makeupartists.skills', 'skills', 2)`
+				VALUES (${LINK}, 22, 999, 'makeupartists.skills', 'skills', 2)`
 			)
 		)
 	)
 
-	afterAll(() => avecLeProprietaire(sql => sql.unsafe(`DELETE FROM makeup_artistes_components WHERE id = ${LIEN}`)))
+	afterAll(() => withOwner(sql => sql.unsafe(`DELETE FROM makeup_artistes_components WHERE id = ${LINK}`)))
 
 	test('il est signalé par son profil, et rien n’est inventé à sa place', async () => {
-		const avant = await profilsDeLaCible()
+		const before = await targetProfiles()
 
-		const rapport = await importOnBench()
+		const report = await importOnBench()
 
-		expect(rapport.collections.profiles).toMatchObject({ created: 0, updated: 0, linksWithoutRow: [22] })
-		expect(await profilsDeLaCible()).toEqual(avant)
+		expect(report.collections.profiles).toMatchObject({ created: 0, updated: 0, linksWithoutRow: [22] })
+		expect(await targetProfiles()).toEqual(before)
 	})
 })

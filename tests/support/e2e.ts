@@ -23,7 +23,7 @@ export const TEST_PATTERN = '**/*.spec.ts'
  * Playwright's own way to order projects (`dependencies`) plays the whole suite again whenever a file is named,
  * and puts every test of a shard in the first one.
  */
-export const TEST_ONLY_ON_BENCH = '**/tranche-profil-importe.spec.ts'
+export const TEST_ONLY_ON_BENCH = '**/imported-profile-slice.spec.ts'
 export const TEST_ONLY_PROJECT = 'import-final'
 
 /** A test carries this tag to run at the phone width too. */

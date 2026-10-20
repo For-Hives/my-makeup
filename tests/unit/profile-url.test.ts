@@ -5,7 +5,7 @@ import { slugify } from '@/lib/slug'
 /**
  * What the address of a profile leads to (ticket 104; plan 02 U13 and U61 on the rule the page applies):
  * the slug wins, the old username and the variants of a slug go to the slug in one hop, a hidden profile
- * and an unknown address lead nowhere. The runs against the bench: tests/e2e/profil-public.spec.ts.
+ * and an unknown address lead nowhere. The runs against the bench: tests/e2e/public-profile.spec.ts.
  */
 
 const profile = (id: number, slug: string, reste: Partial<UrlCandidate> = {}): UrlCandidate => ({

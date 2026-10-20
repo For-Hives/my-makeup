@@ -24,13 +24,13 @@ import { emptyStorage } from '../support/s3'
  * bench that `bun run test:e2e` gives Playwright.
  */
 
-const DECISIONS_DU_BANC = 'tests/fixtures/import/bench-decisions.json'
+const BENCH_DECISIONS = 'tests/fixtures/import/bench-decisions.json'
 
 /** The kept answers of the referential of the communes for the fake source: the import asks nothing online. */
-const REFERENTIEL_DU_BANC = 'tests/fixtures/import/bench-reference.json'
+const BENCH_REFERENCE = 'tests/fixtures/import/bench-reference.json'
 
 /** The keys a reading of a profile must never put into a page: what is private or reserved. */
-const CLES_PRIVEES =
+const PRIVATE_KEYS =
 	/"(?:pro|strapiId|legacyUsername|statut|status|motif|reason|verifie|verified|verifieLe|verifiedAt|siret|noteInterne|internalNote|score|superMaquilleuse|superArtist|coordonnees|contactDetails|telephone|phone|contactPublic|publicContact|consentiLe|consentedAt|sourceConsentement|consentSource)"\s*:/
 
 /**
@@ -39,31 +39,31 @@ const CLES_PRIVEES =
  */
 function bun(...ligne: string[]): Promise<{ code: number | null; sortie: string }> {
 	return new Promise((resoudre, rejeter) => {
-		const enfant = spawn('bun', ['--no-env-file', ...ligne], {
+		const child = spawn('bun', ['--no-env-file', ...ligne], {
 			cwd: ROOT,
 			env: { ...process.env, NODE_ENV: 'production' },
 		})
-		let sortie = ''
-		enfant.stdout.on('data', morceau => {
-			sortie += String(morceau)
+		let output = ''
+		child.stdout.on('data', morceau => {
+			output += String(morceau)
 		})
-		enfant.stderr.on('data', morceau => {
-			sortie += String(morceau)
+		child.stderr.on('data', morceau => {
+			output += String(morceau)
 		})
-		enfant.on('error', rejeter)
-		enfant.on('close', code => resoudre({ code, sortie }))
+		child.on('error', rejeter)
+		child.on('close', code => resoudre({ code, sortie: output }))
 	})
 }
 
 /** A real run of the import, with the table of decisions of the bench, and its report. */
 async function importer(rapport: string) {
-	const { code, sortie } = await bun(
+	const { code, sortie: output } = await bun(
 		'scripts/migration/import.ts',
 		'--real',
 		'--decisions',
-		DECISIONS_DU_BANC,
+		BENCH_DECISIONS,
 		'--cities',
-		REFERENTIEL_DU_BANC,
+		BENCH_REFERENCE,
 		'--offline',
 		// Profile 21 of the fake source shows contact details: the import needs the date of the switch.
 		'--consent-date',
@@ -71,7 +71,7 @@ async function importer(rapport: string) {
 		'--report',
 		rapport
 	)
-	expect(code, sortie).toBe(0)
+	expect(code, output).toBe(0)
 	return JSON.parse(readFileSync(rapport, 'utf8')) as {
 		collections: Record<string, { created: number; updated: number }>
 	}
@@ -92,13 +92,13 @@ test('un profil repris de la fausse base Strapi s’affiche sur sa page publique
 	const source = await bun('scripts/source-strapi.ts')
 	expect(source.code, source.sortie).toBe(0)
 
-	const premier = await importer(testInfo.outputPath('rapport-1.json'))
-	expect(premier.collections.profiles).toMatchObject({ created: 13, updated: 0 })
+	const first = await importer(testInfo.outputPath('rapport-1.json'))
+	expect(first.collections.profiles).toMatchObject({ created: 13, updated: 0 })
 
 	// The HTML of the server, as a search engine reads it: 200, the name in the only h1.
-	const reponse = await request.get('/profil/zoe-lefevre')
-	expect(reponse.status()).toBe(200)
-	const html = await reponse.text()
+	const response = await request.get('/profil/zoe-lefevre')
+	expect(response.status()).toBe(200)
+	const html = await response.text()
 	expect(html).toMatch(/<h1[^>]*>Zoé Lefèvre<\/h1>/)
 	expect(html.match(/<h1[\s>]/g)).toHaveLength(1)
 	expect(html).toContain('Mariage')
@@ -109,14 +109,14 @@ test('un profil repris de la fausse base Strapi s’affiche sur sa page publique
 	expect(html).toContain('contact.zoe@example.test')
 	expect(html).toContain('Français')
 	expect(html).not.toContain('zoe.lefevre@example.test')
-	expect(html).not.toMatch(CLES_PRIVEES)
+	expect(html).not.toMatch(PRIVATE_KEYS)
 
 	// In a browser, at both widths.
 	await page.goto('/profil/zoe-lefevre')
-	const titre = page.getByRole('heading', { level: 1, name: 'Zoé Lefèvre' })
-	await expect(titre).toBeVisible()
+	const title = page.getByRole('heading', { level: 1, name: 'Zoé Lefèvre' })
+	await expect(title).toBeVisible()
 	await page.setViewportSize(SCREENS.mobile)
-	await expect(titre).toBeVisible()
+	await expect(title).toBeVisible()
 	await testInfo.attach('profil-390px', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' })
 
 	// An unknown slug: 404. What a draft answers is ticket 104's (200 in noindex, as today).

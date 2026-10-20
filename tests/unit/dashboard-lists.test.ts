@@ -16,7 +16,7 @@ import { inputPrice, SERVICE_OFFER_OPTIONS, SERVICE_OFFERS } from '@/lib/dashboa
 /**
  * The rules of the lists of her space (tickets 129 to 131; plan 02 U29, U30): what the form and the
  * server both read. The panels play them in tests/unit/dashboard-lists-panels.test.tsx, the server in
- * tests/integration/espace-listes.test.ts.
+ * tests/integration/dashboard-lists.test.ts.
  */
 
 const NOW = new Date('2026-10-15T10:00:00Z')

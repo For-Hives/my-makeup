@@ -33,9 +33,9 @@ setDefaultTimeout(60_000)
 
 const LOCAL = COMPTES_DE_FIXTURE.find(({ provider }) => provider === 'local') ?? COMPTES_DE_FIXTURE[0]
 
-let numero = 0
+let number = 0
 /** A token no earlier pass of this run used. */
-const nouveauJeton = (): string => `essai-233-${(++numero).toString(36)}-${Date.now().toString(36)}`
+const newToken = (): string => `essai-233-${(++number).toString(36)}-${Date.now().toString(36)}`
 
 /** The environment the module reads: the bench's own, the fake source, and the request. */
 function env(importation: Partial<ImportEnv> = {}, surcharge: Partial<OnDemandImportEnv> = {}): OnDemandImportEnv {
@@ -43,7 +43,7 @@ function env(importation: Partial<ImportEnv> = {}, surcharge: Partial<OnDemandIm
 		...serverEnv(),
 		sourceStrapi: benchSource().lecture,
 		importation: {
-			token: nouveauJeton(),
+			token: newToken(),
 			mode: 'dry-run',
 			targetInService: false,
 			decisions: readFileSync(path.join(ROOT, BENCH_DECISION_FILE), 'utf8'),
@@ -55,37 +55,37 @@ function env(importation: Partial<ImportEnv> = {}, surcharge: Partial<OnDemandIm
 }
 
 /** Every line the module wrote, over all the passes of the file. */
-const toutLeJournal: string[] = []
+const allLog: string[] = []
 
-async function passer(importation: Partial<ImportEnv> = {}, options: ImportOptions = {}) {
-	const lignes: string[] = []
+async function pass(importation: Partial<ImportEnv> = {}, options: ImportOptions = {}) {
+	const lines: string[] = []
 	const issue = await importOnDemand(await testPayload(), env(importation), {
 		place: 'site',
 		reference: benchReference(),
 		mediaBase: benchSource().medias,
 		log: ligne => {
-			lignes.push(ligne)
-			toutLeJournal.push(ligne)
+			lines.push(ligne)
+			allLog.push(ligne)
 		},
 		...options,
 	})
-	return { issue, rows: lignes, log: lignes.join('\n') }
+	return { issue, rows: lines, log: lines.join('\n') }
 }
 
-async function nombres() {
+async function counts() {
 	const payload = await testPayload()
-	const compter = async (collection: 'pros' | 'profiles' | 'articles' | 'talents' | 'media') =>
+	const count = async (collection: 'pros' | 'profiles' | 'articles' | 'talents' | 'media') =>
 		(await payload.count({ collection, overrideAccess: true })).totalDocs
 	return {
-		pros: await compter('pros'),
-		profils: await compter('profiles'),
-		articles: await compter('articles'),
-		talents: await compter('talents'),
-		media: await compter('media'),
+		pros: await count('pros'),
+		profils: await count('profiles'),
+		articles: await count('articles'),
+		talents: await count('talents'),
+		media: await count('media'),
 	}
 }
 
-const VIDE = { pros: 0, profils: 0, articles: 0, talents: 0, media: 0 }
+const EMPTY = { pros: 0, profils: 0, articles: 0, talents: 0, media: 0 }
 
 beforeAll(async () => {
 	await emptyBase()
@@ -104,237 +104,237 @@ afterAll(async () => {
 
 describe('à blanc, il lit et n’écrit rien', () => {
 	test('un passage à blanc finit en code 0, annonce ses créations et laisse la cible vide', async () => {
-		const empreinte = (await sourceFingerprint()).empreinte
+		const fingerprint = (await sourceFingerprint()).empreinte
 
-		const { issue, log: journal } = await passer({ mode: 'dry-run' })
+		const { issue, log } = await pass({ mode: 'dry-run' })
 
 		expect(issue).toEqual({ state: 'termine', code: 0 })
-		expect(journal).toContain('Import à blanc : rien n’est écrit.')
-		expect(journal).toContain('Talents : 3 à la source ; 3 créations annoncées')
-		expect(journal).toMatch(/Passage dry-run fini, code 0\./)
-		expect(await nombres()).toEqual(VIDE)
-		expect((await sourceFingerprint()).empreinte).toBe(empreinte)
+		expect(log).toContain('Import à blanc : rien n’est écrit.')
+		expect(log).toContain('Talents : 3 à la source ; 3 créations annoncées')
+		expect(log).toMatch(/Passage dry-run fini, code 0\./)
+		expect(await counts()).toEqual(EMPTY)
+		expect((await sourceFingerprint()).empreinte).toBe(fingerprint)
 	})
 
 	test('sans mode, c’est un passage à blanc : l’env le dit déjà, le module n’écrit rien', async () => {
-		const { issue } = await passer({ mode: 'dry-run', targetInService: false })
+		const { issue } = await pass({ mode: 'dry-run', targetInService: false })
 
 		expect(issue.state).toBe('termine')
-		expect(await nombres()).toEqual(VIDE)
+		expect(await counts()).toEqual(EMPTY)
 	})
 })
 
 describe('réel, puis un jeton nouveau n’écrit plus rien', () => {
 	test('le passage réel écrit, prouve sa parité, puis un second jeton ne crée ni ne modifie rien', async () => {
-		const premier = await passer({ mode: 'real' })
+		const first = await pass({ mode: 'real' })
 
-		expect(premier.issue).toEqual({ state: 'termine', code: 0 })
-		const apres = await nombres()
-		expect(apres.pros).toBeGreaterThan(0)
-		expect(apres.profils).toBeGreaterThan(0)
-		expect(apres.talents).toBe(3)
-		expect(apres.media).toBeGreaterThan(0)
-		expect(premier.log).toContain('Talents : 3 à la source ; 3 créations, 0 mise à jour, 0 inchangé')
+		expect(first.issue).toEqual({ state: 'termine', code: 0 })
+		const after = await counts()
+		expect(after.pros).toBeGreaterThan(0)
+		expect(after.profils).toBeGreaterThan(0)
+		expect(after.talents).toBe(3)
+		expect(after.media).toBeGreaterThan(0)
+		expect(first.log).toContain('Talents : 3 à la source ; 3 créations, 0 mise à jour, 0 inchangé')
 
-		const second = await passer({ mode: 'real' })
+		const second = await pass({ mode: 'real' })
 
 		expect(second.issue).toEqual({ state: 'termine', code: 0 })
 		expect(second.log).toMatch(/Talents : 3 à la source ; 0 création, 0 mise à jour, 3 inchangé/)
 		expect(second.log).toMatch(/Comptes : 17 à la source ; 0 création, 0 mise à jour, 14 inchangé/)
-		expect(await nombres()).toEqual(apres)
+		expect(await counts()).toEqual(after)
 	})
 
 	test('le contrôle, avec un jeton nouveau, sort en code 0 : la cible est la source', async () => {
-		await passer({ mode: 'real' })
+		await pass({ mode: 'real' })
 
-		const { issue, log: journal } = await passer({ mode: 'check' })
+		const { issue, log } = await pass({ mode: 'check' })
 
 		expect(issue).toEqual({ state: 'termine', code: 0 })
-		expect(journal).toContain('la cible est la source')
+		expect(log).toContain('la cible est la source')
 	})
 
 	test('le contrôle d’une cible vide sort en code 4', async () => {
-		const { issue, log: journal } = await passer({ mode: 'check' })
+		const { issue, log } = await pass({ mode: 'check' })
 
 		expect(issue).toEqual({ state: 'termine', code: 4 })
-		expect(journal).not.toContain('la cible est la source')
+		expect(log).not.toContain('la cible est la source')
 	})
 })
 
 describe('un même jeton ne rejoue rien', () => {
 	test('le jeton est gardé en base, avec tous ceux d’avant', async () => {
-		const un = nouveauJeton()
-		const deux = nouveauJeton()
-		await passer({ token: un, mode: 'dry-run' })
-		await passer({ token: deux, mode: 'dry-run' })
+		const a = newToken()
+		const two = newToken()
+		await pass({ token: a, mode: 'dry-run' })
+		await pass({ token: two, mode: 'dry-run' })
 
 		const { rows } = await (await testPayload()).db.pool.query<{ marque: string }>(
 			"SELECT obj_description(to_regnamespace('public'), 'pg_namespace') AS marque"
 		)
 
-		expect(readTokens(rows[0]?.marque)).toEqual(expect.arrayContaining([un, deux]))
+		expect(readTokens(rows[0]?.marque)).toEqual(expect.arrayContaining([a, two]))
 	})
 
 	test('rejoué avec le même jeton, même sur une cible vidée, le passage ne lit rien et n’écrit rien', async () => {
-		const jeton = nouveauJeton()
-		expect((await passer({ token: jeton, mode: 'real' })).issue.state).toBe('termine')
+		const token = newToken()
+		expect((await pass({ token: token, mode: 'real' })).issue.state).toBe('termine')
 		await emptyBase()
-		expect(await nombres()).toEqual(VIDE)
+		expect(await counts()).toEqual(EMPTY)
 
-		let ouverte = false
-		const { issue, log: journal } = await passer(
-			{ token: jeton, mode: 'real' },
+		let open = false
+		const { issue, log } = await pass(
+			{ token: token, mode: 'real' },
 			{
 				openSource: () => {
-					ouverte = true
+					open = true
 					throw new Error('ne devait pas s’ouvrir')
 				},
 			}
 		)
 
-		expect(issue).toEqual({ state: 'deja-joue', token: jeton })
-		expect(journal).toContain('a déjà été joué')
-		expect(ouverte).toBe(false)
-		expect(await nombres()).toEqual(VIDE)
+		expect(issue).toEqual({ state: 'deja-joue', token: token })
+		expect(log).toContain('a déjà été joué')
+		expect(open).toBe(false)
+		expect(await counts()).toEqual(EMPTY)
 	})
 
 	test('cinq démarrages en même temps avec le même jeton : un seul le réserve', async () => {
 		const payload = await testPayload()
-		const jeton = nouveauJeton()
+		const token = newToken()
 
-		const reponses = await Promise.all(Array.from({ length: 5 }, () => reserveToken(payload.db.pool, jeton)))
+		const responses = await Promise.all(Array.from({ length: 5 }, () => reserveToken(payload.db.pool, token)))
 
-		expect(reponses.filter(Boolean)).toHaveLength(1)
+		expect(responses.filter(Boolean)).toHaveLength(1)
 	})
 
 	test('un passage arrêté a utilisé son jeton : le suivant en demande un nouveau', async () => {
-		const jeton = nouveauJeton()
-		const arret = await passer(
-			{ token: jeton },
+		const token = newToken()
+		const stop = await pass(
+			{ token: token },
 			{
 				openSource: () => {
 					throw new Error('la source est tombée')
 				},
 			}
 		)
-		expect(arret.issue.state).toBe('refuse')
+		expect(stop.issue.state).toBe('refuse')
 
-		expect((await passer({ token: jeton })).issue).toEqual({ state: 'deja-joue', token: jeton })
-		expect((await passer({ token: nouveauJeton() })).issue).toEqual({ state: 'termine', code: 0 })
+		expect((await pass({ token: token })).issue).toEqual({ state: 'deja-joue', token: token })
+		expect((await pass({ token: newToken() })).issue).toEqual({ state: 'termine', code: 0 })
 	})
 })
 
 describe('une cible que la v3 utilise déjà est refusée sans l’option', () => {
 	test('après une connexion réussie, le passage réel est refusé ; avec IMPORT_TARGET_IN_SERVICE il passe', async () => {
-		await passer({ mode: 'real' })
+		await pass({ mode: 'real' })
 		expect(await connect(LOCAL?.email ?? '', LOCAL?.motDePasse ?? '')).toMatchObject({ ok: true })
-		const avant = await nombres()
+		const before = await counts()
 
 		for (const mode of ['dry-run', 'real'] as const) {
-			const refus = await passer({ mode })
-			expect(refus.issue.state, mode).toBe('refuse')
-			expect(refus.log).toContain('déjà utilisée par la v3')
-			expect(refus.log).toContain('--target-in-service')
+			const refusal = await pass({ mode })
+			expect(refusal.issue.state, mode).toBe('refuse')
+			expect(refusal.log).toContain('déjà utilisée par la v3')
+			expect(refusal.log).toContain('--target-in-service')
 		}
-		expect(await nombres()).toEqual(avant)
+		expect(await counts()).toEqual(before)
 
-		const permis = await passer({ mode: 'real', targetInService: true })
+		const allowed = await pass({ mode: 'real', targetInService: true })
 
-		expect(permis.issue).toEqual({ state: 'termine', code: 0 })
-		expect(await nombres()).toEqual(avant)
+		expect(allowed.issue).toEqual({ state: 'termine', code: 0 })
+		expect(await counts()).toEqual(before)
 	})
 })
 
 describe('les refus du lieu, de la source et du stockage', () => {
 	test('hors du site, il n’écrit rien et ne réserve pas le jeton', async () => {
-		const jeton = nouveauJeton()
+		const token = newToken()
 
-		const { issue, log: journal } = await passer({ token: jeton, mode: 'real' }, { place: 'autre' })
+		const { issue, log } = await pass({ token: token, mode: 'real' }, { place: 'autre' })
 
 		expect(issue.state).toBe('refuse')
-		expect(journal).toContain('ne tourne que sur le site')
-		expect(await nombres()).toEqual(VIDE)
-		expect((await passer({ token: jeton, mode: 'dry-run' })).issue.state).toBe('termine')
+		expect(log).toContain('ne tourne que sur le site')
+		expect(await counts()).toEqual(EMPTY)
+		expect((await pass({ token: token, mode: 'dry-run' })).issue.state).toBe('termine')
 	})
 
 	test('sans lieu donné, le processus de test n’est pas le site', async () => {
-		const lignes: string[] = []
-		const issue = await importOnDemand(await testPayload(), env({ mode: 'real' }), { log: l => lignes.push(l) })
+		const lines: string[] = []
+		const issue = await importOnDemand(await testPayload(), env({ mode: 'real' }), { log: l => lines.push(l) })
 
 		expect(issue.state).toBe('refuse')
-		expect(await nombres()).toEqual(VIDE)
+		expect(await counts()).toEqual(EMPTY)
 	})
 
 	test('la base de Payload comme source est refusée avant toute lecture', async () => {
 		const payload = await testPayload()
-		const lignes: string[] = []
+		const lines: string[] = []
 
 		const issue = await importOnDemand(
 			payload,
 			{ ...env({ mode: 'real' }), sourceStrapi: serverEnv().databaseUri },
 			{
 				place: 'site',
-				log: l => lignes.push(l),
+				log: l => lines.push(l),
 			}
 		)
 
 		expect(issue.state).toBe('refuse')
-		expect(lignes.join('\n')).toContain('désigne la base de Payload')
-		expect(await nombres()).toEqual(VIDE)
+		expect(lines.join('\n')).toContain('désigne la base de Payload')
+		expect(await counts()).toEqual(EMPTY)
 	})
 
 	test('sans stockage des photos, le passage est refusé : aucune photo ne serait adoptée', async () => {
-		const lignes: string[] = []
+		const lines: string[] = []
 
 		const issue = await importOnDemand(await testPayload(), env({ mode: 'real' }, { storage: undefined }), {
 			place: 'site',
-			log: l => lignes.push(l),
+			log: l => lines.push(l),
 		})
 
 		expect(issue.state).toBe('refuse')
-		expect(lignes.join('\n')).toContain('stockage des photos')
-		expect(await nombres()).toEqual(VIDE)
+		expect(lines.join('\n')).toContain('stockage des photos')
+		expect(await counts()).toEqual(EMPTY)
 	})
 
 	test('une table de décision illisible refuse le passage sans écrire le jeton', async () => {
-		const jeton = nouveauJeton()
+		const token = newToken()
 
-		const mauvais = await passer({ token: jeton, mode: 'real', decisions: '{"sharedEmails": 3}' })
-		expect(mauvais.issue.state).toBe('refuse')
+		const wrong = await pass({ token: token, mode: 'real', decisions: '{"sharedEmails": 3}' })
+		expect(wrong.issue.state).toBe('refuse')
 
-		expect((await passer({ token: jeton, mode: 'dry-run' })).issue.state).toBe('termine')
+		expect((await pass({ token: token, mode: 'dry-run' })).issue.state).toBe('termine')
 	})
 })
 
 describe('le journal ne porte que des nombres', () => {
 	test('aucune ligne, sur tous les passages du fichier, ne contient un @ ni un hash bcrypt', () => {
-		expect(toutLeJournal.length).toBeGreaterThan(50)
-		for (const ligne of toutLeJournal) {
-			expect(ligne).not.toContain('@')
-			expect(ligne).not.toContain('$2a$')
+		expect(allLog.length).toBeGreaterThan(50)
+		for (const line of allLog) {
+			expect(line).not.toContain('@')
+			expect(line).not.toContain('$2a$')
 		}
 	})
 
 	test('une source qui tombe avec une adresse et un mot de passe dans son erreur laisse un journal propre', async () => {
-		const injoignable = 'postgres://lecture_strapi:mot-de-passe-factice@hote-inconnu.example.test:5432/strapi'
-		const lignes: string[] = []
+		const unreachable = 'postgres://lecture_strapi:mot-de-passe-factice@hote-inconnu.example.test:5432/strapi'
+		const lines: string[] = []
 
 		const issue = await importOnDemand(
 			await testPayload(),
-			env({ token: nouveauJeton(), mode: 'dry-run' }, { sourceStrapi: injoignable }),
+			env({ token: newToken(), mode: 'dry-run' }, { sourceStrapi: unreachable }),
 			{
 				place: 'site',
 				reference: benchReference(),
 				mediaBase: benchSource().medias,
-				log: l => lignes.push(l),
+				log: l => lines.push(l),
 			}
 		)
 
-		const journal = lignes.join('\n')
+		const log = lines.join('\n')
 		expect(issue.state).toBe('refuse')
-		expect(journal).toContain('Passage refusé ou arrêté')
-		for (const interdit of ['@', 'mot-de-passe-factice', 'hote-inconnu', 'lecture_strapi'])
-			expect(journal).not.toContain(interdit)
-		expect(await nombres()).toEqual(VIDE)
+		expect(log).toContain('Passage refusé ou arrêté')
+		for (const forbidden of ['@', 'mot-de-passe-factice', 'hote-inconnu', 'lecture_strapi'])
+			expect(log).not.toContain(forbidden)
+		expect(await counts()).toEqual(EMPTY)
 	})
 })

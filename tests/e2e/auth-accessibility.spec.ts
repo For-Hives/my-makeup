@@ -21,9 +21,9 @@ const PAGES = [
 ] as const
 
 test.describe('Accessibilité des pages d’authentification', { tag: '@mobile' }, () => {
-	for (const { nom, chemin } of PAGES) {
-		test(`${nom} : aucune violation grave`, async ({ page }) => {
-			await page.goto(chemin)
+	for (const { nom: name, chemin: path } of PAGES) {
+		test(`${name} : aucune violation grave`, async ({ page }) => {
+			await page.goto(path)
 			await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
 			expect(await violationsSevere(page)).toEqual([])
 		})

@@ -2,7 +2,7 @@
  * The access matrix: who may do what, collection by collection, operation by operation, played
  * twice, through the REST API and through the Local API with the rules active
  * (`overrideAccess: false`), as plan 01 §5 P3 asks. The lines live in
- * tests/integration/payload-acces.test.ts; this file plays them.
+ * tests/integration/payload-access.test.ts; this file plays them.
  *
  * A line names who acts (a role), on what (a collection, and the document of a role), how (an
  * operation, or the change of one field) and what must happen. Playing it gives what did happen,

@@ -16,7 +16,7 @@ import { ImportRefuse } from '../../scripts/migration/import/target'
 /**
  * Ticket 025: what the import makes of an account of the old site, and the table of decisions of
  * the accounts that share one email. No database: the runs are in
- * tests/integration/import-comptes.test.ts. Every value here is fictional.
+ * tests/integration/import-accounts.test.ts. Every value here is fictional.
  */
 
 const DOCS = path.resolve(import.meta.dir, '../../docs/migration')

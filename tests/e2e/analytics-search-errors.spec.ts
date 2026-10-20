@@ -14,8 +14,8 @@ let reference: SearchProfile
 
 test.describe.configure({ mode: 'serial' })
 
-type Donnees = Record<string, unknown>
-const donneesDe = (recu: { corps: unknown }): Donnees => (recu.corps as { payload: { data: Donnees } }).payload.data
+type Data = Record<string, unknown>
+const dataOf = (recu: { corps: unknown }): Data => (recu.corps as { payload: { data: Data } }).payload.data
 
 test.describe('La mesure de la recherche, des appels à l’action et de la 404', () => {
 	// An ordinary Chrome, with a mark of its own: the fake Umami is shared by every worker of the run, and the
@@ -24,10 +24,10 @@ test.describe('La mesure de la recherche, des appels à l’action et de la 404'
 
 	test.beforeAll(async () => {
 		test.setTimeout(180_000)
-		const profils = await setSearchProfiles()
-		const trouve = profils.get('reference')
-		if (!trouve) throw new Error('pas de profil d’essai « reference »')
-		reference = trouve
+		const profiles = await setSearchProfiles()
+		const found = profiles.get('reference')
+		if (!found) throw new Error('pas de profil d’essai « reference »')
+		reference = found
 	})
 
 	test.beforeEach(async ({ context, request, userAgent }) => {
@@ -48,12 +48,12 @@ test.describe('La mesure de la recherche, des appels à l’action et de la 404'
 		await expect(page).toHaveURL(/\/search\?/)
 
 		await expect.poll(async () => (await umami.envois('search_submit')).length, { timeout: 10_000 }).toBe(1)
-		const [soumission] = await umami.envois('search_submit')
-		const donnees = soumission ? donneesDe(soumission) : {}
-		expect(Object.keys(donnees).sort()).toEqual(['from', 'has_city', 'results'])
-		expect(donnees.from).toBe('formulaire')
-		expect(donnees.has_city).toBe(true)
-		expect(['0', '1-5', '6-20', '21+']).toContain(donnees.results)
+		const [submission] = await umami.envois('search_submit')
+		const data = submission ? dataOf(submission) : {}
+		expect(Object.keys(data).sort()).toEqual(['from', 'has_city', 'results'])
+		expect(data.from).toBe('formulaire')
+		expect(data.has_city).toBe(true)
+		expect(['0', '1-5', '6-20', '21+']).toContain(data.results)
 
 		// A reload shows the same search again: not a new one.
 		await page.reload()
@@ -64,20 +64,20 @@ test.describe('La mesure de la recherche, des appels à l’action et de la 404'
 
 		// A click on a result: its rank and its profile.
 		await page.goto('/search?city=Annecy')
-		const cartes = page.locator('main ul li a[href^="/profil/"]')
-		await expect(cartes.first()).toBeVisible()
-		await cartes.nth(1).click()
+		const cards = page.locator('main ul li a[href^="/profil/"]')
+		await expect(cards.first()).toBeVisible()
+		await cards.nth(1).click()
 		await expect.poll(async () => (await umami.envois('search_result_click')).length, { timeout: 10_000 }).toBe(1)
-		const [clic] = await umami.envois('search_result_click')
-		const clique = clic ? donneesDe(clic) : {}
-		expect(Object.keys(clique).sort()).toEqual(['pid', 'rank'])
-		expect(clique.rank).toBe(2)
-		expect(typeof clique.pid === 'number' || /^v3-\d+$/.test(String(clique.pid))).toBe(true)
+		const [click] = await umami.envois('search_result_click')
+		const clicked = click ? dataOf(click) : {}
+		expect(Object.keys(clicked).sort()).toEqual(['pid', 'rank'])
+		expect(clicked.rank).toBe(2)
+		expect(typeof clicked.pid === 'number' || /^v3-\d+$/.test(String(clicked.pid))).toBe(true)
 
 		// Nothing typed went anywhere.
-		const tout = JSON.stringify((await umami.recus()).map(recu => recu.corps))
-		expect(tout).not.toContain('lea@example.test')
-		expect(tout).not.toContain('mariage lea')
+		const all = JSON.stringify((await umami.recus()).map(recu => recu.corps))
+		expect(all).not.toContain('lea@example.test')
+		expect(all).not.toContain('mariage lea')
 	})
 
 	test('un appel à l’action de la page et celui de la navigation', async ({ page }) => {
@@ -86,7 +86,7 @@ test.describe('La mesure de la recherche, des appels à l’action et de la 404'
 		await page.getByRole('link', { name: 'Je suis maquilleuse' }).first().click({ noWaitAfter: true })
 		await expect.poll(async () => (await umami.envois('cta_click')).length, { timeout: 10_000 }).toBe(1)
 		const [cta] = await umami.envois('cta_click')
-		expect(cta ? donneesDe(cta) : {}).toEqual({ where: 'cta_inscription' })
+		expect(cta ? dataOf(cta) : {}).toEqual({ where: 'cta_inscription' })
 
 		await page.goto('/a-propos')
 		await page
@@ -95,16 +95,16 @@ test.describe('La mesure de la recherche, des appels à l’action et de la 404'
 			.click()
 		await expect.poll(async () => (await umami.envois('cta_click')).length, { timeout: 10_000 }).toBe(2)
 		const [, nav] = await umami.envois('cta_click')
-		expect(['nav_recherche', 'nav_recherche_mobile']).toContain(nav ? donneesDe(nav).where : null)
+		expect(['nav_recherche', 'nav_recherche_mobile']).toContain(nav ? dataOf(nav).where : null)
 	})
 
 	test('la 404 d’une adresse que rien ne sert : une fois, « autre »', async ({ page }) => {
-		const reponse = await page.goto('/cette-page-n-existe-pas')
-		expect(reponse?.status()).toBe(404)
+		const response = await page.goto('/cette-page-n-existe-pas')
+		expect(response?.status()).toBe(404)
 
 		await expect.poll(async () => (await umami.envois('not_found')).length, { timeout: 10_000 }).toBe(1)
-		const [introuvable] = await umami.envois('not_found')
-		expect(introuvable ? donneesDe(introuvable) : {}).toEqual({ kind: 'autre' })
+		const [missing] = await umami.envois('not_found')
+		expect(missing ? dataOf(missing) : {}).toEqual({ kind: 'autre' })
 
 		await page.reload()
 		await page.waitForFunction(() => 'umami' in window)
@@ -113,12 +113,12 @@ test.describe('La mesure de la recherche, des appels à l’action et de la 404'
 	})
 
 	test('la 404 : une fois, d’une liste fermée, rien de plus au rechargement', async ({ page }) => {
-		const reponse = await page.goto('/profil/profil-qui-n-existe-pas')
-		expect(reponse?.status()).toBe(404)
+		const response = await page.goto('/profil/profil-qui-n-existe-pas')
+		expect(response?.status()).toBe(404)
 
 		await expect.poll(async () => (await umami.envois('not_found')).length, { timeout: 10_000 }).toBe(1)
-		const [introuvable] = await umami.envois('not_found')
-		expect(introuvable ? donneesDe(introuvable) : {}).toEqual({ kind: 'profil' })
+		const [missing] = await umami.envois('not_found')
+		expect(missing ? dataOf(missing) : {}).toEqual({ kind: 'profil' })
 
 		await page.reload()
 		await page.waitForFunction(() => 'umami' in window)

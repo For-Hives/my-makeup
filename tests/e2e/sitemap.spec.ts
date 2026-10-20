@@ -14,20 +14,20 @@ import { createContent, deleteContent, refreshProfilePages } from '../support/pu
 
 test.describe.configure({ mode: 'serial' })
 
-const locsDe = (xml: string): string[] => [...xml.matchAll(/<loc>([^<]*)<\/loc>/g)].map(m => m[1] ?? '')
+const locsOf = (xml: string): string[] => [...xml.matchAll(/<loc>([^<]*)<\/loc>/g)].map(m => m[1] ?? '')
 
 /** The address on the bench: the same path, under the origin the tests ask. */
-const surLeBanc = (loc: string, baseURL: string): string => `${baseURL}${loc.slice(SITE_ORIGIN.length)}`
+const onBench = (loc: string, baseURL: string): string => `${baseURL}${loc.slice(SITE_ORIGIN.length)}`
 
 /** The slug of a profile type of the bench, and whether the public rules index it. */
-async function etatDesProfils(request: APIRequestContext) {
-	const profils = await setSearchProfiles()
-	const premier = profils.get('reference')
-	if (!premier) throw new Error('le profil de référence manque au banc')
-	await refreshProfilePages(request, premier)
-	return [...profils].map(([cle, profil]) => {
-		const attendu = SEARCH_PROFILES.get(cle)?.attendu
-		return { cle, slug: profil.slug, indexee: attendu?.publishable === true && attendu.status === 'published' }
+async function profilesState(request: APIRequestContext) {
+	const profiles = await setSearchProfiles()
+	const first = profiles.get('reference')
+	if (!first) throw new Error('le profil de référence manque au banc')
+	await refreshProfilePages(request, first)
+	return [...profiles].map(([key, profil]) => {
+		const expected = SEARCH_PROFILES.get(key)?.attendu
+		return { cle: key, slug: profil.slug, indexee: expected?.publishable === true && expected.status === 'published' }
 	})
 }
 
@@ -36,34 +36,38 @@ test.describe('E62 : /sitemap.xml', () => {
 		tag: '@smoke',
 	}, async ({ request, baseURL }) => {
 		test.setTimeout(180_000)
-		const etat = await etatDesProfils(request)
-		const suffixe = Date.now().toString(36)
-		const talent = `essai-sitemap-talent-${suffixe}`
-		const publie = `essai-sitemap-publie-${suffixe}`
-		const brouillon = `essai-sitemap-brouillon-${suffixe}`
-		const contenus = [
+		const state = await profilesState(request)
+		const suffix = Date.now().toString(36)
+		const talent = `essai-sitemap-talent-${suffix}`
+		const published = `essai-sitemap-publie-${suffix}`
+		const draft = `essai-sitemap-brouillon-${suffix}`
+		const contents = [
 			{
 				collection: 'talents' as const,
 				id: await createContent(request, 'talents', { title: `Essai ${talent}`, slug: talent, _status: 'published' }),
 			},
 			{
 				collection: 'articles' as const,
-				id: await createContent(request, 'articles', { title: `Essai ${publie}`, slug: publie, _status: 'published' }),
+				id: await createContent(request, 'articles', {
+					title: `Essai ${published}`,
+					slug: published,
+					_status: 'published',
+				}),
 			},
 			{
 				collection: 'articles' as const,
 				id: await createContent(request, 'articles', {
-					title: `Essai ${brouillon}`,
-					slug: brouillon,
+					title: `Essai ${draft}`,
+					slug: draft,
 					_status: 'draft',
 				}),
 			},
 		]
 		try {
-			const reponse = await request.get('/sitemap.xml', { maxRedirects: 0 })
-			expect(reponse.status()).toBe(200)
-			expect(reponse.headers()['content-type']).toContain('application/xml')
-			const xml = await reponse.text()
+			const response = await request.get('/sitemap.xml', { maxRedirects: 0 })
+			expect(response.status()).toBe(200)
+			expect(response.headers()['content-type']).toContain('application/xml')
+			const xml = await response.text()
 
 			// Well formed: the prolog, one root, every <url> closed, and nothing the standard does not know.
 			expect(xml).toMatch(
@@ -72,10 +76,10 @@ test.describe('E62 : /sitemap.xml', () => {
 			expect(xml.trimEnd().endsWith('</urlset>')).toBe(true)
 			expect(xml.match(/<url>/g)?.length).toBe(xml.match(/<\/url>/g)?.length)
 			expect(xml).not.toMatch(/changefreq|priority/)
-			const adresses = locsDe(xml)
-			expect(adresses.length).toBe(xml.match(/<url>/g)?.length ?? -1)
-			expect(new Set(adresses).size).toBe(adresses.length)
-			for (const loc of adresses) {
+			const urls = locsOf(xml)
+			expect(urls.length).toBe(xml.match(/<url>/g)?.length ?? -1)
+			expect(new Set(urls).size).toBe(urls.length)
+			for (const loc of urls) {
 				expect(loc, loc).toMatch(new RegExp(`^${SITE_ORIGIN}(/[^/\\s]+)*$`))
 				expect(loc, loc).not.toMatch(/^https:\/\/[^/]+\/\/|[^:]\/\//)
 				expect(loc, loc).not.toMatch(/\/(auth|api|admin|search|site-map|demande-envoyee|toutes-les-news)(\/|$)/)
@@ -88,20 +92,20 @@ test.describe('E62 : /sitemap.xml', () => {
 				where: { and: [{ publishable: { equals: true } }, { status: { equals: 'published' } }] },
 				overrideAccess: true,
 			})
-			expect(adresses.filter(loc => loc.startsWith(`${SITE_ORIGIN}/profil/`))).toHaveLength(totalDocs)
-			for (const { cle, slug, indexee } of etat)
-				expect(adresses.includes(`${SITE_ORIGIN}/profil/${slug}`), cle).toBe(indexee)
+			expect(urls.filter(loc => loc.startsWith(`${SITE_ORIGIN}/profil/`))).toHaveLength(totalDocs)
+			for (const { cle: key, slug, indexee: indexed } of state)
+				expect(urls.includes(`${SITE_ORIGIN}/profil/${slug}`), key).toBe(indexed)
 
 			// The pages and the documents.
 			for (const page of deliveredStaticPages())
-				expect(adresses, page.chemin).toContain(page.chemin === '/' ? SITE_ORIGIN : `${SITE_ORIGIN}${page.chemin}`)
-			expect(adresses).toContain(`${SITE_ORIGIN}/talent/${talent}`)
-			expect(adresses).toContain(`${SITE_ORIGIN}/blog/${publie}`)
-			expect(adresses).not.toContain(`${SITE_ORIGIN}/blog/${brouillon}`)
+				expect(urls, page.chemin).toContain(page.chemin === '/' ? SITE_ORIGIN : `${SITE_ORIGIN}${page.chemin}`)
+			expect(urls).toContain(`${SITE_ORIGIN}/talent/${talent}`)
+			expect(urls).toContain(`${SITE_ORIGIN}/blog/${published}`)
+			expect(urls).not.toContain(`${SITE_ORIGIN}/blog/${draft}`)
 
 			// Every address answers 200 with no redirection, and is indexable: no noindex, its own canonical address.
-			for (const loc of adresses) {
-				const page = await request.get(surLeBanc(loc, baseURL ?? ''), { maxRedirects: 0 })
+			for (const loc of urls) {
+				const page = await request.get(onBench(loc, baseURL ?? ''), { maxRedirects: 0 })
 				expect(page.status(), loc).toBe(200)
 				expect(page.headers()['x-robots-tag'] ?? '', loc).not.toMatch(/noindex/i)
 				const html = await page.text()
@@ -109,7 +113,7 @@ test.describe('E62 : /sitemap.xml', () => {
 				expect(/<link rel="canonical" href="([^"]*)"/.exec(html)?.[1], loc).toBe(loc)
 			}
 		} finally {
-			for (const { collection, id } of contenus) await deleteContent(request, collection, id)
+			for (const { collection, id } of contents) await deleteContent(request, collection, id)
 		}
 	})
 
@@ -133,12 +137,12 @@ test.describe('Plan du site (ticket 114)', () => {
 		{ tag: '@mobile' },
 		async ({ page, request, baseURL }, testInfo) => {
 			test.setTimeout(180_000)
-			const etat = await etatDesProfils(request)
-			const suffixe = Date.now().toString(36)
-			const talent = `essai-plan-talent-${suffixe}`
-			const publie = `essai-plan-publie-${suffixe}`
-			const brouillon = `essai-plan-brouillon-${suffixe}`
-			const contenus = [
+			const state = await profilesState(request)
+			const suffix = Date.now().toString(36)
+			const talent = `essai-plan-talent-${suffix}`
+			const published = `essai-plan-publie-${suffix}`
+			const draft = `essai-plan-brouillon-${suffix}`
+			const contents = [
 				{
 					collection: 'talents' as const,
 					id: await createContent(request, 'talents', { title: `Essai ${talent}`, slug: talent, _status: 'published' }),
@@ -146,63 +150,66 @@ test.describe('Plan du site (ticket 114)', () => {
 				{
 					collection: 'articles' as const,
 					id: await createContent(request, 'articles', {
-						title: `Essai ${publie}`,
-						slug: publie,
+						title: `Essai ${published}`,
+						slug: published,
 						_status: 'published',
 					}),
 				},
 				{
 					collection: 'articles' as const,
 					id: await createContent(request, 'articles', {
-						title: `Essai ${brouillon}`,
-						slug: brouillon,
+						title: `Essai ${draft}`,
+						slug: draft,
 						_status: 'draft',
 					}),
 				},
 			]
 			try {
-				const reponse = await page.goto('/site-map')
-				expect(reponse?.status()).toBe(200)
-				expect(reponse?.headers()['x-robots-tag'] ?? '').not.toMatch(/noindex/i)
+				const response = await page.goto('/site-map')
+				expect(response?.status()).toBe(200)
+				expect(response?.headers()['x-robots-tag'] ?? '').not.toMatch(/noindex/i)
 				await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1)
 				await expect(page.getByRole('heading', { level: 1 })).toContainText('Le plan du site')
 				await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', `${SITE_ORIGIN}/site-map`)
 
-				const liens = await page
+				const links = await page
 					.locator('main a[href^="/"]')
 					.evaluateAll(ancres => ancres.map(a => a.getAttribute('href') ?? ''))
-				const chemins = liens.filter(href => !href.startsWith('/auth') && !href.startsWith('/search'))
+				const paths = links.filter(href => !href.startsWith('/auth') && !href.startsWith('/search'))
 
 				// The same fixed pages as the sitemap (the home page is the logo, not a link of the plan).
-				const sitemap = locsDe(await (await request.get('/sitemap.xml')).text()).map(
+				const sitemap = locsOf(await (await request.get('/sitemap.xml')).text()).map(
 					loc => loc.slice(SITE_ORIGIN.length) || '/'
 				)
-				const fixesDuSitemap = sitemap.filter(chemin => !/^\/(profil|talent|blog)\//.test(chemin) && chemin !== '/')
-				for (const chemin of fixesDuSitemap) expect(liens, chemin).toContain(chemin)
+				const fixedSitemapEntries = sitemap.filter(
+					chemin => !/^\/(profil|talent|blog)\//.test(chemin) && chemin !== '/'
+				)
+				for (const path of fixedSitemapEntries) expect(links, path).toContain(path)
 
 				// The publishable profiles, and only them; the talents and the published articles.
-				for (const { cle, slug, indexee } of etat) expect(liens.includes(`/profil/${slug}`), cle).toBe(indexee)
-				expect(liens).toContain(`/talent/${talent}`)
-				expect(liens).toContain(`/blog/${publie}`)
-				expect(liens).not.toContain(`/blog/${brouillon}`)
+				for (const { cle: key, slug, indexee: indexed } of state)
+					expect(links.includes(`/profil/${slug}`), key).toBe(indexed)
+				expect(links).toContain(`/talent/${talent}`)
+				expect(links).toContain(`/blog/${published}`)
+				expect(links).not.toContain(`/blog/${draft}`)
 				// The sitemap and the plan agree on the profiles of this file, one way and the other. Not on every profile
 				// of the bench: other tests publish and hide theirs while this one reads the two pages one after the other.
-				const profilsDuSitemap = sitemap.filter(chemin => chemin.startsWith('/profil/'))
-				const sesProfils = etat.map(({ slug }) => `/profil/${slug}`)
-				expect(sesProfils.filter(chemin => liens.includes(chemin)).sort()).toEqual(
-					sesProfils.filter(chemin => profilsDuSitemap.includes(chemin)).sort()
+				const sitemapProfiles = sitemap.filter(chemin => chemin.startsWith('/profil/'))
+				const itsProfiles = state.map(({ slug }) => `/profil/${slug}`)
+				expect(itsProfiles.filter(chemin => links.includes(chemin)).sort()).toEqual(
+					itsProfiles.filter(chemin => sitemapProfiles.includes(chemin)).sort()
 				)
 
 				// Every link answers 200, with no redirection.
-				for (const chemin of new Set(chemins)) {
-					const lien = await request.get(`${baseURL}${chemin}`, { maxRedirects: 0 })
-					expect(lien.status(), chemin).toBe(200)
+				for (const path of new Set(paths)) {
+					const link = await request.get(`${baseURL}${path}`, { maxRedirects: 0 })
+					expect(link.status(), path).toBe(200)
 				}
 
 				// The capture of the page at the size of the project (390 px wide on the phone).
 				await page.screenshot({ path: testInfo.outputPath('plan-du-site.png'), fullPage: true })
 			} finally {
-				for (const { collection, id } of contenus) await deleteContent(request, collection, id)
+				for (const { collection, id } of contents) await deleteContent(request, collection, id)
 			}
 		}
 	)

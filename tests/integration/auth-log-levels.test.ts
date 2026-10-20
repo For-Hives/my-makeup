@@ -14,37 +14,37 @@ afterAll(async () => {
 	await emptyBase()
 })
 
-type Niveau = 'error' | 'warn' | 'info'
-const appels: Record<Niveau, unknown[][]> = { error: [], warn: [], info: [] }
-let espions: ReturnType<typeof spyOn>[] = []
+type Level = 'error' | 'warn' | 'info'
+const calls: Record<Level, unknown[][]> = { error: [], warn: [], info: [] }
+let spies: ReturnType<typeof spyOn>[] = []
 
 beforeEach(async () => {
 	const { logger } = await testPayload()
-	for (const niveau of ['error', 'warn', 'info'] as const) {
-		appels[niveau] = []
-		espions.push(spyOn(logger, niveau).mockImplementation((...args: unknown[]) => void appels[niveau].push(args)))
+	for (const level of ['error', 'warn', 'info'] as const) {
+		calls[level] = []
+		spies.push(spyOn(logger, level).mockImplementation((...args: unknown[]) => void calls[level].push(args)))
 	}
 })
 afterEach(() => {
-	for (const espion of espions.splice(0)) espion.mockRestore()
-	espions = []
+	for (const spy of spies.splice(0)) spy.mockRestore()
+	spies = []
 })
 
-const texte = (lignes: unknown[][]): string => JSON.stringify(lignes)
+const text = (lignes: unknown[][]): string => JSON.stringify(lignes)
 
 describe('constat 4 : un compte bloqué qui donne son mot de passe est une ligne d’information', () => {
 	test('POST /api/pros/login : 403, une ligne info avec le message, aucune ligne error', async () => {
-		const MOT_DE_PASSE = 'aaaaaaaa'
-		const compte = await createAccount('maquilleuse-bloquee', { motDePasse: () => MOT_DE_PASSE })
+		const PASSWORD = 'aaaaaaaa'
+		const account = await createAccount('maquilleuse-bloquee', { motDePasse: () => PASSWORD })
 
-		const { statut } = await callRest('POST', '/api/pros/login', {
-			corps: { email: compte.email, password: MOT_DE_PASSE },
+		const { statut: status } = await callRest('POST', '/api/pros/login', {
+			corps: { email: account.email, password: PASSWORD },
 			enTetes: { 'x-forwarded-for': '192.0.2.77' },
 		})
 
-		expect(statut).toBe(403)
-		expect(texte(appels.info)).toContain(errorMessage('compte-bloque'))
-		expect(appels.error).toEqual([])
+		expect(status).toBe(403)
+		expect(text(calls.info)).toContain(errorMessage('compte-bloque'))
+		expect(calls.error).toEqual([])
 	})
 })
 
@@ -53,13 +53,13 @@ describe('constat 10 : « Missing ID » de Payload est une ligne d’information
 	test('PATCH /api/pros/abc : 400 avant toute règle, aucune ligne error', async () => {
 		const admin = await createAccount('admin')
 
-		const { statut } = await callRest('PATCH', '/api/pros/abc', {
+		const { statut: status } = await callRest('PATCH', '/api/pros/abc', {
 			corps: { bloque: true },
 			enTetes: admin.session.enTetes,
 		})
 
-		expect(statut).toBe(400)
-		expect(texte(appels.info)).toContain('Missing ID')
-		expect(appels.error).toEqual([])
+		expect(status).toBe(400)
+		expect(text(calls.info)).toContain('Missing ID')
+		expect(calls.error).toEqual([])
 	})
 })

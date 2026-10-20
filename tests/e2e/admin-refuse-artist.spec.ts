@@ -15,11 +15,11 @@ test.describe('E54 : une maquilleuse connectée n’entre pas dans l’administr
 	}) => {
 		// The panel has an admin: with none, Payload would offer to create the first account instead.
 		await createAccount('admin')
-		const maquilleuse = await createAccount('maquilleuse')
-		await context.addCookies(maquilleuse.session.cookies)
+		const artist = await createAccount('maquilleuse')
+		await context.addCookies(artist.session.cookies)
 
-		for (const chemin of ['/admin', '/admin/collections/admins', '/admin/collections/profiles', '/admin/account']) {
-			await page.goto(chemin)
+		for (const path of ['/admin', '/admin/collections/admins', '/admin/collections/profiles', '/admin/account']) {
+			await page.goto(path)
 
 			await expect(page).toHaveURL(/\/admin\/unauthorized(?:\?|$)/)
 			await expect(page.getByRole('heading', { level: 1, name: /Non autorisé/ })).toBeVisible()
@@ -36,7 +36,7 @@ test.describe('E54 : une maquilleuse connectée n’entre pas dans l’administr
  */
 test.describe('Les verrous d’édition du back-office marchent pour les comptes admin', () => {
 	test('un second admin voit le talent verrouillé et reprend la main', async ({ browser }) => {
-		const [premier, second, payload] = await Promise.all([
+		const [first, second, payload] = await Promise.all([
 			createAccount('admin'),
 			createAccount('redaction'),
 			testPayload(),
@@ -51,45 +51,45 @@ test.describe('Les verrous d’édition du back-office marchent pour les comptes
 				_status: 'published',
 			},
 		})
-		const chemin = `/admin/collections/talents/${talent.id}`
+		const path = `/admin/collections/talents/${talent.id}`
 		// The bench is shared with the other tests, which open documents in the panel too: only the
 		// lock of this talent is read, never every lock of the database.
-		const ceVerrou: Where = {
+		const thisLock: Where = {
 			and: [{ 'document.relationTo': { equals: 'talents' } }, { 'document.value': { equals: talent.id } }],
 		}
-		const [contextePremier, contexteSecond] = await Promise.all([browser.newContext(), browser.newContext()])
+		const [firstContext, secondContext] = await Promise.all([browser.newContext(), browser.newContext()])
 		try {
-			await contextePremier.addCookies(premier.session.cookies)
-			await contexteSecond.addCookies(second.session.cookies)
-			const pagePremier = await contextePremier.newPage()
-			const pageSecond = await contexteSecond.newPage()
+			await firstContext.addCookies(first.session.cookies)
+			await secondContext.addCookies(second.session.cookies)
+			const firstPage = await firstContext.newPage()
+			const pageSecond = await secondContext.newPage()
 
-			await pagePremier.goto(chemin)
-			await expect(pagePremier.locator('input[name="title"]')).toHaveValue('Talent des verrous')
+			await firstPage.goto(path)
+			await expect(firstPage.locator('input[name="title"]')).toHaveValue('Talent des verrous')
 			// The panel takes the lock when the form first asks the server for its state: on the first edit.
 			// The form hydrates after it shows: keys typed too early reach no handler and take no lock, so
-			// the edit is made again until the lock is there (as admin-suppression-compte.spec.ts clicks).
-			const verrous = async () =>
-				(await payload.count({ collection: 'payload-locked-documents', where: ceVerrou })).totalDocs
+			// the edit is made again until the lock is there (as admin-account-deletion.spec.ts clicks).
+			const locks = async () =>
+				(await payload.count({ collection: 'payload-locked-documents', where: thisLock })).totalDocs
 			await expect(async () => {
-				await pagePremier.locator('input[name="title"]').pressSequentially(' modifié')
-				await expect.poll(verrous, { timeout: 3_000 }).toBe(1)
+				await firstPage.locator('input[name="title"]').pressSequentially(' modifié')
+				await expect.poll(locks, { timeout: 3_000 }).toBe(1)
 			}).toPass({ timeout: 30_000 })
-			const verrou = (await payload.find({ collection: 'payload-locked-documents', depth: 0, where: ceVerrou })).docs[0]
-			expect(verrou?.user).toEqual({ relationTo: 'admins', value: Number(premier.id) })
+			const lock = (await payload.find({ collection: 'payload-locked-documents', depth: 0, where: thisLock })).docs[0]
+			expect(lock?.user).toEqual({ relationTo: 'admins', value: Number(first.id) })
 
-			await pageSecond.goto(chemin)
+			await pageSecond.goto(path)
 			await expect(pageSecond.getByText('Document verrouillé')).toBeVisible()
 			await pageSecond.getByRole('button', { name: 'Prendre en charge' }).click()
 			await expect(pageSecond.locator('input[name="title"]')).toBeEditable()
 			await expect
 				.poll(
 					async () =>
-						(await payload.findByID({ collection: 'payload-locked-documents', id: verrou?.id ?? 0, depth: 0 })).user
+						(await payload.findByID({ collection: 'payload-locked-documents', id: lock?.id ?? 0, depth: 0 })).user
 				)
 				.toEqual({ relationTo: 'admins', value: Number(second.id) })
 		} finally {
-			await Promise.all([contextePremier.close(), contexteSecond.close()])
+			await Promise.all([firstContext.close(), secondContext.close()])
 		}
 	})
 })

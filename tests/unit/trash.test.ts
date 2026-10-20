@@ -18,7 +18,7 @@ import { type CommandS3, deletionsWithoutTrash } from '../support/s3-spy'
 /**
  * The bin of the object storage (ticket 045; plan 01 §1.8): a photo that no longer serves moves
  * under `deleted/`, never erased. The rule, against a storage in memory; the requests themselves,
- * against the simulator of the bench, are in tests/integration/media-corbeille.test.ts.
+ * against the simulator of the bench, are in tests/integration/media-trash.test.ts.
  */
 
 /** A storage in memory that writes down every operation, and fails on demand. */

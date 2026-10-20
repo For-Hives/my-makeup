@@ -15,40 +15,40 @@ test.describe('Socle SEO', () => {
 	})
 
 	test('les chemins de /auth répondent noindex en en-tête et en balise, sans canonique', async ({ page }) => {
-		const reponse = await page.goto('/auth')
+		const response = await page.goto('/auth')
 
-		expect(reponse?.headers()['x-robots-tag']).toBe('noindex, follow')
+		expect(response?.headers()['x-robots-tag']).toBe('noindex, follow')
 		await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex, follow')
 		await expect(page.locator('link[rel="canonical"]')).toHaveCount(0)
 	})
 
 	test('/search répond noindex en en-tête, même sans page, et n’est pas bloqué par robots.txt', async ({ request }) => {
-		const reponse = await request.get('/search?city=Annecy')
+		const response = await request.get('/search?city=Annecy')
 
-		expect(reponse.headers()['x-robots-tag']).toBe('noindex, follow')
+		expect(response.headers()['x-robots-tag']).toBe('noindex, follow')
 		const robots = await request.get('/robots.txt')
 		if (robots.ok()) expect(await robots.text()).not.toMatch(/Disallow:\s*\/(search|auth)/)
 	})
 
 	test('une page publique ne coupe jamais la reprise par les assistants', async ({ page }) => {
-		const reponse = await page.goto('/')
+		const response = await page.goto('/')
 		const source = await page.content()
 
-		expect(reponse?.headers()['x-robots-tag'] ?? '').not.toMatch(/noarchive|nocache|nosnippet|max-snippet/)
+		expect(response?.headers()['x-robots-tag'] ?? '').not.toMatch(/noarchive|nocache|nosnippet|max-snippet/)
 		expect(source).not.toMatch(/noarchive|nocache|nosnippet|max-snippet|data-nosnippet/)
 	})
 
 	test('E63 : robots.txt ouvre tout sauf l’API et donne le sitemap absolu', async ({ request }) => {
-		const reponse = await request.get('/robots.txt')
+		const response = await request.get('/robots.txt')
 
-		expect(reponse.status()).toBe(200)
-		expect(reponse.headers()['content-type']).toContain('text/plain')
-		const texte = await reponse.text()
-		expect(texte).toMatch(/User-Agent: \*/i)
-		expect(texte).toContain('Allow: /')
-		expect(texte).toContain('Disallow: /api/')
-		expect(texte).toContain('Sitemap: https://my-makeup.fr/sitemap.xml')
-		expect(texte).not.toMatch(/Disallow:\s*\/(auth|search)/)
-		expect(texte).not.toMatch(/GPTBot|ClaudeBot|CCBot|Google-Extended/)
+		expect(response.status()).toBe(200)
+		expect(response.headers()['content-type']).toContain('text/plain')
+		const text = await response.text()
+		expect(text).toMatch(/User-Agent: \*/i)
+		expect(text).toContain('Allow: /')
+		expect(text).toContain('Disallow: /api/')
+		expect(text).toContain('Sitemap: https://my-makeup.fr/sitemap.xml')
+		expect(text).not.toMatch(/Disallow:\s*\/(auth|search)/)
+		expect(text).not.toMatch(/GPTBot|ClaudeBot|CCBot|Google-Extended/)
 	})
 })

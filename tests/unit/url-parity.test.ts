@@ -1,7 +1,7 @@
 /**
  * The tools of the parity of the addresses (ticket 072; plan 02 I45): how the h1 of a page is read,
  * the cases, the check and the report. Unit tests: no server (the run itself is
- * tests/e2e/parite-urls.spec.ts).
+ * tests/e2e/url-parity.spec.ts).
  */
 
 import { describe, expect, test } from 'bun:test'

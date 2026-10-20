@@ -21,18 +21,18 @@ test.describe('L’admin supprime un compte et tout part avec lui', () => {
 		test.setTimeout(120_000)
 		const payload = await testPayload()
 		const admin = await createAccount('admin')
-		const compte = await createAccount('maquilleuse')
-		const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
-		const [fiche] = docs
-		if (!fiche) throw new Error('pas de profil')
+		const account = await createAccount('maquilleuse')
+		const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: account.id } } })
+		const [sheet] = docs
+		if (!sheet) throw new Error('pas de profil')
 		const media = await payload.create({
 			collection: 'media',
-			data: { owner: Number(compte.id), alt: 'Photo principale' },
+			data: { owner: Number(account.id), alt: 'Photo principale' },
 			file: fileForPayload(),
 		})
-		const profil = await payload.update({
+		const profile = await payload.update({
 			collection: 'profiles',
-			id: fiche.id,
+			id: sheet.id,
 			data: {
 				firstName: 'Léa',
 				lastName: 'Fictive',
@@ -41,13 +41,13 @@ test.describe('L’admin supprime un compte et tout part avec lui', () => {
 				mainPicture: media.id,
 			},
 		})
-		const existe = async (collection: 'pros' | 'profiles' | 'media', id: number | string) =>
+		const exists = async (collection: 'pros' | 'profiles' | 'media', id: number | string) =>
 			(await payload.findByID({ collection, id, depth: 0, disableErrors: true, overrideAccess: true })) !== null
-		const cle = `media/${media.filename}`
+		const key = `media/${media.filename}`
 
 		await context.addCookies(admin.session.cookies as never[])
-		await page.goto(`/admin/collections/pros/${compte.id}`)
-		const ouvrir = async () => {
+		await page.goto(`/admin/collections/pros/${account.id}`)
+		const open = async () => {
 			// The form hydrates after it shows: a click that comes too early opens nothing, so it is made again.
 			await expect(async () => {
 				await page.locator('.doc-controls__popup .popup-button').click({ timeout: 2_000 })
@@ -57,33 +57,33 @@ test.describe('L’admin supprime un compte et tout part avec lui', () => {
 		}
 
 		// The confirmation: cancelling deletes nothing.
-		await ouvrir()
+		await open()
 		await page.getByRole('button', { name: 'Annuler' }).click()
-		expect(await existe('pros', compte.id)).toBe(true)
-		expect(await existe('profiles', profil.id)).toBe(true)
+		expect(await exists('pros', account.id)).toBe(true)
+		expect(await exists('profiles', profile.id)).toBe(true)
 
-		await ouvrir()
+		await open()
 		await page.getByRole('button', { name: 'Confirmer' }).click()
 		await page.waitForURL(/\/admin\/collections\/pros(\?.*)?$/, { timeout: 30_000 })
 
-		expect(await existe('pros', compte.id)).toBe(false)
-		expect(await existe('profiles', profil.id)).toBe(false)
-		expect(await existe('media', media.id)).toBe(false)
-		expect(await readObject(cle)).toBeUndefined()
-		expect(await readObject(`deleted/${cle}`)).toBeDefined()
-		expect((await request.get(`/profil/${profil.slug}`)).status()).toBe(404)
-		expect((await payload.auth({ headers: new Headers(compte.session.enTetes) })).user).toBeNull()
+		expect(await exists('pros', account.id)).toBe(false)
+		expect(await exists('profiles', profile.id)).toBe(false)
+		expect(await exists('media', media.id)).toBe(false)
+		expect(await readObject(key)).toBeUndefined()
+		expect(await readObject(`deleted/${key}`)).toBeDefined()
+		expect((await request.get(`/profil/${profile.slug}`)).status()).toBe(404)
+		expect((await payload.auth({ headers: new Headers(account.session.enTetes) })).user).toBeNull()
 	})
 
 	test('la rédaction ne voit pas les comptes et ne peut pas en supprimer un', async ({ context, page }) => {
-		const redaction = await createAccount('redaction')
-		const compte = await createAccount('maquilleuse')
-		await context.addCookies(redaction.session.cookies as never[])
+		const editor = await createAccount('redaction')
+		const account = await createAccount('maquilleuse')
+		await context.addCookies(editor.session.cookies as never[])
 
-		const reponse = await page.request.delete(`/api/pros/${compte.id}`)
-		expect(reponse.status()).toBe(403)
+		const response = await page.request.delete(`/api/pros/${account.id}`)
+		expect(response.status()).toBe(403)
 		expect(
-			(await (await testPayload()).findByID({ collection: 'pros', id: compte.id, depth: 0, disableErrors: true })) !==
+			(await (await testPayload()).findByID({ collection: 'pros', id: account.id, depth: 0, disableErrors: true })) !==
 				null
 		).toBe(true)
 	})

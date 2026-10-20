@@ -15,7 +15,7 @@ import { COMPTES_DE_FIXTURE, createSourceStrapi, eraseSourceStrapi, sourceFinger
  *
  * It runs the whole import and several password checks, and it is part of the whole suite (ticket 225): it
  * empties the database and the mail catcher before and after, like the other import tests, and creates and
- * erases the source it needs. Alone: `bun run test:integration tests/integration/import-puis-connexion.test.ts`.
+ * erases the source it needs. Alone: `bun run test:integration tests/integration/import-then-sign-in.test.ts`.
  */
 
 function failure(): never {
@@ -28,20 +28,20 @@ const GOOGLE = { strapiId: 4, email: 'camille.bernard@example.test' }
 const FACEBOOK = { strapiId: 5, email: 'sarah.k@example.test' }
 
 /** The accounts of the target that still hold a hash of the old site, by `strapiId`: read in the database, no value kept. */
-async function comptesAvecUnHashHerite(): Promise<number[]> {
+async function accountsWithLegacyHash(): Promise<number[]> {
 	const payload = await testPayload()
-	const lignes = await payload.db.find<{ id: number; strapiId?: number | null; legacyBcrypt?: string | null }>({
+	const lines = await payload.db.find<{ id: number; strapiId?: number | null; legacyBcrypt?: string | null }>({
 		collection: 'pros',
 		pagination: false,
 		where: {},
 	})
-	return lignes.docs
+	return lines.docs
 		.filter(({ legacyBcrypt }) => typeof legacyBcrypt === 'string' && legacyBcrypt !== '')
 		.map(({ strapiId }) => Number(strapiId))
 		.sort((a, b) => a - b)
 }
 
-async function compteParStrapiId(strapiId: number) {
+async function accountByStrapiId(strapiId: number) {
 	const payload = await testPayload()
 	const { docs } = await payload.find({
 		collection: 'pros',
@@ -54,7 +54,7 @@ async function compteParStrapiId(strapiId: number) {
 	return docs[0] as NonNullable<(typeof docs)[number]>
 }
 
-async function profilsDe(id: number | string) {
+async function profilesOf(id: number | string) {
 	const payload = await testPayload()
 	return (
 		await payload.find({ collection: 'profiles', depth: 0, overrideAccess: true, where: { pro: { equals: id } } })
@@ -77,35 +77,35 @@ describe('095 : après l’import, trois comptes de fixture se connectent par le
 	test('les trois parcours, le compte des hash hérités baisse de 1 exactement, la source est inchangée (I43)', async () => {
 		const source = (await sourceFingerprint()).empreinte
 		await importOnBench()
-		const avant = await comptesAvecUnHashHerite()
-		expect(avant).toContain(LOCAL.strapiId)
-		expect(avant).not.toContain(GOOGLE.strapiId)
-		expect(avant).not.toContain(FACEBOOK.strapiId)
-		const profilGoogle = await profilsDe((await compteParStrapiId(GOOGLE.strapiId)).id)
-		const profilFacebook = await profilsDe((await compteParStrapiId(FACEBOOK.strapiId)).id)
-		expect(profilGoogle).toHaveLength(1)
-		expect(profilFacebook).toHaveLength(1)
+		const before = await accountsWithLegacyHash()
+		expect(before).toContain(LOCAL.strapiId)
+		expect(before).not.toContain(GOOGLE.strapiId)
+		expect(before).not.toContain(FACEBOOK.strapiId)
+		const profileGoogle = await profilesOf((await accountByStrapiId(GOOGLE.strapiId)).id)
+		const profileFacebook = await profilesOf((await accountByStrapiId(FACEBOOK.strapiId)).id)
+		expect(profileGoogle).toHaveLength(1)
+		expect(profileFacebook).toHaveLength(1)
 
 		// 1. The usual password of the old site: it opens the account, and the hash is replaced.
 		expect(await connect(LOCAL.email, LOCAL.motDePasse)).toMatchObject({ ok: true })
-		expect(await comptesAvecUnHashHerite()).toEqual(avant.filter(strapiId => strapiId !== LOCAL.strapiId))
+		expect(await accountsWithLegacyHash()).toEqual(before.filter(strapiId => strapiId !== LOCAL.strapiId))
 		// The second sign-in is Payload's own, and the old hash does not come back.
 		expect(await connect(LOCAL.email, LOCAL.motDePasse)).toMatchObject({ ok: true })
 
 		// 2. Google, by the fake provider: the same account, no second one, the same profile.
-		const parGoogle = await connectByGoogle(GOOGLE.email)
-		expect(parGoogle).toMatchObject({ ok: true, nouveau: false })
-		expect(await profilsDe((await compteParStrapiId(GOOGLE.strapiId)).id)).toEqual(profilGoogle)
+		const byGoogle = await connectByGoogle(GOOGLE.email)
+		expect(byGoogle).toMatchObject({ ok: true, nouveau: false })
+		expect(await profilesOf((await accountByStrapiId(GOOGLE.strapiId)).id)).toEqual(profileGoogle)
 
 		// 3. Facebook is gone: she is turned away, then the forgotten password gives her one.
 		expect(await connect(FACEBOOK.email, CHOICE)).toEqual({ ok: false, code: 'identifiants-invalides' })
 		expect(await pickPassword(await requestLink(FACEBOOK.email))).toEqual({ ok: true })
 		expect(await connect(FACEBOOK.email, CHOICE)).toMatchObject({ ok: true })
-		expect(await profilsDe((await compteParStrapiId(FACEBOOK.strapiId)).id)).toEqual(profilFacebook)
+		expect(await profilesOf((await accountByStrapiId(FACEBOOK.strapiId)).id)).toEqual(profileFacebook)
 
 		// The three paths together took exactly one old hash away.
-		const apres = await comptesAvecUnHashHerite()
-		expect(apres).toHaveLength(avant.length - 1)
+		const after = await accountsWithLegacyHash()
+		expect(after).toHaveLength(before.length - 1)
 		const payload = await testPayload()
 		expect((await payload.count({ collection: 'pros' })).totalDocs).toBe(14)
 		// I43: the source is the one the import found.

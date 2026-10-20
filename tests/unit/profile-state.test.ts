@@ -24,7 +24,7 @@ import {
  * The state of a profile as the server stores it (ticket 044): a document of `profils` read by the
  * single rule of the old site (src/lib/profile/completeness.ts), the dates of its flags, and the
  * status that follows. The same cases on the bench, through the real saves:
- * tests/integration/profils-completude.test.ts. Made-up values only.
+ * tests/integration/profile-completeness.test.ts. Made-up values only.
  */
 
 const DESCRIPTION = 'Maquilleuse fictive. '.repeat(10)
@@ -225,7 +225,7 @@ describe('le statut après une sauvegarde', () => {
 
 	test('un formulaire qui renvoie le choix stocké ne choisit rien : la règle décide', () => {
 		// The status the form sends never reaches the rule: no API writes it, so the save holds the
-		// stored one (tests/integration/profils-completude.test.ts sends a stale one through REST).
+		// stored one (tests/integration/profile-completeness.test.ts sends a stale one through REST).
 		const published = { status: 'published', chosenStatus: 'automatic' } as const
 		const draft = { status: 'draft', chosenStatus: 'automatic' } as const
 		expect(statusAfter({ avant: published, apres: published, fullyEmpty: true })).toEqual(draft)

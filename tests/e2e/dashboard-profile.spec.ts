@@ -12,59 +12,59 @@ import { openSessionWithoutPassword } from '../support/session'
  * The brake of the sign-in counts by client address: each test sends its own made-up address.
  */
 
-let compteur = 0
+let counter = 0
 test.beforeEach(({ context }) =>
-	context.setExtraHTTPHeaders({ 'x-forwarded-for': `192.0.2.${40 + (++compteur % 150)}` })
+	context.setExtraHTTPHeaders({ 'x-forwarded-for': `192.0.2.${40 + (++counter % 150)}` })
 )
 
-type Maquilleuse = TestAccount<'maquilleuse'>
+type Artist = TestAccount<'maquilleuse'>
 
-const IDENTITE = { firstName: 'Léa', lastName: 'Fictive', artistName: 'Studio Fictif', specialty: 'Maquillage mariée' }
+const IDENTITY = { firstName: 'Léa', lastName: 'Fictive', artistName: 'Studio Fictif', specialty: 'Maquillage mariée' }
 
 /** A makeup artist with her profile filled in, a session in the browser. */
-async function maquilleuse(
-	context: { addCookies: (c: Maquilleuse['session']['cookies']) => Promise<void> },
-	profil: Record<string, unknown> = IDENTITE
-): Promise<Maquilleuse> {
-	const compte = await createAccount('maquilleuse')
+async function artist(
+	context: { addCookies: (c: Artist['session']['cookies']) => Promise<void> },
+	profil: Record<string, unknown> = IDENTITY
+): Promise<Artist> {
+	const account = await createAccount('maquilleuse')
 	const payload = await testPayload()
-	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
-	const [fiche] = docs
-	if (!fiche) throw new Error('pas de profil')
-	await payload.update({ collection: 'profiles', id: fiche.id, data: profil })
-	await context.addCookies(compte.session.cookies)
-	return compte
+	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: account.id } } })
+	const [sheet] = docs
+	if (!sheet) throw new Error('pas de profil')
+	await payload.update({ collection: 'profiles', id: sheet.id, data: profil })
+	await context.addCookies(account.session.cookies)
+	return account
 }
 
-async function ficheDe(compte: Maquilleuse) {
+async function sheetOf(compte: Artist) {
 	const payload = await testPayload()
 	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
-	const [fiche] = docs
-	if (!fiche) throw new Error('pas de profil')
-	return fiche
+	const [sheet] = docs
+	if (!sheet) throw new Error('pas de profil')
+	return sheet
 }
 
 /** The requests that carry a Server Action to the page of the space. */
-function suivreLesEnvois(page: Page): string[] {
-	const envois: string[] = []
+function followUploads(page: Page): string[] {
+	const uploads: string[] = []
 	page.on('request', requete => {
-		if (requete.method() === 'POST' && new URL(requete.url()).pathname === '/auth/profil') envois.push(requete.url())
+		if (requete.method() === 'POST' && new URL(requete.url()).pathname === '/auth/profil') uploads.push(requete.url())
 	})
-	return envois
+	return uploads
 }
 
-const modifier = (page: Page) => page.getByRole('button', { name: 'Modifier mon identité' })
+const modify = (page: Page) => page.getByRole('button', { name: 'Modifier mon identité' })
 const dialogue = (page: Page) => page.getByRole('dialog', { name: 'Modifier mon identité' })
 
-async function ouvrir(page: Page) {
-	if (test.info().project.name === 'mobile') await modifier(page).tap()
-	else await modifier(page).click()
+async function open(page: Page) {
+	if (test.info().project.name === 'mobile') await modify(page).tap()
+	else await modify(page).click()
 	await expect(dialogue(page)).toBeVisible()
 }
 
 test.describe('118 : la page de l’espace', { tag: '@mobile' }, () => {
 	test('les valeurs enregistrées, « à compléter » pour le reste, jamais « null »', async ({ context, page }) => {
-		await maquilleuse(context, { ...IDENTITE, description: 'null', radiusKm: 0 })
+		await artist(context, { ...IDENTITY, description: 'null', radiusKm: 0 })
 
 		await page.goto('/auth/profil')
 
@@ -74,12 +74,12 @@ test.describe('118 : la page de l’espace', { tag: '@mobile' }, () => {
 		await expect(page.getByTestId('carte-competences')).toContainText('à compléter')
 		await expect(page.getByTestId('carte-description')).toContainText('à compléter')
 		await expect(page.getByTestId('carte-reseaux')).toContainText('à compléter')
-		const texte = await page.locator('main').innerText()
-		expect(texte).not.toMatch(/\bnull\b|undefined|NaN/)
+		const text = await page.locator('main').innerText()
+		expect(text).not.toMatch(/\bnull\b|undefined|NaN/)
 	})
 
 	test('un h1, une navigation, aucun débordement', async ({ context, page }) => {
-		await maquilleuse(context)
+		await artist(context)
 
 		await page.goto('/auth/profil')
 		await expect(page.getByTestId('carte-identite')).toBeVisible()
@@ -87,34 +87,34 @@ test.describe('118 : la page de l’espace', { tag: '@mobile' }, () => {
 		await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1)
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText('Mon espace')
 		await expect(page.getByRole('navigation').first()).toBeVisible()
-		const debordement = await page.evaluate(() => {
+		const overflow = await page.evaluate(() => {
 			const { scrollWidth, clientWidth } = document.documentElement
 			return scrollWidth - clientWidth
 		})
-		expect(debordement).toBeLessThanOrEqual(0)
+		expect(overflow).toBeLessThanOrEqual(0)
 		expect(await violationsSevere(page)).toEqual([])
 
-		const dossier = process.env.DASHBOARD_SCREENSHOTS
-		if (dossier) await page.screenshot({ fullPage: true, path: `${dossier}/espace-${test.info().project.name}.png` })
+		const folder = process.env.DASHBOARD_SCREENSHOTS
+		if (folder) await page.screenshot({ fullPage: true, path: `${folder}/espace-${test.info().project.name}.png` })
 	})
 
 	test('U54 : A ne voit rien du profil de B, ni dans la page ni dans la charge RSC', async ({ context, page }) => {
 		const b = await createAccount('maquilleuse')
 		const payload = await testPayload()
-		const ficheB = await ficheDe(b)
+		const sheetB = await sheetOf(b)
 		await payload.update({
 			collection: 'profiles',
-			id: ficheB.id,
+			id: sheetB.id,
 			data: { firstName: 'Zoéprivée', lastName: 'Autredame', specialty: 'Secret de B' },
 		})
-		const a = await maquilleuse(context)
+		const a = await artist(context)
 
 		await page.goto('/auth/profil')
 		await expect(page.getByTestId('carte-identite')).toContainText('Léa')
 
-		const enTetes = { ...a.session.enTetes }
-		const html = await page.context().request.get('/auth/profil', { headers: enTetes })
-		const rsc = await page.context().request.get('/auth/profil', { headers: { ...enTetes, RSC: '1' } })
+		const headers = { ...a.session.enTetes }
+		const html = await page.context().request.get('/auth/profil', { headers: headers })
+		const rsc = await page.context().request.get('/auth/profil', { headers: { ...headers, RSC: '1' } })
 		for (const corps of [await page.content(), await html.text(), await rsc.text()]) {
 			expect(corps).not.toContain('Zoéprivée')
 			expect(corps).not.toContain('Secret de B')
@@ -128,10 +128,10 @@ test.describe('119 : l’identité s’enregistre pour de vrai', { tag: '@mobile
 		context,
 		page,
 	}) => {
-		const compte = await maquilleuse(context)
-		const slug = (await ficheDe(compte)).slug
+		const account = await artist(context)
+		const slug = (await sheetOf(account)).slug
 		await page.goto('/auth/profil')
-		await ouvrir(page)
+		await open(page)
 
 		await page.getByLabel('Prénom').fill('  Inès  ')
 		await page.getByLabel('Spécialité').fill('Effets spéciaux')
@@ -141,18 +141,18 @@ test.describe('119 : l’identité s’enregistre pour de vrai', { tag: '@mobile
 		await expect(page.getByRole('status').filter({ hasText: 'Ton identité est enregistrée.' })).toBeVisible()
 		await expect(page.getByTestId('carte-identite')).toContainText('Inès')
 		await expect(page.getByTestId('carte-identite')).toContainText('Effets spéciaux')
-		await expect(modifier(page)).toBeFocused()
+		await expect(modify(page)).toBeFocused()
 
 		await page.reload()
 		await expect(page.getByTestId('carte-identite')).toContainText('Effets spéciaux')
-		expect(await ficheDe(compte)).toMatchObject({ firstName: 'Inès', specialty: 'Effets spéciaux', slug })
+		expect(await sheetOf(account)).toMatchObject({ firstName: 'Inès', specialty: 'Effets spéciaux', slug })
 	})
 
 	test('E30 : hors bornes, un message sous le champ et aucune requête', async ({ context, page }) => {
-		await maquilleuse(context)
-		const envois = suivreLesEnvois(page)
+		await artist(context)
+		const uploads = followUploads(page)
 		await page.goto('/auth/profil')
-		await ouvrir(page)
+		await open(page)
 
 		await page.getByLabel('Nom', { exact: true }).fill('A')
 		await page.getByLabel('Prénom').fill('')
@@ -162,7 +162,7 @@ test.describe('119 : l’identité s’enregistre pour de vrai', { tag: '@mobile
 		await expect(page.getByText('Ton nom doit contenir au moins 2 caractères.')).toBeVisible()
 		await expect(page.getByText('Indique ton prénom.')).toBeVisible()
 		await expect(page.getByText('Ta spécialité ne doit pas dépasser 70 caractères.')).toBeVisible()
-		expect(envois).toHaveLength(0)
+		expect(uploads).toHaveLength(0)
 		await expect(dialogue(page)).toBeVisible()
 	})
 
@@ -170,9 +170,9 @@ test.describe('119 : l’identité s’enregistre pour de vrai', { tag: '@mobile
 		context,
 		page,
 	}) => {
-		const compte = await maquilleuse(context)
+		const account = await artist(context)
 		await page.goto('/auth/profil')
-		await ouvrir(page)
+		await open(page)
 		await page.route('**/auth/profil', route =>
 			route.request().method() === 'POST' ? route.abort() : route.continue()
 		)
@@ -183,7 +183,7 @@ test.describe('119 : l’identité s’enregistre pour de vrai', { tag: '@mobile
 		await expect(page.getByRole('alert').filter({ hasText: 'L’enregistrement n’a pas abouti' })).toBeVisible()
 		await expect(page.getByLabel('Prénom')).toHaveValue('Inès')
 		await expect(page.getByTestId('carte-identite')).toContainText('Léa')
-		expect((await ficheDe(compte)).firstName).toBe('Léa')
+		expect((await sheetOf(account)).firstName).toBe('Léa')
 		await expect(page.getByRole('status').filter({ hasText: 'enregistrée' })).toHaveCount(0)
 
 		await page.getByRole('button', { name: 'Fermer' }).click()
@@ -196,50 +196,50 @@ test.describe('119 : l’identité s’enregistre pour de vrai', { tag: '@mobile
 		await expect(dialogue(page)).toHaveCount(0)
 		await expect(page.getByTestId('carte-identite')).toContainText('Léa')
 		// Opened again: the stored values, not the abandoned ones.
-		await ouvrir(page)
+		await open(page)
 		await expect(page.getByLabel('Prénom')).toHaveValue('Léa')
 	})
 
 	test('un double clic n’envoie qu’un enregistrement', async ({ context, page }) => {
-		await maquilleuse(context)
-		const envois = suivreLesEnvois(page)
+		await artist(context)
+		const uploads = followUploads(page)
 		await page.goto('/auth/profil')
-		await ouvrir(page)
+		await open(page)
 
 		await page.getByLabel('Nom', { exact: true }).fill('Dupont')
 		await page.getByRole('button', { name: 'Enregistrer' }).dblclick()
 
 		await expect(dialogue(page)).toHaveCount(0)
 		await expect(page.getByTestId('carte-identite')).toContainText('Dupont')
-		expect(envois).toHaveLength(1)
+		expect(uploads).toHaveLength(1)
 	})
 })
 
 test.describe('120 : au doigt et au clavier', { tag: '@mobile' }, () => {
 	test('le panneau s’ouvre au premier tap ou clic et occupe l’écran à 390 px', async ({ context, page }) => {
-		await maquilleuse(context)
+		await artist(context)
 		await page.goto('/auth/profil')
-		await ouvrir(page)
+		await open(page)
 
 		await expect(page.getByLabel('Prénom')).toBeFocused()
-		const taille = page.viewportSize()
-		const boite = await dialogue(page).boundingBox()
-		if (!taille || !boite) throw new Error('pas de mesure')
-		if (taille.width <= 390) {
-			expect(boite.width).toBe(taille.width)
-			expect(boite.height).toBe(taille.height)
+		const size = page.viewportSize()
+		const mailbox = await dialogue(page).boundingBox()
+		if (!size || !mailbox) throw new Error('pas de mesure')
+		if (size.width <= 390) {
+			expect(mailbox.width).toBe(size.width)
+			expect(mailbox.height).toBe(size.height)
 		}
-		const dossier = process.env.DASHBOARD_SCREENSHOTS
-		if (dossier) await page.screenshot({ path: `${dossier}/panneau-${test.info().project.name}.png` })
+		const folder = process.env.DASHBOARD_SCREENSHOTS
+		if (folder) await page.screenshot({ path: `${folder}/panneau-${test.info().project.name}.png` })
 		expect(await violationsSevere(page)).toEqual([])
 	})
 
 	test('E68 : parcours au clavier, le focus reste piégé, Échap ferme et rend le focus', async ({ context, page }) => {
-		await maquilleuse(context)
+		await artist(context)
 		await page.goto('/auth/profil')
 		await expect(page.getByTestId('carte-identite')).toBeVisible()
 
-		await modifier(page).focus()
+		await modify(page).focus()
 		await page.keyboard.press('Enter')
 		await expect(dialogue(page)).toBeVisible()
 		await expect(page.getByLabel('Prénom')).toBeFocused()
@@ -256,7 +256,7 @@ test.describe('120 : au doigt et au clavier', { tag: '@mobile' }, () => {
 
 		await page.keyboard.press('Escape')
 		await expect(dialogue(page)).toHaveCount(0)
-		await expect(modifier(page)).toBeFocused()
+		await expect(modify(page)).toBeFocused()
 
 		// With a change: the first Escape asks, the second goes back to the form.
 		await page.keyboard.press('Enter')
@@ -269,101 +269,101 @@ test.describe('120 : au doigt et au clavier', { tag: '@mobile' }, () => {
 	})
 
 	test('Entrée maintenue : un seul enregistrement, panneau fermé, qui ne se rouvre pas', async ({ context, page }) => {
-		const compte = await maquilleuse(context)
-		const envois = suivreLesEnvois(page)
+		const account = await artist(context)
+		const uploads = followUploads(page)
 		await page.goto('/auth/profil')
-		await ouvrir(page)
+		await open(page)
 		await page.getByLabel('Nom', { exact: true }).fill('Maintenue')
 
 		await page.getByRole('button', { name: 'Enregistrer' }).focus()
 		// A held key: the first press, then its repeats.
 		await page.keyboard.down('Enter')
-		for (let rang = 0; rang < 5; rang++) await page.keyboard.down('Enter')
+		for (let rank = 0; rank < 5; rank++) await page.keyboard.down('Enter')
 		await page.keyboard.up('Enter')
 
 		await expect(dialogue(page)).toHaveCount(0)
 		await expect(page.getByTestId('carte-identite')).toContainText('Maintenue')
-		await expect(modifier(page)).toBeFocused()
-		expect(envois).toHaveLength(1)
-		expect((await ficheDe(compte)).lastName).toBe('Maintenue')
+		await expect(modify(page)).toBeFocused()
+		expect(uploads).toHaveLength(1)
+		expect((await sheetOf(account)).lastName).toBe('Maintenue')
 	})
 
 	test('Entrée maintenue sur « Modifier » : le panneau s’ouvre une fois et rien n’est enregistré', async ({
 		context,
 		page,
 	}) => {
-		await maquilleuse(context)
-		const envois = suivreLesEnvois(page)
+		await artist(context)
+		const uploads = followUploads(page)
 		await page.goto('/auth/profil')
 		await expect(page.getByTestId('carte-identite')).toBeVisible()
 
-		await modifier(page).focus()
+		await modify(page).focus()
 		await page.keyboard.down('Enter')
-		for (let rang = 0; rang < 5; rang++) await page.keyboard.down('Enter')
+		for (let rank = 0; rank < 5; rank++) await page.keyboard.down('Enter')
 		await page.keyboard.up('Enter')
 
 		await expect(dialogue(page)).toBeVisible()
 		await expect(page.getByLabel('Prénom')).toBeFocused()
-		expect(envois).toHaveLength(0)
+		expect(uploads).toHaveLength(0)
 	})
 
 	test('le résultat est annoncé aux lecteurs d’écran : une région de statut hors du panneau', async ({
 		context,
 		page,
 	}) => {
-		await maquilleuse(context)
+		await artist(context)
 		await page.goto('/auth/profil')
-		await ouvrir(page)
+		await open(page)
 		await page.getByLabel('Nom', { exact: true }).fill('Annoncée')
 		await page.getByRole('button', { name: 'Enregistrer' }).click()
 
-		const statut = page.getByRole('status').filter({ hasText: 'Ton identité est enregistrée.' })
-		await expect(statut).toBeVisible()
-		expect(await statut.evaluate(noeud => noeud.closest('[role="dialog"]') === null)).toBe(true)
+		const status = page.getByRole('status').filter({ hasText: 'Ton identité est enregistrée.' })
+		await expect(status).toBeVisible()
+		expect(await status.evaluate(noeud => noeud.closest('[role="dialog"]') === null)).toBe(true)
 		expect(await violationsSevere(page)).toEqual([])
 	})
 })
 
 test.describe('121 : la session expire pendant l’édition', { tag: '@mobile' }, () => {
-	const MOT_DE_PASSE = 'motdepasse-fictif'
+	const PASSWORD = 'motdepasse-fictif'
 
 	test('E32 : message, rien d’enregistré, une seule redirection, saisie retrouvée dans le même panneau, puis effacée', async ({
 		context,
 		page,
 	}) => {
-		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const account = await createAccount('maquilleuse', { motDePasse: () => PASSWORD })
 		const payload = await testPayload()
-		const fiche = await ficheDe(compte)
-		await payload.update({ collection: 'profiles', id: fiche.id, data: IDENTITE })
-		await context.addCookies(compte.session.cookies)
-		const depart = new Set<string>()
+		const sheet = await sheetOf(account)
+		await payload.update({ collection: 'profiles', id: sheet.id, data: IDENTITY })
+		await context.addCookies(account.session.cookies)
+		const start = new Set<string>()
 		page.on('response', reponse => {
 			if (reponse.request().resourceType() !== 'document' || reponse.status() < 300 || reponse.status() >= 400) return
 			// Chromium replays a request once for a client hint: that replay is not a redirection.
-			const vers = new URL(reponse.headers().location ?? '', reponse.url())
-			if (vers.href !== reponse.url()) depart.add(new URL(reponse.url()).pathname)
+			const to = new URL(reponse.headers().location ?? '', reponse.url())
+			if (to.href !== reponse.url()) start.add(new URL(reponse.url()).pathname)
 		})
 		await page.goto('/auth/profil')
-		await ouvrir(page)
+		await open(page)
 		await page.getByLabel('Prénom').fill('Inès')
 		await page.getByLabel('Spécialité').fill('Effets spéciaux')
 
 		// The session ends while she types: the browser now holds a token that has run out.
-		const expiree = await openSessionWithoutPassword(payload, { collection: 'pros', id: compte.id }, process.env, {
+		const expired = await openSessionWithoutPassword(payload, { collection: 'pros', id: account.id }, process.env, {
 			dureeS: -60,
 		})
 		await context.clearCookies()
-		await context.addCookies(expiree.cookies)
+		await context.addCookies(expired.cookies)
 		await page.getByRole('button', { name: 'Enregistrer' }).click()
 
 		// One trip to the sign-in page, with the message; nothing was stored.
 		await expect(page).toHaveURL(/\/auth\/signin\?callbackUrl=%2Fauth%2Fprofil&error=session-expiree$/)
 		await expect(page.getByTestId('session-expiree')).toHaveText('Ta session a expiré, reconnecte-toi.')
-		expect((await ficheDe(compte)).firstName).toBe('Léa')
-		expect([...depart]).toEqual([])
+		expect((await sheetOf(account)).firstName).toBe('Léa')
+		expect([...start]).toEqual([])
 
-		await page.getByLabel('Adresse email').fill(compte.email)
-		await page.getByLabel('Mot de passe').fill(MOT_DE_PASSE)
+		await page.getByLabel('Adresse email').fill(account.email)
+		await page.getByLabel('Mot de passe').fill(PASSWORD)
 		await page.getByRole('button', { name: 'Se connecter' }).click()
 
 		// Back in her space: the same panel, her typing in it, the card still showing the stored values.
@@ -377,7 +377,7 @@ test.describe('121 : la session expire pendant l’édition', { tag: '@mobile' }
 		await page.getByRole('button', { name: 'Enregistrer' }).click()
 		await expect(dialogue(page)).toHaveCount(0)
 		await expect(page.getByTestId('carte-identite')).toContainText('Effets spéciaux')
-		expect(await ficheDe(compte)).toMatchObject({ firstName: 'Inès', specialty: 'Effets spéciaux' })
+		expect(await sheetOf(account)).toMatchObject({ firstName: 'Inès', specialty: 'Effets spéciaux' })
 		// Forgotten after the success: a reload opens nothing.
 		expect(await page.evaluate(() => window.sessionStorage.length)).toBe(0)
 		await page.reload()
@@ -389,23 +389,23 @@ test.describe('121 : la session expire pendant l’édition', { tag: '@mobile' }
 		context,
 		page,
 	}) => {
-		const compte = await maquilleuse(context)
+		const account = await artist(context)
 		await page.goto('/auth/profil')
 		await expect(page.getByTestId('carte-identite')).toBeVisible()
-		const cle = await page.evaluate(
+		const key = await page.evaluate(
 			([proprietaire]) => {
-				const cle = `mm:saisie:identite:${proprietaire}`
+				const key = `mm:saisie:identite:${proprietaire}`
 				window.sessionStorage.setItem(
-					cle,
+					key,
 					JSON.stringify({
 						valeurs: { prenom: 'Gardée', nom: 'Fictive', nomArtiste: '', specialite: 'Teint' },
 						le: Date.now(),
 						redirigeLe: null,
 					})
 				)
-				return cle
+				return key
 			},
-			[String(compte.id)]
+			[String(account.id)]
 		)
 		await page.evaluate(() =>
 			window.sessionStorage.setItem(
@@ -420,7 +420,7 @@ test.describe('121 : la session expire pendant l’édition', { tag: '@mobile' }
 		await page.getByRole('button', { name: 'Fermer' }).click()
 		await page.getByRole('button', { name: 'Abandonner mes modifications' }).click()
 		await expect(dialogue(page)).toHaveCount(0)
-		expect(await page.evaluate(k => window.sessionStorage.getItem(k), cle)).toBeNull()
+		expect(await page.evaluate(k => window.sessionStorage.getItem(k), key)).toBeNull()
 		await page.reload()
 		await expect(dialogue(page)).toHaveCount(0)
 	})

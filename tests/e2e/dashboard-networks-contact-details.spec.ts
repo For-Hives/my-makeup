@@ -12,40 +12,38 @@ import { testPayload } from '../support/payload-test'
  * The brake of the sign-in counts by client address: each test sends its own made-up address.
  */
 
-let compteur = 0
+let counter = 0
 test.beforeEach(({ context }) =>
-	context.setExtraHTTPHeaders({ 'x-forwarded-for': `192.0.2.${200 + (++compteur % 50)}` })
+	context.setExtraHTTPHeaders({ 'x-forwarded-for': `192.0.2.${200 + (++counter % 50)}` })
 )
 
-type Maquilleuse = TestAccount<'maquilleuse'>
+type Artist = TestAccount<'maquilleuse'>
 
-const TELEPHONE = '06 39 98 12 34'
+const PHONE = '06 39 98 12 34'
 
-async function maquilleuse(context: {
-	addCookies: (c: Maquilleuse['session']['cookies']) => Promise<void>
-}): Promise<Maquilleuse> {
-	const compte = await createAccount('maquilleuse')
-	await context.addCookies(compte.session.cookies)
-	await modifierLaFiche(compte, { firstName: 'Léa', lastName: 'Fictive', specialty: 'Maquillage mariée' })
-	return compte
+async function artist(context: { addCookies: (c: Artist['session']['cookies']) => Promise<void> }): Promise<Artist> {
+	const account = await createAccount('maquilleuse')
+	await context.addCookies(account.session.cookies)
+	await modifySheet(account, { firstName: 'Léa', lastName: 'Fictive', specialty: 'Maquillage mariée' })
+	return account
 }
 
-async function modifierLaFiche(compte: Maquilleuse, data: Record<string, unknown>) {
+async function modifySheet(compte: Artist, data: Record<string, unknown>) {
 	const payload = await testPayload()
-	await payload.update({ collection: 'profiles', id: (await ficheDe(compte)).id, data })
+	await payload.update({ collection: 'profiles', id: (await sheetOf(compte)).id, data })
 }
 
-async function ficheDe(compte: Maquilleuse) {
+async function sheetOf(compte: Artist) {
 	const payload = await testPayload()
 	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
-	const [fiche] = docs
-	if (!fiche) throw new Error('pas de profil')
-	return fiche
+	const [sheet] = docs
+	if (!sheet) throw new Error('pas de profil')
+	return sheet
 }
 
 test.describe('125 : les réseaux', { tag: '@mobile' }, () => {
 	test('U28 : « @pseudo » est rangé comme l’adresse complète, et la valeur est stockée', async ({ context, page }) => {
-		const compte = await maquilleuse(context)
+		const account = await artist(context)
 		await page.goto('/auth/profil')
 
 		await page.getByRole('button', { name: 'Modifier mes réseaux' }).click()
@@ -55,15 +53,15 @@ test.describe('125 : les réseaux', { tag: '@mobile' }, () => {
 		await expect(page.getByRole('dialog')).toHaveCount(0)
 		await expect(page.getByRole('status').filter({ hasText: 'Tes réseaux sont enregistrés.' })).toBeVisible()
 		await expect(page.getByTestId('carte-reseaux')).toContainText('https://www.instagram.com/studio.fictif')
-		expect((await ficheDe(compte)).networks?.instagram).toBe('https://www.instagram.com/studio.fictif')
+		expect((await sheetOf(account)).networks?.instagram).toBe('https://www.instagram.com/studio.fictif')
 		expect(await violationsSevere(page)).toEqual([])
 	})
 
 	test('E30 : l’adresse d’un autre site est refusée sous le champ, sans requête', async ({ context, page }) => {
-		const compte = await maquilleuse(context)
-		const envois: string[] = []
+		const account = await artist(context)
+		const uploads: string[] = []
 		page.on('request', requete => {
-			if (requete.method() === 'POST' && new URL(requete.url()).pathname === '/auth/profil') envois.push(requete.url())
+			if (requete.method() === 'POST' && new URL(requete.url()).pathname === '/auth/profil') uploads.push(requete.url())
 		})
 		await page.goto('/auth/profil')
 
@@ -72,16 +70,16 @@ test.describe('125 : les réseaux', { tag: '@mobile' }, () => {
 		await page.getByRole('button', { name: 'Enregistrer' }).click()
 
 		await expect(page.getByText('Cette adresse n’est pas celle d’Instagram')).toBeVisible()
-		expect(envois).toHaveLength(0)
-		expect((await ficheDe(compte)).networks?.instagram ?? null).toBeNull()
+		expect(uploads).toHaveLength(0)
+		expect((await sheetOf(account)).networks?.instagram ?? null).toBeNull()
 	})
 
 	test('E31 : vider un champ retire le réseau ; un échec du serveur laisse l’ancienne valeur et le dit', async ({
 		context,
 		page,
 	}) => {
-		const compte = await maquilleuse(context)
-		await modifierLaFiche(compte, { networks: { instagram: 'https://www.instagram.com/studio.fictif' } })
+		const account = await artist(context)
+		await modifySheet(account, { networks: { instagram: 'https://www.instagram.com/studio.fictif' } })
 		await page.goto('/auth/profil')
 		await page.getByRole('button', { name: 'Modifier mes réseaux' }).click()
 		await page.route('**/auth/profil', route =>
@@ -93,19 +91,19 @@ test.describe('125 : les réseaux', { tag: '@mobile' }, () => {
 
 		await expect(page.getByRole('alert').filter({ hasText: 'L’enregistrement n’a pas abouti' })).toBeVisible()
 		await expect(page.getByTestId('carte-reseaux')).toContainText('instagram.com/studio.fictif')
-		expect((await ficheDe(compte)).networks?.instagram).toBe('https://www.instagram.com/studio.fictif')
+		expect((await sheetOf(account)).networks?.instagram).toBe('https://www.instagram.com/studio.fictif')
 
 		await page.unroute('**/auth/profil')
 		await page.getByRole('button', { name: 'Enregistrer' }).click()
 		await expect(page.getByRole('dialog')).toHaveCount(0)
 		await expect(page.getByTestId('carte-reseaux')).toContainText('à compléter')
-		expect((await ficheDe(compte)).networks?.instagram ?? null).toBeNull()
+		expect((await sheetOf(account)).networks?.instagram ?? null).toBeNull()
 	})
 })
 
 test.describe('126 : les coordonnées', { tag: '@mobile' }, () => {
 	test('E30 : un téléphone invalide a son message sous le champ, sans requête', async ({ context, page }) => {
-		await maquilleuse(context)
+		await artist(context)
 		await page.goto('/auth/profil')
 
 		await page.getByRole('button', { name: 'Modifier mes coordonnées' }).click()
@@ -122,22 +120,22 @@ test.describe('126 : les coordonnées', { tag: '@mobile' }, () => {
 		context,
 		page,
 	}) => {
-		const compte = await maquilleuse(context)
-		const slug = (await ficheDe(compte)).slug
+		const account = await artist(context)
+		const slug = (await sheetOf(account)).slug
 		await page.goto('/auth/profil')
 		await expect(page.getByTestId('carte-coordonnees')).toContainText('Non')
 
 		await page.getByRole('button', { name: 'Modifier mes coordonnées' }).click()
-		await page.getByLabel('Téléphone', { exact: true }).fill(TELEPHONE)
+		await page.getByLabel('Téléphone', { exact: true }).fill(PHONE)
 		await page.getByLabel('Afficher mon téléphone et mon email sur mon profil').check()
 		await page.getByRole('button', { name: 'Enregistrer' }).click()
 
 		await expect(page.getByRole('dialog')).toHaveCount(0)
 		await expect(page.getByRole('status').filter({ hasText: 'elles s’affichent sur ton profil' })).toBeVisible()
 		await expect(page.getByTestId('carte-coordonnees')).toContainText('Oui, depuis le')
-		expect(typeof (await ficheDe(compte)).consentedAt).toBe('string')
-		const affiche = await page.context().request.get(`/profil/${slug}`)
-		expect(await affiche.text()).toContain('tel:0639981234')
+		expect(typeof (await sheetOf(account)).consentedAt).toBe('string')
+		const shown = await page.context().request.get(`/profil/${slug}`)
+		expect(await shown.text()).toContain('tel:0639981234')
 
 		await page.getByRole('button', { name: 'Modifier mes coordonnées' }).click()
 		await page.getByLabel('Afficher mon téléphone et mon email sur mon profil').uncheck()
@@ -145,7 +143,7 @@ test.describe('126 : les coordonnées', { tag: '@mobile' }, () => {
 
 		await expect(page.getByRole('dialog')).toHaveCount(0)
 		await expect(page.getByTestId('carte-coordonnees')).toContainText('Non')
-		expect((await ficheDe(compte)).consentedAt ?? null).toBeNull()
+		expect((await sheetOf(account)).consentedAt ?? null).toBeNull()
 		await expect
 			.poll(async () => (await (await page.context().request.get(`/profil/${slug}`)).text()).includes('39 98'))
 			.toBe(false)

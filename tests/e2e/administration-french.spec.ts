@@ -22,8 +22,8 @@ test.describe('L’administration s’affiche en français', { tag: '@mobile' },
 		await expect(page.getByRole('link', { name: /Mot de passe oublié/ })).toBeVisible()
 		await expect(page.getByRole('button', { name: 'Se connecter' })).toBeVisible()
 		// Nothing of Payload's English is left on the screen.
-		for (const anglais of ['Login', 'Password', 'Forgot password'])
-			await expect(page.getByText(anglais, { exact: false })).toHaveCount(0)
+		for (const english of ['Login', 'Password', 'Forgot password'])
+			await expect(page.getByText(english, { exact: false })).toHaveCount(0)
 
 		await testInfo.attach(`connexion-${testInfo.project.name}`, {
 			body: await page.screenshot({ fullPage: true }),
@@ -35,14 +35,14 @@ test.describe('L’administration s’affiche en français', { tag: '@mobile' },
 	test('l’administration ne demande aucune image à gravatar.com', async ({ context, page }) => {
 		const admin = await createAccount('admin')
 		await context.addCookies(admin.session.cookies)
-		const demandes: string[] = []
-		page.on('request', requete => void demandes.push(requete.url()))
+		const requests: string[] = []
+		page.on('request', requete => void requests.push(requete.url()))
 
 		await page.goto('/admin')
 		await expect(page.getByRole('button', { name: 'Collections' })).toBeVisible()
 		await page.waitForLoadState('networkidle')
 
-		expect(demandes.length).toBeGreaterThan(0)
-		expect(demandes.filter(adresse => /gravatar\.com/i.test(adresse))).toEqual([])
+		expect(requests.length).toBeGreaterThan(0)
+		expect(requests.filter(adresse => /gravatar\.com/i.test(adresse))).toEqual([])
 	})
 })

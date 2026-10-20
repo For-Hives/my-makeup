@@ -24,7 +24,7 @@ import { generatedProfile } from '../support/profile-factory'
  */
 
 /** The 12 panels of the space: the name of the button that opens each. */
-const PANNEAUX = [
+const PANELS = [
 	'Modifier mon identité',
 	'Modifier ma description',
 	'Modifier ma localisation',
@@ -39,50 +39,50 @@ const PANNEAUX = [
 	'Modifier mon portfolio',
 ] as const
 
-const SUPPRESSION = 'Supprimer mon compte'
+const DELETION = 'Supprimer mon compte'
 
-let compteur = 0
+let counter = 0
 test.beforeEach(({ context }) =>
-	context.setExtraHTTPHeaders({ 'x-forwarded-for': `198.51.100.${10 + (++compteur % 200)}` })
+	context.setExtraHTTPHeaders({ 'x-forwarded-for': `198.51.100.${10 + (++counter % 200)}` })
 )
 
 /** The accounts a test made: their profiles would crowd the lists of the search specs. */
-const creees: number[] = []
+const created: number[] = []
 test.afterEach(async () => {
 	const payload = await testPayload()
-	for (const compte of creees.splice(0)) {
-		const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte } } })
+	for (const account of created.splice(0)) {
+		const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: account } } })
 		for (const { id } of docs) await payload.delete({ collection: 'profiles', id }).catch(() => undefined)
-		await payload.delete({ collection: 'pros', id: compte }).catch(() => undefined)
+		await payload.delete({ collection: 'pros', id: account }).catch(() => undefined)
 	}
 })
 
-type Maquilleuse = TestAccount<'maquilleuse'>
+type Artist = TestAccount<'maquilleuse'>
 
-const estMobile = () => test.info().project.name === 'mobile'
-const appuyer = (cible: Locator) => (estMobile() ? cible.tap() : cible.click())
+const isMobile = () => test.info().project.name === 'mobile'
+const press = (cible: Locator) => (isMobile() ? cible.tap() : cible.click())
 
 /** A makeup artist whose profile is full (identity, commune, texts, skills, offers), a session in the browser. */
-async function maquilleusePleine(context: {
-	addCookies: (c: Maquilleuse['session']['cookies']) => Promise<void>
-}): Promise<{ compte: Maquilleuse; slug: string }> {
-	const compte = await createAccount('maquilleuse')
-	creees.push(Number(compte.id))
+async function fullArtist(context: {
+	addCookies: (c: Artist['session']['cookies']) => Promise<void>
+}): Promise<{ compte: Artist; slug: string }> {
+	const account = await createAccount('maquilleuse')
+	created.push(Number(account.id))
 	const payload = await testPayload()
-	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
-	const [fiche] = docs
-	if (!fiche) throw new Error('pas de profil')
+	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: account.id } } })
+	const [sheet] = docs
+	if (!sheet) throw new Error('pas de profil')
 	// A commune far from the cities the search specs look at.
-	const { slug: _, ...profil } = generatedProfile(5, {
+	const { slug: _, ...profile } = generatedProfile(5, {
 		communes: [{ name: 'Lille', inseeCode: '59350', latitude: 50.63, longitude: 3.06 }],
 	})
-	const mis = await payload.update({ collection: 'profiles', id: fiche.id, data: profil })
-	await context.addCookies(compte.session.cookies)
-	return { compte, slug: mis.slug ?? '' }
+	const put = await payload.update({ collection: 'profiles', id: sheet.id, data: profile })
+	await context.addCookies(account.session.cookies)
+	return { compte: account, slug: put.slug ?? '' }
 }
 
 /** Waits for the page of the space, whose cards are streamed. */
-async function ouvrirLEspace(page: Page) {
+async function openDashboard(page: Page) {
 	await page.goto('/auth/profil')
 	await expect(page.getByRole('heading', { level: 1, name: 'Mon espace' })).toBeVisible()
 	await expect(page.getByTestId('carte-identite')).toBeVisible()
@@ -95,55 +95,55 @@ const dialogue = (page: Page) => page.getByRole('dialog')
  * buttons and fields, neither inside the other, whose boxes share more than a few pixels. A field and its
  * own label never overlap in the markup of the site, so any pair found is a fault.
  */
-async function chevauchements(page: Page): Promise<string[]> {
+async function overlaps(page: Page): Promise<string[]> {
 	return page.evaluate(() => {
-		const SELECTEUR = 'h1, h2, h3, a[href], button, input, select, textarea, label, [role="switch"], [role="status"]'
-		const racine = document.querySelector('[role="dialog"]') ?? document.body
+		const SELECTOR = 'h1, h2, h3, a[href], button, input, select, textarea, label, [role="switch"], [role="status"]'
+		const root = document.querySelector('[role="dialog"]') ?? document.body
 		// One box per line of text: a link that wraps is not one wide box covering its neighbours.
-		const visibles = [...racine.querySelectorAll<HTMLElement>(SELECTEUR)].flatMap(element => {
+		const visible = [...root.querySelectorAll<HTMLElement>(SELECTOR)].flatMap(element => {
 			const style = getComputedStyle(element)
 			const cache = style.visibility === 'hidden' || style.display === 'none' || Number(style.opacity) === 0
 			// The « sr-only » helpers and the skip links are not read as boxes.
-			const boites = [...element.getClientRects()].filter(boite => boite.width >= 4 && boite.height >= 4)
-			return cache || boites.length === 0 ? [] : [{ element, boites }]
+			const mailboxes = [...element.getClientRects()].filter(boite => boite.width >= 4 && boite.height >= 4)
+			return cache || mailboxes.length === 0 ? [] : [{ element, boites: mailboxes }]
 		})
-		const nom = (element: HTMLElement) =>
+		const name = (element: HTMLElement) =>
 			`${element.tagName.toLowerCase()}[${(element.getAttribute('aria-label') ?? element.textContent ?? '').trim().slice(0, 40)}]`
-		const trouves: string[] = []
-		for (let i = 0; i < visibles.length; i++) {
-			for (let j = i + 1; j < visibles.length; j++) {
-				const a = visibles[i]
-				const b = visibles[j]
+		const found: string[] = []
+		for (let i = 0; i < visible.length; i++) {
+			for (let j = i + 1; j < visible.length; j++) {
+				const a = visible[i]
+				const b = visible[j]
 				if (!a || !b || a.element.contains(b.element) || b.element.contains(a.element)) continue
-				const recouvre = a.boites.some(x =>
+				const covers = a.boites.some(x =>
 					b.boites.some(
 						y =>
 							Math.min(x.right, y.right) - Math.max(x.left, y.left) > 2 &&
 							Math.min(x.bottom, y.bottom) - Math.max(x.top, y.top) > 2
 					)
 				)
-				if (recouvre) trouves.push(`${nom(a.element)} / ${nom(b.element)}`)
+				if (covers) found.push(`${name(a.element)} / ${name(b.element)}`)
 			}
 		}
-		return trouves
+		return found
 	})
 }
 
-const debordement = (page: Page) =>
+const overflow = (page: Page) =>
 	page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
 
 /** Opens the panel, runs `controle` on it, closes it with Escape and checks that the focus is back on its button. */
-async function parcourirLesPanneaux(page: Page, controle: (nom: string) => Promise<void>) {
-	for (const nom of [...PANNEAUX, SUPPRESSION]) {
-		const bouton = page.getByRole('button', { name: nom, exact: true })
-		await bouton.scrollIntoViewIfNeeded()
-		await appuyer(bouton)
-		await expect(dialogue(page), nom).toBeVisible()
-		await controle(nom)
+async function browsePanels(page: Page, controle: (nom: string) => Promise<void>) {
+	for (const name of [...PANELS, DELETION]) {
+		const button = page.getByRole('button', { name: name, exact: true })
+		await button.scrollIntoViewIfNeeded()
+		await press(button)
+		await expect(dialogue(page), name).toBeVisible()
+		await controle(name)
 		await page.keyboard.press('Escape')
 		// A panel with a change asks before it closes: nothing is typed here, so the first Escape is enough.
-		await expect(dialogue(page), nom).toHaveCount(0)
-		await expect(bouton, nom).toBeFocused()
+		await expect(dialogue(page), name).toHaveCount(0)
+		await expect(button, name).toBeFocused()
 	}
 }
 
@@ -153,34 +153,34 @@ test.describe('142 : la recette de l’espace', { tag: '@mobile' }, () => {
 		page,
 	}) => {
 		test.setTimeout(180_000)
-		await maquilleusePleine(context)
-		await ouvrirLEspace(page)
+		await fullArtist(context)
+		await openDashboard(page)
 
 		// All the buttons the page offers are the ones the walk opens: a panel added later is not left out.
-		const boutons = await page
+		const buttons = await page
 			.locator('main button[aria-label^="Modifier m"]')
 			.evaluateAll(noeuds => noeuds.map(noeud => noeud.getAttribute('aria-label')).sort())
-		expect(boutons).toEqual([...PANNEAUX].sort())
+		expect(buttons).toEqual([...PANELS].sort())
 		expect(await violationsSevere(page)).toEqual([])
 
-		await parcourirLesPanneaux(page, async nom => {
+		await browsePanels(page, async nom => {
 			// Axe reads the dialog once the focus has moved into it.
 			await expect(page.locator('[role="dialog"] :focus, [role="dialog"]:focus').first(), nom).toBeAttached()
 			expect(await violationsSevere(page), nom).toEqual([])
 		})
 
-		const dossier = process.env.DASHBOARD_SCREENSHOTS
-		if (dossier) await page.screenshot({ fullPage: true, path: `${dossier}/recette-${test.info().project.name}.png` })
+		const folder = process.env.DASHBOARD_SCREENSHOTS
+		if (folder) await page.screenshot({ fullPage: true, path: `${folder}/recette-${test.info().project.name}.png` })
 	})
 
 	test('E67 : l’accueil en trois étapes, à chaque étape : 0 violation grave', async ({ context, page }) => {
 		// A confirmed account whose profile is empty lands on the first step.
-		const compte = await createAccount('maquilleuse')
-		creees.push(Number(compte.id))
+		const account = await createAccount('maquilleuse')
+		created.push(Number(account.id))
 		const payload = await testPayload()
-		const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
+		const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: account.id } } })
 		for (const { id } of docs) await payload.delete({ collection: 'profiles', id })
-		await context.addCookies(compte.session.cookies)
+		await context.addCookies(account.session.cookies)
 
 		await page.goto('/auth/init-account')
 		await expect(page).toHaveTitle(/Prépare ton profil/)
@@ -190,28 +190,28 @@ test.describe('142 : la recette de l’espace', { tag: '@mobile' }, () => {
 		await page.getByLabel('Prénom').fill('Léa')
 		await page.getByLabel('Nom', { exact: true }).fill('Fictive')
 		await page.getByLabel(/Spécialité/).fill('Maquillage mariée')
-		await appuyer(page.getByRole('button', { name: /Continuer|Suivant|Enregistrer/ }).first())
+		await press(page.getByRole('button', { name: /Continuer|Suivant|Enregistrer/ }).first())
 		await expect(page.getByRole('combobox', { name: 'Ta commune' })).toBeVisible()
 		expect(await violationsSevere(page)).toEqual([])
 	})
 
 	test('E37 : la photo principale changée : le profil public et son og:image suivent', async ({ context, page }) => {
 		test.setTimeout(120_000)
-		const { slug } = await maquilleusePleine(context)
+		const { slug } = await fullArtist(context)
 		const photo = (couleur: string) =>
 			sharp({ create: { width: 1600, height: 1200, channels: 3, background: couleur } })
 				.jpeg()
 				.toBuffer()
 
-		const imageDePartage = async () => {
-			const reponse = await page.request.get(`/profil/${slug}`)
-			expect(reponse.status()).toBe(200)
-			const html = await reponse.text()
-			const balise = html.match(/<meta property="og:image" content="([^"]+)"/)?.[1]
-			return balise?.replaceAll('&amp;', '&') ?? ''
+		const shareImage = async () => {
+			const response = await page.request.get(`/profil/${slug}`)
+			expect(response.status()).toBe(200)
+			const html = await response.text()
+			const tag = html.match(/<meta property="og:image" content="([^"]+)"/)?.[1]
+			return tag?.replaceAll('&amp;', '&') ?? ''
 		}
-		const changer = async (couleur: string, libelle: 'Choisir une photo' | 'Choisir une autre photo') => {
-			await appuyer(page.getByRole('button', { name: 'Modifier ma photo principale', exact: true }))
+		const change = async (couleur: string, libelle: 'Choisir une photo' | 'Choisir une autre photo') => {
+			await press(page.getByRole('button', { name: 'Modifier ma photo principale', exact: true }))
 			await expect(dialogue(page)).toBeVisible()
 			await page.getByLabel(libelle).setInputFiles({
 				name: `${couleur.slice(1)}.jpg`,
@@ -223,22 +223,22 @@ test.describe('142 : la recette de l’espace', { tag: '@mobile' }, () => {
 			await expect(dialogue(page)).toHaveCount(0, { timeout: 60_000 })
 		}
 
-		await ouvrirLEspace(page)
-		await changer('#aa3355', 'Choisir une photo')
-		const premiere = await imageDePartage()
-		expect(new URL(premiere).pathname).toBe('/_next/image')
+		await openDashboard(page)
+		await change('#aa3355', 'Choisir une photo')
+		const first = await shareImage()
+		expect(new URL(first).pathname).toBe('/_next/image')
 
-		await changer('#3355aa', 'Choisir une autre photo')
-		const seconde = await imageDePartage()
+		await change('#3355aa', 'Choisir une autre photo')
+		const second = await shareImage()
 
-		expect(new URL(seconde).pathname).toBe('/_next/image')
-		expect(seconde).not.toBe(premiere)
+		expect(new URL(second).pathname).toBe('/_next/image')
+		expect(second).not.toBe(first)
 		// The new picture is served, from the application, as an image.
-		const lue = new URL(seconde)
-		const reponse = await page.request.get(`${lue.pathname}${lue.search}`)
-		expect(reponse.status()).toBe(200)
-		expect(reponse.headers()['content-type']).toMatch(/^image\//)
-		const { dominant } = await sharp(await reponse.body()).stats()
+		const read = new URL(second)
+		const response = await page.request.get(`${read.pathname}${read.search}`)
+		expect(response.status()).toBe(200)
+		expect(response.headers()['content-type']).toMatch(/^image\//)
+		const { dominant } = await sharp(await response.body()).stats()
 		// Blue now, red before: the picture a visitor shares is the new one.
 		expect(dominant.b).toBeGreaterThan(dominant.r)
 	})
@@ -248,22 +248,22 @@ test.describe('142 : la recette de l’espace', { tag: '@mobile' }, () => {
 		page,
 	}) => {
 		test.setTimeout(180_000)
-		await maquilleusePleine(context)
+		await fullArtist(context)
 		// 200 % of zoom halves the width in CSS pixels; the phone width is floored at 320, the width of WCAG 1.4.10.
-		const taille = page.viewportSize()
-		if (!taille) throw new Error('pas de taille')
+		const size = page.viewportSize()
+		if (!size) throw new Error('pas de taille')
 		await page.setViewportSize({
-			width: Math.max(320, Math.round(taille.width / 2)),
-			height: Math.round(taille.height / 2),
+			width: Math.max(320, Math.round(size.width / 2)),
+			height: Math.round(size.height / 2),
 		})
-		await ouvrirLEspace(page)
+		await openDashboard(page)
 
-		expect(await debordement(page), 'page').toBeLessThanOrEqual(0)
-		expect(await chevauchements(page), 'page').toEqual([])
+		expect(await overflow(page), 'page').toBeLessThanOrEqual(0)
+		expect(await overlaps(page), 'page').toEqual([])
 
-		await parcourirLesPanneaux(page, async nom => {
-			expect(await debordement(page), nom).toBeLessThanOrEqual(0)
-			expect(await chevauchements(page), nom).toEqual([])
+		await browsePanels(page, async nom => {
+			expect(await overflow(page), nom).toBeLessThanOrEqual(0)
+			expect(await overlaps(page), nom).toEqual([])
 		})
 	})
 
@@ -272,12 +272,12 @@ test.describe('142 : la recette de l’espace', { tag: '@mobile' }, () => {
 		await page.setContent(`<!doctype html><html lang="fr"><body style="width: 200px">
 			<p>Un texte <a href="/a">avec un lien assez long pour passer à la ligne</a> <a href="/b">et un autre lien</a></p>
 		</body></html>`)
-		expect(await chevauchements(page)).toEqual([])
+		expect(await overlaps(page)).toEqual([])
 
 		await page.setContent(`<!doctype html><html lang="fr"><body>
 			<button style="position: absolute; top: 10px; left: 10px; width: 100px; height: 40px">Un</button>
 			<button style="position: absolute; top: 20px; left: 60px; width: 100px; height: 40px">Deux</button>
 		</body></html>`)
-		expect(await chevauchements(page)).toEqual(['button[Un] / button[Deux]'])
+		expect(await overlaps(page)).toEqual(['button[Un] / button[Deux]'])
 	})
 })

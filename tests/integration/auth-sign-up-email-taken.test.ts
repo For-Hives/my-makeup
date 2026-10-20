@@ -14,60 +14,60 @@ import { emptyBase, testPayload } from '../support/payload-test'
 /**
  * An address that already has an account (ticket 083; plan 02 E03, E04), the Gmail variants of an
  * address, and the purge of the accounts never confirmed (ticket 084). The page and the form are
- * played by tests/e2e/inscription.spec.ts.
+ * played by tests/e2e/sign-up.spec.ts.
  */
 
 afterAll(async () => {
 	await Promise.all([emptyBase(), emptySink()])
 })
 
-const MOT_DE_PASSE = 'aaaaaaaa'
+const PASSWORD = 'aaaaaaaa'
 const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3100'
 const unique = () => crypto.randomUUID().slice(0, 8)
-const courriel = (prefixe: string) => `${prefixe}-${crypto.randomUUID()}@example.test`
+const address = (prefixe: string) => `${prefixe}-${crypto.randomUUID()}@example.test`
 
 /** Brakes by mailbox on a clock the test moves. */
-function freinsAvecHorloge(): { freins: MailboxRateLimits; avancer: (ms: number) => void } {
-	let maintenant = Date.now()
-	const monter = (frein: RateLimit): RateLimit => ({
-		prendre: cle => frein.prendre(cle, maintenant),
-		rendre: cle => frein.rendre(cle, maintenant),
+function rateLimitsWithClock(): { freins: MailboxRateLimits; avancer: (ms: number) => void } {
+	let now = Date.now()
+	const mount = (frein: RateLimit): RateLimit => ({
+		prendre: cle => frein.prendre(cle, now),
+		rendre: cle => frein.rendre(cle, now),
 		vider: () => frein.vider(),
 	})
-	const nom = crypto.randomUUID()
+	const name = crypto.randomUUID()
 	return {
 		freins: {
-			parMinute: monter(createRateLimit({ nom: `minute-${nom}`, limite: 1, fenetreMs: 60_000 })),
-			parJour: monter(createRateLimit({ nom: `jour-${nom}`, limite: 5, fenetreMs: 24 * 60 * 60 * 1000 })),
+			parMinute: mount(createRateLimit({ nom: `minute-${name}`, limite: 1, fenetreMs: 60_000 })),
+			parJour: mount(createRateLimit({ nom: `jour-${name}`, limite: 5, fenetreMs: 24 * 60 * 60 * 1000 })),
 		},
 		avancer: ms => {
-			maintenant += ms
+			now += ms
 		},
 	}
 }
-const freinsLarges = (): MailboxRateLimits => ({
+const wideRateLimits = (): MailboxRateLimits => ({
 	parMinute: createRateLimit({ nom: `larges-minute-${unique()}`, limite: 1000, fenetreMs: 60_000 }),
 	parJour: createRateLimit({ nom: `larges-jour-${unique()}`, limite: 1000, fenetreMs: 60_000 }),
 })
 
-async function inscription(
+async function signUp(
 	email: string,
 	options: { plancherMs?: number; freins?: MailboxRateLimits; verifier?: boolean } = {}
 ) {
 	const payload = await testPayload()
 	return signUpAccount({
 		payload,
-		donnees: { nom: 'Léa Fictive', email, password: MOT_DE_PASSE },
+		donnees: { nom: 'Léa Fictive', email, password: PASSWORD },
 		verifier: options.verifier ?? true,
 		envoyer: payloadSendEmail(payload, serverEnv()),
 		site: SITE,
 		journal: authLog(payload),
 		plancherMs: options.plancherMs ?? 0,
-		freins: options.freins ?? freinsLarges(),
+		freins: options.freins ?? wideRateLimits(),
 	})
 }
 
-async function renvoi(email: string, freins: MailboxRateLimits) {
+async function resend(email: string, freins: MailboxRateLimits) {
 	const payload = await testPayload()
 	return resendConfirmation({
 		payload,
@@ -80,142 +80,143 @@ async function renvoi(email: string, freins: MailboxRateLimits) {
 	})
 }
 
-const comptes = async () => (await (await testPayload()).count({ collection: 'pros' })).totalDocs
-const profils = async () => (await (await testPayload()).count({ collection: 'profiles' })).totalDocs
-const journal = async () =>
+const accounts = async () => (await (await testPayload()).count({ collection: 'pros' })).totalDocs
+const profiles = async () => (await (await testPayload()).count({ collection: 'profiles' })).totalDocs
+const log = async () =>
 	(await (await testPayload()).find({ collection: 'auth-events', depth: 0, limit: 1000, sort: 'id' })).docs
-const lienDuMail = (liens: string[]) => liens.find(l => l.includes('/auth/verification-complete'))
-const mediane = (valeurs: number[]) => [...valeurs].sort((a, b) => a - b)[Math.floor(valeurs.length / 2)] ?? 0
+const mailLink = (liens: string[]) => liens.find(l => l.includes('/auth/verification-complete'))
+const median = (valeurs: number[]) => [...valeurs].sort((a, b) => a - b)[Math.floor(valeurs.length / 2)] ?? 0
 
 describe('E03 : une adresse déjà utilisée ne révèle rien et ne crée pas de doublon', () => {
 	test('même réponse que pour une adresse neuve, aucun second compte ni profil, et la vraie propriétaire, encore en attente, reçoit son lien de nouveau', async () => {
-		const email = courriel('deja')
-		const neuve = await inscription(email)
+		const email = address('deja')
+		const freshAddress = await signUp(email)
 		await waitMail({ pour: email })
-		const [c, p, mails] = [await comptes(), await profils(), (await mailReceived(email)).length]
+		const [c, p, mails] = [await accounts(), await profiles(), (await mailReceived(email)).length]
 
 		// Typed in capitals, by someone else, under another name.
-		const doublon = await inscription(email.toUpperCase())
+		const duplicate = await signUp(email.toUpperCase())
 
-		expect(doublon).toEqual(neuve)
-		expect(await comptes()).toBe(c)
-		expect(await profils()).toBe(p)
+		expect(duplicate).toEqual(freshAddress)
+		expect(await accounts()).toBe(c)
+		expect(await profiles()).toBe(p)
 		// Her account is still waiting: the mail she lost leaves again, with the same link.
-		const recus = await mailReceived(email)
-		expect(recus.length).toBe(mails + 1)
-		expect(lienDuMail(recus[1]?.liens ?? [])).toBe(lienDuMail(recus[0]?.liens ?? []))
+		const received = await mailReceived(email)
+		expect(received.length).toBe(mails + 1)
+		expect(mailLink(received[1]?.liens ?? [])).toBe(mailLink(received[0]?.liens ?? []))
 	})
 
 	test('un compte confirmé reçoit « tu as déjà un compte », sans lien de confirmation', async () => {
-		const email = courriel('confirme-deux-fois')
-		await inscription(email, { verifier: false })
-		const [c, p] = [await comptes(), await profils()]
+		const email = address('confirme-deux-fois')
+		await signUp(email, { verifier: false })
+		const [c, p] = [await accounts(), await profiles()]
 
-		const doublon = await inscription(email)
+		const duplicate = await signUp(email)
 
-		expect(doublon).toEqual({ ok: true, confirmee: false })
-		expect(await comptes()).toBe(c)
-		expect(await profils()).toBe(p)
+		expect(duplicate).toEqual({ ok: true, confirmee: false })
+		expect(await accounts()).toBe(c)
+		expect(await profiles()).toBe(p)
 		const mail = await waitMail({ pour: email })
 		expect(mail.sujet).toContain('déjà un compte')
-		expect(lienDuMail(mail.liens)).toBeUndefined()
+		expect(mailLink(mail.liens)).toBeUndefined()
 		expect(mail.liens.some(l => l.endsWith('/auth/signin'))).toBe(true)
 	})
 
 	test('le journal garde le motif « email-deja-pris », sans adresse ni nom', async () => {
-		const email = courriel('journal-pris')
-		await inscription(email)
-		const avant = (await journal()).length
+		const email = address('journal-pris')
+		await signUp(email)
+		const before = (await log()).length
 
-		await inscription(email)
+		await signUp(email)
 
-		const lignes = (await journal()).slice(avant)
-		expect(lignes.map(({ type, code }) => [type, code])).toEqual([['sign-up', 'email-deja-pris']])
-		expect(JSON.stringify(lignes)).not.toContain('journal-pris')
+		const lines = (await log()).slice(before)
+		expect(lines.map(({ type, code }) => [type, code])).toEqual([['sign-up', 'email-deja-pris']])
+		expect(JSON.stringify(lines)).not.toContain('journal-pris')
 	})
 
 	test('une adresse que Payload refuse pour sa forme n’est jamais dite « déjà utilisée » : la phrase du champ, aucun compte (ticket 224)', async () => {
 		// The form checks the address first; this is what a rule of Payload that the form does not know would give.
 		const payload = await testPayload()
-		const avant = (await payload.count({ collection: 'pros', overrideAccess: true })).totalDocs
-		const resultat = await inscription('pas-une-adresse')
+		const before = (await payload.count({ collection: 'pros', overrideAccess: true })).totalDocs
+		const result = await signUp('pas-une-adresse')
 
-		expect(resultat).toEqual({
+		expect(result).toEqual({
 			ok: false,
 			code: 'email-invalide',
 			erreurs: { email: SIGN_UP_MESSAGES.email.invalide },
 		})
-		expect((await payload.count({ collection: 'pros', overrideAccess: true })).totalDocs).toBe(avant)
-		expect((await journal()).map(({ type, code }) => [type, code]).at(-1)).toEqual(['sign-up', 'donnees-invalides'])
+		expect((await payload.count({ collection: 'pros', overrideAccess: true })).totalDocs).toBe(before)
+		expect((await log()).map(({ type, code }) => [type, code]).at(-1)).toEqual(['sign-up', 'donnees-invalides'])
 	})
 
 	test('un mail de la propriétaire qui ne part pas donne la même réponse que pour une adresse neuve dont le mail ne part pas', async () => {
-		const email = courriel('relais-en-feu')
-		await inscription(email)
+		const email = address('relais-en-feu')
+		await signUp(email)
 		const payload = await testPayload()
-		const enPanne = () => Promise.reject(new Error('relais en feu'))
-		const appel = (adresse: string) =>
+		const down = () => Promise.reject(new Error('relais en feu'))
+		const call = (adresse: string) =>
 			signUpAccount({
 				payload,
-				donnees: { nom: 'Léa Fictive', email: adresse, password: MOT_DE_PASSE },
+				donnees: { nom: 'Léa Fictive', email: adresse, password: PASSWORD },
 				verifier: true,
-				envoyer: enPanne,
+				envoyer: down,
 				site: SITE,
 				plancherMs: 0,
-				freins: freinsLarges(),
+				freins: wideRateLimits(),
 			})
 
-		const pris = await appel(email)
-		const neuf = await appel(courriel('neuve-en-panne'))
+		const taken = await call(email)
+		const freshOne = await call(address('neuve-en-panne'))
 
-		expect(pris).toEqual({ ok: false, code: 'service-indisponible' })
-		expect(neuf).toEqual(pris)
+		expect(taken).toEqual({ ok: false, code: 'service-indisponible' })
+		expect(freshOne).toEqual(taken)
 	})
 
 	test('la confirmation coupée (AUTH_VERIFY=off) : la réponse honnête, car un compte neuf entrerait aussitôt', async () => {
-		const email = courriel('sans-mur')
-		await inscription(email, { verifier: false })
+		const email = address('sans-mur')
+		await signUp(email, { verifier: false })
 
-		expect(await inscription(email, { verifier: false })).toEqual({ ok: false, code: 'email-deja-pris' })
+		expect(await signUp(email, { verifier: false })).toEqual({ ok: false, code: 'email-deja-pris' })
 	})
 
 	test('la durée de la réponse est la même, à 50 ms près, pour une adresse neuve ou prise', async () => {
-		const prise = courriel('duree-prise')
-		await inscription(prise)
-		const mesurer = async (email: string) => {
-			const debut = performance.now()
-			await inscription(email, { plancherMs: SIGN_UP_FLOOR_MS })
-			return performance.now() - debut
+		const takenAddress = address('duree-prise')
+		await signUp(takenAddress)
+		const measure = async (email: string) => {
+			const start = performance.now()
+			await signUp(email, { plancherMs: SIGN_UP_FLOOR_MS })
+			return performance.now() - start
 		}
 		// Warm up (first connection, first render of the mail), then alternate the two cases.
-		await mesurer(courriel('echauffement'))
-		await mesurer(prise)
-		const neuves: number[] = []
-		const prises: number[] = []
+		await measure(address('echauffement'))
+		await measure(takenAddress)
+		const freshAddresses: number[] = []
+		const takenAddresses: number[] = []
 		for (let i = 0; i < 5; i++) {
-			neuves.push(await mesurer(courriel('duree-neuve')))
-			prises.push(await mesurer(prise))
+			freshAddresses.push(await measure(address('duree-neuve')))
+			takenAddresses.push(await measure(takenAddress))
 		}
 
-		expect(Math.abs(mediane(neuves) - mediane(prises))).toBeLessThan(50)
-		expect(Math.min(...neuves, ...prises)).toBeGreaterThanOrEqual(SIGN_UP_FLOOR_MS - 5)
+		expect(Math.abs(median(freshAddresses) - median(takenAddresses))).toBeLessThan(50)
+		expect(Math.min(...freshAddresses, ...takenAddresses)).toBeGreaterThanOrEqual(SIGN_UP_FLOOR_MS - 5)
 	}, 60_000)
 
 	test('une propriétaire submergée : au plus un mail « déjà un compte » par minute et par boîte', async () => {
-		const email = courriel('submergee')
-		const { freins, avancer } = freinsAvecHorloge()
+		const email = address('submergee')
+		const { freins: rateLimits, avancer } = rateLimitsWithClock()
 		// A confirmed account (no mail, no place taken); the sign-ups that follow are on the wall's rules.
-		await inscription(email, { verifier: false })
-		const dejaUnCompte = async () => (await mailReceived(email)).filter(m => m.sujet.includes('déjà un compte')).length
+		await signUp(email, { verifier: false })
+		const alreadyAnAccount = async () =>
+			(await mailReceived(email)).filter(m => m.sujet.includes('déjà un compte')).length
 
-		await inscription(email, { freins })
-		await inscription(email, { freins })
-		await inscription(email, { freins })
-		expect(await dejaUnCompte()).toBe(1)
+		await signUp(email, { freins: rateLimits })
+		await signUp(email, { freins: rateLimits })
+		await signUp(email, { freins: rateLimits })
+		expect(await alreadyAnAccount()).toBe(1)
 
 		avancer(61_000)
-		await inscription(email, { freins })
-		expect(await dejaUnCompte()).toBe(2)
+		await signUp(email, { freins: rateLimits })
+		expect(await alreadyAnAccount()).toBe(2)
 	})
 })
 
@@ -223,185 +224,185 @@ describe('variantes Gmail : une boîte, un compte', () => {
 	const local = () => `zz.fictif${unique()}`
 	test('points, étiquette « + », googlemail.com et majuscules sont la même boîte que le compte existant', async () => {
 		const base = local()
-		const existant = `${base.replace('.', '')}@gmail.com`
-		await inscription(existant, { verifier: false })
-		const c = await comptes()
-		const p = await profils()
+		const existing = `${base.replace('.', '')}@gmail.com`
+		await signUp(existing, { verifier: false })
+		const c = await accounts()
+		const p = await profiles()
 
-		const variantes = [
+		const variants = [
 			`${base}@gmail.com`,
 			`${base}+promo@gmail.com`,
 			`${base.replace('.', '')}@googlemail.com`,
 			`${base.toUpperCase()}@GMAIL.COM`,
 			`z.z.f.i.c.t.i.f${base.slice(base.indexOf('fictif') + 6)}+x@gmail.com`,
 		]
-		const reponses = []
-		for (const variante of variantes) reponses.push(await inscription(variante))
+		const responses = []
+		for (const variant of variants) responses.push(await signUp(variant))
 
-		expect(reponses).toEqual(Array(variantes.length).fill({ ok: true, confirmee: false }))
-		expect(await comptes()).toBe(c)
-		expect(await profils()).toBe(p)
+		expect(responses).toEqual(Array(variants.length).fill({ ok: true, confirmee: false }))
+		expect(await accounts()).toBe(c)
+		expect(await profiles()).toBe(p)
 		// The real owner is told, at the address stored.
-		expect((await mailReceived(existant)).some(m => m.sujet.includes('déjà un compte'))).toBe(true)
+		expect((await mailReceived(existing)).some(m => m.sujet.includes('déjà un compte'))).toBe(true)
 	})
 
 	test('l’inverse aussi : le compte existant porte les points, la variante n’en a pas', async () => {
 		const base = `zz${unique()}`
-		const existant = `${base.slice(0, 4)}.${base.slice(4)}@gmail.com`
-		await inscription(existant)
-		const c = await comptes()
+		const existing = `${base.slice(0, 4)}.${base.slice(4)}@gmail.com`
+		await signUp(existing)
+		const c = await accounts()
 
-		await inscription(`${base}@gmail.com`)
+		await signUp(`${base}@gmail.com`)
 
-		expect(await comptes()).toBe(c)
+		expect(await accounts()).toBe(c)
 	})
 
 	test('ailleurs que chez Gmail, un point ou un « + » fait une autre boîte : le compte est créé', async () => {
 		const base = unique()
-		await inscription(`ab${base}@example.test`)
-		const c = await comptes()
+		await signUp(`ab${base}@example.test`)
+		const c = await accounts()
 
-		const autre = await inscription(`a.b${base}@example.test`)
-		const etiquette = await inscription(`ab${base}+x@example.test`)
+		const other = await signUp(`a.b${base}@example.test`)
+		const tag = await signUp(`ab${base}+x@example.test`)
 
-		expect([autre, etiquette]).toEqual([
+		expect([other, tag]).toEqual([
 			{ ok: true, confirmee: false },
 			{ ok: true, confirmee: false },
 		])
-		expect(await comptes()).toBe(c + 2)
+		expect(await accounts()).toBe(c + 2)
 	})
 })
 
 describe('E04 : le renvoi de la confirmation est limité', () => {
 	test('un par minute, 5 par jour (l’inscription compte pour un), le même lien à chaque fois, et le jour suivant il repart', async () => {
-		const email = courriel('renvoi')
-		const { freins, avancer } = freinsAvecHorloge()
-		await inscription(email, { freins })
-		const premier = await waitMail({ pour: email })
-		const lien = lienDuMail(premier.liens)
+		const email = address('renvoi')
+		const { freins: rateLimits, avancer } = rateLimitsWithClock()
+		await signUp(email, { freins: rateLimits })
+		const first = await waitMail({ pour: email })
+		const link = mailLink(first.liens)
 
 		// The sign-up took the place of the minute: a resend at once is refused, one a minute later leaves.
-		expect(await renvoi(email, freins)).toMatchObject({ ok: false, code: 'trop-de-renvois', raison: 'minute' })
+		expect(await resend(email, rateLimits)).toMatchObject({ ok: false, code: 'trop-de-renvois', raison: 'minute' })
 		for (let i = 2; i <= 5; i++) {
 			avancer(61_000)
-			expect(await renvoi(email, freins)).toEqual({ ok: true })
-			expect(await renvoi(email, freins)).toMatchObject({ ok: false, code: 'trop-de-renvois', raison: 'minute' })
+			expect(await resend(email, rateLimits)).toEqual({ ok: true })
+			expect(await resend(email, rateLimits)).toMatchObject({ ok: false, code: 'trop-de-renvois', raison: 'minute' })
 		}
-		const recus = await mailReceived(email)
-		expect(recus.length).toBe(5)
-		expect(recus.every(m => lienDuMail(m.liens) === lien)).toBe(true)
+		const received = await mailReceived(email)
+		expect(received.length).toBe(5)
+		expect(received.every(m => mailLink(m.liens) === link)).toBe(true)
 
 		avancer(61_000)
-		expect(await renvoi(email, freins)).toMatchObject({ ok: false, code: 'trop-de-renvois', raison: 'jour' })
+		expect(await resend(email, rateLimits)).toMatchObject({ ok: false, code: 'trop-de-renvois', raison: 'jour' })
 		expect((await mailReceived(email)).length).toBe(5)
 
 		avancer(24 * 60 * 60 * 1000)
-		expect(await renvoi(email, freins)).toEqual({ ok: true })
+		expect(await resend(email, rateLimits)).toEqual({ ok: true })
 		expect((await mailReceived(email)).length).toBe(6)
 	})
 
 	test('l’inscription suivie du renvoi donne les mêmes réponses pour une adresse neuve et pour une adresse prise : pas d’oracle', async () => {
-		const prise = courriel('oracle-prise')
-		await inscription(prise)
-		const neuve = courriel('oracle-neuve')
-		const { freins, avancer } = freinsAvecHorloge()
-		const { freins: freinsDeLaPrise, avancer: avancerLaPrise } = freinsAvecHorloge()
+		const takenAddress = address('oracle-prise')
+		await signUp(takenAddress)
+		const freshAddress = address('oracle-neuve')
+		const { freins: rateLimits, avancer } = rateLimitsWithClock()
+		const { freins: takenRateLimits, avancer: advanceTaken } = rateLimitsWithClock()
 		// The taken address has an old account: its sign-up and resend run on their own clock.
 		const sequence = async (email: string, f: MailboxRateLimits, avance: (ms: number) => void) => {
-			const inscrite = await inscription(email, { freins: f })
-			const premier = await renvoi(email, f)
+			const signedUp = await signUp(email, { freins: f })
+			const first = await resend(email, f)
 			avance(61_000)
-			const deuxieme = await renvoi(email, f)
-			return [inscrite, premier, deuxieme]
+			const second = await resend(email, f)
+			return [signedUp, first, second]
 		}
 
-		const pourLaNeuve = await sequence(neuve, freins, avancer)
-		const pourLaPrise = await sequence(prise, freinsDeLaPrise, avancerLaPrise)
+		const forFresh = await sequence(freshAddress, rateLimits, avancer)
+		const forTaken = await sequence(takenAddress, takenRateLimits, advanceTaken)
 
-		expect(pourLaNeuve[1]).toMatchObject({ ok: false, code: 'trop-de-renvois', raison: 'minute' })
-		expect(pourLaPrise).toEqual(pourLaNeuve)
+		expect(forFresh[1]).toMatchObject({ ok: false, code: 'trop-de-renvois', raison: 'minute' })
+		expect(forTaken).toEqual(forFresh)
 	})
 
 	test('un second formulaire sur un compte pas encore confirmé renvoie son lien, pas « connecte-toi »', async () => {
-		const email = courriel('relance')
-		const { freins, avancer } = freinsAvecHorloge()
-		await inscription(email, { freins })
-		const premier = await waitMail({ pour: email })
+		const email = address('relance')
+		const { freins: rateLimits, avancer } = rateLimitsWithClock()
+		await signUp(email, { freins: rateLimits })
+		const first = await waitMail({ pour: email })
 		avancer(61_000)
 
-		await inscription(email, { freins })
+		await signUp(email, { freins: rateLimits })
 
-		const recus = await mailReceived(email)
-		expect(recus.length).toBe(2)
-		expect(recus.every(m => !m.sujet.includes('déjà un compte'))).toBe(true)
-		expect(lienDuMail(recus[1]?.liens ?? [])).toBe(lienDuMail(premier.liens))
+		const received = await mailReceived(email)
+		expect(received.length).toBe(2)
+		expect(received.every(m => !m.sujet.includes('déjà un compte'))).toBe(true)
+		expect(mailLink(received[1]?.liens ?? [])).toBe(mailLink(first.liens))
 	})
 
 	test('même réponse, même limite, pour une adresse sans compte : rien ne part et rien ne se devine', async () => {
-		const { freins, avancer } = freinsAvecHorloge()
-		const inconnue = courriel('inconnue')
+		const { freins: rateLimits, avancer } = rateLimitsWithClock()
+		const unknown = address('inconnue')
 
-		expect(await renvoi(inconnue, freins)).toEqual({ ok: true })
-		expect(await renvoi(inconnue, freins)).toMatchObject({ ok: false, code: 'trop-de-renvois', raison: 'minute' })
+		expect(await resend(unknown, rateLimits)).toEqual({ ok: true })
+		expect(await resend(unknown, rateLimits)).toMatchObject({ ok: false, code: 'trop-de-renvois', raison: 'minute' })
 		avancer(61_000)
-		expect(await renvoi(inconnue, freins)).toEqual({ ok: true })
-		expect(await mailReceived(inconnue)).toEqual([])
+		expect(await resend(unknown, rateLimits)).toEqual({ ok: true })
+		expect(await mailReceived(unknown)).toEqual([])
 	})
 
 	test('un compte déjà confirmé reçoit « tu as déjà un compte », pas un lien de confirmation', async () => {
-		const email = courriel('confirme')
-		await inscription(email, { verifier: false })
+		const email = address('confirme')
+		await signUp(email, { verifier: false })
 
-		expect(await renvoi(email, freinsLarges())).toEqual({ ok: true })
+		expect(await resend(email, wideRateLimits())).toEqual({ ok: true })
 
 		const mail = await waitMail({ pour: email })
 		expect(mail.sujet).toContain('déjà un compte')
-		expect(lienDuMail(mail.liens)).toBeUndefined()
+		expect(mailLink(mail.liens)).toBeUndefined()
 	})
 
 	test('les variantes Gmail d’une adresse partagent la même limite', async () => {
 		const base = `zz.renvoi${unique()}`
-		const { freins, avancer } = freinsAvecHorloge()
-		await inscription(`${base.replace('.', '')}@gmail.com`, { freins })
+		const { freins: rateLimits, avancer } = rateLimitsWithClock()
+		await signUp(`${base.replace('.', '')}@gmail.com`, { freins: rateLimits })
 		avancer(61_000)
 
-		expect(await renvoi(`${base.replace('.', '')}@gmail.com`, freins)).toEqual({ ok: true })
-		expect(await renvoi(`${base}+x@gmail.com`, freins)).toMatchObject({ ok: false, code: 'trop-de-renvois' })
+		expect(await resend(`${base.replace('.', '')}@gmail.com`, rateLimits)).toEqual({ ok: true })
+		expect(await resend(`${base}+x@gmail.com`, rateLimits)).toMatchObject({ ok: false, code: 'trop-de-renvois' })
 	})
 
 	test('une adresse qui n’en est pas une est dite telle, sans rien compter', async () => {
-		const { freins } = freinsAvecHorloge()
+		const { freins: rateLimits } = rateLimitsWithClock()
 
-		expect(await renvoi('pas-une-adresse', freins)).toMatchObject({ ok: false, code: 'email-invalide' })
-		expect(await renvoi('', freins)).toMatchObject({ ok: false, code: 'email-invalide' })
+		expect(await resend('pas-une-adresse', rateLimits)).toMatchObject({ ok: false, code: 'email-invalide' })
+		expect(await resend('', rateLimits)).toMatchObject({ ok: false, code: 'email-invalide' })
 	})
 
 	test('le journal : un « renvoi » par demande, avec son issue, sans adresse', async () => {
-		const email = courriel('journal-renvoi')
-		const { freins, avancer } = freinsAvecHorloge()
-		await inscription(email, { freins })
+		const email = address('journal-renvoi')
+		const { freins: rateLimits, avancer } = rateLimitsWithClock()
+		await signUp(email, { freins: rateLimits })
 		avancer(61_000)
-		const avant = (await journal()).length
+		const before = (await log()).length
 
-		await renvoi(email, freins)
-		await renvoi(email, freins)
+		await resend(email, rateLimits)
+		await resend(email, rateLimits)
 		avancer(61_000)
-		await renvoi(email, freins)
+		await resend(email, rateLimits)
 
-		const lignes = (await journal()).slice(avant)
-		expect(lignes.map(({ type, code }) => [type, code])).toEqual([
+		const lines = (await log()).slice(before)
+		expect(lines.map(({ type, code }) => [type, code])).toEqual([
 			['resend', 'ok'],
 			['resend', 'trop-de-tentatives'],
 			['resend', 'ok'],
 		])
-		expect(JSON.stringify(lignes)).not.toContain('journal-renvoi')
+		expect(JSON.stringify(lines)).not.toContain('journal-renvoi')
 	})
 })
 
 describe('purge des comptes jamais confirmés (ticket 084)', () => {
-	const joursAvant = (jours: number) => new Date(Date.now() - jours * 24 * 60 * 60 * 1000).toISOString()
+	const daysBefore = (jours: number) => new Date(Date.now() - jours * 24 * 60 * 60 * 1000).toISOString()
 
-	async function creer(options: {
+	async function create(options: {
 		jours: number
 		verifie?: boolean
 		strapiId?: number
@@ -409,14 +410,14 @@ describe('purge des comptes jamais confirmés (ticket 084)', () => {
 		profilRempli?: boolean
 	}) {
 		const payload = await testPayload()
-		const compte = await payload.create({
+		const account = await payload.create({
 			collection: 'pros',
 			data: {
-				email: courriel('purge'),
-				password: MOT_DE_PASSE,
+				email: address('purge'),
+				password: PASSWORD,
 				name: 'Compte Fictif',
 				_verified: options.verifie ?? false,
-				createdAt: joursAvant(options.jours),
+				createdAt: daysBefore(options.jours),
 				...(options.strapiId !== undefined && { strapiId: options.strapiId }),
 				...(options.legacyProvider !== undefined && { legacyProvider: options.legacyProvider }),
 			},
@@ -424,53 +425,53 @@ describe('purge des comptes jamais confirmés (ticket 084)', () => {
 			disableVerificationEmail: true,
 			overrideAccess: true,
 		})
-		const profil = (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } }))
+		const profile = (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: account.id } } }))
 			.docs[0]
-		if (options.profilRempli && profil)
+		if (options.profilRempli && profile)
 			await payload.update({
 				collection: 'profiles',
-				id: profil.id,
+				id: profile.id,
 				data: { specialty: 'Maquillage de mariée' },
 				depth: 0,
 				overrideAccess: true,
 			})
-		return { compte, profil }
+		return { compte: account, profil: profile }
 	}
-	const existe = async (collection: 'pros' | 'profiles', id: number) =>
+	const exists = async (collection: 'pros' | 'profiles', id: number) =>
 		(await (await testPayload()).count({ collection, where: { id: { equals: id } } })).totalDocs === 1
 
 	test('un compte non confirmé de 8 jours part avec son profil vide ; tout le reste est gardé', async () => {
 		const payload = await testPayload()
-		const perime = await creer({ jours: 8 })
-		const recent = await creer({ jours: 6 })
-		const confirme = await creer({ jours: 30, verifie: true })
-		const importe = await creer({ jours: 30, strapiId: 910_001 })
-		const ancienFournisseur = await creer({ jours: 30, legacyProvider: 'local' })
-		const rempli = await creer({ jours: 30, profilRempli: true })
-		expect(rempli.profil?.id).toBeDefined()
+		const stale = await create({ jours: 8 })
+		const recent = await create({ jours: 6 })
+		const confirmed = await create({ jours: 30, verifie: true })
+		const imported = await create({ jours: 30, strapiId: 910_001 })
+		const oldProvider = await create({ jours: 30, legacyProvider: 'local' })
+		const filled = await create({ jours: 30, profilRempli: true })
+		expect(filled.profil?.id).toBeDefined()
 
-		const supprimes = await purgeUnconfirmedAccounts.executer(payload, new Date())
+		const deleted = await purgeUnconfirmedAccounts.executer(payload, new Date())
 
-		expect(supprimes).toBe(1)
-		expect(await existe('pros', perime.compte.id)).toBe(false)
-		expect(await existe('profiles', perime.profil?.id ?? 0)).toBe(false)
-		for (const gardee of [recent, confirme, importe, ancienFournisseur, rempli]) {
-			expect(await existe('pros', gardee.compte.id)).toBe(true)
-			expect(await existe('profiles', gardee.profil?.id ?? 0)).toBe(true)
+		expect(deleted).toBe(1)
+		expect(await exists('pros', stale.compte.id)).toBe(false)
+		expect(await exists('profiles', stale.profil?.id ?? 0)).toBe(false)
+		for (const guarded of [recent, confirmed, imported, oldProvider, filled]) {
+			expect(await exists('pros', guarded.compte.id)).toBe(true)
+			expect(await exists('profiles', guarded.profil?.id ?? 0)).toBe(true)
 		}
 	})
 
 	test('la purge se rejoue sans effet, et le délai est de 7 jours pleins', async () => {
 		const payload = await testPayload()
-		const limite = await creer({ jours: 7 })
-		const juste = await creer({ jours: 6.9 })
+		const limit = await create({ jours: 7 })
+		const just = await create({ jours: 6.9 })
 
-		const premiere = await purgeUnconfirmedAccounts.executer(payload, new Date())
-		const seconde = await purgeUnconfirmedAccounts.executer(payload, new Date())
+		const firstOne = await purgeUnconfirmedAccounts.executer(payload, new Date())
+		const secondOne = await purgeUnconfirmedAccounts.executer(payload, new Date())
 
-		expect(premiere).toBeGreaterThanOrEqual(1)
-		expect(seconde).toBe(0)
-		expect(await existe('pros', limite.compte.id)).toBe(false)
-		expect(await existe('pros', juste.compte.id)).toBe(true)
+		expect(firstOne).toBeGreaterThanOrEqual(1)
+		expect(secondOne).toBe(0)
+		expect(await exists('pros', limit.compte.id)).toBe(false)
+		expect(await exists('pros', just.compte.id)).toBe(true)
 	})
 })

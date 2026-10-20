@@ -21,116 +21,120 @@ setDefaultTimeout(30_000)
  * removal that is not the second half of a move to the bin fails the test.
  */
 
-let espion: Spy
+let spy: Spy
 
 beforeEach(() => {
-	espion = spyStorage()
+	spy = spyStorage()
 })
 
 afterEach(async () => {
-	const fautes = deletionsWithoutTrash(espion.journal)
-	espion.arreter()
+	const faults = deletionsWithoutTrash(spy.journal)
+	spy.arreter()
 	await Promise.all([emptyBase(), emptyStorage()])
-	expect(fautes).toEqual([])
+	expect(faults).toEqual([])
 })
 
-type Maquilleuse = Awaited<ReturnType<typeof createAccount<'maquilleuse'>>>
+type Artist = Awaited<ReturnType<typeof createAccount<'maquilleuse'>>>
 
-async function envoyer(compte: Maquilleuse): Promise<Media> {
-	const { statut, corps, texte } = await callRest('POST', '/api/media?depth=0', {
+async function send(compte: Artist): Promise<Media> {
+	const {
+		statut: status,
+		corps,
+		texte: text,
+	} = await callRest('POST', '/api/media?depth=0', {
 		enTetes: compte.session.enTetes,
 		formulaire: formWithFile(fileForForm()),
 	})
-	if (statut !== 201) throw new Error(`L’envoi de la photo a échoué : ${statut} ${texte}`)
+	if (status !== 201) throw new Error(`L’envoi de la photo a échoué : ${status} ${text}`)
 	return (corps as { doc: Media }).doc
 }
 
-async function profilDe(compte: { id: number | string }) {
+async function profileOf(compte: { id: number | string }) {
 	const payload = await testPayload()
 	return (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })).docs[0]
 }
 
 /** An account with a profile that names a main photo and a gallery photo, and one more photo nobody names. */
-async function compteGarni() {
-	const compte = await createAccount('maquilleuse')
-	const [principale, galerie, libre] = [await envoyer(compte), await envoyer(compte), await envoyer(compte)]
-	const profil = await profilDe(compte)
-	if (!profil) throw new Error('pas de profil')
+async function filledAccount() {
+	const account = await createAccount('maquilleuse')
+	const [main, gallery, free] = [await send(account), await send(account), await send(account)]
+	const profile = await profileOf(account)
+	if (!profile) throw new Error('pas de profil')
 	await (await testPayload()).update({
 		collection: 'profiles',
-		id: profil.id,
-		data: { mainPicture: principale.id, gallery: [principale.id, galerie.id] },
+		id: profile.id,
+		data: { mainPicture: main.id, gallery: [main.id, gallery.id] },
 	})
-	return { compte, profil, photos: [principale, galerie, libre] }
+	return { compte: account, profil: profile, photos: [main, gallery, free] }
 }
 
 const present = async (collection: 'pros' | 'profiles' | 'media', id: number | string) =>
 	(await (await testPayload()).findByID({ collection, id, depth: 0, disableErrors: true, overrideAccess: true })) !==
 	null
-const cle = (media: Media) => `media/${media.filename}`
-const enPlace = async (media: Media) => (await readObject(cle(media))) !== undefined
-const enCorbeille = async (media: Media) => (await readObject(`deleted/${cle(media)}`)) !== undefined
-const supprimerParAdmin = (admin: { session: { enTetes: Record<string, string> } }, id: number | string) =>
+const key = (media: Media) => `media/${media.filename}`
+const inPlace = async (media: Media) => (await readObject(key(media))) !== undefined
+const inTrash = async (media: Media) => (await readObject(`deleted/${key(media)}`)) !== undefined
+const deleteByAdmin = (admin: { session: { enTetes: Record<string, string> } }, id: number | string) =>
 	callRest('DELETE', `/api/pros/${id}`, { enTetes: admin.session.enTetes })
 
 describe('I37 : l’admin supprime un compte, le même résultat que la maquilleuse', () => {
 	test('compte, profil, sessions, photos : tout part, les objets vont à la corbeille, aucune photo orpheline, les autres comptes intacts', async () => {
 		const payload = await testPayload()
 		const admin = await createAccount('admin')
-		const { compte, profil, photos } = await compteGarni()
-		const autre = await compteGarni()
+		const { compte: account, profil: profile, photos } = await filledAccount()
+		const other = await filledAccount()
 
-		const { statut } = await supprimerParAdmin(admin, compte.id)
+		const { statut: status } = await deleteByAdmin(admin, account.id)
 
-		expect(statut).toBe(200)
-		expect(await present('pros', compte.id)).toBe(false)
-		expect(await present('profiles', profil.id)).toBe(false)
+		expect(status).toBe(200)
+		expect(await present('pros', account.id)).toBe(false)
+		expect(await present('profiles', profile.id)).toBe(false)
 		for (const photo of photos) {
 			expect(await present('media', photo.id)).toBe(false)
-			expect(await enPlace(photo)).toBe(false)
-			expect(await enCorbeille(photo)).toBe(true)
+			expect(await inPlace(photo)).toBe(false)
+			expect(await inTrash(photo)).toBe(true)
 		}
-		expect((await payload.auth({ headers: new Headers(compte.session.enTetes) })).user).toBeNull()
-		expect((await callRest('GET', `/api/pros/me`, { enTetes: compte.session.enTetes })).corps).toMatchObject({
+		expect((await payload.auth({ headers: new Headers(account.session.enTetes) })).user).toBeNull()
+		expect((await callRest('GET', `/api/pros/me`, { enTetes: account.session.enTetes })).corps).toMatchObject({
 			user: null,
 		})
 		expect(
-			(await payload.find({ collection: 'profiles', depth: 0, where: { slug: { equals: profil.slug } } })).totalDocs
+			(await payload.find({ collection: 'profiles', depth: 0, where: { slug: { equals: profile.slug } } })).totalDocs
 		).toBe(0)
 		expect((await listObjects('deleted/')).length).toBe(photos.length)
 
 		// No profile without an owner, no photo without one: what remains is the other account's.
-		const profils = await payload.find({ collection: 'profiles', depth: 0, pagination: false })
-		expect(profils.docs.map(({ id }) => id)).toEqual([autre.profil.id])
+		const profiles = await payload.find({ collection: 'profiles', depth: 0, pagination: false })
+		expect(profiles.docs.map(({ id }) => id)).toEqual([other.profil.id])
 		const media = await payload.find({ collection: 'media', depth: 0, pagination: false })
-		expect(media.docs.map(({ id }) => id).sort()).toEqual(autre.photos.map(({ id }) => id).sort())
-		for (const photo of autre.photos) expect(await enPlace(photo)).toBe(true)
-		expect(await present('pros', autre.compte.id)).toBe(true)
+		expect(media.docs.map(({ id }) => id).sort()).toEqual(other.photos.map(({ id }) => id).sort())
+		for (const photo of other.photos) expect(await inPlace(photo)).toBe(true)
+		expect(await present('pros', other.compte.id)).toBe(true)
 	})
 
 	test('un compte sans profil se supprime aussi, et ses photos vont à la corbeille', async () => {
 		const admin = await createAccount('admin')
-		const compte = await createAccount('maquilleuse-sans-profil')
-		const photo = await envoyer(compte as unknown as Maquilleuse)
+		const account = await createAccount('maquilleuse-sans-profil')
+		const photo = await send(account as unknown as Artist)
 
-		expect((await supprimerParAdmin(admin, compte.id)).statut).toBe(200)
+		expect((await deleteByAdmin(admin, account.id)).statut).toBe(200)
 
-		expect(await present('pros', compte.id)).toBe(false)
+		expect(await present('pros', account.id)).toBe(false)
 		expect(await present('media', photo.id)).toBe(false)
-		expect(await enPlace(photo)).toBe(false)
-		expect(await enCorbeille(photo)).toBe(true)
+		expect(await inPlace(photo)).toBe(false)
+		expect(await inTrash(photo)).toBe(true)
 	})
 
 	test('un compte qui n’existe pas : 404 ; deux clics au même instant : une seule suppression', async () => {
 		const admin = await createAccount('admin')
-		expect((await supprimerParAdmin(admin, 987654)).statut).toBe(404)
+		expect((await deleteByAdmin(admin, 987654)).statut).toBe(404)
 
-		const { compte, photos } = await compteGarni()
-		const reponses = await Promise.all([supprimerParAdmin(admin, compte.id), supprimerParAdmin(admin, compte.id)])
+		const { compte: account, photos } = await filledAccount()
+		const responses = await Promise.all([deleteByAdmin(admin, account.id), deleteByAdmin(admin, account.id)])
 
-		expect(reponses.map(({ statut }) => statut).sort()).toEqual([200, 200])
-		expect(await present('pros', compte.id)).toBe(false)
-		const copies = espion.journal.filter(
+		expect(responses.map(({ statut: status }) => status).sort()).toEqual([200, 200])
+		expect(await present('pros', account.id)).toBe(false)
+		const copies = spy.journal.filter(
 			({ nom, entree }) => nom === 'CopyObject' && String(entree.Key).startsWith('deleted/')
 		)
 		expect(copies).toHaveLength(photos.length)
@@ -139,39 +143,39 @@ describe('I37 : l’admin supprime un compte, le même résultat que la maquille
 
 describe('Seul l’admin supprime un compte', () => {
 	test('la rédaction, une maquilleuse (la sienne ou une autre), un visiteur, un identifiant impossible : 403, rien n’est supprimé', async () => {
-		const { compte, profil, photos } = await compteGarni()
-		const autre = await createAccount('maquilleuse')
-		const redaction = await createAccount('redaction')
+		const { compte: account, profil: profile, photos } = await filledAccount()
+		const other = await createAccount('maquilleuse')
+		const editor = await createAccount('redaction')
 		const admin = await createAccount('admin')
 
-		const essais = [
-			await callRest('DELETE', `/api/pros/${compte.id}`, { enTetes: redaction.session.enTetes }),
-			await callRest('DELETE', `/api/pros/${compte.id}`, { enTetes: compte.session.enTetes }),
-			await callRest('DELETE', `/api/pros/${compte.id}`, { enTetes: autre.session.enTetes }),
-			await callRest('DELETE', `/api/pros/${compte.id}`, {}),
+		const tests = [
+			await callRest('DELETE', `/api/pros/${account.id}`, { enTetes: editor.session.enTetes }),
+			await callRest('DELETE', `/api/pros/${account.id}`, { enTetes: account.session.enTetes }),
+			await callRest('DELETE', `/api/pros/${account.id}`, { enTetes: other.session.enTetes }),
+			await callRest('DELETE', `/api/pros/${account.id}`, {}),
 			await callRest('DELETE', `/api/pros/abc`, { enTetes: admin.session.enTetes }),
 		]
 
-		expect(essais.map(({ statut }) => statut)).toEqual([403, 403, 403, 403, 403])
-		expect(await present('pros', compte.id)).toBe(true)
-		expect(await present('profiles', profil.id)).toBe(true)
-		for (const photo of photos) expect(await enPlace(photo)).toBe(true)
-		expect(espion.journal.filter(({ nom }) => nom === 'CopyObject')).toEqual([])
+		expect(tests.map(({ statut: status }) => status)).toEqual([403, 403, 403, 403, 403])
+		expect(await present('pros', account.id)).toBe(true)
+		expect(await present('profiles', profile.id)).toBe(true)
+		for (const photo of photos) expect(await inPlace(photo)).toBe(true)
+		expect(spy.journal.filter(({ nom }) => nom === 'CopyObject')).toEqual([])
 	})
 
 	test('la suppression de plusieurs comptes à la fois est refusée, même à l’admin ; la suppression native refuse un compte qui a encore un profil', async () => {
 		const payload = await testPayload()
 		const admin = await createAccount('admin')
-		const { compte, profil } = await compteGarni()
+		const { compte: account, profil: profile } = await filledAccount()
 
-		const lot = await callRest('DELETE', `/api/pros?where[email][exists]=true`, { enTetes: admin.session.enTetes })
-		expect(lot.statut).toBeGreaterThanOrEqual(400)
-		await expect(payload.delete({ collection: 'pros', id: compte.id, overrideAccess: true })).rejects.toMatchObject({
+		const batch = await callRest('DELETE', `/api/pros?where[email][exists]=true`, { enTetes: admin.session.enTetes })
+		expect(batch.statut).toBeGreaterThanOrEqual(400)
+		await expect(payload.delete({ collection: 'pros', id: account.id, overrideAccess: true })).rejects.toMatchObject({
 			status: 409,
 		})
 
-		expect(await present('pros', compte.id)).toBe(true)
-		expect(await present('profiles', profil.id)).toBe(true)
+		expect(await present('pros', account.id)).toBe(true)
+		expect(await present('profiles', profile.id)).toBe(true)
 	})
 })
 
@@ -179,26 +183,26 @@ describe('Panne du stockage : tout est encore là', () => {
 	test('la copie vers la corbeille échoue : 503 en français, rien n’est supprimé ; l’essai suivant réussit', async () => {
 		const payload = await testPayload()
 		const admin = await createAccount('admin')
-		const { compte, profil, photos } = await compteGarni()
+		const { compte: account, profil: profile, photos } = await filledAccount()
 		let copies = 0
-		espion.fairePanne(
+		spy.fairePanne(
 			commande => commande.nom === 'CopyObject' && String(commande.entree.Key).startsWith('deleted/') && ++copies === 2
 		)
 
-		const { statut, texte } = await supprimerParAdmin(admin, compte.id)
+		const { statut: status, texte: text } = await deleteByAdmin(admin, account.id)
 
-		expect(statut).toBe(503)
-		expect(texte).toContain(STORAGE_OUTAGE_MESSAGE)
-		expect(await present('pros', compte.id)).toBe(true)
-		expect(await present('profiles', profil.id)).toBe(true)
+		expect(status).toBe(503)
+		expect(text).toContain(STORAGE_OUTAGE_MESSAGE)
+		expect(await present('pros', account.id)).toBe(true)
+		expect(await present('profiles', profile.id)).toBe(true)
 		for (const photo of photos) {
 			expect(await present('media', photo.id)).toBe(true)
-			expect(await enPlace(photo)).toBe(true)
+			expect(await inPlace(photo)).toBe(true)
 		}
-		expect((await payload.auth({ headers: new Headers(compte.session.enTetes) })).user).not.toBeNull()
+		expect((await payload.auth({ headers: new Headers(account.session.enTetes) })).user).not.toBeNull()
 
-		espion.fairePanne(() => false)
-		expect((await supprimerParAdmin(admin, compte.id)).statut).toBe(200)
-		for (const photo of photos) expect(await enCorbeille(photo)).toBe(true)
+		spy.fairePanne(() => false)
+		expect((await deleteByAdmin(admin, account.id)).statut).toBe(200)
+		for (const photo of photos) expect(await inTrash(photo)).toBe(true)
 	})
 })

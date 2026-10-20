@@ -18,38 +18,38 @@ import { sourceDefinition } from '../support/source-strapi/data'
  */
 
 const source = benchSource()
-const { lignes } = sourceDefinition(source.medias)
+const { lignes: lines } = sourceDefinition(source.medias)
 
 /** The account whose email is taken beforehand, so that Payload refuses it. */
-const COMPTE_REFUSE = 1
+const REFUSED_ACCOUNT = 1
 
-const PROFILS_DU_COMPTE = new Set(
-	lignes.makeup_artistes_user_links
-		.filter(lien => Number(lien.user_id) === COMPTE_REFUSE)
+const ACCOUNT_PROFILES = new Set(
+	lines.makeup_artistes_user_links
+		.filter(lien => Number(lien.user_id) === REFUSED_ACCOUNT)
 		.map(lien => Number(lien.makeup_artiste_id))
 )
 
 /** The files the profiles of that account designate. */
-const FICHIERS_DU_COMPTE = lignes.files_related_morphs
-	.filter(lien => lien.related_type === PROFILE_TYPE && PROFILS_DU_COMPTE.has(Number(lien.related_id)))
+const ACCOUNT_FILES = lines.files_related_morphs
+	.filter(lien => lien.related_type === PROFILE_TYPE && ACCOUNT_PROFILES.has(Number(lien.related_id)))
 	.map(lien => Number(lien.file_id))
 
-let rapport: Report
+let report: Report
 
 beforeAll(async () => {
 	await emptyBase()
 	await emptyStorage()
 	await createSourceStrapi()
 	const payload = await testPayload()
-	const ligne = lignes.up_users.find(({ id }) => Number(id) === COMPTE_REFUSE)
+	const line = lines.up_users.find(({ id }) => Number(id) === REFUSED_ACCOUNT)
 	await payload.create({
 		collection: 'pros',
-		data: { email: String(ligne?.email).trim().toLowerCase(), password: randomBytes(24).toString('base64url') },
+		data: { email: String(line?.email).trim().toLowerCase(), password: randomBytes(24).toString('base64url') },
 		context: NO_PROFILE_CONTEXT,
 		disableVerificationEmail: true,
 		overrideAccess: true,
 	})
-	rapport = await importOnBench()
+	report = await importOnBench()
 }, 60_000)
 
 afterAll(async () => {
@@ -59,13 +59,11 @@ afterAll(async () => {
 
 describe('Un compte que la cible refuse n’emporte pas ses photos (ticket 058, I39)', () => {
 	test('le fichier du compte refusé est listé « compte-refuse », jamais écrit, sans média sans propriétaire', async () => {
-		expect(FICHIERS_DU_COMPTE.length).toBeGreaterThan(0)
-		expect(rapport.collections.pros?.refused.map(({ strapiId }) => strapiId)).toEqual([COMPTE_REFUSE])
-		expect(rapport.collections.media?.refused).toEqual([])
-		const refuses = rapport.collections.media?.files?.notAdopted.filter(
-			({ reason: motif }) => motif === 'compte-refuse'
-		)
-		expect(refuses?.map(({ file: fichier }) => fichier).sort()).toEqual([...FICHIERS_DU_COMPTE].sort())
+		expect(ACCOUNT_FILES.length).toBeGreaterThan(0)
+		expect(report.collections.pros?.refused.map(({ strapiId }) => strapiId)).toEqual([REFUSED_ACCOUNT])
+		expect(report.collections.media?.refused).toEqual([])
+		const refuses = report.collections.media?.files?.notAdopted.filter(({ reason: motif }) => motif === 'compte-refuse')
+		expect(refuses?.map(({ file }) => file).sort()).toEqual([...ACCOUNT_FILES].sort())
 
 		const payload = await testPayload()
 		const { docs } = await payload.find({
@@ -74,15 +72,15 @@ describe('Un compte que la cible refuse n’emporte pas ses photos (ticket 058, 
 			pagination: false,
 			overrideAccess: true,
 		})
-		const ecrits = docs.map(({ strapiId }) => Number(strapiId))
-		for (const fichier of FICHIERS_DU_COMPTE) expect(ecrits).not.toContain(fichier)
+		const written = docs.map(({ strapiId }) => Number(strapiId))
+		for (const file of ACCOUNT_FILES) expect(written).not.toContain(file)
 		expect(docs.filter(({ owner }) => owner === null || owner === undefined)).toEqual([])
 	})
 
 	test('la rédaction ne lit aucune photo de ce compte', async () => {
-		const redaction = await createAccount('redaction')
-		const liste = await callRest('GET', '/api/media?depth=0&limit=100', { enTetes: redaction.session.enTetes })
-		expect(liste.statut).toBe(200)
-		expect((liste.corps as { docs: unknown[] }).docs).toEqual([])
+		const editor = await createAccount('redaction')
+		const list = await callRest('GET', '/api/media?depth=0&limit=100', { enTetes: editor.session.enTetes })
+		expect(list.statut).toBe(200)
+		expect((list.corps as { docs: unknown[] }).docs).toEqual([])
 	})
 })

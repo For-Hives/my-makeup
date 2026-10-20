@@ -8,38 +8,38 @@ import { openSession } from '../support/session'
 
 /**
  * The sign-out of a makeup artist (ticket 078; plan 02 I11, I13). The Server Action, the cookie in
- * a browser and the Back button are played by tests/e2e/deconnexion.spec.ts.
+ * a browser and the Back button are played by tests/e2e/sign-out.spec.ts.
  */
 
 afterAll(async () => {
 	await emptyBase()
 })
 
-const MOT_DE_PASSE = 'aaaaaaaa'
+const PASSWORD = 'aaaaaaaa'
 
-async function sessionsEnBase(id: number | string): Promise<number> {
+async function sessionsInBase(id: number | string): Promise<number> {
 	const payload = await testPayload()
-	const ligne = await payload.db.findOne<{ id: number; sessions?: unknown[] }>({
+	const line = await payload.db.findOne<{ id: number; sessions?: unknown[] }>({
 		collection: 'pros',
 		where: { id: { equals: id } },
 	})
-	return ligne?.sessions?.length ?? 0
+	return line?.sessions?.length ?? 0
 }
 
 /** Who Payload says is behind these headers. */
-async function qui(enTetes: Record<string, string>) {
+async function which(enTetes: Record<string, string>) {
 	const payload = await testPayload()
 	return (await payload.auth({ headers: new Headers(enTetes) })).user
 }
 
-const journal = async () =>
+const log = async () =>
 	(await (await testPayload()).find({ collection: 'auth-events', depth: 0, limit: 500, sort: 'id' })).docs
 
-async function nouvelleSession(compte: { email: string }) {
+async function newSession(compte: { email: string }) {
 	return openSession(await testPayload(), {
 		collection: 'pros',
 		email: compte.email,
-		motDePasse: MOT_DE_PASSE,
+		motDePasse: PASSWORD,
 	})
 }
 
@@ -50,41 +50,41 @@ describe('I11 : la déconnexion retire la session en base, l’ancien jeton est 
 	})
 
 	test('après la déconnexion, le jeton rejoué n’ouvre plus rien : ni par l’API locale, ni par REST', async () => {
-		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
-		const { enTetes } = compte.session
+		const account = await createAccount('maquilleuse', { motDePasse: () => PASSWORD })
+		const { enTetes: requestHeaders } = account.session
 		const payload = await testPayload()
-		expect((await qui(enTetes))?.id).toBe(Number(compte.id))
-		const avant = await sessionsEnBase(compte.id)
+		expect((await which(requestHeaders))?.id).toBe(Number(account.id))
+		const before = await sessionsInBase(account.id)
 
-		const resultat = await closeSession({ payload, headers: new Headers(enTetes), toutes: false })
+		const result = await closeSession({ payload, headers: new Headers(requestHeaders), toutes: false })
 
-		expect(resultat).toEqual({ ok: true, fermee: true })
-		expect(await sessionsEnBase(compte.id)).toBe(avant - 1)
-		expect(await qui(enTetes)).toBeNull()
-		const me = await callRest('GET', '/api/pros/me', { enTetes })
+		expect(result).toEqual({ ok: true, fermee: true })
+		expect(await sessionsInBase(account.id)).toBe(before - 1)
+		expect(await which(requestHeaders)).toBeNull()
+		const me = await callRest('GET', '/api/pros/me', { enTetes: requestHeaders })
 		expect((me.corps as { user: unknown }).user).toBeNull()
-		const lecture = await callRest('GET', `/api/pros/${compte.id}`, { enTetes })
-		expect(lecture.statut).toBe(403)
+		const read = await callRest('GET', `/api/pros/${account.id}`, { enTetes: requestHeaders })
+		expect(read.statut).toBe(403)
 	})
 
 	test('« cet appareil » ne ferme pas les autres sessions du même compte', async () => {
-		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
-		const [a, b] = [await nouvelleSession(compte), await nouvelleSession(compte)]
+		const account = await createAccount('maquilleuse', { motDePasse: () => PASSWORD })
+		const [a, b] = [await newSession(account), await newSession(account)]
 		const payload = await testPayload()
 
 		await closeSession({ payload, headers: new Headers(a.enTetes), toutes: false })
 
-		expect(await qui(a.enTetes)).toBeNull()
-		expect((await qui(b.enTetes))?.id).toBe(Number(compte.id))
+		expect(await which(a.enTetes)).toBeNull()
+		expect((await which(b.enTetes))?.id).toBe(Number(account.id))
 	})
 
 	test('une seconde déconnexion, ou une déconnexion sans session, ne fait pas d’erreur', async () => {
-		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const account = await createAccount('maquilleuse', { motDePasse: () => PASSWORD })
 		const payload = await testPayload()
-		const entetes = new Headers(compte.session.enTetes)
-		await closeSession({ payload, headers: entetes, toutes: false })
+		const headers = new Headers(account.session.enTetes)
+		await closeSession({ payload, headers: headers, toutes: false })
 
-		expect(await closeSession({ payload, headers: entetes, toutes: false })).toEqual({ ok: true, fermee: false })
+		expect(await closeSession({ payload, headers: headers, toutes: false })).toEqual({ ok: true, fermee: false })
 		expect(await closeSession({ payload, headers: new Headers(), toutes: true })).toEqual({
 			ok: true,
 			fermee: false,
@@ -95,72 +95,72 @@ describe('I11 : la déconnexion retire la session en base, l’ancien jeton est 
 		const admin = await createAccount('admin')
 		const payload = await testPayload()
 
-		const resultat = await closeSession({ payload, headers: new Headers(admin.session.enTetes), toutes: true })
+		const result = await closeSession({ payload, headers: new Headers(admin.session.enTetes), toutes: true })
 
-		expect(resultat).toEqual({ ok: true, fermee: false })
-		expect((await qui(admin.session.enTetes))?.id).toBe(Number(admin.id))
+		expect(result).toEqual({ ok: true, fermee: false })
+		expect((await which(admin.session.enTetes))?.id).toBe(Number(admin.id))
 	})
 })
 
 describe('I13 : « me déconnecter de tous les appareils »', () => {
 	test('toutes les sessions du compte sont retirées, celles des autres comptes restent', async () => {
-		const [moi, autre] = await Promise.all([
-			createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE }),
-			createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE }),
+		const [myself, other] = await Promise.all([
+			createAccount('maquilleuse', { motDePasse: () => PASSWORD }),
+			createAccount('maquilleuse', { motDePasse: () => PASSWORD }),
 		])
-		const mesSessions = [moi.session, await nouvelleSession(moi), await nouvelleSession(moi)]
-		const sesSessions = [autre.session, await nouvelleSession(autre)]
+		const mySessions = [myself.session, await newSession(myself), await newSession(myself)]
+		const itsSessions = [other.session, await newSession(other)]
 		const payload = await testPayload()
-		expect(await sessionsEnBase(moi.id)).toBeGreaterThanOrEqual(3)
-		const siennes = await sessionsEnBase(autre.id)
+		expect(await sessionsInBase(myself.id)).toBeGreaterThanOrEqual(3)
+		const hers = await sessionsInBase(other.id)
 
-		const resultat = await closeSession({
+		const result = await closeSession({
 			payload,
-			headers: new Headers(mesSessions[1]?.enTetes),
+			headers: new Headers(mySessions[1]?.enTetes),
 			toutes: true,
 		})
 
-		expect(resultat).toEqual({ ok: true, fermee: true })
-		expect(await sessionsEnBase(moi.id)).toBe(0)
-		for (const session of mesSessions) expect(await qui(session.enTetes)).toBeNull()
-		expect(await sessionsEnBase(autre.id)).toBe(siennes)
-		for (const session of sesSessions) expect((await qui(session.enTetes))?.id).toBe(Number(autre.id))
+		expect(result).toEqual({ ok: true, fermee: true })
+		expect(await sessionsInBase(myself.id)).toBe(0)
+		for (const session of mySessions) expect(await which(session.enTetes)).toBeNull()
+		expect(await sessionsInBase(other.id)).toBe(hers)
+		for (const session of itsSessions) expect((await which(session.enTetes))?.id).toBe(Number(other.id))
 	})
 })
 
 describe('le journal et ses pannes', () => {
 	test('une ligne « deconnexion » et une ligne « deconnexion-partout », chacune « ok »', async () => {
-		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const account = await createAccount('maquilleuse', { motDePasse: () => PASSWORD })
 		const payload = await testPayload()
-		const autre = await nouvelleSession(compte)
-		const avant = (await journal()).length
+		const other = await newSession(account)
+		const before = (await log()).length
 
 		await closeSession({
 			payload,
-			headers: new Headers(compte.session.enTetes),
+			headers: new Headers(account.session.enTetes),
 			toutes: false,
 			journal: authLog(payload),
 		})
-		await closeSession({ payload, headers: new Headers(autre.enTetes), toutes: true, journal: authLog(payload) })
+		await closeSession({ payload, headers: new Headers(other.enTetes), toutes: true, journal: authLog(payload) })
 
-		expect((await journal()).slice(avant).map(({ type, code }) => [type, code])).toEqual([
+		expect((await log()).slice(before).map(({ type, code }) => [type, code])).toEqual([
 			['sign-out', 'ok'],
 			['sign-out-everywhere', 'ok'],
 		])
 	})
 
 	test('un journal qui échoue ne rend pas la déconnexion en échec, la session est bien retirée', async () => {
-		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const account = await createAccount('maquilleuse', { motDePasse: () => PASSWORD })
 		const payload = await testPayload()
 
-		const resultat = await closeSession({
+		const result = await closeSession({
 			payload,
-			headers: new Headers(compte.session.enTetes),
+			headers: new Headers(account.session.enTetes),
 			toutes: false,
 			journal: () => Promise.reject(new Error('journal en panne')),
 		})
 
-		expect(resultat).toEqual({ ok: true, fermee: true })
-		expect(await qui(compte.session.enTetes)).toBeNull()
+		expect(result).toEqual({ ok: true, fermee: true })
+		expect(await which(account.session.enTetes)).toBeNull()
 	})
 })

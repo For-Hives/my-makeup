@@ -1,6 +1,6 @@
 /**
  * The home page (ticket 097; plan 02 U50): the talents it lists, the icons it knows, and the structured
- * data it carries. Unit tests: no database, no server (the page itself is tests/e2e/accueil.spec.ts).
+ * data it carries. Unit tests: no database, no server (the page itself is tests/e2e/home.spec.ts).
  */
 
 import { describe, expect, test } from 'bun:test'

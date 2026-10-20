@@ -1,5 +1,5 @@
 // Not a test of the suite: nothing in its name makes bun or Playwright pick it up.
-// tests/integration/banc-comptes.test.ts runs it in a child process, under the environment of
+// tests/integration/bench-accounts.test.ts runs it in a child process, under the environment of
 // the bench, to read everything one use of the account factory prints: the logs of Payload at
 // their most talkative, and the account the factory gives back.
 //

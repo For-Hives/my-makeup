@@ -17,78 +17,78 @@ afterEach(emptyBase)
 
 const ANNECY = { name: 'Annecy', inseeCode: '74010', latitude: 45.8992, longitude: 6.1294 } as const
 /** Annecy as the server stores it: its département, and the coordinates of its centre to about 1 km. */
-const ANNECY_STOCKEE = { ...ANNECY, department: '74', latitude: 45.9, longitude: 6.13 } as const
-const COMMUNE_VIDE = { name: null, inseeCode: null, department: null, latitude: null, longitude: null } as const
+const ANNECY_STORED = { ...ANNECY, department: '74', latitude: 45.9, longitude: 6.13 } as const
+const EMPTY_CITY = { name: null, inseeCode: null, department: null, latitude: null, longitude: null } as const
 
-type Maquilleuse = TestAccount<'maquilleuse'>
+type Artist = TestAccount<'maquilleuse'>
 
 /** A makeup artist of the factory, with the identifier of the profile her account received. */
-async function maquilleuseEtSonProfil(): Promise<{ compte: Maquilleuse; profil: number }> {
-	const compte = await createAccount('maquilleuse')
+async function artistAndItsProfile(): Promise<{ compte: Artist; profil: number }> {
+	const account = await createAccount('maquilleuse')
 	const payload = await testPayload()
 	const { docs } = await payload.find({
 		collection: 'profiles',
 		depth: 0,
 		limit: 1,
-		where: { pro: { equals: compte.id } },
+		where: { pro: { equals: account.id } },
 	})
-	const profil = docs[0]?.id
-	if (profil === undefined) throw new Error('La fabrique n’a pas créé le profil de la maquilleuse.')
-	return { compte, profil }
+	const profile = docs[0]?.id
+	if (profile === undefined) throw new Error('La fabrique n’a pas créé le profil de la maquilleuse.')
+	return { compte: account, profil: profile }
 }
 
 /** She changes her own profile through REST. */
-const modifier = (compte: Maquilleuse, profil: number, corps: Record<string, unknown>) =>
+const modify = (compte: Artist, profil: number, corps: Record<string, unknown>) =>
 	callRest('PATCH', `/api/profiles/${profil}?depth=0`, { enTetes: compte.session.enTetes, corps })
 
 /** The zone as the database holds it, read without access control. */
-async function zoneStockee(profil: number) {
+async function storedZone(profil: number) {
 	const payload = await testPayload()
 	const { city, radiusKm, homeService } = await payload.findByID({ collection: 'profiles', depth: 0, id: profil })
 	return { city, radiusKm, homeService }
 }
 
 /** What a REST refusal says, field by field. */
-function champsRefuses(corps: unknown): { path: string; message: string }[] {
+function refusedFields(corps: unknown): { path: string; message: string }[] {
 	const { errors = [] } = corps as { errors?: { data?: { errors?: { path: string; message: string }[] } }[] }
 	return errors.flatMap(({ data }) => data?.errors ?? []).map(({ path, message }) => ({ path, message }))
 }
 
 describe('La zone enregistrée se relit telle quelle', () => {
 	test('commune, rayon de 30 km et « à domicile », enregistrés par la maquilleuse puis relus', async () => {
-		const { compte, profil } = await maquilleuseEtSonProfil()
+		const { compte: account, profil: profile } = await artistAndItsProfile()
 
-		const enregistre = await modifier(compte, profil, { city: ANNECY, radiusKm: 30, homeService: true })
-		expect(enregistre.statut).toBe(200)
+		const saved = await modify(account, profile, { city: ANNECY, radiusKm: 30, homeService: true })
+		expect(saved.statut).toBe(200)
 
-		const attendu = { city: ANNECY_STOCKEE, radiusKm: 30, homeService: true }
-		const relu = await callRest('GET', `/api/profiles/${profil}?depth=0`, { enTetes: compte.session.enTetes })
-		expect(relu.statut).toBe(200)
-		expect(relu.corps).toMatchObject(attendu)
-		expect(await zoneStockee(profil)).toEqual(attendu)
+		const expected = { city: ANNECY_STORED, radiusKm: 30, homeService: true }
+		const reread = await callRest('GET', `/api/profiles/${profile}?depth=0`, { enTetes: account.session.enTetes })
+		expect(reread.statut).toBe(200)
+		expect(reread.corps).toMatchObject(expected)
+		expect(await storedZone(profile)).toEqual(expected)
 	})
 
 	test('une sauvegarde d’un autre champ laisse la zone telle quelle', async () => {
-		const { compte, profil } = await maquilleuseEtSonProfil()
-		await modifier(compte, profil, { city: ANNECY, radiusKm: 30, homeService: false })
+		const { compte: account, profil: profile } = await artistAndItsProfile()
+		await modify(account, profile, { city: ANNECY, radiusKm: 30, homeService: false })
 
-		expect((await modifier(compte, profil, { firstName: 'Léa' })).statut).toBe(200)
+		expect((await modify(account, profile, { firstName: 'Léa' })).statut).toBe(200)
 
-		expect(await zoneStockee(profil)).toEqual({ city: ANNECY_STOCKEE, radiusKm: 30, homeService: false })
+		expect(await storedZone(profile)).toEqual({ city: ANNECY_STORED, radiusKm: 30, homeService: false })
 	})
 
 	test('un profil créé avec son compte n’a pas encore de zone : rien n’est supposé', async () => {
-		const { profil } = await maquilleuseEtSonProfil()
+		const { profil: profile } = await artistAndItsProfile()
 
-		expect(await zoneStockee(profil)).toEqual({ city: COMMUNE_VIDE, radiusKm: null, homeService: null })
+		expect(await storedZone(profile)).toEqual({ city: EMPTY_CITY, radiusKm: null, homeService: null })
 	})
 
 	test('le département est calculé par le serveur depuis le code INSEE, quoi que la requête envoie', async () => {
-		const { compte, profil } = await maquilleuseEtSonProfil()
+		const { compte: account, profil: profile } = await artistAndItsProfile()
 
 		const ajaccio = { name: 'Ajaccio', inseeCode: ' 2a004 ', department: '13', latitude: 41.9192, longitude: 8.7386 }
-		expect((await modifier(compte, profil, { city: ajaccio })).statut).toBe(200)
-		expect((await zoneStockee(profil)).city).toEqual({
+		expect((await modify(account, profile, { city: ajaccio })).statut).toBe(200)
+		expect((await storedZone(profile)).city).toEqual({
 			...ajaccio,
 			inseeCode: '2A004',
 			department: '2A',
@@ -96,26 +96,26 @@ describe('La zone enregistrée se relit telle quelle', () => {
 			longitude: 8.74,
 		})
 
-		expect((await modifier(compte, profil, { city: { ...ANNECY, department: '2A' } })).statut).toBe(200)
-		expect((await zoneStockee(profil)).city).toEqual(ANNECY_STOCKEE)
+		expect((await modify(account, profile, { city: { ...ANNECY, department: '2A' } })).statut).toBe(200)
+		expect((await storedZone(profile)).city).toEqual(ANNECY_STORED)
 	})
 
 	test('toute la France : une commune d’une collectivité d’outre-mer de la liste officielle est acceptée', async () => {
-		const { compte, profil } = await maquilleuseEtSonProfil()
+		const { compte: account, profil: profile } = await artistAndItsProfile()
 
-		const saintBarthelemy = { name: 'Saint-Barthélemy', inseeCode: '97701', latitude: 17.9, longitude: -62.83 }
-		expect((await modifier(compte, profil, { city: saintBarthelemy })).statut).toBe(200)
-		expect((await zoneStockee(profil)).city).toEqual({ ...saintBarthelemy, department: '977' })
+		const stBarthelemy = { name: 'Saint-Barthélemy', inseeCode: '97701', latitude: 17.9, longitude: -62.83 }
+		expect((await modify(account, profile, { city: stBarthelemy })).statut).toBe(200)
+		expect((await storedZone(profile)).city).toEqual({ ...stBarthelemy, department: '977' })
 	})
 
 	test('vider la commune, champ par champ ou d’un coup, vide aussi son département', async () => {
-		const { compte, profil } = await maquilleuseEtSonProfil()
+		const { compte: account, profil: profile } = await artistAndItsProfile()
 
-		for (const vide of [{ ...COMMUNE_VIDE, department: '74' }, null]) {
-			await modifier(compte, profil, { city: ANNECY, radiusKm: 30 })
-			expect((await modifier(compte, profil, { city: vide })).statut, JSON.stringify(vide)).toBe(200)
-			expect(await zoneStockee(profil), JSON.stringify(vide)).toEqual({
-				city: COMMUNE_VIDE,
+		for (const empty of [{ ...EMPTY_CITY, department: '74' }, null]) {
+			await modify(account, profile, { city: ANNECY, radiusKm: 30 })
+			expect((await modify(account, profile, { city: empty })).statut, JSON.stringify(empty)).toBe(200)
+			expect(await storedZone(profile), JSON.stringify(empty)).toEqual({
+				city: EMPTY_CITY,
 				radiusKm: 30,
 				homeService: null,
 			})
@@ -125,114 +125,116 @@ describe('La zone enregistrée se relit telle quelle', () => {
 
 describe('Une zone mal formée est refusée en français, et rien ne change', () => {
 	test('rayon hors bornes ou décimal : refusé ; 0 et 200 km acceptés', async () => {
-		const { compte, profil } = await maquilleuseEtSonProfil()
-		await modifier(compte, profil, { city: ANNECY, radiusKm: 30 })
-		const avant = await zoneStockee(profil)
+		const { compte: account, profil: profile } = await artistAndItsProfile()
+		await modify(account, profile, { city: ANNECY, radiusKm: 30 })
+		const before = await storedZone(profile)
 
 		for (const radiusKm of [201, -1, 12.5, 1000]) {
-			const refus = await modifier(compte, profil, { radiusKm })
-			expect(refus.statut, String(radiusKm)).toBe(400)
-			expect(champsRefuses(refus.corps), String(radiusKm)).toEqual([{ path: 'radiusKm', message: ZONE_MESSAGES.rayon }])
+			const refusal = await modify(account, profile, { radiusKm })
+			expect(refusal.statut, String(radiusKm)).toBe(400)
+			expect(refusedFields(refusal.corps), String(radiusKm)).toEqual([
+				{ path: 'radiusKm', message: ZONE_MESSAGES.rayon },
+			])
 		}
-		expect(await zoneStockee(profil)).toEqual(avant)
+		expect(await storedZone(profile)).toEqual(before)
 
 		for (const radiusKm of [0, 200]) {
-			expect((await modifier(compte, profil, { radiusKm })).statut, String(radiusKm)).toBe(200)
-			expect((await zoneStockee(profil)).radiusKm).toBe(radiusKm)
+			expect((await modify(account, profile, { radiusKm })).statut, String(radiusKm)).toBe(200)
+			expect((await storedZone(profile)).radiusKm).toBe(radiusKm)
 		}
 	})
 
 	test('code INSEE mal formé : refusé', async () => {
-		const { compte, profil } = await maquilleuseEtSonProfil()
-		await modifier(compte, profil, { city: ANNECY })
-		const avant = await zoneStockee(profil)
+		const { compte: account, profil: profile } = await artistAndItsProfile()
+		await modify(account, profile, { city: ANNECY })
+		const before = await storedZone(profile)
 
 		for (const codeInsee of ['7401', '740100', '20004', 'ABCDE', '97001', '98501']) {
-			const refus = await modifier(compte, profil, { city: { ...ANNECY, inseeCode: codeInsee } })
-			expect(refus.statut, codeInsee).toBe(400)
-			expect(champsRefuses(refus.corps), codeInsee).toEqual([
+			const refusal = await modify(account, profile, { city: { ...ANNECY, inseeCode: codeInsee } })
+			expect(refusal.statut, codeInsee).toBe(400)
+			expect(refusedFields(refusal.corps), codeInsee).toEqual([
 				{ path: 'city.inseeCode', message: ZONE_MESSAGES.codeInseeMalForme },
 			])
 		}
-		expect(await zoneStockee(profil)).toEqual(avant)
+		expect(await storedZone(profile)).toEqual(before)
 	})
 
 	test('commune sans code INSEE : refusée, qu’elle soit nouvelle ou qu’on retire son code', async () => {
-		const { compte, profil } = await maquilleuseEtSonProfil()
+		const { compte: account, profil: profile } = await artistAndItsProfile()
 
-		const nouvelle = await modifier(compte, profil, { city: { name: 'Annecy' } })
-		expect(nouvelle.statut).toBe(400)
-		expect(champsRefuses(nouvelle.corps)).toEqual([
+		const fresh = await modify(account, profile, { city: { name: 'Annecy' } })
+		expect(fresh.statut).toBe(400)
+		expect(refusedFields(fresh.corps)).toEqual([
 			{ path: 'city.inseeCode', message: ZONE_MESSAGES.communeSansCodeInsee },
 		])
-		expect((await zoneStockee(profil)).city).toEqual(COMMUNE_VIDE)
+		expect((await storedZone(profile)).city).toEqual(EMPTY_CITY)
 
-		await modifier(compte, profil, { city: ANNECY })
-		const sansCode = await modifier(compte, profil, { city: { ...ANNECY, inseeCode: '' } })
-		expect(sansCode.statut).toBe(400)
-		expect(champsRefuses(sansCode.corps)).toEqual([
+		await modify(account, profile, { city: ANNECY })
+		const withoutCode = await modify(account, profile, { city: { ...ANNECY, inseeCode: '' } })
+		expect(withoutCode.statut).toBe(400)
+		expect(refusedFields(withoutCode.corps)).toEqual([
 			{ path: 'city.inseeCode', message: ZONE_MESSAGES.communeSansCodeInsee },
 		])
-		expect((await zoneStockee(profil)).city).toEqual(ANNECY_STOCKEE)
+		expect((await storedZone(profile)).city).toEqual(ANNECY_STORED)
 	})
 
 	test('une ville en texte libre, comme sur l’ancien site, n’est pas une city : refusée', async () => {
-		const { compte, profil } = await maquilleuseEtSonProfil()
+		const { compte: account, profil: profile } = await artistAndItsProfile()
 
-		const ville = await modifier(compte, profil, { city: 'Annecy' })
-		expect(ville.statut).toBe(400)
-		expect(champsRefuses(ville.corps)).toEqual([
+		const cityName = await modify(account, profile, { city: 'Annecy' })
+		expect(cityName.statut).toBe(400)
+		expect(refusedFields(cityName.corps)).toEqual([
 			{ path: 'city.inseeCode', message: ZONE_MESSAGES.communeSansCodeInsee },
 		])
 
-		const adresse = await modifier(compte, profil, { city: '12 rue des Lilas, 74000 Annecy' })
-		expect(adresse.statut).toBe(400)
-		expect(champsRefuses(adresse.corps)).toEqual([
+		const url = await modify(account, profile, { city: '12 rue des Lilas, 74000 Annecy' })
+		expect(url.statut).toBe(400)
+		expect(refusedFields(url.corps)).toEqual([
 			{ path: 'city.name', message: ZONE_MESSAGES.nomAdresse },
 			{ path: 'city.inseeCode', message: ZONE_MESSAGES.communeSansCodeInsee },
 		])
-		expect((await zoneStockee(profil)).city).toEqual(COMMUNE_VIDE)
+		expect((await storedZone(profile)).city).toEqual(EMPTY_CITY)
 	})
 
 	test('une commune envoyée en liste est refusée, et son département reste celui de son code', async () => {
-		const { compte, profil } = await maquilleuseEtSonProfil()
-		await modifier(compte, profil, { city: ANNECY })
+		const { compte: account, profil: profile } = await artistAndItsProfile()
+		await modify(account, profile, { city: ANNECY })
 
-		for (const commune of [[], ['Annecy'], [ANNECY]]) {
-			const refus = await modifier(compte, profil, { city: commune })
-			expect(refus.statut, JSON.stringify(commune)).toBe(400)
-			expect(champsRefuses(refus.corps), JSON.stringify(commune)).toEqual([
+		for (const cityEntry of [[], ['Annecy'], [ANNECY]]) {
+			const refusal = await modify(account, profile, { city: cityEntry })
+			expect(refusal.statut, JSON.stringify(cityEntry)).toBe(400)
+			expect(refusedFields(refusal.corps), JSON.stringify(cityEntry)).toEqual([
 				{ path: 'city', message: ZONE_MESSAGES.communeSansCodeInsee },
 			])
-			expect((await zoneStockee(profil)).city, JSON.stringify(commune)).toEqual(ANNECY_STOCKEE)
+			expect((await storedZone(profile)).city, JSON.stringify(cityEntry)).toEqual(ANNECY_STORED)
 		}
 
 		// The import's path, the local API, is held by the same rule.
 		const payload = await testPayload()
-		const parLeServeur = await payload
-			.update({ collection: 'profiles', id: profil, data: { city: [] as never } })
+		const byServer = await payload
+			.update({ collection: 'profiles', id: profile, data: { city: [] as never } })
 			.catch((erreur: unknown) => erreur)
-		expect(parLeServeur).toBeInstanceOf(ValidationError)
-		expect((await zoneStockee(profil)).city).toEqual(ANNECY_STOCKEE)
+		expect(byServer).toBeInstanceOf(ValidationError)
+		expect((await storedZone(profile)).city).toEqual(ANNECY_STORED)
 	})
 
 	test('la commune s’envoie entière : un nom sans son code, ou un code sans son nom, est refusé même quand l’autre est enregistré', async () => {
-		const { compte, profil } = await maquilleuseEtSonProfil()
-		await modifier(compte, profil, { city: ANNECY })
+		const { compte: account, profil: profile } = await artistAndItsProfile()
+		await modify(account, profile, { city: ANNECY })
 
-		const nomSeul = await modifier(compte, profil, { city: { name: 'Lyon' } })
-		expect(nomSeul.statut).toBe(400)
-		expect(champsRefuses(nomSeul.corps)).toEqual([
+		const singleName = await modify(account, profile, { city: { name: 'Lyon' } })
+		expect(singleName.statut).toBe(400)
+		expect(refusedFields(singleName.corps)).toEqual([
 			{ path: 'city.inseeCode', message: ZONE_MESSAGES.communeSansCodeInsee },
 		])
-		const codeSeul = await modifier(compte, profil, { city: { inseeCode: '69123' } })
-		expect(codeSeul.statut).toBe(400)
-		expect(champsRefuses(codeSeul.corps)).toEqual([{ path: 'city.name', message: ZONE_MESSAGES.codeInseeSansNom }])
-		expect((await zoneStockee(profil)).city).toEqual(ANNECY_STOCKEE)
+		const codeOnly = await modify(account, profile, { city: { inseeCode: '69123' } })
+		expect(codeOnly.statut).toBe(400)
+		expect(refusedFields(codeOnly.corps)).toEqual([{ path: 'city.name', message: ZONE_MESSAGES.codeInseeSansNom }])
+		expect((await storedZone(profile)).city).toEqual(ANNECY_STORED)
 
 		// A new commune without coordinates does not keep those of the former one.
-		expect((await modifier(compte, profil, { city: { name: 'Lyon', inseeCode: '69123' } })).statut).toBe(200)
-		expect((await zoneStockee(profil)).city).toEqual({
+		expect((await modify(account, profile, { city: { name: 'Lyon', inseeCode: '69123' } })).statut).toBe(200)
+		expect((await storedZone(profile)).city).toEqual({
 			name: 'Lyon',
 			inseeCode: '69123',
 			department: '69',
@@ -242,103 +244,103 @@ describe('Une zone mal formée est refusée en français, et rien ne change', ()
 	})
 
 	test('un nom qui ressemble à une adresse est refusé, même avec un code INSEE bien formé', async () => {
-		const { compte, profil } = await maquilleuseEtSonProfil()
-		await modifier(compte, profil, { city: ANNECY })
+		const { compte: account, profil: profile } = await artistAndItsProfile()
+		await modify(account, profile, { city: ANNECY })
 
-		for (const nom of ['12 rue des Lilas, 74000 Annecy', 'rue des Lilas', 'Annecy 74000']) {
-			const refus = await modifier(compte, profil, { city: { ...ANNECY, name: nom } })
-			expect(refus.statut, nom).toBe(400)
-			expect(champsRefuses(refus.corps), nom).toEqual([{ path: 'city.name', message: ZONE_MESSAGES.nomAdresse }])
+		for (const name of ['12 rue des Lilas, 74000 Annecy', 'rue des Lilas', 'Annecy 74000']) {
+			const refusal = await modify(account, profile, { city: { ...ANNECY, name: name } })
+			expect(refusal.statut, name).toBe(400)
+			expect(refusedFields(refusal.corps), name).toEqual([{ path: 'city.name', message: ZONE_MESSAGES.nomAdresse }])
 		}
-		expect((await zoneStockee(profil)).city).toEqual(ANNECY_STOCKEE)
+		expect((await storedZone(profile)).city).toEqual(ANNECY_STORED)
 	})
 
 	test('un nom fait d’autres caractères que ceux d’un nom de commune est refusé : un email, un site, un symbole', async () => {
-		const { compte, profil } = await maquilleuseEtSonProfil()
-		await modifier(compte, profil, { city: ANNECY })
+		const { compte: account, profil: profile } = await artistAndItsProfile()
+		await modify(account, profile, { city: ANNECY })
 
-		for (const nom of ['moi@exemple.test', 'www.site-fictif.test', 'St. Gervais', 'Annecy & alentours']) {
-			const refus = await modifier(compte, profil, { city: { ...ANNECY, name: nom } })
-			expect(refus.statut, nom).toBe(400)
-			expect(champsRefuses(refus.corps), nom).toEqual([{ path: 'city.name', message: ZONE_MESSAGES.nomCaracteres }])
+		for (const name of ['moi@exemple.test', 'www.site-fictif.test', 'St. Gervais', 'Annecy & alentours']) {
+			const refusal = await modify(account, profile, { city: { ...ANNECY, name: name } })
+			expect(refusal.statut, name).toBe(400)
+			expect(refusedFields(refusal.corps), name).toEqual([{ path: 'city.name', message: ZONE_MESSAGES.nomCaracteres }])
 		}
-		expect((await zoneStockee(profil)).city).toEqual(ANNECY_STOCKEE)
+		expect((await storedZone(profile)).city).toEqual(ANNECY_STORED)
 		// Its form only: whether the name is the one of its code, the list of the space and of the import says it.
-		expect((await modifier(compte, profil, { city: { ...ANNECY, name: 'Lyon' } })).statut).toBe(200)
+		expect((await modify(account, profile, { city: { ...ANNECY, name: 'Lyon' } })).statut).toBe(200)
 	})
 
 	test('le serveur aussi est tenu par les bornes : l’import d’un rayon de 400 km est refusé, jamais ramené à 200', async () => {
 		const payload = await testPayload()
-		const compte = await payload.create({
+		const account = await payload.create({
 			collection: 'pros',
 			data: { email: `zone-${crypto.randomUUID()}@example.test`, password: randomPassword(), _verified: true },
 			context: NO_PROFILE_CONTEXT,
 			disableVerificationEmail: true,
 		})
 
-		const refus = await payload
-			.create({ collection: 'profiles', data: { pro: compte.id, slug: 'zone-importee', radiusKm: 400 } })
+		const refusal = await payload
+			.create({ collection: 'profiles', data: { pro: account.id, slug: 'zone-importee', radiusKm: 400 } })
 			.catch((erreur: unknown) => erreur)
-		expect(refus).toBeInstanceOf(ValidationError)
-		expect((refus as ValidationError).data.errors).toEqual([
+		expect(refusal).toBeInstanceOf(ValidationError)
+		expect((refusal as ValidationError).data.errors).toEqual([
 			expect.objectContaining({ path: 'radiusKm', message: ZONE_MESSAGES.rayon }),
 		])
 		expect((await payload.count({ collection: 'profiles' })).totalDocs).toBe(0)
 
-		const importe = await payload.create({
+		const imported = await payload.create({
 			collection: 'profiles',
-			data: { pro: compte.id, slug: 'zone-importee', city: ANNECY, radiusKm: 30 },
+			data: { pro: account.id, slug: 'zone-importee', city: ANNECY, radiusKm: 30 },
 		})
-		expect(importe).toMatchObject({ city: ANNECY_STOCKEE, radiusKm: 30, homeService: null })
+		expect(imported).toMatchObject({ city: ANNECY_STORED, radiusKm: 30, homeService: null })
 	})
 })
 
 describe('Les coordonnées de la commune sont celles de son centre, à environ 1 km près', () => {
 	test('envoyées au huitième de décimale, elles sont gardées à deux, et le public ne lit que celles-là', async () => {
-		const { compte, profil } = await maquilleuseEtSonProfil()
+		const { compte: account, profil: profile } = await artistAndItsProfile()
 
-		const precises = { ...ANNECY, latitude: 48.85341234, longitude: 2.34881234 }
-		expect((await modifier(compte, profil, { city: precises })).statut).toBe(200)
+		const precise = { ...ANNECY, latitude: 48.85341234, longitude: 2.34881234 }
+		expect((await modify(account, profile, { city: precise })).statut).toBe(200)
 
-		const arrondies = { latitude: 48.85, longitude: 2.35 }
-		expect((await zoneStockee(profil)).city).toMatchObject(arrondies)
+		const rounded = { latitude: 48.85, longitude: 2.35 }
+		expect((await storedZone(profile)).city).toMatchObject(rounded)
 		// With a commune, the profile is published (ticket 044): what the public reads.
-		const publique = await callRest('GET', `/api/profiles/${profil}?depth=0`)
-		expect(publique.statut).toBe(200)
-		expect((publique.corps as { city: unknown }).city).toMatchObject(arrondies)
+		const publicValue = await callRest('GET', `/api/profiles/${profile}?depth=0`)
+		expect(publicValue.statut).toBe(200)
+		expect((publicValue.corps as { city: unknown }).city).toMatchObject(rounded)
 	})
 
 	test('le serveur aussi les arrondit : l’import d’un centre au mètre près', async () => {
-		const { profil } = await maquilleuseEtSonProfil()
+		const { profil: profile } = await artistAndItsProfile()
 		const payload = await testPayload()
 
-		await payload.update({ collection: 'profiles', id: profil, data: { city: { ...ANNECY, latitude: 45.899247 } } })
+		await payload.update({ collection: 'profiles', id: profile, data: { city: { ...ANNECY, latitude: 45.899247 } } })
 
-		expect((await zoneStockee(profil)).city).toEqual(ANNECY_STOCKEE)
+		expect((await storedZone(profile)).city).toEqual(ANNECY_STORED)
 	})
 })
 
 describe('Lecture anonyme : la commune et son département sortent avec le profil publié', () => {
 	test('par REST et par l’API locale avec les règles actives, seul et en liste ; un brouillon ne sort pas', async () => {
-		const { compte, profil } = await maquilleuseEtSonProfil()
-		const brouillon = await maquilleuseEtSonProfil()
-		await modifier(compte, profil, { city: ANNECY, radiusKm: 30, homeService: true })
-		await modifier(brouillon.compte, brouillon.profil, { city: ANNECY })
+		const { compte: account, profil: profile } = await artistAndItsProfile()
+		const draft = await artistAndItsProfile()
+		await modify(account, profile, { city: ANNECY, radiusKm: 30, homeService: true })
+		await modify(draft.compte, draft.profil, { city: ANNECY })
 		const payload = await testPayload()
 		// With a commune, the rule of ticket 044 publishes the first; an admin holds the other as a draft.
-		await payload.update({ collection: 'profiles', id: brouillon.profil, data: { chosenStatus: 'draft' } })
+		await payload.update({ collection: 'profiles', id: draft.profil, data: { chosenStatus: 'draft' } })
 
-		const attendu = { city: ANNECY_STOCKEE, radiusKm: 30, homeService: true }
-		const seul = await callRest('GET', `/api/profiles/${profil}?depth=0`)
-		expect(seul.statut).toBe(200)
-		expect(seul.corps).toMatchObject(attendu)
-		const liste = (await callRest('GET', '/api/profiles?depth=0')).corps as { docs: { id: number }[] }
+		const expected = { city: ANNECY_STORED, radiusKm: 30, homeService: true }
+		const single = await callRest('GET', `/api/profiles/${profile}?depth=0`)
+		expect(single.statut).toBe(200)
+		expect(single.corps).toMatchObject(expected)
+		const list = (await callRest('GET', '/api/profiles?depth=0')).corps as { docs: { id: number }[] }
 		const locale = await payload.find({ collection: 'profiles', depth: 0, overrideAccess: false })
-		for (const docs of [liste.docs, locale.docs]) {
-			expect(docs.map(({ id }) => id)).toEqual([profil])
-			expect(docs[0]).toMatchObject(attendu)
+		for (const docs of [list.docs, locale.docs]) {
+			expect(docs.map(({ id }) => id)).toEqual([profile])
+			expect(docs[0]).toMatchObject(expected)
 		}
 
-		expect((await callRest('GET', `/api/profiles/${brouillon.profil}`)).statut).toBe(404)
+		expect((await callRest('GET', `/api/profiles/${draft.profil}`)).statut).toBe(404)
 	})
 })

@@ -10,14 +10,14 @@ import { testPayload } from '../support/payload-test'
  */
 
 let payload: Payload
-const gardees: { release: () => void }[] = []
+const guarded: { release: () => void }[] = []
 
 beforeAll(async () => {
 	payload = await testPayload()
 })
 
 afterAll(() => {
-	for (const connexion of gardees.splice(0)) connexion.release()
+	for (const signIn of guarded.splice(0)) signIn.release()
 })
 
 describe('le pool de la base ne bloque pas pour toujours (ticket 222)', () => {
@@ -28,58 +28,58 @@ describe('le pool de la base ne bloque pas pour toujours (ticket 222)', () => {
 	test('toutes les connexions prises : une requête de plus échoue dans le délai, puis l’application répond', async () => {
 		// Take every connection that is free: the ones Payload already holds count as taken.
 		const { options, totalCount, idleCount } = payload.db.pool
-		const libres = (options.max ?? 10) - (totalCount - idleCount)
-		for (let i = 0; i < libres; i++) gardees.push(await payload.db.pool.connect())
+		const free = (options.max ?? 10) - (totalCount - idleCount)
+		for (let i = 0; i < free; i++) guarded.push(await payload.db.pool.connect())
 
-		const debut = performance.now()
+		const start = performance.now()
 		await expect(payload.db.pool.query('SELECT 1')).rejects.toThrow(/timeout/i)
-		const duree = performance.now() - debut
-		expect(duree).toBeGreaterThanOrEqual(CONNECTION_TIMEOUT_MS - 200)
-		expect(duree).toBeLessThan(CONNECTION_TIMEOUT_MS + 3000)
+		const duration = performance.now() - start
+		expect(duration).toBeGreaterThanOrEqual(CONNECTION_TIMEOUT_MS - 200)
+		expect(duration).toBeLessThan(CONNECTION_TIMEOUT_MS + 3000)
 
-		for (const connexion of gardees.splice(0)) connexion.release()
-		const reponse = await sante()
-		expect(reponse.status).toBe(200)
+		for (const signIn of guarded.splice(0)) signIn.release()
+		const response = await sante()
+		expect(response.status).toBe(200)
 	}, 20_000)
 })
 
 describe('une connexion inactive coupée ne tue pas le serveur (ticket 223)', () => {
 	test('le pool de Payload écoute « error » : l’événement ne lève pas, une ligne courte sans adresse de base', () => {
 		expect(payload.db.pool.listenerCount('error')).toBeGreaterThanOrEqual(1)
-		const lignes: string[] = []
-		const espion = spyOn(payload.logger, 'warn').mockImplementation(((ligne: unknown) => {
-			lignes.push(String(ligne))
+		const lines: string[] = []
+		const spy = spyOn(payload.logger, 'warn').mockImplementation(((ligne: unknown) => {
+			lines.push(String(ligne))
 		}) as never)
 		try {
-			const erreur = Object.assign(new Error(`connect ECONNREFUSED ${new URL(process.env.DATABASE_URI ?? '').host}`), {
+			const error = Object.assign(new Error(`connect ECONNREFUSED ${new URL(process.env.DATABASE_URI ?? '').host}`), {
 				code: 'ECONNREFUSED',
 			})
-			expect(() => payload.db.pool.emit('error', erreur)).not.toThrow()
+			expect(() => payload.db.pool.emit('error', error)).not.toThrow()
 		} finally {
-			espion.mockRestore()
+			spy.mockRestore()
 		}
-		expect(lignes).toHaveLength(1)
-		expect(lignes[0]).toContain('ECONNREFUSED')
-		expect(lignes[0]).not.toContain(new URL(process.env.DATABASE_URI ?? '').host)
+		expect(lines).toHaveLength(1)
+		expect(lines[0]).toContain('ECONNREFUSED')
+		expect(lines[0]).not.toContain(new URL(process.env.DATABASE_URI ?? '').host)
 	})
 
 	test('une vraie coupure : PostgreSQL met fin aux connexions inactives, le pool les perd et l’application répond encore', async () => {
 		// Two connections taken, one given back: it sits idle in the pool, as one does between two requests.
-		const premiere = await payload.db.pool.connect()
-		const seconde = await payload.db.pool.connect()
-		seconde.release()
+		const first = await payload.db.pool.connect()
+		const second = await payload.db.pool.connect()
+		second.release()
 		expect(payload.db.pool.idleCount).toBeGreaterThanOrEqual(1)
-		const espion = spyOn(payload.logger, 'warn').mockImplementation((() => undefined) as never)
+		const spy = spyOn(payload.logger, 'warn').mockImplementation((() => undefined) as never)
 		try {
 			// What `docker stop` does to an idle connection: the server ends every other session.
-			await premiere.query(
+			await first.query(
 				'SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE pid <> pg_backend_pid() AND datname = current_database()'
 			)
 			await new Promise(resolve => setTimeout(resolve, 300))
-			expect(espion).toHaveBeenCalled()
+			expect(spy).toHaveBeenCalled()
 		} finally {
-			premiere.release()
-			espion.mockRestore()
+			first.release()
+			spy.mockRestore()
 		}
 		// The process is alive (this line runs), and the next query opens a new connection.
 		expect((await sante()).status).toBe(200)

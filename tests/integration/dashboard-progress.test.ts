@@ -17,71 +17,71 @@ import { emptyBase, testPayload } from '../support/payload-test'
 
 afterEach(emptyBase)
 
-async function utilisateurDe(payload: Payload, id: number | string): Promise<DashboardUser> {
+async function userOf(payload: Payload, id: number | string): Promise<DashboardUser> {
 	const doc = await payload.findByID({ collection: 'pros', id, depth: 0, overrideAccess: true })
 	return { ...doc, collection: 'pros' } as DashboardUser
 }
 
 /** The page's reading and the stored state of her profile. */
-async function lectures(payload: Payload, utilisateur: DashboardUser) {
-	const profil = await artistProfile(payload, utilisateur)
-	if (profil === null) throw new Error('pas de profil')
+async function reads(payload: Payload, utilisateur: DashboardUser) {
+	const profile = await artistProfile(payload, utilisateur)
+	if (profile === null) throw new Error('pas de profil')
 	const { docs } = await payload.find({
 		collection: 'profiles',
 		depth: 0,
 		overrideAccess: true,
-		where: { id: { equals: profil.id } },
+		where: { id: { equals: profile.id } },
 	})
-	const stocke = docs[0]
-	if (!stocke) throw new Error('profil non stocké')
-	return { avancement: profileProgress(profil), stocke }
+	const stored = docs[0]
+	if (!stored) throw new Error('profil non stocké')
+	return { avancement: profileProgress(profile), stocke: stored }
 }
 
 describe('I20 : le bloc de l’espace égale l’état enregistré par le serveur, à chaque étape', () => {
 	test('profil vide, puis après chaque enregistrement', async () => {
-		const compte = await createAccount('maquilleuse')
+		const account = await createAccount('maquilleuse')
 		const payload = await testPayload()
-		const utilisateur = await utilisateurDe(payload, compte.id)
+		const user = await userOf(payload, account.id)
 
-		const egaux = async () => {
-			const { avancement, stocke } = await lectures(payload, utilisateur)
-			expect(avancement.score).toBe(stocke.completeness ?? Number.NaN)
-			expect(avancement.etat === 'publiable').toBe(stocke.publishable === true)
-			expect(avancement.etat === 'vide').toBe(stocke.fullyEmpty === true)
-			return avancement
+		const equal = async () => {
+			const { avancement: progress, stocke: stored } = await reads(payload, user)
+			expect(progress.score).toBe(stored.completeness ?? Number.NaN)
+			expect(progress.etat === 'publiable').toBe(stored.publishable === true)
+			expect(progress.etat === 'vide').toBe(stored.fullyEmpty === true)
+			return progress
 		}
 
-		const vide = await egaux()
-		expect(vide.score).toBe(0)
-		expect(vide.manques).toHaveLength(13)
+		const empty = await equal()
+		expect(empty.score).toBe(0)
+		expect(empty.manques).toHaveLength(13)
 
-		await saveIdentity(payload, utilisateur, {
+		await saveIdentity(payload, user, {
 			prenom: 'Léa',
 			nom: 'Fictive',
 			nomArtiste: '',
 			specialite: 'Mariage',
 		})
-		const apresIdentite = await egaux()
-		expect(apresIdentite.score).toBe(2)
-		expect(apresIdentite.etat).toBe('incomplet')
-		expect(apresIdentite.manques.some(m => m.critere === 'specialite')).toBe(false)
+		const afterIdentity = await equal()
+		expect(afterIdentity.score).toBe(2)
+		expect(afterIdentity.etat).toBe('incomplet')
+		expect(afterIdentity.manques.some(m => m.critere === 'specialite')).toBe(false)
 
-		await saveDescription(payload, utilisateur, { description: 'a'.repeat(199) })
-		const court = await egaux()
-		expect(court.manques.find(m => m.critere === 'description')?.requis).toBe(true)
+		await saveDescription(payload, user, { description: 'a'.repeat(199) })
+		const short = await equal()
+		expect(short.manques.find(m => m.critere === 'description')?.requis).toBe(true)
 
-		await saveDescription(payload, utilisateur, { description: 'a'.repeat(200) })
-		const long = await egaux()
+		await saveDescription(payload, user, { description: 'a'.repeat(200) })
+		const long = await equal()
 		expect(long.manques.some(m => m.critere === 'description')).toBe(false)
 
-		await saveNetworks(payload, utilisateur, {
+		await saveNetworks(payload, user, {
 			instagram: '@studio.fictif',
 			facebook: '',
 			youtube: '',
 			linkedin: '',
 			siteWeb: '',
 		})
-		const reseaux = await egaux()
-		expect(reseaux.manques.some(m => m.critere === 'reseaux')).toBe(false)
+		const networks = await equal()
+		expect(networks.manques.some(m => m.critere === 'reseaux')).toBe(false)
 	})
 })

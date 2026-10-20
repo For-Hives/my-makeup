@@ -8,7 +8,7 @@ import { createAccount } from '../support/account-factory'
  * same secret, same origin.
  *
  * The admin panel is written by Payload: it is found by its addresses and by the address of the
- * account, never by a label. Its language, French, is checked in administration-francais.spec.ts.
+ * account, never by a label. Its language, French, is checked in administration-french.spec.ts.
  */
 test.describe('Essai coquille : le site local, déjà connecté', { tag: '@mobile' }, () => {
 	test('l’accueil s’ouvre, puis l’administration avec une session de la fabrique', async ({ context, page }) => {
@@ -21,17 +21,17 @@ test.describe('Essai coquille : le site local, déjà connecté', { tag: '@mobil
 		).toBeVisible()
 
 		// Nobody types a password: the factory gives the cookie of a session that is already open.
-		const compte = await createAccount('admin')
-		await context.addCookies(compte.session.cookies)
+		const account = await createAccount('admin')
+		await context.addCookies(account.session.cookies)
 
 		await page.goto('/admin')
-		const lienDuCompte = page.locator('a[href="/admin/account"]')
-		await expect(lienDuCompte).toBeVisible()
+		const accountLink = page.locator('a[href="/admin/account"]')
+		await expect(accountLink).toBeVisible()
 		await expect(page).toHaveURL(/\/admin$/)
 
 		// The account page says whose session it is.
-		await lienDuCompte.click()
-		await expect(page.getByRole('heading', { level: 1, name: compte.email })).toBeVisible()
+		await accountLink.click()
+		await expect(page.getByRole('heading', { level: 1, name: account.email })).toBeVisible()
 		await expect(page).toHaveURL(/\/admin\/account$/)
 	})
 

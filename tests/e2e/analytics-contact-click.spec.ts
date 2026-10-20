@@ -10,18 +10,18 @@ import { testPayload } from '../support/payload-test'
  * reminder link; and a profile without a public contact has no link at all.
  *
  * Playwright's Chromium announces itself as automated, which the measure refuses: each test plays a
- * browser that is not (as tests/e2e/mesure-umami.spec.ts does).
+ * browser that is not (as tests/e2e/analytics-umami.spec.ts does).
  */
 
-const TELEPHONE = '06 12 34 56 78'
+const PHONE = '06 12 34 56 78'
 const EMAIL = 'contact-mesure@example.test'
 const INSTAGRAM = 'https://instagram.com/mesure.exemple'
 
 let umami: ReadingFakeUmami
-let compte: TestAccount<'maquilleuse'>
-let autre: TestAccount<'maquilleuse'>
+let account: TestAccount<'maquilleuse'>
+let other: TestAccount<'maquilleuse'>
 let slug: string
-let slugSansContact: string
+let slugWithoutContact: string
 
 test.describe.configure({ mode: 'serial' })
 
@@ -37,40 +37,40 @@ test.beforeEach(async ({ context, userAgent }) => {
 	})
 })
 
-async function profilDe(c: TestAccount<'maquilleuse'>) {
+async function profileOf(c: TestAccount<'maquilleuse'>) {
 	const payload = await testPayload()
 	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: c.id } } })
-	const [fiche] = docs
-	if (!fiche) throw new Error('pas de profil')
-	return { payload, fiche }
+	const [sheet] = docs
+	if (!sheet) throw new Error('pas de profil')
+	return { payload, fiche: sheet }
 }
 
 test.beforeAll(async () => {
 	test.setTimeout(120_000)
-	compte = await createAccount('maquilleuse')
-	autre = await createAccount('maquilleuse')
-	const { payload, fiche } = await profilDe(compte)
-	slug = fiche.slug
+	account = await createAccount('maquilleuse')
+	other = await createAccount('maquilleuse')
+	const { payload, fiche: sheet } = await profileOf(account)
+	slug = sheet.slug
 	await payload.update({
 		collection: 'profiles',
-		id: fiche.id,
+		id: sheet.id,
 		data: {
 			firstName: 'Mesure',
 			lastName: 'Exemple',
 			networks: { instagram: INSTAGRAM },
-			contactDetails: { phone: TELEPHONE, email: EMAIL },
+			contactDetails: { phone: PHONE, email: EMAIL },
 			publicContact: true,
 			consentedAt: new Date().toISOString(),
 		},
 	})
-	const { fiche: sansContact } = await profilDe(autre)
-	slugSansContact = sansContact.slug
+	const { fiche: withoutContact } = await profileOf(other)
+	slugWithoutContact = withoutContact.slug
 })
 
 test.afterAll(async () => {
 	test.setTimeout(120_000)
 	const payload = await testPayload()
-	for (const c of [compte, autre]) {
+	for (const c of [account, other]) {
 		const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: c.id } } })
 		for (const { id } of docs) await payload.delete({ collection: 'profiles', id })
 		await payload.delete({ collection: 'pros', id: c.id }).catch(() => undefined)
@@ -78,14 +78,14 @@ test.afterAll(async () => {
 })
 
 /** Opens a page and waits for the answer about the visitor, so that a click finds it known. */
-async function ouvrir(page: Page, adresse: string) {
-	const reponse = page.waitForResponse(r => new URL(r.url()).pathname === '/api/dashboard/my-pid')
+async function open(page: Page, adresse: string) {
+	const response = page.waitForResponse(r => new URL(r.url()).pathname === '/api/dashboard/my-pid')
 	await page.goto(adresse)
-	await reponse
+	await response
 }
 
 /** The links open nothing in the test: a click is only played, and the page stays. */
-async function cliquer(page: Page, nom: string | RegExp) {
+async function click(page: Page, nom: string | RegExp) {
 	await page.getByRole('link', { name: nom }).click({ modifiers: [], noWaitAfter: true })
 }
 
@@ -93,22 +93,22 @@ test.describe('E52 : un clic de contact est compté une fois, avec le bon canal'
 	test('un visiteur anonyme : un événement par clic, téléphone, email et réseau', async ({ page }) => {
 		// A link to « tel: » or « mailto: » opens nothing here; the instagram link opens a tab.
 		await page.route('https://instagram.com/**', route => route.fulfill({ body: 'ok' }))
-		await ouvrir(page, `/profil/${slug}`)
+		await open(page, `/profil/${slug}`)
 
-		await cliquer(page, TELEPHONE)
+		await click(page, PHONE)
 		await expect.poll(async () => (await umami.envois('contact_click')).length).toBe(1)
-		await cliquer(page, EMAIL)
+		await click(page, EMAIL)
 		await expect.poll(async () => (await umami.envois('contact_click')).length).toBe(2)
-		const [popup] = await Promise.all([page.waitForEvent('popup'), cliquer(page, INSTAGRAM)])
+		const [popup] = await Promise.all([page.waitForEvent('popup'), click(page, INSTAGRAM)])
 		await popup.close()
 		await expect.poll(async () => (await umami.envois('contact_click')).length).toBe(3)
 
-		const recus = (await umami.envois('contact_click')).map(
+		const received = (await umami.envois('contact_click')).map(
 			recu => (recu.corps as { payload: { data: Record<string, unknown> } }).payload.data
 		)
-		const pid = recus[0]?.pid
+		const pid = received[0]?.pid
 		expect(String(pid)).toMatch(/^(v3-)?\d+$/)
-		expect(recus).toEqual([
+		expect(received).toEqual([
 			{ pid, channel: 'phone' },
 			{ pid, channel: 'email' },
 			{ pid, channel: 'instagram' },
@@ -119,10 +119,10 @@ test.describe('E52 : un clic de contact est compté une fois, avec le bon canal'
 	})
 
 	test('U84 : la propriétaire connectée ne compte pas ses propres clics', async ({ context, page }) => {
-		await context.addCookies(compte.session.cookies)
-		await ouvrir(page, `/profil/${slug}`)
-		await cliquer(page, TELEPHONE)
-		await cliquer(page, EMAIL)
+		await context.addCookies(account.session.cookies)
+		await open(page, `/profil/${slug}`)
+		await click(page, PHONE)
+		await click(page, EMAIL)
 		await page.waitForLoadState('networkidle')
 		expect(await umami.envois('contact_click')).toHaveLength(0)
 	})
@@ -131,31 +131,31 @@ test.describe('E52 : un clic de contact est compté une fois, avec le bon canal'
 		context,
 		page,
 	}) => {
-		await context.addCookies(autre.session.cookies)
-		await ouvrir(page, `/profil/${slug}`)
-		await cliquer(page, TELEPHONE)
+		await context.addCookies(other.session.cookies)
+		await open(page, `/profil/${slug}`)
+		await click(page, PHONE)
 		await expect.poll(async () => (await umami.envois('contact_click')).length).toBe(1)
 	})
 
 	test('U84 : un lien de relance (utm_campaign=relance) ne compte pas', async ({ page }) => {
-		await ouvrir(page, `/profil/${slug}?utm_source=email&utm_campaign=relance`)
-		await cliquer(page, TELEPHONE)
+		await open(page, `/profil/${slug}?utm_source=email&utm_campaign=relance`)
+		await click(page, PHONE)
 		await page.waitForLoadState('networkidle')
 		expect(await umami.envois('contact_click')).toHaveLength(0)
 	})
 
 	test('U84 : l’aperçu de sa propre page, depuis son espace, ne compte pas', async ({ context, page }) => {
-		await context.addCookies(compte.session.cookies)
+		await context.addCookies(account.session.cookies)
 		// The preview asks nothing about the visitor: it counts no click at all.
 		await page.goto('/auth/apercu-profil')
-		await expect(page.getByRole('link', { name: TELEPHONE })).toBeVisible()
-		await cliquer(page, TELEPHONE)
+		await expect(page.getByRole('link', { name: PHONE })).toBeVisible()
+		await click(page, PHONE)
 		await page.waitForLoadState('networkidle')
 		expect(await umami.envois('contact_click')).toHaveLength(0)
 	})
 
 	test('un profil sans contact public : ni lien ni événement', async ({ page }) => {
-		await page.goto(`/profil/${slugSansContact}`)
+		await page.goto(`/profil/${slugWithoutContact}`)
 		await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
 		await expect(page.locator('main a[href^="tel:"], main a[href^="mailto:"]')).toHaveCount(0)
 		await expect(page.getByText('Réseaux sociaux & contacts')).toHaveCount(0)

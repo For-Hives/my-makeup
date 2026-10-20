@@ -438,11 +438,11 @@ describe('CLAUDE.md', () => {
 		const architecture = section(guide, /^## Architecture/)
 
 		expect(architecture).toMatch(/toute règle d['’]accès ajoute ses lignes à la matrice d['’]accès/i)
-		expect(architecture).toContain('`tests/integration/payload-acces.test.ts`')
+		expect(architecture).toContain('`tests/integration/payload-access.test.ts`')
 		expect(guides['AGENTS.md']).toMatch(
-			/toute règle d['’]accès ajoute ses lignes à `tests\/integration\/payload-acces\.test\.ts`/i
+			/toute règle d['’]accès ajoute ses lignes à `tests\/integration\/payload-access\.test\.ts`/i
 		)
-		expect(existsSync(path.join(ROOT, 'tests/integration/payload-acces.test.ts'))).toBe(true)
+		expect(existsSync(path.join(ROOT, 'tests/integration/payload-access.test.ts'))).toBe(true)
 		expect(existsSync(path.join(ROOT, 'src/lib/access.ts'))).toBe(true)
 	})
 

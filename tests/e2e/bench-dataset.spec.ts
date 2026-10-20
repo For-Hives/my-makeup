@@ -17,16 +17,16 @@ test.describe('Le jeu du banc dans l’administration', () => {
 	test('l’admin du jeu voit les 12 profils types, les 3 talents et les 3 articles', async ({ context, page }) => {
 		// A load takes about ten seconds, photos included.
 		test.setTimeout(120_000)
-		const { comptes } = await setBenchDataset()
-		const admin = comptes.comptes.find(({ type }) => type === 'admin')
+		const { comptes: accounts } = await setBenchDataset()
+		const admin = accounts.comptes.find(({ type }) => type === 'admin')
 		if (!admin) throw new Error('le jeu du banc ne contient pas son admin')
 		const session = await openSessionWithoutPassword(await testPayload(), admin)
 		await context.addCookies(session.cookies)
 
 		await page.goto('/admin/collections/profiles?limit=100')
 		// The list shows the slug of a profile, no longer the address of its account (ticket 165).
-		for (const { attendu } of DEMO_PROFILES)
-			await expect(page.getByRole('link', { name: attendu.slug, exact: true })).toHaveCount(1)
+		for (const { attendu: expected } of DEMO_PROFILES)
+			await expect(page.getByRole('link', { name: expected.slug, exact: true })).toHaveCount(1)
 		expect(DEMO_PROFILES).toHaveLength(BENCH_CONTENT.profilsTypes)
 
 		await page.goto('/admin/collections/talents?limit=100')
@@ -35,8 +35,8 @@ test.describe('Le jeu du banc dans l’administration', () => {
 		await page.goto('/admin/collections/articles?limit=100')
 		for (const { slug } of DEMO_ARTICLES)
 			await expect(page.locator('tbody tr').filter({ hasText: slug })).toHaveCount(1)
-		const brouillon = DEMO_ARTICLES.find(({ statut }) => statut === 'draft')
-		if (!brouillon) throw new Error('le jeu du banc ne contient pas son brouillon')
-		await expect(page.locator('tbody tr').filter({ hasText: brouillon.slug })).toContainText('Brouillon')
+		const draft = DEMO_ARTICLES.find(({ statut }) => statut === 'draft')
+		if (!draft) throw new Error('le jeu du banc ne contient pas son brouillon')
+		await expect(page.locator('tbody tr').filter({ hasText: draft.slug })).toContainText('Brouillon')
 	})
 })

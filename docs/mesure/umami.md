@@ -69,7 +69,7 @@ Il ne part pas :
 - quand l'adresse porte `utm_campaign=relance` (lien d'un email de relance) ;
 - depuis l'aperçu de sa propre page (`/auth/apercu-profil`), qui ne compte aucun clic (`mesure={false}`).
 
-Un profil sans contact public n'a ni section ni lien, donc aucun événement. Le `pid` d'un profil est l'identifiant de l'ancien site s'il en a un, sinon `v3-<id>` (`src/lib/profile/pid.ts`). Tests : U84 dans `tests/unit/analytics-contact-click.test.tsx`, E52 dans `tests/e2e/mesure-clic-contact.spec.ts`.
+Un profil sans contact public n'a ni section ni lien, donc aucun événement. Le `pid` d'un profil est l'identifiant de l'ancien site s'il en a un, sinon `v3-<id>` (`src/lib/profile/pid.ts`). Tests : U84 dans `tests/unit/analytics-contact-click.test.tsx`, E52 dans `tests/e2e/analytics-contact-click.spec.ts`.
 
 ## La recherche, les appels à l'action et les pages d'erreur (ticket 145)
 
@@ -89,7 +89,7 @@ Un profil sans contact public n'a ni section ni lien, donc aucun événement. Le
 
 Le `pid` d'une carte (`ProfileCard.pid`) est lu à part, par les identifiants que la lecture publique a donnés (`readPids`) : l'ancien identifiant n'est pas un champ que le public lit.
 
-Tests : `tests/unit/analytics-search-errors.test.ts`, et `tests/e2e/mesure-recherche-erreurs.spec.ts` contre le faux Umami.
+Tests : `tests/unit/analytics-search-errors.test.ts`, et `tests/e2e/analytics-search-errors.spec.ts` contre le faux Umami.
 
 ## L'onboarding : les étapes et l'origine déclarée (ticket 148)
 

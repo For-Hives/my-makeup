@@ -11,23 +11,23 @@ import { callRest } from '../support/rest'
 
 afterAll(emptyBase)
 
-const ANCIENS = ['profils', 'demandes', 'auth-evenements', 'comptes-supprimes'] as const
-const NOUVEAUX = ['profiles', 'contact-requests', 'auth-events', 'deleted-accounts'] as const
+const OLD = ['profils', 'demandes', 'auth-evenements', 'comptes-supprimes'] as const
+const NEW = ['profiles', 'contact-requests', 'auth-events', 'deleted-accounts'] as const
 
 describe('Les anciennes adresses REST des collections', () => {
 	test('répondent 404 à une visiteuse comme à un admin, en liste comme sur un identifiant', async () => {
 		const { session } = await createAccount('admin')
-		for (const slug of ANCIENS) {
-			for (const enTetes of [{}, session.enTetes]) {
-				expect((await callRest('GET', `/api/${slug}`, { enTetes })).statut, slug).toBe(404)
-				expect((await callRest('GET', `/api/${slug}/1`, { enTetes })).statut, slug).toBe(404)
+		for (const slug of OLD) {
+			for (const headers of [{}, session.enTetes]) {
+				expect((await callRest('GET', `/api/${slug}`, { enTetes: headers })).statut, slug).toBe(404)
+				expect((await callRest('GET', `/api/${slug}/1`, { enTetes: headers })).statut, slug).toBe(404)
 			}
 		}
 	})
 
 	test('les nouvelles existent : une visiteuse n’y entre pas par la porte des anciennes, un admin lit la liste', async () => {
 		const { session } = await createAccount('admin')
-		for (const slug of NOUVEAUX) {
+		for (const slug of NEW) {
 			expect((await callRest('GET', `/api/${slug}`, { enTetes: session.enTetes })).statut, slug).toBe(200)
 		}
 	})

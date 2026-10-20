@@ -368,10 +368,10 @@ describe('Le moteur de conteneurs : Docker, ou Podman sans démon', () => {
 
 describe('La commande d’intégration', () => {
 	test('lance un seul fichier quand on le lui donne, tout le dossier sinon, jamais avec le .env de travail', () => {
-		expect(testArguments(['tests/integration/banc-base.test.ts'])).toEqual([
+		expect(testArguments(['tests/integration/bench-base.test.ts'])).toEqual([
 			'--no-env-file',
 			'test',
-			'tests/integration/banc-base.test.ts',
+			'tests/integration/bench-base.test.ts',
 		])
 		expect(testArguments([])).toEqual(['--no-env-file', 'test', './tests/integration'])
 	})

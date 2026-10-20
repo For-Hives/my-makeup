@@ -10,9 +10,9 @@ import { violationsSevere } from '../support/axe'
  * The brake of the sign-in counts by client address: each test sends its own made-up address.
  */
 
-let compteur = 0
+let counter = 0
 test.beforeEach(({ context }) =>
-	context.setExtraHTTPHeaders({ 'x-forwarded-for': `192.0.2.${100 + (++compteur % 50)}` })
+	context.setExtraHTTPHeaders({ 'x-forwarded-for': `192.0.2.${100 + (++counter % 50)}` })
 )
 
 test.describe('138 : où en est le profil', { tag: '@mobile' }, () => {
@@ -20,15 +20,15 @@ test.describe('138 : où en est le profil', { tag: '@mobile' }, () => {
 		context,
 		page,
 	}) => {
-		const compte = await createAccount('maquilleuse')
-		await context.addCookies(compte.session.cookies)
+		const account = await createAccount('maquilleuse')
+		await context.addCookies(account.session.cookies)
 		await page.goto('/auth/profil')
 
-		const bloc = page.getByTestId('avancement')
-		await expect(bloc).toHaveAttribute('data-etat', 'vide')
+		const block = page.getByTestId('avancement')
+		await expect(block).toHaveAttribute('data-etat', 'vide')
 		await expect(page.getByTestId('avancement-score')).toHaveText('0 sur 13 (0 %)')
 		await expect(page.getByTestId('avancement-consequence')).toContainText('n’est pas listé dans la recherche')
-		await expect(bloc.locator('li')).toHaveCount(13)
+		await expect(block.locator('li')).toHaveCount(13)
 		expect(await page.locator('h1').count()).toBe(1)
 
 		await page.screenshot({
@@ -38,7 +38,7 @@ test.describe('138 : où en est le profil', { tag: '@mobile' }, () => {
 		})
 
 		// A point leads to its card.
-		await bloc.getByRole('link', { name: 'Ajoute ta photo principale.' }).click()
+		await block.getByRole('link', { name: 'Ajoute ta photo principale.' }).click()
 		await expect(page).toHaveURL(/#carte-photo$/)
 
 		expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
@@ -49,17 +49,17 @@ test.describe('138 : où en est le profil', { tag: '@mobile' }, () => {
 		context,
 		page,
 	}) => {
-		const compte = await createAccount('maquilleuse')
-		await context.addCookies(compte.session.cookies)
+		const account = await createAccount('maquilleuse')
+		await context.addCookies(account.session.cookies)
 		await page.goto('/auth/profil')
 		await expect(page.getByTestId('avancement-score')).toHaveText('0 sur 13 (0 %)')
 		await page.evaluate(() => {
 			;(window as unknown as { __sansRechargement: boolean }).__sansRechargement = true
 		})
 
-		const bouton = page.getByRole('button', { name: 'Modifier ma description' })
-		if (test.info().project.name === 'mobile') await bouton.tap()
-		else await bouton.click()
+		const button = page.getByRole('button', { name: 'Modifier ma description' })
+		if (test.info().project.name === 'mobile') await button.tap()
+		else await button.click()
 		await page.getByLabel('Ta description').fill('a'.repeat(200))
 		await page.getByRole('button', { name: 'Enregistrer' }).click()
 

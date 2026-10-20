@@ -12,7 +12,7 @@ import { pageText, textFingerprint } from '../support/page-text'
 /**
  * The three legal pages (ticket 112): the text of the live site word for word, one h1, one source for
  * the legal identity, and the button that lets a visitor oppose the audience measure. The same pages
- * in a browser, with the fake Umami: tests/e2e/pages-juridiques.spec.ts.
+ * in a browser, with the fake Umami: tests/e2e/legal-pages.spec.ts.
  */
 
 const PAGES = [

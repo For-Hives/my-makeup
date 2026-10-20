@@ -20,112 +20,116 @@ import { deletionsWithoutTrash, type Spy, sourceOf, spyStorage } from '../suppor
  * each test, a removal that is not the second half of a move to the bin fails it.
  */
 
-type Compte = Awaited<ReturnType<typeof createAccount<'maquilleuse'>>>
+type Account = Awaited<ReturnType<typeof createAccount<'maquilleuse'>>>
 
-let espion: Spy
+let spy: Spy
 
 beforeEach(() => {
-	espion = spyStorage()
+	spy = spyStorage()
 })
 
 afterEach(async () => {
-	const fautes = deletionsWithoutTrash(espion.journal)
-	espion.arreter()
+	const faults = deletionsWithoutTrash(spy.journal)
+	spy.arreter()
 	await Promise.all([emptyBase(), emptyStorage()])
-	expect(fautes).toEqual([])
+	expect(faults).toEqual([])
 })
 
 /** A photo sent by this makeup artist through REST, as the site sends it. */
-async function envoyer(compte: Compte): Promise<Media> {
-	const { statut, corps, texte } = await callRest('POST', '/api/media?depth=0', {
+async function send(compte: Account): Promise<Media> {
+	const {
+		statut: status,
+		corps,
+		texte: text,
+	} = await callRest('POST', '/api/media?depth=0', {
 		enTetes: compte.session.enTetes,
 		formulaire: formWithFile(fileForForm()),
 	})
-	if (statut !== 201) throw new Error(`L’envoi de la photo a échoué : ${statut} ${texte}`)
+	if (status !== 201) throw new Error(`L’envoi de la photo a échoué : ${status} ${text}`)
 	return (corps as { doc: Media }).doc
 }
 
 /** The profile of an account, read without access control. */
-async function profilDe(compte: { id: number | string }) {
+async function profileOf(compte: { id: number | string }) {
 	const payload = await testPayload()
-	const [profil] = (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } }))
+	const [profile] = (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } }))
 		.docs
-	if (!profil) throw new Error('La fabrique n’a pas créé de profil.')
-	return profil
+	if (!profile) throw new Error('La fabrique n’a pas créé de profil.')
+	return profile
 }
 
 /** She saves her own profile through REST, as her space will. */
-const enregistrer = async (compte: Compte, corps: Record<string, unknown>) =>
-	callRest('PATCH', `/api/profiles/${(await profilDe(compte)).id}?depth=0`, {
+const save = async (compte: Account, corps: Record<string, unknown>) =>
+	callRest('PATCH', `/api/profiles/${(await profileOf(compte)).id}?depth=0`, {
 		enTetes: compte.session.enTetes,
 		corps,
 	})
 
 /** Saves it, or fails the test. */
-async function enregistrerOuEchouer(compte: Compte, corps: Record<string, unknown>) {
-	const { statut, texte } = await enregistrer(compte, corps)
-	if (statut !== 200) throw new Error(`Enregistrement refusé : ${statut} ${texte}`)
+async function saveOrFail(compte: Account, corps: Record<string, unknown>) {
+	const { statut: status, texte: text } = await save(compte, corps)
+	if (status !== 200) throw new Error(`Enregistrement refusé : ${status} ${text}`)
 }
 
 /** The media as the database holds it, or nothing. */
-async function stocke(id: number): Promise<Media | null> {
+async function stored(id: number): Promise<Media | null> {
 	const payload = await testPayload()
 	return payload.findByID({ collection: 'media', id, depth: 0, disableErrors: true })
 }
 
 /** The key of the object of a photo sent in the v3. */
-const cle = (media: Media) => `media/${media.filename}`
+const key = (media: Media) => `media/${media.filename}`
 
 /** The bytes of an object, or nothing when the storage does not hold it. */
-const octets = async (cleDeLObjet: string) => (await readObject(cleDeLObjet))?.octets
+const bytes = async (cleDeLObjet: string) => (await readObject(cleDeLObjet))?.octets
 
 /** What its public address answers, as a browser would ask it. */
-const statutPublic = async (media: Media) => (await fetch(media.url ?? '')).status
+const publicStatus = async (media: Media) => (await fetch(media.url ?? '')).status
 
 /** The keys of the bin. */
-const corbeille = async () => (await listObjects('deleted/')).map(({ cle: cleDeLObjet }) => cleDeLObjet)
+const trash = async () => (await listObjects('deleted/')).map(({ cle: cleDeLObjet }) => cleDeLObjet)
 
 describe('Photo remplacée : ancien objet en corbeille (I24) ; photo encore référencée : en place (I25)', () => {
 	test('I24 : la photo principale remplacée par la maquilleuse : l’ancienne part à la corbeille, octet pour octet', async () => {
-		const compte = await createAccount('maquilleuse')
-		const [ancienne, nouvelle] = [await envoyer(compte), await envoyer(compte)]
-		await enregistrerOuEchouer(compte, { mainPicture: ancienne.id })
-		const avant = await octets(cle(ancienne))
+		const account = await createAccount('maquilleuse')
+		const [old, fresh] = [await send(account), await send(account)]
+		await saveOrFail(account, { mainPicture: old.id })
+		const before = await bytes(key(old))
 
-		await enregistrerOuEchouer(compte, { mainPicture: nouvelle.id })
+		await saveOrFail(account, { mainPicture: fresh.id })
 
-		expect((await profilDe(compte)).mainPicture).toBe(nouvelle.id)
-		expect(await stocke(ancienne.id)).toBeNull()
-		expect(await octets(cle(ancienne))).toBeUndefined()
-		expect(await octets(`deleted/${cle(ancienne)}`)).toEqual(avant)
-		expect(await stocke(nouvelle.id)).not.toBeNull()
-		expect(await octets(cle(nouvelle))).toBeDefined()
-		expect(await corbeille()).toEqual([`deleted/${cle(ancienne)}`])
+		expect((await profileOf(account)).mainPicture).toBe(fresh.id)
+		expect(await stored(old.id)).toBeNull()
+		expect(await bytes(key(old))).toBeUndefined()
+		expect(await bytes(`deleted/${key(old)}`)).toEqual(before)
+		expect(await stored(fresh.id)).not.toBeNull()
+		expect(await bytes(key(fresh))).toBeDefined()
+		expect(await trash()).toEqual([`deleted/${key(old)}`])
 	})
 
 	test('I25 : une photo retirée de la galerie part à la corbeille ; celle qui reste photo principale reste en place', async () => {
-		const compte = await createAccount('maquilleuse')
-		const [principale, retiree, gardee] = [await envoyer(compte), await envoyer(compte), await envoyer(compte)]
-		await enregistrerOuEchouer(compte, {
-			mainPicture: principale.id,
-			gallery: [principale.id, retiree.id, gardee.id],
+		const account = await createAccount('maquilleuse')
+		const [main, removed, guarded] = [await send(account), await send(account), await send(account)]
+		await saveOrFail(account, {
+			mainPicture: main.id,
+			gallery: [main.id, removed.id, guarded.id],
 		})
 
-		await enregistrerOuEchouer(compte, { gallery: [gardee.id] })
+		await saveOrFail(account, { gallery: [guarded.id] })
 
-		expect(await stocke(retiree.id)).toBeNull()
-		expect(await octets(`deleted/${cle(retiree)}`)).toBeDefined()
-		for (const media of [principale, gardee]) {
-			expect(await stocke(media.id)).not.toBeNull()
-			expect(await octets(cle(media))).toBeDefined()
+		expect(await stored(removed.id)).toBeNull()
+		expect(await bytes(`deleted/${key(removed)}`)).toBeDefined()
+		for (const media of [main, guarded]) {
+			expect(await stored(media.id)).not.toBeNull()
+			expect(await bytes(key(media))).toBeDefined()
 		}
-		expect(await corbeille()).toEqual([`deleted/${cle(retiree)}`])
+		expect(await trash()).toEqual([`deleted/${key(removed)}`])
 	})
 
 	test('une photo qu’une version d’un article garde encore reste en place, même retirée du profil', async () => {
 		const payload = await testPayload()
-		const compte = await createAccount('maquilleuse')
-		const remplacante = await envoyer(compte)
+		const account = await createAccount('maquilleuse')
+		const replacement = await send(account)
 		// A photo of the newsroom, in a version of an article only, then given to the account by an admin.
 		const photo = await payload.create({ collection: 'media', data: {}, file: fileForPayload() })
 		const article = await payload.create({
@@ -133,18 +137,18 @@ describe('Photo remplacée : ancien objet en corbeille (I24) ; photo encore réf
 			data: { title: 'Article fictif', slug: 'article-fictif', gallery: [photo.id], _status: 'published' },
 		})
 		await payload.update({ collection: 'articles', id: article.id, data: { gallery: [] } })
-		await payload.update({ collection: 'media', id: photo.id, data: { owner: Number(compte.id) } })
+		await payload.update({ collection: 'media', id: photo.id, data: { owner: Number(account.id) } })
 		await payload.update({
 			collection: 'profiles',
-			id: (await profilDe(compte)).id,
+			id: (await profileOf(account)).id,
 			data: { mainPicture: photo.id },
 		})
 
-		await enregistrerOuEchouer(compte, { mainPicture: remplacante.id })
+		await saveOrFail(account, { mainPicture: replacement.id })
 
-		expect(await stocke(photo.id)).not.toBeNull()
-		expect(await octets(cle(photo))).toBeDefined()
-		expect(await corbeille()).toEqual([])
+		expect(await stored(photo.id)).not.toBeNull()
+		expect(await bytes(key(photo))).toBeDefined()
+		expect(await trash()).toEqual([])
 	})
 
 	test('un profil supprimé par un admin : ses photos et celles de son compte partent à la corbeille, pas celles d’une autre', async () => {
@@ -153,106 +157,103 @@ describe('Photo remplacée : ancien objet en corbeille (I24) ; photo encore réf
 			createAccount('maquilleuse'),
 			createAccount('admin'),
 		])
-		const [principale, galerie, nonRattachee, deB] = [
-			await envoyer(a),
-			await envoyer(a),
-			await envoyer(a),
-			await envoyer(b),
-		]
-		await enregistrerOuEchouer(a, { mainPicture: principale.id, gallery: [galerie.id] })
-		await enregistrerOuEchouer(b, { mainPicture: deB.id })
+		const [main, gallery, nonRattachee, ofB] = [await send(a), await send(a), await send(a), await send(b)]
+		await saveOrFail(a, { mainPicture: main.id, gallery: [gallery.id] })
+		await saveOrFail(b, { mainPicture: ofB.id })
 
-		const { statut } = await callRest('DELETE', `/api/profiles/${(await profilDe(a)).id}`, {
+		const { statut: status } = await callRest('DELETE', `/api/profiles/${(await profileOf(a)).id}`, {
 			enTetes: admin.session.enTetes,
 		})
 
-		expect(statut).toBe(200)
-		for (const media of [principale, galerie, nonRattachee]) {
-			expect(await stocke(media.id)).toBeNull()
-			expect(await octets(cle(media))).toBeUndefined()
+		expect(status).toBe(200)
+		for (const media of [main, gallery, nonRattachee]) {
+			expect(await stored(media.id)).toBeNull()
+			expect(await bytes(key(media))).toBeUndefined()
 		}
-		expect((await corbeille()).sort()).toEqual(
-			[principale, galerie, nonRattachee].map(media => `deleted/${cle(media)}`).sort()
-		)
-		expect(await stocke(deB.id)).not.toBeNull()
-		expect(await octets(cle(deB))).toBeDefined()
+		expect((await trash()).sort()).toEqual([main, gallery, nonRattachee].map(media => `deleted/${key(media)}`).sort())
+		expect(await stored(ofB.id)).not.toBeNull()
+		expect(await bytes(key(ofB))).toBeDefined()
 	})
 
 	test('un média supprimé par sa propriétaire : son objet part à la corbeille, il n’est pas effacé', async () => {
-		const compte = await createAccount('maquilleuse')
-		const media = await envoyer(compte)
-		const avant = await octets(cle(media))
+		const account = await createAccount('maquilleuse')
+		const media = await send(account)
+		const before = await bytes(key(media))
 
-		const { statut } = await callRest('DELETE', `/api/media/${media.id}`, { enTetes: compte.session.enTetes })
+		const { statut: status } = await callRest('DELETE', `/api/media/${media.id}`, { enTetes: account.session.enTetes })
 
-		expect(statut).toBe(200)
-		expect(await octets(cle(media))).toBeUndefined()
-		expect(await octets(`deleted/${cle(media)}`)).toEqual(avant)
+		expect(status).toBe(200)
+		expect(await bytes(key(media))).toBeUndefined()
+		expect(await bytes(`deleted/${key(media)}`)).toEqual(before)
 	})
 
 	test('le fichier d’un média remplacé : l’ancien objet part à la corbeille, le nouveau est en place', async () => {
-		const compte = await createAccount('maquilleuse')
-		const media = await envoyer(compte)
+		const account = await createAccount('maquilleuse')
+		const media = await send(account)
 
-		const { statut, corps, texte } = await callRest('PATCH', `/api/media/${media.id}?depth=0`, {
-			enTetes: compte.session.enTetes,
+		const {
+			statut: status,
+			corps,
+			texte: text,
+		} = await callRest('PATCH', `/api/media/${media.id}?depth=0`, {
+			enTetes: account.session.enTetes,
 			formulaire: formWithFile(fileForForm()),
 		})
 
-		expect([statut, texte]).toEqual([200, texte])
-		const remplace = (corps as { doc: Media }).doc
-		expect(remplace.filename).not.toBe(media.filename)
-		expect(await octets(cle(remplace))).toBeDefined()
-		expect(await octets(cle(media))).toBeUndefined()
-		expect(await corbeille()).toEqual([`deleted/${cle(media)}`])
+		expect([status, text]).toEqual([200, text])
+		const replaced = (corps as { doc: Media }).doc
+		expect(replaced.filename).not.toBe(media.filename)
+		expect(await bytes(key(replaced))).toBeDefined()
+		expect(await bytes(key(media))).toBeUndefined()
+		expect(await trash()).toEqual([`deleted/${key(media)}`])
 	})
 })
 
 describe('L’adresse publique d’une photo en corbeille ne répond plus 200', () => {
 	test('200 tant qu’elle sert ; plus 200 une fois remplacée', async () => {
-		const compte = await createAccount('maquilleuse')
-		const [ancienne, nouvelle] = [await envoyer(compte), await envoyer(compte)]
-		await enregistrerOuEchouer(compte, { mainPicture: ancienne.id })
-		expect(await statutPublic(ancienne)).toBe(200)
+		const account = await createAccount('maquilleuse')
+		const [old, fresh] = [await send(account), await send(account)]
+		await saveOrFail(account, { mainPicture: old.id })
+		expect(await publicStatus(old)).toBe(200)
 
-		await enregistrerOuEchouer(compte, { mainPicture: nouvelle.id })
+		await saveOrFail(account, { mainPicture: fresh.id })
 
-		expect(await statutPublic(ancienne)).not.toBe(200)
-		expect(await statutPublic(nouvelle)).toBe(200)
+		expect(await publicStatus(old)).not.toBe(200)
+		expect(await publicStatus(fresh)).toBe(200)
 	})
 })
 
 describe('Panne du stockage : document et objet intacts, erreur remontée', () => {
 	test('le stockage tombe pendant le remplacement : 503 en français ; profil, média et objet comme avant', async () => {
-		const compte = await createAccount('maquilleuse')
-		const [ancienne, nouvelle] = [await envoyer(compte), await envoyer(compte)]
-		await enregistrerOuEchouer(compte, { mainPicture: ancienne.id })
-		espion.fairePanne(commande => commande.nom === 'CopyObject')
+		const account = await createAccount('maquilleuse')
+		const [old, fresh] = [await send(account), await send(account)]
+		await saveOrFail(account, { mainPicture: old.id })
+		spy.fairePanne(commande => commande.nom === 'CopyObject')
 
-		const { statut, texte } = await enregistrer(compte, { mainPicture: nouvelle.id })
+		const { statut: status, texte: text } = await save(account, { mainPicture: fresh.id })
 
-		expect(statut).toBe(503)
-		expect(texte).toContain(STORAGE_OUTAGE_MESSAGE)
-		expect((await profilDe(compte)).mainPicture).toBe(ancienne.id)
-		expect(await stocke(ancienne.id)).not.toBeNull()
-		expect(await octets(cle(ancienne))).toBeDefined()
-		expect(await corbeille()).toEqual([])
-		expect(await statutPublic(ancienne)).toBe(200)
+		expect(status).toBe(503)
+		expect(text).toContain(STORAGE_OUTAGE_MESSAGE)
+		expect((await profileOf(account)).mainPicture).toBe(old.id)
+		expect(await stored(old.id)).not.toBeNull()
+		expect(await bytes(key(old))).toBeDefined()
+		expect(await trash()).toEqual([])
+		expect(await publicStatus(old)).toBe(200)
 	})
 
 	test('la suppression d’un média pendant la panne : refusée en 503, le média et son objet restent', async () => {
-		const compte = await createAccount('maquilleuse')
-		const media = await envoyer(compte)
-		espion.fairePanne(commande => commande.nom === 'HeadObject')
+		const account = await createAccount('maquilleuse')
+		const media = await send(account)
+		spy.fairePanne(commande => commande.nom === 'HeadObject')
 
-		const { statut, texte } = await callRest('DELETE', `/api/media/${media.id}`, {
-			enTetes: compte.session.enTetes,
+		const { statut: status, texte: text } = await callRest('DELETE', `/api/media/${media.id}`, {
+			enTetes: account.session.enTetes,
 		})
 
-		expect(statut).toBe(503)
-		expect(texte).toContain(STORAGE_OUTAGE_MESSAGE)
-		expect(await stocke(media.id)).not.toBeNull()
-		expect(await octets(cle(media))).toBeDefined()
+		expect(status).toBe(503)
+		expect(text).toContain(STORAGE_OUTAGE_MESSAGE)
+		expect(await stored(media.id)).not.toBeNull()
+		expect(await bytes(key(media))).toBeDefined()
 	})
 })
 
@@ -261,41 +262,41 @@ describe('Panne du stockage : plusieurs documents à la fois sont refusés, rien
 	// media and profiles are deleted and changed one at a time, where a failure undoes everything.
 
 	test('la propriétaire supprime sa photo principale par un filtre, pendant une panne : refusé ; média, objet et profil intacts', async () => {
-		const compte = await createAccount('maquilleuse')
-		const photo = await envoyer(compte)
-		await enregistrerOuEchouer(compte, { mainPicture: photo.id })
-		espion.fairePanne(commande => commande.nom === 'HeadObject')
-		const avant = espion.journal.length
+		const account = await createAccount('maquilleuse')
+		const photo = await send(account)
+		await saveOrFail(account, { mainPicture: photo.id })
+		spy.fairePanne(commande => commande.nom === 'HeadObject')
+		const before = spy.journal.length
 
-		const { statut } = await callRest('DELETE', `/api/media?where[id][equals]=${photo.id}`, {
-			enTetes: compte.session.enTetes,
+		const { statut: status } = await callRest('DELETE', `/api/media?where[id][equals]=${photo.id}`, {
+			enTetes: account.session.enTetes,
 		})
 
-		expect(statut).toBe(403)
-		expect(espion.journal.slice(avant)).toEqual([])
-		expect(await stocke(photo.id)).not.toBeNull()
-		expect(await octets(cle(photo))).toBeDefined()
-		expect((await profilDe(compte)).mainPicture).toBe(photo.id)
-		expect(await corbeille()).toEqual([])
+		expect(status).toBe(403)
+		expect(spy.journal.slice(before)).toEqual([])
+		expect(await stored(photo.id)).not.toBeNull()
+		expect(await bytes(key(photo))).toBeDefined()
+		expect((await profileOf(account)).mainPicture).toBe(photo.id)
+		expect(await trash()).toEqual([])
 	})
 
 	test('la propriétaire change sa photo principale par un filtre, pendant une panne : refusé ; le profil garde l’ancienne', async () => {
-		const compte = await createAccount('maquilleuse')
-		const [ancienne, nouvelle] = [await envoyer(compte), await envoyer(compte)]
-		await enregistrerOuEchouer(compte, { mainPicture: ancienne.id })
-		const profil = await profilDe(compte)
-		espion.fairePanne(commande => commande.nom === 'CopyObject')
+		const account = await createAccount('maquilleuse')
+		const [old, fresh] = [await send(account), await send(account)]
+		await saveOrFail(account, { mainPicture: old.id })
+		const profile = await profileOf(account)
+		spy.fairePanne(commande => commande.nom === 'CopyObject')
 
-		const { statut } = await callRest('PATCH', `/api/profiles?where[id][equals]=${profil.id}&depth=0`, {
-			enTetes: compte.session.enTetes,
-			corps: { mainPicture: nouvelle.id },
+		const { statut: status } = await callRest('PATCH', `/api/profiles?where[id][equals]=${profile.id}&depth=0`, {
+			enTetes: account.session.enTetes,
+			corps: { mainPicture: fresh.id },
 		})
 
-		expect(statut).toBe(403)
-		expect((await profilDe(compte)).mainPicture).toBe(ancienne.id)
-		expect(await stocke(ancienne.id)).not.toBeNull()
-		expect(await octets(cle(ancienne))).toBeDefined()
-		expect(await corbeille()).toEqual([])
+		expect(status).toBe(403)
+		expect((await profileOf(account)).mainPicture).toBe(old.id)
+		expect(await stored(old.id)).not.toBeNull()
+		expect(await bytes(key(old))).toBeDefined()
+		expect(await trash()).toEqual([])
 	})
 
 	test('un admin supprime deux profils par un filtre, et le stockage tombe à la troisième copie : refusé ; profils, médias et objets intacts', async () => {
@@ -304,152 +305,150 @@ describe('Panne du stockage : plusieurs documents à la fois sont refusés, rien
 			createAccount('maquilleuse'),
 			createAccount('admin'),
 		])
-		const [a1, a2, b1, b2] = [await envoyer(a), await envoyer(a), await envoyer(b), await envoyer(b)]
-		await enregistrerOuEchouer(a, { mainPicture: a1.id, gallery: [a2.id] })
-		await enregistrerOuEchouer(b, { mainPicture: b1.id, gallery: [b2.id] })
-		const [profilA, profilB] = [await profilDe(a), await profilDe(b)]
-		let copiesEnCorbeille = 0
-		espion.fairePanne(
+		const [a1, a2, b1, b2] = [await send(a), await send(a), await send(b), await send(b)]
+		await saveOrFail(a, { mainPicture: a1.id, gallery: [a2.id] })
+		await saveOrFail(b, { mainPicture: b1.id, gallery: [b2.id] })
+		const [profileA, profileB] = [await profileOf(a), await profileOf(b)]
+		let copiesInTrash = 0
+		spy.fairePanne(
 			commande =>
-				commande.nom === 'CopyObject' && String(commande.entree.Key).startsWith('deleted/') && ++copiesEnCorbeille === 3
+				commande.nom === 'CopyObject' && String(commande.entree.Key).startsWith('deleted/') && ++copiesInTrash === 3
 		)
 
-		const { statut } = await callRest('DELETE', `/api/profiles?where[id][in]=${profilA.id},${profilB.id}`, {
+		const { statut: status } = await callRest('DELETE', `/api/profiles?where[id][in]=${profileA.id},${profileB.id}`, {
 			enTetes: admin.session.enTetes,
 		})
 
-		expect(statut).toBe(403)
-		expect([(await profilDe(a)).id, (await profilDe(b)).id]).toEqual([profilA.id, profilB.id])
+		expect(status).toBe(403)
+		expect([(await profileOf(a)).id, (await profileOf(b)).id]).toEqual([profileA.id, profileB.id])
 		for (const media of [a1, a2, b1, b2]) {
-			expect(await stocke(media.id)).not.toBeNull()
-			expect(await octets(cle(media))).toBeDefined()
+			expect(await stored(media.id)).not.toBeNull()
+			expect(await bytes(key(media))).toBeDefined()
 		}
-		expect(await corbeille()).toEqual([])
+		expect(await trash()).toEqual([])
 	})
 
 	test('par l’API locale, même sans contrôle d’accès : chaque suppression et chaque modification par un filtre est refusée en français', async () => {
 		const payload = await testPayload()
-		const compte = await createAccount('maquilleuse')
-		const photo = await envoyer(compte)
-		await enregistrerOuEchouer(compte, { mainPicture: photo.id })
-		const profil = await profilDe(compte)
+		const account = await createAccount('maquilleuse')
+		const photo = await send(account)
+		await saveOrFail(account, { mainPicture: photo.id })
+		const profile = await profileOf(account)
 		const media = { collection: 'media', where: { id: { equals: photo.id } } } as const
-		const profils = { collection: 'profiles', where: { id: { equals: profil.id } } } as const
+		const profiles = { collection: 'profiles', where: { id: { equals: profile.id } } } as const
 
 		for (const operation of [
 			() => payload.delete(media),
 			() => payload.update({ ...media, data: { alt: 'Texte fictif' } }),
-			() => payload.delete(profils),
-			() => payload.update({ ...profils, data: { mainPicture: null } }),
+			() => payload.delete(profiles),
+			() => payload.update({ ...profiles, data: { mainPicture: null } }),
 		])
 			await expect(operation()).rejects.toThrow(ONE_AT_A_TIME_MESSAGE)
 
-		const gardee = await stocke(photo.id)
-		expect(gardee).not.toBeNull()
-		expect(gardee?.alt).not.toBe('Texte fictif')
-		expect((await profilDe(compte)).mainPicture).toBe(photo.id)
-		expect(await octets(cle(photo))).toBeDefined()
-		expect(await corbeille()).toEqual([])
+		const guarded = await stored(photo.id)
+		expect(guarded).not.toBeNull()
+		expect(guarded?.alt).not.toBe('Texte fictif')
+		expect((await profileOf(account)).mainPicture).toBe(photo.id)
+		expect(await bytes(key(photo))).toBeDefined()
+		expect(await trash()).toEqual([])
 	})
 })
 
 describe('Un test échoue si une suppression d’objet est appelée ; la remise en place est essayée une fois', () => {
 	test('l’espion voit les requêtes du greffon de stockage : un envoi est un PutObject de sa clé', async () => {
-		const compte = await createAccount('maquilleuse')
+		const account = await createAccount('maquilleuse')
 
-		const media = await envoyer(compte)
+		const media = await send(account)
 
-		expect(espion.journal.filter(({ nom }) => nom === 'PutObject').map(({ entree }) => entree.Key)).toEqual([
-			cle(media),
-		])
+		expect(spy.journal.filter(({ nom }) => nom === 'PutObject').map(({ entree }) => entree.Key)).toEqual([key(media)])
 	})
 
 	test('la panne au milieu de deux photos : la première, déjà déplacée, est remise en place une fois ; tout est comme avant', async () => {
-		const compte = await createAccount('maquilleuse')
-		const [premiere, seconde] = [await envoyer(compte), await envoyer(compte)]
-		await enregistrerOuEchouer(compte, { gallery: [premiere.id, seconde.id] })
-		let copiesEnCorbeille = 0
-		espion.fairePanne(
+		const account = await createAccount('maquilleuse')
+		const [first, second] = [await send(account), await send(account)]
+		await saveOrFail(account, { gallery: [first.id, second.id] })
+		let copiesInTrash = 0
+		spy.fairePanne(
 			commande =>
-				commande.nom === 'CopyObject' && String(commande.entree.Key).startsWith('deleted/') && ++copiesEnCorbeille === 2
+				commande.nom === 'CopyObject' && String(commande.entree.Key).startsWith('deleted/') && ++copiesInTrash === 2
 		)
 
-		const { statut } = await enregistrer(compte, { gallery: [] })
+		const { statut: status } = await save(account, { gallery: [] })
 
-		expect(statut).toBe(503)
-		expect((await profilDe(compte)).gallery).toEqual([premiere.id, seconde.id])
-		for (const media of [premiere, seconde]) {
-			expect(await stocke(media.id)).not.toBeNull()
-			expect(await octets(cle(media))).toBeDefined()
-			expect(await statutPublic(media)).toBe(200)
+		expect(status).toBe(503)
+		expect((await profileOf(account)).gallery).toEqual([first.id, second.id])
+		for (const media of [first, second]) {
+			expect(await stored(media.id)).not.toBeNull()
+			expect(await bytes(key(media))).toBeDefined()
+			expect(await publicStatus(media)).toBe(200)
 		}
-		const remises = espion.journal.filter(
+		const reset = spy.journal.filter(
 			commande => commande.nom === 'CopyObject' && sourceOf(commande).startsWith('deleted/')
 		)
-		expect(remises).toHaveLength(1)
+		expect(reset).toHaveLength(1)
 	})
 
 	test('une photo de la corbeille se remet en place : son adresse répond de nouveau 200, sa copie reste dans la corbeille', async () => {
-		const compte = await createAccount('maquilleuse')
-		const [ancienne, nouvelle] = [await envoyer(compte), await envoyer(compte)]
-		await enregistrerOuEchouer(compte, { mainPicture: ancienne.id })
-		await enregistrerOuEchouer(compte, { mainPicture: nouvelle.id })
-		const stockage = serverEnv().storage
-		if (!stockage) throw new Error('Le banc n’a pas de stockage : lance les tests par « bun run test:integration ».')
+		const account = await createAccount('maquilleuse')
+		const [old, fresh] = [await send(account), await send(account)]
+		await saveOrFail(account, { mainPicture: old.id })
+		await saveOrFail(account, { mainPicture: fresh.id })
+		const storage = serverEnv().storage
+		if (!storage) throw new Error('Le banc n’a pas de stockage : lance les tests par « bun run test:integration ».')
 
-		const bilan = await restore(createObjectStorage(stockage), [cle(ancienne)])
+		const summary = await restore(createObjectStorage(storage), [key(old)])
 
-		expect(bilan).toEqual({ remises: [cle(ancienne)], nonRemises: [] })
-		expect(await statutPublic(ancienne)).toBe(200)
-		expect(await corbeille()).toEqual([`deleted/${cle(ancienne)}`])
+		expect(summary).toEqual({ remises: [key(old)], nonRemises: [] })
+		expect(await publicStatus(old)).toBe(200)
+		expect(await trash()).toEqual([`deleted/${key(old)}`])
 	})
 })
 
 describe('Avec le contexte d’import, rien n’est déplacé', () => {
 	test('un profil réécrit par l’import : l’ancienne photo et son média restent, aucun objet ne bouge', async () => {
 		const payload = await testPayload()
-		const compte = await createAccount('maquilleuse')
-		const [ancienne, nouvelle] = [await envoyer(compte), await envoyer(compte)]
-		const profil = await profilDe(compte)
-		await payload.update({ collection: 'profiles', id: profil.id, data: { mainPicture: ancienne.id } })
-		const avant = espion.journal.length
+		const account = await createAccount('maquilleuse')
+		const [old, fresh] = [await send(account), await send(account)]
+		const profile = await profileOf(account)
+		await payload.update({ collection: 'profiles', id: profile.id, data: { mainPicture: old.id } })
+		const before = spy.journal.length
 
 		await payload.update({
 			collection: 'profiles',
-			id: profil.id,
-			data: { mainPicture: nouvelle.id },
+			id: profile.id,
+			data: { mainPicture: fresh.id },
 			context: IMPORT_CONTEXT,
 		})
 
-		expect((await profilDe(compte)).mainPicture).toBe(nouvelle.id)
-		expect(await stocke(ancienne.id)).not.toBeNull()
-		expect(await octets(cle(ancienne))).toBeDefined()
-		expect(espion.journal.slice(avant)).toEqual([])
+		expect((await profileOf(account)).mainPicture).toBe(fresh.id)
+		expect(await stored(old.id)).not.toBeNull()
+		expect(await bytes(key(old))).toBeDefined()
+		expect(spy.journal.slice(before)).toEqual([])
 	})
 
 	test('un média supprimé sous le contexte d’import : son objet reste où il est', async () => {
 		const payload = await testPayload()
-		const compte = await createAccount('maquilleuse')
-		const media = await envoyer(compte)
-		const avant = espion.journal.length
+		const account = await createAccount('maquilleuse')
+		const media = await send(account)
+		const before = spy.journal.length
 
 		await payload.delete({ collection: 'media', id: media.id, context: IMPORT_CONTEXT })
 
-		expect(await stocke(media.id)).toBeNull()
-		expect(await octets(cle(media))).toBeDefined()
-		expect(espion.journal.slice(avant)).toEqual([])
+		expect(await stored(media.id)).toBeNull()
+		expect(await bytes(key(media))).toBeDefined()
+		expect(spy.journal.slice(before)).toEqual([])
 	})
 
 	test('l’import peut supprimer par un filtre : le média part, son objet reste où il est', async () => {
 		const payload = await testPayload()
-		const compte = await createAccount('maquilleuse')
-		const media = await envoyer(compte)
-		const avant = espion.journal.length
+		const account = await createAccount('maquilleuse')
+		const media = await send(account)
+		const before = spy.journal.length
 
 		await payload.delete({ collection: 'media', where: { id: { equals: media.id } }, context: IMPORT_CONTEXT })
 
-		expect(await stocke(media.id)).toBeNull()
-		expect(await octets(cle(media))).toBeDefined()
-		expect(espion.journal.slice(avant)).toEqual([])
+		expect(await stored(media.id)).toBeNull()
+		expect(await bytes(key(media))).toBeDefined()
+		expect(spy.journal.slice(before)).toEqual([])
 	})
 })

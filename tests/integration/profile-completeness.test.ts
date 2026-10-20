@@ -27,64 +27,68 @@ afterEach(async () => {
 
 // The tests that write one profile per case, or per condition, take longer than the default 5 s.
 
-type Maquilleuse = TestAccount<'maquilleuse'>
+type Artist = TestAccount<'maquilleuse'>
 
 /** The dates of the three flags. */
 const DATES = ['activeSince', 'publishableSince', 'fullyEmptySince'] as const
 
 /** A makeup artist of the factory, with the identifier of the profile her account received. */
-async function maquilleuseEtSonProfil(): Promise<{ compte: Maquilleuse; profil: number }> {
-	const compte = await createAccount('maquilleuse')
+async function artistAndItsProfile(): Promise<{ compte: Artist; profil: number }> {
+	const account = await createAccount('maquilleuse')
 	const payload = await testPayload()
-	const [profil] = (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } }))
+	const [profile] = (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: account.id } } }))
 		.docs
-	if (!profil) throw new Error('La fabrique n’a pas créé le profil de la maquilleuse.')
-	return { compte, profil: profil.id }
+	if (!profile) throw new Error('La fabrique n’a pas créé le profil de la maquilleuse.')
+	return { compte: account, profil: profile.id }
 }
 
 /** The profile as the database holds it, read without access control. */
-async function stocke(id: number): Promise<Profile> {
+async function stored(id: number): Promise<Profile> {
 	const payload = await testPayload()
 	return payload.findByID({ collection: 'profiles', id, depth: 0 })
 }
 
 /** The state of a stored profile, and its status. */
-async function etat(id: number) {
-	const profil = await stocke(id)
+async function state(id: number) {
+	const profile = await stored(id)
 	return {
-		completeness: profil.completeness,
-		active: profil.active,
-		publishable: profil.publishable,
-		fullyEmpty: profil.fullyEmpty,
-		status: profil.status,
+		completeness: profile.completeness,
+		active: profile.active,
+		publishable: profile.publishable,
+		fullyEmpty: profile.fullyEmpty,
+		status: profile.status,
 	}
 }
 
 /** She changes her own profile through REST, as her space will. */
-async function modifier(compte: Maquilleuse | TestAccount<'admin'>, profil: number, corps: Record<string, unknown>) {
-	const reponse = await callRest('PATCH', `/api/profiles/${profil}?depth=0`, {
+async function modify(compte: Artist | TestAccount<'admin'>, profil: number, corps: Record<string, unknown>) {
+	const response = await callRest('PATCH', `/api/profiles/${profil}?depth=0`, {
 		enTetes: compte.session.enTetes,
 		corps,
 	})
-	if (reponse.statut !== 200) throw new Error(`Enregistrement refusé : ${reponse.statut} ${reponse.texte}`)
-	return reponse
+	if (response.statut !== 200) throw new Error(`Enregistrement refusé : ${response.statut} ${response.texte}`)
+	return response
 }
 
 /** A photo she sends through REST, as the site sends it: the identifier of its media. */
-async function envoyerUnePhoto(compte: Maquilleuse): Promise<number> {
-	const { statut, corps, texte } = await callRest('POST', '/api/media?depth=0', {
+async function sendPhoto(compte: Artist): Promise<number> {
+	const {
+		statut: status,
+		corps,
+		texte: text,
+	} = await callRest('POST', '/api/media?depth=0', {
 		enTetes: compte.session.enTetes,
 		formulaire: formWithFile(fileForForm()),
 	})
-	if (statut !== 201) throw new Error(`L’envoi de la photo a échoué : ${statut} ${texte}`)
+	if (status !== 201) throw new Error(`L’envoi de la photo a échoué : ${status} ${text}`)
 	return (corps as { doc: { id: number } }).doc.id
 }
 
 const DESCRIPTION = 'Maquilleuse fictive, pour les essais du banc. '.repeat(5)
 
 /** Each of the six conditions of a publishable profile, alone, as she fills it in her space. */
-const SIX_CONDITIONS: [string, (compte: Maquilleuse) => Promise<Record<string, unknown>>][] = [
-	['photo principale', async compte => ({ mainPicture: await envoyerUnePhoto(compte) })],
+const SIX_CONDITIONS: [string, (compte: Artist) => Promise<Record<string, unknown>>][] = [
+	['photo principale', async compte => ({ mainPicture: await sendPhoto(compte) })],
 	['ville exploitable', async () => ({ city: ANNECY })],
 	['spécialité', async () => ({ specialty: 'Mariage' })],
 	['offre avec un prix chiffré', async () => ({ serviceOffers: [{ name: 'Prestation fictive', priceFrom: 80 }] })],
@@ -93,13 +97,13 @@ const SIX_CONDITIONS: [string, (compte: Maquilleuse) => Promise<Record<string, u
 ]
 
 /** Everything a publishable profile has. */
-async function toutesLesConditions(compte: Maquilleuse): Promise<Record<string, unknown>> {
-	const parties = await Promise.all(SIX_CONDITIONS.map(([, remplir]) => remplir(compte)))
-	return Object.assign({}, ...parties)
+async function allConditions(compte: Artist): Promise<Record<string, unknown>> {
+	const parts = await Promise.all(SIX_CONDITIONS.map(([, fill]) => fill(compte)))
+	return Object.assign({}, ...parts)
 }
 
 /** What empties each of the six conditions again. */
-const RIEN = {
+const NOTHING = {
 	mainPicture: null,
 	city: null,
 	specialty: null,
@@ -111,53 +115,53 @@ const RIEN = {
 describe('Valeurs stockées égales à la fonction unique sur les cas partagés (I20, U01-U08)', () => {
 	test('chaque cas partagé, écrit comme l’import l’écrira : l’état stocké est celui de la règle, et celui de l’ancien site', async () => {
 		const payload = await testPayload()
-		for (const [i, cas] of SHARED_CASE.entries()) {
-			const { compte, profil } = await maquilleuseEtSonProfil()
+		for (const [i, testCase] of SHARED_CASE.entries()) {
+			const { compte: account, profil: profile } = await artistAndItsProfile()
 			const photo = async () =>
-				(await payload.create({ collection: 'media', data: { owner: Number(compte.id) }, file: fileForPayload() })).id
-			await payload.update({ collection: 'profiles', id: profil, data: await caseDocument(cas.profil, photo) })
+				(await payload.create({ collection: 'media', data: { owner: Number(account.id) }, file: fileForPayload() })).id
+			await payload.update({ collection: 'profiles', id: profile, data: await caseDocument(testCase.profil, photo) })
 
-			const stockee = await etat(profil)
-			const regle = completenessInV3(cas.profil)
-			expect([cas.nom, stockee]).toEqual([
-				cas.nom,
+			const storedOne = await state(profile)
+			const rule = completenessInV3(testCase.profil)
+			expect([testCase.nom, storedOne]).toEqual([
+				testCase.nom,
 				{
-					completeness: regle.score,
-					active: regle.actif,
-					publishable: regle.publiable,
-					fullyEmpty: regle.entierementVide,
-					status: regle.entierementVide ? 'draft' : 'published',
+					completeness: rule.score,
+					active: rule.actif,
+					publishable: rule.publiable,
+					fullyEmpty: rule.entierementVide,
+					status: rule.entierementVide ? 'draft' : 'published',
 				},
 			])
 			// The old site, on the same case: only the « city » criterion of a text that is no commune
 			// leaves the score; the quote form, which nothing turns on, never counts.
-			const ancien = OLD_SITE_RESPONSES[i]
-			if (!ancien) throw new Error(`Pas de réponse de l’ancien site pour « ${cas.nom} ».`)
-			expect([cas.nom, stockee.active, stockee.fullyEmpty]).toEqual([
-				cas.nom,
-				ancien.front.actif,
-				ancien.api.entirelyEmpty,
+			const old = OLD_SITE_RESPONSES[i]
+			if (!old) throw new Error(`Pas de réponse de l’ancien site pour « ${testCase.nom} ».`)
+			expect([testCase.nom, storedOne.active, storedOne.fullyEmpty]).toEqual([
+				testCase.nom,
+				old.front.actif,
+				old.api.entirelyEmpty,
 			])
-			expect([cas.nom, stockee.completeness]).toEqual([
-				cas.nom,
-				ancien.front.score - (excludedCity(cas.profil) ? 1 : 0),
+			expect([testCase.nom, storedOne.completeness]).toEqual([
+				testCase.nom,
+				old.front.score - (excludedCity(testCase.profil) ? 1 : 0),
 			])
-			expect([cas.nom, stockee.publishable]).toEqual([
-				cas.nom,
-				cas.options?.formulaireDevis ? false : ancien.front.publiable,
+			expect([testCase.nom, storedOne.publishable]).toEqual([
+				testCase.nom,
+				testCase.options?.formulaireDevis ? false : old.front.publiable,
 			])
 		}
 	}, 30_000)
 
 	test('par REST, une modification de la maquilleuse recalcule l’état : actif, puis publiable', async () => {
-		const { compte, profil } = await maquilleuseEtSonProfil()
+		const { compte: account, profil: profile } = await artistAndItsProfile()
 
-		await modifier(compte, profil, {
-			mainPicture: await envoyerUnePhoto(compte),
+		await modify(account, profile, {
+			mainPicture: await sendPhoto(account),
 			city: ANNECY,
 			specialty: 'Mariage',
 		})
-		expect(await etat(profil)).toEqual({
+		expect(await state(profile)).toEqual({
 			completeness: 3,
 			active: true,
 			publishable: false,
@@ -165,14 +169,14 @@ describe('Valeurs stockées égales à la fonction unique sur les cas partagés 
 			status: 'published',
 		})
 
-		await modifier(compte, profil, {
+		await modify(account, profile, {
 			description: DESCRIPTION,
 			serviceOffers: [{ name: 'Prestation fictive', priceText: 'Sur devis' }],
 			networks: { website: 'https://example.test' },
 		})
-		expect((await etat(profil)).publishable).toBe(false)
-		await modifier(compte, profil, { serviceOffers: [{ name: 'Prestation fictive', priceFrom: 80 }] })
-		expect(await etat(profil)).toEqual({
+		expect((await state(profile)).publishable).toBe(false)
+		await modify(account, profile, { serviceOffers: [{ name: 'Prestation fictive', priceFrom: 80 }] })
+		expect(await state(profile)).toEqual({
 			completeness: 6,
 			active: true,
 			publishable: true,
@@ -184,111 +188,111 @@ describe('Valeurs stockées égales à la fonction unique sur les cas partagés 
 
 describe('Profile créé vide : brouillon ; première des six conditions remplie : publié', () => {
 	test('le profil créé avec le compte est vide, en brouillon, avec ses trois dates', async () => {
-		const avant = Date.now()
-		const { profil } = await maquilleuseEtSonProfil()
+		const before = Date.now()
+		const { profil: profile } = await artistAndItsProfile()
 
-		const cree = await stocke(profil)
-		expect(await etat(profil)).toEqual({
+		const created = await stored(profile)
+		expect(await state(profile)).toEqual({
 			completeness: 0,
 			active: false,
 			publishable: false,
 			fullyEmpty: true,
 			status: 'draft',
 		})
-		expect(cree.chosenStatus).toBe('automatic')
+		expect(created.chosenStatus).toBe('automatic')
 		for (const date of DATES) {
-			expect([date, Date.parse(String(cree[date])) >= avant - 1000]).toEqual([date, true])
-			expect([date, Date.parse(String(cree[date])) <= Date.now()]).toEqual([date, true])
+			expect([date, Date.parse(String(created[date])) >= before - 1000]).toEqual([date, true])
+			expect([date, Date.parse(String(created[date])) <= Date.now()]).toEqual([date, true])
 		}
-		expect((await callRest('GET', `/api/profiles/${profil}`)).statut).toBe(404)
+		expect((await callRest('GET', `/api/profiles/${profile}`)).statut).toBe(404)
 	})
 
 	test('chacune des six conditions, seule, publie le profil, et le public le lit', async () => {
-		for (const [condition, remplir] of SIX_CONDITIONS) {
-			const { compte, profil } = await maquilleuseEtSonProfil()
+		for (const [condition, fill] of SIX_CONDITIONS) {
+			const { compte: account, profil: profile } = await artistAndItsProfile()
 
-			await modifier(compte, profil, await remplir(compte))
+			await modify(account, profile, await fill(account))
 
-			expect([condition, await etat(profil)]).toMatchObject([condition, { fullyEmpty: false, status: 'published' }])
-			expect([condition, (await callRest('GET', `/api/profiles/${profil}`)).statut]).toEqual([condition, 200])
+			expect([condition, await state(profile)]).toMatchObject([condition, { fullyEmpty: false, status: 'published' }])
+			expect([condition, (await callRest('GET', `/api/profiles/${profile}`)).statut]).toEqual([condition, 200])
 		}
 	}, 30_000)
 
 	test('une commune de plus de six mots est une ville exploitable : seule, elle publie le profil', async () => {
-		const { compte, profil } = await maquilleuseEtSonProfil()
+		const { compte: account, profil: profile } = await artistAndItsProfile()
 
 		// The only name of the official list (14/10/2026) the rule refused as it is.
-		await modifier(compte, profil, { city: { name: 'Pont de Montvert - Sud Mont Lozère', inseeCode: '48116' } })
+		await modify(account, profile, { city: { name: 'Pont de Montvert - Sud Mont Lozère', inseeCode: '48116' } })
 
-		expect(await etat(profil)).toEqual({
+		expect(await state(profile)).toEqual({
 			completeness: 1,
 			active: false,
 			publishable: false,
 			fullyEmpty: false,
 			status: 'published',
 		})
-		await modifier(compte, profil, { mainPicture: await envoyerUnePhoto(compte), specialty: 'Mariage' })
-		expect(await etat(profil)).toMatchObject({ active: true, status: 'published' })
+		await modify(account, profile, { mainPicture: await sendPhoto(account), specialty: 'Mariage' })
+		expect(await state(profile)).toMatchObject({ active: true, status: 'published' })
 	})
 
 	test('vidé de tout ce qui comptait, il repasse en brouillon, et le public ne le lit plus', async () => {
-		const { compte, profil } = await maquilleuseEtSonProfil()
-		await modifier(compte, profil, await toutesLesConditions(compte))
-		expect(await etat(profil)).toMatchObject({ publishable: true, status: 'published' })
+		const { compte: account, profil: profile } = await artistAndItsProfile()
+		await modify(account, profile, await allConditions(account))
+		expect(await state(profile)).toMatchObject({ publishable: true, status: 'published' })
 
-		await modifier(compte, profil, RIEN)
+		await modify(account, profile, NOTHING)
 
-		expect(await etat(profil)).toMatchObject({ fullyEmpty: true, publishable: false, status: 'draft' })
-		expect((await callRest('GET', `/api/profiles/${profil}`)).statut).toBe(404)
+		expect(await state(profile)).toMatchObject({ fullyEmpty: true, publishable: false, status: 'draft' })
+		expect((await callRest('GET', `/api/profiles/${profile}`)).statut).toBe(404)
 	})
 
 	test('un téléphone qu’elle ne montre pas n’est pas un canal de contact ; montré, il l’est', async () => {
-		const { compte, profil } = await maquilleuseEtSonProfil()
-		const coordonnees = { phone: '06 39 98 55 55', email: 'contact-fictif@example.test' }
+		const { compte: account, profil: profile } = await artistAndItsProfile()
+		const contactDetails = { phone: '06 39 98 55 55', email: 'contact-fictif@example.test' }
 
-		await modifier(compte, profil, { contactDetails: coordonnees, publicContact: false })
-		expect(await etat(profil)).toMatchObject({ fullyEmpty: true, status: 'draft' })
+		await modify(account, profile, { contactDetails: contactDetails, publicContact: false })
+		expect(await state(profile)).toMatchObject({ fullyEmpty: true, status: 'draft' })
 
-		await modifier(compte, profil, { publicContact: true })
-		expect(await etat(profil)).toMatchObject({ fullyEmpty: false, status: 'published' })
+		await modify(account, profile, { publicContact: true })
+		expect(await state(profile)).toMatchObject({ fullyEmpty: false, status: 'published' })
 	})
 
 	test('une date ne bouge que quand sa case change de valeur', async () => {
-		const { compte, profil } = await maquilleuseEtSonProfil()
-		const cree = await stocke(profil)
+		const { compte: account, profil: profile } = await artistAndItsProfile()
+		const created = await stored(profile)
 
-		await modifier(compte, profil, { firstName: 'Prénom' })
-		const renomme = await stocke(profil)
-		for (const date of DATES) expect([date, renomme[date]]).toEqual([date, cree[date]])
+		await modify(account, profile, { firstName: 'Prénom' })
+		const renamed = await stored(profile)
+		for (const date of DATES) expect([date, renamed[date]]).toEqual([date, created[date]])
 
-		await modifier(compte, profil, { specialty: 'Mariage' })
-		const rempli = await stocke(profil)
-		expect(rempli.activeSince).toBe(cree.activeSince)
-		expect(rempli.publishableSince).toBe(cree.publishableSince)
-		expect(Date.parse(String(rempli.fullyEmptySince))).toBeGreaterThan(Date.parse(String(cree.fullyEmptySince)))
+		await modify(account, profile, { specialty: 'Mariage' })
+		const filled = await stored(profile)
+		expect(filled.activeSince).toBe(created.activeSince)
+		expect(filled.publishableSince).toBe(created.publishableSince)
+		expect(Date.parse(String(filled.fullyEmptySince))).toBeGreaterThan(Date.parse(String(created.fullyEmptySince)))
 	})
 })
 
 describe('Un profil qui n’a qu’un nom reste entièrement vide', () => {
 	test('prénom, nom et nom d’artiste : 2 sur 13, entièrement vide, en brouillon', async () => {
-		const { compte, profil } = await maquilleuseEtSonProfil()
+		const { compte: account, profil: profile } = await artistAndItsProfile()
 
-		await modifier(compte, profil, { firstName: 'Prénom', lastName: 'Fictif', artistName: 'Studio Fictif' })
+		await modify(account, profile, { firstName: 'Prénom', lastName: 'Fictif', artistName: 'Studio Fictif' })
 
-		expect(await etat(profil)).toEqual({
+		expect(await state(profile)).toEqual({
 			completeness: 2,
 			active: false,
 			publishable: false,
 			fullyEmpty: true,
 			status: 'draft',
 		})
-		expect((await callRest('GET', `/api/profiles/${profil}`)).statut).toBe(404)
+		expect((await callRest('GET', `/api/profiles/${profile}`)).statut).toBe(404)
 	})
 
 	test('ni les listes, ni la galerie, ni le rayon ne sont une des six conditions', async () => {
-		const { compte, profil } = await maquilleuseEtSonProfil()
+		const { compte: account, profil: profile } = await artistAndItsProfile()
 
-		await modifier(compte, profil, {
+		await modify(account, profile, {
 			firstName: 'Prénom',
 			lastName: 'Fictif',
 			skills: [{ name: 'Compétence fictive' }],
@@ -296,115 +300,115 @@ describe('Un profil qui n’a qu’un nom reste entièrement vide', () => {
 			courses: [{ diploma: 'Diplôme fictif' }],
 			experiences: [{ jobTitle: 'Poste fictif' }],
 			serviceOffers: [{ name: 'Prestation fictive', priceText: 'Sur devis' }],
-			gallery: [await envoyerUnePhoto(compte)],
+			gallery: [await sendPhoto(account)],
 			rayonKm: 30,
 			homeService: true,
 		})
 
-		expect(await etat(profil)).toMatchObject({ fullyEmpty: true, status: 'draft' })
+		expect(await state(profile)).toMatchObject({ fullyEmpty: true, status: 'draft' })
 	})
 })
 
 describe('Un profil masqué reste masqué quelle que soit la sauvegarde', () => {
 	test('rempli, vidé, rempli par la maquilleuse, enregistré par l’admin ou par le serveur : toujours masqué', async () => {
-		const { compte, profil } = await maquilleuseEtSonProfil()
+		const { compte: account, profil: profile } = await artistAndItsProfile()
 		const admin = await createAccount('admin')
-		await modifier(compte, profil, await toutesLesConditions(compte))
-		await modifier(admin, profil, { chosenStatus: 'hidden', reason: 'Masqué pour le test' })
-		expect(await etat(profil)).toMatchObject({ publishable: true, status: 'hidden' })
+		await modify(account, profile, await allConditions(account))
+		await modify(admin, profile, { chosenStatus: 'hidden', reason: 'Masqué pour le test' })
+		expect(await state(profile)).toMatchObject({ publishable: true, status: 'hidden' })
 
-		await modifier(compte, profil, RIEN)
-		expect(await etat(profil)).toMatchObject({ fullyEmpty: true, status: 'hidden' })
-		await modifier(compte, profil, await toutesLesConditions(compte))
-		expect(await etat(profil)).toMatchObject({ publishable: true, status: 'hidden' })
-		await modifier(admin, profil, { internalNote: 'Relue' })
-		expect((await etat(profil)).status).toBe('hidden')
+		await modify(account, profile, NOTHING)
+		expect(await state(profile)).toMatchObject({ fullyEmpty: true, status: 'hidden' })
+		await modify(account, profile, await allConditions(account))
+		expect(await state(profile)).toMatchObject({ publishable: true, status: 'hidden' })
+		await modify(admin, profile, { internalNote: 'Relue' })
+		expect((await state(profile)).status).toBe('hidden')
 		// An admin's form that sends another status, with the stored choice: the status is not hers to write.
-		await modifier(admin, profil, { status: 'published', chosenStatus: 'hidden', internalNote: 'Relue encore' })
-		expect((await etat(profil)).status).toBe('hidden')
+		await modify(admin, profile, { status: 'published', chosenStatus: 'hidden', internalNote: 'Relue encore' })
+		expect((await state(profile)).status).toBe('hidden')
 		const payload = await testPayload()
-		await payload.update({ collection: 'profiles', id: profil, data: { firstName: 'Par le serveur' } })
-		expect((await etat(profil)).status).toBe('hidden')
-		expect((await callRest('GET', `/api/profiles/${profil}`)).statut).toBe(404)
+		await payload.update({ collection: 'profiles', id: profile, data: { firstName: 'Par le serveur' } })
+		expect((await state(profile)).status).toBe('hidden')
+		expect((await callRest('GET', `/api/profiles/${profile}`)).statut).toBe(404)
 
 		// Only an admin shows it again, by handing it back to the rule.
-		await modifier(admin, profil, { chosenStatus: 'automatic' })
-		expect(await etat(profil)).toMatchObject({ publishable: true, status: 'published' })
+		await modify(admin, profile, { chosenStatus: 'automatic' })
+		expect(await state(profile)).toMatchObject({ publishable: true, status: 'published' })
 	}, 30_000)
 })
 
 describe('Un statut posé par l’admin n’est jamais écrasé', () => {
 	test('un brouillon posé sur un profil rempli, une publication posée sur un profil vide : gardés', async () => {
 		const admin = await createAccount('admin')
-		const rempli = await maquilleuseEtSonProfil()
-		await modifier(rempli.compte, rempli.profil, { specialty: 'Mariage' })
-		const vide = await maquilleuseEtSonProfil()
+		const filled = await artistAndItsProfile()
+		await modify(filled.compte, filled.profil, { specialty: 'Mariage' })
+		const empty = await artistAndItsProfile()
 
-		await modifier(admin, rempli.profil, { chosenStatus: 'draft' })
-		await modifier(admin, vide.profil, { chosenStatus: 'published' })
-		await modifier(rempli.compte, rempli.profil, { description: DESCRIPTION })
-		await modifier(vide.compte, vide.profil, { firstName: 'Prénom' })
+		await modify(admin, filled.profil, { chosenStatus: 'draft' })
+		await modify(admin, empty.profil, { chosenStatus: 'published' })
+		await modify(filled.compte, filled.profil, { description: DESCRIPTION })
+		await modify(empty.compte, empty.profil, { firstName: 'Prénom' })
 
-		expect(await etat(rempli.profil)).toMatchObject({ fullyEmpty: false, status: 'draft' })
-		expect(await etat(vide.profil)).toMatchObject({ fullyEmpty: true, status: 'published' })
-		expect((await stocke(rempli.profil)).chosenStatus).toBe('draft')
-		expect((await stocke(vide.profil)).chosenStatus).toBe('published')
+		expect(await state(filled.profil)).toMatchObject({ fullyEmpty: false, status: 'draft' })
+		expect(await state(empty.profil)).toMatchObject({ fullyEmpty: true, status: 'published' })
+		expect((await stored(filled.profil)).chosenStatus).toBe('draft')
+		expect((await stored(empty.profil)).chosenStatus).toBe('published')
 	})
 
 	test('un formulaire d’admin chargé avant l’enregistrement de la maquilleuse ne fixe aucun statut', async () => {
 		const admin = await createAccount('admin')
-		const { compte, profil } = await maquilleuseEtSonProfil()
+		const { compte: account, profil: profile } = await artistAndItsProfile()
 		// What the admin's form holds, loaded while the profile was still an empty draft.
-		const charge = await stocke(profil)
-		await modifier(compte, profil, { specialty: 'Mariage' })
-		expect(await etat(profil)).toMatchObject({ status: 'published' })
+		const charge = await stored(profile)
+		await modify(account, profile, { specialty: 'Mariage' })
+		expect(await state(profile)).toMatchObject({ status: 'published' })
 
 		// She saves her note, with the status and the choice her form loaded.
-		await modifier(admin, profil, { statut: charge.status, chosenStatus: charge.chosenStatus, internalNote: 'Relue' })
+		await modify(admin, profile, { statut: charge.status, chosenStatus: charge.chosenStatus, internalNote: 'Relue' })
 
-		expect(await etat(profil)).toMatchObject({ fullyEmpty: false, status: 'published' })
-		expect((await stocke(profil)).chosenStatus).toBe('automatic')
-		await modifier(compte, profil, { specialty: null })
-		expect(await etat(profil)).toMatchObject({ fullyEmpty: true, status: 'draft' })
+		expect(await state(profile)).toMatchObject({ fullyEmpty: false, status: 'published' })
+		expect((await stored(profile)).chosenStatus).toBe('automatic')
+		await modify(account, profile, { specialty: null })
+		expect(await state(profile)).toMatchObject({ fullyEmpty: true, status: 'draft' })
 	})
 
 	test('le formulaire entier renvoyé tel qu’il a été chargé : la règle décide, rien n’est fixé', async () => {
 		const admin = await createAccount('admin')
-		const { compte, profil } = await maquilleuseEtSonProfil()
+		const { compte: account, profil: profile } = await artistAndItsProfile()
 		// The admin panel sends every field of the form it loaded.
-		const { corps } = await callRest('GET', `/api/profiles/${profil}?depth=0`, { enTetes: admin.session.enTetes })
-		const { id: _id, createdAt: _cree, updatedAt: _modifie, ...formulaire } = corps as Record<string, unknown>
-		await modifier(compte, profil, { specialty: 'Mariage' })
+		const { corps } = await callRest('GET', `/api/profiles/${profile}?depth=0`, { enTetes: admin.session.enTetes })
+		const { id: _id, createdAt: _created, updatedAt: _modified, ...form } = corps as Record<string, unknown>
+		await modify(account, profile, { specialty: 'Mariage' })
 
-		await modifier(admin, profil, { ...formulaire, internalNote: 'Relue' })
+		await modify(admin, profile, { ...form, internalNote: 'Relue' })
 
 		// Her speciality is lost with the old form, so the profile is empty again: a draft by the rule.
-		expect(await etat(profil)).toMatchObject({ fullyEmpty: true, status: 'draft' })
-		expect((await stocke(profil)).chosenStatus).toBe('automatic')
-		await modifier(compte, profil, { specialty: 'Mariage' })
-		expect(await etat(profil)).toMatchObject({ fullyEmpty: false, status: 'published' })
+		expect(await state(profile)).toMatchObject({ fullyEmpty: true, status: 'draft' })
+		expect((await stored(profile)).chosenStatus).toBe('automatic')
+		await modify(account, profile, { specialty: 'Mariage' })
+		expect(await state(profile)).toMatchObject({ fullyEmpty: false, status: 'published' })
 	})
 
 	test('l’admin choisit « automatique » : le statut suit de nouveau la règle, dès cet enregistrement', async () => {
 		const admin = await createAccount('admin')
-		const { compte, profil } = await maquilleuseEtSonProfil()
-		await modifier(compte, profil, { specialty: 'Mariage' })
-		await modifier(admin, profil, { chosenStatus: 'draft' })
-		expect(await etat(profil)).toMatchObject({ status: 'draft' })
+		const { compte: account, profil: profile } = await artistAndItsProfile()
+		await modify(account, profile, { specialty: 'Mariage' })
+		await modify(admin, profile, { chosenStatus: 'draft' })
+		expect(await state(profile)).toMatchObject({ status: 'draft' })
 
-		await modifier(admin, profil, { chosenStatus: 'automatic' })
+		await modify(admin, profile, { chosenStatus: 'automatic' })
 
-		expect(await etat(profil)).toMatchObject({ status: 'published' })
-		expect((await stocke(profil)).chosenStatus).toBe('automatic')
+		expect(await state(profile)).toMatchObject({ status: 'published' })
+		expect((await stored(profile)).chosenStatus).toBe('automatic')
 	})
 })
 
 describe('Valeurs envoyées par la maquilleuse ignorées et recalculées', () => {
 	test('par REST : l’état, ses dates, le statut et son choix envoyés sont ignorés ; le serveur les recalcule', async () => {
-		const { compte, profil } = await maquilleuseEtSonProfil()
-		const avant = await stocke(profil)
+		const { compte: account, profil: profile } = await artistAndItsProfile()
+		const before = await stored(profile)
 
-		const { corps } = await modifier(compte, profil, {
+		const { corps } = await modify(account, profile, {
 			firstName: 'Prénom',
 			completeness: 13,
 			active: true,
@@ -417,38 +421,38 @@ describe('Valeurs envoyées par la maquilleuse ignorées et recalculées', () =>
 			chosenStatus: 'published',
 		})
 
-		const attendu = {
+		const expected = {
 			completeness: 0,
 			active: false,
 			publishable: false,
 			fullyEmpty: true,
 			status: 'draft',
 		} as const
-		expect(await etat(profil)).toEqual(attendu)
-		expect((corps as { doc: unknown }).doc).toMatchObject(attendu)
-		const apres = await stocke(profil)
-		expect(apres.chosenStatus).toBe('automatic')
-		for (const date of DATES) expect([date, apres[date]]).toEqual([date, avant[date]])
+		expect(await state(profile)).toEqual(expected)
+		expect((corps as { doc: unknown }).doc).toMatchObject(expected)
+		const after = await stored(profile)
+		expect(after.chosenStatus).toBe('automatic')
+		for (const date of DATES) expect([date, after[date]]).toEqual([date, before[date]])
 	})
 
 	test('par l’API locale avec les règles actives, de même ; et le serveur lui-même ne les écrit pas', async () => {
-		const { compte, profil } = await maquilleuseEtSonProfil()
+		const { compte: account, profil: profile } = await artistAndItsProfile()
 		const payload = await testPayload()
-		const utilisateur = {
-			...(await payload.findByID({ collection: 'pros', id: compte.id, depth: 0 })),
+		const user = {
+			...(await payload.findByID({ collection: 'pros', id: account.id, depth: 0 })),
 			collection: 'pros',
 		}
-		const envoye = { completeness: 13, active: true, publishable: true, fullyEmpty: false }
+		const sent = { completeness: 13, active: true, publishable: true, fullyEmpty: false }
 
 		await payload.update({
 			collection: 'profiles',
-			id: profil,
-			data: envoye,
+			id: profile,
+			data: sent,
 			overrideAccess: false,
-			user: utilisateur as never,
+			user: user as never,
 		})
-		expect(await etat(profil)).toMatchObject({ completeness: 0, active: false, publishable: false, fullyEmpty: true })
-		await payload.update({ collection: 'profiles', id: profil, data: envoye })
-		expect(await etat(profil)).toMatchObject({ completeness: 0, active: false, publishable: false, fullyEmpty: true })
+		expect(await state(profile)).toMatchObject({ completeness: 0, active: false, publishable: false, fullyEmpty: true })
+		await payload.update({ collection: 'profiles', id: profile, data: sent })
+		expect(await state(profile)).toMatchObject({ completeness: 0, active: false, publishable: false, fullyEmpty: true })
 	})
 })

@@ -10,7 +10,7 @@ import { callRest } from '../support/rest'
 
 /**
  * The journal of the authentication events (ticket 077). Who may read it is in the access matrix
- * (tests/integration/payload-acces.test.ts); here, what is written, never what must not be, and the
+ * (tests/integration/payload-access.test.ts); here, what is written, never what must not be, and the
  * purge.
  */
 
@@ -18,69 +18,69 @@ afterAll(async () => {
 	await emptyBase()
 })
 
-const MOT_DE_PASSE = 'aaaaaaaa'
-const frein = createRateLimit({ nom: 'essai-journal-int', limite: 1000, fenetreMs: 60_000 })
+const PASSWORD = 'aaaaaaaa'
+const rateLimit = createRateLimit({ nom: 'essai-journal-int', limite: 1000, fenetreMs: 60_000 })
 let n = 0
-const adresse = () => new Headers({ 'x-forwarded-for': `192.0.2.${100 + (n++ % 100)}` })
+const url = () => new Headers({ 'x-forwarded-for': `192.0.2.${100 + (n++ % 100)}` })
 
-async function lignes() {
+async function lines() {
 	const payload = await testPayload()
 	return (await payload.find({ collection: 'auth-events', depth: 0, limit: 1000, pagination: false, sort: 'id' })).docs
 }
 
-async function ouvrirPar(payloadHeaders: Headers, email: unknown, password: unknown) {
+async function openBy(payloadHeaders: Headers, email: unknown, password: unknown) {
 	const payload = await testPayload()
 	return signInWithPassword({
 		ouvrir: data => openWithPassword(payload, 'pros', data),
 		headers: payloadHeaders,
 		email,
 		password,
-		frein,
+		frein: rateLimit,
 		journal: authLog(payload),
 	})
 }
 
 describe('une ligne par connexion, réussie ou refusée', () => {
 	test('par le formulaire : une ligne « ok », une ligne « identifiants-invalides », et la date de dernière connexion', async () => {
-		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const account = await createAccount('maquilleuse', { motDePasse: () => PASSWORD })
 		const payload = await testPayload()
-		const avant = (await lignes()).length
+		const before = (await lines()).length
 
-		const reussie = await ouvrirPar(adresse(), compte.email, MOT_DE_PASSE)
-		const refusee = await ouvrirPar(adresse(), compte.email, 'mauvais')
+		const succeeded = await openBy(url(), account.email, PASSWORD)
+		const refused = await openBy(url(), account.email, 'mauvais')
 
-		expect(reussie.ok).toBe(true)
-		expect(refusee).toEqual({ ok: false, code: 'identifiants-invalides' })
-		const nouvelles = (await lignes()).slice(avant)
-		expect(nouvelles.map(({ type, code }) => [type, code])).toEqual([
+		expect(succeeded.ok).toBe(true)
+		expect(refused).toEqual({ ok: false, code: 'identifiants-invalides' })
+		const fresh = (await lines()).slice(before)
+		expect(fresh.map(({ type, code }) => [type, code])).toEqual([
 			['sign-in', 'ok'],
 			['sign-in', 'identifiants-invalides'],
 		])
-		for (const ligne of nouvelles) {
-			expect(typeof ligne.durationMs).toBe('number')
-			expect(Number.isNaN(Date.parse(ligne.date))).toBe(false)
-			expect(EVENT_CODES).toContain(ligne.code)
-			expect(EVENT_TYPES).toContain(ligne.type)
+		for (const line of fresh) {
+			expect(typeof line.durationMs).toBe('number')
+			expect(Number.isNaN(Date.parse(line.date))).toBe(false)
+			expect(EVENT_CODES).toContain(line.code)
+			expect(EVENT_TYPES).toContain(line.type)
 		}
-		const lecture = await payload.findByID({ collection: 'pros', id: compte.id, depth: 0 })
-		expect(Date.now() - Date.parse(lecture.lastSignInAt ?? '')).toBeLessThan(60_000)
+		const read = await payload.findByID({ collection: 'pros', id: account.id, depth: 0 })
+		expect(Date.now() - Date.parse(read.lastSignInAt ?? '')).toBeLessThan(60_000)
 	})
 
 	test('par l’API REST : une ligne « ok », une « identifiants-invalides », une « trop-de-tentatives » quand le frein ferme', async () => {
-		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
-		const avant = (await lignes()).length
+		const account = await createAccount('maquilleuse', { motDePasse: () => PASSWORD })
+		const before = (await lines()).length
 		const rest = (password: string, ip: string) =>
 			callRest('POST', '/api/pros/login', {
-				corps: { email: compte.email, password },
+				corps: { email: account.email, password },
 				enTetes: { 'x-forwarded-for': ip },
 			})
 
-		expect((await rest(MOT_DE_PASSE, '198.51.100.201')).statut).toBe(200)
+		expect((await rest(PASSWORD, '198.51.100.201')).statut).toBe(200)
 		expect((await rest('mauvais', '198.51.100.201')).statut).toBe(401)
 		for (let i = 0; i < 10; i++) await rest('mauvais', '198.51.100.202')
 		expect((await rest('mauvais', '198.51.100.202')).statut).toBe(429)
 
-		const codes = (await lignes()).slice(avant).map(({ code }) => code)
+		const codes = (await lines()).slice(before).map(({ code }) => code)
 		expect(codes.filter(code => code === 'ok')).toHaveLength(1)
 		expect(codes.filter(code => code === 'identifiants-invalides')).toHaveLength(11)
 		expect(codes.filter(code => code === 'trop-de-tentatives')).toHaveLength(1)
@@ -88,25 +88,25 @@ describe('une ligne par connexion, réussie ou refusée', () => {
 	})
 
 	test('la date de dernière connexion est mise à jour par l’API REST aussi', async () => {
-		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const account = await createAccount('maquilleuse', { motDePasse: () => PASSWORD })
 		const payload = await testPayload()
-		await payload.update({ collection: 'pros', id: compte.id, data: { lastSignInAt: '2020-01-01T00:00:00.000Z' } })
+		await payload.update({ collection: 'pros', id: account.id, data: { lastSignInAt: '2020-01-01T00:00:00.000Z' } })
 
-		const reponse = await callRest('POST', '/api/pros/login', {
-			corps: { email: compte.email, password: MOT_DE_PASSE },
+		const response = await callRest('POST', '/api/pros/login', {
+			corps: { email: account.email, password: PASSWORD },
 			enTetes: { 'x-forwarded-for': '198.51.100.203' },
 		})
 
-		expect(reponse.statut).toBe(200)
-		const lecture = await payload.findByID({ collection: 'pros', id: compte.id, depth: 0 })
-		expect(Date.now() - Date.parse(lecture.lastSignInAt ?? '')).toBeLessThan(60_000)
+		expect(response.statut).toBe(200)
+		const read = await payload.findByID({ collection: 'pros', id: account.id, depth: 0 })
+		expect(Date.now() - Date.parse(read.lastSignInAt ?? '')).toBeLessThan(60_000)
 	})
 })
 
 describe('aucune donnée personnelle dans le journal, même glissée dans la saisie', () => {
 	test('un email, un nom, un jeton, une IP et un mot de passe saisis ne laissent rien dans les lignes', async () => {
-		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
-		const glisses = [
+		const account = await createAccount('maquilleuse', { motDePasse: () => PASSWORD })
+		const slidMany = [
 			'intruse.test@example.test',
 			'Léa Intruse',
 			'jeton-eyJhbGciOiJIUzI1NiJ9-secret',
@@ -114,83 +114,83 @@ describe('aucune donnée personnelle dans le journal, même glissée dans la sai
 			'2001:db8:abcd:12::77',
 			'mot-de-passe-glisse-12345',
 		]
-		const avant = (await lignes()).length
+		const before = (await lines()).length
 
 		// Through the form: the typed values, the address header, the account's own address.
-		for (const glisse of glisses) {
-			await ouvrirPar(new Headers({ 'x-forwarded-for': glisse.includes('.') ? glisse : '192.0.2.9' }), glisse, glisse)
-			await ouvrirPar(adresse(), compte.email, glisse)
+		for (const slid of slidMany) {
+			await openBy(new Headers({ 'x-forwarded-for': slid.includes('.') ? slid : '192.0.2.9' }), slid, slid)
+			await openBy(url(), account.email, slid)
 		}
-		await ouvrirPar(adresse(), compte.email, MOT_DE_PASSE)
+		await openBy(url(), account.email, PASSWORD)
 		// Through REST: the same values in the body and in the headers.
-		for (const glisse of glisses)
+		for (const slid of slidMany)
 			await callRest('POST', '/api/pros/login', {
-				corps: { email: glisse, password: glisse },
-				enTetes: { 'x-forwarded-for': '198.51.100.204', 'user-agent': glisse, referer: `https://x.test/${glisse}` },
+				corps: { email: slid, password: slid },
+				enTetes: { 'x-forwarded-for': '198.51.100.204', 'user-agent': slid, referer: `https://x.test/${slid}` },
 			})
 		// Written directly, with a value out of the list in each field.
-		await log((await testPayload()) as never, { type: 'sign-in', code: glisses[0] as never, durationMs: 3 } as never)
+		await log((await testPayload()) as never, { type: 'sign-in', code: slidMany[0] as never, durationMs: 3 } as never)
 
-		const nouvelles = (await lignes()).slice(avant)
-		expect(nouvelles.length).toBeGreaterThanOrEqual(20)
-		const texte = JSON.stringify(nouvelles)
-		for (const glisse of [...glisses, compte.email, String(compte.id).padStart(8, '#')])
-			expect(texte).not.toContain(glisse)
-		for (const ligne of nouvelles)
-			expect(Object.keys(ligne).sort()).toEqual(
-				['code', 'date', 'durationMs', 'id', 'method', 'type'].filter(cle => cle in ligne)
+		const fresh = (await lines()).slice(before)
+		expect(fresh.length).toBeGreaterThanOrEqual(20)
+		const text = JSON.stringify(fresh)
+		for (const slid of [...slidMany, account.email, String(account.id).padStart(8, '#')])
+			expect(text).not.toContain(slid)
+		for (const line of fresh)
+			expect(Object.keys(line).sort()).toEqual(
+				['code', 'date', 'durationMs', 'id', 'method', 'type'].filter(cle => cle in line)
 			)
-		expect(nouvelles.some(({ code }) => code === 'inconnu')).toBe(true)
+		expect(fresh.some(({ code }) => code === 'inconnu')).toBe(true)
 		// About thirty sign-in attempts, each held back by the 300 ms floor: more than the 5 s default of bun.
 	}, 60_000)
 })
 
 describe('un échec d’écriture du journal ne fait pas échouer la connexion', () => {
 	test('la ligne ne peut pas s’écrire : la session est ouverte quand même', async () => {
-		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const account = await createAccount('maquilleuse', { motDePasse: () => PASSWORD })
 		const payload = await testPayload()
-		const enPanne = Object.assign(Object.create(payload), {
+		const down = Object.assign(Object.create(payload), {
 			create: () => Promise.reject(new Error('la table du journal est absente')),
 		}) as typeof payload
-		const avant = (await lignes()).length
+		const before = (await lines()).length
 
-		const resultat = await signInWithPassword({
+		const result = await signInWithPassword({
 			ouvrir: data => openWithPassword(payload, 'pros', data),
-			headers: adresse(),
-			email: compte.email,
-			password: MOT_DE_PASSE,
-			frein,
-			journal: authLog(enPanne),
+			headers: url(),
+			email: account.email,
+			password: PASSWORD,
+			frein: rateLimit,
+			journal: authLog(down),
 		})
 
-		expect(resultat.ok).toBe(true)
-		expect((await lignes()).length).toBe(avant)
+		expect(result.ok).toBe(true)
+		expect((await lines()).length).toBe(before)
 	})
 })
 
 describe('la purge à 90 jours, sur une horloge simulée', () => {
-	const joursAvant = (maintenant: Date, jours: number, minutes = 0) =>
+	const daysBefore = (maintenant: Date, jours: number, minutes = 0) =>
 		new Date(maintenant.getTime() - jours * 86_400_000 - minutes * 60_000).toISOString()
 
 	test('une ligne de 91 jours part, une de 89 jours reste ; une seconde passe ne change rien', async () => {
 		const payload = await testPayload()
-		const maintenant = new Date()
-		const ecrire = (date: string) =>
+		const now = new Date()
+		const write = (date: string) =>
 			payload.create({ collection: 'auth-events', data: { type: 'sign-in', code: 'ok', date } })
-		const vieille = await ecrire(joursAvant(maintenant, 91))
-		const limite = await ecrire(joursAvant(maintenant, 90, 1))
-		const recente = await ecrire(joursAvant(maintenant, 89))
-		const aujourdhui = await ecrire(maintenant.toISOString())
+		const old = await write(daysBefore(now, 91))
+		const limit = await write(daysBefore(now, 90, 1))
+		const recent = await write(daysBefore(now, 89))
+		const today = await write(now.toISOString())
 
-		const premiere = await runDailyTasks(payload, maintenant)
-		const restantes = (await lignes()).map(({ id }) => id)
+		const first = await runDailyTasks(payload, now)
+		const remaining = (await lines()).map(({ id }) => id)
 
-		expect(premiere).toContainEqual({ nom: 'purge-journal-authentification', supprimes: 2 })
-		expect(restantes).not.toContain(vieille.id)
-		expect(restantes).not.toContain(limite.id)
-		expect(restantes).toContain(recente.id)
-		expect(restantes).toContain(aujourdhui.id)
-		const seconde = await runDailyTasks(payload, maintenant)
-		expect(seconde).toContainEqual({ nom: 'purge-journal-authentification', supprimes: 0 })
+		expect(first).toContainEqual({ nom: 'purge-journal-authentification', supprimes: 2 })
+		expect(remaining).not.toContain(old.id)
+		expect(remaining).not.toContain(limit.id)
+		expect(remaining).toContain(recent.id)
+		expect(remaining).toContain(today.id)
+		const second = await runDailyTasks(payload, now)
+		expect(second).toContainEqual({ nom: 'purge-journal-authentification', supprimes: 0 })
 	})
 })

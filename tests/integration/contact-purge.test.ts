@@ -11,9 +11,9 @@ import { emptyBase, testPayload } from '../support/payload-test'
 
 afterAll(emptyBase)
 
-const MAINTENANT = new Date('2026-10-15T10:00:00.000Z')
+const NOW = new Date('2026-10-15T10:00:00.000Z')
 
-async function ecrire(createdAt: string) {
+async function write(createdAt: string) {
 	const payload = await testPayload()
 	return payload.create({
 		collection: 'contact-requests',
@@ -40,32 +40,32 @@ async function ids() {
 describe('la purge à 12 mois, sur une horloge simulée', () => {
 	test('12 mois et un jour : supprimé ; 11 mois : gardé ; une seconde passe ne change rien', async () => {
 		const payload = await testPayload()
-		const vieux = await ecrire('2025-10-14T09:59:00.000Z')
-		const tresVieux = await ecrire('2024-01-01T00:00:00.000Z')
-		const onzeMois = await ecrire('2025-11-15T10:00:00.000Z')
-		const recent = await ecrire(MAINTENANT.toISOString())
+		const old = await write('2025-10-14T09:59:00.000Z')
+		const veryOld = await write('2024-01-01T00:00:00.000Z')
+		const elevenMonths = await write('2025-11-15T10:00:00.000Z')
+		const recent = await write(NOW.toISOString())
 
-		const premiere = await runDailyTasks(payload, MAINTENANT, [purgeContactMessages])
-		expect(premiere).toEqual([{ nom: 'purge-messages-contact', supprimes: 2 }])
-		const restants = await ids()
-		expect(restants).not.toContain(vieux.id)
-		expect(restants).not.toContain(tresVieux.id)
-		expect(restants).toContain(onzeMois.id)
-		expect(restants).toContain(recent.id)
+		const first = await runDailyTasks(payload, NOW, [purgeContactMessages])
+		expect(first).toEqual([{ nom: 'purge-messages-contact', supprimes: 2 }])
+		const remaining = await ids()
+		expect(remaining).not.toContain(old.id)
+		expect(remaining).not.toContain(veryOld.id)
+		expect(remaining).toContain(elevenMonths.id)
+		expect(remaining).toContain(recent.id)
 
-		const seconde = await runDailyTasks(payload, MAINTENANT, [purgeContactMessages])
-		expect(seconde).toEqual([{ nom: 'purge-messages-contact', supprimes: 0 }])
+		const second = await runDailyTasks(payload, NOW, [purgeContactMessages])
+		expect(second).toEqual([{ nom: 'purge-messages-contact', supprimes: 0 }])
 	})
 
 	test('pendant un import, rien ne part ; le lendemain de l’import, ce qui est dû part', async () => {
 		const payload = await testPayload()
-		const vieux = await ecrire('2024-06-01T00:00:00.000Z')
-		const fin = markImportInProgress()
-		const pendant = await runDailyTasks(payload, MAINTENANT, [purgeContactMessages])
-		fin()
-		expect(pendant).toEqual([{ nom: 'purge-messages-contact', supprimes: 0 }])
-		expect(await ids()).toContain(vieux.id)
-		await runDailyTasks(payload, MAINTENANT, [purgeContactMessages])
-		expect(await ids()).not.toContain(vieux.id)
+		const old = await write('2024-06-01T00:00:00.000Z')
+		const end = markImportInProgress()
+		const during = await runDailyTasks(payload, NOW, [purgeContactMessages])
+		end()
+		expect(during).toEqual([{ nom: 'purge-messages-contact', supprimes: 0 }])
+		expect(await ids()).toContain(old.id)
+		await runDailyTasks(payload, NOW, [purgeContactMessages])
+		expect(await ids()).not.toContain(old.id)
 	})
 })

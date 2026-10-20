@@ -1,7 +1,7 @@
 /**
  * The search by a word (ticket 099; plan 02 U23): the relevance score, the words kept, the way the
  * city places the profiles the words found. Unit tests: no database, no server. The page itself is
- * tests/e2e/recherche-mot-cle.spec.ts, the directory of 500 profiles tests/integration/recherche.test.ts.
+ * tests/e2e/keyword-search.spec.ts, the directory of 500 profiles tests/integration/search.test.ts.
  */
 
 import { describe, expect, test } from 'bun:test'

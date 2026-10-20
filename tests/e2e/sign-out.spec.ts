@@ -9,28 +9,28 @@ import { testPayload } from '../support/payload-test'
  * navigation, and the public pages stay in the cache.
  */
 
-const MOT_DE_PASSE = 'motdepasse-fictif'
-let compteur = 0
-const adresse = () => `192.0.2.${100 + (++compteur % 100)}`
-test.beforeEach(({ context }) => context.setExtraHTTPHeaders({ 'x-forwarded-for': adresse() }))
+const PASSWORD = 'motdepasse-fictif'
+let counter = 0
+const url = () => `192.0.2.${100 + (++counter % 100)}`
+test.beforeEach(({ context }) => context.setExtraHTTPHeaders({ 'x-forwarded-for': url() }))
 
-async function seConnecter(page: Page, email: string) {
+async function signInAction(page: Page, email: string) {
 	await page.goto('/auth/signin')
 	// A click before the page has hydrated sends nothing.
 	await page.waitForLoadState('networkidle')
 	await page.getByLabel('Adresse email').fill(email)
-	await page.getByLabel('Mot de passe').fill(MOT_DE_PASSE)
+	await page.getByLabel('Mot de passe').fill(PASSWORD)
 	await page.getByRole('button', { name: 'Se connecter' }).click()
 	await expect(page).toHaveURL(/\/auth\/profil$/)
 }
 
-const cookieDeSession = async (context: BrowserContext) =>
+const sessionCookie = async (context: BrowserContext) =>
 	(await context.cookies()).find(({ name }) => name === 'payload-token')
 
-async function contexteAvec(browser: Browser, cookie: NonNullable<Awaited<ReturnType<typeof cookieDeSession>>>) {
-	const contexte = await browser.newContext({ extraHTTPHeaders: { 'x-forwarded-for': adresse() } })
-	await contexte.addCookies([cookie])
-	return contexte
+async function contextWith(browser: Browser, cookie: NonNullable<Awaited<ReturnType<typeof sessionCookie>>>) {
+	const browserContext = await browser.newContext({ extraHTTPHeaders: { 'x-forwarded-for': url() } })
+	await browserContext.addCookies([cookie])
+	return browserContext
 }
 
 test.describe('E10 : la déconnexion', { tag: '@mobile' }, () => {
@@ -38,15 +38,15 @@ test.describe('E10 : la déconnexion', { tag: '@mobile' }, () => {
 		context,
 		page,
 	}) => {
-		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
-		await seConnecter(page, compte.email)
-		expect(await cookieDeSession(context)).toBeDefined()
+		const account = await createAccount('maquilleuse', { motDePasse: () => PASSWORD })
+		await signInAction(page, account.email)
+		expect(await sessionCookie(context)).toBeDefined()
 
 		await page.getByRole('main').getByRole('button', { name: 'Me déconnecter', exact: true }).click()
 
 		await expect(page).toHaveURL(/\/$/)
 		await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
-		expect(await cookieDeSession(context)).toBeUndefined()
+		expect(await sessionCookie(context)).toBeUndefined()
 		expect((await context.cookies()).filter(({ name }) => /token|next-auth/i.test(name))).toEqual([])
 
 		await page.goBack()
@@ -56,65 +56,65 @@ test.describe('E10 : la déconnexion', { tag: '@mobile' }, () => {
 	})
 
 	test('la déconnexion laisse une ligne « deconnexion » au journal', async ({ page }) => {
-		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const account = await createAccount('maquilleuse', { motDePasse: () => PASSWORD })
 		const payload = await testPayload()
 		// The rows belong to nobody, and the other tests sign out at the same time: the exact count of
-		// one sign-out is the integration test's (tests/integration/auth-deconnexion.test.ts).
-		const depuis = new Date().toISOString()
-		const compter = async () =>
+		// one sign-out is the integration test's (tests/integration/auth-sign-out.test.ts).
+		const since = new Date().toISOString()
+		const count = async () =>
 			(
 				await payload.count({
 					collection: 'auth-events',
-					where: { and: [{ type: { equals: 'sign-out' } }, { date: { greater_than_equal: depuis } }] },
+					where: { and: [{ type: { equals: 'sign-out' } }, { date: { greater_than_equal: since } }] },
 				})
 			).totalDocs
-		await seConnecter(page, compte.email)
+		await signInAction(page, account.email)
 
 		await page.getByRole('main').getByRole('button', { name: 'Me déconnecter', exact: true }).click()
 		await expect(page).toHaveURL(/\/$/)
 
-		await expect.poll(compter).toBeGreaterThanOrEqual(1)
+		await expect.poll(count).toBeGreaterThanOrEqual(1)
 	})
 })
 
 test.describe('E11 : l’ancien cookie réinjecté', () => {
 	test('dans un contexte neuf, il est refusé : on arrive sur la connexion', async ({ browser, context, page }) => {
-		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
-		await seConnecter(page, compte.email)
-		const ancien = await cookieDeSession(context)
-		if (!ancien) throw new Error('Pas de cookie de session après la connexion.')
+		const account = await createAccount('maquilleuse', { motDePasse: () => PASSWORD })
+		await signInAction(page, account.email)
+		const old = await sessionCookie(context)
+		if (!old) throw new Error('Pas de cookie de session après la connexion.')
 		// The control: before the sign-out, the same cookie opens the space in a fresh context.
-		const avant = await contexteAvec(browser, ancien)
-		const pageAvant = await avant.newPage()
-		await pageAvant.goto('/auth/profil')
-		await expect(pageAvant.getByRole('heading', { name: 'Mon espace' })).toBeVisible()
-		await avant.close()
+		const before = await contextWith(browser, old)
+		const pageBefore = await before.newPage()
+		await pageBefore.goto('/auth/profil')
+		await expect(pageBefore.getByRole('heading', { name: 'Mon espace' })).toBeVisible()
+		await before.close()
 
 		await page.getByRole('main').getByRole('button', { name: 'Me déconnecter', exact: true }).click()
 		await expect(page).toHaveURL(/\/$/)
 
-		const apres = await contexteAvec(browser, ancien)
-		const pageApres = await apres.newPage()
-		await pageApres.goto('/auth/profil')
-		await expect(pageApres).toHaveURL(/\/auth\/signin\?callbackUrl=%2Fauth%2Fprofil$/)
-		await expect(pageApres.getByRole('button', { name: 'Se connecter' })).toBeVisible()
-		await apres.close()
+		const after = await contextWith(browser, old)
+		const pageAfter = await after.newPage()
+		await pageAfter.goto('/auth/profil')
+		await expect(pageAfter).toHaveURL(/\/auth\/signin\?callbackUrl=%2Fauth%2Fprofil$/)
+		await expect(pageAfter.getByRole('button', { name: 'Se connecter' })).toBeVisible()
+		await after.close()
 	})
 })
 
 test.describe('E17 : la déconnexion dans un onglet', () => {
 	test('l’autre onglet est renvoyé à la connexion à sa prochaine navigation', async ({ context, page }) => {
-		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
-		await seConnecter(page, compte.email)
-		const onglet = await context.newPage()
-		await onglet.goto('/auth/profil')
-		await expect(onglet.getByRole('heading', { name: 'Mon espace' })).toBeVisible()
+		const account = await createAccount('maquilleuse', { motDePasse: () => PASSWORD })
+		await signInAction(page, account.email)
+		const tab = await context.newPage()
+		await tab.goto('/auth/profil')
+		await expect(tab.getByRole('heading', { name: 'Mon espace' })).toBeVisible()
 
 		await page.getByRole('main').getByRole('button', { name: 'Me déconnecter', exact: true }).click()
 		await expect(page).toHaveURL(/\/$/)
 
-		await onglet.goto('/auth/profil')
-		await expect(onglet).toHaveURL(/\/auth\/signin\?callbackUrl=%2Fauth%2Fprofil$/)
+		await tab.goto('/auth/profil')
+		await expect(tab).toHaveURL(/\/auth\/signin\?callbackUrl=%2Fauth%2Fprofil$/)
 	})
 })
 
@@ -124,41 +124,41 @@ test.describe('Me déconnecter de tous les appareils', () => {
 		context,
 		page,
 	}) => {
-		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
-		await seConnecter(page, compte.email)
-		const autreAppareil = await browser.newContext({ extraHTTPHeaders: { 'x-forwarded-for': adresse() } })
-		const autre = await autreAppareil.newPage()
-		await seConnecter(autre, compte.email)
+		const account = await createAccount('maquilleuse', { motDePasse: () => PASSWORD })
+		await signInAction(page, account.email)
+		const otherDevice = await browser.newContext({ extraHTTPHeaders: { 'x-forwarded-for': url() } })
+		const other = await otherDevice.newPage()
+		await signInAction(other, account.email)
 
 		await page.getByRole('button', { name: 'Me déconnecter de tous les appareils' }).click()
 		await expect(page.getByText('Tu seras déconnectée de tous tes appareils')).toBeVisible()
 		// Cancelled: nothing is closed.
 		await page.getByRole('button', { name: 'Annuler' }).click()
 		await expect(page.getByText('Tu seras déconnectée de tous tes appareils')).toHaveCount(0)
-		await autre.goto('/auth/profil')
-		await expect(autre.getByRole('heading', { name: 'Mon espace' })).toBeVisible()
+		await other.goto('/auth/profil')
+		await expect(other.getByRole('heading', { name: 'Mon espace' })).toBeVisible()
 
 		await page.getByRole('button', { name: 'Me déconnecter de tous les appareils' }).click()
 		await page.getByRole('button', { name: 'Oui, me déconnecter partout' }).click()
 
 		await expect(page).toHaveURL(/\/$/)
-		expect(await cookieDeSession(context)).toBeUndefined()
-		await autre.goto('/auth/profil')
-		await expect(autre).toHaveURL(/\/auth\/signin\?callbackUrl=%2Fauth%2Fprofil$/)
-		await autreAppareil.close()
+		expect(await sessionCookie(context)).toBeUndefined()
+		await other.goto('/auth/profil')
+		await expect(other).toHaveURL(/\/auth\/signin\?callbackUrl=%2Fauth%2Fprofil$/)
+		await otherDevice.close()
 	})
 
 	test('une action sans la confirmation ne ferme rien', async ({ page, request }) => {
-		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
-		await seConnecter(page, compte.email)
+		const account = await createAccount('maquilleuse', { motDePasse: () => PASSWORD })
+		await signInAction(page, account.email)
 		await page.getByRole('button', { name: 'Me déconnecter de tous les appareils' }).click()
 		// The confirmation field is the page's: take it out, and send the form.
 		await page.locator('input[name="confirmation"]').evaluate(champ => champ.remove())
 		await page.getByRole('button', { name: 'Oui, me déconnecter partout' }).click()
 
 		await expect(page).toHaveURL(/\/auth\/profil$/)
-		const reponse = await request.get('/api/dashboard/session')
-		expect(reponse.status()).toBe(200)
+		const response = await request.get('/api/dashboard/session')
+		expect(response.status()).toBe(200)
 		await page.reload()
 		await expect(page.getByRole('heading', { name: 'Mon espace' })).toBeVisible()
 	})
@@ -174,8 +174,8 @@ test.describe('La Nav lit l’état connecté dans le navigateur', () => {
 		await expect(nav.getByRole('link', { name: 'Me connecter' })).toBeVisible()
 		await expect(nav.getByRole('link', { name: 'Mon espace' })).toHaveCount(0)
 
-		const compte = await createAccount('maquilleuse')
-		await context.addCookies(compte.session.cookies)
+		const account = await createAccount('maquilleuse')
+		await context.addCookies(account.session.cookies)
 		await page.goto('/')
 
 		await expect(nav.getByRole('link', { name: 'Mon espace' })).toBeVisible()
@@ -198,41 +198,41 @@ test.describe('La Nav lit l’état connecté dans le navigateur', () => {
 		playwright,
 		baseURL,
 	}) => {
-		const compte = await createAccount('maquilleuse')
-		const cookie = compte.session.enTetes.Cookie
-		const lire = async (entetes: Record<string, string>) => {
+		const account = await createAccount('maquilleuse')
+		const cookie = account.session.enTetes.Cookie
+		const read = async (entetes: Record<string, string>) => {
 			const client = await playwright.request.newContext({ baseURL: baseURL ?? '', extraHTTPHeaders: entetes })
 			try {
-				const reponse = await client.get('/')
-				return { statut: reponse.status(), cache: reponse.headers()['cache-control'], corps: await reponse.text() }
+				const response = await client.get('/')
+				return { statut: response.status(), cache: response.headers()['cache-control'], corps: await response.text() }
 			} finally {
 				await client.dispose()
 			}
 		}
 
-		const anonyme = await lire({})
-		const connectee = await lire({ Cookie: cookie, Origin: baseURL ?? '' })
+		const anonymous = await read({})
+		const signedIn = await read({ Cookie: cookie, Origin: baseURL ?? '' })
 
-		expect(anonyme.statut).toBe(200)
+		expect(anonymous.statut).toBe(200)
 		// The home page is read per request (ticket 097): its cache rules are ticket 117's. What matters here is that
 		// the session changes nothing to the answer.
-		expect(connectee.cache).toBe(anonyme.cache)
-		expect(connectee.corps).toBe(anonyme.corps)
+		expect(signedIn.cache).toBe(anonymous.cache)
+		expect(signedIn.corps).toBe(anonymous.corps)
 	})
 
 	test('la route de l’état ne répond qu’un booléen, jamais en cache', async ({ playwright, baseURL }) => {
-		const compte = await createAccount('maquilleuse')
+		const account = await createAccount('maquilleuse')
 		const client = await playwright.request.newContext({
 			baseURL: baseURL ?? '',
-			extraHTTPHeaders: { Cookie: compte.session.enTetes.Cookie, Origin: baseURL ?? '' },
+			extraHTTPHeaders: { Cookie: account.session.enTetes.Cookie, Origin: baseURL ?? '' },
 		})
 		try {
-			const reponse = await client.get('/api/dashboard/session')
-			expect(reponse.headers()['cache-control']).toBe('private, no-store')
-			expect(await reponse.json()).toEqual({ signedIn: true })
-			const sans = await playwright.request.newContext({ baseURL: baseURL ?? '' })
-			expect(await (await sans.get('/api/dashboard/session')).json()).toEqual({ signedIn: false })
-			await sans.dispose()
+			const response = await client.get('/api/dashboard/session')
+			expect(response.headers()['cache-control']).toBe('private, no-store')
+			expect(await response.json()).toEqual({ signedIn: true })
+			const without = await playwright.request.newContext({ baseURL: baseURL ?? '' })
+			expect(await (await without.get('/api/dashboard/session')).json()).toEqual({ signedIn: false })
+			await without.dispose()
 		} finally {
 			await client.dispose()
 		}

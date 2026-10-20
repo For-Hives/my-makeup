@@ -21,66 +21,66 @@ import { readObject } from '../support/s3'
  * A commune of the official list, far from the cities the search specs look at (Annecy, Nantes,
  * Annemasse…): the city a profile needs to be active, without crowding their lists.
  */
-const VILLE = { name: 'Lille', inseeCode: '59350' } as const
+const CITY = { name: 'Lille', inseeCode: '59350' } as const
 
 /** The accounts a test made: their active, published profiles would crowd the lists of the search specs. */
-const creees: number[] = []
+const created: number[] = []
 
 test.afterEach(async () => {
 	const payload = await testPayload()
-	for (const compte of creees.splice(0)) {
-		const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte } } })
+	for (const account of created.splice(0)) {
+		const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: account } } })
 		for (const { id } of docs) await payload.delete({ collection: 'profiles', id }).catch(() => undefined)
-		await payload.delete({ collection: 'pros', id: compte }).catch(() => undefined)
+		await payload.delete({ collection: 'pros', id: account }).catch(() => undefined)
 	}
 })
 
-let compteur = 0
+let counter = 0
 test.beforeEach(({ context }) =>
-	context.setExtraHTTPHeaders({ 'x-forwarded-for': `192.0.2.${150 + (++compteur % 50)}` })
+	context.setExtraHTTPHeaders({ 'x-forwarded-for': `192.0.2.${150 + (++counter % 50)}` })
 )
 
-type Maquilleuse = TestAccount<'maquilleuse'>
+type Artist = TestAccount<'maquilleuse'>
 
 /** A makeup artist whose profile is published, with `deja` photos already in her portfolio. */
-async function maquilleuse(
-	context: { addCookies: (c: Maquilleuse['session']['cookies']) => Promise<void> },
+async function artist(
+	context: { addCookies: (c: Artist['session']['cookies']) => Promise<void> },
 	deja = 0
-): Promise<{ compte: Maquilleuse; slug: string }> {
-	const compte = await createAccount('maquilleuse')
-	creees.push(Number(compte.id))
+): Promise<{ compte: Artist; slug: string }> {
+	const account = await createAccount('maquilleuse')
+	created.push(Number(account.id))
 	const payload = await testPayload()
-	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
-	const [fiche] = docs
-	if (!fiche) throw new Error('pas de profil')
-	const galerie: number[] = []
+	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: account.id } } })
+	const [sheet] = docs
+	if (!sheet) throw new Error('pas de profil')
+	const gallery: number[] = []
 	for (let i = 0; i < deja; i++) {
 		const media = await payload.create({
 			collection: 'media',
-			data: { owner: Number(compte.id), alt: 'Photo du portfolio' },
+			data: { owner: Number(account.id), alt: 'Photo du portfolio' },
 			file: fileForPayload(),
 		})
-		galerie.push(media.id)
+		gallery.push(media.id)
 	}
-	const profil = await payload.update({
+	const profile = await payload.update({
 		collection: 'profiles',
-		id: fiche.id,
-		data: { firstName: 'Léa', lastName: 'Fictive', specialty: 'Mariée', city: VILLE, gallery: galerie },
+		id: sheet.id,
+		data: { firstName: 'Léa', lastName: 'Fictive', specialty: 'Mariée', city: CITY, gallery: gallery },
 	})
-	await context.addCookies(compte.session.cookies)
-	return { compte, slug: profil.slug ?? '' }
+	await context.addCookies(account.session.cookies)
+	return { compte: account, slug: profile.slug ?? '' }
 }
 
-async function profilStocke(compte: Maquilleuse) {
+async function storedProfile(compte: Artist) {
 	const payload = await testPayload()
 	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
-	const profil = docs[0]
-	if (!profil) throw new Error('pas de profil')
-	return profil
+	const profile = docs[0]
+	if (!profile) throw new Error('pas de profil')
+	return profile
 }
 
 /** The media of this account only: the two projects share the bench and run side by side. */
-async function mediasDe(compte: Maquilleuse) {
+async function mediaOf(compte: Artist) {
 	const payload = await testPayload()
 	return (
 		await payload.find({ collection: 'media', depth: 0, pagination: false, where: { owner: { equals: compte.id } } })
@@ -88,10 +88,10 @@ async function mediasDe(compte: Maquilleuse) {
 }
 
 /** The media of this account that nothing references: the orphans of the test. */
-async function orphelinsDe(compte: Maquilleuse): Promise<number[]> {
-	const profil = await profilStocke(compte)
-	const utilises = new Set([...namedPhotos(profil.gallery), ...namedPhotos(profil.mainPicture)].map(String))
-	return (await mediasDe(compte)).filter(media => !utilises.has(String(media.id))).map(media => media.id)
+async function orphansOf(compte: Artist): Promise<number[]> {
+	const profile = await storedProfile(compte)
+	const used = new Set([...namedPhotos(profile.gallery), ...namedPhotos(profile.mainPicture)].map(String))
+	return (await mediaOf(compte)).filter(media => !used.has(String(media.id))).map(media => media.id)
 }
 
 /** A real PNG of this width: the width tells the photos apart once stored. */
@@ -100,31 +100,31 @@ const png = (largeur: number) =>
 		.png()
 		.toBuffer()
 
-const fichierPng = async (largeur: number) => ({
+const filePng = async (largeur: number) => ({
 	name: `photo-${largeur}.png`,
 	mimeType: 'image/png',
 	buffer: await png(largeur),
 })
 
-const modifier = (page: Page) => page.getByRole('button', { name: 'Modifier mon portfolio' })
+const modify = (page: Page) => page.getByRole('button', { name: 'Modifier mon portfolio' })
 const dialogue = (page: Page) => page.getByRole('dialog', { name: 'Modifier mon portfolio' })
 
-async function ouvrir(page: Page) {
-	if (test.info().project.name === 'mobile') await modifier(page).tap()
-	else await modifier(page).click()
+async function open(page: Page) {
+	if (test.info().project.name === 'mobile') await modify(page).tap()
+	else await modify(page).click()
 	await expect(dialogue(page)).toBeVisible()
 }
 
 /** The requests that send a photo to the server. */
-function envois(page: Page): string[] {
-	const liste: string[] = []
+function uploads(page: Page): string[] {
+	const list: string[] = []
 	page.on('request', requete => {
-		if (requete.method() === 'POST' && new URL(requete.url()).pathname === '/api/media') liste.push(requete.url())
+		if (requete.method() === 'POST' && new URL(requete.url()).pathname === '/api/media') list.push(requete.url())
 	})
-	return liste
+	return list
 }
 
-const lignes = (page: Page) =>
+const lines = (page: Page) =>
 	dialogue(page)
 		.locator('li')
 		.filter({ has: page.locator('img') })
@@ -135,54 +135,54 @@ test.describe('135 : le portfolio, ajouter des photos', { tag: '@mobile' }, () =
 		page,
 	}) => {
 		test.setTimeout(120_000)
-		const { compte, slug } = await maquilleuse(context)
+		const { compte: account, slug } = await artist(context)
 		await page.goto('/auth/profil')
 		await expect(page.getByTestId('carte-portfolio')).toContainText('à compléter')
-		await ouvrir(page)
-		const envoyes = envois(page)
+		await open(page)
+		const sent = uploads(page)
 
 		await page
 			.getByLabel('Ajouter des photos')
-			.setInputFiles([await fichierPng(801), await fichierPng(802), await fichierPng(803)])
-		await expect(lignes(page)).toHaveCount(3, { timeout: 30_000 })
+			.setInputFiles([await filePng(801), await filePng(802), await filePng(803)])
+		await expect(lines(page)).toHaveCount(3, { timeout: 30_000 })
 		await expect(dialogue(page).getByText('À enregistrer')).toHaveCount(3)
-		expect(envoyes).toHaveLength(0)
+		expect(sent).toHaveLength(0)
 		expect(await violationsSevere(page)).toEqual([])
 		await page.getByRole('button', { name: 'Enregistrer' }).click()
 
 		await expect(dialogue(page)).toHaveCount(0, { timeout: 60_000 })
 		await expect(page.getByRole('status').filter({ hasText: 'Ton portfolio est enregistré.' })).toBeVisible()
-		await expect(modifier(page)).toBeFocused()
+		await expect(modify(page)).toBeFocused()
 		await expect(page.getByTestId('carte-portfolio')).toContainText('3 photos')
-		expect(envoyes).toHaveLength(3)
+		expect(sent).toHaveLength(3)
 
 		// Stored in the order they were added, with their default alternative text.
-		const profil = await profilStocke(compte)
+		const profile = await storedProfile(account)
 		const payload = await testPayload()
-		const stockees = await Promise.all(
-			namedPhotos(profil.gallery).map(id => payload.findByID({ collection: 'media', id: Number(id), depth: 0 }))
+		const stored = await Promise.all(
+			namedPhotos(profile.gallery).map(id => payload.findByID({ collection: 'media', id: Number(id), depth: 0 }))
 		)
-		expect(stockees.map(media => media.width)).toEqual([801, 802, 803])
-		expect(stockees.map(media => media.alt)).toEqual(['Photo du portfolio', 'Photo du portfolio', 'Photo du portfolio'])
-		expect(await orphelinsDe(compte)).toEqual([])
+		expect(stored.map(media => media.width)).toEqual([801, 802, 803])
+		expect(stored.map(media => media.alt)).toEqual(['Photo du portfolio', 'Photo du portfolio', 'Photo du portfolio'])
+		expect(await orphansOf(account)).toEqual([])
 
 		await page.reload()
-		await ouvrir(page)
-		await expect(lignes(page)).toHaveCount(3)
+		await open(page)
+		await expect(lines(page)).toHaveCount(3)
 		await expect(dialogue(page).getByText('À enregistrer')).toHaveCount(0)
 		await page.keyboard.press('Escape')
 
 		await page.goto(`/profil/${slug}`)
-		for (const rang of [1, 2, 3]) {
-			const image = page.getByRole('img', { name: `Réalisation de Léa Fictive (${rang}/3)` })
+		for (const rank of [1, 2, 3]) {
+			const image = page.getByRole('img', { name: `Réalisation de Léa Fictive (${rank}/3)` })
 			await expect(image).toBeAttached()
 		}
 
-		const dossier = process.env.DASHBOARD_SCREENSHOTS
-		if (dossier) {
+		const folder = process.env.DASHBOARD_SCREENSHOTS
+		if (folder) {
 			await page.goto('/auth/profil')
-			await ouvrir(page)
-			await page.screenshot({ path: `${dossier}/portfolio-${test.info().project.name}.png` })
+			await open(page)
+			await page.screenshot({ path: `${folder}/portfolio-${test.info().project.name}.png` })
 		}
 	})
 
@@ -191,61 +191,61 @@ test.describe('135 : le portfolio, ajouter des photos', { tag: '@mobile' }, () =
 		page,
 	}) => {
 		test.setTimeout(120_000)
-		const { compte } = await maquilleuse(context, 8)
+		const { compte: account } = await artist(context, 8)
 		await page.goto('/auth/profil')
-		await ouvrir(page)
-		const envoyes = envois(page)
+		await open(page)
+		const sent = uploads(page)
 
 		await page
 			.getByLabel('Ajouter des photos')
 			.setInputFiles([
-				await fichierPng(811),
+				await filePng(811),
 				{ name: 'cv.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.7\n1 0 obj\n<<>>\nendobj\n') },
-				await fichierPng(812),
-				await fichierPng(813),
+				await filePng(812),
+				await filePng(813),
 			])
 
-		await expect(lignes(page)).toHaveCount(10, { timeout: 30_000 })
-		const alertes = page.getByRole('alert')
-		await expect(alertes.filter({ hasText: `cv.pdf : ${MESSAGES_PHOTO.type}` })).toBeVisible()
-		await expect(alertes.filter({ hasText: `photo-813.png : ${MESSAGES_PHOTO['limite-galerie']}` })).toBeVisible()
-		expect(envoyes).toHaveLength(0)
+		await expect(lines(page)).toHaveCount(10, { timeout: 30_000 })
+		const alerts = page.getByRole('alert')
+		await expect(alerts.filter({ hasText: `cv.pdf : ${MESSAGES_PHOTO.type}` })).toBeVisible()
+		await expect(alerts.filter({ hasText: `photo-813.png : ${MESSAGES_PHOTO['limite-galerie']}` })).toBeVisible()
+		expect(sent).toHaveLength(0)
 
 		await page.getByRole('button', { name: 'Enregistrer' }).click()
 		await expect(dialogue(page)).toHaveCount(0, { timeout: 60_000 })
-		expect(envoyes).toHaveLength(2)
-		expect(namedPhotos((await profilStocke(compte)).gallery)).toHaveLength(10)
-		expect(await orphelinsDe(compte)).toEqual([])
+		expect(sent).toHaveLength(2)
+		expect(namedPhotos((await storedProfile(account)).gallery)).toHaveLength(10)
+		expect(await orphansOf(account)).toEqual([])
 	})
 
 	test('E34 : fermer sans valider n’envoie rien : aucun objet, aucun média de plus, 0 orphelin', async ({
 		context,
 		page,
 	}) => {
-		const { compte } = await maquilleuse(context, 1)
-		const avant = (await mediasDe(compte)).length
-		const envoyes = envois(page)
+		const { compte: account } = await artist(context, 1)
+		const before = (await mediaOf(account)).length
+		const sent = uploads(page)
 		await page.goto('/auth/profil')
-		await ouvrir(page)
+		await open(page)
 
-		await page.getByLabel('Ajouter des photos').setInputFiles([await fichierPng(821), await fichierPng(822)])
-		await expect(lignes(page)).toHaveCount(3, { timeout: 30_000 })
+		await page.getByLabel('Ajouter des photos').setInputFiles([await filePng(821), await filePng(822)])
+		await expect(lines(page)).toHaveCount(3, { timeout: 30_000 })
 		await page.getByRole('button', { name: 'Fermer' }).click()
 		await page.getByRole('button', { name: 'Abandonner mes modifications' }).click()
 
 		await expect(dialogue(page)).toHaveCount(0)
-		expect(envoyes).toHaveLength(0)
-		expect((await mediasDe(compte)).length).toBe(avant)
-		expect(namedPhotos((await profilStocke(compte)).gallery)).toHaveLength(1)
-		expect(await orphelinsDe(compte)).toEqual([])
-		await ouvrir(page)
-		await expect(lignes(page)).toHaveCount(1)
+		expect(sent).toHaveLength(0)
+		expect((await mediaOf(account)).length).toBe(before)
+		expect(namedPhotos((await storedProfile(account)).gallery)).toHaveLength(1)
+		expect(await orphansOf(account)).toEqual([])
+		await open(page)
+		await expect(lines(page)).toHaveCount(1)
 	})
 
 	test('coupure pendant l’envoi : le portfolio reste comme il était, aucun orphelin', async ({ context, page }) => {
-		const { compte } = await maquilleuse(context, 1)
+		const { compte: account } = await artist(context, 1)
 		await page.goto('/auth/profil')
-		await ouvrir(page)
+		await open(page)
 		// The second file never gets there.
 		let n = 0
 		await page.route('**/api/media*', route => {
@@ -253,15 +253,15 @@ test.describe('135 : le portfolio, ajouter des photos', { tag: '@mobile' }, () =
 			return ++n === 2 ? route.abort() : route.continue()
 		})
 
-		await page.getByLabel('Ajouter des photos').setInputFiles([await fichierPng(831), await fichierPng(832)])
-		await expect(lignes(page)).toHaveCount(3, { timeout: 30_000 })
+		await page.getByLabel('Ajouter des photos').setInputFiles([await filePng(831), await filePng(832)])
+		await expect(lines(page)).toHaveCount(3, { timeout: 30_000 })
 		await page.getByRole('button', { name: 'Enregistrer' }).click()
 
 		await expect(page.getByRole('alert').filter({ hasText: MESSAGES_PHOTO['envoi-impossible'] })).toBeVisible()
 		await expect(dialogue(page)).toBeVisible()
-		await expect.poll(async () => (await mediasDe(compte)).length).toBe(1)
-		expect(namedPhotos((await profilStocke(compte)).gallery)).toHaveLength(1)
-		expect(await orphelinsDe(compte)).toEqual([])
+		await expect.poll(async () => (await mediaOf(account)).length).toBe(1)
+		expect(namedPhotos((await storedProfile(account)).gallery)).toHaveLength(1)
+		expect(await orphansOf(account)).toEqual([])
 	})
 })
 
@@ -271,33 +271,33 @@ test.describe('136 : le portfolio, retirer une photo', { tag: '@mobile' }, () =>
 		page,
 	}) => {
 		test.setTimeout(120_000)
-		const { compte, slug } = await maquilleuse(context, 3)
+		const { compte: account, slug } = await artist(context, 3)
 		const payload = await testPayload()
-		const avant = namedPhotos((await profilStocke(compte)).gallery)
-		const retiree = await payload.findByID({ collection: 'media', id: Number(avant[1]), depth: 0 })
-		const octets = (await readObject(`media/${retiree.filename}`))?.octets
-		expect(octets).toBeDefined()
+		const before = namedPhotos((await storedProfile(account)).gallery)
+		const removed = await payload.findByID({ collection: 'media', id: Number(before[1]), depth: 0 })
+		const bytes = (await readObject(`media/${removed.filename}`))?.octets
+		expect(bytes).toBeDefined()
 		await page.goto('/auth/profil')
 		await expect(page.getByTestId('carte-portfolio')).toContainText('3 photos')
-		await ouvrir(page)
+		await open(page)
 
 		await page.getByRole('button', { name: 'Retirer la photo 2' }).click()
-		await expect(lignes(page)).toHaveCount(2)
+		await expect(lines(page)).toHaveCount(2)
 		await expect(dialogue(page).getByTestId('annonce-retrait')).toContainText(
 			'Photo 2 sur 3 de ton portfolio est retirée'
 		)
 		// The focus stays in the panel, on the photo that takes the place of the one removed.
 		await expect(dialogue(page).getByRole('button', { name: 'Retirer la photo 2' })).toBeFocused()
-		expect(namedPhotos((await profilStocke(compte)).gallery)).toHaveLength(3)
+		expect(namedPhotos((await storedProfile(account)).gallery)).toHaveLength(3)
 		expect(await violationsSevere(page)).toEqual([])
 		await page.getByRole('button', { name: 'Enregistrer' }).click()
 
 		await expect(dialogue(page)).toHaveCount(0, { timeout: 60_000 })
 		await expect(page.getByTestId('carte-portfolio')).toContainText('2 photos')
-		expect(namedPhotos((await profilStocke(compte)).gallery)).toEqual([avant[0], avant[2]])
-		expect(await readObject(`media/${retiree.filename}`)).toBeUndefined()
-		expect((await readObject(`deleted/media/${retiree.filename}`))?.octets).toEqual(octets)
-		expect(await orphelinsDe(compte)).toEqual([])
+		expect(namedPhotos((await storedProfile(account)).gallery)).toEqual([before[0], before[2]])
+		expect(await readObject(`media/${removed.filename}`)).toBeUndefined()
+		expect((await readObject(`deleted/media/${removed.filename}`))?.octets).toEqual(bytes)
+		expect(await orphansOf(account)).toEqual([])
 
 		await page.goto(`/profil/${slug}`)
 		await expect(page.getByRole('img', { name: /^Réalisation de Léa Fictive \(\d\/2\)$/ })).toHaveCount(2, {
@@ -307,37 +307,37 @@ test.describe('136 : le portfolio, retirer une photo', { tag: '@mobile' }, () =>
 	})
 
 	test('retirer puis fermer sans valider : la photo est toujours là, rien n’a changé', async ({ context, page }) => {
-		const { compte } = await maquilleuse(context, 2)
-		const avant = namedPhotos((await profilStocke(compte)).gallery)
+		const { compte: account } = await artist(context, 2)
+		const before = namedPhotos((await storedProfile(account)).gallery)
 		await page.goto('/auth/profil')
-		await ouvrir(page)
+		await open(page)
 
 		await page.getByRole('button', { name: 'Retirer la photo 1' }).click()
-		await expect(lignes(page)).toHaveCount(1)
+		await expect(lines(page)).toHaveCount(1)
 		await page.getByRole('button', { name: 'Fermer' }).click()
 		await page.getByRole('button', { name: 'Abandonner mes modifications' }).click()
 		await expect(dialogue(page)).toHaveCount(0)
 
-		expect(namedPhotos((await profilStocke(compte)).gallery)).toEqual(avant)
-		await ouvrir(page)
-		await expect(lignes(page)).toHaveCount(2)
-		expect(await orphelinsDe(compte)).toEqual([])
+		expect(namedPhotos((await storedProfile(account)).gallery)).toEqual(before)
+		await open(page)
+		await expect(lines(page)).toHaveCount(2)
+		expect(await orphansOf(account)).toEqual([])
 	})
 
 	test('L7 : Entrée maintenue sur « Retirer » ne retire qu’une photo, le focus reste dans le panneau', async ({
 		context,
 		page,
 	}) => {
-		await maquilleuse(context, 4)
+		await artist(context, 4)
 		await page.goto('/auth/profil')
-		await ouvrir(page)
+		await open(page)
 
 		await dialogue(page).getByRole('button', { name: 'Retirer la photo 2' }).focus()
 		// A key pressed again without being released is sent with `repeat: true`.
 		for (let i = 0; i < 6; i++) await page.keyboard.down('Enter')
 		await page.keyboard.up('Enter')
 
-		await expect(lignes(page)).toHaveCount(3)
+		await expect(lines(page)).toHaveCount(3)
 		await expect(dialogue(page)).toBeVisible()
 		const focus = await page.evaluate(() => document.querySelector('[role="dialog"]')?.contains(document.activeElement))
 		expect(focus).toBe(true)

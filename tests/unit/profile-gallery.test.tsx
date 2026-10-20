@@ -6,7 +6,7 @@ import { openWindow } from '../support/dom-react'
 
 /**
  * The portfolio of a public profile (ticket 103): its photos, their alternative text, and the keyboard.
- * The scrolling itself (a swipe, the snapping) needs a real browser: tests/e2e/profil-public.spec.ts, E44.
+ * The scrolling itself (a swipe, the snapping) needs a real browser: tests/e2e/public-profile.spec.ts, E44.
  */
 
 const photos = (nombre: number): GalleryPhoto[] =>

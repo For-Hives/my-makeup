@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import { violationsSevere } from '../support/axe'
 
 /** A page with two faults axe knows: one « critical » (an image without a name), one « serious » (a contrast). */
-const PAGE_FAUTIVE = `<!doctype html>
+const FAULTY_PAGE = `<!doctype html>
 <html lang="fr">
 	<head><title>Page fautive</title></head>
 	<body>
@@ -29,7 +29,7 @@ test.describe('Accessibilité : aucune violation « serious » ni « critical »
 
 	// The proof that the check can fail: without it, an empty list would prove nothing.
 	test('le contrôle voit les fautes d’une page fautive, avec leur niveau et leur élément', async ({ page }) => {
-		await page.setContent(PAGE_FAUTIVE)
+		await page.setContent(FAULTY_PAGE)
 
 		const violations = await violationsSevere(page)
 

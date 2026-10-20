@@ -36,8 +36,8 @@ test.describe('Un navigateur qui n’est pas automatisé', () => {
 		await page.goto('/?q=recherche-privee#haut')
 
 		await expect.poll(async () => (await umami.recus()).length, { timeout: 10_000 }).toBeGreaterThan(0)
-		const [recu] = await umami.recus()
-		const corps = recu?.corps as { type: string; payload: Record<string, unknown> }
+		const [received] = await umami.recus()
+		const corps = received?.corps as { type: string; payload: Record<string, unknown> }
 		expect(corps.type).toBe('event')
 		expect(corps.payload).toMatchObject({
 			website: 'e7010ee5-a940-4add-80bf-5483d2c515db',
@@ -47,9 +47,9 @@ test.describe('Un navigateur qui n’est pas automatisé', () => {
 		// The page view carries no event name; the address lost its search terms and its hash.
 		expect(corps.payload.name).toBeUndefined()
 		expect(String(corps.payload.url)).toMatch(/^http:\/\/localhost:\d+\/$/)
-		expect(recu?.cookie).toBe(false)
-		expect(recu?.referer).toBe(false)
-		expect(recu?.autorisation).toBe(false)
+		expect(received?.cookie).toBe(false)
+		expect(received?.referer).toBe(false)
+		expect(received?.autorisation).toBe(false)
 		// The browser went through the site: the script and the send, under /u, and nowhere else.
 		expect(scripts).toContain('GET /u/script.js')
 		expect(scripts).toContain('POST /u/api/send')
@@ -64,22 +64,22 @@ test.describe('Un navigateur qui n’est pas automatisé', () => {
 		await context.addInitScript(() => {
 			Object.defineProperty(navigator, 'webdriver', { get: () => false })
 		})
-		const vus = async () => (await umami.envois('web-vitals')).length
+		const seen = async () => (await umami.envois('web-vitals')).length
 
-		for (const visite of [1, 2, 3]) {
-			const avant = await vus()
+		for (const visit of [1, 2, 3]) {
+			const before = await seen()
 			await page.goto('/')
 			// The browser reports the metrics it has when the page goes out of sight.
 			await page.evaluate(() => {
 				Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true })
 				document.dispatchEvent(new Event('visibilitychange'))
 			})
-			await expect.poll(vus, { message: `visite ${visite}`, timeout: 10_000 }).toBeGreaterThan(avant)
+			await expect.poll(seen, { message: `visite ${visit}`, timeout: 10_000 }).toBeGreaterThan(before)
 		}
 
-		const evenements = await umami.envois('web-vitals')
-		for (const recu of evenements) {
-			const { payload } = recu.corps as { payload: { data: Record<string, unknown>; tag: string } }
+		const events = await umami.envois('web-vitals')
+		for (const received of events) {
+			const { payload } = received.corps as { payload: { data: Record<string, unknown>; tag: string } }
 			expect(Object.keys(payload.data).sort()).toEqual(['name', 'page', 'rating', 'value'])
 			expect(['CLS', 'FCP', 'INP', 'LCP', 'TTFB']).toContain(payload.data.name)
 			expect(['good', 'needs-improvement', 'poor']).toContain(payload.data.rating)
@@ -106,11 +106,11 @@ test.describe('Un navigateur automatisé', () => {
 
 test.describe('Le chemin /u', () => {
 	test('le script est celui de l’instance, relayé', async ({ request }) => {
-		const reponse = await request.get('/u/script.js')
-		expect(reponse.status()).toBe(200)
-		expect(reponse.headers()['content-type']).toContain('javascript')
-		expect(await reponse.text()).toContain('window.umami')
-		expect(reponse.headers()['set-cookie']).toBeUndefined()
+		const response = await request.get('/u/script.js')
+		expect(response.status()).toBe(200)
+		expect(response.headers()['content-type']).toContain('javascript')
+		expect(await response.text()).toContain('window.umami')
+		expect(response.headers()['set-cookie']).toBeUndefined()
 	})
 
 	test('une mesure postée avec un cookie, un Referer et une adresse arrive sans les deux premiers', async ({
@@ -118,7 +118,7 @@ test.describe('Le chemin /u', () => {
 		userAgent,
 	}) => {
 		const umami = fakeUmami().pourLAgent(userAgent)
-		const reponse = await request.post('/u/api/send', {
+		const response = await request.post('/u/api/send', {
 			headers: {
 				'User-Agent': String(userAgent),
 				Cookie: 'authjs.session-token=valeur-fictive',
@@ -128,17 +128,17 @@ test.describe('Le chemin /u', () => {
 			},
 			data: { type: 'event', payload: { name: 'cta_click', website: 'e7010ee5-a940-4add-80bf-5483d2c515db' } },
 		})
-		expect(reponse.status()).toBe(200)
+		expect(response.status()).toBe(200)
 
-		const [recu] = await umami.envois('cta_click')
-		expect(recu).toMatchObject({ cookie: false, referer: false, autorisation: false, adresse: '203.0.113.7' })
+		const [received] = await umami.envois('cta_click')
+		expect(received).toMatchObject({ cookie: false, referer: false, autorisation: false, adresse: '203.0.113.7' })
 	})
 
 	test('un GET sur l’envoi répond 405, tout autre chemin sous /u répond 404', async ({ request, userAgent }) => {
 		const umami = fakeUmami().pourLAgent(userAgent)
-		const avecSonAgent = { headers: { 'User-Agent': String(userAgent) } }
-		expect((await request.get('/u/api/send', avecSonAgent)).status()).toBe(405)
-		for (const chemin of [
+		const withOwnAgent = { headers: { 'User-Agent': String(userAgent) } }
+		expect((await request.get('/u/api/send', withOwnAgent)).status()).toBe(405)
+		for (const path of [
 			'/u',
 			'/u/',
 			'/u/autre-chemin',
@@ -148,7 +148,7 @@ test.describe('Le chemin /u', () => {
 			'/u/login',
 			'/U/script.js',
 		])
-			expect((await request.get(chemin, avecSonAgent)).status(), chemin).toBe(404)
+			expect((await request.get(path, withOwnAgent)).status(), path).toBe(404)
 		expect(await umami.recus()).toEqual([])
 	})
 })

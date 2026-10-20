@@ -16,27 +16,27 @@ import { emptyBase, testPayload } from '../support/payload-test'
 
 afterEach(emptyBase)
 
-type Maquilleuse = TestAccount<'maquilleuse'>
+type Artist = TestAccount<'maquilleuse'>
 
-async function utilisateurDe(payload: Payload, compte: Maquilleuse): Promise<DashboardUser> {
+async function userOf(payload: Payload, compte: Artist): Promise<DashboardUser> {
 	const doc = await payload.findByID({ collection: 'pros', id: compte.id, depth: 0, overrideAccess: true })
 	return { ...doc, collection: 'pros' } as DashboardUser
 }
 
-async function profilStocke(payload: Payload, compte: Maquilleuse) {
+async function storedProfile(payload: Payload, compte: Artist) {
 	const { docs } = await payload.find({
 		collection: 'profiles',
 		depth: 0,
 		overrideAccess: true,
 		where: { pro: { equals: compte.id } },
 	})
-	const profil = docs[0]
-	if (!profil) throw new Error('pas de profil')
-	return profil
+	const profile = docs[0]
+	if (!profile) throw new Error('pas de profil')
+	return profile
 }
 
 /** What the administration writes when an admin opens the profile. */
-async function ouvrirDansLAdministration(payload: Payload, profil: number, admin: number | string) {
+async function openInAdministration(payload: Payload, profil: number, admin: number | string) {
 	return payload.create({
 		collection: 'payload-locked-documents',
 		overrideAccess: true,
@@ -44,70 +44,70 @@ async function ouvrirDansLAdministration(payload: Payload, profil: number, admin
 	})
 }
 
-const IDENTITE = { prenom: 'Léa', nom: 'Fictive', nomArtiste: 'Studio Fictif', specialite: 'Maquillage mariée' }
+const IDENTITY = { prenom: 'Léa', nom: 'Fictive', nomArtiste: 'Studio Fictif', specialite: 'Maquillage mariée' }
 
 describe('un admin tient le profil : l’espace ne l’écrase pas', () => {
 	test('l’enregistrement est refusé en français, rien n’est écrit ; verrou levé, il passe', async () => {
 		const payload = await testPayload()
-		const compte = await createAccount('maquilleuse')
+		const account = await createAccount('maquilleuse')
 		const admin = await createAccount('admin')
-		const utilisateur = await utilisateurDe(payload, compte)
-		const profil = await profilStocke(payload, compte)
-		const verrou = await ouvrirDansLAdministration(payload, profil.id, admin.id)
+		const user = await userOf(payload, account)
+		const profile = await storedProfile(payload, account)
+		const lock = await openInAdministration(payload, profile.id, admin.id)
 
-		const refuse = await saveIdentity(payload, utilisateur, IDENTITE)
+		const refuse = await saveIdentity(payload, user, IDENTITY)
 
 		expect(refuse).toEqual({ ok: false, message: LOCKED_PROFILE_MESSAGE })
 		expect(LOCKED_PROFILE_MESSAGE).toBe(
 			'Ton profil est en cours de modification par l’équipe, réessaie dans quelques minutes.'
 		)
-		expect((await profilStocke(payload, compte)).lastName).not.toBe('Fictive')
+		expect((await storedProfile(payload, account)).lastName).not.toBe('Fictive')
 
-		await payload.delete({ collection: 'payload-locked-documents', id: verrou.id, overrideAccess: true })
-		const passe = await saveIdentity(payload, utilisateur, IDENTITE)
+		await payload.delete({ collection: 'payload-locked-documents', id: lock.id, overrideAccess: true })
+		const password = await saveIdentity(payload, user, IDENTITY)
 
-		expect(passe.ok).toBe(true)
-		expect((await profilStocke(payload, compte)).lastName).toBe('Fictive')
+		expect(password.ok).toBe(true)
+		expect((await storedProfile(payload, account)).lastName).toBe('Fictive')
 	})
 
 	test('les autres enregistrements de l’espace passent par la même porte', async () => {
 		const payload = await testPayload()
-		const compte = await createAccount('maquilleuse')
+		const account = await createAccount('maquilleuse')
 		const admin = await createAccount('admin')
-		const utilisateur = await utilisateurDe(payload, compte)
-		await ouvrirDansLAdministration(payload, (await profilStocke(payload, compte)).id, admin.id)
+		const user = await userOf(payload, account)
+		await openInAdministration(payload, (await storedProfile(payload, account)).id, admin.id)
 
-		const reseaux = await saveNetworks(payload, utilisateur, {
+		const networks = await saveNetworks(payload, user, {
 			instagram: '@fictive',
 			facebook: '',
 			youtube: '',
 			linkedin: '',
 			siteWeb: '',
 		})
-		const coordonnees = await saveContactDetails(payload, utilisateur, {
+		const contactDetails = await saveContactDetails(payload, user, {
 			telephone: '06 39 98 12 34',
 			email: 'contact-fictif@example.test',
 			contactPublic: false,
 		})
 
-		expect(reseaux).toEqual({ ok: false, message: LOCKED_PROFILE_MESSAGE })
-		expect(coordonnees).toEqual({ ok: false, message: LOCKED_PROFILE_MESSAGE })
-		expect((await profilStocke(payload, compte)).networks?.instagram ?? null).toBeNull()
+		expect(networks).toEqual({ ok: false, message: LOCKED_PROFILE_MESSAGE })
+		expect(contactDetails).toEqual({ ok: false, message: LOCKED_PROFILE_MESSAGE })
+		expect((await storedProfile(payload, account)).networks?.instagram ?? null).toBeNull()
 	})
 
 	test('un verrou plus vieux que sa durée n’en est plus un ; le profil d’une autre n’est pas tenu', async () => {
 		const payload = await testPayload()
-		const compte = await createAccount('maquilleuse')
-		const autre = await createAccount('maquilleuse')
+		const account = await createAccount('maquilleuse')
+		const other = await createAccount('maquilleuse')
 		const admin = await createAccount('admin')
-		const profil = await profilStocke(payload, compte)
-		await ouvrirDansLAdministration(payload, profil.id, admin.id)
-		const plusTard = new Date(Date.now() + (DEFAULT_LOCK_DURATION_S + 60) * 1000)
+		const profile = await storedProfile(payload, account)
+		await openInAdministration(payload, profile.id, admin.id)
+		const later = new Date(Date.now() + (DEFAULT_LOCK_DURATION_S + 60) * 1000)
 
-		await expect(checkAdminDoesNotHoldProfile(payload, profil.id)).rejects.toThrow()
-		await expect(checkAdminDoesNotHoldProfile(payload, profil.id, plusTard)).resolves.toBeUndefined()
+		await expect(checkAdminDoesNotHoldProfile(payload, profile.id)).rejects.toThrow()
+		await expect(checkAdminDoesNotHoldProfile(payload, profile.id, later)).resolves.toBeUndefined()
 		await expect(
-			checkAdminDoesNotHoldProfile(payload, (await profilStocke(payload, autre)).id)
+			checkAdminDoesNotHoldProfile(payload, (await storedProfile(payload, other)).id)
 		).resolves.toBeUndefined()
 	})
 })

@@ -22,14 +22,14 @@ setDefaultTimeout(30_000)
  * step runs exits red on an orphan and green on none.
  */
 
-let espion: Spy
+let spy: Spy
 
 beforeEach(() => {
-	espion = spyStorage()
+	spy = spyStorage()
 })
 
 afterEach(async () => {
-	espion.arreter()
+	spy.arreter()
 	await Promise.all([emptyBase(), emptyStorage()])
 })
 
@@ -38,109 +38,113 @@ const image = () =>
 		.webp()
 		.toBuffer()
 
-type Compte = Awaited<ReturnType<typeof createAccount<'maquilleuse'>>>
+type Account = Awaited<ReturnType<typeof createAccount<'maquilleuse'>>>
 
-async function envoyer(compte: Compte): Promise<Media> {
-	const fichier = new File([Uint8Array.from(await image())], 'photo.webp', { type: 'image/webp' })
-	const { statut, corps, texte } = await callRest('POST', '/api/media?depth=0', {
+async function send(compte: Account): Promise<Media> {
+	const file = new File([Uint8Array.from(await image())], 'photo.webp', { type: 'image/webp' })
+	const {
+		statut: status,
+		corps,
+		texte: text,
+	} = await callRest('POST', '/api/media?depth=0', {
 		enTetes: compte.session.enTetes,
-		formulaire: formWithFile(fichier),
+		formulaire: formWithFile(file),
 	})
-	if (statut !== 201) throw new Error(`L’envoi a échoué : ${statut} ${texte}`)
+	if (status !== 201) throw new Error(`L’envoi a échoué : ${status} ${text}`)
 	return (corps as { doc: Media }).doc
 }
 
 /** The honest state: a main photo and a two-photo gallery, all attached to the profile. */
-async function etatSain() {
-	const compte = await createAccount('maquilleuse')
-	const [principale, galerie1, galerie2] = [await envoyer(compte), await envoyer(compte), await envoyer(compte)]
+async function healthyState() {
+	const account = await createAccount('maquilleuse')
+	const [main, gallery1, gallery2] = [await send(account), await send(account), await send(account)]
 	const payload = await testPayload()
-	const [profil] = (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } }))
+	const [profile] = (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: account.id } } }))
 		.docs
-	if (!profil) throw new Error('Pas de profil.')
-	const { statut } = await callRest('PATCH', `/api/profiles/${profil.id}?depth=0`, {
-		enTetes: compte.session.enTetes,
-		corps: { mainPicture: principale.id, gallery: [galerie1.id, galerie2.id] },
+	if (!profile) throw new Error('Pas de profil.')
+	const { statut: status } = await callRest('PATCH', `/api/profiles/${profile.id}?depth=0`, {
+		enTetes: account.session.enTetes,
+		corps: { mainPicture: main.id, gallery: [gallery1.id, gallery2.id] },
 	})
-	expect(statut).toBe(200)
-	return { compte, principale, galerie1, galerie2 }
+	expect(status).toBe(200)
+	return { compte: account, principale: main, galerie1: gallery1, galerie2: gallery2 }
 }
 
-const cles = (media: Media) => [
+const keys = (media: Media) => [
 	`media/${media.filename}`,
 	...Object.values(media.sizes ?? {}).flatMap(taille => (taille?.filename ? [`media/${taille.filename}`] : [])),
 ]
 
-const rapprocher = async () => {
+const reconcile = async () => {
 	const storage = serverEnv().storage
 	if (!storage) throw new Error('Pas de stockage sur le banc.')
 	return reconcileStorageAndDatabase(await testPayload(), () => listStorage(storage))
 }
 
 /** The command, in its own process, as the CI step runs it. */
-async function commande() {
-	const enfant = Bun.spawn([process.execPath, '--no-env-file', 'scripts/media/reconciliation.ts', '--json'], {
+async function command() {
+	const child = Bun.spawn([process.execPath, '--no-env-file', 'scripts/media/reconciliation.ts', '--json'], {
 		cwd: ROOT,
 		env: process.env,
 		stdin: 'ignore',
 		stdout: 'pipe',
 		stderr: 'pipe',
 	})
-	const [code, sortie, erreurs] = await Promise.all([
-		enfant.exited,
-		new Response(enfant.stdout).text(),
-		new Response(enfant.stderr).text(),
+	const [code, output, errors] = await Promise.all([
+		child.exited,
+		new Response(child.stdout).text(),
+		new Response(child.stderr).text(),
 	])
-	return { code, sortie, erreurs }
+	return { code, sortie: output, erreurs: errors }
 }
 
 describe('I27 : un état sain rend 0 orphelin ; chaque orphelin posé est nommé exactement', () => {
 	test('objets hors corbeille = les objets des photos principales et des galeries, 0 orphelin', async () => {
-		const { principale, galerie1, galerie2 } = await etatSain()
-		const rapport = await rapprocher()
-		expect(rapport).toMatchObject({
+		const { principale: main, galerie1: gallery1, galerie2: gallery2 } = await healthyState()
+		const report = await reconcile()
+		expect(report).toMatchObject({
 			sansOrphelin: true,
 			objetsSansMedia: [],
 			mediasSansObjet: [],
 			mediasSansProfil: [],
 		})
-		const attendus = [principale, galerie1, galerie2].flatMap(cles).sort()
-		expect((await listObjects()).map(({ cle }) => cle).sort()).toEqual(attendus)
-		expect(rapport.comptes).toMatchObject({
-			objetsHorsCorbeille: attendus.length,
-			objetsAttendus: attendus.length,
+		const expected = [main, gallery1, gallery2].flatMap(keys).sort()
+		expect((await listObjects()).map(({ cle }) => cle).sort()).toEqual(expected)
+		expect(report.comptes).toMatchObject({
+			objetsHorsCorbeille: expected.length,
+			objetsAttendus: expected.length,
 			objetsEnCorbeille: 0,
 			medias: 3,
 			mediasUtilises: 3,
 		})
 		// The original and its derived sizes: more objects than photos.
-		expect(attendus.length).toBeGreaterThan(3)
+		expect(expected.length).toBeGreaterThan(3)
 	})
 
 	test('un objet sans média, un média sans objet, un média sans profil : nommés, la corbeille comptée à part', async () => {
-		const { compte, principale, galerie1 } = await etatSain()
-		const sansProfil = await envoyer(compte)
+		const { compte: account, principale: main, galerie1: gallery1 } = await healthyState()
+		const withoutProfile = await send(account)
 		await dropObject('media/orphelin-pose-par-le-test.webp', 'x', { type: 'image/webp' })
 		await dropObject('deleted/media/ancien-pose-par-le-test.webp', 'x', { type: 'image/webp' })
-		await deleteObject(`media/${galerie1.filename}`)
+		await deleteObject(`media/${gallery1.filename}`)
 
-		const rapport = await rapprocher()
-		expect(rapport.objetsSansMedia).toEqual(['media/orphelin-pose-par-le-test.webp'])
-		expect(rapport.mediasSansObjet).toEqual([{ id: String(galerie1.id), cles: [`media/${galerie1.filename}`] }])
-		expect(rapport.mediasSansProfil).toEqual([String(sansProfil.id)])
-		expect(rapport.comptes.objetsEnCorbeille).toBe(1)
-		expect(rapport.sansOrphelin).toBe(false)
+		const report = await reconcile()
+		expect(report.objetsSansMedia).toEqual(['media/orphelin-pose-par-le-test.webp'])
+		expect(report.mediasSansObjet).toEqual([{ id: String(gallery1.id), cles: [`media/${gallery1.filename}`] }])
+		expect(report.mediasSansProfil).toEqual([String(withoutProfile.id)])
+		expect(report.comptes.objetsEnCorbeille).toBe(1)
+		expect(report.sansOrphelin).toBe(false)
 		// The main photo is still whole.
-		expect(rapport.mediasSansObjet.map(({ id }) => id)).not.toContain(String(principale.id))
+		expect(report.mediasSansObjet.map(({ id }) => id)).not.toContain(String(main.id))
 	})
 
 	test('la commande rend le rapport en clés et en comptes, sort en erreur sur un orphelin, en succès sans', async () => {
-		await etatSain()
-		const propre = await commande()
-		expect([propre.code, JSON.parse(propre.sortie).sansOrphelin]).toEqual([0, true])
+		await healthyState()
+		const own = await command()
+		expect([own.code, JSON.parse(own.sortie).sansOrphelin]).toEqual([0, true])
 
 		await dropObject('media/orphelin-pose-par-le-test.webp', 'x', { type: 'image/webp' })
-		const sale = await commande()
+		const sale = await command()
 		expect(sale.code).toBe(1)
 		expect(JSON.parse(sale.sortie).objetsSansMedia).toEqual(['media/orphelin-pose-par-le-test.webp'])
 		// Keys, identifiers and counts only: no address, no email, no account.
@@ -150,23 +154,23 @@ describe('I27 : un état sain rend 0 orphelin ; chaque orphelin posé est nommé
 
 describe('Stockage et base inchangés ; aucun mode de suppression', () => {
 	test('le rapprochement ne laisse ni objet ni ligne différents, et n’envoie que des lectures au stockage', async () => {
-		const { compte } = await etatSain()
-		await envoyer(compte)
+		const { compte: account } = await healthyState()
+		await send(account)
 		await dropObject('media/orphelin-pose-par-le-test.webp', 'x', { type: 'image/webp' })
 		const payload = await testPayload()
-		const instantane = async () => ({
+		const snapshot = async () => ({
 			objets: await listObjects(),
 			medias: (await payload.find({ collection: 'media', depth: 0, pagination: false, sort: 'id' })).docs,
 			profils: (await payload.find({ collection: 'profiles', depth: 0, pagination: false, sort: 'id' })).docs,
 		})
-		const avant = await instantane()
-		espion.journal.length = 0
+		const before = await snapshot()
+		spy.journal.length = 0
 
-		await rapprocher()
-		await commande()
+		await reconcile()
+		await command()
 
-		expect(await instantane()).toEqual(avant)
-		expect(espion.journal.filter(({ nom }) => !/^(List|Head|Get)/.test(nom))).toEqual([])
-		expect(espion.journal.length).toBeGreaterThan(0)
+		expect(await snapshot()).toEqual(before)
+		expect(spy.journal.filter(({ nom }) => !/^(List|Head|Get)/.test(nom))).toEqual([])
+		expect(spy.journal.length).toBeGreaterThan(0)
 	}, 60_000)
 })

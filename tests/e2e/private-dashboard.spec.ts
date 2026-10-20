@@ -6,18 +6,16 @@ import { createAccount } from '../support/account-factory'
  * a way back that stays on the site, never cached, no token in what the page sends.
  */
 
-const MOT_DE_PASSE = 'motdepasse-fictif'
-let compteur = 0
-test.beforeEach(({ context }) =>
-	context.setExtraHTTPHeaders({ 'x-forwarded-for': `192.0.2.${10 + (++compteur % 80)}` })
-)
+const PASSWORD = 'motdepasse-fictif'
+let counter = 0
+test.beforeEach(({ context }) => context.setExtraHTTPHeaders({ 'x-forwarded-for': `192.0.2.${10 + (++counter % 80)}` }))
 
 test.describe('Pages de l’espace sans session', { tag: '@mobile' }, () => {
 	test('une seule redirection vers la connexion, avec la page de retour', async ({ request }) => {
-		const reponse = await request.get('/auth/profil', { maxRedirects: 0 })
+		const response = await request.get('/auth/profil', { maxRedirects: 0 })
 
-		expect(reponse.status()).toBe(307)
-		expect(reponse.headers().location).toBe('/auth/signin?callbackUrl=%2Fauth%2Fprofil')
+		expect(response.status()).toBe(307)
+		expect(response.headers().location).toBe('/auth/signin?callbackUrl=%2Fauth%2Fprofil')
 	})
 
 	test('la page de connexion répond ensuite 200, sans seconde redirection', async ({ page, request }) => {
@@ -29,17 +27,17 @@ test.describe('Pages de l’espace sans session', { tag: '@mobile' }, () => {
 	})
 
 	test('/auth/init-account est fermée de la même façon', async ({ request }) => {
-		const reponse = await request.get('/auth/init-account', { maxRedirects: 0 })
-		expect(reponse.status()).toBe(307)
-		expect(reponse.headers().location).toBe('/auth/signin?callbackUrl=%2Fauth%2Finit-account')
+		const response = await request.get('/auth/init-account', { maxRedirects: 0 })
+		expect(response.status()).toBe(307)
+		expect(response.headers().location).toBe('/auth/signin?callbackUrl=%2Fauth%2Finit-account')
 	})
 
 	test('un cookie qui ne vaut plus rien : une redirection, puis le formulaire, jamais de boucle', async ({
 		context,
 		page,
 	}) => {
-		const compte = await createAccount('maquilleuse')
-		const cookie = compte.session.cookies[0]
+		const account = await createAccount('maquilleuse')
+		const cookie = account.session.cookies[0]
 		if (!cookie) throw new Error('pas de cookie')
 		await context.addCookies([{ ...cookie, value: 'pas-un-jeton' }])
 
@@ -64,37 +62,37 @@ test.describe('Pages de l’espace sans session', { tag: '@mobile' }, () => {
 })
 
 test.describe('Arrivée depuis un autre site (ticket 223)', () => {
-	const EXTERNE = 'http://lien-externe.test'
+	const EXTERNAL = 'http://lien-externe.test'
 
 	test('un lien d’un autre site vers l’espace garde la session : le relais repart du site, sans redirection', async ({
 		baseURL,
 		context,
 		page,
 	}) => {
-		const compte = await createAccount('maquilleuse')
-		await context.addCookies(compte.session.cookies)
-		await page.route(`${EXTERNE}/**`, route =>
+		const account = await createAccount('maquilleuse')
+		await context.addCookies(account.session.cookies)
+		await page.route(`${EXTERNAL}/**`, route =>
 			route.fulfill({
 				contentType: 'text/html',
 				body: `<!doctype html><title>Un mail</title><a href="${baseURL}/auth/profil?venue=mail">Ouvrir mon espace</a>`,
 			})
 		)
 		// The navigations to the page that got a real answer: who sent each one, and what came back.
-		const arrivees: { depuis: string; relais: boolean; statut: number }[] = []
+		const arrived: { depuis: string; relais: boolean; statut: number }[] = []
 		page.on('response', async reponse => {
 			if (!reponse.request().isNavigationRequest() || new URL(reponse.url()).pathname !== '/auth/profil') return
 			// Chrome may replay a request on its own (a redirection to the same address): only real answers count.
 			if (reponse.status() >= 300) return
 			// The body of a page that the browser leaves at once cannot always be read: then it is the relay's.
 			const corps = await reponse.text().catch(() => 'http-equiv="refresh"')
-			arrivees.push({
+			arrived.push({
 				depuis: reponse.request().headers().referer ?? '',
 				relais: corps.includes('http-equiv="refresh"'),
 				statut: reponse.status(),
 			})
 		})
 
-		await page.goto(`${EXTERNE}/`)
+		await page.goto(`${EXTERNAL}/`)
 		await page.getByRole('link', { name: 'Ouvrir mon espace' }).click()
 
 		// She stays on her page, signed in: no sign-in form, no redirection.
@@ -103,57 +101,57 @@ test.describe('Arrivée depuis un autre site (ticket 223)', () => {
 		await expect(page.getByRole('main')).toBeVisible()
 		// Two answers: the relay page to the request that came from the other site, then the page itself, asked
 		// by the relay from this site (its referrer is the address of the page).
-		expect(arrivees).toEqual([
-			{ depuis: `${EXTERNE}/`, relais: true, statut: 200 },
+		expect(arrived).toEqual([
+			{ depuis: `${EXTERNAL}/`, relais: true, statut: 200 },
 			{ depuis: `${baseURL}/auth/profil?venue=mail`, relais: false, statut: 200 },
 		])
 	})
 
 	test('sans cookie, la même arrivée mène à la connexion, comme avant', async ({ request }) => {
-		const reponse = await request.get('/auth/profil', {
+		const response = await request.get('/auth/profil', {
 			headers: { 'sec-fetch-site': 'cross-site' },
 			maxRedirects: 0,
 		})
-		expect(reponse.status()).toBe(307)
-		expect(reponse.headers().location).toBe('/auth/signin?callbackUrl=%2Fauth%2Fprofil')
+		expect(response.status()).toBe(307)
+		expect(response.headers().location).toBe('/auth/signin?callbackUrl=%2Fauth%2Fprofil')
 	})
 })
 
 test.describe('E09 : le retour après la connexion', () => {
 	test('une page interne est respectée', async ({ page }) => {
-		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const account = await createAccount('maquilleuse', { motDePasse: () => PASSWORD })
 
 		await page.goto('/auth/signin?callbackUrl=%2Fauth%2Fprofil%3Fvenue%3Dtest')
-		await page.getByLabel('Adresse email').fill(compte.email)
-		await page.getByLabel('Mot de passe').fill(MOT_DE_PASSE)
+		await page.getByLabel('Adresse email').fill(account.email)
+		await page.getByLabel('Mot de passe').fill(PASSWORD)
 		await page.getByRole('button', { name: 'Se connecter' }).click()
 
 		await expect(page).toHaveURL(/\/auth\/profil\?venue=test$/)
 	})
 
 	test('un retour vers un autre site est ignoré', async ({ page }) => {
-		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const account = await createAccount('maquilleuse', { motDePasse: () => PASSWORD })
 
-		for (const retour of ['https://evil.example/', '//evil.example']) {
+		for (const returned of ['https://evil.example/', '//evil.example']) {
 			await page.context().clearCookies()
-			await page.goto(`/auth/signin?callbackUrl=${encodeURIComponent(retour)}`)
-			await page.getByLabel('Adresse email').fill(compte.email)
-			await page.getByLabel('Mot de passe').fill(MOT_DE_PASSE)
+			await page.goto(`/auth/signin?callbackUrl=${encodeURIComponent(returned)}`)
+			await page.getByLabel('Adresse email').fill(account.email)
+			await page.getByLabel('Mot de passe').fill(PASSWORD)
 			await page.getByRole('button', { name: 'Se connecter' }).click()
 			await expect(page).toHaveURL(/\/auth\/profil$/)
 		}
 	})
 
 	test('déjà connectée, un retour à segment de points ne mène pas vers un autre site', async ({ page }) => {
-		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const account = await createAccount('maquilleuse', { motDePasse: () => PASSWORD })
 		await page.goto('/auth/signin')
-		await page.getByLabel('Adresse email').fill(compte.email)
-		await page.getByLabel('Mot de passe').fill(MOT_DE_PASSE)
+		await page.getByLabel('Adresse email').fill(account.email)
+		await page.getByLabel('Mot de passe').fill(PASSWORD)
 		await page.getByRole('button', { name: 'Se connecter' }).click()
 		await expect(page).toHaveURL(/\/auth\/profil$/)
 
-		for (const retour of ['/.//evil.example', '/%2e//evil.example', '/x/..//evil.example']) {
-			await page.goto(`/auth/signin?callbackUrl=${encodeURIComponent(retour)}`)
+		for (const returned of ['/.//evil.example', '/%2e//evil.example', '/x/..//evil.example']) {
+			await page.goto(`/auth/signin?callbackUrl=${encodeURIComponent(returned)}`)
 			await expect(page).toHaveURL(/^https?:\/\/(?!evil)[^/]+\/auth\/profil$/)
 		}
 	})
@@ -163,24 +161,24 @@ test.describe('E09 : le retour après la connexion', () => {
 		page,
 		playwright,
 	}) => {
-		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const account = await createAccount('maquilleuse', { motDePasse: () => PASSWORD })
 		// A real submit, to learn what the browser sends for the action.
-		const envoi = page.waitForRequest(r => r.method() === 'POST' && new URL(r.url()).pathname === '/auth/signin')
+		const upload = page.waitForRequest(r => r.method() === 'POST' && new URL(r.url()).pathname === '/auth/signin')
 		await page.goto('/auth/signin')
-		await page.getByLabel('Adresse email').fill(compte.email)
-		await page.getByLabel('Mot de passe').fill(MOT_DE_PASSE)
+		await page.getByLabel('Adresse email').fill(account.email)
+		await page.getByLabel('Mot de passe').fill(PASSWORD)
 		await page.getByRole('button', { name: 'Se connecter' }).click()
-		const requete = await envoi
-		const corps = requete.postDataBuffer()
+		const httpRequest = await upload
+		const corps = httpRequest.postDataBuffer()
 		if (!corps) throw new Error('La requête de l’action n’a pas de corps.')
-		const { origin: _origine, cookie: _cookie, ...entetes } = await requete.allHeaders()
+		const { origin: _origin, cookie: _cookie, ...headers } = await httpRequest.allHeaders()
 
 		// The same request, replayed by a client with no cookie, from a given origin.
-		const rejouer = async (origin: string) => {
+		const replay = async (origin: string) => {
 			const client = await playwright.request.newContext({ baseURL: baseURL ?? '' })
 			try {
 				return await client.post('/auth/signin', {
-					headers: { ...entetes, origin, 'x-forwarded-for': '192.0.2.250' },
+					headers: { ...headers, origin, 'x-forwarded-for': '192.0.2.250' },
 					data: corps,
 					maxRedirects: 0,
 				})
@@ -190,11 +188,11 @@ test.describe('E09 : le retour après la connexion', () => {
 		}
 
 		// The control: from the site's own origin the replay opens a session.
-		const permise = await rejouer(baseURL ?? '')
-		expect(permise.headers()['set-cookie']).toContain('payload-token=')
+		const allowed = await replay(baseURL ?? '')
+		expect(allowed.headers()['set-cookie']).toContain('payload-token=')
 
-		const refusee = await rejouer('https://evil.example')
-		expect(refusee.headers()['set-cookie']).toBeUndefined()
+		const refused = await replay('https://evil.example')
+		expect(refused.headers()['set-cookie']).toBeUndefined()
 	})
 })
 
@@ -203,21 +201,21 @@ test.describe('E16 : privé, sans stockage, aucun jeton', () => {
 		context,
 		request,
 	}) => {
-		const compte = await createAccount('maquilleuse')
-		const cookie = compte.session.cookies[0]
+		const account = await createAccount('maquilleuse')
+		const cookie = account.session.cookies[0]
 		if (!cookie) throw new Error('pas de cookie')
-		await context.addCookies(compte.session.cookies)
-		const enTetes = { ...compte.session.enTetes }
+		await context.addCookies(account.session.cookies)
+		const requestHeaders = { ...account.session.enTetes }
 
-		const html = await request.get('/auth/profil', { headers: enTetes })
-		const rsc = await request.get('/auth/profil', { headers: { ...enTetes, RSC: '1' } })
+		const html = await request.get('/auth/profil', { headers: requestHeaders })
+		const rsc = await request.get('/auth/profil', { headers: { ...requestHeaders, RSC: '1' } })
 
-		for (const reponse of [html, rsc]) {
-			expect(reponse.status()).toBe(200)
-			const cc = reponse.headers()['cache-control'] ?? ''
+		for (const response of [html, rsc]) {
+			expect(response.status()).toBe(200)
+			const cc = response.headers()['cache-control'] ?? ''
 			expect(cc).toContain('private')
 			expect(cc).toContain('no-store')
-			const corps = await reponse.text()
+			const corps = await response.text()
 			expect(corps).not.toContain(cookie.value)
 			expect(corps).not.toMatch(/eyJ[\w-]+\.[\w-]+\.[\w-]+/)
 			expect(corps).not.toMatch(/\$2[aby]\$|"hash"|"salt"|"sessions"|payload-token/)
@@ -226,8 +224,8 @@ test.describe('E16 : privé, sans stockage, aucun jeton', () => {
 	})
 
 	test('la page de connexion non plus n’est jamais en cache', async ({ request }) => {
-		const reponse = await request.get('/auth/signin')
-		const cc = reponse.headers()['cache-control'] ?? ''
+		const response = await request.get('/auth/signin')
+		const cc = response.headers()['cache-control'] ?? ''
 		expect(cc).toContain('private')
 		expect(cc).toContain('no-store')
 	})

@@ -1,7 +1,7 @@
 /**
  * The parity of the addresses (ticket 072; plan 02 I45): for each frozen address, the status the
  * table promises and the same h1 as the old site. The cases, the h1 of the old site (as hashes) and
- * the checks are here; tests/e2e/parite-urls.spec.ts runs them against the application of the bench.
+ * the checks are here; tests/e2e/url-parity.spec.ts runs them against the application of the bench.
  *
  * Two lists of cases:
  * - on the bench: the clear addresses of the frozen inventory, the examples of the table, and the

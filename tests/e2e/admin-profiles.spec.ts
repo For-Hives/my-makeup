@@ -24,33 +24,33 @@ const COLLECTIONS = [
 	'auth-events',
 	'deleted-accounts',
 ]
-const UNE_MINUTE = 60_000
+const ONE_MINUTE = 60_000
 
 /** A profile of its own, of one of the types of the fictional set, under a name no other test reads. */
-async function poserUnProfil(cle: string, suffixe: string) {
-	const modele = DEMO_PROFILES.find(autre => autre.cle === cle)
-	if (!modele) throw new Error(`Le profil type « ${cle} » du jeu fictif manque.`)
+async function setProfile(cle: string, suffixe: string) {
+	const template = DEMO_PROFILES.find(autre => autre.cle === cle)
+	if (!template) throw new Error(`Le profil type « ${cle} » du jeu fictif manque.`)
 	const type: DemoProfile = {
-		...modele,
+		...template,
 		cle: `essai-admin-${cle}-${suffixe}`,
 		compte: { email: `essai-admin-${cle}-${suffixe}@example.test`, nom: `Essai Admin ${suffixe} ${cle}` },
-		photos: { principale: modele.photos.principale, galerie: [] },
+		photos: { principale: template.photos.principale, galerie: [] },
 	}
 	const pose = await placeProfile(await testPayload(), type, readDemoPhoto, false)
 	return { id: pose.profil, pro: pose.compte, slug: pose.slug }
 }
 
 /** Takes the profiles of a test away, with their accounts and photos. */
-async function retirer(suffixe: string): Promise<void> {
+async function remove(suffixe: string): Promise<void> {
 	const payload = await testPayload()
-	const comptes = await payload.find({
+	const accounts = await payload.find({
 		collection: 'pros',
 		depth: 0,
 		limit: 50,
 		pagination: false,
 		where: { email: { like: `essai-admin-` } },
 	})
-	for (const { id, email } of comptes.docs) {
+	for (const { id, email } of accounts.docs) {
 		if (!email.includes(`-${suffixe}@`)) continue
 		await payload.delete({ collection: 'media', where: { owner: { equals: id } } }).catch(() => undefined)
 		await payload.delete({ collection: 'profiles', where: { pro: { equals: id } } }).catch(() => undefined)
@@ -63,30 +63,30 @@ async function sessionDAdmin() {
 	return (await createAccount('admin')).session.cookies
 }
 
-const unSuffixe = () => `${Date.now().toString(36)}${Math.floor(Math.random() * 1000).toString(36)}`
+const aSuffix = () => `${Date.now().toString(36)}${Math.floor(Math.random() * 1000).toString(36)}`
 
 test.describe('L’admin retrouve, corrige et masque un profil', () => {
 	test('E53 : chaque collection s’ouvre sans erreur ; la liste des profils se filtre', async ({ context, page }) => {
 		test.setTimeout(180_000)
-		const suffixe = unSuffixe()
+		const suffix = aSuffix()
 		await context.addCookies(await sessionDAdmin())
 		await withoutOutsideNetwork(context)
 		try {
 			// A reference profile (publishable), an empty one and one active but not publishable.
-			await Promise.all(['reference', 'vide', 'actif-non-publiable'].map(cle => poserUnProfil(cle, suffixe)))
-			const siens = `where[and][1][pro.email][like]=-${suffixe}@`
+			await Promise.all(['reference', 'vide', 'actif-non-publiable'].map(cle => setProfile(cle, suffix)))
+			const his = `where[and][1][pro.email][like]=-${suffix}@`
 
-			const erreurs: string[] = []
+			const errors: string[] = []
 			page.on('console', message => {
-				if (message.type() === 'error') erreurs.push(message.text())
+				if (message.type() === 'error') errors.push(message.text())
 			})
 			page.on('response', reponse => {
-				if (reponse.status() >= 500) erreurs.push(`${reponse.status()} ${reponse.url()}`)
+				if (reponse.status() >= 500) errors.push(`${reponse.status()} ${reponse.url()}`)
 			})
 
 			for (const collection of COLLECTIONS) {
-				const reponse = await page.goto(`/admin/collections/${collection}`)
-				expect(reponse?.status(), collection).toBeLessThan(500)
+				const response = await page.goto(`/admin/collections/${collection}`)
+				expect(response?.status(), collection).toBeLessThan(500)
 				await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible()
 				await expect(
 					page.locator('.collection-list, .table, tbody, .collection-list__no-results').first()
@@ -94,27 +94,27 @@ test.describe('L’admin retrouve, corrige et masque un profil', () => {
 			}
 
 			// The columns of the list: the address, the commune, the completeness, publishable, the status.
-			await page.goto(`/admin/collections/profiles?limit=100&where[and][0][status][exists]=true&${siens}`)
-			const entete = page.locator('thead')
-			for (const colonne of ['Adresse du profil', 'Commune', 'Complétude', 'Publiable', 'Statut'])
-				await expect(entete).toContainText(colonne)
+			await page.goto(`/admin/collections/profiles?limit=100&where[and][0][status][exists]=true&${his}`)
+			const header = page.locator('thead')
+			for (const column of ['Adresse du profil', 'Commune', 'Complétude', 'Publiable', 'Statut'])
+				await expect(header).toContainText(column)
 			await expect(page.locator('tbody tr')).toHaveCount(3)
 
 			// The filters of the panel, as its address holds them.
-			const filtre = (champ: string, valeur: string) =>
-				`/admin/collections/profiles?limit=100&where[and][0][${champ}][equals]=${valeur}&${siens}`
-			await page.goto(filtre('publishable', 'false'))
+			const filter = (champ: string, valeur: string) =>
+				`/admin/collections/profiles?limit=100&where[and][0][${champ}][equals]=${valeur}&${his}`
+			await page.goto(filter('publishable', 'false'))
 			await expect(page.locator('tbody tr')).toHaveCount(2)
-			await page.goto(filtre('fullyEmpty', 'true'))
+			await page.goto(filter('fullyEmpty', 'true'))
 			await expect(page.locator('tbody tr')).toHaveCount(1)
-			await page.goto(filtre('status', 'published'))
+			await page.goto(filter('status', 'published'))
 			await expect(page.locator('tbody tr')).toHaveCount(2)
-			await page.goto(filtre('status', 'draft'))
+			await page.goto(filter('status', 'draft'))
 			await expect(page.locator('tbody tr')).toHaveCount(1)
 
-			expect(erreurs).toEqual([])
+			expect(errors).toEqual([])
 		} finally {
-			await retirer(suffixe)
+			await remove(suffix)
 		}
 	})
 
@@ -124,14 +124,14 @@ test.describe('L’admin retrouve, corrige et masque un profil', () => {
 		request,
 	}) => {
 		test.setTimeout(150_000)
-		const suffixe = unSuffixe()
+		const suffix = aSuffix()
 		const payload = await testPayload()
 		await context.addCookies(await sessionDAdmin())
-		const profil = await poserUnProfil('reference', suffixe)
-		const slug = profil.slug
-		const statutDeLaPage = async () => (await request.get(`/profil/${slug}`)).status()
-		const enregistrerAvec = async (choix: string) => {
-			await page.goto(`/admin/collections/profiles/${profil.id}`)
+		const profile = await setProfile('reference', suffix)
+		const slug = profile.slug
+		const pageStatus = async () => (await request.get(`/profil/${slug}`)).status()
+		const saveWith = async (choix: string) => {
+			await page.goto(`/admin/collections/profiles/${profile.id}`)
 			// The form hydrates after it shows: a click that comes too early opens nothing, so it is made again.
 			await expect(async () => {
 				await page.locator('#field-chosenStatus .rs__control').click()
@@ -142,17 +142,17 @@ test.describe('L’admin retrouve, corrige et masque un profil', () => {
 		}
 
 		try {
-			expect(await statutDeLaPage()).toBe(200)
-			await enregistrerAvec('Masqué')
-			await expect.poll(statutDeLaPage, { timeout: UNE_MINUTE }).toBe(404)
-			expect((await payload.findByID({ collection: 'profiles', id: profil.id, depth: 0 })).status).toBe('hidden')
+			expect(await pageStatus()).toBe(200)
+			await saveWith('Masqué')
+			await expect.poll(pageStatus, { timeout: ONE_MINUTE }).toBe(404)
+			expect((await payload.findByID({ collection: 'profiles', id: profile.id, depth: 0 })).status).toBe('hidden')
 
-			await enregistrerAvec('Automatique')
-			await expect.poll(statutDeLaPage, { timeout: UNE_MINUTE }).toBe(200)
+			await saveWith('Automatique')
+			await expect.poll(pageStatus, { timeout: ONE_MINUTE }).toBe(200)
 			const sitemap = await (await request.get('/sitemap.xml')).text()
 			expect(sitemap).toContain(`/profil/${slug}`)
 		} finally {
-			await retirer(suffixe)
+			await remove(suffix)
 		}
 	})
 })

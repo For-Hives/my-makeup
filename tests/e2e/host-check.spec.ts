@@ -17,19 +17,19 @@ import { createContent, deleteContent, refreshProfilePages } from '../support/pu
  * set stays, empty, for a family a later change leaves out; a family that is not in it fails the run, and the day of
  * the switch the command is run with none.
  */
-const A_VENIR: ReadonlySet<string> = new Set()
+const UPCOMING: ReadonlySet<string> = new Set()
 
 test('I45 sur un hôte : tout l’inventaire est conforme, aucun 5xx', async ({ request, baseURL }) => {
 	test.setTimeout(300_000)
 	if (!baseURL) throw new Error('baseURL manque')
-	const profils = await setSearchProfiles()
-	const reference = profils.get('reference')
+	const profiles = await setSearchProfiles()
+	const reference = profiles.get('reference')
 	if (!reference) throw new Error('le profil de référence manque au banc')
 	await refreshProfilePages(request, reference)
-	const suffixe = Date.now().toString(36)
-	const talent = `essai-hote-talent-${suffixe}`
-	const article = `essai-hote-article-${suffixe}`
-	const contenus = [
+	const suffix = Date.now().toString(36)
+	const talent = `essai-hote-talent-${suffix}`
+	const article = `essai-hote-article-${suffix}`
+	const contents = [
 		{
 			collection: 'talents' as const,
 			id: await createContent(request, 'talents', { title: `Essai ${talent}`, slug: talent, _status: 'published' }),
@@ -40,16 +40,16 @@ test('I45 sur un hôte : tout l’inventaire est conforme, aucun 5xx', async ({ 
 		},
 	]
 	try {
-		const rapport = await checkHost({ cible: new URL(baseURL) }, { intervalleMs: 0, aVenir: A_VENIR })
-		console.log(`\n${writeReport(rapport)}\n`)
-		expect(rapport.defauts).toEqual([])
-		expect(rapport.reponses5xx).toBe(0)
-		expect(rapport.adresses.enEchec).toBe(0)
-		expect(rapport.adresses.controlees).toBeGreaterThan(60)
+		const report = await checkHost({ cible: new URL(baseURL) }, { intervalleMs: 0, aVenir: UPCOMING })
+		console.log(`\n${writeReport(report)}\n`)
+		expect(report.defauts).toEqual([])
+		expect(report.reponses5xx).toBe(0)
+		expect(report.adresses.enEchec).toBe(0)
+		expect(report.adresses.controlees).toBeGreaterThan(60)
 		// The pages of the made-up set are in the sitemap, so the check read them.
-		expect(rapport.sections.find(({ titre }) => titre === 'Sitemap')?.constats.join(' ')).toMatch(/profils/)
-		expect(rapport.verdict).toBe('conforme')
+		expect(report.sections.find(({ titre }) => titre === 'Sitemap')?.constats.join(' ')).toMatch(/profils/)
+		expect(report.verdict).toBe('conforme')
 	} finally {
-		for (const { collection, id } of contenus) await deleteContent(request, collection, id)
+		for (const { collection, id } of contents) await deleteContent(request, collection, id)
 	}
 })

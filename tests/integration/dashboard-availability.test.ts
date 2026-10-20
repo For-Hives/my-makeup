@@ -15,23 +15,23 @@ import { emptyBase, testPayload } from '../support/payload-test'
 
 afterEach(emptyBase)
 
-type Maquilleuse = TestAccount<'maquilleuse'>
+type Artist = TestAccount<'maquilleuse'>
 
-async function utilisateurDe(payload: Payload, compte: Maquilleuse): Promise<DashboardUser> {
+async function userOf(payload: Payload, compte: Artist): Promise<DashboardUser> {
 	const doc = await payload.findByID({ collection: 'pros', id: compte.id, depth: 0, overrideAccess: true })
 	return { ...doc, collection: 'pros' } as DashboardUser
 }
 
-async function profilStocke(payload: Payload, compte: Maquilleuse) {
+async function storedProfile(payload: Payload, compte: Artist) {
 	const { docs } = await payload.find({
 		collection: 'profiles',
 		depth: 0,
 		overrideAccess: true,
 		where: { pro: { equals: compte.id } },
 	})
-	const profil = docs[0]
-	if (!profil) throw new Error('pas de profil')
-	return profil
+	const profile = docs[0]
+	if (!profile) throw new Error('pas de profil')
+	return profile
 }
 
 describe('E19-E29 : la disponibilité enregistrée est celle de la base', () => {
@@ -39,37 +39,37 @@ describe('E19-E29 : la disponibilité enregistrée est celle de la base', () => 
 		const a = await createAccount('maquilleuse')
 		const b = await createAccount('maquilleuse')
 		const payload = await testPayload()
-		const utilisateur = await utilisateurDe(payload, a)
-		const avantB = await profilStocke(payload, b)
-		const slug = (await profilStocke(payload, a)).slug
+		const user = await userOf(payload, a)
+		const beforeB = await storedProfile(payload, b)
+		const slug = (await storedProfile(payload, a)).slug
 
-		expect(await saveAvailability(payload, utilisateur, { disponible: false })).toEqual({
+		expect(await saveAvailability(payload, user, { disponible: false })).toEqual({
 			ok: true,
 			valeurs: { disponible: false },
 		})
-		expect((await profilStocke(payload, a)).available).toBe(false)
+		expect((await storedProfile(payload, a)).available).toBe(false)
 
-		expect(await saveAvailability(payload, utilisateur, { disponible: true })).toEqual({
+		expect(await saveAvailability(payload, user, { disponible: true })).toEqual({
 			ok: true,
 			valeurs: { disponible: true },
 		})
-		const apres = await profilStocke(payload, a)
-		expect(apres.available).toBe(true)
-		expect(apres.slug).toBe(slug)
-		const apresB = await profilStocke(payload, b)
-		expect(apresB.available).toBe(avantB.available)
-		expect(apresB.updatedAt).toBe(avantB.updatedAt)
+		const after = await storedProfile(payload, a)
+		expect(after.available).toBe(true)
+		expect(after.slug).toBe(slug)
+		const afterB = await storedProfile(payload, b)
+		expect(afterB.available).toBe(beforeB.available)
+		expect(afterB.updatedAt).toBe(beforeB.updatedAt)
 	})
 
 	test('une valeur nulle importée est rendue « disponible » après une écriture qui ne la touche pas', async () => {
 		const a = await createAccount('maquilleuse')
 		const payload = await testPayload()
-		const profil = await profilStocke(payload, a)
-		await payload.db.updateOne({ collection: 'profiles', id: profil.id, data: { available: null }, returning: false })
-		expect((await profilStocke(payload, a)).available ?? null).toBeNull()
+		const profile = await storedProfile(payload, a)
+		await payload.db.updateOne({ collection: 'profiles', id: profile.id, data: { available: null }, returning: false })
+		expect((await storedProfile(payload, a)).available ?? null).toBeNull()
 
-		const resultat = await saveAvailability(payload, await utilisateurDe(payload, a), { disponible: true })
-		expect(resultat).toEqual({ ok: true, valeurs: { disponible: true } })
+		const result = await saveAvailability(payload, await userOf(payload, a), { disponible: true })
+		expect(result).toEqual({ ok: true, valeurs: { disponible: true } })
 	})
 })
 
@@ -77,8 +77,8 @@ describe('E19-E29 : indisponible, le profil sort de la liste publique', () => {
 	test('la liste le montre disponible, ne le montre plus indisponible, le montre de nouveau disponible', async () => {
 		const a = await createAccount('maquilleuse')
 		const payload = await testPayload()
-		const utilisateur = await utilisateurDe(payload, a)
-		const id = (await profilStocke(payload, a)).id
+		const user = await userOf(payload, a)
+		const id = (await storedProfile(payload, a)).id
 		await payload.update({
 			collection: 'profiles',
 			id,
@@ -90,7 +90,7 @@ describe('E19-E29 : indisponible, le profil sort de la liste publique', () => {
 				skills: [{ name: 'Teint' }],
 			},
 		})
-		const listee = async () =>
+		const listed = async () =>
 			(
 				await payload.find({
 					collection: 'profiles',
@@ -102,11 +102,11 @@ describe('E19-E29 : indisponible, le profil sort de la liste publique', () => {
 				})
 			).totalDocs === 1
 
-		expect(await listee()).toBe(true)
-		await saveAvailability(payload, utilisateur, { disponible: false })
-		expect(await listee()).toBe(false)
-		await saveAvailability(payload, utilisateur, { disponible: true })
-		expect(await listee()).toBe(true)
+		expect(await listed()).toBe(true)
+		await saveAvailability(payload, user, { disponible: false })
+		expect(await listed()).toBe(false)
+		await saveAvailability(payload, user, { disponible: true })
+		expect(await listed()).toBe(true)
 	})
 })
 
@@ -120,24 +120,24 @@ describe('U32, I02 : une requête forgée est refusée, rien ne change', () => {
 	])('%s', async (_nom, saisie) => {
 		const a = await createAccount('maquilleuse')
 		const payload = await testPayload()
-		const avant = await profilStocke(payload, a)
+		const before = await storedProfile(payload, a)
 
-		const resultat = await saveAvailability(payload, await utilisateurDe(payload, a), saisie)
+		const result = await saveAvailability(payload, await userOf(payload, a), saisie)
 
-		expect(resultat).toEqual({ ok: false, message: FAILURE_MESSAGE })
-		const apres = await profilStocke(payload, a)
-		expect(apres.updatedAt).toBe(avant.updatedAt)
-		expect(apres.available).toBe(avant.available)
+		expect(result).toEqual({ ok: false, message: FAILURE_MESSAGE })
+		const after = await storedProfile(payload, a)
+		expect(after.updatedAt).toBe(before.updatedAt)
+		expect(after.available).toBe(before.available)
 	})
 
 	test('un compte sans profil ne crée rien', async () => {
-		const sansProfil = await createAccount('maquilleuse-sans-profil')
+		const withoutProfile = await createAccount('maquilleuse-sans-profil')
 		const payload = await testPayload()
-		const doc = await payload.findByID({ collection: 'pros', id: sansProfil.id, depth: 0, overrideAccess: true })
-		const resultat = await saveAvailability(payload, { ...doc, collection: 'pros' } as DashboardUser, {
+		const doc = await payload.findByID({ collection: 'pros', id: withoutProfile.id, depth: 0, overrideAccess: true })
+		const result = await saveAvailability(payload, { ...doc, collection: 'pros' } as DashboardUser, {
 			disponible: false,
 		})
-		expect(resultat).toEqual({ ok: false, message: FAILURE_MESSAGE })
+		expect(result).toEqual({ ok: false, message: FAILURE_MESSAGE })
 		expect((await payload.count({ collection: 'profiles', overrideAccess: true })).totalDocs).toBe(0)
 	})
 })

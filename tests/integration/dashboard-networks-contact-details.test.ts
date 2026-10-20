@@ -25,60 +25,60 @@ afterEach(async () => {
 	await Promise.all([emptyBase(), emptyStorage()])
 })
 
-type Maquilleuse = TestAccount<'maquilleuse'>
+type Artist = TestAccount<'maquilleuse'>
 
-const TELEPHONE = '06 39 98 12 34'
+const PHONE = '06 39 98 12 34'
 const EMAIL = 'contact-fictif@example.test'
-const VIDES = { instagram: '', facebook: '', youtube: '', linkedin: '', siteWeb: '' }
+const EMPTY = { instagram: '', facebook: '', youtube: '', linkedin: '', siteWeb: '' }
 
-async function utilisateurDe(payload: Payload, compte: Maquilleuse): Promise<DashboardUser> {
+async function userOf(payload: Payload, compte: Artist): Promise<DashboardUser> {
 	const doc = await payload.findByID({ collection: 'pros', id: compte.id, depth: 0, overrideAccess: true })
 	return { ...doc, collection: 'pros' } as DashboardUser
 }
 
-async function profilStocke(payload: Payload, compte: Maquilleuse) {
+async function storedProfile(payload: Payload, compte: Artist) {
 	const { docs } = await payload.find({
 		collection: 'profiles',
 		depth: 0,
 		overrideAccess: true,
 		where: { pro: { equals: compte.id } },
 	})
-	const profil = docs[0]
-	if (!profil) throw new Error('pas de profil')
-	return profil
+	const profile = docs[0]
+	if (!profile) throw new Error('pas de profil')
+	return profile
 }
 
 /** A makeup artist with a published profile, and the account as Payload hands it to a request. */
-async function maquilleuse() {
-	const compte = await createAccount('maquilleuse')
+async function artist() {
+	const account = await createAccount('maquilleuse')
 	const payload = await testPayload()
-	const utilisateur = await utilisateurDe(payload, compte)
-	const profil = await profilStocke(payload, compte)
-	await payload.update({ collection: 'profiles', id: profil.id, data: { specialty: 'Mariage' } })
-	return { compte, payload, utilisateur, id: profil.id, slug: profil.slug }
+	const user = await userOf(payload, account)
+	const profile = await storedProfile(payload, account)
+	await payload.update({ collection: 'profiles', id: profile.id, data: { specialty: 'Mariage' } })
+	return { compte: account, payload, utilisateur: user, id: profile.id, slug: profile.slug }
 }
 
 describe('125, U28 : « @pseudo » et l’adresse complète donnent la même valeur stockée', () => {
 	test('les deux écritures du même compte, enregistrées l’une après l’autre, donnent la même valeur', async () => {
-		const { payload, utilisateur, compte } = await maquilleuse()
+		const { payload, utilisateur: user, compte: account } = await artist()
 
-		const pseudo = await saveNetworks(payload, utilisateur, { ...VIDES, instagram: '@studio.fictif' })
-		const stockePseudo = (await profilStocke(payload, compte)).networks?.instagram
-		const adresse = await saveNetworks(payload, utilisateur, {
-			...VIDES,
+		const pseudo = await saveNetworks(payload, user, { ...EMPTY, instagram: '@studio.fictif' })
+		const storedPseudo = (await storedProfile(payload, account)).networks?.instagram
+		const url = await saveNetworks(payload, user, {
+			...EMPTY,
 			instagram: 'https://www.instagram.com/studio.fictif/',
 		})
-		const stockeAdresse = (await profilStocke(payload, compte)).networks?.instagram
+		const storedUrl = (await storedProfile(payload, account)).networks?.instagram
 
 		expect(pseudo).toMatchObject({ ok: true, valeurs: { instagram: 'https://www.instagram.com/studio.fictif' } })
-		expect(adresse).toEqual({ ok: true, valeurs: { ...VIDES, instagram: 'https://www.instagram.com/studio.fictif' } })
-		expect(stockePseudo).toBe(stockeAdresse ?? '')
+		expect(url).toEqual({ ok: true, valeurs: { ...EMPTY, instagram: 'https://www.instagram.com/studio.fictif' } })
+		expect(storedPseudo).toBe(storedUrl ?? '')
 	})
 
 	test('les cinq champs sont écrits ensemble, et rendus tels que la base les a gardés', async () => {
-		const { payload, utilisateur, compte } = await maquilleuse()
+		const { payload, utilisateur: user, compte: account } = await artist()
 
-		const resultat = await saveNetworks(payload, utilisateur, {
+		const result = await saveNetworks(payload, user, {
 			instagram: '@studio.fictif',
 			facebook: 'facebook.com/studio.fictif',
 			youtube: '@studio.fictif',
@@ -86,19 +86,19 @@ describe('125, U28 : « @pseudo » et l’adresse complète donnent la même val
 			siteWeb: 'studio-fictif.example.test',
 		})
 
-		const attendu = {
+		const expected = {
 			instagram: 'https://www.instagram.com/studio.fictif',
 			facebook: 'https://www.facebook.com/studio.fictif',
 			youtube: 'https://www.youtube.com/@studio.fictif',
 			linkedin: 'https://fr.linkedin.com/in/studio-fictif',
 			siteWeb: 'https://studio-fictif.example.test/',
 		}
-		expect(resultat).toEqual({ ok: true, valeurs: attendu })
-		const { siteWeb, ...autresReseaux } = attendu
-		expect((await profilStocke(payload, compte)).networks).toMatchObject({ ...autresReseaux, website: siteWeb })
+		expect(result).toEqual({ ok: true, valeurs: expected })
+		const { siteWeb, ...othersNetworks } = expected
+		expect((await storedProfile(payload, account)).networks).toMatchObject({ ...othersNetworks, website: siteWeb })
 		// The card she reads next shows the same values.
-		expect((await artistProfile(payload, utilisateur))?.networks).toMatchObject({
-			...autresReseaux,
+		expect((await artistProfile(payload, user))?.networks).toMatchObject({
+			...othersNetworks,
 			website: siteWeb,
 		})
 	})
@@ -106,55 +106,55 @@ describe('125, U28 : « @pseudo » et l’adresse complète donnent la même val
 
 describe('125, E30 et E31 : une adresse d’un autre site est refusée, un champ vidé retire le réseau', () => {
 	test('l’adresse de Facebook dans le champ d’Instagram : le message est sous le champ, la base ne bouge pas', async () => {
-		const { payload, utilisateur, compte } = await maquilleuse()
-		await saveNetworks(payload, utilisateur, { ...VIDES, instagram: '@studio.fictif' })
-		const avant = await profilStocke(payload, compte)
+		const { payload, utilisateur: user, compte: account } = await artist()
+		await saveNetworks(payload, user, { ...EMPTY, instagram: '@studio.fictif' })
+		const before = await storedProfile(payload, account)
 
-		const resultat = await saveNetworks(payload, utilisateur, {
-			...VIDES,
+		const result = await saveNetworks(payload, user, {
+			...EMPTY,
 			instagram: 'https://www.facebook.com/studio.fictif',
 			facebook: '@autre.fictif',
 		})
 
-		expect(resultat).toMatchObject({
+		expect(result).toMatchObject({
 			ok: false,
 			champs: {
 				instagram:
 					'Cette adresse n’est pas celle d’Instagram : colle l’adresse de ta page Instagram ou écris ton @pseudo.',
 			},
 		})
-		const apres = await profilStocke(payload, compte)
-		expect(apres.updatedAt).toBe(avant.updatedAt)
-		expect(apres.networks).toEqual(avant.networks)
+		const after = await storedProfile(payload, account)
+		expect(after.updatedAt).toBe(before.updatedAt)
+		expect(after.networks).toEqual(before.networks)
 	})
 
 	test('vider un champ retire le réseau, les autres restent', async () => {
-		const { payload, utilisateur, compte } = await maquilleuse()
-		await saveNetworks(payload, utilisateur, {
-			...VIDES,
+		const { payload, utilisateur: user, compte: account } = await artist()
+		await saveNetworks(payload, user, {
+			...EMPTY,
 			instagram: '@studio.fictif',
 			facebook: '@studio.fictif',
 		})
 
-		const resultat = await saveNetworks(payload, utilisateur, { ...VIDES, facebook: '@studio.fictif' })
+		const result = await saveNetworks(payload, user, { ...EMPTY, facebook: '@studio.fictif' })
 
-		expect(resultat).toEqual({ ok: true, valeurs: { ...VIDES, facebook: 'https://www.facebook.com/studio.fictif' } })
-		const reseaux = (await profilStocke(payload, compte)).networks
-		expect(reseaux?.instagram ?? null).toBeNull()
-		expect(reseaux?.facebook).toBe('https://www.facebook.com/studio.fictif')
+		expect(result).toEqual({ ok: true, valeurs: { ...EMPTY, facebook: 'https://www.facebook.com/studio.fictif' } })
+		const networks = (await storedProfile(payload, account)).networks
+		expect(networks?.instagram ?? null).toBeNull()
+		expect(networks?.facebook).toBe('https://www.facebook.com/studio.fictif')
 	})
 
 	test('un compte sans profil : le message du site, rien n’est créé', async () => {
-		const sansProfil = await createAccount('maquilleuse-sans-profil')
+		const withoutProfile = await createAccount('maquilleuse-sans-profil')
 		const payload = await testPayload()
-		const doc = await payload.findByID({ collection: 'pros', id: sansProfil.id, depth: 0, overrideAccess: true })
+		const doc = await payload.findByID({ collection: 'pros', id: withoutProfile.id, depth: 0, overrideAccess: true })
 
-		const resultat = await saveNetworks(payload, { ...doc, collection: 'pros' } as DashboardUser, {
-			...VIDES,
+		const result = await saveNetworks(payload, { ...doc, collection: 'pros' } as DashboardUser, {
+			...EMPTY,
 			instagram: '@studio.fictif',
 		})
 
-		expect(resultat).toEqual({ ok: false, message: FAILURE_MESSAGE })
+		expect(result).toEqual({ ok: false, message: FAILURE_MESSAGE })
 		expect((await payload.count({ collection: 'profiles', overrideAccess: true })).totalDocs).toBe(0)
 	})
 
@@ -165,146 +165,146 @@ describe('125, E30 et E31 : une adresse d’un autre site est refusée, un champ
 		['id', 1],
 		['contactPublic', true],
 	])('U32, I03 : la clé réservée %s refuse la requête entière', async (cle, valeur) => {
-		const { payload, utilisateur, compte } = await maquilleuse()
-		const avant = await profilStocke(payload, compte)
+		const { payload, utilisateur: user, compte: account } = await artist()
+		const before = await storedProfile(payload, account)
 
-		const resultat = await saveNetworks(payload, utilisateur, {
-			...VIDES,
+		const result = await saveNetworks(payload, user, {
+			...EMPTY,
 			instagram: '@studio.fictif',
 			[cle]: valeur,
 		})
 
-		expect(resultat).toEqual({ ok: false, message: FAILURE_MESSAGE })
-		const apres = await profilStocke(payload, compte)
-		expect(apres.updatedAt).toBe(avant.updatedAt)
-		expect(apres.slug).toBe(avant.slug)
+		expect(result).toEqual({ ok: false, message: FAILURE_MESSAGE })
+		const after = await storedProfile(payload, account)
+		expect(after.updatedAt).toBe(before.updatedAt)
+		expect(after.slug).toBe(before.slug)
 	})
 
 	test('I02 : elle n’écrit que son profil', async () => {
-		const a = await maquilleuse()
-		const b = await maquilleuse()
+		const a = await artist()
+		const b = await artist()
 
-		await saveNetworks(a.payload, a.utilisateur, { ...VIDES, instagram: '@studio.fictif' })
+		await saveNetworks(a.payload, a.utilisateur, { ...EMPTY, instagram: '@studio.fictif' })
 
-		expect((await profilStocke(b.payload, b.compte)).networks?.instagram ?? null).toBeNull()
+		expect((await storedProfile(b.payload, b.compte)).networks?.instagram ?? null).toBeNull()
 	})
 })
 
 describe('126 : la maquilleuse choisit d’afficher son téléphone et son email', () => {
 	test('sa page lit ses coordonnées, son choix et la date, jamais le compte', async () => {
-		const { payload, utilisateur } = await maquilleuse()
-		await saveContactDetails(payload, utilisateur, { telephone: TELEPHONE, email: EMAIL, contactPublic: true })
+		const { payload, utilisateur: user } = await artist()
+		await saveContactDetails(payload, user, { telephone: PHONE, email: EMAIL, contactPublic: true })
 
-		const lu = await artistProfile(payload, utilisateur)
+		const read = await artistProfile(payload, user)
 
-		expect(lu).toMatchObject({ contactDetails: { phone: TELEPHONE, email: EMAIL }, publicContact: true })
-		expect(typeof lu?.consentedAt).toBe('string')
-		expect(lu).not.toHaveProperty('pro')
+		expect(read).toMatchObject({ contactDetails: { phone: PHONE, email: EMAIL }, publicContact: true })
+		expect(typeof read?.consentedAt).toBe('string')
+		expect(read).not.toHaveProperty('pro')
 	})
 
 	test('un téléphone ou un email invalide : message sous le champ, la base ne bouge pas (U28, E30)', async () => {
-		const { payload, utilisateur, compte } = await maquilleuse()
-		const avant = await profilStocke(payload, compte)
+		const { payload, utilisateur: user, compte: account } = await artist()
+		const before = await storedProfile(payload, account)
 
-		const resultat = await saveContactDetails(payload, utilisateur, {
+		const result = await saveContactDetails(payload, user, {
 			telephone: '06 ab',
 			email: 'pas-un-email',
 			contactPublic: true,
 		})
 
-		expect(resultat).toMatchObject({
+		expect(result).toMatchObject({
 			ok: false,
 			champs: {
 				telephone: 'Ce numéro n’est pas valide : écris-le avec des chiffres, par exemple 06 12 34 56 78.',
 				email: 'Cet email n’est pas valide : écris-le comme prenom@exemple.fr.',
 			},
 		})
-		const apres = await profilStocke(payload, compte)
-		expect(apres.updatedAt).toBe(avant.updatedAt)
-		expect(apres.publicContact).toBe(false)
+		const after = await storedProfile(payload, account)
+		expect(after.updatedAt).toBe(before.updatedAt)
+		expect(after.publicContact).toBe(false)
 	})
 
 	test('affichage activé : la date est celle du serveur, la source est elle, et la page publique les montre', async () => {
-		const { payload, utilisateur, compte, slug } = await maquilleuse()
+		const { payload, utilisateur: user, compte: account, slug } = await artist()
 
-		const avant = Date.now()
-		const resultat = await saveContactDetails(payload, utilisateur, {
-			telephone: TELEPHONE,
+		const before = Date.now()
+		const result = await saveContactDetails(payload, user, {
+			telephone: PHONE,
 			email: EMAIL,
 			contactPublic: true,
 		})
-		const apres = Date.now()
+		const after = Date.now()
 
-		if (!resultat.ok) throw new Error(`refusé : ${resultat.message}`)
-		expect(resultat.valeurs).toMatchObject({ telephone: TELEPHONE, email: EMAIL, contactPublic: true })
-		const date = Date.parse(resultat.valeurs.consentiLe ?? '')
-		expect(date).toBeGreaterThanOrEqual(avant - 1000)
-		expect(date).toBeLessThanOrEqual(apres + 1000)
-		const stocke = await profilStocke(payload, compte)
-		expect(stocke).toMatchObject({ publicContact: true, consentSource: 'artist' })
-		expect(stocke.consentedAt).toBe(resultat.valeurs.consentiLe ?? '')
+		if (!result.ok) throw new Error(`refusé : ${result.message}`)
+		expect(result.valeurs).toMatchObject({ telephone: PHONE, email: EMAIL, contactPublic: true })
+		const date = Date.parse(result.valeurs.consentiLe ?? '')
+		expect(date).toBeGreaterThanOrEqual(before - 1000)
+		expect(date).toBeLessThanOrEqual(after + 1000)
+		const stored = await storedProfile(payload, account)
+		expect(stored).toMatchObject({ publicContact: true, consentSource: 'artist' })
+		expect(stored.consentedAt).toBe(result.valeurs.consentiLe ?? '')
 
-		const profil = await readPublicProfile(payload, slug)
-		expect(profil?.coordonnees).toEqual({ telephone: TELEPHONE, email: EMAIL })
-		if (!profil) throw new Error('pas de page')
-		const html = renderToStaticMarkup(ProfileView({ profil }))
+		const profile = await readPublicProfile(payload, slug)
+		expect(profile?.coordonnees).toEqual({ telephone: PHONE, email: EMAIL })
+		if (!profile) throw new Error('pas de page')
+		const html = renderToStaticMarkup(ProfileView({ profil: profile }))
 		expect(html).toContain(`mailto:${EMAIL}`)
 		expect(html).toContain('tel:0639981234')
 	})
 
 	test('la date de son choix ne bouge pas à un enregistrement suivant, et elle ne peut pas l’écrire', async () => {
-		const { payload, utilisateur } = await maquilleuse()
-		const premier = await saveContactDetails(payload, utilisateur, {
-			telephone: TELEPHONE,
+		const { payload, utilisateur: user } = await artist()
+		const first = await saveContactDetails(payload, user, {
+			telephone: PHONE,
 			email: '',
 			contactPublic: true,
 		})
 
-		const forge = await saveContactDetails(payload, utilisateur, {
-			telephone: TELEPHONE,
+		const forge = await saveContactDetails(payload, user, {
+			telephone: PHONE,
 			email: '',
 			contactPublic: true,
 			consentiLe: '2020-01-01T00:00:00.000Z',
 		})
-		const suivant = await saveContactDetails(payload, utilisateur, {
-			telephone: TELEPHONE,
+		const next = await saveContactDetails(payload, user, {
+			telephone: PHONE,
 			email: EMAIL,
 			contactPublic: true,
 		})
 
 		expect(forge).toEqual({ ok: false, message: FAILURE_MESSAGE })
-		if (!premier.ok || !suivant.ok) throw new Error('refusé')
-		expect(suivant.valeurs.consentiLe).toBe(premier.valeurs.consentiLe ?? '')
+		if (!first.ok || !next.ok) throw new Error('refusé')
+		expect(next.valeurs.consentiLe).toBe(first.valeurs.consentiLe ?? '')
 	})
 
 	test('affichage coupé : la date est effacée, et la page publique n’a plus rien, ni dans les données ni dans le HTML', async () => {
-		const { payload, utilisateur, compte, slug } = await maquilleuse()
-		await saveContactDetails(payload, utilisateur, { telephone: TELEPHONE, email: EMAIL, contactPublic: true })
+		const { payload, utilisateur: user, compte: account, slug } = await artist()
+		await saveContactDetails(payload, user, { telephone: PHONE, email: EMAIL, contactPublic: true })
 
-		const resultat = await saveContactDetails(payload, utilisateur, {
-			telephone: TELEPHONE,
+		const result = await saveContactDetails(payload, user, {
+			telephone: PHONE,
 			email: EMAIL,
 			contactPublic: false,
 		})
 
-		expect(resultat).toEqual({
+		expect(result).toEqual({
 			ok: true,
-			valeurs: { telephone: TELEPHONE, email: EMAIL, contactPublic: false, consentiLe: null },
+			valeurs: { telephone: PHONE, email: EMAIL, contactPublic: false, consentiLe: null },
 		})
-		expect(await profilStocke(payload, compte)).toMatchObject({
+		expect(await storedProfile(payload, account)).toMatchObject({
 			publicContact: false,
 			consentedAt: null,
 			consentSource: null,
 		})
 		// She keeps what she typed: it is hers, and hidden.
-		expect((await profilStocke(payload, compte)).contactDetails).toMatchObject({ phone: TELEPHONE, email: EMAIL })
+		expect((await storedProfile(payload, account)).contactDetails).toMatchObject({ phone: PHONE, email: EMAIL })
 
-		const profil = await readPublicProfile(payload, slug)
-		if (!profil) throw new Error('pas de page')
-		expect(profil.coordonnees).toBeNull()
-		expect(JSON.stringify(profil)).not.toContain(EMAIL)
-		expect(JSON.stringify(profil)).not.toContain('39 98')
-		const html = renderToStaticMarkup(ProfileView({ profil }))
+		const profile = await readPublicProfile(payload, slug)
+		if (!profile) throw new Error('pas de page')
+		expect(profile.coordonnees).toBeNull()
+		expect(JSON.stringify(profile)).not.toContain(EMAIL)
+		expect(JSON.stringify(profile)).not.toContain('39 98')
+		const html = renderToStaticMarkup(ProfileView({ profil: profile }))
 		expect(html).not.toContain(EMAIL)
 		expect(html).not.toContain('39 98')
 		expect(html).not.toContain('tel:')
@@ -315,36 +315,36 @@ describe('126 : la maquilleuse choisit d’afficher son téléphone et son email
 	})
 
 	test('U22 : jamais dans les listes, montrées ou non', async () => {
-		const { payload, utilisateur } = await maquilleuse()
-		await saveContactDetails(payload, utilisateur, { telephone: TELEPHONE, email: EMAIL, contactPublic: true })
+		const { payload, utilisateur: user } = await artist()
+		await saveContactDetails(payload, user, { telephone: PHONE, email: EMAIL, contactPublic: true })
 
-		const liste = await listProfiles(payload)
+		const list = await listProfiles(payload)
 
-		expect(liste.totalDocs).toBe(1)
-		const texte = JSON.stringify(liste)
-		expect(texte).not.toContain(EMAIL)
-		expect(texte).not.toContain('39 98')
-		expect(texte).not.toMatch(/coordonnees|contactPublic|consenti/)
+		expect(list.totalDocs).toBe(1)
+		const text = JSON.stringify(list)
+		expect(text).not.toContain(EMAIL)
+		expect(text).not.toContain('39 98')
+		expect(text).not.toMatch(/coordonnees|contactPublic|consenti/)
 		const rest = await callRest('GET', '/api/profiles?depth=0')
 		expect(rest.texte).not.toContain(EMAIL)
 		expect(rest.texte).not.toContain('contactPublic')
 	})
 
 	test('une maquilleuse n’écrit pas les coordonnées d’une autre (I02)', async () => {
-		const a = await maquilleuse()
-		const b = await maquilleuse()
+		const a = await artist()
+		const b = await artist()
 
-		await saveContactDetails(a.payload, a.utilisateur, { telephone: TELEPHONE, email: EMAIL, contactPublic: true })
+		await saveContactDetails(a.payload, a.utilisateur, { telephone: PHONE, email: EMAIL, contactPublic: true })
 
-		expect(await profilStocke(b.payload, b.compte)).toMatchObject({ publicContact: false, consentedAt: null })
-		expect((await profilStocke(b.payload, b.compte)).contactDetails?.phone ?? null).toBeNull()
+		expect(await storedProfile(b.payload, b.compte)).toMatchObject({ publicContact: false, consentedAt: null })
+		expect((await storedProfile(b.payload, b.compte)).contactDetails?.phone ?? null).toBeNull()
 	})
 })
 
 describe('126 : masquées et aucun réseau, le profil n’est pas publiable', () => {
 	/** Everything a publishable profile has, but a channel of contact. */
-	async function toutSaufLeContact() {
-		const m = await maquilleuse()
+	async function allExceptContact() {
+		const m = await artist()
 		const photo = await m.payload.create({
 			collection: 'media',
 			data: { owner: Number(m.compte.id) },
@@ -363,26 +363,26 @@ describe('126 : masquées et aucun réseau, le profil n’est pas publiable', ()
 		})
 		return m
 	}
-	const publiable = async (m: Awaited<ReturnType<typeof toutSaufLeContact>>) =>
-		(await profilStocke(m.payload, m.compte)).publishable
+	const publishable = async (m: Awaited<ReturnType<typeof allExceptContact>>) =>
+		(await storedProfile(m.payload, m.compte)).publishable
 
 	test('masquées, ses coordonnées ne sont pas un canal ; montrées, elles le sont ; et un réseau suffit', async () => {
-		const m = await toutSaufLeContact()
-		const coordonnees = { telephone: TELEPHONE, email: EMAIL }
+		const m = await allExceptContact()
+		const contactDetails = { telephone: PHONE, email: EMAIL }
 
-		await saveContactDetails(m.payload, m.utilisateur, { ...coordonnees, contactPublic: false })
-		expect(await publiable(m)).toBe(false)
+		await saveContactDetails(m.payload, m.utilisateur, { ...contactDetails, contactPublic: false })
+		expect(await publishable(m)).toBe(false)
 
-		await saveContactDetails(m.payload, m.utilisateur, { ...coordonnees, contactPublic: true })
-		expect(await publiable(m)).toBe(true)
+		await saveContactDetails(m.payload, m.utilisateur, { ...contactDetails, contactPublic: true })
+		expect(await publishable(m)).toBe(true)
 
-		await saveContactDetails(m.payload, m.utilisateur, { ...coordonnees, contactPublic: false })
-		expect(await publiable(m)).toBe(false)
+		await saveContactDetails(m.payload, m.utilisateur, { ...contactDetails, contactPublic: false })
+		expect(await publishable(m)).toBe(false)
 
-		await saveNetworks(m.payload, m.utilisateur, { ...VIDES, instagram: '@studio.fictif' })
-		expect(await publiable(m)).toBe(true)
+		await saveNetworks(m.payload, m.utilisateur, { ...EMPTY, instagram: '@studio.fictif' })
+		expect(await publishable(m)).toBe(true)
 
-		await saveNetworks(m.payload, m.utilisateur, VIDES)
-		expect(await publiable(m)).toBe(false)
+		await saveNetworks(m.payload, m.utilisateur, EMPTY)
+		expect(await publishable(m)).toBe(false)
 	})
 })

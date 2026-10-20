@@ -7,10 +7,10 @@ import { collectRefusal, UnmockedRequest } from '../support/outgoing-http'
  * The outgoing HTTP bench, on the bench as it runs: the two services of the bench that speak
  * HTTP answer for real, and everything else is still refused.
  */
-const { mails, stockage } = benchServices(benchEnvironment())
+const { mails, stockage: storage } = benchServices(benchEnvironment())
 
 /** The status a `node:http` request gets: the way out the S3 client of the application takes. */
-const statutParNode = (adresse: string, methode: string): Promise<number | undefined> =>
+const statusByNode = (adresse: string, methode: string): Promise<number | undefined> =>
 	new Promise((resolve, reject) => {
 		request(adresse, { method: methode }, reponse => {
 			reponse.resume()
@@ -22,20 +22,20 @@ const statutParNode = (adresse: string, methode: string): Promise<number | undef
 
 describe('Sur le banc démarré : ses services ne sont pas interceptés, tout autre hôte l’est', () => {
 	test('le capteur de mails et le stockage d’objets répondent à fetch, sans aucune déclaration', async () => {
-		const capteur = await fetch(`${mails.api}/api/v1/info`)
-		const espace = await fetch(`${stockage.adresse}/${stockage.bucket}`, { method: 'HEAD' })
+		const catcher = await fetch(`${mails.api}/api/v1/info`)
+		const dashboard = await fetch(`${storage.adresse}/${storage.bucket}`, { method: 'HEAD' })
 
-		expect(capteur.status).toBe(200)
+		expect(catcher.status).toBe(200)
 		// Only the real Mailpit knows its own version.
-		expect(Object.keys((await capteur.json()) as object)).toContain('Version')
-		expect(espace.status).toBe(200)
+		expect(Object.keys((await catcher.json()) as object)).toContain('Version')
+		expect(dashboard.status).toBe(200)
 		expect(collectRefusal()).toEqual([])
 	})
 
 	test('ils répondent aussi aux sorties que MSW ne voit pas : Bun.fetch et node:http', async () => {
 		expect((await Bun.fetch(`${mails.api}/readyz`)).status).toBe(200)
-		expect(await statutParNode(`${mails.api}/readyz`, 'GET')).toBe(200)
-		expect(await statutParNode(`${stockage.adresse}/${stockage.bucket}`, 'HEAD')).toBe(200)
+		expect(await statusByNode(`${mails.api}/readyz`, 'GET')).toBe(200)
+		expect(await statusByNode(`${storage.adresse}/${storage.bucket}`, 'HEAD')).toBe(200)
 		expect(collectRefusal()).toEqual([])
 	})
 

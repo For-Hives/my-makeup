@@ -11,14 +11,14 @@ import { testPayload } from '../support/payload-test'
  * The brake of the sign-in counts by client address: each test sends its own made-up address.
  */
 
-let compteur = 0
+let counter = 0
 test.beforeEach(({ context }) =>
-	context.setExtraHTTPHeaders({ 'x-forwarded-for': `192.0.2.${60 + (++compteur % 150)}` })
+	context.setExtraHTTPHeaders({ 'x-forwarded-for': `192.0.2.${60 + (++counter % 150)}` })
 )
 
-type Maquilleuse = TestAccount<'maquilleuse'>
+type Artist = TestAccount<'maquilleuse'>
 
-const COMPLET = {
+const FULL = {
 	firstName: 'Léa',
 	lastName: 'Aperçu',
 	specialty: 'Maquillage mariée',
@@ -27,21 +27,21 @@ const COMPLET = {
 	languages: [{ name: 'Français' }],
 }
 
-async function maquilleuse(
-	context: { addCookies: (c: Maquilleuse['session']['cookies']) => Promise<void> },
+async function artist(
+	context: { addCookies: (c: Artist['session']['cookies']) => Promise<void> },
 	profil: Record<string, unknown>
-): Promise<{ compte: Maquilleuse; slug: string }> {
-	const compte = await createAccount('maquilleuse')
+): Promise<{ compte: Artist; slug: string }> {
+	const account = await createAccount('maquilleuse')
 	const payload = await testPayload()
-	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
-	const [fiche] = docs
-	if (!fiche) throw new Error('pas de profil')
-	await payload.update({ collection: 'profiles', id: fiche.id, data: profil })
-	await context.addCookies(compte.session.cookies)
-	return { compte, slug: (await payload.findByID({ collection: 'profiles', id: fiche.id, depth: 0 })).slug }
+	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: account.id } } })
+	const [sheet] = docs
+	if (!sheet) throw new Error('pas de profil')
+	await payload.update({ collection: 'profiles', id: sheet.id, data: profil })
+	await context.addCookies(account.session.cookies)
+	return { compte: account, slug: (await payload.findByID({ collection: 'profiles', id: sheet.id, depth: 0 })).slug }
 }
 
-const debordement = (page: Page) =>
+const overflow = (page: Page) =>
 	page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
 
 test.describe('139 : voir mon profil public', { tag: '@mobile' }, () => {
@@ -49,19 +49,19 @@ test.describe('139 : voir mon profil public', { tag: '@mobile' }, () => {
 		context,
 		page,
 	}) => {
-		await maquilleuse(context, COMPLET)
-		for (const largeur of [390, 1024, 1440]) {
-			await page.setViewportSize({ width: largeur, height: 900 })
+		await artist(context, FULL)
+		for (const width of [390, 1024, 1440]) {
+			await page.setViewportSize({ width: width, height: 900 })
 			await page.goto('/auth/profil')
-			const lien = page.getByRole('link', { name: 'Voir mon profil public' })
-			await expect(lien).toBeVisible()
-			const boite = await lien.boundingBox()
-			expect(boite?.height ?? 0, `hauteur du lien à ${largeur} px`).toBeGreaterThanOrEqual(44)
-			expect(await debordement(page), `débordement à ${largeur} px`).toBeLessThanOrEqual(0)
-			await lien.click()
+			const link = page.getByRole('link', { name: 'Voir mon profil public' })
+			await expect(link).toBeVisible()
+			const mailbox = await link.boundingBox()
+			expect(mailbox?.height ?? 0, `hauteur du lien à ${width} px`).toBeGreaterThanOrEqual(44)
+			expect(await overflow(page), `débordement à ${width} px`).toBeLessThanOrEqual(0)
+			await link.click()
 			await expect(page).toHaveURL(/\/auth\/apercu-profil$/)
 			await expect(page.getByRole('heading', { level: 1, name: 'Léa Aperçu' })).toBeVisible()
-			expect(await debordement(page), `débordement de l’aperçu à ${largeur} px`).toBeLessThanOrEqual(0)
+			expect(await overflow(page), `débordement de l’aperçu à ${width} px`).toBeLessThanOrEqual(0)
 		}
 	})
 
@@ -70,27 +70,27 @@ test.describe('139 : voir mon profil public', { tag: '@mobile' }, () => {
 		page,
 		request,
 	}) => {
-		const { slug } = await maquilleuse(context, COMPLET)
+		const { slug } = await artist(context, FULL)
 		await page.goto('/auth/apercu-profil')
-		const bandeau = page.getByTestId('bandeau-apercu')
-		await expect(bandeau).toHaveAttribute('data-etat', 'non-publiable')
+		const banner = page.getByTestId('bandeau-apercu')
+		await expect(banner).toHaveAttribute('data-etat', 'non-publiable')
 
-		const publique = await request.get(`/profil/${slug}`)
-		expect(publique.status()).toBe(200)
-		for (const texte of [
+		const publicValue = await request.get(`/profil/${slug}`)
+		expect(publicValue.status()).toBe(200)
+		for (const text of [
 			'Léa Aperçu',
 			'Maquillage mariée',
 			'Je maquille pour les mariages.',
 			'Teint lumineux',
 			'Français',
 		]) {
-			await expect(page.getByRole('main')).toContainText(texte)
-			expect(await publique.text()).toContain(texte)
+			await expect(page.getByRole('main')).toContainText(text)
+			expect(await publicValue.text()).toContain(text)
 		}
 
-		const reponse = await page.request.get('/auth/apercu-profil')
-		expect(reponse.headers()['cache-control']).toBe('private, no-store')
-		expect(reponse.headers()['x-robots-tag']).toContain('noindex')
+		const response = await page.request.get('/auth/apercu-profil')
+		expect(response.headers()['cache-control']).toBe('private, no-store')
+		expect(response.headers()['x-robots-tag']).toContain('noindex')
 		expect(await page.locator('meta[name="robots"]').getAttribute('content')).toContain('noindex')
 		expect(await page.locator('link[rel="canonical"]').count()).toBe(0)
 		expect(await page.locator('script[type="application/ld+json"]').count()).toBe(0)
@@ -103,15 +103,15 @@ test.describe('139 : voir mon profil public', { tag: '@mobile' }, () => {
 		page,
 		request,
 	}) => {
-		const { slug } = await maquilleuse(context, { firstName: 'Zoé', lastName: 'Brouillon', available: false })
+		const { slug } = await artist(context, { firstName: 'Zoé', lastName: 'Brouillon', available: false })
 		await page.goto('/auth/apercu-profil')
 		await expect(page.getByTestId('bandeau-apercu')).toHaveAttribute('data-etat', 'indisponible')
 		await expect(page.getByRole('heading', { level: 1, name: 'Zoé Brouillon' })).toBeVisible()
 		await expect(page.getByRole('link', { name: 'Modifier mon profil' })).toBeVisible()
 		// A visitor without a session is sent to the sign-in page, in one redirection.
-		const visiteuse = await request.get('/auth/apercu-profil', { maxRedirects: 0 })
-		expect(visiteuse.status()).toBe(307)
-		expect(visiteuse.headers().location).toContain('/auth/signin?callbackUrl=%2Fauth%2Fapercu-profil')
+		const visitor = await request.get('/auth/apercu-profil', { maxRedirects: 0 })
+		expect(visitor.status()).toBe(307)
+		expect(visitor.headers().location).toContain('/auth/signin?callbackUrl=%2Fauth%2Fapercu-profil')
 		expect(slug).not.toBe('')
 	})
 })

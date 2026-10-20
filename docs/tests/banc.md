@@ -87,7 +87,7 @@ Avec un décalage de 20 : base sur 5463, SMTP sur 1045, boîte sur 8045, stockag
 
 ```sh
 bun run test:integration                                       # tout le dossier tests/integration/
-bun run test:integration tests/integration/banc-base.test.ts   # un seul fichier
+bun run test:integration tests/integration/bench-base.test.ts   # un seul fichier
 ```
 
 La commande fait trois choses :
@@ -111,10 +111,10 @@ Conséquence : **lancer les tests d'intégration vide le banc**. Les données qu
 ### Les délais, la charge et la remise à zéro de la base (ticket 225)
 
 - **Un délai de 5 secondes est celui de bun par défaut, et il ne suffit pas sous charge.** Sur un poste qui fait tourner plusieurs bancs ou plusieurs agents à la fois (charge de 20 à 30 relevée le 16/10/2026), la suite complète a vu 20 tests dépasser 5 secondes. Un test qui expire laisse ses requêtes tourner : elles passent dans le fichier suivant, et le `TRUNCATE` de celui-ci tombe sur un interblocage (`deadlock detected`), d'où les rouges en cascade.
-- **Les fichiers lourds portent donc un délai explicite**, en tête de fichier : `setDefaultTimeout(30_000)` (il ne vaut que pour ce fichier, et pour ses crochets). Les fichiers concernés : les comptes (`banc-comptes-types`, `auth-comptes-sans-mot-de-passe`, `espace-suppression`, `admin-suppression-compte`), les médias (`espace-portfolio`, `espace-photo`, `envoi-photo`, `rapprochement`) et l'import (`import-comptes`, `import-talents`, `revalidation`). Le délai borne un appel qui se bloque ; il n'est pas une durée que le test promet. Un test qui promet une durée l'écrit dans son `expect` (le « moins de 5 secondes » de `banc-comptes-types.test.ts`).
+- **Les fichiers lourds portent donc un délai explicite**, en tête de fichier : `setDefaultTimeout(30_000)` (il ne vaut que pour ce fichier, et pour ses crochets). Les fichiers concernés : les comptes (`banc-comptes-types`, `auth-comptes-sans-mot-de-passe`, `espace-suppression`, `admin-suppression-compte`), les médias (`espace-portfolio`, `espace-photo`, `envoi-photo`, `rapprochement`) et l'import (`import-comptes`, `import-talents`, `revalidation`). Le délai borne un appel qui se bloque ; il n'est pas une durée que le test promet. Un test qui promet une durée l'écrit dans son `expect` (le « moins de 5 secondes » de `bench-account-types.test.ts`).
 - **Un test qui vide la base attend la fin de son `TRUNCATE`** (`await emptyBase()`, dans le test ou dans `afterEach`) avant de rendre la main : aucune requête ne doit lui survivre. `emptyBase` n'est jamais lancée sans `await`, ni dans un `Promise.all` avec d'autres requêtes de la même base.
-- **Un test d'ordre n'attend pas l'horloge.** Deux mails envoyés au même instant peuvent porter la même date : un test qui veut « le plus récent d'abord » attend le premier mail dans le capteur avant d'envoyer le second (`banc-stockage-mails.test.ts`).
-- **Aucun test n'est sauté selon la commande.** `import-puis-connexion.test.ts` (ticket 095) fait partie de la suite complète : il vide la base, le capteur et le stockage avant et après, comme les autres essais de l'import, et crée puis efface sa source.
+- **Un test d'ordre n'attend pas l'horloge.** Deux mails envoyés au même instant peuvent porter la même date : un test qui veut « le plus récent d'abord » attend le premier mail dans le capteur avant d'envoyer le second (`bench-storage-mails.test.ts`).
+- **Aucun test n'est sauté selon la commande.** `import-then-sign-in.test.ts` (ticket 095) fait partie de la suite complète : il vide la base, le capteur et le stockage avant et après, comme les autres essais de l'import, et crée puis efface sa source.
 
 ## Écrire un test d'intégration
 
@@ -152,9 +152,9 @@ Règles :
 - **La remise à zéro ne vide que la base.** Le capteur de mails et le stockage d'objets ont chacun la leur : `emptySink()` et `emptyStorage()`, plus bas. Un fichier qui envoie des mails ou dépose des objets les vide après ses tests.
 - **Hors du banc, rien n'est écrit.** `testPayload()` et `emptyBase()` s'arrêtent si la base réglée n'est pas exactement celle du banc de l'instance : un test lancé à la main avec un `.env` de travail ne touche pas la base de développement.
 
-`tests/integration/banc-base.test.ts` est le test coquille de la base : il crée un document, le relit, vide la base. Lancé seul, banc démarré, il passe en 2 à 3 secondes (mesuré le 14/10/2026 : 2,2 s, commande comprise).
+`tests/integration/bench-base.test.ts` est le test coquille de la base : il crée un document, le relit, vide la base. Lancé seul, banc démarré, il passe en 2 à 3 secondes (mesuré le 14/10/2026 : 2,2 s, commande comprise).
 
-`tests/integration/banc-stockage-mails.test.ts` est le test coquille de la base, du stockage et du capteur de mails : il écrit un document, un objet et un mail, puis relit les trois. Lancé seul, banc démarré, le fichier entier passe en 2 à 3 secondes (mesuré le 14/10/2026 : 2,3 s, commande comprise).
+`tests/integration/bench-storage-mails.test.ts` est le test coquille de la base, du stockage et du capteur de mails : il écrit un document, un objet et un mail, puis relit les trois. Lancé seul, banc démarré, le fichier entier passe en 2 à 3 secondes (mesuré le 14/10/2026 : 2,3 s, commande comprise).
 
 ## Lire les mails : le capteur
 
@@ -239,7 +239,7 @@ espion.arreter()
 | `deletionsWithoutTrash(journal)` | Les clés retirées sans être la seconde moitié d'un déplacement vers la corbeille : un retrait sans copie confirmée sous `deleted/`, un retrait dans la corbeille, un retrait de plusieurs objets à la fois. Vide quand l'application n'a rien effacé |
 
 - **Il voit tout ce que fait Payload**, parce que Payload tourne dans le processus des tests, et les appels REST aussi. Il ne voit pas le client de test ci-dessus, qui passe par `fetch` : un test vide son espace librement.
-- `tests/integration/media-corbeille.test.ts` s'en sert après chaque test.
+- `tests/integration/media-trash.test.ts` s'en sert après chaque test.
 
 ## Écouter le cache de Next : l'espion
 
@@ -263,7 +263,7 @@ expect(chemins).toEqual([`/profil/${profil.slug}`, '/search', '/site-map', '/sit
 
 - **`next/cache` est remplacé dès le chargement du fichier, pour tout le lancement.** Hors d'un `spyCache`, ses fonctions sont celles de Next, qui refusent de rafraîchir hors d'une de ses requêtes : l'enregistrement passe sans rien rafraîchir, comme dans un script.
 - **Un espion à la fois** : `spyCache` ne s'imbrique pas.
-- **Il dit ce que Next reçoit, pas ce que Next fait de son cache.** Qu'une page rafraîchie montre la modification se prouve de bout en bout (ticket 117, `tests/e2e/fraicheur-pages.spec.ts`).
+- **Il dit ce que Next reçoit, pas ce que Next fait de son cache.** Qu'une page rafraîchie montre la modification se prouve de bout en bout (ticket 117, `tests/e2e/page-freshness.spec.ts`).
 
 ## Préparer la base du banc
 
@@ -351,7 +351,7 @@ Les types de compte sont déclarés dans `ACCOUNT_TYPES` (`tests/support/account
 
 Aucun mail ne part : la fabrique coupe le mail de confirmation que Payload enverrait à une nouvelle maquilleuse. Chaque maquilleuse reçoit un nom d'affichage fictif qui lui est propre, et son profil vide, sauf `maquilleuse-sans-profil`.
 
-`tests/integration/banc-comptes-types.test.ts` crée chaque type et vérifie sa session sur « mon compte », ou qu'il n'en a pas et qu'aucun mot de passe connu ne l'ouvre. Toutes les variantes, créées puis vidées, tiennent en moins de 5 secondes : 0,9 à 1,3 s, la plus longue avec le calcul du hash de fixture (mesuré le 14/10/2026, trois passages).
+`tests/integration/bench-account-types.test.ts` crée chaque type et vérifie sa session sur « mon compte », ou qu'il n'en a pas et qu'aucun mot de passe connu ne l'ouvre. Toutes les variantes, créées puis vidées, tiennent en moins de 5 secondes : 0,9 à 1,3 s, la plus longue avec le calcul du hash de fixture (mesuré le 14/10/2026, trois passages).
 
 Une collection de comptes y ajoute son type par une déclaration :
 
@@ -453,7 +453,7 @@ const { profils, crees, presents } = await poserLesProfilsDuJeu(await testPayloa
 
 Les données sont dans `src/demo-data/profiles.ts` (`DEMO_PROFILES`), avec, pour chaque type, ce que le serveur doit calculer (`attendu`). Le jeu vit sous `src/` et non sous `tests/`, parce que les collections et les outils du banc le chargent sans passer par Next, et que l'image Docker ne contient pas `tests/`.
 
-`tests/unit/demo-data.test.ts` vérifie le jeu sans le banc : les douze types, l'état que leur donne la règle unique, les longueurs du profil aux textes maximaux, les six photos et la garde. `tests/integration/banc-profils-types.test.ts` le charge sur le banc : chaque profil relié à sa maquilleuse, l'état enregistré, les photos et leurs objets, le rechargement.
+`tests/unit/demo-data.test.ts` vérifie le jeu sans le banc : les douze types, l'état que leur donne la règle unique, les longueurs du profil aux textes maximaux, les six photos et la garde. `tests/integration/bench-profile-types.test.ts` le charge sur le banc : chaque profil relié à sa maquilleuse, l'état enregistré, les photos et leurs objets, le rechargement.
 
 ## Le banc complet : une commande, la session dont on a besoin
 
@@ -514,11 +514,11 @@ Le critère « l'administration compte 12 profils » compte les **12 profils typ
 
 Rejouer le chargement ne crée rien : un talent ou un article se retrouve par son adresse, brouillon compris, et reste tel qu'il est.
 
-Les tests : `tests/integration/banc-jeu-complet.test.ts` (le jeu complet, rejoué sans doublon, les commandes `bench:reset` et `bench:session` lancées comme une personne les lance), `tests/e2e/jeu-du-banc.spec.ts` (l'administration, ouverte avec l'admin du jeu, compte les 12 profils types, les 3 talents et les 3 articles dont le brouillon), `tests/unit/editorial-data.test.ts` et `tests/unit/bench-full.test.ts` (sans le banc).
+Les tests : `tests/integration/bench-full-dataset.test.ts` (le jeu complet, rejoué sans doublon, les commandes `bench:reset` et `bench:session` lancées comme une personne les lance), `tests/e2e/bench-dataset.spec.ts` (l'administration, ouverte avec l'admin du jeu, compte les 12 profils types, les 3 talents et les 3 articles dont le brouillon), `tests/unit/editorial-data.test.ts` et `tests/unit/bench-full.test.ts` (sans le banc).
 
 ## La matrice d'accès
 
-Toute règle d'accès, qui dit qui lit, crée, modifie ou supprime quoi, ajoute ses lignes à la matrice d'accès, dans le même commit : `tests/integration/payload-acces.test.ts`. Les règles elles-mêmes sont dans `src/lib/access.ts`, et les collections les appellent.
+Toute règle d'accès, qui dit qui lit, crée, modifie ou supprime quoi, ajoute ses lignes à la matrice d'accès, dans le même commit : `tests/integration/payload-access.test.ts`. Les règles elles-mêmes sont dans `src/lib/access.ts`, et les collections les appellent.
 
 Une ligne dit qui agit, sur quoi, et ce qui doit arriver :
 
@@ -582,7 +582,7 @@ Deux tests la jouent contre ce fournisseur :
 
 ```sh
 bun run test:integration tests/integration/auth-google.test.ts   # les règles, avec la vraie base et le vrai faux Google
-bun run test:e2e tests/e2e/connexion-google.spec.ts              # E07 : le bouton, dans un navigateur
+bun run test:e2e tests/e2e/google-sign-in.spec.ts              # E07 : le bouton, dans un navigateur
 ```
 
 Pour un essai à la main, ouvre le site du banc et clique sur « Se connecter avec Google » : sans choix, `camille.google@example.test` s'inscrit au premier passage et se connecte au suivant.
@@ -632,10 +632,10 @@ Les quatre scénarios :
 
 ### Le test coquille
 
-`tests/integration/banc-faux-google.test.ts` joue un aller-retour complet contre le conteneur : demande d'autorisation avec état, nonce et défi PKCE, retour avec le code, échange, signature du jeton d'identité vérifiée contre les clés publiées, lecture du profil. Puis les quatre scénarios, un par un. Chaque aller-retour doit tenir en moins de 5 secondes ; il prend 10 à 50 millisecondes (mesuré le 14/10/2026).
+`tests/integration/bench-fake-google.test.ts` joue un aller-retour complet contre le conteneur : demande d'autorisation avec état, nonce et défi PKCE, retour avec le code, échange, signature du jeton d'identité vérifiée contre les clés publiées, lecture du profil. Puis les quatre scénarios, un par un. Chaque aller-retour doit tenir en moins de 5 secondes ; il prend 10 à 50 millisecondes (mesuré le 14/10/2026).
 
 ```sh
-bun run test:integration tests/integration/banc-faux-google.test.ts
+bun run test:integration tests/integration/bench-fake-google.test.ts
 ```
 
 `google.allerRetour(choix)` est cet aller-retour, prêt à l'emploi. Il prouve le fournisseur : ce n'est pas la connexion de l'application.
@@ -663,7 +663,7 @@ Il nomme trois sortes d'orphelins, par clé d'objet ou par identifiant, sans auc
 
 La corbeille (`deleted/`) est comptée à part, comme les vignettes de l'ancien site décrites dans `media.strapiFormats` : ce ne sont pas des orphelins. Code de sortie 0 sans orphelin (« 0 orphelin »), 1 avec, 2 si le banc ne répond pas. Avec `--json`, la sortie est le rapport en JSON. Avec `--outside-import`, les médias que l'import a repris de l'ancien site (`strapiId`) restent listés mais ne comptent pas pour le code de sortie : c'est l'option de la CI, parce que l'essai de bout en bout de l'import efface sa fausse source à la fin, et que les médias repris perdent alors leurs objets exprès. Le contrôle complet d'avant purge se lance sans l'option.
 
-En CI, l'étape « Reconcile the storage and the database » du job `e2e` le lance (avec `--outside-import`) après les essais de bout en bout : à ce moment, les objets hors corbeille doivent être exactement ceux des photos des profils et des articles. Un orphelin fait passer l'étape au rouge, donc `ci-ok` au rouge. `tests/integration/rapprochement.test.ts` prouve les trois sortes d'orphelins, l'absence de toute écriture et le code de sortie ; `tests/ci/ci-guardrails.test.ts` garde l'étape dans le workflow.
+En CI, l'étape « Reconcile the storage and the database » du job `e2e` le lance (avec `--outside-import`) après les essais de bout en bout : à ce moment, les objets hors corbeille doivent être exactement ceux des photos des profils et des articles. Un orphelin fait passer l'étape au rouge, donc `ci-ok` au rouge. `tests/integration/reconciliation.test.ts` prouve les trois sortes d'orphelins, l'absence de toute écriture et le code de sortie ; `tests/ci/ci-guardrails.test.ts` garde l'étape dans le workflow.
 
 ## La fausse base Strapi
 
@@ -697,7 +697,7 @@ Chaque image est épinglée par son étiquette exacte et par son empreinte, dans
 - **bun pour le faux Google** : ce n'est pas une image de plus. Le faux Google est du code de ce dépôt (`tests/support/fake-google/`), lu en lecture seule par le conteneur, et lancé par le bun qui construit déjà l'image du site. Un test vérifie que les deux références sont identiques (`tests/unit/bench-stack.test.ts`).
 - Vérifié par `gh api repos/<dépôt>/releases`, `gh api repos/<dépôt>/security-advisories` et `gh api "/advisories?ecosystem=…&affects=…"`, puis `skopeo inspect` pour les empreintes et les dates. Les paquets du système de chaque image n'ont pas été passés au scanner.
 
-Une montée de version change l'étiquette et l'empreinte ensemble. `tests/integration/banc-pile.test.ts` vérifie que la version qui tourne est bien celle qui est épinglée.
+Une montée de version change l'étiquette et l'empreinte ensemble. `tests/integration/bench-stack.test.ts` vérifie que la version qui tourne est bien celle qui est épinglée.
 
 ## Limites
 
@@ -723,7 +723,7 @@ Il tient la place de la vraie sur deux chemins, ceux que le site relaie :
 
 Un test le lit par `fakeUmami()` (`tests/support/fake-umami.ts`) : `recus()`, `envois('cta_click')` et `vider()`. Le traceur est un remplaçant, pas une copie du vrai : il prouve ce que le site lui donne et ce qu'il relaie, pas le comportement de la version d'Umami en ligne.
 
-Le navigateur de Playwright se déclare automatisé (`navigator.webdriver`, agent `HeadlessChrome`), et le filtre du site refuse de le mesurer. Un essai qui veut voir arriver une mesure joue un navigateur ordinaire : un agent d'un Chrome ordinaire et `webdriver` à faux (`tests/e2e/mesure-umami.spec.ts`).
+Le navigateur de Playwright se déclare automatisé (`navigator.webdriver`, agent `HeadlessChrome`), et le filtre du site refuse de le mesurer. Un essai qui veut voir arriver une mesure joue un navigateur ordinaire : un agent d'un Chrome ordinaire et `webdriver` à faux (`tests/e2e/analytics-umami.spec.ts`).
 
 Les noms d'hôte que le traceur compte sont ceux du banc (`NEXT_PUBLIC_UMAMI_DOMAINS` de `.env.test`) ; le build des essais de bout en bout les reçoit, parce que les pages les figent.
 

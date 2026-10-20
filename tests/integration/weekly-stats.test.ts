@@ -15,48 +15,48 @@ import { emptyStorage } from '../support/s3'
  * the token opens this route and no other.
  */
 
-const JETON = 'jeton-de-service-du-banc-0123456789abcdef'
-const SEMAINE = 'from=2020-01-01T00:00:00Z&to=2020-01-08T00:00:00Z'
-const ENTETES = { authorization: `Bearer ${JETON}` }
-const avant = process.env.STATS_TOKEN
+const TOKEN = 'jeton-de-service-du-banc-0123456789abcdef'
+const WEEK = 'from=2020-01-01T00:00:00Z&to=2020-01-08T00:00:00Z'
+const HEADERS = { authorization: `Bearer ${TOKEN}` }
+const before = process.env.STATS_TOKEN
 
-const appeler = (requete: string, entetes: Record<string, string> = ENTETES) =>
+const call = (requete: string, entetes: Record<string, string> = HEADERS) =>
 	GET(new Request(`http://localhost/api/stats/weekly?${requete}`, { headers: entetes }))
 
 beforeAll(async () => {
-	process.env.STATS_TOKEN = JETON
+	process.env.STATS_TOKEN = TOKEN
 	await testPayload()
 	await Promise.all([emptyBase(), emptyStorage()])
 	await setBenchDataset()
 }, 120_000)
 
 afterAll(async () => {
-	if (avant === undefined) delete process.env.STATS_TOKEN
-	else process.env.STATS_TOKEN = avant
+	if (before === undefined) delete process.env.STATS_TOKEN
+	else process.env.STATS_TOKEN = before
 	await Promise.all([emptyBase(), emptyStorage()])
 }, 60_000)
 
 describe('Les statistiques hebdomadaires sur le jeu du banc', () => {
 	test('les nombres exacts, tirés de ce que le jeu promet de chaque profil', async () => {
-		const profilsDesComptes = DATASET_TYPES.filter(type => ACCOUNT_TYPES[type].collection === 'pros').length
-		const sansProfil = DATASET_TYPES.filter(type => type === 'maquilleuse-sans-profil').length
+		const accountsProfiles = DATASET_TYPES.filter(type => ACCOUNT_TYPES[type].collection === 'pros').length
+		const withoutProfile = DATASET_TYPES.filter(type => type === 'maquilleuse-sans-profil').length
 		const types = DEMO_PROFILES
-		const vusParLeServeur = types.filter(({ attendu }) => attendu.status === 'published' && attendu.publishable)
+		const seenByServer = types.filter(({ attendu }) => attendu.status === 'published' && attendu.publishable)
 
-		const reponse = await appeler(SEMAINE)
-		const stats = WeeklyStats.parse(await reponse.json())
+		const response = await call(WEEK)
+		const stats = WeeklyStats.parse(await response.json())
 
-		expect(reponse.status).toBe(200)
-		expect(stats.accounts.total).toBe(types.length + profilsDesComptes)
+		expect(response.status).toBe(200)
+		expect(stats.accounts.total).toBe(types.length + accountsProfiles)
 		// Every account of makeup artist but the one without profile has an empty profile, created with it.
-		const videsDesComptes = profilsDesComptes - sansProfil
-		expect(stats.profiles.total).toBe(types.length + videsDesComptes)
-		expect(stats.profiles.fullyEmpty).toBe(types.filter(({ attendu }) => attendu.fullyEmpty).length + videsDesComptes)
+		const emptyAccounts = accountsProfiles - withoutProfile
+		expect(stats.profiles.total).toBe(types.length + emptyAccounts)
+		expect(stats.profiles.fullyEmpty).toBe(types.filter(({ attendu }) => attendu.fullyEmpty).length + emptyAccounts)
 		expect(stats.profiles.active).toBe(types.filter(({ attendu }) => attendu.active).length)
-		expect(stats.profiles.publishable).toBe(vusParLeServeur.length)
+		expect(stats.profiles.publishable).toBe(seenByServer.length)
 		expect(stats.profiles.hidden).toBe(types.filter(({ attendu }) => attendu.status === 'hidden').length)
-		expect(stats.publishable.slugs).toEqual(vusParLeServeur.map(({ attendu }) => attendu.slug).sort())
-		expect(Object.values(stats.publishable.byDepartment).reduce((a, b) => a + b, 0)).toBe(vusParLeServeur.length)
+		expect(stats.publishable.slugs).toEqual(seenByServer.map(({ attendu }) => attendu.slug).sort())
+		expect(Object.values(stats.publishable.byDepartment).reduce((a, b) => a + b, 0)).toBe(seenByServer.length)
 		// The set was created now: nothing in 2020.
 		expect(stats.profiles.created).toBe(0)
 		expect(stats.accounts.new).toBe(0)
@@ -66,9 +66,9 @@ describe('Les statistiques hebdomadaires sur le jeu du banc', () => {
 	}, 60_000)
 
 	test('une période qui contient la création : les inscriptions et les comptes nouveaux', async () => {
-		const debut = new Date(Date.now() - 3_600_000).toISOString()
-		const fin = new Date(Date.now() + 3_600_000).toISOString()
-		const stats = WeeklyStats.parse(await (await appeler(`from=${debut}&to=${fin}`)).json())
+		const start = new Date(Date.now() - 3_600_000).toISOString()
+		const end = new Date(Date.now() + 3_600_000).toISOString()
+		const stats = WeeklyStats.parse(await (await call(`from=${start}&to=${end}`)).json())
 
 		expect(stats.profiles.created).toBe(stats.profiles.total)
 		expect(stats.signUps).toHaveLength(stats.profiles.total)
@@ -76,9 +76,9 @@ describe('Les statistiques hebdomadaires sur le jeu du banc', () => {
 	}, 60_000)
 
 	test('ni « @ », ni 9 chiffres, ni nom du jeu hors de la liste des adresses publiques', async () => {
-		const stats = WeeklyStats.parse(await (await appeler(SEMAINE)).json())
-		const sansAdresses = JSON.stringify({ ...stats, publishable: { ...stats.publishable, slugs: [] } })
-		const noms = DEMO_PROFILES.flatMap(({ profil, compte }) => [
+		const stats = WeeklyStats.parse(await (await call(WEEK)).json())
+		const withoutUrls = JSON.stringify({ ...stats, publishable: { ...stats.publishable, slugs: [] } })
+		const names = DEMO_PROFILES.flatMap(({ profil, compte }) => [
 			profil.firstName,
 			profil.lastName,
 			profil.artistName,
@@ -88,36 +88,36 @@ describe('Les statistiques hebdomadaires sur le jeu du banc', () => {
 			profil.city?.name,
 		]).filter((nom): nom is string => typeof nom === 'string' && nom !== '')
 
-		expect(sansAdresses).not.toContain('@')
-		expect(sansAdresses).not.toMatch(/\d{9}/)
-		expect(noms.length).toBeGreaterThan(10)
-		for (const nom of noms) expect(sansAdresses.toLowerCase()).not.toContain(nom.toLowerCase())
+		expect(withoutUrls).not.toContain('@')
+		expect(withoutUrls).not.toMatch(/\d{9}/)
+		expect(names.length).toBeGreaterThan(10)
+		for (const name of names) expect(withoutUrls.toLowerCase()).not.toContain(name.toLowerCase())
 	}, 60_000)
 
 	test('401 sans jeton ou avec un mauvais, 400 sur une période illisible, 405 sur un autre verbe, jamais en cache', async () => {
-		for (const entetes of [{}, { authorization: 'Bearer faux' }, { authorization: JETON }] as Record<
+		for (const headers of [{}, { authorization: 'Bearer faux' }, { authorization: TOKEN }] as Record<
 			string,
 			string
 		>[]) {
-			const reponse = await appeler(SEMAINE, entetes)
-			expect(reponse.status).toBe(401)
-			expect(reponse.headers.get('Cache-Control')).toBe('no-store')
+			const response = await call(WEEK, headers)
+			expect(response.status).toBe(401)
+			expect(response.headers.get('Cache-Control')).toBe('no-store')
 		}
-		for (const requete of ['', 'from=2020-01-01&to=2020-01-08', 'from=2020-01-08T00:00:00Z&to=2020-01-01T00:00:00Z']) {
-			const reponse = await appeler(requete)
-			expect(reponse.status).toBe(400)
-			expect(reponse.headers.get('Cache-Control')).toBe('no-store')
+		for (const request of ['', 'from=2020-01-01&to=2020-01-08', 'from=2020-01-08T00:00:00Z&to=2020-01-01T00:00:00Z']) {
+			const response = await call(request)
+			expect(response.status).toBe(400)
+			expect(response.headers.get('Cache-Control')).toBe('no-store')
 		}
 		expect(POST().status).toBe(405)
-		expect((await appeler(SEMAINE)).headers.get('Cache-Control')).toBe('no-store')
+		expect((await call(WEEK)).headers.get('Cache-Control')).toBe('no-store')
 	}, 60_000)
 
 	test('le jeton ne vaut rien sur une autre route : l’API de Payload le lit comme une visiteuse', async () => {
-		const profils = await callRest('GET', '/api/profiles?limit=100', { enTetes: ENTETES })
-		const anonyme = await callRest('GET', '/api/profiles?limit=100')
-		expect(profils.statut).toBe(anonyme.statut)
-		expect(profils.texte).toBe(anonyme.texte)
-		const comptes = await callRest('GET', '/api/pros', { enTetes: ENTETES })
-		expect(comptes.statut).toBe(403)
+		const profiles = await callRest('GET', '/api/profiles?limit=100', { enTetes: HEADERS })
+		const anonymous = await callRest('GET', '/api/profiles?limit=100')
+		expect(profiles.statut).toBe(anonymous.statut)
+		expect(profiles.texte).toBe(anonymous.texte)
+		const accounts = await callRest('GET', '/api/pros', { enTetes: HEADERS })
+		expect(accounts.statut).toBe(403)
 	}, 60_000)
 })

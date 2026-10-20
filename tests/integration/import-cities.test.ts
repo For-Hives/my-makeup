@@ -30,7 +30,7 @@ import { createSourceStrapi, eraseSourceStrapi, sourceFingerprint } from '../sup
  */
 
 /** The decision lines a person would write after reading the private list of review. */
-const DECISIONS_DES_COMMUNES: Decisions = {
+const CITIES_DECISIONS: Decisions = {
 	...BENCH_DECISIONS,
 	cities: [
 		// The Saint-Julien of the Rhône, one of the six candidates.
@@ -40,15 +40,15 @@ const DECISIONS_DES_COMMUNES: Decisions = {
 	],
 }
 
-let revue: CaseToReview[] = []
-let premier: Awaited<ReturnType<typeof importOnBench>>
+let review: CaseToReview[] = []
+let first: Awaited<ReturnType<typeof importOnBench>>
 
 beforeAll(async () => {
 	await emptyBase()
 	await createSourceStrapi()
-	premier = await importOnBench('real', {
+	first = await importOnBench('real', {
 		onReview: cas => {
-			revue = cas
+			review = cas
 		},
 	})
 	// The first run of the file starts Payload on the bench: longer than the default 5 s.
@@ -59,7 +59,7 @@ afterAll(async () => {
 	await eraseSourceStrapi()
 })
 
-async function profils(overrideAccess = true) {
+async function profiles(overrideAccess = true) {
 	const payload = await testPayload()
 	const { docs } = await payload.find({
 		collection: 'profiles',
@@ -72,14 +72,16 @@ async function profils(overrideAccess = true) {
 	return docs
 }
 
-const communeDe = async (strapiId: number) => (await profils()).find(profil => profil.strapiId === strapiId)?.city
+const cityOf = async (strapiId: number) => (await profiles()).find(profil => profil.strapiId === strapiId)?.city
 
 describe('Commune simple, avec code postal, et adresse postale : la bonne commune', () => {
 	test('chaque ville devient sa commune, avec son code INSEE, son département et son centre à 1 km', async () => {
 		const annecy = { name: 'Annecy', inseeCode: '74010', department: '74', latitude: 45.9, longitude: 6.13 }
 
-		for (const id of [21, 22, 23, 30]) expect(await communeDe(id), String(id)).toEqual(annecy)
-		const codes = Object.fromEntries((await profils()).map(({ strapiId, city }) => [strapiId, city?.inseeCode ?? null]))
+		for (const id of [21, 22, 23, 30]) expect(await cityOf(id), String(id)).toEqual(annecy)
+		const codes = Object.fromEntries(
+			(await profiles()).map(({ strapiId, city }) => [strapiId, city?.inseeCode ?? null])
+		)
 		expect(codes).toEqual({
 			21: '74010',
 			22: '74010',
@@ -95,25 +97,25 @@ describe('Commune simple, avec code postal, et adresse postale : la bonne commun
 			33: '44109',
 			34: '74012',
 		})
-		expect(await communeDe(25)).toMatchObject({ name: 'Paris', department: '75' })
+		expect(await cityOf(25)).toMatchObject({ name: 'Paris', department: '75' })
 	})
 
 	test('l’adresse postale n’est jamais importée : aucune rue dans aucun champ, public ou non ; le profil est signalé', async () => {
-		const tout = JSON.stringify(await profils())
+		const all = JSON.stringify(await profiles())
 
-		for (const morceau of ['impasse', 'Pinceaux', '74000']) expect(tout).not.toContain(morceau)
-		expect(premier.collections.profiles?.cities?.addresses).toEqual([23])
+		for (const piece of ['impasse', 'Pinceaux', '74000']) expect(all).not.toContain(piece)
+		expect(first.collections.profiles?.cities?.addresses).toEqual([23])
 		// The public reads the commune of a published profile, and no street.
-		const publics = await profils(false)
-		expect(publics.find(({ slug }) => slug === 'zoe-lefevre')?.city).toMatchObject({
+		const publicValue = await profiles(false)
+		expect(publicValue.find(({ slug }) => slug === 'zoe-lefevre')?.city).toMatchObject({
 			name: 'Annecy',
 			inseeCode: '74010',
 		})
-		expect(JSON.stringify(publics)).not.toContain('Pinceaux')
+		expect(JSON.stringify(publicValue)).not.toContain('Pinceaux')
 	})
 
 	test('la part des villes renseignées rattachées à une commune est donnée en nombres (cible 90 %)', () => {
-		expect(premier.collections.profiles?.cities).toEqual({
+		expect(first.collections.profiles?.cities).toEqual({
 			filledCities: 11,
 			attached: 9,
 			part: 81.8,
@@ -123,69 +125,69 @@ describe('Commune simple, avec code postal, et adresse postale : la bonne commun
 			addresses: [23],
 			decided: [],
 		})
-		expect(premier.gaps['ville-en-commune']).toBe(11)
-		expect(premier.parity?.profiles).toMatchObject({ expected: 13, equal: 13, different: [] })
+		expect(first.gaps['ville-en-commune']).toBe(11)
+		expect(first.parity?.profiles).toMatchObject({ expected: 13, equal: 13, different: [] })
 	})
 })
 
 describe('Cas ambigu : zone vide, profil « à revoir » ; avec sa ligne de décision, la commune choisie', () => {
 	test('sans décision : la zone reste vide, le profil part dans la liste de revue privée, avec ses communes possibles', async () => {
-		expect([await communeDe(26), await communeDe(28)]).toEqual([
+		expect([await cityOf(26), await cityOf(28)]).toEqual([
 			{ name: null, inseeCode: null, department: null, latitude: null, longitude: null },
 			{ name: null, inseeCode: null, department: null, latitude: null, longitude: null },
 		])
-		expect(revue.map(({ profil, motif }) => [profil, motif])).toEqual([
+		expect(review.map(({ profil, motif }) => [profil, motif])).toEqual([
 			[26, 'pas-une-commune'],
 			[28, 'homonymes'],
 		])
-		expect(revue[1]?.candidats.map(({ code }) => code)).toEqual(['21555', '22307', '34271', '69215', '83113', '88421'])
-		expect(JSON.stringify(revue)).not.toContain('France')
+		expect(review[1]?.candidats.map(({ code }) => code)).toEqual(['21555', '22307', '34271', '69215', '83113', '88421'])
+		expect(JSON.stringify(review)).not.toContain('France')
 	})
 
 	test('avec sa ligne de décision : la commune choisie, ou aucune, et le profil n’est plus à revoir', async () => {
-		const rapport = await importOnBench('real', { decisions: DECISIONS_DES_COMMUNES })
+		const report = await importOnBench('real', { decisions: CITIES_DECISIONS })
 
-		expect(rapport.collections.profiles).toMatchObject({ created: 0, updated: 1 })
-		expect(await communeDe(28)).toEqual({
+		expect(report.collections.profiles).toMatchObject({ created: 0, updated: 1 })
+		expect(await cityOf(28)).toEqual({
 			name: 'Saint-Julien',
 			inseeCode: '69215',
 			department: '69',
 			latitude: 46.03,
 			longitude: 4.65,
 		})
-		expect(rapport.collections.profiles?.cities).toMatchObject({
+		expect(report.collections.profiles?.cities).toMatchObject({
 			attached: 10,
 			part: 90.9,
 			toReview: [],
 			decided: [26, 28],
 		})
-		expect(rapport.pointlessDecisions).toBe(0)
+		expect(report.pointlessDecisions).toBe(0)
 	})
 
 	test('second passage avec les mêmes décisions : 0 création, 0 mise à jour', async () => {
-		const avant = await profils()
+		const before = await profiles()
 
-		const second = await importOnBench('real', { decisions: DECISIONS_DES_COMMUNES })
+		const second = await importOnBench('real', { decisions: CITIES_DECISIONS })
 
 		expect(second.collections.profiles).toMatchObject({ created: 0, updated: 0, refused: [] })
-		expect(await profils()).toEqual(avant)
+		expect(await profiles()).toEqual(before)
 	})
 })
 
 describe('Le référentiel simulé, et ses réponses gardées pour deux passages identiques', () => {
 	/** The kept answers of the bench, sent back as the referential sends them. */
-	function simulerAvecLesReponsesDuBanc(): string[] {
-		const reponses = benchReference().reponses
-		const journal: string[] = []
+	function simulateWithBenchResponses(): string[] {
+		const responses = benchReference().reponses
+		const log: string[] = []
 		simulate(
 			http.get(`${REFERENCE_ADDRESS}/communes`, ({ request }) => {
-				journal.push(request.url)
-				const parametres = new URL(request.url).searchParams
-				const [genre, valeur] = parametres.has('nom')
-					? ['nom', parametres.get('nom')]
-					: ['codePostal', parametres.get('codePostal')]
+				log.push(request.url)
+				const parameters = new URL(request.url).searchParams
+				const [gender, value] = parameters.has('nom')
+					? ['nom', parameters.get('nom')]
+					: ['codePostal', parameters.get('codePostal')]
 				return HttpResponse.json(
-					(reponses.get(`${genre}:${valeur}`) ?? []).map(({ departement, latitude, longitude, ...city }) => ({
+					(responses.get(`${gender}:${value}`) ?? []).map(({ departement, latitude, longitude, ...city }) => ({
 						...city,
 						codeDepartement: departement,
 						centre: { type: 'Point', coordinates: [longitude, latitude] },
@@ -193,74 +195,74 @@ describe('Le référentiel simulé, et ses réponses gardées pour deux passages
 				)
 			})
 		)
-		return journal
+		return log
 	}
 
 	test('un premier passage demande chaque ville une fois ; le second ne demande rien et donne la même chose', async () => {
-		const journal = simulerAvecLesReponsesDuBanc()
-		const garde = keptReference(new Map(), geoApiReference())
+		const log = simulateWithBenchResponses()
+		const guard = keptReference(new Map(), geoApiReference())
 
-		const un = await importOnBench('dry-run', { decisions: DECISIONS_DES_COMMUNES, reference: garde })
-		const demandes = journal.length
-		const deux = await importOnBench('dry-run', { decisions: DECISIONS_DES_COMMUNES, reference: garde })
+		const a = await importOnBench('dry-run', { decisions: CITIES_DECISIONS, reference: guard })
+		const requests = log.length
+		const two = await importOnBench('dry-run', { decisions: CITIES_DECISIONS, reference: guard })
 
 		// annecy, 74000, toulouse, 75116, saint-julien, lyon, nantes, annemasse.
-		expect(demandes).toBe(8)
-		expect(garde.nouvelles()).toBe(8)
-		expect(journal).toHaveLength(demandes)
-		expect(deux.collections.profiles).toEqual(un.collections.profiles)
-		expect(un.collections.profiles).toMatchObject({ created: 0, updated: 0 })
+		expect(requests).toBe(8)
+		expect(guard.nouvelles()).toBe(8)
+		expect(log).toHaveLength(requests)
+		expect(two.collections.profiles).toEqual(a.collections.profiles)
+		expect(a.collections.profiles).toMatchObject({ created: 0, updated: 0 })
 	})
 })
 
 describe('La commande', () => {
-	let dossier = ''
+	let folder = ''
 
 	beforeAll(() => {
-		dossier = mkdtempSync(path.join(tmpdir(), 'communes-import-'))
+		folder = mkdtempSync(path.join(tmpdir(), 'communes-import-'))
 	})
 
-	afterAll(() => rmSync(dossier, { recursive: true, force: true }))
+	afterAll(() => rmSync(folder, { recursive: true, force: true }))
 
 	test('--review écrit la liste de revue privée, lisible par son seul propriétaire, sans le texte saisi', async () => {
-		const fichier = path.join(dossier, 'revue.json')
+		const file = path.join(folder, 'revue.json')
 
 		// A dry run, with the table of the bench, which settles no city.
-		const { code, sortie } = await importCommand(['--decisions', BENCH_DECISION_FILE, '--review', fichier])
+		const { code, sortie: output } = await importCommand(['--decisions', BENCH_DECISION_FILE, '--review', file])
 
-		expect(code, sortie).toBe(0)
-		expect(sortie).toContain('communes : 9 sur 11 villes renseignées (81,8 %, cible 90 %)')
-		expect(sortie).toContain('villes à revoir, zone vide (liste de revue privée, --review) : 26, 28')
-		expect(sortie).toContain('adresses postales, dont seule la commune est reprise : 23')
-		expect(statSync(fichier).mode & 0o777).toBe(0o600)
-		const liste = JSON.parse(readFileSync(fichier, 'utf8')) as CaseToReview[]
-		expect(liste.map(({ profil }) => profil)).toEqual([26, 28])
-		expect(readFileSync(fichier, 'utf8')).not.toMatch(/France|Pinceaux/)
+		expect(code, output).toBe(0)
+		expect(output).toContain('communes : 9 sur 11 villes renseignées (81,8 %, cible 90 %)')
+		expect(output).toContain('villes à revoir, zone vide (liste de revue privée, --review) : 26, 28')
+		expect(output).toContain('adresses postales, dont seule la commune est reprise : 23')
+		expect(statSync(file).mode & 0o777).toBe(0o600)
+		const list = JSON.parse(readFileSync(file, 'utf8')) as CaseToReview[]
+		expect(list.map(({ profil }) => profil)).toEqual([26, 28])
+		expect(readFileSync(file, 'utf8')).not.toMatch(/France|Pinceaux/)
 	}, 60_000)
 
 	test('hors ligne, une réponse qui manque arrête la commande avant toute écriture', async () => {
-		const avant = await profils()
-		const empreinte = (await sourceFingerprint()).empreinte
-		const partiel = path.join(dossier, 'partiel.json')
-		const reponses = JSON.parse(readFileSync(BENCH_REFERENCE_FILE, 'utf8'))
-		delete reponses.reponses['nom:lyon']
-		writeFileSync(partiel, JSON.stringify(reponses))
+		const before = await profiles()
+		const fingerprint = (await sourceFingerprint()).empreinte
+		const partial = path.join(folder, 'partiel.json')
+		const responses = JSON.parse(readFileSync(BENCH_REFERENCE_FILE, 'utf8'))
+		delete responses.reponses['nom:lyon']
+		writeFileSync(partial, JSON.stringify(responses))
 
 		const decisions = ['--decisions', BENCH_DECISION_FILE]
-		const manque = await importCommand(['--real', ...decisions, '--cities', partiel, '--offline'])
+		const missing = await importCommand(['--real', ...decisions, '--cities', partial, '--offline'])
 		const absent = await importCommand([
 			'--real',
 			...decisions,
 			'--cities',
-			path.join(dossier, 'absent.json'),
+			path.join(folder, 'absent.json'),
 			'--offline',
 		])
 
-		expect(manque.code, manque.sortie).toBe(1)
-		expect(manque.sortie).toContain('Hors ligne (--offline), une réponse du référentiel des communes')
+		expect(missing.code, missing.sortie).toBe(1)
+		expect(missing.sortie).toContain('Hors ligne (--offline), une réponse du référentiel des communes')
 		expect(absent.code, absent.sortie).toBe(1)
 		expect(absent.sortie).toContain('le fichier des réponses gardées du référentiel des communes n’existe pas')
-		expect(await profils()).toEqual(avant)
-		expect((await sourceFingerprint()).empreinte).toBe(empreinte)
+		expect(await profiles()).toEqual(before)
+		expect((await sourceFingerprint()).empreinte).toBe(fingerprint)
 	}, 60_000)
 })

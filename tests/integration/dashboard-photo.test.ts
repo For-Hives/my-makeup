@@ -29,140 +29,144 @@ setDefaultTimeout(30_000)
  * (ticket 045, « à savoir pour la suite »).
  */
 
-type Maquilleuse = TestAccount<'maquilleuse'>
+type Artist = TestAccount<'maquilleuse'>
 
-let espion: Spy
+let spy: Spy
 
 beforeEach(() => {
-	espion = spyStorage()
+	spy = spyStorage()
 })
 
 afterEach(async () => {
-	const fautes = deletionsWithoutTrash(espion.journal)
-	espion.arreter()
+	const faults = deletionsWithoutTrash(spy.journal)
+	spy.arreter()
 	await Promise.all([emptyBase(), emptyStorage()])
-	expect(fautes).toEqual([])
+	expect(faults).toEqual([])
 })
 
-async function utilisateurDe(payload: Payload, compte: Maquilleuse): Promise<DashboardUser> {
+async function userOf(payload: Payload, compte: Artist): Promise<DashboardUser> {
 	const doc = await payload.findByID({ collection: 'pros', id: compte.id, depth: 0, overrideAccess: true })
 	return { ...doc, collection: 'pros' } as DashboardUser
 }
 
-async function profilDe(compte: Maquilleuse) {
+async function profileOf(compte: Artist) {
 	const payload = await testPayload()
-	const [profil] = (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } }))
+	const [profile] = (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } }))
 		.docs
-	if (!profil) throw new Error('pas de profil')
-	return profil
+	if (!profile) throw new Error('pas de profil')
+	return profile
 }
 
 /** A makeup artist whose profile has a city and a speciality: only the photo is missing to be active (U03). */
-async function maquilleuse(): Promise<Maquilleuse> {
-	const compte = await createAccount('maquilleuse')
+async function artist(): Promise<Artist> {
+	const account = await createAccount('maquilleuse')
 	const payload = await testPayload()
 	await payload.update({
 		collection: 'profiles',
-		id: (await profilDe(compte)).id,
+		id: (await profileOf(account)).id,
 		data: { firstName: 'Léa', lastName: 'Fictive', specialty: 'Mariée', city: ANNECY },
 	})
-	return compte
+	return account
 }
 
 /** A file sent to the media route as the browser sends it. */
-async function envoyer(compte: Maquilleuse, alt = 'Photo principale'): Promise<Media> {
-	const { statut, corps, texte } = await callRest('POST', '/api/media?depth=0', {
+async function send(compte: Artist, alt = 'Photo principale'): Promise<Media> {
+	const {
+		statut: status,
+		corps,
+		texte: text,
+	} = await callRest('POST', '/api/media?depth=0', {
 		enTetes: compte.session.enTetes,
 		formulaire: formWithFile(fileForForm(), { alt }),
 	})
-	if (statut !== 201) throw new Error(`Envoi refusé : ${statut} ${texte}`)
+	if (status !== 201) throw new Error(`Envoi refusé : ${status} ${text}`)
 	return (corps as { doc: Media }).doc
 }
 
-const nombreDeMedias = async () => (await (await testPayload()).count({ collection: 'media' })).totalDocs
-const cle = (media: Media) => `media/${media.filename}`
+const mediaCount = async () => (await (await testPayload()).count({ collection: 'media' })).totalDocs
+const key = (media: Media) => `media/${media.filename}`
 
 describe('I24 : remplacer la photo principale envoie l’ancienne à la corbeille', () => {
 	test('la nouvelle remplace l’ancienne ; ancien objet en deleted/ octet pour octet ; le profil public suit ; « photo » reste remplie', async () => {
-		const compte = await maquilleuse()
+		const account = await artist()
 		const payload = await testPayload()
-		const utilisateur = await utilisateurDe(payload, compte)
+		const user = await userOf(payload, account)
 
-		const ancienne = await envoyer(compte)
-		expect(ancienne.alt).toBe('Photo principale')
-		expect(await saveMainPicture(payload, utilisateur, { photoPrincipale: ancienne.id })).toEqual({
+		const old = await send(account)
+		expect(old.alt).toBe('Photo principale')
+		expect(await saveMainPicture(payload, user, { photoPrincipale: old.id })).toEqual({
 			ok: true,
-			valeurs: { photoPrincipale: ancienne.id },
+			valeurs: { photoPrincipale: old.id },
 		})
-		const avant = (await readObject(cle(ancienne)))?.octets
-		expect(avant).toBeDefined()
+		const before = (await readObject(key(old)))?.octets
+		expect(before).toBeDefined()
 
-		const nouvelle = await envoyer(compte)
-		expect(await saveMainPicture(payload, utilisateur, { photoPrincipale: String(nouvelle.id) })).toEqual({
+		const fresh = await send(account)
+		expect(await saveMainPicture(payload, user, { photoPrincipale: String(fresh.id) })).toEqual({
 			ok: true,
-			valeurs: { photoPrincipale: nouvelle.id },
+			valeurs: { photoPrincipale: fresh.id },
 		})
 
-		const profil = await profilDe(compte)
-		expect(profil.mainPicture).toBe(nouvelle.id)
-		expect(profil.active).toBe(true)
-		expect(await payload.findByID({ collection: 'media', id: ancienne.id, depth: 0, disableErrors: true })).toBeNull()
-		expect(await readObject(cle(ancienne))).toBeUndefined()
-		expect((await readObject(`deleted/${cle(ancienne)}`))?.octets).toEqual(avant)
-		expect(await readObject(cle(nouvelle))).toBeDefined()
+		const profile = await profileOf(account)
+		expect(profile.mainPicture).toBe(fresh.id)
+		expect(profile.active).toBe(true)
+		expect(await payload.findByID({ collection: 'media', id: old.id, depth: 0, disableErrors: true })).toBeNull()
+		expect(await readObject(key(old))).toBeUndefined()
+		expect((await readObject(`deleted/${key(old)}`))?.octets).toEqual(before)
+		expect(await readObject(key(fresh))).toBeDefined()
 		// What her space shows, and what the public profile shows, is the new photo.
-		const photos = await readDashboardPhotos(payload, profil)
-		expect(photos.photo?.id).toBe(nouvelle.id)
-		const publique = await readPublicProfile(payload, profil.slug ?? '')
-		expect(publique?.photo?.url).toBe(nouvelle.url ?? undefined)
+		const photos = await readDashboardPhotos(payload, profile)
+		expect(photos.photo?.id).toBe(fresh.id)
+		const publicValue = await readPublicProfile(payload, profile.slug ?? '')
+		expect(publicValue?.photo?.url).toBe(fresh.url ?? undefined)
 	})
 })
 
 describe('U03, E36 : un échec laisse l’ancienne photo, et le fichier envoyé pour rien part à la corbeille', () => {
 	test('un envoi refusé (PDF) ne crée rien ; le profil garde sa photo et reste « actif »', async () => {
-		const compte = await maquilleuse()
+		const account = await artist()
 		const payload = await testPayload()
-		const ancienne = await envoyer(compte)
-		await saveMainPicture(payload, await utilisateurDe(payload, compte), { photoPrincipale: ancienne.id })
-		const objets = (await listObjects()).length
+		const old = await send(account)
+		await saveMainPicture(payload, await userOf(payload, account), { photoPrincipale: old.id })
+		const objects = (await listObjects()).length
 
 		const pdf = new File([Buffer.from('%PDF-1.7\n')], 'cv.pdf', { type: 'application/pdf' })
-		const { statut } = await callRest('POST', '/api/media?depth=0', {
-			enTetes: compte.session.enTetes,
+		const { statut: status } = await callRest('POST', '/api/media?depth=0', {
+			enTetes: account.session.enTetes,
 			formulaire: formWithFile(pdf),
 		})
 
-		expect(statut).toBe(400)
-		expect(await nombreDeMedias()).toBe(1)
-		expect((await listObjects()).length).toBe(objets)
-		const profil = await profilDe(compte)
-		expect(profil.mainPicture).toBe(ancienne.id)
-		expect(profil.active).toBe(true)
+		expect(status).toBe(400)
+		expect(await mediaCount()).toBe(1)
+		expect((await listObjects()).length).toBe(objects)
+		const profile = await profileOf(account)
+		expect(profile.mainPicture).toBe(old.id)
+		expect(profile.active).toBe(true)
 	})
 
 	test('le média d’une autre maquilleuse est refusé ; le profil est inchangé ; le fichier envoyé se supprime sans rien effacer', async () => {
-		const compte = await maquilleuse()
-		const autre = await maquilleuse()
+		const account = await artist()
+		const other = await artist()
 		const payload = await testPayload()
-		const utilisateur = await utilisateurDe(payload, compte)
-		const ancienne = await envoyer(compte)
-		await saveMainPicture(payload, utilisateur, { photoPrincipale: ancienne.id })
-		const celleDeLAutre = await envoyer(autre)
-		const envoyeeEnTrop = await envoyer(compte)
+		const user = await userOf(payload, account)
+		const old = await send(account)
+		await saveMainPicture(payload, user, { photoPrincipale: old.id })
+		const otherOnesPhoto = await send(other)
+		const extraUpload = await send(account)
 
-		const resultat = await saveMainPicture(payload, utilisateur, { photoPrincipale: celleDeLAutre.id })
+		const result = await saveMainPicture(payload, user, { photoPrincipale: otherOnesPhoto.id })
 
-		expect(resultat).toMatchObject({ ok: false, champs: { photoPrincipale: PHOTO_MESSAGES.photoRefusee } })
-		expect((await profilDe(compte)).mainPicture).toBe(ancienne.id)
+		expect(result).toMatchObject({ ok: false, champs: { photoPrincipale: PHOTO_MESSAGES.photoRefusee } })
+		expect((await profileOf(account)).mainPicture).toBe(old.id)
 		// The browser takes its own file back, as the panel does after an explicit refusal.
-		const suppression = await callRest('DELETE', `/api/media/${envoyeeEnTrop.id}?depth=0`, {
-			enTetes: compte.session.enTetes,
+		const deletion = await callRest('DELETE', `/api/media/${extraUpload.id}?depth=0`, {
+			enTetes: account.session.enTetes,
 		})
-		expect(suppression.statut).toBe(200)
-		expect(await readObject(cle(envoyeeEnTrop))).toBeUndefined()
-		expect(await readObject(`deleted/${cle(envoyeeEnTrop)}`)).toBeDefined()
-		expect((await profilDe(compte)).mainPicture).toBe(ancienne.id)
-		expect(await readObject(cle(celleDeLAutre))).toBeDefined()
+		expect(deletion.statut).toBe(200)
+		expect(await readObject(key(extraUpload))).toBeUndefined()
+		expect(await readObject(`deleted/${key(extraUpload)}`)).toBeDefined()
+		expect((await profileOf(account)).mainPicture).toBe(old.id)
+		expect(await readObject(key(otherOnesPhoto))).toBeDefined()
 	})
 })
 
@@ -176,14 +180,14 @@ describe('la requête de l’action est lue strictement', () => {
 		['une liste', (id: number) => ({ photoPrincipale: [id] })],
 		['rien', () => ({})],
 	])('%s : refusé, jamais une erreur serveur, le profil ne bouge pas', async (_nom, saisie) => {
-		const compte = await maquilleuse()
+		const account = await artist()
 		const payload = await testPayload()
-		const photo = await envoyer(compte)
+		const photo = await send(account)
 
-		const resultat = await saveMainPicture(payload, await utilisateurDe(payload, compte), saisie(photo.id))
+		const result = await saveMainPicture(payload, await userOf(payload, account), saisie(photo.id))
 
-		expect(resultat).toMatchObject({ ok: false })
-		if (!resultat.ok) expect([FAILURE_MESSAGE, expect.any(String)]).toContain(resultat.message)
-		expect((await profilDe(compte)).mainPicture ?? null).toBeNull()
+		expect(result).toMatchObject({ ok: false })
+		if (!result.ok) expect([FAILURE_MESSAGE, expect.any(String)]).toContain(result.message)
+		expect((await profileOf(account)).mainPicture ?? null).toBeNull()
 	})
 })

@@ -15,95 +15,99 @@ afterEach(async () => {
 	await Promise.all([emptyBase(), emptyStorage()])
 })
 
-type Compte = Awaited<ReturnType<typeof createAccount<'maquilleuse'>>>
+type Account = Awaited<ReturnType<typeof createAccount<'maquilleuse'>>>
 
 /** The base of the photos on the bench: the simulator serves its bucket under its own name. */
 const base = () => `${process.env.S3_ENDPOINT}/${process.env.S3_BUCKET}`
 
 /** A photo sent by this makeup artist through REST, as the site sends it: the media it created. */
-async function envoyer(compte: Compte, champs: Record<string, unknown> = {}): Promise<Media> {
-	const { statut, corps, texte } = await callRest('POST', '/api/media?depth=0', {
+async function send(compte: Account, champs: Record<string, unknown> = {}): Promise<Media> {
+	const {
+		statut: status,
+		corps,
+		texte: text,
+	} = await callRest('POST', '/api/media?depth=0', {
 		enTetes: compte.session.enTetes,
 		formulaire: formWithFile(fileForForm(), champs),
 	})
-	if (statut !== 201) throw new Error(`L’envoi de la photo a échoué : ${statut} ${texte}`)
+	if (status !== 201) throw new Error(`L’envoi de la photo a échoué : ${status} ${text}`)
 	return (corps as { doc: Media }).doc
 }
 
 /** The profile of an account. */
-async function profilDe(compte: Compte) {
+async function profileOf(compte: Account) {
 	const payload = await testPayload()
-	const [profil] = (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } }))
+	const [profile] = (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } }))
 		.docs
-	if (!profil) throw new Error('La fabrique n’a pas créé de profil.')
-	return profil
+	if (!profile) throw new Error('La fabrique n’a pas créé de profil.')
+	return profile
 }
 
 /** A makeup artist, her profile in this status, with a main photo and a gallery of her own. */
-async function maquilleuseAvecPhotos(status: 'published' | 'hidden' | 'draft') {
-	const compte = await createAccount('maquilleuse')
-	const [principale, galerie] = [await envoyer(compte), await envoyer(compte)]
-	const profil = await profilDe(compte)
+async function artistWithPhotos(status: 'published' | 'hidden' | 'draft') {
+	const account = await createAccount('maquilleuse')
+	const [main, gallery] = [await send(account), await send(account)]
+	const profile = await profileOf(account)
 	const payload = await testPayload()
 	await payload.update({
 		collection: 'profiles',
-		id: profil.id,
-		data: { status, mainPicture: principale.id, gallery: [galerie.id] },
+		id: profile.id,
+		data: { status, mainPicture: main.id, gallery: [gallery.id] },
 	})
-	return { compte, profil, principale, galerie }
+	return { compte: account, profil: profile, principale: main, galerie: gallery }
 }
 
 /** The media as the database holds it, read without access control. */
-async function stocke(id: number): Promise<Media | null> {
+async function stored(id: number): Promise<Media | null> {
 	const payload = await testPayload()
 	return payload.findByID({ collection: 'media', id, depth: 0, disableErrors: true })
 }
 
 describe('Liste anonyme refusée ; média d’un profil publié lu ; d’un profil masqué introuvable (I04, U56)', () => {
 	test('la liste : 403 ; la photo principale et la galerie d’un profil publié : 200 ; d’un profil masqué : 404', async () => {
-		const publie = await maquilleuseAvecPhotos('published')
-		const masque = await maquilleuseAvecPhotos('hidden')
+		const published = await artistWithPhotos('published')
+		const hidden = await artistWithPhotos('hidden')
 
 		expect((await callRest('GET', '/api/media')).statut).toBe(403)
-		for (const media of [publie.principale, publie.galerie]) {
-			const { statut, corps } = await callRest('GET', `/api/media/${media.id}?depth=0`)
-			expect(statut).toBe(200)
+		for (const media of [published.principale, published.galerie]) {
+			const { statut: status, corps } = await callRest('GET', `/api/media/${media.id}?depth=0`)
+			expect(status).toBe(200)
 			expect(corps).toMatchObject({ id: media.id, url: media.url, filename: media.filename })
 			// Who owns it is not public.
 			expect(corps).not.toHaveProperty('owner')
 		}
-		for (const media of [masque.principale, masque.galerie])
+		for (const media of [hidden.principale, hidden.galerie])
 			expect((await callRest('GET', `/api/media/${media.id}`)).statut).toBe(404)
 	})
 
 	test('un profil publié puis masqué : sa photo devient introuvable', async () => {
-		const { profil, principale } = await maquilleuseAvecPhotos('published')
+		const { profil: profile, principale: main } = await artistWithPhotos('published')
 		const admin = await createAccount('admin')
-		expect((await callRest('GET', `/api/media/${principale.id}`)).statut).toBe(200)
+		expect((await callRest('GET', `/api/media/${main.id}`)).statut).toBe(200)
 
 		// The admin hides it by her choice of status: the status itself is the server's (ticket 044).
-		await callRest('PATCH', `/api/profiles/${profil.id}`, {
+		await callRest('PATCH', `/api/profiles/${profile.id}`, {
 			enTetes: admin.session.enTetes,
 			corps: { chosenStatus: 'hidden' },
 		})
 
-		expect((await callRest('GET', `/api/media/${principale.id}`)).statut).toBe(404)
+		expect((await callRest('GET', `/api/media/${main.id}`)).statut).toBe(404)
 	})
 
 	test('un identifiant mal formé : refusé avant la base, jamais une erreur 500', async () => {
-		const [maquilleuse, admin] = await Promise.all([createAccount('maquilleuse'), createAccount('admin')])
+		const [artist, admin] = await Promise.all([createAccount('maquilleuse'), createAccount('admin')])
 		const payload = await testPayload()
 
-		for (const enTetes of [{}, maquilleuse.session.enTetes, admin.session.enTetes])
+		for (const headers of [{}, artist.session.enTetes, admin.session.enTetes])
 			for (const id of ['abc', 'wp-login.php', '1e999', '99999999999', '1.5']) {
-				expect([id, (await callRest('GET', `/api/media/${id}`, { enTetes })).statut]).toEqual([id, 403])
+				expect([id, (await callRest('GET', `/api/media/${id}`, { enTetes: headers })).statut]).toEqual([id, 403])
 				// A change or a deletion: refused by the rule (403), or by Payload itself before it (400), when
 				// it reads no identifier at all in the address (`abc` gives NaN, « Missing ID »).
-				for (const reponse of [
-					await callRest('PATCH', `/api/media/${id}`, { enTetes, corps: { alt: 'Texte fictif' } }),
-					await callRest('DELETE', `/api/media/${id}`, { enTetes }),
+				for (const response of [
+					await callRest('PATCH', `/api/media/${id}`, { enTetes: headers, corps: { alt: 'Texte fictif' } }),
+					await callRest('DELETE', `/api/media/${id}`, { enTetes: headers }),
 				])
-					expect([id, [400, 403].includes(reponse.statut)]).toEqual([id, true])
+					expect([id, [400, 403].includes(response.statut)]).toEqual([id, true])
 			}
 		await expect(payload.findByID({ collection: 'media', id: 'abc', overrideAccess: false })).rejects.toMatchObject({
 			status: 403,
@@ -111,13 +115,13 @@ describe('Liste anonyme refusée ; média d’un profil publié lu ; d’un prof
 	})
 
 	test('une photo envoyée mais rattachée à rien : introuvable pour le public, lue par sa propriétaire', async () => {
-		const compte = await createAccount('maquilleuse')
-		const media = await envoyer(compte)
+		const account = await createAccount('maquilleuse')
+		const media = await send(account)
 
 		expect((await callRest('GET', `/api/media/${media.id}`)).statut).toBe(404)
-		const lecture = await callRest('GET', `/api/media/${media.id}?depth=0`, { enTetes: compte.session.enTetes })
-		expect(lecture.statut).toBe(200)
-		expect(lecture.corps).toMatchObject({ owner: Number(compte.id) })
+		const read = await callRest('GET', `/api/media/${media.id}?depth=0`, { enTetes: account.session.enTetes })
+		expect(read.statut).toBe(200)
+		expect(read.corps).toMatchObject({ owner: Number(account.id) })
 	})
 })
 
@@ -125,78 +129,78 @@ describe('Le propriétaire est la maquilleuse qui envoie, même si elle en décl
 	test('par REST : le propriétaire déclaré est ignoré', async () => {
 		const [a, b] = await Promise.all([createAccount('maquilleuse'), createAccount('maquilleuse')])
 
-		const media = await envoyer(a, { alt: 'Une photo fictive', owner: Number(b.id) })
+		const media = await send(a, { alt: 'Une photo fictive', owner: Number(b.id) })
 
-		expect((await stocke(media.id))?.owner).toBe(Number(a.id))
+		expect((await stored(media.id))?.owner).toBe(Number(a.id))
 	})
 
 	test('par l’API locale avec les règles actives : de même', async () => {
 		const [a, b] = await Promise.all([createAccount('maquilleuse'), createAccount('maquilleuse')])
 		const payload = await testPayload()
-		const utilisateur = await payload.findByID({ collection: 'pros', id: a.id, depth: 0 })
+		const user = await payload.findByID({ collection: 'pros', id: a.id, depth: 0 })
 
 		const media = await payload.create({
 			collection: 'media',
 			data: { owner: Number(b.id) },
 			file: fileForPayload(),
 			overrideAccess: false,
-			user: { ...utilisateur, collection: 'pros' },
+			user: { ...user, collection: 'pros' },
 		})
 
-		expect((await stocke(media.id))?.owner).toBe(Number(a.id))
+		expect((await stored(media.id))?.owner).toBe(Number(a.id))
 	})
 })
 
 describe('A ne rattache ni ne supprime un média de B ; galerie de 11 photos refusée', () => {
 	test('la photo de B en photo principale ou dans la galerie de A : refusée en français, rien ne change', async () => {
 		const [a, b] = await Promise.all([createAccount('maquilleuse'), createAccount('maquilleuse')])
-		const [sienne, deB] = [await envoyer(a), await envoyer(b)]
-		const profil = await profilDe(a)
+		const [hers, ofB] = [await send(a), await send(b)]
+		const profile = await profileOf(a)
 
-		for (const corps of [{ mainPicture: deB.id }, { gallery: [sienne.id, deB.id] }]) {
-			const { statut, texte } = await callRest('PATCH', `/api/profiles/${profil.id}`, {
+		for (const corps of [{ mainPicture: ofB.id }, { gallery: [hers.id, ofB.id] }]) {
+			const { statut: status, texte: text } = await callRest('PATCH', `/api/profiles/${profile.id}`, {
 				enTetes: a.session.enTetes,
 				corps,
 			})
-			expect(statut).toBe(400)
-			expect(texte).toContain('Choisis à nouveau ta photo')
+			expect(status).toBe(400)
+			expect(text).toContain('Choisis à nouveau ta photo')
 		}
-		expect(await profilDe(a)).toMatchObject({ mainPicture: null, gallery: [] })
+		expect(await profileOf(a)).toMatchObject({ mainPicture: null, gallery: [] })
 	})
 
 	test('A supprime la photo de B : refusé, la photo et son objet restent', async () => {
 		const [a, b] = await Promise.all([createAccount('maquilleuse'), createAccount('maquilleuse')])
-		const deB = await envoyer(b)
+		const ofB = await send(b)
 
-		const { statut } = await callRest('DELETE', `/api/media/${deB.id}`, { enTetes: a.session.enTetes })
+		const { statut: status } = await callRest('DELETE', `/api/media/${ofB.id}`, { enTetes: a.session.enTetes })
 
-		expect([403, 404]).toContain(statut)
-		expect(await stocke(deB.id)).not.toBeNull()
-		expect(await readObject(`media/${deB.filename}`)).toBeDefined()
+		expect([403, 404]).toContain(status)
+		expect(await stored(ofB.id)).not.toBeNull()
+		expect(await readObject(`media/${ofB.filename}`)).toBeDefined()
 	})
 
 	test('11 photos dans la gallery : refusé ; 10 : enregistrées dans l’ordre donné, gardé à la relecture', async () => {
 		const a = await createAccount('maquilleuse')
 		const photos: Media[] = []
-		for (let i = 0; i < 11; i += 1) photos.push(await envoyer(a))
-		const profil = await profilDe(a)
+		for (let i = 0; i < 11; i += 1) photos.push(await send(a))
+		const profile = await profileOf(a)
 		const ids = photos.map(({ id }) => id)
 
-		const onze = await callRest('PATCH', `/api/profiles/${profil.id}`, {
+		const eleven = await callRest('PATCH', `/api/profiles/${profile.id}`, {
 			enTetes: a.session.enTetes,
 			corps: { gallery: ids },
 		})
-		expect(onze.statut).toBe(400)
-		expect(onze.texte).toContain('Ton portfolio contient déjà 10 photos')
-		expect((await profilDe(a)).gallery).toEqual([])
+		expect(eleven.statut).toBe(400)
+		expect(eleven.texte).toContain('Ton portfolio contient déjà 10 photos')
+		expect((await profileOf(a)).gallery).toEqual([])
 
-		const dix = ids.slice(0, 10).reverse()
-		const enregistre = await callRest('PATCH', `/api/profiles/${profil.id}`, {
+		const ten = ids.slice(0, 10).reverse()
+		const saved = await callRest('PATCH', `/api/profiles/${profile.id}`, {
 			enTetes: a.session.enTetes,
-			corps: { gallery: dix },
+			corps: { gallery: ten },
 		})
-		expect(enregistre.statut).toBe(200)
-		expect((await profilDe(a)).gallery).toEqual(dix)
+		expect(saved.statut).toBe(200)
+		expect((await profileOf(a)).gallery).toEqual(ten)
 	})
 })
 
@@ -204,7 +208,7 @@ describe('Adresse publique = préfixe du document + nom de fichier, à la racine
 	test('une photo envoyée : rangée sous media/ dans le stockage, son adresse est la base, media/, puis son nom', async () => {
 		const a = await createAccount('maquilleuse')
 
-		const media = await envoyer(a)
+		const media = await send(a)
 
 		expect(media.prefix).toBe('media')
 		expect(media.url).toBe(`${base()}/media/${media.filename}`)
@@ -213,64 +217,64 @@ describe('Adresse publique = préfixe du document + nom de fichier, à la racine
 
 	test('une photo de l’ancien site adoptée où elle est, à la racine ou sous son préfixe : son adresse suit', async () => {
 		const payload = await testPayload()
-		const [racine, sousPrefixe] = [photoName('racine'), photoName('ancienne')]
+		const [root, underPrefix] = [photoName('racine'), photoName('ancienne')]
 		// The objects are already in the storage, as those of the old site: nothing is copied.
-		await dropObject(racine, 'octets fictifs', { type: 'image/png' })
-		await dropObject(`uploads/${sousPrefixe}`, 'octets fictifs', { type: 'image/png' })
+		await dropObject(root, 'octets fictifs', { type: 'image/png' })
+		await dropObject(`uploads/${underPrefix}`, 'octets fictifs', { type: 'image/png' })
 
 		// As the import will adopt them (ticket 058): by the server, without a session, without touching the storage.
-		const adopter = (nom: string, prefix: string) =>
+		const adopt = (nom: string, prefix: string) =>
 			payload.create({
 				collection: 'media',
 				data: { prefix },
 				file: fileForPayload(nom),
 				context: { skipCloudStorage: true },
 			})
-		const [aLaRacine, sousSonPrefixe] = [await adopter(racine, ''), await adopter(sousPrefixe, 'uploads')]
+		const [atRoot, underItsPrefix] = [await adopt(root, ''), await adopt(underPrefix, 'uploads')]
 
-		expect(aLaRacine.url).toBe(`${base()}/${racine}`)
-		expect(sousSonPrefixe.url).toBe(`${base()}/uploads/${sousPrefixe}`)
-		for (const media of [aLaRacine, sousSonPrefixe]) {
-			const cle = (media.url ?? '').slice(base().length + 1)
-			expect(await readObject(cle)).toBeDefined()
+		expect(atRoot.url).toBe(`${base()}/${root}`)
+		expect(underItsPrefix.url).toBe(`${base()}/uploads/${underPrefix}`)
+		for (const media of [atRoot, underItsPrefix]) {
+			const key = (media.url ?? '').slice(base().length + 1)
+			expect(await readObject(key)).toBeDefined()
 		}
 		// Nothing was written next to them.
-		expect(await readObject(`media/${racine}`)).toBeUndefined()
+		expect(await readObject(`media/${root}`)).toBeUndefined()
 	})
 
 	test('la route de fichier de Payload renvoie vers l’adresse publique, jamais vers le disque du serveur', async () => {
-		const { compte, principale } = await maquilleuseAvecPhotos('published')
-		const [admin, autre] = await Promise.all([createAccount('admin'), createAccount('maquilleuse')])
-		const chemin = `/api/media/file/${principale.filename}`
+		const { compte: account, principale: main } = await artistWithPhotos('published')
+		const [admin, other] = await Promise.all([createAccount('admin'), createAccount('maquilleuse')])
+		const path = `/api/media/file/${main.filename}`
 
 		// Her own photo, or any photo for admin: a redirection to its public address.
-		for (const lecteur of [compte, admin]) {
-			const { statut, enTetes } = await callRest('GET', chemin, { enTetes: lecteur.session.enTetes })
-			expect(statut).toBe(302)
-			expect(enTetes.get('location')).toBe(`${base()}/media/${principale.filename}`)
+		for (const reader of [account, admin]) {
+			const { statut: status, enTetes: headers } = await callRest('GET', path, { enTetes: reader.session.enTetes })
+			expect(status).toBe(302)
+			expect(headers.get('location')).toBe(`${base()}/media/${main.filename}`)
 		}
 		// With the prefix Payload accepts in the query: the same.
-		const avecPrefixe = await callRest('GET', `${chemin}?prefix=media`, { enTetes: admin.session.enTetes })
-		expect([avecPrefixe.statut, avecPrefixe.enTetes.get('location')]).toEqual([302, principale.url ?? ''])
+		const withPrefix = await callRest('GET', `${path}?prefix=media`, { enTetes: admin.session.enTetes })
+		expect([withPrefix.statut, withPrefix.enTetes.get('location')]).toEqual([302, main.url ?? ''])
 		// The route lists no media by name: refused to the public and to another makeup artist.
-		expect((await callRest('GET', chemin)).statut).toBe(403)
-		expect((await callRest('GET', chemin, { enTetes: autre.session.enTetes })).statut).toBe(403)
+		expect((await callRest('GET', path)).statut).toBe(403)
+		expect((await callRest('GET', path, { enTetes: other.session.enTetes })).statut).toBe(403)
 		// A name no media has: not found. A prefix it does not have: refused by Payload itself.
 		expect((await callRest('GET', '/api/media/file/inconnue.png', { enTetes: admin.session.enTetes })).statut).toBe(404)
-		expect((await callRest('GET', `${chemin}?prefix=ailleurs`, { enTetes: admin.session.enTetes })).statut).toBe(403)
+		expect((await callRest('GET', `${path}?prefix=ailleurs`, { enTetes: admin.session.enTetes })).statut).toBe(403)
 	})
 
 	test('une maquilleuse ne choisit ni le préfixe ni le nom de l’objet de sa photo', async () => {
 		const a = await createAccount('maquilleuse')
 
-		const media = await envoyer(a, { prefix: 'ailleurs', filename: 'autre-nom.png', url: 'https://exemple.test/x' })
-		const modifie = await callRest('PATCH', `/api/media/${media.id}`, {
+		const media = await send(a, { prefix: 'ailleurs', filename: 'autre-nom.png', url: 'https://exemple.test/x' })
+		const modified = await callRest('PATCH', `/api/media/${media.id}`, {
 			enTetes: a.session.enTetes,
 			corps: { prefix: '', filename: 'autre-nom.png', alt: 'Nouveau texte' },
 		})
 
-		expect(modifie.statut).toBe(200)
-		expect(await stocke(media.id)).toMatchObject({
+		expect(modified.statut).toBe(200)
+		expect(await stored(media.id)).toMatchObject({
 			prefix: 'media',
 			filename: media.filename,
 			alt: 'Nouveau texte',

@@ -28,247 +28,256 @@ afterEach(async () => {
 })
 
 /** What a write asks Next to refresh when it refreshes nothing. */
-const RIEN = { chemins: [], etiquettes: [] }
+const NOTHING = { chemins: [], etiquettes: [] }
 
 /** The paths and tags of a spy, without the list of the calls. */
-const cibles = ({ chemins, etiquettes }: Refreshed) => ({ chemins, etiquettes })
+const targets = ({ chemins, etiquettes }: Refreshed) => ({ chemins, etiquettes })
 
 /** What a change of a public profile refreshes: its page, the search, the plan of the site, the sitemap. */
-const pagesDuProfil = (slug: string) => ({
+const profilePages = (slug: string) => ({
 	chemins: [`/profil/${slug}`, '/search', '/site-map', '/sitemap.xml'].sort(),
 	etiquettes: [`profil:${slug}`, 'profils'],
 })
 
 /** The profile of a makeup artist, read without access control. */
-async function profilDe(compte: number | string): Promise<Profile> {
+async function profileOf(compte: number | string): Promise<Profile> {
 	const payload = await testPayload()
 	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte } } })
-	const profil = docs[0]
-	if (!profil) throw new Error('La fabrique n’a pas créé le profil de la maquilleuse.')
-	return profil
+	const profile = docs[0]
+	if (!profile) throw new Error('La fabrique n’a pas créé le profil de la maquilleuse.')
+	return profile
 }
 
 /** A makeup artist with her session, and her profile, empty: a draft. */
-async function maquilleuse() {
-	const compte = await createAccount('maquilleuse')
-	return { compte, profil: await profilDe(compte.id) }
+async function artist() {
+	const account = await createAccount('maquilleuse')
+	return { compte: account, profil: await profileOf(account.id) }
 }
 
 /** A makeup artist whose profile is published: a speciality is enough. Written outside of a request of Next. */
-async function maquilleusePubliee() {
-	const { compte, profil } = await maquilleuse()
+async function publishedArtist() {
+	const { compte: account, profil: profile } = await artist()
 	const payload = await testPayload()
-	const publie = await payload.update({
+	const published = await payload.update({
 		collection: 'profiles',
-		id: profil.id,
+		id: profile.id,
 		data: { specialty: 'Maquillage mariée' },
 		depth: 0,
 	})
-	expect(publie.status).toBe('published')
-	return { compte, profil: publie }
+	expect(published.status).toBe('published')
+	return { compte: account, profil: published }
 }
 
 /** A REST write that must succeed. */
-async function ecrire(...[methode, chemin, options]: Parameters<typeof callRest>) {
-	const reponse = await callRest(methode, chemin, options)
-	if (reponse.statut >= 300) throw new Error(`Écriture refusée : ${reponse.statut} ${reponse.texte}`)
-	return reponse.corps as { doc: { id: number; slug: string; _status?: string } }
+async function write(...[methode, chemin, options]: Parameters<typeof callRest>) {
+	const response = await callRest(methode, chemin, options)
+	if (response.statut >= 300) throw new Error(`Écriture refusée : ${response.statut} ${response.texte}`)
+	return response.corps as { doc: { id: number; slug: string; _status?: string } }
 }
 
 describe('Un profil publié modifié rafraîchit sa page, la recherche et le sitemap (I21)', () => {
 	test('la maquilleuse change sa description : sa page, la recherche, le plan du site et le sitemap, expirés tout de suite', async () => {
-		const { compte, profil } = await maquilleusePubliee()
+		const { compte: account, profil: profile } = await publishedArtist()
 
-		const rafraichi = await spyCache(() =>
-			ecrire('PATCH', `/api/profiles/${profil.id}`, {
-				enTetes: compte.session.enTetes,
+		const refreshed = await spyCache(() =>
+			write('PATCH', `/api/profiles/${profile.id}`, {
+				enTetes: account.session.enTetes,
 				corps: { description: 'Une description fictive, changée par la maquilleuse.' },
 			})
 		)
 
-		expect(cibles(rafraichi)).toEqual(pagesDuProfil(profil.slug))
-		for (const { fonction, option } of rafraichi.appels)
-			expect(option).toEqual(fonction === 'revalidateTag' ? { expire: 0 } : undefined)
+		expect(targets(refreshed)).toEqual(profilePages(profile.slug))
+		for (const { fonction: fn, option } of refreshed.appels)
+			expect(option).toEqual(fn === 'revalidateTag' ? { expire: 0 } : undefined)
 	})
 
 	test('la réponse ne choisit qu’un champ : les pages sont rafraîchies quand même', async () => {
-		const { compte, profil } = await maquilleusePubliee()
+		const { compte: account, profil: profile } = await publishedArtist()
 
-		const rafraichi = await spyCache(() =>
-			ecrire('PATCH', `/api/profiles/${profil.id}?select[description]=true`, {
-				enTetes: compte.session.enTetes,
+		const refreshed = await spyCache(() =>
+			write('PATCH', `/api/profiles/${profile.id}?select[description]=true`, {
+				enTetes: account.session.enTetes,
 				corps: { description: 'Une autre description fictive.' },
 			})
 		)
 
-		expect(cibles(rafraichi)).toEqual(pagesDuProfil(profil.slug))
+		expect(targets(refreshed)).toEqual(profilePages(profile.slug))
 	})
 
 	test('un brouillon qui devient publié, à son premier champ rempli : ses pages', async () => {
-		const { compte, profil } = await maquilleuse()
-		expect(profil.status).toBe('draft')
+		const { compte: account, profil: profile } = await artist()
+		expect(profile.status).toBe('draft')
 
-		const rafraichi = await spyCache(() =>
-			ecrire('PATCH', `/api/profiles/${profil.id}`, {
-				enTetes: compte.session.enTetes,
+		const refreshed = await spyCache(() =>
+			write('PATCH', `/api/profiles/${profile.id}`, {
+				enTetes: account.session.enTetes,
 				corps: { specialty: 'Maquillage artistique' },
 			})
 		)
 
-		expect(cibles(rafraichi)).toEqual(pagesDuProfil(profil.slug))
+		expect(targets(refreshed)).toEqual(profilePages(profile.slug))
 	})
 
 	test('l’admin masque un profil publié, puis le supprime : ses pages, à chaque fois', async () => {
-		const [admin, { profil }] = await Promise.all([createAccount('admin'), maquilleusePubliee()])
-		const enTetes = admin.session.enTetes
+		const [admin, { profil: profile }] = await Promise.all([createAccount('admin'), publishedArtist()])
+		const headers = admin.session.enTetes
 
-		const masque = await spyCache(() =>
-			ecrire('PATCH', `/api/profiles/${profil.id}`, { enTetes, corps: { chosenStatus: 'hidden', reason: 'Test' } })
+		const hidden = await spyCache(() =>
+			write('PATCH', `/api/profiles/${profile.id}`, {
+				enTetes: headers,
+				corps: { chosenStatus: 'hidden', reason: 'Test' },
+			})
 		)
-		expect(cibles(masque)).toEqual(pagesDuProfil(profil.slug))
+		expect(targets(hidden)).toEqual(profilePages(profile.slug))
 
 		// Shown again, then deleted while published.
-		await ecrire('PATCH', `/api/profiles/${profil.id}`, { enTetes, corps: { chosenStatus: 'automatic' } })
-		const supprime = await spyCache(() => ecrire('DELETE', `/api/profiles/${profil.id}`, { enTetes }))
-		expect(cibles(supprime)).toEqual(pagesDuProfil(profil.slug))
+		await write('PATCH', `/api/profiles/${profile.id}`, { enTetes: headers, corps: { chosenStatus: 'automatic' } })
+		const deleted = await spyCache(() => write('DELETE', `/api/profiles/${profile.id}`, { enTetes: headers }))
+		expect(targets(deleted)).toEqual(profilePages(profile.slug))
 	})
 
 	test('hors d’une requête de Next (un script, l’API locale), l’enregistrement passe sans rafraîchir', async () => {
-		const { profil } = await maquilleusePubliee()
+		const { profil: profile } = await publishedArtist()
 		const payload = await testPayload()
 
-		const apres = await payload.update({
+		const after = await payload.update({
 			collection: 'profiles',
-			id: profil.id,
+			id: profile.id,
 			data: { description: 'Écrite par un script.' },
 			depth: 0,
 		})
 
-		expect(apres).toMatchObject({ status: 'published', description: 'Écrite par un script.' })
+		expect(after).toMatchObject({ status: 'published', description: 'Écrite par un script.' })
 	})
 })
 
 describe('Un brouillon qui reste brouillon ne rafraîchit rien', () => {
 	test('un profil entièrement vide qui reçoit un prénom reste un brouillon : rien', async () => {
-		const { compte, profil } = await maquilleuse()
+		const { compte: account, profil: profile } = await artist()
 
-		const rafraichi = await spyCache(() =>
-			ecrire('PATCH', `/api/profiles/${profil.id}`, { enTetes: compte.session.enTetes, corps: { firstName: 'Zoé' } })
+		const refreshed = await spyCache(() =>
+			write('PATCH', `/api/profiles/${profile.id}`, { enTetes: account.session.enTetes, corps: { firstName: 'Zoé' } })
 		)
 
-		expect((await profilDe(compte.id)).status).toBe('draft')
-		expect(cibles(rafraichi)).toEqual(RIEN)
+		expect((await profileOf(account.id)).status).toBe('draft')
+		expect(targets(refreshed)).toEqual(NOTHING)
 	})
 
 	test('un profil masqué que la maquilleuse modifie reste masqué : rien', async () => {
-		const [admin, { compte, profil }] = await Promise.all([createAccount('admin'), maquilleusePubliee()])
-		await ecrire('PATCH', `/api/profiles/${profil.id}`, {
+		const [admin, { compte: account, profil: profile }] = await Promise.all([createAccount('admin'), publishedArtist()])
+		await write('PATCH', `/api/profiles/${profile.id}`, {
 			enTetes: admin.session.enTetes,
 			corps: { chosenStatus: 'hidden', reason: 'Test' },
 		})
 
-		const rafraichi = await spyCache(() =>
-			ecrire('PATCH', `/api/profiles/${profil.id}`, {
-				enTetes: compte.session.enTetes,
+		const refreshed = await spyCache(() =>
+			write('PATCH', `/api/profiles/${profile.id}`, {
+				enTetes: account.session.enTetes,
 				corps: { description: 'Changée pendant le masquage.' },
 			})
 		)
 
-		expect((await profilDe(compte.id)).status).toBe('hidden')
-		expect(cibles(rafraichi)).toEqual(RIEN)
+		expect((await profileOf(account.id)).status).toBe('hidden')
+		expect(targets(refreshed)).toEqual(NOTHING)
 	})
 
 	test('un article et un talent créés en brouillon, enregistrés en brouillon, avec ou sans ?draft=true : rien', async () => {
-		const redaction = await createAccount('redaction')
-		const enTetes = redaction.session.enTetes
+		const editor = await createAccount('redaction')
+		const headers = editor.session.enTetes
 
-		const rafraichi = await spyCache(async () => {
+		const refreshed = await spyCache(async () => {
 			for (const [collection, slug] of [
 				['articles', 'un-brouillon-fictif'],
 				['talents', 'un-talent-en-brouillon'],
 			] as const) {
-				const { doc } = await ecrire('POST', `/api/${collection}?draft=true`, {
-					enTetes,
+				const { doc } = await write('POST', `/api/${collection}?draft=true`, {
+					enTetes: headers,
 					corps: { title: 'Un brouillon fictif', slug, _status: 'draft' },
 				})
-				await ecrire('PATCH', `/api/${collection}/${doc.id}?draft=true`, { enTetes, corps: { title: 'Encore' } })
-				await ecrire('PATCH', `/api/${collection}/${doc.id}`, {
-					enTetes,
+				await write('PATCH', `/api/${collection}/${doc.id}?draft=true`, {
+					enTetes: headers,
+					corps: { title: 'Encore' },
+				})
+				await write('PATCH', `/api/${collection}/${doc.id}`, {
+					enTetes: headers,
 					corps: { title: 'Toujours', _status: 'draft' },
 				})
 			}
 		})
 
-		expect(cibles(rafraichi)).toEqual(RIEN)
+		expect(targets(refreshed)).toEqual(NOTHING)
 	})
 })
 
 describe('Un article ou un talent publié, modifié, retiré : ses pages', () => {
-	const pagesDeLArticle = (...slugs: string[]) => ({
+	const articlePages = (...slugs: string[]) => ({
 		chemins: [...slugs.map(slug => `/blog/${slug}`), '/blog', '/site-map', '/sitemap.xml'].sort(),
 		etiquettes: [...slugs.map(slug => `article:${slug}`), 'articles'].sort(),
 	})
 
 	test('publié, puis son adresse changée : sa page, puis l’ancienne et la nouvelle, le blog et les plans', async () => {
-		const redaction = await createAccount('redaction')
-		const enTetes = redaction.session.enTetes
+		const editor = await createAccount('redaction')
+		const headers = editor.session.enTetes
 
 		let id = 0
 		const publication = await spyCache(async () => {
-			const { doc } = await ecrire('POST', '/api/articles', {
-				enTetes,
+			const { doc } = await write('POST', '/api/articles', {
+				enTetes: headers,
 				corps: { title: 'Un article fictif', slug: 'un-article-fictif', _status: 'published' },
 			})
 			id = doc.id
 		})
-		expect(cibles(publication)).toEqual(pagesDeLArticle('un-article-fictif'))
+		expect(targets(publication)).toEqual(articlePages('un-article-fictif'))
 
-		const adresse = await spyCache(() =>
-			ecrire('PATCH', `/api/articles/${id}`, { enTetes, corps: { slug: 'un-article-renomme' } })
+		const url = await spyCache(() =>
+			write('PATCH', `/api/articles/${id}`, { enTetes: headers, corps: { slug: 'un-article-renomme' } })
 		)
-		expect(cibles(adresse)).toEqual(pagesDeLArticle('un-article-fictif', 'un-article-renomme'))
+		expect(targets(url)).toEqual(articlePages('un-article-fictif', 'un-article-renomme'))
 	})
 
 	test('retiré alors qu’un brouillon plus récent l’attend : sa page quand même', async () => {
-		const redaction = await createAccount('redaction')
-		const enTetes = redaction.session.enTetes
-		const { doc } = await ecrire('POST', '/api/articles', {
-			enTetes,
+		const editor = await createAccount('redaction')
+		const headers = editor.session.enTetes
+		const { doc } = await write('POST', '/api/articles', {
+			enTetes: headers,
 			corps: { title: 'Un article fictif', slug: 'un-article-fictif', _status: 'published' },
 		})
 		// A draft version saved over the published article: the latest version is now a draft.
-		await ecrire('PATCH', `/api/articles/${doc.id}?draft=true`, { enTetes, corps: { title: 'Un titre en cours' } })
+		await write('PATCH', `/api/articles/${doc.id}?draft=true`, {
+			enTetes: headers,
+			corps: { title: 'Un titre en cours' },
+		})
 
-		const retrait = await spyCache(() =>
-			ecrire('PATCH', `/api/articles/${doc.id}`, { enTetes, corps: { _status: 'draft' } })
+		const removal = await spyCache(() =>
+			write('PATCH', `/api/articles/${doc.id}`, { enTetes: headers, corps: { _status: 'draft' } })
 		)
 
 		expect((await callRest('GET', `/api/articles/${doc.id}`)).statut).toBe(404)
-		expect(cibles(retrait)).toEqual(pagesDeLArticle('un-article-fictif'))
+		expect(targets(removal)).toEqual(articlePages('un-article-fictif'))
 	})
 
 	test('un talent publié, modifié, puis supprimé : sa page, l’accueil et les plans, à chaque fois', async () => {
-		const redaction = await createAccount('redaction')
-		const enTetes = redaction.session.enTetes
-		const attendu = {
+		const editor = await createAccount('redaction')
+		const headers = editor.session.enTetes
+		const expected = {
 			chemins: ['/', '/site-map', '/sitemap.xml', '/talent/maquillage-fictif'].sort(),
 			etiquettes: ['talent:maquillage-fictif', 'talents'],
 		}
 
 		let id = 0
 		const publication = await spyCache(async () => {
-			const { doc } = await ecrire('POST', '/api/talents', {
-				enTetes,
+			const { doc } = await write('POST', '/api/talents', {
+				enTetes: headers,
 				corps: { title: 'Maquillage fictif', slug: 'maquillage-fictif', _status: 'published' },
 			})
 			id = doc.id
 		})
 		const modification = await spyCache(() =>
-			ecrire('PATCH', `/api/talents/${id}`, { enTetes, corps: { description: 'Une présentation fictive.' } })
+			write('PATCH', `/api/talents/${id}`, { enTetes: headers, corps: { description: 'Une présentation fictive.' } })
 		)
-		const suppression = await spyCache(() => ecrire('DELETE', `/api/talents/${id}`, { enTetes }))
+		const deletion = await spyCache(() => write('DELETE', `/api/talents/${id}`, { enTetes: headers }))
 
-		for (const rafraichi of [publication, modification, suppression]) expect(cibles(rafraichi)).toEqual(attendu)
+		for (const refreshed of [publication, modification, deletion]) expect(targets(refreshed)).toEqual(expected)
 	})
 })
 
@@ -276,43 +285,43 @@ describe('Avec le contexte d’import : aucune invalidation, aucun mail capté',
 	afterAll(eraseSourceStrapi)
 
 	test('une écriture qui porte le contexte d’import ne rafraîchit rien, même publiée', async () => {
-		const { profil } = await maquilleusePubliee()
+		const { profil: profile } = await publishedArtist()
 		const payload = await testPayload()
 
-		const rafraichi = await spyCache(async () => {
+		const refreshed = await spyCache(async () => {
 			await payload.update({
 				collection: 'profiles',
-				id: profil.id,
+				id: profile.id,
 				data: { description: 'Reprise de l’ancien site.' },
 				context: IMPORT_CONTEXT,
 			})
 			for (const collection of ['articles', 'talents'] as const) {
-				const cree = await payload.create({
+				const created = await payload.create({
 					collection,
 					data: { title: 'Repris', slug: `repris-${collection}`, _status: 'published' },
 					context: IMPORT_CONTEXT,
 				})
-				await payload.update({ collection, id: cree.id, data: { title: 'Repris encore' }, context: IMPORT_CONTEXT })
-				await payload.delete({ collection, id: cree.id, context: IMPORT_CONTEXT })
+				await payload.update({ collection, id: created.id, data: { title: 'Repris encore' }, context: IMPORT_CONTEXT })
+				await payload.delete({ collection, id: created.id, context: IMPORT_CONTEXT })
 			}
-			await payload.delete({ collection: 'profiles', id: profil.id, context: IMPORT_CONTEXT })
+			await payload.delete({ collection: 'profiles', id: profile.id, context: IMPORT_CONTEXT })
 		})
 
-		expect(cibles(rafraichi)).toEqual(RIEN)
+		expect(targets(refreshed)).toEqual(NOTHING)
 	})
 
 	test('l’import de la source factice publie des profils et des talents : aucune page rafraîchie, aucun mail', async () => {
 		await createSourceStrapi()
 
-		const rafraichi = await spyCache(() => importOnBench())
+		const refreshed = await spyCache(() => importOnBench())
 
-		expect(cibles(rafraichi)).toEqual(RIEN)
+		expect(targets(refreshed)).toEqual(NOTHING)
 		expect(await countMails()).toBe(0)
 		// Not an empty run: the import did write public documents.
 		const payload = await testPayload()
-		const publics = async (collection: CollectionSlug, champ: string, valeur: string) =>
+		const publicValue = async (collection: CollectionSlug, champ: string, valeur: string) =>
 			(await payload.count({ collection, where: { [champ]: { equals: valeur } } })).totalDocs
-		expect(await publics('profiles', 'status', 'published')).toBeGreaterThan(0)
-		expect(await publics('talents', '_status', 'published')).toBeGreaterThan(0)
+		expect(await publicValue('profiles', 'status', 'published')).toBeGreaterThan(0)
+		expect(await publicValue('talents', '_status', 'published')).toBeGreaterThan(0)
 	})
 })

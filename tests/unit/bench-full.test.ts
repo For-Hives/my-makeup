@@ -17,7 +17,7 @@ import type { Session } from '../support/session'
 /**
  * Ticket 052, without the bench: which account a name stands for, the two files a session is
  * written to, and what the commands of the bench promise. The commands themselves run on the
- * bench: tests/integration/banc-jeu-complet.test.ts.
+ * bench: tests/integration/bench-full-dataset.test.ts.
  */
 
 const read = (fichier: string) => readFileSync(path.join(ROOT, fichier), 'utf8')

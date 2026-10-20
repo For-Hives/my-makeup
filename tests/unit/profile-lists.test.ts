@@ -17,7 +17,7 @@ import {
 /**
  * The rules of the list sections of a profile (ticket 040): the identity of each row (rule L1 of
  * docs/qualite.md §3) and the bounds the server checks (plans/02 U29, U30). The collection plays
- * them in tests/integration/profils-listes.test.ts.
+ * them in tests/integration/profile-lists.test.ts.
  */
 
 // Identifiers as Payload gives them: 24 hexadecimal characters.

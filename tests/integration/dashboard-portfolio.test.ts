@@ -32,144 +32,148 @@ setDefaultTimeout(30_000)
  * (ticket 045, « à savoir pour la suite »).
  */
 
-type Maquilleuse = TestAccount<'maquilleuse'>
+type Artist = TestAccount<'maquilleuse'>
 
-let espion: Spy
+let spy: Spy
 
 beforeEach(() => {
-	espion = spyStorage()
+	spy = spyStorage()
 })
 
 afterEach(async () => {
-	const fautes = deletionsWithoutTrash(espion.journal)
-	espion.arreter()
+	const faults = deletionsWithoutTrash(spy.journal)
+	spy.arreter()
 	await Promise.all([emptyBase(), emptyStorage()])
-	expect(fautes).toEqual([])
+	expect(faults).toEqual([])
 })
 
-async function utilisateurDe(payload: Payload, compte: Maquilleuse): Promise<DashboardUser> {
+async function userOf(payload: Payload, compte: Artist): Promise<DashboardUser> {
 	const doc = await payload.findByID({ collection: 'pros', id: compte.id, depth: 0, overrideAccess: true })
 	return { ...doc, collection: 'pros' } as DashboardUser
 }
 
-async function profilDe(compte: Maquilleuse) {
+async function profileOf(compte: Artist) {
 	const payload = await testPayload()
-	const [profil] = (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } }))
+	const [profile] = (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } }))
 		.docs
-	if (!profil) throw new Error('pas de profil')
-	return profil
+	if (!profile) throw new Error('pas de profil')
+	return profile
 }
 
-async function maquilleuse(): Promise<Maquilleuse> {
-	const compte = await createAccount('maquilleuse')
+async function artist(): Promise<Artist> {
+	const account = await createAccount('maquilleuse')
 	const payload = await testPayload()
 	await payload.update({
 		collection: 'profiles',
-		id: (await profilDe(compte)).id,
+		id: (await profileOf(account)).id,
 		data: { firstName: 'Léa', lastName: 'Fictive', specialty: 'Mariée' },
 	})
-	return compte
+	return account
 }
 
 /** A real image large enough for every derived size: a photo has an original and three more objects. */
-async function imageAssezGrande(): Promise<File> {
-	const octets = await sharp({ create: { width: 1200, height: 800, channels: 3, background: '#c08080' } })
+async function largeEnoughImage(): Promise<File> {
+	const bytes = await sharp({ create: { width: 1200, height: 800, channels: 3, background: '#c08080' } })
 		.webp()
 		.toBuffer()
-	return new File([Uint8Array.from(octets)], `photo-${crypto.randomUUID()}.webp`, { type: 'image/webp' })
+	return new File([Uint8Array.from(bytes)], `photo-${crypto.randomUUID()}.webp`, { type: 'image/webp' })
 }
 
 /** A file sent to the media route as the browser sends it, with its default alternative text. */
-async function envoyer(compte: Maquilleuse, alt = 'Photo du portfolio'): Promise<Media> {
-	const { statut, corps, texte } = await callRest('POST', '/api/media?depth=0', {
+async function send(compte: Artist, alt = 'Photo du portfolio'): Promise<Media> {
+	const {
+		statut: status,
+		corps,
+		texte: text,
+	} = await callRest('POST', '/api/media?depth=0', {
 		enTetes: compte.session.enTetes,
-		formulaire: formWithFile(await imageAssezGrande(), { alt }),
+		formulaire: formWithFile(await largeEnoughImage(), { alt }),
 	})
-	if (statut !== 201) throw new Error(`Envoi refusé : ${statut} ${texte}`)
+	if (status !== 201) throw new Error(`Envoi refusé : ${status} ${text}`)
 	return (corps as { doc: Media }).doc
 }
 
 /** Exactly `n` photos, so that a test reads them without a hole in the type. */
-const envoyerPlusieurs = async (compte: Maquilleuse, n: number): Promise<Media[]> => {
-	const medias: Media[] = []
-	for (let i = 0; i < n; i++) medias.push(await envoyer(compte))
-	return medias
+const sendSeveral = async (compte: Artist, n: number): Promise<Media[]> => {
+	const media: Media[] = []
+	for (let i = 0; i < n; i++) media.push(await send(compte))
+	return media
 }
 
-const envoyerTrois = async (compte: Maquilleuse): Promise<[Media, Media, Media]> => [
-	await envoyer(compte),
-	await envoyer(compte),
-	await envoyer(compte),
+const sendThree = async (compte: Artist): Promise<[Media, Media, Media]> => [
+	await send(compte),
+	await send(compte),
+	await send(compte),
 ]
 
-const galerieDe = async (compte: Maquilleuse) => namedPhotos((await profilDe(compte)).gallery)
-const nombreDeMedias = async () => (await (await testPayload()).count({ collection: 'media' })).totalDocs
+const galleryOf = async (compte: Artist) => namedPhotos((await profileOf(compte)).gallery)
+const mediaCount = async () => (await (await testPayload()).count({ collection: 'media' })).totalDocs
 
 /** The reconciliation of the storage and the database: 0 orphan, or the list of what is wrong. */
-async function orphelins() {
+async function orphans() {
 	const storage = serverEnv().storage
 	if (!storage) throw new Error('Pas de stockage sur le banc.')
-	const rapport = await reconcileStorageAndDatabase(await testPayload(), () => listStorage(storage))
+	const report = await reconcileStorageAndDatabase(await testPayload(), () => listStorage(storage))
 	return {
-		objetsSansMedia: rapport.objetsSansMedia,
-		mediasSansObjet: rapport.mediasSansObjet,
-		mediasSansProfil: rapport.mediasSansProfil,
+		objetsSansMedia: report.objetsSansMedia,
+		mediasSansObjet: report.mediasSansObjet,
+		mediasSansProfil: report.mediasSansProfil,
 	}
 }
-const AUCUN = { objetsSansMedia: [], mediasSansObjet: [], mediasSansProfil: [] }
+const NONE = { objetsSansMedia: [], mediasSansObjet: [], mediasSansProfil: [] }
 
 describe('E34 : trois photos ajoutées sont dans la galerie, dans l’ordre, et sur le profil public', () => {
 	test('la galerie suit l’ordre d’ajout ; l’espace et le profil public montrent les trois ; alt par défaut stocké ; 0 orphelin', async () => {
-		const compte = await maquilleuse()
+		const account = await artist()
 		const payload = await testPayload()
-		const utilisateur = await utilisateurDe(payload, compte)
-		const [a, b, c] = await envoyerTrois(compte)
+		const user = await userOf(payload, account)
+		const [a, b, c] = await sendThree(account)
 		expect([a, b, c].map(m => m.alt)).toEqual(['Photo du portfolio', 'Photo du portfolio', 'Photo du portfolio'])
 
-		const resultat = await savePortfolio(payload, utilisateur, { galerie: [a.id, b.id, c.id] })
+		const result = await savePortfolio(payload, user, { galerie: [a.id, b.id, c.id] })
 
-		expect(resultat).toEqual({ ok: true, valeurs: { galerie: [a.id, b.id, c.id] } })
-		const profil = await profilDe(compte)
-		expect(namedPhotos(profil.gallery)).toEqual([a.id, b.id, c.id])
-		const espace = await readDashboardPhotos(payload, profil)
-		expect(espace.galerie.map(p => p.id)).toEqual([a.id, b.id, c.id])
-		const publique = await readPublicProfile(payload, profil.slug ?? '')
-		expect(publique?.galerie.map(p => p.url)).toEqual([a.url, b.url, c.url] as string[])
-		expect(await orphelins()).toEqual(AUCUN)
+		expect(result).toEqual({ ok: true, valeurs: { galerie: [a.id, b.id, c.id] } })
+		const profile = await profileOf(account)
+		expect(namedPhotos(profile.gallery)).toEqual([a.id, b.id, c.id])
+		const dashboard = await readDashboardPhotos(payload, profile)
+		expect(dashboard.galerie.map(p => p.id)).toEqual([a.id, b.id, c.id])
+		const publicValue = await readPublicProfile(payload, profile.slug ?? '')
+		expect(publicValue?.galerie.map(p => p.url)).toEqual([a.url, b.url, c.url] as string[])
+		expect(await orphans()).toEqual(NONE)
 	})
 
 	test('des photos ajoutées après celles qu’elle a déjà : les anciennes gardent leur place, les nouvelles suivent', async () => {
-		const compte = await maquilleuse()
+		const account = await artist()
 		const payload = await testPayload()
-		const utilisateur = await utilisateurDe(payload, compte)
-		const [a, b, c] = await envoyerTrois(compte)
-		await savePortfolio(payload, utilisateur, { galerie: [a.id, b.id] })
+		const user = await userOf(payload, account)
+		const [a, b, c] = await sendThree(account)
+		await savePortfolio(payload, user, { galerie: [a.id, b.id] })
 
-		const resultat = await savePortfolio(payload, utilisateur, { galerie: [a.id, b.id, c.id] })
+		const result = await savePortfolio(payload, user, { galerie: [a.id, b.id, c.id] })
 
-		expect(resultat.ok).toBe(true)
-		expect(await galerieDe(compte)).toEqual([a.id, b.id, c.id])
-		expect(await orphelins()).toEqual(AUCUN)
+		expect(result.ok).toBe(true)
+		expect(await galleryOf(account)).toEqual([a.id, b.id, c.id])
+		expect(await orphans()).toEqual(NONE)
 	})
 })
 
 describe('U80 : dix photos au plus', () => {
 	test('dix passent ; une onzième est refusée avec le message, la galerie reste intacte', async () => {
-		const compte = await maquilleuse()
+		const account = await artist()
 		const payload = await testPayload()
-		const utilisateur = await utilisateurDe(payload, compte)
-		const medias = await envoyerPlusieurs(compte, 11)
-		const dix = medias.slice(0, 10).map(m => m.id)
+		const user = await userOf(payload, account)
+		const media = await sendSeveral(account, 11)
+		const ten = media.slice(0, 10).map(m => m.id)
 
-		expect(await savePortfolio(payload, utilisateur, { galerie: dix })).toMatchObject({ ok: true })
-		const refus = await savePortfolio(payload, utilisateur, { galerie: medias.map(m => m.id) })
+		expect(await savePortfolio(payload, user, { galerie: ten })).toMatchObject({ ok: true })
+		const refusal = await savePortfolio(payload, user, { galerie: media.map(m => m.id) })
 
-		expect(refus).toEqual({
+		expect(refusal).toEqual({
 			ok: false,
 			message: PHOTO_MESSAGES.galeriePleine,
 			champs: { galerie: PHOTO_MESSAGES.galeriePleine },
 		})
-		expect(await galerieDe(compte)).toEqual(dix)
+		expect(await galleryOf(account)).toEqual(ten)
 	})
 })
 
@@ -183,40 +187,40 @@ describe('la requête de l’action est lue strictement', () => {
 		['une valeur qui n’est pas une liste', (id: number) => ({ galerie: id })],
 		['rien', () => ({})],
 	])('%s : refusé en français, jamais une erreur serveur, la galerie ne bouge pas', async (_nom, saisie) => {
-		const compte = await maquilleuse()
+		const account = await artist()
 		const payload = await testPayload()
-		const photo = await envoyer(compte)
+		const photo = await send(account)
 
-		const resultat = await savePortfolio(payload, await utilisateurDe(payload, compte), saisie(photo.id))
+		const result = await savePortfolio(payload, await userOf(payload, account), saisie(photo.id))
 
-		expect(resultat.ok).toBe(false)
-		if (!resultat.ok) expect(resultat.message).not.toMatch(/unrecognized|expected|invalid/i)
-		expect(await galerieDe(compte)).toEqual([])
+		expect(result.ok).toBe(false)
+		if (!result.ok) expect(result.message).not.toMatch(/unrecognized|expected|invalid/i)
+		expect(await galleryOf(account)).toEqual([])
 	})
 
 	test('la photo d’une autre maquilleuse est refusée, la galerie ne bouge pas', async () => {
-		const compte = await maquilleuse()
-		const autre = await maquilleuse()
+		const account = await artist()
+		const other = await artist()
 		const payload = await testPayload()
-		const mienne = await envoyer(compte)
-		const sienne = await envoyer(autre)
+		const mine = await send(account)
+		const hers = await send(other)
 
-		const resultat = await savePortfolio(payload, await utilisateurDe(payload, compte), {
-			galerie: [mienne.id, sienne.id],
+		const result = await savePortfolio(payload, await userOf(payload, account), {
+			galerie: [mine.id, hers.id],
 		})
 
-		expect(resultat).toMatchObject({ ok: false, champs: { galerie: PHOTO_MESSAGES.photoRefusee } })
-		expect(await galerieDe(compte)).toEqual([])
-		expect(await galerieDe(autre)).toEqual([])
-		expect(await readObject(`media/${sienne.filename}`)).toBeDefined()
+		expect(result).toMatchObject({ ok: false, champs: { galerie: PHOTO_MESSAGES.photoRefusee } })
+		expect(await galleryOf(account)).toEqual([])
+		expect(await galleryOf(other)).toEqual([])
+		expect(await readObject(`media/${hers.filename}`)).toBeDefined()
 	})
 
 	test('un compte de l’administration n’a pas de portfolio à écrire', async () => {
 		const admin = await createAccount('admin')
 		const payload = await testPayload()
 		const doc = await payload.findByID({ collection: 'admins', id: admin.id, depth: 0, overrideAccess: true })
-		const utilisateur = { ...doc, collection: 'admins' } as unknown as DashboardUser
-		expect(await savePortfolio(payload, utilisateur, { galerie: [] })).toEqual({
+		const user = { ...doc, collection: 'admins' } as unknown as DashboardUser
+		expect(await savePortfolio(payload, user, { galerie: [] })).toEqual({
 			ok: false,
 			message: FAILURE_MESSAGE,
 		})
@@ -225,128 +229,128 @@ describe('la requête de l’action est lue strictement', () => {
 
 describe('E34 : fermer sans valider ne laisse rien', () => {
 	test('un panneau fermé n’a rien envoyé : ni média, ni objet, ni orphelin', async () => {
-		const compte = await maquilleuse()
+		const account = await artist()
 		const payload = await testPayload()
-		const a = await envoyer(compte)
-		await savePortfolio(payload, await utilisateurDe(payload, compte), { galerie: [a.id] })
-		const avant = await nombreDeMedias()
+		const a = await send(account)
+		await savePortfolio(payload, await userOf(payload, account), { galerie: [a.id] })
+		const before = await mediaCount()
 
 		// Nothing is sent by the panel before « Enregistrer »: the server sees no request at all.
-		expect(await nombreDeMedias()).toBe(avant)
-		expect(await orphelins()).toEqual(AUCUN)
+		expect(await mediaCount()).toBe(before)
+		expect(await orphans()).toEqual(NONE)
 	})
 })
 
 /** The keys of the objects of a media: the original and each derived size. */
-const clesDe = (media: Media): string[] => [
+const keysOf = (media: Media): string[] => [
 	`media/${media.filename}`,
 	...Object.values(media.sizes ?? {}).flatMap(taille => (taille?.filename ? [`media/${taille.filename}`] : [])),
 ]
 
 describe('E35, I25 : une photo retirée disparaît partout, son objet part à la corbeille', () => {
 	test('retirer la 2e : galerie, espace et profil public sans elle ; l’original et ses tailles en deleted/ ; 0 orphelin', async () => {
-		const compte = await maquilleuse()
+		const account = await artist()
 		const payload = await testPayload()
-		const utilisateur = await utilisateurDe(payload, compte)
-		const [a, b, c] = await envoyerTrois(compte)
-		await savePortfolio(payload, utilisateur, { galerie: [a.id, b.id, c.id] })
-		const cles = clesDe(b)
-		expect(cles.length).toBeGreaterThan(1)
-		const avant = await Promise.all(cles.map(async cle => [cle, (await readObject(cle))?.octets] as const))
-		expect(avant.every(([, octets]) => octets !== undefined)).toBe(true)
+		const user = await userOf(payload, account)
+		const [a, b, c] = await sendThree(account)
+		await savePortfolio(payload, user, { galerie: [a.id, b.id, c.id] })
+		const keys = keysOf(b)
+		expect(keys.length).toBeGreaterThan(1)
+		const before = await Promise.all(keys.map(async cle => [cle, (await readObject(cle))?.octets] as const))
+		expect(before.every(([, bytes]) => bytes !== undefined)).toBe(true)
 
-		const resultat = await savePortfolio(payload, utilisateur, { galerie: [a.id, c.id] })
+		const result = await savePortfolio(payload, user, { galerie: [a.id, c.id] })
 
-		expect(resultat).toEqual({ ok: true, valeurs: { galerie: [a.id, c.id] } })
-		const profil = await profilDe(compte)
-		expect(namedPhotos(profil.gallery)).toEqual([a.id, c.id])
-		expect((await readDashboardPhotos(payload, profil)).galerie.map(p => p.id)).toEqual([a.id, c.id])
-		expect((await readPublicProfile(payload, profil.slug ?? ''))?.galerie.map(p => p.url)).toEqual([
+		expect(result).toEqual({ ok: true, valeurs: { galerie: [a.id, c.id] } })
+		const profile = await profileOf(account)
+		expect(namedPhotos(profile.gallery)).toEqual([a.id, c.id])
+		expect((await readDashboardPhotos(payload, profile)).galerie.map(p => p.id)).toEqual([a.id, c.id])
+		expect((await readPublicProfile(payload, profile.slug ?? ''))?.galerie.map(p => p.url)).toEqual([
 			a.url,
 			c.url,
 		] as string[])
 		expect(await payload.findByID({ collection: 'media', id: b.id, depth: 0, disableErrors: true })).toBeNull()
-		for (const [cle, octets] of avant) {
-			expect(await readObject(cle)).toBeUndefined()
-			expect((await readObject(`deleted/${cle}`))?.octets).toEqual(octets)
+		for (const [key, bytes] of before) {
+			expect(await readObject(key)).toBeUndefined()
+			expect((await readObject(`deleted/${key}`))?.octets).toEqual(bytes)
 		}
 		expect((await fetch(b.url ?? '')).status).not.toBe(200)
 		// The two that stay are untouched.
-		for (const cle of [...clesDe(a), ...clesDe(c)]) expect(await readObject(cle)).toBeDefined()
-		expect(await orphelins()).toEqual(AUCUN)
+		for (const key of [...keysOf(a), ...keysOf(c)]) expect(await readObject(key)).toBeDefined()
+		expect(await orphans()).toEqual(NONE)
 	})
 
 	test('une photo retirée de la galerie mais encore photo principale reste en place (I25)', async () => {
-		const compte = await maquilleuse()
+		const account = await artist()
 		const payload = await testPayload()
-		const utilisateur = await utilisateurDe(payload, compte)
-		const [principale, autre] = [await envoyer(compte), await envoyer(compte)]
+		const user = await userOf(payload, account)
+		const [main, other] = [await send(account), await send(account)]
 		await payload.update({
 			collection: 'profiles',
-			id: (await profilDe(compte)).id,
-			data: { mainPicture: principale.id },
+			id: (await profileOf(account)).id,
+			data: { mainPicture: main.id },
 		})
-		await savePortfolio(payload, utilisateur, { gallery: [principale.id, autre.id] })
+		await savePortfolio(payload, user, { gallery: [main.id, other.id] })
 
-		await savePortfolio(payload, utilisateur, { galerie: [autre.id] })
+		await savePortfolio(payload, user, { galerie: [other.id] })
 
-		expect(await galerieDe(compte)).toEqual([autre.id])
-		expect((await profilDe(compte)).mainPicture).toBe(principale.id)
-		for (const cle of clesDe(principale)) expect(await readObject(cle)).toBeDefined()
-		expect(await readObject(`deleted/media/${principale.filename}`)).toBeUndefined()
-		expect(await orphelins()).toEqual(AUCUN)
+		expect(await galleryOf(account)).toEqual([other.id])
+		expect((await profileOf(account)).mainPicture).toBe(main.id)
+		for (const key of keysOf(main)) expect(await readObject(key)).toBeDefined()
+		expect(await readObject(`deleted/media/${main.filename}`)).toBeUndefined()
+		expect(await orphans()).toEqual(NONE)
 	})
 
 	test('tout retirer : liste vide, tous les objets en corbeille, 0 orphelin', async () => {
-		const compte = await maquilleuse()
+		const account = await artist()
 		const payload = await testPayload()
-		const utilisateur = await utilisateurDe(payload, compte)
-		const [a, b] = [await envoyer(compte), await envoyer(compte)]
-		await savePortfolio(payload, utilisateur, { galerie: [a.id, b.id] })
+		const user = await userOf(payload, account)
+		const [a, b] = [await send(account), await send(account)]
+		await savePortfolio(payload, user, { galerie: [a.id, b.id] })
 
-		expect(await savePortfolio(payload, utilisateur, { galerie: [] })).toEqual({
+		expect(await savePortfolio(payload, user, { galerie: [] })).toEqual({
 			ok: true,
 			valeurs: { galerie: [] },
 		})
 
-		expect(await galerieDe(compte)).toEqual([])
-		expect(await nombreDeMedias()).toBe(0)
-		for (const cle of [...clesDe(a), ...clesDe(b)]) {
-			expect(await readObject(cle)).toBeUndefined()
-			expect(await readObject(`deleted/${cle}`)).toBeDefined()
+		expect(await galleryOf(account)).toEqual([])
+		expect(await mediaCount()).toBe(0)
+		for (const key of [...keysOf(a), ...keysOf(b)]) {
+			expect(await readObject(key)).toBeUndefined()
+			expect(await readObject(`deleted/${key}`)).toBeDefined()
 		}
-		expect(await orphelins()).toEqual(AUCUN)
+		expect(await orphans()).toEqual(NONE)
 	})
 
 	test('enregistrer deux fois la même liste ne déplace plus rien', async () => {
-		const compte = await maquilleuse()
+		const account = await artist()
 		const payload = await testPayload()
-		const utilisateur = await utilisateurDe(payload, compte)
-		const [a, b] = [await envoyer(compte), await envoyer(compte)]
-		await savePortfolio(payload, utilisateur, { galerie: [a.id, b.id] })
-		await savePortfolio(payload, utilisateur, { galerie: [a.id] })
-		const deplacements = () => espion.journal.filter(commande => commande.nom === 'CopyObject').length
-		const avant = deplacements()
+		const user = await userOf(payload, account)
+		const [a, b] = [await send(account), await send(account)]
+		await savePortfolio(payload, user, { galerie: [a.id, b.id] })
+		await savePortfolio(payload, user, { galerie: [a.id] })
+		const moves = () => spy.journal.filter(commande => commande.nom === 'CopyObject').length
+		const before = moves()
 
-		expect(await savePortfolio(payload, utilisateur, { galerie: [a.id] })).toMatchObject({ ok: true })
+		expect(await savePortfolio(payload, user, { galerie: [a.id] })).toMatchObject({ ok: true })
 
-		expect(deplacements()).toBe(avant)
-		expect(await orphelins()).toEqual(AUCUN)
+		expect(moves()).toBe(before)
+		expect(await orphans()).toEqual(NONE)
 	})
 
 	test('la photo de B ne peut pas être retirée par A : la liste de A n’y touche pas, et celle de B reste', async () => {
-		const compte = await maquilleuse()
-		const autre = await maquilleuse()
+		const account = await artist()
+		const other = await artist()
 		const payload = await testPayload()
-		const photoDeB = await envoyer(autre)
-		await savePortfolio(payload, await utilisateurDe(payload, autre), { galerie: [photoDeB.id] })
-		const photoDeA = await envoyer(compte)
+		const photoOfB = await send(other)
+		await savePortfolio(payload, await userOf(payload, other), { galerie: [photoOfB.id] })
+		const photoOfA = await send(account)
 
-		await savePortfolio(payload, await utilisateurDe(payload, compte), { galerie: [photoDeA.id] })
-		await savePortfolio(payload, await utilisateurDe(payload, compte), { galerie: [] })
+		await savePortfolio(payload, await userOf(payload, account), { galerie: [photoOfA.id] })
+		await savePortfolio(payload, await userOf(payload, account), { galerie: [] })
 
-		expect(await galerieDe(autre)).toEqual([photoDeB.id])
-		for (const cle of clesDe(photoDeB)) expect(await readObject(cle)).toBeDefined()
-		expect(await orphelins()).toEqual(AUCUN)
+		expect(await galleryOf(other)).toEqual([photoOfB.id])
+		for (const key of keysOf(photoOfB)) expect(await readObject(key)).toBeDefined()
+		expect(await orphans()).toEqual(NONE)
 	})
 })

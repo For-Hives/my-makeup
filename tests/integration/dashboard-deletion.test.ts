@@ -25,247 +25,251 @@ setDefaultTimeout(30_000)
  * a removal that is not the second half of a move to the bin fails the test.
  */
 
-const MOT_DE_PASSE = 'un-mot-de-passe-fictif-du-banc'
-type Maquilleuse = TestAccount<'maquilleuse'>
+const PASSWORD = 'un-mot-de-passe-fictif-du-banc'
+type Artist = TestAccount<'maquilleuse'>
 
-let espion: Spy
-let numero = 0
+let spy: Spy
+let number = 0
 /** The headers of a request from a made-up client address: each test has its own. */
-const depuis = (adresse = `192.0.2.${100 + (++numero % 100)}`) => new Headers({ 'x-forwarded-for': adresse })
+const since = (adresse = `192.0.2.${100 + (++number % 100)}`) => new Headers({ 'x-forwarded-for': adresse })
 
 beforeEach(() => {
-	espion = spyStorage()
+	spy = spyStorage()
 	deletionRateLimit.vider()
 })
 
 afterEach(async () => {
-	const fautes = deletionsWithoutTrash(espion.journal)
-	espion.arreter()
+	const faults = deletionsWithoutTrash(spy.journal)
+	spy.arreter()
 	await Promise.all([emptyBase(), emptyStorage()])
-	expect(fautes).toEqual([])
+	expect(faults).toEqual([])
 })
 
-const maquilleuse = () => createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+const artist = () => createAccount('maquilleuse', { motDePasse: () => PASSWORD })
 
 /** A photo sent by this makeup artist through REST, as the site sends it. */
-async function envoyer(compte: Maquilleuse): Promise<Media> {
-	const { statut, corps, texte } = await callRest('POST', '/api/media?depth=0', {
+async function send(compte: Artist): Promise<Media> {
+	const {
+		statut: status,
+		corps,
+		texte: text,
+	} = await callRest('POST', '/api/media?depth=0', {
 		enTetes: compte.session.enTetes,
 		formulaire: formWithFile(fileForForm()),
 	})
-	if (statut !== 201) throw new Error(`L’envoi de la photo a échoué : ${statut} ${texte}`)
+	if (status !== 201) throw new Error(`L’envoi de la photo a échoué : ${status} ${text}`)
 	return (corps as { doc: Media }).doc
 }
 
-async function profilDe(compte: { id: number | string }) {
+async function profileOf(compte: { id: number | string }) {
 	const payload = await testPayload()
 	return (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })).docs[0]
 }
 
 /** An account with a profile that names a main photo and a gallery photo, and one more photo nobody names. */
-async function compteGarni() {
-	const compte = await maquilleuse()
-	const [principale, galerie, libre] = [await envoyer(compte), await envoyer(compte), await envoyer(compte)]
-	const profil = await profilDe(compte)
-	if (!profil) throw new Error('pas de profil')
+async function filledAccount() {
+	const account = await artist()
+	const [main, gallery, free] = [await send(account), await send(account), await send(account)]
+	const profile = await profileOf(account)
+	if (!profile) throw new Error('pas de profil')
 	const payload = await testPayload()
 	await payload.update({
 		collection: 'profiles',
-		id: profil.id,
-		data: { mainPicture: principale.id, gallery: [principale.id, galerie.id] },
+		id: profile.id,
+		data: { mainPicture: main.id, gallery: [main.id, gallery.id] },
 	})
-	return { compte, profil, photos: [principale, galerie, libre] }
+	return { compte: account, profil: profile, photos: [main, gallery, free] }
 }
 
-const cle = (media: Media) => `media/${media.filename}`
+const key = (media: Media) => `media/${media.filename}`
 const present = async (collection: 'pros' | 'profiles' | 'media', id: number | string) =>
 	(await (await testPayload()).findByID({ collection, id, depth: 0, disableErrors: true, overrideAccess: true })) !==
 	null
-const enPlace = async (media: Media) => (await readObject(cle(media))) !== undefined
-const enCorbeille = async (media: Media) => (await readObject(`deleted/${cle(media)}`)) !== undefined
+const inPlace = async (media: Media) => (await readObject(key(media))) !== undefined
+const inTrash = async (media: Media) => (await readObject(`deleted/${key(media)}`)) !== undefined
 
-const supprimer = (payload: Payload, compte: Maquilleuse, confirmation: string, entetes = depuis()) =>
+const remove = (payload: Payload, compte: Artist, confirmation: string, entetes = since()) =>
 	deleteMyAccount({ payload, compte, headers: entetes, saisie: { confirmation } })
 
 describe('I36 : tout part avec le compte', () => {
 	test('compte, profil, sessions et photos : les documents disparaissent, les objets vont à la corbeille, l’ancien jeton ne vaut plus', async () => {
 		const payload = await testPayload()
-		const { compte, profil, photos } = await compteGarni()
-		const autre = await garnirUnAutre()
+		const { compte: account, profil: profile, photos } = await filledAccount()
+		const other = await fillOther()
 
-		expect(await supprimer(payload, compte, MOT_DE_PASSE)).toEqual({ ok: true })
+		expect(await remove(payload, account, PASSWORD)).toEqual({ ok: true })
 
-		expect(await present('pros', compte.id)).toBe(false)
-		expect(await present('profiles', profil.id)).toBe(false)
+		expect(await present('pros', account.id)).toBe(false)
+		expect(await present('profiles', profile.id)).toBe(false)
 		for (const photo of photos) {
 			expect(await present('media', photo.id)).toBe(false)
-			expect(await enPlace(photo)).toBe(false)
-			expect(await enCorbeille(photo)).toBe(true)
+			expect(await inPlace(photo)).toBe(false)
+			expect(await inTrash(photo)).toBe(true)
 			expect((await fetch(photo.url ?? '')).status).not.toBe(200)
 		}
-		expect((await payload.auth({ headers: new Headers(compte.session.enTetes) })).user).toBeNull()
-		const slugs = await payload.find({ collection: 'profiles', depth: 0, where: { slug: { equals: profil.slug } } })
+		expect((await payload.auth({ headers: new Headers(account.session.enTetes) })).user).toBeNull()
+		const slugs = await payload.find({ collection: 'profiles', depth: 0, where: { slug: { equals: profile.slug } } })
 		expect(slugs.totalDocs).toBe(0)
 		expect((await listObjects('deleted/')).length).toBe(photos.length)
 		// The others are untouched.
-		expect(await present('pros', autre.compte.id)).toBe(true)
-		expect(await present('profiles', autre.profil.id)).toBe(true)
-		expect(await present('media', autre.photo.id)).toBe(true)
-		expect(await enPlace(autre.photo)).toBe(true)
+		expect(await present('pros', other.compte.id)).toBe(true)
+		expect(await present('profiles', other.profil.id)).toBe(true)
+		expect(await present('media', other.photo.id)).toBe(true)
+		expect(await inPlace(other.photo)).toBe(true)
 	})
 
 	test('un compte sans profil se supprime aussi ; un compte déjà supprimé n’est pas une erreur', async () => {
 		const payload = await testPayload()
-		const compte = await createAccount('maquilleuse-sans-profil', { motDePasse: () => MOT_DE_PASSE })
+		const account = await createAccount('maquilleuse-sans-profil', { motDePasse: () => PASSWORD })
 		expect(
-			await deleteMyAccount({ payload, compte, headers: depuis(), saisie: { confirmation: MOT_DE_PASSE } })
+			await deleteMyAccount({ payload, compte: account, headers: since(), saisie: { confirmation: PASSWORD } })
 		).toEqual({
 			ok: true,
 		})
-		expect(await present('pros', compte.id)).toBe(false)
+		expect(await present('pros', account.id)).toBe(false)
 
-		expect(await deleteAccountAndDependents(payload, compte.id)).toEqual({ supprime: false, profils: 0 })
+		expect(await deleteAccountAndDependents(payload, account.id)).toEqual({ supprime: false, profils: 0 })
 	})
 
 	test('un compte venu de Google se confirme par son adresse, en minuscules ou non, entourée d’espaces', async () => {
 		const payload = await testPayload()
-		const compte = await createAccount('reprise-google')
+		const account = await createAccount('reprise-google')
 
-		const refus = await deleteMyAccount({
+		const refusal = await deleteMyAccount({
 			payload,
-			compte,
-			headers: depuis(),
+			compte: account,
+			headers: since(),
 			saisie: { confirmation: 'autre@example.test' },
 		})
-		expect(refus).toEqual({ ok: false, message: DELETION_MESSAGES.email })
-		expect(await present('pros', compte.id)).toBe(true)
+		expect(refusal).toEqual({ ok: false, message: DELETION_MESSAGES.email })
+		expect(await present('pros', account.id)).toBe(true)
 
 		const ok = await deleteMyAccount({
 			payload,
-			compte,
-			headers: depuis(),
-			saisie: { confirmation: `  ${compte.email.toUpperCase()} ` },
+			compte: account,
+			headers: since(),
+			saisie: { confirmation: `  ${account.email.toUpperCase()} ` },
 		})
 		expect(ok).toEqual({ ok: true })
-		expect(await present('pros', compte.id)).toBe(false)
+		expect(await present('pros', account.id)).toBe(false)
 	})
 })
 
-async function garnirUnAutre() {
-	const compte = await maquilleuse()
-	const photo = await envoyer(compte)
-	const profil = await profilDe(compte)
-	if (!profil) throw new Error('pas de profil')
-	await (await testPayload()).update({ collection: 'profiles', id: profil.id, data: { mainPicture: photo.id } })
-	return { compte, profil, photo }
+async function fillOther() {
+	const account = await artist()
+	const photo = await send(account)
+	const profile = await profileOf(account)
+	if (!profile) throw new Error('pas de profil')
+	await (await testPayload()).update({ collection: 'profiles', id: profile.id, data: { mainPicture: photo.id } })
+	return { compte: account, profil: profile, photo }
 }
 
 describe('Mot de passe faux : rien de supprimé ; essais freinés', () => {
 	test('un mauvais mot de passe, un champ vide, une clé en trop : rien ne bouge', async () => {
 		const payload = await testPayload()
-		const { compte, profil, photos } = await compteGarni()
+		const { compte: account, profil: profile, photos } = await filledAccount()
 
-		expect(await supprimer(payload, compte, 'pas-le-bon')).toEqual({
+		expect(await remove(payload, account, 'pas-le-bon')).toEqual({
 			ok: false,
 			message: DELETION_MESSAGES.motDePasse,
 		})
-		expect(await supprimer(payload, compte, '')).toEqual({ ok: false, message: DELETION_MESSAGES.motDePasse })
-		const enTrop = await deleteMyAccount({
+		expect(await remove(payload, account, '')).toEqual({ ok: false, message: DELETION_MESSAGES.motDePasse })
+		const inToo = await deleteMyAccount({
 			payload,
-			compte,
-			headers: depuis(),
-			saisie: { confirmation: MOT_DE_PASSE, id: 1 },
+			compte: account,
+			headers: since(),
+			saisie: { confirmation: PASSWORD, id: 1 },
 		})
-		expect(enTrop.ok).toBe(false)
+		expect(inToo.ok).toBe(false)
 
-		expect(await present('pros', compte.id)).toBe(true)
-		expect(await present('profiles', profil.id)).toBe(true)
-		for (const photo of photos) expect(await enPlace(photo)).toBe(true)
-		expect((await payload.auth({ headers: new Headers(compte.session.enTetes) })).user).not.toBeNull()
-		expect(espion.journal.filter(({ nom }) => nom === 'CopyObject')).toEqual([])
+		expect(await present('pros', account.id)).toBe(true)
+		expect(await present('profiles', profile.id)).toBe(true)
+		for (const photo of photos) expect(await inPlace(photo)).toBe(true)
+		expect((await payload.auth({ headers: new Headers(account.session.enTetes) })).user).not.toBeNull()
+		expect(spy.journal.filter(({ nom }) => nom === 'CopyObject')).toEqual([])
 	})
 
 	test('la 11e tentative d’une même adresse est freinée, même avec le bon mot de passe ; une autre adresse est libre mais le compte garde son frein', async () => {
 		const payload = await testPayload()
-		const { compte } = await compteGarni()
-		const entetes = depuis('192.0.2.7')
-		for (let i = 0; i < 10; i++) expect((await supprimer(payload, compte, `faux-${i}`, entetes)).ok).toBe(false)
+		const { compte: account } = await filledAccount()
+		const headers = since('192.0.2.7')
+		for (let i = 0; i < 10; i++) expect((await remove(payload, account, `faux-${i}`, headers)).ok).toBe(false)
 
-		const freine = await supprimer(payload, compte, MOT_DE_PASSE, entetes)
-		expect(freine).toEqual({ ok: false, message: DELETION_MESSAGES.freine, freine: true })
-		expect(await present('pros', compte.id)).toBe(true)
+		const throttled = await remove(payload, account, PASSWORD, headers)
+		expect(throttled).toEqual({ ok: false, message: DELETION_MESSAGES.freine, freine: true })
+		expect(await present('pros', account.id)).toBe(true)
 
 		// Another address: the account itself has used its ten places, so a thief who changes address is braked too.
-		const ailleurs = await supprimer(payload, compte, MOT_DE_PASSE, depuis('192.0.2.8'))
-		expect(ailleurs).toEqual({ ok: false, message: DELETION_MESSAGES.freine, freine: true })
-		expect(await present('pros', compte.id)).toBe(true)
+		const elsewhere = await remove(payload, account, PASSWORD, since('192.0.2.8'))
+		expect(elsewhere).toEqual({ ok: false, message: DELETION_MESSAGES.freine, freine: true })
+		expect(await present('pros', account.id)).toBe(true)
 	})
 
 	test('le frein de la suppression ne bloque pas le compte : la connexion par mot de passe marche encore', async () => {
 		const payload = await testPayload()
-		const { compte } = await compteGarni()
-		for (let i = 0; i < 11; i++) await supprimer(payload, compte, `faux-${i}`, depuis('192.0.2.9'))
+		const { compte: account } = await filledAccount()
+		for (let i = 0; i < 11; i++) await remove(payload, account, `faux-${i}`, since('192.0.2.9'))
 
-		const { openWithPassword: ouvrirParMotDePasse } = await import('@/lib/auth/token')
-		const { token } = await ouvrirParMotDePasse(payload, 'pros', { email: compte.email, password: MOT_DE_PASSE })
+		const { openWithPassword: openByPassword } = await import('@/lib/auth/token')
+		const { token } = await openByPassword(payload, 'pros', { email: account.email, password: PASSWORD })
 		expect(token).toBeTruthy()
 	})
 
 	test('le frein d’un compte ne touche pas celui d’un autre', async () => {
 		const payload = await testPayload()
-		const { compte } = await compteGarni()
-		const autre = await maquilleuse()
-		for (let i = 0; i < 10; i++) await supprimer(payload, compte, `faux-${i}`, depuis('192.0.2.20'))
+		const { compte: account } = await filledAccount()
+		const other = await artist()
+		for (let i = 0; i < 10; i++) await remove(payload, account, `faux-${i}`, since('192.0.2.20'))
 
-		expect(await supprimer(payload, autre, MOT_DE_PASSE, depuis('192.0.2.21'))).toEqual({ ok: true })
+		expect(await remove(payload, other, PASSWORD, since('192.0.2.21'))).toEqual({ ok: true })
 	})
 })
 
 describe('I38 : panne du stockage, tout est encore là', () => {
 	test('la copie vers la corbeille échoue : le message le dit, comptes, profil, photos et session sont intacts ; l’essai suivant réussit', async () => {
 		const payload = await testPayload()
-		const { compte, profil, photos } = await compteGarni()
+		const { compte: account, profil: profile, photos } = await filledAccount()
 		let copies = 0
 		// The second object fails: the first has already moved, and must be put back.
-		espion.fairePanne(
+		spy.fairePanne(
 			commande => commande.nom === 'CopyObject' && String(commande.entree.Key).startsWith('deleted/') && ++copies === 2
 		)
 
-		const resultat = await supprimer(payload, compte, MOT_DE_PASSE)
+		const result = await remove(payload, account, PASSWORD)
 
-		expect(resultat).toEqual({ ok: false, message: DELETION_MESSAGES.stockage })
+		expect(result).toEqual({ ok: false, message: DELETION_MESSAGES.stockage })
 		expect(STORAGE_OUTAGE_MESSAGE).toContain('Le stockage des photos ne répond pas')
-		expect(await present('pros', compte.id)).toBe(true)
-		expect(await present('profiles', profil.id)).toBe(true)
+		expect(await present('pros', account.id)).toBe(true)
+		expect(await present('profiles', profile.id)).toBe(true)
 		for (const photo of photos) {
 			expect(await present('media', photo.id)).toBe(true)
-			expect(await enPlace(photo)).toBe(true)
+			expect(await inPlace(photo)).toBe(true)
 			expect((await fetch(photo.url ?? '')).status).toBe(200)
 		}
-		expect((await payload.auth({ headers: new Headers(compte.session.enTetes) })).user).not.toBeNull()
-		expect((await profilDe(compte))?.mainPicture).toBe(photos[0]?.id)
+		expect((await payload.auth({ headers: new Headers(account.session.enTetes) })).user).not.toBeNull()
+		expect((await profileOf(account))?.mainPicture).toBe(photos[0]?.id)
 
-		espion.fairePanne(() => false)
-		expect(await supprimer(payload, compte, MOT_DE_PASSE)).toEqual({ ok: true })
-		expect(await present('pros', compte.id)).toBe(false)
-		for (const photo of photos) expect(await enCorbeille(photo)).toBe(true)
+		spy.fairePanne(() => false)
+		expect(await remove(payload, account, PASSWORD)).toEqual({ ok: true })
+		expect(await present('pros', account.id)).toBe(false)
+		for (const photo of photos) expect(await inTrash(photo)).toBe(true)
 	})
 })
 
 describe('Entrée maintenue : une seule suppression', () => {
 	test('deux demandes au même instant : une suppression, une seule copie par objet, aucune erreur', async () => {
 		const payload = await testPayload()
-		const { compte, photos } = await compteGarni()
+		const { compte: account, photos } = await filledAccount()
 
 		const [a, b] = await Promise.all([
-			supprimer(payload, compte, MOT_DE_PASSE, depuis('192.0.2.30')),
-			supprimer(payload, compte, MOT_DE_PASSE, depuis('192.0.2.30')),
+			remove(payload, account, PASSWORD, since('192.0.2.30')),
+			remove(payload, account, PASSWORD, since('192.0.2.30')),
 		])
 
 		expect(a).toEqual({ ok: true })
 		expect(b.ok).toBe(true)
-		expect(await present('pros', compte.id)).toBe(false)
-		const copies = espion.journal.filter(
+		expect(await present('pros', account.id)).toBe(false)
+		const copies = spy.journal.filter(
 			({ nom, entree }) => nom === 'CopyObject' && String(entree.Key).startsWith('deleted/')
 		)
 		expect(copies).toHaveLength(photos.length)
@@ -274,14 +278,14 @@ describe('Entrée maintenue : une seule suppression', () => {
 
 describe('La suppression reste fermée à la maquilleuse par l’API', () => {
 	test('DELETE /api/pros/<id> et /api/profiles/<id> par la propriétaire : 403, rien n’est supprimé', async () => {
-		const { compte, profil } = await compteGarni()
+		const { compte: account, profil: profile } = await filledAccount()
 
-		for (const chemin of [`/api/pros/${compte.id}`, `/api/profiles/${profil.id}`]) {
-			const { statut } = await callRest('DELETE', chemin, { enTetes: compte.session.enTetes })
-			expect(statut).toBe(403)
+		for (const path of [`/api/pros/${account.id}`, `/api/profiles/${profile.id}`]) {
+			const { statut: status } = await callRest('DELETE', path, { enTetes: account.session.enTetes })
+			expect(status).toBe(403)
 		}
 
-		expect(await present('pros', compte.id)).toBe(true)
-		expect(await present('profiles', profil.id)).toBe(true)
+		expect(await present('pros', account.id)).toBe(true)
+		expect(await present('profiles', profile.id)).toBe(true)
 	})
 })
