@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import type { CollectionSlug, Payload, Where } from 'payload'
 import { boundedQuery, CONDITIONS_MAX, PRIVATE_FIELD_MESSAGE, TOO_MANY_CONDITIONS_MESSAGE } from '@/lib/bounded-query'
-import { creerCompte } from '../support/account-factory'
-import { payloadDeTest, viderLaBase } from '../support/payload-test'
-import { appelerRest } from '../support/rest'
+import { createAccount } from '../support/account-factory'
+import { emptyBase, testPayload } from '../support/payload-test'
+import { callRest } from '../support/rest'
 
 /**
  * A public request that is too large, or that filters or sorts on a private field, is refused
@@ -11,7 +11,7 @@ import { appelerRest } from '../support/rest'
  * passes, except on the secrets of an account, which nobody filters on.
  */
 
-type Compte = Awaited<ReturnType<typeof creerCompte<'maquilleuse'>>>
+type Compte = Awaited<ReturnType<typeof createAccount<'maquilleuse'>>>
 type Lecteur = { nom: string; enTetes: Record<string, string> }
 
 let payload: Payload
@@ -25,12 +25,12 @@ let profilB: number
 const PRIVE_DE_A = { telephone: '06 39 98 00 01', email: 'contact-a@example.test', note: 'Note interne fictive' }
 
 beforeAll(async () => {
-	payload = await payloadDeTest()
-	;[a, b] = [await creerCompte('maquilleuse'), await creerCompte('maquilleuse')]
+	payload = await testPayload()
+	;[a, b] = [await createAccount('maquilleuse'), await createAccount('maquilleuse')]
 	const [autre, redaction, admin] = [
-		await creerCompte('maquilleuse'),
-		await creerCompte('redaction'),
-		await creerCompte('admin'),
+		await createAccount('maquilleuse'),
+		await createAccount('redaction'),
+		await createAccount('admin'),
 	]
 	lecteurs = {
 		anonyme: { nom: 'anonyme', enTetes: {} },
@@ -58,7 +58,7 @@ beforeAll(async () => {
 	})
 })
 
-afterAll(viderLaBase)
+afterAll(emptyBase)
 
 /** `n` conditions on the slug, in one `or`, as a query string. */
 const conditions = (n: number, prefixe = 'where[or]') =>
@@ -66,7 +66,7 @@ const conditions = (n: number, prefixe = 'where[or]') =>
 
 /** A REST read, with what a client sees of it. */
 async function lire(chemin: string, lecteur: Lecteur = lecteurs.anonyme) {
-	const { statut, corps, texte } = await appelerRest('GET', chemin, { enTetes: lecteur.enTetes })
+	const { statut, corps, texte } = await callRest('GET', chemin, { enTetes: lecteur.enTetes })
 	return {
 		statut,
 		corps: corps as { docs?: { id: number }[]; totalDocs?: number; errors?: { message: string }[] },
@@ -331,11 +331,11 @@ describe('Un identifiant qu’aucun document ne peut porter : refusé avant la b
 		for (const lecteur of ecrivains)
 			for (const collection of ['profiles', 'pros', 'admins', 'talents', 'articles'])
 				for (const id of IMPOSSIBLES) {
-					const modification = await appelerRest('PATCH', `/api/${collection}/${id}`, {
+					const modification = await callRest('PATCH', `/api/${collection}/${id}`, {
 						enTetes: lecteur.enTetes,
 						corps: { title: 'Titre fictif' },
 					})
-					const suppression = await appelerRest('DELETE', `/api/${collection}/${id}`, { enTetes: lecteur.enTetes })
+					const suppression = await callRest('DELETE', `/api/${collection}/${id}`, { enTetes: lecteur.enTetes })
 					for (const { statut } of [modification, suppression])
 						expect([lecteur.nom, collection, id, [400, 403].includes(statut)]).toEqual([
 							lecteur.nom,

@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import type { RequiredDataFromCollectionSlug } from 'payload'
 import { readTalent } from '@/services/public/talents'
-import { creerCompte } from '../support/account-factory'
-import { payloadDeTest, viderLaBase } from '../support/payload-test'
-import { appelerRest } from '../support/rest'
+import { createAccount } from '../support/account-factory'
+import { emptyBase, testPayload } from '../support/payload-test'
+import { callRest } from '../support/rest'
 
 /**
  * The talents (ticket 022): the public reads what is published, and nothing else, whatever the
@@ -13,7 +13,7 @@ import { appelerRest } from '../support/rest'
 
 /** A talent as the import writes it: through the Local API, without access control. */
 async function ecrireTalent(donnees: Partial<RequiredDataFromCollectionSlug<'talents'>> & { slug: string }) {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	return payload.create({
 		collection: 'talents',
 		data: {
@@ -32,14 +32,14 @@ interface Liste {
 
 /** A REST read, with its status and its body. */
 async function lire(chemin: string, enTetes: Record<string, string> = {}) {
-	const { statut, corps } = await appelerRest('GET', chemin, { enTetes })
+	const { statut, corps } = await callRest('GET', chemin, { enTetes })
 	return { statut, corps: corps as Liste & { id?: number; title?: string; strapiId?: number } }
 }
 
 /** The slugs a REST list gives. */
 const slugsDe = (corps: Liste) => corps.docs.map(({ slug }) => slug).sort()
 
-afterEach(viderLaBase)
+afterEach(emptyBase)
 
 describe('Lecture anonyme : talent publié lu, brouillon introuvable', () => {
 	test('la liste, la lecture par identifiant et la recherche par slug ne rendent que le talent publié', async () => {
@@ -61,7 +61,7 @@ describe('Lecture anonyme : talent publié lu, brouillon introuvable', () => {
 	test('demander les brouillons (?draft=true) ne rend rien de plus, ni à un anonyme ni à une maquilleuse', async () => {
 		const brouillon = await ecrireTalent({ slug: 'maquillage-fx', _status: 'draft' })
 		await ecrireTalent({ slug: 'maquillage-mariee' })
-		const maquilleuse = await creerCompte('maquilleuse')
+		const maquilleuse = await createAccount('maquilleuse')
 
 		for (const enTetes of [{}, maquilleuse.session.enTetes]) {
 			expect(slugsDe((await lire('/api/talents?draft=true', enTetes)).corps)).toEqual(['maquillage-mariee'])
@@ -71,9 +71,9 @@ describe('Lecture anonyme : talent publié lu, brouillon introuvable', () => {
 
 	test('un talent publié qui a un brouillon en cours se lit dans sa version publiée', async () => {
 		const publie = await ecrireTalent({ slug: 'maquillage-mariee', title: 'Maquillage de mariée' })
-		const redaction = await creerCompte('redaction')
+		const redaction = await createAccount('redaction')
 
-		const brouillon = await appelerRest('PATCH', `/api/talents/${publie.id}?draft=true`, {
+		const brouillon = await callRest('PATCH', `/api/talents/${publie.id}?draft=true`, {
 			enTetes: redaction.session.enTetes,
 			corps: { title: 'Titre en cours d’écriture' },
 		})
@@ -92,14 +92,14 @@ describe('Lecture anonyme : talent publié lu, brouillon introuvable', () => {
 	test('les versions, brouillons compris, ne se lisent que par la rédaction', async () => {
 		const publie = await ecrireTalent({ slug: 'maquillage-mariee' })
 		const [maquilleuse, redaction, admin] = await Promise.all([
-			creerCompte('maquilleuse'),
-			creerCompte('redaction'),
-			creerCompte('admin'),
+			createAccount('maquilleuse'),
+			createAccount('redaction'),
+			createAccount('admin'),
 		])
 
 		for (const enTetes of [{}, maquilleuse.session.enTetes]) {
 			expect((await lire('/api/talents/versions', enTetes)).statut).toBe(403)
-			const versions = await appelerRest('GET', `/api/talents/versions?where[parent][equals]=${publie.id}`, {
+			const versions = await callRest('GET', `/api/talents/versions?where[parent][equals]=${publie.id}`, {
 				enTetes,
 			})
 			expect(versions.statut).toBe(403)
@@ -113,7 +113,7 @@ describe('Lecture anonyme : talent publié lu, brouillon introuvable', () => {
 
 	test('l’identifiant de l’ancien site ne sort que pour la rédaction', async () => {
 		const publie = await ecrireTalent({ slug: 'maquillage-mariee', strapiId: 3 })
-		const redaction = await creerCompte('redaction')
+		const redaction = await createAccount('redaction')
 
 		const anonyme = await lire(`/api/talents/${publie.id}`)
 		expect(anonyme.statut).toBe(200)
@@ -124,9 +124,9 @@ describe('Lecture anonyme : talent publié lu, brouillon introuvable', () => {
 
 	test('dépublié par la rédaction, le talent n’est plus lu par le public', async () => {
 		const publie = await ecrireTalent({ slug: 'maquillage-mariee' })
-		const redaction = await creerCompte('redaction')
+		const redaction = await createAccount('redaction')
 
-		const depublie = await appelerRest('PATCH', `/api/talents/${publie.id}`, {
+		const depublie = await callRest('PATCH', `/api/talents/${publie.id}`, {
 			enTetes: redaction.session.enTetes,
 			corps: { _status: 'draft' },
 		})
@@ -139,11 +139,11 @@ describe('Lecture anonyme : talent publié lu, brouillon introuvable', () => {
 describe('Deux talents ne peuvent pas avoir le même slug', () => {
 	test('la rédaction ne crée pas un second talent sur un slug pris, publié ou brouillon', async () => {
 		await ecrireTalent({ slug: 'maquillage-mariee' })
-		const redaction = await creerCompte('redaction')
-		const payload = await payloadDeTest()
+		const redaction = await createAccount('redaction')
+		const payload = await testPayload()
 
 		for (const chemin of ['/api/talents', '/api/talents?draft=true']) {
-			const { statut } = await appelerRest('POST', chemin, {
+			const { statut } = await callRest('POST', chemin, {
 				enTetes: redaction.session.enTetes,
 				corps: { title: 'Doublon', slug: 'maquillage-mariee', _status: 'published' },
 			})
@@ -154,7 +154,7 @@ describe('Deux talents ne peuvent pas avoir le même slug', () => {
 
 	test('l’import non plus : un slug repris en double est refusé, jamais renommé', async () => {
 		await ecrireTalent({ slug: 'maquillage-mariee', strapiId: 1 })
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 
 		await expect(ecrireTalent({ slug: 'maquillage-mariee', strapiId: 2 })).rejects.toThrow()
 		const { docs } = await payload.find({ collection: 'talents', depth: 0 })
@@ -164,58 +164,58 @@ describe('Deux talents ne peuvent pas avoir le même slug', () => {
 	test('changer le slug d’un talent pour celui d’un autre est refusé, et rien ne change', async () => {
 		await ecrireTalent({ slug: 'maquillage-mariee' })
 		const autre = await ecrireTalent({ slug: 'maquillage-fx' })
-		const redaction = await creerCompte('redaction')
+		const redaction = await createAccount('redaction')
 
-		const { statut } = await appelerRest('PATCH', `/api/talents/${autre.id}`, {
+		const { statut } = await callRest('PATCH', `/api/talents/${autre.id}`, {
 			enTetes: redaction.session.enTetes,
 			corps: { slug: 'maquillage-mariee' },
 		})
 		expect(statut).toBe(400)
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		expect((await payload.findByID({ collection: 'talents', id: autre.id })).slug).toBe('maquillage-fx')
 	})
 
 	test('un slug qui n’a pas la forme d’une adresse est refusé à la publication, avec la bonne forme proposée', async () => {
-		const redaction = await creerCompte('redaction')
+		const redaction = await createAccount('redaction')
 
-		const { statut, texte } = await appelerRest('POST', '/api/talents', {
+		const { statut, texte } = await callRest('POST', '/api/talents', {
 			enTetes: redaction.session.enTetes,
 			corps: { title: 'Maquillage de mariée', slug: 'Maquillage Mariée', _status: 'published' },
 		})
 		expect(statut).toBe(400)
 		expect(texte).toContain('« maquillage-mariee »')
 
-		const sansSlug = await appelerRest('POST', '/api/talents', {
+		const sansSlug = await callRest('POST', '/api/talents', {
 			enTetes: redaction.session.enTetes,
 			corps: { title: 'Maquillage de mariée', _status: 'published' },
 		})
 		expect(sansSlug.statut).toBe(400)
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		expect((await payload.count({ collection: 'talents' })).totalDocs).toBe(0)
 	})
 })
 
 describe('La date de la première publication', () => {
 	test('un brouillon n’en a pas ; la publication l’écrit ; une modification la garde', async () => {
-		const redaction = await creerCompte('redaction')
+		const redaction = await createAccount('redaction')
 		const enTetes = redaction.session.enTetes
 
-		const cree = await appelerRest('POST', '/api/talents?draft=true', {
+		const cree = await callRest('POST', '/api/talents?draft=true', {
 			enTetes,
 			// Sent by a request, the date is ignored.
 			corps: { title: 'Maquillage FX', slug: 'maquillage-fx', publishedAt: '2020-01-01T00:00:00.000Z' },
 		})
 		expect(cree.statut).toBe(201)
 		const id = (cree.corps as { doc: { id: number; publishedAt?: string | null } }).doc.id
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		expect((await payload.findByID({ collection: 'talents', id })).publishedAt ?? null).toBeNull()
 
-		await appelerRest('PATCH', `/api/talents/${id}`, { enTetes, corps: { _status: 'published' } })
+		await callRest('PATCH', `/api/talents/${id}`, { enTetes, corps: { _status: 'published' } })
 		const publie = await payload.findByID({ collection: 'talents', id })
 		expect(publie._status).toBe('published')
 		expect(Date.now() - Date.parse(String(publie.publishedAt))).toBeLessThan(60_000)
 
-		await appelerRest('PATCH', `/api/talents/${id}`, { enTetes, corps: { title: 'Maquillage à effets spéciaux' } })
+		await callRest('PATCH', `/api/talents/${id}`, { enTetes, corps: { title: 'Maquillage à effets spéciaux' } })
 		expect((await payload.findByID({ collection: 'talents', id })).publishedAt).toBe(publie.publishedAt)
 	})
 
@@ -235,7 +235,7 @@ describe('Le titre de la page d’un talent (ticket 108)', () => {
 			seo_title: 'Maquillage fictif',
 			pageTitle: TITRE_DE_55,
 		})
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const lu = await readTalent(payload, 'maquillage-fictif')
 		expect(lu).toMatchObject({ titreDeLaPage: TITRE_DE_55, titreAffiche: 'Maquillage fictif' })
 
@@ -255,6 +255,6 @@ describe('Le titre de la page d’un talent (ticket 108)', () => {
 
 	test('un brouillon n’est pas lu par la page, un anonyme ne lit que le publié', async () => {
 		await ecrireTalent({ slug: 'maquillage-fx', _status: 'draft' })
-		expect(await readTalent(await payloadDeTest(), 'maquillage-fx')).toBeNull()
+		expect(await readTalent(await testPayload(), 'maquillage-fx')).toBeNull()
 	})
 })

@@ -1,7 +1,6 @@
 {
 	"waiting": [
-		"package.json",
-		"scripts/banc.ts",
+		"scripts/bench.ts",
 		"src/app/(front)/globals.css",
 		"src/app/(front)/layout.tsx",
 		"src/app/(payload)",
@@ -14,10 +13,9 @@
 		"src/payload-types.ts",
 		"tests/ci",
 		"tests/e2e",
-		"tests/fixtures",
 		"tests/integration",
-		"tests/outils",
-		"tests/sondes",
+		"tests/support",
+		"tests/probes",
 		"tests/unit",
 		"!tests/unit/naming"
 	],

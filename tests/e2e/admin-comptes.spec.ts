@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
-import { creerCompte } from '../support/account-factory'
-import { sansLeReseauDuDehors } from '../support/offline'
-import { payloadDeTest } from '../support/payload-test'
+import { createAccount } from '../support/account-factory'
+import { withoutOutsideNetwork } from '../support/offline'
+import { testPayload } from '../support/payload-test'
 
 /**
  * Ticket 168 (plan 01 §6.1): the admin opens the list of the accounts, finds the ones without a profile
@@ -12,11 +12,11 @@ import { payloadDeTest } from '../support/payload-test'
 test.describe('L’admin liste les comptes et en bloque un', () => {
 	test('la liste, ses trois filtres, puis le blocage depuis la fiche', async ({ context, page }, info) => {
 		test.setTimeout(120_000)
-		const admin = await creerCompte('admin')
-		const sansProfil = await creerCompte('maquilleuse-sans-profil')
-		const avecProfil = await creerCompte('maquilleuse')
+		const admin = await createAccount('admin')
+		const sansProfil = await createAccount('maquilleuse-sans-profil')
+		const avecProfil = await createAccount('maquilleuse')
 		await context.addCookies(admin.session.cookies)
-		await sansLeReseauDuDehors(context)
+		await withoutOutsideNetwork(context)
 		const erreurs: string[] = []
 		page.on('console', message => {
 			if (message.type() === 'error') erreurs.push(message.text())
@@ -46,7 +46,7 @@ test.describe('L’admin liste les comptes et en bloque un', () => {
 		await page.setViewportSize({ width: 1440, height: 900 })
 
 		// Block from the sheet: tick the box, save, the account is blocked and its session closed.
-		const compte = await creerCompte('maquilleuse')
+		const compte = await createAccount('maquilleuse')
 		await page.goto(`/admin/collections/pros/${compte.id}`)
 		const case_ = page.locator('#field-blocked')
 		await expect(async () => {
@@ -55,7 +55,7 @@ test.describe('L’admin liste les comptes et en bloque un', () => {
 		}).toPass({ timeout: 20_000 })
 		await page.locator('#action-save').click()
 		await expect(page.getByText('Mis à jour avec succès').first()).toBeVisible()
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		expect((await payload.findByID({ collection: 'pros', id: compte.id, depth: 0 })).blocked).toBe(true)
 		const moi = await payload.auth({ headers: new Headers(compte.session.enTetes) })
 		expect(moi.user).toBeNull()

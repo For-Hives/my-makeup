@@ -624,13 +624,13 @@ const SHARD = '${{ matrix.shard }}'
 export const BENCH_JOBS = {
 	integration: [
 		'bun install --frozen-lockfile',
-		'bun run banc:up',
+		'bun run bench:up',
 		`bun run test:integration --shard=${SHARD}/${SHARDS.integration}`,
 	],
 	e2e: [
 		'bun install --frozen-lockfile',
 		'bunx playwright install --with-deps chromium',
-		'bun run banc:up',
+		'bun run bench:up',
 		`bun run test:e2e --shard=${SHARD}/${SHARDS.e2e}`,
 	],
 } as const

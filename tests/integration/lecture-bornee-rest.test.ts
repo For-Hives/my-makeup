@@ -3,11 +3,11 @@ import type { Payload } from 'payload'
 import { NO_PROFILE_CONTEXT } from '@/collections/Profiles'
 import { boundedListRead, REST_LIMIT_DEFAULT, REST_LIMIT_MAX } from '@/lib/bounded-query'
 import type { Article, Media } from '@/payload-types'
-import { creerCompte } from '../support/account-factory'
-import { payloadDeTest, viderLaBase } from '../support/payload-test'
-import { fichierPourFormulaire, fichierPourPayload, nomDePhoto } from '../support/photos'
-import { appelerRest, formulaireAvecFichier } from '../support/rest'
-import { viderLeStockage } from '../support/s3'
+import { createAccount } from '../support/account-factory'
+import { emptyBase, testPayload } from '../support/payload-test'
+import { fileForForm, fileForPayload, photoName } from '../support/photos'
+import { callRest, formWithFile } from '../support/rest'
+import { emptyStorage } from '../support/s3'
 
 /**
  * The list reads over REST are capped (ticket 071, « Ajout du 14/10/2026 »): 100 documents at most
@@ -19,9 +19,9 @@ import { viderLeStockage } from '../support/s3'
 const TOTAL = REST_LIMIT_MAX + 1
 
 let payload: Payload
-let redaction: Awaited<ReturnType<typeof creerCompte<'redaction'>>>
-let admin: Awaited<ReturnType<typeof creerCompte<'admin'>>>
-let maquilleuse: Awaited<ReturnType<typeof creerCompte<'maquilleuse'>>>
+let redaction: Awaited<ReturnType<typeof createAccount<'redaction'>>>
+let admin: Awaited<ReturnType<typeof createAccount<'admin'>>>
+let maquilleuse: Awaited<ReturnType<typeof createAccount<'maquilleuse'>>>
 let identifiantsDesProfils: number[]
 
 /** `n` runs of `tache`, ten at a time. */
@@ -35,11 +35,11 @@ async function repeter<T>(n: number, tache: (i: number) => Promise<T>): Promise<
 }
 
 beforeAll(async () => {
-	payload = await payloadDeTest()
+	payload = await testPayload()
 	;[redaction, admin, maquilleuse] = [
-		await creerCompte('redaction'),
-		await creerCompte('admin'),
-		await creerCompte('maquilleuse'),
+		await createAccount('redaction'),
+		await createAccount('admin'),
+		await createAccount('maquilleuse'),
 	]
 	// 101 published profiles, each of its own account (a speciality makes a profile no longer entirely empty).
 	identifiantsDesProfils = await repeter(TOTAL, async i => {
@@ -74,7 +74,7 @@ beforeAll(async () => {
 }, 180_000)
 
 afterAll(async () => {
-	await Promise.all([viderLaBase(), viderLeStockage()])
+	await Promise.all([emptyBase(), emptyStorage()])
 })
 
 interface Liste {
@@ -84,7 +84,7 @@ interface Liste {
 }
 
 async function lire(chemin: string, enTetes: Record<string, string> = {}) {
-	const { statut, corps } = await appelerRest('GET', chemin, { enTetes })
+	const { statut, corps } = await callRest('GET', chemin, { enTetes })
 	return { statut, liste: corps as Liste }
 }
 
@@ -159,9 +159,9 @@ describe('Les relations ne sont pas touchées par le plafond', () => {
 	test('une maquilleuse enregistre par REST son profil avec sa photo principale et 10 photos de galerie', async () => {
 		const enTetes = maquilleuse.session.enTetes
 		const envoyer = async (): Promise<number> => {
-			const { statut, corps, texte } = await appelerRest('POST', '/api/media?depth=0', {
+			const { statut, corps, texte } = await callRest('POST', '/api/media?depth=0', {
 				enTetes,
-				formulaire: formulaireAvecFichier(fichierPourFormulaire(nomDePhoto('profil')), { alt: 'Photo fictive' }),
+				formulaire: formWithFile(fileForForm(photoName('profil')), { alt: 'Photo fictive' }),
 			})
 			if (statut !== 201) throw new Error(`L’envoi a échoué : ${statut} ${texte}`)
 			return (corps as { doc: Media }).doc.id
@@ -173,7 +173,7 @@ describe('Les relations ne sont pas touchées par le plafond', () => {
 		).docs[0]
 		expect(profil).toBeDefined()
 
-		const reponse = await appelerRest('PATCH', `/api/profiles/${profil?.id}?depth=0`, {
+		const reponse = await callRest('PATCH', `/api/profiles/${profil?.id}?depth=0`, {
 			enTetes,
 			corps: { mainPicture: principale, gallery: galerie },
 		})
@@ -189,30 +189,30 @@ describe('Les relations ne sont pas touchées par le plafond', () => {
 			payload.create({
 				collection: 'media',
 				data: { alt: 'Image fictive de la rédaction' },
-				file: fichierPourPayload(nomDePhoto('galerie')),
+				file: fileForPayload(photoName('galerie')),
 			})
 		)
 		const identifiants = images.map(({ id }) => id)
 		const enTetes = redaction.session.enTetes
 
-		const cree = await appelerRest('POST', '/api/articles?depth=0', {
+		const cree = await callRest('POST', '/api/articles?depth=0', {
 			enTetes,
 			corps: { title: 'Article à grande galerie', slug: 'grande-galerie', gallery: identifiants, _status: 'published' },
 		})
 		expect(cree.statut).toBe(201)
 		const id = (cree.corps as { doc: Article }).doc.id
-		const maj = await appelerRest('PATCH', `/api/articles/${id}?depth=0`, {
+		const maj = await callRest('PATCH', `/api/articles/${id}?depth=0`, {
 			enTetes,
 			corps: { gallery: identifiants, _status: 'published' },
 		})
 		expect(maj.statut).toBe(200)
 
-		const lue = await appelerRest('GET', `/api/articles/${id}?depth=1`, { enTetes })
+		const lue = await callRest('GET', `/api/articles/${id}?depth=1`, { enTetes })
 		const galerie = (lue.corps as Article).gallery ?? []
 		expect(galerie).toHaveLength(TOTAL)
 		expect(galerie.every(media => typeof media === 'object' && typeof media.url === 'string')).toBe(true)
 		// In a list too: the cap bounds the documents of the page, not what they hold.
-		const liste = await appelerRest('GET', '/api/articles?depth=1&where[slug][equals]=grande-galerie', { enTetes })
+		const liste = await callRest('GET', '/api/articles?depth=1&where[slug][equals]=grande-galerie', { enTetes })
 		const document = (liste.corps as { docs: Article[] }).docs[0]
 		expect(document?.gallery?.every(media => typeof media === 'object')).toBe(true)
 		expect(document?.gallery).toHaveLength(TOTAL)

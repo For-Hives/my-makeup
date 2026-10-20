@@ -2,15 +2,15 @@ import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { DEMO_PROFILES } from '@/demo-data/profiles'
-import { TYPES_DU_JEU } from '../fixtures/accounts'
-import { RACINE } from '../support/bench'
+import { DATASET_TYPES } from '../fixtures/accounts'
+import { ROOT } from '../support/bench'
 import {
-	DOSSIER_DES_SESSIONS,
-	entetesDeClient,
-	etatDeNavigateur,
-	messageCompteInconnu,
-	NOMS_DES_COMPTES,
-	rechercheDuCompte,
+	ACCOUNT_NAMES,
+	accountSearch,
+	browserState,
+	clientHeaders,
+	SESSION_FOLDER,
+	unknownAccountMessage,
 } from '../support/bench-session'
 import type { Session } from '../support/session'
 
@@ -20,7 +20,7 @@ import type { Session } from '../support/session'
  * bench: tests/integration/banc-jeu-complet.test.ts.
  */
 
-const lire = (fichier: string) => readFileSync(path.join(RACINE, fichier), 'utf8')
+const lire = (fichier: string) => readFileSync(path.join(ROOT, fichier), 'utf8')
 
 const SESSION: Session = {
 	enTetes: { Cookie: 'payload-token=jeton-factice', Origin: 'http://localhost:3100' },
@@ -40,24 +40,24 @@ const SESSION: Session = {
 
 describe('Quel compte désigne un nom', () => {
 	test('un type du jeu fixe retrouve son adresse et sa collection', () => {
-		expect(rechercheDuCompte('admin')).toEqual({
+		expect(accountSearch('admin')).toEqual({
 			email: 'jeu-admin@example.test',
 			collection: 'admins',
 			nom: 'admin',
 		})
-		expect(rechercheDuCompte('maquilleuse-sans-profil')).toMatchObject({
+		expect(accountSearch('maquilleuse-sans-profil')).toMatchObject({
 			email: 'jeu-maquilleuse-sans-profil@example.test',
 			collection: 'pros',
 		})
 	})
 
 	test('chaque type du jeu fixe et chaque profil type a un nom', () => {
-		expect(NOMS_DES_COMPTES).toHaveLength(TYPES_DU_JEU.length + DEMO_PROFILES.length)
-		for (const nom of NOMS_DES_COMPTES) expect(rechercheDuCompte(nom), nom).toBeDefined()
+		expect(ACCOUNT_NAMES).toHaveLength(DATASET_TYPES.length + DEMO_PROFILES.length)
+		for (const nom of ACCOUNT_NAMES) expect(accountSearch(nom), nom).toBeDefined()
 	})
 
 	test('la maquilleuse d’un profil type', () => {
-		expect(rechercheDuCompte('profil-reference')).toEqual({
+		expect(accountSearch('profil-reference')).toEqual({
 			email: 'jeu-profil-reference@example.test',
 			collection: 'pros',
 			nom: 'profil-reference',
@@ -65,14 +65,14 @@ describe('Quel compte désigne un nom', () => {
 	})
 
 	test('une adresse est cherchée dans les deux collections, un nom inconnu est refusé', () => {
-		expect(rechercheDuCompte(' Quelquun@Example.test ')).toMatchObject({ email: 'quelquun@example.test' })
-		expect(rechercheDuCompte('Quelquun@Example.test')?.collection).toBeUndefined()
-		expect(rechercheDuCompte('personne')).toBeUndefined()
-		expect(rechercheDuCompte('profil-inconnu')).toBeUndefined()
+		expect(accountSearch(' Quelquun@Example.test ')).toMatchObject({ email: 'quelquun@example.test' })
+		expect(accountSearch('Quelquun@Example.test')?.collection).toBeUndefined()
+		expect(accountSearch('personne')).toBeUndefined()
+		expect(accountSearch('profil-inconnu')).toBeUndefined()
 	})
 
 	test('le refus dit quels noms existent', () => {
-		const message = messageCompteInconnu('personne')
+		const message = unknownAccountMessage('personne')
 
 		expect(message).toContain('« personne »')
 		for (const nom of ['admin', 'redaction', 'profil-reference']) expect(message).toContain(nom)
@@ -81,7 +81,7 @@ describe('Quel compte désigne un nom', () => {
 
 describe('Les deux fichiers d’une session', () => {
 	test('l’état d’un navigateur donne à Playwright un cookie par hôte, sans adresse complète', () => {
-		expect(etatDeNavigateur(SESSION)).toEqual({
+		expect(browserState(SESSION)).toEqual({
 			cookies: [
 				{
 					name: 'payload-token',
@@ -99,11 +99,11 @@ describe('Les deux fichiers d’une session', () => {
 	})
 
 	test('les en-têtes se lisent par « curl -H @fichier » : une ligne par en-tête, le cookie et l’origine', () => {
-		expect(entetesDeClient(SESSION)).toBe('Cookie: payload-token=jeton-factice\nOrigin: http://localhost:3100\n')
+		expect(clientHeaders(SESSION)).toBe('Cookie: payload-token=jeton-factice\nOrigin: http://localhost:3100\n')
 	})
 
 	test('les sessions s’écrivent dans un dossier que git ignore', () => {
-		expect(DOSSIER_DES_SESSIONS).toBe('.banc/sessions')
+		expect(SESSION_FOLDER).toBe('.banc/sessions')
 		expect(lire('.gitignore').split('\n')).toContain('/.banc/')
 	})
 })
@@ -112,18 +112,13 @@ describe('Les commandes du banc', () => {
 	const scripts = (JSON.parse(lire('package.json')) as { scripts: Record<string, string> }).scripts
 
 	test('les trois commandes du ticket sont des scripts du paquet, sans le .env de travail', () => {
-		for (const nom of ['banc:complet', 'banc:reinitialiser', 'banc:session'])
-			expect(scripts[nom], nom).toStartWith('bun --no-env-file scripts/banc.ts ')
+		for (const nom of ['bench:full', 'bench:reset', 'bench:session'])
+			expect(scripts[nom], nom).toStartWith('bun --no-env-file scripts/bench.ts ')
 	})
 
 	test('le guide des agents et le guide du banc disent les quatre gestes', () => {
 		for (const fichier of ['CLAUDE.md', 'docs/tests/banc.md'])
-			for (const geste of [
-				'bun run banc:complet',
-				'bun run banc:reinitialiser',
-				'bun run banc:session',
-				'bun run banc:down',
-			])
+			for (const geste of ['bun run bench:full', 'bun run bench:reset', 'bun run bench:session', 'bun run bench:down'])
 				expect(lire(fichier), `${fichier} : ${geste}`).toContain(geste)
 	})
 })

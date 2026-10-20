@@ -13,15 +13,15 @@ import { MESSAGES_PHOTO } from '@/lib/dashboard/photo'
 import { uploadPhoto } from '@/lib/dashboard/photos-upload'
 import { withPublishableTransition } from '@/lib/dashboard/publishable-transition'
 import { FAILURE_MESSAGE, type SaveResult } from '@/lib/dashboard/result'
-import { choisirDesFichiers } from '../support/pick-files'
-import { ouvrirFenetre } from '../support/dom-react'
+import { openWindow } from '../support/dom-react'
+import { pickFiles } from '../support/pick-files'
 
 /**
  * Ticket 147: the events of the space of the makeup artist (plan 04 §3.3, events 13 to 15, 18 and
  * 19; U82). The components send through `porte.suivre`, which a spy takes the place of here: the
  * test sees exactly what would leave.
  */
-const fenetre = ouvrirFenetre()
+const fenetre = openWindow()
 
 type Envoi = { nom: string; proprietes: unknown }
 let envois: Envoi[] = []
@@ -246,7 +246,7 @@ describe('une photo refusée : la vraie cause', () => {
 			/>
 		)
 		await fenetre.cliquer(fenetre.bouton('Modifier ma photo principale'))
-		await choisirDesFichiers(fenetre, fenetre.champ(/photo/i) as HTMLInputElement, [
+		await pickFiles(fenetre, fenetre.champ(/photo/i) as HTMLInputElement, [
 			new File(['gros'], 'grosse.jpg', { type: 'image/jpeg' }),
 		])
 	}

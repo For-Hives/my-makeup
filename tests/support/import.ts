@@ -7,7 +7,7 @@
  *   await commandeDImport(['--real'])    the command itself, as a person runs it
  *
  * Both read the kept answers of the referential of the communes for the fake source
- * (tests/fixtures/import/referentiel-du-banc.json), offline: no test calls the Internet. A test
+ * (tests/fixtures/import/bench-reference.json), offline: no test calls the Internet. A test
  * that asks the referential itself simulates it (`simuler`) and gives `referentiel`. Both adopt the
  * photos of the source in the storage of the bench, where the source put them.
  *
@@ -21,50 +21,48 @@ import { importer, type RunOptions } from '../../scripts/migration/import/import
 import { type KeptReference, keptReference, readAnswers } from '../../scripts/migration/import/reference'
 import type { Mode, Report } from '../../scripts/migration/import/report'
 import { openSourceBun } from '../../scripts/migration/import/source-bun'
-import { DATE_DE_BASCULE_DU_BANC, RACINE } from './bench'
-import { payloadDeTest } from './payload-test'
-import { sourceDuBanc } from './source-strapi'
+import { BENCH_CUTOVER_DATE, ROOT } from './bench'
+import { testPayload } from './payload-test'
+import { benchSource } from './source-strapi'
 
 /**
- * The table of decisions of the bench (tests/fixtures/import/decisions-du-banc.json): of the four
+ * The table of decisions of the bench (tests/fixtures/import/bench-decisions.json): of the four
  * accounts of the fake source that share one email, account 9 is kept.
  */
-export const FICHIER_DES_DECISIONS_DU_BANC = 'tests/fixtures/import/decisions-du-banc.json'
+export const BENCH_DECISION_FILE = 'tests/fixtures/import/bench-decisions.json'
 
-export const DECISIONS_DU_BANC: Decisions = readDecisions(
-	readFileSync(path.join(RACINE, FICHIER_DES_DECISIONS_DU_BANC), 'utf8')
-)
+export const BENCH_DECISIONS: Decisions = readDecisions(readFileSync(path.join(ROOT, BENCH_DECISION_FILE), 'utf8'))
 
 /**
  * The kept answers of the referential of the communes for every city of the fake source: public
  * reference data of geo.api.gouv.fr (names, INSEE codes, postal codes, centres), never a personal one.
  */
-export const FICHIER_DU_REFERENTIEL_DU_BANC = 'tests/fixtures/import/referentiel-du-banc.json'
+export const BENCH_REFERENCE_FILE = 'tests/fixtures/import/bench-reference.json'
 
 /** The referential of the bench: its kept answers, offline. A question it does not keep stops the run. */
-export const referentielDuBanc = (): KeptReference =>
-	keptReference(readAnswers(readFileSync(path.join(RACINE, FICHIER_DU_REFERENTIEL_DU_BANC), 'utf8')), null)
+export const benchReference = (): KeptReference =>
+	keptReference(readAnswers(readFileSync(path.join(ROOT, BENCH_REFERENCE_FILE), 'utf8')), null)
 
 /**
  * Runs the import in this process, against the source and the database of the bench, with the
  * table of decisions and the referential of the bench unless the test gives others.
  */
-export async function importerSurLeBanc(
+export async function importOnBench(
 	mode: Mode = 'real',
 	options: Partial<Omit<RunOptions, 'payload' | 'source' | 'mode'>> = {}
 ): Promise<Report> {
-	const payload = await payloadDeTest()
-	const source = openSourceBun(sourceDuBanc().lecture)
+	const payload = await testPayload()
+	const source = openSourceBun(benchSource().lecture)
 	try {
 		return await importer({
 			payload,
 			source,
 			mode,
 			target: 'local',
-			decisions: DECISIONS_DU_BANC,
-			reference: referentielDuBanc(),
-			media: { base: sourceDuBanc().medias },
-			consentDate: DATE_DE_BASCULE_DU_BANC,
+			decisions: BENCH_DECISIONS,
+			reference: benchReference(),
+			media: { base: benchSource().medias },
+			consentDate: BENCH_CUTOVER_DATE,
 			...options,
 		})
 	} finally {
@@ -77,23 +75,23 @@ export async function importerSurLeBanc(
  * it printed. Unless the options name another file, it reads the referential of the bench offline:
  * a child process is out of reach of the simulation of outgoing calls (docs/tests/http-sortant.md).
  */
-export async function commandeDImport(
+export async function importCommand(
 	options: readonly string[],
 	environnement: Readonly<Record<string, string | undefined>> = process.env
 ): Promise<{ code: number; sortie: string }> {
-	const communes = options.includes('--cities') ? [] : ['--cities', FICHIER_DU_REFERENTIEL_DU_BANC, '--offline']
-	const bascule = options.includes('--consent-date') ? [] : ['--consent-date', DATE_DE_BASCULE_DU_BANC]
-	const ligne = [process.execPath, '--no-env-file', 'scripts/migration/import.ts', ...options, ...communes, ...bascule]
-	const enfant = Bun.spawn(ligne, {
-		cwd: RACINE,
+	const cities = options.includes('--cities') ? [] : ['--cities', BENCH_REFERENCE_FILE, '--offline']
+	const cutover = options.includes('--consent-date') ? [] : ['--consent-date', BENCH_CUTOVER_DATE]
+	const line = [process.execPath, '--no-env-file', 'scripts/migration/import.ts', ...options, ...cities, ...cutover]
+	const child = Bun.spawn(line, {
+		cwd: ROOT,
 		env: { ...environnement },
 		stdout: 'pipe',
 		stderr: 'pipe',
 	})
-	const [code, sortie, erreurs] = await Promise.all([
-		enfant.exited,
-		new Response(enfant.stdout).text(),
-		new Response(enfant.stderr).text(),
+	const [code, output, errors] = await Promise.all([
+		child.exited,
+		new Response(child.stdout).text(),
+		new Response(child.stderr).text(),
 	])
-	return { code, sortie: sortie + erreurs }
+	return { code, sortie: output + errors }
 }

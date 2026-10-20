@@ -1,16 +1,11 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { clearDocuments } from '@/lib/auth/google/oidc'
-import { importerSurLeBanc } from '../support/import'
-import { viderLeCapteur } from '../support/mailpit'
-import { CHOIX, choisirUnMotDePasse, connecterParGoogle, demanderLeLien, seConnecter } from '../support/legacy-journeys'
-import { payloadDeTest, viderLaBase } from '../support/payload-test'
-import { viderLeStockage } from '../support/s3'
-import {
-	COMPTES_DE_FIXTURE,
-	creerLaSourceStrapi,
-	effacerLaSourceStrapi,
-	empreinteDeLaSource,
-} from '../support/source-strapi'
+import { importOnBench } from '../support/import'
+import { CHOICE, connect, connectByGoogle, pickPassword, requestLink } from '../support/legacy-journeys'
+import { emptySink } from '../support/mailpit'
+import { emptyBase, testPayload } from '../support/payload-test'
+import { emptyStorage } from '../support/s3'
+import { COMPTES_DE_FIXTURE, createSourceStrapi, eraseSourceStrapi, sourceFingerprint } from '../support/source-strapi'
 
 /**
  * Ticket 095 (plan 01 §2.4 M2-M3; plan 02 I43): the rehearsal of what the makeup artists will live.
@@ -34,7 +29,7 @@ const FACEBOOK = { strapiId: 5, email: 'sarah.k@example.test' }
 
 /** The accounts of the target that still hold a hash of the old site, by `strapiId`: read in the database, no value kept. */
 async function comptesAvecUnHashHerite(): Promise<number[]> {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	const lignes = await payload.db.find<{ id: number; strapiId?: number | null; legacyBcrypt?: string | null }>({
 		collection: 'pros',
 		pagination: false,
@@ -47,7 +42,7 @@ async function comptesAvecUnHashHerite(): Promise<number[]> {
 }
 
 async function compteParStrapiId(strapiId: number) {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	const { docs } = await payload.find({
 		collection: 'pros',
 		depth: 0,
@@ -60,7 +55,7 @@ async function compteParStrapiId(strapiId: number) {
 }
 
 async function profilsDe(id: number | string) {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	return (
 		await payload.find({ collection: 'profiles', depth: 0, overrideAccess: true, where: { pro: { equals: id } } })
 	).docs.map(({ id: profil, slug }) => ({ id: profil, slug }))
@@ -69,19 +64,19 @@ async function profilsDe(id: number | string) {
 describe('095 : après l’import, trois comptes de fixture se connectent par leur parcours', () => {
 	beforeAll(async () => {
 		clearDocuments()
-		await Promise.all([viderLaBase(), viderLeCapteur()])
+		await Promise.all([emptyBase(), emptySink()])
 		// Before the source: emptying the bucket would take its objects away.
-		await viderLeStockage()
-		await creerLaSourceStrapi()
+		await emptyStorage()
+		await createSourceStrapi()
 	})
 	afterAll(async () => {
-		await Promise.all([viderLaBase(), viderLeCapteur()])
-		await effacerLaSourceStrapi()
+		await Promise.all([emptyBase(), emptySink()])
+		await eraseSourceStrapi()
 	})
 
 	test('les trois parcours, le compte des hash hérités baisse de 1 exactement, la source est inchangée (I43)', async () => {
-		const source = (await empreinteDeLaSource()).empreinte
-		await importerSurLeBanc()
+		const source = (await sourceFingerprint()).empreinte
+		await importOnBench()
 		const avant = await comptesAvecUnHashHerite()
 		expect(avant).toContain(LOCAL.strapiId)
 		expect(avant).not.toContain(GOOGLE.strapiId)
@@ -92,28 +87,28 @@ describe('095 : après l’import, trois comptes de fixture se connectent par le
 		expect(profilFacebook).toHaveLength(1)
 
 		// 1. The usual password of the old site: it opens the account, and the hash is replaced.
-		expect(await seConnecter(LOCAL.email, LOCAL.motDePasse)).toMatchObject({ ok: true })
+		expect(await connect(LOCAL.email, LOCAL.motDePasse)).toMatchObject({ ok: true })
 		expect(await comptesAvecUnHashHerite()).toEqual(avant.filter(strapiId => strapiId !== LOCAL.strapiId))
 		// The second sign-in is Payload's own, and the old hash does not come back.
-		expect(await seConnecter(LOCAL.email, LOCAL.motDePasse)).toMatchObject({ ok: true })
+		expect(await connect(LOCAL.email, LOCAL.motDePasse)).toMatchObject({ ok: true })
 
 		// 2. Google, by the fake provider: the same account, no second one, the same profile.
-		const parGoogle = await connecterParGoogle(GOOGLE.email)
+		const parGoogle = await connectByGoogle(GOOGLE.email)
 		expect(parGoogle).toMatchObject({ ok: true, nouveau: false })
 		expect(await profilsDe((await compteParStrapiId(GOOGLE.strapiId)).id)).toEqual(profilGoogle)
 
 		// 3. Facebook is gone: she is turned away, then the forgotten password gives her one.
-		expect(await seConnecter(FACEBOOK.email, CHOIX)).toEqual({ ok: false, code: 'identifiants-invalides' })
-		expect(await choisirUnMotDePasse(await demanderLeLien(FACEBOOK.email))).toEqual({ ok: true })
-		expect(await seConnecter(FACEBOOK.email, CHOIX)).toMatchObject({ ok: true })
+		expect(await connect(FACEBOOK.email, CHOICE)).toEqual({ ok: false, code: 'identifiants-invalides' })
+		expect(await pickPassword(await requestLink(FACEBOOK.email))).toEqual({ ok: true })
+		expect(await connect(FACEBOOK.email, CHOICE)).toMatchObject({ ok: true })
 		expect(await profilsDe((await compteParStrapiId(FACEBOOK.strapiId)).id)).toEqual(profilFacebook)
 
 		// The three paths together took exactly one old hash away.
 		const apres = await comptesAvecUnHashHerite()
 		expect(apres).toHaveLength(avant.length - 1)
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		expect((await payload.count({ collection: 'pros' })).totalDocs).toBe(14)
 		// I43: the source is the one the import found.
-		expect((await empreinteDeLaSource()).empreinte).toBe(source)
+		expect((await sourceFingerprint()).empreinte).toBe(source)
 	}, 90_000)
 })

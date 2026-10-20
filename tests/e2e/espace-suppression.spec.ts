@@ -1,9 +1,9 @@
 import { expect, type Page, test } from '@playwright/test'
-import { violationsGraves } from '../support/axe'
-import { creerCompte } from '../support/account-factory'
-import { payloadDeTest } from '../support/payload-test'
-import { fichierPourPayload } from '../support/photos'
-import { lireUnObjet } from '../support/s3'
+import { createAccount } from '../support/account-factory'
+import { violationsSevere } from '../support/axe'
+import { testPayload } from '../support/payload-test'
+import { fileForPayload } from '../support/photos'
+import { readObject } from '../support/s3'
 
 /**
  * She deletes her account from her space (ticket 141; plan 02 E33): a dialog that asks for her
@@ -24,15 +24,15 @@ test.beforeEach(({ context }) =>
 
 /** An account with a profile that names a photo, and the session in the browser. */
 async function maquilleuse(context: { addCookies: (c: never[]) => Promise<void> }) {
-	const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
-	const payload = await payloadDeTest()
+	const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+	const payload = await testPayload()
 	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
 	const [fiche] = docs
 	if (!fiche) throw new Error('pas de profil')
 	const media = await payload.create({
 		collection: 'media',
 		data: { owner: Number(compte.id), alt: 'Photo principale' },
-		file: fichierPourPayload(),
+		file: fileForPayload(),
 	})
 	const profil = await payload.update({
 		collection: 'profiles',
@@ -44,7 +44,7 @@ async function maquilleuse(context: { addCookies: (c: never[]) => Promise<void> 
 }
 
 const existe = async (collection: 'pros' | 'profiles' | 'media', id: number | string) =>
-	(await (await payloadDeTest()).findByID({ collection, id, depth: 0, disableErrors: true, overrideAccess: true })) !==
+	(await (await testPayload()).findByID({ collection, id, depth: 0, disableErrors: true, overrideAccess: true })) !==
 	null
 
 async function ouvrirLaFenetre(page: Page) {
@@ -67,7 +67,7 @@ test.describe('141 : supprimer mon compte', { tag: '@mobile' }, () => {
 		await ouvrirLaFenetre(page)
 		await expect(page.getByRole('dialog')).toContainText('toutes tes photos seront supprimés pour toujours')
 		await page.screenshot({ path: `test-results/essais/suppression-fenetre-${test.info().project.name}.png` })
-		expect(await violationsGraves(page)).toEqual([])
+		expect(await violationsSevere(page)).toEqual([])
 
 		await champ(page).fill('pas-le-bon')
 		await page.getByRole('button', { name: 'Supprimer définitivement mon compte' }).click()
@@ -85,8 +85,8 @@ test.describe('141 : supprimer mon compte', { tag: '@mobile' }, () => {
 		expect(await existe('pros', compte.id)).toBe(false)
 		expect(await existe('profiles', profil.id)).toBe(false)
 		expect(await existe('media', media.id)).toBe(false)
-		expect(await lireUnObjet(`media/${media.filename}`)).toBeUndefined()
-		expect(await lireUnObjet(`deleted/media/${media.filename}`)).toBeDefined()
+		expect(await readObject(`media/${media.filename}`)).toBeUndefined()
+		expect(await readObject(`deleted/media/${media.filename}`)).toBeDefined()
 		expect((await page.request.get(`/profil/${slug}`)).status()).toBe(404)
 
 		await page.goto('/auth/profil')

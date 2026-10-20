@@ -93,7 +93,7 @@ Le reste :
 - `tests/` : les tests. Un composant React s'y teste seul, sans navigateur : voir `docs/tests/composants.md`. Un service extérieur s'y simule, et aucun test n'appelle Internet : voir `docs/tests/http-sortant.md`.
 - `compose.test.yml` et `.env.test` : le banc de test local et son environnement factice, voir « Le banc de test ».
 - `src/demo-data/` : le jeu fictif du banc de test, qui ne se charge nulle part ailleurs : les 12 profils types, leurs maquilleuses fictives et leurs photos, trois talents et trois articles dont un brouillon, voir « Le banc de test ».
-- `playwright.config.ts` : les essais de bout en bout, voir « Les essais de bout en bout ». Il ne règle rien lui-même : tout vient de `tests/outils/e2e.ts`.
+- `playwright.config.ts` : les essais de bout en bout, voir « Les essais de bout en bout ». Il ne règle rien lui-même : tout vient de `tests/support/e2e.ts`.
 - `src/content/changelog.json` : les notes de version, en attente puis publiées ; `.github/workflows/release.yml` : la publication d'une version, qui écrit `.release/version.json` (voir « Notes de version et publication »).
 
 Les versions sont figées dans `package.json`, et `bun.lock` est le seul fichier de verrouillage.
@@ -167,7 +167,7 @@ Le statut (`status`) est calculé lui aussi : aucune API ne l'écrit, pas même 
 
 Seul un choix différent de celui qui est enregistré change le choix. Le formulaire de l'administration renvoie tous ses champs : chargé avant un enregistrement de la maquilleuse, il renvoie l'ancien statut, ignoré, et le choix qu'il a lu, inchangé ; il ne fixe donc rien. Le code serveur qui écrit `status` lui-même, règles d'accès levées (l'import, un jeu d'essai, un test), en fait le choix de l'admin.
 
-Tests : `tests/unit/etat-profil.test.ts`, et sur le banc `tests/integration/profils-completude.test.ts`, qui écrit chaque cas partagé de la complétude comme l'import l'écrira (`tests/outils/cas-completude.ts`) et compare l'état enregistré à la règle et aux réponses de l'ancien site.
+Tests : `tests/unit/etat-profil.test.ts`, et sur le banc `tests/integration/profils-completude.test.ts`, qui écrit chaque cas partagé de la complétude comme l'import l'écrira (`tests/support/completeness-cases.ts`) et compare l'état enregistré à la règle et aux réponses de l'ancien site.
 
 ### La liste des profils dans l'administration
 
@@ -203,7 +203,7 @@ Une photo qui ne sert plus part à la corbeille du stockage, jamais à la suppre
 - L'adresse publique d'une photo en corbeille ne répond plus. Sur le site, le cache de R2 peut encore la servir quelques heures. Une règle du stockage efface la corbeille au bout de 30 jours : elle se pose à la main dans R2 (ticket 205). D'ici là, `restore` (`src/lib/trash.ts`) remet un objet à sa place.
 - Le journal du serveur écrit une ligne `[corbeille]` par déplacement : combien d'objets, jamais leurs clés.
 
-Tests : `tests/unit/corbeille.test.ts`, et sur le banc `tests/integration/media-corbeille.test.ts`, où chaque requête de l'application au stockage est espionnée (`tests/outils/espion-s3.ts`, voir [`docs/tests/banc.md`](docs/tests/banc.md)).
+Tests : `tests/unit/corbeille.test.ts`, et sur le banc `tests/integration/media-corbeille.test.ts`, où chaque requête de l'application au stockage est espionnée (`tests/support/s3-spy.ts`, voir [`docs/tests/banc.md`](docs/tests/banc.md)).
 
 ### Rafraîchissement des pages publiques
 
@@ -222,7 +222,7 @@ Quand un profil, un article ou un talent est créé, modifié ou supprimé, le s
 - **L'import ne rafraîchit rien**, et ne lit rien pour cela : il porte le contexte d'import ([`docs/migration/IMPORT.md`](docs/migration/IMPORT.md)).
 - **Next ne prend un rafraîchissement que pendant une de ses requêtes** : l'API REST, l'administration, une Server Action. Hors de là (un script, l'API locale dans un test, une tâche de fond), l'enregistrement passe, et les pages gardent leur cache jusqu'à ce qu'il expire. Un rafraîchissement qui échoue n'annule jamais l'enregistrement : l'erreur est journalisée.
 
-Tests : `tests/unit/revalidation.test.ts`, et sur le banc `tests/integration/revalidation.test.ts` (I21), qui écoute Next par l'espion du cache (`tests/outils/espion-cache.ts`, voir [`docs/tests/banc.md`](docs/tests/banc.md)).
+Tests : `tests/unit/revalidation.test.ts`, et sur le banc `tests/integration/revalidation.test.ts` (I21), qui écoute Next par l'espion du cache (`tests/support/cache-spy.ts`, voir [`docs/tests/banc.md`](docs/tests/banc.md)).
 
 ### Réseaux et coordonnées dans l'espace
 
@@ -258,14 +258,14 @@ Les cartes « Photo principale » et « Portfolio » de `/auth/profil` s'éditen
 - **Retrait** (ticket 136) : retirer une photo ne change rien tant qu'elle n'a pas enregistré. À l'enregistrement, la liste sans la photo est écrite, et les crochets du profil envoient l'objet (original et tailles) à la corbeille s'il n'est plus désigné par rien : une photo encore principale reste en place (I25). Le navigateur ne supprime jamais lui-même une photo enregistrée. Le retrait suit les règles de liste : une clé par ligne (L1), le focus reste dans le panneau (L4), une annonce `role="status"` par retrait, renouvelée quand la phrase se répète (L5), Entrée maintenue ne retire qu'une photo (L7). Sans objet pour une photo : L2 (aucun champ de saisie dans une ligne) et L3 (aucun formulaire de modification).
 - **Lecture** : `readDashboardPhotos` (`src/lib/dashboard/photos.ts`) lit les médias que le profil désigne, par ses identifiants et jamais par la requête.
 
-Tests : `tests/unit/espace-photo.test.ts`, `tests/unit/espace-photo-panneau.test.tsx`, `tests/unit/espace-portfolio-panneau.test.tsx`, sur le banc `tests/integration/espace-photo.test.ts` et `tests/integration/espace-portfolio.test.ts` (qui rejoue le rapprochement du ticket 137 : 0 orphelin), et `tests/e2e/espace-photo.spec.ts`, `tests/e2e/espace-portfolio.spec.ts` (une photo de 8 Mo faite pour l'occasion : `tests/outils/photo-de-8-mo.ts`).
+Tests : `tests/unit/espace-photo.test.ts`, `tests/unit/espace-photo-panneau.test.tsx`, `tests/unit/espace-portfolio-panneau.test.tsx`, sur le banc `tests/integration/espace-photo.test.ts` et `tests/integration/espace-portfolio.test.ts` (qui rejoue le rapprochement du ticket 137 : 0 orphelin), et `tests/e2e/espace-photo.spec.ts`, `tests/e2e/espace-portfolio.spec.ts` (une photo de 8 Mo faite pour l'occasion : `tests/support/photo-8-mb.ts`).
 
 ### Où en est le profil (ticket 138)
 
 En tête de l'espace, `ProfileProgress` (`src/components/dashboard/`) dit où en est le profil : pourcentage (score sur 13), état (vide, pas encore publiable, publiable, compte interne), ce que l'état change (un profil entièrement vide n'est pas listé dans la recherche ; seul un profil publiable est indexé), et la liste des manques, chacun lié à sa carte (`#carte-<section>`), les points requis pour être publiable d'abord. `profileProgress` (`src/lib/dashboard/progress.ts`) ne calcule rien : il formule la définition unique (`src/lib/profile/completeness.ts`) lue par le même passage de champs que la sauvegarde du serveur. Le bloc est rendu côté serveur ; chaque enregistrement rafraîchit la page (`revalidatePath`), donc il bouge sans rechargement.
 
 Tests : `tests/unit/espace-avancement.test.tsx` (U01, U02, U04 à U08), sur le banc `tests/integration/espace-avancement.test.ts` (I20 : le bloc égale l'état stocké) et `tests/e2e/espace-avancement.spec.ts`.
-- Recette de l'espace (ticket 142) : `tests/e2e/espace-recette.spec.ts`, jouée aux deux tailles après les sections : axe sur la page de l'espace, sur chacun des 12 panneaux et sur la fenêtre de suppression, sur l'accueil en trois étapes (E67) ; Échap ferme chaque panneau et rend le focus à son bouton (E68) ; la photo principale changée suit jusqu'au profil public et à son `og:image` (E37) ; zoom à 200 % (largeur de moitié, 320 px au plus bas) sans défilement de côté ni éléments qui se recouvrent. Les orphelins du stockage après la suite sont comptés par l'étape `banc:rapprocher --outside-import` de la CI (ticket 137). Voir [`docs/tests/e2e.md`](docs/tests/e2e.md).
+- Recette de l'espace (ticket 142) : `tests/e2e/espace-recette.spec.ts`, jouée aux deux tailles après les sections : axe sur la page de l'espace, sur chacun des 12 panneaux et sur la fenêtre de suppression, sur l'accueil en trois étapes (E67) ; Échap ferme chaque panneau et rend le focus à son bouton (E68) ; la photo principale changée suit jusqu'au profil public et à son `og:image` (E37) ; zoom à 200 % (largeur de moitié, 320 px au plus bas) sans défilement de côté ni éléments qui se recouvrent. Les orphelins du stockage après la suite sont comptés par l'étape `bench:reconcile --outside-import` de la CI (ticket 137). Voir [`docs/tests/e2e.md`](docs/tests/e2e.md).
 - Profil ouvert dans l'administration (ticket 224, `src/lib/dashboard/lock.ts`) : Payload ne contrôle pas les versions et l'API locale ignore le verrou d'édition (`overrideLock` vaut vrai par défaut, vérifié dans Payload 3.90.2). Chaque enregistrement de l'espace passe donc par `profileIdToWrite`, qui refuse (`LockedProfile`) tant qu'un compte de l'administration tient un verrou de moins de 5 minutes sur le profil : la maquilleuse lit « Ton profil est en cours de modification par l'équipe, réessaie dans quelques minutes. », rien n'est écrit, sa saisie reste dans le formulaire. Le contrôle est le nôtre et non `overrideLock: false`, qui ne compare que le numéro du compte (une maquilleuse du même numéro que l'admin passerait). Test : `tests/integration/espace-verrou.test.ts`.
 
 ## Démarrer en local
@@ -587,8 +587,8 @@ Chaque pull request et chaque poussée sur `v3` lancent `.github/workflows/ci.ym
 | `qualite` | Fichiers générés par Payload à jour, `bun run typecheck`, `bun run ci:biome`, `bun run test:ci-guard` |
 | `unit` | `bun run test:unit` |
 | `build` | `bun run image:build` sans secret ni base, puis `bun run image:check` |
-| `integration` | En trois lots côte à côte : `bun run banc:up`, puis `bun run test:integration --shard=N/3` sur un tiers des fichiers : le banc de test, en CI comme sur un poste |
-| `e2e` | En quatre lots côte à côte : le Chromium de Playwright, `bun run banc:up`, puis `bun run test:e2e --shard=N/4` sur un quart des essais |
+| `integration` | En trois lots côte à côte : `bun run bench:up`, puis `bun run test:integration --shard=N/3` sur un tiers des fichiers : le banc de test, en CI comme sur un poste |
+| `e2e` | En quatre lots côte à côte : le Chromium de Playwright, `bun run bench:up`, puis `bun run test:e2e --shard=N/4` sur un quart des essais |
 | `ci-ok` | Rouge si l'un des cinq a échoué, a été annulé ou a été sauté |
 
 Avant de pousser, les mêmes commandes se lancent en local : `bun run check`, `bun run typecheck`, `bun run test`, `bun run test:ci-guard`, et, banc démarré, `bun run test:integration` et `bun run test:e2e`.
@@ -634,21 +634,21 @@ Rien ne se publie avant la fusion de `v3` dans `main`. Le détail, et ce qu'il r
 | `bun run test` | Les tests qui tournent sans le banc de test : les tests unitaires |
 | `bun run test:unit` | Les tests unitaires de `tests/unit/`, sans lire le fichier `.env` |
 | `bun run test:ci-guard` | Les garde-fous de `tests/ci/`, lancés à part de `bun run test` |
-| `bun run banc:up` | Démarre le banc de test : base, capteur de mails, stockage d'objets, faux Google et faux Umami, en conteneurs |
-| `bun run banc:down` | Arrête le banc de test et efface tout ce qu'il contenait |
-| `bun run banc:complet` | Le banc complet en une commande : démarre la pile, la remet à son état de départ (base reconstruite par les migrations, comptes types, 12 profils types avec photos, 3 talents, 3 articles dont un brouillon), construit l'application et la lance sur le port du banc. `--sans-application` s'arrête avant l'application (voir « Le banc de test ») |
-| `bun run banc:reinitialiser` | Remet le banc à son état de départ, application ou non : base, stockage, capteur de mails, jeu. Environ 10 secondes |
-| `bun run banc:session <compte>` | Ouvre la session d'un compte du banc (`admin`, `redaction`, `maquilleuse`, `profil-reference`… ou une adresse) et l'écrit dans `.banc/sessions/`, sans jamais afficher le jeton |
-| `bun run banc:prepare` | Reconstruit la base du banc par les migrations versionnées, vide, puis vérifie qu'elle décrit les collections du code |
-| `bun run banc:source` | Crée la fausse base Strapi que lit l'import, banc démarré : base, rôle en lecture seule, photos dans le stockage. Relancée, elle la recrée à l'identique et donne la même empreinte. `--fingerprint` la lit sans la toucher, `--erase` la supprime (voir `docs/tests/source-strapi.md`) |
-| `bun run banc:import` | L'import des données de l'ancien site sur le banc : il lit la fausse base Strapi et écrit dans la base du banc. À blanc par défaut, `--real` pour écrire (voir `docs/migration/IMPORT.md`) |
-| `bun run banc:rapprocher [--json] [--outside-import]` | Le rapprochement à blanc du stockage et de la base du banc : objets sans média, médias sans objet, médias sans profil, avec la corbeille comptée à part. Ne supprime rien (aucune option ne le permet) ; code de sortie 1 s'il trouve un orphelin. La CI le lance après les essais de bout en bout (voir `docs/tests/banc.md`, « Le rapprochement du stockage et de la base »). |
+| `bun run bench:up` | Démarre le banc de test : base, capteur de mails, stockage d'objets, faux Google et faux Umami, en conteneurs |
+| `bun run bench:down` | Arrête le banc de test et efface tout ce qu'il contenait |
+| `bun run bench:full` | Le banc complet en une commande : démarre la pile, la remet à son état de départ (base reconstruite par les migrations, comptes types, 12 profils types avec photos, 3 talents, 3 articles dont un brouillon), construit l'application et la lance sur le port du banc. `--without-application` s'arrête avant l'application (voir « Le banc de test ») |
+| `bun run bench:reset` | Remet le banc à son état de départ, application ou non : base, stockage, capteur de mails, jeu. Environ 10 secondes |
+| `bun run bench:session <compte>` | Ouvre la session d'un compte du banc (`admin`, `redaction`, `maquilleuse`, `profil-reference`… ou une adresse) et l'écrit dans `.banc/sessions/`, sans jamais afficher le jeton |
+| `bun run bench:prepare` | Reconstruit la base du banc par les migrations versionnées, vide, puis vérifie qu'elle décrit les collections du code |
+| `bun run bench:source` | Crée la fausse base Strapi que lit l'import, banc démarré : base, rôle en lecture seule, photos dans le stockage. Relancée, elle la recrée à l'identique et donne la même empreinte. `--fingerprint` la lit sans la toucher, `--erase` la supprime (voir `docs/tests/source-strapi.md`) |
+| `bun run bench:import` | L'import des données de l'ancien site sur le banc : il lit la fausse base Strapi et écrit dans la base du banc. À blanc par défaut, `--real` pour écrire (voir `docs/migration/IMPORT.md`) |
+| `bun run bench:reconcile [--json] [--outside-import]` | Le rapprochement à blanc du stockage et de la base du banc : objets sans média, médias sans objet, médias sans profil, avec la corbeille comptée à part. Ne supprime rien (aucune option ne le permet) ; code de sortie 1 s'il trouve un orphelin. La CI le lance après les essais de bout en bout (voir `docs/tests/banc.md`, « Le rapprochement du stockage et de la base »). |
 | `bun run migration:import` | L'import des données de l'ancien site, avec `DATABASE_URI` et `STRAPI_SOURCE_URI` de l'environnement (le script porte `--no-env-file` : le `.env` de travail n'est pas lu). À blanc par défaut ; `--real` écrit ; une base qui n'est pas sur ce poste demande `--remote-target --expected-database <nom>` (voir `docs/migration/IMPORT.md`). En production, sans accès SSH, l'import se lance dans le conteneur par `IMPORT_TOKEN` |
 | `bun run admin:create <email>` | Crée un compte de l'administration, et la seule façon d'avoir le premier. Le mot de passe se tape au clavier, deux fois (voir « Créer un compte admin ») |
 | `bun run test:integration` | Les tests d'intégration de `tests/integration/`, sur le banc. Avec un chemin : ce fichier seul |
 | `bun run test:e2e` | Les essais de bout en bout de `tests/e2e/`, dans un vrai navigateur, contre l'application construite et branchée sur le banc. Avec un chemin : ce fichier seul |
 | `bun run cutover:check` | Le contrôle d'un hôte (ticket 173) : lit en GET, 2 requêtes par seconde au plus, toutes les adresses de l'inventaire, le sitemap, le fichier robots, les anciennes routes d'authentification et le script de mesure, et écrit un rapport daté. L'hôte, de production seulement (`https://my-makeup.fr`, `https://v3.my-makeup.fr`, ou le banc de ce poste), par `HOST_CHECK_TARGET` (voir [`docs/tests/controle-hote.md`](docs/tests/controle-hote.md)) |
-| `bun run sondes` | Les sondes de `tests/sondes/` : lisent le site en ligne, en GET seulement, 2 requêtes par seconde au plus. Une autre cible par `SONDES_CIBLE` (voir « Les sondes du site en ligne ») |
+| `bun run probes` | Les sondes de `tests/probes/` : lisent le site en ligne, en GET seulement, 2 requêtes par seconde au plus. Une autre cible par `PROBES_TARGET` (voir « Les sondes du site en ligne ») |
 | `bun run image:build` | Construit l'image Docker `my-makeup:local` |
 | `bun run image:check` | Vérifie l'image construite contre une base jetable (voir « Image Docker ») |
 | `bun run notes:add` | Ajoute une note de version en attente : un type (`ajout`, `amelioration`, `correction`), puis la phrase entre guillemets (voir « Notes de version et publication ») |
@@ -671,18 +671,18 @@ Les tests tournent avec `bun test`, lancé par les scripts ci-dessus. Pour un se
 | `tests/unit/` | Tests unitaires, en `*.test.ts`, et tests de composants React, en `*.test.tsx` : ni base, ni réseau |
 | `tests/integration/` | Tests d'intégration, en `*.test.ts`, contre la pile de test locale |
 | `tests/e2e/` | Essais de bout en bout, en `*.spec.ts` |
-| `tests/sondes/` | Sondes du site en ligne, en lecture seule |
+| `tests/probes/` | Sondes du site en ligne, en lecture seule |
 | `tests/ci/` | Garde-fous de la CI et de l'image Docker : chacun est joué sur le dépôt, puis sur un exemple fautif |
 | `tests/fixtures/` | Données fictives et fichiers témoins |
-| `tests/outils/` | Outils partagés par les tests |
+| `tests/support/` | Outils partagés par les tests |
 
-Tous ces dossiers existent. `tests/sondes/` ne contient aucun fichier `*.test.ts` ni `*.spec.ts` : les sondes se lancent par `bun run sondes`, et leurs tests sont dans `tests/unit/sondes.test.ts`.
+Tous ces dossiers existent. `tests/probes/` ne contient aucun fichier `*.test.ts` ni `*.spec.ts` : les sondes se lancent par `bun run probes`, et leurs tests sont dans `tests/unit/sondes.test.ts`.
 
 ### La garde d'environnement
 
-`bun test`, lancé depuis la racine du dépôt, charge `tests/outils/garde-environnement.ts` avant tout fichier de test (`bunfig.toml`, section `[test]`). Si l'environnement permet de toucher autre chose que le banc de test local, la garde arrête tout avant le premier test. Son message nomme la variable en cause et ne recopie jamais une adresse complète.
+`bun test`, lancé depuis la racine du dépôt, charge `tests/support/environment-guard.ts` avant tout fichier de test (`bunfig.toml`, section `[test]`). Si l'environnement permet de toucher autre chose que le banc de test local, la garde arrête tout avant le premier test. Son message nomme la variable en cause et ne recopie jamais une adresse complète.
 
-Lancé depuis un sous-dossier, `bun test` ne charge pas la garde : bun lit le `bunfig.toml` du dossier où il est lancé, pas celui d'un dossier parent. Un outil de test qui ouvre lui-même une base appelle donc `verifierBase` sur l'adresse qu'il va ouvrir, sans compter sur ce chargement.
+Lancé depuis un sous-dossier, `bun test` ne charge pas la garde : bun lit le `bunfig.toml` du dossier où il est lancé, pas celui d'un dossier parent. Un outil de test qui ouvre lui-même une base appelle donc `checkBase` sur l'adresse qu'il va ouvrir, sans compter sur ce chargement.
 
 | Variable | Règle |
 |---|---|
@@ -698,7 +698,7 @@ Lancé depuis un sous-dossier, `bun test` ne charge pas la garde : bun lit le `b
 | `GOOGLE_OIDC_ISSUER` | Hôte local : le faux Google du banc, jamais Google |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Une valeur qui porte le mot « factice », et jamais sans `GOOGLE_OIDC_ISSUER` : la connexion viserait Google lui-même |
 
-Un hôte local est `localhost`, `127.0.0.1` ou `::1`, ou le nom du service dans le réseau de la pile de test : `postgres`, `mailpit`, `s3mock`, `faux-google`. Une variable absente n'est pas vérifiée : les tests unitaires tournent sans aucune variable.
+Un hôte local est `localhost`, `127.0.0.1` ou `::1`, ou le nom du service dans le réseau de la pile de test : `postgres`, `mailpit`, `s3mock`, `fake-google`. Une variable absente n'est pas vérifiée : les tests unitaires tournent sans aucune variable.
 
 `bun test` lit tout seul le fichier `.env`, puis `.env.test`, qui l'emporte. Lancé sans `--no-env-file` sur un poste de développement, il tourne donc sous l'environnement du banc de test, et tout ce que `.env.test` ne règle pas vient du `.env` de travail : la garde vérifie aussi ces variables-là. Les tests ne dépendent jamais du `.env` de travail : les scripts passent `--no-env-file`, et c'est par eux qu'on lance les tests.
 
@@ -711,33 +711,33 @@ Les tests d'intégration tournent contre six conteneurs jetables : PostgreSQL en
 Pour travailler dans le site local, sans écrire de test, **quatre gestes** (l'agent n'a plus besoin d'un compte en ligne) :
 
 ```sh
-bun run banc:complet        # 1. monter : pile, base, jeu fictif, application sur http://localhost:3100 (premier plan)
-bun run banc:session admin  # 2. une session : fichiers dans .banc/sessions/<banc>/, le jeton n'est pas affiché
-bun run banc:reinitialiser  # 3. remettre à l'état de départ, en une dizaine de secondes (reprendre une session ensuite)
-bun run banc:down           # 4. tout arrêter et tout effacer
+bun run bench:full        # 1. monter : pile, base, jeu fictif, application sur http://localhost:3100 (premier plan)
+bun run bench:session admin  # 2. une session : fichiers dans .banc/sessions/<banc>/, le jeton n'est pas affiché
+bun run bench:reset  # 3. remettre à l'état de départ, en une dizaine de secondes (reprendre une session ensuite)
+bun run bench:down           # 4. tout arrêter et tout effacer
 ```
 
 Le jeu : 12 profils types (comptes `jeu-profil-*@example.test`), 3 talents, 3 articles dont un brouillon, et un compte de chaque type du site (`jeu-admin@example.test`…). L'administration en compte 19 profils : les 12 types et les 7 profils vides que le serveur crée avec les comptes types. Détail : [`docs/tests/banc.md`](docs/tests/banc.md), « Le banc complet ».
 
 ```sh
-bun run banc:up                                                # démarre le banc, rend la main quand les quatre services répondent
+bun run bench:up                                                # démarre le banc, rend la main quand les quatre services répondent
 bun run test:integration                                       # lance les tests d'intégration
 bun run test:integration tests/integration/banc-base.test.ts   # un seul fichier
-bun run banc:down                                              # arrête tout et efface les données
+bun run bench:down                                              # arrête tout et efface les données
 ```
 
 - `.env.test` décrit le banc. Il est versionné, parce que toutes ses valeurs sont factices.
 - Sans le banc, `bun run test:integration` s'arrête avant le premier test et dit quoi démarrer.
 - Lancer les tests d'intégration vide la base du banc.
-- Plusieurs bancs tournent côte à côte sur un même poste, chacun sous son nom et sur ses ports : `BANC_INSTANCE=mon-banc BANC_DECALAGE=20 bun run banc:up`.
-- Un test obtient un compte fictif et sa session en un appel, sans mot de passe à saisir : `await creerCompte('admin')`, `'redaction'`, `'maquilleuse'` (avec son profil vide), `'maquilleuse-sans-profil'`, ou `'maquilleuse-non-verifiee'` (sans session).
-- La fabrique crée aussi les comptes que l'ancien site apporte et ceux qui ne se connectent pas : `'maquilleuse-bloquee'`, `'reprise-avec-hash'` (hash bcrypt d'un mot de passe fictif connu), `'reprise-google'` et `'reprise-google-avec-hash'` (session ouverte sans mot de passe, comme par Google), `'reprise-facebook'`. Le jeu du banc en pose un exemplaire fixe de chaque type, sans doublon quand on le rejoue : `await poserLesComptesDuJeu()` (`tests/fixtures/comptes.ts`).
+- Plusieurs bancs tournent côte à côte sur un même poste, chacun sous son nom et sur ses ports : `BENCH_INSTANCE=mon-banc BENCH_OFFSET=20 bun run bench:up`.
+- Un test obtient un compte fictif et sa session en un appel, sans mot de passe à saisir : `await createAccount('admin')`, `'redaction'`, `'maquilleuse'` (avec son profil vide), `'maquilleuse-sans-profil'`, ou `'maquilleuse-non-verifiee'` (sans session).
+- La fabrique crée aussi les comptes que l'ancien site apporte et ceux qui ne se connectent pas : `'maquilleuse-bloquee'`, `'reprise-avec-hash'` (hash bcrypt d'un mot de passe fictif connu), `'reprise-google'` et `'reprise-google-avec-hash'` (session ouverte sans mot de passe, comme par Google), `'reprise-facebook'`. Le jeu du banc en pose un exemplaire fixe de chaque type, sans doublon quand on le rejoue : `await setDatasetAccounts()` (`tests/fixtures/accounts.ts`).
 - Le jeu du banc pose aussi les 12 profils types du plan de tests (référence, ville voisine, ville éloignée, indisponible, disponibilité inconnue, vide, actif non publiable, sans contact public, ancien nom accentué, vérifiée, masquée, textes maximaux), chacun avec sa maquilleuse fictive et ses photos, toujours les mêmes, sans doublon quand on le rejoue : `await placeDemoProfiles(payload)` (`src/demo-data/`). Hors du banc, il refuse de tourner avant de rien lire ni écrire.
 - Toute règle d'accès a ses lignes dans la matrice d'accès, jouées par l'API REST et par l'API locale avec les règles actives : `tests/integration/payload-acces.test.ts`.
-- Sur le banc, l'application envoie tous ses mails au capteur. Un test lit le sien, avec son destinataire, son sujet et ses liens : `await attendreLeMail({ pour: adresse })`.
-- Un test dépose un objet dans le stockage et le relit : `await deposerUnObjet(cle, contenu)`, `await lireUnObjet(cle)`.
-- L'import se teste sur une fausse base Strapi qui porte chaque cas connu de la vraie, ouverte en lecture seule, avec ses photos dans le stockage : `bun run banc:source` la crée, à l'identique à chaque fois. `bun run banc:import --real` y lance l'import ; un test le lance par `importerSurLeBanc()` (`tests/outils/import.ts`).
-- La connexion Google se teste sans compte Google ni secret : le faux Google tient la place de Google (`GOOGLE_OIDC_ISSUER`), et un test choisit qui se connecte et comment cela finit, parmi quatre scénarios : `fauxGoogle().choisir({ scenario: 'refus' })`.
+- Sur le banc, l'application envoie tous ses mails au capteur. Un test lit le sien, avec son destinataire, son sujet et ses liens : `await waitMail({ pour: adresse })`.
+- Un test dépose un objet dans le stockage et le relit : `await dropObject(cle, contenu)`, `await readObject(cle)`.
+- L'import se teste sur une fausse base Strapi qui porte chaque cas connu de la vraie, ouverte en lecture seule, avec ses photos dans le stockage : `bun run bench:source` la crée, à l'identique à chaque fois. `bun run bench:import --real` y lance l'import ; un test le lance par `importOnBench()` (`tests/support/import.ts`).
+- La connexion Google se teste sans compte Google ni secret : le faux Google tient la place de Google (`GOOGLE_OIDC_ISSUER`), et un test choisit qui se connecte et comment cela finit, parmi quatre scénarios : `fakeGoogle().choisir({ scenario: 'refus' })`.
 
 Le détail est dans [`docs/tests/banc.md`](docs/tests/banc.md) : les services et leurs adresses, les deux variables d'instance, l'écriture d'un test d'intégration, la remise à zéro, le capteur de mails, le stockage d'objets, la fabrique de comptes et ses types, le jeu de comptes fixes, les 12 profils types, le faux Google et ses quatre scénarios, les images épinglées, la fausse base Strapi.
 
@@ -747,14 +747,14 @@ Un essai de bout en bout ouvre l'application dans un vrai navigateur, à 1440 px
 
 ```sh
 bunx playwright install chromium               # une fois par poste : le navigateur de Playwright
-bun run banc:up
+bun run bench:up
 bun run test:e2e                               # tous les essais
 bun run test:e2e tests/e2e/coquille.spec.ts    # un seul fichier
 ```
 
 - La commande vide la base du banc, construit l'application, puis Playwright la démarre, lance les essais et l'arrête.
-- Une session s'obtient sans mot de passe : `creerCompte('admin')`, puis `context.addCookies(compte.session.cookies)`.
-- `violationsGraves(page)` (`tests/outils/axe.ts`) rend les violations d'accessibilité « serious » et « critical » de la page.
+- Une session s'obtient sans mot de passe : `createAccount('admin')`, puis `context.addCookies(compte.session.cookies)`.
+- `violationsSevere(page)` (`tests/support/axe.ts`) rend les violations d'accessibilité « serious » et « critical » de la page.
 - Un essai en échec garde sa trace, sa vidéo et sa capture dans `test-results/essais/`.
 - Une cible sur `my-makeup.fr` arrête tout avant le premier essai.
 
@@ -765,10 +765,10 @@ Le détail est dans [`docs/tests/e2e.md`](docs/tests/e2e.md) : écrire un essai,
 Les sondes lisent le site en ligne comme une visiteuse anonyme, sans jamais rien y écrire : c'est la seule exception à « rien vers le site en ligne ». Les adresses ne changent pas avec la v3 : elles lisent aujourd'hui le site actuel.
 
 ```sh
-bun run sondes                                       # https://my-makeup.fr
-SONDES_CIBLE=http://localhost:3100 bun run sondes    # une autre cible : le banc, un domaine temporaire
-SONDES_STATS_TOKEN=… bun run sondes                  # avec le jeton du service, R02 compare
-SONDES_API=aucune bun run sondes                     # Strapi est arrêté : plus de partie Strapi dans R05
+bun run probes                                       # https://my-makeup.fr
+PROBES_TARGET=http://localhost:3100 bun run probes    # une autre cible : le banc, un domaine temporaire
+PROBES_STATS_TOKEN=… bun run probes                  # avec le jeton du service, R02 compare
+PROBES_API=aucune bun run probes                     # Strapi est arrêté : plus de partie Strapi dans R05
 ```
 
 - R01 : la garde interrompt toute requête autre qu'un GET, tout ce qui va vers la mesure d'audience (`/u`) ou vers un autre hôte. Elle se vérifie avant la première requête.
@@ -778,14 +778,14 @@ SONDES_API=aucune bun run sondes                     # Strapi est arrêté : plu
 - R05 : les cinq en-têtes de sécurité, les listes privées fermées (401 ou 403), les anciennes routes en 404 ; l'API de Strapi tant qu'il tourne.
 - R06 : certificats valides plus de 21 jours, domaines plus de 30 jours (site, photos, Umami).
 - Une requête à la fois, 2 par seconde au plus. Le rapport désigne un profil par une empreinte, jamais par son adresse.
-- `SONDES_CIBLE` n'est lue que par les sondes : la garde des essais refuse toujours la prod.
+- `PROBES_TARGET` n'est lue que par les sondes : la garde des essais refuse toujours la prod.
 - Le lundi à 07:00 (Paris), le workflow `.github/workflows/sondes.yml` les lance sans aucun secret et écrit le rapport dans le résumé de l'exécution ; une sonde rouge fait échouer l'exécution, que le rapport de 07:30 lit par GitHub.
 
 Le détail est dans [`docs/tests/sondes.md`](docs/tests/sondes.md) : chaque sonde, la garde, lire le rapport, retrouver un profil rouge.
 
 ### Le HTTP sortant
 
-Aucun test n'appelle Internet. `bun test`, lancé depuis la racine du dépôt, charge `tests/outils/precharge-http-sortant.ts` avant tout fichier de test (`bunfig.toml`, section `[test]`) : dès lors, aucune requête HTTP ne quitte le poste.
+Aucun test n'appelle Internet. `bun test`, lancé depuis la racine du dépôt, charge `tests/support/preload-outgoing-http.ts` avant tout fichier de test (`bunfig.toml`, section `[test]`) : dès lors, aucune requête HTTP ne quitte le poste.
 
 - Un service extérieur se simule en une déclaration, dans le test :
 

@@ -8,10 +8,10 @@ import type { MailboxRateLimits } from '@/lib/auth/sign-up-rate-limits'
 import { openWithPassword } from '@/lib/auth/token'
 import { EmailSendFailed, payloadSendEmail } from '@/lib/emails/send'
 import { parseServerEnv, serverEnv } from '@/lib/env'
-import { creerCompte } from '../support/account-factory'
-import { attendreLeMail, mailsRecus, viderLeCapteur } from '../support/mailpit'
-import { payloadDeTest, viderLaBase } from '../support/payload-test'
-import { appelerRest } from '../support/rest'
+import { createAccount } from '../support/account-factory'
+import { emptySink, mailReceived, waitMail } from '../support/mailpit'
+import { emptyBase, testPayload } from '../support/payload-test'
+import { callRest } from '../support/rest'
 
 /**
  * The sign-up and the confirmation of the email (ticket 082; plan 02 I08). The page, the cookie and
@@ -19,7 +19,7 @@ import { appelerRest } from '../support/rest'
  */
 
 afterAll(async () => {
-	await Promise.all([viderLaBase(), viderLeCapteur()])
+	await Promise.all([emptyBase(), emptySink()])
 })
 
 const MOT_DE_PASSE = 'aaaaaaaa'
@@ -42,7 +42,7 @@ async function inscription(options: {
 	plancherMs?: number
 	freins?: MailboxRateLimits
 }) {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	const email = options.email ?? courriel('nouvelle')
 	const resultat = await signUpAccount({
 		payload,
@@ -58,7 +58,7 @@ async function inscription(options: {
 }
 
 async function seConnecter(email: string, password: string) {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	return signInWithPassword({
 		ouvrir: data => openWithPassword(payload, 'pros', data),
 		headers: adresse(),
@@ -70,12 +70,12 @@ async function seConnecter(email: string, password: string) {
 }
 
 const compte = async (email: string) => {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	return (await payload.find({ collection: 'pros', depth: 0, limit: 1, where: { email: { equals: email } } })).docs[0]
 }
 
 const journal = async () =>
-	(await (await payloadDeTest()).find({ collection: 'auth-events', depth: 0, limit: 1000, sort: 'id' })).docs
+	(await (await testPayload()).find({ collection: 'auth-events', depth: 0, limit: 1000, sort: 'id' })).docs
 
 const codeDuLien = (lien: string): string => new URL(lien).searchParams.get('code') ?? ''
 
@@ -87,11 +87,11 @@ describe('I08 : l’inscription envoie le mail de confirmation, et le compte att
 		const pro = await compte(email)
 		expect(pro?._verified).toBe(false)
 		expect(pro?.name).toBe('Léa Fictive')
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const profils = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: pro?.id } } })
 		expect(profils.totalDocs).toBe(1)
 		expect(profils.docs[0]?.slug).toMatch(/^lea-fictive(-\d+)?$/)
-		const mail = await attendreLeMail({ pour: email })
+		const mail = await waitMail({ pour: email })
 		expect(mail.sujet).toContain('Confirme ton adresse email')
 		const lien = mail.liens.find(l => l.includes('/auth/verification-complete'))
 		expect(lien).toStartWith(`${SITE}/auth/verification-complete?code=`)
@@ -102,7 +102,7 @@ describe('I08 : l’inscription envoie le mail de confirmation, et le compte att
 
 	test('le mot de passe n’est dans aucun mail ni dans la base en clair', async () => {
 		const { email } = await inscription({})
-		const mail = await attendreLeMail({ pour: email })
+		const mail = await waitMail({ pour: email })
 		expect(mail.texte + mail.html).not.toContain(MOT_DE_PASSE)
 		const pro = await compte(email)
 		expect(JSON.stringify(pro)).not.toContain(MOT_DE_PASSE)
@@ -112,7 +112,7 @@ describe('I08 : l’inscription envoie le mail de confirmation, et le compte att
 		const a = await inscription({ nom: 'Marie Homonyme' })
 		const b = await inscription({ nom: 'Marie Homonyme' })
 		expect(a.resultat.ok && b.resultat.ok).toBe(true)
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const slugs = (
 			await payload.find({
 				collection: 'profiles',
@@ -134,7 +134,7 @@ describe('des homonymes qui s’inscrivent au même instant', () => {
 		)
 
 		expect(toutes.map(({ resultat }) => resultat.ok)).toEqual(Array(HOMONYMES).fill(true))
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const pros = await Promise.all(toutes.map(({ email }) => compte(email)))
 		const slugs = (
 			await payload.find({ collection: 'profiles', depth: 0, where: { pro: { in: pros.map(p => p?.id) } } })
@@ -152,7 +152,7 @@ describe('l’interrupteur d’exploitation : AUTH_VERIFY', () => {
 			const { resultat, email } = await inscription({ verifier: env.authVerify })
 			expect(resultat).toEqual({ ok: true, confirmee: false })
 			expect((await compte(email))?._verified).toBe(false)
-			await attendreLeMail({ pour: email })
+			await waitMail({ pour: email })
 		}
 	})
 
@@ -163,7 +163,7 @@ describe('l’interrupteur d’exploitation : AUTH_VERIFY', () => {
 		expect(resultat).toEqual({ ok: true, confirmee: true })
 		expect((await compte(email))?._verified).toBe(true)
 		expect((await seConnecter(email, MOT_DE_PASSE)).ok).toBe(true)
-		expect(await mailsRecus(email)).toEqual([])
+		expect(await mailReceived(email)).toEqual([])
 	})
 })
 
@@ -183,7 +183,7 @@ describe('connexion avant confirmation', () => {
 		const { email } = await inscription({})
 		const avant = (await journal()).length
 
-		const reponse = await appelerRest('POST', '/api/pros/login', {
+		const reponse = await callRest('POST', '/api/pros/login', {
 			corps: { email, password: MOT_DE_PASSE },
 			enTetes: { 'x-forwarded-for': '198.51.100.230' },
 		})
@@ -198,7 +198,7 @@ describe('connexion avant confirmation', () => {
 	test('un refus « non confirmé » rend sa place au frein : ce n’est pas un essai de mot de passe', async () => {
 		const { email } = await inscription({})
 		const petitFrein = createRateLimit({ nom: 'essai-non-confirme', limite: 2, fenetreMs: 60_000 })
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const essayer = () =>
 			signInWithPassword({
 				ouvrir: data => openWithPassword(payload, 'pros', data),
@@ -216,9 +216,9 @@ describe('connexion avant confirmation', () => {
 describe('le lien du mail : à usage unique', () => {
 	test('le lien confirme le compte ; suivi une seconde fois il dit « déjà confirmé » et ne change rien ; la connexion marche', async () => {
 		const { email } = await inscription({})
-		const mail = await attendreLeMail({ pour: email })
+		const mail = await waitMail({ pour: email })
 		const code = codeDuLien(mail.liens.find(l => l.includes('verification-complete')) ?? '')
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const avant = (await journal()).length
 
 		expect(await confirmEmail(payload, code, authLog(payload))).toBe('ok')
@@ -237,9 +237,9 @@ describe('le lien du mail : à usage unique', () => {
 
 	test('le jeton ne reste pas en base : une trace de son usage, jamais un lien qui marche', async () => {
 		const { email } = await inscription({})
-		const mail = await attendreLeMail({ pour: email })
+		const mail = await waitMail({ pour: email })
 		const code = codeDuLien(mail.liens.find(l => l.includes('verification-complete')) ?? '')
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		await confirmEmail(payload, code)
 
 		const ligne = await payload.db.findOne<{ id: number; _verificationToken?: string }>({
@@ -252,8 +252,8 @@ describe('le lien du mail : à usage unique', () => {
 
 	test('le lien d’un compte ne confirme pas celui d’un autre', async () => {
 		const [a, b] = [await inscription({}), await inscription({})]
-		const mailA = await attendreLeMail({ pour: a.email })
-		const payload = await payloadDeTest()
+		const mailA = await waitMail({ pour: a.email })
+		const payload = await testPayload()
 
 		await confirmEmail(payload, codeDuLien(mailA.liens.find(l => l.includes('verification-complete')) ?? ''))
 
@@ -262,8 +262,8 @@ describe('le lien du mail : à usage unique', () => {
 	})
 
 	test('l’API REST ne donne jamais le jeton de confirmation, même à la propriétaire', async () => {
-		const maquilleuse = await creerCompte('maquilleuse')
-		const { corps, texte } = await appelerRest('GET', `/api/pros/${maquilleuse.id}`, {
+		const maquilleuse = await createAccount('maquilleuse')
+		const { corps, texte } = await callRest('GET', `/api/pros/${maquilleuse.id}`, {
 			enTetes: maquilleuse.session.enTetes,
 		})
 		expect(corps).not.toHaveProperty('_verificationToken')
@@ -274,7 +274,7 @@ describe('le lien du mail : à usage unique', () => {
 describe('quand l’inscription ne peut pas aboutir', () => {
 	test('le mail ne part pas : rien n’est gardé (ni compte, ni profil), et elle peut réessayer avec la même adresse', async () => {
 		const email = courriel('retente')
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const profils = (await payload.count({ collection: 'profiles' })).totalDocs
 
 		const raté = await inscription({ email, envoyer: () => Promise.reject(new EmailSendFailed()) })
@@ -284,7 +284,7 @@ describe('quand l’inscription ne peut pas aboutir', () => {
 		expect((await payload.count({ collection: 'profiles' })).totalDocs).toBe(profils)
 		const nouvelle = await inscription({ email })
 		expect(nouvelle.resultat).toEqual({ ok: true, confirmee: false })
-		await attendreLeMail({ pour: email })
+		await waitMail({ pour: email })
 	})
 
 	test('une panne imprévue donne « service-indisponible », jamais une exception', async () => {
@@ -314,16 +314,16 @@ describe('le journal de l’inscription', () => {
 
 describe('l’admin qui crée un compte dans le panneau', () => {
 	test('le mail de Payload dit la même chose et mène à la page du site, pas à l’administration', async () => {
-		const admin = await creerCompte('admin')
+		const admin = await createAccount('admin')
 		const email = courriel('par-admin')
 
-		const reponse = await appelerRest('POST', '/api/pros', {
+		const reponse = await callRest('POST', '/api/pros', {
 			enTetes: admin.session.enTetes,
 			corps: { email, password: MOT_DE_PASSE, nom: 'Créée Par Admin' },
 		})
 
 		expect(reponse.statut).toBe(201)
-		const mail = await attendreLeMail({ pour: email })
+		const mail = await waitMail({ pour: email })
 		expect(mail.sujet).toContain('Confirme ton adresse email')
 		const lien = mail.liens.find(l => l.includes('verification-complete'))
 		expect(lien).toMatch(/\/auth\/verification-complete\?code=[0-9a-f]{40}$/)

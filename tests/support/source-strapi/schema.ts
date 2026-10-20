@@ -10,7 +10,7 @@
  * Only Node's own modules: no API of bun.
  */
 
-export type TypeDeColonne =
+export type ColumnType =
 	| 'cle'
 	| 'entier'
 	| 'chaine'
@@ -22,15 +22,15 @@ export type TypeDeColonne =
 	| 'date'
 	| 'json'
 
-export interface Colonne {
+export interface Column {
 	nom: string
-	type: TypeDeColonne
+	type: ColumnType
 	/** A foreign key, as Strapi declares on its link tables: deleting the row deletes the link. */
-	reference?: NomDeTable
+	reference?: TableName
 }
 
 /** The SQL type of each kind of column, as Strapi 4 creates it on PostgreSQL. */
-const TYPES_SQL: Readonly<Record<TypeDeColonne, string>> = {
+const TYPES_SQL: Readonly<Record<ColumnType, string>> = {
 	cle: 'serial PRIMARY KEY',
 	entier: 'integer',
 	chaine: 'character varying(255)',
@@ -48,7 +48,7 @@ const TYPES_SQL: Readonly<Record<TypeDeColonne, string>> = {
  * column. A JSON value travels as text and is parsed by PostgreSQL: given as is, bun would store
  * a JSON string.
  */
-export const CONVERSIONS: Readonly<Record<TypeDeColonne, string>> = {
+export const CONVERSIONS: Readonly<Record<ColumnType, string>> = {
 	cle: 'integer',
 	entier: 'integer',
 	chaine: 'character varying',
@@ -61,10 +61,10 @@ export const CONVERSIONS: Readonly<Record<TypeDeColonne, string>> = {
 	json: 'text::jsonb',
 }
 
-const id: Colonne = { nom: 'id', type: 'cle' }
+const id: Column = { nom: 'id', type: 'cle' }
 
 /** The four columns Strapi adds to every content type and to `files`. */
-const dates = (...autres: Colonne[]): Colonne[] => [
+const dates = (...autres: Column[]): Column[] => [
 	{ nom: 'created_at', type: 'horodatage' },
 	{ nom: 'updated_at', type: 'horodatage' },
 	...autres,
@@ -73,7 +73,7 @@ const dates = (...autres: Colonne[]): Colonne[] => [
 ]
 
 /** A link table between an entry and the rows of its components, ordered by `order`. */
-const liensDeComposants = (entite: NomDeTable): Colonne[] => [
+const componentLinks = (entite: TableName): Column[] => [
 	id,
 	{ nom: 'entity_id', type: 'entier', reference: entite },
 	{ nom: 'component_id', type: 'entier' },
@@ -82,7 +82,7 @@ const liensDeComposants = (entite: NomDeTable): Colonne[] => [
 	{ nom: 'order', type: 'reel' },
 ]
 
-export const NOMS_DES_TABLES = [
+export const TABLE_NAMES = [
 	'up_users',
 	'makeup_artistes',
 	'makeup_artistes_user_links',
@@ -101,10 +101,10 @@ export const NOMS_DES_TABLES = [
 	'talents',
 ] as const
 
-export type NomDeTable = (typeof NOMS_DES_TABLES)[number]
+export type TableName = (typeof TABLE_NAMES)[number]
 
 /** Every table, in an order where a table comes after the tables its foreign keys point to. */
-export const TABLES: Readonly<Record<NomDeTable, readonly Colonne[]>> = {
+export const TABLES: Readonly<Record<TableName, readonly Column[]>> = {
 	up_users: [
 		id,
 		{ nom: 'username', type: 'chaine' },
@@ -177,8 +177,8 @@ export const TABLES: Readonly<Record<NomDeTable, readonly Colonne[]>> = {
 		{ nom: 'description', type: 'texte' },
 		{ nom: 'price', type: 'texte' },
 	],
-	components_makeupartists_service_offers_components: liensDeComposants('components_makeupartists_service_offers'),
-	makeup_artistes_components: liensDeComposants('makeup_artistes'),
+	components_makeupartists_service_offers_components: componentLinks('components_makeupartists_service_offers'),
+	makeup_artistes_components: componentLinks('makeup_artistes'),
 	files: [
 		id,
 		{ nom: 'name', type: 'chaine' },
@@ -232,13 +232,13 @@ export const TABLES: Readonly<Record<NomDeTable, readonly Colonne[]>> = {
 }
 
 /** A SQL identifier, quoted: `order` is a reserved word. */
-export const identifiant = (nom: string): string => `"${nom.replaceAll('"', '""')}"`
+export const identifier = (nom: string): string => `"${nom.replaceAll('"', '""')}"`
 
 /** The CREATE TABLE statement of a table. */
-export function creationDeTable(table: NomDeTable): string {
-	const colonnes = TABLES[table].map(colonne => {
-		const reference = colonne.reference ? ` REFERENCES ${identifiant(colonne.reference)} (id) ON DELETE CASCADE` : ''
-		return `\t${identifiant(colonne.nom)} ${TYPES_SQL[colonne.type]}${reference}`
+export function tableCreation(table: TableName): string {
+	const columns = TABLES[table].map(colonne => {
+		const reference = colonne.reference ? ` REFERENCES ${identifier(colonne.reference)} (id) ON DELETE CASCADE` : ''
+		return `\t${identifier(colonne.nom)} ${TYPES_SQL[colonne.type]}${reference}`
 	})
-	return `CREATE TABLE ${identifiant(table)} (\n${colonnes.join(',\n')}\n)`
+	return `CREATE TABLE ${identifier(table)} (\n${columns.join(',\n')}\n)`
 }

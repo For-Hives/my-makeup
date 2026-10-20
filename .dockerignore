@@ -17,9 +17,9 @@
 !src
 !public
 !scripts/migration/import
-!tests/outils/source-strapi/creation.ts
-!tests/outils/source-strapi/donnees.ts
-!tests/outils/source-strapi/images.ts
-!tests/outils/source-strapi/schema.ts
-!tests/fixtures/import/decisions-du-banc.json
-!tests/fixtures/import/referentiel-du-banc.json
+!tests/support/source-strapi/creation.ts
+!tests/support/source-strapi/data.ts
+!tests/support/source-strapi/images.ts
+!tests/support/source-strapi/schema.ts
+!tests/fixtures/import/bench-decisions.json
+!tests/fixtures/import/bench-reference.json

@@ -15,18 +15,18 @@ import AxeBuilder from '@axe-core/playwright'
 import type { Page } from '@playwright/test'
 
 /** The rule sets of axe that are run. */
-export const REFERENTIELS = ['wcag2a', 'wcag2aa', 'wcag21aa'] as const
+export const REFERENCES = ['wcag2a', 'wcag2aa', 'wcag21aa'] as const
 
 /** The levels of axe that fail a test. */
-export const NIVEAUX_GRAVES = ['serious', 'critical'] as const
+export const SEVERE_LEVELS = ['serious', 'critical'] as const
 
-export type NiveauGrave = (typeof NIVEAUX_GRAVES)[number]
+export type SevereLevel = (typeof SEVERE_LEVELS)[number]
 
 /** One rule that is broken, short enough to be read in the report of a failed test. */
-export interface ViolationGrave {
+export interface ViolationSevere {
 	/** The name of the rule in axe, such as `image-alt` or `color-contrast`. */
 	regle: string
-	niveau: NiveauGrave
+	niveau: SevereLevel
 	/** What the rule asks for, in the words of axe. */
 	aide: string
 	/** Where to read about the rule. */
@@ -44,13 +44,13 @@ export interface ViolationDAxe {
 	nodes: readonly { target: readonly unknown[] }[]
 }
 
-const estGrave = (niveau: string | null | undefined): niveau is NiveauGrave =>
-	NIVEAUX_GRAVES.some(grave => grave === niveau)
+const isSevere = (niveau: string | null | undefined): niveau is SevereLevel =>
+	SEVERE_LEVELS.some(grave => grave === niveau)
 
 /** Keeps the violations of the two highest levels, each in its short form. */
-export function garderLesGraves(violations: readonly ViolationDAxe[]): ViolationGrave[] {
+export function keepSevere(violations: readonly ViolationDAxe[]): ViolationSevere[] {
 	return violations.flatMap(({ id, impact, help, helpUrl, nodes }) =>
-		estGrave(impact)
+		isSevere(impact)
 			? [
 					{
 						regle: id,
@@ -74,9 +74,9 @@ export interface OptionsDAxe {
  * Runs axe on the page as it is now and gives back the « serious » and « critical » violations.
  * Empty when there is none. Wait for the state to check before calling: axe reads the page once.
  */
-export async function violationsGraves(page: Page, { sauf = [] }: OptionsDAxe = {}): Promise<ViolationGrave[]> {
-	let axe = new AxeBuilder({ page }).withTags([...REFERENTIELS])
-	for (const selecteur of sauf) axe = axe.exclude(selecteur)
+export async function violationsSevere(page: Page, { sauf = [] }: OptionsDAxe = {}): Promise<ViolationSevere[]> {
+	let axe = new AxeBuilder({ page }).withTags([...REFERENCES])
+	for (const selector of sauf) axe = axe.exclude(selector)
 	const { violations } = await axe.analyze()
-	return garderLesGraves(violations)
+	return keepSevere(violations)
 }

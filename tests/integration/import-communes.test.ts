@@ -5,22 +5,22 @@ import path from 'node:path'
 import type { CaseToReview } from '../../scripts/migration/import/cities'
 import type { Decisions } from '../../scripts/migration/import/decisions'
 import { geoApiReference, keptReference, REFERENCE_ADDRESS } from '../../scripts/migration/import/reference'
-import { HttpResponse, http, simuler } from '../support/outgoing-http'
 import {
-	commandeDImport,
-	DECISIONS_DU_BANC,
-	FICHIER_DES_DECISIONS_DU_BANC,
-	FICHIER_DU_REFERENTIEL_DU_BANC,
-	importerSurLeBanc,
-	referentielDuBanc,
+	BENCH_DECISION_FILE,
+	BENCH_DECISIONS,
+	BENCH_REFERENCE_FILE,
+	benchReference,
+	importCommand,
+	importOnBench,
 } from '../support/import'
-import { payloadDeTest, viderLaBase } from '../support/payload-test'
-import { creerLaSourceStrapi, effacerLaSourceStrapi, empreinteDeLaSource } from '../support/source-strapi'
+import { HttpResponse, http, simulate } from '../support/outgoing-http'
+import { emptyBase, testPayload } from '../support/payload-test'
+import { createSourceStrapi, eraseSourceStrapi, sourceFingerprint } from '../support/source-strapi'
 
 /**
  * Ticket 063: the city typed in a profile of the fake source becomes a commune of the official
  * list, with its INSEE code, never an address (plan 01 §6.2 « Ville »; plan 03 SEO-24). The
- * referential is read offline from its kept answers (tests/fixtures/import/referentiel-du-banc.json),
+ * referential is read offline from its kept answers (tests/fixtures/import/bench-reference.json),
  * or simulated: no test calls the Internet.
  *
  * The cities of the fake source (docs/tests/source-strapi.md): 21 « Annecy », 22 « 74000 Annecy »,
@@ -31,7 +31,7 @@ import { creerLaSourceStrapi, effacerLaSourceStrapi, empreinteDeLaSource } from 
 
 /** The decision lines a person would write after reading the private list of review. */
 const DECISIONS_DES_COMMUNES: Decisions = {
-	...DECISIONS_DU_BANC,
+	...BENCH_DECISIONS,
 	cities: [
 		// The Saint-Julien of the Rhône, one of the six candidates.
 		{ profile: 28, inseeCode: '69215' },
@@ -41,12 +41,12 @@ const DECISIONS_DES_COMMUNES: Decisions = {
 }
 
 let revue: CaseToReview[] = []
-let premier: Awaited<ReturnType<typeof importerSurLeBanc>>
+let premier: Awaited<ReturnType<typeof importOnBench>>
 
 beforeAll(async () => {
-	await viderLaBase()
-	await creerLaSourceStrapi()
-	premier = await importerSurLeBanc('real', {
+	await emptyBase()
+	await createSourceStrapi()
+	premier = await importOnBench('real', {
 		onReview: cas => {
 			revue = cas
 		},
@@ -55,12 +55,12 @@ beforeAll(async () => {
 }, 60_000)
 
 afterAll(async () => {
-	await viderLaBase()
-	await effacerLaSourceStrapi()
+	await emptyBase()
+	await eraseSourceStrapi()
 })
 
 async function profils(overrideAccess = true) {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	const { docs } = await payload.find({
 		collection: 'profiles',
 		depth: 0,
@@ -143,7 +143,7 @@ describe('Cas ambigu : zone vide, profil « à revoir » ; avec sa ligne de déc
 	})
 
 	test('avec sa ligne de décision : la commune choisie, ou aucune, et le profil n’est plus à revoir', async () => {
-		const rapport = await importerSurLeBanc('real', { decisions: DECISIONS_DES_COMMUNES })
+		const rapport = await importOnBench('real', { decisions: DECISIONS_DES_COMMUNES })
 
 		expect(rapport.collections.profiles).toMatchObject({ created: 0, updated: 1 })
 		expect(await communeDe(28)).toEqual({
@@ -165,7 +165,7 @@ describe('Cas ambigu : zone vide, profil « à revoir » ; avec sa ligne de déc
 	test('second passage avec les mêmes décisions : 0 création, 0 mise à jour', async () => {
 		const avant = await profils()
 
-		const second = await importerSurLeBanc('real', { decisions: DECISIONS_DES_COMMUNES })
+		const second = await importOnBench('real', { decisions: DECISIONS_DES_COMMUNES })
 
 		expect(second.collections.profiles).toMatchObject({ created: 0, updated: 0, refused: [] })
 		expect(await profils()).toEqual(avant)
@@ -175,9 +175,9 @@ describe('Cas ambigu : zone vide, profil « à revoir » ; avec sa ligne de déc
 describe('Le référentiel simulé, et ses réponses gardées pour deux passages identiques', () => {
 	/** The kept answers of the bench, sent back as the referential sends them. */
 	function simulerAvecLesReponsesDuBanc(): string[] {
-		const reponses = referentielDuBanc().reponses
+		const reponses = benchReference().reponses
 		const journal: string[] = []
-		simuler(
+		simulate(
 			http.get(`${REFERENCE_ADDRESS}/communes`, ({ request }) => {
 				journal.push(request.url)
 				const parametres = new URL(request.url).searchParams
@@ -200,9 +200,9 @@ describe('Le référentiel simulé, et ses réponses gardées pour deux passages
 		const journal = simulerAvecLesReponsesDuBanc()
 		const garde = keptReference(new Map(), geoApiReference())
 
-		const un = await importerSurLeBanc('dry-run', { decisions: DECISIONS_DES_COMMUNES, reference: garde })
+		const un = await importOnBench('dry-run', { decisions: DECISIONS_DES_COMMUNES, reference: garde })
 		const demandes = journal.length
-		const deux = await importerSurLeBanc('dry-run', { decisions: DECISIONS_DES_COMMUNES, reference: garde })
+		const deux = await importOnBench('dry-run', { decisions: DECISIONS_DES_COMMUNES, reference: garde })
 
 		// annecy, 74000, toulouse, 75116, saint-julien, lyon, nantes, annemasse.
 		expect(demandes).toBe(8)
@@ -226,7 +226,7 @@ describe('La commande', () => {
 		const fichier = path.join(dossier, 'revue.json')
 
 		// A dry run, with the table of the bench, which settles no city.
-		const { code, sortie } = await commandeDImport(['--decisions', FICHIER_DES_DECISIONS_DU_BANC, '--review', fichier])
+		const { code, sortie } = await importCommand(['--decisions', BENCH_DECISION_FILE, '--review', fichier])
 
 		expect(code, sortie).toBe(0)
 		expect(sortie).toContain('communes : 9 sur 11 villes renseignées (81,8 %, cible 90 %)')
@@ -240,15 +240,15 @@ describe('La commande', () => {
 
 	test('hors ligne, une réponse qui manque arrête la commande avant toute écriture', async () => {
 		const avant = await profils()
-		const empreinte = (await empreinteDeLaSource()).empreinte
+		const empreinte = (await sourceFingerprint()).empreinte
 		const partiel = path.join(dossier, 'partiel.json')
-		const reponses = JSON.parse(readFileSync(FICHIER_DU_REFERENTIEL_DU_BANC, 'utf8'))
+		const reponses = JSON.parse(readFileSync(BENCH_REFERENCE_FILE, 'utf8'))
 		delete reponses.reponses['nom:lyon']
 		writeFileSync(partiel, JSON.stringify(reponses))
 
-		const decisions = ['--decisions', FICHIER_DES_DECISIONS_DU_BANC]
-		const manque = await commandeDImport(['--real', ...decisions, '--cities', partiel, '--offline'])
-		const absent = await commandeDImport([
+		const decisions = ['--decisions', BENCH_DECISION_FILE]
+		const manque = await importCommand(['--real', ...decisions, '--cities', partiel, '--offline'])
+		const absent = await importCommand([
 			'--real',
 			...decisions,
 			'--cities',
@@ -261,6 +261,6 @@ describe('La commande', () => {
 		expect(absent.code, absent.sortie).toBe(1)
 		expect(absent.sortie).toContain('le fichier des réponses gardées du référentiel des communes n’existe pas')
 		expect(await profils()).toEqual(avant)
-		expect((await empreinteDeLaSource()).empreinte).toBe(empreinte)
+		expect((await sourceFingerprint()).empreinte).toBe(empreinte)
 	}, 60_000)
 })

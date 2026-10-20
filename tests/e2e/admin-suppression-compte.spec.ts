@@ -1,8 +1,8 @@
 import { expect, test } from '@playwright/test'
-import { creerCompte } from '../support/account-factory'
-import { payloadDeTest } from '../support/payload-test'
-import { fichierPourPayload } from '../support/photos'
-import { lireUnObjet } from '../support/s3'
+import { createAccount } from '../support/account-factory'
+import { testPayload } from '../support/payload-test'
+import { fileForPayload } from '../support/photos'
+import { readObject } from '../support/s3'
 
 /**
  * E57 (plan 02 §7.4; ticket 167): the admin deletes the account of a makeup artist from its sheet in
@@ -19,16 +19,16 @@ test.describe('L’admin supprime un compte et tout part avec lui', () => {
 		request,
 	}) => {
 		test.setTimeout(120_000)
-		const payload = await payloadDeTest()
-		const admin = await creerCompte('admin')
-		const compte = await creerCompte('maquilleuse')
+		const payload = await testPayload()
+		const admin = await createAccount('admin')
+		const compte = await createAccount('maquilleuse')
 		const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
 		const [fiche] = docs
 		if (!fiche) throw new Error('pas de profil')
 		const media = await payload.create({
 			collection: 'media',
 			data: { owner: Number(compte.id), alt: 'Photo principale' },
-			file: fichierPourPayload(),
+			file: fileForPayload(),
 		})
 		const profil = await payload.update({
 			collection: 'profiles',
@@ -69,21 +69,21 @@ test.describe('L’admin supprime un compte et tout part avec lui', () => {
 		expect(await existe('pros', compte.id)).toBe(false)
 		expect(await existe('profiles', profil.id)).toBe(false)
 		expect(await existe('media', media.id)).toBe(false)
-		expect(await lireUnObjet(cle)).toBeUndefined()
-		expect(await lireUnObjet(`deleted/${cle}`)).toBeDefined()
+		expect(await readObject(cle)).toBeUndefined()
+		expect(await readObject(`deleted/${cle}`)).toBeDefined()
 		expect((await request.get(`/profil/${profil.slug}`)).status()).toBe(404)
 		expect((await payload.auth({ headers: new Headers(compte.session.enTetes) })).user).toBeNull()
 	})
 
 	test('la rédaction ne voit pas les comptes et ne peut pas en supprimer un', async ({ context, page }) => {
-		const redaction = await creerCompte('redaction')
-		const compte = await creerCompte('maquilleuse')
+		const redaction = await createAccount('redaction')
+		const compte = await createAccount('maquilleuse')
 		await context.addCookies(redaction.session.cookies as never[])
 
 		const reponse = await page.request.delete(`/api/pros/${compte.id}`)
 		expect(reponse.status()).toBe(403)
 		expect(
-			(await (await payloadDeTest()).findByID({ collection: 'pros', id: compte.id, depth: 0, disableErrors: true })) !==
+			(await (await testPayload()).findByID({ collection: 'pros', id: compte.id, depth: 0, disableErrors: true })) !==
 				null
 		).toBe(true)
 	})

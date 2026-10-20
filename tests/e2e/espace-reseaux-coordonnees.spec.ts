@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
-import { violationsGraves } from '../support/axe'
-import { type CompteDeTest, creerCompte } from '../support/account-factory'
-import { payloadDeTest } from '../support/payload-test'
+import { createAccount, type TestAccount } from '../support/account-factory'
+import { violationsSevere } from '../support/axe'
+import { testPayload } from '../support/payload-test'
 
 /**
  * The panels of the networks and of the contact details (tickets 125 and 126; plan 02 U28, E30,
@@ -17,26 +17,26 @@ test.beforeEach(({ context }) =>
 	context.setExtraHTTPHeaders({ 'x-forwarded-for': `192.0.2.${200 + (++compteur % 50)}` })
 )
 
-type Maquilleuse = CompteDeTest<'maquilleuse'>
+type Maquilleuse = TestAccount<'maquilleuse'>
 
 const TELEPHONE = '06 39 98 12 34'
 
 async function maquilleuse(context: {
 	addCookies: (c: Maquilleuse['session']['cookies']) => Promise<void>
 }): Promise<Maquilleuse> {
-	const compte = await creerCompte('maquilleuse')
+	const compte = await createAccount('maquilleuse')
 	await context.addCookies(compte.session.cookies)
 	await modifierLaFiche(compte, { firstName: 'Léa', lastName: 'Fictive', specialty: 'Maquillage mariée' })
 	return compte
 }
 
 async function modifierLaFiche(compte: Maquilleuse, data: Record<string, unknown>) {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	await payload.update({ collection: 'profiles', id: (await ficheDe(compte)).id, data })
 }
 
 async function ficheDe(compte: Maquilleuse) {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
 	const [fiche] = docs
 	if (!fiche) throw new Error('pas de profil')
@@ -56,7 +56,7 @@ test.describe('125 : les réseaux', { tag: '@mobile' }, () => {
 		await expect(page.getByRole('status').filter({ hasText: 'Tes réseaux sont enregistrés.' })).toBeVisible()
 		await expect(page.getByTestId('carte-reseaux')).toContainText('https://www.instagram.com/studio.fictif')
 		expect((await ficheDe(compte)).networks?.instagram).toBe('https://www.instagram.com/studio.fictif')
-		expect(await violationsGraves(page)).toEqual([])
+		expect(await violationsSevere(page)).toEqual([])
 	})
 
 	test('E30 : l’adresse d’un autre site est refusée sous le champ, sans requête', async ({ context, page }) => {

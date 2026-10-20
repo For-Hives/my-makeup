@@ -12,7 +12,7 @@ Le code de la v3 est en anglais jusque dans ses noms. Ce document dit ce que la 
 | noms déclarés | `const`, `let`, `var` (noms destructurés compris), `function`, `class`, `interface`, `type`, `enum`, avec le drapeau « exporté » |
 | scripts | les clés de `scripts` dans `package.json` |
 | variables d'environnement | `process.env.NOM`, `Bun.env.NOM`, `env.NOM`, un destructurage de ces objets, les clés d'un `Record<'NOM', …>` |
-| options | une chaîne qui est exactement `--une-option` (ou `--une-option=`), dans `scripts/` et `tests/outils/` |
+| options | une chaîne qui est exactement `--une-option` (ou `--une-option=`), dans `scripts/` et `tests/support/` |
 
 Il ne lit **ni les chaînes** (hors la forme exacte d'une option), **ni les commentaires**, ni le texte des pages. Les titres des tests et les lignes de journal sont des chaînes : ils restent en français sans exception à écrire.
 

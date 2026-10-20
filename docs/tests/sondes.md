@@ -7,15 +7,15 @@ Les adresses du site ne changent pas avec la v3 (`src/lib/frozen-urls.ts`) : les
 ## Lancer
 
 ```sh
-bun run sondes                                       # le site en ligne, https://my-makeup.fr
-SONDES_CIBLE=http://localhost:3100 bun run sondes    # une autre cible : le banc, un domaine temporaire
-SONDES_STATS_TOKEN=… bun run sondes                  # avec le jeton du service : R02 compare le sitemap aux profils publiables
-SONDES_API=aucune bun run sondes                     # Strapi est arrêté : plus de partie Strapi dans R05
+bun run probes                                       # le site en ligne, https://my-makeup.fr
+PROBES_TARGET=http://localhost:3100 bun run probes    # une autre cible : le banc, un domaine temporaire
+PROBES_STATS_TOKEN=… bun run probes                  # avec le jeton du service : R02 compare le sitemap aux profils publiables
+PROBES_API=aucune bun run probes                     # Strapi est arrêté : plus de partie Strapi dans R05
 ```
 
-- `SONDES_CIBLE` est une origine seule : `https://` et un hôte, ou `http://` sur ce poste (`localhost`, `127.0.0.1`, `::1`). Un chemin, un paramètre ou un identifiant dans l'adresse est refusé.
-- `SONDES_STATS_TOKEN` : le jeton de service de la route `/api/stats/weekly` (variable `STATS_TOKEN` de l'application). Sans lui, R02 dit « inconnu ». Il ne part que vers cette route, sur la cible, jamais ailleurs, et le rapport ne l'écrit jamais. Le workflow du lundi n'en a pas (aucun secret de prod) : R02 y reste « inconnu » tant qu'Andy ne lance pas les sondes à la main avec le jeton (voir « Le lancement du lundi »).
-- `SONDES_API` : l'origine de l'API Strapi lue par R05. Par défaut `https://api.my-makeup.fr` quand la cible est le site en ligne, rien ailleurs. `aucune` retire la partie Strapi : à poser le jour où Strapi s'arrête, sinon la redirection de l'ancienne adresse de l'API la rend rouge.
+- `PROBES_TARGET` est une origine seule : `https://` et un hôte, ou `http://` sur ce poste (`localhost`, `127.0.0.1`, `::1`). Un chemin, un paramètre ou un identifiant dans l'adresse est refusé.
+- `PROBES_STATS_TOKEN` : le jeton de service de la route `/api/stats/weekly` (variable `STATS_TOKEN` de l'application). Sans lui, R02 dit « inconnu ». Il ne part que vers cette route, sur la cible, jamais ailleurs, et le rapport ne l'écrit jamais. Le workflow du lundi n'en a pas (aucun secret de prod) : R02 y reste « inconnu » tant qu'Andy ne lance pas les sondes à la main avec le jeton (voir « Le lancement du lundi »).
+- `PROBES_API` : l'origine de l'API Strapi lue par R05. Par défaut `https://api.my-makeup.fr` quand la cible est le site en ligne, rien ailleurs. `aucune` retire la partie Strapi : à poser le jour où Strapi s'arrête, sinon la redirection de l'ancienne adresse de l'API la rend rouge.
 - La commande ne lit aucun fichier `.env`. Les deux variables viennent de l'environnement du shell.
 - Un lancement contre le banc fait 16 requêtes (7,7 s mesurées le 15/10/2026). Contre le site en ligne : autant sur le site, plus 3 sur l'API Strapi, 1 à 3 sur les registres de domaines (RDAP), et 5 poignées TLS sans requête.
 
@@ -48,16 +48,16 @@ Détails :
 
 R05 est celle de la v3. Contre le site actuel, ses en-têtes et ses listes sont rouges : c'est le constat, pas une panne de la sonde. Les cinq en-têtes ne sont pas posés sur une redirection de normalisation (« / » final) : R05 ne vise que des adresses sans « / » final.
 
-R06 : la poignée TLS vérifie la chaîne et le nom, lit la date de fin du certificat et se ferme sans rien envoyer. C'est la seule connexion que les sondes ouvrent hors de la garde, et seul `tests/sondes/certificats.ts` le fait (un test le garde). Un certificat que la poignée refuse (échu, mauvais nom) est rouge. Un registre qui ne répond pas, ou qui ne donne pas de date de fin, rend le domaine « inconnu ». Les registres connus : `.fr` (AFNIC) et `.com` ; une autre extension est « inconnu ». Le seuil est « sous 21 jours » (certificat) et « sous 30 jours » (domaine) : exactement 21 jours est vert.
+R06 : la poignée TLS vérifie la chaîne et le nom, lit la date de fin du certificat et se ferme sans rien envoyer. C'est la seule connexion que les sondes ouvrent hors de la garde, et seul `tests/probes/certificates.ts` le fait (un test le garde). Un certificat que la poignée refuse (échu, mauvais nom) est rouge. Un registre qui ne répond pas, ou qui ne donne pas de date de fin, rend le domaine « inconnu ». Les registres connus : `.fr` (AFNIC) et `.com` ; une autre extension est « inconnu ». Le seuil est « sous 21 jours » (certificat) et « sous 30 jours » (domaine) : exactement 21 jours est vert.
 
 ## La garde
 
-Toute requête d'une sonde passe par `garder()` (`tests/sondes/garde.ts`). Elle laisse passer une lecture, et rien d'autre :
+Toute requête d'une sonde passe par `garder()` (`tests/probes/guard.ts`). Elle laisse passer une lecture, et rien d'autre :
 
 - **GET seulement.** Toute autre méthode est interrompue avant de quitter le poste.
 - **Rien sous `/u`**, où le site relaie sa mesure d'audience (Umami : `/u/script.js`, `/u/api/send`). Une sonde n'est jamais comptée comme une visite.
 - **Rien vers un autre hôte que la cible**, celui d'Umami compris.
-- **Anonyme** : ni cookie ni en-tête `Authorization`. Une seule identité est permise, le jeton de service de R02, et seulement en `GET /api/stats/weekly` sur la cible, avec exactement la valeur de `SONDES_STATS_TOKEN`. R01 essaie ce jeton vers la page d'accueil, vers `/u`, avec un autre jeton et avec un cookie : tout est interrompu.
+- **Anonyme** : ni cookie ni en-tête `Authorization`. Une seule identité est permise, le jeton de service de R02, et seulement en `GET /api/stats/weekly` sur la cible, avec exactement la valeur de `PROBES_STATS_TOKEN`. R01 essaie ce jeton vers la page d'accueil, vers `/u`, avec un autre jeton et avec un cookie : tout est interrompu.
 - **Aucune redirection suivie** : une redirection pourrait mener ailleurs, ou vers `/u`.
 
 Une requête interdite pendant une sonde la rend rouge et arrête les suivantes : une sonde qui tente d'écrire est cassée, quoi qu'elle ait trouvé.
@@ -77,26 +77,26 @@ curl -s https://my-makeup.fr/sitemap.xml | grep -o '/profil/[^<]*' | while read 
 ## Les sondes et les tests
 
 - Les sondes ne tournent pas sous `bun test` : là, aucune requête ne quitte le poste ([`http-sortant.md`](http-sortant.md)). Leur logique se teste dans `tests/unit/sondes.test.ts`, contre un site simulé et des profils fictifs : `bun --no-env-file test tests/unit/sondes.test.ts`.
-- Elles ne passent pas par Playwright, et `tests/sondes/` ne contient aucun fichier `*.spec.ts` ni `*.test.ts`.
-- **La garde des essais de bout en bout refuse toujours la prod** (U86, [`e2e.md`](e2e.md)). Les sondes ont leur propre garde et leur propre variable, `SONDES_CIBLE` : elles ne lisent ni `BASE_URL` ni `NEXT_PUBLIC_SITE_URL`, et n'assouplissent rien.
+- Elles ne passent pas par Playwright, et `tests/probes/` ne contient aucun fichier `*.spec.ts` ni `*.test.ts`.
+- **La garde des essais de bout en bout refuse toujours la prod** (U86, [`e2e.md`](e2e.md)). Les sondes ont leur propre garde et leur propre variable, `PROBES_TARGET` : elles ne lisent ni `BASE_URL` ni `NEXT_PUBLIC_SITE_URL`, et n'assouplissent rien.
 
 ## Le banc
 
 Pour rejouer les six sondes contre le banc (ticket 156) :
 
 ```sh
-BANC_INSTANCE=mon-banc BANC_DECALAGE=20 bun run banc:complet       # dans un autre terminal, jusqu'à « Application prête »
-SONDES_CIBLE=http://localhost:3120 bun run sondes                   # R03, R04, R05 vertes ; R02 et R06 inconnues
+BENCH_INSTANCE=mon-banc BENCH_OFFSET=20 bun run bench:full       # dans un autre terminal, jusqu'à « Application prête »
+PROBES_TARGET=http://localhost:3120 bun run probes                   # R03, R04, R05 vertes ; R02 et R06 inconnues
 ```
 
-R02 demande un jeton : le banc ne règle pas `STATS_TOKEN`. Lance l'application construite avec un jeton factice (32 caractères au moins) dans son environnement, puis donne le même à `SONDES_STATS_TOKEN` : R02 est verte (« égalité exacte »).
+R02 demande un jeton : le banc ne règle pas `STATS_TOKEN`. Lance l'application construite avec un jeton factice (32 caractères au moins) dans son environnement, puis donne le même à `PROBES_STATS_TOKEN` : R02 est verte (« égalité exacte »).
 
 ## Le lancement du lundi
 
-Le workflow `.github/workflows/sondes.yml` lance `bun run sondes` contre le site en ligne **chaque lundi à 07:00, heure de Paris** (le cron porte son fuseau : l'heure d'été ne le décale pas). Tu peux aussi le lancer à la main (« Run workflow »). Il écrit le rapport des sondes dans le résumé de l'exécution, et n'a **aucun secret de prod** : ni jeton, ni variable.
+Le workflow `.github/workflows/sondes.yml` lance `bun run probes` contre le site en ligne **chaque lundi à 07:00, heure de Paris** (le cron porte son fuseau : l'heure d'été ne le décale pas). Tu peux aussi le lancer à la main (« Run workflow »). Il écrit le rapport des sondes dans le résumé de l'exécution, et n'a **aucun secret de prod** : ni jeton, ni variable.
 
 - **Une sonde rouge, ou non lancée, fait échouer l'exécution** (code de sortie 1). Rien ne l'adoucit : ni `continue-on-error`, ni `|| true`. Un test le garde et joue une sonde faussée exprès (`tests/unit/sondes-lundi-ci.test.ts`).
-- **R02 reste « inconnu »** dans ce workflow, faute du jeton de service. Ce n'est pas un échec : l'exécution est verte (décision du ticket 157). Pour comparer le sitemap aux profils publiables, lance les sondes à la main avec `SONDES_STATS_TOKEN`.
+- **R02 reste « inconnu »** dans ce workflow, faute du jeton de service. Ce n'est pas un échec : l'exécution est verte (décision du ticket 157). Pour comparer le sitemap aux profils publiables, lance les sondes à la main avec `PROBES_STATS_TOKEN`.
 - **Les planifications ne tournent que sur la branche par défaut** du dépôt, et GitHub les désactive après 60 jours sans activité dans un dépôt public. Tant que `main` porte l'ancien site, le lundi ne se déclenche pas : il commence à la bascule.
 - Contre le site actuel, R05 est rouge par construction (voir plus haut) : l'exécution du lundi est rouge jusqu'à la bascule.
 

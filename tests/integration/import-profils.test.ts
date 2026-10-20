@@ -7,11 +7,11 @@ import { SPAM_PROFILES } from '../../scripts/migration/import/profiles'
 import { IMPORT_CONTEXT } from '../../src/lib/import-context'
 import { assignSlugs } from '../../src/lib/slug'
 import { PUBLIC_PROFILE_FIELDS, readPublicProfile } from '../../src/services/public/profiles'
-import { commandeDImport, DECISIONS_DU_BANC, FICHIER_DES_DECISIONS_DU_BANC, importerSurLeBanc } from '../support/import'
-import { compterLesMails, viderLeCapteur } from '../support/mailpit'
-import { payloadDeTest, viderLaBase } from '../support/payload-test'
-import { creerLaSourceStrapi, effacerLaSourceStrapi, empreinteDeLaSource, sourceDuBanc } from '../support/source-strapi'
-import { definitionDeLaSource } from '../support/source-strapi/data'
+import { BENCH_DECISION_FILE, BENCH_DECISIONS, importCommand, importOnBench } from '../support/import'
+import { countMails, emptySink } from '../support/mailpit'
+import { emptyBase, testPayload } from '../support/payload-test'
+import { benchSource, createSourceStrapi, eraseSourceStrapi, sourceFingerprint } from '../support/source-strapi'
+import { sourceDefinition } from '../support/source-strapi/data'
 
 /**
  * Tickets 026 and 059: the import takes the identity of the profiles that have an account (link,
@@ -24,8 +24,8 @@ import { definitionDeLaSource } from '../support/source-strapi/data'
  * One import for the whole file: each test reads what it left.
  */
 
-const source = sourceDuBanc()
-const { lignes } = definitionDeLaSource(source.medias)
+const source = benchSource()
+const { lignes } = sourceDefinition(source.medias)
 
 /** As the owner of the bench, the only one who may write into the source. */
 async function avecLeProprietaire<T>(travail: (sql: SQL) => Promise<T>): Promise<T> {
@@ -65,24 +65,24 @@ const SLUGS = new Map(
 )
 
 let empreinteAvant = ''
-let premier: Awaited<ReturnType<typeof importerSurLeBanc>>
+let premier: Awaited<ReturnType<typeof importOnBench>>
 
 beforeAll(async () => {
-	await viderLaBase()
-	await viderLeCapteur()
-	await creerLaSourceStrapi()
-	empreinteAvant = (await empreinteDeLaSource()).empreinte
-	premier = await importerSurLeBanc()
+	await emptyBase()
+	await emptySink()
+	await createSourceStrapi()
+	empreinteAvant = (await sourceFingerprint()).empreinte
+	premier = await importOnBench()
 	// Emptying the base and creating the source take longer than the default 5 s on a loaded machine.
 }, 60_000)
 
 afterAll(async () => {
-	await viderLaBase()
-	await effacerLaSourceStrapi()
+	await emptyBase()
+	await eraseSourceStrapi()
 })
 
 async function profilsDeLaCible() {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	const { docs } = await payload.find({
 		collection: 'profiles',
 		depth: 1,
@@ -104,7 +104,7 @@ describe('Après l’import de la source factice', () => {
 		}
 		expect(new Set(cible.map(({ pro }) => (typeof pro === 'object' ? pro.id : pro))).size).toBe(cible.length)
 		// An account without a profile at the source stays without one: account 8 (I41).
-		const { docs: comptes } = await (await payloadDeTest()).find({
+		const { docs: comptes } = await (await testPayload()).find({
 			collection: 'pros',
 			depth: 0,
 			pagination: false,
@@ -122,7 +122,7 @@ describe('Après l’import de la source factice', () => {
 			spam: [...SPAM_PROFILES],
 		})
 		expect(premier.pointlessDecisions).toBe(0)
-		expect(await compterLesMails()).toBe(0)
+		expect(await countMails()).toBe(0)
 	})
 
 	test('profils de la source = profils repris + profils écartés ; les 13 du spam sont absents de la cible (I39)', async () => {
@@ -200,18 +200,18 @@ describe('Après l’import de la source factice', () => {
 	test('second passage : 0 création, 0 mise à jour, et la source n’a pas bougé', async () => {
 		const cible = await profilsDeLaCible()
 
-		const second = await importerSurLeBanc()
+		const second = await importOnBench()
 
 		for (const collection of ['pros', 'profiles', 'talents'] as const)
 			expect(second.collections[collection], collection).toMatchObject({ created: 0, updated: 0, refused: [] })
 		expect(await profilsDeLaCible()).toEqual(cible)
-		expect((await empreinteDeLaSource()).empreinte).toBe(empreinteAvant)
+		expect((await sourceFingerprint()).empreinte).toBe(empreinteAvant)
 	})
 })
 
 describe('Un choix du statut fixé par un passage précédent', () => {
 	test('l’import de la première tranche écrivait le statut : le choix revient à la règle, une seule fois', async () => {
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const [zoe] = (await profilsDeLaCible()).filter(({ strapiId }) => strapiId === 21)
 		// What the first slice left: a status written by server code becomes the admin's choice.
 		await payload.update({
@@ -226,8 +226,8 @@ describe('Un choix du statut fixé par un passage précédent', () => {
 			chosenStatus: 'draft',
 		})
 
-		const apres = await importerSurLeBanc()
-		const troisieme = await importerSurLeBanc()
+		const apres = await importOnBench()
+		const troisieme = await importOnBench()
 
 		expect(apres.collections.profiles).toMatchObject({ created: 0, updated: 1 })
 		expect((await profilsDeLaCible()).find(({ strapiId }) => strapiId === 21)).toMatchObject({
@@ -256,7 +256,7 @@ describe('Un profil sans compte, hors des 13 profils du spam (SCHEMA.md §4.1)',
 	test('sans décision, la commande s’arrête avant toute écriture et le nomme par identifiant', async () => {
 		const cible = await profilsDeLaCible()
 
-		const { code, sortie } = await commandeDImport(['--real', '--decisions', FICHIER_DES_DECISIONS_DU_BANC])
+		const { code, sortie } = await importCommand(['--real', '--decisions', BENCH_DECISION_FILE])
 
 		expect(code, sortie).toBe(3)
 		expect(sortie).toContain('Import arrêté avant toute écriture')
@@ -267,8 +267,8 @@ describe('Un profil sans compte, hors des 13 profils du spam (SCHEMA.md §4.1)',
 	}, 60_000)
 
 	test('avec sa décision, il est écarté et compté, et rien d’autre ne change', async () => {
-		const rapport = await importerSurLeBanc('real', {
-			decisions: { ...DECISIONS_DU_BANC, excludedProfiles: [...DECISIONS_DU_BANC.excludedProfiles, ORPHELIN] },
+		const rapport = await importOnBench('real', {
+			decisions: { ...BENCH_DECISIONS, excludedProfiles: [...BENCH_DECISIONS.excludedProfiles, ORPHELIN] },
 		})
 
 		expect(rapport.halt).toBeNull()
@@ -286,7 +286,7 @@ describe('Un profil dont la table de décision écarte le compte (SCHEMA.md §11
 			const fichier = path.join(dossier, 'decisions.json')
 			writeFileSync(fichier, JSON.stringify({ sharedEmails: [{ accounts: [9, 10, 11, 12], kept: 9 }] }))
 
-			const { code, sortie } = await commandeDImport(['--real', '--decisions', fichier])
+			const { code, sortie } = await importCommand(['--real', '--decisions', fichier])
 
 			expect(code, sortie).toBe(3)
 			expect(sortie).toContain('Import arrêté avant toute écriture')
@@ -300,7 +300,7 @@ describe('Un profil dont la table de décision écarte le compte (SCHEMA.md §11
 
 describe('La lecture publique d’un profil repris', () => {
 	test('par son slug, le profil publié donne son nom, sa spécialité et sa description, rien d’autre', async () => {
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 
 		const profil = await readPublicProfile(payload, 'zoe-lefevre')
 
@@ -328,7 +328,7 @@ describe('La lecture publique d’un profil repris', () => {
 	})
 
 	test('un slug inconnu, une ancienne forme du nom ne donnent rien (le brouillon est lu, en noindex : ticket 104)', async () => {
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 
 		expect((await readPublicProfile(payload, 'manon-petit'))?.indexable).toBe(false)
 		for (const slug of ['audit-inexistant-zz9', 'Zoe-Lefevre', 'zoé lefèvre', ''])
@@ -336,7 +336,7 @@ describe('La lecture publique d’un profil repris', () => {
 	})
 
 	test('les champs lus sont choisis un par un, et ce sont les seuls que le public lit', async () => {
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 
 		expect(Object.keys(PUBLIC_PROFILE_FIELDS).sort()).toEqual([
 			'artistName',

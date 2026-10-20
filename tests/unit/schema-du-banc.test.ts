@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import type { Payload, SanitizedConfig } from 'payload'
-import { sansChangementDeSchema } from '../support/payload-test'
-import { type ConstatDuSchema, messageDuSchema, sansSortie } from '../support/bench-schema'
+import { type SchemaFinding, schemaMessage, withoutOutput } from '../support/bench-schema'
+import { withoutSchemaChange } from '../support/payload-test'
 
 /**
  * Ticket 049: the bench database is built by the versioned migrations, never pushed from the code.
@@ -85,7 +85,7 @@ describe('the Payload of the tests never pushes the schema', () => {
 	test('its adapter: push off, no migration to play; the rest as the application has it', async () => {
 		const config = await configurationLocale()
 		const application = adaptateurDe(config)
-		const desTests = adaptateurDe(sansChangementDeSchema(config))
+		const desTests = adaptateurDe(withoutSchemaChange(config))
 
 		expect(application).toMatchObject({ push: true })
 		expect(desTests.push).toBe(false)
@@ -98,38 +98,38 @@ describe('the Payload of the tests never pushes the schema', () => {
 		const config = await configurationLocale()
 
 		// The adapter of the tests first: Payload remembers the last schema it pushed, in its module.
-		expect(await connexion(adaptateurDe(sansChangementDeSchema(config)))).toBe('connecté')
+		expect(await connexion(adaptateurDe(withoutSchemaChange(config)))).toBe('connecté')
 		expect(await connexion(adaptateurDe(config))).toBe('schéma poussé')
 	})
 })
 
 describe('a process.exit of Payload becomes a value, never the end of the process', () => {
 	test('an action that ends: its result', async () => {
-		expect(await sansSortie(async () => 'joué')).toEqual({ resultat: 'joué' })
+		expect(await withoutOutput(async () => 'joué')).toEqual({ resultat: 'joué' })
 	})
 
 	test('an action that asks to end: the code it gave, and process.exit is given back', async () => {
 		const sortir = process.exit
 
-		expect(await sansSortie(async () => process.exit(0))).toEqual({ sortie: 0 })
-		expect(await sansSortie(async () => process.exit(1))).toEqual({ sortie: 1 })
+		expect(await withoutOutput(async () => process.exit(0))).toEqual({ sortie: 0 })
+		expect(await withoutOutput(async () => process.exit(1))).toEqual({ sortie: 1 })
 		expect(process.exit).toBe(sortir)
 	})
 
 	test('another error goes through', async () => {
-		await expect(sansSortie(() => Promise.reject(new Error('autre')))).rejects.toThrow('autre')
+		await expect(withoutOutput(() => Promise.reject(new Error('autre')))).rejects.toThrow('autre')
 	})
 })
 
 describe('the message that stops a run', () => {
-	const conforme: ConstatDuSchema = { lignesDeDeveloppement: 0, ecart: { instructions: [], ambiguites: [] } }
+	const conforme: SchemaFinding = { lignesDeDeveloppement: 0, ecart: { instructions: [], ambiguites: [] } }
 
 	test('a database built by the migrations as the code describes it: nothing to say', () => {
-		expect(messageDuSchema(conforme, 'essai')).toBeUndefined()
+		expect(schemaMessage(conforme, 'essai')).toBeUndefined()
 	})
 
 	test('the mark of a push: refused first, whatever else', () => {
-		const message = messageDuSchema(
+		const message = schemaMessage(
 			{
 				lignesDeDeveloppement: 2,
 				ecart: { instructions: ['ALTER TABLE "a" ADD COLUMN "b" varchar;'], ambiguites: [] },
@@ -140,13 +140,13 @@ describe('the message that stops a run', () => {
 		expect(message?.split('\n')).toEqual([
 			'La base du banc porte la trace d’une poussée du schéma : 2 lignes de lot -1 (« dev ») dans payload_migrations.',
 			'Son schéma ne vient donc pas des seules migrations versionnées, et une migration manquante y passerait inaperçue.',
-			'Un Payload s’est branché sur le banc sans sansChangementDeSchema (tests/outils/payload-test.ts) : cherche-le, puis relance.',
+			'Un Payload s’est branché sur le banc sans sansChangementDeSchema (tests/support/payload-test.ts) : cherche-le, puis relance.',
 			'Aucun essai n’a tourné.',
 		])
 	})
 
 	test('a missing migration: the statements it would hold, and what to do', () => {
-		const message = messageDuSchema(
+		const message = schemaMessage(
 			{
 				...conforme,
 				ecart: { instructions: ['ALTER TABLE "talents" ADD COLUMN "seo_title" varchar;'], ambiguites: [] },
@@ -164,7 +164,7 @@ describe('the message that stops a run', () => {
 	})
 
 	test('several statements are counted', () => {
-		const message = messageDuSchema(
+		const message = schemaMessage(
 			{ ...conforme, ecart: { instructions: ['CREATE TABLE "a" ();', 'CREATE TABLE "b" ();'], ambiguites: [] } },
 			'essai'
 		)
@@ -175,7 +175,7 @@ describe('the message that stops a run', () => {
 	})
 
 	test('a name on one side only: each one on its line', () => {
-		const message = messageDuSchema(
+		const message = schemaMessage(
 			{ ...conforme, ecart: { instructions: [], ambiguites: ['colonnes de « public.a » : « b » … ; « c » …'] } },
 			'essai'
 		)

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
-import { creerContenu, supprimerContenu } from '../support/public-pages'
-import { titresPrincipaux } from '../support/url-parity'
+import { createContent, deleteContent } from '../support/public-pages'
+import { mainTitles } from '../support/url-parity'
 
 /** The list of the blog (ticket 107): its h1, its tags, the published articles only, and the old double. */
 
@@ -29,20 +29,20 @@ test.describe('Blog', () => {
 		const recent = `essai-blog-recent-${suffixe}`
 		const brouillon = `essai-blog-brouillon-${suffixe}`
 		const identifiants = [
-			await creerContenu(request, 'articles', { title: `Essai ${ancien}`, slug: ancien, _status: 'published' }),
+			await createContent(request, 'articles', { title: `Essai ${ancien}`, slug: ancien, _status: 'published' }),
 		]
 		try {
 			// `publishedAt` is written by the server at the first publication: the second article comes later.
 			const debut = Date.now()
 			await expect.poll(() => Date.now() - debut, { intervals: [250] }).toBeGreaterThan(1100)
 			identifiants.push(
-				await creerContenu(request, 'articles', {
+				await createContent(request, 'articles', {
 					title: `Essai ${recent}`,
 					slug: recent,
 					excerpt: 'Un extrait fictif.',
 					_status: 'published',
 				}),
-				await creerContenu(request, 'articles', { title: `Essai ${brouillon}`, slug: brouillon, _status: 'draft' })
+				await createContent(request, 'articles', { title: `Essai ${brouillon}`, slug: brouillon, _status: 'draft' })
 			)
 			await expect
 				.poll(async () => (await (await request.get('/blog')).text()).includes(`href="/blog/${recent}"`))
@@ -51,12 +51,12 @@ test.describe('Blog', () => {
 			const reponse = await request.get('/blog')
 			expect(reponse.status()).toBe(200)
 			const html = await reponse.text()
-			expect(titresPrincipaux(html)).toEqual(['Blog & News'])
+			expect(mainTitles(html)).toEqual(['Blog & News'])
 			expect(html.indexOf(`href="/blog/${recent}"`)).toBeLessThan(html.indexOf(`href="/blog/${ancien}"`))
 			expect(html).toContain('Un extrait fictif.')
 			expect(html).not.toContain(brouillon)
 		} finally {
-			for (const id of identifiants) await supprimerContenu(request, 'articles', id)
+			for (const id of identifiants) await deleteContent(request, 'articles', id)
 		}
 		await expect.poll(async () => (await (await request.get('/blog')).text()).includes(`/blog/${recent}`)).toBe(false)
 	})

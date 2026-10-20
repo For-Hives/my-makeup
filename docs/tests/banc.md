@@ -15,11 +15,11 @@ La même pile sert sur un poste et en CI : `compose.test.yml`.
 ## Démarrer et arrêter
 
 ```sh
-bun run banc:up     # démarre les six conteneurs, rend la main quand les six services répondent
-bun run banc:down   # arrête tout, supprime conteneurs, réseau et volumes
+bun run bench:up     # démarre les six conteneurs, rend la main quand les six services répondent
+bun run bench:down   # arrête tout, supprime conteneurs, réseau et volumes
 ```
 
-`banc:up` attend au plus une minute. Images déjà téléchargées, il met 5 à 7 secondes (mesuré le 14/10/2026, avec quatre services : 4,7 s, puis 6,7 s juste après un arrêt). Il ne se contente pas de l'état des conteneurs : il interroge chaque service depuis le poste.
+`bench:up` attend au plus une minute. Images déjà téléchargées, il met 5 à 7 secondes (mesuré le 14/10/2026, avec quatre services : 4,7 s, puis 6,7 s juste après un arrêt). Il ne se contente pas de l'état des conteneurs : il interroge chaque service depuis le poste.
 
 - la base exécute une requête ;
 - le capteur de mails répond en SMTP, et son API est prête ;
@@ -28,9 +28,9 @@ bun run banc:down   # arrête tout, supprime conteneurs, réseau et volumes
 - le faux Umami dit qui il est ;
 - la fausse liste des communes dit qui elle est.
 
-Relancé sur un banc déjà démarré, `banc:up` ne change rien et redit les adresses.
+Relancé sur un banc déjà démarré, `bench:up` ne change rien et redit les adresses.
 
-`banc:down` ne garde rien : la base vit en mémoire, le capteur de mails et le stockage écrivent dans leur conteneur, le faux Google n'écrit nulle part. Il vérifie ensuite qu'il ne reste ni conteneur ni volume au nom du banc.
+`bench:down` ne garde rien : la base vit en mémoire, le capteur de mails et le stockage écrivent dans leur conteneur, le faux Google n'écrit nulle part. Il vérifie ensuite qu'il ne reste ni conteneur ni volume au nom du banc.
 
 Il faut Docker avec Compose. Sans démon Docker, les commandes du banc passent d'elles-mêmes par Podman quand son socket existe (`$XDG_RUNTIME_DIR/podman/podman.sock`). Une variable `DOCKER_HOST` déjà réglée est respectée.
 
@@ -67,20 +67,20 @@ Chaque banc a un nom et ses propres ports. Deux variables d'environnement les r�
 
 | Variable | Rôle | Par défaut |
 |---|---|---|
-| `BANC_INSTANCE` | Le nom du banc. Les conteneurs et le réseau le portent | `my-makeup-test` |
-| `BANC_DECALAGE` | Un nombre de 0 à 900, ajouté à chaque port de `.env.test` | `0` |
+| `BENCH_INSTANCE` | Le nom du banc. Les conteneurs et le réseau le portent | `my-makeup-test` |
+| `BENCH_OFFSET` | Un nombre de 0 à 900, ajouté à chaque port de `.env.test` | `0` |
 
 ```sh
-BANC_INSTANCE=ticket-018 BANC_DECALAGE=20 bun run banc:up
-BANC_INSTANCE=ticket-018 BANC_DECALAGE=20 bun run test:integration
-BANC_INSTANCE=ticket-018 BANC_DECALAGE=20 bun run banc:down
+BENCH_INSTANCE=ticket-018 BENCH_OFFSET=20 bun run bench:up
+BENCH_INSTANCE=ticket-018 BENCH_OFFSET=20 bun run test:integration
+BENCH_INSTANCE=ticket-018 BENCH_OFFSET=20 bun run bench:down
 ```
 
 Avec un décalage de 20 : base sur 5463, SMTP sur 1045, boîte sur 8045, stockage sur 9110, faux Google sur 7100, application sur 3120.
 
 - Deux bancs de noms et de décalages différents ne partagent rien : ni conteneur, ni réseau, ni port, ni donnée.
 - Aucun décalage ne pose un banc sur un port du développement (5442 pour la base de `docker-compose.yml`, 5432, 3000).
-- Si un port est déjà pris, `banc:up` s'arrête avant de démarrer quoi que ce soit, nomme les ports et propose de choisir un autre décalage.
+- Si un port est déjà pris, `bench:up` s'arrête avant de démarrer quoi que ce soit, nomme les ports et propose de choisir un autre décalage.
 - Un outil de test refuse d'écrire si la base réglée n'est pas celle de son instance : on ne vide jamais le banc du voisin.
 
 ## Lancer les tests d'intégration
@@ -96,7 +96,7 @@ La commande fait trois choses :
 
    ```
    Le banc de test « my-makeup-test » ne répond pas : base (127.0.0.1:5443), capteur de mails (127.0.0.1:1025), stockage d’objets (127.0.0.1:9090), faux Google (127.0.0.1:7080), faux Umami (127.0.0.1:4200), fausse liste des communes (127.0.0.1:2050).
-   Démarre-le d’abord : bun run banc:up
+   Démarre-le d’abord : bun run bench:up
    ```
 
 2. Elle efface le schéma de la base du banc, puis y joue les migrations versionnées de `src/migrations/`, comme l'image de production à son premier démarrage. Elle s'arrête avant le premier test si la base qu'elles construisent ne décrit pas les collections du code (voir « Préparer la base du banc »).
@@ -112,7 +112,7 @@ Conséquence : **lancer les tests d'intégration vide le banc**. Les données qu
 
 - **Un délai de 5 secondes est celui de bun par défaut, et il ne suffit pas sous charge.** Sur un poste qui fait tourner plusieurs bancs ou plusieurs agents à la fois (charge de 20 à 30 relevée le 16/10/2026), la suite complète a vu 20 tests dépasser 5 secondes. Un test qui expire laisse ses requêtes tourner : elles passent dans le fichier suivant, et le `TRUNCATE` de celui-ci tombe sur un interblocage (`deadlock detected`), d'où les rouges en cascade.
 - **Les fichiers lourds portent donc un délai explicite**, en tête de fichier : `setDefaultTimeout(30_000)` (il ne vaut que pour ce fichier, et pour ses crochets). Les fichiers concernés : les comptes (`banc-comptes-types`, `auth-comptes-sans-mot-de-passe`, `espace-suppression`, `admin-suppression-compte`), les médias (`espace-portfolio`, `espace-photo`, `envoi-photo`, `rapprochement`) et l'import (`import-comptes`, `import-talents`, `revalidation`). Le délai borne un appel qui se bloque ; il n'est pas une durée que le test promet. Un test qui promet une durée l'écrit dans son `expect` (le « moins de 5 secondes » de `banc-comptes-types.test.ts`).
-- **Un test qui vide la base attend la fin de son `TRUNCATE`** (`await viderLaBase()`, dans le test ou dans `afterEach`) avant de rendre la main : aucune requête ne doit lui survivre. `viderLaBase` n'est jamais lancée sans `await`, ni dans un `Promise.all` avec d'autres requêtes de la même base.
+- **Un test qui vide la base attend la fin de son `TRUNCATE`** (`await emptyBase()`, dans le test ou dans `afterEach`) avant de rendre la main : aucune requête ne doit lui survivre. `emptyBase` n'est jamais lancée sans `await`, ni dans un `Promise.all` avec d'autres requêtes de la même base.
 - **Un test d'ordre n'attend pas l'horloge.** Deux mails envoyés au même instant peuvent porter la même date : un test qui veut « le plus récent d'abord » attend le premier mail dans le capteur avant d'envoyer le second (`banc-stockage-mails.test.ts`).
 - **Aucun test n'est sauté selon la commande.** `import-puis-connexion.test.ts` (ticket 095) fait partie de la suite complète : il vide la base, le capteur et le stockage avant et après, comme les autres essais de l'import, et crée puis efface sa source.
 
@@ -122,12 +122,12 @@ Le fichier se range dans `tests/integration/`, en `*.test.ts`.
 
 ```ts
 import { afterEach, expect, test } from 'bun:test'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
+import { testPayload, emptyBase } from '../outils/payload-test'
 
-afterEach(viderLaBase)
+afterEach(emptyBase)
 
 test('un compte créé se relit', async () => {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 
 	const cree = await payload.create({
 		collection: 'admins',
@@ -138,19 +138,19 @@ test('un compte créé se relit', async () => {
 })
 ```
 
-| Outil (`tests/outils/payload-test.ts`) | Effet |
+| Outil (`tests/support/payload-test.ts`) | Effet |
 |---|---|
-| `await payloadDeTest()` | Le Payload des tests, branché sur la base du banc, sans jamais en changer le schéma. Le même pour tous les fichiers d'un lancement |
-| `await viderLaBase()` | Remise à zéro : vide toutes les tables et remet les compteurs à 1. Le schéma reste |
-| `await compterLesDocuments()` | Le nombre de documents de chaque collection, celles de Payload comprises |
-| `await compterLesLignes()` | Le nombre de lignes de chaque table, y compris celles qu'une collection cache (sessions, relations) |
+| `await testPayload()` | Le Payload des tests, branché sur la base du banc, sans jamais en changer le schéma. Le même pour tous les fichiers d'un lancement |
+| `await emptyBase()` | Remise à zéro : vide toutes les tables et remet les compteurs à 1. Le schéma reste |
+| `await countDocuments()` | Le nombre de documents de chaque collection, celles de Payload comprises |
+| `await countLines()` | Le nombre de lignes de chaque table, y compris celles qu'une collection cache (sessions, relations) |
 
 Règles :
 
-- **Chaque fichier remet la base à zéro** après ses tests (`afterEach(viderLaBase)` ou `afterAll(viderLaBase)`) : le fichier suivant part d'une base vide.
+- **Chaque fichier remet la base à zéro** après ses tests (`afterEach(emptyBase)` ou `afterAll(emptyBase)`) : le fichier suivant part d'une base vide.
 - **Aucune donnée réelle.** Les adresses sont en `@example.test`.
-- **La remise à zéro ne vide que la base.** Le capteur de mails et le stockage d'objets ont chacun la leur : `viderLeCapteur()` et `viderLeStockage()`, plus bas. Un fichier qui envoie des mails ou dépose des objets les vide après ses tests.
-- **Hors du banc, rien n'est écrit.** `payloadDeTest()` et `viderLaBase()` s'arrêtent si la base réglée n'est pas exactement celle du banc de l'instance : un test lancé à la main avec un `.env` de travail ne touche pas la base de développement.
+- **La remise à zéro ne vide que la base.** Le capteur de mails et le stockage d'objets ont chacun la leur : `emptySink()` et `emptyStorage()`, plus bas. Un fichier qui envoie des mails ou dépose des objets les vide après ses tests.
+- **Hors du banc, rien n'est écrit.** `testPayload()` et `emptyBase()` s'arrêtent si la base réglée n'est pas exactement celle du banc de l'instance : un test lancé à la main avec un `.env` de travail ne touche pas la base de développement.
 
 `tests/integration/banc-base.test.ts` est le test coquille de la base : il crée un document, le relit, vide la base. Lancé seul, banc démarré, il passe en 2 à 3 secondes (mesuré le 14/10/2026 : 2,2 s, commande comprise).
 
@@ -161,21 +161,21 @@ Règles :
 Sur le banc, l'application envoie ses mails par l'adaptateur de Payload, réglé par `SMTP_HOST`, `SMTP_PORT` et `EMAIL_FROM` : tout arrive dans le capteur, et rien ne sort du poste. Un test lit ce que l'application a envoyé.
 
 ```ts
-import { attendreLeMail, lienDuMail } from '../outils/mailpit'
+import { waitMail, mailLink } from '../outils/mailpit'
 
-const mail = await attendreLeMail({ pour: compte.email })
+const mail = await waitMail({ pour: compte.email })
 
 expect(mail.sujet).toBe('Vérifie ton adresse email')
-const lien = lienDuMail(mail, '/auth/verification')
+const lien = mailLink(mail, '/auth/verification')
 ```
 
-| Outil (`tests/outils/mailpit.ts`) | Effet |
+| Outil (`tests/support/mailpit.ts`) | Effet |
 |---|---|
-| `await attendreLeMail({ pour, sujet? })` | Le mail reçu par cette adresse, dès qu'il est là ; le plus récent s'il y en a plusieurs. `sujet` choisit parmi eux : le sujet exact, ou un motif |
-| `await mailsRecus(pour)` | Tous les mails reçus par cette adresse, le plus récent d'abord. Une liste vide si elle n'a rien reçu : rien n'est attendu |
-| `lienDuMail(mail, vers)` | Le lien du mail qui mène à une page : son chemin exact (`'/auth/verification'`), ou un motif |
-| `await compterLesMails()` | Le nombre de mails que tient le capteur, tous destinataires confondus |
-| `await viderLeCapteur()` | Remise à zéro : supprime tous les mails du capteur |
+| `await waitMail({ pour, sujet? })` | Le mail reçu par cette adresse, dès qu'il est là ; le plus récent s'il y en a plusieurs. `sujet` choisit parmi eux : le sujet exact, ou un motif |
+| `await mailReceived(pour)` | Tous les mails reçus par cette adresse, le plus récent d'abord. Une liste vide si elle n'a rien reçu : rien n'est attendu |
+| `mailLink(mail, vers)` | Le lien du mail qui mène à une page : son chemin exact (`'/auth/verification'`), ou un motif |
+| `await countMails()` | Le nombre de mails que tient le capteur, tous destinataires confondus |
+| `await emptySink()` | Remise à zéro : supprime tous les mails du capteur |
 
 Un mail lu porte `de`, `destinataires` (À, Cc et Cci), `repondreA`, `sujet`, `texte`, `html`, `liens` et `date`.
 
@@ -183,7 +183,7 @@ Un mail lu porte `de`, `destinataires` (À, Cc et Cci), `repondreA`, `sujet`, `t
 
 - **Un mail se cherche par son destinataire, entier.** Chaque test écrit à une adresse qui lui est propre, en `@example.test` : deux tests qui tournent en même temps ne lisent jamais le mail l'un de l'autre.
 - **`liens` ne garde que les liens web**, chacun une fois : ceux de la partie HTML, lus comme un navigateur les lit (`&amp;` vaut `&`), puis les adresses que seule la partie texte contient. Un `mailto:` n'en fait pas partie.
-- **`attendreLeMail` attend un état, pas une durée.** Il regarde la boîte jusqu'à trouver le mail, 2,5 secondes au plus (`delaiMs` pour en changer). Passé ce délai, son erreur dit ce que l'adresse a reçu.
+- **`waitMail` attend un état, pas une durée.** Il regarde la boîte jusqu'à trouver le mail, 2,5 secondes au plus (`delaiMs` pour en changer). Passé ce délai, son erreur dit ce que l'adresse a reçu.
 - **`texte` est rendu sans le retour à la ligne final** que le transport ajoute toujours.
 - **Capteur arrêté : l'erreur est dite en une phrase, tout de suite.** Chaque outil s'arrête avec le service qui ne répond pas, son adresse et la commande qui démarre le banc. Un capteur qui accepte la connexion sans répondre est abandonné au bout de 2 secondes. Dans tous les cas, moins de 5 secondes.
 - **L'application, elle, ne sait pas que le capteur est arrêté** : l'envoi échoue aussitôt avec l'erreur du transport, qui nomme l'adresse du relais (`connect ECONNREFUSED 127.0.0.1:1025`).
@@ -192,22 +192,22 @@ Un mail lu porte `de`, `destinataires` (À, Cc et Cci), `repondreA`, `sujet`, `t
 ## Déposer et relire un objet : le stockage
 
 ```ts
-import { deposerUnObjet, lireUnObjet, listerLesObjets } from '../outils/s3'
+import { dropObject, readObject, listObjects } from '../outils/s3'
 
-await deposerUnObjet('photos/une.webp', octets, { type: 'image/webp' })
+await dropObject('photos/une.webp', octets, { type: 'image/webp' })
 
-const objet = await lireUnObjet('photos/une.webp')
+const objet = await readObject('photos/une.webp')
 expect(objet?.type).toBe('image/webp')
-expect(await listerLesObjets('photos/')).toEqual([{ cle: 'photos/une.webp', taille: octets.length }])
+expect(await listObjects('photos/')).toEqual([{ cle: 'photos/une.webp', taille: octets.length }])
 ```
 
-| Outil (`tests/outils/s3.ts`) | Effet |
+| Outil (`tests/support/s3.ts`) | Effet |
 |---|---|
-| `await deposerUnObjet(cle, contenu, { type? })` | Dépose un objet dans l'espace du banc, à la place de celui qui avait cette clé. `contenu` est un texte ou des octets |
-| `await lireUnObjet(cle)` | L'objet : sa clé, ses octets, son type. `undefined` si la clé n'existe pas |
-| `await listerLesObjets(prefixe?)` | La clé et la taille de chaque objet dont la clé commence par `prefixe`, dans l'ordre des clés. Tous : les pages du stockage sont suivies jusqu'à la dernière |
-| `await supprimerUnObjet(cle)` | Supprime un objet. Une clé absente n'est pas une erreur |
-| `await viderLeStockage()` | Remise à zéro : supprime tous les objets de l'espace. L'espace reste |
+| `await dropObject(cle, contenu, { type? })` | Dépose un objet dans l'espace du banc, à la place de celui qui avait cette clé. `contenu` est un texte ou des octets |
+| `await readObject(cle)` | L'objet : sa clé, ses octets, son type. `undefined` si la clé n'existe pas |
+| `await listObjects(prefixe?)` | La clé et la taille de chaque objet dont la clé commence par `prefixe`, dans l'ordre des clés. Tous : les pages du stockage sont suivies jusqu'à la dernière |
+| `await deleteObject(cle)` | Supprime un objet. Une clé absente n'est pas une erreur |
+| `await emptyStorage()` | Remise à zéro : supprime tous les objets de l'espace. L'espace reste |
 
 À savoir :
 
@@ -222,21 +222,21 @@ expect(await listerLesObjets('photos/')).toEqual([{ cle: 'photos/une.webp', tail
 L'application écrit ses photos par le client S3 du SDK d'AWS : le greffon de stockage et la corbeille des photos (ticket 045). Un test enregistre chacune de ses requêtes, fait tomber le stockage exprès, et échoue si l'application efface un objet :
 
 ```ts
-import { espionnerLeStockage, suppressionsSansCorbeille } from '../outils/espion-s3'
+import { spyStorage, deletionsWithoutTrash } from '../outils/espion-s3'
 
-const espion = espionnerLeStockage()
+const espion = spyStorage()
 espion.fairePanne(commande => commande.nom === 'CopyObject') // le stockage « tombe » pour ces requêtes
 // … le test …
-expect(suppressionsSansCorbeille(espion.journal)).toEqual([])
+expect(deletionsWithoutTrash(espion.journal)).toEqual([])
 espion.arreter()
 ```
 
-| Outil (`tests/outils/espion-s3.ts`) | Effet |
+| Outil (`tests/support/s3-spy.ts`) | Effet |
 |---|---|
-| `espionnerLeStockage()` | Enregistre chaque requête de tout client S3 du processus, dans `espion.journal` : son nom (`PutObject`, `HeadObject`, `CopyObject`, `DeleteObject`…), ce qu'elle a reçu (`Key`, `CopySource`…) et si le stockage a répondu sans erreur |
+| `spyStorage()` | Enregistre chaque requête de tout client S3 du processus, dans `espion.journal` : son nom (`PutObject`, `HeadObject`, `CopyObject`, `DeleteObject`…), ce qu'elle a reçu (`Key`, `CopySource`…) et si le stockage a répondu sans erreur |
 | `espion.fairePanne(regle)` | Désormais, une requête pour laquelle `regle` est vraie échoue avant de partir, comme un stockage qui ne répond pas (503) |
 | `espion.arreter()` | Remet le client du SDK comme avant. À appeler après chaque test, sinon le fichier suivant hérite de l'espion |
-| `suppressionsSansCorbeille(journal)` | Les clés retirées sans être la seconde moitié d'un déplacement vers la corbeille : un retrait sans copie confirmée sous `deleted/`, un retrait dans la corbeille, un retrait de plusieurs objets à la fois. Vide quand l'application n'a rien effacé |
+| `deletionsWithoutTrash(journal)` | Les clés retirées sans être la seconde moitié d'un déplacement vers la corbeille : un retrait sans copie confirmée sous `deleted/`, un retrait dans la corbeille, un retrait de plusieurs objets à la fois. Vide quand l'application n'a rien effacé |
 
 - **Il voit tout ce que fait Payload**, parce que Payload tourne dans le processus des tests, et les appels REST aussi. Il ne voit pas le client de test ci-dessus, qui passe par `fetch` : un test vide son espace librement.
 - `tests/integration/media-corbeille.test.ts` s'en sert après chaque test.
@@ -246,34 +246,34 @@ espion.arreter()
 Un enregistrement d'un profil, d'un article ou d'un talent dit à Next quelles pages publiques rafraîchir (README, « Rafraîchissement des pages publiques »). Sur le banc, aucune requête de Next n'est en cours : l'espion prend la place de `revalidatePath` et `revalidateTag` le temps d'une action, et rend ce qu'elle a demandé.
 
 ```ts
-import { espionnerLeCache } from '../outils/espion-cache'
+import { spyCache } from '../outils/espion-cache'
 
-const { chemins, etiquettes, appels } = await espionnerLeCache(() =>
-	appelerRest('PATCH', `/api/profiles/${profil.id}`, { enTetes: compte.session.enTetes, corps: { description } })
+const { chemins, etiquettes, appels } = await spyCache(() =>
+	callRest('PATCH', `/api/profiles/${profil.id}`, { enTetes: compte.session.enTetes, corps: { description } })
 )
 
 expect(chemins).toEqual([`/profil/${profil.slug}`, '/search', '/site-map', '/sitemap.xml'])
 ```
 
-| Outil (`tests/outils/espion-cache.ts`) | Effet |
+| Outil (`tests/support/cache-spy.ts`) | Effet |
 |---|---|
-| `await espionnerLeCache(action)` | Lance l'action et rend ce qu'elle a demandé au cache de Next : `chemins` et `etiquettes`, triés, un doublon compté deux fois, et `appels`, chaque appel dans son ordre avec son second argument |
+| `await spyCache(action)` | Lance l'action et rend ce qu'elle a demandé au cache de Next : `chemins` et `etiquettes`, triés, un doublon compté deux fois, et `appels`, chaque appel dans son ordre avec son second argument |
 
 À savoir :
 
-- **`next/cache` est remplacé dès le chargement du fichier, pour tout le lancement.** Hors d'un `espionnerLeCache`, ses fonctions sont celles de Next, qui refusent de rafraîchir hors d'une de ses requêtes : l'enregistrement passe sans rien rafraîchir, comme dans un script.
-- **Un espion à la fois** : `espionnerLeCache` ne s'imbrique pas.
+- **`next/cache` est remplacé dès le chargement du fichier, pour tout le lancement.** Hors d'un `spyCache`, ses fonctions sont celles de Next, qui refusent de rafraîchir hors d'une de ses requêtes : l'enregistrement passe sans rien rafraîchir, comme dans un script.
+- **Un espion à la fois** : `spyCache` ne s'imbrique pas.
 - **Il dit ce que Next reçoit, pas ce que Next fait de son cache.** Qu'une page rafraîchie montre la modification se prouve de bout en bout (ticket 117, `tests/e2e/fraicheur-pages.spec.ts`).
 
 ## Préparer la base du banc
 
 ```sh
-bun run banc:prepare
+bun run bench:prepare
 ```
 
 Efface le schéma de la base du banc, puis y joue les migrations versionnées de `src/migrations/`. La base est alors vide et à jour. À lancer avant de démarrer l'application contre le banc, ou après avoir écrit une migration. Les tests d'intégration le font d'eux-mêmes.
 
-Depuis la migration `init` (ticket 049), la base du banc n'est construite que par les migrations, comme celle de la production : rien ne pousse le schéma du code, ni la commande, ni le Payload des tests (`sansChangementDeSchema`, `tests/outils/payload-test.ts`). Une migration manquante se voit donc ici, et non en production. Une fois les migrations jouées, la commande refuse de continuer, avec un message qui dit quoi faire (`tests/outils/schema-du-banc.ts`) :
+Depuis la migration `init` (ticket 049), la base du banc n'est construite que par les migrations, comme celle de la production : rien ne pousse le schéma du code, ni la commande, ni le Payload des tests (`withoutSchemaChange`, `tests/support/payload-test.ts`). Une migration manquante se voit donc ici, et non en production. Une fois les migrations jouées, la commande refuse de continuer, avec un message qui dit quoi faire (`tests/support/bench-schema.ts`) :
 
 - si la base porte la trace d'une poussée du schéma, une ligne `dev` de lot -1 dans `payload_migrations` ;
 - si la base que les migrations ont construite ne décrit pas les collections du code : une collection changée sans sa migration, ou une migration dont le SQL ne crée pas ce que son instantané déclare. Le message donne le SQL qu'une migration contiendrait pour la rattraper ;
@@ -287,13 +287,13 @@ Le contrôle de la migration elle-même, sur une base effacée puis rejouée, es
 
 Le site n'est pas en production et la base de production v3 est vide : elle a joué les migrations de `6a151dc`, donc elle est supprimée puis recréée (vide) avant le premier déploiement de cette `init`, et `DATABASE_URI` est reposée. Le schéma tient donc dans **une seule migration, `init`**, réécrite à chaque changement de collection au lieu d'empiler des migrations de renommage (ticket 249, `PLAN-ANGLAIS.md` §7). Tant que ce n'est plus vrai, cette marche à suivre cesse : chaque changement de collection reprend sa propre migration, relue.
 
-Pour la réécrire, banc démarré (`bun run banc:up`, ou l'instance de ton lot) :
+Pour la réécrire, banc démarré (`bun run bench:up`, ou l'instance de ton lot) :
 
 1. Supprimer `src/migrations/*_init.ts` et `*_init.json`, et remplacer `src/migrations/index.ts` par `export const migrations = []`.
 2. Lancer `bun run payload:migrate:create init`, avec `DATABASE_URI` et `PAYLOAD_SECRET` du banc dans l'environnement (`.env.test`, port décalé de l'instance). Sans migration avant elle, Payload écrit le schéma entier.
 3. Remettre en forme le fichier généré comme l'ancien : `import { type MigrateDownArgs, type MigrateUpArgs, sql }`, arguments `{ db }` seuls, l'en-tête qui dit ce que fait `init`. Puis `bun run check`.
 4. `bun run payload:types` et `bun run payload:importmap` : les fichiers générés ne doivent changer que si les collections ont changé.
-5. `bun run schema:drift` (aucune dérive), puis `bun run banc:prepare`.
+5. `bun run schema:drift` (aucune dérive), puis `bun run bench:prepare`.
 
 Pour vérifier qu'un regroupement ne change rien, comparer `pg_dump --schema-only` de la base bâtie par l'ancienne chaîne et de celle bâtie par la nouvelle `init`. Une seule différence est normale : l’ordre des colonnes de quelques tables (quatre au moment de l’écriture). Une colonne ajoutée plus tard par une migration passe à la fin, alors que `init` suit l'ordre des champs de la collection. L'ordre d'une colonne ne change rien à ce qu'un programme lit.
 
@@ -301,7 +301,7 @@ Pour vérifier qu'un regroupement ne change rien, comparer `pg_dump --schema-onl
 
 | Base | Commande |
 |---|---|
-| le banc de test | `bun run banc:prepare` (le schéma est effacé, puis rejoué), ou `bun run banc:reinitialiser` pour retrouver aussi le jeu de données ; les tests d'intégration le font d'eux-mêmes |
+| le banc de test | `bun run bench:prepare` (le schéma est effacé, puis rejoué), ou `bun run bench:reset` pour retrouver aussi le jeu de données ; les tests d'intégration le font d'eux-mêmes |
 | la base de développement du poste (`docker-compose.yml`, port 5442) | `docker compose down -v && docker compose up -d --wait`, puis `bun run dev` : le volume `postgres-data` est effacé, et la base repart vide. Un compte admin créé là est à recréer (`bun run admin:create`) |
 
 ## Comptes de test : la fabrique
@@ -309,9 +309,9 @@ Pour vérifier qu'un regroupement ne change rien, comparer `pg_dump --schema-onl
 Un appel crée un compte fictif dans la base du banc et rend sa session, prête à servir. Personne ne saisit de mot de passe.
 
 ```ts
-import { creerCompte } from '../outils/fabrique-comptes'
+import { createAccount } from '../outils/fabrique-comptes'
 
-const compte = await creerCompte('admin')
+const compte = await createAccount('admin')
 // compte.email : admin-<identifiant unique>@example.test
 // compte.id, compte.collection, compte.session
 ```
@@ -331,10 +331,10 @@ Dans un essai de bout en bout, la page s'ouvre par un chemin (`page.goto('/admin
 - **Le cookie vaut pour l'adresse exacte du site.** Posé pour `http://localhost:3100`, il n'est pas envoyé à `http://127.0.0.1:3100`.
 - **Chaque appel donne un compte distinct** : deux tests en parallèle ne se partagent jamais un compte. Tous disparaissent à la remise à zéro, et leurs sessions avec eux.
 - **Aucun mot de passe ne sort de la fabrique.** Elle en tire un au hasard, s'en sert une fois pour ouvrir la session et l'oublie : il n'est ni rendu, ni écrit dans les journaux.
-- **Un test qui doit connaître le mot de passe le choisit** : `creerCompte('maquilleuse-bloquee', { motDePasse: () => connu })`. Un compte de l'ancien site ne le reçoit jamais : son mot de passe reste inconnu, comme après l'import.
+- **Un test qui doit connaître le mot de passe le choisit** : `createAccount('maquilleuse-bloquee', { motDePasse: () => connu })`. Un compte de l'ancien site ne le reçoit jamais : son mot de passe reste inconnu, comme après l'import.
 - **Hors du banc, la fabrique s'arrête avant toute écriture.** Elle vérifie l'environnement, puis la base à laquelle Payload est réellement connecté.
 
-Les types de compte sont déclarés dans `TYPES_DE_COMPTE` (`tests/outils/fabrique-comptes.ts`) :
+Les types de compte sont déclarés dans `ACCOUNT_TYPES` (`tests/support/account-factory.ts`) :
 
 | Type | Collection | Ce que c'est |
 |---|---|---|
@@ -356,7 +356,7 @@ Aucun mail ne part : la fabrique coupe le mail de confirmation que Payload enver
 Une collection de comptes y ajoute son type par une déclaration :
 
 ```ts
-export const TYPES_DE_COMPTE = {
+export const ACCOUNT_TYPES = {
 	admin: declarer({ collection: 'admins', donnees: () => ({ role: 'admin' }) }),
 	redaction: declarer({ collection: 'admins', donnees: () => ({ role: 'editor' }) }),
 }
@@ -368,19 +368,19 @@ export const TYPES_DE_COMPTE = {
 
 Les quatre types `reprise-*` sont les comptes tels que l'import les écrit (plan `01` §2.4, ticket 025) : adresse confirmée, fournisseur d'origine (`legacyProvider` : `local`, `google` ou `facebook`), identifiant de l'ancien site (`strapiId`), et un mot de passe tiré au hasard que personne ne connaît.
 
-- **Le hash de fixture vient d'un mot de passe fictif connu** : `MOT_DE_PASSE_HERITE_DE_FIXTURE`, exporté par la fabrique. C'est lui qu'un test de la connexion héritée saisit. Le hash est au format de l'ancien site (`$2a$10$`), avec un sel fixe (`SEL_BCRYPT_DE_FIXTURE`) : c'est toujours le même.
+- **Le hash de fixture vient d'un mot de passe fictif connu** : `FIXTURE_LEGACY_PASSWORD`, exporté par la fabrique. C'est lui qu'un test de la connexion héritée saisit. Le hash est au format de l'ancien site (`$2a$10$`), avec un sel fixe (`FIXTURE_SALT_BCRYPT`) : c'est toujours le même.
 - **Aucun hash n'est écrit dans le dépôt.** Le PostgreSQL du banc le calcule, avec pgcrypto, comme pour la fausse base Strapi. pgcrypto n'existe que le temps d'une transaction annulée : la base du banc n'en garde rien. Un test unitaire vérifie qu'aucun fichier versionné ne contient de hash bcrypt complet.
 - **La connexion de Payload refuse ces comptes**, avec le message générique : ni le mot de passe d'un test, ni celui de l'ancien site ne l'ouvrent. Le chemin hérité du site (ticket 087) lira le hash.
-- **Leur `strapiId` part de 1 000 000** (`strapiIdDeTest()`) : loin de ceux de la fausse base Strapi et du jeu du banc, qu'un test ne prend donc jamais.
+- **Leur `strapiId` part de 1 000 000** (`testStrapiId()`) : loin de ceux de la fausse base Strapi et du jeu du banc, qu'un test ne prend donc jamais.
 
 ### Une session sans mot de passe
 
 Un compte qui n'a pas de mot de passe connu reçoit sa session comme la connexion Google la donnera : Payload inscrit une session sur le compte et signe son jeton, sans passer par le mot de passe. C'est ce que la fabrique fait pour les anciens comptes Google ; un test peut le faire pour tout compte du banc qui peut se connecter :
 
 ```ts
-import { ouvrirSessionSansMotDePasse } from '../outils/session'
+import { openSessionWithoutPassword } from '../outils/session'
 
-const session = await ouvrirSessionSansMotDePasse(payload, { collection: 'pros', id })
+const session = await openSessionWithoutPassword(payload, { collection: 'pros', id })
 ```
 
 La session a les deux mêmes formes que celle de la fabrique. L'outil ne vérifie ni la confirmation ni le blocage du compte : Payload ignore la session d'un compte non confirmé, et le refus d'un compte bloqué appartient à la connexion (ticket 089).
@@ -390,22 +390,22 @@ La session a les deux mêmes formes que celle de la fabrique. L'outil ne vérifi
 Le jeu pose dans la base du banc un exemplaire fixe de chaque type de la fabrique : toujours la même adresse, le même nom, le même identifiant de l'ancien site.
 
 ```ts
-import { poserLesComptesDuJeu } from '../fixtures/comptes'
+import { setDatasetAccounts } from '../fixtures/accounts'
 
-const { comptes, crees, presents } = await poserLesComptesDuJeu()
+const { comptes, crees, presents } = await setDatasetAccounts()
 ```
 
 | Ce qui est fixe | Valeur |
 |---|---|
-| L'adresse | `jeu-<type>@example.test` (`adresseDuJeu(type)`) : `jeu-admin@example.test`, `jeu-reprise-google@example.test`… |
+| L'adresse | `jeu-<type>@example.test` (`datasetUrl(type)`) : `jeu-admin@example.test`, `jeu-reprise-google@example.test`… |
 | Le nom d'une maquilleuse | Il dit ce qu'est le compte : « Maquilleuse du jeu », « Bloquée du jeu », « Reprise Google du jeu »… |
 | L'identifiant de l'ancien site | 900 001 à 900 004, pour les quatre comptes repris |
-| L'identifiant de chaque compte | Le même sur une base vide : les comptes sont créés un par un, dans l'ordre de `COMPTES_DU_JEU` |
+| L'identifiant de chaque compte | Le même sur une base vide : les comptes sont créés un par un, dans l'ordre de `DATASET_ACCOUNTS` |
 
 - **Rejouer le jeu ne crée aucun doublon.** Un compte se retrouve par son adresse ; s'il est là, il est laissé tel quel (`presents`), sinon il est créé (`crees`).
-- **Aucun mot de passe, aucune session.** Chaque compte reçoit un mot de passe tiré au hasard et oublié. Un test qui veut la session d'un compte du jeu l'ouvre par `ouvrirSessionSansMotDePasse`.
+- **Aucun mot de passe, aucune session.** Chaque compte reçoit un mot de passe tiré au hasard et oublié. Un test qui veut la session d'un compte du jeu l'ouvre par `openSessionWithoutPassword`.
 - **Hors du banc, le jeu s'arrête avant toute lecture et toute écriture**, comme la fabrique.
-- Les données sont dans `tests/fixtures/comptes.ts` : `COMPTES_DU_JEU`. Un chargement sur une base vide prend 2 à 2,3 s pour les dix comptes (mesuré le 14/10/2026, trois passages).
+- Les données sont dans `tests/fixtures/accounts.ts` : `DATASET_ACCOUNTS`. Un chargement sur une base vide prend 2 à 2,3 s pour les dix comptes (mesuré le 14/10/2026, trois passages).
 
 Les profils types sont la section suivante. La commande qui charge le tout (ticket 052) viendra s'ajouter au jeu.
 
@@ -416,7 +416,7 @@ Le jeu pose aussi douze profils fictifs, les types du plan `02` §6. Chacun a sa
 ```ts
 import { poserLesProfilsDuJeu } from '@/demo-data/loading'
 
-const { profils, crees, presents } = await poserLesProfilsDuJeu(await payloadDeTest())
+const { profils, crees, presents } = await poserLesProfilsDuJeu(await testPayload())
 // profils : pour chaque type, dans l'ordre du tableau, sa clé, son compte, son profil et son slug
 ```
 
@@ -437,7 +437,7 @@ const { profils, crees, presents } = await poserLesProfilsDuJeu(await payloadDeT
 
 | Ce qui est fixe | Valeur |
 |---|---|
-| Le compte de chaque maquilleuse | `jeu-profil-<cle>@example.test` (`profileUrl(cle)`), confirmé, sous le nom du tableau. Son mot de passe est tiré au hasard et oublié aussitôt : un test qui veut sa session l'ouvre par `ouvrirSessionSansMotDePasse` |
+| Le compte de chaque maquilleuse | `jeu-profil-<cle>@example.test` (`profileUrl(cle)`), confirmé, sous le nom du tableau. Son mot de passe est tiré au hasard et oublié aussitôt : un test qui veut sa session l'ouvre par `openSessionWithoutPassword` |
 | Les identifiants | Les mêmes sur une base vide : les types sont créés un par un, dans l'ordre du tableau. Après les comptes du jeu, ils les suivent |
 | Les photos | Six fichiers WebP de 400 × 400 pixels, moins de 30 Ko chacun, sans métadonnées, dans `src/demo-data/photos/`. Ils sont tirés des illustrations de `dev-assets/illustration/` : des visages dessinés, aucune personne réelle |
 | Les objets du stockage | Chaque photo d'un profil est un média à elle, qui appartient au compte de la maquilleuse, sous la clé `media/jeu-<cle>-principale.webp` ou `media/jeu-<cle>-galerie-<rang>.webp` : la même à chaque chargement |
@@ -460,24 +460,24 @@ Les données sont dans `src/demo-data/profiles.ts` (`DEMO_PROFILES`), avec, pour
 Pour travailler dans le site local sans écrire de test (voir une page connectée, l'administration, un parcours de maquilleuse), quatre gestes. Aucun compte en ligne n'est nécessaire, rien n'est réel.
 
 ```sh
-bun run banc:complet         # 1. monter : la pile, la base, le jeu, l'application
-bun run banc:session admin   # 2. obtenir la session dont on a besoin
-bun run banc:reinitialiser   # 3. remettre à l'état de départ
-bun run banc:down            # 4. tout arrêter et tout effacer
+bun run bench:full         # 1. monter : la pile, la base, le jeu, l'application
+bun run bench:session admin   # 2. obtenir la session dont on a besoin
+bun run bench:reset   # 3. remettre à l'état de départ
+bun run bench:down            # 4. tout arrêter et tout effacer
 ```
 
-**1. `bun run banc:complet`**, dans cet ordre :
+**1. `bun run bench:full`**, dans cet ordre :
 
-1. démarre les six conteneurs, ou constate qu'ils tournent déjà (`banc:up`) ;
+1. démarre les six conteneurs, ou constate qu'ils tournent déjà (`bench:up`) ;
 2. remet le banc à son état de départ (voir 3) ;
 3. construit l'application pour la production, sans base ni secret, comme `test:e2e` ;
 4. la démarre sur le port du banc, `http://localhost:3100` par défaut, `127.0.0.1` seulement, et dit « Application prête » quand `/api/health` répond.
 
-Elle reste au premier plan jusqu'à Ctrl+C, qui l'arrête sans arrêter le banc. Un agent la lance en arrière-plan et attend la ligne « Application prête ». `--sans-application` s'arrête après le jeu (la pile et les données, sans application). Mesuré le 14/10/2026, images déjà téléchargées : environ 10 secondes pour la pile, 10 pour le jeu, 35 pour le build et le démarrage de l'application. Sur un poste neuf, il y a en plus le téléchargement des quatre images (voir « Images »).
+Elle reste au premier plan jusqu'à Ctrl+C, qui l'arrête sans arrêter le banc. Un agent la lance en arrière-plan et attend la ligne « Application prête ». `--without-application` s'arrête après le jeu (la pile et les données, sans application). Mesuré le 14/10/2026, images déjà téléchargées : environ 10 secondes pour la pile, 10 pour le jeu, 35 pour le build et le démarrage de l'application. Sur un poste neuf, il y a en plus le téléchargement des quatre images (voir « Images »).
 
-L'application porte le nom et le port de l'instance (`BANC_INSTANCE`, `BANC_DECALAGE`, voir « Plusieurs bancs sur le même poste »). Si le port est déjà pris, la commande le dit et s'arrête : `bun run test:e2e` démarre sa propre application sur le même port, et refuse de son côté quand celle-ci tourne.
+L'application porte le nom et le port de l'instance (`BENCH_INSTANCE`, `BENCH_OFFSET`, voir « Plusieurs bancs sur le même poste »). Si le port est déjà pris, la commande le dit et s'arrête : `bun run test:e2e` démarre sa propre application sur le même port, et refuse de son côté quand celle-ci tourne.
 
-**2. `bun run banc:session <compte>`** ouvre une session et l'écrit dans deux fichiers de `.banc/sessions/<instance>/`, que git ignore et que la CI ne publie pas :
+**2. `bun run bench:session <compte>`** ouvre une session et l'écrit dans deux fichiers de `.banc/sessions/<instance>/`, que git ignore et que la CI ne publie pas :
 
 | Compte | Qui |
 |---|---|
@@ -490,15 +490,15 @@ L'application porte le nom et le port de l'instance (`BANC_INSTANCE`, `BANC_DECA
 
 La commande dit le compte, la fin de la session et les deux chemins. **Le jeton n'est jamais affiché**, ni sur la sortie standard, ni dans une erreur : il n'est que dans les deux fichiers (lisibles par leur propriétaire seul). Aucun mot de passe n'existe : la session est ouverte comme le fait une connexion, sans en connaître (voir « Une session sans mot de passe »). Un compte inconnu est refusé avec la liste des noms.
 
-**3. `bun run banc:reinitialiser`** remet le banc dans l'état où `banc:complet` le laisse, application lancée ou non, en environ 10 secondes (mesuré : 9,6 s à 10 s, deux fois de suite) :
+**3. `bun run bench:reset`** remet le banc dans l'état où `bench:full` le laisse, application lancée ou non, en environ 10 secondes (mesuré : 9,6 s à 10 s, deux fois de suite) :
 
 - la base est effacée, puis reconstruite par les migrations versionnées, comme la production (voir « Préparer la base du banc ») ;
 - le stockage d'objets et le capteur de mails sont vidés ;
 - le jeu est chargé : un compte de chaque type du jeu fixe, les 12 profils types avec leurs photos, 3 talents, 3 articles dont un brouillon.
 
-Les identifiants sont les mêmes à chaque fois. Les sessions ouvertes avant ne valent plus (les comptes sont recréés) : redemande-les par `banc:session`. Une application qui tourne continue de servir la même base. Les tests d'intégration et les essais de bout en bout vident aussi le banc, sans recharger le jeu : ce qu'on y avait chargé à la main est perdu.
+Les identifiants sont les mêmes à chaque fois. Les sessions ouvertes avant ne valent plus (les comptes sont recréés) : redemande-les par `bench:session`. Une application qui tourne continue de servir la même base. Les tests d'intégration et les essais de bout en bout vident aussi le banc, sans recharger le jeu : ce qu'on y avait chargé à la main est perdu.
 
-**4. `bun run banc:down`** efface tout, comme toujours.
+**4. `bun run bench:down`** efface tout, comme toujours.
 
 ### Ce que contient le jeu
 
@@ -514,7 +514,7 @@ Le critère « l'administration compte 12 profils » compte les **12 profils typ
 
 Rejouer le chargement ne crée rien : un talent ou un article se retrouve par son adresse, brouillon compris, et reste tel qu'il est.
 
-Les tests : `tests/integration/banc-jeu-complet.test.ts` (le jeu complet, rejoué sans doublon, les commandes `banc:reinitialiser` et `banc:session` lancées comme une personne les lance), `tests/e2e/jeu-du-banc.spec.ts` (l'administration, ouverte avec l'admin du jeu, compte les 12 profils types, les 3 talents et les 3 articles dont le brouillon), `tests/unit/jeu-redaction.test.ts` et `tests/unit/banc-complet.test.ts` (sans le banc).
+Les tests : `tests/integration/banc-jeu-complet.test.ts` (le jeu complet, rejoué sans doublon, les commandes `bench:reset` et `bench:session` lancées comme une personne les lance), `tests/e2e/jeu-du-banc.spec.ts` (l'administration, ouverte avec l'admin du jeu, compte les 12 profils types, les 3 talents et les 3 articles dont le brouillon), `tests/unit/jeu-redaction.test.ts` et `tests/unit/banc-complet.test.ts` (sans le banc).
 
 ## La matrice d'accès
 
@@ -552,14 +552,14 @@ Tout autre constat est `incoherent` : refusé mais écrit quand même, ou une li
 
 À savoir :
 
-- **La distribution est faite une fois par fichier** (`distribuer()`, `tests/outils/matrice-acces.ts`) : un compte par rôle, par la fabrique, avec ses documents. Le profil de « A » (`maquilleuse`) y est publié, celui de « B » (`autreMaquilleuse`) reste un brouillon : une ligne de lecture dit ce que le public voit, et ce qu'il ne voit pas. Les deux statuts sont choisis par un admin (`chosenStatus`) : avec sa photo, « B » serait sinon publiée par la règle du ticket 044, à la première ligne qui enregistre son profil.
+- **La distribution est faite une fois par fichier** (`distribuer()`, `tests/support/access-matrix.ts`) : un compte par rôle, par la fabrique, avec ses documents. Le profil de « A » (`maquilleuse`) y est publié, celui de « B » (`autreMaquilleuse`) reste un brouillon : une ligne de lecture dit ce que le public voit, et ce qu'il ne voit pas. Les deux statuts sont choisis par un admin (`chosenStatus`) : avec sa photo, « B » serait sinon publiée par la règle du ticket 044, à la première ligne qui enregistre son profil.
 - **Une ligne ne change pas la distribution.** Une valeur modifiée est remise comme avant, et une suppression qui doit réussir vise un document jetable de la même collection.
 - **Une collection nouvelle** donne à la matrice son portrait (`PORTRAITS`, même fichier) : le champ ordinaire à modifier, les données d'une création, un document jetable (qui appartient à celui qui agit, quand la collection a des propriétaires), les documents que lit le public (`publics`), et `fichier` pour une collection de fichiers, dont une création envoie une photo. **Un rôle nouveau** prend un type de la fabrique (`TYPE_DU_ROLE`).
 - **Les photos de la distribution** : « A » et « B » ont chacune un média, la photo principale de leur profil. La matrice vide le stockage d'objets après ses lignes.
-- **Une photo de test** vient de `tests/outils/photos.ts` : un vrai PNG de 1 × 1 pixel, sous un nom à lui, pour l'API locale (`fichierPourPayload`) ou pour un formulaire (`fichierPourFormulaire`). `appelerRest` envoie un formulaire avec fichier par son option `formulaire` (`formulaireAvecFichier`, `tests/outils/rest.ts`), comme le site.
-- **Les collections de la rédaction** (`COLLECTIONS_EDITORIALES` : les talents et les articles) ont des brouillons, et leurs documents n'appartiennent à personne. La distribution en tient un publié et un brouillon par collection (`contenus`), qu'une ligne désigne par `publie` ou `brouillon`. Publier, c'est modifier `_status` : `{ champ: '_status', valeur: 'published' }` sur le brouillon ; dépublier, `'draft'` sur le document publié. Leurs lignes communes sont écrites une fois (`lignesDeLaRedaction`), puis jouées pour chaque collection.
+- **Une photo de test** vient de `tests/support/photos.ts` : un vrai PNG de 1 × 1 pixel, sous un nom à lui, pour l'API locale (`fileForPayload`) ou pour un formulaire (`fileForForm`). `callRest` envoie un formulaire avec fichier par son option `formulaire` (`formWithFile`, `tests/support/rest.ts`), comme le site.
+- **Les collections de la rédaction** (`COLLECTION_EDITORIAL` : les talents et les articles) ont des brouillons, et leurs documents n'appartiennent à personne. La distribution en tient un publié et un brouillon par collection (`contenus`), qu'une ligne désigne par `publie` ou `brouillon`. Publier, c'est modifier `_status` : `{ champ: '_status', valeur: 'published' }` sur le brouillon ; dépublier, `'draft'` sur le document publié. Leurs lignes communes sont écrites une fois (`lignesDeLaRedaction`), puis jouées pour chaque collection.
 - **Les photos des articles** : chaque article de la distribution a une photo dans sa galerie, un média qui n'appartient à personne (`photosDesArticles`). Sur `media`, une ligne les désigne par l'état de leur article : `publie` pour la photo de l'article publié, `brouillon` pour celle du brouillon.
-- **L'appel REST passe par la vraie route de l'application** (`appelerRest`, `tests/outils/rest.ts`), sans serveur : mêmes gestionnaires, même contrôle de session, mêmes règles. Il ne prouve pas l'aiguillage de Next lui-même, qu'un essai de bout en bout prouve.
+- **L'appel REST passe par la vraie route de l'application** (`callRest`, `tests/support/rest.ts`), sans serveur : mêmes gestionnaires, même contrôle de session, mêmes règles. Il ne prouve pas l'aiguillage de Next lui-même, qu'un essai de bout en bout prouve.
 
 ## Le faux Google
 
@@ -592,9 +592,9 @@ Pour un essai à la main, ouvre le site du banc et clique sur « Se connecter av
 Un test choisit l'identité renvoyée et la façon dont la connexion finit. Le choix voyage avec la demande d'autorisation, dans un cookie du fournisseur.
 
 ```ts
-import { fauxGoogle } from '../outils/faux-google'
+import { fakeGoogle } from '../outils/fake-google'
 
-const google = fauxGoogle()
+const google = fakeGoogle()
 const choix = google.choisir({ scenario: 'email-verifie', email: 'lea@example.test', prenom: 'Léa', nomDeFamille: 'Martin' })
 ```
 
@@ -649,11 +649,11 @@ Le fournisseur se teste aussi sans le banc, appelé comme une fonction : `bun --
 - La clé qui signe les jetons est tirée au démarrage du conteneur. Elle n'est écrite nulle part et change à chaque démarrage.
 - **Le site refuse un fournisseur local.** Avec une adresse de site déployée dans `NEXT_PUBLIC_SITE_URL`, une `GOOGLE_OIDC_ISSUER` locale arrête l'application au démarrage (README, « Configuration durcie »).
 
-Le code est dans `tests/outils/faux-google/` : `fournisseur.ts` (le fournisseur), `identite.ts` (scénarios et identités), `serveur.ts` (ce que lance le conteneur). L'outil des tests est `tests/outils/faux-google.ts`.
+Le code est dans `tests/support/fake-google/` : `provider.ts` (le fournisseur), `identity.ts` (scénarios et identités), `server.ts` (ce que lance le conteneur). L'outil des tests est `tests/support/fake-google.ts`.
 
 ## Le rapprochement du stockage et de la base
 
-`bun run banc:rapprocher` (ticket 137, plan 02 I27 et §10.1 point 5) compare les objets du stockage du banc aux médias de sa base. Il ne supprime rien et n'écrit rien : il liste le stockage, lit la base, et n'a aucune option qui supprime. La même règle (`src/lib/reconciliation.ts`) servira au contrôle complet d'avant purge, sur d'autres données.
+`bun run bench:reconcile` (ticket 137, plan 02 I27 et §10.1 point 5) compare les objets du stockage du banc aux médias de sa base. Il ne supprime rien et n'écrit rien : il liste le stockage, lit la base, et n'a aucune option qui supprime. La même règle (`src/lib/reconciliation.ts`) servira au contrôle complet d'avant purge, sur d'autres données.
 
 Il nomme trois sortes d'orphelins, par clé d'objet ou par identifiant, sans aucune donnée personnelle :
 
@@ -670,14 +670,14 @@ En CI, l'étape « Reconcile the storage and the database » du job `e2e` le lan
 L'import lit l'ancienne base Strapi. Sur le banc, il lit une fausse base qui porte chaque cas connu de la vraie, avec ses photos dans le stockage d'objets, et qu'un rôle en lecture seule ouvre. Une commande la crée, à l'identique à chaque fois :
 
 ```sh
-bun run banc:source
+bun run bench:source
 ```
 
 Son contenu, son inventaire, son empreinte et ses outils de test : [`source-strapi.md`](source-strapi.md).
 
 ## En CI
 
-Les mêmes commandes, dans le job `integration` de `.github/workflows/ci.yml`, en trois lots côte à côte : `bun run banc:up`, puis `bun run test:integration --shard=N/3`. bun répartit les fichiers de tests entre les lots, un fichier sur trois dans l'ordre alphabétique ; chaque lot démarre son propre banc, si bien que deux lots ne partagent jamais une base. Pour rejouer un lot sur un poste, banc démarré : `bun run test:integration --shard=2/3`. Le banc y tourne sous le nom et sur les ports par défaut, avec le Docker de la machine de GitHub. Chaque lot du job `e2e` démarre aussi le sien ([`e2e.md`](e2e.md), « En CI »). Un job en échec rend `ci-ok` rouge ([`docs/qualite.md`](../qualite.md), « Ce que lance la CI »).
+Les mêmes commandes, dans le job `integration` de `.github/workflows/ci.yml`, en trois lots côte à côte : `bun run bench:up`, puis `bun run test:integration --shard=N/3`. bun répartit les fichiers de tests entre les lots, un fichier sur trois dans l'ordre alphabétique ; chaque lot démarre son propre banc, si bien que deux lots ne partagent jamais une base. Pour rejouer un lot sur un poste, banc démarré : `bun run test:integration --shard=2/3`. Le banc y tourne sous le nom et sur les ports par défaut, avec le Docker de la machine de GitHub. Chaque lot du job `e2e` démarre aussi le sien ([`e2e.md`](e2e.md), « En CI »). Un job en échec rend `ci-ok` rouge ([`docs/qualite.md`](../qualite.md), « Ce que lance la CI »).
 
 Lancé sans les commandes du banc (`docker compose -f compose.test.yml up -d --wait`), `compose.test.yml` démarre l'instance par défaut, sur les ports de `.env.test`.
 
@@ -694,7 +694,7 @@ Chaque image est épinglée par son étiquette exacte et par son empreinte, dans
 
 - **Mailpit** : la v1.31.5 existe, mais elle n'avait que 3 jours le 14/10/2026. La règle des 7 jours donne la v1.31.4.
 - **S3Mock à la place de MinIO** : le plan nommait MinIO, avec S3Mock en repli. Le 14/10/2026, MinIO ne remplit plus les conditions : son dépôt est archivé (dernier commit en avril 2026), son image n'est plus téléchargeable (Docker Hub et quay.io refusent l'accès à `minio/minio`), et le dépôt a publié 7 avis de sécurité en 2026, dont 4 élevés, corrigés seulement dans des versions de 2026 alors que la dernière version publiée sur GitHub date d'octobre 2025. S3Mock est maintenu (dernier commit le 08/10/2026) et n'a aucun avis.
-- **bun pour le faux Google** : ce n'est pas une image de plus. Le faux Google est du code de ce dépôt (`tests/outils/faux-google/`), lu en lecture seule par le conteneur, et lancé par le bun qui construit déjà l'image du site. Un test vérifie que les deux références sont identiques (`tests/unit/banc-pile.test.ts`).
+- **bun pour le faux Google** : ce n'est pas une image de plus. Le faux Google est du code de ce dépôt (`tests/support/fake-google/`), lu en lecture seule par le conteneur, et lancé par le bun qui construit déjà l'image du site. Un test vérifie que les deux références sont identiques (`tests/unit/banc-pile.test.ts`).
 - Vérifié par `gh api repos/<dépôt>/releases`, `gh api repos/<dépôt>/security-advisories` et `gh api "/advisories?ecosystem=…&affects=…"`, puis `skopeo inspect` pour les empreintes et les dates. Les paquets du système de chaque image n'ont pas été passés au scanner.
 
 Une montée de version change l'étiquette et l'empreinte ensemble. `tests/integration/banc-pile.test.ts` vérifie que la version qui tourne est bien celle qui est épinglée.
@@ -704,7 +704,7 @@ Une montée de version change l'étiquette et l'empreinte ensemble. `tests/integ
 - **S3Mock n'est pas un vrai stockage.** Il accepte n'importe quels identifiants et ne vérifie ni les signatures ni les droits : une règle d'accès aux objets ne se prouve pas sur le banc. Il ne connaît que les adresses de la forme `http://hôte:port/espace/clé`.
 - **Le capteur n'est pas un vrai relais.** Il ne demande ni identifiant ni chiffrement, et l'application n'en règle aucun pour l'instant : un envoi par un vrai fournisseur ne se prouve pas sur le banc.
 - **Le faux Google n'est pas Google.** Il n'a ni écran de connexion, ni écran de consentement, ni jeton de rafraîchissement, ni révocation. Il ne connaît qu'un client. Son adresse est en `http` et son émetteur n'est pas `https://accounts.google.com` : ce que l'application ferait d'un vrai certificat ou du vrai émetteur ne se prouve pas sur le banc.
-- **Le faux Google lit son code dans le dépôt.** Le conteneur monte `tests/outils/faux-google/` en lecture seule. Après un changement dans ce dossier, relancer `bun run banc:down` puis `bun run banc:up`. Sur un poste où SELinux est actif (Fedora, avec Podman), ce montage demande `label=disable`, déjà réglé dans `compose.test.yml`.
+- **Le faux Google lit son code dans le dépôt.** Le conteneur monte `tests/support/fake-google/` en lecture seule. Après un changement dans ce dossier, relancer `bun run bench:down` puis `bun run bench:up`. Sur un poste où SELinux est actif (Fedora, avec Podman), ce montage demande `label=disable`, déjà réglé dans `compose.test.yml`.
 - **Le banc n'écoute que sur ce poste** (`127.0.0.1`). Il n'a ni mot de passe sérieux ni chiffrement : il ne doit jamais être exposé.
 - **`bun --env-file=.env.test test`** ne vaut que pour l'instance par défaut, et saute la reconstruction de la base par les migrations : le Payload des tests ne crée aucune table. Passer par `bun run test:integration`.
 
@@ -721,7 +721,7 @@ Il tient la place de la vraie sur deux chemins, ceux que le site relaie :
 | `GET` et `DELETE /_recus` | Lit, puis oublie, ce qui a été reçu |
 | `GET /_sante` | Dit qui répond : la sonde du banc |
 
-Un test le lit par `fauxUmami()` (`tests/outils/faux-umami.ts`) : `recus()`, `envois('cta_click')` et `vider()`. Le traceur est un remplaçant, pas une copie du vrai : il prouve ce que le site lui donne et ce qu'il relaie, pas le comportement de la version d'Umami en ligne.
+Un test le lit par `fakeUmami()` (`tests/support/fake-umami.ts`) : `recus()`, `envois('cta_click')` et `vider()`. Le traceur est un remplaçant, pas une copie du vrai : il prouve ce que le site lui donne et ce qu'il relaie, pas le comportement de la version d'Umami en ligne.
 
 Le navigateur de Playwright se déclare automatisé (`navigator.webdriver`, agent `HeadlessChrome`), et le filtre du site refuse de le mesurer. Un essai qui veut voir arriver une mesure joue un navigateur ordinaire : un agent d'un Chrome ordinaire et `webdriver` à faux (`tests/e2e/mesure-umami.spec.ts`).
 
@@ -729,7 +729,7 @@ Les noms d'hôte que le traceur compte sont ceux du banc (`NEXT_PUBLIC_UMAMI_DOM
 
 ## La fausse liste des communes
 
-L'espace de la maquilleuse demande la liste officielle des communes (geo.api.gouv.fr) : quand elle cherche sa commune, et quand elle l'enregistre (`src/lib/dashboard/city-reference.ts`). Depuis les machines de la CI, la vraie liste répondait parfois en plus de 5 secondes, ou pas du tout, et les essais qui choisissent une commune échouaient avec elle (CI du 15/10/2026). L'application des essais de bout en bout ne l'appelle donc plus : elle demande la fausse liste du banc, `tests/outils/faux-communes/`, qui répond aux mêmes questions à partir de quelques communes de la liste officielle (celles du jeu fictif et de la fabrique de profils, et Lillers et Lillebonne, qui partagent le début du nom de Lille).
+L'espace de la maquilleuse demande la liste officielle des communes (geo.api.gouv.fr) : quand elle cherche sa commune, et quand elle l'enregistre (`src/lib/dashboard/city-reference.ts`). Depuis les machines de la CI, la vraie liste répondait parfois en plus de 5 secondes, ou pas du tout, et les essais qui choisissent une commune échouaient avec elle (CI du 15/10/2026). L'application des essais de bout en bout ne l'appelle donc plus : elle demande la fausse liste du banc, `tests/support/fake-cities/`, qui répond aux mêmes questions à partir de quelques communes de la liste officielle (celles du jeu fictif et de la fabrique de profils, et Lillers et Lillebonne, qui partagent le début du nom de Lille).
 
 | Chemin | Ce qu'il fait |
 |---|---|
@@ -738,7 +738,7 @@ L'espace de la maquilleuse demande la liste officielle des communes (geo.api.gou
 | `GET /communes/<code INSEE>` | Une commune, ou 404 en texte, comme la liste officielle |
 | `GET /_sante` | Dit qui répond : la sonde du banc |
 
-- `.env.test` donne son adresse sous `FAUSSES_COMMUNES`. `bun run test:e2e` et `bun run banc:complet` la passent à l'application sous `COMMUNES_DU_BANC` (`tests/outils/e2e.ts`), et à elle seule.
+- `.env.test` donne son adresse sous `FAKE_CITIES`. `bun run test:e2e` et `bun run bench:full` la passent à l'application sous `BENCH_CITIES` (`tests/support/e2e.ts`), et à elle seule.
 - Les tests d'intégration ne la voient pas : ils simulent la liste officielle elle-même, par `simuler`, pour jouer aussi ses pannes ([`http-sortant.md`](http-sortant.md)).
-- Comme `IMAGES_DU_BANC`, la production ne règle jamais `COMMUNES_DU_BANC` : une valeur qui n'est pas exactement `http://127.0.0.1:PORT` (ou `localhost`), ou qui est donnée à un site déployé, est refusée bruyamment au lieu d'être suivie (`tests/unit/banc-fausses-communes.test.ts`).
-- Un essai qui a besoin d'une autre commune l'ajoute à `COMMUNES` de `tests/outils/faux-communes/fournisseur.ts`, avec les données de la liste officielle : nom, code INSEE, département, codes postaux, centre.
+- Comme `BENCH_IMAGES`, la production ne règle jamais `BENCH_CITIES` : une valeur qui n'est pas exactement `http://127.0.0.1:PORT` (ou `localhost`), ou qui est donnée à un site déployé, est refusée bruyamment au lieu d'être suivie (`tests/unit/banc-fausses-communes.test.ts`).
+- Un essai qui a besoin d'une autre commune l'ajoute à `COMMUNES` de `tests/support/fake-cities/provider.ts`, avec les données de la liste officielle : nom, code INSEE, département, codes postaux, centre.

@@ -1,11 +1,11 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { Profiles } from '../../src/collections/Profiles'
 import { DEMO_PROFILES } from '../../src/demo-data/profiles'
-import { poserLeJeuDuBanc } from '../fixtures/bench-dataset'
-import { creerCompte } from '../support/account-factory'
-import { payloadDeTest, viderLaBase } from '../support/payload-test'
-import { appelerRest } from '../support/rest'
-import { viderLeStockage } from '../support/s3'
+import { setBenchDataset } from '../fixtures/bench-dataset'
+import { createAccount } from '../support/account-factory'
+import { emptyBase, testPayload } from '../support/payload-test'
+import { callRest } from '../support/rest'
+import { emptyStorage } from '../support/s3'
 
 /**
  * Tickets 165 and 166 (plan 01 §3.4, plan 02 §7.4): the admin finds a profile in the list with the
@@ -16,11 +16,11 @@ import { viderLeStockage } from '../support/s3'
  * src/demo-data/profiles.ts.
  */
 
-const remettreAZero = () => Promise.all([viderLaBase(), viderLeStockage()])
+const remettreAZero = () => Promise.all([emptyBase(), emptyStorage()])
 
 beforeAll(async () => {
 	await remettreAZero()
-	await poserLeJeuDuBanc()
+	await setBenchDataset()
 }, 60_000)
 
 afterAll(remettreAZero)
@@ -35,7 +35,7 @@ const DU_JEU = 'where[and][0][pro.email][like]=jeu-profil-'
 
 /** The list of profiles the admin panel asks for, with one `where` clause on the profiles of the set. */
 async function lister(enTetes: Record<string, string>, requete: string) {
-	const reponse = await appelerRest(
+	const reponse = await callRest(
 		'GET',
 		`/api/profiles?limit=50&depth=0&${DU_JEU}&${requete.replace(/^where\[/, 'where[and][1][')}`,
 		{
@@ -65,7 +65,7 @@ describe('La liste des profils de l’admin (ticket 165)', () => {
 	})
 
 	test('chaque filtre rend le nombre attendu sur les 12 profils du banc', async () => {
-		const admin = await creerCompte('admin')
+		const admin = await createAccount('admin')
 		const { enTetes } = admin.session
 
 		const tous = await lister(enTetes, 'sort=slug')
@@ -95,7 +95,7 @@ describe('La liste des profils de l’admin (ticket 165)', () => {
 	}, 30_000)
 
 	test('la recherche du panneau retrouve un profil par son adresse ou sa commune', async () => {
-		const admin = await creerCompte('admin')
+		const admin = await createAccount('admin')
 		const { enTetes } = admin.session
 		const reference = DEMO_PROFILES.find(({ cle }) => cle === 'reference')
 		if (!reference) throw new Error('Le jeu n’a pas de profil de référence.')
@@ -108,7 +108,7 @@ describe('La liste des profils de l’admin (ticket 165)', () => {
 	})
 
 	test('le tri par dernière activité est juste, dans les deux sens, et un profil qu’on corrige remonte', async () => {
-		const admin = await creerCompte('admin')
+		const admin = await createAccount('admin')
 		const { enTetes } = admin.session
 
 		const recentes = (await lister(enTetes, 'sort=-updatedAt')).liste.docs
@@ -120,7 +120,7 @@ describe('La liste des profils de l’admin (ticket 165)', () => {
 		// She who is corrected is the oldest one: after the correction, she is the first.
 		const derniere = recentes.at(-1)
 		if (!derniere) throw new Error('La liste est vide.')
-		const correction = await appelerRest('PATCH', `/api/profiles/${derniere.id}`, {
+		const correction = await callRest('PATCH', `/api/profiles/${derniere.id}`, {
 			enTetes,
 			corps: { internalNote: 'Corrigé par l’admin.' },
 		})
@@ -130,14 +130,14 @@ describe('La liste des profils de l’admin (ticket 165)', () => {
 	}, 30_000)
 
 	test('une valeur qui n’est pas un choix est refusée avec un message, sur la fiche et dans le filtre', async () => {
-		const admin = await creerCompte('admin')
+		const admin = await createAccount('admin')
 		const { enTetes } = admin.session
 		const profil = (await lister(enTetes, 'sort=slug')).liste.docs[0]
 		if (!profil) throw new Error('La liste est vide.')
 
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const avant = await payload.findByID({ collection: 'profiles', id: profil.id, depth: 0 })
-		const refus = await appelerRest('PATCH', `/api/profiles/${profil.id}`, {
+		const refus = await callRest('PATCH', `/api/profiles/${profil.id}`, {
 			enTetes,
 			corps: { chosenStatus: 'archive' },
 		})
@@ -151,7 +151,7 @@ describe('La liste des profils de l’admin (ticket 165)', () => {
 		const filtre = await lister(enTetes, 'where[status][equals]=archive')
 		expect(filtre.statut).toBe(400)
 		expect(filtre.texte).toContain('statut qui n’existe pas')
-		const dansOu = await appelerRest('GET', '/api/profiles?where[or][0][status][in]=published,archive', { enTetes })
+		const dansOu = await callRest('GET', '/api/profiles?where[or][0][status][in]=published,archive', { enTetes })
 		expect(dansOu.statut).toBe(400)
 	})
 })
@@ -167,28 +167,28 @@ describe('Masquer un profil depuis sa fiche (ticket 166)', () => {
 	/** What an anonymous visitor reads: the public list of profiles, by slug. */
 	const lusParLePublic = async (slug: string) =>
 		(
-			(await appelerRest('GET', `/api/profiles?depth=0&where[slug][equals]=${slug}`)).corps as {
+			(await callRest('GET', `/api/profiles?depth=0&where[slug][equals]=${slug}`)).corps as {
 				docs: { slug: string }[]
 			}
 		).docs.map(d => d.slug)
 
 	test('masqué, le profil n’est plus lu par le public ; republié, il revient publiable', async () => {
-		const admin = await creerCompte('admin')
+		const admin = await createAccount('admin')
 		const { enTetes } = admin.session
 		const slug = reference()
 		const id = (await lister(enTetes, `where[slug][equals]=${slug}`)).liste.docs[0]?.id ?? 0
 		expect(await lusParLePublic(slug)).toEqual([slug])
 
-		const masque = await appelerRest('PATCH', `/api/profiles/${id}`, {
+		const masque = await callRest('PATCH', `/api/profiles/${id}`, {
 			enTetes,
 			corps: { chosenStatus: 'hidden', reason: 'Essai de modération.' },
 		})
 		expect(masque.statut).toBe(200)
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		expect((await payload.findByID({ collection: 'profiles', id, depth: 0 })).status).toBe('hidden')
 		expect(await lusParLePublic(slug)).toEqual([])
 
-		const republie = await appelerRest('PATCH', `/api/profiles/${id}`, {
+		const republie = await callRest('PATCH', `/api/profiles/${id}`, {
 			enTetes,
 			corps: { chosenStatus: 'automatic' },
 		})
@@ -199,16 +199,16 @@ describe('Masquer un profil depuis sa fiche (ticket 166)', () => {
 	}, 30_000)
 
 	test('la rédaction ne change pas le statut d’un profil', async () => {
-		const [redaction, admin] = await Promise.all([creerCompte('redaction'), creerCompte('admin')])
+		const [redaction, admin] = await Promise.all([createAccount('redaction'), createAccount('admin')])
 		const slug = reference()
 		const id = (await lister(admin.session.enTetes, `where[slug][equals]=${slug}`)).liste.docs[0]?.id ?? 0
 
-		const reponse = await appelerRest('PATCH', `/api/profiles/${id}`, {
+		const reponse = await callRest('PATCH', `/api/profiles/${id}`, {
 			enTetes: redaction.session.enTetes,
 			corps: { chosenStatus: 'hidden' },
 		})
 		expect(reponse.statut).toBeGreaterThanOrEqual(400)
-		const apres = await (await payloadDeTest()).findByID({ collection: 'profiles', id, depth: 0 })
+		const apres = await (await testPayload()).findByID({ collection: 'profiles', id, depth: 0 })
 		expect([apres.chosenStatus, apres.status]).toEqual(['automatic', 'published'])
 	})
 })

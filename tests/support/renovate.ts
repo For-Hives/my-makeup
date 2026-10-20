@@ -51,7 +51,7 @@ export type UpdateType = (typeof UPDATE_TYPES)[number]
 /** The managers that read the files of this repository, as Renovate names them. */
 const MANAGERS = ['bun', 'dockerfile', 'docker-compose', 'github-actions', 'nvm'] as const
 const DATASOURCES = ['npm', 'node-version', 'docker', 'github-tags', 'github-runners'] as const
-const DEP_TYPES = [
+const DEPENDENCY_TYPES = [
 	'dependencies',
 	'devDependencies',
 	'overrides',
@@ -95,9 +95,9 @@ export function followedDependencies(files: RepositoryFiles): Followed[] {
 		return entries.flatMap(([key, value]): [string, string][] => (typeof value === 'string' ? [[key, value]] : []))
 	}
 
-	for (const depType of ['dependencies', 'devDependencies', 'overrides'])
-		for (const [name, version] of section(depType))
-			followed.push({ file: 'package.json', name, manager: 'bun', datasource: 'npm', depType, version })
+	for (const dependencyType of ['dependencies', 'devDependencies', 'overrides'])
+		for (const [name, version] of section(dependencyType))
+			followed.push({ file: 'package.json', name, manager: 'bun', datasource: 'npm', depType: dependencyType, version })
 	const packageManager = isRecord(manifest) ? /^([^@]+)@(.+)$/.exec(String(manifest.packageManager ?? '')) : null
 	if (packageManager)
 		followed.push({
@@ -268,7 +268,7 @@ const MATCHER_VALUES: Record<string, readonly string[] | undefined> = {
 	matchUpdateTypes: UPDATE_TYPES,
 	matchManagers: MANAGERS,
 	matchDatasources: DATASOURCES,
-	matchDepTypes: DEP_TYPES,
+	matchDepTypes: DEPENDENCY_TYPES,
 }
 
 const rulesOf = (config: RenovateConfig): PackageRule[] =>

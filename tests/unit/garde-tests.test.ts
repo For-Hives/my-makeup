@@ -1,13 +1,13 @@
 import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import { lireFichierEnv } from '../support/bench'
+import { readFileEnv } from '../support/bench'
 import {
-	EnvironnementRefuse,
-	lireEnvironnement,
-	verifierBase,
-	verifierCible,
-	verifierEnvironnement,
+	checkBase,
+	checkEnvironment,
+	checkTarget,
+	RefusedEnvironment,
+	readEnvironment,
 } from '../support/environment-guard'
 
 const RACINE = path.resolve(import.meta.dir, '../..')
@@ -34,7 +34,7 @@ const BANC = {
  * child reads the bunfig.toml of the repository, so it loads the guard the way every run does.
  */
 async function lancerTemoin(variables: Record<string, string>) {
-	const enfant = Bun.spawn([process.execPath, '--no-env-file', 'test', './tests/fixtures/temoin-garde.ts'], {
+	const enfant = Bun.spawn([process.execPath, '--no-env-file', 'test', './tests/fixtures/guard-sentinel.ts'], {
 		cwd: RACINE,
 		env: variables,
 		stdout: 'pipe',
@@ -52,7 +52,7 @@ const messageDuRefus = (verifier: () => unknown): string => {
 	try {
 		verifier()
 	} catch (erreur) {
-		if (erreur instanceof EnvironnementRefuse) return erreur.message
+		if (erreur instanceof RefusedEnvironment) return erreur.message
 		throw erreur
 	}
 	throw new Error('rien n’a été refusé')
@@ -65,12 +65,12 @@ describe('U85 : refuse une DATABASE_URI non locale ou dont la base ne finit pas 
 		'postgres://banc:mot-de-passe-factice@[::1]:5443/mymakeup_test',
 		'postgres://banc:mot-de-passe-factice@postgres:5432/mymakeup_test?sslmode=disable',
 	])('accepte une base locale en _test : %s', uri => {
-		expect(() => verifierBase(uri)).not.toThrow()
+		expect(() => checkBase(uri)).not.toThrow()
 	})
 
 	test('ne demande rien quand aucune base n’est réglée', () => {
-		expect(() => verifierBase(undefined)).not.toThrow()
-		expect(() => verifierBase('')).not.toThrow()
+		expect(() => checkBase(undefined)).not.toThrow()
+		expect(() => checkBase('')).not.toThrow()
 	})
 
 	test.each([
@@ -85,7 +85,7 @@ describe('U85 : refuse une DATABASE_URI non locale ou dont la base ne finit pas 
 		['autre chose qu’une adresse PostgreSQL', 'https://127.0.0.1/mymakeup_test'],
 		['valeur illisible', 'mymakeup_test'],
 	])('refuse : %s', (_cas, uri) => {
-		expect(() => verifierBase(uri)).toThrow(EnvironnementRefuse)
+		expect(() => checkBase(uri)).toThrow(RefusedEnvironment)
 	})
 
 	// `pg` connects to the `host` parameter and not to the host of the address: the address below
@@ -101,22 +101,22 @@ describe('U85 : refuse une DATABASE_URI non locale ou dont la base ne finit pas 
 	])('refuse un paramètre qui remplace l’hôte de l’adresse : %s', (_cas, parametres) => {
 		const uri = `postgres://banc:mot-de-passe-factice@127.0.0.1:5443/mymakeup_test${parametres}`
 
-		expect(messageDuRefus(() => verifierBase(uri))).toStartWith('Base refusée : DATABASE_URI porte un paramètre « host')
+		expect(messageDuRefus(() => checkBase(uri))).toStartWith('Base refusée : DATABASE_URI porte un paramètre « host')
 	})
 
 	test('le refus d’un paramètre d’hôte nomme le paramètre, jamais sa valeur ni l’adresse', () => {
 		const uri = 'postgres://utilisateur-factice:mot-de-passe-factice@127.0.0.1:5443/mymakeup_test?host=db.example.test'
-		const message = messageDuRefus(() => verifierBase(uri))
+		const message = messageDuRefus(() => checkBase(uri))
 
 		expect(message).toBe(
 			"Base refusée : DATABASE_URI porte un paramètre « host », qui remplace l'hôte de l'adresse. Les tests ne lisent l'hôte de la base que dans l'adresse elle-même."
 		)
-		expect(messageDuRefus(() => verifierEnvironnement({ ...BANC, DATABASE_URI: uri }))).toBe(message)
+		expect(messageDuRefus(() => checkEnvironment({ ...BANC, DATABASE_URI: uri }))).toBe(message)
 	})
 
 	test('le message nomme l’hôte et la base, en français, sans l’adresse complète', () => {
 		const uri = 'postgres://utilisateur-factice:mot-de-passe-factice@db.example.test:5432/mymakeup'
-		const message = messageDuRefus(() => verifierBase(uri))
+		const message = messageDuRefus(() => checkBase(uri))
 
 		expect(message).toContain('Base refusée : hôte « db.example.test », base « mymakeup ».')
 		expect(message).toContain('une base locale dont le nom finit par « _test »')
@@ -129,7 +129,7 @@ describe('U85 : refuse une DATABASE_URI non locale ou dont la base ne finit pas 
 	test('un mot de passe qui décale les morceaux de l’adresse ne passe pas dans le message', () => {
 		// The `/` ends the host early: the rest of the password lands in the database name.
 		const uri = 'postgres://utilisateur-factice:123/suite-du-mot-de-passe@db.example.test/mymakeup_test'
-		const message = messageDuRefus(() => verifierBase(uri))
+		const message = messageDuRefus(() => checkBase(uri))
 
 		expect(message).toContain('base (illisible)')
 		expect(message).not.toContain('suite-du-mot-de-passe')
@@ -178,7 +178,7 @@ describe('U86 : refuse une BASE_URL e2e sur my-makeup.fr, www. ou api.', () => {
 		'http://MY-MAKEUP.FR:443/',
 		'https://localhost@www.my-makeup.fr/',
 	])('refuse la prod dans tout environnement : %s', adresse => {
-		expect(messageDuRefus(() => verifierCible(adresse))).toContain('BASE_URL vise la prod')
+		expect(messageDuRefus(() => checkTarget(adresse))).toContain('BASE_URL vise la prod')
 	})
 
 	test.each([
@@ -186,11 +186,11 @@ describe('U86 : refuse une BASE_URL e2e sur my-makeup.fr, www. ou api.', () => {
 		'http://127.0.0.1:3100/auth',
 		'http://[::1]:3100',
 	])('accepte une adresse locale : %s', adresse => {
-		expect(() => verifierCible(adresse)).not.toThrow()
+		expect(() => checkTarget(adresse)).not.toThrow()
 	})
 
 	test('l’ancienne préprod est refusée comme le reste de la prod (ticket 232)', () => {
-		expect(messageDuRefus(() => verifierCible('https://preprod.my-makeup.fr'))).toContain('BASE_URL vise la prod')
+		expect(messageDuRefus(() => checkTarget('https://preprod.my-makeup.fr'))).toContain('BASE_URL vise la prod')
 	})
 
 	test.each([
@@ -198,11 +198,11 @@ describe('U86 : refuse une BASE_URL e2e sur my-makeup.fr, www. ou api.', () => {
 		['un domaine qui finit comme le site', 'https://not-my-makeup.fr'],
 		['une adresse sans protocole web', 'localhost:3100'],
 	])('refuse %s', (_cas, adresse) => {
-		expect(() => verifierCible(adresse)).toThrow(EnvironnementRefuse)
+		expect(() => checkTarget(adresse)).toThrow(RefusedEnvironment)
 	})
 
 	test.each(['BASE_URL', 'NEXT_PUBLIC_SITE_URL'])('la garde lit %s dans l’environnement et nomme la variable', nom => {
-		const message = messageDuRefus(() => verifierEnvironnement({ ...BANC, [nom]: 'https://www.my-makeup.fr' }))
+		const message = messageDuRefus(() => checkEnvironment({ ...BANC, [nom]: 'https://www.my-makeup.fr' }))
 
 		expect(message).toBe(`${nom} vise la prod (« www.my-makeup.fr ») : aucun test ne vise la prod.`)
 	})
@@ -210,23 +210,23 @@ describe('U86 : refuse une BASE_URL e2e sur my-makeup.fr, www. ou api.', () => {
 
 describe('U87 : refuse un domaine d’envoi ou un bucket de prod dans l’environnement de test', () => {
 	test('accepte le banc : capteur de mails et stockage locaux, expéditeur réservé, bucket en -test', () => {
-		expect(verifierEnvironnement(BANC)).toBe('test')
+		expect(checkEnvironment(BANC)).toBe('test')
 		expect(
-			verifierEnvironnement({
+			checkEnvironment({
 				...BANC,
 				SMTP_HOST: 'mailpit',
 				MAILPIT_URL: 'http://mailpit:8025',
 				S3_ENDPOINT: 'http://s3mock:9090',
-				GOOGLE_OIDC_ISSUER: 'http://faux-google:7080',
+				GOOGLE_OIDC_ISSUER: 'http://fake-google:7080',
 			})
 		).toBe('test')
-		expect(verifierEnvironnement({})).toBe('test')
+		expect(checkEnvironment({})).toBe('test')
 	})
 
 	test('le fichier .env.test du dépôt passe la garde : c’est l’environnement du banc', () => {
-		const fichier = lireFichierEnv(readFileSync(path.join(RACINE, '.env.test'), 'utf8'))
+		const fichier = readFileEnv(readFileSync(path.join(RACINE, '.env.test'), 'utf8'))
 
-		expect(verifierEnvironnement(fichier)).toBe('test')
+		expect(checkEnvironment(fichier)).toBe('test')
 		// Each rule of the guard has something to read in the file: none passes for want of a variable.
 		for (const nom of [
 			'APP_ENV',
@@ -245,12 +245,12 @@ describe('U87 : refuse un domaine d’envoi ou un bucket de prod dans l’enviro
 	})
 
 	test('l’expéditeur du banc est sur un domaine réservé : la garde refuse ce fichier dès qu’il écrit au nom du site', () => {
-		const fichier = lireFichierEnv(readFileSync(path.join(RACINE, '.env.test'), 'utf8'))
+		const fichier = readFileEnv(readFileSync(path.join(RACINE, '.env.test'), 'utf8'))
 
 		expect(fichier.EMAIL_FROM).toEndWith('@example.test>')
 		expect(
 			messageDuRefus(() =>
-				verifierEnvironnement({ ...fichier, EMAIL_FROM: 'My Makeup <ne-pas-repondre@send.my-makeup.fr>' })
+				checkEnvironment({ ...fichier, EMAIL_FROM: 'My Makeup <ne-pas-repondre@send.my-makeup.fr>' })
 			)
 		).toStartWith("EMAIL_FROM cite un domaine d'envoi réel (« send.my-makeup.fr »)")
 	})
@@ -260,18 +260,18 @@ describe('U87 : refuse un domaine d’envoi ou un bucket de prod dans l’enviro
 		['MAILGUN_DOMAIN', 'mg.my-makeup.fr', 'mg.my-makeup.fr'],
 		['SMTP_FROM', 'contact@MY-MAKEUP.FR', 'my-makeup.fr'],
 	])('refuse le domaine d’envoi du site dans %s', (nom, valeur, domaine) => {
-		const message = messageDuRefus(() => verifierEnvironnement({ ...BANC, [nom]: valeur }))
+		const message = messageDuRefus(() => checkEnvironment({ ...BANC, [nom]: valeur }))
 
 		expect(message).toStartWith(`${nom} cite un domaine d'envoi réel (« ${domaine} »)`)
 	})
 
 	test('laisse passer un expéditeur dont le domaine réservé ressemble à celui du site', () => {
-		expect(() => verifierEnvironnement({ ...BANC, EMAIL_FROM: 'contact@my-makeup.fr.test' })).not.toThrow()
-		expect(() => verifierEnvironnement({ ...BANC, EMAIL_FROM: 'contact@not-my-makeup.fr' })).not.toThrow()
+		expect(() => checkEnvironment({ ...BANC, EMAIL_FROM: 'contact@my-makeup.fr.test' })).not.toThrow()
+		expect(() => checkEnvironment({ ...BANC, EMAIL_FROM: 'contact@not-my-makeup.fr' })).not.toThrow()
 	})
 
 	test('refuse un relais de mails qui n’est pas le capteur local', () => {
-		const message = messageDuRefus(() => verifierEnvironnement({ ...BANC, SMTP_HOST: 'smtp.resend.com' }))
+		const message = messageDuRefus(() => checkEnvironment({ ...BANC, SMTP_HOST: 'smtp.resend.com' }))
 
 		expect(message).toStartWith('SMTP_HOST refusé (« smtp.resend.com »)')
 	})
@@ -280,7 +280,7 @@ describe('U87 : refuse un domaine d’envoi ou un bucket de prod dans l’enviro
 		['un capteur distant', 'https://mailpit.example.test', '« mailpit.example.test »'],
 		['une adresse sans protocole web', '127.0.0.1:8025', undefined],
 	])('refuse %s dans MAILPIT_URL', (_cas, adresse, hote) => {
-		const message = messageDuRefus(() => verifierEnvironnement({ ...BANC, MAILPIT_URL: adresse }))
+		const message = messageDuRefus(() => checkEnvironment({ ...BANC, MAILPIT_URL: adresse }))
 
 		expect(message).toStartWith('MAILPIT_URL')
 		if (hote) expect(message).toContain(hote)
@@ -291,7 +291,7 @@ describe('U87 : refuse un domaine d’envoi ou un bucket de prod dans l’enviro
 		'mymakeup-test-archive',
 		'mymakeup_test',
 	])('refuse un bucket dont le nom ne finit pas par -test : %s', bucket => {
-		const message = messageDuRefus(() => verifierEnvironnement({ ...BANC, S3_BUCKET: bucket }))
+		const message = messageDuRefus(() => checkEnvironment({ ...BANC, S3_BUCKET: bucket }))
 
 		expect(message).toStartWith(`S3_BUCKET refusé (« ${bucket} »)`)
 	})
@@ -304,7 +304,7 @@ describe('U87 : refuse un domaine d’envoi ou un bucket de prod dans l’enviro
 		],
 		['une adresse sans protocole web', '127.0.0.1:9000', undefined],
 	])('refuse %s dans S3_ENDPOINT', (_cas, adresse, hote) => {
-		const message = messageDuRefus(() => verifierEnvironnement({ ...BANC, S3_ENDPOINT: adresse }))
+		const message = messageDuRefus(() => checkEnvironment({ ...BANC, S3_ENDPOINT: adresse }))
 
 		expect(message).toStartWith('S3_ENDPOINT')
 		if (hote) expect(message).toContain(hote)
@@ -315,9 +315,9 @@ describe('Connexion Google : refuse Google lui-même et tout identifiant Google 
 	const sansGoogle = Object.fromEntries(Object.entries(BANC).filter(([nom]) => !nom.startsWith('GOOGLE_')))
 
 	test('accepte le faux Google du banc et son client factice, et un environnement sans connexion Google', () => {
-		expect(verifierEnvironnement(BANC)).toBe('test')
-		expect(verifierEnvironnement(sansGoogle)).toBe('test')
-		expect(verifierEnvironnement({ ...sansGoogle, GOOGLE_OIDC_ISSUER: 'http://localhost:7219' })).toBe('test')
+		expect(checkEnvironment(BANC)).toBe('test')
+		expect(checkEnvironment(sansGoogle)).toBe('test')
+		expect(checkEnvironment({ ...sansGoogle, GOOGLE_OIDC_ISSUER: 'http://localhost:7219' })).toBe('test')
 	})
 
 	test.each([
@@ -326,7 +326,7 @@ describe('Connexion Google : refuse Google lui-même et tout identifiant Google 
 		['un hôte qui commence comme un hôte local', 'http://127.0.0.1.example.test:7080', '« 127.0.0.1.example.test »'],
 		['une adresse sans protocole web', '127.0.0.1:7080', undefined],
 	])('refuse %s dans GOOGLE_OIDC_ISSUER', (_cas, adresse, hote) => {
-		const message = messageDuRefus(() => verifierEnvironnement({ ...BANC, GOOGLE_OIDC_ISSUER: adresse }))
+		const message = messageDuRefus(() => checkEnvironment({ ...BANC, GOOGLE_OIDC_ISSUER: adresse }))
 
 		expect(message).toStartWith('GOOGLE_OIDC_ISSUER')
 		if (hote) expect(message).toContain(`refusé (hôte ${hote}) : les tests ne parlent qu'au faux Google du banc`)
@@ -336,9 +336,7 @@ describe('Connexion Google : refuse Google lui-même et tout identifiant Google 
 		'GOOGLE_CLIENT_ID',
 		'GOOGLE_CLIENT_SECRET',
 	])('refuse %s réglé sans fournisseur : la connexion viserait Google lui-même', nom => {
-		const message = messageDuRefus(() =>
-			verifierEnvironnement({ ...sansGoogle, [nom]: BANC[nom as keyof typeof BANC] })
-		)
+		const message = messageDuRefus(() => checkEnvironment({ ...sansGoogle, [nom]: BANC[nom as keyof typeof BANC] }))
 
 		expect(message).toStartWith(
 			`${nom} est réglé sans GOOGLE_OIDC_ISSUER : la connexion Google viserait Google lui-même.`
@@ -349,7 +347,7 @@ describe('Connexion Google : refuse Google lui-même et tout identifiant Google 
 		['GOOGLE_CLIENT_ID', 'identifiant-temoin-sans-le-mot'],
 		['GOOGLE_CLIENT_SECRET', 'valeur-temoin-sans-le-mot'],
 	])('refuse dans %s une valeur qui ne se dit pas factice, sans la recopier', (nom, valeur) => {
-		const message = messageDuRefus(() => verifierEnvironnement({ ...BANC, [nom]: valeur }))
+		const message = messageDuRefus(() => checkEnvironment({ ...BANC, [nom]: valeur }))
 
 		expect(message).toBe(
 			`${nom} refusé : sa valeur ne porte pas le mot « factice ». Les tests n'utilisent que le client factice du banc, jamais un vrai identifiant Google.`
@@ -379,22 +377,22 @@ describe('Connexion Google : refuse Google lui-même et tout identifiant Google 
 
 describe('Deux environnements reconnus : test, prod (toujours refusée)', () => {
 	test('rien de déclaré vaut test, le plus strict', () => {
-		expect(lireEnvironnement(undefined)).toBe('test')
-		expect(lireEnvironnement('')).toBe('test')
+		expect(readEnvironment(undefined)).toBe('test')
+		expect(readEnvironment('')).toBe('test')
 	})
 
 	test('test est admis', () => {
-		expect(lireEnvironnement('test')).toBe('test')
+		expect(readEnvironment('test')).toBe('test')
 	})
 
 	test('prod est refusée même quand tout le reste est local', () => {
-		const message = messageDuRefus(() => verifierEnvironnement({ ...BANC, APP_ENV: 'prod' }))
+		const message = messageDuRefus(() => checkEnvironment({ ...BANC, APP_ENV: 'prod' }))
 
 		expect(message).toBe('APP_ENV vaut « prod » : aucun test ne tourne en environnement de prod.')
 	})
 
 	test.each(['production', 'dev', 'PROD', 'preprod', 'préprod'])('un environnement inconnu est refusé : %s', valeur => {
-		expect(messageDuRefus(() => lireEnvironnement(valeur))).toContain('environnement inconnu')
+		expect(messageDuRefus(() => readEnvironment(valeur))).toContain('environnement inconnu')
 	})
 
 	test('arrête bun avant le premier test quand l’environnement déclaré est prod', async () => {
@@ -410,9 +408,9 @@ describe('La fausse base Strapi de l’import : STRAPI_SOURCE_URI locale, et en 
 	const SOURCE = 'postgres://lecture_strapi:mot-de-passe-factice-de-lecture@127.0.0.1:5443/strapi_source_test'
 
 	test('accepte la source du banc, et un environnement sans source', () => {
-		expect(verifierEnvironnement({ ...BANC, STRAPI_SOURCE_URI: SOURCE })).toBe('test')
-		expect(verifierEnvironnement(BANC)).toBe('test')
-		const fichier = lireFichierEnv(readFileSync(path.join(RACINE, '.env.test'), 'utf8'))
+		expect(checkEnvironment({ ...BANC, STRAPI_SOURCE_URI: SOURCE })).toBe('test')
+		expect(checkEnvironment(BANC)).toBe('test')
+		const fichier = readFileEnv(readFileSync(path.join(RACINE, '.env.test'), 'utf8'))
 		expect(fichier.STRAPI_SOURCE_URI).toBe(SOURCE)
 	})
 
@@ -421,17 +419,17 @@ describe('La fausse base Strapi de l’import : STRAPI_SOURCE_URI locale, et en 
 		['base qui ne finit pas par _test', 'postgres://lecture_strapi:x@127.0.0.1:5443/strapi'],
 		['paramètre host qui détourne l’adresse', `${SOURCE}?host=db.example.test`],
 	])('refuse : %s', (_cas, uri) => {
-		expect(() => verifierEnvironnement({ ...BANC, STRAPI_SOURCE_URI: uri })).toThrow(EnvironnementRefuse)
+		expect(() => checkEnvironment({ ...BANC, STRAPI_SOURCE_URI: uri })).toThrow(RefusedEnvironment)
 	})
 
 	test('le message nomme STRAPI_SOURCE_URI, jamais sa valeur', () => {
 		const message = messageDuRefus(() =>
-			verifierEnvironnement({ ...BANC, STRAPI_SOURCE_URI: `${SOURCE}?host=db.example.test` })
+			checkEnvironment({ ...BANC, STRAPI_SOURCE_URI: `${SOURCE}?host=db.example.test` })
 		)
 
 		expect(message).toStartWith('Base refusée : STRAPI_SOURCE_URI porte un paramètre « host »')
 		expect(message).not.toContain('mot-de-passe-factice')
-		expect(messageDuRefus(() => verifierEnvironnement({ ...BANC, STRAPI_SOURCE_URI: 'strapi_source_test' }))).toBe(
+		expect(messageDuRefus(() => checkEnvironment({ ...BANC, STRAPI_SOURCE_URI: 'strapi_source_test' }))).toBe(
 			"STRAPI_SOURCE_URI n'est pas une adresse PostgreSQL lisible."
 		)
 	})
@@ -462,15 +460,15 @@ describe('Ticket 233 : aucun test ne lance l’import à la demande', () => {
 		'IMPORT_COMMUNES',
 		'IMPORT_CONSENTEMENT_LE',
 	])('%s réglée : refusée, sans dire sa valeur', nom => {
-		const message = messageDuRefus(() => verifierEnvironnement({ ...BANC, [nom]: 'valeur-temoin-233' }))
+		const message = messageDuRefus(() => checkEnvironment({ ...BANC, [nom]: 'valeur-temoin-233' }))
 
 		expect(message).toContain(nom)
 		expect(message).not.toContain('valeur-temoin-233')
 	})
 
 	test('une variable vide n’est pas réglée, et l’environnement du banc n’en porte aucune', () => {
-		expect(verifierEnvironnement({ ...BANC, IMPORT_TOKEN: '' })).toBe('test')
-		expect(verifierEnvironnement({ ...BANC, IMPORT_TOKEN: '  ' })).toBe('test')
+		expect(checkEnvironment({ ...BANC, IMPORT_TOKEN: '' })).toBe('test')
+		expect(checkEnvironment({ ...BANC, IMPORT_TOKEN: '  ' })).toBe('test')
 		expect(Object.keys(BANC).filter(nom => nom.startsWith('IMPORT_'))).toEqual([])
 	})
 })

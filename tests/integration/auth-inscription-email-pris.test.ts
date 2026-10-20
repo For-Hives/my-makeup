@@ -8,8 +8,8 @@ import type { MailboxRateLimits } from '@/lib/auth/sign-up-rate-limits'
 import { payloadSendEmail } from '@/lib/emails/send'
 import { serverEnv } from '@/lib/env'
 import { purgeUnconfirmedAccounts } from '@/lib/tasks/unconfirmed-accounts'
-import { attendreLeMail, mailsRecus, viderLeCapteur } from '../support/mailpit'
-import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { emptySink, mailReceived, waitMail } from '../support/mailpit'
+import { emptyBase, testPayload } from '../support/payload-test'
 
 /**
  * An address that already has an account (ticket 083; plan 02 E03, E04), the Gmail variants of an
@@ -18,7 +18,7 @@ import { payloadDeTest, viderLaBase } from '../support/payload-test'
  */
 
 afterAll(async () => {
-	await Promise.all([viderLaBase(), viderLeCapteur()])
+	await Promise.all([emptyBase(), emptySink()])
 })
 
 const MOT_DE_PASSE = 'aaaaaaaa'
@@ -54,7 +54,7 @@ async function inscription(
 	email: string,
 	options: { plancherMs?: number; freins?: MailboxRateLimits; verifier?: boolean } = {}
 ) {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	return signUpAccount({
 		payload,
 		donnees: { nom: 'Léa Fictive', email, password: MOT_DE_PASSE },
@@ -68,7 +68,7 @@ async function inscription(
 }
 
 async function renvoi(email: string, freins: MailboxRateLimits) {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	return resendConfirmation({
 		payload,
 		email,
@@ -80,10 +80,10 @@ async function renvoi(email: string, freins: MailboxRateLimits) {
 	})
 }
 
-const comptes = async () => (await (await payloadDeTest()).count({ collection: 'pros' })).totalDocs
-const profils = async () => (await (await payloadDeTest()).count({ collection: 'profiles' })).totalDocs
+const comptes = async () => (await (await testPayload()).count({ collection: 'pros' })).totalDocs
+const profils = async () => (await (await testPayload()).count({ collection: 'profiles' })).totalDocs
 const journal = async () =>
-	(await (await payloadDeTest()).find({ collection: 'auth-events', depth: 0, limit: 1000, sort: 'id' })).docs
+	(await (await testPayload()).find({ collection: 'auth-events', depth: 0, limit: 1000, sort: 'id' })).docs
 const lienDuMail = (liens: string[]) => liens.find(l => l.includes('/auth/verification-complete'))
 const mediane = (valeurs: number[]) => [...valeurs].sort((a, b) => a - b)[Math.floor(valeurs.length / 2)] ?? 0
 
@@ -91,8 +91,8 @@ describe('E03 : une adresse déjà utilisée ne révèle rien et ne crée pas de
 	test('même réponse que pour une adresse neuve, aucun second compte ni profil, et la vraie propriétaire, encore en attente, reçoit son lien de nouveau', async () => {
 		const email = courriel('deja')
 		const neuve = await inscription(email)
-		await attendreLeMail({ pour: email })
-		const [c, p, mails] = [await comptes(), await profils(), (await mailsRecus(email)).length]
+		await waitMail({ pour: email })
+		const [c, p, mails] = [await comptes(), await profils(), (await mailReceived(email)).length]
 
 		// Typed in capitals, by someone else, under another name.
 		const doublon = await inscription(email.toUpperCase())
@@ -101,7 +101,7 @@ describe('E03 : une adresse déjà utilisée ne révèle rien et ne crée pas de
 		expect(await comptes()).toBe(c)
 		expect(await profils()).toBe(p)
 		// Her account is still waiting: the mail she lost leaves again, with the same link.
-		const recus = await mailsRecus(email)
+		const recus = await mailReceived(email)
 		expect(recus.length).toBe(mails + 1)
 		expect(lienDuMail(recus[1]?.liens ?? [])).toBe(lienDuMail(recus[0]?.liens ?? []))
 	})
@@ -116,7 +116,7 @@ describe('E03 : une adresse déjà utilisée ne révèle rien et ne crée pas de
 		expect(doublon).toEqual({ ok: true, confirmee: false })
 		expect(await comptes()).toBe(c)
 		expect(await profils()).toBe(p)
-		const mail = await attendreLeMail({ pour: email })
+		const mail = await waitMail({ pour: email })
 		expect(mail.sujet).toContain('déjà un compte')
 		expect(lienDuMail(mail.liens)).toBeUndefined()
 		expect(mail.liens.some(l => l.endsWith('/auth/signin'))).toBe(true)
@@ -136,7 +136,7 @@ describe('E03 : une adresse déjà utilisée ne révèle rien et ne crée pas de
 
 	test('une adresse que Payload refuse pour sa forme n’est jamais dite « déjà utilisée » : la phrase du champ, aucun compte (ticket 224)', async () => {
 		// The form checks the address first; this is what a rule of Payload that the form does not know would give.
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const avant = (await payload.count({ collection: 'pros', overrideAccess: true })).totalDocs
 		const resultat = await inscription('pas-une-adresse')
 
@@ -152,7 +152,7 @@ describe('E03 : une adresse déjà utilisée ne révèle rien et ne crée pas de
 	test('un mail de la propriétaire qui ne part pas donne la même réponse que pour une adresse neuve dont le mail ne part pas', async () => {
 		const email = courriel('relais-en-feu')
 		await inscription(email)
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const enPanne = () => Promise.reject(new Error('relais en feu'))
 		const appel = (adresse: string) =>
 			signUpAccount({
@@ -206,7 +206,7 @@ describe('E03 : une adresse déjà utilisée ne révèle rien et ne crée pas de
 		const { freins, avancer } = freinsAvecHorloge()
 		// A confirmed account (no mail, no place taken); the sign-ups that follow are on the wall's rules.
 		await inscription(email, { verifier: false })
-		const dejaUnCompte = async () => (await mailsRecus(email)).filter(m => m.sujet.includes('déjà un compte')).length
+		const dejaUnCompte = async () => (await mailReceived(email)).filter(m => m.sujet.includes('déjà un compte')).length
 
 		await inscription(email, { freins })
 		await inscription(email, { freins })
@@ -242,7 +242,7 @@ describe('variantes Gmail : une boîte, un compte', () => {
 		expect(await comptes()).toBe(c)
 		expect(await profils()).toBe(p)
 		// The real owner is told, at the address stored.
-		expect((await mailsRecus(existant)).some(m => m.sujet.includes('déjà un compte'))).toBe(true)
+		expect((await mailReceived(existant)).some(m => m.sujet.includes('déjà un compte'))).toBe(true)
 	})
 
 	test('l’inverse aussi : le compte existant porte les points, la variante n’en a pas', async () => {
@@ -277,7 +277,7 @@ describe('E04 : le renvoi de la confirmation est limité', () => {
 		const email = courriel('renvoi')
 		const { freins, avancer } = freinsAvecHorloge()
 		await inscription(email, { freins })
-		const premier = await attendreLeMail({ pour: email })
+		const premier = await waitMail({ pour: email })
 		const lien = lienDuMail(premier.liens)
 
 		// The sign-up took the place of the minute: a resend at once is refused, one a minute later leaves.
@@ -287,17 +287,17 @@ describe('E04 : le renvoi de la confirmation est limité', () => {
 			expect(await renvoi(email, freins)).toEqual({ ok: true })
 			expect(await renvoi(email, freins)).toMatchObject({ ok: false, code: 'trop-de-renvois', raison: 'minute' })
 		}
-		const recus = await mailsRecus(email)
+		const recus = await mailReceived(email)
 		expect(recus.length).toBe(5)
 		expect(recus.every(m => lienDuMail(m.liens) === lien)).toBe(true)
 
 		avancer(61_000)
 		expect(await renvoi(email, freins)).toMatchObject({ ok: false, code: 'trop-de-renvois', raison: 'jour' })
-		expect((await mailsRecus(email)).length).toBe(5)
+		expect((await mailReceived(email)).length).toBe(5)
 
 		avancer(24 * 60 * 60 * 1000)
 		expect(await renvoi(email, freins)).toEqual({ ok: true })
-		expect((await mailsRecus(email)).length).toBe(6)
+		expect((await mailReceived(email)).length).toBe(6)
 	})
 
 	test('l’inscription suivie du renvoi donne les mêmes réponses pour une adresse neuve et pour une adresse prise : pas d’oracle', async () => {
@@ -326,12 +326,12 @@ describe('E04 : le renvoi de la confirmation est limité', () => {
 		const email = courriel('relance')
 		const { freins, avancer } = freinsAvecHorloge()
 		await inscription(email, { freins })
-		const premier = await attendreLeMail({ pour: email })
+		const premier = await waitMail({ pour: email })
 		avancer(61_000)
 
 		await inscription(email, { freins })
 
-		const recus = await mailsRecus(email)
+		const recus = await mailReceived(email)
 		expect(recus.length).toBe(2)
 		expect(recus.every(m => !m.sujet.includes('déjà un compte'))).toBe(true)
 		expect(lienDuMail(recus[1]?.liens ?? [])).toBe(lienDuMail(premier.liens))
@@ -345,7 +345,7 @@ describe('E04 : le renvoi de la confirmation est limité', () => {
 		expect(await renvoi(inconnue, freins)).toMatchObject({ ok: false, code: 'trop-de-renvois', raison: 'minute' })
 		avancer(61_000)
 		expect(await renvoi(inconnue, freins)).toEqual({ ok: true })
-		expect(await mailsRecus(inconnue)).toEqual([])
+		expect(await mailReceived(inconnue)).toEqual([])
 	})
 
 	test('un compte déjà confirmé reçoit « tu as déjà un compte », pas un lien de confirmation', async () => {
@@ -354,7 +354,7 @@ describe('E04 : le renvoi de la confirmation est limité', () => {
 
 		expect(await renvoi(email, freinsLarges())).toEqual({ ok: true })
 
-		const mail = await attendreLeMail({ pour: email })
+		const mail = await waitMail({ pour: email })
 		expect(mail.sujet).toContain('déjà un compte')
 		expect(lienDuMail(mail.liens)).toBeUndefined()
 	})
@@ -408,7 +408,7 @@ describe('purge des comptes jamais confirmés (ticket 084)', () => {
 		legacyProvider?: string
 		profilRempli?: boolean
 	}) {
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const compte = await payload.create({
 			collection: 'pros',
 			data: {
@@ -437,10 +437,10 @@ describe('purge des comptes jamais confirmés (ticket 084)', () => {
 		return { compte, profil }
 	}
 	const existe = async (collection: 'pros' | 'profiles', id: number) =>
-		(await (await payloadDeTest()).count({ collection, where: { id: { equals: id } } })).totalDocs === 1
+		(await (await testPayload()).count({ collection, where: { id: { equals: id } } })).totalDocs === 1
 
 	test('un compte non confirmé de 8 jours part avec son profil vide ; tout le reste est gardé', async () => {
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const perime = await creer({ jours: 8 })
 		const recent = await creer({ jours: 6 })
 		const confirme = await creer({ jours: 30, verifie: true })
@@ -461,7 +461,7 @@ describe('purge des comptes jamais confirmés (ticket 084)', () => {
 	})
 
 	test('la purge se rejoue sans effet, et le délai est de 7 jours pleins', async () => {
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const limite = await creer({ jours: 7 })
 		const juste = await creer({ jours: 6.9 })
 

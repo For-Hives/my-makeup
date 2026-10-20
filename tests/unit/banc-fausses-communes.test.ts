@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { CITIES_ADDRESS, citiesAddress } from '@/lib/dashboard/city-reference'
-import { creerFaussesCommunes } from '../support/fake-cities/provider'
+import { createFakeCities } from '../support/fake-cities/provider'
 
 /**
  * The fake list of the communes of the bench (CI of 15/10/2026): it answers the two questions of
@@ -8,7 +8,7 @@ import { creerFaussesCommunes } from '../support/fake-cities/provider'
  * geo.api.gouv.fr. And the variable that points the application at it is refused anywhere else.
  */
 
-const fournisseur = creerFaussesCommunes()
+const fournisseur = createFakeCities()
 let serveur: ReturnType<typeof Bun.serve>
 let adresse = ''
 
@@ -28,7 +28,7 @@ const lire = async (chemin: string) => {
 
 describe('la fausse liste des communes', () => {
 	test('elle dit qui elle est', async () => {
-		expect((await lire('/_sante')).corps).toEqual({ service: 'faux-communes' })
+		expect((await lire('/_sante')).corps).toEqual({ service: 'fake-cities' })
 	})
 
 	test('une recherche par nom : le nom exact d’abord, sans accent ni majuscule, bornée par limit, aux champs de la liste officielle', async () => {
@@ -62,14 +62,14 @@ describe('la fausse liste des communes', () => {
 })
 
 describe('l’application ne demande la fausse liste que sur ce poste, quand le banc la lui donne', () => {
-	test('sans COMMUNES_DU_BANC, la liste officielle', () => {
+	test('sans BENCH_CITIES, la liste officielle', () => {
 		expect(citiesAddress({})).toBe(CITIES_ADDRESS)
-		expect(citiesAddress({ COMMUNES_DU_BANC: ' ' })).toBe(CITIES_ADDRESS)
+		expect(citiesAddress({ BENCH_CITIES: ' ' })).toBe(CITIES_ADDRESS)
 	})
 
 	test('l’adresse du banc, sur ce poste', () => {
 		expect(
-			citiesAddress({ COMMUNES_DU_BANC: 'http://127.0.0.1:2050', NEXT_PUBLIC_SITE_URL: 'http://localhost:3100' })
+			citiesAddress({ BENCH_CITIES: 'http://127.0.0.1:2050', NEXT_PUBLIC_SITE_URL: 'http://localhost:3100' })
 		).toBe('http://127.0.0.1:2050')
 	})
 
@@ -80,11 +80,11 @@ describe('l’application ne demande la fausse liste que sur ce poste, quand le 
 		'http://127.0.0.1:2050/communes',
 		'http://127.0.0.1',
 	])('refuse %s', valeur => {
-		expect(() => citiesAddress({ COMMUNES_DU_BANC: valeur })).toThrow('COMMUNES_DU_BANC refusée')
+		expect(() => citiesAddress({ BENCH_CITIES: valeur })).toThrow('BENCH_CITIES refusée')
 	})
 
 	test.each(['https://my-makeup.fr'])('refuse toute valeur sur %s', site => {
-		expect(() => citiesAddress({ COMMUNES_DU_BANC: 'http://127.0.0.1:2050', NEXT_PUBLIC_SITE_URL: site })).toThrow(
+		expect(() => citiesAddress({ BENCH_CITIES: 'http://127.0.0.1:2050', NEXT_PUBLIC_SITE_URL: site })).toThrow(
 			'un site déployé'
 		)
 	})

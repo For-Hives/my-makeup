@@ -5,7 +5,7 @@ import type { MailState } from '@/lib/contact/states'
 import { markImportInProgress } from '@/lib/import-context'
 import { runDailyTasks } from '@/lib/tasks/daily'
 import { RETRY_DELAY_MS, retryStuckMessages } from '@/lib/tasks/stuck-messages'
-import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { emptyBase, testPayload } from '../support/payload-test'
 
 /**
  * A contact message whose mail never got an answer (the process stopped between the storing and the send)
@@ -13,10 +13,10 @@ import { payloadDeTest, viderLaBase } from '../support/payload-test'
  * (ticket 224). The clock is simulated: the rows are written now, the task runs at a chosen moment.
  */
 
-afterAll(viderLaBase)
+afterAll(emptyBase)
 
 async function ecrire(etatMail: MailState) {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	return payload.create({
 		collection: 'contact-requests',
 		data: {
@@ -33,7 +33,7 @@ async function ecrire(etatMail: MailState) {
 }
 
 async function etatDe(id: number) {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	const { mailStatus, status } = await payload.findByID({ collection: 'contact-requests', id, depth: 0 })
 	return { mailStatus, status }
 }
@@ -42,7 +42,7 @@ const apres = (ms: number) => new Date(Date.now() + ms)
 
 describe('la reprise des messages restés en cours d’envoi, sur une horloge simulée', () => {
 	test('avant le délai rien ne bouge ; après, seul « en cours d’envoi » passe en échec, le statut intact', async () => {
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const bloque = await ecrire('pending')
 		const envoye = await ecrire('sent')
 		const echoue = await ecrire('failed')
@@ -62,7 +62,7 @@ describe('la reprise des messages restés en cours d’envoi, sur une horloge si
 	})
 
 	test('le message repris est renvoyable par l’admin, une fois', async () => {
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const bloque = await ecrire('pending')
 		await runDailyTasks(payload, apres(RETRY_DELAY_MS + 60_000), [retryStuckMessages])
 		const mails: string[] = []
@@ -81,7 +81,7 @@ describe('la reprise des messages restés en cours d’envoi, sur une horloge si
 	})
 
 	test('pendant un import rien ne bouge', async () => {
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const bloque = await ecrire('pending')
 		const fin = markImportInProgress()
 		const pendant = await runDailyTasks(payload, apres(RETRY_DELAY_MS + 60_000), [retryStuckMessages])

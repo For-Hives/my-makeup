@@ -2,7 +2,7 @@
  * The inventory of the fake Strapi source: each case of the real database it carries, in numbers.
  *
  * It is computed from rows and from the keys of the storage, whatever they come from: the rows
- * read back from the source by its read-only role (tests/outils/source-strapi.ts), or the rows of
+ * read back from the source by its read-only role (tests/support/source-strapi.ts), or the rows of
  * the definition itself (donnees.ts). The two must give the same inventory, and both must give the
  * table of docs/tests/source-strapi.md.
  *
@@ -15,26 +15,19 @@ import { completeness, type ProfileFields, usableCity } from '@/lib/profile/comp
 import { DESCRIPTION_MAX_LENGTH, endMessage, NAME_MAX_LENGTH, obtainMessage, textMessage } from '@/lib/profile/lists'
 import { publicPlace } from '@/lib/profile/public-place'
 import { assignSlugs, fallbackSlug, slugify } from '@/lib/slug'
-import {
-	COMPTES_DE_FIXTURE,
-	type Ligne,
-	PROFILS_SANS_PROPRIETAIRE,
-	TYPE_PROFIL,
-	type Valeur,
-	VILLES_HOMONYMES,
-} from './data'
-import type { NomDeTable } from './schema'
+import { CITY_HOMONYMS, FIXTURE_ACCOUNTS, type Line, PROFILES_WITHOUT_OWNER, TYPE_PROFILE, type Value } from './data'
+import type { TableName } from './schema'
 
 /** What the inventory reads. */
-export interface EtatDeLaSource {
-	lignes: Readonly<Record<NomDeTable, readonly Ligne[]>>
+export interface SourceState {
+	lignes: Readonly<Record<TableName, readonly Line[]>>
 	/** The keys of the objects the storage holds. */
 	objets: ReadonlySet<string>
 	/** The public address of the storage: the URL of a file is this, « / », then the key of its object. */
 	medias: string
 }
 
-export interface LigneDInventaire {
+export interface InventoryLine {
 	groupe: string
 	cas: string
 	/** The same count on the real database, 13/10/2026; « — » when it was not measured that day. */
@@ -43,13 +36,13 @@ export interface LigneDInventaire {
 }
 
 /** A complete bcrypt hash: version, cost, 22 characters of salt and 31 of hash. */
-export const HASH_BCRYPT_COMPLET = /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/
+export const HASH_BCRYPT_FULL = /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/
 
 const TYPE_ARTICLE = 'api::article.article'
 const TYPE_TALENT = 'api::talent.talent'
 
 /** The table of each component type, as `component_type` names it in the link tables. */
-const TABLE_DU_COMPOSANT: Readonly<Record<string, NomDeTable>> = {
+const COMPONENT_TABLE: Readonly<Record<string, TableName>> = {
 	'makeupartists.skills': 'components_makeupartists_skills',
 	'makeupartists.experiences': 'components_makeupartists_experiences',
 	'makeupartists.courses': 'components_makeupartists_courses',
@@ -59,161 +52,161 @@ const TABLE_DU_COMPOSANT: Readonly<Record<string, NomDeTable>> = {
 	'service-offers.options': 'components_service_offers_options',
 }
 
-const TABLES_DE_LIENS: readonly NomDeTable[] = [
+const LINK_TABLES: readonly TableName[] = [
 	'makeup_artistes_components',
 	'components_makeupartists_service_offers_components',
 ]
 
-const texte = (valeur: Valeur | undefined): string | null => (typeof valeur === 'string' ? valeur : null)
-const nombre = (valeur: Valeur | undefined): number | null => {
+const text = (valeur: Value | undefined): string | null => (typeof valeur === 'string' ? valeur : null)
+const count = (valeur: Value | undefined): number | null => {
 	if (typeof valeur === 'number') return valeur
 	return typeof valeur === 'string' && valeur.trim() !== '' && Number.isFinite(Number(valeur)) ? Number(valeur) : null
 }
-const rempli = (valeur: Valeur | undefined): boolean => (texte(valeur)?.trim() ?? '') !== ''
-const idDe = (ligne: Ligne): number => nombre(ligne.id) ?? Number.NaN
+const filled = (valeur: Value | undefined): boolean => (text(valeur)?.trim() ?? '') !== ''
+const idOf = (ligne: Line): number => count(ligne.id) ?? Number.NaN
 
 /** How many values are carried by more than one row, and how many rows carry them. */
-function doublons(valeurs: readonly (string | null)[]): { valeurs: number; lignes: number } {
-	const comptes = new Map<string, number>()
-	for (const valeur of valeurs) if (valeur) comptes.set(valeur, (comptes.get(valeur) ?? 0) + 1)
-	const multiples = [...comptes.values()].filter(n => n > 1)
+function duplicates(valeurs: readonly (string | null)[]): { valeurs: number; lignes: number } {
+	const accounts = new Map<string, number>()
+	for (const value of valeurs) if (value) accounts.set(value, (accounts.get(value) ?? 0) + 1)
+	const multiples = [...accounts.values()].filter(n => n > 1)
 	return { valeurs: multiples.length, lignes: multiples.reduce((somme, n) => somme + n, 0) }
 }
 
 /** Everything the counts read, worked out once from the rows. */
-function lire(etat: EtatDeLaSource) {
-	const { lignes, objets, medias } = etat
-	const comptes = lignes.up_users
-	const profils = lignes.makeup_artistes
-	const idsDesComptes = new Set(comptes.map(idDe))
-	const idsDesProfils = new Set(profils.map(idDe))
-	const liensDeComptes = lignes.makeup_artistes_user_links.filter(
-		lien => idsDesProfils.has(nombre(lien.makeup_artiste_id) ?? -1) && idsDesComptes.has(nombre(lien.user_id) ?? -1)
+function read(etat: SourceState) {
+	const { lignes: lines, objets: objects, medias: media } = etat
+	const accounts = lines.up_users
+	const profiles = lines.makeup_artistes
+	const accountIds = new Set(accounts.map(idOf))
+	const profileIds = new Set(profiles.map(idOf))
+	const accountLinks = lines.makeup_artistes_user_links.filter(
+		lien => profileIds.has(count(lien.makeup_artiste_id) ?? -1) && accountIds.has(count(lien.user_id) ?? -1)
 	)
-	const profilsRelies = new Set(liensDeComptes.map(lien => nombre(lien.makeup_artiste_id)))
-	const comptesRelies = new Set(liensDeComptes.map(lien => nombre(lien.user_id)))
+	const linkedProfiles = new Set(accountLinks.map(lien => count(lien.makeup_artiste_id)))
+	const linkedAccounts = new Set(accountLinks.map(lien => count(lien.user_id)))
 
-	const parId = new Map<NomDeTable, Map<number, Ligne>>()
-	for (const table of Object.values(TABLE_DU_COMPOSANT))
-		parId.set(table, new Map(lignes[table].map(ligne => [idDe(ligne), ligne])))
+	const byId = new Map<TableName, Map<number, Line>>()
+	for (const table of Object.values(COMPONENT_TABLE))
+		byId.set(table, new Map(lines[table].map(ligne => [idOf(ligne), ligne])))
 
 	// The rows of each list: link table, entry, field; ordered by `order`, as Strapi reads them.
-	const listes = new Map<string, { liens: Ligne[]; lignes: Ligne[] }>()
-	const lies = new Map<NomDeTable, Set<number>>()
-	for (const tableDeLiens of TABLES_DE_LIENS)
-		for (const lien of lignes[tableDeLiens]) {
-			const table = TABLE_DU_COMPOSANT[texte(lien.component_type) ?? '']
+	const lists = new Map<string, { liens: Line[]; lignes: Line[] }>()
+	const lies = new Map<TableName, Set<number>>()
+	for (const linkTable of LINK_TABLES)
+		for (const link of lines[linkTable]) {
+			const table = COMPONENT_TABLE[text(link.component_type) ?? '']
 			if (!table) continue
-			const idDuComposant = nombre(lien.component_id) ?? -1
-			lies.set(table, (lies.get(table) ?? new Set()).add(idDuComposant))
-			const cle = `${tableDeLiens}|${nombre(lien.entity_id)}|${texte(lien.field)}`
-			const liste = listes.get(cle) ?? { liens: [], lignes: [] }
-			liste.liens.push(lien)
-			listes.set(cle, liste)
+			const componentId = count(link.component_id) ?? -1
+			lies.set(table, (lies.get(table) ?? new Set()).add(componentId))
+			const key = `${linkTable}|${count(link.entity_id)}|${text(link.field)}`
+			const list = lists.get(key) ?? { liens: [], lignes: [] }
+			list.liens.push(link)
+			lists.set(key, list)
 		}
-	for (const [cle, liste] of listes) {
-		liste.liens.sort((a, b) => (nombre(a.order) ?? 0) - (nombre(b.order) ?? 0) || idDe(a) - idDe(b))
-		liste.lignes = liste.liens.flatMap(lien => {
-			const table = TABLE_DU_COMPOSANT[texte(lien.component_type) ?? '']
-			const ligne = table ? parId.get(table)?.get(nombre(lien.component_id) ?? -1) : undefined
-			return ligne ? [ligne] : []
+	for (const [key, list] of lists) {
+		list.liens.sort((a, b) => (count(a.order) ?? 0) - (count(b.order) ?? 0) || idOf(a) - idOf(b))
+		list.lignes = list.liens.flatMap(lien => {
+			const table = COMPONENT_TABLE[text(lien.component_type) ?? '']
+			const line = table ? byId.get(table)?.get(count(lien.component_id) ?? -1) : undefined
+			return line ? [line] : []
 		})
-		listes.set(cle, liste)
+		lists.set(key, list)
 	}
-	const listeDe = (profil: number, champ: string): Ligne[] =>
-		listes.get(`makeup_artistes_components|${profil}|${champ}`)?.lignes ?? []
+	const listOf = (profil: number, champ: string): Line[] =>
+		lists.get(`makeup_artistes_components|${profil}|${champ}`)?.lignes ?? []
 
 	// File links: those that name an entry that still exists, and those whose entry is gone.
-	const entreesVivantes = new Map<string, Set<number>>([
-		[TYPE_PROFIL, idsDesProfils],
-		[TYPE_ARTICLE, new Set(lignes.articles.map(idDe))],
-		[TYPE_TALENT, new Set(lignes.talents.map(idDe))],
+	const liveEntries = new Map<string, Set<number>>([
+		[TYPE_PROFILE, profileIds],
+		[TYPE_ARTICLE, new Set(lines.articles.map(idOf))],
+		[TYPE_TALENT, new Set(lines.talents.map(idOf))],
 	])
-	const vivant = (lien: Ligne): boolean =>
-		entreesVivantes.get(texte(lien.related_type) ?? '')?.has(nombre(lien.related_id) ?? -1) ?? false
-	const liensDeFichiers = lignes.files_related_morphs
-	const liensVivants = liensDeFichiers.filter(vivant)
-	const fichiers = new Map(lignes.files.map(fichier => [idDe(fichier), fichier]))
-	const fichiersDesProfils = [
+	const live = (lien: Line): boolean =>
+		liveEntries.get(text(lien.related_type) ?? '')?.has(count(lien.related_id) ?? -1) ?? false
+	const fileLinks = lines.files_related_morphs
+	const liveLinks = fileLinks.filter(live)
+	const files = new Map(lines.files.map(fichier => [idOf(fichier), fichier]))
+	const profileFiles = [
 		...new Set(
-			liensVivants.filter(lien => texte(lien.related_type) === TYPE_PROFIL).map(lien => nombre(lien.file_id) ?? -1)
+			liveLinks.filter(lien => text(lien.related_type) === TYPE_PROFILE).map(lien => count(lien.file_id) ?? -1)
 		),
-	].flatMap((id): Ligne[] => {
-		const fichier = fichiers.get(id)
-		return fichier ? [fichier] : []
+	].flatMap((id): Line[] => {
+		const file = files.get(id)
+		return file ? [file] : []
 	})
-	const cleDe = (url: Valeur | undefined): string | null => {
-		const adresse = texte(url)
-		return adresse?.startsWith(`${medias}/`) ? adresse.slice(medias.length + 1) : null
+	const keyOf = (url: Value | undefined): string | null => {
+		const address = text(url)
+		return address?.startsWith(`${media}/`) ? address.slice(media.length + 1) : null
 	}
 
-	const champsDuProfil = (profil: Ligne): ProfileFields => {
-		const id = idDe(profil)
+	const profileFields = (profil: Line): ProfileFields => {
+		const id = idOf(profil)
 		const photos = (champ: string) =>
-			liensVivants
+			liveLinks
 				.filter(
-					lien => nombre(lien.related_id) === id && texte(lien.related_type) === TYPE_PROFIL && lien.field === champ
+					lien => count(lien.related_id) === id && text(lien.related_type) === TYPE_PROFILE && lien.field === champ
 				)
-				.map(lien => ({ id: nombre(lien.file_id) }))
-		const [principale] = photos('main_picture')
-		const galerie = photos('image_gallery')
-		const [reseau] = listeDe(id, 'network')
+				.map(lien => ({ id: count(lien.file_id) }))
+		const [main] = photos('main_picture')
+		const gallery = photos('image_gallery')
+		const [network] = listOf(id, 'network')
 		return {
-			first_name: texte(profil.first_name),
-			last_name: texte(profil.last_name),
-			speciality: texte(profil.speciality),
-			company_artist_name: texte(profil.company_artist_name),
-			city: texte(profil.city),
-			description: texte(profil.description),
-			main_picture: principale ?? null,
-			image_gallery: galerie.length > 0 ? galerie : null,
-			skills: listeDe(id, 'skills'),
-			experiences: listeDe(id, 'experiences'),
-			courses: listeDe(id, 'courses'),
-			language: listeDe(id, 'language'),
-			service_offers: listeDe(id, 'service_offers').map(offre => ({ price: texte(offre.price) })),
-			network: reseau
+			first_name: text(profil.first_name),
+			last_name: text(profil.last_name),
+			speciality: text(profil.speciality),
+			company_artist_name: text(profil.company_artist_name),
+			city: text(profil.city),
+			description: text(profil.description),
+			main_picture: main ?? null,
+			image_gallery: gallery.length > 0 ? gallery : null,
+			skills: listOf(id, 'skills'),
+			experiences: listOf(id, 'experiences'),
+			courses: listOf(id, 'courses'),
+			language: listOf(id, 'language'),
+			service_offers: listOf(id, 'service_offers').map(offre => ({ price: text(offre.price) })),
+			network: network
 				? Object.fromEntries(
 						['youtube', 'instagram', 'facebook', 'website', 'linkedin', 'phone', 'email'].map(canal => [
 							canal,
-							texte(reseau[canal]),
+							text(network[canal]),
 						])
 					)
 				: null,
 		}
 	}
-	const lectures = profils.map(profil => ({ profil, completude: completeness(champsDuProfil(profil)) }))
+	const readings = profiles.map(profil => ({ profil, completude: completeness(profileFields(profil)) }))
 
 	return {
 		...etat,
-		comptes,
-		profils,
-		comptesRelies,
-		profilsRelies,
+		comptes: accounts,
+		profils: profiles,
+		comptesRelies: linkedAccounts,
+		profilsRelies: linkedProfiles,
 		lies,
-		listes,
-		liensDeFichiers,
-		liensVivants,
-		fichiers: lignes.files,
-		fichiersDesProfils,
-		cleDe,
-		lectures,
-		objets,
+		listes: lists,
+		liensDeFichiers: fileLinks,
+		liensVivants: liveLinks,
+		fichiers: lines.files,
+		fichiersDesProfils: profileFiles,
+		cleDe: keyOf,
+		lectures: readings,
+		objets: objects,
 	}
 }
 
-type Lecture = ReturnType<typeof lire>
+type Reading = ReturnType<typeof read>
 
-type Cas = readonly [groupe: string, cas: string, reel: string, compter: (lecture: Lecture) => number]
+type Case = readonly [groupe: string, cas: string, reel: string, compter: (lecture: Reading) => number]
 
-const prix = (l: Lecture) =>
+const price = (l: Reading) =>
 	[...l.lignes.components_makeupartists_service_offers, ...l.lignes.components_service_offers_options].map(ligne =>
 		parsePrice(ligne.price)
 	)
 
-const lignesIdentiques = (lignes: readonly Ligne[]): number => {
-	const vues = lignes.map(({ id: _id, ...reste }) => JSON.stringify(reste))
-	return vues.length - new Set(vues).size
+const identicalLines = (lignes: readonly Line[]): number => {
+	const seen = lignes.map(({ id: _id, ...reste }) => JSON.stringify(reste))
+	return seen.length - new Set(seen).size
 }
 
 const C = 'Comptes'
@@ -223,7 +216,7 @@ const F = 'Fichiers'
 const A = 'Articles et talents'
 
 /** Every case, in the order of the table of docs/tests/source-strapi.md. */
-export const CAS: readonly Cas[] = [
+export const CASE: readonly Case[] = [
 	[C, 'Comptes', '91', l => l.comptes.length],
 	[C, 'Comptes `local`', '42', l => l.comptes.filter(c => c.provider === 'local').length],
 	[C, 'Comptes `google`', '40', l => l.comptes.filter(c => c.provider === 'google').length],
@@ -232,13 +225,13 @@ export const CAS: readonly Cas[] = [
 		C,
 		'Comptes avec un hash bcrypt complet',
 		'43',
-		l => l.comptes.filter(c => HASH_BCRYPT_COMPLET.test(texte(c.password) ?? '')).length,
+		l => l.comptes.filter(c => HASH_BCRYPT_FULL.test(text(c.password) ?? '')).length,
 	],
 	[
 		C,
 		'… dont des comptes `google`',
 		'1',
-		l => l.comptes.filter(c => c.provider === 'google' && HASH_BCRYPT_COMPLET.test(texte(c.password) ?? '')).length,
+		l => l.comptes.filter(c => c.provider === 'google' && HASH_BCRYPT_FULL.test(text(c.password) ?? '')).length,
 	],
 	[
 		C,
@@ -246,38 +239,38 @@ export const CAS: readonly Cas[] = [
 		'—',
 		l =>
 			l.comptes.filter(
-				c => COMPTES_DE_FIXTURE.some(f => f.strapiId === idDe(c)) && HASH_BCRYPT_COMPLET.test(texte(c.password) ?? '')
+				c => FIXTURE_ACCOUNTS.some(f => f.strapiId === idOf(c)) && HASH_BCRYPT_FULL.test(text(c.password) ?? '')
 			).length,
 	],
-	[C, 'Comptes sans mot de passe', '48', l => l.comptes.filter(c => !rempli(c.password)).length],
+	[C, 'Comptes sans mot de passe', '48', l => l.comptes.filter(c => !filled(c.password)).length],
 	[C, 'Comptes confirmés', '91', l => l.comptes.filter(c => c.confirmed === true).length],
 	[C, 'Comptes bloqués', '0', l => l.comptes.filter(c => c.blocked === true).length],
 	[
 		C,
 		'Adresses email portées par plusieurs comptes',
 		'1',
-		l => doublons(l.comptes.map(c => texte(c.email)?.trim().toLowerCase() ?? null)).valeurs,
+		l => duplicates(l.comptes.map(c => text(c.email)?.trim().toLowerCase() ?? null)).valeurs,
 	],
 	[
 		C,
 		'… comptes qui portent ces adresses',
 		'4',
-		l => doublons(l.comptes.map(c => texte(c.email)?.trim().toLowerCase() ?? null)).lignes,
+		l => duplicates(l.comptes.map(c => text(c.email)?.trim().toLowerCase() ?? null)).lignes,
 	],
 	[
 		C,
 		'Emails avec des majuscules ou des espaces de bord',
 		'—',
-		l => l.comptes.filter(c => (texte(c.email) ?? '') !== (texte(c.email) ?? '').trim().toLowerCase()).length,
+		l => l.comptes.filter(c => (text(c.email) ?? '') !== (text(c.email) ?? '').trim().toLowerCase()).length,
 	],
 	[
 		C,
 		'Noms (`username`) portés par plusieurs comptes',
 		'2',
-		l => doublons(l.comptes.map(c => texte(c.username))).valeurs,
+		l => duplicates(l.comptes.map(c => text(c.username))).valeurs,
 	],
-	[C, '… comptes qui portent ces noms', '4', l => doublons(l.comptes.map(c => texte(c.username))).lignes],
-	[C, 'Comptes sans profil', '3', l => l.comptes.filter(c => !l.comptesRelies.has(idDe(c))).length],
+	[C, '… comptes qui portent ces noms', '4', l => duplicates(l.comptes.map(c => text(c.username))).lignes],
+	[C, 'Comptes sans profil', '3', l => l.comptes.filter(c => !l.comptesRelies.has(idOf(c))).length],
 
 	[P, 'Profils', '101', l => l.profils.length],
 	[P, 'Profils reliés à un compte', '88', l => l.profilsRelies.size],
@@ -287,7 +280,7 @@ export const CAS: readonly Cas[] = [
 		'13',
 		l =>
 			l.profils.filter(
-				p => !l.profilsRelies.has(idDe(p)) && (PROFILS_SANS_PROPRIETAIRE as readonly number[]).includes(idDe(p))
+				p => !l.profilsRelies.has(idOf(p)) && (PROFILES_WITHOUT_OWNER as readonly number[]).includes(idOf(p))
 			).length,
 	],
 	[
@@ -296,7 +289,7 @@ export const CAS: readonly Cas[] = [
 		'0',
 		l =>
 			l.profils.filter(
-				p => !l.profilsRelies.has(idDe(p)) && !(PROFILS_SANS_PROPRIETAIRE as readonly number[]).includes(idDe(p))
+				p => !l.profilsRelies.has(idOf(p)) && !(PROFILES_WITHOUT_OWNER as readonly number[]).includes(idOf(p))
 			).length,
 	],
 	[
@@ -304,7 +297,7 @@ export const CAS: readonly Cas[] = [
 		'Profils entièrement vides reliés à un compte',
 		'26',
 		l =>
-			l.lectures.filter(({ profil, completude }) => l.profilsRelies.has(idDe(profil)) && completude.entierementVide)
+			l.lectures.filter(({ profil, completude }) => l.profilsRelies.has(idOf(profil)) && completude.entierementVide)
 				.length,
 	],
 	[P, 'Profils actifs', '41', l => l.lectures.filter(({ completude }) => completude.actif).length],
@@ -317,7 +310,7 @@ export const CAS: readonly Cas[] = [
 		P,
 		'`username` qui n’est pas déjà son slug',
 		'73',
-		l => l.profils.filter(p => !rempli(p.username) || slugify(p.username) !== p.username).length,
+		l => l.profils.filter(p => !filled(p.username) || slugify(p.username) !== p.username).length,
 	],
 	[
 		P,
@@ -325,28 +318,28 @@ export const CAS: readonly Cas[] = [
 		'0',
 		l =>
 			assignSlugs(
-				l.profils.map(p => ({ id: idDe(p), username: texte(p.username), createdAt: String(p.created_at) }))
+				l.profils.map(p => ({ id: idOf(p), username: text(p.username), createdAt: String(p.created_at) }))
 			).filter(p => p.slug !== (slugify(p.username) || fallbackSlug(p.id))).length,
 	],
 	[
 		P,
 		'Rayon d’action au-dessus de 200 km',
 		'—',
-		l => l.profils.filter(p => (nombre(p.action_radius) ?? 0) > 200).length,
+		l => l.profils.filter(p => (count(p.action_radius) ?? 0) > 200).length,
 	],
-	[P, 'Ville vide ou nulle', '—', l => l.profils.filter(p => !rempli(p.city)).length],
+	[P, 'Ville vide ou nulle', '—', l => l.profils.filter(p => !filled(p.city)).length],
 	[P, 'Ville lue comme une adresse postale', '—', l => l.profils.filter(p => publicPlace(p.city).adresse).length],
 	[
 		P,
 		'Ville qui n’est pas une commune exploitable (pays, texte libre)',
 		'—',
-		l => l.profils.filter(p => rempli(p.city) && !usableCity(p.city)).length,
+		l => l.profils.filter(p => filled(p.city) && !usableCity(p.city)).length,
 	],
 	[
 		P,
 		'Ville homonyme de plusieurs communes',
 		'—',
-		l => l.profils.filter(p => VILLES_HOMONYMES.includes(texte(p.city)?.trim() ?? '')).length,
+		l => l.profils.filter(p => CITY_HOMONYMS.includes(text(p.city)?.trim() ?? '')).length,
 	],
 
 	[L, 'Compétences', '200', l => l.lignes.components_makeupartists_skills.length],
@@ -361,8 +354,8 @@ export const CAS: readonly Cas[] = [
 		'Lignes de liste qu’aucun lien ne rattache',
 		'3',
 		l =>
-			Object.values(TABLE_DU_COMPOSANT).reduce(
-				(somme, table) => somme + l.lignes[table].filter(ligne => !l.lies.get(table)?.has(idDe(ligne))).length,
+			Object.values(COMPONENT_TABLE).reduce(
+				(somme, table) => somme + l.lignes[table].filter(ligne => !l.lies.get(table)?.has(idOf(ligne))).length,
 				0
 			),
 	],
@@ -370,7 +363,7 @@ export const CAS: readonly Cas[] = [
 		L,
 		'Lignes identiques dans une même liste',
 		'—',
-		l => [...l.listes.values()].reduce((somme, liste) => somme + lignesIdentiques(liste.lignes), 0),
+		l => [...l.listes.values()].reduce((somme, liste) => somme + identicalLines(liste.lignes), 0),
 	],
 	[
 		L,
@@ -378,22 +371,22 @@ export const CAS: readonly Cas[] = [
 		'—',
 		l =>
 			[...l.listes.values()].filter(({ liens }) =>
-				liens.some((lien, rang) => rang > 0 && idDe(lien) < idDe(liens[rang - 1] ?? lien))
+				liens.some((lien, rang) => rang > 0 && idOf(lien) < idOf(liens[rang - 1] ?? lien))
 			).length,
 	],
 	[
 		L,
 		'Réseaux avec un téléphone ou un email de contact',
 		'—',
-		l => l.lignes.components_makeupartists_networks.filter(r => rempli(r.phone) || rempli(r.email)).length,
+		l => l.lignes.components_makeupartists_networks.filter(r => filled(r.phone) || filled(r.email)).length,
 	],
 	[
 		L,
 		'Prix écrits sans nombre lisible (prestations et options)',
 		'—',
-		l => prix(l).filter(p => p.priceText !== null && p.priceFrom === null).length,
+		l => price(l).filter(p => p.priceText !== null && p.priceFrom === null).length,
 	],
-	[L, 'Prix vides ou nuls (prestations et options)', '—', l => prix(l).filter(p => p.priceText === null).length],
+	[L, 'Prix vides ou nuls (prestations et options)', '—', l => price(l).filter(p => p.priceText === null).length],
 	[
 		L,
 		'Expériences dont la fin précède le début (hors des bornes de la v3)',
@@ -431,19 +424,19 @@ export const CAS: readonly Cas[] = [
 		F,
 		'… comme photo principale',
 		'49',
-		l => l.liensVivants.filter(lien => lien.related_type === TYPE_PROFIL && lien.field === 'main_picture').length,
+		l => l.liensVivants.filter(lien => lien.related_type === TYPE_PROFILE && lien.field === 'main_picture').length,
 	],
 	[
 		F,
 		'… dans une galerie',
 		'200',
-		l => l.liensVivants.filter(lien => lien.related_type === TYPE_PROFIL && lien.field === 'image_gallery').length,
+		l => l.liensVivants.filter(lien => lien.related_type === TYPE_PROFILE && lien.field === 'image_gallery').length,
 	],
 	[
 		F,
 		'… qui ne sont pas des images',
 		'1',
-		l => l.fichiersDesProfils.filter(f => !(texte(f.mime) ?? '').startsWith('image/')).length,
+		l => l.fichiersDesProfils.filter(f => !(text(f.mime) ?? '').startsWith('image/')).length,
 	],
 	[
 		F,
@@ -451,8 +444,8 @@ export const CAS: readonly Cas[] = [
 		'1',
 		l =>
 			l.fichiersDesProfils.filter(f => {
-				const cle = l.cleDe(f.url)
-				return cle === null || !l.objets.has(cle)
+				const key = l.cleDe(f.url)
+				return key === null || !l.objets.has(key)
 			}).length,
 	],
 	[
@@ -488,9 +481,9 @@ export const CAS: readonly Cas[] = [
 		F,
 		'Fichiers sans aucun lien',
 		'318',
-		l => l.fichiers.filter(f => !l.liensDeFichiers.some(lien => nombre(lien.file_id) === idDe(f))).length,
+		l => l.fichiers.filter(f => !l.liensDeFichiers.some(lien => count(lien.file_id) === idOf(f))).length,
 	],
-	[F, 'Fichiers avec `uploaded_by` rempli', '—', l => l.fichiers.filter(f => nombre(f.uploaded_by) !== null).length],
+	[F, 'Fichiers avec `uploaded_by` rempli', '—', l => l.fichiers.filter(f => count(f.uploaded_by) !== null).length],
 
 	[A, 'Articles', '10', l => l.lignes.articles.length],
 	[A, 'Articles publiés', '10', l => l.lignes.articles.filter(a => a.published_at !== null).length],
@@ -499,16 +492,16 @@ export const CAS: readonly Cas[] = [
 ]
 
 /** The inventory of a state of the source, case by case. */
-export function inventaire(etat: EtatDeLaSource): LigneDInventaire[] {
-	const lecture = lire(etat)
-	return CAS.map(([groupe, cas, reel, compter]) => ({ groupe, cas, reel, nombre: compter(lecture) }))
+export function inventory(etat: SourceState): InventoryLine[] {
+	const reading = read(etat)
+	return CASE.map(([groupe, cas, reel, compter]) => ({ groupe, cas, reel, nombre: compter(reading) }))
 }
 
 /** The inventory as the Markdown table of docs/tests/source-strapi.md. */
-export function inventaireEnMarkdown(lignes: readonly LigneDInventaire[]): string {
+export function inventoryInMarkdown(lignes: readonly InventoryLine[]): string {
 	return [
 		'| Groupe | Cas | Base réelle, 13/10/2026 | Fausse base |',
 		'|---|---|---|---|',
-		...lignes.map(({ groupe, cas, reel, nombre }) => `| ${groupe} | ${cas} | ${reel} | ${nombre} |`),
+		...lignes.map(({ groupe, cas, reel, nombre: count }) => `| ${groupe} | ${cas} | ${reel} | ${count} |`),
 	].join('\n')
 }

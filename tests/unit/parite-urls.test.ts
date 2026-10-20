@@ -8,24 +8,22 @@ import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-	bilan,
-	type CasDeParite,
-	casDeLaListePrivee,
-	casDuBanc,
-	ecrireLeBilan,
-	empreinteDesTitres,
-	lireLeCsv,
-	type Reponse,
-	type Resultat,
+	benchCase,
+	check,
+	type OldSiteTitles,
+	type ParityCase,
+	privateListCase,
+	type Reply,
+	type Result,
+	readCsv,
 	sha256,
-	type TitresDeLAncienSite,
-	verifier,
+	summary,
+	titleFingerprint,
+	writeSummary,
 } from '../support/url-parity'
 
 const RACINE = join(import.meta.dir, '../..')
-const anciens: TitresDeLAncienSite = JSON.parse(
-	readFileSync(join(RACINE, 'tests/fixtures/parite-urls-h1.json'), 'utf8')
-)
+const anciens: OldSiteTitles = JSON.parse(readFileSync(join(RACINE, 'tests/fixtures/url-parity-h1.json'), 'utf8'))
 const inventaire = JSON.parse(readFileSync(join(RACINE, 'docs/migration/urls-inventaire.json'), 'utf8')) as {
 	addresses: { address: string }[]
 	complements: { address?: string }[]
@@ -38,7 +36,7 @@ const hash = (adresse: string): string => {
 	return sha
 }
 
-const page = (corps: string, status = 200, location: string | null = null): Reponse => ({
+const page = (corps: string, status = 200, location: string | null = null): Reply => ({
 	status,
 	location,
 	contentType: 'text/html; charset=utf-8',
@@ -56,9 +54,9 @@ describe('la lecture du h1, comme l’outil de mesure', () => {
 	test('les balises, les commentaires de React, les espaces et les entités sont lus comme l’outil les lit', () => {
 		const html = `<html><head><script>var a = "<h1>x</h1>"</script></head><body>
 			<h1 class="a">Trouver la maquilleuse <!-- --> qui vous correspond n&#x27;a jamais\n été aussi simple</h1></body></html>`
-		expect(empreinteDesTitres(html)).toEqual({ n: 1, sha: hash('/') })
-		expect(empreinteDesTitres('<p>sans titre</p>')).toEqual({ n: 0, sha: null })
-		expect(empreinteDesTitres('<h1>Un</h1><h1>Deux</h1>').n).toBe(2)
+		expect(titleFingerprint(html)).toEqual({ n: 1, sha: hash('/') })
+		expect(titleFingerprint('<p>sans titre</p>')).toEqual({ n: 0, sha: null })
+		expect(titleFingerprint('<h1>Un</h1><h1>Deux</h1>').n).toBe(2)
 	})
 })
 
@@ -84,7 +82,7 @@ describe('la fixture des h1 de l’ancien site', () => {
 })
 
 describe('les cas du banc', () => {
-	const cas = casDuBanc(anciens, {
+	const cas = benchCase(anciens, {
 		profilsVisibles: ['alice-test'],
 		profilsMasques: ['masquee-test'],
 		ancienNom: { ecrit: 'zo%C3%A9%20lef%C3%A8vre', slug: 'zoe-lefevre' },
@@ -92,7 +90,7 @@ describe('les cas du banc', () => {
 		articlesPublies: ['article-test'],
 		articlesBrouillons: ['brouillon-test'],
 	})
-	const de = (adresse: string): CasDeParite => {
+	const de = (adresse: string): ParityCase => {
 		const trouve = cas.find(c => c.adresse === adresse)
 		if (!trouve) throw new Error(`pas de cas pour ${adresse}`)
 		return trouve
@@ -144,7 +142,7 @@ describe('les cas du banc', () => {
 })
 
 describe('la vérification d’un cas', () => {
-	const cas: CasDeParite = {
+	const cas: ParityCase = {
 		adresse: '/blog/',
 		etiquette: '/blog/',
 		famille: 'barre-finale',
@@ -155,12 +153,12 @@ describe('la vérification d’un cas', () => {
 		titre: { mode: 'hash', sha: sha256('Le blog') },
 	}
 	const serveur =
-		(table: Record<string, Reponse>) =>
-		async (adresse: string): Promise<Reponse> =>
+		(table: Record<string, Reply>) =>
+		async (adresse: string): Promise<Reply> =>
 			table[adresse] ?? page('<h1>404 - Page non trouvée</h1>', 404)
 
 	test('un saut juste, vers une page de même h1 et de même statut : vert', async () => {
-		const resultat = await verifier(
+		const resultat = await check(
 			cas,
 			serveur({ '/blog/': page('', 308, '/blog'), '/blog': page('<main><h1>Le blog</h1></main>') })
 		)
@@ -168,15 +166,15 @@ describe('la vérification d’un cas', () => {
 	})
 
 	test('un mauvais statut ou une mauvaise destination : rouge, au nom de l’adresse', async () => {
-		expect(await verifier(cas, serveur({ '/blog/': page('', 301, '/blog') }))).toMatchObject({ etat: 'rouge' })
-		expect(await verifier(cas, serveur({ '/blog/': page('', 308, '/ailleurs') }))).toMatchObject({
+		expect(await check(cas, serveur({ '/blog/': page('', 301, '/blog') }))).toMatchObject({ etat: 'rouge' })
+		expect(await check(cas, serveur({ '/blog/': page('', 308, '/ailleurs') }))).toMatchObject({
 			etat: 'rouge',
 			defauts: ['destination /ailleurs au lieu de /blog'],
 		})
 	})
 
 	test('une destination fautive est un défaut de la destination, pas de l’adresse', async () => {
-		const resultat = await verifier(
+		const resultat = await check(
 			cas,
 			serveur({ '/blog/': page('', 308, '/blog'), '/blog': page('<h1>Autre titre</h1>') })
 		)
@@ -184,17 +182,17 @@ describe('la vérification d’un cas', () => {
 	})
 
 	test('un h1 en double est un défaut, même avec le bon texte', async () => {
-		const direct: CasDeParite = { ...cas, adresse: '/blog', vers: undefined, statuts: [200] }
+		const direct: ParityCase = { ...cas, adresse: '/blog', vers: undefined, statuts: [200] }
 		delete direct.vers
-		const resultat = await verifier(direct, serveur({ '/blog': page('<h1>Le blog</h1><h1>Le blog</h1>') }))
+		const resultat = await check(direct, serveur({ '/blog': page('<h1>Le blog</h1><h1>Le blog</h1>') }))
 		expect(resultat).toMatchObject({ etat: 'rouge', defauts: ["2 h1 au lieu d'un seul"] })
 	})
 })
 
 describe('le bilan par type', () => {
-	const vert: Resultat = { etat: 'vert', destination: [] }
-	const rouge: Resultat = { etat: 'rouge', defauts: ['statut 404 au lieu de 200'], destination: [] }
-	const unCas = (famille: string, adresse: string): CasDeParite => ({
+	const vert: Result = { etat: 'vert', destination: [] }
+	const rouge: Result = { etat: 'rouge', defauts: ['statut 404 au lieu de 200'], destination: [] }
+	const unCas = (famille: string, adresse: string): ParityCase => ({
 		adresse,
 		etiquette: adresse,
 		famille,
@@ -204,7 +202,7 @@ describe('le bilan par type', () => {
 	})
 
 	test('un type livré dont une adresse échoue est une régression ; un type à venir est « à venir »', () => {
-		const lignes = bilan(
+		const lignes = summary(
 			[
 				{ cas: unCas('accueil', '/'), resultat: vert },
 				{ cas: unCas('accueil', '/?a'), resultat: rouge },
@@ -217,19 +215,19 @@ describe('le bilan par type', () => {
 			{ famille: 'accueil', vertes: 1, aVenir: 0, ecarts: 0, regressions: ['/?a : statut 404 au lieu de 200'] },
 			{ famille: 'talent', vertes: 1, aVenir: 1, ecarts: 0, regressions: [] },
 		])
-		expect(ecrireLeBilan(lignes, new Set(['accueil']))).toContain('talent')
-		expect(ecrireLeBilan(lignes, new Set(['accueil']))).toMatch(/talent\s+1 verte, 1 à venir/)
+		expect(writeSummary(lignes, new Set(['accueil']))).toContain('talent')
+		expect(writeSummary(lignes, new Set(['accueil']))).toMatch(/talent\s+1 verte, 1 à venir/)
 	})
 
 	test('la destination fautive d’une redirection pèse sur la famille de la destination, si elle est livrée', () => {
-		const redirection: CasDeParite = { ...unCas('barre-finale', '/blog/'), vers: '/blog', familleFinale: 'blog' }
-		const fautive: Resultat = { etat: 'vert', destination: ['la destination répond 404 au lieu de 200'] }
-		const livree = bilan([{ cas: redirection, resultat: fautive }], new Set(['blog', 'barre-finale']))
+		const redirection: ParityCase = { ...unCas('barre-finale', '/blog/'), vers: '/blog', familleFinale: 'blog' }
+		const fautive: Result = { etat: 'vert', destination: ['la destination répond 404 au lieu de 200'] }
+		const livree = summary([{ cas: redirection, resultat: fautive }], new Set(['blog', 'barre-finale']))
 		expect(livree.find(l => l.famille === 'blog')?.regressions).toEqual([
 			'/blog/ → /blog : la destination répond 404 au lieu de 200',
 		])
 		expect(livree.find(l => l.famille === 'barre-finale')?.vertes).toBe(1)
-		const attendue = bilan([{ cas: redirection, resultat: fautive }], new Set(['barre-finale']))
+		const attendue = summary([{ cas: redirection, resultat: fautive }], new Set(['barre-finale']))
 		expect(attendue.flatMap(l => l.regressions)).toEqual([])
 	})
 })
@@ -246,18 +244,18 @@ describe('la liste privée de la copie importée', () => {
 	].join('\n')
 
 	test('un champ entre guillemets, avec une virgule ou un saut de ligne, reste un seul champ', () => {
-		expect(lireLeCsv('a,b\n"x, y","l1\nl2"\n')).toEqual([{ a: 'x, y', b: 'l1\nl2' }])
+		expect(readCsv('a,b\n"x, y","l1\nl2"\n')).toEqual([{ a: 'x, y', b: 'l1\nl2' }])
 	})
 
 	test('un profil réel est numéroté, jamais nommé, ni dans son étiquette ni dans les messages', async () => {
-		const cas = casDeLaListePrivee(csv)
+		const cas = privateListCase(csv)
 		expect(cas.map(c => c.etiquette)).toEqual(['/blog', 'profil #1', 'profil #2'])
 		expect(cas.map(c => c.famille)).toEqual(['blog', 'profil', 'profil-ancien-nom'])
 		const ancienNom = cas[2]
 		if (!ancienNom) throw new Error('pas de cas')
-		const resultat = await verifier(ancienNom, async () => page('', 404))
+		const resultat = await check(ancienNom, async () => page('', 404))
 		expect(JSON.stringify(resultat)).not.toContain('jeanne')
-		const faux = await verifier(ancienNom, async adresse =>
+		const faux = await check(ancienNom, async adresse =>
 			adresse === ancienNom.adresse ? page('', 308, '/profil/autre-nom-imaginaire') : page('', 404)
 		)
 		expect(JSON.stringify(faux)).not.toContain('autre-nom-imaginaire')
@@ -265,7 +263,7 @@ describe('la liste privée de la copie importée', () => {
 	})
 
 	test('un profil dont l’adresse répond 200 ou 404 est juste : les 13 profils non repris ne se distinguent pas dans la liste', () => {
-		const [, profil] = casDeLaListePrivee(csv)
+		const [, profil] = privateListCase(csv)
 		expect(profil?.statuts).toEqual([200, 404])
 	})
 })
@@ -281,34 +279,34 @@ describe('le titre de l’onglet des talents importés (ticket 108)', () => {
 	const BON = 'Maquilleuse mariage : trouver la bonne pro près de chez vous' // 59 characters
 
 	test('seul un talent de la copie importée exige le titre écrit par la rédaction', () => {
-		const [talent, blog] = casDeLaListePrivee(csv)
+		const [talent, blog] = privateListCase(csv)
 		expect(talent?.titreDeLOngletRequis).toBe(true)
 		expect(blog?.titreDeLOngletRequis).toBeUndefined()
 	})
 
 	test('un titre de 50 à 60 caractères, distinct du h1, est vert', async () => {
 		expect(BON.length).toBeGreaterThanOrEqual(50)
-		const [talent] = casDeLaListePrivee(csv)
+		const [talent] = privateListCase(csv)
 		if (!talent) throw new Error('pas de cas')
-		expect((await verifier(talent, async () => page(html(BON)))).etat).toBe('vert')
+		expect((await check(talent, async () => page(html(BON)))).etat).toBe('vert')
 	})
 
 	test('le titre court de l’ancien site (« titre | My-Makeup »), trop court, échoue', async () => {
-		const [talent] = casDeLaListePrivee(csv)
+		const [talent] = privateListCase(csv)
 		if (!talent) throw new Error('pas de cas')
-		const resultat = await verifier(talent, async () => page(html('Mariage | My-Makeup')))
+		const resultat = await check(talent, async () => page(html('Mariage | My-Makeup')))
 		expect(resultat.etat).toBe('rouge')
 		expect(JSON.stringify(resultat)).toContain('au lieu de 50 à 60')
 	})
 
 	test('un titre trop long, ou le h1 lui-même, échoue', async () => {
-		const [talent] = casDeLaListePrivee(csv)
+		const [talent] = privateListCase(csv)
 		if (!talent) throw new Error('pas de cas')
-		expect((await verifier(talent, async () => page(html(`${BON} et plus encore`)))).etat).toBe('rouge')
+		expect((await check(talent, async () => page(html(`${BON} et plus encore`)))).etat).toBe('rouge')
 		const long = 'Mariage'.padEnd(55, 'x')
-		const [meme] = casDeLaListePrivee(csv.replace(sha256('Mariage'), sha256(long)))
+		const [meme] = privateListCase(csv.replace(sha256('Mariage'), sha256(long)))
 		if (!meme) throw new Error('pas de cas')
-		const memeTexte = await verifier(meme, async () => page(html(long, long)))
+		const memeTexte = await check(meme, async () => page(html(long, long)))
 		expect(JSON.stringify(memeTexte)).toContain('identique au h1')
 	})
 })

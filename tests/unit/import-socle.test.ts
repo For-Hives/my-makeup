@@ -162,11 +162,11 @@ describe('L1 (ticket 233) : les deux scripts qui écrivent dans une base ne lise
 		expect(scripts['admin:create']).toBe('bun --no-env-file scripts/admin/create-admin.ts')
 	})
 
-	test('banc:import (qui n’est pas migration:import) le porte aussi, et charge import.ts en direct', () => {
+	test('bench:import (qui n’est pas migration:import) le porte aussi, et charge import.ts en direct', () => {
 		const { scripts } = JSON.parse(readFileSync(path.join(import.meta.dir, '../../package.json'), 'utf8')) as {
 			scripts: Record<string, string>
 		}
-		expect(scripts['banc:import']).toBe('bun --no-env-file scripts/migration/bench-import.ts')
+		expect(scripts['bench:import']).toBe('bun --no-env-file scripts/migration/bench-import.ts')
 	})
 })
 

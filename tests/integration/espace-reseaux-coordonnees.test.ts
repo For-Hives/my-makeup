@@ -7,12 +7,12 @@ import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
 import { saveContactDetails } from '@/lib/dashboard/save-contact-details'
 import { saveNetworks } from '@/lib/dashboard/save-networks'
 import { listProfiles, readPublicProfile } from '@/services/public/profiles'
+import { createAccount, type TestAccount } from '../support/account-factory'
 import { ANNECY } from '../support/completeness-cases'
-import { type CompteDeTest, creerCompte } from '../support/account-factory'
-import { payloadDeTest, viderLaBase } from '../support/payload-test'
-import { fichierPourPayload } from '../support/photos'
-import { appelerRest } from '../support/rest'
-import { viderLeStockage } from '../support/s3'
+import { emptyBase, testPayload } from '../support/payload-test'
+import { fileForPayload } from '../support/photos'
+import { callRest } from '../support/rest'
+import { emptyStorage } from '../support/s3'
 
 /**
  * The networks and the contact details saved from her space (tickets 125 and 126; plan 02 U28, U22,
@@ -22,10 +22,10 @@ import { viderLeStockage } from '../support/s3'
  */
 
 afterEach(async () => {
-	await Promise.all([viderLaBase(), viderLeStockage()])
+	await Promise.all([emptyBase(), emptyStorage()])
 })
 
-type Maquilleuse = CompteDeTest<'maquilleuse'>
+type Maquilleuse = TestAccount<'maquilleuse'>
 
 const TELEPHONE = '06 39 98 12 34'
 const EMAIL = 'contact-fictif@example.test'
@@ -50,8 +50,8 @@ async function profilStocke(payload: Payload, compte: Maquilleuse) {
 
 /** A makeup artist with a published profile, and the account as Payload hands it to a request. */
 async function maquilleuse() {
-	const compte = await creerCompte('maquilleuse')
-	const payload = await payloadDeTest()
+	const compte = await createAccount('maquilleuse')
+	const payload = await testPayload()
 	const utilisateur = await utilisateurDe(payload, compte)
 	const profil = await profilStocke(payload, compte)
 	await payload.update({ collection: 'profiles', id: profil.id, data: { specialty: 'Mariage' } })
@@ -145,8 +145,8 @@ describe('125, E30 et E31 : une adresse d’un autre site est refusée, un champ
 	})
 
 	test('un compte sans profil : le message du site, rien n’est créé', async () => {
-		const sansProfil = await creerCompte('maquilleuse-sans-profil')
-		const payload = await payloadDeTest()
+		const sansProfil = await createAccount('maquilleuse-sans-profil')
+		const payload = await testPayload()
 		const doc = await payload.findByID({ collection: 'pros', id: sansProfil.id, depth: 0, overrideAccess: true })
 
 		const resultat = await saveNetworks(payload, { ...doc, collection: 'pros' } as DashboardUser, {
@@ -309,7 +309,7 @@ describe('126 : la maquilleuse choisit d’afficher son téléphone et son email
 		expect(html).not.toContain('39 98')
 		expect(html).not.toContain('tel:')
 
-		const rest = await appelerRest('GET', `/api/profiles?depth=0`)
+		const rest = await callRest('GET', `/api/profiles?depth=0`)
 		expect(rest.texte).not.toContain(EMAIL)
 		expect(rest.texte).not.toContain('39 98')
 	})
@@ -325,7 +325,7 @@ describe('126 : la maquilleuse choisit d’afficher son téléphone et son email
 		expect(texte).not.toContain(EMAIL)
 		expect(texte).not.toContain('39 98')
 		expect(texte).not.toMatch(/coordonnees|contactPublic|consenti/)
-		const rest = await appelerRest('GET', '/api/profiles?depth=0')
+		const rest = await callRest('GET', '/api/profiles?depth=0')
 		expect(rest.texte).not.toContain(EMAIL)
 		expect(rest.texte).not.toContain('contactPublic')
 	})
@@ -348,7 +348,7 @@ describe('126 : masquées et aucun réseau, le profil n’est pas publiable', ()
 		const photo = await m.payload.create({
 			collection: 'media',
 			data: { owner: Number(m.compte.id) },
-			file: fichierPourPayload(),
+			file: fileForPayload(),
 		})
 		await m.payload.update({
 			collection: 'profiles',

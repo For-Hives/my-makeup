@@ -19,8 +19,8 @@ import {
 	readAnswers,
 } from '../../scripts/migration/import/reference'
 import { ImportRefuse } from '../../scripts/migration/import/target'
-import { delay, HttpResponse, http, simuler } from '../support/outgoing-http'
-import { definitionDeLaSource } from '../support/source-strapi/data'
+import { delay, HttpResponse, http, simulate } from '../support/outgoing-http'
+import { sourceDefinition } from '../support/source-strapi/data'
 
 /**
  * Ticket 063: the city typed in a profile becomes a commune of the official list, with its INSEE
@@ -68,7 +68,7 @@ type Journal = string[]
 function simulerLeReferentiel(communes: CommuneSimulee[] = COMMUNES): Journal {
 	const journal: Journal = []
 	const plier = (texte: string) => comparableName(texte)
-	simuler(
+	simulate(
 		http.get(`${REFERENCE_ADDRESS}/communes`, ({ request }) => {
 			journal.push(request.url)
 			const parametres = new URL(request.url).searchParams
@@ -401,10 +401,8 @@ describe('les réponses du référentiel sont gardées : deux passages identique
 	})
 
 	test('les réponses du banc couvrent chaque ville de la fausse base Strapi, hors ligne', async () => {
-		const { lignes } = definitionDeLaSource('http://127.0.0.1:9090/mymakeup-test')
-		const reponses = readAnswers(
-			readFileSync(path.join(RACINE, 'tests/fixtures/import/referentiel-du-banc.json'), 'utf8')
-		)
+		const { lignes } = sourceDefinition('http://127.0.0.1:9090/mymakeup-test')
+		const reponses = readAnswers(readFileSync(path.join(RACINE, 'tests/fixtures/import/bench-reference.json'), 'utf8'))
 		const profils = lignes.makeup_artistes.map(({ id, city }) => ({
 			id: Number(id),
 			city: typeof city === 'string' ? city : null,
@@ -435,18 +433,18 @@ describe('le référentiel qui ne répond pas arrête l’import avant toute éc
 	const adresse = `${REFERENCE_ADDRESS}/communes`
 
 	test('une panne, un réseau coupé, une réponse qui n’est pas une liste de communes, un service muet', async () => {
-		simuler(http.get(adresse, () => new HttpResponse(null, { status: 500 })))
+		simulate(http.get(adresse, () => new HttpResponse(null, { status: 500 })))
 		await expect(geoApiReference().repondre({ genre: 'nom', valeur: 'x' })).rejects.toThrow('réponse 500')
 
-		simuler(http.get(adresse, () => HttpResponse.error()))
+		simulate(http.get(adresse, () => HttpResponse.error()))
 		await expect(geoApiReference().repondre({ genre: 'nom', valeur: 'x' })).rejects.toThrow('réseau injoignable')
 
-		simuler(http.get(adresse, () => HttpResponse.json({ message: 'pas une liste' })))
+		simulate(http.get(adresse, () => HttpResponse.json({ message: 'pas une liste' })))
 		await expect(geoApiReference().repondre({ genre: 'nom', valeur: 'x' })).rejects.toThrow(
 			'sa réponse n’est pas une liste de communes'
 		)
 
-		simuler(
+		simulate(
 			http.get(adresse, async () => {
 				await delay('infinite')
 				return HttpResponse.json([])

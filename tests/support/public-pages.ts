@@ -9,49 +9,49 @@
  */
 
 import type { APIRequestContext } from '@playwright/test'
-import { creerCompte } from './account-factory'
+import { createAccount } from './account-factory'
 
-async function enTetesDeLAdmin(): Promise<{ Cookie: string; Origin: string }> {
-	return (await creerCompte('admin')).session.enTetes
+async function adminHeaderList(): Promise<{ Cookie: string; Origin: string }> {
+	return (await createAccount('admin')).session.enTetes
 }
 
 /** Creates a document through the REST API, as an admin; gives its identifier. */
-export async function creerContenu(
+export async function createContent(
 	request: APIRequestContext,
 	collection: 'talents' | 'articles',
 	data: Record<string, unknown>
 ): Promise<number> {
-	const reponse = await request.post(`/api/${collection}`, { headers: await enTetesDeLAdmin(), data })
-	if (!reponse.ok())
-		throw new Error(`La création dans « ${collection} » a répondu ${reponse.status()} : ${await reponse.text()}`)
-	return ((await reponse.json()) as { doc: { id: number } }).doc.id
+	const response = await request.post(`/api/${collection}`, { headers: await adminHeaderList(), data })
+	if (!response.ok())
+		throw new Error(`La création dans « ${collection} » a répondu ${response.status()} : ${await response.text()}`)
+	return ((await response.json()) as { doc: { id: number } }).doc.id
 }
 
 /** Deletes a document through the REST API, as an admin. */
-export async function supprimerContenu(
+export async function deleteContent(
 	request: APIRequestContext,
 	collection: 'talents' | 'articles',
 	identifiant: number
 ): Promise<void> {
-	await request.delete(`/api/${collection}/${identifiant}`, { headers: await enTetesDeLAdmin() })
+	await request.delete(`/api/${collection}/${identifiant}`, { headers: await adminHeaderList() })
 }
 
-let rafraichie = false
+let refreshed = false
 
 /**
  * Has the application refresh the pages that list the profiles, once for this process: a save of a
  * published profile through the application does it (its page, the search, the sitemap). The profile is
  * saved with the specialty it has, so nothing changes.
  */
-export async function rafraichirLesPagesDesProfils(
+export async function refreshProfilePages(
 	request: APIRequestContext,
 	profil: { id: number; specialite: string | null }
 ): Promise<void> {
-	if (rafraichie) return
-	const reponse = await request.patch(`/api/profiles/${profil.id}`, {
-		headers: await enTetesDeLAdmin(),
+	if (refreshed) return
+	const response = await request.patch(`/api/profiles/${profil.id}`, {
+		headers: await adminHeaderList(),
 		data: { specialite: profil.specialite ?? '' },
 	})
-	if (!reponse.ok()) throw new Error(`Le rafraîchissement a répondu ${reponse.status()} : ${await reponse.text()}`)
-	rafraichie = true
+	if (!response.ok()) throw new Error(`Le rafraîchissement a répondu ${response.status()} : ${await response.text()}`)
+	refreshed = true
 }

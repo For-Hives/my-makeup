@@ -8,7 +8,7 @@ import {
 	DELETION_MESSAGES,
 	deletionSchema,
 } from '@/lib/dashboard/deletion-confirmation'
-import { ouvrirFenetre } from '../support/dom-react'
+import { openWindow } from '../support/dom-react'
 
 /**
  * Deleting her account from her space (ticket 141; plan 02 E33): what she retypes, the strict schema
@@ -17,7 +17,7 @@ import { ouvrirFenetre } from '../support/dom-react'
  * fake: no network.
  */
 
-const fenetre = ouvrirFenetre()
+const fenetre = openWindow()
 
 describe('ce qu’elle retape', () => {
 	test.each([

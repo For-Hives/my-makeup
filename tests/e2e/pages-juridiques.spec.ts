@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { fauxUmami, type LectureFauxUmami, unAgentParEssai } from '../support/fake-umami'
+import { agentByTest, fakeUmami, type ReadingFakeUmami } from '../support/fake-umami'
 
 /**
  * The three legal pages in a browser (ticket 112): they answer 200 with a single h1, and the button
@@ -30,14 +30,14 @@ test.describe('Les pages juridiques', { tag: '@mobile' }, () => {
 })
 
 test.describe('L’opposition à la mesure', () => {
-	let umami: LectureFauxUmami
+	let umami: ReadingFakeUmami
 	// The default agent of the headless browser says « HeadlessChrome », which the filter refuses to measure: an
 	// ordinary Chrome, with a mark of its own. The fake Umami is shared by every worker of the run, and the test
-	// reads only what came from its browser (tests/outils/faux-umami.ts).
-	test.use(unAgentParEssai())
+	// reads only what came from its browser (tests/support/fake-umami.ts).
+	test.use(agentByTest())
 
 	test.beforeEach(async ({ context, userAgent }) => {
-		umami = fauxUmami().pourLAgent(userAgent)
+		umami = fakeUmami().pourLAgent(userAgent)
 		await context.addInitScript(() => {
 			Object.defineProperty(navigator, 'webdriver', { get: () => false })
 		})

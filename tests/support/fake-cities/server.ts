@@ -1,33 +1,33 @@
 /**
  * Entry point of the fake list of the communes: what the container of the bench runs
- * (compose.test.yml, service « faux-communes »). The list itself is ./fournisseur.ts.
+ * (compose.test.yml, service « fake-cities »). The list itself is ./provider.ts.
  *
- *   FAUX_COMMUNES_ECOUTE   the interface it listens on (default 127.0.0.1; 0.0.0.0 inside the
+ *   FAKE_CITIES_LISTEN   the interface it listens on (default 127.0.0.1; 0.0.0.0 inside the
  *                          container, whose port is published on the loopback interface only).
- *   FAUX_COMMUNES_PORT     the port it listens on (default 2050; 0 for any free port).
+ *   FAKE_CITIES_PORT     the port it listens on (default 2050; 0 for any free port).
  *
  * It prints nothing.
  */
 
-import { creerFaussesCommunes } from './provider'
+import { createFakeCities } from './provider'
 
-const PORT_PAR_DEFAUT = 2050
+const PORT_BY_DEFAULT = 2050
 
-const port = Number(process.env.FAUX_COMMUNES_PORT || PORT_PAR_DEFAUT)
+const port = Number(process.env.FAKE_CITIES_PORT || PORT_BY_DEFAULT)
 if (!Number.isInteger(port) || port < 0 || port > 65_535) {
-	console.error('Fausse liste des communes : FAUX_COMMUNES_PORT doit être un numéro de port.')
+	console.error('Fausse liste des communes : FAKE_CITIES_PORT doit être un numéro de port.')
 	process.exit(2)
 }
 
-const fournisseur = creerFaussesCommunes()
-const serveur = Bun.serve({
-	hostname: process.env.FAUX_COMMUNES_ECOUTE || '127.0.0.1',
+const provider = createFakeCities()
+const server = Bun.serve({
+	hostname: process.env.FAKE_CITIES_LISTEN || '127.0.0.1',
 	port,
-	fetch: requete => fournisseur.repondre(requete),
+	fetch: requete => provider.repondre(requete),
 })
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const)
 	process.on(signal, () => {
-		void serveur.stop(true)
+		void server.stop(true)
 		process.exit(0)
 	})

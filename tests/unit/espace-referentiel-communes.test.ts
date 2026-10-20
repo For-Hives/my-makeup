@@ -7,7 +7,7 @@ import {
 	searchQuestion,
 	suggestion,
 } from '@/lib/dashboard/city-reference'
-import { delay, HttpResponse, http, simuler } from '../support/outgoing-http'
+import { delay, HttpResponse, http, simulate } from '../support/outgoing-http'
 
 /**
  * The official list of communes, asked by the space (ticket 123; ticket 037 for the simulation): the
@@ -48,7 +48,7 @@ describe('la question posée à la liste', () => {
 describe('la recherche de communes', () => {
 	test('Annecy : la commune, son code, son département, son libellé', async () => {
 		let demande: URL | undefined
-		simuler(
+		simulate(
 			http.get(LISTE, ({ request }) => {
 				demande = new URL(request.url)
 				return HttpResponse.json([ANNECY])
@@ -71,7 +71,7 @@ describe('la recherche de communes', () => {
 
 	test('un code postal est demandé par son code postal', async () => {
 		let demande: URL | undefined
-		simuler(
+		simulate(
 			http.get(LISTE, ({ request }) => {
 				demande = new URL(request.url)
 				return HttpResponse.json([ANNECY])
@@ -83,7 +83,7 @@ describe('la recherche de communes', () => {
 	})
 
 	test('toute la France : l’outre-mer et la Corse sont proposés, rien n’est filtré par département', async () => {
-		simuler(
+		simulate(
 			http.get(LISTE, () =>
 				HttpResponse.json([
 					{ nom: 'Saint-Denis', code: '97411', codeDepartement: '974' },
@@ -102,7 +102,7 @@ describe('la recherche de communes', () => {
 	})
 
 	test('un code que la collection refuserait, ou donné deux fois, n’est pas proposé', async () => {
-		simuler(
+		simulate(
 			http.get(LISTE, () =>
 				HttpResponse.json([
 					{ nom: 'Fictive', code: '99999' },
@@ -117,7 +117,7 @@ describe('la recherche de communes', () => {
 	})
 
 	test('aucune commune ne correspond : une liste vide, pas une panne', async () => {
-		simuler(http.get(LISTE, () => HttpResponse.json([])))
+		simulate(http.get(LISTE, () => HttpResponse.json([])))
 		expect(await findCities('Zzzzz')).toEqual({ genre: 'communes', communes: [] })
 	})
 
@@ -129,35 +129,35 @@ describe('la recherche de communes', () => {
 
 describe('le service des communes en panne : une seule issue, « panne »', () => {
 	test('une réponse 500', async () => {
-		simuler(http.get(LISTE, () => new HttpResponse(null, { status: 500 })))
+		simulate(http.get(LISTE, () => new HttpResponse(null, { status: 500 })))
 		expect(await findCities('Annecy')).toEqual({ genre: 'panne' })
 	})
 
 	test('un statut 429 ou 503', async () => {
 		for (const status of [429, 503]) {
-			simuler(http.get(LISTE, () => new HttpResponse(null, { status })))
+			simulate(http.get(LISTE, () => new HttpResponse(null, { status })))
 			expect(await findCities('Annecy')).toEqual({ genre: 'panne' })
 		}
 	})
 
 	test('un réseau coupé', async () => {
-		simuler(http.get(LISTE, () => HttpResponse.error()))
+		simulate(http.get(LISTE, () => HttpResponse.error()))
 		expect(await findCities('Annecy')).toEqual({ genre: 'panne' })
 	})
 
 	test('une réponse qui n’est pas du JSON, ou pas une liste de communes', async () => {
-		simuler(http.get(LISTE, () => new HttpResponse('<html>maintenance</html>', { status: 200 })))
+		simulate(http.get(LISTE, () => new HttpResponse('<html>maintenance</html>', { status: 200 })))
 		expect(await findCities('Annecy')).toEqual({ genre: 'panne' })
-		simuler(http.get(LISTE, () => HttpResponse.json({ message: 'ok' })))
+		simulate(http.get(LISTE, () => HttpResponse.json({ message: 'ok' })))
 		expect(await findCities('Annecy')).toEqual({ genre: 'panne' })
-		simuler(http.get(LISTE, () => HttpResponse.json([{ nom: 'Annecy' }])))
+		simulate(http.get(LISTE, () => HttpResponse.json([{ nom: 'Annecy' }])))
 		expect(await findCities('Annecy')).toEqual({ genre: 'panne' })
 	})
 
 	test(
 		'un service muet : abandonné au bout du délai',
 		async () => {
-			simuler(
+			simulate(
 				http.get(LISTE, async () => {
 					await delay('infinite')
 					return HttpResponse.json([ANNECY])
@@ -174,7 +174,7 @@ describe('le service des communes en panne : une seule issue, « panne »', () =
 describe('la commune d’un code', () => {
 	test('74010 : le nom, le département et le centre de la liste', async () => {
 		let demande: URL | undefined
-		simuler(
+		simulate(
 			http.get(`${LISTE}/74010`, ({ request }) => {
 				demande = new URL(request.url)
 				return HttpResponse.json(ANNECY)
@@ -188,7 +188,7 @@ describe('la commune d’un code', () => {
 	})
 
 	test('un code inconnu de la liste (404, corps en texte) est « inconnue », pas une panne', async () => {
-		simuler(http.get(`${LISTE}/74999`, () => new HttpResponse('Not Found', { status: 404 })))
+		simulate(http.get(`${LISTE}/74999`, () => new HttpResponse('Not Found', { status: 404 })))
 		expect(await cityFromCode('74999')).toEqual({ genre: 'inconnue' })
 	})
 
@@ -199,11 +199,11 @@ describe('la commune d’un code', () => {
 	})
 
 	test('une panne, ou une réponse pour un autre code, est « panne » : rien n’est gardé de cette réponse', async () => {
-		simuler(http.get(`${LISTE}/74010`, () => new HttpResponse(null, { status: 502 })))
+		simulate(http.get(`${LISTE}/74010`, () => new HttpResponse(null, { status: 502 })))
 		expect(await cityFromCode('74010')).toEqual({ genre: 'panne' })
-		simuler(http.get(`${LISTE}/74010`, () => HttpResponse.json({ nom: 'Autre', code: '38185' })))
+		simulate(http.get(`${LISTE}/74010`, () => HttpResponse.json({ nom: 'Autre', code: '38185' })))
 		expect(await cityFromCode('74010')).toEqual({ genre: 'panne' })
-		simuler(http.get(`${LISTE}/74010`, () => HttpResponse.error()))
+		simulate(http.get(`${LISTE}/74010`, () => HttpResponse.error()))
 		expect(await cityFromCode('74010')).toEqual({ genre: 'panne' })
 	})
 })

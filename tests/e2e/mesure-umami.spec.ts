@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { AGENT_AUTOMATISE, fauxUmami, unAgentParEssai } from '../support/fake-umami'
+import { AGENT_AUTOMATED, agentByTest, fakeUmami } from '../support/fake-umami'
 
 /**
  * The audience measure, end to end (tickets 111 and 143): a real browser loads a page, the tracker
@@ -11,8 +11,8 @@ import { AGENT_AUTOMATISE, fauxUmami, unAgentParEssai } from '../support/fake-um
  */
 
 // The fake Umami is one instance for every worker of the run: each test reads only what came with its
-// own user agent (tests/outils/faux-umami.ts), never empties it, and never reads all of it.
-test.use(unAgentParEssai())
+// own user agent (tests/support/fake-umami.ts), never empties it, and never reads all of it.
+test.use(agentByTest())
 
 test.describe('Un navigateur qui n’est pas automatisé', () => {
 	test('une page vue arrive au faux Umami, par /u, sans cookie ni Referer, avec la version du build', async ({
@@ -21,7 +21,7 @@ test.describe('Un navigateur qui n’est pas automatisé', () => {
 		request,
 		userAgent,
 	}) => {
-		const umami = fauxUmami().pourLAgent(userAgent)
+		const umami = fakeUmami().pourLAgent(userAgent)
 		// The version of the build is the one /api/health shows: the tag of every event.
 		const version = ((await (await request.get('/api/health')).json()) as { version: string }).version
 		await context.addInitScript(() => {
@@ -60,7 +60,7 @@ test.describe('Un navigateur qui n’est pas automatisé', () => {
 		page,
 		userAgent,
 	}) => {
-		const umami = fauxUmami().pourLAgent(userAgent)
+		const umami = fakeUmami().pourLAgent(userAgent)
 		await context.addInitScript(() => {
 			Object.defineProperty(navigator, 'webdriver', { get: () => false })
 		})
@@ -91,10 +91,10 @@ test.describe('Un navigateur qui n’est pas automatisé', () => {
 
 test.describe('Un navigateur automatisé', () => {
 	// The user agent of the headless browser, marked like the others: the filter of the page still refuses it.
-	test.use(unAgentParEssai(AGENT_AUTOMATISE))
+	test.use(agentByTest(AGENT_AUTOMATED))
 
 	test('rien n’est envoyé : le filtre de la page le refuse', async ({ page, userAgent }) => {
-		const umami = fauxUmami().pourLAgent(userAgent)
+		const umami = fakeUmami().pourLAgent(userAgent)
 		await page.goto('/')
 		// The tracker has run when `window.umami` exists. Asking it for a page view then goes through
 		// the filter of the page, which settles before the call returns: nothing is waited for by the clock.
@@ -117,7 +117,7 @@ test.describe('Le chemin /u', () => {
 		request,
 		userAgent,
 	}) => {
-		const umami = fauxUmami().pourLAgent(userAgent)
+		const umami = fakeUmami().pourLAgent(userAgent)
 		const reponse = await request.post('/u/api/send', {
 			headers: {
 				'User-Agent': String(userAgent),
@@ -135,7 +135,7 @@ test.describe('Le chemin /u', () => {
 	})
 
 	test('un GET sur l’envoi répond 405, tout autre chemin sous /u répond 404', async ({ request, userAgent }) => {
-		const umami = fauxUmami().pourLAgent(userAgent)
+		const umami = fakeUmami().pourLAgent(userAgent)
 		const avecSonAgent = { headers: { 'User-Agent': String(userAgent) } }
 		expect((await request.get('/u/api/send', avecSonAgent)).status()).toBe(405)
 		for (const chemin of [

@@ -5,8 +5,8 @@ import { profileProgress } from '@/lib/dashboard/progress'
 import { saveDescription } from '@/lib/dashboard/save-description'
 import { saveIdentity } from '@/lib/dashboard/save-identity'
 import { saveNetworks } from '@/lib/dashboard/save-networks'
-import { creerCompte } from '../support/account-factory'
-import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { createAccount } from '../support/account-factory'
+import { emptyBase, testPayload } from '../support/payload-test'
 
 /**
  * The progress block of her space (ticket 138; plan 02 I20): after each save, what the page shows
@@ -15,7 +15,7 @@ import { payloadDeTest, viderLaBase } from '../support/payload-test'
  * action), so this equality is what she sees move without a reload.
  */
 
-afterEach(viderLaBase)
+afterEach(emptyBase)
 
 async function utilisateurDe(payload: Payload, id: number | string): Promise<DashboardUser> {
 	const doc = await payload.findByID({ collection: 'pros', id, depth: 0, overrideAccess: true })
@@ -39,8 +39,8 @@ async function lectures(payload: Payload, utilisateur: DashboardUser) {
 
 describe('I20 : le bloc de l’espace égale l’état enregistré par le serveur, à chaque étape', () => {
 	test('profil vide, puis après chaque enregistrement', async () => {
-		const compte = await creerCompte('maquilleuse')
-		const payload = await payloadDeTest()
+		const compte = await createAccount('maquilleuse')
+		const payload = await testPayload()
 		const utilisateur = await utilisateurDe(payload, compte.id)
 
 		const egaux = async () => {

@@ -27,17 +27,17 @@ const FAKE_LIST = /^http:\/\/(?:127\.0\.0\.1|localhost):\d{1,5}$/
 
 /**
  * Where the list is asked: the official one, or the fake list of the test bench when the bench gives
- * it (COMMUNES_DU_BANC, set by tests/outils/e2e.ts for the application of the end-to-end tests,
- * which must never call the Internet). Like IMAGES_DU_BANC, production never sets it: a value that
+ * it (BENCH_CITIES, set by tests/support/e2e.ts for the application of the end-to-end tests,
+ * which must never call the Internet). Like BENCH_IMAGES, production never sets it: a value that
  * is not exactly an http address of this machine with a port, or one given to a deployed site, is
  * refused loudly rather than followed.
  */
 export function citiesAddress(variables: Readonly<Record<string, string | undefined>> = process.env): string {
-	const bench = variables.COMMUNES_DU_BANC?.trim()
+	const bench = variables.BENCH_CITIES?.trim()
 	if (!bench) return CITIES_ADDRESS
-	if (!FAKE_LIST.test(bench)) throw new Error('COMMUNES_DU_BANC refusée. Attendu : http://127.0.0.1:PORT.')
+	if (!FAKE_LIST.test(bench)) throw new Error('BENCH_CITIES refusée. Attendu : http://127.0.0.1:PORT.')
 	if (DEPLOYED_ORIGINS.includes(variables.NEXT_PUBLIC_SITE_URL ?? ''))
-		throw new Error('COMMUNES_DU_BANC refusée : un site déployé ne demande que la liste officielle.')
+		throw new Error('BENCH_CITIES refusée : un site déployé ne demande que la liste officielle.')
 	return bench
 }
 

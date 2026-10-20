@@ -3,8 +3,8 @@ import type { Payload } from 'payload'
 import { artistProfile, type DashboardUser } from '@/lib/dashboard/my-profile'
 import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
 import { saveIdentity } from '@/lib/dashboard/save-identity'
-import { type CompteDeTest, creerCompte } from '../support/account-factory'
-import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { createAccount, type TestAccount } from '../support/account-factory'
+import { emptyBase, testPayload } from '../support/payload-test'
 
 /**
  * The identity saved from her space (tickets 118 and 119; plan 02 U54, I02, I03, I19, U32): the
@@ -12,9 +12,9 @@ import { payloadDeTest, viderLaBase } from '../support/payload-test'
  * values given back are the ones the database holds.
  */
 
-afterEach(viderLaBase)
+afterEach(emptyBase)
 
-type Maquilleuse = CompteDeTest<'maquilleuse'>
+type Maquilleuse = TestAccount<'maquilleuse'>
 
 /** The account as Payload hands it to a request: what the access rules read. */
 async function utilisateurDe(payload: Payload, compte: Maquilleuse): Promise<DashboardUser> {
@@ -38,9 +38,9 @@ const IDENTITE = { prenom: 'Léa', nom: 'Fictive', nomArtiste: 'Studio Fictif', 
 
 describe('U54 : la page ne lit que le profil de la maquilleuse connectée', () => {
 	test('A lit le sien, jamais celui de B', async () => {
-		const a = await creerCompte('maquilleuse')
-		const b = await creerCompte('maquilleuse')
-		const payload = await payloadDeTest()
+		const a = await createAccount('maquilleuse')
+		const b = await createAccount('maquilleuse')
+		const payload = await testPayload()
 		await payload.update({
 			collection: 'profiles',
 			id: (await profilStocke(payload, b)).id,
@@ -64,8 +64,8 @@ describe('U54 : la page ne lit que le profil de la maquilleuse connectée', () =
 	})
 
 	test('un compte de l’administration n’a pas de profil de maquilleuse', async () => {
-		const admin = await creerCompte('admin')
-		const payload = await payloadDeTest()
+		const admin = await createAccount('admin')
+		const payload = await testPayload()
 		const doc = await payload.findByID({ collection: 'admins', id: admin.id, depth: 0, overrideAccess: true })
 		const utilisateur = { ...doc, collection: 'admins' } as unknown as DashboardUser
 		expect(await artistProfile(payload, utilisateur)).toBeNull()
@@ -74,9 +74,9 @@ describe('U54 : la page ne lit que le profil de la maquilleuse connectée', () =
 
 describe('E19 : l’identité enregistrée est celle de la base', () => {
 	test('les valeurs rendues sont les valeurs stockées, rognées, et le profil de A seul a changé', async () => {
-		const a = await creerCompte('maquilleuse')
-		const b = await creerCompte('maquilleuse')
-		const payload = await payloadDeTest()
+		const a = await createAccount('maquilleuse')
+		const b = await createAccount('maquilleuse')
+		const payload = await testPayload()
 		const avantB = await profilStocke(payload, b)
 
 		const resultat = await saveIdentity(payload, await utilisateurDe(payload, a), {
@@ -105,8 +105,8 @@ describe('U32, I03, I02 : une requête forgée est refusée, rien ne change', ()
 		['id', 1],
 		['superArtist', true],
 	])('la clé réservée %s refuse la requête entière', async (cle, valeur) => {
-		const a = await creerCompte('maquilleuse')
-		const payload = await payloadDeTest()
+		const a = await createAccount('maquilleuse')
+		const payload = await testPayload()
 		const avant = await profilStocke(payload, a)
 
 		const resultat = await saveIdentity(payload, await utilisateurDe(payload, a), {
@@ -124,8 +124,8 @@ describe('U32, I03, I02 : une requête forgée est refusée, rien ne change', ()
 	})
 
 	test('hors bornes : le message est sous le champ et la base ne bouge pas', async () => {
-		const a = await creerCompte('maquilleuse')
-		const payload = await payloadDeTest()
+		const a = await createAccount('maquilleuse')
+		const payload = await testPayload()
 		const avant = await profilStocke(payload, a)
 
 		const resultat = await saveIdentity(payload, await utilisateurDe(payload, a), {
@@ -145,8 +145,8 @@ describe('U32, I03, I02 : une requête forgée est refusée, rien ne change', ()
 	})
 
 	test('un compte sans profil ne crée rien : message du site', async () => {
-		const sansProfil = await creerCompte('maquilleuse-sans-profil')
-		const payload = await payloadDeTest()
+		const sansProfil = await createAccount('maquilleuse-sans-profil')
+		const payload = await testPayload()
 		const doc = await payload.findByID({ collection: 'pros', id: sansProfil.id, depth: 0, overrideAccess: true })
 		const resultat = await saveIdentity(payload, { ...doc, collection: 'pros' } as DashboardUser, IDENTITE)
 		expect(resultat).toEqual({ ok: false, message: FAILURE_MESSAGE })
@@ -156,8 +156,8 @@ describe('U32, I03, I02 : une requête forgée est refusée, rien ne change', ()
 
 describe('I19 : changer de nom ne change pas l’adresse du profil', () => {
 	test('deux enregistrements de suite, le slug est celui de la création', async () => {
-		const a = await creerCompte('maquilleuse')
-		const payload = await payloadDeTest()
+		const a = await createAccount('maquilleuse')
+		const payload = await testPayload()
 		const utilisateur = await utilisateurDe(payload, a)
 		const slug = (await profilStocke(payload, a)).slug
 

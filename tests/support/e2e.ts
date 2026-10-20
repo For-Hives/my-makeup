@@ -9,19 +9,12 @@
  */
 
 import type { PlaywrightTestConfig } from '@playwright/test'
-import {
-	BancRefuse,
-	type Environnement,
-	environnementDuBanc,
-	type Instance,
-	lireInstance,
-	type Variables,
-} from './bench'
-import { type EnvironnementAdmis, lireEnvironnement, verifierCible } from './environment-guard'
+import { benchEnvironment, type Environment, type Instance, RefusedBench, readInstance, type Variables } from './bench'
+import { type AcceptedEnvironment, checkTarget, readEnvironment } from './environment-guard'
 
 /** The only folder Playwright looks into, and the only file names it takes there. */
-export const DOSSIER_DES_ESSAIS = './tests/e2e'
-export const MOTIF_DES_ESSAIS = '**/*.spec.ts'
+export const TEST_FOLDER = './tests/e2e'
+export const TEST_PATTERN = '**/*.spec.ts'
 
 /**
  * The one test that needs the bench to itself (ticket 225): the real import of the fake Strapi source empties the
@@ -30,58 +23,58 @@ export const MOTIF_DES_ESSAIS = '**/*.spec.ts'
  * Playwright's own way to order projects (`dependencies`) plays the whole suite again whenever a file is named,
  * and puts every test of a shard in the first one.
  */
-export const ESSAI_SEUL_SUR_LE_BANC = '**/tranche-profil-importe.spec.ts'
-export const PROJET_DE_L_ESSAI_SEUL = 'import-final'
+export const TEST_ONLY_ON_BENCH = '**/tranche-profil-importe.spec.ts'
+export const TEST_ONLY_PROJECT = 'import-final'
 
 /** A test carries this tag to run at the phone width too. */
-export const ETIQUETTE_MOBILE = '@mobile'
+export const LABEL_MOBILE = '@mobile'
 
 /** The two screen sizes of the tests. 390 px is the reference phone width of the v3 (docs/qualite.md). */
-export const ECRANS = {
+export const SCREENS = {
 	chromium: { width: 1440, height: 900 },
 	mobile: { width: 390, height: 844 },
 } as const
 
 /** Where the application says whether it can serve. */
-export const CHEMIN_DE_SANTE = '/api/health'
+export const HEALTH_PATH = '/api/health'
 
 /** Everything a run leaves behind lives under these two folders, both ignored by git. */
-export const DOSSIER_DU_RAPPORT = 'playwright-report'
-export const DOSSIER_DES_RESULTATS = 'test-results'
+export const REPORT_FOLDER = 'playwright-report'
+export const RESULT_FOLDER = 'test-results'
 /** Trace, video and screenshot of each failed test. Playwright empties this folder when a run starts. */
-export const DOSSIER_DES_TRACES = `${DOSSIER_DES_RESULTATS}/essais`
+export const TRACES_FOLDER = `${RESULT_FOLDER}/essais`
 /** The traces of the last run, the one that plays the test that has the bench to itself. */
-export const DOSSIER_DES_TRACES_FINALES = `${DOSSIER_DES_RESULTATS}/essais-final`
+export const TRACES_FINAL_FOLDER = `${RESULT_FOLDER}/essais-final`
 /** The results of the last run, for the tools that read them. */
-export const FICHIER_DES_RESULTATS = `${DOSSIER_DES_RESULTATS}/resultats.json`
+export const RESULT_FILE = `${RESULT_FOLDER}/resultats.json`
 
 /** Longest wait for the application to say it is healthy, once Playwright has started it. */
-export const DELAI_DE_DEMARRAGE_MS = 60_000
+export const STARTUP_DELAY_MS = 60_000
 
-type EnvironnementDeProcessus = Record<string, string>
+type ProcessEnvironment = Record<string, string>
 
-export interface Cible {
+export interface Target {
 	/** The origin every test opens its paths on. */
 	adresse: string
-	environnement: EnvironnementAdmis
+	environnement: AcceptedEnvironment
 }
 
 /** The address the application answers on when it runs against the bench of an instance. */
-export function adresseDuBanc(environnement: Environnement): string {
-	const adresse = environnement.NEXT_PUBLIC_SITE_URL
-	if (!adresse) throw new BancRefuse('.env.test : NEXT_PUBLIC_SITE_URL manque.')
-	return adresse
+export function benchUrl(environnement: Environment): string {
+	const url = environnement.NEXT_PUBLIC_SITE_URL
+	if (!url) throw new RefusedBench('.env.test : NEXT_PUBLIC_SITE_URL manque.')
+	return url
 }
 
 /**
  * Where the tests point: `BASE_URL` when the run gives one, else the application of the bench.
  * Throws `EnvironnementRefuse` on anything but a local address. Production is refused in every environment.
  */
-export function cibleDesEssais(variables: Variables = process.env): Cible {
-	const environnement = lireEnvironnement(variables.APP_ENV)
-	const adresse = variables.BASE_URL || adresseDuBanc(environnementDuBanc(lireInstance(variables)))
-	verifierCible(adresse, environnement)
-	return { adresse, environnement }
+export function testTarget(variables: Variables = process.env): Target {
+	const environment = readEnvironment(variables.APP_ENV)
+	const url = variables.BASE_URL || benchUrl(benchEnvironment(readInstance(variables)))
+	checkTarget(url, environment)
+	return { adresse: url, environnement: environment }
 }
 
 /* ------------------------------------------------------------------------------------------
@@ -95,10 +88,10 @@ export function cibleDesEssais(variables: Variables = process.env): Cible {
  * working `.env`. The variable is not documented by Next: tests/unit/banc-e2e.test.ts checks it
  * against the code of Next that is installed.
  */
-export const SANS_FICHIER_ENV = { __NEXT_PROCESSED_ENV: 'true' } as const
+export const WITHOUT_FILE_ENV = { __NEXT_PROCESSED_ENV: 'true' } as const
 
 /** Nothing leaves the bench, the usage statistics of Next included. */
-const SANS_TELEMETRIE = { NEXT_TELEMETRY_DISABLED: '1' } as const
+const WITHOUT_TELEMETRY = { NEXT_TELEMETRY_DISABLED: '1' } as const
 
 /** What Playwright needs to start the application itself: the shape of its `webServer` setting. */
 export interface Application {
@@ -106,7 +99,7 @@ export interface Application {
 	/** Playwright waits until this address answers, and refuses to start when it already does. */
 	url: string
 	/** Added to the environment of Playwright, and winning over it. */
-	env: EnvironnementDeProcessus
+	env: ProcessEnvironment
 	reuseExistingServer: false
 	timeout: number
 	stdout: 'pipe'
@@ -114,9 +107,9 @@ export interface Application {
 }
 
 /** The port the application of the tests listens on, read in its address. */
-export function portDeLApplication(adresse: string): number {
+export function applicationPort(adresse: string): number {
 	const port = Number(URL.canParse(adresse) ? new URL(adresse).port : Number.NaN)
-	if (!(port > 0)) throw new BancRefuse('.env.test : NEXT_PUBLIC_SITE_URL doit écrire son port.')
+	if (!(port > 0)) throw new RefusedBench('.env.test : NEXT_PUBLIC_SITE_URL doit écrire son port.')
 	return port
 }
 
@@ -124,13 +117,13 @@ export function portDeLApplication(adresse: string): number {
  * What the application of the tests receives besides the environment of Playwright: the bench,
  * and the production mode of the build it serves.
  */
-export function environnementDeLApplication(environnement: Environnement): EnvironnementDeProcessus {
+export function applicationEnvironment(environnement: Environment): ProcessEnvironment {
 	return {
 		...environnement,
-		...imagesDuBanc(environnement),
-		...communesDuBanc(environnement),
-		...SANS_FICHIER_ENV,
-		...SANS_TELEMETRIE,
+		...benchImages(environnement),
+		...benchCities(environnement),
+		...WITHOUT_FILE_ENV,
+		...WITHOUT_TELEMETRY,
 		NODE_ENV: 'production',
 	}
 }
@@ -143,20 +136,20 @@ export function environnementDeLApplication(environnement: Environnement): Envir
  * shell, or pointed at another address, Playwright starts nothing: the global setup then
  * says whether something healthy answers.
  */
-export function applicationDesEssais(variables: Variables = process.env): Application | undefined {
-	const environnement = environnementDuBanc(lireInstance(variables))
-	const adresse = adresseDuBanc(environnement)
-	const surLeBanc = Boolean(variables.DATABASE_URI) && variables.DATABASE_URI === environnement.DATABASE_URI
-	const versLeBanc = !variables.BASE_URL || variables.BASE_URL === adresse
-	if (!surLeBanc || !versLeBanc) return undefined
+export function testApplication(variables: Variables = process.env): Application | undefined {
+	const environment = benchEnvironment(readInstance(variables))
+	const url = benchUrl(environment)
+	const onBench = Boolean(variables.DATABASE_URI) && variables.DATABASE_URI === environment.DATABASE_URI
+	const toBench = !variables.BASE_URL || variables.BASE_URL === url
+	if (!onBench || !toBench) return undefined
 	return {
 		// The script of package.json, on the loopback interface only, like `bun run dev`.
-		command: `bun --no-env-file run start -p ${portDeLApplication(adresse)} -H 127.0.0.1`,
-		url: `${adresse}${CHEMIN_DE_SANTE}`,
-		env: environnementDeLApplication(environnement),
+		command: `bun --no-env-file run start -p ${applicationPort(url)} -H 127.0.0.1`,
+		url: `${url}${HEALTH_PATH}`,
+		env: applicationEnvironment(environment),
 		// Never an application that was already there: nobody knows which database it is attached to.
 		reuseExistingServer: false,
-		timeout: DELAI_DE_DEMARRAGE_MS,
+		timeout: STARTUP_DELAY_MS,
 		stdout: 'pipe',
 		stderr: 'pipe',
 	}
@@ -170,31 +163,31 @@ export function applicationDesEssais(variables: Variables = process.env): Applic
  * The whole configuration of Playwright. playwright.config.ts gives it as it is: what the
  * guard rails of the CI check (C07, tests/ci/garde-fous-ci.test.ts) is what Playwright runs with.
  */
-export function configurationDesEssais(variables: Variables = process.env): PlaywrightTestConfig {
-	const { adresse } = cibleDesEssais(variables)
-	const enCi = Boolean(variables.CI)
-	const application = applicationDesEssais(variables)
+export function testConfiguration(variables: Variables = process.env): PlaywrightTestConfig {
+	const { adresse: url } = testTarget(variables)
+	const inCi = Boolean(variables.CI)
+	const application = testApplication(variables)
 	return {
-		testDir: DOSSIER_DES_ESSAIS,
+		testDir: TEST_FOLDER,
 		// Without it Playwright would also pick up the `*.test.ts` files of bun, and die on `bun:test`.
-		testMatch: MOTIF_DES_ESSAIS,
+		testMatch: TEST_PATTERN,
 		// Started before the global setup, stopped with its whole process tree when the run ends.
 		...(application ? { webServer: application } : {}),
 		// Before the first test: the target is checked again, and the application must be healthy.
-		globalSetup: './tests/outils/serveur-e2e.ts',
-		outputDir: DOSSIER_DES_TRACES,
+		globalSetup: './tests/support/e2e-server.ts',
+		outputDir: TRACES_FOLDER,
 		// In the CI, a test left in `.only` fails the run instead of hiding every other test.
-		forbidOnly: enCi,
+		forbidOnly: inCi,
 		fullyParallel: true,
-		retries: enCi ? 2 : 0,
+		retries: inCi ? 2 : 0,
 		reporter: [
 			['list'],
 			// `never`: after a failure, the default serves the report and keeps the command waiting.
-			['html', { open: 'never', outputFolder: DOSSIER_DU_RAPPORT }],
-			['json', { outputFile: FICHIER_DES_RESULTATS }],
+			['html', { open: 'never', outputFolder: REPORT_FOLDER }],
+			['json', { outputFile: RESULT_FILE }],
 		],
 		use: {
-			baseURL: adresse,
+			baseURL: url,
 			locale: 'fr-FR',
 			timezoneId: 'Europe/Paris',
 			// Kept for every failed attempt, the first one included: on a developer's machine there is no retry.
@@ -205,19 +198,25 @@ export function configurationDesEssais(variables: Variables = process.env): Play
 		projects: [
 			{
 				name: 'chromium',
-				testIgnore: ESSAI_SEUL_SUR_LE_BANC,
-				use: { browserName: 'chromium', viewport: ECRANS.chromium },
+				testIgnore: TEST_ONLY_ON_BENCH,
+				use: { browserName: 'chromium', viewport: SCREENS.chromium },
 			},
 			{
 				name: 'mobile',
-				grep: new RegExp(ETIQUETTE_MOBILE),
-				testIgnore: ESSAI_SEUL_SUR_LE_BANC,
-				use: { browserName: 'chromium', viewport: ECRANS.mobile, isMobile: true, hasTouch: true, deviceScaleFactor: 3 },
+				grep: new RegExp(LABEL_MOBILE),
+				testIgnore: TEST_ONLY_ON_BENCH,
+				use: {
+					browserName: 'chromium',
+					viewport: SCREENS.mobile,
+					isMobile: true,
+					hasTouch: true,
+					deviceScaleFactor: 3,
+				},
 			},
 			{
-				name: PROJET_DE_L_ESSAI_SEUL,
-				testMatch: ESSAI_SEUL_SUR_LE_BANC,
-				use: { browserName: 'chromium', viewport: ECRANS.chromium },
+				name: TEST_ONLY_PROJECT,
+				testMatch: TEST_ONLY_ON_BENCH,
+				use: { browserName: 'chromium', viewport: SCREENS.chromium },
 			},
 		],
 	}
@@ -227,16 +226,16 @@ export function configurationDesEssais(variables: Variables = process.env): Play
  * What `bun run test:e2e` starts: the build, then Playwright
  * ---------------------------------------------------------------------------------------- */
 
-const definies = (variables: Variables): EnvironnementDeProcessus =>
+const defined = (variables: Variables): ProcessEnvironment =>
 	Object.fromEntries(Object.entries(variables).filter((entree): entree is [string, string] => entree[1] !== undefined))
 
 /**
  * The address of the storage of the bench for the image optimizer (next.config.ts): the build freezes
  * it, and the server reads it again. Nothing when the bench has no storage.
  */
-function imagesDuBanc(environnement: Environnement): EnvironnementDeProcessus {
-	const { S3_ENDPOINT: point, S3_BUCKET: espace } = environnement
-	return point && espace ? { IMAGES_DU_BANC: `${point}/${espace}` } : {}
+function benchImages(environnement: Environment): ProcessEnvironment {
+	const { S3_ENDPOINT: point, S3_BUCKET: dashboard } = environnement
+	return point && dashboard ? { BENCH_IMAGES: `${point}/${dashboard}` } : {}
 }
 
 /**
@@ -244,9 +243,9 @@ function imagesDuBanc(environnement: Environnement): EnvironnementDeProcessus {
  * no test of a browser calls the Internet. Only the application of the tests receives it; the
  * integration tests simulate the official list itself (docs/tests/http-sortant.md).
  */
-function communesDuBanc(environnement: Environnement): EnvironnementDeProcessus {
-	const adresse = environnement.FAUSSES_COMMUNES
-	return adresse ? { COMMUNES_DU_BANC: adresse } : {}
+function benchCities(environnement: Environment): ProcessEnvironment {
+	const url = environnement.FAKE_CITIES
+	return url ? { BENCH_CITIES: url } : {}
 }
 
 /**
@@ -254,18 +253,18 @@ function communesDuBanc(environnement: Environnement): EnvironnementDeProcessus 
  * of the site is left out on purpose: present at build time it would be frozen into the build,
  * absent it is read when the application starts.
  */
-export function environnementDuBuild(variables: Variables, environnement: Environnement): EnvironnementDeProcessus {
-	const duBanc = [...Object.keys(environnement), 'BASE_URL']
+export function buildEnvironment(variables: Variables, environnement: Environment): ProcessEnvironment {
+	const bench = [...Object.keys(environnement), 'BASE_URL']
 	return {
-		...Object.fromEntries(Object.entries(definies(variables)).filter(([nom]) => !duBanc.includes(nom))),
+		...Object.fromEntries(Object.entries(defined(variables)).filter(([nom]) => !bench.includes(nom))),
 		// The one public setting of the bench the pages freeze: the hostnames Umami counts on.
 		...(environnement.NEXT_PUBLIC_UMAMI_DOMAINS && {
 			NEXT_PUBLIC_UMAMI_DOMAINS: environnement.NEXT_PUBLIC_UMAMI_DOMAINS,
 		}),
 		// The storage of the bench, where the image optimizer may fetch photos from (ticket 103).
-		...imagesDuBanc(environnement),
-		...SANS_FICHIER_ENV,
-		...SANS_TELEMETRIE,
+		...benchImages(environnement),
+		...WITHOUT_FILE_ENV,
+		...WITHOUT_TELEMETRY,
 		NODE_ENV: 'production',
 	}
 }
@@ -274,23 +273,23 @@ export function environnementDuBuild(variables: Variables, environnement: Enviro
  * The environment of Playwright: the bench of the instance, which the account factory needs and
  * which makes Playwright start the application, and the address the tests open.
  */
-export function environnementDePlaywright(
+export function playwrightEnvironment(
 	variables: Variables,
 	instance: Instance,
-	environnement: Environnement
-): EnvironnementDeProcessus {
+	environnement: Environment
+): ProcessEnvironment {
 	return {
-		...definies(variables),
+		...defined(variables),
 		...environnement,
-		BANC_INSTANCE: instance.nom,
-		BANC_DECALAGE: String(instance.decalage),
-		BASE_URL: adresseDuBanc(environnement),
+		BENCH_INSTANCE: instance.nom,
+		BENCH_OFFSET: String(instance.decalage),
+		BASE_URL: benchUrl(environnement),
 		NODE_ENV: 'test',
 	}
 }
 
 /** The two runs of a `bun run test:e2e`: the arguments of `playwright test` for each, or nothing for a run not asked for. */
-export interface PhasesDePlaywright {
+export interface PlaywrightPhases {
 	/** Everything but the test that has the bench to itself, at the screen sizes asked for. */
 	principale?: string[]
 	/** That test, alone, once the first run is over. */
@@ -307,31 +306,31 @@ export interface PhasesDePlaywright {
  * The second one reads its results on screen and keeps its traces in a folder of its own, so that it does not erase the
  * report and the traces of the first.
  */
-export function phasesDePlaywright(demandes: readonly string[]): PhasesDePlaywright {
-	const projets: string[] = []
-	const reste: string[] = []
+export function playwrightPhases(demandes: readonly string[]): PlaywrightPhases {
+	const projects: string[] = []
+	const rest: string[] = []
 	for (let i = 0; i < demandes.length; i += 1) {
 		const argument = demandes[i] ?? ''
-		if (argument.startsWith('--project=')) projets.push(argument.slice('--project='.length))
+		if (argument.startsWith('--project=')) projects.push(argument.slice('--project='.length))
 		else if ((argument === '--project' || argument === '-p') && i + 1 < demandes.length)
-			projets.push(demandes[++i] ?? '')
-		else reste.push(argument)
+			projects.push(demandes[++i] ?? '')
+		else rest.push(argument)
 	}
-	const dEcran = projets.filter(projet => projet !== PROJET_DE_L_ESSAI_SEUL)
-	const principale = projets.length === 0 ? ['chromium', 'mobile'] : dEcran
-	const finale = projets.length === 0 || projets.includes(PROJET_DE_L_ESSAI_SEUL)
+	const screen = projects.filter(projet => projet !== TEST_ONLY_PROJECT)
+	const main = projects.length === 0 ? ['chromium', 'mobile'] : screen
+	const finale = projects.length === 0 || projects.includes(TEST_ONLY_PROJECT)
 	return {
-		...(principale.length > 0 && {
-			principale: ['test', ...reste, ...principale.map(projet => `--project=${projet}`), '--pass-with-no-tests'],
+		...(main.length > 0 && {
+			principale: ['test', ...rest, ...main.map(projet => `--project=${projet}`), '--pass-with-no-tests'],
 		}),
 		...(finale && {
 			finale: [
 				'test',
-				...reste,
-				`--project=${PROJET_DE_L_ESSAI_SEUL}`,
+				...rest,
+				`--project=${TEST_ONLY_PROJECT}`,
 				'--pass-with-no-tests',
 				'--reporter=list',
-				`--output=${DOSSIER_DES_TRACES_FINALES}`,
+				`--output=${TRACES_FINAL_FOLDER}`,
 			],
 		}),
 	}
@@ -341,32 +340,32 @@ export function phasesDePlaywright(demandes: readonly string[]): PhasesDePlaywri
  * `bun run test:e2e` only ever opens the application of the bench. A `BASE_URL` that points
  * elsewhere is refused rather than replaced without a word: the person asked for another target.
  */
-export function exigerCibleDuBanc(variables: Variables, environnement: Environnement): string {
-	const adresse = adresseDuBanc(environnement)
-	if (variables.BASE_URL && variables.BASE_URL !== adresse)
-		throw new BancRefuse(
-			`BASE_URL est réglée, et ce n’est pas l’adresse de l’application du banc (${adresse}) : « bun run test:e2e » n’ouvre que celle-là. Retire BASE_URL.`
+export function requireBenchTarget(variables: Variables, environnement: Environment): string {
+	const url = benchUrl(environnement)
+	if (variables.BASE_URL && variables.BASE_URL !== url)
+		throw new RefusedBench(
+			`BASE_URL est réglée, et ce n’est pas l’adresse de l’application du banc (${url}) : « bun run test:e2e » n’ouvre que celle-là. Retire BASE_URL.`
 		)
-	return adresse
+	return url
 }
 
 /** What to say when something already listens where the application of the tests must start. */
-export function messagePortPris(port: number): string {
+export function portTakenMessage(port: number): string {
 	return [
 		`Le port ${port} est déjà pris sur ce poste : une application y tourne, peut-être celle d’un autre banc.`,
-		'Arrête-la, ou donne à ce banc son nom et son décalage de ports, par exemple : BANC_INSTANCE=mon-banc BANC_DECALAGE=20 bun run banc:up',
+		'Arrête-la, ou donne à ce banc son nom et son décalage de ports, par exemple : BENCH_INSTANCE=mon-banc BENCH_OFFSET=20 bun run bench:up',
 	].join('\n')
 }
 
-const COMMENT_LANCER =
+const COMMENT_LAUNCH =
 	'Les essais de bout en bout se lancent par « bun run test:e2e », qui construit l’application et la démarre contre le banc de test.'
 
 /** What the global setup says when the application does not answer as a healthy one. */
-export function messageApplicationMuette(adresse: string, constat: string): string {
-	return [`L’application ne répond pas sur ${adresse} (${CHEMIN_DE_SANTE} : ${constat}).`, COMMENT_LANCER].join('\n')
+export function applicationSilentMessage(adresse: string, constat: string): string {
+	return [`L’application ne répond pas sur ${adresse} (${HEALTH_PATH} : ${constat}).`, COMMENT_LAUNCH].join('\n')
 }
 
 /** What the global setup says when Playwright was started on a local address without the bench. */
-export function messageSansBanc(): string {
-	return ['Aucun banc de test n’est réglé pour ces essais (DATABASE_URI manque).', COMMENT_LANCER].join('\n')
+export function withoutBenchMessage(): string {
+	return ['Aucun banc de test n’est réglé pour ces essais (DATABASE_URI manque).', COMMENT_LAUNCH].join('\n')
 }

@@ -3,7 +3,7 @@ import { act } from 'react'
 import { BulletsEditor, type BulletsUpload } from '@/components/dashboard/BulletsEditor'
 import { type Bullet, type BulletsKind, LANGUAGES, SKILLS } from '@/lib/dashboard/bullets'
 import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
-import { ouvrirFenetre } from '../support/dom-react'
+import { openWindow } from '../support/dom-react'
 
 /**
  * The panels of the languages and of the skills (tickets 127 and 128; plan 02 E30, E31) and the
@@ -11,7 +11,7 @@ import { ouvrirFenetre } from '../support/dom-react'
  * fakes: no network. Both lists run the same tests: they are the same editor.
  */
 
-const fenetre = ouvrirFenetre()
+const fenetre = openWindow()
 
 const ENVOI_REUSSI: BulletsUpload = async saisie => ({
 	ok: true,

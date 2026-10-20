@@ -13,10 +13,10 @@
 import type { APIRequestContext, APIResponse } from '@playwright/test'
 import type { Payload } from 'payload'
 import { NO_PROFILE_CONTEXT } from '../../src/collections/Profiles'
-import { creerCompte } from './account-factory'
+import { createAccount } from './account-factory'
 
 /** Communes of the official list, with their INSEE code and the centre of the commune. */
-const COMMUNES = [
+const CITIES = [
 	{ name: 'Annecy', inseeCode: '74010', latitude: 45.9, longitude: 6.13 },
 	{ name: 'Annemasse', inseeCode: '74012', latitude: 46.19, longitude: 6.25 },
 	{ name: 'Thonon-les-Bains', inseeCode: '74281', latitude: 46.37, longitude: 6.48 },
@@ -29,7 +29,7 @@ const COMMUNES = [
 	{ name: 'Marseille', inseeCode: '13055', latitude: 43.3, longitude: 5.37 },
 ] as const
 
-export const SPECIALITES_GENEREES = [
+export const GENERATED_SPECIALTIES = [
 	'Maquillage mariée',
 	'Maquillage de plateau',
 	'Effets spéciaux',
@@ -38,7 +38,7 @@ export const SPECIALITES_GENEREES = [
 	'Maquillage de soirée',
 ] as const
 
-const COMPETENCES = ['Teint', 'Regard', 'Mains', 'Coiffure', 'Body painting', 'Prothèses', 'Visage', 'Peau mature']
+const SKILLS = ['Teint', 'Regard', 'Mains', 'Coiffure', 'Body painting', 'Prothèses', 'Visage', 'Peau mature']
 
 const PHRASES = [
 	'Je me déplace avec mes produits dans toute la région, du lundi au samedi.',
@@ -51,16 +51,16 @@ const PHRASES = [
 ]
 
 /** The marker word of the profiles of the factory, held by none of the vocabulary above. */
-export const MOT_DES_PROFILS_GENERES = 'zyglo'
+export const GENERATED_PROFILE_WORD = 'zyglo'
 
 /** The communes far from the Haute-Savoie and from Nantes, for a run that must not change the other searches of a shared bench. */
-export const COMMUNES_ELOIGNEES = COMMUNES.filter(({ name }) =>
+export const DISTANT_CITIES = CITIES.filter(({ name }) =>
 	['Lille', 'Bordeaux', 'Toulouse', 'Rennes', 'Marseille'].includes(name)
 )
 
-export interface OptionsDeLaFabrique {
+export interface FactoryOptions {
 	/** The communes the profiles are spread over (default: ten communes, one profile in ten in Annecy). */
-	communes?: readonly (typeof COMMUNES)[number][]
+	communes?: readonly (typeof CITIES)[number][]
 	/** False: no profile travels (default: one in three has a radius of 30 km). */
 	seDeplacent?: boolean
 	/** Starts the slug and the address of each profile: two runs with other prefixes do not meet. */
@@ -70,23 +70,23 @@ export interface OptionsDeLaFabrique {
 }
 
 /** Her identity and her texts, by her rank: the same every time. */
-export function profilGenere(
+export function generatedProfile(
 	rang: number,
-	{ prefixe = 'generee', marqueur, communes = COMMUNES, seDeplacent = true }: OptionsDeLaFabrique = {}
+	{ prefixe: prefix = 'generee', marqueur, communes = CITIES, seDeplacent = true }: FactoryOptions = {}
 ) {
-	const commune = communes[rang % communes.length] ?? COMMUNES[0]
+	const city = communes[rang % communes.length] ?? CITIES[0]
 	const description = Array.from({ length: 8 }, (_, i) => PHRASES[(rang + i * 3) % PHRASES.length]).join(' ')
 	return {
-		slug: `${prefixe}-${rang}`,
+		slug: `${prefix}-${rang}`,
 		firstName: 'Générée',
 		lastName: `Numéro ${rang}`,
-		specialty: SPECIALITES_GENEREES[rang % SPECIALITES_GENEREES.length],
-		city: commune,
+		specialty: GENERATED_SPECIALTIES[rang % GENERATED_SPECIALTIES.length],
+		city: city,
 		radiusKm: seDeplacent && rang % 3 === 0 ? 30 : null,
-		description: `${description} ${marqueur ?? (rang % 50 === 0 ? MOT_DES_PROFILS_GENERES : '')}`.trim(),
+		description: `${description} ${marqueur ?? (rang % 50 === 0 ? GENERATED_PROFILE_WORD : '')}`.trim(),
 		skills: [0, 1, 2].map(i => ({
-			name: COMPETENCES[(rang + i) % COMPETENCES.length],
-			description: `Savoir-faire ${COMPETENCES[(rang + i) % COMPETENCES.length]?.toLowerCase()}, appris en école puis en studio.`,
+			name: SKILLS[(rang + i) % SKILLS.length],
+			description: `Savoir-faire ${SKILLS[(rang + i) % SKILLS.length]?.toLowerCase()}, appris en école puis en studio.`,
 		})),
 		serviceOffers: [
 			{
@@ -99,28 +99,24 @@ export function profilGenere(
 }
 
 /** `n` runs of `tache`, ten at a time. */
-async function parLots<T>(n: number, tache: (i: number) => Promise<T>): Promise<T[]> {
-	const sortie: T[] = []
-	for (let debut = 0; debut < n; debut += 10) {
-		const lot = Array.from({ length: Math.min(10, n - debut) }, (_, i) => tache(debut + i))
-		sortie.push(...(await Promise.all(lot)))
+async function byBatches<T>(n: number, tache: (i: number) => Promise<T>): Promise<T[]> {
+	const output: T[] = []
+	for (let startedAt = 0; startedAt < n; startedAt += 10) {
+		const batch = Array.from({ length: Math.min(10, n - startedAt) }, (_, i) => tache(startedAt + i))
+		output.push(...(await Promise.all(batch)))
 	}
-	return sortie
+	return output
 }
 
 /** Creates `n` generated profiles, published and listed. Returns their slugs, in order. */
-export async function fabriquerDesProfils(
-	payload: Payload,
-	n: number,
-	options: OptionsDeLaFabrique = {}
-): Promise<string[]> {
-	const prefixe = options.prefixe ?? 'generee'
-	return parLots(n, async rang => {
-		const { slug, ...profil } = profilGenere(rang, options)
+export async function buildProfiles(payload: Payload, n: number, options: FactoryOptions = {}): Promise<string[]> {
+	const prefix = options.prefixe ?? 'generee'
+	return byBatches(n, async rang => {
+		const { slug, ...profile } = generatedProfile(rang, options)
 		const pro = await payload.create({
 			collection: 'pros',
 			data: {
-				email: `${prefixe}-${rang}@example.test`,
+				email: `${prefix}-${rang}@example.test`,
 				password: `Banc-${rang}-${crypto.randomUUID()}`,
 				name: `Générée ${rang}`,
 				_verified: true,
@@ -128,14 +124,14 @@ export async function fabriquerDesProfils(
 			context: NO_PROFILE_CONTEXT,
 			disableVerificationEmail: true,
 		})
-		await payload.create({ collection: 'profiles', data: { ...profil, slug, pro: pro.id } })
+		await payload.create({ collection: 'profiles', data: { ...profile, slug, pro: pro.id } })
 		return slug
 	})
 }
 
 /** The headers of an admin session, for the REST API of the running application. */
-async function entetesDeLAdmin(): Promise<Record<string, string>> {
-	return (await creerCompte('admin')).session.enTetes
+async function adminHeaders(): Promise<Record<string, string>> {
+	return (await createAccount('admin')).session.enTetes
 }
 
 /**
@@ -144,31 +140,31 @@ async function entetesDeLAdmin(): Promise<Record<string, string>> {
  * with the Payload of the test process would not reach the cache of the server. The account of each is
  * named « <prefixe> <rang> », which gives the slug « <prefixe>-<rang> ». Returns the identifiers to remove them.
  */
-export async function fabriquerParLApplication(
+export async function buildByApplication(
 	request: APIRequestContext,
 	n: number,
-	options: OptionsDeLaFabrique & { prefixe: string }
+	options: FactoryOptions & { prefixe: string }
 ): Promise<{ pros: number[]; profils: number[] }> {
-	const entetes = await entetesDeLAdmin()
-	const verifie = async (reponse: APIResponse, quoi: string) => {
+	const headers = await adminHeaders()
+	const verified = async (reponse: APIResponse, quoi: string) => {
 		if (!reponse.ok()) throw new Error(`${quoi} a répondu ${reponse.status()} : ${await reponse.text()}`)
 		return reponse
 	}
 	const pros: number[] = []
-	const profils: number[] = []
-	for (let debut = 0; debut < n; debut += 5) {
-		const lot = await Promise.all(
-			Array.from({ length: Math.min(5, n - debut) }, async (_, i) => {
-				const rang = debut + i
-				const { slug: _slug, ...profil } = profilGenere(rang, options)
+	const profiles: number[] = []
+	for (let startedAt = 0; startedAt < n; startedAt += 5) {
+		const batch = await Promise.all(
+			Array.from({ length: Math.min(5, n - startedAt) }, async (_, i) => {
+				const rank = startedAt + i
+				const { slug: _slug, ...profile } = generatedProfile(rank, options)
 				const pro = (await (
-					await verifie(
+					await verified(
 						await request.post('/api/pros', {
-							headers: entetes,
+							headers: headers,
 							data: {
-								email: `${options.prefixe}-${rang}@example.test`,
-								password: `Banc-${rang}-${crypto.randomUUID()}`,
-								name: `${options.prefixe} ${rang}`,
+								email: `${options.prefixe}-${rank}@example.test`,
+								password: `Banc-${rank}-${crypto.randomUUID()}`,
+								name: `${options.prefixe} ${rank}`,
 								_verified: true,
 							},
 						}),
@@ -176,40 +172,40 @@ export async function fabriquerParLApplication(
 					)
 				).json()) as { doc: { id: number } }
 				const { docs } = (await (
-					await verifie(
-						await request.get(`/api/profiles?where[pro][equals]=${pro.doc.id}&depth=0&limit=1`, { headers: entetes }),
+					await verified(
+						await request.get(`/api/profiles?where[pro][equals]=${pro.doc.id}&depth=0&limit=1`, { headers: headers }),
 						'La lecture d’un profil'
 					)
 				).json()) as { docs: { id: number }[] }
-				const cree = docs[0]
-				if (!cree) throw new Error('Le compte créé n’a pas son profil.')
-				await verifie(
-					await request.patch(`/api/profiles/${cree.id}`, { headers: entetes, data: profil }),
+				const created = docs[0]
+				if (!created) throw new Error('Le compte créé n’a pas son profil.')
+				await verified(
+					await request.patch(`/api/profiles/${created.id}`, { headers: headers, data: profile }),
 					'L’écriture d’un profil'
 				)
-				return { pro: pro.doc.id, profil: cree.id }
+				return { pro: pro.doc.id, profil: created.id }
 			})
 		)
-		for (const { pro, profil } of lot) {
+		for (const { pro, profil: profile } of batch) {
 			pros.push(pro)
-			profils.push(profil)
+			profiles.push(profile)
 		}
 	}
-	return { pros, profils }
+	return { pros, profils: profiles }
 }
 
 /** Deletes, through the application, the profiles and the accounts `fabriquerParLApplication` made. */
-export async function retirerParLApplication(
+export async function removeByApplication(
 	request: APIRequestContext,
-	{ pros, profils }: { pros: readonly number[]; profils: readonly number[] }
+	{ pros, profils: profiles }: { pros: readonly number[]; profils: readonly number[] }
 ): Promise<void> {
-	const entetes = await entetesDeLAdmin()
-	for (const id of profils) await request.delete(`/api/profiles/${id}`, { headers: entetes })
-	for (const id of pros) await request.delete(`/api/pros/${id}`, { headers: entetes })
+	const headers = await adminHeaders()
+	for (const id of profiles) await request.delete(`/api/profiles/${id}`, { headers: headers })
+	for (const id of pros) await request.delete(`/api/pros/${id}`, { headers: headers })
 }
 
 /** Deletes the profiles of a run and their accounts, by the prefix of their slug. */
-export async function retirerLesProfilsFabriques(payload: Payload, prefixe: string): Promise<void> {
+export async function removeBuiltProfiles(payload: Payload, prefixe: string): Promise<void> {
 	const { docs } = await payload.find({
 		collection: 'profiles',
 		where: { slug: { like: `${prefixe}-` } },

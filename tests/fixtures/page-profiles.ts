@@ -14,11 +14,11 @@
 
 import { placeProfile, profilePresent, readDemoPhoto } from '../../src/demo-data/loading'
 import { DEMO_PROFILES, type DemoProfile } from '../../src/demo-data/profiles'
-import { payloadDeTest } from '../support/payload-test'
-import { sousVerrou } from '../support/lock'
+import { underLock } from '../support/lock'
+import { testPayload } from '../support/payload-test'
 
 /** Every type of the set, and the surname each one takes after « Page » (the longest texts keep theirs). */
-const NOMS: Readonly<Record<string, string>> = {
+const NAMES: Readonly<Record<string, string>> = {
 	reference: 'Alpha',
 	'ville-voisine': 'Bravo',
 	'ville-eloignee': 'Charlie',
@@ -33,45 +33,45 @@ const NOMS: Readonly<Record<string, string>> = {
 	'textes-maximaux': 'Maximal',
 }
 
-function sansAncienNom<T extends { legacyUsername?: unknown }>(profil: T): T {
-	const { legacyUsername: _, ...reste } = profil
-	return reste as T
+function withoutOldName<T extends { legacyUsername?: unknown }>(profil: T): T {
+	const { legacyUsername: _, ...rest } = profil
+	return rest as T
 }
 
-function variante(type: DemoProfile, prefixe = 'Page'): DemoProfile {
-	const minuscule = prefixe.toLowerCase()
-	const nom = NOMS[type.cle]
-	if (!nom) throw new Error(`Pas de nom de page pour le profil type « ${type.cle} ».`)
+function variant(type: DemoProfile, prefixe = 'Page'): DemoProfile {
+	const lowercase = prefixe.toLowerCase()
+	const name = NAMES[type.cle]
+	if (!name) throw new Error(`Pas de nom de page pour le profil type « ${type.cle} ».`)
 	// The longest texts keep their long names: that is what the type is for.
-	const identite =
+	const identity =
 		Object.keys(type.profil).length === 0 || type.cle === 'textes-maximaux'
 			? {}
-			: { firstName: prefixe, lastName: nom, artistName: `${prefixe} ${nom} Maquillage` }
+			: { firstName: prefixe, lastName: name, artistName: `${prefixe} ${name} Maquillage` }
 	return {
 		...type,
-		cle: `${minuscule}-${type.cle}`,
-		compte: { email: `${minuscule}-profil-${type.cle}@example.test`, nom: `${prefixe} ${nom}` },
+		cle: `${lowercase}-${type.cle}`,
+		compte: { email: `${lowercase}-profil-${type.cle}@example.test`, nom: `${prefixe} ${name}` },
 		// The old username of the set belongs to the profile of the search: it stays unique in the bench.
-		profil: sansAncienNom({ ...type.profil, ...identite }),
+		profil: withoutOldName({ ...type.profil, ...identity }),
 		// The profile of an availability never set has no portfolio: the section is then absent from its page.
 		photos: type.cle === 'disponibilite-inconnue' ? { ...type.photos, galerie: [] } : type.photos,
 	}
 }
 
 /** The profile types of the page, by the key of the type of the set they come from. */
-export const PROFILS_DE_PAGE: ReadonlyMap<string, DemoProfile> = new Map(
-	DEMO_PROFILES.map(type => [type.cle, variante(type)])
+export const PAGE_PROFILES: ReadonlyMap<string, DemoProfile> = new Map(
+	DEMO_PROFILES.map(type => [type.cle, variant(type)])
 )
 
 /**
  * The same twelve types under another first name, for a spec that cannot share its profiles with the page
  * spec: each one takes its own away at its end, and the two run side by side (one per screen size).
  */
-export const profilsDePageSousLePrefixe = (prefixe: string): ReadonlyMap<string, DemoProfile> =>
-	new Map(DEMO_PROFILES.map(type => [type.cle, variante(type, prefixe)]))
+export const pageProfilesUnderPrefix = (prefixe: string): ReadonlyMap<string, DemoProfile> =>
+	new Map(DEMO_PROFILES.map(type => [type.cle, variant(type, prefixe)]))
 
 /** A profile type as it is in the bench. */
-export interface ProfilDePage {
+export interface PageProfile {
 	id: number
 	slug: string
 	/** The type it was made from. */
@@ -79,16 +79,16 @@ export interface ProfilDePage {
 }
 
 /** Loads the profiles that are not in the bench yet, and says where each one is. */
-export async function poserLesProfilsDePage(
-	types: ReadonlyMap<string, DemoProfile> = PROFILS_DE_PAGE
-): Promise<ReadonlyMap<string, ProfilDePage>> {
-	return sousVerrou('profils-de-page', async () => {
-		const payload = await payloadDeTest()
-		const posees = new Map<string, ProfilDePage>()
-		for (const [cle, type] of types) {
-			const profil = (await profilePresent(payload, type)) ?? (await placeProfile(payload, type, readDemoPhoto, false))
-			posees.set(cle, { id: profil.profil, slug: profil.slug, type })
+export async function setPageProfiles(
+	types: ReadonlyMap<string, DemoProfile> = PAGE_PROFILES
+): Promise<ReadonlyMap<string, PageProfile>> {
+	return underLock('profils-de-page', async () => {
+		const payload = await testPayload()
+		const set = new Map<string, PageProfile>()
+		for (const [key, type] of types) {
+			const profile = (await profilePresent(payload, type)) ?? (await placeProfile(payload, type, readDemoPhoto, false))
+			set.set(key, { id: profile.profil, slug: profile.slug, type })
 		}
-		return posees
+		return set
 	})
 }

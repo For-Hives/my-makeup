@@ -2,19 +2,19 @@ import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { SQL } from 'bun'
 import { z } from 'zod'
-import { environnementDuBanc, FICHIER_COMPOSE, servicesDuBanc } from '../support/bench'
-import { servicesMuets, sondesDuBanc } from '../support/bench-probes'
+import { benchEnvironment, benchServices, FILE_COMPOSE } from '../support/bench'
+import { benchProbes, serviceSilent } from '../support/bench-probes'
 
 /**
- * The bench as it runs: what `bun run banc:up` started is asked from this machine, through the
+ * The bench as it runs: what `bun run bench:up` started is asked from this machine, through the
  * environment the integration command gave to this process.
  */
-const environnement = environnementDuBanc()
-const services = servicesDuBanc(environnement)
+const environnement = benchEnvironment()
+const services = benchServices(environnement)
 
 /** The version each service must run: the tag its image is pinned at in compose.test.yml. */
 const versionEpinglee = (image: string): string => {
-	const version = new RegExp(`image: ${image}:v?([0-9.]+)`).exec(readFileSync(FICHIER_COMPOSE, 'utf8'))?.[1]
+	const version = new RegExp(`image: ${image}:v?([0-9.]+)`).exec(readFileSync(FILE_COMPOSE, 'utf8'))?.[1]
 	if (!version) throw new Error(`image ${image} absente de compose.test.yml`)
 	return version
 }
@@ -26,7 +26,7 @@ describe('Le banc démarré : la base, le capteur de mails, le stockage d’obje
 	})
 
 	test('les quatre services répondent', async () => {
-		const muets = await servicesMuets(sondesDuBanc(services))
+		const muets = await serviceSilent(benchProbes(services))
 
 		expect(muets.map(({ service }) => service)).toEqual([])
 	})

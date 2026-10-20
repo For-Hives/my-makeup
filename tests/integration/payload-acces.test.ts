@@ -1,19 +1,19 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
-import { viderLeCapteur } from '../support/mailpit'
 import {
-	type CollectionDeLaMatrice,
-	type CollectionEditoriale,
+	type CollectionEditorial,
 	type Distribution,
-	distribuer,
-	jouer,
-	type Ligne,
-	nommer,
+	describeName,
+	distribute,
+	type Line,
+	type MatrixCollection,
 	ROLES,
 	type Role,
-	VOIES,
+	run,
+	STREETS,
 } from '../support/access-matrix'
-import { viderLaBase } from '../support/payload-test'
-import { viderLeStockage } from '../support/s3'
+import { emptySink } from '../support/mailpit'
+import { emptyBase } from '../support/payload-test'
+import { emptyStorage } from '../support/s3'
 
 /** The owner of a document and the role `admin`: who reads the private fields of a profile or a media. */
 const PROPRIETAIRE_ET_ADMIN: readonly Role[] = ['maquilleuse', 'admin']
@@ -37,10 +37,10 @@ const ETAT_ENVOYE = [
  * photo is its main photo): for each field, the roles that read it; every other role reads the
  * document without it. One line per field and per role.
  */
-const lecturesDesChamps = (collection: CollectionDeLaMatrice, lecteurs: [string, readonly Role[]][]): Ligne[] =>
+const lecturesDesChamps = (collection: MatrixCollection, lecteurs: [string, readonly Role[]][]): Line[] =>
 	lecteurs.flatMap(([champ, quiLit]) =>
 		ROLES.map(
-			(role): Ligne => ({
+			(role): Line => ({
 				role,
 				collection,
 				operation: 'lire',
@@ -57,8 +57,8 @@ const lecturesDesChamps = (collection: CollectionDeLaMatrice, lecteurs: [string,
  * drafts too; everyone else, a makeup artist as an anonymous visitor, reads the published documents
  * only and writes nothing (U59). Nobody writes `strapiId`. Talents (ticket 022), articles (046).
  */
-const lignesDeLaRedaction = (collection: CollectionEditoriale): Ligne[] => [
-	...(['anonyme', 'maquilleuse', 'autreMaquilleuse', 'sansProfil'] as const).flatMap((role): Ligne[] => [
+const lignesDeLaRedaction = (collection: CollectionEditorial): Line[] => [
+	...(['anonyme', 'maquilleuse', 'autreMaquilleuse', 'sansProfil'] as const).flatMap((role): Line[] => [
 		{ role, collection, operation: 'lister', attendu: 'publies' },
 		{ role, collection, operation: 'lire', document: 'publie', attendu: 'autorise' },
 		{ role, collection, operation: 'lire', document: 'brouillon', attendu: 'refuse' },
@@ -76,7 +76,7 @@ const lignesDeLaRedaction = (collection: CollectionEditoriale): Ligne[] => [
 		{ role, collection, operation: 'supprimer', document: 'publie', attendu: 'refuse' },
 		{ role, collection, operation: 'supprimer', document: 'brouillon', attendu: 'refuse' },
 	]),
-	...(['redaction', 'admin'] as const).flatMap((role): Ligne[] => [
+	...(['redaction', 'admin'] as const).flatMap((role): Line[] => [
 		{ role, collection, operation: 'lister', attendu: 'tous' },
 		{ role, collection, operation: 'lire', document: 'publie', attendu: 'autorise' },
 		{ role, collection, operation: 'lire', document: 'brouillon', attendu: 'autorise' },
@@ -131,7 +131,7 @@ const lignesDeLaRedaction = (collection: CollectionEditoriale): Ligne[] => [
  * Each line is played twice, through REST and through the Local API with the rules active, and
  * gives one test per way in. A rule added without its lines is a rule nobody checks.
  */
-const MATRICE: Ligne[] = [
+const MATRICE: Line[] = [
 	// admins (ticket 018): the role `admin` does everything; `editor` reaches its own account
 	// only, and never its role; nobody else reaches any account.
 	{ role: 'anonyme', collection: 'admins', operation: 'lister', attendu: 'refuse' },
@@ -200,7 +200,7 @@ const MATRICE: Ligne[] = [
 			['strapiId', 999],
 		] as const
 	).map(
-		([champ, valeur]): Ligne => ({
+		([champ, valeur]): Line => ({
 			role: 'maquilleuse',
 			collection: 'pros',
 			operation: 'modifier',
@@ -231,7 +231,7 @@ const MATRICE: Ligne[] = [
 			['strapiId', 999, 'ignore'],
 		] as const
 	).map(
-		([champ, valeur, attendu]): Ligne => ({
+		([champ, valeur, attendu]): Line => ({
 			role: 'admin',
 			collection: 'pros',
 			operation: 'modifier',
@@ -297,7 +297,7 @@ const MATRICE: Ligne[] = [
 			...ETAT_ENVOYE,
 		] as const
 	).map(
-		([champ, valeur]): Ligne => ({
+		([champ, valeur]): Line => ({
 			role: 'maquilleuse',
 			collection: 'profiles',
 			operation: 'modifier',
@@ -314,7 +314,7 @@ const MATRICE: Ligne[] = [
 			['publicContact', true],
 		] as const
 	).map(
-		([champ, valeur]): Ligne => ({
+		([champ, valeur]): Line => ({
 			role: 'maquilleuse',
 			collection: 'profiles',
 			operation: 'modifier',
@@ -431,7 +431,7 @@ const MATRICE: Ligne[] = [
 			...ETAT_ENVOYE.map(([champ, valeur]) => [champ, valeur, 'ignore'] as const),
 		] as const
 	).map(
-		([champ, valeur, attendu]): Ligne => ({
+		([champ, valeur, attendu]): Line => ({
 			role: 'admin',
 			collection: 'profiles',
 			operation: 'modifier',
@@ -468,7 +468,7 @@ const MATRICE: Ligne[] = [
 			['strapiId', 999],
 		] as const
 	).map(
-		([champ, valeur]): Ligne => ({
+		([champ, valeur]): Line => ({
 			role: 'maquilleuse',
 			collection: 'media',
 			operation: 'modifier',
@@ -512,7 +512,7 @@ const MATRICE: Ligne[] = [
 	{ role: 'redaction', collection: 'media', operation: 'supprimer', document: 'maquilleuse', attendu: 'refuse' },
 	// The photo of a published article is read by everyone; the photo of a draft by the newsroom
 	// only (ticket 046). Nobody else changes or deletes them.
-	...(['anonyme', 'maquilleuse', 'autreMaquilleuse', 'sansProfil'] as const).flatMap((role): Ligne[] => [
+	...(['anonyme', 'maquilleuse', 'autreMaquilleuse', 'sansProfil'] as const).flatMap((role): Line[] => [
 		{ role, collection: 'media', operation: 'lire', document: 'publie', attendu: 'autorise' },
 		{ role, collection: 'media', operation: 'lire', document: 'brouillon', attendu: 'refuse' },
 		{ role, collection: 'media', operation: 'modifier', document: 'publie', attendu: 'refuse' },
@@ -539,7 +539,7 @@ const MATRICE: Ligne[] = [
 			['strapiId', 999, 'ignore'],
 		] as const
 	).map(
-		([champ, valeur, attendu]): Ligne => ({
+		([champ, valeur, attendu]): Line => ({
 			role: 'admin',
 			collection: 'media',
 			operation: 'modifier',
@@ -617,7 +617,7 @@ const MATRICE: Ligne[] = [
 
 	// The authentication journal (ticket 077): only an admin reads it, and nobody writes it through
 	// an API, an admin included. The server writes it, and purges it after 90 days.
-	...ROLES.flatMap((role): Ligne[] => {
+	...ROLES.flatMap((role): Line[] => {
 		const collection = 'auth-events'
 		const lit = role === 'admin'
 		return [
@@ -631,7 +631,7 @@ const MATRICE: Ligne[] = [
 
 	// The accounts of the old site deleted in the v3 (ticket 227): only an admin reads them, and nobody
 	// writes them through an API, an admin included. The server writes the row when an account goes.
-	...ROLES.flatMap((role): Ligne[] => {
+	...ROLES.flatMap((role): Line[] => {
 		const collection = 'deleted-accounts'
 		const lit = role === 'admin'
 		return [
@@ -648,7 +648,7 @@ const MATRICE: Ligne[] = [
 	// the row. An admin changes its status (answered, spam) and nothing else: what the visitor typed and the
 	// state of the mail are frozen. An anonymous visitor and a makeup artist reach nothing, and `editor`
 	// does not see this collection.
-	...ROLES.flatMap((role): Ligne[] => {
+	...ROLES.flatMap((role): Line[] => {
 		const collection = 'contact-requests'
 		const lit = role === 'admin'
 		return [
@@ -678,7 +678,7 @@ const MATRICE: Ligne[] = [
 							valeur: 'autre@example.test',
 							attendu: 'ignore',
 						},
-					] satisfies Ligne[])
+					] satisfies Line[])
 				: []),
 		]
 	}),
@@ -689,7 +689,7 @@ const MATRICE: Ligne[] = [
 	// Payload's document locks (ticket 094): reserved to the accounts of the admin panel. A makeup
 	// artist, a visitor and an account without a profile reach nothing; `editor` and `admin` list,
 	// read, take, change and release a lock, the lock of the other admin included (a take-over).
-	...(['anonyme', 'maquilleuse', 'autreMaquilleuse', 'sansProfil'] as const).flatMap((role): Ligne[] => [
+	...(['anonyme', 'maquilleuse', 'autreMaquilleuse', 'sansProfil'] as const).flatMap((role): Line[] => [
 		{ role, collection: 'payload-locked-documents', operation: 'lister', attendu: 'refuse' },
 		{ role, collection: 'payload-locked-documents', operation: 'lire', document: 'admin', attendu: 'refuse' },
 		// A lock in the name of an admin: the proof of the flaw, 201 before ticket 094.
@@ -697,7 +697,7 @@ const MATRICE: Ligne[] = [
 		{ role, collection: 'payload-locked-documents', operation: 'modifier', document: 'admin', attendu: 'refuse' },
 		{ role, collection: 'payload-locked-documents', operation: 'supprimer', document: 'admin', attendu: 'refuse' },
 	]),
-	...(['redaction', 'admin'] as const).flatMap((role): Ligne[] => [
+	...(['redaction', 'admin'] as const).flatMap((role): Line[] => [
 		{ role, collection: 'payload-locked-documents', operation: 'lister', attendu: 'tous' },
 		{ role, collection: 'payload-locked-documents', operation: 'lire', document: 'admin', attendu: 'autorise' },
 		{ role, collection: 'payload-locked-documents', operation: 'lire', document: 'redaction', attendu: 'autorise' },
@@ -710,19 +710,19 @@ const MATRICE: Ligne[] = [
 let distribution: Distribution
 
 beforeAll(async () => {
-	distribution = await distribuer()
+	distribution = await distribute()
 })
 
 // An account an admin creates through REST gets Payload's confirmation email: the mail catcher is
 // emptied too. The photos of the cast and of the lines go to the object storage: emptied as well.
 afterAll(async () => {
-	await Promise.all([viderLaBase(), viderLeCapteur(), viderLeStockage()])
+	await Promise.all([emptyBase(), emptySink(), emptyStorage()])
 })
 
 describe('La matrice d’accès, par l’API REST et par l’API locale avec les règles actives', () => {
 	for (const ligne of MATRICE)
-		for (const voie of VOIES)
-			test(nommer(ligne, voie), async () => {
-				expect(await jouer(ligne, voie, distribution)).toBe(ligne.attendu)
+		for (const voie of STREETS)
+			test(describeName(ligne, voie), async () => {
+				expect(await run(ligne, voie, distribution)).toBe(ligne.attendu)
 			})
 })

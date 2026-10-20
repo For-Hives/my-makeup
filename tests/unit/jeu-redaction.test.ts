@@ -6,7 +6,7 @@ import { placeDemoData, placeDemoEditorial } from '@/demo-data/dataset'
 import { DEMO_ARTICLES, DEMO_TALENTS } from '@/demo-data/editorial'
 import { DemoDataRefused } from '@/demo-data/guard'
 import { isSlug } from '@/lib/slug'
-import { definitionDeLaSource } from '../support/source-strapi/data'
+import { sourceDefinition } from '../support/source-strapi/data'
 
 /**
  * The editorial part of the fictional set (ticket 052), without the bench: three talents, three
@@ -37,7 +37,7 @@ describe('Les talents et les articles du jeu', () => {
 	})
 
 	test('aucune adresse ne rencontre celles de la fausse source Strapi : les deux jeux se chargent côte à côte', () => {
-		const { lignes } = definitionDeLaSource('https://medias.source-fictive.example.test')
+		const { lignes } = sourceDefinition('https://medias.source-fictive.example.test')
 		const prises = new Set([...(lignes.talents ?? []), ...(lignes.articles ?? [])].map(ligne => String(ligne.slug)))
 
 		expect(prises.size).toBeGreaterThan(0)

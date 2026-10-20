@@ -11,10 +11,10 @@
 import { type AuthCollectionSlug, generatePayloadCookie, type Payload } from 'payload'
 import { cookieEndOfLife } from '../../src/lib/auth/session-state'
 import { type DesignatedAccount, openWithoutPassword, openWithPassword } from '../../src/lib/auth/token'
-import { BancRefuse, type Variables } from './bench'
+import { RefusedBench, type Variables } from './bench'
 
 /** A cookie as a browser context takes it: the shape of Playwright's `context.addCookies()`. */
-export interface CookieDeNavigateur {
+export interface BrowserCookie {
 	name: string
 	value: string
 	/** The origin of the site: the cookie belongs to that host and to every path. */
@@ -33,14 +33,14 @@ export interface Session {
 	 */
 	enTetes: { Cookie: string; Origin: string }
 	/** For a browser: `await context.addCookies(session.cookies)`, then open the site at its address. */
-	cookies: CookieDeNavigateur[]
+	cookies: BrowserCookie[]
 	/** When the session ends. */
 	expire: Date
 }
 
 export type { DesignatedAccount }
 
-export interface Identifiants {
+export interface Identifiers {
 	collection: AuthCollectionSlug
 	email: string
 	motDePasse: string
@@ -51,29 +51,29 @@ export interface Identifiants {
  * that origin only, so it must be one the configuration trusts: otherwise the session would be
  * ignored without a word.
  */
-export function origineDuSite(payload: Pick<Payload, 'config'>, variables: Variables = process.env): string {
-	const origine = variables.NEXT_PUBLIC_SITE_URL
-	if (!origine || !payload.config.csrf.includes(origine))
-		throw new BancRefuse(
+export function siteOrigin(payload: Pick<Payload, 'config'>, variables: Variables = process.env): string {
+	const origin = variables.NEXT_PUBLIC_SITE_URL
+	if (!origin || !payload.config.csrf.includes(origin))
+		throw new RefusedBench(
 			'NEXT_PUBLIC_SITE_URL n’est pas une origine de confiance de cette configuration : une session y serait ignorée.'
 		)
-	return origine
+	return origin
 }
 
 /** Logs the account in through Payload and gives the session back, ready for an HTTP client and for a browser. */
-export async function ouvrirSession(
+export async function openSession(
 	payload: Payload,
-	{ collection, email, motDePasse }: Identifiants,
+	{ collection, email, motDePasse }: Identifiers,
 	variables: Variables = process.env
 ): Promise<Session> {
-	const origine = origineDuSite(payload, variables)
+	const origin = siteOrigin(payload, variables)
 	const { exp, token } = await openWithPassword(payload, collection, { email, password: motDePasse })
 	if (!token || !exp) throw new Error(`Payload n’a ouvert aucune session pour ce compte « ${collection} ».`)
-	return sessionDuJeton(payload, collection, { exp, token }, origine)
+	return tokenSession(payload, collection, { exp, token }, origin)
 }
 
 /** `dureeS`: how long the token lives, in seconds, instead of the collection's own (negative: it is born expired). */
-export interface OptionsDeSession {
+export interface SessionOptions {
 	dureeS?: number
 }
 
@@ -86,19 +86,19 @@ export interface OptionsDeSession {
  * whether the account is confirmed or blocked: Payload ignores the session of an account that is
  * not confirmed, and the site's own rules for a blocked account belong to the login (ticket 089).
  */
-export async function ouvrirSessionSansMotDePasse(
+export async function openSessionWithoutPassword(
 	payload: Payload,
 	{ collection, id }: DesignatedAccount,
 	variables: Variables = process.env,
-	options: OptionsDeSession = {}
+	options: SessionOptions = {}
 ): Promise<Session> {
-	const origine = origineDuSite(payload, variables)
+	const origin = siteOrigin(payload, variables)
 	const { exp, token } = await openWithoutPassword(payload, { collection, id }, options.dureeS)
-	return sessionDuJeton(payload, collection, { exp, token }, origine)
+	return tokenSession(payload, collection, { exp, token }, origin)
 }
 
 /** The two shapes of a session, from the token Payload signed for it. */
-function sessionDuJeton(
+function tokenSession(
 	payload: Payload,
 	collection: AuthCollectionSlug,
 	{ exp, token }: { exp: number; token: string },

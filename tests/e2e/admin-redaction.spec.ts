@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { creerCompte } from '../support/account-factory'
+import { createAccount } from '../support/account-factory'
 
 /**
  * E55 (plan 02 §7.4; ticket 164): an account of the newsroom (`editor`) sees the articles, the
@@ -18,8 +18,8 @@ test.describe('E55 : la rédaction ne voit que les articles, les talents et leur
 		context,
 		page,
 	}) => {
-		await creerCompte('admin')
-		const redaction = await creerCompte('redaction')
+		await createAccount('admin')
+		const redaction = await createAccount('redaction')
 		await context.addCookies(redaction.session.cookies)
 
 		await page.goto('/admin')
@@ -41,8 +41,8 @@ test.describe('E55 : la rédaction ne voit que les articles, les talents et leur
 	})
 
 	test('une liste de l’API ne rend ni les demandes ni les coordonnées', async ({ request }) => {
-		await creerCompte('admin')
-		const { session } = await creerCompte('redaction')
+		await createAccount('admin')
+		const { session } = await createAccount('redaction')
 
 		for (const collection of ['contact-requests', 'pros', 'admins'] as const) {
 			const reponse = await request.get(`/api/${collection}?limit=50`, { headers: session.enTetes })
@@ -63,8 +63,8 @@ test.describe('E55 : la rédaction ne voit que les articles, les talents et leur
 		test(`un ${collection === 'articles' ? 'article' : 'talent'} publié est sur le site, dépublié il répond 404`, async ({
 			request,
 		}) => {
-			await creerCompte('admin')
-			const { session } = await creerCompte('redaction')
+			await createAccount('admin')
+			const { session } = await createAccount('redaction')
 			const slug = `essai-redaction-${collection}-${suffixe}`
 			const cree = await request.post(`/api/${collection}`, {
 				headers: session.enTetes,
@@ -102,8 +102,8 @@ test.describe('E55 : la rédaction ne voit que les articles, les talents et leur
 	}
 
 	test('elle ne change pas son rôle', async ({ request }) => {
-		await creerCompte('admin')
-		const { session, id } = await creerCompte('redaction')
+		await createAccount('admin')
+		const { session, id } = await createAccount('redaction')
 
 		const reponse = await request.patch(`/api/admins/${id}`, { headers: session.enTetes, data: { role: 'admin' } })
 		expect(reponse.ok()).toBe(true)

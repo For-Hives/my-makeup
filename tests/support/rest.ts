@@ -12,9 +12,9 @@
 import { DELETE, GET, PATCH, POST } from '@/app/(payload)/api/[...slug]/route'
 
 const ROUTES = { DELETE, GET, PATCH, POST }
-export type Methode = keyof typeof ROUTES
+export type Method = keyof typeof ROUTES
 
-export interface ReponseRest {
+export interface ResponseRest {
 	statut: number
 	/** The body read as JSON; `null` when there is none. */
 	corps: unknown
@@ -37,41 +37,41 @@ export interface OptionsRest {
 }
 
 /** The site the bench serves: a session cookie is accepted from that origin only. */
-function origine(): string {
+function origin(): string {
 	const site = process.env.NEXT_PUBLIC_SITE_URL
 	if (!site) throw new Error('NEXT_PUBLIC_SITE_URL manque : lance les tests par « bun run test:integration ».')
 	return site
 }
 
 /** One REST request, `chemin` starting with `/api/`, query string included. */
-export async function appelerRest(
-	methode: Methode,
+export async function callRest(
+	methode: Method,
 	chemin: string,
-	{ enTetes = {}, corps, formulaire }: OptionsRest = {}
-): Promise<ReponseRest> {
+	{ enTetes = {}, corps, formulaire: form }: OptionsRest = {}
+): Promise<ResponseRest> {
 	if (!chemin.startsWith('/api/')) throw new Error(`« ${chemin} » n’est pas une adresse de l’API REST.`)
-	const adresse = new URL(chemin, origine())
-	const slug = adresse.pathname.slice('/api/'.length).split('/').map(decodeURIComponent)
-	const requete = new Request(adresse, {
+	const url = new URL(chemin, origin())
+	const slug = url.pathname.slice('/api/'.length).split('/').map(decodeURIComponent)
+	const request = new Request(url, {
 		method: methode,
 		// A form gets its Content-Type, with its boundary, from the request itself.
-		headers: corps === undefined || formulaire ? enTetes : { 'Content-Type': 'application/json', ...enTetes },
-		body: formulaire ?? (corps === undefined ? undefined : JSON.stringify(corps)),
+		headers: corps === undefined || form ? enTetes : { 'Content-Type': 'application/json', ...enTetes },
+		body: form ?? (corps === undefined ? undefined : JSON.stringify(corps)),
 	})
-	const reponse = await ROUTES[methode](requete, { params: Promise.resolve({ slug }) })
-	const texte = await reponse.text()
+	const response = await ROUTES[methode](request, { params: Promise.resolve({ slug }) })
+	const text = await response.text()
 	return {
-		statut: reponse.status,
-		corps: texte ? (JSON.parse(texte) as unknown) : null,
-		texte,
-		enTetes: reponse.headers,
+		statut: response.status,
+		corps: text ? (JSON.parse(text) as unknown) : null,
+		texte: text,
+		enTetes: response.headers,
 	}
 }
 
 /** A form that sends a file the way Payload reads it: the file under `file`, the other fields as JSON under `_payload`. */
-export function formulaireAvecFichier(fichier: File, champs: Record<string, unknown> = {}): FormData {
-	const formulaire = new FormData()
-	formulaire.append('file', fichier)
-	formulaire.append('_payload', JSON.stringify(champs))
-	return formulaire
+export function formWithFile(fichier: File, champs: Record<string, unknown> = {}): FormData {
+	const form = new FormData()
+	form.append('file', fichier)
+	form.append('_payload', JSON.stringify(champs))
+	return form
 }

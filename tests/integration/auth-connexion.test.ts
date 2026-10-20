@@ -2,9 +2,9 @@ import { afterAll, describe, expect, test } from 'bun:test'
 import { createRateLimit } from '@/lib/auth/rate-limit'
 import { signInWithPassword } from '@/lib/auth/sign-in'
 import { openWithPassword } from '@/lib/auth/token'
-import { creerCompte } from '../support/account-factory'
-import { payloadDeTest, viderLaBase } from '../support/payload-test'
-import { appelerRest } from '../support/rest'
+import { createAccount } from '../support/account-factory'
+import { emptyBase, testPayload } from '../support/payload-test'
+import { callRest } from '../support/rest'
 
 /**
  * The sign-in of a makeup artist (tickets 074 and 075; plan 02 I09). The Server Action itself,
@@ -12,7 +12,7 @@ import { appelerRest } from '../support/rest'
  */
 
 afterAll(async () => {
-	await viderLaBase()
+	await emptyBase()
 })
 
 const MOT_DE_PASSE = 'aaaaaaaa'
@@ -20,9 +20,9 @@ const adresse = (n: number) => new Headers({ 'x-forwarded-for': `192.0.2.${n}` }
 
 describe('I09 : la session tient dans un seul cookie', () => {
 	test('la connexion pose payload-token : HttpOnly, SameSite=Lax, et le jeton ne sort pas du cookie', async () => {
-		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
 
-		const { statut, enTetes, texte } = await appelerRest('POST', '/api/pros/login', {
+		const { statut, enTetes, texte } = await callRest('POST', '/api/pros/login', {
 			corps: { email: compte.email, password: MOT_DE_PASSE },
 			enTetes: { 'x-forwarded-for': '192.0.2.11' },
 		})
@@ -40,15 +40,15 @@ describe('I09 : la session tient dans un seul cookie', () => {
 	})
 
 	test('le cookie dure 14 jours', async () => {
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		expect(payload.collections.pros.config.auth.tokenExpiration).toBe(14 * 24 * 3600)
 	})
 })
 
 describe('connecter, avec la vraie base', () => {
 	test('l’email est insensible à la casse et aux espaces de bord', async () => {
-		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
-		const payload = await payloadDeTest()
+		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const payload = await testPayload()
 		const ouvrir = (data: { email: string; password: string }) => openWithPassword(payload, 'pros', data)
 		const frein = createRateLimit({ nom: 'essai-int-casse', limite: 10, fenetreMs: 60_000 })
 
@@ -64,8 +64,8 @@ describe('connecter, avec la vraie base', () => {
 	})
 
 	test('un mot de passe sans majuscule, chiffre ni symbole est accepté à la connexion : aucune règle de composition', async () => {
-		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
-		const payload = await payloadDeTest()
+		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const payload = await testPayload()
 		const ouvrir = (data: { email: string; password: string }) => openWithPassword(payload, 'pros', data)
 		const frein = createRateLimit({ nom: 'essai-int-regle', limite: 10, fenetreMs: 60_000 })
 
@@ -84,10 +84,10 @@ describe('connecter, avec la vraie base', () => {
 
 	test('une adresse inconnue, un mauvais mot de passe et un mauvais mot de passe sur un compte non confirmé donnent la même réponse', async () => {
 		const [connu, nonConfirme] = await Promise.all([
-			creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE }),
-			creerCompte('maquilleuse-non-verifiee', { motDePasse: () => MOT_DE_PASSE }),
+			createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE }),
+			createAccount('maquilleuse-non-verifiee', { motDePasse: () => MOT_DE_PASSE }),
 		])
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const ouvrir = (data: { email: string; password: string }) => openWithPassword(payload, 'pros', data)
 		const frein = createRateLimit({ nom: 'essai-int-generique', limite: 50, fenetreMs: 60_000 })
 		const essayer = (email: string, password: string) =>
@@ -103,8 +103,8 @@ describe('connecter, avec la vraie base', () => {
 	})
 
 	test('un compte non confirmé qui donne le bon mot de passe reçoit le message dédié (ticket 082)', async () => {
-		const nonConfirme = await creerCompte('maquilleuse-non-verifiee', { motDePasse: () => MOT_DE_PASSE })
-		const payload = await payloadDeTest()
+		const nonConfirme = await createAccount('maquilleuse-non-verifiee', { motDePasse: () => MOT_DE_PASSE })
+		const payload = await testPayload()
 		const ouvrir = (data: { email: string; password: string }) => openWithPassword(payload, 'pros', data)
 		const frein = createRateLimit({ nom: 'essai-int-non-confirme', limite: 50, fenetreMs: 60_000 })
 
@@ -122,13 +122,13 @@ describe('connecter, avec la vraie base', () => {
 
 describe('I14 : le frein par adresse, sans verrouiller le compte', () => {
 	const connexion = (email: string, password: string, xForwardedFor: string) =>
-		appelerRest('POST', '/api/pros/login', {
+		callRest('POST', '/api/pros/login', {
 			corps: { email, password },
 			enTetes: { 'x-forwarded-for': xForwardedFor },
 		})
 
 	test('le 11e échec d’une adresse est refusé en 429 ; le compte reste ouvert pour une autre adresse', async () => {
-		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
 		const adresseFrenee = '198.51.100.20'
 
 		for (let i = 0; i < 10; i++) expect((await connexion(compte.email, `faux-${i}`, adresseFrenee)).statut).toBe(401)
@@ -140,7 +140,7 @@ describe('I14 : le frein par adresse, sans verrouiller le compte', () => {
 		expect((await connexion(compte.email, MOT_DE_PASSE, '198.51.100.21')).statut).toBe(200)
 		// …while the braked address is refused even with the right one, until the window runs out.
 		expect((await connexion(compte.email, MOT_DE_PASSE, adresseFrenee)).statut).toBe(429)
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const ligne = await payload.db.findOne<{ id: number; lockUntil?: unknown }>({
 			collection: 'pros',
 			where: { id: { equals: compte.id } },
@@ -149,21 +149,21 @@ describe('I14 : le frein par adresse, sans verrouiller le compte', () => {
 	})
 
 	test('les essais des autres ne bloquent pas une personne qui n’a rien fait de mal', async () => {
-		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
 		for (let i = 0; i < 12; i++) await connexion(compte.email, `faux-${i}`, '198.51.100.30')
 
 		expect((await connexion(compte.email, MOT_DE_PASSE, '198.51.100.31')).statut).toBe(200)
 	})
 
 	test('un en-tête X-Forwarded-For forgé n’y change rien : seule la dernière entrée compte', async () => {
-		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
 		for (let i = 0; i < 10; i++) await connexion(compte.email, 'faux', `10.1.1.${i}, 198.51.100.40`)
 
 		expect((await connexion(compte.email, 'faux', '10.9.9.9, 198.51.100.40')).statut).toBe(429)
 	})
 
 	test('une IPv6 compte par bloc /64', async () => {
-		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
 		for (let i = 0; i < 10; i++) await connexion(compte.email, 'faux', `2001:db8:0:50::${i + 1}`)
 
 		expect((await connexion(compte.email, 'faux', '2001:db8:0:50:aaaa::1')).statut).toBe(429)
@@ -171,7 +171,7 @@ describe('I14 : le frein par adresse, sans verrouiller le compte', () => {
 	})
 
 	test('aucune adresse IP dans ce que l’application écrit, au refus comme avant', async () => {
-		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
 		const adresse = '203.0.113.77'
 		const ecrit: string[] = []
 		const sortie = process.stdout.write.bind(process.stdout)

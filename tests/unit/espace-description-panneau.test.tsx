@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { DescriptionEditor, type DescriptionUpload } from '@/components/dashboard/DescriptionEditor'
 import type { DescriptionValues } from '@/lib/dashboard/description'
 import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
-import { ouvrirFenetre } from '../support/dom-react'
+import { openWindow } from '../support/dom-react'
 
 /**
  * The panel of the description (ticket 122; plan 02 U05, U27, E31): the counter, the bound, the
@@ -10,7 +10,7 @@ import { ouvrirFenetre } from '../support/dom-react'
  * fake: no network.
  */
 
-const fenetre = ouvrirFenetre()
+const fenetre = openWindow()
 const VALEURS: DescriptionValues = { description: 'Maquilleuse mariée.\nJe me déplace.' }
 
 function faussementEnvoi(reponse?: Awaited<ReturnType<DescriptionUpload>>) {

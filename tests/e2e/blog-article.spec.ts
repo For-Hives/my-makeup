@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test'
-import { creerContenu, supprimerContenu } from '../support/public-pages'
+import { createContent, deleteContent } from '../support/public-pages'
 
 /**
  * The page of an article of the blog, end to end (ticket 106; plan 02 E59 and E65): 200 with one h1 for a
@@ -34,7 +34,7 @@ test.beforeAll(async ({ request }) => {
 	identifiants.push(
 		{
 			collection: 'articles',
-			id: await creerContenu(request, 'articles', {
+			id: await createContent(request, 'articles', {
 				title: `Article d’essai ${suffixe}`,
 				slug: publie,
 				author: 'Une rédactrice fictive',
@@ -45,7 +45,7 @@ test.beforeAll(async ({ request }) => {
 		},
 		{
 			collection: 'articles',
-			id: await creerContenu(request, 'articles', {
+			id: await createContent(request, 'articles', {
 				title: 'Brouillon',
 				slug: brouillon,
 				content: 'x',
@@ -54,13 +54,13 @@ test.beforeAll(async ({ request }) => {
 		},
 		{
 			collection: 'articles',
-			id: await creerContenu(request, 'articles', { title: `Article nu ${suffixe}`, slug: nu, _status: 'published' }),
+			id: await createContent(request, 'articles', { title: `Article nu ${suffixe}`, slug: nu, _status: 'published' }),
 		}
 	)
 })
 
 test.afterAll(async ({ request }) => {
-	for (const { collection, id } of identifiants) await supprimerContenu(request, collection, id)
+	for (const { collection, id } of identifiants) await deleteContent(request, collection, id)
 })
 
 /** The structured data blocks of a page, parsed. */

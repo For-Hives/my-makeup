@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test'
-import { violationsGraves } from '../support/axe'
-import { type CompteDeTest, creerCompte } from '../support/account-factory'
-import { payloadDeTest } from '../support/payload-test'
+import { createAccount, type TestAccount } from '../support/account-factory'
+import { violationsSevere } from '../support/axe'
+import { testPayload } from '../support/payload-test'
 
 /**
  * The description in her space (ticket 122; plan 02 E19-E29 description, E31, U05, U27): written,
@@ -16,14 +16,14 @@ test.beforeEach(({ context }) =>
 	context.setExtraHTTPHeaders({ 'x-forwarded-for': `192.0.2.${200 + (++compteur % 50)}` })
 )
 
-type Maquilleuse = CompteDeTest<'maquilleuse'>
+type Maquilleuse = TestAccount<'maquilleuse'>
 
 async function maquilleuse(
 	context: { addCookies: (c: Maquilleuse['session']['cookies']) => Promise<void> },
 	description?: string
 ): Promise<Maquilleuse> {
-	const compte = await creerCompte('maquilleuse')
-	const payload = await payloadDeTest()
+	const compte = await createAccount('maquilleuse')
+	const payload = await testPayload()
 	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
 	const [fiche] = docs
 	if (!fiche) throw new Error('pas de profil')
@@ -37,7 +37,7 @@ async function maquilleuse(
 }
 
 async function descriptionStockee(compte: Maquilleuse): Promise<string> {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
 	return docs[0]?.description ?? ''
 }
@@ -93,7 +93,7 @@ test.describe('122 : la description', { tag: '@mobile' }, () => {
 		await page.getByLabel('Ta description').fill(`${'a'.repeat(199)}b`)
 		await expect(page.getByTestId('compteur-description')).toContainText('200 / 200 caractères')
 		await expect(dialogue(page).getByRole('status')).toContainText('publiable')
-		expect(await violationsGraves(page)).toEqual([])
+		expect(await violationsSevere(page)).toEqual([])
 	})
 
 	test('U27 : 2 001 caractères refusés sans requête ; le HTML collé est retiré', async ({ context, page }) => {
@@ -136,7 +136,7 @@ test.describe('122 : la description', { tag: '@mobile' }, () => {
 		expect(await descriptionStockee(compte)).toBe('Ancien texte')
 		await expect(page.getByRole('status').filter({ hasText: 'enregistrée' })).toHaveCount(0)
 
-		const dossier = process.env.CAPTURES_ESPACE
+		const dossier = process.env.DASHBOARD_SCREENSHOTS
 		if (dossier) await page.screenshot({ path: `${dossier}/description-${test.info().project.name}.png` })
 	})
 })

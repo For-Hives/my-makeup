@@ -1,16 +1,16 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import type { ProfileStatus } from '@/lib/profile/status'
 import type { Profile } from '@/payload-types'
-import { creerCompte } from '../support/account-factory'
-import { payloadDeTest, viderLaBase } from '../support/payload-test'
-import { appelerRest } from '../support/rest'
+import { createAccount } from '../support/account-factory'
+import { emptyBase, testPayload } from '../support/payload-test'
+import { callRest } from '../support/rest'
 
 /**
  * What the public reads of the profiles, and what only an admin writes on them (ticket 021; plan
  * 02 §7.3, I01 and I03; U53 and U55 through the real API).
  */
 
-afterEach(viderLaBase)
+afterEach(emptyBase)
 
 /** What an admin decided about a profile, and what the import wrote: none of it is public. */
 const RESERVE = {
@@ -63,8 +63,8 @@ let dernierStrapiId: number = RESERVE.strapiId
 
 /** The account of a makeup artist, with her profile in this status and every reserved field filled. */
 async function maquilleuseAvecProfil(statut: ProfileStatus) {
-	const compte = await creerCompte('maquilleuse')
-	const payload = await payloadDeTest()
+	const compte = await createAccount('maquilleuse')
+	const payload = await testPayload()
 	const [profil] = (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } }))
 		.docs
 	if (!profil) throw new Error('La fabrique n’a pas créé de profil.')
@@ -86,7 +86,7 @@ async function maquilleuseAvecProfil(statut: ProfileStatus) {
 
 /** The profile as the database holds it, read without access control. */
 async function stocke(id: number): Promise<Profile> {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	return payload.findByID({ collection: 'profiles', id, depth: 0 })
 }
 
@@ -99,16 +99,16 @@ describe('Lecture anonyme : seuls les profils publiés sortent (I01, U53)', () =
 			maquilleuseAvecProfil('draft'),
 			maquilleuseAvecProfil('hidden'),
 		])
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 
-		const rest = await appelerRest('GET', '/api/profiles?limit=100&depth=0')
+		const rest = await callRest('GET', '/api/profiles?limit=100&depth=0')
 		const locale = await payload.find({ collection: 'profiles', depth: 0, overrideAccess: false })
 
 		expect(rest.statut).toBe(200)
 		expect(identifiants(rest.corps)).toEqual([publie.profil.id])
 		expect(locale.docs.map(({ id }) => id)).toEqual([publie.profil.id])
 		for (const cache of [brouillon, masque])
-			expect((await appelerRest('GET', `/api/profiles/${cache.profil.id}`)).statut).toBe(404)
+			expect((await callRest('GET', `/api/profiles/${cache.profil.id}`)).statut).toBe(404)
 	})
 })
 
@@ -121,7 +121,7 @@ describe('Instantané des clés : aucun champ réservé, ni compte relié, ni st
 			`/api/profiles/${profil.id}?depth=2`,
 			'/api/profiles?depth=1',
 		]) {
-			const { statut, corps, texte } = await appelerRest('GET', chemin)
+			const { statut, corps, texte } = await callRest('GET', chemin)
 			expect(statut).toBe(200)
 			const document = 'docs' in (corps as object) ? (corps as { docs: object[] }).docs[0] : corps
 			expect(Object.keys(document as object).sort()).toEqual(CLES_PUBLIQUES)
@@ -132,10 +132,10 @@ describe('Instantané des clés : aucun champ réservé, ni compte relié, ni st
 
 	test('lu par une autre maquilleuse ou par redaction : les mêmes clés', async () => {
 		const { profil } = await maquilleuseAvecProfil('published')
-		const [autre, redaction] = await Promise.all([creerCompte('maquilleuse'), creerCompte('redaction')])
+		const [autre, redaction] = await Promise.all([createAccount('maquilleuse'), createAccount('redaction')])
 
 		for (const lecteur of [autre, redaction]) {
-			const { statut, corps } = await appelerRest('GET', `/api/profiles/${profil.id}?depth=0`, {
+			const { statut, corps } = await callRest('GET', `/api/profiles/${profil.id}?depth=0`, {
 				enTetes: lecteur.session.enTetes,
 			})
 			expect(statut).toBe(200)
@@ -146,7 +146,7 @@ describe('Instantané des clés : aucun champ réservé, ni compte relié, ni st
 	test('la propriétaire lit son statut, son motif, sa vérification et son SIRET, jamais la note interne ni le score', async () => {
 		const { compte, profil } = await maquilleuseAvecProfil('hidden')
 
-		const { statut, corps } = await appelerRest('GET', `/api/profiles/${profil.id}?depth=0`, {
+		const { statut, corps } = await callRest('GET', `/api/profiles/${profil.id}?depth=0`, {
 			enTetes: compte.session.enTetes,
 		})
 
@@ -167,9 +167,9 @@ describe('Instantané des clés : aucun champ réservé, ni compte relié, ni st
 
 	test('l’admin lit tout', async () => {
 		const { profil } = await maquilleuseAvecProfil('published')
-		const admin = await creerCompte('admin')
+		const admin = await createAccount('admin')
 
-		const { corps } = await appelerRest('GET', `/api/profiles/${profil.id}?depth=0`, { enTetes: admin.session.enTetes })
+		const { corps } = await callRest('GET', `/api/profiles/${profil.id}?depth=0`, { enTetes: admin.session.enTetes })
 
 		expect(corps).toMatchObject({ ...RESERVE, strapiId: profil.strapiId, status: 'published', superArtist: true })
 	})
@@ -178,10 +178,10 @@ describe('Instantané des clés : aucun champ réservé, ni compte relié, ni st
 describe('Statut, vérifié et score envoyés par la maquilleuse restent inchangés (I03, U55)', () => {
 	test('la modification passe pour son identité, les champs réservés gardent leur valeur', async () => {
 		const { compte, profil } = await maquilleuseAvecProfil('draft')
-		const autre = await creerCompte('maquilleuse-sans-profil')
+		const autre = await createAccount('maquilleuse-sans-profil')
 		const avant = await stocke(profil.id)
 
-		const { statut } = await appelerRest('PATCH', `/api/profiles/${profil.id}`, {
+		const { statut } = await callRest('PATCH', `/api/profiles/${profil.id}`, {
 			enTetes: compte.session.enTetes,
 			corps: {
 				firstName: 'Nouveau Prénom',
@@ -216,9 +216,9 @@ describe('Statut, vérifié et score envoyés par la maquilleuse restent inchang
 
 	test('un SIRET mal formé est refusé en français, même pour un admin', async () => {
 		const { profil } = await maquilleuseAvecProfil('published')
-		const admin = await creerCompte('admin')
+		const admin = await createAccount('admin')
 
-		const { statut, texte } = await appelerRest('PATCH', `/api/profiles/${profil.id}`, {
+		const { statut, texte } = await callRest('PATCH', `/api/profiles/${profil.id}`, {
 			enTetes: admin.session.enTetes,
 			corps: { siret: '123 456 789' },
 		})
@@ -232,17 +232,17 @@ describe('Statut, vérifié et score envoyés par la maquilleuse restent inchang
 describe('L’admin masque un profil : la lecture anonyme suivante ne le rend plus', () => {
 	test('lu par son identifiant et dans la liste avant ; introuvable et absent de la liste après', async () => {
 		const { profil } = await maquilleuseAvecProfil('published')
-		const admin = await creerCompte('admin')
-		expect((await appelerRest('GET', `/api/profiles/${profil.id}`)).statut).toBe(200)
+		const admin = await createAccount('admin')
+		expect((await callRest('GET', `/api/profiles/${profil.id}`)).statut).toBe(200)
 
-		const masquage = await appelerRest('PATCH', `/api/profiles/${profil.id}`, {
+		const masquage = await callRest('PATCH', `/api/profiles/${profil.id}`, {
 			enTetes: admin.session.enTetes,
 			corps: { chosenStatus: 'hidden', reason: 'Masqué pour le test' },
 		})
 
 		expect(masquage.statut).toBe(200)
-		expect((await appelerRest('GET', `/api/profiles/${profil.id}`)).statut).toBe(404)
-		expect(identifiants((await appelerRest('GET', '/api/profiles?depth=0')).corps)).toEqual([])
+		expect((await callRest('GET', `/api/profiles/${profil.id}`)).statut).toBe(404)
+		expect(identifiants((await callRest('GET', '/api/profiles?depth=0')).corps)).toEqual([])
 	})
 })
 
@@ -251,12 +251,12 @@ const IDENTIFIANTS_MAL_FORMES = ['abc', 'wp-login.php', '1e999', '99999999999', 
 
 describe('Un identifiant de profil mal formé : refusé avant la base, jamais une erreur 500', () => {
 	test('par REST pour l’anonyme, une maquilleuse et l’admin ; par l’API locale avec les règles actives', async () => {
-		const [maquilleuse, admin] = await Promise.all([creerCompte('maquilleuse'), creerCompte('admin')])
-		const payload = await payloadDeTest()
+		const [maquilleuse, admin] = await Promise.all([createAccount('maquilleuse'), createAccount('admin')])
+		const payload = await testPayload()
 
 		for (const enTetes of [{}, maquilleuse.session.enTetes, admin.session.enTetes])
 			for (const id of IDENTIFIANTS_MAL_FORMES)
-				expect([id, (await appelerRest('GET', `/api/profiles/${id}`, { enTetes })).statut]).toEqual([id, 403])
+				expect([id, (await callRest('GET', `/api/profiles/${id}`, { enTetes })).statut]).toEqual([id, 403])
 		for (const id of IDENTIFIANTS_MAL_FORMES)
 			await expect(payload.findByID({ collection: 'profiles', id, overrideAccess: false })).rejects.toMatchObject({
 				status: 403,

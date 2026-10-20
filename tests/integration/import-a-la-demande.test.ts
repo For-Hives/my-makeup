@@ -9,17 +9,17 @@ import {
 	readTokens,
 	reserveToken,
 } from '../../src/migration/on-demand-import'
-import { DATE_DE_BASCULE_DU_BANC, RACINE } from '../support/bench'
-import { FICHIER_DES_DECISIONS_DU_BANC, referentielDuBanc } from '../support/import'
-import { seConnecter } from '../support/legacy-journeys'
-import { payloadDeTest, viderLaBase } from '../support/payload-test'
-import { viderLeStockage } from '../support/s3'
+import { BENCH_CUTOVER_DATE, ROOT } from '../support/bench'
+import { BENCH_DECISION_FILE, benchReference } from '../support/import'
+import { connect } from '../support/legacy-journeys'
+import { emptyBase, testPayload } from '../support/payload-test'
+import { emptyStorage } from '../support/s3'
 import {
+	benchSource,
 	COMPTES_DE_FIXTURE,
-	creerLaSourceStrapi,
-	effacerLaSourceStrapi,
-	empreinteDeLaSource,
-	sourceDuBanc,
+	createSourceStrapi,
+	eraseSourceStrapi,
+	sourceFingerprint,
 } from '../support/source-strapi'
 
 // The bench is shared and a suite under load runs several times slower than alone (ticket 225).
@@ -41,13 +41,13 @@ const nouveauJeton = (): string => `essai-233-${(++numero).toString(36)}-${Date.
 function env(importation: Partial<ImportEnv> = {}, surcharge: Partial<OnDemandImportEnv> = {}): OnDemandImportEnv {
 	return {
 		...serverEnv(),
-		sourceStrapi: sourceDuBanc().lecture,
+		sourceStrapi: benchSource().lecture,
 		importation: {
 			token: nouveauJeton(),
 			mode: 'dry-run',
 			targetInService: false,
-			decisions: readFileSync(path.join(RACINE, FICHIER_DES_DECISIONS_DU_BANC), 'utf8'),
-			consentDate: DATE_DE_BASCULE_DU_BANC,
+			decisions: readFileSync(path.join(ROOT, BENCH_DECISION_FILE), 'utf8'),
+			consentDate: BENCH_CUTOVER_DATE,
 			...importation,
 		},
 		...surcharge,
@@ -59,10 +59,10 @@ const toutLeJournal: string[] = []
 
 async function passer(importation: Partial<ImportEnv> = {}, options: ImportOptions = {}) {
 	const lignes: string[] = []
-	const issue = await importOnDemand(await payloadDeTest(), env(importation), {
+	const issue = await importOnDemand(await testPayload(), env(importation), {
 		place: 'site',
-		reference: referentielDuBanc(),
-		mediaBase: sourceDuBanc().medias,
+		reference: benchReference(),
+		mediaBase: benchSource().medias,
 		log: ligne => {
 			lignes.push(ligne)
 			toutLeJournal.push(ligne)
@@ -73,7 +73,7 @@ async function passer(importation: Partial<ImportEnv> = {}, options: ImportOptio
 }
 
 async function nombres() {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	const compter = async (collection: 'pros' | 'profiles' | 'articles' | 'talents' | 'media') =>
 		(await payload.count({ collection, overrideAccess: true })).totalDocs
 	return {
@@ -88,23 +88,23 @@ async function nombres() {
 const VIDE = { pros: 0, profils: 0, articles: 0, talents: 0, media: 0 }
 
 beforeAll(async () => {
-	await viderLaBase()
-	await viderLeStockage()
-	await creerLaSourceStrapi()
+	await emptyBase()
+	await emptyStorage()
+	await createSourceStrapi()
 })
 
 beforeEach(async () => {
-	await viderLaBase()
+	await emptyBase()
 })
 
 afterAll(async () => {
-	await viderLaBase()
-	await effacerLaSourceStrapi()
+	await emptyBase()
+	await eraseSourceStrapi()
 })
 
 describe('à blanc, il lit et n’écrit rien', () => {
 	test('un passage à blanc finit en code 0, annonce ses créations et laisse la cible vide', async () => {
-		const empreinte = (await empreinteDeLaSource()).empreinte
+		const empreinte = (await sourceFingerprint()).empreinte
 
 		const { issue, log: journal } = await passer({ mode: 'dry-run' })
 
@@ -113,7 +113,7 @@ describe('à blanc, il lit et n’écrit rien', () => {
 		expect(journal).toContain('Talents : 3 à la source ; 3 créations annoncées')
 		expect(journal).toMatch(/Passage dry-run fini, code 0\./)
 		expect(await nombres()).toEqual(VIDE)
-		expect((await empreinteDeLaSource()).empreinte).toBe(empreinte)
+		expect((await sourceFingerprint()).empreinte).toBe(empreinte)
 	})
 
 	test('sans mode, c’est un passage à blanc : l’env le dit déjà, le module n’écrit rien', async () => {
@@ -168,7 +168,7 @@ describe('un même jeton ne rejoue rien', () => {
 		await passer({ token: un, mode: 'dry-run' })
 		await passer({ token: deux, mode: 'dry-run' })
 
-		const { rows } = await (await payloadDeTest()).db.pool.query<{ marque: string }>(
+		const { rows } = await (await testPayload()).db.pool.query<{ marque: string }>(
 			"SELECT obj_description(to_regnamespace('public'), 'pg_namespace') AS marque"
 		)
 
@@ -178,7 +178,7 @@ describe('un même jeton ne rejoue rien', () => {
 	test('rejoué avec le même jeton, même sur une cible vidée, le passage ne lit rien et n’écrit rien', async () => {
 		const jeton = nouveauJeton()
 		expect((await passer({ token: jeton, mode: 'real' })).issue.state).toBe('termine')
-		await viderLaBase()
+		await emptyBase()
 		expect(await nombres()).toEqual(VIDE)
 
 		let ouverte = false
@@ -199,7 +199,7 @@ describe('un même jeton ne rejoue rien', () => {
 	})
 
 	test('cinq démarrages en même temps avec le même jeton : un seul le réserve', async () => {
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const jeton = nouveauJeton()
 
 		const reponses = await Promise.all(Array.from({ length: 5 }, () => reserveToken(payload.db.pool, jeton)))
@@ -227,7 +227,7 @@ describe('un même jeton ne rejoue rien', () => {
 describe('une cible que la v3 utilise déjà est refusée sans l’option', () => {
 	test('après une connexion réussie, le passage réel est refusé ; avec IMPORT_TARGET_IN_SERVICE il passe', async () => {
 		await passer({ mode: 'real' })
-		expect(await seConnecter(LOCAL?.email ?? '', LOCAL?.motDePasse ?? '')).toMatchObject({ ok: true })
+		expect(await connect(LOCAL?.email ?? '', LOCAL?.motDePasse ?? '')).toMatchObject({ ok: true })
 		const avant = await nombres()
 
 		for (const mode of ['dry-run', 'real'] as const) {
@@ -259,14 +259,14 @@ describe('les refus du lieu, de la source et du stockage', () => {
 
 	test('sans lieu donné, le processus de test n’est pas le site', async () => {
 		const lignes: string[] = []
-		const issue = await importOnDemand(await payloadDeTest(), env({ mode: 'real' }), { log: l => lignes.push(l) })
+		const issue = await importOnDemand(await testPayload(), env({ mode: 'real' }), { log: l => lignes.push(l) })
 
 		expect(issue.state).toBe('refuse')
 		expect(await nombres()).toEqual(VIDE)
 	})
 
 	test('la base de Payload comme source est refusée avant toute lecture', async () => {
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const lignes: string[] = []
 
 		const issue = await importOnDemand(
@@ -286,7 +286,7 @@ describe('les refus du lieu, de la source et du stockage', () => {
 	test('sans stockage des photos, le passage est refusé : aucune photo ne serait adoptée', async () => {
 		const lignes: string[] = []
 
-		const issue = await importOnDemand(await payloadDeTest(), env({ mode: 'real' }, { storage: undefined }), {
+		const issue = await importOnDemand(await testPayload(), env({ mode: 'real' }, { storage: undefined }), {
 			place: 'site',
 			log: l => lignes.push(l),
 		})
@@ -320,12 +320,12 @@ describe('le journal ne porte que des nombres', () => {
 		const lignes: string[] = []
 
 		const issue = await importOnDemand(
-			await payloadDeTest(),
+			await testPayload(),
 			env({ token: nouveauJeton(), mode: 'dry-run' }, { sourceStrapi: injoignable }),
 			{
 				place: 'site',
-				reference: referentielDuBanc(),
-				mediaBase: sourceDuBanc().medias,
+				reference: benchReference(),
+				mediaBase: benchSource().medias,
 				log: l => lignes.push(l),
 			}
 		)

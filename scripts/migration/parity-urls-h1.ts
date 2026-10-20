@@ -1,5 +1,5 @@
 /**
- * Writes tests/fixtures/parite-urls-h1.json: the h1 of the old site for the clear addresses of the
+ * Writes tests/fixtures/url-parity-h1.json: the h1 of the old site for the clear addresses of the
  * frozen inventory, as the measuring tool counted them (ticket 072; plan 02 I45).
  *
  *   bun --no-env-file scripts/migration/parity-urls-h1.ts <baseline-2026-10.csv>
@@ -13,10 +13,10 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { SITE_ORIGIN } from '../../src/lib/frozen-urls'
-import { lireLeCsv } from '../../tests/support/url-parity'
+import { readCsv } from '../../tests/support/url-parity'
 import { FROZEN_INVENTORY } from './urls-doc'
 
-const OUTPUT = fileURLToPath(new URL('../../tests/fixtures/parite-urls-h1.json', import.meta.url))
+const OUTPUT = fileURLToPath(new URL('../../tests/fixtures/url-parity-h1.json', import.meta.url))
 
 const [source] = process.argv.slice(2)
 if (!source) {
@@ -24,7 +24,7 @@ if (!source) {
 	process.exit(1)
 }
 
-const rows = lireLeCsv(readFileSync(source, 'utf8'))
+const rows = readCsv(readFileSync(source, 'utf8'))
 const byUrl = new Map(rows.map(ligne => [ligne.url ?? '', ligne]))
 const addresses = [
 	...FROZEN_INVENTORY.addresses.map(({ address }) => address),
@@ -39,4 +39,4 @@ for (const pageUrl of addresses) {
 	result[pageUrl] = { n: Number(row.h1_nb), sha: row.h1_sha256 || null }
 }
 writeFileSync(OUTPUT, `${JSON.stringify(result, null, '\t')}\n`)
-console.log(`${Object.keys(result).length} adresses écrites dans tests/fixtures/parite-urls-h1.json`)
+console.log(`${Object.keys(result).length} adresses écrites dans tests/fixtures/url-parity-h1.json`)

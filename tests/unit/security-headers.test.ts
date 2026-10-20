@@ -361,7 +361,7 @@ describe('the storage of the bench, for the image optimizer (ticket 103)', () =>
 		['a wildcard', 'http://127.0.0.1:9090/*'],
 		['not an address', 'espace'],
 	])('%s is refused', (_cas, valeur) => {
-		expect(() => benchImages(valeur)).toThrow('IMAGES_DU_BANC')
+		expect(() => benchImages(valeur)).toThrow('BENCH_IMAGES')
 	})
 
 	test('the production configuration opens nothing local', async () => {

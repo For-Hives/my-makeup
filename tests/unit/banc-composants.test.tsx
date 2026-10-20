@@ -2,7 +2,7 @@ import { afterAll, describe, expect, spyOn, test } from 'bun:test'
 import net from 'node:net'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { type Fenetre, NOMS_POSES, ouvrirFenetre } from '../support/dom-react'
+import { type DomWindow, openWindow, SET_NAMES } from '../support/dom-react'
 
 // The component bench, tested on components that exist only here: no page of the site is involved.
 
@@ -95,10 +95,10 @@ function Temoin({ journal }: { journal: string[] }) {
 }
 
 /** The window of the first block, kept to be asked once its tests are over. */
-let fenetreRendue: Fenetre | undefined
+let fenetreRendue: DomWindow | undefined
 
 describe('the component bench', () => {
-	const fenetre = ouvrirFenetre({ noms: ['localStorage'] })
+	const fenetre = openWindow({ noms: ['localStorage'] })
 	fenetreRendue = fenetre
 
 	test('renders a component, clicks, and reads the updated text', async () => {
@@ -195,7 +195,7 @@ describe('the component bench', () => {
 
 	test('a test file sees the window under the names of a browser', () => {
 		const globaux = globalThis as unknown as Record<string, unknown>
-		for (const nom of [...NOMS_POSES, 'localStorage']) expect(globaux[nom], nom).toBe(Reflect.get(fenetre.w, nom))
+		for (const nom of [...SET_NAMES, 'localStorage']) expect(globaux[nom], nom).toBe(Reflect.get(fenetre.w, nom))
 		expect(new FormData(fenetre.w.document.createElement('form'))).toBeInstanceOf(fenetre.w.FormData)
 		localStorage.setItem('essai', 'oui')
 		expect(fenetre.w.localStorage.getItem('essai')).toBe('oui')

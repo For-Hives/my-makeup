@@ -1,17 +1,17 @@
 import { afterEach, describe, expect, test } from 'bun:test'
-import { BancRefuse, environnementDuBanc } from '../support/bench'
-import { EnvironnementRefuse } from '../support/environment-guard'
+import { benchEnvironment, RefusedBench } from '../support/bench'
+import { RefusedEnvironment } from '../support/environment-guard'
 import {
-	deposerUnObjet,
-	lireUnObjet,
-	listerLesObjets,
-	type Stockage,
-	stockageDuBanc,
-	supprimerUnObjet,
-	viderLeStockage,
+	benchStorage,
+	deleteObject,
+	dropObject,
+	emptyStorage,
+	listObjects,
+	type ObjectStorage,
+	readObject,
 } from '../support/s3'
 
-const BANC = environnementDuBanc({ nom: 'my-makeup-test', decalage: 0 })
+const BANC = benchEnvironment({ nom: 'my-makeup-test', decalage: 0 })
 
 interface Demande {
 	methode: string
@@ -31,7 +31,7 @@ afterEach(async () => {
 function fauxStockage(
 	repondre: (demande: Demande) => Response,
 	bucket = 'faux-test'
-): Stockage & { demandes: Demande[] } {
+): ObjectStorage & { demandes: Demande[] } {
 	const demandes: Demande[] = []
 	const serveur = Bun.serve({
 		hostname: '127.0.0.1',
@@ -72,7 +72,7 @@ const refus = (essai: () => unknown): string => {
 	try {
 		essai()
 	} catch (erreur) {
-		if (erreur instanceof BancRefuse) return erreur.message
+		if (erreur instanceof RefusedBench) return erreur.message
 		throw erreur
 	}
 	throw new Error('rien n’a été refusé')
@@ -86,7 +86,7 @@ const xml = (corps: string, statut = 200): Response =>
 
 describe('Le client ne lit et ne vide que le stockage du banc de son instance', () => {
 	test('le stockage du banc est reconnu : c’est celui de .env.test', () => {
-		expect(stockageDuBanc(BANC)).toEqual({
+		expect(benchStorage(BANC)).toEqual({
 			service: 'stockage d’objets',
 			instance: { nom: 'my-makeup-test', decalage: 0 },
 			adresse: 'http://127.0.0.1:9090',
@@ -95,8 +95,8 @@ describe('Le client ne lit et ne vide que le stockage du banc de son instance', 
 	})
 
 	test('sans stockage réglé, tout s’arrête avec la commande à lancer', () => {
-		expect(refus(() => stockageDuBanc({}))).toBe(
-			'Aucun banc de test n’est réglé (S3_ENDPOINT manque) : le stockage d’objets n’est ni lu ni vidé. Démarre le banc par « bun run banc:up », puis lance les tests par « bun run test:integration ».'
+		expect(refus(() => benchStorage({}))).toBe(
+			'Aucun banc de test n’est réglé (S3_ENDPOINT manque) : le stockage d’objets n’est ni lu ni vidé. Démarre le banc par « bun run bench:up », puis lance les tests par « bun run test:integration ».'
 		)
 	})
 
@@ -105,50 +105,50 @@ describe('Le client ne lit et ne vide que le stockage du banc de son instance', 
 		['un stockage distant', { S3_ENDPOINT: 'https://compte-factice.r2.cloudflarestorage.com' }, 'S3_ENDPOINT'],
 		['un autre espace du même stockage', { S3_BUCKET: 'autre-test' }, 'S3_BUCKET'],
 	])('refuse %s, sans recopier l’adresse', (_cas, variables, nom) => {
-		const message = refus(() => stockageDuBanc({ ...BANC, ...variables }))
+		const message = refus(() => benchStorage({ ...BANC, ...variables }))
 
 		expect(message).toStartWith(`${nom} ne désigne pas le stockage d’objets du banc de test : il n’est ni lu ni vidé.`)
 		for (const valeur of Object.values(variables)) expect(message).not.toContain(valeur)
 	})
 
 	test('le stockage d’une instance décalée n’est reconnu que sous les variables de cette instance', () => {
-		const voisin = environnementDuBanc({ nom: 'voisin', decalage: 20 })
+		const voisin = benchEnvironment({ nom: 'voisin', decalage: 20 })
 
-		expect(stockageDuBanc({ ...voisin, BANC_INSTANCE: 'voisin', BANC_DECALAGE: '20' }).adresse).toBe(
+		expect(benchStorage({ ...voisin, BENCH_INSTANCE: 'voisin', BENCH_OFFSET: '20' }).adresse).toBe(
 			'http://127.0.0.1:9110'
 		)
-		expect(() => stockageDuBanc(voisin)).toThrow(BancRefuse)
+		expect(() => benchStorage(voisin)).toThrow(RefusedBench)
 	})
 
 	test('un espace dont le nom ne finit pas par -test est refusé avant toute requête, même donné à la main', async () => {
 		const stockage = fauxStockage(() => new Response('', { status: 200 }), 'photos')
 
 		for (const essai of [
-			() => deposerUnObjet('objet.txt', 'x', { stockage }),
-			() => lireUnObjet('objet.txt', { stockage }),
-			() => supprimerUnObjet('objet.txt', { stockage }),
-			() => listerLesObjets('', { stockage }),
-			() => viderLeStockage({ stockage }),
+			() => dropObject('objet.txt', 'x', { stockage }),
+			() => readObject('objet.txt', { stockage }),
+			() => deleteObject('objet.txt', { stockage }),
+			() => listObjects('', { stockage }),
+			() => emptyStorage({ stockage }),
 		]) {
 			const erreur = await echec(essai())
 
-			expect(erreur).toBeInstanceOf(EnvironnementRefuse)
+			expect(erreur).toBeInstanceOf(RefusedEnvironment)
 			expect((erreur as Error).message).toStartWith('S3_BUCKET refusé (« photos »)')
 		}
 		expect(stockage.demandes).toEqual([])
 	})
 
 	test('un stockage qui n’est pas sur ce poste est refusé de la même façon', async () => {
-		const distant: Stockage = {
+		const distant: ObjectStorage = {
 			service: 'stockage d’objets',
 			instance: { nom: 'faux-banc', decalage: 0 },
 			adresse: 'https://compte-factice.r2.cloudflarestorage.com',
 			bucket: 'mymakeup-test',
 		}
 
-		const erreur = await echec(viderLeStockage({ stockage: distant }))
+		const erreur = await echec(emptyStorage({ stockage: distant }))
 
-		expect(erreur).toBeInstanceOf(EnvironnementRefuse)
+		expect(erreur).toBeInstanceOf(RefusedEnvironment)
 		expect((erreur as Error).message).toStartWith(
 			'S3_ENDPOINT refusé (hôte « compte-factice.r2.cloudflarestorage.com »)'
 		)
@@ -159,7 +159,7 @@ describe('Ce que le client demande au stockage', () => {
 	test('un dépôt : l’espace dans le chemin, la clé encodée segment par segment, le type donné, aucune signature', async () => {
 		const stockage = fauxStockage(() => new Response('', { status: 200 }))
 
-		await deposerUnObjet('photos/été 2026/n°1 & 2.webp', 'contenu', { stockage, type: 'image/webp' })
+		await dropObject('photos/été 2026/n°1 & 2.webp', 'contenu', { stockage, type: 'image/webp' })
 
 		const [demande] = stockage.demandes
 		expect(stockage.demandes.length).toBe(1)
@@ -179,7 +179,7 @@ describe('Ce que le client demande au stockage', () => {
 		}
 		const stockage = fauxStockage(({ parametres }) => xml(pages[parametres['continuation-token'] ?? ''] ?? ''))
 
-		expect(await listerLesObjets('a/', { stockage })).toEqual([
+		expect(await listObjects('a/', { stockage })).toEqual([
 			{ cle: 'a/un fichier.txt', taille: 3 },
 			{ cle: 'a/deux mots+plus.txt', taille: 12 },
 		])
@@ -209,8 +209,8 @@ describe('Ce que le client demande au stockage', () => {
 		const plein = fauxStockage(({ methode }) => (methode === 'GET' ? xml(liste) : new Response(null, { status: 204 })))
 		const vide = fauxStockage(() => xml('<ListBucketResult><IsTruncated>false</IsTruncated></ListBucketResult>'))
 
-		await viderLeStockage({ stockage: plein })
-		await viderLeStockage({ stockage: vide })
+		await emptyStorage({ stockage: plein })
+		await emptyStorage({ stockage: vide })
 
 		const supprimes = plein.demandes.filter(({ methode }) => methode === 'DELETE').map(({ chemin }) => chemin)
 		expect(supprimes.sort()).toEqual(cles.map(cle => `/faux-test/${cle}`).sort())
@@ -223,9 +223,9 @@ describe('Ce que le stockage répond', () => {
 	const SANS_ESPACE = '<Error><Code>NoSuchBucket</Code><Message>The specified bucket does not exist.</Message></Error>'
 
 	test('une clé absente ne rend rien ; un espace absent est une erreur, pas un objet absent', async () => {
-		expect(await lireUnObjet('absent.txt', { stockage: fauxStockage(() => xml(ABSENT, 404)) })).toBeUndefined()
+		expect(await readObject('absent.txt', { stockage: fauxStockage(() => xml(ABSENT, 404)) })).toBeUndefined()
 
-		const erreur = await echec(lireUnObjet('objet.txt', { stockage: fauxStockage(() => xml(SANS_ESPACE, 404)) }))
+		const erreur = await echec(readObject('objet.txt', { stockage: fauxStockage(() => xml(SANS_ESPACE, 404)) }))
 
 		expect((erreur as Error).message).toBe(
 			'Le stockage d’objets du banc « faux-banc » a répondu 404 à la demande « lire un objet ».'
@@ -233,10 +233,10 @@ describe('Ce que le stockage répond', () => {
 	})
 
 	test.each([
-		['déposer un objet', (stockage: Stockage) => deposerUnObjet('objet.txt', 'x', { stockage })],
-		['lire un objet', (stockage: Stockage) => lireUnObjet('objet.txt', { stockage })],
-		['supprimer un objet', (stockage: Stockage) => supprimerUnObjet('objet.txt', { stockage })],
-		['lister les objets', (stockage: Stockage) => listerLesObjets('', { stockage })],
+		['déposer un objet', (stockage: ObjectStorage) => dropObject('objet.txt', 'x', { stockage })],
+		['lire un objet', (stockage: ObjectStorage) => readObject('objet.txt', { stockage })],
+		['supprimer un objet', (stockage: ObjectStorage) => deleteObject('objet.txt', { stockage })],
+		['lister les objets', (stockage: ObjectStorage) => listObjects('', { stockage })],
 	])('une panne à la demande « %s » : l’erreur dit quel service, de quel banc, à quelle demande', async (demande, essai) => {
 		const erreur = await echec(essai(fauxStockage(() => new Response('panne', { status: 500 }))))
 
@@ -251,7 +251,7 @@ describe('Ce que le stockage répond', () => {
 				xml(`<ListBucketResult>${ligne}<IsTruncated>false</IsTruncated></ListBucketResult>`)
 			)
 
-			expect(((await echec(listerLesObjets('', { stockage }))) as Error).message).toBe(
+			expect(((await echec(listObjects('', { stockage }))) as Error).message).toBe(
 				'Le stockage d’objets du banc « faux-banc » a rendu une liste illisible.'
 			)
 		}

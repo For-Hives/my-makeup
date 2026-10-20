@@ -4,8 +4,8 @@ import type { DashboardProfile } from '@/lib/dashboard/cards'
 import { SECTIONS } from '@/lib/dashboard/cards'
 import { profileProgress } from '@/lib/dashboard/progress'
 import { CRITERIA } from '@/lib/profile/completeness'
-import { ANNECY, CAS_PARTAGES, completudeEnV3, documentDuCas } from '../support/completeness-cases'
-import { ouvrirFenetre } from '../support/dom-react'
+import { ANNECY, caseDocument, completenessInV3, SHARED_CASE } from '../support/completeness-cases'
+import { openWindow } from '../support/dom-react'
 
 /**
  * The progress block at the top of her space (ticket 138; plan 02 U01, U02, U04-U08): the figures
@@ -13,7 +13,7 @@ import { ouvrirFenetre } from '../support/dom-react'
  * Made-up values only.
  */
 
-const fenetre = ouvrirFenetre()
+const fenetre = openWindow()
 
 const DESCRIPTION = 'Maquilleuse fictive. '.repeat(12)
 
@@ -160,11 +160,11 @@ describe('disponibilité', () => {
 
 describe('U08 : aucun calcul propre à la page, les cas partagés avec l’ancien site', () => {
 	test('score, état publiable et vide égaux à la définition unique, pour chaque cas', async () => {
-		for (const cas of CAS_PARTAGES) {
+		for (const cas of SHARED_CASE) {
 			let photo = 100
-			const document = (await documentDuCas(cas.profil, () => photo++)) as DashboardProfile
+			const document = (await caseDocument(cas.profil, () => photo++)) as DashboardProfile
 			const a = profileProgress({ ...document, id: 1 })
-			const attendu = completudeEnV3(cas.profil)
+			const attendu = completenessInV3(cas.profil)
 			expect([cas.nom, a.score]).toEqual([cas.nom, attendu.score])
 			expect([cas.nom, a.etat === 'publiable']).toEqual([cas.nom, attendu.publiable])
 			expect([cas.nom, a.etat === 'vide']).toEqual([cas.nom, attendu.entierementVide && !attendu.interne])

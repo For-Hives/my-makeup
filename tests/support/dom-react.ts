@@ -6,7 +6,7 @@ import { afterAll, afterEach, beforeAll } from 'bun:test'
 import { JSDOM } from 'jsdom'
 import { act, type ReactNode } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import { poserGlobaux } from './globals'
+import { setGlobals } from './globals'
 
 /**
  * A React component, tested alone in a jsdom window: no browser, no server, no network.
@@ -36,7 +36,7 @@ import { poserGlobaux } from './globals'
  * class, not bun's (React builds `new FormData(form)`, react-hook-form tests `instanceof Blob`).
  * `fetch`, `URL`, `AbortController` and the timers stay bun's.
  */
-export const NOMS_POSES = [
+export const SET_NAMES = [
 	'window',
 	'document',
 	'navigator',
@@ -53,11 +53,11 @@ export const NOMS_POSES = [
 ] as const
 
 /** The ways out of the window that jsdom offers. Both are cut: a component test has no network. */
-const SORTIES_RESEAU = ['XMLHttpRequest', 'WebSocket'] as const
+const OUTPUTS_NETWORK = ['XMLHttpRequest', 'WebSocket'] as const
 
-export type FenetreJsdom = JSDOM['window']
+export type WindowJsdom = JSDOM['window']
 
-export type OptionsFenetre = {
+export type OptionsWindow = {
 	/** The address the window believes it is at. Nothing is fetched from it. */
 	url?: string
 	/** More names of the window to set on `globalThis`, after NOMS_POSES (`'localStorage'`…). */
@@ -65,11 +65,11 @@ export type OptionsFenetre = {
 }
 
 /** A field a person can type in, or choose a value in. */
-export type ChampDeSaisie = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+export type InputField = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
 
-export type Fenetre = {
+export type DomWindow = {
 	/** The jsdom window, open while the tests run. */
-	readonly w: FenetreJsdom
+	readonly w: WindowJsdom
 	/** Renders the element in a new node of the page, and returns this node once React is done. */
 	monter: (element: ReactNode) => Promise<HTMLElement>
 	/** Unmounts what `monter` rendered. Done after each test: call it only to test an unmount. */
@@ -81,51 +81,51 @@ export type Fenetre = {
 	/** The button with this name: its `aria-label`, or else its text. Exactly one, or it throws. */
 	bouton: (nom: string | RegExp, dans?: ParentNode) => HTMLElement
 	/** The field with this label: a `<label>`, or else an `aria-label`. Exactly one, or it throws. */
-	champ: (etiquette: string | RegExp, dans?: ParentNode) => ChampDeSaisie
+	champ: (etiquette: string | RegExp, dans?: ParentNode) => InputField
 	/** Waits until the condition returns something, and returns it. Throws after `max` ms (1000). */
 	attendre: <T>(condition: () => T, options?: { max?: number }) => Promise<NonNullable<T>>
 }
 
-type Ouverte = { w: FenetreJsdom; rendreGlobaux: () => void; racines: Map<HTMLElement, Root> }
+type Open = { w: WindowJsdom; rendreGlobaux: () => void; racines: Map<HTMLElement, Root> }
 
 /** Spaces as a reader sees them: one between words, none around. */
-const lisible = (texte: string | null | undefined): string => (texte ?? '').replace(/\s+/g, ' ').trim()
+const readable = (texte: string | null | undefined): string => (texte ?? '').replace(/\s+/g, ' ').trim()
 
-const correspond = (texte: string, attendu: string | RegExp): boolean =>
-	typeof attendu === 'string' ? texte === lisible(attendu) : attendu.test(texte)
+const matches = (texte: string, attendu: string | RegExp): boolean =>
+	typeof attendu === 'string' ? texte === readable(attendu) : attendu.test(texte)
 
 /** Exactly one match, or an error that lists what the page offers. */
-function leSeul<T>(trouves: readonly T[], quoi: string, attendu: string | RegExp, offerts: readonly string[]): T {
-	const [seul] = trouves
-	if (seul !== undefined && trouves.length === 1) return seul
-	const liste = offerts.length ? offerts.map(nom => `« ${nom} »`).join(', ') : 'aucun'
+function theOnly<T>(trouves: readonly T[], quoi: string, attendu: string | RegExp, offerts: readonly string[]): T {
+	const [only] = trouves
+	if (only !== undefined && trouves.length === 1) return only
+	const list = offerts.length ? offerts.map(nom => `« ${nom} »`).join(', ') : 'aucun'
 	throw new Error(
-		`${trouves.length ? `${trouves.length} ${quoi}s répondent` : `Aucun ${quoi} ne répond`} à ${attendu}. Dans la page : ${liste}.`
+		`${trouves.length ? `${trouves.length} ${quoi}s répondent` : `Aucun ${quoi} ne répond`} à ${attendu}. Dans la page : ${list}.`
 	)
 }
 
-const estUnChamp = (w: FenetreJsdom, element: Element): element is ChampDeSaisie =>
+const isField = (w: WindowJsdom, element: Element): element is InputField =>
 	element instanceof w.HTMLInputElement ||
 	element instanceof w.HTMLTextAreaElement ||
 	element instanceof w.HTMLSelectElement
 
 /** The words of a label, without those of the field it wraps (the options of a list). */
-function texteDeLEtiquette(label: HTMLLabelElement): string {
-	const copie = label.cloneNode(true) as HTMLLabelElement
-	for (const champ of copie.querySelectorAll('input, textarea, select, button')) champ.remove()
-	return lisible(copie.textContent)
+function labelText(label: HTMLLabelElement): string {
+	const copy = label.cloneNode(true) as HTMLLabelElement
+	for (const field of copy.querySelectorAll('input, textarea, select, button')) field.remove()
+	return readable(copy.textContent)
 }
 
-function couperLeReseau(w: FenetreJsdom): void {
-	for (const nom of SORTIES_RESEAU) {
-		const Coupe = class {
+function cutNetwork(w: WindowJsdom): void {
+	for (const name of OUTPUTS_NETWORK) {
+		const Cut = class {
 			constructor() {
 				throw new Error(
-					`Le banc de composants n'a pas de réseau : ${nom} est coupé. Le composant reçoit du test la fonction qui envoie, ou passe par fetch.`
+					`Le banc de composants n'a pas de réseau : ${name} est coupé. Le composant reçoit du test la fonction qui envoie, ou passe par fetch.`
 				)
 			}
 		}
-		Object.defineProperty(w, nom, { configurable: true, value: Coupe, writable: true })
+		Object.defineProperty(w, name, { configurable: true, value: Cut, writable: true })
 	}
 }
 
@@ -133,36 +133,36 @@ function couperLeReseau(w: FenetreJsdom): void {
  * Opens a jsdom window for the tests of the file, or of the `describe`, that calls it.
  * The window exists from the first of these tests to the last, and for them only.
  */
-export function ouvrirFenetre({ url = 'http://localhost/', noms = [] }: OptionsFenetre = {}): Fenetre {
-	let ouverte: Ouverte | undefined
+export function openWindow({ url = 'http://localhost/', noms = [] }: OptionsWindow = {}): DomWindow {
+	let open: Open | undefined
 
-	const fenetre = (): Ouverte => {
-		if (ouverte) return ouverte
+	const window = (): Open => {
+		if (open) return open
 		throw new Error(
 			"La fenêtre n'est ouverte que pendant les tests : monter, cliquer et les autres s'appellent dans un test, pas au chargement du fichier."
 		)
 	}
 
-	const demonter = async (): Promise<void> => {
-		if (!ouverte) return
-		const racines = [...ouverte.racines]
-		ouverte.racines.clear()
+	const unmount = async (): Promise<void> => {
+		if (!open) return
+		const roots = [...open.racines]
+		open.racines.clear()
 		await act(async () => {
-			for (const [, racine] of racines) racine.unmount()
+			for (const [, root] of roots) root.unmount()
 		})
-		for (const [zone] of racines) zone.remove()
+		for (const [zone] of roots) zone.remove()
 	}
 
 	// Every render and unmount of the bench goes through `act`: once the page is empty, React has
 	// nothing left to do in this window, and it can leave.
-	const fermer = async (): Promise<void> => {
-		if (!ouverte) return
-		const { rendreGlobaux, w } = ouverte
+	const close = async (): Promise<void> => {
+		if (!open) return
+		const { rendreGlobaux: renderGlobals, w } = open
 		try {
-			await demonter()
+			await unmount()
 		} finally {
-			ouverte = undefined
-			rendreGlobaux()
+			open = undefined
+			renderGlobals()
 			w.close()
 		}
 	}
@@ -175,109 +175,109 @@ export function ouvrirFenetre({ url = 'http://localhost/', noms = [] }: OptionsF
 			pretendToBeVisual: true,
 			url,
 		})
-		couperLeReseau(w)
-		const valeurs: Record<string, unknown> = { IS_REACT_ACT_ENVIRONMENT: true }
-		for (const nom of [...NOMS_POSES, ...noms]) {
-			if (!(nom in w)) throw new Error(`La fenêtre de test n'a pas de « ${nom} » à poser sur globalThis.`)
-			valeurs[nom] = Reflect.get(w, nom)
+		cutNetwork(w)
+		const values: Record<string, unknown> = { IS_REACT_ACT_ENVIRONMENT: true }
+		for (const name of [...SET_NAMES, ...noms]) {
+			if (!(name in w)) throw new Error(`La fenêtre de test n'a pas de « ${name} » à poser sur globalThis.`)
+			values[name] = Reflect.get(w, name)
 		}
-		ouverte = { racines: new Map(), rendreGlobaux: poserGlobaux(valeurs), w }
+		open = { racines: new Map(), rendreGlobaux: setGlobals(values), w }
 	})
-	afterEach(demonter)
-	afterAll(fermer)
+	afterEach(unmount)
+	afterAll(close)
 
 	return {
 		get w() {
-			return fenetre().w
+			return window().w
 		},
 		monter: async element => {
-			const { racines, w } = fenetre()
+			const { racines: roots, w } = window()
 			const zone = w.document.createElement('div')
 			w.document.body.append(zone)
-			const racine = createRoot(zone)
-			racines.set(zone, racine)
+			const root = createRoot(zone)
+			roots.set(zone, root)
 			await act(async () => {
-				racine.render(element)
+				root.render(element)
 			})
 			return zone
 		},
-		demonter,
+		demonter: unmount,
 		cliquer: async cible => {
-			const { w } = fenetre()
-			const souris = (type: string) => new w.MouseEvent(type, { bubbles: true, button: 0, cancelable: true })
+			const { w } = window()
+			const mouse = (type: string) => new w.MouseEvent(type, { bubbles: true, button: 0, cancelable: true })
 			await act(async () => {
-				cible.dispatchEvent(souris('mousedown'))
+				cible.dispatchEvent(mouse('mousedown'))
 				if (cible instanceof w.HTMLElement) cible.focus()
-				cible.dispatchEvent(souris('mouseup'))
-				cible.dispatchEvent(souris('click'))
+				cible.dispatchEvent(mouse('mouseup'))
+				cible.dispatchEvent(mouse('click'))
 			})
 		},
 		saisir: async (champ, valeur) => {
-			const { w } = fenetre()
-			if (!estUnChamp(w, champ)) {
+			const { w } = window()
+			if (!isField(w, champ)) {
 				throw new Error(
 					`On ne saisit que dans un champ (input, textarea, select), pas dans <${champ.tagName.toLowerCase()}>.`
 				)
 			}
 			// React follows the value of a field through a property it sets on the field itself:
 			// only the setter of the class changes the value behind its back, as typing does.
-			const poseur = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(champ), 'value')?.set
+			const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(champ), 'value')?.set
 			await act(async () => {
 				champ.focus()
-				poseur?.call(champ, valeur)
+				setter?.call(champ, valeur)
 				champ.dispatchEvent(new w.Event('input', { bubbles: true }))
 				champ.dispatchEvent(new w.Event('change', { bubbles: true }))
 			})
 		},
 		bouton: (nom, dans) => {
-			const { w } = fenetre()
-			const tous = [
+			const { w } = window()
+			const everyone = [
 				...(dans ?? w.document.body).querySelectorAll<HTMLElement>(
 					'button, [role="button"], input[type="submit"], input[type="button"]'
 				),
 			].map(element => ({
 				element,
-				nom: lisible(
+				nom: readable(
 					element.getAttribute('aria-label') ??
 						(element instanceof w.HTMLInputElement ? element.value : element.textContent)
 				),
 			}))
-			const trouves = tous.filter(bouton => correspond(bouton.nom, nom))
-			return leSeul(
-				trouves,
+			const found = everyone.filter(bouton => matches(bouton.nom, nom))
+			return theOnly(
+				found,
 				'bouton',
 				nom,
-				tous.map(bouton => bouton.nom)
+				everyone.map(bouton => bouton.nom)
 			).element
 		},
 		champ: (etiquette, dans) => {
-			const { w } = fenetre()
-			const racine = dans ?? w.document.body
-			const tous: { element: Element | null; nom: string }[] = [
-				...[...racine.querySelectorAll('label')].map(label => ({
+			const { w } = window()
+			const root = dans ?? w.document.body
+			const everyone: { element: Element | null; nom: string }[] = [
+				...[...root.querySelectorAll('label')].map(label => ({
 					element: label.control,
-					nom: texteDeLEtiquette(label),
+					nom: labelText(label),
 				})),
-				...[...racine.querySelectorAll('input[aria-label], textarea[aria-label], select[aria-label]')].map(element => ({
+				...[...root.querySelectorAll('input[aria-label], textarea[aria-label], select[aria-label]')].map(element => ({
 					element,
-					nom: lisible(element.getAttribute('aria-label')),
+					nom: readable(element.getAttribute('aria-label')),
 				})),
 			]
-			const trouves = tous.filter(champ => champ.element && correspond(champ.nom, etiquette))
-			return leSeul(
-				trouves,
+			const found = everyone.filter(champ => champ.element && matches(champ.nom, etiquette))
+			return theOnly(
+				found,
 				'champ',
 				etiquette,
-				tous.map(champ => champ.nom)
-			).element as ChampDeSaisie
+				everyone.map(champ => champ.nom)
+			).element as InputField
 		},
 		attendre: async (condition, { max = 1000 } = {}) => {
-			fenetre()
-			const fin = performance.now() + max
+			window()
+			const end = performance.now() + max
 			for (;;) {
-				const valeur = condition()
-				if (valeur) return valeur as NonNullable<ReturnType<typeof condition>>
-				if (performance.now() >= fin) throw new Error(`Attente dépassée : rien au bout de ${max} ms.`)
+				const value = condition()
+				if (value) return value as NonNullable<ReturnType<typeof condition>>
+				if (performance.now() >= end) throw new Error(`Attente dépassée : rien au bout de ${max} ms.`)
 				// One turn of the timers inside `act`: what a resolved promise sets in the state is rendered.
 				await act(async () => {
 					await new Promise(resolve => setTimeout(resolve, 5))

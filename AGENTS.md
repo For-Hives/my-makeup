@@ -13,7 +13,7 @@ Avant le premier changement, lis [`CLAUDE.md`](CLAUDE.md) : les commandes, l'arc
    2. `bun run typecheck` ;
    3. `bun run test` ;
    4. `bun run test:ci-guard` : les garde-fous que la CI lance sur chaque PR ;
-   5. `bun run test:integration`, banc démarré (`bun run banc:up`), si ton changement touche ce que le banc couvre : la base, les comptes, les mails, le stockage, la connexion Google ;
+   5. `bun run test:integration`, banc démarré (`bun run bench:up`), si ton changement touche ce que le banc couvre : la base, les comptes, les mails, le stockage, la connexion Google ;
    6. `bun run test:e2e`, banc démarré, si ton changement touche ce qu'on voit dans un navigateur : une page, un écran, un parcours ;
    7. `bun run build`, si tu as changé du code ou de la configuration.
 

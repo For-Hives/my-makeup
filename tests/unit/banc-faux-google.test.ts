@@ -1,18 +1,18 @@
 import { beforeAll, describe, expect, test } from 'bun:test'
-import { BancRefuse, environnementDuBanc, INSTANCE_PAR_DEFAUT, RACINE } from '../support/bench'
-import { type ChoixPret, fauxGoogle, type OutilFauxGoogle, SCENARIOS } from '../support/fake-google'
-import { CHEMINS, creerFauxGoogle, type FauxGoogle } from '../support/fake-google/provider'
+import { benchEnvironment, INSTANCE_BY_DEFAULT, RefusedBench, ROOT } from '../support/bench'
+import { type ChoiceReady, fakeGoogle, SCENARIOS, type ToolFakeGoogle } from '../support/fake-google'
 import {
-	ChoixRefuse,
-	COOKIE_DU_CHOIX,
-	composerChoix,
-	decoderChoix,
-	encoderChoix,
-	subDe,
+	CHOICE_COOKIE,
+	composeChoice,
+	decodeChoice,
+	encodeChoice,
+	RefusedChoice,
+	subOf,
 } from '../support/fake-google/identity'
+import { createFakeGoogle, type FakeGoogle, PATHS } from '../support/fake-google/provider'
 
 /** The bench as `.env.test` describes it. Nothing is opened: the provider is called as a function. */
-const BANC = environnementDuBanc({ nom: INSTANCE_PAR_DEFAUT, decalage: 0 })
+const BANC = benchEnvironment({ nom: INSTANCE_BY_DEFAULT, decalage: 0 })
 const EMETTEUR = BANC.GOOGLE_OIDC_ISSUER ?? ''
 const CLIENT = BANC.GOOGLE_CLIENT_ID ?? ''
 const SECRET = BANC.GOOGLE_CLIENT_SECRET ?? ''
@@ -20,22 +20,22 @@ const RETOUR = 'http://localhost:3100/retour-du-faux-google'
 
 /** Added to the clock of the provider: a test moves it forward to see a code expire. */
 let avance = 0
-let fournisseur: FauxGoogle
-let google: OutilFauxGoogle
+let fournisseur: FakeGoogle
+let google: ToolFakeGoogle
 
 beforeAll(async () => {
-	fournisseur = await creerFauxGoogle({
+	fournisseur = await createFakeGoogle({
 		emetteur: EMETTEUR,
 		clientId: CLIENT,
 		secret: SECRET,
 		maintenant: () => Date.now() + avance,
 	})
-	google = fauxGoogle(BANC, { requeter: fournisseur.repondre })
+	google = fakeGoogle(BANC, { requeter: fournisseur.repondre })
 })
 
 /** An authorization request as the application would write it, one parameter replaced or removed at will. */
 function demande(surcharge: Record<string, string | undefined> = {}): URL {
-	const url = new URL(`${EMETTEUR}${CHEMINS.autorisation}`)
+	const url = new URL(`${EMETTEUR}${PATHS.autorisation}`)
 	const parametres: Record<string, string | undefined> = {
 		client_id: CLIENT,
 		redirect_uri: RETOUR,
@@ -49,7 +49,7 @@ function demande(surcharge: Record<string, string | undefined> = {}): URL {
 }
 
 /** The code Google sends the browser back with. */
-async function obtenirCode(surcharge: Record<string, string | undefined> = {}, choix?: ChoixPret): Promise<string> {
+async function obtenirCode(surcharge: Record<string, string | undefined> = {}, choix?: ChoiceReady): Promise<string> {
 	const code = (await google.autoriser(demande(surcharge), choix)).searchParams.get('code')
 	if (!code) throw new Error('aucun code dans le retour')
 	return code
@@ -67,7 +67,7 @@ function echanger(champs: Record<string, string | undefined>, enTetes: Record<st
 	}
 	for (const [nom, valeur] of Object.entries(complets)) if (valeur !== undefined) formulaire.set(nom, valeur)
 	return fournisseur.repondre(
-		new Request(`${EMETTEUR}${CHEMINS.jeton}`, {
+		new Request(`${EMETTEUR}${PATHS.jeton}`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/x-www-form-urlencoded', ...enTetes },
 			body: formulaire.toString(),
@@ -85,7 +85,7 @@ const chargeDe = (jeton: string): Record<string, unknown> =>
 
 describe('Le faux Google : un aller-retour complet, comme avec Google', () => {
 	test('il se présente comme Google : mêmes chemins, même document de découverte, sous son adresse locale', async () => {
-		const reponse = await fournisseur.repondre(new Request(`${EMETTEUR}${CHEMINS.decouverte}`))
+		const reponse = await fournisseur.repondre(new Request(`${EMETTEUR}${PATHS.decouverte}`))
 
 		expect(reponse.status).toBe(200)
 		expect(await reponse.json()).toMatchObject({
@@ -109,7 +109,7 @@ describe('Le faux Google : un aller-retour complet, comme avec Google', () => {
 			iss: EMETTEUR,
 			aud: CLIENT,
 			azp: CLIENT,
-			sub: subDe('lea.martin@example.test'),
+			sub: subOf('lea.martin@example.test'),
 			email: 'lea.martin@example.test',
 			email_verified: true,
 			name: 'Léa Martin',
@@ -118,7 +118,7 @@ describe('Le faux Google : un aller-retour complet, comme avec Google', () => {
 		})
 		expect(resultat.revendications.exp - resultat.revendications.iat).toBe(3600)
 		expect(resultat.profil).toEqual({
-			sub: subDe('lea.martin@example.test'),
+			sub: subOf('lea.martin@example.test'),
 			email: 'lea.martin@example.test',
 			email_verified: true,
 			name: 'Léa Martin',
@@ -174,12 +174,12 @@ describe('Le faux Google : un aller-retour complet, comme avec Google', () => {
 		const jetons = (await (await echanger({ code })).json()) as { id_token: string }
 
 		expect(chargeDe(jetons.id_token)).toMatchObject({
-			sub: subDe('camille.google@example.test'),
+			sub: subOf('camille.google@example.test'),
 			email: 'camille.google@example.test',
 			email_verified: true,
 			name: 'Camille Banc-de-Test',
 		})
-		expect(google.choisir().choix).toEqual(composerChoix())
+		expect(google.choisir().choix).toEqual(composeChoice())
 	})
 
 	test('second passage : la même adresse est le même compte Google, quelle que soit sa casse', async () => {
@@ -189,8 +189,8 @@ describe('Le faux Google : un aller-retour complet, comme avec Google', () => {
 		if (premier.issue !== 'connecte' || second.issue !== 'connecte') throw new Error('connexion attendue')
 		expect(second.revendications.sub).toBe(premier.revendications.sub)
 		expect(second.revendications.email).toBe('Zoe@Example.TEST')
-		expect(subDe('zoe@example.test')).toMatch(/^1\d{20}$/)
-		expect(subDe('lea@example.test')).not.toBe(subDe('zoe@example.test'))
+		expect(subOf('zoe@example.test')).toMatch(/^1\d{20}$/)
+		expect(subOf('lea@example.test')).not.toBe(subOf('zoe@example.test'))
 	})
 
 	test('deux connexions en même temps ne se mélangent pas : chacune rend l’identité de son test', async () => {
@@ -345,7 +345,7 @@ describe('Le faux Google refuse ce que Google refuse', () => {
 
 	test('le profil ne se lit qu’avec un jeton d’accès que le fournisseur a donné', async () => {
 		const profil = (enTetes: Record<string, string>) =>
-			fournisseur.repondre(new Request(`${EMETTEUR}${CHEMINS.profil}`, { headers: enTetes }))
+			fournisseur.repondre(new Request(`${EMETTEUR}${PATHS.profil}`, { headers: enTetes }))
 
 		const sansJeton: Record<string, string>[] = [
 			{},
@@ -363,7 +363,7 @@ describe('Le faux Google refuse ce que Google refuse', () => {
 		// The answer of the token endpoint, with one claim changed after the provider signed it.
 		const retoucher = async (requete: Request): Promise<Response> => {
 			const reponse = await fournisseur.repondre(requete)
-			if (new URL(requete.url).pathname !== CHEMINS.jeton) return reponse
+			if (new URL(requete.url).pathname !== PATHS.jeton) return reponse
 			const jetons = (await reponse.json()) as { id_token: string }
 			const [entete = '', charge = '', signature = ''] = jetons.id_token.split('.')
 			const fausse = Buffer.from(
@@ -372,7 +372,7 @@ describe('Le faux Google refuse ce que Google refuse', () => {
 			return Response.json({ ...jetons, id_token: `${entete}.${fausse}.${signature}` })
 		}
 
-		const trompe = fauxGoogle(BANC, { requeter: retoucher })
+		const trompe = fakeGoogle(BANC, { requeter: retoucher })
 
 		await expect(trompe.allerRetour()).rejects.toThrow('Jeton d’identité : signature fausse.')
 	})
@@ -382,15 +382,15 @@ describe('Le faux Google refuse ce que Google refuse', () => {
 			fournisseur.repondre(new Request(`${EMETTEUR}${chemin}`, { method: methode }))
 
 		expect((await appeler('/oauth2/v4/token', 'POST')).status).toBe(404)
-		expect((await appeler(CHEMINS.jeton, 'GET')).status).toBe(405)
-		expect((await appeler(CHEMINS.autorisation, 'POST')).status).toBe(405)
-		expect((await appeler(CHEMINS.cles, 'DELETE')).status).toBe(405)
+		expect((await appeler(PATHS.jeton, 'GET')).status).toBe(405)
+		expect((await appeler(PATHS.autorisation, 'POST')).status).toBe(405)
+		expect((await appeler(PATHS.cles, 'DELETE')).status).toBe(405)
 	})
 
 	test('rien de ce qu’il répond ne se garde en cache', async () => {
 		const reponses = await Promise.all([
-			fournisseur.repondre(new Request(`${EMETTEUR}${CHEMINS.decouverte}`)),
-			fournisseur.repondre(new Request(`${EMETTEUR}${CHEMINS.cles}`)),
+			fournisseur.repondre(new Request(`${EMETTEUR}${PATHS.decouverte}`)),
+			fournisseur.repondre(new Request(`${EMETTEUR}${PATHS.cles}`)),
 			fournisseur.repondre(new Request(demande())),
 			echanger({ code: await obtenirCode() }),
 		])
@@ -413,11 +413,11 @@ describe('Un test choisit l’identité renvoyée', () => {
 				nomDeFamille: 'Banc-de-Test',
 			},
 		})
-		expect(pret.enTetes).toEqual({ Cookie: `${COOKIE_DU_CHOIX}=${encoderChoix(pret.choix)}` })
+		expect(pret.enTetes).toEqual({ Cookie: `${CHOICE_COOKIE}=${encodeChoice(pret.choix)}` })
 		expect(pret.cookies).toEqual([
 			{
-				name: COOKIE_DU_CHOIX,
-				value: encoderChoix(pret.choix),
+				name: CHOICE_COOKIE,
+				value: encodeChoice(pret.choix),
 				url: EMETTEUR,
 				expires: expect.any(Number),
 				httpOnly: true,
@@ -425,7 +425,7 @@ describe('Un test choisit l’identité renvoyée', () => {
 				sameSite: 'Lax',
 			},
 		])
-		expect(decoderChoix(pret.cookies[0]?.value ?? '')).toEqual(pret.choix)
+		expect(decodeChoice(pret.cookies[0]?.value ?? '')).toEqual(pret.choix)
 	})
 
 	test.each([
@@ -441,7 +441,7 @@ describe('Un test choisit l’identité renvoyée', () => {
 		try {
 			google.choisir(identite)
 		} catch (erreur) {
-			if (!(erreur instanceof ChoixRefuse)) throw erreur
+			if (!(erreur instanceof RefusedChoice)) throw erreur
 			message = erreur.message
 		}
 
@@ -450,19 +450,19 @@ describe('Un test choisit l’identité renvoyée', () => {
 	})
 
 	test('un scénario inconnu est refusé, et les quatre sont nommés', () => {
-		expect(() => composerChoix({ scenario: 'succes' as never })).toThrow(
+		expect(() => composeChoice({ scenario: 'succes' as never })).toThrow(
 			'Scénario inconnu. Les quatre scénarios : email-verifie, email-non-verifie, refus, panne.'
 		)
 	})
 
 	test('le fournisseur refait le contrôle : un cookie retouché donne une page d’erreur, jamais une identité', async () => {
 		const vraieAdresse = Buffer.from(
-			JSON.stringify({ ...composerChoix(), identite: { ...composerChoix().identite, email: 'quelquun@gmail.com' } })
+			JSON.stringify({ ...composeChoice(), identite: { ...composeChoice().identite, email: 'quelquun@gmail.com' } })
 		).toString('base64url')
 
 		for (const valeur of [vraieAdresse, 'pas-un-choix', Buffer.from('{"scenario":"refus"}').toString('base64url')]) {
 			const reponse = await fournisseur.repondre(
-				new Request(demande(), { headers: { Cookie: `autre=1; ${COOKIE_DU_CHOIX}=${valeur}` } })
+				new Request(demande(), { headers: { Cookie: `autre=1; ${CHOICE_COOKIE}=${valeur}` } })
 			)
 			const texte = await reponse.text()
 
@@ -479,7 +479,7 @@ describe('Aucun secret Google réel, aucun appel à Google', () => {
 		try {
 			essai()
 		} catch (erreur) {
-			if (erreur instanceof BancRefuse) return erreur.message
+			if (erreur instanceof RefusedBench) return erreur.message
 			throw erreur
 		}
 		throw new Error('rien n’a été refusé')
@@ -504,7 +504,7 @@ describe('Aucun secret Google réel, aucun appel à Google', () => {
 		['un identifiant client sans le mot « factice »', { clientId: 'client-du-banc', secret: SECRET }],
 		['un secret sans le mot « factice »', { clientId: CLIENT, secret: 'secret-du-banc-de-test' }],
 	])('le fournisseur refuse de démarrer avec %s', async (_cas, identifiants) => {
-		await expect(creerFauxGoogle({ emetteur: EMETTEUR, ...identifiants })).rejects.toThrow(
+		await expect(createFakeGoogle({ emetteur: EMETTEUR, ...identifiants })).rejects.toThrow(
 			'doivent porter le mot « factice ». Jamais un vrai secret Google ici.'
 		)
 	})
@@ -513,18 +513,18 @@ describe('Aucun secret Google réel, aucun appel à Google', () => {
 		'https://accounts.google.com',
 		'https://127.0.0.1:7080',
 		'http://192.168.1.20:7080',
-		'http://faux-google.exemple.test',
+		'http://fake-google.exemple.test',
 		'http://127.0.0.1:7080/',
 		'pas une adresse',
 	])('le fournisseur ne se présente que sous une adresse http de ce poste : %s', async emetteur => {
-		await expect(creerFauxGoogle({ emetteur, clientId: CLIENT, secret: SECRET })).rejects.toThrow(
+		await expect(createFakeGoogle({ emetteur, clientId: CLIENT, secret: SECRET })).rejects.toThrow(
 			'son adresse doit être une adresse http de ce poste'
 		)
 	})
 
 	test('sans faux Google réglé, l’outil s’arrête et dit quoi lancer', () => {
-		expect(refus(() => fauxGoogle({}))).toBe(
-			'Aucun faux Google n’est réglé (GOOGLE_OIDC_ISSUER manque). Démarre le banc par « bun run banc:up », puis lance les tests par « bun run test:integration ».'
+		expect(refus(() => fakeGoogle({}))).toBe(
+			'Aucun faux Google n’est réglé (GOOGLE_OIDC_ISSUER manque). Démarre le banc par « bun run bench:up », puis lance les tests par « bun run test:integration ».'
 		)
 	})
 
@@ -536,7 +536,7 @@ describe('Aucun secret Google réel, aucun appel à Google', () => {
 	])('l’outil refuse un fournisseur qui n’est pas sur ce poste, et n’envoie rien : %s', (_cas, emetteur) => {
 		const { envois, requeter } = espion()
 
-		expect(refus(() => fauxGoogle({ ...BANC, GOOGLE_OIDC_ISSUER: emetteur }, { requeter }))).toContain(
+		expect(refus(() => fakeGoogle({ ...BANC, GOOGLE_OIDC_ISSUER: emetteur }, { requeter }))).toContain(
 			'ne désigne pas le faux Google du banc, sur ce poste : rien n’est envoyé.'
 		)
 		expect(envois).toEqual([])
@@ -547,7 +547,7 @@ describe('Aucun secret Google réel, aucun appel à Google', () => {
 		['GOOGLE_CLIENT_SECRET', 'un-secret-qui-ne-dit-rien'],
 		['GOOGLE_CLIENT_SECRET', ''],
 	])('l’outil refuse des identifiants qui pourraient être réels, sans les recopier : %s', (nom, valeur) => {
-		const message = refus(() => fauxGoogle({ ...BANC, [nom]: valeur }))
+		const message = refus(() => fakeGoogle({ ...BANC, [nom]: valeur }))
 
 		expect(message).toContain('jamais un vrai secret Google dans un test')
 		if (valeur) expect(message).not.toContain(valeur)
@@ -555,10 +555,10 @@ describe('Aucun secret Google réel, aucun appel à Google', () => {
 
 	test('l’outil ne joue le navigateur que devant le faux Google : une adresse de Google n’est jamais appelée', async () => {
 		const { envois, requeter } = espion()
-		const outil = fauxGoogle(BANC, { requeter })
+		const outil = fakeGoogle(BANC, { requeter })
 		const versGoogle = `https://accounts.google.com/o/oauth2/v2/auth${demande().search}`
 
-		await expect(outil.autoriser(versGoogle)).rejects.toThrow(BancRefuse)
+		await expect(outil.autoriser(versGoogle)).rejects.toThrow(RefusedBench)
 		await expect(outil.autoriser(demande().href.replace('127.0.0.1', 'localhost'))).rejects.toThrow(
 			'Cette adresse n’est pas celle du faux Google du banc : rien n’est envoyé.'
 		)
@@ -567,14 +567,14 @@ describe('Aucun secret Google réel, aucun appel à Google', () => {
 })
 
 describe('Le serveur que lance le conteneur du banc', () => {
-	const SERVEUR = 'tests/outils/faux-google/serveur.ts'
+	const SERVEUR = 'tests/support/fake-google/server.ts'
 	const identifiants = { GOOGLE_CLIENT_ID: CLIENT, GOOGLE_CLIENT_SECRET: SECRET }
 
 	/** Starts the entry point of the container on a free port of this machine, with these variables only. */
 	function lancer(variables: Record<string, string>) {
 		return Bun.spawn([process.execPath, '--no-env-file', SERVEUR], {
-			cwd: RACINE,
-			env: { ...variables, FAUX_GOOGLE_PORT: '0', PATH: process.env.PATH ?? '' },
+			cwd: ROOT,
+			env: { ...variables, FAKE_GOOGLE_PORT: '0', PATH: process.env.PATH ?? '' },
 			stdout: 'pipe',
 			stderr: 'pipe',
 		})
@@ -589,7 +589,7 @@ describe('Le serveur que lance le conteneur du banc', () => {
 			const emetteur = /^Faux Google prêt : (http:\/\/127\.0\.0\.1:\d+)\n$/.exec(annonce)?.[1]
 			if (!emetteur) throw new Error(`annonce inattendue : ${annonce}`)
 
-			const resultat = await fauxGoogle({ ...BANC, GOOGLE_OIDC_ISSUER: emetteur }).allerRetour()
+			const resultat = await fakeGoogle({ ...BANC, GOOGLE_OIDC_ISSUER: emetteur }).allerRetour()
 
 			if (resultat.issue !== 'connecte') throw new Error(`issue inattendue : ${resultat.issue}`)
 			expect(resultat.revendications.iss).toBe(emetteur)

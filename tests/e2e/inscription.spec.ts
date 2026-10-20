@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test'
-import { violationsGraves } from '../support/axe'
-import { attendreLeMail, mailsRecus } from '../support/mailpit'
-import { payloadDeTest } from '../support/payload-test'
+import { violationsSevere } from '../support/axe'
+import { mailReceived, waitMail } from '../support/mailpit'
+import { testPayload } from '../support/payload-test'
 
 /**
  * The sign-up (ticket 082; plan 02 E01, adapted): she signs up, the wall tells her to look in her
@@ -47,7 +47,7 @@ const aleatoireEnLettres = () =>
 
 /** An account made by the server, as the sign-up would, without the mail and without taking a place in the brakes. */
 async function creerUnCompte(email: string, options: { confirme: boolean }) {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	await payload.create({
 		collection: 'pros',
 		// A name of its own: two accounts made at once with the same name would fight for the same slug.
@@ -58,7 +58,7 @@ async function creerUnCompte(email: string, options: { confirme: boolean }) {
 }
 
 const lienDuMail = async (email: string): Promise<string> => {
-	const mail = await attendreLeMail({ pour: email })
+	const mail = await waitMail({ pour: email })
 	const lien = mail.liens.find(l => l.includes('/auth/verification-complete'))
 	if (!lien) throw new Error('Le mail ne porte pas le lien de confirmation.')
 	return lien
@@ -87,7 +87,7 @@ test.describe('E01 : inscription, mur, lien, connexion, onboarding', { tag: '@mo
 		await expect(page).toHaveURL(/\/auth\/init-account$/)
 		await expect(page.getByRole('heading', { level: 1, name: 'Prépare ton profil' })).toBeVisible()
 		// Her profile and its address were made by the server, with the account.
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const compte = (await payload.find({ collection: 'pros', depth: 0, where: { email: { equals: email } } })).docs[0]
 		const profil = (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte?.id } } }))
 			.docs[0]
@@ -168,7 +168,7 @@ test.describe('U25 : les messages du formulaire', () => {
 	}) => {
 		const email = adresse()
 		await creerUnCompte(email, { confirme: true })
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const comptesDeLAdresse = () => payload.count({ collection: 'pros', where: { email: { equals: email } } })
 		expect((await comptesDeLAdresse()).totalDocs).toBe(1)
 
@@ -182,7 +182,7 @@ test.describe('U25 : les messages du formulaire', () => {
 			0
 		)
 		await expect
-			.poll(async () => (await mailsRecus(email)).map(({ sujet }) => sujet).filter(s => s.includes('déjà un compte')))
+			.poll(async () => (await mailReceived(email)).map(({ sujet }) => sujet).filter(s => s.includes('déjà un compte')))
 			.toHaveLength(1)
 	})
 
@@ -194,7 +194,7 @@ test.describe('U25 : les messages du formulaire', () => {
 
 		await expect(page).toHaveURL(/\/auth\/verification-wall$/)
 		await lienDuMail(email)
-		expect((await mailsRecus(email)).every(({ sujet }) => !sujet.includes('déjà un compte'))).toBe(true)
+		expect((await mailReceived(email)).every(({ sujet }) => !sujet.includes('déjà un compte'))).toBe(true)
 	})
 })
 
@@ -232,7 +232,7 @@ test.describe('E04 : renvoyer l’email de confirmation depuis le mur', () => {
 		await expect(page.getByLabel('Adresse email de ton inscription')).toHaveValue(email)
 		await demander(page, email)
 		await expect(page.getByTestId('retour-renvoi')).toContainText('Un seul email par minute')
-		expect((await mailsRecus(email)).length).toBe(1)
+		expect((await mailReceived(email)).length).toBe(1)
 
 		// An address with no account: the same answer as a real one, and nothing leaves.
 		const inconnue = adresse()
@@ -241,7 +241,7 @@ test.describe('E04 : renvoyer l’email de confirmation depuis le mur', () => {
 		await expect(page.getByTestId('retour-renvoi')).toContainText('un email vient de repartir')
 		await demander(page, inconnue)
 		await expect(page.getByTestId('retour-renvoi')).toContainText('Un seul email par minute')
-		expect(await mailsRecus(inconnue)).toEqual([])
+		expect(await mailReceived(inconnue)).toEqual([])
 	})
 
 	test('le renvoi demandé juste après une inscription : la même réponse que l’adresse ait un compte ou non', async ({
@@ -292,7 +292,7 @@ test.describe('Contre les faux comptes (ticket 084)', () => {
 		page,
 	}) => {
 		const email = adresse()
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const lignes = async () =>
 			(
 				await payload.find({
@@ -316,7 +316,7 @@ test.describe('Contre les faux comptes (ticket 084)', () => {
 
 		await expect(page).toHaveURL(/\/auth\/verification-wall$/)
 		expect((await payload.count({ collection: 'pros', where: { email: { equals: email } } })).totalDocs).toBe(0)
-		expect(await mailsRecus(email)).toEqual([])
+		expect(await mailReceived(email)).toEqual([])
 		expect(await lignes()).toBe(avant + 1)
 	})
 
@@ -351,7 +351,7 @@ test.describe('Contre les faux comptes (ticket 084)', () => {
 		await expect(page.getByTestId('erreur-inscription')).toContainText('Trop d’inscriptions depuis cette adresse')
 		await expect(page).toHaveURL(/\/auth\/signup$/)
 		// The refusal leaves one row in the journal, and no account.
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		expect(
 			(
 				await payload.count({
@@ -375,14 +375,14 @@ test.describe('Contre les faux comptes (ticket 084)', () => {
 test.describe('Accessibilité des pages de l’inscription', { tag: '@mobile' }, () => {
 	test('le formulaire, vide puis avec ses messages d’erreur, et le mur : aucune violation grave', async ({ page }) => {
 		await page.goto('/auth/signup')
-		expect(await violationsGraves(page)).toEqual([])
+		expect(await violationsSevere(page)).toEqual([])
 
 		await page.getByRole('button', { name: 'S’inscrire' }).click()
 		await expect(page.getByTestId('erreur-nom')).toHaveText('Indique ton nom.')
-		expect(await violationsGraves(page)).toEqual([])
+		expect(await violationsSevere(page)).toEqual([])
 
 		await page.goto('/auth/verification-wall')
-		expect(await violationsGraves(page)).toEqual([])
+		expect(await violationsSevere(page)).toEqual([])
 	})
 })
 

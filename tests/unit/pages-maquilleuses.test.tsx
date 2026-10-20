@@ -13,12 +13,12 @@ import WhyJoinPage, {
 import PageSolutions, {
 	metadata as metaSolutions,
 } from '../../src/app/(front)/(site)/solutions/pour-les-maquilleuses/page'
-import { empreinteDesTitres, type TitresDeLAncienSite } from '../support/url-parity'
+import { type OldSiteTitles, titleFingerprint } from '../support/url-parity'
 
 /** The four fixed pages for makeup artists and « À propos » (ticket 110), without a database. Their run in a browser: tests/e2e/pages-maquilleuses.spec.ts. */
 
-const anciens: TitresDeLAncienSite = JSON.parse(
-	readFileSync(new URL('../fixtures/parite-urls-h1.json', import.meta.url), 'utf8')
+const anciens: OldSiteTitles = JSON.parse(
+	readFileSync(new URL('../fixtures/url-parity-h1.json', import.meta.url), 'utf8')
 )
 
 const PAGES: { adresse: string; page: () => ReactElement; metadata: Metadata }[] = [
@@ -36,7 +36,7 @@ describe.each(PAGES)('Page $adresse', ({ adresse, page, metadata }) => {
 	const html = renderToStaticMarkup(page())
 
 	test('un seul h1, rendu par le serveur', () => {
-		expect(empreinteDesTitres(html).n).toBe(1)
+		expect(titleFingerprint(html).n).toBe(1)
 	})
 
 	test('titre de 60 caractères au plus, description de 70 à 155, canonique absolue sans barre finale, indexable', () => {
@@ -65,7 +65,7 @@ describe('Le h1 de l’ancien site', () => {
 		const adresse = '/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse'
 		const html = renderToStaticMarkup(WhyJoinPage())
 		expect(anciens[adresse]?.n).toBe(1)
-		expect(empreinteDesTitres(html).sha).toBe(anciens[adresse]?.sha ?? null)
+		expect(titleFingerprint(html).sha).toBe(anciens[adresse]?.sha ?? null)
 	})
 
 	test('les trois autres avaient deux h1 : le premier, celui de l’en-tête, est gardé ; le texte passe sous un h2', () => {

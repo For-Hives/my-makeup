@@ -3,8 +3,8 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSyn
 import os from 'node:os'
 import path from 'node:path'
 import { CANARY_FAULTS, refusal } from '../../scripts/ci/canary'
-import { MOTIF_DES_ESSAIS } from '../support/e2e'
 import { absoluteNavigations, fixedWaits, focusedOrSkippedTests } from '../support/ci-guardrails'
+import { TEST_PATTERN } from '../support/e2e'
 
 /**
  * The canary kit (docs/qualite.md, « Canari »). The four faulty files are written in a
@@ -95,7 +95,7 @@ describe('the canary plants four faults, one per tool', () => {
 
 		// In tests/e2e, under the pattern of the configuration: the e2e job runs it.
 		expect(FALSE_E2E.file.startsWith('tests/e2e/')).toBe(true)
-		expect(new Bun.Glob(MOTIF_DES_ESSAIS).match(FALSE_E2E.file)).toBe(true)
+		expect(new Bun.Glob(TEST_PATTERN).match(FALSE_E2E.file)).toBe(true)
 		// Planted, it leaves the other jobs green: C05, C06 and C07 find nothing in it.
 		expect(focusedOrSkippedTests(files)).toEqual([])
 		expect(fixedWaits(files)).toEqual([])

@@ -6,7 +6,7 @@
  * the same time never see each other's identity.
  *
  * Shared by the provider, which runs alone in a container and sees this folder only, and by the
- * tool the tests call (tests/outils/faux-google.ts). Node's own modules only: nothing of bun,
+ * tool the tests call (tests/support/fake-google.ts). Node's own modules only: nothing of bun,
  * nothing of the rest of the repository.
  */
 
@@ -27,7 +27,7 @@ export const SCENARIOS = ['email-verifie', 'email-non-verifie', 'refus', 'panne'
 export type Scenario = (typeof SCENARIOS)[number]
 
 /** A Google account that does not exist. */
-export interface Identite {
+export interface Identity {
 	/** Google's own identifier of the account (`sub`): stable, never an address. */
 	sub: string
 	/** Always under a domain in `.test`: no mail can ever be delivered to it. */
@@ -42,62 +42,62 @@ export interface Identite {
 	photo?: string
 }
 
-export interface Choix {
+export interface Choice {
 	scenario: Scenario
-	identite: Identite
+	identite: Identity
 }
 
 /** What a test gives: only what matters to it. The rest is filled in. */
-export interface Demande extends Partial<Identite> {
+export interface Ask extends Partial<Identity> {
 	scenario?: Scenario
 }
 
 /** The cookie of the provider that carries the choice of a test. */
-export const COOKIE_DU_CHOIX = 'faux_google_choix'
+export const CHOICE_COOKIE = 'faux_google_choix'
 
 /** The choice of a test cannot be used. The message is in French and never repeats an address. */
-export class ChoixRefuse extends Error {
+export class RefusedChoice extends Error {
 	override name = 'ChoixRefuse'
 }
 
 /** Who signs in when a test names nobody. */
-const PAR_DEFAUT = {
+const BY_DEFAULT = {
 	email: 'camille.google@example.test',
 	prenom: 'Camille',
 	nomDeFamille: 'Banc-de-Test',
 } as const
 
 /** Reserved for tests (RFC 6761): a name in `.test` never resolves, so an address under it reaches nobody. */
-const ADRESSE_FICTIVE = /^[^\s@]{1,64}@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)*test$/i
+const FAKE_URL = /^[^\s@]{1,64}@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)*test$/i
 
-const IDENTIFIANT = /^[\w-]{1,255}$/
+const IDENTIFIER = /^[\w-]{1,255}$/
 
-const LONGUEUR_MAX = 200
+const LENGTH_MAX = 200
 
 /** The made-up credentials of the bench say what they are: a real one never holds this word. */
-export const estFactice = (valeur: string): boolean => /factice/i.test(valeur)
+export const isFake = (valeur: string): boolean => /factice/i.test(valeur)
 
 /**
  * The identifier Google would give this account: 21 digits, the same for the same address
  * whatever its case, so that a second sign-in is the same account.
  */
-export function subDe(email: string): string {
-	const empreinte = createHash('sha256').update(email.trim().toLowerCase()).digest('hex')
-	return `1${(BigInt(`0x${empreinte.slice(0, 16)}`) % 10n ** 20n).toString().padStart(20, '0')}`
+export function subOf(email: string): string {
+	const fingerprint = createHash('sha256').update(email.trim().toLowerCase()).digest('hex')
+	return `1${(BigInt(`0x${fingerprint.slice(0, 16)}`) % 10n ** 20n).toString().padStart(20, '0')}`
 }
 
-const texte = (valeur: unknown, champ: string): string => {
-	if (typeof valeur !== 'string' || valeur.trim() === '' || valeur.length > LONGUEUR_MAX)
-		throw new ChoixRefuse(`Identité refusée : « ${champ} » doit être un texte de 1 à ${LONGUEUR_MAX} caractères.`)
+const text = (valeur: unknown, champ: string): string => {
+	if (typeof valeur !== 'string' || valeur.trim() === '' || valeur.length > LENGTH_MAX)
+		throw new RefusedChoice(`Identité refusée : « ${champ} » doit être un texte de 1 à ${LENGTH_MAX} caractères.`)
 	return valeur
 }
 
 function photoFictive(valeur: unknown): string {
-	const adresse = texte(valeur, 'photo')
-	const hote = URL.canParse(adresse) ? new URL(adresse).hostname : ''
-	if (!/(?:^|\.)test$/i.test(hote))
-		throw new ChoixRefuse('Identité refusée : la photo doit être une adresse fictive, sous un domaine en « .test ».')
-	return adresse
+	const url = text(valeur, 'photo')
+	const host = URL.canParse(url) ? new URL(url).hostname : ''
+	if (!/(?:^|\.)test$/i.test(host))
+		throw new RefusedChoice('Identité refusée : la photo doit être une adresse fictive, sous un domaine en « .test ».')
+	return url
 }
 
 /**
@@ -105,28 +105,35 @@ function photoFictive(valeur: unknown): string {
  * An address that is not made up is refused here, on both sides: a real person's address never
  * goes through the fake provider.
  */
-export function verifierChoix(valeur: unknown): Choix {
-	if (typeof valeur !== 'object' || valeur === null) throw new ChoixRefuse('Choix illisible : un objet est attendu.')
-	const { scenario, identite } = valeur as { scenario?: unknown; identite?: unknown }
+export function checkChoice(valeur: unknown): Choice {
+	if (typeof valeur !== 'object' || valeur === null) throw new RefusedChoice('Choix illisible : un objet est attendu.')
+	const { scenario, identite: identity } = valeur as { scenario?: unknown; identite?: unknown }
 	if (!SCENARIOS.includes(scenario as Scenario))
-		throw new ChoixRefuse(`Scénario inconnu. Les quatre scénarios : ${SCENARIOS.join(', ')}.`)
-	if (typeof identite !== 'object' || identite === null) throw new ChoixRefuse('Choix illisible : aucune identité.')
-	const { sub, email, nom, prenom, nomDeFamille, photo } = identite as Record<string, unknown>
+		throw new RefusedChoice(`Scénario inconnu. Les quatre scénarios : ${SCENARIOS.join(', ')}.`)
+	if (typeof identity !== 'object' || identity === null) throw new RefusedChoice('Choix illisible : aucune identité.')
+	const {
+		sub,
+		email,
+		nom: name,
+		prenom: firstName,
+		nomDeFamille: familyName,
+		photo,
+	} = identity as Record<string, unknown>
 
-	if (typeof email !== 'string' || !ADRESSE_FICTIVE.test(email))
-		throw new ChoixRefuse(
+	if (typeof email !== 'string' || !FAKE_URL.test(email))
+		throw new RefusedChoice(
 			'Identité refusée : l’adresse doit être fictive, sous un domaine réservé en « .test », comme lea@example.test.'
 		)
-	if (typeof sub !== 'string' || !IDENTIFIANT.test(sub))
-		throw new ChoixRefuse('Identité refusée : « sub » s’écrit en lettres, chiffres, « - » et « _ » (255 au plus).')
+	if (typeof sub !== 'string' || !IDENTIFIER.test(sub))
+		throw new RefusedChoice('Identité refusée : « sub » s’écrit en lettres, chiffres, « - » et « _ » (255 au plus).')
 	return {
 		scenario: scenario as Scenario,
 		identite: {
 			sub,
 			email,
-			nom: texte(nom, 'nom'),
-			prenom: texte(prenom, 'prenom'),
-			nomDeFamille: texte(nomDeFamille, 'nomDeFamille'),
+			nom: text(name, 'nom'),
+			prenom: text(firstName, 'prenom'),
+			nomDeFamille: text(familyName, 'nomDeFamille'),
 			...(photo === undefined ? {} : { photo: photoFictive(photo) }),
 		},
 	}
@@ -136,35 +143,35 @@ export function verifierChoix(valeur: unknown): Choix {
  * The full choice behind what a test asked for. Nothing asked: a verified address, and the
  * same made-up person every time.
  */
-export function composerChoix(demande: Demande = {}): Choix {
-	const { scenario = 'email-verifie', email = PAR_DEFAUT.email, photo } = demande
-	const prenom = demande.prenom ?? PAR_DEFAUT.prenom
-	const nomDeFamille = demande.nomDeFamille ?? PAR_DEFAUT.nomDeFamille
-	return verifierChoix({
+export function composeChoice(demande: Ask = {}): Choice {
+	const { scenario = 'email-verifie', email = BY_DEFAULT.email, photo } = demande
+	const firstName = demande.prenom ?? BY_DEFAULT.prenom
+	const familyName = demande.nomDeFamille ?? BY_DEFAULT.nomDeFamille
+	return checkChoice({
 		scenario,
 		identite: {
-			sub: demande.sub ?? (typeof email === 'string' ? subDe(email) : ''),
+			sub: demande.sub ?? (typeof email === 'string' ? subOf(email) : ''),
 			email,
-			nom: demande.nom ?? `${prenom} ${nomDeFamille}`,
-			prenom,
-			nomDeFamille,
+			nom: demande.nom ?? `${firstName} ${familyName}`,
+			prenom: firstName,
+			nomDeFamille: familyName,
 			...(photo === undefined ? {} : { photo }),
 		},
 	})
 }
 
 /** The choice as the value of a cookie. */
-export const encoderChoix = (choix: Choix): string => Buffer.from(JSON.stringify(choix), 'utf8').toString('base64url')
+export const encodeChoice = (choix: Choice): string => Buffer.from(JSON.stringify(choix), 'utf8').toString('base64url')
 
 /** The choice a cookie carries. Throws `ChoixRefuse` on anything `encoderChoix` did not write. */
-export function decoderChoix(valeur: string): Choix {
-	let lu: unknown
+export function decodeChoice(valeur: string): Choice {
+	let wasRead: unknown
 	try {
-		lu = JSON.parse(Buffer.from(valeur, 'base64url').toString('utf8'))
+		wasRead = JSON.parse(Buffer.from(valeur, 'base64url').toString('utf8'))
 	} catch {
-		throw new ChoixRefuse(
-			`Choix illisible : le cookie « ${COOKIE_DU_CHOIX} » n’est pas celui qu’écrit l’outil des tests.`
+		throw new RefusedChoice(
+			`Choix illisible : le cookie « ${CHOICE_COOKIE} » n’est pas celui qu’écrit l’outil des tests.`
 		)
 	}
-	return verifierChoix(lu)
+	return checkChoice(wasRead)
 }

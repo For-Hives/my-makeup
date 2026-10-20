@@ -1,8 +1,8 @@
 import { expect, type Page, test } from '@playwright/test'
-import { creerCompte } from '../support/account-factory'
-import { fauxGoogle } from '../support/fake-google'
-import { mailsRecus } from '../support/mailpit'
-import { payloadDeTest } from '../support/payload-test'
+import { createAccount } from '../support/account-factory'
+import { fakeGoogle } from '../support/fake-google'
+import { mailReceived } from '../support/mailpit'
+import { testPayload } from '../support/payload-test'
 
 /**
  * The Google sign-in and sign-up in a browser (tickets 090 and 091; plan 02 E07), against the fake
@@ -13,8 +13,8 @@ import { payloadDeTest } from '../support/payload-test'
 
 // Built when a test runs, not when Playwright lists the tests: listing needs no bench.
 const google = {
-	choisir: (...args: Parameters<ReturnType<typeof fauxGoogle>['choisir']>) => fauxGoogle().choisir(...args),
-	autoriser: (...args: Parameters<ReturnType<typeof fauxGoogle>['autoriser']>) => fauxGoogle().autoriser(...args),
+	choisir: (...args: Parameters<ReturnType<typeof fakeGoogle>['choisir']>) => fakeGoogle().choisir(...args),
+	autoriser: (...args: Parameters<ReturnType<typeof fakeGoogle>['autoriser']>) => fakeGoogle().autoriser(...args),
 }
 const cookieDeSession = async (context: import('@playwright/test').BrowserContext) =>
 	(await context.cookies()).find(({ name }) => name === 'payload-token')
@@ -49,7 +49,7 @@ test.describe('E07 : connexion et inscription avec Google', { tag: '@mobile' }, 
 		context,
 		page,
 	}) => {
-		const compte = await creerCompte('reprise-google')
+		const compte = await createAccount('reprise-google')
 		await choisir(context, { email: compte.email })
 
 		await page.goto('/auth/signin')
@@ -62,7 +62,7 @@ test.describe('E07 : connexion et inscription avec Google', { tag: '@mobile' }, 
 		expect(cookie).toMatchObject({ httpOnly: true, path: '/', sameSite: 'Lax' })
 		// The cookie of the departure is spent.
 		expect((await context.cookies()).map(c => c.name)).not.toContain('google-oidc')
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		expect(
 			(await payload.find({ collection: 'pros', depth: 0, where: { email: { equals: compte.email } } })).totalDocs
 		).toBe(1)
@@ -74,11 +74,11 @@ test.describe('E07 : connexion et inscription avec Google', { tag: '@mobile' }, 
 		await page.goto('/auth/profil')
 		await expect(page).toHaveURL(/\/auth\/signin/)
 		// Only the mails of this person: the catcher is shared with the tests that run at the same time.
-		expect(await mailsRecus(compte.email)).toEqual([])
+		expect(await mailReceived(compte.email)).toEqual([])
 	})
 
 	test('la page demandée avant la connexion est celle où l’on arrive', async ({ context, page }) => {
-		const compte = await creerCompte('reprise-google')
+		const compte = await createAccount('reprise-google')
 		await choisir(context, { email: compte.email })
 
 		await page.goto('/auth/signin?callbackUrl=%2Fauth%2Fprofil%3Fvue%3Dessai')
@@ -88,7 +88,7 @@ test.describe('E07 : connexion et inscription avec Google', { tag: '@mobile' }, 
 	})
 
 	test('une adresse de retour d’un autre site est ignorée', async ({ context, page }) => {
-		const compte = await creerCompte('reprise-google')
+		const compte = await createAccount('reprise-google')
 		await choisir(context, { email: compte.email })
 
 		await page.goto(`/auth/signin?callbackUrl=${encodeURIComponent('https://autre.example.test/piege')}`)
@@ -111,7 +111,7 @@ test.describe('E07 : connexion et inscription avec Google', { tag: '@mobile' }, 
 
 		await expect(page).toHaveURL(/\/auth\/init-account$/)
 		await expect(page.getByRole('heading', { level: 1, name: 'Prépare ton profil' })).toBeVisible()
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const comptes = await payload.find({ collection: 'pros', depth: 0, where: { email: { equals: email } } })
 		expect(comptes.docs).toHaveLength(1)
 		expect(comptes.docs[0]).toMatchObject({ name: 'Léa Fictive', _verified: true })
@@ -121,7 +121,7 @@ test.describe('E07 : connexion et inscription avec Google', { tag: '@mobile' }, 
 			where: { pro: { equals: comptes.docs[0]?.id } },
 		})
 		expect(profils.docs.map(p => p.slug)).toEqual([expect.stringMatching(/^lea-fictive(-\d+)?$/)])
-		expect(await mailsRecus(email)).toEqual([])
+		expect(await mailReceived(email)).toEqual([])
 
 		await page.goto('/auth/profil')
 		await page.getByRole('main').getByRole('button', { name: 'Me déconnecter', exact: true }).click()
@@ -136,7 +136,7 @@ test.describe('E07 : connexion et inscription avec Google', { tag: '@mobile' }, 
 			(await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: comptes.docs[0]?.id } } }))
 				.totalDocs
 		).toBe(1)
-		expect(await mailsRecus(email)).toEqual([])
+		expect(await mailReceived(email)).toEqual([])
 	})
 
 	test('un email que Google n’a pas vérifié : un message en français, aucun compte, aucune session', async ({
@@ -151,14 +151,14 @@ test.describe('E07 : connexion et inscription avec Google', { tag: '@mobile' }, 
 		await expect(page).toHaveURL(/\/auth\/signin\?error=google-email-non-verifie$/)
 		await expect(page.getByTestId('erreur-google')).toContainText('Google n’a pas confirmé ton adresse email')
 		expect(await cookieDeSession(context)).toBeUndefined()
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		expect((await payload.find({ collection: 'pros', depth: 0, where: { email: { equals: email } } })).totalDocs).toBe(
 			0
 		)
 	})
 
 	test('un compte à mot de passe n’est pas ouvert par Google', async ({ context, page }) => {
-		const compte = await creerCompte('maquilleuse')
+		const compte = await createAccount('maquilleuse')
 		await choisir(context, { email: compte.email })
 
 		await cliquerSurGoogle(page, '/auth/signin', 'Se connecter avec Google')
@@ -172,8 +172,8 @@ test.describe('E07 : connexion et inscription avec Google', { tag: '@mobile' }, 
 	})
 
 	test('un compte Google bloqué lit le message du compte bloqué', async ({ context, page }) => {
-		const compte = await creerCompte('reprise-google')
-		const payload = await payloadDeTest()
+		const compte = await createAccount('reprise-google')
+		const payload = await testPayload()
 		await payload.update({ collection: 'pros', id: compte.id, data: { blocked: true }, overrideAccess: true })
 		await choisir(context, { email: compte.email })
 
@@ -205,7 +205,7 @@ test.describe('E07 : connexion et inscription avec Google', { tag: '@mobile' }, 
 	test('un retour forgé ou d’une autre origine est refusé : sans le cookie, ou avec un autre state', async ({
 		request,
 	}) => {
-		const compte = await creerCompte('reprise-google')
+		const compte = await createAccount('reprise-google')
 		// 1. A return nobody asked for: no cookie of the departure.
 		const sansCookie = await request.get('/auth/google/callback?code=code-forge&state=state-forge', {
 			maxRedirects: 0,

@@ -34,7 +34,7 @@ test('le service répond 200, puis tombe en panne (500)', async () => {
 bun --no-env-file test tests/unit/banc-http-sortant.test.ts
 ```
 
-`http`, `HttpResponse` et `delay` sont ceux de MSW 2, que `tests/outils/http-sortant.ts` redonne : tout ce que dit [la documentation de MSW](https://mswjs.io/docs/http) sur une déclaration s'applique. Seul `simuler` est propre à ce dépôt.
+`http`, `HttpResponse` et `delay` sont ceux de MSW 2, que `tests/support/outgoing-http.ts` redonne : tout ce que dit [la documentation de MSW](https://mswjs.io/docs/http) sur une déclaration s'applique. Seul `simuler` est propre à ce dépôt.
 
 ## Les gestes
 
@@ -56,13 +56,13 @@ L'adresse d'une déclaration s'écrit sans ses paramètres (`?nom=…`) : ils se
 - **La dernière déclaration l'emporte.** Dans un même appel à `simuler`, c'est la première donnée qui l'emporte.
 - **On ne remplace ni `fetch` ni un module** (`mock.module`) : la simulation répond à la vraie requête du code.
 - **Rien de réel dans une réponse simulée** : des noms inventés, des adresses en `@example.test`.
-- **Les tests se lancent depuis la racine du dépôt** : c'est là que `bunfig.toml` charge `tests/outils/precharge-http-sortant.ts`, qui démarre tout. Lancé ailleurs, `simuler` s'arrête et le dit.
+- **Les tests se lancent depuis la racine du dépôt** : c'est là que `bunfig.toml` charge `tests/support/preload-outgoing-http.ts`, qui démarre tout. Lancé ailleurs, `simuler` s'arrête et le dit.
 
 ## Quand rien n'est déclaré
 
 La requête est refusée à deux moments.
 
-**Sur-le-champ.** `fetch` échoue avec l'erreur `RequeteNonSimulee`, et rien ne part :
+**Sur-le-champ.** `fetch` échoue avec l'erreur `UnmockedRequest`, et rien ne part :
 
 ```
 Requête sortante non simulée : GET https://referentiel.example.test/communes (hôte « referentiel.example.test »).
@@ -75,7 +75,7 @@ Guide : docs/tests/http-sortant.md
 - Une requête faite au chargement d'un fichier ou dans un `beforeAll` fait échouer le premier test qui suit.
 - Une requête faite après le dernier test (dans un `afterAll`, ou par une promesse que personne n'attend) fait échouer le lancement.
 - Le message ne recopie jamais les paramètres de l'adresse : ils peuvent porter un jeton.
-- `releverLesRefus()` lit les refus notés et les oublie. Il est réservé aux tests de ce banc, qui font refuser une requête exprès : ailleurs, il cacherait un appel à Internet.
+- `collectRefusal()` lit les refus notés et les oublie. Il est réservé aux tests de ce banc, qui font refuser une requête exprès : ailleurs, il cacherait un appel à Internet.
 
 ## Ce qui passe : le banc
 
@@ -84,9 +84,9 @@ Une requête vers un hôte du banc n'est pas interceptée : elle atteint le vrai
 | Hôte | Ce qu'il désigne |
 |---|---|
 | `localhost`, `127.0.0.1`, `::1` | Ce poste : le capteur de mails, le stockage d'objets, le faux Google, l'application lancée contre le banc, un serveur ouvert par un test |
-| `postgres`, `mailpit`, `s3mock`, `faux-google` | Les services de `compose.test.yml`, sous leur nom dans le réseau de la pile |
+| `postgres`, `mailpit`, `s3mock`, `fake-google` | Les services de `compose.test.yml`, sous leur nom dans le réseau de la pile |
 
-- La liste est celle de la garde d'environnement : `HOTES_DU_BANC`, dans `tests/outils/garde-environnement.ts`. Un service ajouté au banc s'y ajoute, et nulle part ailleurs.
+- La liste est celle de la garde d'environnement : `BENCH_HOSTS`, dans `tests/support/environment-guard.ts`. Un service ajouté au banc s'y ajoute, et nulle part ailleurs.
 - Tout autre hôte est « extérieur », `127.0.0.2` compris.
 - Une adresse du banc se simule quand même si un test la déclare : c'est ainsi qu'on teste une panne du capteur de mails sans l'arrêter.
 
@@ -114,7 +114,7 @@ Deux couches, démarrées une fois par lancement, avant tout fichier de test.
 - **Les sockets bruts ne sont pas couverts** (`node:net`, `node:tls`, `Bun.connect`), donc ni le SMTP ni PostgreSQL. C'est la garde d'environnement qui les retient : elle refuse un relais de mails ou une base qui n'est pas du banc ([`README.md`](../../README.md), « La garde d'environnement »).
 - **Un processus enfant n'est pas couvert.** bun ne range pas ces six variables, réglées en cours de lancement, parmi les clés de `process.env` : un enfant qui reçoit une copie de l'environnement (`env: { ...process.env }`) ne les a pas, et sort librement. Un `bun test` enfant, lui, démarre son propre banc.
 - **Un `Bun.fetch` qui nomme lui-même son proxy** (option `proxy`) passe à côté du filet.
-- **Vers le banc, `AbortSignal.timeout` n'arrête pas un `fetch`** : MSW laisse passer la requête, et un service qui accepte la connexion sans rien répondre la garde ouverte au-delà du délai (constaté le 14/10/2026, bun 1.3.14 et MSW 2.15.0). Un délai s'écrit avec un `AbortController` et un minuteur, comme dans `tests/outils/banc-requete.ts`. Une requête simulée, elle, s'arrête bien à son délai.
+- **Vers le banc, `AbortSignal.timeout` n'arrête pas un `fetch`** : MSW laisse passer la requête, et un service qui accepte la connexion sans rien répondre la garde ouverte au-delà du délai (constaté le 14/10/2026, bun 1.3.14 et MSW 2.15.0). Un délai s'écrit avec un `AbortController` et un minuteur, comme dans `tests/support/bench-request.ts`. Une requête simulée, elle, s'arrête bien à son délai.
 - **Aucun WebSocket ne se simule pour l'instant** : vers un hôte extérieur, il est refusé.
 - **Les essais de bout en bout et les sondes** ne tournent pas sous `bun test` : ce banc ne les concerne pas.
 - **Le témoin des tests de ce banc est un serveur ouvert sur `127.0.0.2`**, une adresse de ce poste que le banc ne connaît pas. Linux la donne d'office ; `tests/unit/banc-http-sortant.test.ts` ne tourne donc que sous Linux, comme la CI.

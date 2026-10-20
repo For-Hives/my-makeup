@@ -6,7 +6,7 @@ import { createHash } from 'node:crypto'
  * decoded, spaces collapsed, one line per block. Two pages that say the same words in different
  * markup give the same text.
  */
-const ENTITES: Readonly<Record<string, string>> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' }
+const ENTITIES: Readonly<Record<string, string>> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' }
 
 function decoder(texte: string): string {
 	return texte.replace(/&(#x[0-9a-f]+|#[0-9]+|[a-z]+);/gi, (brut, nom: string) => {
@@ -14,21 +14,21 @@ function decoder(texte: string): string {
 			const code = nom[1]?.toLowerCase() === 'x' ? Number.parseInt(nom.slice(2), 16) : Number.parseInt(nom.slice(1), 10)
 			return Number.isFinite(code) && code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : brut
 		}
-		return ENTITES[nom.toLowerCase()] ?? brut
+		return ENTITIES[nom.toLowerCase()] ?? brut
 	})
 }
 
-export function texteDePage(html: string): string {
-	const sansCode = html
+export function pageText(html: string): string {
+	const withoutCode = html
 		.replace(/<!--[\s\S]*?-->/g, '')
 		.replace(/<(script|style|svg)\b[\s\S]*?<\/\1\s*>/gi, '')
 		.replace(/<\/(p|li|h[1-6]|div|header|article|main|section|ul|ol)\s*>|<br\s*\/?>/gi, '\n')
 		.replace(/<[^>]*>/g, '')
-	return decoder(sansCode)
+	return decoder(withoutCode)
 		.split('\n')
 		.map(ligne => ligne.replace(/\s+/g, ' ').trim())
 		.filter(ligne => ligne !== '')
 		.join('\n')
 }
 
-export const empreinteDuTexte = (texte: string): string => createHash('sha256').update(texte).digest('hex')
+export const textFingerprint = (texte: string): string => createHash('sha256').update(texte).digest('hex')

@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { checkHost, writeReport } from '../../scripts/cutover/host-check'
-import { poserLesProfilsDeRecherche } from '../fixtures/search-profiles'
-import { creerContenu, rafraichirLesPagesDesProfils, supprimerContenu } from '../support/public-pages'
+import { setSearchProfiles } from '../fixtures/search-profiles'
+import { createContent, deleteContent, refreshProfilePages } from '../support/public-pages'
 
 /**
  * I45, U61 to U64 on a real host (ticket 173): the command that checks a host reads every address of the
@@ -22,21 +22,21 @@ const A_VENIR: ReadonlySet<string> = new Set()
 test('I45 sur un hôte : tout l’inventaire est conforme, aucun 5xx', async ({ request, baseURL }) => {
 	test.setTimeout(300_000)
 	if (!baseURL) throw new Error('baseURL manque')
-	const profils = await poserLesProfilsDeRecherche()
+	const profils = await setSearchProfiles()
 	const reference = profils.get('reference')
 	if (!reference) throw new Error('le profil de référence manque au banc')
-	await rafraichirLesPagesDesProfils(request, reference)
+	await refreshProfilePages(request, reference)
 	const suffixe = Date.now().toString(36)
 	const talent = `essai-hote-talent-${suffixe}`
 	const article = `essai-hote-article-${suffixe}`
 	const contenus = [
 		{
 			collection: 'talents' as const,
-			id: await creerContenu(request, 'talents', { title: `Essai ${talent}`, slug: talent, _status: 'published' }),
+			id: await createContent(request, 'talents', { title: `Essai ${talent}`, slug: talent, _status: 'published' }),
 		},
 		{
 			collection: 'articles' as const,
-			id: await creerContenu(request, 'articles', { title: `Essai ${article}`, slug: article, _status: 'published' }),
+			id: await createContent(request, 'articles', { title: `Essai ${article}`, slug: article, _status: 'published' }),
 		},
 	]
 	try {
@@ -50,6 +50,6 @@ test('I45 sur un hôte : tout l’inventaire est conforme, aucun 5xx', async ({ 
 		expect(rapport.sections.find(({ titre }) => titre === 'Sitemap')?.constats.join(' ')).toMatch(/profils/)
 		expect(rapport.verdict).toBe('conforme')
 	} finally {
-		for (const { collection, id } of contenus) await supprimerContenu(request, collection, id)
+		for (const { collection, id } of contenus) await deleteContent(request, collection, id)
 	}
 })

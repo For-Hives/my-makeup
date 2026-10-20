@@ -31,7 +31,7 @@ describe('the workflow of the Monday probes', () => {
 	test('it reads nothing secret, writes nothing, and takes no input that could change the target', () => {
 		expect(sansCommentaires).not.toMatch(/secrets\./)
 		expect(sansCommentaires).not.toMatch(/\$\{\{\s*(inputs|github\.event\.inputs)/)
-		expect(sansCommentaires).not.toMatch(/SONDES_|STATS_TOKEN/)
+		expect(sansCommentaires).not.toMatch(/SONDES_|PROBES_|STATS_TOKEN/)
 		expect(workflow.permissions).toEqual({ contents: 'read' })
 	})
 
@@ -40,7 +40,7 @@ describe('the workflow of the Monday probes', () => {
 		expect(sansCommentaires).toMatch(/^\s+shell: bash$/m)
 		const lancement = Object.values(workflow.jobs)
 			.flatMap(({ steps }) => steps)
-			.find(({ run }) => run?.includes('bun run sondes'))
+			.find(({ run }) => run?.includes('bun run probes'))
 		expect(lancement?.run).toContain('tee -a "$GITHUB_STEP_SUMMARY"')
 	})
 
@@ -53,9 +53,9 @@ describe('a probe falsified on purpose fails the command the workflow runs', () 
 	test('a site that answers wrongly: red probes, exit code 1', async () => {
 		const faux = Bun.serve({ port: 0, hostname: '127.0.0.1', fetch: () => new Response('panne', { status: 500 }) })
 		try {
-			const processus = Bun.spawn(['bun', '--no-env-file', 'tests/sondes/sondes.ts'], {
+			const processus = Bun.spawn(['bun', '--no-env-file', 'tests/probes/probes.ts'], {
 				cwd: RACINE,
-				env: { PATH: process.env.PATH ?? '', SONDES_CIBLE: `http://127.0.0.1:${faux.port}` },
+				env: { PATH: process.env.PATH ?? '', PROBES_TARGET: `http://127.0.0.1:${faux.port}` },
 				stdout: 'pipe',
 				stderr: 'pipe',
 			})

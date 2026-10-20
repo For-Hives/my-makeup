@@ -5,20 +5,20 @@ import { connect } from 'node:net'
 import path from 'node:path'
 import { bypass, passthrough } from 'msw'
 import { z } from 'zod'
-import { HOTES_DU_BANC } from '../support/environment-guard'
+import { BENCH_HOSTS } from '../support/environment-guard'
 import {
+	collectRefusal,
 	delay,
-	estHoteDuBanc,
-	exigerAucunRefus,
+	forgetSimulations,
 	HttpResponse,
 	http,
-	messageDesRefus,
-	oublierLesSimulations,
-	type Refus,
-	RequeteNonSimulee,
-	refusDeLigne,
-	releverLesRefus,
-	simuler,
+	isBenchHost,
+	lineRefusal,
+	type Refusal,
+	refusalMessage,
+	requireNoRefusal,
+	simulate,
+	UnmockedRequest,
 } from '../support/outgoing-http'
 
 // The outgoing HTTP bench, tested on services that exist only here. No test of this file reaches
@@ -145,18 +145,18 @@ async function refusDe(requete: Promise<unknown>): Promise<Error> {
 
 describe('Un service extérieur se simule en une déclaration', () => {
 	test('exemple : le service répond 200, puis tombe en panne (500)', async () => {
-		simuler(http.get(REFERENTIEL, () => HttpResponse.json(ANNECY)))
+		simulate(http.get(REFERENTIEL, () => HttpResponse.json(ANNECY)))
 
 		expect(await chercherCommunes('Annecy')).toEqual({ communes: ANNECY })
 
 		// The last declaration wins: the same service, now down.
-		simuler(http.get(REFERENTIEL, () => new HttpResponse(null, { status: 500 })))
+		simulate(http.get(REFERENTIEL, () => new HttpResponse(null, { status: 500 })))
 
 		expect(await chercherCommunes('Annecy')).toEqual({ panne: 'réponse 500' })
 	})
 
 	test('une suite de réponses se déclare d’avance : 200 une seule fois, puis 500', async () => {
-		simuler(
+		simulate(
 			http.get(REFERENTIEL, () => HttpResponse.json(ANNECY), { once: true }),
 			http.get(REFERENTIEL, () => new HttpResponse(null, { status: 500 }))
 		)
@@ -168,7 +168,7 @@ describe('Un service extérieur se simule en une déclaration', () => {
 
 	test('la déclaration lit la requête reçue : adresse, en-têtes, corps', async () => {
 		const recues: { nom: string | null; jeton: string | null; corps: unknown }[] = []
-		simuler(
+		simulate(
 			http.post('https://envoi.example.test/messages', async ({ request }) => {
 				recues.push({
 					nom: new URL(request.url).searchParams.get('nom'),
@@ -190,11 +190,11 @@ describe('Un service extérieur se simule en une déclaration', () => {
 	})
 
 	test('un réseau coupé et un service muet se simulent aussi', async () => {
-		simuler(http.get(REFERENTIEL, () => HttpResponse.error()))
+		simulate(http.get(REFERENTIEL, () => HttpResponse.error()))
 
 		expect(await chercherCommunes('Annecy')).toEqual({ panne: 'TypeError' })
 
-		simuler(
+		simulate(
 			http.get(REFERENTIEL, async () => {
 				await delay('infinite')
 				return HttpResponse.json(ANNECY)
@@ -206,12 +206,12 @@ describe('Un service extérieur se simule en une déclaration', () => {
 	})
 
 	test('une déclaration ne vaut que pour son test : une fois oubliée, le service n’est plus simulé', async () => {
-		simuler(http.get(REFERENTIEL, () => HttpResponse.json(ANNECY)))
+		simulate(http.get(REFERENTIEL, () => HttpResponse.json(ANNECY)))
 		// What the preload does after each test.
-		oublierLesSimulations()
+		forgetSimulations()
 
 		expect(await chercherCommunes('Annecy')).toEqual({ panne: 'RequeteNonSimulee' })
-		expect(releverLesRefus().map(({ hote }) => hote)).toEqual(['referentiel.example.test'])
+		expect(collectRefusal().map(({ hote }) => hote)).toEqual(['referentiel.example.test'])
 	})
 })
 
@@ -221,7 +221,7 @@ describe('Un hôte non déclaré : la requête est refusée, et le test échoue'
 
 		const erreur = await refusDe(fetch(`${adresse}?jeton=secret-factice`))
 
-		expect(erreur).toBeInstanceOf(RequeteNonSimulee)
+		expect(erreur).toBeInstanceOf(UnmockedRequest)
 		expect(erreur.message.split('\n')).toEqual([
 			`Requête sortante non simulée : GET ${adresse} (hôte « 127.0.0.2 »).`,
 			'Aucun test n’appelle Internet : simule ce service dans le test, par simuler(http.get(adresse, () => HttpResponse.json(…))).',
@@ -229,7 +229,7 @@ describe('Un hôte non déclaré : la requête est refusée, et le test échoue'
 		])
 		// The query string may carry a token: it is never repeated.
 		expect(erreur.message).not.toContain('secret-factice')
-		expect(releverLesRefus()).toEqual([{ methode: 'GET', hote: '127.0.0.2', adresse, vuePar: 'simulation' }])
+		expect(collectRefusal()).toEqual([{ methode: 'GET', hote: '127.0.0.2', adresse, vuePar: 'simulation' }])
 		expect(atteintesDehors).toBe(0)
 	})
 
@@ -237,8 +237,8 @@ describe('Un hôte non déclaré : la requête est refusée, et le test échoue'
 		// MSW's own « error » strategy lets these out without a word.
 		const erreur = await refusDe(fetch(`http://127.0.0.2:${dehors.port}/photo.png`))
 
-		expect(erreur).toBeInstanceOf(RequeteNonSimulee)
-		expect(releverLesRefus().map(({ hote }) => hote)).toEqual(['127.0.0.2'])
+		expect(erreur).toBeInstanceOf(UnmockedRequest)
+		expect(collectRefusal().map(({ hote }) => hote)).toEqual(['127.0.0.2'])
 		expect(atteintesDehors).toBe(0)
 	})
 
@@ -247,37 +247,37 @@ describe('Un hôte non déclaré : la requête est refusée, et le test échoue'
 
 		await refusDe(demander(`${adresse}?jeton=secret-factice`))
 
-		expect(releverLesRefus()).toEqual([{ methode: 'GET', hote: '127.0.0.2', adresse, vuePar: 'filet' }])
+		expect(collectRefusal()).toEqual([{ methode: 'GET', hote: '127.0.0.2', adresse, vuePar: 'filet' }])
 		expect(atteintesDehors).toBe(0)
 	})
 
 	test('en https, le filet ne voit que l’hôte : la connexion chiffrée n’est jamais ouverte', async () => {
 		await refusDe(parNode(requeteHttps, 'https://paiement.example.test/factures?jeton=secret-factice'))
 
-		expect(releverLesRefus()).toEqual([
+		expect(collectRefusal()).toEqual([
 			{ methode: 'CONNECT', hote: 'paiement.example.test', adresse: 'https://paiement.example.test', vuePar: 'filet' },
 		])
 	})
 
 	test('sous bun, seul fetch se simule : une déclaration ne répond ni à Bun.fetch, ni à undici, ni à node:http', async () => {
 		const adresse = `http://127.0.0.2:${dehors.port}/etat`
-		simuler(http.get(adresse, () => HttpResponse.text('réponse simulée')))
+		simulate(http.get(adresse, () => HttpResponse.text('réponse simulée')))
 
 		expect(await (await fetch(adresse)).text()).toBe('réponse simulée')
 		for (const [, demander] of SANS_MSW) await refusDe(demander(adresse))
 
-		expect(releverLesRefus().map(({ vuePar }) => vuePar)).toEqual(['filet', 'filet', 'filet'])
+		expect(collectRefusal().map(({ vuePar }) => vuePar)).toEqual(['filet', 'filet', 'filet'])
 		expect(atteintesDehors).toBe(0)
 	})
 
 	test('ni passthrough() ni bypass() n’ouvrent une sortie : le filet les arrête', async () => {
 		const adresse = `http://127.0.0.2:${dehors.port}/etat`
-		simuler(http.get(adresse, () => passthrough()))
+		simulate(http.get(adresse, () => passthrough()))
 
 		await refusDe(fetch(adresse))
 		await refusDe(fetch(bypass(adresse)))
 
-		expect(releverLesRefus().map(({ hote, vuePar }) => `${hote} ${vuePar}`)).toEqual([
+		expect(collectRefusal().map(({ hote, vuePar }) => `${hote} ${vuePar}`)).toEqual([
 			'127.0.0.2 filet',
 			'127.0.0.2 filet',
 		])
@@ -287,7 +287,7 @@ describe('Un hôte non déclaré : la requête est refusée, et le test échoue'
 	test('un WebSocket vers un hôte non déclaré est refusé', async () => {
 		expect(await premierMessage(`ws://127.0.0.2:${dehors.port}/direct`)).toBe('erreur')
 
-		expect(releverLesRefus()).toEqual([
+		expect(collectRefusal()).toEqual([
 			{ methode: 'GET', hote: '127.0.0.2', adresse: `ws://127.0.0.2:${dehors.port}/direct`, vuePar: 'simulation' },
 		])
 		expect(atteintesDehors).toBe(0)
@@ -311,19 +311,22 @@ describe('Un hôte non déclaré : la requête est refusée, et le test échoue'
 
 		expect(reponse).toContain(VRAIE_REPONSE)
 		expect(atteintesDehors).toBe(1)
-		expect(releverLesRefus()).toEqual([])
+		expect(collectRefusal()).toEqual([])
 		atteintesDehors = 0
 	})
 
 	test('dans un lancement de bun test, le test échoue même si le code avale l’erreur, et le message nomme l’hôte', async () => {
 		// The witness file, in a child `bun test` that reads the bunfig.toml of the repository: the
 		// preload is loaded the way every run loads it.
-		const enfant = Bun.spawn([process.execPath, '--no-env-file', 'test', './tests/fixtures/temoin-http-sortant.ts'], {
-			cwd: RACINE,
-			env: { PATH: process.env.PATH ?? '' },
-			stdout: 'pipe',
-			stderr: 'pipe',
-		})
+		const enfant = Bun.spawn(
+			[process.execPath, '--no-env-file', 'test', './tests/fixtures/outgoing-http-sentinel.ts'],
+			{
+				cwd: RACINE,
+				env: { PATH: process.env.PATH ?? '' },
+				stdout: 'pipe',
+				stderr: 'pipe',
+			}
+		)
 		const [code, sortie, erreurs] = await Promise.all([
 			enfant.exited,
 			new Response(enfant.stdout).text(),
@@ -352,19 +355,19 @@ describe('Un hôte non déclaré : la requête est refusée, et le test échoue'
 	})
 
 	test('le verdict ne dit rien sans refus, et nomme chaque hôte sinon', () => {
-		const refus: Refus[] = [
+		const refus: Refusal[] = [
 			{ methode: 'GET', hote: 'a.example.test', adresse: 'https://a.example.test/x', vuePar: 'simulation' },
 			{ methode: 'CONNECT', hote: 'b.example.test', adresse: 'https://b.example.test', vuePar: 'filet' },
 		]
 
-		expect(() => exigerAucunRefus(' pendant ce test')).not.toThrow()
-		expect(messageDesRefus(refus, ' pendant ce test').split('\n')).toEqual([
+		expect(() => requireNoRefusal(' pendant ce test')).not.toThrow()
+		expect(refusalMessage(refus, ' pendant ce test').split('\n')).toEqual([
 			'2 requêtes sortantes non simulées pendant ce test : GET https://a.example.test/x (hôte « a.example.test ») ; CONNECT https://b.example.test (hôte « b.example.test »).',
 			'Aucun test n’appelle Internet : simule ce service dans le test, par simuler(http.get(adresse, () => HttpResponse.json(…))).',
 			'Sous bun, seul fetch se simule : une requête faite par node:http, undici ou Bun.fetch, ou qu’une déclaration laisse passer, finit dans le filet.',
 			'Guide : docs/tests/http-sortant.md',
 		])
-		expect(new RequeteNonSimulee(refus).refus).toEqual(refus)
+		expect(new UnmockedRequest(refus).refus).toEqual(refus)
 	})
 
 	test.each([
@@ -391,7 +394,7 @@ describe('Un hôte non déclaré : la requête est refusée, et le test échoue'
 		['GET /chemin HTTP/1.1', { methode: 'GET', hote: '(illisible)', adresse: '(illisible)' }],
 		['', { methode: '?', hote: '(illisible)', adresse: '(illisible)' }],
 	])('le filet lit la première ligne d’une requête : %s', (ligne, attendu) => {
-		expect(refusDeLigne(ligne)).toEqual({ ...attendu, vuePar: 'filet' })
+		expect(lineRefusal(ligne)).toEqual({ ...attendu, vuePar: 'filet' })
 	})
 })
 
@@ -408,13 +411,13 @@ describe('Le banc lui-même n’est pas intercepté', () => {
 		expect(await premierMessage(`ws://127.0.0.1:${dedans.port}/direct`)).toBe('bonjour du vrai serveur')
 
 		expect(atteintesDedans).toBe(6)
-		expect(releverLesRefus()).toEqual([])
+		expect(collectRefusal()).toEqual([])
 	})
 
 	test('une adresse de ce poste se simule quand un test la déclare', async () => {
 		const adresse = `http://127.0.0.1:${dedans.port}/etat`
 		atteintesDedans = 0
-		simuler(http.get(adresse, () => new HttpResponse(null, { status: 503 })))
+		simulate(http.get(adresse, () => new HttpResponse(null, { status: 503 })))
 
 		expect((await fetch(adresse)).status).toBe(503)
 		expect(atteintesDedans).toBe(0)
@@ -422,8 +425,8 @@ describe('Le banc lui-même n’est pas intercepté', () => {
 
 	test('les hôtes du banc sont ceux de la garde d’environnement, et eux seuls', () => {
 		// Not the whole list: a service added to the bench is added to the guard, and passes here at once.
-		expect([...HOTES_DU_BANC]).toEqual(expect.arrayContaining(['localhost', '127.0.0.1', '::1', 'mailpit', 's3mock']))
-		for (const hote of [...HOTES_DU_BANC, '[::1]', 'LOCALHOST']) expect(estHoteDuBanc(hote), hote).toBe(true)
+		expect([...BENCH_HOSTS]).toEqual(expect.arrayContaining(['localhost', '127.0.0.1', '::1', 'mailpit', 's3mock']))
+		for (const hote of [...BENCH_HOSTS, '[::1]', 'LOCALHOST']) expect(isBenchHost(hote), hote).toBe(true)
 		for (const hote of [
 			'127.0.0.2',
 			'localhost.example.test',
@@ -432,7 +435,7 @@ describe('Le banc lui-même n’est pas intercepté', () => {
 			'v3.my-makeup.fr',
 			'api.resend.com',
 		])
-			expect(estHoteDuBanc(hote), hote).toBe(false)
+			expect(isBenchHost(hote), hote).toBe(false)
 	})
 
 	test('le filet est en place pour tout le lancement, et laisse les hôtes du banc de côté', () => {
@@ -441,6 +444,6 @@ describe('Le banc lui-même n’est pas intercepté', () => {
 		expect(filet).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/)
 		for (const nom of ['HTTPS_PROXY', 'http_proxy', 'https_proxy']) expect(process.env[nom], nom).toBe(filet)
 		for (const nom of ['NO_PROXY', 'no_proxy'])
-			expect(process.env[nom]?.split(','), nom).toEqual([...HOTES_DU_BANC, '[::1]'])
+			expect(process.env[nom]?.split(','), nom).toEqual([...BENCH_HOSTS, '[::1]'])
 	})
 })

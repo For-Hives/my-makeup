@@ -1,16 +1,16 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import { listArticles } from '@/services/public/article-list'
-import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { emptyBase, testPayload } from '../support/payload-test'
 
 /**
  * The list of the blog on the bench (ticket 107): the published articles, the most recent first,
  * never a draft, and nothing a visitor may not read.
  */
 
-afterEach(viderLaBase)
+afterEach(emptyBase)
 
 async function ecrire(slug: string, donnees: Record<string, unknown> = {}) {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	return payload.create({
 		collection: 'articles',
 		data: { title: `Article ${slug}`, slug, excerpt: `Extrait ${slug}`, _status: 'published', ...donnees },
@@ -24,7 +24,7 @@ describe('Liste des articles publiés', () => {
 		await ecrire('milieu', { publishedAt: '2026-05-10T09:00:00.000Z' })
 		await ecrire('brouillon', { _status: 'draft', publishedAt: '2026-10-12T09:00:00.000Z' })
 
-		const liste = await listArticles(await payloadDeTest())
+		const liste = await listArticles(await testPayload())
 
 		expect(liste.map(({ slug }) => slug)).toEqual(['recent', 'milieu', 'ancien'])
 		expect(liste[0]).toEqual({
@@ -36,8 +36,8 @@ describe('Liste des articles publiés', () => {
 	})
 
 	test('un article publié sans date vient après les datés, et la liste vide est vide', async () => {
-		expect(await listArticles(await payloadDeTest())).toEqual([])
-		const payload = await payloadDeTest()
+		expect(await listArticles(await testPayload())).toEqual([])
+		const payload = await testPayload()
 		await ecrire('date', { publishedAt: '2026-03-01T09:00:00.000Z' })
 		// The import may leave the date empty: the newsroom hook only fills it at a publication.
 		const sans = await ecrire('sans-date')
@@ -50,7 +50,7 @@ describe('Liste des articles publiés', () => {
 
 	test('un brouillon en cours sur un article publié ne change pas la liste', async () => {
 		const publie = await ecrire('publie', { publishedAt: '2026-04-01T09:00:00.000Z' })
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		await payload.update({ collection: 'articles', id: publie.id, draft: true, data: { title: 'Titre en cours' } })
 
 		const liste = await listArticles(payload)

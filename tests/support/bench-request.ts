@@ -1,8 +1,8 @@
 /**
- * What the two HTTP clients of the bench share (tests/outils/mailpit.ts and tests/outils/s3.ts):
+ * What the two HTTP clients of the bench share (tests/support/mailpit.ts and tests/support/s3.ts):
  *
  * - the check that this process was started for the bench instance it is about to read or to
- *   empty, as `exigerBanc` does for the database (tests/outils/payload-test.ts);
+ *   empty, as `exigerBanc` does for the database (tests/support/payload-test.ts);
  * - one request with a deadline, which turns a service that does not answer into a sentence:
  *   which service, where, and the command that starts it.
  *
@@ -10,13 +10,13 @@
  */
 
 import {
-	BancRefuse,
-	type Environnement,
-	environnementDuBanc,
+	benchEnvironment,
+	benchSilentMessage,
+	commandPrefix,
+	type Environment,
 	type Instance,
-	lireInstance,
-	messageBancMuet,
-	prefixeDeCommande,
+	RefusedBench,
+	readInstance,
 	type Variables,
 } from './bench'
 
@@ -24,17 +24,17 @@ import {
  * Longest wait for one answer of a service of the bench. A stopped service refuses the
  * connection at once; one that accepts it and says nothing is given up after this long.
  */
-export const DELAI_D_UNE_REQUETE_MS = 2000
+export const REQUEST_DELAY_MS = 2000
 
 /** A service of one bench instance, as the messages name it. */
-export interface ServiceDuBanc {
+export interface BenchService {
 	/** « capteur de mails », « stockage d’objets » : written after « le », in the middle of a sentence. */
 	service: string
 	instance: Instance
 }
 
 /** What a service of the bench answered, read to its end. */
-export interface ReponseDuBanc {
+export interface BenchResponse {
 	statut: number
 	entetes: Headers
 	octets: Uint8Array
@@ -47,23 +47,23 @@ export interface ReponseDuBanc {
  *
  * The message names the variable and never repeats a value.
  */
-export function exigerVariablesDuBanc(
+export function requireBenchVariables(
 	service: string,
 	noms: readonly string[],
 	variables: Variables = process.env
-): { instance: Instance; environnement: Environnement } {
-	const instance = lireInstance(variables)
-	const environnement = environnementDuBanc(instance)
-	const manquante = noms.find(nom => !variables[nom])
-	const etrangere = noms.find(nom => variables[nom] !== environnement[nom])
-	if (manquante === undefined && etrangere === undefined) return { instance, environnement }
-	const prefixe = prefixeDeCommande(instance)
-	throw new BancRefuse(
+): { instance: Instance; environnement: Environment } {
+	const instance = readInstance(variables)
+	const environment = benchEnvironment(instance)
+	const missing = noms.find(nom => !variables[nom])
+	const foreign = noms.find(nom => variables[nom] !== environment[nom])
+	if (missing === undefined && foreign === undefined) return { instance, environnement: environment }
+	const prefix = commandPrefix(instance)
+	throw new RefusedBench(
 		[
-			manquante
-				? `Aucun banc de test n’est réglé (${manquante} manque) : le ${service} n’est ni lu ni vidé.`
-				: `${etrangere} ne désigne pas le ${service} du banc de test : il n’est ni lu ni vidé.`,
-			`Démarre le banc par « ${prefixe}bun run banc:up », puis lance les tests par « ${prefixe}bun run test:integration ».`,
+			missing
+				? `Aucun banc de test n’est réglé (${missing} manque) : le ${service} n’est ni lu ni vidé.`
+				: `${foreign} ne désigne pas le ${service} du banc de test : il n’est ni lu ni vidé.`,
+			`Démarre le banc par « ${prefix}bun run bench:up », puis lance les tests par « ${prefix}bun run test:integration ».`,
 		].join(' ')
 	)
 }
@@ -74,35 +74,35 @@ export function exigerVariablesDuBanc(
  *
  * A redirection is an error: a client of the bench never follows a service somewhere else.
  */
-export async function demanderAuBanc(
-	cible: ServiceDuBanc,
+export async function requestBench(
+	cible: BenchService,
 	adresse: string,
 	requete: RequestInit = {}
-): Promise<ReponseDuBanc> {
+): Promise<BenchResponse> {
 	// A controller and a timer, not `AbortSignal.timeout`: under `bun test`, the global `fetch` is
-	// MSW's (tests/outils/http-sortant.ts), and a request it lets through to the bench ignores a
+	// MSW's (tests/support/outgoing-http.ts), and a request it lets through to the bench ignores a
 	// timeout signal (bun 1.3.14, MSW 2.15.0). An explicit abort is honoured.
-	const controleur = new AbortController()
-	const delai = setTimeout(() => controleur.abort(), DELAI_D_UNE_REQUETE_MS)
+	const controller = new AbortController()
+	const delay = setTimeout(() => controller.abort(), REQUEST_DELAY_MS)
 	try {
-		const reponse = await fetch(adresse, { ...requete, redirect: 'error', signal: controleur.signal })
-		return { statut: reponse.status, entetes: reponse.headers, octets: new Uint8Array(await reponse.arrayBuffer()) }
+		const response = await fetch(adresse, { ...requete, redirect: 'error', signal: controller.signal })
+		return { statut: response.status, entetes: response.headers, octets: new Uint8Array(await response.arrayBuffer()) }
 	} catch (cause) {
-		throw new BancRefuse(
-			messageBancMuet(cible.instance, [{ service: cible.service, adresse: new URL(adresse).host }]),
+		throw new RefusedBench(
+			benchSilentMessage(cible.instance, [{ service: cible.service, adresse: new URL(adresse).host }]),
 			{ cause }
 		)
 	} finally {
-		clearTimeout(delai)
+		clearTimeout(delay)
 	}
 }
 
 /** The error of an answer the client does not know what to do with. `demande` is a few words, never an address. */
-export function reponseInattendue(cible: ServiceDuBanc, demande: string, reponse: ReponseDuBanc): Error {
+export function unexpectedResponse(cible: BenchService, demande: string, reponse: BenchResponse): Error {
 	return new Error(
 		`Le ${cible.service} du banc « ${cible.instance.nom} » a répondu ${reponse.statut} à la demande « ${demande} ».`
 	)
 }
 
 /** The body of an answer, read as UTF-8 text. */
-export const enTexte = (reponse: ReponseDuBanc): string => new TextDecoder().decode(reponse.octets)
+export const inText = (reponse: BenchResponse): string => new TextDecoder().decode(reponse.octets)

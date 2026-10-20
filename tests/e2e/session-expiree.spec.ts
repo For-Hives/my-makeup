@@ -1,8 +1,8 @@
 import { expect, type Page, test } from '@playwright/test'
 import { COOKIE_SURVIVAL_AFTER_END_S, readExpiration } from '../../src/lib/auth/session-state'
-import { creerCompte } from '../support/account-factory'
-import { payloadDeTest } from '../support/payload-test'
-import { ouvrirSessionSansMotDePasse } from '../support/session'
+import { createAccount } from '../support/account-factory'
+import { testPayload } from '../support/payload-test'
+import { openSessionWithoutPassword } from '../support/session'
 
 /**
  * The session that ended (ticket 080; plan 02 E12, E13): one redirection, the message « session
@@ -17,9 +17,9 @@ test.beforeEach(({ context }) =>
 )
 
 /** The cookie of a session whose token ends `dureeS` seconds from now, with the end date the site gives its cookie (it outlives the token). */
-async function cookieDeSession(compte: Awaited<ReturnType<typeof creerCompte<'maquilleuse'>>>, dureeS: number) {
-	const payload = await payloadDeTest()
-	const session = await ouvrirSessionSansMotDePasse(payload, { collection: 'pros', id: compte.id }, process.env, {
+async function cookieDeSession(compte: Awaited<ReturnType<typeof createAccount<'maquilleuse'>>>, dureeS: number) {
+	const payload = await testPayload()
+	const session = await openSessionWithoutPassword(payload, { collection: 'pros', id: compte.id }, process.env, {
 		dureeS,
 	})
 	const cookie = session.cookies[0]
@@ -48,7 +48,7 @@ test.describe('E12 : un jeton expiré', { tag: '@mobile' }, () => {
 		context,
 		page,
 	}) => {
-		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
 		await context.addCookies([await cookieDeSession(compte, -60)])
 		const redirections = suivreLesRedirections(page)
 
@@ -66,7 +66,7 @@ test.describe('E12 : un jeton expiré', { tag: '@mobile' }, () => {
 	})
 
 	test('la réponse brute : un 307 vers la connexion, et la connexion répond 200', async ({ playwright, baseURL }) => {
-		const compte = await creerCompte('maquilleuse')
+		const compte = await createAccount('maquilleuse')
 		const jeton = (await cookieDeSession(compte, -60)).value
 		const client = await playwright.request.newContext({
 			baseURL,
@@ -87,7 +87,7 @@ test.describe('E12 : un jeton expiré', { tag: '@mobile' }, () => {
 	})
 
 	test('après la reconnexion, la page voulue s’ouvre', async ({ page, context }) => {
-		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
 		await context.addCookies([await cookieDeSession(compte, -60)])
 
 		await page.goto('/auth/profil?onglet=photos')
@@ -126,7 +126,7 @@ test.describe('E13 : une expiration réelle', () => {
 		tag: '@lent',
 	}, async ({ context, page }) => {
 		test.setTimeout(60_000)
-		const compte = await creerCompte('maquilleuse')
+		const compte = await createAccount('maquilleuse')
 		await context.addCookies([await cookieDeSession(compte, 8)])
 		// A visit to the space renews a session that has less than 7 days left (ticket 079): this one must
 		// run out by itself, so the renewal is cut off.
@@ -159,7 +159,7 @@ test.describe('le cookie posé par la connexion', () => {
 		context,
 		page,
 	}) => {
-		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
 
 		await page.goto('/auth/signin')
 		await page.getByLabel('Adresse email').fill(compte.email)

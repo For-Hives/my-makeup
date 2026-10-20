@@ -13,7 +13,7 @@ import {
 	shouldExtend,
 	tokenExpiration,
 } from '@/lib/auth/sliding-session'
-import { ouvrirFenetre } from '../support/dom-react'
+import { openWindow } from '../support/dom-react'
 
 const JOUR = 86_400
 const T0 = Date.UTC(2026, 0, 1)
@@ -103,7 +103,7 @@ describe('au plus un prolongement par visite', () => {
 })
 
 describe('le composant du navigateur', () => {
-	const fenetre = ouvrirFenetre()
+	const fenetre = openWindow()
 	test('il ne dessine rien et ne demande rien quand il reste plus de 7 jours', async () => {
 		const appels: string[] = []
 		const original = globalThis.fetch

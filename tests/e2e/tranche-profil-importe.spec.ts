@@ -1,10 +1,10 @@
 import { spawn } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { expect, test } from '@playwright/test'
-import { RACINE } from '../support/bench'
-import { ECRANS } from '../support/e2e'
-import { viderLaBase } from '../support/payload-test'
-import { viderLeStockage } from '../support/s3'
+import { ROOT } from '../support/bench'
+import { SCREENS } from '../support/e2e'
+import { emptyBase } from '../support/payload-test'
+import { emptyStorage } from '../support/s3'
 
 /**
  * Ticket 026, the first slice, end to end: the fake Strapi source of the bench, the import as a
@@ -15,7 +15,7 @@ import { viderLeStockage } from '../support/s3'
  * It has the bench to itself (ticket 225). The real import refuses a slug another test wrote (the set holds
  * « zoe-lefevre » and « ines-morel »), and counts in excess every account that carries an identifier of the old
  * site and is not in the source (the accounts of the set, the ones of the Google and import tests): no test can
- * work around that and stay out of its way. So it is the `import-final` project of tests/outils/e2e.ts, which
+ * work around that and stay out of its way. So it is the `import-final` project of tests/support/e2e.ts, which
  * `bun run test:e2e` plays in a second run, when every other test is over, and it begins by emptying the database
  * and the storage (the photos of the tests that are gone would be orphans). A file run alone or after any other,
  * one worker or several, finds the same state.
@@ -24,10 +24,10 @@ import { viderLeStockage } from '../support/s3'
  * bench that `bun run test:e2e` gives Playwright.
  */
 
-const DECISIONS_DU_BANC = 'tests/fixtures/import/decisions-du-banc.json'
+const DECISIONS_DU_BANC = 'tests/fixtures/import/bench-decisions.json'
 
 /** The kept answers of the referential of the communes for the fake source: the import asks nothing online. */
-const REFERENTIEL_DU_BANC = 'tests/fixtures/import/referentiel-du-banc.json'
+const REFERENTIEL_DU_BANC = 'tests/fixtures/import/bench-reference.json'
 
 /** The keys a reading of a profile must never put into a page: what is private or reserved. */
 const CLES_PRIVEES =
@@ -40,7 +40,7 @@ const CLES_PRIVEES =
 function bun(...ligne: string[]): Promise<{ code: number | null; sortie: string }> {
 	return new Promise((resoudre, rejeter) => {
 		const enfant = spawn('bun', ['--no-env-file', ...ligne], {
-			cwd: RACINE,
+			cwd: ROOT,
 			env: { ...process.env, NODE_ENV: 'production' },
 		})
 		let sortie = ''
@@ -87,8 +87,8 @@ test('un profil repris de la fausse base Strapi s’affiche sur sa page publique
 }, testInfo) => {
 	test.setTimeout(180_000)
 	// Nothing else runs now: the import starts on an empty database and an empty storage, as on the day of the switch.
-	await viderLaBase()
-	await viderLeStockage()
+	await emptyBase()
+	await emptyStorage()
 	const source = await bun('scripts/source-strapi.ts')
 	expect(source.code, source.sortie).toBe(0)
 
@@ -115,7 +115,7 @@ test('un profil repris de la fausse base Strapi s’affiche sur sa page publique
 	await page.goto('/profil/zoe-lefevre')
 	const titre = page.getByRole('heading', { level: 1, name: 'Zoé Lefèvre' })
 	await expect(titre).toBeVisible()
-	await page.setViewportSize(ECRANS.mobile)
+	await page.setViewportSize(SCREENS.mobile)
 	await expect(titre).toBeVisible()
 	await testInfo.attach('profil-390px', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' })
 

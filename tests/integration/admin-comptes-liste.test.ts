@@ -1,11 +1,11 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { Pros } from '../../src/collections/Pros'
 import { filterLink } from '../../src/lib/account/admin-filters'
-import { poserLeJeuDuBanc } from '../fixtures/bench-dataset'
-import { creerCompte } from '../support/account-factory'
-import { payloadDeTest, viderLaBase } from '../support/payload-test'
-import { appelerRest } from '../support/rest'
-import { viderLeStockage } from '../support/s3'
+import { setBenchDataset } from '../fixtures/bench-dataset'
+import { createAccount } from '../support/account-factory'
+import { emptyBase, testPayload } from '../support/payload-test'
+import { callRest } from '../support/rest'
+import { emptyStorage } from '../support/s3'
 
 /**
  * Ticket 168 (plan 01 §6.1; decisions of 13/10 on the sign-up spam): the admin lists the accounts, spots
@@ -14,11 +14,11 @@ import { viderLeStockage } from '../support/s3'
  * profile, one is blocked. The editorial role does not see the accounts.
  */
 
-const remettreAZero = () => Promise.all([viderLaBase(), viderLeStockage()])
+const remettreAZero = () => Promise.all([emptyBase(), emptyStorage()])
 
 beforeAll(async () => {
 	await remettreAZero()
-	await poserLeJeuDuBanc()
+	await setBenchDataset()
 }, 60_000)
 
 afterAll(remettreAZero)
@@ -31,7 +31,7 @@ interface Liste {
 const MOT_DE_PASSE = 'aaaaaaaa'
 
 async function lister(enTetes: Record<string, string>, requete: string) {
-	const reponse = await appelerRest('GET', `/api/pros?limit=100&depth=0&${requete}`, { enTetes })
+	const reponse = await callRest('GET', `/api/pros?limit=100&depth=0&${requete}`, { enTetes })
 	return { statut: reponse.statut, liste: reponse.corps as Liste }
 }
 
@@ -49,7 +49,7 @@ describe('La liste des comptes de l’admin (ticket 168)', () => {
 	})
 
 	test('chaque filtre rend le nombre attendu sur les 20 comptes du banc', async () => {
-		const { session } = await creerCompte('admin')
+		const { session } = await createAccount('admin')
 		const tous = await lister(session.enTetes, 'sort=-createdAt')
 		expect(tous.liste.totalDocs).toBe(20)
 		const dates = tous.liste.docs.map(({ createdAt }) => createdAt)
@@ -63,7 +63,7 @@ describe('La liste des comptes de l’admin (ticket 168)', () => {
 		expect(await emails('where[blocked][equals]=true')).toEqual(['jeu-maquilleuse-bloquee@example.test'])
 		expect((await lister(session.enTetes, 'where[profile][exists]=true')).liste.totalDocs).toBe(19)
 		// The link of the panel (« without profile » by the owners of the profiles) holds the same account.
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const profils = await payload.find({
 			collection: 'profiles',
 			depth: 0,
@@ -81,7 +81,7 @@ describe('La liste des comptes de l’admin (ticket 168)', () => {
 	}, 30_000)
 
 	test('la liste dit, pour chaque compte, s’il a un profil', async () => {
-		const { session } = await creerCompte('admin')
+		const { session } = await createAccount('admin')
 		const { liste } = await lister(session.enTetes, 'where[email][like]=jeu-maquilleuse')
 		const aUnProfil = (email: string) =>
 			(liste.docs.find(autre => autre.email === email)?.profile?.docs?.length ?? 0) > 0
@@ -90,11 +90,11 @@ describe('La liste des comptes de l’admin (ticket 168)', () => {
 	})
 
 	test('la rédaction ne voit pas les comptes ; une maquilleuse ne voit que le sien, filtres compris', async () => {
-		const redaction = await creerCompte('redaction')
+		const redaction = await createAccount('redaction')
 		expect((await lister(redaction.session.enTetes, 'sort=-createdAt')).statut).toBe(403)
 		expect((await lister(redaction.session.enTetes, 'where[blocked][equals]=true')).statut).toBe(403)
 
-		const maquilleuse = await creerCompte('maquilleuse')
+		const maquilleuse = await createAccount('maquilleuse')
 		const siens = await lister(maquilleuse.session.enTetes, 'where[_verified][equals]=true')
 		expect(siens.liste.docs.map(({ id }) => String(id))).toEqual([String(maquilleuse.id)])
 		const bloques = await lister(maquilleuse.session.enTetes, 'where[blocked][equals]=true')
@@ -108,17 +108,17 @@ describe('La liste des comptes de l’admin (ticket 168)', () => {
 
 describe('L’admin bloque un compte depuis sa fiche (ticket 168)', () => {
 	test('le blocage par l’API de l’administration refuse la connexion et ferme la session ; le déblocage la rend', async () => {
-		const admin = await creerCompte('admin')
-		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const admin = await createAccount('admin')
+		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
 		const connexion = () =>
-			appelerRest('POST', '/api/pros/login', {
+			callRest('POST', '/api/pros/login', {
 				corps: { email: compte.email, password: MOT_DE_PASSE },
 				enTetes: { 'x-forwarded-for': '192.0.2.168' },
 			})
-		const moi = () => appelerRest('GET', '/api/pros/me', { enTetes: compte.session.enTetes })
+		const moi = () => callRest('GET', '/api/pros/me', { enTetes: compte.session.enTetes })
 		expect(((await moi()).corps as { user: unknown }).user).not.toBeNull()
 
-		const bloquer = await appelerRest('PATCH', `/api/pros/${compte.id}`, {
+		const bloquer = await callRest('PATCH', `/api/pros/${compte.id}`, {
 			corps: { blocked: true },
 			enTetes: admin.session.enTetes,
 		})
@@ -129,7 +129,7 @@ describe('L’admin bloque un compte depuis sa fiche (ticket 168)', () => {
 		const bloques = await lister(admin.session.enTetes, 'where[blocked][equals]=true')
 		expect(bloques.liste.docs.map(({ id }) => String(id))).toContain(String(compte.id))
 
-		const debloquer = await appelerRest('PATCH', `/api/pros/${compte.id}`, {
+		const debloquer = await callRest('PATCH', `/api/pros/${compte.id}`, {
 			corps: { blocked: false },
 			enTetes: admin.session.enTetes,
 		})
@@ -138,14 +138,14 @@ describe('L’admin bloque un compte depuis sa fiche (ticket 168)', () => {
 	}, 30_000)
 
 	test('la rédaction ne bloque pas un compte', async () => {
-		const redaction = await creerCompte('redaction')
-		const compte = await creerCompte('maquilleuse')
-		const reponse = await appelerRest('PATCH', `/api/pros/${compte.id}`, {
+		const redaction = await createAccount('redaction')
+		const compte = await createAccount('maquilleuse')
+		const reponse = await callRest('PATCH', `/api/pros/${compte.id}`, {
 			corps: { blocked: true },
 			enTetes: redaction.session.enTetes,
 		})
 		expect(reponse.statut).toBeGreaterThanOrEqual(400)
-		const lu = await (await payloadDeTest()).findByID({ collection: 'pros', id: compte.id, depth: 0 })
+		const lu = await (await testPayload()).findByID({ collection: 'pros', id: compte.id, depth: 0 })
 		expect(lu.blocked).toBe(false)
 	})
 })

@@ -20,7 +20,7 @@ import {
 	TargetRefused,
 	type Transport,
 } from '../../scripts/cutover/host-guard'
-import { casDuBanc } from '../support/url-parity'
+import { benchCase } from '../support/url-parity'
 
 /**
  * Ticket 173: the check of a host (scripts/cutover/host-check.ts). No request leaves this machine:
@@ -56,7 +56,7 @@ type Reponses = Map<string, () => Response>
 /** A host that answers what the table promises for the cases of the made-up set. */
 function hoteConforme(): Reponses {
 	const reponses: Reponses = new Map()
-	for (const c of casDuBanc({}, JEU)) {
+	for (const c of benchCase({}, JEU)) {
 		const statut = c.statuts[0] ?? 200
 		if (c.vers) {
 			reponses.set(c.adresse, () => new Response(null, { status: statut, headers: { location: c.vers ?? '' } }))

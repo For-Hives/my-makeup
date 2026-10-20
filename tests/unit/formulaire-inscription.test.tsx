@@ -1,9 +1,9 @@
 import { expect, test } from 'bun:test'
 import { SignUpForm, type SignUpState, withProxyRefusal } from '@/components/auth/SignUpForm'
 import { SIGN_UP_FAILURE_MESSAGES, SIGN_UP_MESSAGES, TRAP_FIELD } from '@/lib/auth/sign-up'
-import { ouvrirFenetre } from '../support/dom-react'
+import { openWindow } from '../support/dom-react'
 
-const fenetre = ouvrirFenetre()
+const fenetre = openWindow()
 
 const formulaire = (action: (p: SignUpState, f: FormData) => Promise<SignUpState>) => (
 	<SignUpForm action={action as never} />

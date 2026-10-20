@@ -6,18 +6,18 @@ import { type MigrateUpArgs, sql } from '@payloadcms/db-postgres'
 import type { Payload } from 'payload'
 import { MIGRATIONS_FOLDER } from '../../scripts/ci/schema-drift'
 import { migrations } from '../../src/migrations'
-import { BancRefuse, RACINE } from '../support/bench'
-import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { RefusedBench, ROOT } from '../support/bench'
 import {
-	constaterLeSchema,
-	exigerLeSchemaDesMigrations,
-	jouerLesMigrations,
-	LOT_DU_MODE_DEVELOPPEMENT,
-	lignesDeDeveloppement,
+	developmentLines,
+	findSchema,
 	type Migration,
-	migrationsJouees,
-	sansSortie,
+	MODE_DEVELOPMENT_BATCH,
+	migrationRun,
+	requireMigrationsSchema,
+	runMigrations,
+	withoutOutput,
 } from '../support/bench-schema'
+import { emptyBase, testPayload } from '../support/payload-test'
 
 /**
  * I22 (plan 02 §7.3), ticket 049: the schema of P3 lives in one migration, `init`. On an erased
@@ -25,7 +25,7 @@ import {
  * generating a migration then finds nothing to write.
  *
  * Then the check that every run of the bench makes before its first test
- * (tests/outils/schema-du-banc.ts): the mark of a schema push, a migration whose SQL no longer
+ * (tests/support/bench-schema.ts): the mark of a schema push, a migration whose SQL no longer
  * creates what its snapshot declares, a renamed column, each one is refused with what to do.
  *
  * The migrations run by Payload's own command, in a process of its own, as a person runs them.
@@ -52,8 +52,8 @@ async function effacerLeSchema(): Promise<void> {
 /** The bench as the files that follow expect it: the schema of the migrations, every table empty. */
 async function remettreLeBanc(): Promise<void> {
 	await effacerLeSchema()
-	await jouerLesMigrations(payload, migrations, 'test')
-	await viderLaBase()
+	await runMigrations(payload, migrations, 'test')
+	await emptyBase()
 }
 
 /**
@@ -66,7 +66,7 @@ async function commandeDePayload(commande: string, reponse?: string): Promise<{ 
 	const journal = path.join(dossierDesJournaux, `${commande.replace(':', '-')}-${crypto.randomUUID()}.log`)
 	const enfant = Bun.spawn(
 		[process.execPath, '--no-env-file', 'node_modules/payload/bin.js', commande, '--disable-transpile'],
-		{ cwd: RACINE, env: process.env, stdin: 'pipe', stdout: Bun.file(journal), stderr: 'inherit' }
+		{ cwd: ROOT, env: process.env, stdin: 'pipe', stdout: Bun.file(journal), stderr: 'inherit' }
 	)
 	if (reponse !== undefined) enfant.stdin.write(reponse)
 	await enfant.stdin.end()
@@ -120,7 +120,7 @@ function initRetouchee(retoucher: (sqlDOrigine: string) => string): Migration {
 }
 
 beforeAll(async () => {
-	payload = await payloadDeTest()
+	payload = await testPayload()
 	dossierDesJournaux = mkdtempSync(path.join(os.tmpdir(), 'migrations-journaux-'))
 })
 
@@ -137,8 +137,8 @@ describe('I22 : la migration init, sur une base effacée, puis rejouée', () => 
 	test('init passe sur une base effacée, sans ligne « dev » ; rejouée, elle ne fait rien', async () => {
 		await effacerLeSchema()
 		// Nothing was pushed: there is not even a table of the migrations.
-		expect(await migrationsJouees(payload)).toEqual([])
-		expect(await lignesDeDeveloppement(payload)).toBe(0)
+		expect(await migrationRun(payload)).toEqual([])
+		expect(await developmentLines(payload)).toBe(0)
 
 		const premiere = await commandeDePayload('migrate')
 
@@ -147,8 +147,8 @@ describe('I22 : la migration init, sur une base effacée, puis rejouée', () => 
 		expect(premiere.code).toBe(0)
 		// The row the migration writes when it has run: answered « no », Payload's « dev mode »
 		// question ends the command with code 0 too, but before anything is played or written.
-		expect(await migrationsJouees(payload)).toEqual(LOT_UN)
-		expect(await lignesDeDeveloppement(payload)).toBe(0)
+		expect(await migrationRun(payload)).toEqual(LOT_UN)
+		expect(await developmentLines(payload)).toBe(0)
 		const schema = await schemaDeLaBase()
 		expect(schema.length).toBeGreaterThan(100)
 
@@ -157,16 +157,16 @@ describe('I22 : la migration init, sur une base effacée, puis rejouée', () => 
 		expect(seconde.sortie).toContain('Done.')
 		expect(seconde.sortie).not.toContain('Migrating:')
 		expect(seconde.code).toBe(0)
-		expect(await migrationsJouees(payload)).toEqual(LOT_UN)
+		expect(await migrationRun(payload)).toEqual(LOT_UN)
 		expect(await schemaDeLaBase()).toEqual(schema)
 	}, 120_000)
 
 	test('la base que construit init est celle des collections du code : rien à pousser, aucune trace de poussée', async () => {
-		expect(await constaterLeSchema(payload)).toEqual({
+		expect(await findSchema(payload)).toEqual({
 			lignesDeDeveloppement: 0,
 			ecart: { instructions: [], ambiguites: [] },
 		})
-		await exigerLeSchemaDesMigrations(payload, 'test')
+		await requireMigrationsSchema(payload, 'test')
 	})
 
 	test('générer une migration ne crée rien : « migrate:create --skip-empty » sort sans écrire de fichier', async () => {
@@ -179,7 +179,7 @@ describe('I22 : la migration init, sur une base effacée, puis rejouée', () => 
 		const dossierDOrigine = payload.db.migrationDir
 		payload.db.migrationDir = dossier
 		try {
-			const issue = await sansSortie(async () => {
+			const issue = await withoutOutput(async () => {
 				await payload.db.createMigration({ migrationName: 'controle_i22', payload, skipEmpty: true })
 			})
 
@@ -202,7 +202,7 @@ describe('I22 : la migration init, sur une base effacée, puis rejouée', () => 
 		expect(descente.code).toBe(0)
 		expect(await schemaDeLaBase()).toEqual([])
 
-		expect(await jouerLesMigrations(payload, migrations, 'test')).toEqual(NOMS)
+		expect(await runMigrations(payload, migrations, 'test')).toEqual(NOMS)
 		expect(await schemaDeLaBase()).toEqual(schema)
 	}, 120_000)
 })
@@ -211,7 +211,7 @@ describe('Avant le premier test ou essai, une base que les migrations n’ont pa
 	test('la trace d’une poussée : la commande de Payload sort en 0 sans rien jouer, le contrôle la refuse', async () => {
 		// The row Payload writes when it pushes the schema of the code (pushDevSchema).
 		await payload.db.pool.query("INSERT INTO payload_migrations (name, batch) VALUES ('dev', $1)", [
-			LOT_DU_MODE_DEVELOPPEMENT,
+			MODE_DEVELOPMENT_BATCH,
 		])
 		try {
 			// What the check guards against: Payload asks whether to go on (and waits for ever when
@@ -224,11 +224,11 @@ describe('Avant le premier test ou essai, une base que les migrations n’ont pa
 			expect(commande.code).toBe(0)
 
 			const refus = 'La base du banc porte la trace d’une poussée du schéma : une ligne de lot -1 (« dev »)'
-			await expect(exigerLeSchemaDesMigrations(payload, 'essai')).rejects.toThrow(refus)
-			await expect(jouerLesMigrations(payload, migrations, 'test')).rejects.toThrow(refus)
-			await expect(exigerLeSchemaDesMigrations(payload, 'essai')).rejects.toBeInstanceOf(BancRefuse)
+			await expect(requireMigrationsSchema(payload, 'essai')).rejects.toThrow(refus)
+			await expect(runMigrations(payload, migrations, 'test')).rejects.toThrow(refus)
+			await expect(requireMigrationsSchema(payload, 'essai')).rejects.toBeInstanceOf(RefusedBench)
 		} finally {
-			await payload.db.pool.query('DELETE FROM payload_migrations WHERE batch = $1', [LOT_DU_MODE_DEVELOPPEMENT])
+			await payload.db.pool.query('DELETE FROM payload_migrations WHERE batch = $1', [MODE_DEVELOPMENT_BATCH])
 		}
 	}, 120_000)
 
@@ -239,9 +239,9 @@ describe('Avant le premier test ou essai, une base que les migrations n’ont pa
 		try {
 			await effacerLeSchema()
 			// Played as the application plays it: the migration passes, the column is missing.
-			expect(await jouerLesMigrations(payload, [retouchee, ...migrations.slice(1)], 'test')).toEqual(NOMS)
+			expect(await runMigrations(payload, [retouchee, ...migrations.slice(1)], 'test')).toEqual(NOMS)
 
-			const constat = await constaterLeSchema(payload)
+			const constat = await findSchema(payload)
 
 			expect(constat).toEqual({
 				lignesDeDeveloppement: 0,
@@ -254,7 +254,7 @@ describe('Avant le premier test ou essai, une base que les migrations n’ont pa
 				'Écris la migration qui manque (bun run payload:migrate:create), ou corrige le SQL de la migration qui ne crée pas ce que son instantané déclare, puis relance.',
 				'Aucun essai n’a tourné.',
 			].join('\n')
-			await expect(exigerLeSchemaDesMigrations(payload, 'essai')).rejects.toThrow(message)
+			await expect(requireMigrationsSchema(payload, 'essai')).rejects.toThrow(message)
 		} finally {
 			await remettreLeBanc()
 		}
@@ -266,10 +266,10 @@ describe('Avant le premier test ou essai, une base que les migrations n’ont pa
 		)
 		try {
 			await effacerLeSchema()
-			await jouerLesMigrations(payload, [retouchee, ...migrations.slice(1)], 'test')
+			await runMigrations(payload, [retouchee, ...migrations.slice(1)], 'test')
 			const debut = performance.now()
 
-			const constat = await constaterLeSchema(payload)
+			const constat = await findSchema(payload)
 
 			expect(constat.ecart).toEqual({
 				instructions: [],
@@ -277,7 +277,7 @@ describe('Avant le premier test ou essai, une base que les migrations n’ont pa
 					'colonnes de « public.talents » : « seo_title » dans le code seulement ; « titre_seo » dans la migration seulement',
 				],
 			})
-			await expect(exigerLeSchemaDesMigrations(payload, 'test')).rejects.toThrow(
+			await expect(requireMigrationsSchema(payload, 'test')).rejects.toThrow(
 				'Il manque une migration : des noms n’existent que d’un côté'
 			)
 			expect(performance.now() - debut).toBeLessThan(10_000)

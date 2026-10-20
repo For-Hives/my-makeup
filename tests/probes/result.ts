@@ -7,14 +7,14 @@
 
 export type Verdict = 'vert' | 'rouge' | 'inconnu' | 'non lancée'
 
-export interface Constat {
+export interface Finding {
 	verdict: Verdict
 	/** Never the address of a real profile, never a token. */
 	constats: string[]
 }
 
 /** The worst verdict of several: rouge, then inconnu, then vert. Empty: inconnu. */
-export function pire(verdicts: readonly Verdict[]): Verdict {
+export function worst(verdicts: readonly Verdict[]): Verdict {
 	if (verdicts.length === 0) return 'inconnu'
 	if (verdicts.includes('rouge')) return 'rouge'
 	if (verdicts.includes('inconnu')) return 'inconnu'
@@ -22,7 +22,7 @@ export function pire(verdicts: readonly Verdict[]): Verdict {
 }
 
 /** Why a request or a reading failed, in one line, without an address that could name a profile. */
-export function raisonDe(erreur: unknown): string {
+export function reasonOf(erreur: unknown): string {
 	if (!(erreur instanceof Error)) return 'erreur inconnue'
 	const message = erreur.message.replace(/\/profil\/[^\s/?#'"]+/g, '/profil/<…>')
 	return erreur.name === 'LectureTropLongue' ? message : `${erreur.name} : ${message}`

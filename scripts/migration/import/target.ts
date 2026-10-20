@@ -108,7 +108,7 @@ export async function verifyTargetSchema(payload: Payload): Promise<void> {
 		[
 			`La base de DATABASE_URI n’a pas le schéma de la v3 : ${rows.length > 1 ? 'il manque les tables' : 'il manque la table'} ${missing}.`,
 			'L’import ne crée ni ne change aucune table : l’application les crée par ses migrations quand elle démarre sur cette base',
-			'(sur le banc : bun run banc:prepare). Rien n’est écrit.',
+			'(sur le banc : bun run bench:prepare). Rien n’est écrit.',
 		].join(' ')
 	)
 }

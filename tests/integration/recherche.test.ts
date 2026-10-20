@@ -5,8 +5,8 @@ import { readSearch } from '@/lib/search/input'
 import { PER_PAGE, paginate, sectionsOfPage } from '@/lib/search/pagination'
 import { find } from '@/lib/search/results'
 import { type DirectoryProfile, readDirectory } from '@/services/public/profiles'
-import { fabriquerDesProfils } from '../support/profile-factory'
-import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { emptyBase, testPayload } from '../support/payload-test'
+import { buildProfiles } from '../support/profile-factory'
 
 /**
  * The search over the real directory (tickets 099 and 100; plan 02 I28 to I31). The search is made on
@@ -15,7 +15,7 @@ import { payloadDeTest, viderLaBase } from '../support/payload-test'
  * ranking, the cut in pages. The page itself, its status codes and the brake of the proxy are played
  * by tests/e2e/recherche-mot-cle.spec.ts.
  *
- * The bench holds 500 generated profiles (tests/outils/fabrique-profils.ts) and five profiles the
+ * The bench holds 500 generated profiles (tests/support/profile-factory.ts) and five profiles the
  * search must treat in their own way.
  */
 
@@ -49,8 +49,8 @@ async function poser(cle: string, profil: Record<string, unknown>): Promise<void
 const ANNECY = { name: 'Annecy', inseeCode: '74010', latitude: 45.9, longitude: 6.13 }
 
 beforeAll(async () => {
-	payload = await payloadDeTest()
-	await fabriquerDesProfils(payload, NOMBRE)
+	payload = await testPayload()
+	await buildProfiles(payload, NOMBRE)
 	await poser('visible', {
 		specialty: 'Maquillage zyglo',
 		city: ANNECY,
@@ -66,7 +66,7 @@ beforeAll(async () => {
 }, 240_000)
 
 afterAll(async () => {
-	await viderLaBase()
+	await emptyBase()
 })
 
 const slugs = (profils: readonly DirectoryProfile[]) => profils.map(({ carte }) => carte.slug)

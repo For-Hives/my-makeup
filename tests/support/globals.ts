@@ -7,15 +7,15 @@
  */
 
 /** Sets each value on `globalThis` under its name, and returns what puts everything back. */
-export function poserGlobaux(valeurs: Readonly<Record<string, unknown>>): () => void {
-	const avant = Object.keys(valeurs).map(nom => [nom, Object.getOwnPropertyDescriptor(globalThis, nom)] as const)
-	for (const [nom, valeur] of Object.entries(valeurs)) {
-		Object.defineProperty(globalThis, nom, { configurable: true, value: valeur, writable: true })
+export function setGlobals(valeurs: Readonly<Record<string, unknown>>): () => void {
+	const before = Object.keys(valeurs).map(nom => [nom, Object.getOwnPropertyDescriptor(globalThis, nom)] as const)
+	for (const [name, value] of Object.entries(valeurs)) {
+		Object.defineProperty(globalThis, name, { configurable: true, value: value, writable: true })
 	}
 	return () => {
-		for (const [nom, descripteur] of avant) {
-			if (descripteur) Object.defineProperty(globalThis, nom, descripteur)
-			else Reflect.deleteProperty(globalThis, nom)
+		for (const [name, descripteur] of before) {
+			if (descripteur) Object.defineProperty(globalThis, name, descripteur)
+			else Reflect.deleteProperty(globalThis, name)
 		}
 	}
 }

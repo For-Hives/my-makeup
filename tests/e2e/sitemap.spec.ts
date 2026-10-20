@@ -1,15 +1,15 @@
 import { type APIRequestContext, expect, test } from '@playwright/test'
 import { SITE_ORIGIN } from '../../src/lib/frozen-urls'
 import { deliveredStaticPages } from '../../src/lib/seo/sitemap'
-import { PROFILS_DE_RECHERCHE, poserLesProfilsDeRecherche } from '../fixtures/search-profiles'
-import { creerContenu, rafraichirLesPagesDesProfils, supprimerContenu } from '../support/public-pages'
-import { payloadDeTest } from '../support/payload-test'
+import { SEARCH_PROFILES, setSearchProfiles } from '../fixtures/search-profiles'
+import { testPayload } from '../support/payload-test'
+import { createContent, deleteContent, refreshProfilePages } from '../support/public-pages'
 
 /**
  * The sitemap and the plan of the site, end to end (tickets 113 and 114; plan 02 E62): the addresses of
  * the sitemap are the indexable pages and those alone, each answers 200 with no redirection, and the plan
  * of the site lists the same pages, with the publishable profiles. The fictional profiles of the bench
- * (tests/fixtures/profils-de-recherche.ts) say which profile belongs and which does not.
+ * (tests/fixtures/search-profiles.ts) say which profile belongs and which does not.
  */
 
 test.describe.configure({ mode: 'serial' })
@@ -21,12 +21,12 @@ const surLeBanc = (loc: string, baseURL: string): string => `${baseURL}${loc.sli
 
 /** The slug of a profile type of the bench, and whether the public rules index it. */
 async function etatDesProfils(request: APIRequestContext) {
-	const profils = await poserLesProfilsDeRecherche()
+	const profils = await setSearchProfiles()
 	const premier = profils.get('reference')
 	if (!premier) throw new Error('le profil de référence manque au banc')
-	await rafraichirLesPagesDesProfils(request, premier)
+	await refreshProfilePages(request, premier)
 	return [...profils].map(([cle, profil]) => {
-		const attendu = PROFILS_DE_RECHERCHE.get(cle)?.attendu
+		const attendu = SEARCH_PROFILES.get(cle)?.attendu
 		return { cle, slug: profil.slug, indexee: attendu?.publishable === true && attendu.status === 'published' }
 	})
 }
@@ -44,15 +44,19 @@ test.describe('E62 : /sitemap.xml', () => {
 		const contenus = [
 			{
 				collection: 'talents' as const,
-				id: await creerContenu(request, 'talents', { title: `Essai ${talent}`, slug: talent, _status: 'published' }),
+				id: await createContent(request, 'talents', { title: `Essai ${talent}`, slug: talent, _status: 'published' }),
 			},
 			{
 				collection: 'articles' as const,
-				id: await creerContenu(request, 'articles', { title: `Essai ${publie}`, slug: publie, _status: 'published' }),
+				id: await createContent(request, 'articles', { title: `Essai ${publie}`, slug: publie, _status: 'published' }),
 			},
 			{
 				collection: 'articles' as const,
-				id: await creerContenu(request, 'articles', { title: `Essai ${brouillon}`, slug: brouillon, _status: 'draft' }),
+				id: await createContent(request, 'articles', {
+					title: `Essai ${brouillon}`,
+					slug: brouillon,
+					_status: 'draft',
+				}),
 			},
 		]
 		try {
@@ -78,7 +82,7 @@ test.describe('E62 : /sitemap.xml', () => {
 			}
 
 			// As many profiles as publishable ones.
-			const payload = await payloadDeTest()
+			const payload = await testPayload()
 			const { totalDocs } = await payload.count({
 				collection: 'profiles',
 				where: { and: [{ publishable: { equals: true } }, { status: { equals: 'published' } }] },
@@ -105,18 +109,18 @@ test.describe('E62 : /sitemap.xml', () => {
 				expect(/<link rel="canonical" href="([^"]*)"/.exec(html)?.[1], loc).toBe(loc)
 			}
 		} finally {
-			for (const { collection, id } of contenus) await supprimerContenu(request, collection, id)
+			for (const { collection, id } of contenus) await deleteContent(request, collection, id)
 		}
 	})
 
 	test('une page de la liste ôtée du site sort du sitemap : un article dépublié', async ({ request }) => {
 		test.setTimeout(120_000)
 		const slug = `essai-sitemap-retire-${Date.now().toString(36)}`
-		const id = await creerContenu(request, 'articles', { title: `Essai ${slug}`, slug, _status: 'published' })
+		const id = await createContent(request, 'articles', { title: `Essai ${slug}`, slug, _status: 'published' })
 		await expect
 			.poll(async () => (await (await request.get('/sitemap.xml')).text()).includes(`/blog/${slug}<`))
 			.toBe(true)
-		await supprimerContenu(request, 'articles', id)
+		await deleteContent(request, 'articles', id)
 		await expect
 			.poll(async () => (await (await request.get('/sitemap.xml')).text()).includes(`/blog/${slug}<`))
 			.toBe(false)
@@ -137,15 +141,19 @@ test.describe('Plan du site (ticket 114)', () => {
 			const contenus = [
 				{
 					collection: 'talents' as const,
-					id: await creerContenu(request, 'talents', { title: `Essai ${talent}`, slug: talent, _status: 'published' }),
+					id: await createContent(request, 'talents', { title: `Essai ${talent}`, slug: talent, _status: 'published' }),
 				},
 				{
 					collection: 'articles' as const,
-					id: await creerContenu(request, 'articles', { title: `Essai ${publie}`, slug: publie, _status: 'published' }),
+					id: await createContent(request, 'articles', {
+						title: `Essai ${publie}`,
+						slug: publie,
+						_status: 'published',
+					}),
 				},
 				{
 					collection: 'articles' as const,
-					id: await creerContenu(request, 'articles', {
+					id: await createContent(request, 'articles', {
 						title: `Essai ${brouillon}`,
 						slug: brouillon,
 						_status: 'draft',
@@ -194,7 +202,7 @@ test.describe('Plan du site (ticket 114)', () => {
 				// The capture of the page at the size of the project (390 px wide on the phone).
 				await page.screenshot({ path: testInfo.outputPath('plan-du-site.png'), fullPage: true })
 			} finally {
-				for (const { collection, id } of contenus) await supprimerContenu(request, collection, id)
+				for (const { collection, id } of contenus) await deleteContent(request, collection, id)
 			}
 		}
 	)

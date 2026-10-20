@@ -19,7 +19,7 @@ import {
 import { exitCode, type Report, reportAsText } from '../../scripts/migration/import/report'
 import { ImportRefuse } from '../../scripts/migration/import/target'
 import { fileOnCreate } from '../../src/collections/Media'
-import { HttpResponse, http, simuler } from '../support/outgoing-http'
+import { HttpResponse, http, simulate } from '../support/outgoing-http'
 
 /**
  * Ticket 058: what the import makes of the files of the old site, before and without the database:
@@ -201,7 +201,7 @@ describe('le stockage n’est lu que par des requêtes d’en-tête', () => {
 	const adresse = `${BASE}/1/photo_1.png`
 
 	test('200 : présent, sa taille en octets ; 404 : absent', async () => {
-		simuler(
+		simulate(
 			http.head(adresse, () => new HttpResponse(null, { status: 200, headers: { 'Content-Length': '1234' } })),
 			http.head(`${BASE}/1/absente.png`, () => new HttpResponse(null, { status: 404 }))
 		)
@@ -217,7 +217,7 @@ describe('le stockage n’est lu que par des requêtes d’en-tête', () => {
 			() => new HttpResponse(null, { status: 301, headers: { Location: `${BASE}/ailleurs.png` } }),
 			() => HttpResponse.error(),
 		]) {
-			simuler(http.head(adresse, reponse))
+			simulate(http.head(adresse, reponse))
 			const essai = httpProbe(adresse)
 			await expect(essai).rejects.toBeInstanceOf(ImportRefuse)
 			await expect(essai).rejects.toThrow('rien n’est écrit')

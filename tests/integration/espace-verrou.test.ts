@@ -5,8 +5,8 @@ import type { DashboardUser } from '@/lib/dashboard/my-profile'
 import { saveContactDetails } from '@/lib/dashboard/save-contact-details'
 import { saveIdentity } from '@/lib/dashboard/save-identity'
 import { saveNetworks } from '@/lib/dashboard/save-networks'
-import { type CompteDeTest, creerCompte } from '../support/account-factory'
-import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { createAccount, type TestAccount } from '../support/account-factory'
+import { emptyBase, testPayload } from '../support/payload-test'
 
 /**
  * The edit lock of the administration protects the profile from the writes of her space (ticket 224): while
@@ -14,9 +14,9 @@ import { payloadDeTest, viderLaBase } from '../support/payload-test'
  * once the lock is released, or past its duration, the write goes through.
  */
 
-afterEach(viderLaBase)
+afterEach(emptyBase)
 
-type Maquilleuse = CompteDeTest<'maquilleuse'>
+type Maquilleuse = TestAccount<'maquilleuse'>
 
 async function utilisateurDe(payload: Payload, compte: Maquilleuse): Promise<DashboardUser> {
 	const doc = await payload.findByID({ collection: 'pros', id: compte.id, depth: 0, overrideAccess: true })
@@ -48,9 +48,9 @@ const IDENTITE = { prenom: 'Léa', nom: 'Fictive', nomArtiste: 'Studio Fictif', 
 
 describe('un admin tient le profil : l’espace ne l’écrase pas', () => {
 	test('l’enregistrement est refusé en français, rien n’est écrit ; verrou levé, il passe', async () => {
-		const payload = await payloadDeTest()
-		const compte = await creerCompte('maquilleuse')
-		const admin = await creerCompte('admin')
+		const payload = await testPayload()
+		const compte = await createAccount('maquilleuse')
+		const admin = await createAccount('admin')
 		const utilisateur = await utilisateurDe(payload, compte)
 		const profil = await profilStocke(payload, compte)
 		const verrou = await ouvrirDansLAdministration(payload, profil.id, admin.id)
@@ -71,9 +71,9 @@ describe('un admin tient le profil : l’espace ne l’écrase pas', () => {
 	})
 
 	test('les autres enregistrements de l’espace passent par la même porte', async () => {
-		const payload = await payloadDeTest()
-		const compte = await creerCompte('maquilleuse')
-		const admin = await creerCompte('admin')
+		const payload = await testPayload()
+		const compte = await createAccount('maquilleuse')
+		const admin = await createAccount('admin')
 		const utilisateur = await utilisateurDe(payload, compte)
 		await ouvrirDansLAdministration(payload, (await profilStocke(payload, compte)).id, admin.id)
 
@@ -96,10 +96,10 @@ describe('un admin tient le profil : l’espace ne l’écrase pas', () => {
 	})
 
 	test('un verrou plus vieux que sa durée n’en est plus un ; le profil d’une autre n’est pas tenu', async () => {
-		const payload = await payloadDeTest()
-		const compte = await creerCompte('maquilleuse')
-		const autre = await creerCompte('maquilleuse')
-		const admin = await creerCompte('admin')
+		const payload = await testPayload()
+		const compte = await createAccount('maquilleuse')
+		const autre = await createAccount('maquilleuse')
+		const admin = await createAccount('admin')
 		const profil = await profilStocke(payload, compte)
 		await ouvrirDansLAdministration(payload, profil.id, admin.id)
 		const plusTard = new Date(Date.now() + (DEFAULT_LOCK_DURATION_S + 60) * 1000)

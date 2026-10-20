@@ -5,16 +5,16 @@
 //
 // The password is given by the test, so that the test knows what to look for.
 
-import { creerCompte } from '../support/account-factory'
-import { payloadDeTest } from '../support/payload-test'
+import { createAccount } from '../support/account-factory'
+import { testPayload } from '../support/payload-test'
 
-const motDePasse = process.env.TEMOIN_MOT_DE_PASSE
-if (!motDePasse) throw new Error('TEMOIN_MOT_DE_PASSE manque')
+const password = process.env.SENTINEL_PASSWORD
+if (!password) throw new Error('SENTINEL_PASSWORD manque')
 
-const payload = await payloadDeTest()
+const payload = await testPayload()
 payload.logger.level = 'trace'
 
-const compte = await creerCompte('admin', { motDePasse: () => motDePasse })
+const account = await createAccount('admin', { motDePasse: () => password })
 
-console.log(`TEMOIN-FABRIQUE ${JSON.stringify(compte)}`)
+console.log(`TEMOIN-FABRIQUE ${JSON.stringify(account)}`)
 process.exit(0)

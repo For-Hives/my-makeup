@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import type { Profile } from '@/payload-types'
-import { creerCompte } from '../support/account-factory'
-import { payloadDeTest, viderLaBase } from '../support/payload-test'
-import { appelerRest } from '../support/rest'
+import { createAccount } from '../support/account-factory'
+import { emptyBase, testPayload } from '../support/payload-test'
+import { callRest } from '../support/rest'
 
 /**
  * The list sections of a profile (ticket 040): offers with their options, skills, languages,
@@ -11,7 +11,7 @@ import { appelerRest } from '../support/rest'
  * them: by REST with her session, and by the Local API with the rules active.
  */
 
-afterEach(viderLaBase)
+afterEach(emptyBase)
 
 type Listes = Pick<Profile, 'serviceOffers' | 'skills' | 'languages' | 'courses' | 'experiences'>
 
@@ -20,8 +20,8 @@ const IDENTIFIANT = /^[0-9a-f]{24}$/
 
 /** A makeup artist with her empty profile and her session. */
 async function maquilleuse() {
-	const compte = await creerCompte('maquilleuse')
-	const payload = await payloadDeTest()
+	const compte = await createAccount('maquilleuse')
+	const payload = await testPayload()
 	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
 	const profil = docs[0]
 	if (!profil) throw new Error('La fabrique devait créer le profil de la maquilleuse.')
@@ -32,7 +32,7 @@ type Maquilleuse = Awaited<ReturnType<typeof maquilleuse>>
 
 /** Her profile as she reads it, by REST. */
 async function lire({ compte, profil }: Maquilleuse): Promise<Profile> {
-	const { statut, corps } = await appelerRest('GET', `/api/profiles/${profil}?depth=0`, {
+	const { statut, corps } = await callRest('GET', `/api/profiles/${profil}?depth=0`, {
 		enTetes: compte.session.enTetes,
 	})
 	expect(statut).toBe(200)
@@ -41,11 +41,11 @@ async function lire({ compte, profil }: Maquilleuse): Promise<Profile> {
 
 /** A save of her profile, by REST, as her space will send it. */
 const enregistrer = ({ compte, profil }: Maquilleuse, donnees: Partial<Profile>) =>
-	appelerRest('PATCH', `/api/profiles/${profil}?depth=0`, { enTetes: compte.session.enTetes, corps: donnees })
+	callRest('PATCH', `/api/profiles/${profil}?depth=0`, { enTetes: compte.session.enTetes, corps: donnees })
 
 /** The profile as stored, read without access control. */
 const stocke = async (profil: number) =>
-	(await payloadDeTest()).findByID({ collection: 'profiles', id: profil, depth: 0 })
+	(await testPayload()).findByID({ collection: 'profiles', id: profil, depth: 0 })
 
 /** The refusals of a REST answer: where, and what the artist reads. */
 function refus(corps: unknown): { path: string; message: string }[] {
@@ -146,7 +146,7 @@ describe('Les sections en liste gardent leur ordre et l’identité de chaque li
 			experiences: lu.experiences,
 		}
 
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const utilisateur = {
 			...(await payload.findByID({ collection: 'pros', id: Number(a.compte.id) })),
 			collection: 'pros',
@@ -232,7 +232,7 @@ describe('Les sections en liste gardent leur ordre et l’identité de chaque li
 		await enregistrer(a, { languages: [{ name: 'Anglais' }] })
 		const avant = (await stocke(a.profil)).languages
 
-		const essai = await appelerRest('PATCH', `/api/profiles/${a.profil}`, {
+		const essai = await callRest('PATCH', `/api/profiles/${a.profil}`, {
 			enTetes: b.compte.session.enTetes,
 			corps: { languages: [] },
 		})

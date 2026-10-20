@@ -280,7 +280,7 @@ describe('la table de décision', () => {
 	})
 
 	test('la table du banc garde le compte 9 parmi les quatre qui partagent un email, et écarte le profil 29 du compte 11', () => {
-		const texte = readFileSync(path.resolve(import.meta.dir, '../fixtures/import/decisions-du-banc.json'), 'utf8')
+		const texte = readFileSync(path.resolve(import.meta.dir, '../fixtures/import/bench-decisions.json'), 'utf8')
 		expect(readDecisions(texte)).toEqual({
 			sharedEmails: [{ accounts: [9, 10, 11, 12], kept: 9 }],
 			excludedProfiles: [29],

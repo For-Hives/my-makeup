@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from 'bun:test'
-import { compterLesDocuments, compterLesLignes, payloadDeTest, viderLaBase } from '../support/payload-test'
+import { countDocuments, countLines, emptyBase, testPayload } from '../support/payload-test'
 
 /** A made-up account document: the skeleton has no other collection to write in yet. */
 const compteFictif = (nom: string) => ({
@@ -9,10 +9,10 @@ const compteFictif = (nom: string) => ({
 })
 
 describe('Test coquille : Payload écrit dans la base du banc, puis la remet à zéro', () => {
-	afterAll(viderLaBase)
+	afterAll(emptyBase)
 
 	test('crée un document, le relit, vide la base', async () => {
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const donnees = compteFictif('coquille')
 
 		const cree = await payload.create({ collection: 'admins', data: donnees })
@@ -21,13 +21,13 @@ describe('Test coquille : Payload écrit dans la base du banc, puis la remet à 
 		expect(relu.email).toBe(donnees.email)
 		expect(relu.id).toBe(cree.id)
 
-		await viderLaBase()
+		await emptyBase()
 
 		expect((await payload.find({ collection: 'admins' })).totalDocs).toBe(0)
 	})
 
 	test('après remise à zéro, toutes les collections sont vides, et les tables qu’elles cachent aussi', async () => {
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		// Something in every table a run can leave rows in: an account and its session, a
 		// preference, a lock on a document, a stored key.
 		const donnees = compteFictif('remise-a-zero')
@@ -46,23 +46,23 @@ describe('Test coquille : Payload écrit dans la base du banc, puis la remet à 
 		})
 		await payload.create({ collection: 'payload-kv', data: { key: 'banc', data: { vu: true } } })
 
-		const avant = await compterLesLignes()
+		const avant = await countLines()
 		expect(Object.values(avant).filter(lignes => lignes > 0).length).toBeGreaterThanOrEqual(5)
 
-		await viderLaBase()
+		await emptyBase()
 
-		const documents = await compterLesDocuments()
+		const documents = await countDocuments()
 		expect(Object.keys(documents)).toContain('admins')
 		// Every collection of the configuration but the bookkeeping of the migrations.
 		expect(Object.keys(documents).length).toBe(payload.config.collections.length - 1)
 		expect(Object.entries(documents).filter(([, compte]) => compte !== 0)).toEqual([])
-		expect(Object.entries(await compterLesLignes()).filter(([, lignes]) => lignes !== 0)).toEqual([])
+		expect(Object.entries(await countLines()).filter(([, lignes]) => lignes !== 0)).toEqual([])
 	})
 
 	test('après remise à zéro, la base repart comme neuve : les identifiants reprennent à 1, le schéma est intact', async () => {
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		await payload.create({ collection: 'admins', data: compteFictif('avant') })
-		await viderLaBase()
+		await emptyBase()
 
 		const premier = await payload.create({ collection: 'admins', data: compteFictif('apres') })
 
@@ -73,9 +73,9 @@ describe('Test coquille : Payload écrit dans la base du banc, puis la remet à 
 	})
 
 	test('une seconde remise à zéro sur une base déjà vide ne fait rien', async () => {
-		await viderLaBase()
-		await viderLaBase()
+		await emptyBase()
+		await emptyBase()
 
-		expect(Object.values(await compterLesDocuments()).every(compte => compte === 0)).toBe(true)
+		expect(Object.values(await countDocuments()).every(compte => compte === 0)).toBe(true)
 	})
 })

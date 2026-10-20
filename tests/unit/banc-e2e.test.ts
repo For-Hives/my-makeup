@@ -2,28 +2,28 @@ import { describe, expect, test } from 'bun:test'
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { garderLesGraves } from '../support/axe'
-import { BancRefuse, environnementDuBanc, lireInstance } from '../support/bench'
+import { keepSevere } from '../support/axe'
+import { benchEnvironment, RefusedBench, readInstance } from '../support/bench'
 import {
-	applicationDesEssais,
-	cibleDesEssais,
-	configurationDesEssais,
-	DOSSIER_DES_RESULTATS,
-	DOSSIER_DES_TRACES,
-	DOSSIER_DES_TRACES_FINALES,
-	ESSAI_SEUL_SUR_LE_BANC,
-	environnementDePlaywright,
-	environnementDuBuild,
-	exigerCibleDuBanc,
-	messageApplicationMuette,
-	messagePortPris,
-	messageSansBanc,
-	phasesDePlaywright,
-	portDeLApplication,
-	SANS_FICHIER_ENV,
+	applicationPort,
+	applicationSilentMessage,
+	buildEnvironment,
+	playwrightEnvironment,
+	playwrightPhases,
+	portTakenMessage,
+	RESULT_FOLDER,
+	requireBenchTarget,
+	TEST_ONLY_ON_BENCH,
+	TRACES_FINAL_FOLDER,
+	TRACES_FOLDER,
+	testApplication,
+	testConfiguration,
+	testTarget,
+	WITHOUT_FILE_ENV,
+	withoutBenchMessage,
 } from '../support/e2e'
-import { EnvironnementRefuse } from '../support/environment-guard'
-import { lireLaSante, MESSAGE_SCHEMA_EN_DESACCORD, sansQuestion } from '../support/e2e-server'
+import { readHealth, SCHEMA_IN_MISMATCH_MESSAGE, withoutQuestion } from '../support/e2e-server'
+import { RefusedEnvironment } from '../support/environment-guard'
 
 /**
  * The end-to-end bench, without a browser and without an application: where the tests point,
@@ -34,17 +34,17 @@ import { lireLaSante, MESSAGE_SCHEMA_EN_DESACCORD, sansQuestion } from '../suppo
 const RACINE = path.resolve(import.meta.dir, '../..')
 
 /** An instance beside the default one: every port moved by 20. */
-const INSTANCE = { BANC_INSTANCE: 'essai-e2e', BANC_DECALAGE: '20' }
-const instance = lireInstance(INSTANCE)
-const banc = environnementDuBanc(instance)
+const INSTANCE = { BENCH_INSTANCE: 'essai-e2e', BENCH_OFFSET: '20' }
+const instance = readInstance(INSTANCE)
+const banc = benchEnvironment(instance)
 /** The environment `bun run test:e2e` gives to Playwright for that instance, from an empty shell. */
-const SOUS_LE_BANC = environnementDePlaywright({ PATH: '/usr/bin' }, instance, banc)
+const SOUS_LE_BANC = playwrightEnvironment({ PATH: '/usr/bin' }, instance, banc)
 
 const messageDuRefus = (action: () => unknown): string => {
 	try {
 		action()
 	} catch (erreur) {
-		if (erreur instanceof EnvironnementRefuse || erreur instanceof BancRefuse) return erreur.message
+		if (erreur instanceof RefusedEnvironment || erreur instanceof RefusedBench) return erreur.message
 		throw erreur
 	}
 	throw new Error('rien n’a été refusé')
@@ -52,12 +52,12 @@ const messageDuRefus = (action: () => unknown): string => {
 
 describe('la cible des essais', () => {
 	test('sans rien de réglé, c’est l’application du banc, sur le port de l’instance', () => {
-		expect(cibleDesEssais({})).toEqual({ adresse: 'http://localhost:3100', environnement: 'test' })
-		expect(cibleDesEssais(INSTANCE).adresse).toBe('http://localhost:3120')
+		expect(testTarget({})).toEqual({ adresse: 'http://localhost:3100', environnement: 'test' })
+		expect(testTarget(INSTANCE).adresse).toBe('http://localhost:3120')
 	})
 
 	test('BASE_URL l’emporte quand elle est locale', () => {
-		expect(cibleDesEssais({ BASE_URL: 'http://127.0.0.1:4000' }).adresse).toBe('http://127.0.0.1:4000')
+		expect(testTarget({ BASE_URL: 'http://127.0.0.1:4000' }).adresse).toBe('http://127.0.0.1:4000')
 	})
 
 	test.each([
@@ -65,22 +65,22 @@ describe('la cible des essais', () => {
 		'https://www.my-makeup.fr/auth/signin',
 		'https://api.my-makeup.fr',
 	])('U86 : la prod est refusée dans tout environnement : %s', adresse => {
-		expect(messageDuRefus(() => cibleDesEssais({ BASE_URL: adresse }))).toContain('BASE_URL vise la prod')
+		expect(messageDuRefus(() => testTarget({ BASE_URL: adresse }))).toContain('BASE_URL vise la prod')
 		// The configuration of Playwright is not even built: nothing is left to run a test with.
-		expect(() => configurationDesEssais({ BASE_URL: adresse })).toThrow(EnvironnementRefuse)
+		expect(() => testConfiguration({ BASE_URL: adresse })).toThrow(RefusedEnvironment)
 	})
 
 	test('la préprod n’existe plus : son hôte est de la prod, et APP_ENV=preprod est inconnu (ticket 232)', () => {
 		const preprod = 'https://preprod.my-makeup.fr'
 
-		expect(messageDuRefus(() => cibleDesEssais({ BASE_URL: preprod }))).toContain('BASE_URL vise la prod')
-		expect(messageDuRefus(() => cibleDesEssais({ APP_ENV: 'preprod', BASE_URL: preprod }))).toContain(
+		expect(messageDuRefus(() => testTarget({ BASE_URL: preprod }))).toContain('BASE_URL vise la prod')
+		expect(messageDuRefus(() => testTarget({ APP_ENV: 'preprod', BASE_URL: preprod }))).toContain(
 			'environnement inconnu'
 		)
 	})
 
 	test('un environnement de prod est refusé, même vers une adresse locale', () => {
-		expect(messageDuRefus(() => cibleDesEssais({ APP_ENV: 'prod', BASE_URL: 'http://localhost:3100' }))).toContain(
+		expect(messageDuRefus(() => testTarget({ APP_ENV: 'prod', BASE_URL: 'http://localhost:3100' }))).toContain(
 			'aucun test ne tourne en environnement de prod'
 		)
 	})
@@ -108,13 +108,13 @@ describe('U86 : « bun run test:e2e » s’arrête avant de rien construire quan
 })
 
 describe('la configuration de Playwright', () => {
-	const configuration = configurationDesEssais({})
+	const configuration = testConfiguration({})
 	const projets = configuration.projects ?? []
 
 	test('les essais sont les fichiers *.spec.ts de tests/e2e, et eux seuls', () => {
 		expect(configuration.testDir).toBe('./tests/e2e')
 		expect(configuration.testMatch).toBe('**/*.spec.ts')
-		expect(configuration.globalSetup).toBe('./tests/outils/serveur-e2e.ts')
+		expect(configuration.globalSetup).toBe('./tests/support/e2e-server.ts')
 	})
 
 	test('deux tailles d’écran : 1440 px pour tous les essais, 390 px pour ceux qui portent @mobile', () => {
@@ -137,9 +137,9 @@ describe('la configuration de Playwright', () => {
 		const [bureau, mobile, seul] = projets
 
 		expect(seul?.dependencies).toBeUndefined()
-		expect(seul?.testMatch).toBe(ESSAI_SEUL_SUR_LE_BANC)
-		expect(bureau?.testIgnore).toBe(ESSAI_SEUL_SUR_LE_BANC)
-		expect(mobile?.testIgnore).toBe(ESSAI_SEUL_SUR_LE_BANC)
+		expect(seul?.testMatch).toBe(TEST_ONLY_ON_BENCH)
+		expect(bureau?.testIgnore).toBe(TEST_ONLY_ON_BENCH)
+		expect(mobile?.testIgnore).toBe(TEST_ONLY_ON_BENCH)
 		expect(seul?.testMatch).toMatch(/tranche-profil-importe\.spec\.ts$/)
 	})
 
@@ -158,7 +158,7 @@ describe('la configuration de Playwright', () => {
 			locale: 'fr-FR',
 			timezoneId: 'Europe/Paris',
 		})
-		expect(configurationDesEssais(INSTANCE).use?.baseURL).toBe('http://localhost:3120')
+		expect(testConfiguration(INSTANCE).use?.baseURL).toBe('http://localhost:3120')
 	})
 
 	test('trois rapports : la liste, le rapport HTML qui ne s’ouvre jamais tout seul, les résultats en JSON', () => {
@@ -170,31 +170,31 @@ describe('la configuration de Playwright', () => {
 	})
 
 	test('en CI : aucun .only, deux nouvelles tentatives ; sur un poste : ni l’un ni l’autre', () => {
-		expect(configurationDesEssais({ CI: 'true' })).toMatchObject({ forbidOnly: true, retries: 2 })
+		expect(testConfiguration({ CI: 'true' })).toMatchObject({ forbidOnly: true, retries: 2 })
 		expect(configuration).toMatchObject({ forbidOnly: false, retries: 0 })
 	})
 })
 
 describe('l’application des essais, démarrée par Playwright', () => {
 	test('sous l’environnement du banc : le build de production, sur le port de l’instance et sur ce poste seulement', () => {
-		const application = applicationDesEssais(SOUS_LE_BANC)
+		const application = testApplication(SOUS_LE_BANC)
 
 		expect(application).toMatchObject({
 			command: 'bun --no-env-file run start -p 3120 -H 127.0.0.1',
 			url: 'http://localhost:3120/api/health',
 			reuseExistingServer: false,
 		})
-		expect(configurationDesEssais(SOUS_LE_BANC).webServer).toEqual(application)
+		expect(testConfiguration(SOUS_LE_BANC).webServer).toEqual(application)
 	})
 
 	test('elle reçoit le banc, le mode production, et ne lit aucun fichier .env', () => {
-		const { env = {} } = applicationDesEssais(SOUS_LE_BANC) ?? {}
+		const { env = {} } = testApplication(SOUS_LE_BANC) ?? {}
 
-		expect(env).toMatchObject({ ...banc, ...SANS_FICHIER_ENV, NODE_ENV: 'production', NEXT_TELEMETRY_DISABLED: '1' })
+		expect(env).toMatchObject({ ...banc, ...WITHOUT_FILE_ENV, NODE_ENV: 'production', NEXT_TELEMETRY_DISABLED: '1' })
 		expect(env.DATABASE_URI).toEndWith(':5463/mymakeup_test')
 		expect(env.NEXT_PUBLIC_SITE_URL).toBe('http://localhost:3120')
 		// The fake list of the communes of the instance, never geo.api.gouv.fr (docs/tests/banc.md).
-		expect(env.COMMUNES_DU_BANC).toBe('http://127.0.0.1:2070')
+		expect(env.BENCH_CITIES).toBe('http://127.0.0.1:2070')
 	})
 
 	test('le script « start » de package.json est bien celui qui sert le build', () => {
@@ -208,17 +208,17 @@ describe('l’application des essais, démarrée par Playwright', () => {
 
 	test.each([
 		['un shell nu : aucune base réglée', {}],
-		['la base d’un autre banc', { ...SOUS_LE_BANC, BANC_DECALAGE: '40' }],
+		['la base d’un autre banc', { ...SOUS_LE_BANC, BENCH_OFFSET: '40' }],
 		['la base de développement', { ...SOUS_LE_BANC, DATABASE_URI: 'postgres://u:p@127.0.0.1:5442/mymakeup_dev' }],
 		['une autre cible locale', { ...SOUS_LE_BANC, BASE_URL: 'http://localhost:4000' }],
 	])('Playwright ne démarre rien hors du lancement préparé : %s', (_cas, variables) => {
-		expect(applicationDesEssais(variables)).toBeUndefined()
-		expect(configurationDesEssais(variables)).not.toHaveProperty('webServer')
+		expect(testApplication(variables)).toBeUndefined()
+		expect(testConfiguration(variables)).not.toHaveProperty('webServer')
 	})
 
 	test('le port se lit dans l’adresse, qui doit l’écrire', () => {
-		expect(portDeLApplication('http://localhost:3213')).toBe(3213)
-		expect(messageDuRefus(() => portDeLApplication('http://localhost'))).toContain('doit écrire son port')
+		expect(applicationPort('http://localhost:3213')).toBe(3213)
+		expect(messageDuRefus(() => applicationPort('http://localhost'))).toContain('doit écrire son port')
 	})
 })
 
@@ -234,7 +234,7 @@ describe('ce que « bun run test:e2e » donne au build et à Playwright', () => 
 	}
 
 	test('le build ne reçoit ni base, ni secret, ni adresse : il est celui de la CI', () => {
-		const build = environnementDuBuild(DU_POSTE, banc)
+		const build = buildEnvironment(DU_POSTE, banc)
 
 		expect(build).toEqual({
 			PATH: '/usr/bin',
@@ -242,8 +242,8 @@ describe('ce que « bun run test:e2e » donne au build et à Playwright', () => 
 			// The one public setting of the bench the pages freeze: the hostnames Umami counts on.
 			NEXT_PUBLIC_UMAMI_DOMAINS: 'localhost,127.0.0.1',
 			// Where the image optimizer may fetch the photos of the bench from (ticket 103).
-			IMAGES_DU_BANC: `${banc.S3_ENDPOINT}/${banc.S3_BUCKET}`,
-			...SANS_FICHIER_ENV,
+			BENCH_IMAGES: `${banc.S3_ENDPOINT}/${banc.S3_BUCKET}`,
+			...WITHOUT_FILE_ENV,
 			NEXT_TELEMETRY_DISABLED: '1',
 			NODE_ENV: 'production',
 		})
@@ -252,21 +252,21 @@ describe('ce que « bun run test:e2e » donne au build et à Playwright', () => 
 	})
 
 	test('Playwright reçoit le banc de l’instance, qui l’emporte sur ce que le poste réglait', () => {
-		const playwright = environnementDePlaywright(DU_POSTE, instance, banc)
+		const playwright = playwrightEnvironment(DU_POSTE, instance, banc)
 
 		expect(playwright).toEqual({
 			PATH: '/usr/bin',
 			CI: 'true',
 			...banc,
-			BANC_INSTANCE: 'essai-e2e',
-			BANC_DECALAGE: '20',
+			BENCH_INSTANCE: 'essai-e2e',
+			BENCH_OFFSET: '20',
 			BASE_URL: 'http://localhost:3120',
 			NODE_ENV: 'test',
 		})
 	})
 
 	test('sans demande, deux passages : tous les essais aux deux tailles, puis l’import réel seul (ticket 225)', () => {
-		expect(phasesDePlaywright([])).toEqual({
+		expect(playwrightPhases([])).toEqual({
 			principale: ['test', '--project=chromium', '--project=mobile', '--pass-with-no-tests'],
 			finale: [
 				'test',
@@ -279,7 +279,7 @@ describe('ce que « bun run test:e2e » donne au build et à Playwright', () => 
 	})
 
 	test('ce qui est demandé passe tel quel dans les deux passages : un fichier, une option, un quart', () => {
-		const { principale, finale } = phasesDePlaywright(['tests/e2e/coquille.spec.ts', '--workers=1', '--shard=2/4'])
+		const { principale, finale } = playwrightPhases(['tests/e2e/coquille.spec.ts', '--workers=1', '--shard=2/4'])
 
 		expect(principale).toEqual([
 			'test',
@@ -294,49 +294,49 @@ describe('ce que « bun run test:e2e » donne au build et à Playwright', () => 
 	})
 
 	test('un projet demandé, sous ses deux écritures, choisit son passage et ne se répète pas dans l’autre', () => {
-		expect(phasesDePlaywright(['--project=mobile', '--headed'])).toEqual({
+		expect(playwrightPhases(['--project=mobile', '--headed'])).toEqual({
 			principale: ['test', '--headed', '--project=mobile', '--pass-with-no-tests'],
 		})
-		expect(phasesDePlaywright(['--project', 'chromium', '-g', 'un titre']).principale).toEqual([
+		expect(playwrightPhases(['--project', 'chromium', '-g', 'un titre']).principale).toEqual([
 			'test',
 			'-g',
 			'un titre',
 			'--project=chromium',
 			'--pass-with-no-tests',
 		])
-		const seul = phasesDePlaywright(['--project=import-final'])
+		const seul = playwrightPhases(['--project=import-final'])
 		expect(seul.principale).toBeUndefined()
 		expect(seul.finale).toContain('--project=import-final')
-		const lesDeux = phasesDePlaywright(['--project=mobile', '--project=import-final'])
+		const lesDeux = playwrightPhases(['--project=mobile', '--project=import-final'])
 		expect(lesDeux.principale).toContain('--project=mobile')
 		expect(lesDeux.finale).toContain('--project=import-final')
 		expect(lesDeux.finale).not.toContain('--project=mobile')
 	})
 
 	test('le passage de l’import réel garde ses traces à part : il n’efface ni le rapport ni les traces du premier', () => {
-		const { finale } = phasesDePlaywright([])
+		const { finale } = playwrightPhases([])
 
-		expect(finale).toContain(`--output=${DOSSIER_DES_TRACES_FINALES}`)
-		expect(DOSSIER_DES_TRACES_FINALES.startsWith(`${DOSSIER_DES_RESULTATS}/`)).toBe(true)
-		expect(DOSSIER_DES_TRACES_FINALES).not.toBe(DOSSIER_DES_TRACES)
+		expect(finale).toContain(`--output=${TRACES_FINAL_FOLDER}`)
+		expect(TRACES_FINAL_FOLDER.startsWith(`${RESULT_FOLDER}/`)).toBe(true)
+		expect(TRACES_FINAL_FOLDER).not.toBe(TRACES_FOLDER)
 		expect(finale).toContain('--reporter=list')
 	})
 
 	test('une BASE_URL qui n’est pas l’application du banc est refusée, pas remplacée', () => {
-		expect(exigerCibleDuBanc({}, banc)).toBe('http://localhost:3120')
-		expect(exigerCibleDuBanc({ BASE_URL: 'http://localhost:3120' }, banc)).toBe('http://localhost:3120')
-		expect(messageDuRefus(() => exigerCibleDuBanc({ BASE_URL: 'http://127.0.0.1:3120' }, banc))).toBe(
+		expect(requireBenchTarget({}, banc)).toBe('http://localhost:3120')
+		expect(requireBenchTarget({ BASE_URL: 'http://localhost:3120' }, banc)).toBe('http://localhost:3120')
+		expect(messageDuRefus(() => requireBenchTarget({ BASE_URL: 'http://127.0.0.1:3120' }, banc))).toBe(
 			'BASE_URL est réglée, et ce n’est pas l’adresse de l’application du banc (http://localhost:3120) : « bun run test:e2e » n’ouvre que celle-là. Retire BASE_URL.'
 		)
 	})
 
 	test('les messages disent quoi faire', () => {
-		expect(messagePortPris(3120)).toContain('Le port 3120 est déjà pris sur ce poste')
-		expect(messagePortPris(3120)).toContain('BANC_INSTANCE=mon-banc BANC_DECALAGE=20')
-		expect(messageApplicationMuette('http://localhost:3120', 'réponse 503')).toContain(
+		expect(portTakenMessage(3120)).toContain('Le port 3120 est déjà pris sur ce poste')
+		expect(portTakenMessage(3120)).toContain('BENCH_INSTANCE=mon-banc BENCH_OFFSET=20')
+		expect(applicationSilentMessage('http://localhost:3120', 'réponse 503')).toContain(
 			'L’application ne répond pas sur http://localhost:3120 (/api/health : réponse 503).'
 		)
-		for (const message of [messageApplicationMuette('http://localhost:3120', 'aucune réponse'), messageSansBanc()])
+		for (const message of [applicationSilentMessage('http://localhost:3120', 'aucune réponse'), withoutBenchMessage()])
 			expect(message).toContain('« bun run test:e2e »')
 	})
 })
@@ -351,7 +351,7 @@ describe('Next ne lit aucun fichier .env quand le banc le lui demande', () => {
 			const programme = [
 				"const { loadEnvConfig } = require('@next/env')",
 				`loadEnvConfig(${JSON.stringify(dossier)}, false, { info() {}, error() {} })`,
-				'console.log(String(process.env.TEMOIN_DU_FICHIER_ENV))',
+				'console.log(String(process.env.ENV_FILE_SENTINEL))',
 			].join('\n')
 			const enfant = Bun.spawnSync([process.execPath, '--no-env-file', '-e', programme], {
 				cwd: RACINE,
@@ -360,10 +360,10 @@ describe('Next ne lit aucun fichier .env quand le banc le lui demande', () => {
 			return enfant.stdout.toString().trim()
 		}
 		try {
-			writeFileSync(path.join(dossier, '.env'), 'TEMOIN_DU_FICHIER_ENV=lu\n')
+			writeFileSync(path.join(dossier, '.env'), 'ENV_FILE_SENTINEL=lu\n')
 
 			expect(lu({})).toBe('lu')
-			expect(lu(SANS_FICHIER_ENV)).toBe('undefined')
+			expect(lu(WITHOUT_FILE_ENV)).toBe('undefined')
 		} finally {
 			rmSync(dossier, { recursive: true })
 		}
@@ -381,7 +381,7 @@ describe('avant le premier essai', () => {
 			return Response.json({ ok: true, version: 'abc1234' })
 		}) as unknown as typeof fetch
 
-		expect(await lireLaSante('http://localhost:3120', demander)).toEqual({
+		expect(await readHealth('http://localhost:3120', demander)).toEqual({
 			saine: true,
 			constat: 'saine',
 			version: 'abc1234',
@@ -394,7 +394,7 @@ describe('avant le premier essai', () => {
 		['un autre serveur répond à cette adresse', 200, { message: 'bonjour' }, 'réponse 200'],
 		['la route n’existe pas', 404, 'Not found', 'réponse 404'],
 	])('pas saine : %s', async (_cas, status, corps, constat) => {
-		expect(await lireLaSante('http://localhost:3120', repondre(status, corps))).toMatchObject({
+		expect(await readHealth('http://localhost:3120', repondre(status, corps))).toMatchObject({
 			saine: false,
 			constat,
 		})
@@ -405,7 +405,7 @@ describe('avant le premier essai', () => {
 			throw new TypeError('fetch failed')
 		}) as unknown as typeof fetch
 
-		expect(await lireLaSante('http://localhost:3120', injoignable)).toEqual({
+		expect(await readHealth('http://localhost:3120', injoignable)).toEqual({
 			saine: false,
 			constat: 'aucune réponse',
 		})
@@ -413,29 +413,29 @@ describe('avant le premier essai', () => {
 
 	test('un arrêt du processus pendant le branchement de Payload devient une erreur, pas un lancement vert', async () => {
 		const sortir = process.exit
-		const arret = sansQuestion(async () => {
+		const arret = withoutQuestion(async () => {
 			// What Payload does when a question about data it could lose cannot be answered.
 			process.exit(0)
 		})
 
-		await expect(arret).rejects.toBeInstanceOf(BancRefuse)
-		await expect(arret).rejects.toThrow(MESSAGE_SCHEMA_EN_DESACCORD)
+		await expect(arret).rejects.toBeInstanceOf(RefusedBench)
+		await expect(arret).rejects.toThrow(SCHEMA_IN_MISMATCH_MESSAGE)
 		expect(process.exit).toBe(sortir)
 	})
 
 	test('une question qui attend sa réponse devient une erreur au bout du délai, pas un lancement bloqué', async () => {
 		const sortir = process.exit
 		// What drizzle-kit does when a column was renamed: it asks on the terminal, and waits.
-		const attente = sansQuestion(() => new Promise<never>(() => undefined), 20)
+		const attente = withoutQuestion(() => new Promise<never>(() => undefined), 20)
 
-		await expect(attente).rejects.toThrow(MESSAGE_SCHEMA_EN_DESACCORD)
+		await expect(attente).rejects.toThrow(SCHEMA_IN_MISMATCH_MESSAGE)
 		expect(process.exit).toBe(sortir)
 	})
 
 	test('sans question, l’action rend son résultat et la sortie du processus est rendue intacte', async () => {
 		const sortir = process.exit
 
-		expect(await sansQuestion(async () => 'branché')).toBe('branché')
+		expect(await withoutQuestion(async () => 'branché')).toBe('branché')
 		expect(process.exit).toBe(sortir)
 	})
 })
@@ -450,7 +450,7 @@ describe('le contrôle d’accessibilité ne garde que les niveaux « serious »
 	})
 
 	test('les deux niveaux graves passent, les autres non', () => {
-		const gardees = garderLesGraves([
+		const gardees = keepSevere([
 			violation('image-alt', 'critical', [['img']]),
 			violation('region', 'moderate', [['div']]),
 			violation('color-contrast', 'serious', [['p.pale'], ['a']]),
@@ -477,12 +477,12 @@ describe('le contrôle d’accessibilité ne garde que les niveaux « serious »
 	})
 
 	test('un élément dans un cadre ou dans une ombre est donné par son chemin', () => {
-		const [dansUnCadre] = garderLesGraves([violation('label', 'critical', [['iframe#carte', ['mon-champ', 'input']]])])
+		const [dansUnCadre] = keepSevere([violation('label', 'critical', [['iframe#carte', ['mon-champ', 'input']]])])
 
 		expect(dansUnCadre?.elements).toEqual(['iframe#carte mon-champ input'])
 	})
 
 	test('aucune violation : une liste vide', () => {
-		expect(garderLesGraves([])).toEqual([])
+		expect(keepSevere([])).toEqual([])
 	})
 })

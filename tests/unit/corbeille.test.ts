@@ -13,7 +13,7 @@ import { ONE_AT_A_TIME_MESSAGE, oneAtATime, withoutPluginDeletion, withTrash } f
 import { IMPORT_CONTEXT } from '@/lib/import-context'
 import { copySource } from '@/lib/storage'
 import { isInTrash, moveToTrash, type ObjectStorage, objectKeys, restore, StorageOutage, trashKey } from '@/lib/trash'
-import { type CommandeS3, suppressionsSansCorbeille } from '../support/s3-spy'
+import { type CommandS3, deletionsWithoutTrash } from '../support/s3-spy'
 
 /**
  * The bin of the object storage (ticket 045; plan 01 §1.8): a photo that no longer serves moves
@@ -249,7 +249,7 @@ describe('La remise en place d’un objet de la corbeille', () => {
 })
 
 describe('Un test échoue si une suppression d’objet est appelée (l’espion du banc)', () => {
-	const commande = (nom: string, entree: Record<string, unknown>, reussie = true): CommandeS3 => ({
+	const commande = (nom: string, entree: Record<string, unknown>, reussie = true): CommandS3 => ({
 		nom,
 		entree,
 		reussie,
@@ -259,7 +259,7 @@ describe('Un test échoue si une suppression d’objet est appelée (l’espion 
 
 	test('un déplacement vers la corbeille n’est pas une suppression', () => {
 		expect(
-			suppressionsSansCorbeille([
+			deletionsWithoutTrash([
 				commande('HeadObject', { Key: 'media/a b.png' }),
 				copieEnCorbeille('media/a b.png'),
 				commande('HeadObject', { Key: 'deleted/media/a b.png' }),
@@ -269,12 +269,12 @@ describe('Un test échoue si une suppression d’objet est appelée (l’espion 
 	})
 
 	test('ce que faisait le greffon de stockage : un objet retiré sans copie dans la corbeille, signalé', () => {
-		expect(suppressionsSansCorbeille([commande('DeleteObject', { Key: 'media/a.png' })])).toEqual(['media/a.png'])
+		expect(deletionsWithoutTrash([commande('DeleteObject', { Key: 'media/a.png' })])).toEqual(['media/a.png'])
 	})
 
 	test('une copie échouée, une copie ailleurs, un objet de la corbeille, plusieurs objets à la fois : signalés', () => {
 		expect(
-			suppressionsSansCorbeille([
+			deletionsWithoutTrash([
 				copieEnCorbeille('media/a.png', false),
 				commande('DeleteObject', { Key: 'media/a.png' }),
 				commande('CopyObject', { Key: 'ailleurs/b.png', CopySource: copySource('b', 'media/b.png') }),

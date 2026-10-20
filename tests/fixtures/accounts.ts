@@ -6,7 +6,7 @@
  *
  * No password, as everywhere on the bench: each account gets one drawn at random and forgotten at
  * once. A test that needs the session of one of them opens it with `ouvrirSessionSansMotDePasse`
- * (tests/outils/session.ts); an account that cannot log in is there to be found, not to log in.
+ * (tests/support/session.ts); an account that cannot log in is there to be found, not to log in.
  *
  * Everything is made up: addresses in `@example.test`, names that say what the account is, ids on
  * the old site from 900 001, which neither the fake Strapi source nor the factory ever gives.
@@ -16,24 +16,24 @@
 
 import type { AuthCollectionSlug } from 'payload'
 import {
-	type CompteFixe,
-	creerCompteFixe,
-	type Dependances,
-	DOMAINE_DES_COMPTES,
-	TYPES_DE_COMPTE,
-	type TypeDeCompte,
-	type ValeursDuCompte,
+	ACCOUNT_DOMAIN,
+	ACCOUNT_TYPES,
+	type AccountType,
+	type AccountValues,
+	createFixedAccount,
+	type Dependencies,
+	type FixedAccount,
 } from '../support/account-factory'
-import { exigerBanc, exigerConnexionDuBanc, payloadDeTest } from '../support/payload-test'
+import { requireBench, requireBenchSignIn, testPayload } from '../support/payload-test'
 
 /** The address of the account of this type in the set: the same at every load. */
-export const adresseDuJeu = (type: TypeDeCompte): string => `jeu-${type}@${DOMAINE_DES_COMPTES}`
+export const datasetUrl = (type: AccountType): string => `jeu-${type}@${ACCOUNT_DOMAIN}`
 
 /**
  * What each account of the set holds besides its address, in the order the set creates them. A
  * type the factory adds has its line here: the compiler asks for it.
  */
-export const COMPTES_DU_JEU: { readonly [Type in TypeDeCompte]: Omit<ValeursDuCompte, 'email'> } = {
+export const DATASET_ACCOUNTS: { readonly [Type in AccountType]: Omit<AccountValues, 'email'> } = {
 	admin: {},
 	redaction: {},
 	maquilleuse: { nom: 'Maquilleuse du jeu' },
@@ -46,15 +46,15 @@ export const COMPTES_DU_JEU: { readonly [Type in TypeDeCompte]: Omit<ValeursDuCo
 	'reprise-facebook': { nom: 'Reprise Facebook du jeu', strapiId: 900_004 },
 }
 
-export const TYPES_DU_JEU = Object.keys(COMPTES_DU_JEU) as TypeDeCompte[]
+export const DATASET_TYPES = Object.keys(DATASET_ACCOUNTS) as AccountType[]
 
-export interface BilanDuJeu {
+export interface DatasetSummary {
 	/** Every account of the set, in its order, whether this load created it or found it. */
-	comptes: CompteFixe[]
+	comptes: FixedAccount[]
 	/** The types whose account this load created. */
-	crees: TypeDeCompte[]
+	crees: AccountType[]
 	/** The types whose account was already there, found by its address: left as it was. */
-	presents: TypeDeCompte[]
+	presents: AccountType[]
 }
 
 /**
@@ -62,16 +62,16 @@ export interface BilanDuJeu {
  * yet, one after the other, so that an empty bench always gives the same identifiers. Outside the
  * bench, it stops before it reads or writes anything.
  */
-export async function poserLesComptesDuJeu(dependances: Omit<Dependances, 'motDePasse'> = {}): Promise<BilanDuJeu> {
-	const { payload: obtenirPayload = payloadDeTest, variables } = dependances
-	exigerBanc(variables)
-	const payload = await obtenirPayload()
-	exigerConnexionDuBanc(payload, variables)
+export async function setDatasetAccounts(dependances: Omit<Dependencies, 'motDePasse'> = {}): Promise<DatasetSummary> {
+	const { payload: getPayload = testPayload, variables } = dependances
+	requireBench(variables)
+	const payload = await getPayload()
+	requireBenchSignIn(payload, variables)
 
-	const bilan: BilanDuJeu = { comptes: [], crees: [], presents: [] }
-	for (const type of TYPES_DU_JEU) {
-		const collection: AuthCollectionSlug = TYPES_DE_COMPTE[type].collection
-		const email = adresseDuJeu(type)
+	const summary: DatasetSummary = { comptes: [], crees: [], presents: [] }
+	for (const type of DATASET_TYPES) {
+		const collection: AuthCollectionSlug = ACCOUNT_TYPES[type].collection
+		const email = datasetUrl(type)
 		const { docs } = await payload.find({
 			collection,
 			depth: 0,
@@ -82,12 +82,12 @@ export async function poserLesComptesDuJeu(dependances: Omit<Dependances, 'motDe
 		})
 		const present = docs[0]
 		if (present) {
-			bilan.comptes.push({ type, collection, id: present.id, email })
-			bilan.presents.push(type)
+			summary.comptes.push({ type, collection, id: present.id, email })
+			summary.presents.push(type)
 			continue
 		}
-		bilan.comptes.push(await creerCompteFixe(type, { email, ...COMPTES_DU_JEU[type] }, dependances))
-		bilan.crees.push(type)
+		summary.comptes.push(await createFixedAccount(type, { email, ...DATASET_ACCOUNTS[type] }, dependances))
+		summary.crees.push(type)
 	}
-	return bilan
+	return summary
 }

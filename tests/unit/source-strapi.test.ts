@@ -2,36 +2,36 @@ import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { inflateSync } from 'node:zlib'
-import { BancRefuse, environnementDuBanc, RACINE } from '../support/bench'
-import { EnvironnementRefuse } from '../support/environment-guard'
-import { sourceDuBanc } from '../support/source-strapi'
-import { exigerLaRevocation } from '../support/source-strapi/creation'
+import { benchEnvironment, RefusedBench, ROOT } from '../support/bench'
+import { RefusedEnvironment } from '../support/environment-guard'
+import { benchSource } from '../support/source-strapi'
+import { requireRevocation } from '../support/source-strapi/creation'
 import {
-	COMPTES_DE_FIXTURE,
-	definitionDeLaSource,
-	ENTREE_DISPARUE,
-	type Ligne,
-	PROFILS_SANS_PROPRIETAIRE,
-	TYPE_PROFIL,
+	FIXTURE_ACCOUNTS,
+	type Line,
+	MISSING_ENTRY,
+	PROFILES_WITHOUT_OWNER,
+	sourceDefinition,
+	TYPE_PROFILE,
 } from '../support/source-strapi/data'
-import { crc32, pngUni } from '../support/source-strapi/images'
+import { crc32, pngPlain } from '../support/source-strapi/images'
 import {
-	CAS,
-	type EtatDeLaSource,
-	HASH_BCRYPT_COMPLET,
-	inventaire,
-	inventaireEnMarkdown,
-	type LigneDInventaire,
+	CASE,
+	HASH_BCRYPT_FULL,
+	type InventoryLine,
+	inventory,
+	inventoryInMarkdown,
+	type SourceState,
 } from '../support/source-strapi/inventory'
-import { creationDeTable, NOMS_DES_TABLES, type NomDeTable, TABLES } from '../support/source-strapi/schema'
+import { TABLE_NAMES, TABLES, type TableName, tableCreation } from '../support/source-strapi/schema'
 
 /** The bench of the default instance, as .env.test describes it. */
-const BANC = { ...environnementDuBanc({ nom: 'my-makeup-test', decalage: 0 }) }
+const BANC = { ...benchEnvironment({ nom: 'my-makeup-test', decalage: 0 }) }
 const MEDIAS = 'http://127.0.0.1:9090/mymakeup-test'
-const definition = definitionDeLaSource(MEDIAS)
+const definition = sourceDefinition(MEDIAS)
 const { lignes } = definition
 
-const idsDe = (table: NomDeTable): number[] => lignes[table].map(ligne => Number(ligne.id))
+const idsDe = (table: TableName): number[] => lignes[table].map(ligne => Number(ligne.id))
 const nombre = (valeur: unknown): number => Number(valeur)
 
 /**
@@ -39,7 +39,7 @@ const nombre = (valeur: unknown): number => Number(valeur)
  * stand-in of the shape of a bcrypt hash takes the place of each hash PostgreSQL will write; it
  * lives in memory only.
  */
-function etatDeLaDefinition(): EtatDeLaSource {
+function etatDeLaDefinition(): SourceState {
 	const enTenantLieu = `$2a$10$${'.'.repeat(53)}`
 	return {
 		lignes: {
@@ -55,8 +55,8 @@ function etatDeLaDefinition(): EtatDeLaSource {
 }
 
 /** The inventory table of docs/tests/source-strapi.md, row by row. */
-function tableauDuDocument(): LigneDInventaire[] {
-	const document = readFileSync(path.join(RACINE, 'docs/tests/source-strapi.md'), 'utf8')
+function tableauDuDocument(): InventoryLine[] {
+	const document = readFileSync(path.join(ROOT, 'docs/tests/source-strapi.md'), 'utf8')
 	const debut = document.indexOf('| Groupe | Cas | Base réelle, 13/10/2026 | Fausse base |')
 	expect(debut).toBeGreaterThan(-1)
 	const lignesDuTableau = document.slice(debut).split('\n')
@@ -69,7 +69,7 @@ function tableauDuDocument(): LigneDInventaire[] {
 
 describe('La fausse base Strapi : ses tables', () => {
 	test('seize tables, aux colonnes de la vraie base, et rien de ce que l’import n’ouvre jamais', () => {
-		expect(NOMS_DES_TABLES).toHaveLength(16)
+		expect(TABLE_NAMES).toHaveLength(16)
 		expect(TABLES.up_users.map(colonne => colonne.nom)).toEqual([
 			'id',
 			'username',
@@ -88,17 +88,17 @@ describe('La fausse base Strapi : ses tables', () => {
 		expect(TABLES.files).toHaveLength(21)
 		expect(TABLES.makeup_artistes).toHaveLength(16)
 		for (const interdite of ['admin_users', 'up_roles', 'strapi_core_store_settings', 'upload_folders'])
-			expect(NOMS_DES_TABLES as readonly string[]).not.toContain(interdite)
+			expect(TABLE_NAMES as readonly string[]).not.toContain(interdite)
 	})
 
 	test('une table vient après celles que ses clés étrangères désignent', () => {
-		for (const [rang, table] of NOMS_DES_TABLES.entries())
+		for (const [rang, table] of TABLE_NAMES.entries())
 			for (const colonne of TABLES[table])
-				if (colonne.reference) expect(NOMS_DES_TABLES.indexOf(colonne.reference)).toBeLessThan(rang)
+				if (colonne.reference) expect(TABLE_NAMES.indexOf(colonne.reference)).toBeLessThan(rang)
 	})
 
 	test('le CREATE TABLE cite chaque nom entre guillemets, « order » compris, et les liens de Strapi', () => {
-		const ddl = creationDeTable('makeup_artistes_components')
+		const ddl = tableCreation('makeup_artistes_components')
 
 		expect(ddl).toContain('"order" double precision')
 		expect(ddl).toContain('"entity_id" integer REFERENCES "makeup_artistes" (id) ON DELETE CASCADE')
@@ -108,7 +108,7 @@ describe('La fausse base Strapi : ses tables', () => {
 
 describe('La fausse base Strapi : ses données', () => {
 	test('deux définitions sont identiques, à l’octet près', () => {
-		const autre = definitionDeLaSource(MEDIAS)
+		const autre = sourceDefinition(MEDIAS)
 
 		expect(JSON.stringify(autre.lignes)).toBe(JSON.stringify(lignes))
 		expect([...autre.motsDePasse]).toEqual([...definition.motsDePasse])
@@ -118,7 +118,7 @@ describe('La fausse base Strapi : ses données', () => {
 	})
 
 	test('chaque ligne n’a que des colonnes de sa table, et chaque identifiant est unique', () => {
-		for (const table of NOMS_DES_TABLES) {
+		for (const table of TABLE_NAMES) {
 			const colonnes = TABLES[table].map(colonne => colonne.nom)
 			for (const ligne of lignes[table]) for (const nom of Object.keys(ligne)) expect(colonnes).toContain(nom)
 			expect(new Set(idsDe(table)).size).toBe(lignes[table].length)
@@ -139,13 +139,13 @@ describe('La fausse base Strapi : ses données', () => {
 		for (const reseau of lignes.components_makeupartists_networks)
 			if (reseau.phone !== null) expect(String(reseau.phone)).toMatch(/^06 39 98 \d\d \d\d$/)
 		expect(texte).not.toMatch(/my-makeup\.fr|andy-cinquin|r2\.dev|cloudflarestorage/)
-		for (const compte of COMPTES_DE_FIXTURE) expect(texte).not.toContain(compte.motDePasse)
+		for (const compte of FIXTURE_ACCOUNTS) expect(texte).not.toContain(compte.motDePasse)
 	})
 
 	test('les trois comptes de fixture existent, avec leur fournisseur, leur email et un mot de passe', () => {
-		expect(COMPTES_DE_FIXTURE).toHaveLength(3)
-		expect(COMPTES_DE_FIXTURE.map(compte => compte.provider).sort()).toEqual(['google', 'local', 'local'])
-		for (const fixture of COMPTES_DE_FIXTURE) {
+		expect(FIXTURE_ACCOUNTS).toHaveLength(3)
+		expect(FIXTURE_ACCOUNTS.map(compte => compte.provider).sort()).toEqual(['google', 'local', 'local'])
+		for (const fixture of FIXTURE_ACCOUNTS) {
 			const compte = lignes.up_users.find(ligne => nombre(ligne.id) === fixture.strapiId)
 			expect(compte?.email).toBe(fixture.email)
 			expect(compte?.provider).toBe(fixture.provider)
@@ -153,10 +153,10 @@ describe('La fausse base Strapi : ses données', () => {
 			expect(fixture.motDePasse.length).toBeGreaterThanOrEqual(8)
 		}
 		// The other passwords are not those of a fixture: a fixture opens one account only.
-		const autres = [...definition.motsDePasse].filter(([id]) => !COMPTES_DE_FIXTURE.some(f => f.strapiId === id))
+		const autres = [...definition.motsDePasse].filter(([id]) => !FIXTURE_ACCOUNTS.some(f => f.strapiId === id))
 		expect(autres).toHaveLength(6)
 		for (const [, motDePasse] of autres)
-			expect(COMPTES_DE_FIXTURE.map(compte => compte.motDePasse)).not.toContain(motDePasse)
+			expect(FIXTURE_ACCOUNTS.map(compte => compte.motDePasse)).not.toContain(motDePasse)
 	})
 
 	test('chaque lien désigne une ligne qui existe, sauf les liens de fichier vers l’entrée disparue', () => {
@@ -169,10 +169,10 @@ describe('La fausse base Strapi : ses données', () => {
 		const fichiers = new Set(idsDe('files'))
 		for (const lien of lignes.files_related_morphs) {
 			expect(fichiers.has(nombre(lien.file_id))).toBe(true)
-			expect(lien.related_type).toBe(TYPE_PROFIL)
-			expect(profils.has(nombre(lien.related_id)) || nombre(lien.related_id) === ENTREE_DISPARUE).toBe(true)
+			expect(lien.related_type).toBe(TYPE_PROFILE)
+			expect(profils.has(nombre(lien.related_id)) || nombre(lien.related_id) === MISSING_ENTRY).toBe(true)
 		}
-		expect(profils.has(ENTREE_DISPARUE)).toBe(false)
+		expect(profils.has(MISSING_ENTRY)).toBe(false)
 		for (const lien of lignes.makeup_artistes_components) expect(profils.has(nombre(lien.entity_id))).toBe(true)
 	})
 
@@ -180,9 +180,9 @@ describe('La fausse base Strapi : ses données', () => {
 		const relies = new Set(lignes.makeup_artistes_user_links.map(lien => nombre(lien.makeup_artiste_id)))
 		const sansCompte = idsDe('makeup_artistes').filter(id => !relies.has(id))
 
-		expect(sansCompte.sort((a, b) => a - b)).toEqual([...PROFILS_SANS_PROPRIETAIRE])
-		const schema = readFileSync(path.join(RACINE, 'docs/migration/SCHEMA.md'), 'utf8')
-		expect(schema).toContain(`Identifiants (\`makeup_artistes.id\`) : ${PROFILS_SANS_PROPRIETAIRE.join(', ')}.`)
+		expect(sansCompte.sort((a, b) => a - b)).toEqual([...PROFILES_WITHOUT_OWNER])
+		const schema = readFileSync(path.join(ROOT, 'docs/migration/SCHEMA.md'), 'utf8')
+		expect(schema).toContain(`Identifiants (\`makeup_artistes.id\`) : ${PROFILES_WITHOUT_OWNER.join(', ')}.`)
 	})
 
 	test('l’adresse d’un fichier est celle du stockage, suivie de la clé de son objet, qui finit par hash et extension', () => {
@@ -192,7 +192,7 @@ describe('La fausse base Strapi : ses données', () => {
 			expect(url).toEndWith(`/${fichier.hash}${fichier.ext}`)
 			expect(String(fichier.hash)).toMatch(/_[0-9a-f]{10}$/)
 		}
-		expect(() => definitionDeLaSource(`${MEDIAS}/`)).toThrow('sans « / » final')
+		expect(() => sourceDefinition(`${MEDIAS}/`)).toThrow('sans « / » final')
 	})
 
 	test('la taille d’un fichier est celle de son objet, en kilo-octets comme les écrit Strapi', () => {
@@ -206,16 +206,16 @@ describe('La fausse base Strapi : ses données', () => {
 
 describe('La fausse base Strapi : son inventaire', () => {
 	test('l’inventaire de la définition est le tableau du document, ligne pour ligne', () => {
-		const calcule = inventaire(etatDeLaDefinition())
+		const calcule = inventory(etatDeLaDefinition())
 		const document = tableauDuDocument()
 
 		expect(document).toEqual(calcule)
-		// Printed by `bun run banc:source` in the same form.
-		expect(inventaireEnMarkdown(calcule).split('\n')).toHaveLength(calcule.length + 2)
+		// Printed by `bun run bench:source` in the same form.
+		expect(inventoryInMarkdown(calcule).split('\n')).toHaveLength(calcule.length + 2)
 	})
 
 	test('chaque cas de l’instantané que nomme le ticket est porté au moins une fois', () => {
-		const parCas = new Map(inventaire(etatDeLaDefinition()).map(ligne => [ligne.cas, ligne.nombre]))
+		const parCas = new Map(inventory(etatDeLaDefinition()).map(ligne => [ligne.cas, ligne.nombre]))
 		for (const cas of [
 			'Comptes avec un hash bcrypt complet',
 			'Comptes `google`',
@@ -233,31 +233,31 @@ describe('La fausse base Strapi : son inventaire', () => {
 
 	test('l’inventaire voit ce qui change : un objet de moins, un compte sans hash', () => {
 		const etat = etatDeLaDefinition()
-		const parCas = (e: EtatDeLaSource) => new Map(inventaire(e).map(ligne => [ligne.cas, ligne.nombre]))
+		const parCas = (e: SourceState) => new Map(inventory(e).map(ligne => [ligne.cas, ligne.nombre]))
 		const [premiere] = definition.objets
 		const sansObjet = { ...etat, objets: new Set([...etat.objets].filter(cle => cle !== premiere?.cle)) }
 		const sansHash = {
 			...etat,
 			lignes: {
 				...etat.lignes,
-				up_users: etat.lignes.up_users.map((c): Ligne => (nombre(c.id) === 1 ? { ...c, password: '$2a$10$court' } : c)),
+				up_users: etat.lignes.up_users.map((c): Line => (nombre(c.id) === 1 ? { ...c, password: '$2a$10$court' } : c)),
 			},
 		}
 
 		expect(parCas(sansObjet).get('… dont l’objet manque dans le stockage')).toBe(2)
 		expect(parCas(sansHash).get('Comptes avec un hash bcrypt complet')).toBe(8)
-		expect(HASH_BCRYPT_COMPLET.test('$2a$10$court')).toBe(false)
+		expect(HASH_BCRYPT_FULL.test('$2a$10$court')).toBe(false)
 	})
 
 	test('chaque cas a son nombre réel, ou « — », et un nom unique', () => {
-		expect(new Set(CAS.map(([, cas]) => cas)).size).toBe(CAS.length)
-		for (const [, , reel] of CAS) expect(reel).toMatch(/^(\d+|—)$/)
+		expect(new Set(CASE.map(([, cas]) => cas)).size).toBe(CASE.length)
+		for (const [, , reel] of CASE) expect(reel).toMatch(/^(\d+|—)$/)
 	})
 })
 
 describe('La fausse base Strapi : ses images', () => {
 	test('un PNG d’une couleur, lisible : signature, en-tête, sommes de contrôle, pixels', () => {
-		const png = pngUni(3, 2, { rouge: 10, vert: 20, bleu: 30 })
+		const png = pngPlain(3, 2, { rouge: 10, vert: 20, bleu: 30 })
 		const vue = new DataView(png.buffer, png.byteOffset, png.byteLength)
 
 		expect([...png.subarray(0, 8)]).toEqual([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
@@ -270,17 +270,17 @@ describe('La fausse base Strapi : ses images', () => {
 	})
 
 	test('une image de plus de 64 Kio passe en plusieurs blocs, lus par zlib', () => {
-		const png = pngUni(200, 120, { rouge: 1, vert: 2, bleu: 3 })
+		const png = pngPlain(200, 120, { rouge: 1, vert: 2, bleu: 3 })
 		const longueur = new DataView(png.buffer, png.byteOffset).getUint32(33)
 
 		expect(inflateSync(png.subarray(41, 41 + longueur))).toHaveLength(120 * (1 + 3 * 200))
-		expect(Buffer.from(pngUni(200, 120, { rouge: 1, vert: 2, bleu: 3 })).equals(Buffer.from(png))).toBe(true)
+		expect(Buffer.from(pngPlain(200, 120, { rouge: 1, vert: 2, bleu: 3 })).equals(Buffer.from(png))).toBe(true)
 	})
 })
 
 describe('La fausse base Strapi : elle n’existe que sur le banc', () => {
 	test('l’environnement du banc donne la source, son rôle et l’adresse de ses photos', () => {
-		const source = sourceDuBanc(BANC)
+		const source = benchSource(BANC)
 
 		expect(source.base).toBe('strapi_source_test')
 		expect(source.role).toBe('lecture_strapi')
@@ -290,15 +290,15 @@ describe('La fausse base Strapi : elle n’existe que sur le banc', () => {
 	})
 
 	test('sans banc réglé, rien n’est ouvert, et le message dit quoi démarrer', () => {
-		expect(() => sourceDuBanc({})).toThrow(BancRefuse)
-		expect(() => sourceDuBanc({})).toThrow('bun run banc:up')
+		expect(() => benchSource({})).toThrow(RefusedBench)
+		expect(() => benchSource({})).toThrow('bun run bench:up')
 	})
 
 	test('une variable qui n’est pas celle de l’instance est refusée, sans recopier sa valeur', () => {
 		const autre = 'postgres://lecture_strapi:mot-de-passe-factice-de-lecture@127.0.0.1:5443/autre_test'
 		let message = ''
 		try {
-			sourceDuBanc({ ...BANC, STRAPI_SOURCE_URI: autre })
+			benchSource({ ...BANC, STRAPI_SOURCE_URI: autre })
 		} catch (erreur) {
 			message = erreur instanceof Error ? erreur.message : ''
 		}
@@ -306,14 +306,14 @@ describe('La fausse base Strapi : elle n’existe que sur le banc', () => {
 		expect(message).toStartWith('STRAPI_SOURCE_URI ne désigne pas le banc de test')
 		expect(message).not.toContain('mot-de-passe-factice')
 		// The bench of another instance is another bench.
-		expect(() => sourceDuBanc({ ...BANC, BANC_INSTANCE: 'voisin', BANC_DECALAGE: '20' })).toThrow(BancRefuse)
+		expect(() => benchSource({ ...BANC, BENCH_INSTANCE: 'voisin', BENCH_OFFSET: '20' })).toThrow(RefusedBench)
 	})
 
 	test('même écrite dans .env.test, une source qui serait la base de l’application, ou lue par son propriétaire, est refusée', () => {
 		/** What happens if .env.test itself said `uri`: the variables and the instance agree. */
 		const siLeBancDisait = (uri: string) => () => {
 			const environnement = { ...BANC, STRAPI_SOURCE_URI: uri }
-			return sourceDuBanc(environnement, environnement)
+			return benchSource(environnement, environnement)
 		}
 		const lecture = 'lecture_strapi:mot-de-passe-factice-de-lecture'
 
@@ -326,8 +326,8 @@ describe('La fausse base Strapi : elle n’existe que sur le banc', () => {
 			'mot de passe factice'
 		)
 		// The guard of the tests comes first: a remote source, or one outside « _test », is never opened.
-		expect(siLeBancDisait(`postgres://${lecture}@db.example.test:5443/strapi_source_test`)).toThrow(EnvironnementRefuse)
-		expect(siLeBancDisait(`postgres://${lecture}@127.0.0.1:5443/strapi_source`)).toThrow(EnvironnementRefuse)
+		expect(siLeBancDisait(`postgres://${lecture}@db.example.test:5443/strapi_source_test`)).toThrow(RefusedEnvironment)
+		expect(siLeBancDisait(`postgres://${lecture}@127.0.0.1:5443/strapi_source`)).toThrow(RefusedEnvironment)
 	})
 })
 
@@ -339,7 +339,7 @@ describe('Le retrait du droit de créer un grand objet est vérifié, pas suppos
 			return Promise.resolve([{ permis: parametres[1] === 'pg_catalog.lo_creat(integer)' }])
 		}
 
-		const echec = await exigerLaRevocation(executer, 'role_fictif').catch((erreur: unknown) => erreur)
+		const echec = await requireRevocation(executer, 'role_fictif').catch((erreur: unknown) => erreur)
 
 		expect(echec).toBeInstanceOf(Error)
 		expect((echec as Error).message).toContain('peut encore créer des grands objets')
@@ -352,6 +352,6 @@ describe('Le retrait du droit de créer un grand objet est vérifié, pas suppos
 	})
 
 	test('quand le rôle n’a plus aucun de ces droits, rien ne se passe', async () => {
-		await expect(exigerLaRevocation(() => Promise.resolve([{ permis: false }]), 'role_fictif')).resolves.toBeUndefined()
+		await expect(requireRevocation(() => Promise.resolve([{ permis: false }]), 'role_fictif')).resolves.toBeUndefined()
 	})
 })

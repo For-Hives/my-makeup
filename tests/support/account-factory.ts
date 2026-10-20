@@ -20,22 +20,22 @@ import { randomBytes, randomInt, randomUUID } from 'node:crypto'
 import type { AuthCollectionSlug, Payload, RequestContext, RequiredDataFromCollectionSlug } from 'payload'
 import { NO_PROFILE_CONTEXT } from '../../src/collections/Profiles'
 import type { Variables } from './bench'
-import { exigerBanc, exigerConnexionDuBanc, payloadDeTest } from './payload-test'
-import { ouvrirSession, ouvrirSessionSansMotDePasse, type Session } from './session'
+import { requireBench, requireBenchSignIn, testPayload } from './payload-test'
+import { openSession, openSessionWithoutPassword, type Session } from './session'
 
 /** Reserved for tests (RFC 6761): no mail can ever be delivered to it. */
-export const DOMAINE_DES_COMPTES = 'example.test'
+export const ACCOUNT_DOMAIN = 'example.test'
 
 /** How an account logged in on the old site: what `pros.legacyProvider` holds. */
-export type FournisseurHerite = 'local' | 'google' | 'facebook'
+export type LegacyProvider = 'local' | 'google' | 'facebook'
 
 /**
  * An account the old site brings, as the import writes it (plan 01 §2.4, M1; ticket 025):
  * confirmed, with its provider and its id on the old site, a password drawn at random that nobody
  * knows — not even a test that chose its own — and the bcrypt hash of the old site when it had one.
  */
-export interface Reprise {
-	fournisseur: FournisseurHerite
+export interface Retry {
+	fournisseur: LegacyProvider
 	/** It brings a bcrypt hash: always the hash of `MOT_DE_PASSE_HERITE_DE_FIXTURE`, never a real one. */
 	hashHerite: boolean
 }
@@ -46,60 +46,60 @@ export interface Reprise {
  * - `'sans-mot-de-passe'`: without a password, the way a login by Google opens one;
  * - `false`: never, the account cannot log in.
  */
-export type Connexion = 'sans-mot-de-passe' | false
+export type SignIn = 'sans-mot-de-passe' | false
 
 /** One type of account: the collection it lives in, and what it holds besides its address and its password. */
-export interface DeclarationDeCompte<Slug extends AuthCollectionSlug> {
+export interface AccountDeclaration<Slug extends AuthCollectionSlug> {
 	collection: Slug
 	donnees: () => Omit<RequiredDataFromCollectionSlug<Slug>, 'email' | 'password'>
 	/** Handed to Payload with the creation (`context`): what the hooks of the collection read. */
 	contexte?: RequestContext
 	/** The account comes from the old site. */
-	reprise?: Reprise
-	connexion?: Connexion
+	reprise?: Retry
+	connexion?: SignIn
 }
 
-const declarer = <Slug extends AuthCollectionSlug>(declaration: DeclarationDeCompte<Slug>) => declaration
+const declare = <Slug extends AuthCollectionSlug>(declaration: AccountDeclaration<Slug>) => declaration
 
 /**
  * A type of account that cannot log in (an address not confirmed yet, a blocked account…): no
  * session is opened, and the account comes back with `session: null`.
  */
-const declarerSansSession = <Slug extends AuthCollectionSlug>(declaration: DeclarationDeCompte<Slug>) => ({
+const declareWithoutSession = <Slug extends AuthCollectionSlug>(declaration: AccountDeclaration<Slug>) => ({
 	...declaration,
 	connexion: false as const,
 })
 
 /** A type of account that logs in without a password (by Google): its session is opened without one. */
-const declarerSansMotDePasse = <Slug extends AuthCollectionSlug>(declaration: DeclarationDeCompte<Slug>) => ({
+const declareWithoutPassword = <Slug extends AuthCollectionSlug>(declaration: AccountDeclaration<Slug>) => ({
 	...declaration,
 	connexion: 'sans-mot-de-passe' as const,
 })
 
 /** A made-up display name, different at each call: two accounts made side by side never share one. */
-const nomFictif = (prefixe: string) => `${prefixe} ${randomUUID().slice(0, 8)}`
+const fakeName = (prefixe: string) => `${prefixe} ${randomUUID().slice(0, 8)}`
 
 /**
  * The types of account the factory knows. A collection of accounts adds its own here, one
  * declaration each: nothing else changes in this file. Each type also has its account in the
- * fixed set of the bench (tests/fixtures/comptes.ts), which the compiler asks for.
+ * fixed set of the bench (tests/fixtures/accounts.ts), which the compiler asks for.
  */
-export const TYPES_DE_COMPTE = {
+export const ACCOUNT_TYPES = {
 	/** An account of the admin panel with the role `admin`: it may do everything. */
-	admin: declarer({ collection: 'admins', donnees: () => ({ role: 'admin' as const }) }),
+	admin: declare({ collection: 'admins', donnees: () => ({ role: 'admin' as const }) }),
 	/** An account of the admin panel with the role `editor`: articles and talents, and its own account. */
-	redaction: declarer({ collection: 'admins', donnees: () => ({ role: 'editor' as const }) }),
+	redaction: declare({ collection: 'admins', donnees: () => ({ role: 'editor' as const }) }),
 	/** The account of a makeup artist, address confirmed, with its empty profile. Call it twice for « A » and « B ». */
-	maquilleuse: declarer({ collection: 'pros', donnees: () => ({ name: nomFictif('Maquilleuse'), _verified: true }) }),
+	maquilleuse: declare({ collection: 'pros', donnees: () => ({ name: fakeName('Maquilleuse'), _verified: true }) }),
 	/** The account of a makeup artist who has not confirmed her address: it cannot log in. */
-	'maquilleuse-non-verifiee': declarerSansSession({
+	'maquilleuse-non-verifiee': declareWithoutSession({
 		collection: 'pros',
-		donnees: () => ({ name: nomFictif('Non vérifiée'), _verified: false }),
+		donnees: () => ({ name: fakeName('Non vérifiée'), _verified: false }),
 	}),
 	/** The account of a makeup artist without a profile, as some accounts of the old site come. */
-	'maquilleuse-sans-profil': declarer({
+	'maquilleuse-sans-profil': declare({
 		collection: 'pros',
-		donnees: () => ({ name: nomFictif('Sans profil'), _verified: true }),
+		donnees: () => ({ name: fakeName('Sans profil'), _verified: true }),
 		contexte: NO_PROFILE_CONTEXT,
 	}),
 	/**
@@ -107,56 +107,56 @@ export const TYPES_DE_COMPTE = {
 	 * the login turns her away (ticket 089). Her password is the drawn one, so that a test that
 	 * gives its own (`motDePasse`) can try the right password on her.
 	 */
-	'maquilleuse-bloquee': declarerSansSession({
+	'maquilleuse-bloquee': declareWithoutSession({
 		collection: 'pros',
-		donnees: () => ({ name: nomFictif('Bloquée'), _verified: true, blocked: true }),
+		donnees: () => ({ name: fakeName('Bloquée'), _verified: true, blocked: true }),
 	}),
 	/**
 	 * An account of the old site with its bcrypt hash, and its profile. She logs in with her old
 	 * password through the legacy path of the site (ticket 087): until then, no session.
 	 */
-	'reprise-avec-hash': declarerSansSession({
+	'reprise-avec-hash': declareWithoutSession({
 		collection: 'pros',
-		donnees: () => ({ name: nomFictif('Reprise'), _verified: true }),
+		donnees: () => ({ name: fakeName('Reprise'), _verified: true }),
 		reprise: { fournisseur: 'local', hashHerite: true },
 	}),
 	/** An old Google account without a password, and its profile: she logs in by Google. */
-	'reprise-google': declarerSansMotDePasse({
+	'reprise-google': declareWithoutPassword({
 		collection: 'pros',
-		donnees: () => ({ name: nomFictif('Reprise Google'), _verified: true }),
+		donnees: () => ({ name: fakeName('Reprise Google'), _verified: true }),
 		reprise: { fournisseur: 'google', hashHerite: false },
 	}),
 	/** An old Google account that also has a bcrypt hash, as one real account has: by Google, or by her old password. */
-	'reprise-google-avec-hash': declarerSansMotDePasse({
+	'reprise-google-avec-hash': declareWithoutPassword({
 		collection: 'pros',
-		donnees: () => ({ name: nomFictif('Reprise Google avec hash'), _verified: true }),
+		donnees: () => ({ name: fakeName('Reprise Google avec hash'), _verified: true }),
 		reprise: { fournisseur: 'google', hashHerite: true },
 	}),
 	/**
 	 * An old Facebook account, and its profile. Facebook is gone and she has no password: she cannot
 	 * log in until she sets one through « mot de passe oublié » (ticket 093).
 	 */
-	'reprise-facebook': declarerSansSession({
+	'reprise-facebook': declareWithoutSession({
 		collection: 'pros',
-		donnees: () => ({ name: nomFictif('Reprise Facebook'), _verified: true }),
+		donnees: () => ({ name: fakeName('Reprise Facebook'), _verified: true }),
 		reprise: { fournisseur: 'facebook', hashHerite: false },
 	}),
 }
 
-export type TypeDeCompte = keyof typeof TYPES_DE_COMPTE
+export type AccountType = keyof typeof ACCOUNT_TYPES
 
 /** `null` for a type of account that cannot log in, a session for every other one. */
-export type SessionDu<Type extends TypeDeCompte> = Type extends unknown
-	? (typeof TYPES_DE_COMPTE)[Type] extends { connexion: false }
+export type SessionOf<Type extends AccountType> = Type extends unknown
+	? (typeof ACCOUNT_TYPES)[Type] extends { connexion: false }
 		? null
 		: Session
 	: never
 
 /** The types of account that log in: their session is never `null`. */
-export type TypeAvecSession = { [Type in TypeDeCompte]: SessionDu<Type> extends null ? never : Type }[TypeDeCompte]
+export type TypeWithSession = { [Type in AccountType]: SessionOf<Type> extends null ? never : Type }[AccountType]
 
 /** An account made by the factory, without its session: what the fixed set of the bench holds. */
-export interface CompteFixe<Type extends TypeDeCompte = TypeDeCompte> {
+export interface FixedAccount<Type extends AccountType = AccountType> {
 	type: Type
 	collection: AuthCollectionSlug
 	id: number | string
@@ -164,14 +164,14 @@ export interface CompteFixe<Type extends TypeDeCompte = TypeDeCompte> {
 	email: string
 }
 
-export interface CompteDeTest<Type extends TypeDeCompte = TypeDeCompte> extends CompteFixe<Type> {
+export interface TestAccount<Type extends AccountType = AccountType> extends FixedAccount<Type> {
 	/** Unique: two calls never give the same account. */
 	email: string
-	session: SessionDu<Type>
+	session: SessionOf<Type>
 }
 
 /** What a test may replace. Nothing to give in an integration test: the defaults are the bench. */
-export interface Dependances {
+export interface Dependencies {
 	payload?: () => Promise<Payload>
 	/** The password of an account that logs in by password. An account of the old site never gets it. */
 	motDePasse?: () => string
@@ -179,7 +179,7 @@ export interface Dependances {
 }
 
 /** What a caller may fix in an account: the fixed set of the bench gives the same ones every time. */
-export interface ValeursDuCompte {
+export interface AccountValues {
 	/** In `@example.test`, and nowhere else. */
 	email: string
 	/** The display name of a makeup artist. Without it, a made-up one. */
@@ -188,30 +188,30 @@ export interface ValeursDuCompte {
 	strapiId?: number
 }
 
-export const adresseDeTest = (type: TypeDeCompte): string => `${type}-${randomUUID()}@${DOMAINE_DES_COMPTES}`
+export const testUrl = (type: AccountType): string => `${type}-${randomUUID()}@${ACCOUNT_DOMAIN}`
 
 /** 32 characters drawn at random: never typed, never shown. */
-export const motDePasseAleatoire = (): string => randomBytes(24).toString('base64url')
+export const randomPassword = (): string => randomBytes(24).toString('base64url')
 
 /**
  * The id on the old site of an account a test makes: from 1 000 000 up, far above the ids of the
  * fake Strapi source and of the fixed set of the bench, so that a test never takes one of theirs.
  */
-export const strapiIdDeTest = (): number => randomInt(1_000_000, 2_000_000_000)
+export const testStrapiId = (): number => randomInt(1_000_000, 2_000_000_000)
 
 /**
  * The password of the old site behind every fixture hash. Fictional and public: it opens nothing
  * but an account of the bench, through the legacy path of the site.
  */
-export const MOT_DE_PASSE_HERITE_DE_FIXTURE = 'fixture-ancien-site-du-banc'
+export const FIXTURE_LEGACY_PASSWORD = 'fixture-ancien-site-du-banc'
 
 /**
  * The salt of the fixture hash. Fixed, so that the hash is the same at every creation, on every
  * bench; version `2a` and cost 10, like every hash of the old site (plan 01 §2.4).
  */
-export const SEL_BCRYPT_DE_FIXTURE = '$2a$10$FabriqueDeComptesDuBa.'
+export const FIXTURE_SALT_BCRYPT = '$2a$10$FabriqueDeComptesDuBa.'
 
-let hashDeFixture: Promise<string> | undefined
+let fixtureHash: Promise<string> | undefined
 
 /**
  * The fixture hash, worked out by the PostgreSQL of the bench with pgcrypto, as the fake Strapi
@@ -219,15 +219,15 @@ let hashDeFixture: Promise<string> | undefined
  * inside one transaction, which is rolled back: the bench database keeps nothing of it. Worked out
  * once per process.
  */
-function hashHeriteDeFixture(payload: Payload): Promise<string> {
-	hashDeFixture ??= calculerLeHashDeFixture(payload).catch((erreur: unknown) => {
-		hashDeFixture = undefined
+function fixtureHashLegacy(payload: Payload): Promise<string> {
+	fixtureHash ??= computeFixtureHash(payload).catch((erreur: unknown) => {
+		fixtureHash = undefined
 		throw erreur
 	})
-	return hashDeFixture
+	return fixtureHash
 }
 
-async function calculerLeHashDeFixture(payload: Payload): Promise<string> {
+async function computeFixtureHash(payload: Payload): Promise<string> {
 	const client = await payload.db.pool.connect()
 	try {
 		await client.query('BEGIN')
@@ -240,18 +240,18 @@ async function calculerLeHashDeFixture(payload: Payload): Promise<string> {
 		)
 		const schema = extensions[0]?.schema ?? 'fabrique_bcrypt'
 		const { rows } = await client.query<{ hash: string }>(`SELECT ${schema}.crypt($1, $2) AS hash`, [
-			MOT_DE_PASSE_HERITE_DE_FIXTURE,
-			SEL_BCRYPT_DE_FIXTURE,
+			FIXTURE_LEGACY_PASSWORD,
+			FIXTURE_SALT_BCRYPT,
 		])
 		const hash = rows[0]?.hash
 		if (!hash) throw new Error('PostgreSQL n’a rendu aucun hash bcrypt pour le compte de fixture.')
 		return hash
 	} finally {
-		const annule = await client.query('ROLLBACK').then(
+		const canceled = await client.query('ROLLBACK').then(
 			() => true,
 			() => false
 		)
-		client.release(!annule)
+		client.release(!canceled)
 	}
 }
 
@@ -259,86 +259,91 @@ async function calculerLeHashDeFixture(payload: Payload): Promise<string> {
  * Writes an account of this type in the bench database. The password goes back to this module
  * only: it opens the session, then is forgotten.
  */
-async function ecrireLeCompte(
+async function writeAccount(
 	payload: Payload,
-	type: TypeDeCompte,
-	valeurs: ValeursDuCompte,
+	type: AccountType,
+	valeurs: AccountValues,
 	tirer: () => string
 ): Promise<{ id: number | string; motDePasse: string }> {
-	if (!valeurs.email.endsWith(`@${DOMAINE_DES_COMPTES}`))
-		throw new Error(`Un compte de test a une adresse en @${DOMAINE_DES_COMPTES}, et nulle part ailleurs.`)
-	const { collection, donnees, contexte, reprise }: DeclarationDeCompte<AuthCollectionSlug> = TYPES_DE_COMPTE[type]
+	if (!valeurs.email.endsWith(`@${ACCOUNT_DOMAIN}`))
+		throw new Error(`Un compte de test a une adresse en @${ACCOUNT_DOMAIN}, et nulle part ailleurs.`)
+	const {
+		collection,
+		donnees: data,
+		contexte: context,
+		reprise: retry,
+	}: AccountDeclaration<AuthCollectionSlug> = ACCOUNT_TYPES[type]
 	// An account of the old site has a password nobody knows, as the import gives it.
-	const motDePasse = reprise ? motDePasseAleatoire() : tirer()
-	const heritage = reprise
+	const password = retry ? randomPassword() : tirer()
+	const heritage = retry
 		? {
-				legacyProvider: reprise.fournisseur,
-				strapiId: valeurs.strapiId ?? strapiIdDeTest(),
-				...(reprise.hashHerite ? { legacyBcrypt: await hashHeriteDeFixture(payload) } : {}),
+				legacyProvider: retry.fournisseur,
+				strapiId: valeurs.strapiId ?? testStrapiId(),
+				...(retry.hashHerite ? { legacyBcrypt: await fixtureHashLegacy(payload) } : {}),
 			}
 		: {}
 	// One call for every collection of accounts: the compiler has checked each declaration already.
-	const creer = payload.create.bind(payload) as unknown as (options: {
+	const create = payload.create.bind(payload) as unknown as (options: {
 		collection: AuthCollectionSlug
 		data: Record<string, unknown>
 		context?: RequestContext
 		disableVerificationEmail: boolean
 	}) => Promise<{ id: number | string }>
-	const compte = await creer({
+	const account = await create({
 		collection,
 		data: {
-			...donnees(),
+			...data(),
 			...(valeurs.nom === undefined ? {} : { name: valeurs.nom }),
 			...heritage,
 			email: valeurs.email,
-			password: motDePasse,
+			password: password,
 		},
-		context: contexte,
+		context: context,
 		disableVerificationEmail: true,
 	})
-	return { id: compte.id, motDePasse }
+	return { id: account.id, motDePasse: password }
 }
 
 /**
  * Creates an account of this type in the bench database and opens its session. No mail leaves:
  * the confirmation email Payload would send for a new makeup artist is not sent.
  */
-export async function creerCompte<Type extends TypeDeCompte = 'admin'>(
+export async function createAccount<Type extends AccountType = 'admin'>(
 	type: Type = 'admin' as Type,
-	dependances: Dependances = {}
-): Promise<CompteDeTest<Type>> {
-	const { payload: obtenirPayload = payloadDeTest, motDePasse: tirer = motDePasseAleatoire, variables } = dependances
+	dependances: Dependencies = {}
+): Promise<TestAccount<Type>> {
+	const { payload: getPayload = testPayload, motDePasse: draw = randomPassword, variables } = dependances
 	// Twice, and both before the first write: the environment before Payload is even loaded,
 	// then the database Payload is really connected to.
-	exigerBanc(variables)
-	const payload = await obtenirPayload()
-	exigerConnexionDuBanc(payload, variables)
+	requireBench(variables)
+	const payload = await getPayload()
+	requireBenchSignIn(payload, variables)
 
-	const { collection, connexion }: DeclarationDeCompte<AuthCollectionSlug> = TYPES_DE_COMPTE[type]
-	const email = adresseDeTest(type)
-	const { id, motDePasse } = await ecrireLeCompte(payload, type, { email }, tirer)
+	const { collection, connexion: signIn }: AccountDeclaration<AuthCollectionSlug> = ACCOUNT_TYPES[type]
+	const email = testUrl(type)
+	const { id, motDePasse: password } = await writeAccount(payload, type, { email }, draw)
 	let session: Session | null = null
-	if (connexion === 'sans-mot-de-passe')
-		session = await ouvrirSessionSansMotDePasse(payload, { collection, id }, variables)
-	else if (connexion !== false) session = await ouvrirSession(payload, { collection, email, motDePasse }, variables)
-	return { type, collection, id, email, session: session as SessionDu<Type> }
+	if (signIn === 'sans-mot-de-passe') session = await openSessionWithoutPassword(payload, { collection, id }, variables)
+	else if (signIn !== false)
+		session = await openSession(payload, { collection, email, motDePasse: password }, variables)
+	return { type, collection, id, email, session: session as SessionOf<Type> }
 }
 
 /**
  * Creates an account of this type with the values the caller fixes, and opens no session: for a
- * set of accounts that must be the same every time (tests/fixtures/comptes.ts). Its password is
+ * set of accounts that must be the same every time (tests/fixtures/accounts.ts). Its password is
  * drawn and forgotten at once.
  */
-export async function creerCompteFixe<Type extends TypeDeCompte>(
+export async function createFixedAccount<Type extends AccountType>(
 	type: Type,
-	valeurs: ValeursDuCompte,
-	dependances: Omit<Dependances, 'motDePasse'> = {}
-): Promise<CompteFixe<Type>> {
-	const { payload: obtenirPayload = payloadDeTest, variables } = dependances
-	exigerBanc(variables)
-	const payload = await obtenirPayload()
-	exigerConnexionDuBanc(payload, variables)
+	valeurs: AccountValues,
+	dependances: Omit<Dependencies, 'motDePasse'> = {}
+): Promise<FixedAccount<Type>> {
+	const { payload: getPayload = testPayload, variables } = dependances
+	requireBench(variables)
+	const payload = await getPayload()
+	requireBenchSignIn(payload, variables)
 
-	const { id } = await ecrireLeCompte(payload, type, valeurs, motDePasseAleatoire)
-	return { type, collection: TYPES_DE_COMPTE[type].collection, id, email: valeurs.email }
+	const { id } = await writeAccount(payload, type, valeurs, randomPassword)
+	return { type, collection: ACCOUNT_TYPES[type].collection, id, email: valeurs.email }
 }

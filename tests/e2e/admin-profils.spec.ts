@@ -1,9 +1,9 @@
 import { expect, test } from '@playwright/test'
 import { placeProfile, readDemoPhoto } from '../../src/demo-data/loading'
 import { DEMO_PROFILES, type DemoProfile } from '../../src/demo-data/profiles'
-import { creerCompte } from '../support/account-factory'
-import { sansLeReseauDuDehors } from '../support/offline'
-import { payloadDeTest } from '../support/payload-test'
+import { createAccount } from '../support/account-factory'
+import { withoutOutsideNetwork } from '../support/offline'
+import { testPayload } from '../support/payload-test'
 
 /**
  * E53 and E56 without the journal (plan 02 §7.4; tickets 165 and 166): the admin opens every
@@ -36,13 +36,13 @@ async function poserUnProfil(cle: string, suffixe: string) {
 		compte: { email: `essai-admin-${cle}-${suffixe}@example.test`, nom: `Essai Admin ${suffixe} ${cle}` },
 		photos: { principale: modele.photos.principale, galerie: [] },
 	}
-	const pose = await placeProfile(await payloadDeTest(), type, readDemoPhoto, false)
+	const pose = await placeProfile(await testPayload(), type, readDemoPhoto, false)
 	return { id: pose.profil, pro: pose.compte, slug: pose.slug }
 }
 
 /** Takes the profiles of a test away, with their accounts and photos. */
 async function retirer(suffixe: string): Promise<void> {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	const comptes = await payload.find({
 		collection: 'pros',
 		depth: 0,
@@ -60,7 +60,7 @@ async function retirer(suffixe: string): Promise<void> {
 
 /** The cookies of the session of a made-up admin. */
 async function sessionDAdmin() {
-	return (await creerCompte('admin')).session.cookies
+	return (await createAccount('admin')).session.cookies
 }
 
 const unSuffixe = () => `${Date.now().toString(36)}${Math.floor(Math.random() * 1000).toString(36)}`
@@ -70,7 +70,7 @@ test.describe('L’admin retrouve, corrige et masque un profil', () => {
 		test.setTimeout(180_000)
 		const suffixe = unSuffixe()
 		await context.addCookies(await sessionDAdmin())
-		await sansLeReseauDuDehors(context)
+		await withoutOutsideNetwork(context)
 		try {
 			// A reference profile (publishable), an empty one and one active but not publishable.
 			await Promise.all(['reference', 'vide', 'actif-non-publiable'].map(cle => poserUnProfil(cle, suffixe)))
@@ -125,7 +125,7 @@ test.describe('L’admin retrouve, corrige et masque un profil', () => {
 	}) => {
 		test.setTimeout(150_000)
 		const suffixe = unSuffixe()
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		await context.addCookies(await sessionDAdmin())
 		const profil = await poserUnProfil('reference', suffixe)
 		const slug = profil.slug

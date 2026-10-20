@@ -11,9 +11,9 @@ Le fichier se range dans `tests/unit/`, en `*.test.tsx`.
 ```tsx
 import { expect, test } from 'bun:test'
 import { Compteur } from '@/components/Compteur'
-import { ouvrirFenetre } from '../outils/dom-react'
+import { openWindow } from '../outils/dom-react'
 
-const fenetre = ouvrirFenetre()
+const fenetre = openWindow()
 
 test('un clic ajoute un', async () => {
 	const zone = await fenetre.monter(<Compteur />)
@@ -24,7 +24,7 @@ test('un clic ajoute un', async () => {
 })
 ```
 
-`ouvrirFenetre()` s'appelle en haut du fichier, ou en haut d'un `describe`. La fenêtre s'ouvre avant le premier test, ce qu'un test a rendu est retiré après lui, et la fenêtre est rendue après le dernier test.
+`openWindow()` s'appelle en haut du fichier, ou en haut d'un `describe`. La fenêtre s'ouvre avant le premier test, ce qu'un test a rendu est retiré après lui, et la fenêtre est rendue après le dernier test.
 
 `tests/unit/banc-composants.test.tsx` montre chaque geste sur de petits composants : un compteur, un champ, une liste, une case à cocher, un formulaire `react-hook-form`, un chargement.
 
@@ -57,17 +57,17 @@ Pendant les tests du fichier, ces noms sont ceux de la fenêtre, comme dans un n
 
 `window`, `document`, `navigator`, `Node`, `Element`, `HTMLElement`, `EventTarget`, `Event`, `CustomEvent`, `FormData`, `Blob`, `File`, `FileList`.
 
-- Un autre nom se demande à l'ouverture : `ouvrirFenetre({ noms: ['localStorage'] })`.
+- Un autre nom se demande à l'ouverture : `openWindow({ noms: ['localStorage'] })`.
 - `fetch`, `URL`, `AbortController` et les minuteurs restent ceux de bun.
 - En dehors de ces tests, il n'y a pas de `window`. Un fichier de test qui n'ouvre pas de fenêtre n'en a jamais : le code du serveur se teste comme sur le serveur.
 
 ## Règles
 
-- **Un seul `ouvrirFenetre()` par fichier**, ou un par `describe`. Un second pendant que le premier est ouvert est refusé.
+- **Un seul `openWindow()` par fichier**, ou un par `describe`. Un second pendant que le premier est ouvert est refusé.
 - **Les gestes s'appellent dans un test**, pas au chargement du fichier : la fenêtre n'existe pas encore.
 - **Aucun réseau.** `XMLHttpRequest` et `WebSocket` sont coupés dans la fenêtre. Un composant qui enregistre reçoit sa fonction d'envoi en propriété, et le test lui en passe une fausse.
 - **Aucun fichier d'environnement.** `bun run test:unit` passe `--no-env-file`. Pour un seul fichier, l'écrire soi-même : `bun test` seul lit le `.env`.
-- **Un nettoyage qui touche la page va dans un `afterEach`.** Un `afterAll` écrit après `ouvrirFenetre()` passe une fois la fenêtre rendue.
+- **Un nettoyage qui touche la page va dans un `afterEach`.** Un `afterAll` écrit après `openWindow()` passe une fois la fenêtre rendue.
 - **Les tests se lancent depuis la racine du dépôt** : c'est là que `bunfig.toml` charge le préchargement.
 
 ## Le préchargement
@@ -81,9 +81,9 @@ bun joue tous les fichiers de test d'un lancement dans un seul processus, et un 
 
 Le fichier qui les charge en premier dépend de l'ordre du lancement : la panne changerait de place d'une machine à l'autre.
 
-`tests/outils/precharge-react-dom.ts` les charge donc avant tout fichier de test (`bunfig.toml`, section `[test]`), dans une fenêtre rendue aussitôt.
+`tests/support/preload-react-dom.ts` les charge donc avant tout fichier de test (`bunfig.toml`, section `[test]`), dans une fenêtre rendue aussitôt.
 
-- Une bibliothèque qui lit `window` ou `document` à son chargement s'ajoute à la liste `MODULES_QUI_SONDENT_LE_DOM` de ce fichier, avec son test dans `tests/unit/banc-composants.test.tsx`.
+- Une bibliothèque qui lit `window` ou `document` à son chargement s'ajoute à la liste `MODULES_PROBE_DOM` de ce fichier, avec son test dans `tests/unit/banc-composants.test.tsx`.
 - Le message « le préchargement doit passer avant… » veut dire que `bun test` n'a pas lu `bunfig.toml` : il a été lancé ailleurs qu'à la racine du dépôt.
 - Chaque lancement de `bun test` paie ce préchargement, même pour une fonction pure : environ une demi-seconde, presque entièrement le chargement de jsdom. Mesuré le 14/10/2026 sur le poste de développement : un test de fonction pure passe de 10 ms à 480 ms.
 
@@ -92,7 +92,7 @@ Le fichier qui les charge en premier dépend de l'ordre du lancement : la panne 
 - Pas de mise en page : les tailles et les positions valent zéro, rien n'est visible ou caché par le CSS.
 - Pas de `matchMedia`, d'`IntersectionObserver` ni de `ResizeObserver`.
 - Pas de navigation : un clic sur un lien ne change pas de page.
-- jsdom ne livre pas ses types. `tests/outils/jsdom.d.ts` déclare les trois membres dont le banc se sert.
+- jsdom ne livre pas ses types. `tests/support/jsdom.d.ts` déclare les trois membres dont le banc se sert.
 
 ## Dépendance
 

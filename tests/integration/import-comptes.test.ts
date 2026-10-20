@@ -6,18 +6,18 @@ import path from 'node:path'
 import { SQL } from 'bun'
 import { NO_DECISION } from '../../scripts/migration/import/decisions'
 import { NO_PROFILE_CONTEXT } from '../../src/collections/Profiles'
-import { commandeDImport, DECISIONS_DU_BANC, FICHIER_DES_DECISIONS_DU_BANC, importerSurLeBanc } from '../support/import'
-import { compterLesMails, viderLeCapteur } from '../support/mailpit'
-import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { BENCH_DECISION_FILE, BENCH_DECISIONS, importCommand, importOnBench } from '../support/import'
+import { countMails, emptySink } from '../support/mailpit'
+import { emptyBase, testPayload } from '../support/payload-test'
 import {
+	benchSource,
 	COMPTES_DE_FIXTURE,
-	creerLaSourceStrapi,
-	effacerLaSourceStrapi,
-	empreinteDeLaSource,
-	sourceDuBanc,
+	createSourceStrapi,
+	eraseSourceStrapi,
+	sourceFingerprint,
 } from '../support/source-strapi'
-import { definitionDeLaSource } from '../support/source-strapi/data'
-import { HASH_BCRYPT_COMPLET } from '../support/source-strapi/inventory'
+import { sourceDefinition } from '../support/source-strapi/data'
+import { HASH_BCRYPT_FULL } from '../support/source-strapi/inventory'
 
 // The bench is shared by every checkout of the machine, and a suite under load runs several times slower than alone:
 // the default 5 s is passed by the heaviest tests of this file (ticket 225). The delay bounds a call that hangs, it
@@ -30,9 +30,9 @@ setDefaultTimeout(30_000)
  * until the table of decisions says which one is kept: on the bench, account 9 of 9 to 12.
  */
 
-const source = sourceDuBanc()
+const source = benchSource()
 
-const COMPTES_DE_LA_SOURCE = definitionDeLaSource(source.medias).lignes.up_users
+const COMPTES_DE_LA_SOURCE = sourceDefinition(source.medias).lignes.up_users
 
 /** The accounts the table of decisions of the bench sets aside: 10, 11 and 12 share the email of 9. */
 const ECARTES = [10, 11, 12]
@@ -61,7 +61,7 @@ const hashDeLaSource = (): Promise<Map<number, string | null>> =>
 
 /** Every account of the target, hidden fields included: the legacy hash, Payload's own hash. */
 async function comptesDeLaCible() {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	const { docs } = await payload.find({
 		collection: 'pros',
 		depth: 0,
@@ -74,19 +74,19 @@ async function comptesDeLaCible() {
 }
 
 beforeEach(async () => {
-	await viderLaBase()
-	await viderLeCapteur()
-	await creerLaSourceStrapi()
+	await emptyBase()
+	await emptySink()
+	await createSourceStrapi()
 })
 
 afterAll(async () => {
-	await viderLaBase()
-	await effacerLaSourceStrapi()
+	await emptyBase()
+	await eraseSourceStrapi()
 })
 
 describe('Critère 1 : autant de comptes qu’à la source, hors comptes écartés ; répartition par fournisseur identique (I39)', () => {
 	test('chaque compte repris porte son email en minuscules, son nom, son fournisseur, son blocage et ses dates', async () => {
-		const rapport = await importerSurLeBanc()
+		const rapport = await importOnBench()
 
 		const pris = COMPTES_DE_LA_SOURCE.filter(({ id }) => !ECARTES.includes(Number(id)))
 		const cible = await comptesDeLaCible()
@@ -108,7 +108,7 @@ describe('Critère 1 : autant de comptes qu’à la source, hors comptes écart�
 	})
 
 	test('la répartition par fournisseur de la cible est celle de la source, comptes écartés retirés', async () => {
-		const rapport = await importerSurLeBanc()
+		const rapport = await importOnBench()
 
 		const attendue: Record<string, number> = {}
 		for (const { id, provider } of COMPTES_DE_LA_SOURCE)
@@ -124,8 +124,8 @@ describe('Critère 1 : autant de comptes qu’à la source, hors comptes écart�
 	})
 
 	test('un compte arrive confirmé, sans session, avec un mot de passe que personne ne connaît, et sans email envoyé', async () => {
-		await importerSurLeBanc()
-		const payload = await payloadDeTest()
+		await importOnBench()
+		const payload = await testPayload()
 
 		const comptes = await comptesDeLaCible()
 		for (const compte of comptes) {
@@ -139,13 +139,13 @@ describe('Critère 1 : autant de comptes qu’à la source, hors comptes écart�
 		// Neither the password of the old site nor any other opens Payload's own login.
 		for (const { email, motDePasse } of COMPTES_DE_FIXTURE)
 			await expect(payload.login({ collection: 'pros', data: { email, password: motDePasse } })).rejects.toThrow()
-		expect(await compterLesMails()).toBe(0)
+		expect(await countMails()).toBe(0)
 	})
 
 	test('un compte non confirmé à la source arrive confirmé, et il est listé', async () => {
 		await avecLeProprietaire(sql => sql.unsafe('UPDATE up_users SET confirmed = false WHERE id = 14'))
 
-		const rapport = await importerSurLeBanc()
+		const rapport = await importOnBench()
 
 		expect(rapport.collections.pros?.unconfirmed).toEqual([14])
 		expect(rapport.gaps['confirmation-email']).toBe(1)
@@ -155,11 +155,11 @@ describe('Critère 1 : autant de comptes qu’à la source, hors comptes écart�
 
 describe('Critère 2 : autant de hash hérités que de comptes source avec un hash complet ; aucun hash dans un fichier ou un journal (I44)', () => {
 	test('chaque hash complet de la source est copié tel quel, et il ouvre encore le mot de passe de l’ancien site', async () => {
-		const rapport = await importerSurLeBanc()
+		const rapport = await importOnBench()
 		const hashes = await hashDeLaSource()
 
 		const complets = [...hashes].filter(
-			([id, hash]) => !ECARTES.includes(id) && hash !== null && HASH_BCRYPT_COMPLET.test(hash)
+			([id, hash]) => !ECARTES.includes(id) && hash !== null && HASH_BCRYPT_FULL.test(hash)
 		)
 		const cible = await comptesDeLaCible()
 		const herites = cible.filter(({ legacyBcrypt }) => typeof legacyBcrypt === 'string')
@@ -178,7 +178,7 @@ describe('Critère 2 : autant de hash hérités que de comptes source avec un ha
 	test('un mot de passe qui n’est pas un hash bcrypt complet ne donne aucun hash hérité', async () => {
 		await avecLeProprietaire(sql => sql.unsafe("UPDATE up_users SET password = '$2a$10$coupé' WHERE id = 17"))
 
-		const rapport = await importerSurLeBanc()
+		const rapport = await importOnBench()
 
 		expect((await comptesDeLaCible()).find(({ strapiId }) => strapiId === 17)?.legacyBcrypt ?? null).toBeNull()
 		expect(rapport.gaps['SCHEMA.md §5.1 (password)']).toBe(1)
@@ -192,7 +192,7 @@ describe('Critère 2 : autant de hash hérités que de comptes source avec un ha
 		})
 		const hashes = await hashDeLaSource()
 
-		const rapport = await importerSurLeBanc()
+		const rapport = await importOnBench()
 
 		const cible = await comptesDeLaCible()
 		expect(cible.find(({ strapiId }) => strapiId === 9)?.legacyBcrypt).toBe(hashes.get(10) ?? 'absent')
@@ -209,9 +209,9 @@ describe('Critère 2 : autant de hash hérités que de comptes source avec un ha
 			await sql.unsafe('UPDATE up_users SET password = (SELECT password FROM up_users WHERE id = 1) WHERE id = 10')
 		})
 
-		const rapport = await importerSurLeBanc('real', {
+		const rapport = await importOnBench('real', {
 			decisions: {
-				...DECISIONS_DU_BANC,
+				...BENCH_DECISIONS,
 				sharedEmails: [{ accounts: [9, 10, 11, 12], kept: 9, lendHash: false }],
 			},
 		})
@@ -226,13 +226,7 @@ describe('Critère 2 : autant de hash hérités que de comptes source avec un ha
 		const dossier = mkdtempSync(path.join(tmpdir(), 'rapport-import-'))
 		try {
 			const fichier = path.join(dossier, 'rapport.json')
-			const { code, sortie } = await commandeDImport([
-				'--real',
-				'--decisions',
-				FICHIER_DES_DECISIONS_DU_BANC,
-				'--report',
-				fichier,
-			])
+			const { code, sortie } = await importCommand(['--real', '--decisions', BENCH_DECISION_FILE, '--report', fichier])
 			const json = readFileSync(fichier, 'utf8')
 
 			expect(code).toBe(0)
@@ -252,7 +246,7 @@ describe('Critère 2 : autant de hash hérités que de comptes source avec un ha
 	test('une erreur de la base en cours d’écriture arrête la commande, qui ne dit ni hash, ni email, ni nom', async () => {
 		// Account 2 has a complete hash at the source: the query that fails carries it, with its email.
 		const compte = COMPTES_DE_FIXTURE[1]?.strapiId ?? 0
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		await payload.db.pool.query(
 			`CREATE FUNCTION banc_refus_d_un_compte() RETURNS trigger LANGUAGE plpgsql AS $$
 			 BEGIN IF NEW.strapi_id = ${compte} THEN RAISE EXCEPTION 'refus du banc' USING ERRCODE = 'P0001'; END IF; RETURN NEW; END $$`
@@ -261,7 +255,7 @@ describe('Critère 2 : autant de hash hérités que de comptes source avec un ha
 			'CREATE TRIGGER banc_refus_d_un_compte BEFORE INSERT ON pros FOR EACH ROW EXECUTE FUNCTION banc_refus_d_un_compte()'
 		)
 		try {
-			const { code, sortie } = await commandeDImport(['--real', '--decisions', FICHIER_DES_DECISIONS_DU_BANC])
+			const { code, sortie } = await importCommand(['--real', '--decisions', BENCH_DECISION_FILE])
 
 			expect(code).toBe(6)
 			expect(sortie).toContain(`le document ${compte} de « pros »`)
@@ -280,7 +274,7 @@ describe('Critère 2 : autant de hash hérités que de comptes source avec un ha
 
 describe('Un compte que la cible refuse : listé, et la parité le dit (I39)', () => {
 	test('un email déjà pris dans la v3 : le compte est refusé, la parité est incomplète, la commande sort en 5', async () => {
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const ligne = COMPTES_DE_LA_SOURCE.find(({ id }) => Number(id) === 4)
 		await payload.create({
 			collection: 'pros',
@@ -290,7 +284,7 @@ describe('Un compte que la cible refuse : listé, et la parité le dit (I39)', (
 			overrideAccess: true,
 		})
 
-		const { code, sortie } = await commandeDImport(['--real', '--decisions', FICHIER_DES_DECISIONS_DU_BANC])
+		const { code, sortie } = await importCommand(['--real', '--decisions', BENCH_DECISION_FILE])
 
 		expect(code, sortie).toBe(5)
 		expect(sortie).toContain('  - refusé : 4 (refuse-par-payload : email)')
@@ -304,8 +298,8 @@ describe('Un compte que la cible refuse : listé, et la parité le dit (I39)', (
 
 describe('Critère 3 : un compte sans profil reste sans profil (I41)', () => {
 	test('aucun compte repris ne reçoit le profil vide qu’une inscription crée', async () => {
-		await importerSurLeBanc()
-		const payload = await payloadDeTest()
+		await importOnBench()
+		const payload = await testPayload()
 
 		const sansProfilALaSource = (await comptesDeLaCible()).find(({ strapiId }) => strapiId === 8)
 		expect(sansProfilALaSource).toBeDefined()
@@ -327,9 +321,9 @@ describe('Critère 3 : un compte sans profil reste sans profil (I41)', () => {
 
 describe('Critère 4 : même email sans décision, arrêt et rapport par identifiants ; avec la table, seul le compte retenu', () => {
 	test('sans table de décision, l’import s’arrête avant toute écriture et liste le groupe par identifiants', async () => {
-		const avant = await empreinteDeLaSource()
+		const avant = await sourceFingerprint()
 
-		const rapport = await importerSurLeBanc('real', { decisions: NO_DECISION })
+		const rapport = await importOnBench('real', { decisions: NO_DECISION })
 
 		expect(rapport.halt).toEqual({
 			sharedEmails: [[9, 10, 11, 12]],
@@ -338,13 +332,13 @@ describe('Critère 4 : même email sans décision, arrêt et rapport par identif
 		})
 		expect(rapport.parity).toBeNull()
 		expect(await comptesDeLaCible()).toEqual([])
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		expect((await payload.count({ collection: 'talents', overrideAccess: true })).totalDocs).toBe(0)
-		expect((await empreinteDeLaSource()).empreinte).toBe(avant.empreinte)
+		expect((await sourceFingerprint()).empreinte).toBe(avant.empreinte)
 	})
 
 	test('la commande sans table sort en 3, nomme le groupe par identifiants, et ne dit aucun email', async () => {
-		const { code, sortie } = await commandeDImport(['--real'])
+		const { code, sortie } = await importCommand(['--real'])
 
 		expect(code).toBe(3)
 		expect(sortie).toContain('Import arrêté avant toute écriture')
@@ -355,7 +349,7 @@ describe('Critère 4 : même email sans décision, arrêt et rapport par identif
 
 	test('avec la table, seul le compte retenu est repris, quel qu’il soit', async () => {
 		// Account 9 is set aside this time: the table says what becomes of its profile, 28.
-		const rapport = await importerSurLeBanc('real', {
+		const rapport = await importOnBench('real', {
 			decisions: { sharedEmails: [{ accounts: [12, 11, 10, 9], kept: 11 }], excludedProfiles: [28] },
 		})
 
@@ -365,7 +359,7 @@ describe('Critère 4 : même email sans décision, arrêt et rapport par identif
 	})
 
 	test('une décision qui ne nomme pas exactement le groupe ne vaut pas : l’import s’arrête', async () => {
-		const rapport = await importerSurLeBanc('real', {
+		const rapport = await importOnBench('real', {
 			decisions: { sharedEmails: [{ accounts: [9, 10, 11], kept: 9 }], excludedProfiles: [] },
 		})
 
@@ -384,7 +378,7 @@ describe('Critère 4 : même email sans décision, arrêt et rapport par identif
 			const fichier = path.join(dossier, 'decisions.json')
 			writeFileSync(fichier, JSON.stringify({ sharedEmails: [{ accounts: [9, 10, 11, 12], kept: 13 }] }))
 
-			const { code, sortie } = await commandeDImport(['--real', '--decisions', fichier])
+			const { code, sortie } = await importCommand(['--real', '--decisions', fichier])
 
 			expect(code).toBe(1)
 			expect(sortie).toContain('La table de décision est refusée')
@@ -397,10 +391,10 @@ describe('Critère 4 : même email sans décision, arrêt et rapport par identif
 
 describe('Critère 5 : second passage, 0 création, 0 mise à jour', () => {
 	test('relancé, l’import n’écrit rien : ni les comptes, ni leur mot de passe, ni leurs dates', async () => {
-		await importerSurLeBanc()
+		await importOnBench()
 		const cible = await comptesDeLaCible()
 
-		const second = await importerSurLeBanc()
+		const second = await importOnBench()
 
 		expect(second.collections.pros).toMatchObject({ created: 0, updated: 0, unchanged: 14, refused: [] })
 		expect(second.collections.talents).toMatchObject({ created: 0, updated: 0 })
@@ -409,7 +403,7 @@ describe('Critère 5 : second passage, 0 création, 0 mise à jour', () => {
 	})
 
 	test('un email changé à la source est mis à jour une fois, sans toucher au mot de passe, puis plus rien', async () => {
-		await importerSurLeBanc()
+		await importOnBench()
 		const avant = (await comptesDeLaCible()).find(({ strapiId }) => strapiId === 4)
 		await avecLeProprietaire(sql =>
 			sql.unsafe(
@@ -417,8 +411,8 @@ describe('Critère 5 : second passage, 0 création, 0 mise à jour', () => {
 			)
 		)
 
-		const apresChangement = await importerSurLeBanc()
-		const troisieme = await importerSurLeBanc()
+		const apresChangement = await importOnBench()
+		const troisieme = await importOnBench()
 
 		expect(apresChangement.collections.pros).toMatchObject({ created: 0, updated: 1, unchanged: 13 })
 		const apres = (await comptesDeLaCible()).find(({ strapiId }) => strapiId === 4)

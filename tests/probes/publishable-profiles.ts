@@ -7,67 +7,67 @@
  * `vert`, since nothing was compared. Equality is exact: same number, same addresses.
  *
  * The report never writes an address: a gap is told by counts and by the fingerprints of the
- * addresses (tests/sondes/contenu.ts).
+ * addresses (tests/probes/content.ts).
  */
 
 import { profilePath } from '../../src/lib/slug'
-import { cheminsDeProfils, empreinte } from './content'
-import { CHEMIN_DES_STATS, RequeteInterdite } from './guard'
-import type { Lecteur } from './reader'
-import { type Constat, raisonDe } from './result'
+import { fingerprint, profilePaths } from './content'
+import { ForbiddenRequest, STATS_PATH } from './guard'
+import type { Reader } from './reader'
+import { type Finding, reasonOf } from './result'
 
-export const CHEMIN_DU_SITEMAP = '/sitemap.xml'
+export const SITEMAP_PATH = '/sitemap.xml'
 
 /** How far back the statistics are asked for: the route needs a period, the profiles listed do not depend on it. */
-const SEMAINE_MS = 7 * 24 * 60 * 60 * 1000
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000
 
 /** How many fingerprints a gap names. */
-const EMPREINTES_MONTREES = 5
+const SHOWN_FINGERPRINTS = 5
 
-export const NOM_DU_JETON = 'SONDES_STATS_TOKEN'
+export const TOKEN_NAME = 'PROBES_STATS_TOKEN'
 
 /** The slugs of `publiables.slugs`, or nothing when the answer does not have that shape. */
-export function slugsPubliables(corps: string): string[] | undefined {
-	let donnees: unknown
+export function slugPublishable(corps: string): string[] | undefined {
+	let data: unknown
 	try {
-		donnees = JSON.parse(corps)
+		data = JSON.parse(corps)
 	} catch {
 		return undefined
 	}
-	if (typeof donnees !== 'object' || donnees === null || !('publiables' in donnees)) return undefined
-	const { publiables } = donnees
-	if (typeof publiables !== 'object' || publiables === null || !('slugs' in publiables)) return undefined
-	const { slugs } = publiables
+	if (typeof data !== 'object' || data === null || !('publiables' in data)) return undefined
+	const { publiables: publishable } = data
+	if (typeof publishable !== 'object' || publishable === null || !('slugs' in publishable)) return undefined
+	const { slugs } = publishable
 	return Array.isArray(slugs) && slugs.every((slug): slug is string => typeof slug === 'string') ? slugs : undefined
 }
 
-const montrer = (chemins: readonly string[]): string =>
+const show = (chemins: readonly string[]): string =>
 	chemins
-		.slice(0, EMPREINTES_MONTREES)
-		.map(chemin => `#${empreinte(chemin)}`)
-		.join(', ') + (chemins.length > EMPREINTES_MONTREES ? ', …' : '')
+		.slice(0, SHOWN_FINGERPRINTS)
+		.map(chemin => `#${fingerprint(chemin)}`)
+		.join(', ') + (chemins.length > SHOWN_FINGERPRINTS ? ', …' : '')
 
 /** Compares two lists of profile paths; red lines are empty when they are the same set. */
-export function comparer(
+export function compare(
 	sitemap: readonly string[],
 	publiables: readonly string[]
 ): { egal: boolean; constats: string[] } {
-	const dansLePlan = new Set(sitemap)
-	const publics = new Set(publiables)
-	const enTrop = [...dansLePlan].filter(chemin => !publics.has(chemin))
-	const manquants = [...publics].filter(chemin => !dansLePlan.has(chemin))
-	const constats = [`${dansLePlan.size} profils dans ${CHEMIN_DU_SITEMAP}, ${publics.size} profils publiables`]
-	if (enTrop.length > 0)
-		constats.push(
-			`${enTrop.length} dans le sitemap mais non publiable${enTrop.length > 1 ? 's' : ''} (empreintes : ${montrer(enTrop)})`
+	const inPlan = new Set(sitemap)
+	const publicOnes = new Set(publiables)
+	const inToo = [...inPlan].filter(chemin => !publicOnes.has(chemin))
+	const missing = [...publicOnes].filter(chemin => !inPlan.has(chemin))
+	const findings = [`${inPlan.size} profils dans ${SITEMAP_PATH}, ${publicOnes.size} profils publiables`]
+	if (inToo.length > 0)
+		findings.push(
+			`${inToo.length} dans le sitemap mais non publiable${inToo.length > 1 ? 's' : ''} (empreintes : ${show(inToo)})`
 		)
-	if (manquants.length > 0)
-		constats.push(
-			`${manquants.length} publiable${manquants.length > 1 ? 's' : ''} absent${manquants.length > 1 ? 's' : ''} du sitemap (empreintes : ${montrer(manquants)})`
+	if (missing.length > 0)
+		findings.push(
+			`${missing.length} publiable${missing.length > 1 ? 's' : ''} absent${missing.length > 1 ? 's' : ''} du sitemap (empreintes : ${show(missing)})`
 		)
-	const egal = enTrop.length === 0 && manquants.length === 0 && dansLePlan.size === publics.size
-	if (egal) constats.push('égalité exacte')
-	return { egal, constats }
+	const equal = inToo.length === 0 && missing.length === 0 && inPlan.size === publicOnes.size
+	if (equal) findings.push('égalité exacte')
+	return { egal: equal, constats: findings }
 }
 
 export interface OptionsR02 {
@@ -76,25 +76,24 @@ export interface OptionsR02 {
 	maintenant: () => Date
 }
 
-export async function sondeR02(lecteur: Lecteur, { jeton, maintenant }: OptionsR02): Promise<Constat> {
+export async function probeR02(lecteur: Reader, { jeton, maintenant }: OptionsR02): Promise<Finding> {
 	if (jeton === undefined || jeton === '')
 		return {
 			verdict: 'inconnu',
 			constats: [
-				`pas de jeton (${NOM_DU_JETON}) : la liste des profils publiables n’est pas lue, rien n’est comparé au sitemap`,
+				`pas de jeton (${TOKEN_NAME}) : la liste des profils publiables n’est pas lue, rien n’est comparé au sitemap`,
 			],
 		}
 	try {
-		const sitemap = await lecteur.lire(CHEMIN_DU_SITEMAP)
-		if (sitemap.statut !== 200)
-			return { verdict: 'rouge', constats: [`${CHEMIN_DU_SITEMAP} : réponse ${sitemap.statut}`] }
+		const sitemap = await lecteur.lire(SITEMAP_PATH)
+		if (sitemap.statut !== 200) return { verdict: 'rouge', constats: [`${SITEMAP_PATH} : réponse ${sitemap.statut}`] }
 
-		const fin = maintenant()
-		const requete = new URLSearchParams({
-			from: new Date(fin.getTime() - SEMAINE_MS).toISOString(),
-			to: fin.toISOString(),
+		const end = maintenant()
+		const request = new URLSearchParams({
+			from: new Date(end.getTime() - WEEK_MS).toISOString(),
+			to: end.toISOString(),
 		})
-		const stats = await lecteur.lire(`${CHEMIN_DES_STATS}?${requete}`, { authorization: `Bearer ${jeton}` })
+		const stats = await lecteur.lire(`${STATS_PATH}?${request}`, { authorization: `Bearer ${jeton}` })
 		if (stats.statut === 401)
 			return {
 				verdict: 'rouge',
@@ -102,17 +101,17 @@ export async function sondeR02(lecteur: Lecteur, { jeton, maintenant }: OptionsR
 			}
 		if (stats.statut !== 200)
 			return { verdict: 'rouge', constats: [`la route des statistiques répond ${stats.statut}, 200 attendu`] }
-		const slugs = slugsPubliables(stats.corps)
+		const slugs = slugPublishable(stats.corps)
 		if (slugs === undefined)
 			return {
 				verdict: 'rouge',
 				constats: ['la réponse des statistiques n’a pas la forme attendue (publiables.slugs)'],
 			}
 
-		const { egal, constats } = comparer(cheminsDeProfils(sitemap.corps), slugs.map(profilePath))
-		return { verdict: egal ? 'vert' : 'rouge', constats }
-	} catch (erreur) {
-		if (erreur instanceof RequeteInterdite) throw erreur
-		return { verdict: 'rouge', constats: [raisonDe(erreur)] }
+		const { egal: equal, constats: findings } = compare(profilePaths(sitemap.corps), slugs.map(profilePath))
+		return { verdict: equal ? 'vert' : 'rouge', constats: findings }
+	} catch (error) {
+		if (error instanceof ForbiddenRequest) throw error
+		return { verdict: 'rouge', constats: [reasonOf(error)] }
 	}
 }

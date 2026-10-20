@@ -12,10 +12,10 @@ import {
 } from '@/lib/auth/google/oidc'
 import { createRateLimit, type RateLimit } from '@/lib/auth/rate-limit'
 import { closeSession } from '@/lib/auth/sign-out'
-import { creerCompte } from '../support/account-factory'
-import { type Demande, fauxGoogle } from '../support/fake-google'
-import { compterLesMails, viderLeCapteur } from '../support/mailpit'
-import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { createAccount } from '../support/account-factory'
+import { type Demande, fakeGoogle } from '../support/fake-google'
+import { countMails, emptySink } from '../support/mailpit'
+import { emptyBase, testPayload } from '../support/payload-test'
 
 /**
  * The Google sign-in and sign-up (tickets 090 and 091; plan 02 E07), against the fake Google of
@@ -25,7 +25,7 @@ import { payloadDeTest, viderLaBase } from '../support/payload-test'
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? ''
 const SECRET = process.env.PAYLOAD_SECRET ?? ''
-const google = fauxGoogle()
+const google = fakeGoogle()
 const config: ConfigGoogle = {
 	emetteur: google.emetteur,
 	clientId: google.clientId,
@@ -34,9 +34,9 @@ const config: ConfigGoogle = {
 }
 
 beforeAll(() => clearDocuments())
-beforeEach(() => viderLeCapteur())
+beforeEach(() => emptySink())
 afterAll(async () => {
-	await viderLaBase()
+	await emptyBase()
 })
 
 interface Passage {
@@ -62,7 +62,7 @@ async function passer(
 		modifier?: (parametres: URLSearchParams, depart: { cookie: string }) => string | undefined
 	} = {}
 ): Promise<Passage> {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	const depart = prepareStart(config, await discover(config.emetteur), { retour: retourSouhaite, secret: SECRET })
 	const retour = await google.autoriser(depart.adresse, google.choisir(demande))
 	const parametres = new URLSearchParams(retour.searchParams)
@@ -84,25 +84,25 @@ async function passer(
 const adresse = (prefixe: string) => `${prefixe}-${crypto.randomUUID().slice(0, 8)}@example.test`
 
 async function comptes(email: string) {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	return (await payload.find({ collection: 'pros', depth: 0, limit: 10, where: { email: { equals: email } } })).docs
 }
 
 async function lignesDuJournal() {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	return (await payload.find({ collection: 'auth-events', depth: 0, limit: 1000, sort: 'id' })).docs
 }
 
 /** Who Payload says is behind this token, the way a page of the space asks. */
 async function qui(token: string) {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	return (await payload.auth({ headers: new Headers({ Cookie: `payload-token=${token}`, Origin: SITE }) })).user
 }
 
 describe('E07 : un compte venu de Google se retrouve par son email vérifié', () => {
 	test('l’ancien compte Google est retrouvé : même compte, même profil, aucun doublon, aucun mail', async () => {
-		const compte = await creerCompte('reprise-google')
-		const payload = await payloadDeTest()
+		const compte = await createAccount('reprise-google')
+		const payload = await testPayload()
 		const avant = await payload.count({ collection: 'pros' })
 		const profilsAvant = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
 
@@ -116,27 +116,27 @@ describe('E07 : un compte venu de Google se retrouve par son email vérifié', (
 		const profils = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
 		expect(profils.docs.map(p => p.id)).toEqual(profilsAvant.docs.map(p => p.id))
 		expect(await comptes(compte.email)).toHaveLength(1)
-		expect(await compterLesMails()).toBe(0)
+		expect(await countMails()).toBe(0)
 	})
 
 	test('l’email est comparé sans tenir compte de la casse', async () => {
-		const compte = await creerCompte('reprise-google')
+		const compte = await createAccount('reprise-google')
 		const { issue } = await passer({ email: compte.email.toUpperCase() })
 		expect(issue.ok).toBe(true)
 		expect(await comptes(compte.email)).toHaveLength(1)
 	})
 
 	test('un ancien compte Google qui a aussi un hash se connecte par Google', async () => {
-		const compte = await creerCompte('reprise-google-avec-hash')
+		const compte = await createAccount('reprise-google-avec-hash')
 		const { issue } = await passer({ email: compte.email })
 		expect(issue.ok).toBe(true)
 	})
 
 	test('la session est celle du mot de passe : elle se ferme par la déconnexion, le jeton rejoué est refusé', async () => {
-		const compte = await creerCompte('reprise-google')
+		const compte = await createAccount('reprise-google')
 		const { issue } = await passer({ email: compte.email })
 		if (!issue.ok) throw new Error(`refusé : ${issue.code}`)
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const entetes = new Headers({ Cookie: `payload-token=${issue.token}`, Origin: SITE })
 		expect((await qui(issue.token))?.id).toBe(Number(compte.id))
 		const ligne = await payload.db.findOne<{ id: number; sessions?: unknown[]; lastSignInAt?: string }>({
@@ -152,7 +152,7 @@ describe('E07 : un compte venu de Google se retrouve par son email vérifié', (
 	})
 
 	test('l’événement « connexion » porte la méthode google, sans rien d’autre', async () => {
-		const compte = await creerCompte('reprise-google')
+		const compte = await createAccount('reprise-google')
 		const avant = (await lignesDuJournal()).length
 
 		await passer({ email: compte.email })
@@ -268,12 +268,12 @@ describe('091 : une personne sans compte s’inscrit avec Google', () => {
 		expect(issue.destination).toBe('/auth/init-account')
 		const [pro] = await comptes(email)
 		expect(pro).toMatchObject({ name: 'Léa Fictive', _verified: true, legacyProvider: 'google' })
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const profils = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: pro?.id } } })
 		expect(profils.totalDocs).toBe(1)
 		expect(profils.docs[0]?.slug).toMatch(/^lea-fictive(-\d+)?$/)
 		expect((await qui(issue.token))?.id).toBe(pro?.id)
-		expect(await compterLesMails()).toBe(0)
+		expect(await countMails()).toBe(0)
 		const lignes = (await lignesDuJournal())
 			.filter(l => l.method === 'google')
 			.map(({ type, code }) => `${type}:${code}`)
@@ -284,7 +284,7 @@ describe('091 : une personne sans compte s’inscrit avec Google', () => {
 	test('second passage : une connexion, aucun doublon, ni compte ni profil, et vers la page demandée', async () => {
 		const email = adresse('second')
 		const premier = await passer({ email })
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const [pro] = await comptes(email)
 
 		const second = await passer({ email }, { retourSouhaite: '/auth/profil' })
@@ -298,7 +298,7 @@ describe('091 : une personne sans compte s’inscrit avec Google', () => {
 		expect(
 			(await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: pro?.id } } })).totalDocs
 		).toBe(1)
-		expect(await compterLesMails()).toBe(0)
+		expect(await countMails()).toBe(0)
 	})
 
 	test('deux premiers passages au même moment : un seul compte, un seul profil, deux sessions valables', async () => {
@@ -314,7 +314,7 @@ describe('091 : une personne sans compte s’inscrit avec Google', () => {
 		const [pro] = await comptes(email)
 		expect(await comptes(email)).toHaveLength(1)
 		expect(passages.filter(({ issue }) => issue.ok && issue.nouveau)).toHaveLength(1)
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		expect(
 			(await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: pro?.id } } })).totalDocs
 		).toBe(1)
@@ -324,8 +324,8 @@ describe('091 : une personne sans compte s’inscrit avec Google', () => {
 
 	test('email non vérifié par Google : refus, aucun compte, ni pour une adresse libre ni pour un compte qui existe', async () => {
 		const libre = adresse('non-verifie')
-		const existant = await creerCompte('reprise-google')
-		const payload = await payloadDeTest()
+		const existant = await createAccount('reprise-google')
+		const payload = await testPayload()
 		const avant = (await payload.count({ collection: 'pros' })).totalDocs
 
 		const a = await passer({ scenario: 'email-non-verifie', email: libre })
@@ -335,7 +335,7 @@ describe('091 : une personne sans compte s’inscrit avec Google', () => {
 		expect(b.issue).toEqual({ ok: false, code: 'google-email-non-verifie' })
 		expect(await comptes(libre)).toHaveLength(0)
 		expect((await payload.count({ collection: 'pros' })).totalDocs).toBe(avant)
-		expect(await compterLesMails()).toBe(0)
+		expect(await countMails()).toBe(0)
 	})
 })
 
@@ -345,8 +345,8 @@ describe('un compte qui ne vient pas de Google n’est jamais ouvert ni lié', (
 		['un ancien compte Facebook', 'reprise-facebook'],
 		['un ancien compte à mot de passe', 'reprise-avec-hash'],
 	] as const)('%s : refus, aucune session, le compte est laissé tel quel', async (_nom, type) => {
-		const compte = await creerCompte(type)
-		const payload = await payloadDeTest()
+		const compte = await createAccount(type)
+		const payload = await testPayload()
 		const avant = await payload.db.findOne<{ id: number; legacyProvider?: string; sessions?: unknown[] }>({
 			collection: 'pros',
 			where: { id: { equals: compte.id } },
@@ -365,8 +365,8 @@ describe('un compte qui ne vient pas de Google n’est jamais ouvert ni lié', (
 	})
 
 	test('un compte Google bloqué est refusé, avec son propre code', async () => {
-		const compte = await creerCompte('reprise-google')
-		const payload = await payloadDeTest()
+		const compte = await createAccount('reprise-google')
+		const payload = await testPayload()
 		await payload.update({ collection: 'pros', id: compte.id, data: { blocked: true }, overrideAccess: true })
 
 		const { issue } = await passer({ email: compte.email })
@@ -376,8 +376,8 @@ describe('un compte qui ne vient pas de Google n’est jamais ouvert ni lié', (
 	})
 
 	test('un compte à mot de passe bloqué est dit bloqué, et rien n’est lié', async () => {
-		const compte = await creerCompte('maquilleuse')
-		const payload = await payloadDeTest()
+		const compte = await createAccount('maquilleuse')
+		const payload = await testPayload()
 		await payload.update({ collection: 'pros', id: compte.id, data: { blocked: true }, overrideAccess: true })
 
 		const { issue } = await passer({ email: compte.email })
@@ -502,7 +502,7 @@ describe('ticket 223, constat 9 : ce que Google dit par lui-même, et sa découv
 	test('la découverte en panne au retour : google-indisponible, une ligne service-indisponible, aucun compte', async () => {
 		const avant = (await lignesDuJournal()).length
 		const email = adresse('decouverte-retour')
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const depart = prepareStart(config, await discover(config.emetteur), {
 			retour: '/auth/profil',
 			secret: SECRET,

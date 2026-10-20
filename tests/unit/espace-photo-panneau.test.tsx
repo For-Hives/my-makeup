@@ -5,8 +5,8 @@ import type { DashboardPhoto } from '@/lib/dashboard/photos'
 import type { FileUploadResult } from '@/lib/dashboard/photos-upload'
 import { UNCERTAIN_RESULT_MESSAGE } from '@/lib/dashboard/photos-upload'
 import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
-import { choisirDesFichiers } from '../support/pick-files'
-import { ouvrirFenetre } from '../support/dom-react'
+import { openWindow } from '../support/dom-react'
+import { pickFiles } from '../support/pick-files'
 
 /**
  * The panel of the main photo (ticket 134; plan 02 E36, U03, I24): a file is checked and reduced
@@ -14,7 +14,7 @@ import { ouvrirFenetre } from '../support/dom-react'
  * and says so. The browser work, the network and the server action are fakes.
  */
 
-const fenetre = ouvrirFenetre()
+const fenetre = openWindow()
 const ACTUELLE: DashboardPhoto = {
 	id: 5,
 	url: 'https://photos.example.test/media/a.webp',
@@ -71,7 +71,7 @@ function banc(
 
 const dialogue = () => fenetre.w.document.querySelector('[role="dialog"]')
 const fichier = () => fenetre.champ(/photo/i) as HTMLInputElement
-const choisir = (f: File) => choisirDesFichiers(fenetre, fichier(), [f])
+const choisir = (f: File) => pickFiles(fenetre, fichier(), [f])
 const alertes = () => [...fenetre.w.document.querySelectorAll('[role="alert"]')].map(a => a.textContent).join('|')
 
 describe('E36 : un fichier refusé est dit avant l’envoi', () => {

@@ -21,7 +21,7 @@ export const ANNECY = { name: 'Annecy', inseeCode: '74010' } as const
  * usable city for the old site (the zone stays empty, the profile goes to review). A city of a
  * new case has to be added here: the translation refuses a city it does not know.
  */
-export const COMMUNE_DE_LA_VILLE: Readonly<Record<string, typeof ANNECY | null>> = {
+export const CITY_CITY: Readonly<Record<string, typeof ANNECY | null>> = {
 	Annecy: ANNECY,
 	'12 rue des Lilas 74000 Annecy': ANNECY,
 	France: null,
@@ -30,46 +30,46 @@ export const COMMUNE_DE_LA_VILLE: Readonly<Record<string, typeof ANNECY | null>>
 	'74 et alentours': null,
 }
 
-export interface CasPartage {
+export interface SharedCase {
 	nom: string
 	profil: ProfileFields
 	options?: { formulaireDevis?: boolean }
 }
 
 /** The shared cases, in their order. */
-export const CAS_PARTAGES = casPartages.cas as CasPartage[]
+export const SHARED_CASE = casPartages.cas as SharedCase[]
 
 /** What the old site answers on each shared case, in the same order: its front and its API. */
-export const REPONSES_DE_L_ANCIEN_SITE = ancienSite.partages.cas as {
+export const OLD_SITE_RESPONSES = ancienSite.partages.cas as {
 	nom: string
 	front: { score: number; actif: boolean; publiable: boolean }
 	api: { entirelyEmpty: boolean }
 }[]
 
 /** The commune a city of a shared case becomes, or nothing. */
-export function communeDeLaVille(ville: string | null | undefined): typeof ANNECY | null {
+export function cityCity(ville: string | null | undefined): typeof ANNECY | null {
 	if (ville === null || ville === undefined || ville === '') return null
-	const commune = COMMUNE_DE_LA_VILLE[ville]
-	if (commune === undefined) throw new Error(`Ville d’un cas partagé sans commune choisie : « ${ville} ».`)
-	return commune
+	const city = CITY_CITY[ville]
+	if (city === undefined) throw new Error(`Ville d’un cas partagé sans commune choisie : « ${ville} ».`)
+	return city
 }
 
 /** True when the v3 keeps nothing of the city typed in this case: a text that is no commune. */
-export const villeEcartee = (profil: ProfileFields): boolean =>
-	typeof profil.city === 'string' && profil.city !== '' && communeDeLaVille(profil.city) === null
+export const excludedCity = (profil: ProfileFields): boolean =>
+	typeof profil.city === 'string' && profil.city !== '' && cityCity(profil.city) === null
 
 /**
  * A shared case as the data of a save of `profils`. `photo` gives the identifier of a media of the
  * account, one per call: the main photo, then the gallery.
  */
-export async function documentDuCas(
+export async function caseDocument(
 	profil: ProfileFields,
 	photo: () => number | Promise<number>
 ): Promise<Record<string, unknown>> {
 	const network = profil.network ?? {}
-	const telephone = network.phone ?? null
+	const phone = network.phone ?? null
 	const email = network.email ?? null
-	const lignes = (liste: readonly unknown[] | null | undefined, ligne: Record<string, string>) =>
+	const lines = (liste: readonly unknown[] | null | undefined, ligne: Record<string, string>) =>
 		(liste ?? []).map(() => ({ ...ligne }))
 	return {
 		firstName: profil.first_name ?? null,
@@ -77,13 +77,13 @@ export async function documentDuCas(
 		specialty: profil.speciality ?? null,
 		artistName: profil.company_artist_name ?? null,
 		description: profil.description ?? null,
-		city: communeDeLaVille(profil.city),
+		city: cityCity(profil.city),
 		mainPicture: aMedia(profil.main_picture) ? await photo() : null,
 		gallery: aMedia(profil.image_gallery) ? [await photo()] : [],
-		skills: lignes(profil.skills, { name: 'Compétence fictive' }),
-		experiences: lignes(profil.experiences, { jobTitle: 'Poste fictif' }),
-		courses: lignes(profil.courses, { diploma: 'Diplôme fictif' }),
-		languages: lignes(profil.language, { name: 'Langue fictive' }),
+		skills: lines(profil.skills, { name: 'Compétence fictive' }),
+		experiences: lines(profil.experiences, { jobTitle: 'Poste fictif' }),
+		courses: lines(profil.courses, { diploma: 'Diplôme fictif' }),
+		languages: lines(profil.language, { name: 'Langue fictive' }),
 		// The price typed is kept, with the amount the single price rule reads in it (ticket 062).
 		serviceOffers: (profil.service_offers ?? []).map(offre => ({
 			name: 'Prestation fictive',
@@ -97,8 +97,8 @@ export async function documentDuCas(
 			linkedin: network.linkedin ?? null,
 		},
 		// A phone or an email the old site showed stays shown (ticket 064).
-		contactDetails: { phone: telephone, email },
-		publicContact: Boolean(telephone || email),
+		contactDetails: { phone: phone, email },
+		publicContact: Boolean(phone || email),
 	}
 }
 
@@ -106,6 +106,6 @@ export async function documentDuCas(
  * What the single rule says of a shared case as the v3 holds it: its city is the name of its
  * commune, or nothing. Never with the quote form, which nothing turns on.
  */
-export function completudeEnV3(profil: ProfileFields): Completeness {
-	return completeness({ ...profil, city: communeDeLaVille(profil.city)?.name ?? null })
+export function completenessInV3(profil: ProfileFields): Completeness {
+	return completeness({ ...profil, city: cityCity(profil.city)?.name ?? null })
 }

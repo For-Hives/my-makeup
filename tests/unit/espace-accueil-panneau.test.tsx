@@ -7,8 +7,8 @@ import type { IdentityValues } from '@/lib/dashboard/identity'
 import type { LocationValues } from '@/lib/dashboard/location'
 import { FAILURE_MESSAGE, MESSAGE_SESSION } from '@/lib/dashboard/result'
 import type { OnboardingPhotoValues } from '@/lib/dashboard/save-onboarding'
-import { choisirDesFichiers } from '../support/pick-files'
-import { ouvrirFenetre } from '../support/dom-react'
+import { openWindow } from '../support/dom-react'
+import { pickFiles } from '../support/pick-files'
 
 /**
  * The onboarding (ticket 140; plan 02 E02, RG-07): the next step opens only when the server said it
@@ -16,7 +16,7 @@ import { ouvrirFenetre } from '../support/dom-react'
  * the server reports the three steps done. The server actions and the browser work are fakes.
  */
 
-const fenetre = ouvrirFenetre()
+const fenetre = openWindow()
 
 const VIDE_IDENTITE: IdentityValues = { prenom: '', nom: '', nomArtiste: '', specialite: '' }
 const VIDE_ZONE: LocationValues = { codeInsee: '', libelle: '', rayonKm: null, aDomicile: false }
@@ -111,7 +111,7 @@ async function choisirLaCommune() {
 }
 
 const choisirLaPhoto = async () => {
-	await choisirDesFichiers(fenetre, fenetre.champ(/photo/i) as HTMLInputElement, [REDUITE])
+	await pickFiles(fenetre, fenetre.champ(/photo/i) as HTMLInputElement, [REDUITE])
 	await fenetre.attendre(() => !(fenetre.bouton('Terminer') as HTMLButtonElement).disabled)
 }
 

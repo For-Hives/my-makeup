@@ -8,37 +8,37 @@
  * start with: on the bench it carries the port of the instance.
  *
  * No bcrypt hash is written here. `motsDePasse` gives the password of each account that has one;
- * the source computes its hash when it is created, in PostgreSQL (tests/outils/source-strapi.ts).
+ * the source computes its hash when it is created, in PostgreSQL (tests/support/source-strapi.ts).
  * Three of them are the fixture passwords of COMPTES_DE_FIXTURE; nothing exports the others.
  *
  * Only Node's own modules: no API of bun.
  */
 
 import { createHash } from 'node:crypto'
-import { pngUni } from './images'
-import type { NomDeTable } from './schema'
+import { pngPlain } from './images'
+import type { TableName } from './schema'
 
 /** A value of a column, as written in an INSERT: a JSON column takes an object. */
-export type Valeur = string | number | boolean | null | Readonly<Record<string, unknown>>
+export type Value = string | number | boolean | null | Readonly<Record<string, unknown>>
 
-export type Ligne = Readonly<Record<string, Valeur>>
+export type Line = Readonly<Record<string, Value>>
 
 /** An object the source puts in the storage, under its key. */
-export interface ObjetDeLaSource {
+export interface SourceObject {
 	cle: string
 	type: string
 	octets: Uint8Array
 }
 
-export interface DefinitionDeLaSource {
-	lignes: Readonly<Record<NomDeTable, readonly Ligne[]>>
+export interface SourceDefinition {
+	lignes: Readonly<Record<TableName, readonly Line[]>>
 	/** Account id → password whose bcrypt hash the source stores in `up_users.password`. */
 	motsDePasse: ReadonlyMap<number, string>
-	objets: readonly ObjetDeLaSource[]
+	objets: readonly SourceObject[]
 }
 
 /** An account whose password is known: it signs in by the legacy path (plans/01 §2.4, M2). */
-export interface CompteDeFixture {
+export interface FixtureAccount {
 	/** `up_users.id`, the future `pros.strapiId` */
 	strapiId: number
 	email: string
@@ -50,29 +50,29 @@ export interface CompteDeFixture {
  * The three fixture accounts: two `local` accounts and the `google` account that also has a
  * password, as one real account has. Fictional passwords, for the bench only.
  */
-export const COMPTES_DE_FIXTURE: readonly CompteDeFixture[] = [
+export const FIXTURE_ACCOUNTS: readonly FixtureAccount[] = [
 	{ strapiId: 1, email: 'zoe.lefevre@example.test', provider: 'local', motDePasse: 'fixture-zoe-locale' },
 	{ strapiId: 2, email: 'lea.martin@example.test', provider: 'local', motDePasse: 'fixture-lea-locale' },
 	{ strapiId: 3, email: 'ines.morel@example.test', provider: 'google', motDePasse: 'fixture-ines-google' },
 ]
 
 /** The 13 profiles left without an account by the spam of 2026 (SCHEMA.md §4.1): the same ids. */
-export const PROFILS_SANS_PROPRIETAIRE = [67, 74, 76, 77, 78, 79, 87, 88, 94, 95, 96, 104, 108] as const
+export const PROFILES_WITHOUT_OWNER = [67, 74, 76, 77, 78, 79, 87, 88, 94, 95, 96, 104, 108] as const
 
 /** A profile id that no row holds any more: a deleted spam profile, still named by two file links. */
-export const ENTREE_DISPARUE = 70
+export const MISSING_ENTRY = 70
 
 /** Names of a city shared by several communes: the import cannot choose alone (ticket 063). */
-export const VILLES_HOMONYMES: readonly string[] = ['Saint-Julien']
+export const CITY_HOMONYMS: readonly string[] = ['Saint-Julien']
 
-export const TYPE_PROFIL = 'api::makeup-artiste.makeup-artiste'
+export const TYPE_PROFILE = 'api::makeup-artiste.makeup-artiste'
 
-const empreinte = (texte: string): string => createHash('sha256').update(texte).digest('hex')
+const fingerprint = (texte: string): string => createHash('sha256').update(texte).digest('hex')
 
 // ---------------------------------------------------------------------------------------------
 // Accounts
 
-interface Compte {
+interface Account {
 	id: number
 	username: string
 	email: string
@@ -87,7 +87,7 @@ interface Compte {
  * them. Account 7 has capitals and edge spaces in its email. Account 8, 10 and 12 have no profile.
  * Id 13 is missing: a deleted account leaves a gap.
  */
-const COMPTES: readonly Compte[] = [
+const ACCOUNTS: readonly Account[] = [
 	{
 		id: 1,
 		username: 'Zoé Lefèvre',
@@ -226,8 +226,8 @@ const COMPTES: readonly Compte[] = [
 	},
 ]
 
-function lignesDesComptes(): Ligne[] {
-	return COMPTES.map(compte => ({
+function accountLines(): Line[] {
+	return ACCOUNTS.map(compte => ({
 		id: compte.id,
 		username: compte.username,
 		email: compte.email,
@@ -245,12 +245,12 @@ function lignesDesComptes(): Ligne[] {
 	}))
 }
 
-function motsDePasse(): Map<number, string> {
-	const connus = new Map(COMPTES_DE_FIXTURE.map(compte => [compte.strapiId, compte.motDePasse]))
+function password(): Map<number, string> {
+	const known = new Map(FIXTURE_ACCOUNTS.map(compte => [compte.strapiId, compte.motDePasse]))
 	return new Map(
-		COMPTES.filter(compte => compte.motDePasse).map(compte => [
+		ACCOUNTS.filter(compte => compte.motDePasse).map(compte => [
 			compte.id,
-			connus.get(compte.id) ?? `inconnu-${empreinte(`source-strapi-factice:${compte.id}`)}`,
+			known.get(compte.id) ?? `inconnu-${fingerprint(`source-strapi-factice:${compte.id}`)}`,
 		])
 	)
 }
@@ -259,7 +259,7 @@ function motsDePasse(): Map<number, string> {
 // Profiles
 
 /** The text fields of a profile; whatever is left out is null. */
-interface Profil {
+interface Profile {
 	id: number
 	compte: number
 	first_name?: string
@@ -276,13 +276,13 @@ interface Profil {
 	modifieLe?: string
 }
 
-const DESCRIPTION_LONGUE =
+const DESCRIPTION_LONG =
 	'Maquilleuse professionnelle depuis huit ans, je prépare les mariées, leurs proches et les équipes de tournage. ' +
 	'Chaque maquillage commence par un essai, pour choisir ensemble les teintes et la tenue. ' +
 	'Je me déplace avec tout mon matériel, désinfecté entre chaque séance.'
 
 /** The profiles of an account: profile id ≠ account id, so a link read by position would be seen. */
-const PROFILS: readonly Profil[] = [
+const PROFILES: readonly Profile[] = [
 	{
 		id: 21,
 		compte: 1,
@@ -293,7 +293,7 @@ const PROFILS: readonly Profil[] = [
 		action_radius: 30,
 		score: 12.5,
 		available: true,
-		description: DESCRIPTION_LONGUE,
+		description: DESCRIPTION_LONG,
 		company_artist_name: 'Zoé Make-up',
 		creeLe: '2023-05-12 09:20:00.000',
 		modifieLe: '2026-09-28 10:11:12.131',
@@ -319,7 +319,7 @@ const PROFILS: readonly Profil[] = [
 		city: '3 impasse des Pinceaux, 74000 Annecy',
 		action_radius: 20,
 		available: true,
-		description: DESCRIPTION_LONGUE,
+		description: DESCRIPTION_LONG,
 		creeLe: '2023-09-18 11:10:00.000',
 	},
 	{
@@ -363,7 +363,7 @@ const PROFILS: readonly Profil[] = [
 		first_name: 'Chloé',
 		last_name: 'Durand',
 		speciality: 'Mariage',
-		city: VILLES_HOMONYMES[0] ?? '',
+		city: CITY_HOMONYMS[0] ?? '',
 		available: true,
 		description: 'Maquillage de mariée.',
 		creeLe: '2023-10-05 08:15:00.000',
@@ -418,20 +418,20 @@ const PROFILS: readonly Profil[] = [
 	},
 ]
 
-const LETTRES = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+const LETTERS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
 /** A spam username, as the 24 deleted accounts had: 16 letters, capitals and small letters mixed. */
-function pseudoDeSpam(id: number): string {
-	const octets = createHash('sha256').update(`spam:${id}`).digest()
-	return Array.from(octets.subarray(0, 16), (octet, rang) => {
-		const lettre = LETTRES[octet % 26] ?? 'a'
-		return rang % 3 === 1 ? lettre.toUpperCase() : lettre
+function spamPseudo(id: number): string {
+	const bytes = createHash('sha256').update(`spam:${id}`).digest()
+	return Array.from(bytes.subarray(0, 16), (octet, rang) => {
+		const letter = LETTERS[octet % 26] ?? 'a'
+		return rang % 3 === 1 ? letter.toUpperCase() : letter
 	}).join('')
 }
 
-function lignesDesProfils(): Ligne[] {
-	const usernames = new Map(COMPTES.map(compte => [compte.id, compte.username]))
-	const relies = PROFILS.map(profil => ({
+function profileLines(): Line[] {
+	const usernames = new Map(ACCOUNTS.map(compte => [compte.id, compte.username]))
+	const relies = PROFILES.map(profil => ({
 		id: profil.id,
 		last_name: profil.last_name ?? null,
 		first_name: profil.first_name ?? null,
@@ -450,7 +450,7 @@ function lignesDesProfils(): Ligne[] {
 		updated_by_id: null,
 	}))
 	// Never modified, nothing filled in: only a username and the dates.
-	const sansProprietaire = PROFILS_SANS_PROPRIETAIRE.map((id, rang) => {
+	const withoutOwner = PROFILES_WITHOUT_OWNER.map((id, rang) => {
 		const date = `2026-0${1 + (rang % 9)}-1${rang % 10} 03:0${rang % 10}:00.000`
 		return {
 			id,
@@ -462,7 +462,7 @@ function lignesDesProfils(): Ligne[] {
 			score: null,
 			available: null,
 			description: null,
-			username: pseudoDeSpam(id),
+			username: spamPseudo(id),
 			pro: false,
 			company_artist_name: null,
 			created_at: date,
@@ -471,19 +471,19 @@ function lignesDesProfils(): Ligne[] {
 			updated_by_id: null,
 		}
 	})
-	return [...relies, ...sansProprietaire]
+	return [...relies, ...withoutOwner]
 }
 
-function lignesDesLiensDeComptes(): Ligne[] {
-	return PROFILS.map((profil, rang) => ({ id: rang + 1, makeup_artiste_id: profil.id, user_id: profil.compte }))
+function accountLinkLines(): Line[] {
+	return PROFILES.map((profil, rang) => ({ id: rang + 1, makeup_artiste_id: profil.id, user_id: profil.compte }))
 }
 
 // ---------------------------------------------------------------------------------------------
 // Components and their links
 
-type Champ = 'skills' | 'experiences' | 'courses' | 'language' | 'network' | 'service_offers'
+type Field = 'skills' | 'experiences' | 'courses' | 'language' | 'network' | 'service_offers'
 
-const TYPES_DE_COMPOSANT: Readonly<Record<Champ, string>> = {
+const COMPONENT_TYPES: Readonly<Record<Field, string>> = {
 	skills: 'makeupartists.skills',
 	experiences: 'makeupartists.experiences',
 	courses: 'makeupartists.courses',
@@ -493,13 +493,13 @@ const TYPES_DE_COMPOSANT: Readonly<Record<Champ, string>> = {
 }
 
 /** One component row and where it belongs: a profile, a field, a position. No profile: an orphan row. */
-interface Composant {
-	ligne: Ligne
+interface Component {
+	ligne: Line
 	profil?: number
 	ordre?: number
 }
 
-const COMPETENCES: readonly Composant[] = [
+const SKILLS: readonly Component[] = [
 	{
 		ligne: { id: 1, name: 'Maquillage mariée', description: 'Teint lumineux et tenue toute la journée.' },
 		profil: 21,
@@ -522,9 +522,9 @@ const COMPETENCES: readonly Composant[] = [
 ]
 
 /** A text of 2 001 characters: one more than a description of the v3 takes (ticket 226). */
-const TEXTE_DE_2001_CARACTERES = 'Une phrase de remplissage. '.repeat(75).slice(0, 2001)
+const TEXT_OF_2001_CHARACTERS = 'Une phrase de remplissage. '.repeat(75).slice(0, 2001)
 
-const EXPERIENCES: readonly Composant[] = [
+const EXPERIENCES: readonly Component[] = [
 	{
 		ligne: {
 			id: 1,
@@ -580,7 +580,7 @@ const EXPERIENCES: readonly Composant[] = [
 	},
 ]
 
-const FORMATIONS: readonly Composant[] = [
+const COURSES: readonly Component[] = [
 	{
 		ligne: {
 			id: 1,
@@ -617,14 +617,14 @@ const FORMATIONS: readonly Composant[] = [
 	},
 ]
 
-const LANGUES: readonly Composant[] = [
+const LANGUAGES: readonly Component[] = [
 	{ ligne: { id: 1, name: 'Français' }, profil: 21, ordre: 1 },
 	{ ligne: { id: 2, name: 'Anglais' }, profil: 21, ordre: 2 },
 	{ ligne: { id: 3, name: 'Espagnol' }, profil: 32, ordre: 1 },
 	{ ligne: { id: 4, name: 'Italien' } },
 ]
 
-const RESEAUX_REMPLIS: Readonly<Record<number, Readonly<Record<string, string>>>> = {
+const FILLED_NETWORKS: Readonly<Record<number, Readonly<Record<string, string>>>> = {
 	21: {
 		instagram: 'https://www.instagram.com/compte.fictif.zoe',
 		website: 'https://zoe-makeup.example.test',
@@ -642,20 +642,20 @@ const RESEAUX_REMPLIS: Readonly<Record<number, Readonly<Record<string, string>>>
 }
 
 /** Every profile has its network row, empty or not, as all 101 real profiles do. */
-function reseaux(): Composant[] {
-	const profils = [...PROFILS.map(profil => profil.id), ...PROFILS_SANS_PROPRIETAIRE]
-	return profils.map((profil, rang) => {
-		const rempli = RESEAUX_REMPLIS[profil] ?? {}
+function networks(): Component[] {
+	const profiles = [...PROFILES.map(profil => profil.id), ...PROFILES_WITHOUT_OWNER]
+	return profiles.map((profil, rang) => {
+		const filled = FILLED_NETWORKS[profil] ?? {}
 		return {
 			ligne: {
 				id: rang + 1,
-				youtube: rempli.youtube ?? null,
-				facebook: rempli.facebook ?? null,
-				instagram: rempli.instagram ?? null,
-				website: rempli.website ?? null,
-				linkedin: rempli.linkedin ?? null,
-				phone: rempli.phone ?? null,
-				email: rempli.email ?? null,
+				youtube: filled.youtube ?? null,
+				facebook: filled.facebook ?? null,
+				instagram: filled.instagram ?? null,
+				website: filled.website ?? null,
+				linkedin: filled.linkedin ?? null,
+				phone: filled.phone ?? null,
+				email: filled.email ?? null,
 			},
 			profil,
 			ordre: 1,
@@ -664,7 +664,7 @@ function reseaux(): Composant[] {
 }
 
 /** Prices as they were typed: amounts, « à partir de », free text, empty, nothing. */
-const PRESTATIONS: readonly Composant[] = [
+const SERVICE_OFFERS: readonly Component[] = [
 	{
 		ligne: {
 			id: 1,
@@ -695,14 +695,14 @@ const PRESTATIONS: readonly Composant[] = [
 	{ ligne: { id: 11, name: 'Maquillage soirée', description: null, price: '45 €' } },
 	// Outside a bound of the v3 (ticket 226): a description of more than 2 000 characters.
 	{
-		ligne: { id: 12, name: 'Forfait détaillé', description: TEXTE_DE_2001_CARACTERES, price: null },
+		ligne: { id: 12, name: 'Forfait détaillé', description: TEXT_OF_2001_CHARACTERS, price: null },
 		profil: 33,
 		ordre: 2,
 	},
 ]
 
 /** Options of an offer: `profil` holds the id of the offer here. */
-const OPTIONS: readonly Composant[] = [
+const OPTIONS: readonly Component[] = [
 	{ ligne: { id: 1, name: 'Retouche en journée', description: null, price: '15 €' }, profil: 1, ordre: 1 },
 	{
 		ligne: { id: 2, name: 'Maquillage d’une demoiselle d’honneur', description: 'Par personne.', price: 'Offert' },
@@ -722,43 +722,43 @@ const OPTIONS: readonly Composant[] = [
  * The link rows of the profiles' components. The links of the skills of profile 21 are written in
  * another order than their position: the order of a list is `order`, never the id of the link.
  */
-function liensDesComposants(): Ligne[] {
-	const champs: [Champ, readonly Composant[]][] = [
-		['network', reseaux()],
-		['skills', [...COMPETENCES].reverse()],
+function componentLinks(): Line[] {
+	const fields: [Field, readonly Component[]][] = [
+		['network', networks()],
+		['skills', [...SKILLS].reverse()],
 		['experiences', EXPERIENCES],
-		['courses', FORMATIONS],
-		['language', LANGUES],
-		['service_offers', PRESTATIONS],
+		['courses', COURSES],
+		['language', LANGUAGES],
+		['service_offers', SERVICE_OFFERS],
 	]
-	const liens: Ligne[] = []
-	for (const [champ, composants] of champs)
-		for (const { ligne, profil, ordre } of composants) {
-			if (profil === undefined) continue
-			liens.push({
-				id: liens.length + 1,
-				entity_id: profil,
-				component_id: ligne.id ?? null,
-				component_type: TYPES_DE_COMPOSANT[champ],
-				field: champ,
-				order: ordre ?? 1,
+	const links: Line[] = []
+	for (const [field, components] of fields)
+		for (const { ligne: line, profil: profile, ordre: order } of components) {
+			if (profile === undefined) continue
+			links.push({
+				id: links.length + 1,
+				entity_id: profile,
+				component_id: line.id ?? null,
+				component_type: COMPONENT_TYPES[field],
+				field: field,
+				order: order ?? 1,
 			})
 		}
-	return liens
+	return links
 }
 
-function liensDesOptions(): Ligne[] {
-	return [...OPTIONS].reverse().flatMap(({ ligne, profil, ordre }, rang) =>
-		profil === undefined
+function optionsLinks(): Line[] {
+	return [...OPTIONS].reverse().flatMap(({ ligne: line, profil: profile, ordre: order }, rang) =>
+		profile === undefined
 			? []
 			: [
 					{
 						id: rang + 1,
-						entity_id: profil,
-						component_id: ligne.id ?? null,
+						entity_id: profile,
+						component_id: line.id ?? null,
 						component_type: 'service-offers.options',
 						field: 'options',
-						order: ordre ?? 1,
+						order: order ?? 1,
 					},
 				]
 	)
@@ -767,22 +767,22 @@ function liensDesOptions(): Ligne[] {
 // ---------------------------------------------------------------------------------------------
 // Files, their objects and their links
 
-type Fournisseur = 'r2' | 'minio'
+type Provider = 'r2' | 'minio'
 
 /** Strapi's names for its two storage providers (SCHEMA.md §8). */
-const FOURNISSEURS: Readonly<Record<Fournisseur, string>> = {
+const PROVIDERS: Readonly<Record<Provider, string>> = {
 	r2: 'strapi-provider-cloudflare-r2',
 	minio: 'minio-for-strapi-v4',
 }
 
-interface Fichier {
+interface SourceFile {
 	id: number
 	/** The name of the file on the device it was sent from. */
 	nom: string
 	/** The name Strapi gives the object, before `_<10 hex>`. */
 	base: string
 	/** The current provider keeps its files under `1/`, the old one at the root of the bucket. */
-	fournisseur: Fournisseur
+	fournisseur: Provider
 	mime: string
 	ext: string
 	largeur?: number
@@ -796,7 +796,7 @@ interface Fichier {
 	creeLe: string
 }
 
-const FICHIERS: readonly Fichier[] = [
+const FILES: readonly SourceFile[] = [
 	{
 		id: 101,
 		nom: 'photo-profil-zoe.png',
@@ -945,7 +945,7 @@ const FICHIERS: readonly Fichier[] = [
 ]
 
 /** Which file each link names, in which entry and field: the gallery of 21 is written out of order. */
-const LIENS_DE_FICHIERS: readonly {
+const FILE_LINKS: readonly {
 	fichier: number
 	entree: number
 	champ: 'main_picture' | 'image_gallery'
@@ -960,19 +960,19 @@ const LIENS_DE_FICHIERS: readonly {
 	{ fichier: 107, entree: 23, champ: 'main_picture', ordre: 1 },
 	{ fichier: 108, entree: 24, champ: 'image_gallery', ordre: 1 },
 	{ fichier: 109, entree: 25, champ: 'image_gallery', ordre: 1 },
-	{ fichier: 110, entree: ENTREE_DISPARUE, champ: 'main_picture', ordre: 1 },
-	{ fichier: 111, entree: ENTREE_DISPARUE, champ: 'image_gallery', ordre: 1 },
+	{ fichier: 110, entree: MISSING_ENTRY, champ: 'main_picture', ordre: 1 },
+	{ fichier: 111, entree: MISSING_ENTRY, champ: 'image_gallery', ordre: 1 },
 ]
 
 /** A colour of its own for each picture: two objects never have the same content. */
-const couleur = (graine: number) => ({
+const color = (graine: number) => ({
 	rouge: (graine * 53) % 256,
 	vert: (graine * 97) % 256,
 	bleu: (graine * 151) % 256,
 })
 
 /** The content of a file that is not a picture: a few fictional bytes of the right kind. */
-function octetsNonImage(fichier: Fichier): Uint8Array {
+function byteNotImage(fichier: SourceFile): Uint8Array {
 	if (fichier.mime === 'application/pdf')
 		return new TextEncoder().encode('%PDF-1.4\n% Fichier fictif du banc de test\ntrailer\n<<>>\n%%EOF\n')
 	return Uint8Array.from([
@@ -990,75 +990,73 @@ function octetsNonImage(fichier: Fichier): Uint8Array {
 }
 
 /** Size in kilobytes, as Strapi writes it: bytes divided by 1 000, two decimals. */
-const kiloOctets = (octets: Uint8Array): number => Math.round((octets.length / 1000) * 100) / 100
+const kiloBytes = (octets: Uint8Array): number => Math.round((octets.length / 1000) * 100) / 100
 
-const TAILLES_DES_FORMATS = { thumbnail: 0.33, small: 0.66 } as const
+const FORMAT_SIZES = { thumbnail: 0.33, small: 0.66 } as const
 
-function fichiersEtObjets(medias: string): { lignes: Ligne[]; objets: ObjetDeLaSource[] } {
-	const lignes: Ligne[] = []
-	const objets: ObjetDeLaSource[] = []
-	for (const fichier of FICHIERS) {
-		const hash = `${fichier.base}_${empreinte(`fichier:${fichier.id}`).slice(0, 10)}`
-		const dossier = fichier.fournisseur === 'r2' ? '1/' : ''
-		const cle = `${dossier}${hash}${fichier.ext}`
-		const octets =
-			fichier.largeur && fichier.hauteur
-				? pngUni(fichier.largeur, fichier.hauteur, couleur(fichier.id))
-				: octetsNonImage(fichier)
-		if (fichier.objet !== false) objets.push({ cle, type: fichier.mime, octets })
+function filesAndObjects(medias: string): { lignes: Line[]; objets: SourceObject[] } {
+	const lines: Line[] = []
+	const objects: SourceObject[] = []
+	for (const file of FILES) {
+		const hash = `${file.base}_${fingerprint(`fichier:${file.id}`).slice(0, 10)}`
+		const folder = file.fournisseur === 'r2' ? '1/' : ''
+		const key = `${folder}${hash}${file.ext}`
+		const bytes =
+			file.largeur && file.hauteur ? pngPlain(file.largeur, file.hauteur, color(file.id)) : byteNotImage(file)
+		if (file.objet !== false) objects.push({ cle: key, type: file.mime, octets: bytes })
 
 		const formats: Record<string, unknown> = {}
-		for (const format of fichier.formats ?? []) {
-			const largeur = Math.max(1, Math.round((fichier.largeur ?? 1) * TAILLES_DES_FORMATS[format]))
-			const hauteur = Math.max(1, Math.round((fichier.hauteur ?? 1) * TAILLES_DES_FORMATS[format]))
-			const octetsDuFormat = pngUni(largeur, hauteur, couleur(fichier.id + 1000))
-			const hashDuFormat = `${format}_${hash}`
-			objets.push({ cle: `${hashDuFormat}${fichier.ext}`, type: fichier.mime, octets: octetsDuFormat })
+		for (const format of file.formats ?? []) {
+			const width = Math.max(1, Math.round((file.largeur ?? 1) * FORMAT_SIZES[format]))
+			const height = Math.max(1, Math.round((file.hauteur ?? 1) * FORMAT_SIZES[format]))
+			const formatBytes = pngPlain(width, height, color(file.id + 1000))
+			const formatHash = `${format}_${hash}`
+			objects.push({ cle: `${formatHash}${file.ext}`, type: file.mime, octets: formatBytes })
 			formats[format] = {
-				ext: fichier.ext,
-				url: `${medias}/${hashDuFormat}${fichier.ext}`,
-				hash: hashDuFormat,
-				mime: fichier.mime,
-				name: `${format}_${fichier.nom}`,
+				ext: file.ext,
+				url: `${medias}/${formatHash}${file.ext}`,
+				hash: formatHash,
+				mime: file.mime,
+				name: `${format}_${file.nom}`,
 				path: null,
-				size: kiloOctets(octetsDuFormat),
-				width: largeur,
-				height: hauteur,
-				sizeInBytes: octetsDuFormat.length,
+				size: kiloBytes(formatBytes),
+				width: width,
+				height: height,
+				sizeInBytes: formatBytes.length,
 			}
 		}
 
-		lignes.push({
-			id: fichier.id,
-			name: fichier.nom,
-			alternative_text: fichier.alt ?? null,
+		lines.push({
+			id: file.id,
+			name: file.nom,
+			alternative_text: file.alt ?? null,
 			caption: null,
-			width: fichier.largeur ?? null,
-			height: fichier.hauteur ?? null,
+			width: file.largeur ?? null,
+			height: file.hauteur ?? null,
 			formats: Object.keys(formats).length > 0 ? formats : null,
 			hash,
-			ext: fichier.ext,
-			mime: fichier.mime,
-			size: kiloOctets(octets),
-			url: `${medias}/${cle}`,
+			ext: file.ext,
+			mime: file.mime,
+			size: kiloBytes(bytes),
+			url: `${medias}/${key}`,
 			preview_url: null,
-			provider: FOURNISSEURS[fichier.fournisseur],
+			provider: PROVIDERS[file.fournisseur],
 			provider_metadata: null,
 			folder_path: '/1',
-			created_at: fichier.creeLe,
-			updated_at: fichier.creeLe,
+			created_at: file.creeLe,
+			updated_at: file.creeLe,
 			created_by_id: null,
 			updated_by_id: null,
-			uploaded_by: fichier.envoyePar ?? null,
+			uploaded_by: file.envoyePar ?? null,
 		})
 	}
-	return { lignes, objets }
+	return { lignes: lines, objets: objects }
 }
 
 // ---------------------------------------------------------------------------------------------
 // Articles and talents
 
-const ARTICLES: readonly Ligne[] = [
+const ARTICLES: readonly Line[] = [
 	{
 		id: 1,
 		title: 'Comment choisir sa maquilleuse de mariage',
@@ -1092,7 +1090,7 @@ const ARTICLES: readonly Ligne[] = [
 	},
 ]
 
-const talent = (id: number, title: string, slug: string, seoDescription: string | null): Ligne => ({
+const talent = (id: number, title: string, slug: string, seoDescription: string | null): Line => ({
 	id,
 	title,
 	seo_title: `${title} : trouvez votre maquilleuse`,
@@ -1107,7 +1105,7 @@ const talent = (id: number, title: string, slug: string, seoDescription: string 
 	updated_by_id: null,
 })
 
-const TALENTS: readonly Ligne[] = [
+const TALENTS: readonly Line[] = [
 	talent(1, 'Maquillage de mariage', 'maquillage-mariage', 'Maquilleuses de mariage près de chez vous.'),
 	talent(2, 'Maquillage artistique', 'maquillage-artistique', 'Maquilleuses artistiques près de chez vous.'),
 	talent(3, 'Effets spéciaux', 'effets-speciaux', null),
@@ -1119,33 +1117,33 @@ const TALENTS: readonly Ligne[] = [
  * The whole fake source: its rows, the passwords to hash, its objects. `medias` is the public
  * address of the storage, without a final slash.
  */
-export function definitionDeLaSource(medias: string): DefinitionDeLaSource {
+export function sourceDefinition(medias: string): SourceDefinition {
 	if (medias.endsWith('/')) throw new Error('L’adresse des photos s’écrit sans « / » final.')
-	const { lignes: fichiers, objets } = fichiersEtObjets(medias)
-	const lignes: Record<NomDeTable, readonly Ligne[]> = {
-		up_users: lignesDesComptes(),
-		makeup_artistes: lignesDesProfils(),
-		makeup_artistes_user_links: lignesDesLiensDeComptes(),
-		components_makeupartists_skills: COMPETENCES.map(c => c.ligne),
+	const { lignes: files, objets: objects } = filesAndObjects(medias)
+	const lines: Record<TableName, readonly Line[]> = {
+		up_users: accountLines(),
+		makeup_artistes: profileLines(),
+		makeup_artistes_user_links: accountLinkLines(),
+		components_makeupartists_skills: SKILLS.map(c => c.ligne),
 		components_makeupartists_experiences: EXPERIENCES.map(c => c.ligne),
-		components_makeupartists_courses: FORMATIONS.map(c => c.ligne),
-		components_makeupartists_languages: LANGUES.map(c => c.ligne),
-		components_makeupartists_networks: reseaux().map(c => c.ligne),
+		components_makeupartists_courses: COURSES.map(c => c.ligne),
+		components_makeupartists_languages: LANGUAGES.map(c => c.ligne),
+		components_makeupartists_networks: networks().map(c => c.ligne),
 		components_service_offers_options: OPTIONS.map(c => c.ligne),
-		components_makeupartists_service_offers: PRESTATIONS.map(c => c.ligne),
-		components_makeupartists_service_offers_components: liensDesOptions(),
-		makeup_artistes_components: liensDesComposants(),
-		files: fichiers,
-		files_related_morphs: LIENS_DE_FICHIERS.map((lien, rang) => ({
+		components_makeupartists_service_offers: SERVICE_OFFERS.map(c => c.ligne),
+		components_makeupartists_service_offers_components: optionsLinks(),
+		makeup_artistes_components: componentLinks(),
+		files: files,
+		files_related_morphs: FILE_LINKS.map((lien, rang) => ({
 			id: rang + 1,
 			file_id: lien.fichier,
 			related_id: lien.entree,
-			related_type: TYPE_PROFIL,
+			related_type: TYPE_PROFILE,
 			field: lien.champ,
 			order: lien.ordre,
 		})),
 		articles: ARTICLES,
 		talents: TALENTS,
 	}
-	return { lignes, motsDePasse: motsDePasse(), objets }
+	return { lignes: lines, motsDePasse: password(), objets: objects }
 }

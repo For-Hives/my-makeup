@@ -8,9 +8,9 @@
  * migrations. So:
  *
  * - the Payload of the tests never changes the schema (`sansChangementDeSchema`,
- *   tests/outils/payload-test.ts);
+ *   tests/support/payload-test.ts);
  * - the commands of the bench play the migrations on an erased database
- *   (`jouerLesMigrations`, scripts/banc.ts), and the application of the end-to-end tests plays
+ *   (`jouerLesMigrations`, scripts/bench.ts), and the application of the end-to-end tests plays
  *   them itself when it starts;
  * - before the first test, `exigerLeSchemaDesMigrations` refuses a database that carries the
  *   mark of a push, or whose schema, as the migrations built it, is not the one of the
@@ -22,10 +22,10 @@
 
 import type { Payload } from 'payload'
 import { ambiguities, type Drift, type Snapshot } from '../../scripts/ci/schema-drift'
-import { BancRefuse } from './bench'
+import { RefusedBench } from './bench'
 
 /** The batch Payload gives to the row it writes when it pushes the schema of the code. */
-export const LOT_DU_MODE_DEVELOPPEMENT = -1
+export const MODE_DEVELOPMENT_BATCH = -1
 
 /** The schema of Payload's tables on the bench. */
 const SCHEMA = 'public'
@@ -38,7 +38,7 @@ export interface Migration {
 }
 
 /** What the database says when its schema was checked against the code. */
-export interface ConstatDuSchema {
+export interface SchemaFinding {
 	/** Rows of `payload_migrations` written by a push of the schema (batch -1). */
 	lignesDeDeveloppement: number
 	/** What separates the database from the collections of the code. */
@@ -48,10 +48,10 @@ export interface ConstatDuSchema {
 /** Who stops: the command of the integration tests, or the global setup of the end-to-end tests. */
 export type Suite = 'test' | 'essai'
 
-const aucunLance = (suite: Suite): string => (suite === 'test' ? 'Aucun test n’a tourné.' : 'Aucun essai n’a tourné.')
+const noneLaunched = (suite: Suite): string => (suite === 'test' ? 'Aucun test n’a tourné.' : 'Aucun essai n’a tourné.')
 
 /** The functions of drizzle-kit that Payload hands over, and the part of its adapter this file reads. */
-interface AdaptateurDeDrizzle {
+interface DrizzleAdapter {
 	schema: Record<string, unknown>
 	drizzle: unknown
 	schemaName?: string
@@ -71,37 +71,37 @@ interface AdaptateurDeDrizzle {
 	}
 }
 
-const adaptateur = (payload: Payload): AdaptateurDeDrizzle => payload.db as unknown as AdaptateurDeDrizzle
+const adapter = (payload: Payload): DrizzleAdapter => payload.db as unknown as DrizzleAdapter
 
 /** Whether the table of the migrations exists: not on an erased database. */
-async function tableDesMigrations(payload: Payload): Promise<boolean> {
-	const { rows } = await adaptateur(payload).pool.query<{ existe: boolean }>(
+async function migrationsTable(payload: Payload): Promise<boolean> {
+	const { rows } = await adapter(payload).pool.query<{ existe: boolean }>(
 		`SELECT to_regclass('${SCHEMA}.payload_migrations') IS NOT NULL AS existe`
 	)
 	return rows[0]?.existe === true
 }
 
 /** How many rows of `payload_migrations` a push of the schema wrote: 0 on a database built by the migrations only. */
-export async function lignesDeDeveloppement(payload: Payload): Promise<number> {
-	if (!(await tableDesMigrations(payload))) return 0
-	const { rows } = await adaptateur(payload).pool.query<{ lignes: number }>(
+export async function developmentLines(payload: Payload): Promise<number> {
+	if (!(await migrationsTable(payload))) return 0
+	const { rows } = await adapter(payload).pool.query<{ lignes: number }>(
 		'SELECT count(*)::int AS lignes FROM payload_migrations WHERE batch = $1',
-		[LOT_DU_MODE_DEVELOPPEMENT]
+		[MODE_DEVELOPMENT_BATCH]
 	)
 	return rows[0]?.lignes ?? 0
 }
 
 /** The migrations the database says it has played, by name, with their batch. */
-export async function migrationsJouees(payload: Payload): Promise<{ name: string; batch: number }[]> {
-	if (!(await tableDesMigrations(payload))) return []
-	const { rows } = await adaptateur(payload).pool.query<{ name: string; batch: number }>(
+export async function migrationRun(payload: Payload): Promise<{ name: string; batch: number }[]> {
+	if (!(await migrationsTable(payload))) return []
+	const { rows } = await adapter(payload).pool.query<{ name: string; batch: number }>(
 		'SELECT name, batch::int AS batch FROM payload_migrations ORDER BY id'
 	)
 	return rows
 }
 
 /** Payload asked to end the process, from the code it was running. */
-class SortieDemandee extends Error {
+class RequestedOutput extends Error {
 	override readonly name = 'SortieDemandee'
 	constructor(readonly code: number | undefined) {
 		super(`process.exit(${code ?? ''})`)
@@ -114,20 +114,20 @@ class SortieDemandee extends Error {
  * « no » (code 0: a run that would pass without having played anything). Here neither ends the
  * process.
  */
-export async function sansSortie<Resultat>(
+export async function withoutOutput<Resultat>(
 	action: () => Promise<Resultat>
 ): Promise<{ resultat: Resultat } | { sortie: number | undefined }> {
-	const sortir = process.exit
+	const exit = process.exit
 	process.exit = ((code?: number) => {
-		throw new SortieDemandee(code)
+		throw new RequestedOutput(code)
 	}) as typeof process.exit
 	try {
 		return { resultat: await action() }
-	} catch (erreur) {
-		if (erreur instanceof SortieDemandee) return { sortie: erreur.code }
-		throw erreur
+	} catch (error) {
+		if (error instanceof RequestedOutput) return { sortie: error.code }
+		throw error
 	} finally {
-		process.exit = sortir
+		process.exit = exit
 	}
 }
 
@@ -137,36 +137,36 @@ export async function sansSortie<Resultat>(
  * a push: Payload would ask whether to go on, wait for ever when nobody answers, and end the
  * process with code 0 on « no ».
  */
-export async function jouerLesMigrations(payload: Payload, migrations: Migration[], suite: Suite): Promise<string[]> {
-	const lignes = await lignesDeDeveloppement(payload)
-	if (lignes > 0) throw new BancRefuse(messageDuSchema(constatSansEcart(lignes), suite))
-	const avant = new Set((await migrationsJouees(payload)).map(({ name }) => name))
-	const issue = await sansSortie(() => adaptateur(payload).migrate({ migrations }))
+export async function runMigrations(payload: Payload, migrations: Migration[], suite: Suite): Promise<string[]> {
+	const lines = await developmentLines(payload)
+	if (lines > 0) throw new RefusedBench(schemaMessage(findingWithoutGap(lines), suite))
+	const before = new Set((await migrationRun(payload)).map(({ name }) => name))
+	const issue = await withoutOutput(() => adapter(payload).migrate({ migrations }))
 	if ('sortie' in issue)
-		throw new BancRefuse(
+		throw new RefusedBench(
 			[
 				`Une migration de src/migrations/ n’a pas pu être jouée sur la base du banc (Payload a demandé l’arrêt, code ${issue.sortie ?? 'aucun'}) : son message est ci-dessus.`,
-				`Corrige la migration, puis relance. ${aucunLance(suite)}`,
+				`Corrige la migration, puis relance. ${noneLaunched(suite)}`,
 			].join('\n')
 		)
-	const apres = await migrationsJouees(payload)
-	const manquantes = migrations.map(({ name }) => name).filter(name => !apres.some(ligne => ligne.name === name))
-	if (manquantes.length > 0)
-		throw new BancRefuse(
-			`Les migrations ${manquantes.join(', ')} ne sont pas inscrites dans payload_migrations après leur passage. ${aucunLance(suite)}`
+	const after = await migrationRun(payload)
+	const missing = migrations.map(({ name }) => name).filter(name => !after.some(ligne => ligne.name === name))
+	if (missing.length > 0)
+		throw new RefusedBench(
+			`Les migrations ${missing.join(', ')} ne sont pas inscrites dans payload_migrations après leur passage. ${noneLaunched(suite)}`
 		)
-	return apres.map(({ name }) => name).filter(name => !avant.has(name))
+	return after.map(({ name }) => name).filter(name => !before.has(name))
 }
 
-const constatSansEcart = (lignes: number): ConstatDuSchema => ({
+const findingWithoutGap = (lignes: number): SchemaFinding => ({
 	lignesDeDeveloppement: lignes,
 	ecart: { instructions: [], ambiguites: [] },
 })
 
 /** The tables, their columns and the enum types of the database, as a snapshot of drizzle-kit names them. */
-async function nomsDeLaBase(payload: Payload): Promise<Snapshot> {
-	const { pool } = adaptateur(payload)
-	const { rows: colonnes } = await pool.query<{ table: string; colonne: string }>(
+async function baseNames(payload: Payload): Promise<Snapshot> {
+	const { pool } = adapter(payload)
+	const { rows: columns } = await pool.query<{ table: string; colonne: string }>(
 		`SELECT c.table_name AS table, c.column_name AS colonne
 		 FROM information_schema.columns c
 		 JOIN information_schema.tables t ON t.table_schema = c.table_schema AND t.table_name = c.table_name
@@ -179,15 +179,15 @@ async function nomsDeLaBase(payload: Payload): Promise<Snapshot> {
 		[SCHEMA]
 	)
 	const tables: Record<string, { columns: Record<string, unknown> }> = {}
-	for (const { table, colonne } of colonnes) {
-		const nom = `${SCHEMA}.${table}`
-		tables[nom] = { columns: { ...tables[nom]?.columns, [colonne]: {} } }
+	for (const { table, colonne: column } of columns) {
+		const nameValue = `${SCHEMA}.${table}`
+		tables[nameValue] = { columns: { ...tables[nameValue]?.columns, [column]: {} } }
 	}
-	return { tables, enums: Object.fromEntries(types.map(({ nom }) => [`${SCHEMA}.${nom}`, {}])) }
+	return { tables, enums: Object.fromEntries(types.map(({ nom: nameValue }) => [`${SCHEMA}.${nameValue}`, {}])) }
 }
 
 /** A change of the default value of a column, as drizzle-kit writes it. */
-const CHANGEMENT_DE_DEFAUT = /^ALTER TABLE "([^"]+)" ALTER COLUMN "([^"]+)" SET DEFAULT (.+?);?$/s
+const DEFAULT_CHANGE = /^ALTER TABLE "([^"]+)" ALTER COLUMN "([^"]+)" SET DEFAULT (.+?);?$/s
 
 /**
  * Whether the default this statement would set is the one the column already has. drizzle-kit
@@ -196,19 +196,19 @@ const CHANGEMENT_DE_DEFAUT = /^ALTER TABLE "([^"]+)" ALTER COLUMN "([^"]+)" SET 
  * for `login_attempts`. PostgreSQL compares the two values; an expression it cannot read keeps
  * the statement.
  */
-async function memeDefaut(payload: Payload, table: string, colonne: string, nouveau: string): Promise<boolean> {
-	const { pool } = adaptateur(payload)
+async function sameDefault(payload: Payload, table: string, colonne: string, nouveau: string): Promise<boolean> {
+	const { pool } = adapter(payload)
 	const { rows } = await pool.query<{ defaut: string | null; type: string }>(
 		`SELECT pg_get_expr(d.adbin, d.adrelid) AS defaut, format_type(a.atttypid, a.atttypmod) AS type
 		 FROM pg_attribute a JOIN pg_attrdef d ON d.adrelid = a.attrelid AND d.adnum = a.attnum
 		 WHERE a.attrelid = to_regclass(format('%I.%I', $1::text, $2::text)) AND a.attname = $3`,
 		[SCHEMA, table, colonne]
 	)
-	const actuel = rows[0]
-	if (!actuel?.defaut) return false
+	const current = rows[0]
+	if (!current?.defaut) return false
 	try {
 		const { rows: comparaison } = await pool.query<{ egal: boolean }>(
-			`SELECT (${actuel.defaut})::${actuel.type} IS NOT DISTINCT FROM (${nouveau})::${actuel.type} AS egal`
+			`SELECT (${current.defaut})::${current.type} IS NOT DISTINCT FROM (${nouveau})::${current.type} AS egal`
 		)
 		return comparaison[0]?.egal === true
 	} catch {
@@ -217,14 +217,14 @@ async function memeDefaut(payload: Payload, table: string, colonne: string, nouv
 }
 
 /** The statements that would change something: a default set again to the same value is left out. */
-async function instructionsUtiles(payload: Payload, instructions: string[]): Promise<string[]> {
-	const utiles: string[] = []
+async function instructionsUseful(payload: Payload, instructions: string[]): Promise<string[]> {
+	const useful: string[] = []
 	for (const instruction of instructions) {
-		const [, table, colonne, nouveau] = CHANGEMENT_DE_DEFAUT.exec(instruction.trim()) ?? []
-		if (table && colonne && nouveau && (await memeDefaut(payload, table, colonne, nouveau))) continue
-		utiles.push(instruction)
+		const [, table, column, fresh] = DEFAULT_CHANGE.exec(instruction.trim()) ?? []
+		if (table && column && fresh && (await sameDefault(payload, table, column, fresh))) continue
+		useful.push(instruction)
 	}
-	return utiles
+	return useful
 }
 
 /**
@@ -233,42 +233,45 @@ async function instructionsUtiles(payload: Payload, instructions: string[]): Pro
  * side (a column renamed) is given at once, from the names alone: drizzle-kit would ask whether
  * one was renamed into the other, and wait for an answer.
  */
-export async function ecartAvecLeCode(payload: Payload): Promise<Drift> {
-	const db = adaptateur(payload)
-	const outils = db.requireDrizzleKit()
-	const duCode = await outils.generateDrizzleJson(db.schema)
-	const trouvees = ambiguities(await nomsDeLaBase(payload), duCode)
-	if (trouvees.length > 0) return { instructions: [], ambiguites: trouvees }
-	const { statementsToExecute } = await outils.pushSchema(
+export async function gapWithCode(payload: Payload): Promise<Drift> {
+	const db = adapter(payload)
+	const support = db.requireDrizzleKit()
+	const code = await support.generateDrizzleJson(db.schema)
+	const found = ambiguities(await baseNames(payload), code)
+	if (found.length > 0) return { instructions: [], ambiguites: found }
+	const { statementsToExecute } = await support.pushSchema(
 		db.schema,
 		db.drizzle,
 		db.schemaName ? [db.schemaName] : undefined,
 		db.tablesFilter,
 		db.extensions?.postgis ? ['postgis'] : undefined
 	)
-	return { instructions: await instructionsUtiles(payload, statementsToExecute), ambiguites: [] }
+	return { instructions: await instructionsUseful(payload, statementsToExecute), ambiguites: [] }
 }
 
 /** What the database says, read without changing anything. */
-export async function constaterLeSchema(payload: Payload): Promise<ConstatDuSchema> {
-	return { lignesDeDeveloppement: await lignesDeDeveloppement(payload), ecart: await ecartAvecLeCode(payload) }
+export async function findSchema(payload: Payload): Promise<SchemaFinding> {
+	return { lignesDeDeveloppement: await developmentLines(payload), ecart: await gapWithCode(payload) }
 }
 
 /** Why the tests must not run on this database, in French; or nothing when its schema is the one of the migrations and of the code. */
-export function messageDuSchema({ lignesDeDeveloppement, ecart }: ConstatDuSchema, suite: Suite): string | undefined {
-	if (lignesDeDeveloppement > 0)
+export function schemaMessage(
+	{ lignesDeDeveloppement: developmentLines, ecart }: SchemaFinding,
+	suite: Suite
+): string | undefined {
+	if (developmentLines > 0)
 		return [
-			`La base du banc porte la trace d’une poussée du schéma : ${lignesDeDeveloppement === 1 ? 'une ligne' : `${lignesDeDeveloppement} lignes`} de lot ${LOT_DU_MODE_DEVELOPPEMENT} (« dev ») dans payload_migrations.`,
+			`La base du banc porte la trace d’une poussée du schéma : ${developmentLines === 1 ? 'une ligne' : `${developmentLines} lignes`} de lot ${MODE_DEVELOPMENT_BATCH} (« dev ») dans payload_migrations.`,
 			'Son schéma ne vient donc pas des seules migrations versionnées, et une migration manquante y passerait inaperçue.',
-			'Un Payload s’est branché sur le banc sans sansChangementDeSchema (tests/outils/payload-test.ts) : cherche-le, puis relance.',
-			aucunLance(suite),
+			'Un Payload s’est branché sur le banc sans sansChangementDeSchema (tests/support/payload-test.ts) : cherche-le, puis relance.',
+			noneLaunched(suite),
 		].join('\n')
 	if (ecart.ambiguites.length > 0)
 		return [
 			'Il manque une migration : des noms n’existent que d’un côté entre la base construite par les migrations et les collections du code (un nom changé, ou retiré pendant qu’un autre était ajouté).',
 			...ecart.ambiguites.map(ambiguite => `- ${ambiguite}`),
 			'Écris la migration qui manque (bun run payload:migrate:create) et relis son SQL, puis relance.',
-			aucunLance(suite),
+			noneLaunched(suite),
 		].join('\n')
 	if (ecart.instructions.length > 0)
 		return [
@@ -276,13 +279,13 @@ export function messageDuSchema({ lignesDeDeveloppement, ecart }: ConstatDuSchem
 			`Pour la rattraper, une migration contiendrait ${ecart.instructions.length === 1 ? 'cette instruction' : `ces ${ecart.instructions.length} instructions`} :`,
 			...ecart.instructions.map(instruction => `  ${instruction.trim()}`),
 			'Écris la migration qui manque (bun run payload:migrate:create), ou corrige le SQL de la migration qui ne crée pas ce que son instantané déclare, puis relance.',
-			aucunLance(suite),
+			noneLaunched(suite),
 		].join('\n')
 	return undefined
 }
 
 /** Refuses, with the message that says what to do, a database the tests must not run on. */
-export async function exigerLeSchemaDesMigrations(payload: Payload, suite: Suite): Promise<void> {
-	const message = messageDuSchema(await constaterLeSchema(payload), suite)
-	if (message) throw new BancRefuse(message)
+export async function requireMigrationsSchema(payload: Payload, suite: Suite): Promise<void> {
+	const message = schemaMessage(await findSchema(payload), suite)
+	if (message) throw new RefusedBench(message)
 }

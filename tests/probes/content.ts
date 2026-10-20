@@ -10,37 +10,37 @@ import { createHash } from 'node:crypto'
 import { JSDOM } from 'jsdom'
 
 /** A profile page of the site: `/profil/<slug>`, one segment, as the frozen URL table writes it. */
-const CHEMIN_DE_PROFIL = /^\/profil\/[^/]+$/
+const PROFILE_PATH = /^\/profil\/[^/]+$/
 
 /** The words a page shows when the code printed a missing value: JavaScript writes them so. */
-export const MOTS_INTERDITS = ['undefined', 'null'] as const
-export type MotInterdit = (typeof MOTS_INTERDITS)[number]
+export const FORBIDDEN_WORDS = ['undefined', 'null'] as const
+export type ForbiddenWord = (typeof FORBIDDEN_WORDS)[number]
 
 /** Attributes a visitor, a screen reader or a search engine reads as text. */
-const ATTRIBUTS_LUS = ['alt', 'title', 'aria-label', 'placeholder'] as const
+const READ_ATTRIBUTES = ['alt', 'title', 'aria-label', 'placeholder'] as const
 
 /** Elements whose content is not shown: the data and code of the page, its styles. */
-const NON_AFFICHES = 'script, style, template'
+const SHOWN_NOT = 'script, style, template'
 
-const ENTITES_XML: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" }
+const ENTITIES_XML: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" }
 
 const decoderXml = (texte: string): string =>
-	texte.replace(/&(amp|lt|gt|quot|apos);/g, (_entite, nom: string) => ENTITES_XML[nom] ?? '')
+	texte.replace(/&(amp|lt|gt|quot|apos);/g, (_entite, nom: string) => ENTITIES_XML[nom] ?? '')
 
 /**
  * The profile paths of a sitemap, in its order and without duplicates. The origin of each
  * `<loc>` is dropped: the probes read the path on their own target, whatever origin the
  * sitemap writes.
  */
-export function cheminsDeProfils(xml: string): string[] {
-	const chemins = new Set<string>()
+export function profilePaths(xml: string): string[] {
+	const paths = new Set<string>()
 	for (const [, loc = ''] of xml.matchAll(/<loc>\s*([^<]+?)\s*<\/loc>/g)) {
-		const adresse = decoderXml(loc)
-		if (!URL.canParse(adresse)) continue
-		const { pathname } = new URL(adresse)
-		if (CHEMIN_DE_PROFIL.test(pathname)) chemins.add(pathname)
+		const url = decoderXml(loc)
+		if (!URL.canParse(url)) continue
+		const { pathname } = new URL(url)
+		if (PROFILE_PATH.test(pathname)) paths.add(pathname)
 	}
-	return [...chemins]
+	return [...paths]
 }
 
 /**
@@ -49,60 +49,61 @@ export function cheminsDeProfils(xml: string): string[] {
  * rule 3); a person who needs it computes the fingerprints of the sitemap on their own machine
  * (docs/tests/sondes.md).
  */
-export function empreinte(chemin: string): string {
+export function fingerprint(chemin: string): string {
 	return createHash('sha256').update(chemin).digest('hex').slice(0, 8)
 }
 
 /** Where a forbidden word was seen, and how many times. Never the text around it. */
 export interface Occurrence {
-	mot: MotInterdit
+	mot: ForbiddenWord
 	/** `texte`, or the name of the attribute (`alt`, `content` of a meta tag…). */
 	lieu: string
 	nombre: number
 }
 
-export interface LectureDuHtml {
+export interface HtmlReading {
 	/** `h1` elements with some text, in the HTML the server sent. */
 	titresH1: number
 	occurrences: Occurrence[]
 }
 
-const compter = (texte: string, mot: MotInterdit): number => texte.match(new RegExp(`\\b${mot}\\b`, 'g'))?.length ?? 0
+const countItems = (texte: string, mot: ForbiddenWord): number =>
+	texte.match(new RegExp(`\\b${mot}\\b`, 'g'))?.length ?? 0
 
 /**
  * What the server HTML shows: its `h1` titles, and every « undefined » or « null » written as a
  * word in a text, in an attribute read as text, or in the content of a meta tag. The scripts,
  * where the data of the page legitimately holds `null`, are left out.
  */
-export function lireLeHtml(html: string): LectureDuHtml {
+export function readHtml(html: string): HtmlReading {
 	const { window } = new JSDOM(html)
 	try {
 		const { document, NodeFilter } = window
-		for (const element of document.querySelectorAll(NON_AFFICHES)) element.remove()
+		for (const element of document.querySelectorAll(SHOWN_NOT)) element.remove()
 
-		const titresH1 = [...document.querySelectorAll('h1')].filter(titre => titre.textContent?.trim()).length
+		const titleH1 = [...document.querySelectorAll('h1')].filter(titre => titre.textContent?.trim()).length
 
-		const vus = new Map<string, Occurrence>()
-		const noter = (texte: string | null | undefined, lieu: string) => {
+		const seen = new Map<string, Occurrence>()
+		const note = (texte: string | null | undefined, lieu: string) => {
 			if (!texte) return
-			for (const mot of MOTS_INTERDITS) {
-				const nombre = compter(texte, mot)
-				if (nombre === 0) continue
-				const cle = `${mot} ${lieu}`
-				const deja = vus.get(cle)
-				vus.set(cle, { mot, lieu, nombre: (deja?.nombre ?? 0) + nombre })
+			for (const word of FORBIDDEN_WORDS) {
+				const count = countItems(texte, word)
+				if (count === 0) continue
+				const key = `${word} ${lieu}`
+				const already = seen.get(key)
+				seen.set(key, { mot: word, lieu, nombre: (already?.nombre ?? 0) + count })
 			}
 		}
 
 		// Text node by text node: two neighbours like « Ville » and « null » are two words, not « Villenull ».
-		const parcours = document.createTreeWalker(document.documentElement, NodeFilter.SHOW_TEXT)
-		for (let noeud = parcours.nextNode(); noeud; noeud = parcours.nextNode()) noter(noeud.nodeValue, 'texte')
-		for (const nom of ATTRIBUTS_LUS)
-			for (const element of document.querySelectorAll(`[${nom}]`)) noter(element.getAttribute(nom), nom)
+		const journey = document.createTreeWalker(document.documentElement, NodeFilter.SHOW_TEXT)
+		for (let node = journey.nextNode(); node; node = journey.nextNode()) note(node.nodeValue, 'texte')
+		for (const name of READ_ATTRIBUTES)
+			for (const element of document.querySelectorAll(`[${name}]`)) note(element.getAttribute(name), name)
 		for (const meta of document.querySelectorAll('meta[content]'))
-			noter(meta.getAttribute('content'), 'content d’une balise meta')
+			note(meta.getAttribute('content'), 'content d’une balise meta')
 
-		return { titresH1, occurrences: [...vus.values()] }
+		return { titresH1: titleH1, occurrences: [...seen.values()] }
 	} finally {
 		window.close()
 	}

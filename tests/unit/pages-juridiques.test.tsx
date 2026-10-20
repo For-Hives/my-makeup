@@ -6,8 +6,8 @@ import { AnalyticsOptOut } from '@/components/analytics/AnalyticsOptOut'
 import { FOOTER_COLUMNS } from '@/components/layout/links'
 import { analyticsRefused, OPT_OUT_KEY, refuseAnalytics } from '@/lib/analytics/opt-out'
 import { formatSiren, formatSiret, HOST, luhnValid, PUBLISHER } from '@/lib/legal'
-import { ouvrirFenetre } from '../support/dom-react'
-import { empreinteDuTexte, texteDePage } from '../support/page-text'
+import { openWindow } from '../support/dom-react'
+import { pageText, textFingerprint } from '../support/page-text'
 
 /**
  * The three legal pages (ticket 112): the text of the live site word for word, one h1, one source for
@@ -29,7 +29,7 @@ const PAGES = [
 // `contact-conservation-12-mois`), and the providers, the email confirmation and the delay of the photos
 // (ticket 189, register `politique-a-jour-a-la-bascule`).
 const EN_LIGNE: Record<string, { lignes: number; sha: string }> = JSON.parse(
-	readFileSync(path.join(process.cwd(), 'tests/fixtures/pages-juridiques-texte.json'), 'utf8')
+	readFileSync(path.join(process.cwd(), 'tests/fixtures/legal-pages-text.json'), 'utf8')
 )
 
 describe('le texte des trois pages', () => {
@@ -37,10 +37,10 @@ describe('le texte des trois pages', () => {
 		test(`${chemin} : texte brut identique à celui du site en ligne, un seul h1`, async () => {
 			const { default: Page } = await module()
 			const html = renderToStaticMarkup(<Page />)
-			const texte = texteDePage(html)
+			const texte = pageText(html)
 
 			expect(texte.split('\n').length).toBe(EN_LIGNE[chemin]?.lignes as number)
-			expect(empreinteDuTexte(texte)).toBe(EN_LIGNE[chemin]?.sha as string)
+			expect(textFingerprint(texte)).toBe(EN_LIGNE[chemin]?.sha as string)
 			expect(html.match(/<h1[\s>]/g)).toHaveLength(1)
 		})
 
@@ -59,7 +59,7 @@ describe('le texte des trois pages', () => {
 	test('seule la politique mène au bouton d’opposition', async () => {
 		const texte = async (module: () => Promise<{ default: () => React.JSX.Element }>) => {
 			const { default: Page } = await module()
-			return texteDePage(renderToStaticMarkup(<Page />))
+			return pageText(renderToStaticMarkup(<Page />))
 		}
 
 		// The button itself draws nothing on the server: the page shows the sentence that leads to it.
@@ -105,7 +105,7 @@ describe('l’identité légale vient d’une seule source', () => {
 
 	test('la page des mentions écrit l’éditeur et l’hébergeur tels que la source les donne', async () => {
 		const { default: Page } = await PAGES[0].module()
-		const texte = texteDePage(renderToStaticMarkup(<Page />))
+		const texte = pageText(renderToStaticMarkup(<Page />))
 
 		for (const ligne of [
 			`SIREN : ${formatSiren(PUBLISHER.siren)}`,
@@ -122,7 +122,7 @@ describe('l’identité légale vient d’une seule source', () => {
 })
 
 describe('l’opposition à la mesure', () => {
-	const fenetre = ouvrirFenetre({ noms: ['localStorage'] })
+	const fenetre = openWindow({ noms: ['localStorage'] })
 
 	test('un clic coupe la mesure sur ce navigateur, un second la rétablit', async () => {
 		fenetre.w.localStorage.clear()

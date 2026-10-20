@@ -10,12 +10,12 @@
  * the old site (`/api/upload/files`, `/api/users`, `/documentation`) must be gone.
  */
 
-import { CHEMIN_DES_STATS, RequeteInterdite } from './guard'
-import type { Lecteur } from './reader'
-import { type Constat, pire, raisonDe, type Verdict } from './result'
+import { ForbiddenRequest, STATS_PATH } from './guard'
+import type { Reader } from './reader'
+import { type Finding, reasonOf, type Verdict, worst } from './result'
 
 /** The five headers every response of the v3 leaves with (src/lib/security-headers.ts, ticket 034). */
-export const ENTETES_DE_SECURITE = [
+export const SECURITY_HEADERS = [
 	'strict-transport-security',
 	'x-content-type-options',
 	'referrer-policy',
@@ -24,89 +24,88 @@ export const ENTETES_DE_SECURITE = [
 ] as const
 
 /** Lists of accounts and of their journal: an anonymous visitor gets neither a list nor a 404. */
-export const LISTES_PRIVEES = ['/api/admins', '/api/pros', '/api/auth-events'] as const
+export const PRIVATE_LISTS = ['/api/admins', '/api/pros', '/api/auth-events'] as const
 
 /** Routes of the old site that the v3 does not have. */
-export const ANCIENNES_ROUTES = ['/api/upload/files', '/api/users', '/documentation'] as const
+export const OLD_ROUTES = ['/api/upload/files', '/api/users', '/documentation'] as const
 
 /** What Strapi must keep answering to an anonymous visitor while it runs (plan 02 §7.6 R05). */
-export const ROUTES_DE_STRAPI: readonly { chemin: string; statut: number }[] = [
+export const STRAPI_ROUTES: readonly { chemin: string; statut: number }[] = [
 	{ chemin: '/api/upload/files', statut: 403 },
 	{ chemin: '/api/users', statut: 403 },
 	{ chemin: '/documentation', statut: 404 },
 ]
 
 /** The headers missing from an answer, and the ones it must not have. */
-export function defautsDEntetes(entetes: Headers): string[] {
-	const defauts = ENTETES_DE_SECURITE.filter(nom => !entetes.get(nom)).map(nom => `en-tête absent : ${nom}`)
+export function headerDefaults(entetes: Headers): string[] {
+	const defaults = SECURITY_HEADERS.filter(nom => !entetes.get(nom)).map(nom => `en-tête absent : ${nom}`)
 	const nosniff = entetes.get('x-content-type-options')
-	if (nosniff && nosniff.toLowerCase() !== 'nosniff') defauts.push('x-content-type-options n’est pas « nosniff »')
-	if (entetes.has('x-powered-by')) defauts.push('en-tête x-powered-by présent')
-	return defauts
+	if (nosniff && nosniff.toLowerCase() !== 'nosniff') defaults.push('x-content-type-options n’est pas « nosniff »')
+	if (entetes.has('x-powered-by')) defaults.push('en-tête x-powered-by présent')
+	return defaults
 }
 
-async function statutDe(lecteur: Lecteur, chemin: string): Promise<{ statut?: number; erreur?: string }> {
+async function statusOf(lecteur: Reader, chemin: string): Promise<{ statut?: number; erreur?: string }> {
 	try {
 		return { statut: (await lecteur.lire(chemin)).statut }
-	} catch (erreur) {
-		if (erreur instanceof RequeteInterdite) throw erreur
-		return { erreur: raisonDe(erreur) }
+	} catch (error) {
+		if (error instanceof ForbiddenRequest) throw error
+		return { erreur: reasonOf(error) }
 	}
 }
 
 /** One address that must answer one of `attendus`; the line says what it answered. */
-async function exiger(
-	lecteur: Lecteur,
+async function demand(
+	lecteur: Reader,
 	chemin: string,
 	attendus: readonly number[],
 	sens: string
 ): Promise<{ verdict: Verdict; constat: string }> {
-	const { statut, erreur } = await statutDe(lecteur, chemin)
-	if (statut === undefined) return { verdict: 'rouge', constat: `${chemin} : ${erreur}` }
-	const ok = attendus.includes(statut)
+	const { statut: status, erreur: error } = await statusOf(lecteur, chemin)
+	if (status === undefined) return { verdict: 'rouge', constat: `${chemin} : ${error}` }
+	const ok = attendus.includes(status)
 	return {
 		verdict: ok ? 'vert' : 'rouge',
-		constat: `${chemin} : ${ok ? statut : `réponse ${statut}, ${attendus.join(' ou ')} attendu`} (${sens})`,
+		constat: `${chemin} : ${ok ? status : `réponse ${status}, ${attendus.join(' ou ')} attendu`} (${sens})`,
 	}
 }
 
 export interface OptionsR05 {
 	/** The site. */
-	site: Lecteur
+	site: Reader
 	/** The Strapi API, while it runs. Nothing: that part is not played. */
-	strapi?: Lecteur | undefined
+	strapi?: Reader | undefined
 }
 
-export async function sondeR05({ site, strapi }: OptionsR05): Promise<Constat> {
+export async function probeR05({ site, strapi }: OptionsR05): Promise<Finding> {
 	const verdicts: Verdict[] = []
-	const constats: string[] = []
+	const findings: string[] = []
 
 	try {
-		const accueil = await site.lire('/')
-		const defauts =
-			accueil.statut === 200 ? defautsDEntetes(accueil.entetes) : [`réponse ${accueil.statut}, 200 attendu`]
-		verdicts.push(defauts.length === 0 ? 'vert' : 'rouge')
-		constats.push(
-			defauts.length === 0
-				? `/ : les ${ENTETES_DE_SECURITE.length} en-têtes de sécurité sont là, pas de x-powered-by`
-				: `/ : ${defauts.join(' ; ')}`
+		const home = await site.lire('/')
+		const defaults = home.statut === 200 ? headerDefaults(home.entetes) : [`réponse ${home.statut}, 200 attendu`]
+		verdicts.push(defaults.length === 0 ? 'vert' : 'rouge')
+		findings.push(
+			defaults.length === 0
+				? `/ : les ${SECURITY_HEADERS.length} en-têtes de sécurité sont là, pas de x-powered-by`
+				: `/ : ${defaults.join(' ; ')}`
 		)
-	} catch (erreur) {
-		if (erreur instanceof RequeteInterdite) throw erreur
+	} catch (error) {
+		if (error instanceof ForbiddenRequest) throw error
 		verdicts.push('rouge')
-		constats.push(`/ : ${raisonDe(erreur)}`)
+		findings.push(`/ : ${reasonOf(error)}`)
 	}
 
-	const aLire: { lecteur: Lecteur; chemin: string; attendus: readonly number[]; sens: string; devant: string }[] = [
-		...LISTES_PRIVEES.map(chemin => ({
+	const toRead: { lecteur: Reader; chemin: string; attendus: readonly number[]; sens: string; devant: string }[] = [
+		...PRIVATE_LISTS.map(chemin => ({
 			lecteur: site,
 			chemin,
 			attendus: [401, 403],
 			sens: 'liste privée fermée',
 			devant: '',
 		})),
-		{ lecteur: site, chemin: CHEMIN_DES_STATS, attendus: [401], sens: 'statistiques fermées sans jeton', devant: '' },
-		...ANCIENNES_ROUTES.map(chemin => ({
+		{ lecteur: site, chemin: STATS_PATH, attendus: [401], sens: 'statistiques fermées sans jeton', devant: '' },
+		...OLD_ROUTES.map(chemin => ({
 			lecteur: site,
 			chemin,
 			attendus: [404],
@@ -114,21 +113,21 @@ export async function sondeR05({ site, strapi }: OptionsR05): Promise<Constat> {
 			devant: '',
 		})),
 		...(strapi
-			? ROUTES_DE_STRAPI.map(({ chemin, statut }) => ({
+			? STRAPI_ROUTES.map(({ chemin: path, statut: status }) => ({
 					lecteur: strapi,
-					chemin,
-					attendus: [statut],
+					chemin: path,
+					attendus: [status],
 					sens: 'API Strapi',
 					devant: 'Strapi ',
 				}))
 			: []),
 	]
 	// One at a time, in order: each reader paces itself.
-	for (const { lecteur, chemin, attendus, sens, devant } of aLire) {
-		const { verdict, constat } = await exiger(lecteur, chemin, attendus, sens)
+	for (const { lecteur: reader, chemin: path, attendus: expected, sens, devant } of toRead) {
+		const { verdict, constat: finding } = await demand(reader, path, expected, sens)
 		verdicts.push(verdict)
-		constats.push(`${devant}${constat}`)
+		findings.push(`${devant}${finding}`)
 	}
-	if (!strapi) constats.push('partie Strapi non jouée (pas d’API Strapi à lire)')
-	return { verdict: pire(verdicts), constats }
+	if (!strapi) findings.push('partie Strapi non jouée (pas d’API Strapi à lire)')
+	return { verdict: worst(verdicts), constats: findings }
 }

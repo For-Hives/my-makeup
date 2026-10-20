@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import type { Where } from 'payload'
-import { creerCompte } from '../support/account-factory'
-import { payloadDeTest } from '../support/payload-test'
+import { createAccount } from '../support/account-factory'
+import { testPayload } from '../support/payload-test'
 
 /**
  * E54 (plan 02 §7.4; ticket 094): a makeup artist, logged in, never opens the admin panel.
@@ -14,8 +14,8 @@ test.describe('E54 : une maquilleuse connectée n’entre pas dans l’administr
 		page,
 	}) => {
 		// The panel has an admin: with none, Payload would offer to create the first account instead.
-		await creerCompte('admin')
-		const maquilleuse = await creerCompte('maquilleuse')
+		await createAccount('admin')
+		const maquilleuse = await createAccount('maquilleuse')
 		await context.addCookies(maquilleuse.session.cookies)
 
 		for (const chemin of ['/admin', '/admin/collections/admins', '/admin/collections/profiles', '/admin/account']) {
@@ -37,9 +37,9 @@ test.describe('E54 : une maquilleuse connectée n’entre pas dans l’administr
 test.describe('Les verrous d’édition du back-office marchent pour les comptes admin', () => {
 	test('un second admin voit le talent verrouillé et reprend la main', async ({ browser }) => {
 		const [premier, second, payload] = await Promise.all([
-			creerCompte('admin'),
-			creerCompte('redaction'),
-			payloadDeTest(),
+			createAccount('admin'),
+			createAccount('redaction'),
+			testPayload(),
 		])
 		const talent = await payload.create({
 			collection: 'talents',

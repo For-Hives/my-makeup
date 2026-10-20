@@ -4,8 +4,8 @@ import type { DashboardUser } from '@/lib/dashboard/my-profile'
 import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
 import { saveAvailability } from '@/lib/dashboard/save-availability'
 import { LISTED_FILTER } from '@/lib/profile/visibility'
-import { type CompteDeTest, creerCompte } from '../support/account-factory'
-import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { createAccount, type TestAccount } from '../support/account-factory'
+import { emptyBase, testPayload } from '../support/payload-test'
 
 /**
  * The availability saved from her space (ticket 124; plan 02 E19-E29, U32, I02): hers alone, the
@@ -13,9 +13,9 @@ import { payloadDeTest, viderLaBase } from '../support/payload-test'
  * value stored (imported) is read as available.
  */
 
-afterEach(viderLaBase)
+afterEach(emptyBase)
 
-type Maquilleuse = CompteDeTest<'maquilleuse'>
+type Maquilleuse = TestAccount<'maquilleuse'>
 
 async function utilisateurDe(payload: Payload, compte: Maquilleuse): Promise<DashboardUser> {
 	const doc = await payload.findByID({ collection: 'pros', id: compte.id, depth: 0, overrideAccess: true })
@@ -36,9 +36,9 @@ async function profilStocke(payload: Payload, compte: Maquilleuse) {
 
 describe('E19-E29 : la disponibilité enregistrée est celle de la base', () => {
 	test('indisponible, puis disponible : la valeur rendue est la valeur stockée, le profil de B ne bouge pas', async () => {
-		const a = await creerCompte('maquilleuse')
-		const b = await creerCompte('maquilleuse')
-		const payload = await payloadDeTest()
+		const a = await createAccount('maquilleuse')
+		const b = await createAccount('maquilleuse')
+		const payload = await testPayload()
 		const utilisateur = await utilisateurDe(payload, a)
 		const avantB = await profilStocke(payload, b)
 		const slug = (await profilStocke(payload, a)).slug
@@ -62,8 +62,8 @@ describe('E19-E29 : la disponibilité enregistrée est celle de la base', () => 
 	})
 
 	test('une valeur nulle importée est rendue « disponible » après une écriture qui ne la touche pas', async () => {
-		const a = await creerCompte('maquilleuse')
-		const payload = await payloadDeTest()
+		const a = await createAccount('maquilleuse')
+		const payload = await testPayload()
 		const profil = await profilStocke(payload, a)
 		await payload.db.updateOne({ collection: 'profiles', id: profil.id, data: { available: null }, returning: false })
 		expect((await profilStocke(payload, a)).available ?? null).toBeNull()
@@ -75,8 +75,8 @@ describe('E19-E29 : la disponibilité enregistrée est celle de la base', () => 
 
 describe('E19-E29 : indisponible, le profil sort de la liste publique', () => {
 	test('la liste le montre disponible, ne le montre plus indisponible, le montre de nouveau disponible', async () => {
-		const a = await creerCompte('maquilleuse')
-		const payload = await payloadDeTest()
+		const a = await createAccount('maquilleuse')
+		const payload = await testPayload()
 		const utilisateur = await utilisateurDe(payload, a)
 		const id = (await profilStocke(payload, a)).id
 		await payload.update({
@@ -118,8 +118,8 @@ describe('U32, I02 : une requête forgée est refusée, rien ne change', () => {
 		['rien', {}],
 		['pas un objet', 'false'],
 	])('%s', async (_nom, saisie) => {
-		const a = await creerCompte('maquilleuse')
-		const payload = await payloadDeTest()
+		const a = await createAccount('maquilleuse')
+		const payload = await testPayload()
 		const avant = await profilStocke(payload, a)
 
 		const resultat = await saveAvailability(payload, await utilisateurDe(payload, a), saisie)
@@ -131,8 +131,8 @@ describe('U32, I02 : une requête forgée est refusée, rien ne change', () => {
 	})
 
 	test('un compte sans profil ne crée rien', async () => {
-		const sansProfil = await creerCompte('maquilleuse-sans-profil')
-		const payload = await payloadDeTest()
+		const sansProfil = await createAccount('maquilleuse-sans-profil')
+		const payload = await testPayload()
 		const doc = await payload.findByID({ collection: 'pros', id: sansProfil.id, depth: 0, overrideAccess: true })
 		const resultat = await saveAvailability(payload, { ...doc, collection: 'pros' } as DashboardUser, {
 			disponible: false,

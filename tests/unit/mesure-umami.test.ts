@@ -22,7 +22,7 @@ import {
 	type UmamiEnv,
 	umamiFromEnv,
 } from '@/lib/env'
-import { delay, HttpResponse, http, simuler } from '../support/outgoing-http'
+import { delay, HttpResponse, http, simulate } from '../support/outgoing-http'
 
 // Made-up instance: a name that never resolves, simulated by the tests.
 const INSTANCE = 'https://umami.exemple.test'
@@ -319,7 +319,7 @@ describe('le relais /u/script.js', () => {
 
 	test('le script de l’instance est relayé sans cookie ni Referer', async () => {
 		let recu: Headers | undefined
-		simuler(
+		simulate(
 			http.get(`${INSTANCE}/script.js`, ({ request }) => {
 				recu = request.headers
 				return new HttpResponse('window.umami={}', {
@@ -342,7 +342,7 @@ describe('le relais /u/script.js', () => {
 
 	test('hors des hôtes du site, rien ne part vers l’instance : un script vide', async () => {
 		let appels = 0
-		simuler(
+		simulate(
 			http.get(`${INSTANCE}/script.js`, () => {
 				appels++
 				return new HttpResponse('window.umami={}')
@@ -364,14 +364,14 @@ describe('le relais /u/script.js', () => {
 	})
 
 	test('l’instance de ce poste (le faux Umami) est relayée depuis n’importe quel hôte', async () => {
-		simuler(http.get('http://127.0.0.1:4200/script.js', () => new HttpResponse('faux')))
+		simulate(http.get('http://127.0.0.1:4200/script.js', () => new HttpResponse('faux')))
 		const reponse = await relayScript(script({ host: 'localhost:3311' }), { umami: LOCAL })
 		expect(await reponse.text()).toBe('faux')
 	})
 
 	test('une instance muette est coupée au délai, 504', async () => {
 		expect(RELAY_TIMEOUT_MS).toBe(10_000)
-		simuler(
+		simulate(
 			http.get(`${INSTANCE}/script.js`, async () => {
 				await delay('infinite')
 				return new HttpResponse('jamais')
@@ -384,9 +384,9 @@ describe('le relais /u/script.js', () => {
 	})
 
 	test('une panne, une redirection : 502, jamais suivie', async () => {
-		simuler(http.get(`${INSTANCE}/script.js`, () => HttpResponse.error()))
+		simulate(http.get(`${INSTANCE}/script.js`, () => HttpResponse.error()))
 		expect((await relayScript(script(), { umami: REEL })).status).toBe(502)
-		simuler(
+		simulate(
 			http.get(
 				`${INSTANCE}/script.js`,
 				() => new HttpResponse(null, { status: 302, headers: { Location: 'https://autre.exemple.test/' } })
@@ -399,7 +399,7 @@ describe('le relais /u/script.js', () => {
 describe('le relais /u/api/send', () => {
 	test('une mesure part vers l’instance avec son corps, sans cookie ni Referer, et la réponse revient', async () => {
 		let recu: { entetes: Headers; corps: string } | undefined
-		simuler(
+		simulate(
 			http.post(`${AUTRE_INSTANCE}/api/send`, async ({ request }) => {
 				recu = { entetes: request.headers, corps: await request.text() }
 				return new HttpResponse('jeton', { headers: { 'Set-Cookie': 'a=b' } })
@@ -425,7 +425,7 @@ describe('le relais /u/api/send', () => {
 
 	test('hors des hôtes du site, la mesure est reçue et jetée : rien ne part', async () => {
 		let appels = 0
-		simuler(
+		simulate(
 			http.post(`${AUTRE_INSTANCE}/api/send`, () => {
 				appels++
 				return new HttpResponse('jeton')
@@ -444,7 +444,7 @@ describe('le relais /u/api/send', () => {
 	})
 
 	test('une instance muette est coupée au délai, 504', async () => {
-		simuler(
+		simulate(
 			http.post(`${AUTRE_INSTANCE}/api/send`, async () => {
 				await delay('infinite')
 				return new HttpResponse('jamais')

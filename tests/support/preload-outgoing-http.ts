@@ -1,8 +1,8 @@
 import { afterAll, afterEach } from 'bun:test'
-import { demarrerHttpSortant, exigerAucunRefus, oublierLesSimulations } from './outgoing-http'
+import { forgetSimulations, requireNoRefusal, startHttpOutgoing } from './outgoing-http'
 
 /**
- * No test calls the Internet (tests/outils/http-sortant.ts).
+ * No test calls the Internet (tests/support/outgoing-http.ts).
  *
  * bun loads this file before any test file (bunfig.toml, `[test] preload`). It starts the
  * interception of outgoing HTTP for the whole run, then declares two hooks that apply to every
@@ -17,13 +17,13 @@ import { demarrerHttpSortant, exigerAucunRefus, oublierLesSimulations } from './
  * Every run pays for this file: MSW is loaded and a local server is opened, about 80 ms.
  * Nothing is read from the environment; six proxy variables are set for this process.
  */
-await demarrerHttpSortant()
+await startHttpOutgoing()
 
 afterEach(() => {
-	oublierLesSimulations()
-	exigerAucunRefus(' pendant ce test, ou juste avant lui')
+	forgetSimulations()
+	requireNoRefusal(' pendant ce test, ou juste avant lui')
 })
 
 afterAll(() => {
-	exigerAucunRefus(' après le dernier test')
+	requireNoRefusal(' après le dernier test')
 })

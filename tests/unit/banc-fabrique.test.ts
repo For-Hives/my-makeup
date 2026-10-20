@@ -1,25 +1,25 @@
 import { describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
-import { adresseDuJeu, COMPTES_DU_JEU, poserLesComptesDuJeu, TYPES_DU_JEU } from '../fixtures/accounts'
-import { BancRefuse, environnementDuBanc, RACINE, type Variables } from '../support/bench'
+import { DATASET_ACCOUNTS, DATASET_TYPES, datasetUrl, setDatasetAccounts } from '../fixtures/accounts'
 import {
-	adresseDeTest,
-	creerCompte,
-	creerCompteFixe,
-	type DeclarationDeCompte,
-	MOT_DE_PASSE_HERITE_DE_FIXTURE,
-	motDePasseAleatoire,
-	SEL_BCRYPT_DE_FIXTURE,
-	strapiIdDeTest,
-	TYPES_DE_COMPTE,
+	ACCOUNT_TYPES,
+	type AccountDeclaration,
+	createAccount,
+	createFixedAccount,
+	FIXTURE_LEGACY_PASSWORD,
+	FIXTURE_SALT_BCRYPT,
+	randomPassword,
+	testStrapiId,
+	testUrl,
 } from '../support/account-factory'
-import { origineDuSite } from '../support/session'
-import { HASH_BCRYPT_COMPLET } from '../support/source-strapi/inventory'
+import { benchEnvironment, RefusedBench, ROOT, type Variables } from '../support/bench'
+import { siteOrigin } from '../support/session'
+import { HASH_BCRYPT_FULL } from '../support/source-strapi/inventory'
 
 /** The types of account the old site brings. */
 const TYPES_REPRIS = ['reprise-avec-hash', 'reprise-google', 'reprise-google-avec-hash', 'reprise-facebook'] as const
 
-const BANC = environnementDuBanc({ nom: 'my-makeup-test', decalage: 0 })
+const BANC = benchEnvironment({ nom: 'my-makeup-test', decalage: 0 })
 const BASE_DU_BANC = BANC.DATABASE_URI ?? ''
 const BASE_DE_DEVELOPPEMENT = 'postgres://mymakeup:local-dev-only@127.0.0.1:5442/mymakeup_dev'
 
@@ -46,7 +46,7 @@ const refus = async (essai: () => Promise<unknown>): Promise<string> => {
 	try {
 		await essai()
 	} catch (erreur) {
-		if (erreur instanceof BancRefuse) return erreur.message
+		if (erreur instanceof RefusedBench) return erreur.message
 		throw erreur
 	}
 	throw new Error('rien n’a été refusé')
@@ -60,7 +60,7 @@ describe('Hors du banc, la fabrique s’arrête avant toute écriture', () => {
 			return Promise.resolve(fauxPayload(BASE_DU_BANC).payload)
 		}
 
-		const message = await refus(() => creerCompte('admin', { payload: charger, variables: {} }))
+		const message = await refus(() => createAccount('admin', { payload: charger, variables: {} }))
 
 		expect(message).toContain('Aucun banc de test n’est réglé (DATABASE_URI manque) : rien n’est écrit.')
 		expect(message).toContain('« bun run test:integration »')
@@ -78,7 +78,7 @@ describe('Hors du banc, la fabrique s’arrête avant toute écriture', () => {
 		const { ecritures, payload } = fauxPayload(base)
 		const variables: Variables = { ...BANC, DATABASE_URI: base }
 
-		const message = await refus(() => creerCompte('admin', { payload: () => Promise.resolve(payload), variables }))
+		const message = await refus(() => createAccount('admin', { payload: () => Promise.resolve(payload), variables }))
 
 		expect(message).toStartWith('DATABASE_URI ne désigne pas la base du banc de test : rien n’est écrit.')
 		expect(message).not.toContain('postgres://')
@@ -89,7 +89,7 @@ describe('Hors du banc, la fabrique s’arrête avant toute écriture', () => {
 		const { ecritures, payload } = fauxPayload(BASE_DE_DEVELOPPEMENT)
 
 		const message = await refus(() =>
-			creerCompte('admin', { payload: () => Promise.resolve(payload), variables: BANC })
+			createAccount('admin', { payload: () => Promise.resolve(payload), variables: BANC })
 		)
 
 		expect(message).toBe('Payload n’est pas branché sur la base du banc de test : rien n’est écrit.')
@@ -101,7 +101,7 @@ describe('Hors du banc, la fabrique s’arrête avant toute écriture', () => {
 		// factory goes on to its first write, which this fake one refuses.
 		const { ecritures, payload } = fauxPayload(BASE_DU_BANC)
 
-		await expect(creerCompte('admin', { payload: () => Promise.resolve(payload), variables: BANC })).rejects.toThrow(
+		await expect(createAccount('admin', { payload: () => Promise.resolve(payload), variables: BANC })).rejects.toThrow(
 			'create ne devait pas être appelé'
 		)
 		expect(ecritures).toEqual(['create'])
@@ -114,9 +114,9 @@ describe('Hors du banc, la fabrique s’arrête avant toute écriture', () => {
 			return Promise.resolve(fauxPayload(BASE_DU_BANC).payload)
 		}
 
-		const pourLeJeu = await refus(() => poserLesComptesDuJeu({ payload: charger, variables: {} }))
+		const pourLeJeu = await refus(() => setDatasetAccounts({ payload: charger, variables: {} }))
 		const pourUnCompte = await refus(() =>
-			creerCompteFixe('admin', { email: adresseDuJeu('admin') }, { payload: charger, variables: {} })
+			createFixedAccount('admin', { email: datasetUrl('admin') }, { payload: charger, variables: {} })
 		)
 
 		for (const message of [pourLeJeu, pourUnCompte])
@@ -128,7 +128,7 @@ describe('Hors du banc, la fabrique s’arrête avant toute écriture', () => {
 		const { ecritures, payload } = fauxPayload(BASE_DU_BANC)
 
 		await expect(
-			creerCompteFixe(
+			createFixedAccount(
 				'admin',
 				{ email: 'admin@exemple.fr' },
 				{ payload: () => Promise.resolve(payload), variables: BANC }
@@ -140,23 +140,23 @@ describe('Hors du banc, la fabrique s’arrête avant toute écriture', () => {
 
 describe('Le jeu du banc : un compte fixe de chaque type', () => {
 	test('chaque type de la fabrique y a son compte, dans le même ordre', () => {
-		expect(TYPES_DU_JEU).toEqual(Object.keys(TYPES_DE_COMPTE) as typeof TYPES_DU_JEU)
+		expect(DATASET_TYPES).toEqual(Object.keys(ACCOUNT_TYPES) as typeof DATASET_TYPES)
 	})
 
 	test('des adresses fixes en @example.test, une par type', () => {
-		const adresses = TYPES_DU_JEU.map(adresseDuJeu)
+		const adresses = DATASET_TYPES.map(datasetUrl)
 
 		for (const adresse of adresses) expect(adresse).toMatch(/^jeu-[a-z-]+@example\.test$/)
-		expect(new Set(adresses).size).toBe(TYPES_DU_JEU.length)
-		expect(adresseDuJeu('reprise-google')).toBe('jeu-reprise-google@example.test')
+		expect(new Set(adresses).size).toBe(DATASET_TYPES.length)
+		expect(datasetUrl('reprise-google')).toBe('jeu-reprise-google@example.test')
 	})
 
 	test('les comptes repris, et eux seuls, ont un identifiant fixe de l’ancien site, sous ceux de la fabrique', () => {
-		const repris = TYPES_DU_JEU.filter(
-			type => TYPES_DE_COMPTE[type].collection === 'pros' && 'reprise' in TYPES_DE_COMPTE[type]
+		const repris = DATASET_TYPES.filter(
+			type => ACCOUNT_TYPES[type].collection === 'pros' && 'reprise' in ACCOUNT_TYPES[type]
 		)
-		const identifiants = TYPES_DU_JEU.flatMap(type => {
-			const { strapiId } = COMPTES_DU_JEU[type]
+		const identifiants = DATASET_TYPES.flatMap(type => {
+			const { strapiId } = DATASET_ACCOUNTS[type]
 			return strapiId === undefined ? [] : [{ type, strapiId }]
 		})
 
@@ -170,12 +170,12 @@ describe('Le jeu du banc : un compte fixe de chaque type', () => {
 	})
 
 	test('chaque maquilleuse du jeu a un nom fixe, différent des autres ; les comptes admin n’en ont pas', () => {
-		const noms = TYPES_DU_JEU.map(type => ({ type, nom: COMPTES_DU_JEU[type].nom }))
-		const maquilleuses = noms.filter(({ type }) => TYPES_DE_COMPTE[type].collection === 'pros')
+		const noms = DATASET_TYPES.map(type => ({ type, nom: DATASET_ACCOUNTS[type].nom }))
+		const maquilleuses = noms.filter(({ type }) => ACCOUNT_TYPES[type].collection === 'pros')
 
 		for (const { nom } of maquilleuses) expect(nom).toEndWith(' du jeu')
 		expect(new Set(maquilleuses.map(({ nom }) => nom)).size).toBe(maquilleuses.length)
-		expect(noms.filter(({ type }) => TYPES_DE_COMPTE[type].collection === 'admins')).toEqual([
+		expect(noms.filter(({ type }) => ACCOUNT_TYPES[type].collection === 'admins')).toEqual([
 			{ type: 'admin', nom: undefined },
 			{ type: 'redaction', nom: undefined },
 		])
@@ -184,15 +184,15 @@ describe('Le jeu du banc : un compte fixe de chaque type', () => {
 
 describe('Aucun hash réel dans le dépôt', () => {
 	test('aucun fichier versionné ne contient un hash bcrypt complet : le hash de fixture se calcule sur le banc', async () => {
-		const listage = Bun.spawnSync(['git', 'ls-files', '-z'], { cwd: RACINE })
+		const listage = Bun.spawnSync(['git', 'ls-files', '-z'], { cwd: ROOT })
 		expect(listage.exitCode).toBe(0)
 		const fichiers = listage.stdout.toString().split('\0').filter(Boolean)
 		// Anywhere in a line, not only a whole value: the pattern of the inventory, without its anchors.
-		const motif = new RegExp(HASH_BCRYPT_COMPLET.source.replace(/^\^/, '').replace(/\$$/, ''))
+		const motif = new RegExp(HASH_BCRYPT_FULL.source.replace(/^\^/, '').replace(/\$$/, ''))
 		const porteurs: string[] = []
 
 		for (const fichier of fichiers) {
-			const contenu = Bun.file(`${RACINE}/${fichier}`)
+			const contenu = Bun.file(`${ROOT}/${fichier}`)
 			// A file removed from the working tree but not from the index yet holds nothing.
 			if (!(await contenu.exists())) continue
 			const octets = new Uint8Array(await contenu.arrayBuffer())
@@ -208,7 +208,7 @@ describe('Aucun hash réel dans le dépôt', () => {
 
 describe('Ce que la fabrique tire au sort', () => {
 	test('chaque type de compte vit dans une collection de comptes', () => {
-		expect(Object.keys(TYPES_DE_COMPTE)).toEqual([
+		expect(Object.keys(ACCOUNT_TYPES)).toEqual([
 			'admin',
 			'redaction',
 			'maquilleuse',
@@ -220,17 +220,17 @@ describe('Ce que la fabrique tire au sort', () => {
 			'reprise-google-avec-hash',
 			'reprise-facebook',
 		])
-		expect(TYPES_DE_COMPTE.admin.collection).toBe('admins')
-		expect(TYPES_DE_COMPTE.redaction.collection).toBe('admins')
-		expect(TYPES_DE_COMPTE.maquilleuse.collection).toBe('pros')
-		expect(TYPES_DE_COMPTE['maquilleuse-non-verifiee'].collection).toBe('pros')
-		expect(TYPES_DE_COMPTE['maquilleuse-sans-profil'].collection).toBe('pros')
-		for (const type of TYPES_REPRIS) expect(TYPES_DE_COMPTE[type].collection).toBe('pros')
-		expect(TYPES_DE_COMPTE['maquilleuse-bloquee'].collection).toBe('pros')
+		expect(ACCOUNT_TYPES.admin.collection).toBe('admins')
+		expect(ACCOUNT_TYPES.redaction.collection).toBe('admins')
+		expect(ACCOUNT_TYPES.maquilleuse.collection).toBe('pros')
+		expect(ACCOUNT_TYPES['maquilleuse-non-verifiee'].collection).toBe('pros')
+		expect(ACCOUNT_TYPES['maquilleuse-sans-profil'].collection).toBe('pros')
+		for (const type of TYPES_REPRIS) expect(ACCOUNT_TYPES[type].collection).toBe('pros')
+		expect(ACCOUNT_TYPES['maquilleuse-bloquee'].collection).toBe('pros')
 	})
 
 	test('une maquilleuse bloquée : confirmée, bloquée, sans session, avec le mot de passe tiré', () => {
-		const bloquee: DeclarationDeCompte<'pros'> = TYPES_DE_COMPTE['maquilleuse-bloquee']
+		const bloquee: AccountDeclaration<'pros'> = ACCOUNT_TYPES['maquilleuse-bloquee']
 		expect(bloquee.donnees()).toMatchObject({ _verified: true, blocked: true })
 		expect(bloquee.connexion).toBe(false)
 		expect(bloquee.reprise).toBeUndefined()
@@ -238,7 +238,7 @@ describe('Ce que la fabrique tire au sort', () => {
 
 	test('les comptes de l’ancien site : leur fournisseur, leur hash, et comment chacun se connecte', () => {
 		const portraits = TYPES_REPRIS.map(type => {
-			const declaration: DeclarationDeCompte<'pros'> = TYPES_DE_COMPTE[type]
+			const declaration: AccountDeclaration<'pros'> = ACCOUNT_TYPES[type]
 			return {
 				type,
 				...declaration.reprise,
@@ -269,12 +269,12 @@ describe('Ce que la fabrique tire au sort', () => {
 
 	test('le hash de fixture : un sel fixe au format de l’ancien site, et un mot de passe fictif', () => {
 		// Version 2a, cost 10, then 22 characters of the alphabet of bcrypt: a salt, never a hash.
-		expect(SEL_BCRYPT_DE_FIXTURE).toMatch(/^\$2a\$10\$[./A-Za-z0-9]{22}$/)
-		expect(MOT_DE_PASSE_HERITE_DE_FIXTURE).toStartWith('fixture-')
+		expect(FIXTURE_SALT_BCRYPT).toMatch(/^\$2a\$10\$[./A-Za-z0-9]{22}$/)
+		expect(FIXTURE_LEGACY_PASSWORD).toStartWith('fixture-')
 	})
 
 	test('un identifiant de l’ancien site pour un compte de test, loin de ceux de la fausse source et du jeu', () => {
-		const tirages = Array.from({ length: 50 }, strapiIdDeTest)
+		const tirages = Array.from({ length: 50 }, testStrapiId)
 
 		for (const tirage of tirages) {
 			expect(Number.isInteger(tirage)).toBe(true)
@@ -284,34 +284,34 @@ describe('Ce que la fabrique tire au sort', () => {
 	})
 
 	test('une maquilleuse sans profil : sa création le dit à Payload, et elle se connecte', () => {
-		expect(TYPES_DE_COMPTE['maquilleuse-sans-profil'].contexte).toEqual({ profilAutomatique: false })
-		expect(TYPES_DE_COMPTE['maquilleuse-sans-profil'].donnees()).toMatchObject({ _verified: true })
-		expect('connexion' in TYPES_DE_COMPTE['maquilleuse-sans-profil']).toBe(false)
+		expect(ACCOUNT_TYPES['maquilleuse-sans-profil'].contexte).toEqual({ profilAutomatique: false })
+		expect(ACCOUNT_TYPES['maquilleuse-sans-profil'].donnees()).toMatchObject({ _verified: true })
+		expect('connexion' in ACCOUNT_TYPES['maquilleuse-sans-profil']).toBe(false)
 	})
 
 	test('une maquilleuse confirmée, et une autre qui ne l’est pas et n’a donc pas de session', () => {
-		expect(TYPES_DE_COMPTE.maquilleuse.donnees()).toMatchObject({ _verified: true })
-		expect(TYPES_DE_COMPTE['maquilleuse-non-verifiee'].donnees()).toMatchObject({ _verified: false })
-		expect(TYPES_DE_COMPTE['maquilleuse-non-verifiee'].connexion).toBe(false)
-		expect('connexion' in TYPES_DE_COMPTE.maquilleuse).toBe(false)
+		expect(ACCOUNT_TYPES.maquilleuse.donnees()).toMatchObject({ _verified: true })
+		expect(ACCOUNT_TYPES['maquilleuse-non-verifiee'].donnees()).toMatchObject({ _verified: false })
+		expect(ACCOUNT_TYPES['maquilleuse-non-verifiee'].connexion).toBe(false)
+		expect('connexion' in ACCOUNT_TYPES.maquilleuse).toBe(false)
 		// Two accounts made side by side never share a display name.
-		expect(TYPES_DE_COMPTE.maquilleuse.donnees().name).not.toBe(TYPES_DE_COMPTE.maquilleuse.donnees().name)
+		expect(ACCOUNT_TYPES.maquilleuse.donnees().name).not.toBe(ACCOUNT_TYPES.maquilleuse.donnees().name)
 	})
 
 	test('les deux rôles de l’administration : admin et redaction', () => {
-		expect(TYPES_DE_COMPTE.admin.donnees()).toEqual({ role: 'admin' })
-		expect(TYPES_DE_COMPTE.redaction.donnees()).toEqual({ role: 'editor' })
+		expect(ACCOUNT_TYPES.admin.donnees()).toEqual({ role: 'admin' })
+		expect(ACCOUNT_TYPES.redaction.donnees()).toEqual({ role: 'editor' })
 	})
 
 	test('une adresse en @example.test, jamais deux fois la même', () => {
-		const adresses = Array.from({ length: 50 }, () => adresseDeTest('admin'))
+		const adresses = Array.from({ length: 50 }, () => testUrl('admin'))
 
 		for (const adresse of adresses) expect(adresse).toMatch(/^admin-[0-9a-f-]{36}@example\.test$/)
 		expect(new Set(adresses).size).toBe(50)
 	})
 
 	test('un mot de passe de 32 caractères, jamais deux fois le même', () => {
-		const tirages = Array.from({ length: 50 }, motDePasseAleatoire)
+		const tirages = Array.from({ length: 50 }, randomPassword)
 
 		for (const tirage of tirages) expect(tirage).toMatch(/^[\w-]{32}$/)
 		expect(new Set(tirages).size).toBe(50)
@@ -322,11 +322,11 @@ describe('L’origine d’une session', () => {
 	const { payload } = fauxPayload(BASE_DU_BANC)
 
 	test('c’est l’adresse du site sur le banc, quand la configuration lui fait confiance', () => {
-		expect(origineDuSite(payload, { NEXT_PUBLIC_SITE_URL: 'http://localhost:3100' })).toBe('http://localhost:3100')
+		expect(siteOrigin(payload, { NEXT_PUBLIC_SITE_URL: 'http://localhost:3100' })).toBe('http://localhost:3100')
 	})
 
 	test('une origine que la configuration ignorerait est refusée, plutôt que de rendre une session sans effet', () => {
-		expect(() => origineDuSite(payload, { NEXT_PUBLIC_SITE_URL: 'http://localhost:3999' })).toThrow(BancRefuse)
-		expect(() => origineDuSite(payload, {})).toThrow(BancRefuse)
+		expect(() => siteOrigin(payload, { NEXT_PUBLIC_SITE_URL: 'http://localhost:3999' })).toThrow(RefusedBench)
+		expect(() => siteOrigin(payload, {})).toThrow(RefusedBench)
 	})
 })

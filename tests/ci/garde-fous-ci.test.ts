@@ -2,7 +2,6 @@ import { describe, expect, test } from 'bun:test'
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { configurationDesEssais } from '../support/e2e'
 import {
 	absoluteNavigations,
 	aggregatorProblems,
@@ -32,6 +31,7 @@ import {
 	unpinnedActions,
 	type Workflow,
 } from '../support/ci-guardrails'
+import { testConfiguration } from '../support/e2e'
 
 /**
  * The guard rails of the CI (plans, C01 to C08) and of the Docker image.
@@ -246,12 +246,12 @@ describe('.dockerignore refuses everything but what the build needs', () => {
 		// The import and the fake Strapi source of the bench, all fictional: the import that runs in the
 		// container of the site reads them (ticket 233).
 		'scripts/migration/import',
-		'tests/outils/source-strapi/creation.ts',
-		'tests/outils/source-strapi/donnees.ts',
-		'tests/outils/source-strapi/images.ts',
-		'tests/outils/source-strapi/schema.ts',
-		'tests/fixtures/import/decisions-du-banc.json',
-		'tests/fixtures/import/referentiel-du-banc.json',
+		'tests/support/source-strapi/creation.ts',
+		'tests/support/source-strapi/data.ts',
+		'tests/support/source-strapi/images.ts',
+		'tests/support/source-strapi/schema.ts',
+		'tests/fixtures/import/bench-decisions.json',
+		'tests/fixtures/import/bench-reference.json',
 	]
 	const dockerignore = read('.dockerignore')
 
@@ -945,7 +945,7 @@ describe('the CI runs the integration tests and the end-to-end tests on the test
 	const SETUP_NODE_OF_E2E =
 		'      # Playwright runs under Node, not bun.\n      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0\n        with:\n          node-version-file: .nvmrc\n          package-manager-cache: false\n'
 	const BENCH_OF_INTEGRATION =
-		'      - name: Start the test bench\n        run: bun run banc:up\n      - name: Integration tests\n'
+		'      - name: Start the test bench\n        run: bun run bench:up\n      - name: Integration tests\n'
 	const SHARD = expression('matrix.shard')
 	const INTEGRATION_TESTS = `run: bun run test:integration --shard=${SHARD}/3`
 	const E2E_TESTS = `run: bun run test:e2e --shard=${SHARD}/4`
@@ -968,13 +968,13 @@ describe('the CI runs the integration tests and the end-to-end tests on the test
 			'integration tests without the bench',
 			BENCH_OF_INTEGRATION,
 			'      - name: Integration tests\n',
-			'job integration : il doit lancer « bun run banc:up », seule dans son étape',
+			'job integration : il doit lancer « bun run bench:up », seule dans son étape',
 		],
 		[
 			'integration tests started before the bench',
 			`${BENCH_OF_INTEGRATION}        ${INTEGRATION_TESTS}\n`,
-			`      - name: Integration tests\n        ${INTEGRATION_TESTS}\n      - name: Start the test bench\n        run: bun run banc:up\n`,
-			`job integration : « bun run test:integration --shard=${SHARD}/3 » doit venir après « bun run banc:up »`,
+			`      - name: Integration tests\n        ${INTEGRATION_TESTS}\n      - name: Start the test bench\n        run: bun run bench:up\n`,
+			`job integration : « bun run test:integration --shard=${SHARD}/3 » doit venir après « bun run bench:up »`,
 		],
 		[
 			'one integration file instead of its shard of the folder',
@@ -996,8 +996,8 @@ describe('the CI runs the integration tests and the end-to-end tests on the test
 		],
 		[
 			'the bench and the tests in one script',
-			`        run: bun run banc:up\n      - name: Integration tests\n        ${INTEGRATION_TESTS}\n`,
-			`        run: |\n          bun run banc:up\n          bun run test:integration --shard=${SHARD}/3\n`,
+			`        run: bun run bench:up\n      - name: Integration tests\n        ${INTEGRATION_TESTS}\n`,
+			`        run: |\n          bun run bench:up\n          bun run test:integration --shard=${SHARD}/3\n`,
 			`job integration : il doit lancer « bun run test:integration --shard=${SHARD}/3 », seule dans son étape`,
 		],
 		[
@@ -1286,9 +1286,9 @@ describe('C06: no end-to-end test waits for a fixed time', () => {
 
 describe('C07: Playwright cannot point at production, and the CI cannot skip tests', () => {
 	const CONFIG = 'playwright.config.ts'
-	const GIVEN_AS_IT_IS = 'export default defineConfig(configurationDesEssais())'
+	const GIVEN_AS_IT_IS = 'export default defineConfig(testConfiguration())'
 	/** The configuration as the CI evaluates it: `CI` set, and nothing else. */
-	const inCi: PlaywrightSettings = configurationDesEssais({ CI: 'true' })
+	const inCi: PlaywrightSettings = testConfiguration({ CI: 'true' })
 	const [firstProject] = inCi.projects ?? []
 
 	test('the configuration of the repository: no `.only` in the CI, `*.spec.ts` files only, a local address', () => {
@@ -1296,7 +1296,7 @@ describe('C07: Playwright cannot point at production, and the CI cannot skip tes
 		expect(inCi.testMatch).toBe('**/*.spec.ts')
 		expect(new URL(inCi.use?.baseURL ?? '').hostname).toBe('localhost')
 		// On a developer's machine `.only` is a tool: the CI alone forbids it.
-		expect(configurationDesEssais({}).forbidOnly).toBe(false)
+		expect(testConfiguration({}).forbidOnly).toBe(false)
 	})
 
 	test('playwright.config.ts gives that configuration as it is, and sets nothing itself', () => {
@@ -1358,17 +1358,17 @@ describe('C07: Playwright cannot point at production, and the CI cannot skip tes
 	})
 
 	test.each([
-		['a setting added after the checked ones', 'defineConfig({ ...configurationDesEssais(), forbidOnly: false })'],
+		['a setting added after the checked ones', 'defineConfig({ ...testConfiguration(), forbidOnly: false })'],
 		[
 			'a configuration written in the file',
 			"defineConfig({ testDir: './tests', use: { baseURL: 'https://my-makeup.fr' } })",
 		],
 		[
 			'a variable given to the checked function',
-			"defineConfig(configurationDesEssais({ BASE_URL: 'https://my-makeup.fr' }))",
+			"defineConfig(testConfiguration({ BASE_URL: 'https://my-makeup.fr' }))",
 		],
 	])('red on %s', (_fault, exported) => {
-		const text = broken(read(CONFIG), 'defineConfig(configurationDesEssais())', exported)
+		const text = broken(read(CONFIG), 'defineConfig(testConfiguration())', exported)
 
 		expect(playwrightConfigFileProblems(text, GIVEN_AS_IT_IS)).toEqual([
 			`playwright.config.ts doit se réduire à « ${GIVEN_AS_IT_IS} » : un réglage écrit dans ce fichier échapperait aux garde-fous.`,
@@ -1462,22 +1462,22 @@ describe('Ticket 137: the reconciliation of the storage and the database runs af
 	const indexDe = (workflow: Workflow, morceau: string) =>
 		etapes(workflow).findIndex(etape => etape.run?.includes(morceau))
 
-	test('the e2e job runs `banc:rapprocher` right after the end-to-end tests, and the aggregator waits for that job', () => {
+	test('the e2e job runs `bench:reconcile` right after the end-to-end tests, and the aggregator waits for that job', () => {
 		const essais = indexDe(ci, 'bun run test:e2e')
 		expect(essais).toBeGreaterThan(-1)
-		expect(indexDe(ci, 'bun run banc:rapprocher')).toBeGreaterThan(essais)
+		expect(indexDe(ci, 'bun run bench:reconcile')).toBeGreaterThan(essais)
 		expect(ci.jobs[AGGREGATOR]?.needs).toContain('e2e')
 	})
 
 	test('red on a CI that drops the step', () => {
-		const sansEtape = brokenCi('        run: bun run banc:rapprocher --outside-import\n', '        run: echo rien\n')
-		expect(indexDe(sansEtape, 'bun run banc:rapprocher')).toBe(-1)
+		const sansEtape = brokenCi('        run: bun run bench:reconcile --outside-import\n', '        run: echo rien\n')
+		expect(indexDe(sansEtape, 'bun run bench:reconcile')).toBe(-1)
 	})
 
 	test('red on a step that tolerates a failure: C01 finds it', () => {
 		const tolerante = brokenCi(
-			'        run: bun run banc:rapprocher --outside-import\n',
-			'        continue-on-error: true\n        run: bun run banc:rapprocher --outside-import\n'
+			'        run: bun run bench:reconcile --outside-import\n',
+			'        continue-on-error: true\n        run: bun run bench:reconcile --outside-import\n'
 		)
 		expect(toleratedFailures([tolerante]).length).toBeGreaterThan(0)
 	})

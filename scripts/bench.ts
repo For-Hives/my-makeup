@@ -1,108 +1,108 @@
 /**
  * Command line of the local test bench (docs/tests/banc.md).
  *
- *   bun run banc:up                     starts the six containers, returns once all six answer
- *   bun run banc:down                   stops them, removes containers and volumes
- *   bun run banc:prepare                rebuilds the bench database by the migrations, empty
- *   bun run banc:complet                starts the stack, loads the whole set, builds and starts the application
- *   bun run banc:reinitialiser          puts the bench back to its starting state: database, storage, mails, set
- *   bun run banc:session <compte>       opens the session of an account and writes it to files (never printed)
+ *   bun run bench:up                     starts the six containers, returns once all six answer
+ *   bun run bench:down                   stops them, removes containers and volumes
+ *   bun run bench:prepare                rebuilds the bench database by the migrations, empty
+ *   bun run bench:full                starts the stack, loads the whole set, builds and starts the application
+ *   bun run bench:reset          puts the bench back to its starting state: database, storage, mails, set
+ *   bun run bench:session <compte>       opens the session of an account and writes it to files (never printed)
  *   bun run test:integration [file…]    rebuilds the database, then runs the integration tests
  *
- * The instance (name and ports) comes from BANC_INSTANCE and BANC_DECALAGE: tests/outils/banc.ts.
+ * The instance (name and ports) comes from BENCH_INSTANCE and BENCH_OFFSET: tests/support/bench.ts.
  * Started with `--no-env-file`: a working `.env` never reaches the bench.
  */
 
 import { existsSync } from 'node:fs'
 import { SQL } from 'bun'
 import {
-	argumentsDeTest,
-	BancRefuse,
-	type Environnement,
-	environnementDuBanc,
-	FICHIER_COMPOSE,
+	benchEnvironment,
+	benchPorts,
+	benchServices,
+	benchSilentMessage,
+	commandPrefix,
+	composeVariables,
+	type Environment,
+	FILE_COMPOSE,
+	fallbackSocket,
 	type Instance,
-	lireInstance,
-	messageBancMuet,
-	portOuvert,
-	portsDuBanc,
-	prefixeDeCommande,
-	RACINE,
+	portOpen,
+	RefusedBench,
+	ROOT,
+	readInstance,
 	type Services,
-	servicesDuBanc,
-	socketDeRepli,
-	variablesDeCompose,
+	testArguments,
 } from '../tests/support/bench'
-import { servicesMuets, sondesDuBanc } from '../tests/support/bench-probes'
+import { benchProbes, serviceSilent } from '../tests/support/bench-probes'
 import {
-	adresseDuBanc,
-	cibleDesEssais,
-	environnementDeLApplication,
-	environnementDuBuild,
-	exigerCibleDuBanc,
-	messagePortPris,
-	portDeLApplication,
+	applicationEnvironment,
+	applicationPort,
+	benchUrl,
+	buildEnvironment,
+	portTakenMessage,
+	requireBenchTarget,
+	testTarget,
 } from '../tests/support/e2e'
-import { lireLaSante } from '../tests/support/e2e-server'
+import { readHealth } from '../tests/support/e2e-server'
 
-/** Longest wait for the six services, from the first line of `banc:up` to the last. */
-const DELAI_DE_DEMARRAGE_MS = 60_000
+/** Longest wait for the six services, from the first line of `bench:up` to the last. */
+const STARTUP_DELAY_MS = 60_000
 
-type EnvironnementDeProcessus = Record<string, string | undefined>
+type ProcessEnvironment = Record<string, string | undefined>
 
-export interface Banc {
+export interface Bench {
 	instance: Instance
 	/** `.env.test`, with the ports of this instance. */
-	environnement: Environnement
+	environnement: Environment
 	services: Services
 }
 
-const secondes = (debut: number): string => ((performance.now() - debut) / 1000).toFixed(1).replace('.', ',')
+const seconds = (debut: number): string => ((performance.now() - debut) / 1000).toFixed(1).replace('.', ',')
 
 /** The environment the container engine is reached with: Docker, or rootless Podman when Docker does not answer. */
-async function moteurDeConteneurs(): Promise<EnvironnementDeProcessus> {
-	const repond = async (env: EnvironnementDeProcessus): Promise<boolean> => {
+async function containersEngine(): Promise<ProcessEnvironment> {
+	const responds = async (env: ProcessEnvironment): Promise<boolean> => {
 		try {
 			return (await Bun.spawn(['docker', 'version'], { env, stdout: 'ignore', stderr: 'ignore' }).exited) === 0
 		} catch {
 			return false
 		}
 	}
-	if (await repond(process.env)) return process.env
-	const repli = socketDeRepli(process.env, existsSync)
-	if (repli && (await repond({ ...process.env, DOCKER_HOST: repli }))) return { ...process.env, DOCKER_HOST: repli }
-	throw new BancRefuse(
+	if (await responds(process.env)) return process.env
+	const fallback = fallbackSocket(process.env, existsSync)
+	if (fallback && (await responds({ ...process.env, DOCKER_HOST: fallback })))
+		return { ...process.env, DOCKER_HOST: fallback }
+	throw new RefusedBench(
 		'Aucun moteur de conteneurs ne répond à la commande « docker ». Démarre Docker ; avec Podman : systemctl --user start podman.socket'
 	)
 }
 
 /** Compose, on the project and the ports of this instance. */
-class Pile {
+class Stack {
 	private constructor(
-		private readonly banc: Banc,
-		private readonly env: EnvironnementDeProcessus
+		private readonly banc: Bench,
+		private readonly env: ProcessEnvironment
 	) {}
 
-	static async de(banc: Banc): Promise<Pile> {
-		const moteur = await moteurDeConteneurs()
-		return new Pile(banc, { ...moteur, ...variablesDeCompose(banc.instance, banc.services) })
+	static async de(banc: Bench): Promise<Stack> {
+		const engine = await containersEngine()
+		return new Stack(banc, { ...engine, ...composeVariables(banc.instance, banc.services) })
 	}
 
 	private commande(suite: string[]): string[] {
-		return ['docker', 'compose', '--project-name', this.banc.instance.nom, '--file', FICHIER_COMPOSE, ...suite]
+		return ['docker', 'compose', '--project-name', this.banc.instance.nom, '--file', FILE_COMPOSE, ...suite]
 	}
 
 	/** Runs Compose and shows what it prints. Returns its exit code. */
 	compose(suite: string[]): Promise<number> {
-		return Bun.spawn(this.commande(suite), { cwd: RACINE, env: this.env, stdio: ['ignore', 'inherit', 'inherit'] })
-			.exited
+		return Bun.spawn(this.commande(suite), { cwd: ROOT, env: this.env, stdio: ['ignore', 'inherit', 'inherit'] }).exited
 	}
 
 	/** Runs a command of the engine and returns what it printed, trimmed. */
 	private async lire(commande: string[]): Promise<string> {
-		const enfant = Bun.spawn(commande, { cwd: RACINE, env: this.env, stdout: 'pipe', stderr: 'ignore' })
-		const [sortie] = await Promise.all([new Response(enfant.stdout).text(), enfant.exited])
-		return sortie.trim()
+		const child = Bun.spawn(commande, { cwd: ROOT, env: this.env, stdout: 'pipe', stderr: 'ignore' })
+		const [output] = await Promise.all([new Response(child.stdout).text(), child.exited])
+		return output.trim()
 	}
 
 	async tourne(): Promise<boolean> {
@@ -111,79 +111,79 @@ class Pile {
 
 	/** What the engine still holds under the name of this instance: containers, then volumes. */
 	async restes(): Promise<string> {
-		const etiquette = `label=com.docker.compose.project=${this.banc.instance.nom}`
-		const listes = await Promise.all([
-			this.lire(['docker', 'ps', '--all', '--quiet', '--filter', etiquette]),
-			this.lire(['docker', 'volume', 'ls', '--quiet', '--filter', etiquette]),
+		const label = `label=com.docker.compose.project=${this.banc.instance.nom}`
+		const lists = await Promise.all([
+			this.lire(['docker', 'ps', '--all', '--quiet', '--filter', label]),
+			this.lire(['docker', 'volume', 'ls', '--quiet', '--filter', label]),
 		])
-		return listes.join('')
+		return lists.join('')
 	}
 }
 
-async function demarrer(banc: Banc): Promise<void> {
-	const debut = performance.now()
+async function start(banc: Bench): Promise<void> {
+	const startedAt = performance.now()
 	const { instance, services } = banc
-	const pile = await Pile.de(banc)
+	const stack = await Stack.de(banc)
 
 	// A port held by something else is said here, in plain words, before Compose fails halfway.
-	if (!(await pile.tourne())) {
-		const ports = portsDuBanc(services)
-		const ouverts = await Promise.all(ports.map(({ port }) => portOuvert(port)))
-		const pris = ports.filter((_port, rang) => ouverts[rang])
-		if (pris.length > 0)
-			throw new BancRefuse(
+	if (!(await stack.tourne())) {
+		const ports = benchPorts(services)
+		const open = await Promise.all(ports.map(({ port }) => portOpen(port)))
+		const taken = ports.filter((_port, rang) => open[rang])
+		if (taken.length > 0)
+			throw new RefusedBench(
 				[
-					`Port déjà pris sur ce poste : ${pris.map(({ port, service }) => `${port} (${service})`).join(', ')}. Un autre banc y tourne peut-être.`,
-					'Donne à ce banc son nom et son décalage de ports, par exemple : BANC_INSTANCE=mon-banc BANC_DECALAGE=20 bun run banc:up',
+					`Port déjà pris sur ce poste : ${taken.map(({ port, service }) => `${port} (${service})`).join(', ')}. Un autre banc y tourne peut-être.`,
+					'Donne à ce banc son nom et son décalage de ports, par exemple : BENCH_INSTANCE=mon-banc BENCH_OFFSET=20 bun run bench:up',
 				].join('\n')
 			)
 	}
 
-	const attente = String(DELAI_DE_DEMARRAGE_MS / 1000)
-	if ((await pile.compose(['up', '--detach', '--wait', '--wait-timeout', attente])) !== 0)
-		throw new BancRefuse('Le banc n’a pas démarré : le message de Docker est ci-dessus.')
+	const waiting = String(STARTUP_DELAY_MS / 1000)
+	if ((await stack.compose(['up', '--detach', '--wait', '--wait-timeout', waiting])) !== 0)
+		throw new RefusedBench('Le banc n’a pas démarré : le message de Docker est ci-dessus.')
 
 	// A healthy container is not yet a service that answers from this machine: each one is asked.
-	let muets = await servicesMuets(sondesDuBanc(services))
-	while (muets.length > 0 && performance.now() - debut < DELAI_DE_DEMARRAGE_MS) {
+	let silent = await serviceSilent(benchProbes(services))
+	while (silent.length > 0 && performance.now() - startedAt < STARTUP_DELAY_MS) {
 		await Bun.sleep(250)
-		muets = await servicesMuets(muets)
+		silent = await serviceSilent(silent)
 	}
-	if (muets.length > 0)
-		throw new BancRefuse(
-			`${messageBancMuet(instance, muets).split('\n')[0]}\nLes journaux des conteneurs : docker compose --project-name ${instance.nom} logs`
+	if (silent.length > 0)
+		throw new RefusedBench(
+			`${benchSilentMessage(instance, silent).split('\n')[0]}\nLes journaux des conteneurs : docker compose --project-name ${instance.nom} logs`
 		)
 
-	const { base, mails, stockage, google, umami, communes } = services
+	const { base, mails, stockage: storage, google, umami, communes: cities } = services
 	console.log(
 		[
-			`Banc de test « ${instance.nom} » prêt en ${secondes(debut)} s.`,
+			`Banc de test « ${instance.nom} » prêt en ${seconds(startedAt)} s.`,
 			`- base : ${base.hote}:${base.port}, base « ${base.nom} », en mémoire`,
 			`- capteur de mails : SMTP ${mails.hote}:${mails.port}, boîte ${mails.api}`,
-			`- stockage d’objets : ${stockage.adresse}, espace « ${stockage.bucket} »`,
+			`- stockage d’objets : ${storage.adresse}, espace « ${storage.bucket} »`,
 			`- faux Google : ${google.adresse}, pris pour Google par GOOGLE_OIDC_ISSUER`,
 			`- faux Umami : ${umami.adresse}, pris pour l’instance Umami par UMAMI_ORIGIN`,
-			`- fausse liste des communes : ${communes.adresse}, prise pour geo.api.gouv.fr par l’application des essais (COMMUNES_DU_BANC)`,
-			`Pour l’arrêter et tout effacer : ${prefixeDeCommande(instance)}bun run banc:down`,
+			`- fausse liste des communes : ${cities.adresse}, prise pour geo.api.gouv.fr par l’application des essais (BENCH_CITIES)`,
+			`Pour l’arrêter et tout effacer : ${commandPrefix(instance)}bun run bench:down`,
 		].join('\n')
 	)
 }
 
-async function arreter(banc: Banc): Promise<void> {
-	const pile = await Pile.de(banc)
-	if ((await pile.compose(['down', '--volumes', '--remove-orphans', '--timeout', '2'])) !== 0)
-		throw new BancRefuse('Le banc ne s’est pas arrêté : le message de Docker est ci-dessus.')
-	if ((await pile.restes()) !== '')
-		throw new BancRefuse(
+async function stop(banc: Bench): Promise<void> {
+	const stack = await Stack.de(banc)
+	if ((await stack.compose(['down', '--volumes', '--remove-orphans', '--timeout', '2'])) !== 0)
+		throw new RefusedBench('Le banc ne s’est pas arrêté : le message de Docker est ci-dessus.')
+	if ((await stack.restes()) !== '')
+		throw new RefusedBench(
 			`Le banc « ${banc.instance.nom} » laisse des conteneurs ou des volumes : voir « docker ps -a ».`
 		)
 	console.log(`Banc de test « ${banc.instance.nom} » arrêté : conteneurs et volumes supprimés, rien n’est gardé.`)
 }
 
 /** Stops with the message that names what to start when a service of the bench is silent. */
-export async function exigerBancDebout({ instance, services }: Banc): Promise<void> {
-	const muets = await servicesMuets(sondesDuBanc(services))
-	if (muets.length > 0) throw new BancRefuse(messageBancMuet(instance, muets))
+export async function requireRunningBench({ instance, services }: Bench): Promise<void> {
+	const silent = await serviceSilent(benchProbes(services))
+	if (silent.length > 0) throw new RefusedBench(benchSilentMessage(instance, silent))
 }
 
 /**
@@ -194,10 +194,10 @@ export async function exigerBancDebout({ instance, services }: Banc): Promise<vo
  * The address is the one this file worked out from `.env.test` for the instance: never a value
  * read from the environment.
  */
-export async function effacerLeSchema({ services: { base } }: Banc): Promise<void> {
+export async function eraseSchema({ services: { base } }: Bench): Promise<void> {
 	// The same rule as the guard of the tests, asked again where the tables are dropped.
 	if (!['127.0.0.1', 'localhost'].includes(base.hote) || !base.nom.endsWith('_test'))
-		throw new BancRefuse(
+		throw new RefusedBench(
 			'.env.test ne désigne pas une base locale dont le nom finit par « _test » : rien n’est effacé.'
 		)
 	const sql = new SQL({ url: base.adresse, max: 1 })
@@ -215,27 +215,21 @@ export async function effacerLeSchema({ services: { base } }: Banc): Promise<voi
  * exist, files under the fixed names the set gives its photos (ticket 225). The fake Umami and the fake
  * Google keep no state a test reads whole.
  */
-export async function viderCeQueLaBaseNeContientPas({ instance, environnement }: Banc): Promise<void> {
+export async function emptyUnknownContent({ instance, environnement: environment }: Bench): Promise<void> {
 	const variables = {
-		...environnement,
-		BANC_INSTANCE: instance.nom,
-		BANC_DECALAGE: String(instance.decalage),
+		...environment,
+		BENCH_INSTANCE: instance.nom,
+		BENCH_OFFSET: String(instance.decalage),
 	}
-	const [
-		{ stockageDuBanc, viderLeStockage },
-		{ capteurDuBanc, viderLeCapteur },
-		{ effacerLaSourceStrapi, sourceDuBanc },
-	] = await Promise.all([
-		import('../tests/support/s3'),
-		import('../tests/support/mailpit'),
-		import('../tests/support/source-strapi'),
-	])
+	const [{ benchStorage, emptyStorage }, { benchSink, emptySink }, { eraseSourceStrapi, benchSource }] =
+		await Promise.all([
+			import('../tests/support/s3'),
+			import('../tests/support/mailpit'),
+			import('../tests/support/source-strapi'),
+		])
 	// The source first: erasing it deletes the objects it named, the storage is then emptied whole.
-	await effacerLaSourceStrapi(sourceDuBanc(variables, environnement))
-	await Promise.all([
-		viderLeStockage({ stockage: stockageDuBanc(variables) }),
-		viderLeCapteur({ capteur: capteurDuBanc(variables) }),
-	])
+	await eraseSourceStrapi(benchSource(variables, environment))
+	await Promise.all([emptyStorage({ stockage: benchStorage(variables) }), emptySink({ capteur: benchSink(variables) })])
 }
 
 /**
@@ -245,46 +239,47 @@ export async function viderCeQueLaBaseNeContientPas({ instance, environnement }:
  * the code describe it: a missing migration stops here, before the first test, and not in
  * production. Gives the names of the migrations played.
  */
-async function reconstruireLaBase(banc: Banc): Promise<string[]> {
-	await effacerLeSchema(banc)
+async function rebuildBase(banc: Bench): Promise<string[]> {
+	await eraseSchema(banc)
 	// Set before the Payload configuration is loaded: it reads the environment when it is imported.
 	Object.assign(process.env, banc.environnement)
-	const [{ payloadDeTest }, { exigerLeSchemaDesMigrations, jouerLesMigrations }, { migrations }] = await Promise.all([
+	const [{ testPayload }, { requireMigrationsSchema, runMigrations }, { migrations }] = await Promise.all([
 		import('../tests/support/payload-test'),
 		import('../tests/support/bench-schema'),
 		import('../src/migrations'),
 	])
 	// The Payload of the tests changes no schema when it connects: the migrations build every table.
-	const payload = await payloadDeTest()
-	const jouees = await jouerLesMigrations(payload, migrations, 'test')
-	await exigerLeSchemaDesMigrations(payload, 'test')
-	return jouees
+	const payload = await testPayload()
+	const run = await runMigrations(payload, migrations, 'test')
+	await requireMigrationsSchema(payload, 'test')
+	return run
 }
 
-async function preparer(banc: Banc): Promise<void> {
-	await exigerBancDebout(banc)
-	const jouees = await reconstruireLaBase(banc)
-	const { compterLesDocuments } = await import('../tests/support/payload-test')
-	const comptes = Object.values(await compterLesDocuments())
-	if (comptes.some(compte => compte !== 0)) throw new BancRefuse('La base du banc n’est pas vide après sa préparation.')
+async function prepare(banc: Bench): Promise<void> {
+	await requireRunningBench(banc)
+	const run = await rebuildBase(banc)
+	const { countDocuments } = await import('../tests/support/payload-test')
+	const accounts = Object.values(await countDocuments())
+	if (accounts.some(compte => compte !== 0))
+		throw new RefusedBench('La base du banc n’est pas vide après sa préparation.')
 	console.log(
-		`Base du banc « ${banc.instance.nom} » prête : ${jouees.length > 1 ? 'migrations jouées' : 'migration jouée'} sur une base vide (${jouees.join(', ')}), schéma conforme aux collections du code, ${comptes.length} collections, toutes vides.`
+		`Base du banc « ${banc.instance.nom} » prête : ${run.length > 1 ? 'migrations jouées' : 'migration jouée'} sur une base vide (${run.join(', ')}), schéma conforme aux collections du code, ${accounts.length} collections, toutes vides.`
 	)
 }
 
-async function tester(banc: Banc, demandes: string[]): Promise<number> {
-	await exigerBancDebout(banc)
-	const jouees = await reconstruireLaBase(banc)
+async function tester(banc: Bench, demandes: string[]): Promise<number> {
+	await requireRunningBench(banc)
+	const run = await rebuildBase(banc)
 	console.log(
-		`Base du banc « ${banc.instance.nom} » reconstruite par ${jouees.length > 1 ? 'les migrations' : 'la migration'} ${jouees.join(', ')} : schéma conforme aux collections du code.`
+		`Base du banc « ${banc.instance.nom} » reconstruite par ${run.length > 1 ? 'les migrations' : 'la migration'} ${run.join(', ')} : schéma conforme aux collections du code.`
 	)
-	return Bun.spawn([process.execPath, ...argumentsDeTest(demandes)], {
-		cwd: RACINE,
+	return Bun.spawn([process.execPath, ...testArguments(demandes)], {
+		cwd: ROOT,
 		env: {
 			...process.env,
 			...banc.environnement,
-			BANC_INSTANCE: banc.instance.nom,
-			BANC_DECALAGE: String(banc.instance.decalage),
+			BENCH_INSTANCE: banc.instance.nom,
+			BENCH_OFFSET: String(banc.instance.decalage),
 			NODE_ENV: 'test',
 		},
 		stdio: ['inherit', 'inherit', 'inherit'],
@@ -292,10 +287,10 @@ async function tester(banc: Banc, demandes: string[]): Promise<number> {
 }
 
 /** The longest wait for the application to answer once it is started: the first call starts Payload. */
-const DELAI_DE_L_APPLICATION_MS = 60_000
+const APPLICATION_DELAY_MS = 60_000
 
-/** What `banc:reinitialiser` and `banc:complet` leave in the bench. */
-interface Contenu {
+/** What `bench:reset` and `bench:full` leave in the bench. */
+interface Content {
 	profils: number
 	profilsTypes: number
 	talents: number
@@ -308,24 +303,23 @@ interface Contenu {
 /**
  * Puts the bench back to its starting state, whatever it held: the database dropped and rebuilt by
  * the versioned migrations, the object storage and the mail catcher emptied, then the whole set
- * loaded (tests/fixtures/jeu-du-banc.ts). The same content every time, the same identifiers.
+ * loaded (tests/fixtures/bench-dataset.ts). The same content every time, the same identifiers.
  *
  * A running application keeps serving: it reads the same database. The sessions it had opened are
- * gone with the accounts, `banc:session` gives new ones.
+ * gone with the accounts, `bench:session` gives new ones.
  */
-async function remettreLeBancAZero(banc: Banc): Promise<Contenu> {
-	await reconstruireLaBase(banc)
-	const [{ viderLeStockage, listerLesObjets }, { viderLeCapteur }, { poserLeJeuDuBanc }, { payloadDeTest }] =
-		await Promise.all([
-			import('../tests/support/s3'),
-			import('../tests/support/mailpit'),
-			import('../tests/fixtures/bench-dataset'),
-			import('../tests/support/payload-test'),
-		])
-	await Promise.all([viderLeStockage(), viderLeCapteur()])
-	await poserLeJeuDuBanc()
-	const payload = await payloadDeTest()
-	const compter = async (collection: 'profiles' | 'talents' | 'articles' | 'pros' | 'admins') =>
+async function resetBench(banc: Bench): Promise<Content> {
+	await rebuildBase(banc)
+	const [{ emptyStorage, listObjects }, { emptySink }, { setBenchDataset }, { testPayload }] = await Promise.all([
+		import('../tests/support/s3'),
+		import('../tests/support/mailpit'),
+		import('../tests/fixtures/bench-dataset'),
+		import('../tests/support/payload-test'),
+	])
+	await Promise.all([emptyStorage(), emptySink()])
+	await setBenchDataset()
+	const payload = await testPayload()
+	const countItems = async (collection: 'profiles' | 'talents' | 'articles' | 'pros' | 'admins') =>
 		(await payload.count({ collection, overrideAccess: true })).totalDocs
 	const types = await payload.count({
 		collection: 'profiles',
@@ -333,147 +327,147 @@ async function remettreLeBancAZero(banc: Banc): Promise<Contenu> {
 		where: { 'pro.email': { like: 'jeu-profil-' } },
 	})
 	return {
-		profils: await compter('profiles'),
+		profils: await countItems('profiles'),
 		profilsTypes: types.totalDocs,
-		talents: await compter('talents'),
-		articles: await compter('articles'),
-		comptes: await compter('pros'),
-		admins: await compter('admins'),
-		objets: (await listerLesObjets()).length,
+		talents: await countItems('talents'),
+		articles: await countItems('articles'),
+		comptes: await countItems('pros'),
+		admins: await countItems('admins'),
+		objets: (await listObjects()).length,
 	}
 }
 
-const resumeDuContenu = (c: Contenu): string =>
+const contentSummary = (c: Content): string =>
 	`${c.profilsTypes} profils types (${c.profils} profils en tout), ${c.talents} talents, ${c.articles} articles dont un brouillon, ${c.admins} comptes d’administration, ${c.comptes} comptes de maquilleuses, ${c.objets} objets au stockage`
 
-async function reinitialiser(banc: Banc): Promise<void> {
-	const debut = performance.now()
-	await exigerBancDebout(banc)
-	const contenu = await remettreLeBancAZero(banc)
+async function reset(banc: Bench): Promise<void> {
+	const startedAt = performance.now()
+	await requireRunningBench(banc)
+	const content = await resetBench(banc)
 	console.log(
-		`Banc « ${banc.instance.nom} » remis à son état de départ en ${secondes(debut)} s : ${resumeDuContenu(contenu)}.`
+		`Banc « ${banc.instance.nom} » remis à son état de départ en ${seconds(startedAt)} s : ${contentSummary(content)}.`
 	)
 }
 
 /** Builds the application for production, against no database and no secret, then starts it on the port of the bench. */
-async function lancerLApplication(banc: Banc): Promise<number> {
-	const adresse = exigerCibleDuBanc(process.env, banc.environnement)
+async function launchApplication(banc: Bench): Promise<number> {
+	const url = requireBenchTarget(process.env, banc.environnement)
 	// The guard of the tests, asked here before anything is built.
-	cibleDesEssais({ ...process.env, BASE_URL: adresse })
-	const port = portDeLApplication(adresse)
-	if (await portOuvert(port)) throw new BancRefuse(messagePortPris(port))
+	testTarget({ ...process.env, BASE_URL: url })
+	const port = applicationPort(url)
+	if (await portOpen(port)) throw new RefusedBench(portTakenMessage(port))
 
-	const debut = performance.now()
-	console.log(`Build de l’application pour ${adresse}…`)
+	const startedAt = performance.now()
+	console.log(`Build de l’application pour ${url}…`)
 	const build = await Bun.spawn([process.execPath, '--no-env-file', 'run', 'build'], {
-		cwd: RACINE,
-		env: environnementDuBuild(process.env, banc.environnement),
+		cwd: ROOT,
+		env: buildEnvironment(process.env, banc.environnement),
 		stdio: ['ignore', 'inherit', 'inherit'],
 	}).exited
-	if (build !== 0) throw new BancRefuse('Le build de l’application a échoué : le message de Next est ci-dessus.')
+	if (build !== 0) throw new RefusedBench('Le build de l’application a échoué : le message de Next est ci-dessus.')
 
 	const application = Bun.spawn(
 		[process.execPath, '--no-env-file', 'run', 'start', '-p', String(port), '-H', '127.0.0.1'],
 		{
-			cwd: RACINE,
-			env: { ...process.env, ...environnementDeLApplication(banc.environnement) },
+			cwd: ROOT,
+			env: { ...process.env, ...applicationEnvironment(banc.environnement) },
 			stdio: ['ignore', 'inherit', 'inherit'],
 		}
 	)
-	const arreter = () => application.kill('SIGTERM')
-	for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) process.on(signal, arreter)
+	const stop = () => application.kill('SIGTERM')
+	for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) process.on(signal, stop)
 
-	const limite = performance.now() + DELAI_DE_L_APPLICATION_MS
-	let sante = await lireLaSante(adresse)
-	while (!sante.saine && application.exitCode === null && performance.now() < limite) {
+	const limit = performance.now() + APPLICATION_DELAY_MS
+	let health = await readHealth(url)
+	while (!health.saine && application.exitCode === null && performance.now() < limit) {
 		await Bun.sleep(500)
-		sante = await lireLaSante(adresse)
+		health = await readHealth(url)
 	}
-	if (!sante.saine) {
+	if (!health.saine) {
 		application.kill('SIGTERM')
 		await application.exited
-		throw new BancRefuse(`L’application ne répond pas à ${adresse} (${sante.constat}) : son journal est ci-dessus.`)
+		throw new RefusedBench(`L’application ne répond pas à ${url} (${health.constat}) : son journal est ci-dessus.`)
 	}
 	console.log(
 		[
-			`Application prête sur ${adresse} (${secondes(debut)} s de build et de démarrage). Ctrl+C l’arrête ; le banc reste.`,
-			`Administration : ${adresse}/admin. Une session : ${prefixeDeCommande(banc.instance)}bun run banc:session admin`,
+			`Application prête sur ${url} (${seconds(startedAt)} s de build et de démarrage). Ctrl+C l’arrête ; le banc reste.`,
+			`Administration : ${url}/admin. Une session : ${commandPrefix(banc.instance)}bun run bench:session admin`,
 		].join('\n')
 	)
 	const code = await application.exited
 	return code === 143 || code === 130 ? 0 : code
 }
 
-async function complet(banc: Banc, options: string[]): Promise<number> {
-	const debut = performance.now()
-	await demarrer(banc)
-	const contenu = await remettreLeBancAZero(banc)
-	console.log(`Jeu chargé en ${secondes(debut)} s depuis le départ : ${resumeDuContenu(contenu)}.`)
-	if (options.includes('--sans-application')) {
+async function full(banc: Bench, options: string[]): Promise<number> {
+	const startedAt = performance.now()
+	await start(banc)
+	const content = await resetBench(banc)
+	console.log(`Jeu chargé en ${seconds(startedAt)} s depuis le départ : ${contentSummary(content)}.`)
+	if (options.includes('--without-application')) {
 		console.log(
-			`Pas d’application lancée. Les adresses ci-dessus servent aux tests ; pour l’application : ${prefixeDeCommande(banc.instance)}bun run banc:complet`
+			`Pas d’application lancée. Les adresses ci-dessus servent aux tests ; pour l’application : ${commandPrefix(banc.instance)}bun run bench:full`
 		)
 		return 0
 	}
-	return lancerLApplication(banc)
+	return launchApplication(banc)
 }
 
-async function session(banc: Banc, [demande, ...reste]: string[]): Promise<number> {
+async function session(banc: Bench, [demande, ...reste]: string[]): Promise<number> {
 	if (!demande || reste.length > 0) {
-		console.error('Usage : bun run banc:session <compte>')
-		const { messageCompteInconnu } = await import('../tests/support/bench-session')
-		console.error(messageCompteInconnu(demande ?? ''))
+		console.error('Usage : bun run bench:session <compte>')
+		const { unknownAccountMessage } = await import('../tests/support/bench-session')
+		console.error(unknownAccountMessage(demande ?? ''))
 		return 2
 	}
-	await exigerBancDebout(banc)
+	await requireRunningBench(banc)
 	Object.assign(process.env, banc.environnement)
-	const [{ payloadDeTest }, { ecrireLaSession }] = await Promise.all([
+	const [{ testPayload }, { writeSession }] = await Promise.all([
 		import('../tests/support/payload-test'),
 		import('../tests/support/bench-session'),
 	])
-	const ecrite = await ecrireLaSession(await payloadDeTest(), demande, { instance: banc.instance.nom })
-	const adresse = adresseDuBanc(banc.environnement)
+	const written = await writeSession(await testPayload(), demande, { instance: banc.instance.nom })
+	const url = benchUrl(banc.environnement)
 	console.log(
 		[
-			`Session de ${ecrite.compte} (${ecrite.collection}), ouverte jusqu’à ${ecrite.expire.toLocaleTimeString('fr-FR')}. Le jeton n’est pas affiché.`,
-			`- navigateur (Playwright) : browser.newContext({ storageState: '${ecrite.etatDeNavigateur}' }), puis ${adresse}/admin`,
-			`- curl : curl -H @${ecrite.entetes} ${adresse}/api/${ecrite.collection}/me`,
+			`Session de ${written.compte} (${written.collection}), ouverte jusqu’à ${written.expire.toLocaleTimeString('fr-FR')}. Le jeton n’est pas affiché.`,
+			`- navigateur (Playwright) : browser.newContext({ storageState: '${written.etatDeNavigateur}' }), puis ${url}/admin`,
+			`- curl : curl -H @${written.entetes} ${url}/api/${written.collection}/me`,
 		].join('\n')
 	)
 	return 0
 }
 
 const USAGE =
-	'Usage : bun run banc:up | banc:down | banc:prepare | banc:complet | banc:reinitialiser | banc:session <compte> | test:integration [fichier…]'
+	'Usage : bun run bench:up | bench:down | bench:prepare | bench:full | bench:reset | bench:session <compte> | test:integration [fichier…]'
 
-/** The bench this process works on: the instance named by BANC_INSTANCE and BANC_DECALAGE. */
-export function bancCourant(): Banc {
-	const instance = lireInstance()
-	const environnement = environnementDuBanc(instance)
-	return { instance, environnement, services: servicesDuBanc(environnement) }
+/** The bench this process works on: the instance named by BENCH_INSTANCE and BENCH_OFFSET. */
+export function currentBench(): Bench {
+	const instance = readInstance()
+	const environment = benchEnvironment(instance)
+	return { instance, environnement: environment, services: benchServices(environment) }
 }
 
 async function principal([commande, ...suite]: string[]): Promise<number> {
-	const banc = bancCourant()
+	const bench = currentBench()
 	switch (commande) {
 		case 'up':
-			await demarrer(banc)
+			await start(bench)
 			return 0
 		case 'down':
-			await arreter(banc)
+			await stop(bench)
 			return 0
 		case 'prepare':
-			await preparer(banc)
+			await prepare(bench)
 			return 0
-		case 'complet':
-			return complet(banc, suite)
-		case 'reinitialiser':
-			await reinitialiser(banc)
+		case 'full':
+			return full(bench, suite)
+		case 'reset':
+			await reset(bench)
 			return 0
 		case 'session':
-			return session(banc, suite)
+			return session(bench, suite)
 		case 'test':
-			return tester(banc, suite)
+			return tester(bench, suite)
 		default:
 			console.error(USAGE)
 			return 2
@@ -483,8 +477,8 @@ async function principal([commande, ...suite]: string[]): Promise<number> {
 try {
 	// Only when this file is the command: scripts/e2e.ts imports the tools above without running it.
 	if (import.meta.main) process.exit(await principal(process.argv.slice(2)))
-} catch (erreur) {
-	if (!(erreur instanceof BancRefuse)) throw erreur
-	console.error(erreur.message)
+} catch (error) {
+	if (!(error instanceof RefusedBench)) throw error
+	console.error(error.message)
 	process.exit(1)
 }

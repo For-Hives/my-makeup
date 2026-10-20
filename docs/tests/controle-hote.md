@@ -2,7 +2,7 @@
 
 Une commande lit, sur un hôte donné, toutes les adresses de l'inventaire gelé, le sitemap, le fichier robots, les anciennes routes d'authentification et le script de mesure, et écrit un rapport daté. C'est le contrôle du jour de la bascule et de sa répétition. Elle ne fait que des lectures : comme les sondes, c'est une exception à « rien vers le site en ligne » ([`CLAUDE.md`](../../CLAUDE.md), interdit 5), et elle a sa propre garde.
 
-Les adresses et les réponses attendues sont celles de la table des URL gelées ([`../migration/URLS.md`](../migration/URLS.md), `src/lib/frozen-urls.ts`). La vérification est celle du test I45 ([`../../tests/outils/parite-urls.ts`](../../tests/outils/parite-urls.ts)) : le code que promet la table, la redirection en un saut, le même `h1` que l'ancien site (comparé par empreinte).
+Les adresses et les réponses attendues sont celles de la table des URL gelées ([`../migration/URLS.md`](../migration/URLS.md), `src/lib/frozen-urls.ts`). La vérification est celle du test I45 ([`../../tests/support/url-parity.ts`](../../tests/support/url-parity.ts)) : le code que promet la table, la redirection en un saut, le même `h1` que l'ancien site (comparé par empreinte).
 
 ## Lancer
 
@@ -53,7 +53,7 @@ Toute requête passe par `garder()` (`scripts/cutover/host-guard.ts`), qui laiss
 
 Une requête interdite arrête le contrôle : c'est un défaut de la commande, pas de l'hôte.
 
-Les requêtes partent **une à la fois, à 500 ms d'écart au moins** entre deux départs : 2 par seconde au plus, comme les sondes (`tests/sondes/lecteur.ts`). Une page qui n'est pas revenue en entier au bout de 15 secondes est abandonnée. Chaque requête se présente sous le nom `my-makeup-controle-hote/1 (lecture seule)`.
+Les requêtes partent **une à la fois, à 500 ms d'écart au moins** entre deux départs : 2 par seconde au plus, comme les sondes (`tests/probes/reader.ts`). Une page qui n'est pas revenue en entier au bout de 15 secondes est abandonnée. Chaque requête se présente sous le nom `my-makeup-controle-hote/1 (lecture seule)`.
 
 La commande n'importe aucune dépendance installée par `bun install` : la CI la lance sans l'installer, à côté des secrets.
 

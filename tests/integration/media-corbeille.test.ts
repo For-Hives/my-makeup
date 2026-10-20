@@ -5,41 +5,41 @@ import { IMPORT_CONTEXT } from '@/lib/import-context'
 import { createObjectStorage } from '@/lib/storage'
 import { restore } from '@/lib/trash'
 import type { Media } from '@/payload-types'
-import { type Espion, espionnerLeStockage, sourceDe, suppressionsSansCorbeille } from '../support/s3-spy'
-import { creerCompte } from '../support/account-factory'
-import { payloadDeTest, viderLaBase } from '../support/payload-test'
-import { fichierPourFormulaire, fichierPourPayload } from '../support/photos'
-import { appelerRest, formulaireAvecFichier } from '../support/rest'
-import { lireUnObjet, listerLesObjets, viderLeStockage } from '../support/s3'
+import { createAccount } from '../support/account-factory'
+import { emptyBase, testPayload } from '../support/payload-test'
+import { fileForForm, fileForPayload } from '../support/photos'
+import { callRest, formWithFile } from '../support/rest'
+import { emptyStorage, listObjects, readObject } from '../support/s3'
+import { deletionsWithoutTrash, type Spy, sourceOf, spyStorage } from '../support/s3-spy'
 
 /**
  * A media that no longer serves goes to the bin, never to a direct deletion (ticket 045; plan 02
  * §7.3, I24 and I25; plan 01 §1.8). Against the S3 simulator of the bench, through the real API.
  *
- * Every request of the application to the storage is recorded (tests/outils/espion-s3.ts): after
+ * Every request of the application to the storage is recorded (tests/support/s3-spy.ts): after
  * each test, a removal that is not the second half of a move to the bin fails it.
  */
 
-type Compte = Awaited<ReturnType<typeof creerCompte<'maquilleuse'>>>
+type Compte = Awaited<ReturnType<typeof createAccount<'maquilleuse'>>>
 
-let espion: Espion
+let espion: Spy
 
 beforeEach(() => {
-	espion = espionnerLeStockage()
+	espion = spyStorage()
 })
 
 afterEach(async () => {
-	const fautes = suppressionsSansCorbeille(espion.journal)
+	const fautes = deletionsWithoutTrash(espion.journal)
 	espion.arreter()
-	await Promise.all([viderLaBase(), viderLeStockage()])
+	await Promise.all([emptyBase(), emptyStorage()])
 	expect(fautes).toEqual([])
 })
 
 /** A photo sent by this makeup artist through REST, as the site sends it. */
 async function envoyer(compte: Compte): Promise<Media> {
-	const { statut, corps, texte } = await appelerRest('POST', '/api/media?depth=0', {
+	const { statut, corps, texte } = await callRest('POST', '/api/media?depth=0', {
 		enTetes: compte.session.enTetes,
-		formulaire: formulaireAvecFichier(fichierPourFormulaire()),
+		formulaire: formWithFile(fileForForm()),
 	})
 	if (statut !== 201) throw new Error(`L’envoi de la photo a échoué : ${statut} ${texte}`)
 	return (corps as { doc: Media }).doc
@@ -47,7 +47,7 @@ async function envoyer(compte: Compte): Promise<Media> {
 
 /** The profile of an account, read without access control. */
 async function profilDe(compte: { id: number | string }) {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	const [profil] = (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } }))
 		.docs
 	if (!profil) throw new Error('La fabrique n’a pas créé de profil.')
@@ -56,7 +56,7 @@ async function profilDe(compte: { id: number | string }) {
 
 /** She saves her own profile through REST, as her space will. */
 const enregistrer = async (compte: Compte, corps: Record<string, unknown>) =>
-	appelerRest('PATCH', `/api/profiles/${(await profilDe(compte)).id}?depth=0`, {
+	callRest('PATCH', `/api/profiles/${(await profilDe(compte)).id}?depth=0`, {
 		enTetes: compte.session.enTetes,
 		corps,
 	})
@@ -69,7 +69,7 @@ async function enregistrerOuEchouer(compte: Compte, corps: Record<string, unknow
 
 /** The media as the database holds it, or nothing. */
 async function stocke(id: number): Promise<Media | null> {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	return payload.findByID({ collection: 'media', id, depth: 0, disableErrors: true })
 }
 
@@ -77,17 +77,17 @@ async function stocke(id: number): Promise<Media | null> {
 const cle = (media: Media) => `media/${media.filename}`
 
 /** The bytes of an object, or nothing when the storage does not hold it. */
-const octets = async (cleDeLObjet: string) => (await lireUnObjet(cleDeLObjet))?.octets
+const octets = async (cleDeLObjet: string) => (await readObject(cleDeLObjet))?.octets
 
 /** What its public address answers, as a browser would ask it. */
 const statutPublic = async (media: Media) => (await fetch(media.url ?? '')).status
 
 /** The keys of the bin. */
-const corbeille = async () => (await listerLesObjets('deleted/')).map(({ cle: cleDeLObjet }) => cleDeLObjet)
+const corbeille = async () => (await listObjects('deleted/')).map(({ cle: cleDeLObjet }) => cleDeLObjet)
 
 describe('Photo remplacée : ancien objet en corbeille (I24) ; photo encore référencée : en place (I25)', () => {
 	test('I24 : la photo principale remplacée par la maquilleuse : l’ancienne part à la corbeille, octet pour octet', async () => {
-		const compte = await creerCompte('maquilleuse')
+		const compte = await createAccount('maquilleuse')
 		const [ancienne, nouvelle] = [await envoyer(compte), await envoyer(compte)]
 		await enregistrerOuEchouer(compte, { mainPicture: ancienne.id })
 		const avant = await octets(cle(ancienne))
@@ -104,7 +104,7 @@ describe('Photo remplacée : ancien objet en corbeille (I24) ; photo encore réf
 	})
 
 	test('I25 : une photo retirée de la galerie part à la corbeille ; celle qui reste photo principale reste en place', async () => {
-		const compte = await creerCompte('maquilleuse')
+		const compte = await createAccount('maquilleuse')
 		const [principale, retiree, gardee] = [await envoyer(compte), await envoyer(compte), await envoyer(compte)]
 		await enregistrerOuEchouer(compte, {
 			mainPicture: principale.id,
@@ -123,11 +123,11 @@ describe('Photo remplacée : ancien objet en corbeille (I24) ; photo encore réf
 	})
 
 	test('une photo qu’une version d’un article garde encore reste en place, même retirée du profil', async () => {
-		const payload = await payloadDeTest()
-		const compte = await creerCompte('maquilleuse')
+		const payload = await testPayload()
+		const compte = await createAccount('maquilleuse')
 		const remplacante = await envoyer(compte)
 		// A photo of the newsroom, in a version of an article only, then given to the account by an admin.
-		const photo = await payload.create({ collection: 'media', data: {}, file: fichierPourPayload() })
+		const photo = await payload.create({ collection: 'media', data: {}, file: fileForPayload() })
 		const article = await payload.create({
 			collection: 'articles',
 			data: { title: 'Article fictif', slug: 'article-fictif', gallery: [photo.id], _status: 'published' },
@@ -149,9 +149,9 @@ describe('Photo remplacée : ancien objet en corbeille (I24) ; photo encore réf
 
 	test('un profil supprimé par un admin : ses photos et celles de son compte partent à la corbeille, pas celles d’une autre', async () => {
 		const [a, b, admin] = await Promise.all([
-			creerCompte('maquilleuse'),
-			creerCompte('maquilleuse'),
-			creerCompte('admin'),
+			createAccount('maquilleuse'),
+			createAccount('maquilleuse'),
+			createAccount('admin'),
 		])
 		const [principale, galerie, nonRattachee, deB] = [
 			await envoyer(a),
@@ -162,7 +162,7 @@ describe('Photo remplacée : ancien objet en corbeille (I24) ; photo encore réf
 		await enregistrerOuEchouer(a, { mainPicture: principale.id, gallery: [galerie.id] })
 		await enregistrerOuEchouer(b, { mainPicture: deB.id })
 
-		const { statut } = await appelerRest('DELETE', `/api/profiles/${(await profilDe(a)).id}`, {
+		const { statut } = await callRest('DELETE', `/api/profiles/${(await profilDe(a)).id}`, {
 			enTetes: admin.session.enTetes,
 		})
 
@@ -179,11 +179,11 @@ describe('Photo remplacée : ancien objet en corbeille (I24) ; photo encore réf
 	})
 
 	test('un média supprimé par sa propriétaire : son objet part à la corbeille, il n’est pas effacé', async () => {
-		const compte = await creerCompte('maquilleuse')
+		const compte = await createAccount('maquilleuse')
 		const media = await envoyer(compte)
 		const avant = await octets(cle(media))
 
-		const { statut } = await appelerRest('DELETE', `/api/media/${media.id}`, { enTetes: compte.session.enTetes })
+		const { statut } = await callRest('DELETE', `/api/media/${media.id}`, { enTetes: compte.session.enTetes })
 
 		expect(statut).toBe(200)
 		expect(await octets(cle(media))).toBeUndefined()
@@ -191,12 +191,12 @@ describe('Photo remplacée : ancien objet en corbeille (I24) ; photo encore réf
 	})
 
 	test('le fichier d’un média remplacé : l’ancien objet part à la corbeille, le nouveau est en place', async () => {
-		const compte = await creerCompte('maquilleuse')
+		const compte = await createAccount('maquilleuse')
 		const media = await envoyer(compte)
 
-		const { statut, corps, texte } = await appelerRest('PATCH', `/api/media/${media.id}?depth=0`, {
+		const { statut, corps, texte } = await callRest('PATCH', `/api/media/${media.id}?depth=0`, {
 			enTetes: compte.session.enTetes,
-			formulaire: formulaireAvecFichier(fichierPourFormulaire()),
+			formulaire: formWithFile(fileForForm()),
 		})
 
 		expect([statut, texte]).toEqual([200, texte])
@@ -210,7 +210,7 @@ describe('Photo remplacée : ancien objet en corbeille (I24) ; photo encore réf
 
 describe('L’adresse publique d’une photo en corbeille ne répond plus 200', () => {
 	test('200 tant qu’elle sert ; plus 200 une fois remplacée', async () => {
-		const compte = await creerCompte('maquilleuse')
+		const compte = await createAccount('maquilleuse')
 		const [ancienne, nouvelle] = [await envoyer(compte), await envoyer(compte)]
 		await enregistrerOuEchouer(compte, { mainPicture: ancienne.id })
 		expect(await statutPublic(ancienne)).toBe(200)
@@ -224,7 +224,7 @@ describe('L’adresse publique d’une photo en corbeille ne répond plus 200', 
 
 describe('Panne du stockage : document et objet intacts, erreur remontée', () => {
 	test('le stockage tombe pendant le remplacement : 503 en français ; profil, média et objet comme avant', async () => {
-		const compte = await creerCompte('maquilleuse')
+		const compte = await createAccount('maquilleuse')
 		const [ancienne, nouvelle] = [await envoyer(compte), await envoyer(compte)]
 		await enregistrerOuEchouer(compte, { mainPicture: ancienne.id })
 		espion.fairePanne(commande => commande.nom === 'CopyObject')
@@ -241,11 +241,11 @@ describe('Panne du stockage : document et objet intacts, erreur remontée', () =
 	})
 
 	test('la suppression d’un média pendant la panne : refusée en 503, le média et son objet restent', async () => {
-		const compte = await creerCompte('maquilleuse')
+		const compte = await createAccount('maquilleuse')
 		const media = await envoyer(compte)
 		espion.fairePanne(commande => commande.nom === 'HeadObject')
 
-		const { statut, texte } = await appelerRest('DELETE', `/api/media/${media.id}`, {
+		const { statut, texte } = await callRest('DELETE', `/api/media/${media.id}`, {
 			enTetes: compte.session.enTetes,
 		})
 
@@ -261,13 +261,13 @@ describe('Panne du stockage : plusieurs documents à la fois sont refusés, rien
 	// media and profiles are deleted and changed one at a time, where a failure undoes everything.
 
 	test('la propriétaire supprime sa photo principale par un filtre, pendant une panne : refusé ; média, objet et profil intacts', async () => {
-		const compte = await creerCompte('maquilleuse')
+		const compte = await createAccount('maquilleuse')
 		const photo = await envoyer(compte)
 		await enregistrerOuEchouer(compte, { mainPicture: photo.id })
 		espion.fairePanne(commande => commande.nom === 'HeadObject')
 		const avant = espion.journal.length
 
-		const { statut } = await appelerRest('DELETE', `/api/media?where[id][equals]=${photo.id}`, {
+		const { statut } = await callRest('DELETE', `/api/media?where[id][equals]=${photo.id}`, {
 			enTetes: compte.session.enTetes,
 		})
 
@@ -280,13 +280,13 @@ describe('Panne du stockage : plusieurs documents à la fois sont refusés, rien
 	})
 
 	test('la propriétaire change sa photo principale par un filtre, pendant une panne : refusé ; le profil garde l’ancienne', async () => {
-		const compte = await creerCompte('maquilleuse')
+		const compte = await createAccount('maquilleuse')
 		const [ancienne, nouvelle] = [await envoyer(compte), await envoyer(compte)]
 		await enregistrerOuEchouer(compte, { mainPicture: ancienne.id })
 		const profil = await profilDe(compte)
 		espion.fairePanne(commande => commande.nom === 'CopyObject')
 
-		const { statut } = await appelerRest('PATCH', `/api/profiles?where[id][equals]=${profil.id}&depth=0`, {
+		const { statut } = await callRest('PATCH', `/api/profiles?where[id][equals]=${profil.id}&depth=0`, {
 			enTetes: compte.session.enTetes,
 			corps: { mainPicture: nouvelle.id },
 		})
@@ -300,9 +300,9 @@ describe('Panne du stockage : plusieurs documents à la fois sont refusés, rien
 
 	test('un admin supprime deux profils par un filtre, et le stockage tombe à la troisième copie : refusé ; profils, médias et objets intacts', async () => {
 		const [a, b, admin] = await Promise.all([
-			creerCompte('maquilleuse'),
-			creerCompte('maquilleuse'),
-			creerCompte('admin'),
+			createAccount('maquilleuse'),
+			createAccount('maquilleuse'),
+			createAccount('admin'),
 		])
 		const [a1, a2, b1, b2] = [await envoyer(a), await envoyer(a), await envoyer(b), await envoyer(b)]
 		await enregistrerOuEchouer(a, { mainPicture: a1.id, gallery: [a2.id] })
@@ -314,7 +314,7 @@ describe('Panne du stockage : plusieurs documents à la fois sont refusés, rien
 				commande.nom === 'CopyObject' && String(commande.entree.Key).startsWith('deleted/') && ++copiesEnCorbeille === 3
 		)
 
-		const { statut } = await appelerRest('DELETE', `/api/profiles?where[id][in]=${profilA.id},${profilB.id}`, {
+		const { statut } = await callRest('DELETE', `/api/profiles?where[id][in]=${profilA.id},${profilB.id}`, {
 			enTetes: admin.session.enTetes,
 		})
 
@@ -328,8 +328,8 @@ describe('Panne du stockage : plusieurs documents à la fois sont refusés, rien
 	})
 
 	test('par l’API locale, même sans contrôle d’accès : chaque suppression et chaque modification par un filtre est refusée en français', async () => {
-		const payload = await payloadDeTest()
-		const compte = await creerCompte('maquilleuse')
+		const payload = await testPayload()
+		const compte = await createAccount('maquilleuse')
 		const photo = await envoyer(compte)
 		await enregistrerOuEchouer(compte, { mainPicture: photo.id })
 		const profil = await profilDe(compte)
@@ -355,7 +355,7 @@ describe('Panne du stockage : plusieurs documents à la fois sont refusés, rien
 
 describe('Un test échoue si une suppression d’objet est appelée ; la remise en place est essayée une fois', () => {
 	test('l’espion voit les requêtes du greffon de stockage : un envoi est un PutObject de sa clé', async () => {
-		const compte = await creerCompte('maquilleuse')
+		const compte = await createAccount('maquilleuse')
 
 		const media = await envoyer(compte)
 
@@ -365,7 +365,7 @@ describe('Un test échoue si une suppression d’objet est appelée ; la remise 
 	})
 
 	test('la panne au milieu de deux photos : la première, déjà déplacée, est remise en place une fois ; tout est comme avant', async () => {
-		const compte = await creerCompte('maquilleuse')
+		const compte = await createAccount('maquilleuse')
 		const [premiere, seconde] = [await envoyer(compte), await envoyer(compte)]
 		await enregistrerOuEchouer(compte, { gallery: [premiere.id, seconde.id] })
 		let copiesEnCorbeille = 0
@@ -384,13 +384,13 @@ describe('Un test échoue si une suppression d’objet est appelée ; la remise 
 			expect(await statutPublic(media)).toBe(200)
 		}
 		const remises = espion.journal.filter(
-			commande => commande.nom === 'CopyObject' && sourceDe(commande).startsWith('deleted/')
+			commande => commande.nom === 'CopyObject' && sourceOf(commande).startsWith('deleted/')
 		)
 		expect(remises).toHaveLength(1)
 	})
 
 	test('une photo de la corbeille se remet en place : son adresse répond de nouveau 200, sa copie reste dans la corbeille', async () => {
-		const compte = await creerCompte('maquilleuse')
+		const compte = await createAccount('maquilleuse')
 		const [ancienne, nouvelle] = [await envoyer(compte), await envoyer(compte)]
 		await enregistrerOuEchouer(compte, { mainPicture: ancienne.id })
 		await enregistrerOuEchouer(compte, { mainPicture: nouvelle.id })
@@ -407,8 +407,8 @@ describe('Un test échoue si une suppression d’objet est appelée ; la remise 
 
 describe('Avec le contexte d’import, rien n’est déplacé', () => {
 	test('un profil réécrit par l’import : l’ancienne photo et son média restent, aucun objet ne bouge', async () => {
-		const payload = await payloadDeTest()
-		const compte = await creerCompte('maquilleuse')
+		const payload = await testPayload()
+		const compte = await createAccount('maquilleuse')
 		const [ancienne, nouvelle] = [await envoyer(compte), await envoyer(compte)]
 		const profil = await profilDe(compte)
 		await payload.update({ collection: 'profiles', id: profil.id, data: { mainPicture: ancienne.id } })
@@ -428,8 +428,8 @@ describe('Avec le contexte d’import, rien n’est déplacé', () => {
 	})
 
 	test('un média supprimé sous le contexte d’import : son objet reste où il est', async () => {
-		const payload = await payloadDeTest()
-		const compte = await creerCompte('maquilleuse')
+		const payload = await testPayload()
+		const compte = await createAccount('maquilleuse')
 		const media = await envoyer(compte)
 		const avant = espion.journal.length
 
@@ -441,8 +441,8 @@ describe('Avec le contexte d’import, rien n’est déplacé', () => {
 	})
 
 	test('l’import peut supprimer par un filtre : le média part, son objet reste où il est', async () => {
-		const payload = await payloadDeTest()
-		const compte = await creerCompte('maquilleuse')
+		const payload = await testPayload()
+		const compte = await createAccount('maquilleuse')
 		const media = await envoyer(compte)
 		const avant = espion.journal.length
 

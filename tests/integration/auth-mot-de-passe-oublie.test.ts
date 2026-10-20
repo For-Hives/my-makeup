@@ -7,11 +7,11 @@ import { signInWithPassword } from '@/lib/auth/sign-in'
 import { openWithPassword } from '@/lib/auth/token'
 import { payloadSendEmail } from '@/lib/emails/send'
 import { serverEnv } from '@/lib/env'
-import { creerCompte } from '../support/account-factory'
-import { attendreLeMail, compterLesMails, mailsRecus, viderLeCapteur } from '../support/mailpit'
-import { payloadDeTest, viderLaBase } from '../support/payload-test'
-import { appelerRest } from '../support/rest'
-import { ouvrirSession } from '../support/session'
+import { createAccount } from '../support/account-factory'
+import { countMails, emptySink, mailReceived, waitMail } from '../support/mailpit'
+import { emptyBase, testPayload } from '../support/payload-test'
+import { callRest } from '../support/rest'
+import { openSession } from '../support/session'
 
 /**
  * The forgotten password (tickets 085 and 086; plan 02 I10 and I17): the mail and its link of one
@@ -21,7 +21,7 @@ import { ouvrirSession } from '../support/session'
  */
 
 afterAll(async () => {
-	await Promise.all([viderLaBase(), viderLeCapteur()])
+	await Promise.all([emptyBase(), emptySink()])
 })
 
 const ANCIEN = 'ancien-mot-de-passe-fictif'
@@ -35,7 +35,7 @@ const libre = () => createRateLimit({ nom: `essai-oubli-${n++}`, limite: 1000, f
 /** The work after the answer is awaited, so that a test can read the mail it causes. */
 function demande(email: unknown, options: { frein?: ReturnType<typeof createRateLimit>; headers?: Headers } = {}) {
 	const travaux: Promise<void>[] = []
-	return payloadDeTest().then(async payload => {
+	return testPayload().then(async payload => {
 		const debut = Date.now()
 		const resultat = await requestPasswordLink({
 			payload,
@@ -56,7 +56,7 @@ function demande(email: unknown, options: { frein?: ReturnType<typeof createRate
 }
 
 const jetonDuMail = async (email: string): Promise<string> => {
-	const mail = await attendreLeMail({ pour: email, sujet: /Réinitialise ton mot de passe/ })
+	const mail = await waitMail({ pour: email, sujet: /Réinitialise ton mot de passe/ })
 	const lien = mail.liens.find(l => new URL(l).pathname === '/auth/reinitialiser')
 	if (!lien) throw new Error('Le mail ne porte pas le lien.')
 	expect(lien).toStartWith(`${SITE}/auth/reinitialiser?code=`)
@@ -70,17 +70,17 @@ const reinit = async (
 	frein = libre()
 ) =>
 	resetPassword({
-		payload: await payloadDeTest(),
+		payload: await testPayload(),
 		headers: adresseCliente(),
 		jeton,
 		motDePasse,
 		confirmation,
 		frein,
-		journal: authLog(await payloadDeTest()),
+		journal: authLog(await testPayload()),
 	})
 
 const ligne = async (id: number | string) => {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	return payload.db.findOne<{
 		id: number
 		resetPasswordToken?: string | null
@@ -92,7 +92,7 @@ const ligne = async (id: number | string) => {
 }
 
 const seConnecter = async (email: string, password: string) => {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	return signInWithPassword({
 		ouvrir: data => openWithPassword(payload, 'pros', data),
 		headers: adresseCliente(),
@@ -102,10 +102,10 @@ const seConnecter = async (email: string, password: string) => {
 	})
 }
 
-const compteConnu = () => creerCompte('maquilleuse', { motDePasse: () => ANCIEN })
+const compteConnu = () => createAccount('maquilleuse', { motDePasse: () => ANCIEN })
 
 beforeEach(async () => {
-	await viderLeCapteur()
+	await emptySink()
 })
 
 describe('I10 : la demande envoie un mail avec un lien d’une heure', () => {
@@ -116,7 +116,7 @@ describe('I10 : la demande envoie un mail avec un lien d’une heure', () => {
 		const { resultat } = await demande(compte.email)
 
 		expect(resultat).toEqual({ ok: true })
-		const mail = await attendreLeMail({ pour: compte.email })
+		const mail = await waitMail({ pour: compte.email })
 		expect(mail.sujet).toBe('Réinitialise ton mot de passe My Makeup')
 		expect(mail.liens.some(l => l.includes('/admin'))).toBe(false)
 		const jeton = await jetonDuMail(compte.email)
@@ -133,10 +133,10 @@ describe('I10 : la demande envoie un mail avec un lien d’une heure', () => {
 		const compte = await compteConnu()
 		await demande(compte.email)
 		const jeton = await jetonDuMail(compte.email)
-		expect(await linkStillValid(await payloadDeTest(), jeton)).toBe(true)
+		expect(await linkStillValid(await testPayload(), jeton)).toBe(true)
 
 		// The hour has passed: the expiration is set in the past, the clock is not faked.
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		await payload.db.updateOne({
 			collection: 'pros',
 			data: { resetPasswordExpiration: new Date(Date.now() - 1000).toISOString() },
@@ -153,14 +153,14 @@ describe('I10 : la demande envoie un mail avec un lien d’une heure', () => {
 	test('le mail ne contient ni le mot de passe ni l’adresse d’un autre compte', async () => {
 		const compte = await compteConnu()
 		await demande(compte.email)
-		const mail = await attendreLeMail({ pour: compte.email })
+		const mail = await waitMail({ pour: compte.email })
 		expect(mail.texte + mail.html).not.toContain(ANCIEN)
 	})
 
 	test('le mail part par le point d’envoi du site : une partie texte et une partie HTML, toutes deux avec le lien', async () => {
 		const compte = await compteConnu()
 		await demande(compte.email)
-		const mail = await attendreLeMail({ pour: compte.email })
+		const mail = await waitMail({ pour: compte.email })
 		expect(mail.texte).toContain('/auth/reinitialiser?code=')
 		expect(mail.html).toContain('/auth/reinitialiser?code=')
 	})
@@ -170,10 +170,10 @@ describe('I10 : la demande envoie un mail avec un lien d’une heure', () => {
 		const premiere = await demande(compte.email)
 		const seconde = await demande(compte.email)
 		expect(seconde.resultat).toEqual(premiere.resultat)
-		await attendreLeMail({ pour: compte.email })
-		expect(await compterLesMails()).toBe(1)
+		await waitMail({ pour: compte.email })
+		expect(await countMails()).toBe(1)
 		// The window is over: the next request sends again.
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		await payload.db.updateOne({
 			collection: 'pros',
 			data: { resetPasswordRequestedAt: new Date(Date.now() - 16_000).toISOString() },
@@ -181,13 +181,13 @@ describe('I10 : la demande envoie un mail avec un lien d’une heure', () => {
 			where: { id: { equals: compte.id } },
 		})
 		await demande(compte.email)
-		expect(await compterLesMails()).toBe(2)
+		expect(await countMails()).toBe(2)
 	})
 
 	test('l’adresse est lue sans tenir compte de la casse ni des espaces', async () => {
 		const compte = await compteConnu()
 		await demande(`  ${compte.email.toUpperCase()}  `)
-		await attendreLeMail({ pour: compte.email })
+		await waitMail({ pour: compte.email })
 	})
 })
 
@@ -207,16 +207,16 @@ describe('I10 : une adresse inconnue répond pareil, dans le même temps, sans m
 			expect(duree).toBeLessThan(FORGOT_PASSWORD_FLOOR_MS + 400)
 		}
 		expect(Math.abs(connue.duree - autre.duree)).toBeLessThan(150)
-		await attendreLeMail({ pour: compte.email })
-		expect(await mailsRecus(inconnue)).toEqual([])
-		expect(await compterLesMails()).toBe(1)
+		await waitMail({ pour: compte.email })
+		expect(await mailReceived(inconnue)).toEqual([])
+		expect(await countMails()).toBe(1)
 	})
 
 	test('une adresse qui n’en est pas une est refusée, sans mail', async () => {
 		expect((await demande('pas-une-adresse')).resultat).toEqual({ ok: false, code: 'email-invalide' })
 		expect((await demande('   ')).resultat).toEqual({ ok: false, code: 'email-vide' })
 		expect((await demande(undefined)).resultat).toEqual({ ok: false, code: 'email-vide' })
-		expect(await compterLesMails()).toBe(0)
+		expect(await countMails()).toBe(0)
 	})
 
 	test('le frein par adresse cliente : la 11e demande est refusée, connue ou non, et ne part pas', async () => {
@@ -227,22 +227,22 @@ describe('I10 : une adresse inconnue répond pareil, dans le même temps, sans m
 			const email = i % 2 === 0 ? `inconnue-${i}@example.test` : compte.email
 			expect((await demande(email, { frein, headers })).resultat.ok).toBe(true)
 		}
-		await attendreLeMail({ pour: compte.email })
-		await viderLeCapteur()
+		await waitMail({ pour: compte.email })
+		await emptySink()
 
 		const refusee = await demande(compte.email, { frein, headers })
 		const aussi = await demande(`inconnue-${crypto.randomUUID()}@example.test`, { frein, headers })
 
 		expect(refusee.resultat).toEqual({ ok: false, code: 'trop-de-tentatives' })
 		expect(aussi.resultat).toEqual(refusee.resultat)
-		expect(await compterLesMails()).toBe(0)
+		expect(await countMails()).toBe(0)
 		// Another address is free.
 		expect((await demande(compte.email, { frein, headers: adresseCliente() })).resultat.ok).toBe(true)
 	})
 
 	test('le journal : une ligne « ok » par demande, la même pour une adresse inconnue, sans adresse ni jeton', async () => {
 		const compte = await compteConnu()
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const lire = async () =>
 			(
 				await payload.find({
@@ -268,14 +268,14 @@ describe('les portes REST de Payload sont fermées', () => {
 		const compte = await compteConnu()
 		const inconnue = `inconnue-${crypto.randomUUID()}@example.test`
 		for (const email of [compte.email, inconnue]) {
-			const r = await appelerRest('POST', '/api/pros/forgot-password', { corps: { email } })
+			const r = await callRest('POST', '/api/pros/forgot-password', { corps: { email } })
 			expect(r.statut).toBe(403)
 		}
-		const reset = await appelerRest('POST', '/api/pros/reset-password', {
+		const reset = await callRest('POST', '/api/pros/reset-password', {
 			corps: { token: 'a'.repeat(40), password: NOUVEAU },
 		})
 		expect(reset.statut).toBe(403)
-		expect(await compterLesMails()).toBe(0)
+		expect(await countMails()).toBe(0)
 		expect((await ligne(compte.id))?.resetPasswordToken ?? null).toBeNull()
 	})
 })
@@ -333,7 +333,7 @@ describe('085 : choisir un nouveau mot de passe', () => {
 		expect(await reinit(jeton, 'court')).toEqual({ ok: false, code: 'mot-de-passe-trop-court' })
 		expect(await reinit(jeton, 'x'.repeat(256))).toEqual({ ok: false, code: 'mot-de-passe-trop-long' })
 		expect(await reinit(jeton, NOUVEAU, 'autre-chose-fictif')).toEqual({ ok: false, code: 'mots-de-passe-differents' })
-		expect(await linkStillValid(await payloadDeTest(), jeton)).toBe(true)
+		expect(await linkStillValid(await testPayload(), jeton)).toBe(true)
 		expect(await reinit(jeton)).toEqual({ ok: true })
 	})
 
@@ -344,7 +344,7 @@ describe('085 : choisir un nouveau mot de passe', () => {
 		expect(await reinit(ancien)).toEqual({ ok: false, code: 'code-invalide' })
 		expect(await reinit('f'.repeat(40))).toEqual({ ok: false, code: 'code-invalide' })
 		expect(await reinit("' or 1=1 --")).toEqual({ ok: false, code: 'code-invalide' })
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		expect(await linkStillValid(payload, ancien)).toBe(false)
 		expect(await linkStillValid(payload, 'f'.repeat(40))).toBe(false)
 		expect(await linkStillValid(payload, undefined)).toBe(false)
@@ -358,7 +358,7 @@ describe('085 : choisir un nouveau mot de passe', () => {
 		const headers = adresseCliente()
 		const tenter = async (code: unknown) =>
 			resetPassword({
-				payload: await payloadDeTest(),
+				payload: await testPayload(),
 				headers,
 				jeton: code,
 				motDePasse: NOUVEAU,
@@ -382,7 +382,7 @@ describe('085 : choisir un nouveau mot de passe', () => {
 
 	test('le journal : une ligne « reinitialisation » par essai, sans jeton ni adresse', async () => {
 		const compte = await compteConnu()
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		await demande(compte.email)
 		const jeton = await jetonDuMail(compte.email)
 		await reinit(jeton)
@@ -404,10 +404,10 @@ describe('085 : choisir un nouveau mot de passe', () => {
 describe('I17 : réinitialiser ferme toutes les autres sessions', () => {
 	test('deux sessions ouvertes, le nouveau mot de passe les ferme, et il n’en reste aucune', async () => {
 		const compte = await compteConnu()
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const premiere = compte.session
-		const seconde = await ouvrirSession(payload, { collection: 'pros', email: compte.email, motDePasse: ANCIEN })
-		const moi = (enTetes: Record<string, string>) => appelerRest('GET', '/api/pros/me', { enTetes })
+		const seconde = await openSession(payload, { collection: 'pros', email: compte.email, motDePasse: ANCIEN })
+		const moi = (enTetes: Record<string, string>) => callRest('GET', '/api/pros/me', { enTetes })
 		expect((await moi(premiere.enTetes)).corps).toHaveProperty('user.id', compte.id)
 		expect((await moi(seconde.enTetes)).corps).toHaveProperty('user.id', compte.id)
 		expect((await ligne(compte.id))?.sessions?.length).toBe(2)
@@ -422,18 +422,18 @@ describe('I17 : réinitialiser ferme toutes les autres sessions', () => {
 
 	test('les sessions d’un autre compte ne sont pas touchées', async () => {
 		const compte = await compteConnu()
-		const autre = await creerCompte('maquilleuse')
+		const autre = await createAccount('maquilleuse')
 		await demande(compte.email)
 		await reinit(await jetonDuMail(compte.email))
 
-		const r = await appelerRest('GET', '/api/pros/me', { enTetes: autre.session.enTetes })
+		const r = await callRest('GET', '/api/pros/me', { enTetes: autre.session.enTetes })
 		expect(r.corps).toHaveProperty('user.id', autre.id)
 	})
 })
 
 describe('un compte repris de l’ancien site', () => {
 	test('l’ancien mot de passe ne passe plus par le chemin hérité : le hash hérité est effacé', async () => {
-		const compte = await creerCompte('reprise-avec-hash')
+		const compte = await createAccount('reprise-avec-hash')
 		expect((await ligne(compte.id))?.legacyBcrypt).toBeTruthy()
 
 		await demande(compte.email)
@@ -445,7 +445,7 @@ describe('un compte repris de l’ancien site', () => {
 	})
 
 	test('un compte sans mot de passe (Google, Facebook) en choisit un par ce même parcours', async () => {
-		const compte = await creerCompte('reprise-facebook')
+		const compte = await createAccount('reprise-facebook')
 		expect((await seConnecter(compte.email, NOUVEAU)).ok).toBe(false)
 
 		await demande(compte.email)

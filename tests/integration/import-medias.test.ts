@@ -4,14 +4,14 @@ import { MissingFile } from 'payload'
 import { PROFILE_TYPE } from '../../scripts/migration/import/media'
 import type { Report } from '../../scripts/migration/import/report'
 import type { Media } from '../../src/payload-types'
-import { espionnerLeStockage } from '../support/s3-spy'
-import { creerCompte } from '../support/account-factory'
-import { importerSurLeBanc } from '../support/import'
-import { payloadDeTest, viderLaBase } from '../support/payload-test'
-import { appelerRest } from '../support/rest'
-import { lireUnObjet, listerLesObjets, viderLeStockage } from '../support/s3'
-import { creerLaSourceStrapi, effacerLaSourceStrapi, empreinteDeLaSource, sourceDuBanc } from '../support/source-strapi'
-import { definitionDeLaSource } from '../support/source-strapi/data'
+import { createAccount } from '../support/account-factory'
+import { importOnBench } from '../support/import'
+import { emptyBase, testPayload } from '../support/payload-test'
+import { callRest } from '../support/rest'
+import { emptyStorage, listObjects, readObject } from '../support/s3'
+import { spyStorage } from '../support/s3-spy'
+import { benchSource, createSourceStrapi, eraseSourceStrapi, sourceFingerprint } from '../support/source-strapi'
+import { sourceDefinition } from '../support/source-strapi/data'
 
 /**
  * Ticket 058: the files a profile or an article the import takes designates become media, adopted
@@ -22,8 +22,8 @@ import { definitionDeLaSource } from '../support/source-strapi/data'
  * One import for the whole file: each test reads what it left.
  */
 
-const source = sourceDuBanc()
-const { lignes, objets } = definitionDeLaSource(source.medias)
+const source = benchSource()
+const { lignes, objets } = sourceDefinition(source.medias)
 
 /** The files of the source, by identifier. */
 const FICHIERS = new Map(lignes.files.map(fichier => [Number(fichier.id), fichier]))
@@ -41,8 +41,8 @@ const ADOPTES = [101, 102, 103, 104, 105, 106, 107, 109]
 /** Each object of the bucket, with a fingerprint of its content. */
 async function etatDuStockage(): Promise<string[]> {
 	const etat: string[] = []
-	for (const { cle, taille } of await listerLesObjets()) {
-		const objet = await lireUnObjet(cle)
+	for (const { cle, taille } of await listObjects()) {
+		const objet = await readObject(cle)
 		etat.push(
 			`${cle} ${taille} ${createHash('sha256')
 				.update(objet?.octets ?? new Uint8Array())
@@ -53,7 +53,7 @@ async function etatDuStockage(): Promise<string[]> {
 }
 
 async function mediasDeLaCible(): Promise<Media[]> {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	const { docs } = await payload.find({
 		collection: 'media',
 		depth: 0,
@@ -71,16 +71,16 @@ let premier: Report
 let journalDuStockage: string[] = []
 
 beforeAll(async () => {
-	await viderLaBase()
+	await emptyBase()
 	// Before the source: emptying the bucket would take its objects away.
-	await viderLeStockage()
-	await creerLaSourceStrapi()
+	await emptyStorage()
+	await createSourceStrapi()
 	stockageAvant = await etatDuStockage()
-	empreinteAvant = (await empreinteDeLaSource()).empreinte
-	const espion = espionnerLeStockage()
+	empreinteAvant = (await sourceFingerprint()).empreinte
+	const espion = spyStorage()
 	try {
-		aBlanc = await importerSurLeBanc('dry-run')
-		premier = await importerSurLeBanc()
+		aBlanc = await importOnBench('dry-run')
+		premier = await importOnBench()
 	} finally {
 		espion.arreter()
 		journalDuStockage = espion.journal.map(({ nom }) => nom)
@@ -88,8 +88,8 @@ beforeAll(async () => {
 }, 60_000)
 
 afterAll(async () => {
-	await viderLaBase()
-	await effacerLaSourceStrapi()
+	await emptyBase()
+	await eraseSourceStrapi()
 })
 
 describe('Les photos référencées sont adoptées là où elles sont (ticket 058)', () => {
@@ -112,7 +112,7 @@ describe('Les photos référencées sont adoptées là où elles sont (ticket 05
 		expect(premier.parity?.media).toMatchObject({ expected: 8, equal: 8, different: [], missing: [], extra: [] })
 		expect(premier.gaps).toMatchObject({ 'SCHEMA.md §8 (size)': 8, 'fichiers-non-images-non-repris': 1 })
 		// Each media belongs to the account of the profile that designates it.
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const { docs: comptes } = await payload.find({ collection: 'pros', depth: 0, pagination: false })
 		const compteEnPayload = new Map(comptes.map(({ id, strapiId }) => [Number(strapiId), id]))
 		for (const media of medias) {
@@ -132,7 +132,7 @@ describe('Les photos référencées sont adoptées là où elles sont (ticket 05
 	test('le stockage est identique avant et après : aucune écriture, aucun appel du client S3 de l’application', async () => {
 		expect(await etatDuStockage()).toEqual(stockageAvant)
 		expect(journalDuStockage).toEqual([])
-		expect((await empreinteDeLaSource()).empreinte).toBe(empreinteAvant)
+		expect((await sourceFingerprint()).empreinte).toBe(empreinteAvant)
 	})
 
 	test('l’adresse publique est l’adresse source, caractère pour caractère, et répond 200 en HEAD (I42)', async () => {
@@ -165,7 +165,7 @@ describe('Les photos référencées sont adoptées là où elles sont (ticket 05
 	})
 
 	test('l’objet manquant est listé en « 404 connus » sans bloquer le reste : le profil garde sa photo', async () => {
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const [ines] = (
 			await payload.find({
 				collection: 'profiles',
@@ -184,7 +184,7 @@ describe('Les photos référencées sont adoptées là où elles sont (ticket 05
 	test('second passage : 0 création, 0 mise à jour', async () => {
 		const avant = await mediasDeLaCible()
 
-		const second = await importerSurLeBanc()
+		const second = await importOnBench()
 
 		expect(second.collections.media).toMatchObject({ created: 0, updated: 0, unchanged: 8, refused: [] })
 		expect(await mediasDeLaCible()).toEqual(avant)
@@ -194,9 +194,9 @@ describe('Les photos référencées sont adoptées là où elles sont (ticket 05
 
 describe('Seul l’import crée un média sans recevoir de fichier', () => {
 	test('une maquilleuse qui envoie un média sans fichier est refusée, comme avant (400)', async () => {
-		const compte = await creerCompte('maquilleuse')
+		const compte = await createAccount('maquilleuse')
 
-		const { statut } = await appelerRest('POST', '/api/media', {
+		const { statut } = await callRest('POST', '/api/media', {
 			enTetes: compte.session.enTetes,
 			corps: { alt: 'Sans fichier', filename: 'photo.png', prefix: '1' },
 		})
@@ -206,7 +206,7 @@ describe('Seul l’import crée un média sans recevoir de fichier', () => {
 	})
 
 	test('le code serveur qui crée un média sans fichier ni nom de fichier est refusé aussi', async () => {
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 
 		await expect(payload.create({ collection: 'media', data: { alt: 'Sans fichier' } })).rejects.toBeInstanceOf(
 			MissingFile

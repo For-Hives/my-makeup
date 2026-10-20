@@ -4,9 +4,9 @@ import { createRateLimit } from '@/lib/auth/rate-limit'
 import { signInWithPassword } from '@/lib/auth/sign-in'
 import { openWithPassword } from '@/lib/auth/token'
 import { runDailyTasks } from '@/lib/tasks/daily'
-import { creerCompte } from '../support/account-factory'
-import { payloadDeTest, viderLaBase } from '../support/payload-test'
-import { appelerRest } from '../support/rest'
+import { createAccount } from '../support/account-factory'
+import { emptyBase, testPayload } from '../support/payload-test'
+import { callRest } from '../support/rest'
 
 /**
  * The journal of the authentication events (ticket 077). Who may read it is in the access matrix
@@ -15,7 +15,7 @@ import { appelerRest } from '../support/rest'
  */
 
 afterAll(async () => {
-	await viderLaBase()
+	await emptyBase()
 })
 
 const MOT_DE_PASSE = 'aaaaaaaa'
@@ -24,12 +24,12 @@ let n = 0
 const adresse = () => new Headers({ 'x-forwarded-for': `192.0.2.${100 + (n++ % 100)}` })
 
 async function lignes() {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	return (await payload.find({ collection: 'auth-events', depth: 0, limit: 1000, pagination: false, sort: 'id' })).docs
 }
 
 async function ouvrirPar(payloadHeaders: Headers, email: unknown, password: unknown) {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	return signInWithPassword({
 		ouvrir: data => openWithPassword(payload, 'pros', data),
 		headers: payloadHeaders,
@@ -42,8 +42,8 @@ async function ouvrirPar(payloadHeaders: Headers, email: unknown, password: unkn
 
 describe('une ligne par connexion, réussie ou refusée', () => {
 	test('par le formulaire : une ligne « ok », une ligne « identifiants-invalides », et la date de dernière connexion', async () => {
-		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
-		const payload = await payloadDeTest()
+		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const payload = await testPayload()
 		const avant = (await lignes()).length
 
 		const reussie = await ouvrirPar(adresse(), compte.email, MOT_DE_PASSE)
@@ -67,10 +67,10 @@ describe('une ligne par connexion, réussie ou refusée', () => {
 	})
 
 	test('par l’API REST : une ligne « ok », une « identifiants-invalides », une « trop-de-tentatives » quand le frein ferme', async () => {
-		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
 		const avant = (await lignes()).length
 		const rest = (password: string, ip: string) =>
-			appelerRest('POST', '/api/pros/login', {
+			callRest('POST', '/api/pros/login', {
 				corps: { email: compte.email, password },
 				enTetes: { 'x-forwarded-for': ip },
 			})
@@ -88,11 +88,11 @@ describe('une ligne par connexion, réussie ou refusée', () => {
 	})
 
 	test('la date de dernière connexion est mise à jour par l’API REST aussi', async () => {
-		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
-		const payload = await payloadDeTest()
+		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const payload = await testPayload()
 		await payload.update({ collection: 'pros', id: compte.id, data: { lastSignInAt: '2020-01-01T00:00:00.000Z' } })
 
-		const reponse = await appelerRest('POST', '/api/pros/login', {
+		const reponse = await callRest('POST', '/api/pros/login', {
 			corps: { email: compte.email, password: MOT_DE_PASSE },
 			enTetes: { 'x-forwarded-for': '198.51.100.203' },
 		})
@@ -105,7 +105,7 @@ describe('une ligne par connexion, réussie ou refusée', () => {
 
 describe('aucune donnée personnelle dans le journal, même glissée dans la saisie', () => {
 	test('un email, un nom, un jeton, une IP et un mot de passe saisis ne laissent rien dans les lignes', async () => {
-		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
 		const glisses = [
 			'intruse.test@example.test',
 			'Léa Intruse',
@@ -124,12 +124,12 @@ describe('aucune donnée personnelle dans le journal, même glissée dans la sai
 		await ouvrirPar(adresse(), compte.email, MOT_DE_PASSE)
 		// Through REST: the same values in the body and in the headers.
 		for (const glisse of glisses)
-			await appelerRest('POST', '/api/pros/login', {
+			await callRest('POST', '/api/pros/login', {
 				corps: { email: glisse, password: glisse },
 				enTetes: { 'x-forwarded-for': '198.51.100.204', 'user-agent': glisse, referer: `https://x.test/${glisse}` },
 			})
 		// Written directly, with a value out of the list in each field.
-		await log((await payloadDeTest()) as never, { type: 'sign-in', code: glisses[0] as never, durationMs: 3 } as never)
+		await log((await testPayload()) as never, { type: 'sign-in', code: glisses[0] as never, durationMs: 3 } as never)
 
 		const nouvelles = (await lignes()).slice(avant)
 		expect(nouvelles.length).toBeGreaterThanOrEqual(20)
@@ -147,8 +147,8 @@ describe('aucune donnée personnelle dans le journal, même glissée dans la sai
 
 describe('un échec d’écriture du journal ne fait pas échouer la connexion', () => {
 	test('la ligne ne peut pas s’écrire : la session est ouverte quand même', async () => {
-		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
-		const payload = await payloadDeTest()
+		const compte = await createAccount('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const payload = await testPayload()
 		const enPanne = Object.assign(Object.create(payload), {
 			create: () => Promise.reject(new Error('la table du journal est absente')),
 		}) as typeof payload
@@ -173,7 +173,7 @@ describe('la purge à 90 jours, sur une horloge simulée', () => {
 		new Date(maintenant.getTime() - jours * 86_400_000 - minutes * 60_000).toISOString()
 
 	test('une ligne de 91 jours part, une de 89 jours reste ; une seconde passe ne change rien', async () => {
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const maintenant = new Date()
 		const ecrire = (date: string) =>
 			payload.create({ collection: 'auth-events', data: { type: 'sign-in', code: 'ok', date } })

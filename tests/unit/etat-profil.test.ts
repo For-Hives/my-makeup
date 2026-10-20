@@ -13,11 +13,11 @@ import {
 } from '@/lib/profile/state'
 import {
 	ANNECY,
-	CAS_PARTAGES,
-	completudeEnV3,
-	documentDuCas,
-	REPONSES_DE_L_ANCIEN_SITE,
-	villeEcartee,
+	caseDocument,
+	completenessInV3,
+	excludedCity,
+	OLD_SITE_RESPONSES,
+	SHARED_CASE,
 } from '../support/completeness-cases'
 
 /**
@@ -127,9 +127,9 @@ describe('un document de profils lu par la règle unique', () => {
 
 describe('les cas partagés, écrits comme la v3 les tient (U01-U08)', () => {
 	test('l’état calculé est celui de la règle unique sur le même profil', async () => {
-		for (const cas of CAS_PARTAGES) {
-			const attendu = completudeEnV3(cas.profil)
-			const etat = profileState(await documentDuCas(cas.profil, () => 1))
+		for (const cas of SHARED_CASE) {
+			const attendu = completenessInV3(cas.profil)
+			const etat = profileState(await caseDocument(cas.profil, () => 1))
 			expect([cas.nom, etat]).toEqual([
 				cas.nom,
 				{
@@ -143,13 +143,13 @@ describe('les cas partagés, écrits comme la v3 les tient (U01-U08)', () => {
 	})
 
 	test('et celui de l’ancien site : seul le critère « ville » d’un texte qui n’est pas une commune manque au score', async () => {
-		expect(CAS_PARTAGES.map(({ nom }) => nom)).toEqual(REPONSES_DE_L_ANCIEN_SITE.map(({ nom }) => nom))
-		for (const [i, cas] of CAS_PARTAGES.entries()) {
-			const ancien = REPONSES_DE_L_ANCIEN_SITE[i]
+		expect(SHARED_CASE.map(({ nom }) => nom)).toEqual(OLD_SITE_RESPONSES.map(({ nom }) => nom))
+		for (const [i, cas] of SHARED_CASE.entries()) {
+			const ancien = OLD_SITE_RESPONSES[i]
 			if (!ancien) throw new Error(`Pas de réponse de l’ancien site pour « ${cas.nom} ».`)
-			const etat = profileState(await documentDuCas(cas.profil, () => 1))
+			const etat = profileState(await caseDocument(cas.profil, () => 1))
 			expect([cas.nom, etat.active, etat.fullyEmpty]).toEqual([cas.nom, ancien.front.actif, ancien.api.entirelyEmpty])
-			expect([cas.nom, etat.completeness]).toEqual([cas.nom, ancien.front.score - (villeEcartee(cas.profil) ? 1 : 0)])
+			expect([cas.nom, etat.completeness]).toEqual([cas.nom, ancien.front.score - (excludedCity(cas.profil) ? 1 : 0)])
 			// The quote form counts on the old site only when it is online; nothing turns it on.
 			if (cas.options?.formulaireDevis) expect([cas.nom, etat.publishable]).toEqual([cas.nom, false])
 			else expect([cas.nom, etat.publishable]).toEqual([cas.nom, ancien.front.publiable])

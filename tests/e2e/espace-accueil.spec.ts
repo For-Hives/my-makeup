@@ -1,8 +1,8 @@
 import { expect, type Locator, type Page, test } from '@playwright/test'
-import { violationsGraves } from '../support/axe'
-import { creerCompte } from '../support/account-factory'
-import { payloadDeTest } from '../support/payload-test'
-import { grandePhotoSynthetique } from '../support/synthetic-photo'
+import { createAccount } from '../support/account-factory'
+import { violationsSevere } from '../support/axe'
+import { testPayload } from '../support/payload-test'
+import { largePhotoSynthetic } from '../support/synthetic-photo'
 
 /**
  * The onboarding in three steps (ticket 140; plan 02 E02, RG-07): a new account lands on the first
@@ -25,7 +25,7 @@ test.beforeEach(({ context }) =>
 
 const creees: string[] = []
 test.afterEach(async () => {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	for (const email of creees.splice(0)) {
 		const { docs } = await payload.find({ collection: 'pros', depth: 0, where: { email: { equals: email } } })
 		for (const compte of docs) {
@@ -45,7 +45,7 @@ const aleatoireEnLettres = () =>
 /** A confirmed account made by the server, as the sign-up leaves it: with its empty profile. */
 async function nouveauCompte(): Promise<string> {
 	const email = `accueil-${crypto.randomUUID()}@example.test`
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	await payload.create({
 		collection: 'pros',
 		data: { email, password: MOT_DE_PASSE, name: `Accueil ${aleatoireEnLettres()}`, _verified: true },
@@ -68,12 +68,12 @@ async function seConnecter(page: Page, email: string) {
 /** Axe reads the page once: wait for the title of the page, which Next streams after a transition. */
 async function violationsApresLeTitre(page: Page) {
 	await expect(page).toHaveTitle(/Prépare ton profil/)
-	return violationsGraves(page)
+	return violationsSevere(page)
 }
 
-/** A capture of the page as it is, when CAPTURES_ESPACE names a folder (the check of ticket 140 at 390 px). */
+/** A capture of the page as it is, when DASHBOARD_SCREENSHOTS names a folder (the check of ticket 140 at 390 px). */
 async function capturer(page: Page, nom: string) {
-	const dossier = process.env.CAPTURES_ESPACE
+	const dossier = process.env.DASHBOARD_SCREENSHOTS
 	if (dossier)
 		await page.screenshot({ path: `${dossier}/accueil-${nom}-${test.info().project.name}.png`, fullPage: true })
 }
@@ -84,7 +84,7 @@ const appuyer = (cible: Locator) => (test.info().project.name === 'mobile' ? cib
 const titre = (page: Page) => page.locator('#accueil-titre-etape')
 
 async function profilDe(email: string) {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	const compte = (await payload.find({ collection: 'pros', depth: 0, where: { email: { equals: email } } })).docs[0]
 	const profil = (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte?.id } } }))
 		.docs[0]
@@ -105,7 +105,7 @@ async function choisirLille(page: Page) {
 }
 
 async function choisirLaPhoto(page: Page) {
-	const octets = await grandePhotoSynthetique()
+	const octets = await largePhotoSynthetic()
 	await page
 		.getByLabel('Choisir une photo')
 		.setInputFiles({ name: 'accueil.webp', mimeType: 'image/webp', buffer: Buffer.from(octets) })
@@ -300,9 +300,9 @@ test.describe('E02 : l’accueil en trois étapes', { tag: '@mobile' }, () => {
 		context,
 		page,
 	}) => {
-		const compte = await creerCompte('maquilleuse-sans-profil')
+		const compte = await createAccount('maquilleuse-sans-profil')
 		await context.addCookies(compte.session.cookies)
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const profils = () =>
 			payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } }).then(r => r.docs)
 		expect(await profils()).toHaveLength(0)

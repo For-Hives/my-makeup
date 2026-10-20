@@ -12,15 +12,15 @@ import { Onboarding } from '@/components/dashboard/onboarding/Onboarding'
 import { DECLARED_ORIGINS, eventData } from '@/lib/analytics/events'
 import type { Track } from '@/lib/analytics/track'
 import { strictOnboardingIdentitySchema } from '@/lib/dashboard/onboarding'
-import { choisirDesFichiers } from '../support/pick-files'
-import { ouvrirFenetre } from '../support/dom-react'
+import { openWindow } from '../support/dom-react'
+import { pickFiles } from '../support/pick-files'
 
 /**
  * Ticket 148: the onboarding sends its steps and the declared origin as events (plan 04 §3.3, events
  * 16 and 17), and stores nothing. `suivre` is given to the component, so the test sees exactly what
  * would leave; the server actions are fakes that keep what they receive.
  */
-const fenetre = ouvrirFenetre()
+const fenetre = openWindow()
 
 type Envoi = { nom: string; proprietes: unknown }
 function espion() {
@@ -96,7 +96,7 @@ async function zone() {
 }
 
 async function photo() {
-	await choisirDesFichiers(fenetre, fenetre.champ(/photo/i) as HTMLInputElement, [REDUITE])
+	await pickFiles(fenetre, fenetre.champ(/photo/i) as HTMLInputElement, [REDUITE])
 	await fenetre.attendre(() => !(fenetre.bouton('Terminer') as HTMLButtonElement).disabled)
 	await fenetre.cliquer(fenetre.bouton('Terminer'))
 }

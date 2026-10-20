@@ -4,7 +4,7 @@ import { AvailabilitySwitch, type AvailabilityUpload } from '@/components/dashbo
 import { availabilitySchema, isAvailable } from '@/lib/dashboard/availability'
 import { type DashboardProfile, profileCards } from '@/lib/dashboard/cards'
 import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
-import { ouvrirFenetre } from '../support/dom-react'
+import { openWindow } from '../support/dom-react'
 
 /**
  * The availability of her space (ticket 124; plan 02 E19-E29): what a card says for each stored
@@ -12,7 +12,7 @@ import { ouvrirFenetre } from '../support/dom-react'
  * failure). The send function is a fake: no network.
  */
 
-const fenetre = ouvrirFenetre()
+const fenetre = openWindow()
 
 const profil = (disponible: boolean | null | undefined) => ({ id: 1, available: disponible }) as DashboardProfile
 const ligneDeLaCarte = (disponible: boolean | null | undefined) =>

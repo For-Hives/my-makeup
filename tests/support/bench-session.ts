@@ -1,12 +1,12 @@
 /**
  * The session of an account of the bench, for an agent that needs to be logged in (ticket 052):
- * `bun run banc:session <compte>` writes the session to files and prints where they are.
+ * `bun run bench:session <compte>` writes the session to files and prints where they are.
  *
- *   admin                       an account of the fixed set (tests/fixtures/comptes.ts), by its type
+ *   admin                       an account of the fixed set (tests/fixtures/accounts.ts), by its type
  *   profil-reference            the makeup artist of a profile type (src/demo-data/profiles.ts)
  *   jeu-admin@example.test      any account of the bench, by its address
  *
- * The session is a real one, opened the way a login opens it (tests/outils/session.ts). Nothing
+ * The session is a real one, opened the way a login opens it (tests/support/session.ts). Nothing
  * secret is printed: the token goes into two files in `.banc/` that git ignores, which an agent
  * hands to its browser or to curl. No password is ever asked, drawn for the occasion or shown.
  */
@@ -15,20 +15,20 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import type { AuthCollectionSlug, Payload } from 'payload'
 import { DEMO_PROFILES, profileUrl } from '../../src/demo-data/profiles'
-import { adresseDuJeu, TYPES_DU_JEU } from '../fixtures/accounts'
-import { BancRefuse, RACINE } from './bench'
-import { TYPES_DE_COMPTE } from './account-factory'
-import { exigerBanc, exigerConnexionDuBanc } from './payload-test'
-import { ouvrirSessionSansMotDePasse, type Session } from './session'
+import { DATASET_TYPES, datasetUrl } from '../fixtures/accounts'
+import { ACCOUNT_TYPES } from './account-factory'
+import { RefusedBench, ROOT } from './bench'
+import { requireBench, requireBenchSignIn } from './payload-test'
+import { openSessionWithoutPassword, type Session } from './session'
 
 /** Where the sessions are written: git ignores it (.gitignore), and the CI uploads nothing from it. */
-export const DOSSIER_DES_SESSIONS = '.banc/sessions'
+export const SESSION_FOLDER = '.banc/sessions'
 
 /** The accounts a name can designate, for the message that refuses another one. */
-export const NOMS_DES_COMPTES = [...TYPES_DU_JEU, ...DEMO_PROFILES.map(({ cle }) => `profil-${cle}`)]
+export const ACCOUNT_NAMES = [...DATASET_TYPES, ...DEMO_PROFILES.map(({ cle: key }) => `profil-${key}`)]
 
 /** Where to look for an account, from the name the person gave. */
-export interface Recherche {
+export interface Search {
 	email: string
 	/** Absent for an address: the account is looked for in both collections. */
 	collection?: AuthCollectionSlug
@@ -36,29 +36,29 @@ export interface Recherche {
 	nom: string
 }
 
-const ADRESSE = /^[^\s@]+@[^\s@]+$/
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+$/
 
 /** What a name stands for, or nothing when the bench knows no such account. */
-export function rechercheDuCompte(demande: string): Recherche | undefined {
-	const nom = demande.trim()
-	const type = TYPES_DU_JEU.find(cle => cle === nom)
-	if (type) return { email: adresseDuJeu(type), collection: TYPES_DE_COMPTE[type].collection, nom }
-	const cle = nom.startsWith('profil-') ? nom.slice('profil-'.length) : undefined
-	if (cle !== undefined && DEMO_PROFILES.some(profil => profil.cle === cle))
-		return { email: profileUrl(cle), collection: 'pros', nom }
-	if (ADRESSE.test(nom)) return { email: nom.toLowerCase(), nom: nom.replace(/[^a-z0-9.-]+/gi, '_') }
+export function accountSearch(demande: string): Search | undefined {
+	const name = demande.trim()
+	const type = DATASET_TYPES.find(cle => cle === name)
+	if (type) return { email: datasetUrl(type), collection: ACCOUNT_TYPES[type].collection, nom: name }
+	const key = name.startsWith('profil-') ? name.slice('profil-'.length) : undefined
+	if (key !== undefined && DEMO_PROFILES.some(profil => profil.cle === key))
+		return { email: profileUrl(key), collection: 'pros', nom: name }
+	if (EMAIL_PATTERN.test(name)) return { email: name.toLowerCase(), nom: name.replace(/[^a-z0-9.-]+/gi, '_') }
 	return undefined
 }
 
-export const messageCompteInconnu = (demande: string): string =>
+export const unknownAccountMessage = (demande: string): string =>
 	[
 		`Le banc ne connaît pas de compte « ${demande} ».`,
-		`Un type du jeu fixe ou un profil type : ${NOMS_DES_COMPTES.join(', ')}.`,
+		`Un type du jeu fixe ou un profil type : ${ACCOUNT_NAMES.join(', ')}.`,
 		'Ou l’adresse d’un compte du banc, par exemple jeu-admin@example.test.',
 	].join('\n')
 
 /** The state of a browser context holding the session: `browser.newContext({ storageState })`. */
-export function etatDeNavigateur(session: Session) {
+export function browserState(session: Session) {
 	return {
 		cookies: session.cookies.map(({ url, ...cookie }) => ({
 			...cookie,
@@ -70,12 +70,12 @@ export function etatDeNavigateur(session: Session) {
 }
 
 /** The headers of an HTTP client, one per line, as `curl -H @fichier` reads them. */
-export const entetesDeClient = (session: Session): string =>
+export const clientHeaders = (session: Session): string =>
 	`${Object.entries(session.enTetes)
-		.map(([nom, valeur]) => `${nom}: ${valeur}`)
+		.map(([name, valeur]) => `${name}: ${valeur}`)
 		.join('\n')}\n`
 
-export interface SessionEcrite {
+export interface SessionWritten {
 	compte: string
 	collection: AuthCollectionSlug
 	etatDeNavigateur: string
@@ -85,18 +85,18 @@ export interface SessionEcrite {
 
 /**
  * Opens a session for the account the name stands for and writes it into the two files. The
- * account must exist on the bench: the fixed set is loaded by `bun run banc:complet`.
+ * account must exist on the bench: the fixed set is loaded by `bun run bench:full`.
  */
-export async function ecrireLaSession(
+export async function writeSession(
 	payload: Payload,
 	demande: string,
-	{ dossier = path.join(RACINE, DOSSIER_DES_SESSIONS), instance = 'banc' }: { dossier?: string; instance?: string } = {}
-): Promise<SessionEcrite> {
-	exigerBanc()
-	exigerConnexionDuBanc(payload)
-	const recherche = rechercheDuCompte(demande)
-	if (!recherche) throw new BancRefuse(messageCompteInconnu(demande))
-	const collections: AuthCollectionSlug[] = recherche.collection ? [recherche.collection] : ['admins', 'pros']
+	{ dossier = path.join(ROOT, SESSION_FOLDER), instance = 'banc' }: { dossier?: string; instance?: string } = {}
+): Promise<SessionWritten> {
+	requireBench()
+	requireBenchSignIn(payload)
+	const search = accountSearch(demande)
+	if (!search) throw new RefusedBench(unknownAccountMessage(demande))
+	const collections: AuthCollectionSlug[] = search.collection ? [search.collection] : ['admins', 'pros']
 	for (const collection of collections) {
 		const { docs } = await payload.find({
 			collection,
@@ -104,26 +104,26 @@ export async function ecrireLaSession(
 			limit: 1,
 			pagination: false,
 			select: {},
-			where: { email: { equals: recherche.email } },
+			where: { email: { equals: search.email } },
 		})
-		const compte = docs[0]
-		if (!compte) continue
-		const session = await ouvrirSessionSansMotDePasse(payload, { collection, id: compte.id })
-		const repertoire = path.join(dossier, instance)
-		await mkdir(repertoire, { recursive: true })
-		const fichierNavigateur = path.join(repertoire, `${recherche.nom}.etat.json`)
-		const fichierEntetes = path.join(repertoire, `${recherche.nom}.entetes`)
-		await writeFile(fichierNavigateur, `${JSON.stringify(etatDeNavigateur(session), null, '\t')}\n`, { mode: 0o600 })
-		await writeFile(fichierEntetes, entetesDeClient(session), { mode: 0o600 })
+		const account = docs[0]
+		if (!account) continue
+		const session = await openSessionWithoutPassword(payload, { collection, id: account.id })
+		const directory = path.join(dossier, instance)
+		await mkdir(directory, { recursive: true })
+		const fileBrowser = path.join(directory, `${search.nom}.etat.json`)
+		const fileHeaders = path.join(directory, `${search.nom}.entetes`)
+		await writeFile(fileBrowser, `${JSON.stringify(browserState(session), null, '\t')}\n`, { mode: 0o600 })
+		await writeFile(fileHeaders, clientHeaders(session), { mode: 0o600 })
 		return {
-			compte: recherche.email,
+			compte: search.email,
 			collection,
-			etatDeNavigateur: fichierNavigateur,
-			entetes: fichierEntetes,
+			etatDeNavigateur: fileBrowser,
+			entetes: fileHeaders,
 			expire: session.expire,
 		}
 	}
-	throw new BancRefuse(
-		`Le banc n’a pas de compte à l’adresse de « ${demande} ». Le jeu se charge par : bun run banc:complet (ou banc:reinitialiser).`
+	throw new RefusedBench(
+		`Le banc n’a pas de compte à l’adresse de « ${demande} ». Le jeu se charge par : bun run bench:full (ou bench:reset).`
 	)
 }

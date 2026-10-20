@@ -2,9 +2,9 @@ import { afterEach, describe, expect, setSystemTime, test } from 'bun:test'
 import { getFieldsToSign, jwtSign } from 'payload'
 import { cookieEndOfLife } from '@/lib/auth/session-state'
 import { SESSION_CAP_S, tokenExpiration } from '@/lib/auth/sliding-session'
-import { creerCompte } from '../support/account-factory'
-import { payloadDeTest, viderLaBase } from '../support/payload-test'
-import { appelerRest } from '../support/rest'
+import { createAccount } from '../support/account-factory'
+import { emptyBase, testPayload } from '../support/payload-test'
+import { callRest } from '../support/rest'
 
 /**
  * The sliding session of a makeup artist (ticket 079; plan 02 I16): a renewal is accepted on day 13,
@@ -17,7 +17,7 @@ const REFRESH = '/api/pros/refresh-token'
 
 afterEach(async () => {
 	setSystemTime()
-	await viderLaBase()
+	await emptyBase()
 })
 
 const jetonDuCookie = (enTetes: Headers): string =>
@@ -27,11 +27,11 @@ const entetesAvec = (jeton: string, origine: string) => ({ Cookie: `payload-toke
 describe('I16 : session glissante de 14 jours, plafonnée à 90', () => {
 	test('un rafraîchissement à J+13 est accepté, un autre à J+91 est refusé', async () => {
 		const debut = Date.now()
-		const { session } = await creerCompte('maquilleuse')
+		const { session } = await createAccount('maquilleuse')
 		const { Origin } = session.enTetes
 
 		setSystemTime(new Date(debut + 13 * JOUR_MS))
-		const accepte = await appelerRest('POST', REFRESH, { enTetes: session.enTetes })
+		const accepte = await callRest('POST', REFRESH, { enTetes: session.enTetes })
 		expect(accepte.statut).toBe(200)
 		const jeton = jetonDuCookie(accepte.enTetes)
 		expect(tokenExpiration(jeton)).toBe(Math.floor((debut + 27 * JOUR_MS) / 1000))
@@ -40,16 +40,16 @@ describe('I16 : session glissante de 14 jours, plafonnée à 90', () => {
 
 		// Day 91 with the ORIGINAL token: it ended on day 14, nothing opens.
 		setSystemTime(new Date(debut + 91 * JOUR_MS))
-		expect((await appelerRest('POST', REFRESH, { enTetes: session.enTetes })).statut).toBe(403)
-		expect((await appelerRest('POST', REFRESH, { enTetes: entetesAvec(jeton, Origin) })).statut).toBe(403)
+		expect((await callRest('POST', REFRESH, { enTetes: session.enTetes })).statut).toBe(403)
+		expect((await callRest('POST', REFRESH, { enTetes: entetesAvec(jeton, Origin) })).statut).toBe(403)
 	})
 
 	test('ticket 223 : le cookie du renouvellement finit comme celui de la connexion, 90 jours après son jeton', async () => {
 		const debut = Date.now()
-		const { session } = await creerCompte('maquilleuse')
+		const { session } = await createAccount('maquilleuse')
 		setSystemTime(new Date(debut + 13 * JOUR_MS))
 
-		const reponse = await appelerRest('POST', REFRESH, { enTetes: session.enTetes })
+		const reponse = await callRest('POST', REFRESH, { enTetes: session.enTetes })
 		expect(reponse.statut).toBe(200)
 
 		// One cookie only: Payload's own is not added to ours.
@@ -73,14 +73,14 @@ describe('I16 : session glissante de 14 jours, plafonnée à 90', () => {
 
 	test('une visite tous les 13 jours prolonge la session, mais aucun jeton ne finit après J+90', async () => {
 		const debut = Date.now()
-		const { session } = await creerCompte('maquilleuse')
+		const { session } = await createAccount('maquilleuse')
 		const plafond = Math.floor((debut + SESSION_CAP_S * 1000) / 1000)
 		let enTetes = session.enTetes
 		let derniere = 0
 
 		for (const jour of [13, 26, 39, 52, 65, 78, 89]) {
 			setSystemTime(new Date(debut + jour * JOUR_MS))
-			const reponse = await appelerRest('POST', REFRESH, { enTetes })
+			const reponse = await callRest('POST', REFRESH, { enTetes })
 			expect(reponse.statut, `jour ${jour}`).toBe(200)
 			const jeton = jetonDuCookie(reponse.enTetes)
 			derniere = tokenExpiration(jeton) ?? 0
@@ -92,13 +92,13 @@ describe('I16 : session glissante de 14 jours, plafonnée à 90', () => {
 
 		// Day 91: the last token has ended, and the session has no more life.
 		setSystemTime(new Date(debut + 91 * JOUR_MS))
-		expect((await appelerRest('POST', REFRESH, { enTetes })).statut).toBe(403)
+		expect((await callRest('POST', REFRESH, { enTetes })).statut).toBe(403)
 	})
 
 	test('un jeton plus long que le plafond est refusé au rafraîchissement dès J+90, en français', async () => {
 		const debut = Date.now()
-		const { session, email } = await creerCompte('maquilleuse')
-		const payload = await payloadDeTest()
+		const { session, email } = await createAccount('maquilleuse')
+		const payload = await testPayload()
 		const config = payload.collections.pros.config
 		const sid = /"sid":"([^"]+)"/.exec(
 			Buffer.from(session.cookies[0]?.value.split('.')[1] ?? '', 'base64url').toString()
@@ -124,12 +124,10 @@ describe('I16 : session glissante de 14 jours, plafonnée à 90', () => {
 		})
 
 		setSystemTime(new Date(debut + 89 * JOUR_MS))
-		expect((await appelerRest('POST', REFRESH, { enTetes: entetesAvec(token, session.enTetes.Origin) })).statut).toBe(
-			200
-		)
+		expect((await callRest('POST', REFRESH, { enTetes: entetesAvec(token, session.enTetes.Origin) })).statut).toBe(200)
 
 		setSystemTime(new Date(debut + 91 * JOUR_MS))
-		const refuse = await appelerRest('POST', REFRESH, { enTetes: entetesAvec(token, session.enTetes.Origin) })
+		const refuse = await callRest('POST', REFRESH, { enTetes: entetesAvec(token, session.enTetes.Origin) })
 		expect(refuse.statut).toBe(403)
 		expect(refuse.texte).toContain('durée maximale')
 		expect(refuse.enTetes.get('set-cookie')).toBeNull()

@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
-import { type ProfilDePage, poserLesProfilsDePage, profilsDePageSousLePrefixe } from '../fixtures/page-profiles'
-import { payloadDeTest } from '../support/payload-test'
-import { schemaDuProfil } from '../support/profile-json-ld-schema'
+import { type PageProfile, pageProfilesUnderPrefix, setPageProfiles } from '../fixtures/page-profiles'
+import { testPayload } from '../support/payload-test'
+import { profileSchema } from '../support/profile-json-ld-schema'
 
 /**
  * The head of the public page of a profile, end to end (ticket 105; plan 02 E64 for the profile
@@ -10,20 +10,20 @@ import { schemaDuProfil } from '../support/profile-json-ld-schema'
  * ticket 116's.
  */
 
-let profils: ReadonlyMap<string, ProfilDePage>
+let profils: ReadonlyMap<string, PageProfile>
 
 test.describe.configure({ mode: 'serial' })
 
 test.beforeAll(async () => {
 	test.setTimeout(180_000)
 	// Profiles of its own (« Seo … »): the page spec takes its « Page … » ones away at its end, side by side with this one.
-	profils = await poserLesProfilsDePage(profilsDePageSousLePrefixe('Seo'))
+	profils = await setPageProfiles(pageProfilesUnderPrefix('Seo'))
 })
 
 // Taken away at the end, as in tests/e2e/profil-public.spec.ts: left in the bench they crowd the search specs.
 test.afterAll(async () => {
 	test.setTimeout(180_000)
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	for (const { id } of profils.values()) {
 		const profil = await payload
 			.findByID({ collection: 'profiles', id, depth: 0, select: { pro: true } })
@@ -98,7 +98,7 @@ test.describe('E65 : les données structurées du profil, valides et cohérentes
 			const html = await (await request.get(`/profil/${slug}`)).text()
 			const blocs = donneesStructurees(html)
 			expect(blocs, cle).toHaveLength(1)
-			const donnees = schemaDuProfil.parse(blocs[0])
+			const donnees = profileSchema.parse(blocs[0])
 			// The script cannot be closed from inside, whatever the profile wrote.
 			expect(html.match(/<script type="application\/ld\+json">/g), cle).toHaveLength(1)
 			const texte = JSON.stringify(donnees)
@@ -117,7 +117,7 @@ test.describe('E65 : les données structurées du profil, valides et cohérentes
 	test('le profil de référence : ses offres en euros, son prix minimal est un prix de la page', async ({ request }) => {
 		const { slug } = profils.get('reference') ?? { slug: '' }
 		const html = await (await request.get(`/profil/${slug}`)).text()
-		const donnees = schemaDuProfil.parse(donneesStructurees(html)[0])
+		const donnees = profileSchema.parse(donneesStructurees(html)[0])
 		const page = donnees['@graph'][0]
 		if (page?.['@type'] !== 'ProfilePage') throw new Error('le profil de référence est publiable')
 		const prix = (page.mainEntity.makesOffer ?? []).flatMap(offre => offre.price ?? [])

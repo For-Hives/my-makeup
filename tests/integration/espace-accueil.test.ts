@@ -5,13 +5,13 @@ import { artistProfile, type DashboardUser, profileId } from '@/lib/dashboard/my
 import { onboardingPosition } from '@/lib/dashboard/onboarding'
 import { saveOnboardingIdentity, saveOnboardingPhoto } from '@/lib/dashboard/save-onboarding'
 import type { Media } from '@/payload-types'
+import { createAccount, type TestAccount } from '../support/account-factory'
 import { ANNECY } from '../support/completeness-cases'
-import { type Espion, espionnerLeStockage } from '../support/s3-spy'
-import { type CompteDeTest, creerCompte } from '../support/account-factory'
-import { payloadDeTest, viderLaBase } from '../support/payload-test'
-import { fichierPourFormulaire } from '../support/photos'
-import { appelerRest, formulaireAvecFichier } from '../support/rest'
-import { viderLeStockage } from '../support/s3'
+import { emptyBase, testPayload } from '../support/payload-test'
+import { fileForForm } from '../support/photos'
+import { callRest, formWithFile } from '../support/rest'
+import { emptyStorage } from '../support/s3'
+import { type Spy, spyStorage } from '../support/s3-spy'
 
 /**
  * The onboarding on the server side (ticket 140; plan 02 E02, I02): an account without a profile
@@ -19,13 +19,13 @@ import { viderLeStockage } from '../support/s3'
  * stands from the database, so a profile that went through the three steps is active and published.
  */
 
-let espion: Espion
+let espion: Spy
 beforeEach(() => {
-	espion = espionnerLeStockage()
+	espion = spyStorage()
 })
 afterEach(async () => {
 	espion.arreter()
-	await Promise.all([viderLaBase(), viderLeStockage()])
+	await Promise.all([emptyBase(), emptyStorage()])
 })
 
 async function utilisateurDe(payload: Payload, compte: { id: number | string }): Promise<DashboardUser> {
@@ -36,14 +36,14 @@ async function utilisateurDe(payload: Payload, compte: { id: number | string }):
 const profilsDuCompte = async (compte: { id: number | string }) =>
 	(
 		await (
-			await payloadDeTest()
+			await testPayload()
 		).find({ collection: 'profiles', depth: 0, pagination: false, where: { pro: { equals: compte.id } } })
 	).docs
 
-async function envoyerUnePhoto(compte: CompteDeTest<'maquilleuse'>): Promise<Media> {
-	const { statut, corps, texte } = await appelerRest('POST', '/api/media?depth=0', {
+async function envoyerUnePhoto(compte: TestAccount<'maquilleuse'>): Promise<Media> {
+	const { statut, corps, texte } = await callRest('POST', '/api/media?depth=0', {
 		enTetes: compte.session.enTetes,
-		formulaire: formulaireAvecFichier(fichierPourFormulaire(), { alt: 'Photo principale' }),
+		formulaire: formWithFile(fileForForm(), { alt: 'Photo principale' }),
 	})
 	if (statut !== 201) throw new Error(`Envoi refusé : ${statut} ${texte}`)
 	return (corps as { doc: Media }).doc
@@ -51,8 +51,8 @@ async function envoyerUnePhoto(compte: CompteDeTest<'maquilleuse'>): Promise<Med
 
 describe('un compte importé sans profil : le profil vide est créé côté serveur', () => {
 	test('un compte sans profil en reçoit un, une seule fois, et le slug vient de son nom', async () => {
-		const compte = await creerCompte('maquilleuse-sans-profil')
-		const payload = await payloadDeTest()
+		const compte = await createAccount('maquilleuse-sans-profil')
+		const payload = await testPayload()
 		const utilisateur = await utilisateurDe(payload, compte)
 		expect(await profilsDuCompte(compte)).toHaveLength(0)
 		expect(await artistProfile(payload, utilisateur)).toBeNull()
@@ -69,8 +69,8 @@ describe('un compte importé sans profil : le profil vide est créé côté serv
 	})
 
 	test('deux appels au même moment ne font qu’un profil', async () => {
-		const compte = await creerCompte('maquilleuse-sans-profil')
-		const payload = await payloadDeTest()
+		const compte = await createAccount('maquilleuse-sans-profil')
+		const payload = await testPayload()
 		const utilisateur = await utilisateurDe(payload, compte)
 
 		const [a, b] = await Promise.all([ensureProfile(payload, utilisateur), ensureProfile(payload, utilisateur)])
@@ -81,16 +81,16 @@ describe('un compte importé sans profil : le profil vide est créé côté serv
 	})
 
 	test('un compte qui a son profil n’en reçoit pas un second', async () => {
-		const compte = await creerCompte('maquilleuse')
-		const payload = await payloadDeTest()
+		const compte = await createAccount('maquilleuse')
+		const payload = await testPayload()
 		const avant = (await profilsDuCompte(compte))[0]?.id
 		expect(await ensureProfile(payload, await utilisateurDe(payload, compte))).toBe(avant ?? null)
 		expect(await profilsDuCompte(compte)).toHaveLength(1)
 	})
 
 	test('un compte de l’administration n’en reçoit pas', async () => {
-		const admin = await creerCompte('admin')
-		const payload = await payloadDeTest()
+		const admin = await createAccount('admin')
+		const payload = await testPayload()
 		const doc = await payload.findByID({ collection: 'admins', id: admin.id, depth: 0, overrideAccess: true })
 		const utilisateur = { ...doc, collection: 'admins' } as unknown as DashboardUser
 		expect(await ensureProfile(payload, utilisateur)).toBeNull()
@@ -100,8 +100,8 @@ describe('un compte importé sans profil : le profil vide est créé côté serv
 
 describe('E02 : les trois étapes donnent un profil actif', () => {
 	test('identité, zone, photo : à chaque étape la position avance, à la fin le profil est actif et publié', async () => {
-		const compte = await creerCompte('maquilleuse')
-		const payload = await payloadDeTest()
+		const compte = await createAccount('maquilleuse')
+		const payload = await testPayload()
 		const utilisateur = await utilisateurDe(payload, compte)
 		const id = (await profilsDuCompte(compte))[0]?.id as number
 
@@ -141,8 +141,8 @@ describe('E02 : les trois étapes donnent un profil actif', () => {
 	})
 
 	test('la photo enregistrée alors qu’une étape manque dit où elle en est, pas « terminée »', async () => {
-		const compte = await creerCompte('maquilleuse')
-		const payload = await payloadDeTest()
+		const compte = await createAccount('maquilleuse')
+		const payload = await testPayload()
 		const utilisateur = await utilisateurDe(payload, compte)
 		const media = await envoyerUnePhoto(compte)
 
@@ -154,8 +154,8 @@ describe('E02 : les trois étapes donnent un profil actif', () => {
 	})
 
 	test('un champ réservé dans l’identité refuse toute la demande (U32)', async () => {
-		const compte = await creerCompte('maquilleuse')
-		const payload = await payloadDeTest()
+		const compte = await createAccount('maquilleuse')
+		const payload = await testPayload()
 		const utilisateur = await utilisateurDe(payload, compte)
 		const refus = await saveOnboardingIdentity(payload, utilisateur, {
 			prenom: 'Léa',

@@ -1,12 +1,12 @@
 import { expect, type Page, test } from '@playwright/test'
-import { type ProfilDePage, poserLesProfilsDePage } from '../fixtures/page-profiles'
-import { ECRANS } from '../support/e2e'
-import { payloadDeTest } from '../support/payload-test'
-import { usagers } from '../support/lock'
+import { type PageProfile, setPageProfiles } from '../fixtures/page-profiles'
+import { SCREENS } from '../support/e2e'
+import { users } from '../support/lock'
+import { testPayload } from '../support/payload-test'
 
 /**
  * The public page of a profile, end to end (tickets 101 to 103; plan 02 E43 and E44), on profiles of
- * the bench that have their own names (tests/fixtures/profils-de-page.ts). The page is read twice: as
+ * the bench that have their own names (tests/fixtures/page-profiles.ts). The page is read twice: as
  * the server sends it, with no JavaScript (what a search engine reads), and in the browser at both
  * screen sizes.
  */
@@ -17,15 +17,15 @@ const CLES_PRIVEES =
 
 const MOTS_INTERDITS = /\b(?:undefined|null|NaN|Invalid Date)\b|&\s*km|\bnullkm\b/
 
-let profils: ReadonlyMap<string, ProfilDePage>
+let profils: ReadonlyMap<string, PageProfile>
 
 // One worker for the whole file, so that one set-up and one clean-up serve all its tests.
 test.describe.configure({ mode: 'serial' })
 
 test.beforeAll(async () => {
 	test.setTimeout(180_000)
-	await usagers('profils-de-page', 1)
-	profils = await poserLesProfilsDePage()
+	await users('profils-de-page', 1)
+	profils = await setPageProfiles()
 })
 
 // The profiles of the page are taken away at the end by the last process: left in the bench, they would crowd the
@@ -34,8 +34,8 @@ test.afterAll(async () => {
 	test.setTimeout(180_000)
 	// The two projects (1440 and 390 px) share these profiles: the last one to end takes them away, or the
 	// first one to end would delete what the other is still reading.
-	if ((await usagers('profils-de-page', -1)) > 0 || !profils) return
-	const payload = await payloadDeTest()
+	if ((await users('profils-de-page', -1)) > 0 || !profils) return
+	const payload = await testPayload()
 	for (const { id } of profils.values()) {
 		const profil = await payload
 			.findByID({ collection: 'profiles', id, depth: 0, select: { pro: true } })
@@ -47,7 +47,7 @@ test.afterAll(async () => {
 	}
 })
 
-const profil = (cle: string): ProfilDePage => {
+const profil = (cle: string): PageProfile => {
 	const trouve = profils.get(cle)
 	if (!trouve) throw new Error(`pas de profil d’essai « ${cle} »`)
 	return trouve
@@ -118,11 +118,11 @@ test.describe('E43 : le profil public, rendu par le serveur', { tag: '@mobile' }
 		await page.goto(`/profil/${profil('textes-maximaux').slug}`)
 		await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
 
-		for (const ecran of [ECRANS.mobile, ECRANS.chromium]) {
+		for (const ecran of [SCREENS.mobile, SCREENS.chromium]) {
 			await page.setViewportSize(ecran)
 			expect(await sansDebordement(page), `à ${ecran.width} px`).toBe(true)
 		}
-		await page.setViewportSize(ECRANS.mobile)
+		await page.setViewportSize(SCREENS.mobile)
 		await testInfo.attach('profil-textes-maximaux-390px', {
 			body: await page.screenshot({ fullPage: true }),
 			contentType: 'image/png',
@@ -170,7 +170,7 @@ test.describe('E44 : les offres, les prix et les coordonnées publiées', { tag:
 		await page.goto(`/profil/${profil('textes-maximaux').slug}`)
 		for (const titre of ['Compétences', 'Langues', 'Service(s) proposé(s)', 'Expériences professionnelles'])
 			await expect(page.getByRole('heading', { level: 2, name: titre })).toBeVisible()
-		await page.setViewportSize(ECRANS.mobile)
+		await page.setViewportSize(SCREENS.mobile)
 		expect(await sansDebordement(page)).toBe(true)
 		await testInfo.attach('profil-sections-390px', {
 			body: await page.screenshot({ fullPage: true }),
@@ -210,7 +210,7 @@ const ANCIEN_NOM = 'Page Ancien Nom E46'
 test.describe('E46 : l’ancienne adresse par nom d’utilisateur', () => {
 	test.beforeAll(async () => {
 		// The old username is written by the import only: the test writes it as the import does, without the access rules.
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		await payload.update({
 			collection: 'profiles',
 			id: profil('indisponible').id,
@@ -300,7 +300,7 @@ test.describe('E44 : la galerie du portfolio', { tag: '@mobile' }, () => {
 		await expect(images).toHaveCount(6)
 
 		// The addresses the portfolio is made from, as the database holds them, in the order she gave.
-		const stocke = await (await payloadDeTest()).findByID({
+		const stocke = await (await testPayload()).findByID({
 			collection: 'profiles',
 			id,
 			depth: 1,
@@ -413,7 +413,7 @@ test.describe('E44 : la galerie du portfolio', { tag: '@mobile' }, () => {
 	test('le profil aux dix photos tient à 390 px sans déborder', async ({ page }, testInfo) => {
 		await page.goto(`/profil/${profil('textes-maximaux').slug}`)
 		await expect(page.locator('[aria-roledescription="photo"]')).toHaveCount(10)
-		await page.setViewportSize(ECRANS.mobile)
+		await page.setViewportSize(SCREENS.mobile)
 		expect(await sansDebordement(page)).toBe(true)
 		await page.getByRole('heading', { name: 'Portfolio' }).scrollIntoViewIfNeeded()
 		await testInfo.attach('portfolio-390px', { body: await page.screenshot(), contentType: 'image/png' })

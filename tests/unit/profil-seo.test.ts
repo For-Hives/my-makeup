@@ -5,7 +5,7 @@ import { serializeJsonLd } from '@/lib/seo/json-ld'
 import { profileBreadcrumb, profileMetadata, profileStructuredData, profileTitle } from '@/lib/seo/profile'
 import { DESCRIPTION_MAX, DESCRIPTION_MIN, MAX_TITLE } from '@/lib/seo/text'
 import { type ProfilePageData, type PublicProfile, publicProfileOf } from '@/services/public/profiles'
-import { schemaDuProfil } from '../support/profile-json-ld-schema'
+import { profileSchema } from '../support/profile-json-ld-schema'
 
 /**
  * The head of the public page of a profile (ticket 105; plan 02 U47 to U50, and the schema half of
@@ -75,7 +75,7 @@ describe('U47 : ProfilePage → Person, avec des Offer en euros', () => {
 	test('les douze profils types : le schéma strict passe', () => {
 		for (const profilType of DEMO_PROFILES) {
 			const donnees = profileStructuredData(lireLeType(profilType))
-			expect(() => schemaDuProfil.parse(JSON.parse(serializeJsonLd(donnees))), profilType.cle).not.toThrow()
+			expect(() => profileSchema.parse(JSON.parse(serializeJsonLd(donnees))), profilType.cle).not.toThrow()
 		}
 	})
 
@@ -192,6 +192,6 @@ describe('U50 : un texte avec une balise de fermeture de script', () => {
 		const sortie = serializeJsonLd(donnees)
 		expect(sortie).not.toMatch(/[<>&]/)
 		expect(sortie.toLowerCase()).not.toContain('</script')
-		expect(() => schemaDuProfil.parse(JSON.parse(sortie))).not.toThrow()
+		expect(() => profileSchema.parse(JSON.parse(sortie))).not.toThrow()
 	})
 })

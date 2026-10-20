@@ -4,7 +4,7 @@ import { NetworksEditor, type NetworksUpload } from '@/components/dashboard/Netw
 import type { ContactDetailsValues } from '@/lib/dashboard/contact-details'
 import type { NetworksValues } from '@/lib/dashboard/networks'
 import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
-import { ouvrirFenetre } from '../support/dom-react'
+import { openWindow } from '../support/dom-react'
 
 /**
  * The panels of the networks and of the contact details (tickets 125 and 126; plan 02 U28, E30,
@@ -12,7 +12,7 @@ import { ouvrirFenetre } from '../support/dom-react'
  * keeps the old value and says so. The send functions are fakes: no network.
  */
 
-const fenetre = ouvrirFenetre()
+const fenetre = openWindow()
 
 const RESEAUX: NetworksValues = {
 	instagram: 'https://www.instagram.com/studio.fictif',

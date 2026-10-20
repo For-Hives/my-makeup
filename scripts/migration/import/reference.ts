@@ -10,7 +10,7 @@
  *   same communes, whatever the referential says in between.
  * - Offline (`--offline`), nothing is asked: a question whose answer is not kept stops the run
  *   before any write. The bench and the tests run so, with the answers of
- *   tests/fixtures/import/referentiel-du-banc.json: no test calls the Internet.
+ *   tests/fixtures/import/bench-reference.json: no test calls the Internet.
  * - A referential that does not answer, answers an error or something that is not a list of
  *   communes stops the run before any write. The answers already received stay kept.
  *

@@ -20,7 +20,7 @@ import { DESCRIPTION_MAX_LENGTH, NAME_MAX_LENGTH } from '@/lib/profile/lists'
 import { profileState, statusAfter } from '@/lib/profile/state'
 import { RADIUS_BOUNDS_KM } from '@/lib/profile/zone'
 import { slugify } from '@/lib/slug'
-import { environnementDuBanc, RACINE } from '../support/bench'
+import { benchEnvironment, ROOT } from '../support/bench'
 
 /**
  * The fictional set of the bench (ticket 051), without the bench: its
@@ -28,7 +28,7 @@ import { environnementDuBanc, RACINE } from '../support/bench'
  * that keeps it off the site. The same set loaded on the bench: tests/integration/banc-profils-types.test.ts.
  */
 
-const DOSSIER_DES_PHOTOS = path.join(RACINE, 'src/demo-data/photos')
+const DOSSIER_DES_PHOTOS = path.join(ROOT, 'src/demo-data/photos')
 
 const type = (cle: string): DemoProfile => {
 	const trouve = DEMO_PROFILES.find(profil => profil.cle === cle)
@@ -48,7 +48,7 @@ function etatSelonLaRegle({ profil, photos }: DemoProfile) {
 }
 
 /** The bench of `.env.test`, default instance. */
-const BANC = environnementDuBanc({ nom: 'my-makeup-test', decalage: 0 })
+const BANC = benchEnvironment({ nom: 'my-makeup-test', decalage: 0 })
 
 // What the retired pre-production used to give: the guard must refuse it now (ticket 232).
 const ANCIENNE_PREPROD = {
@@ -214,7 +214,7 @@ describe('Le jeu ne se charge que sur le banc', () => {
 
 	test('le banc de test est accepté, quelle que soit son instance', () => {
 		expect(demoTarget(BANC)).toBe('banc')
-		expect(demoTarget(environnementDuBanc({ nom: 'mm-051', decalage: 451 }))).toBe('banc')
+		expect(demoTarget(benchEnvironment({ nom: 'mm-051', decalage: 451 }))).toBe('banc')
 	})
 
 	test.each([

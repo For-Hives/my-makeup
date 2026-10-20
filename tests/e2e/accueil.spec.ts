@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
-import { creerContenu, supprimerContenu } from '../support/public-pages'
-import { titresPrincipaux } from '../support/url-parity'
+import { createContent, deleteContent } from '../support/public-pages'
+import { mainTitles } from '../support/url-parity'
 
 /** The home page (ticket 097): its h1, its search block, its talents, its structured data. */
 
@@ -38,7 +38,7 @@ test.describe('Accueil', () => {
 		const suffixe = Date.now().toString(36)
 		const slug = `essai-accueil-${suffixe}`
 		const titre = `Essai accueil ${suffixe}`
-		const identifiant = await creerContenu(request, 'talents', {
+		const identifiant = await createContent(request, 'talents', {
 			title: titre,
 			slug,
 			description: 'Un talent fictif.',
@@ -53,7 +53,7 @@ test.describe('Accueil', () => {
 			const reponse = await request.get('/')
 			expect(reponse.status()).toBe(200)
 			const html = await reponse.text()
-			expect(titresPrincipaux(html)).toEqual([H1_EN_LIGNE])
+			expect(mainTitles(html)).toEqual([H1_EN_LIGNE])
 			expect(html).toContain(titre)
 			const balises = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)]
 			expect(balises).toHaveLength(1)
@@ -63,7 +63,7 @@ test.describe('Accueil', () => {
 			expect(donnees['@graph'].map(({ '@type': type }) => type)).toEqual(['Organization', 'WebSite'])
 			expect(html).not.toMatch(/milliers|paiement sécurisé|avis vérifiés|réservation/i)
 		} finally {
-			await supprimerContenu(request, 'talents', identifiant)
+			await deleteContent(request, 'talents', identifiant)
 		}
 	})
 
@@ -72,12 +72,12 @@ test.describe('Accueil', () => {
 		const suffixe = Date.now().toString(36)
 		const publie = `essai-publie-${suffixe}`
 		const brouillon = `essai-brouillon-${suffixe}`
-		const idPublie = await creerContenu(request, 'talents', {
+		const idPublie = await createContent(request, 'talents', {
 			title: `Essai ${publie}`,
 			slug: publie,
 			_status: 'published',
 		})
-		const idBrouillon = await creerContenu(request, 'talents', {
+		const idBrouillon = await createContent(request, 'talents', {
 			title: `Essai ${brouillon}`,
 			slug: brouillon,
 			_status: 'draft',
@@ -88,8 +88,8 @@ test.describe('Accueil', () => {
 				.toBe(true)
 			expect(await (await request.get('/')).text()).not.toContain(brouillon)
 		} finally {
-			await supprimerContenu(request, 'talents', idPublie)
-			await supprimerContenu(request, 'talents', idBrouillon)
+			await deleteContent(request, 'talents', idPublie)
+			await deleteContent(request, 'talents', idBrouillon)
 		}
 		await expect.poll(async () => (await (await request.get('/')).text()).includes(publie)).toBe(false)
 	})

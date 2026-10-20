@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import { NO_PROFILE_CONTEXT } from '@/collections/Profiles'
-import { creerCompte, motDePasseAleatoire } from '../support/account-factory'
-import { viderLeCapteur } from '../support/mailpit'
-import { payloadDeTest, viderLaBase } from '../support/payload-test'
-import { appelerRest } from '../support/rest'
+import { createAccount, randomPassword } from '../support/account-factory'
+import { emptySink } from '../support/mailpit'
+import { emptyBase, testPayload } from '../support/payload-test'
+import { callRest } from '../support/rest'
 
 /**
  * What the server does by itself when an account or a profile is written (plan 02 §7.3,
@@ -12,12 +12,12 @@ import { appelerRest } from '../support/rest'
 
 /** Creates the account of a makeup artist with this name, as the server will at the sign-up. */
 async function creerMaquilleuse(nom: string | undefined, contexte?: typeof NO_PROFILE_CONTEXT) {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	return payload.create({
 		collection: 'pros',
 		data: {
 			email: `hook-${crypto.randomUUID()}@example.test`,
-			password: motDePasseAleatoire(),
+			password: randomPassword(),
 			name: nom,
 			_verified: true,
 		},
@@ -28,12 +28,12 @@ async function creerMaquilleuse(nom: string | undefined, contexte?: typeof NO_PR
 
 /** The profiles of an account. */
 async function profilsDe(compte: number) {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	return (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte } } })).docs
 }
 
 afterEach(async () => {
-	await Promise.all([viderLaBase(), viderLeCapteur()])
+	await Promise.all([emptyBase(), emptySink()])
 })
 
 describe('Un compte créé reçoit son profil vide, avec un slug unique (I18)', () => {
@@ -78,11 +78,11 @@ describe('Un compte créé reçoit son profil vide, avec un slug unique (I18)', 
 	})
 
 	test('un compte créé par un admin, par REST, reçoit aussi son profil, et la réponse le dit vide', async () => {
-		const admin = await creerCompte('admin')
+		const admin = await createAccount('admin')
 
-		const { statut, corps } = await appelerRest('POST', '/api/pros', {
+		const { statut, corps } = await callRest('POST', '/api/pros', {
 			enTetes: admin.session.enTetes,
-			corps: { email: `rest-${crypto.randomUUID()}@example.test`, password: motDePasseAleatoire(), name: 'Inès Morel' },
+			corps: { email: `rest-${crypto.randomUUID()}@example.test`, password: randomPassword(), name: 'Inès Morel' },
 		})
 
 		expect(statut).toBe(201)
@@ -98,7 +98,7 @@ describe('Un compte créé reçoit son profil vide, avec un slug unique (I18)', 
 
 	test('un compte n’a qu’un profil : un second profil pour le même compte est refusé', async () => {
 		const compte = await creerMaquilleuse('Une Seule')
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 
 		await expect(
 			payload.create({ collection: 'profiles', data: { pro: compte.id, slug: 'une-seule-bis' } })
@@ -108,7 +108,7 @@ describe('Un compte créé reçoit son profil vide, avec un slug unique (I18)', 
 
 	test('un slug donné par le serveur lui-même, comme à l’import, est gardé tel quel', async () => {
 		const compte = await creerMaquilleuse('Nouveau Nom', NO_PROFILE_CONTEXT)
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 
 		const profil = await payload.create({
 			collection: 'profiles',
@@ -121,16 +121,16 @@ describe('Un compte créé reçoit son profil vide, avec un slug unique (I18)', 
 
 describe('Le slug ne change plus (I19)', () => {
 	test('changer le nom du compte, le prénom ou le nom du profil laisse le slug identique', async () => {
-		const a = await creerCompte('maquilleuse')
+		const a = await createAccount('maquilleuse')
 		const [profil] = await profilsDe(Number(a.id))
 		const slug = profil?.slug ?? ''
 		expect(slug).toMatch(/^maquilleuse-[0-9a-f]{8}$/)
 
-		const surLeCompte = await appelerRest('PATCH', `/api/pros/${a.id}`, {
+		const surLeCompte = await callRest('PATCH', `/api/pros/${a.id}`, {
 			enTetes: a.session.enTetes,
 			corps: { nom: 'Camille Bernard' },
 		})
-		const surLeProfil = await appelerRest('PATCH', `/api/profiles/${profil?.id}`, {
+		const surLeProfil = await callRest('PATCH', `/api/profiles/${profil?.id}`, {
 			enTetes: a.session.enTetes,
 			corps: { firstName: 'Camille', lastName: 'Bernard', artistName: 'Camille B.', slug: 'camille-bernard' },
 		})
@@ -144,11 +144,11 @@ describe('Le slug ne change plus (I19)', () => {
 describe('Un compte qui a encore un profil n’est pas supprimé tout seul', () => {
 	test('la suppression native refuse (409) ; la route de l’admin emporte le profil avec le compte (ticket 167)', async () => {
 		const [admin, a, b] = await Promise.all([
-			creerCompte('admin'),
-			creerCompte('maquilleuse'),
-			creerCompte('maquilleuse'),
+			createAccount('admin'),
+			createAccount('maquilleuse'),
+			createAccount('maquilleuse'),
 		])
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 
 		await expect(payload.delete({ collection: 'pros', id: a.id, overrideAccess: true })).rejects.toMatchObject({
 			status: 409,
@@ -156,16 +156,16 @@ describe('Un compte qui a encore un profil n’est pas supprimé tout seul', () 
 		})
 		expect((await payload.count({ collection: 'pros', where: { id: { equals: a.id } } })).totalDocs).toBe(1)
 
-		expect((await appelerRest('DELETE', `/api/pros/${a.id}`, { enTetes: admin.session.enTetes })).statut).toBe(200)
+		expect((await callRest('DELETE', `/api/pros/${a.id}`, { enTetes: admin.session.enTetes })).statut).toBe(200)
 		expect((await payload.count({ collection: 'pros', where: { id: { equals: a.id } } })).totalDocs).toBe(0)
 		expect((await profilsDe(Number(a.id))).length).toBe(0)
 
 		// A profile deleted first leaves an account without a profile, which goes as well.
 		const [profil] = await profilsDe(Number(b.id))
-		expect(
-			(await appelerRest('DELETE', `/api/profiles/${profil?.id}`, { enTetes: admin.session.enTetes })).statut
-		).toBe(200)
-		expect((await appelerRest('DELETE', `/api/pros/${b.id}`, { enTetes: admin.session.enTetes })).statut).toBe(200)
+		expect((await callRest('DELETE', `/api/profiles/${profil?.id}`, { enTetes: admin.session.enTetes })).statut).toBe(
+			200
+		)
+		expect((await callRest('DELETE', `/api/pros/${b.id}`, { enTetes: admin.session.enTetes })).statut).toBe(200)
 		expect((await payload.count({ collection: 'pros', where: { id: { equals: b.id } } })).totalDocs).toBe(0)
 	})
 })

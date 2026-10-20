@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { creerCompte } from '../support/account-factory'
+import { createAccount } from '../support/account-factory'
 
 /**
  * The shell test of the end-to-end bench: the smallest test that goes through everything a
@@ -21,7 +21,7 @@ test.describe('Essai coquille : le site local, déjà connecté', { tag: '@mobil
 		).toBeVisible()
 
 		// Nobody types a password: the factory gives the cookie of a session that is already open.
-		const compte = await creerCompte('admin')
+		const compte = await createAccount('admin')
 		await context.addCookies(compte.session.cookies)
 
 		await page.goto('/admin')
@@ -37,7 +37,7 @@ test.describe('Essai coquille : le site local, déjà connecté', { tag: '@mobil
 
 	test('sans session, l’administration renvoie à sa page de connexion', async ({ page }) => {
 		// With no account at all, Payload would offer to create the first one instead.
-		await creerCompte('admin')
+		await createAccount('admin')
 
 		await page.goto('/admin')
 

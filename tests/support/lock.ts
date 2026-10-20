@@ -10,33 +10,33 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 const AGE_MAX_MS = 3 * 60_000
-const ATTENTE_MAX_MS = 5 * 60_000
+const WAITING_MAX_MS = 5 * 60_000
 
-const dossierDuVerrou = (nom: string): string =>
+const lockFolder = (nom: string): string =>
 	join(tmpdir(), `my-makeup-verrou-${nom}-${(process.env.DATABASE_URI ?? '').replace(/[^a-z0-9]+/gi, '-')}`)
 
-export async function sousVerrou<T>(nom: string, travail: () => Promise<T>): Promise<T> {
-	const dossier = dossierDuVerrou(nom)
-	const limite = Date.now() + ATTENTE_MAX_MS
+export async function underLock<T>(nom: string, travail: () => Promise<T>): Promise<T> {
+	const folder = lockFolder(nom)
+	const limit = Date.now() + WAITING_MAX_MS
 	for (;;) {
 		try {
-			mkdirSync(dossier)
+			mkdirSync(folder)
 			break
-		} catch (erreur) {
-			if ((erreur as NodeJS.ErrnoException).code !== 'EEXIST') throw erreur
+		} catch (error) {
+			if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error
 			try {
-				if (Date.now() - statSync(dossier).mtimeMs > AGE_MAX_MS) rmSync(dossier, { recursive: true, force: true })
+				if (Date.now() - statSync(folder).mtimeMs > AGE_MAX_MS) rmSync(folder, { recursive: true, force: true })
 			} catch {
 				// Released between the two calls: take it again.
 			}
-			if (Date.now() > limite) throw new Error(`Le verrou « ${nom} » reste pris depuis plus de 5 minutes.`)
+			if (Date.now() > limit) throw new Error(`Le verrou « ${nom} » reste pris depuis plus de 5 minutes.`)
 			await new Promise(fin => setTimeout(fin, 250))
 		}
 	}
 	try {
 		return await travail()
 	} finally {
-		rmSync(dossier, { recursive: true, force: true })
+		rmSync(folder, { recursive: true, force: true })
 	}
 }
 
@@ -47,21 +47,21 @@ export async function sousVerrou<T>(nom: string, travail: () => Promise<T>): Pro
  * The count belongs to one run: it is kept under the process that started the workers (their parent), so
  * that the count of a run that crashed never reaches the next one.
  */
-export async function usagers(nom: string, variation: 1 | -1): Promise<number> {
-	return sousVerrou(`usagers-${nom}-${process.ppid}`, async () => {
-		const fichier = join(
+export async function users(nom: string, variation: 1 | -1): Promise<number> {
+	return underLock(`usagers-${nom}-${process.ppid}`, async () => {
+		const file = join(
 			tmpdir(),
 			`my-makeup-usagers-${nom}-${process.ppid}-${(process.env.DATABASE_URI ?? '').replace(/[^a-z0-9]+/gi, '-')}`
 		)
-		let courant = 0
+		let current = 0
 		try {
-			courant = Number(readFileSync(fichier, 'utf8')) || 0
+			current = Number(readFileSync(file, 'utf8')) || 0
 		} catch {
 			// First worker of the run: nobody uses the data yet.
 		}
-		const reste = Math.max(courant + variation, 0)
-		if (reste === 0) rmSync(fichier, { force: true })
-		else writeFileSync(fichier, String(reste))
-		return reste
+		const rest = Math.max(current + variation, 0)
+		if (rest === 0) rmSync(file, { force: true })
+		else writeFileSync(file, String(rest))
+		return rest
 	})
 }

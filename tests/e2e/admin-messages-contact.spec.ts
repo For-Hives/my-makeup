@@ -1,8 +1,8 @@
 import { type BrowserContext, expect, type Page, test } from '@playwright/test'
-import { creerCompte } from '../support/account-factory'
-import { sansLeReseauDuDehors } from '../support/offline'
-import { type Mail, mailsRecus } from '../support/mailpit'
-import { payloadDeTest } from '../support/payload-test'
+import { createAccount } from '../support/account-factory'
+import { type Mail, mailReceived } from '../support/mailpit'
+import { withoutOutsideNetwork } from '../support/offline'
+import { testPayload } from '../support/payload-test'
 
 /**
  * The contact messages in the admin panel (ticket 163; plan 02 E58, E55 and E53).
@@ -19,7 +19,7 @@ async function messageEnBase(mailStatus: 'failed' | 'sent', nom = 'Témoin') {
 	const email = unique()
 	// A name of its own: the list of another test of the same run may hold the same word.
 	const nomUnique = `${nom}${crypto.randomUUID().slice(0, 8)}`
-	const { id } = await (await payloadDeTest()).create({
+	const { id } = await (await testPayload()).create({
 		collection: 'contact-requests',
 		data: {
 			type: 'contact',
@@ -37,10 +37,10 @@ async function messageEnBase(mailStatus: 'failed' | 'sent', nom = 'Témoin') {
 }
 
 const mailsDe = async (email: string): Promise<Mail[]> =>
-	(await mailsRecus(EQUIPE)).filter(mail => mail.repondreA.some(({ adresse }) => adresse === email))
+	(await mailReceived(EQUIPE)).filter(mail => mail.repondreA.some(({ adresse }) => adresse === email))
 
 async function ouvrirEnAdmin(context: BrowserContext) {
-	const admin = await creerCompte('admin')
+	const admin = await createAccount('admin')
 	await context.addCookies(admin.session.cookies)
 }
 
@@ -84,7 +84,7 @@ test.describe('E58 : l’admin filtre les messages dont l’email a échoué et 
 				.poll(async () => (await mailsDe(echoue.email)).length, { timeout: 2000, intervals: [200] })
 				.toBeGreaterThan(1)
 		).rejects.toThrow()
-		const ligne = await (await payloadDeTest()).findByID({ collection: 'contact-requests', id: echoue.id, depth: 0 })
+		const ligne = await (await testPayload()).findByID({ collection: 'contact-requests', id: echoue.id, depth: 0 })
 		expect(ligne).toMatchObject({ mailStatus: 'sent', status: 'forwarded' })
 
 		// A message whose mail left shows no button.
@@ -112,7 +112,7 @@ test.describe('E58 : l’admin filtre les messages dont l’email a échoué et 
 
 		await expect
 			.poll(
-				async () => (await (await payloadDeTest()).findByID({ collection: 'contact-requests', id: message.id })).status
+				async () => (await (await testPayload()).findByID({ collection: 'contact-requests', id: message.id })).status
 			)
 			.toBe('answered')
 	})
@@ -121,7 +121,7 @@ test.describe('E58 : l’admin filtre les messages dont l’email a échoué et 
 test.describe('E55 : la rédaction ne voit pas les messages de contact', () => {
 	test('ni dans le menu, ni par l’adresse de la collection, ni par l’API', async ({ context, page }) => {
 		const message = await messageEnBase('sent', 'Cache')
-		const redaction = await creerCompte('redaction')
+		const redaction = await createAccount('redaction')
 		await context.addCookies(redaction.session.cookies)
 
 		await page.goto('/admin')
@@ -142,7 +142,7 @@ test.describe('E53 : l’admin ouvre chaque collection sans erreur', () => {
 	test('aucune erreur de console ni réponse 500 sur les huit listes', async ({ context, page }) => {
 		test.setTimeout(90_000)
 		await ouvrirEnAdmin(context)
-		await sansLeReseauDuDehors(context)
+		await withoutOutsideNetwork(context)
 		const erreurs: string[] = []
 		page.on('pageerror', erreur => erreurs.push(`pageerror : ${erreur.message}`))
 		page.on('console', message => {

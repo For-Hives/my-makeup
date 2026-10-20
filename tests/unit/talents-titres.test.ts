@@ -7,7 +7,7 @@ import { validatePageTitle } from '../../src/collections/Talents'
 import { TALENT_PAGE_TITLES } from '../../src/content/talent-titles'
 import { MAX_TITLE, pageTitle, TALENT_MIN_TITLE } from '../../src/lib/seo/text'
 import { isSlug } from '../../src/lib/slug'
-import { defautsDuTitreDeTalent } from '../support/url-parity'
+import { talentTitleDefaults } from '../support/url-parity'
 
 /** Ticket 108: the 14 titles of the talent tabs, written by the project, and how the import fills them in. */
 
@@ -49,7 +49,7 @@ describe('les 14 titres d’onglet des pages talent', () => {
 			// The tab is the title as it is (no brand added after 50 characters), the h1 is another text.
 			const onglet = pageTitle(titre)
 			expect(onglet).toBe(titre)
-			expect(defautsDuTitreDeTalent(`<title>${onglet}</title><h1>${court}</h1>`), slug).toEqual([])
+			expect(talentTitleDefaults(`<title>${onglet}</title><h1>${court}</h1>`), slug).toEqual([])
 		}
 	})
 })

@@ -14,12 +14,12 @@
  * centres), never a personal one. Like the official list, `limit` bounds the answer and `fields` is
  * accepted; the fields are always the four the site asks for.
  *
- * Nothing of bun here: the unit test loads it under bun, the container runs ./serveur.ts.
+ * Nothing of bun here: the unit test loads it under bun, the container runs ./server.ts.
  */
 
-export const IDENTITE = 'faux-communes'
+export const IDENTITY = 'fake-cities'
 
-interface Commune {
+interface City {
 	nom: string
 	code: string
 	codeDepartement: string
@@ -31,7 +31,7 @@ interface Commune {
 }
 
 /** The communes of the fictional set and of the profile factory, and a few that share a name. */
-export const COMMUNES: readonly Commune[] = [
+export const CITIES: readonly City[] = [
 	{
 		nom: 'Annecy',
 		code: '74010',
@@ -138,7 +138,7 @@ export const COMMUNES: readonly Commune[] = [
 	},
 ]
 
-const plier = (texte: string): string =>
+const fold = (texte: string): string =>
 	texte
 		.normalize('NFD')
 		.replace(/\p{Diacritic}/gu, '')
@@ -146,43 +146,42 @@ const plier = (texte: string): string =>
 		.replace(/[\s'’-]+/g, ' ')
 		.trim()
 
-const enJson = ({ nom, code, codeDepartement, centre }: Commune) => ({
-	nom,
+const inJson = ({ nom: name, code, codeDepartement, centre }: City) => ({
+	nom: name,
 	code,
 	codeDepartement,
 	centre: { type: 'Point', coordinates: centre },
 })
 
-const SANS_CACHE = { 'Cache-Control': 'no-store' }
+const WITHOUT_CACHE = { 'Cache-Control': 'no-store' }
 
 /** The communes that answer a search, the closest name first, then the most populated, as the official list orders them. */
-export function chercher(parametres: URLSearchParams): Commune[] {
-	const limite = Math.max(0, Number(parametres.get('limit') ?? 50) || 50)
+export function find(parametres: URLSearchParams): City[] {
+	const limit = Math.max(0, Number(parametres.get('limit') ?? 50) || 50)
 	const codePostal = parametres.get('codePostal')
-	const nom = parametres.get('nom')
-	const trouvees =
+	const name = parametres.get('nom')
+	const found =
 		codePostal !== null
-			? COMMUNES.filter(({ codesPostaux }) => codesPostaux.includes(codePostal.trim()))
-			: nom !== null && plier(nom) !== ''
-				? COMMUNES.filter(commune => plier(commune.nom).includes(plier(nom)))
+			? CITIES.filter(({ codesPostaux }) => codesPostaux.includes(codePostal.trim()))
+			: name !== null && fold(name) !== ''
+				? CITIES.filter(commune => fold(commune.nom).includes(fold(name)))
 				: []
-	const question = plier(nom ?? '')
-	const rang = (commune: Commune) =>
-		plier(commune.nom) === question ? 0 : plier(commune.nom).startsWith(question) ? 1 : 2
-	return [...trouvees].sort((a, b) => rang(a) - rang(b) || b.population - a.population).slice(0, limite)
+	const question = fold(name ?? '')
+	const rank = (commune: City) => (fold(commune.nom) === question ? 0 : fold(commune.nom).startsWith(question) ? 1 : 2)
+	return [...found].sort((a, b) => rank(a) - rank(b) || b.population - a.population).slice(0, limit)
 }
 
-export function creerFaussesCommunes() {
+export function createFakeCities() {
 	return {
 		repondre(requete: Request): Response {
 			const { pathname, searchParams } = new URL(requete.url)
 			if (requete.method !== 'GET') return new Response('Not Found', { status: 404 })
-			if (pathname === '/_sante') return Response.json({ service: IDENTITE }, { headers: SANS_CACHE })
-			if (pathname === '/communes') return Response.json(chercher(searchParams).map(enJson), { headers: SANS_CACHE })
+			if (pathname === '/_sante') return Response.json({ service: IDENTITY }, { headers: WITHOUT_CACHE })
+			if (pathname === '/communes') return Response.json(find(searchParams).map(inJson), { headers: WITHOUT_CACHE })
 			const code = /^\/communes\/([^/]+)$/.exec(pathname)?.[1]
-			const commune = code === undefined ? undefined : COMMUNES.find(une => une.code === decodeURIComponent(code))
-			if (commune) return Response.json(enJson(commune), { headers: SANS_CACHE })
-			return new Response('Not Found', { status: 404, headers: SANS_CACHE })
+			const city = code === undefined ? undefined : CITIES.find(une => une.code === decodeURIComponent(code))
+			if (city) return Response.json(inJson(city), { headers: WITHOUT_CACHE })
+			return new Response('Not Found', { status: 404, headers: WITHOUT_CACHE })
 		},
 	}
 }

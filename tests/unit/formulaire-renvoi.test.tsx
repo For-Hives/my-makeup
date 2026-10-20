@@ -1,8 +1,8 @@
 import { expect, test } from 'bun:test'
 import { ResendForm, type ResendState } from '@/components/auth/ResendForm'
-import { ouvrirFenetre } from '../support/dom-react'
+import { openWindow } from '../support/dom-react'
 
-const fenetre = ouvrirFenetre()
+const fenetre = openWindow()
 
 const formulaire = (action: (p: ResendState, f: FormData) => Promise<ResendState>) => (
 	<ResendForm action={action as never} />

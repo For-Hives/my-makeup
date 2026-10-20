@@ -9,13 +9,13 @@ import { markMethod } from '@/lib/analytics/sign-in-mark'
 import type { Track } from '@/lib/analytics/track'
 import { ERROR_CODES, GOOGLE_ERROR_CODES } from '@/lib/auth/errors'
 import { SIGN_UP_FAILURE_CODES } from '@/lib/auth/sign-up'
-import { ouvrirFenetre } from '../support/dom-react'
+import { openWindow } from '../support/dom-react'
 
 /**
  * Ticket 146: the events of sign-up and sign-in (plan 04 §3.3, events 9 to 12; U82, U83, E12).
  * Each component takes its `suivre`, so the test sees exactly what would leave.
  */
-const fenetre = ouvrirFenetre()
+const fenetre = openWindow()
 
 type Envoi = { nom: string; proprietes: unknown }
 function espion() {

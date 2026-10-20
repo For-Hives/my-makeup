@@ -327,7 +327,7 @@ describe('the Google sign-in talks to Google, or on this machine to the fake Goo
 		'http://127.0.0.1:7080/o/oauth2/v2/auth',
 		'http://localhost.exemple.test:7080',
 		'http://192.168.1.20:7080',
-		'http://faux-google:7080',
+		'http://fake-google:7080',
 		'127.0.0.1:7080',
 	])('any other provider is refused, deployed or not: %s', issuer => {
 		for (const env of [valid, { ...production, NEXT_PUBLIC_SITE_URL: SITE }]) {

@@ -16,13 +16,13 @@
  *   DELETE /_recus      forgets it
  *   GET    /_sante      who answers (the probe of the bench)
  *
- * Nothing of bun here: the helper that reads it (tests/outils/faux-umami.ts) also loads under Node.
+ * Nothing of bun here: the helper that reads it (tests/support/fake-umami.ts) also loads under Node.
  */
 
-export const IDENTITE = 'faux-umami'
+export const IDENTITY = 'fake-umami'
 
 /** Headers the fake keeps a note of: names only, and the values that are not secrets. */
-export interface Recu {
+export interface Received {
 	/** The body of the send, parsed (`{ type, payload }`), or the text when it was not JSON. */
 	corps: unknown
 	/** True when a Cookie header came with it. */
@@ -79,53 +79,53 @@ window.umami.track();
 `
 
 /** The headers of every answer: nothing is kept by a browser or a proxy. */
-const SANS_CACHE = { 'Cache-Control': 'no-store' }
+const WITHOUT_CACHE = { 'Cache-Control': 'no-store' }
 
-export interface FauxUmami {
+export interface FakeUmami {
 	repondre: (requete: Request) => Promise<Response>
 	/** What was received, oldest first. */
-	recus: () => readonly Recu[]
+	recus: () => readonly Received[]
 }
 
-export function creerFauxUmami(): FauxUmami {
-	let recus: Recu[] = []
+export function createFakeUmami(): FakeUmami {
+	let received: Received[] = []
 
-	async function repondre(requete: Request): Promise<Response> {
+	async function respond(requete: Request): Promise<Response> {
 		const { pathname } = new URL(requete.url)
-		const methode = requete.method.toUpperCase()
-		if (pathname === '/_sante' && methode === 'GET')
-			return Response.json({ service: IDENTITE }, { headers: SANS_CACHE })
-		if (pathname === '/script.js' && methode === 'GET')
+		const method = requete.method.toUpperCase()
+		if (pathname === '/_sante' && method === 'GET')
+			return Response.json({ service: IDENTITY }, { headers: WITHOUT_CACHE })
+		if (pathname === '/script.js' && method === 'GET')
 			return new Response(TRACKER, {
-				headers: { ...SANS_CACHE, 'Content-Type': 'text/javascript; charset=utf-8' },
+				headers: { ...WITHOUT_CACHE, 'Content-Type': 'text/javascript; charset=utf-8' },
 			})
-		if (pathname === '/api/send' && methode === 'POST') {
-			const texte = await requete.text()
-			let corps: unknown = texte
+		if (pathname === '/api/send' && method === 'POST') {
+			const text = await requete.text()
+			let corps: unknown = text
 			try {
-				corps = JSON.parse(texte)
+				corps = JSON.parse(text)
 			} catch {
 				// kept as text: the bench wants to see what arrived
 			}
-			recus.push({
+			received.push({
 				corps,
 				cookie: requete.headers.has('cookie'),
 				referer: requete.headers.has('referer'),
 				autorisation: requete.headers.has('authorization'),
 				adresse: requete.headers.get('true-client-ip'),
 				agent: requete.headers.get('user-agent'),
-				methode,
+				methode: method,
 			})
 			// The real instance answers a token the tracker gives back; any text does here.
-			return new Response('faux-jeton', { headers: { ...SANS_CACHE, 'Content-Type': 'text/plain' } })
+			return new Response('faux-jeton', { headers: { ...WITHOUT_CACHE, 'Content-Type': 'text/plain' } })
 		}
-		if (pathname === '/_recus' && methode === 'GET') return Response.json(recus, { headers: SANS_CACHE })
-		if (pathname === '/_recus' && methode === 'DELETE') {
-			recus = []
-			return new Response(null, { status: 204, headers: SANS_CACHE })
+		if (pathname === '/_recus' && method === 'GET') return Response.json(received, { headers: WITHOUT_CACHE })
+		if (pathname === '/_recus' && method === 'DELETE') {
+			received = []
+			return new Response(null, { status: 204, headers: WITHOUT_CACHE })
 		}
-		return new Response('Faux Umami : chemin inconnu.\n', { status: 404, headers: SANS_CACHE })
+		return new Response('Faux Umami : chemin inconnu.\n', { status: 404, headers: WITHOUT_CACHE })
 	}
 
-	return { repondre, recus: () => recus }
+	return { repondre: respond, recus: () => received }
 }

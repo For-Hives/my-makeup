@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, setDefaultTimeout, test } from 'bun:test'
 import { STORAGE_OUTAGE_MESSAGE } from '@/collections/trash'
 import type { Media } from '@/payload-types'
-import { type Espion, espionnerLeStockage, suppressionsSansCorbeille } from '../support/s3-spy'
-import { creerCompte } from '../support/account-factory'
-import { payloadDeTest, viderLaBase } from '../support/payload-test'
-import { fichierPourFormulaire } from '../support/photos'
-import { appelerRest, formulaireAvecFichier } from '../support/rest'
-import { lireUnObjet, listerLesObjets, viderLeStockage } from '../support/s3'
+import { createAccount } from '../support/account-factory'
+import { emptyBase, testPayload } from '../support/payload-test'
+import { fileForForm } from '../support/photos'
+import { callRest, formWithFile } from '../support/rest'
+import { emptyStorage, listObjects, readObject } from '../support/s3'
+import { deletionsWithoutTrash, type Spy, spyStorage } from '../support/s3-spy'
 
 // The bench is shared by every checkout of the machine, and a suite under load runs several times slower than alone:
 // the default 5 s is passed by the heaviest tests of this file (ticket 225). The delay bounds a call that hangs, it
@@ -21,42 +21,42 @@ setDefaultTimeout(30_000)
  * removal that is not the second half of a move to the bin fails the test.
  */
 
-let espion: Espion
+let espion: Spy
 
 beforeEach(() => {
-	espion = espionnerLeStockage()
+	espion = spyStorage()
 })
 
 afterEach(async () => {
-	const fautes = suppressionsSansCorbeille(espion.journal)
+	const fautes = deletionsWithoutTrash(espion.journal)
 	espion.arreter()
-	await Promise.all([viderLaBase(), viderLeStockage()])
+	await Promise.all([emptyBase(), emptyStorage()])
 	expect(fautes).toEqual([])
 })
 
-type Maquilleuse = Awaited<ReturnType<typeof creerCompte<'maquilleuse'>>>
+type Maquilleuse = Awaited<ReturnType<typeof createAccount<'maquilleuse'>>>
 
 async function envoyer(compte: Maquilleuse): Promise<Media> {
-	const { statut, corps, texte } = await appelerRest('POST', '/api/media?depth=0', {
+	const { statut, corps, texte } = await callRest('POST', '/api/media?depth=0', {
 		enTetes: compte.session.enTetes,
-		formulaire: formulaireAvecFichier(fichierPourFormulaire()),
+		formulaire: formWithFile(fileForForm()),
 	})
 	if (statut !== 201) throw new Error(`L’envoi de la photo a échoué : ${statut} ${texte}`)
 	return (corps as { doc: Media }).doc
 }
 
 async function profilDe(compte: { id: number | string }) {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	return (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })).docs[0]
 }
 
 /** An account with a profile that names a main photo and a gallery photo, and one more photo nobody names. */
 async function compteGarni() {
-	const compte = await creerCompte('maquilleuse')
+	const compte = await createAccount('maquilleuse')
 	const [principale, galerie, libre] = [await envoyer(compte), await envoyer(compte), await envoyer(compte)]
 	const profil = await profilDe(compte)
 	if (!profil) throw new Error('pas de profil')
-	await (await payloadDeTest()).update({
+	await (await testPayload()).update({
 		collection: 'profiles',
 		id: profil.id,
 		data: { mainPicture: principale.id, gallery: [principale.id, galerie.id] },
@@ -65,18 +65,18 @@ async function compteGarni() {
 }
 
 const present = async (collection: 'pros' | 'profiles' | 'media', id: number | string) =>
-	(await (await payloadDeTest()).findByID({ collection, id, depth: 0, disableErrors: true, overrideAccess: true })) !==
+	(await (await testPayload()).findByID({ collection, id, depth: 0, disableErrors: true, overrideAccess: true })) !==
 	null
 const cle = (media: Media) => `media/${media.filename}`
-const enPlace = async (media: Media) => (await lireUnObjet(cle(media))) !== undefined
-const enCorbeille = async (media: Media) => (await lireUnObjet(`deleted/${cle(media)}`)) !== undefined
+const enPlace = async (media: Media) => (await readObject(cle(media))) !== undefined
+const enCorbeille = async (media: Media) => (await readObject(`deleted/${cle(media)}`)) !== undefined
 const supprimerParAdmin = (admin: { session: { enTetes: Record<string, string> } }, id: number | string) =>
-	appelerRest('DELETE', `/api/pros/${id}`, { enTetes: admin.session.enTetes })
+	callRest('DELETE', `/api/pros/${id}`, { enTetes: admin.session.enTetes })
 
 describe('I37 : l’admin supprime un compte, le même résultat que la maquilleuse', () => {
 	test('compte, profil, sessions, photos : tout part, les objets vont à la corbeille, aucune photo orpheline, les autres comptes intacts', async () => {
-		const payload = await payloadDeTest()
-		const admin = await creerCompte('admin')
+		const payload = await testPayload()
+		const admin = await createAccount('admin')
 		const { compte, profil, photos } = await compteGarni()
 		const autre = await compteGarni()
 
@@ -91,13 +91,13 @@ describe('I37 : l’admin supprime un compte, le même résultat que la maquille
 			expect(await enCorbeille(photo)).toBe(true)
 		}
 		expect((await payload.auth({ headers: new Headers(compte.session.enTetes) })).user).toBeNull()
-		expect((await appelerRest('GET', `/api/pros/me`, { enTetes: compte.session.enTetes })).corps).toMatchObject({
+		expect((await callRest('GET', `/api/pros/me`, { enTetes: compte.session.enTetes })).corps).toMatchObject({
 			user: null,
 		})
 		expect(
 			(await payload.find({ collection: 'profiles', depth: 0, where: { slug: { equals: profil.slug } } })).totalDocs
 		).toBe(0)
-		expect((await listerLesObjets('deleted/')).length).toBe(photos.length)
+		expect((await listObjects('deleted/')).length).toBe(photos.length)
 
 		// No profile without an owner, no photo without one: what remains is the other account's.
 		const profils = await payload.find({ collection: 'profiles', depth: 0, pagination: false })
@@ -109,8 +109,8 @@ describe('I37 : l’admin supprime un compte, le même résultat que la maquille
 	})
 
 	test('un compte sans profil se supprime aussi, et ses photos vont à la corbeille', async () => {
-		const admin = await creerCompte('admin')
-		const compte = await creerCompte('maquilleuse-sans-profil')
+		const admin = await createAccount('admin')
+		const compte = await createAccount('maquilleuse-sans-profil')
 		const photo = await envoyer(compte as unknown as Maquilleuse)
 
 		expect((await supprimerParAdmin(admin, compte.id)).statut).toBe(200)
@@ -122,7 +122,7 @@ describe('I37 : l’admin supprime un compte, le même résultat que la maquille
 	})
 
 	test('un compte qui n’existe pas : 404 ; deux clics au même instant : une seule suppression', async () => {
-		const admin = await creerCompte('admin')
+		const admin = await createAccount('admin')
 		expect((await supprimerParAdmin(admin, 987654)).statut).toBe(404)
 
 		const { compte, photos } = await compteGarni()
@@ -140,16 +140,16 @@ describe('I37 : l’admin supprime un compte, le même résultat que la maquille
 describe('Seul l’admin supprime un compte', () => {
 	test('la rédaction, une maquilleuse (la sienne ou une autre), un visiteur, un identifiant impossible : 403, rien n’est supprimé', async () => {
 		const { compte, profil, photos } = await compteGarni()
-		const autre = await creerCompte('maquilleuse')
-		const redaction = await creerCompte('redaction')
-		const admin = await creerCompte('admin')
+		const autre = await createAccount('maquilleuse')
+		const redaction = await createAccount('redaction')
+		const admin = await createAccount('admin')
 
 		const essais = [
-			await appelerRest('DELETE', `/api/pros/${compte.id}`, { enTetes: redaction.session.enTetes }),
-			await appelerRest('DELETE', `/api/pros/${compte.id}`, { enTetes: compte.session.enTetes }),
-			await appelerRest('DELETE', `/api/pros/${compte.id}`, { enTetes: autre.session.enTetes }),
-			await appelerRest('DELETE', `/api/pros/${compte.id}`, {}),
-			await appelerRest('DELETE', `/api/pros/abc`, { enTetes: admin.session.enTetes }),
+			await callRest('DELETE', `/api/pros/${compte.id}`, { enTetes: redaction.session.enTetes }),
+			await callRest('DELETE', `/api/pros/${compte.id}`, { enTetes: compte.session.enTetes }),
+			await callRest('DELETE', `/api/pros/${compte.id}`, { enTetes: autre.session.enTetes }),
+			await callRest('DELETE', `/api/pros/${compte.id}`, {}),
+			await callRest('DELETE', `/api/pros/abc`, { enTetes: admin.session.enTetes }),
 		]
 
 		expect(essais.map(({ statut }) => statut)).toEqual([403, 403, 403, 403, 403])
@@ -160,11 +160,11 @@ describe('Seul l’admin supprime un compte', () => {
 	})
 
 	test('la suppression de plusieurs comptes à la fois est refusée, même à l’admin ; la suppression native refuse un compte qui a encore un profil', async () => {
-		const payload = await payloadDeTest()
-		const admin = await creerCompte('admin')
+		const payload = await testPayload()
+		const admin = await createAccount('admin')
 		const { compte, profil } = await compteGarni()
 
-		const lot = await appelerRest('DELETE', `/api/pros?where[email][exists]=true`, { enTetes: admin.session.enTetes })
+		const lot = await callRest('DELETE', `/api/pros?where[email][exists]=true`, { enTetes: admin.session.enTetes })
 		expect(lot.statut).toBeGreaterThanOrEqual(400)
 		await expect(payload.delete({ collection: 'pros', id: compte.id, overrideAccess: true })).rejects.toMatchObject({
 			status: 409,
@@ -177,8 +177,8 @@ describe('Seul l’admin supprime un compte', () => {
 
 describe('Panne du stockage : tout est encore là', () => {
 	test('la copie vers la corbeille échoue : 503 en français, rien n’est supprimé ; l’essai suivant réussit', async () => {
-		const payload = await payloadDeTest()
-		const admin = await creerCompte('admin')
+		const payload = await testPayload()
+		const admin = await createAccount('admin')
 		const { compte, profil, photos } = await compteGarni()
 		let copies = 0
 		espion.fairePanne(

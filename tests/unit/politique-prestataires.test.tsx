@@ -7,7 +7,7 @@ import { GOOGLE_ISSUER, UMAMI_ORIGIN_DEFAULT } from '@/lib/env'
 import { HOST } from '@/lib/legal'
 import { PHOTO_ERASURE_DAYS, PROVIDERS } from '@/lib/providers'
 import { PURGE_DELAY_DAYS } from '@/lib/tasks/unconfirmed-accounts'
-import { texteDePage } from '../support/page-text'
+import { pageText } from '../support/page-text'
 
 /**
  * The privacy policy says what is true on the day of the switch (ticket 189): the providers come
@@ -17,7 +17,7 @@ import { texteDePage } from '../support/page-text'
  */
 
 const lire = (fichier: string): string => readFileSync(path.join(process.cwd(), fichier), 'utf8')
-const texte = texteDePage(renderToStaticMarkup(<Page />))
+const texte = pageText(renderToStaticMarkup(<Page />))
 const parId = (id: string) => PROVIDERS.find(prestataire => prestataire.id === id)
 
 describe('la liste des sous-traitants', () => {

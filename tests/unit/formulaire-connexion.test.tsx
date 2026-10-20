@@ -1,8 +1,8 @@
 import { expect, test } from 'bun:test'
 import { SignInForm } from '@/components/auth/SignInForm'
-import { ouvrirFenetre } from '../support/dom-react'
+import { openWindow } from '../support/dom-react'
 
-const fenetre = ouvrirFenetre()
+const fenetre = openWindow()
 
 function formulaire(action: (p: null, f: FormData) => Promise<{ code: 'identifiants-invalides' } | null>) {
 	return <SignInForm action={action as never} retour="/auth/profil" />

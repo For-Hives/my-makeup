@@ -4,55 +4,55 @@ L'import de la v3 lit la base de l'ancienne API (Strapi 4) et adopte ses photos 
 
 Les tickets d'import (024 et suivants) et la connexion des comptes repris (095) s'en servent. Le schéma de référence est [`docs/migration/SCHEMA.md`](../migration/SCHEMA.md).
 
-La source est créée par des instructions écrites une fois (`tests/outils/source-strapi/creation.ts`), que lance bun sur le banc. La préprod, qui les lançait aussi par le client PostgreSQL de Payload, n'existe plus (ticket 232). Ce fichier, `donnees.ts`, `images.ts` et `schema.ts` restent dans le contexte de l'image Docker, sans API de bun et sans aucune donnée réelle, pour l'import lancé dans le conteneur de la production (ticket 233).
+La source est créée par des instructions écrites une fois (`tests/support/source-strapi/creation.ts`), que lance bun sur le banc. La préprod, qui les lançait aussi par le client PostgreSQL de Payload, n'existe plus (ticket 232). Ce fichier, `donnees.ts`, `images.ts` et `schema.ts` restent dans le contexte de l'image Docker, sans API de bun et sans aucune donnée réelle, pour l'import lancé dans le conteneur de la production (ticket 233).
 
 | Élément | Où |
 |---|---|
 | La base | Une base à elle, `strapi_source_test`, dans le PostgreSQL du banc, à côté de la base de l'application |
 | Qui la lit | Le rôle `lecture_strapi`, qui ne peut rien y écrire : c'est `STRAPI_SOURCE_URI`, dans `.env.test` |
 | Les photos | Dans l'espace du banc (`S3_BUCKET`), là où l'application lit les siennes : à la racine, et sous `1/` |
-| Les données | `tests/outils/source-strapi/donnees.ts` ; les tables : `tests/outils/source-strapi/schema.ts` |
-| L'outil | `tests/outils/source-strapi.ts` ; la commande : `scripts/source-strapi.ts` |
-| Les instructions de création | `tests/outils/source-strapi/creation.ts`, sans API de bun, pour pouvoir s'exécuter sous Node aussi |
+| Les données | `tests/support/source-strapi/data.ts` ; les tables : `tests/support/source-strapi/schema.ts` |
+| L'outil | `tests/support/source-strapi.ts` ; la commande : `scripts/source-strapi.ts` |
+| Les instructions de création | `tests/support/source-strapi/creation.ts`, sans API de bun, pour pouvoir s'exécuter sous Node aussi |
 
 ## La commande
 
-Banc démarré (`bun run banc:up`) :
+Banc démarré (`bun run bench:up`) :
 
 ```sh
-bun run banc:source               # crée la source, ou la recrée de zéro, puis donne son inventaire et son empreinte
-bun run banc:source --fingerprint   # donne l'empreinte de la source telle qu'elle est, sans y toucher
-bun run banc:source --erase     # efface la base, le rôle en lecture seule et les objets de la source
+bun run bench:source               # crée la source, ou la recrée de zéro, puis donne son inventaire et son empreinte
+bun run bench:source --fingerprint   # donne l'empreinte de la source telle qu'elle est, sans y toucher
+bun run bench:source --erase     # efface la base, le rôle en lecture seule et les objets de la source
 ```
 
-Comme toute commande du banc, elle vise l'instance de `BANC_INSTANCE` et `BANC_DECALAGE`. Elle met environ une seconde. Elle n'affiche que des nombres et des empreintes : ni hash, ni email, ni mot de passe.
+Comme toute commande du banc, elle vise l'instance de `BENCH_INSTANCE` et `BENCH_OFFSET`. Elle met environ une seconde. Elle n'affiche que des nombres et des empreintes : ni hash, ni email, ni mot de passe.
 
-`bun run test:integration` ne touche pas à la source : il n'efface que le schéma de la base de l'application. Mais un fichier de tests qui vide le stockage (`viderLeStockage()`) emporte ses photos. Un test qui lit la source la crée donc lui-même, au début, et l'efface à la fin.
+`bun run test:integration` ne touche pas à la source : il n'efface que le schéma de la base de l'application. Mais un fichier de tests qui vide le stockage (`emptyStorage()`) emporte ses photos. Un test qui lit la source la crée donc lui-même, au début, et l'efface à la fin.
 
 ## Dans un test
 
 ```ts
 import { afterAll, beforeAll, expect, test } from 'bun:test'
-import { creerLaSourceStrapi, effacerLaSourceStrapi, empreinteDeLaSource, ouvrirLaSource } from '../outils/source-strapi'
+import { createSourceStrapi, eraseSourceStrapi, sourceFingerprint, openSource } from '../outils/source-strapi'
 
-beforeAll(() => creerLaSourceStrapi())
-afterAll(() => effacerLaSourceStrapi())
+beforeAll(() => createSourceStrapi())
+afterAll(() => eraseSourceStrapi())
 
 test('l’import ne change pas la source', async () => {
-	const avant = await empreinteDeLaSource()
-	// … l'import lit la source par ouvrirLaSource() …
-	expect((await empreinteDeLaSource()).empreinte).toBe(avant.empreinte)
+	const avant = await sourceFingerprint()
+	// … l'import lit la source par openSource() …
+	expect((await sourceFingerprint()).empreinte).toBe(avant.empreinte)
 })
 ```
 
-| Outil (`tests/outils/source-strapi.ts`) | Effet |
+| Outil (`tests/support/source-strapi.ts`) | Effet |
 |---|---|
-| `await creerLaSourceStrapi()` | Crée la source de zéro : base, tables, lignes, hash, rôle en lecture seule, objets. Rend sa définition |
-| `ouvrirLaSource()` | Une connexion à la source par le rôle en lecture seule, comme l'import l'ouvre. À fermer par `await sql.close()` |
-| `await empreinteDeLaSource()` | L'empreinte de la source, lue par le rôle en lecture seule |
-| `inventaire(await lireLaSource())` | L'inventaire de la source, cas par cas, lu par le rôle en lecture seule |
-| `await effacerLaSourceStrapi()` | Supprime la base, le rôle et les objets de la source. Rien d'autre du banc |
-| `COMPTES_DE_FIXTURE` | Les trois comptes dont le mot de passe est connu : `strapiId`, email, fournisseur, mot de passe |
+| `await createSourceStrapi()` | Crée la source de zéro : base, tables, lignes, hash, rôle en lecture seule, objets. Rend sa définition |
+| `openSource()` | Une connexion à la source par le rôle en lecture seule, comme l'import l'ouvre. À fermer par `await sql.close()` |
+| `await sourceFingerprint()` | L'empreinte de la source, lue par le rôle en lecture seule |
+| `inventaire(await readSource())` | L'inventaire de la source, cas par cas, lu par le rôle en lecture seule |
+| `await eraseSourceStrapi()` | Supprime la base, le rôle et les objets de la source. Rien d'autre du banc |
+| `FIXTURE_ACCOUNTS` | Les trois comptes dont le mot de passe est connu : `strapiId`, email, fournisseur, mot de passe |
 
 Chaque outil s'arrête avant d'ouvrir quoi que ce soit si `DATABASE_URI`, `STRAPI_SOURCE_URI`, `S3_ENDPOINT` ou `S3_BUCKET` ne sont pas exactement ceux de l'instance du banc. La garde des tests refuse aussi une `STRAPI_SOURCE_URI` qui n'est pas locale ou dont la base ne finit pas par `_test` : un test ne lit jamais la vraie base Strapi.
 
@@ -66,11 +66,11 @@ L'import lit la source par un rôle qui ne peut rien y écrire (SCHEMA.md, règl
 
 Toute écriture dans une table échoue avec une erreur de PostgreSQL (`42501`, droit refusé, ou `25006`, transaction en lecture seule) ; la création d'un grand objet échoue en `42501`, même après `SET default_transaction_read_only = off`. Le test d'intégration essaie chacune.
 
-**Ce que le rôle peut encore faire, et que la source ne peut pas lui interdire.** Un rôle PostgreSQL règle ses propres paramètres : il peut lever son verrou pour de bon (`ALTER ROLE … IN DATABASE … SET default_transaction_read_only = off`, une fois la lecture seule levée dans sa session), poser d'autres paramètres (`work_mem`, `statement_timeout`…) et changer son mot de passe. Aucune de ces trois actions ne lui donne un droit d'écrire dans une table, mais elles changent le rôle, pas les données. `bun run banc:source` les remet à zéro à chaque création de la source : la base est recréée avec son verrou, le rôle est remis à zéro (`ALTER ROLE … RESET ALL`), son mot de passe est réécrit. C'est donc le seul geste qui garantit un rôle intact ; l'empreinte, elle, voit les tables, les objets du stockage et les grands objets (`pg_largeobject_metadata`), pas les réglages du rôle.
+**Ce que le rôle peut encore faire, et que la source ne peut pas lui interdire.** Un rôle PostgreSQL règle ses propres paramètres : il peut lever son verrou pour de bon (`ALTER ROLE … IN DATABASE … SET default_transaction_read_only = off`, une fois la lecture seule levée dans sa session), poser d'autres paramètres (`work_mem`, `statement_timeout`…) et changer son mot de passe. Aucune de ces trois actions ne lui donne un droit d'écrire dans une table, mais elles changent le rôle, pas les données. `bun run bench:source` les remet à zéro à chaque création de la source : la base est recréée avec son verrou, le rôle est remis à zéro (`ALTER ROLE … RESET ALL`), son mot de passe est réécrit. C'est donc le seul geste qui garantit un rôle intact ; l'empreinte, elle, voit les tables, les objets du stockage et les grands objets (`pg_largeobject_metadata`), pas les réglages du rôle.
 
 ## Les trois comptes de fixture
 
-Les comptes 1 et 2 (`local`) et 3 (`google`, avec un mot de passe, comme un vrai compte) ont un mot de passe connu, écrit dans `COMPTES_DE_FIXTURE`. Ce document ne le recopie pas. Ce sont eux qui se connecteront par le chemin hérité (plan `01` §2.4, M2 ; ticket 095).
+Les comptes 1 et 2 (`local`) et 3 (`google`, avec un mot de passe, comme un vrai compte) ont un mot de passe connu, écrit dans `FIXTURE_ACCOUNTS`. Ce document ne le recopie pas. Ce sont eux qui se connecteront par le chemin hérité (plan `01` §2.4, M2 ; ticket 095).
 
 Après l'import, trois comptes de la source se connectent chacun par leur parcours (ticket 095, `tests/integration/import-puis-connexion.test.ts`, joué avec la suite complète) : le compte 1 par son mot de passe habituel, le compte 4 (Google, sans mot de passe) par le faux Google, le compte 5 (Facebook) par « Mot de passe oublié ». Le compte 3, Google avec un hash, garde le chemin hérité comme le 1 et reste disponible pour le suivi M2 du plan.
 
@@ -93,7 +93,7 @@ Les adresses des photos portent le port du stockage de l'instance : deux instanc
 
 ## Inventaire
 
-Les nombres de la vraie base viennent de l'instantané du 13/10/2026 ([`SCHEMA.md`](../migration/SCHEMA.md), §3) et de l'analyse du même jour pour les profils actifs et publiables. « — » : non mesuré ce jour-là. Un test compare ce tableau à l'inventaire calculé sur les données (`bun --no-env-file test tests/unit/source-strapi.test.ts`), et le test d'intégration le compare à la base créée. `bun run banc:source` l'affiche sous cette forme.
+Les nombres de la vraie base viennent de l'instantané du 13/10/2026 ([`SCHEMA.md`](../migration/SCHEMA.md), §3) et de l'analyse du même jour pour les profils actifs et publiables. « — » : non mesuré ce jour-là. Un test compare ce tableau à l'inventaire calculé sur les données (`bun --no-env-file test tests/unit/source-strapi.test.ts`), et le test d'intégration le compare à la base créée. `bun run bench:source` l'affiche sous cette forme.
 
 | Groupe | Cas | Base réelle, 13/10/2026 | Fausse base |
 |---|---|---|---|
@@ -197,7 +197,7 @@ Les identifiants sont ceux de la fausse base, jamais ceux de la vraie.
 | 32, 34 | Profils simples ; 34 a été créé la veille de l'instantané |
 | 33 | Quatre lignes hors des bornes de la v3, une par borne (ticket 226) : une expérience dont la fin précède le début, une formation « obtenue » en 2099, une prestation dont la description a 2 001 caractères, et une option au nom de 71 caractères sur la prestation « Cours particulier ». L'import les laisse de côté et les liste ; le reste du profil est repris |
 
-Les villes de ces profils ont leurs réponses du référentiel des communes dans `tests/fixtures/import/referentiel-du-banc.json` : des données publiques de `geo.api.gouv.fr`, que l'import du banc lit hors ligne ([`docs/migration/IMPORT.md`](../migration/IMPORT.md), « Les communes »). Une ville ajoutée à la source y ajoute ses réponses, sinon l'import du banc s'arrête.
+Les villes de ces profils ont leurs réponses du référentiel des communes dans `tests/fixtures/import/bench-reference.json` : des données publiques de `geo.api.gouv.fr`, que l'import du banc lit hors ligne ([`docs/migration/IMPORT.md`](../migration/IMPORT.md), « Les communes »). Une ville ajoutée à la source y ajoute ses réponses, sinon l'import du banc s'arrête.
 
 **Listes** : la compétence 6, la langue 4 et la prestation 11 n'ont aucun lien. Chaque profil a sa ligne de réseaux, vide ou non.
 

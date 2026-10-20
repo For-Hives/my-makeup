@@ -9,9 +9,9 @@ import { signInWithPassword } from '@/lib/auth/sign-in'
 import { openWithPassword } from '@/lib/auth/token'
 import { payloadSendEmail } from '@/lib/emails/send'
 import { serverEnv } from '@/lib/env'
-import { fauxGoogle } from './fake-google'
-import { attendreLeMail } from './mailpit'
-import { payloadDeTest } from './payload-test'
+import { fakeGoogle } from './fake-google'
+import { waitMail } from './mailpit'
+import { testPayload } from './payload-test'
 
 /**
  * The three ways into an account of the old site, as the tests of tickets 093 and 095 play them
@@ -23,14 +23,14 @@ import { payloadDeTest } from './payload-test'
 export const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? ''
 export const SECRET = process.env.PAYLOAD_SECRET ?? ''
 /** The password a test chooses for an account that had none. */
-export const CHOIX = 'mot-de-passe-choisi-fictif'
+export const CHOICE = 'mot-de-passe-choisi-fictif'
 
 let n = 0
-const adresseCliente = () => new Headers({ 'x-forwarded-for': `203.0.113.${1 + (n++ % 250)}` })
-const libre = () => createRateLimit({ nom: `essai-parcours-${n++}`, limite: 1000, fenetreMs: 60_000 })
+const urlClient = () => new Headers({ 'x-forwarded-for': `203.0.113.${1 + (n++ % 250)}` })
+const free = () => createRateLimit({ nom: `essai-parcours-${n++}`, limite: 1000, fenetreMs: 60_000 })
 
 export const configGoogle = (): ConfigGoogle => {
-	const google = fauxGoogle()
+	const google = fakeGoogle()
 	return {
 		emetteur: google.emetteur,
 		clientId: google.clientId,
@@ -40,71 +40,71 @@ export const configGoogle = (): ConfigGoogle => {
 }
 
 /** Asks for the link, waits for the mail, and gives the token of its link. */
-export async function demanderLeLien(email: string): Promise<string> {
-	const payload = await payloadDeTest()
-	const travaux: Promise<void>[] = []
-	const resultat = await requestPasswordLink({
+export async function requestLink(email: string): Promise<string> {
+	const payload = await testPayload()
+	const jobs: Promise<void>[] = []
+	const result = await requestPasswordLink({
 		payload,
-		headers: adresseCliente(),
+		headers: urlClient(),
 		email,
 		envoyer: payloadSendEmail(payload, serverEnv()),
 		site: SITE,
 		apres: travail => {
-			travaux.push(travail())
+			jobs.push(travail())
 		},
-		frein: libre(),
+		frein: free(),
 		journal: authLog(payload),
 	})
-	expect(resultat).toEqual({ ok: true })
-	await Promise.all(travaux)
-	const mail = await attendreLeMail({ pour: email, sujet: /Réinitialise ton mot de passe/ })
-	const lien = mail.liens.find(l => new URL(l).pathname === '/auth/reinitialiser')
-	if (!lien) throw new Error('Le mail ne porte pas le lien.')
-	return new URL(lien).searchParams.get('code') ?? ''
+	expect(result).toEqual({ ok: true })
+	await Promise.all(jobs)
+	const mail = await waitMail({ pour: email, sujet: /Réinitialise ton mot de passe/ })
+	const link = mail.liens.find(l => new URL(l).pathname === '/auth/reinitialiser')
+	if (!link) throw new Error('Le mail ne porte pas le lien.')
+	return new URL(link).searchParams.get('code') ?? ''
 }
 
-export async function choisirUnMotDePasse(jeton: string, motDePasse: string = CHOIX) {
-	const payload = await payloadDeTest()
+export async function pickPassword(jeton: string, motDePasse: string = CHOICE) {
+	const payload = await testPayload()
 	return resetPassword({
 		payload,
-		headers: adresseCliente(),
+		headers: urlClient(),
 		jeton,
 		motDePasse,
 		confirmation: motDePasse,
-		frein: libre(),
+		frein: free(),
 		journal: authLog(payload),
 	})
 }
 
-export async function seConnecter(email: string, password: string) {
-	const payload = await payloadDeTest()
+export async function connect(email: string, password: string) {
+	const payload = await testPayload()
 	return signInWithPassword({
 		ouvrir: data => openWithPassword(payload, 'pros', data),
 		herite: data => replaceLegacyHash(payload, data),
-		headers: adresseCliente(),
+		headers: urlClient(),
 		email,
 		password,
-		frein: libre(),
+		frein: free(),
 		journal: authLog(payload),
 	})
 }
 
 /** One trip to the fake Google, from the departure to the end of the return. */
-export async function connecterParGoogle(email: string) {
-	const payload = await payloadDeTest()
+export async function connectByGoogle(email: string) {
+	const payload = await testPayload()
 	const config = configGoogle()
-	const depart = prepareStart(config, await discover(config.emetteur), { retour: '/auth/profil', secret: SECRET })
-	const retour = await fauxGoogle().autoriser(depart.adresse, fauxGoogle().choisir({ email }))
+	const start = prepareStart(config, await discover(config.emetteur), { retour: '/auth/profil', secret: SECRET })
+	const returnUrl = await fakeGoogle().autoriser(start.adresse, fakeGoogle().choisir({ email }))
 	return finishGoogleSignIn({
 		payload,
 		config,
 		secret: SECRET,
 		retour: {
-			code: retour.searchParams.get('code'),
-			state: retour.searchParams.get('state'),
-			error: retour.searchParams.get('error'),
+			code: returnUrl.searchParams.get('code'),
+			state: returnUrl.searchParams.get('state'),
+			error: returnUrl.searchParams.get('error'),
 		},
-		cookie: depart.cookie,
+		cookie: start.cookie,
 		journal: authLog(payload),
 	})
 }

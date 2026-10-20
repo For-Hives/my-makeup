@@ -1,21 +1,21 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import { createServer, type Server, type Socket } from 'node:net'
-import { BancRefuse, environnementDuBanc } from '../support/bench'
-import { DELAI_D_UNE_REQUETE_MS } from '../support/bench-request'
-import { EnvironnementRefuse } from '../support/environment-guard'
+import { benchEnvironment, RefusedBench } from '../support/bench'
+import { REQUEST_DELAY_MS } from '../support/bench-request'
+import { RefusedEnvironment } from '../support/environment-guard'
 import {
-	attendreLeMail,
-	type Capteur,
-	capteurDuBanc,
-	compterLesMails,
-	DELAI_D_ATTENTE_MS,
-	extraireLesLiens,
-	lienDuMail,
-	mailsRecus,
-	viderLeCapteur,
+	benchSink,
+	countMails,
+	emptySink,
+	extractLinks,
+	mailLink,
+	mailReceived,
+	type Sink,
+	WAITING_DELAY_MS,
+	waitMail,
 } from '../support/mailpit'
 
-const BANC = environnementDuBanc({ nom: 'my-makeup-test', decalage: 0 })
+const BANC = benchEnvironment({ nom: 'my-makeup-test', decalage: 0 })
 const SITE = 'http://localhost:3100'
 
 /** What a test has to close when it ends, whatever happened. */
@@ -25,7 +25,7 @@ afterEach(async () => {
 })
 
 /** A catcher that is not the bench: a stand-in on a local port, which answers what the test decides. */
-function fauxCapteur(repondre: (url: URL, requete: Request) => Response): Capteur & { demandes: string[] } {
+function fauxCapteur(repondre: (url: URL, requete: Request) => Response): Sink & { demandes: string[] } {
 	const demandes: string[] = []
 	const serveur = Bun.serve({
 		hostname: '127.0.0.1',
@@ -45,7 +45,7 @@ function fauxCapteur(repondre: (url: URL, requete: Request) => Response): Capteu
 	}
 }
 
-const capteurA = (api: string): Capteur => ({
+const capteurA = (api: string): Sink => ({
 	service: 'capteur de mails',
 	instance: { nom: 'banc-voisin', decalage: 20 },
 	api,
@@ -73,7 +73,7 @@ const refus = (essai: () => unknown): string => {
 	try {
 		essai()
 	} catch (erreur) {
-		if (erreur instanceof BancRefuse) return erreur.message
+		if (erreur instanceof RefusedBench) return erreur.message
 		throw erreur
 	}
 	throw new Error('rien n’a été refusé')
@@ -88,7 +88,7 @@ describe('Les liens d’un mail', () => {
 			`<a\n\tstyle="color:#b76e79"\n\thref="${SITE}/cgu?v=1&#x26;lang=fr">Conditions</a>`,
 		].join('\n')
 
-		expect(extraireLesLiens(html)).toEqual([
+		expect(extractLinks(html)).toEqual([
 			`${SITE}/auth/verification?jeton=abc&retour=profil`,
 			`${SITE}/auth/reinitialiser?code=1&etape=2`,
 			`${SITE}/contact`,
@@ -108,7 +108,7 @@ describe('Les liens d’un mail', () => {
 			`<a href="${SITE}/seul">Le seul lien</a>`,
 		].join('')
 
-		expect(extraireLesLiens(html)).toEqual([`${SITE}/seul`])
+		expect(extractLinks(html)).toEqual([`${SITE}/seul`])
 	})
 
 	test('les adresses de la partie texte, sans la ponctuation qui les suit', () => {
@@ -118,7 +118,7 @@ describe('Les liens d’un mail', () => {
 			'Sans lien : www.example.test et contact@example.test',
 		].join('\n')
 
-		expect(extraireLesLiens('', texte)).toEqual([
+		expect(extractLinks('', texte)).toEqual([
 			`${SITE}/auth/verification?jeton=abc&retour=profil`,
 			`${SITE}/auth/signin`,
 			`${SITE}/contact`,
@@ -129,16 +129,16 @@ describe('Les liens d’un mail', () => {
 		const html = `<a href="${SITE}/b">B</a> <a href="${SITE}/a?x=1&amp;y=2">A</a> <a href="${SITE}/b">B encore</a>`
 		const texte = `A : ${SITE}/a?x=1&y=2\nC : ${SITE}/c\nB : ${SITE}/b`
 
-		expect(extraireLesLiens(html, texte)).toEqual([`${SITE}/b`, `${SITE}/a?x=1&y=2`, `${SITE}/c`])
+		expect(extractLinks(html, texte)).toEqual([`${SITE}/b`, `${SITE}/a?x=1&y=2`, `${SITE}/c`])
 	})
 
 	test('un mail sans lien n’en a aucun', () => {
-		expect(extraireLesLiens('<p>Bonjour &amp; bienvenue</p>', 'Bonjour & bienvenue')).toEqual([])
-		expect(extraireLesLiens('')).toEqual([])
+		expect(extractLinks('<p>Bonjour &amp; bienvenue</p>', 'Bonjour & bienvenue')).toEqual([])
+		expect(extractLinks('')).toEqual([])
 	})
 
 	test('une entité inconnue ou hors limites est laissée telle quelle', () => {
-		expect(extraireLesLiens(`<a href="${SITE}/a?x=&inconnue;&#x110000;&#9999999;">A</a>`)).toEqual([
+		expect(extractLinks(`<a href="${SITE}/a?x=&inconnue;&#x110000;&#9999999;">A</a>`)).toEqual([
 			`${SITE}/a?x=&inconnue;&#x110000;&#9999999;`,
 		])
 	})
@@ -151,24 +151,24 @@ describe('Le lien d’un mail vers une page', () => {
 	}
 
 	test('par son chemin exact, ou par un motif', () => {
-		expect(lienDuMail(mail, '/auth/reinitialiser')).toBe(`${SITE}/auth/reinitialiser?code=jeton-temoin`)
-		expect(lienDuMail(mail, '/contact')).toBe(`${SITE}/contact`)
-		expect(lienDuMail(mail, /\/aide$/)).toBe(`${SITE}/auth/reinitialiser/aide`)
+		expect(mailLink(mail, '/auth/reinitialiser')).toBe(`${SITE}/auth/reinitialiser?code=jeton-temoin`)
+		expect(mailLink(mail, '/contact')).toBe(`${SITE}/contact`)
+		expect(mailLink(mail, /\/aide$/)).toBe(`${SITE}/auth/reinitialiser/aide`)
 	})
 
 	test('aucun lien vers cette page : l’erreur liste les liens du mail, sans leurs paramètres', () => {
-		expect(() => lienDuMail(mail, '/auth/verification')).toThrow(
+		expect(() => mailLink(mail, '/auth/verification')).toThrow(
 			`Aucun lien vers « /auth/verification » dans le mail « Réinitialise ton mot de passe ». Ses liens, sans leurs paramètres : ${SITE}/auth/reinitialiser, ${SITE}/contact, ${SITE}/auth/reinitialiser/aide.`
 		)
-		expect(() => lienDuMail(mail, /verification/)).toThrow(
+		expect(() => mailLink(mail, /verification/)).toThrow(
 			`Aucun lien qui corresponde à /verification/ dans le mail « Réinitialise ton mot de passe ». Ses liens, sans leurs paramètres : ${SITE}/auth/reinitialiser, `
 		)
 		// A token read in a mail is never copied into a message.
-		expect(() => lienDuMail(mail, /verification/)).not.toThrow(/jeton-temoin/)
+		expect(() => mailLink(mail, /verification/)).not.toThrow(/jeton-temoin/)
 	})
 
 	test('un mail sans lien le dit', () => {
-		expect(() => lienDuMail({ sujet: 'Bienvenue', liens: [] }, '/auth')).toThrow(
+		expect(() => mailLink({ sujet: 'Bienvenue', liens: [] }, '/auth')).toThrow(
 			'Aucun lien vers « /auth » dans le mail « Bienvenue ». Il ne contient aucun lien.'
 		)
 	})
@@ -176,7 +176,7 @@ describe('Le lien d’un mail vers une page', () => {
 
 describe('Le client ne lit et ne vide que le capteur du banc de son instance', () => {
 	test('le capteur du banc est reconnu : c’est celui de .env.test', () => {
-		expect(capteurDuBanc(BANC)).toEqual({
+		expect(benchSink(BANC)).toEqual({
 			service: 'capteur de mails',
 			instance: { nom: 'my-makeup-test', decalage: 0 },
 			api: 'http://127.0.0.1:8025',
@@ -184,10 +184,10 @@ describe('Le client ne lit et ne vide que le capteur du banc de son instance', (
 	})
 
 	test('sans capteur réglé, tout s’arrête avec la commande à lancer', () => {
-		expect(refus(() => capteurDuBanc({}))).toBe(
-			'Aucun banc de test n’est réglé (MAILPIT_URL manque) : le capteur de mails n’est ni lu ni vidé. Démarre le banc par « bun run banc:up », puis lance les tests par « bun run test:integration ».'
+		expect(refus(() => benchSink({}))).toBe(
+			'Aucun banc de test n’est réglé (MAILPIT_URL manque) : le capteur de mails n’est ni lu ni vidé. Démarre le banc par « bun run bench:up », puis lance les tests par « bun run test:integration ».'
 		)
-		expect(refus(() => capteurDuBanc({ ...BANC, SMTP_PORT: '' }))).toStartWith(
+		expect(refus(() => benchSink({ ...BANC, SMTP_PORT: '' }))).toStartWith(
 			'Aucun banc de test n’est réglé (SMTP_PORT manque)'
 		)
 	})
@@ -199,33 +199,33 @@ describe('Le client ne lit et ne vide que le capteur du banc de son instance', (
 		['un relais qui n’est pas celui du capteur', { SMTP_HOST: 'smtp.example.test' }, 'SMTP_HOST'],
 		['le port SMTP d’une autre instance', { SMTP_PORT: '1045' }, 'SMTP_PORT'],
 	])('refuse %s, sans recopier l’adresse', (_cas, variables, nom) => {
-		const message = refus(() => capteurDuBanc({ ...BANC, ...variables }))
+		const message = refus(() => benchSink({ ...BANC, ...variables }))
 
 		expect(message).toStartWith(`${nom} ne désigne pas le capteur de mails du banc de test : il n’est ni lu ni vidé.`)
 		for (const valeur of Object.values(variables)) expect(message).not.toContain(valeur)
 	})
 
 	test('le capteur d’une instance décalée n’est reconnu que sous les variables de cette instance', () => {
-		const voisin = environnementDuBanc({ nom: 'voisin', decalage: 20 })
-		const instance = { BANC_INSTANCE: 'voisin', BANC_DECALAGE: '20' }
+		const voisin = benchEnvironment({ nom: 'voisin', decalage: 20 })
+		const instance = { BENCH_INSTANCE: 'voisin', BENCH_OFFSET: '20' }
 
-		expect(capteurDuBanc({ ...voisin, ...instance }).api).toBe('http://127.0.0.1:8045')
-		expect(() => capteurDuBanc(voisin)).toThrow(BancRefuse)
-		expect(refus(() => capteurDuBanc(instance))).toContain('« BANC_INSTANCE=voisin BANC_DECALAGE=20 bun run banc:up »')
+		expect(benchSink({ ...voisin, ...instance }).api).toBe('http://127.0.0.1:8045')
+		expect(() => benchSink(voisin)).toThrow(RefusedBench)
+		expect(refus(() => benchSink(instance))).toContain('« BENCH_INSTANCE=voisin BENCH_OFFSET=20 bun run bench:up »')
 	})
 
 	test('un capteur qui n’est pas sur ce poste est refusé avant toute requête, même donné à la main', async () => {
 		const distant = capteurA('https://mailpit.example.test')
 
 		for (const essai of [
-			() => viderLeCapteur({ capteur: distant }),
-			() => compterLesMails({ capteur: distant }),
-			() => mailsRecus('lea@example.test', { capteur: distant }),
-			() => attendreLeMail({ pour: 'lea@example.test' }, { capteur: distant }),
+			() => emptySink({ capteur: distant }),
+			() => countMails({ capteur: distant }),
+			() => mailReceived('lea@example.test', { capteur: distant }),
+			() => waitMail({ pour: 'lea@example.test' }, { capteur: distant }),
 		]) {
 			const { erreur } = await echec(essai())
 
-			expect(erreur).toBeInstanceOf(EnvironnementRefuse)
+			expect(erreur).toBeInstanceOf(RefusedEnvironment)
 			expect((erreur as Error).message).toStartWith('MAILPIT_URL refusée (hôte « mailpit.example.test »)')
 		}
 	})
@@ -233,7 +233,7 @@ describe('Le client ne lit et ne vide que le capteur du banc de son instance', (
 
 describe('Capteur arrêté ou muet : une erreur lisible en moins de 5 secondes', () => {
 	const MESSAGE = (hote: string) =>
-		`Le banc de test « banc-voisin » ne répond pas : capteur de mails (${hote}).\nDémarre-le d’abord : BANC_INSTANCE=banc-voisin BANC_DECALAGE=20 bun run banc:up`
+		`Le banc de test « banc-voisin » ne répond pas : capteur de mails (${hote}).\nDémarre-le d’abord : BENCH_INSTANCE=banc-voisin BENCH_OFFSET=20 bun run bench:up`
 
 	test('arrêté : la connexion est refusée, l’erreur nomme le service, son adresse et la commande', async () => {
 		const serveur = createServer()
@@ -241,10 +241,10 @@ describe('Capteur arrêté ou muet : une erreur lisible en moins de 5 secondes',
 		await new Promise(resolve => serveur.close(resolve))
 
 		const { erreur, dureeMs } = await echec(
-			attendreLeMail({ pour: 'lea@example.test' }, { capteur: capteurA(`http://127.0.0.1:${port}`) })
+			waitMail({ pour: 'lea@example.test' }, { capteur: capteurA(`http://127.0.0.1:${port}`) })
 		)
 
-		expect(erreur).toBeInstanceOf(BancRefuse)
+		expect(erreur).toBeInstanceOf(RefusedBench)
 		expect((erreur as Error).message).toBe(MESSAGE(`127.0.0.1:${port}`))
 		// Not after the wait for a mail: the first look at the mailbox is what fails.
 		expect(dureeMs).toBeLessThan(1000)
@@ -260,17 +260,17 @@ describe('Capteur arrêté ou muet : une erreur lisible en moins de 5 secondes',
 		})
 
 		const { erreur, dureeMs } = await echec(
-			attendreLeMail({ pour: 'lea@example.test' }, { capteur: capteurA(`http://127.0.0.1:${port}`) })
+			waitMail({ pour: 'lea@example.test' }, { capteur: capteurA(`http://127.0.0.1:${port}`) })
 		)
 
-		expect(erreur).toBeInstanceOf(BancRefuse)
+		expect(erreur).toBeInstanceOf(RefusedBench)
 		expect((erreur as Error).message).toBe(MESSAGE(`127.0.0.1:${port}`))
-		expect(dureeMs).toBeGreaterThanOrEqual(DELAI_D_UNE_REQUETE_MS - 100)
+		expect(dureeMs).toBeGreaterThanOrEqual(REQUEST_DELAY_MS - 100)
 		expect(dureeMs).toBeLessThan(5000)
 	}, 5000)
 
 	test('l’attente d’un mail et une demande sans réponse tiennent ensemble en moins de 5 secondes', () => {
-		expect(DELAI_D_ATTENTE_MS + DELAI_D_UNE_REQUETE_MS).toBeLessThan(5000)
+		expect(WAITING_DELAY_MS + REQUEST_DELAY_MS).toBeLessThan(5000)
 	})
 })
 
@@ -313,7 +313,7 @@ describe('Ce que le capteur répond', () => {
 			})
 		})
 
-		const { erreur } = await echec(attendreLeMail({ pour, sujet: 'Absent' }, { capteur, delaiMs: 0 }))
+		const { erreur } = await echec(waitMail({ pour, sujet: 'Absent' }, { capteur, delaiMs: 0 }))
 
 		expect(capteur.demandes).toEqual(['GET /api/v1/search', 'GET /api/v1/search', 'GET /api/v1/search'])
 		expect([...new Set(recherches)]).toEqual([`addressed:"${pour}"`])
@@ -321,7 +321,7 @@ describe('Ce que le capteur répond', () => {
 			`Aucun mail pour « ${pour} » dont le sujet soit « Absent » dans le capteur de mails au bout de 0 s. Cette adresse en a reçu 207, sous un autre sujet : « Mail 229 », « Mail 228 », `
 		)
 		// The most recent one is the one that is read, whatever the order of the answer.
-		expect((await attendreLeMail({ pour }, { capteur: avecLecture })).texte).toBe('Bonjour\nLéa')
+		expect((await waitMail({ pour }, { capteur: avecLecture })).texte).toBe('Bonjour\nLéa')
 		expect(lus).toEqual(['/api/v1/message/mail-229'])
 	})
 
@@ -338,7 +338,7 @@ describe('Ce que le capteur répond', () => {
 			'a répondu autre chose que prévu à la demande « chercher ».',
 		],
 	])('%s : l’erreur dit quel service, de quel banc, à quelle demande', async (_cas, repondre, fin) => {
-		const { erreur } = await echec(mailsRecus('lea@example.test', { capteur: fauxCapteur(repondre) }))
+		const { erreur } = await echec(mailReceived('lea@example.test', { capteur: fauxCapteur(repondre) }))
 
 		expect((erreur as Error).message).toBe(`Le capteur de mails du banc « faux-banc » ${fin}`)
 	})
@@ -346,7 +346,7 @@ describe('Ce que le capteur répond', () => {
 	test('une remise à zéro que le capteur refuse est une erreur', async () => {
 		const capteur = fauxCapteur(() => new Response('', { status: 503 }))
 
-		const { erreur } = await echec(viderLeCapteur({ capteur }))
+		const { erreur } = await echec(emptySink({ capteur }))
 
 		expect(capteur.demandes).toEqual(['DELETE /api/v1/messages'])
 		expect((erreur as Error).message).toBe(
@@ -358,7 +358,7 @@ describe('Ce que le capteur répond', () => {
 		const capteur = fauxCapteur(() => new Response('', { status: 500 }))
 
 		for (const pour of ['', 'lea', 'lea@example.test" OR "', 'Léa Martin <lea@example.test>'])
-			expect((await echec(mailsRecus(pour, { capteur }))).erreur).toEqual(
+			expect((await echec(mailReceived(pour, { capteur }))).erreur).toEqual(
 				new Error('Adresse illisible : une adresse entière est attendue.')
 			)
 		expect(capteur.demandes).toEqual([])

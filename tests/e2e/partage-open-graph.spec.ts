@@ -2,11 +2,11 @@ import { expect, test } from '@playwright/test'
 import sharp from 'sharp'
 import { placeProfile, profilePresent } from '../../src/demo-data/loading'
 import type { DemoProfile } from '../../src/demo-data/profiles'
-import { type ProfilDePage, poserLesProfilsDePage, profilsDePageSousLePrefixe } from '../fixtures/page-profiles'
-import { creerContenu, supprimerContenu } from '../support/public-pages'
-import { payloadDeTest } from '../support/payload-test'
-import { grandePhotoSynthetique } from '../support/synthetic-photo'
-import { sousVerrou } from '../support/lock'
+import { type PageProfile, pageProfilesUnderPrefix, setPageProfiles } from '../fixtures/page-profiles'
+import { underLock } from '../support/lock'
+import { testPayload } from '../support/payload-test'
+import { createContent, deleteContent } from '../support/public-pages'
+import { largePhotoSynthetic } from '../support/synthetic-photo'
 
 /**
  * The preview of a shared link, end to end (ticket 116; plan 02 E64 and U51): twelve addresses of every kind
@@ -20,8 +20,8 @@ const suffixe = Date.now().toString(36)
 const talents = [`essai-og-talent-a-${suffixe}`, `essai-og-talent-b-${suffixe}`]
 const articles = [`essai-og-article-a-${suffixe}`, `essai-og-article-b-${suffixe}`]
 const identifiants: { collection: 'talents' | 'articles'; id: number }[] = []
-let profils: ReadonlyMap<string, ProfilDePage>
-let grande: ProfilDePage
+let profils: ReadonlyMap<string, PageProfile>
+let grande: PageProfile
 
 /** The big-photo profile: a variant of the reference type with one very large photo and no gallery. */
 function typeDeLaGrandePhoto(base: DemoProfile): DemoProfile {
@@ -38,7 +38,7 @@ test.describe.configure({ mode: 'serial' })
 
 test.beforeAll(async ({ request }) => {
 	test.setTimeout(240_000)
-	const types = profilsDePageSousLePrefixe('Og')
+	const types = pageProfilesUnderPrefix('Og')
 	const choisis = new Map(
 		['reference', 'ville-voisine', 'textes-maximaux', 'actif-non-publiable'].map(cle => {
 			const type = types.get(cle)
@@ -46,21 +46,21 @@ test.beforeAll(async ({ request }) => {
 			return [cle, type] as const
 		})
 	)
-	profils = await poserLesProfilsDePage(choisis)
+	profils = await setPageProfiles(choisis)
 	const base = types.get('reference')
 	if (!base) throw new Error('pas de profil de référence')
 	const type = typeDeLaGrandePhoto(base)
-	const octets = await grandePhotoSynthetique()
+	const octets = await largePhotoSynthetic()
 	expect(octets.length, 'l’original doit peser bien plus que 300 Ko').toBeGreaterThan(POIDS_MAX * 4)
-	const posee = await sousVerrou('profil-og-grande-photo', async () => {
-		const payload = await payloadDeTest()
+	const posee = await underLock('profil-og-grande-photo', async () => {
+		const payload = await testPayload()
 		return (await profilePresent(payload, type)) ?? (await placeProfile(payload, type, async () => octets, false))
 	})
 	grande = { id: posee.profil, slug: posee.slug, type }
 	for (const [rang, slug] of talents.entries())
 		identifiants.push({
 			collection: 'talents',
-			id: await creerContenu(request, 'talents', {
+			id: await createContent(request, 'talents', {
 				title: `Talent ${rang} ${suffixe}`,
 				slug,
 				seo_title: `Le maquillage fictif ${rang} ${suffixe}`,
@@ -72,14 +72,14 @@ test.beforeAll(async ({ request }) => {
 	for (const slug of articles)
 		identifiants.push({
 			collection: 'articles',
-			id: await creerContenu(request, 'articles', { title: `Essai ${slug}`, slug, _status: 'published' }),
+			id: await createContent(request, 'articles', { title: `Essai ${slug}`, slug, _status: 'published' }),
 		})
 })
 
 test.afterAll(async ({ request }) => {
 	test.setTimeout(180_000)
-	for (const { collection, id } of identifiants) await supprimerContenu(request, collection, id)
-	const payload = await payloadDeTest()
+	for (const { collection, id } of identifiants) await deleteContent(request, collection, id)
+	const payload = await testPayload()
 	for (const { id } of [...(profils?.values() ?? []), ...(grande ? [grande] : [])]) {
 		const profil = await payload
 			.findByID({ collection: 'profiles', id, depth: 0, select: { pro: true } })

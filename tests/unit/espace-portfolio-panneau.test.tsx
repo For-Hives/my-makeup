@@ -5,8 +5,8 @@ import type { DashboardPhoto } from '@/lib/dashboard/photos'
 import type { FileUploadResult } from '@/lib/dashboard/photos-upload'
 import { UNCERTAIN_RESULT_MESSAGE } from '@/lib/dashboard/photos-upload'
 import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
-import { choisirDesFichiers } from '../support/pick-files'
-import { ouvrirFenetre } from '../support/dom-react'
+import { openWindow } from '../support/dom-react'
+import { pickFiles } from '../support/pick-files'
 
 /**
  * The panel of the portfolio, adding photos (ticket 135; plan 02 E34, E36, U80, rule L6): several
@@ -14,7 +14,7 @@ import { ouvrirFenetre } from '../support/dom-react'
  * without losing the others. The browser work, the network and the server action are fakes.
  */
 
-const fenetre = ouvrirFenetre()
+const fenetre = openWindow()
 
 const photoDeLEspace = (id: number): DashboardPhoto => ({
 	id,
@@ -90,7 +90,7 @@ function banc(
 const dialogue = () => fenetre.w.document.querySelector('[role="dialog"]')
 const champ = () => fenetre.champ('Ajouter des photos') as HTMLInputElement
 const choisir = (...noms: string[]) =>
-	choisirDesFichiers(
+	pickFiles(
 		fenetre,
 		champ(),
 		noms.map(nom => source(nom))
@@ -166,9 +166,9 @@ describe('L6 : le même fichier choisi deux fois est refusé, et le refus est di
 		const b = banc()
 		await b.monter()
 		const fichier = source('a.jpg')
-		await choisirDesFichiers(fenetre, champ(), [fichier])
+		await pickFiles(fenetre, champ(), [fichier])
 		await fenetre.attendre(() => images().length === 1)
-		await choisirDesFichiers(fenetre, champ(), [fichier])
+		await pickFiles(fenetre, champ(), [fichier])
 		await fenetre.attendre(() => alertes().includes(MESSAGES_PHOTO.doublon))
 
 		expect(images()).toHaveLength(1)
@@ -365,7 +365,7 @@ describe('L1 : un identifiant par ligne', () => {
 		})
 		await b.monter()
 		const [premiere, seconde] = [source('a.jpg'), source('a.jpg')]
-		await choisirDesFichiers(fenetre, champ(), [premiere, seconde])
+		await pickFiles(fenetre, champ(), [premiere, seconde])
 		await fenetre.attendre(() => images().length === 2)
 		await retirer(1)
 

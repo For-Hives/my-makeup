@@ -4,7 +4,7 @@ import { IdentityEditor, type IdentityUpload } from '@/components/dashboard/Iden
 import type { DraftStorage } from '@/lib/dashboard/guarded-input'
 import type { IdentityValues } from '@/lib/dashboard/identity'
 import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
-import { ouvrirFenetre } from '../support/dom-react'
+import { openWindow } from '../support/dom-react'
 
 /**
  * The panel of the identity (tickets 119 and 120; plan 02 E30, E31, E68): bounds, a failure that
@@ -12,7 +12,7 @@ import { ouvrirFenetre } from '../support/dom-react'
  * Enter, and the keyboard inside the dialog. The send function is a fake: no network.
  */
 
-const fenetre = ouvrirFenetre()
+const fenetre = openWindow()
 
 const VALEURS: IdentityValues = { prenom: 'Léa', nom: 'Fictive', nomArtiste: '', specialite: 'Teint' }
 

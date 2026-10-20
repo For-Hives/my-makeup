@@ -4,21 +4,21 @@ import { replaceLegacyHash } from '@/lib/auth/legacy'
 import { createRateLimit } from '@/lib/auth/rate-limit'
 import { signInWithPassword } from '@/lib/auth/sign-in'
 import { openWithPassword } from '@/lib/auth/token'
-import { creerCompte, MOT_DE_PASSE_HERITE_DE_FIXTURE } from '../support/account-factory'
-import { payloadDeTest, viderLaBase } from '../support/payload-test'
-import { appelerRest } from '../support/rest'
+import { createAccount, FIXTURE_LEGACY_PASSWORD } from '../support/account-factory'
+import { emptyBase, testPayload } from '../support/payload-test'
+import { callRest } from '../support/rest'
 
 /**
  * The sign-in of an account of the old site (tickets 087 and 088; plan 02 I15). The browser side,
  * the Server Action and the cookie are played by tests/e2e/connexion-heritee.spec.ts (E73).
  */
 
-afterEach(viderLaBase)
+afterEach(emptyBase)
 
 const adresse = (n: number) => new Headers({ 'x-forwarded-for': `192.0.2.${n}` })
 
 async function brancher(nomDuFrein: string) {
-	const payload = await payloadDeTest()
+	const payload = await testPayload()
 	const appels = { herite: 0 }
 	return {
 		payload,
@@ -43,17 +43,17 @@ interface Ligne {
 }
 
 async function ligneDuCompte(id: number | string): Promise<Ligne> {
-	const ligne = await (await payloadDeTest()).db.findOne<Ligne>({ collection: 'pros', where: { id: { equals: id } } })
+	const ligne = await (await testPayload()).db.findOne<Ligne>({ collection: 'pros', where: { id: { equals: id } } })
 	if (!ligne) throw new Error('le compte n’est pas en base')
 	return ligne
 }
 
 const rangees = async (code: string) =>
-	(await (await payloadDeTest()).find({ collection: 'auth-events', depth: 0, where: { code: { equals: code } } })).docs
+	(await (await testPayload()).find({ collection: 'auth-events', depth: 0, where: { code: { equals: code } } })).docs
 
 describe('I15 : un compte migré (bcrypt) se connecte, son hash est remplacé, la seconde connexion est en pbkdf2', () => {
 	test('le mot de passe habituel ouvre le compte, une fois, puis le hash hérité n’existe plus', async () => {
-		const compte = await creerCompte('reprise-avec-hash')
+		const compte = await createAccount('reprise-avec-hash')
 		const { entrees, appels, frein } = await brancher('essai-int-herite-1')
 		const avant = await ligneDuCompte(compte.id)
 		expect(avant.legacyBcrypt).toStartWith('$2a$10$')
@@ -62,7 +62,7 @@ describe('I15 : un compte migré (bcrypt) se connecte, son hash est remplacé, l
 			...entrees,
 			headers: adresse(21),
 			email: compte.email,
-			password: MOT_DE_PASSE_HERITE_DE_FIXTURE,
+			password: FIXTURE_LEGACY_PASSWORD,
 			frein,
 		})
 
@@ -80,7 +80,7 @@ describe('I15 : un compte migré (bcrypt) se connecte, son hash est remplacé, l
 			...entrees,
 			headers: adresse(21),
 			email: compte.email,
-			password: MOT_DE_PASSE_HERITE_DE_FIXTURE,
+			password: FIXTURE_LEGACY_PASSWORD,
 			frein,
 		})
 		expect(seconde.ok).toBe(true)
@@ -90,7 +90,7 @@ describe('I15 : un compte migré (bcrypt) se connecte, son hash est remplacé, l
 	})
 
 	test('un mauvais mot de passe : message générique, hash hérité et mot de passe Payload intacts', async () => {
-		const compte = await creerCompte('reprise-avec-hash')
+		const compte = await createAccount('reprise-avec-hash')
 		const { entrees, frein } = await brancher('essai-int-herite-2')
 		const avant = await ligneDuCompte(compte.id)
 
@@ -110,13 +110,13 @@ describe('I15 : un compte migré (bcrypt) se connecte, son hash est remplacé, l
 	})
 
 	test('l’adresse s’écrit comme on veut : casse et espaces de bord', async () => {
-		const compte = await creerCompte('reprise-avec-hash')
+		const compte = await createAccount('reprise-avec-hash')
 		const { entrees, frein } = await brancher('essai-int-herite-3')
 		const r = await signInWithPassword({
 			...entrees,
 			headers: adresse(23),
 			email: ` ${compte.email.toUpperCase()} `,
-			password: MOT_DE_PASSE_HERITE_DE_FIXTURE,
+			password: FIXTURE_LEGACY_PASSWORD,
 			frein,
 		})
 		expect(r.ok).toBe(true)
@@ -124,22 +124,22 @@ describe('I15 : un compte migré (bcrypt) se connecte, son hash est remplacé, l
 
 	test('un compte Google avec hash se connecte aussi par son ancien mot de passe ; sans hash, il est refusé', async () => {
 		const [avecHash, sansHash] = await Promise.all([
-			creerCompte('reprise-google-avec-hash'),
-			creerCompte('reprise-google'),
+			createAccount('reprise-google-avec-hash'),
+			createAccount('reprise-google'),
 		])
 		const { entrees, frein } = await brancher('essai-int-herite-4')
 		const juste = await signInWithPassword({
 			...entrees,
 			headers: adresse(24),
 			email: avecHash.email,
-			password: MOT_DE_PASSE_HERITE_DE_FIXTURE,
+			password: FIXTURE_LEGACY_PASSWORD,
 			frein,
 		})
 		const refus = await signInWithPassword({
 			...entrees,
 			headers: adresse(24),
 			email: sansHash.email,
-			password: MOT_DE_PASSE_HERITE_DE_FIXTURE,
+			password: FIXTURE_LEGACY_PASSWORD,
 			frein,
 		})
 		expect(juste.ok).toBe(true)
@@ -147,13 +147,13 @@ describe('I15 : un compte migré (bcrypt) se connecte, son hash est remplacé, l
 	})
 
 	test('le hash hérité ne sort ni par REST ni par l’API locale, pour un admin comme pour la propriétaire', async () => {
-		const [admin, compte] = await Promise.all([creerCompte('admin'), creerCompte('reprise-avec-hash')])
+		const [admin, compte] = await Promise.all([createAccount('admin'), createAccount('reprise-avec-hash')])
 		const hash = (await ligneDuCompte(compte.id)).legacyBcrypt ?? ''
 		expect(hash).not.toBe('')
 
-		const rest = await appelerRest('GET', `/api/pros/${compte.id}`, { enTetes: admin.session.enTetes })
-		const liste = await appelerRest('GET', '/api/pros?limit=100', { enTetes: admin.session.enTetes })
-		const payload = await payloadDeTest()
+		const rest = await callRest('GET', `/api/pros/${compte.id}`, { enTetes: admin.session.enTetes })
+		const liste = await callRest('GET', '/api/pros?limit=100', { enTetes: admin.session.enTetes })
+		const payload = await testPayload()
 		const locale = await payload.findByID({
 			collection: 'pros',
 			id: compte.id,
@@ -168,9 +168,9 @@ describe('I15 : un compte migré (bcrypt) se connecte, son hash est remplacé, l
 	})
 
 	test('un mot de passe choisi autrement (admin, API locale) efface le hash hérité : l’ancien ne marche plus, le nouveau si', async () => {
-		const compte = await creerCompte('reprise-avec-hash')
+		const compte = await createAccount('reprise-avec-hash')
 		const { entrees, appels, frein } = await brancher('essai-int-herite-6')
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const nouveau = 'nouveau-mot-de-passe-42'
 
 		await payload.update({ collection: 'pros', id: compte.id, data: { password: nouveau }, overrideAccess: true })
@@ -180,7 +180,7 @@ describe('I15 : un compte migré (bcrypt) se connecte, son hash est remplacé, l
 			...entrees,
 			headers: adresse(26),
 			email: compte.email,
-			password: MOT_DE_PASSE_HERITE_DE_FIXTURE,
+			password: FIXTURE_LEGACY_PASSWORD,
 			frein,
 		})
 		const choisi = await signInWithPassword({
@@ -197,8 +197,8 @@ describe('I15 : un compte migré (bcrypt) se connecte, son hash est remplacé, l
 	})
 
 	test('un mot de passe défini par l’admin en REST efface aussi le hash hérité', async () => {
-		const [admin, compte] = await Promise.all([creerCompte('admin'), creerCompte('reprise-avec-hash')])
-		const { statut } = await appelerRest('PATCH', `/api/pros/${compte.id}`, {
+		const [admin, compte] = await Promise.all([createAccount('admin'), createAccount('reprise-avec-hash')])
+		const { statut } = await callRest('PATCH', `/api/pros/${compte.id}`, {
 			corps: { password: 'choisi-par-l-admin-42' },
 			enTetes: admin.session.enTetes,
 		})
@@ -207,9 +207,9 @@ describe('I15 : un compte migré (bcrypt) se connecte, son hash est remplacé, l
 	})
 
 	test('le lien de réinitialisation efface le hash hérité : l’ancien mot de passe ne marche plus', async () => {
-		const compte = await creerCompte('reprise-avec-hash')
+		const compte = await createAccount('reprise-avec-hash')
 		const { entrees, frein } = await brancher('essai-int-herite-7')
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const nouveau = 'apres-reinitialisation-42'
 
 		const jeton = await payload.forgotPassword({
@@ -224,7 +224,7 @@ describe('I15 : un compte migré (bcrypt) se connecte, son hash est remplacé, l
 			...entrees,
 			headers: adresse(27),
 			email: compte.email,
-			password: MOT_DE_PASSE_HERITE_DE_FIXTURE,
+			password: FIXTURE_LEGACY_PASSWORD,
 			frein,
 		})
 		const choisi = await signInWithPassword({
@@ -239,9 +239,9 @@ describe('I15 : un compte migré (bcrypt) se connecte, son hash est remplacé, l
 	})
 
 	test('la porte REST native ne connaît pas le chemin hérité : le compte y reçoit un refus', async () => {
-		const compte = await creerCompte('reprise-avec-hash')
-		const { statut } = await appelerRest('POST', '/api/pros/login', {
-			corps: { email: compte.email, password: MOT_DE_PASSE_HERITE_DE_FIXTURE },
+		const compte = await createAccount('reprise-avec-hash')
+		const { statut } = await callRest('POST', '/api/pros/login', {
+			corps: { email: compte.email, password: FIXTURE_LEGACY_PASSWORD },
 			enTetes: { 'x-forwarded-for': '192.0.2.25' },
 		})
 		expect(statut).toBe(401)
@@ -251,12 +251,12 @@ describe('I15 : un compte migré (bcrypt) se connecte, son hash est remplacé, l
 
 describe('088 : la porte REST répond aux refus avec le même plancher et la même réponse', () => {
 	test('adresse inconnue, mauvais mot de passe, compte hérité : 401, même corps, jamais avant 300 ms', async () => {
-		const [connu, herite] = await Promise.all([creerCompte('maquilleuse'), creerCompte('reprise-avec-hash')])
+		const [connu, herite] = await Promise.all([createAccount('maquilleuse'), createAccount('reprise-avec-hash')])
 		const essais = ['personne@example.test', connu.email, herite.email]
 		const reponses: { statut: number; texte: string; duree: number }[] = []
 		for (const email of essais) {
 			const debut = performance.now()
-			const { statut, texte } = await appelerRest('POST', '/api/pros/login', {
+			const { statut, texte } = await callRest('POST', '/api/pros/login', {
 				corps: { email, password: 'pas-le-bon' },
 				enTetes: { 'x-forwarded-for': '192.0.2.26' },
 			})

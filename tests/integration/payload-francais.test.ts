@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from 'bun:test'
-import { creerCompte } from '../support/account-factory'
-import { payloadDeTest, viderLaBase } from '../support/payload-test'
-import { appelerRest } from '../support/rest'
+import { createAccount } from '../support/account-factory'
+import { emptyBase, testPayload } from '../support/payload-test'
+import { callRest } from '../support/rest'
 
 /**
  * Payload answers in French only (ticket 221): the envelope of a refusal, its own refusals and its
@@ -10,7 +10,7 @@ import { appelerRest } from '../support/rest'
  * (tests/e2e/administration-francais.spec.ts).
  */
 
-afterEach(viderLaBase)
+afterEach(emptyBase)
 
 /** The start of the envelope of a refusal, in Payload's French. */
 const ENVELOPPE = 'Le champ suivant n’est pas valide'
@@ -31,8 +31,8 @@ const messagesDesChamps = (corps: unknown): string[] =>
 
 /** A makeup artist with her empty profile and her session. */
 async function maquilleuse() {
-	const compte = await creerCompte('maquilleuse')
-	const payload = await payloadDeTest()
+	const compte = await createAccount('maquilleuse')
+	const payload = await testPayload()
 	const [profil] = (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } }))
 		.docs
 	if (!profil) throw new Error('La fabrique devait créer le profil de la maquilleuse.')
@@ -46,7 +46,7 @@ describe('REST : l’enveloppe d’un refus est en français, même pour une req
 
 		const langues: Record<string, string>[] = [{}, { 'Accept-Language': 'en' }, { 'Accept-Language': 'en-US,en;q=0.9' }]
 		for (const langue of langues) {
-			const { statut, corps, texte } = await appelerRest('PATCH', `/api/profiles/${id}`, {
+			const { statut, corps, texte } = await callRest('PATCH', `/api/profiles/${id}`, {
 				enTetes: { ...compte.session.enTetes, ...langue },
 				corps: { contactDetails: { phone: TELEPHONE_TROP_LONG } },
 			})
@@ -56,7 +56,7 @@ describe('REST : l’enveloppe d’un refus est en français, même pour une req
 			expect(texte).not.toContain('The following')
 		}
 		// The cookie of the admin panel's language asks for English too: French all the same.
-		const { corps } = await appelerRest('PATCH', `/api/profiles/${id}`, {
+		const { corps } = await callRest('PATCH', `/api/profiles/${id}`, {
 			enTetes: { ...compte.session.enTetes, Cookie: `${compte.session.enTetes.Cookie}; payload-lng=en` },
 			corps: { contactDetails: { phone: TELEPHONE_TROP_LONG } },
 		})
@@ -67,7 +67,7 @@ describe('REST : l’enveloppe d’un refus est en français, même pour une req
 		expect(PRENOM_TROP_LONG).toHaveLength(71)
 		const { compte, id } = await maquilleuse()
 
-		const { statut, corps, texte } = await appelerRest('PATCH', `/api/profiles/${id}`, {
+		const { statut, corps, texte } = await callRest('PATCH', `/api/profiles/${id}`, {
 			enTetes: { ...compte.session.enTetes, 'Accept-Language': 'en' },
 			corps: { firstName: PRENOM_TROP_LONG },
 		})
@@ -78,7 +78,7 @@ describe('REST : l’enveloppe d’un refus est en français, même pour une req
 			'Cette valeur doit être inférieure à la longueur maximale de 70 caractères.',
 		])
 		expect(texte).not.toContain('This value must be shorter')
-		expect((await (await payloadDeTest()).findByID({ collection: 'profiles', id, depth: 0 })).firstName).not.toBe(
+		expect((await (await testPayload()).findByID({ collection: 'profiles', id, depth: 0 })).firstName).not.toBe(
 			PRENOM_TROP_LONG
 		)
 	})
@@ -86,7 +86,7 @@ describe('REST : l’enveloppe d’un refus est en français, même pour une req
 	test('POST anonyme sur /api/pros/first-register : « Vous n’êtes pas autorisé à effectuer cette action. »', async () => {
 		const langues: Record<string, string>[] = [{}, { 'Accept-Language': 'en' }]
 		for (const langue of langues) {
-			const { statut, corps } = await appelerRest('POST', '/api/pros/first-register', {
+			const { statut, corps } = await callRest('POST', '/api/pros/first-register', {
 				enTetes: langue,
 				corps: { email: `anonyme-${crypto.randomUUID()}@example.test`, password: crypto.randomUUID() },
 			})
@@ -102,7 +102,7 @@ describe('REST : l’enveloppe d’un refus est en français, même pour une req
 describe('API locale, règles actives : la même écriture lève une erreur en français', () => {
 	test('la propriétaire enregistre un téléphone de 21 caractères : le message de l’erreur est en français', async () => {
 		const { compte, id } = await maquilleuse()
-		const payload = await payloadDeTest()
+		const payload = await testPayload()
 		const proprietaire = {
 			...(await payload.findByID({ collection: 'pros', id: Number(compte.id) })),
 			collection: 'pros' as const,

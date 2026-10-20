@@ -1,11 +1,11 @@
 import { z } from 'zod'
 
 /** The schema of the structured data of a profile page (SEO-26), strict: a key it does not know fails. Shared by U47-U50 and E65. */
-const adresse = z.string().regex(/^https?:\/\/[^\s]+$/)
-const texteNonVide = z.string().min(1)
+const url = z.string().regex(/^https?:\/\/[^\s]+$/)
+const textNotEmpty = z.string().min(1)
 
 /** What the page promises search engines (SEO-26), strict: a key the schema does not know fails. */
-const schemaOffre = z.strictObject({
+const schemaOffer = z.strictObject({
 	'@type': z.literal('Offer'),
 	priceCurrency: z.literal('EUR').optional(),
 	price: z.number().positive().optional(),
@@ -18,52 +18,52 @@ const schemaOffre = z.strictObject({
 		.optional(),
 	itemOffered: z.strictObject({
 		'@type': z.literal('Service'),
-		name: texteNonVide,
-		description: texteNonVide.optional(),
-		serviceType: texteNonVide.optional(),
-		areaServed: z.strictObject({ '@type': z.literal('City'), name: texteNonVide }).optional(),
-		provider: z.strictObject({ '@id': adresse }),
+		name: textNotEmpty,
+		description: textNotEmpty.optional(),
+		serviceType: textNotEmpty.optional(),
+		areaServed: z.strictObject({ '@type': z.literal('City'), name: textNotEmpty }).optional(),
+		provider: z.strictObject({ '@id': url }),
 	}),
 })
 
-const schemaPersonne = z.strictObject({
+const schemaPerson = z.strictObject({
 	'@type': z.literal('Person'),
-	'@id': adresse,
-	name: texteNonVide,
-	url: adresse,
-	image: adresse.optional(),
-	jobTitle: texteNonVide,
-	description: texteNonVide.optional(),
-	areaServed: z.strictObject({ '@type': z.literal('City'), name: texteNonVide }).optional(),
-	knowsAbout: z.array(texteNonVide).max(10).optional(),
-	knowsLanguage: z.array(texteNonVide).optional(),
-	sameAs: z.array(adresse).optional(),
-	makesOffer: z.array(schemaOffre).optional(),
+	'@id': url,
+	name: textNotEmpty,
+	url: url,
+	image: url.optional(),
+	jobTitle: textNotEmpty,
+	description: textNotEmpty.optional(),
+	areaServed: z.strictObject({ '@type': z.literal('City'), name: textNotEmpty }).optional(),
+	knowsAbout: z.array(textNotEmpty).max(10).optional(),
+	knowsLanguage: z.array(textNotEmpty).optional(),
+	sameAs: z.array(url).optional(),
+	makesOffer: z.array(schemaOffer).optional(),
 })
 
-const schemaFil = z.strictObject({
+const schemaThread = z.strictObject({
 	'@type': z.literal('BreadcrumbList'),
 	itemListElement: z.array(
 		z.strictObject({
 			'@type': z.literal('ListItem'),
 			position: z.number().int().positive(),
-			name: texteNonVide,
-			item: adresse,
+			name: textNotEmpty,
+			item: url,
 		})
 	),
 })
 
 const schemaPage = z.strictObject({
 	'@type': z.literal('ProfilePage'),
-	'@id': adresse,
-	url: adresse,
-	name: texteNonVide,
+	'@id': url,
+	url: url,
+	name: textNotEmpty,
 	inLanguage: z.literal('fr-FR'),
-	isPartOf: z.strictObject({ '@type': z.literal('WebSite'), name: texteNonVide, url: adresse }),
-	mainEntity: schemaPersonne,
+	isPartOf: z.strictObject({ '@type': z.literal('WebSite'), name: textNotEmpty, url: url }),
+	mainEntity: schemaPerson,
 })
 
-export const schemaDuProfil = z.strictObject({
+export const profileSchema = z.strictObject({
 	'@context': z.literal('https://schema.org'),
-	'@graph': z.union([z.tuple([schemaPage, schemaFil]), z.tuple([schemaFil])]),
+	'@graph': z.union([z.tuple([schemaPage, schemaThread]), z.tuple([schemaThread])]),
 })

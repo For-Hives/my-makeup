@@ -4,7 +4,7 @@ import type { PayloadRequest, RequestContext } from 'payload'
 import { outsideNextRequest, refresh } from '../../src/collections/revalidate'
 import { IMPORT_CONTEXT } from '../../src/lib/import-context'
 import { changeTargets, PUBLIC_PAGES, type PublicState, TAGS } from '../../src/lib/revalidate'
-import { espionnerLeCache } from '../support/cache-spy'
+import { spyCache } from '../support/cache-spy'
 
 /**
  * Ticket 047: which pages a save makes stale (src/lib/revalidate.ts), and the hooks that tell
@@ -114,7 +114,7 @@ describe('les crochets de Payload', () => {
 			{ id: 7, slug: 'zoe-lefevre', status: 'published' },
 		])
 
-		const { appels, chemins, etiquettes } = await espionnerLeCache(() => mettreAJour(req, {}))
+		const { appels, chemins, etiquettes } = await spyCache(() => mettreAJour(req, {}))
 
 		expect(findOne).toHaveBeenCalledTimes(2)
 		expect(chemins).toEqual(['/profil/zoe-lefevre', '/search', '/site-map', '/sitemap.xml'])
@@ -127,7 +127,7 @@ describe('les crochets de Payload', () => {
 		const { req, findOne } = requete([{ id: 7, slug: 'zoe-lefevre', status: 'published' }])
 		const context: RequestContext = { ...IMPORT_CONTEXT }
 
-		const { appels } = await espionnerLeCache(async () => {
+		const { appels } = await spyCache(async () => {
 			const { avant, apres, data } = await mettreAJour(req, context)
 			expect(avant).toBe(data)
 			expect(apres).toEqual({ id: 7 })
