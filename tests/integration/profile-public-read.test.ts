@@ -26,7 +26,7 @@ const RESERVE = {
 
 /**
  * What anyone but the owner and an admin reads of a published profile: its identity, its networks
- * (ticket 042), its photos (ticket 043), its lists (ticket 040), its zone (ticket 041), its state (ticket 044), the badge
+ * (ticket 042), its photos (ticket 043), its lists (ticket 040), its zone (tickets 041 and 259), its state (ticket 044), the badge
  * of the search and Payload's dates. A new public field of the profile is added here on purpose.
  */
 const PUBLIC_KEYS = [
@@ -35,6 +35,7 @@ const PUBLIC_KEYS = [
 	'available',
 	'city',
 	'completeness',
+	'countries',
 	'courses',
 	'createdAt',
 	'description',
@@ -55,7 +56,9 @@ const PUBLIC_KEYS = [
 	'slug',
 	'specialty',
 	'superArtist',
+	'town',
 	'updatedAt',
+	'zoneKind',
 ]
 
 /** The identifier of the old site is unique: each profile of a test gets its own. */
