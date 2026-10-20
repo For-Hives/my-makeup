@@ -194,7 +194,7 @@ describe('Après l’import de la source factice', () => {
 		expect(premier.collections.profiles?.statusesDifferingFromSource).toEqual([])
 		expect(Object.entries(statuts).filter(([, statut]) => statut === 'published')).toHaveLength(12)
 		expect(premier.gaps).toMatchObject({ 'profils-vides-brouillon': 1, 'slug-stocke': 12 })
-		expect(premier.parity?.profiles).toMatchObject({ expected: 13, equal: 13, statuts: { published: 12, draft: 1 } })
+		expect(premier.parity?.profiles).toMatchObject({ expected: 13, equal: 13, statuses: { published: 12, draft: 1 } })
 	})
 
 	test('second passage : 0 création, 0 mise à jour, et la source n’a pas bougé', async () => {

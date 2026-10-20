@@ -13,7 +13,7 @@
 export const CLEANUP_DAYS = 90
 
 /** The day of the switch, `YYYY-MM-DD`, read by the proxy. Unset: the cleaning has no end date. */
-export const CUTOVER_VARIABLE = 'BASCULE_LE'
+export const CUTOVER_VARIABLE = 'CUTOVER_DATE'
 
 /** A short-lived cookie of this site, set when the old cookies are expired away from the sign-in page. */
 export const MESSAGE_COOKIE = 'mm-signed-out'

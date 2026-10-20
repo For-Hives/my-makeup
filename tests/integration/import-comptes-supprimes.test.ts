@@ -123,7 +123,7 @@ describe('Un compte supprimé dans la v3 ne revient pas à un rejeu (ticket 227)
 			created: 0,
 			updated: 0,
 			refused: [],
-			supprimesDansLaV3: [LOCAL?.strapiId],
+			deletedInV3: [LOCAL?.strapiId],
 		})
 		expect(rapport.collections.profiles).toMatchObject({ created: 0, updated: 0, refused: [] })
 		expect(rapport.parity?.pros).toMatchObject({ different: [], missing: [], extra: [] })

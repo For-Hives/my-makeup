@@ -111,7 +111,7 @@ describe('à blanc, il lit et n’écrit rien', () => {
 		expect(issue).toEqual({ state: 'termine', code: 0 })
 		expect(journal).toContain('Import à blanc : rien n’est écrit.')
 		expect(journal).toContain('Talents : 3 à la source ; 3 créations annoncées')
-		expect(journal).toMatch(/Passage a-blanc fini, code 0\./)
+		expect(journal).toMatch(/Passage dry-run fini, code 0\./)
 		expect(await nombres()).toEqual(VIDE)
 		expect((await empreinteDeLaSource()).empreinte).toBe(empreinte)
 	})

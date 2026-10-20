@@ -4,7 +4,7 @@
  *
  * Two readers, one set of rules:
  * - tests/ci reads the Dockerfile and .dockerignore as text, on every pull request;
- * - scripts/image/controle.ts reads the image that was really built.
+ * - scripts/image/check.ts reads the image that was really built.
  */
 
 /**

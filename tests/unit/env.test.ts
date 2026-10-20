@@ -1005,8 +1005,9 @@ describe('the import of the old site runs on the site only, once per token (tick
 		expect(error.variables).toEqual(['STRAPI_SOURCE_URI'])
 	})
 
-	test('an old IMPORT_* name is refused at the start, with the new name, and its value is never shown', () => {
+	test('an old variable name is refused at the start, with the new name, and its value is never shown', () => {
 		expect(RENAMED_VARIABLES.map(([old]) => old).sort()).toEqual([
+			'BASCULE_LE',
 			'IMPORT_CIBLE_EN_SERVICE',
 			'IMPORT_COMMUNES',
 			'IMPORT_CONSENTEMENT_LE',

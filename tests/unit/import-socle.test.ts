@@ -154,12 +154,12 @@ describe('L9 (ticket 233) : --remote-target exige --expected-database, et la bas
 })
 
 describe('L1 (ticket 233) : les deux scripts qui écrivent dans une base ne lisent jamais le .env de travail', () => {
-	test('migration:import et admin:creer portent --no-env-file', () => {
+	test('migration:import et admin:create portent --no-env-file', () => {
 		const { scripts } = JSON.parse(readFileSync(path.join(import.meta.dir, '../../package.json'), 'utf8')) as {
 			scripts: Record<string, string>
 		}
 		expect(scripts['migration:import']).toBe('bun --no-env-file scripts/migration/import.ts')
-		expect(scripts['admin:creer']).toBe('bun --no-env-file scripts/admin/creer-admin.ts')
+		expect(scripts['admin:create']).toBe('bun --no-env-file scripts/admin/create-admin.ts')
 	})
 
 	test('banc:import (qui n’est pas migration:import) le porte aussi, et charge import.ts en direct', () => {

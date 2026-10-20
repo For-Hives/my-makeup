@@ -111,7 +111,7 @@ expect(await violationsGraves(page)).toEqual([])
 
 ## La recette de l'espace maquilleuse (ticket 142)
 
-`tests/e2e/espace-recette.spec.ts` se joue une fois, aux deux tailles, quand toutes les sections de l'espace sont livrées ; la CI le rejoue avec les autres essais, puis compte les orphelins (`bun run banc:rapprocher --hors-import`).
+`tests/e2e/espace-recette.spec.ts` se joue une fois, aux deux tailles, quand toutes les sections de l'espace sont livrées ; la CI le rejoue avec les autres essais, puis compte les orphelins (`bun run banc:rapprocher --outside-import`).
 
 - **E67, E68** : une maquilleuse au profil plein ouvre l'un après l'autre les 12 panneaux et la fenêtre de suppression. Pour chacun : 0 violation grave d'axe, Échap le ferme, le focus revient sur son bouton. La liste des boutons est comparée à celle de la page : un panneau ajouté sans entrer dans la recette fait échouer l'essai.
 - **E37** : la photo principale est changée deux fois par l'interface ; l'`og:image` du profil public change, et sert la nouvelle image.

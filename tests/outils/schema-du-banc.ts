@@ -21,7 +21,7 @@
  */
 
 import type { Payload } from 'payload'
-import { ambiguites, type Derive, type Instantane } from '../../scripts/ci/schema-drift'
+import { ambiguities, type Drift, type Snapshot } from '../../scripts/ci/schema-drift'
 import { BancRefuse } from './banc'
 
 /** The batch Payload gives to the row it writes when it pushes the schema of the code. */
@@ -42,7 +42,7 @@ export interface ConstatDuSchema {
 	/** Rows of `payload_migrations` written by a push of the schema (batch -1). */
 	lignesDeDeveloppement: number
 	/** What separates the database from the collections of the code. */
-	ecart: Derive
+	ecart: Drift
 }
 
 /** Who stops: the command of the integration tests, or the global setup of the end-to-end tests. */
@@ -60,7 +60,7 @@ interface AdaptateurDeDrizzle {
 	pool: { query: <Ligne>(texte: string, valeurs?: unknown[]) => Promise<{ rows: Ligne[] }> }
 	migrate: (options: { migrations: Migration[] }) => Promise<void>
 	requireDrizzleKit: () => {
-		generateDrizzleJson: (schema: unknown) => Instantane | Promise<Instantane>
+		generateDrizzleJson: (schema: unknown) => Snapshot | Promise<Snapshot>
 		pushSchema: (
 			schema: unknown,
 			drizzle: unknown,
@@ -164,7 +164,7 @@ const constatSansEcart = (lignes: number): ConstatDuSchema => ({
 })
 
 /** The tables, their columns and the enum types of the database, as a snapshot of drizzle-kit names them. */
-async function nomsDeLaBase(payload: Payload): Promise<Instantane> {
+async function nomsDeLaBase(payload: Payload): Promise<Snapshot> {
 	const { pool } = adaptateur(payload)
 	const { rows: colonnes } = await pool.query<{ table: string; colonne: string }>(
 		`SELECT c.table_name AS table, c.column_name AS colonne
@@ -233,11 +233,11 @@ async function instructionsUtiles(payload: Payload, instructions: string[]): Pro
  * side (a column renamed) is given at once, from the names alone: drizzle-kit would ask whether
  * one was renamed into the other, and wait for an answer.
  */
-export async function ecartAvecLeCode(payload: Payload): Promise<Derive> {
+export async function ecartAvecLeCode(payload: Payload): Promise<Drift> {
 	const db = adaptateur(payload)
 	const outils = db.requireDrizzleKit()
 	const duCode = await outils.generateDrizzleJson(db.schema)
-	const trouvees = ambiguites(await nomsDeLaBase(payload), duCode)
+	const trouvees = ambiguities(await nomsDeLaBase(payload), duCode)
 	if (trouvees.length > 0) return { instructions: [], ambiguites: trouvees }
 	const { statementsToExecute } = await outils.pushSchema(
 		db.schema,

@@ -210,7 +210,7 @@ describe('Les sections de chaque profil sont reprises dans leur ordre (ticket 06
 			).toEqual(attendues)
 		}
 		expect(premier.parity?.profiles).toMatchObject({ expected: 13, equal: 13, different: [], missing: [] })
-		expect(premier.collections.profiles).toMatchObject({ refused: [], liensSansLigne: [] })
+		expect(premier.collections.profiles).toMatchObject({ refused: [], linksWithoutRow: [] })
 	})
 
 	test('l’ordre est celui de la table de liens, jamais celui des identifiants ; une ligne en double reste en double', async () => {
@@ -278,9 +278,9 @@ describe('Les sections de chaque profil sont reprises dans leur ordre (ticket 06
 			(serviceOffers ?? []).flatMap(o => [o, ...(o.options ?? [])])
 		)
 		expect(prix).toMatchObject({
-			prix: lignesDePrix.length,
-			avecMontant: lignesDePrix.filter(({ priceFrom }) => priceFrom !== null).length,
-			offresChiffreesPerdues: [],
+			prices: lignesDePrix.length,
+			withAmount: lignesDePrix.filter(({ priceFrom }) => priceFrom !== null).length,
+			lostPricedOffers: [],
 		})
 		// Profile 23 (60 is read) is no écart; 22 (an option at 0,50 € / km, under 5 €) and 24 (« 2 h : 150 € ») are listed.
 		expect(prix?.unreadDigits).toEqual([22, 24])
@@ -421,7 +421,7 @@ describe('Un lien de liste qui ne nomme aucune ligne (SCHEMA.md §7)', () => {
 
 		const rapport = await importerSurLeBanc()
 
-		expect(rapport.collections.profiles).toMatchObject({ created: 0, updated: 0, liensSansLigne: [22] })
+		expect(rapport.collections.profiles).toMatchObject({ created: 0, updated: 0, linksWithoutRow: [22] })
 		expect(await profilsDeLaCible()).toEqual(avant)
 	})
 })

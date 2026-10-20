@@ -3,14 +3,14 @@
  * (« Image Docker »): no root, no runtime variable written in the image, migrations played
  * once, a health check that follows the database, and an image optimizer that resizes.
  *
- *   bun run image:controle [image]        default image: my-makeup:local
+ *   bun run image:check [image]        default image: my-makeup:local
  *
  * Optional environment:
- *   CONTROLE_IMAGE_NOM      prefix of the containers and of the network (default: mm-controle-image)
- *   CONTROLE_IMAGE_PORT     port of the application on 127.0.0.1 (default: a free one)
- *   CONTROLE_IMAGE_COMMIT   the commit given to the build as SOURCE_COMMIT: /api/health must
+ *   IMAGE_CHECK_NAME      prefix of the containers and of the network (default: mm-controle-image)
+ *   IMAGE_CHECK_PORT     port of the application on 127.0.0.1 (default: a free one)
+ *   IMAGE_CHECK_COMMIT   the commit given to the build as SOURCE_COMMIT: /api/health must
  *                           then show its first 7 characters
- *   CONTROLE_IMAGE_PHOTOS   the R2_PUBLIC_URL given to the build: the content policy must then name
+ *   IMAGE_CHECK_PHOTOS   the R2_PUBLIC_URL given to the build: the content policy must then name
  *                           this host and not the one of the live site (default: none was given)
  *
  * It needs the `docker` command and nothing else: the database is a container without any
@@ -123,7 +123,7 @@ export function expectedVersion(commit: string | undefined): string | undefined 
 	const value = commit?.trim() ?? ''
 	if (value === '') return undefined
 	if (!/^[0-9a-f]{7,40}$/i.test(value))
-		throw new CheckFailed('CONTROLE_IMAGE_COMMIT doit être un commit : 7 à 40 chiffres hexadécimaux.')
+		throw new CheckFailed('IMAGE_CHECK_COMMIT doit être un commit : 7 à 40 chiffres hexadécimaux.')
 	return value.slice(0, 7).toLowerCase()
 }
 
@@ -136,7 +136,7 @@ export function expectedPhotosOrigin(built: string | undefined): string {
 	try {
 		return mediaOrigin(built)
 	} catch {
-		throw new CheckFailed('CONTROLE_IMAGE_PHOTOS doit être une adresse https://HÔTE, sans chemin ni « / » final.')
+		throw new CheckFailed('IMAGE_CHECK_PHOTOS doit être une adresse https://HÔTE, sans chemin ni « / » final.')
 	}
 }
 
@@ -192,12 +192,12 @@ async function engineHealth(container: string): Promise<string | undefined> {
 
 async function main(): Promise<void> {
 	const image = process.argv[2] ?? DEFAULT_IMAGE
-	const prefix = process.env.CONTROLE_IMAGE_NOM?.trim() || DEFAULT_PREFIX
-	const wantedPort = process.env.CONTROLE_IMAGE_PORT?.trim() ?? ''
+	const prefix = process.env.IMAGE_CHECK_NAME?.trim() || DEFAULT_PREFIX
+	const wantedPort = process.env.IMAGE_CHECK_PORT?.trim() ?? ''
 	if (wantedPort !== '' && !/^\d{2,5}$/.test(wantedPort))
-		throw new CheckFailed('CONTROLE_IMAGE_PORT doit être un numéro de port.')
-	const version = expectedVersion(process.env.CONTROLE_IMAGE_COMMIT)
-	const photos = expectedPhotosOrigin(process.env.CONTROLE_IMAGE_PHOTOS)
+		throw new CheckFailed('IMAGE_CHECK_PORT doit être un numéro de port.')
+	const version = expectedVersion(process.env.IMAGE_CHECK_COMMIT)
+	const photos = expectedPhotosOrigin(process.env.IMAGE_CHECK_PHOTOS)
 	const names = { network: `${prefix}-net`, database: `${prefix}-pg`, first: `${prefix}-1`, second: `${prefix}-2` }
 	const read = (file: string) => readFileSync(path.join(ROOT, file), 'utf8')
 

@@ -88,8 +88,8 @@ describe('Critère 1 : une commande crée la source ; relancée, elle donne la m
 		expect(empreinte).toMatch(/^[0-9a-f]{64}$/)
 		expect(empreinteAffichee(second.sortie)).toBe(empreinte ?? '')
 		expect((await empreinteDeLaSource()).empreinte).toBe(empreinte ?? '')
-		// « --empreinte » reads it without touching anything.
-		const lue = await commande('--empreinte')
+		// « --fingerprint » reads it without touching anything.
+		const lue = await commande('--fingerprint')
 		expect(empreinteAffichee(lue.sortie)).toBe(empreinte ?? '')
 		// Numbers and fingerprints only: no hash, no email, no password.
 		for (const sortie of [premier.sortie, second.sortie, lue.sortie]) {

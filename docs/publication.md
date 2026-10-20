@@ -11,7 +11,7 @@ Chaque changement qu'une visiteuse ou une maquilleuse peut remarquer a sa note d
 Quand ton changement se remarque par rapport au site en ligne :
 
 ```sh
-bun run notes:ajouter ajout "Tu peux ajouter une vidéo à ta galerie."
+bun run notes:add ajout "Tu peux ajouter une vidéo à ta galerie."
 ```
 
 Le premier mot est le type de la note :
@@ -36,7 +36,7 @@ Les tests unitaires relisent tout le journal avec la même règle : une note fau
 ## Publier à blanc
 
 ```sh
-bun run release:publier --a-blanc
+bun run release:publish --dry-run
 ```
 
 Elle montre ce que ferait la prochaine publication du commit extrait : le numéro, les notes qui passeraient dessous, le contenu de `.release/version.json`. Elle n'écrit rien. Le numéro qu'elle annonce se fonde sur les étiquettes connues de ton clone ; le vrai se décide à la publication, d'après celles du dépôt GitHub.
@@ -47,7 +47,7 @@ Personne ne publie à la main. Le workflow `release.yml` publie quand la CI d'un
 
 1. Il démarre à la fin du workflow `CI` (`workflow_run`), seulement si la CI a réussi, pour une poussée (jamais une pull request) faite sur ce dépôt (jamais une copie).
 2. Il extrait le commit dont la CI est verte, et lui seul.
-3. Il relit sur GitHub le check `ci-ok` de ce commit, celui qu'exige la protection de la branche (`ci/checks-requis.json`). S'il n'a pas réussi, rien n'est publié et le job est rouge.
+3. Il relit sur GitHub le check `ci-ok` de ce commit, celui qu'exige la protection de la branche (`ci/required-checks.json`). S'il n'a pas réussi, rien n'est publié et le job est rouge.
 4. Il réserve le numéro suivant, range les notes en attente dessous, écrit `.release/version.json`, commite les deux fichiers au nom de `github-actions[bot]` et pose l'étiquette `vX.Y.Z` sur ce commit.
 5. Il pousse le commit et l'étiquette en une seule fois.
 

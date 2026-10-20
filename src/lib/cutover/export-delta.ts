@@ -8,7 +8,7 @@ import type { Payload } from 'payload'
  * - **An allow-list for the accounts and the photos** (`select`): a field that is added later is not exported
  *   until it is named here. The profiles and the messages are exported whole, and every record goes through
  *   `retirerLesSecrets`, which drops any key that looks like a password, a hash, a salt or a token.
- * - **Deterministic**: no clock, no random value. The same database and the same `depuis` give the same text.
+ * - **Deterministic**: no clock, no random value. The same database and the same `since` give the same text.
  * - **What a deletion leaves**: an account of the old site deleted on the v3 leaves its old identifier in
  *   `deleted-accounts`. A photo or an account that came from the v3 alone and was deleted leaves nothing, and
  *   the old site never knew it.
@@ -17,44 +17,44 @@ import type { Payload } from 'payload'
  */
 
 /** The name of the format, so that the reader knows what it holds. */
-export const FORMAT_DU_DELTA = 'my-makeup-delta-1'
+export const DELTA_FORMAT = 'my-makeup-delta-2'
 
 /** Why a record is in the export: made after the date, or made before and changed after. */
-export type Motif = 'cree' | 'modifie'
+export type RecordReason = 'created' | 'updated'
 
-export type Enregistrement = Record<string, unknown> & { id: number; depuisLaBascule: Motif }
+export type DeltaRecord = Record<string, unknown> & { id: number; sinceCutover: RecordReason }
 
-export interface ExportDuDelta {
-	format: typeof FORMAT_DU_DELTA
-	depuis: string
-	nombres: Record<RubriqueDuDelta, number>
-	comptes: Enregistrement[]
-	profils: Enregistrement[]
-	photos: Enregistrement[]
-	messages: Enregistrement[]
-	comptesSupprimes: { strapiId: number; date: string }[]
+export interface DeltaExport {
+	format: typeof DELTA_FORMAT
+	since: string
+	counts: Record<DeltaSection, number>
+	accounts: DeltaRecord[]
+	profiles: DeltaRecord[]
+	photos: DeltaRecord[]
+	messages: DeltaRecord[]
+	deletedAccounts: { strapiId: number; date: string }[]
 }
 
-export type RubriqueDuDelta = 'comptes' | 'profils' | 'photos' | 'messages' | 'comptesSupprimes'
+export type DeltaSection = 'accounts' | 'profiles' | 'photos' | 'messages' | 'deletedAccounts'
 
 /** A key that names a password, a hash, a salt, a token, a secret or a session: never exported, at any depth. */
-const CLE_SECRETE =
+const SECRET_KEY =
 	/hash|salt|token|password|passwd|motdepasse|secret|bcrypt|session|apikey|cookie|lockuntil|loginattempts/i
 
 /** The same value without any secret key, at any depth. */
-export function retirerLesSecrets(valeur: unknown): unknown {
-	if (Array.isArray(valeur)) return valeur.map(retirerLesSecrets)
+export function removeSecrets(valeur: unknown): unknown {
+	if (Array.isArray(valeur)) return valeur.map(removeSecrets)
 	if (valeur !== null && typeof valeur === 'object')
 		return Object.fromEntries(
 			Object.entries(valeur)
-				.filter(([cle]) => !CLE_SECRETE.test(cle))
-				.map(([cle, contenu]) => [cle, retirerLesSecrets(contenu)])
+				.filter(([cle]) => !SECRET_KEY.test(cle))
+				.map(([cle, contenu]) => [cle, removeSecrets(contenu)])
 		)
 	return valeur
 }
 
 /** The fields of an account that are exported: what is needed to make it again on the old site, nothing of its credentials. */
-const CHAMPS_DU_COMPTE = {
+const ACCOUNT_FIELDS = {
 	email: true,
 	name: true,
 	blocked: true,
@@ -67,7 +67,7 @@ const CHAMPS_DU_COMPTE = {
 } as const
 
 /** The fields of a photo that are exported. */
-const CHAMPS_DE_LA_PHOTO = {
+const PHOTO_FIELDS = {
 	filename: true,
 	mimeType: true,
 	filesize: true,
@@ -81,66 +81,66 @@ const CHAMPS_DE_LA_PHOTO = {
 	updatedAt: true,
 } as const
 
-const motifDe = (doc: { createdAt?: string | null }, depuis: Date): Motif =>
-	doc.createdAt && new Date(doc.createdAt).getTime() >= depuis.getTime() ? 'cree' : 'modifie'
+const reasonOf = (doc: { createdAt?: string | null }, depuis: Date): RecordReason =>
+	doc.createdAt && new Date(doc.createdAt).getTime() >= depuis.getTime() ? 'created' : 'updated'
 
-function enregistrement(doc: { id: number; createdAt?: string | null }, depuis: Date): Enregistrement {
-	const { id, collection: _collection, ...reste } = retirerLesSecrets(doc) as Record<string, unknown> & { id: number }
-	// `depuisLaBascule` is last on purpose: no field of a collection may take its place.
-	return { id, ...reste, depuisLaBascule: motifDe(doc, depuis) }
+function toRecord(doc: { id: number; createdAt?: string | null }, depuis: Date): DeltaRecord {
+	const { id, collection: _collection, ...rest } = removeSecrets(doc) as Record<string, unknown> & { id: number }
+	// `sinceCutover` is last on purpose: no field of a collection may take its place.
+	return { id, ...rest, sinceCutover: reasonOf(doc, depuis) }
 }
 
 /** Reads what was created or changed since `depuis`, oldest identifier first. */
-export async function lireLeDelta(payload: Payload, depuis: Date): Promise<ExportDuDelta> {
+export async function readDelta(payload: Payload, depuis: Date): Promise<DeltaExport> {
 	const instant = depuis.toISOString()
 	const recent = { updatedAt: { greater_than_equal: instant } }
-	const lecture = { depth: 0, limit: 0, pagination: false, overrideAccess: true, sort: 'id' } as const
-	const [comptes, profils, photos, messages, supprimes] = await Promise.all([
-		payload.find({ ...lecture, collection: 'pros', select: CHAMPS_DU_COMPTE, where: recent }),
-		payload.find({ ...lecture, collection: 'profiles', where: recent }),
-		payload.find({ ...lecture, collection: 'media', select: CHAMPS_DE_LA_PHOTO, where: recent }),
-		payload.find({ ...lecture, collection: 'contact-requests', where: recent }),
+	const reading = { depth: 0, limit: 0, pagination: false, overrideAccess: true, sort: 'id' } as const
+	const [accounts, profiles, photos, messages, deleted] = await Promise.all([
+		payload.find({ ...reading, collection: 'pros', select: ACCOUNT_FIELDS, where: recent }),
+		payload.find({ ...reading, collection: 'profiles', where: recent }),
+		payload.find({ ...reading, collection: 'media', select: PHOTO_FIELDS, where: recent }),
+		payload.find({ ...reading, collection: 'contact-requests', where: recent }),
 		payload.find({
-			...lecture,
+			...reading,
 			collection: 'deleted-accounts',
 			select: { strapiId: true, date: true },
 			where: { date: { greater_than_equal: instant } },
 		}),
 	])
-	const mettre = (docs: { id: number; createdAt?: string | null }[]) => docs.map(doc => enregistrement(doc, depuis))
-	const sortie = {
-		comptes: mettre(comptes.docs),
-		profils: mettre(profils.docs),
-		photos: mettre(photos.docs),
-		messages: mettre(messages.docs),
-		comptesSupprimes: supprimes.docs.map(({ strapiId, date }) => ({ strapiId, date })),
+	const toRecords = (docs: { id: number; createdAt?: string | null }[]) => docs.map(doc => toRecord(doc, depuis))
+	const output = {
+		accounts: toRecords(accounts.docs),
+		profiles: toRecords(profiles.docs),
+		photos: toRecords(photos.docs),
+		messages: toRecords(messages.docs),
+		deletedAccounts: deleted.docs.map(({ strapiId, date }) => ({ strapiId, date })),
 	}
 	return {
-		format: FORMAT_DU_DELTA,
-		depuis: instant,
-		nombres: {
-			comptes: sortie.comptes.length,
-			profils: sortie.profils.length,
-			photos: sortie.photos.length,
-			messages: sortie.messages.length,
-			comptesSupprimes: sortie.comptesSupprimes.length,
+		format: DELTA_FORMAT,
+		since: instant,
+		counts: {
+			accounts: output.accounts.length,
+			profiles: output.profiles.length,
+			photos: output.photos.length,
+			messages: output.messages.length,
+			deletedAccounts: output.deletedAccounts.length,
 		},
-		...sortie,
+		...output,
 	}
 }
 
 /** The lines of the log: counts and numeric identifiers only, never a name, an address or a text. */
-export function journalDuDelta(delta: ExportDuDelta): string[] {
+export function deltaLog(delta: DeltaExport): string[] {
 	const ids = (liste: { id: number }[]) => liste.map(({ id }) => id).join(', ')
 	return [
-		`[bascule] export du delta depuis ${delta.depuis}`,
-		`[bascule] comptes : ${delta.nombres.comptes} (identifiants ${ids(delta.comptes)})`,
-		`[bascule] profils : ${delta.nombres.profils} (identifiants ${ids(delta.profils)})`,
-		`[bascule] photos : ${delta.nombres.photos} (identifiants ${ids(delta.photos)})`,
-		`[bascule] messages : ${delta.nombres.messages} (identifiants ${ids(delta.messages)})`,
-		`[bascule] comptes de l’ancien site supprimés : ${delta.nombres.comptesSupprimes} (identifiants ${delta.comptesSupprimes.map(({ strapiId }) => strapiId).join(', ')})`,
+		`[bascule] export du delta depuis ${delta.since}`,
+		`[bascule] comptes : ${delta.counts.accounts} (identifiants ${ids(delta.accounts)})`,
+		`[bascule] profils : ${delta.counts.profiles} (identifiants ${ids(delta.profiles)})`,
+		`[bascule] photos : ${delta.counts.photos} (identifiants ${ids(delta.photos)})`,
+		`[bascule] messages : ${delta.counts.messages} (identifiants ${ids(delta.messages)})`,
+		`[bascule] comptes de l’ancien site supprimés : ${delta.counts.deletedAccounts} (identifiants ${delta.deletedAccounts.map(({ strapiId }) => strapiId).join(', ')})`,
 	]
 }
 
 /** The text of the file. */
-export const deltaEnTexte = (delta: ExportDuDelta): string => `${JSON.stringify(delta, null, 2)}\n`
+export const deltaAsText = (delta: DeltaExport): string => `${JSON.stringify(delta, null, 2)}\n`

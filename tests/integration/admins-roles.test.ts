@@ -106,7 +106,7 @@ describe('Les comptes admins : deux rôles, une session de 8 heures', () => {
 		const email = `procedure-${crypto.randomUUID()}@example.test`
 		const payload = await payloadDeTest()
 
-		// What `bun run admin:creer` does: the Local API, without any request.
+		// What `bun run admin:create` does: the Local API, without any request.
 		await payload.create({ collection: 'admins', data: { email, password: crypto.randomUUID(), role: 'admin' } })
 
 		const { docs } = await payload.find({ collection: 'admins', where: { email: { equals: email } } })

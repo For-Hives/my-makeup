@@ -1,19 +1,19 @@
 import config from '@payload-config'
 import { getPayload } from 'payload'
 import { isAdmin } from '@/lib/access'
-import { lireLeDelta } from '@/lib/cutover/export-delta'
-import { lieuDeLExport, methodeNonPermise, repondreAuDelta } from '@/lib/cutover/delta-response'
+import { exportPlace, methodNotAllowed, respondToDelta } from '@/lib/cutover/delta-response'
+import { readDelta } from '@/lib/cutover/export-delta'
 
 // Never prerendered, never cached: each request reads the database again.
 export const dynamic = 'force-dynamic'
 
 const RIEN_A_LIRE = {
-	basculeLe: undefined,
-	estAdmin: async () => false,
-	lire: async () => {
+	cutoverDate: undefined,
+	isAdmin: async () => false,
+	read: async () => {
 		throw new Error('unreachable')
 	},
-	journal: () => undefined,
+	log: () => undefined,
 } as const
 
 /**
@@ -22,23 +22,23 @@ const RIEN_A_LIRE = {
  * site. This static segment wins over the catch-all REST route of Payload.
  */
 export async function GET(request: Request): Promise<Response> {
-	const lieu = lieuDeLExport()
+	const lieu = exportPlace()
 	// Anywhere else than the site: refused before Payload is even started, nothing is read.
-	if (lieu !== 'site') return repondreAuDelta(request, { ...RIEN_A_LIRE, lieu })
+	if (lieu !== 'site') return respondToDelta(request, { ...RIEN_A_LIRE, place: lieu })
 	const payload = await getPayload({ config })
-	return repondreAuDelta(request, {
-		lieu,
-		basculeLe: process.env.BASCULE_LE,
-		estAdmin: async () => {
+	return respondToDelta(request, {
+		place: lieu,
+		cutoverDate: process.env.CUTOVER_DATE,
+		isAdmin: async () => {
 			const { user } = await payload.auth({ headers: request.headers })
 			return user ? isAdmin(user) : 'anonyme'
 		},
-		lire: depuis => lireLeDelta(payload, depuis),
-		journal: ligne => payload.logger.info(ligne),
+		read: depuis => readDelta(payload, depuis),
+		log: ligne => payload.logger.info(ligne),
 	})
 }
 
-export const POST = methodeNonPermise
-export const PUT = methodeNonPermise
-export const PATCH = methodeNonPermise
-export const DELETE = methodeNonPermise
+export const POST = methodNotAllowed
+export const PUT = methodNotAllowed
+export const PATCH = methodNotAllowed
+export const DELETE = methodNotAllowed

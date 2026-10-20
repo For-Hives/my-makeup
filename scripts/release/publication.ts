@@ -1,8 +1,8 @@
 /**
  * The publication of a version (ticket 036, docs/publication.md).
  *
- *   bun run release:publier --a-blanc   shows what the next publication would do, writes nothing
- *   bun run release:publier --pousser   publishes: only in .github/workflows/release.yml
+ *   bun run release:publish --dry-run   shows what the next publication would do, writes nothing
+ *   bun run release:publish --push   publishes: only in .github/workflows/release.yml
  *
  * A publication reserves the next number, moves the pending release notes under it, writes
  * .release/version.json and pushes, in one atomic push, the commit that holds both files and the
@@ -40,7 +40,7 @@ export const RELEASE_FILE = '.release/version.json'
 /** The only branch a version is published from. */
 export const RELEASE_BRANCH = 'main'
 /** The checks the protection of the branch requires, the ones the publication waits for. */
-export const REQUIRED_CHECKS_FILE = 'ci/checks-requis.json'
+export const REQUIRED_CHECKS_FILE = 'ci/required-checks.json'
 /** Who signs the publication commit: the bot of GitHub Actions. */
 const BOT = { name: 'github-actions[bot]', email: '41898282+github-actions[bot]@users.noreply.github.com' }
 
@@ -333,12 +333,12 @@ export function dryRun(root: string, now = new Date()): Plan {
  * ci-ok
  * ---------------------------------------------------------------------------------------- */
 
-/** The checks of ci/checks-requis.json that a workflow of this repository gives: ci-ok today. */
+/** The checks of ci/required-checks.json that a workflow of this repository gives: ci-ok today. */
 export function requiredWorkflowChecks(root: string): string[] {
 	const { checks } = JSON.parse(readFileSync(path.join(root, REQUIRED_CHECKS_FILE), 'utf8')) as {
-		checks: { nom: string; source: string }[]
+		checks: { name: string; source: string }[]
 	}
-	const names = checks.filter(check => check.source === 'workflow').map(check => check.nom)
+	const names = checks.filter(check => check.source === 'workflow').map(check => check.name)
 	if (names.length === 0) throw new Error(`${REQUIRED_CHECKS_FILE} ne nomme aucun check de workflow : rien à attendre.`)
 	return names
 }
@@ -391,8 +391,8 @@ export async function requiredChecksRefusal(options: {
 
 const USAGE = [
 	'Usage :',
-	'  bun run release:publier --a-blanc   montre la prochaine publication, sans rien écrire',
-	'  bun run release:publier --pousser   publie (le workflow release.yml seulement)',
+	'  bun run release:publish --dry-run   montre la prochaine publication, sans rien écrire',
+	'  bun run release:publish --push   publie (le workflow release.yml seulement)',
 ].join('\n')
 
 function describeDryRun(next: Plan): string {
@@ -422,7 +422,7 @@ async function push(): Promise<void> {
 	const { GITHUB_ACTIONS, GITHUB_REPOSITORY, GITHUB_TOKEN, SOURCE_COMMIT, GITHUB_STEP_SUMMARY } = process.env
 	if (GITHUB_ACTIONS !== 'true' || !GITHUB_REPOSITORY || !GITHUB_TOKEN || !SOURCE_COMMIT || !COMMIT.test(SOURCE_COMMIT))
 		throw new Error(
-			'« --pousser » ne tourne que dans le workflow de publication (GITHUB_ACTIONS, GITHUB_REPOSITORY, GITHUB_TOKEN, SOURCE_COMMIT). En local : « --a-blanc ».'
+			'« --push » ne tourne que dans le workflow de publication (GITHUB_ACTIONS, GITHUB_REPOSITORY, GITHUB_TOKEN, SOURCE_COMMIT). En local : « --dry-run ».'
 		)
 	// The header git receives is the token in base64: GitHub masks the token, not this form of it.
 	console.log(`::add-mask::${Buffer.from(`x-access-token:${GITHUB_TOKEN}`).toString('base64')}`)
@@ -445,8 +445,8 @@ async function push(): Promise<void> {
 async function main(): Promise<void> {
 	const mode = process.argv.slice(2)
 	try {
-		if (mode.length === 1 && mode[0] === '--a-blanc') console.log(describeDryRun(dryRun(process.cwd())))
-		else if (mode.length === 1 && mode[0] === '--pousser') await push()
+		if (mode.length === 1 && mode[0] === '--dry-run') console.log(describeDryRun(dryRun(process.cwd())))
+		else if (mode.length === 1 && mode[0] === '--push') await push()
 		else {
 			console.error(USAGE)
 			process.exitCode = 1

@@ -25,7 +25,7 @@ import { HttpResponse, http, simuler } from '../outils/http-sortant'
  */
 
 const ROOT = path.resolve(import.meta.dir, '../..')
-const ADD_NOTE = path.join(ROOT, 'scripts/release/ajouter-note.ts')
+const ADD_NOTE = path.join(ROOT, 'scripts/release/add-note.ts')
 const PUBLICATION = path.join(ROOT, 'scripts/release/publication.ts')
 const NOW = new Date('2026-10-14T21:30:00Z')
 const NOTE = 'Tu peux ajouter une vidéo à ta galerie.'
@@ -172,7 +172,7 @@ describe('add a note, then publish à blanc: the note goes under the new number'
 		expect(withNote).not.toBe(before)
 		expect(parseChangelog(withNote).pending.map(note => note.text)).toEqual([NOTE])
 
-		const dry = script(work, PUBLICATION, ['--a-blanc'])
+		const dry = script(work, PUBLICATION, ['--dry-run'])
 		expect(dry.err).toBe('')
 		expect(dry.code).toBe(0)
 		expect(dry.out).toContain('la prochaine version serait la 3.0.0. Rien n’est écrit.')
@@ -233,17 +233,17 @@ describe('add a note, then publish à blanc: the note goes under the new number'
 		const added = script(workingCopy(), ADD_NOTE, ['ajout'])
 
 		expect(added.code).toBe(1)
-		expect(added.err).toContain('Usage : bun run notes:ajouter <type> "<une phrase>"')
+		expect(added.err).toContain('Usage : bun run notes:add <type> "<une phrase>"')
 		expect(added.err).toContain('ajout (Nouveau), amelioration (Amélioré), correction (Corrigé)')
 	})
 
 	test('the publication command wants a mode, and only publishes from its workflow', () => {
 		const work = workingCopy()
 
-		expect(script(work, PUBLICATION, []).err).toContain('bun run release:publier --a-blanc')
-		const outside = script(work, PUBLICATION, ['--pousser'])
+		expect(script(work, PUBLICATION, []).err).toContain('bun run release:publish --dry-run')
+		const outside = script(work, PUBLICATION, ['--push'])
 		expect(outside.code).toBe(1)
-		expect(outside.err).toContain('« --pousser » ne tourne que dans le workflow de publication')
+		expect(outside.err).toContain('« --push » ne tourne que dans le workflow de publication')
 		expect(existsSync(path.join(work, RELEASE_FILE))).toBe(false)
 	})
 })

@@ -78,7 +78,7 @@ async function importer(rapport: string) {
 }
 
 test.afterAll(async () => {
-	await bun('scripts/source-strapi.ts', '--effacer')
+	await bun('scripts/source-strapi.ts', '--erase')
 })
 
 test('un profil repris de la fausse base Strapi s’affiche sur sa page publique, nom en h1, rien de privé', async ({

@@ -293,7 +293,7 @@ Pour la réécrire, banc démarré (`bun run banc:up`, ou l'instance de ton lot)
 2. Lancer `bun run payload:migrate:create init`, avec `DATABASE_URI` et `PAYLOAD_SECRET` du banc dans l'environnement (`.env.test`, port décalé de l'instance). Sans migration avant elle, Payload écrit le schéma entier.
 3. Remettre en forme le fichier généré comme l'ancien : `import { type MigrateDownArgs, type MigrateUpArgs, sql }`, arguments `{ db }` seuls, l'en-tête qui dit ce que fait `init`. Puis `bun run check`.
 4. `bun run payload:types` et `bun run payload:importmap` : les fichiers générés ne doivent changer que si les collections ont changé.
-5. `bun run schema:derive` (aucune dérive), puis `bun run banc:prepare`.
+5. `bun run schema:drift` (aucune dérive), puis `bun run banc:prepare`.
 
 Pour vérifier qu'un regroupement ne change rien, comparer `pg_dump --schema-only` de la base bâtie par l'ancienne chaîne et de celle bâtie par la nouvelle `init`. Une seule différence est normale : l’ordre des colonnes de quelques tables (quatre au moment de l’écriture). Une colonne ajoutée plus tard par une migration passe à la fin, alors que `init` suit l'ordre des champs de la collection. L'ordre d'une colonne ne change rien à ce qu'un programme lit.
 
@@ -302,7 +302,7 @@ Pour vérifier qu'un regroupement ne change rien, comparer `pg_dump --schema-onl
 | Base | Commande |
 |---|---|
 | le banc de test | `bun run banc:prepare` (le schéma est effacé, puis rejoué), ou `bun run banc:reinitialiser` pour retrouver aussi le jeu de données ; les tests d'intégration le font d'eux-mêmes |
-| la base de développement du poste (`docker-compose.yml`, port 5442) | `docker compose down -v && docker compose up -d --wait`, puis `bun run dev` : le volume `postgres-data` est effacé, et la base repart vide. Un compte admin créé là est à recréer (`bun run admin:creer`) |
+| la base de développement du poste (`docker-compose.yml`, port 5442) | `docker compose down -v && docker compose up -d --wait`, puis `bun run dev` : le volume `postgres-data` est effacé, et la base repart vide. Un compte admin créé là est à recréer (`bun run admin:create`) |
 
 ## Comptes de test : la fabrique
 
@@ -661,9 +661,9 @@ Il nomme trois sortes d'orphelins, par clé d'objet ou par identifiant, sans auc
 - **un média sans objet** : un média dont l'objet d'origine ou une taille dérivée manque ;
 - **un média sans profil** : un média qu'aucune photo principale, aucune galerie de profil, aucun article (versions comprises) ne désigne.
 
-La corbeille (`deleted/`) est comptée à part, comme les vignettes de l'ancien site décrites dans `media.strapiFormats` : ce ne sont pas des orphelins. Code de sortie 0 sans orphelin (« 0 orphelin »), 1 avec, 2 si le banc ne répond pas. Avec `--json`, la sortie est le rapport en JSON. Avec `--hors-import`, les médias que l'import a repris de l'ancien site (`strapiId`) restent listés mais ne comptent pas pour le code de sortie : c'est l'option de la CI, parce que l'essai de bout en bout de l'import efface sa fausse source à la fin, et que les médias repris perdent alors leurs objets exprès. Le contrôle complet d'avant purge se lance sans l'option.
+La corbeille (`deleted/`) est comptée à part, comme les vignettes de l'ancien site décrites dans `media.strapiFormats` : ce ne sont pas des orphelins. Code de sortie 0 sans orphelin (« 0 orphelin »), 1 avec, 2 si le banc ne répond pas. Avec `--json`, la sortie est le rapport en JSON. Avec `--outside-import`, les médias que l'import a repris de l'ancien site (`strapiId`) restent listés mais ne comptent pas pour le code de sortie : c'est l'option de la CI, parce que l'essai de bout en bout de l'import efface sa fausse source à la fin, et que les médias repris perdent alors leurs objets exprès. Le contrôle complet d'avant purge se lance sans l'option.
 
-En CI, l'étape « Reconcile the storage and the database » du job `e2e` le lance (avec `--hors-import`) après les essais de bout en bout : à ce moment, les objets hors corbeille doivent être exactement ceux des photos des profils et des articles. Un orphelin fait passer l'étape au rouge, donc `ci-ok` au rouge. `tests/integration/rapprochement.test.ts` prouve les trois sortes d'orphelins, l'absence de toute écriture et le code de sortie ; `tests/ci/garde-fous-ci.test.ts` garde l'étape dans le workflow.
+En CI, l'étape « Reconcile the storage and the database » du job `e2e` le lance (avec `--outside-import`) après les essais de bout en bout : à ce moment, les objets hors corbeille doivent être exactement ceux des photos des profils et des articles. Un orphelin fait passer l'étape au rouge, donc `ci-ok` au rouge. `tests/integration/rapprochement.test.ts` prouve les trois sortes d'orphelins, l'absence de toute écriture et le code de sortie ; `tests/ci/garde-fous-ci.test.ts` garde l'étape dans le workflow.
 
 ## La fausse base Strapi
 

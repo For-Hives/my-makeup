@@ -2,7 +2,7 @@
  * Validates renovate.json with Renovate's own validator, in strict mode: an unknown option, a
  * schedule or an expression Renovate cannot read, or a setting written the old way, fails.
  *
- *   bun run renovate:valide
+ *   bun run renovate:validate
  *
  * To run after every change of renovate.json, and before the switch: the guard of tests/ci
  * freezes what the rules decide, this command asks Renovate whether it can read them.

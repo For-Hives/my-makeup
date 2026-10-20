@@ -4,7 +4,7 @@
 #   runtime variable are given to the container when it starts, never to `docker build`.
 # - Versions are the ones of .nvmrc and of `packageManager` in package.json, with the digest
 #   of each image. The CI guard C04 fails when one of them drifts (tests/ci).
-# - `bun run image:controle` starts this image against a throwaway database and checks what
+# - `bun run image:check` starts this image against a throwaway database and checks what
 #   the README promises (« Image Docker »).
 
 # 1. Dependencies, from the lockfile alone: this layer is rebuilt only when it changes.

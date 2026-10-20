@@ -12,7 +12,7 @@ Avant le premier changement, lis [`CLAUDE.md`](CLAUDE.md) : les commandes, l'arc
    1. `bun run check` : Biome, qui écrit ses corrections ;
    2. `bun run typecheck` ;
    3. `bun run test` ;
-   4. `bun run test:ci-garde` : les garde-fous que la CI lance sur chaque PR ;
+   4. `bun run test:ci-guard` : les garde-fous que la CI lance sur chaque PR ;
    5. `bun run test:integration`, banc démarré (`bun run banc:up`), si ton changement touche ce que le banc couvre : la base, les comptes, les mails, le stockage, la connexion Google ;
    6. `bun run test:e2e`, banc démarré, si ton changement touche ce qu'on voit dans un navigateur : une page, un écran, un parcours ;
    7. `bun run build`, si tu as changé du code ou de la configuration.
@@ -47,7 +47,7 @@ Selon ce que le changement touche :
 | Une collection ou un champ | Les règles « Schéma » de [`CLAUDE.md`](CLAUDE.md) sont tenues. |
 | Une adresse publique | Les règles « URL » de [`CLAUDE.md`](CLAUDE.md) sont tenues. |
 
-La note de version s'ajoute par `bun run notes:ajouter <type> "<phrase>"`, dans le même commit que le changement. Elle attend dans `src/content/changelog.json` jusqu'à la publication suivante, qui la range sous son numéro. Le type, la règle de la phrase et la publication : [`docs/publication.md`](docs/publication.md).
+La note de version s'ajoute par `bun run notes:add <type> "<phrase>"`, dans le même commit que le changement. Elle attend dans `src/content/changelog.json` jusqu'à la publication suivante, qui la range sous son numéro. Le type, la règle de la phrase et la publication : [`docs/publication.md`](docs/publication.md).
 
 ## Compte rendu
 

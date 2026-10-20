@@ -1,29 +1,29 @@
 import { describe, expect, test } from 'bun:test'
 import {
-	ANCIENNES_ROUTES,
-	adressesDuSitemap,
-	ControleRefuse,
-	controlerLHote,
-	ecrireLeRapport,
-	jeuDuSitemap,
-	lancer,
-	lireLesReglages,
-	type Outils,
-	type Reglages,
+	CheckRefused,
+	checkHost,
+	OLD_ROUTES,
+	readSettings,
+	run,
+	type Settings,
+	sitemapAddresses,
+	sitemapSet,
+	type Tools,
+	writeReport,
 } from '../../scripts/cutover/host-check'
 import {
-	AGENT_DU_CONTROLE,
-	CibleRefusee,
-	cibleDuControle,
-	controlerRequete,
-	garder,
-	RequeteInterdite,
+	CHECK_AGENT,
+	checkQuery,
+	checkTarget,
+	ForbiddenQuery,
+	keep,
+	TargetRefused,
 	type Transport,
 } from '../../scripts/cutover/host-guard'
 import { casDuBanc } from '../outils/parite-urls'
 
 /**
- * Ticket 173: the check of a host (scripts/bascule/controle-hote.ts). No request leaves this machine:
+ * Ticket 173: the check of a host (scripts/cutover/host-check.ts). No request leaves this machine:
  * the host is played by a fake transport that answers what the frozen table promises. The run on a
  * real host is tests/e2e/controle-hote.spec.ts (I45, U61 to U64).
  */
@@ -77,7 +77,7 @@ function hoteConforme(): Reponses {
 		'/u/script.js',
 		() => new Response('(function(){})()', { headers: { 'content-type': 'text/javascript' } })
 	)
-	for (const route of ANCIENNES_ROUTES) reponses.set(route, () => html(404))
+	for (const route of OLD_ROUTES) reponses.set(route, () => html(404))
 	return reponses
 }
 
@@ -95,8 +95,8 @@ function transportDe(reponses: Reponses): {
 }
 
 const CIBLE = new URL('https://hote.example.test')
-const reglages: Reglages = { cible: CIBLE }
-const sansAttente = (transport: Transport): Outils => ({
+const reglages: Settings = { cible: CIBLE }
+const sansAttente = (transport: Transport): Tools => ({
 	transport,
 	intervalleMs: 0,
 	anciens: {},
@@ -105,18 +105,18 @@ const sansAttente = (transport: Transport): Outils => ({
 
 describe('la garde : une lecture, sur la cible, et rien d’autre', () => {
 	const lire = (chemin: string, init: RequestInit = {}, autorisation?: string) =>
-		controlerRequete(chemin, init, CIBLE, autorisation)
+		checkQuery(chemin, init, CIBLE, autorisation)
 
 	test('une écriture est interrompue avant de partir', () => {
 		for (const method of ['POST', 'PUT', 'PATCH', 'DELETE', 'HEAD'])
-			expect(() => lire('/contact', { method })).toThrow(RequeteInterdite)
-		expect(() => lire('/contact', { body: 'x' })).toThrow(RequeteInterdite)
+			expect(() => lire('/contact', { method })).toThrow(ForbiddenQuery)
+		expect(() => lire('/contact', { body: 'x' })).toThrow(ForbiddenQuery)
 	})
 
 	test('sous /u, les quatre adresses de l’inventaire en GET et rien d’autre : la mesure n’est jamais comptée', () => {
 		for (const chemin of ['/u', '/u/script.js', '/u/api/send', '/u/autre-chemin'])
 			expect(lire(chemin).adresse.pathname).toBe(chemin)
-		expect(() => lire('/u/api/send', { method: 'POST' })).toThrow(RequeteInterdite)
+		expect(() => lire('/u/api/send', { method: 'POST' })).toThrow(ForbiddenQuery)
 		for (const chemin of [
 			'/u/',
 			'//u/api/send',
@@ -125,32 +125,32 @@ describe('la garde : une lecture, sur la cible, et rien d’autre', () => {
 			'/u/api/send?x=1',
 			'/u/api/batch',
 		])
-			expect(() => lire(chemin)).toThrow(RequeteInterdite)
+			expect(() => lire(chemin)).toThrow(ForbiddenQuery)
 	})
 
 	test('un chemin à double barre reste un chemin de la cible, jamais un autre hôte', () => {
 		expect(lire('//profil/x').adresse.href).toBe('https://hote.example.test//profil/x')
-		expect(() => lire('https://autre.example.test/')).toThrow(RequeteInterdite)
-		expect(() => lire('@autre.example.test/')).toThrow(RequeteInterdite)
+		expect(() => lire('https://autre.example.test/')).toThrow(ForbiddenQuery)
+		expect(() => lire('@autre.example.test/')).toThrow(ForbiddenQuery)
 	})
 
 	test('ni cookie ni Authorization de l’appelant', () => {
-		expect(() => lire('/', { headers: { cookie: 'a=b' } })).toThrow(RequeteInterdite)
-		expect(() => lire('/', { headers: { Authorization: 'Bearer x' } })).toThrow(RequeteInterdite)
-		expect(lire('/').entetes.get('user-agent')).toBe(AGENT_DU_CONTROLE)
+		expect(() => lire('/', { headers: { cookie: 'a=b' } })).toThrow(ForbiddenQuery)
+		expect(() => lire('/', { headers: { Authorization: 'Bearer x' } })).toThrow(ForbiddenQuery)
+		expect(lire('/').entetes.get('user-agent')).toBe(CHECK_AGENT)
 	})
 
 	test('l’accès protégé ne part que vers l’hôte temporaire, jamais vers le site', () => {
-		expect(() => lire('/', {}, 'Basic eA==')).toThrow(RequeteInterdite)
-		expect(() => controlerRequete('/', {}, new URL('https://my-makeup.fr'), 'Basic eA==')).toThrow(RequeteInterdite)
+		expect(() => lire('/', {}, 'Basic eA==')).toThrow(ForbiddenQuery)
+		expect(() => checkQuery('/', {}, new URL('https://my-makeup.fr'), 'Basic eA==')).toThrow(ForbiddenQuery)
 		const temporaire = new URL('https://v3.my-makeup.fr')
-		expect(controlerRequete('/', {}, temporaire, 'Basic eA==').entetes.get('authorization')).toBe('Basic eA==')
+		expect(checkQuery('/', {}, temporaire, 'Basic eA==').entetes.get('authorization')).toBe('Basic eA==')
 	})
 
 	test('aucune redirection suivie, la méthode est GET', async () => {
 		const { transport, appels } = transportDe(new Map())
 		let initRecu: RequestInit | undefined
-		await garder(CIBLE, async (adresse, init) => {
+		await keep(CIBLE, async (adresse, init) => {
 			initRecu = init
 			return transport(adresse, init)
 		})('/a-propos')
@@ -159,9 +159,9 @@ describe('la garde : une lecture, sur la cible, et rien d’autre', () => {
 	})
 
 	test('la cible : https, ou http sur ce poste, une origine seule', () => {
-		expect(cibleDuControle('https://my-makeup.fr').href).toBe('https://my-makeup.fr/')
-		expect(cibleDuControle('https://v3.my-makeup.fr').href).toBe('https://v3.my-makeup.fr/')
-		expect(cibleDuControle('http://127.0.0.1:3373').origin).toBe('http://127.0.0.1:3373')
+		expect(checkTarget('https://my-makeup.fr').href).toBe('https://my-makeup.fr/')
+		expect(checkTarget('https://v3.my-makeup.fr').href).toBe('https://v3.my-makeup.fr/')
+		expect(checkTarget('http://127.0.0.1:3373').origin).toBe('http://127.0.0.1:3373')
 		for (const mauvaise of [
 			'http://my-makeup.fr',
 			'https://www.my-makeup.fr',
@@ -171,52 +171,52 @@ describe('la garde : une lecture, sur la cible, et rien d’autre', () => {
 			'https://u:p@x.test',
 			'pas une adresse',
 		])
-			expect(() => cibleDuControle(mauvaise)).toThrow(CibleRefusee)
+			expect(() => checkTarget(mauvaise)).toThrow(TargetRefused)
 	})
 })
 
 describe('les réglages', () => {
 	test('seule la production se lit en ligne : la préprod et tout autre hôte sont refusés', () => {
 		for (const hote of ['https://preprod.my-makeup.fr', 'https://x.test', 'https://not-my-makeup.fr'])
-			expect(() => lireLesReglages({ CONTROLE_HOTE_CIBLE: hote })).toThrow(CibleRefusee)
-		expect(lireLesReglages({ CONTROLE_HOTE_CIBLE: 'https://my-makeup.fr' }).cible.hostname).toBe('my-makeup.fr')
+			expect(() => readSettings({ HOST_CHECK_TARGET: hote })).toThrow(TargetRefused)
+		expect(readSettings({ HOST_CHECK_TARGET: 'https://my-makeup.fr' }).cible.hostname).toBe('my-makeup.fr')
 	})
 
 	test('l’accès protégé : facultatif, jamais à moitié, et seulement pour l’hôte temporaire', () => {
-		const acces = { CONTROLE_HOTE_ACCES_UTILISATEUR: 'essai', CONTROLE_HOTE_ACCES_MOT_DE_PASSE: 'factice-173' }
-		expect(lireLesReglages({ CONTROLE_HOTE_CIBLE: 'https://v3.my-makeup.fr' }).autorisation).toBeUndefined()
-		expect(lireLesReglages({ CONTROLE_HOTE_CIBLE: 'https://v3.my-makeup.fr', ...acces }).autorisation).toBe(
+		const acces = { HOST_CHECK_ACCESS_USER: 'essai', HOST_CHECK_ACCESS_PASSWORD: 'factice-173' }
+		expect(readSettings({ HOST_CHECK_TARGET: 'https://v3.my-makeup.fr' }).autorisation).toBeUndefined()
+		expect(readSettings({ HOST_CHECK_TARGET: 'https://v3.my-makeup.fr', ...acces }).autorisation).toBe(
 			`Basic ${btoa('essai:factice-173')}`
 		)
 		expect(() =>
-			lireLesReglages({ CONTROLE_HOTE_CIBLE: 'https://v3.my-makeup.fr', CONTROLE_HOTE_ACCES_UTILISATEUR: 'essai' })
-		).toThrow(ControleRefuse)
-		expect(() => lireLesReglages({ CONTROLE_HOTE_CIBLE: 'https://my-makeup.fr', ...acces })).toThrow(ControleRefuse)
-		expect(() => lireLesReglages({ CONTROLE_HOTE_CIBLE: 'http://127.0.0.1:3373', ...acces })).toThrow(ControleRefuse)
-		expect(lireLesReglages({ CONTROLE_HOTE_CIBLE: 'http://127.0.0.1:3373' }).autorisation).toBeUndefined()
+			readSettings({ HOST_CHECK_TARGET: 'https://v3.my-makeup.fr', HOST_CHECK_ACCESS_USER: 'essai' })
+		).toThrow(CheckRefused)
+		expect(() => readSettings({ HOST_CHECK_TARGET: 'https://my-makeup.fr', ...acces })).toThrow(CheckRefused)
+		expect(() => readSettings({ HOST_CHECK_TARGET: 'http://127.0.0.1:3373', ...acces })).toThrow(CheckRefused)
+		expect(readSettings({ HOST_CHECK_TARGET: 'http://127.0.0.1:3373' }).autorisation).toBeUndefined()
 	})
 
 	test('sans cible : refusé, et le code de sortie est 2 sans une requête', async () => {
 		const lignes: string[] = []
-		expect(await lancer({}, l => lignes.push(l))).toBe(2)
-		expect(await lancer({ CONTROLE_HOTE_CIBLE: 'http://my-makeup.fr' }, l => lignes.push(l))).toBe(2)
-		expect(lignes.join('\n')).toContain('CONTROLE_HOTE_CIBLE')
+		expect(await run({}, l => lignes.push(l))).toBe(2)
+		expect(await run({ HOST_CHECK_TARGET: 'http://my-makeup.fr' }, l => lignes.push(l))).toBe(2)
+		expect(lignes.join('\n')).toContain('HOST_CHECK_TARGET')
 	})
 })
 
 describe('la lecture du sitemap', () => {
 	test('les chemins, et le jeu de profils, talents et articles', () => {
-		const chemins = adressesDuSitemap(SITEMAP)
+		const chemins = sitemapAddresses(SITEMAP)
 		expect(chemins).toEqual(['/profil/essai-controle-hote', '/talent/essai-talent', '/blog/essai-article', '/a-propos'])
-		expect(jeuDuSitemap(chemins)).toEqual({ ...JEU, talents: ['essai-talent'], articlesPublies: ['essai-article'] })
-		expect(jeuDuSitemap(['/blog', '/profil/a/b']).articlesPublies).toEqual([])
+		expect(sitemapSet(chemins)).toEqual({ ...JEU, talents: ['essai-talent'], articlesPublies: ['essai-article'] })
+		expect(sitemapSet(['/blog', '/profil/a/b']).articlesPublies).toEqual([])
 	})
 })
 
 describe('I45 sur un hôte : le rapport', () => {
 	test('un hôte conforme : tout est conforme, aucun 5xx, lectures seules', async () => {
 		const { transport, appels } = transportDe(hoteConforme())
-		const rapport = await controlerLHote(reglages, sansAttente(transport))
+		const rapport = await checkHost(reglages, sansAttente(transport))
 		expect(rapport.defauts).toEqual([])
 		expect(rapport.verdict).toBe('conforme')
 		expect(rapport.reponses5xx).toBe(0)
@@ -234,12 +234,12 @@ describe('I45 sur un hôte : le rapport', () => {
 	test('une adresse cassée exprès est détectée, et le rapport la nomme', async () => {
 		const reponses = hoteConforme()
 		reponses.set('/a-propos', () => new Response('boom', { status: 500, headers: { 'content-type': 'text/html' } }))
-		const rapport = await controlerLHote(reglages, sansAttente(transportDe(reponses).transport))
+		const rapport = await checkHost(reglages, sansAttente(transportDe(reponses).transport))
 		expect(rapport.verdict).toBe('non-conforme')
 		expect(rapport.adresses.enEchec).toBeGreaterThan(0)
 		expect(rapport.reponses5xx).toBeGreaterThan(0)
 		expect(rapport.defauts.join('\n')).toContain('/a-propos')
-		expect(ecrireLeRapport(rapport)).toContain('NON CONFORME')
+		expect(writeReport(rapport)).toContain('NON CONFORME')
 	})
 
 	test('une adresse qui ne répond pas est un défaut, pas un arrêt', async () => {
@@ -247,7 +247,7 @@ describe('I45 sur un hôte : le rapport', () => {
 		reponses.set('/contact', () => {
 			throw Object.assign(new Error('secret'), { cause: { code: 'ECONNRESET' } })
 		})
-		const rapport = await controlerLHote(reglages, sansAttente(transportDe(reponses).transport))
+		const rapport = await checkHost(reglages, sansAttente(transportDe(reponses).transport))
 		expect(rapport.verdict).toBe('non-conforme')
 		expect(rapport.defauts.join('\n')).toContain('ECONNRESET')
 		expect(rapport.defauts.join('\n')).not.toContain('secret')
@@ -258,7 +258,7 @@ describe('I45 sur un hôte : le rapport', () => {
 		reponses.set('/api/auth/session', () => Response.json({ user: null }))
 		reponses.set('/u/script.js', () => new Response('nope', { status: 404 }))
 		reponses.set('/robots.txt', () => new Response('rien', { headers: { 'content-type': 'text/plain' } }))
-		const rapport = await controlerLHote(reglages, sansAttente(transportDe(reponses).transport))
+		const rapport = await checkHost(reglages, sansAttente(transportDe(reponses).transport))
 		const conformes = Object.fromEntries(rapport.sections.map(s => [s.titre, s.conforme]))
 		expect(conformes['Anciennes routes d’authentification']).toBe(false)
 		expect(conformes['Script de mesure']).toBe(false)
@@ -269,26 +269,26 @@ describe('I45 sur un hôte : le rapport', () => {
 	test('le sitemap : une adresse qu’il liste et qui ne répond plus 200 est un défaut', async () => {
 		const reponses = hoteConforme()
 		reponses.set('/a-propos', () => html(404))
-		const rapport = await controlerLHote(reglages, sansAttente(transportDe(reponses).transport))
+		const rapport = await checkHost(reglages, sansAttente(transportDe(reponses).transport))
 		expect(rapport.verdict).toBe('non-conforme')
 	})
 
 	test('le rapport n’écrit jamais l’adresse d’un profil : une empreinte de 8 chiffres, et des nombres', async () => {
 		const reponses = hoteConforme()
 		reponses.set(`/profil/${SLUG_PROFIL}`, () => html(500))
-		const rapport = await controlerLHote(reglages, sansAttente(transportDe(reponses).transport))
-		const texte = `${ecrireLeRapport(rapport)}\n${JSON.stringify(rapport)}`
+		const rapport = await checkHost(reglages, sansAttente(transportDe(reponses).transport))
+		const texte = `${writeReport(rapport)}\n${JSON.stringify(rapport)}`
 		expect(rapport.verdict).toBe('non-conforme')
 		expect(texte).toMatch(/profil #[0-9a-f]{8}/)
 		expect(texte).not.toContain(SLUG_PROFIL)
 	})
 
 	test('l’empreinte des adresses change quand une adresse change d’état', async () => {
-		const bon = await controlerLHote(reglages, sansAttente(transportDe(hoteConforme()).transport))
-		const meme = await controlerLHote(reglages, sansAttente(transportDe(hoteConforme()).transport))
+		const bon = await checkHost(reglages, sansAttente(transportDe(hoteConforme()).transport))
+		const meme = await checkHost(reglages, sansAttente(transportDe(hoteConforme()).transport))
 		const reponses = hoteConforme()
 		reponses.set('/a-propos', () => html(404))
-		const autre = await controlerLHote(reglages, sansAttente(transportDe(reponses).transport))
+		const autre = await checkHost(reglages, sansAttente(transportDe(reponses).transport))
 		expect(meme.empreinte).toBe(bon.empreinte)
 		expect(autre.empreinte).not.toBe(bon.empreinte)
 		expect(bon.empreinte).toMatch(/^[0-9a-f]{8}$/)
@@ -299,7 +299,7 @@ describe('deux requêtes par seconde au plus', () => {
 	test('500 ms au moins entre deux départs, sur toute la lecture', async () => {
 		let heure = 0
 		const { transport } = transportDe(hoteConforme())
-		const rapport = await controlerLHote(reglages, {
+		const rapport = await checkHost(reglages, {
 			transport: async (adresse, init) => {
 				heure += 10
 				return transport(adresse, init)

@@ -1,9 +1,9 @@
 /**
  * Command line that creates an account of the admin panel (README « Créer un compte admin »).
  *
- *   bun run admin:creer <email>                   an `admin`, in the database of DATABASE_URI
- *   bun run admin:creer <email> --role=editor     an `editor` account
- *   bun run admin:creer <email> --remote-target  when DATABASE_URI is not on this machine
+ *   bun run admin:create <email>                   an `admin`, in the database of DATABASE_URI
+ *   bun run admin:create <email> --role=editor     an `editor` account
+ *   bun run admin:create <email> --remote-target  when DATABASE_URI is not on this machine
  *
  * The first screen of the admin panel does not create the first account any more
  * (`/api/admins/first-register` answers 403, ticket 094): this command does, through the Local
@@ -17,37 +17,37 @@
 
 import { isLocalDatabase } from '../../src/lib/env'
 import { configurationWithoutSchemaChange } from '../migration/import/target'
-import { lireUnSecret } from './keyboard'
-import { type Comptes, CreationRefusee, creerLeCompte, DRAPEAU_CIBLE_DISTANTE, lireLesArguments, USAGE } from './account'
+import { type Accounts, CreationRefused, createAccount, REMOTE_TARGET_FLAG, readArguments, USAGE } from './account'
+import { readSecret } from './keyboard'
 
 async function principal(argv: string[]): Promise<number> {
-	const demande = lireLesArguments(argv)
-	if (!demande) {
+	const request = readArguments(argv)
+	if (!request) {
 		console.error(USAGE)
 		return 2
 	}
 	// Before anything is loaded: the configuration of Payload connects to whatever DATABASE_URI names.
 	const base = process.env.DATABASE_URI
-	if (!base) throw new CreationRefusee('DATABASE_URI manque : la commande ne sait pas où écrire. Rien n’est écrit.')
-	if (!isLocalDatabase(base) && !demande.cibleDistante)
-		throw new CreationRefusee(
-			`DATABASE_URI ne désigne pas une base de ce poste : la commande refuse d’y écrire. Pour une base distante, la commande le dit elle-même : ${DRAPEAU_CIBLE_DISTANTE}. Rien n’est écrit.`
+	if (!base) throw new CreationRefused('DATABASE_URI manque : la commande ne sait pas où écrire. Rien n’est écrit.')
+	if (!isLocalDatabase(base) && !request.cibleDistante)
+		throw new CreationRefused(
+			`DATABASE_URI ne désigne pas une base de ce poste : la commande refuse d’y écrire. Pour une base distante, la commande le dit elle-même : ${REMOTE_TARGET_FLAG}. Rien n’est écrit.`
 		)
 	// The password is asked before Payload starts: a refusal costs nothing.
-	const motDePasse = await lireUnSecret('Mot de passe (12 caractères au moins, rien ne s’affiche) : ')
-	const confirmation = await lireUnSecret('Mot de passe, une seconde fois : ')
+	const password = await readSecret('Mot de passe (12 caractères au moins, rien ne s’affiche) : ')
+	const confirmation = await readSecret('Mot de passe, une seconde fois : ')
 
 	const [{ getPayload }, { default: config }] = await Promise.all([import('payload'), import('@payload-config')])
 	// The schema is never changed from here: Payload connects to the tables the application built.
 	const payload = await getPayload({ config: configurationWithoutSchemaChange(await config) })
 	try {
-		const comptes: Comptes = {
+		const accounts: Accounts = {
 			existe: async email =>
 				(await payload.count({ collection: 'admins', overrideAccess: true, where: { email: { equals: email } } }))
 					.totalDocs > 0,
 			creer: async data => ({ id: (await payload.create({ collection: 'admins', data, overrideAccess: true })).id }),
 		}
-		const { id, role } = await creerLeCompte(comptes, demande, motDePasse, confirmation)
+		const { id, role } = await createAccount(accounts, request, password, confirmation)
 		console.log(`Compte admin créé : identifiant ${id}, rôle ${role}.`)
 		return 0
 	} finally {
@@ -57,14 +57,14 @@ async function principal(argv: string[]): Promise<number> {
 
 try {
 	process.exit(await principal(process.argv.slice(2)))
-} catch (erreur) {
-	if (erreur instanceof CreationRefusee) {
-		console.error(erreur.message)
+} catch (error) {
+	if (error instanceof CreationRefused) {
+		console.error(error.message)
 		process.exit(1)
 	}
 	// An error of the database carries the values of the query: only its type is printed.
 	console.error(
-		`La création a échoué (${erreur instanceof Error ? erreur.name : 'erreur inconnue'}). Rien n’est affiché de plus : il pourrait porter le mot de passe.`
+		`La création a échoué (${error instanceof Error ? error.name : 'erreur inconnue'}). Rien n’est affiché de plus : il pourrait porter le mot de passe.`
 	)
 	process.exit(3)
 }

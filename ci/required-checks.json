@@ -2,13 +2,13 @@
 	"description": "Les checks que la protection de la branche v3 exige. La garde C03 (tests/ci) vérifie que chacun existe sous ce nom exact : un check requis qui change de nom reste en attente pour toujours.",
 	"checks": [
 		{
-			"nom": "ci-ok",
+			"name": "ci-ok",
 			"source": "workflow",
-			"fichier": ".github/workflows/ci.yml",
+			"file": ".github/workflows/ci.yml",
 			"job": "ci-ok"
 		},
 		{
-			"nom": "CodeQL",
+			"name": "CodeQL",
 			"source": "github",
 			"detail": "Analyse de code de GitHub, en configuration par défaut : elle se règle dans GitHub, pas dans ce dépôt. Aucun job d'un workflow ne doit porter ce nom."
 		}

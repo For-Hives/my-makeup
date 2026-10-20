@@ -1,7 +1,7 @@
 /**
  * Adds a release note to the pending ones (ticket 036, docs/publication.md).
  *
- *   bun run notes:ajouter ajout "Tu peux ajouter une vidéo à ta galerie."
+ *   bun run notes:add ajout "Tu peux ajouter une vidéo à ta galerie."
  *
  * The type is `ajout`, `amelioration` or `correction`. The sentence is checked by the rule of
  * src/lib/release-notes.ts, the same one the unit tests apply to the whole file. The note
@@ -29,7 +29,7 @@ function main(): void {
 	if (type === '' || text === '') {
 		console.error(
 			[
-				'Usage : bun run notes:ajouter <type> "<une phrase>"',
+				'Usage : bun run notes:add <type> "<une phrase>"',
 				`Types : ${Object.entries(NOTE_TYPES)
 					.map(([key, label]) => `${key} (${label})`)
 					.join(', ')}.`,

@@ -28,7 +28,7 @@ Le ticket 219 prévient Bing et les autres moteurs du protocole IndexNow (Yandex
 Après l'échange des domaines, envoyer toutes les adresses du sitemap :
 
 ```sh
-INDEXNOW_KEY=<la clé> bun run indexnow:tout
+INDEXNOW_KEY=<la clé> bun run indexnow:all
 ```
 
 La commande lit le sitemap du site en ligne et envoie ce qu'il liste (une requête par 10 000 adresses). La réponse attendue est 200 ou 202. Le ticket 184 reprend cette ligne dans le pas-à-pas.

@@ -301,7 +301,7 @@ const ci = readWorkflow(CI, ciText)
 /** The CI with one thing changed in its text. */
 const brokenCi = (from: string | RegExp, to: string): Workflow => readWorkflow(CI, broken(ciText, from, to))
 
-const required = (JSON.parse(read('ci/checks-requis.json')) as { checks: RequiredCheck[] }).checks
+const required = (JSON.parse(read('ci/required-checks.json')) as { checks: RequiredCheck[] }).checks
 
 const CHECKOUT = 'uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0'
 /** An expression of GitHub Actions, `\${{ … }}`, written so that it is not read as a template of this file. */
@@ -438,8 +438,8 @@ describe('C02: no step depends on a cache, and only .next/cache is cached', () =
 })
 
 describe('C03: the required checks exist under their exact names', () => {
-	test('ci/checks-requis.json lists ci-ok and CodeQL, and both are what they say', () => {
-		expect(required.map(check => [check.nom, check.source])).toEqual([
+	test('ci/required-checks.json lists ci-ok and CodeQL, and both are what they say', () => {
+		expect(required.map(check => [check.name, check.source])).toEqual([
 			['ci-ok', 'workflow'],
 			['CodeQL', 'github'],
 		])
@@ -513,7 +513,7 @@ describe('C03: the required checks exist under their exact names', () => {
 	})
 
 	test('red on a required check of an unknown kind', () => {
-		expect(requiredCheckProblems([{ nom: 'autre', source: 'ailleurs' }], workflows)).toEqual([
+		expect(requiredCheckProblems([{ name: 'autre', source: 'ailleurs' }], workflows)).toEqual([
 			'Check requis « autre » : source « ailleurs » inconnue.',
 		])
 	})
@@ -1470,14 +1470,14 @@ describe('Ticket 137: the reconciliation of the storage and the database runs af
 	})
 
 	test('red on a CI that drops the step', () => {
-		const sansEtape = brokenCi('        run: bun run banc:rapprocher --hors-import\n', '        run: echo rien\n')
+		const sansEtape = brokenCi('        run: bun run banc:rapprocher --outside-import\n', '        run: echo rien\n')
 		expect(indexDe(sansEtape, 'bun run banc:rapprocher')).toBe(-1)
 	})
 
 	test('red on a step that tolerates a failure: C01 finds it', () => {
 		const tolerante = brokenCi(
-			'        run: bun run banc:rapprocher --hors-import\n',
-			'        continue-on-error: true\n        run: bun run banc:rapprocher --hors-import\n'
+			'        run: bun run banc:rapprocher --outside-import\n',
+			'        continue-on-error: true\n        run: bun run banc:rapprocher --outside-import\n'
 		)
 		expect(toleratedFailures([tolerante]).length).toBeGreaterThan(0)
 	})

@@ -18,7 +18,7 @@ const requete = (chemin: string, entetes: Record<string, string> = {}, methode =
 	new NextRequest(`${SITE}${chemin}`, { headers: entetes, method: methode })
 
 afterEach(() => {
-	delete process.env.BASCULE_LE
+	delete process.env.CUTOVER_DATE
 })
 
 describe('constat 1 : une arrivée depuis un autre site garde la session', () => {

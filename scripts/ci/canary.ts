@@ -2,8 +2,8 @@
  * The canary of the CI: four faults planted on purpose, one per tool, to prove on a real
  * pull request that the required check can fail (docs/qualite.md, « Canari »).
  *
- *   bun run ci:canari             writes the four faulty files
- *   bun run ci:canari --retirer   removes them
+ *   bun run ci:canary             writes the four faulty files
+ *   bun run ci:canary --remove   removes them
  *
  * It only writes on a branch whose name starts with `canari-`: the faults never land on a
  * working branch by accident. The four files live under tests/, outside the Docker image:
@@ -75,7 +75,7 @@ function currentBranch(): string {
 }
 
 function main(): void {
-	const remove = process.argv.includes('--retirer')
+	const remove = process.argv.includes('--remove')
 	if (remove) {
 		for (const { file } of CANARY_FAULTS) rmSync(path.join(ROOT, file), { force: true })
 		console.log('Canari retiré : les quatre fichiers fautifs sont supprimés.')

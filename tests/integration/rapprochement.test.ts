@@ -79,7 +79,7 @@ const rapprocher = async () => {
 
 /** The command, in its own process, as the CI step runs it. */
 async function commande() {
-	const enfant = Bun.spawn([process.execPath, '--no-env-file', 'scripts/medias/rapprochement.ts', '--json'], {
+	const enfant = Bun.spawn([process.execPath, '--no-env-file', 'scripts/media/reconciliation.ts', '--json'], {
 		cwd: RACINE,
 		env: process.env,
 		stdin: 'ignore',

@@ -30,7 +30,7 @@ export type RawEnv = Partial<
 	Record<
 		| 'APP_ENV'
 		| 'AUTH_VERIFY'
-		| 'BASCULE_LE'
+		| 'CUTOVER_DATE'
 		| 'CONTACT_TO'
 		| 'DATABASE_URI'
 		| 'EMAIL_FROM'
@@ -248,7 +248,7 @@ const DEFAULT_SENDER_NAME = 'My Makeup'
 const EXPECTED = {
 	APP_ENV: '« test » sur le banc de test, « prod » sur le site en ligne, ou absente sur un poste',
 	AUTH_VERIFY: '« on » (la valeur par défaut) ou « off »',
-	BASCULE_LE: 'une date au format AAAA-MM-JJ, comme « 2027-02-01 », qui existe',
+	CUTOVER_DATE: 'une date au format AAAA-MM-JJ, comme « 2027-02-01 », qui existe',
 	CONTACT_TO: 'une adresse email seule, comme « equipe@domaine »',
 	DATABASE_URI: 'postgres://UTILISATEUR:MOT_DE_PASSE@HÔTE:PORT/BASE',
 	EMAIL_FROM: '« Nom <adresse@domaine> », ou une adresse seule',
@@ -699,7 +699,7 @@ const schema = z.object({
 		.string()
 		.refine(value => ['on', 'off'].includes(value.trim().toLowerCase()), { error: 'illisible' })
 		.optional(),
-	BASCULE_LE: z
+	CUTOVER_DATE: z
 		.string()
 		.refine(value => cleanupEnd(value) !== undefined, { error: 'illisible' })
 		.optional(),
@@ -854,7 +854,7 @@ function processEnv(): RawEnv {
 	return {
 		APP_ENV: process.env.APP_ENV,
 		AUTH_VERIFY: process.env.AUTH_VERIFY,
-		BASCULE_LE: process.env.BASCULE_LE,
+		CUTOVER_DATE: process.env.CUTOVER_DATE,
 		CONTACT_TO: process.env.CONTACT_TO,
 		DATABASE_URI: process.env.DATABASE_URI,
 		EMAIL_FROM: process.env.EMAIL_FROM,
@@ -898,6 +898,7 @@ export const RENAMED_VARIABLES: readonly (readonly [string, string])[] = [
 	['IMPORT_CIBLE_EN_SERVICE', 'IMPORT_TARGET_IN_SERVICE'],
 	['IMPORT_COMMUNES', 'IMPORT_CITIES'],
 	['IMPORT_CONSENTEMENT_LE', 'IMPORT_CONSENT_DATE'],
+	['BASCULE_LE', 'CUTOVER_DATE'],
 ]
 
 /** The values of IMPORT_MODE that were renamed: old value, new value. */

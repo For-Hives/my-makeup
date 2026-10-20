@@ -13,7 +13,7 @@ import type { Workflow } from './garde-fous-ci'
 /** The one branch a version is published from. */
 const PUBLISHED_BRANCH = 'main'
 /** The command the publication job runs, and nothing else. */
-export const PUBLICATION_COMMAND = 'bun run release:publier --pousser'
+export const PUBLICATION_COMMAND = 'bun run release:publish --push'
 /** An expression of GitHub Actions, `\${{ … }}`, written so that it is not read as a template of this file. */
 const expression = (inner: string): string => `\${{ ${inner} }}`
 /** The commit the publication starts from: the one whose CI ended green. */

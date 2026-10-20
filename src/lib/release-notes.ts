@@ -2,7 +2,7 @@
  * The release notes of the site (ticket 036): what a visitor or a makeup artist can notice,
  * one French sentence per change, kept in src/content/changelog.json.
  *
- * A note waits in `pending` from the commit that brings the change (`bun run notes:ajouter`).
+ * A note waits in `pending` from the commit that brings the change (`bun run notes:add`).
  * The publication of a version (scripts/release/publication.ts, run by
  * .github/workflows/release.yml once ci-ok is green on main) moves every pending note under
  * the number it reserves. The « Nouveautés » page of the makeup artists will read `releases`.

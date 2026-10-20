@@ -21,8 +21,8 @@ Banc démarré (`bun run banc:up`) :
 
 ```sh
 bun run banc:source               # crée la source, ou la recrée de zéro, puis donne son inventaire et son empreinte
-bun run banc:source --empreinte   # donne l'empreinte de la source telle qu'elle est, sans y toucher
-bun run banc:source --effacer     # efface la base, le rôle en lecture seule et les objets de la source
+bun run banc:source --fingerprint   # donne l'empreinte de la source telle qu'elle est, sans y toucher
+bun run banc:source --erase     # efface la base, le rôle en lecture seule et les objets de la source
 ```
 
 Comme toute commande du banc, elle vise l'instance de `BANC_INSTANCE` et `BANC_DECALAGE`. Elle met environ une seconde. Elle n'affiche que des nombres et des empreintes : ni hash, ni email, ni mot de passe.

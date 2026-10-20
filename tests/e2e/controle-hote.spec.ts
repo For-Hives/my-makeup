@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { controlerLHote, ecrireLeRapport } from '../../scripts/cutover/host-check'
+import { checkHost, writeReport } from '../../scripts/cutover/host-check'
 import { poserLesProfilsDeRecherche } from '../fixtures/profils-de-recherche'
 import { creerContenu, rafraichirLesPagesDesProfils, supprimerContenu } from '../outils/pages-publiques'
 
@@ -40,8 +40,8 @@ test('I45 sur un hôte : tout l’inventaire est conforme, aucun 5xx', async ({ 
 		},
 	]
 	try {
-		const rapport = await controlerLHote({ cible: new URL(baseURL) }, { intervalleMs: 0, aVenir: A_VENIR })
-		console.log(`\n${ecrireLeRapport(rapport)}\n`)
+		const rapport = await checkHost({ cible: new URL(baseURL) }, { intervalleMs: 0, aVenir: A_VENIR })
+		console.log(`\n${writeReport(rapport)}\n`)
 		expect(rapport.defauts).toEqual([])
 		expect(rapport.reponses5xx).toBe(0)
 		expect(rapport.adresses.enEchec).toBe(0)
