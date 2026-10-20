@@ -10,7 +10,7 @@ import {
 	imageDePartageDeLaPhoto,
 	LARGEUR_DE_PARTAGE,
 	QUALITE_DE_PARTAGE,
-} from '../../src/lib/seo/sharing'
+} from '../../src/lib/seo/share'
 import { metadonneesDuProfil } from '../../src/lib/seo/profile'
 import type { PublicProfile } from '../../src/services/public/profiles'
 

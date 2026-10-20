@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { balisesDePartage, type ImageDePartage, type TypeDePartage } from './sharing'
+import { balisesDePartage, type ImageDePartage, type TypeDePartage } from './share'
 import { descriptionEditoriale, descriptionMeta, titrePage } from './text'
 import { urlCanonique } from './url'
 

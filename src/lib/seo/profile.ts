@@ -14,7 +14,7 @@ import type { PublicProfile } from '@/services/public/profiles'
 import { SITE_ORIGIN } from '../frozen-urls'
 import { NOM_DU_SITE } from './json-ld'
 import { metadonnees } from './metadata'
-import { imageDePartageDeLaPhoto } from './sharing'
+import { imageDePartageDeLaPhoto } from './share'
 import { MARQUE, TITRE_MAX, texteSur, tronquer } from './text'
 import { urlCanonique } from './url'
 
