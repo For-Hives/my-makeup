@@ -274,7 +274,7 @@ export async function run(args: readonly string[], env: Record<string, string | 
 		const commit =
 			spawnSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: ROOT, encoding: 'utf8' }).stdout.trim() || 'inconnu'
 		const measure: Measure = {
-			date: new Date().toISOString().slice(0, 10),
+			date: new Date().toLocaleDateString('fr-FR', { timeZone: 'Europe/Paris' }),
 			commit,
 			lighthouse: version,
 			browser,
