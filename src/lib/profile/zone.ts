@@ -490,7 +490,8 @@ export function zoneFilled(zone: unknown): boolean {
  * stored zone.
  *
  * - A commune given: the zone is a commune; countries and town are emptied.
- * - Countries or a town given: the zone is countries; the commune is emptied.
+ * - Countries or a town given: the zone is countries; the commune is emptied, and so is the town
+ *   when countries are given without one.
  * - Both given, or a type that contradicts what is given: refused, as a message.
  * - Only a type given: the zone takes it and the fields of the other are emptied.
  * - Nothing about the zone given: null, nothing to write. A commune or countries sent empty stay
@@ -509,7 +510,13 @@ export function zoneWrite(data: unknown): Record<string, unknown> | string | nul
 	const clearCity = { city: null }
 	const clearCountries = { countries: [], town: null }
 	if (hasCity) return { zoneKind: 'city', ...clearCountries }
-	if (hasCountries) return { zoneKind: 'countries', ...clearCity }
+	// Countries given without a town: the zone is whole, the town of the stored zone does not stay.
+	if (hasCountries)
+		return {
+			zoneKind: 'countries',
+			...clearCity,
+			...(countries !== undefined && town === undefined ? { town: null } : {}),
+		}
 	if (kind === 'city') return { ...clearCountries }
 	if (kind === 'countries') return { ...clearCity }
 	return null

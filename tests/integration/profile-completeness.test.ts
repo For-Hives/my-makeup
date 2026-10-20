@@ -456,3 +456,39 @@ describe('Valeurs envoyées par la maquilleuse ignorées et recalculées', () =>
 		expect(await state(profile)).toMatchObject({ completeness: 0, active: false, publishable: false, fullyEmpty: true })
 	})
 })
+
+describe('Une zone de pays rend le profil publiable comme sur l’ancien site (ticket 260)', () => {
+	/** Everything a publishable profile has, but its zone. */
+	async function withoutZone(compte: Artist): Promise<Record<string, unknown>> {
+		const { city: _city, ...others } = await allConditions(compte)
+		return others
+	}
+
+	test('un pays étranger avec sa ville, puis plusieurs pays : actif et publiable ; une zone vide ne l’est pas', async () => {
+		const { compte: account, profil: profile } = await artistAndItsProfile()
+		await modify(account, profile, await withoutZone(account))
+		expect(await state(profile)).toMatchObject({ active: false, publishable: false, status: 'published' })
+
+		await modify(account, profile, { countries: ['BE'], town: 'Bruxelles' })
+		expect(await state(profile)).toMatchObject({ active: true, publishable: true, completeness: 6 })
+
+		await modify(account, profile, { countries: ['FR', 'IT'] })
+		expect(await state(profile)).toMatchObject({ active: true, publishable: true })
+
+		await modify(account, profile, { zoneKind: 'countries', countries: [] })
+		expect(await state(profile)).toMatchObject({ active: false, publishable: false })
+	})
+
+	test('de la commune aux pays et retour : la lecture suit la zone, rien d’autre ne change', async () => {
+		const { compte: account, profil: profile } = await artistAndItsProfile()
+		await modify(account, profile, { ...(await withoutZone(account)), city: ANNECY })
+		const asCity = await state(profile)
+		expect(asCity).toMatchObject({ active: true, publishable: true })
+
+		await modify(account, profile, { countries: ['CH'] })
+		expect(await state(profile)).toEqual(asCity)
+
+		await modify(account, profile, { city: ANNECY })
+		expect(await state(profile)).toEqual(asCity)
+	})
+})

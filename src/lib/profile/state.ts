@@ -16,6 +16,7 @@
  * CLI, outside of Next.
  */
 
+import { countryByCode, FRANCE_CODE, normalizedCountryCode } from '../countries'
 import { isPriceAmount } from '../price'
 import { completeness, type ProfileFields, usableCity } from './completeness'
 import {
@@ -47,6 +48,9 @@ export interface ProfileDocument {
 	readonly specialty?: string | null
 	readonly description?: string | null
 	readonly city?: { readonly name?: string | null; readonly inseeCode?: string | null } | null
+	/** `countries` reads the countries; anything else (or nothing) reads the commune. */
+	readonly zoneKind?: string | null
+	readonly countries?: readonly string[] | null
 	readonly mainPicture?: unknown
 	readonly gallery?: readonly unknown[] | null
 	readonly skills?: readonly unknown[] | null
@@ -74,10 +78,32 @@ function cityName(commune: ProfileDocument['city']): string | null {
 }
 
 /**
+ * The city the rule reads for a zone of countries (ticket 260): the name of the first foreign
+ * country, which the rule takes for a usable city (src/lib/countries.ts, tested on the whole list).
+ * France is no foreign country, so a zone of France alone reads nothing; neither does an empty one.
+ */
+function countryCityName(countries: ProfileDocument['countries']): string | null {
+	for (const code of countries ?? []) {
+		const normalized = normalizedCountryCode(code)
+		if (normalized !== FRANCE_CODE) {
+			const country = countryByCode(normalized)
+			if (country) return country.name
+		}
+	}
+	return null
+}
+
+/** The city the rule reads for the zone of a document: its commune, or the first foreign country of its countries. */
+function zoneCityName(document: ProfileDocument): string | null {
+	return document.zoneKind === 'countries' ? countryCityName(document.countries) : cityName(document.city)
+}
+
+/**
  * A document of `profiles` under the names of the old site, as the single rule reads it.
  *
  * - The city is the name of the commune (ticket 041), and only a commune with its INSEE code: the
- *   server stores no other (`cityName`).
+ *   server stores no other (`cityName`). For a zone of countries it is the name of the first
+ *   foreign country (`countryCityName`, ticket 260); a zone of communes reads as it always did.
  * - A photo is passed as an object, never as a bare identifier, which the rule would count as no
  *   photo; the gallery as its list.
  * - The price of an offer is its amount (`priceFrom`, read from the text typed by the same
@@ -95,7 +121,7 @@ export function profileFields(document: ProfileDocument | null | undefined): Pro
 		last_name: d.lastName,
 		speciality: d.specialty,
 		company_artist_name: d.artistName,
-		city: cityName(d.city),
+		city: zoneCityName(d),
 		description: d.description,
 		main_picture: d.mainPicture === null || d.mainPicture === undefined ? null : { id: d.mainPicture },
 		image_gallery: d.gallery ?? null,

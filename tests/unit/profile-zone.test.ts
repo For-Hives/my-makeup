@@ -494,7 +494,8 @@ describe('la zone enregistrée entière (ticket 259)', () => {
 
 	test('une commune donnée vide les pays et la ville ; des pays donnés vident la commune', () => {
 		expect(zoneWrite({ city: ANNECY })).toEqual({ zoneKind: 'city', countries: [], town: null })
-		expect(zoneWrite({ countries: ['BE'] })).toEqual({ zoneKind: 'countries', city: null })
+		expect(zoneWrite({ countries: ['BE'] })).toEqual({ zoneKind: 'countries', city: null, town: null })
+		expect(zoneWrite({ countries: ['BE'], town: 'Bruxelles' })).toEqual({ zoneKind: 'countries', city: null })
 		expect(zoneWrite({ town: 'Bruxelles' })).toEqual({ zoneKind: 'countries', city: null })
 		expect(zoneWrite({ city: ANNECY, zoneKind: 'city' })).toEqual({ zoneKind: 'city', countries: [], town: null })
 	})

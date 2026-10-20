@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from 'bun:test'
 import { ValidationError } from 'payload'
 import { NO_PROFILE_CONTEXT } from '@/collections/Profiles'
 import { ABROAD_MESSAGES, ZONE_KIND_MESSAGES, ZONE_MESSAGES } from '@/lib/profile/zone'
+import type { Profile } from '@/payload-types'
 import { createAccount, randomPassword, type TestAccount } from '../support/account-factory'
 import { emptyBase, testPayload } from '../support/payload-test'
 import { callRest } from '../support/rest'
@@ -554,11 +555,11 @@ describe('Les deux types de zone (ticket 259) : une commune, ou des pays', () =>
 })
 
 describe('La revue de zone (ticket 259) : posée par l’import seul, vidée par le serveur', () => {
-	const REVIEW = {
+	const REVIEW: NonNullable<Profile['zoneReview']> = {
 		reason: 'sharedPostalCode',
 		postalCode: '62149',
 		candidates: [{ inseeCode: '62200', name: 'Cambrin', department: '62' }],
-	} as const
+	}
 
 	test('l’import la pose sur une zone vide ; elle se relit telle quelle', async () => {
 		const { profil: profile } = await artistAndItsProfile()

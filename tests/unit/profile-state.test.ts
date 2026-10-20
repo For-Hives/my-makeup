@@ -2,7 +2,8 @@ import { describe, expect, test } from 'bun:test'
 import type { Field } from 'payload'
 import { Profiles } from '@/collections/Profiles'
 import { STATE_FIELDS } from '@/collections/profiles/state'
-import { completeness, publishableConditions } from '@/lib/profile/completeness'
+import { DEMO_PROFILES } from '@/demo-data/profiles'
+import { completeness, publishableConditions, usableCity } from '@/lib/profile/completeness'
 import {
 	type ProfileDocument,
 	profileFields,
@@ -376,6 +377,79 @@ describe('les champs de l’état dans la collection des profils', () => {
 			const nameValue = 'name' in field ? field.name : ''
 			for (const operation of ['create', 'update'] as const)
 				expect([nameValue, operation, access?.[operation]?.({} as never)]).toEqual([nameValue, operation, false])
+		}
+	})
+})
+
+describe('une zone de pays lue par la règle unique (ticket 260)', () => {
+	const ABROAD = { ...PUBLISHABLE, city: undefined }
+
+	test('un pays étranger, avec ses autres conditions : actif et publiable', () => {
+		const state = profileState({ ...ABROAD, zoneKind: 'countries', countries: ['BE'] })
+		expect(state).toMatchObject({ active: true, publishable: true, fullyEmpty: false })
+		expect(profileState({ ...ABROAD, zoneKind: 'countries', countries: ['BE'] }).completeness).toBe(
+			profileState(PUBLISHABLE).completeness
+		)
+	})
+
+	test('France et Italie : publiable aussi, la ville lue est le premier pays étranger', () => {
+		const document: ProfileDocument = { ...ABROAD, zoneKind: 'countries', countries: ['FR', 'IT'] }
+		expect(profileState(document)).toMatchObject({ active: true, publishable: true })
+		expect(profileFields(document).city).toBe('Italie')
+		expect(profileFields({ ...document, countries: ['IT', 'FR'] }).city).toBe('Italie')
+		expect(profileFields({ ...document, countries: ['be', 'FR'] }).city).toBe('Belgique')
+	})
+
+	test('une zone vide n’est pas publiable ; la France seule ne lit aucune ville exploitable', () => {
+		for (const zone of [
+			{ zoneKind: 'countries', countries: [] },
+			{ zoneKind: 'countries', countries: null },
+			{ zoneKind: 'countries' },
+			{ zoneKind: 'countries', countries: ['FR'] },
+			{ zoneKind: 'countries', countries: ['fr'] },
+			{ zoneKind: 'countries', countries: ['XX'] },
+		]) {
+			const document: ProfileDocument = { ...ABROAD, ...zone }
+			expect(profileState(document), JSON.stringify(zone)).toMatchObject({ active: false, publishable: false })
+			expect(usableCity(profileFields(document).city), JSON.stringify(zone)).toBe(false)
+		}
+	})
+
+	test('le nom du premier pays étranger est une ville exploitable, pour chaque pays de la liste', async () => {
+		const { COUNTRIES } = await import('@/lib/countries')
+		for (const { code, name } of COUNTRIES) {
+			if (code === 'FR') continue
+			const fields = profileFields({ zoneKind: 'countries', countries: [code] })
+			expect(fields.city, code).toBe(name)
+			expect(usableCity(fields.city), code).toBe(true)
+		}
+	})
+
+	test('la zone de pays prime sur une commune qui resterait ; une zone de communes ignore les pays', () => {
+		const stale = { name: 'Annecy', inseeCode: '74010' }
+		expect(profileFields({ city: stale, zoneKind: 'countries', countries: ['BE'] }).city).toBe('Belgique')
+		expect(profileFields({ city: stale, zoneKind: 'countries', countries: [] }).city).toBeNull()
+		expect(profileFields({ city: stale, zoneKind: 'city', countries: ['BE'] }).city).toBe('Annecy')
+		expect(profileFields({ city: stale, countries: ['BE'] }).city).toBe('Annecy')
+		expect(profileFields({ city: stale }).city).toBe('Annecy')
+	})
+
+	test('chaque profil du jeu du banc donne la même lecture qu’avant : zone de communes, type city ou absent', () => {
+		// Before this ticket the rule read the name of the commune, next to its INSEE code, with the spaced
+		// hyphens joined when the rule of the old site refused the name.
+		const before = (document: ProfileDocument): string | null => {
+			const commune = document.city
+			if (!commune?.inseeCode || typeof commune.name !== 'string') return null
+			return usableCity(commune.name) ? commune.name : commune.name.replace(/\s+-\s+/g, '-')
+		}
+		expect(DEMO_PROFILES.length).toBeGreaterThan(0)
+		for (const { cle, profil } of DEMO_PROFILES) {
+			const document = profil as ProfileDocument
+			expect(profileFields(document).city, cle).toBe(before(document))
+			expect(profileFields({ ...document, zoneKind: 'city' }), cle).toEqual(profileFields(document))
+			expect(profileFields({ ...document, zoneKind: 'city', countries: [] }), cle).toEqual(profileFields(document))
+			const state = profileState({ ...document, zoneKind: 'city' })
+			expect(state, cle).toEqual(profileState(document))
 		}
 	})
 })
