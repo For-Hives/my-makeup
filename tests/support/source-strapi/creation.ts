@@ -162,6 +162,16 @@ export async function fillBase(executer: Run, definition: SourceDefinition, role
 			id,
 		])
 	await executer('DROP SCHEMA fabrique CASCADE')
+	await grantReadOnly(executer, role)
+}
+
+/**
+ * Locks the source to its read-only role: the role may use the schema and select from its tables,
+ * and cannot create a large object. Also what the rehearsal on a restored backup does (ticket 180),
+ * run in the source database by its owner.
+ */
+export async function grantReadOnly(executer: Run, role: string): Promise<void> {
+	if (!NAME_SQL.test(role)) throw new Error('Fausse base Strapi : un rôle s’écrit en minuscules, chiffres et « _ ».')
 	await executer('REVOKE ALL ON SCHEMA public FROM PUBLIC')
 	await executer(`GRANT USAGE ON SCHEMA public TO ${identifier(role)}`)
 	await executer(`GRANT SELECT ON ALL TABLES IN SCHEMA public TO ${identifier(role)}`)

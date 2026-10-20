@@ -60,7 +60,7 @@ export interface Bench {
 const seconds = (debut: number): string => ((performance.now() - debut) / 1000).toFixed(1).replace('.', ',')
 
 /** The environment the container engine is reached with: Docker, or rootless Podman when Docker does not answer. */
-async function containersEngine(): Promise<ProcessEnvironment> {
+export async function containersEngine(): Promise<ProcessEnvironment> {
 	const responds = async (env: ProcessEnvironment): Promise<boolean> => {
 		try {
 			return (await Bun.spawn(['docker', 'version'], { env, stdout: 'ignore', stderr: 'ignore' }).exited) === 0
