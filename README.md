@@ -652,6 +652,7 @@ Rien ne se publie avant la fusion de `v3` dans `main`. Le détail, et ce qu'il r
 | `bun run image:build` | Construit l'image Docker `my-makeup:local` |
 | `bun run image:check` | Vérifie l'image construite contre une base jetable (voir « Image Docker ») |
 | `bun run notes:add` | Ajoute une note de version en attente : un type (`ajout`, `amelioration`, `correction`), puis la phrase entre guillemets (voir « Notes de version et publication ») |
+| `bun run perf:lighthouse` | La vitesse des quatre pages de référence (P01 à P04) en mobile : 5 passages par page, médiane, budgets du plan 02 §7.5 et comparaison avec le site en ligne, rapport dans `docs/mesure/lighthouse-v3.md`. Sur le banc (`bun run bench:full`), seul et machine au repos : la commande refuse sinon, `--indicative` mesure quand même (voir [`docs/mesure/lighthouse.md`](docs/mesure/lighthouse.md)) |
 | `bun run names:check [dossier…]` | Liste les noms du code qui sont encore français (fichiers, dossiers, noms déclarés, scripts, variables d'environnement lues, options des scripts) et sort avec le code 1 s'il en trouve hors des exceptions nommées. `--summary`, `--json` (voir [`docs/noms.md`](docs/noms.md)). Tourne dans la CI (job `qualite`), sous `ci-ok`, sans liste d'attente |
 | `bun run release:publish` | Avec `--dry-run` : montre la prochaine publication sans rien écrire. Avec `--push` : publie, dans le workflow `release.yml` seulement |
 

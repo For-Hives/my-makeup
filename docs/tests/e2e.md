@@ -118,6 +118,13 @@ expect(await violationsSevere(page)).toEqual([])
 - **Zoom à 200 %** : la largeur de la fenêtre est divisée par deux (320 px au plus bas, la largeur de la règle WCAG 1.4.10 de reflux). Ni défilement de côté, ni deux liens, boutons, champs ou titres qui se recouvrent, sur la page et dans chaque panneau. Le contrôle de recouvrement compare les boîtes ligne par ligne et prouve qu'il sait échouer.
 - Le reste de la liste du ticket (E02, E19 à E36, U25 à U32, U79 à U81, I23 à I27, I36, I38) est joué par les essais de chaque section.
 
+## Les 15 pages clés et les listes, une dernière fois (ticket 178)
+
+Deux essais se jouent à la fin, quand tout est livré ; la CI les rejoue avec les autres.
+
+- **`a11y-key-pages.spec.ts`** : axe ne trouve aucune violation « serious » ni « critical » sur 15 pages, aux deux tailles. Les 12 pages ouvertes à tous : accueil, recherche d'une ville, un profil public, un talent, le blog, un article, le contact, les mentions légales, la connexion, l'inscription, le mot de passe oublié, la page 404. Les 3 pages de l'espace : l'espace lui-même (avec quatre panneaux de nature différente ouverts l'un après l'autre : un texte, la recherche de commune, une liste avec ses options, le portfolio), l'aperçu du profil, la première étape de l'accueil. Deux états s'y ajoutent : la recherche sans résultat et le formulaire de contact avec ses erreurs. Le dernier essai compte les 15 pages. E67 et E68 parcourent les douze panneaux et la suppression (`dashboard-acceptance.spec.ts`).
+- **`lists-removal.spec.ts`** : sur chacune des sept listes (langues, compétences, expériences, formations, prestations, options d'une prestation, photos du portfolio), la zone `role="status"` est là et vide à l'ouverture ; un retrait au clavier puis un retrait au clic ou au toucher laissent le focus dans le panneau (jamais sur un champ de saisie après un clic), et chacun est annoncé par une phrase qui change. Ce sont les règles L4 et L5 de [`docs/qualite.md`](../qualite.md), §3, dans un vrai navigateur ; les sept règles ont chacune leur test en unitaire pour chaque panneau.
+
 ## La parité des adresses (I45)
 
 `tests/e2e/url-parity.spec.ts` demande à l'application chaque adresse gelée ([`docs/migration/URLS.md`](../migration/URLS.md)) et vérifie le code que la table promet, la redirection en un seul saut vers la bonne destination, et le même h1 que l'ancien site. Il n'ouvre pas de navigateur : il interroge l'application avec `request`, sans suivre les redirections, et lit le HTML comme l'outil de mesure l'a lu.
