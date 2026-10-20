@@ -22,16 +22,16 @@ import {
 	writeSummary,
 } from '../support/url-parity'
 
-const RACINE = join(import.meta.dir, '../..')
-const anciens: OldSiteTitles = JSON.parse(readFileSync(join(RACINE, 'tests/fixtures/url-parity-h1.json'), 'utf8'))
-const inventaire = JSON.parse(readFileSync(join(RACINE, 'docs/migration/urls-inventaire.json'), 'utf8')) as {
+const ROOT = join(import.meta.dir, '../..')
+const old: OldSiteTitles = JSON.parse(readFileSync(join(ROOT, 'tests/fixtures/url-parity-h1.json'), 'utf8'))
+const inventory = JSON.parse(readFileSync(join(ROOT, 'docs/migration/urls-inventaire.json'), 'utf8')) as {
 	addresses: { address: string }[]
 	complements: { address?: string }[]
 }
 
 /** The hash the old site's tool wrote for an address, which the fixture must hold. */
 const hash = (adresse: string): string => {
-	const sha = anciens[adresse]?.sha
+	const sha = old[adresse]?.sha
 	if (!sha) throw new Error(`pas d'empreinte pour ${adresse}`)
 	return sha
 }
@@ -62,27 +62,25 @@ describe('la lecture du h1, comme l’outil de mesure', () => {
 
 describe('la fixture des h1 de l’ancien site', () => {
 	test('elle ne garde que des adresses que le dépôt écrit déjà en clair, jamais un chemin de profil', () => {
-		const ecrites = new Set([
-			...inventaire.addresses.map(({ address }) => address),
-			...inventaire.complements.flatMap(({ address }) => (address ? [address] : [])),
+		const written = new Set([
+			...inventory.addresses.map(({ address }) => address),
+			...inventory.complements.flatMap(({ address }) => (address ? [address] : [])),
 		])
-		for (const adresse of Object.keys(anciens)) expect(ecrites.has(adresse)).toBe(true)
-		expect(Object.keys(anciens).filter(adresse => /^\/{1,2}profil\/(?!audit-inexistant-zz9$)/.test(adresse))).toEqual(
-			[]
-		)
+		for (const url of Object.keys(old)) expect(written.has(url)).toBe(true)
+		expect(Object.keys(old).filter(adresse => /^\/{1,2}profil\/(?!audit-inexistant-zz9$)/.test(adresse))).toEqual([])
 	})
 
 	test('chaque entrée dit un nombre de h1 et une empreinte de 64 caractères, ou aucune', () => {
-		for (const [adresse, { n, sha }] of Object.entries(anciens)) {
-			expect(Number.isInteger(n), adresse).toBe(true)
-			if (n > 0) expect(sha, adresse).toMatch(/^[0-9a-f]{64}$/)
-			else expect(sha, adresse).toBeNull()
+		for (const [url, { n, sha }] of Object.entries(old)) {
+			expect(Number.isInteger(n), url).toBe(true)
+			if (n > 0) expect(sha, url).toMatch(/^[0-9a-f]{64}$/)
+			else expect(sha, url).toBeNull()
 		}
 	})
 })
 
 describe('les cas du banc', () => {
-	const cas = benchCase(anciens, {
+	const testCaseAlt = benchCase(old, {
 		profilsVisibles: ['alice-test'],
 		profilsMasques: ['masquee-test'],
 		ancienNom: { ecrit: 'zo%C3%A9%20lef%C3%A8vre', slug: 'zoe-lefevre' },
@@ -90,59 +88,59 @@ describe('les cas du banc', () => {
 		articlesPublies: ['article-test'],
 		articlesBrouillons: ['brouillon-test'],
 	})
-	const de = (adresse: string): ParityCase => {
-		const trouve = cas.find(c => c.adresse === adresse)
-		if (!trouve) throw new Error(`pas de cas pour ${adresse}`)
-		return trouve
+	const from = (adresse: string): ParityCase => {
+		const found = testCaseAlt.find(c => c.adresse === adresse)
+		if (!found) throw new Error(`pas de cas pour ${adresse}`)
+		return found
 	}
 
 	test('une adresse redirigée est suivie jusqu’à sa destination, dont l’h1 est celui de l’ancien site', () => {
-		expect(de('/blog/')).toMatchObject({ famille: 'barre-finale', statuts: [308], vers: '/blog', statutFinal: 200 })
-		expect(de('/blog/').titre).toEqual({ mode: 'hash', sha: hash('/blog') })
-		expect(de('/toutes-les-news')).toMatchObject({ statuts: [301], vers: '/blog', familleFinale: 'blog' })
-		expect(de('/auth/profil')).toMatchObject({ famille: 'espace-prive', statuts: [307] })
+		expect(from('/blog/')).toMatchObject({ famille: 'barre-finale', statuts: [308], vers: '/blog', statutFinal: 200 })
+		expect(from('/blog/').titre).toEqual({ mode: 'hash', sha: hash('/blog') })
+		expect(from('/toutes-les-news')).toMatchObject({ statuts: [301], vers: '/blog', familleFinale: 'blog' })
+		expect(from('/auth/profil')).toMatchObject({ famille: 'espace-prive', statuts: [307] })
 	})
 
 	test('la double barre accepte le 308 de Next, et reste un écart connu', () => {
-		expect(de('//blog')).toMatchObject({ famille: 'double-barre', statuts: [301, 308] })
-		expect(de('//blog').ecartConnu).toBeDefined()
+		expect(from('//blog')).toMatchObject({ famille: 'double-barre', statuts: [301, 308] })
+		expect(from('//blog').ecartConnu).toBeDefined()
 	})
 
 	test('une page inconnue doit avoir l’h1 de la 404 de l’ancien site, une recherche un seul h1', () => {
-		expect(de('/page-inexistante-audit-zz').titre).toEqual({
+		expect(from('/page-inexistante-audit-zz').titre).toEqual({
 			mode: 'hash',
 			sha: hash('/page-inexistante-audit-zz'),
 		})
-		expect(de('/search?city=Annecy').titre).toEqual({ mode: 'un' })
-		expect(de('/search').titre).toEqual({ mode: 'hash', sha: hash('/search') })
+		expect(from('/search?city=Annecy').titre).toEqual({ mode: 'un' })
+		expect(from('/search').titre).toEqual({ mode: 'hash', sha: hash('/search') })
 	})
 
 	test('une page à deux h1 sur l’ancien site doit en avoir un seul', () => {
-		expect(de('/a-propos').titre).toEqual({ mode: 'un' })
+		expect(from('/a-propos').titre).toEqual({ mode: 'un' })
 	})
 
 	test('les profils, les talents et les articles viennent du jeu fictif, pas des vrais slugs de l’inventaire', () => {
-		expect(de('/profil/alice-test')).toMatchObject({ famille: 'profil', statuts: [200] })
-		expect(de('/profil/masquee-test')).toMatchObject({ famille: 'slug-inconnu', statuts: [404] })
-		expect(de('/profil/zo%C3%A9%20lef%C3%A8vre')).toMatchObject({
+		expect(from('/profil/alice-test')).toMatchObject({ famille: 'profil', statuts: [200] })
+		expect(from('/profil/masquee-test')).toMatchObject({ famille: 'slug-inconnu', statuts: [404] })
+		expect(from('/profil/zo%C3%A9%20lef%C3%A8vre')).toMatchObject({
 			famille: 'profil-ancien-nom',
 			vers: '/profil/zoe-lefevre',
 		})
-		expect(cas.some(c => c.adresse === '/blog/cout-maquilleuse-professionnelle-guide-tarifs')).toBe(false)
-		expect(cas.some(c => c.adresse === '/talent/maquillage-fete')).toBe(false)
-		expect(cas.some(c => c.adresse === '/talent/maquillage-mariee')).toBe(false)
-		expect(de('/talent/maquillage-test')).toMatchObject({ famille: 'talent', statuts: [200] })
-		expect(de('/blog/article-test')).toMatchObject({ famille: 'article', statuts: [200] })
-		expect(de('/blog/brouillon-test')).toMatchObject({ famille: 'slug-inconnu', statuts: [404] })
+		expect(testCaseAlt.some(c => c.adresse === '/blog/cout-maquilleuse-professionnelle-guide-tarifs')).toBe(false)
+		expect(testCaseAlt.some(c => c.adresse === '/talent/maquillage-fete')).toBe(false)
+		expect(testCaseAlt.some(c => c.adresse === '/talent/maquillage-mariee')).toBe(false)
+		expect(from('/talent/maquillage-test')).toMatchObject({ famille: 'talent', statuts: [200] })
+		expect(from('/blog/article-test')).toMatchObject({ famille: 'article', statuts: [200] })
+		expect(from('/blog/brouillon-test')).toMatchObject({ famille: 'slug-inconnu', statuts: [404] })
 	})
 
 	test('les hôtes (http, www, ancienne API) ne sont pas des cas : l’hébergeur répond', () => {
-		expect(cas.filter(c => ['http', 'www', 'ancienne-api'].includes(c.famille))).toEqual([])
+		expect(testCaseAlt.filter(c => ['http', 'www', 'ancienne-api'].includes(c.famille))).toEqual([])
 	})
 })
 
 describe('la vérification d’un cas', () => {
-	const cas: ParityCase = {
+	const testCaseAlt: ParityCase = {
 		adresse: '/blog/',
 		etiquette: '/blog/',
 		famille: 'barre-finale',
@@ -152,47 +150,47 @@ describe('la vérification d’un cas', () => {
 		familleFinale: 'blog',
 		titre: { mode: 'hash', sha: sha256('Le blog') },
 	}
-	const serveur =
+	const server =
 		(table: Record<string, Reply>) =>
 		async (adresse: string): Promise<Reply> =>
 			table[adresse] ?? page('<h1>404 - Page non trouvée</h1>', 404)
 
 	test('un saut juste, vers une page de même h1 et de même statut : vert', async () => {
-		const resultat = await check(
-			cas,
-			serveur({ '/blog/': page('', 308, '/blog'), '/blog': page('<main><h1>Le blog</h1></main>') })
+		const result = await check(
+			testCaseAlt,
+			server({ '/blog/': page('', 308, '/blog'), '/blog': page('<main><h1>Le blog</h1></main>') })
 		)
-		expect(resultat).toEqual({ etat: 'vert', destination: [] })
+		expect(result).toEqual({ etat: 'vert', destination: [] })
 	})
 
 	test('un mauvais statut ou une mauvaise destination : rouge, au nom de l’adresse', async () => {
-		expect(await check(cas, serveur({ '/blog/': page('', 301, '/blog') }))).toMatchObject({ etat: 'rouge' })
-		expect(await check(cas, serveur({ '/blog/': page('', 308, '/ailleurs') }))).toMatchObject({
+		expect(await check(testCaseAlt, server({ '/blog/': page('', 301, '/blog') }))).toMatchObject({ etat: 'rouge' })
+		expect(await check(testCaseAlt, server({ '/blog/': page('', 308, '/ailleurs') }))).toMatchObject({
 			etat: 'rouge',
 			defauts: ['destination /ailleurs au lieu de /blog'],
 		})
 	})
 
 	test('une destination fautive est un défaut de la destination, pas de l’adresse', async () => {
-		const resultat = await check(
-			cas,
-			serveur({ '/blog/': page('', 308, '/blog'), '/blog': page('<h1>Autre titre</h1>') })
+		const result = await check(
+			testCaseAlt,
+			server({ '/blog/': page('', 308, '/blog'), '/blog': page('<h1>Autre titre</h1>') })
 		)
-		expect(resultat).toEqual({ etat: 'vert', destination: ['h1 différent de celui de l’ancien site'] })
+		expect(result).toEqual({ etat: 'vert', destination: ['h1 différent de celui de l’ancien site'] })
 	})
 
 	test('un h1 en double est un défaut, même avec le bon texte', async () => {
-		const direct: ParityCase = { ...cas, adresse: '/blog', vers: undefined, statuts: [200] }
+		const direct: ParityCase = { ...testCaseAlt, adresse: '/blog', vers: undefined, statuts: [200] }
 		delete direct.vers
-		const resultat = await check(direct, serveur({ '/blog': page('<h1>Le blog</h1><h1>Le blog</h1>') }))
-		expect(resultat).toMatchObject({ etat: 'rouge', defauts: ["2 h1 au lieu d'un seul"] })
+		const result = await check(direct, server({ '/blog': page('<h1>Le blog</h1><h1>Le blog</h1>') }))
+		expect(result).toMatchObject({ etat: 'rouge', defauts: ["2 h1 au lieu d'un seul"] })
 	})
 })
 
 describe('le bilan par type', () => {
-	const vert: Result = { etat: 'vert', destination: [] }
-	const rouge: Result = { etat: 'rouge', defauts: ['statut 404 au lieu de 200'], destination: [] }
-	const unCas = (famille: string, adresse: string): ParityCase => ({
+	const green: Result = { etat: 'vert', destination: [] }
+	const red: Result = { etat: 'rouge', defauts: ['statut 404 au lieu de 200'], destination: [] }
+	const testCase = (famille: string, adresse: string): ParityCase => ({
 		adresse,
 		etiquette: adresse,
 		famille,
@@ -202,33 +200,33 @@ describe('le bilan par type', () => {
 	})
 
 	test('un type livré dont une adresse échoue est une régression ; un type à venir est « à venir »', () => {
-		const lignes = summary(
+		const lines = summary(
 			[
-				{ cas: unCas('accueil', '/'), resultat: vert },
-				{ cas: unCas('accueil', '/?a'), resultat: rouge },
-				{ cas: unCas('talent', '/talent/a'), resultat: rouge },
-				{ cas: unCas('talent', '/talent/b'), resultat: vert },
+				{ cas: testCase('accueil', '/'), resultat: green },
+				{ cas: testCase('accueil', '/?a'), resultat: red },
+				{ cas: testCase('talent', '/talent/a'), resultat: red },
+				{ cas: testCase('talent', '/talent/b'), resultat: green },
 			],
 			new Set(['accueil'])
 		)
-		expect(lignes).toEqual([
+		expect(lines).toEqual([
 			{ famille: 'accueil', vertes: 1, aVenir: 0, ecarts: 0, regressions: ['/?a : statut 404 au lieu de 200'] },
 			{ famille: 'talent', vertes: 1, aVenir: 1, ecarts: 0, regressions: [] },
 		])
-		expect(writeSummary(lignes, new Set(['accueil']))).toContain('talent')
-		expect(writeSummary(lignes, new Set(['accueil']))).toMatch(/talent\s+1 verte, 1 à venir/)
+		expect(writeSummary(lines, new Set(['accueil']))).toContain('talent')
+		expect(writeSummary(lines, new Set(['accueil']))).toMatch(/talent\s+1 verte, 1 à venir/)
 	})
 
 	test('la destination fautive d’une redirection pèse sur la famille de la destination, si elle est livrée', () => {
-		const redirection: ParityCase = { ...unCas('barre-finale', '/blog/'), vers: '/blog', familleFinale: 'blog' }
-		const fautive: Result = { etat: 'vert', destination: ['la destination répond 404 au lieu de 200'] }
-		const livree = summary([{ cas: redirection, resultat: fautive }], new Set(['blog', 'barre-finale']))
-		expect(livree.find(l => l.famille === 'blog')?.regressions).toEqual([
+		const redirection: ParityCase = { ...testCase('barre-finale', '/blog/'), vers: '/blog', familleFinale: 'blog' }
+		const faulty: Result = { etat: 'vert', destination: ['la destination répond 404 au lieu de 200'] }
+		const delivered = summary([{ cas: redirection, resultat: faulty }], new Set(['blog', 'barre-finale']))
+		expect(delivered.find(l => l.famille === 'blog')?.regressions).toEqual([
 			'/blog/ → /blog : la destination répond 404 au lieu de 200',
 		])
-		expect(livree.find(l => l.famille === 'barre-finale')?.vertes).toBe(1)
-		const attendue = summary([{ cas: redirection, resultat: fautive }], new Set(['barre-finale']))
-		expect(attendue.flatMap(l => l.regressions)).toEqual([])
+		expect(delivered.find(l => l.famille === 'barre-finale')?.vertes).toBe(1)
+		const expected = summary([{ cas: redirection, resultat: faulty }], new Set(['barre-finale']))
+		expect(expected.flatMap(l => l.regressions)).toEqual([])
 	})
 })
 
@@ -248,23 +246,23 @@ describe('la liste privée de la copie importée', () => {
 	})
 
 	test('un profil réel est numéroté, jamais nommé, ni dans son étiquette ni dans les messages', async () => {
-		const cas = privateListCase(csv)
-		expect(cas.map(c => c.etiquette)).toEqual(['/blog', 'profil #1', 'profil #2'])
-		expect(cas.map(c => c.famille)).toEqual(['blog', 'profil', 'profil-ancien-nom'])
-		const ancienNom = cas[2]
-		if (!ancienNom) throw new Error('pas de cas')
-		const resultat = await check(ancienNom, async () => page('', 404))
-		expect(JSON.stringify(resultat)).not.toContain('jeanne')
-		const faux = await check(ancienNom, async adresse =>
-			adresse === ancienNom.adresse ? page('', 308, '/profil/autre-nom-imaginaire') : page('', 404)
+		const testCaseAlt = privateListCase(csv)
+		expect(testCaseAlt.map(c => c.etiquette)).toEqual(['/blog', 'profil #1', 'profil #2'])
+		expect(testCaseAlt.map(c => c.famille)).toEqual(['blog', 'profil', 'profil-ancien-nom'])
+		const oldName = testCaseAlt[2]
+		if (!oldName) throw new Error('pas de cas')
+		const result = await check(oldName, async () => page('', 404))
+		expect(JSON.stringify(result)).not.toContain('jeanne')
+		const fake = await check(oldName, async adresse =>
+			adresse === oldName.adresse ? page('', 308, '/profil/autre-nom-imaginaire') : page('', 404)
 		)
-		expect(JSON.stringify(faux)).not.toContain('autre-nom-imaginaire')
-		expect(JSON.stringify(faux)).toContain('/profil/…')
+		expect(JSON.stringify(fake)).not.toContain('autre-nom-imaginaire')
+		expect(JSON.stringify(fake)).toContain('/profil/…')
 	})
 
 	test('un profil dont l’adresse répond 200 ou 404 est juste : les 13 profils non repris ne se distinguent pas dans la liste', () => {
-		const [, profil] = privateListCase(csv)
-		expect(profil?.statuts).toEqual([200, 404])
+		const [, profile] = privateListCase(csv)
+		expect(profile?.statuts).toEqual([200, 404])
 	})
 })
 
@@ -276,7 +274,7 @@ describe('le titre de l’onglet des talents importés (ticket 108)', () => {
 	].join('\n')
 	const html = (titre: string, h1 = 'Mariage') =>
 		`<html><head><title>${titre}</title></head><body><h1>${h1}</h1></body></html>`
-	const BON = 'Maquilleuse mariage : trouver la bonne pro près de chez vous' // 59 characters
+	const GOOD = 'Maquilleuse mariage : trouver la bonne pro près de chez vous' // 59 characters
 
 	test('seul un talent de la copie importée exige le titre écrit par la rédaction', () => {
 		const [talent, blog] = privateListCase(csv)
@@ -285,28 +283,28 @@ describe('le titre de l’onglet des talents importés (ticket 108)', () => {
 	})
 
 	test('un titre de 50 à 60 caractères, distinct du h1, est vert', async () => {
-		expect(BON.length).toBeGreaterThanOrEqual(50)
+		expect(GOOD.length).toBeGreaterThanOrEqual(50)
 		const [talent] = privateListCase(csv)
 		if (!talent) throw new Error('pas de cas')
-		expect((await check(talent, async () => page(html(BON)))).etat).toBe('vert')
+		expect((await check(talent, async () => page(html(GOOD)))).etat).toBe('vert')
 	})
 
 	test('le titre court de l’ancien site (« titre | My-Makeup »), trop court, échoue', async () => {
 		const [talent] = privateListCase(csv)
 		if (!talent) throw new Error('pas de cas')
-		const resultat = await check(talent, async () => page(html('Mariage | My-Makeup')))
-		expect(resultat.etat).toBe('rouge')
-		expect(JSON.stringify(resultat)).toContain('au lieu de 50 à 60')
+		const result = await check(talent, async () => page(html('Mariage | My-Makeup')))
+		expect(result.etat).toBe('rouge')
+		expect(JSON.stringify(result)).toContain('au lieu de 50 à 60')
 	})
 
 	test('un titre trop long, ou le h1 lui-même, échoue', async () => {
 		const [talent] = privateListCase(csv)
 		if (!talent) throw new Error('pas de cas')
-		expect((await check(talent, async () => page(html(`${BON} et plus encore`)))).etat).toBe('rouge')
+		expect((await check(talent, async () => page(html(`${GOOD} et plus encore`)))).etat).toBe('rouge')
 		const long = 'Mariage'.padEnd(55, 'x')
-		const [meme] = privateListCase(csv.replace(sha256('Mariage'), sha256(long)))
-		if (!meme) throw new Error('pas de cas')
-		const memeTexte = await check(meme, async () => page(html(long, long)))
-		expect(JSON.stringify(memeTexte)).toContain('identique au h1')
+		const [same] = privateListCase(csv.replace(sha256('Mariage'), sha256(long)))
+		if (!same) throw new Error('pas de cas')
+		const sameText = await check(same, async () => page(html(long, long)))
+		expect(JSON.stringify(sameText)).toContain('identique au h1')
 	})
 })

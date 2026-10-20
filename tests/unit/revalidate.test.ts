@@ -12,56 +12,56 @@ import { spyCache } from '../support/cache-spy'
  * REST API on the bench: tests/integration/revalidation.test.ts (I21).
  */
 
-const publie = (slug: string): PublicState => ({ slug, visible: true })
+const published = (slug: string): PublicState => ({ slug, visible: true })
 const cache = (slug: string): PublicState => ({ slug, visible: false })
 
-const RIEN = { chemins: [], etiquettes: [] }
+const NOTHING = { chemins: [], etiquettes: [] }
 
 describe('les pages qu’un enregistrement rend périmées', () => {
 	test('un profil publié modifié : sa page, la recherche, le plan du site et le sitemap (I21)', () => {
-		expect(changeTargets('profiles', publie('zoe-lefevre'), publie('zoe-lefevre'))).toEqual({
+		expect(changeTargets('profiles', published('zoe-lefevre'), published('zoe-lefevre'))).toEqual({
 			chemins: ['/profil/zoe-lefevre', '/search', '/site-map', '/sitemap.xml'],
 			etiquettes: ['profil:zoe-lefevre', 'profils'],
 		})
 	})
 
 	test('un brouillon qui reste brouillon, un profil masqué qui le reste : rien', () => {
-		expect(changeTargets('profiles', cache('zoe-lefevre'), cache('zoe-lefevre'))).toEqual(RIEN)
-		expect(changeTargets('articles', cache('un-article'), cache('un-article'))).toEqual(RIEN)
-		expect(changeTargets('talents', null, cache('un-talent'))).toEqual(RIEN)
-		expect(changeTargets('talents', cache('un-talent'), null)).toEqual(RIEN)
+		expect(changeTargets('profiles', cache('zoe-lefevre'), cache('zoe-lefevre'))).toEqual(NOTHING)
+		expect(changeTargets('articles', cache('un-article'), cache('un-article'))).toEqual(NOTHING)
+		expect(changeTargets('talents', null, cache('un-talent'))).toEqual(NOTHING)
+		expect(changeTargets('talents', cache('un-talent'), null)).toEqual(NOTHING)
 	})
 
 	test('un document qui entre ou qui sort du public : sa page et les listes', () => {
-		const attendu = {
+		const expected = {
 			chemins: ['/profil/zoe-lefevre', '/search', '/site-map', '/sitemap.xml'],
 			etiquettes: ['profil:zoe-lefevre', 'profils'],
 		}
 		// Published, created published, hidden, deleted.
-		expect(changeTargets('profiles', cache('zoe-lefevre'), publie('zoe-lefevre'))).toEqual(attendu)
-		expect(changeTargets('profiles', null, publie('zoe-lefevre'))).toEqual(attendu)
-		expect(changeTargets('profiles', publie('zoe-lefevre'), cache('zoe-lefevre'))).toEqual(attendu)
-		expect(changeTargets('profiles', publie('zoe-lefevre'), null)).toEqual(attendu)
+		expect(changeTargets('profiles', cache('zoe-lefevre'), published('zoe-lefevre'))).toEqual(expected)
+		expect(changeTargets('profiles', null, published('zoe-lefevre'))).toEqual(expected)
+		expect(changeTargets('profiles', published('zoe-lefevre'), cache('zoe-lefevre'))).toEqual(expected)
+		expect(changeTargets('profiles', published('zoe-lefevre'), null)).toEqual(expected)
 	})
 
 	test('un article : sa page, le blog, le plan du site et le sitemap ; un talent : sa page, l’accueil, les deux plans', () => {
-		expect(changeTargets('articles', null, publie('un-article'))).toEqual({
+		expect(changeTargets('articles', null, published('un-article'))).toEqual({
 			chemins: ['/blog/un-article', '/blog', '/site-map', '/sitemap.xml'],
 			etiquettes: ['article:un-article', 'articles'],
 		})
-		expect(changeTargets('talents', publie('maquillage-mariee'), publie('maquillage-mariee'))).toEqual({
+		expect(changeTargets('talents', published('maquillage-mariee'), published('maquillage-mariee'))).toEqual({
 			chemins: ['/talent/maquillage-mariee', '/', '/site-map', '/sitemap.xml'],
 			etiquettes: ['talent:maquillage-mariee', 'talents'],
 		})
 	})
 
 	test('une adresse changée sur un document publié : l’ancienne page et la nouvelle', () => {
-		expect(changeTargets('articles', publie('ancienne'), publie('nouvelle'))).toEqual({
+		expect(changeTargets('articles', published('ancienne'), published('nouvelle'))).toEqual({
 			chemins: ['/blog/ancienne', '/blog/nouvelle', '/blog', '/site-map', '/sitemap.xml'],
 			etiquettes: ['article:ancienne', 'article:nouvelle', 'articles'],
 		})
 		// Changed while it was a draft: only the published address counts.
-		expect(changeTargets('articles', cache('brouillon'), publie('publiee')).chemins).toEqual([
+		expect(changeTargets('articles', cache('brouillon'), published('publiee')).chemins).toEqual([
 			'/blog/publiee',
 			'/blog',
 			'/site-map',
@@ -70,7 +70,7 @@ describe('les pages qu’un enregistrement rend périmées', () => {
 	})
 
 	test('un slug qui n’en est pas un, comme le slug provisoire d’un profil en création, ne donne aucune page', () => {
-		expect(changeTargets('profiles', null, publie('_provisoire-1234'))).toEqual({
+		expect(changeTargets('profiles', null, published('_provisoire-1234'))).toEqual({
 			chemins: ['/search', '/site-map', '/sitemap.xml'],
 			etiquettes: ['profils'],
 		})
@@ -84,84 +84,84 @@ describe('les pages qu’un enregistrement rend périmées', () => {
 })
 
 /** The part of a request the hooks read: the database adapter and the logger. */
-function requete(lignes: Record<string, unknown>[] = []) {
+function request(lignes: Record<string, unknown>[] = []) {
 	const findOne = mock(async () => lignes.shift() ?? null)
-	const journal = { debug: mock(() => {}), error: mock(() => {}) }
-	const req = { payload: { db: { findOne }, logger: journal } } as unknown as PayloadRequest
-	return { req, findOne, journal }
+	const log = { debug: mock(() => {}), error: mock(() => {}) }
+	const req = { payload: { db: { findOne }, logger: log } } as unknown as PayloadRequest
+	return { req, findOne, journal: log }
 }
 
 const HOOKS = refresh('profiles')
 
 /** An update of a profile through the hooks, as Payload runs them: before the write, then after. */
-async function mettreAJour(req: PayloadRequest, context: RequestContext, id = 7) {
+async function update(req: PayloadRequest, context: RequestContext, id = 7) {
 	const data = { description: 'Une description' }
-	const avant = await HOOKS.avantEcriture({ context, data, operation: 'update', originalDoc: { id }, req } as never)
-	const apres = await HOOKS.apresEcriture({
+	const before = await HOOKS.avantEcriture({ context, data, operation: 'update', originalDoc: { id }, req } as never)
+	const after = await HOOKS.apresEcriture({
 		context,
 		doc: { id },
 		operation: 'update',
 		previousDoc: { id },
 		req,
 	} as never)
-	return { avant, apres, data }
+	return { avant: before, apres: after, data }
 }
 
 describe('les crochets de Payload', () => {
 	test('un profil publié modifié : Next reçoit sa page et les listes, les étiquettes expirées tout de suite', async () => {
-		const { req, findOne } = requete([
+		const { req, findOne } = request([
 			{ id: 7, slug: 'zoe-lefevre', status: 'published' },
 			{ id: 7, slug: 'zoe-lefevre', status: 'published' },
 		])
 
-		const { appels, chemins, etiquettes } = await spyCache(() => mettreAJour(req, {}))
+		const { appels: calls, chemins: paths, etiquettes: labels } = await spyCache(() => update(req, {}))
 
 		expect(findOne).toHaveBeenCalledTimes(2)
-		expect(chemins).toEqual(['/profil/zoe-lefevre', '/search', '/site-map', '/sitemap.xml'])
-		expect(etiquettes).toEqual(['profil:zoe-lefevre', 'profils'])
-		for (const appel of appels.filter(({ fonction }) => fonction === 'revalidateTag'))
-			expect(appel.option).toEqual({ expire: 0 })
+		expect(paths).toEqual(['/profil/zoe-lefevre', '/search', '/site-map', '/sitemap.xml'])
+		expect(labels).toEqual(['profil:zoe-lefevre', 'profils'])
+		for (const call of calls.filter(({ fonction }) => fonction === 'revalidateTag'))
+			expect(call.option).toEqual({ expire: 0 })
 	})
 
 	test('le contexte d’import : rien n’est lu, rien n’est rafraîchi, l’écriture passe telle quelle', async () => {
-		const { req, findOne } = requete([{ id: 7, slug: 'zoe-lefevre', status: 'published' }])
+		const { req, findOne } = request([{ id: 7, slug: 'zoe-lefevre', status: 'published' }])
 		const context: RequestContext = { ...IMPORT_CONTEXT }
 
-		const { appels } = await spyCache(async () => {
-			const { avant, apres, data } = await mettreAJour(req, context)
-			expect(avant).toBe(data)
-			expect(apres).toEqual({ id: 7 })
+		const { appels: calls } = await spyCache(async () => {
+			const { avant: before, apres: after, data } = await update(req, context)
+			expect(before).toBe(data)
+			expect(after).toEqual({ id: 7 })
 			await HOOKS.avantSuppression({ context, id: 7, req } as never)
 			await HOOKS.apresSuppression({ context, doc: { id: 7 }, id: 7, req } as never)
 		})
 
 		expect(findOne).not.toHaveBeenCalled()
-		expect(appels).toEqual([])
+		expect(calls).toEqual([])
 		expect(context).toEqual({ ...IMPORT_CONTEXT })
 	})
 
 	test('hors d’une requête de Next, l’enregistrement passe : rien n’est rafraîchi, rien n’est levé', async () => {
-		const { req, journal } = requete([
+		const { req, journal: log } = request([
 			{ id: 7, slug: 'zoe-lefevre', status: 'published' },
 			{ id: 7, slug: 'zoe-lefevre', status: 'published' },
 		])
 
 		// No spy: Next's own revalidateTag, outside of one of its requests.
-		const { apres } = await mettreAJour(req, {})
+		const { apres: after } = await update(req, {})
 
-		expect(apres).toEqual({ id: 7 })
-		expect(journal.debug).toHaveBeenCalledTimes(1)
-		expect(journal.error).not.toHaveBeenCalled()
+		expect(after).toEqual({ id: 7 })
+		expect(log.debug).toHaveBeenCalledTimes(1)
+		expect(log.error).not.toHaveBeenCalled()
 	})
 
 	test('le refus de Next hors de ses requêtes est reconnu à son code, et seulement lui', () => {
-		let refus: unknown
+		let refusal: unknown
 		try {
 			revalidateTag('profils', { expire: 0 })
-		} catch (erreur) {
-			refus = erreur
+		} catch (error) {
+			refusal = error
 		}
-		expect(outsideNextRequest(refus)).toBe(true)
+		expect(outsideNextRequest(refusal)).toBe(true)
 		expect(outsideNextRequest(new Error('Invariant: static generation store missing'))).toBe(false)
 		expect(outsideNextRequest('E263')).toBe(false)
 	})

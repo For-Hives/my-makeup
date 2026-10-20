@@ -34,8 +34,8 @@ describe('retourSur : le retour après la connexion (U63)', () => {
 	})
 
 	test('une page d’authentification ou de l’API ne sert jamais de retour (pas de boucle)', () => {
-		for (const brut of ['/auth/signin', '/auth/signin?callbackUrl=/x', '/auth/signup', '/auth/error', '/api/pros/me'])
-			expect(safeReturnTo(brut, SITE)).toBe('/auth/profil')
+		for (const raw of ['/auth/signin', '/auth/signin?callbackUrl=/x', '/auth/signup', '/auth/error', '/api/pros/me'])
+			expect(safeReturnTo(raw, SITE)).toBe('/auth/profil')
 	})
 })
 

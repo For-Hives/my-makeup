@@ -16,7 +16,7 @@
  *   profile the access rules already gave, and only when its owner published them
  *   (`contactPublic`). A hidden profile gives nothing.
  * - Every read of a list gives its `limit`: the REST bound of ticket 071 does not reach the local
- *   API, so the code bounds itself (tests/unit/lecture-publique.test.ts checks it).
+ *   API, so the code bounds itself (tests/unit/public-read.test.ts checks it).
  *
  * The caller gives the Payload instance: the page gets it from the configuration, a test from the
  * bench. No `next` import: the module is read by the tests too.

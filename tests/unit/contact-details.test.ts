@@ -12,8 +12,8 @@ import {
 
 describe('Ce que le serveur accepte, avec les messages de l’ancien site', () => {
 	test('vide : accepté partout', () => {
-		for (const valider of [validateNetworkLink, validatePhone, validateContactEmail])
-			expect([null, undefined, ''].map(valider)).toEqual([true, true, true])
+		for (const validate of [validateNetworkLink, validatePhone, validateContactEmail])
+			expect([null, undefined, ''].map(validate)).toEqual([true, true, true])
 	})
 
 	test('un téléphone de 20 caractères passe ; de 21, refusé en français', () => {
@@ -74,16 +74,16 @@ describe('Ce que le serveur accepte, avec les messages de l’ancien site', () =
 })
 
 describe('La trace du consentement : posée par le serveur', () => {
-	const maintenant = new Date('2026-10-14T08:00:00.000Z')
-	const autreDate = '2026-01-01T00:00:00.000Z'
+	const now = new Date('2026-10-14T08:00:00.000Z')
+	const otherDate = '2026-01-01T00:00:00.000Z'
 
 	test('fermées : ni date ni source, même si on en envoie', () => {
 		expect(
 			consentAfter({
 				avant: true,
-				donnees: { publicContact: false, consentedAt: autreDate, consentSource: 'artist' },
+				donnees: { publicContact: false, consentedAt: otherDate, consentSource: 'artist' },
 				compte: 'pros',
-				maintenant,
+				maintenant: now,
 			})
 		).toEqual({ consentedAt: null, consentSource: null })
 	})
@@ -94,49 +94,51 @@ describe('La trace du consentement : posée par le serveur', () => {
 				avant: false,
 				donnees: { publicContact: true, consentedAt: null },
 				compte: 'pros',
-				maintenant,
+				maintenant: now,
 			})
-		).toEqual({ consentedAt: maintenant.toISOString(), consentSource: 'artist' })
+		).toEqual({ consentedAt: now.toISOString(), consentSource: 'artist' })
 	})
 
 	test('ouvertes par un admin : la date du serveur, la source « admin »', () => {
-		expect(consentAfter({ avant: false, donnees: { publicContact: true }, compte: 'admins', maintenant })).toEqual({
-			consentedAt: maintenant.toISOString(),
-			consentSource: 'admin',
-		})
+		expect(consentAfter({ avant: false, donnees: { publicContact: true }, compte: 'admins', maintenant: now })).toEqual(
+			{
+				consentedAt: now.toISOString(),
+				consentSource: 'admin',
+			}
+		)
 	})
 
 	test('déjà ouvertes : la trace ne bouge pas', () => {
 		expect(
 			consentAfter({
 				avant: true,
-				donnees: { publicContact: true, consentedAt: autreDate, consentSource: 'import' },
+				donnees: { publicContact: true, consentedAt: otherDate, consentSource: 'import' },
 				compte: 'pros',
-				maintenant,
+				maintenant: now,
 			})
-		).toEqual({ consentedAt: autreDate, consentSource: 'import' })
+		).toEqual({ consentedAt: otherDate, consentSource: 'import' })
 	})
 
 	test('ouvertes à la création par le serveur sans compte : la date et la source données, sinon l’heure et « import »', () => {
 		expect(
 			consentAfter({
 				avant: undefined,
-				donnees: { publicContact: true, consentedAt: autreDate, consentSource: 'import' },
+				donnees: { publicContact: true, consentedAt: otherDate, consentSource: 'import' },
 				compte: undefined,
-				maintenant,
+				maintenant: now,
 			})
-		).toEqual({ consentedAt: autreDate, consentSource: 'import' })
-		expect(consentAfter({ avant: undefined, donnees: { publicContact: true }, compte: undefined, maintenant })).toEqual(
-			{ consentedAt: maintenant.toISOString(), consentSource: 'import' }
-		)
+		).toEqual({ consentedAt: otherDate, consentSource: 'import' })
+		expect(
+			consentAfter({ avant: undefined, donnees: { publicContact: true }, compte: undefined, maintenant: now })
+		).toEqual({ consentedAt: now.toISOString(), consentSource: 'import' })
 	})
 })
 
 describe('Un groupe envoyé à null (ticket 224)', () => {
 	test('devient le groupe vide ; tout autre contenu est rendu tel quel', () => {
 		expect(emptyGroupIfNull(null, ['telephone', 'email'])).toEqual({ telephone: null, email: null })
-		const groupe = { telephone: '06 39 98 12 34' }
-		expect(emptyGroupIfNull(groupe, ['telephone', 'email'])).toBe(groupe)
+		const group = { telephone: '06 39 98 12 34' }
+		expect(emptyGroupIfNull(group, ['telephone', 'email'])).toBe(group)
 		expect(emptyGroupIfNull(undefined, ['telephone'])).toBeUndefined()
 		expect(emptyGroupIfNull('texte', ['telephone'])).toBe('texte')
 	})

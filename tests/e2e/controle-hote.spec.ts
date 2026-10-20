@@ -8,7 +8,7 @@ import { createContent, deleteContent, refreshProfilePages } from '../support/pu
  * frozen inventory, the sitemap, the robots file, the old authentication routes and the script of the
  * audience measurement on the application of the bench, and finds all of it conform, with no 5xx.
  *
- * The pace (two requests per second) is proved by tests/unit/bascule-controle-hote.test.ts with a clock; here
+ * The pace (two requests per second) is proved by tests/unit/cutover-host-check.test.ts with a clock; here
  * the bench is read without waiting, so that the run stays short.
  */
 /**

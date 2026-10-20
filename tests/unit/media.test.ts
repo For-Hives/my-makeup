@@ -7,8 +7,8 @@ describe('L’adresse publique = la base des photos, le préfixe du document, le
 	const base = 'https://photos.exemple.test'
 
 	test('à la racine du stockage : la base, puis le nom', () => {
-		for (const prefixe of ['', null, undefined])
-			expect(mediaUrl(base, prefixe, 'photo_3f2a1b.jpg')).toBe('https://photos.exemple.test/photo_3f2a1b.jpg')
+		for (const prefix of ['', null, undefined])
+			expect(mediaUrl(base, prefix, 'photo_3f2a1b.jpg')).toBe('https://photos.exemple.test/photo_3f2a1b.jpg')
 	})
 
 	test('sous un préfixe, même imbriqué : la base, le préfixe, puis le nom', () => {

@@ -3,7 +3,7 @@
  * what `bun run test:e2e` gives to the programs it starts (docs/tests/e2e.md).
  *
  * Three readers: playwright.config.ts under Node, scripts/e2e.ts under bun, and
- * tests/unit/banc-e2e.test.ts. Nothing here starts a process or opens a connection.
+ * tests/unit/bench-e2e.test.ts. Nothing here starts a process or opens a connection.
  *
  * Only Node's own modules are used: Playwright loads this file in a runner that is not bun.
  */
@@ -85,7 +85,7 @@ export function testTarget(variables: Variables = process.env): Target {
  * Next reads the `.env` files of its folder by itself, at build time as when it starts, and no
  * option turns that off. With this variable set, it takes them as already read and copies
  * nothing from them: neither the build nor the application of the tests receives a value of the
- * working `.env`. The variable is not documented by Next: tests/unit/banc-e2e.test.ts checks it
+ * working `.env`. The variable is not documented by Next: tests/unit/bench-e2e.test.ts checks it
  * against the code of Next that is installed.
  */
 export const WITHOUT_FILE_ENV = { __NEXT_PROCESSED_ENV: 'true' } as const
@@ -161,7 +161,7 @@ export function testApplication(variables: Variables = process.env): Application
 
 /**
  * The whole configuration of Playwright. playwright.config.ts gives it as it is: what the
- * guard rails of the CI check (C07, tests/ci/garde-fous-ci.test.ts) is what Playwright runs with.
+ * guard rails of the CI check (C07, tests/ci/ci-guardrails.test.ts) is what Playwright runs with.
  */
 export function testConfiguration(variables: Variables = process.env): PlaywrightTestConfig {
 	const { adresse: url } = testTarget(variables)

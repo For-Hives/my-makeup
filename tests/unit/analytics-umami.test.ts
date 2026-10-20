@@ -26,11 +26,11 @@ import { delay, HttpResponse, http, simulate } from '../support/outgoing-http'
 
 // Made-up instance: a name that never resolves, simulated by the tests.
 const INSTANCE = 'https://umami.exemple.test'
-const REEL: UmamiEnv = { origin: INSTANCE, local: false }
+const REAL: UmamiEnv = { origin: INSTANCE, local: false }
 // The bench keeps the cookies a simulated answer sets, per host: the send tests have an instance of their own.
-const AUTRE_INSTANCE = 'https://umami-envoi.exemple.test'
+const OTHER_INSTANCE = 'https://umami-envoi.exemple.test'
 const LOCAL: UmamiEnv = { origin: 'http://127.0.0.1:4200', local: true }
-const DU_SITE = { host: 'my-makeup.fr' }
+const SITE = { host: 'my-makeup.fr' }
 
 const BASE: RawEnv = {
 	DATABASE_URI: 'postgres://banc:banc@127.0.0.1:5442/mymakeup_test',
@@ -39,7 +39,7 @@ const BASE: RawEnv = {
 
 describe('UMAMI_ORIGIN (ticket 111)', () => {
 	test('set, it is read in its exact form; a path is allowed, a query is not', () => {
-		expect(umamiFromEnv(INSTANCE, undefined)).toEqual(REEL)
+		expect(umamiFromEnv(INSTANCE, undefined)).toEqual(REAL)
 		expect(umamiFromEnv(`${INSTANCE}/umami`, undefined)).toEqual({ origin: `${INSTANCE}/umami`, local: false })
 		expect(umamiFromEnv('http://127.0.0.1:4200', undefined)).toEqual(LOCAL)
 		for (const refused of [
@@ -79,7 +79,7 @@ describe('UMAMI_ORIGIN (ticket 111)', () => {
 
 	test('the checked environment carries the instance, or nothing', () => {
 		expect(parseServerEnv(BASE).umami).toBeUndefined()
-		expect(parseServerEnv({ ...BASE, UMAMI_ORIGIN: INSTANCE }).umami).toEqual(REEL)
+		expect(parseServerEnv({ ...BASE, UMAMI_ORIGIN: INSTANCE }).umami).toEqual(REAL)
 		expect(parseServerEnv({ ...BASE, UMAMI_ORIGIN: 'http://127.0.0.1:4200' }).umami).toEqual(LOCAL)
 	})
 
@@ -115,10 +115,10 @@ describe('l’étiquette et les domaines du script', () => {
 	})
 
 	test('les attributs : l’identifiant du site, le chemin /u, le filtre, l’étiquette du commit', () => {
-		const attributs = umamiScriptAttributes({
+		const attributes = umamiScriptAttributes({
 			version: { commit: '4d70990f1f2e3d4c5b6a79881726354433221100' },
 		})
-		expect(attributs).toEqual({
+		expect(attributes).toEqual({
 			src: '/u/script.js',
 			'data-website-id': UMAMI_WEBSITE_ID,
 			'data-host-url': '/u',
@@ -130,8 +130,8 @@ describe('l’étiquette et les domaines du script', () => {
 })
 
 /** A window just big enough for the inline script, and what it did. */
-function fenetre(surcharge: { webdriver?: boolean; agent?: string; cadre?: boolean; desactive?: boolean } = {}) {
-	const ecouteurs: Record<string, () => void> = {}
+function jsdomWindow(surcharge: { webdriver?: boolean; agent?: string; cadre?: boolean; desactive?: boolean } = {}) {
+	const listeners: Record<string, () => void> = {}
 	const script = {
 		attributs: {} as Record<string, string>,
 		async: false,
@@ -139,11 +139,11 @@ function fenetre(surcharge: { webdriver?: boolean; agent?: string; cadre?: boole
 			this.attributs[nom] = valeur
 		},
 		addEventListener(nom: string, fn: () => void) {
-			ecouteurs[nom] = fn
+			listeners[nom] = fn
 		},
 	}
 	const pose: unknown[] = []
-	const suivis: { nom: string; donnees: unknown }[] = []
+	const followed: { nom: string; donnees: unknown }[] = []
 	const w: Record<string, unknown> = {
 		navigator: { webdriver: surcharge.webdriver ?? false, userAgent: surcharge.agent ?? 'Mozilla/5.0 Firefox/130.0' },
 		localStorage: { getItem: (cle: string) => (surcharge.desactive && cle === 'umami.disabled' ? '1' : null) },
@@ -160,12 +160,12 @@ function fenetre(surcharge: { webdriver?: boolean; agent?: string; cadre?: boole
 		w,
 		script,
 		pose,
-		suivis,
+		suivis: followed,
 		charger() {
-			w.umami = { track: (nom: string, donnees: unknown) => suivis.push({ nom, donnees }) }
-			ecouteurs.load?.()
+			w.umami = { track: (nom: string, donnees: unknown) => followed.push({ nom, donnees }) }
+			listeners.load?.()
 		},
-		echouer: () => ecouteurs.error?.(),
+		echouer: () => listeners.error?.(),
 		filtre: (type: string, charge: unknown) =>
 			(w[BEFORE_SEND_NAME] as (type: string, charge: unknown) => unknown)(type, charge),
 		salle: (nom: string, donnees: unknown) =>
@@ -182,7 +182,7 @@ describe('le script de l’en-tête de chaque page', () => {
 	})
 
 	test('il ajoute le script d’Umami, asynchrone, avec ses attributs', () => {
-		const { script, pose } = fenetre()
+		const { script, pose } = jsdomWindow()
 		expect(pose).toEqual([script])
 		expect(script.async).toBe(true)
 		expect(script.attributs['data-before-send']).toBe(BEFORE_SEND_NAME)
@@ -191,15 +191,15 @@ describe('le script de l’en-tête de chaque page', () => {
 	})
 
 	test('aucun `<` dans le texte inséré : une valeur ne peut pas fermer la balise', () => {
-		const texte = umamiLoaderScript({ 'data-tag': '</script><b>' })
-		expect(texte).not.toContain('</script>')
-		expect(texte).toContain('\\u003c/script>')
+		const text = umamiLoaderScript({ 'data-tag': '</script><b>' })
+		expect(text).not.toContain('</script>')
+		expect(text).toContain('\\u003c/script>')
 	})
 
 	test('le filtre nettoie l’adresse et le référent, comme avant', () => {
-		const { filtre } = fenetre()
+		const { filtre: filter } = jsdomWindow()
 		expect(
-			filtre('event', {
+			filter('event', {
 				url: 'https://my-makeup.fr/search?q=maquillage&utm_source=insta&utm_medium=social&gclid=abc#haut',
 				referrer: 'https://www.google.com/search?q=secret#x',
 				name: 'cta_click',
@@ -209,40 +209,40 @@ describe('le script de l’en-tête de chaque page', () => {
 			referrer: 'https://www.google.com/search',
 			name: 'cta_click',
 		})
-		expect(filtre('event', { referrer: 'android-app://com.google.android.googlequicksearchbox/x?y=1' })).toEqual({
+		expect(filter('event', { referrer: 'android-app://com.google.android.googlequicksearchbox/x?y=1' })).toEqual({
 			referrer: 'android-app://com.google.android.googlequicksearchbox/',
 		})
 	})
 
 	test('un navigateur automatisé, un agent HeadlessChrome, une page encadrée, un refus de mesure : rien ne part', () => {
 		const charge = { url: 'https://my-makeup.fr/' }
-		expect(fenetre({ webdriver: true }).filtre('event', charge)).toBe(false)
-		expect(fenetre({ agent: 'Mozilla/5.0 HeadlessChrome/130' }).filtre('event', charge)).toBe(false)
-		expect(fenetre({ cadre: true }).filtre('event', charge)).toBe(false)
-		expect(fenetre({ desactive: true }).filtre('event', charge)).toBe(false)
-		expect(fenetre().filtre('event', null)).toBe(false)
+		expect(jsdomWindow({ webdriver: true }).filtre('event', charge)).toBe(false)
+		expect(jsdomWindow({ agent: 'Mozilla/5.0 HeadlessChrome/130' }).filtre('event', charge)).toBe(false)
+		expect(jsdomWindow({ cadre: true }).filtre('event', charge)).toBe(false)
+		expect(jsdomWindow({ desactive: true }).filtre('event', charge)).toBe(false)
+		expect(jsdomWindow().filtre('event', null)).toBe(false)
 	})
 
 	test('aucun filtre des robots qui se déclarent : Googlebot et ses pairs restent comptés', () => {
 		const charge = { url: 'https://my-makeup.fr/' }
 		for (const agent of ['Mozilla/5.0 (compatible; Googlebot/2.1)', 'bingbot/2.0', 'GPTBot/1.1', 'curl/8.0'])
-			expect(fenetre({ agent }).filtre('event', charge)).toEqual(charge)
+			expect(jsdomWindow({ agent }).filtre('event', charge)).toEqual(charge)
 	})
 
 	test('une erreur dans le filtre : rien ne part, et rien ne casse la page', () => {
-		const { w, filtre } = fenetre()
+		const { w, filtre: filter } = jsdomWindow()
 		w.navigator = null
-		expect(filtre('event', { url: 'x' })).toEqual({ url: 'https://my-makeup.fr/profil/x' })
+		expect(filter('event', { url: 'x' })).toEqual({ url: 'https://my-makeup.fr/profil/x' })
 		Object.defineProperty(w, 'location', {
 			get() {
 				throw new Error('boum')
 			},
 		})
-		expect(filtre('event', { url: 'x' })).toBe(false)
+		expect(filter('event', { url: 'x' })).toBe(false)
 	})
 
 	test('un événement suivi avant le script attend, puis part dans l’ordre', () => {
-		const f = fenetre()
+		const f = jsdomWindow()
 		expect(f.salle('a', { n: 1 })).toBe(true)
 		expect(f.salle('b', { n: 2 })).toBe(true)
 		f.charger()
@@ -255,13 +255,13 @@ describe('le script de l’en-tête de chaque page', () => {
 	})
 
 	test('la salle d’attente tient 20 événements, et se vide si le script ne charge pas', () => {
-		const pleine = fenetre()
-		for (let i = 0; i < 20; i++) expect(pleine.salle('e', {})).toBe(true)
-		expect(pleine.salle('e', {})).toBe(false)
-		const echec = fenetre()
-		expect(echec.salle('e', {})).toBe(true)
-		echec.echouer()
-		expect(echec.salle('e', {})).toBe(false)
+		const full = jsdomWindow()
+		for (let i = 0; i < 20; i++) expect(full.salle('e', {})).toBe(true)
+		expect(full.salle('e', {})).toBe(false)
+		const failure = jsdomWindow()
+		expect(failure.salle('e', {})).toBe(true)
+		failure.echouer()
+		expect(failure.salle('e', {})).toBe(false)
 	})
 })
 
@@ -275,7 +275,7 @@ describe('l’adresse du visiteur et les en-têtes du relais', () => {
 	})
 
 	test('le relais retient une liste d’en-têtes : ni cookie, ni Referer, ni adresse écrite par le navigateur', () => {
-		const sortants = relayHeaders(
+		const outgoing = relayHeaders(
 			new Headers({
 				cookie: 'session=abc',
 				authorization: 'Bearer x',
@@ -296,7 +296,7 @@ describe('l’adresse du visiteur et les en-têtes du relais', () => {
 				'x-umami-cache': 'jeton',
 			})
 		)
-		expect(Object.fromEntries(sortants)).toEqual({
+		expect(Object.fromEntries(outgoing)).toEqual({
 			'user-agent': 'Mozilla/5.0 Firefox/130.0',
 			'content-type': 'application/json',
 			'accept-language': 'fr-FR',
@@ -306,67 +306,67 @@ describe('l’adresse du visiteur et les en-têtes du relais', () => {
 	})
 })
 
-const envoi = (entetes: Record<string, string> = {}, corps = '{"type":"event","payload":{"name":"x"}}') =>
-	new Request('https://my-makeup.fr/u/api/send', { method: 'POST', body: corps, headers: { ...DU_SITE, ...entetes } })
+const upload = (entetes: Record<string, string> = {}, corps = '{"type":"event","payload":{"name":"x"}}') =>
+	new Request('https://my-makeup.fr/u/api/send', { method: 'POST', body: corps, headers: { ...SITE, ...entetes } })
 const script = (entetes: Record<string, string> = {}) =>
-	new Request('https://my-makeup.fr/u/script.js', { headers: { ...DU_SITE, ...entetes } })
+	new Request('https://my-makeup.fr/u/script.js', { headers: { ...SITE, ...entetes } })
 
 describe('le relais /u/script.js', () => {
 	test('sans instance réglée, 404', async () => {
 		expect((await relayScript(script(), { umami: undefined })).status).toBe(404)
-		expect((await relaySend(envoi(), { umami: undefined })).status).toBe(404)
+		expect((await relaySend(upload(), { umami: undefined })).status).toBe(404)
 	})
 
 	test('le script de l’instance est relayé sans cookie ni Referer', async () => {
-		let recu: Headers | undefined
+		let received: Headers | undefined
 		simulate(
 			http.get(`${INSTANCE}/script.js`, ({ request }) => {
-				recu = request.headers
+				received = request.headers
 				return new HttpResponse('window.umami={}', {
 					headers: { 'Content-Type': 'text/javascript', 'Set-Cookie': 'a=b' },
 				})
 			})
 		)
-		const reponse = await relayScript(
+		const response = await relayScript(
 			script({ cookie: 'session=abc', referer: 'https://my-makeup.fr/auth/profil', 'x-forwarded-for': '203.0.113.7' }),
-			{ umami: REEL }
+			{ umami: REAL }
 		)
-		expect(reponse.status).toBe(200)
-		expect(await reponse.text()).toBe('window.umami={}')
-		expect(reponse.headers.get('content-type')).toBe('text/javascript')
-		expect(reponse.headers.get('set-cookie')).toBeNull()
-		expect(recu?.has('cookie')).toBe(false)
-		expect(recu?.has('referer')).toBe(false)
-		expect(recu?.get('true-client-ip')).toBe('203.0.113.7')
+		expect(response.status).toBe(200)
+		expect(await response.text()).toBe('window.umami={}')
+		expect(response.headers.get('content-type')).toBe('text/javascript')
+		expect(response.headers.get('set-cookie')).toBeNull()
+		expect(received?.has('cookie')).toBe(false)
+		expect(received?.has('referer')).toBe(false)
+		expect(received?.get('true-client-ip')).toBe('203.0.113.7')
 	})
 
 	test('hors des hôtes du site, rien ne part vers l’instance : un script vide', async () => {
-		let appels = 0
+		let calls = 0
 		simulate(
 			http.get(`${INSTANCE}/script.js`, () => {
-				appels++
+				calls++
 				return new HttpResponse('window.umami={}')
 			})
 		)
-		for (const hote of ['v3.my-makeup.fr', 'localhost:3000', 'my-makeup.fr.exemple.test']) {
-			const reponse = await relayScript(
-				new Request('https://x.exemple.test/u/script.js', { headers: { host: hote } }),
-				{ umami: REEL }
+		for (const host of ['v3.my-makeup.fr', 'localhost:3000', 'my-makeup.fr.exemple.test']) {
+			const response = await relayScript(
+				new Request('https://x.exemple.test/u/script.js', { headers: { host: host } }),
+				{ umami: REAL }
 			)
-			expect(reponse.status).toBe(200)
-			expect(await reponse.text()).not.toContain('umami={}')
+			expect(response.status).toBe(200)
+			expect(await response.text()).not.toContain('umami={}')
 		}
-		expect(appels).toBe(0)
+		expect(calls).toBe(0)
 		// www is a host of the site.
-		const www = await relayScript(script({ host: 'www.my-makeup.fr' }), { umami: REEL })
+		const www = await relayScript(script({ host: 'www.my-makeup.fr' }), { umami: REAL })
 		expect(await www.text()).toContain('umami={}')
-		expect(appels).toBe(1)
+		expect(calls).toBe(1)
 	})
 
 	test('l’instance de ce poste (le faux Umami) est relayée depuis n’importe quel hôte', async () => {
 		simulate(http.get('http://127.0.0.1:4200/script.js', () => new HttpResponse('faux')))
-		const reponse = await relayScript(script({ host: 'localhost:3311' }), { umami: LOCAL })
-		expect(await reponse.text()).toBe('faux')
+		const response = await relayScript(script({ host: 'localhost:3311' }), { umami: LOCAL })
+		expect(await response.text()).toBe('faux')
 	})
 
 	test('une instance muette est coupée au délai, 504', async () => {
@@ -377,103 +377,103 @@ describe('le relais /u/script.js', () => {
 				return new HttpResponse('jamais')
 			})
 		)
-		const debut = Date.now()
-		const reponse = await relayScript(script(), { umami: REEL, delaiMs: 150 })
-		expect(reponse.status).toBe(504)
-		expect(Date.now() - debut).toBeLessThan(2000)
+		const startedAt = Date.now()
+		const response = await relayScript(script(), { umami: REAL, delaiMs: 150 })
+		expect(response.status).toBe(504)
+		expect(Date.now() - startedAt).toBeLessThan(2000)
 	})
 
 	test('une panne, une redirection : 502, jamais suivie', async () => {
 		simulate(http.get(`${INSTANCE}/script.js`, () => HttpResponse.error()))
-		expect((await relayScript(script(), { umami: REEL })).status).toBe(502)
+		expect((await relayScript(script(), { umami: REAL })).status).toBe(502)
 		simulate(
 			http.get(
 				`${INSTANCE}/script.js`,
 				() => new HttpResponse(null, { status: 302, headers: { Location: 'https://autre.exemple.test/' } })
 			)
 		)
-		expect((await relayScript(script(), { umami: REEL })).status).toBe(502)
+		expect((await relayScript(script(), { umami: REAL })).status).toBe(502)
 	})
 })
 
 describe('le relais /u/api/send', () => {
 	test('une mesure part vers l’instance avec son corps, sans cookie ni Referer, et la réponse revient', async () => {
-		let recu: { entetes: Headers; corps: string } | undefined
+		let received: { entetes: Headers; corps: string } | undefined
 		simulate(
-			http.post(`${AUTRE_INSTANCE}/api/send`, async ({ request }) => {
-				recu = { entetes: request.headers, corps: await request.text() }
+			http.post(`${OTHER_INSTANCE}/api/send`, async ({ request }) => {
+				received = { entetes: request.headers, corps: await request.text() }
 				return new HttpResponse('jeton', { headers: { 'Set-Cookie': 'a=b' } })
 			})
 		)
-		const reponse = await relaySend(
-			envoi({
+		const response = await relaySend(
+			upload({
 				cookie: 'session=abc',
 				referer: 'https://my-makeup.fr/auth/profil',
 				authorization: 'Bearer x',
 				'x-forwarded-for': '203.0.113.7',
 				'content-type': 'application/json',
 			}),
-			{ umami: { origin: AUTRE_INSTANCE, local: false } }
+			{ umami: { origin: OTHER_INSTANCE, local: false } }
 		)
-		expect(reponse.status).toBe(200)
-		expect(await reponse.text()).toBe('jeton')
-		expect(reponse.headers.get('set-cookie')).toBeNull()
-		expect(recu?.corps).toBe('{"type":"event","payload":{"name":"x"}}')
-		expect([...(recu?.entetes.keys() ?? [])].sort()).toEqual(['content-type', 'true-client-ip'].sort())
-		expect(recu?.entetes.get('true-client-ip')).toBe('203.0.113.7')
+		expect(response.status).toBe(200)
+		expect(await response.text()).toBe('jeton')
+		expect(response.headers.get('set-cookie')).toBeNull()
+		expect(received?.corps).toBe('{"type":"event","payload":{"name":"x"}}')
+		expect([...(received?.entetes.keys() ?? [])].sort()).toEqual(['content-type', 'true-client-ip'].sort())
+		expect(received?.entetes.get('true-client-ip')).toBe('203.0.113.7')
 	})
 
 	test('hors des hôtes du site, la mesure est reçue et jetée : rien ne part', async () => {
-		let appels = 0
+		let calls = 0
 		simulate(
-			http.post(`${AUTRE_INSTANCE}/api/send`, () => {
-				appels++
+			http.post(`${OTHER_INSTANCE}/api/send`, () => {
+				calls++
 				return new HttpResponse('jeton')
 			})
 		)
-		const reponse = await relaySend(envoi({ host: 'v3.my-makeup.fr' }), {
-			umami: { origin: AUTRE_INSTANCE, local: false },
+		const response = await relaySend(upload({ host: 'v3.my-makeup.fr' }), {
+			umami: { origin: OTHER_INSTANCE, local: false },
 		})
-		expect(reponse.status).toBe(204)
-		expect(appels).toBe(0)
+		expect(response.status).toBe(204)
+		expect(calls).toBe(0)
 	})
 
 	test('un corps trop gros n’est pas une mesure : 413', async () => {
-		const gros = 'x'.repeat(40 * 1024)
-		expect((await relaySend(envoi({}, gros), { umami: { origin: AUTRE_INSTANCE, local: false } })).status).toBe(413)
+		const big = 'x'.repeat(40 * 1024)
+		expect((await relaySend(upload({}, big), { umami: { origin: OTHER_INSTANCE, local: false } })).status).toBe(413)
 	})
 
 	test('une instance muette est coupée au délai, 504', async () => {
 		simulate(
-			http.post(`${AUTRE_INSTANCE}/api/send`, async () => {
+			http.post(`${OTHER_INSTANCE}/api/send`, async () => {
 				await delay('infinite')
 				return new HttpResponse('jamais')
 			})
 		)
-		expect((await relaySend(envoi(), { umami: { origin: AUTRE_INSTANCE, local: false }, delaiMs: 150 })).status).toBe(
+		expect((await relaySend(upload(), { umami: { origin: OTHER_INSTANCE, local: false }, delaiMs: 150 })).status).toBe(
 			504
 		)
 	})
 
 	test('la route ne répond qu’au POST, le script qu’au GET, et le reste de /u par un 404', async () => {
-		const racine = path.join(process.cwd(), 'src/app/u')
-		const envoyer = await import('@/app/u/api/send/route')
-		const servir = await import('@/app/u/script.js/route')
-		const reste = await import('@/app/u/[[...rest]]/route')
-		expect(Object.keys(envoyer).filter(nom => /^[A-Z]+$/.test(nom))).toEqual(['POST'])
-		expect(Object.keys(servir).filter(nom => /^[A-Z]+$/.test(nom))).toEqual(['GET'])
-		const reponse = await reste.GET()
-		expect(reponse.status).toBe(404)
+		const root = path.join(process.cwd(), 'src/app/u')
+		const send = await import('@/app/u/api/send/route')
+		const serve = await import('@/app/u/script.js/route')
+		const rest = await import('@/app/u/[[...rest]]/route')
+		expect(Object.keys(send).filter(nom => /^[A-Z]+$/.test(nom))).toEqual(['POST'])
+		expect(Object.keys(serve).filter(nom => /^[A-Z]+$/.test(nom))).toEqual(['GET'])
+		const response = await rest.GET()
+		expect(response.status).toBe(404)
 		// Nothing else lives under /u.
-		const fichiers = readdirSync(racine, { recursive: true, withFileTypes: true })
+		const files = readdirSync(root, { recursive: true, withFileTypes: true })
 			.filter(entree => entree.isFile())
-			.map(entree => path.relative(racine, path.join(entree.parentPath, entree.name)))
+			.map(entree => path.relative(root, path.join(entree.parentPath, entree.name)))
 			.sort()
-		expect(fichiers).toEqual([
+		expect(files).toEqual([
 			path.join('[[...rest]]', 'route.ts'),
 			path.join('api', 'send', 'route.ts'),
 			path.join('script.js', 'route.ts'),
 		])
-		expect(readFileSync(path.join(racine, 'api/send/route.ts'), 'utf8')).toContain('POST')
+		expect(readFileSync(path.join(root, 'api/send/route.ts'), 'utf8')).toContain('POST')
 	})
 })

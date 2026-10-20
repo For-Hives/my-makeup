@@ -12,101 +12,101 @@ import {
 import { createFakeGoogle, type FakeGoogle, PATHS } from '../support/fake-google/provider'
 
 /** The bench as `.env.test` describes it. Nothing is opened: the provider is called as a function. */
-const BANC = benchEnvironment({ nom: INSTANCE_BY_DEFAULT, decalage: 0 })
-const EMETTEUR = BANC.GOOGLE_OIDC_ISSUER ?? ''
-const CLIENT = BANC.GOOGLE_CLIENT_ID ?? ''
-const SECRET = BANC.GOOGLE_CLIENT_SECRET ?? ''
-const RETOUR = 'http://localhost:3100/retour-du-faux-google'
+const BENCH = benchEnvironment({ nom: INSTANCE_BY_DEFAULT, decalage: 0 })
+const ISSUER = BENCH.GOOGLE_OIDC_ISSUER ?? ''
+const CLIENT = BENCH.GOOGLE_CLIENT_ID ?? ''
+const SECRET = BENCH.GOOGLE_CLIENT_SECRET ?? ''
+const RETURN = 'http://localhost:3100/retour-du-faux-google'
 
 /** Added to the clock of the provider: a test moves it forward to see a code expire. */
-let avance = 0
-let fournisseur: FakeGoogle
+let advanced = 0
+let provider: FakeGoogle
 let google: ToolFakeGoogle
 
 beforeAll(async () => {
-	fournisseur = await createFakeGoogle({
-		emetteur: EMETTEUR,
+	provider = await createFakeGoogle({
+		emetteur: ISSUER,
 		clientId: CLIENT,
 		secret: SECRET,
-		maintenant: () => Date.now() + avance,
+		maintenant: () => Date.now() + advanced,
 	})
-	google = fakeGoogle(BANC, { requeter: fournisseur.repondre })
+	google = fakeGoogle(BENCH, { requeter: provider.repondre })
 })
 
 /** An authorization request as the application would write it, one parameter replaced or removed at will. */
-function demande(surcharge: Record<string, string | undefined> = {}): URL {
-	const url = new URL(`${EMETTEUR}${PATHS.autorisation}`)
-	const parametres: Record<string, string | undefined> = {
+function request(surcharge: Record<string, string | undefined> = {}): URL {
+	const url = new URL(`${ISSUER}${PATHS.autorisation}`)
+	const parameters: Record<string, string | undefined> = {
 		client_id: CLIENT,
-		redirect_uri: RETOUR,
+		redirect_uri: RETURN,
 		response_type: 'code',
 		scope: 'openid email profile',
 		state: 'etat-du-test',
 		...surcharge,
 	}
-	for (const [nom, valeur] of Object.entries(parametres)) if (valeur !== undefined) url.searchParams.set(nom, valeur)
+	for (const [name, value] of Object.entries(parameters)) if (value !== undefined) url.searchParams.set(name, value)
 	return url
 }
 
 /** The code Google sends the browser back with. */
-async function obtenirCode(surcharge: Record<string, string | undefined> = {}, choix?: ChoiceReady): Promise<string> {
-	const code = (await google.autoriser(demande(surcharge), choix)).searchParams.get('code')
+async function getCode(surcharge: Record<string, string | undefined> = {}, choix?: ChoiceReady): Promise<string> {
+	const code = (await google.autoriser(request(surcharge), choix)).searchParams.get('code')
 	if (!code) throw new Error('aucun code dans le retour')
 	return code
 }
 
 /** The exchange of a code, as the application sends it: one field replaced or removed at will. */
-function echanger(champs: Record<string, string | undefined>, enTetes: Record<string, string> = {}): Promise<Response> {
-	const formulaire = new URLSearchParams()
-	const complets: Record<string, string | undefined> = {
+function exchange(champs: Record<string, string | undefined>, enTetes: Record<string, string> = {}): Promise<Response> {
+	const form = new URLSearchParams()
+	const full: Record<string, string | undefined> = {
 		grant_type: 'authorization_code',
-		redirect_uri: RETOUR,
+		redirect_uri: RETURN,
 		client_id: CLIENT,
 		client_secret: SECRET,
 		...champs,
 	}
-	for (const [nom, valeur] of Object.entries(complets)) if (valeur !== undefined) formulaire.set(nom, valeur)
-	return fournisseur.repondre(
-		new Request(`${EMETTEUR}${PATHS.jeton}`, {
+	for (const [name, value] of Object.entries(full)) if (value !== undefined) form.set(name, value)
+	return provider.repondre(
+		new Request(`${ISSUER}${PATHS.jeton}`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/x-www-form-urlencoded', ...enTetes },
-			body: formulaire.toString(),
+			body: form.toString(),
 		})
 	)
 }
 
-const erreurDe = async (reponse: Response): Promise<{ status: number; error: unknown }> => ({
+const errorOf = async (reponse: Response): Promise<{ status: number; error: unknown }> => ({
 	status: reponse.status,
 	error: ((await reponse.json()) as { error?: unknown }).error,
 })
 
-const chargeDe = (jeton: string): Record<string, unknown> =>
+const loadOf = (jeton: string): Record<string, unknown> =>
 	JSON.parse(Buffer.from(jeton.split('.')[1] ?? '', 'base64url').toString('utf8')) as Record<string, unknown>
 
 describe('Le faux Google : un aller-retour complet, comme avec Google', () => {
 	test('il se présente comme Google : mêmes chemins, même document de découverte, sous son adresse locale', async () => {
-		const reponse = await fournisseur.repondre(new Request(`${EMETTEUR}${PATHS.decouverte}`))
+		const response = await provider.repondre(new Request(`${ISSUER}${PATHS.decouverte}`))
 
-		expect(reponse.status).toBe(200)
-		expect(await reponse.json()).toMatchObject({
-			issuer: EMETTEUR,
-			authorization_endpoint: `${EMETTEUR}/o/oauth2/v2/auth`,
-			token_endpoint: `${EMETTEUR}/token`,
-			userinfo_endpoint: `${EMETTEUR}/v1/userinfo`,
-			jwks_uri: `${EMETTEUR}/oauth2/v3/certs`,
+		expect(response.status).toBe(200)
+		expect(await response.json()).toMatchObject({
+			issuer: ISSUER,
+			authorization_endpoint: `${ISSUER}/o/oauth2/v2/auth`,
+			token_endpoint: `${ISSUER}/token`,
+			userinfo_endpoint: `${ISSUER}/v1/userinfo`,
+			jwks_uri: `${ISSUER}/oauth2/v3/certs`,
 			id_token_signing_alg_values_supported: ['RS256'],
 			code_challenge_methods_supported: ['plain', 'S256'],
 		})
 	})
 
 	test('email vérifié : code, jetons, jeton d’identité signé, profil, le tout en moins de 5 secondes', async () => {
-		const choix = google.choisir({ email: 'lea.martin@example.test', prenom: 'Léa', nomDeFamille: 'Martin' })
+		const choice = google.choisir({ email: 'lea.martin@example.test', prenom: 'Léa', nomDeFamille: 'Martin' })
 
-		const resultat = await google.allerRetour(choix)
+		const result = await google.allerRetour(choice)
 
-		if (resultat.issue !== 'connecte') throw new Error(`issue inattendue : ${resultat.issue}`)
-		expect(resultat.revendications).toMatchObject({
-			iss: EMETTEUR,
+		if (result.issue !== 'connecte') throw new Error(`issue inattendue : ${result.issue}`)
+		expect(result.revendications).toMatchObject({
+			iss: ISSUER,
 			aud: CLIENT,
 			azp: CLIENT,
 			sub: subOf('lea.martin@example.test'),
@@ -116,8 +116,8 @@ describe('Le faux Google : un aller-retour complet, comme avec Google', () => {
 			given_name: 'Léa',
 			family_name: 'Martin',
 		})
-		expect(resultat.revendications.exp - resultat.revendications.iat).toBe(3600)
-		expect(resultat.profil).toEqual({
+		expect(result.revendications.exp - result.revendications.iat).toBe(3600)
+		expect(result.profil).toEqual({
 			sub: subOf('lea.martin@example.test'),
 			email: 'lea.martin@example.test',
 			email_verified: true,
@@ -126,41 +126,41 @@ describe('Le faux Google : un aller-retour complet, comme avec Google', () => {
 			family_name: 'Martin',
 		})
 		// What Google adds to its own answer comes back too, and the state as it was sent.
-		expect(resultat.retour.searchParams.get('authuser')).toBe('0')
-		expect(resultat.dureeMs).toBeLessThan(5000)
+		expect(result.retour.searchParams.get('authuser')).toBe('0')
+		expect(result.dureeMs).toBeLessThan(5000)
 	})
 
 	test('email non vérifié : la connexion aboutit, et Google dit que l’adresse n’a jamais été confirmée', async () => {
-		const resultat = await google.allerRetour(google.choisir({ scenario: 'email-non-verifie' }))
+		const result = await google.allerRetour(google.choisir({ scenario: 'email-non-verifie' }))
 
-		if (resultat.issue !== 'connecte') throw new Error(`issue inattendue : ${resultat.issue}`)
-		expect(resultat.revendications.email_verified).toBe(false)
-		expect(resultat.profil.email_verified).toBe(false)
-		expect(resultat.revendications.email).toBe('camille.google@example.test')
+		if (result.issue !== 'connecte') throw new Error(`issue inattendue : ${result.issue}`)
+		expect(result.revendications.email_verified).toBe(false)
+		expect(result.profil.email_verified).toBe(false)
+		expect(result.revendications.email).toBe('camille.google@example.test')
 	})
 
 	test('refus : le navigateur revient avec access_denied et l’état, sans aucun code', async () => {
-		const resultat = await google.allerRetour(google.choisir({ scenario: 'refus' }))
+		const result = await google.allerRetour(google.choisir({ scenario: 'refus' }))
 
-		expect(resultat.issue).toBe('refus')
-		expect(resultat.retour.searchParams.get('error')).toBe('access_denied')
-		expect(resultat.retour.searchParams.has('code')).toBe(false)
-		expect(resultat.retour.searchParams.get('state')).toBeTruthy()
+		expect(result.issue).toBe('refus')
+		expect(result.retour.searchParams.get('error')).toBe('access_denied')
+		expect(result.retour.searchParams.has('code')).toBe(false)
+		expect(result.retour.searchParams.get('state')).toBeTruthy()
 	})
 
 	test('panne : le code revient, puis son échange répond 503 avec une page, pas du JSON, à chaque essai', async () => {
-		const resultat = await google.allerRetour(google.choisir({ scenario: 'panne' }))
-		expect(resultat).toMatchObject({ issue: 'panne', statut: 503 })
+		const result = await google.allerRetour(google.choisir({ scenario: 'panne' }))
+		expect(result).toMatchObject({ issue: 'panne', statut: 503 })
 
-		const code = await obtenirCode({}, google.choisir({ scenario: 'panne' }))
-		for (const _essai of [1, 2]) {
-			const reponse = await echanger({ code })
-			expect(reponse.status).toBe(503)
-			expect(reponse.headers.get('content-type')).toStartWith('text/html')
-			expect(await reponse.text()).toContain('503 Service Unavailable')
+		const code = await getCode({}, google.choisir({ scenario: 'panne' }))
+		for (const _test of [1, 2]) {
+			const response = await exchange({ code })
+			expect(response.status).toBe(503)
+			expect(response.headers.get('content-type')).toStartWith('text/html')
+			expect(await response.text()).toContain('503 Service Unavailable')
 		}
 		// Even a client the provider does not know sees the outage, not a refusal.
-		expect((await echanger({ code, client_secret: 'secret-factice-mais-faux' })).status).toBe(503)
+		expect((await exchange({ code, client_secret: 'secret-factice-mais-faux' })).status).toBe(503)
 	})
 
 	test('les quatre scénarios existent, et aucun autre', () => {
@@ -169,11 +169,11 @@ describe('Le faux Google : un aller-retour complet, comme avec Google', () => {
 	})
 
 	test('sans choix, une personne fictive à l’adresse vérifiée se connecte : toujours la même', async () => {
-		const sansCookie = await fournisseur.repondre(new Request(demande()))
-		const code = new URL(sansCookie.headers.get('location') ?? '').searchParams.get('code') ?? ''
-		const jetons = (await (await echanger({ code })).json()) as { id_token: string }
+		const withoutCookie = await provider.repondre(new Request(request()))
+		const code = new URL(withoutCookie.headers.get('location') ?? '').searchParams.get('code') ?? ''
+		const tokens = (await (await exchange({ code })).json()) as { id_token: string }
 
-		expect(chargeDe(jetons.id_token)).toMatchObject({
+		expect(loadOf(tokens.id_token)).toMatchObject({
 			sub: subOf('camille.google@example.test'),
 			email: 'camille.google@example.test',
 			email_verified: true,
@@ -183,50 +183,50 @@ describe('Le faux Google : un aller-retour complet, comme avec Google', () => {
 	})
 
 	test('second passage : la même adresse est le même compte Google, quelle que soit sa casse', async () => {
-		const premier = await google.allerRetour(google.choisir({ email: 'zoe@example.test' }))
+		const first = await google.allerRetour(google.choisir({ email: 'zoe@example.test' }))
 		const second = await google.allerRetour(google.choisir({ email: 'Zoe@Example.TEST' }))
 
-		if (premier.issue !== 'connecte' || second.issue !== 'connecte') throw new Error('connexion attendue')
-		expect(second.revendications.sub).toBe(premier.revendications.sub)
+		if (first.issue !== 'connecte' || second.issue !== 'connecte') throw new Error('connexion attendue')
+		expect(second.revendications.sub).toBe(first.revendications.sub)
 		expect(second.revendications.email).toBe('Zoe@Example.TEST')
 		expect(subOf('zoe@example.test')).toMatch(/^1\d{20}$/)
 		expect(subOf('lea@example.test')).not.toBe(subOf('zoe@example.test'))
 	})
 
 	test('deux connexions en même temps ne se mélangent pas : chacune rend l’identité de son test', async () => {
-		const adresses = ['a', 'b', 'c', 'd', 'e'].map(nom => `${nom}@example.test`)
+		const urls = ['a', 'b', 'c', 'd', 'e'].map(nom => `${nom}@example.test`)
 
-		const resultats = await Promise.all(adresses.map(email => google.allerRetour(google.choisir({ email }))))
+		const results = await Promise.all(urls.map(email => google.allerRetour(google.choisir({ email }))))
 
-		expect(resultats.map(resultat => resultat.issue === 'connecte' && resultat.revendications.email)).toEqual(adresses)
+		expect(results.map(resultat => resultat.issue === 'connecte' && resultat.revendications.email)).toEqual(urls)
 	})
 
 	test('Google ne dit que ce qu’on lui demande : sans la portée email, aucune adresse', async () => {
-		const code = await obtenirCode({ scope: 'openid profile' })
-		const jetons = (await (await echanger({ code })).json()) as { id_token: string; scope: string }
+		const code = await getCode({ scope: 'openid profile' })
+		const tokens = (await (await exchange({ code })).json()) as { id_token: string; scope: string }
 
-		expect(jetons.scope).toBe('openid profile')
-		expect(chargeDe(jetons.id_token)).not.toHaveProperty('email')
-		expect(chargeDe(jetons.id_token)).toHaveProperty('name')
+		expect(tokens.scope).toBe('openid profile')
+		expect(loadOf(tokens.id_token)).not.toHaveProperty('email')
+		expect(loadOf(tokens.id_token)).toHaveProperty('name')
 	})
 
 	test('une photo n’est rendue que si le test en donne une', async () => {
-		const sans = await google.allerRetour()
-		const avec = await google.allerRetour(google.choisir({ photo: 'https://photos.example.test/camille.png' }))
+		const without = await google.allerRetour()
+		const withValue = await google.allerRetour(google.choisir({ photo: 'https://photos.example.test/camille.png' }))
 
-		if (sans.issue !== 'connecte' || avec.issue !== 'connecte') throw new Error('connexion attendue')
-		expect(sans.profil.picture).toBeUndefined()
-		expect(avec.profil.picture).toBe('https://photos.example.test/camille.png')
+		if (without.issue !== 'connecte' || withValue.issue !== 'connecte') throw new Error('connexion attendue')
+		expect(without.profil.picture).toBeUndefined()
+		expect(withValue.profil.picture).toBe('https://photos.example.test/camille.png')
 	})
 })
 
 describe('Le faux Google refuse ce que Google refuse', () => {
 	test('un client inconnu : une page d’erreur du fournisseur, aucun retour vers le site', async () => {
-		const reponse = await fournisseur.repondre(new Request(demande({ client_id: 'client-factice-inconnu' })))
+		const response = await provider.repondre(new Request(request({ client_id: 'client-factice-inconnu' })))
 
-		expect(reponse.status).toBe(401)
-		expect(reponse.headers.has('location')).toBe(false)
-		expect(await reponse.text()).toContain('Erreur 401 : invalid_client')
+		expect(response.status).toBe(401)
+		expect(response.headers.has('location')).toBe(false)
+		expect(await response.text()).toContain('Erreur 401 : invalid_client')
 	})
 
 	test.each([
@@ -238,14 +238,14 @@ describe('Le faux Google refuse ce que Google refuse', () => {
 		['une adresse avec un fragment', 'http://localhost:3100/retour#fragment'],
 		['aucune adresse', undefined],
 	])('il ne renvoie un navigateur que vers ce poste : %s', async (_cas, adresse) => {
-		const reponse = await fournisseur.repondre(new Request(demande({ redirect_uri: adresse })))
+		const response = await provider.repondre(new Request(request({ redirect_uri: adresse })))
 
-		expect(reponse.status).toBe(400)
-		expect(reponse.headers.has('location')).toBe(false)
-		const texte = await reponse.text()
-		expect(texte).toContain('Erreur 400 : redirect_uri_mismatch')
+		expect(response.status).toBe(400)
+		expect(response.headers.has('location')).toBe(false)
+		const text = await response.text()
+		expect(text).toContain('Erreur 400 : redirect_uri_mismatch')
 		// Nothing of the request is echoed in the page.
-		if (adresse) expect(texte).not.toContain(adresse)
+		if (adresse) expect(text).not.toContain(adresse)
 	})
 
 	test.each([
@@ -253,157 +253,153 @@ describe('Le faux Google refuse ce que Google refuse', () => {
 		['une portée sans openid', { scope: 'email profile' }, 'invalid_scope'],
 		['une méthode de défi inconnue', { code_challenge: 'defi', code_challenge_method: 'S512' }, 'invalid_request'],
 	])('une demande mal formée revient au site avec son erreur et son état : %s', async (_cas, surcharge, erreur) => {
-		const retour = await google.autoriser(demande(surcharge))
+		const returnUrl = await google.autoriser(request(surcharge))
 
-		expect(retour.searchParams.get('error')).toBe(erreur)
-		expect(retour.searchParams.get('state')).toBe('etat-du-test')
-		expect(retour.searchParams.has('code')).toBe(false)
+		expect(returnUrl.searchParams.get('error')).toBe(erreur)
+		expect(returnUrl.searchParams.get('state')).toBe('etat-du-test')
+		expect(returnUrl.searchParams.has('code')).toBe(false)
 	})
 
 	test('un secret faux, ou pas de secret : invalid_client, et le code reste bon pour le vrai client', async () => {
-		const code = await obtenirCode()
+		const code = await getCode()
 
-		expect(await erreurDe(await echanger({ code, client_secret: 'secret-factice-mais-faux' }))).toEqual({
+		expect(await errorOf(await exchange({ code, client_secret: 'secret-factice-mais-faux' }))).toEqual({
 			status: 401,
 			error: 'invalid_client',
 		})
-		expect(await erreurDe(await echanger({ code, client_secret: undefined }))).toEqual({
+		expect(await errorOf(await exchange({ code, client_secret: undefined }))).toEqual({
 			status: 401,
 			error: 'invalid_client',
 		})
-		expect((await echanger({ code })).status).toBe(200)
+		expect((await exchange({ code })).status).toBe(200)
 	})
 
 	test('le client peut se présenter dans l’en-tête Authorization', async () => {
-		const basique = (secret: string) => ({ Authorization: `Basic ${btoa(`${CLIENT}:${secret}`)}` })
-		const sansCorps = { client_id: undefined, client_secret: undefined }
+		const basic = (secret: string) => ({ Authorization: `Basic ${btoa(`${CLIENT}:${secret}`)}` })
+		const withoutBody = { client_id: undefined, client_secret: undefined }
 
-		expect((await echanger({ code: await obtenirCode(), ...sansCorps }, basique(SECRET))).status).toBe(200)
-		expect(
-			(await echanger({ code: await obtenirCode(), ...sansCorps }, basique('secret-factice-mais-faux'))).status
-		).toBe(401)
-		expect((await echanger({ code: await obtenirCode(), ...sansCorps }, { Authorization: 'Basic %%%' })).status).toBe(
+		expect((await exchange({ code: await getCode(), ...withoutBody }, basic(SECRET))).status).toBe(200)
+		expect((await exchange({ code: await getCode(), ...withoutBody }, basic('secret-factice-mais-faux'))).status).toBe(
 			401
 		)
+		expect((await exchange({ code: await getCode(), ...withoutBody }, { Authorization: 'Basic %%%' })).status).toBe(401)
 	})
 
 	test('un code ne s’échange qu’une fois', async () => {
-		const code = await obtenirCode()
+		const code = await getCode()
 
-		expect((await echanger({ code })).status).toBe(200)
-		expect(await erreurDe(await echanger({ code }))).toEqual({ status: 400, error: 'invalid_grant' })
-		expect(await erreurDe(await echanger({ code: 'code-jamais-donne' }))).toEqual({
+		expect((await exchange({ code })).status).toBe(200)
+		expect(await errorOf(await exchange({ code }))).toEqual({ status: 400, error: 'invalid_grant' })
+		expect(await errorOf(await exchange({ code: 'code-jamais-donne' }))).toEqual({
 			status: 400,
 			error: 'invalid_grant',
 		})
-		expect(await erreurDe(await echanger({}))).toEqual({ status: 400, error: 'invalid_grant' })
+		expect(await errorOf(await exchange({}))).toEqual({ status: 400, error: 'invalid_grant' })
 	})
 
 	test('un code expire au bout d’une minute', async () => {
-		const [juste, tard] = [await obtenirCode(), await obtenirCode()]
+		const [exact, late] = [await getCode(), await getCode()]
 		try {
-			avance = 59_000
-			expect((await echanger({ code: juste })).status).toBe(200)
-			avance = 61_000
-			expect(await erreurDe(await echanger({ code: tard }))).toEqual({ status: 400, error: 'invalid_grant' })
+			advanced = 59_000
+			expect((await exchange({ code: exact })).status).toBe(200)
+			advanced = 61_000
+			expect(await errorOf(await exchange({ code: late }))).toEqual({ status: 400, error: 'invalid_grant' })
 		} finally {
-			avance = 0
+			advanced = 0
 		}
 	})
 
 	test('l’échange doit redonner la même adresse de retour que la demande', async () => {
-		const reponse = await echanger({ code: await obtenirCode(), redirect_uri: 'http://localhost:3100/autre-retour' })
+		const response = await exchange({ code: await getCode(), redirect_uri: 'http://localhost:3100/autre-retour' })
 
-		expect(await erreurDe(reponse)).toEqual({ status: 400, error: 'redirect_uri_mismatch' })
+		expect(await errorOf(response)).toEqual({ status: 400, error: 'redirect_uri_mismatch' })
 	})
 
 	test('avec un défi PKCE, l’échange exige la preuve qui lui correspond', async () => {
-		const preuve = 'preuve-du-test-preuve-du-test-preuve-du-test-0123'
-		const defi = Buffer.from(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(preuve))).toString(
+		const proof = 'preuve-du-test-preuve-du-test-preuve-du-test-0123'
+		const challenge = Buffer.from(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(proof))).toString(
 			'base64url'
 		)
-		const pkce = { code_challenge: defi, code_challenge_method: 'S256' }
+		const pkce = { code_challenge: challenge, code_challenge_method: 'S256' }
 
-		expect((await echanger({ code: await obtenirCode(pkce), code_verifier: preuve })).status).toBe(200)
-		expect(
-			await erreurDe(await echanger({ code: await obtenirCode(pkce), code_verifier: 'une-autre-preuve' }))
-		).toEqual({
+		expect((await exchange({ code: await getCode(pkce), code_verifier: proof })).status).toBe(200)
+		expect(await errorOf(await exchange({ code: await getCode(pkce), code_verifier: 'une-autre-preuve' }))).toEqual({
 			status: 400,
 			error: 'invalid_grant',
 		})
-		expect(await erreurDe(await echanger({ code: await obtenirCode(pkce) }))).toEqual({
+		expect(await errorOf(await exchange({ code: await getCode(pkce) }))).toEqual({
 			status: 400,
 			error: 'invalid_grant',
 		})
 	})
 
 	test('un autre type d’échange que le code d’autorisation est refusé', async () => {
-		const reponse = await echanger({ code: await obtenirCode(), grant_type: 'refresh_token' })
+		const response = await exchange({ code: await getCode(), grant_type: 'refresh_token' })
 
-		expect(await erreurDe(reponse)).toEqual({ status: 400, error: 'unsupported_grant_type' })
+		expect(await errorOf(response)).toEqual({ status: 400, error: 'unsupported_grant_type' })
 	})
 
 	test('le profil ne se lit qu’avec un jeton d’accès que le fournisseur a donné', async () => {
-		const profil = (enTetes: Record<string, string>) =>
-			fournisseur.repondre(new Request(`${EMETTEUR}${PATHS.profil}`, { headers: enTetes }))
+		const profile = (enTetes: Record<string, string>) =>
+			provider.repondre(new Request(`${ISSUER}${PATHS.profil}`, { headers: enTetes }))
 
-		const sansJeton: Record<string, string>[] = [
+		const withoutToken: Record<string, string>[] = [
 			{},
 			{ Authorization: 'Bearer jeton-jamais-donne' },
 			{ Authorization: 'Basic abc' },
 		]
-		for (const enTetes of sansJeton) {
-			const reponse = await profil(enTetes)
-			expect(reponse.status).toBe(401)
-			expect(reponse.headers.get('www-authenticate')).toBe('Bearer error="invalid_token"')
+		for (const headerList of withoutToken) {
+			const response = await profile(headerList)
+			expect(response.status).toBe(401)
+			expect(response.headers.get('www-authenticate')).toBe('Bearer error="invalid_token"')
 		}
 	})
 
 	test('un jeton d’identité retouché ne passe pas la vérification de l’outil : la signature est réelle', async () => {
 		// The answer of the token endpoint, with one claim changed after the provider signed it.
-		const retoucher = async (requete: Request): Promise<Response> => {
-			const reponse = await fournisseur.repondre(requete)
-			if (new URL(requete.url).pathname !== PATHS.jeton) return reponse
-			const jetons = (await reponse.json()) as { id_token: string }
-			const [entete = '', charge = '', signature = ''] = jetons.id_token.split('.')
-			const fausse = Buffer.from(
-				JSON.stringify({ ...chargeDe(`.${charge}.`), email: 'une-autre@example.test' })
-			).toString('base64url')
-			return Response.json({ ...jetons, id_token: `${entete}.${fausse}.${signature}` })
+		const touch = async (requete: Request): Promise<Response> => {
+			const response = await provider.repondre(requete)
+			if (new URL(requete.url).pathname !== PATHS.jeton) return response
+			const tokens = (await response.json()) as { id_token: string }
+			const [header = '', charge = '', signature = ''] = tokens.id_token.split('.')
+			const fake = Buffer.from(JSON.stringify({ ...loadOf(`.${charge}.`), email: 'une-autre@example.test' })).toString(
+				'base64url'
+			)
+			return Response.json({ ...tokens, id_token: `${header}.${fake}.${signature}` })
 		}
 
-		const trompe = fakeGoogle(BANC, { requeter: retoucher })
+		const wrong = fakeGoogle(BENCH, { requeter: touch })
 
-		await expect(trompe.allerRetour()).rejects.toThrow('Jeton d’identité : signature fausse.')
+		await expect(wrong.allerRetour()).rejects.toThrow('Jeton d’identité : signature fausse.')
 	})
 
 	test('une adresse inconnue répond 404, une méthode inattendue 405, sans rien d’autre', async () => {
-		const appeler = (chemin: string, methode: string) =>
-			fournisseur.repondre(new Request(`${EMETTEUR}${chemin}`, { method: methode }))
+		const call = (chemin: string, methode: string) =>
+			provider.repondre(new Request(`${ISSUER}${chemin}`, { method: methode }))
 
-		expect((await appeler('/oauth2/v4/token', 'POST')).status).toBe(404)
-		expect((await appeler(PATHS.jeton, 'GET')).status).toBe(405)
-		expect((await appeler(PATHS.autorisation, 'POST')).status).toBe(405)
-		expect((await appeler(PATHS.cles, 'DELETE')).status).toBe(405)
+		expect((await call('/oauth2/v4/token', 'POST')).status).toBe(404)
+		expect((await call(PATHS.jeton, 'GET')).status).toBe(405)
+		expect((await call(PATHS.autorisation, 'POST')).status).toBe(405)
+		expect((await call(PATHS.cles, 'DELETE')).status).toBe(405)
 	})
 
 	test('rien de ce qu’il répond ne se garde en cache', async () => {
-		const reponses = await Promise.all([
-			fournisseur.repondre(new Request(`${EMETTEUR}${PATHS.decouverte}`)),
-			fournisseur.repondre(new Request(`${EMETTEUR}${PATHS.cles}`)),
-			fournisseur.repondre(new Request(demande())),
-			echanger({ code: await obtenirCode() }),
+		const responses = await Promise.all([
+			provider.repondre(new Request(`${ISSUER}${PATHS.decouverte}`)),
+			provider.repondre(new Request(`${ISSUER}${PATHS.cles}`)),
+			provider.repondre(new Request(request())),
+			exchange({ code: await getCode() }),
 		])
 
-		for (const reponse of reponses) expect(reponse.headers.get('cache-control')).toBe('no-store')
+		for (const response of responses) expect(response.headers.get('cache-control')).toBe('no-store')
 	})
 })
 
 describe('Un test choisit l’identité renvoyée', () => {
 	test('le choix voyage dans un cookie du fournisseur : un en-tête pour un client HTTP, un cookie pour un navigateur', () => {
-		const pret = google.choisir({ scenario: 'email-non-verifie', email: 'lea@example.test', sub: 'compte-42' })
+		const ready = google.choisir({ scenario: 'email-non-verifie', email: 'lea@example.test', sub: 'compte-42' })
 
-		expect(pret.choix).toEqual({
+		expect(ready.choix).toEqual({
 			scenario: 'email-non-verifie',
 			identite: {
 				sub: 'compte-42',
@@ -413,19 +409,19 @@ describe('Un test choisit l’identité renvoyée', () => {
 				nomDeFamille: 'Banc-de-Test',
 			},
 		})
-		expect(pret.enTetes).toEqual({ Cookie: `${CHOICE_COOKIE}=${encodeChoice(pret.choix)}` })
-		expect(pret.cookies).toEqual([
+		expect(ready.enTetes).toEqual({ Cookie: `${CHOICE_COOKIE}=${encodeChoice(ready.choix)}` })
+		expect(ready.cookies).toEqual([
 			{
 				name: CHOICE_COOKIE,
-				value: encodeChoice(pret.choix),
-				url: EMETTEUR,
+				value: encodeChoice(ready.choix),
+				url: ISSUER,
 				expires: expect.any(Number),
 				httpOnly: true,
 				secure: false,
 				sameSite: 'Lax',
 			},
 		])
-		expect(decodeChoice(pret.cookies[0]?.value ?? '')).toEqual(pret.choix)
+		expect(decodeChoice(ready.cookies[0]?.value ?? '')).toEqual(ready.choix)
 	})
 
 	test.each([
@@ -440,13 +436,13 @@ describe('Un test choisit l’identité renvoyée', () => {
 		let message = ''
 		try {
 			google.choisir(identite)
-		} catch (erreur) {
-			if (!(erreur instanceof RefusedChoice)) throw erreur
-			message = erreur.message
+		} catch (error) {
+			if (!(error instanceof RefusedChoice)) throw error
+			message = error.message
 		}
 
 		expect(message).toStartWith('Identité refusée')
-		for (const valeur of Object.values(identite)) if (valeur.trim() !== '') expect(message).not.toContain(valeur)
+		for (const value of Object.values(identite)) if (value.trim() !== '') expect(message).not.toContain(value)
 	})
 
 	test('un scénario inconnu est refusé, et les quatre sont nommés', () => {
@@ -456,43 +452,43 @@ describe('Un test choisit l’identité renvoyée', () => {
 	})
 
 	test('le fournisseur refait le contrôle : un cookie retouché donne une page d’erreur, jamais une identité', async () => {
-		const vraieAdresse = Buffer.from(
+		const trueUrl = Buffer.from(
 			JSON.stringify({ ...composeChoice(), identite: { ...composeChoice().identite, email: 'quelquun@gmail.com' } })
 		).toString('base64url')
 
-		for (const valeur of [vraieAdresse, 'pas-un-choix', Buffer.from('{"scenario":"refus"}').toString('base64url')]) {
-			const reponse = await fournisseur.repondre(
-				new Request(demande(), { headers: { Cookie: `autre=1; ${CHOICE_COOKIE}=${valeur}` } })
+		for (const value of [trueUrl, 'pas-un-choix', Buffer.from('{"scenario":"refus"}').toString('base64url')]) {
+			const response = await provider.repondre(
+				new Request(request(), { headers: { Cookie: `autre=1; ${CHOICE_COOKIE}=${value}` } })
 			)
-			const texte = await reponse.text()
+			const text = await response.text()
 
-			expect(reponse.status).toBe(400)
-			expect(reponse.headers.has('location')).toBe(false)
-			expect(texte).toContain('Erreur 400 : choix_refuse')
-			expect(texte).not.toContain('gmail.com')
+			expect(response.status).toBe(400)
+			expect(response.headers.has('location')).toBe(false)
+			expect(text).toContain('Erreur 400 : choix_refuse')
+			expect(text).not.toContain('gmail.com')
 		}
 	})
 })
 
 describe('Aucun secret Google réel, aucun appel à Google', () => {
-	const refus = (essai: () => unknown): string => {
+	const refusal = (essai: () => unknown): string => {
 		try {
 			essai()
-		} catch (erreur) {
-			if (erreur instanceof RefusedBench) return erreur.message
-			throw erreur
+		} catch (error) {
+			if (error instanceof RefusedBench) return error.message
+			throw error
 		}
 		throw new Error('rien n’a été refusé')
 	}
 
 	/** Records what would be sent: nothing may be. */
-	const espion = () => {
-		const envois: string[] = []
-		const requeter = (requete: Request) => {
-			envois.push(requete.url)
+	const spy = () => {
+		const uploads: string[] = []
+		const query = (requete: Request) => {
+			uploads.push(requete.url)
 			return Promise.resolve(new Response(null, { status: 599 }))
 		}
-		return { envois, requeter }
+		return { envois: uploads, requeter: query }
 	}
 
 	test('le client et le secret du banc disent qu’ils sont factices', () => {
@@ -504,7 +500,7 @@ describe('Aucun secret Google réel, aucun appel à Google', () => {
 		['un identifiant client sans le mot « factice »', { clientId: 'client-du-banc', secret: SECRET }],
 		['un secret sans le mot « factice »', { clientId: CLIENT, secret: 'secret-du-banc-de-test' }],
 	])('le fournisseur refuse de démarrer avec %s', async (_cas, identifiants) => {
-		await expect(createFakeGoogle({ emetteur: EMETTEUR, ...identifiants })).rejects.toThrow(
+		await expect(createFakeGoogle({ emetteur: ISSUER, ...identifiants })).rejects.toThrow(
 			'doivent porter le mot « factice ». Jamais un vrai secret Google ici.'
 		)
 	})
@@ -523,7 +519,7 @@ describe('Aucun secret Google réel, aucun appel à Google', () => {
 	})
 
 	test('sans faux Google réglé, l’outil s’arrête et dit quoi lancer', () => {
-		expect(refus(() => fakeGoogle({}))).toBe(
+		expect(refusal(() => fakeGoogle({}))).toBe(
 			'Aucun faux Google n’est réglé (GOOGLE_OIDC_ISSUER manque). Démarre le banc par « bun run bench:up », puis lance les tests par « bun run test:integration ».'
 		)
 	})
@@ -534,12 +530,12 @@ describe('Aucun secret Google réel, aucun appel à Google', () => {
 		['une adresse privée', 'http://192.168.1.20:7080'],
 		['une adresse locale avec un chemin', 'http://127.0.0.1:7080/oidc'],
 	])('l’outil refuse un fournisseur qui n’est pas sur ce poste, et n’envoie rien : %s', (_cas, emetteur) => {
-		const { envois, requeter } = espion()
+		const { envois: uploads, requeter: query } = spy()
 
-		expect(refus(() => fakeGoogle({ ...BANC, GOOGLE_OIDC_ISSUER: emetteur }, { requeter }))).toContain(
+		expect(refusal(() => fakeGoogle({ ...BENCH, GOOGLE_OIDC_ISSUER: emetteur }, { requeter: query }))).toContain(
 			'ne désigne pas le faux Google du banc, sur ce poste : rien n’est envoyé.'
 		)
-		expect(envois).toEqual([])
+		expect(uploads).toEqual([])
 	})
 
 	test.each([
@@ -547,32 +543,32 @@ describe('Aucun secret Google réel, aucun appel à Google', () => {
 		['GOOGLE_CLIENT_SECRET', 'un-secret-qui-ne-dit-rien'],
 		['GOOGLE_CLIENT_SECRET', ''],
 	])('l’outil refuse des identifiants qui pourraient être réels, sans les recopier : %s', (nom, valeur) => {
-		const message = refus(() => fakeGoogle({ ...BANC, [nom]: valeur }))
+		const message = refusal(() => fakeGoogle({ ...BENCH, [nom]: valeur }))
 
 		expect(message).toContain('jamais un vrai secret Google dans un test')
 		if (valeur) expect(message).not.toContain(valeur)
 	})
 
 	test('l’outil ne joue le navigateur que devant le faux Google : une adresse de Google n’est jamais appelée', async () => {
-		const { envois, requeter } = espion()
-		const outil = fakeGoogle(BANC, { requeter })
-		const versGoogle = `https://accounts.google.com/o/oauth2/v2/auth${demande().search}`
+		const { envois: uploads, requeter: query } = spy()
+		const tool = fakeGoogle(BENCH, { requeter: query })
+		const toGoogle = `https://accounts.google.com/o/oauth2/v2/auth${request().search}`
 
-		await expect(outil.autoriser(versGoogle)).rejects.toThrow(RefusedBench)
-		await expect(outil.autoriser(demande().href.replace('127.0.0.1', 'localhost'))).rejects.toThrow(
+		await expect(tool.autoriser(toGoogle)).rejects.toThrow(RefusedBench)
+		await expect(tool.autoriser(request().href.replace('127.0.0.1', 'localhost'))).rejects.toThrow(
 			'Cette adresse n’est pas celle du faux Google du banc : rien n’est envoyé.'
 		)
-		expect(envois).toEqual([])
+		expect(uploads).toEqual([])
 	})
 })
 
 describe('Le serveur que lance le conteneur du banc', () => {
-	const SERVEUR = 'tests/support/fake-google/server.ts'
-	const identifiants = { GOOGLE_CLIENT_ID: CLIENT, GOOGLE_CLIENT_SECRET: SECRET }
+	const SERVER = 'tests/support/fake-google/server.ts'
+	const identifiers = { GOOGLE_CLIENT_ID: CLIENT, GOOGLE_CLIENT_SECRET: SECRET }
 
 	/** Starts the entry point of the container on a free port of this machine, with these variables only. */
-	function lancer(variables: Record<string, string>) {
-		return Bun.spawn([process.execPath, '--no-env-file', SERVEUR], {
+	function launch(variables: Record<string, string>) {
+		return Bun.spawn([process.execPath, '--no-env-file', SERVER], {
 			cwd: ROOT,
 			env: { ...variables, FAKE_GOOGLE_PORT: '0', PATH: process.env.PATH ?? '' },
 			stdout: 'pipe',
@@ -581,22 +577,22 @@ describe('Le serveur que lance le conteneur du banc', () => {
 	}
 
 	test('il démarre, annonce son adresse, et un aller-retour par HTTP y prend moins de 5 secondes', async () => {
-		const enfant = lancer(identifiants)
+		const child = launch(identifiers)
 		try {
-			const lecteur = enfant.stdout.getReader()
-			const annonce = new TextDecoder().decode((await lecteur.read()).value)
-			lecteur.releaseLock()
-			const emetteur = /^Faux Google prêt : (http:\/\/127\.0\.0\.1:\d+)\n$/.exec(annonce)?.[1]
-			if (!emetteur) throw new Error(`annonce inattendue : ${annonce}`)
+			const reader = child.stdout.getReader()
+			const announcement = new TextDecoder().decode((await reader.read()).value)
+			reader.releaseLock()
+			const issuer = /^Faux Google prêt : (http:\/\/127\.0\.0\.1:\d+)\n$/.exec(announcement)?.[1]
+			if (!issuer) throw new Error(`annonce inattendue : ${announcement}`)
 
-			const resultat = await fakeGoogle({ ...BANC, GOOGLE_OIDC_ISSUER: emetteur }).allerRetour()
+			const result = await fakeGoogle({ ...BENCH, GOOGLE_OIDC_ISSUER: issuer }).allerRetour()
 
-			if (resultat.issue !== 'connecte') throw new Error(`issue inattendue : ${resultat.issue}`)
-			expect(resultat.revendications.iss).toBe(emetteur)
-			expect(resultat.dureeMs).toBeLessThan(5000)
+			if (result.issue !== 'connecte') throw new Error(`issue inattendue : ${result.issue}`)
+			expect(result.revendications.iss).toBe(issuer)
+			expect(result.dureeMs).toBeLessThan(5000)
 		} finally {
-			enfant.kill()
-			await enfant.exited
+			child.kill()
+			await child.exited
 		}
 	})
 
@@ -609,20 +605,20 @@ describe('Le serveur que lance le conteneur du banc', () => {
 		],
 		[
 			'sous l’adresse de Google',
-			{ ...identifiants, GOOGLE_OIDC_ISSUER: 'https://accounts.google.com' },
+			{ ...identifiers, GOOGLE_OIDC_ISSUER: 'https://accounts.google.com' },
 			'Faux Google : son adresse doit être une adresse http de ce poste',
 		],
 	])('il refuse de démarrer %s, et ne recopie aucune valeur', async (_cas, variables, message) => {
-		const enfant = lancer(variables)
-		const [code, sortie, erreurs] = await Promise.all([
-			enfant.exited,
-			new Response(enfant.stdout).text(),
-			new Response(enfant.stderr).text(),
+		const child = launch(variables)
+		const [code, output, errors] = await Promise.all([
+			child.exited,
+			new Response(child.stdout).text(),
+			new Response(child.stderr).text(),
 		])
 
-		expect(erreurs).toContain(message)
-		expect(sortie).toBe('')
-		expect(erreurs).not.toContain('secret-temoin-du-test')
+		expect(errors).toContain(message)
+		expect(output).toBe('')
+		expect(errors).not.toContain('secret-temoin-du-test')
 		expect(code).toBe(2)
 	})
 })

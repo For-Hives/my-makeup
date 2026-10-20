@@ -31,35 +31,35 @@ const PAGES = [
 ] as const
 
 /** The promises CONF-01 took away (plan 01 §1.9): none may come back. */
-const PROMESSES_RETIREES = /milliers|paiement sécurisé|avis vérifiés|vérifiées|réservation/i
+const REMOVED_PROMISES = /milliers|paiement sécurisé|avis vérifiés|vérifiées|réservation/i
 
 const html = (element: React.ReactElement): string => renderToStaticMarkup(element)
 
-for (const { chemin, Page, metadata } of PAGES)
-	describe(chemin, () => {
-		const rendu = html(<Page />)
+for (const { chemin: filePath, Page, metadata } of PAGES)
+	describe(filePath, () => {
+		const rendered = html(<Page />)
 
 		test('un seul h1, et les titres suivants sont des h2 puis des h3', () => {
-			expect(rendu.match(/<h1[\s>]/g)).toHaveLength(1)
-			expect(rendu).toMatch(/<h2[\s>]/)
+			expect(rendered.match(/<h1[\s>]/g)).toHaveLength(1)
+			expect(rendered).toMatch(/<h2[\s>]/)
 		})
 
 		test('aucune promesse retirée par CONF-01 ne revient', () => {
-			expect(rendu).not.toMatch(PROMESSES_RETIREES)
+			expect(rendered).not.toMatch(REMOVED_PROMISES)
 		})
 
 		test('aucun texte « undefined » ou « null » dans la page', () => {
-			expect(rendu).not.toMatch(/>\s*(undefined|null)\s*</)
+			expect(rendered).not.toMatch(/>\s*(undefined|null)\s*</)
 		})
 
 		test('l’adresse canonique est la sienne et la page est indexable', () => {
-			expect(metadata.alternates?.canonical).toBe(`https://my-makeup.fr${chemin}`)
+			expect(metadata.alternates?.canonical).toBe(`https://my-makeup.fr${filePath}`)
 			expect(metadata.robots).toBeUndefined()
 		})
 	})
 
 describe('la page « demande envoyée »', () => {
-	const rendu = html(<PageDemande />)
+	const rendered = html(<PageDemande />)
 
 	test('elle est en noindex, sans adresse canonique', () => {
 		expect(metaDemande.robots).toEqual({ index: false, follow: true })
@@ -67,21 +67,21 @@ describe('la page « demande envoyée »', () => {
 	})
 
 	test('un seul h1 et un lien vers la recherche', () => {
-		expect(rendu.match(/<h1[\s>]/g)).toHaveLength(1)
-		expect(rendu).toContain('Votre demande est transmise')
-		expect(rendu).toContain('href="/search"')
+		expect(rendered.match(/<h1[\s>]/g)).toHaveLength(1)
+		expect(rendered).toContain('Votre demande est transmise')
+		expect(rendered).toContain('href="/search"')
 	})
 
 	test('elle ne porte pas le bloc de recherche de l’en-tête', () => {
-		expect(rendu).not.toContain('role="search"')
+		expect(rendered).not.toContain('role="search"')
 	})
 })
 
 describe('les guides', () => {
 	test('les étapes de chaque guide sont des h3 sous le h2 de l’article', () => {
-		const rendu = html(<PageTrouver />)
-		const h2 = rendu.indexOf('<h2')
-		const h3 = rendu.indexOf('<h3')
+		const rendered = html(<PageTrouver />)
+		const h2 = rendered.indexOf('<h2')
+		const h3 = rendered.indexOf('<h3')
 		expect(h2).toBeGreaterThan(-1)
 		expect(h3).toBeGreaterThan(h2)
 	})

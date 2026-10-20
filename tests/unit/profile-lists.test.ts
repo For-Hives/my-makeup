@@ -27,7 +27,7 @@ const C = '6710a0000000000000000003'
 const O1 = '6710b0000000000000000001'
 const O2 = '6710b0000000000000000002'
 
-const stocke = {
+const stored = {
 	serviceOffers: [
 		{ id: A, name: 'Mariée', options: [{ id: O1, name: 'Essai' }] },
 		{ id: B, name: 'Soirée', options: [{ id: O2, name: 'Faux cils' }] },
@@ -37,23 +37,25 @@ const stocke = {
 
 describe('L1. Un identifiant par ligne : le serveur le donne et le garde', () => {
 	test('une ligne renvoyée avec son identifiant le garde, dans l’ordre envoyé', () => {
-		const recu = {
+		const received = {
 			serviceOffers: [
 				{ id: B, name: 'Soirée' },
 				{ id: A, name: 'Mariée' },
 			],
 		}
 
-		expect(rowIdentities(recu, stocke).serviceOffers).toEqual([
+		expect(rowIdentities(received, stored).serviceOffers).toEqual([
 			{ id: B, name: 'Soirée' },
 			{ id: A, name: 'Mariée' },
 		])
 	})
 
 	test('une ligne nouvelle, ou venue avec un identifiant tiré de son contenu, n’en a plus : Payload lui en donnera un', () => {
-		const recu = { languages: [{ name: 'Italien' }, { id: 'italien', name: 'Italien' }, { id: C, name: 'Anglais' }] }
+		const received = {
+			languages: [{ name: 'Italien' }, { id: 'italien', name: 'Italien' }, { id: C, name: 'Anglais' }],
+		}
 
-		expect(rowIdentities(recu, stocke).languages).toEqual([
+		expect(rowIdentities(received, stored).languages).toEqual([
 			{ name: 'Italien' },
 			{ name: 'Italien' },
 			{ id: C, name: 'Anglais' },
@@ -61,20 +63,20 @@ describe('L1. Un identifiant par ligne : le serveur le donne et le garde', () =>
 	})
 
 	test('deux lignes de même contenu et de même identifiant : la seconde est une ligne nouvelle', () => {
-		const recu = {
+		const received = {
 			languages: [
 				{ id: C, name: 'Anglais' },
 				{ id: C, name: 'Anglais' },
 			],
 		}
 
-		expect(rowIdentities(recu, stocke).languages).toEqual([{ id: C, name: 'Anglais' }, { name: 'Anglais' }])
+		expect(rowIdentities(received, stored).languages).toEqual([{ id: C, name: 'Anglais' }, { name: 'Anglais' }])
 	})
 
 	test('un identifiant d’une autre liste, ou d’un autre profil, n’est pas repris', () => {
-		const recu = { languages: [{ id: A, name: 'Anglais' }], skills: [{ id: C, name: 'Mariage' }] }
+		const received = { languages: [{ id: A, name: 'Anglais' }], skills: [{ id: C, name: 'Mariage' }] }
 
-		expect(rowIdentities(recu, stocke)).toEqual({
+		expect(rowIdentities(received, stored)).toEqual({
 			languages: [{ name: 'Anglais' }],
 			skills: [{ name: 'Mariage' }],
 		})
@@ -87,7 +89,7 @@ describe('L1. Un identifiant par ligne : le serveur le donne et le garde', () =>
 	})
 
 	test('les options gardent leur identifiant une fois dans tout le profil, même déplacées vers une autre prestation', () => {
-		const recu = {
+		const received = {
 			serviceOffers: [
 				{ id: A, options: [{ id: O2, name: 'Faux cils' }, { id: O1 }] },
 				{ id: B, options: [{ id: O1 }, { id: 'essai' }] },
@@ -95,7 +97,7 @@ describe('L1. Un identifiant par ligne : le serveur le donne et le garde', () =>
 			],
 		}
 
-		expect(rowIdentities(recu, stocke).serviceOffers).toEqual([
+		expect(rowIdentities(received, stored).serviceOffers).toEqual([
 			{ id: A, options: [{ id: O2, name: 'Faux cils' }, { id: O1 }] },
 			{ id: B, options: [{}, {}] },
 			{ name: 'Nouvelle', options: [{}] },
@@ -103,17 +105,17 @@ describe('L1. Un identifiant par ligne : le serveur le donne et le garde', () =>
 	})
 
 	test('une liste qui n’est pas envoyée, les autres champs et ce qui n’est pas une ligne restent tels quels', () => {
-		const recu = { prenom: 'Zoé', languages: null, skills: [null, 'texte'] }
+		const received = { prenom: 'Zoé', languages: null, skills: [null, 'texte'] }
 
-		expect(rowIdentities(recu, stocke)).toEqual({ prenom: 'Zoé', languages: null, skills: [null, 'texte'] })
+		expect(rowIdentities(received, stored)).toEqual({ prenom: 'Zoé', languages: null, skills: [null, 'texte'] })
 	})
 
 	test('les données reçues ne sont pas modifiées en place', () => {
-		const recu = { languages: [{ id: 'italien', name: 'Italien' }] }
+		const received = { languages: [{ id: 'italien', name: 'Italien' }] }
 
-		rowIdentities(recu, stocke)
+		rowIdentities(received, stored)
 
-		expect(recu).toEqual({ languages: [{ id: 'italien', name: 'Italien' }] })
+		expect(received).toEqual({ languages: [{ id: 'italien', name: 'Italien' }] })
 	})
 })
 
@@ -146,7 +148,7 @@ describe('Le montant d’un prix suit la règle de prix unique (U29)', () => {
 	test('les bornes de src/lib/price.ts : de 5 à 10 000 €', () => {
 		for (const refuse of [0, 4.99, 10_000.01, Number.NaN, Number.POSITIVE_INFINITY, '80', true])
 			expect(priceMessage(refuse)).toBe(MESSAGES.prixHorsBornes)
-		for (const accepte of [5, 80, 49.5, 10_000]) expect(priceMessage(accepte)).toBeNull()
+		for (const accepted of [5, 80, 49.5, 10_000]) expect(priceMessage(accepted)).toBeNull()
 	})
 
 	test('sans montant, une prestation sur devis passe', () => {
@@ -165,7 +167,7 @@ describe('Une date de ces listes est un jour, sans heure', () => {
 	})
 
 	test('un jour qui n’existe pas, une autre forme ou autre chose qu’une date n’est pas une date', () => {
-		for (const pasUneDate of [
+		for (const notDate of [
 			'2024-02-30',
 			'2023-02-29',
 			'2024-13-01',
@@ -175,9 +177,8 @@ describe('Une date de ces listes est un jour, sans heure', () => {
 			'0000-01-01',
 			'0000-12-31T00:00:00.000Z',
 		])
-			expect(calendarDay(pasUneDate)).toBeNull()
-		for (const pasUneDate of [20240301, null, undefined, new Date('invalide'), {}])
-			expect(calendarDay(pasUneDate)).toBeNull()
+			expect(calendarDay(notDate)).toBeNull()
+		for (const notDate of [20240301, null, undefined, new Date('invalide'), {}]) expect(calendarDay(notDate)).toBeNull()
 	})
 
 	test('l’an 0 n’existe pas pour PostgreSQL : refusé avec la phrase des dates ; l’an 1 passe', () => {
@@ -222,20 +223,18 @@ describe('Expérience : la fin ne précède pas le début (U30)', () => {
 })
 
 describe('Formation : obtenue au plus un an après la date du jour (U30)', () => {
-	const maintenant = new Date('2026-10-14T09:00:00.000Z')
+	const now = new Date('2026-10-14T09:00:00.000Z')
 
 	test('le même jour un an plus tard passe, le lendemain est refusé, en français', () => {
-		expect(lastDayToObtain(maintenant)).toBe('2027-10-14')
-		expect(obtainMessage('2027-10-14', maintenant)).toBeNull()
-		expect(obtainMessage('2027-10-15', maintenant)).toBe(
-			'Une date d’obtention ne peut pas dépasser d’un an la date du jour.'
-		)
+		expect(lastDayToObtain(now)).toBe('2027-10-14')
+		expect(obtainMessage('2027-10-14', now)).toBeNull()
+		expect(obtainMessage('2027-10-15', now)).toBe('Une date d’obtention ne peut pas dépasser d’un an la date du jour.')
 	})
 
 	test('une date passée ou absente passe ; une date qui n’en est pas une est refusée comme telle', () => {
-		expect(obtainMessage('2012-06-30', maintenant)).toBeNull()
-		expect(obtainMessage(null, maintenant)).toBeNull()
-		expect(obtainMessage('2012-06-31', maintenant)).toBe(MESSAGES.dateInvalide)
+		expect(obtainMessage('2012-06-30', now)).toBeNull()
+		expect(obtainMessage(null, now)).toBeNull()
+		expect(obtainMessage('2012-06-31', now)).toBe(MESSAGES.dateInvalide)
 	})
 
 	test('un 29 février : la limite est le 1er mars de l’année suivante', () => {

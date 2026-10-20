@@ -76,5 +76,5 @@ Il porte des emails, des téléphones et des messages de visiteuses : c'est une 
 
 ## Ce qui est testé
 
-- `tests/unit/bascule-delta.test.ts` : refus hors du site, 401 et 403, 400, en-têtes, journal sans email, mêmes octets au second appel, filtre des secrets.
+- `tests/unit/cutover-delta.test.ts` : refus hors du site, 401 et 403, 400, en-têtes, journal sans email, mêmes octets au second appel, filtre des secrets.
 - `tests/integration/bascule-delta.test.ts`, sur le banc : un profil créé après la date apparaît, un profil importé et inchangé n'apparaît pas, un compte modifié apparaît en `updated`, aucune clé ni valeur de mot de passe, hash, sel ou session dans le fichier, et la route avec une vraie session admin, une session de maquilleuse et sans session.

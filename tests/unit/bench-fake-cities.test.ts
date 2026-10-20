@@ -8,34 +8,34 @@ import { createFakeCities } from '../support/fake-cities/provider'
  * geo.api.gouv.fr. And the variable that points the application at it is refused anywhere else.
  */
 
-const fournisseur = createFakeCities()
-let serveur: ReturnType<typeof Bun.serve>
-let adresse = ''
+const provider = createFakeCities()
+let server: ReturnType<typeof Bun.serve>
+let url = ''
 
 beforeAll(() => {
-	serveur = Bun.serve({ hostname: '127.0.0.1', port: 0, fetch: requete => fournisseur.repondre(requete) })
-	adresse = `http://127.0.0.1:${serveur.port}`
+	server = Bun.serve({ hostname: '127.0.0.1', port: 0, fetch: requete => provider.repondre(requete) })
+	url = `http://127.0.0.1:${server.port}`
 })
-afterAll(() => serveur.stop(true))
+afterAll(() => server.stop(true))
 
-const lire = async (chemin: string) => {
-	const reponse = await fetch(`${adresse}${chemin}`)
+const read = async (chemin: string) => {
+	const response = await fetch(`${url}${chemin}`)
 	return {
-		statut: reponse.status,
-		corps: reponse.headers.get('content-type')?.includes('json') ? await reponse.json() : await reponse.text(),
+		statut: response.status,
+		corps: response.headers.get('content-type')?.includes('json') ? await response.json() : await response.text(),
 	}
 }
 
 describe('la fausse liste des communes', () => {
 	test('elle dit qui elle est', async () => {
-		expect((await lire('/_sante')).corps).toEqual({ service: 'fake-cities' })
+		expect((await read('/_sante')).corps).toEqual({ service: 'fake-cities' })
 	})
 
 	test('une recherche par nom : le nom exact d’abord, sans accent ni majuscule, bornée par limit, aux champs de la liste officielle', async () => {
-		const { statut, corps } = await lire(
+		const { statut: status, corps } = await read(
 			'/communes?nom=lille&fields=nom,code,codeDepartement,centre&boost=population&limit=8'
 		)
-		expect(statut).toBe(200)
+		expect(status).toBe(200)
 		expect((corps as { nom: string }[]).map(({ nom }) => nom)).toEqual(['Lille', 'Lillers', 'Lillebonne'])
 		expect((corps as unknown[])[0]).toEqual({
 			nom: 'Lille',
@@ -43,21 +43,21 @@ describe('la fausse liste des communes', () => {
 			codeDepartement: '59',
 			centre: { type: 'Point', coordinates: [3.0465, 50.6311] },
 		})
-		expect(((await lire('/communes?nom=lille&limit=1')).corps as unknown[]).length).toBe(1)
-		expect(((await lire('/communes?nom=THONON LES BAINS')).corps as { code: string }[])[0]?.code).toBe('74281')
-		expect((await lire('/communes?nom=Atlantide')).corps).toEqual([])
+		expect(((await read('/communes?nom=lille&limit=1')).corps as unknown[]).length).toBe(1)
+		expect(((await read('/communes?nom=THONON LES BAINS')).corps as { code: string }[])[0]?.code).toBe('74281')
+		expect((await read('/communes?nom=Atlantide')).corps).toEqual([])
 	})
 
 	test('une recherche par code postal, et une commune par son code INSEE ; un code inconnu : 404 en texte', async () => {
-		expect(((await lire('/communes?codePostal=74000')).corps as { nom: string }[]).map(({ nom }) => nom)).toEqual([
+		expect(((await read('/communes?codePostal=74000')).corps as { nom: string }[]).map(({ nom }) => nom)).toEqual([
 			'Annecy',
 		])
-		expect((await lire('/communes/74010?fields=nom,code,codeDepartement,centre')).corps).toMatchObject({
+		expect((await read('/communes/74010?fields=nom,code,codeDepartement,centre')).corps).toMatchObject({
 			nom: 'Annecy',
 			code: '74010',
 		})
-		expect(await lire('/communes/99999')).toEqual({ statut: 404, corps: 'Not Found' })
-		expect((await lire('/dashboard')).statut).toBe(404)
+		expect(await read('/communes/99999')).toEqual({ statut: 404, corps: 'Not Found' })
+		expect((await read('/dashboard')).statut).toBe(404)
 	})
 })
 

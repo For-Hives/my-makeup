@@ -18,7 +18,7 @@ import {
  * values, under the field names of the v3.
  */
 
-const INTERDIT = /\b(?:undefined|null|NaN|Invalid Date)\b/
+const FORBIDDEN = /\b(?:undefined|null|NaN|Invalid Date)\b/
 
 describe('lignes', () => {
 	test('une ligne par ligne saisie, sans ligne vide ni « null »', () => {
@@ -32,7 +32,7 @@ describe('dates', () => {
 	test('un mois et une année en français, lus en UTC', () => {
 		expect(monthYear('2020-01-15T12:00:00.000Z')).toBe('janvier 2020')
 		expect(monthYear('2016-06-30')).toBe('juin 2016')
-		for (const rien of ['', '  ', 'pas une date', null, undefined, 42]) expect(monthYear(rien)).toBe('')
+		for (const nothing of ['', '  ', 'pas une date', null, undefined, 42]) expect(monthYear(nothing)).toBe('')
 	})
 
 	test('une période : la fin absente veut dire aujourd’hui, un début absent ne dit rien', () => {
@@ -55,7 +55,7 @@ describe('urlReseau', () => {
 	})
 
 	test('jamais un schéma dangereux ni un lien relatif', () => {
-		for (const valeur of [
+		for (const value of [
 			'javascript:alert(1)',
 			'data:text/html,x',
 			'/profil/autre',
@@ -64,7 +64,7 @@ describe('urlReseau', () => {
 			'',
 			'null',
 		])
-			expect(networkUrl('website', valeur), valeur).toBeNull()
+			expect(networkUrl('website', value), value).toBeNull()
 		// A bare word is no website, but it is a pseudo on a network.
 		expect(networkUrl('website', 'studio')).toBeNull()
 		expect(networkUrl('facebook', 'studio')).toBe('https://www.facebook.com/studio')
@@ -73,14 +73,14 @@ describe('urlReseau', () => {
 
 describe('contacts', () => {
 	test('dans l’ordre de la page, avec le lien de chaque canal', () => {
-		const liens = contacts({
+		const links = contacts({
 			reseaux: { website: 'https://studio.example.test', instagram: '@studio', facebook: '', linkedin: null },
 			telephone: '06 39 98 10 01',
 			email: 'contact@studio.example.test',
 		})
 
-		expect(liens.map(({ canal }) => canal)).toEqual(['instagram', 'email', 'phone', 'website'])
-		expect(liens.map(({ href }) => href)).toEqual([
+		expect(links.map(({ canal }) => canal)).toEqual(['instagram', 'email', 'phone', 'website'])
+		expect(links.map(({ href }) => href)).toEqual([
 			'https://www.instagram.com/studio',
 			'mailto:contact@studio.example.test',
 			'tel:0639981001',
@@ -89,9 +89,9 @@ describe('contacts', () => {
 	})
 
 	test('un email mal formé ou un numéro trop court se montre sans lien', () => {
-		const liens = contacts({ telephone: '12', email: 'pas-un-email' })
+		const links = contacts({ telephone: '12', email: 'pas-un-email' })
 
-		expect(liens).toEqual([
+		expect(links).toEqual([
 			{ canal: 'email', libelle: 'pas-un-email', href: null },
 			{ canal: 'phone', libelle: '12', href: null },
 		])
@@ -105,7 +105,7 @@ describe('contacts', () => {
 
 describe('les listes', () => {
 	test('les prestations sans nom disparaissent, les options sans nom aussi, l’ordre est gardé', () => {
-		const lues = serviceOffers([
+		const read = serviceOffers([
 			{
 				name: 'B',
 				priceFrom: 50,
@@ -117,13 +117,13 @@ describe('les listes', () => {
 			null,
 		])
 
-		expect(lues.map(({ nom }) => nom)).toEqual(['B', 'A'])
-		expect(lues[0]?.options.map(({ nom }) => nom)).toEqual(['o2', 'o1'])
-		expect(lues[0]?.options[0]?.prix).toEqual(['Sur devis'])
-		expect(lues[0]?.prix).toEqual(['50 €'])
-		expect(lues[1]?.description).toEqual(['l1', 'l2'])
-		expect(lues[1]?.prix).toEqual(['1 200 €'])
-		expect(JSON.stringify(lues)).not.toMatch(INTERDIT)
+		expect(read.map(({ nom }) => nom)).toEqual(['B', 'A'])
+		expect(read[0]?.options.map(({ nom }) => nom)).toEqual(['o2', 'o1'])
+		expect(read[0]?.options[0]?.prix).toEqual(['Sur devis'])
+		expect(read[0]?.prix).toEqual(['50 €'])
+		expect(read[1]?.description).toEqual(['l1', 'l2'])
+		expect(read[1]?.prix).toEqual(['1 200 €'])
+		expect(JSON.stringify(read)).not.toMatch(FORBIDDEN)
 	})
 
 	test('compétences et langues : les noms qui disent quelque chose', () => {

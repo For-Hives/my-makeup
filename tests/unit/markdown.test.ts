@@ -65,6 +65,6 @@ describe('markdownEnHtml : le markdown assaini', () => {
 	})
 
 	test('rien, null, undefined ou un nombre : une chaîne vide, jamais « null »', async () => {
-		for (const vide of [undefined, null, '', '   \n ', 12, {}]) expect(await markdownToHtml(vide)).toBe('')
+		for (const empty of [undefined, null, '', '   \n ', 12, {}]) expect(await markdownToHtml(empty)).toBe('')
 	})
 })

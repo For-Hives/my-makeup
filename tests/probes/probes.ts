@@ -23,7 +23,7 @@
  * probes read the current site today and the v3 after the switch (docs/tests/sondes.md).
  *
  * Not a `bun test` file: under `bun test`, no request leaves this machine
- * (tests/support/outgoing-http.ts). The logic is tested in tests/unit/sondes.test.ts.
+ * (tests/support/outgoing-http.ts). The logic is tested in tests/unit/probes.test.ts.
  */
 
 import { SITE_ORIGIN } from '../../src/lib/frozen-urls'

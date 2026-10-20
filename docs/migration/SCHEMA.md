@@ -397,7 +397,7 @@ Pour mémoire : ces champs n'ont aucune ligne aux §5 et §6. Leur valeur à l'i
 
 Total : **71 attributs**, 44 dans les 4 types de contenu et 27 dans les 7 composants ; 68 repris, 3 abandonnés.
 
-Le test `tests/unit/doc-schema-gele.test.ts` relit ce document et échoue si :
+Le test `tests/unit/frozen-schema-doc.test.ts` relit ce document et échoue si :
 
 - un attribut de Strapi n'a pas sa ligne, en a deux, ou n'est pas à sa place ;
 - une ligne n'a ni champ cible, ni abandon motivé ;
@@ -409,13 +409,13 @@ Le test `tests/unit/doc-schema-gele.test.ts` relit ce document et échoue si :
 - le document contient un hash, une adresse email ou un numéro de téléphone.
 
 ```sh
-bun --no-env-file test tests/unit/doc-schema-gele.test.ts
+bun --no-env-file test tests/unit/frozen-schema-doc.test.ts
 ```
 
 L'inventaire des attributs est figé dans le test. Pour le recomparer aux vrais fichiers de schéma, tant que le dépôt de l'ancienne API existe :
 
 ```sh
-STRAPI_API_DIR=../api-my-makeup bun --no-env-file test tests/unit/doc-schema-gele.test.ts
+STRAPI_API_DIR=../api-my-makeup bun --no-env-file test tests/unit/frozen-schema-doc.test.ts
 ```
 
 ## 11. Points en attente

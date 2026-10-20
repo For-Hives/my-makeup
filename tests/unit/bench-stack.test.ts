@@ -26,10 +26,10 @@ import {
 import { benchProbes } from '../support/bench-probes'
 import { checkEnvironment } from '../support/environment-guard'
 
-const PAR_DEFAUT: Instance = { nom: INSTANCE_BY_DEFAULT, decalage: 0 }
+const BY_DEFAULT: Instance = { nom: INSTANCE_BY_DEFAULT, decalage: 0 }
 
 /** The ports of this machine a bench must leave alone: the dev database, PostgreSQL's own port, the dev server. */
-const PORTS_DU_DEVELOPPEMENT = [5442, 5432, 3000]
+const DEVELOPMENT_PORTS = [5442, 5432, 3000]
 
 const Compose = z.object({
 	name: z.string(),
@@ -52,11 +52,11 @@ const Compose = z.object({
 const compose = Compose.parse(Bun.YAML.parse(readFileSync(FILE_COMPOSE, 'utf8')))
 
 /** What Compose makes of `${NOM:-défaut}` when the variable is given, and when it is not. */
-const resoudre = (texte: string, variables: Record<string, string> = {}): string =>
+const resolve = (texte: string, variables: Record<string, string> = {}): string =>
 	texte.replace(/\$\{(\w+):-([^}]*)\}/g, (_tout, nom: string, defaut: string) => variables[nom] ?? defaut)
 
-const portsPublies = (variables: Record<string, string> = {}): string[] =>
-	Object.values(compose.services).flatMap(({ ports }) => ports.map(port => resoudre(port, variables)))
+const portsPublished = (variables: Record<string, string> = {}): string[] =>
+	Object.values(compose.services).flatMap(({ ports }) => ports.map(port => resolve(port, variables)))
 
 describe('compose.test.yml : six services, épinglés, en mémoire, joignables de ce poste seulement', () => {
 	test('la pile compte la base, le capteur de mails, le stockage d’objets, le faux Google, le faux Umami et la fausse liste des communes, et rien d’autre', () => {
@@ -79,31 +79,26 @@ describe('compose.test.yml : six services, épinglés, en mémoire, joignables d
 	})
 
 	test('chaque port n’est publié que sur l’interface locale', () => {
-		expect(portsPublies().length).toBe(7)
-		for (const port of portsPublies()) expect(port).toStartWith('127.0.0.1:')
+		expect(portsPublished().length).toBe(7)
+		for (const port of portsPublished()) expect(port).toStartWith('127.0.0.1:')
 	})
 
 	test('rien n’est gardé : la base est en mémoire, aucun volume n’est déclaré', () => {
-		const {
-			'fake-google': fauxGoogle,
-			'fake-umami': fauxUmami,
-			'fake-cities': faussesCommunes,
-			...autres
-		} = compose.services
+		const { 'fake-google': fakeGoogle, 'fake-umami': fakeUmami, 'fake-cities': fakeCities, ...other } = compose.services
 
 		expect(compose.services.postgres?.tmpfs).toEqual(['/var/lib/postgresql'])
 		expect(compose.volumes).toBeUndefined()
-		for (const service of Object.values(autres)) expect(service.volumes).toBeUndefined()
+		for (const service of Object.values(other)) expect(service.volumes).toBeUndefined()
 		// The one mount of the stack: the code of the fake Google, read from the repository. It can
 		// write neither there nor anywhere in its container.
-		expect(fauxGoogle?.volumes).toEqual(['./tests/support/fake-google:/bench:ro'])
-		expect(fauxGoogle?.read_only).toBe(true)
+		expect(fakeGoogle?.volumes).toEqual(['./tests/support/fake-google:/bench:ro'])
+		expect(fakeGoogle?.read_only).toBe(true)
 		// Same for the fake Umami.
-		expect(fauxUmami?.volumes).toEqual(['./tests/support/fake-umami:/bench:ro'])
-		expect(fauxUmami?.read_only).toBe(true)
+		expect(fakeUmami?.volumes).toEqual(['./tests/support/fake-umami:/bench:ro'])
+		expect(fakeUmami?.read_only).toBe(true)
 		// And for the fake list of the communes.
-		expect(faussesCommunes?.volumes).toEqual(['./tests/support/fake-cities:/bench:ro'])
-		expect(faussesCommunes?.read_only).toBe(true)
+		expect(fakeCities?.volumes).toEqual(['./tests/support/fake-cities:/bench:ro'])
+		expect(fakeCities?.read_only).toBe(true)
 	})
 
 	test('chaque service dit lui-même quand il est prêt : c’est ce qu’attend « up --wait »', () => {
@@ -111,10 +106,10 @@ describe('compose.test.yml : six services, épinglés, en mémoire, joignables d
 	})
 
 	test('lancée telle quelle, la pile est celle de .env.test : mêmes ports, même base, même espace', () => {
-		const services = benchServices(benchEnvironment(PAR_DEFAUT))
+		const services = benchServices(benchEnvironment(BY_DEFAULT))
 
-		expect(resoudre(compose.name)).toBe(INSTANCE_BY_DEFAULT)
-		expect(portsPublies().sort()).toEqual(
+		expect(resolve(compose.name)).toBe(INSTANCE_BY_DEFAULT)
+		expect(portsPublished().sort()).toEqual(
 			[
 				`127.0.0.1:${services.base.port}:5432`,
 				`127.0.0.1:${services.mails.port}:1025`,
@@ -136,7 +131,7 @@ describe('compose.test.yml : six services, épinglés, en mémoire, joignables d
 		// The fake Google presents itself under the address the application is given, and accepts
 		// the made-up client of .env.test: the same three variables on both sides.
 		const google: Record<string, string> = { ...compose.services['fake-google']?.environment }
-		google.GOOGLE_OIDC_ISSUER = resoudre(google.GOOGLE_OIDC_ISSUER ?? '')
+		google.GOOGLE_OIDC_ISSUER = resolve(google.GOOGLE_OIDC_ISSUER ?? '')
 		expect(google).toEqual({
 			GOOGLE_OIDC_ISSUER: services.google.adresse,
 			GOOGLE_CLIENT_ID: services.google.clientId,
@@ -157,23 +152,23 @@ describe('compose.test.yml : six services, épinglés, en mémoire, joignables d
 	})
 
 	test('le faux Umami et la fausse liste des communes tournent sur le même bun, avec le code du dépôt', () => {
-		for (const [service, dossier] of [
+		for (const [service, folder] of [
 			['fake-umami', 'fake-umami'],
 			['fake-cities', 'fake-cities'],
 		] as const) {
 			expect(compose.services[service]?.image).toBe(compose.services['fake-google']?.image ?? '')
 			expect(compose.services[service]?.command).toEqual(['bun', '/bench/server.ts'])
-			expect(existsSync(path.join(ROOT, `tests/support/${dossier}/server.ts`))).toBe(true)
+			expect(existsSync(path.join(ROOT, `tests/support/${folder}/server.ts`))).toBe(true)
 		}
 	})
 
 	test('le faux Google tourne sur le bun du Dockerfile : même image, même empreinte, et le code du dépôt', () => {
-		const bunDuDockerfile = /^FROM (oven\/bun:\S+@sha256:[0-9a-f]{64}) /m.exec(
+		const dockerfileBun = /^FROM (oven\/bun:\S+@sha256:[0-9a-f]{64}) /m.exec(
 			readFileSync(path.join(ROOT, 'Dockerfile'), 'utf8')
 		)?.[1]
 
-		expect(bunDuDockerfile).toBeDefined()
-		expect(compose.services['fake-google']?.image).toBe(bunDuDockerfile ?? '')
+		expect(dockerfileBun).toBeDefined()
+		expect(compose.services['fake-google']?.image).toBe(dockerfileBun ?? '')
 		expect(compose.services['fake-google']?.command).toEqual(['bun', '/bench/server.ts'])
 		expect(existsSync(path.join(ROOT, 'tests/support/fake-google/server.ts'))).toBe(true)
 	})
@@ -182,8 +177,8 @@ describe('compose.test.yml : six services, épinglés, en mémoire, joignables d
 		const instance: Instance = { nom: 'banc-voisin', decalage: 20 }
 		const variables = composeVariables(instance, benchServices(benchEnvironment(instance)))
 
-		expect(resoudre(compose.name, variables)).toBe('banc-voisin')
-		expect(portsPublies(variables).sort()).toEqual([
+		expect(resolve(compose.name, variables)).toBe('banc-voisin')
+		expect(portsPublished(variables).sort()).toEqual([
 			'127.0.0.1:1045:1025',
 			'127.0.0.1:2070:2050',
 			'127.0.0.1:4220:4200',
@@ -193,18 +188,18 @@ describe('compose.test.yml : six services, épinglés, en mémoire, joignables d
 			'127.0.0.1:9110:9090',
 		])
 		// Its tokens name the port of this machine, not the one of the container.
-		expect(resoudre(compose.services['fake-google']?.environment?.GOOGLE_OIDC_ISSUER ?? '', variables)).toBe(
+		expect(resolve(compose.services['fake-google']?.environment?.GOOGLE_OIDC_ISSUER ?? '', variables)).toBe(
 			'http://127.0.0.1:7100'
 		)
 	})
 })
 
 describe('.env.test : l’environnement factice du banc', () => {
-	const fichier = readFileSync(FILE_ENV, 'utf8')
-	const environnement = readFileEnv(fichier)
+	const file = readFileSync(FILE_ENV, 'utf8')
+	const environment = readFileEnv(file)
 
 	test('il décrit les six services et l’application, sans rien d’autre', () => {
-		expect(Object.keys(environnement).sort()).toEqual([
+		expect(Object.keys(environment).sort()).toEqual([
 			'APP_ENV',
 			'DATABASE_URI',
 			'EMAIL_FROM',
@@ -229,30 +224,30 @@ describe('.env.test : l’environnement factice du banc', () => {
 	})
 
 	test('ses valeurs sont factices : un mot de passe et un secret qui le disent, aucun domaine du site', () => {
-		expect(benchServices(environnement).base.motDePasse).toBe('mot-de-passe-factice')
-		expect(environnement.PAYLOAD_SECRET).toContain('factice')
-		expect(environnement.PAYLOAD_SECRET?.length).toBeGreaterThanOrEqual(32)
-		expect(environnement.GOOGLE_CLIENT_ID).toContain('factice')
-		expect(environnement.GOOGLE_CLIENT_SECRET).toContain('factice')
-		expect(environnement.S3_ACCESS_KEY_ID).toContain('factice')
-		expect(environnement.S3_SECRET_ACCESS_KEY).toContain('factice')
-		expect(fichier).not.toContain('my-makeup.fr')
+		expect(benchServices(environment).base.motDePasse).toBe('mot-de-passe-factice')
+		expect(environment.PAYLOAD_SECRET).toContain('factice')
+		expect(environment.PAYLOAD_SECRET?.length).toBeGreaterThanOrEqual(32)
+		expect(environment.GOOGLE_CLIENT_ID).toContain('factice')
+		expect(environment.GOOGLE_CLIENT_SECRET).toContain('factice')
+		expect(environment.S3_ACCESS_KEY_ID).toContain('factice')
+		expect(environment.S3_SECRET_ACCESS_KEY).toContain('factice')
+		expect(file).not.toContain('my-makeup.fr')
 		// The key of IndexNow is served by the bench, and nothing is ever sent from it.
-		expect(environnement.INDEXNOW_KEY).toMatch(KEY_FORMAT)
-		expect(keyIfSubmitAllowed(environnement)).toBeUndefined()
+		expect(environment.INDEXNOW_KEY).toMatch(KEY_FORMAT)
+		expect(keyIfSubmitAllowed(environment)).toBeUndefined()
 		// Nothing that has the shape of a real Google credential, and never Google's own address.
-		expect(fichier).not.toMatch(/googleusercontent|GOCSPX|accounts\.google\.com/i)
+		expect(file).not.toMatch(/googleusercontent|GOCSPX|accounts\.google\.com/i)
 	})
 
 	test('bun lit ce fichier comme le banc le lit', async () => {
-		const enfant = Bun.spawn(
+		const child = Bun.spawn(
 			[process.execPath, `--env-file=${FILE_ENV}`, '-e', 'console.log(JSON.stringify(process.env))'],
 			{ cwd: path.join(ROOT, 'tests'), env: {}, stdout: 'pipe', stderr: 'pipe' }
 		)
-		const lues = z.record(z.string(), z.string()).parse(JSON.parse(await new Response(enfant.stdout).text()))
+		const read = z.record(z.string(), z.string()).parse(JSON.parse(await new Response(child.stdout).text()))
 
-		expect(await enfant.exited).toBe(0)
-		expect(Object.fromEntries(Object.keys(environnement).map(nom => [nom, lues[nom]]))).toEqual(environnement)
+		expect(await child.exited).toBe(0)
+		expect(Object.fromEntries(Object.keys(environment).map(nom => [nom, read[nom]]))).toEqual(environment)
 	})
 
 	test.each([
@@ -268,9 +263,9 @@ describe('.env.test : l’environnement factice du banc', () => {
 
 describe('Plusieurs bancs côte à côte : un nom d’instance et un décalage de ports', () => {
 	test('sans variable, c’est l’instance par défaut, sur les ports de .env.test', () => {
-		expect(readInstance({})).toEqual(PAR_DEFAUT)
-		expect(readInstance({ BENCH_INSTANCE: '', BENCH_OFFSET: '' })).toEqual(PAR_DEFAUT)
-		expect(benchEnvironment(PAR_DEFAUT)).toEqual(readFileEnv(readFileSync(FILE_ENV, 'utf8')))
+		expect(readInstance({})).toEqual(BY_DEFAULT)
+		expect(readInstance({ BENCH_INSTANCE: '', BENCH_OFFSET: '' })).toEqual(BY_DEFAULT)
+		expect(benchEnvironment(BY_DEFAULT)).toEqual(readFileEnv(readFileSync(FILE_ENV, 'utf8')))
 	})
 
 	test('BENCH_INSTANCE et BENCH_OFFSET règlent le nom et les ports', () => {
@@ -310,30 +305,30 @@ describe('Plusieurs bancs côte à côte : un nom d’instance et un décalage d
 			benchPorts(benchServices(benchEnvironment({ nom: 'x', decalage }))).map(({ port }) => port)
 
 		expect(ports(0)).toEqual([5443, 1025, 8025, 9090, 7080, 4200, 2050])
-		for (const decalage of [1, 20, 104, OFFSET_MAX])
-			expect(ports(decalage).filter(port => ports(0).includes(port))).toEqual([])
+		for (const offset of [1, 20, 104, OFFSET_MAX])
+			expect(ports(offset).filter(port => ports(0).includes(port))).toEqual([])
 		// Whatever the two offsets: two ports of the bench are further apart than the highest offset.
 		const tries = [...ports(0), 3100].sort((a, b) => a - b)
-		for (const [rang, port] of tries.entries())
-			if (rang > 0) expect(port - (tries[rang - 1] ?? 0)).toBeGreaterThan(OFFSET_MAX)
+		for (const [rank, port] of tries.entries())
+			if (rank > 0) expect(port - (tries[rank - 1] ?? 0)).toBeGreaterThan(OFFSET_MAX)
 	})
 
 	test('aucun décalage ne pose un banc sur un port du développement', () => {
-		const pris: number[] = []
-		for (let decalage = 0; decalage <= OFFSET_MAX; decalage++) {
-			const environnement = benchEnvironment({ nom: 'x', decalage })
+		const taken: number[] = []
+		for (let offset = 0; offset <= OFFSET_MAX; offset++) {
+			const environment = benchEnvironment({ nom: 'x', decalage: offset })
 			const ports = [
-				...benchPorts(benchServices(environnement)).map(({ port }) => port),
-				Number(new URL(environnement.NEXT_PUBLIC_SITE_URL ?? '').port),
+				...benchPorts(benchServices(environment)).map(({ port }) => port),
+				Number(new URL(environment.NEXT_PUBLIC_SITE_URL ?? '').port),
 			]
-			pris.push(...ports.filter(port => PORTS_DU_DEVELOPPEMENT.includes(port)))
+			taken.push(...ports.filter(port => DEVELOPMENT_PORTS.includes(port)))
 		}
-		expect(pris).toEqual([])
+		expect(taken).toEqual([])
 	})
 
 	test('un banc décalé reste un banc pour la garde : tout est local, la base en _test, l’espace en -test', () => {
-		for (const decalage of [0, 104, OFFSET_MAX])
-			expect(checkEnvironment(benchEnvironment({ nom: 'x', decalage }))).toBe('test')
+		for (const offset of [0, 104, OFFSET_MAX])
+			expect(checkEnvironment(benchEnvironment({ nom: 'x', decalage: offset }))).toBe('test')
 	})
 
 	test.each([
@@ -349,7 +344,7 @@ describe('Plusieurs bancs côte à côte : un nom d’instance et un décalage d
 	})
 
 	test('une commande se recopie avec les variables de son instance, et sans rien pour l’instance par défaut', () => {
-		expect(commandPrefix(PAR_DEFAUT)).toBe('')
+		expect(commandPrefix(BY_DEFAULT)).toBe('')
 		expect(commandPrefix({ nom: 'voisin', decalage: 20 })).toBe('BENCH_INSTANCE=voisin BENCH_OFFSET=20 ')
 		expect(commandPrefix({ nom: INSTANCE_BY_DEFAULT, decalage: 20 })).toBe('BENCH_OFFSET=20 ')
 	})
@@ -394,49 +389,47 @@ describe('La commande d’intégration', () => {
 
 	test('le message d’un banc muet nomme les services, leur adresse et la commande qui démarre le banc', () => {
 		const instance: Instance = { nom: 'voisin', decalage: 20 }
-		const sondes = benchProbes(benchServices(benchEnvironment(instance)))
+		const probes = benchProbes(benchServices(benchEnvironment(instance)))
 
-		expect(benchSilentMessage(instance, sondes)).toBe(
+		expect(benchSilentMessage(instance, probes)).toBe(
 			[
 				'Le banc de test « voisin » ne répond pas : base (127.0.0.1:5463), capteur de mails (127.0.0.1:1045), stockage d’objets (127.0.0.1:9110), faux Google (127.0.0.1:7100), faux Umami (127.0.0.1:4220), fausse liste des communes (127.0.0.1:2070).',
 				'Démarre-le d’abord : BENCH_INSTANCE=voisin BENCH_OFFSET=20 bun run bench:up',
 			].join('\n')
 		)
-		expect(benchSilentMessage(instance, sondes)).not.toContain('mot-de-passe-factice')
+		expect(benchSilentMessage(instance, probes)).not.toContain('mot-de-passe-factice')
 	})
 
 	/** An offset no bench of this machine listens on: its four ports are closed. */
-	async function decalageSansBanc(): Promise<number> {
-		for (let decalage = OFFSET_MAX; decalage > OFFSET_MAX - 50; decalage--) {
-			const ports = benchPorts(benchServices(benchEnvironment({ nom: 'x', decalage })))
-			const ouverts = await Promise.all(ports.map(({ port }) => portOpen(port)))
-			if (!ouverts.includes(true)) return decalage
+	async function offsetWithoutBench(): Promise<number> {
+		for (let offset = OFFSET_MAX; offset > OFFSET_MAX - 50; offset--) {
+			const ports = benchPorts(benchServices(benchEnvironment({ nom: 'x', decalage: offset })))
+			const open = await Promise.all(ports.map(({ port }) => portOpen(port)))
+			if (!open.includes(true)) return offset
 		}
 		throw new Error('aucun décalage libre pour ce test')
 	}
 
 	test('sans la pile, elle s’arrête avant le premier test et dit quoi démarrer', async () => {
-		const decalage = await decalageSansBanc()
-		const enfant = Bun.spawn(
+		const offset = await offsetWithoutBench()
+		const child = Bun.spawn(
 			[process.execPath, '--no-env-file', 'scripts/bench.ts', 'test', './tests/fixtures/guard-sentinel.ts'],
 			{
 				cwd: ROOT,
-				env: { BENCH_INSTANCE: 'banc-absent', BENCH_OFFSET: String(decalage), PATH: process.env.PATH ?? '' },
+				env: { BENCH_INSTANCE: 'banc-absent', BENCH_OFFSET: String(offset), PATH: process.env.PATH ?? '' },
 				stdout: 'pipe',
 				stderr: 'pipe',
 			}
 		)
-		const [code, sortie, erreurs] = await Promise.all([
-			enfant.exited,
-			new Response(enfant.stdout).text(),
-			new Response(enfant.stderr).text(),
+		const [code, output, errors] = await Promise.all([
+			child.exited,
+			new Response(child.stdout).text(),
+			new Response(child.stderr).text(),
 		])
 
-		expect(erreurs).toContain('Le banc de test « banc-absent » ne répond pas : base (127.0.0.1:')
-		expect(erreurs).toContain(
-			`Démarre-le d’abord : BENCH_INSTANCE=banc-absent BENCH_OFFSET=${decalage} bun run bench:up`
-		)
-		expect(sortie + erreurs).not.toContain('TEMOIN-GARDE')
+		expect(errors).toContain('Le banc de test « banc-absent » ne répond pas : base (127.0.0.1:')
+		expect(errors).toContain(`Démarre-le d’abord : BENCH_INSTANCE=banc-absent BENCH_OFFSET=${offset} bun run bench:up`)
+		expect(output + errors).not.toContain('TEMOIN-GARDE')
 		expect(code).toBe(1)
 	})
 })

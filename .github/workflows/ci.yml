@@ -1,6 +1,6 @@
 # The CI of the v3. One check is required to merge: ci-ok, the last job of this file.
 #
-# Rules, each of them enforced by tests/ci/garde-fous-ci.test.ts (docs/qualite.md):
+# Rules, each of them enforced by tests/ci/ci-guardrails.test.ts (docs/qualite.md):
 # - no path filter: a required check that does not run stays « pending », and a pending
 #   check ends up merged around;
 # - no step allowed to fail, no command under a condition that could skip it, no step that

@@ -28,10 +28,10 @@ test('le service répond 200, puis tombe en panne (500)', async () => {
 
 `chercherCommunes` est le code testé : il appelle le service par `fetch`, sans rien savoir du test.
 
-`tests/unit/banc-http-sortant.test.ts` montre chaque geste sur un petit client écrit dans le fichier. Lancer ce fichier seul, depuis la racine du dépôt :
+`tests/unit/bench-outgoing-http.test.ts` montre chaque geste sur un petit client écrit dans le fichier. Lancer ce fichier seul, depuis la racine du dépôt :
 
 ```sh
-bun --no-env-file test tests/unit/banc-http-sortant.test.ts
+bun --no-env-file test tests/unit/bench-outgoing-http.test.ts
 ```
 
 `http`, `HttpResponse` et `delay` sont ceux de MSW 2, que `tests/support/outgoing-http.ts` redonne : tout ce que dit [la documentation de MSW](https://mswjs.io/docs/http) sur une déclaration s'applique. Seul `simuler` est propre à ce dépôt.
@@ -117,7 +117,7 @@ Deux couches, démarrées une fois par lancement, avant tout fichier de test.
 - **Vers le banc, `AbortSignal.timeout` n'arrête pas un `fetch`** : MSW laisse passer la requête, et un service qui accepte la connexion sans rien répondre la garde ouverte au-delà du délai (constaté le 14/10/2026, bun 1.3.14 et MSW 2.15.0). Un délai s'écrit avec un `AbortController` et un minuteur, comme dans `tests/support/bench-request.ts`. Une requête simulée, elle, s'arrête bien à son délai.
 - **Aucun WebSocket ne se simule pour l'instant** : vers un hôte extérieur, il est refusé.
 - **Les essais de bout en bout et les sondes** ne tournent pas sous `bun test` : ce banc ne les concerne pas.
-- **Le témoin des tests de ce banc est un serveur ouvert sur `127.0.0.2`**, une adresse de ce poste que le banc ne connaît pas. Linux la donne d'office ; `tests/unit/banc-http-sortant.test.ts` ne tourne donc que sous Linux, comme la CI.
+- **Le témoin des tests de ce banc est un serveur ouvert sur `127.0.0.2`**, une adresse de ce poste que le banc ne connaît pas. Linux la donne d'office ; `tests/unit/bench-outgoing-http.test.ts` ne tourne donc que sous Linux, comme la CI.
 
 ## Dépendance
 

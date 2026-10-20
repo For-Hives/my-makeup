@@ -22,24 +22,24 @@ import { type ProfilePlace, placeMatch, profilePlace, readPlace, sectionsByPlace
 import { readDirectory } from '@/services/public/profiles'
 
 /** A profile for the sections: its commune, its département, and whether she travels. */
-const profil = (nom: string, ville: string | null, departement: string | null, seDeplace = false) => ({
+const profile = (nom: string, ville: string | null, departement: string | null, seDeplace = false) => ({
 	nom,
 	ville,
 	departement,
 	seDeplace,
 })
 
-const COMMUNES = [
-	profil('annecy', 'Annecy', '74', true),
-	profil('annecy-le-vieux', 'Annecy-le-Vieux', '74'),
-	profil('annemasse', 'Annemasse', '74', true),
-	profil('thonon', 'Thonon-les-Bains', '74'),
-	profil('chambery', 'Chambéry', '73', true),
-	profil('nantes', 'Nantes', '44'),
-	profil('sans-ville', null, null),
+const CITIES = [
+	profile('annecy', 'Annecy', '74', true),
+	profile('annecy-le-vieux', 'Annecy-le-Vieux', '74'),
+	profile('annemasse', 'Annemasse', '74', true),
+	profile('thonon', 'Thonon-les-Bains', '74'),
+	profile('chambery', 'Chambéry', '73', true),
+	profile('nantes', 'Nantes', '44'),
+	profile('sans-ville', null, null),
 ]
 
-const noms = (profils: readonly { nom: string }[]): string[] => profils.map(p => p.nom)
+const names = (profils: readonly { nom: string }[]): string[] => profils.map(p => p.nom)
 
 describe('U17 : la saisie, normalisée', () => {
 	test('un champ est rogné, ses espaces fusionnés, coupé à 100 caractères', () => {
@@ -49,7 +49,7 @@ describe('U17 : la saisie, normalisée', () => {
 	})
 
 	test('ce qui n’est pas un texte est un champ vide, jamais une erreur', () => {
-		for (const valeur of [undefined, null, 42, {}, true, [], [undefined]]) expect(field(valeur)).toBe('')
+		for (const value of [undefined, null, 42, {}, true, [], [undefined]]) expect(field(value)).toBe('')
 	})
 
 	test('l’adresse donne la recherche, un paramètre inconnu est ignoré', () => {
@@ -61,15 +61,14 @@ describe('U17 : la saisie, normalisée', () => {
 	})
 
 	test('la casse, les accents et les traits d’union ne changent pas la ville trouvée', () => {
-		const annecyLeVieux = profilePlace({ ville: 'Annecy-le-Vieux', departement: '74' })
-		for (const saisie of ['annecy', 'ANNECY', 'Annecy', '  annecy  ', 'Annecy le Vieux', 'annecy-le-vieux'])
-			expect(placeMatch(annecyLeVieux, readPlace(saisie)), saisie).toBe('ville')
+		const annecyOldTown = profilePlace({ ville: 'Annecy-le-Vieux', departement: '74' })
+		for (const input of ['annecy', 'ANNECY', 'Annecy', '  annecy  ', 'Annecy le Vieux', 'annecy-le-vieux'])
+			expect(placeMatch(annecyOldTown, readPlace(input)), input).toBe('ville')
 		const evian = profilePlace({ ville: 'Évian-les-Bains', departement: '74' })
-		for (const saisie of ['evian', 'Évian', 'EVIAN LES BAINS'])
-			expect(placeMatch(evian, readPlace(saisie))).toBe('ville')
-		const saintJulien = profilePlace({ ville: 'Saint-Julien-en-Genevois', departement: '74' })
-		for (const saisie of ['St Julien', 'saint julien', 'st-julien-en-genevois'])
-			expect(placeMatch(saintJulien, readPlace(saisie)), saisie).toBe('ville')
+		for (const input of ['evian', 'Évian', 'EVIAN LES BAINS']) expect(placeMatch(evian, readPlace(input))).toBe('ville')
+		const julienCity = profilePlace({ ville: 'Saint-Julien-en-Genevois', departement: '74' })
+		for (const input of ['St Julien', 'saint julien', 'st-julien-en-genevois'])
+			expect(placeMatch(julienCity, readPlace(input)), input).toBe('ville')
 	})
 
 	test('« Annecy » n’est pas « Annemasse », et un mot entier n’est pas un bout de mot', () => {
@@ -92,8 +91,8 @@ describe('U17 : la saisie, normalisée', () => {
 	})
 
 	test('« Savoie » n’est pas « Haute-Savoie », ni « Loire » « Loire-Atlantique »', () => {
-		const hauteSavoie = profilePlace({ ville: 'Haute-Savoie', departement: '74' })
-		expect(placeMatch(hauteSavoie, readPlace('Savoie'))).toBeNull()
+		const highSavoie = profilePlace({ ville: 'Haute-Savoie', departement: '74' })
+		expect(placeMatch(highSavoie, readPlace('Savoie'))).toBeNull()
 		const loireAtlantique = profilePlace({ ville: 'Loire-Atlantique', departement: '44' })
 		expect(placeMatch(loireAtlantique, readPlace('Loire'))).toBeNull()
 	})
@@ -111,7 +110,7 @@ describe('U18 : les paramètres de l’adresse, leurs défauts et leurs bornes',
 	})
 
 	test('la page est un entier de 1 à 1 000, sinon la première', () => {
-		for (const [valeur, attendu] of [
+		for (const [value, expected] of [
 			['1', 1],
 			['2', 2],
 			['1000', 1000],
@@ -127,7 +126,7 @@ describe('U18 : les paramètres de l’adresse, leurs défauts et leurs bornes',
 			[7, 1],
 			['99999', 1],
 		] as const)
-			expect(readPage(valeur), String(valeur)).toBe(attendu)
+			expect(readPage(value), String(value)).toBe(expected)
 		expect(PAGE_MAX).toBe(1000)
 	})
 
@@ -156,10 +155,10 @@ describe('U18 : les paramètres de l’adresse, leurs défauts et leurs bornes',
 
 describe('U19 : sans critère, sans erreur', () => {
 	test('une adresse sans paramètre n’est pas une recherche, et ne lève rien', () => {
-		for (const parametres of [{}, { search: '', city: '' }, { search: '   ' }, { city: [] }, undefined]) {
-			const recherche = readSearch(parametres)
-			expect(validSearch(recherche)).toBe(false)
-			expect(searchByCity(recherche)).toBe(false)
+		for (const parameters of [{}, { search: '', city: '' }, { search: '   ' }, { city: [] }, undefined]) {
+			const search = readSearch(parameters)
+			expect(validSearch(search)).toBe(false)
+			expect(searchByCity(search)).toBe(false)
 		}
 	})
 
@@ -185,57 +184,57 @@ describe('U19 : sans critère, sans erreur', () => {
 	})
 
 	test('sans lieu utilisable, une seule liste : tout le monde est « local »', () => {
-		const resultat = sectionsByPlace(COMMUNES, 'France')
-		expect(resultat.parLieu).toBe(false)
-		expect(resultat.locaux).toHaveLength(COMMUNES.length)
-		expect(resultat.sections).toEqual([])
+		const result = sectionsByPlace(CITIES, 'France')
+		expect(result.parLieu).toBe(false)
+		expect(result.locaux).toHaveLength(CITIES.length)
+		expect(result.sections).toEqual([])
 		expect(sectionsByPlace([], 'Annecy').locaux).toEqual([])
 	})
 })
 
 describe('les sections d’une recherche par ville', () => {
 	test('d’abord la ville, puis le département tapé ; le titre ne compte qu’eux', () => {
-		const resultat = sectionsByPlace(COMMUNES, 'Annecy')
-		expect(noms(resultat.locaux)).toEqual(['annecy', 'annecy-le-vieux'])
-		expect(resultat.parLieu).toBe(true)
+		const result = sectionsByPlace(CITIES, 'Annecy')
+		expect(names(result.locaux)).toEqual(['annecy', 'annecy-le-vieux'])
+		expect(result.parLieu).toBe(true)
 	})
 
 	test('puis le même département, ceux qui se déplacent, le reste : chacun une fois', () => {
-		const resultat = sectionsByPlace(COMMUNES, 'Annecy')
-		expect(resultat.departements).toEqual(['74'])
-		expect(resultat.sections.map(({ cle }) => cle)).toEqual(['departement', 'deplacent', 'autres'])
-		expect(resultat.sections.map(({ titre }) => titre)).toEqual([
+		const result = sectionsByPlace(CITIES, 'Annecy')
+		expect(result.departements).toEqual(['74'])
+		expect(result.sections.map(({ cle }) => cle)).toEqual(['departement', 'deplacent', 'autres'])
+		expect(result.sections.map(({ titre }) => titre)).toEqual([
 			'Autres maquilleuses du 74 (Haute-Savoie)',
 			'Autres maquilleuses qui se déplacent',
 			'Autres maquilleuses',
 		])
-		expect(noms(resultat.sections[0]?.profils ?? [])).toEqual(['annemasse', 'thonon'])
-		expect(noms(resultat.sections[1]?.profils ?? [])).toEqual(['chambery'])
-		expect(noms(resultat.sections[2]?.profils ?? [])).toEqual(['nantes', 'sans-ville'])
-		const tous = [...resultat.locaux, ...resultat.sections.flatMap(section => section.profils)]
-		expect(noms(tous).sort()).toEqual(noms(COMMUNES).sort())
+		expect(names(result.sections[0]?.profils ?? [])).toEqual(['annemasse', 'thonon'])
+		expect(names(result.sections[1]?.profils ?? [])).toEqual(['chambery'])
+		expect(names(result.sections[2]?.profils ?? [])).toEqual(['nantes', 'sans-ville'])
+		const everyone = [...result.locaux, ...result.sections.flatMap(section => section.profils)]
+		expect(names(everyone).sort()).toEqual(names(CITIES).sort())
 	})
 
 	test('un département tapé donne ses profils d’abord, sans section du même département', () => {
-		const resultat = sectionsByPlace(COMMUNES, 'Haute-Savoie')
-		expect(noms(resultat.locaux)).toEqual(['annecy', 'annecy-le-vieux', 'annemasse', 'thonon'])
-		expect(resultat.sections.map(({ cle }) => cle)).toEqual(['deplacent', 'autres'])
+		const result = sectionsByPlace(CITIES, 'Haute-Savoie')
+		expect(names(result.locaux)).toEqual(['annecy', 'annecy-le-vieux', 'annemasse', 'thonon'])
+		expect(result.sections.map(({ cle }) => cle)).toEqual(['deplacent', 'autres'])
 	})
 
 	test('sans profil de la ville, la page le dit : aucun local, et le département reste inconnu', () => {
-		const resultat = sectionsByPlace(COMMUNES, 'Grenoble')
-		expect(resultat.locaux).toEqual([])
-		expect(resultat.departements).toEqual([])
-		expect(resultat.sections.map(({ cle }) => cle)).toEqual(['deplacent', 'autres'])
+		const result = sectionsByPlace(CITIES, 'Grenoble')
+		expect(result.locaux).toEqual([])
+		expect(result.departements).toEqual([])
+		expect(result.sections.map(({ cle }) => cle)).toEqual(['deplacent', 'autres'])
 	})
 
 	test('le département d’une ville est celui de ses profils, le plus fréquent', () => {
-		const profils: ProfilePlace[] = [
+		const profiles: ProfilePlace[] = [
 			{ ville: 'Annecy', departement: '74', seDeplace: false },
 			{ ville: 'Annecy', departement: '74', seDeplace: false },
 			{ ville: 'Annecy-le-Vieux', departement: '74', seDeplace: false },
 		]
-		expect(sectionsByPlace(profils, 'annecy').departements).toEqual(['74'])
+		expect(sectionsByPlace(profiles, 'annecy').departements).toEqual(['74'])
 	})
 })
 
@@ -255,11 +254,11 @@ describe('le titre et l’adresse', () => {
 })
 
 describe('la lecture de l’annuaire', () => {
-	function payloadEspion(pages: unknown[][]) {
-		const lectures: Record<string, unknown>[] = []
+	function payloadSpy(pages: unknown[][]) {
+		const readings: Record<string, unknown>[] = []
 		const payload = {
 			find: async (options: Record<string, unknown>) => {
-				lectures.push(options)
+				readings.push(options)
 				if (options.collection === 'media')
 					return {
 						docs: [
@@ -270,7 +269,7 @@ describe('la lecture de l’annuaire', () => {
 				return { docs: pages[page - 1] ?? [], page, totalDocs: 0, hasNextPage: page < pages.length }
 			},
 		}
-		return { payload: payload as unknown as Payload, lectures }
+		return { payload: payload as unknown as Payload, lectures: readings }
 	}
 
 	const doc = (slug: string, extra: Record<string, unknown> = {}) => ({
@@ -293,42 +292,40 @@ describe('la lecture de l’annuaire', () => {
 	})
 
 	test('il lit page après page, par cent, jusqu’à la dernière, sous les règles d’accès', async () => {
-		const { payload, lectures } = payloadEspion([[doc('a')], [doc('b')], [doc('c')]])
+		const { payload, lectures: readings } = payloadSpy([[doc('a')], [doc('b')], [doc('c')]])
 
-		const annuaire = await readDirectory(payload)
+		const directory = await readDirectory(payload)
 
-		expect(annuaire.map(({ carte }) => carte.slug)).toEqual(['a', 'b', 'c'])
-		const profils = lectures.filter(lecture => lecture.collection === 'profiles' && lecture.overrideAccess === false)
-		expect(profils.map(({ page }) => page)).toEqual([1, 2, 3])
-		for (const lecture of profils)
-			expect(lecture).toMatchObject({ collection: 'profiles', limit: 100, overrideAccess: false, depth: 0 })
+		expect(directory.map(({ carte }) => carte.slug)).toEqual(['a', 'b', 'c'])
+		const profiles = readings.filter(lecture => lecture.collection === 'profiles' && lecture.overrideAccess === false)
+		expect(profiles.map(({ page }) => page)).toEqual([1, 2, 3])
+		for (const reading of profiles)
+			expect(reading).toMatchObject({ collection: 'profiles', limit: 100, overrideAccess: false, depth: 0 })
 	})
 
 	test('il ne lit jamais plus de dix pages', async () => {
-		const { payload, lectures } = payloadEspion(Array.from({ length: 50 }, () => [doc('x')]))
+		const { payload, lectures: readings } = payloadSpy(Array.from({ length: 50 }, () => [doc('x')]))
 		await readDirectory(payload)
 		expect(
-			lectures.filter(lecture => lecture.collection === 'profiles' && lecture.overrideAccess === false)
+			readings.filter(lecture => lecture.collection === 'profiles' && lecture.overrideAccess === false)
 		).toHaveLength(10)
 	})
 
 	test('la place d’un profil est sa commune et son département ; le centre de la commune n’en sort pas', async () => {
-		const { payload } = payloadEspion([
-			[doc('a'), doc('b', { city: null, radiusKm: 30 }), doc('c', { radiusKm: null })],
-		])
+		const { payload } = payloadSpy([[doc('a'), doc('b', { city: null, radiusKm: 30 }), doc('c', { radiusKm: null })]])
 
 		const [a, b, c] = await readDirectory(payload)
 
 		expect(a).toMatchObject({ ville: 'Annecy', departement: '74', seDeplace: true })
 		expect(b).toMatchObject({ ville: null, departement: null, seDeplace: false })
 		expect(c).toMatchObject({ ville: 'Annecy', seDeplace: false })
-		const texte = JSON.stringify(await readDirectory(payload))
-		for (const interdit of ['latitude', 'longitude', 'codeInsee', 'filename', '45.9'])
-			expect(texte, interdit).not.toContain(interdit)
+		const text = JSON.stringify(await readDirectory(payload))
+		for (const forbidden of ['latitude', 'longitude', 'codeInsee', 'filename', '45.9'])
+			expect(text, forbidden).not.toContain(forbidden)
 	})
 
 	test('avec les textes, chaque profil porte ce qu’une recherche par mot lit, à côté de sa carte et sans prix', async () => {
-		const { payload, lectures } = payloadEspion([
+		const { payload, lectures: readings } = payloadSpy([
 			[
 				doc('a', {
 					description: '  Je fais le maquillage de mariage.  ',
@@ -364,21 +361,21 @@ describe('la lecture de l’annuaire', () => {
 		expect(Object.keys(a?.carte ?? {}).sort()).toEqual(
 			Object.keys((await readDirectory(payload))[0]?.carte ?? {}).sort()
 		)
-		const select = lectures.find(lecture => lecture.collection === 'profiles')?.select as Record<string, unknown>
+		const select = readings.find(lecture => lecture.collection === 'profiles')?.select as Record<string, unknown>
 		expect(Object.keys(select)).toEqual(expect.arrayContaining(['description', 'skills', 'serviceOffers']))
-		for (const interdit of ['contactDetails', 'publicContact', 'networks', 'internalNote', 'pro'])
-			expect(select).not.toHaveProperty(interdit)
+		for (const forbidden of ['contactDetails', 'publicContact', 'networks', 'internalNote', 'pro'])
+			expect(select).not.toHaveProperty(forbidden)
 		// Without the option, the texts are neither read nor carried.
-		const sans = (await readDirectory(payload))[0]
-		expect(sans).not.toHaveProperty('textes')
-		expect(JSON.stringify(sans)).not.toContain('150')
+		const without = (await readDirectory(payload))[0]
+		expect(without).not.toHaveProperty('textes')
+		expect(JSON.stringify(without)).not.toContain('150')
 	})
 
 	test('une photo qui n’est qu’un identifiant, ou sans adresse, donne une carte sans photo', async () => {
-		const { payload } = payloadEspion([
+		const { payload } = payloadSpy([
 			[doc('a', { mainPicture: 9 }), doc('b', { mainPicture: { id: 9 } }), doc('c', { mainPicture: null })],
 		])
-		const cartes = (await readDirectory(payload)).map(({ carte }) => carte)
-		expect(cartes.map(({ photo }) => photo)).toEqual([null, null, null])
+		const cards = (await readDirectory(payload)).map(({ carte }) => carte)
+		expect(cards.map(({ photo }) => photo)).toEqual([null, null, null])
 	})
 })

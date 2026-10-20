@@ -15,16 +15,16 @@ import { descriptionLength } from '@/lib/profile/completeness'
 describe('U27 : 2 000 caractères au plus', () => {
 	test('2 000 passent, 2 001 sont refusés avec un message en français', () => {
 		expect(descriptionSchema.safeParse({ description: 'a'.repeat(DESCRIPTION_MAX) }).success).toBe(true)
-		const lu = descriptionSchema.safeParse({ description: 'a'.repeat(DESCRIPTION_MAX + 1) })
-		if (lu.success) throw new Error('doit être refusé')
-		expect(descriptionErrors(lu.error)).toEqual({
+		const wasRead = descriptionSchema.safeParse({ description: 'a'.repeat(DESCRIPTION_MAX + 1) })
+		if (wasRead.success) throw new Error('doit être refusé')
+		expect(descriptionErrors(wasRead.error)).toEqual({
 			description: 'Ta description ne doit pas dépasser 2000 caractères.',
 		})
 	})
 
 	test('la borne se compte sur le texte rangé : espaces des bords et HTML ne comptent pas', () => {
-		const lu = descriptionSchema.parse({ description: `  <p>${'a'.repeat(DESCRIPTION_MAX)}</p>  ` })
-		expect(lu.description).toHaveLength(DESCRIPTION_MAX)
+		const wasRead = descriptionSchema.parse({ description: `  <p>${'a'.repeat(DESCRIPTION_MAX)}</p>  ` })
+		expect(wasRead.description).toHaveLength(DESCRIPTION_MAX)
 	})
 
 	test('une description vide est permise : elle efface le texte', () => {
@@ -32,9 +32,9 @@ describe('U27 : 2 000 caractères au plus', () => {
 	})
 
 	test('une valeur qui n’est pas un texte a un message français', () => {
-		const lu = strictDescriptionSchema.safeParse({ description: 42 })
-		if (lu.success) throw new Error('doit être refusé')
-		expect(descriptionErrors(lu.error).description).toBe('Ta description doit être un texte.')
+		const wasRead = strictDescriptionSchema.safeParse({ description: 42 })
+		if (wasRead.success) throw new Error('doit être refusé')
+		expect(descriptionErrors(wasRead.error).description).toBe('Ta description doit être un texte.')
 	})
 })
 
@@ -70,10 +70,10 @@ describe('U05 : le compteur suit la définition unique de la complétude', () =>
 	})
 
 	test('espaces des bords ignorés, suite d’espaces et de sauts de ligne comptée pour un', () => {
-		const texte = `  ${'a'.repeat(100)} \n\n   ${'b'.repeat(99)}  `
-		expect(descriptionCounter(texte).compte).toBe(200)
-		expect(descriptionCounter(`${texte}c`).assez).toBe(true)
-		expect(descriptionCounter(texte.slice(0, -3)).assez).toBe(false)
+		const text = `  ${'a'.repeat(100)} \n\n   ${'b'.repeat(99)}  `
+		expect(descriptionCounter(text).compte).toBe(200)
+		expect(descriptionCounter(`${text}c`).assez).toBe(true)
+		expect(descriptionCounter(text.slice(0, -3)).assez).toBe(false)
 	})
 
 	test('le HTML ne compte pas', () => {
@@ -81,8 +81,8 @@ describe('U05 : le compteur suit la définition unique de la complétude', () =>
 	})
 
 	test('le compte est celui de longueurDescription, pour des textes de toute forme', () => {
-		for (const texte of ['', ' ', 'a b  c', 'a\n\nb\tc', 'é'.repeat(250), `x${' '.repeat(50)}y`])
-			expect(descriptionCounter(texte).compte).toBe(descriptionLength(texte))
+		for (const text of ['', ' ', 'a b  c', 'a\n\nb\tc', 'é'.repeat(250), `x${' '.repeat(50)}y`])
+			expect(descriptionCounter(text).compte).toBe(descriptionLength(text))
 	})
 })
 

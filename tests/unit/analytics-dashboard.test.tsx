@@ -21,20 +21,20 @@ import { pickFiles } from '../support/pick-files'
  * 19; U82). The components send through `porte.suivre`, which a spy takes the place of here: the
  * test sees exactly what would leave.
  */
-const fenetre = openWindow()
+const jsdomWindow = openWindow()
 
-type Envoi = { nom: string; proprietes: unknown }
-let envois: Envoi[] = []
-const origine = holder.suivre
+type Upload = { nom: string; proprietes: unknown }
+let uploads: Upload[] = []
+const origin = holder.suivre
 beforeEach(() => {
-	envois = []
+	uploads = []
 	holder.suivre = ((nom: string, proprietes: unknown = {}) => {
-		envois.push({ nom, proprietes })
+		uploads.push({ nom, proprietes })
 		return true
 	}) as unknown as Track
 })
 afterEach(() => {
-	holder.suivre = origine
+	holder.suivre = origin
 })
 
 describe('U82 : les propriétés restent dans les listes fermées', () => {
@@ -63,127 +63,127 @@ describe('U82 : les propriétés restent dans les listes fermées', () => {
 })
 
 describe('l’enregistrement d’une section', () => {
-	const sans = (disponible: boolean) => async () => ({ ok: true as const, valeurs: { disponible } })
+	const without = (disponible: boolean) => async () => ({ ok: true as const, valeurs: { disponible } })
 
 	test('la réponse du serveur donne un événement profile_save, et un double clic n’en donne qu’un', async () => {
-		let finir: () => void = () => undefined
-		await fenetre.monter(
+		let finish: () => void = () => undefined
+		await jsdomWindow.monter(
 			<AvailabilitySwitch
 				disponible={true}
 				envoyer={() =>
 					new Promise(fin => {
-						finir = () => fin({ ok: true, valeurs: { disponible: false } })
+						finish = () => fin({ ok: true, valeurs: { disponible: false } })
 					})
 				}
 			/>
 		)
-		const interrupteur = fenetre.w.document.querySelector<HTMLElement>('[role="switch"]') as HTMLElement
-		await fenetre.cliquer(interrupteur)
-		await fenetre.cliquer(interrupteur)
-		expect(envois).toEqual([])
-		await fenetre.attendre(() => {
-			finir()
-			return envois.length > 0
+		const toggle = jsdomWindow.w.document.querySelector<HTMLElement>('[role="switch"]') as HTMLElement
+		await jsdomWindow.cliquer(toggle)
+		await jsdomWindow.cliquer(toggle)
+		expect(uploads).toEqual([])
+		await jsdomWindow.attendre(() => {
+			finish()
+			return uploads.length > 0
 		})
-		expect(envois).toEqual([{ nom: 'profile_save', proprietes: { section: 'disponibilite', ok: true } }])
+		expect(uploads).toEqual([{ nom: 'profile_save', proprietes: { section: 'disponibilite', ok: true } }])
 	})
 
 	test('un refus du serveur donne ok=false, et jamais profile_publiable', async () => {
-		await fenetre.monter(
+		await jsdomWindow.monter(
 			<AvailabilitySwitch disponible={true} envoyer={async () => ({ ok: false, message: FAILURE_MESSAGE })} />
 		)
-		await fenetre.cliquer(fenetre.w.document.querySelector<HTMLElement>('[role="switch"]') as HTMLElement)
-		await fenetre.attendre(() => envois.length > 0)
-		expect(envois).toEqual([{ nom: 'profile_save', proprietes: { section: 'disponibilite', ok: false } }])
+		await jsdomWindow.cliquer(jsdomWindow.w.document.querySelector<HTMLElement>('[role="switch"]') as HTMLElement)
+		await jsdomWindow.attendre(() => uploads.length > 0)
+		expect(uploads).toEqual([{ nom: 'profile_save', proprietes: { section: 'disponibilite', ok: false } }])
 	})
 
 	test('le serveur dit que le profil est devenu publiable : profile_publiable part une fois, sans propriété', async () => {
-		await fenetre.monter(
+		await jsdomWindow.monter(
 			<AvailabilitySwitch
 				disponible={true}
 				envoyer={async () => ({ ok: true, valeurs: { disponible: false }, devenuPublicable: true })}
 			/>
 		)
-		await fenetre.cliquer(fenetre.w.document.querySelector<HTMLElement>('[role="switch"]') as HTMLElement)
-		await fenetre.attendre(() => envois.length > 1)
-		expect(envois).toEqual([
+		await jsdomWindow.cliquer(jsdomWindow.w.document.querySelector<HTMLElement>('[role="switch"]') as HTMLElement)
+		await jsdomWindow.attendre(() => uploads.length > 1)
+		expect(uploads).toEqual([
 			{ nom: 'profile_save', proprietes: { section: 'disponibilite', ok: true } },
 			{ nom: 'profile_publiable', proprietes: {} },
 		])
 	})
 
 	test('sans l’indication du serveur, une réussite ne donne pas profile_publiable', async () => {
-		await fenetre.monter(<AvailabilitySwitch disponible={true} envoyer={sans(false)} />)
-		await fenetre.cliquer(fenetre.w.document.querySelector<HTMLElement>('[role="switch"]') as HTMLElement)
-		await fenetre.attendre(() => envois.length > 0)
-		expect(envois.map(e => e.nom)).toEqual(['profile_save'])
+		await jsdomWindow.monter(<AvailabilitySwitch disponible={true} envoyer={without(false)} />)
+		await jsdomWindow.cliquer(jsdomWindow.w.document.querySelector<HTMLElement>('[role="switch"]') as HTMLElement)
+		await jsdomWindow.attendre(() => uploads.length > 0)
+		expect(uploads.map(e => e.nom)).toEqual(['profile_save'])
 	})
 })
 
 describe('Entrée maintenue pendant un enregistrement : un seul événement', () => {
 	test('le panneau de la description envoie une requête et un profile_save, quelle que soit la répétition', async () => {
-		let requetes = 0
-		let finir: () => void = () => undefined
-		await fenetre.monter(
+		let requests = 0
+		let finish: () => void = () => undefined
+		await jsdomWindow.monter(
 			<DescriptionEditor
 				valeurs={{ description: 'Maquilleuse mariée.' }}
 				envoyer={valeurs => {
-					requetes += 1
+					requests += 1
 					return new Promise(fin => {
-						finir = () => fin({ ok: true, valeurs })
+						finish = () => fin({ ok: true, valeurs })
 					})
 				}}
 			/>
 		)
-		await fenetre.cliquer(fenetre.bouton('Modifier ma description'))
-		const champ = fenetre.champ('Ta description') as HTMLTextAreaElement
-		await fenetre.saisir(champ, 'Maquilleuse mariée, je me déplace partout.')
-		const bouton = fenetre.bouton('Enregistrer')
-		await fenetre.cliquer(bouton)
+		await jsdomWindow.cliquer(jsdomWindow.bouton('Modifier ma description'))
+		const field = jsdomWindow.champ('Ta description') as HTMLTextAreaElement
+		await jsdomWindow.saisir(field, 'Maquilleuse mariée, je me déplace partout.')
+		const button = jsdomWindow.bouton('Enregistrer')
+		await jsdomWindow.cliquer(button)
 		// The key is still down: its repeats reach the panel while the save is under way.
 		for (let i = 0; i < 4; i += 1) {
 			await act(async () => {
-				bouton.dispatchEvent(
-					new fenetre.w.KeyboardEvent('keydown', { key: 'Enter', repeat: true, bubbles: true, cancelable: true })
+				button.dispatchEvent(
+					new jsdomWindow.w.KeyboardEvent('keydown', { key: 'Enter', repeat: true, bubbles: true, cancelable: true })
 				)
 			})
 		}
-		expect(requetes).toBe(1)
-		expect(envois).toEqual([])
-		await fenetre.attendre(() => {
-			finir()
-			return envois.length > 0
+		expect(requests).toBe(1)
+		expect(uploads).toEqual([])
+		await jsdomWindow.attendre(() => {
+			finish()
+			return uploads.length > 0
 		})
-		expect(envois).toEqual([{ nom: 'profile_save', proprietes: { section: 'description', ok: true } }])
+		expect(uploads).toEqual([{ nom: 'profile_save', proprietes: { section: 'description', ok: true } }])
 	})
 })
 
 describe('le passage à publiable est dit par le serveur, une seule fois', () => {
-	function banc(etats: boolean[], resultat: SaveResult<{ a: string }>) {
-		const lectures: boolean[] = [...etats]
+	function bench(etats: boolean[], resultat: SaveResult<{ a: string }>) {
+		const readings: boolean[] = [...etats]
 		const payload = {
 			find: async () => ({ docs: [{ id: 7 }] }),
-			findByID: async () => ({ publishable: lectures.shift() }),
+			findByID: async () => ({ publishable: readings.shift() }),
 		} as unknown as Payload
 		return withPublishableTransition(payload, { collection: 'pros', id: 1 } as never, async () => resultat)
 	}
-	const bon = { ok: true, valeurs: { a: 'x' } } as const
+	const good = { ok: true, valeurs: { a: 'x' } } as const
 
 	test('non publiable puis publiable : l’indication est posée', async () => {
-		expect(await banc([false, true], bon)).toEqual({ ok: true, valeurs: { a: 'x' }, devenuPublicable: true })
+		expect(await bench([false, true], good)).toEqual({ ok: true, valeurs: { a: 'x' }, devenuPublicable: true })
 	})
 	test('déjà publiable : rien, même s’il le reste', async () => {
-		expect(await banc([true, true], bon)).toEqual(bon)
+		expect(await bench([true, true], good)).toEqual(good)
 	})
 	test('le chemin inverse (publiable puis non) : rien', async () => {
-		expect(await banc([true, false], bon)).toEqual(bon)
+		expect(await bench([true, false], good)).toEqual(good)
 	})
 	test('toujours non publiable : rien', async () => {
-		expect(await banc([false, false], bon)).toEqual(bon)
+		expect(await bench([false, false], good)).toEqual(good)
 	})
 	test('un enregistrement refusé : rien, et la relecture n’a pas lieu', async () => {
-		const refus = { ok: false, message: FAILURE_MESSAGE } as const
-		expect(await banc([false, true], refus)).toEqual(refus)
+		const refusal = { ok: false, message: FAILURE_MESSAGE } as const
+		expect(await bench([false, true], refusal)).toEqual(refusal)
 	})
 	test('un état illisible : rien', async () => {
 		const payload = {
@@ -192,15 +192,15 @@ describe('le passage à publiable est dit par le serveur, une seule fois', () =>
 				throw new Error('base indisponible')
 			},
 		} as unknown as Payload
-		expect(await withPublishableTransition(payload, { collection: 'pros', id: 1 } as never, async () => bon)).toEqual(
-			bon
+		expect(await withPublishableTransition(payload, { collection: 'pros', id: 1 } as never, async () => good)).toEqual(
+			good
 		)
 	})
 })
 
 describe('une photo refusée : la vraie cause', () => {
-	const fichier = new File(['x'], 'photo.webp', { type: 'image/webp' })
-	const reponse =
+	const file = new File(['x'], 'photo.webp', { type: 'image/webp' })
+	const response =
 		(status: number, corps = '') =>
 		async () =>
 			new Response(corps, { status })
@@ -213,152 +213,152 @@ describe('une photo refusée : la vraie cause', () => {
 		[500, '', 'server'],
 		[200, '', 'server'],
 	])('l’envoi répond %p : %s', async (status, corps, cause) => {
-		const envoi = await uploadPhoto(fichier, '', reponse(status, corps))
-		expect(envoi).toMatchObject({ ok: false, cause })
+		const upload = await uploadPhoto(file, '', response(status, corps))
+		expect(upload).toMatchObject({ ok: false, cause })
 	})
 
 	test('le réseau tombe : server ; une session finie n’est pas un refus de la photo', async () => {
-		const tombe = await uploadPhoto(fichier, '', async () => {
+		const fallen = await uploadPhoto(file, '', async () => {
 			throw new Error('Failed to fetch')
 		})
-		expect(tombe).toMatchObject({ ok: false, cause: 'server' })
-		const session = await uploadPhoto(fichier, '', reponse(401))
+		expect(fallen).toMatchObject({ ok: false, cause: 'server' })
+		const session = await uploadPhoto(file, '', response(401))
 		expect(session).toMatchObject({ ok: false, session: 'expiree' })
 		expect('cause' in session).toBe(false)
 	})
 
-	const ACTUELLE = { id: 5, url: 'https://photos.example.test/a.webp', largeur: 800, hauteur: 600, alt: '' }
-	const REDUITE = new File(['petit'], 'photo.webp', { type: 'image/webp' })
-	async function monter(options: {
+	const CURRENT = { id: 5, url: 'https://photos.example.test/a.webp', largeur: 800, hauteur: 600, alt: '' }
+	const REDUCED = new File(['petit'], 'photo.webp', { type: 'image/webp' })
+	async function mount(options: {
 		preparer?: Parameters<typeof PhotoEditor>[0]['preparer']
 		televerser?: Parameters<typeof PhotoEditor>[0]['televerser']
 	}) {
-		await fenetre.monter(
+		await jsdomWindow.monter(
 			<PhotoEditor
-				photo={ACTUELLE}
+				photo={CURRENT}
 				envoyer={async saisie => ({ ok: true, valeurs: { photoPrincipale: saisie.photoPrincipale } })}
 				preparer={
 					options.preparer ??
-					(async () => ({ ok: true as const, fichier: REDUITE, largeur: 800, hauteur: 600, taille: 5 }))
+					(async () => ({ ok: true as const, fichier: REDUCED, largeur: 800, hauteur: 600, taille: 5 }))
 				}
 				televerser={options.televerser ?? (async () => ({ ok: true as const, id: 9 }))}
 				supprimer={async () => undefined}
 			/>
 		)
-		await fenetre.cliquer(fenetre.bouton('Modifier ma photo principale'))
-		await pickFiles(fenetre, fenetre.champ(/photo/i) as HTMLInputElement, [
+		await jsdomWindow.cliquer(jsdomWindow.bouton('Modifier ma photo principale'))
+		await pickFiles(jsdomWindow, jsdomWindow.champ(/photo/i) as HTMLInputElement, [
 			new File(['gros'], 'grosse.jpg', { type: 'image/jpeg' }),
 		])
 	}
 
 	test('refusée avant l’envoi (trop lourde) : upload_error size, rien d’autre', async () => {
-		await monter({
+		await mount({
 			preparer: async () => ({ ok: false, raison: 'taille', code: 'taille', message: MESSAGES_PHOTO.taille }),
 		})
-		await fenetre.attendre(() => envois.length > 0)
-		expect(envois).toEqual([{ nom: 'upload_error', proprietes: { kind: 'size' } }])
+		await jsdomWindow.attendre(() => uploads.length > 0)
+		expect(uploads).toEqual([{ nom: 'upload_error', proprietes: { kind: 'size' } }])
 	})
 
 	test('refusée avant l’envoi (mauvais type) : upload_error type', async () => {
-		await monter({ preparer: async () => ({ ok: false, raison: 'type', code: 'heic', message: MESSAGES_PHOTO.heic }) })
-		await fenetre.attendre(() => envois.length > 0)
-		expect(envois).toEqual([{ nom: 'upload_error', proprietes: { kind: 'type' } }])
+		await mount({ preparer: async () => ({ ok: false, raison: 'type', code: 'heic', message: MESSAGES_PHOTO.heic }) })
+		await jsdomWindow.attendre(() => uploads.length > 0)
+		expect(uploads).toEqual([{ nom: 'upload_error', proprietes: { kind: 'type' } }])
 	})
 
 	test('refusée par le serveur : la cause du serveur, et aucun profile_save (rien n’a été enregistré)', async () => {
-		await monter({ televerser: async () => ({ ok: false, message: MESSAGES_PHOTO['refus-type'], cause: 'type' }) })
-		await fenetre.attendre(() => !(fenetre.bouton('Enregistrer') as HTMLButtonElement).disabled)
-		await fenetre.cliquer(fenetre.bouton('Enregistrer'))
-		await fenetre.attendre(() => envois.length > 0)
-		expect(envois).toEqual([{ nom: 'upload_error', proprietes: { kind: 'type' } }])
+		await mount({ televerser: async () => ({ ok: false, message: MESSAGES_PHOTO['refus-type'], cause: 'type' }) })
+		await jsdomWindow.attendre(() => !(jsdomWindow.bouton('Enregistrer') as HTMLButtonElement).disabled)
+		await jsdomWindow.cliquer(jsdomWindow.bouton('Enregistrer'))
+		await jsdomWindow.attendre(() => uploads.length > 0)
+		expect(uploads).toEqual([{ nom: 'upload_error', proprietes: { kind: 'type' } }])
 	})
 
 	test('une session finie pendant l’envoi n’est pas un refus de la photo', async () => {
-		await monter({ televerser: async () => ({ ok: false, message: 'Session finie', session: 'expiree' }) })
-		await fenetre.attendre(() => !(fenetre.bouton('Enregistrer') as HTMLButtonElement).disabled)
-		await fenetre.cliquer(fenetre.bouton('Enregistrer'))
-		await fenetre.attendre(() => fenetre.w.document.body.textContent?.includes('Session finie') ?? false)
-		expect(envois).toEqual([])
+		await mount({ televerser: async () => ({ ok: false, message: 'Session finie', session: 'expiree' }) })
+		await jsdomWindow.attendre(() => !(jsdomWindow.bouton('Enregistrer') as HTMLButtonElement).disabled)
+		await jsdomWindow.cliquer(jsdomWindow.bouton('Enregistrer'))
+		await jsdomWindow.attendre(() => jsdomWindow.w.document.body.textContent?.includes('Session finie') ?? false)
+		expect(uploads).toEqual([])
 	})
 
 	test('une photo enregistrée : un profile_save photo, aucun upload_error', async () => {
-		await monter({})
-		await fenetre.attendre(() => !(fenetre.bouton('Enregistrer') as HTMLButtonElement).disabled)
-		await fenetre.cliquer(fenetre.bouton('Enregistrer'))
-		await fenetre.attendre(() => envois.length > 0)
-		expect(envois).toEqual([{ nom: 'profile_save', proprietes: { section: 'photo', ok: true } }])
+		await mount({})
+		await jsdomWindow.attendre(() => !(jsdomWindow.bouton('Enregistrer') as HTMLButtonElement).disabled)
+		await jsdomWindow.cliquer(jsdomWindow.bouton('Enregistrer'))
+		await jsdomWindow.attendre(() => uploads.length > 0)
+		expect(uploads).toEqual([{ nom: 'profile_save', proprietes: { section: 'photo', ok: true } }])
 	})
 })
 
 describe('la suppression du compte', () => {
-	async function supprimer(envoyer: () => Promise<{ ok: true } | { ok: false; message: string }>) {
-		await fenetre.monter(<AccountDeletion mode="mot-de-passe" envoyer={envoyer as never} aller={() => undefined} />)
-		await fenetre.cliquer(fenetre.bouton('Supprimer mon compte'))
-		await fenetre.saisir(fenetre.champ('Retape ton mot de passe pour confirmer'), 'mon secret fictif')
-		await fenetre.cliquer(fenetre.bouton('Supprimer définitivement mon compte'))
+	async function remove(envoyer: () => Promise<{ ok: true } | { ok: false; message: string }>) {
+		await jsdomWindow.monter(<AccountDeletion mode="mot-de-passe" envoyer={envoyer as never} aller={() => undefined} />)
+		await jsdomWindow.cliquer(jsdomWindow.bouton('Supprimer mon compte'))
+		await jsdomWindow.saisir(jsdomWindow.champ('Retape ton mot de passe pour confirmer'), 'mon secret fictif')
+		await jsdomWindow.cliquer(jsdomWindow.bouton('Supprimer définitivement mon compte'))
 	}
 
 	test('réussie : account_delete part une fois, sans rien de saisi', async () => {
-		await supprimer(async () => ({ ok: true }))
-		expect(envois).toEqual([{ nom: 'account_delete', proprietes: {} }])
-		expect(JSON.stringify(envois)).not.toContain('secret')
+		await remove(async () => ({ ok: true }))
+		expect(uploads).toEqual([{ nom: 'account_delete', proprietes: {} }])
+		expect(JSON.stringify(uploads)).not.toContain('secret')
 	})
 
 	test('refusée : rien ne part', async () => {
-		await supprimer(async () => ({ ok: false, message: 'Mot de passe incorrect.' }))
-		expect(envois).toEqual([])
+		await remove(async () => ({ ok: false, message: 'Mot de passe incorrect.' }))
+		expect(uploads).toEqual([])
 	})
 
 	test('perdue : rien ne part', async () => {
-		await supprimer(async () => {
+		await remove(async () => {
 			throw new Error('Failed to fetch')
 		})
-		expect(envois).toEqual([])
+		expect(uploads).toEqual([])
 	})
 })
 
 describe('le changement de vue', () => {
-	async function monter(vue: 'publique' | 'edition') {
-		await fenetre.monter(
+	async function mount(vue: 'publique' | 'edition') {
+		await jsdomWindow.monter(
 			<ViewLink vue={vue} href="/auth/apercu-profil">
 				Voir
 			</ViewLink>
 		)
-		const lien = fenetre.w.document.querySelector('a') as HTMLAnchorElement
+		const link = jsdomWindow.w.document.querySelector('a') as HTMLAnchorElement
 		// The page does not really leave: the test only counts.
-		lien.addEventListener('click', evenement => evenement.preventDefault())
-		return lien
+		link.addEventListener('click', evenement => evenement.preventDefault())
+		return link
 	}
-	const clic = (lien: HTMLElement) => fenetre.cliquer(lien)
+	const click = (lien: HTMLElement) => jsdomWindow.cliquer(lien)
 	// A click made with a modifier key, which `cliquer` does not do.
-	const clicAvecCtrl = (lien: HTMLElement) =>
+	const clickWithCtrl = (lien: HTMLElement) =>
 		act(async () => {
 			lien.dispatchEvent(
-				new fenetre.w.MouseEvent('click', { bubbles: true, button: 0, cancelable: true, ctrlKey: true })
+				new jsdomWindow.w.MouseEvent('click', { bubbles: true, button: 0, cancelable: true, ctrlKey: true })
 			)
 		})
 
 	test('le chargement ne compte rien', async () => {
-		await monter('publique')
-		expect(envois).toEqual([])
+		await mount('publique')
+		expect(uploads).toEqual([])
 	})
 
 	test('un clic compte une fois, et un double clic aussi', async () => {
-		const lien = await monter('publique')
-		await clic(lien)
-		await clic(lien)
-		expect(envois).toEqual([{ nom: 'profile_visibility', proprietes: { public: true } }])
+		const link = await mount('publique')
+		await click(link)
+		await click(link)
+		expect(uploads).toEqual([{ nom: 'profile_visibility', proprietes: { public: true } }])
 	})
 
 	test('le retour vers l’espace dit public=false', async () => {
-		const lien = await monter('edition')
-		await clic(lien)
-		expect(envois).toEqual([{ nom: 'profile_visibility', proprietes: { public: false } }])
+		const link = await mount('edition')
+		await click(link)
+		expect(uploads).toEqual([{ nom: 'profile_visibility', proprietes: { public: false } }])
 	})
 
 	test('un clic avec une touche modificatrice ne change pas la vue de cet onglet : rien', async () => {
-		const lien = await monter('publique')
-		await clicAvecCtrl(lien)
-		expect(envois).toEqual([])
+		const link = await mount('publique')
+		await clickWithCtrl(link)
+		expect(uploads).toEqual([])
 	})
 })

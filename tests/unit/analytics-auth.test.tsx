@@ -15,23 +15,23 @@ import { openWindow } from '../support/dom-react'
  * Ticket 146: the events of sign-up and sign-in (plan 04 §3.3, events 9 to 12; U82, U83, E12).
  * Each component takes its `suivre`, so the test sees exactly what would leave.
  */
-const fenetre = openWindow()
+const jsdomWindow = openWindow()
 
-type Envoi = { nom: string; proprietes: unknown }
-function espion() {
-	const envois: Envoi[] = []
-	const suivre = ((nom: string, proprietes: unknown = {}) => {
-		envois.push({ nom, proprietes })
+type Upload = { nom: string; proprietes: unknown }
+function spy() {
+	const uploads: Upload[] = []
+	const follow = ((nom: string, proprietes: unknown = {}) => {
+		uploads.push({ nom, proprietes })
 		return true
 	}) as unknown as Track
-	return { envois, suivre }
+	return { envois: uploads, suivre: follow }
 }
 
 describe('le catalogue couvre tous les codes que les pages peuvent montrer', () => {
 	test('chaque code de connexion, de Google et d’inscription est dans la liste fermée', () => {
-		const liste: readonly string[] = AUTH_ERROR_CODES
+		const list: readonly string[] = AUTH_ERROR_CODES
 		for (const code of [...ERROR_CODES, ...GOOGLE_ERROR_CODES, ...SIGN_UP_FAILURE_CODES])
-			expect(liste, code).toContain(code)
+			expect(list, code).toContain(code)
 	})
 
 	test('un code qui n’est pas de la liste fait tomber l’événement', () => {
@@ -43,50 +43,50 @@ describe('le catalogue couvre tous les codes que les pages peuvent montrer', () 
 
 describe('connexion par email', () => {
 	test('un refus envoie login_result une fois, avec le code affiché', async () => {
-		const { envois, suivre } = espion()
-		const zone = await fenetre.monter(
+		const { envois: uploads, suivre: follow } = spy()
+		const zone = await jsdomWindow.monter(
 			<SignInForm
 				action={(async () => ({ code: 'identifiants-invalides' })) as never}
 				retour="/auth/profil"
-				suivre={suivre}
+				suivre={follow}
 			/>
 		)
-		await fenetre.saisir(fenetre.champ('Adresse email'), 'lea@example.test')
-		await fenetre.saisir(fenetre.champ('Mot de passe'), 'secret-fictif-1')
-		await fenetre.cliquer(fenetre.bouton('Se connecter'))
-		await fenetre.attendre(() => zone.querySelector('[role="alert"] p'))
+		await jsdomWindow.saisir(jsdomWindow.champ('Adresse email'), 'lea@example.test')
+		await jsdomWindow.saisir(jsdomWindow.champ('Mot de passe'), 'secret-fictif-1')
+		await jsdomWindow.cliquer(jsdomWindow.bouton('Se connecter'))
+		await jsdomWindow.attendre(() => zone.querySelector('[role="alert"] p'))
 
-		expect(envois).toEqual([
+		expect(uploads).toEqual([
 			{ nom: 'login_result', proprietes: { method: 'email', ok: false, code: 'identifiants-invalides' } },
 		])
-		expect(JSON.stringify(envois)).not.toContain('example.test')
-		expect(JSON.stringify(envois)).not.toContain('secret-fictif')
+		expect(JSON.stringify(uploads)).not.toContain('example.test')
+		expect(JSON.stringify(uploads)).not.toContain('secret-fictif')
 	})
 
 	test('rien n’est envoyé avant la première réponse', async () => {
-		const { envois, suivre } = espion()
-		await fenetre.monter(<SignInForm action={(async () => null) as never} retour="/auth/profil" suivre={suivre} />)
-		expect(envois).toEqual([])
+		const { envois: uploads, suivre: follow } = spy()
+		await jsdomWindow.monter(<SignInForm action={(async () => null) as never} retour="/auth/profil" suivre={follow} />)
+		expect(uploads).toEqual([])
 	})
 })
 
 describe('connexion réussie (email ou Google), sur la page d’arrivée', () => {
 	test('la marque du serveur donne un login_result ok, puis elle est dépensée', async () => {
-		const { envois, suivre } = espion()
+		const { envois: uploads, suivre: follow } = spy()
 		document.cookie = 'mm-sign-in-mark=google; Path=/'
-		await fenetre.monter(<SignInSucceeded suivre={suivre} />)
-		expect(envois).toEqual([{ nom: 'login_result', proprietes: { method: 'google', ok: true, code: 'ok' } }])
+		await jsdomWindow.monter(<SignInSucceeded suivre={follow} />)
+		expect(uploads).toEqual([{ nom: 'login_result', proprietes: { method: 'google', ok: true, code: 'ok' } }])
 		expect(document.cookie).not.toContain('mm-sign-in-mark')
 		// Mounted again: nothing left to send.
-		await fenetre.monter(<SignInSucceeded suivre={suivre} />)
-		expect(envois).toHaveLength(1)
+		await jsdomWindow.monter(<SignInSucceeded suivre={follow} />)
+		expect(uploads).toHaveLength(1)
 	})
 
 	test('sans marque, ou avec une valeur inconnue, rien ne part', async () => {
-		const { envois, suivre } = espion()
+		const { envois: uploads, suivre: follow } = spy()
 		document.cookie = 'mm-sign-in-mark=a@example.test; Path=/'
-		await fenetre.monter(<SignInSucceeded suivre={suivre} />)
-		expect(envois).toEqual([])
+		await jsdomWindow.monter(<SignInSucceeded suivre={follow} />)
+		expect(uploads).toEqual([])
 		expect(markMethod('a=1; mm-sign-in-mark=email')).toBe('email')
 		expect(markMethod('a=1')).toBeNull()
 		document.cookie = 'mm-sign-in-mark=; Max-Age=0; Path=/'
@@ -95,16 +95,16 @@ describe('connexion réussie (email ou Google), sur la page d’arrivée', () =>
 
 describe('page de connexion avec ?error=', () => {
 	test('session expirée : session_expired une fois, ni login_result ni auth_error (E12 reste vert)', async () => {
-		const { envois, suivre } = espion()
-		await fenetre.monter(<SignInPageEvents code="session-expiree" suivre={suivre} />)
-		expect(envois).toEqual([{ nom: 'session_expired', proprietes: { where: 'jwt_expire' } }])
+		const { envois: uploads, suivre: follow } = spy()
+		await jsdomWindow.monter(<SignInPageEvents code="session-expiree" suivre={follow} />)
+		expect(uploads).toEqual([{ nom: 'session_expired', proprietes: { where: 'jwt_expire' } }])
 	})
 
 	for (const code of GOOGLE_ERROR_CODES) {
 		test(`retour de Google en échec ${code} : login_result google et auth_error, une fois`, async () => {
-			const { envois, suivre } = espion()
-			await fenetre.monter(<SignInPageEvents code={code} suivre={suivre} />)
-			expect(envois).toEqual([
+			const { envois: uploads, suivre: follow } = spy()
+			await jsdomWindow.monter(<SignInPageEvents code={code} suivre={follow} />)
+			expect(uploads).toEqual([
 				{ nom: 'login_result', proprietes: { method: 'google', ok: false, code } },
 				{ nom: 'auth_error', proprietes: { code } },
 			])
@@ -112,50 +112,50 @@ describe('page de connexion avec ?error=', () => {
 	}
 
 	test('sans code, ou avec un code hors liste, rien ne part', async () => {
-		const { envois, suivre } = espion()
-		await fenetre.monter(<SignInPageEvents code={null} suivre={suivre} />)
-		await fenetre.monter(<SignInPageEvents code="texte-libre" suivre={suivre} />)
-		expect(envois).toEqual([])
+		const { envois: uploads, suivre: follow } = spy()
+		await jsdomWindow.monter(<SignInPageEvents code={null} suivre={follow} />)
+		await jsdomWindow.monter(<SignInPageEvents code="texte-libre" suivre={follow} />)
+		expect(uploads).toEqual([])
 	})
 })
 
 describe('inscription', () => {
 	test('signup_start part au premier envoi seulement, method email', async () => {
-		const { envois, suivre } = espion()
-		const zone = await fenetre.monter(
-			<SignUpForm action={(async () => ({ erreurs: { nom: 'Trop court.' } })) as never} suivre={suivre} />
+		const { envois: uploads, suivre: follow } = spy()
+		const zone = await jsdomWindow.monter(
+			<SignUpForm action={(async () => ({ erreurs: { nom: 'Trop court.' } })) as never} suivre={follow} />
 		)
-		await fenetre.cliquer(fenetre.bouton('S’inscrire'))
-		await fenetre.attendre(() => zone.querySelector('#erreur-nom')?.textContent)
-		await fenetre.cliquer(fenetre.bouton('S’inscrire'))
-		expect(envois).toEqual([{ nom: 'signup_start', proprietes: { method: 'email' } }])
+		await jsdomWindow.cliquer(jsdomWindow.bouton('S’inscrire'))
+		await jsdomWindow.attendre(() => zone.querySelector('#erreur-nom')?.textContent)
+		await jsdomWindow.cliquer(jsdomWindow.bouton('S’inscrire'))
+		expect(uploads).toEqual([{ nom: 'signup_start', proprietes: { method: 'email' } }])
 	})
 
 	test('un refus du serveur envoie auth_error avec son code', async () => {
-		const { envois, suivre } = espion()
-		const zone = await fenetre.monter(
-			<SignUpForm action={(async () => ({ echec: 'service-indisponible' })) as never} suivre={suivre} />
+		const { envois: uploads, suivre: follow } = spy()
+		const zone = await jsdomWindow.monter(
+			<SignUpForm action={(async () => ({ echec: 'service-indisponible' })) as never} suivre={follow} />
 		)
-		await fenetre.cliquer(fenetre.bouton('S’inscrire'))
-		await fenetre.attendre(() => zone.querySelector('[role="alert"] p'))
-		expect(envois).toContainEqual({ nom: 'auth_error', proprietes: { code: 'service-indisponible' } })
+		await jsdomWindow.cliquer(jsdomWindow.bouton('S’inscrire'))
+		await jsdomWindow.attendre(() => zone.querySelector('[role="alert"] p'))
+		expect(uploads).toContainEqual({ nom: 'auth_error', proprietes: { code: 'service-indisponible' } })
 	})
 
 	test('le bouton Google de l’inscription envoie signup_start google ; celui de la connexion, rien', async () => {
-		const { envois, suivre } = espion()
-		const zone = await fenetre.monter(
+		const { envois: uploads, suivre: follow } = spy()
+		const zone = await jsdomWindow.monter(
 			<div>
-				<GoogleLink adresse="#a" debutDInscription={true} className="x" suivre={suivre}>
+				<GoogleLink adresse="#a" debutDInscription={true} className="x" suivre={follow}>
 					a
 				</GoogleLink>
-				<GoogleLink adresse="#b" debutDInscription={false} className="x" suivre={suivre}>
+				<GoogleLink adresse="#b" debutDInscription={false} className="x" suivre={follow}>
 					b
 				</GoogleLink>
 			</div>
 		)
-		const liens = zone.querySelectorAll('a')
-		await fenetre.cliquer(liens[0] as HTMLElement)
-		await fenetre.cliquer(liens[1] as HTMLElement)
-		expect(envois).toEqual([{ nom: 'signup_start', proprietes: { method: 'google' } }])
+		const links = zone.querySelectorAll('a')
+		await jsdomWindow.cliquer(links[0] as HTMLElement)
+		await jsdomWindow.cliquer(links[1] as HTMLElement)
+		expect(uploads).toEqual([{ nom: 'signup_start', proprietes: { method: 'google' } }])
 	})
 })

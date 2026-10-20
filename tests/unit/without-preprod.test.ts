@@ -9,12 +9,12 @@ import path from 'node:path'
  * `preprod` of APP_ENV (tests/unit/env.test.ts). What this file proves is the removal itself.
  */
 
-const RACINE = path.resolve(import.meta.dir, '../..')
+const ROOT = path.resolve(import.meta.dir, '../..')
 
 /** The tracked files of these places that mention the pre-production, in any case, with or without the accent. */
 function mentions(...chemins: string[]): string[] {
 	const ran = Bun.spawnSync(['git', 'grep', '-il', '-e', 'preprod', '-e', 'préprod', '--', ...chemins], {
-		cwd: RACINE,
+		cwd: ROOT,
 	})
 	// Exit code 1: nothing found. Anything above is a failure of git itself.
 	if (ran.exitCode > 1) throw new Error(`git grep a échoué : ${ran.stderr.toString()}`)
@@ -30,7 +30,7 @@ describe('la préprod n’existe plus (ticket 232)', () => {
 		'.github/workflows/preprod-controles.yml',
 		'tests/fixtures/demarrage-preprod.ts',
 	])('%s est supprimé', chemin => {
-		expect(existsSync(path.join(RACINE, chemin))).toBe(false)
+		expect(existsSync(path.join(ROOT, chemin))).toBe(false)
 	})
 
 	test('rien n’en parle dans le code, les scripts, la CI, l’image, package.json et la liste des variables', () => {

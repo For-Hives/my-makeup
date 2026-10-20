@@ -14,34 +14,34 @@ const MESSAGE: ContactMessage = {
 	message: 'Bonjour.',
 }
 
-function banc(etatDeDepart: MailState | null, envoyer?: SendEmail) {
-	let etat: MailState | null = etatDeDepart
+function bench(etatDeDepart: MailState | null, envoyer?: SendEmail) {
+	let state: MailState | null = etatDeDepart
 	const mails: EmailToSend[] = []
-	const marques: string[] = []
-	const relecture: ResendStorage = {
-		lire: async () => (etat === null ? null : { message: MESSAGE, etatMail: etat }),
+	const marks: string[] = []
+	const review: ResendStorage = {
+		lire: async () => (state === null ? null : { message: MESSAGE, etatMail: state }),
 		reserver: async () => {
-			if (etat !== 'failed') return false
-			etat = 'pending'
+			if (state !== 'failed') return false
+			state = 'pending'
 			return true
 		},
 	}
-	const porte: SendEmail = envoyer ?? (async email => void mails.push(email))
+	const door: SendEmail = envoyer ?? (async email => void mails.push(email))
 	return {
 		mails,
-		marques,
-		etat: () => etat,
+		marques: marks,
+		etat: () => state,
 		appel: (id = 1) =>
 			resendMessageEmail(id, {
-				relecture,
+				relecture: review,
 				stockage: {
 					creer: async () => 1,
 					marquer: async (_id, nouvelEtat, statut) => {
-						etat = nouvelEtat
-						marques.push(`${nouvelEtat}${statut ? `:${statut}` : ''}`)
+						state = nouvelEtat
+						marks.push(`${nouvelEtat}${statut ? `:${statut}` : ''}`)
 					},
 				},
-				envoyer: porte,
+				envoyer: door,
 				destinataire: 'equipe@example.test',
 				journal: { info: () => {}, erreur: () => {} },
 			}),
@@ -50,7 +50,7 @@ function banc(etatDeDepart: MailState | null, envoyer?: SendEmail) {
 
 describe('Le renvoi de l’email d’un message de contact', () => {
 	test('un message en échec repart : un mail vers l’équipe, réponse vers la visiteuse, la ligne passe à envoyé et transmise', async () => {
-		const b = banc('failed')
+		const b = bench('failed')
 		expect(await b.appel()).toEqual({ ok: true, etatMail: 'envoye' })
 		expect(b.mails).toHaveLength(1)
 		expect(b.mails[0]).toMatchObject({ a: 'equipe@example.test', repondreA: 'renvoi@example.test' })
@@ -58,7 +58,7 @@ describe('Le renvoi de l’email d’un message de contact', () => {
 	})
 
 	test('deux clics en même temps : un seul mail, l’autre clic apprend que le message n’est plus en échec', async () => {
-		const b = banc('failed')
+		const b = bench('failed')
 		const [a, c] = await Promise.all([b.appel(), b.appel()])
 		expect([a.ok, c.ok].sort()).toEqual([false, true])
 		expect([a, c]).toContainEqual({ ok: false, code: 'pas-en-echec' })
@@ -66,28 +66,28 @@ describe('Le renvoi de l’email d’un message de contact', () => {
 	})
 
 	test('un message déjà envoyé, ou en cours d’envoi, ne repart pas', async () => {
-		for (const etat of ['sent', 'pending'] as const) {
-			const b = banc(etat)
+		for (const state of ['sent', 'pending'] as const) {
+			const b = bench(state)
 			expect(await b.appel()).toEqual({ ok: false, code: 'pas-en-echec' })
 			expect(b.mails).toEqual([])
 		}
 	})
 
 	test('un message qui n’existe pas : introuvable, aucun mail', async () => {
-		const b = banc(null)
+		const b = bench(null)
 		expect(await b.appel(99)).toEqual({ ok: false, code: 'introuvable' })
 		expect(b.mails).toEqual([])
 	})
 
 	test('le fournisseur échoue encore : le résultat dit « échec », la ligne reste en échec et se renvoie plus tard', async () => {
-		let appels = 0
-		const b = banc('failed', async () => {
-			appels += 1
-			if (appels === 1) throw new EmailSendFailed()
+		let calls = 0
+		const b = bench('failed', async () => {
+			calls += 1
+			if (calls === 1) throw new EmailSendFailed()
 		})
 		expect(await b.appel()).toEqual({ ok: true, etatMail: 'echec' })
 		expect(b.etat()).toBe('failed')
 		expect(await b.appel()).toEqual({ ok: true, etatMail: 'envoye' })
-		expect(appels).toBe(2)
+		expect(calls).toBe(2)
 	})
 })

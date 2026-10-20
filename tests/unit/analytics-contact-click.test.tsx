@@ -15,57 +15,57 @@ import { type PublicProfile, publicProfileOf } from '@/services/public/profiles'
  * the artist herself, nor from her space, nor from a reminder link.
  */
 
-const RACINE = path.resolve(import.meta.dir, '../..')
-const ORIGINE = 'https://exemple.test'
-const ANONYME = { recherche: '', referent: '', origine: ORIGINE }
+const ROOT = path.resolve(import.meta.dir, '../..')
+const ORIGIN = 'https://exemple.test'
+const ANONYMOUS = { recherche: '', referent: '', origine: ORIGIN }
 
 /** A production browser with a stub `window.umami`: what the events handed to it are kept. */
-function navigateur() {
-	const recus: Array<{ nom: string; donnees: Record<string, string | number | boolean> }> = []
-	const fenetre: MeasuredWindow = {
+function browser() {
+	const received: Array<{ nom: string; donnees: Record<string, string | number | boolean> }> = []
+	const jsdomWindow: MeasuredWindow = {
 		navigator: { webdriver: false },
-		umami: { track: (nom, donnees) => void recus.push({ nom, donnees }) },
+		umami: { track: (nom, donnees) => void received.push({ nom, donnees }) },
 	}
-	const execution: Execution = { fenetre, production: true }
-	return { recus, suivre: createTrack(() => execution) }
+	const execution: Execution = { fenetre: jsdomWindow, production: true }
+	return { recus: received, suivre: createTrack(() => execution) }
 }
 
 describe('U84 : pas de contact_click pour la propriétaire, ni depuis son espace, ni par une relance', () => {
 	test('une visiteuse quelconque est comptée', () => {
-		expect(clickToMeasure({ pid: 12, pidDeLaVisiteuse: null, ...ANONYME })).toBe(true)
-		expect(clickToMeasure({ pid: 12, pidDeLaVisiteuse: 99, ...ANONYME })).toBe(true)
-		expect(clickToMeasure({ pid: 'v3-4', pidDeLaVisiteuse: 12, ...ANONYME })).toBe(true)
+		expect(clickToMeasure({ pid: 12, pidDeLaVisiteuse: null, ...ANONYMOUS })).toBe(true)
+		expect(clickToMeasure({ pid: 12, pidDeLaVisiteuse: 99, ...ANONYMOUS })).toBe(true)
+		expect(clickToMeasure({ pid: 'v3-4', pidDeLaVisiteuse: 12, ...ANONYMOUS })).toBe(true)
 	})
 
 	test('la propriétaire du profil ne l’est pas, pour un profil de l’ancien site comme pour un neuf', () => {
-		expect(clickToMeasure({ pid: 12, pidDeLaVisiteuse: 12, ...ANONYME })).toBe(false)
-		expect(clickToMeasure({ pid: 'v3-4', pidDeLaVisiteuse: 'v3-4', ...ANONYME })).toBe(false)
+		expect(clickToMeasure({ pid: 12, pidDeLaVisiteuse: 12, ...ANONYMOUS })).toBe(false)
+		expect(clickToMeasure({ pid: 'v3-4', pidDeLaVisiteuse: 'v3-4', ...ANONYMOUS })).toBe(false)
 	})
 
 	test('venir de son espace (/auth/...) : pas compté ; venir d’ailleurs : compté', () => {
-		const depuis = (referent: string) => clickToMeasure({ pid: 1, pidDeLaVisiteuse: null, ...ANONYME, referent })
-		expect(depuis(`${ORIGINE}/auth/profil`)).toBe(false)
-		expect(depuis(`${ORIGINE}/auth/apercu-profil`)).toBe(false)
-		expect(depuis(`${ORIGINE}/auth`)).toBe(false)
-		expect(depuis(`${ORIGINE}/search?q=annecy`)).toBe(true)
-		expect(depuis(`${ORIGINE}/authentique`)).toBe(true)
+		const since = (referent: string) => clickToMeasure({ pid: 1, pidDeLaVisiteuse: null, ...ANONYMOUS, referent })
+		expect(since(`${ORIGIN}/auth/profil`)).toBe(false)
+		expect(since(`${ORIGIN}/auth/apercu-profil`)).toBe(false)
+		expect(since(`${ORIGIN}/auth`)).toBe(false)
+		expect(since(`${ORIGIN}/search?q=annecy`)).toBe(true)
+		expect(since(`${ORIGIN}/authentique`)).toBe(true)
 		// Another site with the same path is not her space.
-		expect(depuis('https://autre.example.test/auth/profil')).toBe(true)
-		expect(depuis('')).toBe(true)
-		expect(depuis('pas une adresse')).toBe(true)
+		expect(since('https://autre.example.test/auth/profil')).toBe(true)
+		expect(since('')).toBe(true)
+		expect(since('pas une adresse')).toBe(true)
 	})
 
 	test('utm_campaign=relance : pas compté ; une autre campagne : compté', () => {
-		const avec = (recherche: string) => clickToMeasure({ pid: 1, pidDeLaVisiteuse: null, ...ANONYME, recherche })
-		expect(avec('?utm_campaign=relance')).toBe(false)
-		expect(avec('?utm_source=email&utm_campaign=relance&utm_medium=mail')).toBe(false)
-		expect(avec('?utm_campaign=Relance')).toBe(false)
-		expect(avec('?utm_campaign=ete')).toBe(true)
-		expect(avec('?utm_source=relance')).toBe(true)
+		const withValue = (recherche: string) => clickToMeasure({ pid: 1, pidDeLaVisiteuse: null, ...ANONYMOUS, recherche })
+		expect(withValue('?utm_campaign=relance')).toBe(false)
+		expect(withValue('?utm_source=email&utm_campaign=relance&utm_medium=mail')).toBe(false)
+		expect(withValue('?utm_campaign=Relance')).toBe(false)
+		expect(withValue('?utm_campaign=ete')).toBe(true)
+		expect(withValue('?utm_source=relance')).toBe(true)
 	})
 
 	test('un profil sans identifiant connu n’émet rien', () => {
-		expect(clickToMeasure({ pid: null, pidDeLaVisiteuse: null, ...ANONYME })).toBe(false)
+		expect(clickToMeasure({ pid: null, pidDeLaVisiteuse: null, ...ANONYMOUS })).toBe(false)
 	})
 })
 
@@ -79,65 +79,65 @@ describe('un clic de contact émet un événement, avec le bon canal', () => {
 		'youtube',
 		'website',
 	] as const)('%s : un événement, le profil et le canal', async canal => {
-		const { recus, suivre } = navigateur()
-		const emis = await measureContactClick({
+		const { recus: received, suivre: follow } = browser()
+		const emitted = await measureContactClick({
 			pid: 12,
 			canal,
-			lieu: ANONYME,
+			lieu: ANONYMOUS,
 			monPid: Promise.resolve(null),
-			suivre,
+			suivre: follow,
 		})
-		expect(emis).toBe(true)
-		expect(recus).toEqual([{ nom: 'contact_click', donnees: { pid: 12, channel: canal } }])
+		expect(emitted).toBe(true)
+		expect(received).toEqual([{ nom: 'contact_click', donnees: { pid: 12, channel: canal } }])
 	})
 
 	test('la propriétaire, son espace, une relance : rien n’arrive à Umami', async () => {
-		const { recus, suivre } = navigateur()
-		const clic = { pid: 12 as Pid, canal: 'phone' as const, suivre }
-		await measureContactClick({ ...clic, lieu: ANONYME, monPid: Promise.resolve(12) })
+		const { recus: received, suivre: follow } = browser()
+		const click = { pid: 12 as Pid, canal: 'phone' as const, suivre: follow }
+		await measureContactClick({ ...click, lieu: ANONYMOUS, monPid: Promise.resolve(12) })
 		await measureContactClick({
-			...clic,
-			lieu: { ...ANONYME, referent: `${ORIGINE}/auth/profil` },
+			...click,
+			lieu: { ...ANONYMOUS, referent: `${ORIGIN}/auth/profil` },
 			monPid: Promise.resolve(null),
 		})
 		await measureContactClick({
-			...clic,
-			lieu: { ...ANONYME, recherche: '?utm_campaign=relance' },
+			...click,
+			lieu: { ...ANONYMOUS, recherche: '?utm_campaign=relance' },
 			monPid: Promise.resolve(null),
 		})
-		expect(recus).toEqual([])
+		expect(received).toEqual([])
 	})
 
 	test('la réponse du serveur sur la visiteuse est attendue ; si elle échoue, le clic est compté', async () => {
-		const { recus, suivre } = navigateur()
-		let repondre: (pid: Pid | null) => void = () => undefined
-		const enRoute = new Promise<Pid | null>(resolve => {
-			repondre = resolve
+		const { recus: received, suivre: follow } = browser()
+		let respond: (pid: Pid | null) => void = () => undefined
+		const inRoute = new Promise<Pid | null>(resolve => {
+			respond = resolve
 		})
-		const clic = measureContactClick({ pid: 12, canal: 'email', lieu: ANONYME, monPid: enRoute, suivre })
+		const click = measureContactClick({ pid: 12, canal: 'email', lieu: ANONYMOUS, monPid: inRoute, suivre: follow })
 		await Promise.resolve()
-		expect(recus).toEqual([])
-		repondre(12)
-		expect(await clic).toBe(false)
-		expect(recus).toEqual([])
+		expect(received).toEqual([])
+		respond(12)
+		expect(await click).toBe(false)
+		expect(received).toEqual([])
 
-		const panne = await measureContactClick({
+		const failure = await measureContactClick({
 			pid: 12,
 			canal: 'email',
-			lieu: ANONYME,
+			lieu: ANONYMOUS,
 			monPid: Promise.reject(new Error('réseau')),
-			suivre,
+			suivre: follow,
 		})
-		expect(panne).toBe(true)
-		expect(recus).toHaveLength(1)
+		expect(failure).toBe(true)
+		expect(received).toHaveLength(1)
 	})
 
 	test('sans Umami, en développement ou dans un navigateur automatisé : rien, et aucune erreur', async () => {
-		const clic = { pid: 12 as Pid, canal: 'phone' as const, lieu: ANONYME, monPid: Promise.resolve(null) }
-		const sans = createTrack(() => ({ fenetre: {}, production: true }))
+		const click = { pid: 12 as Pid, canal: 'phone' as const, lieu: ANONYMOUS, monPid: Promise.resolve(null) }
+		const without = createTrack(() => ({ fenetre: {}, production: true }))
 		const dev = createTrack(() => ({ fenetre: { umami: { track: () => 1 } }, production: false }))
-		expect(await measureContactClick({ ...clic, suivre: sans })).toBe(false)
-		expect(await measureContactClick({ ...clic, suivre: dev })).toBe(false)
+		expect(await measureContactClick({ ...click, suivre: without })).toBe(false)
+		expect(await measureContactClick({ ...click, suivre: dev })).toBe(false)
 	})
 })
 
@@ -153,7 +153,7 @@ describe('pid du profil', () => {
 
 describe('la page du profil', () => {
 	const base = { slug: 'lea-exemple', prenom: 'Léa', nom: 'Exemple', statut: 'publie', publiable: true } as const
-	const profil = (
+	const profile = (
 		surcharge: Partial<Parameters<typeof publicProfileOf>[0]>,
 		coordonnees: PublicProfile['coordonnees']
 	) =>
@@ -161,32 +161,32 @@ describe('la page du profil', () => {
 			{ ...base, id: 8, strapiId: 77, networks: { instagram: 'https://instagram.com/lea.exemple' }, ...surcharge },
 			{ photo: null, galerie: [], coordonnees }
 		)
-	const rendre = (p: PublicProfile, mesure?: boolean) =>
+	const renderNow = (p: PublicProfile, mesure?: boolean) =>
 		renderToStaticMarkup(<ProfileView profil={p} {...(mesure === undefined ? {} : { mesure })} />)
 
 	test('le profil porte son pid', () => {
-		expect(profil({}, null).pid).toBe(77)
-		expect(profil({ strapiId: null }, null).pid).toBe('v3-8')
+		expect(profile({}, null).pid).toBe(77)
+		expect(profile({ strapiId: null }, null).pid).toBe('v3-8')
 	})
 
 	test('un lien de contact par canal publié, avec son adresse, dans le HTML du serveur', () => {
-		const html = rendre(profil({}, { telephone: '06 12 34 56 78', email: 'lea@example.test' }))
+		const html = renderNow(profile({}, { telephone: '06 12 34 56 78', email: 'lea@example.test' }))
 		expect(html).toContain('href="tel:0612345678"')
 		expect(html).toContain('href="mailto:lea@example.test"')
 		expect(html).toContain('href="https://instagram.com/lea.exemple"')
 	})
 
 	test('un profil sans contact public : ni lien de téléphone ni d’email, et aucune section de contacts', () => {
-		const html = rendre(profil({ networks: {} }, null))
+		const html = renderNow(profile({ networks: {} }, null))
 		expect(html).not.toContain('tel:')
 		expect(html).not.toContain('mailto:')
 		expect(html).not.toContain('Réseaux sociaux &amp; contacts')
 	})
 
 	test('l’aperçu de sa propre page garde les liens, et dit qu’il ne les compte pas', () => {
-		const p = profil({}, { telephone: '06 12 34 56 78', email: null })
-		expect(rendre(p, false)).toContain('href="tel:0612345678"')
-		const apercu = readFileSync(path.join(RACINE, 'src/app/(front)/(dashboard)/auth/apercu-profil/page.tsx'), 'utf8')
-		expect(apercu).toContain('<ProfileView profil={preview.profil} mesure={false} />')
+		const p = profile({}, { telephone: '06 12 34 56 78', email: null })
+		expect(renderNow(p, false)).toContain('href="tel:0612345678"')
+		const preview = readFileSync(path.join(ROOT, 'src/app/(front)/(dashboard)/auth/apercu-profil/page.tsx'), 'utf8')
+		expect(preview).toContain('<ProfileView profil={preview.profil} mesure={false} />')
 	})
 })

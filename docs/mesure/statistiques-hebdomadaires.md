@@ -64,6 +64,6 @@ Pas de zone pilote (abandonnée le 13/10/2026). Les vues de profil et les recher
 
 ## Garde-fous
 
-- Test unitaire (`tests/unit/stats-hebdo.test.ts`) : période, jeton, réponses, comptes sur des profils fictifs, aucune donnée personnelle, schéma et exemple.
-- Ticket 169 : `tests/unit/stats-hebdo.test.ts` (comptes, centile, clés facultatives) et `tests/integration/stats-hebdo-contact-connexions.test.ts` (un message par état, connexions de durée connue, hash du jeu, baisse après la première connexion héritée, aucun `@`, IP ou nom).
+- Test unitaire (`tests/unit/weekly-stats.test.ts`) : période, jeton, réponses, comptes sur des profils fictifs, aucune donnée personnelle, schéma et exemple.
+- Ticket 169 : `tests/unit/weekly-stats.test.ts` (comptes, centile, clés facultatives) et `tests/integration/stats-hebdo-contact-connexions.test.ts` (un message par état, connexions de durée connue, hash du jeu, baisse après la première connexion héritée, aucun `@`, IP ou nom).
 - Test d'intégration sur le jeu du banc (`tests/integration/stats-hebdo.test.ts`) : nombres exacts tirés de ce que le jeu promet de chaque profil, aucun champ avec « @ », 9 chiffres ou un nom du jeu (hors la liste des adresses), le jeton refusé ailleurs.

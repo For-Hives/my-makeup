@@ -7,15 +7,15 @@ import { type DomWindow, openWindow, SET_NAMES } from '../support/dom-react'
 // The component bench, tested on components that exist only here: no page of the site is involved.
 
 /** Read while bun loads this file, before any window opens: what the preload left behind. */
-const AU_CHARGEMENT = { document: typeof document, window: typeof window }
+const LOADING = { document: typeof document, window: typeof window }
 
 /** Both ways out to the network are watched from here to the end of the file: none may be taken. */
-const sorties = [spyOn(globalThis, 'fetch'), spyOn(net.Socket.prototype, 'connect')]
+const outputs = [spyOn(globalThis, 'fetch'), spyOn(net.Socket.prototype, 'connect')]
 afterAll(() => {
-	for (const sortie of sorties) sortie.mockRestore()
+	for (const output of outputs) output.mockRestore()
 })
 
-function Compteur() {
+function Counter() {
 	const [clics, setClics] = useState(0)
 	return (
 		<section>
@@ -28,32 +28,32 @@ function Compteur() {
 }
 
 function Presentation() {
-	const [prenom, setPrenom] = useState('')
-	const [specialite, setSpecialite] = useState('mariee')
-	const [disponible, setDisponible] = useState(false)
+	const [firstName, setFirstName] = useState('')
+	const [specialty, setSpecialty] = useState('mariee')
+	const [available, setAvailable] = useState(false)
 	return (
 		<section>
 			<label>
 				Prénom
-				<input value={prenom} onChange={event => setPrenom(event.target.value)} />
+				<input value={firstName} onChange={event => setFirstName(event.target.value)} />
 			</label>
 			<label>
 				Spécialité
-				<select value={specialite} onChange={event => setSpecialite(event.target.value)}>
+				<select value={specialty} onChange={event => setSpecialty(event.target.value)}>
 					<option value="mariee">Mariée</option>
 					<option value="cinema">Cinéma</option>
 				</select>
 			</label>
 			<label>
-				<input type="checkbox" checked={disponible} onChange={event => setDisponible(event.target.checked)} />
+				<input type="checkbox" checked={available} onChange={event => setAvailable(event.target.checked)} />
 				Disponible
 			</label>
-			<p>{`${prenom || 'Sans prénom'}, ${specialite}${disponible ? ', disponible' : ''}`}</p>
+			<p>{`${firstName || 'Sans prénom'}, ${specialty}${available ? ', disponible' : ''}`}</p>
 		</section>
 	)
 }
 
-function Identite({ enregistrer }: { enregistrer: (valeurs: { prenom: string }) => void }) {
+function Identity({ enregistrer }: { enregistrer: (valeurs: { prenom: string }) => void }) {
 	const { formState, handleSubmit, register, reset } = useForm<{ prenom: string }>({ defaultValues: { prenom: '' } })
 	return (
 		<form onSubmit={handleSubmit(enregistrer)}>
@@ -72,144 +72,145 @@ function Identite({ enregistrer }: { enregistrer: (valeurs: { prenom: string }) 
 	)
 }
 
-function Chargement({ charger }: { charger: () => Promise<string> }) {
-	const [ville, setVille] = useState<string>()
+function Loading({ charger: load }: { charger: () => Promise<string> }) {
+	const [city, setCity] = useState<string>()
 	return (
 		<section>
-			<button type="button" onClick={() => void charger().then(setVille)}>
+			<button type="button" onClick={() => void load().then(setCity)}>
 				Charger
 			</button>
-			{ville && <p data-ville>{ville}</p>}
+			{city && <p data-ville>{city}</p>}
 		</section>
 	)
 }
 
-function Temoin({ journal }: { journal: string[] }) {
+function Sentinel({ journal: log }: { journal: string[] }) {
 	useEffect(() => {
-		journal.push('monté')
+		log.push('monté')
 		return () => {
-			journal.push('démonté')
+			log.push('démonté')
 		}
-	}, [journal])
+	}, [log])
 	return <p>Témoin</p>
 }
 
 /** The window of the first block, kept to be asked once its tests are over. */
-let fenetreRendue: DomWindow | undefined
+let renderedWindow: DomWindow | undefined
 
 describe('the component bench', () => {
-	const fenetre = openWindow({ noms: ['localStorage'] })
-	fenetreRendue = fenetre
+	const jsdomWindow = openWindow({ noms: ['localStorage'] })
+	renderedWindow = jsdomWindow
 
 	test('renders a component, clicks, and reads the updated text', async () => {
-		const zone = await fenetre.monter(<Compteur />)
+		const zone = await jsdomWindow.monter(<Counter />)
 		expect(zone.querySelector('p')?.textContent).toBe('Aucun clic')
 
-		await fenetre.cliquer(fenetre.bouton('Ajouter'))
+		await jsdomWindow.cliquer(jsdomWindow.bouton('Ajouter'))
 		expect(zone.querySelector('p')?.textContent).toBe('1 clic')
 
-		await fenetre.cliquer(fenetre.bouton('Ajouter'))
+		await jsdomWindow.cliquer(jsdomWindow.bouton('Ajouter'))
 		expect(zone.querySelector('p')?.textContent).toBe('2 clics')
 	})
 
 	test('each test starts from an empty page', () => {
-		expect(fenetre.w.document.body.childElementCount).toBe(0)
+		expect(jsdomWindow.w.document.body.childElementCount).toBe(0)
 	})
 
 	test('typing in a field reaches onChange: React was loaded with a window', async () => {
-		const zone = await fenetre.monter(<Presentation />)
+		const zone = await jsdomWindow.monter(<Presentation />)
 
-		await fenetre.saisir(fenetre.champ('Prénom'), 'Léa')
+		await jsdomWindow.saisir(jsdomWindow.champ('Prénom'), 'Léa')
 		expect(zone.querySelector('p')?.textContent).toBe('Léa, mariee')
-		expect(fenetre.w.document.activeElement).toBe(fenetre.champ('Prénom'))
+		expect(jsdomWindow.w.document.activeElement).toBe(jsdomWindow.champ('Prénom'))
 
 		// The label of a list is its own words, not those of its options.
-		await fenetre.saisir(fenetre.champ('Spécialité'), 'cinema')
+		await jsdomWindow.saisir(jsdomWindow.champ('Spécialité'), 'cinema')
 		expect(zone.querySelector('p')?.textContent).toBe('Léa, cinema')
 
 		// A checkbox is clicked, not typed in.
-		await fenetre.cliquer(fenetre.champ('Disponible'))
+		await jsdomWindow.cliquer(jsdomWindow.champ('Disponible'))
 		expect(zone.querySelector('p')?.textContent).toBe('Léa, cinema, disponible')
 	})
 
 	test('a form of react-hook-form refuses, accepts, and resets the native form', async () => {
-		const recus: { prenom: string }[] = []
-		const zone = await fenetre.monter(<Identite enregistrer={valeurs => recus.push(valeurs)} />)
+		const received: { prenom: string }[] = []
+		const zone = await jsdomWindow.monter(<Identity enregistrer={valeurs => received.push(valeurs)} />)
 
-		await fenetre.cliquer(fenetre.bouton('Enregistrer'))
+		await jsdomWindow.cliquer(jsdomWindow.bouton('Enregistrer'))
 		expect(zone.querySelector('[role="alert"]')?.textContent).toBe('Le prénom est obligatoire')
-		expect(recus).toEqual([])
+		expect(received).toEqual([])
 
-		await fenetre.saisir(fenetre.champ('Prénom'), 'Léa')
-		await fenetre.cliquer(fenetre.bouton('Enregistrer'))
+		await jsdomWindow.saisir(jsdomWindow.champ('Prénom'), 'Léa')
+		await jsdomWindow.cliquer(jsdomWindow.bouton('Enregistrer'))
 		expect(zone.querySelector('[role="alert"]')).toBeNull()
-		expect(recus).toEqual([{ prenom: 'Léa' }])
+		expect(received).toEqual([{ prenom: 'Léa' }])
 
 		// Loaded without a window, react-hook-form would leave the native form alone.
-		await fenetre.saisir(fenetre.champ('Note'), 'autre chose')
-		await fenetre.cliquer(fenetre.bouton('Annuler'))
-		expect(fenetre.champ('Note').value).toBe('brouillon')
-		expect(fenetre.champ('Prénom').value).toBe('')
+		await jsdomWindow.saisir(jsdomWindow.champ('Note'), 'autre chose')
+		await jsdomWindow.cliquer(jsdomWindow.bouton('Annuler'))
+		expect(jsdomWindow.champ('Note').value).toBe('brouillon')
+		expect(jsdomWindow.champ('Prénom').value).toBe('')
 	})
 
 	test('waits for what a promise brings, without a fixed delay', async () => {
-		let repondre: (ville: string) => void = () => {}
-		const charger = () => new Promise<string>(resolve => (repondre = resolve))
-		const zone = await fenetre.monter(<Chargement charger={charger} />)
+		let respond: (ville: string) => void = () => {}
+		const load = () => new Promise<string>(resolve => (respond = resolve))
+		const zone = await jsdomWindow.monter(<Loading charger={load} />)
 
-		await fenetre.cliquer(fenetre.bouton('Charger'))
+		await jsdomWindow.cliquer(jsdomWindow.bouton('Charger'))
 		expect(zone.querySelector('[data-ville]')).toBeNull()
 
-		repondre('Annecy')
-		const ville = await fenetre.attendre(() => zone.querySelector('[data-ville]'))
-		expect(ville.textContent).toBe('Annecy')
+		respond('Annecy')
+		const city = await jsdomWindow.attendre(() => zone.querySelector('[data-ville]'))
+		expect(city.textContent).toBe('Annecy')
 
-		await expect(fenetre.attendre(() => zone.querySelector('[data-absent]'), { max: 20 })).rejects.toThrow(
+		await expect(jsdomWindow.attendre(() => zone.querySelector('[data-absent]'), { max: 20 })).rejects.toThrow(
 			'Attente dépassée : rien au bout de 20 ms.'
 		)
 	})
 
 	test('unmounting is a real unmount: the effects are cleaned up', async () => {
-		const journal: string[] = []
-		await fenetre.monter(<Temoin journal={journal} />)
-		expect(journal).toEqual(['monté'])
+		const log: string[] = []
+		await jsdomWindow.monter(<Sentinel journal={log} />)
+		expect(log).toEqual(['monté'])
 
-		await fenetre.demonter()
-		expect(journal).toEqual(['monté', 'démonté'])
-		expect(fenetre.w.document.body.childElementCount).toBe(0)
+		await jsdomWindow.demonter()
+		expect(log).toEqual(['monté', 'démonté'])
+		expect(jsdomWindow.w.document.body.childElementCount).toBe(0)
 	})
 
 	test('a button or a field is found by its name, or the error lists what the page offers', async () => {
-		await fenetre.monter(<Identite enregistrer={() => {}} />)
+		await jsdomWindow.monter(<Identity enregistrer={() => {}} />)
 
-		expect(fenetre.bouton(/^Enreg/).textContent).toBe('Enregistrer')
-		expect(() => fenetre.bouton('Supprimer')).toThrow(
+		expect(jsdomWindow.bouton(/^Enreg/).textContent).toBe('Enregistrer')
+		expect(() => jsdomWindow.bouton('Supprimer')).toThrow(
 			'Aucun bouton ne répond à Supprimer. Dans la page : « Enregistrer », « Annuler ».'
 		)
-		expect(() => fenetre.bouton(/e/)).toThrow('2 boutons répondent à /e/.')
-		expect(() => fenetre.champ('Nom')).toThrow('Aucun champ ne répond à Nom. Dans la page : « Prénom », « Note ».')
-		await expect(fenetre.saisir(fenetre.bouton('Annuler'), 'x')).rejects.toThrow(
+		expect(() => jsdomWindow.bouton(/e/)).toThrow('2 boutons répondent à /e/.')
+		expect(() => jsdomWindow.champ('Nom')).toThrow('Aucun champ ne répond à Nom. Dans la page : « Prénom », « Note ».')
+		await expect(jsdomWindow.saisir(jsdomWindow.bouton('Annuler'), 'x')).rejects.toThrow(
 			'On ne saisit que dans un champ (input, textarea, select), pas dans <button>.'
 		)
 	})
 
 	test('a test file sees the window under the names of a browser', () => {
-		const globaux = globalThis as unknown as Record<string, unknown>
-		for (const nom of [...SET_NAMES, 'localStorage']) expect(globaux[nom], nom).toBe(Reflect.get(fenetre.w, nom))
-		expect(new FormData(fenetre.w.document.createElement('form'))).toBeInstanceOf(fenetre.w.FormData)
+		const globals = globalThis as unknown as Record<string, unknown>
+		for (const name of [...SET_NAMES, 'localStorage'])
+			expect(globals[name], name).toBe(Reflect.get(jsdomWindow.w, name))
+		expect(new FormData(jsdomWindow.w.document.createElement('form'))).toBeInstanceOf(jsdomWindow.w.FormData)
 		localStorage.setItem('essai', 'oui')
-		expect(fenetre.w.localStorage.getItem('essai')).toBe('oui')
+		expect(jsdomWindow.w.localStorage.getItem('essai')).toBe('oui')
 
 		// What reaches the network or the clock stays bun's, and the window offers no fetch of its own.
-		for (const nom of ['URL', 'AbortController', 'setTimeout']) {
-			expect(globaux[nom], nom).not.toBe(Reflect.get(fenetre.w, nom))
+		for (const name of ['URL', 'AbortController', 'setTimeout']) {
+			expect(globals[name], name).not.toBe(Reflect.get(jsdomWindow.w, name))
 		}
-		expect(Reflect.get(fenetre.w, 'fetch')).toBeUndefined()
+		expect(Reflect.get(jsdomWindow.w, 'fetch')).toBeUndefined()
 	})
 
 	test('the window has no way out to the network', () => {
-		expect(() => new fenetre.w.XMLHttpRequest()).toThrow("Le banc de composants n'a pas de réseau : XMLHttpRequest")
-		expect(() => new fenetre.w.WebSocket('ws://localhost/')).toThrow(
+		expect(() => new jsdomWindow.w.XMLHttpRequest()).toThrow("Le banc de composants n'a pas de réseau : XMLHttpRequest")
+		expect(() => new jsdomWindow.w.WebSocket('ws://localhost/')).toThrow(
 			"Le banc de composants n'a pas de réseau : WebSocket"
 		)
 	})
@@ -217,23 +218,23 @@ describe('the component bench', () => {
 
 describe('around the window', () => {
 	test('the preload left no window behind', () => {
-		expect(AU_CHARGEMENT).toEqual({ document: 'undefined', window: 'undefined' })
+		expect(LOADING).toEqual({ document: 'undefined', window: 'undefined' })
 	})
 
 	test('the window is given back after its last test', () => {
-		for (const nom of ['window', 'document', 'HTMLElement', 'localStorage', 'IS_REACT_ACT_ENVIRONMENT']) {
-			expect(nom in globalThis, nom).toBe(false)
+		for (const name of ['window', 'document', 'HTMLElement', 'localStorage', 'IS_REACT_ACT_ENVIRONMENT']) {
+			expect(name in globalThis, name).toBe(false)
 		}
 		expect(navigator.userAgent).toStartWith('Bun/')
 		expect(new FormData()).toBeInstanceOf(FormData)
 	})
 
 	test('a helper called outside the tests of its window says so', async () => {
-		expect(() => fenetreRendue?.w).toThrow("La fenêtre n'est ouverte que pendant les tests")
-		await expect(fenetreRendue?.monter(<Compteur />)).rejects.toThrow("La fenêtre n'est ouverte que pendant les tests")
+		expect(() => renderedWindow?.w).toThrow("La fenêtre n'est ouverte que pendant les tests")
+		await expect(renderedWindow?.monter(<Counter />)).rejects.toThrow("La fenêtre n'est ouverte que pendant les tests")
 	})
 
 	test('nothing went out: no fetch, no socket, from the opening of the window to its end', () => {
-		for (const sortie of sorties) expect(sortie).not.toHaveBeenCalled()
+		for (const output of outputs) expect(output).not.toHaveBeenCalled()
 	})
 })

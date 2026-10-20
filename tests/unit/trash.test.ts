@@ -22,7 +22,7 @@ import { type CommandS3, deletionsWithoutTrash } from '../support/s3-spy'
  */
 
 /** A storage in memory that writes down every operation, and fails on demand. */
-class StockageEnMemoire implements ObjectStorage {
+class StorageInMemory implements ObjectStorage {
 	readonly objets = new Map<string, Uint8Array>()
 	readonly operations: string[] = []
 	/** An operation for which this is true fails, as when the storage is down. */
@@ -31,7 +31,7 @@ class StockageEnMemoire implements ObjectStorage {
 	copieTronquee: (source: string) => boolean = () => false
 
 	constructor(objets: Record<string, string> = {}) {
-		for (const [cle, contenu] of Object.entries(objets)) this.objets.set(cle, new TextEncoder().encode(contenu))
+		for (const [key, content] of Object.entries(objets)) this.objets.set(key, new TextEncoder().encode(content))
 	}
 
 	private noter(operation: string) {
@@ -46,9 +46,9 @@ class StockageEnMemoire implements ObjectStorage {
 
 	async copier(source: string, destination: string) {
 		this.noter(`copier ${source} ${destination}`)
-		const octets = this.objets.get(source)
-		if (!octets) throw new Error('NoSuchKey')
-		this.objets.set(destination, this.copieTronquee(source) ? octets.slice(0, -1) : octets.slice())
+		const bytes = this.objets.get(source)
+		if (!bytes) throw new Error('NoSuchKey')
+		this.objets.set(destination, this.copieTronquee(source) ? bytes.slice(0, -1) : bytes.slice())
 	}
 
 	async retirer(cle: string) {
@@ -57,8 +57,8 @@ class StockageEnMemoire implements ObjectStorage {
 	}
 
 	contenu(cle: string): string | undefined {
-		const octets = this.objets.get(cle)
-		return octets && new TextDecoder().decode(octets)
+		const bytes = this.objets.get(cle)
+		return bytes && new TextDecoder().decode(bytes)
 	}
 
 	/** The operations of one kind, in order. */
@@ -100,32 +100,28 @@ describe('Les clés d’un média : l’original et chaque taille dérivée, dan
 		expect(trashKey('media/a.png')).toBe('deleted/media/a.png')
 		expect(trashKey('a.png')).toBe('deleted/a.png')
 		expect(isInTrash('deleted/media/a.png')).toBe(true)
-		for (const cle of ['media/a.png', 'deleted.png', 'media/deleted/a.png']) expect(isInTrash(cle)).toBe(false)
+		for (const key of ['media/a.png', 'deleted.png', 'media/deleted/a.png']) expect(isInTrash(key)).toBe(false)
 	})
 })
 
 describe('Un objet passe à la corbeille : copié, vérifié, puis retiré de sa place', () => {
 	test('chaque objet passe sous deleted/, octet pour octet ; rien d’autre ne bouge', async () => {
-		const stockage = new StockageEnMemoire({ 'media/a.png': 'AAAA', 'media/a-300.png': 'aa', 'media/b.png': 'BB' })
+		const storage = new StorageInMemory({ 'media/a.png': 'AAAA', 'media/a-300.png': 'aa', 'media/b.png': 'BB' })
 
-		const bilan = await moveToTrash(stockage, ['media/a.png', 'media/a-300.png'])
+		const summary = await moveToTrash(storage, ['media/a.png', 'media/a-300.png'])
 
-		expect(bilan).toEqual({ deplacees: ['media/a.png', 'media/a-300.png'], absentes: [], dejaEnCorbeille: [] })
-		expect([...stockage.objets.keys()].sort()).toEqual([
-			'deleted/media/a-300.png',
-			'deleted/media/a.png',
-			'media/b.png',
-		])
-		expect(stockage.contenu('deleted/media/a.png')).toBe('AAAA')
-		expect(stockage.contenu('deleted/media/a-300.png')).toBe('aa')
+		expect(summary).toEqual({ deplacees: ['media/a.png', 'media/a-300.png'], absentes: [], dejaEnCorbeille: [] })
+		expect([...storage.objets.keys()].sort()).toEqual(['deleted/media/a-300.png', 'deleted/media/a.png', 'media/b.png'])
+		expect(storage.contenu('deleted/media/a.png')).toBe('AAAA')
+		expect(storage.contenu('deleted/media/a-300.png')).toBe('aa')
 	})
 
 	test('l’original n’est retiré qu’après la copie et la vérification de sa taille', async () => {
-		const stockage = new StockageEnMemoire({ 'media/a.png': 'AAAA' })
+		const storage = new StorageInMemory({ 'media/a.png': 'AAAA' })
 
-		await moveToTrash(stockage, ['media/a.png'])
+		await moveToTrash(storage, ['media/a.png'])
 
-		expect(stockage.operations).toEqual([
+		expect(storage.operations).toEqual([
 			'taille media/a.png',
 			'copier media/a.png deleted/media/a.png',
 			'taille deleted/media/a.png',
@@ -134,190 +130,187 @@ describe('Un objet passe à la corbeille : copié, vérifié, puis retiré de sa
 	})
 
 	test('un objet absent n’est pas une erreur ; un objet déjà en corbeille y reste ; une clé donnée deux fois, une fois', async () => {
-		const stockage = new StockageEnMemoire({ 'media/a.png': 'A', 'deleted/media/z.png': 'Z' })
+		const storage = new StorageInMemory({ 'media/a.png': 'A', 'deleted/media/z.png': 'Z' })
 
-		const bilan = await moveToTrash(stockage, [
+		const summary = await moveToTrash(storage, [
 			'media/absente.png',
 			'media/a.png',
 			'media/a.png',
 			'deleted/media/z.png',
 		])
 
-		expect(bilan).toEqual({
+		expect(summary).toEqual({
 			deplacees: ['media/a.png'],
 			absentes: ['media/absente.png'],
 			dejaEnCorbeille: ['deleted/media/z.png'],
 		})
-		expect(stockage.contenu('deleted/media/z.png')).toBe('Z')
-		expect(stockage.des('retirer')).toEqual(['retirer media/a.png'])
+		expect(storage.contenu('deleted/media/z.png')).toBe('Z')
+		expect(storage.des('retirer')).toEqual(['retirer media/a.png'])
 	})
 
 	test('une copie incomplète : l’original reste, rien n’est retiré, l’erreur remonte', async () => {
-		const stockage = new StockageEnMemoire({ 'media/a.png': 'AAAA' })
-		stockage.copieTronquee = () => true
+		const storage = new StorageInMemory({ 'media/a.png': 'AAAA' })
+		storage.copieTronquee = () => true
 
-		await expect(moveToTrash(stockage, ['media/a.png'])).rejects.toBeInstanceOf(StorageOutage)
+		await expect(moveToTrash(storage, ['media/a.png'])).rejects.toBeInstanceOf(StorageOutage)
 
-		expect(stockage.contenu('media/a.png')).toBe('AAAA')
-		expect(stockage.des('retirer')).toEqual([])
+		expect(storage.contenu('media/a.png')).toBe('AAAA')
+		expect(storage.des('retirer')).toEqual([])
 	})
 })
 
 describe('Panne du stockage : ce qui a bougé est remis en place, une fois, et l’erreur remonte', () => {
-	const troisObjets = () =>
-		new StockageEnMemoire({ 'media/1.png': 'un', 'media/2.png': 'deux', 'media/3.png': 'trois' })
+	const threeObjects = () => new StorageInMemory({ 'media/1.png': 'un', 'media/2.png': 'deux', 'media/3.png': 'trois' })
 
 	test('la panne au deuxième objet : le premier revient, le troisième n’a jamais bougé', async () => {
-		const stockage = troisObjets()
-		stockage.panne = operation => operation === 'copier media/2.png deleted/media/2.png'
+		const storage = threeObjects()
+		storage.panne = operation => operation === 'copier media/2.png deleted/media/2.png'
 
-		const erreur = await moveToTrash(stockage, ['media/1.png', 'media/2.png', 'media/3.png']).catch((e: unknown) => e)
+		const error = await moveToTrash(storage, ['media/1.png', 'media/2.png', 'media/3.png']).catch((e: unknown) => e)
 
-		expect(erreur).toBeInstanceOf(StorageOutage)
-		expect(erreur).toMatchObject({ remises: ['media/1.png'], nonRemises: [] })
-		for (const [cle, contenu] of [
+		expect(error).toBeInstanceOf(StorageOutage)
+		expect(error).toMatchObject({ remises: ['media/1.png'], nonRemises: [] })
+		for (const [key, content] of [
 			['media/1.png', 'un'],
 			['media/2.png', 'deux'],
 			['media/3.png', 'trois'],
 		])
-			expect(stockage.contenu(cle as string)).toBe(contenu)
+			expect(storage.contenu(key as string)).toBe(content)
 		// The copy back, once; the copy in the bin stays, for the rule of the storage: nothing removed.
-		expect(stockage.des('copier').filter(op => op.startsWith('copier deleted/'))).toEqual([
+		expect(storage.des('copier').filter(op => op.startsWith('copier deleted/'))).toEqual([
 			'copier deleted/media/1.png media/1.png',
 		])
-		expect(stockage.contenu('deleted/media/1.png')).toBe('un')
-		expect(stockage.des('retirer')).toEqual(['retirer media/1.png'])
+		expect(storage.contenu('deleted/media/1.png')).toBe('un')
+		expect(storage.des('retirer')).toEqual(['retirer media/1.png'])
 	})
 
 	test('la remise en place échoue aussi : elle n’est pas répétée, l’objet attend dans la corbeille et l’erreur le dit', async () => {
-		const stockage = troisObjets()
-		stockage.panne = operation =>
+		const storage = threeObjects()
+		storage.panne = operation =>
 			operation === 'copier media/2.png deleted/media/2.png' || operation === 'copier deleted/media/1.png media/1.png'
 
-		const erreur = await moveToTrash(stockage, ['media/1.png', 'media/2.png']).catch((e: unknown) => e)
+		const error = await moveToTrash(storage, ['media/1.png', 'media/2.png']).catch((e: unknown) => e)
 
-		expect(erreur).toMatchObject({ name: 'PanneDuStockage', remises: [], nonRemises: ['media/1.png'] })
-		expect(stockage.des('copier').filter(op => op.startsWith('copier deleted/'))).toHaveLength(1)
-		expect(stockage.contenu('deleted/media/1.png')).toBe('un')
+		expect(error).toMatchObject({ name: 'PanneDuStockage', remises: [], nonRemises: ['media/1.png'] })
+		expect(storage.des('copier').filter(op => op.startsWith('copier deleted/'))).toHaveLength(1)
+		expect(storage.contenu('deleted/media/1.png')).toBe('un')
 	})
 
 	test('le retrait de l’original échoue : l’original est toujours là, rien à remettre', async () => {
-		const stockage = troisObjets()
-		stockage.panne = operation => operation === 'retirer media/1.png'
+		const storage = threeObjects()
+		storage.panne = operation => operation === 'retirer media/1.png'
 
-		const erreur = await moveToTrash(stockage, ['media/1.png']).catch((e: unknown) => e)
+		const error = await moveToTrash(storage, ['media/1.png']).catch((e: unknown) => e)
 
-		expect(erreur).toMatchObject({ remises: ['media/1.png'], nonRemises: [] })
-		expect(stockage.contenu('media/1.png')).toBe('un')
-		expect(stockage.des('copier')).toEqual(['copier media/1.png deleted/media/1.png'])
+		expect(error).toMatchObject({ remises: ['media/1.png'], nonRemises: [] })
+		expect(storage.contenu('media/1.png')).toBe('un')
+		expect(storage.des('copier')).toEqual(['copier media/1.png deleted/media/1.png'])
 	})
 
 	test('le stockage ne répond pas dès le début : rien n’a bougé, rien à remettre', async () => {
-		const stockage = troisObjets()
-		stockage.panne = () => true
+		const storage = threeObjects()
+		storage.panne = () => true
 
-		const erreur = await moveToTrash(stockage, ['media/1.png']).catch((e: unknown) => e)
+		const error = await moveToTrash(storage, ['media/1.png']).catch((e: unknown) => e)
 
-		expect(erreur).toMatchObject({ remises: [], nonRemises: [] })
-		expect((erreur as Error).message).not.toContain('media/1.png')
-		expect(stockage.contenu('media/1.png')).toBe('un')
+		expect(error).toMatchObject({ remises: [], nonRemises: [] })
+		expect((error as Error).message).not.toContain('media/1.png')
+		expect(storage.contenu('media/1.png')).toBe('un')
 	})
 })
 
 describe('La remise en place d’un objet de la corbeille', () => {
 	test('l’objet revient à sa place ; sa copie reste dans la corbeille ; rien n’est retiré', async () => {
-		const stockage = new StockageEnMemoire({ 'media/a.png': 'AAAA' })
-		await moveToTrash(stockage, ['media/a.png'])
+		const storage = new StorageInMemory({ 'media/a.png': 'AAAA' })
+		await moveToTrash(storage, ['media/a.png'])
 
-		const bilan = await restore(stockage, ['media/a.png'])
+		const summary = await restore(storage, ['media/a.png'])
 
-		expect(bilan).toEqual({ remises: ['media/a.png'], nonRemises: [] })
-		expect(stockage.contenu('media/a.png')).toBe('AAAA')
-		expect(stockage.contenu('deleted/media/a.png')).toBe('AAAA')
-		expect(stockage.des('retirer')).toEqual(['retirer media/a.png'])
+		expect(summary).toEqual({ remises: ['media/a.png'], nonRemises: [] })
+		expect(storage.contenu('media/a.png')).toBe('AAAA')
+		expect(storage.contenu('deleted/media/a.png')).toBe('AAAA')
+		expect(storage.des('retirer')).toEqual(['retirer media/a.png'])
 	})
 
 	test('un objet déjà à sa place n’est pas réécrit ; sans copie dans la corbeille, il est listé', async () => {
-		const stockage = new StockageEnMemoire({ 'media/a.png': 'neuf', 'deleted/media/a.png': 'ancien' })
+		const storage = new StorageInMemory({ 'media/a.png': 'neuf', 'deleted/media/a.png': 'ancien' })
 
-		const bilan = await restore(stockage, ['media/a.png', 'media/inconnue.png'])
+		const summary = await restore(storage, ['media/a.png', 'media/inconnue.png'])
 
-		expect(bilan).toEqual({ remises: ['media/a.png'], nonRemises: ['media/inconnue.png'] })
-		expect(stockage.contenu('media/a.png')).toBe('neuf')
-		expect(stockage.des('copier')).toEqual([])
+		expect(summary).toEqual({ remises: ['media/a.png'], nonRemises: ['media/inconnue.png'] })
+		expect(storage.contenu('media/a.png')).toBe('neuf')
+		expect(storage.des('copier')).toEqual([])
 	})
 })
 
 describe('Un test échoue si une suppression d’objet est appelée (l’espion du banc)', () => {
-	const commande = (nom: string, entree: Record<string, unknown>, reussie = true): CommandS3 => ({
+	const command = (nom: string, entree: Record<string, unknown>, reussie = true): CommandS3 => ({
 		nom,
 		entree,
 		reussie,
 	})
-	const copieEnCorbeille = (cle: string, reussie = true) =>
-		commande('CopyObject', { Bucket: 'b', Key: trashKey(cle), CopySource: copySource('b', cle) }, reussie)
+	const copyInTrash = (cle: string, reussie = true) =>
+		command('CopyObject', { Bucket: 'b', Key: trashKey(cle), CopySource: copySource('b', cle) }, reussie)
 
 	test('un déplacement vers la corbeille n’est pas une suppression', () => {
 		expect(
 			deletionsWithoutTrash([
-				commande('HeadObject', { Key: 'media/a b.png' }),
-				copieEnCorbeille('media/a b.png'),
-				commande('HeadObject', { Key: 'deleted/media/a b.png' }),
-				commande('DeleteObject', { Key: 'media/a b.png' }),
+				command('HeadObject', { Key: 'media/a b.png' }),
+				copyInTrash('media/a b.png'),
+				command('HeadObject', { Key: 'deleted/media/a b.png' }),
+				command('DeleteObject', { Key: 'media/a b.png' }),
 			])
 		).toEqual([])
 	})
 
 	test('ce que faisait le greffon de stockage : un objet retiré sans copie dans la corbeille, signalé', () => {
-		expect(deletionsWithoutTrash([commande('DeleteObject', { Key: 'media/a.png' })])).toEqual(['media/a.png'])
+		expect(deletionsWithoutTrash([command('DeleteObject', { Key: 'media/a.png' })])).toEqual(['media/a.png'])
 	})
 
 	test('une copie échouée, une copie ailleurs, un objet de la corbeille, plusieurs objets à la fois : signalés', () => {
 		expect(
 			deletionsWithoutTrash([
-				copieEnCorbeille('media/a.png', false),
-				commande('DeleteObject', { Key: 'media/a.png' }),
-				commande('CopyObject', { Key: 'ailleurs/b.png', CopySource: copySource('b', 'media/b.png') }),
-				commande('DeleteObject', { Key: 'media/b.png' }),
-				commande('DeleteObject', { Key: 'deleted/media/c.png' }),
-				commande('DeleteObjects', { Delete: { Objects: [] } }),
+				copyInTrash('media/a.png', false),
+				command('DeleteObject', { Key: 'media/a.png' }),
+				command('CopyObject', { Key: 'ailleurs/b.png', CopySource: copySource('b', 'media/b.png') }),
+				command('DeleteObject', { Key: 'media/b.png' }),
+				command('DeleteObject', { Key: 'deleted/media/c.png' }),
+				command('DeleteObjects', { Delete: { Objects: [] } }),
 			])
 		).toEqual(['media/a.png', 'media/b.png', 'deleted/media/c.png', '(plusieurs objets à la fois)'])
 	})
 })
 
 describe('L’application n’efface jamais un objet : une seule suppression dans le code, celle du déplacement', () => {
-	const racine = path.resolve(import.meta.dir, '../..')
-	const fichiers = (dossier: string): string[] =>
-		readdirSync(path.join(racine, dossier), { recursive: true, encoding: 'utf8' })
+	const root = path.resolve(import.meta.dir, '../..')
+	const files = (dossier: string): string[] =>
+		readdirSync(path.join(root, dossier), { recursive: true, encoding: 'utf8' })
 			.filter(fichier => /\.(ts|tsx)$/.test(fichier))
 			.map(fichier => path.join(dossier, fichier))
-	const contenant = (motif: RegExp) =>
-		[...fichiers('src'), ...fichiers('scripts')].filter(fichier =>
-			motif.test(readFileSync(path.join(racine, fichier), 'utf8'))
-		)
+	const containing = (motif: RegExp) =>
+		[...files('src'), ...files('scripts')].filter(fichier => motif.test(readFileSync(path.join(root, fichier), 'utf8')))
 
 	test('une requête de suppression du stockage n’existe que dans src/lib/storage.ts', () => {
-		expect(contenant(/DeleteObjects?Command|\.deleteObjects?\s*\(/)).toEqual(['src/lib/storage.ts'])
+		expect(containing(/DeleteObjects?Command|\.deleteObjects?\s*\(/)).toEqual(['src/lib/storage.ts'])
 	})
 
 	test('et elle n’est appelée que par le déplacement vers la corbeille', () => {
-		expect(contenant(/\.retirer\s*\(/)).toEqual(['src/lib/trash.ts'])
+		expect(containing(/\.retirer\s*\(/)).toEqual(['src/lib/trash.ts'])
 	})
 })
 
 describe('Le greffon de stockage perd ses suppressions ; media et profils reçoivent la corbeille', () => {
-	const propre: CollectionAfterChangeHook = ({ doc }) => doc
-	const propreALaSuppression: CollectionAfterDeleteHook = ({ doc }) => doc
+	const own: CollectionAfterChangeHook = ({ doc }) => doc
+	const ownToDeletion: CollectionAfterDeleteHook = ({ doc }) => doc
 
 	/** A plugin that does what @payloadcms/storage-s3 does: an upload then a deletion after a change, a deletion after a delete. */
-	function faussePlugin() {
-		const recus: unknown[] = []
-		const televersement: CollectionAfterChangeHook = args => {
-			recus.push(args.previousDoc)
+	function fakePlugin() {
+		const received: unknown[] = []
+		const upload: CollectionAfterChangeHook = args => {
+			received.push(args.previousDoc)
 			return args.doc
 		}
-		const suppression: CollectionAfterDeleteHook = ({ doc }) => doc
+		const deletion: CollectionAfterDeleteHook = ({ doc }) => doc
 		const plugin: Plugin = config => ({
 			...config,
 			collections: config.collections?.map(collection =>
@@ -326,73 +319,73 @@ describe('Le greffon de stockage perd ses suppressions ; media et profils reçoi
 							...collection,
 							hooks: {
 								...collection.hooks,
-								afterChange: [...(collection.hooks?.afterChange ?? []), televersement],
-								afterDelete: [...(collection.hooks?.afterDelete ?? []), suppression],
+								afterChange: [...(collection.hooks?.afterChange ?? []), upload],
+								afterDelete: [...(collection.hooks?.afterDelete ?? []), deletion],
 							},
 						}
 					: collection
 			),
 		})
-		return { plugin, recus, suppression, televersement }
+		return { plugin, recus: received, suppression: deletion, televersement: upload }
 	}
 
 	const collections = (): CollectionConfig[] => [
-		{ slug: 'media', upload: true, fields: [], hooks: { afterChange: [propre], afterDelete: [propreALaSuppression] } },
-		{ slug: 'profiles', fields: [], hooks: { afterChange: [propre] } },
+		{ slug: 'media', upload: true, fields: [], hooks: { afterChange: [own], afterDelete: [ownToDeletion] } },
+		{ slug: 'profiles', fields: [], hooks: { afterChange: [own] } },
 		{ slug: 'talents', fields: [] },
 	]
 
 	test('après le greffon : ses suppressions retirées, ses envois gardés, les crochets de la collection d’abord, la corbeille en dernier', async () => {
-		const fausse = faussePlugin()
+		const fake = fakePlugin()
 
-		const config = (await withTrash(fausse.plugin, undefined)({ collections: collections() } as Config))
+		const config = (await withTrash(fake.plugin, undefined)({ collections: collections() } as Config))
 			.collections as CollectionConfig[]
-		const [media, profils, talents] = config
+		const [media, profiles, talents] = config
 
 		expect(media?.hooks?.afterDelete).toHaveLength(2)
-		expect(media?.hooks?.afterDelete?.[0]).toBe(propreALaSuppression)
-		expect(media?.hooks?.afterDelete).not.toContain(fausse.suppression)
+		expect(media?.hooks?.afterDelete?.[0]).toBe(ownToDeletion)
+		expect(media?.hooks?.afterDelete).not.toContain(fake.suppression)
 		expect(media?.hooks?.afterChange).toHaveLength(3)
-		expect(media?.hooks?.afterChange?.[0]).toBe(propre)
-		expect(profils?.hooks?.afterChange).toHaveLength(2)
-		expect(profils?.hooks?.afterChange?.[0]).toBe(propre)
-		expect(profils?.hooks?.afterDelete).toHaveLength(1)
+		expect(media?.hooks?.afterChange?.[0]).toBe(own)
+		expect(profiles?.hooks?.afterChange).toHaveLength(2)
+		expect(profiles?.hooks?.afterChange?.[0]).toBe(own)
+		expect(profiles?.hooks?.afterDelete).toHaveLength(1)
 		expect(talents?.hooks).toBeUndefined()
 	})
 
 	test('media et profils : un document à la fois, d’abord ; la liste de l’administration n’offre plus d’agir sur plusieurs', async () => {
-		const avant: CollectionBeforeOperationHook = ({ args }) => args
-		const [media, profils, talents] = (
+		const before: CollectionBeforeOperationHook = ({ args }) => args
+		const [media, profiles, talents] = (
 			await withTrash(
-				faussePlugin().plugin,
+				fakePlugin().plugin,
 				undefined
 			)({
 				collections: collections().map(collection =>
 					collection.slug === 'media'
-						? { ...collection, hooks: { ...collection.hooks, beforeOperation: [avant] } }
+						? { ...collection, hooks: { ...collection.hooks, beforeOperation: [before] } }
 						: collection
 				),
 			} as Config)
 		).collections as CollectionConfig[]
 
-		expect(media?.hooks?.beforeOperation).toEqual([oneAtATime, avant])
-		expect(profils?.hooks?.beforeOperation).toEqual([oneAtATime])
-		for (const collection of [media, profils])
+		expect(media?.hooks?.beforeOperation).toEqual([oneAtATime, before])
+		expect(profiles?.hooks?.beforeOperation).toEqual([oneAtATime])
+		for (const collection of [media, profiles])
 			expect(collection).toMatchObject({ disableBulkDelete: true, disableBulkEdit: true })
 		expect(talents?.disableBulkDelete).toBeUndefined()
 		expect(talents?.disableBulkEdit).toBeUndefined()
 	})
 
 	test('l’envoi du greffon ne voit plus le document précédent : il ne peut plus effacer l’ancien fichier', async () => {
-		const fausse = faussePlugin()
+		const fake = fakePlugin()
 		const [media] =
 			withoutPluginDeletion(
 				{
 					slug: 'media',
 					fields: [],
-					hooks: { afterChange: [propre, fausse.televersement], afterDelete: [fausse.suppression] },
+					hooks: { afterChange: [own, fake.televersement], afterDelete: [fake.suppression] },
 				},
-				{ afterChange: [propre] }
+				{ afterChange: [own] }
 			).hooks?.afterChange?.slice(1) ?? []
 
 		await media?.({
@@ -405,11 +398,11 @@ describe('Le greffon de stockage perd ses suppressions ; media et profils reçoi
 			req: {} as never,
 		})
 
-		expect(fausse.recus).toEqual([undefined])
+		expect(fake.recus).toEqual([undefined])
 	})
 
 	test('un greffon qui n’ajoute rien (stockage absent) : la collection reste telle quelle', () => {
-		const collection: CollectionConfig = { slug: 'media', fields: [], hooks: { afterChange: [propre] } }
+		const collection: CollectionConfig = { slug: 'media', fields: [], hooks: { afterChange: [own] } }
 		expect(withoutPluginDeletion(collection, collection.hooks)).toBe(collection)
 	})
 })
@@ -426,26 +419,26 @@ describe('Plusieurs médias ou profils à la fois : refusé avant toute écritur
 		})
 
 	test('une suppression ou une modification par un filtre : refusée en 403, avec le message en français', () => {
-		for (const nom of ['delete', 'update']) {
-			let erreur: unknown
+		for (const name of ['delete', 'update']) {
+			let error: unknown
 			try {
-				operation(nom, { where: { id: { equals: 1 } } })
+				operation(name, { where: { id: { equals: 1 } } })
 			} catch (e) {
-				erreur = e
+				error = e
 			}
-			expect(erreur).toMatchObject({ message: ONE_AT_A_TIME_MESSAGE, status: 403, isPublic: true })
+			expect(error).toMatchObject({ message: ONE_AT_A_TIME_MESSAGE, status: 403, isPublic: true })
 		}
 	})
 
 	test('par son identifiant, une lecture, une création : passent telles quelles', () => {
-		for (const [nom, args] of [
+		for (const [name, args] of [
 			['delete', { id: 1 }],
 			['update', { id: 1, data: {} }],
 			['update', { id: 0, data: {} }],
 			['read', { where: {} }],
 			['create', { data: {} }],
 		] as const)
-			expect(operation(nom, args)).toBe(args as never)
+			expect(operation(name, args)).toBe(args as never)
 	})
 
 	test('sous le contexte d’import : passent aussi, l’import ne déplace rien', () => {
@@ -457,82 +450,82 @@ describe('Plusieurs médias ou profils à la fois : refusé avant toute écritur
 
 describe('Sans stockage d’objets, le ménage d’un profil ne supprime aucun média', () => {
 	/** A request whose Local API writes down what it is asked, finds nothing, and deletes nothing. */
-	function fausseRequete() {
-		const appels: string[] = []
-		const avertissements: string[] = []
+	function fakeRequest() {
+		const calls: string[] = []
+		const warnings: string[] = []
 		const req = {
 			context: {},
 			payload: {
 				find: async ({ collection }: { collection: string }) => {
-					appels.push(`find ${collection}`)
+					calls.push(`find ${collection}`)
 					return { docs: [] }
 				},
 				findVersions: async ({ collection }: { collection: string }) => {
-					appels.push(`findVersions ${collection}`)
+					calls.push(`findVersions ${collection}`)
 					return { docs: [] }
 				},
 				delete: async ({ collection }: { collection: string }) => {
-					appels.push(`delete ${collection}`)
+					calls.push(`delete ${collection}`)
 				},
-				logger: { info: () => {}, warn: (ligne: string) => avertissements.push(ligne), error: () => {} },
+				logger: { info: () => {}, warn: (ligne: string) => warnings.push(ligne), error: () => {} },
 			},
 		}
-		return { appels, avertissements, req: req as never }
+		return { appels: calls, avertissements: warnings, req: req as never }
 	}
 
 	/** The hooks of the bin on `profils`, as src/payload.config.ts sets them, with this storage or none. */
-	async function crochetsDesProfils(stockage: ObjectStorage | undefined) {
-		const profilsSeuls: CollectionConfig[] = [{ slug: 'profiles', fields: [] }]
-		const config = await withTrash(config => config, stockage)({ collections: profilsSeuls } as Config)
-		const [profils] = config.collections as CollectionConfig[]
-		const [apresEnregistrement] = profils?.hooks?.afterChange ?? []
-		const [apresSuppression] = profils?.hooks?.afterDelete ?? []
-		if (!apresEnregistrement || !apresSuppression) throw new Error('La corbeille n’a pas posé ses crochets.')
-		return { apresEnregistrement, apresSuppression }
+	async function profileHooks(stockage: ObjectStorage | undefined) {
+		const profileOnly: CollectionConfig[] = [{ slug: 'profiles', fields: [] }]
+		const config = await withTrash(config => config, stockage)({ collections: profileOnly } as Config)
+		const [profiles] = config.collections as CollectionConfig[]
+		const [afterRecord] = profiles?.hooks?.afterChange ?? []
+		const [afterDeletion] = profiles?.hooks?.afterDelete ?? []
+		if (!afterRecord || !afterDeletion) throw new Error('La corbeille n’a pas posé ses crochets.')
+		return { apresEnregistrement: afterRecord, apresSuppression: afterDeletion }
 	}
 
-	const avant = { id: 7, pro: 3, mainPicture: 11, gallery: [12, { id: 13 }] }
-	const apres = { id: 7, pro: 3, mainPicture: null, gallery: [] }
+	const before = { id: 7, pro: 3, mainPicture: 11, gallery: [12, { id: 13 }] }
+	const after = { id: 7, pro: 3, mainPicture: null, gallery: [] }
 
 	test('une photo retirée, un profil supprimé : aucune lecture, aucune suppression ; une ligne le dit', async () => {
-		const { apresEnregistrement, apresSuppression } = await crochetsDesProfils(undefined)
-		const enregistrement = fausseRequete()
-		const suppression = fausseRequete()
+		const { apresEnregistrement: afterRecord, apresSuppression: afterDeletion } = await profileHooks(undefined)
+		const record = fakeRequest()
+		const deletion = fakeRequest()
 
-		await apresEnregistrement({
+		await afterRecord({
 			collection: {} as never,
 			context: {},
 			data: {},
-			doc: apres,
+			doc: after,
 			operation: 'update',
-			previousDoc: avant,
-			req: enregistrement.req,
+			previousDoc: before,
+			req: record.req,
 		})
-		await apresSuppression({ collection: {} as never, context: {}, doc: avant, id: 7, req: suppression.req })
+		await afterDeletion({ collection: {} as never, context: {}, doc: before, id: 7, req: deletion.req })
 
-		expect(enregistrement.appels).toEqual([])
-		expect(suppression.appels).toEqual([])
-		expect(enregistrement.avertissements).toEqual([
+		expect(record.appels).toEqual([])
+		expect(deletion.appels).toEqual([])
+		expect(record.avertissements).toEqual([
 			'[corbeille] profile 7: no object storage, the clean-up is skipped and 3 media kept',
 		])
-		expect(suppression.avertissements).toHaveLength(1)
+		expect(deletion.avertissements).toHaveLength(1)
 	})
 
 	test('avec un stockage, le même enregistrement cherche ce que rien ne désigne plus : le ménage n’est coupé que sans stockage', async () => {
-		const { apresEnregistrement } = await crochetsDesProfils(new StockageEnMemoire())
-		const { appels, avertissements, req } = fausseRequete()
+		const { apresEnregistrement: afterRecord } = await profileHooks(new StorageInMemory())
+		const { appels: calls, avertissements: warnings, req } = fakeRequest()
 
-		await apresEnregistrement({
+		await afterRecord({
 			collection: {} as never,
 			context: {},
 			data: {},
-			doc: apres,
+			doc: after,
 			operation: 'update',
-			previousDoc: avant,
+			previousDoc: before,
 			req,
 		})
 
-		expect(appels).toEqual(['find profiles', 'find articles', 'findVersions articles', 'find media'])
-		expect(avertissements).toEqual([])
+		expect(calls).toEqual(['find profiles', 'find articles', 'findVersions articles', 'find media'])
+		expect(warnings).toEqual([])
 	})
 })

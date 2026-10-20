@@ -14,87 +14,89 @@ import { pickFiles } from '../support/pick-files'
  * and says so. The browser work, the network and the server action are fakes.
  */
 
-const fenetre = openWindow()
-const ACTUELLE: DashboardPhoto = {
+const jsdomWindow = openWindow()
+const CURRENT: DashboardPhoto = {
 	id: 5,
 	url: 'https://photos.example.test/media/a.webp',
 	largeur: 800,
 	hauteur: 600,
 	alt: '',
 }
-const REDUITE = new File(['petit'], 'photo.webp', { type: 'image/webp' })
+const REDUCED = new File(['petit'], 'photo.webp', { type: 'image/webp' })
 
-function banc(
+function bench(
 	options: {
 		preparer?: (f: File) => Promise<PreparedPhoto<File>>
 		televerser?: () => Promise<FileUploadResult>
 		envoyer?: PhotoUpload
 	} = {}
 ) {
-	const journal = { prepares: 0, televerses: 0, supprimes: [] as unknown[], enregistres: [] as unknown[] }
-	const preparer =
+	const log = { prepares: 0, televerses: 0, supprimes: [] as unknown[], enregistres: [] as unknown[] }
+	const prepare =
 		options.preparer ??
 		(async () => {
-			journal.prepares++
-			return { ok: true as const, fichier: REDUITE, largeur: 800, hauteur: 600, taille: 5 }
+			log.prepares++
+			return { ok: true as const, fichier: REDUCED, largeur: 800, hauteur: 600, taille: 5 }
 		})
-	const televerser =
+	const upload =
 		options.televerser ??
 		(async () => {
-			journal.televerses++
+			log.televerses++
 			return { ok: true as const, id: 9 }
 		})
-	const envoyer: PhotoUpload =
+	const send: PhotoUpload =
 		options.envoyer ??
 		(async saisie => {
-			journal.enregistres.push(saisie)
+			log.enregistres.push(saisie)
 			return { ok: true, valeurs: { photoPrincipale: saisie.photoPrincipale } }
 		})
 	return {
-		journal,
+		journal: log,
 		monter: async () => {
-			await fenetre.monter(
+			await jsdomWindow.monter(
 				<PhotoEditor
-					photo={ACTUELLE}
-					envoyer={envoyer}
-					preparer={preparer}
-					televerser={televerser}
+					photo={CURRENT}
+					envoyer={send}
+					preparer={prepare}
+					televerser={upload}
 					supprimer={async id => {
-						journal.supprimes.push(id)
+						log.supprimes.push(id)
 					}}
 				/>
 			)
-			await fenetre.cliquer(fenetre.bouton('Modifier ma photo principale'))
+			await jsdomWindow.cliquer(jsdomWindow.bouton('Modifier ma photo principale'))
 		},
 	}
 }
 
-const dialogue = () => fenetre.w.document.querySelector('[role="dialog"]')
-const fichier = () => fenetre.champ(/photo/i) as HTMLInputElement
-const choisir = (f: File) => pickFiles(fenetre, fichier(), [f])
-const alertes = () => [...fenetre.w.document.querySelectorAll('[role="alert"]')].map(a => a.textContent).join('|')
+const dialogue = () => jsdomWindow.w.document.querySelector('[role="dialog"]')
+const file = () => jsdomWindow.champ(/photo/i) as HTMLInputElement
+const pick = (f: File) => pickFiles(jsdomWindow, file(), [f])
+const alerts = () => [...jsdomWindow.w.document.querySelectorAll('[role="alert"]')].map(a => a.textContent).join('|')
 
 describe('E36 : un fichier refusé est dit avant l’envoi', () => {
 	test('la raison s’affiche sous le champ, rien n’est envoyé, « Enregistrer » reste éteint', async () => {
-		const b = banc({
+		const b = bench({
 			preparer: async () => ({ ok: false, raison: 'type', code: 'type', message: MESSAGES_PHOTO.type }),
 		})
 		await b.monter()
-		await choisir(new File(['%PDF'], 'cv.pdf', { type: 'application/pdf' }))
-		await fenetre.attendre(() => alertes().includes(MESSAGES_PHOTO.type))
+		await pick(new File(['%PDF'], 'cv.pdf', { type: 'application/pdf' }))
+		await jsdomWindow.attendre(() => alerts().includes(MESSAGES_PHOTO.type))
 		expect(b.journal.televerses).toBe(0)
-		expect((fenetre.bouton('Enregistrer') as HTMLButtonElement).disabled).toBe(true)
+		expect((jsdomWindow.bouton('Enregistrer') as HTMLButtonElement).disabled).toBe(true)
 	})
 })
 
 describe('rien n’est envoyé avant « Enregistrer »', () => {
 	test('choisir puis fermer en abandonnant : aucun envoi, aucun enregistrement', async () => {
-		const b = banc()
+		const b = bench()
 		await b.monter()
-		await choisir(new File(['gros'], 'grosse.jpg', { type: 'image/jpeg' }))
-		await fenetre.attendre(() => fenetre.w.document.querySelector('img[alt="Aperçu de la photo choisie"]') ?? null)
-		await fenetre.cliquer(fenetre.bouton('Fermer'))
-		await fenetre.cliquer(fenetre.bouton('Abandonner mes modifications'))
+		await pick(new File(['gros'], 'grosse.jpg', { type: 'image/jpeg' }))
+		await jsdomWindow.attendre(
+			() => jsdomWindow.w.document.querySelector('img[alt="Aperçu de la photo choisie"]') ?? null
+		)
+		await jsdomWindow.cliquer(jsdomWindow.bouton('Fermer'))
+		await jsdomWindow.cliquer(jsdomWindow.bouton('Abandonner mes modifications'))
 		expect(dialogue()).toBeNull()
 		expect(b.journal.televerses).toBe(0)
 		expect(b.journal.enregistres).toEqual([])
@@ -103,72 +105,72 @@ describe('rien n’est envoyé avant « Enregistrer »', () => {
 
 describe('enregistrer : le fichier réduit part, puis il est nommé', () => {
 	test('le panneau se ferme, la réussite est annoncée hors du panneau', async () => {
-		const b = banc()
+		const b = bench()
 		await b.monter()
-		await choisir(new File(['gros'], 'grosse.jpg', { type: 'image/jpeg' }))
-		await fenetre.attendre(() => !(fenetre.bouton('Enregistrer') as HTMLButtonElement).disabled)
-		await fenetre.cliquer(fenetre.bouton('Enregistrer'))
-		await fenetre.attendre(() => dialogue() === null)
+		await pick(new File(['gros'], 'grosse.jpg', { type: 'image/jpeg' }))
+		await jsdomWindow.attendre(() => !(jsdomWindow.bouton('Enregistrer') as HTMLButtonElement).disabled)
+		await jsdomWindow.cliquer(jsdomWindow.bouton('Enregistrer'))
+		await jsdomWindow.attendre(() => dialogue() === null)
 		expect(b.journal.televerses).toBe(1)
 		expect(b.journal.enregistres).toEqual([{ photoPrincipale: 9 }])
-		expect(fenetre.w.document.body.textContent).toContain('Ta photo principale est enregistrée.')
+		expect(jsdomWindow.w.document.body.textContent).toContain('Ta photo principale est enregistrée.')
 	})
 
 	test('le serveur dit « non » : message en français, fichier envoyé supprimé, panneau ouvert avec le choix', async () => {
-		const b = banc({ envoyer: async () => ({ ok: false, message: FAILURE_MESSAGE }) })
+		const b = bench({ envoyer: async () => ({ ok: false, message: FAILURE_MESSAGE }) })
 		await b.monter()
-		await choisir(new File(['gros'], 'grosse.jpg', { type: 'image/jpeg' }))
-		await fenetre.attendre(() => !(fenetre.bouton('Enregistrer') as HTMLButtonElement).disabled)
-		await fenetre.cliquer(fenetre.bouton('Enregistrer'))
-		await fenetre.attendre(() => alertes().includes(FAILURE_MESSAGE))
+		await pick(new File(['gros'], 'grosse.jpg', { type: 'image/jpeg' }))
+		await jsdomWindow.attendre(() => !(jsdomWindow.bouton('Enregistrer') as HTMLButtonElement).disabled)
+		await jsdomWindow.cliquer(jsdomWindow.bouton('Enregistrer'))
+		await jsdomWindow.attendre(() => alerts().includes(FAILURE_MESSAGE))
 		expect(b.journal.supprimes).toEqual([9])
 		expect(dialogue()).not.toBeNull()
-		expect(fenetre.w.document.body.textContent).not.toContain('est enregistrée')
+		expect(jsdomWindow.w.document.body.textContent).not.toContain('est enregistrée')
 	})
 
 	test('la réponse se perd : message d’incertitude, rien n’est supprimé', async () => {
-		const b = banc({
+		const b = bench({
 			envoyer: async () => {
 				throw new Error('Failed to fetch')
 			},
 		})
 		await b.monter()
-		await choisir(new File(['gros'], 'grosse.jpg', { type: 'image/jpeg' }))
-		await fenetre.attendre(() => !(fenetre.bouton('Enregistrer') as HTMLButtonElement).disabled)
-		await fenetre.cliquer(fenetre.bouton('Enregistrer'))
-		await fenetre.attendre(() => alertes().includes(UNCERTAIN_RESULT_MESSAGE))
+		await pick(new File(['gros'], 'grosse.jpg', { type: 'image/jpeg' }))
+		await jsdomWindow.attendre(() => !(jsdomWindow.bouton('Enregistrer') as HTMLButtonElement).disabled)
+		await jsdomWindow.cliquer(jsdomWindow.bouton('Enregistrer'))
+		await jsdomWindow.attendre(() => alerts().includes(UNCERTAIN_RESULT_MESSAGE))
 		expect(b.journal.supprimes).toEqual([])
 	})
 
 	test('coupure pendant l’envoi du fichier : message, rien d’enregistré (la photo en place reste)', async () => {
-		const b = banc({ televerser: async () => ({ ok: false, message: MESSAGES_PHOTO['envoi-impossible'] }) })
+		const b = bench({ televerser: async () => ({ ok: false, message: MESSAGES_PHOTO['envoi-impossible'] }) })
 		await b.monter()
-		await choisir(new File(['gros'], 'grosse.jpg', { type: 'image/jpeg' }))
-		await fenetre.attendre(() => !(fenetre.bouton('Enregistrer') as HTMLButtonElement).disabled)
-		await fenetre.cliquer(fenetre.bouton('Enregistrer'))
-		await fenetre.attendre(() => alertes().includes(MESSAGES_PHOTO['envoi-impossible']))
+		await pick(new File(['gros'], 'grosse.jpg', { type: 'image/jpeg' }))
+		await jsdomWindow.attendre(() => !(jsdomWindow.bouton('Enregistrer') as HTMLButtonElement).disabled)
+		await jsdomWindow.cliquer(jsdomWindow.bouton('Enregistrer'))
+		await jsdomWindow.attendre(() => alerts().includes(MESSAGES_PHOTO['envoi-impossible']))
 		expect(b.journal.enregistres).toEqual([])
 	})
 
 	test('double clic pendant l’envoi : un seul envoi', async () => {
-		let ouvrirLaPorte: () => void = () => {}
-		const porte = new Promise<void>(resolve => {
-			ouvrirLaPorte = resolve
+		let openDoor: () => void = () => {}
+		const door = new Promise<void>(resolve => {
+			openDoor = resolve
 		})
-		const b = banc({
+		const b = bench({
 			televerser: async () => {
-				await porte
+				await door
 				return { ok: true, id: 9 }
 			},
 		})
 		await b.monter()
-		await choisir(new File(['gros'], 'grosse.jpg', { type: 'image/jpeg' }))
-		await fenetre.attendre(() => !(fenetre.bouton('Enregistrer') as HTMLButtonElement).disabled)
-		const bouton = fenetre.bouton('Enregistrer')
-		await fenetre.cliquer(bouton)
-		await fenetre.cliquer(bouton)
-		ouvrirLaPorte()
-		await fenetre.attendre(() => dialogue() === null)
+		await pick(new File(['gros'], 'grosse.jpg', { type: 'image/jpeg' }))
+		await jsdomWindow.attendre(() => !(jsdomWindow.bouton('Enregistrer') as HTMLButtonElement).disabled)
+		const button = jsdomWindow.bouton('Enregistrer')
+		await jsdomWindow.cliquer(button)
+		await jsdomWindow.cliquer(button)
+		openDoor()
+		await jsdomWindow.attendre(() => dialogue() === null)
 		expect(b.journal.enregistres).toHaveLength(1)
 	})
 })

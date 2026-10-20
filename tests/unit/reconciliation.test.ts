@@ -3,7 +3,7 @@ import { describeReconciliation, type ReadMedia, reconcile } from '@/lib/reconci
 
 /** The dry reconciliation of the storage and the database (ticket 137; plan 02 I27). */
 
-const objet = (cle: string) => ({ cle, taille: 10 })
+const object = (cle: string) => ({ cle, taille: 10 })
 const media = (id: number, filename: string, extra: Partial<ReadMedia> = {}): ReadMedia => ({
 	id,
 	prefix: 'media',
@@ -13,22 +13,22 @@ const media = (id: number, filename: string, extra: Partial<ReadMedia> = {}): Re
 
 describe('I27 : les orphelins sont nommés exactement', () => {
 	test('un stockage et une base d’accord : 0 orphelin', () => {
-		const rapport = reconcile({
-			objets: [objet('media/a.webp'), objet('media/a-500.webp')],
+		const report = reconcile({
+			objets: [object('media/a.webp'), object('media/a-500.webp')],
 			medias: [media(1, 'a.webp', { sizes: { small: { filename: 'a-500.webp' } } })],
 			mediasUtilises: new Set(['1']),
 		})
-		expect(rapport.sansOrphelin).toBe(true)
-		expect(rapport.comptes).toMatchObject({ objets: 2, medias: 1, mediasUtilises: 1, objetsAttendus: 2 })
+		expect(report.sansOrphelin).toBe(true)
+		expect(report.comptes).toMatchObject({ objets: 2, medias: 1, mediasUtilises: 1, objetsAttendus: 2 })
 	})
 
 	test('les trois sortes d’orphelins, et la corbeille comptée à part', () => {
-		const rapport = reconcile({
+		const report = reconcile({
 			objets: [
-				objet('media/a.webp'),
-				objet('media/seul.webp'),
-				objet('media/sans-profil.webp'),
-				objet('deleted/media/ancien.webp'),
+				object('media/a.webp'),
+				object('media/seul.webp'),
+				object('media/sans-profil.webp'),
+				object('deleted/media/ancien.webp'),
 			],
 			medias: [
 				media(1, 'a.webp'),
@@ -37,25 +37,25 @@ describe('I27 : les orphelins sont nommés exactement', () => {
 			],
 			mediasUtilises: new Set(['1', '2']),
 		})
-		expect(rapport.objetsSansMedia).toEqual(['media/seul.webp'])
-		expect(rapport.mediasSansObjet).toEqual([{ id: '2', cles: ['media/m-500.webp', 'media/manquant.webp'] }])
-		expect(rapport.mediasSansProfil).toEqual(['3'])
-		expect(rapport.comptes).toMatchObject({ objets: 4, objetsEnCorbeille: 1, objetsHorsCorbeille: 3 })
-		expect(rapport.sansOrphelin).toBe(false)
+		expect(report.objetsSansMedia).toEqual(['media/seul.webp'])
+		expect(report.mediasSansObjet).toEqual([{ id: '2', cles: ['media/m-500.webp', 'media/manquant.webp'] }])
+		expect(report.mediasSansProfil).toEqual(['3'])
+		expect(report.comptes).toMatchObject({ objets: 4, objetsEnCorbeille: 1, objetsHorsCorbeille: 3 })
+		expect(report.sansOrphelin).toBe(false)
 	})
 
 	test('un média de l’ancien site à la racine ou sous son préfixe est reconnu par sa clé', () => {
-		const rapport = reconcile({
-			objets: [objet('photo_a.jpg'), objet('1/photo_b.jpg')],
+		const report = reconcile({
+			objets: [object('photo_a.jpg'), object('1/photo_b.jpg')],
 			medias: [media(1, 'photo_a.jpg', { prefix: '' }), media(2, 'photo_b.jpg', { prefix: '1' })],
 			mediasUtilises: new Set(['1', '2']),
 		})
-		expect(rapport.sansOrphelin).toBe(true)
+		expect(report.sansOrphelin).toBe(true)
 	})
 
 	test('les vignettes de l’ancien site sont comptées à part, pas des orphelines', () => {
-		const rapport = reconcile({
-			objets: [objet('photo_a.jpg'), objet('thumbnail_photo_a.jpg'), objet('autre.jpg')],
+		const report = reconcile({
+			objets: [object('photo_a.jpg'), object('thumbnail_photo_a.jpg'), object('autre.jpg')],
 			medias: [
 				media(1, 'photo_a.jpg', {
 					prefix: '',
@@ -64,34 +64,36 @@ describe('I27 : les orphelins sont nommés exactement', () => {
 			],
 			mediasUtilises: new Set(['1']),
 		})
-		expect(rapport.comptes.vignettesAnciennes).toBe(1)
-		expect(rapport.objetsSansMedia).toEqual(['autre.jpg'])
+		expect(report.comptes.vignettesAnciennes).toBe(1)
+		expect(report.objetsSansMedia).toEqual(['autre.jpg'])
 	})
 
 	test('un média adopté de l’ancien site est listé, mais ne compte pas « hors import » ; un média de la v3 compte toujours', () => {
-		const adopte = media(1, 'vieux.jpg', { prefix: '', strapiId: 7 })
-		const objets = [objet('media/neuf.webp')]
-		const surImport = reconcile({ objets: [], medias: [adopte], mediasUtilises: new Set() })
-		expect(surImport).toMatchObject({
+		const adopted = media(1, 'vieux.jpg', { prefix: '', strapiId: 7 })
+		const objects = [object('media/neuf.webp')]
+		const onImport = reconcile({ objets: [], medias: [adopted], mediasUtilises: new Set() })
+		expect(onImport).toMatchObject({
 			sansOrphelin: false,
 			sansOrphelinHorsImport: true,
 			importes: ['1'],
 			mediasSansObjet: [{ id: '1', cles: ['vieux.jpg'] }],
 			mediasSansProfil: ['1'],
 		})
-		const surNeuf = reconcile({ objets, medias: [media(2, 'autre.webp')], mediasUtilises: new Set() })
-		expect(surNeuf.sansOrphelinHorsImport).toBe(false)
-		expect(surNeuf.importes).toEqual([])
+		const onNew = reconcile({ objets: objects, medias: [media(2, 'autre.webp')], mediasUtilises: new Set() })
+		expect(onNew.sansOrphelinHorsImport).toBe(false)
+		expect(onNew.importes).toEqual([])
 		// A stray object is never excused by the import.
-		expect(reconcile({ objets, medias: [adopte], mediasUtilises: new Set(['1']) }).sansOrphelinHorsImport).toBe(false)
+		expect(
+			reconcile({ objets: objects, medias: [adopted], mediasUtilises: new Set(['1']) }).sansOrphelinHorsImport
+		).toBe(false)
 	})
 
 	test('la sortie ne porte que des clés, des identifiants et des comptes', () => {
-		const texte = describeReconciliation(
-			reconcile({ objets: [objet('media/seul.webp')], medias: [media(5, 'x.webp')], mediasUtilises: new Set() })
+		const text = describeReconciliation(
+			reconcile({ objets: [object('media/seul.webp')], medias: [media(5, 'x.webp')], mediasUtilises: new Set() })
 		)
-		expect(texte).toContain('media/seul.webp')
-		expect(texte).toContain('média 5 : media/x.webp')
-		expect(texte).toContain('Orphelins trouvés : rien n’a été supprimé.')
+		expect(text).toContain('media/seul.webp')
+		expect(text).toContain('média 5 : media/x.webp')
+		expect(text).toContain('Orphelins trouvés : rien n’a été supprimé.')
 	})
 })

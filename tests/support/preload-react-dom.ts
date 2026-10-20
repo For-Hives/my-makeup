@@ -15,7 +15,7 @@ import { setGlobals } from './globals'
  * bun loads this file before any test file (bunfig.toml, `[test] preload`). The libraries listed
  * below are loaded here, once, inside a jsdom window that is given back at once: the globals are
  * left as they were, and a test file that opens no window still has none
- * (tests/unit/banc-sans-fenetre.test.ts). A test file that needs one opens it with
+ * (tests/unit/bench-windowless.test.ts). A test file that needs one opens it with
  * `ouvrirFenetre()` (tests/support/dom-react.ts).
  *
  * A library that reads `window` or `document` when it loads is added to the list below, and

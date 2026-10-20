@@ -76,7 +76,7 @@ curl -s https://my-makeup.fr/sitemap.xml | grep -o '/profil/[^<]*' | while read 
 
 ## Les sondes et les tests
 
-- Les sondes ne tournent pas sous `bun test` : là, aucune requête ne quitte le poste ([`http-sortant.md`](http-sortant.md)). Leur logique se teste dans `tests/unit/sondes.test.ts`, contre un site simulé et des profils fictifs : `bun --no-env-file test tests/unit/sondes.test.ts`.
+- Les sondes ne tournent pas sous `bun test` : là, aucune requête ne quitte le poste ([`http-sortant.md`](http-sortant.md)). Leur logique se teste dans `tests/unit/probes.test.ts`, contre un site simulé et des profils fictifs : `bun --no-env-file test tests/unit/probes.test.ts`.
 - Elles ne passent pas par Playwright, et `tests/probes/` ne contient aucun fichier `*.spec.ts` ni `*.test.ts`.
 - **La garde des essais de bout en bout refuse toujours la prod** (U86, [`e2e.md`](e2e.md)). Les sondes ont leur propre garde et leur propre variable, `PROBES_TARGET` : elles ne lisent ni `BASE_URL` ni `NEXT_PUBLIC_SITE_URL`, et n'assouplissent rien.
 
@@ -95,7 +95,7 @@ R02 demande un jeton : le banc ne règle pas `STATS_TOKEN`. Lance l'application 
 
 Le workflow `.github/workflows/sondes.yml` lance `bun run probes` contre le site en ligne **chaque lundi à 07:00, heure de Paris** (le cron porte son fuseau : l'heure d'été ne le décale pas). Tu peux aussi le lancer à la main (« Run workflow »). Il écrit le rapport des sondes dans le résumé de l'exécution, et n'a **aucun secret de prod** : ni jeton, ni variable.
 
-- **Une sonde rouge, ou non lancée, fait échouer l'exécution** (code de sortie 1). Rien ne l'adoucit : ni `continue-on-error`, ni `|| true`. Un test le garde et joue une sonde faussée exprès (`tests/unit/sondes-lundi-ci.test.ts`).
+- **Une sonde rouge, ou non lancée, fait échouer l'exécution** (code de sortie 1). Rien ne l'adoucit : ni `continue-on-error`, ni `|| true`. Un test le garde et joue une sonde faussée exprès (`tests/unit/probes-monday-ci.test.ts`).
 - **R02 reste « inconnu »** dans ce workflow, faute du jeton de service. Ce n'est pas un échec : l'exécution est verte (décision du ticket 157). Pour comparer le sitemap aux profils publiables, lance les sondes à la main avec `PROBES_STATS_TOKEN`.
 - **Les planifications ne tournent que sur la branche par défaut** du dépôt, et GitHub les désactive après 60 jours sans activité dans un dépôt public. Tant que `main` porte l'ancien site, le lundi ne se déclenche pas : il commence à la bascule.
 - Contre le site actuel, R05 est rouge par construction (voir plus haut) : l'exécution du lundi est rouge jusqu'à la bascule.

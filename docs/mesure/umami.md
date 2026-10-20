@@ -53,7 +53,7 @@ track('profile_publiable') // un événement sans propriété n'en prend pas
 - Un nom inconnu, une propriété en trop ou manquante, une valeur hors de sa liste : le code ne compile pas. À l'exécution, l'événement tombe tout entier.
 - Rien n'est émis en développement ni dans les tests, ni sans Umami, ni depuis un navigateur automatisé. Rien ne lève. Pendant que le traceur charge, l'événement attend dans la salle d'attente.
 - Aucune donnée personnelle : des listes fermées, des booléens, des entiers, l'identifiant d'un profil (`pid` : l'identifiant de l'ancien site, ou `v3-<id>` pour un profil créé depuis), un chemin sans paramètre. Un texte qui ressemble à un email ou à un téléphone fait tomber l'événement.
-- Ajouter un événement : une ligne dans `CATALOG`, une ligne dans `EXEMPLES` de `tests/unit/mesure-evenements.test.ts`, et sa ligne dans le plan de mesure. Renommer une valeur coupe sa série dans Umami.
+- Ajouter un événement : une ligne dans `CATALOG`, une ligne dans `EXEMPLES` de `tests/unit/analytics-events.test.ts`, et sa ligne dans le plan de mesure. Renommer une valeur coupe sa série dans Umami.
 - Aucun appel direct à Umami hors de `src/lib/analytics/` : un test statique le garde.
 
 Les Web Vitals (`web-vitals`, un événement par mesure : `CLS`, `FCP`, `INP`, `LCP`, `TTFB`) partent de chaque page chargée, sans échantillon, depuis `src/components/analytics/WebVitals.tsx`. Le nom garde son tiret : la série existe déjà dans le rapport du lundi.
@@ -69,7 +69,7 @@ Il ne part pas :
 - quand l'adresse porte `utm_campaign=relance` (lien d'un email de relance) ;
 - depuis l'aperçu de sa propre page (`/auth/apercu-profil`), qui ne compte aucun clic (`mesure={false}`).
 
-Un profil sans contact public n'a ni section ni lien, donc aucun événement. Le `pid` d'un profil est l'identifiant de l'ancien site s'il en a un, sinon `v3-<id>` (`src/lib/profile/pid.ts`). Tests : U84 dans `tests/unit/mesure-clic-contact.test.tsx`, E52 dans `tests/e2e/mesure-clic-contact.spec.ts`.
+Un profil sans contact public n'a ni section ni lien, donc aucun événement. Le `pid` d'un profil est l'identifiant de l'ancien site s'il en a un, sinon `v3-<id>` (`src/lib/profile/pid.ts`). Tests : U84 dans `tests/unit/analytics-contact-click.test.tsx`, E52 dans `tests/e2e/mesure-clic-contact.spec.ts`.
 
 ## La recherche, les appels à l'action et les pages d'erreur (ticket 145)
 
@@ -89,7 +89,7 @@ Un profil sans contact public n'a ni section ni lien, donc aucun événement. Le
 
 Le `pid` d'une carte (`ProfileCard.pid`) est lu à part, par les identifiants que la lecture publique a donnés (`readPids`) : l'ancien identifiant n'est pas un champ que le public lit.
 
-Tests : `tests/unit/mesure-recherche-erreurs.test.ts`, et `tests/e2e/mesure-recherche-erreurs.spec.ts` contre le faux Umami.
+Tests : `tests/unit/analytics-search-errors.test.ts`, et `tests/e2e/mesure-recherche-erreurs.spec.ts` contre le faux Umami.
 
 ## L'onboarding : les étapes et l'origine déclarée (ticket 148)
 
@@ -98,4 +98,4 @@ Tests : `tests/unit/mesure-recherche-erreurs.test.ts`, et `tests/e2e/mesure-rech
 | `onboarding_step` | Le serveur a répondu qu'il a enregistré une étape de `/auth/init-account` | `step` : `identite`, `zone`, `photo`, puis `termine` quand le serveur dit que les trois étapes sont faites. `verification_email` et `compte_cree` restent dans la liste pour les séries de l'ancien site, la v3 ne les émet pas |
 | `onboarding_source` | La réponse à « Comment as-tu connu My Makeup ? » est choisie, et l'identité est enregistrée | `source` : `instagram`, `google`, `bouche-a-oreille`, `ecole`, `ia`, `autre` |
 
-Chaque étape est comptée une fois par visite : un « Précédent » suivi d'un nouveau « Suivant » ne recompte rien, et un échec du serveur n'émet rien. L'origine part une seule fois, avec l'étape `identite`, seulement si elle est choisie (une réponse effacée ne part pas). **Elle n'est stockée nulle part** : ni envoyée au serveur avec l'identité, ni dans un champ de la base ou du compte. Les origines se lisent en totaux hebdomadaires dans Umami, jamais rapprochées d'un compte. Le code est dans `src/components/dashboard/onboarding/Onboarding.tsx`. Test : `tests/unit/mesure-onboarding.test.tsx`, qui vérifie aussi qu'aucune collection n'a de champ pour la réponse.
+Chaque étape est comptée une fois par visite : un « Précédent » suivi d'un nouveau « Suivant » ne recompte rien, et un échec du serveur n'émet rien. L'origine part une seule fois, avec l'étape `identite`, seulement si elle est choisie (une réponse effacée ne part pas). **Elle n'est stockée nulle part** : ni envoyée au serveur avec l'identité, ni dans un champ de la base ou du compte. Les origines se lisent en totaux hebdomadaires dans Umami, jamais rapprochées d'un compte. Le code est dans `src/components/dashboard/onboarding/Onboarding.tsx`. Test : `tests/unit/analytics-onboarding.test.tsx`, qui vérifie aussi qu'aucune collection n'a de champ pour la réponse.

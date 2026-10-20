@@ -3,7 +3,7 @@ import { request } from 'node:https'
 import { HttpResponse, http, simulate } from '../support/outgoing-http'
 
 // Not a test of the suite: nothing in its name makes bun or Playwright pick it up.
-// tests/unit/banc-http-sortant.test.ts runs it in a child `bun test` and reads the verdict of
+// tests/unit/bench-outgoing-http.test.ts runs it in a child `bun test` and reads the verdict of
 // each test below. All but the first one must fail, though every one of their assertions holds.
 
 /** A careless client: whatever goes wrong with the service, it carries on. */

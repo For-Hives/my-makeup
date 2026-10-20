@@ -17,8 +17,8 @@ import {
 	publishableConditions,
 	usableCity,
 } from '@/lib/profile/completeness'
-import ancienSite from './fixtures/completude-ancien-site.json'
-import casPartages from './fixtures/completude-cas.json'
+import casPartages from './fixtures/completeness-cases.json'
+import ancienSite from './fixtures/completeness-old-site.json'
 
 // Ported from tests/unit/completude.test.mjs of the old site (branch main) and from
 // tests/unit/profile-conditions.test.js of the old API: same cases, same expected values.
@@ -27,7 +27,7 @@ import casPartages from './fixtures/completude-cas.json'
 const DESCRIPTION = 'Maquilleuse professionnelle. '.repeat(8)
 
 // made-up complete profile (media of the old API, in `{ data }`)
-const complet: ProfileFields = {
+const full: ProfileFields = {
 	first_name: 'Testine',
 	last_name: 'Recette',
 	speciality: 'Mariage',
@@ -44,7 +44,7 @@ const complet: ProfileFields = {
 	language: [{ id: 1 }],
 }
 
-const AUCUNE: PublishableConditions = {
+const NONE: PublishableConditions = {
 	photoPrincipale: false,
 	villeExploitable: false,
 	specialite: false,
@@ -53,7 +53,7 @@ const AUCUNE: PublishableConditions = {
 	canalDeContact: false,
 }
 
-const TOUTES: PublishableConditions = {
+const ALL: PublishableConditions = {
 	photoPrincipale: true,
 	villeExploitable: true,
 	specialite: true,
@@ -63,7 +63,7 @@ const TOUTES: PublishableConditions = {
 }
 
 /** The six conditions as the old API names them, under the names of the v3 */
-const depuisAncienneApi = (api: {
+const sinceOldApi = (api: {
 	mainPicture: boolean
 	usableCity: boolean
 	speciality: boolean
@@ -80,7 +80,7 @@ const depuisAncienneApi = (api: {
 })
 
 /** What the old front returned, as the reference file holds it */
-interface ResultatAncienFront {
+interface ResultOldFront {
 	score: number
 	sur: number
 	manquants: string[]
@@ -90,12 +90,19 @@ interface ResultatAncienFront {
 }
 
 /** The result without what the v3 adds, to compare with the old front */
-const commeAncienFront = (
+const asOldFront = (
 	profil: ProfileFields | null | undefined,
 	options?: { formulaireDevis?: boolean }
-): ResultatAncienFront => {
-	const { score, sur, manquants, actif, publiable, interne } = completeness(profil, options)
-	return { score, sur, manquants, actif, publiable, interne }
+): ResultOldFront => {
+	const {
+		score,
+		sur: onValue,
+		manquants: missing,
+		actif: active,
+		publiable: publishable,
+		interne: internal,
+	} = completeness(profil, options)
+	return { score, sur: onValue, manquants: missing, actif: active, publiable: publishable, interne: internal }
 }
 
 describe('completude (plans/02 U01-U08)', () => {
@@ -121,7 +128,7 @@ describe('completude (plans/02 U01-U08)', () => {
 			'langues',
 			'galerie',
 		])
-		expect(c.conditions).toEqual(AUCUNE)
+		expect(c.conditions).toEqual(NONE)
 		expect(c.entierementVide).toBe(true)
 		expect(completeness(null).score).toBe(0)
 		expect(completeness(null).entierementVide).toBe(true)
@@ -129,18 +136,18 @@ describe('completude (plans/02 U01-U08)', () => {
 	})
 
 	test('U02 complete profile: 13/13, actif and publiable', () => {
-		const c = completeness(complet)
+		const c = completeness(full)
 		expect(c.score).toBe(13)
 		expect(c.manquants).toEqual([])
 		expect(c.actif).toBe(true)
 		expect(c.publiable).toBe(true)
 		expect(c.interne).toBe(false)
-		expect(c.conditions).toEqual(TOUTES)
+		expect(c.conditions).toEqual(ALL)
 		expect(c.entierementVide).toBe(false)
 	})
 
 	test('U03 actif needs a picture, a usable city and a speciality', () => {
-		const manques: ProfileFields[] = [
+		const gaps: ProfileFields[] = [
 			{ main_picture: { data: null } },
 			{ main_picture: null },
 			{ city: 'France' },
@@ -148,83 +155,81 @@ describe('completude (plans/02 U01-U08)', () => {
 			{ speciality: '' },
 			{ speciality: null },
 		]
-		for (const manque of manques) {
-			const c = completeness({ ...complet, ...manque })
+		for (const gap of gaps) {
+			const c = completeness({ ...full, ...gap })
 			expect(c.actif).toBe(false)
 			expect(c.publiable).toBe(false)
 		}
 		// each of the three, and nothing else
-		expect(completeness({ ...complet, main_picture: null }).conditions).toEqual({ ...TOUTES, photoPrincipale: false })
-		expect(completeness({ ...complet, city: 'France' }).conditions).toEqual({ ...TOUTES, villeExploitable: false })
-		expect(completeness({ ...complet, speciality: '' }).conditions).toEqual({ ...TOUTES, specialite: false })
+		expect(completeness({ ...full, main_picture: null }).conditions).toEqual({ ...ALL, photoPrincipale: false })
+		expect(completeness({ ...full, city: 'France' }).conditions).toEqual({ ...ALL, villeExploitable: false })
+		expect(completeness({ ...full, speciality: '' }).conditions).toEqual({ ...ALL, specialite: false })
 		// the three alone: actif, not publiable
-		const troisSeules = completeness({ main_picture: { id: 1 }, city: 'Annecy', speciality: 'Mariage' })
-		expect(troisSeules.actif).toBe(true)
-		expect(troisSeules.publiable).toBe(false)
+		const threeOnly = completeness({ main_picture: { id: 1 }, city: 'Annecy', speciality: 'Mariage' })
+		expect(threeOnly.actif).toBe(true)
+		expect(threeOnly.publiable).toBe(false)
 	})
 
 	test('U04 publiable needs an offer with a numeric price', () => {
-		const avec = (service_offers: ProfileFields['service_offers']) => completeness({ ...complet, service_offers })
-		expect(avec([{ price: 'Sur devis' }]).publiable).toBe(false)
-		expect(avec([{ price: 'Sur devis' }]).actif).toBe(true)
-		expect(avec([{ price: 'Sur devis' }]).manquants).toEqual([])
-		expect(avec([]).publiable).toBe(false)
-		expect(avec(null).publiable).toBe(false)
-		expect(avec([null, { price: null }, {}]).publiable).toBe(false)
-		expect(avec([{ price: 'Sur devis' }, { price: '80€' }]).publiable).toBe(true)
-		expect(avec([{ price: 'Sur devis' }]).conditions).toEqual({ ...TOUTES, offreChiffree: false })
+		const withValue = (service_offers: ProfileFields['service_offers']) => completeness({ ...full, service_offers })
+		expect(withValue([{ price: 'Sur devis' }]).publiable).toBe(false)
+		expect(withValue([{ price: 'Sur devis' }]).actif).toBe(true)
+		expect(withValue([{ price: 'Sur devis' }]).manquants).toEqual([])
+		expect(withValue([]).publiable).toBe(false)
+		expect(withValue(null).publiable).toBe(false)
+		expect(withValue([null, { price: null }, {}]).publiable).toBe(false)
+		expect(withValue([{ price: 'Sur devis' }, { price: '80€' }]).publiable).toBe(true)
+		expect(withValue([{ price: 'Sur devis' }]).conditions).toEqual({ ...ALL, offreChiffree: false })
 	})
 
 	test('U05 description of 200 characters at least, edge spaces ignored', () => {
-		const avec = (description: string) => completeness({ ...complet, description })
+		const withValue = (description: string) => completeness({ ...full, description })
 		expect(DESCRIPTION_MIN).toBe(200)
-		expect(avec('a'.repeat(199)).publiable).toBe(false)
-		expect(avec('a'.repeat(200)).publiable).toBe(true)
-		expect(avec(`   ${'a'.repeat(199)}   `).publiable).toBe(false)
-		expect(avec(`   ${'a'.repeat(200)}   `).publiable).toBe(true)
+		expect(withValue('a'.repeat(199)).publiable).toBe(false)
+		expect(withValue('a'.repeat(200)).publiable).toBe(true)
+		expect(withValue(`   ${'a'.repeat(199)}   `).publiable).toBe(false)
+		expect(withValue(`   ${'a'.repeat(200)}   `).publiable).toBe(true)
 		expect(descriptionLength(`a${' '.repeat(50)}b`)).toBe(3)
 		expect(descriptionLength(`   ${'a'.repeat(199)}   `)).toBe(199)
 		expect(descriptionLength(null)).toBe(0)
 		// a short description still counts for the bar
-		expect(avec('a'.repeat(199)).manquants).toEqual([])
-		expect(avec('a'.repeat(199)).conditions).toEqual({ ...TOUTES, descriptionLongue: false })
+		expect(withValue('a'.repeat(199)).manquants).toEqual([])
+		expect(withValue('a'.repeat(199)).conditions).toEqual({ ...ALL, descriptionLongue: false })
 	})
 
 	test('U06 publiable needs a contact channel; the quote form is none', () => {
-		const sansCanal: ProfileFields = { ...complet, network: { instagram: '', email: null } }
-		const c = completeness(sansCanal)
+		const withoutChannel: ProfileFields = { ...full, network: { instagram: '', email: null } }
+		const c = completeness(withoutChannel)
 		expect(c.publiable).toBe(false)
 		expect(c.actif).toBe(true)
 		expect(c.manquants).toEqual(['reseaux'])
-		expect(c.conditions).toEqual({ ...TOUTES, canalDeContact: false })
-		expect(completeness({ ...complet, network: null }).publiable).toBe(false)
+		expect(c.conditions).toEqual({ ...ALL, canalDeContact: false })
+		expect(completeness({ ...full, network: null }).publiable).toBe(false)
 		// the option is off unless a caller turns it on, and no caller does
-		expect(completeness(sansCanal, {}).publiable).toBe(false)
-		expect(completeness(sansCanal, { formulaireDevis: false }).publiable).toBe(false)
-		expect(completeness(sansCanal, { formulaireDevis: undefined }).publiable).toBe(false)
+		expect(completeness(withoutChannel, {}).publiable).toBe(false)
+		expect(completeness(withoutChannel, { formulaireDevis: false }).publiable).toBe(false)
+		expect(completeness(withoutChannel, { formulaireDevis: undefined }).publiable).toBe(false)
 	})
 
 	test('the quote form option of the old site: still read, never one of the six conditions', () => {
-		const sansCanal: ProfileFields = { ...complet, network: { instagram: '', email: null } }
-		const avecFormulaire = completeness(sansCanal, { formulaireDevis: true })
-		expect(avecFormulaire.publiable).toBe(true)
-		expect(avecFormulaire.manquants).toEqual(['reseaux'])
-		expect(avecFormulaire.conditions.canalDeContact).toBe(false)
+		const withoutChannel: ProfileFields = { ...full, network: { instagram: '', email: null } }
+		const withForm = completeness(withoutChannel, { formulaireDevis: true })
+		expect(withForm.publiable).toBe(true)
+		expect(withForm.manquants).toEqual(['reseaux'])
+		expect(withForm.conditions.canalDeContact).toBe(false)
 		// a profile without anything stays entirely empty, whatever the option
 		expect(completeness({}, { formulaireDevis: true }).entierementVide).toBe(true)
 		expect(completeness({}, { formulaireDevis: true }).publiable).toBe(false)
 	})
 
 	test('U07 an internal account is never publiable', () => {
-		const c = completeness({ ...complet, speciality: 'CEO/CTO My Makeup' })
+		const c = completeness({ ...full, speciality: 'CEO/CTO My Makeup' })
 		expect(c.interne).toBe(true)
 		expect(c.actif).toBe(true)
 		expect(c.publiable).toBe(false)
-		expect(c.conditions).toEqual(TOUTES)
-		expect(completeness({ ...complet, speciality: 'CEO/CTO My Makeup' }, { formulaireDevis: true }).publiable).toBe(
-			false
-		)
-		expect(completeness({ ...complet, speciality: 'Maquillage mariée' }).interne).toBe(false)
+		expect(c.conditions).toEqual(ALL)
+		expect(completeness({ ...full, speciality: 'CEO/CTO My Makeup' }, { formulaireDevis: true }).publiable).toBe(false)
+		expect(completeness({ ...full, speciality: 'Maquillage mariée' }).interne).toBe(false)
 		for (const speciality of [
 			'ceo',
 			'CTO',
@@ -245,23 +250,23 @@ describe('completude (plans/02 U01-U08)', () => {
 
 	// the steps of the progress bar: it shows Math.round(100 / 13 * score)
 	test('names alone: 1/13 (both needed), a short description counts for the bar', () => {
-		const noms: ProfileFields = { first_name: 'Al', last_name: 'Bo' }
-		expect(completeness(noms).score).toBe(1)
-		expect(completeness(noms).manquants).toEqual(CRITERIA.slice(1))
+		const names: ProfileFields = { first_name: 'Al', last_name: 'Bo' }
+		expect(completeness(names).score).toBe(1)
+		expect(completeness(names).manquants).toEqual(CRITERIA.slice(1))
 		expect(completeness({ first_name: 'Al' }).score).toBe(0)
 		expect(completeness({ last_name: 'Bo' }).score).toBe(0)
 		expect(completeness({ first_name: 'Al', last_name: '  ' }).score).toBe(0)
 		// under the 200 characters of `publiable`, still one criterion
-		const courte = completeness({ ...noms, description: 'x' })
-		expect(courte.score).toBe(2)
-		expect(courte.publiable).toBe(false)
-		expect(completeness({ ...noms, description: '   ' }).score).toBe(1)
+		const short = completeness({ ...names, description: 'x' })
+		expect(short.score).toBe(2)
+		expect(short.publiable).toBe(false)
+		expect(completeness({ ...names, description: '   ' }).score).toBe(1)
 	})
 
 	test('everything but the gallery: 12/13, only « galerie » missing', () => {
-		const galeries: ProfileFields['image_gallery'][] = [{ data: [] }, { data: null }, [], null]
-		for (const image_gallery of galeries) {
-			const c = completeness({ ...complet, image_gallery })
+		const galleries: ProfileFields['image_gallery'][] = [{ data: [] }, { data: null }, [], null]
+		for (const image_gallery of galleries) {
+			const c = completeness({ ...full, image_gallery })
 			expect(c.score).toBe(12)
 			expect(c.manquants).toEqual(['galerie'])
 			// the gallery is not a rule of `publiable`
@@ -271,57 +276,57 @@ describe('completude (plans/02 U01-U08)', () => {
 
 	test('U08 shared JSON cases: same score and flags as on the old site', () => {
 		expect(casPartages.cas.length).toBeGreaterThanOrEqual(10)
-		for (const { nom, profil, options, attendu } of casPartages.cas) {
-			const { score, actif, publiable, interne } = completeness(profil, options)
-			expect({ score, actif, publiable, interne }, `cas « ${nom} »`).toEqual(attendu)
+		for (const { nom: name, profil: profile, options, attendu: expected } of casPartages.cas) {
+			const { score, actif: active, publiable: publishable, interne: internal } = completeness(profile, options)
+			expect({ score, actif: active, publiable: publishable, interne: internal }, `cas « ${name} »`).toEqual(expected)
 		}
 	})
 
 	test('U08 shared JSON cases: same missing criteria as the code of the old site computed', () => {
 		const reference = ancienSite.partages.cas
 		expect(reference.map(cas => cas.nom)).toEqual(casPartages.cas.map(cas => cas.nom))
-		for (const [i, { nom, profil, options }] of casPartages.cas.entries()) {
+		for (const [i, { nom: name, profil: profile, options }] of casPartages.cas.entries()) {
 			const front = reference[i]?.front
-			if (front === undefined) throw new Error(`no reference for « ${nom} »`)
-			expect(commeAncienFront(profil, options), `cas « ${nom} »`).toEqual(front)
+			if (front === undefined) throw new Error(`no reference for « ${name} »`)
+			expect(asOldFront(profile, options), `cas « ${name} »`).toEqual(front)
 		}
 	})
 
 	test('U08 shared JSON cases: the six conditions the old API read, entirely empty or not', () => {
-		for (const [i, { nom, profil, options }] of casPartages.cas.entries()) {
+		for (const [i, { nom: name, profil: profile, options }] of casPartages.cas.entries()) {
 			const api = ancienSite.partages.cas[i]?.api
-			if (api === undefined) throw new Error(`no reference for « ${nom} »`)
-			const c = completeness(profil, options)
-			expect(c.conditions, `cas « ${nom} »`).toEqual(depuisAncienneApi(api))
-			expect(c.entierementVide, `cas « ${nom} »`).toBe(api.entirelyEmpty)
+			if (api === undefined) throw new Error(`no reference for « ${name} »`)
+			const c = completeness(profile, options)
+			expect(c.conditions, `cas « ${name} »`).toEqual(sinceOldApi(api))
+			expect(c.entierementVide, `cas « ${name} »`).toBe(api.entirelyEmpty)
 		}
 	})
 })
 
 describe('the six conditions and the entirely empty profile (cases of the old API)', () => {
-	const cas = ancienSite.api.cas
+	const testCase = ancienSite.api.cas
 
 	test('each case: same conditions, same « entirely empty », same score and flags as the old site', () => {
-		expect(cas.length).toBeGreaterThanOrEqual(15)
-		for (const { nom, profil, front, api } of cas) {
-			expect(publishableConditions(profil), `cas « ${nom} »`).toEqual(depuisAncienneApi(api))
-			expect(isFullyEmpty(profil), `cas « ${nom} »`).toBe(api.entirelyEmpty)
-			expect(completeness(profil).entierementVide, `cas « ${nom} »`).toBe(api.entirelyEmpty)
-			expect(completeness(profil).conditions, `cas « ${nom} »`).toEqual(depuisAncienneApi(api))
-			expect(commeAncienFront(profil), `cas « ${nom} »`).toEqual(front)
+		expect(testCase.length).toBeGreaterThanOrEqual(15)
+		for (const { nom: name, profil: profile, front, api } of testCase) {
+			expect(publishableConditions(profile), `cas « ${name} »`).toEqual(sinceOldApi(api))
+			expect(isFullyEmpty(profile), `cas « ${name} »`).toBe(api.entirelyEmpty)
+			expect(completeness(profile).entierementVide, `cas « ${name} »`).toBe(api.entirelyEmpty)
+			expect(completeness(profile).conditions, `cas « ${name} »`).toEqual(sinceOldApi(api))
+			expect(asOldFront(profile), `cas « ${name} »`).toEqual(front)
 		}
 	})
 
 	test('nothing at all: none of the six conditions, entirely empty', () => {
-		for (const profil of [{}, null, undefined]) {
-			expect(publishableConditions(profil)).toEqual(AUCUNE)
-			expect(isFullyEmpty(profil)).toBe(true)
+		for (const profile of [{}, null, undefined]) {
+			expect(publishableConditions(profile)).toEqual(NONE)
+			expect(isFullyEmpty(profile)).toBe(true)
 		}
 	})
 
 	test('a name alone, or everything that is not one of the six conditions: entirely empty', () => {
 		expect(isFullyEmpty({ first_name: 'Prenom', last_name: 'Nom' })).toBe(true)
-		const sansCondition: ProfileFields = {
+		const withoutCondition: ProfileFields = {
 			first_name: 'Prenom',
 			last_name: 'Nom',
 			company_artist_name: 'Studio Fictif',
@@ -331,12 +336,12 @@ describe('the six conditions and the entirely empty profile (cases of the old AP
 			courses: [{ id: 1 }],
 			language: [{ id: 1 }],
 		}
-		expect(completeness(sansCondition).score).toBe(7)
-		expect(completeness(sansCondition).entierementVide).toBe(true)
+		expect(completeness(withoutCondition).score).toBe(7)
+		expect(completeness(withoutCondition).entierementVide).toBe(true)
 	})
 
 	test('just under each condition: entirely empty', () => {
-		const presque: ProfileFields = {
+		const almost: ProfileFields = {
 			speciality: '   ',
 			city: 'France',
 			description: 'a'.repeat(199),
@@ -344,13 +349,13 @@ describe('the six conditions and the entirely empty profile (cases of the old AP
 			service_offers: [{ price: 'Sur devis' }, { price: '2' }, { price: '12 000 €' }, { price: null }, null],
 			network: { instagram: ' ', email: '', phone: null },
 		}
-		expect(publishableConditions(presque)).toEqual(AUCUNE)
-		expect(isFullyEmpty(presque)).toBe(true)
-		expect(isFullyEmpty({ ...presque, city: '9 impasse des Essais Fictifs' })).toBe(true)
+		expect(publishableConditions(almost)).toEqual(NONE)
+		expect(isFullyEmpty(almost)).toBe(true)
+		expect(isFullyEmpty({ ...almost, city: '9 impasse des Essais Fictifs' })).toBe(true)
 	})
 
 	test('one condition alone is enough not to be entirely empty', () => {
-		const seules: [keyof PublishableConditions, ProfileFields][] = [
+		const only: [keyof PublishableConditions, ProfileFields][] = [
 			['offreChiffree', { service_offers: [{ price: 'Sur devis' }, { price: '80€' }] }],
 			['descriptionLongue', { description: 'a'.repeat(200) }],
 			['photoPrincipale', { main_picture: { id: 1, url: '/m/1.webp' } }],
@@ -358,12 +363,12 @@ describe('the six conditions and the entirely empty profile (cases of the old AP
 			['villeExploitable', { city: 'Annecy' }],
 			['specialite', { speciality: 'Mariage' }],
 		]
-		expect(Object.keys(AUCUNE).sort()).toEqual(seules.map(([condition]) => condition).sort())
-		for (const [condition, donnees] of seules) {
-			const profil: ProfileFields = { first_name: 'Prenom', ...donnees }
-			expect(publishableConditions(profil), condition).toEqual({ ...AUCUNE, [condition]: true })
-			expect(isFullyEmpty(profil), condition).toBe(false)
-			const c = completeness(profil)
+		expect(Object.keys(NONE).sort()).toEqual(only.map(([condition]) => condition).sort())
+		for (const [condition, data] of only) {
+			const profile: ProfileFields = { first_name: 'Prenom', ...data }
+			expect(publishableConditions(profile), condition).toEqual({ ...NONE, [condition]: true })
+			expect(isFullyEmpty(profile), condition).toBe(false)
+			const c = completeness(profile)
 			expect(c.entierementVide, condition).toBe(false)
 			expect(c.publiable, condition).toBe(false)
 		}
@@ -376,8 +381,8 @@ describe('the six conditions and the entirely empty profile (cases of the old AP
 	})
 
 	test('publiable is the six conditions together, and no internal account', () => {
-		const conditions = Object.keys(TOUTES) as (keyof PublishableConditions)[]
-		const sans: Record<keyof PublishableConditions, ProfileFields> = {
+		const conditions = Object.keys(ALL) as (keyof PublishableConditions)[]
+		const without: Record<keyof PublishableConditions, ProfileFields> = {
 			photoPrincipale: { main_picture: null },
 			villeExploitable: { city: 'France' },
 			specialite: { speciality: null },
@@ -386,8 +391,8 @@ describe('the six conditions and the entirely empty profile (cases of the old AP
 			canalDeContact: { network: null },
 		}
 		for (const condition of conditions) {
-			const c = completeness({ ...complet, ...sans[condition] })
-			expect(c.conditions, condition).toEqual({ ...TOUTES, [condition]: false })
+			const c = completeness({ ...full, ...without[condition] })
+			expect(c.conditions, condition).toEqual({ ...ALL, [condition]: false })
 			expect(c.publiable, condition).toBe(false)
 			expect(c.entierementVide, condition).toBe(false)
 		}
@@ -395,13 +400,14 @@ describe('the six conditions and the entirely empty profile (cases of the old AP
 
 	test('a commune named like a type of street is a usable city, as on the old front (the old API refused it)', () => {
 		expect(ancienSite.ecarts.cas.length).toBeGreaterThanOrEqual(5)
-		for (const { nom, profil, front, api, villeExploitableFront } of ancienSite.ecarts.cas) {
-			expect(villeExploitableFront, nom).toBe(true)
-			expect(api.usableCity, nom).toBe(false)
-			expect(usableCity(profil.city), nom).toBe(true)
-			expect(commeAncienFront(profil), nom).toEqual(front)
-			expect(publishableConditions(profil), nom).toEqual({ ...AUCUNE, villeExploitable: true })
-			expect(isFullyEmpty(profil), nom).toBe(false)
+		for (const { nom: name, profil: profile, front, api, villeExploitableFront: usableCityFront } of ancienSite.ecarts
+			.cas) {
+			expect(usableCityFront, name).toBe(true)
+			expect(api.usableCity, name).toBe(false)
+			expect(usableCity(profile.city), name).toBe(true)
+			expect(asOldFront(profile), name).toEqual(front)
+			expect(publishableConditions(profile), name).toEqual({ ...NONE, villeExploitable: true })
+			expect(isFullyEmpty(profile), name).toBe(false)
 		}
 	})
 })
@@ -459,13 +465,13 @@ describe('elementary rules', () => {
 			'7 IMPASSE DES ESSAIS, 74200 THONON-LES-BAINS, FRANCE',
 			'Annecy 74000',
 		]) {
-			const c = completeness({ ...complet, city })
+			const c = completeness({ ...full, city })
 			expect(c.actif, city).toBe(true)
 			expect(c.publiable, city).toBe(true)
 			expect(c.score, city).toBe(13)
 		}
 		for (const city of ['3 avenue des Essais', 'Annecy,rue des Essais']) {
-			const c = completeness({ ...complet, city })
+			const c = completeness({ ...full, city })
 			expect(c.actif, city).toBe(false)
 			expect(c.publiable, city).toBe(false)
 			// the field is filled: it still counts for the bar
@@ -509,8 +515,8 @@ describe('elementary rules', () => {
 		expect(aMedia('7')).toBe(false)
 		expect(aMedia(true)).toBe(false)
 		// @ts-expect-error the type refuses a bare id as a picture
-		const avecIdentifiant: ProfileFields = { ...complet, main_picture: 7 }
-		const c = completeness(avecIdentifiant)
+		const withIdentifier: ProfileFields = { ...full, main_picture: 7 }
+		const c = completeness(withIdentifier)
 		expect(c.conditions.photoPrincipale).toBe(false)
 		expect(c.manquants).toEqual(['photo'])
 		expect(c.actif).toBe(false)
@@ -523,9 +529,9 @@ describe('elementary rules', () => {
 		expect(hasContactChannel(null)).toBe(false)
 		expect(hasContactChannel(undefined)).toBe(false)
 		expect(CHANNELS).toEqual(['youtube', 'instagram', 'facebook', 'website', 'linkedin', 'phone', 'email'])
-		for (const canal of CHANNELS) {
-			expect(hasContactChannel({ [canal]: 'fictif' }), canal).toBe(true)
-			expect(completeness({ network: { [canal]: 'fictif' } }).manquants, canal).not.toContain('reseaux')
+		for (const channel of CHANNELS) {
+			expect(hasContactChannel({ [channel]: 'fictif' }), channel).toBe(true)
+			expect(completeness({ network: { [channel]: 'fictif' } }).manquants, channel).not.toContain('reseaux')
 		}
 	})
 
@@ -538,47 +544,47 @@ describe('elementary rules', () => {
 
 	test('values of another type than expected count as missing, without an error', () => {
 		// what a JSON document of unknown origin may hold
-		const douteux: unknown = JSON.parse(
+		const doubtful: unknown = JSON.parse(
 			'{"first_name":42,"last_name":{},"speciality":7,"city":["Annecy"],"description":200,"main_picture":7,"image_gallery":"x","skills":"x","experiences":{"length":2},"courses":3,"service_offers":"x","network":"instagram","language":true}'
 		)
-		const c = completeness(douteux as ProfileFields)
+		const c = completeness(doubtful as ProfileFields)
 		expect(c.score).toBe(0)
 		expect(c.manquants).toEqual([...CRITERIA])
 		expect(c.entierementVide).toBe(true)
-		const offres: unknown = JSON.parse('{"service_offers":["offre",12,null,{"price":80},{"price":"80 €"}]}')
-		expect(publishableConditions(offres as ProfileFields)).toEqual({ ...AUCUNE, offreChiffree: true })
+		const offers: unknown = JSON.parse('{"service_offers":["offre",12,null,{"price":80},{"price":"80 €"}]}')
+		expect(publishableConditions(offers as ProfileFields)).toEqual({ ...NONE, offreChiffree: true })
 	})
 })
 
 describe('devientPubliable (the « profile_publiable » event)', () => {
 	// one criterion short: a description of 199 characters
-	const presque: ProfileFields = { ...complet, description: 'a'.repeat(199) }
-	const incomplet: ProfileFields = { ...complet, description: '', main_picture: null }
+	const almost: ProfileFields = { ...full, description: 'a'.repeat(199) }
+	const incomplete: ProfileFields = { ...full, description: '', main_picture: null }
 
 	test('the save that completes the last criterion: true', () => {
-		expect(becomesPublishable(presque, { ...presque, description: 'a'.repeat(200) })).toBe(true)
-		expect(becomesPublishable(presque, complet)).toBe(true)
+		expect(becomesPublishable(almost, { ...almost, description: 'a'.repeat(200) })).toBe(true)
+		expect(becomesPublishable(almost, full)).toBe(true)
 	})
 
 	test('complete to complete, incomplete to incomplete, complete to incomplete: false', () => {
-		expect(becomesPublishable(complet, { ...complet, city: 'Lyon' })).toBe(false)
-		expect(becomesPublishable(incomplet, { ...incomplet, description: 'Bonjour' })).toBe(false)
-		expect(becomesPublishable(presque, presque)).toBe(false)
+		expect(becomesPublishable(full, { ...full, city: 'Lyon' })).toBe(false)
+		expect(becomesPublishable(incomplete, { ...incomplete, description: 'Bonjour' })).toBe(false)
+		expect(becomesPublishable(almost, almost)).toBe(false)
 		// a loss is never counted as a profile that became publiable
-		expect(becomesPublishable(complet, presque)).toBe(false)
-		expect(becomesPublishable(complet, { ...complet, service_offers: [] })).toBe(false)
+		expect(becomesPublishable(full, almost)).toBe(false)
+		expect(becomesPublishable(full, { ...full, service_offers: [] })).toBe(false)
 		expect(becomesPublishable(null, undefined)).toBe(false)
 		// an internal account never becomes publiable
-		const interne: ProfileFields = { ...presque, speciality: 'CEO/CTO My Makeup' }
-		expect(becomesPublishable(interne, { ...interne, description: DESCRIPTION })).toBe(false)
+		const internal: ProfileFields = { ...almost, speciality: 'CEO/CTO My Makeup' }
+		expect(becomesPublishable(internal, { ...internal, description: DESCRIPTION })).toBe(false)
 	})
 
 	test('without a contact channel she does not become publiable; the quote form option is off', () => {
-		const sansCanal: ProfileFields = { ...presque, network: { instagram: '' } }
-		const apres: ProfileFields = { ...sansCanal, description: 'a'.repeat(200) }
-		expect(becomesPublishable(sansCanal, apres)).toBe(false)
-		expect(becomesPublishable(sansCanal, apres, { formulaireDevis: false })).toBe(false)
+		const withoutChannel: ProfileFields = { ...almost, network: { instagram: '' } }
+		const after: ProfileFields = { ...withoutChannel, description: 'a'.repeat(200) }
+		expect(becomesPublishable(withoutChannel, after)).toBe(false)
+		expect(becomesPublishable(withoutChannel, after, { formulaireDevis: false })).toBe(false)
 		// as on the old site when the option is turned on
-		expect(becomesPublishable(sansCanal, apres, { formulaireDevis: true })).toBe(true)
+		expect(becomesPublishable(withoutChannel, after, { formulaireDevis: true })).toBe(true)
 	})
 })

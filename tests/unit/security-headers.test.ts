@@ -178,7 +178,7 @@ describe('the content policy is in report-only mode and names no third-party dom
 
 describe('the photos of an environment (ticket 230)', () => {
 	// What a build gives when R2_PUBLIC_URL names another host: its own bucket, not the one of the live site.
-	const AUTRE_BUCKET = 'https://exemple-photos.example.test'
+	const OTHER_BUCKET = 'https://exemple-photos.example.test'
 	const imgSources = async (env: Env) =>
 		sourcesOf(
 			(await headersSentFor(await configUnder(env), '/')).get('content-security-policy-report-only') ?? '',
@@ -186,9 +186,9 @@ describe('the photos of an environment (ticket 230)', () => {
 		)
 
 	test('the policy names the host of R2_PUBLIC_URL and not the one of the live site', async () => {
-		const sources = await imgSources({ NODE_ENV: 'production', R2_PUBLIC_URL: AUTRE_BUCKET })
+		const sources = await imgSources({ NODE_ENV: 'production', R2_PUBLIC_URL: OTHER_BUCKET })
 
-		expect(sources).toContain(AUTRE_BUCKET)
+		expect(sources).toContain(OTHER_BUCKET)
 		expect(sources).not.toContain(MEDIA_ORIGIN_DEFAULT)
 	})
 
@@ -197,7 +197,7 @@ describe('the photos of an environment (ticket 230)', () => {
 			const sources = await imgSources({ NODE_ENV: 'production', R2_PUBLIC_URL })
 
 			expect(sources).toContain(MEDIA_ORIGIN_DEFAULT)
-			expect(sources).not.toContain(AUTRE_BUCKET)
+			expect(sources).not.toContain(OTHER_BUCKET)
 		}
 	})
 })
@@ -335,16 +335,16 @@ describe('the storage of the bench, for the image optimizer (ticket 103)', () =>
 	})
 
 	test('the bench opens one local folder, over http, and the photos of it only', () => {
-		const banc = benchImages('http://127.0.0.1:9110/mymakeup-test')
+		const bench = benchImages('http://127.0.0.1:9110/mymakeup-test')
 
-		expect(banc?.remotePattern).toEqual({
+		expect(bench?.remotePattern).toEqual({
 			hostname: '127.0.0.1',
 			pathname: '/mymakeup-test/**',
 			port: '9110',
 			protocol: 'http',
 		})
-		if (!banc) throw new Error('the bench storage was refused')
-		const accepted = (address: string) => hasRemoteMatch([], [banc.remotePattern], new URL(address))
+		if (!bench) throw new Error('the bench storage was refused')
+		const accepted = (address: string) => hasRemoteMatch([], [bench.remotePattern], new URL(address))
 		expect(accepted('http://127.0.0.1:9110/mymakeup-test/photos/une.webp')).toBe(true)
 		expect(accepted('http://127.0.0.1:9110/autre-espace/une.webp')).toBe(false)
 		expect(accepted('http://127.0.0.1:9111/mymakeup-test/une.webp')).toBe(false)

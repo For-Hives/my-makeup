@@ -15,7 +15,7 @@ Trois fichiers vont ensemble :
 | `docs/migration/urls-inventaire.json` | L'inventaire gelé : les adresses relevées sur l'ancien site, sans aucun chemin de profil réel |
 | `docs/migration/URLS.md` | Ce document. Ses tableaux sont écrits depuis les deux fichiers ci-dessus par `bun scripts/migration/urls-doc.ts` |
 
-Le test `tests/unit/urls-gelees.test.ts` échoue si un tableau de ce document ne dit plus la même chose que la table.
+Le test `tests/unit/frozen-urls.test.ts` échoue si un tableau de ce document ne dit plus la même chose que la table.
 
 ## Règles
 
@@ -393,7 +393,7 @@ Une adresse publique ne change pas sans laisser de trace.
 1. Écrire la décision au journal des décisions.
 2. Modifier la table `src/lib/frozen-urls.ts` : l'ancienne adresse reçoit sa redirection 308 en un saut, ou sa 404 attendue avec sa raison.
 3. Lancer `bun scripts/migration/urls-doc.ts`, qui réécrit les tableaux de ce document.
-4. Lancer `bun --no-env-file test tests/unit/urls-gelees.test.ts`.
+4. Lancer `bun --no-env-file test tests/unit/frozen-urls.test.ts`.
 5. Pendant la migration, ajouter la ligne au registre `CHANGEMENTS-VOULUS.md`.
 
 L'inventaire, lui, ne se modifie pas à la main. Il se relance, puis se gèle de nouveau.

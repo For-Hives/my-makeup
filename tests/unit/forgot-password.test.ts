@@ -18,7 +18,7 @@ import { passwordResetEmailContent } from '@/lib/emails/password-reset'
 
 /** Tickets 085 and 086: the rules of the forgotten password that need no database. */
 
-const JETON = 'a1b2c3d4e5f60718293a4b5c6d7e8f9012345678'
+const TOKEN = 'a1b2c3d4e5f60718293a4b5c6d7e8f9012345678'
 
 describe('l’adresse de la demande', () => {
 	test('une adresse est rognée et acceptée', () => {
@@ -56,10 +56,10 @@ describe('le nouveau mot de passe', () => {
 
 describe('le jeton du lien', () => {
 	test('40 caractères hexadécimaux, ou rien', () => {
-		expect(passwordResetToken(JETON)).toBe(JETON)
-		expect(passwordResetToken(` ${JETON} `)).toBe(JETON)
-		expect(passwordResetToken([JETON, 'x'])).toBe(JETON)
-		for (const faux of [
+		expect(passwordResetToken(TOKEN)).toBe(TOKEN)
+		expect(passwordResetToken(` ${TOKEN} `)).toBe(TOKEN)
+		expect(passwordResetToken([TOKEN, 'x'])).toBe(TOKEN)
+		for (const fake of [
 			undefined,
 			null,
 			'',
@@ -69,7 +69,7 @@ describe('le jeton du lien', () => {
 			'a1'.repeat(64),
 			"' or 1=1",
 		])
-			expect(passwordResetToken(faux)).toBeNull()
+			expect(passwordResetToken(fake)).toBeNull()
 	})
 })
 
@@ -77,14 +77,14 @@ describe('le lien du mail sort de l’adresse (proxy)', () => {
 	const params = (requete: string) => new URLSearchParams(requete)
 
 	test('le lien du mail : un cookie d’une heure, et l’adresse sans code', () => {
-		const plan = linkPlan('/auth/reinitialiser', params(`code=${JETON}`))
-		expect(plan).toEqual({ aller: '/auth/reinitialiser', cookie: { valeur: JETON, maxAgeS: 3600 } })
+		const plan = linkPlan('/auth/reinitialiser', params(`code=${TOKEN}`))
+		expect(plan).toEqual({ aller: '/auth/reinitialiser', cookie: { valeur: TOKEN, maxAgeS: 3600 } })
 		expect(LINK_DURATION_MS / 1000).toBe(3600)
 	})
 	test('un lien de l’ancien site (128 caractères) est gardé : la page dira « plus valable »', () => {
-		const ancien = 'a1'.repeat(64)
-		expect(linkPlan('/auth/reinitialiser', params(`code=${ancien}`))?.cookie.valeur).toBe(ancien)
-		expect(passwordResetToken(ancien)).toBeNull()
+		const old = 'a1'.repeat(64)
+		expect(linkPlan('/auth/reinitialiser', params(`code=${old}`))?.cookie.valeur).toBe(old)
+		expect(passwordResetToken(old)).toBeNull()
 	})
 	test('un code qui n’en est pas un efface le cookie et ne le remplace pas', () => {
 		for (const code of ['', 'x', '<script>alert(1)</script>', 'a b c d e f g h i j k l'])
@@ -95,8 +95,8 @@ describe('le lien du mail sort de l’adresse (proxy)', () => {
 	})
 	test('rien d’autre n’est concerné : sans code, ou une autre page', () => {
 		expect(linkPlan('/auth/reinitialiser', params(''))).toBeNull()
-		expect(linkPlan('/auth/signin', params(`code=${JETON}`))).toBeNull()
-		expect(linkPlan('/auth/reinitialiser/autre', params(`code=${JETON}`))).toBeNull()
+		expect(linkPlan('/auth/signin', params(`code=${TOKEN}`))).toBeNull()
+		expect(linkPlan('/auth/reinitialiser/autre', params(`code=${TOKEN}`))).toBeNull()
 	})
 	test('le cookie a le nom des anciennes pages', () => {
 		expect(PASSWORD_RESET_COOKIE).toBe('mm-reset')
@@ -105,9 +105,9 @@ describe('le lien du mail sort de l’adresse (proxy)', () => {
 
 describe('le mail', () => {
 	test('un bouton vers la page du site avec le jeton, une heure, un seul usage, « tu »', () => {
-		const email = composerEmail(passwordResetEmailContent(JETON), 'https://my-makeup.fr')
+		const email = composerEmail(passwordResetEmailContent(TOKEN), 'https://my-makeup.fr')
 		expect(email.sujet).toBe('Réinitialise ton mot de passe My Makeup')
-		expect(email.lien).toBe(`https://my-makeup.fr/auth/reinitialiser?code=${JETON}`)
+		expect(email.lien).toBe(`https://my-makeup.fr/auth/reinitialiser?code=${TOKEN}`)
 		expect(email.texte).toContain(email.lien ?? 'x')
 		expect(email.html).toContain('valable une heure')
 		expect(email.html).toContain('ne sert qu’une fois')
@@ -128,22 +128,22 @@ describe('les textes sont ceux du site actuel', () => {
 })
 
 describe('demanderUnLien avec un Payload de pacotille', () => {
-	const journal: { type: string; code: string }[] = []
-	const appels: string[] = []
-	const envoyes: { a: string; texte: string; html: string }[] = []
-	const rendus: number[] = []
+	const log: { type: string; code: string }[] = []
+	const calls: string[] = []
+	const sent: { a: string; texte: string; html: string }[] = []
+	const rendered: number[] = []
 	const payload = () =>
 		({
 			db: {
 				// The reservation: a known account is found, an unknown one is not.
 				updateOne: async ({ data, where }: { data: Record<string, unknown>; where: unknown }) => {
 					if (data.resetPasswordRequestedAt === null) {
-						rendus.push(1)
+						rendered.push(1)
 						return null
 					}
-					const adresse = JSON.stringify(where).match(/"equals":"([^"]+)"/)?.[1] ?? ''
-					appels.push(adresse)
-					return adresse.startsWith('connue') ? { id: 7, email: adresse } : null
+					const url = JSON.stringify(where).match(/"equals":"([^"]+)"/)?.[1] ?? ''
+					calls.push(url)
+					return url.startsWith('connue') ? { id: 7, email: url } : null
 				},
 			},
 			forgotPassword: async ({ disableEmail }: { disableEmail?: boolean }) => {
@@ -152,11 +152,11 @@ describe('demanderUnLien avec un Payload de pacotille', () => {
 			},
 			logger: { error: () => {} },
 		}) as unknown as Payload
-	const envoyer = (echec: boolean) => async (e: { a: string; texte: string; html: string }) => {
+	const send = (echec: boolean) => async (e: { a: string; texte: string; html: string }) => {
 		if (echec) throw new Error(`le relais refuse ${e.a}`)
-		envoyes.push(e)
+		sent.push(e)
 	}
-	const lancer = async (
+	const launch = async (
 		email: unknown,
 		options: {
 			echec?: boolean
@@ -164,82 +164,85 @@ describe('demanderUnLien avec un Payload de pacotille', () => {
 			apres?: (t: () => Promise<void>) => void
 		} = {}
 	) => {
-		const travaux: Promise<void>[] = []
-		const debut = Date.now()
-		const resultat = await requestPasswordLink({
+		const jobs: Promise<void>[] = []
+		const startedAt = Date.now()
+		const result = await requestPasswordLink({
 			payload: payload(),
-			envoyer: envoyer(options.echec ?? false),
+			envoyer: send(options.echec ?? false),
 			site: 'https://my-makeup.fr',
 			headers: new Headers({ 'x-forwarded-for': '203.0.113.7' }),
 			email,
-			apres: options.apres ?? (t => void travaux.push(t())),
+			apres: options.apres ?? (t => void jobs.push(t())),
 			frein: options.frein ?? createRateLimit({ nom: `unit-${Math.random()}`, limite: 100, fenetreMs: 1000 }),
-			journal: async e => void journal.push({ type: e.type, code: e.code }),
+			journal: async e => void log.push({ type: e.type, code: e.code }),
 		})
-		const duree = Date.now() - debut
-		await Promise.all(travaux)
-		return { resultat, duree }
+		const duration = Date.now() - startedAt
+		await Promise.all(jobs)
+		return { resultat: result, duree: duration }
 	}
 
 	test('connue ou inconnue : même réponse, même plancher, et le travail est confié à `apres`', async () => {
-		const connue = await lancer('connue@example.test')
-		const inconnue = await lancer('inconnue@example.test')
-		expect(connue.resultat).toEqual(inconnue.resultat)
-		expect(envoyes.map(e => e.a)).toEqual(['connue@example.test'])
+		const known = await launch('connue@example.test')
+		const unknown = await launch('inconnue@example.test')
+		expect(known.resultat).toEqual(unknown.resultat)
+		expect(sent.map(e => e.a)).toEqual(['connue@example.test'])
 		// The mail leaves by the one door, with its two parts.
-		expect(envoyes[0]?.texte).toContain('/auth/reinitialiser?code=')
-		expect(envoyes[0]?.html).toContain('/auth/reinitialiser?code=')
-		for (const { duree } of [connue, inconnue]) {
-			expect(duree).toBeGreaterThanOrEqual(FORGOT_PASSWORD_FLOOR_MS - 20)
-			expect(duree).toBeLessThan(FORGOT_PASSWORD_FLOOR_MS + 200)
+		expect(sent[0]?.texte).toContain('/auth/reinitialiser?code=')
+		expect(sent[0]?.html).toContain('/auth/reinitialiser?code=')
+		for (const { duree: duration } of [known, unknown]) {
+			expect(duration).toBeGreaterThanOrEqual(FORGOT_PASSWORD_FLOOR_MS - 20)
+			expect(duration).toBeLessThan(FORGOT_PASSWORD_FLOOR_MS + 200)
 		}
 	})
 
 	test('le travail ne tourne pas avant la réponse : il est remis à `apres`', async () => {
-		appels.length = 0
-		let remis: (() => Promise<void>) | undefined
-		await lancer('connue@example.test', {
+		calls.length = 0
+		let reset: (() => Promise<void>) | undefined
+		await launch('connue@example.test', {
 			apres: t => {
-				remis = t
+				reset = t
 			},
 		})
-		expect(appels).toEqual([])
-		await remis?.()
-		expect(appels).toEqual(['connue@example.test'])
+		expect(calls).toEqual([])
+		await reset?.()
+		expect(calls).toEqual(['connue@example.test'])
 	})
 
 	test('hors d’une requête, `after` refuse : le travail tourne quand même, la réponse ne change pas', async () => {
-		appels.length = 0
-		const { resultat } = await lancer('connue@example.test', {
+		calls.length = 0
+		const { resultat: result } = await launch('connue@example.test', {
 			apres: () => {
 				throw new Error('after was called outside a request scope')
 			},
 		})
-		expect(resultat).toEqual({ ok: true })
+		expect(result).toEqual({ ok: true })
 		await Bun.sleep(20)
-		expect(appels).toEqual(['connue@example.test'])
+		expect(calls).toEqual(['connue@example.test'])
 	})
 
 	test('un relais en panne ne change pas la réponse, et le journal ne garde pas l’adresse', async () => {
-		journal.length = 0
-		const { resultat } = await lancer('connue@example.test', { echec: true })
-		expect(resultat).toEqual({ ok: true })
-		expect(journal).toEqual([{ type: 'forgot-password', code: 'service-indisponible' }])
+		log.length = 0
+		const { resultat: result } = await launch('connue@example.test', { echec: true })
+		expect(result).toEqual({ ok: true })
+		expect(log).toEqual([{ type: 'forgot-password', code: 'service-indisponible' }])
 		// The place of the mail is given back, so that she can ask again at once.
-		expect(rendus.length).toBe(1)
+		expect(rendered.length).toBe(1)
 	})
 
 	test('la 11e demande est refusée avant tout travail, connue ou non', async () => {
-		appels.length = 0
-		const frein = createRateLimit({ nom: `unit-frein-${Math.random()}`, limite: 10, fenetreMs: 60_000 })
-		for (let i = 0; i < 10; i++) await lancer(`inconnue${i}@example.test`, { frein })
-		const avant = appels.length
-		expect((await lancer('connue@example.test', { frein })).resultat).toEqual({ ok: false, code: 'trop-de-tentatives' })
-		expect((await lancer('inconnue@example.test', { frein })).resultat).toEqual({
+		calls.length = 0
+		const rateLimit = createRateLimit({ nom: `unit-frein-${Math.random()}`, limite: 10, fenetreMs: 60_000 })
+		for (let i = 0; i < 10; i++) await launch(`inconnue${i}@example.test`, { frein: rateLimit })
+		const before = calls.length
+		expect((await launch('connue@example.test', { frein: rateLimit })).resultat).toEqual({
 			ok: false,
 			code: 'trop-de-tentatives',
 		})
-		expect(appels.length).toBe(avant)
+		expect((await launch('inconnue@example.test', { frein: rateLimit })).resultat).toEqual({
+			ok: false,
+			code: 'trop-de-tentatives',
+		})
+		expect(calls.length).toBe(before)
 	})
 })
 

@@ -28,7 +28,7 @@ import { PUBLIC_PROFILE_FIELDS } from '../../src/services/public/profiles'
  * tests/integration/import-profils.test.ts. Every value here is fictional.
  */
 
-const profil = (id: number, modif: Partial<ReadProfile> = {}): ReadProfile => ({
+const profile = (id: number, modif: Partial<ReadProfile> = {}): ReadProfile => ({
 	id,
 	first_name: null,
 	last_name: null,
@@ -52,12 +52,12 @@ const profil = (id: number, modif: Partial<ReadProfile> = {}): ReadProfile => ({
 
 describe('la source dit si un profil est entièrement vide, comme l’ancien site le lit', () => {
 	test('un nom seul laisse le profil entièrement vide', () => {
-		expect(emptyToSource(profil(1, { first_name: 'Manon', last_name: 'Petit' }))).toBe(true)
-		expect(emptyToSource(profil(1, { reseaux: { instagram: '   ' } }))).toBe(true)
+		expect(emptyToSource(profile(1, { first_name: 'Manon', last_name: 'Petit' }))).toBe(true)
+		expect(emptyToSource(profile(1, { reseaux: { instagram: '   ' } }))).toBe(true)
 	})
 
 	test('une seule des six conditions suffit à ne plus l’être', () => {
-		const uneCondition: Partial<ReadProfile>[] = [
+		const condition: Partial<ReadProfile>[] = [
 			{ aPhotoPrincipale: true },
 			{ city: 'Annecy' },
 			{ speciality: 'Mariage' },
@@ -65,10 +65,10 @@ describe('la source dit si un profil est entièrement vide, comme l’ancien sit
 			{ description: 'x'.repeat(200) },
 			{ reseaux: { phone: '06 39 98 00 00' } },
 		]
-		for (const modif of uneCondition) expect(emptyToSource(profil(1, modif)), JSON.stringify(modif)).toBe(false)
+		for (const edit of condition) expect(emptyToSource(profile(1, edit)), JSON.stringify(edit)).toBe(false)
 		// What is not a condition: a short description, a country, a price without a number.
-		for (const modif of [{ description: 'Courte.' }, { city: 'France' }, { prix: ['Sur devis'] }])
-			expect(emptyToSource(profil(1, modif)), JSON.stringify(modif)).toBe(true)
+		for (const edit of [{ description: 'Courte.' }, { city: 'France' }, { prix: ['Sur devis'] }])
+			expect(emptyToSource(profile(1, edit)), JSON.stringify(edit)).toBe(true)
 	})
 })
 
@@ -83,24 +83,24 @@ describe('le statut est celui que le serveur calcule de ce que l’import écrit
 	test('le statut est comparé mais jamais écrit ; le choix du statut est rendu à la règle', () => {
 		expect(PROFILES_ADAPTER.computed).toEqual(['status'])
 		expect(PROFILES_ADAPTER.fields).toMatchObject({ status: 'texte', chosenStatus: 'texte' })
-		const [attendu] = expectedProfiles([profil(21, { speciality: 'Mariage' })], new Map([[121, 501]])).expected
-		expect(attendu?.values).toMatchObject({ status: 'published', chosenStatus: 'automatic' })
+		const [expected] = expectedProfiles([profile(21, { speciality: 'Mariage' })], new Map([[121, 501]])).expected
+		expect(expected?.values).toMatchObject({ status: 'published', chosenStatus: 'automatic' })
 	})
 })
 
 describe('les profils que l’import ne prend pas (SCHEMA.md §4.1 et §11)', () => {
-	const profils = [
-		profil(21, { compte: 1 }),
-		profil(29, { compte: 11 }),
-		profil(31, { compte: 12 }),
+	const profiles = [
+		profile(21, { compte: 1 }),
+		profile(29, { compte: 11 }),
+		profile(31, { compte: 12 }),
 		// The spam: no account at all.
-		profil(67, { compte: null }),
-		profil(74, { compte: null }),
+		profile(67, { compte: null }),
+		profile(74, { compte: null }),
 		// No account, out of the list of the spam: a link to an account the source no longer holds.
-		profil(40, { compte: 99 }),
-		profil(41, { compte: null }),
+		profile(40, { compte: 99 }),
+		profile(41, { compte: null }),
 	]
-	const comptesDeLaSource = new Set([1, 11, 12])
+	const sourceAccounts = new Set([1, 11, 12])
 
 	test('la liste du spam est celle de SCHEMA.md §4.1', () => {
 		const schema = readFileSync(path.resolve(import.meta.dir, '../../docs/migration/SCHEMA.md'), 'utf8')
@@ -111,7 +111,7 @@ describe('les profils que l’import ne prend pas (SCHEMA.md §4.1 et §11)', ()
 
 	test('sans décision : les profils du spam sont écartés, tout autre profil sans compte arrête l’import', () => {
 		expect(
-			skippedProfiles(profils, { sourceAccounts: comptesDeLaSource, excludedAccounts: [11, 12], excludedProfiles: [] })
+			skippedProfiles(profiles, { sourceAccounts: sourceAccounts, excludedAccounts: [11, 12], excludedProfiles: [] })
 		).toEqual({
 			excluded: [],
 			spam: [67, 74],
@@ -123,8 +123,8 @@ describe('les profils que l’import ne prend pas (SCHEMA.md §4.1 et §11)', ()
 
 	test('une décision par profil le laisse de côté ; une décision qui ne nomme aucun de ces cas est sans objet', () => {
 		expect(
-			skippedProfiles(profils, {
-				sourceAccounts: comptesDeLaSource,
+			skippedProfiles(profiles, {
+				sourceAccounts: sourceAccounts,
 				excludedAccounts: [11, 12],
 				// 21 has its account, 67 is the spam already, 500 is not in the source.
 				excludedProfiles: [29, 41, 21, 67, 500],
@@ -134,8 +134,8 @@ describe('les profils que l’import ne prend pas (SCHEMA.md §4.1 et §11)', ()
 
 	test('un profil de la liste du spam qui a un compte est un profil comme un autre', () => {
 		expect(
-			skippedProfiles([profil(67, { compte: 1 })], {
-				sourceAccounts: comptesDeLaSource,
+			skippedProfiles([profile(67, { compte: 1 })], {
+				sourceAccounts: sourceAccounts,
 				excludedAccounts: [],
 				excludedProfiles: [],
 			})
@@ -144,27 +144,27 @@ describe('les profils que l’import ne prend pas (SCHEMA.md §4.1 et §11)', ()
 })
 
 describe('les profils attendus', () => {
-	const profils = [
-		profil(21, { username: 'Zoé Lefèvre', compte: 1, speciality: 'Mariage', created_at: '2023-05-12T09:20:00.000Z' }),
-		profil(22, { username: 'lea-martin', compte: 2, first_name: 'Léa', available: null }),
+	const profiles = [
+		profile(21, { username: 'Zoé Lefèvre', compte: 1, speciality: 'Mariage', created_at: '2023-05-12T09:20:00.000Z' }),
+		profile(22, { username: 'lea-martin', compte: 2, first_name: 'Léa', available: null }),
 		// Same slug as 21, created later: it takes the suffix, as on the old site.
-		profil(23, { username: 'zoe lefevre', compte: 3, created_at: '2024-01-01T00:00:00.000Z', available: false }),
-		profil(24, { username: 'Sans compte', compte: null }),
-		profil(25, { username: 'Compte écarté', compte: 11 }),
+		profile(23, { username: 'zoe lefevre', compte: 3, created_at: '2024-01-01T00:00:00.000Z', available: false }),
+		profile(24, { username: 'Sans compte', compte: null }),
+		profile(25, { username: 'Compte écarté', compte: 11 }),
 		// Older than 21 and without an account: its slug still counts in the table of the old site.
-		profil(26, { username: 'ZOE-LEFEVRE', compte: null, created_at: '2022-01-01T00:00:00.000Z' }),
+		profile(26, { username: 'ZOE-LEFEVRE', compte: null, created_at: '2022-01-01T00:00:00.000Z' }),
 	]
-	const comptes = new Map<number, number | null>([
+	const accounts = new Map<number, number | null>([
 		[1, 501],
 		[2, 502],
 		[3, null],
 	])
-	const laisses = { excluded: [25], spam: [24, 26] }
+	const left = { excluded: [25], spam: [24, 26] }
 
 	test('reliés à leur compte dans Payload, avec le slug de l’ancien site, calculé sur toute la source', () => {
-		const { expected: attendus } = expectedProfiles(profils, comptes, laisses)
+		const { expected: expectedList } = expectedProfiles(profiles, accounts, left)
 
-		expect(attendus.map(({ strapiId, values: valeurs }) => [strapiId, valeurs.pro, valeurs.slug])).toEqual([
+		expect(expectedList.map(({ strapiId, values: valeurs }) => [strapiId, valeurs.pro, valeurs.slug])).toEqual([
 			[21, 501, 'zoe-lefevre-2'],
 			[22, 502, 'lea-martin'],
 			[23, null, 'zoe-lefevre-3'],
@@ -172,20 +172,22 @@ describe('les profils attendus', () => {
 	})
 
 	test('un profil ni pris ni laissé de côté est une erreur : l’import devait s’arrêter avant', () => {
-		expect(() => expectedProfiles(profils, comptes, { excluded: [25], spam: [26] })).toThrow(
+		expect(() => expectedProfiles(profiles, accounts, { excluded: [25], spam: [26] })).toThrow(
 			'Le profil 24 n’a pas de compte repris'
 		)
 	})
 
 	test('chaque transformation porte sa référence : slug stocké, disponibilité par défaut, profil vide en brouillon', () => {
-		const { expected: attendus, statuses: statuts } = expectedProfiles(profils, comptes, laisses)
+		const { expected: expectedList, statuses } = expectedProfiles(profiles, accounts, left)
 
-		expect(attendus.map(({ strapiId, gaps: ecarts }) => [strapiId, ecarts.map(({ reference }) => reference)])).toEqual([
+		expect(
+			expectedList.map(({ strapiId, gaps: ecarts }) => [strapiId, ecarts.map(({ reference }) => reference)])
+		).toEqual([
 			[21, ['slug-stocke']],
 			[22, ['disponibilite-par-defaut', 'profils-vides-brouillon']],
 			[23, ['slug-stocke', 'profils-vides-brouillon']],
 		])
-		expect(statuts).toEqual({ published: 1, draft: 2 })
+		expect(statuses).toEqual({ published: 1, draft: 2 })
 		for (const reference of ['disponibilite-par-defaut', 'profils-spam-non-repris'])
 			expect(Object.values(REFERENCES) as string[]).toContain(reference)
 	})
@@ -193,11 +195,11 @@ describe('les profils attendus', () => {
 	test('l’identité, l’ancien nom d’utilisateur, le score, le badge et les dates tels quels ; nul reste nul, sauf la disponibilité', () => {
 		const [zoe, lea, ines] = expectedProfiles(
 			[
-				{ ...(profils[0] as ReadProfile), score: '12.50', pro: true, updated_at: '2026-09-28T10:11:12.131Z' },
-				...profils.slice(1),
+				{ ...(profiles[0] as ReadProfile), score: '12.50', pro: true, updated_at: '2026-09-28T10:11:12.131Z' },
+				...profiles.slice(1),
 			],
-			comptes,
-			laisses
+			accounts,
+			left
 		).expected
 
 		expect(zoe?.values).toEqual({
@@ -241,20 +243,20 @@ describe('les profils attendus', () => {
 
 	test('un statut que la source ne donne pas est listé : une section pas encore reprise', () => {
 		// 22 is empty in the v3 but not at the source: its only condition is its main picture.
-		const { statusesDifferingFromSource: statutsDifferentsDeLaSource } = expectedProfiles(
-			[profils[0] as ReadProfile, { ...(profils[1] as ReadProfile), aPhotoPrincipale: true }],
-			comptes
+		const { statusesDifferingFromSource: sourceStatusesDifferent } = expectedProfiles(
+			[profiles[0] as ReadProfile, { ...(profiles[1] as ReadProfile), aPhotoPrincipale: true }],
+			accounts
 		)
 
-		expect(statutsDifferentsDeLaSource).toEqual([22])
+		expect(sourceStatusesDifferent).toEqual([22])
 	})
 
 	test('un profil non vide à la source qui devient brouillon porte sa propre référence, pas celle des profils vides', () => {
-		const { expected: attendus } = expectedProfiles(
-			[profils[0] as ReadProfile, { ...(profils[1] as ReadProfile), aPhotoPrincipale: true }],
-			comptes
+		const { expected: expectedList } = expectedProfiles(
+			[profiles[0] as ReadProfile, { ...(profiles[1] as ReadProfile), aPhotoPrincipale: true }],
+			accounts
 		)
-		const references = (id: number) => attendus.find(({ strapiId }) => strapiId === id)?.gaps.map(e => e.reference)
+		const references = (id: number) => expectedList.find(({ strapiId }) => strapiId === id)?.gaps.map(e => e.reference)
 
 		expect(references(22)).toContain('profil-non-vide-en-brouillon')
 		expect(references(22)).not.toContain('profils-vides-brouillon')
@@ -305,38 +307,38 @@ describe('la lecture publique choisit ses champs un par un', () => {
 })
 
 describe('les coordonnées de contact sont lues comme l’ancien site les lit (ticket 064)', () => {
-	const reseaux = (phone: string | null, email: string | null) =>
-		profil(1, { reseaux: { phone, email } as ReadProfile['reseaux'] })
+	const networks = (phone: string | null, email: string | null) =>
+		profile(1, { reseaux: { phone, email } as ReadProfile['reseaux'] })
 
 	test('rognées, et sans valeur quand elles sont vides ou les mots null et undefined', () => {
-		expect(sourceContactDetails(reseaux(' 06 12 ', '  a@example.test '))).toEqual({
+		expect(sourceContactDetails(networks(' 06 12 ', '  a@example.test '))).toEqual({
 			telephone: '06 12',
 			email: 'a@example.test',
 		})
-		for (const vide of ['', '   ', 'null', 'undefined', ' Undefined ', 'NULL']) {
-			expect(sourceContactDetails(reseaux(vide, vide)), vide).toEqual({ telephone: null, email: null })
-			expect(shownToSource(reseaux(vide, vide)), vide).toBe(false)
+		for (const empty of ['', '   ', 'null', 'undefined', ' Undefined ', 'NULL']) {
+			expect(sourceContactDetails(networks(empty, empty)), empty).toEqual({ telephone: null, email: null })
+			expect(shownToSource(networks(empty, empty)), empty).toBe(false)
 		}
 	})
 
 	test('une valeur que le serveur refuserait est laissée de côté et listée, sans sa valeur', () => {
-		const lu = reseaux('0'.repeat(21), 'Insta: @hugo')
+		const wasRead = networks('0'.repeat(21), 'Insta: @hugo')
 
-		expect(sourceContactDetails(lu)).toEqual({ telephone: null, email: null })
-		expect(contactDetailsToReview(lu)).toEqual([
+		expect(sourceContactDetails(wasRead)).toEqual({ telephone: null, email: null })
+		expect(contactDetailsToReview(wasRead)).toEqual([
 			{ profile: 1, field: 'telephone' },
 			{ profile: 1, field: 'email' },
 		])
-		expect(shownToSource(lu)).toBe(false)
+		expect(shownToSource(wasRead)).toBe(false)
 		// The other channel still opens the contact details.
-		expect(shownToSource(reseaux('0'.repeat(21), 'a@example.test'))).toBe(true)
-		expect(contactDetailsToReview(reseaux('06', 'a@example.test'))).toEqual([])
+		expect(shownToSource(networks('0'.repeat(21), 'a@example.test'))).toBe(true)
+		expect(contactDetailsToReview(networks('06', 'a@example.test'))).toEqual([])
 	})
 })
 
 describe('le rayon d’action est repris de 0 à 200 km, jamais ramené à 200 en silence (ticket 226)', () => {
 	test('de 0 à 200 : repris tel quel ; sans rayon : vide', () => {
-		for (const rayon of [0, 1, 30, 200]) expect(sourceRadius({ action_radius: rayon }), String(rayon)).toBe(rayon)
+		for (const radius of [0, 1, 30, 200]) expect(sourceRadius({ action_radius: radius }), String(radius)).toBe(radius)
 		expect(sourceRadius({ action_radius: null })).toBeNull()
 		expect(sourceRadius({})).toBeNull()
 		expect(radiusToReview({ id: 1, action_radius: 200 })).toBeNull()
@@ -348,8 +350,8 @@ describe('le rayon d’action est repris de 0 à 200 km, jamais ramené à 200 e
 		expect(sourceRadius({ action_radius: 400 })).toBeNull()
 		expect(radiusToReview({ id: 26, action_radius: 400 })).toEqual({ profile: 26, radiusKm: 400 })
 
-		const { expected: attendus, radiiToReview: rayonsARevoir } = expectedProfiles(
-			[profil(1, { action_radius: 30 }), profil(2, { action_radius: 400 }), profil(3)],
+		const { expected: expectedList, radiiToReview } = expectedProfiles(
+			[profile(1, { action_radius: 30 }), profile(2, { action_radius: 400 }), profile(3)],
 			new Map([
 				[101, 1],
 				[102, 2],
@@ -357,11 +359,11 @@ describe('le rayon d’action est repris de 0 à 200 km, jamais ramené à 200 e
 			])
 		)
 
-		expect(attendus.map(({ values: valeurs }) => valeurs.radiusKm)).toEqual([30, null, null])
-		expect(rayonsARevoir).toEqual([{ profile: 2, radiusKm: 400 }])
+		expect(expectedList.map(({ values: valeurs }) => valeurs.radiusKm)).toEqual([30, null, null])
+		expect(radiiToReview).toEqual([{ profile: 2, radiusKm: 400 }])
 		// The difference is explained by the register, once, for the profile above the bound only.
 		expect(
-			attendus.map(({ gaps: ecarts }) => ecarts.some(({ reference }) => reference === REFERENCES.rayon200Km))
+			expectedList.map(({ gaps: ecarts }) => ecarts.some(({ reference }) => reference === REFERENCES.rayon200Km))
 		).toEqual([false, true, false])
 	})
 
@@ -374,15 +376,15 @@ describe('le rayon d’action est repris de 0 à 200 km, jamais ramené à 200 e
 
 describe('le contrôle des offres chiffrées perdues ne lit que les prestations (ticket 226)', () => {
 	test('une option chiffrée ne cache pas une offre qui a perdu son montant', () => {
-		const ecrites = [{ priceText: '80 €', priceFrom: null, options: [{ priceText: '15 €', priceFrom: 15 }] }]
+		const written = [{ priceText: '80 €', priceFrom: null, options: [{ priceText: '15 €', priceFrom: 15 }] }]
 
-		expect(lostPricedOffer(['80 €'], ecrites)).toBe(true)
+		expect(lostPricedOffer(['80 €'], written)).toBe(true)
 	})
 
 	test('seule une option chiffrée : aucune offre chiffrée à la source, rien n’est perdu', () => {
-		const ecrites = [{ priceText: 'Sur devis', priceFrom: null, options: [{ priceText: '15 €', priceFrom: 15 }] }]
+		const written = [{ priceText: 'Sur devis', priceFrom: null, options: [{ priceText: '15 €', priceFrom: 15 }] }]
 
-		expect(lostPricedOffer(['Sur devis'], ecrites)).toBe(false)
+		expect(lostPricedOffer(['Sur devis'], written)).toBe(false)
 	})
 
 	test('une offre qui garde son montant n’est pas perdue', () => {

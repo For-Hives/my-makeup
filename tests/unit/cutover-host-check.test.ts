@@ -28,9 +28,9 @@ import { benchCase } from '../support/url-parity'
  * real host is tests/e2e/controle-hote.spec.ts (I45, U61 to U64).
  */
 
-const SLUG_PROFIL = 'essai-controle-hote'
-const JEU = {
-	profilsVisibles: [SLUG_PROFIL],
+const SLUG_PROFILE = 'essai-controle-hote'
+const DATASET = {
+	profilsVisibles: [SLUG_PROFILE],
 	profilsMasques: [],
 	ancienNom: null,
 	talents: ['essai-talent'],
@@ -43,7 +43,7 @@ const html = (status: number) =>
 	new Response(page(status), { status, headers: { 'content-type': 'text/html; charset=utf-8' } })
 
 const SITEMAP = `<?xml version="1.0"?><urlset>${[
-	`/profil/${SLUG_PROFIL}`,
+	`/profil/${SLUG_PROFILE}`,
 	'/talent/essai-talent',
 	'/blog/essai-article',
 	'/a-propos',
@@ -51,52 +51,52 @@ const SITEMAP = `<?xml version="1.0"?><urlset>${[
 	.map(c => `<url><loc>https://my-makeup.fr${c}</loc></url>`)
 	.join('')}</urlset>`
 
-type Reponses = Map<string, () => Response>
+type Responses = Map<string, () => Response>
 
 /** A host that answers what the table promises for the cases of the made-up set. */
-function hoteConforme(): Reponses {
-	const reponses: Reponses = new Map()
-	for (const c of benchCase({}, JEU)) {
-		const statut = c.statuts[0] ?? 200
+function compliantHost(): Responses {
+	const responses: Responses = new Map()
+	for (const c of benchCase({}, DATASET)) {
+		const status = c.statuts[0] ?? 200
 		if (c.vers) {
-			reponses.set(c.adresse, () => new Response(null, { status: statut, headers: { location: c.vers ?? '' } }))
-			if (!reponses.has(c.vers)) reponses.set(c.vers, () => html(c.statutFinal))
-		} else if (c.titre === 'non-verifie') reponses.set(c.adresse, () => new Response('x', { status: statut }))
-		else reponses.set(c.adresse, () => html(statut))
+			responses.set(c.adresse, () => new Response(null, { status: status, headers: { location: c.vers ?? '' } }))
+			if (!responses.has(c.vers)) responses.set(c.vers, () => html(c.statutFinal))
+		} else if (c.titre === 'non-verifie') responses.set(c.adresse, () => new Response('x', { status: status }))
+		else responses.set(c.adresse, () => html(status))
 	}
-	reponses.set('/api/health', () => Response.json({ ok: true, version: 'abc1234' }))
-	reponses.set('/sitemap.xml', () => new Response(SITEMAP, { headers: { 'content-type': 'application/xml' } }))
-	reponses.set(
+	responses.set('/api/health', () => Response.json({ ok: true, version: 'abc1234' }))
+	responses.set('/sitemap.xml', () => new Response(SITEMAP, { headers: { 'content-type': 'application/xml' } }))
+	responses.set(
 		'/robots.txt',
 		() =>
 			new Response('User-agent: *\nAllow: /\nDisallow: /api/\n\nSitemap: https://my-makeup.fr/sitemap.xml\n', {
 				headers: { 'content-type': 'text/plain' },
 			})
 	)
-	reponses.set(
+	responses.set(
 		'/u/script.js',
 		() => new Response('(function(){})()', { headers: { 'content-type': 'text/javascript' } })
 	)
-	for (const route of OLD_ROUTES) reponses.set(route, () => html(404))
-	return reponses
+	for (const route of OLD_ROUTES) responses.set(route, () => html(404))
+	return responses
 }
 
-function transportDe(reponses: Reponses): {
+function transportOf(reponses: Responses): {
 	transport: Transport
 	appels: { methode: string; chemin: string; entetes: Headers }[]
 } {
-	const appels: { methode: string; chemin: string; entetes: Headers }[] = []
+	const calls: { methode: string; chemin: string; entetes: Headers }[] = []
 	const transport: Transport = async (adresse, init) => {
-		const chemin = adresse.pathname + adresse.search
-		appels.push({ methode: String(init.method), chemin, entetes: new Headers(init.headers) })
-		return (reponses.get(chemin) ?? (() => html(404)))()
+		const filePath = adresse.pathname + adresse.search
+		calls.push({ methode: String(init.method), chemin: filePath, entetes: new Headers(init.headers) })
+		return (reponses.get(filePath) ?? (() => html(404)))()
 	}
-	return { transport, appels }
+	return { transport, appels: calls }
 }
 
-const CIBLE = new URL('https://hote.example.test')
-const reglages: Settings = { cible: CIBLE }
-const sansAttente = (transport: Transport): Tools => ({
+const TARGET = new URL('https://hote.example.test')
+const settings: Settings = { cible: TARGET }
+const withoutWaiting = (transport: Transport): Tools => ({
 	transport,
 	intervalleMs: 0,
 	anciens: {},
@@ -104,20 +104,20 @@ const sansAttente = (transport: Transport): Tools => ({
 })
 
 describe('la garde : une lecture, sur la cible, et rien d’autre', () => {
-	const lire = (chemin: string, init: RequestInit = {}, autorisation?: string) =>
-		checkQuery(chemin, init, CIBLE, autorisation)
+	const read = (chemin: string, init: RequestInit = {}, autorisation?: string) =>
+		checkQuery(chemin, init, TARGET, autorisation)
 
 	test('une écriture est interrompue avant de partir', () => {
 		for (const method of ['POST', 'PUT', 'PATCH', 'DELETE', 'HEAD'])
-			expect(() => lire('/contact', { method })).toThrow(ForbiddenQuery)
-		expect(() => lire('/contact', { body: 'x' })).toThrow(ForbiddenQuery)
+			expect(() => read('/contact', { method })).toThrow(ForbiddenQuery)
+		expect(() => read('/contact', { body: 'x' })).toThrow(ForbiddenQuery)
 	})
 
 	test('sous /u, les quatre adresses de l’inventaire en GET et rien d’autre : la mesure n’est jamais comptée', () => {
-		for (const chemin of ['/u', '/u/script.js', '/u/api/send', '/u/autre-chemin'])
-			expect(lire(chemin).adresse.pathname).toBe(chemin)
-		expect(() => lire('/u/api/send', { method: 'POST' })).toThrow(ForbiddenQuery)
-		for (const chemin of [
+		for (const filePath of ['/u', '/u/script.js', '/u/api/send', '/u/autre-chemin'])
+			expect(read(filePath).adresse.pathname).toBe(filePath)
+		expect(() => read('/u/api/send', { method: 'POST' })).toThrow(ForbiddenQuery)
+		for (const filePath of [
 			'/u/',
 			'//u/api/send',
 			'/%75/api/send',
@@ -125,44 +125,44 @@ describe('la garde : une lecture, sur la cible, et rien d’autre', () => {
 			'/u/api/send?x=1',
 			'/u/api/batch',
 		])
-			expect(() => lire(chemin)).toThrow(ForbiddenQuery)
+			expect(() => read(filePath)).toThrow(ForbiddenQuery)
 	})
 
 	test('un chemin à double barre reste un chemin de la cible, jamais un autre hôte', () => {
-		expect(lire('//profil/x').adresse.href).toBe('https://hote.example.test//profil/x')
-		expect(() => lire('https://autre.example.test/')).toThrow(ForbiddenQuery)
-		expect(() => lire('@autre.example.test/')).toThrow(ForbiddenQuery)
+		expect(read('//profil/x').adresse.href).toBe('https://hote.example.test//profil/x')
+		expect(() => read('https://autre.example.test/')).toThrow(ForbiddenQuery)
+		expect(() => read('@autre.example.test/')).toThrow(ForbiddenQuery)
 	})
 
 	test('ni cookie ni Authorization de l’appelant', () => {
-		expect(() => lire('/', { headers: { cookie: 'a=b' } })).toThrow(ForbiddenQuery)
-		expect(() => lire('/', { headers: { Authorization: 'Bearer x' } })).toThrow(ForbiddenQuery)
-		expect(lire('/').entetes.get('user-agent')).toBe(CHECK_AGENT)
+		expect(() => read('/', { headers: { cookie: 'a=b' } })).toThrow(ForbiddenQuery)
+		expect(() => read('/', { headers: { Authorization: 'Bearer x' } })).toThrow(ForbiddenQuery)
+		expect(read('/').entetes.get('user-agent')).toBe(CHECK_AGENT)
 	})
 
 	test('l’accès protégé ne part que vers l’hôte temporaire, jamais vers le site', () => {
-		expect(() => lire('/', {}, 'Basic eA==')).toThrow(ForbiddenQuery)
+		expect(() => read('/', {}, 'Basic eA==')).toThrow(ForbiddenQuery)
 		expect(() => checkQuery('/', {}, new URL('https://my-makeup.fr'), 'Basic eA==')).toThrow(ForbiddenQuery)
-		const temporaire = new URL('https://v3.my-makeup.fr')
-		expect(checkQuery('/', {}, temporaire, 'Basic eA==').entetes.get('authorization')).toBe('Basic eA==')
+		const temporary = new URL('https://v3.my-makeup.fr')
+		expect(checkQuery('/', {}, temporary, 'Basic eA==').entetes.get('authorization')).toBe('Basic eA==')
 	})
 
 	test('aucune redirection suivie, la méthode est GET', async () => {
-		const { transport, appels } = transportDe(new Map())
-		let initRecu: RequestInit | undefined
-		await keep(CIBLE, async (adresse, init) => {
-			initRecu = init
+		const { transport, appels: calls } = transportOf(new Map())
+		let initReceived: RequestInit | undefined
+		await keep(TARGET, async (adresse, init) => {
+			initReceived = init
 			return transport(adresse, init)
 		})('/a-propos')
-		expect(initRecu?.redirect).toBe('manual')
-		expect(appels[0]?.methode).toBe('GET')
+		expect(initReceived?.redirect).toBe('manual')
+		expect(calls[0]?.methode).toBe('GET')
 	})
 
 	test('la cible : https, ou http sur ce poste, une origine seule', () => {
 		expect(checkTarget('https://my-makeup.fr').href).toBe('https://my-makeup.fr/')
 		expect(checkTarget('https://v3.my-makeup.fr').href).toBe('https://v3.my-makeup.fr/')
 		expect(checkTarget('http://127.0.0.1:3373').origin).toBe('http://127.0.0.1:3373')
-		for (const mauvaise of [
+		for (const bad of [
 			'http://my-makeup.fr',
 			'https://www.my-makeup.fr',
 			'https://ancien.my-makeup.fr',
@@ -171,148 +171,150 @@ describe('la garde : une lecture, sur la cible, et rien d’autre', () => {
 			'https://u:p@x.test',
 			'pas une adresse',
 		])
-			expect(() => checkTarget(mauvaise)).toThrow(TargetRefused)
+			expect(() => checkTarget(bad)).toThrow(TargetRefused)
 	})
 })
 
 describe('les réglages', () => {
 	test('seule la production se lit en ligne : la préprod et tout autre hôte sont refusés', () => {
-		for (const hote of ['https://preprod.my-makeup.fr', 'https://x.test', 'https://not-my-makeup.fr'])
-			expect(() => readSettings({ HOST_CHECK_TARGET: hote })).toThrow(TargetRefused)
+		for (const host of ['https://preprod.my-makeup.fr', 'https://x.test', 'https://not-my-makeup.fr'])
+			expect(() => readSettings({ HOST_CHECK_TARGET: host })).toThrow(TargetRefused)
 		expect(readSettings({ HOST_CHECK_TARGET: 'https://my-makeup.fr' }).cible.hostname).toBe('my-makeup.fr')
 	})
 
 	test('l’accès protégé : facultatif, jamais à moitié, et seulement pour l’hôte temporaire', () => {
-		const acces = { HOST_CHECK_ACCESS_USER: 'essai', HOST_CHECK_ACCESS_PASSWORD: 'factice-173' }
+		const access = { HOST_CHECK_ACCESS_USER: 'essai', HOST_CHECK_ACCESS_PASSWORD: 'factice-173' }
 		expect(readSettings({ HOST_CHECK_TARGET: 'https://v3.my-makeup.fr' }).autorisation).toBeUndefined()
-		expect(readSettings({ HOST_CHECK_TARGET: 'https://v3.my-makeup.fr', ...acces }).autorisation).toBe(
+		expect(readSettings({ HOST_CHECK_TARGET: 'https://v3.my-makeup.fr', ...access }).autorisation).toBe(
 			`Basic ${btoa('essai:factice-173')}`
 		)
 		expect(() =>
 			readSettings({ HOST_CHECK_TARGET: 'https://v3.my-makeup.fr', HOST_CHECK_ACCESS_USER: 'essai' })
 		).toThrow(CheckRefused)
-		expect(() => readSettings({ HOST_CHECK_TARGET: 'https://my-makeup.fr', ...acces })).toThrow(CheckRefused)
-		expect(() => readSettings({ HOST_CHECK_TARGET: 'http://127.0.0.1:3373', ...acces })).toThrow(CheckRefused)
+		expect(() => readSettings({ HOST_CHECK_TARGET: 'https://my-makeup.fr', ...access })).toThrow(CheckRefused)
+		expect(() => readSettings({ HOST_CHECK_TARGET: 'http://127.0.0.1:3373', ...access })).toThrow(CheckRefused)
 		expect(readSettings({ HOST_CHECK_TARGET: 'http://127.0.0.1:3373' }).autorisation).toBeUndefined()
 	})
 
 	test('sans cible : refusé, et le code de sortie est 2 sans une requête', async () => {
-		const lignes: string[] = []
-		expect(await run({}, l => lignes.push(l))).toBe(2)
-		expect(await run({ HOST_CHECK_TARGET: 'http://my-makeup.fr' }, l => lignes.push(l))).toBe(2)
-		expect(lignes.join('\n')).toContain('HOST_CHECK_TARGET')
+		const lines: string[] = []
+		expect(await run({}, l => lines.push(l))).toBe(2)
+		expect(await run({ HOST_CHECK_TARGET: 'http://my-makeup.fr' }, l => lines.push(l))).toBe(2)
+		expect(lines.join('\n')).toContain('HOST_CHECK_TARGET')
 	})
 })
 
 describe('la lecture du sitemap', () => {
 	test('les chemins, et le jeu de profils, talents et articles', () => {
-		const chemins = sitemapAddresses(SITEMAP)
-		expect(chemins).toEqual(['/profil/essai-controle-hote', '/talent/essai-talent', '/blog/essai-article', '/a-propos'])
-		expect(sitemapSet(chemins)).toEqual({ ...JEU, talents: ['essai-talent'], articlesPublies: ['essai-article'] })
+		const paths = sitemapAddresses(SITEMAP)
+		expect(paths).toEqual(['/profil/essai-controle-hote', '/talent/essai-talent', '/blog/essai-article', '/a-propos'])
+		expect(sitemapSet(paths)).toEqual({ ...DATASET, talents: ['essai-talent'], articlesPublies: ['essai-article'] })
 		expect(sitemapSet(['/blog', '/profil/a/b']).articlesPublies).toEqual([])
 	})
 })
 
 describe('I45 sur un hôte : le rapport', () => {
 	test('un hôte conforme : tout est conforme, aucun 5xx, lectures seules', async () => {
-		const { transport, appels } = transportDe(hoteConforme())
-		const rapport = await checkHost(reglages, sansAttente(transport))
-		expect(rapport.defauts).toEqual([])
-		expect(rapport.verdict).toBe('conforme')
-		expect(rapport.reponses5xx).toBe(0)
-		expect(rapport.adresses.enEchec).toBe(0)
-		expect(rapport.adresses.controlees).toBeGreaterThan(30)
-		expect(rapport.version).toBe('abc1234')
-		expect(rapport.date).toBe('2026-10-15T10:00:00.000Z')
-		expect(appels.every(({ methode }) => methode === 'GET')).toBe(true)
+		const { transport, appels: calls } = transportOf(compliantHost())
+		const report = await checkHost(settings, withoutWaiting(transport))
+		expect(report.defauts).toEqual([])
+		expect(report.verdict).toBe('conforme')
+		expect(report.reponses5xx).toBe(0)
+		expect(report.adresses.enEchec).toBe(0)
+		expect(report.adresses.controlees).toBeGreaterThan(30)
+		expect(report.version).toBe('abc1234')
+		expect(report.date).toBe('2026-10-15T10:00:00.000Z')
+		expect(calls.every(({ methode }) => methode === 'GET')).toBe(true)
 		// Under /u only GET reads; no cookie anywhere.
-		expect(appels.filter(({ chemin }) => chemin.startsWith('/u')).every(({ methode }) => methode === 'GET')).toBe(true)
-		expect(appels.some(({ entetes }) => entetes.has('cookie') || entetes.has('authorization'))).toBe(false)
-		expect(rapport.sections.map(s => s.titre)).toContain('Script de mesure')
+		expect(
+			calls.filter(({ chemin: filePath }) => filePath.startsWith('/u')).every(({ methode }) => methode === 'GET')
+		).toBe(true)
+		expect(calls.some(({ entetes }) => entetes.has('cookie') || entetes.has('authorization'))).toBe(false)
+		expect(report.sections.map(s => s.titre)).toContain('Script de mesure')
 	})
 
 	test('une adresse cassée exprès est détectée, et le rapport la nomme', async () => {
-		const reponses = hoteConforme()
-		reponses.set('/a-propos', () => new Response('boom', { status: 500, headers: { 'content-type': 'text/html' } }))
-		const rapport = await checkHost(reglages, sansAttente(transportDe(reponses).transport))
-		expect(rapport.verdict).toBe('non-conforme')
-		expect(rapport.adresses.enEchec).toBeGreaterThan(0)
-		expect(rapport.reponses5xx).toBeGreaterThan(0)
-		expect(rapport.defauts.join('\n')).toContain('/a-propos')
-		expect(writeReport(rapport)).toContain('NON CONFORME')
+		const responses = compliantHost()
+		responses.set('/a-propos', () => new Response('boom', { status: 500, headers: { 'content-type': 'text/html' } }))
+		const report = await checkHost(settings, withoutWaiting(transportOf(responses).transport))
+		expect(report.verdict).toBe('non-conforme')
+		expect(report.adresses.enEchec).toBeGreaterThan(0)
+		expect(report.reponses5xx).toBeGreaterThan(0)
+		expect(report.defauts.join('\n')).toContain('/a-propos')
+		expect(writeReport(report)).toContain('NON CONFORME')
 	})
 
 	test('une adresse qui ne répond pas est un défaut, pas un arrêt', async () => {
-		const reponses = hoteConforme()
-		reponses.set('/contact', () => {
+		const responses = compliantHost()
+		responses.set('/contact', () => {
 			throw Object.assign(new Error('secret'), { cause: { code: 'ECONNRESET' } })
 		})
-		const rapport = await checkHost(reglages, sansAttente(transportDe(reponses).transport))
-		expect(rapport.verdict).toBe('non-conforme')
-		expect(rapport.defauts.join('\n')).toContain('ECONNRESET')
-		expect(rapport.defauts.join('\n')).not.toContain('secret')
+		const report = await checkHost(settings, withoutWaiting(transportOf(responses).transport))
+		expect(report.verdict).toBe('non-conforme')
+		expect(report.defauts.join('\n')).toContain('ECONNRESET')
+		expect(report.defauts.join('\n')).not.toContain('secret')
 	})
 
 	test('une ancienne route d’authentification qui répond, le script absent, le robots muet : chacun est un défaut', async () => {
-		const reponses = hoteConforme()
-		reponses.set('/api/auth/session', () => Response.json({ user: null }))
-		reponses.set('/u/script.js', () => new Response('nope', { status: 404 }))
-		reponses.set('/robots.txt', () => new Response('rien', { headers: { 'content-type': 'text/plain' } }))
-		const rapport = await checkHost(reglages, sansAttente(transportDe(reponses).transport))
-		const conformes = Object.fromEntries(rapport.sections.map(s => [s.titre, s.conforme]))
-		expect(conformes['Anciennes routes d’authentification']).toBe(false)
-		expect(conformes['Script de mesure']).toBe(false)
-		expect(conformes['Fichier robots']).toBe(false)
-		expect(conformes.Sitemap).toBe(true)
+		const responses = compliantHost()
+		responses.set('/api/auth/session', () => Response.json({ user: null }))
+		responses.set('/u/script.js', () => new Response('nope', { status: 404 }))
+		responses.set('/robots.txt', () => new Response('rien', { headers: { 'content-type': 'text/plain' } }))
+		const report = await checkHost(settings, withoutWaiting(transportOf(responses).transport))
+		const compliant = Object.fromEntries(report.sections.map(s => [s.titre, s.conforme]))
+		expect(compliant['Anciennes routes d’authentification']).toBe(false)
+		expect(compliant['Script de mesure']).toBe(false)
+		expect(compliant['Fichier robots']).toBe(false)
+		expect(compliant.Sitemap).toBe(true)
 	})
 
 	test('le sitemap : une adresse qu’il liste et qui ne répond plus 200 est un défaut', async () => {
-		const reponses = hoteConforme()
-		reponses.set('/a-propos', () => html(404))
-		const rapport = await checkHost(reglages, sansAttente(transportDe(reponses).transport))
-		expect(rapport.verdict).toBe('non-conforme')
+		const responses = compliantHost()
+		responses.set('/a-propos', () => html(404))
+		const report = await checkHost(settings, withoutWaiting(transportOf(responses).transport))
+		expect(report.verdict).toBe('non-conforme')
 	})
 
 	test('le rapport n’écrit jamais l’adresse d’un profil : une empreinte de 8 chiffres, et des nombres', async () => {
-		const reponses = hoteConforme()
-		reponses.set(`/profil/${SLUG_PROFIL}`, () => html(500))
-		const rapport = await checkHost(reglages, sansAttente(transportDe(reponses).transport))
-		const texte = `${writeReport(rapport)}\n${JSON.stringify(rapport)}`
-		expect(rapport.verdict).toBe('non-conforme')
-		expect(texte).toMatch(/profil #[0-9a-f]{8}/)
-		expect(texte).not.toContain(SLUG_PROFIL)
+		const responses = compliantHost()
+		responses.set(`/profil/${SLUG_PROFILE}`, () => html(500))
+		const report = await checkHost(settings, withoutWaiting(transportOf(responses).transport))
+		const text = `${writeReport(report)}\n${JSON.stringify(report)}`
+		expect(report.verdict).toBe('non-conforme')
+		expect(text).toMatch(/profil #[0-9a-f]{8}/)
+		expect(text).not.toContain(SLUG_PROFILE)
 	})
 
 	test('l’empreinte des adresses change quand une adresse change d’état', async () => {
-		const bon = await checkHost(reglages, sansAttente(transportDe(hoteConforme()).transport))
-		const meme = await checkHost(reglages, sansAttente(transportDe(hoteConforme()).transport))
-		const reponses = hoteConforme()
-		reponses.set('/a-propos', () => html(404))
-		const autre = await checkHost(reglages, sansAttente(transportDe(reponses).transport))
-		expect(meme.empreinte).toBe(bon.empreinte)
-		expect(autre.empreinte).not.toBe(bon.empreinte)
-		expect(bon.empreinte).toMatch(/^[0-9a-f]{8}$/)
+		const good = await checkHost(settings, withoutWaiting(transportOf(compliantHost()).transport))
+		const same = await checkHost(settings, withoutWaiting(transportOf(compliantHost()).transport))
+		const responses = compliantHost()
+		responses.set('/a-propos', () => html(404))
+		const other = await checkHost(settings, withoutWaiting(transportOf(responses).transport))
+		expect(same.empreinte).toBe(good.empreinte)
+		expect(other.empreinte).not.toBe(good.empreinte)
+		expect(good.empreinte).toMatch(/^[0-9a-f]{8}$/)
 	})
 })
 
 describe('deux requêtes par seconde au plus', () => {
 	test('500 ms au moins entre deux départs, sur toute la lecture', async () => {
-		let heure = 0
-		const { transport } = transportDe(hoteConforme())
-		const rapport = await checkHost(reglages, {
+		let hour = 0
+		const { transport } = transportOf(compliantHost())
+		const report = await checkHost(settings, {
 			transport: async (adresse, init) => {
-				heure += 10
+				hour += 10
 				return transport(adresse, init)
 			},
 			anciens: {},
 			horloge: {
-				maintenant: () => heure,
+				maintenant: () => hour,
 				attendre: async ms => {
-					heure += ms
+					hour += ms
 				},
 			},
 		})
-		expect(rapport.requetes).toBeGreaterThan(30)
-		expect(rapport.ecartMinimalMs).toBeGreaterThanOrEqual(500)
+		expect(report.requetes).toBeGreaterThan(30)
+		expect(report.ecartMinimalMs).toBeGreaterThanOrEqual(500)
 	})
 })

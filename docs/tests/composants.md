@@ -26,12 +26,12 @@ test('un clic ajoute un', async () => {
 
 `openWindow()` s'appelle en haut du fichier, ou en haut d'un `describe`. La fenêtre s'ouvre avant le premier test, ce qu'un test a rendu est retiré après lui, et la fenêtre est rendue après le dernier test.
 
-`tests/unit/banc-composants.test.tsx` montre chaque geste sur de petits composants : un compteur, un champ, une liste, une case à cocher, un formulaire `react-hook-form`, un chargement.
+`tests/unit/bench-components.test.tsx` montre chaque geste sur de petits composants : un compteur, un champ, une liste, une case à cocher, un formulaire `react-hook-form`, un chargement.
 
 Lancer un seul fichier, depuis la racine du dépôt :
 
 ```sh
-bun --no-env-file test tests/unit/banc-composants.test.tsx
+bun --no-env-file test tests/unit/bench-components.test.tsx
 ```
 
 ## Les gestes
@@ -83,7 +83,7 @@ Le fichier qui les charge en premier dépend de l'ordre du lancement : la panne 
 
 `tests/support/preload-react-dom.ts` les charge donc avant tout fichier de test (`bunfig.toml`, section `[test]`), dans une fenêtre rendue aussitôt.
 
-- Une bibliothèque qui lit `window` ou `document` à son chargement s'ajoute à la liste `MODULES_PROBE_DOM` de ce fichier, avec son test dans `tests/unit/banc-composants.test.tsx`.
+- Une bibliothèque qui lit `window` ou `document` à son chargement s'ajoute à la liste `MODULES_PROBE_DOM` de ce fichier, avec son test dans `tests/unit/bench-components.test.tsx`.
 - Le message « le préchargement doit passer avant… » veut dire que `bun test` n'a pas lu `bunfig.toml` : il a été lancé ailleurs qu'à la racine du dépôt.
 - Chaque lancement de `bun test` paie ce préchargement, même pour une fonction pure : environ une demi-seconde, presque entièrement le chargement de jsdom. Mesuré le 14/10/2026 sur le poste de développement : un test de fonction pure passe de 10 ms à 480 ms.
 

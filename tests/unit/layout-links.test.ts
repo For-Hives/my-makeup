@@ -4,10 +4,10 @@ import { anonymousStatus, familiesFor, SITE_ORIGIN } from '../../src/lib/frozen-
 
 describe('liens du gabarit (068)', () => {
 	test('chaque lien interne est une adresse gelée qui répond 200 (aucun lien mort)', () => {
-		for (const chemin of internalPaths()) {
-			const familles = familiesFor(`${SITE_ORIGIN}${chemin}`)
-			expect(familles.length, chemin).toBeGreaterThan(0)
-			expect(familles.map(anonymousStatus), chemin).toEqual(familles.map(() => 200))
+		for (const filePath of internalPaths()) {
+			const families = familiesFor(`${SITE_ORIGIN}${filePath}`)
+			expect(families.length, filePath).toBeGreaterThan(0)
+			expect(families.map(anonymousStatus), filePath).toEqual(families.map(() => 200))
 		}
 	})
 
@@ -20,7 +20,7 @@ describe('liens du gabarit (068)', () => {
 		])
 		expect(FOOTER_COLUMNS.flatMap(colonne => colonne.liens)).toHaveLength(15)
 		expect(NETWORKS).toHaveLength(4)
-		for (const reseau of NETWORKS) expect(reseau.href).toMatch(/^(https:\/\/|mailto:)/)
+		for (const network of NETWORKS) expect(network.href).toMatch(/^(https:\/\/|mailto:)/)
 	})
 
 	test('la Nav a les 3 menus et le blog de la prod', () => {

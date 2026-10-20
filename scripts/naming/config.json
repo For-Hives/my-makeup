@@ -1,6 +1,5 @@
 {
 	"waiting": [
-		"scripts/bench.ts",
 		"src/app/(front)/globals.css",
 		"src/app/(front)/layout.tsx",
 		"src/app/(payload)",
@@ -11,13 +10,8 @@
 		"src/app/sitemap.xml",
 		"src/app/u",
 		"src/payload-types.ts",
-		"tests/ci",
 		"tests/e2e",
-		"tests/integration",
-		"tests/support",
-		"tests/probes",
-		"tests/unit",
-		"!tests/unit/naming"
+		"tests/integration"
 	],
 	"exceptions": {
 		"paths": [

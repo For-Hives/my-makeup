@@ -575,8 +575,8 @@ describe('every action is pinned by its commit', () => {
 
 describe('there is no pre-production workflow (ticket 232)', () => {
 	test('the two workflows of the pre-production are gone, and no remaining workflow, script or file names it', () => {
-		for (const nom of ['preprod.yml', 'preprod-controles.yml'])
-			expect(existsSync(path.join(ROOT, WORKFLOWS, nom)), nom).toBe(false)
+		for (const name of ['preprod.yml', 'preprod-controles.yml'])
+			expect(existsSync(path.join(ROOT, WORKFLOWS, name)), name).toBe(false)
 		const texts = workflows.map(workflow => readFileSync(path.join(ROOT, workflow.file), 'utf8')).join('\n')
 		expect(texts).not.toMatch(/preprod|préprod/i)
 		expect(read('package.json')).not.toMatch(/preprod|préprod/i)
@@ -1116,7 +1116,7 @@ describe('C05: no focused test, no skipped test without its issue', () => {
 	test('no test file of the repository focuses or skips a test', () => {
 		const files = tracked('tests/**/*.ts', 'tests/**/*.tsx')
 
-		expect(files).toContain('tests/ci/garde-fous-ci.test.ts')
+		expect(files).toContain('tests/ci/ci-guardrails.test.ts')
 		expect(focusedOrSkippedTests(files.map(file => ({ file, text: read(file) })))).toEqual([])
 	})
 
@@ -1458,27 +1458,27 @@ describe('C07: Playwright cannot point at production, and the CI cannot skip tes
 })
 
 describe('Ticket 137: the reconciliation of the storage and the database runs after the journeys', () => {
-	const etapes = (workflow: Workflow) => workflow.jobs.e2e?.steps ?? []
-	const indexDe = (workflow: Workflow, morceau: string) =>
-		etapes(workflow).findIndex(etape => etape.run?.includes(morceau))
+	const steps = (workflow: Workflow) => workflow.jobs.e2e?.steps ?? []
+	const indexOf = (workflow: Workflow, morceau: string) =>
+		steps(workflow).findIndex(etape => etape.run?.includes(morceau))
 
 	test('the e2e job runs `bench:reconcile` right after the end-to-end tests, and the aggregator waits for that job', () => {
-		const essais = indexDe(ci, 'bun run test:e2e')
-		expect(essais).toBeGreaterThan(-1)
-		expect(indexDe(ci, 'bun run bench:reconcile')).toBeGreaterThan(essais)
+		const tests = indexOf(ci, 'bun run test:e2e')
+		expect(tests).toBeGreaterThan(-1)
+		expect(indexOf(ci, 'bun run bench:reconcile')).toBeGreaterThan(tests)
 		expect(ci.jobs[AGGREGATOR]?.needs).toContain('e2e')
 	})
 
 	test('red on a CI that drops the step', () => {
-		const sansEtape = brokenCi('        run: bun run bench:reconcile --outside-import\n', '        run: echo rien\n')
-		expect(indexDe(sansEtape, 'bun run bench:reconcile')).toBe(-1)
+		const withoutStep = brokenCi('        run: bun run bench:reconcile --outside-import\n', '        run: echo rien\n')
+		expect(indexOf(withoutStep, 'bun run bench:reconcile')).toBe(-1)
 	})
 
 	test('red on a step that tolerates a failure: C01 finds it', () => {
-		const tolerante = brokenCi(
+		const tolerant = brokenCi(
 			'        run: bun run bench:reconcile --outside-import\n',
 			'        continue-on-error: true\n        run: bun run bench:reconcile --outside-import\n'
 		)
-		expect(toleratedFailures([tolerante]).length).toBeGreaterThan(0)
+		expect(toleratedFailures([tolerant]).length).toBeGreaterThan(0)
 	})
 })

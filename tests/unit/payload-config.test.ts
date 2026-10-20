@@ -16,7 +16,7 @@ const SENDER = 'My Makeup <ne-pas-repondre@example.test>'
 
 const development: RawEnv = { DATABASE_URI: LOCAL_URI, NODE_ENV: 'development', PAYLOAD_SECRET: SECRET, PORT: '3123' }
 // The site in production: the only deployed environment (ticket 232). It holds a relay with its login (ticket 073).
-const enLigne: RawEnv = {
+const online: RawEnv = {
 	DATABASE_URI: REMOTE_URI,
 	EMAIL_FROM: SENDER,
 	NEXT_PUBLIC_SITE_URL: 'https://my-makeup.fr',
@@ -105,7 +105,7 @@ describe('src/payload.config.ts is hardened', () => {
 	})
 
 	test('on any other database: no schema push, no database created, the versioned migrations instead', async () => {
-		const config = await configUnder(enLigne)
+		const config = await configUnder(online)
 
 		expect(database(config)).toMatchObject({
 			disableCreateDatabase: true,
@@ -153,24 +153,24 @@ describe('Payload speaks French only, whatever the request asks for (ticket 221)
 
 	test('a request that asks for English, by its header or by the cookie of the admin panel, gets French', async () => {
 		const config = await configUnder(development)
-		const langue = (headers: Record<string, string>, cookies: Record<string, string> = {}) =>
+		const language = (headers: Record<string, string>, cookies: Record<string, string> = {}) =>
 			getRequestLanguage({ config, cookies: new Map(Object.entries(cookies)), headers: new Headers(headers) })
 
-		expect(langue({})).toBe('fr')
-		expect(langue({ 'Accept-Language': 'en' })).toBe('fr')
-		expect(langue({ 'Accept-Language': 'en-US,en;q=0.9' })).toBe('fr')
-		expect(langue({ 'Accept-Language': 'de' }, { 'payload-lng': 'en' })).toBe('fr')
+		expect(language({})).toBe('fr')
+		expect(language({ 'Accept-Language': 'en' })).toBe('fr')
+		expect(language({ 'Accept-Language': 'en-US,en;q=0.9' })).toBe('fr')
+		expect(language({ 'Accept-Language': 'de' }, { 'payload-lng': 'en' })).toBe('fr')
 	})
 
 	test('the envelope of a refusal and Payload’s own refusals read in French', async () => {
 		const { t } = await initI18n({ config: (await configUnder(development)).i18n, context: 'api', language: 'fr' })
 
-		const refus = new ValidationError(
+		const refusal = new ValidationError(
 			{ collection: 'profiles', errors: [{ label: 'Téléphone', message: 'Trop long.', path: 'telephone' }] },
 			t
 		)
 		// Payload's French puts a no-break space before the colon.
-		expect(refus.message).toBe('Le champ suivant n’est pas valide\u00a0: Téléphone')
+		expect(refusal.message).toBe('Le champ suivant n’est pas valide\u00a0: Téléphone')
 		expect(new Forbidden(t).message).toBe('Vous n’êtes pas autorisé à effectuer cette action.')
 		expect(t('validation:shorterThanMax', { maxLength: 70 })).toBe(
 			'Cette valeur doit être inférieure à la longueur maximale de 70 caractères.'
@@ -302,7 +302,7 @@ describe('a session cookie counts only when the request comes from a trusted ori
 
 	test('the site accepts its own origin and ignores the cookie from anywhere else', async () => {
 		const extractJWT = await gate()
-		const config = await configUnder(enLigne)
+		const config = await configUnder(online)
 		const token = (headers: Record<string, string>) => extractJWT({ headers: from(headers), payload: { config } })
 
 		expect(token({ Origin: 'https://my-makeup.fr' })).toBe('jeton-de-test')
@@ -312,7 +312,7 @@ describe('a session cookie counts only when the request comes from a trusted ori
 
 	test('without an Origin header, the browser must say the request comes from the site itself', async () => {
 		const extractJWT = await gate()
-		const config = await configUnder(enLigne)
+		const config = await configUnder(online)
 		const token = (headers: Record<string, string>) => extractJWT({ headers: from(headers), payload: { config } })
 
 		expect(token({ 'Sec-Fetch-Site': 'same-origin' })).toBe('jeton-de-test')

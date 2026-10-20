@@ -12,7 +12,7 @@ import { emptyStorage, listObjects, readObject } from '../support/s3'
 /**
  * The twelve profile types of the fictional set, loaded on the bench (ticket 051): each one tied
  * to its made-up makeup artist, its state as the server computes it, its photos in the storage,
- * and the same content at every load. The set without the bench: tests/unit/jeu-fictif.test.ts.
+ * and the same content at every load. The set without the bench: tests/unit/demo-data.test.ts.
  */
 
 const CLES = DEMO_PROFILES.map(({ cle }) => cle)

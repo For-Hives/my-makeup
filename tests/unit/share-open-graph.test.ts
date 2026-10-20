@@ -9,9 +9,9 @@ import { profileMetadata } from '../../src/lib/seo/profile'
 import { DEFAULT_IMAGE, SHARE_QUALITY, SHARE_WIDTH, shareImageOfPhoto } from '../../src/lib/seo/share'
 import type { PublicProfile } from '../../src/services/public/profiles'
 
-const ABSOLUE = /^https:\/\/my-makeup\.fr\//
+const ABSOLUTE = /^https:\/\/my-makeup\.fr\//
 
-const profil = (surcharge: Partial<PublicProfile> = {}): PublicProfile =>
+const profile = (surcharge: Partial<PublicProfile> = {}): PublicProfile =>
 	({
 		slug: 'lea-imaginaire',
 		nom: 'Léa Imaginaire',
@@ -37,22 +37,22 @@ describe('Open Graph (U51)', () => {
 			repli: 'repli',
 			chemin: '/blog',
 		})
-		const balises = og(meta)
-		expect(balises.title).toBe('Blog et actualités | My-Makeup')
-		expect(balises.description).toBe(meta.description)
-		expect(String(balises.description).length).toBeGreaterThanOrEqual(70)
-		expect(balises.url).toBe('https://my-makeup.fr/blog')
-		expect(balises.type).toBe('website')
-		expect(balises.siteName).toBe('My-Makeup')
-		expect(balises.locale).toBe('fr_FR')
-		expect(balises.images).toEqual([DEFAULT_IMAGE])
-		expect(balises.images[0]?.url).toMatch(ABSOLUE)
+		const tags = og(meta)
+		expect(tags.title).toBe('Blog et actualités | My-Makeup')
+		expect(tags.description).toBe(meta.description)
+		expect(String(tags.description).length).toBeGreaterThanOrEqual(70)
+		expect(tags.url).toBe('https://my-makeup.fr/blog')
+		expect(tags.type).toBe('website')
+		expect(tags.siteName).toBe('My-Makeup')
+		expect(tags.locale).toBe('fr_FR')
+		expect(tags.images).toEqual([DEFAULT_IMAGE])
+		expect(tags.images[0]?.url).toMatch(ABSOLUTE)
 	})
 
 	test('og:title est le titre de la page, pas une valeur vide ni « null »', () => {
-		const balises = og(pageMetadata({ titre: null, description: null, repli: 'r'.repeat(80), chemin: '/' }))
-		expect(balises.title).toBe('My-Makeup')
-		expect(JSON.stringify(balises)).not.toMatch(/null|undefined/)
+		const tags = og(pageMetadata({ titre: null, description: null, repli: 'r'.repeat(80), chemin: '/' }))
+		expect(tags.title).toBe('My-Makeup')
+		expect(JSON.stringify(tags)).not.toMatch(/null|undefined/)
 	})
 
 	test('la carte Twitter reprend titre, description et image', () => {
@@ -81,31 +81,31 @@ describe('Open Graph (U51)', () => {
 	})
 
 	test('un profil : type « profile », sa photo principale allégée à 1 200 px, absolue', () => {
-		const balises = og(profileMetadata(profil()))
-		expect(balises.type).toBe('profile')
-		expect(balises.title).toBe('Léa Imaginaire – maquilleuse mariage à Annecy | My-Makeup')
-		const [image] = balises.images
-		expect(image?.url).toMatch(ABSOLUE)
-		const adresse = new URL(image?.url ?? '')
-		expect(adresse.pathname).toBe('/_next/image')
-		expect(adresse.searchParams.get('url')).toBe('https://photos.example.test/media/abc.webp')
-		expect(adresse.searchParams.get('w')).toBe(String(SHARE_WIDTH))
-		expect(adresse.searchParams.get('q')).toBe(String(SHARE_QUALITY))
+		const tags = og(profileMetadata(profile()))
+		expect(tags.type).toBe('profile')
+		expect(tags.title).toBe('Léa Imaginaire – maquilleuse mariage à Annecy | My-Makeup')
+		const [image] = tags.images
+		expect(image?.url).toMatch(ABSOLUTE)
+		const url = new URL(image?.url ?? '')
+		expect(url.pathname).toBe('/_next/image')
+		expect(url.searchParams.get('url')).toBe('https://photos.example.test/media/abc.webp')
+		expect(url.searchParams.get('w')).toBe(String(SHARE_WIDTH))
+		expect(url.searchParams.get('q')).toBe(String(SHARE_QUALITY))
 		expect(image).toMatchObject({ width: 1200, height: 800 })
 	})
 
 	test('un profil sans photo : l’image par défaut', () => {
-		expect(og(profileMetadata(profil({ photo: null }))).images).toEqual([DEFAULT_IMAGE])
+		expect(og(profileMetadata(profile({ photo: null }))).images).toEqual([DEFAULT_IMAGE])
 	})
 
 	test('une page en noindex garde ses balises, sans adresse canonique', () => {
-		const meta = profileMetadata(profil({ indexable: false }))
+		const meta = profileMetadata(profile({ indexable: false }))
 		expect(meta.robots).toEqual({ index: false, follow: true })
 		expect(meta.alternates).toBeUndefined()
-		const balises = og(meta)
-		expect(balises.title).toBe('Léa Imaginaire – maquilleuse mariage à Annecy | My-Makeup')
-		expect(balises.url).toBe('https://my-makeup.fr/profil/lea-imaginaire')
-		expect(balises.images[0]?.url).toMatch(ABSOLUE)
+		const tags = og(meta)
+		expect(tags.title).toBe('Léa Imaginaire – maquilleuse mariage à Annecy | My-Makeup')
+		expect(tags.url).toBe('https://my-makeup.fr/profil/lea-imaginaire')
+		expect(tags.images[0]?.url).toMatch(ABSOLUTE)
 		expect(meta.twitter).toBeDefined()
 	})
 })

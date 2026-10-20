@@ -7,14 +7,14 @@ import { proxy } from '@/proxy'
 /** The findings 1, 7 and 8 of ticket 223, on the proxy. Made-up host and token: only the end date of a token is read. */
 
 const SITE = 'https://my-makeup.fr'
-const jeton = (exp: number) => {
+const token = (exp: number) => {
 	const base64url = (valeur: unknown) => Buffer.from(JSON.stringify(valeur)).toString('base64url')
 	return `${base64url({ alg: 'HS256', typ: 'JWT' })}.${base64url({ exp })}.signature`
 }
-const enCours = jeton(Math.floor(Date.now() / 1000) + 3600)
-const expire = jeton(Math.floor(Date.now() / 1000) - 60)
+const inCourse = token(Math.floor(Date.now() / 1000) + 3600)
+const expired = token(Math.floor(Date.now() / 1000) - 60)
 
-const requete = (chemin: string, entetes: Record<string, string> = {}, methode = 'GET') =>
+const request = (chemin: string, entetes: Record<string, string> = {}, methode = 'GET') =>
 	new NextRequest(`${SITE}${chemin}`, { headers: entetes, method: methode })
 
 afterEach(() => {
@@ -22,7 +22,7 @@ afterEach(() => {
 })
 
 describe('constat 1 : une arrivée depuis un autre site garde la session', () => {
-	const entetes = (provenance: string, jetonDeSession = enCours) => ({
+	const headers = (provenance: string, jetonDeSession = inCourse) => ({
 		cookie: `payload-token=${jetonDeSession}`,
 		'sec-fetch-site': provenance,
 	})
@@ -33,44 +33,44 @@ describe('constat 1 : une arrivée depuis un autre site garde la session', () =>
 		'/auth/init-account',
 		'/auth/profil/photo',
 	])('%s, cookie valide, cross-site : la page de relais, jamais mise en cache', async chemin => {
-		const reponse = proxy(requete(`${chemin}?a=1&b=2`, entetes('cross-site')))
-		expect(reponse.status).toBe(200)
-		expect(reponse.headers.get('location')).toBeNull()
-		expect(reponse.headers.get('content-type')).toContain('text/html')
-		expect(reponse.headers.get('cache-control')).toBe('private, no-store')
-		expect(reponse.headers.get('x-robots-tag')).toContain('noindex')
-		const page = await reponse.text()
+		const response = proxy(request(`${chemin}?a=1&b=2`, headers('cross-site')))
+		expect(response.status).toBe(200)
+		expect(response.headers.get('location')).toBeNull()
+		expect(response.headers.get('content-type')).toContain('text/html')
+		expect(response.headers.get('cache-control')).toBe('private, no-store')
+		expect(response.headers.get('x-robots-tag')).toContain('noindex')
+		const page = await response.text()
 		// The navigation restarts from the site, to the very same address, query kept and escaped.
 		expect(page).toContain(`url=${chemin}?a=1&amp;b=2"`)
 		expect(page).toBe(relayPage(`${chemin}?a=1&b=2`))
 	})
 
 	test.each(['same-origin', 'same-site', 'none'])('Sec-Fetch-Site %s : la page répond elle-même', provenance => {
-		const reponse = proxy(requete('/auth/profil', entetes(provenance)))
-		expect(reponse.headers.get('x-middleware-next')).toBe('1')
+		const response = proxy(request('/auth/profil', headers(provenance)))
+		expect(response.headers.get('x-middleware-next')).toBe('1')
 	})
 
 	test('sans l’en-tête (navigateur ancien, outil) : la page répond elle-même', () => {
-		const reponse = proxy(requete('/auth/profil', { cookie: `payload-token=${enCours}` }))
-		expect(reponse.headers.get('x-middleware-next')).toBe('1')
+		const response = proxy(request('/auth/profil', { cookie: `payload-token=${inCourse}` }))
+		expect(response.headers.get('x-middleware-next')).toBe('1')
 	})
 
 	test('sans cookie, la redirection vers la connexion ne change pas', () => {
-		const reponse = proxy(requete('/auth/profil', { 'sec-fetch-site': 'cross-site' }))
-		expect(reponse.status).toBe(307)
-		expect(reponse.headers.get('location')).toBe(`${SITE}/auth/signin?callbackUrl=%2Fauth%2Fprofil`)
+		const response = proxy(request('/auth/profil', { 'sec-fetch-site': 'cross-site' }))
+		expect(response.status).toBe(307)
+		expect(response.headers.get('location')).toBe(`${SITE}/auth/signin?callbackUrl=%2Fauth%2Fprofil`)
 	})
 
 	test('cookie expiré, cross-site : la connexion avec le message, comme avant', () => {
-		const reponse = proxy(requete('/auth/profil', entetes('cross-site', expire)))
-		expect(reponse.status).toBe(307)
-		expect(new URL(reponse.headers.get('location') ?? '').searchParams.get('error')).toBe('session-expiree')
+		const response = proxy(request('/auth/profil', headers('cross-site', expired)))
+		expect(response.status).toBe(307)
+		expect(new URL(response.headers.get('location') ?? '').searchParams.get('error')).toBe('session-expiree')
 	})
 
 	test('une action serveur (POST) et les pages publiques ne passent jamais par le relais', () => {
-		expect(proxy(requete('/auth/profil', entetes('cross-site'), 'POST')).headers.get('x-middleware-next')).toBe('1')
-		for (const chemin of ['/', '/a-propos', '/auth/signin', '/auth/google/callback'])
-			expect(proxy(requete(chemin, entetes('cross-site'))).headers.get('x-middleware-next')).toBe('1')
+		expect(proxy(request('/auth/profil', headers('cross-site'), 'POST')).headers.get('x-middleware-next')).toBe('1')
+		for (const filePath of ['/', '/a-propos', '/auth/signin', '/auth/google/callback'])
+			expect(proxy(request(filePath, headers('cross-site'))).headers.get('x-middleware-next')).toBe('1')
 	})
 
 	test('seule la valeur cross-site compte', () => {
@@ -88,59 +88,59 @@ describe('constat 7 : une adresse au pourcentage mal formé répond la page 404 
 		'/%',
 		'/blog/a%zz',
 	])('%s est réécrite vers une adresse qui n’existe pas', chemin => {
-		const reponse = proxy(requete(chemin))
-		const cible = new URL(reponse.headers.get('x-middleware-rewrite') ?? '')
-		expect(cible.pathname).toBe('/unknown-page')
-		expect(reponse.headers.get('x-robots-tag')).toBe('noindex')
+		const response = proxy(request(chemin))
+		const target = new URL(response.headers.get('x-middleware-rewrite') ?? '')
+		expect(target.pathname).toBe('/unknown-page')
+		expect(response.headers.get('x-robots-tag')).toBe('noindex')
 	})
 
 	test('une adresse qui se décode, accents compris, suit son chemin', () => {
-		for (const chemin of ['/profil/%C3%A9l%C3%A9a/photos', '/blog/un-article/suite', '/talent/ana%20b/x'])
-			expect(proxy(requete(chemin)).headers.get('x-middleware-rewrite')).toBeNull()
+		for (const filePath of ['/profil/%C3%A9l%C3%A9a/photos', '/blog/un-article/suite', '/talent/ana%20b/x'])
+			expect(proxy(request(filePath)).headers.get('x-middleware-rewrite')).toBeNull()
 	})
 
 	test('les fichiers de Next ne sont pas touchés', () => {
-		expect(proxy(requete('/_next/static/%E0%A4%A.js')).headers.get('x-middleware-rewrite')).toBeNull()
+		expect(proxy(request('/_next/static/%E0%A4%A.js')).headers.get('x-middleware-rewrite')).toBeNull()
 	})
 
 	test('sous l’API, une adresse illisible répond un 400 en JSON, pas la page 404', async () => {
-		const reponse = proxy(requete('/api/pros/%E0%A4%A'))
-		expect(reponse.status).toBe(400)
-		expect(reponse.headers.get('x-middleware-rewrite')).toBeNull()
-		expect(await reponse.json()).toEqual({ errors: [{ message: 'Adresse illisible.' }] })
-		expect(proxy(requete('/api/pros/%C3%A9')).status).toBe(200)
+		const response = proxy(request('/api/pros/%E0%A4%A'))
+		expect(response.status).toBe(400)
+		expect(response.headers.get('x-middleware-rewrite')).toBeNull()
+		expect(await response.json()).toEqual({ errors: [{ message: 'Adresse illisible.' }] })
+		expect(proxy(request('/api/pros/%C3%A9')).status).toBe(200)
 	})
 })
 
 describe('constat 8 : une réponse qui efface des cookies n’est jamais gardée par un cache partagé', () => {
-	const HERITES = ['next-auth.session-token', '__Secure-next-auth.session-token']
-	const avecCookies = (chemin: string, noms: string[]) =>
-		requete(chemin, { cookie: noms.map(nom => `${nom}=valeur`).join('; ') })
+	const LEGACY = ['next-auth.session-token', '__Secure-next-auth.session-token']
+	const withCookies = (chemin: string, noms: string[]) =>
+		request(chemin, { cookie: noms.map(nom => `${nom}=valeur`).join('; ') })
 
 	test('une page publique qui efface un cookie hérité : private, no-store', () => {
-		const reponse = proxy(avecCookies('/a-propos', HERITES))
-		expect(reponse.headers.getSetCookie().length).toBeGreaterThan(0)
-		expect(reponse.headers.get('cache-control')).toBe('private, no-store')
+		const response = proxy(withCookies('/a-propos', LEGACY))
+		expect(response.headers.getSetCookie().length).toBeGreaterThan(0)
+		expect(response.headers.get('cache-control')).toBe('private, no-store')
 	})
 
 	test('le rappel du message : private, no-store aussi, qu’on le pose ou qu’on l’efface', () => {
-		const pose = proxy(avecCookies('/', HERITES))
+		const pose = proxy(withCookies('/', LEGACY))
 		expect(pose.headers.getSetCookie().some(ligne => ligne.startsWith(`${MESSAGE_COOKIE}=1`))).toBe(true)
 		expect(pose.headers.get('cache-control')).toBe('private, no-store')
-		const efface = proxy(avecCookies('/auth/signin', [MESSAGE_COOKIE]))
-		expect(efface.headers.getSetCookie().some(ligne => ligne.startsWith(`${MESSAGE_COOKIE}=;`))).toBe(true)
-		expect(efface.headers.get('cache-control')).toBe('private, no-store')
+		const erased = proxy(withCookies('/auth/signin', [MESSAGE_COOKIE]))
+		expect(erased.headers.getSetCookie().some(ligne => ligne.startsWith(`${MESSAGE_COOKIE}=;`))).toBe(true)
+		expect(erased.headers.get('cache-control')).toBe('private, no-store')
 	})
 
 	test('la redirection vers la connexion qui efface des cookies : private, no-store', () => {
-		const reponse = proxy(avecCookies('/auth/profil', HERITES))
-		expect(reponse.status).toBe(307)
-		expect(reponse.headers.get('cache-control')).toBe('private, no-store')
+		const response = proxy(withCookies('/auth/profil', LEGACY))
+		expect(response.status).toBe(307)
+		expect(response.headers.get('cache-control')).toBe('private, no-store')
 	})
 
 	test('sans cookie à effacer, la réponse garde ses en-têtes', () => {
-		const reponse = proxy(avecCookies('/a-propos', ['payload-token']))
-		expect(reponse.headers.getSetCookie()).toEqual([])
-		expect(reponse.headers.get('cache-control')).toBeNull()
+		const response = proxy(withCookies('/a-propos', ['payload-token']))
+		expect(response.headers.getSetCookie()).toEqual([])
+		expect(response.headers.get('cache-control')).toBeNull()
 	})
 })

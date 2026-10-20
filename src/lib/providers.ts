@@ -3,7 +3,7 @@ import { HOST } from './legal'
 /**
  * The processors the privacy policy names, in one place (ticket 189). The page
  * `/politique-de-confidentialite` draws its list of providers from `PROVIDERS` and nothing else;
- * tests/unit/politique-prestataires.test.ts compares each entry to the service the code is
+ * tests/unit/providers-policy.test.tsx compares each entry to the service the code is
  * configured for (the host of the site, the Umami instance, the S3 storage, the SMTP relay, the
  * Google issuer), so that adding or replacing a service without editing this list fails the CI.
  *

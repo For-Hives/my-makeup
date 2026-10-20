@@ -2,7 +2,7 @@
  * The guard rails of the CI and of the Docker image, as pure functions: each one reads the
  * text of a file of the repository and gives back what is wrong, in French, or nothing.
  *
- * tests/ci/garde-fous-ci.test.ts runs each of them twice: on the real files, where it must
+ * tests/ci/ci-guardrails.test.ts runs each of them twice: on the real files, where it must
  * find nothing, and on a faulty example, where it must find the fault. A guard that was
  * never seen red proves nothing.
  */

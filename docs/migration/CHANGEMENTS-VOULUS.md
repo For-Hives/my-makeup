@@ -18,7 +18,7 @@ Les faits datés de la migration sont dans [`JOURNAL.md`](JOURNAL.md).
 - Un changement visible sans ligne ici n'est pas fini. La ligne s'ajoute en bas du tableau de sa partie, dans le même commit que le changement.
 - Une décision qui annule un changement retire sa ligne. Le journal en garde la trace.
 
-Un test garde la forme du registre : `bun --no-env-file test tests/unit/registre-changements.test.ts`.
+Un test garde la forme du registre : `bun --no-env-file test tests/unit/intended-changes.test.ts`.
 
 ## Sources citées
 

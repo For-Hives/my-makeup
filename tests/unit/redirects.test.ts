@@ -38,8 +38,16 @@ describe('U62 : la double barre et la barre finale', () => {
 	})
 
 	test('une adresse de la bonne forme ne redirige pas, la casse compte', () => {
-		for (const chemin of ['/', '/blog', '/Blog', '/search', '/profil/zoe-lefevre', '/favicon.webp', '/blog/un-article'])
-			expect(shapeRedirect(chemin)).toBeNull()
+		for (const filePath of [
+			'/',
+			'/blog',
+			'/Blog',
+			'/search',
+			'/profil/zoe-lefevre',
+			'/favicon.webp',
+			'/blog/un-article',
+		])
+			expect(shapeRedirect(filePath)).toBeNull()
 	})
 
 	test('les redirections de chemin viennent de la table des adresses gelées', () => {
@@ -47,25 +55,25 @@ describe('U62 : la double barre et la barre finale', () => {
 	})
 
 	test('chaque exemple des deux familles de forme, et ceux qui y passent, va où la table le dit', () => {
-		const exemples = FROZEN_URL_FAMILIES.filter(famille => famille.rule !== undefined).flatMap(famille =>
+		const examples = FROZEN_URL_FAMILIES.filter(famille => famille.rule !== undefined).flatMap(famille =>
 			famille.examples.map(exemple => ({ famille, ...exemple }))
 		)
-		expect(exemples.length).toBeGreaterThan(0)
-		for (const { famille, from, to } of exemples) {
+		expect(examples.length).toBeGreaterThan(0)
+		for (const { famille: family, from, to } of examples) {
 			const redirection = shapeRedirect(splitAddress(from).path)
 			expect(redirection?.chemin).toBe(splitAddress(to ?? '').path)
-			expect<number | undefined>(redirection?.status).toBe(famille.status)
+			expect<number | undefined>(redirection?.status).toBe(family.status)
 		}
 	})
 })
 
 describe('U64 : ce que la forme ne touche pas', () => {
 	test('/admin, /api et /_next ne sont jamais interceptés, même avec une barre en trop', () => {
-		for (const prefixe of UNFROZEN_PREFIXES) {
-			expect(shapeRedirect(prefixe)).toBeNull()
-			expect(shapeRedirect(`${prefixe}/`)).toBeNull()
-			expect(shapeRedirect(`${prefixe}//x`)).toBeNull()
-			expect(shapeRedirect(`//${prefixe.slice(1)}/x/`)).toBeNull()
+		for (const prefix of UNFROZEN_PREFIXES) {
+			expect(shapeRedirect(prefix)).toBeNull()
+			expect(shapeRedirect(`${prefix}/`)).toBeNull()
+			expect(shapeRedirect(`${prefix}//x`)).toBeNull()
+			expect(shapeRedirect(`//${prefix.slice(1)}/x/`)).toBeNull()
 		}
 		expect(shapeRedirect('/api/health')).toBeNull()
 		expect(shapeRedirect('/_next/static/chunks/a.js')).toBeNull()
@@ -73,8 +81,8 @@ describe('U64 : ce que la forme ne touche pas', () => {
 	})
 
 	test('les fichiers statiques de `public/` ne sont pas interceptés', () => {
-		for (const chemin of ['/favicon.webp', '/BingSiteAuth.xml', '/robots.txt', '/assets/back.webp'])
-			expect(shapeRedirect(chemin)).toBeNull()
+		for (const filePath of ['/favicon.webp', '/BingSiteAuth.xml', '/robots.txt', '/assets/back.webp'])
+			expect(shapeRedirect(filePath)).toBeNull()
 	})
 
 	test('un préfixe voisin n’est pas un préfixe libre', () => {

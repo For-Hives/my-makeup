@@ -15,7 +15,7 @@ import { EnvError, parseServerEnv } from '@/lib/env'
 import { proxy } from '@/proxy'
 
 const SITE = 'https://my-makeup.fr'
-const HERITES = [
+const LEGACY = [
 	'__Secure-next-auth.session-token',
 	'__Secure-next-auth.session-token.0',
 	'__Secure-next-auth.session-token.1',
@@ -25,18 +25,18 @@ const HERITES = [
 
 describe('U65 : la liste des cookies hérités effacés', () => {
 	test('la session (et ses morceaux), le jeton CSRF et l’adresse de retour, avec ou sans préfixe', () => {
-		const noms = [
-			...HERITES,
+		const names = [
+			...LEGACY,
 			'next-auth.session-token',
 			'next-auth.session-token.12',
 			'next-auth.csrf-token',
 			'next-auth.callback-url',
 		]
-		expect(legacyCookiesPresent(noms)).toEqual(noms)
+		expect(legacyCookiesPresent(names)).toEqual(names)
 	})
 
 	test('rien d’autre : ni le cookie de Payload, ni un nom voisin', () => {
-		const autres = [
+		const other = [
 			'payload-token',
 			'next-auth.session-tokens',
 			'next-auth.session-token.',
@@ -46,15 +46,15 @@ describe('U65 : la liste des cookies hérités effacés', () => {
 			'__Secure-payload-token',
 			'mm-signed-out',
 		]
-		expect(legacyCookiesPresent(autres)).toEqual([])
+		expect(legacyCookiesPresent(other)).toEqual([])
 	})
 })
 
 describe('U66 : chaque effacement répète les attributs de la pose', () => {
-	test.each(HERITES)('%s : Max-Age=0, même Path, Secure, SameSite, pas de Domain', nom => {
+	test.each(LEGACY)('%s : Max-Age=0, même Path, Secure, SameSite, pas de Domain', nom => {
 		const pose = setAttributes(nom)
-		const effacement = clearingCookie(nom)
-		expect(effacement).toMatchObject({
+		const erasure = clearingCookie(nom)
+		expect(erasure).toMatchObject({
 			name: nom,
 			value: '',
 			maxAge: 0,
@@ -63,13 +63,13 @@ describe('U66 : chaque effacement répète les attributs de la pose', () => {
 			sameSite: pose.sameSite,
 			httpOnly: pose.httpOnly,
 		})
-		expect(effacement).not.toHaveProperty('domain')
-		expect(effacement.expires.getTime()).toBe(0)
+		expect(erasure).not.toHaveProperty('domain')
+		expect(erasure.expires.getTime()).toBe(0)
 	})
 
 	test('les valeurs de NextAuth v4 : Path=/, HttpOnly, Lax, Secure avec les préfixes seulement', () => {
-		for (const nom of HERITES)
-			expect(setAttributes(nom)).toMatchObject({ path: '/', httpOnly: true, sameSite: 'lax', secure: true })
+		for (const name of LEGACY)
+			expect(setAttributes(name)).toMatchObject({ path: '/', httpOnly: true, sameSite: 'lax', secure: true })
 		expect(setAttributes('next-auth.session-token').secure).toBe(false)
 		expect(setAttributes('next-auth.csrf-token').secure).toBe(false)
 	})
@@ -124,7 +124,7 @@ describe('U64 : le back-office, l’API et les fichiers statiques ne sont pas to
 		expect(pathWithoutCleanup(chemin)).toBe(true)
 		const plan = cleanupPlan({
 			chemin,
-			noms: HERITES,
+			noms: LEGACY,
 			prechargement: false,
 			maintenant: new Date(),
 			basculeLe: undefined,
@@ -144,7 +144,7 @@ describe('U64 : le back-office, l’API et les fichiers statiques ne sont pas to
 	})
 })
 
-const requete = (chemin: string, cookies: string[], entetes: Record<string, string> = {}) =>
+const request = (chemin: string, cookies: string[], entetes: Record<string, string> = {}) =>
 	new NextRequest(`${SITE}${chemin}`, {
 		headers: { cookie: cookies.map(nom => `${nom}=valeur`).join('; '), ...entetes },
 	})
@@ -152,85 +152,85 @@ const requete = (chemin: string, cookies: string[], entetes: Record<string, stri
 const setCookies = (reponse: Response) => reponse.headers.getSetCookie()
 
 describe('le proxy : le nettoyage à la première requête', () => {
-	const avant = process.env.CUTOVER_DATE
+	const before = process.env.CUTOVER_DATE
 	afterEach(() => {
-		if (avant === undefined) delete process.env.CUTOVER_DATE
-		else process.env.CUTOVER_DATE = avant
+		if (before === undefined) delete process.env.CUTOVER_DATE
+		else process.env.CUTOVER_DATE = before
 	})
 
 	test('une page du site : chaque cookie hérité expiré, un rappel posé, pas de redirection', () => {
 		delete process.env.CUTOVER_DATE
-		const reponse = proxy(requete('/a-propos', HERITES))
-		expect(reponse.status).toBe(200)
-		const lignes = setCookies(reponse)
-		for (const nom of HERITES) {
-			const ligne = lignes.find(l => l.startsWith(`${nom}=;`))
-			expect(ligne).toBeDefined()
-			expect(ligne).toContain('Max-Age=0')
-			expect(ligne).toContain('Path=/')
-			expect(ligne).toContain('SameSite=lax')
-			expect(ligne).not.toContain('Domain')
+		const response = proxy(request('/a-propos', LEGACY))
+		expect(response.status).toBe(200)
+		const lines = setCookies(response)
+		for (const name of LEGACY) {
+			const line = lines.find(l => l.startsWith(`${name}=;`))
+			expect(line).toBeDefined()
+			expect(line).toContain('Max-Age=0')
+			expect(line).toContain('Path=/')
+			expect(line).toContain('SameSite=lax')
+			expect(line).not.toContain('Domain')
 		}
-		expect(lignes.find(l => l.startsWith('__Host-next-auth.csrf-token='))).toContain('Secure')
-		expect(lignes.find(l => l.startsWith(`${MESSAGE_COOKIE}=1`))).toContain('HttpOnly')
+		expect(lines.find(l => l.startsWith('__Host-next-auth.csrf-token='))).toContain('Secure')
+		expect(lines.find(l => l.startsWith(`${MESSAGE_COOKIE}=1`))).toContain('HttpOnly')
 	})
 
 	test('la connexion directement : le message est dû tout de suite, sans rappel', () => {
 		delete process.env.CUTOVER_DATE
-		const reponse = proxy(requete('/auth/signin', HERITES))
-		expect(reponse.status).toBe(200)
-		expect(reponse.headers.get('x-middleware-request-x-mm-signed-out')).toBe('1')
-		expect(setCookies(reponse).some(l => l.startsWith(`${MESSAGE_COOKIE}=1`))).toBe(false)
+		const response = proxy(request('/auth/signin', LEGACY))
+		expect(response.status).toBe(200)
+		expect(response.headers.get('x-middleware-request-x-mm-signed-out')).toBe('1')
+		expect(setCookies(response).some(l => l.startsWith(`${MESSAGE_COOKIE}=1`))).toBe(false)
 	})
 
 	test('une page privée : une seule redirection vers la connexion, les cookies expirés au passage (pas de boucle)', () => {
 		delete process.env.CUTOVER_DATE
-		const reponse = proxy(requete('/auth/profil', HERITES))
-		expect(reponse.status).toBe(307)
-		expect(reponse.headers.get('location')).toBe(`${SITE}/auth/signin?callbackUrl=%2Fauth%2Fprofil`)
-		expect(setCookies(reponse).filter(l => l.includes('Max-Age=0'))).toHaveLength(HERITES.length)
+		const response = proxy(request('/auth/profil', LEGACY))
+		expect(response.status).toBe(307)
+		expect(response.headers.get('location')).toBe(`${SITE}/auth/signin?callbackUrl=%2Fauth%2Fprofil`)
+		expect(setCookies(response).filter(l => l.includes('Max-Age=0'))).toHaveLength(LEGACY.length)
 		// The next request carries no old cookie any more: the sign-in page answers, with the reminder.
-		const suite = proxy(requete('/auth/signin', [MESSAGE_COOKIE]))
+		const suite = proxy(request('/auth/signin', [MESSAGE_COOKIE]))
 		expect(suite.status).toBe(200)
 		expect(suite.headers.get('x-middleware-request-x-mm-signed-out')).toBe('1')
 	})
 
 	test('le message ne s’affiche qu’une fois : le rappel est effacé en le servant, et sans rappel rien ne s’affiche', () => {
 		delete process.env.CUTOVER_DATE
-		const premiere = proxy(requete('/auth/signin', [MESSAGE_COOKIE]))
-		expect(setCookies(premiere).find(l => l.startsWith(`${MESSAGE_COOKIE}=;`))).toContain('Max-Age=0')
-		const seconde = proxy(requete('/auth/signin', []))
-		expect(seconde.headers.get('x-middleware-request-x-mm-signed-out')).toBeNull()
-		expect(setCookies(seconde)).toEqual([])
+		const firstOne = proxy(request('/auth/signin', [MESSAGE_COOKIE]))
+		expect(setCookies(firstOne).find(l => l.startsWith(`${MESSAGE_COOKIE}=;`))).toContain('Max-Age=0')
+		const second = proxy(request('/auth/signin', []))
+		expect(second.headers.get('x-middleware-request-x-mm-signed-out')).toBeNull()
+		expect(setCookies(second)).toEqual([])
 	})
 
 	test('un préchargement ne montre pas le message et ne l’use pas', () => {
 		delete process.env.CUTOVER_DATE
-		const reponse = proxy(requete('/auth/signin', [MESSAGE_COOKIE], { 'next-router-prefetch': '1' }))
-		expect(reponse.headers.get('x-middleware-request-x-mm-signed-out')).toBeNull()
-		expect(setCookies(reponse)).toEqual([])
+		const response = proxy(request('/auth/signin', [MESSAGE_COOKIE], { 'next-router-prefetch': '1' }))
+		expect(response.headers.get('x-middleware-request-x-mm-signed-out')).toBeNull()
+		expect(setCookies(response)).toEqual([])
 	})
 
 	test('l’en-tête du message envoyé par un visiteur est retiré', () => {
 		delete process.env.CUTOVER_DATE
-		const reponse = proxy(requete('/auth/signin', [], { [MESSAGE_HEADER]: '1' }))
-		expect(reponse.headers.get('x-middleware-request-x-mm-signed-out')).toBeNull()
+		const response = proxy(request('/auth/signin', [], { [MESSAGE_HEADER]: '1' }))
+		expect(response.headers.get('x-middleware-request-x-mm-signed-out')).toBeNull()
 	})
 
 	test('le back-office, l’API et les fichiers : aucun Set-Cookie', () => {
 		delete process.env.CUTOVER_DATE
-		for (const chemin of ['/admin', '/api/pros/me', '/_next/static/a.js', '/robots.txt'])
-			expect(setCookies(proxy(requete(chemin, HERITES)))).toEqual([])
+		for (const filePath of ['/admin', '/api/pros/me', '/_next/static/a.js', '/robots.txt'])
+			expect(setCookies(proxy(request(filePath, LEGACY)))).toEqual([])
 	})
 
 	test('passé les 90 jours, plus rien n’est touché', () => {
 		process.env.CUTOVER_DATE = '2020-01-01'
-		const reponse = proxy(requete('/a-propos', HERITES))
-		expect(setCookies(reponse)).toEqual([])
+		const response = proxy(request('/a-propos', LEGACY))
+		expect(setCookies(response)).toEqual([])
 	})
 
 	test('sans cookie hérité, rien n’est posé', () => {
 		delete process.env.CUTOVER_DATE
-		expect(setCookies(proxy(requete('/', ['payload-token'])))).toEqual([])
+		expect(setCookies(proxy(request('/', ['payload-token'])))).toEqual([])
 	})
 })

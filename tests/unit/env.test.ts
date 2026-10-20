@@ -25,7 +25,7 @@ const REMOTE_URI = 'postgres://banc:MOT-DE-PASSE-TEMOIN@base.exemple.test:5432/m
 const SECRET = 'k'.repeat(64)
 const valid: RawEnv = { DATABASE_URI: LOCAL_URI, PAYLOAD_SECRET: SECRET }
 /** What the site itself must also hold since ticket 073: a relay with its login, and a sender. */
-const RELAIS_DU_SITE: RawEnv = {
+const SITE_RELAY: RawEnv = {
 	EMAIL_FROM: 'My Makeup <ne-pas-repondre@example.test>',
 	SMTP_HOST: 'relais.exemple.test',
 	SMTP_PASSWORD: 'MOT-DE-PASSE-DU-RELAIS-TEMOIN',
@@ -173,7 +173,7 @@ describe('the schema is pushed only into a database of this machine', () => {
 })
 
 describe('trusted origins: the site and this machine, each for itself', () => {
-	const production: RawEnv = { ...valid, ...RELAIS_DU_SITE, DATABASE_URI: REMOTE_URI, NODE_ENV: 'production' }
+	const production: RawEnv = { ...valid, ...SITE_RELAY, DATABASE_URI: REMOTE_URI, NODE_ENV: 'production' }
 	const origins = (env: RawEnv) => parseServerEnv(env).trustedOrigins
 
 	test('outside production: this machine, on the port Next listens on', () => {
@@ -243,7 +243,7 @@ describe('trusted origins: the site and this machine, each for itself', () => {
 
 describe('the client of the Google sign-in is both halves or nothing (ticket 090)', () => {
 	const ID = 'client-factice-du-banc'
-	const SECRET_DU_CLIENT = 'secret-factice-du-banc-de-test'
+	const CLIENT_SECRET = 'secret-factice-du-banc-de-test'
 
 	test('neither: no Google client, and the site still starts', () => {
 		expect(parseServerEnv(valid).google).toBeUndefined()
@@ -251,8 +251,8 @@ describe('the client of the Google sign-in is both halves or nothing (ticket 090
 	})
 
 	test('both: the client is read, trimmed', () => {
-		const env = parseServerEnv({ ...valid, GOOGLE_CLIENT_ID: ` ${ID} `, GOOGLE_CLIENT_SECRET: SECRET_DU_CLIENT })
-		expect(env.google).toEqual({ clientId: ID, clientSecret: SECRET_DU_CLIENT })
+		const env = parseServerEnv({ ...valid, GOOGLE_CLIENT_ID: ` ${ID} `, GOOGLE_CLIENT_SECRET: CLIENT_SECRET })
+		expect(env.google).toEqual({ clientId: ID, clientSecret: CLIENT_SECRET })
 	})
 
 	test.each([
@@ -274,7 +274,7 @@ describe('the client of the Google sign-in is both halves or nothing (ticket 090
 
 describe('the Google sign-in talks to Google, or on this machine to the fake Google of the test bench', () => {
 	const FAKE = 'http://127.0.0.1:7080'
-	const production: RawEnv = { ...valid, ...RELAIS_DU_SITE, DATABASE_URI: REMOTE_URI, NODE_ENV: 'production' }
+	const production: RawEnv = { ...valid, ...SITE_RELAY, DATABASE_URI: REMOTE_URI, NODE_ENV: 'production' }
 	const SITE = 'https://my-makeup.fr'
 
 	test('nothing set: Google itself, in production or not', () => {
@@ -384,7 +384,7 @@ describe('the server stops when it starts with an environment that is not valid'
 	test('the production configuration with a local Google provider: exit code 1, the variable named, no value', () => {
 		const run = start({
 			...valid,
-			...RELAIS_DU_SITE,
+			...SITE_RELAY,
 			DATABASE_URI: REMOTE_URI,
 			GOOGLE_OIDC_ISSUER: 'http://127.0.0.1:7080',
 			NEXT_PUBLIC_SITE_URL: 'https://my-makeup.fr',
@@ -427,9 +427,9 @@ describe('the confirmation of a new email is on, unless the operating switch say
 
 	test('any other value stops the start, and the message names the variable, not the value', () => {
 		for (const AUTH_VERIFY of ['false', '0', 'non', 'desactive-12345']) {
-			const erreur = refusal({ ...valid, AUTH_VERIFY })
-			expect(erreur.variables).toEqual(['AUTH_VERIFY'])
-			expect(erreur.message).not.toContain(AUTH_VERIFY)
+			const errorValue = refusal({ ...valid, AUTH_VERIFY })
+			expect(errorValue.variables).toEqual(['AUTH_VERIFY'])
+			expect(errorValue.message).not.toContain(AUTH_VERIFY)
 		}
 	})
 
@@ -529,7 +529,7 @@ describe('the mails leave through the relay the environment names, or not at all
 		expect(
 			parseServerEnv({
 				...valid,
-				...RELAIS_DU_SITE,
+				...SITE_RELAY,
 				NODE_ENV: 'production',
 				NEXT_PUBLIC_SITE_URL: 'https://my-makeup.fr',
 			}).contactTo
@@ -696,12 +696,12 @@ describe('the mails leave through the relay the environment names, or not at all
 describe('the site itself sends through an authenticated relay, or does not start (ticket 073)', () => {
 	const site: RawEnv = {
 		...valid,
-		...RELAIS_DU_SITE,
+		...SITE_RELAY,
 		DATABASE_URI: REMOTE_URI,
 		NEXT_PUBLIC_SITE_URL: 'https://my-makeup.fr',
 		NODE_ENV: 'production',
 	}
-	const sansRelais: RawEnv = {
+	const withoutRelay: RawEnv = {
 		...site,
 		EMAIL_FROM: undefined,
 		SMTP_HOST: undefined,
@@ -721,7 +721,7 @@ describe('the site itself sends through an authenticated relay, or does not star
 	})
 
 	test('the site in production without a relay: refused, the variable named', () => {
-		const error = refusal(sansRelais)
+		const error = refusal(withoutRelay)
 		expect(error.variables).toEqual(['SMTP_HOST'])
 		expect(error.message).toContain('- SMTP_HOST : absente, alors qu’elle est obligatoire sur le site en ligne')
 	})
@@ -758,14 +758,14 @@ describe('the site itself sends through an authenticated relay, or does not star
 
 	test('a work station and the bench may go without a relay', () => {
 		expect(parseServerEnv(valid).mail).toBeUndefined()
-		expect(parseServerEnv({ ...sansRelais, NEXT_PUBLIC_SITE_URL: 'http://localhost:3100' }).mail).toBeUndefined()
+		expect(parseServerEnv({ ...withoutRelay, NEXT_PUBLIC_SITE_URL: 'http://localhost:3100' }).mail).toBeUndefined()
 	})
 
 	test('SMTP_USER and SMTP_PASSWORD go together', () => {
-		const relais: RawEnv = { ...valid, ...RELAIS_DU_SITE, SMTP_PORT: '587' }
-		expect(refusal({ ...relais, SMTP_PASSWORD: undefined }).variables).toEqual(['SMTP_PASSWORD'])
-		expect(refusal({ ...relais, SMTP_USER: undefined }).variables).toEqual(['SMTP_USER'])
-		expect(parseServerEnv({ ...relais, SMTP_USER: undefined, SMTP_PASSWORD: undefined }).mail?.auth).toBeUndefined()
+		const relayValue: RawEnv = { ...valid, ...SITE_RELAY, SMTP_PORT: '587' }
+		expect(refusal({ ...relayValue, SMTP_PASSWORD: undefined }).variables).toEqual(['SMTP_PASSWORD'])
+		expect(refusal({ ...relayValue, SMTP_USER: undefined }).variables).toEqual(['SMTP_USER'])
+		expect(parseServerEnv({ ...relayValue, SMTP_USER: undefined, SMTP_PASSWORD: undefined }).mail?.auth).toBeUndefined()
 	})
 
 	test('no message of a refusal holds the password of the relay', () => {
@@ -775,7 +775,7 @@ describe('the site itself sends through an authenticated relay, or does not star
 	})
 
 	test('next build asks for nothing and gets no relay', () => {
-		const built = serverEnv({ ...sansRelais, NEXT_PHASE: 'phase-production-build' })
+		const built = serverEnv({ ...withoutRelay, NEXT_PHASE: 'phase-production-build' })
 		expect(built.mail).toBeUndefined()
 	})
 })
@@ -895,21 +895,21 @@ describe('the import of the old site runs on the site only, once per token (tick
 	const SOURCE = 'postgres://lecture_strapi:MOT-DE-PASSE-TEMOIN@base-strapi.exemple.test:5432/strapi'
 	const site: RawEnv = {
 		...valid,
-		...RELAIS_DU_SITE,
+		...SITE_RELAY,
 		APP_ENV: 'prod',
 		DATABASE_URI: REMOTE_URI,
 		NEXT_PUBLIC_SITE_URL: 'https://my-makeup.fr',
 		NODE_ENV: 'production',
 		STRAPI_SOURCE_URI: SOURCE,
 	}
-	const demande: RawEnv = { ...site, IMPORT_TOKEN: '2026-11-05-passage-a' }
+	const request: RawEnv = { ...site, IMPORT_TOKEN: '2026-11-05-passage-a' }
 
 	test('STRAPI_SOURCE_URI is known to the application: read as an address, kept apart, never refused for being local', () => {
 		expect(parseServerEnv(site).sourceStrapi).toBe(SOURCE)
 		expect(parseServerEnv(site).importation).toBeUndefined()
 		// The bench sets it to its fake source, on this machine.
-		const banc = 'postgres://lecture_strapi_test:x@127.0.0.1:5443/strapi_source_test'
-		expect(parseServerEnv({ ...valid, STRAPI_SOURCE_URI: banc }).sourceStrapi).toBe(banc)
+		const benchValue = 'postgres://lecture_strapi_test:x@127.0.0.1:5443/strapi_source_test'
+		expect(parseServerEnv({ ...valid, STRAPI_SOURCE_URI: benchValue }).sourceStrapi).toBe(benchValue)
 		expect(parseServerEnv(valid).sourceStrapi).toBeUndefined()
 		const error = refusal({ ...valid, STRAPI_SOURCE_URI: 'pas une adresse' })
 		expect(error.variables).toEqual(['STRAPI_SOURCE_URI'])
@@ -917,7 +917,7 @@ describe('the import of the old site runs on the site only, once per token (tick
 	})
 
 	test('a token alone is a dry run, read with the defaults', () => {
-		expect(parseServerEnv(demande).importation).toEqual({
+		expect(parseServerEnv(request).importation).toEqual({
 			token: '2026-11-05-passage-a',
 			mode: 'dry-run',
 			targetInService: false,
@@ -928,7 +928,7 @@ describe('the import of the old site runs on the site only, once per token (tick
 		const decisions = JSON.stringify({ emailsPartages: [], profilsEcartes: [29] })
 		expect(
 			parseServerEnv({
-				...demande,
+				...request,
 				IMPORT_TARGET_IN_SERVICE: 'oui',
 				IMPORT_CITIES: '[]',
 				IMPORT_CONSENT_DATE: '2026-11-02T08:00:00Z',
@@ -946,14 +946,14 @@ describe('the import of the old site runs on the site only, once per token (tick
 	})
 
 	test.each([
-		['a work station', { ...demande, NODE_ENV: undefined, NEXT_PUBLIC_SITE_URL: undefined, APP_ENV: undefined }],
-		['a development server with the site address', { ...demande, NODE_ENV: 'development' }],
+		['a work station', { ...request, NODE_ENV: undefined, NEXT_PUBLIC_SITE_URL: undefined, APP_ENV: undefined }],
+		['a development server with the site address', { ...request, NODE_ENV: 'development' }],
 		[
 			'a production build served from this machine',
-			{ ...demande, NEXT_PUBLIC_SITE_URL: 'http://localhost:3000', DATABASE_URI: LOCAL_URI },
+			{ ...request, NEXT_PUBLIC_SITE_URL: 'http://localhost:3000', DATABASE_URI: LOCAL_URI },
 		],
-		['the site without APP_ENV', { ...demande, APP_ENV: undefined }],
-		['the test bench', { ...demande, APP_ENV: 'test' }],
+		['the site without APP_ENV', { ...request, APP_ENV: undefined }],
+		['the test bench', { ...request, APP_ENV: 'test' }],
 	])('refused on %s, naming the variable and never its value', (_cas, env) => {
 		const error = refusal(env)
 		expect(error.variables).toContain('IMPORT_TOKEN')
@@ -963,14 +963,14 @@ describe('the import of the old site runs on the site only, once per token (tick
 	})
 
 	test('any other IMPORT_* variable is refused off the site too, token or not', () => {
-		for (const [variable, valeur] of [
+		for (const [variable, value] of [
 			['IMPORT_MODE', 'real'],
 			['IMPORT_DECISIONS', '{}'],
 			['IMPORT_CONSENT_DATE', '2026-11-02'],
 			['IMPORT_CITIES', '[]'],
 			['IMPORT_TARGET_IN_SERVICE', 'oui'],
 		] as const)
-			expect(refusal({ ...valid, [variable]: valeur }).variables, variable).toEqual([variable])
+			expect(refusal({ ...valid, [variable]: value }).variables, variable).toEqual([variable])
 	})
 
 	test('a variable without the token is refused on the site: it would do nothing', () => {
@@ -990,18 +990,18 @@ describe('the import of the old site runs on the site only, once per token (tick
 		['IMPORT_DECISIONS', '{pas du json'],
 		['IMPORT_CITIES', 'pas du json'],
 	])('%s = « %s » is unreadable', (variable, valeur) => {
-		const error = refusal({ ...demande, [variable]: valeur })
+		const error = refusal({ ...request, [variable]: valeur })
 		expect(error.variables).toEqual([variable])
 		expect(error.message).not.toContain(valeur)
 	})
 
 	test('a check does not go with a target left as it is', () => {
-		const error = refusal({ ...demande, IMPORT_MODE: 'check', IMPORT_TARGET_IN_SERVICE: 'oui' })
+		const error = refusal({ ...request, IMPORT_MODE: 'check', IMPORT_TARGET_IN_SERVICE: 'oui' })
 		expect(error.variables).toEqual(['IMPORT_TARGET_IN_SERVICE'])
 	})
 
 	test('the token needs a source to read', () => {
-		const error = refusal({ ...demande, STRAPI_SOURCE_URI: undefined })
+		const error = refusal({ ...request, STRAPI_SOURCE_URI: undefined })
 		expect(error.variables).toEqual(['STRAPI_SOURCE_URI'])
 	})
 
@@ -1037,13 +1037,13 @@ describe('the import of the old site runs on the site only, once per token (tick
 		['reel', 'real'],
 		['controle', 'check'],
 	])('the old IMPORT_MODE value « %s » is refused and the message gives « %s »', (old, current) => {
-		const error = refusal({ ...demande, IMPORT_MODE: old })
+		const error = refusal({ ...request, IMPORT_MODE: old })
 		expect(error.variables).toEqual(['IMPORT_MODE'])
 		expect(error.message).toContain(`« ${current} »`)
 	})
 
 	test('next build reads no import: nothing runs while Next builds', () => {
-		const construction = serverEnv({ ...demande, NEXT_PHASE: 'phase-production-build' })
+		const construction = serverEnv({ ...request, NEXT_PHASE: 'phase-production-build' })
 		expect(construction.importation).toBeUndefined()
 		expect(construction.sourceStrapi).toBeUndefined()
 	})

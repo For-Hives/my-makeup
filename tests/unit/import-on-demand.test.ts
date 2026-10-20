@@ -18,20 +18,20 @@ import {
  * themselves, on the bench with the fake Strapi source, are in tests/integration/import-a-la-demande.test.ts.
  */
 
-const CIBLE = 'postgres://app:mot-de-passe-factice@payload.interne.example.test:5432/mymakeup'
+const TARGET = 'postgres://app:mot-de-passe-factice@payload.interne.example.test:5432/mymakeup'
 const SOURCE = 'postgres://lecture_strapi:mot-de-passe-factice@strapi.interne.example.test:5432/mymakeup'
-const STOCKAGE = {
+const STORAGE = {
 	endpoint: 'https://stockage.example.test',
 	bucket: 'photos-factices',
 	accessKeyId: 'x',
 	secretAccessKey: 'y',
 	local: false,
 }
-const DEMANDE: ImportEnv = { token: '2026-11-05-passage-a', mode: 'dry-run', targetInService: false }
-const ENV: OnDemandImportEnv = { databaseUri: CIBLE, importation: DEMANDE, sourceStrapi: SOURCE, storage: STOCKAGE }
+const REQUEST: ImportEnv = { token: '2026-11-05-passage-a', mode: 'dry-run', targetInService: false }
+const ENV: OnDemandImportEnv = { databaseUri: TARGET, importation: REQUEST, sourceStrapi: SOURCE, storage: STORAGE }
 
 /** A Payload that fails the test when anything reads from it: no token, no refusal reads the database. */
-const payloadInterdit = new Proxy(
+const payloadForbidden = new Proxy(
 	{},
 	{
 		get: () => {
@@ -41,33 +41,33 @@ const payloadInterdit = new Proxy(
 ) as unknown as Payload
 
 /** The comment of the schema `public`, the pool of `pg` just enough for `reserverLeJeton`. */
-function fausseBase(commentaire: string | null = 'standard public schema') {
-	const etat = { commentaire, log: [] as string[], connexions: 0, relachees: 0 }
+function fakeBase(commentaire: string | null = 'standard public schema') {
+	const state = { commentaire, log: [] as string[], connexions: 0, relachees: 0 }
 	const pool = {
 		async connect() {
-			etat.connexions++
+			state.connexions++
 			return {
 				async query(texte: string, parametres: unknown[] = []) {
-					etat.log.push(texte.split(' ').slice(0, 2).join(' '))
+					state.log.push(texte.split(' ').slice(0, 2).join(' '))
 					if (texte.startsWith('SELECT obj_description')) {
 						expect(parametres).toEqual(['public', 'pg_namespace'])
-						return { rows: [{ marque: etat.commentaire }] }
+						return { rows: [{ marque: state.commentaire }] }
 					}
-					const ecrit = /^COMMENT ON SCHEMA public IS '(.*)'$/s.exec(texte)
-					if (ecrit) etat.commentaire = (ecrit[1] ?? '').replaceAll("''", "'")
+					const written = /^COMMENT ON SCHEMA public IS '(.*)'$/s.exec(texte)
+					if (written) state.commentaire = (written[1] ?? '').replaceAll("''", "'")
 					return { rows: [] }
 				},
 				release() {
-					etat.relachees++
+					state.relachees++
 				},
 			}
 		},
 	}
-	return { etat, pool }
+	return { etat: state, pool }
 }
 
 /** A Payload that has the tables of the v3 and a pool, to go past the schema check. */
-function payloadAvecSchema(pool: object): Payload {
+function payloadWithSchema(pool: object): Payload {
 	return {
 		db: {
 			tableNameMap: new Map(),
@@ -100,7 +100,7 @@ describe('où tourne le processus : le site, ou ailleurs', () => {
 
 describe('la source n’est jamais la base de Payload', () => {
 	test('une autre base, ou un autre hôte, passe', () => {
-		expect(() => requireSourceOtherThanTarget(SOURCE, CIBLE)).not.toThrow()
+		expect(() => requireSourceOtherThanTarget(SOURCE, TARGET)).not.toThrow()
 		// Same host and database name on two servers: not the same database.
 		expect(() =>
 			requireSourceOtherThanTarget(
@@ -118,8 +118,8 @@ describe('la source n’est jamais la base de Payload', () => {
 	})
 
 	test.each([
-		['la même adresse', CIBLE, CIBLE],
-		['un autre rôle, la même base', 'postgres://lecture:autre@payload.interne.example.test:5432/mymakeup', CIBLE],
+		['la même adresse', TARGET, TARGET],
+		['un autre rôle, la même base', 'postgres://lecture:autre@payload.interne.example.test:5432/mymakeup', TARGET],
 		[
 			'le port par défaut écrit ou non',
 			'postgres://a:b@hote.example.test/base',
@@ -130,14 +130,14 @@ describe('la source n’est jamais la base de Payload', () => {
 			'postgres://a:b@hote.example.test/base?host=x.example.test',
 			'postgres://a:b@hote.example.test/base?host=x.example.test',
 		],
-		['une adresse illisible', 'pas une adresse', CIBLE],
+		['une adresse illisible', 'pas une adresse', TARGET],
 	])('refuse : %s', (_cas, source, cible) => {
 		let message = ''
 		try {
 			requireSourceOtherThanTarget(source, cible)
-		} catch (erreur) {
-			expect(erreur).toBeInstanceOf(ImportRefuse)
-			message = (erreur as Error).message
+		} catch (error) {
+			expect(error).toBeInstanceOf(ImportRefuse)
+			message = (error as Error).message
 		}
 		expect(message).toContain('STRAPI_SOURCE_URI')
 		expect(message).not.toContain('mot-de-passe')
@@ -147,7 +147,7 @@ describe('la source n’est jamais la base de Payload', () => {
 
 describe('les jetons joués, gardés dans le commentaire du schéma', () => {
 	test('aucun commentaire, ou celui de PostgreSQL, ne porte aucun jeton', () => {
-		for (const vide of [null, undefined, '', 'standard public schema']) expect(readTokens(vide)).toEqual([])
+		for (const empty of [null, undefined, '', 'standard public schema']) expect(readTokens(empty)).toEqual([])
 	})
 
 	test('les jetons se lisent dans l’ordre où ils ont été joués', () => {
@@ -162,20 +162,20 @@ describe('les jetons joués, gardés dans le commentaire du schéma', () => {
 	})
 
 	test('un jeton nouveau est réservé une fois, et le même jeton ne l’est plus', async () => {
-		const { etat, pool } = fausseBase()
+		const { etat: state, pool } = fakeBase()
 
 		expect(await reserveToken(pool, '2026-11-05-passage-a')).toBe(true)
 		expect(await reserveToken(pool, '2026-11-05-passage-a')).toBe(false)
-		expect(etat.commentaire).toBe(`${TOKENS_MARKER}2026-11-05-passage-a`)
+		expect(state.commentaire).toBe(`${TOKENS_MARKER}2026-11-05-passage-a`)
 	})
 
 	test('chaque jeton joué reste gardé : un ancien jeton ne rejoue pas non plus', async () => {
-		const { etat, pool } = fausseBase()
+		const { etat: state, pool } = fakeBase()
 
-		for (const jeton of ['2026-11-05-passage-a', '2026-11-05-passage-b', '2026-11-05-passage-c'])
-			expect(await reserveToken(pool, jeton)).toBe(true)
+		for (const token of ['2026-11-05-passage-a', '2026-11-05-passage-b', '2026-11-05-passage-c'])
+			expect(await reserveToken(pool, token)).toBe(true)
 		expect(await reserveToken(pool, '2026-11-05-passage-a')).toBe(false)
-		expect(readTokens(etat.commentaire)).toEqual([
+		expect(readTokens(state.commentaire)).toEqual([
 			'2026-11-05-passage-a',
 			'2026-11-05-passage-b',
 			'2026-11-05-passage-c',
@@ -183,122 +183,122 @@ describe('les jetons joués, gardés dans le commentaire du schéma', () => {
 	})
 
 	test('la réservation se fait sous verrou, dans une transaction, et rend sa connexion', async () => {
-		const { etat, pool } = fausseBase()
+		const { etat: state, pool } = fakeBase()
 
 		await reserveToken(pool, '2026-11-05-passage-a')
 
-		expect(etat.log[0]).toBe('BEGIN')
-		expect(etat.log[1]).toBe('SELECT pg_advisory_xact_lock(hashtext($1))')
-		expect(etat.log.at(-1)).toBe('COMMIT')
-		expect(etat.connexions).toBe(etat.relachees)
+		expect(state.log[0]).toBe('BEGIN')
+		expect(state.log[1]).toBe('SELECT pg_advisory_xact_lock(hashtext($1))')
+		expect(state.log.at(-1)).toBe('COMMIT')
+		expect(state.connexions).toBe(state.relachees)
 	})
 
 	test('un commentaire inconnu ne perd pas la connexion : retour en arrière, rien n’est écrit', async () => {
-		const { etat, pool } = fausseBase('le commentaire de quelqu’un d’autre')
+		const { etat: state, pool } = fakeBase('le commentaire de quelqu’un d’autre')
 
 		await expect(reserveToken(pool, '2026-11-05-passage-a')).rejects.toBeInstanceOf(ImportRefuse)
 
-		expect(etat.commentaire).toBe('le commentaire de quelqu’un d’autre')
-		expect(etat.log.at(-1)).toBe('ROLLBACK')
-		expect(etat.connexions).toBe(etat.relachees)
+		expect(state.commentaire).toBe('le commentaire de quelqu’un d’autre')
+		expect(state.log.at(-1)).toBe('ROLLBACK')
+		expect(state.connexions).toBe(state.relachees)
 	})
 })
 
 describe('importALaDemande : ce qu’elle refuse, sans rien lire quand il n’y a rien à faire', () => {
-	function avecJournal() {
-		const lignes: string[] = []
-		return { rows: lignes, options: { log: (ligne: string) => lignes.push(ligne) } }
+	function withLog() {
+		const lines: string[] = []
+		return { rows: lines, options: { log: (ligne: string) => lines.push(ligne) } }
 	}
 
 	test('sans jeton, elle ne fait rien et ne touche à rien', async () => {
-		const { rows: lignes, options } = avecJournal()
+		const { rows: lines, options } = withLog()
 
 		const issue = await importOnDemand(
-			payloadInterdit,
+			payloadForbidden,
 			{ ...ENV, importation: undefined },
 			{ ...options, place: 'site' }
 		)
 
 		expect(issue).toEqual({ state: 'sans-jeton' })
-		expect(lignes).toEqual([])
+		expect(lines).toEqual([])
 	})
 
 	test('hors du site, elle refuse avant toute lecture, même avec un jeton', async () => {
-		const { rows: lignes, options } = avecJournal()
+		const { rows: lines, options } = withLog()
 
-		const issue = await importOnDemand(payloadInterdit, ENV, { ...options, place: 'autre' })
+		const issue = await importOnDemand(payloadForbidden, ENV, { ...options, place: 'autre' })
 
 		expect(issue.state).toBe('refuse')
-		expect(lignes.join('\n')).toContain('ne tourne que sur le site')
+		expect(lines.join('\n')).toContain('ne tourne que sur le site')
 	})
 
 	test('sans lieu donné, elle lit l’environnement du processus : celui des tests n’est pas le site', async () => {
-		const { options } = avecJournal()
+		const { options } = withLog()
 
-		expect((await importOnDemand(payloadInterdit, ENV, options)).state).toBe('refuse')
+		expect((await importOnDemand(payloadForbidden, ENV, options)).state).toBe('refuse')
 	})
 
 	test('sans source, ou avec la base de Payload pour source, elle refuse avant toute lecture', async () => {
-		const { rows: lignes, options } = avecJournal()
+		const { rows: lines, options } = withLog()
 
 		expect(
-			(await importOnDemand(payloadInterdit, { ...ENV, sourceStrapi: undefined }, { ...options, place: 'site' })).state
+			(await importOnDemand(payloadForbidden, { ...ENV, sourceStrapi: undefined }, { ...options, place: 'site' })).state
 		).toBe('refuse')
 		expect(
-			(await importOnDemand(payloadInterdit, { ...ENV, sourceStrapi: CIBLE }, { ...options, place: 'site' })).state
+			(await importOnDemand(payloadForbidden, { ...ENV, sourceStrapi: TARGET }, { ...options, place: 'site' })).state
 		).toBe('refuse')
-		expect(lignes.join('\n')).toContain('STRAPI_SOURCE_URI manque')
-		expect(lignes.join('\n')).toContain('désigne la base de Payload')
+		expect(lines.join('\n')).toContain('STRAPI_SOURCE_URI manque')
+		expect(lines.join('\n')).toContain('désigne la base de Payload')
 	})
 
 	test('sans stockage des photos, elle refuse avant toute lecture', async () => {
-		const { rows: lignes, options } = avecJournal()
+		const { rows: lines, options } = withLog()
 
-		const issue = await importOnDemand(payloadInterdit, { ...ENV, storage: undefined }, { ...options, place: 'site' })
+		const issue = await importOnDemand(payloadForbidden, { ...ENV, storage: undefined }, { ...options, place: 'site' })
 
 		expect(issue.state).toBe('refuse')
-		expect(lignes.join('\n')).toContain('stockage des photos')
+		expect(lines.join('\n')).toContain('stockage des photos')
 	})
 
 	test.each([
-		['une table de décision illisible', { ...DEMANDE, decisions: '{"sharedEmails": "non"}' }],
-		['une date qui n’en est pas une', { ...DEMANDE, consentDate: '2026-02-31' }],
-		['des réponses gardées illisibles', { ...DEMANDE, cities: '{"pas": "des réponses"}' }],
+		['une table de décision illisible', { ...REQUEST, decisions: '{"sharedEmails": "non"}' }],
+		['une date qui n’en est pas une', { ...REQUEST, consentDate: '2026-02-31' }],
+		['des réponses gardées illisibles', { ...REQUEST, cities: '{"pas": "des réponses"}' }],
 	])('%s : refusé AVANT que le jeton soit écrit', async (_cas, importation) => {
-		const { etat, pool } = fausseBase()
-		const { rows: lignes, options } = avecJournal()
+		const { etat: state, pool } = fakeBase()
+		const { rows: lines, options } = withLog()
 
-		const issue = await importOnDemand(payloadAvecSchema(pool), { ...ENV, importation }, { ...options, place: 'site' })
+		const issue = await importOnDemand(payloadWithSchema(pool), { ...ENV, importation }, { ...options, place: 'site' })
 
 		expect(issue.state).toBe('refuse')
-		expect(etat.connexions).toBe(0)
-		expect(etat.commentaire).toBe('standard public schema')
-		expect(lignes.join('\n')).toContain('Passage refusé ou arrêté')
+		expect(state.connexions).toBe(0)
+		expect(state.commentaire).toBe('standard public schema')
+		expect(lines.join('\n')).toContain('Passage refusé ou arrêté')
 	})
 
 	test('un jeton déjà joué ne rouvre pas la source', async () => {
-		const { pool } = fausseBase(`${TOKENS_MARKER}${DEMANDE.token}`)
-		const { rows: lignes, options } = avecJournal()
-		let ouverte = false
+		const { pool } = fakeBase(`${TOKENS_MARKER}${REQUEST.token}`)
+		const { rows: lines, options } = withLog()
+		let open = false
 
-		const issue = await importOnDemand(payloadAvecSchema(pool), ENV, {
+		const issue = await importOnDemand(payloadWithSchema(pool), ENV, {
 			...options,
 			place: 'site',
 			openSource: () => {
-				ouverte = true
+				open = true
 				throw new Error('ne devait pas s’ouvrir')
 			},
 		})
 
-		expect(issue).toEqual({ state: 'deja-joue', token: DEMANDE.token })
-		expect(ouverte).toBe(false)
-		expect(lignes.join('\n')).toContain('a déjà été joué')
+		expect(issue).toEqual({ state: 'deja-joue', token: REQUEST.token })
+		expect(open).toBe(false)
+		expect(lines.join('\n')).toContain('a déjà été joué')
 	})
 
 	test('une erreur de la base est dite par son type et son code, jamais par son texte, et le journal reste propre', async () => {
-		const { pool } = fausseBase()
-		const { rows: lignes, options } = avecJournal()
-		const erreur = Object.assign(
+		const { pool } = fakeBase()
+		const { rows: lines, options } = withLog()
+		const error = Object.assign(
 			new Error('password authentication failed for user "lecture_strapi" at pers@example.test $2a$10$abcdefghij'),
 			{
 				name: 'error',
@@ -306,41 +306,41 @@ describe('importALaDemande : ce qu’elle refuse, sans rien lire quand il n’y 
 			}
 		)
 
-		const issue = await importOnDemand(payloadAvecSchema(pool), ENV, {
+		const issue = await importOnDemand(payloadWithSchema(pool), ENV, {
 			...options,
 			place: 'site',
 			mediaBase: 'https://stockage.example.test/photos-factices',
 			reference: { repondre: async () => [] },
 			openSource: () => {
-				throw erreur
+				throw error
 			},
 		})
 
-		const journal = lignes.join('\n')
+		const log = lines.join('\n')
 		expect(issue.state).toBe('refuse')
-		expect(journal).toContain('code 28P01')
-		expect(journal).not.toContain('pers@')
-		expect(journal).not.toContain('$2a$')
-		expect(journal).not.toContain('lecture_strapi')
-		for (const ligne of lignes) expect(ligne).not.toMatch(/@|\$2a\$/)
+		expect(log).toContain('code 28P01')
+		expect(log).not.toContain('pers@')
+		expect(log).not.toContain('$2a$')
+		expect(log).not.toContain('lecture_strapi')
+		for (const line of lines) expect(line).not.toMatch(/@|\$2a\$/)
 	})
 
 	test('une ligne qui porterait un @ ou un hash est retenue, d’où qu’elle vienne', async () => {
-		const { pool } = fausseBase()
-		const { rows: lignes, options } = avecJournal()
-		const { ImportRefuse: Refus } = await import('../../scripts/migration/import/target')
+		const { pool } = fakeBase()
+		const { rows: lines, options } = withLog()
+		const { ImportRefuse: Refusal } = await import('../../scripts/migration/import/target')
 
-		await importOnDemand(payloadAvecSchema(pool), ENV, {
+		await importOnDemand(payloadWithSchema(pool), ENV, {
 			...options,
 			place: 'site',
 			mediaBase: 'https://stockage.example.test/photos-factices',
 			reference: { repondre: async () => [] },
 			openSource: () => {
-				throw new Refus('quelqu’un@example.test $2a$10$abcdefghij')
+				throw new Refusal('quelqu’un@example.test $2a$10$abcdefghij')
 			},
 		})
 
-		for (const ligne of lignes) expect(ligne).not.toMatch(/@|\$2a\$/)
-		expect(lignes.join('\n')).toContain('retenue')
+		for (const line of lines) expect(line).not.toMatch(/@|\$2a\$/)
+		expect(lines.join('\n')).toContain('retenue')
 	})
 })

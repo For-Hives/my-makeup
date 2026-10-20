@@ -8,13 +8,13 @@ import { DESCRIPTION_MAX, DESCRIPTION_MIN, descriptionMeta, MAX_TITLE, pageTitle
 import { canonicalUrl } from '../../src/lib/seo/url'
 import { proxy } from '../../src/proxy'
 
-const RACINE = join(import.meta.dir, '../..')
+const ROOT = join(import.meta.dir, '../..')
 
 describe('titres (U44)', () => {
 	test('jamais « null null » ni « undefined », même avec des valeurs vides', () => {
-		for (const valeur of [null, undefined, '', '  ', 'null null', 'undefined']) {
-			const titre = pageTitle(valeur)
-			expect(titre).toBe('My-Makeup')
+		for (const value of [null, undefined, '', '  ', 'null null', 'undefined']) {
+			const title = pageTitle(value)
+			expect(title).toBe('My-Makeup')
 		}
 		expect(pageTitle('Léa null Martin')).toBe('Léa Martin | My-Makeup')
 	})
@@ -29,18 +29,18 @@ describe('titres (U44)', () => {
 
 describe('descriptions (U45)', () => {
 	test('de 70 à 155 caractères, sans HTML', () => {
-		const sortie = descriptionMeta(
+		const output = descriptionMeta(
 			['court', `<p>Une <strong>maquilleuse</strong> ${'qui travaille partout en Haute-Savoie '.repeat(6)}</p>`],
 			'repli'
 		)
-		expect(sortie.length).toBeGreaterThanOrEqual(DESCRIPTION_MIN)
-		expect(sortie.length).toBeLessThanOrEqual(DESCRIPTION_MAX)
-		expect(sortie).not.toMatch(/[<>]/)
+		expect(output.length).toBeGreaterThanOrEqual(DESCRIPTION_MIN)
+		expect(output.length).toBeLessThanOrEqual(DESCRIPTION_MAX)
+		expect(output).not.toMatch(/[<>]/)
 	})
 
 	test('un texte trop court cède la place au repli', () => {
-		const repli = 'Annuaire de maquilleuses professionnelles indépendantes : trouvez celle qui vous correspond.'
-		expect(descriptionMeta(['trop court', null], repli)).toBe(repli)
+		const fallback = 'Annuaire de maquilleuses professionnelles indépendantes : trouvez celle qui vous correspond.'
+		expect(descriptionMeta(['trop court', null], fallback)).toBe(fallback)
 	})
 })
 
@@ -60,43 +60,43 @@ describe('adresse canonique (U46)', () => {
 		const indexable = pageMetadata({ titre: 'Blog', description: '', repli: 'x'.repeat(80), chemin: '/blog/' })
 		expect(indexable.alternates?.canonical).toBe('https://my-makeup.fr/blog')
 		expect(indexable.robots).toBeUndefined()
-		const exclue = pageMetadata({
+		const excluded = pageMetadata({
 			titre: 'Blog',
 			description: '',
 			repli: 'x'.repeat(80),
 			chemin: '/blog',
 			indexable: false,
 		})
-		expect(exclue.alternates).toBeUndefined()
-		expect(exclue.robots).toEqual({ index: false, follow: true })
+		expect(excluded.alternates).toBeUndefined()
+		expect(excluded.robots).toEqual({ index: false, follow: true })
 	})
 })
 
 describe('JSON-LD (U50)', () => {
 	test('< > & sont échappés', () => {
-		const sortie = serializeJsonLd({ name: '</script><b>&amp;' })
-		expect(sortie).not.toMatch(/[<>&]/)
-		expect(JSON.parse(sortie)).toEqual({ name: '</script><b>&amp;' })
+		const output = serializeJsonLd({ name: '</script><b>&amp;' })
+		expect(output).not.toMatch(/[<>&]/)
+		expect(JSON.parse(output)).toEqual({ name: '</script><b>&amp;' })
 	})
 })
 
 describe('robots (U52)', () => {
 	test('/auth et /search, sous-chemins compris, sans toucher aux autres', () => {
 		expect(NOINDEX_PATHS).toEqual(['/auth', '/search'])
-		for (const chemin of ['/auth', '/auth/signin', '/search', '/search?city=Annecy'])
-			expect(robotsForPath(chemin)).toBe(NOINDEX)
-		for (const chemin of ['/', '/authentique', '/searching', '/profil/abc'])
-			expect(robotsForPath(chemin)).toBeUndefined()
+		for (const filePath of ['/auth', '/auth/signin', '/search', '/search?city=Annecy'])
+			expect(robotsForPath(filePath)).toBe(NOINDEX)
+		for (const filePath of ['/', '/authentique', '/searching', '/profil/abc'])
+			expect(robotsForPath(filePath)).toBeUndefined()
 	})
 
 	test('plus de noindex pour tout le site selon APP_ENV : il n’y a pas de préprod (ticket 232)', () => {
-		for (const chemin of ['/', '/profil/abc', '/api/health']) expect(robotsForPath(chemin)).toBeUndefined()
+		for (const filePath of ['/', '/profil/abc', '/api/health']) expect(robotsForPath(filePath)).toBeUndefined()
 	})
 
 	test('le proxy ne lit plus APP_ENV : même déclaré « preprod », il ne pose le noindex que sur /auth et /search', () => {
-		const avant = process.env.APP_ENV
+		const before = process.env.APP_ENV
 		try {
-			const requete = (chemin: string) =>
+			const request = (chemin: string) =>
 				({
 					nextUrl: new URL(`https://exemple.test${chemin}`),
 					cookies: { get: () => ({ value: 'cookie' }), getAll: () => [] },
@@ -104,38 +104,38 @@ describe('robots (U52)', () => {
 				}) as unknown as Parameters<typeof proxy>[0]
 			for (const appEnv of ['prod', 'preprod']) {
 				process.env.APP_ENV = appEnv
-				expect(proxy(requete('/')).headers.get('x-robots-tag')).toBeNull()
-				expect(proxy(requete('/search')).headers.get('x-robots-tag')).toBe(NOINDEX)
+				expect(proxy(request('/')).headers.get('x-robots-tag')).toBeNull()
+				expect(proxy(request('/search')).headers.get('x-robots-tag')).toBe(NOINDEX)
 			}
 		} finally {
-			if (avant === undefined) delete process.env.APP_ENV
-			else process.env.APP_ENV = avant
+			if (before === undefined) delete process.env.APP_ENV
+			else process.env.APP_ENV = before
 		}
 	})
 })
 
 describe('reprise par les assistants', () => {
-	const INTERDITS = /noarchive|nocache|nosnippet|max-snippet|data-nosnippet/i
+	const FORBIDDEN = /noarchive|nocache|nosnippet|max-snippet|data-nosnippet/i
 
 	function sources(dossier: string): string[] {
 		return readdirSync(dossier).flatMap(nom => {
-			const chemin = join(dossier, nom)
-			if (statSync(chemin).isDirectory()) return sources(chemin)
-			return /\.(tsx?|css)$/.test(nom) ? [chemin] : []
+			const filePath = join(dossier, nom)
+			if (statSync(filePath).isDirectory()) return sources(filePath)
+			return /\.(tsx?|css)$/.test(nom) ? [filePath] : []
 		})
 	}
 
 	test('aucun fichier du site ni du gabarit ne les écrit', () => {
-		const fichiers = [
-			...sources(join(RACINE, 'src/app/(front)')),
-			...sources(join(RACINE, 'src/components')),
-			...sources(join(RACINE, 'src/lib/seo')),
-			join(RACINE, 'src/proxy.ts'),
+		const files = [
+			...sources(join(ROOT, 'src/app/(front)')),
+			...sources(join(ROOT, 'src/components')),
+			...sources(join(ROOT, 'src/lib/seo')),
+			join(ROOT, 'src/proxy.ts'),
 		]
-		expect(fichiers.length).toBeGreaterThan(10)
-		for (const fichier of fichiers) {
-			const contenu = readFileSync(fichier, 'utf8').replace(/^\s*(\/\/|\*|\/\*).*$/gm, '')
-			expect(contenu, fichier).not.toMatch(INTERDITS)
+		expect(files.length).toBeGreaterThan(10)
+		for (const file of files) {
+			const content = readFileSync(file, 'utf8').replace(/^\s*(\/\/|\*|\/\*).*$/gm, '')
+			expect(content, file).not.toMatch(FORBIDDEN)
 		}
 	})
 })
@@ -148,13 +148,13 @@ describe('robots.txt (E63)', () => {
 	})
 
 	test('n’interdit ni /auth ni /search, et ne vise aucun robot d’assistant', () => {
-		const texte = JSON.stringify(robotsRules())
-		for (const chemin of NOINDEX_PATHS) expect(texte).not.toContain(chemin)
-		expect(texte).not.toMatch(/GPTBot|ClaudeBot|CCBot|Google-Extended|Perplexity|Claude-|OAI-/)
+		const text = JSON.stringify(robotsRules())
+		for (const filePath of NOINDEX_PATHS) expect(text).not.toContain(filePath)
+		expect(text).not.toMatch(/GPTBot|ClaudeBot|CCBot|Google-Extended|Perplexity|Claude-|OAI-/)
 	})
 
 	test('une seule source : la route lit reglesRobots, aucun fichier statique', () => {
-		expect(existsSync(join(RACINE, 'public/robots.txt'))).toBe(false)
-		expect(readFileSync(join(RACINE, 'src/app/robots.ts'), 'utf8')).toContain('robotsRules()')
+		expect(existsSync(join(ROOT, 'public/robots.txt'))).toBe(false)
+		expect(readFileSync(join(ROOT, 'src/app/robots.ts'), 'utf8')).toContain('robotsRules()')
 	})
 })

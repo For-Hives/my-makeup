@@ -9,7 +9,7 @@ import { isSlug, SLUG_MAX } from '@/lib/slug'
  */
 
 /** What Payload hands to a validation: only what the text validation reads. */
-const argumentsDeValidation = {
+const validationArguments = {
 	required: true,
 	req: { payload: { config: {} }, t: (cle: string) => cle },
 } as never
@@ -38,18 +38,18 @@ describe('Un slug de la rédaction a déjà la forme d’une adresse', () => {
 	})
 
 	test('la validation refuse sans corriger, et propose la bonne forme', () => {
-		expect(validateSlug('maquillage-mariee', argumentsDeValidation)).toBe(true)
-		const message = validateSlug('Maquillage Mariée', argumentsDeValidation)
+		expect(validateSlug('maquillage-mariee', validationArguments)).toBe(true)
+		const message = validateSlug('Maquillage Mariée', validationArguments)
 		expect(message).toContain('minuscules')
 		expect(message).toContain('« maquillage-mariee »')
 		// Nothing usable in it: no proposal, still a refusal.
-		expect(validateSlug('💄', argumentsDeValidation)).not.toContain('Par exemple')
-		expect(validateSlug('💄', argumentsDeValidation)).not.toBe(true)
+		expect(validateSlug('💄', validationArguments)).not.toContain('Par exemple')
+		expect(validateSlug('💄', validationArguments)).not.toBe(true)
 	})
 
 	test('un slug manquant est refusé par la règle « requis » de Payload', () => {
-		expect(validateSlug(undefined, argumentsDeValidation)).not.toBe(true)
-		expect(validateSlug('', argumentsDeValidation)).not.toBe(true)
+		expect(validateSlug(undefined, validationArguments)).not.toBe(true)
+		expect(validateSlug('', validationArguments)).not.toBe(true)
 	})
 
 	test('le champ dit à quelle adresse répond la page', () => {
@@ -64,23 +64,23 @@ describe('Un slug de la rédaction a déjà la forme d’une adresse', () => {
 })
 
 describe('La date de la première publication', () => {
-	const appel = (data: Record<string, unknown>) =>
+	const call = (data: Record<string, unknown>) =>
 		firstPublicationDate({ data, operation: 'update' } as never) as Record<string, unknown>
 
 	test('un document publié sans date reçoit la date du moment', () => {
-		const avant = Date.now()
-		const { publishedAt } = appel({ _status: 'published', publishedAt: null })
-		expect(Date.parse(String(publishedAt))).toBeGreaterThanOrEqual(avant)
+		const before = Date.now()
+		const { publishedAt } = call({ _status: 'published', publishedAt: null })
+		expect(Date.parse(String(publishedAt))).toBeGreaterThanOrEqual(before)
 		expect(Date.parse(String(publishedAt))).toBeLessThanOrEqual(Date.now())
 	})
 
 	test('une date déjà là (publication précédente, ou celle de l’import) est gardée', () => {
 		const date = '2023-04-01T09:00:00.000Z'
-		expect(appel({ _status: 'published', publishedAt: date }).publishedAt).toBe(date)
-		expect(appel({ _status: 'draft', publishedAt: date }).publishedAt).toBe(date)
+		expect(call({ _status: 'published', publishedAt: date }).publishedAt).toBe(date)
+		expect(call({ _status: 'draft', publishedAt: date }).publishedAt).toBe(date)
 	})
 
 	test('un brouillon n’a pas de date', () => {
-		expect(appel({ _status: 'draft' }).publishedAt).toBeUndefined()
+		expect(call({ _status: 'draft' }).publishedAt).toBeUndefined()
 	})
 })

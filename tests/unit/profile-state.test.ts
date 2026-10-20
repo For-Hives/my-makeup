@@ -30,7 +30,7 @@ import {
 const DESCRIPTION = 'Maquilleuse fictive. '.repeat(10)
 
 /** A profile that meets the six conditions, as the collection holds it. */
-const PUBLIABLE: ProfileDocument = {
+const PUBLISHABLE: ProfileDocument = {
 	firstName: 'Prénom',
 	lastName: 'Fictif',
 	specialty: 'Mariage',
@@ -41,13 +41,13 @@ const PUBLIABLE: ProfileDocument = {
 	networks: { instagram: '@compte.fictif' },
 }
 
-const MAINTENANT = new Date('2026-10-14T10:00:00.000Z')
-const HIER = '2026-10-13T10:00:00.000Z'
+const NOW = new Date('2026-10-14T10:00:00.000Z')
+const YESTERDAY = '2026-10-13T10:00:00.000Z'
 
 describe('un document de profils lu par la règle unique', () => {
 	test('un profil vide : 0 sur 13, ni actif ni publiable, entièrement vide', () => {
-		for (const vide of [{}, null, undefined])
-			expect(profileState(vide)).toEqual({ completeness: 0, active: false, publishable: false, fullyEmpty: true })
+		for (const empty of [{}, null, undefined])
+			expect(profileState(empty)).toEqual({ completeness: 0, active: false, publishable: false, fullyEmpty: true })
 	})
 
 	test('un profil qui n’a qu’un nom reste entièrement vide', () => {
@@ -60,7 +60,7 @@ describe('un document de profils lu par la règle unique', () => {
 	})
 
 	test('les six conditions remplies : actif et publiable', () => {
-		expect(profileState(PUBLIABLE)).toMatchObject({ active: true, publishable: true, fullyEmpty: false })
+		expect(profileState(PUBLISHABLE)).toMatchObject({ active: true, publishable: true, fullyEmpty: false })
 	})
 
 	test('une photo passée par son seul identifiant compte comme une photo, la galerie comme sa liste', () => {
@@ -74,85 +74,94 @@ describe('un document de profils lu par la règle unique', () => {
 	test('la ville est le nom de la commune, seulement avec son code INSEE', () => {
 		expect(profileFields({ city: ANNECY }).city).toBe('Annecy')
 		expect(publishableConditions(profileFields({ city: ANNECY })).villeExploitable).toBe(true)
-		for (const commune of [{ name: 'Annecy', inseeCode: null }, { name: null, inseeCode: null }, null])
-			expect(profileFields({ city: commune }).city).toBeNull()
+		for (const city of [{ name: 'Annecy', inseeCode: null }, { name: null, inseeCode: null }, null])
+			expect(profileFields({ city: city }).city).toBeNull()
 	})
 
 	test('une commune de plus de six mots est une ville exploitable : son trait d’union espacé est lu comme les autres', () => {
 		// The only name of the official list (14/10/2026) the rule refused as it is.
-		const pontDeMontvert = { name: 'Pont de Montvert - Sud Mont Lozère', inseeCode: '48116' }
-		expect(publishableConditions(profileFields({ city: pontDeMontvert })).villeExploitable).toBe(true)
-		expect(profileFields({ city: pontDeMontvert }).city).toBe('Pont de Montvert-Sud Mont Lozère')
-		expect(profileState({ city: pontDeMontvert, mainPicture: 3, specialty: 'Mariage' })).toMatchObject({
+		const montvertBridge = { name: 'Pont de Montvert - Sud Mont Lozère', inseeCode: '48116' }
+		expect(publishableConditions(profileFields({ city: montvertBridge })).villeExploitable).toBe(true)
+		expect(profileFields({ city: montvertBridge }).city).toBe('Pont de Montvert-Sud Mont Lozère')
+		expect(profileState({ city: montvertBridge, mainPicture: 3, specialty: 'Mariage' })).toMatchObject({
 			active: true,
 		})
-		expect(profileState({ city: pontDeMontvert })).toMatchObject({ completeness: 1, fullyEmpty: false })
+		expect(profileState({ city: montvertBridge })).toMatchObject({ completeness: 1, fullyEmpty: false })
 		// A name the rule reads as a city is passed as it is.
 		expect(
 			profileFields({ city: { name: 'Saint-Remy-en-Bouzemont-Saint-Genest-et-Isson', inseeCode: '51513' } }).city
 		).toBe('Saint-Remy-en-Bouzemont-Saint-Genest-et-Isson')
 		// A text that is no city stays none, even next to a code: the rule still refuses it.
-		for (const nom of ['France', 'Partout', 'Toute la France', '-'])
+		for (const nameValue of ['France', 'Partout', 'Toute la France', '-'])
 			expect([
-				nom,
-				publishableConditions(profileFields({ city: { name: nom, inseeCode: '74010' } })).villeExploitable,
-			]).toEqual([nom, false])
+				nameValue,
+				publishableConditions(profileFields({ city: { name: nameValue, inseeCode: '74010' } })).villeExploitable,
+			]).toEqual([nameValue, false])
 	})
 
 	test('le prix chiffré d’une offre est son montant : un texte sans montant n’en est pas un', () => {
-		const offre = (serviceOffers: ProfileDocument['serviceOffers']) =>
+		const offer = (serviceOffers: ProfileDocument['serviceOffers']) =>
 			publishableConditions(profileFields({ serviceOffers })).offreChiffree
-		expect(offre([{ priceFrom: 80 }])).toBe(true)
-		expect(offre([{ priceFrom: 5 }, { priceFrom: null }])).toBe(true)
-		expect(offre([{ priceFrom: 10_000 }])).toBe(true)
-		expect(offre([{ priceFrom: 49.5 }])).toBe(true)
-		expect(offre([{ priceFrom: null }])).toBe(false)
-		expect(offre([{ priceFrom: 4 }, { priceFrom: 10_001 }])).toBe(false)
-		expect(offre([null])).toBe(false)
-		expect(offre([])).toBe(false)
+		expect(offer([{ priceFrom: 80 }])).toBe(true)
+		expect(offer([{ priceFrom: 5 }, { priceFrom: null }])).toBe(true)
+		expect(offer([{ priceFrom: 10_000 }])).toBe(true)
+		expect(offer([{ priceFrom: 49.5 }])).toBe(true)
+		expect(offer([{ priceFrom: null }])).toBe(false)
+		expect(offer([{ priceFrom: 4 }, { priceFrom: 10_001 }])).toBe(false)
+		expect(offer([null])).toBe(false)
+		expect(offer([])).toBe(false)
 	})
 
 	test('le téléphone et l’email ne comptent comme canal de contact que montrés au public', () => {
-		const canal = (document: ProfileDocument) => publishableConditions(profileFields(document)).canalDeContact
+		const channel = (document: ProfileDocument) => publishableConditions(profileFields(document)).canalDeContact
 		const contactDetails = { phone: '06 39 98 00 00', email: 'contact-fictif@example.test' }
-		expect(canal({ contactDetails, publicContact: false })).toBe(false)
-		expect(canal({ contactDetails })).toBe(false)
-		expect(canal({ contactDetails, publicContact: true })).toBe(true)
-		expect(canal({ contactDetails: { phone: '06 39 98 00 00' }, publicContact: true })).toBe(true)
-		expect(canal({ publicContact: true })).toBe(false)
-		for (const reseau of ['youtube', 'facebook', 'instagram', 'website', 'linkedin'] as const)
-			expect(canal({ networks: { [reseau]: 'https://example.test/fictif' } }), reseau).toBe(true)
+		expect(channel({ contactDetails, publicContact: false })).toBe(false)
+		expect(channel({ contactDetails })).toBe(false)
+		expect(channel({ contactDetails, publicContact: true })).toBe(true)
+		expect(channel({ contactDetails: { phone: '06 39 98 00 00' }, publicContact: true })).toBe(true)
+		expect(channel({ publicContact: true })).toBe(false)
+		for (const network of ['youtube', 'facebook', 'instagram', 'website', 'linkedin'] as const)
+			expect(channel({ networks: { [network]: 'https://example.test/fictif' } }), network).toBe(true)
 	})
 })
 
 describe('les cas partagés, écrits comme la v3 les tient (U01-U08)', () => {
 	test('l’état calculé est celui de la règle unique sur le même profil', async () => {
-		for (const cas of SHARED_CASE) {
-			const attendu = completenessInV3(cas.profil)
-			const etat = profileState(await caseDocument(cas.profil, () => 1))
-			expect([cas.nom, etat]).toEqual([
-				cas.nom,
+		for (const testCase of SHARED_CASE) {
+			const expected = completenessInV3(testCase.profil)
+			const state = profileState(await caseDocument(testCase.profil, () => 1))
+			expect([testCase.nom, state]).toEqual([
+				testCase.nom,
 				{
-					completeness: attendu.score,
-					active: attendu.actif,
-					publishable: attendu.publiable,
-					fullyEmpty: attendu.entierementVide,
+					completeness: expected.score,
+					active: expected.actif,
+					publishable: expected.publiable,
+					fullyEmpty: expected.entierementVide,
 				},
 			])
 		}
 	})
 
 	test('et celui de l’ancien site : seul le critère « ville » d’un texte qui n’est pas une commune manque au score', async () => {
-		expect(SHARED_CASE.map(({ nom }) => nom)).toEqual(OLD_SITE_RESPONSES.map(({ nom }) => nom))
-		for (const [i, cas] of SHARED_CASE.entries()) {
-			const ancien = OLD_SITE_RESPONSES[i]
-			if (!ancien) throw new Error(`Pas de réponse de l’ancien site pour « ${cas.nom} ».`)
-			const etat = profileState(await caseDocument(cas.profil, () => 1))
-			expect([cas.nom, etat.active, etat.fullyEmpty]).toEqual([cas.nom, ancien.front.actif, ancien.api.entirelyEmpty])
-			expect([cas.nom, etat.completeness]).toEqual([cas.nom, ancien.front.score - (excludedCity(cas.profil) ? 1 : 0)])
+		expect(SHARED_CASE.map(({ nom: nameValue }) => nameValue)).toEqual(
+			OLD_SITE_RESPONSES.map(({ nom: nameValue }) => nameValue)
+		)
+		for (const [i, testCase] of SHARED_CASE.entries()) {
+			const old = OLD_SITE_RESPONSES[i]
+			if (!old) throw new Error(`Pas de réponse de l’ancien site pour « ${testCase.nom} ».`)
+			const state = profileState(await caseDocument(testCase.profil, () => 1))
+			expect([testCase.nom, state.active, state.fullyEmpty]).toEqual([
+				testCase.nom,
+				old.front.actif,
+				old.api.entirelyEmpty,
+			])
+			expect([testCase.nom, state.completeness]).toEqual([
+				testCase.nom,
+				old.front.score - (excludedCity(testCase.profil) ? 1 : 0),
+			])
 			// The quote form counts on the old site only when it is online; nothing turns it on.
-			if (cas.options?.formulaireDevis) expect([cas.nom, etat.publishable]).toEqual([cas.nom, false])
-			else expect([cas.nom, etat.publishable]).toEqual([cas.nom, ancien.front.publiable])
+			if (testCase.options?.formulaireDevis) expect([testCase.nom, state.publishable]).toEqual([testCase.nom, false])
+			else expect([testCase.nom, state.publishable]).toEqual([testCase.nom, old.front.publiable])
 		}
 	})
 })
@@ -172,17 +181,17 @@ describe('le statut après une sauvegarde', () => {
 	})
 
 	test('en automatique, il suit le profil dans les deux sens', () => {
-		const brouillon = { status: 'draft', chosenStatus: 'automatic' } as const
-		const publie = { status: 'published', chosenStatus: 'automatic' } as const
-		expect(statusAfter({ avant: brouillon, apres: brouillon, fullyEmpty: false })).toEqual(publie)
-		expect(statusAfter({ avant: publie, apres: publie, fullyEmpty: true })).toEqual(brouillon)
-		expect(statusAfter({ avant: publie, apres: publie, fullyEmpty: false })).toEqual(publie)
+		const draft = { status: 'draft', chosenStatus: 'automatic' } as const
+		const published = { status: 'published', chosenStatus: 'automatic' } as const
+		expect(statusAfter({ avant: draft, apres: draft, fullyEmpty: false })).toEqual(published)
+		expect(statusAfter({ avant: published, apres: published, fullyEmpty: true })).toEqual(draft)
+		expect(statusAfter({ avant: published, apres: published, fullyEmpty: false })).toEqual(published)
 	})
 
 	test('un profil masqué reste masqué, quoi qu’on enregistre', () => {
-		const masque = { status: 'hidden', chosenStatus: 'hidden' } as const
+		const hidden = { status: 'hidden', chosenStatus: 'hidden' } as const
 		for (const fullyEmpty of [true, false])
-			expect(statusAfter({ avant: masque, apres: masque, fullyEmpty })).toEqual(masque)
+			expect(statusAfter({ avant: hidden, apres: hidden, fullyEmpty })).toEqual(hidden)
 		// Hidden in this very save, by an admin.
 		expect(
 			statusAfter({
@@ -190,37 +199,37 @@ describe('le statut après une sauvegarde', () => {
 				apres: { status: 'published', chosenStatus: 'hidden' },
 				fullyEmpty: false,
 			})
-		).toEqual(masque)
+		).toEqual(hidden)
 		// Stored hidden with no choice (before the field existed): still hidden, and the choice says so.
 		for (const chosenStatus of [undefined, null, 'automatic'])
 			expect(
 				statusAfter({ avant: { status: 'hidden', chosenStatus }, apres: { chosenStatus }, fullyEmpty: false })
-			).toEqual(masque)
+			).toEqual(hidden)
 	})
 
 	test('un statut choisi par l’admin est gardé : le serveur ne l’écrase plus', () => {
 		// An admin puts a filled profile back to draft: the rule would publish it.
-		const brouillon = statusAfter({
+		const draft = statusAfter({
 			avant: { status: 'published', chosenStatus: 'automatic' },
 			apres: { status: 'published', chosenStatus: 'draft' },
 			fullyEmpty: false,
 		})
-		expect(brouillon).toEqual({ status: 'draft', chosenStatus: 'draft' })
-		expect(statusAfter({ avant: brouillon, apres: brouillon, fullyEmpty: false })).toEqual(brouillon)
+		expect(draft).toEqual({ status: 'draft', chosenStatus: 'draft' })
+		expect(statusAfter({ avant: draft, apres: draft, fullyEmpty: false })).toEqual(draft)
 		// An admin publishes an empty profile: it stays published.
-		const publie = { status: 'published', chosenStatus: 'published' } as const
-		expect(statusAfter({ avant: publie, apres: publie, fullyEmpty: true })).toEqual(publie)
+		const published = { status: 'published', chosenStatus: 'published' } as const
+		expect(statusAfter({ avant: published, apres: published, fullyEmpty: true })).toEqual(published)
 		// Created with a choice.
-		expect(statusAfter({ apres: { chosenStatus: 'published' }, fullyEmpty: true })).toEqual(publie)
+		expect(statusAfter({ apres: { chosenStatus: 'published' }, fullyEmpty: true })).toEqual(published)
 	})
 
 	test('un formulaire qui renvoie le choix stocké ne choisit rien : la règle décide', () => {
 		// The status the form sends never reaches the rule: no API writes it, so the save holds the
 		// stored one (tests/integration/profils-completude.test.ts sends a stale one through REST).
-		const publie = { status: 'published', chosenStatus: 'automatic' } as const
-		const brouillon = { status: 'draft', chosenStatus: 'automatic' } as const
-		expect(statusAfter({ avant: publie, apres: publie, fullyEmpty: true })).toEqual(brouillon)
-		expect(statusAfter({ avant: brouillon, apres: brouillon, fullyEmpty: false })).toEqual(publie)
+		const published = { status: 'published', chosenStatus: 'automatic' } as const
+		const draft = { status: 'draft', chosenStatus: 'automatic' } as const
+		expect(statusAfter({ avant: published, apres: published, fullyEmpty: true })).toEqual(draft)
+		expect(statusAfter({ avant: draft, apres: draft, fullyEmpty: false })).toEqual(published)
 	})
 
 	test('l’admin rend le statut à la règle en choisissant « automatique » : la règle s’applique dès cet enregistrement', () => {
@@ -275,63 +284,63 @@ describe('le statut après une sauvegarde', () => {
 
 describe('ce qu’une sauvegarde écrit : l’état, ses dates de passage, le statut', () => {
 	test('à la création : l’état, les trois dates à l’instant de la création, le brouillon', () => {
-		expect(stateAfterSave({ apres: {}, maintenant: MAINTENANT })).toEqual({
+		expect(stateAfterSave({ apres: {}, maintenant: NOW })).toEqual({
 			completeness: 0,
 			active: false,
 			publishable: false,
 			fullyEmpty: true,
-			activeSince: MAINTENANT.toISOString(),
-			publishableSince: MAINTENANT.toISOString(),
-			fullyEmptySince: MAINTENANT.toISOString(),
+			activeSince: NOW.toISOString(),
+			publishableSince: NOW.toISOString(),
+			fullyEmptySince: NOW.toISOString(),
 			status: 'draft',
 			chosenStatus: 'automatic',
 		})
 	})
 
 	test('une date ne change que quand sa case change de valeur', () => {
-		const avant = {
+		const before = {
 			...profileState({ specialty: 'Mariage' }),
-			activeSince: HIER,
-			publishableSince: HIER,
-			fullyEmptySince: HIER,
+			activeSince: YESTERDAY,
+			publishableSince: YESTERDAY,
+			fullyEmptySince: YESTERDAY,
 			status: 'published',
 			chosenStatus: 'automatic',
 		}
 		// The same profile, saved again: nothing moves.
-		expect(stateAfterSave({ avant, apres: { specialty: 'Mariage' }, maintenant: MAINTENANT })).toMatchObject({
-			activeSince: HIER,
-			publishableSince: HIER,
-			fullyEmptySince: HIER,
+		expect(stateAfterSave({ avant: before, apres: { specialty: 'Mariage' }, maintenant: NOW })).toMatchObject({
+			activeSince: YESTERDAY,
+			publishableSince: YESTERDAY,
+			fullyEmptySince: YESTERDAY,
 			status: 'published',
 		})
 		// Active now: only the date of `actif` moves.
-		const actif = { specialty: 'Mariage', city: ANNECY, mainPicture: 3 }
-		expect(stateAfterSave({ avant, apres: actif, maintenant: MAINTENANT })).toMatchObject({
+		const active = { specialty: 'Mariage', city: ANNECY, mainPicture: 3 }
+		expect(stateAfterSave({ avant: before, apres: active, maintenant: NOW })).toMatchObject({
 			active: true,
-			activeSince: MAINTENANT.toISOString(),
-			publishableSince: HIER,
-			fullyEmptySince: HIER,
+			activeSince: NOW.toISOString(),
+			publishableSince: YESTERDAY,
+			fullyEmptySince: YESTERDAY,
 		})
 		// Emptied: back to a draft, and the date of `fullyEmpty` moves.
-		expect(stateAfterSave({ avant, apres: {}, maintenant: MAINTENANT })).toMatchObject({
+		expect(stateAfterSave({ avant: before, apres: {}, maintenant: NOW })).toMatchObject({
 			fullyEmpty: true,
-			fullyEmptySince: MAINTENANT.toISOString(),
-			activeSince: HIER,
+			fullyEmptySince: NOW.toISOString(),
+			activeSince: YESTERDAY,
 			status: 'draft',
 		})
 	})
 
 	test('un document sans date stockée reçoit l’instant de la sauvegarde ; une date en objet est gardée', () => {
-		const avant = { ...profileState({}), status: 'draft', activeSince: new Date(HIER) }
-		expect(stateAfterSave({ avant, apres: {}, maintenant: MAINTENANT })).toMatchObject({
-			activeSince: HIER,
-			publishableSince: MAINTENANT.toISOString(),
-			fullyEmptySince: MAINTENANT.toISOString(),
+		const before = { ...profileState({}), status: 'draft', activeSince: new Date(YESTERDAY) }
+		expect(stateAfterSave({ avant: before, apres: {}, maintenant: NOW })).toMatchObject({
+			activeSince: YESTERDAY,
+			publishableSince: NOW.toISOString(),
+			fullyEmptySince: NOW.toISOString(),
 		})
 	})
 
 	test('ce que la requête envoie sur l’état est ignoré : il est recalculé', () => {
-		const envoye = {
+		const sent = {
 			completeness: 13,
 			active: true,
 			publishable: true,
@@ -339,34 +348,34 @@ describe('ce qu’une sauvegarde écrit : l’état, ses dates de passage, le st
 			activeSince: '2020-01-01T00:00:00.000Z',
 			status: 'draft',
 		}
-		expect(stateAfterSave({ apres: envoye, maintenant: MAINTENANT })).toMatchObject({
+		expect(stateAfterSave({ apres: sent, maintenant: NOW })).toMatchObject({
 			completeness: 0,
 			active: false,
 			publishable: false,
 			fullyEmpty: true,
-			activeSince: MAINTENANT.toISOString(),
+			activeSince: NOW.toISOString(),
 		})
 	})
 })
 
 describe('les champs de l’état dans la collection des profils', () => {
-	const champs = Profiles.fields.filter((champ): champ is Field & { name: string } => 'name' in champ)
-	const noms = champs.map(({ name }) => name)
+	const fields = Profiles.fields.filter((champ): champ is Field & { name: string } => 'name' in champ)
+	const names = fields.map(({ name }) => name)
 
 	test('la complétude, les trois cases, leurs dates, et le statut choisi par l’admin à côté du statut', () => {
-		for (const nom of ['completeness', 'active', 'publishable', 'fullyEmpty', ...Object.values(TRANSITION_DATES)])
-			expect(noms).toContain(nom)
-		expect(noms[noms.indexOf('status') + 1]).toBe('chosenStatus')
+		for (const nameValue of ['completeness', 'active', 'publishable', 'fullyEmpty', ...Object.values(TRANSITION_DATES)])
+			expect(names).toContain(nameValue)
+		expect(names[names.indexOf('status') + 1]).toBe('chosenStatus')
 	})
 
 	test('aucune API n’écrit l’état ni le statut : création et modification fermées à tous', () => {
-		const statut = champs.find(({ name }) => name === 'status')
-		if (!statut) throw new Error('Le champ « status » manque à la collection des profils.')
-		for (const champ of [...STATE_FIELDS, statut]) {
-			const acces = 'access' in champ ? champ.access : undefined
-			const nom = 'name' in champ ? champ.name : ''
+		const status = fields.find(({ name }) => name === 'status')
+		if (!status) throw new Error('Le champ « status » manque à la collection des profils.')
+		for (const field of [...STATE_FIELDS, status]) {
+			const access = 'access' in field ? field.access : undefined
+			const nameValue = 'name' in field ? field.name : ''
 			for (const operation of ['create', 'update'] as const)
-				expect([nom, operation, acces?.[operation]?.({} as never)]).toEqual([nom, operation, false])
+				expect([nameValue, operation, access?.[operation]?.({} as never)]).toEqual([nameValue, operation, false])
 		}
 	})
 })

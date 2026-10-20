@@ -23,7 +23,7 @@ describe('U78 : le cycle des statuts d’un message de contact', () => {
 	})
 
 	test('le spam se marque depuis tous les statuts, et se défait vers « nouvelle »', () => {
-		for (const de of ['new', 'forwarded', 'answered'] as const) expect(transitionAllowed(de, 'spam')).toBe(true)
+		for (const from of ['new', 'forwarded', 'answered'] as const) expect(transitionAllowed(from, 'spam')).toBe(true)
 		expect(transitionAllowed('spam', 'new')).toBe(true)
 	})
 
@@ -36,6 +36,6 @@ describe('U78 : le cycle des statuts d’un message de contact', () => {
 	})
 
 	test('rester où l’on est est toujours permis', () => {
-		for (const statut of REQUEST_STATUSES) expect(transitionAllowed(statut, statut)).toBe(true)
+		for (const status of REQUEST_STATUSES) expect(transitionAllowed(status, status)).toBe(true)
 	})
 })

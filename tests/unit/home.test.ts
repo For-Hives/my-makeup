@@ -13,27 +13,27 @@ import { SITE_ORIGIN } from '@/lib/frozen-urls'
 import { homeStructuredData, ORGANIZATION_ID, SITE_LOGO, serializeJsonLd } from '@/lib/seo/json-ld'
 import { listTalents, TALENTS_LIMIT } from '@/services/public/talents'
 
-const RACINE = join(import.meta.dir, '../..')
+const ROOT = join(import.meta.dir, '../..')
 
 describe('les talents de l’accueil', () => {
-	function payloadEspion(docs: unknown[]) {
-		const lectures: Record<string, unknown>[] = []
+	function payloadSpy(docs: unknown[]) {
+		const readings: Record<string, unknown>[] = []
 		const payload = {
 			find: async (options: Record<string, unknown>) => {
-				lectures.push(options)
+				readings.push(options)
 				return { docs }
 			},
 		}
-		return { payload: payload as unknown as Payload, lectures }
+		return { payload: payload as unknown as Payload, lectures: readings }
 	}
 
 	test('la lecture choisit deux champs, garde les règles d’accès et se borne elle-même', async () => {
-		const { payload, lectures } = payloadEspion([])
+		const { payload, lectures: readings } = payloadSpy([])
 
 		await listTalents(payload)
 
-		expect(lectures).toHaveLength(1)
-		expect(lectures[0]).toMatchObject({
+		expect(readings).toHaveLength(1)
+		expect(readings[0]).toMatchObject({
 			collection: 'talents',
 			select: { slug: true, title: true },
 			overrideAccess: false,
@@ -42,7 +42,7 @@ describe('les talents de l’accueil', () => {
 	})
 
 	test('chaque talent est un titre et une adresse ; un talent sans titre ou sans adresse valable est laissé de côté', async () => {
-		const { payload } = payloadEspion([
+		const { payload } = payloadSpy([
 			{ slug: 'maquillage-mariee', title: 'Maquillage de mariée', content: 'jamais lu' },
 			{ slug: 'Pas Une Adresse', title: 'Mauvaise adresse' },
 			{ slug: 'sans-titre', title: '  ' },
@@ -54,43 +54,43 @@ describe('les talents de l’accueil', () => {
 })
 
 describe('aucune promesse retirée par CONF-01', () => {
-	const fichiersDe = (dossier: string): string[] =>
+	const filesOf = (dossier: string): string[] =>
 		readdirSync(dossier).flatMap(nom => {
-			const chemin = join(dossier, nom)
-			return statSync(chemin).isDirectory() ? fichiersDe(chemin) : /\.tsx?$/.test(nom) ? [chemin] : []
+			const filePath = join(dossier, nom)
+			return statSync(filePath).isDirectory() ? filesOf(filePath) : /\.tsx?$/.test(nom) ? [filePath] : []
 		})
 
 	test('ni « milliers », ni « paiement sécurisé », ni « avis vérifiés », ni « réservation » dans la page et ses blocs', () => {
-		const fichiers = [
-			...fichiersDe(join(RACINE, 'src/components/home')),
-			...fichiersDe(join(RACINE, 'src/components/blocks')),
-			join(RACINE, 'src/app/(front)/(site)/page.tsx'),
+		const files = [
+			...filesOf(join(ROOT, 'src/components/home')),
+			...filesOf(join(ROOT, 'src/components/blocks')),
+			join(ROOT, 'src/app/(front)/(site)/page.tsx'),
 		]
-		expect(fichiers.length).toBeGreaterThan(8)
-		const trouves = fichiers.filter(fichier =>
+		expect(files.length).toBeGreaterThan(8)
+		const found = files.filter(fichier =>
 			/milliers|paiement sécurisé|avis vérifiés|réservation/i.test(readFileSync(fichier, 'utf8'))
 		)
-		expect(trouves).toEqual([])
+		expect(found).toEqual([])
 	})
 })
 
 describe('les icônes des talents', () => {
 	test('la liste des talents qui ont une icône est celle du dossier public/assets/talents', () => {
-		const fichiers = readdirSync(join(RACINE, 'public/assets/talents'))
+		const files = readdirSync(join(ROOT, 'public/assets/talents'))
 			.filter(nom => nom.endsWith('.svg'))
 			.map(nom => nom.replace(/\.svg$/, ''))
-		expect([...TALENTS_WITH_ICON].sort()).toEqual(fichiers.sort())
+		expect([...TALENTS_WITH_ICON].sort()).toEqual(files.sort())
 	})
 })
 
 describe('les données structurées de l’accueil (SEO-26)', () => {
 	const sameAs = NETWORKS.filter(({ href }) => href.startsWith('https://')).map(({ href }) => href)
-	const donnees = homeStructuredData(sameAs)
-	const [organisation, site] = donnees['@graph'] as Record<string, unknown>[]
+	const data = homeStructuredData(sameAs)
+	const [organization, site] = data['@graph'] as Record<string, unknown>[]
 
 	test('une organisation et un site, sur l’apex, avec des adresses absolues', () => {
-		expect(donnees['@context']).toBe('https://schema.org')
-		expect(organisation).toMatchObject({
+		expect(data['@context']).toBe('https://schema.org')
+		expect(organization).toMatchObject({
 			'@type': 'Organization',
 			url: SITE_ORIGIN,
 			logo: SITE_LOGO,
@@ -98,14 +98,14 @@ describe('les données structurées de l’accueil (SEO-26)', () => {
 		})
 		expect(site).toMatchObject({ '@type': 'WebSite', url: SITE_ORIGIN, inLanguage: 'fr-FR', name: 'My-Makeup' })
 		expect(site?.publisher).toEqual({ '@id': ORGANIZATION_ID })
-		expect(organisation?.sameAs).toEqual(sameAs)
+		expect(organization?.sameAs).toEqual(sameAs)
 		expect(sameAs.length).toBeGreaterThan(0)
-		for (const adresse of [SITE_LOGO, ...sameAs]) expect(adresse).toMatch(/^https:\/\/[^/]+\//)
+		for (const url of [SITE_LOGO, ...sameAs]) expect(url).toMatch(/^https:\/\/[^/]+\//)
 	})
 
 	test('ni note, ni adresse postale, ni coordonnée de maquilleuse', () => {
-		const texte = JSON.stringify(donnees)
-		for (const interdit of [
+		const text = JSON.stringify(data)
+		for (const forbidden of [
 			'AggregateRating',
 			'aggregateRating',
 			'PostalAddress',
@@ -114,12 +114,12 @@ describe('les données structurées de l’accueil (SEO-26)', () => {
 			'email',
 			'Review',
 		])
-			expect(texte, interdit).not.toContain(interdit)
+			expect(text, forbidden).not.toContain(forbidden)
 	})
 
 	test('sérialisé pour une balise script, il ne peut pas la fermer, et se relit à l’identique', () => {
-		const texte = serializeJsonLd(donnees)
-		expect(texte).not.toMatch(/[<>&]/)
-		expect(JSON.parse(texte)).toEqual(donnees)
+		const text = serializeJsonLd(data)
+		expect(text).not.toMatch(/[<>&]/)
+		expect(JSON.parse(text)).toEqual(data)
 	})
 })

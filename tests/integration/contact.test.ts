@@ -13,7 +13,7 @@ import { emptyBase, testPayload } from '../support/payload-test'
  * The contact message against the real store and the mail catcher of the bench (tickets 158 and 159;
  * plan 02 I32 and I33). The mails leave by SMTP, which no HTTP simulation reaches (ticket 037): an email
  * in panne is a door that fails, or a relay that never answers. The page and the form in a browser:
- * tests/e2e/contact.spec.ts. The same lines with doubles: tests/unit/contact-envoi.test.ts.
+ * tests/e2e/contact.spec.ts. The same lines with doubles: tests/unit/contact-send.test.ts.
  */
 
 beforeAll(emptySink)

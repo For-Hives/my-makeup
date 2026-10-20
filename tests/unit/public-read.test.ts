@@ -46,11 +46,11 @@ describe('U20 : listé, indexable, visible', () => {
 })
 
 /** A Payload that records the reads it is given and answers one profile. */
-function payloadEspion() {
-	const lectures: Record<string, unknown>[] = []
+function payloadSpy() {
+	const readings: Record<string, unknown>[] = []
 	const payload = {
 		find: async (options: Record<string, unknown>) => {
-			lectures.push(options)
+			readings.push(options)
 			// The photos: read by the identifiers the profiles gave, with more fields than a card keeps.
 			if (options.collection === 'media')
 				return {
@@ -88,17 +88,17 @@ function payloadEspion() {
 			}
 		},
 	}
-	return { payload: payload as unknown as Payload, lectures }
+	return { payload: payload as unknown as Payload, lectures: readings }
 }
 
 describe('U22 : la carte d’une liste, clés figées', () => {
 	test('ni email, ni téléphone, ni compte, ni score, ni statut : sept clés, la photo et l’identifiant de mesure compris', async () => {
-		const { payload } = payloadEspion()
+		const { payload } = payloadSpy()
 
-		const { cartes } = await listProfiles(payload)
+		const { cartes: cards } = await listProfiles(payload)
 
-		expect(cartes).toHaveLength(1)
-		expect(Object.keys(cartes[0] ?? {}).sort()).toEqual([
+		expect(cards).toHaveLength(1)
+		expect(Object.keys(cards[0] ?? {}).sort()).toEqual([
 			'lieu',
 			'nom',
 			'photo',
@@ -107,7 +107,7 @@ describe('U22 : la carte d’une liste, clés figées', () => {
 			'specialite',
 			'superMaquilleuse',
 		])
-		expect(cartes[0]).toEqual({
+		expect(cards[0]).toEqual({
 			slug: 'zoe-fictive',
 			pid: 4242,
 			nom: 'Zoé Fictive',
@@ -119,15 +119,15 @@ describe('U22 : la carte d’une liste, clés figées', () => {
 	})
 
 	test('l’identifiant de mesure : celui de l’ancien site s’il y en a un, lu à part, sur les seuls profils déjà donnés', async () => {
-		const { payload, lectures } = payloadEspion()
+		const { payload, lectures: readings } = payloadSpy()
 
 		await listProfiles(payload)
 
-		const lecturesDesIdentifiants = lectures.filter(
+		const identifiersReadings = readings.filter(
 			lecture => lecture.collection === 'profiles' && (lecture.select as Record<string, unknown>)?.strapiId === true
 		)
-		expect(lecturesDesIdentifiants).toHaveLength(1)
-		expect(lecturesDesIdentifiants[0]).toMatchObject({
+		expect(identifiersReadings).toHaveLength(1)
+		expect(identifiersReadings[0]).toMatchObject({
 			where: { id: { in: [1] } },
 			select: { strapiId: true },
 			overrideAccess: true,
@@ -135,17 +135,17 @@ describe('U22 : la carte d’une liste, clés figées', () => {
 	})
 
 	test('la photo n’est que son adresse et sa taille : jamais son propriétaire, son nom de fichier ni ses autres champs', async () => {
-		const { payload } = payloadEspion()
-		const { cartes } = await listProfiles(payload)
-		expect(Object.keys(cartes[0]?.photo ?? {}).sort()).toEqual(['height', 'url', 'width'])
+		const { payload } = payloadSpy()
+		const { cartes: cards } = await listProfiles(payload)
+		expect(Object.keys(cards[0]?.photo ?? {}).sort()).toEqual(['height', 'url', 'width'])
 	})
 
 	test('les photos de la liste se lisent en une requête, par les identifiants que la lecture des profils a donnés', async () => {
-		const { payload, lectures } = payloadEspion()
+		const { payload, lectures: readings } = payloadSpy()
 
 		await listProfiles(payload)
 
-		const photos = lectures.filter(lecture => lecture.collection === 'media')
+		const photos = readings.filter(lecture => lecture.collection === 'media')
 		expect(photos).toHaveLength(1)
 		expect(photos[0]).toMatchObject({
 			where: { id: { in: [7] } },
@@ -155,76 +155,76 @@ describe('U22 : la carte d’une liste, clés figées', () => {
 	})
 
 	test('la lecture choisit ses champs, garde les règles d’accès, filtre sur « listé » et se borne elle-même', async () => {
-		const { payload, lectures } = payloadEspion()
+		const { payload, lectures: readings } = payloadSpy()
 
 		await listProfiles(payload, { page: 3, limite: 5000 })
 		await listProfiles(payload, { limite: 0 })
 
-		const [grande, nulle] = lectures.filter(
+		const [large, nulle] = readings.filter(
 			lecture => lecture.collection === 'profiles' && lecture.overrideAccess === false
 		)
-		expect(grande).toMatchObject({ collection: 'profiles', where: LISTED_FILTER, overrideAccess: false, page: 3 })
-		expect(grande?.limit).toBe(LIST_MAX_LIMIT)
+		expect(large).toMatchObject({ collection: 'profiles', where: LISTED_FILTER, overrideAccess: false, page: 3 })
+		expect(large?.limit).toBe(LIST_MAX_LIMIT)
 		expect(nulle?.limit).toBe(20)
-		const champs = Object.keys(grande?.select as object).sort()
-		for (const prive of ['contactDetails', 'publicContact', 'pro', 'score', 'internalNote', 'status', 'email'])
-			expect(champs).not.toContain(prive)
+		const fields = Object.keys(large?.select as object).sort()
+		for (const privateOnes of ['contactDetails', 'publicContact', 'pro', 'score', 'internalNote', 'status', 'email'])
+			expect(fields).not.toContain(privateOnes)
 	})
 })
 
 /** The TypeScript and TSX files under a folder, relative paths. */
-function fichiersDe(dossier: string): string[] {
+function filesOf(dossier: string): string[] {
 	return readdirSync(dossier).flatMap(nom => {
-		const chemin = join(dossier, nom)
-		return statSync(chemin).isDirectory() ? fichiersDe(chemin) : /\.tsx?$/.test(nom) ? [chemin] : []
+		const filePath = join(dossier, nom)
+		return statSync(filePath).isDirectory() ? filesOf(filePath) : /\.tsx?$/.test(nom) ? [filePath] : []
 	})
 }
 
 /** The text of each call of a method of Payload (`.find({ … })`), up to its closing brace. */
-function appelsDe(code: string, methode: string): string[] {
-	const appels: string[] = []
-	for (const debut of code.matchAll(new RegExp(`\\.${methode}\\(\\s*\\{`, 'g'))) {
-		let profondeur = 0
-		let fin = debut.index
-		for (; fin < code.length; fin += 1) {
-			if (code[fin] === '{') profondeur += 1
-			if (code[fin] === '}' && --profondeur === 0) break
+function callsOf(code: string, methode: string): string[] {
+	const calls: string[] = []
+	for (const startedAt of code.matchAll(new RegExp(`\\.${methode}\\(\\s*\\{`, 'g'))) {
+		let depth = 0
+		let end = startedAt.index
+		for (; end < code.length; end += 1) {
+			if (code[end] === '{') depth += 1
+			if (code[end] === '}' && --depth === 0) break
 		}
-		appels.push(code.slice(debut.index, fin + 1))
+		calls.push(code.slice(startedAt.index, end + 1))
 	}
-	return appels
+	return calls
 }
 
-const LECTURES_DE_PAYLOAD = ['find', 'findByID', 'findDistinct', 'count', 'findVersions', 'findGlobal']
+const PAYLOAD_READINGS = ['find', 'findByID', 'findDistinct', 'count', 'findVersions', 'findGlobal']
 
 describe('Un seul point de lecture publique', () => {
 	test('aucune page ni aucun composant du site ne lit une collection : ils passent par src/services/public/', () => {
-		const fautes = fichiersDe('src/app/(front)').flatMap(fichier => {
+		const faults = filesOf('src/app/(front)').flatMap(fichier => {
 			const code = readFileSync(fichier, 'utf8')
-			return LECTURES_DE_PAYLOAD.filter(methode => new RegExp(`\\.${methode}\\(`).test(code)).map(
+			return PAYLOAD_READINGS.filter(methode => new RegExp(`\\.${methode}\\(`).test(code)).map(
 				methode => `${fichier} : .${methode}(`
 			)
 		})
-		expect(fautes).toEqual([])
+		expect(faults).toEqual([])
 	})
 
 	test('chaque lecture en liste du module donne sa limite, et garde les règles d’accès', () => {
-		const fichiers = fichiersDe('src/services/public')
-		expect(fichiers.length).toBeGreaterThan(0)
-		const fautes = fichiers.flatMap(fichier => {
+		const files = filesOf('src/services/public')
+		expect(files.length).toBeGreaterThan(0)
+		const faults = files.flatMap(fichier => {
 			const code = readFileSync(fichier, 'utf8')
-			return appelsDe(code, 'find').flatMap(appel => [
+			return callsOf(code, 'find').flatMap(appel => [
 				...(/\blimit:/.test(appel) ? [] : [`${fichier} : un .find( sans limit`]),
 				...(/overrideAccess:\s*(false|true)/.test(appel) ? [] : [`${fichier} : un .find( sans overrideAccess`]),
 			])
 		})
-		expect(fautes).toEqual([])
+		expect(faults).toEqual([])
 	})
 
 	test('le contrôle voit une lecture sans limite', () => {
-		const appels = appelsDe("await payload.find({ collection: 'profiles', depth: 0 })", 'find')
-		expect(appels).toHaveLength(1)
-		expect(appels[0]).not.toMatch(/\blimit:/)
-		expect(appelsDe('payload.find({ where: { a: { equals: 1 } }, limit: 3 })', 'find')[0]).toMatch(/\blimit:/)
+		const calls = callsOf("await payload.find({ collection: 'profiles', depth: 0 })", 'find')
+		expect(calls).toHaveLength(1)
+		expect(calls[0]).not.toMatch(/\blimit:/)
+		expect(callsOf('payload.find({ where: { a: { equals: 1 } }, limit: 3 })', 'find')[0]).toMatch(/\blimit:/)
 	})
 })

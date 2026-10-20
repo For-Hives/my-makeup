@@ -4,8 +4,8 @@
 # summary of the run. The weekly report of 07:30 reads the result through GitHub: the conclusion of
 # the latest run of this workflow (docs/tests/sondes.md, « Le lancement du lundi »).
 #
-# Rules, enforced by tests/unit/sondes-lundi-ci.test.ts and the guard rails of every workflow
-# (tests/ci/garde-fous-ci.test.ts):
+# Rules, enforced by tests/unit/probes-monday-ci.test.ts and the guard rails of every workflow
+# (tests/ci/ci-guardrails.test.ts):
 # - no secret of production, no token, no variable: the probes read as an anonymous visitor.
 #   R02 (sitemap against the publishable profiles) needs the token of the service, so here it
 #   stays « inconnu », which is not a failure; Andy plays it by hand with the token;

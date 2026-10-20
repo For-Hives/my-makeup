@@ -8,6 +8,6 @@ import { testConfiguration } from './tests/support/e2e'
  * Nothing is set here. Every value comes from tests/support/e2e.ts, where the target is checked
  * by the guard of the tests before Playwright reads anything: a run that points at production
  * stops while this file is loaded, before the first test. The guard rails of the CI read the
- * same function (C07, tests/ci/garde-fous-ci.test.ts): adding a setting below would escape them.
+ * same function (C07, tests/ci/ci-guardrails.test.ts): adding a setting below would escape them.
  */
 export default defineConfig(testConfiguration())

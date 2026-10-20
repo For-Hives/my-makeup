@@ -11,10 +11,10 @@ import { type ProfilePageData, type PublicProfile, publicProfileOf } from '@/ser
  * run the same page in a browser: tests/e2e/profil-public.spec.ts).
  */
 
-const ADRESSE_DE_PHOTO = 'https://photos.example.test/media'
+const PHOTO_URL = 'https://photos.example.test/media'
 
 /** A profile of the set as the public reading holds it: what the set writes, plus a main photo when it has one. */
-function lireLeType(type: DemoProfile, surcharge: Partial<ProfilePageData> = {}): PublicProfile {
+function readType(type: DemoProfile, surcharge: Partial<ProfilePageData> = {}): PublicProfile {
 	const doc: ProfilePageData = {
 		slug: type.attendu.slug,
 		status: type.attendu.status,
@@ -23,32 +23,32 @@ function lireLeType(type: DemoProfile, surcharge: Partial<ProfilePageData> = {})
 		...surcharge,
 	}
 	const photo = type.photos.principale
-		? { url: `${ADRESSE_DE_PHOTO}/${type.photos.principale}`, width: 400, height: 400 }
+		? { url: `${PHOTO_URL}/${type.photos.principale}`, width: 400, height: 400 }
 		: null
-	const galerie = type.photos.galerie.map(fichier => ({
-		url: `${ADRESSE_DE_PHOTO}/${fichier}`,
+	const gallery = type.photos.galerie.map(fichier => ({
+		url: `${PHOTO_URL}/${fichier}`,
 		width: 400,
 		height: 400,
 	}))
 	// What the public reading does: the contact details leave only when she published them.
-	const { phone: telephone = null, email = null } = type.profil.contactDetails ?? {}
-	const coordonnees = type.profil.publicContact === true && (telephone || email) ? { telephone, email } : null
-	return publicProfileOf(doc, { photo, galerie, coordonnees })
+	const { phone = null, email = null } = type.profil.contactDetails ?? {}
+	const contactDetails = type.profil.publicContact === true && (phone || email) ? { telephone: phone, email } : null
+	return publicProfileOf(doc, { photo, galerie: gallery, coordonnees: contactDetails })
 }
 
-const rendre = (profil: PublicProfile): string => renderToStaticMarkup(<ProfileView profil={profil} />)
+const renderNow = (profil: PublicProfile): string => renderToStaticMarkup(<ProfileView profil={profil} />)
 
 const type = (cle: string): DemoProfile => {
-	const trouve = DEMO_PROFILES.find(profil => profil.cle === cle)
-	if (!trouve) throw new Error(`pas de profil type « ${cle} »`)
-	return trouve
+	const found = DEMO_PROFILES.find(profil => profil.cle === cle)
+	if (!found) throw new Error(`pas de profil type « ${cle} »`)
+	return found
 }
 
-const MOTS_INTERDITS = /\b(?:undefined|null|NaN|Invalid Date)\b|&\s*km|\bnullkm\b/
+const FORBIDDEN_WORDS = /\b(?:undefined|null|NaN|Invalid Date)\b|&\s*km|\bnullkm\b/
 
 describe('E43 : l’en-tête du profil, dans le HTML du serveur', () => {
 	test('le profil de référence : un h1 avec le nom, la spécialité, la zone, la disponibilité, la description', () => {
-		const html = rendre(lireLeType(type('reference')))
+		const html = renderNow(readType(type('reference')))
 
 		expect(html.match(/<h1[\s>]/g)).toHaveLength(1)
 		expect(html).toMatch(/<h1[^>]*>Inès Morel<\/h1>/)
@@ -62,14 +62,14 @@ describe('E43 : l’en-tête du profil, dans le HTML du serveur', () => {
 	})
 
 	test('une disponibilité jamais posée compte comme disponible ; seul « false » dit indisponible', () => {
-		expect(rendre(lireLeType(type('disponibilite-inconnue')))).toContain('Disponible')
-		const html = rendre(lireLeType(type('indisponible')))
+		expect(renderNow(readType(type('disponibilite-inconnue')))).toContain('Disponible')
+		const html = renderNow(readType(type('indisponible')))
 		expect(html).toContain('Indisponible')
 		expect(html).not.toMatch(/>Disponible</)
 	})
 
 	test('sans photo, la photo du site est montrée sans texte alternatif', () => {
-		const html = rendre(lireLeType(type('vide')))
+		const html = renderNow(readType(type('vide')))
 
 		expect(html).toContain('pp_makeup.webp')
 		expect(html).toContain('alt=""')
@@ -77,28 +77,28 @@ describe('E43 : l’en-tête du profil, dans le HTML du serveur', () => {
 	})
 
 	test('un champ vide n’affiche ni titre ni ligne vide, et jamais « undefined » ni « null »', () => {
-		const html = rendre(lireLeType(type('vide')))
+		const html = renderNow(readType(type('vide')))
 
-		expect(html).not.toMatch(MOTS_INTERDITS)
+		expect(html).not.toMatch(FORBIDDEN_WORDS)
 		expect(html).not.toContain('Vous en quelques mots')
 		expect(html).not.toContain('km autour')
 		expect(html).not.toMatch(/<p[^>]*><\/p>/)
 	})
 
 	test('une ville sans rayon : la ville seule ; un rayon sans ville : aucune zone', () => {
-		expect(lireLeType(type('reference'), { radiusKm: null }).zone).toBe('Annecy')
-		expect(lireLeType(type('reference'), { city: {} }).zone).toBeNull()
-		expect(lireLeType(type('reference'), { city: { name: 'null' }, radiusKm: 30 }).zone).toBeNull()
+		expect(readType(type('reference'), { radiusKm: null }).zone).toBe('Annecy')
+		expect(readType(type('reference'), { city: {} }).zone).toBeNull()
+		expect(readType(type('reference'), { city: { name: 'null' }, radiusKm: 30 }).zone).toBeNull()
 	})
 
 	test('la description s’affiche une ligne par paragraphe, sans ligne vide', () => {
-		const html = rendre(lireLeType(type('reference'), { description: 'Première ligne.\n\n  \nDeuxième ligne.\nnull' }))
+		const html = renderNow(readType(type('reference'), { description: 'Première ligne.\n\n  \nDeuxième ligne.\nnull' }))
 
 		const section = html.slice(html.indexOf('Vous en quelques mots'))
 		expect(section.slice(0, section.indexOf('</section>')).match(/<p /g)).toHaveLength(2)
 		expect(html).toContain('Première ligne.')
 		expect(html).toContain('Deuxième ligne.')
-		expect(html).not.toMatch(MOTS_INTERDITS)
+		expect(html).not.toMatch(FORBIDDEN_WORDS)
 	})
 
 	test('le nom d’artiste ne s’affiche que s’il ajoute quelque chose', () => {
@@ -114,13 +114,13 @@ describe('E43 : l’en-tête du profil, dans le HTML du serveur', () => {
 	})
 
 	test('aucune adresse postale : seule la commune est lue', () => {
-		const profil = lireLeType(type('reference'))
+		const profile = readType(type('reference'))
 
-		expect(JSON.stringify(profil)).not.toMatch(/codeInsee|latitude|longitude|74010/)
+		expect(JSON.stringify(profile)).not.toMatch(/codeInsee|latitude|longitude|74010/)
 	})
 
 	test('les textes les plus longs : tout est rendu, avec de quoi passer à la ligne', () => {
-		const html = rendre(lireLeType(type('textes-maximaux')))
+		const html = renderNow(readType(type('textes-maximaux')))
 
 		expect(html.match(/<h1[\s>]/g)).toHaveLength(1)
 		expect(html).toContain('break-words')
@@ -130,7 +130,7 @@ describe('E43 : l’en-tête du profil, dans le HTML du serveur', () => {
 
 describe('E44 : les sections du profil', () => {
 	test('les prestations : prix formatés par la règle unique, options dans l’ordre', () => {
-		const html = rendre(lireLeType(type('reference')))
+		const html = renderNow(readType(type('reference')))
 
 		expect(html).toContain('Service(s) proposé(s)')
 		expect(html).toContain('Maquillage de la mariée')
@@ -147,15 +147,15 @@ describe('E44 : les sections du profil', () => {
 	})
 
 	test('un prix « sur devis » ou en texte libre reste tel qu’il a été écrit, avec une majuscule', () => {
-		const html = rendre(lireLeType(type('actif-non-publiable')))
+		const html = renderNow(readType(type('actif-non-publiable')))
 
 		expect(html).toContain('Sur devis')
 		expect(html).toContain('Selon le nombre de personnes')
-		expect(html).not.toMatch(MOTS_INTERDITS)
+		expect(html).not.toMatch(FORBIDDEN_WORDS)
 	})
 
 	test('les compétences, les langues, les formations et les expériences', () => {
-		const html = rendre(lireLeType(type('reference')))
+		const html = renderNow(readType(type('reference')))
 
 		expect(html).toContain('Compétences')
 		expect(html).toContain('Maquillage longue tenue')
@@ -171,8 +171,8 @@ describe('E44 : les sections du profil', () => {
 	})
 
 	test('une section vide n’est pas affichée, titre compris', () => {
-		const html = rendre(
-			lireLeType(type('sans-contact-public'), {
+		const html = renderNow(
+			readType(type('sans-contact-public'), {
 				skills: [{ name: '  ' }, { name: 'null' }],
 				languages: [],
 				courses: [{ diploma: null, school: '', graduatedAt: '2014-06-30' }],
@@ -182,30 +182,30 @@ describe('E44 : les sections du profil', () => {
 			})
 		)
 
-		for (const titre of ['Compétences', 'Langues', 'Formations', 'Expériences', 'Service(s)', 'Réseaux sociaux'])
-			expect(html, titre).not.toContain(titre)
-		expect(html).not.toMatch(MOTS_INTERDITS)
+		for (const title of ['Compétences', 'Langues', 'Formations', 'Expériences', 'Service(s)', 'Réseaux sociaux'])
+			expect(html, title).not.toContain(title)
+		expect(html).not.toMatch(FORBIDDEN_WORDS)
 	})
 
 	test('les coordonnées publiées s’affichent, les autres jamais', () => {
-		const publiees = rendre(lireLeType(type('reference')))
-		expect(publiees).toContain('Réseaux sociaux &amp; contacts')
-		expect(publiees).toContain('href="tel:0639981001"')
-		expect(publiees).toContain('href="mailto:contact@ines-morel.example.test"')
-		expect(publiees).toContain('href="https://instagram.example.test/ines.morel"')
-		expect(publiees).toContain('href="https://ines-morel.example.test/"')
+		const published = renderNow(readType(type('reference')))
+		expect(published).toContain('Réseaux sociaux &amp; contacts')
+		expect(published).toContain('href="tel:0639981001"')
+		expect(published).toContain('href="mailto:contact@ines-morel.example.test"')
+		expect(published).toContain('href="https://instagram.example.test/ines.morel"')
+		expect(published).toContain('href="https://ines-morel.example.test/"')
 
-		const fermees = rendre(lireLeType(type('sans-contact-public')))
-		expect(fermees).not.toContain('Réseaux sociaux')
-		expect(fermees).not.toContain('06 39 98 10 08')
-		expect(fermees).not.toContain('louise-girard.example.test')
-		expect(fermees).not.toContain('tel:')
-		expect(fermees).not.toContain('mailto:')
+		const closed = renderNow(readType(type('sans-contact-public')))
+		expect(closed).not.toContain('Réseaux sociaux')
+		expect(closed).not.toContain('06 39 98 10 08')
+		expect(closed).not.toContain('louise-girard.example.test')
+		expect(closed).not.toContain('tel:')
+		expect(closed).not.toContain('mailto:')
 	})
 
 	test('les liens sont ceux que la maquilleuse a saisis, jamais un schéma dangereux', () => {
-		const html = rendre(
-			lireLeType(type('reference'), {
+		const html = renderNow(
+			readType(type('reference'), {
 				networks: {
 					instagram: 'ines.morel',
 					facebook: 'javascript:alert(1)',
@@ -225,7 +225,7 @@ describe('E44 : les sections du profil', () => {
 	})
 
 	test('les liens externes s’ouvrent dans un autre onglet, pas l’email ni le téléphone', () => {
-		const html = rendre(lireLeType(type('reference')))
+		const html = renderNow(readType(type('reference')))
 
 		expect(html).toMatch(
 			/href="https:\/\/instagram\.example\.test[^"]*"[^>]*target="_blank"[^>]*rel="noopener nofollow noreferrer"/
@@ -236,22 +236,22 @@ describe('E44 : les sections du profil', () => {
 
 	test('les douze profils types : ni « undefined » ni « null », un seul h1, aucun titre sans contenu', () => {
 		expect(DEMO_PROFILES).toHaveLength(12)
-		for (const profilType of DEMO_PROFILES) {
-			const html = rendre(lireLeType(profilType))
-			const texte = html.replace(/<[^>]+>/g, ' ')
+		for (const profileType of DEMO_PROFILES) {
+			const html = renderNow(readType(profileType))
+			const text = html.replace(/<[^>]+>/g, ' ')
 
-			expect(texte, profilType.cle).not.toMatch(MOTS_INTERDITS)
-			expect(html.match(/<h1[\s>]/g), profilType.cle).toHaveLength(1)
+			expect(text, profileType.cle).not.toMatch(FORBIDDEN_WORDS)
+			expect(html.match(/<h1[\s>]/g), profileType.cle).toHaveLength(1)
 			// A title is followed by something: never by the end of its card.
-			expect(html, profilType.cle).not.toMatch(/<\/h[23]>\s*<\/(?:div|li|section)>/)
-			expect(html, profilType.cle).not.toMatch(/<(?:p|li|h[1-6])[^>]*>\s*<\/(?:p|li|h[1-6])>/)
+			expect(html, profileType.cle).not.toMatch(/<\/h[23]>\s*<\/(?:div|li|section)>/)
+			expect(html, profileType.cle).not.toMatch(/<(?:p|li|h[1-6])[^>]*>\s*<\/(?:p|li|h[1-6])>/)
 		}
 	})
 })
 
 describe('E44 : le portfolio', () => {
 	test('six photos, chacune avec son texte alternatif, dans l’ordre donné', () => {
-		const html = rendre(lireLeType(type('reference')))
+		const html = renderNow(readType(type('reference')))
 
 		expect(html).toContain('Portfolio')
 		for (let n = 1; n <= 6; n++) expect(html).toContain(`alt="Réalisation de Inès Morel (${n}/6)"`)
@@ -260,15 +260,15 @@ describe('E44 : le portfolio', () => {
 	})
 
 	test('sans galerie, la section est absente', () => {
-		const html = rendre(lireLeType(type('vide')))
+		const html = renderNow(readType(type('vide')))
 
 		expect(html).not.toContain('Portfolio')
 		expect(html).not.toContain('Réalisation de')
 	})
 
 	test('une galerie dont les photos ont disparu n’affiche rien', () => {
-		const profil = lireLeType(type('reference'))
+		const profile = readType(type('reference'))
 
-		expect(rendre({ ...profil, galerie: [] })).not.toContain('Portfolio')
+		expect(renderNow({ ...profile, galerie: [] })).not.toContain('Portfolio')
 	})
 })

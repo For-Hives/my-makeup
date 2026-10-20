@@ -29,7 +29,7 @@ describe('?error= : une liste fermée, jamais ce qui est écrit dans l’adresse
 	})
 
 	test('un code inconnu, un texte glissé dans l’adresse ou une liste ne montrent rien', () => {
-		for (const brut of [
+		for (const raw of [
 			'google-inconnu',
 			'<b>google-echec</b>',
 			'lea@example.test',
@@ -38,7 +38,7 @@ describe('?error= : une liste fermée, jamais ce qui est écrit dans l’adresse
 			3,
 			['google-echec-x'],
 		])
-			expect(urlMessage(brut)).toBeNull()
+			expect(urlMessage(raw)).toBeNull()
 	})
 
 	test('la session expirée garde son message', () => {
@@ -51,8 +51,8 @@ describe('le journal garde la méthode, dans une liste fermée', () => {
 	test('google et mot de passe sont écrits, tout le reste est ignoré', () => {
 		expect(EVENT_METHODS).toEqual(['password', 'google'])
 		expect(authLogRow({ type: 'sign-in', code: 'ok', method: 'google' }).method).toBe('google')
-		const glisse = 'lea@example.test' as unknown as 'google'
-		expect('method' in authLogRow({ type: 'sign-in', code: 'ok', method: glisse })).toBe(false)
+		const slid = 'lea@example.test' as unknown as 'google'
+		expect('method' in authLogRow({ type: 'sign-in', code: 'ok', method: slid })).toBe(false)
 		expect('method' in authLogRow({ type: 'sign-out', code: 'ok' })).toBe(false)
 	})
 })

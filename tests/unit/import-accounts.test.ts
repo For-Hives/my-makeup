@@ -22,9 +22,9 @@ import { ImportRefuse } from '../../scripts/migration/import/target'
 const DOCS = path.resolve(import.meta.dir, '../../docs/migration')
 
 /** The shape of a complete bcrypt hash, made of one repeated character: no real hash. */
-const FORME_DE_HASH = `$2a$10$${'a'.repeat(53)}`
+const HASH_SHAPE = `$2a$10$${'a'.repeat(53)}`
 
-const ligne = (id: number, modif: Partial<AccountRow> = {}): AccountRow => ({
+const line = (id: number, modif: Partial<AccountRow> = {}): AccountRow => ({
 	id,
 	username: `Compte ${id}`,
 	email: `compte.${id}@example.test`,
@@ -39,19 +39,19 @@ const ligne = (id: number, modif: Partial<AccountRow> = {}): AccountRow => ({
 
 describe('un compte de l’ancien site, tel que l’import le reprend', () => {
 	test('email en minuscules, nom, fournisseur, blocage, dates ; confirmé ; un mot de passe tiré à la création', () => {
-		const attendu = expectedAccount(
-			ligne(7, { email: ' Compte.Sept@Example.Test ', provider: 'google', password: FORME_DE_HASH }),
+		const expected = expectedAccount(
+			line(7, { email: ' Compte.Sept@Example.Test ', provider: 'google', password: HASH_SHAPE }),
 			() => 'tire-au-hasard'
 		)
 
-		expect(attendu).toEqual({
+		expect(expected).toEqual({
 			strapiId: 7,
 			values: {
 				strapiId: 7,
 				email: 'compte.sept@example.test',
 				name: 'Compte 7',
 				legacyProvider: 'google',
-				legacyBcrypt: FORME_DE_HASH,
+				legacyBcrypt: HASH_SHAPE,
 				blocked: false,
 				_verified: true,
 				createdAt: '2023-05-12T09:14:03.211Z',
@@ -63,30 +63,30 @@ describe('un compte de l’ancien site, tel que l’import le reprend', () => {
 	})
 
 	test('seul un hash bcrypt complet est copié : toute autre valeur ne donne rien, et c’est compté', () => {
-		for (const password of ['$2a$10$court', 'texte-en-clair', '', `${FORME_DE_HASH}a`]) {
-			const attendu = expectedAccount(ligne(1, { password }))
-			expect(attendu.values.legacyBcrypt, password).toBeNull()
-			expect(attendu.gaps).toContainEqual({ field: 'legacyBcrypt', reference: 'SCHEMA.md §5.1 (password)' })
+		for (const password of ['$2a$10$court', 'texte-en-clair', '', `${HASH_SHAPE}a`]) {
+			const expected = expectedAccount(line(1, { password }))
+			expect(expected.values.legacyBcrypt, password).toBeNull()
+			expect(expected.gaps).toContainEqual({ field: 'legacyBcrypt', reference: 'SCHEMA.md §5.1 (password)' })
 		}
-		expect(expectedAccount(ligne(1, { password: null })).gaps).toEqual([])
+		expect(expectedAccount(line(1, { password: null })).gaps).toEqual([])
 		for (const version of ['2a', '2b', '2y'])
 			expect(
-				expectedAccount(ligne(1, { password: `$${version}$10$${'b'.repeat(53)}` })).values.legacyBcrypt
+				expectedAccount(line(1, { password: `$${version}$10$${'b'.repeat(53)}` })).values.legacyBcrypt
 			).not.toBeNull()
 	})
 
 	test('un compte non confirmé à la source arrive confirmé ; nul reste nul ailleurs', () => {
-		const attendu = expectedAccount(ligne(2, { confirmed: false, blocked: null, username: null }))
+		const expected = expectedAccount(line(2, { confirmed: false, blocked: null, username: null }))
 
-		expect(attendu.values).toMatchObject({ _verified: true, blocked: null, name: null })
-		expect(attendu.gaps).toEqual([{ field: '_verified', reference: 'confirmation-email' }])
+		expect(expected.values).toMatchObject({ _verified: true, blocked: null, name: null })
+		expect(expected.gaps).toEqual([{ field: '_verified', reference: 'confirmation-email' }])
 	})
 
 	test('le mot de passe tiré par défaut fait 32 octets aléatoires, jamais deux fois le même', () => {
-		const un = expectedAccount(ligne(1)).onCreation?.password
-		const deux = expectedAccount(ligne(1)).onCreation?.password
-		expect(String(un)).toMatch(/^[A-Za-z0-9_-]{43}$/)
-		expect(un).not.toBe(deux)
+		const one = expectedAccount(line(1)).onCreation?.password
+		const two = expectedAccount(line(1)).onCreation?.password
+		expect(String(one)).toMatch(/^[A-Za-z0-9_-]{43}$/)
+		expect(one).not.toBe(two)
 	})
 
 	test('l’email se compare sans espaces de bord ni majuscules', () => {
@@ -96,49 +96,49 @@ describe('un compte de l’ancien site, tel que l’import le reprend', () => {
 
 	test('la répartition compte les fournisseurs et les seuls hash complets', () => {
 		const documents = [
-			expectedAccount(ligne(1, { password: FORME_DE_HASH })),
-			expectedAccount(ligne(2, { provider: 'google' })),
-			expectedAccount(ligne(3, { provider: 'google', password: 'pas-un-hash' })),
+			expectedAccount(line(1, { password: HASH_SHAPE })),
+			expectedAccount(line(2, { provider: 'google' })),
+			expectedAccount(line(3, { provider: 'google', password: 'pas-un-hash' })),
 		]
 		expect(accountDistribution(documents)).toEqual({ providers: { local: 1, google: 2 }, legacyHashes: 1 })
 	})
 })
 
 describe('les comptes au même email', () => {
-	const lignes = [
-		ligne(9, { email: 'chloe@example.test' }),
-		ligne(10, { email: 'Chloe@Example.test' }),
-		ligne(3),
-		ligne(12, { email: ' chloe@example.test' }),
-		ligne(4, { email: 'autre@example.test' }),
-		ligne(5, { email: 'AUTRE@example.test' }),
+	const lines = [
+		line(9, { email: 'chloe@example.test' }),
+		line(10, { email: 'Chloe@Example.test' }),
+		line(3),
+		line(12, { email: ' chloe@example.test' }),
+		line(4, { email: 'autre@example.test' }),
+		line(5, { email: 'AUTRE@example.test' }),
 	]
 
 	test('ils se groupent sans espaces de bord ni majuscules, chaque groupe trié', () => {
-		expect(sharedEmailGroups(lignes)).toEqual([
+		expect(sharedEmailGroups(lines)).toEqual([
 			[4, 5],
 			[9, 10, 12],
 		])
 	})
 
 	test('sans décision, chaque groupe arrête l’import, et aucun de ses comptes n’est attendu', () => {
-		const resultat = expectedAccounts(lignes, NO_DECISION)
-		expect(resultat.withoutDecision).toEqual([
+		const result = expectedAccounts(lines, NO_DECISION)
+		expect(result.withoutDecision).toEqual([
 			[4, 5],
 			[9, 10, 12],
 		])
-		expect(resultat.expected.map(({ strapiId }) => strapiId)).toEqual([3])
+		expect(result.expected.map(({ strapiId }) => strapiId)).toEqual([3])
 	})
 
 	test('avec une décision par groupe, seul le compte retenu est attendu ; les autres sont écartés', () => {
-		const resultat = expectedAccounts(lignes, {
+		const result = expectedAccounts(lines, {
 			sharedEmails: [
 				{ accounts: [12, 9, 10], kept: 10 },
 				{ accounts: [4, 5], kept: 4 },
 			],
 		})
-		expect(resultat).toMatchObject({ withoutDecision: [], excluded: [5, 9, 12], pointless: 0 })
-		expect(resultat.expected.map(({ strapiId }) => strapiId)).toEqual([10, 3, 4])
+		expect(result).toMatchObject({ withoutDecision: [], excluded: [5, 9, 12], pointless: 0 })
+		expect(result.expected.map(({ strapiId }) => strapiId)).toEqual([10, 3, 4])
 	})
 
 	test('une décision vaut pour le groupe exact qu’elle nomme ; sinon elle est sans objet', () => {
@@ -153,77 +153,77 @@ describe('les comptes au même email', () => {
 	})
 
 	describe('les moyens de connexion des comptes écartés (défaut du ticket 066)', () => {
-		const AUTRE_HASH = `$2a$10$${'b'.repeat(53)}`
-		const TROISIEME_HASH = `$2a$10$${'c'.repeat(53)}`
-		const hashDe = (resultat: ReturnType<typeof expectedAccounts>, id: number) =>
+		const OTHER_HASH = `$2a$10$${'b'.repeat(53)}`
+		const THIRD_HASH = `$2a$10$${'c'.repeat(53)}`
+		const hashOf = (resultat: ReturnType<typeof expectedAccounts>, id: number) =>
 			resultat.expected.find(({ strapiId }) => strapiId === id)?.values.legacyBcrypt
 
 		test('un compte local écarté ne prête pas son hash au compte Google gardé sans décision explicite', () => {
-			const resultat = expectedAccounts(
+			const result = expectedAccounts(
 				[
-					ligne(1, { email: 'a@example.test', provider: 'google' }),
-					ligne(2, { email: 'A@example.test', provider: 'local', password: FORME_DE_HASH }),
+					line(1, { email: 'a@example.test', provider: 'google' }),
+					line(2, { email: 'A@example.test', provider: 'local', password: HASH_SHAPE }),
 				],
 				{ sharedEmails: [{ accounts: [1, 2], kept: 1 }] }
 			)
-			expect(hashDe(resultat, 1)).toBeNull()
-			expect(resultat).toMatchObject({ attachedHashes: [], unattachedHashes: 1 })
+			expect(hashOf(result, 1)).toBeNull()
+			expect(result).toMatchObject({ attachedHashes: [], unattachedHashes: 1 })
 		})
 
 		test('un compte local écarté prête son hash au compte Google gardé quand la décision l’accorde (pretDuHash vrai), qui garde son fournisseur', () => {
-			const resultat = expectedAccounts(
+			const result = expectedAccounts(
 				[
-					ligne(1, { email: 'a@example.test', provider: 'google' }),
-					ligne(2, { email: 'A@example.test', provider: 'local', password: FORME_DE_HASH }),
+					line(1, { email: 'a@example.test', provider: 'google' }),
+					line(2, { email: 'A@example.test', provider: 'local', password: HASH_SHAPE }),
 				],
 				{ sharedEmails: [{ accounts: [1, 2], kept: 1, lendHash: true }] }
 			)
-			expect(resultat.expected.map(({ strapiId }) => strapiId)).toEqual([1])
-			expect(hashDe(resultat, 1)).toBe(FORME_DE_HASH)
-			expect(resultat.expected[0]?.values.legacyProvider).toBe('google')
-			expect(resultat.expected[0]?.gaps).toContainEqual({
+			expect(result.expected.map(({ strapiId }) => strapiId)).toEqual([1])
+			expect(hashOf(result, 1)).toBe(HASH_SHAPE)
+			expect(result.expected[0]?.values.legacyProvider).toBe('google')
+			expect(result.expected[0]?.gaps).toContainEqual({
 				field: 'legacyBcrypt',
 				reference: REFERENCES.comptesEmailPartage,
 			})
-			expect(resultat).toMatchObject({ attachedHashes: [1], unattachedHashes: 0 })
+			expect(result).toMatchObject({ attachedHashes: [1], unattachedHashes: 0 })
 		})
 
 		test('le compte gardé qui a déjà son hash le garde ; celui de l’écarté est compté comme non rattaché', () => {
-			const resultat = expectedAccounts(
+			const result = expectedAccounts(
 				[
-					ligne(1, { email: 'a@example.test', password: FORME_DE_HASH }),
-					ligne(2, { email: 'a@example.test', password: AUTRE_HASH }),
+					line(1, { email: 'a@example.test', password: HASH_SHAPE }),
+					line(2, { email: 'a@example.test', password: OTHER_HASH }),
 				],
 				{ sharedEmails: [{ accounts: [1, 2], kept: 1 }] }
 			)
-			expect(hashDe(resultat, 1)).toBe(FORME_DE_HASH)
-			expect(resultat).toMatchObject({ attachedHashes: [], unattachedHashes: 1 })
+			expect(hashOf(result, 1)).toBe(HASH_SHAPE)
+			expect(result).toMatchObject({ attachedHashes: [], unattachedHashes: 1 })
 		})
 
 		test('deux comptes écartés qui ont chacun un hash : le plus ancien est pris, l’autre est compté', () => {
-			const resultat = expectedAccounts(
+			const result = expectedAccounts(
 				[
-					ligne(3, { email: 'a@example.test' }),
-					ligne(1, { email: 'a@example.test', password: AUTRE_HASH }),
-					ligne(2, { email: 'a@example.test', password: TROISIEME_HASH }),
+					line(3, { email: 'a@example.test' }),
+					line(1, { email: 'a@example.test', password: OTHER_HASH }),
+					line(2, { email: 'a@example.test', password: THIRD_HASH }),
 				],
 				{ sharedEmails: [{ accounts: [1, 2, 3], kept: 3 }] }
 			)
-			expect(hashDe(resultat, 3)).toBe(AUTRE_HASH)
-			expect(resultat).toMatchObject({ attachedHashes: [3], unattachedHashes: 1 })
+			expect(hashOf(result, 3)).toBe(OTHER_HASH)
+			expect(result).toMatchObject({ attachedHashes: [3], unattachedHashes: 1 })
 		})
 
 		test('une décision qui refuse le prêt (pretDuHash faux) laisse le compte gardé sans hash, le hash écarté est compté', () => {
-			const resultat = expectedAccounts(
+			const result = expectedAccounts(
 				[
-					ligne(1, { email: 'a@example.test', provider: 'google' }),
-					ligne(2, { email: 'a@example.test', provider: 'local', password: FORME_DE_HASH }),
+					line(1, { email: 'a@example.test', provider: 'google' }),
+					line(2, { email: 'a@example.test', provider: 'local', password: HASH_SHAPE }),
 				],
 				{ sharedEmails: [{ accounts: [1, 2], kept: 1, lendHash: false }] }
 			)
-			expect(hashDe(resultat, 1)).toBeNull()
-			expect(resultat).toMatchObject({ attachedHashes: [], unattachedHashes: 1 })
-			expect(resultat.expected[0]?.gaps).not.toContainEqual(expect.objectContaining({ champ: 'legacyBcrypt' }))
+			expect(hashOf(result, 1)).toBeNull()
+			expect(result).toMatchObject({ attachedHashes: [], unattachedHashes: 1 })
+			expect(result.expected[0]?.gaps).not.toContainEqual(expect.objectContaining({ champ: 'legacyBcrypt' }))
 		})
 
 		test('la table de décision lit pretDuHash et refuse une valeur qui n’est pas un booléen', () => {
@@ -236,12 +236,12 @@ describe('les comptes au même email', () => {
 		})
 
 		test('un mot de passe incomplet n’est pas prêté, et un groupe sans hash ne change rien', () => {
-			const resultat = expectedAccounts(
-				[ligne(1, { email: 'a@example.test' }), ligne(2, { email: 'a@example.test', password: 'pas-un-hash' })],
+			const result = expectedAccounts(
+				[line(1, { email: 'a@example.test' }), line(2, { email: 'a@example.test', password: 'pas-un-hash' })],
 				{ sharedEmails: [{ accounts: [1, 2], kept: 1 }] }
 			)
-			expect(hashDe(resultat, 1)).toBeNull()
-			expect(resultat).toMatchObject({ attachedHashes: [], unattachedHashes: 0 })
+			expect(hashOf(result, 1)).toBeNull()
+			expect(result).toMatchObject({ attachedHashes: [], unattachedHashes: 0 })
 		})
 	})
 })
@@ -257,7 +257,7 @@ describe('la table de décision', () => {
 	})
 
 	test('une table mal formée est refusée, avec ce qui ne va pas, jamais une valeur', () => {
-		const refusees = [
+		const refused = [
 			'pas du json',
 			'{ "sharedEmails": [{ "accounts": [9, 10], "kept": 11 }] }',
 			'{ "sharedEmails": [{ "accounts": [9], "kept": 9 }] }',
@@ -269,19 +269,19 @@ describe('la table de décision', () => {
 			'{ "excludedProfiles": [0] }',
 			'{ "excludedProfiles": "29" }',
 		]
-		for (const texte of refusees) {
-			expect(() => readDecisions(texte), texte).toThrow(ImportRefuse)
+		for (const text of refused) {
+			expect(() => readDecisions(text), text).toThrow(ImportRefuse)
 			try {
-				readDecisions(texte)
-			} catch (erreur) {
-				expect((erreur as Error).message).not.toContain('example.test')
+				readDecisions(text)
+			} catch (error) {
+				expect((error as Error).message).not.toContain('example.test')
 			}
 		}
 	})
 
 	test('la table du banc garde le compte 9 parmi les quatre qui partagent un email, et écarte le profil 29 du compte 11', () => {
-		const texte = readFileSync(path.resolve(import.meta.dir, '../fixtures/import/bench-decisions.json'), 'utf8')
-		expect(readDecisions(texte)).toEqual({
+		const text = readFileSync(path.resolve(import.meta.dir, '../fixtures/import/bench-decisions.json'), 'utf8')
+		expect(readDecisions(text)).toEqual({
 			sharedEmails: [{ accounts: [9, 10, 11, 12], kept: 9 }],
 			excludedProfiles: [29],
 		})
@@ -289,25 +289,25 @@ describe('la table de décision', () => {
 })
 
 describe('chaque écart de l’import se lit contre une règle écrite', () => {
-	const registre = readFileSync(path.join(DOCS, 'CHANGEMENTS-VOULUS.md'), 'utf8')
+	const registry = readFileSync(path.join(DOCS, 'CHANGEMENTS-VOULUS.md'), 'utf8')
 	const schema = readFileSync(path.join(DOCS, 'SCHEMA.md'), 'utf8')
 
 	/**
 	 * The part of the frozen schema under a heading `### <numéro>` (`5.1`), or `## <numéro>.` (`8`),
 	 * up to the next heading.
 	 */
-	const sectionDuSchema = (numero: string): string => {
-		const debut = schema.indexOf(numero.includes('.') ? `\n### ${numero} ` : `\n## ${numero}. `)
-		if (debut < 0) return ''
-		const fin = schema.indexOf('\n#', debut + 1)
-		return schema.slice(debut, fin < 0 ? undefined : fin)
+	const schemaSection = (numero: string): string => {
+		const startedAt = schema.indexOf(numero.includes('.') ? `\n### ${numero} ` : `\n## ${numero}. `)
+		if (startedAt < 0) return ''
+		const end = schema.indexOf('\n#', startedAt + 1)
+		return schema.slice(startedAt, end < 0 ? undefined : end)
 	}
 
 	test('un repère est une ligne du registre ; une section du schéma nomme l’attribut', () => {
 		for (const reference of Object.values(REFERENCES)) {
-			const duSchema = /^SCHEMA\.md §(\d+(?:\.\d+)?) \((\w+)\)$/.exec(reference)
-			if (duSchema) expect(sectionDuSchema(duSchema[1] ?? ''), reference).toContain(`| \`${duSchema[2]}\` |`)
-			else expect(registre, reference).toContain(`| \`${reference}\` |`)
+			const schemaValue = /^SCHEMA\.md §(\d+(?:\.\d+)?) \((\w+)\)$/.exec(reference)
+			if (schemaValue) expect(schemaSection(schemaValue[1] ?? ''), reference).toContain(`| \`${schemaValue[2]}\` |`)
+			else expect(registry, reference).toContain(`| \`${reference}\` |`)
 		}
 	})
 })

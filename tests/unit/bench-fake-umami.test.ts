@@ -9,30 +9,30 @@ import { createFakeUmami } from '../support/fake-umami/provider'
  * of the tests refuses in its place.
  */
 
-const fournisseur = createFakeUmami()
-let serveur: ReturnType<typeof Bun.serve>
-let adresse = ''
+const provider = createFakeUmami()
+let server: ReturnType<typeof Bun.serve>
+let url = ''
 
 beforeAll(() => {
-	serveur = Bun.serve({ hostname: '127.0.0.1', port: 0, fetch: requete => fournisseur.repondre(requete) })
-	adresse = `http://127.0.0.1:${serveur.port}`
+	server = Bun.serve({ hostname: '127.0.0.1', port: 0, fetch: requete => provider.repondre(requete) })
+	url = `http://127.0.0.1:${server.port}`
 })
-afterAll(() => serveur.stop(true))
+afterAll(() => server.stop(true))
 
 describe('le faux Umami', () => {
 	test('il dit qui il est, et sert un traceur', async () => {
-		expect(await (await fetch(`${adresse}/_sante`)).json()).toEqual({ service: 'fake-umami' })
-		const traceur = await fetch(`${adresse}/script.js`)
-		expect(traceur.headers.get('content-type')).toContain('javascript')
-		const texte = await traceur.text()
-		for (const attribut of ['data-website-id', 'data-host-url', 'data-domains', 'data-tag', 'data-before-send'])
-			expect(texte).toContain(attribut)
+		expect(await (await fetch(`${url}/_sante`)).json()).toEqual({ service: 'fake-umami' })
+		const tracer = await fetch(`${url}/script.js`)
+		expect(tracer.headers.get('content-type')).toContain('javascript')
+		const text = await tracer.text()
+		for (const attribute of ['data-website-id', 'data-host-url', 'data-domains', 'data-tag', 'data-before-send'])
+			expect(text).toContain(attribute)
 	})
 
 	test('il note ce qu’il reçoit, sans jamais garder la valeur d’un cookie, et l’oublie sur demande', async () => {
-		const outil = fakeUmami({ UMAMI_ORIGIN: adresse })
-		await outil.vider()
-		await fetch(`${adresse}/api/send`, {
+		const tool = fakeUmami({ UMAMI_ORIGIN: url })
+		await tool.vider()
+		await fetch(`${url}/api/send`, {
 			method: 'POST',
 			body: JSON.stringify({ type: 'event', payload: { name: 'cta_click', tag: 'abc1234' } }),
 			headers: {
@@ -41,47 +41,47 @@ describe('le faux Umami', () => {
 				Referer: 'https://exemple.test/',
 			},
 		})
-		await fetch(`${adresse}/api/send`, { method: 'POST', body: 'pas du JSON' })
+		await fetch(`${url}/api/send`, { method: 'POST', body: 'pas du JSON' })
 
-		const recus = await outil.recus()
-		expect(recus).toHaveLength(2)
-		expect(recus[0]).toMatchObject({ cookie: true, referer: true, autorisation: false, methode: 'POST' })
-		expect(JSON.stringify(recus)).not.toContain('valeur-secrete')
-		expect(recus[1]?.corps).toBe('pas du JSON')
-		expect(await outil.envois('cta_click')).toHaveLength(1)
+		const received = await tool.recus()
+		expect(received).toHaveLength(2)
+		expect(received[0]).toMatchObject({ cookie: true, referer: true, autorisation: false, methode: 'POST' })
+		expect(JSON.stringify(received)).not.toContain('valeur-secrete')
+		expect(received[1]?.corps).toBe('pas du JSON')
+		expect(await tool.envois('cta_click')).toHaveLength(1)
 
-		await outil.vider()
-		expect(await outil.recus()).toEqual([])
+		await tool.vider()
+		expect(await tool.recus()).toEqual([])
 	})
 
 	test('un essai ne lit que ce que son navigateur a envoyé : celui d’à côté ne le gêne pas', async () => {
-		const outil = fakeUmami({ UMAMI_ORIGIN: adresse })
-		const [le, lautre] = [testAgent(), testAgent()]
-		const envoyer = (agent: string, name: string) =>
-			fetch(`${adresse}/api/send`, {
+		const tool = fakeUmami({ UMAMI_ORIGIN: url })
+		const [theOne, lautre] = [testAgent(), testAgent()]
+		const send = (agent: string, name: string) =>
+			fetch(`${url}/api/send`, {
 				method: 'POST',
 				body: JSON.stringify({ type: 'event', payload: { name } }),
 				headers: { 'Content-Type': 'application/json', 'User-Agent': agent },
 			})
-		await envoyer(le, 'cta_click')
-		await envoyer(lautre, 'cta_click')
-		await envoyer(lautre, 'not_found')
+		await send(theOne, 'cta_click')
+		await send(lautre, 'cta_click')
+		await send(lautre, 'not_found')
 
-		expect(le).not.toBe(lautre)
-		expect(le.startsWith(AGENT_ORDINARY)).toBe(true)
+		expect(theOne).not.toBe(lautre)
+		expect(theOne.startsWith(AGENT_ORDINARY)).toBe(true)
 		expect(testAgent(AGENT_AUTOMATED)).toContain('HeadlessChrome')
-		expect(await outil.pourLAgent(le).envois('cta_click')).toHaveLength(1)
-		expect(await outil.pourLAgent(le).recus()).toHaveLength(1)
-		expect(await outil.pourLAgent(lautre).recus()).toHaveLength(2)
-		expect(await outil.pourLAgent(lautre).envois('not_found')).toHaveLength(1)
+		expect(await tool.pourLAgent(theOne).envois('cta_click')).toHaveLength(1)
+		expect(await tool.pourLAgent(theOne).recus()).toHaveLength(1)
+		expect(await tool.pourLAgent(lautre).recus()).toHaveLength(2)
+		expect(await tool.pourLAgent(lautre).envois('not_found')).toHaveLength(1)
 		// Without the mark of a test, it would read what every other test sent.
-		expect(() => outil.pourLAgent(AGENT_ORDINARY)).toThrow(RefusedBench)
-		expect(() => outil.pourLAgent(undefined)).toThrow('agentDeLEssai')
+		expect(() => tool.pourLAgent(AGENT_ORDINARY)).toThrow(RefusedBench)
+		expect(() => tool.pourLAgent(undefined)).toThrow('agentDeLEssai')
 	})
 
 	test('un autre chemin, ou une autre méthode : 404', async () => {
-		expect((await fetch(`${adresse}/dashboard`)).status).toBe(404)
-		expect((await fetch(`${adresse}/api/send`)).status).toBe(404)
+		expect((await fetch(`${url}/dashboard`)).status).toBe(404)
+		expect((await fetch(`${url}/api/send`)).status).toBe(404)
 	})
 })
 

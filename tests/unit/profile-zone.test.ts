@@ -56,14 +56,14 @@ describe('le département d’un code INSEE', () => {
 	})
 
 	test('chacun des 101 départements et des 8 collectivités d’outre-mer a des codes de communes bien formés', () => {
-		for (const departement of [...Object.keys(DEPARTMENTS), ...Object.keys(OVERSEAS_COLLECTIVITIES)]) {
-			const code = departement.length === 3 ? `${departement}01` : `${departement}001`
-			expect(departmentOfInseeCode(code), code).toBe(departement)
+		for (const department of [...Object.keys(DEPARTMENTS), ...Object.keys(OVERSEAS_COLLECTIVITIES)]) {
+			const code = department.length === 3 ? `${department}01` : `${department}001`
+			expect(departmentOfInseeCode(code), code).toBe(department)
 		}
 	})
 
 	test('un code mal formé ne nomme aucun département', () => {
-		const malFormes = [
+		const badlyForms = [
 			'7401', // 4 caractères
 			'740100', // 6 caractères
 			'74 010',
@@ -84,8 +84,8 @@ describe('le département d’un code INSEE', () => {
 			'ABCDE',
 			'',
 		]
-		for (const code of malFormes) expect(departmentOfInseeCode(code), code).toBeNull()
-		for (const valeur of [74010, null, undefined, {}, ['74010']]) expect(departmentOfInseeCode(valeur)).toBeNull()
+		for (const code of badlyForms) expect(departmentOfInseeCode(code), code).toBeNull()
+		for (const value of [74010, null, undefined, {}, ['74010']]) expect(departmentOfInseeCode(value)).toBeNull()
 	})
 
 	test('la collection range le code sans espaces autour, A et B en capitales, vide en null ; une commune nulle est vide, un texte seul n’a pas de code', () => {
@@ -112,11 +112,11 @@ describe('le département d’un code INSEE', () => {
 
 describe('une commune s’envoie entière, et seulement comme un objet', () => {
 	test('ce qu’une commune envoyée ne donne pas est vide, jamais repris de la commune déjà enregistrée', () => {
-		const vide = { name: null, inseeCode: null, latitude: null, longitude: null }
-		expect(cityToFields({ name: 'Lyon' })).toEqual({ ...vide, name: 'Lyon' })
-		expect(cityToFields({ inseeCode: '69123' })).toEqual({ ...vide, inseeCode: '69123' })
-		expect(cityToFields({ name: 'Lyon', inseeCode: '69123' })).toEqual({ ...vide, name: 'Lyon', inseeCode: '69123' })
-		expect(cityToFields({})).toEqual(vide)
+		const empty = { name: null, inseeCode: null, latitude: null, longitude: null }
+		expect(cityToFields({ name: 'Lyon' })).toEqual({ ...empty, name: 'Lyon' })
+		expect(cityToFields({ inseeCode: '69123' })).toEqual({ ...empty, inseeCode: '69123' })
+		expect(cityToFields({ name: 'Lyon', inseeCode: '69123' })).toEqual({ ...empty, name: 'Lyon', inseeCode: '69123' })
+		expect(cityToFields({})).toEqual(empty)
 		// The département is the server's: what a request sends for it is not kept.
 		expect(cityToFields({ ...ANNECY, department: '13' })).toEqual(ANNECY)
 		expect(cityErrors(cityToFields({ name: 'Lyon' }) as CityInput)).toEqual({
@@ -128,18 +128,18 @@ describe('une commune s’envoie entière, et seulement comme un objet', () => {
 	})
 
 	test('une liste, ou un objet qui n’est pas un simple objet, n’est pas une commune : refusée en français', () => {
-		for (const commune of [[], ['Annecy'], [ANNECY], new Date(0), new Map([['nom', 'Annecy']])]) {
-			expect(cityToFields(commune), String(commune)).toBe(commune)
-			expect(cityVerdict(commune), String(commune)).toBe(ZONE_MESSAGES.communeSansCodeInsee)
+		for (const city of [[], ['Annecy'], [ANNECY], new Date(0), new Map([['nom', 'Annecy']])]) {
+			expect(cityToFields(city), String(city)).toBe(city)
+			expect(cityVerdict(city), String(city)).toBe(ZONE_MESSAGES.communeSansCodeInsee)
 		}
-		for (const commune of [undefined, null, {}, ANNECY, cityToFields(null), Object.create(null)])
-			expect(cityVerdict(commune)).toBe(true)
+		for (const city of [undefined, null, {}, ANNECY, cityToFields(null), Object.create(null)])
+			expect(cityVerdict(city)).toBe(true)
 	})
 })
 
 describe('un nom de commune n’est jamais une adresse', () => {
 	test('un numéro, un code postal, une virgule ou une rue suivie de son name : refusés en français', () => {
-		const adresses = [
+		const urls = [
 			'12 rue des Lilas, 74000 Annecy',
 			'12 rue des Lilas',
 			'rue des Lilas',
@@ -156,9 +156,9 @@ describe('un nom de commune n’est jamais une adresse', () => {
 			'Paris 21e Arrondissement 75000',
 			'BP 12 Annecy',
 		]
-		for (const nom of adresses) {
-			expect(looksLikeAnAddress(nom), nom).toBe(true)
-			expect(cityErrors({ name: nom, inseeCode: '74010' }), nom).toEqual({
+		for (const nameValue of urls) {
+			expect(looksLikeAnAddress(nameValue), nameValue).toBe(true)
+			expect(cityErrors({ name: nameValue, inseeCode: '74010' }), nameValue).toEqual({
 				name: ZONE_MESSAGES.nomAdresse,
 			})
 		}
@@ -170,7 +170,7 @@ describe('un nom de commune n’est jamais une adresse', () => {
 	test('les noms de la liste officielle passent, même ceux qui portent un mot de rue, un chiffre ou des parenthèses', () => {
 		// Real names of geo.api.gouv.fr (public reference data). The rule was also run on the whole
 		// list of 14/10/2026, 34 969 communes and 45 arrondissements: none was refused.
-		const noms = [
+		const names = [
 			'Annecy',
 			'Rue',
 			'Le Chemin',
@@ -188,16 +188,16 @@ describe('un nom de commune n’est jamais une adresse', () => {
 			'Paris 20e Arrondissement',
 			'Saint-Remy-en-Bouzemont-Saint-Genest-et-Isson',
 		]
-		for (const nom of noms) {
-			expect(looksLikeAnAddress(nom), nom).toBe(false)
-			expect(cityErrors({ name: nom, inseeCode: '74010' }), nom).toEqual({})
+		for (const nameValue of names) {
+			expect(looksLikeAnAddress(nameValue), nameValue).toBe(false)
+			expect(cityErrors({ name: nameValue, inseeCode: '74010' }), nameValue).toEqual({})
 		}
 	})
 })
 
 describe('un nom de commune n’a que les caractères d’un nom de commune', () => {
 	test('un email, un site, une abréviation ou un symbole : refusés en français', () => {
-		const textes = [
+		const texts = [
 			'moi@exemple.fr',
 			'www.mon-site-fictif.fr',
 			'St. Gervais',
@@ -213,8 +213,8 @@ describe('un nom de commune n’a que les caractères d’un nom de commune', ()
 			'[Annecy]',
 			'Annecy\u200b',
 		]
-		for (const nom of textes)
-			expect(cityErrors({ name: nom, inseeCode: '74010' }), nom).toEqual({
+		for (const nameValue of texts)
+			expect(cityErrors({ name: nameValue, inseeCode: '74010' }), nameValue).toEqual({
 				name: ZONE_MESSAGES.nomCaracteres,
 			})
 		expect(ZONE_MESSAGES.nomCaracteres).toBe(
@@ -224,7 +224,7 @@ describe('un nom de commune n’a que les caractères d’un nom de commune', ()
 
 	test('les lettres de toutes les langues, leurs accents, le trait d’union, l’apostrophe et les parenthèses passent', () => {
 		// Made-up names, one per kind of character the official list holds.
-		for (const nom of [
+		for (const nameValue of [
 			'Œuvre-sur-Mer',
 			'Ÿonne',
 			'L’Île-Fictive',
@@ -233,7 +233,7 @@ describe('un nom de commune n’a que les caractères d’un nom de commune', ()
 			'Haÿ ʻO Fictif',
 			'Ville - Fictive',
 		])
-			expect(cityErrors({ name: nom, inseeCode: '74010' }), nom).toEqual({})
+			expect(cityErrors({ name: nameValue, inseeCode: '74010' }), nameValue).toEqual({})
 	})
 
 	test('le nom n’est pas comparé à celui de son code : c’est le travail de la liste de l’espace et de l’import', () => {
@@ -255,21 +255,21 @@ describe('les coordonnées de la commune sont celles de son centre, à environ 1
 	})
 
 	test('ce qui n’est pas un nombre fini est laissé tel quel, pour que la vérification le refuse', () => {
-		for (const valeur of [null, undefined, '45.8992', Number.NaN, Number.POSITIVE_INFINITY, true])
-			expect(Object.is(roundedCoordinate(valeur), valeur), String(valeur)).toBe(true)
+		for (const value of [null, undefined, '45.8992', Number.NaN, Number.POSITIVE_INFINITY, true])
+			expect(Object.is(roundedCoordinate(value), value), String(value)).toBe(true)
 	})
 })
 
 describe('le rayon d’action', () => {
 	test('de 0 à 200 km, en kilomètres entiers, ou vide', () => {
 		expect(RADIUS_BOUNDS_KM).toEqual({ min: 0, max: 200 })
-		for (const rayon of [0, 1, 30, 199, 200, null, undefined]) expect(radiusVerdict(rayon), String(rayon)).toBe(true)
+		for (const radius of [0, 1, 30, 199, 200, null, undefined]) expect(radiusVerdict(radius), String(radius)).toBe(true)
 	})
 
 	test('hors bornes, décimal ou qui n’est pas un nombre : refusé en français', () => {
 		expect(ZONE_MESSAGES.rayon).toBe('Le rayon d’action se donne en kilomètres entiers, de 0 à 200 km.')
-		for (const rayon of [-1, 201, 400, 1000, 12.5, Number.NaN, Number.POSITIVE_INFINITY, '30', true])
-			expect(radiusVerdict(rayon), String(rayon)).toBe(ZONE_MESSAGES.rayon)
+		for (const radius of [-1, 201, 400, 1000, 12.5, Number.NaN, Number.POSITIVE_INFINITY, '30', true])
+			expect(radiusVerdict(radius), String(radius)).toBe(ZONE_MESSAGES.rayon)
 	})
 })
 
@@ -342,26 +342,26 @@ describe('la commune', () => {
 })
 
 describe('les champs de la zone dans la collection des profils', () => {
-	const champs = Profiles.fields.filter((champ): champ is Field & { name: string } => 'name' in champ)
-	const champ = (nom: string) => champs.find(({ name }) => name === nom)
+	const fields = Profiles.fields.filter((champ): champ is Field & { name: string } => 'name' in champ)
+	const field = (nom: string) => fields.find(({ name }) => name === nom)
 
 	test('commune, rayonKm et aDomicile, aux noms de SCHEMA.md, après la spécialité', () => {
-		const noms = champs.map(({ name }) => name)
-		expect(noms.slice(noms.indexOf('specialty'), noms.indexOf('specialty') + 4)).toEqual([
+		const names = fields.map(({ name }) => name)
+		expect(names.slice(names.indexOf('specialty'), names.indexOf('specialty') + 4)).toEqual([
 			'specialty',
 			'city',
 			'radiusKm',
 			'homeService',
 		])
-		expect(champ('radiusKm')?.type).toBe('number')
-		expect(champ('homeService')?.type).toBe('checkbox')
+		expect(field('radiusKm')?.type).toBe('number')
+		expect(field('homeService')?.type).toBe('checkbox')
 	})
 
 	test('la commune n’a que ses cinq champs : aucune adresse postale', () => {
-		const commune = champ('city')
-		expect(commune?.type).toBe('group')
-		const sousChamps = commune && 'fields' in commune ? commune.fields : []
-		expect(sousChamps.map(sousChamp => ('name' in sousChamp ? sousChamp.name : sousChamp.type))).toEqual([
+		const city = field('city')
+		expect(city?.type).toBe('group')
+		const underFields = city && 'fields' in city ? city.fields : []
+		expect(underFields.map(sousChamp => ('name' in sousChamp ? sousChamp.name : sousChamp.type))).toEqual([
 			...CITY_FIELDS,
 		])
 	})
@@ -370,13 +370,13 @@ describe('les champs de la zone dans la collection des profils', () => {
 		// A decision of ticket 041: the INSEE code and the coordinates of the centre of a commune are
 		// public reference data, not personal data, so the whole zone follows the reading of its
 		// profile: an anonymous reader reads it with the published profiles (ticket 021).
-		const commune = champ('city')
-		const sousChamps = commune && 'fields' in commune ? commune.fields : []
-		for (const zone of [commune, champ('radiusKm'), champ('homeService'), ...sousChamps]) {
+		const city = field('city')
+		const underFields = city && 'fields' in city ? city.fields : []
+		for (const zone of [city, field('radiusKm'), field('homeService'), ...underFields]) {
 			// Once the configuration is built (another test file may build it), Payload gives every
 			// field an empty `access`: what matters is that no rule is in it.
-			const acces = zone && 'access' in zone ? zone.access : undefined
-			expect(acces ?? {}, 'name' in (zone ?? {}) ? String((zone as { name: string }).name) : '').toEqual({})
+			const access = zone && 'access' in zone ? zone.access : undefined
+			expect(access ?? {}, 'name' in (zone ?? {}) ? String((zone as { name: string }).name) : '').toEqual({})
 		}
 	})
 })

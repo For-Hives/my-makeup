@@ -22,12 +22,12 @@ describe('la garde d’une cible déjà utilisée par la v3 (ticket 227)', () =>
 	})
 
 	test('une connexion réussie ou un hash effacé : refus en français, avec le nom de l’option, sans valeur', () => {
-		const connexions = cutoverMessage({ connexions: 3, comptesConnectes: 0, hashEfface: [], supprimes: [] })
+		const signIns = cutoverMessage({ connexions: 3, comptesConnectes: 0, hashEfface: [], supprimes: [] })
 		const hash = cutoverMessage({ connexions: 0, comptesConnectes: 0, hashEfface: [1, 4], supprimes: [] })
 
-		expect(connexions).toContain('3 connexions')
-		expect(connexions).toContain('Rien n’est écrit')
-		expect(connexions).toContain('--target-in-service')
+		expect(signIns).toContain('3 connexions')
+		expect(signIns).toContain('Rien n’est écrit')
+		expect(signIns).toContain('--target-in-service')
 		expect(hash).toContain('2 comptes dont le hash hérité a déjà été effacé')
 		expect(hash).toContain('1, 4')
 		expect(cutoverMessage({ connexions: 1, comptesConnectes: 0, hashEfface: [7], supprimes: [] })).toMatch(
@@ -36,7 +36,7 @@ describe('la garde d’une cible déjà utilisée par la v3 (ticket 227)', () =>
 		// The journal is purged after 90 days: the date of last sign-in of the accounts is a trace of its own.
 		const date = cutoverMessage({ connexions: 0, comptesConnectes: 2, hashEfface: [], supprimes: [] })
 		expect(date).toContain('2 comptes avec une date de dernière connexion')
-		expect(`${connexions}${hash}${date}`).not.toMatch(/\$2[aby]\$|@/)
+		expect(`${signIns}${hash}${date}`).not.toMatch(/\$2[aby]\$|@/)
 	})
 
 	test('l’option se lit sur la ligne de commande, une seule fois', () => {
@@ -52,7 +52,7 @@ describe('la garde d’une cible déjà utilisée par la v3 (ticket 227)', () =>
 })
 
 describe('sur une cible en service, un compte déjà repris reste tel quel (ticket 227)', () => {
-	const compte = (valeurs: Record<string, unknown>, strapiId = 1): Expected => ({
+	const account = (valeurs: Record<string, unknown>, strapiId = 1): Expected => ({
 		strapiId,
 		values: {
 			strapiId,
@@ -68,7 +68,7 @@ describe('sur une cible en service, un compte déjà repris reste tel quel (tick
 		},
 		gaps: [],
 	})
-	const devenu = compte({
+	const become = account({
 		email: 'nouveau@example.test',
 		legacyBcrypt: null,
 		blocked: true,
@@ -76,9 +76,9 @@ describe('sur une cible en service, un compte déjà repris reste tel quel (tick
 	})
 
 	test('par défaut, la source fait loi : l’email et le hash reviennent', () => {
-		const attendu = compte({})
+		const expected = account({})
 
-		expect(differentFields(ACCOUNTS_ADAPTER, attendu, { id: 5, values: devenu.values })).toEqual([
+		expect(differentFields(ACCOUNTS_ADAPTER, expected, { id: 5, values: become.values })).toEqual([
 			'email',
 			'legacyBcrypt',
 			'blocked',
@@ -87,29 +87,33 @@ describe('sur une cible en service, un compte déjà repris reste tel quel (tick
 	})
 
 	test('en service, aucun champ du compte n’est comparé ni réécrit', () => {
-		const attendu = compte({})
+		const expected = account({})
 
-		expect(differentFields(ACCOUNTS_IN_SERVICE_ADAPTER, attendu, { id: 5, values: devenu.values })).toEqual([])
-		const plan = planActions(ACCOUNTS_IN_SERVICE_ADAPTER, [attendu, compte({}, 2)], [{ id: 5, values: devenu.values }])
+		expect(differentFields(ACCOUNTS_IN_SERVICE_ADAPTER, expected, { id: 5, values: become.values })).toEqual([])
+		const plan = planActions(
+			ACCOUNTS_IN_SERVICE_ADAPTER,
+			[expected, account({}, 2)],
+			[{ id: 5, values: become.values }]
+		)
 		// The account the target holds is untouched; the one it misses is still created.
 		expect(plan.actions.map(({ kind: genre }) => genre)).toEqual(['inchange', 'creation'])
 	})
 
 	test('l’empreinte ne compte pas les champs laissés tels quels : le contrôle ne voit pas la v3 comme un écart', () => {
-		const source = [{ strapiId: 1, values: compte({}).values }]
-		const cible = [{ strapiId: 1, values: devenu.values }]
+		const source = [{ strapiId: 1, values: account({}).values }]
+		const target = [{ strapiId: 1, values: become.values }]
 
-		expect(documentsFingerprint(ACCOUNTS_IN_SERVICE_ADAPTER, cible)).toBe(
+		expect(documentsFingerprint(ACCOUNTS_IN_SERVICE_ADAPTER, target)).toBe(
 			documentsFingerprint(ACCOUNTS_IN_SERVICE_ADAPTER, source)
 		)
-		expect(documentsFingerprint(ACCOUNTS_ADAPTER, cible)).not.toBe(documentsFingerprint(ACCOUNTS_ADAPTER, source))
+		expect(documentsFingerprint(ACCOUNTS_ADAPTER, target)).not.toBe(documentsFingerprint(ACCOUNTS_ADAPTER, source))
 	})
 })
 
 describe('la date de consentement déjà posée est gardée (ticket 227)', () => {
-	const PREMIERE = '2026-11-02T08:00:00.000Z'
-	const AUTRE = '2026-11-09T08:00:00.000Z'
-	const profil = (strapiId: number, consentiLe: string | null): Expected => ({
+	const FIRST = '2026-11-02T08:00:00.000Z'
+	const OTHER = '2026-11-09T08:00:00.000Z'
+	const profile = (strapiId: number, consentiLe: string | null): Expected => ({
 		strapiId,
 		values: { strapiId, publicContact: consentiLe !== null, consentedAt: consentiLe },
 		gaps: [],
@@ -117,15 +121,15 @@ describe('la date de consentement déjà posée est gardée (ticket 227)', () =>
 
 	test('la date est une amorce : écrite sur un profil qui n’en a pas, jamais par-dessus une date posée', () => {
 		expect(PROFILES_ADAPTER.seeds).toContain('consentedAt')
-		const existants = [
-			{ id: 1, values: { strapiId: 1, publicContact: true, consentedAt: PREMIERE } },
+		const existingList = [
+			{ id: 1, values: { strapiId: 1, publicContact: true, consentedAt: FIRST } },
 			{ id: 2, values: { strapiId: 2, publicContact: false, consentedAt: null } },
 		]
 
 		const plan = planActions(
 			{ ...PROFILES_ADAPTER, fields: { publicContact: 'booleen', consentedAt: 'date' } },
-			[profil(1, AUTRE), profil(2, AUTRE)],
-			existants
+			[profile(1, OTHER), profile(2, OTHER)],
+			existingList
 		)
 
 		expect(plan.actions.map(action => [action.kind, 'fields' in action ? action.fields : []])).toEqual([
@@ -135,17 +139,17 @@ describe('la date de consentement déjà posée est gardée (ticket 227)', () =>
 	})
 
 	test('le rapport compte les profils dont la date demandée diffère de la date gardée, par identifiant', () => {
-		const existants = [
-			{ values: { strapiId: 1, consentedAt: PREMIERE } },
-			{ values: { strapiId: 2, consentedAt: new Date(PREMIERE) } },
+		const existingList = [
+			{ values: { strapiId: 1, consentedAt: FIRST } },
+			{ values: { strapiId: 2, consentedAt: new Date(FIRST) } },
 			{ values: { strapiId: 3, consentedAt: null } },
-			{ values: { strapiId: 4, consentedAt: PREMIERE } },
+			{ values: { strapiId: 4, consentedAt: FIRST } },
 		]
-		const attendus = [profil(4, AUTRE), profil(1, AUTRE), profil(2, PREMIERE), profil(3, AUTRE), profil(5, AUTRE)]
+		const expectedList = [profile(4, OTHER), profile(1, OTHER), profile(2, FIRST), profile(3, OTHER), profile(5, OTHER)]
 
 		// 2 asks the date it holds; 3 holds none (the run fills it in); 5 is new; 4 and 1 differ.
-		expect(keptConsents(attendus, existants)).toEqual([1, 4])
-		expect(keptConsents([profil(1, null)], existants)).toEqual([])
+		expect(keptConsents(expectedList, existingList)).toEqual([1, 4])
+		expect(keptConsents([profile(1, null)], existingList)).toEqual([])
 	})
 })
 
@@ -161,7 +165,7 @@ describe('un compte supprimé dans la v3 ne revient pas (ticket 227)', () => {
 	})
 
 	test('avec l’option, le compte supprimé et son profil sortent de ce que la source donne ; les autres restent', () => {
-		const lu = {
+		const wasRead = {
 			comptes: [{ id: 1 }, { id: 2 }, { id: 3 }],
 			profils: [
 				{ id: 11, compte: 1 },
@@ -171,38 +175,38 @@ describe('un compte supprimé dans la v3 ne revient pas (ticket 227)', () => {
 			ailleurs: 'inchangé',
 		}
 
-		const reste = withoutDeletedAccounts(lu, new Set([2, 99]))
+		const rest = withoutDeletedAccounts(wasRead, new Set([2, 99]))
 
-		expect(reste.comptes.map(({ id }) => id)).toEqual([1, 3])
-		expect(reste.profils.map(({ id }) => id)).toEqual([11, 13])
-		expect(reste.ailleurs).toBe('inchangé')
-		expect(withoutDeletedAccounts(lu, new Set())).toBe(lu)
+		expect(rest.comptes.map(({ id }) => id)).toEqual([1, 3])
+		expect(rest.profils.map(({ id }) => id)).toEqual([11, 13])
+		expect(rest.ailleurs).toBe('inchangé')
+		expect(withoutDeletedAccounts(wasRead, new Set())).toBe(wasRead)
 	})
 })
 
 describe('sur une cible en service, un profil déjà repris reste tel quel (ticket 227)', () => {
-	const profil = (valeurs: Record<string, unknown>): Expected => ({
+	const profile = (valeurs: Record<string, unknown>): Expected => ({
 		strapiId: 1,
 		values: { strapiId: 1, ...valeurs },
 		gaps: [],
 	})
-	const existant = { id: 7, values: { strapiId: 1, publicContact: false, contactDetails: { phone: null } } }
+	const existing = { id: 7, values: { strapiId: 1, publicContact: false, contactDetails: { phone: null } } }
 
 	test('ce que la maquilleuse a fermé dans la v3 n’est pas rouvert : aucun champ n’est comparé', () => {
-		const attendu = profil({
+		const expected = profile({
 			publicContact: true,
 			contactDetails: { phone: '0100000000' },
 			consentSource: 'import',
 		})
 
-		expect(differentFields(PROFILES_ADAPTER, attendu, existant)).toContain('publicContact')
-		expect(differentFields(PROFILES_IN_SERVICE_ADAPTER, attendu, existant)).toEqual([])
-		const plan = planActions(PROFILES_IN_SERVICE_ADAPTER, [attendu], [existant])
+		expect(differentFields(PROFILES_ADAPTER, expected, existing)).toContain('publicContact')
+		expect(differentFields(PROFILES_IN_SERVICE_ADAPTER, expected, existing)).toEqual([])
+		const plan = planActions(PROFILES_IN_SERVICE_ADAPTER, [expected], [existing])
 		expect(plan.actions.map(({ kind: genre }) => genre)).toEqual(['inchange'])
 	})
 
 	test('un profil qui manque est créé, avec tous ses champs', () => {
-		const plan = planActions(PROFILES_IN_SERVICE_ADAPTER, [profil({ publicContact: false })], [])
+		const plan = planActions(PROFILES_IN_SERVICE_ADAPTER, [profile({ publicContact: false })], [])
 
 		expect(plan.actions.map(({ kind: genre }) => genre)).toEqual(['creation'])
 	})

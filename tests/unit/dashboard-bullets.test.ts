@@ -61,18 +61,18 @@ describe('127, 128 : ce que la saisie donne', () => {
 	})
 
 	test('le premier nom refusé s’arrête avec le reste dans le champ, ceux d’avant sont ajoutés', () => {
-		const lu = readNames('Italien;anglais;Russe;', [A], LANGUAGES, false)
-		expect(lu).toEqual({ ok: false, noms: ['Italien'], reste: 'anglais;Russe;', message: LANGUAGES.doublon })
+		const wasRead = readNames('Italien;anglais;Russe;', [A], LANGUAGES, false)
+		expect(wasRead).toEqual({ ok: false, noms: ['Italien'], reste: 'anglais;Russe;', message: LANGUAGES.doublon })
 	})
 
 	test('deux fois le même nom dans une même saisie : le second est un doublon', () => {
-		const lu = readNames('Russe;russe;', [], LANGUAGES, false)
-		expect(lu).toMatchObject({ ok: false, noms: ['Russe'], message: LANGUAGES.doublon })
+		const wasRead = readNames('Russe;russe;', [], LANGUAGES, false)
+		expect(wasRead).toMatchObject({ ok: false, noms: ['Russe'], message: LANGUAGES.doublon })
 	})
 
 	test('un nom trop long dans une saisie à « ; » est refusé comme seul', () => {
-		const lu = readNames(`${'x'.repeat(71)};`, [], SKILLS, false)
-		expect(lu).toMatchObject({ ok: false, noms: [], message: SKILLS.tropLong })
+		const wasRead = readNames(`${'x'.repeat(71)};`, [], SKILLS, false)
+		expect(wasRead).toMatchObject({ ok: false, noms: [], message: SKILLS.tropLong })
 	})
 
 	test('Entrée sur un champ vide dit qu’il faut un nom', () => {
@@ -102,7 +102,7 @@ describe('127, 128 : la demande que le serveur lit', () => {
 	})
 
 	test('une clé en trop, un nom qui n’est pas un texte, trop de puces : refus entier', () => {
-		for (const saisie of [
+		for (const input of [
 			{ puces: [{ nom: 'a' }], pro: 12 },
 			{ puces: [{ nom: 'a', description: 'x' }] },
 			{ puces: [{ nom: 12 }] },
@@ -110,7 +110,7 @@ describe('127, 128 : la demande que le serveur lit', () => {
 			{ puces: Array.from({ length: BULLETS_COUNT_MAX + 1 }, (_, rang) => ({ nom: `n${rang}` })) },
 			null,
 		]) {
-			expect(readBullets(LANGUAGES, saisie)).toEqual({ ok: false, message: LANGUAGES.invalide })
+			expect(readBullets(LANGUAGES, input)).toEqual({ ok: false, message: LANGUAGES.invalide })
 		}
 	})
 })

@@ -4,7 +4,7 @@ import { agentByTest, fakeUmami, type ReadingFakeUmami } from '../support/fake-u
 /**
  * The three legal pages in a browser (ticket 112): they answer 200 with a single h1, and the button
  * of the privacy policy stops, then brings back, what this browser sends to the fake Umami. The text
- * word for word is checked without a browser (tests/unit/pages-juridiques.test.tsx); the addresses
+ * word for word is checked without a browser (tests/unit/legal-pages.test.tsx); the addresses
  * are also held green by I45 (tests/e2e/parite-urls.spec.ts).
  */
 

@@ -5,19 +5,19 @@ import { proxy, unknownAddressProxy } from '@/proxy'
 /** Ticket 231, on the proxy: the lookup is made only for a plain pass-through, and a failure lets the page answer. */
 
 const SITE = 'https://my-makeup.fr'
-const requete = (chemin: string, methode = 'GET', entetes: Record<string, string> = {}) =>
+const requestAlt = (chemin: string, methode = 'GET', entetes: Record<string, string> = {}) =>
 	new NextRequest(`${SITE}${chemin}`, { method: methode, headers: entetes })
 
 /** The proxy as Next calls it, with a made-up lookup in place of the database. */
-async function repondre(chemin: string, existe: (famille: string, segment: string) => Promise<boolean>, entetes = {}) {
-	const demande = requete(chemin, 'GET', entetes)
-	const premiere = proxy(demande)
+async function respond(chemin: string, existe: (famille: string, segment: string) => Promise<boolean>, entetes = {}) {
+	const request = requestAlt(chemin, 'GET', entetes)
+	const firstOne = proxy(request)
 	// A plain pass-through is the one answer the lookup may replace.
-	const adresse = chemin.split('/')
+	const url = chemin.split('/')
 	return unknownAddressProxy(
-		demande,
-		await premiere,
-		{ famille: adresse[1] as 'profil' | 'talent' | 'blog', segment: decodeURIComponent(adresse[2] ?? '') },
+		request,
+		await firstOne,
+		{ famille: url[1] as 'profil' | 'talent' | 'blog', segment: decodeURIComponent(url[2] ?? '') },
 		existe
 	)
 }
@@ -28,36 +28,36 @@ describe('une adresse inconnue sous /profil, /talent ou /blog', () => {
 		'/talent/inconnu',
 		'/blog/inconnu',
 	])('%s est réécrite vers la 404 du site', async chemin => {
-		const reponse = await repondre(chemin, async () => false)
-		expect(new URL(reponse.headers.get('x-middleware-rewrite') ?? '').pathname).toBe('/unknown-page')
-		expect(reponse.headers.get('x-robots-tag')).toBe('noindex')
+		const response = await respond(chemin, async () => false)
+		expect(new URL(response.headers.get('x-middleware-rewrite') ?? '').pathname).toBe('/unknown-page')
+		expect(response.headers.get('x-robots-tag')).toBe('noindex')
 	})
 
 	test('une page qui existe passe jusqu’à la page', async () => {
-		const reponse = await repondre('/talent/existe', async () => true)
-		expect(reponse.headers.get('x-middleware-rewrite')).toBeNull()
-		expect(reponse.headers.get('x-middleware-next')).toBe('1')
+		const response = await respond('/talent/existe', async () => true)
+		expect(response.headers.get('x-middleware-rewrite')).toBeNull()
+		expect(response.headers.get('x-middleware-next')).toBe('1')
 	})
 
 	test('une lecture qui échoue laisse la page répondre', async () => {
-		const reponse = await repondre('/blog/inconnu', async () => {
+		const response = await respond('/blog/inconnu', async () => {
 			throw new Error('base muette')
 		})
-		expect(reponse.headers.get('x-middleware-rewrite')).toBeNull()
-		expect(reponse.headers.get('x-middleware-next')).toBe('1')
+		expect(response.headers.get('x-middleware-rewrite')).toBeNull()
+		expect(response.headers.get('x-middleware-next')).toBe('1')
 	})
 
 	test('les cookies du nettoyage de l’ancienne authentification suivent la réécriture', async () => {
-		const reponse = await repondre('/profil/inconnu', async () => false, { cookie: 'next-auth.session-token=x' })
-		expect(reponse.headers.get('x-middleware-rewrite')).not.toBeNull()
-		expect(reponse.cookies.get('next-auth.session-token')?.value).toBe('')
+		const response = await respond('/profil/inconnu', async () => false, { cookie: 'next-auth.session-token=x' })
+		expect(response.headers.get('x-middleware-rewrite')).not.toBeNull()
+		expect(response.cookies.get('next-auth.session-token')?.value).toBe('')
 	})
 })
 
 describe('ce que le proxy envoie à la lecture', () => {
 	test('une adresse à un seul segment, en GET, sans réponse propre : une promesse', () => {
-		expect(proxy(requete('/talent/x'))).toBeInstanceOf(Promise)
-		expect(proxy(requete('/profil/x', 'HEAD'))).toBeInstanceOf(Promise)
+		expect(proxy(requestAlt('/talent/x'))).toBeInstanceOf(Promise)
+		expect(proxy(requestAlt('/profil/x', 'HEAD'))).toBeInstanceOf(Promise)
 	})
 
 	test.each([
@@ -67,6 +67,6 @@ describe('ce que le proxy envoie à la lecture', () => {
 		['/blog/a/b', 'GET'],
 		['/profil/%E0%A4%A', 'GET'],
 	])('%s (%s) répond tout de suite, sans lecture', (chemin, methode) => {
-		expect(proxy(requete(chemin, methode))).not.toBeInstanceOf(Promise)
+		expect(proxy(requestAlt(chemin, methode))).not.toBeInstanceOf(Promise)
 	})
 })

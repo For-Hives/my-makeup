@@ -16,7 +16,7 @@ import { apply } from '../../scripts/admin/keyboard'
  * argument, typed at the keyboard, an `admin` by default, nothing written on a refusal.
  */
 
-const MOT_DE_PASSE = 'un-mot-de-passe-fictif-094'
+const PASSWORD = 'un-mot-de-passe-fictif-094'
 
 describe('Le script ne lit pas le .env de travail (ticket 233, L1)', () => {
 	test('admin:create porte --no-env-file : DATABASE_URI vient de l’environnement du terminal, jamais du .env', () => {
@@ -80,42 +80,42 @@ describe('Le mot de passe', () => {
 })
 
 describe('La création', () => {
-	const faux = (existe = false) => {
-		const ecrits: { email: string; password: string; role: string }[] = []
-		const comptes: Accounts = {
+	const fake = (existe = false) => {
+		const written: { email: string; password: string; role: string }[] = []
+		const accounts: Accounts = {
 			existe: () => Promise.resolve(existe),
 			creer: data => {
-				ecrits.push(data)
+				written.push(data)
 				return Promise.resolve({ id: 7 })
 			},
 		}
-		return { comptes, ecrits }
+		return { comptes: accounts, ecrits: written }
 	}
-	const demande = { email: 'a@example.test', role: 'admin' } as const
+	const request = { email: 'a@example.test', role: 'admin' } as const
 
 	test('une saisie répétée à l’identique crée le compte avec le rôle demandé', async () => {
-		const { comptes, ecrits } = faux()
+		const { comptes: accounts, ecrits: written } = fake()
 
-		const issue = await createAccount(comptes, demande, MOT_DE_PASSE, MOT_DE_PASSE)
+		const issue = await createAccount(accounts, request, PASSWORD, PASSWORD)
 
 		expect(issue).toEqual({ id: 7, role: 'admin' })
-		expect(ecrits).toEqual([{ email: 'a@example.test', password: MOT_DE_PASSE, role: 'admin' }])
+		expect(written).toEqual([{ email: 'a@example.test', password: PASSWORD, role: 'admin' }])
 	})
 
 	test('deux saisies différentes, un mot de passe trop court, une adresse déjà prise : rien n’est écrit', async () => {
-		for (const [existe, un, deux, message] of [
-			[false, MOT_DE_PASSE, `${MOT_DE_PASSE}x`, 'diffèrent'],
+		for (const [exists, one, two, message] of [
+			[false, PASSWORD, `${PASSWORD}x`, 'diffèrent'],
 			[false, 'court', 'court', 'moins de 12'],
-			[true, MOT_DE_PASSE, MOT_DE_PASSE, 'déjà cette adresse'],
+			[true, PASSWORD, PASSWORD, 'déjà cette adresse'],
 		] as const) {
-			const { comptes, ecrits } = faux(existe)
+			const { comptes: accounts, ecrits: written } = fake(exists)
 
-			const echec = createAccount(comptes, demande, un, deux)
+			const failure = createAccount(accounts, request, one, two)
 
-			await expect(echec).rejects.toBeInstanceOf(CreationRefused)
-			await expect(echec).rejects.toThrow(message)
-			await expect(echec).rejects.not.toThrow(MOT_DE_PASSE)
-			expect(ecrits).toEqual([])
+			await expect(failure).rejects.toBeInstanceOf(CreationRefused)
+			await expect(failure).rejects.toThrow(message)
+			await expect(failure).rejects.not.toThrow(PASSWORD)
+			expect(written).toEqual([])
 		}
 	})
 })
@@ -137,52 +137,56 @@ describe('La saisie au clavier', () => {
 })
 
 describe('La commande elle-même', () => {
-	const lancer = async (argv: string[], entree: string, env: Record<string, string> = {}) => {
-		const processus = Bun.spawn(['bun', '--no-env-file', 'scripts/admin/create-admin.ts', ...argv], {
+	const launch = async (argv: string[], entree: string, env: Record<string, string> = {}) => {
+		const childProcess = Bun.spawn(['bun', '--no-env-file', 'scripts/admin/create-admin.ts', ...argv], {
 			env: { PATH: process.env.PATH ?? '', ...env },
 			stdin: new Blob([entree]),
 			stdout: 'pipe',
 			stderr: 'pipe',
 		})
-		const [sortie, erreur, code] = await Promise.all([
-			new Response(processus.stdout).text(),
-			new Response(processus.stderr).text(),
-			processus.exited,
+		const [output, error, code] = await Promise.all([
+			new Response(childProcess.stdout).text(),
+			new Response(childProcess.stderr).text(),
+			childProcess.exited,
 		])
-		return { sortie, erreur, code }
+		return { sortie: output, erreur: error, code }
 	}
 
 	test('un mot de passe donné en option : 2, usage affiché, le mot de passe n’est jamais écrit', async () => {
-		const { erreur, code } = await lancer(['a@example.test', '--password=secret-fictif-094'], '')
+		const { erreur: error, code } = await launch(['a@example.test', '--password=secret-fictif-094'], '')
 
 		expect(code).toBe(2)
-		expect(erreur).toContain('Usage')
-		expect(erreur).not.toContain('secret-fictif-094')
+		expect(error).toContain('Usage')
+		expect(error).not.toContain('secret-fictif-094')
 	})
 
 	test('un mot de passe qui arrive par un tube est refusé : il se tape dans un terminal', async () => {
-		const { sortie, erreur, code } = await lancer(['a@example.test'], `${MOT_DE_PASSE}\n${MOT_DE_PASSE}\n`, {
+		const {
+			sortie: output,
+			erreur: error,
+			code,
+		} = await launch(['a@example.test'], `${PASSWORD}\n${PASSWORD}\n`, {
 			DATABASE_URI: 'postgres://utilisateur@127.0.0.1:1/base_fictive',
 		})
 
 		expect(code).toBe(1)
-		expect(erreur).toContain('dans un terminal')
-		expect(sortie + erreur).not.toContain(MOT_DE_PASSE)
+		expect(error).toContain('dans un terminal')
+		expect(output + error).not.toContain(PASSWORD)
 	})
 
 	test('une base qui n’est pas sur ce poste est refusée sans --remote-target, avant toute saisie', async () => {
-		const { erreur, code } = await lancer(['a@example.test'], '', {
+		const { erreur: error, code } = await launch(['a@example.test'], '', {
 			DATABASE_URI: 'postgres://utilisateur@base.example.test:5432/base_fictive',
 		})
 
 		expect(code).toBe(1)
-		expect(erreur).toContain('--remote-target')
+		expect(error).toContain('--remote-target')
 	})
 
 	test('sans DATABASE_URI : refusé, rien n’est écrit', async () => {
-		const { erreur, code } = await lancer(['a@example.test'], '')
+		const { erreur: error, code } = await launch(['a@example.test'], '')
 
 		expect(code).toBe(1)
-		expect(erreur).toContain('DATABASE_URI manque')
+		expect(error).toContain('DATABASE_URI manque')
 	})
 })

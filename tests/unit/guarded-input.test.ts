@@ -11,58 +11,58 @@ import {
 
 /** The typing kept while the session ends (ticket 121): kept, read back, forgotten, never trusted blindly. */
 
-const CHAMPS = ['prenom', 'nom'] as const
-const MAINTENANT = 1_800_000_000_000
+const FIELDS = ['prenom', 'nom'] as const
+const NOW = 1_800_000_000_000
 
-function faussementStockage(): DraftStorage & { contenu: Map<string, string> } {
-	const contenu = new Map<string, string>()
+function falselyStorage(): DraftStorage & { contenu: Map<string, string> } {
+	const content = new Map<string, string>()
 	return {
-		contenu,
-		getItem: cle => contenu.get(cle) ?? null,
-		setItem: (cle, valeur) => void contenu.set(cle, valeur),
-		removeItem: cle => void contenu.delete(cle),
+		contenu: content,
+		getItem: cle => content.get(cle) ?? null,
+		setItem: (cle, valeur) => void content.set(cle, valeur),
+		removeItem: cle => void content.delete(cle),
 	}
 }
 
 describe('la saisie gardée', () => {
 	test('gardée puis relue telle quelle, pour ce compte seulement', () => {
-		const stockage = faussementStockage()
-		const saisie = { valeurs: { prenom: 'Inès', nom: 'Fictive' }, le: MAINTENANT, redirigeLe: MAINTENANT }
-		expect(guardInput(stockage, 'identite', '7', saisie)).toBe(true)
+		const storage = falselyStorage()
+		const input = { valeurs: { prenom: 'Inès', nom: 'Fictive' }, le: NOW, redirigeLe: NOW }
+		expect(guardInput(storage, 'identite', '7', input)).toBe(true)
 
-		expect(readInput(stockage, 'identite', '7', CHAMPS, MAINTENANT + 1000)).toEqual(saisie)
-		expect(readInput(stockage, 'identite', '8', CHAMPS, MAINTENANT + 1000)).toBeNull()
+		expect(readInput(storage, 'identite', '7', FIELDS, NOW + 1000)).toEqual(input)
+		expect(readInput(storage, 'identite', '8', FIELDS, NOW + 1000)).toBeNull()
 	})
 
 	test('oubliée : plus rien', () => {
-		const stockage = faussementStockage()
-		guardInput(stockage, 'identite', '7', { valeurs: { prenom: 'a', nom: 'b' }, le: MAINTENANT, redirigeLe: null })
-		forgetInput(stockage, 'identite', '7')
-		expect(stockage.contenu.size).toBe(0)
-		expect(readInput(stockage, 'identite', '7', CHAMPS, MAINTENANT)).toBeNull()
+		const storage = falselyStorage()
+		guardInput(storage, 'identite', '7', { valeurs: { prenom: 'a', nom: 'b' }, le: NOW, redirigeLe: null })
+		forgetInput(storage, 'identite', '7')
+		expect(storage.contenu.size).toBe(0)
+		expect(readInput(storage, 'identite', '7', FIELDS, NOW)).toBeNull()
 	})
 
 	test('trop ancienne : ignorée et effacée', () => {
-		const stockage = faussementStockage()
-		guardInput(stockage, 'identite', '7', { valeurs: { prenom: 'a', nom: 'b' }, le: MAINTENANT, redirigeLe: null })
-		expect(readInput(stockage, 'identite', '7', CHAMPS, MAINTENANT + INPUT_LIFETIME_MS + 1)).toBeNull()
-		expect(stockage.contenu.size).toBe(0)
+		const storage = falselyStorage()
+		guardInput(storage, 'identite', '7', { valeurs: { prenom: 'a', nom: 'b' }, le: NOW, redirigeLe: null })
+		expect(readInput(storage, 'identite', '7', FIELDS, NOW + INPUT_LIFETIME_MS + 1)).toBeNull()
+		expect(storage.contenu.size).toBe(0)
 	})
 
 	test('illisible, incomplète ou mal typée : ignorée', () => {
-		const stockage = faussementStockage()
-		const cle = 'mm:saisie:identite:7'
-		for (const brut of [
+		const storage = falselyStorage()
+		const key = 'mm:saisie:identite:7'
+		for (const raw of [
 			'pas du json',
 			'null',
 			'42',
-			JSON.stringify({ le: MAINTENANT }),
-			JSON.stringify({ le: MAINTENANT, valeurs: { prenom: 'a' } }),
-			JSON.stringify({ le: MAINTENANT, valeurs: { prenom: 'a', nom: 3 } }),
+			JSON.stringify({ le: NOW }),
+			JSON.stringify({ le: NOW, valeurs: { prenom: 'a' } }),
+			JSON.stringify({ le: NOW, valeurs: { prenom: 'a', nom: 3 } }),
 			JSON.stringify({ le: 'hier', valeurs: { prenom: 'a', nom: 'b' } }),
 		]) {
-			stockage.contenu.set(cle, brut)
-			expect(readInput(stockage, 'identite', '7', CHAMPS, MAINTENANT)).toBeNull()
+			storage.contenu.set(key, raw)
+			expect(readInput(storage, 'identite', '7', FIELDS, NOW)).toBeNull()
 		}
 	})
 
@@ -78,22 +78,22 @@ describe('la saisie gardée', () => {
 				throw new Error('bloqué')
 			},
 		}
-		const saisie = { valeurs: { prenom: 'a', nom: 'b' }, le: MAINTENANT, redirigeLe: null }
-		expect(guardInput(refuse, 'identite', '7', saisie)).toBe(false)
-		expect(readInput(refuse, 'identite', '7', CHAMPS, MAINTENANT)).toBeNull()
+		const input = { valeurs: { prenom: 'a', nom: 'b' }, le: NOW, redirigeLe: null }
+		expect(guardInput(refuse, 'identite', '7', input)).toBe(false)
+		expect(readInput(refuse, 'identite', '7', FIELDS, NOW)).toBeNull()
 		expect(() => forgetInput(refuse, 'identite', '7')).not.toThrow()
-		expect(guardInput(null, 'identite', '7', saisie)).toBe(false)
-		expect(readInput(null, 'identite', '7', CHAMPS, MAINTENANT)).toBeNull()
+		expect(guardInput(null, 'identite', '7', input)).toBe(false)
+		expect(readInput(null, 'identite', '7', FIELDS, NOW)).toBeNull()
 	})
 })
 
 describe('une seule redirection', () => {
 	test('la première fois : oui ; juste après un renvoi : non ; bien plus tard : oui', () => {
-		expect(canRedirect(null, MAINTENANT)).toBe(true)
-		const sans = { valeurs: {}, le: MAINTENANT, redirigeLe: null }
-		expect(canRedirect(sans, MAINTENANT)).toBe(true)
-		const renvoyee = { valeurs: {}, le: MAINTENANT, redirigeLe: MAINTENANT }
-		expect(canRedirect(renvoyee, MAINTENANT + 30_000)).toBe(false)
-		expect(canRedirect(renvoyee, MAINTENANT + ANTI_LOOP_DELAY_MS + 1)).toBe(true)
+		expect(canRedirect(null, NOW)).toBe(true)
+		const without = { valeurs: {}, le: NOW, redirigeLe: null }
+		expect(canRedirect(without, NOW)).toBe(true)
+		const resent = { valeurs: {}, le: NOW, redirigeLe: NOW }
+		expect(canRedirect(resent, NOW + 30_000)).toBe(false)
+		expect(canRedirect(resent, NOW + ANTI_LOOP_DELAY_MS + 1)).toBe(true)
 	})
 })

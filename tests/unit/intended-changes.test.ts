@@ -11,7 +11,7 @@ import path from 'node:path'
 
 const docs = path.resolve(import.meta.dir, '../../docs/migration')
 const register = readFileSync(path.join(docs, 'CHANGEMENTS-VOULUS.md'), 'utf8')
-const journal = readFileSync(path.join(docs, 'JOURNAL.md'), 'utf8')
+const log = readFileSync(path.join(docs, 'JOURNAL.md'), 'utf8')
 const schema = readFileSync(path.join(docs, 'SCHEMA.md'), 'utf8')
 
 type RegisterLine = {
@@ -333,7 +333,7 @@ describe('the families of addresses that change, in URLS.md', () => {
 
 describe('the journal of the migration', () => {
 	test('it has one heading per day, the oldest first', () => {
-		const days = [...journal.matchAll(/^## (\d{2})\/(\d{2})\/(\d{4})$/gm)].map(
+		const days = [...log.matchAll(/^## (\d{2})\/(\d{2})\/(\d{4})$/gm)].map(
 			([, day, month, year]) => `${year}-${month}-${day}`
 		)
 
@@ -342,11 +342,11 @@ describe('the journal of the migration', () => {
 	})
 
 	test('it starts with tickets 001 and 002, done', () => {
-		expect(journal).toContain('Ticket 001 fait')
-		expect(journal).toContain('Ticket 002 fait')
+		expect(log).toContain('Ticket 001 fait')
+		expect(log).toContain('Ticket 002 fait')
 	})
 
 	test('it holds no personal data', () => {
-		expect(personalData(journal)).toEqual([])
+		expect(personalData(log)).toEqual([])
 	})
 })

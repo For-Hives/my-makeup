@@ -94,6 +94,6 @@ L'application de prod suit la branche `main`, avec `/.release/version.json` dans
 
 | Test | Ce qu'il vérifie |
 |---|---|
-| `bun --no-env-file test tests/unit/notes-de-version.test.ts` | La règle d'une note, la forme du journal, et le journal du dépôt lui-même |
+| `bun --no-env-file test tests/unit/release-notes.test.ts` | La règle d'une note, la forme du journal, et le journal du dépôt lui-même |
 | `bun --no-env-file test tests/unit/publication.test.ts` | Le numéro, la publication à blanc, la publication sur de vrais dépôts git, la lecture de `ci-ok` |
 | `bun --no-env-file test tests/ci/publication.test.ts` | Le workflow : C01 à C03, la dépendance à `ci-ok`, une seule commande, aucun `bun install`, les permissions |

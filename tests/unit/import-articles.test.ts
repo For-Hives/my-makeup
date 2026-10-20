@@ -30,12 +30,12 @@ const article = (id: number, modif: Partial<ArticleRow> = {}): ArticleRow => ({
 
 describe('les articles attendus', () => {
 	test('chaque champ tel quel ; publié avec sa date, ou brouillon sans date', () => {
-		const { expected: attendus } = expectedArticles(
+		const { expected } = expectedArticles(
 			[article(1), article(2, { published_at: null, title: null, excerpt: '' })],
 			[]
 		)
 
-		expect(attendus).toEqual([
+		expect(expected).toEqual([
 			{
 				strapiId: 1,
 				values: {
@@ -60,11 +60,11 @@ describe('les articles attendus', () => {
 				values: expect.objectContaining({ title: null, excerpt: '', _status: 'draft', publishedAt: null }),
 			}),
 		])
-		expect(attendus.map(attendu => ARTICLES_ADAPTER.options?.(attendu))).toEqual([{ draft: false }, { draft: true }])
+		expect(expected.map(attendu => ARTICLES_ADAPTER.options?.(attendu))).toEqual([{ draft: false }, { draft: true }])
 	})
 
 	test('la galerie : les images adoptées dans l’ordre ; un fichier non adopté est signalé, pas inventé', () => {
-		const liens = [
+		const links = [
 			{ fichier: 31, entree: 1, type: TYPE_ARTICLE, champ: 'galery' },
 			{ fichier: 30, entree: 1, type: TYPE_ARTICLE, champ: 'galery' },
 			{ fichier: 32, entree: 1, type: TYPE_ARTICLE, champ: 'galery' },
@@ -72,9 +72,9 @@ describe('les articles attendus', () => {
 			{ fichier: 33, entree: 1, type: PROFILE_TYPE, champ: 'image_gallery' },
 		]
 
-		const { expected: attendus, photosNotCarriedOver: photosNonReprises } = expectedArticles(
+		const { expected, photosNotCarriedOver: unresumedPhotos } = expectedArticles(
 			[article(1)],
-			liens,
+			links,
 			new Map([
 				[30, 300],
 				[31, 310],
@@ -82,19 +82,19 @@ describe('les articles attendus', () => {
 			])
 		)
 
-		expect(attendus[0]?.values.gallery).toEqual([310, 300])
-		expect(photosNonReprises).toEqual([{ entry: 1, file: 32 }])
+		expect(expected[0]?.values.gallery).toEqual([310, 300])
+		expect(unresumedPhotos).toEqual([{ entry: 1, file: 32 }])
 	})
 
 	test('un slug qui n’est pas une adresse, ou en double, est refusé et listé ; jamais corrigé', () => {
-		const { taken: pris, refused: refuses } = splitArticles([
+		const { taken, refused: refuses } = splitArticles([
 			article(3, { slug: 'article-1' }),
 			article(1),
 			article(2, { slug: 'Article Deux' }),
 			article(4, { slug: null }),
 		])
 
-		expect(pris.map(({ id }) => id)).toEqual([1])
+		expect(taken.map(({ id }) => id)).toEqual([1])
 		expect(refuses).toEqual([
 			{ strapiId: 2, reason: 'slug-pas-une-adresse', fields: ['slug'] },
 			{ strapiId: 3, reason: 'slug-en-double', fields: ['slug'] },

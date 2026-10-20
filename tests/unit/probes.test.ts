@@ -52,38 +52,38 @@ import { testConfiguration } from '../support/e2e'
 import { checkTarget, RefusedEnvironment } from '../support/environment-guard'
 import { delay, HttpResponse, http, simulate } from '../support/outgoing-http'
 
-const RACINE = path.resolve(import.meta.dir, '../..')
-const CIBLE = new URL('https://site-sonde.example.test')
+const ROOT = path.resolve(import.meta.dir, '../..')
+const TARGET = new URL('https://site-sonde.example.test')
 
 /** Seven fictional profiles, as the sitemap of the simulated site lists them. */
-const PROFILS = Array.from({ length: 7 }, (_vide, rang) => `/profil/maquilleuse-fictive-${rang + 1}`)
+const PROFILES = Array.from({ length: 7 }, (_vide, rang) => `/profil/maquilleuse-fictive-${rang + 1}`)
 
 /** A clock that only moves when the reader waits: the gaps it records are the ones the reader chose. */
-function horlogeFactice(): Clock {
-	let maintenant = 0
+function fakeClock(): Clock {
+	let now = 0
 	return {
-		maintenant: () => maintenant,
+		maintenant: () => now,
 		attendre: async ms => {
-			maintenant += ms
+			now += ms
 		},
 	}
 }
 
 /** Always the same draw: the first item left. */
-const premier = () => 0
+const first = () => 0
 
 const sitemap = (chemins: readonly string[]): string =>
 	[
 		'<?xml version="1.0" encoding="UTF-8"?>',
 		'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
-		`  <url><loc>${CIBLE.origin}</loc></url>`,
-		`  <url><loc>${CIBLE.origin}/talent/maquillage-mariee</loc></url>`,
-		...chemins.map(chemin => `  <url><loc>${CIBLE.origin}${chemin}</loc></url>`),
+		`  <url><loc>${TARGET.origin}</loc></url>`,
+		`  <url><loc>${TARGET.origin}/talent/maquillage-mariee</loc></url>`,
+		...chemins.map(chemin => `  <url><loc>${TARGET.origin}${chemin}</loc></url>`),
 		'</urlset>',
 	].join('\n')
 
 /** A profile page as a server renders it: the data of the page in a script, where `null` is normal. */
-const pageDeProfil = (corps = '<h1>Maquilleuse fictive</h1><p>Mariage et soirée, à Annecy</p>'): string =>
+const profilePage = (corps = '<h1>Maquilleuse fictive</h1><p>Mariage et soirée, à Annecy</p>'): string =>
 	[
 		'<!doctype html><html lang="fr"><head>',
 		'<title>Maquilleuse fictive - My-Makeup</title>',
@@ -95,27 +95,27 @@ const pageDeProfil = (corps = '<h1>Maquilleuse fictive</h1><p>Mariage et soirée
 	].join('')
 
 /** The five headers of the v3, as the simulated site sends them. */
-const ENTETES_DU_SITE: Record<string, string> = {
+const SITE_HEADERS: Record<string, string> = {
 	'strict-transport-security': 'max-age=31536000',
 	'x-content-type-options': 'nosniff',
 	'referrer-policy': 'strict-origin-when-cross-origin',
 	'permissions-policy': 'camera=()',
 	'content-security-policy-report-only': "default-src 'self'",
 }
-const LISTES_FERMEES = ['/api/admins', '/api/pros', '/api/auth-events']
+const CLOSED_LISTS = ['/api/admins', '/api/pros', '/api/auth-events']
 
-const MAINTENANT = new Date('2026-10-15T08:00:00Z')
-const dans = (joursACompter: number): Date => new Date(MAINTENANT.getTime() + joursACompter * 86_400_000)
+const NOW = new Date('2026-10-15T08:00:00Z')
+const insideValue = (joursACompter: number): Date => new Date(NOW.getTime() + joursACompter * 86_400_000)
 const rdap = (fin: Date) => ({
 	statut: 200,
 	corps: JSON.stringify({ events: [{ eventAction: 'expiration', eventDate: fin.toISOString() }] }),
 })
 
 /** Certificates and domains that are fine for 200 days: no test of the full run reaches the network. */
-const AUTRES_SONDES = {
-	certificat: async () => dans(200),
-	domaine: async () => rdap(dans(200)),
-	maintenant: () => MAINTENANT,
+const OTHER_PROBES = {
+	certificat: async () => insideValue(200),
+	domaine: async () => rdap(insideValue(200)),
+	maintenant: () => NOW,
 }
 
 interface Site {
@@ -127,34 +127,34 @@ interface Site {
  * The simulated site: its sitemap, a page per profile, and a 404 for anything else. `pages`
  * replaces the answer to a path.
  */
-function simulerLeSite(pages: Record<string, (request: Request) => Response> = {}): Site {
+function simulateSite(pages: Record<string, (request: Request) => Response> = {}): Site {
 	const site: Site = { recues: [] }
 	simulate(
-		http.all(`${CIBLE.origin}/*`, ({ request }) => {
+		http.all(`${TARGET.origin}/*`, ({ request }) => {
 			const { pathname } = new URL(request.url)
 			site.recues.push(`${request.method} ${pathname}`)
 			const page = pages[pathname]
 			if (page) return page(request)
-			if (pathname === '/') return HttpResponse.html('<h1>Accueil</h1>', { headers: ENTETES_DU_SITE })
-			if (LISTES_FERMEES.includes(pathname)) return HttpResponse.json({ errors: [] }, { status: 403 })
+			if (pathname === '/') return HttpResponse.html('<h1>Accueil</h1>', { headers: SITE_HEADERS })
+			if (CLOSED_LISTS.includes(pathname)) return HttpResponse.json({ errors: [] }, { status: 403 })
 			if (pathname === STATS_PATH) return HttpResponse.json({ errors: [] }, { status: 401 })
-			if (pathname === '/sitemap.xml') return HttpResponse.xml(sitemap(PROFILS))
-			if (PROFILS.includes(pathname)) return HttpResponse.html(pageDeProfil())
+			if (pathname === '/sitemap.xml') return HttpResponse.xml(sitemap(PROFILES))
+			if (PROFILES.includes(pathname)) return HttpResponse.html(profilePage())
 			return HttpResponse.html('<h1>Page introuvable</h1>', { status: 404 })
 		})
 	)
 	return site
 }
 
-const lecteurDuSite = () => createReader({ lecture: keep(CIBLE), horloge: horlogeFactice() })
+const siteReader = () => createReader({ lecture: keep(TARGET), horloge: fakeClock() })
 
 /** A transport that records and never sends. */
-function enregistreur(): { transport: Transport; recues: { adresse: URL; init: RequestInit }[] } {
-	const recues: { adresse: URL; init: RequestInit }[] = []
+function recorder(): { transport: Transport; recues: { adresse: URL; init: RequestInit }[] } {
+	const received: { adresse: URL; init: RequestInit }[] = []
 	return {
-		recues,
+		recues: received,
 		transport: async (adresse, init) => {
-			recues.push({ adresse, init })
+			received.push({ adresse, init })
 			return new Response('ok', { status: 200 })
 		},
 	}
@@ -170,18 +170,18 @@ describe('R01 : toute requête autre qu’une lecture est interrompue, la mesure
 		'HEAD',
 		'post',
 	])('une requête %s est interrompue avant le transport', async methode => {
-		const { transport, recues } = enregistreur()
+		const { transport, recues: received } = recorder()
 
-		await expect(keep(CIBLE, transport)('/contact', { method: methode })).rejects.toThrow(ForbiddenRequest)
-		expect(recues).toEqual([])
+		await expect(keep(TARGET, transport)('/contact', { method: methode })).rejects.toThrow(ForbiddenRequest)
+		expect(received).toEqual([])
 	})
 
 	test('une requête POST donnée comme un objet Request est interrompue aussi', async () => {
-		const { transport, recues } = enregistreur()
-		const ecriture = new Request(`${CIBLE.origin}/api/sendMail`, { method: 'POST', body: '{"message":"factice"}' })
+		const { transport, recues: received } = recorder()
+		const write = new Request(`${TARGET.origin}/api/sendMail`, { method: 'POST', body: '{"message":"factice"}' })
 
-		await expect(keep(CIBLE, transport)(ecriture)).rejects.toThrow(ForbiddenRequest)
-		expect(recues).toEqual([])
+		await expect(keep(TARGET, transport)(write)).rejects.toThrow(ForbiddenRequest)
+		expect(received).toEqual([])
 	})
 
 	test.each([
@@ -194,20 +194,20 @@ describe('R01 : toute requête autre qu’une lecture est interrompue, la mesure
 		'/blog/../u/script.js',
 		'/u//api/send',
 	])('une lecture vers la mesure d’audience est interrompue : %s', async chemin => {
-		const { transport, recues } = enregistreur()
+		const { transport, recues: received } = recorder()
 
-		await expect(keep(CIBLE, transport)(chemin)).rejects.toThrow('la mesure d’audience est bloquée')
-		expect(recues).toEqual([])
+		await expect(keep(TARGET, transport)(chemin)).rejects.toThrow('la mesure d’audience est bloquée')
+		expect(received).toEqual([])
 	})
 
 	test('chaque adresse de la mesure dans la table des URL gelées est bloquée', () => {
-		const mesure = FROZEN_URL_FAMILIES.filter(famille =>
+		const analytics = FROZEN_URL_FAMILIES.filter(famille =>
 			famille.patterns.some(motif => motif === '/u' || motif.startsWith('/u/'))
 		)
-		const exemples = mesure.flatMap(famille => famille.examples.map(({ from }) => from))
+		const examples = analytics.flatMap(famille => famille.examples.map(({ from }) => from))
 
-		expect(mesure.map(famille => famille.id)).toEqual(['mesure-script', 'mesure-envoi', 'mesure-autre'])
-		for (const exemple of exemples) expect(() => checkRequest(exemple, {}, CIBLE)).toThrow(ForbiddenRequest)
+		expect(analytics.map(famille => famille.id)).toEqual(['mesure-script', 'mesure-envoi', 'mesure-autre'])
+		for (const example of examples) expect(() => checkRequest(example, {}, TARGET)).toThrow(ForbiddenRequest)
 	})
 
 	test.each([
@@ -217,30 +217,30 @@ describe('R01 : toute requête autre qu’une lecture est interrompue, la mesure
 		['le même hôte en http', 'http://site-sonde.example.test/'],
 		['un sous-domaine de la cible', 'https://www.site-sonde.example.test/'],
 	])('une lecture vers un autre hôte est interrompue : %s', async (_cas, entree) => {
-		const { transport, recues } = enregistreur()
+		const { transport, recues: received } = recorder()
 
-		await expect(keep(CIBLE, transport)(entree)).rejects.toThrow('une sonde ne lit que la cible')
-		expect(recues).toEqual([])
+		await expect(keep(TARGET, transport)(entree)).rejects.toThrow('une sonde ne lit que la cible')
+		expect(received).toEqual([])
 	})
 
 	test.each(['cookie', 'Authorization'])('une lecture qui porte l’en-tête %s est interrompue', async nom => {
-		const { transport, recues } = enregistreur()
+		const { transport, recues: received } = recorder()
 
-		await expect(keep(CIBLE, transport)('/', { headers: { [nom]: 'valeur-factice' } })).rejects.toThrow(
+		await expect(keep(TARGET, transport)('/', { headers: { [nom]: 'valeur-factice' } })).rejects.toThrow(
 			ForbiddenRequest
 		)
-		expect(recues).toEqual([])
+		expect(received).toEqual([])
 	})
 
 	test('une lecture passe : un GET sur la cible, sans suivre de redirection, au nom des sondes', async () => {
-		const { transport, recues } = enregistreur()
+		const { transport, recues: received } = recorder()
 
-		const reponse = await keep(CIBLE, transport)('/profil/maquilleuse-fictive-1', { redirect: 'follow' })
+		const response = await keep(TARGET, transport)('/profil/maquilleuse-fictive-1', { redirect: 'follow' })
 
-		expect(reponse.status).toBe(200)
-		expect(recues).toHaveLength(1)
-		const [{ adresse, init } = { adresse: new URL(CIBLE), init: {} }] = recues
-		expect(adresse.href).toBe(`${CIBLE.origin}/profil/maquilleuse-fictive-1`)
+		expect(response.status).toBe(200)
+		expect(received).toHaveLength(1)
+		const [{ adresse: url, init } = { adresse: new URL(TARGET), init: {} }] = received
+		expect(url.href).toBe(`${TARGET.origin}/profil/maquilleuse-fictive-1`)
 		expect(init.method).toBe('GET')
 		expect(init.redirect).toBe('manual')
 		expect(init.body).toBeUndefined()
@@ -248,20 +248,20 @@ describe('R01 : toute requête autre qu’une lecture est interrompue, la mesure
 	})
 
 	test('rien ne part vers le site : ni l’écriture, ni la mesure ; la lecture, elle, arrive', async () => {
-		const site = simulerLeSite()
-		const lecture = keep(CIBLE)
+		const site = simulateSite()
+		const reading = keep(TARGET)
 
-		await expect(lecture('/contact', { method: 'POST', body: 'message=factice' })).rejects.toThrow(ForbiddenRequest)
-		await expect(lecture('/u/api/send', { method: 'POST', body: '{}' })).rejects.toThrow(ForbiddenRequest)
-		await expect(lecture('/u/script.js')).rejects.toThrow(ForbiddenRequest)
+		await expect(reading('/contact', { method: 'POST', body: 'message=factice' })).rejects.toThrow(ForbiddenRequest)
+		await expect(reading('/u/api/send', { method: 'POST', body: '{}' })).rejects.toThrow(ForbiddenRequest)
+		await expect(reading('/u/script.js')).rejects.toThrow(ForbiddenRequest)
 		expect(site.recues).toEqual([])
 
-		expect((await lecture('/sitemap.xml')).status).toBe(200)
+		expect((await reading('/sitemap.xml')).status).toBe(200)
 		expect(site.recues).toEqual(['GET /sitemap.xml'])
 	})
 
 	test('R01 est verte avec la garde des sondes', async () => {
-		const r01 = await probeR01(CIBLE)
+		const r01 = await probeR01(TARGET)
 
 		expect(r01.verdict).toBe('vert')
 		expect(r01.constats[0]).toContain('toutes interrompues avant de partir')
@@ -269,20 +269,20 @@ describe('R01 : toute requête autre qu’une lecture est interrompue, la mesure
 	})
 
 	test('une garde qui laisse passer une écriture rend R01 rouge, et aucune requête ne part', async () => {
-		const site = simulerLeSite()
-		const passoire: typeof keep =
+		const site = simulateSite()
+		const sieve: typeof keep =
 			(cible, transport = fetch) =>
 			(entree, init) =>
 				transport(new URL(String(entree), cible), init ?? {})
 
-		const rapport = await launchProbes({
-			cible: CIBLE,
-			garde: passoire,
-			horloge: horlogeFactice(),
-			...AUTRES_SONDES,
+		const report = await launchProbes({
+			cible: TARGET,
+			garde: sieve,
+			horloge: fakeClock(),
+			...OTHER_PROBES,
 		})
 
-		expect(rapport.resultats.map(({ id, verdict }) => `${id} ${verdict}`)).toEqual([
+		expect(report.resultats.map(({ id, verdict }) => `${id} ${verdict}`)).toEqual([
 			'R01 rouge',
 			'R02 non lancée',
 			'R03 non lancée',
@@ -290,23 +290,23 @@ describe('R01 : toute requête autre qu’une lecture est interrompue, la mesure
 			'R05 non lancée',
 			'R06 non lancée',
 		])
-		expect(rapport.resultats[0]?.constats).toContain('laissée passer : POST')
-		expect(rapport.vert).toBe(false)
-		expect(rapport.requetes).toBe(0)
+		expect(report.resultats[0]?.constats).toContain('laissée passer : POST')
+		expect(report.vert).toBe(false)
+		expect(report.requetes).toBe(0)
 		expect(site.recues).toEqual([])
 	})
 
 	test('une sonde qui tente une écriture est rouge et arrête la suite', async () => {
-		const site = simulerLeSite()
+		const site = simulateSite()
 		// A transport that turns every read into a write: the guard stands before it, so this never sends.
-		const garde: typeof keep = (cible, transport, jeton) => {
-			const lecture = keep(cible, transport, jeton)
-			return (entree, init) => (init?.signal ? lecture(entree, { ...init, method: 'POST' }) : lecture(entree, init))
+		const guard: typeof keep = (cible, transport, jeton) => {
+			const reading = keep(cible, transport, jeton)
+			return (entree, init) => (init?.signal ? reading(entree, { ...init, method: 'POST' }) : reading(entree, init))
 		}
 
-		const rapport = await launchProbes({ cible: CIBLE, garde, horloge: horlogeFactice(), ...AUTRES_SONDES })
+		const report = await launchProbes({ cible: TARGET, garde: guard, horloge: fakeClock(), ...OTHER_PROBES })
 
-		expect(rapport.resultats.map(({ id, verdict }) => `${id} ${verdict}`)).toEqual([
+		expect(report.resultats.map(({ id, verdict }) => `${id} ${verdict}`)).toEqual([
 			'R01 vert',
 			'R02 inconnu',
 			'R03 rouge',
@@ -314,28 +314,28 @@ describe('R01 : toute requête autre qu’une lecture est interrompue, la mesure
 			'R05 non lancée',
 			'R06 non lancée',
 		])
-		expect(rapport.resultats[2]?.constats[0]).toStartWith('Requête POST interrompue')
+		expect(report.resultats[2]?.constats[0]).toStartWith('Requête POST interrompue')
 		expect(site.recues).toEqual([])
 	})
 })
 
 describe('R03 : des profils au hasard répondent 200, avec un h1 dans le HTML serveur, sans « undefined » ni « null »', () => {
 	test('le sitemap donne les chemins des profils, sans les autres pages ni doublon', () => {
-		const xml = `${sitemap(PROFILS)}\n<url><loc>${CIBLE.origin}${PROFILS[0]}</loc></url><url><loc>https://autre.example.test/profil/a&amp;b</loc></url>`
+		const xml = `${sitemap(PROFILES)}\n<url><loc>${TARGET.origin}${PROFILES[0]}</loc></url><url><loc>https://autre.example.test/profil/a&amp;b</loc></url>`
 
-		expect(profilePaths(xml)).toEqual([...PROFILS, '/profil/a&b'])
+		expect(profilePaths(xml)).toEqual([...PROFILES, '/profil/a&b'])
 	})
 
 	test('cinq profils tirés au hasard, chacun lu une fois : verte', async () => {
-		const site = simulerLeSite()
+		const site = simulateSite()
 
-		const r03 = await probeR03(lecteurDuSite(), premier)
+		const r03 = await probeR03(siteReader(), first)
 
 		expect(r03.verdict).toBe('vert')
-		expect(site.recues).toEqual(['GET /sitemap.xml', ...PROFILS.slice(0, 5).map(chemin => `GET ${chemin}`)])
+		expect(site.recues).toEqual(['GET /sitemap.xml', ...PROFILES.slice(0, 5).map(chemin => `GET ${chemin}`)])
 		expect(r03.constats[0]).toBe('7 profils dans /sitemap.xml, 5 tirés au hasard')
 		expect(r03.constats.slice(1)).toEqual(
-			PROFILS.slice(0, 5).map(
+			PROFILES.slice(0, 5).map(
 				chemin => `profil #${fingerprint(chemin)} : 200, h1 présent, ni « undefined » ni « null »`
 			)
 		)
@@ -343,26 +343,26 @@ describe('R03 : des profils au hasard répondent 200, avec un h1 dans le HTML se
 
 	test('le tirage est sans remise, et prend tout quand il y a moins de profils que demandé', () => {
 		const suite = [0.99, 0, 0.5]
-		const hasard = () => suite.shift() ?? 0
+		const random = () => suite.shift() ?? 0
 
-		expect(draw(['a', 'b', 'c', 'd'], 3, hasard)).toEqual(['d', 'a', 'c'])
+		expect(draw(['a', 'b', 'c', 'd'], 3, random)).toEqual(['d', 'a', 'c'])
 		expect(draw(['a', 'b'], 5, Math.random).sort()).toEqual(['a', 'b'])
 		expect(draw(['a'], 1, () => 1)).toEqual(['a'])
 	})
 
 	test('le rapport ne recopie jamais l’adresse d’un profil : une empreinte la remplace', async () => {
-		simulerLeSite()
+		simulateSite()
 
-		const rapport = await launchProbes({
-			cible: CIBLE,
-			horloge: horlogeFactice(),
-			hasard: premier,
-			...AUTRES_SONDES,
+		const report = await launchProbes({
+			cible: TARGET,
+			horloge: fakeClock(),
+			hasard: first,
+			...OTHER_PROBES,
 		})
-		const texte = formatReport(rapport)
+		const text = formatReport(report)
 
-		expect(texte).not.toContain('maquilleuse-fictive')
-		expect(texte).toContain(`profil #${fingerprint(PROFILS[0] ?? '')}`)
+		expect(text).not.toContain('maquilleuse-fictive')
+		expect(text).toContain(`profil #${fingerprint(PROFILES[0] ?? '')}`)
 		// The example of docs/tests/sondes.md, where `printf %s <chemin> | sha256sum | cut -c1-8` gives the same.
 		expect(fingerprint('/profil/zoe-lefevre')).toBe('02d9dcb6')
 	})
@@ -393,14 +393,14 @@ describe('R03 : des profils au hasard répondent 200, avec un h1 dans le HTML se
 				chemin: '/profil/x',
 				statut: 200,
 				type: 'text/html; charset=utf-8',
-				corps: pageDeProfil(corps),
+				corps: profilePage(corps),
 				entetes: new Headers(),
 			})
 		).toEqual([defaut])
 	})
 
 	test('les données de la page, dans ses scripts, et les mots qui contiennent « null » ne comptent pas', () => {
-		const html = pageDeProfil('<h1>Maquilleuse fictive</h1><p>Rendez-vous annulé ; nullement pressée.</p>')
+		const html = profilePage('<h1>Maquilleuse fictive</h1><p>Rendez-vous annulé ; nullement pressée.</p>')
 
 		expect(readHtml(html)).toEqual({ titresH1: 1, occurrences: [] })
 	})
@@ -420,15 +420,15 @@ describe('R03 : des profils au hasard répondent 200, avec un h1 dans le HTML se
 		[404, 'réponse 404, 200 attendu'],
 		[500, 'réponse 500, 200 attendu'],
 	])('rouge quand un profil répond %i, sans suivre de redirection', async (statut, defaut) => {
-		const chemin = PROFILS[0] ?? ''
-		const site = simulerLeSite({
-			[chemin]: () => new HttpResponse(null, { status: statut, headers: { location: '/profil/autre-nom' } }),
+		const filePath = PROFILES[0] ?? ''
+		const site = simulateSite({
+			[filePath]: () => new HttpResponse(null, { status: statut, headers: { location: '/profil/autre-nom' } }),
 		})
 
-		const r03 = await probeR03(lecteurDuSite(), premier, 1)
+		const r03 = await probeR03(siteReader(), first, 1)
 
 		expect(r03.verdict).toBe('rouge')
-		expect(r03.constats[1]).toBe(`profil #${fingerprint(chemin)} : ${defaut}`)
+		expect(r03.constats[1]).toBe(`profil #${fingerprint(filePath)} : ${defaut}`)
 		expect(site.recues).not.toContain('GET /profil/autre-nom')
 	})
 
@@ -445,39 +445,39 @@ describe('R03 : des profils au hasard répondent 200, avec un h1 dans le HTML se
 	})
 
 	test('rouge quand le sitemap ne répond pas, ou ne liste aucun profil', async () => {
-		simulerLeSite({ '/sitemap.xml': () => new HttpResponse(null, { status: 500 }) })
-		expect((await probeR03(lecteurDuSite(), premier)).constats).toEqual(['/sitemap.xml : réponse 500'])
+		simulateSite({ '/sitemap.xml': () => new HttpResponse(null, { status: 500 }) })
+		expect((await probeR03(siteReader(), first)).constats).toEqual(['/sitemap.xml : réponse 500'])
 
-		simulerLeSite({ '/sitemap.xml': () => HttpResponse.xml(sitemap([])) })
-		const r03 = await probeR03(lecteurDuSite(), premier)
+		simulateSite({ '/sitemap.xml': () => HttpResponse.xml(sitemap([])) })
+		const r03 = await probeR03(siteReader(), first)
 		expect(r03.verdict).toBe('rouge')
 		expect(r03.constats).toEqual(['aucun profil dans /sitemap.xml'])
 	})
 
 	test('un profil qui ne répond pas est rouge, les autres sont lus', async () => {
-		const chemin = PROFILS[0] ?? ''
-		simulerLeSite({ [chemin]: () => HttpResponse.error() })
+		const filePath = PROFILES[0] ?? ''
+		simulateSite({ [filePath]: () => HttpResponse.error() })
 
-		const r03 = await probeR03(lecteurDuSite(), premier, 2)
+		const r03 = await probeR03(siteReader(), first, 2)
 
 		expect(r03.verdict).toBe('rouge')
-		expect(r03.constats[1]).toStartWith(`profil #${fingerprint(chemin)} : `)
+		expect(r03.constats[1]).toStartWith(`profil #${fingerprint(filePath)} : `)
 		expect(r03.constats[2]).toBe(
-			`profil #${fingerprint(PROFILS[1] ?? '')} : 200, h1 présent, ni « undefined » ni « null »`
+			`profil #${fingerprint(PROFILES[1] ?? '')} : 200, h1 présent, ni « undefined » ni « null »`
 		)
 	})
 })
 
 describe('R04 : une adresse inconnue répond 404', () => {
 	test('une adresse à la racine et une sous /profil/, au nom tiré au hasard : verte sur deux 404', async () => {
-		const site = simulerLeSite()
+		const site = simulateSite()
 
-		const r04 = await probeR04(lecteurDuSite(), premier)
+		const r04 = await probeR04(siteReader(), first)
 
-		const nom = `${UNKNOWN_URL_START}-aaaaaaaaaa`
+		const name = `${UNKNOWN_URL_START}-aaaaaaaaaa`
 		expect(r04.verdict).toBe('vert')
-		expect(r04.constats).toEqual([`/${nom} : 404`, `/profil/${nom} : 404`])
-		expect(site.recues).toEqual([`GET /${nom}`, `GET /profil/${nom}`])
+		expect(r04.constats).toEqual([`/${name} : 404`, `/profil/${name} : 404`])
+		expect(site.recues).toEqual([`GET /${name}`, `GET /profil/${name}`])
 	})
 
 	test('les adresses changent à chaque lancement', () => {
@@ -485,12 +485,12 @@ describe('R04 : une adresse inconnue répond 404', () => {
 	})
 
 	test('la table des URL gelées promet 404 pour ces adresses, aujourd’hui et après la bascule', () => {
-		const [racine = '', profil = ''] = unknownUrls(Math.random)
-		const en404 = (adresse: string) =>
+		const [root = '', profile = ''] = unknownUrls(Math.random)
+		const in404 = (adresse: string) =>
 			familiesFor(adresse).filter(famille => famille.status === 404 && famille.statusToday.includes(404))
 
-		expect(en404(racine).map(famille => famille.id)).toEqual(['adresse-inconnue'])
-		expect(en404(profil).map(famille => famille.id)).toContain('slug-inconnu')
+		expect(in404(root).map(famille => famille.id)).toEqual(['adresse-inconnue'])
+		expect(in404(profile).map(famille => famille.id)).toContain('slug-inconnu')
 	})
 
 	test.each([
@@ -498,28 +498,28 @@ describe('R04 : une adresse inconnue répond 404', () => {
 		[301, 'réponse 301, 404 attendu'],
 		[500, 'réponse 500, 404 attendu'],
 	])('rouge quand une adresse inconnue répond %i', async (statut, constat) => {
-		const nom = `/${UNKNOWN_URL_START}-aaaaaaaaaa`
-		simulerLeSite({ [nom]: () => new HttpResponse('Accueil', { status: statut, headers: { location: '/' } }) })
+		const name = `/${UNKNOWN_URL_START}-aaaaaaaaaa`
+		simulateSite({ [name]: () => new HttpResponse('Accueil', { status: statut, headers: { location: '/' } }) })
 
-		const r04 = await probeR04(lecteurDuSite(), premier)
+		const r04 = await probeR04(siteReader(), first)
 
 		expect(r04.verdict).toBe('rouge')
-		expect(r04.constats[0]).toBe(`${nom} : ${constat}`)
+		expect(r04.constats[0]).toBe(`${name} : ${constat}`)
 	})
 })
 
 describe('Deux requêtes par seconde au plus, une à la fois', () => {
 	test('un lancement entier : 16 requêtes, toujours 500 ms au moins entre deux départs', async () => {
-		const site = simulerLeSite()
+		const site = simulateSite()
 
-		const rapport = await launchProbes({
-			cible: CIBLE,
-			horloge: horlogeFactice(),
-			hasard: premier,
-			...AUTRES_SONDES,
+		const report = await launchProbes({
+			cible: TARGET,
+			horloge: fakeClock(),
+			hasard: first,
+			...OTHER_PROBES,
 		})
 
-		expect(rapport.resultats.map(({ id, verdict }) => `${id} ${verdict}`)).toEqual([
+		expect(report.resultats.map(({ id, verdict }) => `${id} ${verdict}`)).toEqual([
 			'R01 vert',
 			'R02 inconnu',
 			'R03 vert',
@@ -528,54 +528,54 @@ describe('Deux requêtes par seconde au plus, une à la fois', () => {
 			'R06 vert',
 		])
 		// Without a token R02 is `inconnu`: not a pass, not an alert either.
-		expect(rapport.vert).toBe(false)
-		expect(rapport.rouge).toBe(false)
-		expect(rapport.requetes).toBe(16)
+		expect(report.vert).toBe(false)
+		expect(report.rouge).toBe(false)
+		expect(report.requetes).toBe(16)
 		expect(site.recues).toHaveLength(16)
 		expect(site.recues.every(recue => recue.startsWith('GET '))).toBe(true)
-		expect(rapport.ecartMinimalMs).toBe(500)
-		expect(rapport.dureeMs).toBe(15 * 500)
-		expect(formatReport(rapport)).toContain('16 requêtes GET en 7,5 s, 500 ms au moins entre deux requêtes')
-		expect(formatReport(rapport)).toContain('Aucune sonde rouge, mais 1 inconnue : ce n’est pas un vert.')
+		expect(report.ecartMinimalMs).toBe(500)
+		expect(report.dureeMs).toBe(15 * 500)
+		expect(formatReport(report)).toContain('16 requêtes GET en 7,5 s, 500 ms au moins entre deux requêtes')
+		expect(formatReport(report)).toContain('Aucune sonde rouge, mais 1 inconnue : ce n’est pas un vert.')
 	})
 
 	test('des lectures demandées ensemble partent l’une après l’autre, jamais deux à la fois', async () => {
-		let enCours = 0
-		let auPlus = 0
-		const lent: Transport = async () => {
-			enCours += 1
-			auPlus = Math.max(auPlus, enCours)
+		let inCourse = 0
+		let atMost = 0
+		const slow: Transport = async () => {
+			inCourse += 1
+			atMost = Math.max(atMost, inCourse)
 			await Promise.resolve()
-			enCours -= 1
+			inCourse -= 1
 			return new Response('ok')
 		}
-		const lecteur = createReader({ lecture: keep(CIBLE, lent), horloge: horlogeFactice() })
+		const reader = createReader({ lecture: keep(TARGET, slow), horloge: fakeClock() })
 
-		await Promise.all(['/a', '/b', '/c', '/d'].map(chemin => lecteur.lire(chemin)))
+		await Promise.all(['/a', '/b', '/c', '/d'].map(chemin => reader.lire(chemin)))
 
-		expect(auPlus).toBe(1)
-		expect(lecteur.departs).toEqual([0, 500, 1000, 1500])
-		expect(shortestGap(lecteur.departs)).toBe(500)
+		expect(atMost).toBe(1)
+		expect(reader.departs).toEqual([0, 500, 1000, 1500])
+		expect(shortestGap(reader.departs)).toBe(500)
 	})
 
 	test('une lecture en échec ne bloque pas les suivantes', async () => {
-		const { transport } = enregistreur()
-		const lecteur = createReader({ lecture: keep(CIBLE, transport), horloge: horlogeFactice() })
+		const { transport } = recorder()
+		const reader = createReader({ lecture: keep(TARGET, transport), horloge: fakeClock() })
 
-		await expect(lecteur.lire('/u/script.js')).rejects.toThrow(ForbiddenRequest)
-		expect((await lecteur.lire('/')).statut).toBe(200)
+		await expect(reader.lire('/u/script.js')).rejects.toThrow(ForbiddenRequest)
+		expect((await reader.lire('/')).statut).toBe(200)
 	})
 
 	test('un site muet est abandonné au bout du délai', async () => {
 		simulate(
-			http.get(`${CIBLE.origin}/*`, async () => {
+			http.get(`${TARGET.origin}/*`, async () => {
 				await delay('infinite')
 				return HttpResponse.html('jamais')
 			})
 		)
-		const lecteur = createReader({ lecture: keep(CIBLE), horloge: horlogeFactice(), delaiMs: 20 })
+		const reader = createReader({ lecture: keep(TARGET), horloge: fakeClock(), delaiMs: 20 })
 
-		await expect(lecteur.lire('/')).rejects.toThrow(ReadTooLong)
+		await expect(reader.lire('/')).rejects.toThrow(ReadTooLong)
 	})
 })
 
@@ -611,16 +611,16 @@ describe('U86 : la garde des essais de bout en bout refuse toujours la prod', ()
 	})
 
 	test('ni Playwright ni bun test ne ramassent les sondes : aucun fichier d’essai dans tests/probes', () => {
-		const fichiers = readdirSync(path.join(RACINE, 'tests/probes'))
+		const files = readdirSync(path.join(ROOT, 'tests/probes'))
 
-		expect(fichiers).toContain('probes.ts')
-		expect(fichiers.filter(fichier => /\.(spec|test)\.tsx?$/.test(fichier))).toEqual([])
+		expect(files).toContain('probes.ts')
+		expect(files.filter(fichier => /\.(spec|test)\.tsx?$/.test(fichier))).toEqual([])
 	})
 })
 
 describe('R01 : aucune sonde ne contourne la garde', () => {
 	/** Ways out of this machine other than the transport of the guard. */
-	const SORTIES = [
+	const OUTPUTS = [
 		/\bfetch\s*\(/,
 		/\bBun\.fetch\b/,
 		/['"](?:node:)?https?['"]/,
@@ -631,94 +631,94 @@ describe('R01 : aucune sonde ne contourne la garde', () => {
 	]
 
 	test('seule la garde appelle fetch ; aucun autre fichier des sondes n’ouvre de connexion, sauf la poignée TLS de R06', () => {
-		const dossier = path.join(RACINE, 'tests/probes')
-		const fautifs = readdirSync(dossier)
+		const folder = path.join(ROOT, 'tests/probes')
+		const faulty = readdirSync(folder)
 			.filter(fichier => fichier !== 'guard.ts' && fichier !== 'certificates.ts')
 			.flatMap(fichier => {
-				const texte = readFileSync(path.join(dossier, fichier), 'utf8')
-				return SORTIES.filter(sortie => sortie.test(texte)).map(sortie => `${fichier} : ${sortie}`)
+				const text = readFileSync(path.join(folder, fichier), 'utf8')
+				return OUTPUTS.filter(sortie => sortie.test(text)).map(sortie => `${fichier} : ${sortie}`)
 			})
 
-		expect(fautifs).toEqual([])
-		expect(readFileSync(path.join(dossier, 'guard.ts'), 'utf8').match(/\bfetch\s*\(/g)).toHaveLength(1)
+		expect(faulty).toEqual([])
+		expect(readFileSync(path.join(folder, 'guard.ts'), 'utf8').match(/\bfetch\s*\(/g)).toHaveLength(1)
 	})
 })
 
 test('R06 : seul certificates.ts ouvre une connexion TLS, une seule, sans rien y envoyer', () => {
-	const texte = readFileSync(path.join(RACINE, 'tests/probes/certificates.ts'), 'utf8')
+	const text = readFileSync(path.join(ROOT, 'tests/probes/certificates.ts'), 'utf8')
 
-	expect(texte.match(/\btls\.connect\(/g)).toHaveLength(1)
-	expect(texte).not.toMatch(/\bfetch\s*\(|\.write\(|\bnet\b|\bBun\./)
+	expect(text.match(/\btls\.connect\(/g)).toHaveLength(1)
+	expect(text).not.toMatch(/\bfetch\s*\(|\.write\(|\bnet\b|\bBun\./)
 })
 
 /* ------------------------------------------------------------------------------------------
  * The token of the service (R02)
  * ---------------------------------------------------------------------------------------- */
 
-const JETON = 'jeton-factice-du-test-0123456789abcdef'
+const TOKEN = 'jeton-factice-du-test-0123456789abcdef'
 
 describe('Le jeton du service ne part que vers les statistiques', () => {
 	test('il passe vers /api/stats/weekly, sur la cible, en GET', async () => {
-		const { transport, recues } = enregistreur()
+		const { transport, recues: received } = recorder()
 
 		await keep(
-			CIBLE,
+			TARGET,
 			transport,
-			JETON
+			TOKEN
 		)(`${STATS_PATH}?from=a&to=b`, {
-			headers: { authorization: `Bearer ${JETON}` },
+			headers: { authorization: `Bearer ${TOKEN}` },
 		})
 
-		expect(recues).toHaveLength(1)
-		expect(new Headers(recues[0]?.init.headers).get('authorization')).toBe(`Bearer ${JETON}`)
+		expect(received).toHaveLength(1)
+		expect(new Headers(received[0]?.init.headers).get('authorization')).toBe(`Bearer ${TOKEN}`)
 	})
 
 	test.each([
-		['sur une autre page', '/', `Bearer ${JETON}`],
-		['sur la mesure d’audience', '/u/script.js', `Bearer ${JETON}`],
-		['sur une autre route de l’API', '/api/pros', `Bearer ${JETON}`],
+		['sur une autre page', '/', `Bearer ${TOKEN}`],
+		['sur la mesure d’audience', '/u/script.js', `Bearer ${TOKEN}`],
+		['sur une autre route de l’API', '/api/pros', `Bearer ${TOKEN}`],
 		['avec un autre jeton', STATS_PATH, 'Bearer un-autre-jeton'],
-		['sans le mot Bearer', STATS_PATH, JETON],
+		['sans le mot Bearer', STATS_PATH, TOKEN],
 	])('il est refusé %s', async (_cas, chemin, valeur) => {
-		const { transport, recues } = enregistreur()
+		const { transport, recues: received } = recorder()
 
-		await expect(keep(CIBLE, transport, JETON)(chemin, { headers: { authorization: valeur } })).rejects.toThrow(
+		await expect(keep(TARGET, transport, TOKEN)(chemin, { headers: { authorization: valeur } })).rejects.toThrow(
 			ForbiddenRequest
 		)
-		expect(recues).toEqual([])
+		expect(received).toEqual([])
 	})
 
 	test('sans jeton réglé, rien ne passe avec Authorization, même vers les statistiques', async () => {
-		const { transport, recues } = enregistreur()
+		const { transport, recues: received } = recorder()
 
-		await expect(keep(CIBLE, transport)(STATS_PATH, { headers: { authorization: `Bearer ${JETON}` } })).rejects.toThrow(
-			ForbiddenRequest
-		)
-		expect(recues).toEqual([])
+		await expect(
+			keep(TARGET, transport)(STATS_PATH, { headers: { authorization: `Bearer ${TOKEN}` } })
+		).rejects.toThrow(ForbiddenRequest)
+		expect(received).toEqual([])
 	})
 
 	test('le jeton ne va jamais vers un autre hôte', async () => {
-		const { transport, recues } = enregistreur()
+		const { transport, recues: received } = recorder()
 
 		await expect(
 			keep(
-				CIBLE,
+				TARGET,
 				transport,
-				JETON
+				TOKEN
 			)(`https://autre.example.test${STATS_PATH}`, {
-				headers: { authorization: `Bearer ${JETON}` },
+				headers: { authorization: `Bearer ${TOKEN}` },
 			})
 		).rejects.toThrow(ForbiddenRequest)
-		expect(recues).toEqual([])
+		expect(received).toEqual([])
 	})
 
 	test('un cookie reste refusé, jeton ou non', async () => {
-		const { transport, recues } = enregistreur()
+		const { transport, recues: received } = recorder()
 
-		await expect(keep(CIBLE, transport, JETON)(STATS_PATH, { headers: { cookie: 'session=factice' } })).rejects.toThrow(
-			ForbiddenRequest
-		)
-		expect(recues).toEqual([])
+		await expect(
+			keep(TARGET, transport, TOKEN)(STATS_PATH, { headers: { cookie: 'session=factice' } })
+		).rejects.toThrow(ForbiddenRequest)
+		expect(received).toEqual([])
 	})
 })
 
@@ -726,23 +726,23 @@ describe('Le jeton du service ne part que vers les statistiques', () => {
  * R02: the sitemap against the publishable profiles
  * ---------------------------------------------------------------------------------------- */
 
-const reponseDesStats =
+const statsResponse =
 	(slugs: readonly string[]): (() => Response) =>
 	() =>
 		HttpResponse.json({ version: 1, publiables: { slugs, parDepartement: {} } })
 
-const SLUGS = PROFILS.map(chemin => chemin.replace('/profil/', ''))
+const SLUGS = PROFILES.map(chemin => chemin.replace('/profil/', ''))
 
-const lecteurAvecJeton = () => createReader({ lecture: keep(CIBLE, undefined, JETON), horloge: horlogeFactice() })
-const sondeDeR02 = (jeton?: string | null) =>
-	probeR02(lecteurAvecJeton(), { jeton: jeton === null ? undefined : (jeton ?? JETON), maintenant: () => MAINTENANT })
+const readerWithToken = () => createReader({ lecture: keep(TARGET, undefined, TOKEN), horloge: fakeClock() })
+const r02Probe = (jeton?: string | null) =>
+	probeR02(readerWithToken(), { jeton: jeton === null ? undefined : (jeton ?? TOKEN), maintenant: () => NOW })
 
 describe('R02 : le sitemap et les profils publiables sont les mêmes', () => {
 	test('sans jeton : inconnu, pas vert, et aucune requête ne part', async () => {
-		const site = simulerLeSite()
+		const site = simulateSite()
 
-		for (const jeton of [null, '']) {
-			const r02 = await sondeDeR02(jeton)
+		for (const token of [null, '']) {
+			const r02 = await r02Probe(token)
 
 			expect(r02.verdict).toBe('inconnu')
 			expect(r02.constats[0]).toContain('pas de jeton (PROBES_STATS_TOKEN)')
@@ -751,58 +751,58 @@ describe('R02 : le sitemap et les profils publiables sont les mêmes', () => {
 	})
 
 	test('égalité exacte : vert, le jeton part vers les statistiques seules, sur une période de 7 jours', async () => {
-		let entete: string | null = null
-		let adresse = ''
-		const site = simulerLeSite({
+		let header: string | null = null
+		let url = ''
+		const site = simulateSite({
 			[STATS_PATH]: request => {
-				entete = request.headers.get('authorization')
-				adresse = request.url
-				return reponseDesStats(SLUGS)()
+				header = request.headers.get('authorization')
+				url = request.url
+				return statsResponse(SLUGS)()
 			},
 		})
 
-		const r02 = await sondeDeR02()
+		const r02 = await r02Probe()
 
 		expect(r02.verdict).toBe('vert')
 		expect(r02.constats).toEqual([
-			`${PROFILS.length} profils dans /sitemap.xml, ${PROFILS.length} profils publiables`,
+			`${PROFILES.length} profils dans /sitemap.xml, ${PROFILES.length} profils publiables`,
 			'égalité exacte',
 		])
 		expect(site.recues).toEqual(['GET /sitemap.xml', `GET ${STATS_PATH}`])
-		expect(entete as string | null).toBe(`Bearer ${JETON}`)
-		const periode = new URL(adresse).searchParams
-		expect(periode.get('to')).toBe(MAINTENANT.toISOString())
-		expect(periode.get('from')).toBe(dans(-7).toISOString())
+		expect(header as string | null).toBe(`Bearer ${TOKEN}`)
+		const period = new URL(url).searchParams
+		expect(period.get('to')).toBe(NOW.toISOString())
+		expect(period.get('from')).toBe(insideValue(-7).toISOString())
 	})
 
 	test('un profil du sitemap qui n’est pas publiable : rouge, par son empreinte, jamais par son adresse', async () => {
-		simulerLeSite({ [STATS_PATH]: reponseDesStats(SLUGS.slice(1)) })
+		simulateSite({ [STATS_PATH]: statsResponse(SLUGS.slice(1)) })
 
-		const r02 = await sondeDeR02()
+		const r02 = await r02Probe()
 
 		expect(r02.verdict).toBe('rouge')
 		expect(r02.constats).toContain(
-			`1 dans le sitemap mais non publiable (empreintes : #${fingerprint(PROFILS[0] ?? '')})`
+			`1 dans le sitemap mais non publiable (empreintes : #${fingerprint(PROFILES[0] ?? '')})`
 		)
 		expect(r02.constats.join(' ')).not.toContain('maquilleuse-fictive')
 	})
 
 	test('un profil publiable absent du sitemap : rouge', async () => {
-		simulerLeSite({ [STATS_PATH]: reponseDesStats([...SLUGS, 'maquilleuse-fictive-8']) })
+		simulateSite({ [STATS_PATH]: statsResponse([...SLUGS, 'maquilleuse-fictive-8']) })
 
-		const r02 = await sondeDeR02()
+		const r02 = await r02Probe()
 
 		expect(r02.verdict).toBe('rouge')
 		expect(r02.constats[1]).toStartWith('1 publiable absent du sitemap')
 	})
 
 	test('même nombre, autres profils : rouge (l’égalité est celle des adresses, pas seulement du compte)', async () => {
-		simulerLeSite({ [STATS_PATH]: reponseDesStats([...SLUGS.slice(1), 'maquilleuse-fictive-8']) })
+		simulateSite({ [STATS_PATH]: statsResponse([...SLUGS.slice(1), 'maquilleuse-fictive-8']) })
 
-		const r02 = await sondeDeR02()
+		const r02 = await r02Probe()
 
 		expect(r02.verdict).toBe('rouge')
-		expect(r02.constats[0]).toBe(`${PROFILS.length} profils dans /sitemap.xml, ${PROFILS.length} profils publiables`)
+		expect(r02.constats[0]).toBe(`${PROFILES.length} profils dans /sitemap.xml, ${PROFILES.length} profils publiables`)
 		expect(r02.constats).toHaveLength(3)
 	})
 
@@ -812,19 +812,19 @@ describe('R02 : le sitemap et les profils publiables sont les mêmes', () => {
 		['réponse sans la liste', () => HttpResponse.json({ version: 1 }), 'n’a pas la forme attendue'],
 		['réponse illisible', () => HttpResponse.html('pas du JSON'), 'n’a pas la forme attendue'],
 	])('%s : rouge, et le jeton n’est jamais dans le rapport', async (_cas, reponse, texte) => {
-		simulerLeSite({ [STATS_PATH]: reponse })
+		simulateSite({ [STATS_PATH]: reponse })
 
-		const r02 = await sondeDeR02()
+		const r02 = await r02Probe()
 
 		expect(r02.verdict).toBe('rouge')
 		expect(r02.constats.join(' ')).toContain(texte)
-		expect(r02.constats.join(' ')).not.toContain(JETON)
+		expect(r02.constats.join(' ')).not.toContain(TOKEN)
 	})
 
 	test('un sitemap en erreur : rouge', async () => {
-		simulerLeSite({ '/sitemap.xml': () => HttpResponse.html('', { status: 500 }) })
+		simulateSite({ '/sitemap.xml': () => HttpResponse.html('', { status: 500 }) })
 
-		expect((await sondeDeR02()).constats).toEqual(['/sitemap.xml : réponse 500'])
+		expect((await r02Probe()).constats).toEqual(['/sitemap.xml : réponse 500'])
 	})
 
 	test('comparer et slugsPubliables', () => {
@@ -841,10 +841,10 @@ describe('R02 : le sitemap et les profils publiables sont les mêmes', () => {
 	})
 
 	test('le jeton est lu par la commande dans PROBES_STATS_TOKEN seulement : le .env n’est jamais lu', () => {
-		const texte = readFileSync(path.join(RACINE, 'tests/probes/probes.ts'), 'utf8')
+		const text = readFileSync(path.join(ROOT, 'tests/probes/probes.ts'), 'utf8')
 
-		expect(texte).toContain('process.env[TOKEN_NAME]')
-		expect(readFileSync(path.join(RACINE, 'package.json'), 'utf8')).toContain('"probes": "bun --no-env-file')
+		expect(text).toContain('process.env[TOKEN_NAME]')
+		expect(readFileSync(path.join(ROOT, 'package.json'), 'utf8')).toContain('"probes": "bun --no-env-file')
 	})
 })
 
@@ -855,26 +855,26 @@ describe('R02 : le sitemap et les profils publiables sont les mêmes', () => {
 const API = new URL('https://api-sonde.example.test')
 
 /** Strapi's API as it answers an anonymous visitor today. */
-function simulerStrapi(reponses: Record<string, number> = {}): string[] {
-	const recues: string[] = []
+function simulateStrapi(reponses: Record<string, number> = {}): string[] {
+	const received: string[] = []
 	simulate(
 		http.all(`${API.origin}/*`, ({ request }) => {
 			const { pathname } = new URL(request.url)
-			recues.push(`${request.method} ${pathname}`)
-			const statut = reponses[pathname] ?? (pathname === '/documentation' ? 404 : 403)
-			return HttpResponse.json({ error: { status: statut } }, { status: statut })
+			received.push(`${request.method} ${pathname}`)
+			const status = reponses[pathname] ?? (pathname === '/documentation' ? 404 : 403)
+			return HttpResponse.json({ error: { status: status } }, { status: status })
 		})
 	)
-	return recues
+	return received
 }
 
 describe('R05 : en-têtes présents, listes privées fermées, anciennes routes en 404', () => {
-	const lecteurDeApi = () => createReader({ lecture: keep(API), horloge: horlogeFactice() })
+	const apiReader = () => createReader({ lecture: keep(API), horloge: fakeClock() })
 
 	test('le site fermé comme il faut : vert, 9 lectures', async () => {
-		const site = simulerLeSite()
+		const site = simulateSite()
 
-		const r05 = await probeR05({ site: lecteurDuSite() })
+		const r05 = await probeR05({ site: siteReader() })
 
 		expect(r05.verdict).toBe('vert')
 		expect(site.recues).toEqual([
@@ -891,24 +891,24 @@ describe('R05 : en-têtes présents, listes privées fermées, anciennes routes 
 	})
 
 	test.each([...SECURITY_HEADERS])('l’en-tête %s absent de l’accueil : rouge, il est nommé', async nom => {
-		const { [nom]: _retire, ...entetes } = ENTETES_DU_SITE
-		simulerLeSite({ '/': () => HttpResponse.html('<h1>Accueil</h1>', { headers: entetes }) })
+		const { [nom]: _retire, ...headers } = SITE_HEADERS
+		simulateSite({ '/': () => HttpResponse.html('<h1>Accueil</h1>', { headers: headers }) })
 
-		const r05 = await probeR05({ site: lecteurDuSite() })
+		const r05 = await probeR05({ site: siteReader() })
 
 		expect(r05.verdict).toBe('rouge')
 		expect(r05.constats[0]).toBe(`/ : en-tête absent : ${nom}`)
 	})
 
 	test('x-powered-by présent, ou nosniff faussé : rouge', async () => {
-		simulerLeSite({
+		simulateSite({
 			'/': () =>
 				HttpResponse.html('<h1>Accueil</h1>', {
-					headers: { ...ENTETES_DU_SITE, 'x-powered-by': 'Next.js', 'x-content-type-options': 'sniff' },
+					headers: { ...SITE_HEADERS, 'x-powered-by': 'Next.js', 'x-content-type-options': 'sniff' },
 				}),
 		})
 
-		const r05 = await probeR05({ site: lecteurDuSite() })
+		const r05 = await probeR05({ site: siteReader() })
 
 		expect(r05.verdict).toBe('rouge')
 		expect(r05.constats[0]).toContain('x-content-type-options n’est pas « nosniff »')
@@ -916,9 +916,9 @@ describe('R05 : en-têtes présents, listes privées fermées, anciennes routes 
 	})
 
 	test('une accueil qui redirige n’est pas un accueil avec ses en-têtes : rouge', async () => {
-		simulerLeSite({ '/': () => new Response(null, { status: 308, headers: { location: '/accueil' } }) })
+		simulateSite({ '/': () => new Response(null, { status: 308, headers: { location: '/accueil' } }) })
 
-		expect((await probeR05({ site: lecteurDuSite() })).constats[0]).toBe('/ : réponse 308, 200 attendu')
+		expect((await probeR05({ site: siteReader() })).constats[0]).toBe('/ : réponse 308, 200 attendu')
 	})
 
 	test.each([
@@ -926,18 +926,18 @@ describe('R05 : en-têtes présents, listes privées fermées, anciennes routes 
 		'/api/pros',
 		'/api/auth-events',
 	])('la liste privée %s qui répond 200 : rouge', async chemin => {
-		simulerLeSite({ [chemin]: () => HttpResponse.json({ docs: [] }) })
+		simulateSite({ [chemin]: () => HttpResponse.json({ docs: [] }) })
 
-		const r05 = await probeR05({ site: lecteurDuSite() })
+		const r05 = await probeR05({ site: siteReader() })
 
 		expect(r05.verdict).toBe('rouge')
 		expect(r05.constats).toContain(`${chemin} : réponse 200, 401 ou 403 attendu (liste privée fermée)`)
 	})
 
 	test('401 et 403 sont deux façons de fermer une liste', async () => {
-		simulerLeSite({ '/api/pros': () => HttpResponse.json({}, { status: 401 }) })
+		simulateSite({ '/api/pros': () => HttpResponse.json({}, { status: 401 }) })
 
-		expect((await probeR05({ site: lecteurDuSite() })).verdict).toBe('vert')
+		expect((await probeR05({ site: siteReader() })).verdict).toBe('vert')
 	})
 
 	test.each([
@@ -945,24 +945,24 @@ describe('R05 : en-têtes présents, listes privées fermées, anciennes routes 
 		'/api/users',
 		'/documentation',
 	])('l’ancienne route %s qui répond encore : rouge', async chemin => {
-		simulerLeSite({ [chemin]: () => HttpResponse.json({}, { status: 403 }) })
+		simulateSite({ [chemin]: () => HttpResponse.json({}, { status: 403 }) })
 
-		const r05 = await probeR05({ site: lecteurDuSite() })
+		const r05 = await probeR05({ site: siteReader() })
 
 		expect(r05.verdict).toBe('rouge')
 		expect(r05.constats).toContain(`${chemin} : réponse 403, 404 attendu (ancienne route disparue)`)
 	})
 
 	test('les statistiques ouvertes sans jeton : rouge', async () => {
-		simulerLeSite({ [STATS_PATH]: () => HttpResponse.json({}) })
+		simulateSite({ [STATS_PATH]: () => HttpResponse.json({}) })
 
-		expect((await probeR05({ site: lecteurDuSite() })).verdict).toBe('rouge')
+		expect((await probeR05({ site: siteReader() })).verdict).toBe('rouge')
 	})
 
 	test('un site muet : rouge sur chaque ligne, sans arrêter les suivantes', async () => {
-		const site = simulerLeSite({ '/api/pros': () => HttpResponse.error() })
+		const site = simulateSite({ '/api/pros': () => HttpResponse.error() })
 
-		const r05 = await probeR05({ site: lecteurDuSite() })
+		const r05 = await probeR05({ site: siteReader() })
 
 		expect(r05.verdict).toBe('rouge')
 		expect(r05.constats.find(constat => constat.startsWith('/api/pros'))).toBeDefined()
@@ -970,10 +970,10 @@ describe('R05 : en-têtes présents, listes privées fermées, anciennes routes 
 	})
 
 	test('tant que Strapi tourne : /api/upload/files et /api/users en 403, /documentation en 404', async () => {
-		simulerLeSite()
-		const strapi = simulerStrapi()
+		simulateSite()
+		const strapi = simulateStrapi()
 
-		const r05 = await probeR05({ site: lecteurDuSite(), strapi: lecteurDeApi() })
+		const r05 = await probeR05({ site: siteReader(), strapi: apiReader() })
 
 		expect(r05.verdict).toBe('vert')
 		expect(strapi).toEqual(['GET /api/upload/files', 'GET /api/users', 'GET /documentation'])
@@ -986,10 +986,10 @@ describe('R05 : en-têtes présents, listes privées fermées, anciennes routes 
 		['/api/users', 200, 'Strapi /api/users : réponse 200, 403 attendu (API Strapi)'],
 		['/documentation', 200, 'Strapi /documentation : réponse 200, 404 attendu (API Strapi)'],
 	])('Strapi qui ouvre %s : rouge', async (chemin, statut, constat) => {
-		simulerLeSite()
-		simulerStrapi({ [chemin]: statut })
+		simulateSite()
+		simulateStrapi({ [chemin]: statut })
 
-		const r05 = await probeR05({ site: lecteurDuSite(), strapi: lecteurDeApi() })
+		const r05 = await probeR05({ site: siteReader(), strapi: apiReader() })
 
 		expect(r05.verdict).toBe('rouge')
 		expect(r05.constats).toContain(constat)
@@ -1001,31 +1001,31 @@ describe('R05 : en-têtes présents, listes privées fermées, anciennes routes 
 		expect(probeApi(undefined, prod)?.origin).toBe('https://api.my-makeup.fr')
 		expect(probeApi('aucune', prod)).toBeUndefined()
 		expect(probeApi('https://api-autre.example.test', prod)?.origin).toBe('https://api-autre.example.test')
-		expect(probeApi(undefined, CIBLE)).toBeUndefined()
+		expect(probeApi(undefined, TARGET)).toBeUndefined()
 		expect(probeApi(undefined, probeTarget('http://localhost:3356'))).toBeUndefined()
 		expect(() => probeApi('http://api.example.test', prod)).toThrow(RefusedTarget)
 	})
 
 	test('un lancement avec l’API de Strapi lit les deux origines, 500 ms d’écart sur chacune', async () => {
-		simulerLeSite()
-		const strapi = simulerStrapi()
+		simulateSite()
+		const strapi = simulateStrapi()
 
-		const rapport = await launchProbes({
-			cible: CIBLE,
+		const report = await launchProbes({
+			cible: TARGET,
 			api: API,
-			horloge: horlogeFactice(),
-			hasard: premier,
-			...AUTRES_SONDES,
+			horloge: fakeClock(),
+			hasard: first,
+			...OTHER_PROBES,
 		})
 
-		expect(rapport.resultats.find(({ id }) => id === 'R05')?.verdict).toBe('vert')
+		expect(report.resultats.find(({ id }) => id === 'R05')?.verdict).toBe('vert')
 		expect(strapi).toHaveLength(3)
-		expect(rapport.requetes).toBe(19)
-		expect(rapport.ecartMinimalMs).toBe(500)
+		expect(report.requetes).toBe(19)
+		expect(report.ecartMinimalMs).toBe(500)
 	})
 
 	test('defautsDEntetes', () => {
-		expect(headerDefaults(new Headers(ENTETES_DU_SITE))).toEqual([])
+		expect(headerDefaults(new Headers(SITE_HEADERS))).toEqual([])
 		expect(headerDefaults(new Headers())).toHaveLength(SECURITY_HEADERS.length)
 	})
 })
@@ -1036,13 +1036,13 @@ describe('R05 : en-têtes présents, listes privées fermées, anciennes routes 
 
 describe('R06 : certificats sous 21 jours, domaines sous 30 jours', () => {
 	const surveillance = { hotes: ['site.example.test', 'photos.example.test'], domaines: ['example.test'] }
-	const lancer = (certificat: (hote: string) => Promise<Date>, domaine: Parameters<typeof probeR06>[0]['domaine']) =>
-		probeR06({ surveillance, certificat, domaine, maintenant: () => MAINTENANT })
+	const launch = (certificat: (hote: string) => Promise<Date>, domaine: Parameters<typeof probeR06>[0]['domaine']) =>
+		probeR06({ surveillance, certificat, domaine, maintenant: () => NOW })
 
 	test('tout est loin : vert', async () => {
-		const r06 = await lancer(
-			async () => dans(80),
-			async () => rdap(dans(400))
+		const r06 = await launch(
+			async () => insideValue(80),
+			async () => rdap(insideValue(400))
 		)
 
 		expect(r06.verdict).toBe('vert')
@@ -1060,9 +1060,9 @@ describe('R06 : certificats sous 21 jours, domaines sous 30 jours', () => {
 		[5, 'rouge'],
 		[-1, 'rouge'],
 	])('un certificat à %p jours : %s', async (jours, verdict) => {
-		const r06 = await lancer(
-			async hote => (hote === 'photos.example.test' ? dans(jours) : dans(90)),
-			async () => rdap(dans(400))
+		const r06 = await launch(
+			async hote => (hote === 'photos.example.test' ? insideValue(jours) : insideValue(90)),
+			async () => rdap(insideValue(400))
 		)
 
 		expect(r06.verdict).toBe(verdict)
@@ -1076,9 +1076,9 @@ describe('R06 : certificats sous 21 jours, domaines sous 30 jours', () => {
 		[3, 'rouge'],
 		[-2, 'rouge'],
 	])('un domaine à %p jours : %s', async (jours, verdict) => {
-		const r06 = await lancer(
-			async () => dans(90),
-			async () => rdap(dans(jours))
+		const r06 = await launch(
+			async () => insideValue(90),
+			async () => rdap(insideValue(jours))
 		)
 
 		expect(r06.verdict).toBe(verdict)
@@ -1086,12 +1086,12 @@ describe('R06 : certificats sous 21 jours, domaines sous 30 jours', () => {
 	})
 
 	test('un certificat que la poignée refuse : rouge, avec la raison', async () => {
-		const r06 = await lancer(
+		const r06 = await launch(
 			async hote => {
 				if (hote === 'site.example.test') throw new Error('certificate has expired')
-				return dans(90)
+				return insideValue(90)
 			},
-			async () => rdap(dans(400))
+			async () => rdap(insideValue(400))
 		)
 
 		expect(r06.verdict).toBe('rouge')
@@ -1099,13 +1099,13 @@ describe('R06 : certificats sous 21 jours, domaines sous 30 jours', () => {
 	})
 
 	test('un registre qui ne répond pas, ou sans date : inconnu, jamais vert', async () => {
-		for (const domaine of [
+		for (const domain of [
 			async () => ({ statut: 503, corps: '' }),
 			async () => ({ statut: 200, corps: '{"events":[]}' }),
 			async () => ({ statut: 200, corps: 'pas du JSON' }),
 			async () => undefined,
 		]) {
-			const r06 = await lancer(async () => dans(90), domaine)
+			const r06 = await launch(async () => insideValue(90), domain)
 
 			expect(r06.verdict).toBe('inconnu')
 			expect(r06.constats[2]).toStartWith('domaine example.test : ')
@@ -1113,8 +1113,8 @@ describe('R06 : certificats sous 21 jours, domaines sous 30 jours', () => {
 	})
 
 	test('un registre injoignable : inconnu', async () => {
-		const r06 = await lancer(
-			async () => dans(90),
+		const r06 = await launch(
+			async () => insideValue(90),
 			async () => {
 				throw new Error('boum')
 			}
@@ -1125,8 +1125,8 @@ describe('R06 : certificats sous 21 jours, domaines sous 30 jours', () => {
 	})
 
 	test('rouge l’emporte sur inconnu', async () => {
-		const r06 = await lancer(
-			async () => dans(2),
+		const r06 = await launch(
+			async () => insideValue(2),
 			async () => undefined
 		)
 
@@ -1157,60 +1157,60 @@ describe('R06 : certificats sous 21 jours, domaines sous 30 jours', () => {
 	test('sur une cible locale : R06 est inconnue, rien ne part vers un certificat', async () => {
 		const local = new URL('http://localhost:3356')
 		simulate(http.all(`${local.origin}/*`, () => HttpResponse.html('<h1>x</h1>', { status: 404 })))
-		const certificat = async (): Promise<Date> => {
+		const certificate = async (): Promise<Date> => {
 			throw new Error('ne doit pas être appelé')
 		}
 
-		const rapport = await launchProbes({
+		const report = await launchProbes({
 			cible: local,
-			horloge: horlogeFactice(),
-			certificat,
+			horloge: fakeClock(),
+			certificat: certificate,
 			domaine: async () => undefined,
 		})
 
-		expect(rapport.resultats.find(({ id }) => id === 'R06')).toMatchObject({ verdict: 'inconnu' })
+		expect(report.resultats.find(({ id }) => id === 'R06')).toMatchObject({ verdict: 'inconnu' })
 	})
 
 	test('le registre est lu par un GET gardé, un registre à la fois ; une extension inconnue ne part nulle part', async () => {
-		const recues: string[] = []
+		const received: string[] = []
 		simulate(
 			http.get('https://rdap.nic.fr/domain/:domaine', ({ request, params }) => {
-				recues.push(`${params.domaine} ${request.headers.get('user-agent')}`)
+				received.push(`${params.domaine} ${request.headers.get('user-agent')}`)
 				return HttpResponse.json({ events: [{ eventAction: 'expiration', eventDate: '2030-01-01T00:00:00Z' }] })
 			})
 		)
-		const lire = readerRdap(undefined, horlogeFactice())
+		const read = readerRdap(undefined, fakeClock())
 
-		const reponse = await lire('example.fr')
+		const response = await read('example.fr')
 
-		expect(reponse?.statut).toBe(200)
-		expect(recordEnd(reponse?.corps ?? '')?.toISOString()).toBe('2030-01-01T00:00:00.000Z')
-		expect(recues).toEqual([`example.fr ${PROBE_AGENT}`])
-		expect(await lire('example.xyz')).toBeUndefined()
+		expect(response?.statut).toBe(200)
+		expect(recordEnd(response?.corps ?? '')?.toISOString()).toBe('2030-01-01T00:00:00.000Z')
+		expect(received).toEqual([`example.fr ${PROBE_AGENT}`])
+		expect(await read('example.xyz')).toBeUndefined()
 	})
 
 	test('joursRestants et finDeLEnregistrement', () => {
-		expect(remainingDays(new Date('2026-11-05T08:00:00Z'), MAINTENANT)).toBe(21)
+		expect(remainingDays(new Date('2026-11-05T08:00:00Z'), NOW)).toBe(21)
 		expect(recordEnd('{"events":[{"eventAction":"registration","eventDate":"2001-01-01T00:00:00Z"}]}')).toBeUndefined()
 		expect(recordEnd('{"events":[{"eventAction":"expiration","eventDate":"pas une date"}]}')).toBeUndefined()
 	})
 })
 
 describe('R06 : la poignée TLS lit la date de fin du certificat', () => {
-	let dossier: string | undefined
-	let serveur: tls.Server | undefined
+	let folder: string | undefined
+	let server: tls.Server | undefined
 
 	afterEach(() => {
-		serveur?.close()
-		serveur = undefined
-		if (dossier) rmSync(dossier, { recursive: true, force: true })
-		dossier = undefined
+		server?.close()
+		server = undefined
+		if (folder) rmSync(folder, { recursive: true, force: true })
+		folder = undefined
 	})
 
 	/** A local authority and a server certificate for `localhost`, good for 10 days. Skipped without openssl. */
-	function certificatLocal(): { cle: string; certificat: string } | undefined {
+	function certificateLocal(): { cle: string; certificat: string } | undefined {
 		try {
-			dossier = mkdtempSync(path.join(tmpdir(), 'sonde-tls-'))
+			folder = mkdtempSync(path.join(tmpdir(), 'sonde-tls-'))
 			execFileSync(
 				'openssl',
 				[
@@ -1222,9 +1222,9 @@ describe('R06 : la poignée TLS lit la date de fin du certificat', () => {
 					'-days',
 					'10',
 					'-keyout',
-					path.join(dossier, 'cle.pem'),
+					path.join(folder, 'cle.pem'),
 					'-out',
-					path.join(dossier, 'certificat.pem'),
+					path.join(folder, 'certificat.pem'),
 					'-subj',
 					'/CN=localhost',
 					'-addext',
@@ -1233,8 +1233,8 @@ describe('R06 : la poignée TLS lit la date de fin du certificat', () => {
 				{ stdio: 'ignore' }
 			)
 			return {
-				cle: readFileSync(path.join(dossier, 'cle.pem'), 'utf8'),
-				certificat: readFileSync(path.join(dossier, 'certificat.pem'), 'utf8'),
+				cle: readFileSync(path.join(folder, 'cle.pem'), 'utf8'),
+				certificat: readFileSync(path.join(folder, 'certificat.pem'), 'utf8'),
 			}
 		} catch {
 			return undefined
@@ -1242,24 +1242,24 @@ describe('R06 : la poignée TLS lit la date de fin du certificat', () => {
 	}
 
 	test('un certificat que la chaîne accepte : sa date de fin, environ 10 jours', async () => {
-		const paire = certificatLocal()
-		if (!paire) return
-		serveur = tls.createServer({ key: paire.cle, cert: paire.certificat }, socket => socket.end())
-		await new Promise<void>(resolve => serveur?.listen(0, '127.0.0.1', resolve))
-		const port = (serveur.address() as { port: number }).port
+		const pair = certificateLocal()
+		if (!pair) return
+		server = tls.createServer({ key: pair.cle, cert: pair.certificat }, socket => socket.end())
+		await new Promise<void>(resolve => server?.listen(0, '127.0.0.1', resolve))
+		const port = (server.address() as { port: number }).port
 
-		const fin = await readCertificate({ ca: paire.certificat, port })('localhost')
+		const end = await readCertificate({ ca: pair.certificat, port })('localhost')
 
-		expect(remainingDays(fin, new Date())).toBeGreaterThan(9)
-		expect(remainingDays(fin, new Date())).toBeLessThan(10.1)
+		expect(remainingDays(end, new Date())).toBeGreaterThan(9)
+		expect(remainingDays(end, new Date())).toBeLessThan(10.1)
 	})
 
 	test('un certificat que la chaîne refuse (autorité inconnue) : la poignée échoue, la sonde est rouge', async () => {
-		const paire = certificatLocal()
-		if (!paire) return
-		serveur = tls.createServer({ key: paire.cle, cert: paire.certificat }, socket => socket.end())
-		await new Promise<void>(resolve => serveur?.listen(0, '127.0.0.1', resolve))
-		const port = (serveur.address() as { port: number }).port
+		const pair = certificateLocal()
+		if (!pair) return
+		server = tls.createServer({ key: pair.cle, cert: pair.certificat }, socket => socket.end())
+		await new Promise<void>(resolve => server?.listen(0, '127.0.0.1', resolve))
+		const port = (server.address() as { port: number }).port
 
 		await expect(readCertificate({ port })('localhost')).rejects.toThrow()
 	})

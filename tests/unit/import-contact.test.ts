@@ -15,7 +15,7 @@ describe('la date de bascule (--consent-date)', () => {
 	})
 
 	test('ce qui n’est pas une date réelle est refusé, sans repli sur l’horloge', () => {
-		for (const texte of [
+		for (const text of [
 			'',
 			'demain',
 			'02/11/2026',
@@ -24,7 +24,7 @@ describe('la date de bascule (--consent-date)', () => {
 			'2026-11-02T08:00:00',
 			'2026-11-02 08:00',
 		])
-			expect(cutoverDate(texte), texte).toBeNull()
+			expect(cutoverDate(text), text).toBeNull()
 	})
 
 	test('la ligne de commande la lit comme un fichier : une valeur est obligatoire', () => {

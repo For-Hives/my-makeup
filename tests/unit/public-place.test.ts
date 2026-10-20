@@ -6,10 +6,10 @@ import { publicCity, publicPlace } from '@/lib/profile/public-place'
 // (branch main): same cases, same expected values.
 // Made-up addresses only (« des Essais », « Fictifs »): never a real one.
 
-type Adresse = readonly [tapee: string, publique: string, motsDeLaRue: readonly string[]]
-type Lieu = readonly [tapee: string, publique: string]
+type Url = readonly [tapee: string, publique: string, motsDeLaRue: readonly string[]]
+type Place = readonly [tapee: string, publique: string]
 
-const ADRESSES: readonly Adresse[] = [
+const URLS: readonly Url[] = [
 	['12 rue X 74000 Annecy', 'Annecy (74)', ['12', 'rue', 'X']],
 	['12, avenue Y, 75011 Paris', 'Paris (75)', ['12', 'avenue', 'Y']],
 	['3 Place Z Thonon-les-Bains', 'Thonon-les-Bains', ['3', 'Place', 'Z']],
@@ -80,7 +80,7 @@ const ADRESSES: readonly Adresse[] = [
 ]
 
 // a code of département then the name of that département: both kept
-const DEPARTEMENTS_NOMMES: readonly Lieu[] = [
+const NAMED_DEPARTMENTS: readonly Place[] = [
 	['74 Haute-Savoie', 'Haute-Savoie (74)'],
 	['2A Corse-du-Sud', 'Corse-du-Sud (2A)'],
 	['75 Paris', 'Paris (75)'],
@@ -88,7 +88,7 @@ const DEPARTEMENTS_NOMMES: readonly Lieu[] = [
 
 // a street glued to the commune without a postal code: the commune cannot be told from the
 // street, nothing is published, and it is not a usable city
-const RUES_COLLEES: readonly string[] = [
+const PASTED_STREETS: readonly string[] = [
 	'Annecy,rue des Essais',
 	'Annecy;rue des Essais',
 	'Annecy/rue des Essais',
@@ -104,7 +104,7 @@ const RUES_COLLEES: readonly string[] = [
 ]
 
 // a number then free text is no street number: shown as typed, and not a usable city
-const NUMERO_PUIS_TEXTE: readonly string[] = [
+const NUMBER_THEN_TEXT: readonly string[] = [
 	'74 et alentours',
 	'74 et alentours, Annecy',
 	'74 partout',
@@ -116,7 +116,7 @@ const NUMERO_PUIS_TEXTE: readonly string[] = [
 ]
 
 // fields that are no address: shown as typed (cleaned)
-const LIEUX: readonly Lieu[] = [
+const PLACES: readonly Place[] = [
 	['Annecy', 'Annecy'],
 	['  Annecy  ', 'Annecy'],
 	['Annecy 74000', 'Annecy (74)'],
@@ -143,7 +143,7 @@ const LIEUX: readonly Lieu[] = [
 
 // communes named like a type of street: a type of street comes before the name of the street,
 // never alone nor before a postal code
-const COMMUNES_COMME_UNE_VOIE: readonly Lieu[] = [
+const CITY_AS_STREET: readonly Place[] = [
 	['Rue', 'Rue'],
 	['Cours', 'Cours'],
 	['Le Passage', 'Le Passage'],
@@ -156,51 +156,51 @@ const COMMUNES_COMME_UNE_VOIE: readonly Lieu[] = [
 	['Apt', 'Apt'],
 ]
 
-const VIDES: readonly unknown[] = [null, undefined, 42, {}, '', '   ', 'null', 'undefined', '-', '.', 'NaN']
+const EMPTY: readonly unknown[] = [null, undefined, 42, {}, '', '   ', 'null', 'undefined', '-', '.', 'NaN']
 
 // digits in a public place: only a postal code alone, or the département in brackets
-const SANS_NUMERO_DE_RUE = /^(\d{5}|[^\d]*( \((\d{2}|2A|2B|97\d)\))?)$/
+const WITHOUT_STREET_NUMBER = /^(\d{5}|[^\d]*( \((\d{2}|2A|2B|97\d)\))?)$/
 
 describe('villePublique: the public place of a city field', () => {
-	for (const [tapee, publique] of [...ADRESSES, ...LIEUX]) {
-		test(`« ${tapee} » → « ${publique} »`, () => {
-			expect(publicCity(tapee)).toBe(publique)
+	for (const [typed, publicOnes] of [...URLS, ...PLACES]) {
+		test(`« ${typed} » → « ${publicOnes} »`, () => {
+			expect(publicCity(typed)).toBe(publicOnes)
 		})
 	}
 
-	for (const [tapee, publique] of DEPARTEMENTS_NOMMES) {
-		test(`« ${tapee} » → « ${publique} »`, () => {
-			expect(publicCity(tapee)).toBe(publique)
-			expect(usableCity(tapee)).toBe(true)
+	for (const [typed, publicOnes] of NAMED_DEPARTMENTS) {
+		test(`« ${typed} » → « ${publicOnes} »`, () => {
+			expect(publicCity(typed)).toBe(publicOnes)
+			expect(usableCity(typed)).toBe(true)
 		})
 	}
 
-	for (const [tapee, publique] of COMMUNES_COMME_UNE_VOIE) {
-		test(`« ${tapee} » → « ${publique} », a usable city`, () => {
-			expect(publicCity(tapee)).toBe(publique)
-			expect(publicPlace(tapee).adresse).toBe(false)
-			expect(usableCity(tapee)).toBe(true)
+	for (const [typed, publicOnes] of CITY_AS_STREET) {
+		test(`« ${typed} » → « ${publicOnes} », a usable city`, () => {
+			expect(publicCity(typed)).toBe(publicOnes)
+			expect(publicPlace(typed).adresse).toBe(false)
+			expect(usableCity(typed)).toBe(true)
 		})
 	}
 
 	test('a street glued to the commune, no postal code: nothing, not a usable city', () => {
-		for (const tapee of RUES_COLLEES) {
-			expect(publicCity(tapee), tapee).toBe('')
-			expect(publicPlace(tapee).adresse, tapee).toBe(true)
-			expect(usableCity(tapee), tapee).toBe(false)
+		for (const typed of PASTED_STREETS) {
+			expect(publicCity(typed), typed).toBe('')
+			expect(publicPlace(typed).adresse, typed).toBe(true)
+			expect(usableCity(typed), typed).toBe(false)
 		}
 	})
 
 	test('a département code then free text: as typed, not a usable city', () => {
-		for (const tapee of NUMERO_PUIS_TEXTE) {
-			expect(publicCity(tapee)).toBe(tapee)
-			expect(publicPlace(tapee).adresse, tapee).toBe(false)
-			expect(usableCity(tapee), tapee).toBe(false)
+		for (const typed of NUMBER_THEN_TEXT) {
+			expect(publicCity(typed)).toBe(typed)
+			expect(publicPlace(typed).adresse, typed).toBe(false)
+			expect(usableCity(typed), typed).toBe(false)
 		}
 	})
 
 	test('nothing usable: an empty text', () => {
-		for (const v of VIDES) {
+		for (const v of EMPTY) {
 			expect(publicCity(v), String(v)).toBe('')
 			expect(publicPlace(v), String(v)).toEqual({ texte: '', commune: '', departement: null, adresse: false })
 		}
@@ -209,39 +209,39 @@ describe('villePublique: the public place of a city field', () => {
 	})
 
 	test('never the street number nor the street of an address', () => {
-		for (const [tapee, publique, rue] of ADRESSES) {
-			for (const mot of rue) {
-				const present = ` ${publique} `.includes(` ${mot.trim()} `) || publique.includes(`${mot.trim()} `)
-				expect(present, `« ${tapee} » → « ${publique} » holds « ${mot} »`).toBe(false)
+		for (const [typed, publicOnes, street] of URLS) {
+			for (const word of street) {
+				const present = ` ${publicOnes} `.includes(` ${word.trim()} `) || publicOnes.includes(`${word.trim()} `)
+				expect(present, `« ${typed} » → « ${publicOnes} » holds « ${word} »`).toBe(false)
 			}
-			expect(publique, tapee).toMatch(SANS_NUMERO_DE_RUE)
+			expect(publicOnes, typed).toMatch(WITHOUT_STREET_NUMBER)
 		}
 	})
 
 	test('the same place when read again (a public page reads what another one published)', () => {
-		for (const tapee of [
-			...[...ADRESSES, ...LIEUX, ...DEPARTEMENTS_NOMMES, ...COMMUNES_COMME_UNE_VOIE].map(([t]) => t),
-			...NUMERO_PUIS_TEXTE,
-			...RUES_COLLEES,
+		for (const typed of [
+			...[...URLS, ...PLACES, ...NAMED_DEPARTMENTS, ...CITY_AS_STREET].map(([t]) => t),
+			...NUMBER_THEN_TEXT,
+			...PASTED_STREETS,
 		]) {
-			const une = publicPlace(tapee)
-			expect(publicCity(une.texte), tapee).toBe(une.texte)
-			expect(publicPlace(une.texte).departement, tapee).toBe(une.departement)
+			const oneAlt = publicPlace(typed)
+			expect(publicCity(oneAlt.texte), typed).toBe(oneAlt.texte)
+			expect(publicPlace(oneAlt.texte).departement, typed).toBe(oneAlt.departement)
 			// what is published and what was typed agree
-			expect(usableCity(une.texte), tapee).toBe(usableCity(tapee))
+			expect(usableCity(oneAlt.texte), typed).toBe(usableCity(typed))
 		}
 	})
 
 	test('property: a generated address never gives its street, whatever glues it', () => {
 		// made-up streets: each name holds a word that must never come out
-		let graine = 7
-		const hasard = (): number => {
-			graine = (graine * 1103515245 + 12345) % 2 ** 31
-			return graine / 2 ** 31
+		let seed = 7
+		const random = (): number => {
+			seed = (seed * 1103515245 + 12345) % 2 ** 31
+			return seed / 2 ** 31
 		}
-		const un = (liste: readonly string[]): string => liste[Math.floor(hasard() * liste.length)] ?? ''
-		const NUMEROS = ['', '12 ', '3 bis ', '7ter ', '45, ', '12', '9-']
-		const VOIES = [
+		const one = (liste: readonly string[]): string => liste[Math.floor(random() * liste.length)] ?? ''
+		const NUMBERS = ['', '12 ', '3 bis ', '7ter ', '45, ', '12', '9-']
+		const STREETS = [
 			'rue',
 			'RUE',
 			'avenue',
@@ -261,7 +261,7 @@ describe('villePublique: the public place of a city field', () => {
 			'rond-point',
 			"l'avenue",
 		]
-		const NOMS = [
+		const NAMES = [
 			'des Zorglubs',
 			'du Xyzzy',
 			'Qwertz',
@@ -273,8 +273,8 @@ describe('villePublique: the public place of a city field', () => {
 			'du 8 Mai Zorgle',
 			'Qwertz Zorgmann',
 		]
-		const MARQUES = /zorglub|xyzzy|qwertz|plugh|zorgmann|wibble|frobnitz|frobs|gloups|zorgle/i
-		const COMMUNES = [
+		const MARKS = /zorglub|xyzzy|qwertz|plugh|zorgmann|wibble|frobnitz|frobs|gloups|zorgle/i
+		const CITIES = [
 			'Annecy',
 			'Thonon-les-Bains',
 			'La Roche-sur-Foron',
@@ -286,32 +286,32 @@ describe('villePublique: the public place of a city field', () => {
 		]
 		const CODES = ['74000', '74200', '73000', '75011', '74 000', '20000']
 		// with or without a space
-		const SEPARATEURS = [' ', ', ', ',', ' , ', '; ', ';', '/', ' / ', '.', '. ', ':', '|', ' - ', '-', ' – ']
-		const FINS = ['', ', France', ' CEDEX', ' (France)', '.']
-		const FORMES: readonly ((rue: string, commune: string, codePostal: string) => string)[] = [
-			(rue, c, cp) => `${rue}${un(SEPARATEURS)}${cp} ${c}`,
-			(rue, c, cp) => `${rue}${un(SEPARATEURS)}${c}${un(SEPARATEURS)}${cp}`,
-			(rue, c) => `${rue}${un(SEPARATEURS)}${c}`,
-			(rue, _c, cp) => `${rue}${un(SEPARATEURS)}${cp}`,
+		const SEPARATORS = [' ', ', ', ',', ' , ', '; ', ';', '/', ' / ', '.', '. ', ':', '|', ' - ', '-', ' – ']
+		const ENDS = ['', ', France', ' CEDEX', ' (France)', '.']
+		const FORMS: readonly ((rue: string, commune: string, codePostal: string) => string)[] = [
+			(rue, c, cp) => `${rue}${one(SEPARATORS)}${cp} ${c}`,
+			(rue, c, cp) => `${rue}${one(SEPARATORS)}${c}${one(SEPARATORS)}${cp}`,
+			(rue, c) => `${rue}${one(SEPARATORS)}${c}`,
+			(rue, _c, cp) => `${rue}${one(SEPARATORS)}${cp}`,
 			(rue, c) => `${rue} ${c}`,
-			(rue, c, cp) => `${cp} ${c}${un(SEPARATEURS)}${rue}`,
-			(rue, c) => `${c}${un(SEPARATEURS)}${rue}`,
+			(rue, c, cp) => `${cp} ${c}${one(SEPARATORS)}${rue}`,
+			(rue, c) => `${c}${one(SEPARATORS)}${rue}`,
 		]
 		for (let i = 0; i < 4000; i++) {
-			const rue = `${un(NUMEROS)}${un(VOIES)} ${un(NOMS)}`
-			const forme = FORMES[Math.floor(hasard() * FORMES.length)]
-			if (forme === undefined) throw new Error('no form drawn')
-			let tapee = `${forme(rue, un(COMMUNES), un(CODES))}${un(FINS)}`
-			const casse = hasard()
-			if (casse < 0.25) tapee = tapee.toUpperCase()
-			else if (casse < 0.45) tapee = tapee.toLowerCase()
-			const lieu = publicPlace(tapee)
-			for (const sortie of [lieu.texte, lieu.commune]) {
-				expect(sortie, `« ${tapee} » → « ${sortie} »`).not.toMatch(MARQUES)
+			const street = `${one(NUMBERS)}${one(STREETS)} ${one(NAMES)}`
+			const shape = FORMS[Math.floor(random() * FORMS.length)]
+			if (shape === undefined) throw new Error('no form drawn')
+			let typed = `${shape(street, one(CITIES), one(CODES))}${one(ENDS)}`
+			const broken = random()
+			if (broken < 0.25) typed = typed.toUpperCase()
+			else if (broken < 0.45) typed = typed.toLowerCase()
+			const place = publicPlace(typed)
+			for (const output of [place.texte, place.commune]) {
+				expect(output, `« ${typed} » → « ${output} »`).not.toMatch(MARKS)
 			}
-			expect(lieu.texte, tapee).toMatch(SANS_NUMERO_DE_RUE)
-			expect(publicCity(lieu.texte), tapee).toBe(lieu.texte)
-			expect(usableCity(lieu.texte), tapee).toBe(usableCity(tapee))
+			expect(place.texte, typed).toMatch(WITHOUT_STREET_NUMBER)
+			expect(publicCity(place.texte), typed).toBe(place.texte)
+			expect(usableCity(place.texte), typed).toBe(usableCity(typed))
 		}
 	})
 

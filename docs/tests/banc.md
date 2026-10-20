@@ -56,7 +56,7 @@ Il faut Docker avec Compose. Sans démon Docker, les commandes du banc passent d
 Règles du fichier :
 
 - des lignes `NOM=valeur` seulement, sans guillemet ni variable dans une valeur ;
-- jamais un vrai secret, jamais une adresse distante. La garde des tests les refuse, et un test vérifie que ce fichier passe la garde (`tests/unit/garde-tests.test.ts`, U87) ;
+- jamais un vrai secret, jamais une adresse distante. La garde des tests les refuse, et un test vérifie que ce fichier passe la garde (`tests/unit/test-guard.test.ts`, U87) ;
 - une variable s'y ajoute par le ticket qui commence à la lire.
 
 Le fichier décrit l'instance par défaut. Les commandes du banc le lisent elles-mêmes et y appliquent le décalage de ports de l'instance (voir plus bas) : c'est pourquoi les tests d'intégration se lancent par `bun run test:integration`, pas par `bun --env-file=.env.test test`.
@@ -453,7 +453,7 @@ const { profils, crees, presents } = await poserLesProfilsDuJeu(await testPayloa
 
 Les données sont dans `src/demo-data/profiles.ts` (`DEMO_PROFILES`), avec, pour chaque type, ce que le serveur doit calculer (`attendu`). Le jeu vit sous `src/` et non sous `tests/`, parce que les collections et les outils du banc le chargent sans passer par Next, et que l'image Docker ne contient pas `tests/`.
 
-`tests/unit/jeu-fictif.test.ts` vérifie le jeu sans le banc : les douze types, l'état que leur donne la règle unique, les longueurs du profil aux textes maximaux, les six photos et la garde. `tests/integration/banc-profils-types.test.ts` le charge sur le banc : chaque profil relié à sa maquilleuse, l'état enregistré, les photos et leurs objets, le rechargement.
+`tests/unit/demo-data.test.ts` vérifie le jeu sans le banc : les douze types, l'état que leur donne la règle unique, les longueurs du profil aux textes maximaux, les six photos et la garde. `tests/integration/banc-profils-types.test.ts` le charge sur le banc : chaque profil relié à sa maquilleuse, l'état enregistré, les photos et leurs objets, le rechargement.
 
 ## Le banc complet : une commande, la session dont on a besoin
 
@@ -514,7 +514,7 @@ Le critère « l'administration compte 12 profils » compte les **12 profils typ
 
 Rejouer le chargement ne crée rien : un talent ou un article se retrouve par son adresse, brouillon compris, et reste tel qu'il est.
 
-Les tests : `tests/integration/banc-jeu-complet.test.ts` (le jeu complet, rejoué sans doublon, les commandes `bench:reset` et `bench:session` lancées comme une personne les lance), `tests/e2e/jeu-du-banc.spec.ts` (l'administration, ouverte avec l'admin du jeu, compte les 12 profils types, les 3 talents et les 3 articles dont le brouillon), `tests/unit/jeu-redaction.test.ts` et `tests/unit/banc-complet.test.ts` (sans le banc).
+Les tests : `tests/integration/banc-jeu-complet.test.ts` (le jeu complet, rejoué sans doublon, les commandes `bench:reset` et `bench:session` lancées comme une personne les lance), `tests/e2e/jeu-du-banc.spec.ts` (l'administration, ouverte avec l'admin du jeu, compte les 12 profils types, les 3 talents et les 3 articles dont le brouillon), `tests/unit/editorial-data.test.ts` et `tests/unit/bench-full.test.ts` (sans le banc).
 
 ## La matrice d'accès
 
@@ -640,7 +640,7 @@ bun run test:integration tests/integration/banc-faux-google.test.ts
 
 `google.allerRetour(choix)` est cet aller-retour, prêt à l'emploi. Il prouve le fournisseur : ce n'est pas la connexion de l'application.
 
-Le fournisseur se teste aussi sans le banc, appelé comme une fonction : `bun --no-env-file test tests/unit/banc-faux-google.test.ts`.
+Le fournisseur se teste aussi sans le banc, appelé comme une fonction : `bun --no-env-file test tests/unit/bench-fake-google.test.ts`.
 
 ### Aucun secret Google réel
 
@@ -663,7 +663,7 @@ Il nomme trois sortes d'orphelins, par clé d'objet ou par identifiant, sans auc
 
 La corbeille (`deleted/`) est comptée à part, comme les vignettes de l'ancien site décrites dans `media.strapiFormats` : ce ne sont pas des orphelins. Code de sortie 0 sans orphelin (« 0 orphelin »), 1 avec, 2 si le banc ne répond pas. Avec `--json`, la sortie est le rapport en JSON. Avec `--outside-import`, les médias que l'import a repris de l'ancien site (`strapiId`) restent listés mais ne comptent pas pour le code de sortie : c'est l'option de la CI, parce que l'essai de bout en bout de l'import efface sa fausse source à la fin, et que les médias repris perdent alors leurs objets exprès. Le contrôle complet d'avant purge se lance sans l'option.
 
-En CI, l'étape « Reconcile the storage and the database » du job `e2e` le lance (avec `--outside-import`) après les essais de bout en bout : à ce moment, les objets hors corbeille doivent être exactement ceux des photos des profils et des articles. Un orphelin fait passer l'étape au rouge, donc `ci-ok` au rouge. `tests/integration/rapprochement.test.ts` prouve les trois sortes d'orphelins, l'absence de toute écriture et le code de sortie ; `tests/ci/garde-fous-ci.test.ts` garde l'étape dans le workflow.
+En CI, l'étape « Reconcile the storage and the database » du job `e2e` le lance (avec `--outside-import`) après les essais de bout en bout : à ce moment, les objets hors corbeille doivent être exactement ceux des photos des profils et des articles. Un orphelin fait passer l'étape au rouge, donc `ci-ok` au rouge. `tests/integration/rapprochement.test.ts` prouve les trois sortes d'orphelins, l'absence de toute écriture et le code de sortie ; `tests/ci/ci-guardrails.test.ts` garde l'étape dans le workflow.
 
 ## La fausse base Strapi
 
@@ -694,7 +694,7 @@ Chaque image est épinglée par son étiquette exacte et par son empreinte, dans
 
 - **Mailpit** : la v1.31.5 existe, mais elle n'avait que 3 jours le 14/10/2026. La règle des 7 jours donne la v1.31.4.
 - **S3Mock à la place de MinIO** : le plan nommait MinIO, avec S3Mock en repli. Le 14/10/2026, MinIO ne remplit plus les conditions : son dépôt est archivé (dernier commit en avril 2026), son image n'est plus téléchargeable (Docker Hub et quay.io refusent l'accès à `minio/minio`), et le dépôt a publié 7 avis de sécurité en 2026, dont 4 élevés, corrigés seulement dans des versions de 2026 alors que la dernière version publiée sur GitHub date d'octobre 2025. S3Mock est maintenu (dernier commit le 08/10/2026) et n'a aucun avis.
-- **bun pour le faux Google** : ce n'est pas une image de plus. Le faux Google est du code de ce dépôt (`tests/support/fake-google/`), lu en lecture seule par le conteneur, et lancé par le bun qui construit déjà l'image du site. Un test vérifie que les deux références sont identiques (`tests/unit/banc-pile.test.ts`).
+- **bun pour le faux Google** : ce n'est pas une image de plus. Le faux Google est du code de ce dépôt (`tests/support/fake-google/`), lu en lecture seule par le conteneur, et lancé par le bun qui construit déjà l'image du site. Un test vérifie que les deux références sont identiques (`tests/unit/bench-stack.test.ts`).
 - Vérifié par `gh api repos/<dépôt>/releases`, `gh api repos/<dépôt>/security-advisories` et `gh api "/advisories?ecosystem=…&affects=…"`, puis `skopeo inspect` pour les empreintes et les dates. Les paquets du système de chaque image n'ont pas été passés au scanner.
 
 Une montée de version change l'étiquette et l'empreinte ensemble. `tests/integration/banc-pile.test.ts` vérifie que la version qui tourne est bien celle qui est épinglée.
@@ -740,5 +740,5 @@ L'espace de la maquilleuse demande la liste officielle des communes (geo.api.gou
 
 - `.env.test` donne son adresse sous `FAKE_CITIES`. `bun run test:e2e` et `bun run bench:full` la passent à l'application sous `BENCH_CITIES` (`tests/support/e2e.ts`), et à elle seule.
 - Les tests d'intégration ne la voient pas : ils simulent la liste officielle elle-même, par `simuler`, pour jouer aussi ses pannes ([`http-sortant.md`](http-sortant.md)).
-- Comme `BENCH_IMAGES`, la production ne règle jamais `BENCH_CITIES` : une valeur qui n'est pas exactement `http://127.0.0.1:PORT` (ou `localhost`), ou qui est donnée à un site déployé, est refusée bruyamment au lieu d'être suivie (`tests/unit/banc-fausses-communes.test.ts`).
+- Comme `BENCH_IMAGES`, la production ne règle jamais `BENCH_CITIES` : une valeur qui n'est pas exactement `http://127.0.0.1:PORT` (ou `localhost`), ou qui est donnée à un site déployé, est refusée bruyamment au lieu d'être suivie (`tests/unit/bench-fake-cities.test.ts`).
 - Un essai qui a besoin d'une autre commune l'ajoute à `COMMUNES` de `tests/support/fake-cities/provider.ts`, avec les données de la liste officielle : nom, code INSEE, département, codes postaux, centre.

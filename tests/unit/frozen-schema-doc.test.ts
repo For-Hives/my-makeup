@@ -11,7 +11,7 @@ import path from 'node:path'
  * compared to it.
  *
  * The inventory can be compared again to the real schema files while the old API repository
- * exists: `STRAPI_API_DIR=../api-my-makeup bun --no-env-file test tests/unit/doc-schema-gele.test.ts`.
+ * exists: `STRAPI_API_DIR=../api-my-makeup bun --no-env-file test tests/unit/frozen-schema-doc.test.ts`.
  */
 
 const DOC_PATH = path.resolve(import.meta.dir, '../../docs/migration/SCHEMA.md')

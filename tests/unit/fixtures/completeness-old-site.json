@@ -5,7 +5,7 @@
 		"api": "For-Hives/api-my-makeup, main ccd449d, src/utils/profile-conditions.js et public-city.js"
 	},
 	"partages": {
-		"description": "Les cas de completude-cas.json, dans le même ordre : résultat complet du front (avec les manques) et conditions de l’API.",
+		"description": "Les cas de completeness-cases.json, dans le même ordre : résultat complet du front (avec les manques) et conditions de l’API.",
 		"cas": [
 			{
 				"nom": "vide",

@@ -64,9 +64,9 @@ Le rapport s'affiche dans le terminal : une ligne par partie (CONFORME ou NON CO
 - **Jamais l'adresse d'un profil** ([`CLAUDE.md`](../../CLAUDE.md), interdit 3). Un profil est désigné par `profil #xxxxxxxx`, les 8 premiers chiffres du SHA-256 de son chemin (voir [`sondes.md`](sondes.md) pour retrouver un profil sur son poste).
 - Le sitemap, le fichier robots et le script de mesure ont chacun leur empreinte (8 chiffres du SHA-256 du corps) : deux contrôles successifs d'un hôte qui n'a pas changé donnent les mêmes.
 - « Empreinte des adresses » résume l'état de toutes les adresses lues : elle change dès qu'une adresse change d'état.
-- Une adresse cassée exprès (`/a-propos` en 500, une ancienne route qui répond, un script absent) rend la partie concernée NON CONFORME, la nomme et fait sortir la commande en 1 (`tests/unit/bascule-controle-hote.test.ts`).
+- Une adresse cassée exprès (`/a-propos` en 500, une ancienne route qui répond, un script absent) rend la partie concernée NON CONFORME, la nomme et fait sortir la commande en 1 (`tests/unit/cutover-host-check.test.ts`).
 
 ## Les tests
 
-- `tests/unit/bascule-controle-hote.test.ts` : la garde (écritures, `/u`, double barre, cookie, accès protégé), les réglages, la lecture du sitemap, un hôte simulé conforme et des hôtes cassés exprès, le rapport sans adresse de profil, le rythme de 2 requêtes par seconde avec une horloge simulée. `bun --no-env-file test tests/unit/bascule-controle-hote.test.ts`.
+- `tests/unit/cutover-host-check.test.ts` : la garde (écritures, `/u`, double barre, cookie, accès protégé), les réglages, la lecture du sitemap, un hôte simulé conforme et des hôtes cassés exprès, le rapport sans adresse de profil, le rythme de 2 requêtes par seconde avec une horloge simulée. `bun --no-env-file test tests/unit/cutover-host-check.test.ts`.
 - `tests/e2e/controle-hote.spec.ts` (I45, U61 à U64) : la commande contre l'application du banc, avec des profils, un talent et un article d'essai dans le sitemap. Aucune famille n'y est comptée « à venir » : la page 404 d'un talent, d'un article ou d'un profil inconnu, la dernière, est livrée par le proxy avec son `h1` dans le HTML du serveur (ticket 231), et la commande n'en connaît aucune.

@@ -20,7 +20,7 @@ import type { Session } from '../support/session'
  * bench: tests/integration/banc-jeu-complet.test.ts.
  */
 
-const lire = (fichier: string) => readFileSync(path.join(ROOT, fichier), 'utf8')
+const read = (fichier: string) => readFileSync(path.join(ROOT, fichier), 'utf8')
 
 const SESSION: Session = {
 	enTetes: { Cookie: 'payload-token=jeton-factice', Origin: 'http://localhost:3100' },
@@ -53,7 +53,7 @@ describe('Quel compte désigne un nom', () => {
 
 	test('chaque type du jeu fixe et chaque profil type a un nom', () => {
 		expect(ACCOUNT_NAMES).toHaveLength(DATASET_TYPES.length + DEMO_PROFILES.length)
-		for (const nom of ACCOUNT_NAMES) expect(accountSearch(nom), nom).toBeDefined()
+		for (const name of ACCOUNT_NAMES) expect(accountSearch(name), name).toBeDefined()
 	})
 
 	test('la maquilleuse d’un profil type', () => {
@@ -75,7 +75,7 @@ describe('Quel compte désigne un nom', () => {
 		const message = unknownAccountMessage('personne')
 
 		expect(message).toContain('« personne »')
-		for (const nom of ['admin', 'redaction', 'profil-reference']) expect(message).toContain(nom)
+		for (const name of ['admin', 'redaction', 'profil-reference']) expect(message).toContain(name)
 	})
 })
 
@@ -104,21 +104,26 @@ describe('Les deux fichiers d’une session', () => {
 
 	test('les sessions s’écrivent dans un dossier que git ignore', () => {
 		expect(SESSION_FOLDER).toBe('.banc/sessions')
-		expect(lire('.gitignore').split('\n')).toContain('/.banc/')
+		expect(read('.gitignore').split('\n')).toContain('/.banc/')
 	})
 })
 
 describe('Les commandes du banc', () => {
-	const scripts = (JSON.parse(lire('package.json')) as { scripts: Record<string, string> }).scripts
+	const scripts = (JSON.parse(read('package.json')) as { scripts: Record<string, string> }).scripts
 
 	test('les trois commandes du ticket sont des scripts du paquet, sans le .env de travail', () => {
-		for (const nom of ['bench:full', 'bench:reset', 'bench:session'])
-			expect(scripts[nom], nom).toStartWith('bun --no-env-file scripts/bench.ts ')
+		for (const name of ['bench:full', 'bench:reset', 'bench:session'])
+			expect(scripts[name], name).toStartWith('bun --no-env-file scripts/bench.ts ')
 	})
 
 	test('le guide des agents et le guide du banc disent les quatre gestes', () => {
-		for (const fichier of ['CLAUDE.md', 'docs/tests/banc.md'])
-			for (const geste of ['bun run bench:full', 'bun run bench:reset', 'bun run bench:session', 'bun run bench:down'])
-				expect(lire(fichier), `${fichier} : ${geste}`).toContain(geste)
+		for (const file of ['CLAUDE.md', 'docs/tests/banc.md'])
+			for (const gesture of [
+				'bun run bench:full',
+				'bun run bench:reset',
+				'bun run bench:session',
+				'bun run bench:down',
+			])
+				expect(read(file), `${file} : ${gesture}`).toContain(gesture)
 	})
 })

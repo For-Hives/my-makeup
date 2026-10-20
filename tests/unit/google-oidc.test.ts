@@ -19,60 +19,60 @@ import {
  * A provider is played in the test: its keys are made here, its answers are a function of the request.
  */
 
-const EMETTEUR = 'https://accounts.google.com'
+const ISSUER = 'https://accounts.google.com'
 const CLIENT = 'client-factice.example.test'
 const SECRET = 'secret-factice-du-client'
-const CLE_DE_SCEAU = 'une-cle-de-sceau-qui-fait-plus-de-32-caracteres'
+const SEAL_KEY = 'une-cle-de-sceau-qui-fait-plus-de-32-caracteres'
 const config: ConfigGoogle = {
-	emetteur: EMETTEUR,
+	emetteur: ISSUER,
 	clientId: CLIENT,
 	clientSecret: SECRET,
 	redirectUri: 'https://my-makeup.example.test/auth/google/callback',
 }
-const MAINTENANT = Date.UTC(2026, 9, 14, 12, 0, 0)
-const maintenant = () => MAINTENANT
-const dans = (secondes: number) => Math.floor(MAINTENANT / 1000) + secondes
+const NOW = Date.UTC(2026, 9, 14, 12, 0, 0)
+const now = () => NOW
+const insideValue = (secondes: number) => Math.floor(NOW / 1000) + secondes
 
 const base64url = (donnees: string | Uint8Array) => Buffer.from(donnees).toString('base64url')
 
-async function fabriquerUneCle() {
-	const paire = await crypto.subtle.generateKey(
+async function buildKey() {
+	const pair = await crypto.subtle.generateKey(
 		{ name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' },
 		true,
 		['sign', 'verify']
 	)
-	const jwk = await crypto.subtle.exportKey('jwk', paire.publicKey)
-	return { privee: paire.privateKey, publique: { ...jwk, kid: 'cle-1', alg: 'RS256', use: 'sig' } }
+	const jwk = await crypto.subtle.exportKey('jwk', pair.publicKey)
+	return { privee: pair.privateKey, publique: { ...jwk, kid: 'cle-1', alg: 'RS256', use: 'sig' } }
 }
 
-const cle = await fabriquerUneCle()
-const autreCle = await fabriquerUneCle()
+const key = await buildKey()
+const otherKey = await buildKey()
 
-async function signer(
+async function sign(
 	charge: Record<string, unknown>,
-	{ alg = 'RS256', avec = cle.privee, kid = 'cle-1' }: { alg?: string; avec?: CryptoKey; kid?: string } = {}
+	{ alg = 'RS256', avec = key.privee, kid = 'cle-1' }: { alg?: string; avec?: CryptoKey; kid?: string } = {}
 ): Promise<string> {
-	const entete = base64url(JSON.stringify({ alg, kid, typ: 'JWT' }))
+	const header = base64url(JSON.stringify({ alg, kid, typ: 'JWT' }))
 	const corps = base64url(JSON.stringify(charge))
-	const signature = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', avec, new TextEncoder().encode(`${entete}.${corps}`))
-	return `${entete}.${corps}.${base64url(new Uint8Array(signature))}`
+	const signature = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', avec, new TextEncoder().encode(`${header}.${corps}`))
+	return `${header}.${corps}.${base64url(new Uint8Array(signature))}`
 }
 
-const chargeValide = (en: Record<string, unknown> = {}) => ({
-	iss: EMETTEUR,
+const validLoad = (en: Record<string, unknown> = {}) => ({
+	iss: ISSUER,
 	aud: CLIENT,
 	sub: 'sub-fictif',
 	email: 'lea@example.test',
 	email_verified: true,
 	name: 'Léa Fictive',
 	nonce: 'nonce-attendu',
-	iat: dans(-5),
-	exp: dans(3600),
+	iat: insideValue(-5),
+	exp: insideValue(3600),
 	...en,
 })
 
-const decouverteValide = {
-	issuer: EMETTEUR,
+const validDiscovery = {
+	issuer: ISSUER,
 	authorization_endpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
 	token_endpoint: 'https://oauth2.googleapis.com/token',
 	jwks_uri: 'https://www.googleapis.com/oauth2/v3/certs',
@@ -82,38 +82,37 @@ const json = (corps: unknown, statut = 200) =>
 	new Response(JSON.stringify(corps), { status: statut, headers: { 'Content-Type': 'application/json' } })
 
 /** A provider: discovery, keys and the token endpoint, which answers with the token the test chose. */
-function fournisseur(idToken: () => Promise<string>, decouverte: Record<string, unknown> = decouverteValide) {
-	const vues: { url: string; init?: RequestInit }[] = []
-	const requeter = async (url: string, init?: RequestInit): Promise<Response> => {
-		vues.push({ url, init })
+function provider(idToken: () => Promise<string>, decouverte: Record<string, unknown> = validDiscovery) {
+	const seen: { url: string; init?: RequestInit }[] = []
+	const query = async (url: string, init?: RequestInit): Promise<Response> => {
+		seen.push({ url, init })
 		if (url.endsWith('/.well-known/openid-configuration')) return json(decouverte)
-		if (url === decouverteValide.jwks_uri) return json({ keys: [cle.publique] })
-		if (url === decouverteValide.token_endpoint)
-			return json({ access_token: 'acces-fictif', id_token: await idToken() })
+		if (url === validDiscovery.jwks_uri) return json({ keys: [key.publique] })
+		if (url === validDiscovery.token_endpoint) return json({ access_token: 'acces-fictif', id_token: await idToken() })
 		return new Response('introuvable', { status: 404 })
 	}
-	return { requeter, vues }
+	return { requeter: query, vues: seen }
 }
 
-const demande: PendingRequest = {
+const request: PendingRequest = {
 	state: 'state',
 	nonce: 'nonce-attendu',
 	verifier: 'verifier-fictif',
 	retour: '/auth/profil',
-	expire: dans(600),
+	expire: insideValue(600),
 }
 
 beforeEach(() => clearDocuments())
 
 describe('le départ vers Google', () => {
 	test('la demande porte le client, le retour, le state, le nonce et le défi PKCE S256, sans le secret', () => {
-		const { adresse } = prepareStart(config, decouverteValide as never, {
+		const { adresse: address } = prepareStart(config, validDiscovery as never, {
 			retour: '/auth/profil',
-			secret: CLE_DE_SCEAU,
-			maintenant,
+			secret: SEAL_KEY,
+			maintenant: now,
 		})
-		const url = new URL(adresse)
-		expect(url.origin + url.pathname).toBe(decouverteValide.authorization_endpoint)
+		const url = new URL(address)
+		expect(url.origin + url.pathname).toBe(validDiscovery.authorization_endpoint)
 		expect(Object.fromEntries(url.searchParams)).toMatchObject({
 			client_id: CLIENT,
 			redirect_uri: config.redirectUri,
@@ -123,85 +122,85 @@ describe('le départ vers Google', () => {
 		})
 		expect(url.searchParams.get('state')?.length).toBeGreaterThan(30)
 		expect(url.searchParams.get('nonce')?.length).toBeGreaterThan(30)
-		expect(adresse).not.toContain(SECRET)
+		expect(address).not.toContain(SECRET)
 	})
 
 	test('le cookie rend ce que le départ a gardé, et le state du cookie est celui de l’adresse', () => {
-		const depart = prepareStart(config, decouverteValide as never, {
+		const start = prepareStart(config, validDiscovery as never, {
 			retour: '/blog',
-			secret: CLE_DE_SCEAU,
-			maintenant,
+			secret: SEAL_KEY,
+			maintenant: now,
 		})
-		const garde = openCookie(depart.cookie, CLE_DE_SCEAU, maintenant)
-		expect(garde?.retour).toBe('/blog')
-		expect(garde?.state).toBe(new URL(depart.adresse).searchParams.get('state') ?? undefined)
-		expect(garde?.expire).toBe(dans(600))
+		const guard = openCookie(start.cookie, SEAL_KEY, now)
+		expect(guard?.retour).toBe('/blog')
+		expect(guard?.state).toBe(new URL(start.adresse).searchParams.get('state') ?? undefined)
+		expect(guard?.expire).toBe(insideValue(600))
 	})
 
 	test('le cookie ne vaut rien : changé, signé par une autre clé, périmé, ou sans signature', () => {
-		const bon = seal(demande, CLE_DE_SCEAU)
-		const [charge = '', signature = ''] = bon.split('.')
-		const autre = base64url(JSON.stringify({ ...demande, retour: '//autre.example.test' }))
-		expect(openCookie(bon, CLE_DE_SCEAU, maintenant)).toEqual(demande)
-		for (const mauvais of [
-			`${autre}.${signature}`,
-			seal(demande, 'une-autre-cle-de-sceau-de-plus-de-32-caracteres'),
-			seal({ ...demande, expire: dans(-1) }, CLE_DE_SCEAU),
+		const good = seal(request, SEAL_KEY)
+		const [charge = '', signature = ''] = good.split('.')
+		const other = base64url(JSON.stringify({ ...request, retour: '//autre.example.test' }))
+		expect(openCookie(good, SEAL_KEY, now)).toEqual(request)
+		for (const bad of [
+			`${other}.${signature}`,
+			seal(request, 'une-autre-cle-de-sceau-de-plus-de-32-caracteres'),
+			seal({ ...request, expire: insideValue(-1) }, SEAL_KEY),
 			charge,
 			`${charge}.`,
 			`${charge}.${signature}.x`,
 			'',
 			undefined,
 		])
-			expect(openCookie(mauvais, CLE_DE_SCEAU, maintenant)).toBeUndefined()
+			expect(openCookie(bad, SEAL_KEY, now)).toBeUndefined()
 	})
 })
 
 describe('la découverte', () => {
 	test('elle est gardée : une seule lecture', async () => {
-		const { requeter, vues } = fournisseur(async () => '')
-		await discover(EMETTEUR, { requeter, maintenant })
-		await discover(EMETTEUR, { requeter, maintenant })
-		expect(vues).toHaveLength(1)
+		const { requeter: query, vues: seen } = provider(async () => '')
+		await discover(ISSUER, { requeter: query, maintenant: now })
+		await discover(ISSUER, { requeter: query, maintenant: now })
+		expect(seen).toHaveLength(1)
 	})
 
 	test.each([
-		['un autre émetteur', { ...decouverteValide, issuer: 'https://autre.example.test' }],
-		['un point d’accès en http', { ...decouverteValide, token_endpoint: 'http://oauth2.googleapis.com/token' }],
-		['des identifiants dans l’adresse', { ...decouverteValide, jwks_uri: 'https://a:b@www.googleapis.com/certs' }],
-		['un document incomplet', { issuer: EMETTEUR }],
+		['un autre émetteur', { ...validDiscovery, issuer: 'https://autre.example.test' }],
+		['un point d’accès en http', { ...validDiscovery, token_endpoint: 'http://oauth2.googleapis.com/token' }],
+		['des identifiants dans l’adresse', { ...validDiscovery, jwks_uri: 'https://a:b@www.googleapis.com/certs' }],
+		['un document incomplet', { issuer: ISSUER }],
 	])('%s : refusé', async (_nom, document) => {
-		const { requeter } = fournisseur(async () => '', document)
-		await expect(discover(EMETTEUR, { requeter, maintenant })).rejects.toBeInstanceOf(GoogleUnavailable)
+		const { requeter: query } = provider(async () => '', document)
+		await expect(discover(ISSUER, { requeter: query, maintenant: now })).rejects.toBeInstanceOf(GoogleUnavailable)
 	})
 
 	test('un émetteur local ne peut pas renvoyer vers un autre hôte', async () => {
 		const local = 'http://127.0.0.1:7080'
-		const requeter = async () =>
+		const query = async () =>
 			json({
-				...decouverteValide,
+				...validDiscovery,
 				issuer: local,
 				authorization_endpoint: `${local}/auth`,
 				token_endpoint: 'http://127.0.0.1:9999/token',
 				jwks_uri: `${local}/certs`,
 			})
-		await expect(discover(local, { requeter, maintenant })).rejects.toBeInstanceOf(GoogleUnavailable)
+		await expect(discover(local, { requeter: query, maintenant: now })).rejects.toBeInstanceOf(GoogleUnavailable)
 	})
 
 	test('une panne de Google est une panne, pas un plantage', async () => {
-		const requeter = async () => new Response('<html>503</html>', { status: 503 })
-		await expect(discover(EMETTEUR, { requeter, maintenant })).rejects.toBeInstanceOf(GoogleUnavailable)
+		const query = async () => new Response('<html>503</html>', { status: 503 })
+		await expect(discover(ISSUER, { requeter: query, maintenant: now })).rejects.toBeInstanceOf(GoogleUnavailable)
 	})
 })
 
 describe('le jeton d’identité', () => {
-	const verifier = async (jeton: string) => {
-		const { requeter } = fournisseur(async () => '')
-		return verifyToken(jeton, config, decouverteValide as never, 'nonce-attendu', { requeter, maintenant })
+	const check = async (jeton: string) => {
+		const { requeter: query } = provider(async () => '')
+		return verifyToken(jeton, config, validDiscovery as never, 'nonce-attendu', { requeter: query, maintenant: now })
 	}
 
 	test('un jeton juste rend ce que Google dit de la personne', async () => {
-		expect(await verifier(await signer(chargeValide()))).toEqual({
+		expect(await check(await sign(validLoad()))).toEqual({
 			sub: 'sub-fictif',
 			email: 'lea@example.test',
 			emailVerifie: true,
@@ -210,12 +209,12 @@ describe('le jeton d’identité', () => {
 	})
 
 	test('le nom vient du prénom et du nom de famille quand « name » manque', async () => {
-		const r = await verifier(await signer(chargeValide({ name: undefined, given_name: 'Léa', family_name: 'Fictive' })))
+		const r = await check(await sign(validLoad({ name: undefined, given_name: 'Léa', family_name: 'Fictive' })))
 		expect(r.nom).toBe('Léa Fictive')
 	})
 
 	test('« email_verified » est vrai pour true et pour "true", faux pour tout le reste', async () => {
-		for (const [valeur, attendu] of [
+		for (const [value, expected] of [
 			[true, true],
 			['true', true],
 			[false, false],
@@ -223,45 +222,45 @@ describe('le jeton d’identité', () => {
 			[undefined, false],
 			[1, false],
 		] as const) {
-			const jeton = await signer(chargeValide({ email_verified: valeur }))
-			if (valeur === 1) await expect(verifier(jeton)).rejects.toBeInstanceOf(RefusedToken)
-			else expect((await verifier(jeton)).emailVerifie).toBe(attendu)
+			const token = await sign(validLoad({ email_verified: value }))
+			if (value === 1) await expect(check(token)).rejects.toBeInstanceOf(RefusedToken)
+			else expect((await check(token)).emailVerifie).toBe(expected)
 		}
 	})
 
 	test('l’émetteur court de Google est accepté', async () => {
-		expect((await verifier(await signer(chargeValide({ iss: 'accounts.google.com' })))).sub).toBe('sub-fictif')
+		expect((await check(await sign(validLoad({ iss: 'accounts.google.com' })))).sub).toBe('sub-fictif')
 	})
 
 	test.each([
 		['un autre émetteur', { iss: 'https://autre.example.test' }],
 		['un autre client', { aud: 'un-autre-client' }],
 		['plusieurs publics dont le nôtre, sans azp', { aud: [CLIENT, 'un-autre-client'] }],
-		['un jeton périmé', { exp: dans(-120) }],
-		['un jeton daté du futur', { iat: dans(3600) }],
+		['un jeton périmé', { exp: insideValue(-120) }],
+		['un jeton daté du futur', { iat: insideValue(3600) }],
 		['un autre nonce', { nonce: 'rejoue' }],
 		['pas de nonce', { nonce: undefined }],
 		['pas de sujet', { sub: undefined }],
 	])('%s : refusé', async (_nom, changement) => {
-		await expect(verifier(await signer(chargeValide(changement)))).rejects.toBeInstanceOf(RefusedToken)
+		await expect(check(await sign(validLoad(changement)))).rejects.toBeInstanceOf(RefusedToken)
 	})
 
 	test('plusieurs publics dont le nôtre, avec notre azp : accepté', async () => {
-		const jeton = await signer(chargeValide({ aud: [CLIENT, 'un-autre-client'], azp: CLIENT }))
-		expect((await verifier(jeton)).sub).toBe('sub-fictif')
+		const token = await sign(validLoad({ aud: [CLIENT, 'un-autre-client'], azp: CLIENT }))
+		expect((await check(token)).sub).toBe('sub-fictif')
 	})
 
 	test('une signature faite par une autre clé, une clé inconnue, ou un algorithme autre que RS256 : refusé', async () => {
-		await expect(verifier(await signer(chargeValide(), { avec: autreCle.privee }))).rejects.toBeInstanceOf(RefusedToken)
-		await expect(verifier(await signer(chargeValide(), { kid: 'inconnue' }))).rejects.toBeInstanceOf(RefusedToken)
+		await expect(check(await sign(validLoad(), { avec: otherKey.privee }))).rejects.toBeInstanceOf(RefusedToken)
+		await expect(check(await sign(validLoad(), { kid: 'inconnue' }))).rejects.toBeInstanceOf(RefusedToken)
 		for (const alg of ['none', 'HS256', 'RS512'])
-			await expect(verifier(await signer(chargeValide(), { alg }))).rejects.toBeInstanceOf(RefusedToken)
+			await expect(check(await sign(validLoad(), { alg }))).rejects.toBeInstanceOf(RefusedToken)
 	})
 
 	test('un jeton dont la charge a été changée après la signature : refusé', async () => {
-		const [entete, , signature] = (await signer(chargeValide())).split('.')
-		const charge = base64url(JSON.stringify(chargeValide({ email: 'autre@example.test' })))
-		await expect(verifier(`${entete}.${charge}.${signature}`)).rejects.toBeInstanceOf(RefusedToken)
+		const [header, , signature] = (await sign(validLoad())).split('.')
+		const charge = base64url(JSON.stringify(validLoad({ email: 'autre@example.test' })))
+		await expect(check(`${header}.${charge}.${signature}`)).rejects.toBeInstanceOf(RefusedToken)
 	})
 
 	test.each([
@@ -271,23 +270,23 @@ describe('le jeton d’identité', () => {
 		'a.b.c',
 		'a.b.c.d',
 	])('un texte qui n’est pas un jeton (« %s ») : refusé', async texte => {
-		await expect(verifier(texte)).rejects.toBeInstanceOf(RefusedToken)
+		await expect(check(texte)).rejects.toBeInstanceOf(RefusedToken)
 	})
 })
 
 describe('l’échange du code', () => {
 	test('le code part avec le secret du client et le vérificateur PKCE, par POST, et le jeton est vérifié', async () => {
-		const { requeter, vues } = fournisseur(async () => signer(chargeValide()))
+		const { requeter: query, vues: seen } = provider(async () => sign(validLoad()))
 		const r = await codeClaims(
 			config,
-			decouverteValide as never,
-			{ code: 'code-fictif', demande },
-			{ requeter, maintenant }
+			validDiscovery as never,
+			{ code: 'code-fictif', demande: request },
+			{ requeter: query, maintenant: now }
 		)
 		expect(r.email).toBe('lea@example.test')
-		const echange = vues.find(({ url }) => url === decouverteValide.token_endpoint)
-		expect(echange?.init?.method).toBe('POST')
-		const corps = new URLSearchParams(String(echange?.init?.body))
+		const exchange = seen.find(({ url }) => url === validDiscovery.token_endpoint)
+		expect(exchange?.init?.method).toBe('POST')
+		const corps = new URLSearchParams(String(exchange?.init?.body))
 		expect(Object.fromEntries(corps)).toEqual({
 			grant_type: 'authorization_code',
 			code: 'code-fictif',
@@ -299,16 +298,16 @@ describe('l’échange du code', () => {
 	})
 
 	test('Google qui refuse le code (400) est un refus ; Google qui tombe (503, réseau coupé) est une panne', async () => {
-		const refus = async () => json({ error: 'invalid_grant' }, 400)
-		const panne = async () => new Response('<html>503</html>', { status: 503 })
-		const coupe = async (): Promise<Response> => {
+		const refusal = async () => json({ error: 'invalid_grant' }, 400)
+		const failure = async () => new Response('<html>503</html>', { status: 503 })
+		const cut = async (): Promise<Response> => {
 			throw new TypeError('fetch failed')
 		}
-		const essai = (requeter: () => Promise<Response>) =>
-			codeClaims(config, decouverteValide as never, { code: 'c', demande }, { requeter, maintenant })
-		await expect(essai(refus)).rejects.toBeInstanceOf(RefusedToken)
-		await expect(essai(panne)).rejects.toBeInstanceOf(GoogleUnavailable)
-		await expect(essai(coupe)).rejects.toBeInstanceOf(GoogleUnavailable)
+		const attempt = (requeter: () => Promise<Response>) =>
+			codeClaims(config, validDiscovery as never, { code: 'c', demande: request }, { requeter, maintenant: now })
+		await expect(attempt(refusal)).rejects.toBeInstanceOf(RefusedToken)
+		await expect(attempt(failure)).rejects.toBeInstanceOf(GoogleUnavailable)
+		await expect(attempt(cut)).rejects.toBeInstanceOf(GoogleUnavailable)
 	})
 })
 

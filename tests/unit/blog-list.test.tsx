@@ -22,23 +22,23 @@ const article = (slug: string, publieLe: string | null, extra: Partial<ListedArt
 
 describe('Ordre de la liste', () => {
 	test('le plus récent d’abord, sans date à la fin, à égalité par adresse', () => {
-		const liste = [
+		const list = [
 			article('b', '2026-01-01T00:00:00.000Z'),
 			article('sans-date', null),
 			article('a', '2026-01-01T00:00:00.000Z'),
 			article('recent', '2026-09-01T00:00:00.000Z'),
 			article('illisible', 'pas une date'),
 		]
-		expect([...liste].sort(byRecency).map(({ slug }) => slug)).toEqual(['recent', 'a', 'b', 'illisible', 'sans-date'])
+		expect([...list].sort(byRecency).map(({ slug }) => slug)).toEqual(['recent', 'a', 'b', 'illisible', 'sans-date'])
 	})
 })
 
 describe('Lecture', () => {
 	test('lit les champs de la carte, avec les règles d’accès d’une visiteuse et une limite', async () => {
-		const lectures: Record<string, unknown>[] = []
+		const readings: Record<string, unknown>[] = []
 		const payload = {
 			find: async (options: Record<string, unknown>) => {
-				lectures.push(options)
+				readings.push(options)
 				return {
 					docs: [
 						{ slug: 'ancien', title: 'Ancien', excerpt: '  ', publishedAt: '2026-01-01T00:00:00.000Z' },
@@ -51,25 +51,25 @@ describe('Lecture', () => {
 			},
 		} as unknown as Payload
 
-		const liste = await listArticles(payload)
+		const list = await listArticles(payload)
 
-		expect(lectures).toHaveLength(1)
-		expect(lectures[0]).toMatchObject({
+		expect(readings).toHaveLength(1)
+		expect(readings[0]).toMatchObject({
 			collection: 'articles',
 			select: LIST_FIELDS,
 			limit: ARTICLES_LIMIT,
 			overrideAccess: false,
 			depth: 0,
 		})
-		expect(liste.map(({ slug }) => slug)).toEqual(['recent', 'ancien', 'sans-date'])
-		expect(liste[0]).toEqual({
+		expect(list.map(({ slug }) => slug)).toEqual(['recent', 'ancien', 'sans-date'])
+		expect(list[0]).toEqual({
 			slug: 'recent',
 			titre: 'Récent',
 			extrait: 'Un extrait',
 			publieLe: '2026-06-01T00:00:00.000Z',
 		})
-		expect(liste[1]?.extrait).toBe('')
-		expect(liste[2]?.publieLe).toBeNull()
+		expect(list[1]?.extrait).toBe('')
+		expect(list[2]?.publieLe).toBeNull()
 	})
 })
 

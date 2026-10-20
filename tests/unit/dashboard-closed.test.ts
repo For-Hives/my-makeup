@@ -24,7 +24,7 @@ describe('redirectionDeLEspace : la porte rapide des pages privées', () => {
 	})
 
 	test('la connexion elle-même, le site et l’API ne sont jamais fermés (pas de boucle)', () => {
-		for (const chemin of [
+		for (const filePath of [
 			'/auth/signin',
 			'/auth/signup',
 			'/auth/profilx',
@@ -33,7 +33,7 @@ describe('redirectionDeLEspace : la porte rapide des pages privées', () => {
 			'/api/pros/me',
 			'/admin',
 		])
-			expect(dashboardRedirection(chemin, '', false)).toBeNull()
+			expect(dashboardRedirection(filePath, '', false)).toBeNull()
 	})
 
 	test('les sous-chemins d’une page privée sont privés', () => {
@@ -47,8 +47,8 @@ describe('redirectionDeLEspace : la porte rapide des pages privées', () => {
 
 describe('U71 : les pages de l’espace ne sont jamais en cache', () => {
 	test('Cache-Control: private, no-store et noindex', () => {
-		const entetes = Object.fromEntries(dashboardHeaders().map(({ key, value }) => [key, value]))
-		expect(entetes['Cache-Control']).toBe('private, no-store')
-		expect(entetes['X-Robots-Tag']).toContain('noindex')
+		const headers = Object.fromEntries(dashboardHeaders().map(({ key, value }) => [key, value]))
+		expect(headers['Cache-Control']).toBe('private, no-store')
+		expect(headers['X-Robots-Tag']).toContain('noindex')
 	})
 })

@@ -28,49 +28,49 @@ const PAGES = [
 // wanted differences are in the policy: the paragraph « Formulaire de contact » (ticket 162, register
 // `contact-conservation-12-mois`), and the providers, the email confirmation and the delay of the photos
 // (ticket 189, register `politique-a-jour-a-la-bascule`).
-const EN_LIGNE: Record<string, { lignes: number; sha: string }> = JSON.parse(
+const ONLINE: Record<string, { lignes: number; sha: string }> = JSON.parse(
 	readFileSync(path.join(process.cwd(), 'tests/fixtures/legal-pages-text.json'), 'utf8')
 )
 
 describe('le texte des trois pages', () => {
-	for (const { chemin, module } of PAGES) {
-		test(`${chemin} : texte brut identique à celui du site en ligne, un seul h1`, async () => {
+	for (const { chemin: filePath, module } of PAGES) {
+		test(`${filePath} : texte brut identique à celui du site en ligne, un seul h1`, async () => {
 			const { default: Page } = await module()
 			const html = renderToStaticMarkup(<Page />)
-			const texte = pageText(html)
+			const text = pageText(html)
 
-			expect(texte.split('\n').length).toBe(EN_LIGNE[chemin]?.lignes as number)
-			expect(textFingerprint(texte)).toBe(EN_LIGNE[chemin]?.sha as string)
+			expect(text.split('\n').length).toBe(ONLINE[filePath]?.lignes as number)
+			expect(textFingerprint(text)).toBe(ONLINE[filePath]?.sha as string)
 			expect(html.match(/<h1[\s>]/g)).toHaveLength(1)
 		})
 
-		test(`${chemin} : titre, description et adresse canonique`, async () => {
+		test(`${filePath} : titre, description et adresse canonique`, async () => {
 			const { metadata } = await module()
 			const description = String(metadata.description)
 
 			expect(String((metadata.title as { absolute: string }).absolute)).toMatch(/ \| My-Makeup$/)
 			expect(description.length).toBeGreaterThanOrEqual(70)
 			expect(description.length).toBeLessThanOrEqual(155)
-			expect(metadata.alternates?.canonical).toBe(`https://my-makeup.fr${chemin}`)
+			expect(metadata.alternates?.canonical).toBe(`https://my-makeup.fr${filePath}`)
 			expect(metadata.robots).toBeUndefined()
 		})
 	}
 
 	test('seule la politique mène au bouton d’opposition', async () => {
-		const texte = async (module: () => Promise<{ default: () => React.JSX.Element }>) => {
+		const text = async (module: () => Promise<{ default: () => React.JSX.Element }>) => {
 			const { default: Page } = await module()
 			return pageText(renderToStaticMarkup(<Page />))
 		}
 
 		// The button itself draws nothing on the server: the page shows the sentence that leads to it.
-		expect(await texte(PAGES[2].module)).toContain('Vous pouvez vous y opposer sur ce navigateur :')
-		expect(await texte(PAGES[1].module)).not.toContain('opposer')
-		expect(await texte(PAGES[0].module)).not.toContain('opposer')
+		expect(await text(PAGES[2].module)).toContain('Vous pouvez vous y opposer sur ce navigateur :')
+		expect(await text(PAGES[1].module)).not.toContain('opposer')
+		expect(await text(PAGES[0].module)).not.toContain('opposer')
 	})
 
 	test('le pied de page mène aux trois pages', () => {
-		const liens = FOOTER_COLUMNS.flatMap(({ liens }) => liens.map(({ href }) => href))
-		for (const { chemin } of PAGES) expect(liens).toContain(chemin)
+		const links = FOOTER_COLUMNS.flatMap(({ liens: links }) => links.map(({ href }) => href))
+		for (const { chemin: filePath } of PAGES) expect(links).toContain(filePath)
 	})
 })
 
@@ -92,7 +92,7 @@ describe('l’identité légale vient d’une seule source', () => {
 		})
 			.filter(entree => entree.isFile() && /\.tsx?$/.test(entree.name))
 			.map(entree => readFileSync(path.join(entree.parentPath, entree.name), 'utf8'))
-		const valeurs = [
+		const values = [
 			PUBLISHER.siren,
 			PUBLISHER.siret,
 			PUBLISHER.adresse,
@@ -100,14 +100,14 @@ describe('l’identité légale vient d’une seule source', () => {
 			HOST.adresse,
 			HOST.telephone,
 		]
-		for (const source of sources) for (const valeur of valeurs) expect(source).not.toContain(valeur)
+		for (const source of sources) for (const value of values) expect(source).not.toContain(value)
 	})
 
 	test('la page des mentions écrit l’éditeur et l’hébergeur tels que la source les donne', async () => {
 		const { default: Page } = await PAGES[0].module()
-		const texte = pageText(renderToStaticMarkup(<Page />))
+		const text = pageText(renderToStaticMarkup(<Page />))
 
-		for (const ligne of [
+		for (const line of [
 			`SIREN : ${formatSiren(PUBLISHER.siren)}`,
 			`SIRET : ${formatSiret(PUBLISHER.siret)}`,
 			`Adresse : ${PUBLISHER.adresse}`,
@@ -116,70 +116,70 @@ describe('l’identité légale vient d’une seule source', () => {
 			HOST.adresse,
 			`Téléphone : ${HOST.telephone}`,
 		])
-			expect(texte).toContain(ligne)
-		expect(texte).toContain(`édité par ${PUBLISHER.nom}, ${PUBLISHER.forme}.`)
+			expect(text).toContain(line)
+		expect(text).toContain(`édité par ${PUBLISHER.nom}, ${PUBLISHER.forme}.`)
 	})
 })
 
 describe('l’opposition à la mesure', () => {
-	const fenetre = openWindow({ noms: ['localStorage'] })
+	const jsdomWindow = openWindow({ noms: ['localStorage'] })
 
 	test('un clic coupe la mesure sur ce navigateur, un second la rétablit', async () => {
-		fenetre.w.localStorage.clear()
-		const zone = await fenetre.monter(<AnalyticsOptOut />)
-		const etat = () => zone.querySelector('[role="status"]')?.textContent
+		jsdomWindow.w.localStorage.clear()
+		const zone = await jsdomWindow.monter(<AnalyticsOptOut />)
+		const state = () => zone.querySelector('[role="status"]')?.textContent
 
-		expect(etat()).toBe("La mesure d'audience est active sur ce navigateur.")
-		expect(fenetre.w.localStorage.getItem(OPT_OUT_KEY)).toBeNull()
+		expect(state()).toBe("La mesure d'audience est active sur ce navigateur.")
+		expect(jsdomWindow.w.localStorage.getItem(OPT_OUT_KEY)).toBeNull()
 
-		await fenetre.cliquer(fenetre.bouton('Ne plus mesurer mes visites'))
-		expect(fenetre.w.localStorage.getItem(OPT_OUT_KEY)).not.toBeNull()
-		expect(etat()).toBe("La mesure d'audience est désactivée sur ce navigateur.")
+		await jsdomWindow.cliquer(jsdomWindow.bouton('Ne plus mesurer mes visites'))
+		expect(jsdomWindow.w.localStorage.getItem(OPT_OUT_KEY)).not.toBeNull()
+		expect(state()).toBe("La mesure d'audience est désactivée sur ce navigateur.")
 
-		await fenetre.cliquer(fenetre.bouton("Réactiver la mesure d'audience"))
-		expect(fenetre.w.localStorage.getItem(OPT_OUT_KEY)).toBeNull()
-		expect(etat()).toBe("La mesure d'audience est active sur ce navigateur.")
+		await jsdomWindow.cliquer(jsdomWindow.bouton("Réactiver la mesure d'audience"))
+		expect(jsdomWindow.w.localStorage.getItem(OPT_OUT_KEY)).toBeNull()
+		expect(state()).toBe("La mesure d'audience est active sur ce navigateur.")
 	})
 
 	test('une opposition déjà posée se lit à l’ouverture de la page', async () => {
-		fenetre.w.localStorage.setItem(OPT_OUT_KEY, '1')
-		const zone = await fenetre.monter(<AnalyticsOptOut />)
-		await fenetre.attendre(() => zone.querySelector('button'))
+		jsdomWindow.w.localStorage.setItem(OPT_OUT_KEY, '1')
+		const zone = await jsdomWindow.monter(<AnalyticsOptOut />)
+		await jsdomWindow.attendre(() => zone.querySelector('button'))
 
 		expect(zone.querySelector('[role="status"]')?.textContent).toBe(
 			"La mesure d'audience est désactivée sur ce navigateur."
 		)
-		expect(fenetre.bouton("Réactiver la mesure d'audience")).toBeTruthy()
-		fenetre.w.localStorage.clear()
+		expect(jsdomWindow.bouton("Réactiver la mesure d'audience")).toBeTruthy()
+		jsdomWindow.w.localStorage.clear()
 	})
 })
 
 describe('la clé d’opposition', () => {
-	const memoire = () => {
-		const valeurs = new Map<string, string>()
+	const memory = () => {
+		const values = new Map<string, string>()
 		return {
-			getItem: (cle: string) => valeurs.get(cle) ?? null,
-			setItem: (cle: string, valeur: string) => void valeurs.set(cle, valeur),
-			removeItem: (cle: string) => void valeurs.delete(cle),
+			getItem: (cle: string) => values.get(cle) ?? null,
+			setItem: (cle: string, valeur: string) => void values.set(cle, valeur),
+			removeItem: (cle: string) => void values.delete(cle),
 		}
 	}
 
 	test('c’est la clé qu’Umami lit lui-même, et le filtre de la page la lit aussi', () => {
 		expect(OPT_OUT_KEY).toBe('umami.disabled')
-		const filtre = readFileSync(path.join(process.cwd(), 'src/lib/analytics/umami.ts'), 'utf8')
-		expect(filtre).toContain(`getItem('${OPT_OUT_KEY}')`)
+		const filter = readFileSync(path.join(process.cwd(), 'src/lib/analytics/umami.ts'), 'utf8')
+		expect(filter).toContain(`getItem('${OPT_OUT_KEY}')`)
 	})
 
 	test('poser puis retirer la clé change l’état, et l’état se relit dans le stockage', () => {
-		const stockage = memoire()
-		expect(analyticsRefused(stockage)).toBe(false)
-		expect(refuseAnalytics(stockage, true)).toBe(true)
-		expect(analyticsRefused(stockage)).toBe(true)
-		expect(refuseAnalytics(stockage, false)).toBe(false)
+		const storage = memory()
+		expect(analyticsRefused(storage)).toBe(false)
+		expect(refuseAnalytics(storage, true)).toBe(true)
+		expect(analyticsRefused(storage)).toBe(true)
+		expect(refuseAnalytics(storage, false)).toBe(false)
 	})
 
 	test('un stockage absent ou qui refuse ne casse rien et ne compte pas pour une opposition', () => {
-		const casse = {
+		const broken = {
 			getItem: () => {
 				throw new Error('bloqué')
 			},
@@ -191,8 +191,8 @@ describe('la clé d’opposition', () => {
 			},
 		}
 		expect(analyticsRefused(undefined)).toBe(false)
-		expect(analyticsRefused(casse)).toBe(false)
-		expect(refuseAnalytics(casse, true)).toBe(false)
+		expect(analyticsRefused(broken)).toBe(false)
+		expect(refuseAnalytics(broken, true)).toBe(false)
 		expect(refuseAnalytics(undefined, true)).toBe(false)
 	})
 })

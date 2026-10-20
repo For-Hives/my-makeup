@@ -14,10 +14,10 @@ import {
 import { methodNotAllowed, respondToStats } from '@/services/analytics/stats-response'
 import exemple from '../../docs/mesure/stats-hebdo.exemple.json'
 
-const periode = { debut: new Date('2026-10-05T00:00:00+02:00'), fin: new Date('2026-10-12T00:00:00+02:00') }
-const maintenant = new Date('2026-10-14T10:00:00Z')
+const period = { debut: new Date('2026-10-05T00:00:00+02:00'), fin: new Date('2026-10-12T00:00:00+02:00') }
+const now = new Date('2026-10-14T10:00:00Z')
 
-const profil = (surcharge: Partial<ProfileForStats> & { slug: string }): ProfileForStats => ({
+const profile = (surcharge: Partial<ProfileForStats> & { slug: string }): ProfileForStats => ({
 	createdAt: '2026-01-10T10:00:00.000Z',
 	updatedAt: '2026-01-10T10:00:00.000Z',
 	status: 'published',
@@ -29,12 +29,12 @@ const profil = (surcharge: Partial<ProfileForStats> & { slug: string }): Profile
 })
 
 describe('lirePeriode', () => {
-	const lire = (requete: string) => readPeriod(new URLSearchParams(requete))
+	const readAlt = (requete: string) => readPeriod(new URLSearchParams(requete))
 
 	test('two instants, from before to', () => {
-		const lue = lire('from=2026-10-05T00:00:00%2B02:00&to=2026-10-12T00:00:00Z')
-		expect(lue?.debut.toISOString()).toBe('2026-10-04T22:00:00.000Z')
-		expect(lue?.fin.toISOString()).toBe('2026-10-12T00:00:00.000Z')
+		const read = readAlt('from=2026-10-05T00:00:00%2B02:00&to=2026-10-12T00:00:00Z')
+		expect(read?.debut.toISOString()).toBe('2026-10-04T22:00:00.000Z')
+		expect(read?.fin.toISOString()).toBe('2026-10-12T00:00:00.000Z')
 	})
 
 	test.each([
@@ -49,81 +49,81 @@ describe('lirePeriode', () => {
 		'from=2026-10-05T00:00:00Z&from=2026-10-06T00:00:00Z&to=2026-10-12T00:00:00Z',
 		'from=1760000000000&to=1760600000000',
 	])('refused: %p', requete => {
-		expect(lire(requete)).toBeUndefined()
+		expect(readAlt(requete)).toBeUndefined()
 	})
 
 	test('at most 92 days', () => {
 		expect(PERIOD_MAX_DAYS).toBe(92)
-		expect(lire('from=2026-01-01T00:00:00Z&to=2026-04-03T00:00:00Z')).toBeDefined()
-		expect(lire('from=2026-01-01T00:00:00Z&to=2026-04-04T00:00:01Z')).toBeUndefined()
+		expect(readAlt('from=2026-01-01T00:00:00Z&to=2026-04-03T00:00:00Z')).toBeDefined()
+		expect(readAlt('from=2026-01-01T00:00:00Z&to=2026-04-04T00:00:01Z')).toBeUndefined()
 	})
 })
 
 describe('the token', () => {
-	const jeton = 'a'.repeat(40)
+	const token = 'a'.repeat(40)
 
 	test('Bearer only', () => {
-		expect(headerToken(`Bearer ${jeton}`)).toBe(jeton)
-		for (const entete of [null, '', 'Basic abc', `Bearer`, `Bearer ${jeton} extra`, jeton]) {
-			expect(headerToken(entete)).toBeUndefined()
+		expect(headerToken(`Bearer ${token}`)).toBe(token)
+		for (const header of [null, '', 'Basic abc', `Bearer`, `Bearer ${token} extra`, token]) {
+			expect(headerToken(header)).toBeUndefined()
 		}
 	})
 
 	test('exact match; no configured token means nobody gets in', () => {
-		expect(tokenValid(`Bearer ${jeton}`, jeton)).toBe(true)
-		expect(tokenValid(`Bearer ${jeton}x`, jeton)).toBe(false)
-		expect(tokenValid(`Bearer ${jeton}`, undefined)).toBe(false)
+		expect(tokenValid(`Bearer ${token}`, token)).toBe(true)
+		expect(tokenValid(`Bearer ${token}x`, token)).toBe(false)
+		expect(tokenValid(`Bearer ${token}`, undefined)).toBe(false)
 		expect(tokenValid('Bearer ', '')).toBe(false)
-		expect(tokenValid(null, jeton)).toBe(false)
+		expect(tokenValid(null, token)).toBe(false)
 	})
 })
 
 describe('the answers of the route', () => {
-	const jeton = 'b'.repeat(40)
-	const lire = async () => aggregateStats({ profils: [], datesDesComptes: [], periode, maintenant })
-	const demande = (requete: string, entete?: string) =>
+	const token = 'b'.repeat(40)
+	const readAlt = async () => aggregateStats({ profils: [], datesDesComptes: [], periode: period, maintenant: now })
+	const request = (requete: string, entete?: string) =>
 		new Request(`http://localhost/api/stats/weekly?${requete}`, entete ? { headers: { authorization: entete } } : {})
-	const bonne = 'from=2026-10-05T00:00:00Z&to=2026-10-12T00:00:00Z'
+	const good = 'from=2026-10-05T00:00:00Z&to=2026-10-12T00:00:00Z'
 
 	test('401 without a token, or with a wrong one, or when none is configured; never cached', async () => {
-		for (const [entete, attendu] of [
-			[undefined, jeton],
-			['Bearer faux', jeton],
-			[`Bearer ${jeton}`, undefined],
+		for (const [header, expected] of [
+			[undefined, token],
+			['Bearer faux', token],
+			[`Bearer ${token}`, undefined],
 		] as const) {
-			const reponse = await respondToStats(demande(bonne, entete), { jeton: attendu, lire })
-			expect(reponse.status).toBe(401)
-			expect(reponse.headers.get('Cache-Control')).toBe('no-store')
-			expect(reponse.headers.get('X-Robots-Tag')).toBe('noindex')
+			const response = await respondToStats(request(good, header), { jeton: expected, lire: readAlt })
+			expect(response.status).toBe(401)
+			expect(response.headers.get('Cache-Control')).toBe('no-store')
+			expect(response.headers.get('X-Robots-Tag')).toBe('noindex')
 		}
 	})
 
 	test('400 for a period that cannot be read, after the token', async () => {
-		const reponse = await respondToStats(demande('from=x', `Bearer ${jeton}`), { jeton, lire })
-		expect(reponse.status).toBe(400)
-		expect(reponse.headers.get('Cache-Control')).toBe('no-store')
-		const sansJeton = await respondToStats(demande('from=x'), { jeton, lire })
-		expect(sansJeton.status).toBe(401)
+		const response = await respondToStats(request('from=x', `Bearer ${token}`), { jeton: token, lire: readAlt })
+		expect(response.status).toBe(400)
+		expect(response.headers.get('Cache-Control')).toBe('no-store')
+		const withoutToken = await respondToStats(request('from=x'), { jeton: token, lire: readAlt })
+		expect(withoutToken.status).toBe(401)
 	})
 
 	test('200 with the token, never cached', async () => {
-		const reponse = await respondToStats(demande(bonne, `Bearer ${jeton}`), { jeton, lire })
-		expect(reponse.status).toBe(200)
-		expect(reponse.headers.get('Cache-Control')).toBe('no-store')
-		expect(WeeklyStats.safeParse(await reponse.json()).success).toBe(true)
+		const response = await respondToStats(request(good, `Bearer ${token}`), { jeton: token, lire: readAlt })
+		expect(response.status).toBe(200)
+		expect(response.headers.get('Cache-Control')).toBe('no-store')
+		expect(WeeklyStats.safeParse(await response.json()).success).toBe(true)
 	})
 
 	test('any other verb is 405, with Allow', () => {
-		const reponse = methodNotAllowed()
-		expect(reponse.status).toBe(405)
-		expect(reponse.headers.get('Allow')).toBe('GET')
-		expect(reponse.headers.get('Cache-Control')).toBe('no-store')
+		const response = methodNotAllowed()
+		expect(response.status).toBe(405)
+		expect(response.headers.get('Allow')).toBe('GET')
+		expect(response.headers.get('Cache-Control')).toBe('no-store')
 	})
 })
 
 describe('agregerStats', () => {
-	const profils: ProfileForStats[] = [
-		profil({
+	const profiles: ProfileForStats[] = [
+		profile({
 			slug: 'ada-fictive',
 			firstName: 'Ada',
 			lastName: 'Fictive',
@@ -137,7 +137,7 @@ describe('agregerStats', () => {
 			contactDetails: { phone: '0639980001', email: 'ada@example.test' },
 			publicContact: true,
 		}),
-		profil({
+		profile({
 			slug: 'brouillon-fictif',
 			createdAt: '2026-09-20T08:00:00.000Z',
 			completeness: 3,
@@ -145,7 +145,7 @@ describe('agregerStats', () => {
 			fullyEmpty: false,
 			status: 'draft',
 		}),
-		profil({
+		profile({
 			slug: 'masquee-fictive',
 			completeness: 12,
 			active: true,
@@ -154,13 +154,13 @@ describe('agregerStats', () => {
 			status: 'hidden',
 			city: { department: '44' },
 		}),
-		profil({ slug: 'vide-fictive', createdAt: '2026-10-08T08:00:00.000Z', completeness: 1 }),
+		profile({ slug: 'vide-fictive', createdAt: '2026-10-08T08:00:00.000Z', completeness: 1 }),
 	]
 	const stats = aggregateStats({
-		profils,
+		profils: profiles,
 		datesDesComptes: ['2026-01-01T00:00:00.000Z', '2026-10-06T08:00:00.000Z', '2026-10-08T08:00:00.000Z'],
-		periode,
-		maintenant,
+		periode: period,
+		maintenant: now,
 	})
 
 	test('exact counts', () => {
@@ -191,10 +191,10 @@ describe('agregerStats', () => {
 	})
 
 	test('no personal data outside the slugs: no @, no run of 9 digits, no name', () => {
-		const sansSlugs = JSON.stringify({ ...stats, publishable: { ...stats.publishable, slugs: [] } })
-		expect(sansSlugs).not.toContain('@')
-		expect(sansSlugs).not.toMatch(/\d{9}/)
-		for (const nom of ['Ada', 'Fictive', 'Annecy', 'example.test']) expect(sansSlugs).not.toContain(nom)
+		const withoutSlugs = JSON.stringify({ ...stats, publishable: { ...stats.publishable, slugs: [] } })
+		expect(withoutSlugs).not.toContain('@')
+		expect(withoutSlugs).not.toMatch(/\d{9}/)
+		for (const name of ['Ada', 'Fictive', 'Annecy', 'example.test']) expect(withoutSlugs).not.toContain(name)
 	})
 
 	test('the answer fits the schema, and the schema refuses an extra key', () => {
@@ -206,12 +206,12 @@ describe('agregerStats', () => {
 	test('the answer is version 2, with English keys only: a version 1 answer is refused', () => {
 		expect(stats.version).toBe(2)
 		expect(WeeklyStats.safeParse({ ...stats, version: 1 }).success).toBe(false)
-		const cles = (valeur: unknown): string[] =>
+		const keys = (valeur: unknown): string[] =>
 			valeur !== null && typeof valeur === 'object'
-				? Object.entries(valeur).flatMap(([cle, v]) => [cle, ...cles(v)])
+				? Object.entries(valeur).flatMap(([cle, v]) => [cle, ...keys(v)])
 				: []
-		for (const ancienne of ['periode', 'genereLe', 'comptes', 'profils', 'entierementVides', 'inscriptions', 'parCode'])
-			expect(cles(stats)).not.toContain(ancienne)
+		for (const oldAlt of ['periode', 'genereLe', 'comptes', 'profils', 'entierementVides', 'inscriptions', 'parCode'])
+			expect(keys(stats)).not.toContain(oldAlt)
 	})
 })
 
@@ -221,9 +221,9 @@ describe('the published example', () => {
 	})
 
 	test('carries no personal data', () => {
-		const sansSlugs = JSON.stringify({ ...exemple, publishable: { ...exemple.publishable, slugs: [] } })
-		expect(sansSlugs).not.toContain('@')
-		expect(sansSlugs).not.toMatch(/\d{9}/)
+		const withoutSlugs = JSON.stringify({ ...exemple, publishable: { ...exemple.publishable, slugs: [] } })
+		expect(withoutSlugs).not.toContain('@')
+		expect(withoutSlugs).not.toMatch(/\d{9}/)
 	})
 })
 
@@ -278,11 +278,11 @@ describe('ticket 169: contact messages, sign-ins and inherited hashes', () => {
 	})
 
 	test('the new keys are optional: an answer without them, the old example, still fits; a stray key does not', () => {
-		const { contact: _c, auth: _a, inherited: _h, ...ancien } = exemple as unknown as WeeklyStats
-		expect(WeeklyStats.safeParse(ancien).success).toBe(true)
-		const avec = WeeklyStats.parse(exemple)
-		expect(avec.contact?.total).toBe(3)
-		expect(WeeklyStats.safeParse({ ...avec, contact: { ...avec.contact, email: 'x' } }).success).toBe(false)
-		expect(WeeklyStats.safeParse({ ...avec, inherited: { remainingHashes: 1 } }).success).toBe(false)
+		const { contact: _c, auth: _a, inherited: _h, ...old } = exemple as unknown as WeeklyStats
+		expect(WeeklyStats.safeParse(old).success).toBe(true)
+		const withValue = WeeklyStats.parse(exemple)
+		expect(withValue.contact?.total).toBe(3)
+		expect(WeeklyStats.safeParse({ ...withValue, contact: { ...withValue.contact, email: 'x' } }).success).toBe(false)
+		expect(WeeklyStats.safeParse({ ...withValue, inherited: { remainingHashes: 1 } }).success).toBe(false)
 	})
 })

@@ -12,7 +12,7 @@ import {
  * messages under the field, the strict schema, and the line « Affichées sur ton profil » of the card.
  */
 
-const VALIDE = { telephone: '06 12 34 56 78', email: 'contact-fictif@example.test', contactPublic: true }
+const VALID = { telephone: '06 12 34 56 78', email: 'contact-fictif@example.test', contactPublic: true }
 
 describe('U28 : un téléphone de 20 caractères au plus, un email bien formé', () => {
 	test.each([
@@ -24,12 +24,12 @@ describe('U28 : un téléphone de 20 caractères au plus, un email bien formé',
 		'',
 		'   ',
 	])('le téléphone « %s » passe', telephone => {
-		expect(contactDetailsSchema.safeParse({ ...VALIDE, telephone }).success).toBe(true)
+		expect(contactDetailsSchema.safeParse({ ...VALID, telephone }).success).toBe(true)
 	})
 
 	test('rogné : les espaces des bords ne comptent pas', () => {
 		expect(
-			contactDetailsSchema.parse({ ...VALIDE, telephone: '  06 12 34 56 78  ', email: ' a@example.test ' })
+			contactDetailsSchema.parse({ ...VALID, telephone: '  06 12 34 56 78  ', email: ' a@example.test ' })
 		).toMatchObject({
 			telephone: '06 12 34 56 78',
 			email: 'a@example.test',
@@ -42,17 +42,17 @@ describe('U28 : un téléphone de 20 caractères au plus, un email bien formé',
 		['21 caractères', '06 12 34 56 78 90 12 3'],
 		['des caractères inattendus', '06/12/34/56/78'],
 	])('un téléphone avec %s est refusé, en français', (_cas, telephone) => {
-		const lue = contactDetailsSchema.safeParse({ ...VALIDE, telephone })
-		if (lue.success) throw new Error('doit être refusé')
-		const message = contactDetailsErrors(lue.error).telephone ?? ''
+		const read = contactDetailsSchema.safeParse({ ...VALID, telephone })
+		if (read.success) throw new Error('doit être refusé')
+		const message = contactDetailsErrors(read.error).telephone ?? ''
 		expect(message).toMatch(/^(Ce numéro n’est pas valide|Ton numéro ne doit pas dépasser 20 caractères)/)
 	})
 
 	test('les 20 caractères sont la borne', () => {
-		expect(contactDetailsSchema.safeParse({ ...VALIDE, telephone: '+33 6 12 34 56 78 90' }).success).toBe(true)
-		const lue = contactDetailsSchema.safeParse({ ...VALIDE, telephone: '+33 6 12 34 56 78 901' })
-		if (lue.success) throw new Error('doit être refusé')
-		expect(contactDetailsErrors(lue.error).telephone).toBe('Ton numéro ne doit pas dépasser 20 caractères.')
+		expect(contactDetailsSchema.safeParse({ ...VALID, telephone: '+33 6 12 34 56 78 90' }).success).toBe(true)
+		const read = contactDetailsSchema.safeParse({ ...VALID, telephone: '+33 6 12 34 56 78 901' })
+		if (read.success) throw new Error('doit être refusé')
+		expect(contactDetailsErrors(read.error).telephone).toBe('Ton numéro ne doit pas dépasser 20 caractères.')
 	})
 
 	test.each([
@@ -61,22 +61,24 @@ describe('U28 : un téléphone de 20 caractères au plus, un email bien formé',
 		'con tact@example.test',
 		'a@b@example.test',
 	])('l’email « %s » est refusé, en français', email => {
-		const lue = contactDetailsSchema.safeParse({ ...VALIDE, email })
-		if (lue.success) throw new Error('doit être refusé')
-		expect(contactDetailsErrors(lue.error).email).toBe('Cet email n’est pas valide : écris-le comme prenom@exemple.fr.')
+		const read = contactDetailsSchema.safeParse({ ...VALID, email })
+		if (read.success) throw new Error('doit être refusé')
+		expect(contactDetailsErrors(read.error).email).toBe(
+			'Cet email n’est pas valide : écris-le comme prenom@exemple.fr.'
+		)
 	})
 
 	test('un email de plus de 200 caractères est refusé', () => {
 		const long = `${'a'.repeat(60)}@${'b'.repeat(60)}.${'c'.repeat(60)}.${'d'.repeat(20)}.test`
-		const lue = contactDetailsSchema.safeParse({ ...VALIDE, email: long })
-		if (lue.success) throw new Error('doit être refusé')
-		expect(contactDetailsErrors(lue.error).email).toBe('Ton email ne doit pas dépasser 200 caractères.')
+		const read = contactDetailsSchema.safeParse({ ...VALID, email: long })
+		if (read.success) throw new Error('doit être refusé')
+		expect(contactDetailsErrors(read.error).email).toBe('Ton email ne doit pas dépasser 200 caractères.')
 	})
 
 	test('chaque champ refusé a son message, sans anglais', () => {
-		const lue = contactDetailsSchema.safeParse({ telephone: 12, email: 'x', contactPublic: 'oui' })
-		if (lue.success) throw new Error('doit être refusé')
-		const messages = Object.values(contactDetailsErrors(lue.error))
+		const read = contactDetailsSchema.safeParse({ telephone: 12, email: 'x', contactPublic: 'oui' })
+		if (read.success) throw new Error('doit être refusé')
+		const messages = Object.values(contactDetailsErrors(read.error))
 		expect(messages).toHaveLength(3)
 		for (const message of messages) expect(message).not.toMatch(/expected|invalid|string|boolean/i)
 	})
@@ -84,7 +86,7 @@ describe('U28 : un téléphone de 20 caractères au plus, un email bien formé',
 
 describe('le schéma du serveur est strict : elle n’écrit pas la date de son propre consentement', () => {
 	test('les trois champs passent', () => {
-		expect(strictContactDetailsSchema.safeParse(VALIDE).success).toBe(true)
+		expect(strictContactDetailsSchema.safeParse(VALID).success).toBe(true)
 	})
 
 	test.each([
@@ -94,23 +96,23 @@ describe('le schéma du serveur est strict : elle n’écrit pas la date de son 
 		['pro', 1],
 		['id', 1],
 	])('la clé %s refuse la requête entière', (cle, valeur) => {
-		expect(strictContactDetailsSchema.safeParse({ ...VALIDE, [cle]: valeur }).success).toBe(false)
+		expect(strictContactDetailsSchema.safeParse({ ...VALID, [cle]: valeur }).success).toBe(false)
 	})
 })
 
 describe('la carte dit si les coordonnées sont affichées, et depuis quand', () => {
-	const ligne = (profil: DashboardProfile) =>
+	const line = (profil: DashboardProfile) =>
 		profileCards(profil)
 			.find(carte => carte.section === 'coordonnees')
 			?.lignes.find(l => l.libelle === 'Affichées sur ton profil')?.valeur
 
 	test('masquées : « Non », même avec une date restée d’avant', () => {
-		expect(ligne({ id: 1, publicContact: false })).toBe('Non')
-		expect(ligne({ id: 1, publicContact: false, consentedAt: '2026-10-15T10:00:00.000Z' })).toBe('Non')
+		expect(line({ id: 1, publicContact: false })).toBe('Non')
+		expect(line({ id: 1, publicContact: false, consentedAt: '2026-10-15T10:00:00.000Z' })).toBe('Non')
 	})
 
 	test('affichées avec la date du serveur : « Oui, depuis le … », à l’heure de Paris', () => {
-		expect(ligne({ id: 1, publicContact: true, consentedAt: '2026-10-15T10:00:00.000Z' })).toBe(
+		expect(line({ id: 1, publicContact: true, consentedAt: '2026-10-15T10:00:00.000Z' })).toBe(
 			'Oui, depuis le 15 octobre 2026'
 		)
 		// 23:30 UTC the 14th is already the 15th in Paris.
@@ -118,7 +120,7 @@ describe('la carte dit si les coordonnées sont affichées, et depuis quand', ()
 	})
 
 	test('affichées sans date lisible : « Oui » seulement', () => {
-		expect(ligne({ id: 1, publicContact: true })).toBe('Oui')
-		expect(ligne({ id: 1, publicContact: true, consentedAt: 'pas une date' })).toBe('Oui')
+		expect(line({ id: 1, publicContact: true })).toBe('Oui')
+		expect(line({ id: 1, publicContact: true, consentedAt: 'pas une date' })).toBe('Oui')
 	})
 })

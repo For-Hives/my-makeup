@@ -1,16 +1,16 @@
 /**
- * The shared cases of the completeness rule (tests/unit/fixtures/completude-cas.json, written in
+ * The shared cases of the completeness rule (tests/unit/fixtures/completeness-cases.json, written in
  * the fields of the old site), as the v3 holds them (ticket 044): what the import makes of each
  * (tickets 059 to 064), so that the state the server stores can be compared with the single rule
- * (I20, U01-U08) and with the answers of the old site (tests/unit/fixtures/completude-ancien-site.json).
+ * (I20, U01-U08) and with the answers of the old site (tests/unit/fixtures/completeness-old-site.json).
  *
  * Every value is made up, but for the commune, which is public reference data.
  */
 
 import { parsePrice } from '@/lib/price'
 import { aMedia, type Completeness, completeness, type ProfileFields } from '@/lib/profile/completeness'
-import ancienSite from '../unit/fixtures/completude-ancien-site.json'
-import casPartages from '../unit/fixtures/completude-cas.json'
+import casPartages from '../unit/fixtures/completeness-cases.json'
+import ancienSite from '../unit/fixtures/completeness-old-site.json'
 
 /** A commune of the official list, with its INSEE code. */
 export const ANNECY = { name: 'Annecy', inseeCode: '74010' } as const

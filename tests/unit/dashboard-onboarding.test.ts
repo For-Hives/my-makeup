@@ -10,8 +10,8 @@ import {
  * single rule of a profile, and the speciality, which the space leaves optional, is required.
  */
 
-const IDENTITE = { firstName: 'Léa', lastName: 'Fictive', specialty: 'Mariée' }
-const COMMUNE = { name: 'Lille', inseeCode: '59350' }
+const IDENTITY = { firstName: 'Léa', lastName: 'Fictive', specialty: 'Mariée' }
+const CITY = { name: 'Lille', inseeCode: '59350' }
 
 describe('la position : première étape que le profil enregistré n’a pas faite', () => {
 	test('un profil vide est à l’étape 1', () => {
@@ -25,30 +25,30 @@ describe('la position : première étape que le profil enregistré n’a pas fai
 	})
 
 	test('identité faite, sans commune : étape 2 (la reprise après un départ)', () => {
-		expect(onboardingPosition(IDENTITE)).toBe(2)
+		expect(onboardingPosition(IDENTITY)).toBe(2)
 		// A commune with no code is no commune the rule can read.
-		expect(onboardingPosition({ ...IDENTITE, city: { name: 'Lille' } })).toBe(2)
+		expect(onboardingPosition({ ...IDENTITY, city: { name: 'Lille' } })).toBe(2)
 	})
 
 	test('identité et commune faites, sans photo : étape 3', () => {
-		expect(onboardingPosition({ ...IDENTITE, city: COMMUNE })).toBe(3)
+		expect(onboardingPosition({ ...IDENTITY, city: CITY })).toBe(3)
 	})
 
 	test('les trois faites : terminée, et c’est exactement un profil actif', () => {
-		expect(onboardingPosition({ ...IDENTITE, city: COMMUNE, mainPicture: { id: 4 } })).toBe('terminee')
+		expect(onboardingPosition({ ...IDENTITY, city: CITY, mainPicture: { id: 4 } })).toBe('terminee')
 	})
 
 	test('une photo sans le reste ne saute pas d’étape', () => {
 		expect(onboardingPosition({ mainPicture: { id: 4 } })).toBe(1)
-		expect(onboardingPosition({ ...IDENTITE, mainPicture: { id: 4 } })).toBe(2)
+		expect(onboardingPosition({ ...IDENTITY, mainPicture: { id: 4 } })).toBe(2)
 	})
 })
 
 describe('l’identité de l’accueil : la spécialité est obligatoire', () => {
 	test('sans spécialité, le message est sous le champ', () => {
-		const lue = onboardingIdentitySchema.safeParse({ prenom: 'Léa', nom: 'Fictive', nomArtiste: '', specialite: '  ' })
-		expect(lue.success).toBe(false)
-		expect(lue.error?.issues.map(i => [i.path[0], i.message])).toEqual([['specialite', 'Indique ta spécialité.']])
+		const read = onboardingIdentitySchema.safeParse({ prenom: 'Léa', nom: 'Fictive', nomArtiste: '', specialite: '  ' })
+		expect(read.success).toBe(false)
+		expect(read.error?.issues.map(i => [i.path[0], i.message])).toEqual([['specialite', 'Indique ta spécialité.']])
 	})
 
 	test('le nom d’artiste reste facultatif', () => {

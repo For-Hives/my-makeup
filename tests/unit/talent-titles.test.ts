@@ -11,51 +11,51 @@ import { talentTitleDefaults } from '../support/url-parity'
 
 /** Ticket 108: the 14 titles of the talent tabs, written by the project, and how the import fills them in. */
 
-const entrees = Object.entries(TALENT_PAGE_TITLES)
-const racine = path.resolve(import.meta.dir, '../..')
+const entries = Object.entries(TALENT_PAGE_TITLES)
+const root = path.resolve(import.meta.dir, '../..')
 
 describe('les 14 titres d’onglet des pages talent', () => {
 	test('il y en a 14, un par adresse conservée, et chaque adresse a la forme d’un slug', () => {
-		expect(entrees).toHaveLength(14)
-		const inventaire = readFileSync(path.join(racine, 'docs/migration/urls-inventaire.json'), 'utf8')
-		for (const [slug] of entrees) {
+		expect(entries).toHaveLength(14)
+		const inventory = readFileSync(path.join(root, 'docs/migration/urls-inventaire.json'), 'utf8')
+		for (const [slug] of entries) {
 			expect(isSlug(slug), slug).toBe(true)
-			expect(inventaire, slug).toContain(`/talent/${slug}`)
+			expect(inventory, slug).toContain(`/talent/${slug}`)
 		}
 	})
 
 	test('chacun fait de 50 à 60 caractères, ils sont tous distincts et acceptés par le champ de l’administration', () => {
-		const titres = entrees.map(([, titre]) => titre)
-		expect(new Set(titres).size).toBe(14)
-		for (const titre of titres) {
-			expect(titre.length, titre).toBeGreaterThanOrEqual(TALENT_MIN_TITLE)
-			expect(titre.length, titre).toBeLessThanOrEqual(MAX_TITLE)
-			expect(titre).toBe(titre.trim())
+		const titles = entries.map(([, title]) => title)
+		expect(new Set(titles).size).toBe(14)
+		for (const title of titles) {
+			expect(title.length, title).toBeGreaterThanOrEqual(TALENT_MIN_TITLE)
+			expect(title.length, title).toBeLessThanOrEqual(MAX_TITLE)
+			expect(title).toBe(title.trim())
 			expect(
-				validatePageTitle(titre, {
+				validatePageTitle(title, {
 					required: false,
 					siblingData: { seo_title: 'Court' },
 					req: { payload: { config: {} }, t: (cle: string) => cle },
 				} as never),
-				titre
+				title
 			).toBe(true)
 		}
 	})
 
 	test('aucun ne reprend le titre court de l’ancien site, et l’onglet rendu passe le contrôle de I45', () => {
-		for (const [slug, titre] of entrees) {
-			const court = slug.replace('maquillage-', 'Maquillage ')
-			expect(titre).not.toBe(court)
+		for (const [slug, title] of entries) {
+			const short = slug.replace('maquillage-', 'Maquillage ')
+			expect(title).not.toBe(short)
 			// The tab is the title as it is (no brand added after 50 characters), the h1 is another text.
-			const onglet = pageTitle(titre)
-			expect(onglet).toBe(titre)
-			expect(talentTitleDefaults(`<title>${onglet}</title><h1>${court}</h1>`), slug).toEqual([])
+			const tab = pageTitle(title)
+			expect(tab).toBe(title)
+			expect(talentTitleDefaults(`<title>${tab}</title><h1>${short}</h1>`), slug).toEqual([])
 		}
 	})
 })
 
 describe('l’import des titres d’onglet', () => {
-	const ligne = (id: number, slug: string): TalentRow => ({
+	const line = (id: number, slug: string): TalentRow => ({
 		id,
 		title: 'Talent',
 		seo_title: null,
@@ -69,27 +69,29 @@ describe('l’import des titres d’onglet', () => {
 	})
 
 	test('un talent des 14 reçoit son titre et l’écart est annoncé ; un autre talent n’en reçoit pas', () => {
-		const connu = expectedTalent(ligne(1, 'maquillage-mariee'))
-		expect(connu.values.pageTitle).toBe(TALENT_PAGE_TITLES['maquillage-mariee'])
-		expect(connu.gaps).toEqual([{ field: 'pageTitle', reference: 'titre-page-talent' }])
-		const inconnu = expectedTalent(ligne(2, 'effets-speciaux'))
-		expect(inconnu.values).not.toHaveProperty('pageTitle')
-		expect(inconnu.gaps).toEqual([])
+		const known = expectedTalent(line(1, 'maquillage-mariee'))
+		expect(known.values.pageTitle).toBe(TALENT_PAGE_TITLES['maquillage-mariee'])
+		expect(known.gaps).toEqual([{ field: 'pageTitle', reference: 'titre-page-talent' }])
+		const unknown = expectedTalent(line(2, 'effets-speciaux'))
+		expect(unknown.values).not.toHaveProperty('pageTitle')
+		expect(unknown.gaps).toEqual([])
 	})
 
 	test('le titre n’est écrit que s’il manque : jamais par-dessus un titre saisi dans l’administration', () => {
-		const attendu = expectedTalent(ligne(1, 'maquillage-mariee'))
-		const valeurs = { ...attendu.values }
-		const existant = (titreDeLaPage: unknown) => ({ id: 7, values: { ...valeurs, pageTitle: titreDeLaPage } })
-		expect(differentFields(TALENTS_ADAPTER, attendu, existant(null))).toEqual(['pageTitle'])
-		expect(differentFields(TALENTS_ADAPTER, attendu, existant(''))).toEqual(['pageTitle'])
+		const expected = expectedTalent(line(1, 'maquillage-mariee'))
+		const values = { ...expected.values }
+		const existing = (titreDeLaPage: unknown) => ({ id: 7, values: { ...values, pageTitle: titreDeLaPage } })
+		expect(differentFields(TALENTS_ADAPTER, expected, existing(null))).toEqual(['pageTitle'])
+		expect(differentFields(TALENTS_ADAPTER, expected, existing(''))).toEqual(['pageTitle'])
 		expect(
-			differentFields(TALENTS_ADAPTER, attendu, existant('Un titre saisi par la rédaction, de bonne longueur'))
+			differentFields(TALENTS_ADAPTER, expected, existing('Un titre saisi par la rédaction, de bonne longueur'))
 		).toEqual([])
-		expect(differentFields(TALENTS_ADAPTER, attendu, existant(valeurs.pageTitle))).toEqual([])
+		expect(differentFields(TALENTS_ADAPTER, expected, existing(values.pageTitle))).toEqual([])
 		// A talent with no title to give leaves an empty one alone.
-		const sans = expectedTalent(ligne(2, 'effets-speciaux'))
-		expect(differentFields(TALENTS_ADAPTER, sans, { id: 8, values: { ...sans.values, pageTitle: null } })).toEqual([])
-		expect(planActions(TALENTS_ADAPTER, [attendu], [existant('Saisi')]).actions[0]?.kind).toBe('inchange')
+		const without = expectedTalent(line(2, 'effets-speciaux'))
+		expect(
+			differentFields(TALENTS_ADAPTER, without, { id: 8, values: { ...without.values, pageTitle: null } })
+		).toEqual([])
+		expect(planActions(TALENTS_ADAPTER, [expected], [existing('Saisi')]).actions[0]?.kind).toBe('inchange')
 	})
 })

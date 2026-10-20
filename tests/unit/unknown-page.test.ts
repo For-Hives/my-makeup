@@ -42,34 +42,34 @@ describe('adresseAVerifier', () => {
 describe('memoireDesPagesQuiExistent', () => {
 	test('retient une page qui existe pendant la durée, puis l’oublie', () => {
 		let t = 1_000
-		const memoire = existingPagesMemory({ dureeMs: 60_000 }, () => t)
-		expect(memoire.connait('talent:a')).toBe(false)
-		memoire.retenir('talent:a')
-		expect(memoire.connait('talent:a')).toBe(true)
+		const memory = existingPagesMemory({ dureeMs: 60_000 }, () => t)
+		expect(memory.connait('talent:a')).toBe(false)
+		memory.retenir('talent:a')
+		expect(memory.connait('talent:a')).toBe(true)
 		t += 59_999
-		expect(memoire.connait('talent:a')).toBe(true)
+		expect(memory.connait('talent:a')).toBe(true)
 		t += 2
-		expect(memoire.connait('talent:a')).toBe(false)
-		expect(memoire.taille).toBe(0)
+		expect(memory.connait('talent:a')).toBe(false)
+		expect(memory.taille).toBe(0)
 	})
 
 	test('ne dépasse jamais sa taille : la plus ancienne part', () => {
 		let t = 0
-		const memoire = existingPagesMemory({ dureeMs: 60_000, tailleMax: 3 }, () => t++)
-		for (const cle of ['a', 'b', 'c', 'd']) memoire.retenir(cle)
-		expect(memoire.taille).toBe(3)
-		expect(memoire.connait('a')).toBe(false)
-		expect(memoire.connait('d')).toBe(true)
+		const memory = existingPagesMemory({ dureeMs: 60_000, tailleMax: 3 }, () => t++)
+		for (const key of ['a', 'b', 'c', 'd']) memory.retenir(key)
+		expect(memory.taille).toBe(3)
+		expect(memory.connait('a')).toBe(false)
+		expect(memory.connait('d')).toBe(true)
 	})
 
 	test('une page retenue de nouveau repart pour toute la durée', () => {
 		let t = 0
-		const memoire = existingPagesMemory({ dureeMs: 100 }, () => t)
-		memoire.retenir('a')
+		const memory = existingPagesMemory({ dureeMs: 100 }, () => t)
+		memory.retenir('a')
 		t = 90
-		memoire.retenir('a')
+		memory.retenir('a')
 		t = 150
-		expect(memoire.connait('a')).toBe(true)
-		expect(memoire.taille).toBe(1)
+		expect(memory.connait('a')).toBe(true)
+		expect(memory.taille).toBe(1)
 	})
 })

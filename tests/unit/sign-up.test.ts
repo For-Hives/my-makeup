@@ -10,12 +10,12 @@ import { failureCode as codeDeLEchecDInscription, isAddressAlreadyTaken } from '
 import { confirmationEmailContent } from '@/lib/emails/confirmation'
 import { composerEmail } from '@/lib/emails/layout'
 
-const BON = { nom: 'Léa Fictive', email: 'lea@example.test', password: 'aaaaaaaa', cgu: 'on' }
+const GOOD = { nom: 'Léa Fictive', email: 'lea@example.test', password: 'aaaaaaaa', cgu: 'on' }
 
 describe('U24 : les règles de l’inscription', () => {
 	test('un email valide, 8 caractères et les conditions cochées : accepté, nom et email nettoyés', () => {
-		const resultat = validateSignUp({ ...BON, nom: '  Léa Fictive ', email: ' lea@example.test ' })
-		expect(resultat).toEqual({
+		const result = validateSignUp({ ...GOOD, nom: '  Léa Fictive ', email: ' lea@example.test ' })
+		expect(result).toEqual({
 			ok: true,
 			donnees: { nom: 'Léa Fictive', email: 'lea@example.test', password: 'aaaaaaaa' },
 		})
@@ -23,45 +23,45 @@ describe('U24 : les règles de l’inscription', () => {
 
 	test('le mot de passe n’a aucune règle de composition : 8 lettres minuscules suffisent', () => {
 		for (const password of ['aaaaaaaa', '12345678', 'abcdefgh', '        ', 'é'.repeat(8)])
-			expect(validateSignUp({ ...BON, password }).ok).toBe(true)
+			expect(validateSignUp({ ...GOOD, password }).ok).toBe(true)
 	})
 
 	test('7 caractères sont refusés, 8 acceptés ; le mot de passe n’est jamais rogné', () => {
-		expect(validateSignUp({ ...BON, password: 'a'.repeat(7) }).ok).toBe(false)
-		expect(validateSignUp({ ...BON, password: 'a'.repeat(8) }).ok).toBe(true)
-		const resultat = validateSignUp({ ...BON, password: '  abcdefg  ' })
-		expect(resultat.ok && resultat.donnees.password).toBe('  abcdefg  ')
+		expect(validateSignUp({ ...GOOD, password: 'a'.repeat(7) }).ok).toBe(false)
+		expect(validateSignUp({ ...GOOD, password: 'a'.repeat(8) }).ok).toBe(true)
+		const result = validateSignUp({ ...GOOD, password: '  abcdefg  ' })
+		expect(result.ok && result.donnees.password).toBe('  abcdefg  ')
 	})
 
 	test('le nom est libre : un nom de 1 caractère passe, un nom pris par une autre maquilleuse n’est pas vérifié ici', () => {
-		expect(validateSignUp({ ...BON, nom: 'Z' }).ok).toBe(true)
-		expect(validateSignUp({ ...BON, nom: 'Marie' }).ok).toBe(true)
+		expect(validateSignUp({ ...GOOD, nom: 'Z' }).ok).toBe(true)
+		expect(validateSignUp({ ...GOOD, nom: 'Marie' }).ok).toBe(true)
 	})
 
 	test('les conditions générales sont obligatoires', () => {
 		for (const cgu of [undefined, '', 'off', false, null])
-			expect(validateSignUp({ ...BON, cgu })).toEqual({
+			expect(validateSignUp({ ...GOOD, cgu })).toEqual({
 				ok: false,
 				erreurs: { cgu: SIGN_UP_MESSAGES.cgu.refusees },
 			})
-		expect(validateSignUp({ ...BON, cgu: 'true' }).ok).toBe(true)
+		expect(validateSignUp({ ...GOOD, cgu: 'true' }).ok).toBe(true)
 	})
 
 	test('des adresses mal formées sont refusées', () => {
 		for (const email of ['lea', 'lea@', '@example.test', 'lea@example', 'lea example@example.test', 'a@@b.test'])
-			expect(validateSignUp({ ...BON, email }).ok, email).toBe(false)
+			expect(validateSignUp({ ...GOOD, email }).ok, email).toBe(false)
 	})
 
 	test('des valeurs qui ne sont pas du texte sont des champs vides', () => {
-		const resultat = validateSignUp({ nom: 1, email: null, password: undefined, cgu: 'on' })
-		expect(resultat.ok).toBe(false)
+		const result = validateSignUp({ nom: 1, email: null, password: undefined, cgu: 'on' })
+		expect(result.ok).toBe(false)
 	})
 })
 
 describe('U25 : un message en français par champ', () => {
 	test('tout vide : un message par champ, le premier de la règle enfreinte', () => {
-		const resultat = validateSignUp({})
-		expect(resultat).toEqual({
+		const result = validateSignUp({})
+		expect(result).toEqual({
 			ok: false,
 			erreurs: {
 				nom: SIGN_UP_MESSAGES.nom.vide,
@@ -73,21 +73,21 @@ describe('U25 : un message en français par champ', () => {
 	})
 
 	test('chaque champ ne donne qu’un message, même s’il enfreint plusieurs règles', () => {
-		const resultat = validateSignUp({
-			...BON,
+		const result = validateSignUp({
+			...GOOD,
 			nom: 'x'.repeat(500),
 			email: 'x'.repeat(500),
 			password: 'a'.repeat(3),
 		})
-		if (resultat.ok) throw new Error('accepté')
-		expect(Object.keys(resultat.erreurs).sort()).toEqual(['email', 'nom', 'password'])
-		expect(resultat.erreurs.password).toBe(SIGN_UP_MESSAGES.password.court)
-		expect(resultat.erreurs.nom).toBe(SIGN_UP_MESSAGES.nom.long)
-		expect(resultat.erreurs.email).toBe(SIGN_UP_MESSAGES.email.long)
+		if (result.ok) throw new Error('accepté')
+		expect(Object.keys(result.erreurs).sort()).toEqual(['email', 'nom', 'password'])
+		expect(result.erreurs.password).toBe(SIGN_UP_MESSAGES.password.court)
+		expect(result.erreurs.nom).toBe(SIGN_UP_MESSAGES.nom.long)
+		expect(result.erreurs.email).toBe(SIGN_UP_MESSAGES.email.long)
 	})
 
 	test('un seul champ fautif : seul ce champ a un message', () => {
-		expect(validateSignUp({ ...BON, email: 'lea' })).toEqual({
+		expect(validateSignUp({ ...GOOD, email: 'lea' })).toEqual({
 			ok: false,
 			erreurs: { email: SIGN_UP_MESSAGES.email.invalide },
 		})
@@ -124,111 +124,111 @@ describe('connexion avant confirmation', () => {
 })
 
 describe('l’email de confirmation', () => {
-	const JETON = 'ab12'.repeat(10)
+	const TOKEN = 'ab12'.repeat(10)
 
 	test('un bouton « Confirmer mon adresse » vers la page de confirmation, lien absolu, tutoiement', () => {
-		const email = composerEmail(confirmationEmailContent(JETON), 'https://v3.my-makeup.fr')
-		expect(email.lien).toBe(`https://v3.my-makeup.fr/auth/verification-complete?code=${JETON}`)
+		const email = composerEmail(confirmationEmailContent(TOKEN), 'https://v3.my-makeup.fr')
+		expect(email.lien).toBe(`https://v3.my-makeup.fr/auth/verification-complete?code=${TOKEN}`)
 		expect(email.texte).toContain('Confirmer mon adresse')
 		expect(email.html).toContain('Confirme')
 		expect(email.sujet).toContain('Confirme ton adresse email')
 	})
 
 	test('le lien ne mène jamais à l’administration', () => {
-		const email = composerEmail(confirmationEmailContent(JETON), 'https://my-makeup.fr')
+		const email = composerEmail(confirmationEmailContent(TOKEN), 'https://my-makeup.fr')
 		expect(email.lien).not.toContain('/admin')
 	})
 })
 
 describe('confirmerLEmail : la logique du lien, sans base', () => {
-	const JETON = 'cd34'.repeat(10)
-	const TRACE = `utilise:${createHash('sha256').update(JETON).digest('hex')}`
+	const TOKEN = 'cd34'.repeat(10)
+	const TRACE = `utilise:${createHash('sha256').update(TOKEN).digest('hex')}`
 
-	function fauxPayload(ligne: Record<string, unknown> | null) {
-		const ecritures: Record<string, unknown>[] = []
-		const requetes: unknown[] = []
+	function fakePayload(ligne: Record<string, unknown> | null) {
+		const writes: Record<string, unknown>[] = []
+		const requests: unknown[] = []
 		const payload = {
 			db: {
 				findOne: (options: unknown) => {
-					requetes.push(options)
+					requests.push(options)
 					return Promise.resolve(ligne)
 				},
 				updateOne: (options: { data: Record<string, unknown> }) => {
-					ecritures.push(options.data)
+					writes.push(options.data)
 					return Promise.resolve(null)
 				},
 			},
 		} as unknown as Payload
-		return { payload, ecritures, requetes }
+		return { payload, ecritures: writes, requetes: requests }
 	}
 
 	test('un jeton qui n’a pas la forme d’un jeton est refusé sans interroger la base', async () => {
-		const { payload, requetes } = fauxPayload(null)
-		for (const code of [undefined, '', 'abc', 'x'.repeat(40), `${JETON}0`, 12, ["' or 1=1 --"], { a: 1 }, null])
+		const { payload, requetes: requests } = fakePayload(null)
+		for (const code of [undefined, '', 'abc', 'x'.repeat(40), `${TOKEN}0`, 12, ["' or 1=1 --"], { a: 1 }, null])
 			expect(await confirmEmail(payload, code)).toBe('lien-invalide')
-		expect(requetes).toHaveLength(0)
+		expect(requests).toHaveLength(0)
 	})
 
 	test('un jeton inconnu : lien invalide, rien n’est écrit', async () => {
-		const { payload, ecritures } = fauxPayload(null)
-		expect(await confirmEmail(payload, JETON)).toBe('lien-invalide')
-		expect(ecritures).toHaveLength(0)
+		const { payload, ecritures: writes } = fakePayload(null)
+		expect(await confirmEmail(payload, TOKEN)).toBe('lien-invalide')
+		expect(writes).toHaveLength(0)
 	})
 
 	test('un jeton d’un compte non confirmé : confirmé, et le jeton est remplacé par sa trace', async () => {
-		const { payload, ecritures } = fauxPayload({ id: 4, _verified: false, _verificationToken: JETON })
-		expect(await confirmEmail(payload, JETON)).toBe('ok')
-		expect(ecritures).toHaveLength(1)
-		expect(ecritures[0]).toMatchObject({ _verified: true, _verificationToken: TRACE })
-		expect(JSON.stringify(ecritures)).not.toContain(JETON)
+		const { payload, ecritures: writes } = fakePayload({ id: 4, _verified: false, _verificationToken: TOKEN })
+		expect(await confirmEmail(payload, TOKEN)).toBe('ok')
+		expect(writes).toHaveLength(1)
+		expect(writes[0]).toMatchObject({ _verified: true, _verificationToken: TRACE })
+		expect(JSON.stringify(writes)).not.toContain(TOKEN)
 	})
 
 	test('le même lien une seconde fois : déjà confirmé, rien n’est écrit', async () => {
-		const { payload, ecritures } = fauxPayload({ id: 4, _verified: true, _verificationToken: TRACE })
-		expect(await confirmEmail(payload, JETON)).toBe('deja-confirme')
-		expect(ecritures).toHaveLength(0)
+		const { payload, ecritures: writes } = fakePayload({ id: 4, _verified: true, _verificationToken: TRACE })
+		expect(await confirmEmail(payload, TOKEN)).toBe('deja-confirme')
+		expect(writes).toHaveLength(0)
 	})
 
 	test('le journal reçoit l’issue, jamais le jeton ; une panne du journal ne change rien', async () => {
-		const { payload } = fauxPayload({ id: 4, _verified: false, _verificationToken: JETON })
-		const lignes: unknown[] = []
-		const resultat = await confirmEmail(payload, JETON, e => {
-			lignes.push(e)
+		const { payload } = fakePayload({ id: 4, _verified: false, _verificationToken: TOKEN })
+		const lines: unknown[] = []
+		const result = await confirmEmail(payload, TOKEN, e => {
+			lines.push(e)
 			return Promise.reject(new Error('journal en panne'))
 		})
-		expect(resultat).toBe('ok')
-		expect(lignes).toHaveLength(1)
-		expect(lignes[0]).toMatchObject({ type: 'confirmation', code: 'ok' })
-		expect(JSON.stringify(lignes)).not.toContain(JETON)
+		expect(result).toBe('ok')
+		expect(lines).toHaveLength(1)
+		expect(lines[0]).toMatchObject({ type: 'confirmation', code: 'ok' })
+		expect(JSON.stringify(lines)).not.toContain(TOKEN)
 	})
 })
 
 describe('« adresse déjà utilisée » : seulement pour l’unicité de l’email (ticket 224)', () => {
 	// The two shapes Payload gives, as the real ones read on the bench (tests/integration/auth-inscription-email-pris.test.ts).
-	const refus = (message: string, path = 'email') => ({ data: { errors: [{ message, path }] } })
-	const unicite = refus("Un utilisateur avec l'email donné est déjà enregistré.")
-	const forme = refus('S’il vous plaît, veuillez entrer une adresse e-mail valide.')
+	const refusal = (message: string, path = 'email') => ({ data: { errors: [{ message, path }] } })
+	const uniqueness = refusal("Un utilisateur avec l'email donné est déjà enregistré.")
+	const shape = refusal('S’il vous plaît, veuillez entrer une adresse e-mail valide.')
 
 	test('l’unicité (auth ou index, en français ou en anglais) est une adresse déjà prise', () => {
-		for (const erreur of [
-			unicite,
-			refus('La valeur doit être unique'),
-			refus('Value must be unique'),
-			refus('A user with the given email is already registered.'),
+		for (const error of [
+			uniqueness,
+			refusal('La valeur doit être unique'),
+			refusal('Value must be unique'),
+			refusal('A user with the given email is already registered.'),
 		]) {
-			expect(isAddressAlreadyTaken(erreur)).toBe(true)
-			expect(codeDeLEchecDInscription(erreur)).toBe('email-deja-pris')
+			expect(isAddressAlreadyTaken(error)).toBe(true)
+			expect(codeDeLEchecDInscription(error)).toBe('email-deja-pris')
 		}
 	})
 
 	test('une erreur de forme sur l’email, ou l’unicité d’un autre champ, ne l’est pas', () => {
-		for (const erreur of [forme, refus('La valeur doit être unique', 'nom'), new Error('x'), null, { data: {} }])
-			expect(isAddressAlreadyTaken(erreur)).toBe(false)
+		for (const error of [shape, refusal('La valeur doit être unique', 'nom'), new Error('x'), null, { data: {} }])
+			expect(isAddressAlreadyTaken(error)).toBe(false)
 	})
 
 	test('une erreur de forme sur l’email est un refus du champ ; toute autre est un service indisponible', () => {
-		expect(codeDeLEchecDInscription(forme)).toBe('email-invalide')
-		for (const erreur of [refus('La valeur doit être unique', 'nom'), new Error('x'), null, { data: {} }])
-			expect(codeDeLEchecDInscription(erreur)).toBe('service-indisponible')
+		expect(codeDeLEchecDInscription(shape)).toBe('email-invalide')
+		for (const error of [refusal('La valeur doit être unique', 'nom'), new Error('x'), null, { data: {} }])
+			expect(codeDeLEchecDInscription(error)).toBe('service-indisponible')
 	})
 })

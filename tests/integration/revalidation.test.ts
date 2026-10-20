@@ -20,7 +20,7 @@ setDefaultTimeout(30_000)
  * document (its page, the search or the blog or the home page, the plan of the site, the
  * sitemap), and the import refreshes nothing. Each write goes through Payload as the site makes
  * it, mostly by REST, inside the spy of Next's cache (tests/support/cache-spy.ts). The rule
- * itself is tested in tests/unit/revalidation.test.ts.
+ * itself is tested in tests/unit/revalidate.test.ts.
  */
 
 afterEach(async () => {

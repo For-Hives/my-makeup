@@ -14,29 +14,29 @@ import {
 import { proxy } from '@/proxy'
 
 /** A token shaped like Payload's, signed with nothing: only its end date is ever read here. */
-const jeton = (charge: Record<string, unknown>) => {
+const token = (charge: Record<string, unknown>) => {
 	const base64url = (valeur: unknown) => Buffer.from(JSON.stringify(valeur)).toString('base64url')
 	return `${base64url({ alg: 'HS256', typ: 'JWT' })}.${base64url(charge)}.signature`
 }
-const MAINTENANT = 1_800_000_000
+const NOW = 1_800_000_000
 
 describe('U69 : un jeton expiré est « expirée », distincte d’« anonyme »', () => {
 	test('la date de fin se lit dans le jeton, avec ou sans bourrage base64', () => {
-		expect(readExpiration(jeton({ exp: MAINTENANT }))).toBe(MAINTENANT)
+		expect(readExpiration(token({ exp: NOW }))).toBe(NOW)
 		// A payload whose base64url form is not a multiple of 4 characters long.
-		expect(readExpiration(jeton({ exp: MAINTENANT, a: 'xy' }))).toBe(MAINTENANT)
+		expect(readExpiration(token({ exp: NOW, a: 'xy' }))).toBe(NOW)
 	})
 
 	test('un jeton passé de la date de fin est « expire », juste avant elle « en-cours »', () => {
-		expect(tokenState(jeton({ exp: MAINTENANT - 1 }), MAINTENANT)).toBe('expire')
-		expect(tokenState(jeton({ exp: MAINTENANT }), MAINTENANT)).toBe('expire')
-		expect(tokenState(jeton({ exp: MAINTENANT + 1 }), MAINTENANT)).toBe('en-cours')
+		expect(tokenState(token({ exp: NOW - 1 }), NOW)).toBe('expire')
+		expect(tokenState(token({ exp: NOW }), NOW)).toBe('expire')
+		expect(tokenState(token({ exp: NOW + 1 }), NOW)).toBe('en-cours')
 	})
 
 	test('sans jeton, ou avec un jeton qui ne dit rien de sa fin : pas de session, jamais « expirée »', () => {
-		for (const brut of [undefined, '']) expect(tokenState(brut, MAINTENANT)).toBe('absent')
-		for (const brut of ['pas-un-jeton', 'a.b.c', 'a.b', jeton({ id: 1 }), jeton({ exp: 'demain' })])
-			expect(tokenState(brut, MAINTENANT)).toBe('illisible')
+		for (const raw of [undefined, '']) expect(tokenState(raw, NOW)).toBe('absent')
+		for (const raw of ['pas-un-jeton', 'a.b.c', 'a.b', token({ id: 1 }), token({ exp: 'demain' })])
+			expect(tokenState(raw, NOW)).toBe('illisible')
 	})
 
 	test('l’état de la session sépare expirée et anonyme', () => {
@@ -65,74 +65,72 @@ describe('U70 : une panne ne déconnecte personne, un refus déconnecte', () => 
 
 describe('la porte de l’espace et la date de fin du cookie', () => {
 	test('un cookie expiré : une redirection avec le message et le retour', () => {
-		const vers = dashboardDecision('/auth/profil', '?a=1', jeton({ exp: MAINTENANT - 60 }), MAINTENANT)
-		expect(vers).toBe('/auth/signin?callbackUrl=%2Fauth%2Fprofil%3Fa%3D1&error=session-expiree')
+		const to = dashboardDecision('/auth/profil', '?a=1', token({ exp: NOW - 60 }), NOW)
+		expect(to).toBe('/auth/signin?callbackUrl=%2Fauth%2Fprofil%3Fa%3D1&error=session-expiree')
 	})
 
 	test('sans cookie : la connexion sans message ; un cookie en cours : la page décide', () => {
-		expect(dashboardDecision('/auth/profil', '', undefined, MAINTENANT)).toBe(
-			'/auth/signin?callbackUrl=%2Fauth%2Fprofil'
-		)
-		expect(dashboardDecision('/auth/profil', '', jeton({ exp: MAINTENANT + 60 }), MAINTENANT)).toBeNull()
-		expect(dashboardDecision('/auth/profil', '', 'pas-un-jeton', MAINTENANT)).toBeNull()
+		expect(dashboardDecision('/auth/profil', '', undefined, NOW)).toBe('/auth/signin?callbackUrl=%2Fauth%2Fprofil')
+		expect(dashboardDecision('/auth/profil', '', token({ exp: NOW + 60 }), NOW)).toBeNull()
+		expect(dashboardDecision('/auth/profil', '', 'pas-un-jeton', NOW)).toBeNull()
 	})
 
 	test('121 : une sauvegarde (POST) n’est jamais redirigée, cookie expiré ou absent : l’action répond elle-même', () => {
-		const expire = jeton({ exp: MAINTENANT - 60 })
-		for (const methode of ['POST', 'PUT', 'PATCH', 'DELETE']) {
-			expect(dashboardDecision('/auth/profil', '', expire, MAINTENANT, methode)).toBeNull()
-			expect(dashboardDecision('/auth/profil', '', undefined, MAINTENANT, methode)).toBeNull()
+		const expired = token({ exp: NOW - 60 })
+		for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) {
+			expect(dashboardDecision('/auth/profil', '', expired, NOW, method)).toBeNull()
+			expect(dashboardDecision('/auth/profil', '', undefined, NOW, method)).toBeNull()
 		}
-		expect(dashboardDecision('/auth/profil', '', expire, MAINTENANT, 'GET')).not.toBeNull()
-		expect(dashboardDecision('/auth/profil', '', expire, MAINTENANT, 'HEAD')).not.toBeNull()
+		expect(dashboardDecision('/auth/profil', '', expired, NOW, 'GET')).not.toBeNull()
+		expect(dashboardDecision('/auth/profil', '', expired, NOW, 'HEAD')).not.toBeNull()
 	})
 
 	test('121 : le proxy laisse passer le POST d’une session expirée', () => {
-		const expire = jeton({ exp: Math.floor(Date.now() / 1000) - 60 })
-		const reponse = proxy(
+		const expired = token({ exp: Math.floor(Date.now() / 1000) - 60 })
+		const response = proxy(
 			new NextRequest('http://localhost:3280/auth/profil', {
 				method: 'POST',
-				headers: { cookie: `payload-token=${expire}` },
+				headers: { cookie: `payload-token=${expired}` },
 			})
 		)
-		expect(reponse.status).toBe(200)
-		expect(reponse.headers.get('location')).toBeNull()
+		expect(response.status).toBe(200)
+		expect(response.headers.get('location')).toBeNull()
 	})
 
 	test('la page de connexion, avec un cookie expiré, n’est jamais renvoyée : pas de boucle', () => {
-		for (const chemin of ['/auth/signin', '/auth/signup', '/', '/api/pros/me'])
-			expect(dashboardDecision(chemin, '', jeton({ exp: MAINTENANT - 60 }), MAINTENANT)).toBeNull()
+		for (const filePath of ['/auth/signin', '/auth/signup', '/', '/api/pros/me'])
+			expect(dashboardDecision(filePath, '', token({ exp: NOW - 60 }), NOW)).toBeNull()
 	})
 
 	test('l’adresse du message garde un retour sûr, et la page de connexion n’est pas un retour', () => {
-		const adresse = expiredSessionUrl('/auth/profil?x=1')
-		const url = new URL(adresse, 'https://my-makeup.fr')
+		const address = expiredSessionUrl('/auth/profil?x=1')
+		const url = new URL(address, 'https://my-makeup.fr')
 		expect(safeReturnTo(url.searchParams.get('callbackUrl'), 'https://my-makeup.fr')).toBe('/auth/profil?x=1')
 		expect(safeReturnTo(expiredSessionUrl('/auth/signin'), 'https://my-makeup.fr')).toBe('/auth/profil')
 	})
 
 	test('le proxy : 307 unique vers la connexion, avec le message et le retour', () => {
-		const expire = jeton({ exp: Math.floor(Date.now() / 1000) - 60 })
-		const reponse = proxy(
-			new NextRequest('http://localhost:3280/auth/profil', { headers: { cookie: `payload-token=${expire}` } })
+		const expired = token({ exp: Math.floor(Date.now() / 1000) - 60 })
+		const response = proxy(
+			new NextRequest('http://localhost:3280/auth/profil', { headers: { cookie: `payload-token=${expired}` } })
 		)
 
-		expect(reponse.status).toBe(307)
-		const cible = new URL(reponse.headers.get('location') ?? '')
-		expect(cible.pathname).toBe('/auth/signin')
-		expect(cible.searchParams.get('error')).toBe('session-expiree')
-		expect(cible.searchParams.get('callbackUrl')).toBe('/auth/profil')
+		expect(response.status).toBe(307)
+		const target = new URL(response.headers.get('location') ?? '')
+		expect(target.pathname).toBe('/auth/signin')
+		expect(target.searchParams.get('error')).toBe('session-expiree')
+		expect(target.searchParams.get('callbackUrl')).toBe('/auth/profil')
 		// Left alone on purpose (see decisionDeLEspace).
-		expect(reponse.headers.get('set-cookie')).toBeNull()
+		expect(response.headers.get('set-cookie')).toBeNull()
 	})
 
 	test('le proxy : un cookie en cours ne reçoit aucune redirection', () => {
-		const enCours = jeton({ exp: Math.floor(Date.now() / 1000) + 3600 })
-		const reponse = proxy(
-			new NextRequest('http://localhost:3280/auth/profil', { headers: { cookie: `payload-token=${enCours}` } })
+		const inCourse = token({ exp: Math.floor(Date.now() / 1000) + 3600 })
+		const response = proxy(
+			new NextRequest('http://localhost:3280/auth/profil', { headers: { cookie: `payload-token=${inCourse}` } })
 		)
-		expect(reponse.headers.get('location')).toBeNull()
-		expect(reponse.headers.get('set-cookie')).toBeNull()
+		expect(response.headers.get('location')).toBeNull()
+		expect(response.headers.get('set-cookie')).toBeNull()
 	})
 })
 
@@ -143,7 +141,7 @@ describe('un code d’erreur inconnu n’est jamais recopié à l’écran', () 
 	})
 
 	test('tout autre code, du texte ou du HTML : rien', () => {
-		for (const brut of [
+		for (const raw of [
 			undefined,
 			'',
 			'OAuthCallback',
@@ -154,27 +152,27 @@ describe('un code d’erreur inconnu n’est jamais recopié à l’écran', () 
 			42,
 			null,
 		])
-			expect(urlMessage(brut)).toBeNull()
+			expect(urlMessage(raw)).toBeNull()
 	})
 })
 
 describe('U70 : la décision panne ou refus, avec ses dépendances simulées', () => {
 	const ok = async () => undefined
-	const casse = async () => {
+	const broken = async () => {
 		throw new Error('connexion perdue')
 	}
 
 	test('un utilisateur accepté par Payload : session acceptée, sans sonder la base', async () => {
-		let sondee = false
+		let probed = false
 		const r = await verifySession({
 			authentifier: async () => ({ id: 1 }),
 			convient: () => true,
 			sonder: async () => {
-				sondee = true
+				probed = true
 			},
 		})
 		expect(r).toEqual({ verification: 'acceptee', utilisateur: { id: 1 } })
-		expect(sondee).toBe(false)
+		expect(probed).toBe(false)
 	})
 
 	test('pas d’utilisateur et la base répond : refus (déconnexion)', async () => {
@@ -183,12 +181,12 @@ describe('U70 : la décision panne ou refus, avec ses dépendances simulées', (
 	})
 
 	test('pas d’utilisateur et la base ne répond pas : panne, jamais refus', async () => {
-		const r = await verifySession({ authentifier: async () => null, convient: () => true, sonder: casse })
+		const r = await verifySession({ authentifier: async () => null, convient: () => true, sonder: broken })
 		expect(r).toEqual({ verification: 'panne' })
 	})
 
 	test('Payload lui-même qui échoue : panne', async () => {
-		const r = await verifySession({ authentifier: casse as () => Promise<null>, convient: () => true, sonder: ok })
+		const r = await verifySession({ authentifier: broken as () => Promise<null>, convient: () => true, sonder: ok })
 		expect(r).toEqual({ verification: 'panne' })
 	})
 
@@ -200,8 +198,8 @@ describe('U70 : la décision panne ou refus, avec ses dépendances simulées', (
 
 describe('le cookie survit à son jeton', () => {
 	test('sa date de fin est celle du jeton plus 90 jours, jamais moins', () => {
-		expect(cookieEndOfLife(MAINTENANT).getTime()).toBe((MAINTENANT + 90 * 86_400) * 1000)
+		expect(cookieEndOfLife(NOW).getTime()).toBe((NOW + 90 * 86_400) * 1000)
 		expect(COOKIE_SURVIVAL_AFTER_END_S).toBe(90 * 86_400)
-		expect(cookieEndOfLife(MAINTENANT).getTime()).toBeGreaterThan(MAINTENANT * 1000)
+		expect(cookieEndOfLife(NOW).getTime()).toBeGreaterThan(NOW * 1000)
 	})
 })
