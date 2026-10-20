@@ -200,8 +200,12 @@ test.describe('Plan du site (ticket 114)', () => {
 					itsProfiles.filter(chemin => sitemapProfiles.includes(chemin)).sort()
 				)
 
-				// Every link answers 200, with no redirection.
-				for (const path of new Set(paths)) {
+				// Every link answers 200, with no redirection. The talents and articles that other specs create for their
+				// own test (`essai-…`) come and go while the two projects run side by side: the plan lists them for a moment,
+				// then another test deletes them before this loop reaches them. Only this test's own are followed (ticket 176).
+				const ofOtherTests = (path: string) =>
+					/^\/(talent|blog)\/essai-/.test(path) && ![talent, published].some(slug => path.endsWith(`/${slug}`))
+				for (const path of new Set(paths.filter(path => !ofOtherTests(path)))) {
 					const link = await request.get(`${baseURL}${path}`, { maxRedirects: 0 })
 					expect(link.status(), path).toBe(200)
 				}
