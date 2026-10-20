@@ -4,8 +4,8 @@ import { LANGUAGES, listBullets, SKILLS } from '@/lib/dashboard/bullets'
 import { artistProfile, type DashboardUser } from '@/lib/dashboard/my-profile'
 import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
 import { saveLanguages, saveSkills } from '@/lib/dashboard/save-bullets'
-import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
+import { type CompteDeTest, creerCompte } from '../support/account-factory'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
 
 /**
  * The languages and the skills saved from her space (tickets 127 and 128; plan 02 E30, E31, I02):

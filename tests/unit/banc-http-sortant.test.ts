@@ -5,7 +5,7 @@ import { connect } from 'node:net'
 import path from 'node:path'
 import { bypass, passthrough } from 'msw'
 import { z } from 'zod'
-import { HOTES_DU_BANC } from '../outils/garde-environnement'
+import { HOTES_DU_BANC } from '../support/environment-guard'
 import {
 	delay,
 	estHoteDuBanc,
@@ -19,7 +19,7 @@ import {
 	refusDeLigne,
 	releverLesRefus,
 	simuler,
-} from '../outils/http-sortant'
+} from '../support/outgoing-http'
 
 // The outgoing HTTP bench, tested on services that exist only here. No test of this file reaches
 // anything but this machine: an « outside » service is a server of this process, at an address

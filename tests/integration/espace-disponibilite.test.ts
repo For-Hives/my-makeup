@@ -4,8 +4,8 @@ import type { DashboardUser } from '@/lib/dashboard/my-profile'
 import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
 import { saveAvailability } from '@/lib/dashboard/save-availability'
 import { LISTED_FILTER } from '@/lib/profile/visibility'
-import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
+import { type CompteDeTest, creerCompte } from '../support/account-factory'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
 
 /**
  * The availability saved from her space (ticket 124; plan 02 E19-E29, U32, I02): hers alone, the

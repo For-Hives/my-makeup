@@ -6,7 +6,7 @@ import { placeDemoData, placeDemoEditorial } from '@/demo-data/dataset'
 import { DEMO_ARTICLES, DEMO_TALENTS } from '@/demo-data/editorial'
 import { DemoDataRefused } from '@/demo-data/guard'
 import { isSlug } from '@/lib/slug'
-import { definitionDeLaSource } from '../outils/source-strapi/donnees'
+import { definitionDeLaSource } from '../support/source-strapi/data'
 
 /**
  * The editorial part of the fictional set (ticket 052), without the bench: three talents, three

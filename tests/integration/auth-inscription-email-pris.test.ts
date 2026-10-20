@@ -8,8 +8,8 @@ import type { MailboxRateLimits } from '@/lib/auth/sign-up-rate-limits'
 import { payloadSendEmail } from '@/lib/emails/send'
 import { serverEnv } from '@/lib/env'
 import { purgeUnconfirmedAccounts } from '@/lib/tasks/unconfirmed-accounts'
-import { attendreLeMail, mailsRecus, viderLeCapteur } from '../outils/mailpit'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
+import { attendreLeMail, mailsRecus, viderLeCapteur } from '../support/mailpit'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
 
 /**
  * An address that already has an account (ticket 083; plan 02 E03, E04), the Gmail variants of an

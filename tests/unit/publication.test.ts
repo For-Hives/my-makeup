@@ -16,7 +16,7 @@ import {
 	takenByTags,
 } from '../../scripts/release/publication'
 import { CHANGELOG_FILE, type Changelog, parseChangelog } from '../../src/lib/release-notes'
-import { HttpResponse, http, simuler } from '../outils/http-sortant'
+import { HttpResponse, http, simuler } from '../support/outgoing-http'
 
 /**
  * The publication of a version (ticket 036). The git parts run for real, on repositories made

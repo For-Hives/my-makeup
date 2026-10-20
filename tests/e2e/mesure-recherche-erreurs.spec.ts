@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
-import { type ProfilDeRecherche, poserLesProfilsDeRecherche } from '../fixtures/profils-de-recherche'
-import { fauxUmami, type LectureFauxUmami, unAgentParEssai } from '../outils/faux-umami'
-import { rafraichirLesPagesDesProfils } from '../outils/pages-publiques'
+import { type ProfilDeRecherche, poserLesProfilsDeRecherche } from '../fixtures/search-profiles'
+import { fauxUmami, type LectureFauxUmami, unAgentParEssai } from '../support/fake-umami'
+import { rafraichirLesPagesDesProfils } from '../support/public-pages'
 
 /**
  * The events of the search, the calls to action and the 404 (ticket 145; plan 04 §3.3, events 4 to 6

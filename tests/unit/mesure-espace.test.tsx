@@ -13,8 +13,8 @@ import { MESSAGES_PHOTO } from '@/lib/dashboard/photo'
 import { uploadPhoto } from '@/lib/dashboard/photos-upload'
 import { withPublishableTransition } from '@/lib/dashboard/publishable-transition'
 import { FAILURE_MESSAGE, type SaveResult } from '@/lib/dashboard/result'
-import { choisirDesFichiers } from '../outils/choisir-fichiers'
-import { ouvrirFenetre } from '../outils/dom-react'
+import { choisirDesFichiers } from '../support/pick-files'
+import { ouvrirFenetre } from '../support/dom-react'
 
 /**
  * Ticket 147: the events of the space of the makeup artist (plan 04 §3.3, events 13 to 15, 18 and

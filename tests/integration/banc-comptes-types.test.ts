@@ -1,7 +1,7 @@
 import { afterEach, beforeAll, describe, expect, setDefaultTimeout, test } from 'bun:test'
 import { AuthenticationError, UnverifiedEmail } from 'payload'
 import { z } from 'zod'
-import { adresseDuJeu, COMPTES_DU_JEU, poserLesComptesDuJeu, TYPES_DU_JEU } from '../fixtures/comptes'
+import { adresseDuJeu, COMPTES_DU_JEU, poserLesComptesDuJeu, TYPES_DU_JEU } from '../fixtures/accounts'
 import {
 	type CompteFixe,
 	creerCompte,
@@ -9,10 +9,10 @@ import {
 	MOT_DE_PASSE_HERITE_DE_FIXTURE,
 	TYPES_DE_COMPTE,
 	type TypeDeCompte,
-} from '../outils/fabrique-comptes'
-import { compterLesLignes, payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { appelerRest } from '../outils/rest'
-import { HASH_BCRYPT_COMPLET } from '../outils/source-strapi/inventaire'
+} from '../support/account-factory'
+import { compterLesLignes, payloadDeTest, viderLaBase } from '../support/payload-test'
+import { appelerRest } from '../support/rest'
+import { HASH_BCRYPT_COMPLET } from '../support/source-strapi/inventory'
 
 // The bench is shared by every checkout of the machine, and a suite under load runs several times slower than alone:
 // the default 5 s is passed by the heaviest tests of this file (ticket 225). The delay bounds a call that hangs, it

@@ -6,8 +6,8 @@ import { transportOptions } from '@/lib/emails/relay'
 import { createSendEmail, EmailSendFailed, payloadSendEmail } from '@/lib/emails/send'
 import { serverEnv } from '@/lib/env'
 import { IMPORT_CONTEXT } from '@/lib/import-context'
-import { attendreLeMail, compterLesMails, lienDuMail, mailsRecus, viderLeCapteur } from '../outils/mailpit'
-import { payloadDeTest } from '../outils/payload-test'
+import { attendreLeMail, compterLesMails, lienDuMail, mailsRecus, viderLeCapteur } from '../support/mailpit'
+import { payloadDeTest } from '../support/payload-test'
 
 /** The address the application of the bench is served from: where the link of a mail must lead. */
 const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? ''

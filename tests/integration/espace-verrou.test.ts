@@ -5,8 +5,8 @@ import type { DashboardUser } from '@/lib/dashboard/my-profile'
 import { saveContactDetails } from '@/lib/dashboard/save-contact-details'
 import { saveIdentity } from '@/lib/dashboard/save-identity'
 import { saveNetworks } from '@/lib/dashboard/save-networks'
-import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
+import { type CompteDeTest, creerCompte } from '../support/account-factory'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
 
 /**
  * The edit lock of the administration protects the profile from the writes of her space (ticket 224): while

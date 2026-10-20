@@ -11,11 +11,11 @@ import { reconcileStorageAndDatabase } from '@/lib/reconciliation-read'
 import { listStorage } from '@/lib/storage'
 import type { Media } from '@/payload-types'
 import { readPublicProfile } from '@/services/public/profiles'
-import { type Espion, espionnerLeStockage, suppressionsSansCorbeille } from '../outils/espion-s3'
-import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { appelerRest, formulaireAvecFichier } from '../outils/rest'
-import { lireUnObjet, viderLeStockage } from '../outils/s3'
+import { type Espion, espionnerLeStockage, suppressionsSansCorbeille } from '../support/s3-spy'
+import { type CompteDeTest, creerCompte } from '../support/account-factory'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { appelerRest, formulaireAvecFichier } from '../support/rest'
+import { lireUnObjet, viderLeStockage } from '../support/s3'
 
 // The bench is shared by every checkout of the machine, and a suite under load runs several times slower than alone:
 // the default 5 s is passed by the heaviest tests of this file (ticket 225). The delay bounds a call that hangs, it

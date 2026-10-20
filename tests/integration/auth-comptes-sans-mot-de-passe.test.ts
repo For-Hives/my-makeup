@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, setDefaultTimeout, test } from 'bun:test'
 import { clearDocuments } from '@/lib/auth/google/oidc'
-import { creerCompte, type TypeDeCompte } from '../outils/fabrique-comptes'
-import { viderLeCapteur } from '../outils/mailpit'
-import { CHOIX, choisirUnMotDePasse, connecterParGoogle, demanderLeLien, seConnecter } from '../outils/parcours-herites'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
+import { creerCompte, type TypeDeCompte } from '../support/account-factory'
+import { viderLeCapteur } from '../support/mailpit'
+import { CHOIX, choisirUnMotDePasse, connecterParGoogle, demanderLeLien, seConnecter } from '../support/legacy-journeys'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
 
 // The bench is shared by every checkout of the machine, and a suite under load runs several times slower than alone:
 // the default 5 s is passed by the heaviest tests of this file (ticket 225). The delay bounds a call that hangs, it

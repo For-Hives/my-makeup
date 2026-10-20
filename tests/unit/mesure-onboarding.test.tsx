@@ -12,8 +12,8 @@ import { Onboarding } from '@/components/dashboard/onboarding/Onboarding'
 import { DECLARED_ORIGINS, eventData } from '@/lib/analytics/events'
 import type { Track } from '@/lib/analytics/track'
 import { strictOnboardingIdentitySchema } from '@/lib/dashboard/onboarding'
-import { choisirDesFichiers } from '../outils/choisir-fichiers'
-import { ouvrirFenetre } from '../outils/dom-react'
+import { choisirDesFichiers } from '../support/pick-files'
+import { ouvrirFenetre } from '../support/dom-react'
 
 /**
  * Ticket 148: the onboarding sends its steps and the declared origin as events (plan 04 §3.3, events

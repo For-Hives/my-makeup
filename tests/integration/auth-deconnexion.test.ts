@@ -1,10 +1,10 @@
 import { afterAll, describe, expect, test } from 'bun:test'
 import { authLog } from '@/lib/auth/auth-log'
 import { closeSession } from '@/lib/auth/sign-out'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { appelerRest } from '../outils/rest'
-import { ouvrirSession } from '../outils/session'
+import { creerCompte } from '../support/account-factory'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { appelerRest } from '../support/rest'
+import { ouvrirSession } from '../support/session'
 
 /**
  * The sign-out of a makeup artist (ticket 078; plan 02 I11, I13). The Server Action, the cookie in

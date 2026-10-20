@@ -2,11 +2,11 @@ import { expect, test } from '@playwright/test'
 import sharp from 'sharp'
 import { placeProfile, profilePresent } from '../../src/demo-data/loading'
 import type { DemoProfile } from '../../src/demo-data/profiles'
-import { type ProfilDePage, poserLesProfilsDePage, profilsDePageSousLePrefixe } from '../fixtures/profils-de-page'
-import { creerContenu, supprimerContenu } from '../outils/pages-publiques'
-import { payloadDeTest } from '../outils/payload-test'
-import { grandePhotoSynthetique } from '../outils/photo-synthetique'
-import { sousVerrou } from '../outils/verrou'
+import { type ProfilDePage, poserLesProfilsDePage, profilsDePageSousLePrefixe } from '../fixtures/page-profiles'
+import { creerContenu, supprimerContenu } from '../support/public-pages'
+import { payloadDeTest } from '../support/payload-test'
+import { grandePhotoSynthetique } from '../support/synthetic-photo'
+import { sousVerrou } from '../support/lock'
 
 /**
  * The preview of a shared link, end to end (ticket 116; plan 02 E64 and U51): twelve addresses of every kind

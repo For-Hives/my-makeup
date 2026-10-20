@@ -1,8 +1,8 @@
 import { expect, test } from '@playwright/test'
 import { getFieldsToSign, jwtSign } from 'payload'
 import { tokenExpiration } from '@/lib/auth/sliding-session'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest } from '../outils/payload-test'
+import { creerCompte } from '../support/account-factory'
+import { payloadDeTest } from '../support/payload-test'
 
 /**
  * The sliding session (ticket 079; plan 02 E14): a makeup artist who visits her space with less

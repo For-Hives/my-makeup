@@ -20,7 +20,7 @@ import {
 	TargetRefused,
 	type Transport,
 } from '../../scripts/cutover/host-guard'
-import { casDuBanc } from '../outils/parite-urls'
+import { casDuBanc } from '../support/url-parity'
 
 /**
  * Ticket 173: the check of a host (scripts/cutover/host-check.ts). No request leaves this machine:

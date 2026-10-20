@@ -19,8 +19,8 @@ import {
 	readAnswers,
 } from '../../scripts/migration/import/reference'
 import { ImportRefuse } from '../../scripts/migration/import/target'
-import { delay, HttpResponse, http, simuler } from '../outils/http-sortant'
-import { definitionDeLaSource } from '../outils/source-strapi/donnees'
+import { delay, HttpResponse, http, simuler } from '../support/outgoing-http'
+import { definitionDeLaSource } from '../support/source-strapi/data'
 
 /**
  * Ticket 063: the city typed in a profile becomes a commune of the official list, with its INSEE

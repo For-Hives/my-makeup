@@ -5,7 +5,7 @@ import { serializeJsonLd } from '@/lib/seo/json-ld'
 import { profileBreadcrumb, profileMetadata, profileStructuredData, profileTitle } from '@/lib/seo/profile'
 import { DESCRIPTION_MAX, DESCRIPTION_MIN, MAX_TITLE } from '@/lib/seo/text'
 import { type ProfilePageData, type PublicProfile, publicProfileOf } from '@/services/public/profiles'
-import { schemaDuProfil } from '../outils/schema-profil-json-ld'
+import { schemaDuProfil } from '../support/profile-json-ld-schema'
 
 /**
  * The head of the public page of a profile (ticket 105; plan 02 U47 to U50, and the schema half of

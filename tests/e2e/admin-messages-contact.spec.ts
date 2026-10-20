@@ -1,8 +1,8 @@
 import { type BrowserContext, expect, type Page, test } from '@playwright/test'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { sansLeReseauDuDehors } from '../outils/hors-reseau'
-import { type Mail, mailsRecus } from '../outils/mailpit'
-import { payloadDeTest } from '../outils/payload-test'
+import { creerCompte } from '../support/account-factory'
+import { sansLeReseauDuDehors } from '../support/offline'
+import { type Mail, mailsRecus } from '../support/mailpit'
+import { payloadDeTest } from '../support/payload-test'
 
 /**
  * The contact messages in the admin panel (ticket 163; plan 02 E58, E55 and E53).

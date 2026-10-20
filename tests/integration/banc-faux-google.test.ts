@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import { environnementDuBanc, servicesDuBanc } from '../outils/banc'
-import { fauxGoogle, SCENARIOS } from '../outils/faux-google'
+import { environnementDuBanc, servicesDuBanc } from '../support/bench'
+import { fauxGoogle, SCENARIOS } from '../support/fake-google'
 
 /**
  * The fake Google as it runs: the container `bun run banc:up` started, asked over HTTP from this

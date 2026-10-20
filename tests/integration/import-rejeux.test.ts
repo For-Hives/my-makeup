@@ -1,17 +1,17 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { exitCode, type Report } from '../../scripts/migration/import/report'
 import { ImportRefuse } from '../../scripts/migration/import/target'
-import { DATE_DE_BASCULE_DU_BANC } from '../outils/banc'
-import { commandeDImport, FICHIER_DES_DECISIONS_DU_BANC, importerSurLeBanc } from '../outils/import'
-import { seConnecter } from '../outils/parcours-herites'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { viderLeStockage } from '../outils/s3'
+import { DATE_DE_BASCULE_DU_BANC } from '../support/bench'
+import { commandeDImport, FICHIER_DES_DECISIONS_DU_BANC, importerSurLeBanc } from '../support/import'
+import { seConnecter } from '../support/legacy-journeys'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { viderLeStockage } from '../support/s3'
 import {
 	COMPTES_DE_FIXTURE,
 	creerLaSourceStrapi,
 	effacerLaSourceStrapi,
 	empreinteDeLaSource,
-} from '../outils/source-strapi'
+} from '../support/source-strapi'
 
 /**
  * Ticket 227: a run of the import does not undo what the v3 wrote. The date of consent a profile

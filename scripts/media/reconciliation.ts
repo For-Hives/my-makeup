@@ -18,8 +18,8 @@
  * the bench. Started with `--no-env-file`: a working `.env` never reaches the bench.
  */
 
-import { BancRefuse } from '../../tests/outils/banc'
-import { bancCourant, exigerBancDebout } from '../banc'
+import { BancRefuse } from '../../tests/support/bench'
+import { bancCourant, exigerBancDebout } from '../bench'
 
 try {
 	const bench = bancCourant()
@@ -32,7 +32,7 @@ try {
 	process.exit(2)
 }
 
-const { payloadDeTest: testPayload } = await import('../../tests/outils/payload-test')
+const { payloadDeTest: testPayload } = await import('../../tests/support/payload-test')
 const { serverEnv } = await import('../../src/lib/env')
 const { listStorage } = await import('../../src/lib/storage')
 const { describeReconciliation: tellReconciliation } = await import('../../src/lib/reconciliation')

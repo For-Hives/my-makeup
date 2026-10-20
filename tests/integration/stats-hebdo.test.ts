@@ -2,12 +2,12 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { GET, POST } from '@/app/api/stats/weekly/route'
 import { WeeklyStats } from '@/lib/weekly-stats'
 import { DEMO_PROFILES } from '../../src/demo-data/profiles'
-import { COMPTES_DU_JEU, TYPES_DU_JEU } from '../fixtures/comptes'
-import { poserLeJeuDuBanc } from '../fixtures/jeu-du-banc'
-import { TYPES_DE_COMPTE } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { appelerRest } from '../outils/rest'
-import { viderLeStockage } from '../outils/s3'
+import { COMPTES_DU_JEU, TYPES_DU_JEU } from '../fixtures/accounts'
+import { poserLeJeuDuBanc } from '../fixtures/bench-dataset'
+import { TYPES_DE_COMPTE } from '../support/account-factory'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { appelerRest } from '../support/rest'
+import { viderLeStockage } from '../support/s3'
 
 /**
  * Ticket 149 (plan 04 §3.6, RESTE MES-20): GET /api/stats/weekly on the set of the bench. Exact

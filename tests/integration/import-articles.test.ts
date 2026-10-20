@@ -3,12 +3,12 @@ import { SQL } from 'bun'
 import { TYPE_ARTICLE } from '../../scripts/migration/import/media'
 import type { Report } from '../../scripts/migration/import/report'
 import type { Article, Media } from '../../src/payload-types'
-import { importerSurLeBanc } from '../outils/import'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { deposerUnObjet, supprimerUnObjet, viderLeStockage } from '../outils/s3'
-import { creerLaSourceStrapi, effacerLaSourceStrapi, sourceDuBanc } from '../outils/source-strapi'
-import { definitionDeLaSource } from '../outils/source-strapi/donnees'
-import { pngUni } from '../outils/source-strapi/images'
+import { importerSurLeBanc } from '../support/import'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { deposerUnObjet, supprimerUnObjet, viderLeStockage } from '../support/s3'
+import { creerLaSourceStrapi, effacerLaSourceStrapi, sourceDuBanc } from '../support/source-strapi'
+import { definitionDeLaSource } from '../support/source-strapi/data'
+import { pngUni } from '../support/source-strapi/images'
 
 /**
  * Ticket 061: the articles are taken as they are, drafts included (docs/migration/SCHEMA.md §5.3;

@@ -5,8 +5,8 @@ import type { DashboardPhoto } from '@/lib/dashboard/photos'
 import type { FileUploadResult } from '@/lib/dashboard/photos-upload'
 import { UNCERTAIN_RESULT_MESSAGE } from '@/lib/dashboard/photos-upload'
 import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
-import { choisirDesFichiers } from '../outils/choisir-fichiers'
-import { ouvrirFenetre } from '../outils/dom-react'
+import { choisirDesFichiers } from '../support/pick-files'
+import { ouvrirFenetre } from '../support/dom-react'
 
 /**
  * The panel of the portfolio, adding photos (ticket 135; plan 02 E34, E36, U80, rule L6): several

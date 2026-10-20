@@ -1,8 +1,8 @@
 import { expect, type Page, test } from '@playwright/test'
-import { type ProfilDePage, poserLesProfilsDePage } from '../fixtures/profils-de-page'
-import { ECRANS } from '../outils/e2e'
-import { payloadDeTest } from '../outils/payload-test'
-import { usagers } from '../outils/verrou'
+import { type ProfilDePage, poserLesProfilsDePage } from '../fixtures/page-profiles'
+import { ECRANS } from '../support/e2e'
+import { payloadDeTest } from '../support/payload-test'
+import { usagers } from '../support/lock'
 
 /**
  * The public page of a profile, end to end (tickets 101 to 103; plan 02 E43 and E44), on profiles of

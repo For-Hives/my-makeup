@@ -5,8 +5,8 @@ import { readSearch } from '@/lib/search/input'
 import { PER_PAGE, paginate, sectionsOfPage } from '@/lib/search/pagination'
 import { find } from '@/lib/search/results'
 import { type DirectoryProfile, readDirectory } from '@/services/public/profiles'
-import { fabriquerDesProfils } from '../outils/fabrique-profils'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
+import { fabriquerDesProfils } from '../support/profile-factory'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
 
 /**
  * The search over the real directory (tickets 099 and 100; plan 02 I28 to I31). The search is made on

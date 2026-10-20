@@ -9,7 +9,7 @@ import { markMethod } from '@/lib/analytics/sign-in-mark'
 import type { Track } from '@/lib/analytics/track'
 import { ERROR_CODES, GOOGLE_ERROR_CODES } from '@/lib/auth/errors'
 import { SIGN_UP_FAILURE_CODES } from '@/lib/auth/sign-up'
-import { ouvrirFenetre } from '../outils/dom-react'
+import { ouvrirFenetre } from '../support/dom-react'
 
 /**
  * Ticket 146: the events of sign-up and sign-in (plan 04 §3.3, events 9 to 12; U82, U83, E12).

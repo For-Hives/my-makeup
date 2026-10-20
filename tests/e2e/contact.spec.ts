@@ -1,8 +1,8 @@
 import { expect, type Page, test } from '@playwright/test'
-import { violationsGraves } from '../outils/axe'
-import { fauxUmami, unAgentParEssai } from '../outils/faux-umami'
-import { type Mail, mailsRecus } from '../outils/mailpit'
-import { payloadDeTest } from '../outils/payload-test'
+import { violationsGraves } from '../support/axe'
+import { fauxUmami, unAgentParEssai } from '../support/fake-umami'
+import { type Mail, mailsRecus } from '../support/mailpit'
+import { payloadDeTest } from '../support/payload-test'
 
 /**
  * The contact page, end to end (tickets 158 and 160; plan 02 E50, E51 and E69).

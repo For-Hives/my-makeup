@@ -1,8 +1,8 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
-import { BancRefuse } from '../outils/banc'
-import { AGENT_AUTOMATISE, AGENT_ORDINAIRE, agentDeLEssai, fauxUmami } from '../outils/faux-umami'
-import { creerFauxUmami } from '../outils/faux-umami/fournisseur'
-import { EnvironnementRefuse, verifierUmami } from '../outils/garde-environnement'
+import { BancRefuse } from '../support/bench'
+import { AGENT_AUTOMATISE, AGENT_ORDINAIRE, agentDeLEssai, fauxUmami } from '../support/fake-umami'
+import { creerFauxUmami } from '../support/fake-umami/provider'
+import { EnvironnementRefuse, verifierUmami } from '../support/environment-guard'
 
 /**
  * The fake Umami of the bench (ticket 111): what it records, what it forgets, and what the guard

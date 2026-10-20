@@ -7,8 +7,8 @@ import type { IdentityValues } from '@/lib/dashboard/identity'
 import type { LocationValues } from '@/lib/dashboard/location'
 import { FAILURE_MESSAGE, MESSAGE_SESSION } from '@/lib/dashboard/result'
 import type { OnboardingPhotoValues } from '@/lib/dashboard/save-onboarding'
-import { choisirDesFichiers } from '../outils/choisir-fichiers'
-import { ouvrirFenetre } from '../outils/dom-react'
+import { choisirDesFichiers } from '../support/pick-files'
+import { ouvrirFenetre } from '../support/dom-react'
 
 /**
  * The onboarding (ticket 140; plan 02 E02, RG-07): the next step opens only when the server said it

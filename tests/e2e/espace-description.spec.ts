@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test'
-import { violationsGraves } from '../outils/axe'
-import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest } from '../outils/payload-test'
+import { violationsGraves } from '../support/axe'
+import { type CompteDeTest, creerCompte } from '../support/account-factory'
+import { payloadDeTest } from '../support/payload-test'
 
 /**
  * The description in her space (ticket 122; plan 02 E19-E29 description, E31, U05, U27): written,

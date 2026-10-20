@@ -1,9 +1,9 @@
 import { expect, test } from '@playwright/test'
 import { DEMO_ARTICLES, DEMO_TALENTS } from '../../src/demo-data/editorial'
 import { DEMO_PROFILES } from '../../src/demo-data/profiles'
-import { CONTENU_DU_BANC, poserLeJeuDuBanc } from '../fixtures/jeu-du-banc'
-import { payloadDeTest } from '../outils/payload-test'
-import { ouvrirSessionSansMotDePasse } from '../outils/session'
+import { CONTENU_DU_BANC, poserLeJeuDuBanc } from '../fixtures/bench-dataset'
+import { payloadDeTest } from '../support/payload-test'
+import { ouvrirSessionSansMotDePasse } from '../support/session'
 
 /**
  * Ticket 052: with the set of the bench loaded, the admin panel opens for the admin of the set

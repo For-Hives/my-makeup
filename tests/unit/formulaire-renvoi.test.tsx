@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test'
 import { ResendForm, type ResendState } from '@/components/auth/ResendForm'
-import { ouvrirFenetre } from '../outils/dom-react'
+import { ouvrirFenetre } from '../support/dom-react'
 
 const fenetre = ouvrirFenetre()
 

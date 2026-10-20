@@ -1,9 +1,9 @@
 import { expect, type Page, test } from '@playwright/test'
-import { violationsGraves } from '../outils/axe'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest } from '../outils/payload-test'
-import { fichierPourPayload } from '../outils/photos'
-import { lireUnObjet } from '../outils/s3'
+import { violationsGraves } from '../support/axe'
+import { creerCompte } from '../support/account-factory'
+import { payloadDeTest } from '../support/payload-test'
+import { fichierPourPayload } from '../support/photos'
+import { lireUnObjet } from '../support/s3'
 
 /**
  * She deletes her account from her space (ticket 141; plan 02 E33): a dialog that asks for her

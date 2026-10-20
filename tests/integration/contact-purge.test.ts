@@ -2,7 +2,7 @@ import { afterAll, describe, expect, test } from 'bun:test'
 import { markImportInProgress } from '@/lib/import-context'
 import { purgeContactMessages } from '@/lib/tasks/contact-messages'
 import { runDailyTasks } from '@/lib/tasks/daily'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
 
 /**
  * The 12-month purge of the contact messages against the real store (ticket 162), on a simulated clock.

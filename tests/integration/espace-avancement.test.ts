@@ -5,8 +5,8 @@ import { profileProgress } from '@/lib/dashboard/progress'
 import { saveDescription } from '@/lib/dashboard/save-description'
 import { saveIdentity } from '@/lib/dashboard/save-identity'
 import { saveNetworks } from '@/lib/dashboard/save-networks'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
+import { creerCompte } from '../support/account-factory'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
 
 /**
  * The progress block of her space (ticket 138; plan 02 I20): after each save, what the page shows

@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { sansLeReseauDuDehors } from '../outils/hors-reseau'
-import { payloadDeTest } from '../outils/payload-test'
+import { creerCompte } from '../support/account-factory'
+import { sansLeReseauDuDehors } from '../support/offline'
+import { payloadDeTest } from '../support/payload-test'
 
 /**
  * Ticket 168 (plan 01 §6.1): the admin opens the list of the accounts, finds the ones without a profile

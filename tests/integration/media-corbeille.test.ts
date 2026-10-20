@@ -5,12 +5,12 @@ import { IMPORT_CONTEXT } from '@/lib/import-context'
 import { createObjectStorage } from '@/lib/storage'
 import { restore } from '@/lib/trash'
 import type { Media } from '@/payload-types'
-import { type Espion, espionnerLeStockage, sourceDe, suppressionsSansCorbeille } from '../outils/espion-s3'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { fichierPourFormulaire, fichierPourPayload } from '../outils/photos'
-import { appelerRest, formulaireAvecFichier } from '../outils/rest'
-import { lireUnObjet, listerLesObjets, viderLeStockage } from '../outils/s3'
+import { type Espion, espionnerLeStockage, sourceDe, suppressionsSansCorbeille } from '../support/s3-spy'
+import { creerCompte } from '../support/account-factory'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { fichierPourFormulaire, fichierPourPayload } from '../support/photos'
+import { appelerRest, formulaireAvecFichier } from '../support/rest'
+import { lireUnObjet, listerLesObjets, viderLeStockage } from '../support/s3'
 
 /**
  * A media that no longer serves goes to the bin, never to a direct deletion (ticket 045; plan 02

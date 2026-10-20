@@ -6,18 +6,18 @@ import path from 'node:path'
 import { SQL } from 'bun'
 import { NO_DECISION } from '../../scripts/migration/import/decisions'
 import { NO_PROFILE_CONTEXT } from '../../src/collections/Profiles'
-import { commandeDImport, DECISIONS_DU_BANC, FICHIER_DES_DECISIONS_DU_BANC, importerSurLeBanc } from '../outils/import'
-import { compterLesMails, viderLeCapteur } from '../outils/mailpit'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
+import { commandeDImport, DECISIONS_DU_BANC, FICHIER_DES_DECISIONS_DU_BANC, importerSurLeBanc } from '../support/import'
+import { compterLesMails, viderLeCapteur } from '../support/mailpit'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
 import {
 	COMPTES_DE_FIXTURE,
 	creerLaSourceStrapi,
 	effacerLaSourceStrapi,
 	empreinteDeLaSource,
 	sourceDuBanc,
-} from '../outils/source-strapi'
-import { definitionDeLaSource } from '../outils/source-strapi/donnees'
-import { HASH_BCRYPT_COMPLET } from '../outils/source-strapi/inventaire'
+} from '../support/source-strapi'
+import { definitionDeLaSource } from '../support/source-strapi/data'
+import { HASH_BCRYPT_COMPLET } from '../support/source-strapi/inventory'
 
 // The bench is shared by every checkout of the machine, and a suite under load runs several times slower than alone:
 // the default 5 s is passed by the heaviest tests of this file (ticket 225). The delay bounds a call that hangs, it

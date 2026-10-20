@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { expect, test } from '@playwright/test'
-import { poserLesProfilsDeRecherche } from '../fixtures/profils-de-recherche'
-import { creerContenu, rafraichirLesPagesDesProfils, supprimerContenu } from '../outils/pages-publiques'
+import { poserLesProfilsDeRecherche } from '../fixtures/search-profiles'
+import { creerContenu, rafraichirLesPagesDesProfils, supprimerContenu } from '../support/public-pages'
 import {
 	bilan,
 	type CasDeParite,
@@ -11,7 +11,7 @@ import {
 	listePrivee,
 	type TitresDeLAncienSite,
 	verifier,
-} from '../outils/parite-urls'
+} from '../support/url-parity'
 
 /**
  * I45 (ticket 072, plan 02 §7.3): every frozen address answers what the table promises, with the

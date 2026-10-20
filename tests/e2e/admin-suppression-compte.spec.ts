@@ -1,8 +1,8 @@
 import { expect, test } from '@playwright/test'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest } from '../outils/payload-test'
-import { fichierPourPayload } from '../outils/photos'
-import { lireUnObjet } from '../outils/s3'
+import { creerCompte } from '../support/account-factory'
+import { payloadDeTest } from '../support/payload-test'
+import { fichierPourPayload } from '../support/photos'
+import { lireUnObjet } from '../support/s3'
 
 /**
  * E57 (plan 02 §7.4; ticket 167): the admin deletes the account of a makeup artist from its sheet in

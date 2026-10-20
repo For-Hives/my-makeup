@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { AGENT_AUTOMATISE, fauxUmami, unAgentParEssai } from '../outils/faux-umami'
+import { AGENT_AUTOMATISE, fauxUmami, unAgentParEssai } from '../support/fake-umami'
 
 /**
  * The audience measure, end to end (tickets 111 and 143): a real browser loads a page, the tracker

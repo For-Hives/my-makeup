@@ -1,7 +1,7 @@
 import { type Browser, expect, type Page, test } from '@playwright/test'
-import { violationsGraves } from '../outils/axe'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { attendreLeMail, mailsRecus } from '../outils/mailpit'
+import { violationsGraves } from '../support/axe'
+import { creerCompte } from '../support/account-factory'
+import { attendreLeMail, mailsRecus } from '../support/mailpit'
 
 /**
  * The forgotten password (tickets 085 and 086; plan 02 E08 and E15): she asks for a link, reads it in

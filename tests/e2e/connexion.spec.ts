@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { creerCompte } from '../outils/fabrique-comptes'
+import { creerCompte } from '../support/account-factory'
 
 /**
  * The sign-in of a makeup artist (ticket 074; plan 02 E05, E06) and the way back (E09).

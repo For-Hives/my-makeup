@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, spyOn, test } from 'bun:test'
 import type { Payload } from 'payload'
 import { GET as sante } from '@/app/api/health/route'
 import { CONNECTION_TIMEOUT_MS } from '@/lib/pool-base'
-import { payloadDeTest } from '../outils/payload-test'
+import { payloadDeTest } from '../support/payload-test'
 
 /**
  * Ticket 222: when every connection of the pool is taken and kept, one more query fails within the

@@ -1,9 +1,9 @@
 import { expect, test } from '@playwright/test'
 import { placeProfile, readDemoPhoto } from '../../src/demo-data/loading'
 import { DEMO_PROFILES, type DemoProfile } from '../../src/demo-data/profiles'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { sansLeReseauDuDehors } from '../outils/hors-reseau'
-import { payloadDeTest } from '../outils/payload-test'
+import { creerCompte } from '../support/account-factory'
+import { sansLeReseauDuDehors } from '../support/offline'
+import { payloadDeTest } from '../support/payload-test'
 
 /**
  * E53 and E56 without the journal (plan 02 §7.4; tickets 165 and 166): the admin opens every

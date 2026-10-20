@@ -2,10 +2,10 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { isAdmin } from '@/lib/access'
 import { respondToDelta } from '@/lib/cutover/delta-response'
 import { readDelta } from '@/lib/cutover/export-delta'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { fichierPourPayload } from '../outils/photos'
-import { viderLeStockage } from '../outils/s3'
+import { creerCompte } from '../support/account-factory'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { fichierPourPayload } from '../support/photos'
+import { viderLeStockage } from '../support/s3'
 
 /**
  * Ticket 234 (PLAN-PROD-DIRECT §4.5, §7 L5): the export of what the v3 received since the switch, against the

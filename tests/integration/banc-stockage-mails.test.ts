@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { createServer } from 'node:net'
-import { BancRefuse, environnementDuBanc, lireInstance, prefixeDeCommande } from '../outils/banc'
+import { BancRefuse, environnementDuBanc, lireInstance, prefixeDeCommande } from '../support/bench'
 import {
 	attendreLeMail,
 	type Capteur,
@@ -10,8 +10,8 @@ import {
 	lienDuMail,
 	mailsRecus,
 	viderLeCapteur,
-} from '../outils/mailpit'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
+} from '../support/mailpit'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
 import {
 	deposerUnObjet,
 	lireUnObjet,
@@ -19,7 +19,7 @@ import {
 	stockageDuBanc,
 	supprimerUnObjet,
 	viderLeStockage,
-} from '../outils/s3'
+} from '../support/s3'
 
 /** The criterion of the ticket, for a write or for an error: under 5 seconds. */
 const CINQ_SECONDES_MS = 5000

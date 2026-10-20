@@ -10,7 +10,7 @@
  * holds a hash, an email or a password: numbers and fingerprints only.
  */
 
-import { BancRefuse } from '../tests/outils/banc'
+import { BancRefuse } from '../tests/support/bench'
 import {
 	creerLaSourceStrapi,
 	type EmpreinteDeLaSource,
@@ -21,8 +21,8 @@ import {
 	lireLaSource,
 	type SourceStrapi,
 	sourceDuBanc,
-} from '../tests/outils/source-strapi'
-import { bancCourant, exigerBancDebout } from './banc'
+} from '../tests/support/source-strapi'
+import { bancCourant, exigerBancDebout } from './bench'
 
 const USAGE = 'Usage : bun run banc:source [--fingerprint | --erase]'
 

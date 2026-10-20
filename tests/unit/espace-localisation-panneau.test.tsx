@@ -10,7 +10,7 @@ import {
 } from '@/lib/dashboard/location'
 import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
 import { ZONE_MESSAGES } from '@/lib/profile/zone'
-import { ouvrirFenetre } from '../outils/dom-react'
+import { ouvrirFenetre } from '../support/dom-react'
 
 /**
  * The panel of the location (ticket 123; plan 02 U14, U15, U16, E30, E31): the commune chosen in

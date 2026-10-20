@@ -6,7 +6,7 @@ import {
 	type TitresDeLAncienSite,
 	titresPrincipaux,
 	verifier,
-} from '../outils/parite-urls'
+} from '../support/url-parity'
 
 /**
  * The fixed pages for makeup artists and « À propos » (ticket 110): 200, a single h1, a canonical address,

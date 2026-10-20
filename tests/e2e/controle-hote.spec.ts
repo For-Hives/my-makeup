@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { checkHost, writeReport } from '../../scripts/cutover/host-check'
-import { poserLesProfilsDeRecherche } from '../fixtures/profils-de-recherche'
-import { creerContenu, rafraichirLesPagesDesProfils, supprimerContenu } from '../outils/pages-publiques'
+import { poserLesProfilsDeRecherche } from '../fixtures/search-profiles'
+import { creerContenu, rafraichirLesPagesDesProfils, supprimerContenu } from '../support/public-pages'
 
 /**
  * I45, U61 to U64 on a real host (ticket 173): the command that checks a host reads every address of the

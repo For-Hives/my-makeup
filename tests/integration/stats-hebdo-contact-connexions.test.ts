@@ -4,11 +4,11 @@ import { type AuthEvent, log } from '@/lib/auth/auth-log'
 import { replaceLegacyHash } from '@/lib/auth/legacy'
 import { payloadStorage } from '@/lib/contact/payload-send'
 import { WeeklyStats } from '@/lib/weekly-stats'
-import { adresseDuJeu, TYPES_DU_JEU } from '../fixtures/comptes'
-import { poserLeJeuDuBanc } from '../fixtures/jeu-du-banc'
-import { MOT_DE_PASSE_HERITE_DE_FIXTURE, TYPES_DE_COMPTE } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { viderLeStockage } from '../outils/s3'
+import { adresseDuJeu, TYPES_DU_JEU } from '../fixtures/accounts'
+import { poserLeJeuDuBanc } from '../fixtures/bench-dataset'
+import { MOT_DE_PASSE_HERITE_DE_FIXTURE, TYPES_DE_COMPTE } from '../support/account-factory'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { viderLeStockage } from '../support/s3'
 
 /**
  * Ticket 169 (plan 04 §3.6; plan 01 §2.4 M6): the contact messages, the sign-ins and the inherited

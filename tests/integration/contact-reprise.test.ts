@@ -5,7 +5,7 @@ import type { MailState } from '@/lib/contact/states'
 import { markImportInProgress } from '@/lib/import-context'
 import { runDailyTasks } from '@/lib/tasks/daily'
 import { RETRY_DELAY_MS, retryStuckMessages } from '@/lib/tasks/stuck-messages'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
 
 /**
  * A contact message whose mail never got an answer (the process stopped between the storing and the send)

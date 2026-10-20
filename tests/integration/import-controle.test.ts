@@ -1,9 +1,9 @@
 import { afterAll, beforeEach, describe, expect, test } from 'bun:test'
 import { SQL } from 'bun'
-import { commandeDImport, FICHIER_DES_DECISIONS_DU_BANC, importerSurLeBanc } from '../outils/import'
-import { viderLeCapteur } from '../outils/mailpit'
-import { viderLaBase } from '../outils/payload-test'
-import { creerLaSourceStrapi, effacerLaSourceStrapi, sourceDuBanc } from '../outils/source-strapi'
+import { commandeDImport, FICHIER_DES_DECISIONS_DU_BANC, importerSurLeBanc } from '../support/import'
+import { viderLeCapteur } from '../support/mailpit'
+import { viderLaBase } from '../support/payload-test'
+import { creerLaSourceStrapi, effacerLaSourceStrapi, sourceDuBanc } from '../support/source-strapi'
 
 /**
  * Ticket 067: the check of the parity (`--check`). A dry run that says whether the target is the

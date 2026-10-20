@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import type { ProfileStatus } from '@/lib/profile/status'
 import type { Profile } from '@/payload-types'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { appelerRest } from '../outils/rest'
+import { creerCompte } from '../support/account-factory'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { appelerRest } from '../support/rest'
 
 /**
  * What the public reads of the profiles, and what only an admin writes on them (ticket 021; plan

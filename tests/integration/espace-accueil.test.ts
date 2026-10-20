@@ -5,13 +5,13 @@ import { artistProfile, type DashboardUser, profileId } from '@/lib/dashboard/my
 import { onboardingPosition } from '@/lib/dashboard/onboarding'
 import { saveOnboardingIdentity, saveOnboardingPhoto } from '@/lib/dashboard/save-onboarding'
 import type { Media } from '@/payload-types'
-import { ANNECY } from '../outils/cas-completude'
-import { type Espion, espionnerLeStockage } from '../outils/espion-s3'
-import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { fichierPourFormulaire } from '../outils/photos'
-import { appelerRest, formulaireAvecFichier } from '../outils/rest'
-import { viderLeStockage } from '../outils/s3'
+import { ANNECY } from '../support/completeness-cases'
+import { type Espion, espionnerLeStockage } from '../support/s3-spy'
+import { type CompteDeTest, creerCompte } from '../support/account-factory'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { fichierPourFormulaire } from '../support/photos'
+import { appelerRest, formulaireAvecFichier } from '../support/rest'
+import { viderLeStockage } from '../support/s3'
 
 /**
  * The onboarding on the server side (ticket 140; plan 02 E02, I02): an account without a profile

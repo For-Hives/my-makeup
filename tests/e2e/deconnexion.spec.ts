@@ -1,6 +1,6 @@
 import { type Browser, type BrowserContext, expect, type Page, test } from '@playwright/test'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest } from '../outils/payload-test'
+import { creerCompte } from '../support/account-factory'
+import { payloadDeTest } from '../support/payload-test'
 
 /**
  * The sign-out (ticket 078; plan 02 E10, E11, E17) and the signed-in state of the navigation: the

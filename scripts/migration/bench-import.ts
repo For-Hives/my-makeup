@@ -9,8 +9,8 @@
  * the bench. Started with `--no-env-file`: a working `.env` never reaches the bench.
  */
 
-import { BancRefuse, DATE_DE_BASCULE_DU_BANC } from '../../tests/outils/banc'
-import { bancCourant, exigerBancDebout } from '../banc'
+import { BancRefuse, DATE_DE_BASCULE_DU_BANC } from '../../tests/support/bench'
+import { bancCourant, exigerBancDebout } from '../bench'
 
 try {
 	const bench = bancCourant()

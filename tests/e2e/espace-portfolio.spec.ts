@@ -2,11 +2,11 @@ import { expect, type Page, test } from '@playwright/test'
 import sharp from 'sharp'
 import { MESSAGES_PHOTO } from '@/lib/dashboard/photo'
 import { namedPhotos } from '@/lib/profile/photos'
-import { violationsGraves } from '../outils/axe'
-import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest } from '../outils/payload-test'
-import { fichierPourPayload } from '../outils/photos'
-import { lireUnObjet } from '../outils/s3'
+import { violationsGraves } from '../support/axe'
+import { type CompteDeTest, creerCompte } from '../support/account-factory'
+import { payloadDeTest } from '../support/payload-test'
+import { fichierPourPayload } from '../support/photos'
+import { lireUnObjet } from '../support/s3'
 
 /**
  * The portfolio in her space (tickets 135 and 136; plan 02 E34, E35, E36, U80): several photos

@@ -5,7 +5,7 @@ import path from 'node:path'
 import type { CaseToReview } from '../../scripts/migration/import/cities'
 import type { Decisions } from '../../scripts/migration/import/decisions'
 import { geoApiReference, keptReference, REFERENCE_ADDRESS } from '../../scripts/migration/import/reference'
-import { HttpResponse, http, simuler } from '../outils/http-sortant'
+import { HttpResponse, http, simuler } from '../support/outgoing-http'
 import {
 	commandeDImport,
 	DECISIONS_DU_BANC,
@@ -13,9 +13,9 @@ import {
 	FICHIER_DU_REFERENTIEL_DU_BANC,
 	importerSurLeBanc,
 	referentielDuBanc,
-} from '../outils/import'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { creerLaSourceStrapi, effacerLaSourceStrapi, empreinteDeLaSource } from '../outils/source-strapi'
+} from '../support/import'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { creerLaSourceStrapi, effacerLaSourceStrapi, empreinteDeLaSource } from '../support/source-strapi'
 
 /**
  * Ticket 063: the city typed in a profile of the fake source becomes a commune of the official

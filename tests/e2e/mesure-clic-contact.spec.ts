@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test'
-import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
-import { fauxUmami, type LectureFauxUmami, unAgentParEssai } from '../outils/faux-umami'
-import { payloadDeTest } from '../outils/payload-test'
+import { type CompteDeTest, creerCompte } from '../support/account-factory'
+import { fauxUmami, type LectureFauxUmami, unAgentParEssai } from '../support/fake-umami'
+import { payloadDeTest } from '../support/payload-test'
 
 /**
  * The click on a contact of a public profile, end to end (ticket 144; plan 02 E52): a real browser

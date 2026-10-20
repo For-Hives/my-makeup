@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { creerCompte } from '../outils/fabrique-comptes'
+import { creerCompte } from '../support/account-factory'
 
 /**
  * The shell test of the end-to-end bench: the smallest test that goes through everything a

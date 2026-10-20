@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, setSystemTime, test } from 'bun:test'
 import { z } from 'zod'
 import { ADMIN_SESSION_DURATION_S } from '@/collections/Admins'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { appelerRest } from '../outils/rest'
+import { creerCompte } from '../support/account-factory'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { appelerRest } from '../support/rest'
 
 const MonCompte = z.object({
 	user: z.object({ id: z.number(), email: z.string(), role: z.enum(['admin', 'editor']) }).nullable(),

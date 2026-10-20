@@ -9,18 +9,18 @@ import {
 	readTokens,
 	reserveToken,
 } from '../../src/migration/on-demand-import'
-import { DATE_DE_BASCULE_DU_BANC, RACINE } from '../outils/banc'
-import { FICHIER_DES_DECISIONS_DU_BANC, referentielDuBanc } from '../outils/import'
-import { seConnecter } from '../outils/parcours-herites'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { viderLeStockage } from '../outils/s3'
+import { DATE_DE_BASCULE_DU_BANC, RACINE } from '../support/bench'
+import { FICHIER_DES_DECISIONS_DU_BANC, referentielDuBanc } from '../support/import'
+import { seConnecter } from '../support/legacy-journeys'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { viderLeStockage } from '../support/s3'
 import {
 	COMPTES_DE_FIXTURE,
 	creerLaSourceStrapi,
 	effacerLaSourceStrapi,
 	empreinteDeLaSource,
 	sourceDuBanc,
-} from '../outils/source-strapi'
+} from '../support/source-strapi'
 
 // The bench is shared and a suite under load runs several times slower than alone (ticket 225).
 setDefaultTimeout(60_000)

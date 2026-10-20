@@ -1,8 +1,8 @@
 import { expect, type Page, test } from '@playwright/test'
 import { COOKIE_SURVIVAL_AFTER_END_S, readExpiration } from '../../src/lib/auth/session-state'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest } from '../outils/payload-test'
-import { ouvrirSessionSansMotDePasse } from '../outils/session'
+import { creerCompte } from '../support/account-factory'
+import { payloadDeTest } from '../support/payload-test'
+import { ouvrirSessionSansMotDePasse } from '../support/session'
 
 /**
  * The session that ended (ticket 080; plan 02 E12, E13): one redirection, the message « session

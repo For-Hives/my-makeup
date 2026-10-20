@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test'
-import { creerContenu, supprimerContenu } from '../outils/pages-publiques'
+import { creerContenu, supprimerContenu } from '../support/public-pages'
 
 /**
  * The page of an article of the blog, end to end (ticket 106; plan 02 E59 and E65): 200 with one h1 for a

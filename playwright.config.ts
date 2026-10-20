@@ -1,5 +1,5 @@
 import { defineConfig } from '@playwright/test'
-import { configurationDesEssais } from './tests/outils/e2e'
+import { configurationDesEssais } from './tests/support/e2e'
 
 /**
  * The end-to-end tests (docs/tests/e2e.md). They are started by `bun run test:e2e`, which builds

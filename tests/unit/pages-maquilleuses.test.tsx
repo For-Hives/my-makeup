@@ -13,7 +13,7 @@ import WhyJoinPage, {
 import PageSolutions, {
 	metadata as metaSolutions,
 } from '../../src/app/(front)/(site)/solutions/pour-les-maquilleuses/page'
-import { empreinteDesTitres, type TitresDeLAncienSite } from '../outils/parite-urls'
+import { empreinteDesTitres, type TitresDeLAncienSite } from '../support/url-parity'
 
 /** The four fixed pages for makeup artists and « À propos » (ticket 110), without a database. Their run in a browser: tests/e2e/pages-maquilleuses.spec.ts. */
 

@@ -12,10 +12,10 @@ import {
 } from '@/lib/auth/google/oidc'
 import { createRateLimit, type RateLimit } from '@/lib/auth/rate-limit'
 import { closeSession } from '@/lib/auth/sign-out'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { type Demande, fauxGoogle } from '../outils/faux-google'
-import { compterLesMails, viderLeCapteur } from '../outils/mailpit'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
+import { creerCompte } from '../support/account-factory'
+import { type Demande, fauxGoogle } from '../support/fake-google'
+import { compterLesMails, viderLeCapteur } from '../support/mailpit'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
 
 /**
  * The Google sign-in and sign-up (tickets 090 and 091; plan 02 E07), against the fake Google of

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { request } from 'node:http'
-import { environnementDuBanc, servicesDuBanc } from '../outils/banc'
-import { RequeteNonSimulee, releverLesRefus } from '../outils/http-sortant'
+import { environnementDuBanc, servicesDuBanc } from '../support/bench'
+import { RequeteNonSimulee, releverLesRefus } from '../support/outgoing-http'
 
 /**
  * The outgoing HTTP bench, on the bench as it runs: the two services of the bench that speak

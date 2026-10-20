@@ -1,10 +1,10 @@
 import { afterAll, describe, expect, test } from 'bun:test'
 import { canAccessAdmin, createLocalReq } from 'payload'
 import { z } from 'zod'
-import { creerCompte, motDePasseAleatoire } from '../outils/fabrique-comptes'
-import { mailsRecus, viderLeCapteur } from '../outils/mailpit'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { appelerRest } from '../outils/rest'
+import { creerCompte, motDePasseAleatoire } from '../support/account-factory'
+import { mailsRecus, viderLeCapteur } from '../support/mailpit'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { appelerRest } from '../support/rest'
 
 /**
  * The accounts of the makeup artists (ticket 019). Who reaches which account is in the access

@@ -2,7 +2,7 @@ import { afterAll, describe, expect, spyOn, test } from 'bun:test'
 import net from 'node:net'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { type Fenetre, NOMS_POSES, ouvrirFenetre } from '../outils/dom-react'
+import { type Fenetre, NOMS_POSES, ouvrirFenetre } from '../support/dom-react'
 
 // The component bench, tested on components that exist only here: no page of the site is involved.
 

@@ -1,8 +1,8 @@
 import { type BrowserContext, expect, type Page, test } from '@playwright/test'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { fauxGoogle } from '../outils/faux-google'
-import { attendreLeMail } from '../outils/mailpit'
-import { payloadDeTest } from '../outils/payload-test'
+import { creerCompte } from '../support/account-factory'
+import { fauxGoogle } from '../support/fake-google'
+import { attendreLeMail } from '../support/mailpit'
+import { payloadDeTest } from '../support/payload-test'
 
 /**
  * An account without a password of its own (ticket 093; plan 02 E74): an old Google account or an old

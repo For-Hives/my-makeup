@@ -3,8 +3,8 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSyn
 import os from 'node:os'
 import path from 'node:path'
 import { CANARY_FAULTS, refusal } from '../../scripts/ci/canary'
-import { MOTIF_DES_ESSAIS } from '../outils/e2e'
-import { absoluteNavigations, fixedWaits, focusedOrSkippedTests } from '../outils/garde-fous-ci'
+import { MOTIF_DES_ESSAIS } from '../support/e2e'
+import { absoluteNavigations, fixedWaits, focusedOrSkippedTests } from '../support/ci-guardrails'
 
 /**
  * The canary kit (docs/qualite.md, « Canari »). The four faulty files are written in a

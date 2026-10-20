@@ -5,12 +5,12 @@ import path from 'node:path'
 import { SQL } from 'bun'
 import { exitCode } from '../../scripts/migration/import/report'
 import { TALENT_PAGE_TITLES } from '../../src/content/talent-titles'
-import { commandeDImport, FICHIER_DES_DECISIONS_DU_BANC, importerSurLeBanc } from '../outils/import'
-import { compterLesMails, viderLeCapteur } from '../outils/mailpit'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { appelerRest } from '../outils/rest'
-import { creerLaSourceStrapi, effacerLaSourceStrapi, empreinteDeLaSource, sourceDuBanc } from '../outils/source-strapi'
-import { definitionDeLaSource } from '../outils/source-strapi/donnees'
+import { commandeDImport, FICHIER_DES_DECISIONS_DU_BANC, importerSurLeBanc } from '../support/import'
+import { compterLesMails, viderLeCapteur } from '../support/mailpit'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { appelerRest } from '../support/rest'
+import { creerLaSourceStrapi, effacerLaSourceStrapi, empreinteDeLaSource, sourceDuBanc } from '../support/source-strapi'
+import { definitionDeLaSource } from '../support/source-strapi/data'
 
 // The bench is shared by every checkout of the machine, and a suite under load runs several times slower than alone:
 // the default 5 s is passed by the heaviest tests of this file (ticket 225). The delay bounds a call that hangs, it

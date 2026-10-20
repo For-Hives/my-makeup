@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test'
-import { violationsGraves } from '../outils/axe'
-import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest } from '../outils/payload-test'
+import { violationsGraves } from '../support/axe'
+import { type CompteDeTest, creerCompte } from '../support/account-factory'
+import { payloadDeTest } from '../support/payload-test'
 
 /**
  * « Voir mon profil public » (ticket 139; plan 02 RG-06): a link that works at 390, 1024 and 1440 px,

@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import type { Media } from '@/payload-types'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { fichierPourFormulaire, fichierPourPayload, nomDePhoto } from '../outils/photos'
-import { appelerRest, formulaireAvecFichier } from '../outils/rest'
-import { deposerUnObjet, lireUnObjet, viderLeStockage } from '../outils/s3'
+import { creerCompte } from '../support/account-factory'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { fichierPourFormulaire, fichierPourPayload, nomDePhoto } from '../support/photos'
+import { appelerRest, formulaireAvecFichier } from '../support/rest'
+import { deposerUnObjet, lireUnObjet, viderLeStockage } from '../support/s3'
 
 /**
  * The media: their objects in the storage, their owner, their reading, and the photos of a profile

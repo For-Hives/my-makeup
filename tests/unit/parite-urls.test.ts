@@ -20,7 +20,7 @@ import {
 	sha256,
 	type TitresDeLAncienSite,
 	verifier,
-} from '../outils/parite-urls'
+} from '../support/url-parity'
 
 const RACINE = join(import.meta.dir, '../..')
 const anciens: TitresDeLAncienSite = JSON.parse(

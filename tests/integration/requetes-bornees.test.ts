@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import type { CollectionSlug, Payload, Where } from 'payload'
 import { boundedQuery, CONDITIONS_MAX, PRIVATE_FIELD_MESSAGE, TOO_MANY_CONDITIONS_MESSAGE } from '@/lib/bounded-query'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { appelerRest } from '../outils/rest'
+import { creerCompte } from '../support/account-factory'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { appelerRest } from '../support/rest'
 
 /**
  * A public request that is too large, or that filters or sorts on a private field, is refused

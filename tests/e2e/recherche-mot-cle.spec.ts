@@ -1,9 +1,9 @@
 import { randomInt } from 'node:crypto'
 import { gzipSync } from 'node:zlib'
 import { type APIRequestContext, expect, request as pwRequest, test } from '@playwright/test'
-import { MOT_DES_ESSAIS, type ProfilDeRecherche, poserLesProfilsDeRecherche } from '../fixtures/profils-de-recherche'
-import { COMMUNES_ELOIGNEES, fabriquerParLApplication, retirerParLApplication } from '../outils/fabrique-profils'
-import { rafraichirLesPagesDesProfils } from '../outils/pages-publiques'
+import { MOT_DES_ESSAIS, type ProfilDeRecherche, poserLesProfilsDeRecherche } from '../fixtures/search-profiles'
+import { COMMUNES_ELOIGNEES, fabriquerParLApplication, retirerParLApplication } from '../support/profile-factory'
+import { rafraichirLesPagesDesProfils } from '../support/public-pages'
 
 /**
  * The search by a word, its pages and its brake (tickets 099 and 100; plan 02 E39, E40, E41, I29 and

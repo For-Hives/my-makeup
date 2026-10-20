@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import type { Where } from 'payload'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest } from '../outils/payload-test'
+import { creerCompte } from '../support/account-factory'
+import { payloadDeTest } from '../support/payload-test'
 
 /**
  * E54 (plan 02 §7.4; ticket 094): a makeup artist, logged in, never opens the admin panel.

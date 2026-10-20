@@ -2,10 +2,10 @@ import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { inflateSync } from 'node:zlib'
-import { BancRefuse, environnementDuBanc, RACINE } from '../outils/banc'
-import { EnvironnementRefuse } from '../outils/garde-environnement'
-import { sourceDuBanc } from '../outils/source-strapi'
-import { exigerLaRevocation } from '../outils/source-strapi/creation'
+import { BancRefuse, environnementDuBanc, RACINE } from '../support/bench'
+import { EnvironnementRefuse } from '../support/environment-guard'
+import { sourceDuBanc } from '../support/source-strapi'
+import { exigerLaRevocation } from '../support/source-strapi/creation'
 import {
 	COMPTES_DE_FIXTURE,
 	definitionDeLaSource,
@@ -13,8 +13,8 @@ import {
 	type Ligne,
 	PROFILS_SANS_PROPRIETAIRE,
 	TYPE_PROFIL,
-} from '../outils/source-strapi/donnees'
-import { crc32, pngUni } from '../outils/source-strapi/images'
+} from '../support/source-strapi/data'
+import { crc32, pngUni } from '../support/source-strapi/images'
 import {
 	CAS,
 	type EtatDeLaSource,
@@ -22,8 +22,8 @@ import {
 	inventaire,
 	inventaireEnMarkdown,
 	type LigneDInventaire,
-} from '../outils/source-strapi/inventaire'
-import { creationDeTable, NOMS_DES_TABLES, type NomDeTable, TABLES } from '../outils/source-strapi/schema'
+} from '../support/source-strapi/inventory'
+import { creationDeTable, NOMS_DES_TABLES, type NomDeTable, TABLES } from '../support/source-strapi/schema'
 
 /** The bench of the default instance, as .env.test describes it. */
 const BANC = { ...environnementDuBanc({ nom: 'my-makeup-test', decalage: 0 }) }

@@ -6,8 +6,8 @@ import { AnalyticsOptOut } from '@/components/analytics/AnalyticsOptOut'
 import { FOOTER_COLUMNS } from '@/components/layout/links'
 import { analyticsRefused, OPT_OUT_KEY, refuseAnalytics } from '@/lib/analytics/opt-out'
 import { formatSiren, formatSiret, HOST, luhnValid, PUBLISHER } from '@/lib/legal'
-import { ouvrirFenetre } from '../outils/dom-react'
-import { empreinteDuTexte, texteDePage } from '../outils/texte-de-page'
+import { ouvrirFenetre } from '../support/dom-react'
+import { empreinteDuTexte, texteDePage } from '../support/page-text'
 
 /**
  * The three legal pages (ticket 112): the text of the live site word for word, one h1, one source for

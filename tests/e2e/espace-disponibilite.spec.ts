@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test'
-import { violationsGraves } from '../outils/axe'
-import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest } from '../outils/payload-test'
+import { violationsGraves } from '../support/axe'
+import { type CompteDeTest, creerCompte } from '../support/account-factory'
+import { payloadDeTest } from '../support/payload-test'
 
 /**
  * The availability in her space (ticket 124; plan 02 E19-E29): a switch that is saved for real, a

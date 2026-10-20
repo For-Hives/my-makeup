@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import type { RequiredDataFromCollectionSlug } from 'payload'
 import type { Article, Media } from '@/payload-types'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { fichierPourFormulaire, fichierPourPayload, nomDePhoto } from '../outils/photos'
-import { appelerRest, formulaireAvecFichier } from '../outils/rest'
-import { viderLeStockage } from '../outils/s3'
+import { creerCompte } from '../support/account-factory'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { fichierPourFormulaire, fichierPourPayload, nomDePhoto } from '../support/photos'
+import { appelerRest, formulaireAvecFichier } from '../support/rest'
+import { viderLeStockage } from '../support/s3'
 
 /**
  * The articles of the blog (ticket 046): the public reads what is published, and nothing else;

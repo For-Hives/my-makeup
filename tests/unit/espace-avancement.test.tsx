@@ -4,8 +4,8 @@ import type { DashboardProfile } from '@/lib/dashboard/cards'
 import { SECTIONS } from '@/lib/dashboard/cards'
 import { profileProgress } from '@/lib/dashboard/progress'
 import { CRITERIA } from '@/lib/profile/completeness'
-import { ANNECY, CAS_PARTAGES, completudeEnV3, documentDuCas } from '../outils/cas-completude'
-import { ouvrirFenetre } from '../outils/dom-react'
+import { ANNECY, CAS_PARTAGES, completudeEnV3, documentDuCas } from '../support/completeness-cases'
+import { ouvrirFenetre } from '../support/dom-react'
 
 /**
  * The progress block at the top of her space (ticket 138; plan 02 U01, U02, U04-U08): the figures

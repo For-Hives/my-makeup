@@ -6,8 +6,8 @@ import { DEMO_PROFILES, type DemoPhoto, type DemoProfile, PHOTO_MAX_WEIGHT } fro
 import { mediaKey, UPLOAD_PREFIX } from '@/lib/media'
 import { profileState } from '@/lib/profile/state'
 import type { Media, Pro, Profile } from '@/payload-types'
-import { compterLesDocuments, compterLesLignes, payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { lireUnObjet, listerLesObjets, viderLeStockage } from '../outils/s3'
+import { compterLesDocuments, compterLesLignes, payloadDeTest, viderLaBase } from '../support/payload-test'
+import { lireUnObjet, listerLesObjets, viderLeStockage } from '../support/s3'
 
 /**
  * The twelve profile types of the fictional set, loaded on the bench (ticket 051): each one tied

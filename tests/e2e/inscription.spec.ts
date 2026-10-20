@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test'
-import { violationsGraves } from '../outils/axe'
-import { attendreLeMail, mailsRecus } from '../outils/mailpit'
-import { payloadDeTest } from '../outils/payload-test'
+import { violationsGraves } from '../support/axe'
+import { attendreLeMail, mailsRecus } from '../support/mailpit'
+import { payloadDeTest } from '../support/payload-test'
 
 /**
  * The sign-up (ticket 082; plan 02 E01, adapted): she signs up, the wall tells her to look in her

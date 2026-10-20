@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import { createServer, type Server, type Socket } from 'node:net'
-import { BancRefuse, environnementDuBanc } from '../outils/banc'
-import { DELAI_D_UNE_REQUETE_MS } from '../outils/banc-requete'
-import { EnvironnementRefuse } from '../outils/garde-environnement'
+import { BancRefuse, environnementDuBanc } from '../support/bench'
+import { DELAI_D_UNE_REQUETE_MS } from '../support/bench-request'
+import { EnvironnementRefuse } from '../support/environment-guard'
 import {
 	attendreLeMail,
 	type Capteur,
@@ -13,7 +13,7 @@ import {
 	lienDuMail,
 	mailsRecus,
 	viderLeCapteur,
-} from '../outils/mailpit'
+} from '../support/mailpit'
 
 const BANC = environnementDuBanc({ nom: 'my-makeup-test', decalage: 0 })
 const SITE = 'http://localhost:3100'

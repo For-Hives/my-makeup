@@ -1,10 +1,10 @@
 import { spawn } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { expect, test } from '@playwright/test'
-import { RACINE } from '../outils/banc'
-import { ECRANS } from '../outils/e2e'
-import { viderLaBase } from '../outils/payload-test'
-import { viderLeStockage } from '../outils/s3'
+import { RACINE } from '../support/bench'
+import { ECRANS } from '../support/e2e'
+import { viderLaBase } from '../support/payload-test'
+import { viderLeStockage } from '../support/s3'
 
 /**
  * Ticket 026, the first slice, end to end: the fake Strapi source of the bench, the import as a

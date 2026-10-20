@@ -3,9 +3,9 @@ import type { BrowserContext } from '@playwright/test'
 import { z } from 'zod'
 import { GET } from '@/app/(payload)/api/[...slug]/route'
 import { COOKIE_SURVIVAL_AFTER_END_S } from '@/lib/auth/session-state'
-import { RACINE } from '../outils/banc'
-import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
+import { RACINE } from '../support/bench'
+import { type CompteDeTest, creerCompte } from '../support/account-factory'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
 
 const MonCompte = z.object({
 	user: z.object({ id: z.number(), email: z.string(), collection: z.string() }).nullable(),

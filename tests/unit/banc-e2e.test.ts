@@ -2,8 +2,8 @@ import { describe, expect, test } from 'bun:test'
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { garderLesGraves } from '../outils/axe'
-import { BancRefuse, environnementDuBanc, lireInstance } from '../outils/banc'
+import { garderLesGraves } from '../support/axe'
+import { BancRefuse, environnementDuBanc, lireInstance } from '../support/bench'
 import {
 	applicationDesEssais,
 	cibleDesEssais,
@@ -21,9 +21,9 @@ import {
 	phasesDePlaywright,
 	portDeLApplication,
 	SANS_FICHIER_ENV,
-} from '../outils/e2e'
-import { EnvironnementRefuse } from '../outils/garde-environnement'
-import { lireLaSante, MESSAGE_SCHEMA_EN_DESACCORD, sansQuestion } from '../outils/serveur-e2e'
+} from '../support/e2e'
+import { EnvironnementRefuse } from '../support/environment-guard'
+import { lireLaSante, MESSAGE_SCHEMA_EN_DESACCORD, sansQuestion } from '../support/e2e-server'
 
 /**
  * The end-to-end bench, without a browser and without an application: where the tests point,

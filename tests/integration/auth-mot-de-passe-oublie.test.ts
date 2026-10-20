@@ -7,11 +7,11 @@ import { signInWithPassword } from '@/lib/auth/sign-in'
 import { openWithPassword } from '@/lib/auth/token'
 import { payloadSendEmail } from '@/lib/emails/send'
 import { serverEnv } from '@/lib/env'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { attendreLeMail, compterLesMails, mailsRecus, viderLeCapteur } from '../outils/mailpit'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { appelerRest } from '../outils/rest'
-import { ouvrirSession } from '../outils/session'
+import { creerCompte } from '../support/account-factory'
+import { attendreLeMail, compterLesMails, mailsRecus, viderLeCapteur } from '../support/mailpit'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { appelerRest } from '../support/rest'
+import { ouvrirSession } from '../support/session'
 
 /**
  * The forgotten password (tickets 085 and 086; plan 02 I10 and I17): the mail and its link of one

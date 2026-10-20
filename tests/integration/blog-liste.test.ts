@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import { listArticles } from '@/services/public/article-list'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
 
 /**
  * The list of the blog on the bench (ticket 107): the published articles, the most recent first,

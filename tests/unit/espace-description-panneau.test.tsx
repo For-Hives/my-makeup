@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { DescriptionEditor, type DescriptionUpload } from '@/components/dashboard/DescriptionEditor'
 import type { DescriptionValues } from '@/lib/dashboard/description'
 import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
-import { ouvrirFenetre } from '../outils/dom-react'
+import { ouvrirFenetre } from '../support/dom-react'
 
 /**
  * The panel of the description (ticket 122; plan 02 U05, U27, E31): the counter, the bound, the

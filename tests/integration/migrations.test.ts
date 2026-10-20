@@ -6,8 +6,8 @@ import { type MigrateUpArgs, sql } from '@payloadcms/db-postgres'
 import type { Payload } from 'payload'
 import { MIGRATIONS_FOLDER } from '../../scripts/ci/schema-drift'
 import { migrations } from '../../src/migrations'
-import { BancRefuse, RACINE } from '../outils/banc'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
+import { BancRefuse, RACINE } from '../support/bench'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
 import {
 	constaterLeSchema,
 	exigerLeSchemaDesMigrations,
@@ -17,7 +17,7 @@ import {
 	type Migration,
 	migrationsJouees,
 	sansSortie,
-} from '../outils/schema-du-banc'
+} from '../support/bench-schema'
 
 /**
  * I22 (plan 02 §7.3), ticket 049: the schema of P3 lives in one migration, `init`. On an erased

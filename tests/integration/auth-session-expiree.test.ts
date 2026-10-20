@@ -1,9 +1,9 @@
 import { afterAll, describe, expect, test } from 'bun:test'
 import { readExpiration } from '@/lib/auth/session-state'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { appelerRest } from '../outils/rest'
-import { ouvrirSessionSansMotDePasse } from '../outils/session'
+import { creerCompte } from '../support/account-factory'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { appelerRest } from '../support/rest'
+import { ouvrirSessionSansMotDePasse } from '../support/session'
 
 /** The session that ended (ticket 080; plan 02 I12). The pages and the redirection are played by tests/e2e/session-expiree.spec.ts. */
 

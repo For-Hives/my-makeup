@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
-import { type ProfilDePage, poserLesProfilsDePage, profilsDePageSousLePrefixe } from '../fixtures/profils-de-page'
-import { payloadDeTest } from '../outils/payload-test'
-import { schemaDuProfil } from '../outils/schema-profil-json-ld'
+import { type ProfilDePage, poserLesProfilsDePage, profilsDePageSousLePrefixe } from '../fixtures/page-profiles'
+import { payloadDeTest } from '../support/payload-test'
+import { schemaDuProfil } from '../support/profile-json-ld-schema'
 
 /**
  * The head of the public page of a profile, end to end (ticket 105; plan 02 E64 for the profile

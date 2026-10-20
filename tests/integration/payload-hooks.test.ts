@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import { NO_PROFILE_CONTEXT } from '@/collections/Profiles'
-import { creerCompte, motDePasseAleatoire } from '../outils/fabrique-comptes'
-import { viderLeCapteur } from '../outils/mailpit'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { appelerRest } from '../outils/rest'
+import { creerCompte, motDePasseAleatoire } from '../support/account-factory'
+import { viderLeCapteur } from '../support/mailpit'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { appelerRest } from '../support/rest'
 
 /**
  * What the server does by itself when an account or a profile is written (plan 02 §7.3,

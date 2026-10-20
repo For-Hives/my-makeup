@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { violationsGraves } from '../outils/axe'
+import { violationsGraves } from '../support/axe'
 
 /**
  * The five fixed pages for the people looking for a makeup artist and the thank-you page, end to end

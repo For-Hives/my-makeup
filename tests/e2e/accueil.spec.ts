@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
-import { creerContenu, supprimerContenu } from '../outils/pages-publiques'
-import { titresPrincipaux } from '../outils/parite-urls'
+import { creerContenu, supprimerContenu } from '../support/public-pages'
+import { titresPrincipaux } from '../support/url-parity'
 
 /** The home page (ticket 097): its h1, its search block, its talents, its structured data. */
 

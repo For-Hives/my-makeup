@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
-import { violationsGraves } from '../outils/axe'
-import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest } from '../outils/payload-test'
+import { violationsGraves } from '../support/axe'
+import { type CompteDeTest, creerCompte } from '../support/account-factory'
+import { payloadDeTest } from '../support/payload-test'
 
 /**
  * The panels of the languages and of the skills (tickets 127 and 128; plan 02 E30, E31): Enter

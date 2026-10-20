@@ -1,16 +1,16 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { clearDocuments } from '@/lib/auth/google/oidc'
-import { importerSurLeBanc } from '../outils/import'
-import { viderLeCapteur } from '../outils/mailpit'
-import { CHOIX, choisirUnMotDePasse, connecterParGoogle, demanderLeLien, seConnecter } from '../outils/parcours-herites'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { viderLeStockage } from '../outils/s3'
+import { importerSurLeBanc } from '../support/import'
+import { viderLeCapteur } from '../support/mailpit'
+import { CHOIX, choisirUnMotDePasse, connecterParGoogle, demanderLeLien, seConnecter } from '../support/legacy-journeys'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { viderLeStockage } from '../support/s3'
 import {
 	COMPTES_DE_FIXTURE,
 	creerLaSourceStrapi,
 	effacerLaSourceStrapi,
 	empreinteDeLaSource,
-} from '../outils/source-strapi'
+} from '../support/source-strapi'
 
 /**
  * Ticket 095 (plan 01 §2.4 M2-M3; plan 02 I43): the rehearsal of what the makeup artists will live.

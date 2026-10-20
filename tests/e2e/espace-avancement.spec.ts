@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
-import { violationsGraves } from '../outils/axe'
-import { creerCompte } from '../outils/fabrique-comptes'
+import { violationsGraves } from '../support/axe'
+import { creerCompte } from '../support/account-factory'
 
 /**
  * The progress block at the top of her space (ticket 138; plan 02 U01, I20): an empty profile reads

@@ -1,8 +1,8 @@
 import { expect, type Page, test } from '@playwright/test'
-import { violationsGraves } from '../outils/axe'
-import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest } from '../outils/payload-test'
-import { ouvrirSessionSansMotDePasse } from '../outils/session'
+import { violationsGraves } from '../support/axe'
+import { type CompteDeTest, creerCompte } from '../support/account-factory'
+import { payloadDeTest } from '../support/payload-test'
+import { ouvrirSessionSansMotDePasse } from '../support/session'
 
 /**
  * The page of her space and the panel of her identity (tickets 118, 119, 120; plan 02 E16, E19, E30,

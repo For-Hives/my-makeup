@@ -3,8 +3,8 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { SQL } from 'bun'
 import { LARGE_OBJECTS, type Query, sameTables, tablesFingerprint } from '../../scripts/migration/import/source'
-import { RACINE } from '../outils/banc'
-import { deposerUnObjet, supprimerUnObjet } from '../outils/s3'
+import { RACINE } from '../support/bench'
+import { deposerUnObjet, supprimerUnObjet } from '../support/s3'
 import {
 	COMPTES_DE_FIXTURE,
 	creerLaSourceStrapi,
@@ -14,10 +14,10 @@ import {
 	lireLaSource,
 	ouvrirLaSource,
 	sourceDuBanc,
-} from '../outils/source-strapi'
-import { definitionDeLaSource } from '../outils/source-strapi/donnees'
-import { HASH_BCRYPT_COMPLET, type LigneDInventaire } from '../outils/source-strapi/inventaire'
-import { NOMS_DES_TABLES } from '../outils/source-strapi/schema'
+} from '../support/source-strapi'
+import { definitionDeLaSource } from '../support/source-strapi/data'
+import { HASH_BCRYPT_COMPLET, type LigneDInventaire } from '../support/source-strapi/inventory'
+import { NOMS_DES_TABLES } from '../support/source-strapi/schema'
 
 const source = sourceDuBanc()
 

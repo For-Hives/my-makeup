@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import type { RequiredDataFromCollectionSlug } from 'payload'
 import { readTalent } from '@/services/public/talents'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { appelerRest } from '../outils/rest'
+import { creerCompte } from '../support/account-factory'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { appelerRest } from '../support/rest'
 
 /**
  * The talents (ticket 022): the public reads what is published, and nothing else, whatever the

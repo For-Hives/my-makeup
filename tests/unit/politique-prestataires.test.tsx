@@ -7,7 +7,7 @@ import { GOOGLE_ISSUER, UMAMI_ORIGIN_DEFAULT } from '@/lib/env'
 import { HOST } from '@/lib/legal'
 import { PHOTO_ERASURE_DAYS, PROVIDERS } from '@/lib/providers'
 import { PURGE_DELAY_DAYS } from '@/lib/tasks/unconfirmed-accounts'
-import { texteDePage } from '../outils/texte-de-page'
+import { texteDePage } from '../support/page-text'
 
 /**
  * The privacy policy says what is true on the day of the switch (ticket 189): the providers come

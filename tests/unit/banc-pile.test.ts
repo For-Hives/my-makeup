@@ -22,9 +22,9 @@ import {
 	servicesDuBanc,
 	socketDeRepli,
 	variablesDeCompose,
-} from '../outils/banc'
-import { sondesDuBanc } from '../outils/banc-sondes'
-import { verifierEnvironnement } from '../outils/garde-environnement'
+} from '../support/bench'
+import { sondesDuBanc } from '../support/bench-probes'
+import { verifierEnvironnement } from '../support/environment-guard'
 
 const PAR_DEFAUT: Instance = { nom: INSTANCE_PAR_DEFAUT, decalage: 0 }
 

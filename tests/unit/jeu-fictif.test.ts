@@ -20,7 +20,7 @@ import { DESCRIPTION_MAX_LENGTH, NAME_MAX_LENGTH } from '@/lib/profile/lists'
 import { profileState, statusAfter } from '@/lib/profile/state'
 import { RADIUS_BOUNDS_KM } from '@/lib/profile/zone'
 import { slugify } from '@/lib/slug'
-import { environnementDuBanc, RACINE } from '../outils/banc'
+import { environnementDuBanc, RACINE } from '../support/bench'
 
 /**
  * The fictional set of the bench (ticket 051), without the bench: its

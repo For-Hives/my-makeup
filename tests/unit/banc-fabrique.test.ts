@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
-import { adresseDuJeu, COMPTES_DU_JEU, poserLesComptesDuJeu, TYPES_DU_JEU } from '../fixtures/comptes'
-import { BancRefuse, environnementDuBanc, RACINE, type Variables } from '../outils/banc'
+import { adresseDuJeu, COMPTES_DU_JEU, poserLesComptesDuJeu, TYPES_DU_JEU } from '../fixtures/accounts'
+import { BancRefuse, environnementDuBanc, RACINE, type Variables } from '../support/bench'
 import {
 	adresseDeTest,
 	creerCompte,
@@ -12,9 +12,9 @@ import {
 	SEL_BCRYPT_DE_FIXTURE,
 	strapiIdDeTest,
 	TYPES_DE_COMPTE,
-} from '../outils/fabrique-comptes'
-import { origineDuSite } from '../outils/session'
-import { HASH_BCRYPT_COMPLET } from '../outils/source-strapi/inventaire'
+} from '../support/account-factory'
+import { origineDuSite } from '../support/session'
+import { HASH_BCRYPT_COMPLET } from '../support/source-strapi/inventory'
 
 /** The types of account the old site brings. */
 const TYPES_REPRIS = ['reprise-avec-hash', 'reprise-google', 'reprise-google-avec-hash', 'reprise-facebook'] as const

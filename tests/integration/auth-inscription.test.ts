@@ -8,10 +8,10 @@ import type { MailboxRateLimits } from '@/lib/auth/sign-up-rate-limits'
 import { openWithPassword } from '@/lib/auth/token'
 import { EmailSendFailed, payloadSendEmail } from '@/lib/emails/send'
 import { parseServerEnv, serverEnv } from '@/lib/env'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { attendreLeMail, mailsRecus, viderLeCapteur } from '../outils/mailpit'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { appelerRest } from '../outils/rest'
+import { creerCompte } from '../support/account-factory'
+import { attendreLeMail, mailsRecus, viderLeCapteur } from '../support/mailpit'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { appelerRest } from '../support/rest'
 
 /**
  * The sign-up and the confirmation of the email (ticket 082; plan 02 I08). The page, the cookie and

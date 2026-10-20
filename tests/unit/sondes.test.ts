@@ -12,9 +12,9 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import tls from 'node:tls'
 import { FROZEN_URL_FAMILIES, familiesFor } from '../../src/lib/frozen-urls'
-import { configurationDesEssais } from '../outils/e2e'
-import { EnvironnementRefuse, verifierCible } from '../outils/garde-environnement'
-import { delay, HttpResponse, http, simuler } from '../outils/http-sortant'
+import { configurationDesEssais } from '../support/e2e'
+import { EnvironnementRefuse, verifierCible } from '../support/environment-guard'
+import { delay, HttpResponse, http, simuler } from '../support/outgoing-http'
 import {
 	domaineEnregistre,
 	finDeLEnregistrement,
@@ -23,9 +23,9 @@ import {
 	lireLeCertificat,
 	sondeR06,
 	surveillanceDe,
-} from '../sondes/certificats'
-import { cheminsDeProfils, empreinte, lireLeHtml } from '../sondes/contenu'
-import { defautsDEntetes, ENTETES_DE_SECURITE, sondeR05 } from '../sondes/entetes'
+} from '../probes/certificates'
+import { cheminsDeProfils, empreinte, lireLeHtml } from '../probes/content'
+import { defautsDEntetes, ENTETES_DE_SECURITE, sondeR05 } from '../probes/headers'
 import {
 	AGENT_DES_SONDES,
 	CHEMIN_DES_STATS,
@@ -35,10 +35,10 @@ import {
 	garder,
 	RequeteInterdite,
 	type Transport,
-} from '../sondes/garde'
-import { creerLecteur, ecartLePlusCourt, type Horloge, LectureTropLongue } from '../sondes/lecteur'
-import { comparer, slugsPubliables, sondeR02 } from '../sondes/profils-publiables'
-import type { Verdict } from '../sondes/resultat'
+} from '../probes/guard'
+import { creerLecteur, ecartLePlusCourt, type Horloge, LectureTropLongue } from '../probes/reader'
+import { comparer, slugsPubliables, sondeR02 } from '../probes/publishable-profiles'
+import type { Verdict } from '../probes/result'
 import {
 	adressesInconnues,
 	apiDesSondes,
@@ -50,7 +50,7 @@ import {
 	sondeR03,
 	sondeR04,
 	tirer,
-} from '../sondes/sondes'
+} from '../probes/probes'
 
 const RACINE = path.resolve(import.meta.dir, '../..')
 const CIBLE = new URL('https://site-sonde.example.test')

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { violationsGraves } from '../outils/axe'
+import { violationsGraves } from '../support/axe'
 
 /** A page with two faults axe knows: one « critical » (an image without a name), one « serious » (a contrast). */
 const PAGE_FAUTIVE = `<!doctype html>

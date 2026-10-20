@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
-import { creerContenu, supprimerContenu } from '../outils/pages-publiques'
-import { titresPrincipaux } from '../outils/parite-urls'
+import { creerContenu, supprimerContenu } from '../support/public-pages'
+import { titresPrincipaux } from '../support/url-parity'
 
 /** The list of the blog (ticket 107): its h1, its tags, the published articles only, and the old double. */
 

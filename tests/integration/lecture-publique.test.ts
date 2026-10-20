@@ -1,8 +1,8 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { type ProfilesSummary, placeDemoProfiles } from '@/demo-data/loading'
 import { listProfiles, readProfileUrlTarget, readPublicProfile } from '@/services/public/profiles'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { viderLeStockage } from '../outils/s3'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { viderLeStockage } from '../support/s3'
 
 /**
  * The public reading of the profiles on the fictional set of the bench (ticket 071; plan 02 U20):

@@ -5,11 +5,11 @@ import path from 'node:path'
 import type { Payload } from 'payload'
 import { DEMO_ARTICLES, DEMO_TALENTS } from '../../src/demo-data/editorial'
 import { profileUrl } from '../../src/demo-data/profiles'
-import { CONTENU_DU_BANC, poserLeJeuDuBanc } from '../fixtures/jeu-du-banc'
-import { RACINE } from '../outils/banc'
-import { ecrireLaSession } from '../outils/banc-session'
-import { compterLesDocuments, payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { listerLesObjets, viderLeStockage } from '../outils/s3'
+import { CONTENU_DU_BANC, poserLeJeuDuBanc } from '../fixtures/bench-dataset'
+import { RACINE } from '../support/bench'
+import { ecrireLaSession } from '../support/bench-session'
+import { compterLesDocuments, payloadDeTest, viderLaBase } from '../support/payload-test'
+import { listerLesObjets, viderLeStockage } from '../support/s3'
 
 /**
  * Ticket 052: the whole set of the bench, in one call and by the commands of the bench

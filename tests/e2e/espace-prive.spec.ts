@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { creerCompte } from '../outils/fabrique-comptes'
+import { creerCompte } from '../support/account-factory'
 
 /**
  * The closed pages of the space (ticket 075; plan 02 E09, E16): one redirection without a session,

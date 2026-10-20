@@ -4,7 +4,7 @@ import { NetworksEditor, type NetworksUpload } from '@/components/dashboard/Netw
 import type { ContactDetailsValues } from '@/lib/dashboard/contact-details'
 import type { NetworksValues } from '@/lib/dashboard/networks'
 import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
-import { ouvrirFenetre } from '../outils/dom-react'
+import { ouvrirFenetre } from '../support/dom-react'
 
 /**
  * The panels of the networks and of the contact details (tickets 125 and 126; plan 02 U28, E30,

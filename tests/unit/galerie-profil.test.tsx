@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { act } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { type GalleryPhoto, ProfileGallery } from '@/components/profile/ProfileGallery'
-import { ouvrirFenetre } from '../outils/dom-react'
+import { ouvrirFenetre } from '../support/dom-react'
 
 /**
  * The portfolio of a public profile (ticket 103): its photos, their alternative text, and the keyboard.

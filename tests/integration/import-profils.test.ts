@@ -7,11 +7,11 @@ import { SPAM_PROFILES } from '../../scripts/migration/import/profiles'
 import { IMPORT_CONTEXT } from '../../src/lib/import-context'
 import { assignSlugs } from '../../src/lib/slug'
 import { PUBLIC_PROFILE_FIELDS, readPublicProfile } from '../../src/services/public/profiles'
-import { commandeDImport, DECISIONS_DU_BANC, FICHIER_DES_DECISIONS_DU_BANC, importerSurLeBanc } from '../outils/import'
-import { compterLesMails, viderLeCapteur } from '../outils/mailpit'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { creerLaSourceStrapi, effacerLaSourceStrapi, empreinteDeLaSource, sourceDuBanc } from '../outils/source-strapi'
-import { definitionDeLaSource } from '../outils/source-strapi/donnees'
+import { commandeDImport, DECISIONS_DU_BANC, FICHIER_DES_DECISIONS_DU_BANC, importerSurLeBanc } from '../support/import'
+import { compterLesMails, viderLeCapteur } from '../support/mailpit'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { creerLaSourceStrapi, effacerLaSourceStrapi, empreinteDeLaSource, sourceDuBanc } from '../support/source-strapi'
+import { definitionDeLaSource } from '../support/source-strapi/data'
 
 /**
  * Tickets 026 and 059: the import takes the identity of the profiles that have an account (link,

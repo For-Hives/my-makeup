@@ -13,7 +13,7 @@ import { ONE_AT_A_TIME_MESSAGE, oneAtATime, withoutPluginDeletion, withTrash } f
 import { IMPORT_CONTEXT } from '@/lib/import-context'
 import { copySource } from '@/lib/storage'
 import { isInTrash, moveToTrash, type ObjectStorage, objectKeys, restore, StorageOutage, trashKey } from '@/lib/trash'
-import { type CommandeS3, suppressionsSansCorbeille } from '../outils/espion-s3'
+import { type CommandeS3, suppressionsSansCorbeille } from '../support/s3-spy'
 
 /**
  * The bin of the object storage (ticket 045; plan 01 §1.8): a photo that no longer serves moves

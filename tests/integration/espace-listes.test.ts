@@ -7,11 +7,11 @@ import { artistProfile, type DashboardUser } from '@/lib/dashboard/my-profile'
 import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
 import { saveList } from '@/lib/dashboard/save-list'
 import { SERVICE_OFFERS } from '@/lib/dashboard/service-offers'
-import { ANNECY } from '../outils/cas-completude'
-import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { fichierPourPayload } from '../outils/photos'
-import { viderLeStockage } from '../outils/s3'
+import { ANNECY } from '../support/completeness-cases'
+import { type CompteDeTest, creerCompte } from '../support/account-factory'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { fichierPourPayload } from '../support/photos'
+import { viderLeStockage } from '../support/s3'
 
 /**
  * The lists saved from her space (tickets 129 to 131; docs/qualite.md §3 L1, plan 02 U29, U30, U04,

@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { MODULES_QUI_SONDENT_LE_DOM } from '../outils/precharge-react-dom'
+import { MODULES_QUI_SONDENT_LE_DOM } from '../support/preload-react-dom'
 
 // A test file that opens no window: the test of a pure function. The component bench must cost
 // it nothing but the preload, and leave it the globals of bun, without a browser.

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
-import { MOT_DES_ESSAIS, type ProfilDeRecherche, poserLesProfilsDeRecherche } from '../fixtures/profils-de-recherche'
-import { rafraichirLesPagesDesProfils } from '../outils/pages-publiques'
+import { MOT_DES_ESSAIS, type ProfilDeRecherche, poserLesProfilsDeRecherche } from '../fixtures/search-profiles'
+import { rafraichirLesPagesDesProfils } from '../support/public-pages'
 
 /**
  * The search by city (ticket 098; plan 02 E38 and E42). The bench is shared with the other tests, which

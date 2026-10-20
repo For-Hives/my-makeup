@@ -22,7 +22,7 @@ import {
 	type UmamiEnv,
 	umamiFromEnv,
 } from '@/lib/env'
-import { delay, HttpResponse, http, simuler } from '../outils/http-sortant'
+import { delay, HttpResponse, http, simuler } from '../support/outgoing-http'
 
 // Made-up instance: a name that never resolves, simulated by the tests.
 const INSTANCE = 'https://umami.exemple.test'

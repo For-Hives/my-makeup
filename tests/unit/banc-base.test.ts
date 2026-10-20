@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import { BancRefuse, environnementDuBanc } from '../outils/banc'
-import { exigerBanc, exigerConnexionDuBanc } from '../outils/payload-test'
+import { BancRefuse, environnementDuBanc } from '../support/bench'
+import { exigerBanc, exigerConnexionDuBanc } from '../support/payload-test'
 
 const BANC = environnementDuBanc({ nom: 'my-makeup-test', decalage: 0 })
 const BASE_DU_BANC = BANC.DATABASE_URI ?? ''

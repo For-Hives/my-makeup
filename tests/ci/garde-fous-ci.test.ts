@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { configurationDesEssais } from '../outils/e2e'
+import { configurationDesEssais } from '../support/e2e'
 import {
 	absoluteNavigations,
 	aggregatorProblems,
@@ -31,7 +31,7 @@ import {
 	unexpectedSecrets,
 	unpinnedActions,
 	type Workflow,
-} from '../outils/garde-fous-ci'
+} from '../support/ci-guardrails'
 
 /**
  * The guard rails of the CI (plans, C01 to C08) and of the Docker image.

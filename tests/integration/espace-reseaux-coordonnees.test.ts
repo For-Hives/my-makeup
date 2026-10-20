@@ -7,12 +7,12 @@ import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
 import { saveContactDetails } from '@/lib/dashboard/save-contact-details'
 import { saveNetworks } from '@/lib/dashboard/save-networks'
 import { listProfiles, readPublicProfile } from '@/services/public/profiles'
-import { ANNECY } from '../outils/cas-completude'
-import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { fichierPourPayload } from '../outils/photos'
-import { appelerRest } from '../outils/rest'
-import { viderLeStockage } from '../outils/s3'
+import { ANNECY } from '../support/completeness-cases'
+import { type CompteDeTest, creerCompte } from '../support/account-factory'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { fichierPourPayload } from '../support/photos'
+import { appelerRest } from '../support/rest'
+import { viderLeStockage } from '../support/s3'
 
 /**
  * The networks and the contact details saved from her space (tickets 125 and 126; plan 02 U28, U22,

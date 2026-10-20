@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import type { Payload, SanitizedConfig } from 'payload'
-import { sansChangementDeSchema } from '../outils/payload-test'
-import { type ConstatDuSchema, messageDuSchema, sansSortie } from '../outils/schema-du-banc'
+import { sansChangementDeSchema } from '../support/payload-test'
+import { type ConstatDuSchema, messageDuSchema, sansSortie } from '../support/bench-schema'
 
 /**
  * Ticket 049: the bench database is built by the versioned migrations, never pushed from the code.

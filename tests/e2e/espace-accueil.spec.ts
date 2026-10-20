@@ -1,8 +1,8 @@
 import { expect, type Locator, type Page, test } from '@playwright/test'
-import { violationsGraves } from '../outils/axe'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest } from '../outils/payload-test'
-import { grandePhotoSynthetique } from '../outils/photo-synthetique'
+import { violationsGraves } from '../support/axe'
+import { creerCompte } from '../support/account-factory'
+import { payloadDeTest } from '../support/payload-test'
+import { grandePhotoSynthetique } from '../support/synthetic-photo'
 
 /**
  * The onboarding in three steps (ticket 140; plan 02 E02, RG-07): a new account lands on the first

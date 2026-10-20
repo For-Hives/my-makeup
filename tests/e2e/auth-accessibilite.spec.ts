@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { violationsGraves } from '../outils/axe'
+import { violationsGraves } from '../support/axe'
 
 /**
  * The exit of P5 (ticket 096): no « serious » or « critical » accessibility violation on the

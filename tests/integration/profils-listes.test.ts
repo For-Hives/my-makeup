@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import type { Profile } from '@/payload-types'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { appelerRest } from '../outils/rest'
+import { creerCompte } from '../support/account-factory'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { appelerRest } from '../support/rest'
 
 /**
  * The list sections of a profile (ticket 040): offers with their options, skills, languages,

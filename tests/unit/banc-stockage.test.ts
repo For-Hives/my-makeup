@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from 'bun:test'
-import { BancRefuse, environnementDuBanc } from '../outils/banc'
-import { EnvironnementRefuse } from '../outils/garde-environnement'
+import { BancRefuse, environnementDuBanc } from '../support/bench'
+import { EnvironnementRefuse } from '../support/environment-guard'
 import {
 	deposerUnObjet,
 	lireUnObjet,
@@ -9,7 +9,7 @@ import {
 	stockageDuBanc,
 	supprimerUnObjet,
 	viderLeStockage,
-} from '../outils/s3'
+} from '../support/s3'
 
 const BANC = environnementDuBanc({ nom: 'my-makeup-test', decalage: 0 })
 

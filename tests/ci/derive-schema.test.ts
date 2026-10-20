@@ -10,7 +10,7 @@ import {
 	type Snapshot,
 	verdict,
 } from '../../scripts/ci/schema-drift'
-import { readWorkflow, SCHEMA_DRIFT, schemaDriftProblems } from '../outils/garde-fous-ci'
+import { readWorkflow, SCHEMA_DRIFT, schemaDriftProblems } from '../support/ci-guardrails'
 
 /**
  * The schema drift check (docs/qualite.md, « La dérive de schéma »), a step of the job `qualite`

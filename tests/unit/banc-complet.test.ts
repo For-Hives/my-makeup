@@ -2,8 +2,8 @@ import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { DEMO_PROFILES } from '@/demo-data/profiles'
-import { TYPES_DU_JEU } from '../fixtures/comptes'
-import { RACINE } from '../outils/banc'
+import { TYPES_DU_JEU } from '../fixtures/accounts'
+import { RACINE } from '../support/bench'
 import {
 	DOSSIER_DES_SESSIONS,
 	entetesDeClient,
@@ -11,8 +11,8 @@ import {
 	messageCompteInconnu,
 	NOMS_DES_COMPTES,
 	rechercheDuCompte,
-} from '../outils/banc-session'
-import type { Session } from '../outils/session'
+} from '../support/bench-session'
+import type { Session } from '../support/session'
 
 /**
  * Ticket 052, without the bench: which account a name stands for, the two files a session is

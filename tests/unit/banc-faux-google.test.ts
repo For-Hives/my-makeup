@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, test } from 'bun:test'
-import { BancRefuse, environnementDuBanc, INSTANCE_PAR_DEFAUT, RACINE } from '../outils/banc'
-import { type ChoixPret, fauxGoogle, type OutilFauxGoogle, SCENARIOS } from '../outils/faux-google'
-import { CHEMINS, creerFauxGoogle, type FauxGoogle } from '../outils/faux-google/fournisseur'
+import { BancRefuse, environnementDuBanc, INSTANCE_PAR_DEFAUT, RACINE } from '../support/bench'
+import { type ChoixPret, fauxGoogle, type OutilFauxGoogle, SCENARIOS } from '../support/fake-google'
+import { CHEMINS, creerFauxGoogle, type FauxGoogle } from '../support/fake-google/provider'
 import {
 	ChoixRefuse,
 	COOKIE_DU_CHOIX,
@@ -9,7 +9,7 @@ import {
 	decoderChoix,
 	encoderChoix,
 	subDe,
-} from '../outils/faux-google/identite'
+} from '../support/fake-google/identity'
 
 /** The bench as `.env.test` describes it. Nothing is opened: the provider is called as a function. */
 const BANC = environnementDuBanc({ nom: INSTANCE_PAR_DEFAUT, decalage: 0 })

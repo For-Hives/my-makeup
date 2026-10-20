@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
-import { viderLeCapteur } from '../outils/mailpit'
+import { viderLeCapteur } from '../support/mailpit'
 import {
 	type CollectionDeLaMatrice,
 	type CollectionEditoriale,
@@ -11,9 +11,9 @@ import {
 	ROLES,
 	type Role,
 	VOIES,
-} from '../outils/matrice-acces'
-import { viderLaBase } from '../outils/payload-test'
-import { viderLeStockage } from '../outils/s3'
+} from '../support/access-matrix'
+import { viderLaBase } from '../support/payload-test'
+import { viderLeStockage } from '../support/s3'
 
 /** The owner of a document and the role `admin`: who reads the private fields of a profile or a media. */
 const PROPRIETAIRE_ET_ADMIN: readonly Role[] = ['maquilleuse', 'admin']

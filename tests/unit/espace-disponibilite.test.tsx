@@ -4,7 +4,7 @@ import { AvailabilitySwitch, type AvailabilityUpload } from '@/components/dashbo
 import { availabilitySchema, isAvailable } from '@/lib/dashboard/availability'
 import { type DashboardProfile, profileCards } from '@/lib/dashboard/cards'
 import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
-import { ouvrirFenetre } from '../outils/dom-react'
+import { ouvrirFenetre } from '../support/dom-react'
 
 /**
  * The availability of her space (ticket 124; plan 02 E19-E29): what a card says for each stored

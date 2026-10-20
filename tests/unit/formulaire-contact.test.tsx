@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test'
 import { type ContactAction, ContactForm, withNetworkFailure } from '@/components/contact/ContactForm'
 import { type ContactMessage, type ContactState, MESSAGE_TOO_MANY_MESSAGES } from '@/lib/contact/message'
-import { ouvrirFenetre } from '../outils/dom-react'
+import { ouvrirFenetre } from '../support/dom-react'
 
 /** The contact form alone, in a jsdom window (tickets 158 and 160; plan 02 E51 and E69 are played in a browser by tests/e2e/contact.spec.ts). */
 

@@ -7,7 +7,7 @@ import {
 	searchQuestion,
 	suggestion,
 } from '@/lib/dashboard/city-reference'
-import { delay, HttpResponse, http, simuler } from '../outils/http-sortant'
+import { delay, HttpResponse, http, simuler } from '../support/outgoing-http'
 
 /**
  * The official list of communes, asked by the space (ticket 123; ticket 037 for the simulation): the

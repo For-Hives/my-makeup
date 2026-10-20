@@ -1,9 +1,9 @@
 import { type APIRequestContext, expect, test } from '@playwright/test'
 import { SITE_ORIGIN } from '../../src/lib/frozen-urls'
 import { deliveredStaticPages } from '../../src/lib/seo/sitemap'
-import { PROFILS_DE_RECHERCHE, poserLesProfilsDeRecherche } from '../fixtures/profils-de-recherche'
-import { creerContenu, rafraichirLesPagesDesProfils, supprimerContenu } from '../outils/pages-publiques'
-import { payloadDeTest } from '../outils/payload-test'
+import { PROFILS_DE_RECHERCHE, poserLesProfilsDeRecherche } from '../fixtures/search-profiles'
+import { creerContenu, rafraichirLesPagesDesProfils, supprimerContenu } from '../support/public-pages'
+import { payloadDeTest } from '../support/payload-test'
 
 /**
  * The sitemap and the plan of the site, end to end (tickets 113 and 114; plan 02 E62): the addresses of

@@ -3,8 +3,8 @@ import type { Payload } from 'payload'
 import { artistProfile, type DashboardUser } from '@/lib/dashboard/my-profile'
 import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
 import { saveIdentity } from '@/lib/dashboard/save-identity'
-import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
+import { type CompteDeTest, creerCompte } from '../support/account-factory'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
 
 /**
  * The identity saved from her space (tickets 118 and 119; plan 02 U54, I02, I03, I19, U32): the

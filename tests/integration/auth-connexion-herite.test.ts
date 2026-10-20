@@ -4,9 +4,9 @@ import { replaceLegacyHash } from '@/lib/auth/legacy'
 import { createRateLimit } from '@/lib/auth/rate-limit'
 import { signInWithPassword } from '@/lib/auth/sign-in'
 import { openWithPassword } from '@/lib/auth/token'
-import { creerCompte, MOT_DE_PASSE_HERITE_DE_FIXTURE } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { appelerRest } from '../outils/rest'
+import { creerCompte, MOT_DE_PASSE_HERITE_DE_FIXTURE } from '../support/account-factory'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { appelerRest } from '../support/rest'
 
 /**
  * The sign-in of an account of the old site (tickets 087 and 088; plan 02 I15). The browser side,

@@ -2,8 +2,8 @@ import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { SQL } from 'bun'
 import { z } from 'zod'
-import { environnementDuBanc, FICHIER_COMPOSE, servicesDuBanc } from '../outils/banc'
-import { servicesMuets, sondesDuBanc } from '../outils/banc-sondes'
+import { environnementDuBanc, FICHIER_COMPOSE, servicesDuBanc } from '../support/bench'
+import { servicesMuets, sondesDuBanc } from '../support/bench-probes'
 
 /**
  * The bench as it runs: what `bun run banc:up` started is asked from this machine, through the

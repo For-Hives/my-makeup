@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { CITIES_ADDRESS, citiesAddress } from '@/lib/dashboard/city-reference'
-import { creerFaussesCommunes } from '../outils/faux-communes/fournisseur'
+import { creerFaussesCommunes } from '../support/fake-cities/provider'
 
 /**
  * The fake list of the communes of the bench (CI of 15/10/2026): it answers the two questions of

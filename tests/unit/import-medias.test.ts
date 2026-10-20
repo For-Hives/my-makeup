@@ -19,7 +19,7 @@ import {
 import { exitCode, type Report, reportAsText } from '../../scripts/migration/import/report'
 import { ImportRefuse } from '../../scripts/migration/import/target'
 import { fileOnCreate } from '../../src/collections/Media'
-import { HttpResponse, http, simuler } from '../outils/http-sortant'
+import { HttpResponse, http, simuler } from '../support/outgoing-http'
 
 /**
  * Ticket 058: what the import makes of the files of the old site, before and without the database:

@@ -6,8 +6,8 @@ import { type ContactRateLimits, createContactRateLimits } from '@/lib/contact/r
 import { transportOptions } from '@/lib/emails/relay'
 import { createSendEmail, payloadSendEmail, type SendEmail } from '@/lib/emails/send'
 import { serverEnv } from '@/lib/env'
-import { attendreLeMail, mailsRecus, viderLeCapteur } from '../outils/mailpit'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
+import { attendreLeMail, mailsRecus, viderLeCapteur } from '../support/mailpit'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
 
 /**
  * The contact message against the real store and the mail catcher of the bench (tickets 158 and 159;

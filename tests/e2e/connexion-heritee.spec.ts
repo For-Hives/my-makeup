@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
-import { creerCompte, MOT_DE_PASSE_HERITE_DE_FIXTURE } from '../outils/fabrique-comptes'
-import { payloadDeTest } from '../outils/payload-test'
+import { creerCompte, MOT_DE_PASSE_HERITE_DE_FIXTURE } from '../support/account-factory'
+import { payloadDeTest } from '../support/payload-test'
 
 /**
  * An account of the old site signs in with its usual password (tickets 087 and 088; plan 02 E73):

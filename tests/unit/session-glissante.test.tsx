@@ -13,7 +13,7 @@ import {
 	shouldExtend,
 	tokenExpiration,
 } from '@/lib/auth/sliding-session'
-import { ouvrirFenetre } from '../outils/dom-react'
+import { ouvrirFenetre } from '../support/dom-react'
 
 const JOUR = 86_400
 const T0 = Date.UTC(2026, 0, 1)

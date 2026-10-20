@@ -2,11 +2,11 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { exitCode } from '../../scripts/migration/import/report'
 import { ImportRefuse } from '../../scripts/migration/import/target'
 import { deleteAccountAndDependents } from '../../src/lib/account/deletion'
-import { importerSurLeBanc } from '../outils/import'
-import { seConnecter } from '../outils/parcours-herites'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { viderLeStockage } from '../outils/s3'
-import { COMPTES_DE_FIXTURE, creerLaSourceStrapi, effacerLaSourceStrapi } from '../outils/source-strapi'
+import { importerSurLeBanc } from '../support/import'
+import { seConnecter } from '../support/legacy-journeys'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { viderLeStockage } from '../support/s3'
+import { COMPTES_DE_FIXTURE, creerLaSourceStrapi, effacerLaSourceStrapi } from '../support/source-strapi'
 
 /**
  * Ticket 227: a rerun never brings back an account its owner deleted in the v3, nor its profile with

@@ -8,7 +8,7 @@ import {
 	DELETION_MESSAGES,
 	deletionSchema,
 } from '@/lib/dashboard/deletion-confirmation'
-import { ouvrirFenetre } from '../outils/dom-react'
+import { ouvrirFenetre } from '../support/dom-react'
 
 /**
  * Deleting her account from her space (ticket 141; plan 02 E33): what she retypes, the strict schema

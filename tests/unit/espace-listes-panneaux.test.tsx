@@ -5,7 +5,7 @@ import type { ListUpload } from '@/components/dashboard/ListEditor'
 import { CoursesEditor, ExperiencesEditor, ServiceOffersEditor } from '@/components/dashboard/ListsEditors'
 import type { SavedRow, SentList } from '@/lib/dashboard/list'
 import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
-import { ouvrirFenetre } from '../outils/dom-react'
+import { ouvrirFenetre } from '../support/dom-react'
 
 /**
  * The panels of the experiences, the courses and the offers (tickets 129 to 131; docs/qualite.md §3,

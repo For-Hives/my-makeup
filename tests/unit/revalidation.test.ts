@@ -4,7 +4,7 @@ import type { PayloadRequest, RequestContext } from 'payload'
 import { outsideNextRequest, refresh } from '../../src/collections/revalidate'
 import { IMPORT_CONTEXT } from '../../src/lib/import-context'
 import { changeTargets, PUBLIC_PAGES, type PublicState, TAGS } from '../../src/lib/revalidate'
-import { espionnerLeCache } from '../outils/espion-cache'
+import { espionnerLeCache } from '../support/cache-spy'
 
 /**
  * Ticket 047: which pages a save makes stale (src/lib/revalidate.ts), and the hooks that tell

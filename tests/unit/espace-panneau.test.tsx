@@ -4,7 +4,7 @@ import { IdentityEditor, type IdentityUpload } from '@/components/dashboard/Iden
 import type { DraftStorage } from '@/lib/dashboard/guarded-input'
 import type { IdentityValues } from '@/lib/dashboard/identity'
 import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
-import { ouvrirFenetre } from '../outils/dom-react'
+import { ouvrirFenetre } from '../support/dom-react'
 
 /**
  * The panel of the identity (tickets 119 and 120; plan 02 E30, E31, E68): bounds, a failure that

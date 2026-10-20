@@ -1,10 +1,10 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { payloadStorage } from '@/lib/contact/payload-send'
 import { serverEnv } from '@/lib/env'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { mailsRecus, viderLeCapteur } from '../outils/mailpit'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { appelerRest } from '../outils/rest'
+import { creerCompte } from '../support/account-factory'
+import { mailsRecus, viderLeCapteur } from '../support/mailpit'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { appelerRest } from '../support/rest'
 
 /**
  * The admin side of the contact messages (ticket 163; plan 02 E58, in its server half): the status

@@ -1,11 +1,11 @@
 import { expect, type Page, test } from '@playwright/test'
 import { MESSAGES_PHOTO } from '@/lib/dashboard/photo'
-import { violationsGraves } from '../outils/axe'
-import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest } from '../outils/payload-test'
-import { photoDeHuitMo } from '../outils/photo-de-8-mo'
-import { fichierPourPayload } from '../outils/photos'
-import { lireUnObjet } from '../outils/s3'
+import { violationsGraves } from '../support/axe'
+import { type CompteDeTest, creerCompte } from '../support/account-factory'
+import { payloadDeTest } from '../support/payload-test'
+import { photoDeHuitMo } from '../support/photo-8-mb'
+import { fichierPourPayload } from '../support/photos'
+import { lireUnObjet } from '../support/s3'
 
 /**
  * The main photo in her space (ticket 134; plan 02 E36, I24, U03): reduced in the browser before

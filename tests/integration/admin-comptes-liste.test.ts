@@ -1,11 +1,11 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { Pros } from '../../src/collections/Pros'
 import { filterLink } from '../../src/lib/account/admin-filters'
-import { poserLeJeuDuBanc } from '../fixtures/jeu-du-banc'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { appelerRest } from '../outils/rest'
-import { viderLeStockage } from '../outils/s3'
+import { poserLeJeuDuBanc } from '../fixtures/bench-dataset'
+import { creerCompte } from '../support/account-factory'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { appelerRest } from '../support/rest'
+import { viderLeStockage } from '../support/s3'
 
 /**
  * Ticket 168 (plan 01 §6.1; decisions of 13/10 on the sign-up spam): the admin lists the accounts, spots

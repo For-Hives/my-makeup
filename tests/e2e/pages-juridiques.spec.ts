@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { fauxUmami, type LectureFauxUmami, unAgentParEssai } from '../outils/faux-umami'
+import { fauxUmami, type LectureFauxUmami, unAgentParEssai } from '../support/fake-umami'
 
 /**
  * The three legal pages in a browser (ticket 112): they answer 200 with a single h1, and the button

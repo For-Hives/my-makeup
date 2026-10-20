@@ -1,9 +1,9 @@
 import { type APIRequestContext, expect, test } from '@playwright/test'
 import { placeProfile, readDemoPhoto } from '../../src/demo-data/loading'
 import { DEMO_PROFILES, type DemoProfile } from '../../src/demo-data/profiles'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { creerContenu, supprimerContenu } from '../outils/pages-publiques'
-import { payloadDeTest } from '../outils/payload-test'
+import { creerCompte } from '../support/account-factory'
+import { creerContenu, supprimerContenu } from '../support/public-pages'
+import { payloadDeTest } from '../support/payload-test'
 
 /**
  * The freshness of the public pages, end to end (ticket 117; plan 03 SEO-27, plan 02 I21): a change made

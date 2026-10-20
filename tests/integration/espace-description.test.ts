@@ -3,8 +3,8 @@ import type { Payload } from 'payload'
 import type { DashboardUser } from '@/lib/dashboard/my-profile'
 import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
 import { saveDescription } from '@/lib/dashboard/save-description'
-import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
+import { type CompteDeTest, creerCompte } from '../support/account-factory'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
 
 /**
  * The description saved from her space (ticket 122; plan 02 E19-E29 description, U27, U32, I02): the

@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from 'bun:test'
-import { compterLesDocuments, compterLesLignes, payloadDeTest, viderLaBase } from '../outils/payload-test'
+import { compterLesDocuments, compterLesLignes, payloadDeTest, viderLaBase } from '../support/payload-test'
 
 /** A made-up account document: the skeleton has no other collection to write in yet. */
 const compteFictif = (nom: string) => ({

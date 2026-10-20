@@ -1,8 +1,8 @@
 import { expect, type Page, test } from '@playwright/test'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { fauxGoogle } from '../outils/faux-google'
-import { mailsRecus } from '../outils/mailpit'
-import { payloadDeTest } from '../outils/payload-test'
+import { creerCompte } from '../support/account-factory'
+import { fauxGoogle } from '../support/fake-google'
+import { mailsRecus } from '../support/mailpit'
+import { payloadDeTest } from '../support/payload-test'
 
 /**
  * The Google sign-in and sign-up in a browser (tickets 090 and 091; plan 02 E07), against the fake

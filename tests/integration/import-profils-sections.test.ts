@@ -3,11 +3,11 @@ import { SQL } from 'bun'
 import type { Report } from '../../scripts/migration/import/report'
 import { minimumPrice, parsePrice } from '../../src/lib/price'
 import type { Profile } from '../../src/payload-types'
-import { importerSurLeBanc } from '../outils/import'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { viderLeStockage } from '../outils/s3'
-import { creerLaSourceStrapi, effacerLaSourceStrapi, sourceDuBanc } from '../outils/source-strapi'
-import { definitionDeLaSource, type Ligne } from '../outils/source-strapi/donnees'
+import { importerSurLeBanc } from '../support/import'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { viderLeStockage } from '../support/s3'
+import { creerLaSourceStrapi, effacerLaSourceStrapi, sourceDuBanc } from '../support/source-strapi'
+import { definitionDeLaSource, type Ligne } from '../support/source-strapi/data'
 
 /**
  * Ticket 060: the import takes the sections of each profile, in their order, with their photos:

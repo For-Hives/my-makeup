@@ -2,8 +2,8 @@ import { afterEach, describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
 import { type DashboardUser, profileId } from '@/lib/dashboard/my-profile'
 import { readProfilePreview, readProfileUrlTarget } from '@/services/public/profiles'
-import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
+import { type CompteDeTest, creerCompte } from '../support/account-factory'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
 
 /**
  * The preview of her own page (ticket 139; plan 02 RG-06): the same content as the public page for a

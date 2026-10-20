@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { creerCompte } from '../outils/fabrique-comptes'
+import { creerCompte } from '../support/account-factory'
 
 /**
  * E55 (plan 02 §7.4; ticket 164): an account of the newsroom (`editor`) sees the articles, the

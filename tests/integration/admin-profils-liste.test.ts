@@ -1,11 +1,11 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { Profiles } from '../../src/collections/Profiles'
 import { DEMO_PROFILES } from '../../src/demo-data/profiles'
-import { poserLeJeuDuBanc } from '../fixtures/jeu-du-banc'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { appelerRest } from '../outils/rest'
-import { viderLeStockage } from '../outils/s3'
+import { poserLeJeuDuBanc } from '../fixtures/bench-dataset'
+import { creerCompte } from '../support/account-factory'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { appelerRest } from '../support/rest'
+import { viderLeStockage } from '../support/s3'
 
 /**
  * Tickets 165 and 166 (plan 01 §3.4, plan 02 §7.4): the admin finds a profile in the list with the

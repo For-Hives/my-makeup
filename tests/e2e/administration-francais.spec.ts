@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { creerCompte } from '../outils/fabrique-comptes'
+import { creerCompte } from '../support/account-factory'
 
 /**
  * The admin panel speaks French (ticket 221; src/lib/payload-language.ts). Payload offers no other

@@ -13,7 +13,7 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { SITE_ORIGIN } from '../../src/lib/frozen-urls'
-import { lireLeCsv } from '../../tests/outils/parite-urls'
+import { lireLeCsv } from '../../tests/support/url-parity'
 import { FROZEN_INVENTORY } from './urls-doc'
 
 const OUTPUT = fileURLToPath(new URL('../../tests/fixtures/parite-urls-h1.json', import.meta.url))

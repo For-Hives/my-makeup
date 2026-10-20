@@ -18,7 +18,7 @@ import {
 	documentDuCas,
 	REPONSES_DE_L_ANCIEN_SITE,
 	villeEcartee,
-} from '../outils/cas-completude'
+} from '../support/completeness-cases'
 
 /**
  * The state of a profile as the server stores it (ticket 044): a document of `profils` read by the

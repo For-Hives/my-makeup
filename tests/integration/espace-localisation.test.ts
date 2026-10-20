@@ -4,9 +4,9 @@ import { CITIES_SERVICE_MESSAGE } from '@/lib/dashboard/location'
 import { artistProfile, type DashboardUser } from '@/lib/dashboard/my-profile'
 import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
 import { saveLocation } from '@/lib/dashboard/save-location'
-import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
-import { HttpResponse, http, simuler } from '../outils/http-sortant'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
+import { type CompteDeTest, creerCompte } from '../support/account-factory'
+import { HttpResponse, http, simuler } from '../support/outgoing-http'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
 
 /**
  * The location saved from her space (ticket 123; plan 02 U16, I02, I19, E19-E29 for the zone): the

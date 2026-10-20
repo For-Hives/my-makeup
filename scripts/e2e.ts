@@ -26,7 +26,7 @@
 
 import { rmSync } from 'node:fs'
 import path from 'node:path'
-import { BancRefuse, portOuvert, RACINE } from '../tests/outils/banc'
+import { BancRefuse, portOuvert, RACINE } from '../tests/support/bench'
 import {
 	cibleDesEssais,
 	DOSSIER_DES_TRACES,
@@ -38,9 +38,9 @@ import {
 	messagePortPris,
 	phasesDePlaywright,
 	portDeLApplication,
-} from '../tests/outils/e2e'
-import { EnvironnementRefuse } from '../tests/outils/garde-environnement'
-import { bancCourant, effacerLeSchema, exigerBancDebout, viderCeQueLaBaseNeContientPas } from './banc'
+} from '../tests/support/e2e'
+import { EnvironnementRefuse } from '../tests/support/environment-guard'
+import { bancCourant, effacerLeSchema, exigerBancDebout, viderCeQueLaBaseNeContientPas } from './bench'
 
 /** Playwright runs under Node: its test runner does not support bun. */
 const NODE = 'node'

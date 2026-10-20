@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, test } from 'bun:test'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { viderLaBase } from '../outils/payload-test'
-import { appelerRest } from '../outils/rest'
+import { creerCompte } from '../support/account-factory'
+import { viderLaBase } from '../support/payload-test'
+import { appelerRest } from '../support/rest'
 
 /**
  * Ticket 250 (PLAN-ANGLAIS.md §7): the collections of the database have English slugs, and the French

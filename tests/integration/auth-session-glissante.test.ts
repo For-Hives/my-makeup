@@ -2,9 +2,9 @@ import { afterEach, describe, expect, setSystemTime, test } from 'bun:test'
 import { getFieldsToSign, jwtSign } from 'payload'
 import { cookieEndOfLife } from '@/lib/auth/session-state'
 import { SESSION_CAP_S, tokenExpiration } from '@/lib/auth/sliding-session'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { appelerRest } from '../outils/rest'
+import { creerCompte } from '../support/account-factory'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { appelerRest } from '../support/rest'
 
 /**
  * The sliding session of a makeup artist (ticket 079; plan 02 I16): a renewal is accepted on day 13,

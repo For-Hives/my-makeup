@@ -2,9 +2,9 @@ import { afterEach, describe, expect, test } from 'bun:test'
 import { ValidationError } from 'payload'
 import { NO_PROFILE_CONTEXT } from '@/collections/Profiles'
 import { ZONE_MESSAGES } from '@/lib/profile/zone'
-import { type CompteDeTest, creerCompte, motDePasseAleatoire } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { appelerRest } from '../outils/rest'
+import { type CompteDeTest, creerCompte, motDePasseAleatoire } from '../support/account-factory'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { appelerRest } from '../support/rest'
 
 /**
  * The zone of a profile (ticket 041): a commune with its INSEE code, a radius and « à domicile »,

@@ -1,9 +1,9 @@
 import { expect, type Locator, type Page, test } from '@playwright/test'
 import sharp from 'sharp'
-import { violationsGraves } from '../outils/axe'
-import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
-import { profilGenere } from '../outils/fabrique-profils'
-import { payloadDeTest } from '../outils/payload-test'
+import { violationsGraves } from '../support/axe'
+import { type CompteDeTest, creerCompte } from '../support/account-factory'
+import { profilGenere } from '../support/profile-factory'
+import { payloadDeTest } from '../support/payload-test'
 
 /**
  * The final check of her space (ticket 142; plan 02 §9 P7, E37, E67, E68): played once, at 390 and

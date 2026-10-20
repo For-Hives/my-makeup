@@ -34,8 +34,8 @@ import {
 	type Resultat,
 	type TitresDeLAncienSite,
 	verifier,
-} from '../../tests/outils/parite-urls'
-import { creerLecteur, ecartLePlusCourt, HORLOGE_REELLE, type Horloge, type Lecteur } from '../../tests/sondes/lecteur'
+} from '../../tests/support/url-parity'
+import { creerLecteur, ecartLePlusCourt, HORLOGE_REELLE, type Horloge, type Lecteur } from '../../tests/probes/reader'
 import {
 	checkTarget,
 	ForbiddenQuery,

@@ -3,11 +3,11 @@ import type { Payload } from 'payload'
 import { NO_PROFILE_CONTEXT } from '@/collections/Profiles'
 import { boundedListRead, REST_LIMIT_DEFAULT, REST_LIMIT_MAX } from '@/lib/bounded-query'
 import type { Article, Media } from '@/payload-types'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { fichierPourFormulaire, fichierPourPayload, nomDePhoto } from '../outils/photos'
-import { appelerRest, formulaireAvecFichier } from '../outils/rest'
-import { viderLeStockage } from '../outils/s3'
+import { creerCompte } from '../support/account-factory'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { fichierPourFormulaire, fichierPourPayload, nomDePhoto } from '../support/photos'
+import { appelerRest, formulaireAvecFichier } from '../support/rest'
+import { viderLeStockage } from '../support/s3'
 
 /**
  * The list reads over REST are capped (ticket 071, « Ajout du 14/10/2026 »): 100 documents at most

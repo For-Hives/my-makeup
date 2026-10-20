@@ -1,14 +1,14 @@
 import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import { lireFichierEnv } from '../outils/banc'
+import { lireFichierEnv } from '../support/bench'
 import {
 	EnvironnementRefuse,
 	lireEnvironnement,
 	verifierBase,
 	verifierCible,
 	verifierEnvironnement,
-} from '../outils/garde-environnement'
+} from '../support/environment-guard'
 
 const RACINE = path.resolve(import.meta.dir, '../..')
 const MARQUE_DU_TEMOIN = 'TEMOIN-GARDE'

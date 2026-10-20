@@ -7,12 +7,12 @@ import {
 	documentDuCas,
 	REPONSES_DE_L_ANCIEN_SITE,
 	villeEcartee,
-} from '../outils/cas-completude'
-import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
-import { fichierPourFormulaire, fichierPourPayload } from '../outils/photos'
-import { appelerRest, formulaireAvecFichier } from '../outils/rest'
-import { viderLeStockage } from '../outils/s3'
+} from '../support/completeness-cases'
+import { type CompteDeTest, creerCompte } from '../support/account-factory'
+import { payloadDeTest, viderLaBase } from '../support/payload-test'
+import { fichierPourFormulaire, fichierPourPayload } from '../support/photos'
+import { appelerRest, formulaireAvecFichier } from '../support/rest'
+import { viderLeStockage } from '../support/s3'
 
 /**
  * At every save, the server knows whether a profile is empty, active or publishable (ticket 044;
