@@ -51,9 +51,9 @@ export async function profileId(payload: Payload, utilisateur: DashboardUser): P
 }
 
 /**
- * The identifier of her profile for a write of her space: `identifiantDuProfil`, then a refusal
- * (`ProfilVerrouille`) while an admin has the profile open in the administration (ticket 224). Null
- * when she has no profile, as `identifiantDuProfil`.
+ * The identifier of her profile for a write of her space: `profileId`, then a refusal
+ * (`LockedProfile`) while an admin has the profile open in the administration (ticket 224). Null
+ * when she has no profile, as `profileId`.
  */
 export async function profileIdToWrite(payload: Payload, utilisateur: DashboardUser): Promise<number | null> {
 	const id = await profileId(payload, utilisateur)
@@ -62,7 +62,7 @@ export async function profileIdToWrite(payload: Payload, utilisateur: DashboardU
 }
 
 /**
- * The profile of this makeup artist, and hers only: found by her account (`identifiantDuProfil`),
+ * The profile of this makeup artist, and hers only: found by her account (`profileId`),
  * never by an identifier that comes from the request, then read with the access rules on
  * (`overrideAccess: false`) as herself. Nobody else's profile can come out of it (U54).
  */

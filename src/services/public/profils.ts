@@ -388,13 +388,13 @@ async function profilPublicLu(payload: Payload, profil: ProfilDeLaPage & { id: n
 	})
 }
 
-/** Where her profile stands, as the preview banner says it (src/lib/espace/apercu.ts). */
+/** Where her profile stands, as the preview banner says it (src/lib/dashboard/preview.ts). */
 export type EtatDuProfilApercu = Pick<Profile, 'status' | 'available' | 'fullyEmpty' | 'publishable'>
 
 /**
  * Her own page as a visitor sees it (ticket 139): the same `ProfilPublic` as `lireLAdresseDeProfil`,
  * built by the same code, for the profile with this identifier whether it is listed, a draft or even
- * hidden. The identifier is the one the server found by her session (`identifiantDuProfil`), never one
+ * hidden. The identifier is the one the server found by her session (`profileId`), never one
  * a request gave. The contact details are the ones she published, exactly as the public sees them.
  * `null` when the profile does not exist.
  */

@@ -41,7 +41,7 @@ const FIELD = 'min-h-11 rounded-md border border-neutral-400 bg-white px-3 py-2 
  *   once the panel has closed.
  *
  * - The session ends while she types (ticket 121, E32): the save fails with nothing stored, what she
- *   typed is kept in the tab (`saisie-gardee.ts`), she is sent once to the sign-in page, and back
+ *   typed is kept in the tab (`guarded-input.ts`), she is sent once to the sign-in page, and back
  *   on her space the same panel opens again with her typing. The draft is forgotten after a save
  *   or when she abandons. A second « expired » right after the redirection does not send her
  *   away again: the message stays in the panel.

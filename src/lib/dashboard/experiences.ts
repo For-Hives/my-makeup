@@ -1,6 +1,6 @@
 /**
  * The experiences of a makeup artist, edited row by row in her space (ticket 129; plan 02 U30, E31).
- * The description of the section for the list module (src/lib/espace/liste.ts), read by the panel and
+ * The description of the section for the list module (src/lib/dashboard/list.ts), read by the panel and
  * by the server action.
  *
  * - Required, for the row she adds or edits: the company, the job and the start day. The city, the

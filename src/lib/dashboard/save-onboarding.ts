@@ -13,7 +13,7 @@ import { saveMainPicture } from './save-photo'
  *
  * - the identity also requires the speciality, because a profile without one cannot be active;
  * - the main photo gives back where she stands once it is saved, read from the profile the
- *   database now holds (`positionDAccueil`), so that « Bienvenue » is said only when the server
+ *   database now holds (`onboardingPosition`), so that « Bienvenue » is said only when the server
  *   has seen the three steps done, and never from what the browser believes.
  */
 

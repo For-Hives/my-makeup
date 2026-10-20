@@ -8,7 +8,7 @@
  * The table is a JSON file:
  *
  *   {
- *     "files": [{ "from": "src/lib/espace", "to": "src/lib/dashboard" },
+ *     "files": [{ "from": "src/lib/maquilleuse", "to": "src/lib/dashboard" },
  *               { "from": "src/lib/x/lire.ts", "to": "src/lib/x/read.ts" }],
  *     "names": [{ "file": "src/lib/x/read.ts", "from": "lireLeProfil", "to": "readProfile" }]
  *   }

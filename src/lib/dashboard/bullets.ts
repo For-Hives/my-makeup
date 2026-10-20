@@ -2,7 +2,7 @@
  * The lists of chips of her space: her languages (ticket 127) and her skills (ticket 128). One
  * module, read by the editor in the browser and by the server actions, so the two never disagree.
  * A chip is a name, kept in a list that has an order; a skill row also holds a description that
- * the chips never touch (`enregistrer-puces.ts` keeps it).
+ * the chips never touch (`save-bullets.ts` keeps it).
  *
  * - A name is trimmed, never empty, and 70 characters at most (E30, the bound of the collection).
  * - A name already in the list is not added a second time: the same name once the spaces around it

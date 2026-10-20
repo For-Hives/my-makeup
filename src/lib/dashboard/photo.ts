@@ -3,13 +3,13 @@
  * E36): the main photo and the portfolio. Ported from the old site (src/lib/photo.js, branch main).
  *
  * The server takes a JPEG, a PNG or a WebP of 10 MiB at most, read in its first bytes
- * (`src/lib/envoi-photo.ts`). A HEIC, an AVIF, a SVG, a GIF or a PDF is refused here first, with a
+ * (`src/lib/photo-upload.ts`). A HEIC, an AVIF, a SVG, a GIF or a PDF is refused here first, with a
  * message she can act on. Every accepted picture is then shrunk in the browser before it leaves:
  * 2 000 px on its longest side, WebP (JPEG when the browser cannot encode WebP), 1 MiB at most.
  * Re-encoding also drops the EXIF block, the GPS position of a phone photo included.
  *
  * The decisions are pure functions. The browser work (read the first bytes, decode, draw, encode)
- * goes through ports: `photo-navigateur.ts` gives them in the page, a test gives fakes.
+ * goes through ports: `browser-photo.ts` gives them in the page, a test gives fakes.
  */
 
 export const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const
@@ -26,7 +26,7 @@ export const CHOICE_SIZE_MAX = 25 * 1024 * 1024
 /** The longest side, in pixels, of a sent picture. */
 export const SIDE_MAX = 2000
 
-/** The steps tried in turn until the encoded picture fits in `TAILLE_MAX_ENVOI`. */
+/** The steps tried in turn until the encoded picture fits in `UPLOAD_SIZE_MAX`. */
 export const LADDER = [
 	{ echelle: 1, qualite: 0.82 },
 	{ echelle: 1, qualite: 0.72 },
@@ -217,7 +217,7 @@ export interface DecodedImage {
 	liberer?: () => void
 }
 
-/** The browser work, given by `photo-navigateur.ts` in the page and by fakes in a test. */
+/** The browser work, given by `browser-photo.ts` in the page and by fakes in a test. */
 export interface PhotoPorts<Fichier extends ChosenFile, Produit> {
 	lireTete: (fichier: Fichier) => Promise<Uint8Array>
 	decoder: (fichier: Fichier) => Promise<DecodedImage>

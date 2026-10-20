@@ -34,7 +34,7 @@ La sortie groupe les noms par fichier, avec les mots français trouvés. Le cont
 
 Les deux vivent dans `scripts/naming/config.json`.
 
-- **`waiting`** : les fichiers et dossiers qu'aucun lot n'a encore traités. Une entrée couvre le chemin et tout ce qu'il contient, en respectant les dossiers (`src/lib/espace` ne couvre pas `src/lib/espace-bis`). `!chemin` en retire un chemin de la liste (utilisé pour `tests/unit/naming`, que ce lot a écrit en anglais). `=chemin` couvre ce chemin seul, pas ce qu'il contient (le dossier `(espace)` dont le nom est français alors que ses enfants sont listés un à un). **Un lot retire de la liste les entrées qu'il vient de traiter**, dans le même commit que ses renommages : le contrôle dit alors qu'il n'en reste aucun dans ses dossiers. Une entrée qui ne désigne plus aucun chemin est signalée (« à retirer »), de même qu'une exception devenue sans objet (un dossier gelé déplacé, `saisie.ts` renommé).
+- **`waiting`** : les fichiers et dossiers qu'aucun lot n'a encore traités. Une entrée couvre le chemin et tout ce qu'il contient, en respectant les dossiers (`src/lib/maquilleuse` ne couvre pas `src/lib/maquilleuse-bis`). `!chemin` en retire un chemin de la liste (utilisé pour `tests/unit/naming`, que ce lot a écrit en anglais). `=chemin` couvre ce chemin seul, pas ce qu'il contient (le dossier `(espace)` dont le nom est français alors que ses enfants sont listés un à un). **Un lot retire de la liste les entrées qu'il vient de traiter**, dans le même commit que ses renommages : le contrôle dit alors qu'il n'en reste aucun dans ses dossiers. Une entrée qui ne désigne plus aucun chemin est signalée (« à retirer »), de même qu'une exception devenue sans objet (un dossier gelé déplacé, `saisie.ts` renommé).
 - **`exceptions.paths`** : un fichier ou un dossier dont le **nom** reste français, avec sa raison. Ce sont les dossiers des adresses gelées (le nom du dossier est l'adresse). Les workflows de `.github/` (`sondes.yml`, `ci.yml`) sont hors du périmètre du contrôle, qui ne lit que `src/`, `scripts/`, `tests/` et `package.json`. L'exception ne couvre pas ce que le dossier contient.
 - **`exceptions.words`** : un mot qui reste partout, ou seulement sous les chemins de `in`. Aujourd'hui : `specialite`, dans `src/lib/recherche/saisie.ts` (le paramètre `?specialite=`).
 
@@ -57,7 +57,7 @@ C'est la méthode du plan, §8 :
 ```json
 {
   "files": [
-    { "from": "src/lib/espace", "to": "src/lib/dashboard" },
+    { "from": "src/lib/maquilleuse", "to": "src/lib/dashboard" },
     { "from": "src/lib/dashboard/lire.ts", "to": "src/lib/dashboard/read.ts" }
   ],
   "names": [

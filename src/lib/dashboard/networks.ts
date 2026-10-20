@@ -3,7 +3,7 @@
  * plan 02 U28, E30, E31): Instagram, Facebook, YouTube, LinkedIn and a website. One module, read by
  * the form in the browser and by the server action, so the two never disagree.
  *
- * - What she types is « @pseudo », a bare pseudo or an address. `normaliserReseau` turns it into
+ * - What she types is « @pseudo », a bare pseudo or an address. `normalizeNetwork` turns it into
  *   the one address that is stored, so « @studio.fictif » and « https://www.instagram.com/studio.fictif »
  *   give the same value (U28). Normalising a normalised value changes nothing.
  * - An address that belongs to another site is refused under its field (E30): the field of

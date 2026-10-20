@@ -40,7 +40,7 @@ export async function findMyCities(texte: unknown): Promise<SearchResult> {
 }
 
 /**
- * Saves the location of the signed-in makeup artist (ticket 123), as `enregistrerMonIdentite` saves
+ * Saves the location of the signed-in makeup artist (ticket 123), as `saveMyIdentity` saves
  * her identity: session read again, origin checked, the profile of her account, the values the
  * database stored given back, or a message in French. It never redirects.
  */

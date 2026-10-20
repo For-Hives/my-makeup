@@ -23,7 +23,7 @@ const PATH_FIELD: Readonly<Record<string, NetworkField>> = {
 
 /**
  * Saves the networks and the website of the signed-in makeup artist (ticket 125), and tells the
- * truth about it, like the identity (src/lib/espace/enregistrer-identite.ts):
+ * truth about it, like the identity (src/lib/dashboard/save-identity.ts):
  *
  * - the request is read by the strict schema (a key that is not one of the five fields refuses it
  *   whole), then each field is normalised by the rule the form uses (U28): « @pseudo » and the

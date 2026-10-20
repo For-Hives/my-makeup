@@ -74,7 +74,7 @@ const fichierNommeParLeServeur = (req: { context?: Record<string, unknown> }): b
 
 /**
  * A file sent to the site is a JPEG, a PNG or a WebP of 10 MiB at most, read in its content
- * (ticket 133, `src/lib/envoi-photo.ts`), whoever sends it. Anything else is refused (400) before
+ * (ticket 133, `src/lib/photo-upload.ts`), whoever sends it. Anything else is refused (400) before
  * Payload reads it, so that nothing reaches the storage. The photo is then stored under a name the
  * server draws (`<uuid>.<extension of its real type>`): the original name appears nowhere.
  *

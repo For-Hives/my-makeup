@@ -17,7 +17,7 @@ type StoredRow = { id?: string | null; name?: string | null; description?: strin
 
 /**
  * Saves a list of chips of the signed-in makeup artist (languages: ticket 127, skills: ticket 128),
- * and tells the truth about it, like the identity (src/lib/espace/enregistrer-identite.ts):
+ * and tells the truth about it, like the identity (src/lib/dashboard/save-identity.ts):
  *
  * - the request is read by the strict schema (`puces`, each with an optional `id` and a `nom`):
  *   every name is trimmed and refused in French when empty or beyond 70 characters (E30);

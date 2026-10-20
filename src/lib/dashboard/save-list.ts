@@ -65,11 +65,11 @@ function optionsToWrite(
 
 /**
  * Saves a list of the signed-in makeup artist (tickets 129 to 131), and tells the truth about it,
- * like the networks (src/lib/espace/enregistrer-reseaux.ts):
+ * like the networks (src/lib/dashboard/save-networks.ts):
  *
  * - the request is read by the strict schema of the section: the rows, each with its texts and no
  *   other key. A key that is not a field refuses it whole;
- * - each row is trimmed and checked by the rule the form uses (src/lib/espace/liste.ts). The bounds
+ * - each row is trimmed and checked by the rule the form uses (src/lib/dashboard/list.ts). The bounds
  *   are checked for every row. What a row requires is checked for a new row and a changed one only:
  *   an imported row with an empty field (SCHEMA.md §2) never blocks the save of another one;
  * - the profile written is hers, found by her account: the request holds no identifier of profile;

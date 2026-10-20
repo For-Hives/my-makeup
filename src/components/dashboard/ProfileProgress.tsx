@@ -30,7 +30,7 @@ function List({ titre, id, manques }: { titre: string; id: string; manques: read
 /**
  * Where her profile stands, at the top of her space (ticket 138): the percentage, the state, what
  * the state changes, and what she lacks, each point linked to its card. A server component: it
- * shows the reading it is given (`avancementDuProfil`), and the page renders again after each save,
+ * shows the reading it is given (`profileProgress`), and the page renders again after each save,
  * so it moves without a reload.
  */
 export function ProfileProgress({ avancement }: { avancement: Progress }) {

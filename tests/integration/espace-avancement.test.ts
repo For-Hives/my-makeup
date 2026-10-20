@@ -10,7 +10,7 @@ import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 
 /**
  * The progress block of her space (ticket 138; plan 02 I20): after each save, what the page shows
- * (`avancementDuProfil`, read as herself) equals what the server stored in `completude`, `actif`,
+ * (`profileProgress`, read as herself) equals what the server stored in `completude`, `actif`,
  * `publiable` and `entierementVide`. The page renders again after a save (`revalidatePath` in each
  * action), so this equality is what she sees move without a reload.
  */

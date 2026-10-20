@@ -14,7 +14,7 @@ import { FAILURE_MESSAGE, payloadFailure, type SaveResult } from './result'
  * - the value given back is the one the database stored, never the one that was sent. A failure
  *   gives back a message in French, and the old text stays.
  *
- * It never reads `error.message`: see `echecDePayload`.
+ * It never reads `error.message`: see `payloadFailure`.
  */
 export async function saveDescription(
 	payload: Payload,

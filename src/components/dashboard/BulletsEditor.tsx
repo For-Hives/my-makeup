@@ -28,11 +28,11 @@ const sameBullets = (a: readonly Bullet[], b: readonly Bullet[]): boolean =>
 
 /**
  * The button « Modifier » of a card of chips (languages: ticket 127, skills: ticket 128) and the
- * panel it opens. Same contract as the identity (src/components/espace/EditeurDIdentite.tsx): the
+ * panel it opens. Same contract as the identity (src/components/dashboard/IdentityEditor.tsx): the
  * card shows only what the database stored; a failure keeps the old list and what she did, and
  * says so (E31); one request for two clicks; the result is announced outside of the panel.
  *
- * The seven rules of the lists edited in place (docs/qualite.md §3) are kept in `FormulaireDePuces`.
+ * The seven rules of the lists edited in place (docs/qualite.md §3) are kept in `BulletsForm`.
  */
 export function BulletsEditor({
 	liste: list,

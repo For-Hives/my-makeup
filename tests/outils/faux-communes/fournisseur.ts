@@ -1,6 +1,6 @@
 /**
  * The fake list of the communes of the bench (CI of 15/10/2026): the two questions the space of the
- * makeup artist asks the official list (geo.api.gouv.fr, src/lib/espace/referentiel-communes.ts),
+ * makeup artist asks the official list (geo.api.gouv.fr, src/lib/dashboard/city-reference.ts),
  * answered from a few communes of that list, so that the application of the end-to-end tests never
  * calls the Internet. The live list answered slowly or not at all from the machines of the CI, and
  * the tests that choose a commune failed with it.

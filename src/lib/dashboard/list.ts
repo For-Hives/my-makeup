@@ -3,8 +3,8 @@
  * rules L1 to L7): experiences, courses and offers. One module, read by the panel in the browser
  * and by the server action, so the two never disagree.
  *
- * A section is described once, by a `DefinitionDeListe` (src/lib/espace/experiences.ts, formations.ts,
- * prestations.ts): its fields, what it requires, its bounds, how a stored row is read and written.
+ * A section is described once, by a `ListDefinition` (src/lib/dashboard/experiences.ts, courses.ts,
+ * service-offers.ts): its fields, what it requires, its bounds, how a stored row is read and written.
  * This file holds what the three share.
  *
  * - A row travels as `{ id?, valeurs }`. `valeurs` holds texts only (a date is « YYYY-MM-DD », a price

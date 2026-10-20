@@ -36,7 +36,7 @@ export function localPreview(fichier: Blob): string {
 	}
 }
 
-/** Gives back a local address made by `apercuLocal`. */
+/** Gives back a local address made by `localPreview`. */
 export function releasePreview(adresse: string): void {
 	try {
 		if (adresse !== '') URL.revokeObjectURL(adresse)
@@ -58,7 +58,7 @@ interface Chosen extends PhotoToSend {
  * - « Enregistrer » sends the reduced file, then names it as her main photo; the former one goes
  *   to the bin of the storage. A failure leaves the former photo, keeps what she chose, and says so.
  *   Whatever the failure, a file sent in the gesture is deleted again unless the outcome is unknown
- *   (`envoyerPuisEnregistrer`).
+ *   (`sendThenSave`).
  * - The result is announced in a `role="status"` outside the panel.
  *
  * The browser work, the network and the server action are properties: a test gives fakes.

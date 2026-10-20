@@ -6,7 +6,7 @@
  *   server gave. The editors lock while a save is under way (a double click or a held Enter sends
  *   one request), so one gesture is one answer is one event.
  * - `profile_publiable`: only when the server says that this very save made the profile publiable
- *   (`devenuPublicable`, src/lib/espace/passage-publiable.ts): once, never for the way back.
+ *   (`devenuPublicable`, src/lib/dashboard/publishable-transition.ts): once, never for the way back.
  * - `upload_error { kind }`: the real cause of a refused photo.
  * - `account_delete`: only once the server has deleted the account.
  * - `profile_visibility { public }`: when she switches between her space and her public view.

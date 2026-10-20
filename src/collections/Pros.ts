@@ -103,7 +103,7 @@ export const Pros: CollectionConfig<'pros'> = {
 		// No lock of the account: the brake is by client address (`rateLimitSignIn`), so that
 		// ten wrong passwords typed by anyone never lock the account they aimed at (AUTH-05).
 		maxLoginAttempts: 0,
-		// 14 days (plan 01 §2.3), renewed by a visit to the space (`RafraichirSession`) and never past 90 days
+		// 14 days (plan 01 §2.3), renewed by a visit to the space (`RefreshSession`) and never past 90 days
 		// from the opening of the session (ticket 079: the `refresh` hook and the `beforeOperation` one below).
 		tokenExpiration: DUREE_SESSION_PRO_S,
 		// The token lives in the cookie only: no response of the API carries it (ticket 075).

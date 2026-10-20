@@ -1,6 +1,6 @@
 /**
  * The courses of a makeup artist, edited row by row in her space (ticket 130; plan 02 U30, E31). Same
- * model as the experiences (src/lib/espace/experiences.ts).
+ * model as the experiences (src/lib/dashboard/experiences.ts).
  *
  * - Required, for the row she adds or edits: the diploma and the school. The day it was obtained and
  *   the description may stay empty.

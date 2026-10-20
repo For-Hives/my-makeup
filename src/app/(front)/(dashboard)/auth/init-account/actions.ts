@@ -15,7 +15,7 @@ import {
  * The saves of the onboarding that differ from those of the space (ticket 140). An action is a
  * public endpoint: the session is read again, the origin is checked against the origins Payload
  * trusts, and the profile written is the one of her account. The location is saved by
- * `enregistrerMaLocalisation`, as in her space.
+ * `saveMyLocation`, as in her space.
  */
 async function trustContext() {
 	const context = await requestUser()

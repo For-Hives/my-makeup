@@ -4,7 +4,7 @@
  * its size and its name, ticket 133), then asks the server to name the photos on her profile.
  * Nothing is sent before that; closing a panel sends nothing, so it leaves no object.
  *
- * `envoyerPuisEnregistrer` is the whole gesture, with its three outcomes kept apart:
+ * `sendThenSave` is the whole gesture, with its three outcomes kept apart:
  * - a file is refused or the network fails while sending: nothing is saved, the files already sent
  *   in this gesture are deleted again (they are referenced by nothing), and she is told which file;
  * - the server answers « not saved » (`ok: false`): the same, the files sent are deleted;

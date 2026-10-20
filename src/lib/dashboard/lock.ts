@@ -8,7 +8,7 @@ import type { Payload } from 'payload'
  * versions, though: an admin whose form was opened before the makeup artist saved from her space sends
  * every field back and overwrites what she just wrote. The Local API skips the lock unless it is asked
  * not to (`overrideLock` is true by default), and she writes through the Local API. So the writes of
- * her space look first for a lock held by an admin on her profile (`verifierQueLAdminNeTientPasLeProfil`),
+ * her space look first for a lock held by an admin on her profile (`checkAdminDoesNotHoldProfile`),
  * and she is told in French to try again in a few minutes; what she typed stays in her form.
  *
  * The check is ours and not Payload's `overrideLock: false`, which compares only the identifier of the
@@ -37,7 +37,7 @@ function lockDurationS(payload: Payload): number | null {
 }
 
 /**
- * Throws `ProfilVerrouille` when an admin holds a live lock on this profile. A lock past its
+ * Throws `LockedProfile` when an admin holds a live lock on this profile. A lock past its
  * duration is no lock (Payload's own rule), and neither is one held by an account that is not an
  * admin's. `maintenant` is the clock, for a test.
  */

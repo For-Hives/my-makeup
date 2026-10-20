@@ -19,7 +19,7 @@ const BUTTON = 'min-h-11 rounded-md px-4 py-2 font-medium'
 const FIELD = 'min-h-11 rounded-md border border-neutral-400 bg-white px-3 py-2 text-base'
 
 /**
- * The form reads what she typed by the rule of the server (`lireLesReseaux`): « @pseudo » becomes
+ * The form reads what she typed by the rule of the server (`readNetworks`): « @pseudo » becomes
  * the address, an address of another site is refused under its field, and nothing is sent while a
  * field is refused (E30). The values the form sends are the normalised ones.
  */
@@ -39,7 +39,7 @@ const resolver: Resolver<NetworksValues> = values => {
 
 /**
  * The button « Modifier » of the card of her networks, and the panel it opens (ticket 125). Same
- * contract as the identity (src/components/espace/EditeurDIdentite.tsx): the card shows only what
+ * contract as the identity (src/components/dashboard/IdentityEditor.tsx): the card shows only what
  * the database stored; a failure keeps the old value and what she typed, and says so (E31); one
  * request for two clicks; the result is announced outside of the panel.
  *

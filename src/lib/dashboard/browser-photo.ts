@@ -1,7 +1,7 @@
 import { type DecodedImage, type PhotoPorts, type PreparedPhoto, preparePhoto } from './photo'
 
 /**
- * The browser ports of `preparerPhoto` (src/lib/espace/photo.ts): read the first bytes, decode the
+ * The browser ports of `preparePhoto` (src/lib/dashboard/photo.ts): read the first bytes, decode the
  * picture, draw it on a canvas, encode it. Browser only; the browser tests play them, the decisions
  * themselves are unit tested in photo.ts.
  */

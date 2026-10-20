@@ -28,7 +28,7 @@ const PATH_FIELD: Readonly<Record<string, IdentityField>> = {
  * - the values given back are those the database stored, read from the document Payload returns,
  *   never the ones that were sent. A failure gives back a message in French and no value.
  *
- * It never reads `error.message`: see `echecDePayload`.
+ * It never reads `error.message`: see `payloadFailure`.
  */
 export async function saveIdentity(
 	payload: Payload,

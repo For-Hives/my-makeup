@@ -1,6 +1,6 @@
 /**
  * The offers of a makeup artist, edited row by row in her space (ticket 131; plan 01 §3.3 P7.4,
- * plan 02 U29, U04). Same model as the experiences (src/lib/espace/experiences.ts).
+ * plan 02 U29, U04). Same model as the experiences (src/lib/dashboard/experiences.ts).
  *
  * - Required, for the row she adds or edits: the name. The description and the price may stay empty.
  * - The price is one text, as typed: « 80 », « 80 € », « à partir de 80 » or « sur devis ». The server

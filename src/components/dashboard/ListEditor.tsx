@@ -38,7 +38,7 @@ type FocusTarget =
 /**
  * The button « Modifier » of the card of a list, and the panel it opens (tickets 129 to 131): the
  * rows of the list, and a form that adds a row or changes the one she chose. « Enregistrer » sends
- * the whole list. The section is described by a `DefinitionDeListe`; this component knows nothing of
+ * the whole list. The section is described by a `ListDefinition`; this component knows nothing of
  * experiences, courses or offers.
  *
  * The seven rules of the lists edited in place (docs/qualite.md §3) are held here:
