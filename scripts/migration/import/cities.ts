@@ -136,7 +136,7 @@ export function citySearch(ville: string | null): Search | null {
 	const { texte: text, departement: leadingDepartment } = extractLeadingDepartment(ville?.trim() ?? '')
 	if (text === '') return null
 	const place = publicPlace(text)
-	const codePostal = [...text.matchAll(CODE_POSTAL)].at(-1)?.[0] ?? null
+	const postalCode = [...text.matchAll(CODE_POSTAL)].at(-1)?.[0] ?? null
 	const name = withoutAbbreviation(place.commune.replace(DISTRICT, '')).replace(/\s+/g, ' ').trim()
 	const searchable =
 		usableCity(text) &&
@@ -147,7 +147,7 @@ export function citySearch(ville: string | null): Search | null {
 		!looksLikeAnAddress(name)
 	return {
 		nom: searchable ? name.toLowerCase() : null,
-		codePostal,
+		codePostal: postalCode,
 		departement: place.departement ?? leadingDepartment,
 		adresse: place.adresse,
 	}

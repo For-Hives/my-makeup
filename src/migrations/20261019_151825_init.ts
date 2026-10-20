@@ -13,7 +13,7 @@ import { type MigrateDownArgs, type MigrateUpArgs, sql } from '@payloadcms/db-po
  * migrations included. How to write it again: docs/tests/banc.md, « Réécrire la migration init ».
  *
  * Once a production database has played it, this stops: every change of a collection then comes
- * with its own migration, in the same commit. `bun run schema:derive` is a step of the CI
+ * with its own migration, in the same commit. `bun run schema:drift` is a step of the CI
  * (docs/qualite.md, « La dérive de schéma »).
  */
 export async function up({ db }: MigrateUpArgs): Promise<void> {

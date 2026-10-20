@@ -41,6 +41,8 @@ export interface NamingConfig {
 	 * with `=` covers that exact path only, not what is inside (a folder whose own name is French).
 	 */
 	waiting: string[]
+	/** The ticket that renames each waiting-list entry (not the `!` ones): a path nobody owns is never renamed. */
+	owners?: Record<string, number>
 	exceptions: {
 		/** A file or folder whose own name stays: a frozen address, a workflow file. Not what is inside. */
 		paths: { path: string; reason: string }[]

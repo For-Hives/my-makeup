@@ -6,7 +6,7 @@ import type { RequestContext } from 'payload'
  *
  * The import writes the data as they are, and tells nobody: a hook that would send an email,
  * refresh the cache of a page or move a photo to the bin reads it and does nothing
- * (`estUnImport`). The confirmation email of a new account is turned off by the import itself, at
+ * (`isImport`). The confirmation email of a new account is turned off by the import itself, at
  * each creation (`disableVerificationEmail`); the refresh of the pages and the bin of the photos
  * read this context in their own tickets (047 and 045).
  *

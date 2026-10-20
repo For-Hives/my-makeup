@@ -34,6 +34,16 @@ describe('the names check in the CI', () => {
 	})
 })
 
+describe('the waiting list of the names check', () => {
+	test('every entry has an owner ticket, and an owner names no entry that is not waiting', () => {
+		const config = loadConfig()
+		const entries = config.waiting.filter(entry => !entry.startsWith('!'))
+		const owners = config.owners ?? {}
+		expect(entries.filter(entry => !Number.isInteger(owners[entry]))).toEqual([])
+		expect(Object.keys(owners).filter(entry => !entries.includes(entry))).toEqual([])
+	})
+})
+
 describe('the names check with the committed configuration', () => {
 	const words = loadWords()
 	const config = loadConfig()

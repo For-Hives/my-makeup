@@ -7,7 +7,7 @@ import { readDelta } from '@/lib/cutover/export-delta'
 // Never prerendered, never cached: each request reads the database again.
 export const dynamic = 'force-dynamic'
 
-const RIEN_A_LIRE = {
+const NOTHING_TO_READ = {
 	cutoverDate: undefined,
 	isAdmin: async () => false,
 	read: async () => {
@@ -22,12 +22,12 @@ const RIEN_A_LIRE = {
  * site. This static segment wins over the catch-all REST route of Payload.
  */
 export async function GET(request: Request): Promise<Response> {
-	const lieu = exportPlace()
+	const place = exportPlace()
 	// Anywhere else than the site: refused before Payload is even started, nothing is read.
-	if (lieu !== 'site') return respondToDelta(request, { ...RIEN_A_LIRE, place: lieu })
+	if (place !== 'site') return respondToDelta(request, { ...NOTHING_TO_READ, place })
 	const payload = await getPayload({ config })
 	return respondToDelta(request, {
-		place: lieu,
+		place,
 		cutoverDate: process.env.CUTOVER_DATE,
 		isAdmin: async () => {
 			const { user } = await payload.auth({ headers: request.headers })

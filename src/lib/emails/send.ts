@@ -6,7 +6,7 @@
  *   const envoyer = payloadSendEmail(payload, env)
  *   await envoyer({ a: adresse, ...composerEmail(contenu, site) }, { context: req.context })
  *
- * - The import of the old data sends nothing: a write that carries its context (`estUnImport`) leaves
+ * - The import of the old data sends nothing: a write that carries its context (`isImport`) leaves
  *   before anything is read or written.
  * - Without a relay (no SMTP_HOST: a work station), the mail is not sent, one line of the log says
  *   so, and the door gives back `NO_RELAY`. The site never gets there: its environment is refused without a relay (src/lib/env.ts).
@@ -33,7 +33,7 @@ export type EmailToSend = {
 }
 
 export type SendOptions = {
-	/** The context of the request that causes the mail. An import (`CONTEXTE_IMPORT`) sends nothing. */
+	/** The context of the request that causes the mail. An import (`IMPORT_CONTEXT`) sends nothing. */
 	context?: RequestContext | undefined
 }
 

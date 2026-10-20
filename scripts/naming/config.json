@@ -13,6 +13,20 @@
 		"tests/e2e",
 		"tests/integration"
 	],
+	"owners": {
+		"src/app/(front)/globals.css": 254,
+		"src/app/(front)/layout.tsx": 254,
+		"src/app/(payload)": 254,
+		"src/app/api": 254,
+		"src/app/global-error.tsx": 254,
+		"src/app/global-not-found.tsx": 254,
+		"src/app/robots.ts": 254,
+		"src/app/sitemap.xml": 254,
+		"src/app/u": 254,
+		"src/payload-types.ts": 254,
+		"tests/e2e": 248,
+		"tests/integration": 248
+	},
 	"exceptions": {
 		"paths": [
 			{
@@ -95,7 +109,9 @@
 		"words": [
 			{
 				"word": "specialite",
-				"in": ["src/lib/search/input.ts"],
+				"in": [
+					"src/lib/search/input.ts"
+				],
 				"reason": "The ?specialite= parameter of /search: links of the old site carry it."
 			}
 		]
