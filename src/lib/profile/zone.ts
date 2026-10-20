@@ -19,6 +19,7 @@
  * CLI, outside of Next.
  */
 
+import { FRANCE_CODE, isCountryCode, normalizedCountryCode } from '../countries'
 import { DEPARTMENTS } from '../departments'
 
 /**
@@ -299,5 +300,121 @@ export function cityErrors(commune: CityInput | null | undefined): CityErrors {
 	if (lat === 'valide' && lng === 'valide' && empty(codeInsee) && empty(cityName))
 		errors.latitude = ZONE_MESSAGES.coordonneesSansCommune
 
+	return errors
+}
+
+// ---------------------------------------------------------------------------------------------
+// A zone outside of France, and the postal codes of a commune (plans/PLAN-ZONES.md §3.2 to §3.4;
+// ticket 258). Rules only: the collection (ticket 259) calls them, the space shows their messages.
+// ---------------------------------------------------------------------------------------------
+
+/** The most countries a zone names. */
+export const COUNTRIES_MAX = 5
+
+/** What the server answers, in French, to a zone outside of France or to postal codes it refuses. */
+export const ABROAD_MESSAGES = {
+	countriesTooMany: `${COUNTRIES_MAX} pays au plus.`,
+	countriesUnknown: 'Un des pays n’est pas dans la liste : choisis-le dans la liste.',
+	countriesDuplicate: 'Un même pays est choisi deux fois.',
+	countriesFranceOnly: 'Choisis au moins un pays étranger : pour la France, écris ta commune.',
+	countriesNotAList: 'Les pays se donnent en liste de codes, comme BE ou IT.',
+	townWithoutCountry: 'Une ville à l’étranger va avec un pays étranger.',
+	townSeveralCountries: 'Une ville ne va qu’avec un seul pays : retire-la, ou retire les autres pays.',
+	townInvalid: `Le nom de la ville est un texte de ${CITY_NAME_MAX} caractères au plus.`,
+	townAddress: 'Écris le nom de ta ville, pas ton adresse : elle ne s’enregistre jamais.',
+	townCharacters:
+		'Le nom d’une ville n’a que des lettres, des espaces, des traits d’union, des apostrophes et des parenthèses.',
+	postalCodeInvalid: 'Un code postal a cinq chiffres, comme 74000.',
+	postalCodeDuplicate: 'Un même code postal est donné deux fois.',
+	postalCodesNotAList: 'Les codes postaux se donnent en liste.',
+} as const
+
+/**
+ * Whether a text is a French postal code: five digits and nothing else, spaces ignored (« 62 149 »
+ * is « 62149 »). The code of a commune (« 62200 ») and of a typed search read the same way.
+ */
+export function isPostalCode(text: unknown): boolean {
+	return typeof text === 'string' && /^\d{5}$/.test(text.replace(/\s+/g, ''))
+}
+
+/** A postal code as the collection stores it: five digits, no space; anything else as it came. */
+export function normalizedPostalCode(code: unknown): unknown {
+	return isPostalCode(code) ? (code as string).replace(/\s+/g, '') : code
+}
+
+/**
+ * The postal codes of a commune as the collection stores them: each written without spaces, then
+ * sorted. A duplicate is kept, `postalCodesErrors` refuses it. Anything but a list stays as sent.
+ */
+export function normalizedPostalCodes(codes: unknown): unknown {
+	if (!Array.isArray(codes)) return codes
+	const normalized = codes.map(normalizedPostalCode)
+	return normalized.every(code => typeof code === 'string') ? normalized.toSorted() : normalized
+}
+
+/** The countries of a zone as the collection stores them: each in capitals, without spaces around. */
+export function normalizedCountries(countries: unknown): unknown {
+	return Array.isArray(countries) ? countries.map(normalizedCountryCode) : countries
+}
+
+/** The foreign countries of a list of codes read as the collection reads them (capitals, known codes only). */
+function foreignCountries(countries: unknown): string[] {
+	const list = normalizedCountries(countries)
+	return Array.isArray(list) ? list.filter((code): code is string => isCountryCode(code) && code !== FRANCE_CODE) : []
+}
+
+/**
+ * What is wrong with the countries of a zone, in French; an empty list when nothing is.
+ *
+ * - Empty (nothing given): no error, a zone may be empty.
+ * - 1 to 5 codes of the list (src/lib/countries.ts), each once, in capitals (a lower case code is
+ *   written in capitals first), at least one foreign country: France alone is a commune.
+ */
+export function countriesErrors(countries: unknown): string[] {
+	if (countries === null || countries === undefined) return []
+	const list = normalizedCountries(countries)
+	if (!Array.isArray(list)) return [ABROAD_MESSAGES.countriesNotAList]
+	if (list.length === 0) return []
+	const errors: string[] = []
+	if (list.length > COUNTRIES_MAX) errors.push(ABROAD_MESSAGES.countriesTooMany)
+	if (list.some(code => !isCountryCode(code))) errors.push(ABROAD_MESSAGES.countriesUnknown)
+	if (new Set(list).size !== list.length) errors.push(ABROAD_MESSAGES.countriesDuplicate)
+	if (errors.length === 0 && foreignCountries(list).length === 0) errors.push(ABROAD_MESSAGES.countriesFranceOnly)
+	return errors
+}
+
+/**
+ * What is wrong with the town of a zone outside of France, in French; an empty list when nothing is.
+ *
+ * - Empty: no error, the town is optional.
+ * - Only next to one foreign country (`countries`, as sent): never alone, never with several
+ *   countries, nor next to France.
+ * - The rules of a name of commune: 70 characters at most, no digit nor type of street
+ *   (`looksLikeAnAddress`), only the characters of a name (`hasNameCharacters`).
+ */
+export function townErrors(town: unknown, countries: unknown): string[] {
+	if (empty(town)) return []
+	const list = normalizedCountries(countries)
+	const given = Array.isArray(list) ? list.length : 0
+	const foreign = foreignCountries(countries)
+	if (given > 1) return [ABROAD_MESSAGES.townSeveralCountries]
+	if (foreign.length !== 1) return [ABROAD_MESSAGES.townWithoutCountry]
+	if (typeof town !== 'string' || town.trim().length > CITY_NAME_MAX) return [ABROAD_MESSAGES.townInvalid]
+	if (looksLikeAnAddress(town)) return [ABROAD_MESSAGES.townAddress]
+	if (!hasNameCharacters(town)) return [ABROAD_MESSAGES.townCharacters]
+	return []
+}
+
+/**
+ * What is wrong with the postal codes of a commune, in French; an empty list when nothing is: five
+ * digits each (`isPostalCode`, written without spaces and sorted first), no duplicate.
+ */
+export function postalCodesErrors(codes: unknown): string[] {
+	if (codes === null || codes === undefined) return []
+	const list = normalizedPostalCodes(codes)
+	if (!Array.isArray(list)) return [ABROAD_MESSAGES.postalCodesNotAList]
+	const errors: string[] = []
+	if (list.some(code => !isPostalCode(code))) errors.push(ABROAD_MESSAGES.postalCodeInvalid)
+	else if (new Set(list).size !== list.length) errors.push(ABROAD_MESSAGES.postalCodeDuplicate)
 	return errors
 }

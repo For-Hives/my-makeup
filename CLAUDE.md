@@ -189,6 +189,8 @@ Le même mot français a le même mot anglais partout (source : `PLAN-ANGLAIS.md
 | prêt (d'un hash) / à revoir | `lend` / `toReview` | canari (test de la CI) / dérive (du schéma) | `canary` / `drift` |
 | valider / contrôler (un hôte, une image) | `validate` / `check` | delta (export du retour arrière) / depuis la bascule | `delta` / `sinceCutover` |
 | jeu de données (du banc) / capture (d'écran) | `dataset` / `screenshot` | écoute (adresse d'un faux service) / décalage (de ports) | `listen` / `offset` |
+| pays / ville (à l'étranger) | `country` / `town` | type de zone / code postal | `zoneKind` / `postalCode` |
+| revue de zone (privée, d'un profil) / candidate (commune possible) | `zoneReview` / `candidate` | à l'étranger / drapeau | `abroad` / `flag` |
 
 ## Pièges
 

@@ -3,20 +3,27 @@ import type { Field } from 'payload'
 import { Profiles } from '@/collections/Profiles'
 import { DEPARTMENTS } from '@/lib/departments'
 import {
+	ABROAD_MESSAGES,
 	CITY_FIELDS,
 	type CityInput,
 	COORDINATE_DECIMALS,
 	cityErrors,
 	cityToFields,
 	cityVerdict,
+	countriesErrors,
 	departmentOfInseeCode,
+	isPostalCode,
 	looksLikeAnAddress,
+	normalizedCountries,
 	normalizedInseeCode,
 	normalizedName,
+	normalizedPostalCodes,
 	OVERSEAS_COLLECTIVITIES,
+	postalCodesErrors,
 	RADIUS_BOUNDS_KM,
 	radiusVerdict,
 	roundedCoordinate,
+	townErrors,
 	ZONE_MESSAGES,
 } from '@/lib/profile/zone'
 
@@ -377,6 +384,91 @@ describe('les champs de la zone dans la collection des profils', () => {
 			// field an empty `access`: what matters is that no rule is in it.
 			const access = zone && 'access' in zone ? zone.access : undefined
 			expect(access ?? {}, 'name' in (zone ?? {}) ? String((zone as { name: string }).name) : '').toEqual({})
+		}
+	})
+})
+
+describe('une zone hors de France et les codes postaux (ticket 258)', () => {
+	test('un code postal : cinq chiffres, les espaces ne comptent pas', () => {
+		for (const text of ['62149', '62 149', ' 74000 ', '01000', '75001']) expect(isPostalCode(text), text).toBe(true)
+		for (const text of ['6214', '621490', '2A004', 'abcde', '', '62149 Cambrin', '62,149', 62149, null, undefined])
+			expect(isPostalCode(text), String(text)).toBe(false)
+	})
+
+	test('les pays : une liste vide est une zone vide, sans erreur', () => {
+		expect(countriesErrors([])).toEqual([])
+		expect(countriesErrors(null)).toEqual([])
+		expect(countriesErrors(undefined)).toEqual([])
+	})
+
+	test('les pays : de un à cinq, au moins un étranger', () => {
+		expect(countriesErrors(['BE'])).toEqual([])
+		expect(countriesErrors(['FR', 'IT'])).toEqual([])
+		expect(countriesErrors(['BE', 'CH', 'LU', 'IT', 'ES'])).toEqual([])
+		expect(countriesErrors(['FR'])).toEqual([ABROAD_MESSAGES.countriesFranceOnly])
+		expect(countriesErrors(['BE', 'CH', 'LU', 'IT', 'ES', 'DE'])).toEqual([ABROAD_MESSAGES.countriesTooMany])
+	})
+
+	test('les pays : un code inconnu, un code d’outre-mer, un doublon, autre chose qu’une liste', () => {
+		expect(countriesErrors(['XX'])).toEqual([ABROAD_MESSAGES.countriesUnknown])
+		expect(countriesErrors(['RE'])).toEqual([ABROAD_MESSAGES.countriesUnknown])
+		expect(countriesErrors(['BE', 'BE'])).toEqual([ABROAD_MESSAGES.countriesDuplicate])
+		expect(countriesErrors(['BE', 'be'])).toEqual([ABROAD_MESSAGES.countriesDuplicate])
+		expect(countriesErrors([42])).toEqual([ABROAD_MESSAGES.countriesUnknown])
+		expect(countriesErrors('BE')).toEqual([ABROAD_MESSAGES.countriesNotAList])
+	})
+
+	test('les pays : un code en minuscules est d’abord écrit en capitales, puis jugé', () => {
+		expect(normalizedCountries(['be', ' it '])).toEqual(['BE', 'IT'])
+		expect(countriesErrors(['be'])).toEqual([])
+		expect(countriesErrors(['fr'])).toEqual([ABROAD_MESSAGES.countriesFranceOnly])
+		expect(normalizedCountries('be')).toBe('be')
+	})
+
+	test('la ville à l’étranger : facultative, avec un seul pays étranger', () => {
+		expect(townErrors(null, ['BE'])).toEqual([])
+		expect(townErrors('', ['BE', 'CH'])).toEqual([])
+		expect(townErrors(undefined, [])).toEqual([])
+		expect(townErrors('Bruxelles', ['BE'])).toEqual([])
+		expect(townErrors('Genève', ['ch'])).toEqual([])
+		expect(townErrors('Saint-Gilles (Bruxelles)', ['BE'])).toEqual([])
+	})
+
+	test('la ville à l’étranger : refusée sans pays étranger ou avec plusieurs pays', () => {
+		expect(townErrors('Bruxelles', [])).toEqual([ABROAD_MESSAGES.townWithoutCountry])
+		expect(townErrors('Bruxelles', null)).toEqual([ABROAD_MESSAGES.townWithoutCountry])
+		expect(townErrors('Paris', ['FR'])).toEqual([ABROAD_MESSAGES.townWithoutCountry])
+		expect(townErrors('Bruxelles', ['BE', 'NL'])).toEqual([ABROAD_MESSAGES.townSeveralCountries])
+		expect(townErrors('Bruxelles', ['FR', 'BE'])).toEqual([ABROAD_MESSAGES.townSeveralCountries])
+	})
+
+	test('la ville à l’étranger : ni adresse, ni chiffre, ni trop longue', () => {
+		expect(townErrors('12 rue des Lilas', ['BE'])).toEqual([ABROAD_MESSAGES.townAddress])
+		expect(townErrors('rue des Lilas', ['BE'])).toEqual([ABROAD_MESSAGES.townAddress])
+		expect(townErrors('Bruxelles 1000', ['BE'])).toEqual([ABROAD_MESSAGES.townAddress])
+		expect(townErrors('Bruxelles, Ixelles', ['BE'])).toEqual([ABROAD_MESSAGES.townAddress])
+		expect(townErrors('bruxelles@example.org', ['BE'])).toEqual([ABROAD_MESSAGES.townCharacters])
+		expect(townErrors('a'.repeat(71), ['BE'])).toEqual([ABROAD_MESSAGES.townInvalid])
+		expect(townErrors('a'.repeat(70), ['BE'])).toEqual([])
+		expect(townErrors(42, ['BE'])).toEqual([ABROAD_MESSAGES.townInvalid])
+	})
+
+	test('les codes postaux : cinq chiffres chacun, triés, sans doublon', () => {
+		expect(postalCodesErrors(['62149', '62200'])).toEqual([])
+		expect(postalCodesErrors([])).toEqual([])
+		expect(postalCodesErrors(null)).toEqual([])
+		expect(normalizedPostalCodes(['62200', '62 149', '01000'])).toEqual(['01000', '62149', '62200'])
+		expect(postalCodesErrors(['6214'])).toEqual([ABROAD_MESSAGES.postalCodeInvalid])
+		expect(postalCodesErrors(['62149', 'abcde'])).toEqual([ABROAD_MESSAGES.postalCodeInvalid])
+		expect(postalCodesErrors([62149])).toEqual([ABROAD_MESSAGES.postalCodeInvalid])
+		expect(postalCodesErrors(['62149', '62 149'])).toEqual([ABROAD_MESSAGES.postalCodeDuplicate])
+		expect(postalCodesErrors('62149')).toEqual([ABROAD_MESSAGES.postalCodesNotAList])
+	})
+
+	test('tous les messages sont en français et tutoient', () => {
+		for (const message of Object.values(ABROAD_MESSAGES)) {
+			expect(message).toMatch(/[.]$/)
+			expect(message).not.toMatch(/\bvous\b|\bvotre\b/i)
 		}
 	})
 })
