@@ -13,7 +13,7 @@ import { z } from 'zod'
 import { ORIGINES_DECLAREES } from '../analytics/events'
 import { completude } from '../profil/completude'
 import { champsDuProfil, type DocumentDuProfil } from '../profil/etat'
-import { IDENTITE_MAX, schemaDeLIdentite, schemaDeLIdentiteStrict } from './identite'
+import { IDENTITE_MAX, schemaDeLIdentite, schemaDeLIdentiteStrict } from './identity'
 
 export const ETAPES = [1, 2, 3] as const
 export type EtapeDAccueil = (typeof ETAPES)[number]

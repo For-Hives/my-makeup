@@ -6,7 +6,7 @@ import {
 	PROPOSITIONS_MAX,
 	proposition,
 	questionDeLaRecherche,
-} from '@/lib/dashboard/referentiel-communes'
+} from '@/lib/dashboard/city-reference'
 import { delay, HttpResponse, http, simuler } from '../outils/http-sortant'
 
 /**

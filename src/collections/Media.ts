@@ -20,7 +20,7 @@ import {
 	jamais,
 	lectureDesMedias,
 } from '../lib/acces'
-import { CONTEXTE_FICHIER_NOMME, juger, nomImprevisible } from '../lib/envoi-photo'
+import { CONTEXTE_FICHIER_NOMME, juger, nomImprevisible } from '../lib/photo-upload'
 import { adresseDuMedia } from '../lib/medias'
 
 /**

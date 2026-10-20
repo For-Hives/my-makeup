@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
-import { identifiantDuProfil, type UtilisateurDeLEspace } from '@/lib/dashboard/mon-profil'
+import { identifiantDuProfil, type UtilisateurDeLEspace } from '@/lib/dashboard/my-profile'
 import { lireLAdresseDeProfil, lireLApercuDuProfil } from '@/services/public/profils'
 import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'

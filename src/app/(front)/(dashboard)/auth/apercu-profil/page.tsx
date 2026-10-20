@@ -1,11 +1,11 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
-import { BandeauDApercu } from '@/components/dashboard/BandeauDApercu'
+import { BandeauDApercu } from '@/components/dashboard/PreviewBanner'
 import { VueDuProfil } from '@/components/profil/VueDuProfil'
 import { requireArtist } from '@/lib/auth/session'
-import { CHEMIN_DE_L_APERCU, CHEMIN_DE_L_ESPACE, etatDeLApercu } from '@/lib/dashboard/apercu'
-import { identifiantDuProfil } from '@/lib/dashboard/mon-profil'
-import { utilisatriceDeLaRequete } from '@/lib/dashboard/requete'
+import { CHEMIN_DE_L_APERCU, CHEMIN_DE_L_ESPACE, etatDeLApercu } from '@/lib/dashboard/preview'
+import { identifiantDuProfil } from '@/lib/dashboard/my-profile'
+import { utilisatriceDeLaRequete } from '@/lib/dashboard/request'
 import { lireLApercuDuProfil } from '@/services/public/profils'
 
 // Read per request: it depends on the session, and the build has no database. Private and never

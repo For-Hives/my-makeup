@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { cartesDuProfil } from '@/lib/dashboard/cartes'
+import { cartesDuProfil } from '@/lib/dashboard/cards'
 import {
 	erreursParChamp,
 	libelleDeLaCommune,
@@ -7,8 +7,8 @@ import {
 	rayonDuTexte,
 	schemaDeLaLocalisationStrict,
 	schemaDuRayonSaisi,
-} from '@/lib/dashboard/localisation'
-import { echecDePayload } from '@/lib/dashboard/resultat'
+} from '@/lib/dashboard/location'
+import { echecDePayload } from '@/lib/dashboard/result'
 import { MESSAGES_DE_LA_ZONE } from '@/lib/profil/zone'
 
 /**

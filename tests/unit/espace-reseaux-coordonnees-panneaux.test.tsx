@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'bun:test'
-import { EditeurDeCoordonnees, type EnvoiDesCoordonnees } from '@/components/dashboard/EditeurDeCoordonnees'
-import { EditeurDeReseaux, type EnvoiDesReseaux } from '@/components/dashboard/EditeurDeReseaux'
-import type { ValeursDesCoordonnees } from '@/lib/dashboard/coordonnees'
-import type { ValeursDesReseaux } from '@/lib/dashboard/reseaux'
-import { MESSAGE_ECHEC } from '@/lib/dashboard/resultat'
+import { EditeurDeCoordonnees, type EnvoiDesCoordonnees } from '@/components/dashboard/ContactDetailsEditor'
+import { EditeurDeReseaux, type EnvoiDesReseaux } from '@/components/dashboard/NetworksEditor'
+import type { ValeursDesCoordonnees } from '@/lib/dashboard/contact-details'
+import type { ValeursDesReseaux } from '@/lib/dashboard/networks'
+import { MESSAGE_ECHEC } from '@/lib/dashboard/result'
 import { ouvrirFenetre } from '../outils/dom-react'
 
 /**

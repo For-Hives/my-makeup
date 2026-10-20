@@ -6,10 +6,10 @@ import {
 	enregistrerIdentiteDAccueil,
 	enregistrerPhotoDAccueil,
 	type ValeursDeLaPhotoDAccueil,
-} from '@/lib/dashboard/enregistrer-accueil'
-import type { ValeursDeLIdentite } from '@/lib/dashboard/identite'
-import { utilisatriceDeLaRequete } from '@/lib/dashboard/requete'
-import { MESSAGE_ECHEC, MESSAGE_SESSION, type ResultatDEnregistrement } from '@/lib/dashboard/resultat'
+} from '@/lib/dashboard/save-onboarding'
+import type { ValeursDeLIdentite } from '@/lib/dashboard/identity'
+import { utilisatriceDeLaRequete } from '@/lib/dashboard/request'
+import { MESSAGE_ECHEC, MESSAGE_SESSION, type ResultatDEnregistrement } from '@/lib/dashboard/result'
 
 /**
  * The saves of the onboarding that differ from those of the space (ticket 140). An action is a

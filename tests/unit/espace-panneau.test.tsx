@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'bun:test'
 import { act } from 'react'
-import { EditeurDIdentite, type EnvoiDeLIdentite } from '@/components/dashboard/EditeurDIdentite'
-import type { ValeursDeLIdentite } from '@/lib/dashboard/identite'
-import { MESSAGE_ECHEC } from '@/lib/dashboard/resultat'
-import type { Stockage } from '@/lib/dashboard/saisie-gardee'
+import { EditeurDIdentite, type EnvoiDeLIdentite } from '@/components/dashboard/IdentityEditor'
+import type { ValeursDeLIdentite } from '@/lib/dashboard/identity'
+import { MESSAGE_ECHEC } from '@/lib/dashboard/result'
+import type { Stockage } from '@/lib/dashboard/guarded-input'
 import { ouvrirFenetre } from '../outils/dom-react'
 
 /**

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, setDefaultTimeout, test } from 'bun:test'
 import sharp from 'sharp'
-import { MESSAGES_D_ENVOI, TAILLE_MAX_PHOTO } from '@/lib/envoi-photo'
+import { MESSAGES_D_ENVOI, TAILLE_MAX_PHOTO } from '@/lib/photo-upload'
 import { MESSAGES_DES_PHOTOS } from '@/lib/profil/photos'
 import type { Media } from '@/payload-types'
 import { type Espion, espionnerLeStockage, suppressionsSansCorbeille } from '../outils/espion-s3'

@@ -6,7 +6,7 @@ import {
 	TAILLE_MAX_PHOTO,
 	TYPES_DE_PHOTO,
 	typeDeLaPhoto,
-} from '@/lib/envoi-photo'
+} from '@/lib/photo-upload'
 
 /** What a photo sent to the site may be (ticket 133; plan 02 U79, U80, U81). */
 

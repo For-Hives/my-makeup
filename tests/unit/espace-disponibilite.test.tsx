@@ -3,10 +3,10 @@ import { act } from 'react'
 import {
 	type EnvoiDeLaDisponibilite,
 	InterrupteurDeDisponibilite,
-} from '@/components/dashboard/InterrupteurDeDisponibilite'
-import { cartesDuProfil, type ProfilDeLEspace } from '@/lib/dashboard/cartes'
-import { estDisponible, schemaDeLaDisponibilite } from '@/lib/dashboard/disponibilite'
-import { MESSAGE_ECHEC } from '@/lib/dashboard/resultat'
+} from '@/components/dashboard/AvailabilitySwitch'
+import { cartesDuProfil, type ProfilDeLEspace } from '@/lib/dashboard/cards'
+import { estDisponible, schemaDeLaDisponibilite } from '@/lib/dashboard/availability'
+import { MESSAGE_ECHEC } from '@/lib/dashboard/result'
 import { ouvrirFenetre } from '../outils/dom-react'
 
 /**

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import { RafraichirSession } from '@/components/dashboard/RafraichirSession'
+import { RafraichirSession } from '@/components/dashboard/RefreshSession'
 import { createExtension, EXTENSION_ROUTE } from '@/lib/auth/extend'
 import {
 	capReached,

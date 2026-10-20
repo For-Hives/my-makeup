@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'bun:test'
 import type { ReactElement } from 'react'
 import { act } from 'react'
-import type { EnvoiDeLaListe } from '@/components/dashboard/EditeurDeListe'
-import { EditeurDExperiences, EditeurDeFormations, EditeurDePrestations } from '@/components/dashboard/EditeursDeListes'
-import type { LigneEnregistree, ListeEnvoyee } from '@/lib/dashboard/liste'
-import { MESSAGE_ECHEC } from '@/lib/dashboard/resultat'
+import type { EnvoiDeLaListe } from '@/components/dashboard/ListEditor'
+import { EditeurDExperiences, EditeurDeFormations, EditeurDePrestations } from '@/components/dashboard/ListsEditors'
+import type { LigneEnregistree, ListeEnvoyee } from '@/lib/dashboard/list'
+import { MESSAGE_ECHEC } from '@/lib/dashboard/result'
 import { ouvrirFenetre } from '../outils/dom-react'
 
 /**

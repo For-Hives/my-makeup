@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { BandeauDApercu } from '@/components/dashboard/BandeauDApercu'
-import { CHEMIN_DE_L_APERCU, CHEMIN_DE_L_ESPACE, etatDeLApercu } from '@/lib/dashboard/apercu'
+import { BandeauDApercu } from '@/components/dashboard/PreviewBanner'
+import { CHEMIN_DE_L_APERCU, CHEMIN_DE_L_ESPACE, etatDeLApercu } from '@/lib/dashboard/preview'
 
 /**
  * The preview of her own page (ticket 139; plan 02 RG-06): the banner says where her profile stands,

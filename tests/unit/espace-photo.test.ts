@@ -1,11 +1,11 @@
 import { describe, expect, test } from 'bun:test'
-import { MESSAGES_D_ENVOI } from '@/lib/envoi-photo'
+import { MESSAGES_D_ENVOI } from '@/lib/photo-upload'
 import {
 	envoyerPuisEnregistrer,
 	MESSAGE_RESULTAT_INCERTAIN,
 	type PhotoAEnvoyer,
 	televerserLaPhoto,
-} from '@/lib/dashboard/envoi-des-photos'
+} from '@/lib/dashboard/photos-upload'
 import {
 	compresserPhoto,
 	dimensionsCibles,
@@ -17,7 +17,7 @@ import {
 	TAILLE_MAX_ENVOI,
 	verifierPhoto,
 } from '@/lib/dashboard/photo'
-import { MESSAGE_ECHEC, MESSAGE_SESSION, type ResultatDEnregistrement } from '@/lib/dashboard/resultat'
+import { MESSAGE_ECHEC, MESSAGE_SESSION, type ResultatDEnregistrement } from '@/lib/dashboard/result'
 
 /**
  * The photos she sends from her space (tickets 134 and 135; plan 02 U79, U80, E36): what is refused

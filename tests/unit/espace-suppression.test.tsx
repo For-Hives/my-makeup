@@ -1,13 +1,13 @@
 import { describe, expect, test } from 'bun:test'
 import { act } from 'react'
-import { type EnvoiDeLaSuppression, SuppressionDuCompte } from '@/components/dashboard/SuppressionDuCompte'
+import { type EnvoiDeLaSuppression, SuppressionDuCompte } from '@/components/dashboard/AccountDeletion'
 import {
 	CONFIRMATION_MAX,
 	MESSAGES_DE_SUPPRESSION,
 	type ModeDeConfirmation,
 	modeDeConfirmation,
 	schemaDeLaSuppression,
-} from '@/lib/dashboard/confirmation-suppression'
+} from '@/lib/dashboard/deletion-confirmation'
 import { ouvrirFenetre } from '../outils/dom-react'
 
 /**

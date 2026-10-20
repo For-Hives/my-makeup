@@ -24,7 +24,7 @@
 import { randomBytes } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 import { commitTransaction, createLocalReq, initTransaction, killTransaction, type Payload } from 'payload'
-import { CONTEXTE_FICHIER_NOMME } from '../lib/envoi-photo'
+import { CONTEXTE_FICHIER_NOMME } from '../lib/photo-upload'
 import { type CibleDuJeu, cibleDuJeu, JeuFictifRefuse, type VariablesDuJeu } from './garde'
 import { type PhotoDuJeu, PROFILS_DU_JEU, type ProfilDuJeu } from './profils'
 

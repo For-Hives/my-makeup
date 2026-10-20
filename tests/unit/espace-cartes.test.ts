@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { cartesDuProfil, type ProfilDeLEspace, SECTIONS } from '@/lib/dashboard/cartes'
+import { cartesDuProfil, type ProfilDeLEspace, SECTIONS } from '@/lib/dashboard/cards'
 
 /** The cards of the page of her space (ticket 118): the value stored, or nothing — never « null ». */
 

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import { erreursParChamp, IDENTITE_MAX, schemaDeLIdentite, schemaDeLIdentiteStrict } from '@/lib/dashboard/identite'
-import { echecDePayload, MESSAGE_ECHEC } from '@/lib/dashboard/resultat'
+import { erreursParChamp, IDENTITE_MAX, schemaDeLIdentite, schemaDeLIdentiteStrict } from '@/lib/dashboard/identity'
+import { echecDePayload, MESSAGE_ECHEC } from '@/lib/dashboard/result'
 
 /**
  * The rules of the identity form (ticket 119; plan 02 U25, U26, U32): bounds, French messages under

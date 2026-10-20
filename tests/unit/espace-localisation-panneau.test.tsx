@@ -1,14 +1,14 @@
 import { describe, expect, test } from 'bun:test'
 import { act } from 'react'
-import { PAUSE_DE_LA_RECHERCHE_MS, type RechercheDeCommunes } from '@/components/dashboard/ChampDeCommune'
-import { EditeurDeLocalisation, type EnvoiDeLaLocalisation } from '@/components/dashboard/EditeurDeLocalisation'
+import { PAUSE_DE_LA_RECHERCHE_MS, type RechercheDeCommunes } from '@/components/dashboard/CityField'
+import { EditeurDeLocalisation, type EnvoiDeLaLocalisation } from '@/components/dashboard/LocationEditor'
 import {
 	MESSAGE_ADRESSE_REFUSEE,
 	MESSAGE_COMMUNE_A_CHOISIR,
 	MESSAGE_SERVICE_DES_COMMUNES,
 	type ValeursDeLaLocalisation,
-} from '@/lib/dashboard/localisation'
-import { MESSAGE_ECHEC } from '@/lib/dashboard/resultat'
+} from '@/lib/dashboard/location'
+import { MESSAGE_ECHEC } from '@/lib/dashboard/result'
 import { MESSAGES_DE_LA_ZONE } from '@/lib/profil/zone'
 import { ouvrirFenetre } from '../outils/dom-react'
 

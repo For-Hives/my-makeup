@@ -13,7 +13,7 @@
 import { LONGUEUR_DESCRIPTION, LONGUEUR_NOM, messageDeDate, messageDeFin, messageDeTexte } from '../profil/listes'
 import { texte } from '../profil/nom-affiche'
 import { periode } from '../profil/vue-publique'
-import { type DefinitionDeListe, type ErreursDeLigne, jourDuFormulaire, type ValeursDeLigne } from './liste'
+import { type DefinitionDeListe, type ErreursDeLigne, jourDuFormulaire, type ValeursDeLigne } from './list'
 
 const TEXTES: readonly [string, number][] = [
 	['company', LONGUEUR_NOM],
