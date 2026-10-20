@@ -18,7 +18,7 @@
  * No `next` import: the proxy and the tests read this file.
  */
 
-import { FROZEN_URL_FAMILIES, UNFROZEN_PREFIXES } from '../urls-gelees'
+import { FROZEN_URL_FAMILIES, UNFROZEN_PREFIXES } from '../frozen-urls'
 
 export interface RedirectionDeForme {
 	/** The path to go to, with no query. */

@@ -4,14 +4,14 @@
  */
 
 import { describe, expect, test } from 'bun:test'
-import { metadonnees, metadonneesEditoriales } from '../../src/lib/seo/metadonnees'
+import { metadonnees, metadonneesEditoriales } from '../../src/lib/seo/metadata'
 import {
 	IMAGE_PAR_DEFAUT,
 	imageDePartageDeLaPhoto,
 	LARGEUR_DE_PARTAGE,
 	QUALITE_DE_PARTAGE,
-} from '../../src/lib/seo/partage'
-import { metadonneesDuProfil } from '../../src/lib/seo/profil'
+} from '../../src/lib/seo/sharing'
+import { metadonneesDuProfil } from '../../src/lib/seo/profile'
 import type { PublicProfile } from '../../src/services/public/profiles'
 
 const ABSOLUE = /^https:\/\/my-makeup\.fr\//

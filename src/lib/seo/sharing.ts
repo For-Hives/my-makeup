@@ -7,8 +7,8 @@
  */
 
 import type { Metadata } from 'next'
-import { SITE_ORIGIN } from '../urls-gelees'
-import { MARQUE } from './texte'
+import { SITE_ORIGIN } from '../frozen-urls'
+import { MARQUE } from './text'
 
 /** The picture of the site, shared by every page that has none of its own (1200 x 630). */
 export const IMAGE_PAR_DEFAUT = { url: `${SITE_ORIGIN}/assets/og-my-makeup.jpg`, width: 1200, height: 630 } as const

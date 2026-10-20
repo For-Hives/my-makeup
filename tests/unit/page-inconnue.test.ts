@@ -4,7 +4,7 @@ import {
 	type FamilleVerifiee,
 	memoireDesPagesQuiExistent,
 	segmentEcrit,
-} from '@/lib/urls/page-inconnue'
+} from '@/lib/urls/unknown-page'
 
 /** Which addresses the proxy looks up before the page runs (ticket 231). */
 

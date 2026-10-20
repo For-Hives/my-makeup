@@ -34,7 +34,7 @@ import {
 	splitAddress,
 	UNFROZEN_PREFIXES,
 	UNWANTED_404_OF_2026_10_09,
-} from '../../src/lib/urls-gelees'
+} from '../../src/lib/frozen-urls'
 
 const ROOT = join(import.meta.dir, '../..')
 const PUBLIC = join(ROOT, 'public')

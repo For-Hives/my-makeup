@@ -1,4 +1,4 @@
-import { AVANTAGES_MAQUILLEUSES } from './textes-maquilleuses'
+import { AVANTAGES_MAQUILLEUSES } from './artist-texts'
 
 function IconeCoche() {
 	return (

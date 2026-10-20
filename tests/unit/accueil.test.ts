@@ -8,14 +8,14 @@ import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import type { Payload } from 'payload'
 import { TALENTS_AVEC_ICONE } from '@/components/home/Talents'
-import { RESEAUX } from '@/components/layout/liens'
+import { RESEAUX } from '@/components/layout/links'
 import {
 	donneesStructureesDeLAccueil,
 	IDENTIFIANT_DE_L_ORGANISATION,
 	LOGO_DU_SITE,
 	serializeJsonLd,
 } from '@/lib/seo/json-ld'
-import { SITE_ORIGIN } from '@/lib/urls-gelees'
+import { SITE_ORIGIN } from '@/lib/frozen-urls'
 import { TALENTS_LIMIT, listTalents } from '@/services/public/talents'
 
 const RACINE = join(import.meta.dir, '../..')

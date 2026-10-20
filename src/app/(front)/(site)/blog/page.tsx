@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { Cta } from '@/components/blocks/Cta'
-import { ListeDesArticles } from '@/components/blog/ListeDesArticles'
-import { metadonnees } from '@/lib/seo/metadonnees'
+import { ListeDesArticles } from '@/components/blog/ArticleList'
+import { metadonnees } from '@/lib/seo/metadata'
 import { cachedArticles } from '@/services/public/cached'
 
 // Rendered at each request: the build runs without a database. The articles are read through the cache

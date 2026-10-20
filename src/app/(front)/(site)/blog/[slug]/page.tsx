@@ -5,7 +5,7 @@ import { notFound } from 'next/navigation'
 import { getPayload } from 'payload'
 import { cache } from 'react'
 import { Cta } from '@/components/blocks/Cta'
-import { ContenuMarkdown } from '@/components/content/ContenuMarkdown'
+import { ContenuMarkdown } from '@/components/content/MarkdownContent'
 import { markdownEnHtml } from '@/lib/markdown'
 import {
 	donneesStructureesDeLArticle,
@@ -13,7 +13,7 @@ import {
 	NOM_DU_SITE,
 	serializeJsonLd,
 } from '@/lib/seo/json-ld'
-import { metadonneesEditoriales } from '@/lib/seo/metadonnees'
+import { metadonneesEditoriales } from '@/lib/seo/metadata'
 import { urlCanonique } from '@/lib/seo/url'
 import { cachedArticle } from '@/services/public/cached'
 

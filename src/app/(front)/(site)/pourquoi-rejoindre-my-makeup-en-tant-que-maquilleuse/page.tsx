@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 import { Cta } from '@/components/blocks/Cta'
 import { Hero } from '@/components/blocks/Hero'
-import { AvantagesMaquilleuses } from '@/components/static-pages/AvantagesMaquilleuses'
-import { metadonnees } from '@/lib/seo/metadonnees'
+import { AvantagesMaquilleuses } from '@/components/static-pages/ArtistBenefits'
+import { metadonnees } from '@/lib/seo/metadata'
 
 export const metadata: Metadata = metadonnees({
 	titre: 'Pourquoi My-Makeup ? en tant que maquilleuse',

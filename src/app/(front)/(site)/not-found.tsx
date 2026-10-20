@@ -1,6 +1,6 @@
 import { MesureDePageIntrouvable } from '@/components/analytics/MesureDePage'
-import { PageIntrouvable } from '@/components/layout/PageIntrouvable'
-import { metadonneesIntrouvable } from '@/lib/seo/metadonnees'
+import { PageIntrouvable } from '@/components/layout/NotFoundPage'
+import { metadonneesIntrouvable } from '@/lib/seo/metadata'
 
 export const metadata = metadonneesIntrouvable('Page non trouvée')
 

@@ -1,4 +1,4 @@
-import { SITE_ORIGIN } from '../urls-gelees'
+import { SITE_ORIGIN } from '../frozen-urls'
 
 /** The names the structured data gives the site and its publisher. */
 export const NOM_DU_SITE = 'My-Makeup'

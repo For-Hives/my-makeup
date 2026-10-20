@@ -1,4 +1,4 @@
-import type { ContenuDePage } from './ArticleDePage'
+import type { ContenuDePage } from './PageArticle'
 
 /**
  * The texts of the fixed pages for makeup artists and of « À propos », as the site online says them on

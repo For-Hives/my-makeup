@@ -1,5 +1,5 @@
 import { cheminProfil } from '../slug'
-import { SITE_ORIGIN } from '../urls-gelees'
+import { SITE_ORIGIN } from '../frozen-urls'
 import { cheminPropre } from './url'
 
 /**

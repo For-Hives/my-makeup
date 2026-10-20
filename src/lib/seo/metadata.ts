@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
-import { balisesDePartage, type ImageDePartage, type TypeDePartage } from './partage'
-import { descriptionEditoriale, descriptionMeta, titrePage } from './texte'
+import { balisesDePartage, type ImageDePartage, type TypeDePartage } from './sharing'
+import { descriptionEditoriale, descriptionMeta, titrePage } from './text'
 import { urlCanonique } from './url'
 
 export interface EntreesDePage {

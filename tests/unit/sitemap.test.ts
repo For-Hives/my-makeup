@@ -14,7 +14,7 @@ import {
 	pagesFixesLivrees,
 	sitemapXml,
 } from '../../src/lib/seo/sitemap'
-import { FROZEN_URL_FAMILIES } from '../../src/lib/urls-gelees'
+import { FROZEN_URL_FAMILIES } from '../../src/lib/frozen-urls'
 import {
 	readIndexablePages,
 	readIndexableProfiles,

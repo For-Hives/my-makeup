@@ -1,5 +1,5 @@
 import { SuiviDeLaSoumission } from '@/components/analytics/SuiviDeLaSoumission'
-import { IconeLieu, IconeLoupe } from './icones'
+import { IconeLieu, IconeLoupe } from './icons'
 
 const CHAMP =
 	'flex w-full items-center rounded-lg border-2 border-indigo-900 bg-transparent py-2 pr-6 pl-12 text-indigo-900 text-sm leading-6'

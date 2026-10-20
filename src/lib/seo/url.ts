@@ -1,4 +1,4 @@
-import { SITE_ORIGIN } from '../urls-gelees'
+import { SITE_ORIGIN } from '../frozen-urls'
 
 /**
  * Absolute addresses of the site (ticket 070). The origin is the constant apex of the site, never

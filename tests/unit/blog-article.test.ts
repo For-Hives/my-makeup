@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
 import { z } from 'zod'
 import { donneesStructureesDeLArticle, donneesStructureesDuFilDAriane, serializeJsonLd } from '@/lib/seo/json-ld'
-import { descriptionEditoriale, texteBrut } from '@/lib/seo/texte'
+import { descriptionEditoriale, texteBrut } from '@/lib/seo/text'
 import { ARTICLE_FIELDS, readPublicArticle } from '@/services/public/articles'
 
 /**

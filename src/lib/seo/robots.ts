@@ -1,4 +1,4 @@
-import { SITE_ORIGIN } from '../urls-gelees'
+import { SITE_ORIGIN } from '../frozen-urls'
 
 /**
  * What search engines may index (ticket 070, test U52): never the account pages (/auth) nor the

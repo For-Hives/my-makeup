@@ -7,7 +7,7 @@
 
 import config from '@payload-config'
 import { getPayload } from 'payload'
-import { type FamilleVerifiee, memoireDesPagesQuiExistent } from '@/lib/urls/page-inconnue'
+import { type FamilleVerifiee, memoireDesPagesQuiExistent } from '@/lib/urls/unknown-page'
 import { cachedProfileUrl, cachedArticle, cachedTalent } from './cached'
 
 const memory = memoireDesPagesQuiExistent()

@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { BlocDeRecherche } from './BlocDeRecherche'
+import { BlocDeRecherche } from './SearchBlock'
 
 interface PropsHero {
 	/** The only h1 of the page. */

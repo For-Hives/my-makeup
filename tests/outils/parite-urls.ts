@@ -30,7 +30,7 @@ import {
 	familiesMeasured,
 	SITE_ORIGIN,
 	splitAddress,
-} from '../../src/lib/urls-gelees'
+} from '../../src/lib/frozen-urls'
 
 /* ------------------------------------------------------------------------------------------
  * Reading the h1 like the measuring tool

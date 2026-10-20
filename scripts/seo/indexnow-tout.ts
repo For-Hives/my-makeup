@@ -1,5 +1,5 @@
 import { adressesDuSitemap, cleIndexNow, envoyerAIndexNow } from '../../src/lib/seo/indexnow'
-import { SITE_ORIGIN } from '../../src/lib/urls-gelees'
+import { SITE_ORIGIN } from '../../src/lib/frozen-urls'
 
 /**
  * Tells IndexNow about every address of the sitemap of the site (ticket 219, the step « envoi des adresses »

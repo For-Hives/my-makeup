@@ -1,6 +1,6 @@
 import { type ContenuPublic, type EtatPublic, PAGES_PUBLIQUES } from '../revalidation'
 import { estUnSlug } from '../slug'
-import { SITE_ORIGIN } from '../urls-gelees'
+import { SITE_ORIGIN } from '../frozen-urls'
 import { urlCanonique } from './url'
 
 /**

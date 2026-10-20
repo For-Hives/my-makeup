@@ -1,6 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { COLONNES_DE_PIED, RESEAUX } from './liens'
+import { COLONNES_DE_PIED, RESEAUX } from './links'
 import { Signature } from './Signature'
 
 export function Footer() {

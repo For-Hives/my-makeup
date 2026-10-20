@@ -1,7 +1,7 @@
 import type { CollectionConfig, TextFieldSingleValidation } from 'payload'
 import { text } from 'payload/shared'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
-import { TITRE_MAX, TITRE_MIN_DES_TALENTS } from '../lib/seo/texte'
+import { TITRE_MAX, TITRE_MIN_DES_TALENTS } from '../lib/seo/text'
 import {
 	ACCES_REDACTION,
 	champPublieLe,

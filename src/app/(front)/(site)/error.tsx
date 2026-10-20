@@ -1,7 +1,7 @@
 'use client'
 
 import { MesureDErreur } from '@/components/analytics/MesureDePage'
-import { PageEnErreur } from '@/components/layout/PageEnErreur'
+import { PageEnErreur } from '@/components/layout/ErrorPage'
 
 // The message and the trace of the error stay on the server, in its log: the visitor reads a sentence.
 // Next 16 gives the retry as `unstable_retry`; the event keeps only a scope and a code (ticket 145).

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { dateDeLArticle, ListeDesArticles } from '../../src/components/blog/ListeDesArticles'
+import { dateDeLArticle, ListeDesArticles } from '../../src/components/blog/ArticleList'
 import {
 	type ListedArticle,
 	LIST_FIELDS,

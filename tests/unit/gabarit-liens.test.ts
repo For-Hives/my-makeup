@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import { COLONNES_DE_PIED, cheminsInternes, NAVIGATION, RESEAUX } from '../../src/components/layout/liens'
-import { anonymousStatus, familiesFor, SITE_ORIGIN } from '../../src/lib/urls-gelees'
+import { COLONNES_DE_PIED, cheminsInternes, NAVIGATION, RESEAUX } from '../../src/components/layout/links'
+import { anonymousStatus, familiesFor, SITE_ORIGIN } from '../../src/lib/frozen-urls'
 
 describe('liens du gabarit (068)', () => {
 	test('chaque lien interne est une adresse gelée qui répond 200 (aucun lien mort)', () => {

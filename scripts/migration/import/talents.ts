@@ -7,7 +7,7 @@
  * before any write and listed (rule 5): it is never corrected.
  */
 
-import { TITRES_DES_PAGES_TALENT } from '../../../src/content/talents-titres'
+import { TITRES_DES_PAGES_TALENT } from '../../../src/content/talent-titles'
 import { estUnSlug } from '../../../src/lib/slug'
 import { REFERENCES } from './ecarts'
 import type { Adaptateur, Attendu, Refus } from './moteur'

@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { signOut } from '@/app/(front)/(dashboard)/auth/actions'
 import { LienSuivi } from '@/components/analytics/LienSuivi'
-import { LIEN_CONNEXION, LIEN_ESPACE, LIEN_RECHERCHE, NAVIGATION } from './liens'
+import { LIEN_CONNEXION, LIEN_ESPACE, LIEN_RECHERCHE, NAVIGATION } from './links'
 
 const LIEN = 'font-semibold text-gray-900 text-sm leading-6'
 const ANNEAU = 'focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2'

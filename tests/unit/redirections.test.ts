@@ -4,8 +4,8 @@
  */
 
 import { describe, expect, test } from 'bun:test'
-import { REDIRECTIONS_DE_CHEMIN, redirectionDeForme } from '../../src/lib/urls/forme'
-import { FROZEN_URL_FAMILIES, splitAddress, UNFROZEN_PREFIXES } from '../../src/lib/urls-gelees'
+import { REDIRECTIONS_DE_CHEMIN, redirectionDeForme } from '../../src/lib/urls/shape'
+import { FROZEN_URL_FAMILIES, splitAddress, UNFROZEN_PREFIXES } from '../../src/lib/frozen-urls'
 
 describe('U62 : la double barre et la barre finale', () => {
 	test('`//x` répond 301 vers `/x`', () => {

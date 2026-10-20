@@ -15,7 +15,7 @@
 
 import tls from 'node:tls'
 import { MEDIA_ORIGIN_DEFAULT, UMAMI_ORIGIN_DEFAULT } from '../../src/lib/env'
-import { SITE_ORIGIN } from '../../src/lib/urls-gelees'
+import { SITE_ORIGIN } from '../../src/lib/frozen-urls'
 import { garder, RequeteInterdite, type Transport } from './garde'
 import { creerLecteur, HORLOGE_REELLE, type Horloge, type Lecteur } from './lecteur'
 import { type Constat, pire, raisonDe, type Verdict } from './resultat'

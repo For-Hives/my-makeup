@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 import { Cta } from '@/components/blocks/Cta'
 import { Hero } from '@/components/blocks/Hero'
-import { AvantagesParticulier } from '@/components/static-pages/AvantagesParticulier'
-import { metadonnees } from '@/lib/seo/metadonnees'
+import { AvantagesParticulier } from '@/components/static-pages/ClientBenefits'
+import { metadonnees } from '@/lib/seo/metadata'
 
 const DESCRIPTION = 'Découvrez pourquoi vous devriez utiliser My-Makeup en tant que particulier & professionnel'
 

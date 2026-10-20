@@ -11,11 +11,11 @@
 
 import type { Metadata } from 'next'
 import type { PublicProfile } from '@/services/public/profiles'
-import { SITE_ORIGIN } from '../urls-gelees'
+import { SITE_ORIGIN } from '../frozen-urls'
 import { NOM_DU_SITE } from './json-ld'
-import { metadonnees } from './metadonnees'
-import { imageDePartageDeLaPhoto } from './partage'
-import { MARQUE, TITRE_MAX, texteSur, tronquer } from './texte'
+import { metadonnees } from './metadata'
+import { imageDePartageDeLaPhoto } from './sharing'
+import { MARQUE, TITRE_MAX, texteSur, tronquer } from './text'
 import { urlCanonique } from './url'
 
 /** The address path of a profile. */

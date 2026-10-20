@@ -1,9 +1,9 @@
 import type { Metadata } from 'next'
 import { Cta } from '@/components/blocks/Cta'
 import { Hero } from '@/components/blocks/Hero'
-import { ArticleDePage } from '@/components/static-pages/ArticleDePage'
-import { PARTENARIATS } from '@/components/static-pages/textes-maquilleuses'
-import { metadonnees } from '@/lib/seo/metadonnees'
+import { ArticleDePage } from '@/components/static-pages/PageArticle'
+import { PARTENARIATS } from '@/components/static-pages/artist-texts'
+import { metadonnees } from '@/lib/seo/metadata'
 
 export const metadata: Metadata = metadonnees({
 	titre: 'Communauté et partenariats !',

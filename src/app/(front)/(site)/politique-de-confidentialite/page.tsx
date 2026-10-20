@@ -1,9 +1,9 @@
 import Link from 'next/link'
 import { OppositionMesure } from '@/components/analytics/OppositionMesure'
-import { PageJuridique } from '@/components/legal/PageJuridique'
+import { PageJuridique } from '@/components/legal/LegalPage'
 import { EDITEUR, formatSiret } from '@/lib/legal'
 import { JOURS_AVANT_EFFACEMENT_DES_PHOTOS, PRESTATAIRES } from '@/lib/prestataires'
-import { metadonnees } from '@/lib/seo/metadonnees'
+import { metadonnees } from '@/lib/seo/metadata'
 import { DELAI_AVANT_PURGE_JOURS } from '@/lib/taches/comptes-non-confirmes'
 
 // Static: the text is in the code, and the page reads no cookie and no data (ticket 112).

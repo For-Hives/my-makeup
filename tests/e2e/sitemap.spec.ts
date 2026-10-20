@@ -1,6 +1,6 @@
 import { type APIRequestContext, expect, test } from '@playwright/test'
 import { pagesFixesLivrees } from '../../src/lib/seo/sitemap'
-import { SITE_ORIGIN } from '../../src/lib/urls-gelees'
+import { SITE_ORIGIN } from '../../src/lib/frozen-urls'
 import { PROFILS_DE_RECHERCHE, poserLesProfilsDeRecherche } from '../fixtures/profils-de-recherche'
 import { creerContenu, rafraichirLesPagesDesProfils, supprimerContenu } from '../outils/pages-publiques'
 import { payloadDeTest } from '../outils/payload-test'

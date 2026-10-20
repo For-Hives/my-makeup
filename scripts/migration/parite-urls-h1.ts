@@ -12,7 +12,7 @@
 
 import { readFileSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { SITE_ORIGIN } from '../../src/lib/urls-gelees'
+import { SITE_ORIGIN } from '../../src/lib/frozen-urls'
 import { lireLeCsv } from '../../tests/outils/parite-urls'
 import { FROZEN_INVENTORY } from './urls-doc'
 

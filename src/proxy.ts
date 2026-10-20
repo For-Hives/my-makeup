@@ -19,8 +19,8 @@ import {
 } from '@/lib/contact/frein'
 import { rateLimitSearch } from '@/lib/search/rate-limit'
 import { robotsPourChemin } from '@/lib/seo/robots'
-import { redirectionDeForme } from '@/lib/urls/forme'
-import { adresseAVerifier, type FamilleVerifiee } from '@/lib/urls/page-inconnue'
+import { redirectionDeForme } from '@/lib/urls/shape'
+import { adresseAVerifier, type FamilleVerifiee } from '@/lib/urls/unknown-page'
 
 /**
  * One proxy, no matcher: it runs for every request.

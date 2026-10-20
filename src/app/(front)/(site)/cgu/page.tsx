@@ -1,7 +1,7 @@
 import Link from 'next/link'
-import { PageJuridique } from '@/components/legal/PageJuridique'
+import { PageJuridique } from '@/components/legal/LegalPage'
 import { EDITEUR } from '@/lib/legal'
-import { metadonnees } from '@/lib/seo/metadonnees'
+import { metadonnees } from '@/lib/seo/metadata'
 
 // Static: the text is in the code, and the page reads no cookie and no data (ticket 112).
 export const metadata = metadonnees({

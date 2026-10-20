@@ -21,7 +21,7 @@ import {
 	familiesMeasured,
 	UNWANTED_404_OF_2026_10_09,
 	type UrlKind,
-} from '../../src/lib/urls-gelees'
+} from '../../src/lib/frozen-urls'
 
 export const DOCUMENT_PATH = fileURLToPath(new URL('../../docs/migration/URLS.md', import.meta.url))
 

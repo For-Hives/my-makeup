@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
 import { validerTitreDeLaPage } from '@/collections/Talents'
-import { metadonneesEditoriales } from '@/lib/seo/metadonnees'
-import { TITRE_MAX, TITRE_MIN_DES_TALENTS } from '@/lib/seo/texte'
+import { metadonneesEditoriales } from '@/lib/seo/metadata'
+import { TITRE_MAX, TITRE_MIN_DES_TALENTS } from '@/lib/seo/text'
 import { TALENT_PAGE_FIELDS, readTalent } from '@/services/public/talents'
 
 /**

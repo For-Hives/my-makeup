@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import type { TalentPublic } from '@/services/public/talents'
-import { CarteDeDemonstration } from './CarteDeDemonstration'
+import { CarteDeDemonstration } from './DemoCard'
 
 /** The talents that have an icon under `public/assets/talents/`: a talent created later is shown without one. */
 export const TALENTS_AVEC_ICONE: ReadonlySet<string> = new Set([

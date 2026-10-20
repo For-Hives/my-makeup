@@ -26,7 +26,7 @@
  * (tests/outils/http-sortant.ts). The logic is tested in tests/unit/sondes.test.ts.
  */
 
-import { SITE_ORIGIN } from '../../src/lib/urls-gelees'
+import { SITE_ORIGIN } from '../../src/lib/frozen-urls'
 import {
 	type LireUnCertificat,
 	type LireUnDomaine,

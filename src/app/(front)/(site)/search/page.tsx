@@ -1,6 +1,6 @@
 import Image from 'next/image'
 import { MesureDeRecherche } from '@/components/analytics/MesureDePage'
-import { BlocDeRecherche } from '@/components/blocks/BlocDeRecherche'
+import { BlocDeRecherche } from '@/components/blocks/SearchBlock'
 import { NoResult, SearchFailed } from '@/components/search/SearchStates'
 import { ResultList } from '@/components/search/ResultList'
 import { ResultPages } from '@/components/search/ResultPages'
@@ -11,7 +11,7 @@ import { sectionsByPlace } from '@/lib/search/place'
 import { paginate, sectionsOfPage } from '@/lib/search/pagination'
 import { find } from '@/lib/search/results'
 import { readSearch, searchByWord, searchByCity, resultsTitle } from '@/lib/search/input'
-import { metadonnees } from '@/lib/seo/metadonnees'
+import { metadonnees } from '@/lib/seo/metadata'
 import { cachedDirectoryWithTexts, cachedDirectory } from '@/services/public/cached'
 
 // The address is the search: read at each request. The directory it ranks is read through the cache
