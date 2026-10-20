@@ -1,7 +1,14 @@
 import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import { collectRepository, evaluate, loadConfig, loadWords, type NamingConfig, namesOfPaths } from '../../scripts/naming/check'
+import {
+	collectRepository,
+	evaluate,
+	loadConfig,
+	loadWords,
+	type NamingConfig,
+	namesOfPaths,
+} from '../../scripts/naming/check'
 import { readWorkflow } from '../support/ci-guardrails'
 
 /**
