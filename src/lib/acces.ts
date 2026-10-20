@@ -19,7 +19,7 @@
 
 import type { Access, FieldAccess, PayloadRequest, Where } from 'payload'
 // Relative import on purpose: this file is also loaded by the Payload CLI, outside of Next.
-import { STATUT_PUBLIE } from './profil/statut'
+import { PUBLISHED_STATUS } from './profile/status'
 
 /** The roles of an `admins` account, in the order the admin panel lists them. */
 export const ROLES_ADMIN = ['admin', 'editor'] as const
@@ -114,7 +114,7 @@ const identifiantImpossible = (id: number | string | null | undefined): boolean 
 	id !== undefined && id !== null && !identifiantPossible(id)
 
 /** The profiles the public reads: the published ones (U53). */
-export const PROFILS_PUBLIES: Where = { status: { equals: STATUT_PUBLIE } }
+export const PROFILS_PUBLIES: Where = { status: { equals: PUBLISHED_STATUS } }
 
 /**
  * Reading profiles (ticket 021). The role `admin` reads every profile; a makeup artist reads her

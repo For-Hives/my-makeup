@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test'
 import sharp from 'sharp'
 import { MESSAGES_PHOTO } from '@/lib/dashboard/photo'
-import { photosNommees } from '@/lib/profil/photos'
+import { namedPhotos } from '@/lib/profile/photos'
 import { violationsGraves } from '../outils/axe'
 import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest } from '../outils/payload-test'
@@ -90,7 +90,7 @@ async function mediasDe(compte: Maquilleuse) {
 /** The media of this account that nothing references: the orphans of the test. */
 async function orphelinsDe(compte: Maquilleuse): Promise<number[]> {
 	const profil = await profilStocke(compte)
-	const utilises = new Set([...photosNommees(profil.gallery), ...photosNommees(profil.mainPicture)].map(String))
+	const utilises = new Set([...namedPhotos(profil.gallery), ...namedPhotos(profil.mainPicture)].map(String))
 	return (await mediasDe(compte)).filter(media => !utilises.has(String(media.id))).map(media => media.id)
 }
 
@@ -160,7 +160,7 @@ test.describe('135 : le portfolio, ajouter des photos', { tag: '@mobile' }, () =
 		const profil = await profilStocke(compte)
 		const payload = await payloadDeTest()
 		const stockees = await Promise.all(
-			photosNommees(profil.gallery).map(id => payload.findByID({ collection: 'media', id: Number(id), depth: 0 }))
+			namedPhotos(profil.gallery).map(id => payload.findByID({ collection: 'media', id: Number(id), depth: 0 }))
 		)
 		expect(stockees.map(media => media.width)).toEqual([801, 802, 803])
 		expect(stockees.map(media => media.alt)).toEqual(['Photo du portfolio', 'Photo du portfolio', 'Photo du portfolio'])
@@ -214,7 +214,7 @@ test.describe('135 : le portfolio, ajouter des photos', { tag: '@mobile' }, () =
 		await page.getByRole('button', { name: 'Enregistrer' }).click()
 		await expect(dialogue(page)).toHaveCount(0, { timeout: 60_000 })
 		expect(envoyes).toHaveLength(2)
-		expect(photosNommees((await profilStocke(compte)).gallery)).toHaveLength(10)
+		expect(namedPhotos((await profilStocke(compte)).gallery)).toHaveLength(10)
 		expect(await orphelinsDe(compte)).toEqual([])
 	})
 
@@ -236,7 +236,7 @@ test.describe('135 : le portfolio, ajouter des photos', { tag: '@mobile' }, () =
 		await expect(dialogue(page)).toHaveCount(0)
 		expect(envoyes).toHaveLength(0)
 		expect((await mediasDe(compte)).length).toBe(avant)
-		expect(photosNommees((await profilStocke(compte)).gallery)).toHaveLength(1)
+		expect(namedPhotos((await profilStocke(compte)).gallery)).toHaveLength(1)
 		expect(await orphelinsDe(compte)).toEqual([])
 		await ouvrir(page)
 		await expect(lignes(page)).toHaveCount(1)
@@ -260,7 +260,7 @@ test.describe('135 : le portfolio, ajouter des photos', { tag: '@mobile' }, () =
 		await expect(page.getByRole('alert').filter({ hasText: MESSAGES_PHOTO['envoi-impossible'] })).toBeVisible()
 		await expect(dialogue(page)).toBeVisible()
 		await expect.poll(async () => (await mediasDe(compte)).length).toBe(1)
-		expect(photosNommees((await profilStocke(compte)).gallery)).toHaveLength(1)
+		expect(namedPhotos((await profilStocke(compte)).gallery)).toHaveLength(1)
 		expect(await orphelinsDe(compte)).toEqual([])
 	})
 })
@@ -273,7 +273,7 @@ test.describe('136 : le portfolio, retirer une photo', { tag: '@mobile' }, () =>
 		test.setTimeout(120_000)
 		const { compte, slug } = await maquilleuse(context, 3)
 		const payload = await payloadDeTest()
-		const avant = photosNommees((await profilStocke(compte)).gallery)
+		const avant = namedPhotos((await profilStocke(compte)).gallery)
 		const retiree = await payload.findByID({ collection: 'media', id: Number(avant[1]), depth: 0 })
 		const octets = (await lireUnObjet(`media/${retiree.filename}`))?.octets
 		expect(octets).toBeDefined()
@@ -288,13 +288,13 @@ test.describe('136 : le portfolio, retirer une photo', { tag: '@mobile' }, () =>
 		)
 		// The focus stays in the panel, on the photo that takes the place of the one removed.
 		await expect(dialogue(page).getByRole('button', { name: 'Retirer la photo 2' })).toBeFocused()
-		expect(photosNommees((await profilStocke(compte)).gallery)).toHaveLength(3)
+		expect(namedPhotos((await profilStocke(compte)).gallery)).toHaveLength(3)
 		expect(await violationsGraves(page)).toEqual([])
 		await page.getByRole('button', { name: 'Enregistrer' }).click()
 
 		await expect(dialogue(page)).toHaveCount(0, { timeout: 60_000 })
 		await expect(page.getByTestId('carte-portfolio')).toContainText('2 photos')
-		expect(photosNommees((await profilStocke(compte)).gallery)).toEqual([avant[0], avant[2]])
+		expect(namedPhotos((await profilStocke(compte)).gallery)).toEqual([avant[0], avant[2]])
 		expect(await lireUnObjet(`media/${retiree.filename}`)).toBeUndefined()
 		expect((await lireUnObjet(`deleted/media/${retiree.filename}`))?.octets).toEqual(octets)
 		expect(await orphelinsDe(compte)).toEqual([])
@@ -308,7 +308,7 @@ test.describe('136 : le portfolio, retirer une photo', { tag: '@mobile' }, () =>
 
 	test('retirer puis fermer sans valider : la photo est toujours là, rien n’a changé', async ({ context, page }) => {
 		const { compte } = await maquilleuse(context, 2)
-		const avant = photosNommees((await profilStocke(compte)).gallery)
+		const avant = namedPhotos((await profilStocke(compte)).gallery)
 		await page.goto('/auth/profil')
 		await ouvrir(page)
 
@@ -318,7 +318,7 @@ test.describe('136 : le portfolio, retirer une photo', { tag: '@mobile' }, () =>
 		await page.getByRole('button', { name: 'Abandonner mes modifications' }).click()
 		await expect(dialogue(page)).toHaveCount(0)
 
-		expect(photosNommees((await profilStocke(compte)).gallery)).toEqual(avant)
+		expect(namedPhotos((await profilStocke(compte)).gallery)).toEqual(avant)
 		await ouvrir(page)
 		await expect(lignes(page)).toHaveCount(2)
 		expect(await orphelinsDe(compte)).toEqual([])

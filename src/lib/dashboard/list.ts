@@ -18,7 +18,7 @@
  */
 
 import { z } from 'zod'
-import { jourCalendaire } from '../profil/listes'
+import { calendarDay } from '../profile/lists'
 
 export type FieldKind = 'texte' | 'date' | 'long'
 
@@ -145,7 +145,7 @@ function fingerprint(definition: ListDefinition, valeurs: RowValues): string {
 	return JSON.stringify(
 		definition.champs.map(({ nom, genre }) => {
 			const v = (valeurs[nom] ?? '').trim()
-			return genre === 'date' ? (jourCalendaire(v) ?? v) : v
+			return genre === 'date' ? (calendarDay(v) ?? v) : v
 		})
 	)
 }
@@ -171,7 +171,7 @@ export function rowErrors(
 }
 
 /** The day of a date field as the form writes it, « YYYY-MM-DD », or '' for nothing. */
-export const formDay = (valeur: unknown): string => jourCalendaire(valeur) ?? ''
+export const formDay = (valeur: unknown): string => calendarDay(valeur) ?? ''
 
 /**
  * Where the focus goes after a row is removed (rule L4): the row that takes its place, or the one

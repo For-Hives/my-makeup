@@ -9,9 +9,9 @@ import type {
 } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { estUnImport } from '../lib/contexte-import'
-import { STATUT_PUBLIE } from '../lib/profil/statut'
+import { PUBLISHED_STATUS } from '../lib/profile/status'
 import { type Cibles, type ContenuPublic, ciblesDuChangement, type EtatPublic } from '../lib/revalidation'
-import { adressesDuChangement, cleSiLEnvoiEstPermis, signalerPlusTard } from '../lib/seo/indexnow'
+import { changedUrls, keyIfSubmitAllowed, reportLater } from '../lib/seo/indexnow'
 
 /**
  * The refresh of the public pages (ticket 047): when a profile, an article or a talent is created,
@@ -31,7 +31,7 @@ import { adressesDuChangement, cleSiLEnvoiEstPermis, signalerPlusTard } from '..
 
 /** The field of the stored row that says whether the document is shown, and its public value. */
 const VISIBILITE: Readonly<Record<ContenuPublic, { champ: 'status' | '_status'; valeur: string }>> = {
-	profiles: { champ: 'status', valeur: STATUT_PUBLIE },
+	profiles: { champ: 'status', valeur: PUBLISHED_STATUS },
 	articles: { champ: '_status', valeur: 'published' },
 	talents: { champ: '_status', valeur: 'published' },
 }
@@ -120,10 +120,10 @@ export function signalerAuxMoteurs(
 	avant: EtatPublic | null,
 	apres: EtatPublic | null
 ): void {
-	const cle = cleSiLEnvoiEstPermis()
+	const cle = keyIfSubmitAllowed()
 	if (cle === undefined) return
 	try {
-		signalerPlusTard(adressesDuChangement(contenu, avant, apres), {
+		reportLater(changedUrls(contenu, avant, apres), {
 			cle,
 			journal: {
 				info: message => req.payload.logger.info(message),

@@ -8,7 +8,7 @@ import {
 	removeHtml,
 	strictDescriptionSchema,
 } from '@/lib/dashboard/description'
-import { longueurDescription } from '@/lib/profil/completude'
+import { descriptionLength } from '@/lib/profile/completeness'
 
 /** The rules of the description form (ticket 122; plan 02 U05, U27, U32). */
 
@@ -82,7 +82,7 @@ describe('U05 : le compteur suit la définition unique de la complétude', () =>
 
 	test('le compte est celui de longueurDescription, pour des textes de toute forme', () => {
 		for (const texte of ['', ' ', 'a b  c', 'a\n\nb\tc', 'é'.repeat(250), `x${' '.repeat(50)}y`])
-			expect(descriptionCounter(texte).compte).toBe(longueurDescription(texte))
+			expect(descriptionCounter(texte).compte).toBe(descriptionLength(texte))
 	})
 })
 

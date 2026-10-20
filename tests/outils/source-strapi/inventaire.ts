@@ -11,15 +11,9 @@
  */
 
 import { parsePrice } from '@/lib/prix'
-import { type ChampsDuProfil, completude, villeExploitable } from '@/lib/profil/completude'
-import { lieuPublic } from '@/lib/profil/lieu-public'
-import {
-	LONGUEUR_DESCRIPTION,
-	LONGUEUR_NOM,
-	messageDeFin,
-	messageDeTexte,
-	messageDObtention,
-} from '@/lib/profil/listes'
+import { completeness, type ProfileFields, usableCity } from '@/lib/profile/completeness'
+import { DESCRIPTION_MAX_LENGTH, endMessage, NAME_MAX_LENGTH, obtainMessage, textMessage } from '@/lib/profile/lists'
+import { publicPlace } from '@/lib/profile/public-place'
 import { attribuerSlugs, slugDeRepli, slugifier } from '@/lib/slug'
 import {
 	COMPTES_DE_FIXTURE,
@@ -153,7 +147,7 @@ function lire(etat: EtatDeLaSource) {
 		return adresse?.startsWith(`${medias}/`) ? adresse.slice(medias.length + 1) : null
 	}
 
-	const champsDuProfil = (profil: Ligne): ChampsDuProfil => {
+	const champsDuProfil = (profil: Ligne): ProfileFields => {
 		const id = idDe(profil)
 		const photos = (champ: string) =>
 			liensVivants
@@ -188,7 +182,7 @@ function lire(etat: EtatDeLaSource) {
 				: null,
 		}
 	}
-	const lectures = profils.map(profil => ({ profil, completude: completude(champsDuProfil(profil)) }))
+	const lectures = profils.map(profil => ({ profil, completude: completeness(champsDuProfil(profil)) }))
 
 	return {
 		...etat,
@@ -341,12 +335,12 @@ export const CAS: readonly Cas[] = [
 		l => l.profils.filter(p => (nombre(p.action_radius) ?? 0) > 200).length,
 	],
 	[P, 'Ville vide ou nulle', '—', l => l.profils.filter(p => !rempli(p.city)).length],
-	[P, 'Ville lue comme une adresse postale', '—', l => l.profils.filter(p => lieuPublic(p.city).adresse).length],
+	[P, 'Ville lue comme une adresse postale', '—', l => l.profils.filter(p => publicPlace(p.city).adresse).length],
 	[
 		P,
 		'Ville qui n’est pas une commune exploitable (pays, texte libre)',
 		'—',
-		l => l.profils.filter(p => rempli(p.city) && !villeExploitable(p.city)).length,
+		l => l.profils.filter(p => rempli(p.city) && !usableCity(p.city)).length,
 	],
 	[
 		P,
@@ -405,21 +399,21 @@ export const CAS: readonly Cas[] = [
 		'Expériences dont la fin précède le début (hors des bornes de la v3)',
 		'—',
 		l =>
-			l.lignes.components_makeupartists_experiences.filter(e => messageDeFin(e.date_end, e.date_start) !== null).length,
+			l.lignes.components_makeupartists_experiences.filter(e => endMessage(e.date_end, e.date_start) !== null).length,
 	],
 	[
 		L,
 		'Formations obtenues plus d’un an après le jour (hors des bornes de la v3)',
 		'—',
 		l =>
-			l.lignes.components_makeupartists_courses.filter(f => messageDObtention(f.date_graduation, new Date()) !== null)
+			l.lignes.components_makeupartists_courses.filter(f => obtainMessage(f.date_graduation, new Date()) !== null)
 				.length,
 	],
 	[
 		L,
 		'Options dont le nom dépasse 70 caractères (hors des bornes de la v3)',
 		'—',
-		l => l.lignes.components_service_offers_options.filter(o => messageDeTexte(o.name, LONGUEUR_NOM) !== null).length,
+		l => l.lignes.components_service_offers_options.filter(o => textMessage(o.name, NAME_MAX_LENGTH) !== null).length,
 	],
 	[
 		L,
@@ -427,7 +421,7 @@ export const CAS: readonly Cas[] = [
 		'—',
 		l =>
 			l.lignes.components_makeupartists_service_offers.filter(
-				p => messageDeTexte(p.description, LONGUEUR_DESCRIPTION) !== null
+				p => textMessage(p.description, DESCRIPTION_MAX_LENGTH) !== null
 			).length,
 	],
 

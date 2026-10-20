@@ -16,7 +16,7 @@
 
 import { z } from 'zod'
 import { DEPLOYED_ORIGINS } from '../env'
-import { aLesCaracteresDUnNom, departementDuCodeInsee, ressembleAUneAdresse } from '../profil/zone'
+import { departmentOfInseeCode, hasNameCharacters, looksLikeAnAddress } from '../profile/zone'
 import { cityLabel, SEARCH_MAX, SEARCH_MIN } from './location'
 
 /** The public address of the list. */
@@ -66,7 +66,7 @@ const API_CITY = z.object({
 })
 
 function officialCity(ligne: z.infer<typeof API_CITY>): OfficialCity | null {
-	const department = departementDuCodeInsee(ligne.code)
+	const department = departmentOfInseeCode(ligne.code)
 	// A code the collection would refuse is not a commune we can store.
 	if (department === null) return null
 	const [longitude, latitude] = ligne.centre?.coordinates ?? [null, null]
@@ -101,7 +101,7 @@ export function searchQuestion(
 	const clean = texte.trim().replace(/\s+/g, ' ')
 	if (/^\d{5}$/.test(clean)) return { genre: 'codePostal', valeur: clean }
 	if (clean.length < SEARCH_MIN) return { genre: 'rien', motif: 'trop-court' }
-	if (clean.length > SEARCH_MAX || ressembleAUneAdresse(clean) || !aLesCaracteresDUnNom(clean))
+	if (clean.length > SEARCH_MAX || looksLikeAnAddress(clean) || !hasNameCharacters(clean))
 		return { genre: 'rien', motif: 'adresse' }
 	return { genre: 'nom', valeur: clean }
 }
@@ -140,7 +140,7 @@ export type CityFromCode = { genre: 'commune'; commune: OfficialCity } | { genre
 /** The commune of an INSEE code, as the list holds it: its name, its département and its centre. */
 export async function cityFromCode(codeInsee: string): Promise<CityFromCode> {
 	// The code goes in the path: only a well formed one is asked.
-	if (departementDuCodeInsee(codeInsee) === null) return { genre: 'inconnue' }
+	if (departmentOfInseeCode(codeInsee) === null) return { genre: 'inconnue' }
 	const response = await ask(`/communes/${encodeURIComponent(codeInsee)}`, { fields: REQUESTED_FIELDS })
 	if (response.genre !== 'ok') return response
 	const parsed = API_CITY.safeParse(response.corps)

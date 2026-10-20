@@ -7,16 +7,11 @@ import { describe, expect, test } from 'bun:test'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import type { Payload } from 'payload'
-import { TALENTS_AVEC_ICONE } from '@/components/accueil/Talents'
-import { RESEAUX } from '@/components/gabarit/liens'
-import {
-	donneesStructureesDeLAccueil,
-	IDENTIFIANT_DE_L_ORGANISATION,
-	LOGO_DU_SITE,
-	serializeJsonLd,
-} from '@/lib/seo/json-ld'
-import { SITE_ORIGIN } from '@/lib/urls-gelees'
-import { LIMITE_DES_TALENTS, listerLesTalents } from '@/services/public/talents'
+import { TALENTS_WITH_ICON } from '@/components/home/Talents'
+import { NETWORKS } from '@/components/layout/links'
+import { SITE_ORIGIN } from '@/lib/frozen-urls'
+import { homeStructuredData, ORGANIZATION_ID, SITE_LOGO, serializeJsonLd } from '@/lib/seo/json-ld'
+import { listTalents, TALENTS_LIMIT } from '@/services/public/talents'
 
 const RACINE = join(import.meta.dir, '../..')
 
@@ -35,14 +30,14 @@ describe('les talents de l’accueil', () => {
 	test('la lecture choisit deux champs, garde les règles d’accès et se borne elle-même', async () => {
 		const { payload, lectures } = payloadEspion([])
 
-		await listerLesTalents(payload)
+		await listTalents(payload)
 
 		expect(lectures).toHaveLength(1)
 		expect(lectures[0]).toMatchObject({
 			collection: 'talents',
 			select: { slug: true, title: true },
 			overrideAccess: false,
-			limit: LIMITE_DES_TALENTS,
+			limit: TALENTS_LIMIT,
 		})
 	})
 
@@ -54,7 +49,7 @@ describe('les talents de l’accueil', () => {
 			{ slug: 'indefini', title: 'undefined' },
 		])
 
-		expect(await listerLesTalents(payload)).toEqual([{ slug: 'maquillage-mariee', titre: 'Maquillage de mariée' }])
+		expect(await listTalents(payload)).toEqual([{ slug: 'maquillage-mariee', titre: 'Maquillage de mariée' }])
 	})
 })
 
@@ -67,8 +62,8 @@ describe('aucune promesse retirée par CONF-01', () => {
 
 	test('ni « milliers », ni « paiement sécurisé », ni « avis vérifiés », ni « réservation » dans la page et ses blocs', () => {
 		const fichiers = [
-			...fichiersDe(join(RACINE, 'src/components/accueil')),
-			...fichiersDe(join(RACINE, 'src/components/blocs')),
+			...fichiersDe(join(RACINE, 'src/components/home')),
+			...fichiersDe(join(RACINE, 'src/components/blocks')),
 			join(RACINE, 'src/app/(front)/(site)/page.tsx'),
 		]
 		expect(fichiers.length).toBeGreaterThan(8)
@@ -84,13 +79,13 @@ describe('les icônes des talents', () => {
 		const fichiers = readdirSync(join(RACINE, 'public/assets/talents'))
 			.filter(nom => nom.endsWith('.svg'))
 			.map(nom => nom.replace(/\.svg$/, ''))
-		expect([...TALENTS_AVEC_ICONE].sort()).toEqual(fichiers.sort())
+		expect([...TALENTS_WITH_ICON].sort()).toEqual(fichiers.sort())
 	})
 })
 
 describe('les données structurées de l’accueil (SEO-26)', () => {
-	const sameAs = RESEAUX.filter(({ href }) => href.startsWith('https://')).map(({ href }) => href)
-	const donnees = donneesStructureesDeLAccueil(sameAs)
+	const sameAs = NETWORKS.filter(({ href }) => href.startsWith('https://')).map(({ href }) => href)
+	const donnees = homeStructuredData(sameAs)
 	const [organisation, site] = donnees['@graph'] as Record<string, unknown>[]
 
 	test('une organisation et un site, sur l’apex, avec des adresses absolues', () => {
@@ -98,14 +93,14 @@ describe('les données structurées de l’accueil (SEO-26)', () => {
 		expect(organisation).toMatchObject({
 			'@type': 'Organization',
 			url: SITE_ORIGIN,
-			logo: LOGO_DU_SITE,
+			logo: SITE_LOGO,
 			name: 'My-Makeup',
 		})
 		expect(site).toMatchObject({ '@type': 'WebSite', url: SITE_ORIGIN, inLanguage: 'fr-FR', name: 'My-Makeup' })
-		expect(site?.publisher).toEqual({ '@id': IDENTIFIANT_DE_L_ORGANISATION })
+		expect(site?.publisher).toEqual({ '@id': ORGANIZATION_ID })
 		expect(organisation?.sameAs).toEqual(sameAs)
 		expect(sameAs.length).toBeGreaterThan(0)
-		for (const adresse of [LOGO_DU_SITE, ...sameAs]) expect(adresse).toMatch(/^https:\/\/[^/]+\//)
+		for (const adresse of [SITE_LOGO, ...sameAs]) expect(adresse).toMatch(/^https:\/\/[^/]+\//)
 	})
 
 	test('ni note, ni adresse postale, ni coordonnée de maquilleuse', () => {

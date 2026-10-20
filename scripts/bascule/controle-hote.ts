@@ -9,7 +9,7 @@
  *   CONTROLE_HOTE_CIBLE=http://127.0.0.1:3100 bun run bascule:controle    # the bench, a build of this machine
  *   CONTROLE_HOTE_CIBLE=https://my-makeup.fr bun run bascule:controle     # the live site, reads only
  *
- * - The addresses are those of the frozen table (src/lib/urls-gelees.ts) and of the inventory
+ * - The addresses are those of the frozen table (src/lib/frozen-urls.ts) and of the inventory
  *   (docs/migration/urls-inventaire.json), checked like I45 (tests/outils/parite-urls.ts): the status
  *   the table promises, the single redirect, the same h1 as the old site. The profiles, talents and
  *   articles of the host are the ones its sitemap lists.

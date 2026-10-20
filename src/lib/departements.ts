@@ -3,7 +3,7 @@
  * is compared (lower case, no accents, « St » written « saint »).
  *
  * Ported as is from src/lib/lieu.js of the old site (branch main): only what the public city of a
- * profile needs (src/lib/profil/lieu-public.ts). The ranking of a search by city, the rest of that
+ * profile needs (src/lib/profile/public-place.ts). The ranking of a search by city, the rest of that
  * file, is not ported here.
  */
 

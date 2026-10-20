@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers'
 import { SESSION_COOKIE } from '@/lib/auth/closed-dashboard'
 import { requestUser } from '@/lib/dashboard/request'
-import { pidDuProfil } from '@/lib/profil/pid'
+import { profilePid } from '@/lib/profile/pid'
 
 // Read per request: it depends on the session, and the build has no database.
 export const dynamic = 'force-dynamic'
@@ -28,5 +28,5 @@ export async function GET(): Promise<Response> {
 		where: { pro: { equals: contexte.utilisateur.id } },
 	})
 	const profil = docs[0]
-	return Response.json({ pid: profil ? pidDuProfil(profil) : null }, { headers: entetes })
+	return Response.json({ pid: profil ? profilePid(profil) : null }, { headers: entetes })
 }

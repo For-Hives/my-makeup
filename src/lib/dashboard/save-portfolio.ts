@@ -1,5 +1,5 @@
 import type { Payload } from 'payload'
-import { MESSAGES_DES_PHOTOS, photosNommees } from '../profil/photos'
+import { namedPhotos, PHOTO_MESSAGES } from '../profile/photos'
 import { type DashboardUser, profileIdToWrite } from './my-profile'
 import { type PortfolioValues, portfolioSchema } from './portfolio'
 import { FAILURE_MESSAGE, payloadFailure, type SaveResult } from './result'
@@ -27,9 +27,7 @@ export async function savePortfolio(
 	if (!parsed.success) {
 		// Only the messages of the schema are French; a forged key gets the general message.
 		const messages = parsed.error.issues.map(({ message }) => message)
-		const message = [MESSAGES_DES_PHOTOS.galeriePleine, MESSAGES_DES_PHOTOS.photoRefusee].find(m =>
-			messages.includes(m)
-		)
+		const message = [PHOTO_MESSAGES.galeriePleine, PHOTO_MESSAGES.photoRefusee].find(m => messages.includes(m))
 		return message ? { ok: false, message, champs: { galerie: message } } : { ok: false, message: FAILURE_MESSAGE }
 	}
 	try {
@@ -43,7 +41,7 @@ export async function savePortfolio(
 			overrideAccess: false,
 			user: utilisateur,
 		})
-		return { ok: true, valeurs: { galerie: photosNommees(stored.gallery) } }
+		return { ok: true, valeurs: { galerie: namedPhotos(stored.gallery) } }
 	} catch (error) {
 		return payloadFailure(error, ['galerie'] as const, chemin => (chemin === 'gallery' ? 'galerie' : ''))
 	}

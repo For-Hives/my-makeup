@@ -2,12 +2,12 @@ import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { VueDuProfil } from '@/components/profil/VueDuProfil'
+import { ProfileView } from '@/components/profile/ProfileView'
 import { clicAMesurer, mesurerUnClicDeContact } from '@/lib/analytics/contact-click'
 import type { Pid } from '@/lib/analytics/events'
 import { creerTrack, type Execution, type FenetreMesuree } from '@/lib/analytics/track'
-import { pidDuProfil } from '@/lib/profil/pid'
-import { type ProfilPublic, profilPublicDe } from '@/services/public/profils'
+import { profilePid } from '@/lib/profile/pid'
+import { type PublicProfile, publicProfileOf } from '@/services/public/profiles'
 
 /**
  * The click on a contact of a public profile (ticket 144; plan 02 U84, and E52 in a browser:
@@ -143,23 +143,26 @@ describe('un clic de contact émet un événement, avec le bon canal', () => {
 
 describe('pid du profil', () => {
 	test('l’id de l’ancien site s’il existe, sinon v3-<id>, sinon rien', () => {
-		expect(pidDuProfil({ id: 5, strapiId: 321 })).toBe(321)
-		expect(pidDuProfil({ id: 5, strapiId: null })).toBe('v3-5')
-		expect(pidDuProfil({ id: 5 })).toBe('v3-5')
-		expect(pidDuProfil({ strapiId: 0 })).toBeNull()
-		expect(pidDuProfil({})).toBeNull()
+		expect(profilePid({ id: 5, strapiId: 321 })).toBe(321)
+		expect(profilePid({ id: 5, strapiId: null })).toBe('v3-5')
+		expect(profilePid({ id: 5 })).toBe('v3-5')
+		expect(profilePid({ strapiId: 0 })).toBeNull()
+		expect(profilePid({})).toBeNull()
 	})
 })
 
 describe('la page du profil', () => {
 	const base = { slug: 'lea-exemple', prenom: 'Léa', nom: 'Exemple', statut: 'publie', publiable: true } as const
-	const profil = (surcharge: Partial<Parameters<typeof profilPublicDe>[0]>, coordonnees: ProfilPublic['coordonnees']) =>
-		profilPublicDe(
+	const profil = (
+		surcharge: Partial<Parameters<typeof publicProfileOf>[0]>,
+		coordonnees: PublicProfile['coordonnees']
+	) =>
+		publicProfileOf(
 			{ ...base, id: 8, strapiId: 77, networks: { instagram: 'https://instagram.com/lea.exemple' }, ...surcharge },
 			{ photo: null, galerie: [], coordonnees }
 		)
-	const rendre = (p: ProfilPublic, mesure?: boolean) =>
-		renderToStaticMarkup(<VueDuProfil profil={p} {...(mesure === undefined ? {} : { mesure })} />)
+	const rendre = (p: PublicProfile, mesure?: boolean) =>
+		renderToStaticMarkup(<ProfileView profil={p} {...(mesure === undefined ? {} : { mesure })} />)
 
 	test('le profil porte son pid', () => {
 		expect(profil({}, null).pid).toBe(77)
@@ -184,6 +187,6 @@ describe('la page du profil', () => {
 		const p = profil({}, { telephone: '06 12 34 56 78', email: null })
 		expect(rendre(p, false)).toContain('href="tel:0612345678"')
 		const apercu = readFileSync(path.join(RACINE, 'src/app/(front)/(dashboard)/auth/apercu-profil/page.tsx'), 'utf8')
-		expect(apercu).toContain('<VueDuProfil profil={preview.profil} mesure={false} />')
+		expect(apercu).toContain('<ProfileView profil={preview.profil} mesure={false} />')
 	})
 })

@@ -1,6 +1,6 @@
 import type { Payload } from 'payload'
 import { identifiantPossible } from '../acces'
-import { photosNommees } from '../profil/photos'
+import { namedPhotos } from '../profile/photos'
 import type { DashboardProfile } from './cards'
 
 /** An identifier of a media, as Payload gives it (a number) or a request spells it (digits). */
@@ -33,8 +33,8 @@ export async function readDashboardPhotos(
 	payload: Payload,
 	profil: Pick<DashboardProfile, 'mainPicture' | 'gallery'>
 ): Promise<DashboardPhotos> {
-	const main = photosNommees(profil.mainPicture)[0]
-	const ranked = photosNommees(profil.gallery)
+	const main = namedPhotos(profil.mainPicture)[0]
+	const ranked = namedPhotos(profil.gallery)
 	const requested = [...new Set([...(main === undefined ? [] : [main]), ...ranked].map(String))]
 	if (requested.length === 0) return { photo: null, galerie: [] }
 	const { docs } = await payload.find({

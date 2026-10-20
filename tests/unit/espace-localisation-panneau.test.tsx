@@ -9,7 +9,7 @@ import {
 	REFUSED_ADDRESS_MESSAGE,
 } from '@/lib/dashboard/location'
 import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
-import { MESSAGES_DE_LA_ZONE } from '@/lib/profil/zone'
+import { ZONE_MESSAGES } from '@/lib/profile/zone'
 import { ouvrirFenetre } from '../outils/dom-react'
 
 /**
@@ -272,7 +272,7 @@ describe('U14, U15, E30 : le rayon', () => {
 		await fenetre.cliquer(fenetre.bouton('Enregistrer'))
 
 		const erreur = await fenetre.attendre(() => fenetre.w.document.querySelector('[id$="-rayon-erreur"]'))
-		expect(erreur.textContent).toBe(MESSAGES_DE_LA_ZONE.rayon)
+		expect(erreur.textContent).toBe(ZONE_MESSAGES.rayon)
 		expect(fenetre.champ('Rayon d’action (en km)').getAttribute('aria-invalid')).toBe('true')
 		expect(appels).toHaveLength(0)
 		expect(dialogue()).not.toBeNull()

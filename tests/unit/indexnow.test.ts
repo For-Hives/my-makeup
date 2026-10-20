@@ -5,17 +5,17 @@ import { rafraichissement } from '../../src/collections/revalidation'
 import { CONTEXTE_IMPORT } from '../../src/lib/contexte-import'
 import { type EnvError, parseServerEnv } from '../../src/lib/env'
 import {
-	ADRESSES_PAR_ENVOI,
-	adressesDuChangement,
-	adressesDuSitemap,
-	adressesEnAttente,
-	cleIndexNow,
-	cleSiLEnvoiEstPermis,
-	envoyerAIndexNow,
-	oublierLaFile,
-	POINT_D_ENVOI,
-	signalerPlusTard,
-	viderLaFile,
+	changedUrls,
+	flushQueue,
+	forgetQueue,
+	indexNowKey,
+	keyIfSubmitAllowed,
+	pendingUrls,
+	reportLater,
+	SUBMIT_ENDPOINT,
+	sitemapUrls,
+	submitToIndexNow,
+	URLS_PER_SUBMISSION,
 } from '../../src/lib/seo/indexnow'
 
 /**
@@ -81,59 +81,59 @@ describe('la variable INDEXNOW_KEY', () => {
 	})
 
 	test('la clé lue : 32 caractères hexadécimaux en minuscules, rien d’autre', () => {
-		expect(cleIndexNow(` ${CLE} `)).toBe(CLE)
+		expect(indexNowKey(` ${CLE} `)).toBe(CLE)
 		for (const faux of [undefined, '', CLE.slice(1), `${CLE}a`, CLE.toUpperCase(), 'g'.repeat(32)])
-			expect(cleIndexNow(faux)).toBeUndefined()
+			expect(indexNowKey(faux)).toBeUndefined()
 	})
 })
 
 describe('où l’envoi est permis', () => {
 	test('le site, avec la clé : oui', () => {
-		expect(cleSiLEnvoiEstPermis(ENV_DU_SITE)).toBe(CLE)
-		expect(cleSiLEnvoiEstPermis({ ...ENV_DU_SITE, APP_ENV: 'prod' })).toBe(CLE)
+		expect(keyIfSubmitAllowed(ENV_DU_SITE)).toBe(CLE)
+		expect(keyIfSubmitAllowed({ ...ENV_DU_SITE, APP_ENV: 'prod' })).toBe(CLE)
 	})
 
 	test('sans clé, sur un hôte temporaire, sur un poste, sur le banc de test : non', () => {
-		expect(cleSiLEnvoiEstPermis({ NEXT_PUBLIC_SITE_URL: SITE })).toBeUndefined()
-		expect(cleSiLEnvoiEstPermis({ ...ENV_DU_SITE, NEXT_PUBLIC_SITE_URL: 'https://v3.my-makeup.fr' })).toBeUndefined()
-		expect(cleSiLEnvoiEstPermis({ ...ENV_DU_SITE, NEXT_PUBLIC_SITE_URL: 'http://127.0.0.1:3419' })).toBeUndefined()
-		expect(cleSiLEnvoiEstPermis({ INDEXNOW_KEY: CLE })).toBeUndefined()
-		expect(cleSiLEnvoiEstPermis({ ...ENV_DU_SITE, APP_ENV: 'test' })).toBeUndefined()
+		expect(keyIfSubmitAllowed({ NEXT_PUBLIC_SITE_URL: SITE })).toBeUndefined()
+		expect(keyIfSubmitAllowed({ ...ENV_DU_SITE, NEXT_PUBLIC_SITE_URL: 'https://v3.my-makeup.fr' })).toBeUndefined()
+		expect(keyIfSubmitAllowed({ ...ENV_DU_SITE, NEXT_PUBLIC_SITE_URL: 'http://127.0.0.1:3419' })).toBeUndefined()
+		expect(keyIfSubmitAllowed({ INDEXNOW_KEY: CLE })).toBeUndefined()
+		expect(keyIfSubmitAllowed({ ...ENV_DU_SITE, APP_ENV: 'test' })).toBeUndefined()
 	})
 })
 
 describe('les adresses d’un enregistrement', () => {
 	test('un profil qui devient publiable, qui cesse de l’être, qui change : son adresse définitive', () => {
 		const attendu = [`${SITE}/profil/zoe-lefevre`]
-		expect(adressesDuChangement('profiles', cache('zoe-lefevre'), publie('zoe-lefevre'))).toEqual(attendu)
-		expect(adressesDuChangement('profiles', publie('zoe-lefevre'), cache('zoe-lefevre'))).toEqual(attendu)
-		expect(adressesDuChangement('profiles', publie('zoe-lefevre'), publie('zoe-lefevre'))).toEqual(attendu)
-		expect(adressesDuChangement('profiles', null, publie('zoe-lefevre'))).toEqual(attendu)
-		expect(adressesDuChangement('profiles', publie('zoe-lefevre'), null)).toEqual(attendu)
+		expect(changedUrls('profiles', cache('zoe-lefevre'), publie('zoe-lefevre'))).toEqual(attendu)
+		expect(changedUrls('profiles', publie('zoe-lefevre'), cache('zoe-lefevre'))).toEqual(attendu)
+		expect(changedUrls('profiles', publie('zoe-lefevre'), publie('zoe-lefevre'))).toEqual(attendu)
+		expect(changedUrls('profiles', null, publie('zoe-lefevre'))).toEqual(attendu)
+		expect(changedUrls('profiles', publie('zoe-lefevre'), null)).toEqual(attendu)
 	})
 
 	test('un profil publié mais pas publiable, ou masqué qui le reste : rien', () => {
-		expect(adressesDuChangement('profiles', publie('zoe', false), publie('zoe', false))).toEqual([])
-		expect(adressesDuChangement('profiles', cache('zoe'), cache('zoe'))).toEqual([])
-		expect(adressesDuChangement('profiles', null, null)).toEqual([])
+		expect(changedUrls('profiles', publie('zoe', false), publie('zoe', false))).toEqual([])
+		expect(changedUrls('profiles', cache('zoe'), cache('zoe'))).toEqual([])
+		expect(changedUrls('profiles', null, null)).toEqual([])
 	})
 
 	test('une adresse qui change : l’ancienne et la nouvelle, une seule fois chacune', () => {
-		expect(adressesDuChangement('articles', publie('ancienne'), publie('nouvelle'))).toEqual([
+		expect(changedUrls('articles', publie('ancienne'), publie('nouvelle'))).toEqual([
 			`${SITE}/blog/ancienne`,
 			`${SITE}/blog/nouvelle`,
 		])
 	})
 
 	test('un article, un talent : sa page, jamais une liste ; un brouillon qui reste brouillon : rien', () => {
-		expect(adressesDuChangement('articles', null, publie('un-article'))).toEqual([`${SITE}/blog/un-article`])
-		expect(adressesDuChangement('talents', publie('mariee'), null)).toEqual([`${SITE}/talent/mariee`])
-		expect(adressesDuChangement('talents', publie('mariee'), publie('mariee'))).toEqual([`${SITE}/talent/mariee`])
-		expect(adressesDuChangement('articles', cache('brouillon'), cache('brouillon'))).toEqual([])
+		expect(changedUrls('articles', null, publie('un-article'))).toEqual([`${SITE}/blog/un-article`])
+		expect(changedUrls('talents', publie('mariee'), null)).toEqual([`${SITE}/talent/mariee`])
+		expect(changedUrls('talents', publie('mariee'), publie('mariee'))).toEqual([`${SITE}/talent/mariee`])
+		expect(changedUrls('articles', cache('brouillon'), cache('brouillon'))).toEqual([])
 	})
 
 	test('un slug qui n’en est pas un (slug provisoire d’un profil en création) : rien', () => {
-		expect(adressesDuChangement('profiles', null, publie('_provisoire-1234'))).toEqual([])
+		expect(changedUrls('profiles', null, publie('_provisoire-1234'))).toEqual([])
 	})
 })
 
@@ -150,10 +150,10 @@ function fauxPointDEnvoi(status = 202) {
 describe('la requête', () => {
 	test('un envoi : l’hôte principal, la clé, son emplacement et les adresses, en https vers le point commun', async () => {
 		const { appels, chercher } = fauxPointDEnvoi()
-		await envoyerAIndexNow([`${SITE}/profil/zoe-lefevre`, `${SITE}/profil/zoe-lefevre`], CLE, chercher)
+		await submitToIndexNow([`${SITE}/profil/zoe-lefevre`, `${SITE}/profil/zoe-lefevre`], CLE, chercher)
 		expect(appels).toEqual([
 			{
-				adresse: POINT_D_ENVOI,
+				adresse: SUBMIT_ENDPOINT,
 				corps: {
 					host: 'my-makeup.fr',
 					key: CLE,
@@ -162,12 +162,12 @@ describe('la requête', () => {
 				},
 			},
 		])
-		expect(POINT_D_ENVOI.startsWith('https://')).toBe(true)
+		expect(SUBMIT_ENDPOINT.startsWith('https://')).toBe(true)
 	})
 
 	test('jamais d’adresse hors de l’hôte principal en https', async () => {
 		const { appels, chercher } = fauxPointDEnvoi()
-		await envoyerAIndexNow(
+		await submitToIndexNow(
 			[
 				`${SITE}/blog/ok`,
 				'http://my-makeup.fr/blog/http',
@@ -182,20 +182,20 @@ describe('la requête', () => {
 		)
 		expect(appels.flatMap(({ corps }) => corps.urlList)).toEqual([`${SITE}/blog/ok`])
 		const vide = fauxPointDEnvoi()
-		await envoyerAIndexNow(['https://autre.test/'], CLE, vide.chercher)
+		await submitToIndexNow(['https://autre.test/'], CLE, vide.chercher)
 		expect(vide.appels).toEqual([])
 	})
 
 	test('plus de 10 000 adresses : plusieurs requêtes', async () => {
 		const { appels, chercher } = fauxPointDEnvoi(200)
-		const adresses = Array.from({ length: ADRESSES_PAR_ENVOI + 1 }, (_, i) => `${SITE}/profil/p-${i}`)
-		await envoyerAIndexNow(adresses, CLE, chercher)
-		expect(appels.map(({ corps }) => corps.urlList.length)).toEqual([ADRESSES_PAR_ENVOI, 1])
+		const adresses = Array.from({ length: URLS_PER_SUBMISSION + 1 }, (_, i) => `${SITE}/profil/p-${i}`)
+		await submitToIndexNow(adresses, CLE, chercher)
+		expect(appels.map(({ corps }) => corps.urlList.length)).toEqual([URLS_PER_SUBMISSION, 1])
 	})
 
 	test('un refus lève une erreur qui nomme le statut, jamais la clé', async () => {
 		const { chercher } = fauxPointDEnvoi(403)
-		const erreur = await envoyerAIndexNow([`${SITE}/blog/a`], CLE, chercher).catch(e => e as Error)
+		const erreur = await submitToIndexNow([`${SITE}/blog/a`], CLE, chercher).catch(e => e as Error)
 		expect(erreur).toBeInstanceOf(Error)
 		expect((erreur as Error).message).toContain('403')
 		expect((erreur as Error).message).not.toContain(CLE)
@@ -204,7 +204,7 @@ describe('la requête', () => {
 	test('les adresses d’un sitemap : celles de l’hôte principal, décodées', () => {
 		const xml = `<urlset><url><loc>${SITE}/</loc></url><url><loc> ${SITE}/profil/a?x=1&amp;y=2 </loc></url>
 			<url><loc>https://autre.test/x</loc></url><url><loc>${SITE}/</loc></url></urlset>`
-		expect(adressesDuSitemap(xml)).toEqual([`${SITE}/`, `${SITE}/profil/a?x=1&y=2`])
+		expect(sitemapUrls(xml)).toEqual([`${SITE}/`, `${SITE}/profil/a?x=1&y=2`])
 	})
 })
 
@@ -222,7 +222,7 @@ describe('les crochets de Payload', () => {
 	let faux: ReturnType<typeof fauxPointDEnvoi>
 
 	beforeEach(() => {
-		oublierLaFile()
+		forgetQueue()
 		process.env.INDEXNOW_KEY = CLE
 		process.env.NEXT_PUBLIC_SITE_URL = SITE
 		delete process.env.APP_ENV
@@ -230,7 +230,7 @@ describe('les crochets de Payload', () => {
 		globalThis.fetch = faux.chercher as unknown as typeof fetch
 	})
 	afterEach(() => {
-		oublierLaFile()
+		forgetQueue()
 		globalThis.fetch = vraiFetch
 		for (const [nom, valeur] of [
 			['INDEXNOW_KEY', avant.cle],
@@ -256,9 +256,9 @@ describe('les crochets de Payload', () => {
 		await enregistrer(req, {})
 		// Nothing leaves while the save is still running.
 		expect(faux.appels).toEqual([])
-		expect(adressesEnAttente()).toEqual([`${SITE}/profil/zoe-lefevre`])
+		expect(pendingUrls()).toEqual([`${SITE}/profil/zoe-lefevre`])
 
-		await viderLaFile()
+		await flushQueue()
 
 		expect(faux.appels).toHaveLength(1)
 		expect(faux.appels[0]?.corps.urlList).toEqual([`${SITE}/profil/zoe-lefevre`])
@@ -268,9 +268,9 @@ describe('les crochets de Payload', () => {
 
 	test('un profil qui devient publiable, qui cesse de l’être : son adresse part', async () => {
 		await enregistrer(requete([ligne('published', false), ligne('published', true)]).req, {})
-		await viderLaFile()
+		await flushQueue()
 		await enregistrer(requete([ligne('published', true), ligne('published', false)]).req, {})
-		await viderLaFile()
+		await flushQueue()
 		expect(faux.appels.map(({ corps }) => corps.urlList)).toEqual([
 			[`${SITE}/profil/zoe-lefevre`],
 			[`${SITE}/profil/zoe-lefevre`],
@@ -279,8 +279,8 @@ describe('les crochets de Payload', () => {
 
 	test('un profil qui n’est pas publiable avant ni après : rien ne part', async () => {
 		await enregistrer(requete([ligne('published', false), ligne('published', false)]).req, {})
-		expect(adressesEnAttente()).toEqual([])
-		await viderLaFile()
+		expect(pendingUrls()).toEqual([])
+		await flushQueue()
 		expect(faux.appels).toEqual([])
 	})
 
@@ -294,7 +294,7 @@ describe('les crochets de Payload', () => {
 		const context = {}
 		await talents.avantEcriture({ context, data: {}, operation: 'update', originalDoc: { id: 3 }, req } as never)
 		await talents.apresEcriture({ context, doc: { id: 3 }, operation: 'update', previousDoc: { id: 3 }, req } as never)
-		await viderLaFile()
+		await flushQueue()
 		expect(faux.appels).toHaveLength(1)
 		expect(faux.appels[0]?.corps.urlList).toEqual([`${SITE}/profil/zoe-lefevre`, `${SITE}/talent/mariee`])
 	})
@@ -305,15 +305,15 @@ describe('les crochets de Payload', () => {
 		const context = {}
 		await articles.avantSuppression({ context, id: 4, req } as never)
 		await articles.apresSuppression({ context, doc: { id: 4 }, id: 4, req } as never)
-		await viderLaFile()
+		await flushQueue()
 		expect(faux.appels[0]?.corps.urlList).toEqual([`${SITE}/blog/un-article`])
 	})
 
 	test('pendant l’import : rien dans la file, rien ne part', async () => {
 		const { req } = requete([ligne('published', true), ligne('published', true)])
 		await enregistrer(req, { ...CONTEXTE_IMPORT })
-		expect(adressesEnAttente()).toEqual([])
-		await viderLaFile()
+		expect(pendingUrls()).toEqual([])
+		await flushQueue()
 		expect(faux.appels).toEqual([])
 	})
 
@@ -327,8 +327,8 @@ describe('les crochets de Payload', () => {
 		process.env.NEXT_PUBLIC_SITE_URL = SITE
 		process.env.APP_ENV = 'test'
 		await enregistrer(lignes(), {})
-		expect(adressesEnAttente()).toEqual([])
-		await viderLaFile()
+		expect(pendingUrls()).toEqual([])
+		await flushQueue()
 		expect(faux.appels).toEqual([])
 	})
 
@@ -338,7 +338,7 @@ describe('les crochets de Payload', () => {
 		}) as unknown as typeof fetch
 		const { req, journal } = requete([ligne('published', true), ligne('published', true)])
 		await enregistrer(req, {})
-		await viderLaFile()
+		await flushQueue()
 		expect(journal.error).toHaveBeenCalledTimes(1)
 		const [message] = journal.error.mock.calls[0] as unknown as [string]
 		expect(message).toContain('[indexnow]')
@@ -347,7 +347,7 @@ describe('les crochets de Payload', () => {
 	})
 
 	test('la file elle-même ne garde que des adresses du site', () => {
-		signalerPlusTard(['https://autre.test/x', `${SITE}/blog/a`], { cle: CLE, journal: { info() {}, error() {} } })
-		expect(adressesEnAttente()).toEqual([`${SITE}/blog/a`])
+		reportLater(['https://autre.test/x', `${SITE}/blog/a`], { cle: CLE, journal: { info() {}, error() {} } })
+		expect(pendingUrls()).toEqual([`${SITE}/blog/a`])
 	})
 })

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
 import { type DashboardUser, profileId } from '@/lib/dashboard/my-profile'
-import { lireLAdresseDeProfil, lireLApercuDuProfil } from '@/services/public/profils'
+import { readProfilePreview, readProfileUrlTarget } from '@/services/public/profiles'
 import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 
@@ -47,8 +47,8 @@ describe('139 : l’aperçu est la page publique', () => {
 		await payload.update({ collection: 'profiles', id: fiche.id, data: COMPLET })
 		const slug = (await ficheDe(payload, compte)).slug
 
-		const apercu = await lireLApercuDuProfil(payload, fiche.id)
-		const adresse = await lireLAdresseDeProfil(payload, slug)
+		const apercu = await readProfilePreview(payload, fiche.id)
+		const adresse = await readProfileUrlTarget(payload, slug)
 		expect(adresse.type).toBe('profil')
 		if (adresse.type !== 'profil') return
 		expect(apercu?.profil).toEqual(adresse.profil)
@@ -60,7 +60,7 @@ describe('139 : l’aperçu est la page publique', () => {
 		const payload = await payloadDeTest()
 		const fiche = await ficheDe(payload, compte)
 		await payload.update({ collection: 'profiles', id: fiche.id, data: { ...COMPLET, publicContact: false } })
-		const apercu = await lireLApercuDuProfil(payload, fiche.id)
+		const apercu = await readProfilePreview(payload, fiche.id)
 		expect(apercu?.profil.coordonnees).toBeNull()
 		expect(JSON.stringify(apercu?.profil)).not.toMatch(/example\.test|06 39 98/)
 	})
@@ -69,7 +69,7 @@ describe('139 : l’aperçu est la page publique', () => {
 		const compte = await creerCompte('maquilleuse')
 		const payload = await payloadDeTest()
 		const fiche = await ficheDe(payload, compte)
-		const vide = await lireLApercuDuProfil(payload, fiche.id)
+		const vide = await readProfilePreview(payload, fiche.id)
 		expect(vide?.etat).toMatchObject({ status: 'draft', fullyEmpty: true })
 
 		await payload.update({ collection: 'profiles', id: fiche.id, data: COMPLET })
@@ -79,15 +79,15 @@ describe('139 : l’aperçu est la page publique', () => {
 			data: { chosenStatus: 'hidden', reason: 'Masqué pour le test' },
 		})
 		const slug = (await ficheDe(payload, compte)).slug
-		expect((await lireLAdresseDeProfil(payload, slug)).type).toBe('inconnue')
-		const masque = await lireLApercuDuProfil(payload, fiche.id)
+		expect((await readProfileUrlTarget(payload, slug)).type).toBe('inconnue')
+		const masque = await readProfilePreview(payload, fiche.id)
 		expect(masque?.etat.status).toBe('hidden')
 		expect(masque?.profil.nom).toBe('Léa Fictive')
 	})
 
 	test('un identifiant inconnu ne donne rien', async () => {
 		const payload = await payloadDeTest()
-		expect(await lireLApercuDuProfil(payload, 987_654)).toBeNull()
+		expect(await readProfilePreview(payload, 987_654)).toBeNull()
 	})
 })
 
@@ -104,8 +104,8 @@ describe('139 : seulement le sien', () => {
 		const idB = await profileId(payload, await utilisateurDe(payload, b))
 		expect(idA).toBe(ficheA.id)
 		expect(idB).toBe(ficheB.id)
-		expect((await lireLApercuDuProfil(payload, idA ?? -1))?.profil.nom).not.toContain('Bea')
-		expect((await lireLApercuDuProfil(payload, idB ?? -1))?.profil.nom).toBe('Bea Autre')
+		expect((await readProfilePreview(payload, idA ?? -1))?.profil.nom).not.toContain('Bea')
+		expect((await readProfilePreview(payload, idB ?? -1))?.profil.nom).toBe('Bea Autre')
 	})
 
 	test('un compte sans profil n’a pas d’aperçu', async () => {

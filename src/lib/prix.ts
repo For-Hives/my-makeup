@@ -6,7 +6,7 @@
  * A price is two values: `priceFrom`, an amount in euros or nothing, and `priceText`, what
  * was typed, kept as it is.
  *
- * The amount is read as on the old site (prixNumerique of src/lib/profil/completude.js, branch
+ * The amount is read as on the old site (numericPrice of src/lib/profil/completude.js, branch
  * main): the same text gives the same number, so a profile keeps its « offre chiffrée ». Its
  * known limits come with it: the first number of the text is the one read (« 45 min, 60 € »
  * gives 45, « 2 h : 150 € » gives nothing), and two numbers on two lines with nothing between
@@ -52,7 +52,7 @@ export function estMontantDePrix(montant: unknown): montant is number {
 	return typeof montant === 'number' && montant >= PRIX_MIN && montant <= PRIX_MAX
 }
 
-/** Trimmed text, or null for anything else, for an empty text and for the words of MOTS_VIDES. */
+/** Trimmed text, or null for anything else, for an empty text and for the words of STOP_WORDS. */
 function texteSaisi(saisie: unknown): string | null {
 	if (typeof saisie !== 'string') return null
 	const texte = saisie.trim()

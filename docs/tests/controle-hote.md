@@ -2,7 +2,7 @@
 
 Une commande lit, sur un hôte donné, toutes les adresses de l'inventaire gelé, le sitemap, le fichier robots, les anciennes routes d'authentification et le script de mesure, et écrit un rapport daté. C'est le contrôle du jour de la bascule et de sa répétition. Elle ne fait que des lectures : comme les sondes, c'est une exception à « rien vers le site en ligne » ([`CLAUDE.md`](../../CLAUDE.md), interdit 5), et elle a sa propre garde.
 
-Les adresses et les réponses attendues sont celles de la table des URL gelées ([`../migration/URLS.md`](../migration/URLS.md), `src/lib/urls-gelees.ts`). La vérification est celle du test I45 ([`../../tests/outils/parite-urls.ts`](../../tests/outils/parite-urls.ts)) : le code que promet la table, la redirection en un saut, le même `h1` que l'ancien site (comparé par empreinte).
+Les adresses et les réponses attendues sont celles de la table des URL gelées ([`../migration/URLS.md`](../migration/URLS.md), `src/lib/frozen-urls.ts`). La vérification est celle du test I45 ([`../../tests/outils/parite-urls.ts`](../../tests/outils/parite-urls.ts)) : le code que promet la table, la redirection en un saut, le même `h1` que l'ancien site (comparé par empreinte).
 
 ## Lancer
 

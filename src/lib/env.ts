@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { cleanupEnd } from './auth/legacy-cookies'
-import { FORMAT_DE_LA_CLE } from './seo/indexnow'
+import { KEY_FORMAT } from './seo/indexnow'
 import type { VersionSources } from './version'
 
 /**
@@ -713,7 +713,7 @@ const schema = z.object({
 		.optional(),
 	INDEXNOW_KEY: z
 		.string()
-		.refine(value => FORMAT_DE_LA_CLE.test(value.trim()), { error: 'illisible' })
+		.refine(value => KEY_FORMAT.test(value.trim()), { error: 'illisible' })
 		.optional(),
 	STRAPI_SOURCE_URI: z
 		.string()

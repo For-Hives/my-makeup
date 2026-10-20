@@ -4,14 +4,14 @@ import path from 'node:path'
 import { champsDifferents, planifier } from '../../scripts/migration/import/moteur'
 import { ADAPTATEUR_TALENTS, type LigneTalent, talentAttendu } from '../../scripts/migration/import/talents'
 import { validerTitreDeLaPage } from '../../src/collections/Talents'
-import { TITRES_DES_PAGES_TALENT } from '../../src/content/talents-titres'
-import { TITRE_MAX, TITRE_MIN_DES_TALENTS, titrePage } from '../../src/lib/seo/texte'
+import { TALENT_PAGE_TITLES } from '../../src/content/talent-titles'
+import { MAX_TITLE, pageTitle, TALENT_MIN_TITLE } from '../../src/lib/seo/text'
 import { estUnSlug } from '../../src/lib/slug'
 import { defautsDuTitreDeTalent } from '../outils/parite-urls'
 
 /** Ticket 108: the 14 titles of the talent tabs, written by the project, and how the import fills them in. */
 
-const entrees = Object.entries(TITRES_DES_PAGES_TALENT)
+const entrees = Object.entries(TALENT_PAGE_TITLES)
 const racine = path.resolve(import.meta.dir, '../..')
 
 describe('les 14 titres d’onglet des pages talent', () => {
@@ -28,8 +28,8 @@ describe('les 14 titres d’onglet des pages talent', () => {
 		const titres = entrees.map(([, titre]) => titre)
 		expect(new Set(titres).size).toBe(14)
 		for (const titre of titres) {
-			expect(titre.length, titre).toBeGreaterThanOrEqual(TITRE_MIN_DES_TALENTS)
-			expect(titre.length, titre).toBeLessThanOrEqual(TITRE_MAX)
+			expect(titre.length, titre).toBeGreaterThanOrEqual(TALENT_MIN_TITLE)
+			expect(titre.length, titre).toBeLessThanOrEqual(MAX_TITLE)
 			expect(titre).toBe(titre.trim())
 			expect(
 				validerTitreDeLaPage(titre, {
@@ -47,7 +47,7 @@ describe('les 14 titres d’onglet des pages talent', () => {
 			const court = slug.replace('maquillage-', 'Maquillage ')
 			expect(titre).not.toBe(court)
 			// The tab is the title as it is (no brand added after 50 characters), the h1 is another text.
-			const onglet = titrePage(titre)
+			const onglet = pageTitle(titre)
 			expect(onglet).toBe(titre)
 			expect(defautsDuTitreDeTalent(`<title>${onglet}</title><h1>${court}</h1>`), slug).toEqual([])
 		}
@@ -70,7 +70,7 @@ describe('l’import des titres d’onglet', () => {
 
 	test('un talent des 14 reçoit son titre et l’écart est annoncé ; un autre talent n’en reçoit pas', () => {
 		const connu = talentAttendu(ligne(1, 'maquillage-mariee'))
-		expect(connu.valeurs.pageTitle).toBe(TITRES_DES_PAGES_TALENT['maquillage-mariee'])
+		expect(connu.valeurs.pageTitle).toBe(TALENT_PAGE_TITLES['maquillage-mariee'])
 		expect(connu.ecarts).toEqual([{ champ: 'pageTitle', reference: 'titre-page-talent' }])
 		const inconnu = talentAttendu(ligne(2, 'effets-speciaux'))
 		expect(inconnu.valeurs).not.toHaveProperty('pageTitle')

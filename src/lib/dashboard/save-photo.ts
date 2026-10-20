@@ -1,5 +1,5 @@
 import type { Payload } from 'payload'
-import { identifiantDe } from '../profil/photos'
+import { idOf } from '../profile/photos'
 import { type PhotoValues, photoSchema } from './main-picture'
 import { type DashboardUser, profileIdToWrite } from './my-profile'
 import { FAILURE_MESSAGE, payloadFailure, type SaveResult } from './result'
@@ -34,7 +34,7 @@ export async function saveMainPicture(
 			overrideAccess: false,
 			user: utilisateur,
 		})
-		const photo = identifiantDe(stored.mainPicture)
+		const photo = idOf(stored.mainPicture)
 		if (photo === undefined) return { ok: false, message: FAILURE_MESSAGE }
 		return { ok: true, valeurs: { photoPrincipale: photo } }
 	} catch (error) {

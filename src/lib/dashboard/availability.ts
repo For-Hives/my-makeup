@@ -1,7 +1,7 @@
 /**
  * The availability of a makeup artist, as she sets it in her space (ticket 124; plan 02 E19-E29):
  * one boolean. A profile with no value stored (an imported one) counts as available, as on the old
- * site and as the public list does (`src/lib/profil/visibilite.ts`).
+ * site and as the public list does (`src/lib/profile/visibility.ts`).
  *
  * The server reads the strict schema: a key that is not `disponible`, or a value that is not a
  * boolean (a string « false » included), refuses the whole request.

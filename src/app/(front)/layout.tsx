@@ -4,7 +4,7 @@ import { ConnexionReussie } from '@/components/analytics/ConnexionReussie'
 import { WebVitals } from '@/components/analytics/WebVitals'
 import { umamiLoaderScript, umamiScriptAttributes } from '@/lib/analytics/umami'
 import { versionEnv } from '@/lib/env'
-import { SITE_ORIGIN } from '@/lib/urls-gelees'
+import { SITE_ORIGIN } from '@/lib/frozen-urls'
 import packageJson from '../../../package.json'
 import './globals.css'
 

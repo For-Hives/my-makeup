@@ -1,6 +1,6 @@
 import { type APIRequestContext, expect, test } from '@playwright/test'
-import { pagesFixesLivrees } from '../../src/lib/seo/sitemap'
-import { SITE_ORIGIN } from '../../src/lib/urls-gelees'
+import { SITE_ORIGIN } from '../../src/lib/frozen-urls'
+import { deliveredStaticPages } from '../../src/lib/seo/sitemap'
 import { PROFILS_DE_RECHERCHE, poserLesProfilsDeRecherche } from '../fixtures/profils-de-recherche'
 import { creerContenu, rafraichirLesPagesDesProfils, supprimerContenu } from '../outils/pages-publiques'
 import { payloadDeTest } from '../outils/payload-test'
@@ -89,7 +89,7 @@ test.describe('E62 : /sitemap.xml', () => {
 				expect(adresses.includes(`${SITE_ORIGIN}/profil/${slug}`), cle).toBe(indexee)
 
 			// The pages and the documents.
-			for (const page of pagesFixesLivrees())
+			for (const page of deliveredStaticPages())
 				expect(adresses, page.chemin).toContain(page.chemin === '/' ? SITE_ORIGIN : `${SITE_ORIGIN}${page.chemin}`)
 			expect(adresses).toContain(`${SITE_ORIGIN}/talent/${talent}`)
 			expect(adresses).toContain(`${SITE_ORIGIN}/blog/${publie}`)

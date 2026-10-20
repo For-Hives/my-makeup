@@ -1,4 +1,4 @@
-import { SITE_ORIGIN } from '../urls-gelees'
+import { SITE_ORIGIN } from '../frozen-urls'
 
 /**
  * Absolute addresses of the site (ticket 070). The origin is the constant apex of the site, never
@@ -7,16 +7,16 @@ import { SITE_ORIGIN } from '../urls-gelees'
  */
 
 /** The path of an address, with no query, no fragment, no run of slashes and no final slash. */
-export function cheminPropre(brut: string): string {
-	let chemin = brut.trim()
-	if (/^[a-z][a-z0-9+.-]*:\/\//i.test(chemin) && URL.canParse(chemin)) chemin = new URL(chemin).pathname
-	chemin = chemin.split(/[?#]/, 1)[0] ?? ''
-	chemin = `/${chemin}`.replace(/\/{2,}/g, '/')
-	return chemin.length > 1 ? chemin.replace(/\/+$/, '') : chemin
+export function cleanPath(brut: string): string {
+	let path = brut.trim()
+	if (/^[a-z][a-z0-9+.-]*:\/\//i.test(path) && URL.canParse(path)) path = new URL(path).pathname
+	path = path.split(/[?#]/, 1)[0] ?? ''
+	path = `/${path}`.replace(/\/{2,}/g, '/')
+	return path.length > 1 ? path.replace(/\/+$/, '') : path
 }
 
 /** The canonical address of a path: absolute, on the apex, without a final slash or a parameter. */
-export function urlCanonique(chemin: string): string {
-	const propre = cheminPropre(chemin)
-	return propre === '/' ? SITE_ORIGIN : `${SITE_ORIGIN}${propre}`
+export function canonicalUrl(chemin: string): string {
+	const clean = cleanPath(chemin)
+	return clean === '/' ? SITE_ORIGIN : `${SITE_ORIGIN}${clean}`
 }

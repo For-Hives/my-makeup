@@ -1,6 +1,6 @@
 import { mailboxKey } from '../auth/canonical-email'
 import { createRateLimit, type RateLimit } from '../auth/rate-limit'
-import { estUneAdresseLocale } from '../recherche/frein'
+import { isLocalAddress } from '../search/rate-limit'
 
 /**
  * The brakes of the contact form (ticket 161; plan 02 U77), the protection kept for the switch-over,
@@ -83,7 +83,7 @@ export function prendreUnePlaceDeContact(
 	freins: FreinsDeContact = FREINS_DE_CONTACT,
 	maintenant = Date.now()
 ): DecisionDeContact {
-	const compteLAdresse = !estUneAdresseLocale(client)
+	const compteLAdresse = !isLocalAddress(client)
 	if (compteLAdresse) {
 		const adresse = freins.parAdresse.prendre(client, maintenant)
 		if (!adresse.autorise) return { autorise: false, raison: 'adresse', reessayerDansS: adresse.reessayerDansS }
@@ -102,7 +102,7 @@ export function secondesAvantUnMessage(
 	freins: FreinsDeContact = FREINS_DE_CONTACT,
 	maintenant = Date.now()
 ): number | undefined {
-	if (estUneAdresseLocale(client)) return undefined
+	if (isLocalAddress(client)) return undefined
 	const decision = freins.parAdresse.prendre(client, maintenant)
 	if (decision.autorise) {
 		freins.parAdresse.rendre(client, maintenant)

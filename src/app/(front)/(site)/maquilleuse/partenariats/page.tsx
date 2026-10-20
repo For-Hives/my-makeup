@@ -1,11 +1,11 @@
 import type { Metadata } from 'next'
-import { Cta } from '@/components/blocs/Cta'
-import { Hero } from '@/components/blocs/Hero'
-import { ArticleDePage } from '@/components/pages-fixes/ArticleDePage'
-import { PARTENARIATS } from '@/components/pages-fixes/textes-maquilleuses'
-import { metadonnees } from '@/lib/seo/metadonnees'
+import { Cta } from '@/components/blocks/Cta'
+import { Hero } from '@/components/blocks/Hero'
+import { PARTNERSHIPS } from '@/components/static-pages/artist-texts'
+import { PageArticle } from '@/components/static-pages/PageArticle'
+import { pageMetadata } from '@/lib/seo/metadata'
 
-export const metadata: Metadata = metadonnees({
+export const metadata: Metadata = pageMetadata({
 	titre: 'Communauté et partenariats !',
 	description:
 		"Communauté et partenariat chez My-Makeup : une page professionnelle gratuite pour présenter votre travail, et une équipe à l'écoute des maquilleuses.",
@@ -13,7 +13,7 @@ export const metadata: Metadata = metadonnees({
 	chemin: '/maquilleuse/partenariats',
 })
 
-export default function PagePartenariats() {
+export default function PartnershipsPage() {
 	return (
 		<main className="relative">
 			<Hero
@@ -28,7 +28,7 @@ export default function PagePartenariats() {
 				recherche={false}
 				inscription
 			/>
-			<ArticleDePage contenu={PARTENARIATS} />
+			<PageArticle contenu={PARTNERSHIPS} />
 			<Cta />
 		</main>
 	)

@@ -1,5 +1,5 @@
 /**
- * Writes the tables of docs/migration/URLS.md from the frozen table (src/lib/urls-gelees.ts)
+ * Writes the tables of docs/migration/URLS.md from the frozen table (src/lib/frozen-urls.ts)
  * and from the frozen inventory (docs/migration/urls-inventaire.json), so the document
  * cannot say anything else than what the tests read.
  *
@@ -21,7 +21,7 @@ import {
 	familiesMeasured,
 	UNWANTED_404_OF_2026_10_09,
 	type UrlKind,
-} from '../../src/lib/urls-gelees'
+} from '../../src/lib/frozen-urls'
 
 export const DOCUMENT_PATH = fileURLToPath(new URL('../../docs/migration/URLS.md', import.meta.url))
 

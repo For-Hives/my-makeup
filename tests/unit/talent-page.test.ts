@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
 import { validerTitreDeLaPage } from '@/collections/Talents'
-import { metadonneesEditoriales } from '@/lib/seo/metadonnees'
-import { TITRE_MAX, TITRE_MIN_DES_TALENTS } from '@/lib/seo/texte'
-import { CHAMPS_DE_LA_PAGE_DU_TALENT, lireLeTalent } from '@/services/public/talents'
+import { editorialMetadata } from '@/lib/seo/metadata'
+import { MAX_TITLE, TALENT_MIN_TITLE } from '@/lib/seo/text'
+import { readTalent, TALENT_PAGE_FIELDS } from '@/services/public/talents'
 
 /**
  * The page of a talent without a database (ticket 108): what its reading asks for, the title of the page the
@@ -35,12 +35,12 @@ const TALENT = {
 describe('lireLeTalent : la lecture publique d’un talent', () => {
 	test('elle choisit ses champs, garde les règles d’accès et se borne à un document', async () => {
 		const { payload, lectures } = payloadEspion([TALENT])
-		await lireLeTalent(payload, 'maquillage-fictif')
+		await readTalent(payload, 'maquillage-fictif')
 		expect(lectures).toHaveLength(1)
 		expect(lectures[0]).toMatchObject({
 			collection: 'talents',
 			where: { slug: { equals: 'maquillage-fictif' } },
-			select: CHAMPS_DE_LA_PAGE_DU_TALENT,
+			select: TALENT_PAGE_FIELDS,
 			overrideAccess: false,
 			limit: 1,
 			depth: 0,
@@ -48,14 +48,14 @@ describe('lireLeTalent : la lecture publique d’un talent', () => {
 	})
 
 	test('les champs lus sont figés : ni identifiant de l’ancien site, ni état de brouillon', () => {
-		expect(Object.keys(CHAMPS_DE_LA_PAGE_DU_TALENT).sort()).toEqual(
+		expect(Object.keys(TALENT_PAGE_FIELDS).sort()).toEqual(
 			['content', 'description', 'seo_description', 'seo_title', 'slug', 'title', 'pageTitle'].sort()
 		)
 	})
 
 	test('le h1 est le titre « seo_title » rogné, le titre du talent à défaut ; un champ jamais rempli est vide', async () => {
 		const { payload } = payloadEspion([TALENT])
-		expect(await lireLeTalent(payload, 'maquillage-fictif')).toEqual({
+		expect(await readTalent(payload, 'maquillage-fictif')).toEqual({
 			slug: 'maquillage-fictif',
 			titre: 'Maquillage fictif',
 			titreAffiche: 'Un maquillage fictif pour les fêtes',
@@ -65,13 +65,13 @@ describe('lireLeTalent : la lecture publique d’un talent', () => {
 			contenu: '',
 		})
 		const sansSeo = payloadEspion([{ ...TALENT, seo_title: 'null' }])
-		expect((await lireLeTalent(sansSeo.payload, 'maquillage-fictif'))?.titreAffiche).toBe('Maquillage fictif')
+		expect((await readTalent(sansSeo.payload, 'maquillage-fictif'))?.titreAffiche).toBe('Maquillage fictif')
 	})
 
 	test('un brouillon ou un inconnu : null ; une adresse qui n’est pas un slug ne touche pas la base', async () => {
-		expect(await lireLeTalent(payloadEspion([]).payload, 'inconnu')).toBeNull()
+		expect(await readTalent(payloadEspion([]).payload, 'inconnu')).toBeNull()
 		const { payload, lectures } = payloadEspion([TALENT])
-		for (const mauvais of ['', 'Maquillage Fictif', '../etc']) expect(await lireLeTalent(payload, mauvais)).toBeNull()
+		for (const mauvais of ['', 'Maquillage Fictif', '../etc']) expect(await readTalent(payload, mauvais)).toBeNull()
 		expect(lectures).toHaveLength(0)
 	})
 })
@@ -92,14 +92,14 @@ describe('validerTitreDeLaPage : de 50 à 60 caractères, différent du h1', () 
 	})
 
 	test('50 à 60 caractères : accepté', () => {
-		for (const n of [TITRE_MIN_DES_TALENTS, 55, TITRE_MAX])
+		for (const n of [TALENT_MIN_TITLE, 55, MAX_TITLE])
 			expect(validerTitreDeLaPage(de(n), arguments_()), String(n)).toBe(true)
 	})
 
 	test('49 ou 61 caractères : refusé, avec la longueur dite', () => {
 		for (const n of [49, 61, 10]) {
 			const message = validerTitreDeLaPage(de(n), arguments_())
-			expect(message).toContain(`de ${TITRE_MIN_DES_TALENTS} à ${TITRE_MAX} caractères`)
+			expect(message).toContain(`de ${TALENT_MIN_TITLE} à ${MAX_TITLE} caractères`)
 			expect(message).toContain(`en compte ${n}`)
 		}
 	})
@@ -121,19 +121,19 @@ describe('les métadonnées d’un talent', () => {
 
 	test('le titre écrit par la rédaction est repris tel quel, sans la marque : il fait déjà 50 à 60 caractères', () => {
 		const titre = 'Maquillage fictif : trouvez une maquilleuse près de chez vous'.slice(0, 58)
-		const meta = metadonneesEditoriales({ ...entrees, titre })
+		const meta = editorialMetadata({ ...entrees, titre })
 		expect(meta.title).toEqual({ absolute: titre })
-		expect(titre.length).toBeGreaterThanOrEqual(TITRE_MIN_DES_TALENTS)
+		expect(titre.length).toBeGreaterThanOrEqual(TALENT_MIN_TITLE)
 	})
 
 	test('sans lui, le titre court du talent suivi du nom du site, comme aujourd’hui', () => {
-		expect(metadonneesEditoriales({ ...entrees, titre: 'Maquillage fictif' }).title).toEqual({
+		expect(editorialMetadata({ ...entrees, titre: 'Maquillage fictif' }).title).toEqual({
 			absolute: 'Maquillage fictif | My-Makeup',
 		})
 	})
 
 	test('la description et l’adresse canonique', () => {
-		const meta = metadonneesEditoriales({ ...entrees, titre: 'x' })
+		const meta = editorialMetadata({ ...entrees, titre: 'x' })
 		expect(meta.description).toStartWith('Une présentation écrite pour l’essai')
 		expect(meta.alternates?.canonical).toBe('https://my-makeup.fr/talent/maquillage-fictif')
 	})

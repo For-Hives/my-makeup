@@ -17,10 +17,10 @@ import {
 	CHEMIN_DU_REFUS_DE_CONTACT,
 	secondesAvantUnMessageDeCetteRequete,
 } from '@/lib/contact/frein'
-import { freinerLaRecherche } from '@/lib/recherche/frein'
-import { robotsPourChemin } from '@/lib/seo/robots'
-import { redirectionDeForme } from '@/lib/urls/forme'
-import { adresseAVerifier, type FamilleVerifiee } from '@/lib/urls/page-inconnue'
+import { rateLimitSearch } from '@/lib/search/rate-limit'
+import { robotsForPath } from '@/lib/seo/robots'
+import { shapeRedirect } from '@/lib/urls/shape'
+import { type CheckedFamily, urlToCheck } from '@/lib/urls/unknown-page'
 
 /**
  * One proxy, no matcher: it runs for every request.
@@ -67,21 +67,21 @@ function proxyDuSite(requete: NextRequest) {
 		return introuvable
 	}
 	// The path as the visitor wrote it: `nextUrl.pathname` may already have lost a repeated slash.
-	const forme = redirectionDeForme(cheminEcrit(requete.url ?? requete.nextUrl.href) ?? pathname)
+	const forme = shapeRedirect(cheminEcrit(requete.url ?? requete.nextUrl.href) ?? pathname)
 	if (forme) {
 		// A new URL on the host of the request: cloning `nextUrl` would keep the final slash it had.
 		const redirectionDeForme = NextResponse.redirect(
 			new URL(`${forme.chemin}${search}`, requete.url ?? requete.nextUrl.href),
 			forme.status
 		)
-		const consigneDeForme = robotsPourChemin(pathname)
+		const consigneDeForme = robotsForPath(pathname)
 		if (consigneDeForme) redirectionDeForme.headers.set('X-Robots-Tag', consigneDeForme)
 		return redirectionDeForme
 	}
-	const freinee = freinerLaRecherche({ chemin: pathname, methode: requete.method, entetes: requete.headers })
+	const freinee = rateLimitSearch({ chemin: pathname, methode: requete.method, entetes: requete.headers })
 	if (freinee) {
 		const reponseFreinee = new NextResponse(freinee.corps, { status: freinee.status, headers: freinee.entetes })
-		const consigneFreinee = robotsPourChemin(pathname)
+		const consigneFreinee = robotsForPath(pathname)
 		if (consigneFreinee) reponseFreinee.headers.set('X-Robots-Tag', consigneFreinee)
 		return reponseFreinee
 	}
@@ -151,7 +151,7 @@ function proxyDuSite(requete: NextRequest) {
 		})
 		redirection.headers.set('Cache-Control', 'private, no-store')
 		redirection.headers.set('Referrer-Policy', 'no-referrer')
-		const consigneDuLien = robotsPourChemin(pathname)
+		const consigneDuLien = robotsForPath(pathname)
 		if (consigneDuLien) redirection.headers.set('X-Robots-Tag', consigneDuLien)
 		return avecLeNettoyage(redirection)
 	}
@@ -169,7 +169,7 @@ function proxyDuSite(requete: NextRequest) {
 		cible.pathname = chemin
 		cible.search = recherche ? `?${recherche}` : ''
 		const redirection = NextResponse.redirect(cible, 307)
-		const consigneRedirection = robotsPourChemin(pathname)
+		const consigneRedirection = robotsForPath(pathname)
 		if (consigneRedirection) redirection.headers.set('X-Robots-Tag', consigneRedirection)
 		return avecLeNettoyage(redirection)
 	}
@@ -177,12 +177,12 @@ function proxyDuSite(requete: NextRequest) {
 		// She comes from another site with a session cookie that Payload would ignore (ticket 223): the
 		// relay page restarts the navigation from this site, where the cookie counts.
 		const relais = new NextResponse(relayPage(`${pathname}${search}`), { status: 200, headers: RELAY_HEADERS })
-		const consigneDuRelais = robotsPourChemin(pathname)
+		const consigneDuRelais = robotsForPath(pathname)
 		if (consigneDuRelais) relais.headers.set('X-Robots-Tag', consigneDuRelais)
 		return avecLeNettoyage(relais)
 	}
 	const reponse = avecLeNettoyage(NextResponse.next({ request: { headers: entetes } }))
-	const consigne = robotsPourChemin(pathname)
+	const consigne = robotsForPath(pathname)
 	if (consigne) reponse.headers.set('X-Robots-Tag', consigne)
 	return reponse
 }
@@ -224,7 +224,7 @@ export function proxy(requete: NextRequest): NextResponse | Promise<NextResponse
 	if (requete.method !== 'POST' || requete.nextUrl.pathname !== CHEMIN_DU_CONTACT) {
 		// An answer of its own (redirect, rewrite, brake, relay page) comes first; only a plain pass-through is checked.
 		if (!passeTelQuel(reponse)) return reponse
-		const a = adresseAVerifier(requete.nextUrl.pathname, requete.method)
+		const a = urlToCheck(requete.nextUrl.pathname, requete.method)
 		return a ? proxyDeLAdresseInconnue(requete, reponse, a) : reponse
 	}
 	// A redirect of form (repeated or final slash) comes first, as for every other path.
@@ -237,21 +237,21 @@ function passeTelQuel(reponse: NextResponse): boolean {
 	return reponse.status === 200 && reponse.headers.has('x-middleware-next')
 }
 
-type ExistenceDUnePage = (famille: FamilleVerifiee, segment: string) => Promise<boolean>
+type ExistenceDUnePage = (famille: CheckedFamily, segment: string) => Promise<boolean>
 
 /** The real lookup, loaded on first use: the proxy of every other path never loads Payload. */
 const existenceReelle: ExistenceDUnePage = async (famille, segment) =>
-	(await import('@/services/public/existe')).existeUnePage(famille, segment)
+	(await import('@/services/public/exists')).pageExists(famille, segment)
 
 /**
  * An unknown profile, talent or article answers the 404 page of the site, in full (ticket 231). The lookup is the
- * page's own reads, and what exists is remembered for a minute (src/lib/urls/page-inconnue.ts).
+ * page's own reads, and what exists is remembered for a minute (src/lib/urls/unknown-page.ts).
  * Any failure (a database that does not answer) leaves the page to answer, as before.
  */
 export async function proxyDeLAdresseInconnue(
 	requete: NextRequest,
 	reponse: NextResponse,
-	{ famille, segment }: { famille: FamilleVerifiee; segment: string },
+	{ famille, segment }: { famille: CheckedFamily; segment: string },
 	existe: ExistenceDUnePage = existenceReelle
 ): Promise<NextResponse> {
 	try {

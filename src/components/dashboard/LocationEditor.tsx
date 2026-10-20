@@ -13,7 +13,7 @@ import {
 	textRadius,
 } from '@/lib/dashboard/location'
 import { FAILURE_MESSAGE, type SaveResult } from '@/lib/dashboard/result'
-import { BORNES_DU_RAYON_KM } from '@/lib/profil/zone'
+import { RADIUS_BOUNDS_KM } from '@/lib/profile/zone'
 import { type CitiesSearch, CityField } from './CityField'
 import { EditingPanel } from './EditingPanel'
 
@@ -217,7 +217,7 @@ function LocationForm({
 						{...register('rayon')}
 					/>
 					<p id={`${id}-rayon-aide`} className="text-neutral-700 text-sm">
-						De {BORNES_DU_RAYON_KM.min} à {BORNES_DU_RAYON_KM.max} km, en kilomètres entiers. Tu peux laisser vide.
+						De {RADIUS_BOUNDS_KM.min} à {RADIUS_BOUNDS_KM.max} km, en kilomètres entiers. Tu peux laisser vide.
 					</p>
 					{radiusError ? (
 						<p id={`${id}-rayon-erreur`} className="text-red-800 text-sm">

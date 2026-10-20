@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
-import { Cta } from '@/components/blocs/Cta'
-import { ListeDesArticles } from '@/components/blog/ListeDesArticles'
-import { metadonnees } from '@/lib/seo/metadonnees'
-import { lesArticlesEnCache } from '@/services/public/en-cache'
+import { Cta } from '@/components/blocks/Cta'
+import { ArticleList } from '@/components/blog/ArticleList'
+import { pageMetadata } from '@/lib/seo/metadata'
+import { cachedArticles } from '@/services/public/cached'
 
 // Rendered at each request: the build runs without a database. The articles are read through the cache
 // of Next, tagged `articles`: a save of an article in the admin panel refreshes the list (tickets 047 and 117), and a
@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic'
 
 // `/toutes-les-news` redirects here (ticket 072): the list shows every published article, not the
 // last three of the old page.
-export const metadata: Metadata = metadonnees({
+export const metadata: Metadata = pageMetadata({
 	titre: 'Blog et actualités',
 	description:
 		"L'actualité de My-Makeup, nos conseils pour choisir une maquilleuse professionnelle et les nouveautés qui arrivent bientôt.",
@@ -19,8 +19,8 @@ export const metadata: Metadata = metadonnees({
 	chemin: '/blog',
 })
 
-export default async function PageDuBlog() {
-	const articles = await lesArticlesEnCache()
+export default async function BlogPage() {
+	const articles = await cachedArticles()
 	return (
 		<main className="relative">
 			<section className="relative px-4 py-20 md:px-8 2xl:px-0">
@@ -32,7 +32,7 @@ export default async function PageDuBlog() {
 							arrivent bientôt !
 						</p>
 					</div>
-					<ListeDesArticles articles={articles} />
+					<ArticleList articles={articles} />
 				</div>
 			</section>
 			<Cta />

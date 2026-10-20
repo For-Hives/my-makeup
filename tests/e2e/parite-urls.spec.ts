@@ -35,7 +35,7 @@ const anciens: TitresDeLAncienSite = JSON.parse(
 
 // Every family of the inventory is delivered. `slug-inconnu` came last (ticket 231): a 404 raised by `notFound()`
 // reaches the browser as a stream with no h1 in the HTML of the server, so the proxy answers an unknown slug itself
-// (src/proxy.ts, src/lib/urls/page-inconnue.ts).
+// (src/proxy.ts, src/lib/urls/unknown-page.ts).
 const LIVREES: ReadonlySet<string> = new Set([
 	'accueil',
 	'recherche',

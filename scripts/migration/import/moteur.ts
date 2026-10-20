@@ -156,7 +156,7 @@ function clesTriees(valeur: unknown): unknown {
  * The rows of a list as they are compared: each row without the identifier Payload gave it, its
  * filled fields sorted by name, an empty field or an empty nested list counting as an absent one,
  * the rows in their order. The values themselves are compared as they are: the import gives them
- * in the form Payload reads back (a day of these lists at 12:00 UTC, src/lib/profil/listes.ts).
+ * in the form Payload reads back (a day of these lists at 12:00 UTC, src/lib/profile/lists.ts).
  */
 function lignesNormalisees(lignes: readonly unknown[]): unknown[] {
 	return lignes.map(ligne => {

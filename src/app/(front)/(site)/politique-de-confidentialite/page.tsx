@@ -1,13 +1,13 @@
 import Link from 'next/link'
 import { OppositionMesure } from '@/components/analytics/OppositionMesure'
-import { PageJuridique } from '@/components/legal/PageJuridique'
+import { LegalPage } from '@/components/legal/LegalPage'
 import { EDITEUR, formatSiret } from '@/lib/legal'
 import { JOURS_AVANT_EFFACEMENT_DES_PHOTOS, PRESTATAIRES } from '@/lib/prestataires'
-import { metadonnees } from '@/lib/seo/metadonnees'
+import { pageMetadata } from '@/lib/seo/metadata'
 import { DELAI_AVANT_PURGE_JOURS } from '@/lib/taches/comptes-non-confirmes'
 
 // Static: the text is in the code, and the page reads no cookie and no data (ticket 112).
-export const metadata = metadonnees({
+export const metadata = pageMetadata({
 	titre: 'Politique de confidentialité',
 	description:
 		'Quelles données My-Makeup traite, pourquoi, combien de temps, avec quels prestataires, et comment exercer vos droits.',
@@ -16,9 +16,9 @@ export const metadata = metadonnees({
 	chemin: '/politique-de-confidentialite',
 })
 
-export default function PolitiqueDeConfidentialite() {
+export default function PrivacyPolicyPage() {
 	return (
-		<PageJuridique
+		<LegalPage
 			titre={
 				<>
 					Politique de confidentialité de&nbsp;
@@ -130,6 +130,6 @@ export default function PolitiqueDeConfidentialite() {
 			<p>
 				{`Si cette politique change de façon importante, nous l'indiquerons sur le site et, pour les maquilleuses inscrites, par email.`}
 			</p>
-		</PageJuridique>
+		</LegalPage>
 	)
 }

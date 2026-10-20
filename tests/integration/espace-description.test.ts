@@ -138,8 +138,8 @@ describe('U05 : la longueur enregistrée rend le profil publiable par la défini
 		const a = await creerCompte('maquilleuse')
 		const payload = await payloadDeTest()
 		const utilisateur = await utilisateurDe(payload, a)
-		const { conditionsPubliable } = await import('@/lib/profil/completude')
-		const { champsDuProfil } = await import('@/lib/profil/etat')
+		const { publishableConditions: conditionsPubliable } = await import('@/lib/profile/completeness')
+		const { profileFields: champsDuProfil } = await import('@/lib/profile/state')
 
 		await saveDescription(payload, utilisateur, { description: 'a'.repeat(199) })
 		expect(conditionsPubliable(champsDuProfil(await profilStocke(payload, a))).descriptionLongue).toBe(false)

@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { z } from 'zod'
-import { cleSiLEnvoiEstPermis, FORMAT_DE_LA_CLE } from '../../src/lib/seo/indexnow'
+import { KEY_FORMAT, keyIfSubmitAllowed } from '../../src/lib/seo/indexnow'
 import {
 	argumentsDeTest,
 	BancRefuse,
@@ -238,8 +238,8 @@ describe('.env.test : l’environnement factice du banc', () => {
 		expect(environnement.S3_SECRET_ACCESS_KEY).toContain('factice')
 		expect(fichier).not.toContain('my-makeup.fr')
 		// The key of IndexNow is served by the bench, and nothing is ever sent from it.
-		expect(environnement.INDEXNOW_KEY).toMatch(FORMAT_DE_LA_CLE)
-		expect(cleSiLEnvoiEstPermis(environnement)).toBeUndefined()
+		expect(environnement.INDEXNOW_KEY).toMatch(KEY_FORMAT)
+		expect(keyIfSubmitAllowed(environnement)).toBeUndefined()
 		// Nothing that has the shape of a real Google credential, and never Google's own address.
 		expect(fichier).not.toMatch(/googleusercontent|GOCSPX|accounts\.google\.com/i)
 	})

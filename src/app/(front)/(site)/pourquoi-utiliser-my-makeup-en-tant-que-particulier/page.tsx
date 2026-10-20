@@ -1,12 +1,12 @@
 import type { Metadata } from 'next'
-import { Cta } from '@/components/blocs/Cta'
-import { Hero } from '@/components/blocs/Hero'
-import { AvantagesParticulier } from '@/components/pages-fixes/AvantagesParticulier'
-import { metadonnees } from '@/lib/seo/metadonnees'
+import { Cta } from '@/components/blocks/Cta'
+import { Hero } from '@/components/blocks/Hero'
+import { ClientBenefits } from '@/components/static-pages/ClientBenefits'
+import { pageMetadata } from '@/lib/seo/metadata'
 
 const DESCRIPTION = 'Découvrez pourquoi vous devriez utiliser My-Makeup en tant que particulier & professionnel'
 
-export const metadata: Metadata = metadonnees({
+export const metadata: Metadata = pageMetadata({
 	titre: 'Pourquoi My-Makeup ? en tant que particulier',
 	description: DESCRIPTION,
 	repli: DESCRIPTION,
@@ -25,7 +25,7 @@ export default function Page() {
 				}
 				description="Découvrez les avantages à utiliser notre plateforme pour développer votre activité et trouver des passionnées expérimentées !"
 			/>
-			<AvantagesParticulier />
+			<ClientBenefits />
 			<Cta />
 		</main>
 	)

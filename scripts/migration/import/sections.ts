@@ -10,7 +10,7 @@
  * - **Every value is taken as it is**, the price above all: `priceText` is the text typed, byte
  *   for byte, and `priceFrom` stays empty here (ticket 062 fills it). A date of these lists is
  *   a day: the day typed, stored at 12:00 UTC as the collection stores every day
- *   (src/lib/profil/listes.ts). Empty stays empty (rule 2).
+ *   (src/lib/profile/lists.ts). Empty stays empty (rule 2).
  * - **The identifier of a row** is not taken (§7): Payload gives one, and keeps it as long as the
  *   row does not change. The comparison of the import reads the rows without it.
  * - **The networks** are the five links of the profile. The phone and the email of the same row of
@@ -23,16 +23,16 @@
  */
 
 import { parsePrice } from '../../../src/lib/prix'
-import type { ReseauxDuProfil } from '../../../src/lib/profil/completude'
+import type { ProfileNetworks } from '../../../src/lib/profile/completeness'
 import {
-	dateDuJour,
-	LONGUEUR_DESCRIPTION,
-	LONGUEUR_NOM,
-	messageDeDate,
-	messageDeFin,
-	messageDeTexte,
-	messageDObtention,
-} from '../../../src/lib/profil/listes'
+	DESCRIPTION_MAX_LENGTH,
+	dateMessage,
+	dayDate,
+	endMessage,
+	NAME_MAX_LENGTH,
+	obtainMessage,
+	textMessage,
+} from '../../../src/lib/profile/lists'
 import { TYPE_PROFIL } from './medias'
 import type { Requete } from './source'
 
@@ -85,7 +85,7 @@ export interface SectionsLues {
 	experiences: Experience[]
 	prestations: Prestation[]
 	/** The single network row of the profile, phone and email included (read, never written here). */
-	reseau: ReseauxDuProfil | null
+	reseau: ProfileNetworks | null
 	/** The files of its main picture and of its gallery, in order. */
 	photoPrincipale: number[]
 	galerie: number[]
@@ -198,7 +198,7 @@ export async function lireLesSections(requete: Requete): Promise<Map<number, Sec
 	const langues = parEntree(await requete<LigneLue<Langue>>(LECTURES.langues), sansLigne)
 	const formations = parEntree(await requete<LigneLue<Formation>>(LECTURES.formations), sansLigne)
 	const experiences = parEntree(await requete<LigneLue<Experience>>(LECTURES.experiences), sansLigne)
-	const reseaux = parEntree(await requete<LigneLue<ReseauxDuProfil>>(LECTURES.reseaux), sansLigne)
+	const reseaux = parEntree(await requete<LigneLue<ProfileNetworks>>(LECTURES.reseaux), sansLigne)
 	const prestationsLues = await requete<LigneLue<Omit<Prestation, 'id' | 'options'>>>(LECTURES.prestations)
 	// The options hang on the row of their offer, by its identifier in Strapi.
 	const options = parEntree(await requete<LigneLue<OptionDePrestation>>(LECTURES.options), sansLigneDesOffres)
@@ -256,9 +256,9 @@ export interface LigneLaissee {
 	prestation?: number
 }
 
-const horsTexte = (valeur: string | null, maximum: number): boolean => messageDeTexte(valeur, maximum) !== null
-const horsNom = (valeur: string | null): boolean => horsTexte(valeur, LONGUEUR_NOM)
-const horsDescription = (valeur: string | null): boolean => horsTexte(valeur, LONGUEUR_DESCRIPTION)
+const horsTexte = (valeur: string | null, maximum: number): boolean => textMessage(valeur, maximum) !== null
+const horsNom = (valeur: string | null): boolean => horsTexte(valeur, NAME_MAX_LENGTH)
+const horsDescription = (valeur: string | null): boolean => horsTexte(valeur, DESCRIPTION_MAX_LENGTH)
 
 /**
  * Whether the server (src/collections/profile-lists.ts) would refuse a row, and with it the whole
@@ -272,14 +272,14 @@ const horsBornes = {
 		horsNom(f.diploma) ||
 		horsNom(f.school) ||
 		horsDescription(f.course_description) ||
-		messageDObtention(f.date_graduation, maintenant) !== null,
+		obtainMessage(f.date_graduation, maintenant) !== null,
 	experiences: (e: Experience) =>
 		horsNom(e.company) ||
 		horsNom(e.job_name) ||
 		horsNom(e.city) ||
 		horsDescription(e.description) ||
-		messageDeDate(e.date_start) !== null ||
-		messageDeFin(e.date_end, e.date_start) !== null,
+		dateMessage(e.date_start) !== null ||
+		endMessage(e.date_end, e.date_start) !== null,
 	prestations: (p: Pick<OptionDePrestation, 'name' | 'description' | 'price'>) =>
 		horsNom(p.name) || horsDescription(p.description) || horsNom(p.price),
 } as const
@@ -339,7 +339,7 @@ export function lignesDansLesBornes(
 }
 
 /** A day of these lists as the collection stores it, or null. */
-const leJour = (date: string | null): unknown => (date === null ? null : dateDuJour(date))
+const leJour = (date: string | null): unknown => (date === null ? null : dayDate(date))
 
 /**
  * A price of the source: the text byte for byte (not trimmed: rule 2), and the amount the single

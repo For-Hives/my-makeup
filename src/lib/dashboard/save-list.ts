@@ -74,7 +74,7 @@ function optionsToWrite(
  *   an imported row with an empty field (SCHEMA.md §2) never blocks the save of another one;
  * - the profile written is hers, found by her account: the request holds no identifier of profile;
  * - the whole list is written, in the order sent. A row keeps the identifier the server gave it
- *   (rule L1, `identitesDesLignes`); a row sent without one is new. The options of an offer (ticket
+ *   (rule L1, `rowIdentities`); a row sent without one is new. The options of an offer (ticket
  *   132) are written as sent, in order, each with its own identifier; an offer sent with none of the
  *   key keeps the stored options;
  * - the write goes through the access rules and the hooks of the collection, as herself, so the server

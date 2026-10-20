@@ -19,8 +19,8 @@ import {
 	videALaSource,
 } from '../../scripts/migration/import/profils'
 import { SECTIONS_VIDES } from '../../scripts/migration/import/sections'
-import { NOM_NEUTRE, nomAffiche, nomComplet, texte } from '../../src/lib/profil/nom-affiche'
-import { CHAMPS_PUBLICS_DU_PROFIL } from '../../src/services/public/profils'
+import { displayName, fullName, NEUTRAL_NAME, text } from '../../src/lib/profile/display-name'
+import { PUBLIC_PROFILE_FIELDS } from '../../src/services/public/profiles'
 
 /**
  * Tickets 026 and 059: what the import makes of a profile of the old site, the name of its page,
@@ -274,24 +274,24 @@ describe('le moteur compare un groupe de champs comme un tout', () => {
 
 describe('le nom de la page : prénom et nom, sinon le nom d’artiste, sinon un libellé neutre', () => {
 	test('comme sur l’ancien site', () => {
-		expect(nomAffiche({ firstName: 'Zoé', lastName: 'Lefèvre', artistName: 'Zoé Make-up' })).toBe('Zoé Lefèvre')
-		expect(nomAffiche({ firstName: ' Zoé ', lastName: null })).toBe('Zoé')
-		expect(nomAffiche({ lastName: 'Lefèvre' })).toBe('Lefèvre')
-		expect(nomAffiche({ firstName: '  ', lastName: 'null', artistName: 'Studio Lumière' })).toBe('Studio Lumière')
-		expect(nomAffiche({ artistName: 'undefined' })).toBe(NOM_NEUTRE)
-		expect(nomAffiche({})).toBe('Maquilleuse professionnelle')
+		expect(displayName({ firstName: 'Zoé', lastName: 'Lefèvre', artistName: 'Zoé Make-up' })).toBe('Zoé Lefèvre')
+		expect(displayName({ firstName: ' Zoé ', lastName: null })).toBe('Zoé')
+		expect(displayName({ lastName: 'Lefèvre' })).toBe('Lefèvre')
+		expect(displayName({ firstName: '  ', lastName: 'null', artistName: 'Studio Lumière' })).toBe('Studio Lumière')
+		expect(displayName({ artistName: 'undefined' })).toBe(NEUTRAL_NAME)
+		expect(displayName({})).toBe('Maquilleuse professionnelle')
 	})
 
 	test('jamais « undefined » ni « null »', () => {
-		expect(texte('NULL')).toBe('')
-		expect(texte(42)).toBe('')
-		expect(nomComplet({ firstName: 'Undefined', lastName: 'Petit' })).toBe('Petit')
+		expect(text('NULL')).toBe('')
+		expect(text(42)).toBe('')
+		expect(fullName({ firstName: 'Undefined', lastName: 'Petit' })).toBe('Petit')
 	})
 })
 
 describe('la lecture publique choisit ses champs un par un', () => {
 	test('l’identité seulement : ni coordonnées, ni compte, ni ce qu’ont écrit l’import ou un admin', () => {
-		expect(Object.keys(CHAMPS_PUBLICS_DU_PROFIL).sort()).toEqual([
+		expect(Object.keys(PUBLIC_PROFILE_FIELDS).sort()).toEqual([
 			'artistName',
 			'description',
 			'firstName',

@@ -10,14 +10,14 @@
  *   Instagram holds an Instagram address. The website field holds any web address.
  * - An empty field removes the network (the value stored is nothing).
  * - The server reads the strict schema: a key that is not one of the five fields refuses the whole request.
- * - A link to a network is a channel of contact (src/lib/profil/completude.ts): the card says so.
+ * - A link to a network is a channel of contact (src/lib/profile/completeness.ts): the card says so.
  * - Every message is in French, under the field it is about.
  */
 
 import { z } from 'zod'
-import { LONGUEUR_MAX_LIEN } from '../profil/coordonnees'
-import { texte } from '../profil/nom-affiche'
-import { urlReseau } from '../profil/vue-publique'
+import { LINK_MAX_LENGTH } from '../profile/contact-details'
+import { text } from '../profile/display-name'
+import { networkUrl } from '../profile/public-view'
 
 /** The five fields, in display order. `siteWeb` is the key of the collection. */
 export const NETWORKS_FIELDS = ['instagram', 'facebook', 'youtube', 'linkedin', 'siteWeb'] as const
@@ -76,7 +76,7 @@ export const NETWORKS: Readonly<Record<NetworkField, Network>> = {
 
 export const NETWORKS_MESSAGES = {
 	pasUnTexte: 'Ce champ doit être un texte.',
-	tropLong: `Ce lien ne doit pas dépasser ${LONGUEUR_MAX_LIEN} caractères.`,
+	tropLong: `Ce lien ne doit pas dépasser ${LINK_MAX_LENGTH} caractères.`,
 	illisible: (canal: NetworkField) =>
 		canal === 'siteWeb'
 			? `Cette adresse n’est pas lisible : colle l’adresse de ton site, par exemple ${NETWORKS.siteWeb.exemple}.`
@@ -106,11 +106,11 @@ export type NormalizationResult = { ok: true; valeur: string } | { ok: false; me
  */
 export function normalizeNetwork(canal: NetworkField, saisie: unknown): NormalizationResult {
 	if (typeof saisie !== 'string') return { ok: false, message: NETWORKS_MESSAGES.pasUnTexte }
-	const v = texte(saisie)
+	const v = text(saisie)
 	if (v === '') return { ok: true, valeur: '' }
 	const network = NETWORKS[canal]
 	if (canal === 'siteWeb' && v.startsWith('@')) return { ok: false, message: NETWORKS_MESSAGES.adresseDeSite }
-	const link = urlReseau(canal === 'siteWeb' ? 'website' : canal, v)
+	const link = networkUrl(canal === 'siteWeb' ? 'website' : canal, v)
 	if (link === null) return { ok: false, message: NETWORKS_MESSAGES.illisible(canal) }
 	const address = new URL(link)
 	if (address.username !== '' || address.password !== '')
@@ -135,7 +135,7 @@ export function normalizeNetwork(canal: NetworkField, saisie: unknown): Normaliz
 		if (address.pathname === '/' && address.search === '' && address.hash === '')
 			return { ok: false, message: NETWORKS_MESSAGES.illisible(canal) }
 	}
-	if (value.length > LONGUEUR_MAX_LIEN) return { ok: false, message: NETWORKS_MESSAGES.tropLong }
+	if (value.length > LINK_MAX_LENGTH) return { ok: false, message: NETWORKS_MESSAGES.tropLong }
 	return { ok: true, valeur: value }
 }
 

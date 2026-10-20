@@ -9,7 +9,7 @@ import {
 	textRadius,
 } from '@/lib/dashboard/location'
 import { payloadFailure } from '@/lib/dashboard/result'
-import { MESSAGES_DE_LA_ZONE } from '@/lib/profil/zone'
+import { ZONE_MESSAGES } from '@/lib/profile/zone'
 
 /**
  * The rules of the location form (ticket 123; plan 02 U14, U15, U16): the label of a commune, the
@@ -87,7 +87,7 @@ describe('le rayon saisi : des kilomètres entiers, de 0 à 200', () => {
 	])('« %s » est refusé', texte => {
 		const lu = enteredRadiusSchema.safeParse(texte)
 		expect(lu.success).toBe(false)
-		expect(lu.error?.issues[0]?.message).toBe(MESSAGES_DE_LA_ZONE.rayon)
+		expect(lu.error?.issues[0]?.message).toBe(ZONE_MESSAGES.rayon)
 	})
 
 	test('le rayon saisi devient des kilomètres, ou rien quand le champ est vide', () => {
@@ -118,7 +118,7 @@ describe('le schéma du serveur est strict', () => {
 	])('le rayon %p est refusé avec le message de la zone', rayonKm => {
 		const lu = strictLocationSchema.safeParse({ ...VALIDE, rayonKm })
 		if (lu.success) throw new Error('doit être refusé')
-		expect(errorsByField(lu.error)).toEqual({ rayonKm: MESSAGES_DE_LA_ZONE.rayon })
+		expect(errorsByField(lu.error)).toEqual({ rayonKm: ZONE_MESSAGES.rayon })
 	})
 
 	test.each([
@@ -165,11 +165,11 @@ describe('le schéma du serveur est strict', () => {
 describe('l’échec de Payload sur la commune se dit sous le champ de la commune', () => {
 	test('un chemin commune.* devient le champ codeInsee', () => {
 		const erreur = {
-			data: { errors: [{ path: 'commune.nom', message: MESSAGES_DE_LA_ZONE.nomAdresse }] },
+			data: { errors: [{ path: 'commune.nom', message: ZONE_MESSAGES.nomAdresse }] },
 		}
 		const echec = payloadFailure(erreur, ['codeInsee', 'rayonKm', 'aDomicile'], chemin =>
 			chemin.startsWith('commune') ? 'codeInsee' : chemin
 		)
-		expect(echec.champs).toEqual({ codeInsee: MESSAGES_DE_LA_ZONE.nomAdresse })
+		expect(echec.champs).toEqual({ codeInsee: ZONE_MESSAGES.nomAdresse })
 	})
 })

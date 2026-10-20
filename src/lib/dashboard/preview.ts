@@ -3,11 +3,11 @@
  * stands for a visitor, in one banner. Pure, so the page and the tests call it.
  *
  * The three rules are the ones of the public reading, never written again here
- * (src/lib/profil/visibilite.ts): visible at its address, listed, indexable. The first condition
+ * (src/lib/profile/visibility.ts): visible at its address, listed, indexable. The first condition
  * that fails gives the message, from the most serious to the lightest.
  */
 
-import { type DocumentVisible, estIndexable, estListe, estVisible } from '../profil/visibilite'
+import { type DocumentVisible, isIndexable, isList, isVisible } from '../profile/visibility'
 
 export const PREVIEW_PATH = '/auth/apercu-profil'
 export const DASHBOARD_PATH = '/auth/profil'
@@ -24,14 +24,14 @@ export interface PreviewState {
 
 /** The banner for the state of her profile. */
 export function previewState(profil: DocumentVisible): PreviewState {
-	if (!estVisible(profil))
+	if (!isVisible(profil))
 		return {
 			code: 'masque',
 			titre: 'Ton profil est masqué.',
 			texte:
 				'Les visiteuses ne le voient pas : cette page n’existe que pour toi. Écris-nous si tu penses que c’est une erreur.',
 		}
-	if (!estListe(profil) && profil.available !== false)
+	if (!isList(profil) && profil.available !== false)
 		return {
 			code: 'vide',
 			titre: 'Ton profil est encore vide.',
@@ -44,7 +44,7 @@ export function previewState(profil: DocumentVisible): PreviewState {
 			texte:
 				'Ton profil n’apparaît pas dans les résultats de recherche, mais cette page reste visible par celles qui ont ton lien.',
 		}
-	if (!estIndexable(profil))
+	if (!isIndexable(profil))
 		return {
 			code: 'non-publiable',
 			titre: 'Ton profil n’est pas encore publiable.',

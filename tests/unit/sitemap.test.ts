@@ -2,25 +2,25 @@ import { describe, expect, test } from 'bun:test'
 import { existsSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import type { Payload } from 'payload'
+import { FROZEN_URL_FAMILIES } from '../../src/lib/frozen-urls'
 import {
-	adresseAbsolue,
-	echapperXml,
-	entreesDuSitemap,
-	GROUPES_DU_PLAN,
+	absoluteUrl,
+	deliveredStaticPages,
+	EXCLUDED_PAGES,
+	EXCLUDED_PREFIXES,
+	escapeXml,
 	lastmod,
-	PAGES_EXCLUES,
-	PAGES_FIXES,
-	PREFIXES_EXCLUS,
-	pagesFixesLivrees,
+	SITE_MAP_GROUPS,
+	STATIC_PAGES,
+	sitemapEntries,
 	sitemapXml,
 } from '../../src/lib/seo/sitemap'
-import { FROZEN_URL_FAMILIES } from '../../src/lib/urls-gelees'
 import {
-	lireLesPagesIndexables,
-	lireLesProfilsIndexables,
+	PAGE_SIZE,
 	PAGES_MAX,
-	TAILLE_DE_LA_PAGE,
-} from '../../src/services/public/pages-indexables'
+	readIndexablePages,
+	readIndexableProfiles,
+} from '../../src/services/public/indexable-pages'
 
 /**
  * The sitemap (tickets 113 and 114; plan 02 U38 to U43): the pure module, the table of the fixed pages
@@ -45,30 +45,30 @@ function verifierLesAdresses(adresses: readonly string[]): void {
 describe('U38 : tous les profils publiables, sans troncature', () => {
 	test('150 profils publiables → 150 adresses de profil', () => {
 		const profils = Array.from({ length: 150 }, (_, i) => ({ slug: `profil-${i + 1}` }))
-		const xml = sitemapXml(entreesDuSitemap({ pages: [], profils }))
+		const xml = sitemapXml(sitemapEntries({ pages: [], profils }))
 		expect(locs(xml).filter(loc => loc.includes('/profil/'))).toHaveLength(150)
 	})
 
 	test('la lecture suit les pages de 100 : 150 profils → deux lectures, 150 profils', async () => {
 		const { payload, lectures } = payloadEspion({ profils: 150 })
-		const profils = await lireLesProfilsIndexables(payload)
+		const profils = await readIndexableProfiles(payload)
 		expect(profils).toHaveLength(150)
 		expect(lectures.map(({ page }) => page)).toEqual([1, 2])
 	})
 
 	test('une liste qui dépasse la borne fait échouer la lecture au lieu d’être coupée', async () => {
-		const { payload } = payloadEspion({ profils: (PAGES_MAX + 1) * TAILLE_DE_LA_PAGE })
-		await expect(lireLesProfilsIndexables(payload)).rejects.toThrow(/coupée/)
+		const { payload } = payloadEspion({ profils: (PAGES_MAX + 1) * PAGE_SIZE })
+		await expect(readIndexableProfiles(payload)).rejects.toThrow(/coupée/)
 	})
 })
 
 describe('U39 : aucun « // » hors du schéma', () => {
 	test('les adresses sont celles de l’apex, quel que soit le chemin écrit', () => {
-		expect(adresseAbsolue('/')).toBe('https://my-makeup.fr')
-		expect(adresseAbsolue('/blog/')).toBe('https://my-makeup.fr/blog')
-		expect(adresseAbsolue('//profil//x/')).toBe('https://my-makeup.fr/profil/x')
+		expect(absoluteUrl('/')).toBe('https://my-makeup.fr')
+		expect(absoluteUrl('/blog/')).toBe('https://my-makeup.fr/blog')
+		expect(absoluteUrl('//profil//x/')).toBe('https://my-makeup.fr/profil/x')
 		const xml = sitemapXml(
-			entreesDuSitemap({
+			sitemapEntries({
 				profils: [{ slug: 'zoe-lefevre' }],
 				talents: [{ slug: 'maquillage-mariee' }],
 				articles: [{ slug: 'prix-mariee-2027' }],
@@ -83,7 +83,7 @@ describe('U39 : aucun « // » hors du schéma', () => {
 describe('U40 : slugs encodés, XML échappé', () => {
 	test('un slug hors norme est encodé dans l’adresse, et l’XML échappe ce qui reste', () => {
 		const xml = sitemapXml(
-			entreesDuSitemap({
+			sitemapEntries({
 				pages: [],
 				talents: [{ slug: 'mariée & <soirée>' }],
 				articles: [{ slug: "l'été" }],
@@ -95,28 +95,28 @@ describe('U40 : slugs encodés, XML échappé', () => {
 	})
 
 	test('le texte est échappé', () => {
-		expect(echapperXml(`a&b<c>"d"'e'`)).toBe('a&amp;b&lt;c&gt;&quot;d&quot;&apos;e&apos;')
+		expect(escapeXml(`a&b<c>"d"'e'`)).toBe('a&amp;b&lt;c&gt;&quot;d&quot;&apos;e&apos;')
 	})
 })
 
 describe('U41 : les exclus ne sont jamais là', () => {
 	test('/auth, /api, /admin, /search, le plan du site et la page de remerciement', () => {
 		const pages = [
-			...PAGES_FIXES,
+			...STATIC_PAGES,
 			...['/auth', '/auth/signin', '/api/health', '/admin', '/admin/collections/profiles', '/search', '/site-map'].map(
 				chemin => ({ chemin, titre: chemin, groupe: null })
 			),
 			{ chemin: '/demande-envoyee', titre: 'x', groupe: null },
 			{ chemin: '/toutes-les-news', titre: 'x', groupe: null },
 		]
-		const xml = sitemapXml(entreesDuSitemap({ pages }))
+		const xml = sitemapXml(sitemapEntries({ pages }))
 		for (const loc of locs(xml))
 			expect(loc, loc).not.toMatch(/\/(auth|api|admin|search|site-map|demande-envoyee|toutes-les-news)(\/|$)/)
 	})
 
 	test('la lecture ne demande que les profils publiables, avec les règles d’accès actives', async () => {
 		const { payload, lectures } = payloadEspion({ profils: 1 })
-		await lireLesPagesIndexables(payload)
+		await readIndexablePages(payload)
 		const [profils] = lectures.filter(({ collection }) => collection === 'profiles')
 		expect(profils).toMatchObject({ where: { publishable: { equals: true } }, overrideAccess: false })
 		for (const lecture of lectures) expect(lecture.overrideAccess, String(lecture.collection)).toBe(false)
@@ -124,7 +124,7 @@ describe('U41 : les exclus ne sont jamais là', () => {
 
 	test('la lecture ne prend aucun champ privé', async () => {
 		const { payload, lectures } = payloadEspion({ profils: 1 })
-		await lireLesPagesIndexables(payload)
+		await readIndexablePages(payload)
 		for (const lecture of lectures) {
 			const champs = Object.keys(lecture.select as object)
 			for (const prive of ['coordonnees', 'contactPublic', 'pro', 'email', 'statut', 'legacyUsername'])
@@ -134,7 +134,7 @@ describe('U41 : les exclus ne sont jamais là', () => {
 
 	test('un profil dont le slug n’est pas une adresse est écarté : sa page ne répondrait pas', async () => {
 		const { payload } = payloadEspion({ profils: 0, profilsBruts: [{ slug: 'Slug Invalide' }, { slug: 'ok-un' }] })
-		expect((await lireLesProfilsIndexables(payload)).map(({ slug }) => slug)).toEqual(['ok-un'])
+		expect((await readIndexableProfiles(payload)).map(({ slug }) => slug)).toEqual(['ok-un'])
 	})
 
 	test('une base en erreur donne une erreur, pas un sitemap tronqué', async () => {
@@ -143,7 +143,7 @@ describe('U41 : les exclus ne sont jamais là', () => {
 				throw new Error('base indisponible')
 			},
 		} as unknown as Payload
-		await expect(lireLesPagesIndexables(payload)).rejects.toThrow('base indisponible')
+		await expect(readIndexablePages(payload)).rejects.toThrow('base indisponible')
 	})
 })
 
@@ -156,7 +156,7 @@ describe('U42 : lastmod = la date réelle de la dernière modification', () => {
 
 	test('une page fixe n’a pas de date, ni changefreq ni priority', () => {
 		const xml = sitemapXml(
-			entreesDuSitemap({
+			sitemapEntries({
 				profils: [{ slug: 'zoe-lefevre', misAJourLe: '2026-01-02T03:04:05.000Z' }],
 				talents: [{ slug: 'mariee', misAJourLe: null }],
 			})
@@ -173,7 +173,7 @@ describe('U42 : lastmod = la date réelle de la dernière modification', () => {
 describe('U43 : talents et articles par slug, pages fixes d’une table explicite', () => {
 	test('chaque talent sous /talent, chaque article sous /blog, sans doublon', () => {
 		const xml = sitemapXml(
-			entreesDuSitemap({
+			sitemapEntries({
 				pages: [],
 				talents: [{ slug: 'mariee' }, { slug: 'mariee' }],
 				articles: [{ slug: 'prix-2027' }],
@@ -186,14 +186,14 @@ describe('U43 : talents et articles par slug, pages fixes d’une table explicit
 		const gelees = FROZEN_URL_FAMILIES.filter(({ id }) =>
 			['accueil', 'pages-fixes', 'mentions-legales', 'blog'].includes(id)
 		).flatMap(({ patterns }) => patterns)
-		expect([...PAGES_FIXES.map(({ chemin }) => chemin)].sort()).toEqual([...gelees].sort())
+		expect([...STATIC_PAGES.map(({ chemin }) => chemin)].sort()).toEqual([...gelees].sort())
 	})
 
 	test('chaque page de la table a ses adresses sans doublon, et un groupe connu du plan', () => {
-		const chemins = PAGES_FIXES.map(({ chemin }) => chemin)
+		const chemins = STATIC_PAGES.map(({ chemin }) => chemin)
 		expect(new Set(chemins).size).toBe(chemins.length)
-		const groupes: readonly (string | null)[] = GROUPES_DU_PLAN.map(({ id }) => id)
-		for (const page of PAGES_FIXES) if (page.groupe !== null) expect(groupes, page.chemin).toContain(page.groupe)
+		const groupes: readonly (string | null)[] = SITE_MAP_GROUPS.map(({ id }) => id)
+		for (const page of STATIC_PAGES) if (page.groupe !== null) expect(groupes, page.chemin).toContain(page.groupe)
 	})
 })
 
@@ -234,8 +234,8 @@ function adressesDeLApplication(): { statiques: string[]; dynamiques: string[] }
 describe('La table des pages fixes couvre les pages de l’application, dans les deux sens', () => {
 	const { statiques, dynamiques } = adressesDeLApplication()
 	const exclue = (chemin: string) =>
-		PAGES_EXCLUES.some(page => page.chemin === chemin) ||
-		PREFIXES_EXCLUS.some(prefixe => chemin === prefixe || chemin.startsWith(`${prefixe}/`))
+		EXCLUDED_PAGES.some(page => page.chemin === chemin) ||
+		EXCLUDED_PREFIXES.some(prefixe => chemin === prefixe || chemin.startsWith(`${prefixe}/`))
 
 	test('le parcours trouve les pages que l’on connaît', () => {
 		expect(statiques).toContain('/a-propos')
@@ -244,19 +244,19 @@ describe('La table des pages fixes couvre les pages de l’application, dans les
 	})
 
 	test('une page de l’application est dans la table ou dans les exclusions, jamais dans aucune', () => {
-		const dansLaTable = new Set(PAGES_FIXES.map(({ chemin }) => chemin))
+		const dansLaTable = new Set(STATIC_PAGES.map(({ chemin }) => chemin))
 		expect(statiques.filter(chemin => !dansLaTable.has(chemin) && !exclue(chemin))).toEqual([])
 	})
 
 	test('une page de la table qui existe n’est pas marquée « à venir »', () => {
 		const existantes = new Set(statiques)
-		const faux = PAGES_FIXES.filter(page => page.aVenir !== undefined && existantes.has(page.chemin))
+		const faux = STATIC_PAGES.filter(page => page.aVenir !== undefined && existantes.has(page.chemin))
 		expect(faux.map(({ chemin }) => chemin)).toEqual([])
 	})
 
 	test('une page de la table qui n’existe pas est marquée « à venir » : sinon le sitemap listerait un 404', () => {
 		const existantes = new Set(statiques)
-		const manque = PAGES_FIXES.filter(page => page.aVenir === undefined && !existantes.has(page.chemin))
+		const manque = STATIC_PAGES.filter(page => page.aVenir === undefined && !existantes.has(page.chemin))
 		expect(manque.map(({ chemin }) => chemin)).toEqual([])
 	})
 
@@ -270,12 +270,12 @@ describe('La table des pages fixes couvre les pages de l’application, dans les
 
 	test('la table livrée ne garde que les pages qui existent', () => {
 		const existantes = new Set(statiques)
-		for (const page of pagesFixesLivrees()) expect(existantes.has(page.chemin), page.chemin).toBe(true)
+		for (const page of deliveredStaticPages()) expect(existantes.has(page.chemin), page.chemin).toBe(true)
 		expect(existsSync(join(RACINE, 'src/app/sitemap.xml/route.ts'))).toBe(true)
 	})
 
 	test('le contrôle voit une page absente des deux listes', () => {
-		const dansLaTable = new Set(PAGES_FIXES.map(({ chemin }) => chemin))
+		const dansLaTable = new Set(STATIC_PAGES.map(({ chemin }) => chemin))
 		const inconnue = '/nouvelle-page-sans-ligne'
 		expect(!dansLaTable.has(inconnue) && !exclue(inconnue)).toBe(true)
 	})

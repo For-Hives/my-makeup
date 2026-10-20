@@ -59,8 +59,8 @@ import {
 	TYPES_D_IMAGE,
 } from '@/lib/articles'
 import { LANGUE_DE_PAYLOAD } from '@/lib/langue-payload'
-import { validerPhotosDuProfil } from '@/lib/profil/photos'
-import { STATUTS_DU_PROFIL } from '@/lib/profil/statut'
+import { validateProfilePhotos } from '@/lib/profile/photos'
+import { PROFILE_STATUSES } from '@/lib/profile/status'
 
 /**
  * The access rules, called as Payload calls them, without a database: who reaches what. The
@@ -397,7 +397,7 @@ describe('La collection profils (ticket 020)', () => {
 	})
 
 	test('le statut : brouillon, publié ou masqué ; un profil neuf est un brouillon', () => {
-		expect(STATUTS_DU_PROFIL).toEqual(['draft', 'published', 'hidden'])
+		expect(PROFILE_STATUSES).toEqual(['draft', 'published', 'hidden'])
 		const statut = champ(Profiles.fields, 'status') as { defaultValue?: unknown; options?: { value: string }[] }
 		// Not `required`: a profile created without one, by the server or a test, gets the default.
 		expect(statut).toMatchObject({ type: 'select', defaultValue: 'draft' })
@@ -905,7 +905,7 @@ describe('Les photos d’un profil (ticket 043)', () => {
 	/** The validation as Payload calls it, with a database that holds these media and their owners. */
 	function valider(valeur: unknown, pro: unknown, media: { id: number; owner: unknown }[], avant?: unknown) {
 		const payload = { find: () => Promise.resolve({ docs: media }) }
-		return validerPhotosDuProfil(valeur, {
+		return validateProfilePhotos(valeur, {
 			data: { pro },
 			previousValue: avant,
 			req: { payload } as unknown as PayloadRequest,
@@ -949,7 +949,7 @@ describe('Les photos d’un profil (ticket 043)', () => {
 			},
 		}
 		const valider133 = (valeur: unknown, hasMany: boolean) =>
-			validerPhotosDuProfil(valeur, { data: { pro: 7 }, hasMany, req: { payload } as unknown as PayloadRequest })
+			validateProfilePhotos(valeur, { data: { pro: 7 }, hasMany, req: { payload } as unknown as PayloadRequest })
 		for (const id of IDENTIFIANTS_IMPOSSIBLES) {
 			expect([id, await valider133(id, false)]).toEqual([id, MESSAGE_REFUS])
 			expect([id, await valider133([id], true)]).toEqual([id, MESSAGE_REFUS])
@@ -960,7 +960,7 @@ describe('Les photos d’un profil (ticket 043)', () => {
 	test('133 : une entrée qui ne nomme aucun identifiant est refusée au lieu d’être ignorée', async () => {
 		const payload = { find: () => Promise.resolve({ docs: [{ id: 5, owner: 7 }] }) }
 		const valider133 = (valeur: unknown, hasMany: boolean) =>
-			validerPhotosDuProfil(valeur, { data: { pro: 7 }, hasMany, req: { payload } as unknown as PayloadRequest })
+			validateProfilePhotos(valeur, { data: { pro: 7 }, hasMany, req: { payload } as unknown as PayloadRequest })
 		for (const entree of [true, {}, { relationTo: 'media', value: 5 }, [[5]]])
 			expect([entree, await valider133(entree, false)]).toEqual([entree, MESSAGE_REFUS])
 		expect(await valider133([5], false)).toBe(MESSAGE_REFUS)

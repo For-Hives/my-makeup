@@ -13,7 +13,7 @@ import {
 } from '@/lib/dashboard/location'
 import { STEPS_TITLES } from '@/lib/dashboard/onboarding'
 import { FAILURE_MESSAGE, type SaveResult } from '@/lib/dashboard/result'
-import { BORNES_DU_RAYON_KM } from '@/lib/profil/zone'
+import { RADIUS_BOUNDS_KM } from '@/lib/profile/zone'
 import { type CitiesSearch, CityField } from '../CityField'
 import type { LocationUpload } from '../LocationEditor'
 import { BUTTON, FailureMessage, FIELD, MAIN_BUTTON, StepFrame } from './shared'
@@ -148,7 +148,7 @@ export function ZoneStep({
 						{...register('rayon')}
 					/>
 					<p id={`${id}-rayon-aide`} className="text-neutral-700 text-sm">
-						De {BORNES_DU_RAYON_KM.min} à {BORNES_DU_RAYON_KM.max} km, en kilomètres entiers.
+						De {RADIUS_BOUNDS_KM.min} à {RADIUS_BOUNDS_KM.max} km, en kilomètres entiers.
 					</p>
 					{radiusError ? (
 						<p id={`${id}-rayon-erreur`} className="text-red-800 text-sm">

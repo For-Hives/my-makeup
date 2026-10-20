@@ -3,11 +3,11 @@ import { readFileSync } from 'node:fs'
 import type { Metadata } from 'next'
 import type { ReactElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import PageAPropos, { metadata as metaAPropos } from '../../src/app/(front)/(site)/a-propos/page'
-import PagePartenariats, {
+import AboutPage, { metadata as metaAPropos } from '../../src/app/(front)/(site)/a-propos/page'
+import PartnershipsPage, {
 	metadata as metaPartenariats,
 } from '../../src/app/(front)/(site)/maquilleuse/partenariats/page'
-import PagePourquoiRejoindre, {
+import WhyJoinPage, {
 	metadata as metaPourquoi,
 } from '../../src/app/(front)/(site)/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse/page'
 import PageSolutions, {
@@ -22,11 +22,11 @@ const anciens: TitresDeLAncienSite = JSON.parse(
 )
 
 const PAGES: { adresse: string; page: () => ReactElement; metadata: Metadata }[] = [
-	{ adresse: '/a-propos', page: PageAPropos, metadata: metaAPropos },
-	{ adresse: '/maquilleuse/partenariats', page: PagePartenariats, metadata: metaPartenariats },
+	{ adresse: '/a-propos', page: AboutPage, metadata: metaAPropos },
+	{ adresse: '/maquilleuse/partenariats', page: PartnershipsPage, metadata: metaPartenariats },
 	{
 		adresse: '/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse',
-		page: PagePourquoiRejoindre,
+		page: WhyJoinPage,
 		metadata: metaPourquoi,
 	},
 	{ adresse: '/solutions/pour-les-maquilleuses', page: PageSolutions, metadata: metaSolutions },
@@ -63,7 +63,7 @@ describe.each(PAGES)('Page $adresse', ({ adresse, page, metadata }) => {
 describe('Le h1 de l’ancien site', () => {
 	test('« Pourquoi rejoindre » garde mot pour mot son h1 d’avant (même empreinte)', () => {
 		const adresse = '/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse'
-		const html = renderToStaticMarkup(PagePourquoiRejoindre())
+		const html = renderToStaticMarkup(WhyJoinPage())
 		expect(anciens[adresse]?.n).toBe(1)
 		expect(empreinteDesTitres(html).sha).toBe(anciens[adresse]?.sha ?? null)
 	})

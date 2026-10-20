@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, setDefaultTimeout, test } from 'bun:test'
 import sharp from 'sharp'
 import { PHOTO_SIZE_MAX, UPLOAD_MESSAGES } from '@/lib/photo-upload'
-import { MESSAGES_DES_PHOTOS } from '@/lib/profil/photos'
+import { PHOTO_MESSAGES } from '@/lib/profile/photos'
 import type { Media } from '@/payload-types'
 import { type Espion, espionnerLeStockage, suppressionsSansCorbeille } from '../outils/espion-s3'
 import { creerCompte } from '../outils/fabrique-comptes'
@@ -180,7 +180,7 @@ describe('Ajout du 14/10 : une photo au mauvais identifiant est refusée en 400,
 			corps,
 		})
 		expect(reponse.statut).toBe(400)
-		expect(reponse.texte).toContain(MESSAGES_DES_PHOTOS.photoRefusee)
+		expect(reponse.texte).toContain(PHOTO_MESSAGES.photoRefusee)
 		const apres = await profilDe(compte)
 		expect([apres.mainPicture ?? null, apres.gallery ?? []]).toEqual([avant.mainPicture ?? null, avant.gallery ?? []])
 	})

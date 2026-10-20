@@ -1,10 +1,10 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Hero } from '@/components/blocs/Hero'
-import { metadonnees } from '@/lib/seo/metadonnees'
+import { Hero } from '@/components/blocks/Hero'
+import { pageMetadata } from '@/lib/seo/metadata'
 
 // The thank-you page: a page, but not one to find in a search engine. No canonical address, `noindex`.
-export const metadata: Metadata = metadonnees({
+export const metadata: Metadata = pageMetadata({
 	titre: 'Demande envoyée',
 	description: 'Votre demande est transmise.',
 	repli: 'Votre demande est transmise.',
@@ -12,7 +12,7 @@ export const metadata: Metadata = metadonnees({
 	indexable: false,
 })
 
-export default function PageDemandeEnvoyee() {
+export default function RequestSentPage() {
 	return (
 		<main className="relative">
 			<Hero

@@ -1,7 +1,7 @@
 import { type FieldHook, type FilterOptionsProps, type PayloadRequest, ValidationError, type Where } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { estAdmin, identifiantPossible, MEDIAS_DE_LA_REDACTION } from './acces'
-import { photosNommees } from './profil/photos'
+import { namedPhotos } from './profile/photos'
 
 /**
  * The gallery of an article (ticket 046; docs/migration/SCHEMA.md, §5.3): images only. The old site
@@ -77,7 +77,7 @@ export async function queDesImagesDeLaRedaction(ids: (number | string)[], req: P
  */
 export const galerieDImages: FieldHook = async ({ field, value, req }) => {
 	const entrees = value === undefined || value === null ? [] : Array.isArray(value) ? value : [value]
-	const ids = photosNommees(entrees)
+	const ids = namedPhotos(entrees)
 	if (ids.length !== entrees.length || !(await queDesImagesDeLaRedaction(ids, req)))
 		throw new ValidationError(
 			{

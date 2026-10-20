@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
-import { Footer } from '@/components/gabarit/Footer'
-import { Nav } from '@/components/gabarit/Nav'
+import { Footer } from '@/components/layout/Footer'
+import { Nav } from '@/components/layout/Nav'
 
 // The template of every public page: navigation, content, footer. It reads no cookie and no
 // session, so the pages stay static; the signed-in state of the navigation is read in the browser

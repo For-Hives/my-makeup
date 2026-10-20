@@ -60,7 +60,7 @@ Les Web Vitals (`web-vitals`, un événement par mesure : `CLS`, `FCP`, `INP`, `
 
 ## Le clic sur un contact d'un profil public (`contact_click`)
 
-Chaque lien de la section « Réseaux sociaux & contacts » d'un profil public (téléphone, email, Instagram, Facebook, LinkedIn, YouTube, site) émet un `contact_click` avec le `pid` du profil et le `channel`, une fois par clic (le clic du milieu aussi). C'est le principal signal de demande. Le code est `src/lib/analytics/contact-click.ts` (la règle et l'envoi) et `src/components/profil/LienDeContactMesure.tsx` (le lien).
+Chaque lien de la section « Réseaux sociaux & contacts » d'un profil public (téléphone, email, Instagram, Facebook, LinkedIn, YouTube, site) émet un `contact_click` avec le `pid` du profil et le `channel`, une fois par clic (le clic du milieu aussi). C'est le principal signal de demande. Le code est `src/lib/analytics/contact-click.ts` (la règle et l'envoi) et `src/components/profile/TrackedContactLink.tsx` (le lien).
 
 Il ne part pas :
 
@@ -69,7 +69,7 @@ Il ne part pas :
 - quand l'adresse porte `utm_campaign=relance` (lien d'un email de relance) ;
 - depuis l'aperçu de sa propre page (`/auth/apercu-profil`), qui ne compte aucun clic (`mesure={false}`).
 
-Un profil sans contact public n'a ni section ni lien, donc aucun événement. Le `pid` d'un profil est l'identifiant de l'ancien site s'il en a un, sinon `v3-<id>` (`src/lib/profil/pid.ts`). Tests : U84 dans `tests/unit/mesure-clic-contact.test.tsx`, E52 dans `tests/e2e/mesure-clic-contact.spec.ts`.
+Un profil sans contact public n'a ni section ni lien, donc aucun événement. Le `pid` d'un profil est l'identifiant de l'ancien site s'il en a un, sinon `v3-<id>` (`src/lib/profile/pid.ts`). Tests : U84 dans `tests/unit/mesure-clic-contact.test.tsx`, E52 dans `tests/e2e/mesure-clic-contact.spec.ts`.
 
 ## La recherche, les appels à l'action et les pages d'erreur (ticket 145)
 
@@ -87,7 +87,7 @@ Un profil sans contact public n'a ni section ni lien, donc aucun événement. Le
 
 **Le traceur sur les pages qui l'ont perdu.** Le script de l'en-tête ne s'exécute pas quand le navigateur dessine lui-même la page après un échec du serveur : la 404 d'une adresse que rien ne sert (`src/app/global-not-found.tsx`), celle d'un profil, d'un talent ou d'un article inconnu, et toute page d'erreur. Ces pages ajoutent donc le traceur elles-mêmes avant d'émettre (`src/lib/analytics/chargeur.ts`), s'il n'est pas déjà là. La page d'erreur globale (`global-error.tsx`) fait de même.
 
-Le `pid` d'une carte (`CarteDeProfil.pid`) est lu à part, par les identifiants que la lecture publique a donnés (`lireLesPid`) : l'ancien identifiant n'est pas un champ que le public lit.
+Le `pid` d'une carte (`ProfileCard.pid`) est lu à part, par les identifiants que la lecture publique a donnés (`readPids`) : l'ancien identifiant n'est pas un champ que le public lit.
 
 Tests : `tests/unit/mesure-recherche-erreurs.test.ts`, et `tests/e2e/mesure-recherche-erreurs.spec.ts` contre le faux Umami.
 

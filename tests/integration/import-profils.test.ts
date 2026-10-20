@@ -6,7 +6,7 @@ import { SQL } from 'bun'
 import { PROFILS_DU_SPAM } from '../../scripts/migration/import/profils'
 import { CONTEXTE_IMPORT } from '../../src/lib/contexte-import'
 import { attribuerSlugs } from '../../src/lib/slug'
-import { CHAMPS_PUBLICS_DU_PROFIL, lireLeProfilPublic } from '../../src/services/public/profils'
+import { PUBLIC_PROFILE_FIELDS, readPublicProfile } from '../../src/services/public/profiles'
 import { commandeDImport, DECISIONS_DU_BANC, FICHIER_DES_DECISIONS_DU_BANC, importerSurLeBanc } from '../outils/import'
 import { compterLesMails, viderLeCapteur } from '../outils/mailpit'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
@@ -302,7 +302,7 @@ describe('La lecture publique d’un profil repris', () => {
 	test('par son slug, le profil publié donne son nom, sa spécialité et sa description, rien d’autre', async () => {
 		const payload = await payloadDeTest()
 
-		const profil = await lireLeProfilPublic(payload, 'zoe-lefevre')
+		const profil = await readPublicProfile(payload, 'zoe-lefevre')
 
 		expect(profil).toMatchObject({
 			slug: 'zoe-lefevre',
@@ -330,15 +330,15 @@ describe('La lecture publique d’un profil repris', () => {
 	test('un slug inconnu, une ancienne forme du nom ne donnent rien (le brouillon est lu, en noindex : ticket 104)', async () => {
 		const payload = await payloadDeTest()
 
-		expect((await lireLeProfilPublic(payload, 'manon-petit'))?.indexable).toBe(false)
+		expect((await readPublicProfile(payload, 'manon-petit'))?.indexable).toBe(false)
 		for (const slug of ['audit-inexistant-zz9', 'Zoe-Lefevre', 'zoé lefèvre', ''])
-			expect(await lireLeProfilPublic(payload, slug), slug).toBeNull()
+			expect(await readPublicProfile(payload, slug), slug).toBeNull()
 	})
 
 	test('les champs lus sont choisis un par un, et ce sont les seuls que le public lit', async () => {
 		const payload = await payloadDeTest()
 
-		expect(Object.keys(CHAMPS_PUBLICS_DU_PROFIL).sort()).toEqual([
+		expect(Object.keys(PUBLIC_PROFILE_FIELDS).sort()).toEqual([
 			'artistName',
 			'description',
 			'firstName',
@@ -349,7 +349,7 @@ describe('La lecture publique d’un profil repris', () => {
 		const { docs } = await payload.find({
 			collection: 'profiles',
 			where: { slug: { equals: 'zoe-lefevre' } },
-			select: CHAMPS_PUBLICS_DU_PROFIL,
+			select: PUBLIC_PROFILE_FIELDS,
 			depth: 0,
 			overrideAccess: false,
 		})

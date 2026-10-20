@@ -1,25 +1,25 @@
 import { describe, expect, test } from 'bun:test'
 import {
-	consentementApres,
-	groupeVideSiNul,
-	MESSAGES_DES_COORDONNEES,
-	validerEmailDeContact,
-	validerLienDeReseau,
-	validerTelephone,
-} from '@/lib/profil/coordonnees'
+	CONTACT_DETAILS_MESSAGES,
+	consentAfter,
+	emptyGroupIfNull,
+	validateContactEmail,
+	validateNetworkLink,
+	validatePhone,
+} from '@/lib/profile/contact-details'
 
 /** The networks and contact details of a profile, and the trace of the consent (ticket 042). */
 
 describe('Ce que le serveur accepte, avec les messages de l’ancien site', () => {
 	test('vide : accepté partout', () => {
-		for (const valider of [validerLienDeReseau, validerTelephone, validerEmailDeContact])
+		for (const valider of [validateNetworkLink, validatePhone, validateContactEmail])
 			expect([null, undefined, ''].map(valider)).toEqual([true, true, true])
 	})
 
 	test('un téléphone de 20 caractères passe ; de 21, refusé en français', () => {
-		expect(validerTelephone('+33 6 39 98 12 34')).toBe(true)
-		expect(validerTelephone('0'.repeat(20))).toBe(true)
-		expect(validerTelephone('0'.repeat(21))).toBe('Le numéro de téléphone ne doit pas dépasser 20 caractères.')
+		expect(validatePhone('+33 6 39 98 12 34')).toBe(true)
+		expect(validatePhone('0'.repeat(20))).toBe(true)
+		expect(validatePhone('0'.repeat(21))).toBe('Le numéro de téléphone ne doit pas dépasser 20 caractères.')
 	})
 
 	test.each([
@@ -28,20 +28,20 @@ describe('Ce que le serveur accepte, avec les messages de l’ancien site', () =
 		['avec une espace', 'con tact@example.test'],
 		['deux arobases', 'a@b@example.test'],
 	])('un email mal formé (%s) : refusé en français', (_cas, email) => {
-		expect(validerEmailDeContact(email)).toBe('Veuillez entrer un email valide.')
+		expect(validateContactEmail(email)).toBe('Veuillez entrer un email valide.')
 	})
 
 	test('un email bien formé passe ; au-delà de 200 caractères, refusé', () => {
-		expect(validerEmailDeContact('contact@example.test')).toBe(true)
+		expect(validateContactEmail('contact@example.test')).toBe(true)
 		const long = `${'a'.repeat(60)}@${'b'.repeat(60)}.${'c'.repeat(60)}.${'d'.repeat(20)}.test`
 		expect(long.length).toBeGreaterThan(200)
-		expect(validerEmailDeContact(long)).toBe(MESSAGES_DES_COORDONNEES.emailTropLong)
+		expect(validateContactEmail(long)).toBe(CONTACT_DETAILS_MESSAGES.emailTropLong)
 	})
 
 	test('un lien de réseau : 200 caractères au plus, sans contrôle de forme', () => {
-		expect(validerLienDeReseau('https://example.test/une-page')).toBe(true)
-		expect(validerLienDeReseau('@un_pseudo')).toBe(true)
-		expect(validerLienDeReseau(`https://example.test/${'a'.repeat(200)}`)).toBe(
+		expect(validateNetworkLink('https://example.test/une-page')).toBe(true)
+		expect(validateNetworkLink('@un_pseudo')).toBe(true)
+		expect(validateNetworkLink(`https://example.test/${'a'.repeat(200)}`)).toBe(
 			"L'URL ne doit pas dépasser 200 caractères."
 		)
 	})
@@ -55,7 +55,7 @@ describe('Ce que le serveur accepte, avec les messages de l’ancien site', () =
 		['un texte libre avec deux-points', 'Instagram : un_pseudo'],
 		['une adresse relative au protocole', '//example.test/une-page'],
 	])('un lien en http, en https ou sans protocole passe (%s)', (_cas, lien) => {
-		expect(validerLienDeReseau(lien)).toBe(true)
+		expect(validateNetworkLink(lien)).toBe(true)
 	})
 
 	test.each([
@@ -68,8 +68,8 @@ describe('Ce que le serveur accepte, avec les messages de l’ancien site', () =
 		['file', 'file:///etc/passwd'],
 		['mailto', 'mailto:contact@example.test'],
 	])('un lien qui nomme un autre protocole est refusé en français (%s)', (_cas, lien) => {
-		expect(validerLienDeReseau(lien)).toBe(MESSAGES_DES_COORDONNEES.lienSansProtocoleWeb)
-		expect(MESSAGES_DES_COORDONNEES.lienSansProtocoleWeb).toBe('Ce lien doit commencer par http:// ou https://.')
+		expect(validateNetworkLink(lien)).toBe(CONTACT_DETAILS_MESSAGES.lienSansProtocoleWeb)
+		expect(CONTACT_DETAILS_MESSAGES.lienSansProtocoleWeb).toBe('Ce lien doit commencer par http:// ou https://.')
 	})
 })
 
@@ -79,7 +79,7 @@ describe('La trace du consentement : posée par le serveur', () => {
 
 	test('fermées : ni date ni source, même si on en envoie', () => {
 		expect(
-			consentementApres({
+			consentAfter({
 				avant: true,
 				donnees: { publicContact: false, consentedAt: autreDate, consentSource: 'artist' },
 				compte: 'pros',
@@ -90,7 +90,7 @@ describe('La trace du consentement : posée par le serveur', () => {
 
 	test('ouvertes par la maquilleuse : la date du serveur, la source « maquilleuse »', () => {
 		expect(
-			consentementApres({
+			consentAfter({
 				avant: false,
 				donnees: { publicContact: true, consentedAt: null },
 				compte: 'pros',
@@ -100,17 +100,15 @@ describe('La trace du consentement : posée par le serveur', () => {
 	})
 
 	test('ouvertes par un admin : la date du serveur, la source « admin »', () => {
-		expect(consentementApres({ avant: false, donnees: { publicContact: true }, compte: 'admins', maintenant })).toEqual(
-			{
-				consentedAt: maintenant.toISOString(),
-				consentSource: 'admin',
-			}
-		)
+		expect(consentAfter({ avant: false, donnees: { publicContact: true }, compte: 'admins', maintenant })).toEqual({
+			consentedAt: maintenant.toISOString(),
+			consentSource: 'admin',
+		})
 	})
 
 	test('déjà ouvertes : la trace ne bouge pas', () => {
 		expect(
-			consentementApres({
+			consentAfter({
 				avant: true,
 				donnees: { publicContact: true, consentedAt: autreDate, consentSource: 'import' },
 				compte: 'pros',
@@ -121,25 +119,25 @@ describe('La trace du consentement : posée par le serveur', () => {
 
 	test('ouvertes à la création par le serveur sans compte : la date et la source données, sinon l’heure et « import »', () => {
 		expect(
-			consentementApres({
+			consentAfter({
 				avant: undefined,
 				donnees: { publicContact: true, consentedAt: autreDate, consentSource: 'import' },
 				compte: undefined,
 				maintenant,
 			})
 		).toEqual({ consentedAt: autreDate, consentSource: 'import' })
-		expect(
-			consentementApres({ avant: undefined, donnees: { publicContact: true }, compte: undefined, maintenant })
-		).toEqual({ consentedAt: maintenant.toISOString(), consentSource: 'import' })
+		expect(consentAfter({ avant: undefined, donnees: { publicContact: true }, compte: undefined, maintenant })).toEqual(
+			{ consentedAt: maintenant.toISOString(), consentSource: 'import' }
+		)
 	})
 })
 
 describe('Un groupe envoyé à null (ticket 224)', () => {
 	test('devient le groupe vide ; tout autre contenu est rendu tel quel', () => {
-		expect(groupeVideSiNul(null, ['telephone', 'email'])).toEqual({ telephone: null, email: null })
+		expect(emptyGroupIfNull(null, ['telephone', 'email'])).toEqual({ telephone: null, email: null })
 		const groupe = { telephone: '06 39 98 12 34' }
-		expect(groupeVideSiNul(groupe, ['telephone', 'email'])).toBe(groupe)
-		expect(groupeVideSiNul(undefined, ['telephone'])).toBeUndefined()
-		expect(groupeVideSiNul('texte', ['telephone'])).toBe('texte')
+		expect(emptyGroupIfNull(groupe, ['telephone', 'email'])).toBe(groupe)
+		expect(emptyGroupIfNull(undefined, ['telephone'])).toBeUndefined()
+		expect(emptyGroupIfNull('texte', ['telephone'])).toBe('texte')
 	})
 })

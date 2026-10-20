@@ -5,7 +5,7 @@
  */
 import type { Payload } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
-import { photosNommees } from './profil/photos'
+import { namedPhotos } from './profile/photos'
 import { type MediaLu, type Rapprochement, rapprocher } from './rapprochement'
 import type { ObjetDuStockage } from './stockage'
 
@@ -57,9 +57,9 @@ export async function rapprocherLeStockageEtLaBase(
 	])
 	const utilises = new Set(
 		[
-			...profils.flatMap(({ mainPicture, gallery }) => [...photosNommees(mainPicture), ...photosNommees(gallery)]),
-			...articles.flatMap(({ gallery }) => photosNommees(gallery)),
-			...versions.flatMap(({ version }) => photosNommees(version?.gallery)),
+			...profils.flatMap(({ mainPicture, gallery }) => [...namedPhotos(mainPicture), ...namedPhotos(gallery)]),
+			...articles.flatMap(({ gallery }) => namedPhotos(gallery)),
+			...versions.flatMap(({ version }) => namedPhotos(version?.gallery)),
 		].map(String)
 	)
 	return rapprocher({ objets, medias, mediasUtilises: utilises })

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test'
-import { listerLesArticles } from '@/services/public/liste-articles'
+import { listArticles } from '@/services/public/article-list'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 
 /**
@@ -24,7 +24,7 @@ describe('Liste des articles publiés', () => {
 		await ecrire('milieu', { publishedAt: '2026-05-10T09:00:00.000Z' })
 		await ecrire('brouillon', { _status: 'draft', publishedAt: '2026-10-12T09:00:00.000Z' })
 
-		const liste = await listerLesArticles(await payloadDeTest())
+		const liste = await listArticles(await payloadDeTest())
 
 		expect(liste.map(({ slug }) => slug)).toEqual(['recent', 'milieu', 'ancien'])
 		expect(liste[0]).toEqual({
@@ -36,14 +36,14 @@ describe('Liste des articles publiés', () => {
 	})
 
 	test('un article publié sans date vient après les datés, et la liste vide est vide', async () => {
-		expect(await listerLesArticles(await payloadDeTest())).toEqual([])
+		expect(await listArticles(await payloadDeTest())).toEqual([])
 		const payload = await payloadDeTest()
 		await ecrire('date', { publishedAt: '2026-03-01T09:00:00.000Z' })
 		// The import may leave the date empty: the newsroom hook only fills it at a publication.
 		const sans = await ecrire('sans-date')
 		await payload.db.updateOne({ collection: 'articles', id: sans.id, data: { publishedAt: null }, returning: false })
 
-		const liste = await listerLesArticles(payload)
+		const liste = await listArticles(payload)
 
 		expect(liste.map(({ slug }) => slug)).toEqual(['date', 'sans-date'])
 	})
@@ -53,7 +53,7 @@ describe('Liste des articles publiés', () => {
 		const payload = await payloadDeTest()
 		await payload.update({ collection: 'articles', id: publie.id, draft: true, data: { title: 'Titre en cours' } })
 
-		const liste = await listerLesArticles(payload)
+		const liste = await listArticles(payload)
 
 		expect(liste.map(({ titre }) => titre)).toEqual(['Article publie'])
 	})

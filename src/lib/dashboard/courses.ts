@@ -5,26 +5,26 @@
  * - Required, for the row she adds or edits: the diploma and the school. The day it was obtained and
  *   the description may stay empty.
  * - A day more than a year ahead is refused under its field (U30), by the rule of the collection
- *   (`messageDObtention`, src/lib/profil/listes.ts): a course to come may be listed, not one made up
+ *   (`obtainMessage`, src/lib/profile/lists.ts): a course to come may be listed, not one made up
  *   far ahead.
  */
 
-import { LONGUEUR_DESCRIPTION, LONGUEUR_NOM, messageDeTexte, messageDObtention } from '../profil/listes'
-import { texte } from '../profil/nom-affiche'
-import { moisAnnee } from '../profil/vue-publique'
+import { text } from '../profile/display-name'
+import { DESCRIPTION_MAX_LENGTH, NAME_MAX_LENGTH, obtainMessage, textMessage } from '../profile/lists'
+import { monthYear } from '../profile/public-view'
 import { formDay, type ListDefinition, type RowErrors, type RowValues } from './list'
 
 function bounds(valeurs: RowValues, maintenant: Date): RowErrors {
 	const errors: Record<string, string> = {}
 	for (const [field, maximum] of [
-		['diploma', LONGUEUR_NOM],
-		['school', LONGUEUR_NOM],
-		['description', LONGUEUR_DESCRIPTION],
+		['diploma', NAME_MAX_LENGTH],
+		['school', NAME_MAX_LENGTH],
+		['description', DESCRIPTION_MAX_LENGTH],
 	] as const) {
-		const message = messageDeTexte(valeurs[field], maximum)
+		const message = textMessage(valeurs[field], maximum)
 		if (message !== null) errors[field] = message
 	}
-	const message = messageDObtention(valeurs.graduatedAt ? valeurs.graduatedAt : null, maintenant)
+	const message = obtainMessage(valeurs.graduatedAt ? valeurs.graduatedAt : null, maintenant)
 	if (message !== null) errors.graduatedAt = message
 	return errors
 }
@@ -49,12 +49,12 @@ export const COURSES: ListDefinition = {
 	doublon: 'Une formation identique est déjà dans la liste.',
 	bornes: bounds,
 	resume: valeurs =>
-		[valeurs.diploma, valeurs.school, moisAnnee(valeurs.graduatedAt)].map(texte).filter(Boolean).join(' - '),
-	nom: valeurs => texte(valeurs.diploma) || texte(valeurs.school),
+		[valeurs.diploma, valeurs.school, monthYear(valeurs.graduatedAt)].map(text).filter(Boolean).join(' - '),
+	nom: valeurs => text(valeurs.diploma) || text(valeurs.school),
 	retrait: nom => `Formation ${nom} retirée`.replace(/\s+/g, ' '),
 	depuisLeStockage: stockee => ({
-		diploma: texte(stockee.diploma),
-		school: texte(stockee.school),
+		diploma: text(stockee.diploma),
+		school: text(stockee.school),
 		graduatedAt: formDay(stockee.graduatedAt),
 		description: typeof stockee.description === 'string' ? stockee.description.trim() : '',
 	}),

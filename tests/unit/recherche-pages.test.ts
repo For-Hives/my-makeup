@@ -6,32 +6,32 @@
 import { describe, expect, test } from 'bun:test'
 import { NextRequest } from 'next/server'
 import { createRateLimit } from '@/lib/auth/rate-limit'
-import { freinerLaRecherche, RECHERCHES_PAR_MINUTE } from '@/lib/recherche/frein'
-import { DELAI_DE_LECTURE_MS, lireSansBloquer } from '@/lib/recherche/lecture'
-import { PAR_PAGE, paginer, sectionsDeLaPage } from '@/lib/recherche/pagination'
+import { PER_PAGE, paginate, sectionsOfPage } from '@/lib/search/pagination'
+import { rateLimitSearch, SEARCHES_PER_MINUTE } from '@/lib/search/rate-limit'
+import { READ_TIMEOUT_MS, readWithoutBlocking } from '@/lib/search/read'
 import { proxy } from '@/proxy'
 
 describe('U18 et E41 : les pages de 20, sans doublon', () => {
 	const liste = Array.from({ length: 45 }, (_, i) => `p${i + 1}`)
 
 	test('20 par page, la dernière garde le reste', () => {
-		expect(PAR_PAGE).toBe(20)
-		expect(paginer(liste, 1)).toMatchObject({ page: 1, pages: 3, total: 45, premier: 1 })
-		expect(paginer(liste, 1).elements).toHaveLength(20)
-		expect(paginer(liste, 3).elements).toEqual(['p41', 'p42', 'p43', 'p44', 'p45'])
+		expect(PER_PAGE).toBe(20)
+		expect(paginate(liste, 1)).toMatchObject({ page: 1, pages: 3, total: 45, premier: 1 })
+		expect(paginate(liste, 1).elements).toHaveLength(20)
+		expect(paginate(liste, 3).elements).toEqual(['p41', 'p42', 'p43', 'p44', 'p45'])
 	})
 
 	test('les pages mises bout à bout redonnent la liste, chaque profil une seule fois', () => {
-		const lues = [1, 2, 3].flatMap(page => paginer(liste, page).elements)
+		const lues = [1, 2, 3].flatMap(page => paginate(liste, page).elements)
 		expect(lues).toEqual(liste)
 		expect(new Set(lues).size).toBe(lues.length)
 	})
 
 	test('une page hors bornes est ramenée dans les bornes ; une liste vide est une page vide', () => {
-		expect(paginer(liste, 99).page).toBe(3)
-		expect(paginer(liste, 0).page).toBe(1)
-		expect(paginer(liste, Number.NaN).page).toBe(1)
-		expect(paginer([], 4)).toEqual({ elements: [], page: 1, pages: 1, total: 0, premier: 1 })
+		expect(paginate(liste, 99).page).toBe(3)
+		expect(paginate(liste, 0).page).toBe(1)
+		expect(paginate(liste, Number.NaN).page).toBe(1)
+		expect(paginate([], 4)).toEqual({ elements: [], page: 1, pages: 1, total: 0, premier: 1 })
 	})
 
 	test('une page à cheval sur deux sections montre la fin de l’une et le début de l’autre, sans rien répéter', () => {
@@ -40,14 +40,14 @@ describe('U18 et E41 : les pages de 20, sans doublon', () => {
 		const toutes = Array.from({ length: 37 }, (_, i) => i)
 		const vues: number[] = []
 		for (const page of [1, 2]) {
-			const p = paginer(toutes, page)
-			const parts = sectionsDeLaPage(p, longueurs)
+			const p = paginate(toutes, page)
+			const parts = sectionsOfPage(p, longueurs)
 			expect(parts.flat()).toEqual(p.elements)
 			vues.push(...parts.flat())
 		}
 		expect(vues).toEqual(toutes)
-		expect(sectionsDeLaPage(paginer(toutes, 1), longueurs).map(part => part.length)).toEqual([12, 8, 0])
-		expect(sectionsDeLaPage(paginer(toutes, 2), longueurs).map(part => part.length)).toEqual([0, 7, 10])
+		expect(sectionsOfPage(paginate(toutes, 1), longueurs).map(part => part.length)).toEqual([12, 8, 0])
+		expect(sectionsOfPage(paginate(toutes, 2), longueurs).map(part => part.length)).toEqual([0, 7, 10])
 	})
 })
 
@@ -62,11 +62,11 @@ const unFrein = (limite: number) =>
 
 describe('le frein de la recherche (I30 côté unité)', () => {
 	test('la 61e requête d’une adresse est refusée en 429, en français, avec Retry-After', () => {
-		const frein = unFrein(RECHERCHES_PAR_MINUTE)
+		const frein = unFrein(SEARCHES_PER_MINUTE)
 		const entetes = new Headers({ 'x-forwarded-for': '192.0.2.1' })
-		for (let i = 0; i < RECHERCHES_PAR_MINUTE; i += 1)
-			expect(freinerLaRecherche({ chemin: '/search', methode: 'GET', entetes }, frein), `requête ${i + 1}`).toBeNull()
-		const refusee = freinerLaRecherche({ chemin: '/search', methode: 'GET', entetes }, frein)
+		for (let i = 0; i < SEARCHES_PER_MINUTE; i += 1)
+			expect(rateLimitSearch({ chemin: '/search', methode: 'GET', entetes }, frein), `requête ${i + 1}`).toBeNull()
+		const refusee = rateLimitSearch({ chemin: '/search', methode: 'GET', entetes }, frein)
 		expect(refusee?.status).toBe(429)
 		expect(refusee?.corps).toContain('Trop de recherches')
 		expect(refusee?.corps).toContain('lang="fr"')
@@ -80,8 +80,8 @@ describe('le frein de la recherche (I30 côté unité)', () => {
 		const a = new Headers({ 'x-forwarded-for': '192.0.2.1' })
 		const b = new Headers({ 'x-forwarded-for': '192.0.2.2' })
 		for (let i = 0; i < 3; i += 1) frein.prendre('192.0.2.1')
-		expect(freinerLaRecherche({ chemin: '/search', methode: 'GET', entetes: a }, frein)?.status).toBe(429)
-		expect(freinerLaRecherche({ chemin: '/search', methode: 'GET', entetes: b }, frein)).toBeNull()
+		expect(rateLimitSearch({ chemin: '/search', methode: 'GET', entetes: a }, frein)?.status).toBe(429)
+		expect(rateLimitSearch({ chemin: '/search', methode: 'GET', entetes: b }, frein)).toBeNull()
 		expect(frein.prendre('192.0.2.1', Date.now() + 61_000)).toEqual({ autorise: true })
 	})
 
@@ -90,7 +90,7 @@ describe('le frein de la recherche (I30 côté unité)', () => {
 		for (const adresse of [undefined, '127.0.0.1', '127.0.0.53', '::1', '::ffff:127.0.0.1', '[::1]'])
 			for (let i = 0; i < 5; i += 1)
 				expect(
-					freinerLaRecherche(
+					rateLimitSearch(
 						{ chemin: '/search', methode: 'GET', entetes: new Headers(adresse ? { 'x-forwarded-for': adresse } : {}) },
 						frein
 					),
@@ -98,8 +98,8 @@ describe('le frein de la recherche (I30 côté unité)', () => {
 				).toBeNull()
 		// An address that is not local is counted at once.
 		const distante = new Headers({ 'x-forwarded-for': '203.0.113.9' })
-		expect(freinerLaRecherche({ chemin: '/search', methode: 'GET', entetes: distante }, frein)).toBeNull()
-		expect(freinerLaRecherche({ chemin: '/search', methode: 'GET', entetes: distante }, frein)?.status).toBe(429)
+		expect(rateLimitSearch({ chemin: '/search', methode: 'GET', entetes: distante }, frein)).toBeNull()
+		expect(rateLimitSearch({ chemin: '/search', methode: 'GET', entetes: distante }, frein)?.status).toBe(429)
 	})
 
 	test('seule la recherche est comptée : pas une autre page, un envoi, un préchargement, ni une requête sans proxy', () => {
@@ -107,20 +107,20 @@ describe('le frein de la recherche (I30 côté unité)', () => {
 		const entetes = new Headers({ 'x-forwarded-for': '192.0.2.3' })
 		const prechargement = new Headers({ 'x-forwarded-for': '192.0.2.3', 'next-router-prefetch': '1' })
 		for (let i = 0; i < 5; i += 1) {
-			expect(freinerLaRecherche({ chemin: '/', methode: 'GET', entetes }, frein)).toBeNull()
-			expect(freinerLaRecherche({ chemin: '/profil/ana', methode: 'GET', entetes }, frein)).toBeNull()
-			expect(freinerLaRecherche({ chemin: '/search', methode: 'POST', entetes }, frein)).toBeNull()
-			expect(freinerLaRecherche({ chemin: '/search', methode: 'GET', entetes: prechargement }, frein)).toBeNull()
-			expect(freinerLaRecherche({ chemin: '/search', methode: 'GET', entetes: new Headers() }, frein)).toBeNull()
+			expect(rateLimitSearch({ chemin: '/', methode: 'GET', entetes }, frein)).toBeNull()
+			expect(rateLimitSearch({ chemin: '/profil/ana', methode: 'GET', entetes }, frein)).toBeNull()
+			expect(rateLimitSearch({ chemin: '/search', methode: 'POST', entetes }, frein)).toBeNull()
+			expect(rateLimitSearch({ chemin: '/search', methode: 'GET', entetes: prechargement }, frein)).toBeNull()
+			expect(rateLimitSearch({ chemin: '/search', methode: 'GET', entetes: new Headers() }, frein)).toBeNull()
 		}
 		// None of those took a place: the first real search still passes, the second is refused.
-		expect(freinerLaRecherche({ chemin: '/search', methode: 'GET', entetes }, frein)).toBeNull()
-		expect(freinerLaRecherche({ chemin: '/search', methode: 'GET', entetes }, frein)?.status).toBe(429)
+		expect(rateLimitSearch({ chemin: '/search', methode: 'GET', entetes }, frein)).toBeNull()
+		expect(rateLimitSearch({ chemin: '/search', methode: 'GET', entetes }, frein)?.status).toBe(429)
 	})
 
 	test('par le proxy : la 61e recherche est refusée, l’accueil et un profil restent servis, une autre adresse passe', async () => {
 		const adresse = '198.51.100.61'
-		for (let i = 0; i < RECHERCHES_PAR_MINUTE; i += 1)
+		for (let i = 0; i < SEARCHES_PER_MINUTE; i += 1)
 			expect(proxy(requete(`/search?city=Annecy&page=${i + 1}`, adresse)).status, `requête ${i + 1}`).not.toBe(429)
 		const refusee = proxy(requete('/search?city=Annecy', adresse))
 		expect(refusee.status).toBe(429)
@@ -136,7 +136,7 @@ describe('le frein de la recherche (I30 côté unité)', () => {
 	test('la barre finale est redirigée avant le frein : elle ne prend pas de place', () => {
 		const adresse = '198.51.100.63'
 		for (let i = 0; i < 10; i += 1) expect(proxy(requete('/search/?city=Annecy', adresse)).status).toBe(308)
-		for (let i = 0; i < RECHERCHES_PAR_MINUTE; i += 1)
+		for (let i = 0; i < SEARCHES_PER_MINUTE; i += 1)
 			expect(proxy(requete('/search?city=Annecy', adresse)).status).not.toBe(429)
 	})
 })
@@ -157,12 +157,12 @@ function journaliser() {
 
 describe('la lecture qui ne bloque jamais (ticket 100)', () => {
 	test('une lecture qui réussit rend sa valeur', async () => {
-		expect(await lireSansBloquer(async () => 42)).toEqual({ reussie: true, valeur: 42 })
+		expect(await readWithoutBlocking(async () => 42)).toEqual({ reussie: true, valeur: 42 })
 	})
 
 	test('une lecture qui échoue rend un échec sans lever, et ne journalise que la classe de l’erreur', async () => {
 		const journal = journaliser()
-		const lecture = await lireSansBloquer(async () => {
+		const lecture = await readWithoutBlocking(async () => {
 			throw new Error('connexion refusée : requête pour « mariage Annecy »')
 		})
 		journal.restaurer()
@@ -175,10 +175,10 @@ describe('la lecture qui ne bloque jamais (ticket 100)', () => {
 	test('une lecture qui ne répond pas est coupée au délai, et le délai tient sous les 10 secondes du ticket', async () => {
 		const journal = journaliser()
 		const debut = performance.now()
-		const lecture = await lireSansBloquer(() => new Promise<never>(() => {}), 50)
+		const lecture = await readWithoutBlocking(() => new Promise<never>(() => {}), 50)
 		journal.restaurer()
 		expect(lecture).toEqual({ reussie: false })
 		expect(performance.now() - debut).toBeLessThan(1000)
-		expect(DELAI_DE_LECTURE_MS).toBeLessThan(10_000)
+		expect(READ_TIMEOUT_MS).toBeLessThan(10_000)
 	})
 })

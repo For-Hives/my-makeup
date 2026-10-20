@@ -2,8 +2,8 @@ import { describe, expect, test } from 'bun:test'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import type { Payload } from 'payload'
-import { estIndexable, estListe, estVisible, FILTRE_INDEXABLE, FILTRE_LISTE } from '@/lib/profil/visibilite'
-import { LIMITE_MAX_DE_LA_LISTE, listerLesProfils } from '@/services/public/profils'
+import { INDEXABLE_FILTER, isIndexable, isList, isVisible, LISTED_FILTER } from '@/lib/profile/visibility'
+import { LIST_MAX_LIMIT, listProfiles } from '@/services/public/profiles'
 
 /**
  * The public reading of the profiles, without a database (ticket 071; plan 02 §7.2, U20 and U22):
@@ -13,35 +13,35 @@ import { LIMITE_MAX_DE_LA_LISTE, listerLesProfils } from '@/services/public/prof
 
 describe('U20 : listé, indexable, visible', () => {
 	test('le masqué, l’indisponible et l’entièrement vide ne sont pas listés', () => {
-		expect(estListe({ status: 'published', available: true, fullyEmpty: false })).toBe(true)
-		expect(estListe({ status: 'hidden', available: true, fullyEmpty: false })).toBe(false)
-		expect(estListe({ status: 'published', available: false, fullyEmpty: false })).toBe(false)
-		expect(estListe({ status: 'published', available: true, fullyEmpty: true })).toBe(false)
+		expect(isList({ status: 'published', available: true, fullyEmpty: false })).toBe(true)
+		expect(isList({ status: 'hidden', available: true, fullyEmpty: false })).toBe(false)
+		expect(isList({ status: 'published', available: false, fullyEmpty: false })).toBe(false)
+		expect(isList({ status: 'published', available: true, fullyEmpty: true })).toBe(false)
 	})
 
 	test('une disponibilité jamais posée compte comme disponible (available=null)', () => {
-		expect(estListe({ status: 'published', available: null, fullyEmpty: false })).toBe(true)
-		expect(estListe({ status: 'published', fullyEmpty: false })).toBe(true)
+		expect(isList({ status: 'published', available: null, fullyEmpty: false })).toBe(true)
+		expect(isList({ status: 'published', fullyEmpty: false })).toBe(true)
 	})
 
 	test('indexable : publiable et pas masqué ; un profil visible mais non publiable reste hors de l’index', () => {
-		expect(estIndexable({ status: 'published', publishable: true })).toBe(true)
-		expect(estIndexable({ status: 'published', publishable: false })).toBe(false)
-		expect(estIndexable({ status: 'published', publishable: null })).toBe(false)
-		expect(estIndexable({ status: 'hidden', publishable: true })).toBe(false)
-		expect(estVisible({ status: 'published', publishable: false })).toBe(true)
+		expect(isIndexable({ status: 'published', publishable: true })).toBe(true)
+		expect(isIndexable({ status: 'published', publishable: false })).toBe(false)
+		expect(isIndexable({ status: 'published', publishable: null })).toBe(false)
+		expect(isIndexable({ status: 'hidden', publishable: true })).toBe(false)
+		expect(isVisible({ status: 'published', publishable: false })).toBe(true)
 	})
 
 	test('visible à son adresse : tout sauf le masqué, indisponible ou non', () => {
-		expect(estVisible({ status: 'published', available: false, fullyEmpty: true })).toBe(true)
-		expect(estVisible({ status: 'hidden' })).toBe(false)
+		expect(isVisible({ status: 'published', available: false, fullyEmpty: true })).toBe(true)
+		expect(isVisible({ status: 'hidden' })).toBe(false)
 	})
 
 	test('les filtres de la base, sans le statut que la règle de lecture pose déjà', () => {
-		expect(FILTRE_LISTE).toEqual({
+		expect(LISTED_FILTER).toEqual({
 			and: [{ available: { not_equals: false } }, { fullyEmpty: { not_equals: true } }],
 		})
-		expect(FILTRE_INDEXABLE).toEqual({ publishable: { equals: true } })
+		expect(INDEXABLE_FILTER).toEqual({ publishable: { equals: true } })
 	})
 })
 
@@ -95,7 +95,7 @@ describe('U22 : la carte d’une liste, clés figées', () => {
 	test('ni email, ni téléphone, ni compte, ni score, ni statut : sept clés, la photo et l’identifiant de mesure compris', async () => {
 		const { payload } = payloadEspion()
 
-		const { cartes } = await listerLesProfils(payload)
+		const { cartes } = await listProfiles(payload)
 
 		expect(cartes).toHaveLength(1)
 		expect(Object.keys(cartes[0] ?? {}).sort()).toEqual([
@@ -121,7 +121,7 @@ describe('U22 : la carte d’une liste, clés figées', () => {
 	test('l’identifiant de mesure : celui de l’ancien site s’il y en a un, lu à part, sur les seuls profils déjà donnés', async () => {
 		const { payload, lectures } = payloadEspion()
 
-		await listerLesProfils(payload)
+		await listProfiles(payload)
 
 		const lecturesDesIdentifiants = lectures.filter(
 			lecture => lecture.collection === 'profiles' && (lecture.select as Record<string, unknown>)?.strapiId === true
@@ -136,35 +136,35 @@ describe('U22 : la carte d’une liste, clés figées', () => {
 
 	test('la photo n’est que son adresse et sa taille : jamais son propriétaire, son nom de fichier ni ses autres champs', async () => {
 		const { payload } = payloadEspion()
-		const { cartes } = await listerLesProfils(payload)
+		const { cartes } = await listProfiles(payload)
 		expect(Object.keys(cartes[0]?.photo ?? {}).sort()).toEqual(['height', 'url', 'width'])
 	})
 
 	test('les photos de la liste se lisent en une requête, par les identifiants que la lecture des profils a donnés', async () => {
 		const { payload, lectures } = payloadEspion()
 
-		await listerLesProfils(payload)
+		await listProfiles(payload)
 
 		const photos = lectures.filter(lecture => lecture.collection === 'media')
 		expect(photos).toHaveLength(1)
 		expect(photos[0]).toMatchObject({
 			where: { id: { in: [7] } },
 			select: { url: true, width: true, height: true, filename: true, prefix: true },
-			limit: LIMITE_MAX_DE_LA_LISTE,
+			limit: LIST_MAX_LIMIT,
 		})
 	})
 
 	test('la lecture choisit ses champs, garde les règles d’accès, filtre sur « listé » et se borne elle-même', async () => {
 		const { payload, lectures } = payloadEspion()
 
-		await listerLesProfils(payload, { page: 3, limite: 5000 })
-		await listerLesProfils(payload, { limite: 0 })
+		await listProfiles(payload, { page: 3, limite: 5000 })
+		await listProfiles(payload, { limite: 0 })
 
 		const [grande, nulle] = lectures.filter(
 			lecture => lecture.collection === 'profiles' && lecture.overrideAccess === false
 		)
-		expect(grande).toMatchObject({ collection: 'profiles', where: FILTRE_LISTE, overrideAccess: false, page: 3 })
-		expect(grande?.limit).toBe(LIMITE_MAX_DE_LA_LISTE)
+		expect(grande).toMatchObject({ collection: 'profiles', where: LISTED_FILTER, overrideAccess: false, page: 3 })
+		expect(grande?.limit).toBe(LIST_MAX_LIMIT)
 		expect(nulle?.limit).toBe(20)
 		const champs = Object.keys(grande?.select as object).sort()
 		for (const prive of ['contactDetails', 'publicContact', 'pro', 'score', 'internalNote', 'status', 'email'])

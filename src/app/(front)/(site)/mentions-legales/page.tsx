@@ -1,19 +1,19 @@
 import Link from 'next/link'
-import { PageJuridique } from '@/components/legal/PageJuridique'
+import { LegalPage } from '@/components/legal/LegalPage'
 import { EDITEUR, formatSiren, formatSiret, HEBERGEUR } from '@/lib/legal'
-import { metadonnees } from '@/lib/seo/metadonnees'
+import { pageMetadata } from '@/lib/seo/metadata'
 
 // Static: the text is in the code, and the page reads no cookie and no data (ticket 112).
-export const metadata = metadonnees({
+export const metadata = pageMetadata({
 	titre: 'Mentions légales',
 	description: 'Mentions légales du site my-makeup.fr : éditeur, directeur de la publication, hébergeur et contact.',
 	repli: 'Mentions légales du site my-makeup.fr : éditeur, directeur de la publication, hébergeur et contact.',
 	chemin: '/mentions-legales',
 })
 
-export default function MentionsLegales() {
+export default function LegalNoticePage() {
 	return (
-		<PageJuridique
+		<LegalPage
 			titre={
 				<>
 					Mentions légales de&nbsp;
@@ -74,6 +74,6 @@ export default function MentionsLegales() {
 				<Link href={'/cgu'}>conditions générales d&apos;utilisation</Link>
 				{'.'}
 			</p>
-		</PageJuridique>
+		</LegalPage>
 	)
 }

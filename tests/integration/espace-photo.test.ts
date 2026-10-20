@@ -4,9 +4,9 @@ import type { DashboardUser } from '@/lib/dashboard/my-profile'
 import { readDashboardPhotos } from '@/lib/dashboard/photos'
 import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
 import { saveMainPicture } from '@/lib/dashboard/save-photo'
-import { MESSAGES_DES_PHOTOS } from '@/lib/profil/photos'
+import { PHOTO_MESSAGES } from '@/lib/profile/photos'
 import type { Media } from '@/payload-types'
-import { lireLeProfilPublic } from '@/services/public/profils'
+import { readPublicProfile } from '@/services/public/profiles'
 import { ANNECY } from '../outils/cas-completude'
 import { type Espion, espionnerLeStockage, suppressionsSansCorbeille } from '../outils/espion-s3'
 import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
@@ -113,7 +113,7 @@ describe('I24 : remplacer la photo principale envoie l’ancienne à la corbeill
 		// What her space shows, and what the public profile shows, is the new photo.
 		const photos = await readDashboardPhotos(payload, profil)
 		expect(photos.photo?.id).toBe(nouvelle.id)
-		const publique = await lireLeProfilPublic(payload, profil.slug ?? '')
+		const publique = await readPublicProfile(payload, profil.slug ?? '')
 		expect(publique?.photo?.url).toBe(nouvelle.url ?? undefined)
 	})
 })
@@ -152,7 +152,7 @@ describe('U03, E36 : un échec laisse l’ancienne photo, et le fichier envoyé 
 
 		const resultat = await saveMainPicture(payload, utilisateur, { photoPrincipale: celleDeLAutre.id })
 
-		expect(resultat).toMatchObject({ ok: false, champs: { photoPrincipale: MESSAGES_DES_PHOTOS.photoRefusee } })
+		expect(resultat).toMatchObject({ ok: false, champs: { photoPrincipale: PHOTO_MESSAGES.photoRefusee } })
 		expect((await profilDe(compte)).mainPicture).toBe(ancienne.id)
 		// The browser takes its own file back, as the panel does after an explicit refusal.
 		const suppression = await appelerRest('DELETE', `/api/media/${envoyeeEnTrop.id}?depth=0`, {

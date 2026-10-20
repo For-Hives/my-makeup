@@ -39,7 +39,7 @@ import { randomUUID } from 'node:crypto'
 import type { Payload, RequiredDataFromCollectionSlug, Where } from 'payload'
 import { CONTEXTE_SANS_PROFIL } from '@/collections/Profiles'
 import { PROFILS_PUBLIES } from '@/lib/acces'
-import { STATUT_INITIAL, STATUT_PUBLIE } from '@/lib/profil/statut'
+import { INITIAL_STATUS, PUBLISHED_STATUS } from '@/lib/profile/status'
 import { creerCompte, DOMAINE_DES_COMPTES, motDePasseAleatoire, type TypeAvecSession } from './fabrique-comptes'
 import { payloadDeTest } from './payload-test'
 import { fichierPourFormulaire, fichierPourPayload, nomDePhoto } from './photos'
@@ -422,7 +422,7 @@ export async function distribuer(): Promise<Distribution> {
 		const profil = acteur.documents.profiles
 		if (profil === undefined) throw new Error(`La distribution n’a pas de profil pour « ${role} ».`)
 		acteur.documents.media = await mediaDe(payload, acteur.documents.pros)
-		const statutChoisi = role === 'maquilleuse' ? STATUT_PUBLIE : STATUT_INITIAL
+		const statutChoisi = role === 'maquilleuse' ? PUBLISHED_STATUS : INITIAL_STATUS
 		await payload.update({
 			collection: 'profiles',
 			id: profil,

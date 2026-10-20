@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
 import { z } from 'zod'
-import { donneesStructureesDeLArticle, donneesStructureesDuFilDAriane, serializeJsonLd } from '@/lib/seo/json-ld'
-import { descriptionEditoriale, texteBrut } from '@/lib/seo/texte'
-import { CHAMPS_DE_L_ARTICLE, lireUnArticlePublic } from '@/services/public/articles'
+import { articleStructuredData, breadcrumbStructuredData, serializeJsonLd } from '@/lib/seo/json-ld'
+import { editorialDescription, plainText } from '@/lib/seo/text'
+import { ARTICLE_FIELDS, readPublicArticle } from '@/services/public/articles'
 
 /**
  * The page of an article without a database (ticket 106): what its reading asks for, the structured
@@ -39,12 +39,12 @@ const ARTICLE = {
 describe('lireUnArticlePublic : la lecture publique d’un article', () => {
 	test('elle choisit ses champs, garde les règles d’accès et se borne à un document', async () => {
 		const { payload, lectures } = payloadEspion([ARTICLE])
-		await lireUnArticlePublic(payload, 'un-article-fictif')
+		await readPublicArticle(payload, 'un-article-fictif')
 		expect(lectures).toHaveLength(1)
 		expect(lectures[0]).toMatchObject({
 			collection: 'articles',
 			where: { slug: { equals: 'un-article-fictif' } },
-			select: CHAMPS_DE_L_ARTICLE,
+			select: ARTICLE_FIELDS,
 			overrideAccess: false,
 			limit: 1,
 			depth: 0,
@@ -52,7 +52,7 @@ describe('lireUnArticlePublic : la lecture publique d’un article', () => {
 	})
 
 	test('les champs lus sont figés : ni identifiant de l’ancien site, ni galerie, ni état de brouillon', () => {
-		expect(Object.keys(CHAMPS_DE_L_ARTICLE).sort()).toEqual(
+		expect(Object.keys(ARTICLE_FIELDS).sort()).toEqual(
 			[
 				'author',
 				'content',
@@ -70,7 +70,7 @@ describe('lireUnArticlePublic : la lecture publique d’un article', () => {
 
 	test('un champ jamais rempli est une chaîne vide, jamais « null » ; la date de création sert de publication', async () => {
 		const { payload } = payloadEspion([ARTICLE])
-		const article = await lireUnArticlePublic(payload, 'un-article-fictif')
+		const article = await readPublicArticle(payload, 'un-article-fictif')
 		expect(article).toEqual({
 			slug: 'un-article-fictif',
 			titre: 'Un article fictif',
@@ -86,13 +86,13 @@ describe('lireUnArticlePublic : la lecture publique d’un article', () => {
 
 	test('un brouillon ou un inconnu (rien rendu par la base) : null', async () => {
 		const { payload } = payloadEspion([])
-		expect(await lireUnArticlePublic(payload, 'inconnu')).toBeNull()
+		expect(await readPublicArticle(payload, 'inconnu')).toBeNull()
 	})
 
 	test('une adresse qui n’est pas un slug ne touche pas la base', async () => {
 		const { payload, lectures } = payloadEspion([ARTICLE])
 		for (const mauvais of ['', 'Un Article', '../etc', 'a b', 'a'.repeat(300)])
-			expect(await lireUnArticlePublic(payload, mauvais)).toBeNull()
+			expect(await readPublicArticle(payload, mauvais)).toBeNull()
 		expect(lectures).toHaveLength(0)
 	})
 })
@@ -136,21 +136,21 @@ describe('E65 : les données structurées d’un article', () => {
 	}
 
 	test('Article est valide, et dit ce que la page dit', () => {
-		const donnees = SCHEMA_ARTICLE.parse(donneesStructureesDeLArticle(entrees))
+		const donnees = SCHEMA_ARTICLE.parse(articleStructuredData(entrees))
 		expect(donnees.headline).toBe('Un article fictif')
 		expect(donnees.mainEntityOfPage['@id']).toBe(entrees.url)
 		expect(donnees.author.name).toBe('Une rédactrice fictive')
 	})
 
 	test('sans signature, l’éditeur du site est l’auteur : jamais un auteur vide', () => {
-		const donnees = SCHEMA_ARTICLE.parse(donneesStructureesDeLArticle({ ...entrees, auteur: '' }))
+		const donnees = SCHEMA_ARTICLE.parse(articleStructuredData({ ...entrees, auteur: '' }))
 		expect(donnees.author['@type']).toBe('Organization')
 		expect(donnees.author.name).toBe('My-Makeup')
 	})
 
 	test('le fil d’Ariane est valide, numéroté de 1, et finit sur la page', () => {
 		const donnees = SCHEMA_FIL.parse(
-			donneesStructureesDuFilDAriane([
+			breadcrumbStructuredData([
 				{ nom: 'Accueil', url: 'https://my-makeup.fr' },
 				{ nom: 'Blog', url: 'https://my-makeup.fr/blog' },
 				{ nom: 'Un article fictif', url: entrees.url },
@@ -161,7 +161,7 @@ describe('E65 : les données structurées d’un article', () => {
 	})
 
 	test('un titre qui contient « </script> » ne ferme pas la balise', () => {
-		const sortie = serializeJsonLd(donneesStructureesDeLArticle({ ...entrees, titre: '</script><script>x()</script>' }))
+		const sortie = serializeJsonLd(articleStructuredData({ ...entrees, titre: '</script><script>x()</script>' }))
 		expect(sortie).not.toContain('</script>')
 		expect(JSON.parse(sortie).headline).toBe('</script><script>x()</script>')
 	})
@@ -171,25 +171,25 @@ describe('descriptionEditoriale : le texte que la rédaction a écrit est gardé
 	const repli = 'Un texte de repli écrit pour atteindre soixante-dix caractères au moins, comme le veut la règle.'
 
 	test('un texte court de la rédaction est gardé tel quel', () => {
-		expect(descriptionEditoriale('Court mais écrit.', ['x'.repeat(200)], repli)).toBe('Court mais écrit.')
+		expect(editorialDescription('Court mais écrit.', ['x'.repeat(200)], repli)).toBe('Court mais écrit.')
 	})
 
 	test('coupé à 155 caractères', () => {
-		expect(descriptionEditoriale('mot '.repeat(80), [], repli).length).toBeLessThanOrEqual(155)
+		expect(editorialDescription('mot '.repeat(80), [], repli).length).toBeLessThanOrEqual(155)
 	})
 
 	test('sans texte de la rédaction, le premier texte de 70 caractères ou plus, markdown réduit en texte', () => {
 		const contenu = `# Titre\n\n**Gras** et [un lien](https://example.test) ${'avec du texte '.repeat(8)}`
-		const sortie = descriptionEditoriale(null, ['court', contenu], repli)
+		const sortie = editorialDescription(null, ['court', contenu], repli)
 		expect(sortie).toStartWith('Titre Gras et un lien avec du texte')
 		expect(sortie).not.toMatch(/[#*[\]()]|https/)
 	})
 
 	test('rien d’écrit nulle part : le repli', () => {
-		expect(descriptionEditoriale(null, [undefined, 'court'], repli)).toBe(repli)
+		expect(editorialDescription(null, [undefined, 'court'], repli)).toBe(repli)
 	})
 
 	test('texteBrut ne laisse ni balise, ni « null »', () => {
-		expect(texteBrut('<b>a</b> null ![img](x.webp) b')).toBe('a img b')
+		expect(plainText('<b>a</b> null ![img](x.webp) b')).toBe('a img b')
 	})
 })

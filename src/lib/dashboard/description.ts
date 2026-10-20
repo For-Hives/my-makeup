@@ -7,15 +7,15 @@
  *   removed and the edge spaces cut. The collection `profils` holds the same bound.
  * - Every tag pasted into the text is removed (U27), with the content of a `script` or a `style`.
  *   The line breaks she typed are kept.
- * - The counter next to the field counts with `longueurDescription`, the single definition of the
- *   length that makes a profile publishable (U05, src/lib/profil/completude.ts): the form never
+ * - The counter next to the field counts with `descriptionLength`, the single definition of the
+ *   length that makes a profile publishable (U05, src/lib/profile/completeness.ts): the form never
  *   computes its own.
  * - The server reads the same schema in its strict form: any key but `description` refuses the
  *   whole request (U32). Every message is in French.
  */
 
 import { z } from 'zod'
-import { DESCRIPTION_MIN, longueurDescription } from '../profil/completude'
+import { DESCRIPTION_MIN, descriptionLength } from '../profile/completeness'
 
 /** The longest description: the bound of the collection `profils`. */
 export const DESCRIPTION_MAX = 2000
@@ -56,7 +56,7 @@ export interface Counter {
 
 export function descriptionCounter(saisie: string): Counter {
 	const text = removeHtml(saisie)
-	const account = longueurDescription(text)
+	const account = descriptionLength(text)
 	return { compte: account, total: text.length, assez: account >= DESCRIPTION_MIN }
 }
 

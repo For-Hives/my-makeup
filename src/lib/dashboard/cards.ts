@@ -3,7 +3,7 @@
  * value stored or nothing, which the page shows as « à compléter ». Pure functions, no server code:
  * the page and the tests call them.
  *
- * - Only what was stored is shown: a text goes through `texte` (src/lib/profil/nom-affiche.ts), so
+ * - Only what was stored is shown: a text goes through `texte` (src/lib/profile/display-name.ts), so
  *   « null » and « undefined » are empty, never printed.
  * - The cards hold plain text: they are what the page hands to the browser, never the document of
  *   Payload (no account, no internal field, no token).
@@ -12,8 +12,8 @@
 import type { Profile } from '@/payload-types'
 import { rayonKm } from '../format-zone'
 import { formatPrix } from '../prix'
-import { texte } from '../profil/nom-affiche'
-import { moisAnnee, periode } from '../profil/vue-publique'
+import { text } from '../profile/display-name'
+import { monthYear, period } from '../profile/public-view'
 import { AVAILABLE_TEXT, isAvailable, OUT_OF_SEARCH_TEXT, UNAVAILABLE_TEXT } from './availability'
 import { longDate } from './contact-details'
 import { cityLabel } from './location'
@@ -74,7 +74,7 @@ export type DashboardProfile = Pick<
 	| 'consentedAt'
 >
 
-const or = (valeur: unknown): string | null => texte(valeur) || null
+const or = (valeur: unknown): string | null => text(valeur) || null
 
 const row = (libelle: string | undefined, valeur: unknown): CardRow => ({
 	...(libelle === undefined ? {} : { libelle }),
@@ -88,10 +88,10 @@ function listRows(textes: readonly (string | null)[]): CardRow[] {
 }
 
 const gather = (parties: readonly unknown[], separateur: string): string | null =>
-	or(parties.map(texte).filter(Boolean).join(separateur))
+	or(parties.map(text).filter(Boolean).join(separateur))
 
 function locationCard(profil: DashboardProfile): Card {
-	const cityName = texte(profil.city?.name)
+	const cityName = text(profil.city?.name)
 	const km = rayonKm(profil.radiusKm)
 	const home = profil.homeService === true ? 'Oui' : profil.homeService === false ? 'Non' : null
 	return {
@@ -171,7 +171,7 @@ export function profileCards(profil: DashboardProfile): Card[] {
 			titre: 'Formations',
 			lignes: listRows(
 				(profil.courses ?? []).map(({ diploma, school, graduatedAt }) =>
-					gather([diploma, school, moisAnnee(graduatedAt)], ' - ')
+					gather([diploma, school, monthYear(graduatedAt)], ' - ')
 				)
 			),
 		},
@@ -180,7 +180,7 @@ export function profileCards(profil: DashboardProfile): Card[] {
 			titre: 'Expériences',
 			lignes: listRows(
 				(profil.experiences ?? []).map(({ jobTitle, company, city, startDate, endDate }) =>
-					gather([jobTitle, company, city, periode({ startDate, endDate })], ' - ')
+					gather([jobTitle, company, city, period({ startDate, endDate })], ' - ')
 				)
 			),
 		},

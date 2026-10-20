@@ -1,18 +1,18 @@
 import { describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { dateDeLArticle, ListeDesArticles } from '../../src/components/blog/ListeDesArticles'
+import { ArticleList, articleDate } from '../../src/components/blog/ArticleList'
 import {
-	type ArticleDeLaListe,
-	CHAMPS_DE_LA_LISTE,
-	LIMITE_DES_ARTICLES,
-	listerLesArticles,
-	parRecence,
-} from '../../src/services/public/liste-articles'
+	ARTICLES_LIMIT,
+	byRecency,
+	LIST_FIELDS,
+	type ListedArticle,
+	listArticles,
+} from '../../src/services/public/article-list'
 
 /** The list of the blog (ticket 107), without a database. The run on the bench: tests/integration/blog-liste.test.ts. */
 
-const article = (slug: string, publieLe: string | null, extra: Partial<ArticleDeLaListe> = {}): ArticleDeLaListe => ({
+const article = (slug: string, publieLe: string | null, extra: Partial<ListedArticle> = {}): ListedArticle => ({
 	slug,
 	titre: `Titre ${slug}`,
 	extrait: `Extrait ${slug}`,
@@ -29,7 +29,7 @@ describe('Ordre de la liste', () => {
 			article('recent', '2026-09-01T00:00:00.000Z'),
 			article('illisible', 'pas une date'),
 		]
-		expect([...liste].sort(parRecence).map(({ slug }) => slug)).toEqual(['recent', 'a', 'b', 'illisible', 'sans-date'])
+		expect([...liste].sort(byRecency).map(({ slug }) => slug)).toEqual(['recent', 'a', 'b', 'illisible', 'sans-date'])
 	})
 })
 
@@ -51,13 +51,13 @@ describe('Lecture', () => {
 			},
 		} as unknown as Payload
 
-		const liste = await listerLesArticles(payload)
+		const liste = await listArticles(payload)
 
 		expect(lectures).toHaveLength(1)
 		expect(lectures[0]).toMatchObject({
 			collection: 'articles',
-			select: CHAMPS_DE_LA_LISTE,
-			limit: LIMITE_DES_ARTICLES,
+			select: LIST_FIELDS,
+			limit: ARTICLES_LIMIT,
 			overrideAccess: false,
 			depth: 0,
 		})
@@ -75,17 +75,15 @@ describe('Lecture', () => {
 
 describe('Affichage', () => {
 	test('la date est en français, à l’heure de Paris', () => {
-		expect(dateDeLArticle('2026-10-14T10:00:00.000Z')).toBe('14 octobre 2026')
-		expect(dateDeLArticle('2026-12-31T23:30:00.000Z')).toBe('1 janvier 2027')
-		expect(dateDeLArticle(null)).toBe('')
-		expect(dateDeLArticle('hier')).toBe('')
+		expect(articleDate('2026-10-14T10:00:00.000Z')).toBe('14 octobre 2026')
+		expect(articleDate('2026-12-31T23:30:00.000Z')).toBe('1 janvier 2027')
+		expect(articleDate(null)).toBe('')
+		expect(articleDate('hier')).toBe('')
 	})
 
 	test('chaque article est un lien vers sa page, son titre est un h2 et la page n’a pas de h1 à elle', () => {
 		const html = renderToStaticMarkup(
-			<ListeDesArticles
-				articles={[article('un', '2026-10-14T10:00:00.000Z'), article('deux', null, { extrait: '' })]}
-			/>
+			<ArticleList articles={[article('un', '2026-10-14T10:00:00.000Z'), article('deux', null, { extrait: '' })]} />
 		)
 
 		expect(html).toContain('href="/blog/un"')
@@ -99,7 +97,7 @@ describe('Affichage', () => {
 
 	test('un texte d’article ne devient jamais du HTML', () => {
 		const html = renderToStaticMarkup(
-			<ListeDesArticles articles={[article('un', null, { titre: '<script>alert(1)</script>' })]} />
+			<ArticleList articles={[article('un', null, { titre: '<script>alert(1)</script>' })]} />
 		)
 
 		expect(html).not.toContain('<script>')
@@ -107,6 +105,6 @@ describe('Affichage', () => {
 	})
 
 	test('sans article, la page le dit', () => {
-		expect(renderToStaticMarkup(<ListeDesArticles articles={[]} />)).toContain('Aucun article')
+		expect(renderToStaticMarkup(<ArticleList articles={[]} />)).toContain('Aucun article')
 	})
 })
