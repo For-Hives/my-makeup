@@ -2,25 +2,25 @@
 
 import Image from 'next/image'
 import { type KeyboardEvent, useCallback, useEffect, useRef, useState } from 'react'
-import { altRealisation } from '@/lib/profile/public-view'
+import { altWork } from '@/lib/profile/public-view'
 import { RATIO_PAR_DEFAUT, ratioMedia, sizesBoite } from '@/lib/taille-image'
 
 /** The height of a photo of the portfolio, in px: its width follows the shape of the photo. */
-const HAUTEUR_DE_LA_PHOTO = 500
+const PHOTO_HEIGHT = 500
 
 /** The photos of a portfolio. Only what the page shows crosses to the browser: addresses and sizes. */
-export interface PhotoDeLaGalerie {
+export interface GalleryPhoto {
 	url: string
 	width: number | null
 	height: number | null
 }
 
 /** Quiet time after the last scroll before the position is read: the end of a swipe, not its middle. */
-const ATTENTE_DE_LA_POSITION_MS = 120
+const POSITION_WAIT_MS = 120
 
-const SANS_MOUVEMENT = '(prefers-reduced-motion: reduce)'
+const REDUCED_MOTION = '(prefers-reduced-motion: reduce)'
 
-function Fleche({ vers }: { vers: 'gauche' | 'droite' }) {
+function Arrow({ vers }: { vers: 'gauche' | 'droite' }) {
 	return (
 		<svg
 			viewBox="0 0 20 20"
@@ -46,76 +46,76 @@ function Fleche({ vers }: { vers: 'gauche' | 'droite' }) {
  * Every photo has its alternative text, « Réalisation de <nom> (n/N) », and is asked to the image
  * optimizer at the width it is drawn at (`sizesBoite`), from its original address.
  */
-export function GalerieDuProfil({ photos, nom }: { photos: readonly PhotoDeLaGalerie[]; nom: string }) {
-	const piste = useRef<HTMLDivElement>(null)
-	const attente = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+export function ProfileGallery({ photos, nom }: { photos: readonly GalleryPhoto[]; nom: string }) {
+	const track = useRef<HTMLDivElement>(null)
+	const wait = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 	// True while the row scrolls toward a photo chosen by key or button: the position is then known, and what the
 	// scroll passes on its way (a smooth scroll, slowed by a busy machine) must not rewrite it.
-	const deplacement = useRef(false)
-	const [courante, setCourante] = useState(0)
+	const scrollBy = useRef(false)
+	const [current, setCurrent] = useState(0)
 	const total = photos.length
 
-	useEffect(() => () => clearTimeout(attente.current), [])
+	useEffect(() => () => clearTimeout(wait.current), [])
 
-	const aller = useCallback(
+	const goTo = useCallback(
 		(rang: number) => {
-			const visee = Math.min(Math.max(rang, 0), total - 1)
-			setCourante(visee)
-			const element = piste.current
-			const photo = element?.children.item(visee)
+			const targetIndex = Math.min(Math.max(rang, 0), total - 1)
+			setCurrent(targetIndex)
+			const element = track.current
+			const photo = element?.children.item(targetIndex)
 			if (!element || !(photo instanceof HTMLElement) || typeof element.scrollTo !== 'function') return
-			const sansMouvement = typeof matchMedia === 'function' && matchMedia(SANS_MOUVEMENT).matches
+			const reducedMotion = typeof matchMedia === 'function' && matchMedia(REDUCED_MOTION).matches
 			// Nothing to wait for when the row is already there: no scroll event would end the wait.
-			deplacement.current = Math.abs(photo.offsetLeft - element.scrollLeft) > 1
-			element.scrollTo({ left: photo.offsetLeft, behavior: sansMouvement ? 'auto' : 'smooth' })
+			scrollBy.current = Math.abs(photo.offsetLeft - element.scrollLeft) > 1
+			element.scrollTo({ left: photo.offsetLeft, behavior: reducedMotion ? 'auto' : 'smooth' })
 		},
 		[total]
 	)
 
 	// The photo that sits at the left edge of the row: what a swipe ended on.
-	const lireLaPosition = useCallback(() => {
-		const element = piste.current
+	const readPosition = useCallback(() => {
+		const element = track.current
 		if (!element) return
 		// The scroll that was asked for has ended: the position stays the one that was asked for.
-		if (deplacement.current) {
-			deplacement.current = false
+		if (scrollBy.current) {
+			scrollBy.current = false
 			return
 		}
-		let proche = 0
-		let ecartMin = Number.POSITIVE_INFINITY
-		for (const [rang, photo] of Array.from(element.children).entries()) {
+		let nearest = 0
+		let minGap = Number.POSITIVE_INFINITY
+		for (const [rank, photo] of Array.from(element.children).entries()) {
 			if (!(photo instanceof HTMLElement)) continue
-			const ecart = Math.abs(photo.offsetLeft - element.scrollLeft)
-			if (ecart < ecartMin) {
-				ecartMin = ecart
-				proche = rang
+			const gap = Math.abs(photo.offsetLeft - element.scrollLeft)
+			if (gap < minGap) {
+				minGap = gap
+				nearest = rank
 			}
 		}
-		setCourante(proche)
+		setCurrent(nearest)
 	}, [])
 
-	const auDefilement = () => {
-		clearTimeout(attente.current)
-		attente.current = setTimeout(lireLaPosition, ATTENTE_DE_LA_POSITION_MS)
+	const onScroll = () => {
+		clearTimeout(wait.current)
+		wait.current = setTimeout(readPosition, POSITION_WAIT_MS)
 	}
 
-	const auClavier = (evenement: KeyboardEvent<HTMLDivElement>) => {
-		const rang =
+	const onKeyDown = (evenement: KeyboardEvent<HTMLDivElement>) => {
+		const rank =
 			evenement.key === 'ArrowRight'
-				? courante + 1
+				? current + 1
 				: evenement.key === 'ArrowLeft'
-					? courante - 1
+					? current - 1
 					: evenement.key === 'Home'
 						? 0
 						: evenement.key === 'End'
 							? total - 1
 							: null
-		if (rang === null) return
+		if (rank === null) return
 		evenement.preventDefault()
-		aller(rang)
+		goTo(rank)
 	}
 
-	const bouton =
+	const button =
 		'inline-flex min-h-11 items-center gap-2 rounded px-2 font-semibold text-indigo-950 focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2 aria-disabled:opacity-40'
 
 	return (
@@ -127,19 +127,19 @@ export function GalerieDuProfil({ photos, nom }: { photos: readonly PhotoDeLaGal
 			{/* The row is the one tab stop of the photos: focused, the arrow keys move it. */}
 			{/* biome-ignore lint/a11y/useSemanticElements: a focusable row of photos, named; a fieldset is a form control */}
 			<div
-				ref={piste}
+				ref={track}
 				// biome-ignore lint/a11y/noNoninteractiveTabindex: a scrolling region must be reachable by keyboard
 				tabIndex={0}
 				role="group"
 				aria-label={`Photos de ${nom}`}
-				onKeyDown={auClavier}
-				onScroll={auDefilement}
+				onKeyDown={onKeyDown}
+				onScroll={onScroll}
 				// A finger or a wheel takes the row over: what follows is read from where it stops.
 				onTouchStart={() => {
-					deplacement.current = false
+					scrollBy.current = false
 				}}
 				onWheel={() => {
-					deplacement.current = false
+					scrollBy.current = false
 				}}
 				className="relative flex w-full snap-x snap-mandatory gap-8 overflow-x-auto overscroll-x-contain scroll-smooth rounded focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2 motion-reduce:scroll-auto"
 			>
@@ -151,14 +151,14 @@ export function GalerieDuProfil({ photos, nom }: { photos: readonly PhotoDeLaGal
 						role="group"
 						aria-roledescription="photo"
 						aria-label={`${rang + 1} sur ${total}`}
-						style={{ aspectRatio: ratioMedia(photo) ?? RATIO_PAR_DEFAUT, height: HAUTEUR_DE_LA_PHOTO }}
+						style={{ aspectRatio: ratioMedia(photo) ?? RATIO_PAR_DEFAUT, height: PHOTO_HEIGHT }}
 						className="relative max-w-full shrink-0 snap-start"
 					>
 						<Image
 							src={photo.url}
-							alt={altRealisation(nom, rang + 1, total)}
+							alt={altWork(nom, rang + 1, total)}
 							fill
-							sizes={sizesBoite({ hauteur: HAUTEUR_DE_LA_PHOTO, ratio: ratioMedia(photo) })}
+							sizes={sizesBoite({ hauteur: PHOTO_HEIGHT, ratio: ratioMedia(photo) })}
 							className="rounded object-cover"
 						/>
 					</div>
@@ -166,21 +166,21 @@ export function GalerieDuProfil({ photos, nom }: { photos: readonly PhotoDeLaGal
 			</div>
 			{total > 1 && (
 				<div className="flex w-full items-center justify-between gap-2">
-					<button type="button" aria-disabled={courante === 0} onClick={() => aller(courante - 1)} className={bouton}>
-						<Fleche vers="gauche" />
+					<button type="button" aria-disabled={current === 0} onClick={() => goTo(current - 1)} className={button}>
+						<Arrow vers="gauche" />
 						Photo précédente
 					</button>
 					<p aria-live="polite" aria-atomic="true" className="text-gray-700 text-sm">
-						Photo {courante + 1} sur {total}
+						Photo {current + 1} sur {total}
 					</p>
 					<button
 						type="button"
-						aria-disabled={courante === total - 1}
-						onClick={() => aller(courante + 1)}
-						className={bouton}
+						aria-disabled={current === total - 1}
+						onClick={() => goTo(current + 1)}
+						className={button}
 					>
 						Photo suivante
-						<Fleche vers="droite" />
+						<Arrow vers="droite" />
 					</button>
 				</div>
 			)}

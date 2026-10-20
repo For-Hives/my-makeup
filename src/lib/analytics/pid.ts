@@ -4,7 +4,7 @@
  * Public and free of personal data: it is only a number.
  */
 
-import { pidDuProfil as pidOuNul } from '@/lib/profile/pid'
+import { profilePid as pidOuNul } from '@/lib/profile/pid'
 import type { Pid } from './events'
 
 export type { Pid }

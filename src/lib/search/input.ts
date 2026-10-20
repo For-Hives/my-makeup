@@ -10,15 +10,15 @@
  * No `next` import: read by the page and by the tests.
  */
 
-import { lireLieu } from './place'
+import { readPlace } from './place'
 
-export const LONGUEUR_MAX_DE_LA_SAISIE = 100
+export const INPUT_MAX_LENGTH = 100
 
 /** The most pages an address may ask for: a page beyond the last is brought back to it, this only bounds the number read. */
 export const PAGE_MAX = 1000
 
 /** What the address asks for. */
-export interface Recherche {
+export interface Search {
 	/** What is looked for ('' when nothing). */
 	search: string
 	/** Where ('' when nowhere). */
@@ -27,18 +27,18 @@ export interface Recherche {
 	page: number
 }
 
-const premier = (valeur: unknown): unknown => (Array.isArray(valeur) ? valeur[0] : valeur)
+const first = (valeur: unknown): unknown => (Array.isArray(valeur) ? valeur[0] : valeur)
 
 /** A field as typed: trimmed, spaces merged, 100 characters at most. Anything but a text is ''. */
-export function champ(valeur: unknown): string {
-	const texte = premier(valeur)
-	return typeof texte === 'string' ? texte.trim().replace(/\s+/g, ' ').slice(0, LONGUEUR_MAX_DE_LA_SAISIE) : ''
+export function field(valeur: unknown): string {
+	const text = first(valeur)
+	return typeof text === 'string' ? text.trim().replace(/\s+/g, ' ').slice(0, INPUT_MAX_LENGTH) : ''
 }
 
 /** The page of an address: a whole number from 1 to `PAGE_MAX`, else 1 (a text, a decimal, zero, a negative number). */
-export function lireLaPage(valeur: unknown): number {
-	const texte = champ(valeur)
-	const page = /^\d{1,4}$/.test(texte) ? Number(texte) : 0
+export function readPage(valeur: unknown): number {
+	const text = field(valeur)
+	const page = /^\d{1,4}$/.test(text) ? Number(text) : 0
 	return page >= 1 && page <= PAGE_MAX ? page : 1
 }
 
@@ -47,46 +47,46 @@ export function lireLaPage(valeur: unknown): number {
  * what `search` says (the address table of the plan promises both): it is read when `search` is empty.
  * Any other parameter is ignored.
  */
-export function lireLaRecherche(parametres: Record<string, unknown> = {}): Recherche {
+export function readSearch(parametres: Record<string, unknown> = {}): Search {
 	return {
-		search: champ(parametres.search) || champ(parametres.specialite),
-		city: champ(parametres.city),
-		page: lireLaPage(parametres.page),
+		search: field(parametres.search) || field(parametres.specialite),
+		city: field(parametres.city),
+		page: readPage(parametres.page),
 	}
 }
 
 /** False when there is nothing to look for (U19): no term and no city. */
-export const rechercheValide = ({ search, city }: Pick<Recherche, 'search' | 'city'>): boolean =>
+export const validSearch = ({ search, city }: Pick<Search, 'search' | 'city'>): boolean =>
 	search !== '' || city !== ''
 
 /**
  * A search by a word, alone or with a city: a term that is not the city itself. The page of the results
- * ranks the profiles by how well they match it (src/lib/recherche/pertinence.ts).
+ * ranks the profiles by how well they match it (src/lib/search/relevance.ts).
  */
-export const rechercheParMot = ({ search, city }: Pick<Recherche, 'search' | 'city'>): boolean =>
-	search !== '' && !rechercheParVille({ search, city })
+export const searchByWord = ({ search, city }: Pick<Search, 'search' | 'city'>): boolean =>
+	search !== '' && !searchByCity({ search, city })
 
 /**
  * A search by city: a city, and no other term than the city itself (the form of the old site sent the
  * city as the term too), of a place the page can rank by (neither empty, nor « France »).
  */
-export const rechercheParVille = ({ search, city }: Pick<Recherche, 'search' | 'city'>): boolean =>
-	city !== '' && (search === '' || search.toLowerCase() === city.toLowerCase()) && lieuUtilisable(city)
+export const searchByCity = ({ search, city }: Pick<Search, 'search' | 'city'>): boolean =>
+	city !== '' && (search === '' || search.toLowerCase() === city.toLowerCase()) && usablePlace(city)
 
 /** A place the page can rank by: neither empty nor « France ». */
-export function lieuUtilisable(city: string): boolean {
-	const lieu = lireLieu(city)
-	return lieu.segments.length > 0 || lieu.departements.length > 0
+export function usablePlace(city: string): boolean {
+	const place = readPlace(city)
+	return place.segments.length > 0 || place.departements.length > 0
 }
 
 /** The path of the search page for a search; empty fields and the first page are left out. */
-export function urlPageRecherche({ search = '', city = '', page = 1 }: Partial<Recherche> = {}): string {
-	const parametres = new URLSearchParams()
-	if (champ(search)) parametres.set('search', champ(search))
-	if (champ(city)) parametres.set('city', champ(city))
-	if (page > 1) parametres.set('page', String(Math.min(Math.trunc(page), PAGE_MAX)))
-	const texte = parametres.toString()
-	return texte ? `/search?${texte}` : '/search'
+export function searchPageUrl({ search = '', city = '', page = 1 }: Partial<Search> = {}): string {
+	const params = new URLSearchParams()
+	if (field(search)) params.set('search', field(search))
+	if (field(city)) params.set('city', field(city))
+	if (page > 1) params.set('page', String(Math.min(Math.trunc(page), PAGE_MAX)))
+	const text = params.toString()
+	return text ? `/search?${text}` : '/search'
 }
 
 /**
@@ -94,9 +94,9 @@ export function urlPageRecherche({ search = '', city = '', page = 1 }: Partial<R
  * city, `total` counts the profiles of that city or département only.
  * « 3 résultats pour « Annecy » », « Aucun résultat pour « zzqq » ».
  */
-export function titreDesResultats({ search, city }: Pick<Recherche, 'search' | 'city'>, total: number): string {
-	const nombre = total === 0 ? 'Aucun résultat' : `${total} résultat${total > 1 ? 's' : ''}`
-	const quoi = search && search.toLowerCase() !== city.toLowerCase() ? `« ${search} »` : ''
-	const ou = city ? `« ${city} »` : ''
-	return `${nombre} pour ${[quoi, ou].filter(Boolean).join(' à ')}`
+export function resultsTitle({ search, city }: Pick<Search, 'search' | 'city'>, total: number): string {
+	const count = total === 0 ? 'Aucun résultat' : `${total} résultat${total > 1 ? 's' : ''}`
+	const what = search && search.toLowerCase() !== city.toLowerCase() ? `« ${search} »` : ''
+	const where = city ? `« ${city} »` : ''
+	return `${count} pour ${[what, where].filter(Boolean).join(' à ')}`
 }

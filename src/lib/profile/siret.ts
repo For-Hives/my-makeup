@@ -8,7 +8,7 @@
 export const MESSAGE_SIRET = 'Le SIRET compte 14 chiffres, sans espace.'
 
 /** `true`, or the message the field shows. The signature of a Payload `validate`. */
-export function validerSiret(valeur: string | null | undefined): true | string {
+export function validateSiret(valeur: string | null | undefined): true | string {
 	if (valeur === null || valeur === undefined || valeur === '') return true
 	return /^\d{14}$/.test(valeur) ? true : MESSAGE_SIRET
 }

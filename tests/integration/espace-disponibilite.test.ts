@@ -3,7 +3,7 @@ import type { Payload } from 'payload'
 import type { DashboardUser } from '@/lib/dashboard/my-profile'
 import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
 import { saveAvailability } from '@/lib/dashboard/save-availability'
-import { FILTRE_LISTE } from '@/lib/profile/visibility'
+import { LISTED_FILTER } from '@/lib/profile/visibility'
 import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 
@@ -98,7 +98,7 @@ describe('E19-E29 : indisponible, le profil sort de la liste publique', () => {
 					limit: 1,
 					overrideAccess: false,
 					select: {},
-					where: { and: [{ id: { equals: id } }, FILTRE_LISTE] },
+					where: { and: [{ id: { equals: id } }, LISTED_FILTER] },
 				})
 			).totalDocs === 1
 

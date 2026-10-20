@@ -8,7 +8,7 @@
  */
 
 import { parsePrice } from '@/lib/prix'
-import { aMedia, type ChampsDuProfil, type Completude, completude } from '@/lib/profile/completeness'
+import { aMedia, type ProfileFields, type Completeness, completeness } from '@/lib/profile/completeness'
 import ancienSite from '../unit/fixtures/completude-ancien-site.json'
 import casPartages from '../unit/fixtures/completude-cas.json'
 
@@ -32,7 +32,7 @@ export const COMMUNE_DE_LA_VILLE: Readonly<Record<string, typeof ANNECY | null>>
 
 export interface CasPartage {
 	nom: string
-	profil: ChampsDuProfil
+	profil: ProfileFields
 	options?: { formulaireDevis?: boolean }
 }
 
@@ -55,7 +55,7 @@ export function communeDeLaVille(ville: string | null | undefined): typeof ANNEC
 }
 
 /** True when the v3 keeps nothing of the city typed in this case: a text that is no commune. */
-export const villeEcartee = (profil: ChampsDuProfil): boolean =>
+export const villeEcartee = (profil: ProfileFields): boolean =>
 	typeof profil.city === 'string' && profil.city !== '' && communeDeLaVille(profil.city) === null
 
 /**
@@ -63,7 +63,7 @@ export const villeEcartee = (profil: ChampsDuProfil): boolean =>
  * account, one per call: the main photo, then the gallery.
  */
 export async function documentDuCas(
-	profil: ChampsDuProfil,
+	profil: ProfileFields,
 	photo: () => number | Promise<number>
 ): Promise<Record<string, unknown>> {
 	const network = profil.network ?? {}
@@ -106,6 +106,6 @@ export async function documentDuCas(
  * What the single rule says of a shared case as the v3 holds it: its city is the name of its
  * commune, or nothing. Never with the quote form, which nothing turns on.
  */
-export function completudeEnV3(profil: ChampsDuProfil): Completude {
-	return completude({ ...profil, city: communeDeLaVille(profil.city)?.name ?? null })
+export function completudeEnV3(profil: ProfileFields): Completeness {
+	return completeness({ ...profil, city: communeDeLaVille(profil.city)?.name ?? null })
 }

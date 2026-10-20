@@ -32,7 +32,7 @@ import { PREVIEW_PATH } from '@/lib/dashboard/preview'
 import { profileProgress } from '@/lib/dashboard/progress'
 import { requestUser } from '@/lib/dashboard/request'
 import { SERVICE_OFFERS } from '@/lib/dashboard/service-offers'
-import { texte } from '@/lib/profile/display-name'
+import { text } from '@/lib/profile/display-name'
 import {
 	saveMyAvailability,
 	saveMyContactDetails,
@@ -72,7 +72,7 @@ export default async function ProfilePage() {
 		<main className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-8">
 			<h1 className="font-semibold text-3xl">Mon espace</h1>
 			<RefreshSession expire={artist.expire} />
-			<p>Bonjour {texte(artist.nom) || 'toi'}, tu es connectée.</p>
+			<p>Bonjour {text(artist.nom) || 'toi'}, tu es connectée.</p>
 			{profile === null ? null : (
 				<>
 					<ViewLink
@@ -92,23 +92,23 @@ export default async function ProfilePage() {
 								carte.section === 'identite' ? (
 									<IdentityEditor
 										valeurs={{
-											prenom: texte(profile.firstName),
-											nom: texte(profile.lastName),
-											nomArtiste: texte(profile.artistName),
-											specialite: texte(profile.specialty),
+											prenom: text(profile.firstName),
+											nom: text(profile.lastName),
+											nomArtiste: text(profile.artistName),
+											specialite: text(profile.specialty),
 										}}
 										envoyer={saveMyIdentity}
 										proprietaire={String(artist.id)}
 									/>
 								) : carte.section === 'description' ? (
 									<DescriptionEditor
-										valeurs={{ description: texte(profile.description) }}
+										valeurs={{ description: text(profile.description) }}
 										envoyer={saveMyDescription}
 									/>
 								) : carte.section === 'localisation' ? (
 									<LocationEditor
 										valeurs={{
-											codeInsee: texte(profile.city?.inseeCode),
+											codeInsee: text(profile.city?.inseeCode),
 											libelle: cityLabel({ nom: profile.city?.name, departement: profile.city?.department }),
 											rayonKm: typeof profile.radiusKm === 'number' ? profile.radiusKm : null,
 											aDomicile: profile.homeService === true,
@@ -129,19 +129,19 @@ export default async function ProfilePage() {
 								) : carte.section === 'reseaux' ? (
 									<NetworksEditor
 										valeurs={{
-											instagram: texte(profile.networks?.instagram),
-											facebook: texte(profile.networks?.facebook),
-											youtube: texte(profile.networks?.youtube),
-											linkedin: texte(profile.networks?.linkedin),
-											siteWeb: texte(profile.networks?.website),
+											instagram: text(profile.networks?.instagram),
+											facebook: text(profile.networks?.facebook),
+											youtube: text(profile.networks?.youtube),
+											linkedin: text(profile.networks?.linkedin),
+											siteWeb: text(profile.networks?.website),
 										}}
 										envoyer={saveMyNetworks}
 									/>
 								) : carte.section === 'coordonnees' ? (
 									<ContactDetailsEditor
 										valeurs={{
-											telephone: texte(profile.contactDetails?.phone),
-											email: texte(profile.contactDetails?.email),
+											telephone: text(profile.contactDetails?.phone),
+											email: text(profile.contactDetails?.email),
 											contactPublic: profile.publicContact === true,
 										}}
 										envoyer={saveMyContactDetails}

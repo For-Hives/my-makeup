@@ -138,7 +138,7 @@ describe('rien de saisi ne part : lecture du code', () => {
 		const page = lire('src/app/(front)/(site)/search/page.tsx')
 		const balise = page.match(/<MesureDeRecherche[\s\S]*?\/>/)?.[0] ?? ''
 		expect(balise).toContain("aUneVille={city !== ''}")
-		expect(balise).toContain('trancheDeResultats(tous.length)')
+		expect(balise).toContain('trancheDeResultats(all.length)')
 		expect(balise).toContain('empreinte(')
 		expect(balise).not.toMatch(/search=\{search\}|city=\{city\}|recherche=/)
 	})
@@ -151,7 +151,7 @@ describe('rien de saisi ne part : lecture du code', () => {
 		expect(lire('src/components/blocs/Cta.tsx')).toContain("where: 'cta_recherche'")
 		expect(lire('src/components/blocs/Cta.tsx')).toContain("where: 'cta_inscription'")
 		expect(lire('src/components/gabarit/Nav.tsx')).toContain("nom: 'nav_recherche'")
-		expect(lire('src/components/recherche/CarteDeResultat.tsx')).toContain("nom: 'search_result_click'")
+		expect(lire('src/components/search/ResultCard.tsx')).toContain("nom: 'search_result_click'")
 		expect(lire('src/app/(front)/(site)/not-found.tsx')).toContain('<MesureDePageIntrouvable />')
 		expect(lire('src/app/(front)/(site)/error.tsx')).toContain('scope="site"')
 		expect(lire('src/app/(front)/(dashboard)/auth/error.tsx')).toContain('scope="espace"')

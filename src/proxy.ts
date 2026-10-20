@@ -17,7 +17,7 @@ import {
 	CHEMIN_DU_REFUS_DE_CONTACT,
 	secondesAvantUnMessageDeCetteRequete,
 } from '@/lib/contact/frein'
-import { freinerLaRecherche } from '@/lib/search/rate-limit'
+import { rateLimitSearch } from '@/lib/search/rate-limit'
 import { robotsPourChemin } from '@/lib/seo/robots'
 import { redirectionDeForme } from '@/lib/urls/forme'
 import { adresseAVerifier, type FamilleVerifiee } from '@/lib/urls/page-inconnue'
@@ -78,7 +78,7 @@ function proxyDuSite(requete: NextRequest) {
 		if (consigneDeForme) redirectionDeForme.headers.set('X-Robots-Tag', consigneDeForme)
 		return redirectionDeForme
 	}
-	const freinee = freinerLaRecherche({ chemin: pathname, methode: requete.method, entetes: requete.headers })
+	const freinee = rateLimitSearch({ chemin: pathname, methode: requete.method, entetes: requete.headers })
 	if (freinee) {
 		const reponseFreinee = new NextResponse(freinee.corps, { status: freinee.status, headers: freinee.entetes })
 		const consigneFreinee = robotsPourChemin(pathname)
@@ -241,7 +241,7 @@ type ExistenceDUnePage = (famille: FamilleVerifiee, segment: string) => Promise<
 
 /** The real lookup, loaded on first use: the proxy of every other path never loads Payload. */
 const existenceReelle: ExistenceDUnePage = async (famille, segment) =>
-	(await import('@/services/public/exists')).existeUnePage(famille, segment)
+	(await import('@/services/public/exists')).pageExists(famille, segment)
 
 /**
  * An unknown profile, talent or article answers the 404 page of the site, in full (ticket 231). The lookup is the

@@ -9,7 +9,7 @@ import type {
 } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { estUnImport } from '../lib/contexte-import'
-import { STATUT_PUBLIE } from '../lib/profile/status'
+import { PUBLISHED_STATUS } from '../lib/profile/status'
 import { type Cibles, type ContenuPublic, ciblesDuChangement, type EtatPublic } from '../lib/revalidation'
 import { adressesDuChangement, cleSiLEnvoiEstPermis, signalerPlusTard } from '../lib/seo/indexnow'
 
@@ -31,7 +31,7 @@ import { adressesDuChangement, cleSiLEnvoiEstPermis, signalerPlusTard } from '..
 
 /** The field of the stored row that says whether the document is shown, and its public value. */
 const VISIBILITE: Readonly<Record<ContenuPublic, { champ: 'status' | '_status'; valeur: string }>> = {
-	profiles: { champ: 'status', valeur: STATUT_PUBLIE },
+	profiles: { champ: 'status', valeur: PUBLISHED_STATUS },
 	articles: { champ: '_status', valeur: 'published' },
 	talents: { champ: '_status', valeur: 'published' },
 }

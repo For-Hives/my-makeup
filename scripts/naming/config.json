@@ -27,11 +27,8 @@
 		"src/app/(front)/(site)/politique-de-confidentialite",
 		"src/app/(front)/(site)/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse",
 		"src/app/(front)/(site)/pourquoi-utiliser-my-makeup-en-tant-que-particulier",
-		"src/app/(front)/(site)/profil",
-		"src/app/(front)/(site)/search",
 		"src/app/(front)/(site)/site-map",
 		"src/app/(front)/(site)/solutions",
-		"src/app/(front)/(site)/talent",
 		"src/app/(front)/globals.css",
 		"src/app/(front)/layout.tsx",
 		"src/app/(payload)",
@@ -62,8 +59,6 @@
 		"src/components/gabarit",
 		"src/components/legal",
 		"src/components/pages-fixes",
-		"src/components/profil",
-		"src/components/recherche",
 		"src/content",
 		"src/instrumentation-node.ts",
 		"src/instrumentation.ts",
@@ -88,10 +83,8 @@
 		"src/lib/pool-base.ts",
 		"src/lib/prestataires.ts",
 		"src/lib/prix.ts",
-		"src/lib/profil",
 		"src/lib/rapprochement-lecture.ts",
 		"src/lib/rapprochement.ts",
-		"src/lib/recherche",
 		"src/lib/requete-bornee.ts",
 		"src/lib/revalidation.ts",
 		"src/lib/security-headers.ts",
@@ -109,7 +102,7 @@
 		"src/payload-types.ts",
 		"src/payload.config.ts",
 		"src/proxy.ts",
-		"src/services",
+		"src/services/mesure",
 		"tests/ci",
 		"tests/e2e",
 		"tests/fixtures",
@@ -201,7 +194,7 @@
 		"words": [
 			{
 				"word": "specialite",
-				"in": ["src/lib/recherche/saisie.ts"],
+				"in": ["src/lib/search/input.ts"],
 				"reason": "The ?specialite= parameter of /search: links of the old site carry it."
 			}
 		]

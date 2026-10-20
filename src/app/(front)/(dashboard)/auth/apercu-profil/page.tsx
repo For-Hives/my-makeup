@@ -1,12 +1,12 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { PreviewBanner } from '@/components/dashboard/PreviewBanner'
-import { VueDuProfil } from '@/components/profile/ProfileView'
+import { ProfileView } from '@/components/profile/ProfileView'
 import { requireArtist } from '@/lib/auth/session'
 import { profileId } from '@/lib/dashboard/my-profile'
 import { DASHBOARD_PATH, PREVIEW_PATH, previewState } from '@/lib/dashboard/preview'
 import { requestUser } from '@/lib/dashboard/request'
-import { lireLApercuDuProfil } from '@/services/public/profiles'
+import { readProfilePreview } from '@/services/public/profiles'
 
 // Read per request: it depends on the session, and the build has no database. Private and never
 // indexed: the headers of `/auth/*` (`private, no-store`, `noindex`) and the tag below.
@@ -25,13 +25,13 @@ export default async function PreviewPage() {
 	await requireArtist(PREVIEW_PATH)
 	const context = await requestUser()
 	const id = context === null ? null : await profileId(context.payload, context.utilisateur)
-	const preview = context === null || id === null ? null : await lireLApercuDuProfil(context.payload, id)
+	const preview = context === null || id === null ? null : await readProfilePreview(context.payload, id)
 	// No profile yet: her space says so, with the way to ask for one.
 	if (preview === null) redirect(DASHBOARD_PATH)
 	return (
 		<>
 			<PreviewBanner etat={previewState(preview.etat)} />
-			<VueDuProfil profil={preview.profil} mesure={false} />
+			<ProfileView profil={preview.profil} mesure={false} />
 		</>
 	)
 }

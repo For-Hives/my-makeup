@@ -11,33 +11,33 @@ import { GALERIE_MAX } from '../medias'
  * The messages are those of the old site, word for word (src/lib/photo.js and
  * src/lib/sauvegarde-profil.js, branch main).
  */
-export const MESSAGES_DES_PHOTOS = {
+export const PHOTO_MESSAGES = {
 	galeriePleine: 'Ton portfolio contient déjà 10 photos : retires-en une pour en ajouter une autre.',
 	photoRefusee:
 		"Choisis à nouveau ta photo : elle n'a pas été acceptée, et tes modifications n'ont pas été enregistrées.",
 } as const
 
 /** The identifier of a document a relationship holds: the identifier itself, or the document once populated. */
-export const identifiantDe = (valeur: unknown): number | string | undefined => {
+export const idOf = (valeur: unknown): number | string | undefined => {
 	const id = typeof valeur === 'object' && valeur !== null && 'id' in valeur ? valeur.id : valeur
 	return typeof id === 'number' || typeof id === 'string' ? id : undefined
 }
 
 /** The media a field of photos names: none, one, or the list of the gallery, in order. */
-export const photosNommees = (valeur: unknown): (number | string)[] =>
-	(Array.isArray(valeur) ? valeur : [valeur]).map(identifiantDe).filter(id => id !== undefined)
+export const namedPhotos = (valeur: unknown): (number | string)[] =>
+	(Array.isArray(valeur) ? valeur : [valeur]).map(idOf).filter(id => id !== undefined)
 
 /**
  * In the admin panel, the photos offered for a profile: those of its account. Nothing before the
  * account is chosen.
  */
-export const photosDeLaProprietaire = ({ data }: { data: unknown }): Where | boolean => {
-	const pro = identifiantDe((data as { pro?: unknown } | undefined)?.pro)
+export const ownerPhotos = ({ data }: { data: unknown }): Where | boolean => {
+	const pro = idOf((data as { pro?: unknown } | undefined)?.pro)
 	return pro === undefined ? false : { owner: { equals: pro } }
 }
 
 /** What Payload hands a `validate` of these fields. `hasMany` is the one of the field, when it is known. */
-interface OptionsDeValidation {
+interface ValidationOptions {
 	data: unknown
 	hasMany?: boolean
 	previousValue?: unknown
@@ -58,21 +58,21 @@ interface OptionsDeValidation {
  *
  * The media are read without access control: the rule is the owner, not what the request may read.
  */
-export async function validerPhotosDuProfil(
+export async function validateProfilePhotos(
 	valeur: unknown,
-	{ data, hasMany, previousValue, req }: OptionsDeValidation
+	{ data, hasMany, previousValue, req }: ValidationOptions
 ): Promise<true | string> {
-	const plusieurs = hasMany ?? Array.isArray(valeur)
-	if (!plusieurs && Array.isArray(valeur)) return MESSAGES_DES_PHOTOS.photoRefusee
-	const entrees = (Array.isArray(valeur) ? valeur : [valeur]).filter(entree => entree !== undefined && entree !== null)
-	const toutes = photosNommees(entrees)
-	if (toutes.length !== entrees.length) return MESSAGES_DES_PHOTOS.photoRefusee
-	if (toutes.length > GALERIE_MAX) return MESSAGES_DES_PHOTOS.galeriePleine
-	const dejaLa = new Set(photosNommees(previousValue).map(String))
-	const ids = toutes.filter(id => !dejaLa.has(String(id)))
+	const several = hasMany ?? Array.isArray(valeur)
+	if (!several && Array.isArray(valeur)) return PHOTO_MESSAGES.photoRefusee
+	const entries = (Array.isArray(valeur) ? valeur : [valeur]).filter(entree => entree !== undefined && entree !== null)
+	const all = namedPhotos(entries)
+	if (all.length !== entries.length) return PHOTO_MESSAGES.photoRefusee
+	if (all.length > GALERIE_MAX) return PHOTO_MESSAGES.galeriePleine
+	const alreadyThere = new Set(namedPhotos(previousValue).map(String))
+	const ids = all.filter(id => !alreadyThere.has(String(id)))
 	if (ids.length === 0) return true
-	if (!ids.every(identifiantPossible)) return MESSAGES_DES_PHOTOS.photoRefusee
-	const pro = identifiantDe((data as { pro?: unknown } | undefined)?.pro)
+	if (!ids.every(identifiantPossible)) return PHOTO_MESSAGES.photoRefusee
+	const pro = idOf((data as { pro?: unknown } | undefined)?.pro)
 	const { docs } = await req.payload.find({
 		collection: 'media',
 		depth: 0,
@@ -82,22 +82,22 @@ export async function validerPhotosDuProfil(
 		select: { owner: true },
 		where: { id: { in: ids } },
 	})
-	const proprietaires = new Map(docs.map(({ id, owner }) => [String(id), identifiantDe(owner)]))
-	const toutesASonCompte = ids.every(id => {
-		const proprietaire = proprietaires.get(String(id))
-		return pro !== undefined && proprietaire !== undefined && String(proprietaire) === String(pro)
+	const photoOwners = new Map(docs.map(({ id, owner }) => [String(id), idOf(owner)]))
+	const allOnHerAccount = ids.every(id => {
+		const photoOwner = photoOwners.get(String(id))
+		return pro !== undefined && photoOwner !== undefined && String(photoOwner) === String(pro)
 	})
-	return toutesASonCompte ? true : MESSAGES_DES_PHOTOS.photoRefusee
+	return allOnHerAccount ? true : PHOTO_MESSAGES.photoRefusee
 }
 
 /** `validate` of `photoPrincipale`: one photo, never a list. */
-export const validerPhotoPrincipale = (
+export const validateMainPhoto = (
 	valeur: unknown,
-	options: Omit<OptionsDeValidation, 'hasMany'>
-): Promise<true | string> => validerPhotosDuProfil(valeur, { ...options, hasMany: false })
+	options: Omit<ValidationOptions, 'hasMany'>
+): Promise<true | string> => validateProfilePhotos(valeur, { ...options, hasMany: false })
 
 /** `validate` of `galerie`: a list, in order. */
-export const validerGalerie = (
+export const validateGallery = (
 	valeur: unknown,
-	options: Omit<OptionsDeValidation, 'hasMany'>
-): Promise<true | string> => validerPhotosDuProfil(valeur, { ...options, hasMany: true })
+	options: Omit<ValidationOptions, 'hasMany'>
+): Promise<true | string> => validateProfilePhotos(valeur, { ...options, hasMany: true })

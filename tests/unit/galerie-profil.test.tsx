@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { act } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { GalerieDuProfil, type PhotoDeLaGalerie } from '@/components/profile/ProfileGallery'
+import { ProfileGallery, type GalleryPhoto } from '@/components/profile/ProfileGallery'
 import { ouvrirFenetre } from '../outils/dom-react'
 
 /**
@@ -9,7 +9,7 @@ import { ouvrirFenetre } from '../outils/dom-react'
  * The scrolling itself (a swipe, the snapping) needs a real browser: tests/e2e/profil-public.spec.ts, E44.
  */
 
-const photos = (nombre: number): PhotoDeLaGalerie[] =>
+const photos = (nombre: number): GalleryPhoto[] =>
 	Array.from({ length: nombre }, (_, rang) => ({
 		url: `https://photos.example.test/media/photo-${rang + 1}.webp`,
 		width: 400,
@@ -38,7 +38,7 @@ const position = (zone: Element): string => zone.querySelector('[aria-live="poli
 
 describe('E44 : la galerie au clavier', () => {
 	test('chaque photo a son texte alternatif « Réalisation de <nom> (n/N) », demandée depuis son adresse d’origine', () => {
-		const html = renderToStaticMarkup(<GalerieDuProfil photos={photos(6)} nom="Inès Morel" />)
+		const html = renderToStaticMarkup(<ProfileGallery photos={photos(6)} nom="Inès Morel" />)
 
 		for (let n = 1; n <= 6; n++) expect(html).toContain(`alt="Réalisation de Inès Morel (${n}/6)"`)
 		expect(html.match(/<img /g)).toHaveLength(6)
@@ -49,7 +49,7 @@ describe('E44 : la galerie au clavier', () => {
 	})
 
 	test('une seule photo : pas de boutons ni de position à annoncer', () => {
-		const html = renderToStaticMarkup(<GalerieDuProfil photos={photos(1)} nom="Inès Morel" />)
+		const html = renderToStaticMarkup(<ProfileGallery photos={photos(1)} nom="Inès Morel" />)
 
 		expect(html).toContain('alt="Réalisation de Inès Morel (1/1)"')
 		expect(html).not.toContain('Photo suivante')
@@ -57,7 +57,7 @@ describe('E44 : la galerie au clavier', () => {
 	})
 
 	test('les flèches changent de photo et la position est annoncée', async () => {
-		const zone = await fenetre.monter(<GalerieDuProfil photos={photos(3)} nom="Inès Morel" />)
+		const zone = await fenetre.monter(<ProfileGallery photos={photos(3)} nom="Inès Morel" />)
 		const rangee = piste(zone)
 		expect(position(zone)).toBe('Photo 1 sur 3')
 
@@ -77,7 +77,7 @@ describe('E44 : la galerie au clavier', () => {
 	})
 
 	test('une autre touche est laissée au navigateur', async () => {
-		const zone = await fenetre.monter(<GalerieDuProfil photos={photos(3)} nom="Inès Morel" />)
+		const zone = await fenetre.monter(<ProfileGallery photos={photos(3)} nom="Inès Morel" />)
 
 		expect(await appuyer(piste(zone), 'a')).toBe(false)
 		expect(await appuyer(piste(zone), 'ArrowDown')).toBe(false)
@@ -85,7 +85,7 @@ describe('E44 : la galerie au clavier', () => {
 	})
 
 	test('« Photo précédente » et « Photo suivante » font de même, sans jamais sortir de la rangée', async () => {
-		const zone = await fenetre.monter(<GalerieDuProfil photos={photos(3)} nom="Inès Morel" />)
+		const zone = await fenetre.monter(<ProfileGallery photos={photos(3)} nom="Inès Morel" />)
 		const suivante = fenetre.bouton('Photo suivante')
 		const precedente = fenetre.bouton('Photo précédente')
 
@@ -103,7 +103,7 @@ describe('E44 : la galerie au clavier', () => {
 	})
 
 	test('la rangée défile jusqu’à la photo choisie', async () => {
-		const zone = await fenetre.monter(<GalerieDuProfil photos={photos(3)} nom="Inès Morel" />)
+		const zone = await fenetre.monter(<ProfileGallery photos={photos(3)} nom="Inès Morel" />)
 		const rangee = piste(zone)
 		const arrivees: number[] = []
 		rangee.scrollTo = ((options: ScrollToOptions) => {
@@ -121,7 +121,7 @@ describe('E44 : la galerie au clavier', () => {
 	})
 
 	test('la rangée se laisse atteindre au clavier et se nomme', async () => {
-		const zone = await fenetre.monter(<GalerieDuProfil photos={photos(2)} nom="Inès Morel" />)
+		const zone = await fenetre.monter(<ProfileGallery photos={photos(2)} nom="Inès Morel" />)
 
 		expect(piste(zone).getAttribute('aria-label')).toBe('Photos de Inès Morel')
 		expect(zone.querySelectorAll('[aria-roledescription="photo"]')).toHaveLength(2)

@@ -1,18 +1,18 @@
 import type { Field, FieldHook } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import {
-	BORNES_DU_RAYON_KM,
-	type CommuneSaisie,
-	codeInseeNormalise,
-	communeEnChamps,
-	coordonneeArrondie,
-	departementDuCodeInsee,
-	type ErreursDeLaCommune,
-	erreursDeLaCommune,
-	NOM_DE_COMMUNE_MAX,
-	nomNormalise,
-	verdictDeLaCommune,
-	verdictDuRayon,
+	RADIUS_BOUNDS_KM,
+	type CityInput,
+	normalizedInseeCode,
+	cityToFields,
+	roundedCoordinate,
+	departmentOfInseeCode,
+	type CityErrors,
+	cityErrors,
+	CITY_NAME_MAX,
+	normalizedName,
+	cityVerdict,
+	radiusVerdict,
 } from '../../lib/profile/zone'
 
 /**
@@ -21,18 +21,18 @@ import {
  * code that is not well formed gives null, and the check of the code refuses the save anyway.
  */
 const departementDuCode: FieldHook = ({ siblingData }) =>
-	departementDuCodeInsee((siblingData as CommuneSaisie).inseeCode)
+	departmentOfInseeCode((siblingData as CityInput).inseeCode)
 
-/** The check of one field of the commune, which reads its sibling fields (src/lib/profil/zone.ts). */
+/** The check of one field of the commune, which reads its sibling fields (src/lib/profile/zone.ts). */
 const verdictDe =
-	(champ: keyof ErreursDeLaCommune) =>
+	(champ: keyof CityErrors) =>
 	(_valeur: unknown, { siblingData }: { siblingData: unknown }): true | string =>
-		erreursDeLaCommune(siblingData as CommuneSaisie)[champ] ?? true
+		cityErrors(siblingData as CityInput)[champ] ?? true
 
 /**
  * The zone of a profile (ticket 041; plan 01 §3.3 P7.4 and §6.2; docs/migration/SCHEMA.md,
  * §5.2 and §9): its commune, its radius and « à domicile ». No postal address: there is no field
- * for one. The rules and their French messages live in src/lib/profil/zone.ts.
+ * for one. The rules and their French messages live in src/lib/profile/zone.ts.
  *
  * - `city`: a commune of the official list, with its name and its INSEE code, the one never
  *   without the other; the coordinates of its centre if known, rounded to about 1 km. It is sent
@@ -56,22 +56,22 @@ export const champsDeLaZone: Field[] = [
 		admin: { description: 'Une commune de la liste officielle, avec son code INSEE. Jamais une adresse.' },
 		// Before its fields are read: Payload stops with a 500 on a group sent as `null`, and fills
 		// what an object leaves out with the stored values.
-		hooks: { beforeValidate: [({ value }) => communeEnChamps(value)] },
-		validate: verdictDeLaCommune,
+		hooks: { beforeValidate: [({ value }) => cityToFields(value)] },
+		validate: cityVerdict,
 		fields: [
 			{
 				name: 'name',
 				label: 'Nom',
 				type: 'text',
-				maxLength: NOM_DE_COMMUNE_MAX,
-				hooks: { beforeValidate: [({ value }) => nomNormalise(value)] },
+				maxLength: CITY_NAME_MAX,
+				hooks: { beforeValidate: [({ value }) => normalizedName(value)] },
 				validate: verdictDe('name'),
 			},
 			{
 				name: 'inseeCode',
 				label: 'Code INSEE',
 				type: 'text',
-				hooks: { beforeValidate: [({ value }) => codeInseeNormalise(value)] },
+				hooks: { beforeValidate: [({ value }) => normalizedInseeCode(value)] },
 				validate: verdictDe('inseeCode'),
 			},
 			{
@@ -86,14 +86,14 @@ export const champsDeLaZone: Field[] = [
 				name: 'latitude',
 				label: 'Latitude',
 				type: 'number',
-				hooks: { beforeValidate: [({ value }) => coordonneeArrondie(value)] },
+				hooks: { beforeValidate: [({ value }) => roundedCoordinate(value)] },
 				validate: verdictDe('latitude'),
 			},
 			{
 				name: 'longitude',
 				label: 'Longitude',
 				type: 'number',
-				hooks: { beforeValidate: [({ value }) => coordonneeArrondie(value)] },
+				hooks: { beforeValidate: [({ value }) => roundedCoordinate(value)] },
 				validate: verdictDe('longitude'),
 			},
 		],
@@ -102,10 +102,10 @@ export const champsDeLaZone: Field[] = [
 		name: 'radiusKm',
 		label: 'Rayon d’action (km)',
 		type: 'number',
-		min: BORNES_DU_RAYON_KM.min,
-		max: BORNES_DU_RAYON_KM.max,
+		min: RADIUS_BOUNDS_KM.min,
+		max: RADIUS_BOUNDS_KM.max,
 		admin: { step: 1 },
-		validate: verdictDuRayon,
+		validate: radiusVerdict,
 	},
 	{
 		name: 'homeService',

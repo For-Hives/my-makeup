@@ -12,11 +12,11 @@ import {
 	QUALITE_DE_PARTAGE,
 } from '../../src/lib/seo/partage'
 import { metadonneesDuProfil } from '../../src/lib/seo/profil'
-import type { ProfilPublic } from '../../src/services/public/profiles'
+import type { PublicProfile } from '../../src/services/public/profiles'
 
 const ABSOLUE = /^https:\/\/my-makeup\.fr\//
 
-const profil = (surcharge: Partial<ProfilPublic> = {}): ProfilPublic =>
+const profil = (surcharge: Partial<PublicProfile> = {}): PublicProfile =>
 	({
 		slug: 'lea-imaginaire',
 		nom: 'Léa Imaginaire',
@@ -26,7 +26,7 @@ const profil = (surcharge: Partial<ProfilPublic> = {}): ProfilPublic =>
 		photo: { url: 'https://photos.example.test/media/abc.webp', width: 3000, height: 2000 },
 		indexable: true,
 		...surcharge,
-	}) as ProfilPublic
+	}) as PublicProfile
 
 const og = (meta: ReturnType<typeof metadonnees>) => {
 	const { openGraph } = meta

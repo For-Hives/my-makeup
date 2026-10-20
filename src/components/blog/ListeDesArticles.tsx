@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import type { ArticleDeLaListe } from '@/services/public/article-list'
+import type { ListedArticle } from '@/services/public/article-list'
 
 /** « 14 octobre 2026 », in the Paris time zone; '' for a missing or unreadable date. */
 export function dateDeLArticle(date: string | null): string {
@@ -15,7 +15,7 @@ export function dateDeLArticle(date: string | null): string {
 }
 
 /** The cards of the blog: date, title, excerpt and a link to the article. Server component. */
-export function ListeDesArticles({ articles }: { articles: readonly ArticleDeLaListe[] }) {
+export function ListeDesArticles({ articles }: { articles: readonly ListedArticle[] }) {
 	if (articles.length === 0)
 		return <p className="text-gray-700">Aucun article n&apos;est publié pour le moment. Reviens bientôt !</p>
 	return (

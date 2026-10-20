@@ -1,18 +1,18 @@
 import Image from 'next/image'
 import { MesureDeRecherche } from '@/components/analytics/MesureDePage'
 import { BlocDeRecherche } from '@/components/blocs/BlocDeRecherche'
-import { AucunResultat, RechercheEnEchec } from '@/components/search/SearchStates'
-import { ListeDeResultats } from '@/components/search/ResultList'
-import { PagesDeResultats } from '@/components/search/ResultPages'
+import { NoResult, SearchFailed } from '@/components/search/SearchStates'
+import { ResultList } from '@/components/search/ResultList'
+import { ResultPages } from '@/components/search/ResultPages'
 import { empreinte } from '@/lib/analytics/doublon'
 import { trancheDeResultats } from '@/lib/analytics/valeurs'
-import { lireSansBloquer } from '@/lib/search/read'
-import { sectionsParLieu } from '@/lib/search/place'
-import { paginer, sectionsDeLaPage } from '@/lib/search/pagination'
-import { chercher } from '@/lib/search/results'
-import { lireLaRecherche, rechercheParMot, rechercheParVille, titreDesResultats } from '@/lib/search/input'
+import { readWithoutBlocking } from '@/lib/search/read'
+import { sectionsByPlace } from '@/lib/search/place'
+import { paginate, sectionsOfPage } from '@/lib/search/pagination'
+import { find } from '@/lib/search/results'
+import { readSearch, searchByWord, searchByCity, resultsTitle } from '@/lib/search/input'
 import { metadonnees } from '@/lib/seo/metadonnees'
-import { lAnnuaireAvecLesTextesEnCache, lAnnuaireEnCache } from '@/services/public/cached'
+import { cachedDirectoryWithTexts, cachedDirectory } from '@/services/public/cached'
 
 // The address is the search: read at each request. The directory it ranks is read through the cache
 // of Next, tagged `profils` (ticket 047).
@@ -33,18 +33,18 @@ export const metadata = metadonnees({
  * - By city (ticket 098): the artists of the city or of the département typed come first and are the
  *   only ones the title counts; the others follow under their own headings.
  * - By a word, alone or with a city (ticket 099): the listed profiles that hold the words, best first
- *   (src/lib/recherche/pertinence.ts); with a city, hers come first, as above.
+ *   (src/lib/search/relevance.ts); with a city, hers come first, as above.
  * - Pages of 20, every profile once (ticket 100), and an error state with « Réessayer » when the
  *   directory cannot be read in time. The brake by address is the proxy's (src/proxy.ts).
  *
  * A profile that is hidden, unavailable or entirely empty is not in the directory it ranks
- * (src/lib/profil/visibilite.ts). The text typed is never logged and never measured.
+ * (src/lib/profile/visibility.ts). The text typed is never logged and never measured.
  */
-export default async function PageDeRecherche({ searchParams }: PageProps<'/search'>) {
-	const recherche = lireLaRecherche(await searchParams)
-	const { search, city } = recherche
+export default async function SearchPage({ searchParams }: PageProps<'/search'>) {
+	const query = readSearch(await searchParams)
+	const { search, city } = query
 
-	if (!rechercheParVille(recherche) && !rechercheParMot(recherche)) {
+	if (!searchByCity(query) && !searchByWord(query)) {
 		return (
 			<main className="relative flex flex-1 flex-col">
 				<BlocDeRecherche search={search} city={city} surLaPageDeRecherche />
@@ -61,31 +61,31 @@ export default async function PageDeRecherche({ searchParams }: PageProps<'/sear
 		)
 	}
 
-	const lecture = await lireSansBloquer(rechercheParMot(recherche) ? lAnnuaireAvecLesTextesEnCache : lAnnuaireEnCache)
-	if (!lecture.reussie)
+	const reading = await readWithoutBlocking(searchByWord(query) ? cachedDirectoryWithTexts : cachedDirectory)
+	if (!reading.reussie)
 		return (
 			<main className="relative flex flex-1 flex-col">
 				<BlocDeRecherche search={search} city={city} surLaPageDeRecherche />
-				<RechercheEnEchec recherche={recherche} />
+				<SearchFailed recherche={query} />
 			</main>
 		)
 
-	const annuaire = lecture.valeur
-	const { locaux, parLieu, sections } = chercher(annuaire, recherche)
-	const tous = [...locaux, ...sections.flatMap(section => section.profils)]
-	const page = paginer(tous, recherche.page)
-	const [locauxDeLaPage = [], ...sectionsDeCettePage] = sectionsDeLaPage(page, [
-		locaux.length,
+	const directory = reading.valeur
+	const { locaux: localProfiles, parLieu: byPlace, sections } = find(directory, query)
+	const all = [...localProfiles, ...sections.flatMap(section => section.profils)]
+	const page = paginate(all, query.page)
+	const [localsOfPage = [], ...sectionsOfThisPage] = sectionsOfPage(page, [
+		localProfiles.length,
 		...sections.map(section => section.profils.length),
 	])
 	// The sections that have something on this page, in order.
-	const groupes = sections
-		.map((section, rang) => ({ section, profils: sectionsDeCettePage[rang] ?? [] }))
+	const groups = sections
+		.map((section, rang) => ({ section, profils: sectionsOfThisPage[rang] ?? [] }))
 		.filter(({ profils }) => profils.length > 0)
 	// The rank of a card is its place in the whole list, over all the pages: the sections follow one another.
-	const rangsDeDepart = groupes.reduce<number[]>(
+	const startRanks = groups.reduce<number[]>(
 		(departs, { profils }, i) => [...departs, (departs[i] ?? 0) + profils.length],
-		[page.premier + locauxDeLaPage.length]
+		[page.premier + localsOfPage.length]
 	)
 
 	return (
@@ -94,54 +94,54 @@ export default async function PageDeRecherche({ searchParams }: PageProps<'/sear
 			{/* Two facts and a hash: never the words (ticket 145). Page 1 and page 2 are the same search. */}
 			<MesureDeRecherche
 				aUneVille={city !== ''}
-				resultats={trancheDeResultats(tous.length)}
+				resultats={trancheDeResultats(all.length)}
 				empreinte={empreinte(`${search}|${city}`)}
 			/>
-			{tous.length === 0 ? (
-				<AucunResultat
-					titre={titreDesResultats(recherche, 0)}
+			{all.length === 0 ? (
+				<NoResult
+					titre={resultsTitle(query, 0)}
 					search={search}
 					city={city}
-					departements={city ? sectionsParLieu(annuaire, city).departements : []}
+					departements={city ? sectionsByPlace(directory, city).departements : []}
 				/>
 			) : (
 				<div className="w-full px-4 pb-16 md:px-16">
 					<h1 className="mb-8 font-bold text-2xl text-gray-800">
-						{titreDesResultats(recherche, parLieu ? locaux.length : tous.length)}
+						{resultsTitle(query, byPlace ? localProfiles.length : all.length)}
 					</h1>
-					{parLieu && locaux.length === 0 && (
+					{byPlace && localProfiles.length === 0 && (
 						<p className="-mt-4 mb-8 text-gray-700">
 							Aucune maquilleuse n’indique « {city} » (ville ou département) dans son profil.
 						</p>
 					)}
-					{locauxDeLaPage.length > 0 && (
+					{localsOfPage.length > 0 && (
 						<section aria-labelledby="recherche-titre-locaux">
 							<h2 id="recherche-titre-locaux" className="sr-only">
-								{parLieu ? `Maquilleuses de « ${city} »` : 'Résultats'}
+								{byPlace ? `Maquilleuses de « ${city} »` : 'Résultats'}
 							</h2>
-							<ListeDeResultats
-								cartes={locauxDeLaPage.map(({ carte }) => carte)}
+							<ResultList
+								cartes={localsOfPage.map(({ carte }) => carte)}
 								premiereDeLaPage
 								rangDuPremier={page.premier}
 							/>
 						</section>
 					)}
-					{groupes.map(({ section, profils }, rang) => (
+					{groups.map(({ section, profils }, rang) => (
 						<section key={section.cle} aria-labelledby={`recherche-titre-${section.cle}`}>
 							<h2
 								id={`recherche-titre-${section.cle}`}
-								className={`mb-8 font-bold text-gray-800 text-xl ${rang > 0 || locauxDeLaPage.length > 0 ? 'mt-12' : ''}`}
+								className={`mb-8 font-bold text-gray-800 text-xl ${rang > 0 || localsOfPage.length > 0 ? 'mt-12' : ''}`}
 							>
 								{section.titre}
 							</h2>
-							<ListeDeResultats
+							<ResultList
 								cartes={profils.map(({ carte }) => carte)}
-								rangDuPremier={rangsDeDepart[rang] ?? page.premier}
-								premiereDeLaPage={rang === 0 && locauxDeLaPage.length === 0}
+								rangDuPremier={startRanks[rang] ?? page.premier}
+								premiereDeLaPage={rang === 0 && localsOfPage.length === 0}
 							/>
 						</section>
 					))}
-					<PagesDeResultats recherche={recherche} page={page.page} pages={page.pages} />
+					<ResultPages recherche={query} page={page.page} pages={page.pages} />
 				</div>
 			)}
 		</main>

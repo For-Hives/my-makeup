@@ -1,7 +1,7 @@
 import type { CollectionBeforeChangeHook, Field, FieldAccess } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { champDuProfilAdminOuProprietaire, jamais } from '../../lib/acces'
-import { etatApresSauvegarde } from '../../lib/profile/state'
+import { stateAfterSave } from '../../lib/profile/state'
 
 /** Written by the server only, at every save: what any request sends on it is ignored. */
 const CALCULE: { create: FieldAccess; update: FieldAccess } = { create: jamais, update: jamais }
@@ -31,8 +31,8 @@ const depuis = (name: string, label: string): Field => ({
 
 /**
  * The state of a profile (ticket 044; docs/migration/SCHEMA.md §9), computed and stored by the
- * server at every save by the single rule (src/lib/profil/etat.ts, which reads
- * src/lib/profil/completude.ts): never written by an API, whatever a request sends.
+ * server at every save by the single rule (src/lib/profile/state.ts, which reads
+ * src/lib/profile/completeness.ts): never written by an API, whatever a request sends.
  *
  * The score and the three flags are read by everyone who reads the profile: they say nothing a
  * reader does not see already (the phone and the email count only when shown), and the public
@@ -60,12 +60,12 @@ export const CHAMPS_DE_L_ETAT: Field[] = [
 
 /**
  * Before a profile is written: its state, the dates of its flags and its status, by the rule of
- * src/lib/profil/etat.ts, from what the save holds once the access rules have run (`data` holds
+ * src/lib/profile/state.ts, from what the save holds once the access rules have run (`data` holds
  * every field: Payload fills what a request leaves out with the stored value).
  */
 export const etatAvantEcriture: CollectionBeforeChangeHook = ({ data, operation, originalDoc }) => ({
 	...data,
-	...etatApresSauvegarde({
+	...stateAfterSave({
 		avant: operation === 'update' ? originalDoc : undefined,
 		apres: data,
 		maintenant: new Date(),

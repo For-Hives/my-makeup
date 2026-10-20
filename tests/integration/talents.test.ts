@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import type { RequiredDataFromCollectionSlug } from 'payload'
-import { lireLeTalent } from '@/services/public/talents'
+import { readTalent } from '@/services/public/talents'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 import { appelerRest } from '../outils/rest'
@@ -236,7 +236,7 @@ describe('Le titre de la page d’un talent (ticket 108)', () => {
 			pageTitle: TITRE_DE_55,
 		})
 		const payload = await payloadDeTest()
-		const lu = await lireLeTalent(payload, 'maquillage-fictif')
+		const lu = await readTalent(payload, 'maquillage-fictif')
 		expect(lu).toMatchObject({ titreDeLaPage: TITRE_DE_55, titreAffiche: 'Maquillage fictif' })
 
 		await expect(
@@ -250,11 +250,11 @@ describe('Le titre de la page d’un talent (ticket 108)', () => {
 		).rejects.toThrow()
 		// Left empty, nothing is refused: the page keeps the title of the site online.
 		await payload.update({ collection: 'talents', id: talent.id, data: { pageTitle: '' } })
-		expect((await lireLeTalent(payload, 'maquillage-fictif'))?.titreDeLaPage).toBe('')
+		expect((await readTalent(payload, 'maquillage-fictif'))?.titreDeLaPage).toBe('')
 	})
 
 	test('un brouillon n’est pas lu par la page, un anonyme ne lit que le publié', async () => {
 		await ecrireTalent({ slug: 'maquillage-fx', _status: 'draft' })
-		expect(await lireLeTalent(await payloadDeTest(), 'maquillage-fx')).toBeNull()
+		expect(await readTalent(await payloadDeTest(), 'maquillage-fx')).toBeNull()
 	})
 })

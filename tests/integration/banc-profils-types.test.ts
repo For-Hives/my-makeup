@@ -4,7 +4,7 @@ import sharp from 'sharp'
 import { type BilanDesProfils, lirePhotoDuJeu, nomDuFichier, poserLesProfilsDuJeu } from '@/jeu-fictif/chargement'
 import { type PhotoDuJeu, POIDS_MAX_D_UNE_PHOTO, PROFILS_DU_JEU, type ProfilDuJeu } from '@/jeu-fictif/profils'
 import { cleDuMedia, PREFIXE_DES_ENVOIS } from '@/lib/medias'
-import { etatDuProfil } from '@/lib/profile/state'
+import { profileState } from '@/lib/profile/state'
 import type { Media, Pro, Profile } from '@/payload-types'
 import { compterLesDocuments, compterLesLignes, payloadDeTest, viderLaBase } from '../outils/payload-test'
 import { lireUnObjet, listerLesObjets, viderLeStockage } from '../outils/s3'
@@ -143,7 +143,7 @@ describe('Le jeu du banc : les 12 profils types', () => {
 
 			expect({ cle: type.cle, etat: stocke }).toEqual({ cle: type.cle, etat: attendu })
 			// What the server stored is what the single rule reads in what it stored.
-			const { completeness, active, publishable, fullyEmpty } = etatDuProfil(profil)
+			const { completeness, active, publishable, fullyEmpty } = profileState(profil)
 			expect({
 				completeness: stocke.completeness,
 				active: stocke.active,

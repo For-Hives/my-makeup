@@ -16,9 +16,9 @@ import {
 } from '@/jeu-fictif/profils'
 import { DEPLOYED_ORIGINS } from '@/lib/env'
 import { GALERIE_MAX } from '@/lib/medias'
-import { etatDuProfil, statutApres } from '@/lib/profile/state'
-import { LONGUEUR_DESCRIPTION, LONGUEUR_NOM } from '@/lib/profile/lists'
-import { BORNES_DU_RAYON_KM } from '@/lib/profile/zone'
+import { profileState, statusAfter } from '@/lib/profile/state'
+import { DESCRIPTION_MAX_LENGTH, NAME_MAX_LENGTH } from '@/lib/profile/lists'
+import { RADIUS_BOUNDS_KM } from '@/lib/profile/zone'
 import { slugifier } from '@/lib/slug'
 import { environnementDuBanc, RACINE } from '../outils/banc'
 
@@ -43,8 +43,8 @@ function etatSelonLaRegle({ profil, photos }: ProfilDuJeu) {
 		mainPicture: photos.principale === null ? null : 1,
 		gallery: photos.galerie.map((_, rang) => rang + 2),
 	}
-	const etat = etatDuProfil(document)
-	return { ...etat, status: statutApres({ apres: profil, fullyEmpty: etat.fullyEmpty }).status }
+	const etat = profileState(document)
+	return { ...etat, status: statusAfter({ apres: profil, fullyEmpty: etat.fullyEmpty }).status }
 }
 
 /** The bench of `.env.test`, default instance. */
@@ -159,16 +159,16 @@ describe('Les 12 profils types du plan 02 §6', () => {
 
 		for (const nom of ['firstName', 'lastName', 'artistName', 'specialty', 'description'] as const)
 			expect({ nom, longueur: profil[nom]?.length }).toEqual({ nom, longueur: borne(nom) })
-		expect(profil.radiusKm).toBe(BORNES_DU_RAYON_KM.max)
+		expect(profil.radiusKm).toBe(RADIUS_BOUNDS_KM.max)
 		expect(photos.galerie).toHaveLength(GALERIE_MAX)
 		for (const prestation of profil.serviceOffers ?? []) {
-			expect([prestation.name?.length, prestation.priceText?.length]).toEqual([LONGUEUR_NOM, LONGUEUR_NOM])
-			expect(prestation.description?.length).toBe(LONGUEUR_DESCRIPTION)
+			expect([prestation.name?.length, prestation.priceText?.length]).toEqual([NAME_MAX_LENGTH, NAME_MAX_LENGTH])
+			expect(prestation.description?.length).toBe(DESCRIPTION_MAX_LENGTH)
 			for (const option of prestation.options ?? [])
 				expect([option.name?.length, option.priceText?.length, option.description?.length]).toEqual([
-					LONGUEUR_NOM,
-					LONGUEUR_NOM,
-					LONGUEUR_DESCRIPTION,
+					NAME_MAX_LENGTH,
+					NAME_MAX_LENGTH,
+					DESCRIPTION_MAX_LENGTH,
 				])
 		}
 		for (const lien of Object.values(profil.networks ?? {})) expect(lien?.length).toBe(200)

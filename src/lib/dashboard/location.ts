@@ -6,13 +6,13 @@
  * - The commune is only ever a code of the official list (INSEE). The request holds no name and no
  *   coordinates: the server takes them from the list (./referentiel-communes.ts). A text typed
  *   freely is never a commune, an address least of all.
- * - The radius is a whole number of kilometres, from `BORNES_DU_RAYON_KM.min` to `.max`, or empty.
- * - The bounds and the French messages are those of the collection (src/lib/profil/zone.ts): the
+ * - The radius is a whole number of kilometres, from `RADIUS_BOUNDS_KM.min` to `.max`, or empty.
+ * - The bounds and the French messages are those of the collection (src/lib/profile/zone.ts): the
  *   same sentence under the field, whoever refuses.
  */
 
 import { z } from 'zod'
-import { BORNES_DU_RAYON_KM, departementDuCodeInsee, MESSAGES_DE_LA_ZONE } from '../profile/zone'
+import { RADIUS_BOUNDS_KM, departmentOfInseeCode, ZONE_MESSAGES } from '../profile/zone'
 
 /** What the card and the panel call a commune: « Annecy (74) » (plan 02 U16). Never « Annecy () ». */
 export function cityLabel({ nom, departement }: { nom?: unknown; departement?: unknown }): string {
@@ -73,12 +73,12 @@ export const strictLocationSchema = z.strictObject({
 		.string({ error: CITY_TO_CHOOSE_MESSAGE })
 		.trim()
 		.toUpperCase()
-		.refine(code => departementDuCodeInsee(code) !== null, CITY_TO_CHOOSE_MESSAGE),
+		.refine(code => departmentOfInseeCode(code) !== null, CITY_TO_CHOOSE_MESSAGE),
 	rayonKm: z
-		.number({ error: MESSAGES_DE_LA_ZONE.rayon })
-		.int(MESSAGES_DE_LA_ZONE.rayon)
-		.min(BORNES_DU_RAYON_KM.min, MESSAGES_DE_LA_ZONE.rayon)
-		.max(BORNES_DU_RAYON_KM.max, MESSAGES_DE_LA_ZONE.rayon)
+		.number({ error: ZONE_MESSAGES.rayon })
+		.int(ZONE_MESSAGES.rayon)
+		.min(RADIUS_BOUNDS_KM.min, ZONE_MESSAGES.rayon)
+		.max(RADIUS_BOUNDS_KM.max, ZONE_MESSAGES.rayon)
 		.nullable(),
 	aDomicile: z.boolean({ error: HOME_MESSAGE }),
 })
@@ -100,11 +100,11 @@ export function errorsByField(erreur: z.ZodError): Partial<Record<LocationField,
 
 /** What the form checks of the radius she typed: nothing, or whole kilometres within the bounds. */
 export const enteredRadiusSchema = z
-	.string({ error: MESSAGES_DE_LA_ZONE.rayon })
+	.string({ error: ZONE_MESSAGES.rayon })
 	.trim()
 	.refine(
-		texte => texte === '' || (/^\d{1,3}$/.test(texte) && Number(texte) <= BORNES_DU_RAYON_KM.max),
-		MESSAGES_DE_LA_ZONE.rayon
+		texte => texte === '' || (/^\d{1,3}$/.test(texte) && Number(texte) <= RADIUS_BOUNDS_KM.max),
+		ZONE_MESSAGES.rayon
 	)
 
 /** The radius typed as the server takes it: whole kilometres, or null when empty. */

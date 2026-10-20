@@ -1,10 +1,10 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
 import { CONTEXTE_SANS_PROFIL } from '@/collections/Profiles'
-import { PAR_PAGE, paginer, sectionsDeLaPage } from '@/lib/search/pagination'
-import { chercher } from '@/lib/search/results'
-import { lireLaRecherche } from '@/lib/search/input'
-import { lireLAnnuaire, type ProfilDeLAnnuaire } from '@/services/public/profiles'
+import { PER_PAGE, paginate, sectionsOfPage } from '@/lib/search/pagination'
+import { find } from '@/lib/search/results'
+import { readSearch } from '@/lib/search/input'
+import { readDirectory, type DirectoryProfile } from '@/services/public/profiles'
 import { fabriquerDesProfils } from '../outils/fabrique-profils'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 
@@ -69,11 +69,11 @@ afterAll(async () => {
 	await viderLaBase()
 })
 
-const slugs = (profils: readonly ProfilDeLAnnuaire[]) => profils.map(({ carte }) => carte.slug)
+const slugs = (profils: readonly DirectoryProfile[]) => profils.map(({ carte }) => carte.slug)
 
 describe('I28 : la recherche ne liste que les profils listés, par pages de 20', () => {
 	test('l’annuaire compte les profils listés et ni le masqué, ni l’indisponible, ni le vide', async () => {
-		const annuaire = await lireLAnnuaire(payload, { avecLesTextes: true })
+		const annuaire = await readDirectory(payload, { avecLesTextes: true })
 		expect(annuaire).toHaveLength(NOMBRE + 1)
 		const noms = slugs(annuaire)
 		expect(noms).toContain('recherche-visible')
@@ -81,9 +81,9 @@ describe('I28 : la recherche ne liste que les profils listés, par pages de 20',
 	})
 
 	test('une ville : celles de la ville d’abord, 20 par page, chacune une seule fois d’une page à l’autre', async () => {
-		const annuaire = await lireLAnnuaire(payload, { avecLesTextes: true })
-		const recherche = lireLaRecherche({ city: 'Annecy' })
-		const { locaux, sections } = chercher(annuaire, recherche)
+		const annuaire = await readDirectory(payload, { avecLesTextes: true })
+		const recherche = readSearch({ city: 'Annecy' })
+		const { locaux, sections } = find(annuaire, recherche)
 		// 50 of the generated profiles are in Annecy (one commune in ten), and the visible one.
 		expect(locaux).toHaveLength(NOMBRE / 10 + 1)
 		for (const profil of locaux) expect(profil.ville).toBe('Annecy')
@@ -91,13 +91,13 @@ describe('I28 : la recherche ne liste que les profils listés, par pages de 20',
 		expect(tous).toHaveLength(NOMBRE + 1)
 
 		const vus: string[] = []
-		const pages = paginer(tous, 1).pages
-		expect(pages).toBe(Math.ceil((NOMBRE + 1) / PAR_PAGE))
+		const pages = paginate(tous, 1).pages
+		expect(pages).toBe(Math.ceil((NOMBRE + 1) / PER_PAGE))
 		for (let page = 1; page <= pages; page += 1) {
-			const courante = paginer(tous, page)
-			expect(courante.elements.length).toBeLessThanOrEqual(PAR_PAGE)
-			if (page < pages) expect(courante.elements).toHaveLength(PAR_PAGE)
-			const parts = sectionsDeLaPage(courante, [locaux.length, ...sections.map(section => section.profils.length)])
+			const courante = paginate(tous, page)
+			expect(courante.elements.length).toBeLessThanOrEqual(PER_PAGE)
+			if (page < pages) expect(courante.elements).toHaveLength(PER_PAGE)
+			const parts = sectionsOfPage(courante, [locaux.length, ...sections.map(section => section.profils.length)])
 			expect(parts.flat()).toEqual(courante.elements)
 			vus.push(...slugs(courante.elements))
 		}
@@ -106,8 +106,8 @@ describe('I28 : la recherche ne liste que les profils listés, par pages de 20',
 	})
 
 	test('un mot et une ville : le mot filtre, la ville place', async () => {
-		const annuaire = await lireLAnnuaire(payload, { avecLesTextes: true })
-		const { locaux, sections } = chercher(annuaire, { search: 'zyglo', city: 'Annecy' })
+		const annuaire = await readDirectory(payload, { avecLesTextes: true })
+		const { locaux, sections } = find(annuaire, { search: 'zyglo', city: 'Annecy' })
 		// The marker word is in one generated profile in fifty, and in the speciality of the visible one.
 		const portent = NOMBRE / 50 + 1
 		const tous = [...locaux, ...sections.flatMap(section => section.profils)]
@@ -122,8 +122,8 @@ describe('I28 : la recherche ne liste que les profils listés, par pages de 20',
 	})
 
 	test('un mot qui n’est nulle part ne trouve personne', async () => {
-		const annuaire = await lireLAnnuaire(payload, { avecLesTextes: true })
-		const { locaux, sections } = chercher(annuaire, { search: 'zzqqxxyy', city: '' })
+		const annuaire = await readDirectory(payload, { avecLesTextes: true })
+		const { locaux, sections } = find(annuaire, { search: 'zzqqxxyy', city: '' })
 		expect(locaux).toEqual([])
 		expect(sections).toEqual([])
 	})
@@ -131,11 +131,11 @@ describe('I28 : la recherche ne liste que les profils listés, par pages de 20',
 
 describe('I29 : ni email ni téléphone, et une réponse légère', () => {
 	test('ce que la page reçoit des 500 profils tient en moins de 50 Ko et ne porte aucune coordonnée', async () => {
-		const annuaire = await lireLAnnuaire(payload, { avecLesTextes: true })
-		const { locaux, sections } = chercher(annuaire, { search: 'maquillage', city: '' })
+		const annuaire = await readDirectory(payload, { avecLesTextes: true })
+		const { locaux, sections } = find(annuaire, { search: 'maquillage', city: '' })
 		const tous = [...locaux, ...sections.flatMap(section => section.profils)]
-		const premierePage = paginer(tous, 1).elements
-		expect(premierePage).toHaveLength(PAR_PAGE)
+		const premierePage = paginate(tous, 1).elements
+		expect(premierePage).toHaveLength(PER_PAGE)
 		// What reaches the browser is the cards of a page, and only them.
 		const reponse = JSON.stringify(premierePage.map(({ carte }) => carte))
 		expect(new TextEncoder().encode(reponse).length).toBeLessThan(50_000)
@@ -144,7 +144,7 @@ describe('I29 : ni email ni téléphone, et une réponse légère', () => {
 	})
 
 	test('l’annuaire entier ne porte jamais les coordonnées publiées, même dans les textes cherchés', async () => {
-		const annuaire = await lireLAnnuaire(payload, { avecLesTextes: true })
+		const annuaire = await readDirectory(payload, { avecLesTextes: true })
 		const texte = JSON.stringify(annuaire)
 		for (const interdit of [TELEPHONE, EMAIL, 'latitude', 'longitude', 'inseeCode'])
 			expect(texte, interdit).not.toContain(interdit)
@@ -155,9 +155,9 @@ describe('I29 : ni email ni téléphone, et une réponse légère', () => {
 	})
 
 	test('un téléphone ou un email ne se cherche pas : aucun profil ne le porte comme texte', async () => {
-		const annuaire = await lireLAnnuaire(payload, { avecLesTextes: true })
-		expect(chercher(annuaire, { search: EMAIL, city: '' }).locaux).toEqual([])
-		expect(chercher(annuaire, { search: '0639980077', city: '' }).locaux).toEqual([])
+		const annuaire = await readDirectory(payload, { avecLesTextes: true })
+		expect(find(annuaire, { search: EMAIL, city: '' }).locaux).toEqual([])
+		expect(find(annuaire, { search: '0639980077', city: '' }).locaux).toEqual([])
 	})
 })
 
@@ -181,16 +181,16 @@ describe('I31 : 500 profils générés, p95 sous 300 ms', () => {
 	}
 
 	test('20 recherches sur l’annuaire en mémoire (celui que le cache de Next garde) : p95 sous 300 ms', async () => {
-		const annuaire = await lireLAnnuaire(payload, { avecLesTextes: true })
+		const annuaire = await readDirectory(payload, { avecLesTextes: true })
 		expect(annuaire.length).toBeGreaterThanOrEqual(NOMBRE)
 		const durees: number[] = []
 		for (let i = 0; i < 20; i += 1) {
 			const terme = TERMES[i % TERMES.length] ?? 'mariage'
 			const debut = performance.now()
-			const { locaux, sections } = chercher(annuaire, { search: terme, city: i % 2 === 0 ? 'Annecy' : '' })
-			const page = paginer([...locaux, ...sections.flatMap(section => section.profils)], 1)
+			const { locaux, sections } = find(annuaire, { search: terme, city: i % 2 === 0 ? 'Annecy' : '' })
+			const page = paginate([...locaux, ...sections.flatMap(section => section.profils)], 1)
 			durees.push(performance.now() - debut)
-			expect(page.elements.length).toBeLessThanOrEqual(PAR_PAGE)
+			expect(page.elements.length).toBeLessThanOrEqual(PER_PAGE)
 		}
 		console.info(
 			`I31 : p95 = ${p95(durees).toFixed(1)} ms, plus lente = ${Math.max(...durees).toFixed(1)} ms (annuaire en mémoire)`
@@ -202,8 +202,8 @@ describe('I31 : 500 profils générés, p95 sous 300 ms', () => {
 		const durees: number[] = []
 		for (let i = 0; i < 5; i += 1) {
 			const debut = performance.now()
-			const annuaire = await lireLAnnuaire(payload, { avecLesTextes: true })
-			chercher(annuaire, { search: TERMES[i % TERMES.length] ?? 'mariage', city: 'Annecy' })
+			const annuaire = await readDirectory(payload, { avecLesTextes: true })
+			find(annuaire, { search: TERMES[i % TERMES.length] ?? 'mariage', city: 'Annecy' })
 			durees.push(performance.now() - debut)
 		}
 		// The page reads the directory through the cache of Next: this is the price of a miss, reported, not a bound of the ticket.

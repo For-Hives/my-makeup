@@ -11,18 +11,18 @@ import { markdownEnHtml } from '@/lib/markdown'
 import { donneesStructureesDuFilDAriane, NOM_DU_SITE, serializeJsonLd } from '@/lib/seo/json-ld'
 import { metadonneesEditoriales } from '@/lib/seo/metadonnees'
 import { urlCanonique } from '@/lib/seo/url'
-import { leTalentEnCache } from '@/services/public/cached'
+import { cachedTalent } from '@/services/public/cached'
 
 // Rendered at each request: the build runs without a database. The talent is read through the cache of
 // Next, under its tag `talent:<slug>`: a save of a talent refreshes it (tickets 047 and 117).
 export const dynamic = 'force-dynamic'
 
 /** The page and its metadata read the same talent: once per request. */
-const lireLeTalentUneFois = cache(async (slug: string) => leTalentEnCache(await getPayload({ config }), slug))
+const readTalentOnce = cache(async (slug: string) => cachedTalent(await getPayload({ config }), slug))
 
 export async function generateMetadata({ params }: PageProps<'/talent/[slug]'>): Promise<Metadata> {
 	const { slug } = await params
-	const talent = await lireLeTalentUneFois(slug)
+	const talent = await readTalentOnce(slug)
 	// The page answers 404 below; its own metadata are those of the 404 page.
 	if (!talent) return {}
 	return metadonneesEditoriales({
@@ -40,12 +40,12 @@ export async function generateMetadata({ params }: PageProps<'/talent/[slug]'>):
  * presentation, its content (markdown turned into sanitized HTML, src/lib/markdown.ts) and a link to the
  * search. An unknown slug and a draft answer 404 in French (E59). The structured data is the breadcrumb (E65).
  */
-export default async function PageDuTalent({ params }: PageProps<'/talent/[slug]'>) {
+export default async function TalentPage({ params }: PageProps<'/talent/[slug]'>) {
 	const { slug } = await params
-	const talent = await lireLeTalentUneFois(slug)
+	const talent = await readTalentOnce(slug)
 	if (!talent) notFound()
 	const html = await markdownEnHtml(talent.contenu)
-	const fil = donneesStructureesDuFilDAriane([
+	const breadcrumb = donneesStructureesDuFilDAriane([
 		{ nom: 'Accueil', url: urlCanonique('/') },
 		{ nom: talent.titre, url: urlCanonique(`/talent/${talent.slug}`) },
 	])
@@ -54,7 +54,7 @@ export default async function PageDuTalent({ params }: PageProps<'/talent/[slug]
 			<script
 				type="application/ld+json"
 				// serializeJsonLd escapes <, > and &, so the data cannot close the tag.
-				dangerouslySetInnerHTML={{ __html: serializeJsonLd(fil) }}
+				dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumb) }}
 			/>
 			<Hero
 				image="/assets/back/maquilleuse_europeenne_white.webp"

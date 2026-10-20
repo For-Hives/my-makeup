@@ -10,7 +10,7 @@
  */
 
 import type { Metadata } from 'next'
-import type { ProfilPublic } from '@/services/public/profiles'
+import type { PublicProfile } from '@/services/public/profiles'
 import { SITE_ORIGIN } from '../urls-gelees'
 import { NOM_DU_SITE } from './json-ld'
 import { metadonnees } from './metadonnees'
@@ -22,13 +22,13 @@ import { urlCanonique } from './url'
 export const cheminDuProfil = (slug: string): string => `/profil/${slug}`
 
 /** « Maquilleuse mariage à Annecy », or whatever of the speciality and the commune she gave. */
-function detailDuProfil({ specialite, lieu }: Pick<ProfilPublic, 'specialite' | 'lieu'>): string {
+function detailDuProfil({ specialite, lieu }: Pick<PublicProfile, 'specialite' | 'lieu'>): string {
 	if (specialite) return lieu ? `${specialite} à ${lieu}` : specialite
 	return lieu ? `maquilleuse à ${lieu}` : 'maquilleuse professionnelle'
 }
 
 /** The title: « Nom – détail | My-Makeup » when it fits in 60 characters, else the shorter forms. */
-export function titreDuProfil(profil: Pick<ProfilPublic, 'nom' | 'specialite' | 'lieu'>): string {
+export function titreDuProfil(profil: Pick<PublicProfile, 'nom' | 'specialite' | 'lieu'>): string {
 	const nom = texteSur(profil.nom)
 	const detail = detailDuProfil(profil)
 	const candidats = [`${nom} – ${detail} | ${MARQUE}`, `${nom} – ${detail}`, `${nom} | ${MARQUE}`]
@@ -36,7 +36,7 @@ export function titreDuProfil(profil: Pick<ProfilPublic, 'nom' | 'specialite' | 
 }
 
 /** The meta tags of the page of a profile: not publishable means noindex and no canonical address. */
-export function metadonneesDuProfil(profil: ProfilPublic): Metadata {
+export function metadonneesDuProfil(profil: PublicProfile): Metadata {
 	const detail = detailDuProfil(profil)
 	return metadonnees({
 		titre: titreDuProfil(profil),
@@ -70,7 +70,7 @@ export function sansVides(valeur: unknown): unknown {
 }
 
 /** The breadcrumb of a profile: the home page, then the profile. */
-export function filDArianeDuProfil(profil: Pick<ProfilPublic, 'nom' | 'slug'>) {
+export function filDArianeDuProfil(profil: Pick<PublicProfile, 'nom' | 'slug'>) {
 	const etapes = [
 		{ nom: 'Accueil', url: urlCanonique('/') },
 		{ nom: texteSur(profil.nom), url: urlCanonique(cheminDuProfil(profil.slug)) },
@@ -94,7 +94,7 @@ const adresseAbsolue = (adresse: string | null | undefined): string =>
  * The structured data of the page of a profile: a `ProfilePage` whose main entity is the `Person`,
  * and the breadcrumb. The offers are in euros; the lowest amount among them is `profil.prixMinimal`.
  */
-export function donneesStructureesDuProfil(profil: ProfilPublic) {
+export function donneesStructureesDuProfil(profil: PublicProfile) {
 	const url = urlCanonique(cheminDuProfil(profil.slug))
 	const filDAriane = filDArianeDuProfil(profil)
 	if (!profil.indexable) return sansVides({ '@context': 'https://schema.org', '@graph': [filDAriane] })

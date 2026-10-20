@@ -17,7 +17,7 @@ import {
 	PanneDuStockage,
 	type StockageDesObjets,
 } from '../lib/corbeille'
-import { identifiantDe, photosNommees } from '../lib/profile/photos'
+import { idOf, namedPhotos } from '../lib/profile/photos'
 
 /**
  * A photo that no longer serves goes to the bin, never to a direct deletion (ticket 045; plan 01
@@ -151,8 +151,8 @@ export async function corbeilleRetenue<T>(req: PayloadRequest, sujet: string, tr
 
 /** The photos of a profile, main photo first, by identifier: the profile as Payload hands it, populated or not. */
 const photosDuProfil = (profil: { mainPicture?: unknown; gallery?: unknown } | undefined): (number | string)[] => [
-	...photosNommees(profil?.mainPicture),
-	...photosNommees(profil?.gallery),
+	...namedPhotos(profil?.mainPicture),
+	...namedPhotos(profil?.gallery),
 ]
 
 /**
@@ -181,8 +181,8 @@ async function encoreReferencees(req: PayloadRequest, ids: (number | string)[]):
 	return new Set(
 		[
 			...profils.docs.flatMap(photosDuProfil),
-			...articles.docs.flatMap(({ gallery }) => photosNommees(gallery)),
-			...versions.docs.flatMap(({ version }) => photosNommees(version?.gallery)),
+			...articles.docs.flatMap(({ gallery }) => namedPhotos(gallery)),
+			...versions.docs.flatMap(({ version }) => namedPhotos(version?.gallery)),
 		].map(String)
 	)
 }
@@ -242,7 +242,7 @@ export const menageApresSuppression =
 	(stockage: StockageDesObjets | undefined): CollectionAfterDeleteHook =>
 	async ({ context, doc, id, req }) => {
 		if (estUnImport(context)) return doc
-		const compte = identifiantDe((doc as { pro?: unknown }).pro)
+		const compte = idOf((doc as { pro?: unknown }).pro)
 		const duCompte =
 			compte === undefined || !stockage
 				? []

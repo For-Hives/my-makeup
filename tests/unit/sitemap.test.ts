@@ -16,10 +16,10 @@ import {
 } from '../../src/lib/seo/sitemap'
 import { FROZEN_URL_FAMILIES } from '../../src/lib/urls-gelees'
 import {
-	lireLesPagesIndexables,
-	lireLesProfilsIndexables,
+	readIndexablePages,
+	readIndexableProfiles,
 	PAGES_MAX,
-	TAILLE_DE_LA_PAGE,
+	PAGE_SIZE,
 } from '../../src/services/public/indexable-pages'
 
 /**
@@ -51,14 +51,14 @@ describe('U38 : tous les profils publiables, sans troncature', () => {
 
 	test('la lecture suit les pages de 100 : 150 profils → deux lectures, 150 profils', async () => {
 		const { payload, lectures } = payloadEspion({ profils: 150 })
-		const profils = await lireLesProfilsIndexables(payload)
+		const profils = await readIndexableProfiles(payload)
 		expect(profils).toHaveLength(150)
 		expect(lectures.map(({ page }) => page)).toEqual([1, 2])
 	})
 
 	test('une liste qui dépasse la borne fait échouer la lecture au lieu d’être coupée', async () => {
-		const { payload } = payloadEspion({ profils: (PAGES_MAX + 1) * TAILLE_DE_LA_PAGE })
-		await expect(lireLesProfilsIndexables(payload)).rejects.toThrow(/coupée/)
+		const { payload } = payloadEspion({ profils: (PAGES_MAX + 1) * PAGE_SIZE })
+		await expect(readIndexableProfiles(payload)).rejects.toThrow(/coupée/)
 	})
 })
 
@@ -116,7 +116,7 @@ describe('U41 : les exclus ne sont jamais là', () => {
 
 	test('la lecture ne demande que les profils publiables, avec les règles d’accès actives', async () => {
 		const { payload, lectures } = payloadEspion({ profils: 1 })
-		await lireLesPagesIndexables(payload)
+		await readIndexablePages(payload)
 		const [profils] = lectures.filter(({ collection }) => collection === 'profiles')
 		expect(profils).toMatchObject({ where: { publishable: { equals: true } }, overrideAccess: false })
 		for (const lecture of lectures) expect(lecture.overrideAccess, String(lecture.collection)).toBe(false)
@@ -124,7 +124,7 @@ describe('U41 : les exclus ne sont jamais là', () => {
 
 	test('la lecture ne prend aucun champ privé', async () => {
 		const { payload, lectures } = payloadEspion({ profils: 1 })
-		await lireLesPagesIndexables(payload)
+		await readIndexablePages(payload)
 		for (const lecture of lectures) {
 			const champs = Object.keys(lecture.select as object)
 			for (const prive of ['coordonnees', 'contactPublic', 'pro', 'email', 'statut', 'legacyUsername'])
@@ -134,7 +134,7 @@ describe('U41 : les exclus ne sont jamais là', () => {
 
 	test('un profil dont le slug n’est pas une adresse est écarté : sa page ne répondrait pas', async () => {
 		const { payload } = payloadEspion({ profils: 0, profilsBruts: [{ slug: 'Slug Invalide' }, { slug: 'ok-un' }] })
-		expect((await lireLesProfilsIndexables(payload)).map(({ slug }) => slug)).toEqual(['ok-un'])
+		expect((await readIndexableProfiles(payload)).map(({ slug }) => slug)).toEqual(['ok-un'])
 	})
 
 	test('une base en erreur donne une erreur, pas un sitemap tronqué', async () => {
@@ -143,7 +143,7 @@ describe('U41 : les exclus ne sont jamais là', () => {
 				throw new Error('base indisponible')
 			},
 		} as unknown as Payload
-		await expect(lireLesPagesIndexables(payload)).rejects.toThrow('base indisponible')
+		await expect(readIndexablePages(payload)).rejects.toThrow('base indisponible')
 	})
 })
 

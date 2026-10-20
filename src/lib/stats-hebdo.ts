@@ -25,8 +25,8 @@ import { createHash, timingSafeEqual } from 'node:crypto'
 import { z } from 'zod'
 import { EVENT_CODES, EVENT_TYPES } from './auth/auth-log'
 import { ETATS_DU_MAIL, STATUTS_DE_DEMANDE } from './contact/etats'
-import { completude } from './profile/completeness'
-import { champsDuProfil, type DocumentDuProfil } from './profile/state'
+import { completeness } from './profile/completeness'
+import { profileFields, type ProfileDocument } from './profile/state'
 
 /** A published profile has this status; the rest is a draft or hidden. */
 const STATUT_PUBLIE = 'published'
@@ -164,7 +164,7 @@ export function lirePeriode(parametres: URLSearchParams): Periode | undefined {
 }
 
 /** What the aggregation reads of a profile. */
-export interface ProfilPourStats extends DocumentDuProfil {
+export interface ProfilPourStats extends ProfileDocument {
 	slug?: string | null
 	createdAt: string
 	updatedAt: string
@@ -227,7 +227,7 @@ export function agregerStats({
 	const slugs: string[] = []
 
 	for (const profil of profils) {
-		const lecture = completude(champsDuProfil(profil))
+		const lecture = completeness(profileFields(profil))
 		const creeLe = new Date(profil.createdAt)
 		const actif = profil.active === true
 		const publiable = profil.publishable === true

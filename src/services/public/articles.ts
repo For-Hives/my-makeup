@@ -8,11 +8,11 @@
  */
 
 import type { Payload } from 'payload'
-import { texte } from '@/lib/profile/display-name'
+import { text } from '@/lib/profile/display-name'
 import { estUnSlug } from '@/lib/slug'
 
 /** The fields of an article a public page reads, and nothing else. */
-export const CHAMPS_DE_L_ARTICLE = {
+export const ARTICLE_FIELDS = {
 	slug: true,
 	title: true,
 	author: true,
@@ -42,26 +42,26 @@ export interface ArticlePublic {
 }
 
 /** The published article of this slug, or `null`: unknown, a draft, or not even a slug. */
-export async function lireUnArticlePublic(payload: Payload, slug: string): Promise<ArticlePublic | null> {
+export async function readPublicArticle(payload: Payload, slug: string): Promise<ArticlePublic | null> {
 	if (!estUnSlug(slug)) return null
 	const { docs } = await payload.find({
 		collection: 'articles',
 		where: { slug: { equals: slug } },
-		select: CHAMPS_DE_L_ARTICLE,
+		select: ARTICLE_FIELDS,
 		depth: 0,
 		limit: 1,
 		pagination: false,
 		overrideAccess: false,
 	})
 	const article = docs[0]
-	if (!article || !estUnSlug(article.slug) || !texte(article.title)) return null
+	if (!article || !estUnSlug(article.slug) || !text(article.title)) return null
 	return {
 		slug: article.slug,
-		titre: texte(article.title),
-		auteur: texte(article.author),
-		extrait: texte(article.excerpt),
-		titreSeo: texte(article.seo_title),
-		descriptionSeo: texte(article.seo_description),
+		titre: text(article.title),
+		auteur: text(article.author),
+		extrait: text(article.excerpt),
+		titreSeo: text(article.seo_title),
+		descriptionSeo: text(article.seo_description),
 		contenu: typeof article.content === 'string' ? article.content : '',
 		publieLe: article.publishedAt ?? article.createdAt,
 		modifieLe: article.updatedAt,

@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { Cta } from '@/components/blocs/Cta'
 import { ListeDesArticles } from '@/components/blog/ListeDesArticles'
 import { metadonnees } from '@/lib/seo/metadonnees'
-import { lesArticlesEnCache } from '@/services/public/cached'
+import { cachedArticles } from '@/services/public/cached'
 
 // Rendered at each request: the build runs without a database. The articles are read through the cache
 // of Next, tagged `articles`: a save of an article in the admin panel refreshes the list (tickets 047 and 117), and a
@@ -20,7 +20,7 @@ export const metadata: Metadata = metadonnees({
 })
 
 export default async function PageDuBlog() {
-	const articles = await lesArticlesEnCache()
+	const articles = await cachedArticles()
 	return (
 		<main className="relative">
 			<section className="relative px-4 py-20 md:px-8 2xl:px-0">

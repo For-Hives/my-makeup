@@ -3,7 +3,7 @@ import { ProfileProgress } from '@/components/dashboard/ProfileProgress'
 import type { DashboardProfile } from '@/lib/dashboard/cards'
 import { SECTIONS } from '@/lib/dashboard/cards'
 import { profileProgress } from '@/lib/dashboard/progress'
-import { CRITERES } from '@/lib/profile/completeness'
+import { CRITERIA } from '@/lib/profile/completeness'
 import { ANNECY, CAS_PARTAGES, completudeEnV3, documentDuCas } from '../outils/cas-completude'
 import { ouvrirFenetre } from '../outils/dom-react'
 
@@ -49,7 +49,7 @@ describe('U01 : profil vide', () => {
 		expect(vide.score).toBe(0)
 		expect(vide.sur).toBe(13)
 		expect(vide.pourcentage).toBe(0)
-		expect(vide.manques.map(m => m.critere).sort()).toEqual([...CRITERES].sort())
+		expect(vide.manques.map(m => m.critere).sort()).toEqual([...CRITERIA].sort())
 		expect(vide.manques).toHaveLength(13)
 	})
 

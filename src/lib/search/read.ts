@@ -10,21 +10,21 @@
  */
 
 /** How long a read may take before the page gives up and says so. */
-export const DELAI_DE_LECTURE_MS = 8000
+export const READ_TIMEOUT_MS = 8000
 
-export type Lecture<T> = { reussie: true; valeur: T } | { reussie: false }
+export type ReadOutcome<T> = { reussie: true; valeur: T } | { reussie: false }
 
-export async function lireSansBloquer<T>(lire: () => Promise<T>, delaiMs = DELAI_DE_LECTURE_MS): Promise<Lecture<T>> {
-	let minuteur: ReturnType<typeof setTimeout> | undefined
-	const delai = new Promise<never>((_, rejeter) => {
-		minuteur = setTimeout(() => rejeter(new Error('delai')), delaiMs)
+export async function readWithoutBlocking<T>(lire: () => Promise<T>, delaiMs = READ_TIMEOUT_MS): Promise<ReadOutcome<T>> {
+	let timer: ReturnType<typeof setTimeout> | undefined
+	const timeout = new Promise<never>((_, rejeter) => {
+		timer = setTimeout(() => rejeter(new Error('delai')), delaiMs)
 	})
 	try {
-		return { reussie: true, valeur: await Promise.race([lire(), delai]) }
-	} catch (erreur) {
-		console.error(`recherche : lecture de l’annuaire impossible (${erreur instanceof Error ? erreur.name : 'erreur'})`)
+		return { reussie: true, valeur: await Promise.race([lire(), timeout]) }
+	} catch (error) {
+		console.error(`recherche : lecture de l’annuaire impossible (${error instanceof Error ? error.name : 'erreur'})`)
 		return { reussie: false }
 	} finally {
-		clearTimeout(minuteur)
+		clearTimeout(timer)
 	}
 }

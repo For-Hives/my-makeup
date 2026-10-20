@@ -15,29 +15,29 @@
 import config from '@payload-config'
 import { unstable_cache } from 'next/cache'
 import { getPayload, type Payload } from 'payload'
-import { valeursARechercher } from '@/lib/profile/url'
+import { valuesToSearch } from '@/lib/profile/url'
 import { ETIQUETTES } from '@/lib/revalidation'
 import { estUnSlug } from '@/lib/slug'
-import { type ArticlePublic, lireUnArticlePublic } from './articles'
-import { listerLesArticles } from './article-list'
-import { lireLesPagesIndexables } from './indexable-pages'
-import { type AdresseDeProfil, lireLAdresseDeProfil, lireLAnnuaire } from './profiles'
-import { lireLeTalent, listerLesTalents, type TalentDeLaPage } from './talents'
+import { type ArticlePublic, readPublicArticle } from './articles'
+import { listArticles } from './article-list'
+import { readIndexablePages } from './indexable-pages'
+import { type ProfileUrlTarget, readProfileUrlTarget, readDirectory } from './profiles'
+import { readTalent, listTalents, type TalentPageData } from './talents'
 
-const UNE_HEURE = 60 * 60
+const ONE_HOUR = 60 * 60
 
 /** The talents of the home page. */
-export const lesTalentsEnCache = unstable_cache(
-	async () => listerLesTalents(await getPayload({ config })),
+export const cachedTalents = unstable_cache(
+	async () => listTalents(await getPayload({ config })),
 	['public:talents'],
-	{ tags: [ETIQUETTES.talents], revalidate: UNE_HEURE }
+	{ tags: [ETIQUETTES.talents], revalidate: ONE_HOUR }
 )
 
 /** Every listed profile, with her place: what the search by city ranks. */
-export const lAnnuaireEnCache = unstable_cache(
-	async () => lireLAnnuaire(await getPayload({ config })),
+export const cachedDirectory = unstable_cache(
+	async () => readDirectory(await getPayload({ config })),
 	['public:annuaire'],
-	{ tags: [ETIQUETTES.profils], revalidate: UNE_HEURE }
+	{ tags: [ETIQUETTES.profils], revalidate: ONE_HOUR }
 )
 
 /**
@@ -46,60 +46,60 @@ export const lAnnuaireEnCache = unstable_cache(
  * word was typed. The word itself is never part of the key: the directory is cached, the search is made
  * on it in memory.
  */
-export const lAnnuaireAvecLesTextesEnCache = unstable_cache(
-	async () => lireLAnnuaire(await getPayload({ config }), { avecLesTextes: true }),
+export const cachedDirectoryWithTexts = unstable_cache(
+	async () => readDirectory(await getPayload({ config }), { avecLesTextes: true }),
 	['public:annuaire-textes'],
-	{ tags: [ETIQUETTES.profils], revalidate: UNE_HEURE }
+	{ tags: [ETIQUETTES.profils], revalidate: ONE_HOUR }
 )
 
 /** The articles of the blog list (ticket 107): refreshed by a save of an article. */
-export const lesArticlesEnCache = unstable_cache(
-	async () => listerLesArticles(await getPayload({ config })),
+export const cachedArticles = unstable_cache(
+	async () => listArticles(await getPayload({ config })),
 	['public:articles'],
-	{ tags: [ETIQUETTES.articles], revalidate: UNE_HEURE }
+	{ tags: [ETIQUETTES.articles], revalidate: ONE_HOUR }
 )
 
 /**
  * The profiles, talents and articles the sitemap and the plan of the site list (tickets 113 and 114): one
  * reading for both, refreshed by a save of any of the three collections. An error is not cached.
  */
-export const lesPagesIndexablesEnCache = unstable_cache(
-	async () => lireLesPagesIndexables(await getPayload({ config })),
+export const cachedIndexablePages = unstable_cache(
+	async () => readIndexablePages(await getPayload({ config })),
 	['public:pages-indexables'],
-	{ tags: [ETIQUETTES.profils, ETIQUETTES.talents, ETIQUETTES.articles], revalidate: UNE_HEURE }
+	{ tags: [ETIQUETTES.profils, ETIQUETTES.talents, ETIQUETTES.articles], revalidate: ONE_HOUR }
 )
 
 /** What a read of one page gives: the document to keep, or what to answer without keeping anything. */
-type Lecture<T, E> = { garder: T } | { ecart: E }
+type ReadOutcome<T, E> = { garder: T } | { ecart: E }
 
 /** Thrown to leave the cache without writing: `unstable_cache` keeps a value, never a failure. */
-class PasGardee extends Error {}
+class NotKept extends Error {}
 
 /**
  * Keeps the document of one page in Next's cache under its tag, and only when the read finds it. When it
  * does not (`ecart`), the answer of that read is given back and nothing is written.
  */
-async function enCacheSiTrouve<T, E>(
+async function cachedIfFound<T, E>(
 	cle: string[],
 	etiquette: string,
-	lire: () => Promise<Lecture<T, E>>
+	lire: () => Promise<ReadOutcome<T, E>>
 ): Promise<{ garder: T } | { ecart: E }> {
-	let ecart: { ecart: E } | undefined
-	const lue = unstable_cache(
+	let gap: { ecart: E } | undefined
+	const read = unstable_cache(
 		async () => {
-			const lecture = await lire()
-			if ('garder' in lecture) return lecture.garder
-			ecart = lecture
-			throw new PasGardee()
+			const reading = await lire()
+			if ('garder' in reading) return reading.garder
+			gap = reading
+			throw new NotKept()
 		},
 		cle,
-		{ tags: [etiquette], revalidate: UNE_HEURE }
+		{ tags: [etiquette], revalidate: ONE_HOUR }
 	)
 	try {
-		return { garder: await lue() }
-	} catch (erreur) {
-		if (ecart) return ecart
-		throw erreur
+		return { garder: await read() }
+	} catch (error) {
+		if (gap) return gap
+		throw error
 	}
 }
 
@@ -108,46 +108,46 @@ async function enCacheSiTrouve<T, E>(
  * `profil:<slug>`; everything else (a variant, an old username, a draft, an unknown or hidden profile) is
  * read at each visit, as before.
  */
-export async function lAdresseDeProfilEnCache(payload: Payload, segment: string): Promise<AdresseDeProfil> {
-	const slug = valeursARechercher(segment)?.segment
-	if (slug === undefined || !estUnSlug(slug)) return lireLAdresseDeProfil(payload, segment)
-	const lecture = await enCacheSiTrouve<AdresseDeProfil & { type: 'profil' }, AdresseDeProfil>(
+export async function cachedProfileUrl(payload: Payload, segment: string): Promise<ProfileUrlTarget> {
+	const slug = valuesToSearch(segment)?.segment
+	if (slug === undefined || !estUnSlug(slug)) return readProfileUrlTarget(payload, segment)
+	const reading = await cachedIfFound<ProfileUrlTarget & { type: 'profil' }, ProfileUrlTarget>(
 		['public:profil', slug],
 		ETIQUETTES.profil(slug),
 		async () => {
-			const adresse = await lireLAdresseDeProfil(payload, slug)
-			return adresse.type === 'profil' && adresse.publie && adresse.profil.slug === slug
-				? { garder: adresse }
-				: { ecart: adresse }
+			const target = await readProfileUrlTarget(payload, slug)
+			return target.type === 'profil' && target.publie && target.profil.slug === slug
+				? { garder: target }
+				: { ecart: target }
 		}
 	)
-	return 'garder' in lecture ? lecture.garder : lecture.ecart
+	return 'garder' in reading ? reading.garder : reading.ecart
 }
 
 /** The published talent of this slug, kept under `talent:<slug>`; `null` (unknown, a draft) is not kept. */
-export async function leTalentEnCache(payload: Payload, slug: string): Promise<TalentDeLaPage | null> {
+export async function cachedTalent(payload: Payload, slug: string): Promise<TalentPageData | null> {
 	if (!estUnSlug(slug)) return null
-	const lecture = await enCacheSiTrouve<TalentDeLaPage, null>(
+	const reading = await cachedIfFound<TalentPageData, null>(
 		['public:talent', slug],
 		ETIQUETTES.talent(slug),
 		async () => {
-			const talent = await lireLeTalent(payload, slug)
+			const talent = await readTalent(payload, slug)
 			return talent ? { garder: talent } : { ecart: null }
 		}
 	)
-	return 'garder' in lecture ? lecture.garder : null
+	return 'garder' in reading ? reading.garder : null
 }
 
 /** The published article of this slug, kept under `article:<slug>`; `null` (unknown, a draft) is not kept. */
-export async function lArticleEnCache(payload: Payload, slug: string): Promise<ArticlePublic | null> {
+export async function cachedArticle(payload: Payload, slug: string): Promise<ArticlePublic | null> {
 	if (!estUnSlug(slug)) return null
-	const lecture = await enCacheSiTrouve<ArticlePublic, null>(
+	const reading = await cachedIfFound<ArticlePublic, null>(
 		['public:article', slug],
 		ETIQUETTES.article(slug),
 		async () => {
-			const article = await lireUnArticlePublic(payload, slug)
+			const article = await readPublicArticle(payload, slug)
 			return article ? { garder: article } : { ecart: null }
 		}
 	)
-	return 'garder' in lecture ? lecture.garder : null
+	return 'garder' in reading ? reading.garder : null
 }

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import { villeExploitable } from '@/lib/profile/completeness'
-import { lieuPublic, villePublique } from '@/lib/profile/public-place'
+import { usableCity } from '@/lib/profile/completeness'
+import { publicPlace, publicCity } from '@/lib/profile/public-place'
 
 // Ported from the « villePublique » block of tests/unit/lieu-public.test.mjs of the old site
 // (branch main): same cases, same expected values.
@@ -164,48 +164,48 @@ const SANS_NUMERO_DE_RUE = /^(\d{5}|[^\d]*( \((\d{2}|2A|2B|97\d)\))?)$/
 describe('villePublique: the public place of a city field', () => {
 	for (const [tapee, publique] of [...ADRESSES, ...LIEUX]) {
 		test(`« ${tapee} » → « ${publique} »`, () => {
-			expect(villePublique(tapee)).toBe(publique)
+			expect(publicCity(tapee)).toBe(publique)
 		})
 	}
 
 	for (const [tapee, publique] of DEPARTEMENTS_NOMMES) {
 		test(`« ${tapee} » → « ${publique} »`, () => {
-			expect(villePublique(tapee)).toBe(publique)
-			expect(villeExploitable(tapee)).toBe(true)
+			expect(publicCity(tapee)).toBe(publique)
+			expect(usableCity(tapee)).toBe(true)
 		})
 	}
 
 	for (const [tapee, publique] of COMMUNES_COMME_UNE_VOIE) {
 		test(`« ${tapee} » → « ${publique} », a usable city`, () => {
-			expect(villePublique(tapee)).toBe(publique)
-			expect(lieuPublic(tapee).adresse).toBe(false)
-			expect(villeExploitable(tapee)).toBe(true)
+			expect(publicCity(tapee)).toBe(publique)
+			expect(publicPlace(tapee).adresse).toBe(false)
+			expect(usableCity(tapee)).toBe(true)
 		})
 	}
 
 	test('a street glued to the commune, no postal code: nothing, not a usable city', () => {
 		for (const tapee of RUES_COLLEES) {
-			expect(villePublique(tapee), tapee).toBe('')
-			expect(lieuPublic(tapee).adresse, tapee).toBe(true)
-			expect(villeExploitable(tapee), tapee).toBe(false)
+			expect(publicCity(tapee), tapee).toBe('')
+			expect(publicPlace(tapee).adresse, tapee).toBe(true)
+			expect(usableCity(tapee), tapee).toBe(false)
 		}
 	})
 
 	test('a département code then free text: as typed, not a usable city', () => {
 		for (const tapee of NUMERO_PUIS_TEXTE) {
-			expect(villePublique(tapee)).toBe(tapee)
-			expect(lieuPublic(tapee).adresse, tapee).toBe(false)
-			expect(villeExploitable(tapee), tapee).toBe(false)
+			expect(publicCity(tapee)).toBe(tapee)
+			expect(publicPlace(tapee).adresse, tapee).toBe(false)
+			expect(usableCity(tapee), tapee).toBe(false)
 		}
 	})
 
 	test('nothing usable: an empty text', () => {
 		for (const v of VIDES) {
-			expect(villePublique(v), String(v)).toBe('')
-			expect(lieuPublic(v), String(v)).toEqual({ texte: '', commune: '', departement: null, adresse: false })
+			expect(publicCity(v), String(v)).toBe('')
+			expect(publicPlace(v), String(v)).toEqual({ texte: '', commune: '', departement: null, adresse: false })
 		}
 		// only separators are left once the country is dropped
-		expect(villePublique(', France')).toBe('')
+		expect(publicCity(', France')).toBe('')
 	})
 
 	test('never the street number nor the street of an address', () => {
@@ -224,11 +224,11 @@ describe('villePublique: the public place of a city field', () => {
 			...NUMERO_PUIS_TEXTE,
 			...RUES_COLLEES,
 		]) {
-			const une = lieuPublic(tapee)
-			expect(villePublique(une.texte), tapee).toBe(une.texte)
-			expect(lieuPublic(une.texte).departement, tapee).toBe(une.departement)
+			const une = publicPlace(tapee)
+			expect(publicCity(une.texte), tapee).toBe(une.texte)
+			expect(publicPlace(une.texte).departement, tapee).toBe(une.departement)
 			// what is published and what was typed agree
-			expect(villeExploitable(une.texte), tapee).toBe(villeExploitable(tapee))
+			expect(usableCity(une.texte), tapee).toBe(usableCity(tapee))
 		}
 	})
 
@@ -305,38 +305,38 @@ describe('villePublique: the public place of a city field', () => {
 			const casse = hasard()
 			if (casse < 0.25) tapee = tapee.toUpperCase()
 			else if (casse < 0.45) tapee = tapee.toLowerCase()
-			const lieu = lieuPublic(tapee)
+			const lieu = publicPlace(tapee)
 			for (const sortie of [lieu.texte, lieu.commune]) {
 				expect(sortie, `« ${tapee} » → « ${sortie} »`).not.toMatch(MARQUES)
 			}
 			expect(lieu.texte, tapee).toMatch(SANS_NUMERO_DE_RUE)
-			expect(villePublique(lieu.texte), tapee).toBe(lieu.texte)
-			expect(villeExploitable(lieu.texte), tapee).toBe(villeExploitable(tapee))
+			expect(publicCity(lieu.texte), tapee).toBe(lieu.texte)
+			expect(usableCity(lieu.texte), tapee).toBe(usableCity(tapee))
 		}
 	})
 
 	test('commune and département apart', () => {
-		expect(lieuPublic('12 rue X 74000 Annecy')).toEqual({
+		expect(publicPlace('12 rue X 74000 Annecy')).toEqual({
 			texte: 'Annecy (74)',
 			commune: 'Annecy',
 			departement: '74',
 			adresse: true,
 		})
-		expect(lieuPublic('Annecy (74)')).toEqual({
+		expect(publicPlace('Annecy (74)')).toEqual({
 			texte: 'Annecy (74)',
 			commune: 'Annecy',
 			departement: '74',
 			adresse: false,
 		})
-		expect(lieuPublic('Annecy').commune).toBe('Annecy')
-		expect(lieuPublic('3 avenue X').adresse).toBe(true)
-		expect(lieuPublic('Annecy').adresse).toBe(false)
+		expect(publicPlace('Annecy').commune).toBe('Annecy')
+		expect(publicPlace('3 avenue X').adresse).toBe(true)
+		expect(publicPlace('Annecy').adresse).toBe(false)
 	})
 
 	test('the département of the last postal code', () => {
-		expect(lieuPublic('CS 12345 74000 Annecy Cedex').departement).toBe('74')
-		expect(lieuPublic('1 cours des Essais 20200 Bastia').departement).toBe('2B')
-		expect(lieuPublic('12 bd des Essais 98000 Monaco').texte).toBe('Monaco')
-		expect(lieuPublic('Monaco 98000').texte).toBe('Monaco')
+		expect(publicPlace('CS 12345 74000 Annecy Cedex').departement).toBe('74')
+		expect(publicPlace('1 cours des Essais 20200 Bastia').departement).toBe('2B')
+		expect(publicPlace('12 bd des Essais 98000 Monaco').texte).toBe('Monaco')
+		expect(publicPlace('Monaco 98000').texte).toBe('Monaco')
 	})
 })

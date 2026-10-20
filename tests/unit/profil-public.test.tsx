@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { VueDuProfil } from '@/components/profile/ProfileView'
+import { ProfileView } from '@/components/profile/ProfileView'
 import { PROFILS_DU_JEU, type ProfilDuJeu } from '@/jeu-fictif/profils'
-import { nomDArtisteAffiche } from '@/lib/profile/public-view'
-import { type ProfilDeLaPage, type ProfilPublic, profilPublicDe } from '@/services/public/profiles'
+import { displayedArtistName } from '@/lib/profile/public-view'
+import { type ProfilePageData, type PublicProfile, publicProfileOf } from '@/services/public/profiles'
 
 /**
  * The page of a public profile, rendered from the profile the public reading gives, on the twelve
@@ -14,8 +14,8 @@ import { type ProfilDeLaPage, type ProfilPublic, profilPublicDe } from '@/servic
 const ADRESSE_DE_PHOTO = 'https://photos.example.test/media'
 
 /** A profile of the set as the public reading holds it: what the set writes, plus a main photo when it has one. */
-function lireLeType(type: ProfilDuJeu, surcharge: Partial<ProfilDeLaPage> = {}): ProfilPublic {
-	const doc: ProfilDeLaPage = {
+function lireLeType(type: ProfilDuJeu, surcharge: Partial<ProfilePageData> = {}): PublicProfile {
+	const doc: ProfilePageData = {
 		slug: type.attendu.slug,
 		status: type.attendu.status,
 		publishable: type.attendu.publishable,
@@ -33,10 +33,10 @@ function lireLeType(type: ProfilDuJeu, surcharge: Partial<ProfilDeLaPage> = {}):
 	// What the public reading does: the contact details leave only when she published them.
 	const { phone: telephone = null, email = null } = type.profil.contactDetails ?? {}
 	const coordonnees = type.profil.publicContact === true && (telephone || email) ? { telephone, email } : null
-	return profilPublicDe(doc, { photo, galerie, coordonnees })
+	return publicProfileOf(doc, { photo, galerie, coordonnees })
 }
 
-const rendre = (profil: ProfilPublic): string => renderToStaticMarkup(<VueDuProfil profil={profil} />)
+const rendre = (profil: PublicProfile): string => renderToStaticMarkup(<ProfileView profil={profil} />)
 
 const type = (cle: string): ProfilDuJeu => {
 	const trouve = PROFILS_DU_JEU.find(profil => profil.cle === cle)
@@ -103,14 +103,14 @@ describe('E43 : l’en-tête du profil, dans le HTML du serveur', () => {
 
 	test('le nom d’artiste ne s’affiche que s’il ajoute quelque chose', () => {
 		expect(
-			nomDArtisteAffiche({ firstName: 'Léa', lastName: 'Garnier', artistName: 'Léa Garnier' }, 'Léa Garnier')
+			displayedArtistName({ firstName: 'Léa', lastName: 'Garnier', artistName: 'Léa Garnier' }, 'Léa Garnier')
 		).toBeNull()
 		expect(
-			nomDArtisteAffiche({ firstName: 'Léa', lastName: 'Garnier', artistName: 'Léa Garnier Beauté' }, 'Léa Garnier')
+			displayedArtistName({ firstName: 'Léa', lastName: 'Garnier', artistName: 'Léa Garnier Beauté' }, 'Léa Garnier')
 		).toBe('Léa Garnier Beauté')
 		// Without a first or last name, the artist name is the h1 already.
-		expect(nomDArtisteAffiche({ artistName: 'Studio Fictif' }, 'Studio Fictif')).toBeNull()
-		expect(nomDArtisteAffiche({ firstName: 'Léa', artistName: 'undefined' }, 'Léa')).toBeNull()
+		expect(displayedArtistName({ artistName: 'Studio Fictif' }, 'Studio Fictif')).toBeNull()
+		expect(displayedArtistName({ firstName: 'Léa', artistName: 'undefined' }, 'Léa')).toBeNull()
 	})
 
 	test('aucune adresse postale : seule la commune est lue', () => {

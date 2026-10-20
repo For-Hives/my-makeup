@@ -16,7 +16,7 @@ import {
 	serializeJsonLd,
 } from '@/lib/seo/json-ld'
 import { SITE_ORIGIN } from '@/lib/urls-gelees'
-import { LIMITE_DES_TALENTS, listerLesTalents } from '@/services/public/talents'
+import { TALENTS_LIMIT, listTalents } from '@/services/public/talents'
 
 const RACINE = join(import.meta.dir, '../..')
 
@@ -35,14 +35,14 @@ describe('les talents de l’accueil', () => {
 	test('la lecture choisit deux champs, garde les règles d’accès et se borne elle-même', async () => {
 		const { payload, lectures } = payloadEspion([])
 
-		await listerLesTalents(payload)
+		await listTalents(payload)
 
 		expect(lectures).toHaveLength(1)
 		expect(lectures[0]).toMatchObject({
 			collection: 'talents',
 			select: { slug: true, title: true },
 			overrideAccess: false,
-			limit: LIMITE_DES_TALENTS,
+			limit: TALENTS_LIMIT,
 		})
 	})
 
@@ -54,7 +54,7 @@ describe('les talents de l’accueil', () => {
 			{ slug: 'indefini', title: 'undefined' },
 		])
 
-		expect(await listerLesTalents(payload)).toEqual([{ slug: 'maquillage-mariee', titre: 'Maquillage de mariée' }])
+		expect(await listTalents(payload)).toEqual([{ slug: 'maquillage-mariee', titre: 'Maquillage de mariée' }])
 	})
 })
 

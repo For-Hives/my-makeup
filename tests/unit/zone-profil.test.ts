@@ -3,21 +3,21 @@ import type { Field } from 'payload'
 import { Profiles } from '@/collections/Profiles'
 import { DEPARTEMENTS } from '@/lib/departements'
 import {
-	BORNES_DU_RAYON_KM,
-	CHAMPS_DE_LA_COMMUNE,
-	COLLECTIVITES_D_OUTRE_MER,
-	type CommuneSaisie,
-	codeInseeNormalise,
-	communeEnChamps,
-	coordonneeArrondie,
-	DECIMALES_DES_COORDONNEES,
-	departementDuCodeInsee,
-	erreursDeLaCommune,
-	MESSAGES_DE_LA_ZONE,
-	nomNormalise,
-	ressembleAUneAdresse,
-	verdictDeLaCommune,
-	verdictDuRayon,
+	RADIUS_BOUNDS_KM,
+	CITY_FIELDS,
+	OVERSEAS_COLLECTIVITIES,
+	type CityInput,
+	normalizedInseeCode,
+	cityToFields,
+	roundedCoordinate,
+	COORDINATE_DECIMALS,
+	departmentOfInseeCode,
+	cityErrors,
+	ZONE_MESSAGES,
+	normalizedName,
+	looksLikeAnAddress,
+	cityVerdict,
+	radiusVerdict,
 } from '@/lib/profile/zone'
 
 /**
@@ -31,34 +31,34 @@ const ANNECY = { name: 'Annecy', inseeCode: '74010', latitude: 45.8992, longitud
 
 describe('le département d’un code INSEE', () => {
 	test('les deux premiers caractères en métropole et en Corse, les trois premiers outre-mer', () => {
-		expect(departementDuCodeInsee('74010')).toBe('74')
-		expect(departementDuCodeInsee('01004')).toBe('01')
-		expect(departementDuCodeInsee('75056')).toBe('75')
-		expect(departementDuCodeInsee('2A004')).toBe('2A')
-		expect(departementDuCodeInsee('2B033')).toBe('2B')
-		expect(departementDuCodeInsee('97411')).toBe('974')
-		expect(departementDuCodeInsee('97105')).toBe('971')
-		expect(departementDuCodeInsee('97611')).toBe('976')
+		expect(departmentOfInseeCode('74010')).toBe('74')
+		expect(departmentOfInseeCode('01004')).toBe('01')
+		expect(departmentOfInseeCode('75056')).toBe('75')
+		expect(departmentOfInseeCode('2A004')).toBe('2A')
+		expect(departmentOfInseeCode('2B033')).toBe('2B')
+		expect(departmentOfInseeCode('97411')).toBe('974')
+		expect(departmentOfInseeCode('97105')).toBe('971')
+		expect(departmentOfInseeCode('97611')).toBe('976')
 	})
 
 	test('toute la France : les collectivités d’outre-mer de la liste officielle aussi, sur leurs trois premiers caractères', () => {
 		// One commune of each, as geo.api.gouv.fr lists them (public reference data, 14/10/2026).
-		expect(departementDuCodeInsee('97501')).toBe('975') // Miquelon-Langlade
-		expect(departementDuCodeInsee('97502')).toBe('975') // Saint-Pierre
-		expect(departementDuCodeInsee('97701')).toBe('977') // Saint-Barthélemy
-		expect(departementDuCodeInsee('97801')).toBe('978') // Saint-Martin
-		expect(departementDuCodeInsee('98411')).toBe('984') // Îles Saint-Paul et Nouvelle-Amsterdam
-		expect(departementDuCodeInsee('98611')).toBe('986') // Alo
-		expect(departementDuCodeInsee('98735')).toBe('987') // Papeete
-		expect(departementDuCodeInsee('98801')).toBe('988') // Belep
-		expect(departementDuCodeInsee('98901')).toBe('989') // Île de Clipperton
-		expect(Object.keys(COLLECTIVITES_D_OUTRE_MER)).toEqual(['975', '977', '978', '984', '986', '987', '988', '989'])
+		expect(departmentOfInseeCode('97501')).toBe('975') // Miquelon-Langlade
+		expect(departmentOfInseeCode('97502')).toBe('975') // Saint-Pierre
+		expect(departmentOfInseeCode('97701')).toBe('977') // Saint-Barthélemy
+		expect(departmentOfInseeCode('97801')).toBe('978') // Saint-Martin
+		expect(departmentOfInseeCode('98411')).toBe('984') // Îles Saint-Paul et Nouvelle-Amsterdam
+		expect(departmentOfInseeCode('98611')).toBe('986') // Alo
+		expect(departmentOfInseeCode('98735')).toBe('987') // Papeete
+		expect(departmentOfInseeCode('98801')).toBe('988') // Belep
+		expect(departmentOfInseeCode('98901')).toBe('989') // Île de Clipperton
+		expect(Object.keys(OVERSEAS_COLLECTIVITIES)).toEqual(['975', '977', '978', '984', '986', '987', '988', '989'])
 	})
 
 	test('chacun des 101 départements et des 8 collectivités d’outre-mer a des codes de communes bien formés', () => {
-		for (const departement of [...Object.keys(DEPARTEMENTS), ...Object.keys(COLLECTIVITES_D_OUTRE_MER)]) {
+		for (const departement of [...Object.keys(DEPARTEMENTS), ...Object.keys(OVERSEAS_COLLECTIVITIES)]) {
 			const code = departement.length === 3 ? `${departement}01` : `${departement}001`
-			expect(departementDuCodeInsee(code), code).toBe(departement)
+			expect(departmentOfInseeCode(code), code).toBe(departement)
 		}
 	})
 
@@ -84,56 +84,56 @@ describe('le département d’un code INSEE', () => {
 			'ABCDE',
 			'',
 		]
-		for (const code of malFormes) expect(departementDuCodeInsee(code), code).toBeNull()
-		for (const valeur of [74010, null, undefined, {}, ['74010']]) expect(departementDuCodeInsee(valeur)).toBeNull()
+		for (const code of malFormes) expect(departmentOfInseeCode(code), code).toBeNull()
+		for (const valeur of [74010, null, undefined, {}, ['74010']]) expect(departmentOfInseeCode(valeur)).toBeNull()
 	})
 
 	test('la collection range le code sans espaces autour, A et B en capitales, vide en null ; une commune nulle est vide, un texte seul n’a pas de code', () => {
-		expect(codeInseeNormalise(' 2a004 ')).toBe('2A004')
-		expect(codeInseeNormalise('74010')).toBe('74010')
-		expect(codeInseeNormalise('   ')).toBeNull()
-		expect(codeInseeNormalise('')).toBeNull()
+		expect(normalizedInseeCode(' 2a004 ')).toBe('2A004')
+		expect(normalizedInseeCode('74010')).toBe('74010')
+		expect(normalizedInseeCode('   ')).toBeNull()
+		expect(normalizedInseeCode('')).toBeNull()
 		// What is not a text is left as sent: the check refuses it.
-		expect(codeInseeNormalise(74010)).toBe(74010)
-		expect(codeInseeNormalise(null)).toBeNull()
-		expect(codeInseeNormalise(undefined)).toBeUndefined()
-		expect(communeEnChamps(null)).toEqual({ name: null, inseeCode: null, latitude: null, longitude: null })
-		expect(communeEnChamps('Annecy')).toEqual({ name: 'Annecy', inseeCode: null, latitude: null, longitude: null })
-		expect(erreursDeLaCommune(communeEnChamps('Annecy') as CommuneSaisie)).toEqual({
-			inseeCode: MESSAGES_DE_LA_ZONE.communeSansCodeInsee,
+		expect(normalizedInseeCode(74010)).toBe(74010)
+		expect(normalizedInseeCode(null)).toBeNull()
+		expect(normalizedInseeCode(undefined)).toBeUndefined()
+		expect(cityToFields(null)).toEqual({ name: null, inseeCode: null, latitude: null, longitude: null })
+		expect(cityToFields('Annecy')).toEqual({ name: 'Annecy', inseeCode: null, latitude: null, longitude: null })
+		expect(cityErrors(cityToFields('Annecy') as CityInput)).toEqual({
+			inseeCode: ZONE_MESSAGES.communeSansCodeInsee,
 		})
-		expect(communeEnChamps(ANNECY)).toEqual(ANNECY)
-		expect(communeEnChamps(undefined)).toBeUndefined()
-		expect(nomNormalise('  Annecy ')).toBe('Annecy')
-		expect(nomNormalise(' ')).toBeNull()
-		expect(nomNormalise(undefined)).toBeUndefined()
+		expect(cityToFields(ANNECY)).toEqual(ANNECY)
+		expect(cityToFields(undefined)).toBeUndefined()
+		expect(normalizedName('  Annecy ')).toBe('Annecy')
+		expect(normalizedName(' ')).toBeNull()
+		expect(normalizedName(undefined)).toBeUndefined()
 	})
 })
 
 describe('une commune s’envoie entière, et seulement comme un objet', () => {
 	test('ce qu’une commune envoyée ne donne pas est vide, jamais repris de la commune déjà enregistrée', () => {
 		const vide = { name: null, inseeCode: null, latitude: null, longitude: null }
-		expect(communeEnChamps({ name: 'Lyon' })).toEqual({ ...vide, name: 'Lyon' })
-		expect(communeEnChamps({ inseeCode: '69123' })).toEqual({ ...vide, inseeCode: '69123' })
-		expect(communeEnChamps({ name: 'Lyon', inseeCode: '69123' })).toEqual({ ...vide, name: 'Lyon', inseeCode: '69123' })
-		expect(communeEnChamps({})).toEqual(vide)
+		expect(cityToFields({ name: 'Lyon' })).toEqual({ ...vide, name: 'Lyon' })
+		expect(cityToFields({ inseeCode: '69123' })).toEqual({ ...vide, inseeCode: '69123' })
+		expect(cityToFields({ name: 'Lyon', inseeCode: '69123' })).toEqual({ ...vide, name: 'Lyon', inseeCode: '69123' })
+		expect(cityToFields({})).toEqual(vide)
 		// The département is the server's: what a request sends for it is not kept.
-		expect(communeEnChamps({ ...ANNECY, department: '13' })).toEqual(ANNECY)
-		expect(erreursDeLaCommune(communeEnChamps({ name: 'Lyon' }) as CommuneSaisie)).toEqual({
-			inseeCode: MESSAGES_DE_LA_ZONE.communeSansCodeInsee,
+		expect(cityToFields({ ...ANNECY, department: '13' })).toEqual(ANNECY)
+		expect(cityErrors(cityToFields({ name: 'Lyon' }) as CityInput)).toEqual({
+			inseeCode: ZONE_MESSAGES.communeSansCodeInsee,
 		})
-		expect(erreursDeLaCommune(communeEnChamps({ inseeCode: '69123' }) as CommuneSaisie)).toEqual({
-			name: MESSAGES_DE_LA_ZONE.codeInseeSansNom,
+		expect(cityErrors(cityToFields({ inseeCode: '69123' }) as CityInput)).toEqual({
+			name: ZONE_MESSAGES.codeInseeSansNom,
 		})
 	})
 
 	test('une liste, ou un objet qui n’est pas un simple objet, n’est pas une commune : refusée en français', () => {
 		for (const commune of [[], ['Annecy'], [ANNECY], new Date(0), new Map([['nom', 'Annecy']])]) {
-			expect(communeEnChamps(commune), String(commune)).toBe(commune)
-			expect(verdictDeLaCommune(commune), String(commune)).toBe(MESSAGES_DE_LA_ZONE.communeSansCodeInsee)
+			expect(cityToFields(commune), String(commune)).toBe(commune)
+			expect(cityVerdict(commune), String(commune)).toBe(ZONE_MESSAGES.communeSansCodeInsee)
 		}
-		for (const commune of [undefined, null, {}, ANNECY, communeEnChamps(null), Object.create(null)])
-			expect(verdictDeLaCommune(commune)).toBe(true)
+		for (const commune of [undefined, null, {}, ANNECY, cityToFields(null), Object.create(null)])
+			expect(cityVerdict(commune)).toBe(true)
 	})
 })
 
@@ -157,12 +157,12 @@ describe('un nom de commune n’est jamais une adresse', () => {
 			'BP 12 Annecy',
 		]
 		for (const nom of adresses) {
-			expect(ressembleAUneAdresse(nom), nom).toBe(true)
-			expect(erreursDeLaCommune({ name: nom, inseeCode: '74010' }), nom).toEqual({
-				name: MESSAGES_DE_LA_ZONE.nomAdresse,
+			expect(looksLikeAnAddress(nom), nom).toBe(true)
+			expect(cityErrors({ name: nom, inseeCode: '74010' }), nom).toEqual({
+				name: ZONE_MESSAGES.nomAdresse,
 			})
 		}
-		expect(MESSAGES_DE_LA_ZONE.nomAdresse).toBe(
+		expect(ZONE_MESSAGES.nomAdresse).toBe(
 			'Ce nom ressemble à une adresse : choisis ta commune dans la liste, jamais ton adresse.'
 		)
 	})
@@ -189,8 +189,8 @@ describe('un nom de commune n’est jamais une adresse', () => {
 			'Saint-Remy-en-Bouzemont-Saint-Genest-et-Isson',
 		]
 		for (const nom of noms) {
-			expect(ressembleAUneAdresse(nom), nom).toBe(false)
-			expect(erreursDeLaCommune({ name: nom, inseeCode: '74010' }), nom).toEqual({})
+			expect(looksLikeAnAddress(nom), nom).toBe(false)
+			expect(cityErrors({ name: nom, inseeCode: '74010' }), nom).toEqual({})
 		}
 	})
 })
@@ -214,10 +214,10 @@ describe('un nom de commune n’a que les caractères d’un nom de commune', ()
 			'Annecy\u200b',
 		]
 		for (const nom of textes)
-			expect(erreursDeLaCommune({ name: nom, inseeCode: '74010' }), nom).toEqual({
-				name: MESSAGES_DE_LA_ZONE.nomCaracteres,
+			expect(cityErrors({ name: nom, inseeCode: '74010' }), nom).toEqual({
+				name: ZONE_MESSAGES.nomCaracteres,
 			})
-		expect(MESSAGES_DE_LA_ZONE.nomCaracteres).toBe(
+		expect(ZONE_MESSAGES.nomCaracteres).toBe(
 			'Le nom d’une commune n’a que des lettres, des espaces, des traits d’union, des apostrophes et des parenthèses : choisis ta commune dans la liste.'
 		)
 	})
@@ -233,111 +233,111 @@ describe('un nom de commune n’a que les caractères d’un nom de commune', ()
 			'Haÿ ʻO Fictif',
 			'Ville - Fictive',
 		])
-			expect(erreursDeLaCommune({ name: nom, inseeCode: '74010' }), nom).toEqual({})
+			expect(cityErrors({ name: nom, inseeCode: '74010' }), nom).toEqual({})
 	})
 
 	test('le nom n’est pas comparé à celui de son code : c’est le travail de la liste de l’espace et de l’import', () => {
 		// A decision of ticket 041, written in the README: the server checks the form of the name only.
-		expect(erreursDeLaCommune({ name: 'Lyon', inseeCode: '74010' })).toEqual({})
+		expect(cityErrors({ name: 'Lyon', inseeCode: '74010' })).toEqual({})
 	})
 })
 
 describe('les coordonnées de la commune sont celles de son centre, à environ 1 km près', () => {
 	test('arrondies à deux décimales : aucune ne situe une adresse', () => {
-		expect(DECIMALES_DES_COORDONNEES).toBe(2)
-		expect(coordonneeArrondie(48.85341234)).toBe(48.85)
-		expect(coordonneeArrondie(2.34881234)).toBe(2.35)
-		expect(coordonneeArrondie(45.8992)).toBe(45.9)
-		expect(coordonneeArrondie(-21.11551)).toBe(-21.12)
-		expect(coordonneeArrondie(-0.001)).toBe(0)
-		expect(Object.is(coordonneeArrondie(-0.001), -0)).toBe(false)
-		expect(coordonneeArrondie(6)).toBe(6)
+		expect(COORDINATE_DECIMALS).toBe(2)
+		expect(roundedCoordinate(48.85341234)).toBe(48.85)
+		expect(roundedCoordinate(2.34881234)).toBe(2.35)
+		expect(roundedCoordinate(45.8992)).toBe(45.9)
+		expect(roundedCoordinate(-21.11551)).toBe(-21.12)
+		expect(roundedCoordinate(-0.001)).toBe(0)
+		expect(Object.is(roundedCoordinate(-0.001), -0)).toBe(false)
+		expect(roundedCoordinate(6)).toBe(6)
 	})
 
 	test('ce qui n’est pas un nombre fini est laissé tel quel, pour que la vérification le refuse', () => {
 		for (const valeur of [null, undefined, '45.8992', Number.NaN, Number.POSITIVE_INFINITY, true])
-			expect(Object.is(coordonneeArrondie(valeur), valeur), String(valeur)).toBe(true)
+			expect(Object.is(roundedCoordinate(valeur), valeur), String(valeur)).toBe(true)
 	})
 })
 
 describe('le rayon d’action', () => {
 	test('de 0 à 200 km, en kilomètres entiers, ou vide', () => {
-		expect(BORNES_DU_RAYON_KM).toEqual({ min: 0, max: 200 })
-		for (const rayon of [0, 1, 30, 199, 200, null, undefined]) expect(verdictDuRayon(rayon), String(rayon)).toBe(true)
+		expect(RADIUS_BOUNDS_KM).toEqual({ min: 0, max: 200 })
+		for (const rayon of [0, 1, 30, 199, 200, null, undefined]) expect(radiusVerdict(rayon), String(rayon)).toBe(true)
 	})
 
 	test('hors bornes, décimal ou qui n’est pas un nombre : refusé en français', () => {
-		expect(MESSAGES_DE_LA_ZONE.rayon).toBe('Le rayon d’action se donne en kilomètres entiers, de 0 à 200 km.')
+		expect(ZONE_MESSAGES.rayon).toBe('Le rayon d’action se donne en kilomètres entiers, de 0 à 200 km.')
 		for (const rayon of [-1, 201, 400, 1000, 12.5, Number.NaN, Number.POSITIVE_INFINITY, '30', true])
-			expect(verdictDuRayon(rayon), String(rayon)).toBe(MESSAGES_DE_LA_ZONE.rayon)
+			expect(radiusVerdict(rayon), String(rayon)).toBe(ZONE_MESSAGES.rayon)
 	})
 })
 
 describe('la commune', () => {
 	test('vide, ou avec son nom et son code INSEE : acceptée ; ses coordonnées sont facultatives', () => {
-		expect(erreursDeLaCommune(undefined)).toEqual({})
-		expect(erreursDeLaCommune(null)).toEqual({})
-		expect(erreursDeLaCommune({})).toEqual({})
+		expect(cityErrors(undefined)).toEqual({})
+		expect(cityErrors(null)).toEqual({})
+		expect(cityErrors({})).toEqual({})
 		expect(
-			erreursDeLaCommune({ name: null, inseeCode: null, department: null, latitude: null, longitude: null })
+			cityErrors({ name: null, inseeCode: null, department: null, latitude: null, longitude: null })
 		).toEqual({})
-		expect(erreursDeLaCommune(ANNECY)).toEqual({})
-		expect(erreursDeLaCommune({ name: 'Annecy', inseeCode: '74010' })).toEqual({})
-		expect(erreursDeLaCommune({ name: 'Saint-Remy-en-Bouzemont-Saint-Genest-et-Isson', inseeCode: '51513' })).toEqual(
+		expect(cityErrors(ANNECY)).toEqual({})
+		expect(cityErrors({ name: 'Annecy', inseeCode: '74010' })).toEqual({})
+		expect(cityErrors({ name: 'Saint-Remy-en-Bouzemont-Saint-Genest-et-Isson', inseeCode: '51513' })).toEqual(
 			{}
 		)
-		expect(erreursDeLaCommune({ name: 'Ajaccio', inseeCode: '2A004', latitude: 0, longitude: 0 })).toEqual({})
+		expect(cityErrors({ name: 'Ajaccio', inseeCode: '2A004', latitude: 0, longitude: 0 })).toEqual({})
 	})
 
 	test('sans code INSEE : refusée en français, sur le code', () => {
-		expect(erreursDeLaCommune({ name: 'Annecy' })).toEqual({ inseeCode: MESSAGES_DE_LA_ZONE.communeSansCodeInsee })
-		expect(erreursDeLaCommune({ ...ANNECY, inseeCode: null })).toEqual({
-			inseeCode: MESSAGES_DE_LA_ZONE.communeSansCodeInsee,
+		expect(cityErrors({ name: 'Annecy' })).toEqual({ inseeCode: ZONE_MESSAGES.communeSansCodeInsee })
+		expect(cityErrors({ ...ANNECY, inseeCode: null })).toEqual({
+			inseeCode: ZONE_MESSAGES.communeSansCodeInsee,
 		})
-		expect(erreursDeLaCommune({ name: 'Annecy', inseeCode: '  ' })).toEqual({
-			inseeCode: MESSAGES_DE_LA_ZONE.communeSansCodeInsee,
+		expect(cityErrors({ name: 'Annecy', inseeCode: '  ' })).toEqual({
+			inseeCode: ZONE_MESSAGES.communeSansCodeInsee,
 		})
-		expect(MESSAGES_DE_LA_ZONE.communeSansCodeInsee).toBe(
+		expect(ZONE_MESSAGES.communeSansCodeInsee).toBe(
 			'Choisis ta commune dans la liste : sans son code INSEE, elle ne peut pas être enregistrée.'
 		)
 	})
 
 	test('code INSEE mal formé : refusé en français', () => {
 		for (const codeInsee of ['7401', '20004', 'ABCDE', '97001', 74010])
-			expect(erreursDeLaCommune({ name: 'Annecy', inseeCode: codeInsee }), String(codeInsee)).toEqual({
-				inseeCode: MESSAGES_DE_LA_ZONE.codeInseeMalForme,
+			expect(cityErrors({ name: 'Annecy', inseeCode: codeInsee }), String(codeInsee)).toEqual({
+				inseeCode: ZONE_MESSAGES.codeInseeMalForme,
 			})
-		expect(MESSAGES_DE_LA_ZONE.codeInseeMalForme).toBe(
+		expect(ZONE_MESSAGES.codeInseeMalForme).toBe(
 			'Le code INSEE de la commune est mal formé : 5 caractères, comme 74010 ou 2A004.'
 		)
 	})
 
 	test('un code sans nom, un nom trop long ou qui n’est pas un texte : refusés sur le nom', () => {
-		expect(erreursDeLaCommune({ inseeCode: '74010' })).toEqual({ name: MESSAGES_DE_LA_ZONE.codeInseeSansNom })
-		expect(erreursDeLaCommune({ name: 'A'.repeat(71), inseeCode: '74010' })).toEqual({
-			name: MESSAGES_DE_LA_ZONE.nomInvalide,
+		expect(cityErrors({ inseeCode: '74010' })).toEqual({ name: ZONE_MESSAGES.codeInseeSansNom })
+		expect(cityErrors({ name: 'A'.repeat(71), inseeCode: '74010' })).toEqual({
+			name: ZONE_MESSAGES.nomInvalide,
 		})
-		expect(erreursDeLaCommune({ name: 'A'.repeat(70), inseeCode: '74010' })).toEqual({})
-		expect(erreursDeLaCommune({ name: 42, inseeCode: '74010' })).toEqual({ name: MESSAGES_DE_LA_ZONE.nomInvalide })
+		expect(cityErrors({ name: 'A'.repeat(70), inseeCode: '74010' })).toEqual({})
+		expect(cityErrors({ name: 42, inseeCode: '74010' })).toEqual({ name: ZONE_MESSAGES.nomInvalide })
 	})
 
 	test('des coordonnées hors bornes, seules ou sans commune : refusées en français', () => {
-		expect(erreursDeLaCommune({ ...ANNECY, latitude: 91 })).toEqual({ latitude: MESSAGES_DE_LA_ZONE.latitude })
-		expect(erreursDeLaCommune({ ...ANNECY, longitude: -180.5 })).toEqual({ longitude: MESSAGES_DE_LA_ZONE.longitude })
-		expect(erreursDeLaCommune({ ...ANNECY, latitude: Number.NaN })).toEqual({ latitude: MESSAGES_DE_LA_ZONE.latitude })
-		expect(erreursDeLaCommune({ ...ANNECY, longitude: null })).toEqual({
-			longitude: MESSAGES_DE_LA_ZONE.coordonneesIncompletes,
+		expect(cityErrors({ ...ANNECY, latitude: 91 })).toEqual({ latitude: ZONE_MESSAGES.latitude })
+		expect(cityErrors({ ...ANNECY, longitude: -180.5 })).toEqual({ longitude: ZONE_MESSAGES.longitude })
+		expect(cityErrors({ ...ANNECY, latitude: Number.NaN })).toEqual({ latitude: ZONE_MESSAGES.latitude })
+		expect(cityErrors({ ...ANNECY, longitude: null })).toEqual({
+			longitude: ZONE_MESSAGES.coordonneesIncompletes,
 		})
-		expect(erreursDeLaCommune({ ...ANNECY, latitude: undefined })).toEqual({
-			latitude: MESSAGES_DE_LA_ZONE.coordonneesIncompletes,
+		expect(cityErrors({ ...ANNECY, latitude: undefined })).toEqual({
+			latitude: ZONE_MESSAGES.coordonneesIncompletes,
 		})
-		expect(erreursDeLaCommune({ latitude: 45.9, longitude: 6.13 })).toEqual({
-			latitude: MESSAGES_DE_LA_ZONE.coordonneesSansCommune,
+		expect(cityErrors({ latitude: 45.9, longitude: 6.13 })).toEqual({
+			latitude: ZONE_MESSAGES.coordonneesSansCommune,
 		})
 	})
 
 	test('chaque message est en français, avec ses accents', () => {
-		for (const message of Object.values(MESSAGES_DE_LA_ZONE)) {
+		for (const message of Object.values(ZONE_MESSAGES)) {
 			expect(message).toMatch(/^[A-ZÀ-Ý]/)
 			expect(message).toEndWith('.')
 			expect(message).not.toMatch(/\b(?:the|field|invalid|must|is)\b/i)
@@ -366,7 +366,7 @@ describe('les champs de la zone dans la collection des profils', () => {
 		expect(commune?.type).toBe('group')
 		const sousChamps = commune && 'fields' in commune ? commune.fields : []
 		expect(sousChamps.map(sousChamp => ('name' in sousChamp ? sousChamp.name : sousChamp.type))).toEqual([
-			...CHAMPS_DE_LA_COMMUNE,
+			...CITY_FIELDS,
 		])
 	})
 

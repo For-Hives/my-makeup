@@ -14,13 +14,13 @@
  */
 
 import { slugifier } from '../slug'
-import { type DocumentVisible, estVisible } from './visibility'
+import { type DocumentVisible, isVisible } from './visibility'
 
 /** The longest segment worth looking up: a slug has 70 characters, an old username fewer than 100. */
 export const SEGMENT_MAX = 200
 
 /** A profile a lookup of an address gave. */
-export interface CandidatDeLAdresse extends DocumentVisible {
+export interface UrlCandidate extends DocumentVisible {
 	id: number | string
 	slug: string
 	legacyUsername?: string | null
@@ -28,15 +28,15 @@ export interface CandidatDeLAdresse extends DocumentVisible {
 }
 
 /** What an address leads to. */
-export type CibleDeLAdresse<T extends CandidatDeLAdresse = CandidatDeLAdresse> =
+export type UrlTarget<T extends UrlCandidate = UrlCandidate> =
 	| { type: 'profil'; profil: T }
 	| { type: 'redirection'; slug: string }
 	| { type: 'inconnue' }
 
-const INCONNUE = { type: 'inconnue' } as const
+const UNKNOWN = { type: 'inconnue' } as const
 
 /** True when a segment can be looked up: text of a sensible length, no control character (the database refuses a NUL). */
-export const segmentRecherchable = (segment: unknown): segment is string =>
+export const searchableSegment = (segment: unknown): segment is string =>
 	typeof segment === 'string' &&
 	segment !== '' &&
 	segment.length <= SEGMENT_MAX &&
@@ -47,19 +47,19 @@ export const segmentRecherchable = (segment: unknown): segment is string =>
  * The values a read looks for: the segment as a slug, its slugified form, and the segment as an old username.
  * `null` when the address cannot lead anywhere.
  */
-export function valeursARechercher(segment: unknown): { segment: string; slugifie: string } | null {
-	if (!segmentRecherchable(segment)) return null
-	const slugifie = slugifier(segment)
-	return slugifie === '' ? null : { segment, slugifie }
+export function valuesToSearch(segment: unknown): { segment: string; slugifie: string } | null {
+	if (!searchableSegment(segment)) return null
+	const slugified = slugifier(segment)
+	return slugified === '' ? null : { segment, slugifie: slugified }
 }
 
-const horodatage = (date: string | null | undefined): number => {
+const timestamp = (date: string | null | undefined): number => {
 	const t = date ? Date.parse(date) : Number.NaN
 	return Number.isNaN(t) ? Number.POSITIVE_INFINITY : t
 }
 
-const plusAncienD = (a: CandidatDeLAdresse, b: CandidatDeLAdresse): number =>
-	horodatage(a.createdAt) - horodatage(b.createdAt) ||
+const olderThan = (a: UrlCandidate, b: UrlCandidate): number =>
+	timestamp(a.createdAt) - timestamp(b.createdAt) ||
 	Number(a.id) - Number(b.id) ||
 	String(a.id).localeCompare(String(b.id))
 
@@ -67,16 +67,16 @@ const plusAncienD = (a: CandidatDeLAdresse, b: CandidatDeLAdresse): number =>
  * What the segment leads to, among the profiles that could be its target (those whose slug is the
  * segment or its slugified form, or whose old username is the segment).
  */
-export function cibleDeLAdresse<T extends CandidatDeLAdresse>(
+export function urlTarget<T extends UrlCandidate>(
 	segment: unknown,
 	candidats: readonly T[]
-): CibleDeLAdresse<T> {
-	const valeurs = valeursARechercher(segment)
-	if (!valeurs) return INCONNUE
-	const direct = candidats.find(({ slug }) => slug === valeurs.segment)
-	if (direct) return estVisible(direct) ? { type: 'profil', profil: direct } : INCONNUE
-	const cible =
-		[...candidats].sort(plusAncienD).find(({ legacyUsername }) => legacyUsername === valeurs.segment) ??
-		candidats.find(({ slug }) => slug === valeurs.slugifie)
-	return cible && estVisible(cible) ? { type: 'redirection', slug: cible.slug } : INCONNUE
+): UrlTarget<T> {
+	const values = valuesToSearch(segment)
+	if (!values) return UNKNOWN
+	const direct = candidats.find(({ slug }) => slug === values.segment)
+	if (direct) return isVisible(direct) ? { type: 'profil', profil: direct } : UNKNOWN
+	const target =
+		[...candidats].sort(olderThan).find(({ legacyUsername }) => legacyUsername === values.segment) ??
+		candidats.find(({ slug }) => slug === values.slugifie)
+	return target && isVisible(target) ? { type: 'redirection', slug: target.slug } : UNKNOWN
 }

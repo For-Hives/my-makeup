@@ -728,7 +728,6 @@ incomplet
 inconnu
 inconnue
 inconnues
-indexable
 indexables
 indexee
 indice

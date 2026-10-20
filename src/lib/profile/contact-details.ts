@@ -11,11 +11,11 @@ import { z } from 'zod'
  * value the old site accepted stays valid, and the import never truncates nor corrects one in silence.
  */
 
-export const LONGUEUR_MAX_LIEN = 200
-export const LONGUEUR_MAX_EMAIL = 200
-export const LONGUEUR_MAX_TELEPHONE = 20
+export const LINK_MAX_LENGTH = 200
+export const EMAIL_MAX_LENGTH = 200
+export const PHONE_MAX_LENGTH = 20
 
-export const MESSAGES_DES_COORDONNEES = {
+export const CONTACT_DETAILS_MESSAGES = {
 	lienTropLong: "L'URL ne doit pas dépasser 200 caractères.",
 	/** New in the v3, not a text of the old site. */
 	lienSansProtocoleWeb: 'Ce lien doit commencer par http:// ou https://.',
@@ -24,13 +24,13 @@ export const MESSAGES_DES_COORDONNEES = {
 	telephoneTropLong: 'Le numéro de téléphone ne doit pas dépasser 20 caractères.',
 } as const
 
-type Valeur = string | null | undefined
+type Value = string | null | undefined
 
-const vide = (valeur: Valeur): valeur is null | undefined | '' =>
+const empty = (valeur: Value): valeur is null | undefined | '' =>
 	valeur === null || valeur === undefined || valeur === ''
 
 /** The only protocols a link of a public profile may name: a page of the web. */
-const PROTOCOLES_DU_WEB = new Set(['http:', 'https:'])
+const WEB_PROTOCOLS = new Set(['http:', 'https:'])
 
 /**
  * True when the link names a protocol other than `http` or `https` (`javascript:`, `data:`…).
@@ -39,34 +39,34 @@ const PROTOCOLES_DU_WEB = new Set(['http:', 'https:'])
  * absolute address is what a browser opens from an `href`, spaces, tabs and capitals included. A
  * link without a protocol (`@pseudo`, `www.example.test`) is not an absolute address: it passes.
  */
-function nommeUnAutreProtocole(lien: string): boolean {
+function namesAnotherProtocol(lien: string): boolean {
 	if (!URL.canParse(lien)) return false
-	return !PROTOCOLES_DU_WEB.has(new URL(lien).protocol)
+	return !WEB_PROTOCOLS.has(new URL(lien).protocol)
 }
 
 /**
  * A link to a network or a website: 200 characters at most, and no protocol but `http` or `https`,
  * since the public profile makes it a link. The signature of a Payload `validate`.
  */
-export function validerLienDeReseau(valeur: Valeur): true | string {
-	if (vide(valeur)) return true
-	if (valeur.length > LONGUEUR_MAX_LIEN) return MESSAGES_DES_COORDONNEES.lienTropLong
-	return nommeUnAutreProtocole(valeur) ? MESSAGES_DES_COORDONNEES.lienSansProtocoleWeb : true
+export function validateNetworkLink(valeur: Value): true | string {
+	if (empty(valeur)) return true
+	if (valeur.length > LINK_MAX_LENGTH) return CONTACT_DETAILS_MESSAGES.lienTropLong
+	return namesAnotherProtocol(valeur) ? CONTACT_DETAILS_MESSAGES.lienSansProtocoleWeb : true
 }
 
 /** The phone number of contact: 20 characters at most, as on the old site. */
-export function validerTelephone(valeur: Valeur): true | string {
-	if (vide(valeur)) return true
-	return valeur.length <= LONGUEUR_MAX_TELEPHONE ? true : MESSAGES_DES_COORDONNEES.telephoneTropLong
+export function validatePhone(valeur: Value): true | string {
+	if (empty(valeur)) return true
+	return valeur.length <= PHONE_MAX_LENGTH ? true : CONTACT_DETAILS_MESSAGES.telephoneTropLong
 }
 
 const EMAIL = z.email()
 
 /** The email of contact, not the one of the account: a well-formed address of 200 characters at most. */
-export function validerEmailDeContact(valeur: Valeur): true | string {
-	if (vide(valeur)) return true
-	if (!EMAIL.safeParse(valeur).success) return MESSAGES_DES_COORDONNEES.emailInvalide
-	return valeur.length <= LONGUEUR_MAX_EMAIL ? true : MESSAGES_DES_COORDONNEES.emailTropLong
+export function validateContactEmail(valeur: Value): true | string {
+	if (empty(valeur)) return true
+	if (!EMAIL.safeParse(valeur).success) return CONTACT_DETAILS_MESSAGES.emailInvalide
+	return valeur.length <= EMAIL_MAX_LENGTH ? true : CONTACT_DETAILS_MESSAGES.emailTropLong
 }
 
 /**
@@ -74,19 +74,19 @@ export function validerEmailDeContact(valeur: Valeur): true | string {
  * on her behalf, or the import, for a profile that showed its contact details on the old site
  * (plan 01 §6.2, « Coordonnées »).
  */
-export const SOURCES_DU_CONSENTEMENT = ['artist', 'admin', 'import'] as const
-export type SourceDuConsentement = (typeof SOURCES_DU_CONSENTEMENT)[number]
+export const CONSENT_SOURCES = ['artist', 'admin', 'import'] as const
+export type ConsentSource = (typeof CONSENT_SOURCES)[number]
 
-export const LIBELLES_DES_SOURCES: Record<SourceDuConsentement, string> = {
+export const SOURCE_LABELS: Record<ConsentSource, string> = {
 	artist: 'La maquilleuse',
 	admin: 'Un admin, à sa demande',
 	import: 'L’import : coordonnées affichées sur l’ancien site',
 }
 
 /** The trace of the consent: when, and who gave it. Both empty while the contact details are closed. */
-export interface Consentement {
+export interface Consent {
 	consentedAt: string | null
-	consentSource: SourceDuConsentement | null
+	consentSource: ConsentSource | null
 }
 
 /**
@@ -102,7 +102,7 @@ export interface Consentement {
  * `donnees` is what the save would store: an account never writes the trace itself (its fields
  * are closed to every API), so its values there are the stored ones.
  */
-export function consentementApres({
+export function consentAfter({
 	avant,
 	donnees,
 	compte,
@@ -110,11 +110,11 @@ export function consentementApres({
 }: {
 	/** `publicContact` as stored before the save; `undefined` for a creation. */
 	avant: boolean | null | undefined
-	donnees: { publicContact?: boolean | null } & Partial<Consentement>
+	donnees: { publicContact?: boolean | null } & Partial<Consent>
 	/** The collection of the account behind the request, if any. */
 	compte: 'admins' | 'pros' | undefined
 	maintenant: Date
-}): Consentement {
+}): Consent {
 	if (donnees.publicContact !== true) return { consentedAt: null, consentSource: null }
 	if (avant === true) return { consentedAt: donnees.consentedAt ?? null, consentSource: donnees.consentSource ?? null }
 	if (compte !== undefined)
@@ -134,6 +134,6 @@ export function consentementApres({
  * the group hook turns it into this before. Anything else is returned as it came, for the checks
  * of the fields to read. The signature of the body of a Payload `beforeValidate` of a group.
  */
-export function groupeVideSiNul(valeur: unknown, champs: readonly string[]): unknown {
+export function emptyGroupIfNull(valeur: unknown, champs: readonly string[]): unknown {
 	return valeur === null ? Object.fromEntries(champs.map(champ => [champ, null])) : valeur
 }

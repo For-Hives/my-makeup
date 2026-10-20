@@ -20,7 +20,7 @@
  */
 
 import { z } from 'zod'
-import { departementDuCodeInsee } from '../../../src/lib/profile/zone'
+import { departmentOfInseeCode } from '../../../src/lib/profile/zone'
 import { ImportRefuse } from './cible'
 
 /** The public address of the referential. */
@@ -71,7 +71,7 @@ function communeDeLApi(commune: z.infer<typeof COMMUNE_DE_L_API>): CommuneDuRefe
 	return {
 		nom: commune.nom,
 		code: commune.code,
-		departement: commune.codeDepartement ?? departementDuCodeInsee(commune.code),
+		departement: commune.codeDepartement ?? departmentOfInseeCode(commune.code),
 		codesPostaux: [...(commune.codesPostaux ?? [])].sort(),
 		latitude,
 		longitude,

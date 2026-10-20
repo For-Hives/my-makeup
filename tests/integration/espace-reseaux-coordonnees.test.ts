@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { VueDuProfil } from '@/components/profile/ProfileView'
+import { ProfileView } from '@/components/profile/ProfileView'
 import { artistProfile, type DashboardUser } from '@/lib/dashboard/my-profile'
 import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
 import { saveContactDetails } from '@/lib/dashboard/save-contact-details'
 import { saveNetworks } from '@/lib/dashboard/save-networks'
-import { lireLeProfilPublic, listerLesProfils } from '@/services/public/profiles'
+import { readPublicProfile, listProfiles } from '@/services/public/profiles'
 import { ANNECY } from '../outils/cas-completude'
 import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
@@ -244,10 +244,10 @@ describe('126 : la maquilleuse choisit d’afficher son téléphone et son email
 		expect(stocke).toMatchObject({ publicContact: true, consentSource: 'artist' })
 		expect(stocke.consentedAt).toBe(resultat.valeurs.consentiLe ?? '')
 
-		const profil = await lireLeProfilPublic(payload, slug)
+		const profil = await readPublicProfile(payload, slug)
 		expect(profil?.coordonnees).toEqual({ telephone: TELEPHONE, email: EMAIL })
 		if (!profil) throw new Error('pas de page')
-		const html = renderToStaticMarkup(VueDuProfil({ profil }))
+		const html = renderToStaticMarkup(ProfileView({ profil }))
 		expect(html).toContain(`mailto:${EMAIL}`)
 		expect(html).toContain('tel:0639981234')
 	})
@@ -299,12 +299,12 @@ describe('126 : la maquilleuse choisit d’afficher son téléphone et son email
 		// She keeps what she typed: it is hers, and hidden.
 		expect((await profilStocke(payload, compte)).contactDetails).toMatchObject({ phone: TELEPHONE, email: EMAIL })
 
-		const profil = await lireLeProfilPublic(payload, slug)
+		const profil = await readPublicProfile(payload, slug)
 		if (!profil) throw new Error('pas de page')
 		expect(profil.coordonnees).toBeNull()
 		expect(JSON.stringify(profil)).not.toContain(EMAIL)
 		expect(JSON.stringify(profil)).not.toContain('39 98')
-		const html = renderToStaticMarkup(VueDuProfil({ profil }))
+		const html = renderToStaticMarkup(ProfileView({ profil }))
 		expect(html).not.toContain(EMAIL)
 		expect(html).not.toContain('39 98')
 		expect(html).not.toContain('tel:')
@@ -318,7 +318,7 @@ describe('126 : la maquilleuse choisit d’afficher son téléphone et son email
 		const { payload, utilisateur } = await maquilleuse()
 		await saveContactDetails(payload, utilisateur, { telephone: TELEPHONE, email: EMAIL, contactPublic: true })
 
-		const liste = await listerLesProfils(payload)
+		const liste = await listProfiles(payload)
 
 		expect(liste.totalDocs).toBe(1)
 		const texte = JSON.stringify(liste)

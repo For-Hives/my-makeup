@@ -15,8 +15,8 @@
  */
 
 import { formatMontant, formatPrix, parsePrice } from '../prix'
-import { LONGUEUR_DESCRIPTION, LONGUEUR_NOM, messageDeTexte } from '../profile/lists'
-import { texte } from '../profile/display-name'
+import { DESCRIPTION_MAX_LENGTH, NAME_MAX_LENGTH, textMessage } from '../profile/lists'
+import { text } from '../profile/display-name'
 import type { ListDefinition, RowErrors, RowValues } from './list'
 
 /** The price as typed (« ; » between several), as the one text that is stored (one per line). */
@@ -39,11 +39,11 @@ export const SERVICE_OFFERS_MESSAGES = {
 
 function bounds(valeurs: RowValues): RowErrors {
 	const errors: Record<string, string> = {}
-	const name = messageDeTexte(valeurs.name, LONGUEUR_NOM)
+	const name = textMessage(valeurs.name, NAME_MAX_LENGTH)
 	if (name !== null) errors.name = name
-	const description = messageDeTexte(valeurs.description, LONGUEUR_DESCRIPTION)
+	const description = textMessage(valeurs.description, DESCRIPTION_MAX_LENGTH)
 	if (description !== null) errors.description = description
-	const price = messageDeTexte(inputPrice(valeurs.price ?? ''), LONGUEUR_NOM)
+	const price = textMessage(inputPrice(valeurs.price ?? ''), NAME_MAX_LENGTH)
 	if (price !== null) errors.price = price
 	return errors
 }
@@ -66,14 +66,14 @@ const SHARED = {
 	],
 	bornes: bounds,
 	resume: (valeurs: RowValues) =>
-		[valeurs.name, formatPrix(storedPrice(valeurs.price)).replace(/\n/g, ', ')].map(texte).filter(Boolean).join(' - '),
-	nom: (valeurs: RowValues) => texte(valeurs.name),
+		[valeurs.name, formatPrix(storedPrice(valeurs.price)).replace(/\n/g, ', ')].map(text).filter(Boolean).join(' - '),
+	nom: (valeurs: RowValues) => text(valeurs.name),
 	depuisLeStockage: (stockee: Readonly<Record<string, unknown>>) => ({
-		name: texte(stockee.name),
+		name: text(stockee.name),
 		description: typeof stockee.description === 'string' ? stockee.description.trim() : '',
 		price: priceFromInput(
 			// An amount stored without its text (an imported offer) is typed back as the amount.
-			texte(stockee.priceText) !== ''
+			text(stockee.priceText) !== ''
 				? stockee.priceText
 				: typeof stockee.priceFrom === 'number'
 					? String(stockee.priceFrom)

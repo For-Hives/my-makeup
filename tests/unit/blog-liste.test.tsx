@@ -3,16 +3,16 @@ import type { Payload } from 'payload'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { dateDeLArticle, ListeDesArticles } from '../../src/components/blog/ListeDesArticles'
 import {
-	type ArticleDeLaListe,
-	CHAMPS_DE_LA_LISTE,
-	LIMITE_DES_ARTICLES,
-	listerLesArticles,
-	parRecence,
+	type ListedArticle,
+	LIST_FIELDS,
+	ARTICLES_LIMIT,
+	listArticles,
+	byRecency,
 } from '../../src/services/public/article-list'
 
 /** The list of the blog (ticket 107), without a database. The run on the bench: tests/integration/blog-liste.test.ts. */
 
-const article = (slug: string, publieLe: string | null, extra: Partial<ArticleDeLaListe> = {}): ArticleDeLaListe => ({
+const article = (slug: string, publieLe: string | null, extra: Partial<ListedArticle> = {}): ListedArticle => ({
 	slug,
 	titre: `Titre ${slug}`,
 	extrait: `Extrait ${slug}`,
@@ -29,7 +29,7 @@ describe('Ordre de la liste', () => {
 			article('recent', '2026-09-01T00:00:00.000Z'),
 			article('illisible', 'pas une date'),
 		]
-		expect([...liste].sort(parRecence).map(({ slug }) => slug)).toEqual(['recent', 'a', 'b', 'illisible', 'sans-date'])
+		expect([...liste].sort(byRecency).map(({ slug }) => slug)).toEqual(['recent', 'a', 'b', 'illisible', 'sans-date'])
 	})
 })
 
@@ -51,13 +51,13 @@ describe('Lecture', () => {
 			},
 		} as unknown as Payload
 
-		const liste = await listerLesArticles(payload)
+		const liste = await listArticles(payload)
 
 		expect(lectures).toHaveLength(1)
 		expect(lectures[0]).toMatchObject({
 			collection: 'articles',
-			select: CHAMPS_DE_LA_LISTE,
-			limit: LIMITE_DES_ARTICLES,
+			select: LIST_FIELDS,
+			limit: ARTICLES_LIMIT,
 			overrideAccess: false,
 			depth: 0,
 		})

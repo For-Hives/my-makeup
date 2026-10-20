@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { type CandidatDeLAdresse, cibleDeLAdresse, SEGMENT_MAX, valeursARechercher } from '@/lib/profile/url'
+import { type UrlCandidate, urlTarget, SEGMENT_MAX, valuesToSearch } from '@/lib/profile/url'
 import { slugifier } from '@/lib/slug'
 
 /**
@@ -8,7 +8,7 @@ import { slugifier } from '@/lib/slug'
  * and an unknown address lead nowhere. The runs against the bench: tests/e2e/profil-public.spec.ts.
  */
 
-const profil = (id: number, slug: string, reste: Partial<CandidatDeLAdresse> = {}): CandidatDeLAdresse => ({
+const profil = (id: number, slug: string, reste: Partial<UrlCandidate> = {}): UrlCandidate => ({
 	id,
 	slug,
 	status: 'published',
@@ -17,7 +17,7 @@ const profil = (id: number, slug: string, reste: Partial<CandidatDeLAdresse> = {
 })
 
 /** The candidates a read gives for a segment: the profiles whose slug or old username it names. */
-const candidatsPour = (segment: string, profils: readonly CandidatDeLAdresse[]): CandidatDeLAdresse[] =>
+const candidatsPour = (segment: string, profils: readonly UrlCandidate[]): UrlCandidate[] =>
 	profils.filter(
 		({ slug, legacyUsername }) => slug === segment || slug === slugifier(segment) || legacyUsername === segment
 	)
@@ -29,7 +29,7 @@ const jeu = [
 	profil(4, 'camille', { status: 'draft', publishable: false }),
 ]
 
-const cible = (segment: string, profils = jeu) => cibleDeLAdresse(segment, candidatsPour(segment, profils))
+const cible = (segment: string, profils = jeu) => urlTarget(segment, candidatsPour(segment, profils))
 
 describe('U13, U61 : l’adresse d’un profil', () => {
 	test('le slug donne le profil, publié ou en brouillon', () => {
@@ -68,12 +68,12 @@ describe('U13, U61 : l’adresse d’un profil', () => {
 
 	test('une adresse inconnue, vide, trop longue ou à caractère de contrôle ne mène nulle part', () => {
 		expect(cible('audit-inexistant-zz9')).toEqual({ type: 'inconnue' })
-		expect(cibleDeLAdresse('', jeu)).toEqual({ type: 'inconnue' })
-		expect(cibleDeLAdresse('🙂', jeu)).toEqual({ type: 'inconnue' })
-		expect(cibleDeLAdresse('a\u0000b', jeu)).toEqual({ type: 'inconnue' })
-		expect(cibleDeLAdresse('a'.repeat(SEGMENT_MAX + 1), jeu)).toEqual({ type: 'inconnue' })
-		expect(cibleDeLAdresse(undefined, jeu)).toEqual({ type: 'inconnue' })
-		expect(valeursARechercher('Zoé Lefèvre')).toEqual({ segment: 'Zoé Lefèvre', slugifie: 'zoe-lefevre' })
-		expect(valeursARechercher('a\u0000b')).toBeNull()
+		expect(urlTarget('', jeu)).toEqual({ type: 'inconnue' })
+		expect(urlTarget('🙂', jeu)).toEqual({ type: 'inconnue' })
+		expect(urlTarget('a\u0000b', jeu)).toEqual({ type: 'inconnue' })
+		expect(urlTarget('a'.repeat(SEGMENT_MAX + 1), jeu)).toEqual({ type: 'inconnue' })
+		expect(urlTarget(undefined, jeu)).toEqual({ type: 'inconnue' })
+		expect(valuesToSearch('Zoé Lefèvre')).toEqual({ segment: 'Zoé Lefèvre', slugifie: 'zoe-lefevre' })
+		expect(valuesToSearch('a\u0000b')).toBeNull()
 	})
 })

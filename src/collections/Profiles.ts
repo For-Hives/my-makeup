@@ -23,23 +23,23 @@ import {
 } from '../lib/acces'
 import { GALERIE_MAX } from '../lib/medias'
 import {
-	consentementApres,
-	groupeVideSiNul,
-	LIBELLES_DES_SOURCES,
-	SOURCES_DU_CONSENTEMENT,
-	validerEmailDeContact,
-	validerLienDeReseau,
-	validerTelephone,
+	consentAfter,
+	emptyGroupIfNull,
+	SOURCE_LABELS,
+	CONSENT_SOURCES,
+	validateContactEmail,
+	validateNetworkLink,
+	validatePhone,
 } from '../lib/profile/contact-details'
-import { photosDeLaProprietaire, validerGalerie, validerPhotoPrincipale } from '../lib/profile/photos'
-import { validerSiret } from '../lib/profile/siret'
+import { ownerPhotos, validateGallery, validateMainPhoto } from '../lib/profile/photos'
+import { validateSiret } from '../lib/profile/siret'
 import {
-	CHOIX_DU_STATUT,
-	CHOIX_INITIAL,
-	LIBELLES_DES_CHOIX,
-	LIBELLES_DES_STATUTS,
-	STATUT_INITIAL,
-	STATUTS_DU_PROFIL,
+	STATUS_CHOICES,
+	INITIAL_CHOICE,
+	CHOICE_LABELS,
+	STATUS_LABELS,
+	INITIAL_STATUS,
+	PROFILE_STATUSES,
 } from '../lib/profile/status'
 import { premierSlugLibre, slugDeRepli, slugifier } from '../lib/slug'
 import { CHAMPS_LISTES, identitesDesLignesAvantEcriture } from './profile-lists'
@@ -134,13 +134,13 @@ export const slugDeRepliApresCreation: CollectionAfterChangeHook = async ({ doc,
 /**
  * The trace of the consent to show the contact details (ticket 042): when `publicContact` is
  * switched on, the server writes the date and the source itself; switched off, both are emptied.
- * The rule is `consentementApres` (src/lib/profil/coordonnees.ts).
+ * The rule is `consentAfter` (src/lib/profile/contact-details.ts).
  */
 export const consentementTrace: CollectionBeforeChangeHook = ({ data, originalDoc, req }) => {
 	const compte = req.user?.collection === 'pros' || req.user?.collection === 'admins' ? req.user.collection : undefined
 	return {
 		...data,
-		...consentementApres({ avant: originalDoc?.publicContact, donnees: data, compte, maintenant: new Date() }),
+		...consentAfter({ avant: originalDoc?.publicContact, donnees: data, compte, maintenant: new Date() }),
 	}
 }
 
@@ -169,14 +169,14 @@ export const profilALaCreationDuCompte: CollectionAfterChangeHook = async ({ con
 const MESSAGE_DU_CHOIX = 'Ce statut n’existe pas : choisis automatique, brouillon, publié ou masqué.'
 
 const estUnChoixDuStatut = (value: unknown): boolean =>
-	value === undefined || value === null || (CHOIX_DU_STATUT as readonly unknown[]).includes(value)
+	value === undefined || value === null || (STATUS_CHOICES as readonly unknown[]).includes(value)
 
 const validerLeChoixDuStatut: Validate = value => (estUnChoixDuStatut(value) ? true : MESSAGE_DU_CHOIX)
 
 /** The statuses a filter may name: the column is an enumeration of the database, which fails with a 500 on any other. */
 const VALEURS_PAR_CHAMP: Record<string, readonly string[]> = {
-	status: STATUTS_DU_PROFIL,
-	chosenStatus: CHOIX_DU_STATUT,
+	status: PROFILE_STATUSES,
+	chosenStatus: STATUS_CHOICES,
 }
 const OPERATEURS_DE_VALEUR = ['equals', 'not_equals', 'in', 'not_in', 'like', 'contains'] as const
 
@@ -341,8 +341,8 @@ export const Profiles: CollectionConfig<'profiles'> = {
 			label: 'Photo principale',
 			type: 'upload',
 			relationTo: 'media',
-			filterOptions: photosDeLaProprietaire,
-			validate: validerPhotoPrincipale,
+			filterOptions: ownerPhotos,
+			validate: validateMainPhoto,
 		},
 		{
 			name: 'gallery',
@@ -351,8 +351,8 @@ export const Profiles: CollectionConfig<'profiles'> = {
 			relationTo: 'media',
 			hasMany: true,
 			maxRows: GALERIE_MAX,
-			filterOptions: photosDeLaProprietaire,
-			validate: validerGalerie,
+			filterOptions: ownerPhotos,
+			validate: validateGallery,
 			admin: { description: 'Dans l’ordre d’affichage, 10 photos au plus.' },
 		},
 		// The networks are public; the contact details are not (ticket 042).
@@ -364,13 +364,13 @@ export const Profiles: CollectionConfig<'profiles'> = {
 			hooks: {
 				beforeValidate: [
 					({ value }) =>
-						groupeVideSiNul(
+						emptyGroupIfNull(
 							value,
 							RESEAUX.map(([name]) => name)
 						),
 				],
 			},
-			fields: RESEAUX.map(([name, label]) => ({ name, label, type: 'text' as const, validate: validerLienDeReseau })),
+			fields: RESEAUX.map(([name, label]) => ({ name, label, type: 'text' as const, validate: validateNetworkLink })),
 		},
 		{
 			// Never read by the public through the API, whatever `publicContact` says: a public page
@@ -379,13 +379,13 @@ export const Profiles: CollectionConfig<'profiles'> = {
 			label: 'Coordonnées',
 			type: 'group',
 			access: { read: champDuProfilAdminOuProprietaire },
-			hooks: { beforeValidate: [({ value }) => groupeVideSiNul(value, ['phone', 'email'])] },
+			hooks: { beforeValidate: [({ value }) => emptyGroupIfNull(value, ['phone', 'email'])] },
 			admin: {
 				description: 'Fermées au public. La page du profil ne les montre que si « Coordonnées publiques » est cochée.',
 			},
 			fields: [
-				{ name: 'phone', label: 'Téléphone', type: 'text', validate: validerTelephone },
-				{ name: 'email', label: 'Email de contact', type: 'email', validate: validerEmailDeContact },
+				{ name: 'phone', label: 'Téléphone', type: 'text', validate: validatePhone },
+				{ name: 'email', label: 'Email de contact', type: 'email', validate: validateContactEmail },
 			],
 		},
 		{
@@ -411,7 +411,7 @@ export const Profiles: CollectionConfig<'profiles'> = {
 			name: 'consentSource',
 			label: 'Source du consentement',
 			type: 'select',
-			options: SOURCES_DU_CONSENTEMENT.map(source => ({ label: LIBELLES_DES_SOURCES[source], value: source })),
+			options: CONSENT_SOURCES.map(source => ({ label: SOURCE_LABELS[source], value: source })),
 			access: { read: champDuProfilAdminOuProprietaire, create: jamais, update: jamais },
 			admin: { readOnly: true, description: 'Posée par le serveur, avec la date.' },
 		},
@@ -439,11 +439,11 @@ export const Profiles: CollectionConfig<'profiles'> = {
 			type: 'select',
 			// Not `required`, so that a creation needs no status in its data: it gets the default, which
 			// the server replaces. An empty status is not `publie`.
-			defaultValue: STATUT_INITIAL,
+			defaultValue: INITIAL_STATUS,
 			// Every public read filters on it.
 			index: true,
-			options: STATUTS_DU_PROFIL.map(statut => ({ label: LIBELLES_DES_STATUTS[statut], value: statut })),
-			// No API writes it: what a request sends, an admin's included, is ignored (src/lib/profil/etat.ts).
+			options: PROFILE_STATUSES.map(statut => ({ label: STATUS_LABELS[statut], value: statut })),
+			// No API writes it: what a request sends, an admin's included, is ignored (src/lib/profile/state.ts).
 			access: { read: champDuProfilAdminOuProprietaire, create: jamais, update: jamais },
 			admin: {
 				readOnly: true,
@@ -457,8 +457,8 @@ export const Profiles: CollectionConfig<'profiles'> = {
 			name: 'chosenStatus',
 			label: 'Statut choisi par l’admin',
 			type: 'select',
-			defaultValue: CHOIX_INITIAL,
-			options: CHOIX_DU_STATUT.map(choix => ({ label: LIBELLES_DES_CHOIX[choix], value: choix })),
+			defaultValue: INITIAL_CHOICE,
+			options: STATUS_CHOICES.map(choix => ({ label: CHOICE_LABELS[choix], value: choix })),
 			// A value that is no choice is refused with a sentence, never ignored (ticket 165).
 			validate: validerLeChoixDuStatut,
 			access: RESERVE_LU_PAR_LA_PROPRIETAIRE,
@@ -494,7 +494,7 @@ export const Profiles: CollectionConfig<'profiles'> = {
 			name: 'siret',
 			label: 'SIRET',
 			type: 'text',
-			validate: validerSiret,
+			validate: validateSiret,
 			access: RESERVE_LU_PAR_LA_PROPRIETAIRE,
 			admin: { position: 'sidebar', description: '14 chiffres, sans espace.' },
 		},

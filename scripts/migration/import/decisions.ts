@@ -23,7 +23,7 @@
  */
 
 import { z } from 'zod'
-import { departementDuCodeInsee } from '../../../src/lib/profile/zone'
+import { departmentOfInseeCode } from '../../../src/lib/profile/zone'
 import { ImportRefuse } from './cible'
 
 const identifiant = z.number().int().positive()
@@ -54,7 +54,7 @@ const SCHEMA_DES_DECISIONS = z
 						profil: identifiant,
 						codeInsee: z
 							.string()
-							.refine(code => departementDuCodeInsee(code) !== null, { message: 'code INSEE mal formé' })
+							.refine(code => departmentOfInseeCode(code) !== null, { message: 'code INSEE mal formé' })
 							.nullable(),
 					})
 					.strict()

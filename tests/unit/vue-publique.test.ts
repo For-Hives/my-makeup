@@ -1,15 +1,15 @@
 import { describe, expect, test } from 'bun:test'
 import {
-	altRealisation,
+	altWork,
 	contacts,
 	experiences,
-	formations,
-	lignes,
-	moisAnnee,
-	noms,
-	periode,
-	prestations,
-	urlReseau,
+	courses,
+	rows,
+	monthYear,
+	names,
+	period,
+	serviceOffers,
+	networkUrl,
 } from '@/lib/profile/public-view'
 
 /**
@@ -22,36 +22,36 @@ const INTERDIT = /\b(?:undefined|null|NaN|Invalid Date)\b/
 
 describe('lignes', () => {
 	test('une ligne par ligne saisie, sans ligne vide ni « null »', () => {
-		expect(lignes('  a \n\n b\nnull\nundefined\n   ')).toEqual(['a', 'b'])
-		expect(lignes(null)).toEqual([])
-		expect(lignes(42)).toEqual([])
+		expect(rows('  a \n\n b\nnull\nundefined\n   ')).toEqual(['a', 'b'])
+		expect(rows(null)).toEqual([])
+		expect(rows(42)).toEqual([])
 	})
 })
 
 describe('dates', () => {
 	test('un mois et une année en français, lus en UTC', () => {
-		expect(moisAnnee('2020-01-15T12:00:00.000Z')).toBe('janvier 2020')
-		expect(moisAnnee('2016-06-30')).toBe('juin 2016')
-		for (const rien of ['', '  ', 'pas une date', null, undefined, 42]) expect(moisAnnee(rien)).toBe('')
+		expect(monthYear('2020-01-15T12:00:00.000Z')).toBe('janvier 2020')
+		expect(monthYear('2016-06-30')).toBe('juin 2016')
+		for (const rien of ['', '  ', 'pas une date', null, undefined, 42]) expect(monthYear(rien)).toBe('')
 	})
 
 	test('une période : la fin absente veut dire aujourd’hui, un début absent ne dit rien', () => {
-		expect(periode({ startDate: '2020-01-15', endDate: '2022-03-02' })).toBe('janvier 2020 - mars 2022')
-		expect(periode({ startDate: '2020-01-15', endDate: null })).toBe('janvier 2020 - aujourd’hui')
-		expect(periode({ startDate: null, endDate: '2022-03-02' })).toBe('')
-		expect(periode(undefined)).toBe('')
-		expect(periode({ startDate: 'n’importe quoi', endDate: 'x' })).toBe('')
+		expect(period({ startDate: '2020-01-15', endDate: '2022-03-02' })).toBe('janvier 2020 - mars 2022')
+		expect(period({ startDate: '2020-01-15', endDate: null })).toBe('janvier 2020 - aujourd’hui')
+		expect(period({ startDate: null, endDate: '2022-03-02' })).toBe('')
+		expect(period(undefined)).toBe('')
+		expect(period({ startDate: 'n’importe quoi', endDate: 'x' })).toBe('')
 	})
 })
 
 describe('urlReseau', () => {
 	test('une adresse web telle quelle, un pseudo sur son réseau, un domaine en https', () => {
-		expect(urlReseau('instagram', 'https://www.instagram.com/studio')).toBe('https://www.instagram.com/studio')
-		expect(urlReseau('instagram', '@studio.fictif')).toBe('https://www.instagram.com/studio.fictif')
-		expect(urlReseau('instagram', 'studio.fictif')).toBe('https://www.instagram.com/studio.fictif')
-		expect(urlReseau('youtube', '@chaine')).toBe('https://www.youtube.com/@chaine')
-		expect(urlReseau('website', 'studio.example.test/portfolio')).toBe('https://studio.example.test/portfolio')
-		expect(urlReseau('instagram', 'instagram.com/studio')).toBe('https://instagram.com/studio')
+		expect(networkUrl('instagram', 'https://www.instagram.com/studio')).toBe('https://www.instagram.com/studio')
+		expect(networkUrl('instagram', '@studio.fictif')).toBe('https://www.instagram.com/studio.fictif')
+		expect(networkUrl('instagram', 'studio.fictif')).toBe('https://www.instagram.com/studio.fictif')
+		expect(networkUrl('youtube', '@chaine')).toBe('https://www.youtube.com/@chaine')
+		expect(networkUrl('website', 'studio.example.test/portfolio')).toBe('https://studio.example.test/portfolio')
+		expect(networkUrl('instagram', 'instagram.com/studio')).toBe('https://instagram.com/studio')
 	})
 
 	test('jamais un schéma dangereux ni un lien relatif', () => {
@@ -64,10 +64,10 @@ describe('urlReseau', () => {
 			'',
 			'null',
 		])
-			expect(urlReseau('website', valeur), valeur).toBeNull()
+			expect(networkUrl('website', valeur), valeur).toBeNull()
 		// A bare word is no website, but it is a pseudo on a network.
-		expect(urlReseau('website', 'studio')).toBeNull()
-		expect(urlReseau('facebook', 'studio')).toBe('https://www.facebook.com/studio')
+		expect(networkUrl('website', 'studio')).toBeNull()
+		expect(networkUrl('facebook', 'studio')).toBe('https://www.facebook.com/studio')
 	})
 })
 
@@ -105,7 +105,7 @@ describe('contacts', () => {
 
 describe('les listes', () => {
 	test('les prestations sans nom disparaissent, les options sans nom aussi, l’ordre est gardé', () => {
-		const lues = prestations([
+		const lues = serviceOffers([
 			{
 				name: 'B',
 				priceFrom: 50,
@@ -127,16 +127,16 @@ describe('les listes', () => {
 	})
 
 	test('compétences et langues : les noms qui disent quelque chose', () => {
-		expect(noms([{ name: 'Teint' }, { name: '' }, { name: 'undefined' }, null, { name: ' Yeux ' }])).toEqual([
+		expect(names([{ name: 'Teint' }, { name: '' }, { name: 'undefined' }, null, { name: ' Yeux ' }])).toEqual([
 			'Teint',
 			'Yeux',
 		])
-		expect(noms(undefined)).toEqual([])
+		expect(names(undefined)).toEqual([])
 	})
 
 	test('formations et expériences : une ligne avec un diplôme, une école, une entreprise ou un poste', () => {
 		expect(
-			formations([
+			courses([
 				{ diploma: '', school: '', graduatedAt: '2020-01-01' },
 				{ diploma: 'CAP', graduatedAt: '2014-06-30' },
 			])
@@ -154,6 +154,6 @@ describe('les listes', () => {
 
 describe('altRealisation', () => {
 	test('« Réalisation de <nom> (n/N) »', () => {
-		expect(altRealisation('Inès Morel', 2, 6)).toBe('Réalisation de Inès Morel (2/6)')
+		expect(altWork('Inès Morel', 2, 6)).toBe('Réalisation de Inès Morel (2/6)')
 	})
 })

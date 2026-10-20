@@ -166,7 +166,7 @@ Les nombres de la vraie base viennent de l'instantané du 13/10/2026 ([`SCHEMA.m
 | Articles et talents | Talents | 14 | 3 |
 | Articles et talents | Talents publiés | 14 | 3 |
 
-Un profil se lit avec les règles de la v3 : le slug par `src/lib/slug.ts`, le prix par `src/lib/prix.ts`, la ville et la complétude par `src/lib/profil/`. Un email en double se compte sans casse ni espaces de bord, comme l'import le normalisera.
+Un profil se lit avec les règles de la v3 : le slug par `src/lib/slug.ts`, le prix par `src/lib/prix.ts`, la ville et la complétude par `src/lib/profile/`. Un email en double se compte sans casse ni espaces de bord, comme l'import le normalisera.
 
 ## Où trouver chaque cas
 

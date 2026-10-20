@@ -9,7 +9,7 @@ import { cheminPropre } from './url'
  * - The fixed pages come from one explicit table (`PAGES_FIXES`), which the plan of the site reads too.
  *   A test fails when a page of the application is in neither this table nor the exclusions.
  * - A profile is there when it is publishable, a talent or an article when it is published: the reading
- *   that gives them is src/services/public/pages-indexables.ts.
+ *   that gives them is src/services/public/indexable-pages.ts.
  * - No `changefreq`, no `priority`. `lastmod` is the real date of the last change of the document, and is
  *   left out when it is not known (a fixed page).
  * - Every address is built from `SITE_ORIGIN`, the constant apex, so none has a double or a final slash.

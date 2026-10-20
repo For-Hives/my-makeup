@@ -12,25 +12,25 @@
 
 import { DEPARTEMENTS, departementDuCodePostal, normaliserLieu } from '../departements'
 
-const NOMS_DE_DEPARTEMENT = new Map<string, string[]>([
+const DEPARTMENT_NAMES = new Map<string, string[]>([
 	...Object.entries(DEPARTEMENTS).map(([code, nom]): [string, string[]] => [normaliserLieu(nom), [code]]),
 	['corse', ['2A', '2B']],
 	['reunion', ['974']],
 ])
 
-const commencePar = (texte: string, mots: string): boolean => `${texte} `.startsWith(`${mots} `)
-const contient = (texte: string, mots: string): boolean => ` ${texte} `.includes(` ${mots} `)
+const startsWith = (texte: string, mots: string): boolean => `${texte} `.startsWith(`${mots} `)
+const contains = (texte: string, mots: string): boolean => ` ${texte} `.includes(` ${mots} `)
 
 /** A name of département → the longer names that begin with it: « loire » → « loire atlantique ». */
-const NOMS_PLUS_LONGS = new Map(
-	[...NOMS_DE_DEPARTEMENT.keys()].map(nom => [
+const LONGEST_NAMES = new Map(
+	[...DEPARTMENT_NAMES.keys()].map(nom => [
 		nom,
-		[...NOMS_DE_DEPARTEMENT.keys()].filter(autre => autre !== nom && commencePar(autre, nom)),
+		[...DEPARTMENT_NAMES.keys()].filter(autre => autre !== nom && startsWith(autre, nom)),
 	])
 )
 
 /** The whole country: not a place to rank by. */
-const PARTOUT = new Set(['france', 'toute la france', 'france entiere', 'partout en france', 'france metropolitaine'])
+const EVERYWHERE = new Set(['france', 'toute la france', 'france entiere', 'partout en france', 'france metropolitaine'])
 
 /** Countries and regions (those of 2016, the former ones still written): wider than a city or a département. */
 const LARGES = new Set([
@@ -79,12 +79,12 @@ const LARGES = new Set([
 ])
 
 /** Numbers in a place (postal code, arrondissement) are not part of its name: « Paris 15e » is in Paris. */
-const NUMERO = /^\d+(e|er|eme|ieme|re)?$/
+const NUMBER = /^\d+(e|er|eme|ieme|re)?$/
 /** Places in one field: « Annecy / Genève », « Annecy (74) », « Lyon - Rhône ». */
-const SEPARATEURS = /[,;/|+()[\]]|\s[-–—]\s/
-const CODE_DE_DEPARTEMENT = /^(\d{2}|2A|2B|97\d)$/
+const SEPARATORS = /[,;/|+()[\]]|\s[-–—]\s/
+const DEPARTMENT_CODE = /^(\d{2}|2A|2B|97\d)$/
 
-export interface SegmentDeLieu {
+export interface PlaceSegment {
 	/** The place written, normalised, without its numbers. */
 	mots: string
 	/** True when the place is the name of a département. */
@@ -93,54 +93,54 @@ export interface SegmentDeLieu {
 	large: boolean
 }
 
-export interface Lieu {
-	segments: SegmentDeLieu[]
+export interface Place {
+	segments: PlaceSegment[]
 	/** Codes of département found in the text. */
 	departements: string[]
 }
 
 /** A segment that is a code of département: « 74 », « 2a », « 974 », « 20 ». */
-function codesDuSegment(segment: string): string[] {
+function segmentCodes(segment: string): string[] {
 	if (segment === '20') return ['2A', '2B']
 	const code = segment.toUpperCase()
-	return CODE_DE_DEPARTEMENT.test(code) && DEPARTEMENTS[code] ? [code] : []
+	return DEPARTMENT_CODE.test(code) && DEPARTEMENTS[code] ? [code] : []
 }
 
 /** What a city field says of where: the places written and the départements named. */
-export function lireLieu(valeur: unknown): Lieu {
-	const brut = typeof valeur === 'string' ? valeur : ''
-	const departements = new Set<string>()
-	for (const [code] of brut.matchAll(/(?<!\d)\d{5}(?!\d)/g)) {
-		const departement = departementDuCodePostal(code)
-		if (departement) departements.add(departement)
+export function readPlace(valeur: unknown): Place {
+	const raw = typeof valeur === 'string' ? valeur : ''
+	const departments = new Set<string>()
+	for (const [code] of raw.matchAll(/(?<!\d)\d{5}(?!\d)/g)) {
+		const department = departementDuCodePostal(code)
+		if (department) departments.add(department)
 	}
-	const segments: SegmentDeLieu[] = []
-	for (const morceau of brut.split(SEPARATEURS)) {
-		const segment = normaliserLieu(morceau)
-		const codes = codesDuSegment(segment)
-		for (const code of codes) departements.add(code)
-		const mots = codes.length
+	const segments: PlaceSegment[] = []
+	for (const chunk of raw.split(SEPARATORS)) {
+		const segment = normaliserLieu(chunk)
+		const codes = segmentCodes(segment)
+		for (const code of codes) departments.add(code)
+		const words = codes.length
 			? ''
 			: segment
 					.split(' ')
-					.filter(mot => mot && !NUMERO.test(mot))
+					.filter(mot => mot && !NUMBER.test(mot))
 					.join(' ')
-		if (!mots || PARTOUT.has(mots)) continue
-		const parNom = NOMS_DE_DEPARTEMENT.get(mots)
-		for (const code of parNom ?? []) departements.add(code)
-		segments.push({ mots, departement: parNom !== undefined, large: LARGES.has(mots) })
+		if (!words || EVERYWHERE.has(words)) continue
+		const byName = DEPARTMENT_NAMES.get(words)
+		for (const code of byName ?? []) departments.add(code)
+		segments.push({ mots: words, departement: byName !== undefined, large: LARGES.has(words) })
 	}
-	return { segments, departements: [...departements] }
+	return { segments, departements: [...departments] }
 }
 
-const lieuVide = (lieu: Lieu): boolean => lieu.segments.length === 0 && lieu.departements.length === 0
+const emptyPlace = (lieu: Place): boolean => lieu.segments.length === 0 && lieu.departements.length === 0
 
 /** A place that starts with this name of département, and not with a longer one that begins the same. */
-const commenceParDepartement = (texte: string, nom: string): boolean =>
-	commencePar(texte, nom) && !(NOMS_PLUS_LONGS.get(nom) ?? []).some(long => commencePar(texte, long))
+const startsWithDepartment = (texte: string, nom: string): boolean =>
+	startsWith(texte, nom) && !(LONGEST_NAMES.get(nom) ?? []).some(long => startsWith(texte, long))
 
 /** Where a profile works, as the search reads it: its commune, and the département of its INSEE code. */
-export interface PlaceDuProfil {
+export interface ProfilePlace {
 	ville: string | null
 	departement: string | null
 	/** True when she gives a city and a radius: she travels. */
@@ -148,9 +148,9 @@ export interface PlaceDuProfil {
 }
 
 /** The place of a profile, in the shape of what was typed. */
-export function lieuDuProfil({ ville, departement }: Pick<PlaceDuProfil, 'ville' | 'departement'>): Lieu {
-	const lu = lireLieu(ville)
-	return { segments: lu.segments, departements: departement ? [departement] : [] }
+export function profilePlace({ ville: city, departement: department }: Pick<ProfilePlace, 'ville' | 'departement'>): Place {
+	const read = readPlace(city)
+	return { segments: read.segments, departements: department ? [department] : [] }
 }
 
 /**
@@ -162,11 +162,11 @@ export function lieuDuProfil({ ville, departement }: Pick<PlaceDuProfil, 'ville'
  * - 'departement': a département in common (postal code, code or name);
  * - null otherwise, and always for a profile without a commune.
  */
-export function correspondanceLieu(profil: Lieu, cherche: Lieu): 'ville' | 'departement' | null {
-	const precis = cherche.segments.filter(segment => !segment.large)
-	const segments = precis.length || cherche.departements.length ? precis : cherche.segments
-	for (const { mots, departement } of segments) {
-		if (profil.segments.some(p => (departement ? commenceParDepartement(p.mots, mots) : contient(p.mots, mots))))
+export function placeMatch(profil: Place, cherche: Place): 'ville' | 'departement' | null {
+	const precise = cherche.segments.filter(segment => !segment.large)
+	const segments = precise.length || cherche.departements.length ? precise : cherche.segments
+	for (const { mots: words, departement: department } of segments) {
+		if (profil.segments.some(p => (department ? startsWithDepartment(p.mots, words) : contains(p.mots, words))))
 			return 'ville'
 	}
 	if (cherche.departements.some(code => profil.departements.includes(code))) return 'departement'
@@ -178,35 +178,35 @@ export function correspondanceLieu(profil: Lieu, cherche: Lieu): 'ville' | 'depa
  * profiles of that city are in, the most frequent, the first in their order on a tie; none without
  * either (no geocoding: « Annecy » alone says nothing).
  */
-export function departementsDeLaRecherche(locaux: readonly PlaceDuProfil[], city: string): string[] {
-	const tapes = lireLieu(city).departements
+export function searchDepartments(locaux: readonly ProfilePlace[], city: string): string[] {
+	const tapes = readPlace(city).departements
 	if (tapes.length) return tapes
-	const compte = new Map<string, number>()
-	for (const profil of locaux)
-		if (profil.departement) compte.set(profil.departement, (compte.get(profil.departement) ?? 0) + 1)
-	let meilleur: string | null = null
-	for (const [code, n] of compte) if (meilleur === null || n > (compte.get(meilleur) ?? 0)) meilleur = code
-	return meilleur === null ? [] : [meilleur]
+	const count = new Map<string, number>()
+	for (const profile of locaux)
+		if (profile.departement) count.set(profile.departement, (count.get(profile.departement) ?? 0) + 1)
+	let best: string | null = null
+	for (const [code, n] of count) if (best === null || n > (count.get(best) ?? 0)) best = code
+	return best === null ? [] : [best]
 }
 
 /** « du 74 (Haute-Savoie) », « du 2A (Corse-du-Sud) et du 2B (Haute-Corse) ». */
-export const duDepartement = (codes: readonly string[]): string =>
+export const inDepartment = (codes: readonly string[]): string =>
 	codes.map(code => `du ${code}${DEPARTEMENTS[code] ? ` (${DEPARTEMENTS[code]})` : ''}`).join(' et ')
 
-export interface SectionAutres<T> {
+export interface OthersSection<T> {
 	cle: 'departement' | 'deplacent' | 'autres'
 	/** Its h2. */
 	titre: string
 	profils: T[]
 }
 
-export interface ProfilsParLieu<T> {
+export interface ProfilesByPlace<T> {
 	/** The profiles of the place typed: the city, then the département. The only ones the title counts. */
 	locaux: T[]
 	/** False without a usable place (no city, « France »): one list. */
 	parLieu: boolean
 	departements: string[]
-	sections: SectionAutres<T>[]
+	sections: OthersSection<T>[]
 }
 
 /**
@@ -217,40 +217,40 @@ export interface ProfilsParLieu<T> {
  * - the rest, « Zone non renseignée » included.
  * Each list keeps the order given.
  */
-export function sectionsParLieu<T extends PlaceDuProfil>(profils: readonly T[], city: string): ProfilsParLieu<T> {
-	const cherche = lireLieu(city)
-	if (lieuVide(cherche)) return { locaux: [...profils], parLieu: false, departements: [], sections: [] }
+export function sectionsByPlace<T extends ProfilePlace>(profils: readonly T[], city: string): ProfilesByPlace<T> {
+	const searched = readPlace(city)
+	if (emptyPlace(searched)) return { locaux: [...profils], parLieu: false, departements: [], sections: [] }
 
-	const ville: T[] = []
-	const departement: T[] = []
-	const autres: T[] = []
-	for (const profil of profils) {
-		const correspondance = correspondanceLieu(lieuDuProfil(profil), cherche)
-		if (correspondance === 'ville') ville.push(profil)
-		else if (correspondance === 'departement') departement.push(profil)
-		else autres.push(profil)
+	const cityProfiles: T[] = []
+	const department: T[] = []
+	const others: T[] = []
+	for (const profile of profils) {
+		const match = placeMatch(profilePlace(profile), searched)
+		if (match === 'ville') cityProfiles.push(profile)
+		else if (match === 'departement') department.push(profile)
+		else others.push(profile)
 	}
-	const locaux = [...ville, ...departement]
-	const departements = departementsDeLaRecherche(locaux, city)
-	const duDepartementCherche = autres.filter(profil => profil.departement && departements.includes(profil.departement))
-	const ailleurs = autres.filter(profil => !duDepartementCherche.includes(profil))
-	const section = (cle: SectionAutres<T>['cle'], titre: string, liste: T[]): SectionAutres<T>[] =>
+	const localProfiles = [...cityProfiles, ...department]
+	const departments = searchDepartments(localProfiles, city)
+	const inSearchedDepartment = others.filter(profil => profil.departement && departments.includes(profil.departement))
+	const elsewhere = others.filter(profil => !inSearchedDepartment.includes(profil))
+	const section = (cle: OthersSection<T>['cle'], titre: string, liste: T[]): OthersSection<T>[] =>
 		liste.length ? [{ cle, titre, profils: liste }] : []
 	return {
-		locaux,
+		locaux: localProfiles,
 		parLieu: true,
-		departements,
+		departements: departments,
 		sections: [
-			...section('departement', `Autres maquilleuses ${duDepartement(departements)}`, duDepartementCherche),
+			...section('departement', `Autres maquilleuses ${inDepartment(departments)}`, inSearchedDepartment),
 			...section(
 				'deplacent',
 				'Autres maquilleuses qui se déplacent',
-				ailleurs.filter(profil => profil.seDeplace)
+				elsewhere.filter(profil => profil.seDeplace)
 			),
 			...section(
 				'autres',
 				'Autres maquilleuses',
-				ailleurs.filter(profil => !profil.seDeplace)
+				elsewhere.filter(profil => !profil.seDeplace)
 			),
 		],
 	}

@@ -12,7 +12,7 @@
  */
 
 import { z } from 'zod'
-import { LONGUEUR_MAX_EMAIL, LONGUEUR_MAX_TELEPHONE } from '../profile/contact-details'
+import { EMAIL_MAX_LENGTH, PHONE_MAX_LENGTH } from '../profile/contact-details'
 
 export const CONTACT_DETAILS_FIELDS = ['telephone', 'email', 'contactPublic'] as const
 export type ContactDetailsField = (typeof CONTACT_DETAILS_FIELDS)[number]
@@ -31,9 +31,9 @@ export type SavedContactDetails = ContactDetailsValues & {
 
 export const DASHBOARD_CONTACT_DETAILS_MESSAGES = {
 	pasUnTexte: 'Ce champ doit être un texte.',
-	telephoneTropLong: `Ton numéro ne doit pas dépasser ${LONGUEUR_MAX_TELEPHONE} caractères.`,
+	telephoneTropLong: `Ton numéro ne doit pas dépasser ${PHONE_MAX_LENGTH} caractères.`,
 	telephoneInvalide: 'Ce numéro n’est pas valide : écris-le avec des chiffres, par exemple 06 12 34 56 78.',
-	emailTropLong: `Ton email ne doit pas dépasser ${LONGUEUR_MAX_EMAIL} caractères.`,
+	emailTropLong: `Ton email ne doit pas dépasser ${EMAIL_MAX_LENGTH} caractères.`,
 	emailInvalide: 'Cet email n’est pas valide : écris-le comme prenom@exemple.fr.',
 } as const
 
@@ -46,7 +46,7 @@ const phone = z
 	.trim()
 	.superRefine((valeur, contexte) => {
 		if (valeur === '') return
-		if (valeur.length > LONGUEUR_MAX_TELEPHONE) {
+		if (valeur.length > PHONE_MAX_LENGTH) {
 			contexte.addIssue({ code: 'custom', message: DASHBOARD_CONTACT_DETAILS_MESSAGES.telephoneTropLong })
 			return
 		}
@@ -64,7 +64,7 @@ const email = z
 		if (valeur === '') return
 		if (!EMAIL.safeParse(valeur).success)
 			contexte.addIssue({ code: 'custom', message: DASHBOARD_CONTACT_DETAILS_MESSAGES.emailInvalide })
-		else if (valeur.length > LONGUEUR_MAX_EMAIL)
+		else if (valeur.length > EMAIL_MAX_LENGTH)
 			contexte.addIssue({ code: 'custom', message: DASHBOARD_CONTACT_DETAILS_MESSAGES.emailTropLong })
 	})
 

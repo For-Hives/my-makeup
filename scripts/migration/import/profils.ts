@@ -43,11 +43,11 @@
  */
 
 import { estMontantDePrix, parsePrice, prixMinimal } from '../../../src/lib/prix'
-import { type ChampsDuProfil, estEntierementVide, type ReseauxDuProfil } from '../../../src/lib/profile/completeness'
-import { validerEmailDeContact, validerTelephone } from '../../../src/lib/profile/contact-details'
-import { type DocumentDuProfil, etatDuProfil, statutApres } from '../../../src/lib/profile/state'
-import { CHOIX_INITIAL, type StatutDuProfil } from '../../../src/lib/profile/status'
-import { BORNES_DU_RAYON_KM } from '../../../src/lib/profile/zone'
+import { type ProfileFields, isFullyEmpty, type ProfileNetworks } from '../../../src/lib/profile/completeness'
+import { validateContactEmail, validatePhone } from '../../../src/lib/profile/contact-details'
+import { type ProfileDocument, profileState, statusAfter } from '../../../src/lib/profile/state'
+import { INITIAL_CHOICE, type ProfileStatus } from '../../../src/lib/profile/status'
+import { RADIUS_BOUNDS_KM } from '../../../src/lib/profile/zone'
 import { attribuerSlugs } from '../../../src/lib/slug'
 import type { CommuneAttendue } from './communes'
 import { REFERENCES } from './ecarts'
@@ -97,7 +97,7 @@ export interface ProfilLu extends LigneProfil {
 	compte: number | null
 	aPhotoPrincipale: boolean
 	prix: (string | null)[]
-	reseaux: ReseauxDuProfil | null
+	reseaux: ProfileNetworks | null
 	/** Its lists, its networks and its photos, in their order (./sections.ts). */
 	sections: SectionsLues
 }
@@ -135,7 +135,7 @@ export async function lireLesProfils(requete: Requete): Promise<ProfilLu[]> {
  * What the single rule of completeness reads of a profile of the source, under the names of the
  * old site, as the old site reads it: main picture, city, speciality, offers, description, networks.
  */
-export const champsDeLaSource = (profil: ProfilLu): ChampsDuProfil => ({
+export const champsDeLaSource = (profil: ProfilLu): ProfileFields => ({
 	first_name: profil.first_name,
 	last_name: profil.last_name,
 	company_artist_name: profil.company_artist_name,
@@ -148,16 +148,16 @@ export const champsDeLaSource = (profil: ProfilLu): ChampsDuProfil => ({
 })
 
 /** Whether the source itself says a profile is entirely empty: none of the six conditions. */
-export const videALaSource = (profil: ProfilLu): boolean => estEntierementVide(champsDeLaSource(profil))
+export const videALaSource = (profil: ProfilLu): boolean => isFullyEmpty(champsDeLaSource(profil))
 
 /**
  * The status the server computes for a profile from what the import writes, by its own rule
- * (src/lib/profil/etat.ts), the choice of the status left to the rule: a draft when entirely empty,
+ * (src/lib/profile/state.ts), the choice of the status left to the rule: a draft when entirely empty,
  * published otherwise.
  */
-export function statutCalcule(valeurs: Readonly<Record<string, unknown>>): StatutDuProfil {
-	const { fullyEmpty } = etatDuProfil(valeurs as DocumentDuProfil)
-	return statutApres({ apres: { chosenStatus: CHOIX_INITIAL }, fullyEmpty }).status
+export function statutCalcule(valeurs: Readonly<Record<string, unknown>>): ProfileStatus {
+	const { fullyEmpty } = profileState(valeurs as ProfileDocument)
+	return statusAfter({ apres: { chosenStatus: INITIAL_CHOICE }, fullyEmpty }).status
 }
 
 /** A `decimal` of Strapi as a number, or `null`. */
@@ -176,7 +176,7 @@ export type RayonARevoir = { profil: number; rayonKm: number }
 export function rayonDeLaSource(profil: Pick<LigneProfil, 'action_radius'>): number | null {
 	const rayon = nombre(profil.action_radius)
 	if (rayon === null) return null
-	return Number.isInteger(rayon) && rayon >= BORNES_DU_RAYON_KM.min && rayon <= BORNES_DU_RAYON_KM.max ? rayon : null
+	return Number.isInteger(rayon) && rayon >= RADIUS_BOUNDS_KM.min && rayon <= RADIUS_BOUNDS_KM.max ? rayon : null
 }
 
 /** The radius of the source that `rayonDeLaSource` leaves out, for the report. */
@@ -210,8 +210,8 @@ export function coordonneesDeLaSource(profil: ProfilLu): { telephone: string | n
 	const telephone = coordonnee(profil.reseaux?.phone)
 	const email = coordonnee(profil.reseaux?.email)
 	return {
-		telephone: validerTelephone(telephone) === true ? telephone : null,
-		email: validerEmailDeContact(email) === true ? email : null,
+		telephone: validatePhone(telephone) === true ? telephone : null,
+		email: validateContactEmail(email) === true ? email : null,
 	}
 }
 
@@ -287,7 +287,7 @@ export const ADAPTATEUR_PROFILS: Adaptateur = {
 	calcules: ['status'],
 	// The date of the consent is the one of the first run that gave it: a later run with another date of
 	// the switch keeps it (ticket 227). The server dates it again when the contact details are closed
-	// then opened (src/lib/profil/coordonnees.ts), and the field is empty then, so the run fills it in.
+	// then opened (src/lib/profile/contact-details.ts), and the field is empty then, so the run fills it in.
 	amorces: ['consentedAt'],
 }
 
@@ -530,7 +530,7 @@ export function profilsAttendus(
 			publicContact: affiche,
 			consentedAt: affiche ? consentiLe : null,
 			consentSource: affiche ? 'import' : null,
-			chosenStatus: CHOIX_INITIAL,
+			chosenStatus: INITIAL_CHOICE,
 			createdAt: profil.created_at,
 			updatedAt: profil.updated_at,
 		}

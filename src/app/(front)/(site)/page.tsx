@@ -8,7 +8,7 @@ import { Hero } from '@/components/blocs/Hero'
 import { RESEAUX } from '@/components/gabarit/liens'
 import { donneesStructureesDeLAccueil, serializeJsonLd } from '@/lib/seo/json-ld'
 import { metadonnees } from '@/lib/seo/metadonnees'
-import { lesTalentsEnCache } from '@/services/public/cached'
+import { cachedTalents } from '@/services/public/cached'
 import type { TalentPublic } from '@/services/public/talents'
 
 // Rendered at each request: the build runs without a database. The talents are read through the cache of
@@ -34,7 +34,7 @@ const RESEAUX_PUBLICS = RESEAUX.filter(({ href }) => href.startsWith('https://')
 /** The talents, or none when the database does not answer: the home page stays a page, never a 500. */
 async function lireLesTalents(): Promise<readonly TalentPublic[]> {
 	try {
-		return await lesTalentsEnCache()
+		return await cachedTalents()
 	} catch (erreur) {
 		console.error('[accueil] les talents ne se lisent pas :', erreur instanceof Error ? erreur.message : erreur)
 		return []

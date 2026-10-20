@@ -2,15 +2,15 @@ import type { CollectionBeforeChangeHook, DateField, Field, NumberField, Textare
 import { PRIX_MAX, PRIX_MIN } from '../lib/prix'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import {
-	dateDuJour,
-	identitesDesLignes,
-	LONGUEUR_DESCRIPTION,
-	LONGUEUR_NOM,
-	messageDeDate,
-	messageDeFin,
-	messageDePrix,
-	messageDeTexte,
-	messageDObtention,
+	dayDate,
+	rowIdentities,
+	DESCRIPTION_MAX_LENGTH,
+	NAME_MAX_LENGTH,
+	dateMessage,
+	endMessage,
+	priceMessage,
+	textMessage,
+	obtainMessage,
 } from '../lib/profile/lists'
 
 /**
@@ -18,8 +18,8 @@ import {
  * with their options, skills, languages, courses and experiences, in the order the artist gave.
  *
  * Each row has the identifier Payload gives it, kept from one save to the next
- * (`identitesDesLignes`); the order is the order of the rows sent. Each value is checked by the
- * server against its bound, with a refusal in French (src/lib/profil/listes.ts). No sub-field is
+ * (`rowIdentities`); the order is the order of the rows sent. Each value is checked by the
+ * server against its bound, with a refusal in French (src/lib/profile/lists.ts). No sub-field is
  * required: a row of the old site keeps its empty values (SCHEMA.md §2, rule 2); the forms of the
  * artist's space say what they require.
  *
@@ -27,12 +27,12 @@ import {
  */
 
 /** A text of a row, refused in French beyond `maximum` characters. */
-const texte = (name: string, label: string, maximum = LONGUEUR_NOM): TextField => ({
+const texte = (name: string, label: string, maximum = NAME_MAX_LENGTH): TextField => ({
 	name,
 	label,
 	type: 'text',
 	maxLength: maximum,
-	validate: valeur => messageDeTexte(valeur, maximum) ?? true,
+	validate: valeur => textMessage(valeur, maximum) ?? true,
 })
 
 /** A long text of a row, refused in French beyond 2 000 characters. */
@@ -40,17 +40,17 @@ const description = (): TextareaField => ({
 	name: 'description',
 	label: 'Description',
 	type: 'textarea',
-	maxLength: LONGUEUR_DESCRIPTION,
-	validate: valeur => messageDeTexte(valeur, LONGUEUR_DESCRIPTION) ?? true,
+	maxLength: DESCRIPTION_MAX_LENGTH,
+	validate: valeur => textMessage(valeur, DESCRIPTION_MAX_LENGTH) ?? true,
 })
 
-/** A day without an hour, stored at 12:00 UTC (`dateDuJour`). */
+/** A day without an hour, stored at 12:00 UTC (`dayDate`). */
 const jour = (name: string, label: string, validate: DateField['validate']): DateField => ({
 	name,
 	label,
 	type: 'date',
 	admin: { date: { pickerAppearance: 'dayOnly', displayFormat: 'dd/MM/yyyy' } },
-	hooks: { beforeValidate: [({ value }) => dateDuJour(value)] },
+	hooks: { beforeValidate: [({ value }) => dayDate(value)] },
 	validate,
 })
 
@@ -64,7 +64,7 @@ const prix = (): Field[] => [
 		min: PRIX_MIN,
 		max: PRIX_MAX,
 		admin: { description: 'De 5 à 10 000 €. Vide quand le prix saisi n’a pas de montant (« Sur devis »).' },
-		validate: valeur => messageDePrix(valeur) ?? true,
+		validate: valeur => priceMessage(valeur) ?? true,
 	} satisfies NumberField,
 ]
 
@@ -109,7 +109,7 @@ export const CHAMPS_LISTES: Field[] = [
 		fields: [
 			texte('diploma', 'Diplôme'),
 			texte('school', 'École'),
-			jour('graduatedAt', 'Obtenu le', valeur => messageDObtention(valeur, new Date()) ?? true),
+			jour('graduatedAt', 'Obtenu le', valeur => obtainMessage(valeur, new Date()) ?? true),
 			description(),
 		],
 	},
@@ -122,11 +122,11 @@ export const CHAMPS_LISTES: Field[] = [
 			texte('company', 'Entreprise'),
 			texte('jobTitle', 'Poste'),
 			texte('city', 'Ville'),
-			jour('startDate', 'Début', valeur => messageDeDate(valeur) ?? true),
+			jour('startDate', 'Début', valeur => dateMessage(valeur) ?? true),
 			jour(
 				'endDate',
 				'Fin',
-				(valeur, { siblingData }) => messageDeFin(valeur, (siblingData as { startDate?: unknown }).startDate) ?? true
+				(valeur, { siblingData }) => endMessage(valeur, (siblingData as { startDate?: unknown }).startDate) ?? true
 			),
 			description(),
 		],
@@ -138,4 +138,4 @@ export const CHAMPS_LISTES: Field[] = [
  * identifier the server gave it keeps it; any other row is new and gets one from Payload.
  */
 export const identitesDesLignesAvantEcriture: CollectionBeforeChangeHook = ({ data, originalDoc }) =>
-	identitesDesLignes(data, originalDoc)
+	rowIdentities(data, originalDoc)

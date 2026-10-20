@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { NETWORKS_FIELDS, normalizeNetwork, readNetworks, strictNetworksSchema } from '@/lib/dashboard/networks'
-import { urlReseau } from '@/lib/profile/public-view'
+import { networkUrl } from '@/lib/profile/public-view'
 
 /** The networks she edits in her space (ticket 125; plan 02 U28, E30): one stored address per network. */
 
@@ -43,7 +43,7 @@ describe('U28 : « @pseudo » et l’adresse complète donnent la même valeur',
 	test('la valeur rangée mène là où la page publique mène pour la saisie d’origine', () => {
 		for (const canal of ['instagram', 'facebook', 'youtube'] as const) {
 			const stockee = valeur(canal, '@studio.fictif')
-			expect(urlReseau(canal, stockee)).toBe(urlReseau(canal, '@studio.fictif') as string)
+			expect(networkUrl(canal, stockee)).toBe(networkUrl(canal, '@studio.fictif') as string)
 		}
 	})
 

@@ -4,21 +4,21 @@
  * each point linked to the card of its section.
  *
  * Nothing is computed here: the score, the flags and the conditions come from the single definition
- * of a profile (src/lib/profil/completude.ts), read through the same mapping the server uses at
- * every save (`champsDuProfil`, src/lib/profil/etat.ts). This file only words them. Pure functions,
+ * of a profile (src/lib/profile/completeness.ts), read through the same mapping the server uses at
+ * every save (`profileFields`, src/lib/profile/state.ts). This file only words them. Pure functions,
  * no server code: the page and the tests call them.
  */
 
 import { PRIX_MAX, PRIX_MIN } from '../prix'
 import {
-	type Completude,
-	CRITERES,
-	type Critere,
-	completude,
+	type Completeness,
+	CRITERIA,
+	type Criterion,
+	completeness,
 	DESCRIPTION_MIN,
-	longueurDescription,
+	descriptionLength,
 } from '../profile/completeness'
-import { champsDuProfil } from '../profile/state'
+import { profileFields } from '../profile/state'
 import { isAvailable } from './availability'
 import type { DashboardProfile, Section } from './cards'
 
@@ -27,7 +27,7 @@ export type DisplayedState = 'vide' | 'incomplet' | 'publiable' | 'interne'
 
 /** One point she lacks. */
 export interface Missing {
-	readonly critere: Critere
+	readonly critere: Criterion
 	/** What to do, in French. */
 	readonly texte: string
 	/** The card to go to: the link is `#carte-<section>`. */
@@ -50,7 +50,7 @@ export interface Progress {
 }
 
 /** The card where each criterion of the progress bar is edited. */
-export const CRITERION_SECTION: Record<Critere, Section> = {
+export const CRITERION_SECTION: Record<Criterion, Section> = {
 	nom: 'identite',
 	specialite: 'identite',
 	nom_artiste: 'identite',
@@ -66,7 +66,7 @@ export const CRITERION_SECTION: Record<Critere, Section> = {
 	galerie: 'portfolio',
 }
 
-const MISSING_TEXT: Record<Critere, string> = {
+const MISSING_TEXT: Record<Criterion, string> = {
 	nom: 'Ajoute ton prénom et ton nom.',
 	specialite: 'Indique ta spécialité.',
 	nom_artiste: 'Ajoute ton nom d’artiste.',
@@ -91,12 +91,12 @@ const CRITERION_CONDITION = {
 	offres: 'offreChiffree',
 	description: 'descriptionLongue',
 	reseaux: 'canalDeContact',
-} as const satisfies Partial<Record<Critere, keyof Completude['conditions']>>
+} as const satisfies Partial<Record<Criterion, keyof Completeness['conditions']>>
 
-function missingText(critere: Critere, absent: boolean, profil: DashboardProfile): string {
+function missingText(critere: Criterion, absent: boolean, profil: DashboardProfile): string {
 	if (absent) return MISSING_TEXT[critere]
 	if (critere === 'description') {
-		return `Allonge ta description : ${DESCRIPTION_MIN} caractères au moins pour être publiable (${longueurDescription(profil.description)} aujourd’hui).`
+		return `Allonge ta description : ${DESCRIPTION_MIN} caractères au moins pour être publiable (${descriptionLength(profil.description)} aujourd’hui).`
 	}
 	if (critere === 'offres') {
 		return `Donne un prix en chiffres, entre ${PRIX_MIN} et ${PRIX_MAX.toLocaleString('fr-FR')} €, à l’une de tes prestations.`
@@ -104,7 +104,7 @@ function missingText(critere: Critere, absent: boolean, profil: DashboardProfile
 	return MISSING_TEXT[critere]
 }
 
-function stateOf(lecture: Completude): DisplayedState {
+function stateOf(lecture: Completeness): DisplayedState {
 	if (lecture.interne) return 'interne'
 	if (lecture.publiable) return 'publiable'
 	return lecture.entierementVide ? 'vide' : 'incomplet'
@@ -133,9 +133,9 @@ const OUT_OF_SEARCH =
  * computed by the same function from the same fields (plan 02 I20).
  */
 export function profileProgress(profil: DashboardProfile): Progress {
-	const reading = completude(champsDuProfil(profil))
-	const absents = new Set<Critere>(reading.manquants)
-	const missing = CRITERES.flatMap((critere): Missing[] => {
+	const reading = completeness(profileFields(profil))
+	const absents = new Set<Criterion>(reading.manquants)
+	const missing = CRITERIA.flatMap((critere): Missing[] => {
 		const absent = absents.has(critere)
 		const condition =
 			critere in CRITERION_CONDITION ? CRITERION_CONDITION[critere as keyof typeof CRITERION_CONDITION] : null

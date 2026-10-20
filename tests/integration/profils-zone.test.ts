@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import { ValidationError } from 'payload'
 import { CONTEXTE_SANS_PROFIL } from '@/collections/Profiles'
-import { MESSAGES_DE_LA_ZONE } from '@/lib/profile/zone'
+import { ZONE_MESSAGES } from '@/lib/profile/zone'
 import { type CompteDeTest, creerCompte, motDePasseAleatoire } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 import { appelerRest } from '../outils/rest'
@@ -133,7 +133,7 @@ describe('Une zone mal formée est refusée en français, et rien ne change', ()
 			const refus = await modifier(compte, profil, { radiusKm })
 			expect(refus.statut, String(radiusKm)).toBe(400)
 			expect(champsRefuses(refus.corps), String(radiusKm)).toEqual([
-				{ path: 'radiusKm', message: MESSAGES_DE_LA_ZONE.rayon },
+				{ path: 'radiusKm', message: ZONE_MESSAGES.rayon },
 			])
 		}
 		expect(await zoneStockee(profil)).toEqual(avant)
@@ -153,7 +153,7 @@ describe('Une zone mal formée est refusée en français, et rien ne change', ()
 			const refus = await modifier(compte, profil, { city: { ...ANNECY, inseeCode: codeInsee } })
 			expect(refus.statut, codeInsee).toBe(400)
 			expect(champsRefuses(refus.corps), codeInsee).toEqual([
-				{ path: 'city.inseeCode', message: MESSAGES_DE_LA_ZONE.codeInseeMalForme },
+				{ path: 'city.inseeCode', message: ZONE_MESSAGES.codeInseeMalForme },
 			])
 		}
 		expect(await zoneStockee(profil)).toEqual(avant)
@@ -165,7 +165,7 @@ describe('Une zone mal formée est refusée en français, et rien ne change', ()
 		const nouvelle = await modifier(compte, profil, { city: { name: 'Annecy' } })
 		expect(nouvelle.statut).toBe(400)
 		expect(champsRefuses(nouvelle.corps)).toEqual([
-			{ path: 'city.inseeCode', message: MESSAGES_DE_LA_ZONE.communeSansCodeInsee },
+			{ path: 'city.inseeCode', message: ZONE_MESSAGES.communeSansCodeInsee },
 		])
 		expect((await zoneStockee(profil)).city).toEqual(COMMUNE_VIDE)
 
@@ -173,7 +173,7 @@ describe('Une zone mal formée est refusée en français, et rien ne change', ()
 		const sansCode = await modifier(compte, profil, { city: { ...ANNECY, inseeCode: '' } })
 		expect(sansCode.statut).toBe(400)
 		expect(champsRefuses(sansCode.corps)).toEqual([
-			{ path: 'city.inseeCode', message: MESSAGES_DE_LA_ZONE.communeSansCodeInsee },
+			{ path: 'city.inseeCode', message: ZONE_MESSAGES.communeSansCodeInsee },
 		])
 		expect((await zoneStockee(profil)).city).toEqual(ANNECY_STOCKEE)
 	})
@@ -184,14 +184,14 @@ describe('Une zone mal formée est refusée en français, et rien ne change', ()
 		const ville = await modifier(compte, profil, { city: 'Annecy' })
 		expect(ville.statut).toBe(400)
 		expect(champsRefuses(ville.corps)).toEqual([
-			{ path: 'city.inseeCode', message: MESSAGES_DE_LA_ZONE.communeSansCodeInsee },
+			{ path: 'city.inseeCode', message: ZONE_MESSAGES.communeSansCodeInsee },
 		])
 
 		const adresse = await modifier(compte, profil, { city: '12 rue des Lilas, 74000 Annecy' })
 		expect(adresse.statut).toBe(400)
 		expect(champsRefuses(adresse.corps)).toEqual([
-			{ path: 'city.name', message: MESSAGES_DE_LA_ZONE.nomAdresse },
-			{ path: 'city.inseeCode', message: MESSAGES_DE_LA_ZONE.communeSansCodeInsee },
+			{ path: 'city.name', message: ZONE_MESSAGES.nomAdresse },
+			{ path: 'city.inseeCode', message: ZONE_MESSAGES.communeSansCodeInsee },
 		])
 		expect((await zoneStockee(profil)).city).toEqual(COMMUNE_VIDE)
 	})
@@ -204,7 +204,7 @@ describe('Une zone mal formée est refusée en français, et rien ne change', ()
 			const refus = await modifier(compte, profil, { city: commune })
 			expect(refus.statut, JSON.stringify(commune)).toBe(400)
 			expect(champsRefuses(refus.corps), JSON.stringify(commune)).toEqual([
-				{ path: 'city', message: MESSAGES_DE_LA_ZONE.communeSansCodeInsee },
+				{ path: 'city', message: ZONE_MESSAGES.communeSansCodeInsee },
 			])
 			expect((await zoneStockee(profil)).city, JSON.stringify(commune)).toEqual(ANNECY_STOCKEE)
 		}
@@ -225,12 +225,12 @@ describe('Une zone mal formée est refusée en français, et rien ne change', ()
 		const nomSeul = await modifier(compte, profil, { city: { name: 'Lyon' } })
 		expect(nomSeul.statut).toBe(400)
 		expect(champsRefuses(nomSeul.corps)).toEqual([
-			{ path: 'city.inseeCode', message: MESSAGES_DE_LA_ZONE.communeSansCodeInsee },
+			{ path: 'city.inseeCode', message: ZONE_MESSAGES.communeSansCodeInsee },
 		])
 		const codeSeul = await modifier(compte, profil, { city: { inseeCode: '69123' } })
 		expect(codeSeul.statut).toBe(400)
 		expect(champsRefuses(codeSeul.corps)).toEqual([
-			{ path: 'city.name', message: MESSAGES_DE_LA_ZONE.codeInseeSansNom },
+			{ path: 'city.name', message: ZONE_MESSAGES.codeInseeSansNom },
 		])
 		expect((await zoneStockee(profil)).city).toEqual(ANNECY_STOCKEE)
 
@@ -252,7 +252,7 @@ describe('Une zone mal formée est refusée en français, et rien ne change', ()
 		for (const nom of ['12 rue des Lilas, 74000 Annecy', 'rue des Lilas', 'Annecy 74000']) {
 			const refus = await modifier(compte, profil, { city: { ...ANNECY, name: nom } })
 			expect(refus.statut, nom).toBe(400)
-			expect(champsRefuses(refus.corps), nom).toEqual([{ path: 'city.name', message: MESSAGES_DE_LA_ZONE.nomAdresse }])
+			expect(champsRefuses(refus.corps), nom).toEqual([{ path: 'city.name', message: ZONE_MESSAGES.nomAdresse }])
 		}
 		expect((await zoneStockee(profil)).city).toEqual(ANNECY_STOCKEE)
 	})
@@ -265,7 +265,7 @@ describe('Une zone mal formée est refusée en français, et rien ne change', ()
 			const refus = await modifier(compte, profil, { city: { ...ANNECY, name: nom } })
 			expect(refus.statut, nom).toBe(400)
 			expect(champsRefuses(refus.corps), nom).toEqual([
-				{ path: 'city.name', message: MESSAGES_DE_LA_ZONE.nomCaracteres },
+				{ path: 'city.name', message: ZONE_MESSAGES.nomCaracteres },
 			])
 		}
 		expect((await zoneStockee(profil)).city).toEqual(ANNECY_STOCKEE)
@@ -287,7 +287,7 @@ describe('Une zone mal formée est refusée en français, et rien ne change', ()
 			.catch((erreur: unknown) => erreur)
 		expect(refus).toBeInstanceOf(ValidationError)
 		expect((refus as ValidationError).data.errors).toEqual([
-			expect.objectContaining({ path: 'radiusKm', message: MESSAGES_DE_LA_ZONE.rayon }),
+			expect.objectContaining({ path: 'radiusKm', message: ZONE_MESSAGES.rayon }),
 		])
 		expect((await payload.count({ collection: 'profiles' })).totalDocs).toBe(0)
 

@@ -16,10 +16,10 @@
  */
 
 import { z } from 'zod'
-import { LONGUEUR_NOM } from '../profile/lists'
-import { texte } from '../profile/display-name'
+import { NAME_MAX_LENGTH } from '../profile/lists'
+import { text } from '../profile/display-name'
 
-export const BULLET_LENGTH = LONGUEUR_NOM
+export const BULLET_LENGTH = NAME_MAX_LENGTH
 /** More chips than any makeup artist lists: a request beyond it is not a list she edited. */
 export const BULLETS_COUNT_MAX = 100
 
@@ -182,7 +182,7 @@ export function readBullets(sorte: BulletsKind, saisie: unknown): BulletsReading
 /** The chips of a stored list: a row without a name says nothing and is left out. */
 export function listBullets(lignes: readonly { name?: unknown; id?: unknown }[] | null | undefined): Bullet[] {
 	return (lignes ?? []).flatMap(({ id, name }) => {
-		const clean = texte(name).trim()
+		const clean = text(name).trim()
 		return clean === '' || typeof id !== 'string' || id === '' ? [] : [{ id, nom: clean }]
 	})
 }

@@ -6,20 +6,20 @@
  * - Required, for the row she adds or edits: the company, the job and the start day. The city, the
  *   end day and the description may stay empty (an experience still going on has no end).
  * - An end before the start is refused under the end field (U30), by the rule of the collection
- *   (`messageDeFin`, src/lib/profil/listes.ts): the form and the server cannot disagree.
+ *   (`endMessage`, src/lib/profile/lists.ts): the form and the server cannot disagree.
  * - Texts: 70 characters at most, 2 000 for the description; dates are days (« YYYY-MM-DD »).
  */
 
-import { LONGUEUR_DESCRIPTION, LONGUEUR_NOM, messageDeDate, messageDeFin, messageDeTexte } from '../profile/lists'
-import { texte } from '../profile/display-name'
-import { periode } from '../profile/public-view'
+import { DESCRIPTION_MAX_LENGTH, NAME_MAX_LENGTH, dateMessage, endMessage, textMessage } from '../profile/lists'
+import { text } from '../profile/display-name'
+import { period } from '../profile/public-view'
 import { formDay, type ListDefinition, type RowErrors, type RowValues } from './list'
 
 const TEXTS: readonly [string, number][] = [
-	['company', LONGUEUR_NOM],
-	['jobTitle', LONGUEUR_NOM],
-	['city', LONGUEUR_NOM],
-	['description', LONGUEUR_DESCRIPTION],
+	['company', NAME_MAX_LENGTH],
+	['jobTitle', NAME_MAX_LENGTH],
+	['city', NAME_MAX_LENGTH],
+	['description', DESCRIPTION_MAX_LENGTH],
 ]
 
 const afterEmpty = (valeur: string | undefined): string | null =>
@@ -28,15 +28,15 @@ const afterEmpty = (valeur: string | undefined): string | null =>
 function bounds(valeurs: RowValues): RowErrors {
 	const errors: Record<string, string> = {}
 	for (const [field, maximum] of TEXTS) {
-		const message = messageDeTexte(valeurs[field], maximum)
+		const message = textMessage(valeurs[field], maximum)
 		if (message !== null) errors[field] = message
 	}
 	const startDate = afterEmpty(valeurs.startDate)
 	const endDate = afterEmpty(valeurs.endDate)
-	const startMessage = messageDeDate(startDate)
+	const startMessage = dateMessage(startDate)
 	if (startMessage !== null) errors.startDate = startMessage
-	const endMessage = messageDeFin(endDate, startMessage === null ? startDate : null)
-	if (endMessage !== null) errors.endDate = endMessage
+	const endError = endMessage(endDate, startMessage === null ? startDate : null)
+	if (endError !== null) errors.endDate = endError
 	return errors
 }
 
@@ -67,17 +67,17 @@ export const EXPERIENCES: ListDefinition = {
 			valeurs.jobTitle,
 			valeurs.company,
 			valeurs.city,
-			periode({ startDate: valeurs.startDate, endDate: valeurs.endDate }),
+			period({ startDate: valeurs.startDate, endDate: valeurs.endDate }),
 		]
-			.map(texte)
+			.map(text)
 			.filter(Boolean)
 			.join(' - '),
-	nom: valeurs => texte(valeurs.company) || texte(valeurs.jobTitle),
+	nom: valeurs => text(valeurs.company) || text(valeurs.jobTitle),
 	retrait: nom => `Expérience ${nom} retirée`.replace(/\s+/g, ' '),
 	depuisLeStockage: stockee => ({
-		jobTitle: texte(stockee.jobTitle),
-		company: texte(stockee.company),
-		city: texte(stockee.city),
+		jobTitle: text(stockee.jobTitle),
+		company: text(stockee.company),
+		city: text(stockee.city),
 		startDate: formDay(stockee.startDate),
 		endDate: formDay(stockee.endDate),
 		description: typeof stockee.description === 'string' ? stockee.description.trim() : '',

@@ -6,11 +6,11 @@ import { readDashboardPhotos } from '@/lib/dashboard/photos'
 import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
 import { savePortfolio } from '@/lib/dashboard/save-portfolio'
 import { serverEnv } from '@/lib/env'
-import { MESSAGES_DES_PHOTOS, photosNommees } from '@/lib/profile/photos'
+import { PHOTO_MESSAGES, namedPhotos } from '@/lib/profile/photos'
 import { rapprocherLeStockageEtLaBase } from '@/lib/rapprochement-lecture'
 import { listerLeStockage } from '@/lib/stockage'
 import type { Media } from '@/payload-types'
-import { lireLeProfilPublic } from '@/services/public/profiles'
+import { readPublicProfile } from '@/services/public/profiles'
 import { type Espion, espionnerLeStockage, suppressionsSansCorbeille } from '../outils/espion-s3'
 import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
@@ -102,7 +102,7 @@ const envoyerTrois = async (compte: Maquilleuse): Promise<[Media, Media, Media]>
 	await envoyer(compte),
 ]
 
-const galerieDe = async (compte: Maquilleuse) => photosNommees((await profilDe(compte)).gallery)
+const galerieDe = async (compte: Maquilleuse) => namedPhotos((await profilDe(compte)).gallery)
 const nombreDeMedias = async () => (await (await payloadDeTest()).count({ collection: 'media' })).totalDocs
 
 /** The reconciliation of the storage and the database: 0 orphan, or the list of what is wrong. */
@@ -130,10 +130,10 @@ describe('E34 : trois photos ajoutées sont dans la galerie, dans l’ordre, et 
 
 		expect(resultat).toEqual({ ok: true, valeurs: { galerie: [a.id, b.id, c.id] } })
 		const profil = await profilDe(compte)
-		expect(photosNommees(profil.gallery)).toEqual([a.id, b.id, c.id])
+		expect(namedPhotos(profil.gallery)).toEqual([a.id, b.id, c.id])
 		const espace = await readDashboardPhotos(payload, profil)
 		expect(espace.galerie.map(p => p.id)).toEqual([a.id, b.id, c.id])
-		const publique = await lireLeProfilPublic(payload, profil.slug ?? '')
+		const publique = await readPublicProfile(payload, profil.slug ?? '')
 		expect(publique?.galerie.map(p => p.url)).toEqual([a.url, b.url, c.url] as string[])
 		expect(await orphelins()).toEqual(AUCUN)
 	})
@@ -166,8 +166,8 @@ describe('U80 : dix photos au plus', () => {
 
 		expect(refus).toEqual({
 			ok: false,
-			message: MESSAGES_DES_PHOTOS.galeriePleine,
-			champs: { galerie: MESSAGES_DES_PHOTOS.galeriePleine },
+			message: PHOTO_MESSAGES.galeriePleine,
+			champs: { galerie: PHOTO_MESSAGES.galeriePleine },
 		})
 		expect(await galerieDe(compte)).toEqual(dix)
 	})
@@ -205,7 +205,7 @@ describe('la requête de l’action est lue strictement', () => {
 			galerie: [mienne.id, sienne.id],
 		})
 
-		expect(resultat).toMatchObject({ ok: false, champs: { galerie: MESSAGES_DES_PHOTOS.photoRefusee } })
+		expect(resultat).toMatchObject({ ok: false, champs: { galerie: PHOTO_MESSAGES.photoRefusee } })
 		expect(await galerieDe(compte)).toEqual([])
 		expect(await galerieDe(autre)).toEqual([])
 		expect(await lireUnObjet(`media/${sienne.filename}`)).toBeDefined()
@@ -259,9 +259,9 @@ describe('E35, I25 : une photo retirée disparaît partout, son objet part à la
 
 		expect(resultat).toEqual({ ok: true, valeurs: { galerie: [a.id, c.id] } })
 		const profil = await profilDe(compte)
-		expect(photosNommees(profil.gallery)).toEqual([a.id, c.id])
+		expect(namedPhotos(profil.gallery)).toEqual([a.id, c.id])
 		expect((await readDashboardPhotos(payload, profil)).galerie.map(p => p.id)).toEqual([a.id, c.id])
-		expect((await lireLeProfilPublic(payload, profil.slug ?? ''))?.galerie.map(p => p.url)).toEqual([
+		expect((await readPublicProfile(payload, profil.slug ?? ''))?.galerie.map(p => p.url)).toEqual([
 			a.url,
 			c.url,
 		] as string[])

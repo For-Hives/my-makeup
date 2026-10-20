@@ -6,11 +6,11 @@
  * published. The pages of the talents and of the articles add their own reading in their own
  * tickets, in this folder.
  *
- * - The fields are chosen one by one (`CHAMPS_PUBLICS_DU_PROFIL`, `CHAMPS_DE_LA_CARTE`): never the
+ * - The fields are chosen one by one (`PUBLIC_PROFILE_FIELDS`, `CARD_FIELDS`): never the
  *   account, never what the import or an admin wrote.
  * - The lists keep the access rules of the collection (`overrideAccess: false`), as an anonymous
- *   visitor. The page of a profile lifts them (`lireLAdresseDeProfil`): a draft answers in noindex
- *   (ticket 104). The three rules (listed, indexable, visible) are src/lib/profil/visibilite.ts;
+ *   visitor. The page of a profile lifts them (`readProfileUrlTarget`): a draft answers in noindex
+ *   (ticket 104). The three rules (listed, indexable, visible) are src/lib/profile/visibility.ts;
  *   none is written again here.
  * - The contact details are the one thing read without the access rules, by the identifier of a
  *   profile the access rules already gave, and only when its owner published them
@@ -26,31 +26,31 @@ import type { Payload } from 'payload'
 import { type Pid, pidDuProfil } from '@/lib/analytics/pid'
 import { formatZone, rayonKm, villeAffichee } from '@/lib/format-zone'
 import { estMontantDePrix, prixMinimal } from '@/lib/prix'
-import { cibleDeLAdresse, valeursARechercher } from '@/lib/profile/url'
-import { nomAffiche, texte } from '@/lib/profile/display-name'
-import { pidDuProfil as pidDeLaPage } from '@/lib/profile/pid'
-import { STATUT_PUBLIE } from '@/lib/profile/status'
-import { estIndexable, FILTRE_LISTE } from '@/lib/profile/visibility'
+import { urlTarget, valuesToSearch } from '@/lib/profile/url'
+import { displayName, text } from '@/lib/profile/display-name'
+import { profilePid as pidDeLaPage } from '@/lib/profile/pid'
+import { PUBLISHED_STATUS } from '@/lib/profile/status'
+import { isIndexable, LISTED_FILTER } from '@/lib/profile/visibility'
 import {
 	contacts,
-	type ExperiencePublique,
+	type PublicExperience,
 	experiences,
-	type FormationPublique,
-	formations,
-	type LienDeContact,
-	lignes,
-	nomDArtisteAffiche,
-	noms,
-	type PrestationPublique,
-	prestations,
+	type PublicCourse,
+	courses,
+	type ContactLink,
+	rows,
+	displayedArtistName,
+	names,
+	type PublicServiceOffer,
+	serviceOffers,
 } from '@/lib/profile/public-view'
-import type { PlaceDuProfil } from '@/lib/search/place'
-import { normaliserLesTextes, type TextesNormalises } from '@/lib/search/relevance'
+import type { ProfilePlace } from '@/lib/search/place'
+import { normalizeTexts, type NormalizedTexts } from '@/lib/search/relevance'
 import { estUnSlug } from '@/lib/slug'
 import type { Profile } from '@/payload-types'
 
 /** The fields of a profile a public page reads, and nothing else. */
-export const CHAMPS_PUBLICS_DU_PROFIL = {
+export const PUBLIC_PROFILE_FIELDS = {
 	slug: true,
 	firstName: true,
 	lastName: true,
@@ -60,7 +60,7 @@ export const CHAMPS_PUBLICS_DU_PROFIL = {
 } as const
 
 /** What a card of a list reads: the identity, the badge, the zone and the main photo. */
-export const CHAMPS_DE_LA_CARTE = {
+export const CARD_FIELDS = {
 	slug: true,
 	firstName: true,
 	lastName: true,
@@ -77,17 +77,17 @@ export const CHAMPS_DE_LA_CARTE = {
  * and the prefix of the object (`generateFileURL`, src/payload.config.ts), so those two are read to make
  * it, and a card keeps neither.
  */
-export const CHAMPS_DE_LA_PHOTO = { url: true, width: true, height: true, filename: true, prefix: true } as const
+export const PHOTO_FIELDS = { url: true, width: true, height: true, filename: true, prefix: true } as const
 
 /**
  * What the page of a profile reads (tickets 101 to 103): the fields above, her zone, her
  * availability and her photos. The commune is chosen down to its name: its code and its centre
  * stay in the database. The contact details are not here: they are read apart, and only when she
- * published them (`lireLesCoordonneesPubliees`).
+ * published them (`readPublishedContactDetails`).
  */
-export const CHAMPS_DE_LA_PAGE_DU_PROFIL = {
-	...CHAMPS_PUBLICS_DU_PROFIL,
-	// Only to make the `pid` of the audience measure (src/lib/profil/pid.ts); the page shows none of it.
+export const PROFILE_PAGE_FIELDS = {
+	...PUBLIC_PROFILE_FIELDS,
+	// Only to make the `pid` of the audience measure (src/lib/profile/pid.ts); the page shows none of it.
 	strapiId: true,
 	city: { name: true },
 	radiusKm: true,
@@ -103,23 +103,23 @@ export const CHAMPS_DE_LA_PAGE_DU_PROFIL = {
 } as const
 
 /** The most profiles one read of a list gives, and the size of a page when none is asked. */
-export const LIMITE_MAX_DE_LA_LISTE = 100
-export const LIMITE_PAR_DEFAUT = 20
+export const LIST_MAX_LIMIT = 100
+export const DEFAULT_LIMIT = 20
 
 /** The contact details a makeup artist chose to publish. */
-export interface CoordonneesPubliques {
+export interface PublicContactDetails {
 	telephone: string | null
 	email: string | null
 }
 
 /** A profile as a public page shows it. */
-export interface ProfilPublic {
+export interface PublicProfile {
 	slug: string
-	/** The id the audience measure counts the profile under (src/lib/profil/pid.ts), or `null` when unknown. */
+	/** The id the audience measure counts the profile under (src/lib/profile/pid.ts), or `null` when unknown. */
 	pid: Pid | null
-	/** The name of the h1 (src/lib/profil/nom-affiche.ts). */
+	/** The name of the h1 (src/lib/profile/display-name.ts). */
 	nom: string
-	/** The artist name under the h1, only when it adds something to the name (`nomDArtisteAffiche`). */
+	/** The artist name under the h1, only when it adds something to the name (`displayedArtistName`). */
 	nomArtiste: string | null
 	specialite: string | null
 	/** « Annecy », « Annecy et 30 km autour », or `null` (src/lib/format-zone.ts). */
@@ -127,48 +127,48 @@ export interface ProfilPublic {
 	/** False only when she said so: an availability never set counts as available, as on the old site. */
 	disponible: boolean
 	/** Her main photo, or `null`: the page then shows the picture of the site. */
-	photo: PhotoDeCarte | null
+	photo: CardPhoto | null
 	/** The photos of her portfolio, in the order she gave, a photo that is gone left out. */
-	galerie: PhotoDeCarte[]
+	galerie: CardPhoto[]
 	/** Her commune, or `null`. */
 	lieu: string | null
 	/** True when she gave a radius around her commune. */
 	seDeplace: boolean
 	/** The sections below hold only rows that say something, in the order she gave them. */
-	prestations: PrestationPublique[]
+	prestations: PublicServiceOffer[]
 	competences: string[]
 	langues: string[]
-	formations: FormationPublique[]
-	experiences: ExperiencePublique[]
+	formations: PublicCourse[]
+	experiences: PublicExperience[]
 	/** Her networks, and her telephone and email only when she published them. */
-	liens: LienDeContact[]
+	liens: ContactLink[]
 	description: string | null
 	/** Publishable: the page may be indexed. Otherwise it is shown in noindex. */
 	indexable: boolean
 	/** Her telephone and email, only when she published them, else `null`. */
-	coordonnees: CoordonneesPubliques | null
+	coordonnees: PublicContactDetails | null
 	/** The offers with a name, with their amount in euros (what the structured data prices; no option). */
-	offres: OffreChiffree[]
+	offres: PricedOffer[]
 	/** The lowest amount of her offers (src/lib/prix.ts, `prixMinimal`, U37), or `null`. */
 	prixMinimal: number | null
 }
 
 /** An offer as the structured data says it: its name, its text, and its amount in euros when it has a usable one. */
-export interface OffreChiffree {
+export interface PricedOffer {
 	nom: string
 	description: string
 	montant: number | null
 }
 
 /** The main photo of a card: where it is and how big, never the file's owner or its other fields. */
-export interface PhotoDeCarte {
+export interface CardPhoto {
 	url: string
 	width: number | null
 	height: number | null
 }
 
 /** A card of the list: the keys are frozen by the unit test (U22), never a contact detail. */
-export interface CarteDeProfil {
+export interface ProfileCard {
 	slug: string
 	/** The id the measure counts the profile under (src/lib/analytics/pid.ts): public, no personal data. */
 	pid: Pid
@@ -177,18 +177,18 @@ export interface CarteDeProfil {
 	/** « Annecy », « Annecy et 30 km autour », or `null`. */
 	lieu: string | null
 	superMaquilleuse: boolean
-	photo: PhotoDeCarte | null
+	photo: CardPhoto | null
 }
 
 /** One page of the listed profiles. */
-export interface PageDeProfils {
-	cartes: CarteDeProfil[]
+export interface ProfileListPage {
+	cartes: ProfileCard[]
 	page: number
 	totalDocs: number
 	hasNextPage: boolean
 }
 
-type ProfilDeLaCarte = Pick<
+type CardProfile = Pick<
 	Profile,
 	| 'id'
 	| 'slug'
@@ -203,10 +203,10 @@ type ProfilDeLaCarte = Pick<
 >
 
 /** The photos of the cards, by the identifier of the media. */
-type PhotosParIdentifiant = ReadonlyMap<number | string, PhotoDeCarte>
+type PhotosById = ReadonlyMap<number | string, CardPhoto>
 
 /** The identifier a relationship to a photo holds, populated or not. */
-const identifiantDeLaPhoto = (photo: ProfilDeLaCarte['mainPicture']): number | string | undefined =>
+const photoId = (photo: CardProfile['mainPicture']): number | string | undefined =>
 	typeof photo === 'object' && photo !== null ? photo.id : (photo ?? undefined)
 
 /**
@@ -215,18 +215,18 @@ const identifiantDeLaPhoto = (photo: ProfilDeLaCarte['mainPicture']): number | s
  * photos are read here in one request, by the identifiers the public read of the profiles gave, which is
  * the same rule: a photo of a profile the public reads is public, and nothing else is read.
  */
-async function lireLesPhotos(payload: Payload, profils: readonly ProfilDeLaCarte[]): Promise<PhotosParIdentifiant> {
-	const identifiants = [...new Set(profils.map(({ mainPicture }) => identifiantDeLaPhoto(mainPicture)))].filter(
+async function readPhotos(payload: Payload, profils: readonly CardProfile[]): Promise<PhotosById> {
+	const identifiers = [...new Set(profils.map(({ mainPicture }) => photoId(mainPicture)))].filter(
 		(identifiant): identifiant is number | string => identifiant !== undefined
 	)
-	const photos = new Map<number | string, PhotoDeCarte>()
-	if (identifiants.length === 0) return photos
+	const photos = new Map<number | string, CardPhoto>()
+	if (identifiers.length === 0) return photos
 	const { docs } = await payload.find({
 		collection: 'media',
-		where: { id: { in: identifiants } },
-		select: CHAMPS_DE_LA_PHOTO,
+		where: { id: { in: identifiers } },
+		select: PHOTO_FIELDS,
 		depth: 0,
-		limit: LIMITE_MAX_DE_LA_LISTE,
+		limit: LIST_MAX_LIMIT,
 		pagination: false,
 		overrideAccess: true,
 	})
@@ -241,7 +241,7 @@ async function lireLesPhotos(payload: Payload, profils: readonly ProfilDeLaCarte
  * public does not read, so it is read here, by the identifiers the public read of the profiles gave,
  * and nothing else is read of those profiles.
  */
-async function lireLesPid(payload: Payload, profils: readonly { id: number }[]): Promise<ReadonlyMap<number, Pid>> {
+async function readPids(payload: Payload, profils: readonly { id: number }[]): Promise<ReadonlyMap<number, Pid>> {
 	const pid = new Map<number, Pid>()
 	if (profils.length === 0) return pid
 	const { docs } = await payload.find({
@@ -249,7 +249,7 @@ async function lireLesPid(payload: Payload, profils: readonly { id: number }[]):
 		where: { id: { in: profils.map(({ id }) => id) } },
 		select: { strapiId: true },
 		depth: 0,
-		limit: LIMITE_MAX_DE_LA_LISTE,
+		limit: LIST_MAX_LIMIT,
 		pagination: false,
 		overrideAccess: true,
 	})
@@ -258,21 +258,21 @@ async function lireLesPid(payload: Payload, profils: readonly { id: number }[]):
 }
 
 /** A profile read for a list, as a card: the keys are frozen (U22), no coordinates and no contact. */
-function carteDe(profil: ProfilDeLaCarte, photos: PhotosParIdentifiant, pids: ReadonlyMap<number, Pid>): CarteDeProfil {
-	const identifiant = identifiantDeLaPhoto(profil.mainPicture)
+function cardOf(profil: CardProfile, photos: PhotosById, pids: ReadonlyMap<number, Pid>): ProfileCard {
+	const identifier = photoId(profil.mainPicture)
 	return {
 		slug: profil.slug,
 		pid: pids.get(profil.id) ?? pidDuProfil({ id: profil.id }),
-		nom: nomAffiche(profil),
-		specialite: texte(profil.specialty) || null,
+		nom: displayName(profil),
+		specialite: text(profil.specialty) || null,
 		lieu: formatZone({ city: profil.city?.name, radius: profil.radiusKm }) || null,
 		superMaquilleuse: profil.superArtist === true,
-		photo: (identifiant !== undefined && photos.get(identifiant)) || null,
+		photo: (identifier !== undefined && photos.get(identifier)) || null,
 	}
 }
 
 /** The contact details of this profile if its owner published them, else `null`. */
-async function lireLesCoordonneesPubliees(payload: Payload, id: number): Promise<CoordonneesPubliques | null> {
+async function readPublishedContactDetails(payload: Payload, id: number): Promise<PublicContactDetails | null> {
 	const { docs } = await payload.find({
 		collection: 'profiles',
 		where: { id: { equals: id } },
@@ -284,34 +284,34 @@ async function lireLesCoordonneesPubliees(payload: Payload, id: number): Promise
 		// by the identifier of a profile the public already reads, and keeps them if she chose so.
 		overrideAccess: true,
 	})
-	const profil = docs[0]
-	if (profil?.publicContact !== true) return null
-	const telephone = texte(profil.contactDetails?.phone) || null
-	const email = texte(profil.contactDetails?.email) || null
-	return telephone || email ? { telephone, email } : null
+	const profile = docs[0]
+	if (profile?.publicContact !== true) return null
+	const phone = text(profile.contactDetails?.phone) || null
+	const email = text(profile.contactDetails?.email) || null
+	return phone || email ? { telephone: phone, email } : null
 }
 
 /**
  * The photos a profile names (her main photo and her portfolio), by identifier, in one read; a photo that
- * is gone, or has no address, is not in the map. Read by identifier, as `lireLesPhotos` does for the
+ * is gone, or has no address, is not in the map. Read by identifier, as `readPhotos` does for the
  * cards: the access rule of the media opens a photo to the public when it is asked by its identifier,
  * and a profile the public reads names only its own photos.
  */
-async function lireLesPhotosDuProfil(
+async function readProfilePhotos(
 	payload: Payload,
 	identifiants: readonly (number | string | undefined)[]
-): Promise<PhotosParIdentifiant> {
-	const demandes = [...new Set(identifiants)].filter(
+): Promise<PhotosById> {
+	const requested = [...new Set(identifiants)].filter(
 		(identifiant): identifiant is number | string => identifiant !== undefined
 	)
-	const photos = new Map<number | string, PhotoDeCarte>()
-	if (demandes.length === 0) return photos
+	const photos = new Map<number | string, CardPhoto>()
+	if (requested.length === 0) return photos
 	const { docs } = await payload.find({
 		collection: 'media',
-		where: { id: { in: demandes } },
-		select: CHAMPS_DE_LA_PHOTO,
+		where: { id: { in: requested } },
+		select: PHOTO_FIELDS,
 		depth: 0,
-		limit: LIMITE_MAX_DE_LA_LISTE,
+		limit: LIST_MAX_LIMIT,
 		pagination: false,
 		overrideAccess: true,
 	})
@@ -322,36 +322,36 @@ async function lireLesPhotosDuProfil(
 }
 
 /** What the address of a profile leads to: the profile, a redirection to its slug, or nothing. */
-export type AdresseDeProfil =
-	| { type: 'profil'; profil: ProfilPublic; publie: boolean }
+export type ProfileUrlTarget =
+	| { type: 'profil'; profil: PublicProfile; publie: boolean }
 	| { type: 'redirection'; slug: string }
 	| { type: 'inconnue' }
 
 /**
  * What the address `/profil/<segment>` leads to (ticket 104): the profile itself, a redirection to its
  * slug (an old username, or a variant of the slug), or nothing (unknown, or hidden). The rule is
- * src/lib/profil/adresse.ts.
+ * src/lib/profile/url.ts.
  *
  * The read lifts the access rules of the collection, which keep the published profiles only, for two
  * reasons: a profile that is visible but not published (a draft) answers its page in noindex, as on the
  * site today, and the old username (`legacyUsername`) is closed to the public. Nothing else is lifted:
- * the fields are chosen one by one, a hidden profile is dropped by the rule (`estVisible`), and the
+ * the fields are chosen one by one, a hidden profile is dropped by the rule (`isVisible`), and the
  * contact details are read apart.
  */
-export async function lireLAdresseDeProfil(payload: Payload, segment: string): Promise<AdresseDeProfil> {
-	const valeurs = valeursARechercher(segment)
-	if (!valeurs) return { type: 'inconnue' }
+export async function readProfileUrlTarget(payload: Payload, segment: string): Promise<ProfileUrlTarget> {
+	const values = valuesToSearch(segment)
+	if (!values) return { type: 'inconnue' }
 	const { docs } = await payload.find({
 		collection: 'profiles',
 		where: {
 			or: [
-				{ slug: { equals: valeurs.segment } },
-				{ slug: { equals: valeurs.slugifie } },
-				{ legacyUsername: { equals: valeurs.segment } },
+				{ slug: { equals: values.segment } },
+				{ slug: { equals: values.slugifie } },
+				{ legacyUsername: { equals: values.segment } },
 			],
 		},
 		select: {
-			...CHAMPS_DE_LA_PAGE_DU_PROFIL,
+			...PROFILE_PAGE_FIELDS,
 			id: true,
 			status: true,
 			publishable: true,
@@ -361,51 +361,51 @@ export async function lireLAdresseDeProfil(payload: Payload, segment: string): P
 		sort: ['createdAt', 'id'],
 		depth: 0,
 		// Two usernames can be the same, a slug is unique: a handful of candidates at most.
-		limit: LIMITE_DES_CANDIDATS,
+		limit: CANDIDATES_LIMIT,
 		pagination: false,
 		overrideAccess: true,
 	})
-	const cible = cibleDeLAdresse(segment, docs)
-	if (cible.type !== 'profil') return cible
+	const target = urlTarget(segment, docs)
+	if (target.type !== 'profil') return target
 	return {
 		type: 'profil',
 		// Only a published profile is refreshed by a save (src/lib/revalidation.ts): the page keeps it in the cache.
-		publie: cible.profil.status === STATUT_PUBLIE,
-		profil: await profilPublicLu(payload, cible.profil),
+		publie: target.profil.status === PUBLISHED_STATUS,
+		profil: await publicProfileRead(payload, target.profil),
 	}
 }
 
-/** A profile read with `CHAMPS_DE_LA_PAGE_DU_PROFIL` and its id, as a public page shows it: photos and published contact included. */
-async function profilPublicLu(payload: Payload, profil: ProfilDeLaPage & { id: number }): Promise<ProfilPublic> {
-	const principale = identifiantDeLaPhoto(profil.mainPicture)
+/** A profile read with `PROFILE_PAGE_FIELDS` and its id, as a public page shows it: photos and published contact included. */
+async function publicProfileRead(payload: Payload, profil: ProfilePageData & { id: number }): Promise<PublicProfile> {
+	const main = photoId(profil.mainPicture)
 	// The portfolio, in the order she gave; a photo named twice is shown twice.
-	const rangee = (profil.gallery ?? []).map(photo => identifiantDeLaPhoto(photo))
-	const photos = await lireLesPhotosDuProfil(payload, [principale, ...rangee])
-	return profilPublicDe(profil, {
-		photo: (principale !== undefined && photos.get(principale)) || null,
-		galerie: rangee.flatMap(identifiant => (identifiant !== undefined && photos.get(identifiant)) || []),
-		coordonnees: await lireLesCoordonneesPubliees(payload, profil.id),
+	const ranked = (profil.gallery ?? []).map(photo => photoId(photo))
+	const photos = await readProfilePhotos(payload, [main, ...ranked])
+	return publicProfileOf(profil, {
+		photo: (main !== undefined && photos.get(main)) || null,
+		galerie: ranked.flatMap(identifiant => (identifiant !== undefined && photos.get(identifiant)) || []),
+		coordonnees: await readPublishedContactDetails(payload, profil.id),
 	})
 }
 
 /** Where her profile stands, as the preview banner says it (src/lib/dashboard/preview.ts). */
-export type EtatDuProfilApercu = Pick<Profile, 'status' | 'available' | 'fullyEmpty' | 'publishable'>
+export type ProfilePreviewState = Pick<Profile, 'status' | 'available' | 'fullyEmpty' | 'publishable'>
 
 /**
- * Her own page as a visitor sees it (ticket 139): the same `ProfilPublic` as `lireLAdresseDeProfil`,
+ * Her own page as a visitor sees it (ticket 139): the same `PublicProfile` as `readProfileUrlTarget`,
  * built by the same code, for the profile with this identifier whether it is listed, a draft or even
  * hidden. The identifier is the one the server found by her session (`profileId`), never one
  * a request gave. The contact details are the ones she published, exactly as the public sees them.
  * `null` when the profile does not exist.
  */
-export async function lireLApercuDuProfil(
+export async function readProfilePreview(
 	payload: Payload,
 	id: number
-): Promise<{ profil: ProfilPublic; etat: EtatDuProfilApercu } | null> {
+): Promise<{ profil: PublicProfile; etat: ProfilePreviewState } | null> {
 	const { docs } = await payload.find({
 		collection: 'profiles',
 		where: { id: { equals: id } },
-		select: { ...CHAMPS_DE_LA_PAGE_DU_PROFIL, id: true, status: true, publishable: true, fullyEmpty: true },
+		select: { ...PROFILE_PAGE_FIELDS, id: true, status: true, publishable: true, fullyEmpty: true },
 		depth: 0,
 		limit: 1,
 		pagination: false,
@@ -414,7 +414,7 @@ export async function lireLApercuDuProfil(
 	const doc = docs[0]
 	if (!doc) return null
 	return {
-		profil: await profilPublicLu(payload, doc),
+		profil: await publicProfileRead(payload, doc),
 		etat: {
 			status: doc.status,
 			available: doc.available,
@@ -425,17 +425,17 @@ export async function lireLApercuDuProfil(
 }
 
 /** How many profiles one address can match: the slug, its variant, and the profiles sharing an old username. */
-const LIMITE_DES_CANDIDATS = 20
+const CANDIDATES_LIMIT = 20
 
 /** The profile at this slug, or `null`: unknown, hidden, or a slug that is not the profile's own. */
-export async function lireLeProfilPublic(payload: Payload, slug: string): Promise<ProfilPublic | null> {
+export async function readPublicProfile(payload: Payload, slug: string): Promise<PublicProfile | null> {
 	if (!estUnSlug(slug)) return null
-	const cible = await lireLAdresseDeProfil(payload, slug)
-	return cible.type === 'profil' ? cible.profil : null
+	const target = await readProfileUrlTarget(payload, slug)
+	return target.type === 'profil' ? target.profil : null
 }
 
-/** What a profile read for its page holds: the fields of `CHAMPS_DE_LA_PAGE_DU_PROFIL` and the state. */
-export type ProfilDeLaPage = Pick<
+/** What a profile read for its page holds: the fields of `PROFILE_PAGE_FIELDS` and the state. */
+export type ProfilePageData = Pick<
 	Profile,
 	| 'slug'
 	| 'firstName'
@@ -464,52 +464,52 @@ export type ProfilDeLaPage = Pick<
  * without a database. The photos and the contact details are read apart (they are read by their own
  * rules) and given here.
  */
-export function profilPublicDe(
-	profil: ProfilDeLaPage & { id?: number },
-	lu: { photo: PhotoDeCarte | null; galerie: PhotoDeCarte[]; coordonnees: CoordonneesPubliques | null }
-): ProfilPublic {
-	const nom = nomAffiche(profil)
+export function publicProfileOf(
+	profil: ProfilePageData & { id?: number },
+	lu: { photo: CardPhoto | null; galerie: CardPhoto[]; coordonnees: PublicContactDetails | null }
+): PublicProfile {
+	const name = displayName(profil)
 	return {
 		slug: profil.slug,
 		pid: pidDeLaPage(profil),
-		nom,
-		nomArtiste: nomDArtisteAffiche(profil, nom),
-		specialite: texte(profil.specialty) || null,
+		nom: name,
+		nomArtiste: displayedArtistName(profil, name),
+		specialite: text(profil.specialty) || null,
 		zone: formatZone({ city: profil.city?.name, radius: profil.radiusKm }) || null,
 		disponible: profil.available !== false,
 		photo: lu.photo,
 		galerie: lu.galerie,
 		lieu: villeAffichee(profil.city?.name) || null,
 		seDeplace: villeAffichee(profil.city?.name) !== '' && rayonKm(profil.radiusKm) !== null,
-		prestations: prestations(profil.serviceOffers),
-		competences: noms(profil.skills),
-		langues: noms(profil.languages),
-		formations: formations(profil.courses),
+		prestations: serviceOffers(profil.serviceOffers),
+		competences: names(profil.skills),
+		langues: names(profil.languages),
+		formations: courses(profil.courses),
 		experiences: experiences(profil.experiences),
 		liens: contacts({
 			reseaux: profil.networks,
 			telephone: lu.coordonnees?.telephone,
 			email: lu.coordonnees?.email,
 		}),
-		description: texte(profil.description) || null,
-		indexable: estIndexable(profil),
+		description: text(profil.description) || null,
+		indexable: isIndexable(profil),
 		coordonnees: lu.coordonnees,
-		offres: offresChiffrees(profil.serviceOffers),
+		offres: pricedOffers(profil.serviceOffers),
 		prixMinimal: prixMinimal(profil.serviceOffers),
 	}
 }
 
 /** The offers with a name, each with its amount when it is one the site counts as a price. */
-function offresChiffrees(stockees: ProfilDeLaPage['serviceOffers']): OffreChiffree[] {
+function pricedOffers(stockees: ProfilePageData['serviceOffers']): PricedOffer[] {
 	return (stockees ?? []).flatMap(ligne => {
-		const nom = texte(ligne?.name)
-		if (nom === '') return []
-		const montant = ligne?.priceFrom
+		const name = text(ligne?.name)
+		if (name === '') return []
+		const amount = ligne?.priceFrom
 		return [
 			{
-				nom,
-				description: lignes(ligne?.description).join(' '),
-				montant: estMontantDePrix(montant) ? montant : null,
+				nom: name,
+				description: rows(ligne?.description).join(' '),
+				montant: estMontantDePrix(amount) ? amount : null,
 			},
 		]
 	})
@@ -520,71 +520,71 @@ function offresChiffrees(stockees: ProfilDeLaPage['serviceOffers']): OffreChiffr
  * default and 100 at most. A page past the end is empty. The order is the slug, stable from one
  * page to the next; the search of ticket 098 sorts by relevance on top of this read.
  */
-export async function listerLesProfils(
+export async function listProfiles(
 	payload: Payload,
-	{ page = 1, limite = LIMITE_PAR_DEFAUT }: { page?: number; limite?: number } = {}
-): Promise<PageDeProfils> {
-	const resultat = await payload.find({
+	{ page = 1, limite = DEFAULT_LIMIT }: { page?: number; limite?: number } = {}
+): Promise<ProfileListPage> {
+	const result = await payload.find({
 		collection: 'profiles',
-		where: FILTRE_LISTE,
-		select: CHAMPS_DE_LA_CARTE,
+		where: LISTED_FILTER,
+		select: CARD_FIELDS,
 		sort: 'slug',
 		depth: 0,
-		limit: Math.min(Math.max(Math.trunc(limite) || LIMITE_PAR_DEFAUT, 1), LIMITE_MAX_DE_LA_LISTE),
+		limit: Math.min(Math.max(Math.trunc(limite) || DEFAULT_LIMIT, 1), LIST_MAX_LIMIT),
 		page: Math.max(Math.trunc(page) || 1, 1),
 		pagination: true,
 		overrideAccess: false,
 	})
-	const photos = await lireLesPhotos(payload, resultat.docs)
-	const pids = await lireLesPid(payload, resultat.docs)
+	const photos = await readPhotos(payload, result.docs)
+	const pids = await readPids(payload, result.docs)
 	return {
-		cartes: resultat.docs.map(profil => carteDe(profil, photos, pids)),
-		page: resultat.page ?? 1,
-		totalDocs: resultat.totalDocs,
-		hasNextPage: resultat.hasNextPage,
+		cartes: result.docs.map(profil => cardOf(profil, photos, pids)),
+		page: result.page ?? 1,
+		totalDocs: result.totalDocs,
+		hasNextPage: result.hasNextPage,
 	}
 }
 
 /** A listed profile with where she works: what the search by city ranks by. */
-export interface ProfilDeLAnnuaire extends PlaceDuProfil {
-	carte: CarteDeProfil
+export interface DirectoryProfile extends ProfilePlace {
+	carte: ProfileCard
 	/**
 	 * What she wrote that a search by a word looks into (ticket 099). Beside the card, never in it: a card
 	 * is what a page renders, and carries none of this. Read only when asked (`avecLesTextes`).
 	 */
-	textes?: TextesNormalises
+	textes?: NormalizedTexts
 }
 
 /** The fields a search by a word reads on top of a card: her texts, and no price, no contact, no link. */
-const CHAMPS_DE_LA_RECHERCHE = {
-	...CHAMPS_DE_LA_CARTE,
+const SEARCH_FIELDS = {
+	...CARD_FIELDS,
 	description: true,
 	skills: true,
 	serviceOffers: true,
 } as const
 
-type ProfilCherche = ProfilDeLaCarte & Pick<Profile, 'description' | 'skills' | 'serviceOffers'>
+type SearchedProfile = CardProfile & Pick<Profile, 'description' | 'skills' | 'serviceOffers'>
 
 /** The texts a search by a word looks into (the commune, the speciality, the description, the skills and the offers), normalised. */
-function textesDe(profil: ProfilCherche): TextesNormalises {
-	const noms = <T extends { name?: string | null }>(liste: readonly T[] | null | undefined): string[] =>
-		(liste ?? []).map(element => texte(element.name)).filter(nom => nom !== '')
+function textsOf(profil: SearchedProfile): NormalizedTexts {
+	const names = <T extends { name?: string | null }>(liste: readonly T[] | null | undefined): string[] =>
+		(liste ?? []).map(element => text(element.name)).filter(nom => nom !== '')
 	const descriptions = <T extends { description?: string | null }>(liste: readonly T[] | null | undefined): string[] =>
-		(liste ?? []).map(element => texte(element.description)).filter(description => description !== '')
-	return normaliserLesTextes({
-		ville: texte(profil.city?.name),
-		specialite: texte(profil.specialty),
-		description: texte(profil.description),
-		competences: noms(profil.skills),
+		(liste ?? []).map(element => text(element.description)).filter(description => description !== '')
+	return normalizeTexts({
+		ville: text(profil.city?.name),
+		specialite: text(profil.specialty),
+		description: text(profil.description),
+		competences: names(profil.skills),
 		descriptionsDesCompetences: descriptions(profil.skills),
 		descriptionsDesPrestations: descriptions(profil.serviceOffers),
-		nom: texte(profil.lastName),
-		prenom: texte(profil.firstName),
+		nom: text(profil.lastName),
+		prenom: text(profil.firstName),
 	})
 }
 
 /** The most pages of the directory one read goes through: 1 000 profiles, ten times the site today. */
-const PAGES_MAX_DE_L_ANNUAIRE = 10
+const DIRECTORY_MAX_PAGES = 10
 
 /**
  * Every listed profile, most complete first, then most recently changed (ticket 098): what a search by
@@ -593,34 +593,34 @@ const PAGES_MAX_DE_L_ANNUAIRE = 10
  * the centre of the commune stays here. With `avecLesTextes` (ticket 099) each profile also carries the
  * texts a search by a word looks into, beside its card.
  */
-export async function lireLAnnuaire(
+export async function readDirectory(
 	payload: Payload,
 	{ avecLesTextes = false }: { avecLesTextes?: boolean } = {}
-): Promise<ProfilDeLAnnuaire[]> {
-	const annuaire: ProfilDeLAnnuaire[] = []
-	for (let page = 1; page <= PAGES_MAX_DE_L_ANNUAIRE; page += 1) {
-		const resultat = await payload.find({
+): Promise<DirectoryProfile[]> {
+	const directory: DirectoryProfile[] = []
+	for (let page = 1; page <= DIRECTORY_MAX_PAGES; page += 1) {
+		const result = await payload.find({
 			collection: 'profiles',
-			where: FILTRE_LISTE,
-			select: avecLesTextes ? CHAMPS_DE_LA_RECHERCHE : CHAMPS_DE_LA_CARTE,
+			where: LISTED_FILTER,
+			select: avecLesTextes ? SEARCH_FIELDS : CARD_FIELDS,
 			sort: ['-completeness', '-updatedAt', 'slug'],
 			depth: 0,
-			limit: LIMITE_MAX_DE_LA_LISTE,
+			limit: LIST_MAX_LIMIT,
 			page,
 			pagination: true,
 			overrideAccess: false,
 		})
-		const photos = await lireLesPhotos(payload, resultat.docs)
-		const pids = await lireLesPid(payload, resultat.docs)
-		for (const profil of resultat.docs)
-			annuaire.push({
-				carte: carteDe(profil, photos, pids),
-				ville: texte(profil.city?.name) || null,
-				departement: texte(profil.city?.department) || null,
-				seDeplace: texte(profil.city?.name) !== '' && rayonKm(profil.radiusKm) !== null,
-				...(avecLesTextes && { textes: textesDe(profil) }),
+		const photos = await readPhotos(payload, result.docs)
+		const pids = await readPids(payload, result.docs)
+		for (const profile of result.docs)
+			directory.push({
+				carte: cardOf(profile, photos, pids),
+				ville: text(profile.city?.name) || null,
+				departement: text(profile.city?.department) || null,
+				seDeplace: text(profile.city?.name) !== '' && rayonKm(profile.radiusKm) !== null,
+				...(avecLesTextes && { textes: textsOf(profile) }),
 			})
-		if (!resultat.hasNextPage) break
+		if (!result.hasNextPage) break
 	}
-	return annuaire
+	return directory
 }

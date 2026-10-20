@@ -7,17 +7,17 @@
  */
 
 import type { Payload } from 'payload'
-import { texte } from '@/lib/profile/display-name'
+import { text } from '@/lib/profile/display-name'
 import { estUnSlug } from '@/lib/slug'
 
 /** The fields of an article the list reads, and nothing else. */
-export const CHAMPS_DE_LA_LISTE = { slug: true, title: true, excerpt: true, publishedAt: true } as const
+export const LIST_FIELDS = { slug: true, title: true, excerpt: true, publishedAt: true } as const
 
 /** The most articles one read gives: the site has 10. */
-export const LIMITE_DES_ARTICLES = 200
+export const ARTICLES_LIMIT = 200
 
 /** An article as the list of the blog shows it. */
-export interface ArticleDeLaListe {
+export interface ListedArticle {
 	slug: string
 	titre: string
 	/** Empty when the article has no excerpt. */
@@ -29,12 +29,12 @@ export interface ArticleDeLaListe {
 /** A comparable instant, or null for a missing or unreadable date. */
 function instant(date: string | null): number | null {
 	if (!date) return null
-	const valeur = Date.parse(date)
-	return Number.isNaN(valeur) ? null : valeur
+	const value = Date.parse(date)
+	return Number.isNaN(value) ? null : value
 }
 
 /** The most recent first; an article without a date after the dated ones; ties by slug. */
-export function parRecence(a: ArticleDeLaListe, b: ArticleDeLaListe): number {
+export function byRecency(a: ListedArticle, b: ListedArticle): number {
 	const dateA = instant(a.publieLe)
 	const dateB = instant(b.publieLe)
 	if (dateA !== dateB) {
@@ -49,28 +49,28 @@ export function parRecence(a: ArticleDeLaListe, b: ArticleDeLaListe): number {
  * The published articles, the most recent first. An article without a title or with a slug that is
  * no address is left out: its link would lead nowhere.
  */
-export async function listerLesArticles(payload: Payload): Promise<ArticleDeLaListe[]> {
+export async function listArticles(payload: Payload): Promise<ListedArticle[]> {
 	const { docs } = await payload.find({
 		collection: 'articles',
-		select: CHAMPS_DE_LA_LISTE,
+		select: LIST_FIELDS,
 		sort: ['-publishedAt', 'slug'],
 		depth: 0,
-		limit: LIMITE_DES_ARTICLES,
+		limit: ARTICLES_LIMIT,
 		pagination: false,
 		overrideAccess: false,
 	})
 	return docs
 		.flatMap(article =>
-			estUnSlug(article.slug) && texte(article.title)
+			estUnSlug(article.slug) && text(article.title)
 				? [
 						{
 							slug: article.slug,
-							titre: texte(article.title),
-							extrait: texte(article.excerpt),
+							titre: text(article.title),
+							extrait: text(article.excerpt),
 							publieLe: article.publishedAt ?? null,
 						},
 					]
 				: []
 		)
-		.sort(parRecence)
+		.sort(byRecency)
 }

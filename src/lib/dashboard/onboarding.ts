@@ -5,14 +5,14 @@
  * stored, never from what the browser remembers.
  *
  * Nothing is computed here on its own: « done » is what the single rule of a profile says
- * (src/lib/profil/completude.ts), so that a profile that went through the three steps is `actif`
+ * (src/lib/profile/completeness.ts), so that a profile that went through the three steps is `actif`
  * (main photo, usable city and speciality) and the onboarding cannot disagree with the space.
  */
 
 import { z } from 'zod'
 import { ORIGINES_DECLAREES } from '../analytics/events'
-import { completude } from '../profile/completeness'
-import { champsDuProfil, type DocumentDuProfil } from '../profile/state'
+import { completeness } from '../profile/completeness'
+import { profileFields, type ProfileDocument } from '../profile/state'
 import { IDENTITY_MAX, identitySchema, strictIdentitySchema } from './identity'
 
 export const STEPS = [1, 2, 3] as const
@@ -41,8 +41,8 @@ export const STEPS_NAMES: Readonly<Record<OnboardingStep, string>> = {
  * 3. a main photo.
  * A profile that holds the three is `actif` by the single rule.
  */
-export function onboardingPosition(profil: DocumentDuProfil | null | undefined): OnboardingPosition {
-	const reading = completude(champsDuProfil(profil))
+export function onboardingPosition(profil: ProfileDocument | null | undefined): OnboardingPosition {
+	const reading = completeness(profileFields(profil))
 	if (reading.manquants.includes('nom') || !reading.conditions.specialite) return 1
 	if (!reading.conditions.villeExploitable) return 2
 	if (!reading.conditions.photoPrincipale) return 3

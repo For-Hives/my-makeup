@@ -6,17 +6,17 @@ import type { Pid } from '@/lib/analytics/events'
 import { track } from '@/lib/analytics/track'
 
 /** How long the answer about the visitor is kept: the clicks of one visit share a single request. */
-const DUREE_DE_LA_REPONSE_MS = 10_000
+const RESPONSE_DURATION_MS = 10_000
 
-let reponse: { lueA: number; pid: Promise<Pid | null> } | null = null
+let response: { lueA: number; pid: Promise<Pid | null> } | null = null
 
 /** The `pid` of the profile of the visitor, if she is an artist with one (`/api/dashboard/my-pid`). */
-function monPid(): Promise<Pid | null> {
-	if (reponse && Date.now() - reponse.lueA < DUREE_DE_LA_REPONSE_MS) return reponse.pid
+function myPid(): Promise<Pid | null> {
+	if (response && Date.now() - response.lueA < RESPONSE_DURATION_MS) return response.pid
 	const pid = fetch('/api/dashboard/my-pid', { cache: 'no-store', credentials: 'same-origin' })
 		.then(async r => (r.ok ? ((await r.json()) as { pid?: Pid | null }).pid : null) ?? null)
 		.catch(() => null)
-	reponse = { lueA: Date.now(), pid }
+	response = { lueA: Date.now(), pid }
 	return pid
 }
 
@@ -25,7 +25,7 @@ function monPid(): Promise<Pid | null> {
  * rendered by the server with the link in its HTML; this adds the count. The answer about the visitor
  * is asked as soon as the link is there, so that it is usually known when she clicks.
  */
-export function LienDeContactMesure({
+export function TrackedContactLink({
 	pid,
 	canal,
 	href,
@@ -33,14 +33,14 @@ export function LienDeContactMesure({
 	...lien
 }: { pid: Pid | null; canal: CanalDeContact; href: string } & Omit<ComponentProps<'a'>, 'onClick' | 'href'>) {
 	useEffect(() => {
-		if (pid !== null) void monPid()
+		if (pid !== null) void myPid()
 	}, [pid])
-	const compter = () => {
+	const countClick = () => {
 		void mesurerUnClicDeContact({
 			pid,
 			canal,
 			lieu: { recherche: location.search, referent: document.referrer, origine: location.origin },
-			monPid: monPid(),
+			monPid: myPid(),
 			suivre: track,
 		})
 	}
@@ -48,10 +48,10 @@ export function LienDeContactMesure({
 		<a
 			href={href}
 			{...lien}
-			onClick={compter}
+			onClick={countClick}
 			// A click of the middle button opens the link in a tab without a `click` event.
 			onAuxClick={event => {
-				if (event.button === 1) compter()
+				if (event.button === 1) countClick()
 			}}
 		>
 			{children}

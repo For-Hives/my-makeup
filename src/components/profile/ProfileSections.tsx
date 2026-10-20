@@ -1,15 +1,15 @@
 import Image from 'next/image'
 import type { Pid } from '@/lib/analytics/events'
 import type {
-	ExperiencePublique,
-	FormationPublique,
-	LienDeContact,
-	OptionPublique,
-	PrestationPublique,
+	PublicExperience,
+	PublicCourse,
+	ContactLink,
+	PublicOption,
+	PublicServiceOffer,
 } from '@/lib/profile/public-view'
-import { LIBELLES_DES_CANAUX } from '@/lib/profile/public-view'
-import { LienDeContactMesure } from './TrackedContactLink'
-import { SectionDuProfil } from './ProfileSection'
+import { CHANNEL_LABELS } from '@/lib/profile/public-view'
+import { TrackedContactLink } from './TrackedContactLink'
+import { ProfileSection } from './ProfileSection'
 
 /**
  * The cards of the page of a profile, one component each (ticket 102). They are server components
@@ -20,7 +20,7 @@ import { SectionDuProfil } from './ProfileSection'
  */
 
 /** A paragraph for each line typed. */
-function Paragraphes({ lignes, className }: { lignes: readonly string[]; className: string }) {
+function Paragraphs({ lignes, className }: { lignes: readonly string[]; className: string }) {
 	return lignes.map((ligne, rang) => (
 		// biome-ignore lint/suspicious/noArrayIndexKey: the lines are fixed text, never reordered
 		<p key={`${rang}-${ligne}`} className={`break-words ${className}`}>
@@ -31,13 +31,13 @@ function Paragraphes({ lignes, className }: { lignes: readonly string[]; classNa
 
 export function SectionDescription({ lignes }: { lignes: readonly string[] }) {
 	return (
-		<SectionDuProfil titre="Vous en quelques mots">
-			<Paragraphes lignes={lignes} className="text-gray-800" />
-		</SectionDuProfil>
+		<ProfileSection titre="Vous en quelques mots">
+			<Paragraphs lignes={lignes} className="text-gray-800" />
+		</ProfileSection>
 	)
 }
 
-export function SectionLocalisation({
+export function LocationSection({
 	lieu,
 	seDeplace,
 	zone,
@@ -47,7 +47,7 @@ export function SectionLocalisation({
 	zone: string | null
 }) {
 	return (
-		<SectionDuProfil titre="Localisation & département">
+		<ProfileSection titre="Localisation & département">
 			<div className="flex flex-col gap-1">
 				<h3 className="font-semibold text-gray-700 text-lg">Localisation</h3>
 				<p className="break-words text-gray-800">{lieu}</p>
@@ -58,12 +58,12 @@ export function SectionLocalisation({
 					<p className="break-words text-gray-800">{zone}</p>
 				</div>
 			)}
-		</SectionDuProfil>
+		</ProfileSection>
 	)
 }
 
 /** The icon of each channel: the files of the site online, in public/assets/brand. */
-const ICONES: Readonly<Record<LienDeContact['canal'], string>> = {
+const ICONS: Readonly<Record<ContactLink['canal'], string>> = {
 	instagram: '/assets/brand/037-instagram.svg',
 	facebook: '/assets/brand/006-facebook.svg',
 	linkedin: '/assets/brand/030-linkedin.svg',
@@ -74,32 +74,32 @@ const ICONES: Readonly<Record<LienDeContact['canal'], string>> = {
 }
 
 /** Networks and websites open in a new tab; an email and a telephone do not. */
-const NOUVEL_ONGLET = new Set<LienDeContact['canal']>(['instagram', 'facebook', 'linkedin', 'youtube', 'website'])
+const NEW_TAB = new Set<ContactLink['canal']>(['instagram', 'facebook', 'linkedin', 'youtube', 'website'])
 
-function LienDuContact({
+function ContactLinkAnchor({
 	lien: { canal, libelle },
 	href,
 	pid,
 	mesure,
 }: {
-	lien: LienDeContact
+	lien: ContactLink
 	href: string
 	pid: Pid | null
 	mesure: boolean
 }) {
-	const proprietes = {
+	const properties = {
 		href,
-		...(NOUVEL_ONGLET.has(canal) ? { target: '_blank' } : {}),
+		...(NEW_TAB.has(canal) ? { target: '_blank' } : {}),
 		rel: 'noopener nofollow noreferrer',
 		className:
 			'break-words text-indigo-900 underline [overflow-wrap:anywhere] focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2',
 	}
 	return mesure && pid !== null ? (
-		<LienDeContactMesure pid={pid} canal={canal} {...proprietes}>
+		<TrackedContactLink pid={pid} canal={canal} {...properties}>
 			{libelle}
-		</LienDeContactMesure>
+		</TrackedContactLink>
 	) : (
-		<a {...proprietes}>{libelle}</a>
+		<a {...properties}>{libelle}</a>
 	)
 }
 
@@ -112,21 +112,21 @@ export function SectionContacts({
 	pid,
 	mesure = true,
 }: {
-	liens: readonly LienDeContact[]
+	liens: readonly ContactLink[]
 	pid: Pid | null
 	mesure?: boolean
 }) {
 	return (
-		<SectionDuProfil titre="Réseaux sociaux & contacts">
+		<ProfileSection titre="Réseaux sociaux & contacts">
 			<ul className="flex flex-col gap-3">
 				{liens.map(({ canal, libelle, href }) => (
 					<li key={canal} className="flex min-w-0 items-center gap-3 text-sm">
 						{/* The name of the channel is written next to the icon: the icon only decorates. */}
-						<Image src={ICONES[canal]} alt="" width={35} height={35} className="shrink-0" />
+						<Image src={ICONS[canal]} alt="" width={35} height={35} className="shrink-0" />
 						<div className="min-w-0">
-							<span className="block font-semibold text-gray-700">{LIBELLES_DES_CANAUX[canal]}</span>
+							<span className="block font-semibold text-gray-700">{CHANNEL_LABELS[canal]}</span>
 							{href ? (
-								<LienDuContact lien={{ canal, libelle, href }} href={href} pid={pid} mesure={mesure} />
+								<ContactLinkAnchor lien={{ canal, libelle, href }} href={href} pid={pid} mesure={mesure} />
 							) : (
 								<span className="break-words text-gray-700 [overflow-wrap:anywhere]">{libelle}</span>
 							)}
@@ -134,13 +134,13 @@ export function SectionContacts({
 					</li>
 				))}
 			</ul>
-		</SectionDuProfil>
+		</ProfileSection>
 	)
 }
 
-export function SectionCompetences({ competences }: { competences: readonly string[] }) {
+export function SkillsSection({ competences }: { competences: readonly string[] }) {
 	return (
-		<SectionDuProfil titre="Compétences">
+		<ProfileSection titre="Compétences">
 			<ul className="flex flex-wrap gap-3">
 				{competences.map((nom, rang) => (
 					<li
@@ -152,13 +152,13 @@ export function SectionCompetences({ competences }: { competences: readonly stri
 					</li>
 				))}
 			</ul>
-		</SectionDuProfil>
+		</ProfileSection>
 	)
 }
 
-export function SectionLangues({ langues }: { langues: readonly string[] }) {
+export function LanguagesSection({ langues }: { langues: readonly string[] }) {
 	return (
-		<SectionDuProfil titre="Langues">
+		<ProfileSection titre="Langues">
 			<ul className="flex flex-col gap-3">
 				{langues.map((nom, rang) => (
 					// biome-ignore lint/suspicious/noArrayIndexKey: a language can be listed twice, and the rows never move
@@ -168,13 +168,13 @@ export function SectionLangues({ langues }: { langues: readonly string[] }) {
 					</li>
 				))}
 			</ul>
-		</SectionDuProfil>
+		</ProfileSection>
 	)
 }
 
-export function SectionFormations({ formations }: { formations: readonly FormationPublique[] }) {
+export function CoursesSection({ formations }: { formations: readonly PublicCourse[] }) {
 	return (
-		<SectionDuProfil titre="Formations & diplômes">
+		<ProfileSection titre="Formations & diplômes">
 			<ul className="flex flex-col gap-5">
 				{formations.map(({ diploma, school, obtenu, description }, rang) => (
 					// biome-ignore lint/suspicious/noArrayIndexKey: the rows never move
@@ -186,21 +186,21 @@ export function SectionFormations({ formations }: { formations: readonly Formati
 								{obtenu && <span>{obtenu}</span>}
 							</p>
 						)}
-						<Paragraphes lignes={description} className="text-gray-500 text-sm italic" />
+						<Paragraphs lignes={description} className="text-gray-500 text-sm italic" />
 					</li>
 				))}
 			</ul>
-		</SectionDuProfil>
+		</ProfileSection>
 	)
 }
 
-function PrixEtDescription({ element }: { element: OptionPublique }) {
+function PriceAndDescription({ element }: { element: PublicOption }) {
 	if (element.description.length === 0 && element.prix.length === 0) return null
 	return (
 		<div className="flex flex-col gap-3">
 			{element.description.length > 0 && (
 				<div className="flex flex-col gap-1 border-gray-300 border-l pl-4">
-					<Paragraphes lignes={element.description} className="text-gray-700" />
+					<Paragraphs lignes={element.description} className="text-gray-700" />
 				</div>
 			)}
 			{element.prix.length > 0 && (
@@ -220,15 +220,15 @@ function PrixEtDescription({ element }: { element: OptionPublique }) {
 	)
 }
 
-export function SectionPrestations({ prestations }: { prestations: readonly PrestationPublique[] }) {
+export function ServiceOffersSection({ prestations }: { prestations: readonly PublicServiceOffer[] }) {
 	return (
-		<SectionDuProfil titre="Service(s) proposé(s)">
+		<ProfileSection titre="Service(s) proposé(s)">
 			<ul className="flex flex-col gap-8">
 				{prestations.map((prestation, rang) => (
 					// biome-ignore lint/suspicious/noArrayIndexKey: the rows never move
 					<li key={`${rang}-${prestation.nom}`} className="flex min-w-0 flex-col gap-4">
 						<h3 className="break-words text-start font-bold text-indigo-900 text-lg">{prestation.nom}</h3>
-						<PrixEtDescription element={prestation} />
+						<PriceAndDescription element={prestation} />
 						{prestation.options.length > 0 && (
 							<div className="flex flex-col">
 								{prestation.options.map((option, place) => (
@@ -251,7 +251,7 @@ export function SectionPrestations({ prestations }: { prestations: readonly Pres
 											</svg>
 										</summary>
 										<div className="pt-4">
-											<PrixEtDescription element={option} />
+											<PriceAndDescription element={option} />
 										</div>
 									</details>
 								))}
@@ -260,13 +260,13 @@ export function SectionPrestations({ prestations }: { prestations: readonly Pres
 					</li>
 				))}
 			</ul>
-		</SectionDuProfil>
+		</ProfileSection>
 	)
 }
 
-export function SectionExperiences({ experiences }: { experiences: readonly ExperiencePublique[] }) {
+export function SectionExperiences({ experiences }: { experiences: readonly PublicExperience[] }) {
 	return (
-		<SectionDuProfil titre="Expériences professionnelles">
+		<ProfileSection titre="Expériences professionnelles">
 			<ul className="flex flex-col gap-5">
 				{experiences.map(({ company, jobTitle, city, periode, description }, rang) => (
 					// biome-ignore lint/suspicious/noArrayIndexKey: the rows never move
@@ -279,10 +279,10 @@ export function SectionExperiences({ experiences }: { experiences: readonly Expe
 							</p>
 						)}
 						{city && <p className="break-words text-gray-600 text-sm italic">à {city}</p>}
-						<Paragraphes lignes={description} className="text-gray-500 text-sm italic" />
+						<Paragraphs lignes={description} className="text-gray-500 text-sm italic" />
 					</li>
 				))}
 			</ul>
-		</SectionDuProfil>
+		</ProfileSection>
 	)
 }

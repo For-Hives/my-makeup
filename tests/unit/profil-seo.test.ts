@@ -4,7 +4,7 @@ import { prixMinimal } from '@/lib/prix'
 import { serializeJsonLd } from '@/lib/seo/json-ld'
 import { donneesStructureesDuProfil, filDArianeDuProfil, metadonneesDuProfil, titreDuProfil } from '@/lib/seo/profil'
 import { DESCRIPTION_MAX, DESCRIPTION_MIN, TITRE_MAX } from '@/lib/seo/texte'
-import { type ProfilDeLaPage, type ProfilPublic, profilPublicDe } from '@/services/public/profiles'
+import { type ProfilePageData, type PublicProfile, publicProfileOf } from '@/services/public/profiles'
 import { schemaDuProfil } from '../outils/schema-profil-json-ld'
 
 /**
@@ -13,8 +13,8 @@ import { schemaDuProfil } from '../outils/schema-profil-json-ld'
  * no database.
  */
 
-function lireLeType(type: ProfilDuJeu, surcharge: Partial<ProfilDeLaPage> = {}): ProfilPublic {
-	const doc: ProfilDeLaPage = {
+function lireLeType(type: ProfilDuJeu, surcharge: Partial<ProfilePageData> = {}): PublicProfile {
+	const doc: ProfilePageData = {
 		slug: type.attendu.slug,
 		status: type.attendu.status,
 		publishable: type.attendu.publishable,
@@ -26,7 +26,7 @@ function lireLeType(type: ProfilDuJeu, surcharge: Partial<ProfilDeLaPage> = {}):
 		: null
 	const { phone: telephone = null, email = null } = type.profil.contactDetails ?? {}
 	const coordonnees = type.profil.publicContact === true && (telephone || email) ? { telephone, email } : null
-	return profilPublicDe(doc, { photo, galerie: [], coordonnees })
+	return publicProfileOf(doc, { photo, galerie: [], coordonnees })
 }
 
 const type = (cle: string): ProfilDuJeu => {

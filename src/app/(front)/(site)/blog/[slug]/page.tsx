@@ -15,14 +15,14 @@ import {
 } from '@/lib/seo/json-ld'
 import { metadonneesEditoriales } from '@/lib/seo/metadonnees'
 import { urlCanonique } from '@/lib/seo/url'
-import { lArticleEnCache } from '@/services/public/cached'
+import { cachedArticle } from '@/services/public/cached'
 
 // Rendered at each request: the build runs without a database. The article is read through the cache of
 // Next, under its tag `article:<slug>`: a save of an article refreshes it (tickets 047 and 117).
 export const dynamic = 'force-dynamic'
 
 /** The page and its metadata read the same article: once per request. */
-const lireLArticle = cache(async (slug: string) => lArticleEnCache(await getPayload({ config }), slug))
+const lireLArticle = cache(async (slug: string) => cachedArticle(await getPayload({ config }), slug))
 
 export async function generateMetadata({ params }: PageProps<'/blog/[slug]'>): Promise<Metadata> {
 	const { slug } = await params

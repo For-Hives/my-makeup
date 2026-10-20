@@ -25,10 +25,10 @@
 
 import { GALERIE_MAX } from '../lib/medias'
 import { parsePrice } from '../lib/prix'
-import { LONGUEUR_MAX_EMAIL, LONGUEUR_MAX_LIEN, LONGUEUR_MAX_TELEPHONE } from '../lib/profile/contact-details'
-import { LONGUEUR_DESCRIPTION, LONGUEUR_NOM } from '../lib/profile/lists'
-import type { StatutDuProfil } from '../lib/profile/status'
-import { BORNES_DU_RAYON_KM } from '../lib/profile/zone'
+import { EMAIL_MAX_LENGTH, LINK_MAX_LENGTH, PHONE_MAX_LENGTH } from '../lib/profile/contact-details'
+import { DESCRIPTION_MAX_LENGTH, NAME_MAX_LENGTH } from '../lib/profile/lists'
+import type { ProfileStatus } from '../lib/profile/status'
+import { RADIUS_BOUNDS_KM } from '../lib/profile/zone'
 import type { Profile } from '../payload-types'
 
 /** The photos of the set, in ./photos/: 400 × 400, WebP, under 30 KB each. */
@@ -79,7 +79,7 @@ export interface EtatAttendu {
 	readonly active: boolean
 	readonly publishable: boolean
 	readonly fullyEmpty: boolean
-	readonly status: StatutDuProfil
+	readonly status: ProfileStatus
 }
 
 export interface ProfilDuJeu {
@@ -223,24 +223,24 @@ const PUBLIE_COMPLET = {
 /** The longest texts of the profile with every text at its longest. */
 const LONGUE_DESCRIPTION =
 	'Maquilleuse de mariage, de soirée, de mode et de cinéma, je travaille partout où l’on me demande, du lever du jour jusqu’au bout de la nuit, avec une trousse complète et des produits choisis pour chaque peau.'
-const PRENOM_LE_PLUS_LONG = texteDeLongueur('Marie-Apolline-Joséphine-Bérénice-Eugénie-Héloïse', LONGUEUR_NOM)
-const NOM_LE_PLUS_LONG = texteDeLongueur('Delaunay-Vasseur de La Roche-Fontenelle des Prés-Hauts', LONGUEUR_NOM)
+const PRENOM_LE_PLUS_LONG = texteDeLongueur('Marie-Apolline-Joséphine-Bérénice-Eugénie-Héloïse', NAME_MAX_LENGTH)
+const NOM_LE_PLUS_LONG = texteDeLongueur('Delaunay-Vasseur de La Roche-Fontenelle des Prés-Hauts', NAME_MAX_LENGTH)
 const lienLePlusLong = (reseau: string) => {
 	const debut = `https://${reseau}.${DOMAINE_DU_JEU}/`
-	return `${debut}${'textes-maximaux-'.repeat(LONGUEUR_MAX_LIEN).slice(0, LONGUEUR_MAX_LIEN - debut.length)}`
+	return `${debut}${'textes-maximaux-'.repeat(LINK_MAX_LENGTH).slice(0, LINK_MAX_LENGTH - debut.length)}`
 }
 /** 64 characters before the « @ », the most an address takes; 200 in all. */
 const EMAIL_LE_PLUS_LONG = `${'contact-textes-maximaux-'.padEnd(64, 'm')}@${'m'.repeat(61)}.${'m'.repeat(60)}.${DOMAINE_DU_JEU}`
 const TELEPHONE_LE_PLUS_LONG = '+33 (0)6 39 98 10 12'
 
 const prestationLaPlusLongue = (numero: number) => ({
-	name: texteDeLongueur(`Prestation ${numero} : maquillage complet de la mariée et de son cortège`, LONGUEUR_NOM),
-	description: texteDeLongueur(LONGUE_DESCRIPTION, LONGUEUR_DESCRIPTION),
-	...prix(texteDeLongueur('À partir de 10 000 €, essai, déplacement et retouches compris', LONGUEUR_NOM)),
+	name: texteDeLongueur(`Prestation ${numero} : maquillage complet de la mariée et de son cortège`, NAME_MAX_LENGTH),
+	description: texteDeLongueur(LONGUE_DESCRIPTION, DESCRIPTION_MAX_LENGTH),
+	...prix(texteDeLongueur('À partir de 10 000 €, essai, déplacement et retouches compris', NAME_MAX_LENGTH)),
 	options: [1, 2].map(option => ({
-		name: texteDeLongueur(`Option ${option} : retouches jusqu’à la fin de la soirée`, LONGUEUR_NOM),
-		description: texteDeLongueur(LONGUE_DESCRIPTION, LONGUEUR_DESCRIPTION),
-		...prix(texteDeLongueur('Sur devis, selon le nombre de personnes et le lieu', LONGUEUR_NOM)),
+		name: texteDeLongueur(`Option ${option} : retouches jusqu’à la fin de la soirée`, NAME_MAX_LENGTH),
+		description: texteDeLongueur(LONGUE_DESCRIPTION, DESCRIPTION_MAX_LENGTH),
+		...prix(texteDeLongueur('Sur devis, selon le nombre de personnes et le lieu', NAME_MAX_LENGTH)),
 	})),
 })
 
@@ -547,34 +547,34 @@ export const PROFILS_DU_JEU: readonly ProfilDuJeu[] = [
 		profil: {
 			firstName: PRENOM_LE_PLUS_LONG,
 			lastName: NOM_LE_PLUS_LONG,
-			artistName: texteDeLongueur('Maison de maquillage des mariées du lac et des montagnes', LONGUEUR_NOM),
-			specialty: texteDeLongueur('Maquillage mariage, soirée, mode, cinéma et effets spéciaux', LONGUEUR_NOM),
+			artistName: texteDeLongueur('Maison de maquillage des mariées du lac et des montagnes', NAME_MAX_LENGTH),
+			specialty: texteDeLongueur('Maquillage mariage, soirée, mode, cinéma et effets spéciaux', NAME_MAX_LENGTH),
 			city: COMMUNES.laPlusLongue,
-			radiusKm: BORNES_DU_RAYON_KM.max,
+			radiusKm: RADIUS_BOUNDS_KM.max,
 			homeService: true,
 			available: true,
-			description: texteDeLongueur(LONGUE_DESCRIPTION, LONGUEUR_DESCRIPTION),
+			description: texteDeLongueur(LONGUE_DESCRIPTION, DESCRIPTION_MAX_LENGTH),
 			serviceOffers: [1, 2, 3].map(prestationLaPlusLongue),
 			skills: [1, 2, 3].map(numero => ({
-				name: texteDeLongueur(`Compétence ${numero} : maquillage longue tenue pour peaux sensibles`, LONGUEUR_NOM),
-				description: texteDeLongueur(LONGUE_DESCRIPTION, LONGUEUR_DESCRIPTION),
+				name: texteDeLongueur(`Compétence ${numero} : maquillage longue tenue pour peaux sensibles`, NAME_MAX_LENGTH),
+				description: texteDeLongueur(LONGUE_DESCRIPTION, DESCRIPTION_MAX_LENGTH),
 			})),
 			languages: [1, 2, 3].map(numero => ({
-				name: texteDeLongueur(`Langue ${numero} : français, anglais, italien, espagnol, allemand`, LONGUEUR_NOM),
+				name: texteDeLongueur(`Langue ${numero} : français, anglais, italien, espagnol, allemand`, NAME_MAX_LENGTH),
 			})),
 			courses: [1, 2, 3].map(numero => ({
-				diploma: texteDeLongueur(`Diplôme ${numero} : certificat de maquillage artistique et de scène`, LONGUEUR_NOM),
-				school: texteDeLongueur('École fictive supérieure des métiers du maquillage et de la beauté', LONGUEUR_NOM),
+				diploma: texteDeLongueur(`Diplôme ${numero} : certificat de maquillage artistique et de scène`, NAME_MAX_LENGTH),
+				school: texteDeLongueur('École fictive supérieure des métiers du maquillage et de la beauté', NAME_MAX_LENGTH),
 				graduatedAt: `201${numero}-06-30`,
-				description: texteDeLongueur(LONGUE_DESCRIPTION, LONGUEUR_DESCRIPTION),
+				description: texteDeLongueur(LONGUE_DESCRIPTION, DESCRIPTION_MAX_LENGTH),
 			})),
 			experiences: [1, 2, 3].map(numero => ({
-				company: texteDeLongueur(`Entreprise ${numero} : studio fictif de maquillage et de coiffure`, LONGUEUR_NOM),
-				jobTitle: texteDeLongueur('Maquilleuse principale, cheffe d’équipe maquillage et coiffure', LONGUEUR_NOM),
-				city: texteDeLongueur('Saint-Remy-en-Bouzemont-Saint-Genest-et-Isson', LONGUEUR_NOM),
+				company: texteDeLongueur(`Entreprise ${numero} : studio fictif de maquillage et de coiffure`, NAME_MAX_LENGTH),
+				jobTitle: texteDeLongueur('Maquilleuse principale, cheffe d’équipe maquillage et coiffure', NAME_MAX_LENGTH),
+				city: texteDeLongueur('Saint-Remy-en-Bouzemont-Saint-Genest-et-Isson', NAME_MAX_LENGTH),
 				startDate: `201${numero}-01-02`,
 				endDate: `201${numero + 1}-12-31`,
-				description: texteDeLongueur(LONGUE_DESCRIPTION, LONGUEUR_DESCRIPTION),
+				description: texteDeLongueur(LONGUE_DESCRIPTION, DESCRIPTION_MAX_LENGTH),
 			})),
 			networks: {
 				youtube: lienLePlusLong('youtube'),
@@ -601,6 +601,6 @@ export const PROFILS_DU_JEU: readonly ProfilDuJeu[] = [
 
 /** The longest values of the profile with every text at its longest, for the checks of its lengths. */
 export const LONGUEURS_DU_JEU = {
-	email: { valeur: EMAIL_LE_PLUS_LONG, maximum: LONGUEUR_MAX_EMAIL },
-	telephone: { valeur: TELEPHONE_LE_PLUS_LONG, maximum: LONGUEUR_MAX_TELEPHONE },
+	email: { valeur: EMAIL_LE_PLUS_LONG, maximum: EMAIL_MAX_LENGTH },
+	telephone: { valeur: TELEPHONE_LE_PLUS_LONG, maximum: PHONE_MAX_LENGTH },
 } as const

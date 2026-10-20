@@ -4,11 +4,11 @@
  * or entirely empty, the date each of these three took its current value, and the status that
  * follows from them.
  *
- * The reading itself is the single rule ported from the old site, src/lib/profil/completude.ts:
- * this file only maps a document of `profiles` to the fields that rule reads (`champsDuProfil`),
+ * The reading itself is the single rule ported from the old site, src/lib/profile/completeness.ts:
+ * this file only maps a document of `profiles` to the fields that rule reads (`profileFields`),
  * then says what the collection stores. Nothing here computes a condition on its own.
  *
- * The status (src/lib/profil/statut.ts) follows the rule while an admin has chosen nothing else:
+ * The status (src/lib/profile/status.ts) follows the rule while an admin has chosen nothing else:
  * an entirely empty profile is a draft, any other is published, both ways. A status an admin
  * chose (`chosenStatus`) is never overwritten, and a hidden profile stays hidden whatever the save.
  *
@@ -17,18 +17,18 @@
  */
 
 import { estMontantDePrix } from '../prix'
-import { type ChampsDuProfil, completude, villeExploitable } from './completeness'
+import { type ProfileFields, completeness, usableCity } from './completeness'
 import {
-	CHOIX_DU_STATUT,
-	CHOIX_INITIAL,
-	type ChoixDuStatut,
-	STATUT_INITIAL,
-	STATUTS_DU_PROFIL,
-	type StatutDuProfil,
+	STATUS_CHOICES,
+	INITIAL_CHOICE,
+	type StatusChoice,
+	INITIAL_STATUS,
+	PROFILE_STATUSES,
+	type ProfileStatus,
 } from './status'
 
 /** The networks of a profile, as the collection names them. */
-interface ReseauxDuDocument {
+interface DocumentNetworks {
 	readonly youtube?: string | null
 	readonly facebook?: string | null
 	readonly instagram?: string | null
@@ -40,7 +40,7 @@ interface ReseauxDuDocument {
  * What the rule reads of a document of `profiles`, any field absent: the data of a save once the
  * access rules have run, or a stored document. A photo is an identifier or a media.
  */
-export interface DocumentDuProfil {
+export interface ProfileDocument {
 	readonly firstName?: string | null
 	readonly lastName?: string | null
 	readonly artistName?: string | null
@@ -54,7 +54,7 @@ export interface DocumentDuProfil {
 	readonly courses?: readonly unknown[] | null
 	readonly languages?: readonly unknown[] | null
 	readonly serviceOffers?: readonly ({ readonly priceFrom?: number | null } | null)[] | null
-	readonly networks?: ReseauxDuDocument | null
+	readonly networks?: DocumentNetworks | null
 	readonly contactDetails?: { readonly phone?: string | null; readonly email?: string | null } | null
 	readonly publicContact?: boolean | null
 }
@@ -68,16 +68,16 @@ export interface DocumentDuProfil {
  * the other names of the list write them (« Pont de Montvert-Sud Mont Lozère »). A name the rule
  * reads is passed as it is; a text that is no city (« France », « Partout ») stays none.
  */
-function villeDeLaCommune(commune: DocumentDuProfil['city']): string | null {
+function cityName(commune: ProfileDocument['city']): string | null {
 	if (!commune?.inseeCode || typeof commune.name !== 'string') return null
-	return villeExploitable(commune.name) ? commune.name : commune.name.replace(/\s+-\s+/g, '-')
+	return usableCity(commune.name) ? commune.name : commune.name.replace(/\s+-\s+/g, '-')
 }
 
 /**
  * A document of `profiles` under the names of the old site, as the single rule reads it.
  *
  * - The city is the name of the commune (ticket 041), and only a commune with its INSEE code: the
- *   server stores no other (`villeDeLaCommune`).
+ *   server stores no other (`cityName`).
  * - A photo is passed as an object, never as a bare identifier, which the rule would count as no
  *   photo; the gallery as its list.
  * - The price of an offer is its amount (`priceFrom`, read from the text typed by the same
@@ -86,16 +86,16 @@ function villeDeLaCommune(commune: DocumentDuProfil['city']): string | null {
  * - The phone and the email count as contact channels only when she shows them (`publicContact`):
  *   a channel nobody sees is no channel.
  */
-export function champsDuProfil(document: DocumentDuProfil | null | undefined): ChampsDuProfil {
+export function profileFields(document: ProfileDocument | null | undefined): ProfileFields {
 	const d = document ?? {}
-	const reseaux = d.networks ?? {}
-	const montres = d.publicContact === true
+	const networks = d.networks ?? {}
+	const shown = d.publicContact === true
 	return {
 		first_name: d.firstName,
 		last_name: d.lastName,
 		speciality: d.specialty,
 		company_artist_name: d.artistName,
-		city: villeDeLaCommune(d.city),
+		city: cityName(d.city),
 		description: d.description,
 		main_picture: d.mainPicture === null || d.mainPicture === undefined ? null : { id: d.mainPicture },
 		image_gallery: d.gallery ?? null,
@@ -104,23 +104,23 @@ export function champsDuProfil(document: DocumentDuProfil | null | undefined): C
 		courses: d.courses,
 		language: d.languages,
 		service_offers: (d.serviceOffers ?? []).map(offre => {
-			const montant = offre?.priceFrom
-			return { price: estMontantDePrix(montant) ? String(montant) : null }
+			const amount = offre?.priceFrom
+			return { price: estMontantDePrix(amount) ? String(amount) : null }
 		}),
 		network: {
-			youtube: reseaux.youtube,
-			facebook: reseaux.facebook,
-			instagram: reseaux.instagram,
-			website: reseaux.website,
-			linkedin: reseaux.linkedin,
-			phone: montres ? d.contactDetails?.phone : null,
-			email: montres ? d.contactDetails?.email : null,
+			youtube: networks.youtube,
+			facebook: networks.facebook,
+			instagram: networks.instagram,
+			website: networks.website,
+			linkedin: networks.linkedin,
+			phone: shown ? d.contactDetails?.phone : null,
+			email: shown ? d.contactDetails?.email : null,
 		},
 	}
 }
 
 /** What the single rule says of a profile, as the collection stores it. */
-export interface EtatDuProfil {
+export interface ProfileState {
 	/** Criteria met, out of 13: the progress bar of the space */
 	readonly completeness: number
 	/** Main photo, usable city and speciality */
@@ -131,32 +131,32 @@ export interface EtatDuProfil {
 	readonly fullyEmpty: boolean
 }
 
-/** The state of a profile, by the single rule (src/lib/profil/completude.ts). */
-export function etatDuProfil(document: DocumentDuProfil | null | undefined): EtatDuProfil {
-	const { score, actif, publiable, entierementVide } = completude(champsDuProfil(document))
-	return { completeness: score, active: actif, publishable: publiable, fullyEmpty: entierementVide }
+/** The state of a profile, by the single rule (src/lib/profile/completeness.ts). */
+export function profileState(document: ProfileDocument | null | undefined): ProfileState {
+	const { score, actif: active, publiable: publishable, entierementVide: completelyEmpty } = completeness(profileFields(document))
+	return { completeness: score, active: active, publishable: publishable, fullyEmpty: completelyEmpty }
 }
 
 /** For each flag of the state, the field of the date it took its current value. */
-export const DATES_DE_PASSAGE = {
+export const TRANSITION_DATES = {
 	active: 'activeSince',
 	publishable: 'publishableSince',
 	fullyEmpty: 'fullyEmptySince',
 } as const
 
-type Drapeau = keyof typeof DATES_DE_PASSAGE
-type DateDePassage = (typeof DATES_DE_PASSAGE)[Drapeau]
+type Flag = keyof typeof TRANSITION_DATES
+type TransitionDate = (typeof TRANSITION_DATES)[Flag]
 
 /** What the collection stores of the status, before or after a save. */
-export interface StatutStocke {
+export interface StoredStatus {
 	readonly status?: unknown
 	readonly chosenStatus?: unknown
 }
 
-const estUnStatut = (statut: unknown): statut is StatutDuProfil =>
-	(STATUTS_DU_PROFIL as readonly unknown[]).includes(statut)
+const isStatus = (statut: unknown): statut is ProfileStatus =>
+	(PROFILE_STATUSES as readonly unknown[]).includes(statut)
 
-const estUnChoix = (choix: unknown): choix is ChoixDuStatut => (CHOIX_DU_STATUT as readonly unknown[]).includes(choix)
+const isChoice = (choix: unknown): choix is StatusChoice => (STATUS_CHOICES as readonly unknown[]).includes(choix)
 
 /**
  * The choice of the status and the status, after a save.
@@ -177,28 +177,28 @@ const estUnChoix = (choix: unknown): choix is ChoixDuStatut => (CHOIX_DU_STATUT 
  * access rules have run. A status or a choice that is none of the known ones counts as the
  * initial one.
  */
-export function statutApres({
+export function statusAfter({
 	avant,
 	apres,
 	fullyEmpty,
 }: {
-	avant?: StatutStocke | null
-	apres: StatutStocke
+	avant?: StoredStatus | null
+	apres: StoredStatus
 	fullyEmpty: boolean
-}): { status: StatutDuProfil; chosenStatus: ChoixDuStatut } {
-	const statutStocke = estUnStatut(avant?.status) ? avant.status : STATUT_INITIAL
-	const choixStocke = estUnChoix(avant?.chosenStatus) ? avant.chosenStatus : CHOIX_INITIAL
-	const choixGarde: ChoixDuStatut = statutStocke === 'hidden' && choixStocke === CHOIX_INITIAL ? 'hidden' : choixStocke
-	let chosenStatus = choixGarde
-	if (estUnChoix(apres.chosenStatus) && apres.chosenStatus !== choixStocke) chosenStatus = apres.chosenStatus
-	else if (estUnStatut(apres.status) && apres.status !== statutStocke) chosenStatus = apres.status
+}): { status: ProfileStatus; chosenStatus: StatusChoice } {
+	const storedStatus = isStatus(avant?.status) ? avant.status : INITIAL_STATUS
+	const storedChoice = isChoice(avant?.chosenStatus) ? avant.chosenStatus : INITIAL_CHOICE
+	const keptChoice: StatusChoice = storedStatus === 'hidden' && storedChoice === INITIAL_CHOICE ? 'hidden' : storedChoice
+	let chosenStatus = keptChoice
+	if (isChoice(apres.chosenStatus) && apres.chosenStatus !== storedChoice) chosenStatus = apres.chosenStatus
+	else if (isStatus(apres.status) && apres.status !== storedStatus) chosenStatus = apres.status
 	if (chosenStatus === 'automatic') return { status: fullyEmpty ? 'draft' : 'published', chosenStatus }
 	return { status: chosenStatus, chosenStatus }
 }
 
 /** What the server writes on a profile at every save: the state, its dates, the status. */
-export type EcritureDeLEtat = EtatDuProfil &
-	Record<DateDePassage, string> & { status: StatutDuProfil; chosenStatus: ChoixDuStatut }
+export type StateWrite = ProfileState &
+	Record<TransitionDate, string> & { status: ProfileStatus; chosenStatus: StatusChoice }
 
 /**
  * What a save stores, whatever the request sent on these fields: the state by the single rule; for
@@ -208,26 +208,26 @@ export type EcritureDeLEtat = EtatDuProfil &
  * `avant` is the stored document, nothing for a creation; `apres` is the document the save holds
  * once the access rules have run.
  */
-export function etatApresSauvegarde({
+export function stateAfterSave({
 	avant,
 	apres,
 	maintenant,
 }: {
-	avant?: Readonly<Partial<Record<Drapeau | DateDePassage, unknown>>> & StatutStocke
-	apres: DocumentDuProfil & StatutStocke
+	avant?: Readonly<Partial<Record<Flag | TransitionDate, unknown>>> & StoredStatus
+	apres: ProfileDocument & StoredStatus
 	maintenant: Date
-}): EcritureDeLEtat {
-	const etat = etatDuProfil(apres)
-	const depuis = (drapeau: Drapeau): string => {
-		const date = avant?.[DATES_DE_PASSAGE[drapeau]]
-		const garde = avant?.[drapeau] === etat[drapeau] && (typeof date === 'string' || date instanceof Date)
-		return garde ? new Date(date).toISOString() : maintenant.toISOString()
+}): StateWrite {
+	const state = profileState(apres)
+	const since = (drapeau: Flag): string => {
+		const date = avant?.[TRANSITION_DATES[drapeau]]
+		const kept = avant?.[drapeau] === state[drapeau] && (typeof date === 'string' || date instanceof Date)
+		return kept ? new Date(date).toISOString() : maintenant.toISOString()
 	}
 	return {
-		...etat,
-		activeSince: depuis('active'),
-		publishableSince: depuis('publishable'),
-		fullyEmptySince: depuis('fullyEmpty'),
-		...statutApres({ avant, apres, fullyEmpty: etat.fullyEmpty }),
+		...state,
+		activeSince: since('active'),
+		publishableSince: since('publishable'),
+		fullyEmptySince: since('fullyEmpty'),
+		...statusAfter({ avant, apres, fullyEmpty: state.fullyEmpty }),
 	}
 }

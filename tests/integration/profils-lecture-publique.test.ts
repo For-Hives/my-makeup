@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test'
-import type { StatutDuProfil } from '@/lib/profile/status'
+import type { ProfileStatus } from '@/lib/profile/status'
 import type { Profile } from '@/payload-types'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
@@ -62,7 +62,7 @@ const CLES_PUBLIQUES = [
 let dernierStrapiId: number = RESERVE.strapiId
 
 /** The account of a makeup artist, with her profile in this status and every reserved field filled. */
-async function maquilleuseAvecProfil(statut: StatutDuProfil) {
+async function maquilleuseAvecProfil(statut: ProfileStatus) {
 	const compte = await creerCompte('maquilleuse')
 	const payload = await payloadDeTest()
 	const [profil] = (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } }))

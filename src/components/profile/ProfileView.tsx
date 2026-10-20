@@ -1,17 +1,17 @@
-import { lignes } from '@/lib/profile/public-view'
-import type { ProfilPublic } from '@/services/public/profiles'
-import { EnTeteDuProfil } from './ProfileHeader'
-import { GalerieDuProfil } from './ProfileGallery'
-import { SectionDuProfil } from './ProfileSection'
+import { rows } from '@/lib/profile/public-view'
+import type { PublicProfile } from '@/services/public/profiles'
+import { ProfileHeader } from './ProfileHeader'
+import { ProfileGallery } from './ProfileGallery'
+import { ProfileSection } from './ProfileSection'
 import {
-	SectionCompetences,
+	SkillsSection,
 	SectionContacts,
 	SectionDescription,
 	SectionExperiences,
-	SectionFormations,
-	SectionLangues,
-	SectionLocalisation,
-	SectionPrestations,
+	CoursesSection,
+	LanguagesSection,
+	LocationSection,
+	ServiceOffersSection,
 } from './ProfileSections'
 
 /**
@@ -21,28 +21,28 @@ import {
  * database, and the HTML of the server holds all of it. `mesure` false: the contact links count no click
  * (the preview of her own page, ticket 144).
  */
-export function VueDuProfil({ profil, mesure = true }: { profil: ProfilPublic; mesure?: boolean }) {
-	const description = lignes(profil.description)
+export function ProfileView({ profil, mesure = true }: { profil: PublicProfile; mesure?: boolean }) {
+	const description = rows(profil.description)
 	return (
 		<main className="flex flex-1 flex-col">
-			<EnTeteDuProfil profil={profil} />
+			<ProfileHeader profil={profil} />
 			<div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 md:px-8">
 				<div className="grid grid-cols-12 gap-5">
 					<div className="col-span-12 flex min-w-0 flex-col items-start gap-5 md:col-span-4">
-						{profil.lieu && <SectionLocalisation lieu={profil.lieu} seDeplace={profil.seDeplace} zone={profil.zone} />}
+						{profil.lieu && <LocationSection lieu={profil.lieu} seDeplace={profil.seDeplace} zone={profil.zone} />}
 						{profil.liens.length > 0 && <SectionContacts liens={profil.liens} pid={profil.pid} mesure={mesure} />}
-						{profil.competences.length > 0 && <SectionCompetences competences={profil.competences} />}
-						{profil.langues.length > 0 && <SectionLangues langues={profil.langues} />}
-						{profil.formations.length > 0 && <SectionFormations formations={profil.formations} />}
+						{profil.competences.length > 0 && <SkillsSection competences={profil.competences} />}
+						{profil.langues.length > 0 && <LanguagesSection langues={profil.langues} />}
+						{profil.formations.length > 0 && <CoursesSection formations={profil.formations} />}
 					</div>
 					<div className="col-span-12 flex min-w-0 flex-col items-start gap-5 md:col-span-8">
 						{description.length > 0 && <SectionDescription lignes={description} />}
 						{profil.galerie.length > 0 && (
-							<SectionDuProfil titre="Portfolio">
-								<GalerieDuProfil photos={profil.galerie} nom={profil.nom} />
-							</SectionDuProfil>
+							<ProfileSection titre="Portfolio">
+								<ProfileGallery photos={profil.galerie} nom={profil.nom} />
+							</ProfileSection>
 						)}
-						{profil.prestations.length > 0 && <SectionPrestations prestations={profil.prestations} />}
+						{profil.prestations.length > 0 && <ServiceOffersSection prestations={profil.prestations} />}
 						{profil.experiences.length > 0 && <SectionExperiences experiences={profil.experiences} />}
 					</div>
 				</div>

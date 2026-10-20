@@ -5,13 +5,13 @@
  */
 
 import { z } from 'zod'
-import { MESSAGES_DES_PHOTOS } from '../profile/photos'
+import { PHOTO_MESSAGES } from '../profile/photos'
 import { isPhotoId, type PhotoId } from './photos'
 
 export interface PhotoValues extends Record<string, unknown> {
 	photoPrincipale: PhotoId
 }
 
-const id = z.custom<PhotoId>(isPhotoId, { error: MESSAGES_DES_PHOTOS.photoRefusee })
+const id = z.custom<PhotoId>(isPhotoId, { error: PHOTO_MESSAGES.photoRefusee })
 
 export const photoSchema = z.strictObject({ photoPrincipale: id })

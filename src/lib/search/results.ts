@@ -1,22 +1,22 @@
 /**
  * What a search finds in the directory, before it is cut in pages (tickets 098 and 099): the profiles
- * the words matched, best first (src/lib/recherche/pertinence.ts), or every listed profile when only a
- * city was typed; then placed by the city typed, in sections (src/lib/recherche/lieu.ts). The city only
+ * the words matched, best first (src/lib/search/relevance.ts), or every listed profile when only a
+ * city was typed; then placed by the city typed, in sections (src/lib/search/place.ts). The city only
  * places: it never adds a profile the words did not find.
  *
  * No `next` import: read by the page and by the tests.
  */
 
-import { type PlaceDuProfil, type ProfilsParLieu, sectionsParLieu } from './place'
-import { classerParPertinence, normaliserLesTextes, type TextesNormalises } from './relevance'
-import { type Recherche, rechercheParMot } from './input'
+import { type ProfilePlace, type ProfilesByPlace, sectionsByPlace } from './place'
+import { rankByRelevance, normalizeTexts, type NormalizedTexts } from './relevance'
+import { type Search, searchByWord } from './input'
 
 /** A profile of the directory as the search reads it: where she works, and (for a word) what she wrote. */
-export interface ProfilCherchable extends PlaceDuProfil {
-	textes?: TextesNormalises
+export interface SearchableProfile extends ProfilePlace {
+	textes?: NormalizedTexts
 }
 
-const SANS_TEXTE = normaliserLesTextes({
+const NO_TEXT = normalizeTexts({
 	ville: '',
 	specialite: '',
 	description: '',
@@ -28,14 +28,14 @@ const SANS_TEXTE = normaliserLesTextes({
 })
 
 /** The profiles a search finds, in their sections. The directory comes in its order, which breaks ties. */
-export function chercher<T extends ProfilCherchable>(
+export function find<T extends SearchableProfile>(
 	annuaire: readonly T[],
-	recherche: Pick<Recherche, 'search' | 'city'>
-): ProfilsParLieu<T> {
-	const trouves = rechercheParMot(recherche)
-		? classerParPertinence(annuaire, profil => profil.textes ?? SANS_TEXTE, recherche.search).map(
+	recherche: Pick<Search, 'search' | 'city'>
+): ProfilesByPlace<T> {
+	const found = searchByWord(recherche)
+		? rankByRelevance(annuaire, profil => profil.textes ?? NO_TEXT, recherche.search).map(
 				({ profil }) => profil
 			)
 		: annuaire
-	return sectionsParLieu(trouves, recherche.city)
+	return sectionsByPlace(found, recherche.city)
 }

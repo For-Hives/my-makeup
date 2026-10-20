@@ -19,22 +19,22 @@
 import { ipClient, NO_PROXY } from '@/lib/auth/client-ip'
 import { createRateLimit, type RateLimit } from '@/lib/auth/rate-limit'
 
-export const RECHERCHES_PAR_MINUTE = 60
+export const SEARCHES_PER_MINUTE = 60
 
-export const freinDeRecherche: RateLimit = createRateLimit({
+export const searchRateLimit: RateLimit = createRateLimit({
 	nom: 'recherche',
-	limite: RECHERCHES_PAR_MINUTE,
+	limite: SEARCHES_PER_MINUTE,
 	fenetreMs: 60_000,
 })
 
-export const CHEMIN_DE_LA_RECHERCHE = '/search'
+export const SEARCH_PATH = '/search'
 
 /** The key of a loopback address, as `ipClient` gives it: `127.x.y.z`, or the /64 block of `::1`. */
-export const estUneAdresseLocale = (cle: string): boolean =>
+export const isLocalAddress = (cle: string): boolean =>
 	cle === NO_PROXY || cle.startsWith('127.') || cle === '0:0:0:0::/64'
 
 /** The page that answers a braked address: plain HTML, in French, with a way back. */
-export function pageDeFrein(reessayerDansS: number): string {
+export function rateLimitPage(reessayerDansS: number): string {
 	return `<!doctype html>
 <html lang="fr">
 <head>
@@ -56,20 +56,20 @@ export function pageDeFrein(reessayerDansS: number): string {
  * Takes a place for this search; `null` when it may go on, else the 429 to answer (body, headers).
  * `frein` is the brake to use, the shared one by default.
  */
-export function freinerLaRecherche(
+export function rateLimitSearch(
 	{ chemin, methode, entetes }: { chemin: string; methode: string; entetes: Headers },
-	frein: RateLimit = freinDeRecherche
+	frein: RateLimit = searchRateLimit
 ): { status: 429; corps: string; entetes: Record<string, string> } | null {
-	if (chemin !== CHEMIN_DE_LA_RECHERCHE) return null
+	if (chemin !== SEARCH_PATH) return null
 	if (methode !== 'GET' && methode !== 'HEAD') return null
 	if (entetes.has('next-router-prefetch') || entetes.get('purpose') === 'prefetch') return null
-	const cle = ipClient(entetes)
-	if (estUneAdresseLocale(cle)) return null
-	const decision = frein.prendre(cle)
+	const key = ipClient(entetes)
+	if (isLocalAddress(key)) return null
+	const decision = frein.prendre(key)
 	if (decision.autorise) return null
 	return {
 		status: 429,
-		corps: pageDeFrein(decision.reessayerDansS),
+		corps: rateLimitPage(decision.reessayerDansS),
 		entetes: {
 			'Content-Type': 'text/html; charset=utf-8',
 			'Retry-After': String(decision.reessayerDansS),

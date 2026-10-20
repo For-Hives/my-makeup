@@ -8,7 +8,7 @@ import { cityLabel } from '@/lib/dashboard/location'
 import { artistProfile } from '@/lib/dashboard/my-profile'
 import { onboardingPosition } from '@/lib/dashboard/onboarding'
 import { requestUser } from '@/lib/dashboard/request'
-import { texte } from '@/lib/profile/display-name'
+import { text } from '@/lib/profile/display-name'
 import { findMyCities, saveMyLocation } from '../profil/location-actions'
 import { saveMyOnboardingIdentity, saveMyOnboardingPhoto } from './actions'
 
@@ -38,13 +38,13 @@ export default async function AccountOnboardingPage() {
 			<Onboarding
 				etapeInitiale={position}
 				identite={{
-					prenom: texte(profile.firstName),
-					nom: texte(profile.lastName),
-					nomArtiste: texte(profile.artistName),
-					specialite: texte(profile.specialty),
+					prenom: text(profile.firstName),
+					nom: text(profile.lastName),
+					nomArtiste: text(profile.artistName),
+					specialite: text(profile.specialty),
 				}}
 				localisation={{
-					codeInsee: texte(profile.city?.inseeCode),
+					codeInsee: text(profile.city?.inseeCode),
 					libelle: cityLabel({ nom: profile.city?.name, departement: profile.city?.department }),
 					rayonKm: typeof profile.radiusKm === 'number' ? profile.radiusKm : null,
 					aDomicile: profile.homeService === true,

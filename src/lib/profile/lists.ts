@@ -4,9 +4,9 @@
  * called by the collection (src/collections/profile-lists.ts) and, later, by the forms of the
  * artist's space, which must not compute them again.
  *
- * - The identity of a row: the server gives it, once, and keeps it (`identitesDesLignes`).
+ * - The identity of a row: the server gives it, once, and keeps it (`rowIdentities`).
  * - The bounds of a value: a text length, an amount of price, a date (`messageDe…`).
- * - A date of these lists is a day, without an hour (`dateDuJour`).
+ * - A date of these lists is a day, without an hour (`dayDate`).
  *
  * Every message is in French: it is what the artist reads when the server refuses a value.
  */
@@ -14,15 +14,15 @@
 import { estMontantDePrix, formatMontant, PRIX_MAX, PRIX_MIN } from '../prix'
 
 /** Longest name, title or price text of a row (the bounds of the old API and of its forms). */
-export const LONGUEUR_NOM = 70
+export const NAME_MAX_LENGTH = 70
 /** Longest description of a row (the bound of the old API and of its forms). */
-export const LONGUEUR_DESCRIPTION = 2000
+export const DESCRIPTION_MAX_LENGTH = 2000
 
 /**
  * The list fields of a profile, each with the lists nested in its rows. Only one level of
  * nesting exists: the options of an offer.
  */
-export const LISTES_DU_PROFIL = {
+export const PROFILE_LISTS = {
 	serviceOffers: ['options'],
 	skills: [],
 	languages: [],
@@ -31,14 +31,14 @@ export const LISTES_DU_PROFIL = {
 } as const satisfies Readonly<Record<string, readonly string[]>>
 
 /** A row of a list, or a document that holds lists: what it holds is checked, never assumed. */
-export type Ligne = Record<string, unknown>
+export type Row = Record<string, unknown>
 
-const estLigne = (valeur: unknown): valeur is Ligne =>
+const isRow = (valeur: unknown): valeur is Row =>
 	typeof valeur === 'object' && valeur !== null && !Array.isArray(valeur)
 
-const lignesDe = (valeur: unknown): Ligne[] => (Array.isArray(valeur) ? valeur.filter(estLigne) : [])
+const rowsOf = (valeur: unknown): Row[] => (Array.isArray(valeur) ? valeur.filter(isRow) : [])
 
-const identifiantsDe = (lignes: readonly Ligne[]): ReadonlySet<string> =>
+const idsOf = (lignes: readonly Row[]): ReadonlySet<string> =>
 	new Set(lignes.flatMap(({ id }) => (typeof id === 'string' && id !== '' ? [id] : [])))
 
 /**
@@ -46,11 +46,11 @@ const identifiantsDe = (lignes: readonly Ligne[]): ReadonlySet<string> =>
  * this list (`connus`) and no earlier row of the request holds it already (`vus`). Any other
  * row loses its identifier, and Payload gives it a new one.
  */
-function garderLesIdentifiants(recues: unknown[], connus: ReadonlySet<string>, vus: Set<string>): unknown[] {
+function keepIds(recues: unknown[], connus: ReadonlySet<string>, vus: Set<string>): unknown[] {
 	return recues.map(ligne => {
-		if (!estLigne(ligne)) return ligne
-		const { id, ...contenu } = ligne
-		if (typeof id !== 'string' || !connus.has(id) || vus.has(id)) return contenu
+		if (!isRow(ligne)) return ligne
+		const { id, ...content } = ligne
+		if (typeof id !== 'string' || !connus.has(id) || vus.has(id)) return content
 		vus.add(id)
 		return ligne
 	})
@@ -71,26 +71,26 @@ function garderLesIdentifiants(recues: unknown[], connus: ReadonlySet<string>, v
  *
  * A list that is not sent is left as it is. Everything else in `recu` is returned unchanged.
  */
-export function identitesDesLignes(recu: Ligne, stocke: Ligne | null | undefined): Ligne {
-	const sortie: Ligne = { ...recu }
-	for (const [nom, imbriquees] of Object.entries(LISTES_DU_PROFIL)) {
-		const recues = recu[nom]
-		if (!Array.isArray(recues)) continue
-		const stockees = lignesDe(stocke?.[nom])
-		let lignes = garderLesIdentifiants(recues, identifiantsDe(stockees), new Set())
-		for (const sousListe of imbriquees) {
-			const connus = identifiantsDe(stockees.flatMap(ligne => lignesDe(ligne[sousListe])))
+export function rowIdentities(recu: Row, stocke: Row | null | undefined): Row {
+	const output: Row = { ...recu }
+	for (const [name, nested] of Object.entries(PROFILE_LISTS)) {
+		const received = recu[name]
+		if (!Array.isArray(received)) continue
+		const stored = rowsOf(stocke?.[name])
+		let rows = keepIds(received, idsOf(stored), new Set())
+		for (const subList of nested) {
+			const known = idsOf(stored.flatMap(ligne => rowsOf(ligne[subList])))
 			// One set for all the rows: an option keeps its identifier once in the whole profile.
-			const vus = new Set<string>()
-			lignes = lignes.map(ligne =>
-				estLigne(ligne) && Array.isArray(ligne[sousListe])
-					? { ...ligne, [sousListe]: garderLesIdentifiants(ligne[sousListe], connus, vus) }
+			const seen = new Set<string>()
+			rows = rows.map(ligne =>
+				isRow(ligne) && Array.isArray(ligne[subList])
+					? { ...ligne, [subList]: keepIds(ligne[subList], known, seen) }
 					: ligne
 			)
 		}
-		sortie[nom] = lignes
+		output[name] = rows
 	}
-	return sortie
+	return output
 }
 
 /** Refusals, as the artist reads them. */
@@ -104,7 +104,7 @@ export const MESSAGES = {
 } as const
 
 /** Null when the text is within its bound (or absent), else the refusal. */
-export function messageDeTexte(valeur: unknown, maximum: number): string | null {
+export function textMessage(valeur: unknown, maximum: number): string | null {
 	if (valeur === null || valeur === undefined) return null
 	if (typeof valeur !== 'string') return MESSAGES.pasUnTexte
 	return valeur.length > maximum ? MESSAGES.texteTropLong(maximum) : null
@@ -115,22 +115,22 @@ export function messageDeTexte(valeur: unknown, maximum: number): string | null 
  * price (src/lib/prix.ts: between PRIX_MIN and PRIX_MAX), else the refusal: a negative amount,
  * zero, an amount out of bounds, anything that is not a number.
  */
-export function messageDePrix(valeur: unknown): string | null {
+export function priceMessage(valeur: unknown): string | null {
 	if (valeur === null || valeur === undefined) return null
 	return estMontantDePrix(valeur) ? null : MESSAGES.prixHorsBornes
 }
 
 // « 2024-03-01 », alone or followed by an hour: the day as it was written.
-const DATE_ECRITE = /^(\d{4})-(\d{2})-(\d{2})(?=$|T)/
+const WRITTEN_DATE = /^(\d{4})-(\d{2})-(\d{2})(?=$|T)/
 
 /** The first year PostgreSQL stores for these four-digit dates: it has no year 0. */
-const ANNEE_MIN = 1
+const MIN_YEAR = 1
 
-const deuxChiffres = (nombre: number) => String(nombre).padStart(2, '0')
+const twoDigits = (nombre: number) => String(nombre).padStart(2, '0')
 
 /** « YYYY-MM-DD » of a date in UTC. */
-const jourUtc = (date: Date) =>
-	`${String(date.getUTCFullYear()).padStart(4, '0')}-${deuxChiffres(date.getUTCMonth() + 1)}-${deuxChiffres(date.getUTCDate())}`
+const utcDay = (date: Date) =>
+	`${String(date.getUTCFullYear()).padStart(4, '0')}-${twoDigits(date.getUTCMonth() + 1)}-${twoDigits(date.getUTCDate())}`
 
 /**
  * The day a date of these lists stands for, « YYYY-MM-DD », or null when it is not a date. A text
@@ -138,17 +138,17 @@ const jourUtc = (date: Date) =>
  * the day typed, whatever the time zone of whoever typed it. A Date gives its day in UTC. Anything
  * else, a day that does not exist (« 2024-02-30 »), the year 0 that PostgreSQL does not store and a text in another form are not dates.
  */
-export function jourCalendaire(valeur: unknown): string | null {
-	if (valeur instanceof Date) return Number.isNaN(valeur.getTime()) ? null : jourUtc(valeur)
+export function calendarDay(valeur: unknown): string | null {
+	if (valeur instanceof Date) return Number.isNaN(valeur.getTime()) ? null : utcDay(valeur)
 	if (typeof valeur !== 'string') return null
-	const ecrit = DATE_ECRITE.exec(valeur)
-	if (ecrit === null || Number.isNaN(Date.parse(valeur))) return null
-	const [, annee, mois, jour] = ecrit.map(Number) as [number, number, number, number]
+	const written = WRITTEN_DATE.exec(valeur)
+	if (written === null || Number.isNaN(Date.parse(valeur))) return null
+	const [, year, month, day] = written.map(Number) as [number, number, number, number]
 	// PostgreSQL has no year 0 (1 BC is followed by 1 AD): « 0000-01-01 » would pass here and fail the write.
-	if (annee < ANNEE_MIN) return null
-	const date = new Date(Date.UTC(annee, mois - 1, jour))
-	date.setUTCFullYear(annee)
-	return jourUtc(date) === ecrit[0] ? ecrit[0] : null
+	if (year < MIN_YEAR) return null
+	const date = new Date(Date.UTC(year, month - 1, day))
+	date.setUTCFullYear(year)
+	return utcDay(date) === written[0] ? written[0] : null
 }
 
 /**
@@ -158,44 +158,44 @@ export function jourCalendaire(valeur: unknown): string | null {
  * form sends it. Any other value that is not a date is returned as it is, for the validation to
  * refuse it; null and undefined too.
  */
-export function dateDuJour(valeur: unknown): unknown {
+export function dayDate(valeur: unknown): unknown {
 	if (valeur === '') return null
-	const jour = jourCalendaire(valeur)
-	return jour === null ? valeur : `${jour}T12:00:00.000Z`
+	const day = calendarDay(valeur)
+	return day === null ? valeur : `${day}T12:00:00.000Z`
 }
 
 /** Null when the value is a date (or absent), else the refusal. */
-export function messageDeDate(valeur: unknown): string | null {
+export function dateMessage(valeur: unknown): string | null {
 	if (valeur === null || valeur === undefined) return null
-	return jourCalendaire(valeur) === null ? MESSAGES.dateInvalide : null
+	return calendarDay(valeur) === null ? MESSAGES.dateInvalide : null
 }
 
 /**
  * Null when the end of an experience is absent, or on its start day or later (plans/02 U30),
  * else the refusal. Without a start, there is nothing to compare: only the end is checked.
  */
-export function messageDeFin(fin: unknown, debut: unknown): string | null {
-	const pasUneDate = messageDeDate(fin)
-	if (pasUneDate !== null) return pasUneDate
-	const jourDeFin = jourCalendaire(fin)
-	const jourDeDebut = jourCalendaire(debut)
-	return jourDeFin !== null && jourDeDebut !== null && jourDeFin < jourDeDebut ? MESSAGES.finAvantDebut : null
+export function endMessage(fin: unknown, debut: unknown): string | null {
+	const notADate = dateMessage(fin)
+	if (notADate !== null) return notADate
+	const endDay = calendarDay(fin)
+	const startDay = calendarDay(debut)
+	return endDay !== null && startDay !== null && endDay < startDay ? MESSAGES.finAvantDebut : null
 }
 
 /** The last day a course may be obtained, seen from `maintenant`: the same day, one year later (UTC). */
-export function dernierJourDObtention(maintenant: Date): string {
-	const limite = new Date(maintenant.getTime())
-	limite.setUTCFullYear(limite.getUTCFullYear() + 1)
-	return jourUtc(limite)
+export function lastDayToObtain(maintenant: Date): string {
+	const limit = new Date(maintenant.getTime())
+	limit.setUTCFullYear(limit.getUTCFullYear() + 1)
+	return utcDay(limit)
 }
 
 /**
  * Null when the date a course was obtained is absent, or one year from `maintenant` at the latest
  * (plans/02 U30), else the refusal. A course to come may be listed, not one invented far ahead.
  */
-export function messageDObtention(graduatedAt: unknown, maintenant: Date): string | null {
-	const pasUneDate = messageDeDate(graduatedAt)
-	if (pasUneDate !== null) return pasUneDate
-	const jour = jourCalendaire(graduatedAt)
-	return jour !== null && jour > dernierJourDObtention(maintenant) ? MESSAGES.obtentionTropLointaine : null
+export function obtainMessage(graduatedAt: unknown, maintenant: Date): string | null {
+	const notADate = dateMessage(graduatedAt)
+	if (notADate !== null) return notADate
+	const day = calendarDay(graduatedAt)
+	return day !== null && day > lastDayToObtain(maintenant) ? MESSAGES.obtentionTropLointaine : null
 }

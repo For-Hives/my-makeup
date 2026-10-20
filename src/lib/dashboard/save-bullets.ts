@@ -23,7 +23,7 @@ type StoredRow = { id?: string | null; name?: string | null; description?: strin
  *   every name is trimmed and refused in French when empty or beyond 70 characters (E30);
  * - the profile written is hers, found by her account: the request holds no identifier (I02);
  * - a chip keeps its identifier when it is sent back with the one the server gave it (rule L1, the
- *   hook `identitesDesLignes` decides); a chip added is new and the server gives it its own. The
+ *   hook `rowIdentities` decides); a chip added is new and the server gives it its own. The
  *   order of the request is the order stored;
  * - a name that duplicates another chip is refused when the chip is new. A chip already stored twice
  *   (the import, the old site) is kept as it is: saving never fails because of what was there;

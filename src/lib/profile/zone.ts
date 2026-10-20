@@ -26,26 +26,26 @@ import { DEPARTEMENTS } from '../departements'
  * own bound (`RAYON_MAX_KM`, src/lib/format-zone.ts, 1 000 km as on the old site), which is not
  * this one.
  */
-export const BORNES_DU_RAYON_KM = { min: 0, max: 200 } as const
+export const RADIUS_BOUNDS_KM = { min: 0, max: 200 } as const
 
 /** The longest name of a commune kept; the longest of the official list has 45 characters. */
-export const NOM_DE_COMMUNE_MAX = 70
+export const CITY_NAME_MAX = 70
 
 /**
  * The decimals kept of a coordinate: the centre of a commune to about 1 km (0.01° is 1.1 km of
  * latitude), never a point that locates a home.
  */
-export const DECIMALES_DES_COORDONNEES = 2
+export const COORDINATE_DECIMALS = 2
 
 /** The fields of the commune of a profile, in the order of SCHEMA.md §5.2. */
-export const CHAMPS_DE_LA_COMMUNE = ['name', 'inseeCode', 'department', 'latitude', 'longitude'] as const
+export const CITY_FIELDS = ['name', 'inseeCode', 'department', 'latitude', 'longitude'] as const
 
 /**
  * The overseas collectivities whose communes the official list holds (geo.api.gouv.fr, 14/10/2026),
  * besides the 101 départements of src/lib/departements.ts: code → name. Their INSEE codes start
  * with these three characters, and `city.department` holds them.
  */
-export const COLLECTIVITES_D_OUTRE_MER: Readonly<Record<string, string>> = {
+export const OVERSEAS_COLLECTIVITIES: Readonly<Record<string, string>> = {
 	975: 'Saint-Pierre-et-Miquelon',
 	977: 'Saint-Barthélemy',
 	978: 'Saint-Martin',
@@ -57,12 +57,12 @@ export const COLLECTIVITES_D_OUTRE_MER: Readonly<Record<string, string>> = {
 }
 
 /** What the server answers, in French, to a zone it refuses. */
-export const MESSAGES_DE_LA_ZONE = {
-	rayon: `Le rayon d’action se donne en kilomètres entiers, de ${BORNES_DU_RAYON_KM.min} à ${BORNES_DU_RAYON_KM.max} km.`,
+export const ZONE_MESSAGES = {
+	rayon: `Le rayon d’action se donne en kilomètres entiers, de ${RADIUS_BOUNDS_KM.min} à ${RADIUS_BOUNDS_KM.max} km.`,
 	codeInseeMalForme: 'Le code INSEE de la commune est mal formé : 5 caractères, comme 74010 ou 2A004.',
 	communeSansCodeInsee: 'Choisis ta commune dans la liste : sans son code INSEE, elle ne peut pas être enregistrée.',
 	codeInseeSansNom: 'Il manque le nom de la commune de ce code INSEE.',
-	nomInvalide: `Le nom de la commune est un texte de ${NOM_DE_COMMUNE_MAX} caractères au plus.`,
+	nomInvalide: `Le nom de la commune est un texte de ${CITY_NAME_MAX} caractères au plus.`,
 	nomAdresse: 'Ce nom ressemble à une adresse : choisis ta commune dans la liste, jamais ton adresse.',
 	nomCaracteres:
 		'Le nom d’une commune n’a que des lettres, des espaces, des traits d’union, des apostrophes et des parenthèses : choisis ta commune dans la liste.',
@@ -84,29 +84,29 @@ const CODE_INSEE = /^(?:(9[78]\d)(\d{2})|(\d{2}|2[AB])(\d{3}))$/
  * The département an INSEE code names, or null when the code is not well formed: « 74010 » →
  * « 74 », « 2A004 » → « 2A », « 97411 » → « 974 », « 97701 » → « 977 ». The 101 départements of
  * src/lib/departements.ts and the overseas collectivities of the official list
- * (`COLLECTIVITES_D_OUTRE_MER`) exist here, nothing else: « 20004 » (Corsica is 2A and 2B),
+ * (`OVERSEAS_COLLECTIVITIES`) exist here, nothing else: « 20004 » (Corsica is 2A and 2B),
  * « 97001 » and a commune numbered 0 are refused. The code is read as written: no space, A and B
  * in capitals (the collection writes it so before it checks it).
  */
-export function departementDuCodeInsee(code: unknown): string | null {
+export function departmentOfInseeCode(code: unknown): string | null {
 	if (typeof code !== 'string') return null
-	const [, outreMer, numeroOutreMer, metropole, numeroMetropole] = CODE_INSEE.exec(code) ?? []
-	const departement = outreMer ?? metropole
-	const numero = numeroOutreMer ?? numeroMetropole
-	if (departement === undefined || numero === undefined || /^0+$/.test(numero)) return null
-	return Object.hasOwn(DEPARTEMENTS, departement) || Object.hasOwn(COLLECTIVITES_D_OUTRE_MER, departement)
-		? departement
+	const [, overseas, overseasNumber, metropole, mainlandNumber] = CODE_INSEE.exec(code) ?? []
+	const department = overseas ?? metropole
+	const number = overseasNumber ?? mainlandNumber
+	if (department === undefined || number === undefined || /^0+$/.test(number)) return null
+	return Object.hasOwn(DEPARTEMENTS, department) || Object.hasOwn(OVERSEAS_COLLECTIVITIES, department)
+		? department
 		: null
 }
 
 /** An INSEE code as the collection stores it: without spaces around, A and B in capitals, null when empty. */
-export function codeInseeNormalise(code: unknown): unknown {
+export function normalizedInseeCode(code: unknown): unknown {
 	if (typeof code !== 'string') return code
 	return code.trim().toUpperCase() || null
 }
 
 /** A plain object, as a JSON body gives one: not an array, nor a date, a map or another instance. */
-function objetSimple(valeur: unknown): valeur is Record<string, unknown> {
+function plainObject(valeur: unknown): valeur is Record<string, unknown> {
 	if (typeof valeur !== 'object' || valeur === null) return false
 	const prototype = Object.getPrototypeOf(valeur)
 	return prototype === Object.prototype || prototype === null
@@ -121,12 +121,12 @@ function objetSimple(valeur: unknown): valeur is Record<string, unknown> {
  * - `null` is the empty commune: it empties a stored one.
  * - A text, a number… is a name without an INSEE code, which the check refuses: free text is
  *   never a commune.
- * - An array, or another object than a plain one, is left as sent: `verdictDeLaCommune` refuses it.
+ * - An array, or another object than a plain one, is left as sent: `cityVerdict` refuses it.
  * - Nothing sent stays nothing (Payload hands the stored commune instead on an update).
  */
-export function communeEnChamps(commune: unknown): unknown {
+export function cityToFields(commune: unknown): unknown {
 	if (commune === undefined) return commune
-	if (objetSimple(commune)) {
+	if (plainObject(commune)) {
 		const { name = null, inseeCode = null, latitude = null, longitude = null } = commune
 		return { name, inseeCode, latitude, longitude }
 	}
@@ -135,22 +135,22 @@ export function communeEnChamps(commune: unknown): unknown {
 }
 
 /**
- * The commune as a whole, once read by `communeEnChamps`: nothing, or a plain object. An array (or
+ * The commune as a whole, once read by `cityToFields`: nothing, or a plain object. An array (or
  * a date…) is refused in French: without it, its fields would be read as empty while the stored
  * ones stay, and its département would be lost.
  */
-export function verdictDeLaCommune(commune: unknown): true | string {
-	return commune === undefined || commune === null || objetSimple(commune)
+export function cityVerdict(commune: unknown): true | string {
+	return commune === undefined || commune === null || plainObject(commune)
 		? true
-		: MESSAGES_DE_LA_ZONE.communeSansCodeInsee
+		: ZONE_MESSAGES.communeSansCodeInsee
 }
 
 /**
- * Types of street, as src/lib/profil/lieu-public.ts reads them in an address (lower case, without
+ * Types of street, as src/lib/profile/public-place.ts reads them in an address (lower case, without
  * accents). Here they only count before another word: « Rue », « Le Chemin », « Le Passage » are
  * communes.
  */
-const VOIES = new Set([
+const STREETS = new Set([
 	'rue',
 	'ruelle',
 	'avenue',
@@ -191,7 +191,7 @@ const VOIES = new Set([
 ])
 
 /** The ordinal of a municipal arrondissement, the only digits of the official list (« Paris 20e Arrondissement »). */
-const ARRONDISSEMENT = / \d{1,2}(?:er|e) arrondissement$/i
+const DISTRICT = / \d{1,2}(?:er|e) arrondissement$/i
 
 /**
  * Whether a name of commune looks like a postal address: a digit (a street number, a postal code)
@@ -200,17 +200,17 @@ const ARRONDISSEMENT = / \d{1,2}(?:er|e) arrondissement$/i
  * official list does: the rule was run on the whole list of 14/10/2026 (34 969 communes and 45
  * municipal arrondissements of geo.api.gouv.fr), and none was refused.
  */
-export function ressembleAUneAdresse(nom: string): boolean {
-	const sansArrondissement = nom.trim().replace(ARRONDISSEMENT, '')
-	if (/\d/.test(sansArrondissement) || /[,;:/|]/.test(sansArrondissement)) return true
-	const mots = sansArrondissement.split(/\s+/).map(mot =>
+export function looksLikeAnAddress(nom: string): boolean {
+	const withoutDistrict = nom.trim().replace(DISTRICT, '')
+	if (/\d/.test(withoutDistrict) || /[,;:/|]/.test(withoutDistrict)) return true
+	const words = withoutDistrict.split(/\s+/).map(mot =>
 		mot
 			.normalize('NFD')
 			.replace(/[\u0300-\u036f]/g, '')
 			.toLowerCase()
 			.replace(/^l['’]/, '')
 	)
-	return mots.some((mot, i) => i < mots.length - 1 && VOIES.has(mot))
+	return words.some((mot, i) => i < words.length - 1 && STREETS.has(mot))
 }
 
 /**
@@ -219,52 +219,52 @@ export function ressembleAUneAdresse(nom: string): boolean {
  * ordinal of an arrondissement, the only digits (removed before this check). An email, a website,
  * an abbreviation (« St. ») or a symbol is not a name of commune.
  */
-const CARACTERES_D_UN_NOM = /^[\p{L}\p{M} '’()-]*$/u
+const NAME_CHARACTERS = /^[\p{L}\p{M} '’()-]*$/u
 
-/** Whether a name holds only the characters of a name of commune (`CARACTERES_D_UN_NOM`). */
-export function aLesCaracteresDUnNom(nom: string): boolean {
-	return CARACTERES_D_UN_NOM.test(nom.trim().replace(ARRONDISSEMENT, ''))
+/** Whether a name holds only the characters of a name of commune (`NAME_CHARACTERS`). */
+export function hasNameCharacters(nom: string): boolean {
+	return NAME_CHARACTERS.test(nom.trim().replace(DISTRICT, ''))
 }
 
-/** A coordinate as the collection stores it: rounded to `DECIMALES_DES_COORDONNEES`; anything else as it came. */
-export function coordonneeArrondie(valeur: unknown): unknown {
+/** A coordinate as the collection stores it: rounded to `COORDINATE_DECIMALS`; anything else as it came. */
+export function roundedCoordinate(valeur: unknown): unknown {
 	if (typeof valeur !== 'number' || !Number.isFinite(valeur)) return valeur
-	const facteur = 10 ** DECIMALES_DES_COORDONNEES
+	const factor = 10 ** COORDINATE_DECIMALS
 	// `|| 0`: never a negative zero.
-	return Math.round(valeur * facteur) / facteur || 0
+	return Math.round(valeur * factor) / factor || 0
 }
 
 /** A name as the collection stores it: without spaces around, null when empty. */
-export function nomNormalise(nom: unknown): unknown {
+export function normalizedName(nom: unknown): unknown {
 	if (typeof nom !== 'string') return nom
 	return nom.trim() || null
 }
 
 /** Nothing given: absent, null, or a text of spaces only. */
-const vide = (valeur: unknown): boolean =>
+const empty = (valeur: unknown): boolean =>
 	valeur === null || valeur === undefined || (typeof valeur === 'string' && valeur.trim() === '')
 
 /**
  * The radius: empty (the makeup artist has not said it), or a whole number of kilometres from 0
  * to 200. Gives `true`, or the message of the refusal.
  */
-export function verdictDuRayon(rayon: unknown): true | string {
-	if (vide(rayon)) return true
-	const { min, max } = BORNES_DU_RAYON_KM
+export function radiusVerdict(rayon: unknown): true | string {
+	if (empty(rayon)) return true
+	const { min, max } = RADIUS_BOUNDS_KM
 	return typeof rayon === 'number' && Number.isInteger(rayon) && rayon >= min && rayon <= max
 		? true
-		: MESSAGES_DE_LA_ZONE.rayon
+		: ZONE_MESSAGES.rayon
 }
 
 /** What a commune holds before it is checked: anything a request may send. */
-export type CommuneSaisie = Partial<Record<(typeof CHAMPS_DE_LA_COMMUNE)[number], unknown>>
+export type CityInput = Partial<Record<(typeof CITY_FIELDS)[number], unknown>>
 
 /** The fields of a commune that can be wrong, each with the message of its refusal. */
-export type ErreursDeLaCommune = Partial<Record<'name' | 'inseeCode' | 'latitude' | 'longitude', string>>
+export type CityErrors = Partial<Record<'name' | 'inseeCode' | 'latitude' | 'longitude', string>>
 
 /** A coordinate: absent, in its bounds, or out of them (not a number, or too far). */
-function coordonnee(valeur: unknown, borne: number): 'absente' | 'valide' | 'invalide' {
-	if (vide(valeur)) return 'absente'
+function coordinate(valeur: unknown, borne: number): 'absente' | 'valide' | 'invalide' {
+	if (empty(valeur)) return 'absente'
 	return typeof valeur === 'number' && Number.isFinite(valeur) && Math.abs(valeur) <= borne ? 'valide' : 'invalide'
 }
 
@@ -273,34 +273,34 @@ function coordonnee(valeur: unknown, borne: number): 'absente' | 'valide' | 'inv
  *
  * - Empty (nothing given): no error, a profile may have no zone yet.
  * - A commune has its name and its INSEE code, the one never without the other, and the code is
- *   well formed (`departementDuCodeInsee`). Its name never looks like an address
- *   (`ressembleAUneAdresse`), and holds only the characters of a name (`aLesCaracteresDUnNom`).
+ *   well formed (`departmentOfInseeCode`). Its name never looks like an address
+ *   (`looksLikeAnAddress`), and holds only the characters of a name (`hasNameCharacters`).
  * - Its coordinates are optional; given, they come together, in their bounds, with a commune.
  *
  * The département is not checked: the server computes it from the code, whatever was sent.
  */
-export function erreursDeLaCommune(commune: CommuneSaisie | null | undefined): ErreursDeLaCommune {
-	const { name: nom, inseeCode: codeInsee, latitude, longitude } = commune ?? {}
-	const erreurs: ErreursDeLaCommune = {}
+export function cityErrors(commune: CityInput | null | undefined): CityErrors {
+	const { name: cityName, inseeCode: codeInsee, latitude, longitude } = commune ?? {}
+	const errors: CityErrors = {}
 
-	if (!vide(codeInsee) && departementDuCodeInsee(codeInsee) === null)
-		erreurs.inseeCode = MESSAGES_DE_LA_ZONE.codeInseeMalForme
-	else if (vide(codeInsee) && !vide(nom)) erreurs.inseeCode = MESSAGES_DE_LA_ZONE.communeSansCodeInsee
+	if (!empty(codeInsee) && departmentOfInseeCode(codeInsee) === null)
+		errors.inseeCode = ZONE_MESSAGES.codeInseeMalForme
+	else if (empty(codeInsee) && !empty(cityName)) errors.inseeCode = ZONE_MESSAGES.communeSansCodeInsee
 
-	if (!vide(nom) && (typeof nom !== 'string' || nom.trim().length > NOM_DE_COMMUNE_MAX))
-		erreurs.name = MESSAGES_DE_LA_ZONE.nomInvalide
-	else if (typeof nom === 'string' && ressembleAUneAdresse(nom)) erreurs.name = MESSAGES_DE_LA_ZONE.nomAdresse
-	else if (typeof nom === 'string' && !aLesCaracteresDUnNom(nom)) erreurs.name = MESSAGES_DE_LA_ZONE.nomCaracteres
-	else if (vide(nom) && !vide(codeInsee)) erreurs.name = MESSAGES_DE_LA_ZONE.codeInseeSansNom
+	if (!empty(cityName) && (typeof cityName !== 'string' || cityName.trim().length > CITY_NAME_MAX))
+		errors.name = ZONE_MESSAGES.nomInvalide
+	else if (typeof cityName === 'string' && looksLikeAnAddress(cityName)) errors.name = ZONE_MESSAGES.nomAdresse
+	else if (typeof cityName === 'string' && !hasNameCharacters(cityName)) errors.name = ZONE_MESSAGES.nomCaracteres
+	else if (empty(cityName) && !empty(codeInsee)) errors.name = ZONE_MESSAGES.codeInseeSansNom
 
-	const lat = coordonnee(latitude, 90)
-	const lng = coordonnee(longitude, 180)
-	if (lat === 'invalide') erreurs.latitude = MESSAGES_DE_LA_ZONE.latitude
-	if (lng === 'invalide') erreurs.longitude = MESSAGES_DE_LA_ZONE.longitude
-	if (lat === 'absente' && lng !== 'absente') erreurs.latitude = MESSAGES_DE_LA_ZONE.coordonneesIncompletes
-	if (lng === 'absente' && lat !== 'absente') erreurs.longitude = MESSAGES_DE_LA_ZONE.coordonneesIncompletes
-	if (lat === 'valide' && lng === 'valide' && vide(codeInsee) && vide(nom))
-		erreurs.latitude = MESSAGES_DE_LA_ZONE.coordonneesSansCommune
+	const lat = coordinate(latitude, 90)
+	const lng = coordinate(longitude, 180)
+	if (lat === 'invalide') errors.latitude = ZONE_MESSAGES.latitude
+	if (lng === 'invalide') errors.longitude = ZONE_MESSAGES.longitude
+	if (lat === 'absente' && lng !== 'absente') errors.latitude = ZONE_MESSAGES.coordonneesIncompletes
+	if (lng === 'absente' && lat !== 'absente') errors.longitude = ZONE_MESSAGES.coordonneesIncompletes
+	if (lat === 'valide' && lng === 'valide' && empty(codeInsee) && empty(cityName))
+		errors.latitude = ZONE_MESSAGES.coordonneesSansCommune
 
-	return erreurs
+	return errors
 }

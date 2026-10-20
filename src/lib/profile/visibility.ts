@@ -5,7 +5,7 @@
  * - **Listed** (the search, the home, the lists): neither hidden, nor unavailable, nor entirely
  *   empty. An availability that was never set counts as available (U20), as on the old site.
  * - **Indexable** (the robots tag, the sitemap): publishable, the six conditions of
- *   src/lib/profil/completude.ts.
+ *   src/lib/profile/completeness.ts.
  * - **Visible** at its address: not hidden. A page for a profile that is visible but cannot be
  *   indexed answers 200 in noindex (ticket 104).
  *
@@ -18,35 +18,35 @@
  */
 
 import type { Where } from 'payload'
-import type { StatutDuProfil } from './status'
+import type { ProfileStatus } from './status'
 
 /** What the rules read of a profile; any field may be absent or null. */
 export interface DocumentVisible {
-	readonly status?: StatutDuProfil | string | null
+	readonly status?: ProfileStatus | string | null
 	readonly available?: boolean | null
 	readonly fullyEmpty?: boolean | null
 	readonly publishable?: boolean | null
 }
 
 /** Visible at its address: not hidden by an admin. */
-export const estVisible = ({ status }: DocumentVisible): boolean => status !== 'hidden'
+export const isVisible = ({ status }: DocumentVisible): boolean => status !== 'hidden'
 
 /** Listed: visible, available (never set counts as available) and not entirely empty. */
-export const estListe = (profil: DocumentVisible): boolean =>
-	estVisible(profil) && profil.available !== false && profil.fullyEmpty !== true
+export const isList = (profil: DocumentVisible): boolean =>
+	isVisible(profil) && profil.available !== false && profil.fullyEmpty !== true
 
 /** Indexable: publishable, and visible. */
-export const estIndexable = (profil: DocumentVisible): boolean => estVisible(profil) && profil.publishable === true
+export const isIndexable = (profil: DocumentVisible): boolean => isVisible(profil) && profil.publishable === true
 
 /**
- * The filters of `estListe` and `estIndexable`, without the status: a public read of the
+ * The filters of `estListe` and `isIndexable`, without the status: a public read of the
  * collection already carries the reading rule (`status` is a field the public may not filter on, and
  * the rule keeps the published profiles, which no hidden profile is). So « visible » is the
  * access rule itself, and a query adds the other conditions only.
  */
-export const FILTRE_LISTE: Where = {
+export const LISTED_FILTER: Where = {
 	and: [{ available: { not_equals: false } }, { fullyEmpty: { not_equals: true } }],
 }
 
-/** The filter of `estIndexable`, without the status (see `FILTRE_LISTE`). */
-export const FILTRE_INDEXABLE: Where = { publishable: { equals: true } }
+/** The filter of `isIndexable`, without the status (see `LISTED_FILTER`). */
+export const INDEXABLE_FILTER: Where = { publishable: { equals: true } }
