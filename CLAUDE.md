@@ -80,7 +80,7 @@ Le jeu et ses chiffres : [`docs/tests/banc.md`](docs/tests/banc.md), « Le banc 
 
 Ce qui existe aujourd'hui est décrit dans le README, « Ce que contient le squelette ». Les règles ci-dessous valent dès le premier fichier de chaque module.
 
-- **Une application, trois zones**, sous `src/app/` : les pages publiques dans `(front)/(site)/`, l'espace maquilleuse dans `(front)/(espace)/auth/`, l'administration et l'API dans `(payload)/`, générées par Payload. Le groupe `(front)` donne une seule coquille HTML au site et à l'espace. Les plans écrivent ces chemins sans `(front)`.
+- **Une application, trois zones**, sous `src/app/` : les pages publiques dans `(front)/(site)/`, l'espace maquilleuse dans `(front)/(dashboard)/auth/`, l'administration et l'API dans `(payload)/`, générées par Payload. Le groupe `(front)` donne une seule coquille HTML au site et à l'espace. Les plans écrivent ces chemins sans `(front)`.
 - **Deux collections de comptes.** `admins` ouvre l'administration (rôles `admin` et `editor`). `pros` porte les comptes des maquilleuses. Une maquilleuse n'entre jamais dans `/admin`.
 - **Un seul point de lecture publique** : `src/services/public/`. Une page publique lit ses données par ce module, qui choisit ses champs un par un. Les coordonnées d'une maquilleuse n'en sortent que si elle les publie (`publicContact`).
 - **Une seule règle par sujet**, dans `src/lib/`, testée en unitaire : complétude d'un profil (`src/lib/profil/completude.ts`), slug (`src/lib/slug.ts`), zone (`src/lib/format-zone.ts`), prix (`src/lib/prix.ts`), URL gelées (`src/lib/urls-gelees.ts`), variables d'environnement (`src/lib/env.ts`). Le reste du code les appelle et ne refait pas le calcul.
@@ -173,6 +173,10 @@ Le même mot français a le même mot anglais partout (source : `PLAN-ANGLAIS.md
 | boîte (email) | `mailbox` | page de relais | `relay` |
 | nettoyage (des cookies hérités) | `cleanup` | session expirée (message de reconnexion) | `signedOut` |
 | revendications (jeton Google) | `claims` | compte bloqué | `blockedAccount` |
+| puce (langue, compétence) | `bullet` | ligne (d'une liste) | `row` |
+| saisie (texte tapé) / saisie gardée | `input` / `guardedInput` | étape (de l'accueil) | `step` |
+| envoi (d'un fichier) | `upload` | avancement (du profil) | `progress` |
+| refus | `refusal` | suppression (du compte) | `deletion` |
 
 ## Pièges
 

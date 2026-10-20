@@ -8,10 +8,10 @@ import { Media } from '@/collections/Media'
 import { Profiles } from '@/collections/Profiles'
 import { Pros } from '@/collections/Pros'
 import { Talents } from '@/collections/Talents'
-import { Accueil } from '@/components/espace/accueil/Accueil'
+import { Onboarding } from '@/components/dashboard/onboarding/Onboarding'
 import { donneesDEvenement, ORIGINES_DECLAREES } from '@/lib/analytics/events'
 import type { Suivre } from '@/lib/analytics/track'
-import { schemaDeLIdentiteDAccueilStrict } from '@/lib/espace/onboarding'
+import { strictOnboardingIdentitySchema } from '@/lib/dashboard/onboarding'
 import { choisirDesFichiers } from '../outils/choisir-fichiers'
 import { ouvrirFenetre } from '../outils/dom-react'
 
@@ -43,7 +43,7 @@ function banc(options: { etape?: 1 | 2 | 3; photoEnCours?: 'terminee' | 2 } = {}
 		recu,
 		monter: () =>
 			fenetre.monter(
-				<Accueil
+				<Onboarding
 					etapeInitiale={options.etape ?? 1}
 					identite={{ prenom: '', nom: '', nomArtiste: '', specialite: '' }}
 					localisation={{ codeInsee: '', libelle: '', rayonKm: null, aDomicile: false }}
@@ -122,7 +122,7 @@ describe('une émission par étape franchie, valeurs fermées', () => {
 	test('un échec du serveur n’émet rien', async () => {
 		const { envois, suivre } = espion()
 		await fenetre.monter(
-			<Accueil
+			<Onboarding
 				etapeInitiale={1}
 				identite={{ prenom: '', nom: '', nomArtiste: '', specialite: '' }}
 				localisation={{ codeInsee: '', libelle: '', rayonKm: null, aDomicile: false }}
@@ -227,8 +227,8 @@ describe('la réponse n’est stockée nulle part', () => {
 
 	test('le schéma strict du serveur refuse un champ d’origine', () => {
 		const base = { prenom: 'Léa', nom: 'Fictive', nomArtiste: '', specialite: 'Mariée' }
-		expect(schemaDeLIdentiteDAccueilStrict.safeParse(base).success).toBe(true)
-		expect(schemaDeLIdentiteDAccueilStrict.safeParse({ ...base, origine: 'ia' }).success).toBe(false)
+		expect(strictOnboardingIdentitySchema.safeParse(base).success).toBe(true)
+		expect(strictOnboardingIdentitySchema.safeParse({ ...base, origine: 'ia' }).success).toBe(false)
 	})
 
 	test('aucun champ d’aucune collection n’est fait pour la recevoir', () => {

@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'bun:test'
-import { EditeurDuPortfolio, type EnvoiDuPortfolio } from '@/components/espace/EditeurDuPortfolio'
-import type { ResultatDEnvoiDUnFichier } from '@/lib/espace/envoi-des-photos'
-import { MESSAGE_RESULTAT_INCERTAIN } from '@/lib/espace/envoi-des-photos'
-import { MESSAGES_PHOTO, type PhotoPreparee } from '@/lib/espace/photo'
-import type { PhotoDeLEspace } from '@/lib/espace/photos'
-import { MESSAGE_ECHEC } from '@/lib/espace/resultat'
+import { PortfolioEditor, type PortfolioUpload } from '@/components/dashboard/PortfolioEditor'
+import { MESSAGES_PHOTO, type PreparedPhoto } from '@/lib/dashboard/photo'
+import type { DashboardPhoto } from '@/lib/dashboard/photos'
+import type { FileUploadResult } from '@/lib/dashboard/photos-upload'
+import { UNCERTAIN_RESULT_MESSAGE } from '@/lib/dashboard/photos-upload'
+import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
 import { choisirDesFichiers } from '../outils/choisir-fichiers'
 import { ouvrirFenetre } from '../outils/dom-react'
 
@@ -16,7 +16,7 @@ import { ouvrirFenetre } from '../outils/dom-react'
 
 const fenetre = ouvrirFenetre()
 
-const photoDeLEspace = (id: number): PhotoDeLEspace => ({
+const photoDeLEspace = (id: number): DashboardPhoto => ({
 	id,
 	url: `https://photos.example.test/media/${id}.webp`,
 	largeur: 800,
@@ -31,10 +31,10 @@ const source = (nom: string, type = 'image/jpeg') =>
 
 function banc(
 	options: {
-		existantes?: PhotoDeLEspace[]
+		existantes?: DashboardPhoto[]
 		refuser?: (f: File) => string | null
-		televerser?: (fichier: File) => Promise<ResultatDEnvoiDUnFichier>
-		envoyer?: EnvoiDuPortfolio
+		televerser?: (fichier: File) => Promise<FileUploadResult>
+		envoyer?: PortfolioUpload
 	} = {}
 ) {
 	const journal = {
@@ -44,7 +44,7 @@ function banc(
 		enregistres: [] as unknown[],
 	}
 	let prochainId = 100
-	const preparer = async (f: File): Promise<PhotoPreparee<File>> => {
+	const preparer = async (f: File): Promise<PreparedPhoto<File>> => {
 		journal.prepares.push(f.name)
 		const motif = options.refuser?.(f)
 		if (motif) return { ok: false, raison: 'type', code: 'type', message: motif }
@@ -62,7 +62,7 @@ function banc(
 			journal.televerses.push(fichier.name)
 			return { ok: true as const, id: ++prochainId }
 		})
-	const envoyer: EnvoiDuPortfolio =
+	const envoyer: PortfolioUpload =
 		options.envoyer ??
 		(async saisie => {
 			journal.enregistres.push(saisie.galerie)
@@ -72,7 +72,7 @@ function banc(
 		journal,
 		monter: async () => {
 			await fenetre.monter(
-				<EditeurDuPortfolio
+				<PortfolioEditor
 					photos={options.existantes ?? []}
 					envoyer={envoyer}
 					preparer={preparer}
@@ -229,11 +229,11 @@ describe('un échec laisse le portfolio comme il était', () => {
 	})
 
 	test('« non » du serveur : fichiers envoyés repris ; réponse perdue : rien n’est repris', async () => {
-		const non = banc({ envoyer: async () => ({ ok: false, message: MESSAGE_ECHEC }) })
+		const non = banc({ envoyer: async () => ({ ok: false, message: FAILURE_MESSAGE }) })
 		await non.monter()
 		await choisir('a.jpg')
 		await enregistrer()
-		await fenetre.attendre(() => alertes().includes(MESSAGE_ECHEC))
+		await fenetre.attendre(() => alertes().includes(FAILURE_MESSAGE))
 		expect(non.journal.supprimes).toEqual([101])
 		await fenetre.demonter()
 
@@ -245,7 +245,7 @@ describe('un échec laisse le portfolio comme il était', () => {
 		await perdu.monter()
 		await choisir('a.jpg')
 		await enregistrer()
-		await fenetre.attendre(() => alertes().includes(MESSAGE_RESULTAT_INCERTAIN))
+		await fenetre.attendre(() => alertes().includes(UNCERTAIN_RESULT_MESSAGE))
 		expect(perdu.journal.supprimes).toEqual([])
 	})
 
@@ -260,7 +260,7 @@ describe('un échec laisse le portfolio comme il était', () => {
 		await b.monter()
 		await choisir('a.jpg')
 		await enregistrer()
-		await fenetre.attendre(() => alertes().includes(MESSAGE_RESULTAT_INCERTAIN))
+		await fenetre.attendre(() => alertes().includes(UNCERTAIN_RESULT_MESSAGE))
 		await enregistrer()
 		await fenetre.attendre(() => dialogue() === null)
 		expect(b.journal.televerses).toEqual(['a.jpg'])
@@ -344,11 +344,11 @@ describe('E35 : retirer une photo, la validation la retire de la liste', () => {
 	})
 
 	test('un échec du serveur garde la photo retirée dans le panneau et dit l’échec ; rien n’est supprimé par le navigateur', async () => {
-		const b = banc({ existantes: TROIS, envoyer: async () => ({ ok: false, message: MESSAGE_ECHEC }) })
+		const b = banc({ existantes: TROIS, envoyer: async () => ({ ok: false, message: FAILURE_MESSAGE }) })
 		await b.monter()
 		await retirer(2)
 		await enregistrer()
-		await fenetre.attendre(() => alertes().includes(MESSAGE_ECHEC))
+		await fenetre.attendre(() => alertes().includes(FAILURE_MESSAGE))
 		expect(images()).toHaveLength(2)
 		expect(b.journal.supprimes).toEqual([])
 	})

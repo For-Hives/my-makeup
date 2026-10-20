@@ -1,13 +1,13 @@
 import { describe, expect, test } from 'bun:test'
 import { act } from 'react'
-import { type EnvoiDeLaSuppression, SuppressionDuCompte } from '@/components/espace/SuppressionDuCompte'
+import { AccountDeletion, type DeletionUpload } from '@/components/dashboard/AccountDeletion'
 import {
 	CONFIRMATION_MAX,
-	MESSAGES_DE_SUPPRESSION,
-	type ModeDeConfirmation,
-	modeDeConfirmation,
-	schemaDeLaSuppression,
-} from '@/lib/espace/confirmation-suppression'
+	type ConfirmationMode,
+	confirmationMode,
+	DELETION_MESSAGES,
+	deletionSchema,
+} from '@/lib/dashboard/deletion-confirmation'
 import { ouvrirFenetre } from '../outils/dom-react'
 
 /**
@@ -27,8 +27,8 @@ describe('ce qu’elle retape', () => {
 		[{ legacyProvider: null }, 'mot-de-passe'],
 		[{}, 'mot-de-passe'],
 		[{ email: 'a@example.test' }, 'mot-de-passe'],
-	] as [object, ModeDeConfirmation][])('%j : %s', (compte, attendu) => {
-		expect(modeDeConfirmation(compte)).toBe(attendu)
+	] as [object, ConfirmationMode][])('%j : %s', (compte, attendu) => {
+		expect(confirmationMode(compte)).toBe(attendu)
 	})
 })
 
@@ -43,16 +43,12 @@ describe('le schéma du serveur est strict', () => {
 		[{ confirmation: 'x', id: 4 }, false],
 		[{ confirmation: 'x', pro: 4 }, false],
 	])('%j accepté : %p', (saisie, accepte) => {
-		expect(schemaDeLaSuppression.safeParse(saisie).success).toBe(accepte)
+		expect(deletionSchema.safeParse(saisie).success).toBe(accepte)
 	})
 })
 
-function monter(
-	mode: 'mot-de-passe' | 'email',
-	envoyer: EnvoiDeLaSuppression,
-	aller: (adresse: string) => void = () => {}
-) {
-	return fenetre.monter(<SuppressionDuCompte mode={mode} envoyer={envoyer} aller={aller} />)
+function monter(mode: 'mot-de-passe' | 'email', envoyer: DeletionUpload, aller: (adresse: string) => void = () => {}) {
+	return fenetre.monter(<AccountDeletion mode={mode} envoyer={envoyer} aller={aller} />)
 }
 const ouvrir = () => fenetre.cliquer(fenetre.bouton('Supprimer mon compte'))
 const dialogue = () => fenetre.w.document.querySelector('[role="dialog"]')
@@ -106,7 +102,7 @@ describe('la fenêtre de suppression', () => {
 		const allees: string[] = []
 		await monter(
 			'mot-de-passe',
-			async () => ({ ok: false, message: MESSAGES_DE_SUPPRESSION.motDePasse }),
+			async () => ({ ok: false, message: DELETION_MESSAGES.motDePasse }),
 			a => allees.push(a)
 		)
 		await ouvrir()
@@ -114,7 +110,7 @@ describe('la fenêtre de suppression', () => {
 
 		await fenetre.cliquer(confirmer())
 
-		expect(alerte()).toBe(MESSAGES_DE_SUPPRESSION.motDePasse)
+		expect(alerte()).toBe(DELETION_MESSAGES.motDePasse)
 		expect((fenetre.champ('Retape ton mot de passe pour confirmer') as HTMLInputElement).value).toBe('faux')
 		expect(allees).toEqual([])
 		expect(confirmer().hasAttribute('disabled')).toBe(false)
@@ -129,7 +125,7 @@ describe('la fenêtre de suppression', () => {
 
 		await fenetre.cliquer(confirmer())
 
-		expect(alerte()).toBe(MESSAGES_DE_SUPPRESSION.echec)
+		expect(alerte()).toBe(DELETION_MESSAGES.echec)
 	})
 
 	test('pendant l’envoi tout est verrouillé : deux clics et une touche Entrée répétée, une seule requête', async () => {
@@ -138,7 +134,7 @@ describe('la fenêtre de suppression', () => {
 		await monter('mot-de-passe', () => {
 			appels += 1
 			return new Promise(fin => {
-				finir = () => fin({ ok: false, message: MESSAGES_DE_SUPPRESSION.motDePasse })
+				finir = () => fin({ ok: false, message: DELETION_MESSAGES.motDePasse })
 			})
 		})
 		await ouvrir()

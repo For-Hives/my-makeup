@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
-import { enregistrerListe } from '@/lib/espace/enregistrer-liste'
-import { EXPERIENCES } from '@/lib/espace/experiences'
-import { FORMATIONS } from '@/lib/espace/formations'
-import type { DefinitionDeListe, ValeursDeLigne } from '@/lib/espace/liste'
-import { profilDeLaMaquilleuse, type UtilisateurDeLEspace } from '@/lib/espace/mon-profil'
-import { PRESTATIONS } from '@/lib/espace/prestations'
-import { MESSAGE_ECHEC } from '@/lib/espace/resultat'
+import { COURSES } from '@/lib/dashboard/courses'
+import { EXPERIENCES } from '@/lib/dashboard/experiences'
+import type { ListDefinition, RowValues } from '@/lib/dashboard/list'
+import { artistProfile, type DashboardUser } from '@/lib/dashboard/my-profile'
+import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
+import { saveList } from '@/lib/dashboard/save-list'
+import { SERVICE_OFFERS } from '@/lib/dashboard/service-offers'
 import { ANNECY } from '../outils/cas-completude'
 import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
@@ -41,22 +41,22 @@ async function maquilleuse() {
 	const compte = await creerCompte('maquilleuse')
 	const payload = await payloadDeTest()
 	const doc = await payload.findByID({ collection: 'pros', id: compte.id, depth: 0, overrideAccess: true })
-	const utilisateur = { ...doc, collection: 'pros' } as UtilisateurDeLEspace
+	const utilisateur = { ...doc, collection: 'pros' } as DashboardUser
 	const profil = await profilStocke(payload, compte)
 	return { compte, payload, utilisateur, id: profil.id }
 }
 
 const enregistrer = (
 	m: Awaited<ReturnType<typeof maquilleuse>>,
-	definition: DefinitionDeListe,
+	definition: ListDefinition,
 	lignes: readonly {
 		id?: string
-		valeurs: ValeursDeLigne
-		options?: readonly { id?: string; valeurs: ValeursDeLigne }[]
+		valeurs: RowValues
+		options?: readonly { id?: string; valeurs: RowValues }[]
 	}[]
-) => enregistrerListe(m.payload, m.utilisateur, { lignes }, definition)
+) => saveList(m.payload, m.utilisateur, { lignes }, definition)
 
-const EXPERIENCE: ValeursDeLigne = {
+const EXPERIENCE: RowValues = {
 	jobTitle: 'Maquilleuse',
 	company: 'Studio Fictif',
 	city: 'Lyon',
@@ -64,7 +64,7 @@ const EXPERIENCE: ValeursDeLigne = {
 	endDate: '',
 	description: '',
 }
-const FORMATION: ValeursDeLigne = {
+const FORMATION: RowValues = {
 	diploma: 'CAP esthétique',
 	school: 'École Fictive',
 	graduatedAt: '2018-06-30',
@@ -114,7 +114,7 @@ describe('129 : les expériences', () => {
 		expect(stocke?.map(ligne => ligne.jobTitle)).toEqual(['Troisième', 'Première'])
 		expect(stocke?.[0]).toMatchObject({ startDate: '2022-01-15T12:00:00.000Z', endDate: '2022-12-31T12:00:00.000Z' })
 		expect(stocke?.[1]?.endDate ?? null).toBeNull()
-		const page = await profilDeLaMaquilleuse(m.payload, m.utilisateur)
+		const page = await artistProfile(m.payload, m.utilisateur)
 		expect(page?.experiences?.map(ligne => ligne.jobTitle)).toEqual(['Troisième', 'Première'])
 	})
 
@@ -177,32 +177,27 @@ describe('129 : les expériences', () => {
 
 	test('une clé de plus refuse la requête entière, un compte sans profil reçoit le message du site', async () => {
 		const m = await maquilleuse()
-		const resultat = await enregistrerListe(
+		const resultat = await saveList(
 			m.payload,
 			m.utilisateur,
 			{ lignes: [{ valeurs: EXPERIENCE }], status: 'published' },
 			EXPERIENCES
 		)
-		expect(resultat).toEqual({ ok: false, message: MESSAGE_ECHEC })
+		expect(resultat).toEqual({ ok: false, message: FAILURE_MESSAGE })
 		expect((await profilStocke(m.payload, m.compte)).experiences ?? []).toHaveLength(0)
 
 		const sansProfil = await creerCompte('maquilleuse-sans-profil')
 		const doc = await m.payload.findByID({ collection: 'pros', id: sansProfil.id, depth: 0, overrideAccess: true })
 		expect(
-			await enregistrerListe(
-				m.payload,
-				{ ...doc, collection: 'pros' } as UtilisateurDeLEspace,
-				{ lignes: [] },
-				EXPERIENCES
-			)
-		).toEqual({ ok: false, message: MESSAGE_ECHEC })
+			await saveList(m.payload, { ...doc, collection: 'pros' } as DashboardUser, { lignes: [] }, EXPERIENCES)
+		).toEqual({ ok: false, message: FAILURE_MESSAGE })
 	})
 })
 
 describe('130 : les formations', () => {
 	test('L1 : les lignes sont écrites dans l’ordre, chacune avec son identifiant', async () => {
 		const m = await maquilleuse()
-		const resultat = await enregistrer(m, FORMATIONS, [
+		const resultat = await enregistrer(m, COURSES, [
 			{ valeurs: FORMATION },
 			{ valeurs: FORMATION },
 			{ valeurs: { ...FORMATION, diploma: 'BP esthétique' } },
@@ -220,10 +215,10 @@ describe('130 : les formations', () => {
 
 	test('U30, E31 : une date à plus d’un an dans le futur est refusée, la base ne bouge pas', async () => {
 		const m = await maquilleuse()
-		await enregistrer(m, FORMATIONS, [{ valeurs: FORMATION }])
+		await enregistrer(m, COURSES, [{ valeurs: FORMATION }])
 		const avant = await profilStocke(m.payload, m.compte)
 
-		const resultat = await enregistrer(m, FORMATIONS, [
+		const resultat = await enregistrer(m, COURSES, [
 			{ valeurs: FORMATION },
 			{ valeurs: { ...FORMATION, diploma: 'Futur', graduatedAt: '2099-01-01' } },
 		])
@@ -238,19 +233,19 @@ describe('130 : les formations', () => {
 
 	test('l’ordre change quand on envoie les lignes dans un autre ordre, et vider la liste la vide', async () => {
 		const m = await maquilleuse()
-		const premier = await enregistrer(m, FORMATIONS, [
+		const premier = await enregistrer(m, COURSES, [
 			{ valeurs: FORMATION },
 			{ valeurs: { ...FORMATION, diploma: 'BP esthétique' } },
 		])
 		if (!premier.ok) throw new Error(premier.message)
 		const [a, b] = premier.valeurs.lignes
-		const inverse = await enregistrer(m, FORMATIONS, [
+		const inverse = await enregistrer(m, COURSES, [
 			{ id: b?.id, valeurs: b?.valeurs ?? {} },
 			{ id: a?.id, valeurs: a?.valeurs ?? {} },
 		])
 		expect(inverse.ok && inverse.valeurs.lignes.map(ligne => ligne.id)).toEqual([b?.id as string, a?.id as string])
 
-		await enregistrer(m, FORMATIONS, [])
+		await enregistrer(m, COURSES, [])
 		expect((await profilStocke(m.payload, m.compte)).courses ?? []).toHaveLength(0)
 	})
 })
@@ -258,7 +253,7 @@ describe('130 : les formations', () => {
 describe('131 : les prestations', () => {
 	test.each(['80', '80 €', 'à partir de 80'])('U29 : « %s » donne un prix de 80, le texte est gardé', async saisie => {
 		const m = await maquilleuse()
-		const resultat = await enregistrer(m, PRESTATIONS, [
+		const resultat = await enregistrer(m, SERVICE_OFFERS, [
 			{ valeurs: { name: 'Mariée', description: '', price: saisie } },
 		])
 
@@ -272,7 +267,7 @@ describe('131 : les prestations', () => {
 
 	test('U29 : « sur devis » garde son texte sans montant, plusieurs formules sont rangées une par ligne', async () => {
 		const m = await maquilleuse()
-		await enregistrer(m, PRESTATIONS, [
+		await enregistrer(m, SERVICE_OFFERS, [
 			{ valeurs: { name: 'Mariée', description: '', price: 'sur devis' } },
 			{ valeurs: { name: 'Cours', description: 'Deux heures.', price: '60 € ; sur devis' } },
 		])
@@ -283,13 +278,13 @@ describe('131 : les prestations', () => {
 
 	test('un montant envoyé par la requête refuse la requête entière : le serveur le lit lui-même', async () => {
 		const m = await maquilleuse()
-		const resultat = await enregistrerListe(
+		const resultat = await saveList(
 			m.payload,
 			m.utilisateur,
 			{ lignes: [{ valeurs: { name: 'Mariée', description: '', price: 'sur devis', priceFrom: 5000 } }] },
-			PRESTATIONS
+			SERVICE_OFFERS
 		)
-		expect(resultat).toEqual({ ok: false, message: MESSAGE_ECHEC })
+		expect(resultat).toEqual({ ok: false, message: FAILURE_MESSAGE })
 		expect((await profilStocke(m.payload, m.compte)).serviceOffers ?? []).toHaveLength(0)
 	})
 
@@ -316,7 +311,7 @@ describe('131 : les prestations', () => {
 		const idsAvant = avant?.options?.map(option => option.id)
 		expect(idsAvant).toHaveLength(2)
 
-		const resultat = await enregistrer(m, PRESTATIONS, [
+		const resultat = await enregistrer(m, SERVICE_OFFERS, [
 			{ id: avant?.id ?? undefined, valeurs: { name: 'Mariée du soir', description: '', price: '90' } },
 		])
 
@@ -331,11 +326,11 @@ describe('131 : les prestations', () => {
 
 	test('E31 : un nom trop long ou vide est refusé, la base ne bouge pas', async () => {
 		const m = await maquilleuse()
-		await enregistrer(m, PRESTATIONS, [{ valeurs: { name: 'Mariée', description: '', price: '80' } }])
+		await enregistrer(m, SERVICE_OFFERS, [{ valeurs: { name: 'Mariée', description: '', price: '80' } }])
 		const avant = await profilStocke(m.payload, m.compte)
 
-		const vide = await enregistrer(m, PRESTATIONS, [{ valeurs: { name: '', description: '', price: '80' } }])
-		const long = await enregistrer(m, PRESTATIONS, [
+		const vide = await enregistrer(m, SERVICE_OFFERS, [{ valeurs: { name: '', description: '', price: '80' } }])
+		const long = await enregistrer(m, SERVICE_OFFERS, [
 			{ valeurs: { name: 'a'.repeat(71), description: '', price: '80' } },
 		])
 
@@ -371,31 +366,31 @@ describe('131 : les prestations', () => {
 		test('« sur devis » seul ne suffit pas, un montant suffit, et le retirer ôte le critère', async () => {
 			const m = await toutSaufLOffre()
 
-			await enregistrer(m, PRESTATIONS, [{ valeurs: { name: 'Mariée', description: '', price: 'sur devis' } }])
+			await enregistrer(m, SERVICE_OFFERS, [{ valeurs: { name: 'Mariée', description: '', price: 'sur devis' } }])
 			expect(await publiable(m)).toBe(false)
 
-			const chiffree = await enregistrer(m, PRESTATIONS, [
+			const chiffree = await enregistrer(m, SERVICE_OFFERS, [
 				{ valeurs: { name: 'Mariée', description: '', price: 'à partir de 80' } },
 			])
 			expect(chiffree.ok).toBe(true)
 			expect(await publiable(m)).toBe(true)
 
-			await enregistrer(m, PRESTATIONS, [])
+			await enregistrer(m, SERVICE_OFFERS, [])
 			expect(await publiable(m)).toBe(false)
 		})
 	})
 })
 
 describe('132 : les options d’une prestation', () => {
-	const MARIEE: ValeursDeLigne = { name: 'Mariée', description: '', price: '80' }
-	const SOIREE: ValeursDeLigne = { name: 'Soirée', description: '', price: '60' }
-	const ESSAI: ValeursDeLigne = { name: 'Essai', description: 'Une heure', price: '30' }
-	const CILS: ValeursDeLigne = { name: 'Cils', description: '', price: 'sur devis' }
-	const RETOUCHES: ValeursDeLigne = { name: 'Retouches', description: '', price: '' }
+	const MARIEE: RowValues = { name: 'Mariée', description: '', price: '80' }
+	const SOIREE: RowValues = { name: 'Soirée', description: '', price: '60' }
+	const ESSAI: RowValues = { name: 'Essai', description: 'Une heure', price: '30' }
+	const CILS: RowValues = { name: 'Cils', description: '', price: 'sur devis' }
+	const RETOUCHES: RowValues = { name: 'Retouches', description: '', price: '' }
 
 	test('les options sont stockées sous la bonne prestation, dans l’ordre, avec le montant lu par le serveur', async () => {
 		const m = await maquilleuse()
-		const resultat = await enregistrer(m, PRESTATIONS, [
+		const resultat = await enregistrer(m, SERVICE_OFFERS, [
 			{ valeurs: MARIEE, options: [{ valeurs: ESSAI }, { valeurs: CILS }] },
 			{ valeurs: SOIREE, options: [{ valeurs: RETOUCHES }] },
 		])
@@ -421,13 +416,13 @@ describe('132 : les options d’une prestation', () => {
 
 	test('L1 : une option renvoyée avec son identifiant le garde, une option ajoutée en reçoit un, l’ordre suit la requête', async () => {
 		const m = await maquilleuse()
-		const premiere = await enregistrer(m, PRESTATIONS, [
+		const premiere = await enregistrer(m, SERVICE_OFFERS, [
 			{ valeurs: MARIEE, options: [{ valeurs: ESSAI }, { valeurs: CILS }] },
 		])
 		const [ligne] = premiere.ok ? premiere.valeurs.lignes : []
 		const [essai, cils] = ligne?.options ?? []
 
-		const seconde = await enregistrer(m, PRESTATIONS, [
+		const seconde = await enregistrer(m, SERVICE_OFFERS, [
 			{
 				id: ligne?.id,
 				valeurs: MARIEE,
@@ -444,25 +439,25 @@ describe('132 : les options d’une prestation', () => {
 
 	test('retirer la dernière option la retire du stockage ; ne rien envoyer les garde', async () => {
 		const m = await maquilleuse()
-		const premiere = await enregistrer(m, PRESTATIONS, [{ valeurs: MARIEE, options: [{ valeurs: ESSAI }] }])
+		const premiere = await enregistrer(m, SERVICE_OFFERS, [{ valeurs: MARIEE, options: [{ valeurs: ESSAI }] }])
 		const id = premiere.ok ? premiere.valeurs.lignes[0]?.id : undefined
 
-		await enregistrer(m, PRESTATIONS, [{ id, valeurs: MARIEE }])
+		await enregistrer(m, SERVICE_OFFERS, [{ id, valeurs: MARIEE }])
 		expect((await profilStocke(m.payload, m.compte)).serviceOffers?.[0]?.options).toHaveLength(1)
 
-		await enregistrer(m, PRESTATIONS, [{ id, valeurs: MARIEE, options: [] }])
+		await enregistrer(m, SERVICE_OFFERS, [{ id, valeurs: MARIEE, options: [] }])
 		expect((await profilStocke(m.payload, m.compte)).serviceOffers?.[0]?.options ?? []).toHaveLength(0)
 	})
 
 	test('un identifiant d’option qui n’est pas celui de cette prestation est remplacé, jamais repris', async () => {
 		const m = await maquilleuse()
-		const premiere = await enregistrer(m, PRESTATIONS, [
+		const premiere = await enregistrer(m, SERVICE_OFFERS, [
 			{ valeurs: MARIEE, options: [{ valeurs: ESSAI }] },
 			{ valeurs: SOIREE, options: [{ valeurs: CILS }] },
 		])
 		const [une, autre] = premiere.ok ? premiere.valeurs.lignes : []
 		const idDeLAutre = autre?.options?.[0]?.id
-		const resultat = await enregistrer(m, PRESTATIONS, [
+		const resultat = await enregistrer(m, SERVICE_OFFERS, [
 			{ id: une?.id, valeurs: MARIEE, options: [{ id: idDeLAutre, valeurs: CILS }] },
 			{ id: autre?.id, valeurs: SOIREE, options: [{ id: idDeLAutre, valeurs: CILS }] },
 		])
@@ -473,9 +468,9 @@ describe('132 : les options d’une prestation', () => {
 
 	test('L6 : deux options identiques sont refusées, la base ne bouge pas', async () => {
 		const m = await maquilleuse()
-		await enregistrer(m, PRESTATIONS, [{ valeurs: MARIEE, options: [{ valeurs: ESSAI }] }])
+		await enregistrer(m, SERVICE_OFFERS, [{ valeurs: MARIEE, options: [{ valeurs: ESSAI }] }])
 		const avant = await profilStocke(m.payload, m.compte)
-		const resultat = await enregistrer(m, PRESTATIONS, [
+		const resultat = await enregistrer(m, SERVICE_OFFERS, [
 			{ valeurs: MARIEE, options: [{ valeurs: ESSAI }, { valeurs: { ...ESSAI, name: ' Essai ' } }] },
 		])
 		expect(resultat).toMatchObject({ ok: false, message: expect.stringContaining('deux options identiques') })
@@ -484,10 +479,10 @@ describe('132 : les options d’une prestation', () => {
 
 	test('E31 : une option sans nom, ou trop longue, est refusée avec son nom dans le message', async () => {
 		const m = await maquilleuse()
-		const vide = await enregistrer(m, PRESTATIONS, [
+		const vide = await enregistrer(m, SERVICE_OFFERS, [
 			{ valeurs: MARIEE, options: [{ valeurs: { ...ESSAI, name: '' } }] },
 		])
-		const longue = await enregistrer(m, PRESTATIONS, [
+		const longue = await enregistrer(m, SERVICE_OFFERS, [
 			{ valeurs: MARIEE, options: [{ valeurs: { ...ESSAI, price: 'a'.repeat(71) } }] },
 		])
 		expect(vide).toMatchObject({ ok: false, message: expect.stringContaining('Le nom de l’option est requis.') })
@@ -497,11 +492,11 @@ describe('132 : les options d’une prestation', () => {
 
 	test('une requête qui porte un montant d’option, ou des options hors prestation, est refusée en entier', async () => {
 		const m = await maquilleuse()
-		const montant = await enregistrer(m, PRESTATIONS, [
-			{ valeurs: MARIEE, options: [{ valeurs: { ...ESSAI, priceFrom: '30' } as ValeursDeLigne }] },
+		const montant = await enregistrer(m, SERVICE_OFFERS, [
+			{ valeurs: MARIEE, options: [{ valeurs: { ...ESSAI, priceFrom: '30' } as RowValues }] },
 		])
 		const horsPrestation = await enregistrer(m, EXPERIENCES, [{ valeurs: EXPERIENCE, options: [{ valeurs: ESSAI }] }])
-		expect(montant).toEqual({ ok: false, message: MESSAGE_ECHEC })
-		expect(horsPrestation).toEqual({ ok: false, message: MESSAGE_ECHEC })
+		expect(montant).toEqual({ ok: false, message: FAILURE_MESSAGE })
+		expect(horsPrestation).toEqual({ ok: false, message: FAILURE_MESSAGE })
 	})
 })

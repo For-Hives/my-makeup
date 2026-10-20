@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'bun:test'
 import type { ReactElement } from 'react'
 import { act } from 'react'
-import type { EnvoiDeLaListe } from '@/components/espace/EditeurDeListe'
-import { EditeurDExperiences, EditeurDeFormations, EditeurDePrestations } from '@/components/espace/EditeursDeListes'
-import type { LigneEnregistree, ListeEnvoyee } from '@/lib/espace/liste'
-import { MESSAGE_ECHEC } from '@/lib/espace/resultat'
+import type { ListUpload } from '@/components/dashboard/ListEditor'
+import { CoursesEditor, ExperiencesEditor, ServiceOffersEditor } from '@/components/dashboard/ListsEditors'
+import type { SavedRow, SentList } from '@/lib/dashboard/list'
+import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
 import { ouvrirFenetre } from '../outils/dom-react'
 
 /**
@@ -18,7 +18,7 @@ const fenetre = ouvrirFenetre()
 interface Cas {
 	readonly name: string
 	readonly ouvrir: string
-	readonly monter: (lignes: readonly LigneEnregistree[], envoyer: EnvoiDeLaListe) => ReactElement
+	readonly monter: (lignes: readonly SavedRow[], envoyer: ListUpload) => ReactElement
 	/** The texts of a row, by field. */
 	readonly ligne: Record<string, string>
 	/** The same row, changed. */
@@ -38,7 +38,7 @@ const CAS: readonly Cas[] = [
 	{
 		name: 'expériences',
 		ouvrir: 'Modifier mes expériences',
-		monter: (lignes, envoyer) => <EditeurDExperiences lignes={lignes} envoyer={envoyer} />,
+		monter: (lignes, envoyer) => <ExperiencesEditor lignes={lignes} envoyer={envoyer} />,
 		ligne: {
 			jobTitle: 'Maquilleuse',
 			company: 'Studio Fictif',
@@ -70,7 +70,7 @@ const CAS: readonly Cas[] = [
 	{
 		name: 'courses',
 		ouvrir: 'Modifier mes formations',
-		monter: (lignes, envoyer) => <EditeurDeFormations lignes={lignes} envoyer={envoyer} />,
+		monter: (lignes, envoyer) => <CoursesEditor lignes={lignes} envoyer={envoyer} />,
 		ligne: { diploma: 'CAP esthétique', school: 'École Fictive', graduatedAt: '2018-06-30', description: '' },
 		autre: { diploma: 'BP esthétique', school: 'École Fictive', graduatedAt: '2018-06-30', description: '' },
 		champTexte: 'Diplôme',
@@ -87,7 +87,7 @@ const CAS: readonly Cas[] = [
 	{
 		name: 'serviceOffers',
 		ouvrir: 'Modifier mes prestations',
-		monter: (lignes, envoyer) => <EditeurDePrestations lignes={lignes} envoyer={envoyer} />,
+		monter: (lignes, envoyer) => <ServiceOffersEditor lignes={lignes} envoyer={envoyer} />,
 		ligne: { name: 'Maquillage de mariée', description: '', price: 'à partir de 80 €' },
 		autre: { name: 'Maquillage de soirée', description: '', price: 'à partir de 80 €' },
 		champTexte: 'Nom de la prestation',
@@ -150,9 +150,9 @@ async function activerAuClavier(bouton: HTMLElement, options: { repeat?: boolean
 	return true
 }
 
-function fauxEnvoi(reponse?: Awaited<ReturnType<EnvoiDeLaListe>>) {
-	const appels: ListeEnvoyee[] = []
-	const envoyer: EnvoiDeLaListe = async liste => {
+function fauxEnvoi(reponse?: Awaited<ReturnType<ListUpload>>) {
+	const appels: SentList[] = []
+	const envoyer: ListUpload = async liste => {
 		appels.push(liste)
 		return (
 			reponse ?? {
@@ -178,12 +178,12 @@ function fauxEnvoi(reponse?: Awaited<ReturnType<EnvoiDeLaListe>>) {
 }
 
 /** Two rows that say the same thing, as the server gave them each its own identifier. */
-const identiques = (cas: Cas): LigneEnregistree[] => [
+const identiques = (cas: Cas): SavedRow[] => [
 	{ id: 'aaa', valeurs: cas.ligne },
 	{ id: 'bbb', valeurs: cas.ligne },
 ]
 
-async function ouvrir(cas: Cas, lignes: readonly LigneEnregistree[], envoyer: EnvoiDeLaListe = fauxEnvoi().envoyer) {
+async function ouvrir(cas: Cas, lignes: readonly SavedRow[], envoyer: ListUpload = fauxEnvoi().envoyer) {
 	await fenetre.monter(cas.monter(lignes, envoyer))
 	await fenetre.cliquer(fenetre.bouton(cas.ouvrir))
 }
@@ -258,7 +258,7 @@ for (const cas of CAS) {
 		})
 
 		test('L4 : au clavier, le focus reste dans le panneau, sur la ligne qui prend la place puis sur celle du dessus', async () => {
-			const trois: LigneEnregistree[] = [
+			const trois: SavedRow[] = [
 				{ id: 'a', valeurs: cas.ligne },
 				{ id: 'b', valeurs: cas.autre },
 				{ id: 'c', valeurs: { ...cas.autre, [Object.keys(cas.autre)[0] as string]: 'Troisième' } },
@@ -403,25 +403,25 @@ for (const cas of CAS) {
 		})
 
 		test('E31 : un échec garde la liste et la saisie, dit pourquoi, et le panneau reste ouvert', async () => {
-			const { envoyer } = fauxEnvoi({ ok: false, message: MESSAGE_ECHEC })
+			const { envoyer } = fauxEnvoi({ ok: false, message: FAILURE_MESSAGE })
 			await ouvrir(cas, [{ id: 'aaa', valeurs: cas.ligne }], envoyer)
 			await fenetre.cliquer(fenetre.bouton(/^Retirer /, lignesAffichees()[0]))
 			await fenetre.cliquer(fenetre.bouton('Enregistrer'))
 
 			const alerte = await fenetre.attendre(() => dialogue().querySelector('[role="alert"] p'))
-			expect(alerte.textContent).toBe(MESSAGE_ECHEC)
+			expect(alerte.textContent).toBe(FAILURE_MESSAGE)
 			expect(lignesAffichees()).toHaveLength(0)
 			expect(fenetre.w.document.querySelector('[role="status"]')?.textContent).toBe('')
 		})
 
 		test('E31 : une fonction d’envoi qui lève donne le message du site', async () => {
-			const lever: EnvoiDeLaListe = async () => {
+			const lever: ListUpload = async () => {
 				throw new Error('Failed to fetch')
 			}
 			await ouvrir(cas, [{ id: 'aaa', valeurs: cas.ligne }], lever)
 			await fenetre.cliquer(fenetre.bouton('Enregistrer'))
 			const alerte = await fenetre.attendre(() => dialogue().querySelector('[role="alert"] p'))
-			expect(alerte.textContent).toBe(MESSAGE_ECHEC)
+			expect(alerte.textContent).toBe(FAILURE_MESSAGE)
 		})
 
 		test('E31 : fermer avec des changements non enregistrés demande confirmation, puis rend les valeurs d’origine', async () => {
@@ -446,8 +446,8 @@ for (const cas of CAS) {
 
 		test('deux clics sur « Enregistrer » avant la réponse : un seul envoi', async () => {
 			let repondre: (() => void) | undefined
-			const appels: ListeEnvoyee[] = []
-			const envoyer: EnvoiDeLaListe = liste => {
+			const appels: SentList[] = []
+			const envoyer: ListUpload = liste => {
 				appels.push(liste)
 				return new Promise(resolve => {
 					repondre = () => resolve({ ok: true, valeurs: { lignes: [] } })
@@ -550,12 +550,12 @@ describe('132 : les options d’une prestation', () => {
 	const cas = CAS[2] as Cas
 	const ESSAI = { name: 'Essai', description: '', price: '30' }
 	const CILS = { name: 'Cils', description: 'Pose de cils', price: 'sur devis' }
-	const mariee = (options: LigneEnregistree[]): LigneEnregistree => ({
+	const mariee = (options: SavedRow[]): SavedRow => ({
 		id: 'p1',
 		valeurs: { name: 'Maquillage de mariée', description: '', price: 'à partir de 80 €' },
 		options,
 	})
-	const deux = (): LigneEnregistree[] => [
+	const deux = (): SavedRow[] => [
 		mariee([
 			{ id: 'o1', valeurs: ESSAI },
 			{ id: 'o2', valeurs: CILS },
@@ -656,7 +656,7 @@ describe('132 : les options d’une prestation', () => {
 
 	test('une option ajoutée part sans identifiant, les autres gardent le leur, dans l’ordre, sous la bonne prestation', async () => {
 		const { appels, envoyer } = fauxEnvoi()
-		const autre: LigneEnregistree = {
+		const autre: SavedRow = {
 			id: 'p2',
 			valeurs: { name: 'Maquillage de soirée', description: '', price: '60' },
 			options: [{ id: 'o9', valeurs: { name: 'Retouches', description: '', price: '' } }],
@@ -814,7 +814,7 @@ describe('132 : les options d’une prestation', () => {
 	})
 
 	test('E31 : un échec garde les options saisies et le panneau ouvert', async () => {
-		const { envoyer } = fauxEnvoi({ ok: false, message: MESSAGE_ECHEC })
+		const { envoyer } = fauxEnvoi({ ok: false, message: FAILURE_MESSAGE })
 		await ouvrir(cas, [mariee([])], envoyer)
 		await modifierLaPrestation()
 		await ajouterUneOption(ESSAI)

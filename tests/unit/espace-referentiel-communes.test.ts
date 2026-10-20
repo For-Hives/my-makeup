@@ -1,12 +1,12 @@
 import { describe, expect, test } from 'bun:test'
 import {
-	chercherDesCommunes,
-	communeDuCode,
-	DELAI_DES_COMMUNES_MS,
-	PROPOSITIONS_MAX,
-	proposition,
-	questionDeLaRecherche,
-} from '@/lib/espace/referentiel-communes'
+	CITIES_DELAY_MS,
+	cityFromCode,
+	findCities,
+	SUGGESTIONS_MAX,
+	searchQuestion,
+	suggestion,
+} from '@/lib/dashboard/city-reference'
 import { delay, HttpResponse, http, simuler } from '../outils/http-sortant'
 
 /**
@@ -25,11 +25,11 @@ const ANNECY = {
 
 describe('la question posée à la liste', () => {
 	test('un nom, un code postal de cinq chiffres, ou rien', () => {
-		expect(questionDeLaRecherche('  Annecy  ')).toEqual({ genre: 'nom', valeur: 'Annecy' })
-		expect(questionDeLaRecherche('Saint   Denis')).toEqual({ genre: 'nom', valeur: 'Saint Denis' })
-		expect(questionDeLaRecherche('74000')).toEqual({ genre: 'codePostal', valeur: '74000' })
-		expect(questionDeLaRecherche('A')).toEqual({ genre: 'rien', motif: 'trop-court' })
-		expect(questionDeLaRecherche('   ')).toEqual({ genre: 'rien', motif: 'trop-court' })
+		expect(searchQuestion('  Annecy  ')).toEqual({ genre: 'nom', valeur: 'Annecy' })
+		expect(searchQuestion('Saint   Denis')).toEqual({ genre: 'nom', valeur: 'Saint Denis' })
+		expect(searchQuestion('74000')).toEqual({ genre: 'codePostal', valeur: '74000' })
+		expect(searchQuestion('A')).toEqual({ genre: 'rien', motif: 'trop-court' })
+		expect(searchQuestion('   ')).toEqual({ genre: 'rien', motif: 'trop-court' })
 	})
 
 	test.each([
@@ -41,7 +41,7 @@ describe('la question posée à la liste', () => {
 		'7400',
 		'740000',
 	])('« %s » ressemble à une adresse : jamais envoyée à la liste', texte => {
-		expect(questionDeLaRecherche(texte)).toEqual({ genre: 'rien', motif: 'adresse' })
+		expect(searchQuestion(texte)).toEqual({ genre: 'rien', motif: 'adresse' })
 	})
 })
 
@@ -55,16 +55,16 @@ describe('la recherche de communes', () => {
 			})
 		)
 
-		const reponse = await chercherDesCommunes('Annecy')
+		const reponse = await findCities('Annecy')
 
 		expect(reponse).toEqual({
 			genre: 'communes',
 			communes: [{ nom: 'Annecy', codeInsee: '74010', departement: '74', latitude: 45.9024, longitude: 6.1264 }],
 		})
 		if (reponse.genre !== 'communes') throw new Error('attendu : des communes')
-		expect(reponse.communes.map(proposition)).toEqual([{ codeInsee: '74010', libelle: 'Annecy (74)' }])
+		expect(reponse.communes.map(suggestion)).toEqual([{ codeInsee: '74010', libelle: 'Annecy (74)' }])
 		expect(demande?.searchParams.get('nom')).toBe('Annecy')
-		expect(demande?.searchParams.get('limit')).toBe(String(PROPOSITIONS_MAX))
+		expect(demande?.searchParams.get('limit')).toBe(String(SUGGESTIONS_MAX))
 		// Nothing of the person goes with the question: no cookie, no account.
 		expect([...(demande?.searchParams.keys() ?? [])].sort()).toEqual(['boost', 'fields', 'limit', 'nom'])
 	})
@@ -77,7 +77,7 @@ describe('la recherche de communes', () => {
 				return HttpResponse.json([ANNECY])
 			})
 		)
-		await chercherDesCommunes('74000')
+		await findCities('74000')
 		expect(demande?.searchParams.get('codePostal')).toBe('74000')
 		expect(demande?.searchParams.has('nom')).toBe(false)
 	})
@@ -92,9 +92,9 @@ describe('la recherche de communes', () => {
 				])
 			)
 		)
-		const reponse = await chercherDesCommunes('Saint')
+		const reponse = await findCities('Saint')
 		if (reponse.genre !== 'communes') throw new Error('attendu : des communes')
-		expect(reponse.communes.map(proposition).map(p => p.libelle)).toEqual([
+		expect(reponse.communes.map(suggestion).map(p => p.libelle)).toEqual([
 			'Saint-Denis (974)',
 			'Papeete (987)',
 			'Ajaccio (2A)',
@@ -111,47 +111,47 @@ describe('la recherche de communes', () => {
 				])
 			)
 		)
-		const reponse = await chercherDesCommunes('Annecy')
+		const reponse = await findCities('Annecy')
 		if (reponse.genre !== 'communes') throw new Error('attendu : des communes')
 		expect(reponse.communes.map(c => c.codeInsee)).toEqual(['74010'])
 	})
 
 	test('aucune commune ne correspond : une liste vide, pas une panne', async () => {
 		simuler(http.get(LISTE, () => HttpResponse.json([])))
-		expect(await chercherDesCommunes('Zzzzz')).toEqual({ genre: 'communes', communes: [] })
+		expect(await findCities('Zzzzz')).toEqual({ genre: 'communes', communes: [] })
 	})
 
 	test('une adresse ou un texte trop court ne fait aucune requête (une requête non déclarée ferait échouer le test)', async () => {
-		expect(await chercherDesCommunes('12 rue des Lilas, 74000 Annecy')).toEqual({ genre: 'rien', motif: 'adresse' })
-		expect(await chercherDesCommunes('A')).toEqual({ genre: 'rien', motif: 'trop-court' })
+		expect(await findCities('12 rue des Lilas, 74000 Annecy')).toEqual({ genre: 'rien', motif: 'adresse' })
+		expect(await findCities('A')).toEqual({ genre: 'rien', motif: 'trop-court' })
 	})
 })
 
 describe('le service des communes en panne : une seule issue, « panne »', () => {
 	test('une réponse 500', async () => {
 		simuler(http.get(LISTE, () => new HttpResponse(null, { status: 500 })))
-		expect(await chercherDesCommunes('Annecy')).toEqual({ genre: 'panne' })
+		expect(await findCities('Annecy')).toEqual({ genre: 'panne' })
 	})
 
 	test('un statut 429 ou 503', async () => {
 		for (const status of [429, 503]) {
 			simuler(http.get(LISTE, () => new HttpResponse(null, { status })))
-			expect(await chercherDesCommunes('Annecy')).toEqual({ genre: 'panne' })
+			expect(await findCities('Annecy')).toEqual({ genre: 'panne' })
 		}
 	})
 
 	test('un réseau coupé', async () => {
 		simuler(http.get(LISTE, () => HttpResponse.error()))
-		expect(await chercherDesCommunes('Annecy')).toEqual({ genre: 'panne' })
+		expect(await findCities('Annecy')).toEqual({ genre: 'panne' })
 	})
 
 	test('une réponse qui n’est pas du JSON, ou pas une liste de communes', async () => {
 		simuler(http.get(LISTE, () => new HttpResponse('<html>maintenance</html>', { status: 200 })))
-		expect(await chercherDesCommunes('Annecy')).toEqual({ genre: 'panne' })
+		expect(await findCities('Annecy')).toEqual({ genre: 'panne' })
 		simuler(http.get(LISTE, () => HttpResponse.json({ message: 'ok' })))
-		expect(await chercherDesCommunes('Annecy')).toEqual({ genre: 'panne' })
+		expect(await findCities('Annecy')).toEqual({ genre: 'panne' })
 		simuler(http.get(LISTE, () => HttpResponse.json([{ nom: 'Annecy' }])))
-		expect(await chercherDesCommunes('Annecy')).toEqual({ genre: 'panne' })
+		expect(await findCities('Annecy')).toEqual({ genre: 'panne' })
 	})
 
 	test(
@@ -164,10 +164,10 @@ describe('le service des communes en panne : une seule issue, « panne »', () =
 				})
 			)
 			const debut = Date.now()
-			expect(await chercherDesCommunes('Annecy')).toEqual({ genre: 'panne' })
-			expect(Date.now() - debut).toBeGreaterThanOrEqual(DELAI_DES_COMMUNES_MS - 200)
+			expect(await findCities('Annecy')).toEqual({ genre: 'panne' })
+			expect(Date.now() - debut).toBeGreaterThanOrEqual(CITIES_DELAY_MS - 200)
 		},
-		DELAI_DES_COMMUNES_MS + 3000
+		CITIES_DELAY_MS + 3000
 	)
 })
 
@@ -180,7 +180,7 @@ describe('la commune d’un code', () => {
 				return HttpResponse.json(ANNECY)
 			})
 		)
-		expect(await communeDuCode('74010')).toEqual({
+		expect(await cityFromCode('74010')).toEqual({
 			genre: 'commune',
 			commune: { nom: 'Annecy', codeInsee: '74010', departement: '74', latitude: 45.9024, longitude: 6.1264 },
 		})
@@ -189,21 +189,21 @@ describe('la commune d’un code', () => {
 
 	test('un code inconnu de la liste (404, corps en texte) est « inconnue », pas une panne', async () => {
 		simuler(http.get(`${LISTE}/74999`, () => new HttpResponse('Not Found', { status: 404 })))
-		expect(await communeDuCode('74999')).toEqual({ genre: 'inconnue' })
+		expect(await cityFromCode('74999')).toEqual({ genre: 'inconnue' })
 	})
 
 	test('un code mal formé n’est pas demandé', async () => {
 		for (const code of ['', '7401', '../x', '20004', '74010/../x']) {
-			expect(await communeDuCode(code)).toEqual({ genre: 'inconnue' })
+			expect(await cityFromCode(code)).toEqual({ genre: 'inconnue' })
 		}
 	})
 
 	test('une panne, ou une réponse pour un autre code, est « panne » : rien n’est gardé de cette réponse', async () => {
 		simuler(http.get(`${LISTE}/74010`, () => new HttpResponse(null, { status: 502 })))
-		expect(await communeDuCode('74010')).toEqual({ genre: 'panne' })
+		expect(await cityFromCode('74010')).toEqual({ genre: 'panne' })
 		simuler(http.get(`${LISTE}/74010`, () => HttpResponse.json({ nom: 'Autre', code: '38185' })))
-		expect(await communeDuCode('74010')).toEqual({ genre: 'panne' })
+		expect(await cityFromCode('74010')).toEqual({ genre: 'panne' })
 		simuler(http.get(`${LISTE}/74010`, () => HttpResponse.error()))
-		expect(await communeDuCode('74010')).toEqual({ genre: 'panne' })
+		expect(await cityFromCode('74010')).toEqual({ genre: 'panne' })
 	})
 })

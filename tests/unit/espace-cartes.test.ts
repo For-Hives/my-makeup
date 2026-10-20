@@ -1,19 +1,19 @@
 import { describe, expect, test } from 'bun:test'
-import { cartesDuProfil, type ProfilDeLEspace, SECTIONS } from '@/lib/espace/cartes'
+import { type DashboardProfile, profileCards, SECTIONS } from '@/lib/dashboard/cards'
 
 /** The cards of the page of her space (ticket 118): the value stored, or nothing — never « null ». */
 
-const VIDE: ProfilDeLEspace = { id: 1 }
+const VIDE: DashboardProfile = { id: 1 }
 
-const carte = (profil: ProfilDeLEspace, section: string) => {
-	const trouvee = cartesDuProfil(profil).find(c => c.section === section)
+const carte = (profil: DashboardProfile, section: string) => {
+	const trouvee = profileCards(profil).find(c => c.section === section)
 	if (!trouvee) throw new Error(`pas de carte ${section}`)
 	return trouvee
 }
 
 describe('une carte par section, dans l’ordre de la page', () => {
 	test('un profil vide a toutes ses cartes, et aucune valeur', () => {
-		const cartes = cartesDuProfil(VIDE)
+		const cartes = profileCards(VIDE)
 		expect(cartes.map(c => c.section)).toEqual([...SECTIONS])
 		for (const { lignes } of cartes) {
 			expect(lignes.length).toBeGreaterThan(0)
@@ -25,7 +25,7 @@ describe('une carte par section, dans l’ordre de la page', () => {
 })
 
 describe('les valeurs enregistrées', () => {
-	const PROFIL: ProfilDeLEspace = {
+	const PROFIL: DashboardProfile = {
 		id: 2,
 		firstName: 'Léa',
 		lastName: 'Fictive',
@@ -69,7 +69,7 @@ describe('les valeurs enregistrées', () => {
 	})
 
 	test('les mots « null » et « undefined » enregistrés par erreur ne s’affichent jamais', () => {
-		const sale: ProfilDeLEspace = {
+		const sale: DashboardProfile = {
 			id: 3,
 			firstName: 'null',
 			lastName: ' undefined ',
@@ -78,7 +78,7 @@ describe('les valeurs enregistrées', () => {
 			skills: [{ name: 'null' }, { name: null }],
 			networks: { instagram: 'undefined' },
 		}
-		const textes = cartesDuProfil(sale).flatMap(c => c.lignes.map(l => l.valeur))
+		const textes = profileCards(sale).flatMap(c => c.lignes.map(l => l.valeur))
 		for (const valeur of textes) expect(valeur === null || !/null|undefined/i.test(valeur)).toBe(true)
 		expect(
 			carte(sale, 'identite')

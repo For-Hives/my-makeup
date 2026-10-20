@@ -1,16 +1,16 @@
 import { describe, expect, test } from 'bun:test'
-import { CHAMPS_DES_RESEAUX, lireLesReseaux, normaliserReseau, schemaDesReseauxStrict } from '@/lib/espace/reseaux'
+import { NETWORKS_FIELDS, normalizeNetwork, readNetworks, strictNetworksSchema } from '@/lib/dashboard/networks'
 import { urlReseau } from '@/lib/profil/vue-publique'
 
 /** The networks she edits in her space (ticket 125; plan 02 U28, E30): one stored address per network. */
 
-const valeur = (canal: Parameters<typeof normaliserReseau>[0], saisie: unknown): string => {
-	const lue = normaliserReseau(canal, saisie)
+const valeur = (canal: Parameters<typeof normalizeNetwork>[0], saisie: unknown): string => {
+	const lue = normalizeNetwork(canal, saisie)
 	if (!lue.ok) throw new Error(`refusé : ${lue.message}`)
 	return lue.valeur
 }
-const message = (canal: Parameters<typeof normaliserReseau>[0], saisie: unknown): string => {
-	const lue = normaliserReseau(canal, saisie)
+const message = (canal: Parameters<typeof normalizeNetwork>[0], saisie: unknown): string => {
+	const lue = normalizeNetwork(canal, saisie)
 	if (lue.ok) throw new Error(`accepté : ${lue.valeur}`)
 	return lue.message
 }
@@ -68,7 +68,7 @@ describe('U28 : « @pseudo » et l’adresse complète donnent la même valeur',
 	})
 
 	test('vide ou fait d’espaces : la valeur est vide, le réseau est retiré', () => {
-		for (const canal of CHAMPS_DES_RESEAUX) expect([valeur(canal, ''), valeur(canal, '   ')]).toEqual(['', ''])
+		for (const canal of NETWORKS_FIELDS) expect([valeur(canal, ''), valeur(canal, '   ')]).toEqual(['', ''])
 	})
 })
 
@@ -118,7 +118,7 @@ describe('E30 : une adresse d’un autre site est refusée sous le champ', () =>
 	})
 
 	test('chaque champ refusé a son message, les autres passent', () => {
-		const lue = lireLesReseaux({
+		const lue = readNetworks({
 			instagram: 'https://www.facebook.com/x',
 			facebook: '@studio',
 			youtube: '',
@@ -141,10 +141,10 @@ describe('le schéma du serveur est strict', () => {
 		'contactPublic',
 		'coordonnees',
 	])('la clé %s refuse la requête entière', cle => {
-		expect(schemaDesReseauxStrict.safeParse({ ...TOUS, [cle]: 'x' }).success).toBe(false)
+		expect(strictNetworksSchema.safeParse({ ...TOUS, [cle]: 'x' }).success).toBe(false)
 	})
 
 	test('les cinq champs passent', () => {
-		expect(schemaDesReseauxStrict.safeParse(TOUS).success).toBe(true)
+		expect(strictNetworksSchema.safeParse(TOUS).success).toBe(true)
 	})
 })

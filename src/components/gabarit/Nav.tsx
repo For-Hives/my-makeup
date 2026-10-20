@@ -4,7 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
-import { signOut } from '@/app/(front)/(espace)/auth/actions'
+import { signOut } from '@/app/(front)/(dashboard)/auth/actions'
 import { LienSuivi } from '@/components/analytics/LienSuivi'
 import { LIEN_CONNEXION, LIEN_ESPACE, LIEN_RECHERCHE, NAVIGATION } from './liens'
 

@@ -532,7 +532,7 @@ describe('ticket 223, constat 9 : ce que Google dit par lui-même, et sa découv
 	})
 
 	test('le départ, la découverte en panne : retour à la connexion avec google-indisponible, sans cookie ni exception', async () => {
-		const { GET } = await import('@/app/(front)/(espace)/auth/google/route')
+		const { GET } = await import('@/app/(front)/(dashboard)/auth/google/route')
 		const avant = process.env.GOOGLE_OIDC_ISSUER
 		// A local port where nothing listens: the discovery document cannot be read.
 		process.env.GOOGLE_OIDC_ISSUER = 'http://127.0.0.1:9'

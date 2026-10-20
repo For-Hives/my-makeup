@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
-import { EditeurDeDescription, type EnvoiDeLaDescription } from '@/components/espace/EditeurDeDescription'
-import type { ValeursDeLaDescription } from '@/lib/espace/description'
-import { MESSAGE_ECHEC } from '@/lib/espace/resultat'
+import { DescriptionEditor, type DescriptionUpload } from '@/components/dashboard/DescriptionEditor'
+import type { DescriptionValues } from '@/lib/dashboard/description'
+import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
 import { ouvrirFenetre } from '../outils/dom-react'
 
 /**
@@ -11,19 +11,19 @@ import { ouvrirFenetre } from '../outils/dom-react'
  */
 
 const fenetre = ouvrirFenetre()
-const VALEURS: ValeursDeLaDescription = { description: 'Maquilleuse mariée.\nJe me déplace.' }
+const VALEURS: DescriptionValues = { description: 'Maquilleuse mariée.\nJe me déplace.' }
 
-function faussementEnvoi(reponse?: Awaited<ReturnType<EnvoiDeLaDescription>>) {
-	const appels: ValeursDeLaDescription[] = []
-	const envoyer: EnvoiDeLaDescription = async valeurs => {
+function faussementEnvoi(reponse?: Awaited<ReturnType<DescriptionUpload>>) {
+	const appels: DescriptionValues[] = []
+	const envoyer: DescriptionUpload = async valeurs => {
 		appels.push(valeurs)
 		return reponse ?? { ok: true, valeurs }
 	}
 	return { appels, envoyer }
 }
 
-async function ouvrir(envoyer: EnvoiDeLaDescription) {
-	await fenetre.monter(<EditeurDeDescription valeurs={VALEURS} envoyer={envoyer} />)
+async function ouvrir(envoyer: DescriptionUpload) {
+	await fenetre.monter(<DescriptionEditor valeurs={VALEURS} envoyer={envoyer} />)
 	await fenetre.cliquer(fenetre.bouton('Modifier ma description'))
 }
 
@@ -93,21 +93,21 @@ describe('U27 : 2 001 caractères refusés, HTML retiré', () => {
 
 describe('E31 : un échec du serveur', () => {
 	test('le panneau reste ouvert avec la saisie, le message est en français, rien n’est annoncé', async () => {
-		const { envoyer } = faussementEnvoi({ ok: false, message: MESSAGE_ECHEC })
+		const { envoyer } = faussementEnvoi({ ok: false, message: FAILURE_MESSAGE })
 		await ouvrir(envoyer)
 
 		await fenetre.saisir(champ(), 'Nouveau texte')
 		await fenetre.cliquer(fenetre.bouton('Enregistrer'))
 
 		const alerte = await fenetre.attendre(() => fenetre.w.document.querySelector('[role="alert"] p'))
-		expect(alerte.textContent).toBe(MESSAGE_ECHEC)
+		expect(alerte.textContent).toBe(FAILURE_MESSAGE)
 		expect(champ().value).toBe('Nouveau texte')
 		expect(dialogue()).not.toBeNull()
 		expect(fenetre.w.document.body.textContent).not.toContain('Ta description est enregistrée.')
 	})
 
 	test('une fonction d’envoi qui lève donne le message du site', async () => {
-		const envoyer: EnvoiDeLaDescription = async () => {
+		const envoyer: DescriptionUpload = async () => {
 			throw new Error('Failed to fetch')
 		}
 		await ouvrir(envoyer)
@@ -115,7 +115,7 @@ describe('E31 : un échec du serveur', () => {
 		await fenetre.cliquer(fenetre.bouton('Enregistrer'))
 
 		const alerte = await fenetre.attendre(() => fenetre.w.document.querySelector('[role="alert"] p'))
-		expect(alerte.textContent).toBe(MESSAGE_ECHEC)
+		expect(alerte.textContent).toBe(FAILURE_MESSAGE)
 	})
 
 	test('le message du champ renvoyé par le serveur s’affiche sous le champ', async () => {

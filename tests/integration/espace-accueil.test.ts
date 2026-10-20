@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
-import { enregistrerIdentiteDAccueil, enregistrerPhotoDAccueil } from '@/lib/espace/enregistrer-accueil'
-import { identifiantDuProfil, profilDeLaMaquilleuse, type UtilisateurDeLEspace } from '@/lib/espace/mon-profil'
-import { positionDAccueil } from '@/lib/espace/onboarding'
-import { garantirLeProfil } from '@/lib/espace/profil-vide'
+import { ensureProfile } from '@/lib/dashboard/empty-profile'
+import { artistProfile, type DashboardUser, profileId } from '@/lib/dashboard/my-profile'
+import { onboardingPosition } from '@/lib/dashboard/onboarding'
+import { saveOnboardingIdentity, saveOnboardingPhoto } from '@/lib/dashboard/save-onboarding'
 import type { Media } from '@/payload-types'
 import { ANNECY } from '../outils/cas-completude'
 import { type Espion, espionnerLeStockage } from '../outils/espion-s3'
@@ -28,9 +28,9 @@ afterEach(async () => {
 	await Promise.all([viderLaBase(), viderLeStockage()])
 })
 
-async function utilisateurDe(payload: Payload, compte: { id: number | string }): Promise<UtilisateurDeLEspace> {
+async function utilisateurDe(payload: Payload, compte: { id: number | string }): Promise<DashboardUser> {
 	const doc = await payload.findByID({ collection: 'pros', id: compte.id, depth: 0, overrideAccess: true })
-	return { ...doc, collection: 'pros' } as UtilisateurDeLEspace
+	return { ...doc, collection: 'pros' } as DashboardUser
 }
 
 const profilsDuCompte = async (compte: { id: number | string }) =>
@@ -55,9 +55,9 @@ describe('un compte importé sans profil : le profil vide est créé côté serv
 		const payload = await payloadDeTest()
 		const utilisateur = await utilisateurDe(payload, compte)
 		expect(await profilsDuCompte(compte)).toHaveLength(0)
-		expect(await profilDeLaMaquilleuse(payload, utilisateur)).toBeNull()
+		expect(await artistProfile(payload, utilisateur)).toBeNull()
 
-		const id = await garantirLeProfil(payload, utilisateur)
+		const id = await ensureProfile(payload, utilisateur)
 
 		const profils = await profilsDuCompte(compte)
 		expect(profils).toHaveLength(1)
@@ -65,7 +65,7 @@ describe('un compte importé sans profil : le profil vide est créé côté serv
 		expect(profils[0]?.slug).toBeTruthy()
 		expect(profils[0]?.status).toBe('draft')
 		// She reads her own empty profile now, and the onboarding starts at the first step.
-		expect(positionDAccueil(await profilDeLaMaquilleuse(payload, utilisateur))).toBe(1)
+		expect(onboardingPosition(await artistProfile(payload, utilisateur))).toBe(1)
 	})
 
 	test('deux appels au même moment ne font qu’un profil', async () => {
@@ -73,7 +73,7 @@ describe('un compte importé sans profil : le profil vide est créé côté serv
 		const payload = await payloadDeTest()
 		const utilisateur = await utilisateurDe(payload, compte)
 
-		const [a, b] = await Promise.all([garantirLeProfil(payload, utilisateur), garantirLeProfil(payload, utilisateur)])
+		const [a, b] = await Promise.all([ensureProfile(payload, utilisateur), ensureProfile(payload, utilisateur)])
 
 		expect(a).not.toBeNull()
 		expect(a).toBe(b)
@@ -84,7 +84,7 @@ describe('un compte importé sans profil : le profil vide est créé côté serv
 		const compte = await creerCompte('maquilleuse')
 		const payload = await payloadDeTest()
 		const avant = (await profilsDuCompte(compte))[0]?.id
-		expect(await garantirLeProfil(payload, await utilisateurDe(payload, compte))).toBe(avant ?? null)
+		expect(await ensureProfile(payload, await utilisateurDe(payload, compte))).toBe(avant ?? null)
 		expect(await profilsDuCompte(compte)).toHaveLength(1)
 	})
 
@@ -92,9 +92,9 @@ describe('un compte importé sans profil : le profil vide est créé côté serv
 		const admin = await creerCompte('admin')
 		const payload = await payloadDeTest()
 		const doc = await payload.findByID({ collection: 'admins', id: admin.id, depth: 0, overrideAccess: true })
-		const utilisateur = { ...doc, collection: 'admins' } as unknown as UtilisateurDeLEspace
-		expect(await garantirLeProfil(payload, utilisateur)).toBeNull()
-		expect(await identifiantDuProfil(payload, utilisateur)).toBeNull()
+		const utilisateur = { ...doc, collection: 'admins' } as unknown as DashboardUser
+		expect(await ensureProfile(payload, utilisateur)).toBeNull()
+		expect(await profileId(payload, utilisateur)).toBeNull()
 	})
 })
 
@@ -106,7 +106,7 @@ describe('E02 : les trois étapes donnent un profil actif', () => {
 		const id = (await profilsDuCompte(compte))[0]?.id as number
 
 		// Step 1 refuses a missing speciality, and stores nothing.
-		const sans = await enregistrerIdentiteDAccueil(payload, utilisateur, {
+		const sans = await saveOnboardingIdentity(payload, utilisateur, {
 			prenom: 'Léa',
 			nom: 'Fictive',
 			nomArtiste: '',
@@ -116,22 +116,22 @@ describe('E02 : les trois étapes donnent un profil actif', () => {
 		expect(sans.ok ? '' : sans.champs?.specialite).toBe('Indique ta spécialité.')
 		expect((await profilsDuCompte(compte))[0]?.firstName ?? null).toBeNull()
 
-		const identite = await enregistrerIdentiteDAccueil(payload, utilisateur, {
+		const identite = await saveOnboardingIdentity(payload, utilisateur, {
 			prenom: 'Léa',
 			nom: 'Fictive',
 			nomArtiste: '',
 			specialite: 'Mariée',
 		})
 		expect(identite.ok).toBe(true)
-		expect(positionDAccueil(await profilDeLaMaquilleuse(payload, utilisateur))).toBe(2)
+		expect(onboardingPosition(await artistProfile(payload, utilisateur))).toBe(2)
 
 		// The zone is saved by the save of her space; here it is written as it would be.
 		await payload.update({ collection: 'profiles', id, data: { city: ANNECY } })
-		expect(positionDAccueil(await profilDeLaMaquilleuse(payload, utilisateur))).toBe(3)
+		expect(onboardingPosition(await artistProfile(payload, utilisateur))).toBe(3)
 		expect((await profilsDuCompte(compte))[0]?.active).toBe(false)
 
 		const media = await envoyerUnePhoto(compte)
-		const photo = await enregistrerPhotoDAccueil(payload, utilisateur, { photoPrincipale: media.id })
+		const photo = await saveOnboardingPhoto(payload, utilisateur, { photoPrincipale: media.id })
 
 		expect(photo.ok).toBe(true)
 		expect(photo.ok ? photo.valeurs.position : null).toBe('terminee')
@@ -146,7 +146,7 @@ describe('E02 : les trois étapes donnent un profil actif', () => {
 		const utilisateur = await utilisateurDe(payload, compte)
 		const media = await envoyerUnePhoto(compte)
 
-		const photo = await enregistrerPhotoDAccueil(payload, utilisateur, { photoPrincipale: media.id })
+		const photo = await saveOnboardingPhoto(payload, utilisateur, { photoPrincipale: media.id })
 
 		expect(photo.ok).toBe(true)
 		expect(photo.ok ? photo.valeurs.position : null).toBe(1)
@@ -157,7 +157,7 @@ describe('E02 : les trois étapes donnent un profil actif', () => {
 		const compte = await creerCompte('maquilleuse')
 		const payload = await payloadDeTest()
 		const utilisateur = await utilisateurDe(payload, compte)
-		const refus = await enregistrerIdentiteDAccueil(payload, utilisateur, {
+		const refus = await saveOnboardingIdentity(payload, utilisateur, {
 			prenom: 'Léa',
 			nom: 'Fictive',
 			nomArtiste: '',

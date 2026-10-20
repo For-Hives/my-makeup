@@ -1,20 +1,20 @@
 import { describe, expect, test } from 'bun:test'
 import {
-	DELAI_ANTI_BOUCLE_MS,
-	DUREE_DE_VIE_DE_LA_SAISIE_MS,
-	garderLaSaisie,
-	lireLaSaisie,
-	oublierLaSaisie,
-	peutRediriger,
-	type Stockage,
-} from '@/lib/espace/saisie-gardee'
+	ANTI_LOOP_DELAY_MS,
+	canRedirect,
+	type DraftStorage,
+	forgetInput,
+	guardInput,
+	INPUT_LIFETIME_MS,
+	readInput,
+} from '@/lib/dashboard/guarded-input'
 
 /** The typing kept while the session ends (ticket 121): kept, read back, forgotten, never trusted blindly. */
 
 const CHAMPS = ['prenom', 'nom'] as const
 const MAINTENANT = 1_800_000_000_000
 
-function faussementStockage(): Stockage & { contenu: Map<string, string> } {
+function faussementStockage(): DraftStorage & { contenu: Map<string, string> } {
 	const contenu = new Map<string, string>()
 	return {
 		contenu,
@@ -28,24 +28,24 @@ describe('la saisie gardée', () => {
 	test('gardée puis relue telle quelle, pour ce compte seulement', () => {
 		const stockage = faussementStockage()
 		const saisie = { valeurs: { prenom: 'Inès', nom: 'Fictive' }, le: MAINTENANT, redirigeLe: MAINTENANT }
-		expect(garderLaSaisie(stockage, 'identite', '7', saisie)).toBe(true)
+		expect(guardInput(stockage, 'identite', '7', saisie)).toBe(true)
 
-		expect(lireLaSaisie(stockage, 'identite', '7', CHAMPS, MAINTENANT + 1000)).toEqual(saisie)
-		expect(lireLaSaisie(stockage, 'identite', '8', CHAMPS, MAINTENANT + 1000)).toBeNull()
+		expect(readInput(stockage, 'identite', '7', CHAMPS, MAINTENANT + 1000)).toEqual(saisie)
+		expect(readInput(stockage, 'identite', '8', CHAMPS, MAINTENANT + 1000)).toBeNull()
 	})
 
 	test('oubliée : plus rien', () => {
 		const stockage = faussementStockage()
-		garderLaSaisie(stockage, 'identite', '7', { valeurs: { prenom: 'a', nom: 'b' }, le: MAINTENANT, redirigeLe: null })
-		oublierLaSaisie(stockage, 'identite', '7')
+		guardInput(stockage, 'identite', '7', { valeurs: { prenom: 'a', nom: 'b' }, le: MAINTENANT, redirigeLe: null })
+		forgetInput(stockage, 'identite', '7')
 		expect(stockage.contenu.size).toBe(0)
-		expect(lireLaSaisie(stockage, 'identite', '7', CHAMPS, MAINTENANT)).toBeNull()
+		expect(readInput(stockage, 'identite', '7', CHAMPS, MAINTENANT)).toBeNull()
 	})
 
 	test('trop ancienne : ignorée et effacée', () => {
 		const stockage = faussementStockage()
-		garderLaSaisie(stockage, 'identite', '7', { valeurs: { prenom: 'a', nom: 'b' }, le: MAINTENANT, redirigeLe: null })
-		expect(lireLaSaisie(stockage, 'identite', '7', CHAMPS, MAINTENANT + DUREE_DE_VIE_DE_LA_SAISIE_MS + 1)).toBeNull()
+		guardInput(stockage, 'identite', '7', { valeurs: { prenom: 'a', nom: 'b' }, le: MAINTENANT, redirigeLe: null })
+		expect(readInput(stockage, 'identite', '7', CHAMPS, MAINTENANT + INPUT_LIFETIME_MS + 1)).toBeNull()
 		expect(stockage.contenu.size).toBe(0)
 	})
 
@@ -62,12 +62,12 @@ describe('la saisie gardée', () => {
 			JSON.stringify({ le: 'hier', valeurs: { prenom: 'a', nom: 'b' } }),
 		]) {
 			stockage.contenu.set(cle, brut)
-			expect(lireLaSaisie(stockage, 'identite', '7', CHAMPS, MAINTENANT)).toBeNull()
+			expect(readInput(stockage, 'identite', '7', CHAMPS, MAINTENANT)).toBeNull()
 		}
 	})
 
 	test('un navigateur qui refuse le stockage : rien ne casse, rien n’est gardé', () => {
-		const refuse: Stockage = {
+		const refuse: DraftStorage = {
 			getItem: () => {
 				throw new Error('bloqué')
 			},
@@ -79,21 +79,21 @@ describe('la saisie gardée', () => {
 			},
 		}
 		const saisie = { valeurs: { prenom: 'a', nom: 'b' }, le: MAINTENANT, redirigeLe: null }
-		expect(garderLaSaisie(refuse, 'identite', '7', saisie)).toBe(false)
-		expect(lireLaSaisie(refuse, 'identite', '7', CHAMPS, MAINTENANT)).toBeNull()
-		expect(() => oublierLaSaisie(refuse, 'identite', '7')).not.toThrow()
-		expect(garderLaSaisie(null, 'identite', '7', saisie)).toBe(false)
-		expect(lireLaSaisie(null, 'identite', '7', CHAMPS, MAINTENANT)).toBeNull()
+		expect(guardInput(refuse, 'identite', '7', saisie)).toBe(false)
+		expect(readInput(refuse, 'identite', '7', CHAMPS, MAINTENANT)).toBeNull()
+		expect(() => forgetInput(refuse, 'identite', '7')).not.toThrow()
+		expect(guardInput(null, 'identite', '7', saisie)).toBe(false)
+		expect(readInput(null, 'identite', '7', CHAMPS, MAINTENANT)).toBeNull()
 	})
 })
 
 describe('une seule redirection', () => {
 	test('la première fois : oui ; juste après un renvoi : non ; bien plus tard : oui', () => {
-		expect(peutRediriger(null, MAINTENANT)).toBe(true)
+		expect(canRedirect(null, MAINTENANT)).toBe(true)
 		const sans = { valeurs: {}, le: MAINTENANT, redirigeLe: null }
-		expect(peutRediriger(sans, MAINTENANT)).toBe(true)
+		expect(canRedirect(sans, MAINTENANT)).toBe(true)
 		const renvoyee = { valeurs: {}, le: MAINTENANT, redirigeLe: MAINTENANT }
-		expect(peutRediriger(renvoyee, MAINTENANT + 30_000)).toBe(false)
-		expect(peutRediriger(renvoyee, MAINTENANT + DELAI_ANTI_BOUCLE_MS + 1)).toBe(true)
+		expect(canRedirect(renvoyee, MAINTENANT + 30_000)).toBe(false)
+		expect(canRedirect(renvoyee, MAINTENANT + ANTI_LOOP_DELAY_MS + 1)).toBe(true)
 	})
 })

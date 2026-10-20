@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { BandeauDApercu } from '@/components/espace/BandeauDApercu'
-import { CHEMIN_DE_L_APERCU, CHEMIN_DE_L_ESPACE, etatDeLApercu } from '@/lib/espace/apercu'
+import { PreviewBanner } from '@/components/dashboard/PreviewBanner'
+import { DASHBOARD_PATH, PREVIEW_PATH, previewState } from '@/lib/dashboard/preview'
 
 /**
  * The preview of her own page (ticket 139; plan 02 RG-06): the banner says where her profile stands,
@@ -13,27 +13,27 @@ const COMPLET = { status: 'published', available: true, fullyEmpty: false, publi
 
 describe('139 : l’état que dit le bandeau', () => {
 	test('profil complet, publié, available : « ta page telle que les visiteuses la voient »', () => {
-		expect(etatDeLApercu(COMPLET).code).toBe('complet')
+		expect(previewState(COMPLET).code).toBe('complet')
 	})
 
 	test('un profil dont la disponibilité n’a jamais été donnée compte comme disponible', () => {
-		expect(etatDeLApercu({ ...COMPLET, available: null }).code).toBe('complet')
+		expect(previewState({ ...COMPLET, available: null }).code).toBe('complet')
 	})
 
 	test('masqué par l’équipe : le dit, avant tout le reste', () => {
-		expect(etatDeLApercu({ ...COMPLET, status: 'hidden', fullyEmpty: true, available: false }).code).toBe('masque')
+		expect(previewState({ ...COMPLET, status: 'hidden', fullyEmpty: true, available: false }).code).toBe('masque')
 	})
 
 	test('entièrement vide : pas listé', () => {
-		expect(etatDeLApercu({ status: 'draft', available: true, fullyEmpty: true, publishable: false }).code).toBe('vide')
+		expect(previewState({ status: 'draft', available: true, fullyEmpty: true, publishable: false }).code).toBe('vide')
 	})
 
 	test('indisponible : écarté de la recherche', () => {
-		expect(etatDeLApercu({ ...COMPLET, available: false }).code).toBe('indisponible')
+		expect(previewState({ ...COMPLET, available: false }).code).toBe('indisponible')
 	})
 
 	test('rempli mais pas publishable : visible, pas référencé', () => {
-		expect(etatDeLApercu({ ...COMPLET, publishable: false }).code).toBe('non-publiable')
+		expect(previewState({ ...COMPLET, publishable: false }).code).toBe('non-publiable')
 	})
 })
 
@@ -46,11 +46,11 @@ describe('139 : le bandeau', () => {
 			{ ...COMPLET, available: false },
 			{ ...COMPLET, publishable: false },
 		]) {
-			const etat = etatDeLApercu(profil)
-			const html = renderToStaticMarkup(<BandeauDApercu etat={etat} />)
+			const etat = previewState(profil)
+			const html = renderToStaticMarkup(<PreviewBanner etat={etat} />)
 			expect(html).toContain(`data-etat="${etat.code}"`)
 			expect(html).toContain(etat.titre)
-			expect(html).toContain(`href="${CHEMIN_DE_L_ESPACE}"`)
+			expect(html).toContain(`href="${DASHBOARD_PATH}"`)
 			expect(html).toContain('Modifier mon profil')
 			expect(html).not.toMatch(/\b(?:undefined|null)\b/)
 		}
@@ -58,7 +58,7 @@ describe('139 : le bandeau', () => {
 
 	test('l’aperçu est une page de l’espace : privée et sans cache comme lui', async () => {
 		const { isPrivatePage: estPagePrivee } = await import('@/lib/auth/closed-dashboard')
-		expect(CHEMIN_DE_L_APERCU.startsWith('/auth/')).toBe(true)
-		expect(estPagePrivee(CHEMIN_DE_L_APERCU)).toBe(true)
+		expect(PREVIEW_PATH.startsWith('/auth/')).toBe(true)
+		expect(estPagePrivee(PREVIEW_PATH)).toBe(true)
 	})
 })

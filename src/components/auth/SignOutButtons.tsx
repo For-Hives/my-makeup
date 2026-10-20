@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { signOut, signOutEverywhere } from '@/app/(front)/(espace)/auth/actions'
+import { signOut, signOutEverywhere } from '@/app/(front)/(dashboard)/auth/actions'
 
 const BUTTON = 'min-h-11 rounded-md px-4 py-2 font-medium'
 

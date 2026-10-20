@@ -1,18 +1,18 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
 import { act } from 'react'
-import { EditeurDeDescription } from '@/components/espace/EditeurDeDescription'
-import { EditeurDeLaPhoto } from '@/components/espace/EditeurDeLaPhoto'
-import { InterrupteurDeDisponibilite } from '@/components/espace/InterrupteurDeDisponibilite'
-import { LienDeVue } from '@/components/espace/LienDeVue'
-import { SuppressionDuCompte } from '@/components/espace/SuppressionDuCompte'
+import { AccountDeletion } from '@/components/dashboard/AccountDeletion'
+import { AvailabilitySwitch } from '@/components/dashboard/AvailabilitySwitch'
+import { DescriptionEditor } from '@/components/dashboard/DescriptionEditor'
+import { PhotoEditor } from '@/components/dashboard/PhotoEditor'
+import { ViewLink } from '@/components/dashboard/ViewLink'
 import { donneesDEvenement } from '@/lib/analytics/events'
 import type { Suivre } from '@/lib/analytics/track'
-import { televerserLaPhoto } from '@/lib/espace/envoi-des-photos'
-import { porte } from '@/lib/espace/mesure'
-import { avecPassagePublicable } from '@/lib/espace/passage-publiable'
-import { MESSAGES_PHOTO } from '@/lib/espace/photo'
-import { MESSAGE_ECHEC, type ResultatDEnregistrement } from '@/lib/espace/resultat'
+import { holder } from '@/lib/dashboard/analytics'
+import { MESSAGES_PHOTO } from '@/lib/dashboard/photo'
+import { uploadPhoto } from '@/lib/dashboard/photos-upload'
+import { withPublishableTransition } from '@/lib/dashboard/publishable-transition'
+import { FAILURE_MESSAGE, type SaveResult } from '@/lib/dashboard/result'
 import { choisirDesFichiers } from '../outils/choisir-fichiers'
 import { ouvrirFenetre } from '../outils/dom-react'
 
@@ -25,16 +25,16 @@ const fenetre = ouvrirFenetre()
 
 type Envoi = { nom: string; proprietes: unknown }
 let envois: Envoi[] = []
-const origine = porte.suivre
+const origine = holder.suivre
 beforeEach(() => {
 	envois = []
-	porte.suivre = ((nom: string, proprietes: unknown = {}) => {
+	holder.suivre = ((nom: string, proprietes: unknown = {}) => {
 		envois.push({ nom, proprietes })
 		return true
 	}) as unknown as Suivre
 })
 afterEach(() => {
-	porte.suivre = origine
+	holder.suivre = origine
 })
 
 describe('U82 : les propriétés restent dans les listes fermées', () => {
@@ -68,7 +68,7 @@ describe('l’enregistrement d’une section', () => {
 	test('la réponse du serveur donne un événement profile_save, et un double clic n’en donne qu’un', async () => {
 		let finir: () => void = () => undefined
 		await fenetre.monter(
-			<InterrupteurDeDisponibilite
+			<AvailabilitySwitch
 				disponible={true}
 				envoyer={() =>
 					new Promise(fin => {
@@ -90,7 +90,7 @@ describe('l’enregistrement d’une section', () => {
 
 	test('un refus du serveur donne ok=false, et jamais profile_publiable', async () => {
 		await fenetre.monter(
-			<InterrupteurDeDisponibilite disponible={true} envoyer={async () => ({ ok: false, message: MESSAGE_ECHEC })} />
+			<AvailabilitySwitch disponible={true} envoyer={async () => ({ ok: false, message: FAILURE_MESSAGE })} />
 		)
 		await fenetre.cliquer(fenetre.w.document.querySelector<HTMLElement>('[role="switch"]') as HTMLElement)
 		await fenetre.attendre(() => envois.length > 0)
@@ -99,7 +99,7 @@ describe('l’enregistrement d’une section', () => {
 
 	test('le serveur dit que le profil est devenu publiable : profile_publiable part une fois, sans propriété', async () => {
 		await fenetre.monter(
-			<InterrupteurDeDisponibilite
+			<AvailabilitySwitch
 				disponible={true}
 				envoyer={async () => ({ ok: true, valeurs: { disponible: false }, devenuPublicable: true })}
 			/>
@@ -113,7 +113,7 @@ describe('l’enregistrement d’une section', () => {
 	})
 
 	test('sans l’indication du serveur, une réussite ne donne pas profile_publiable', async () => {
-		await fenetre.monter(<InterrupteurDeDisponibilite disponible={true} envoyer={sans(false)} />)
+		await fenetre.monter(<AvailabilitySwitch disponible={true} envoyer={sans(false)} />)
 		await fenetre.cliquer(fenetre.w.document.querySelector<HTMLElement>('[role="switch"]') as HTMLElement)
 		await fenetre.attendre(() => envois.length > 0)
 		expect(envois.map(e => e.nom)).toEqual(['profile_save'])
@@ -125,7 +125,7 @@ describe('Entrée maintenue pendant un enregistrement : un seul événement', ()
 		let requetes = 0
 		let finir: () => void = () => undefined
 		await fenetre.monter(
-			<EditeurDeDescription
+			<DescriptionEditor
 				valeurs={{ description: 'Maquilleuse mariée.' }}
 				envoyer={valeurs => {
 					requetes += 1
@@ -159,13 +159,13 @@ describe('Entrée maintenue pendant un enregistrement : un seul événement', ()
 })
 
 describe('le passage à publiable est dit par le serveur, une seule fois', () => {
-	function banc(etats: boolean[], resultat: ResultatDEnregistrement<{ a: string }>) {
+	function banc(etats: boolean[], resultat: SaveResult<{ a: string }>) {
 		const lectures: boolean[] = [...etats]
 		const payload = {
 			find: async () => ({ docs: [{ id: 7 }] }),
 			findByID: async () => ({ publishable: lectures.shift() }),
 		} as unknown as Payload
-		return avecPassagePublicable(payload, { collection: 'pros', id: 1 } as never, async () => resultat)
+		return withPublishableTransition(payload, { collection: 'pros', id: 1 } as never, async () => resultat)
 	}
 	const bon = { ok: true, valeurs: { a: 'x' } } as const
 
@@ -182,7 +182,7 @@ describe('le passage à publiable est dit par le serveur, une seule fois', () =>
 		expect(await banc([false, false], bon)).toEqual(bon)
 	})
 	test('un enregistrement refusé : rien, et la relecture n’a pas lieu', async () => {
-		const refus = { ok: false, message: MESSAGE_ECHEC } as const
+		const refus = { ok: false, message: FAILURE_MESSAGE } as const
 		expect(await banc([false, true], refus)).toEqual(refus)
 	})
 	test('un état illisible : rien', async () => {
@@ -192,7 +192,9 @@ describe('le passage à publiable est dit par le serveur, une seule fois', () =>
 				throw new Error('base indisponible')
 			},
 		} as unknown as Payload
-		expect(await avecPassagePublicable(payload, { collection: 'pros', id: 1 } as never, async () => bon)).toEqual(bon)
+		expect(await withPublishableTransition(payload, { collection: 'pros', id: 1 } as never, async () => bon)).toEqual(
+			bon
+		)
 	})
 })
 
@@ -211,16 +213,16 @@ describe('une photo refusée : la vraie cause', () => {
 		[500, '', 'server'],
 		[200, '', 'server'],
 	])('l’envoi répond %p : %s', async (status, corps, cause) => {
-		const envoi = await televerserLaPhoto(fichier, '', reponse(status, corps))
+		const envoi = await uploadPhoto(fichier, '', reponse(status, corps))
 		expect(envoi).toMatchObject({ ok: false, cause })
 	})
 
 	test('le réseau tombe : server ; une session finie n’est pas un refus de la photo', async () => {
-		const tombe = await televerserLaPhoto(fichier, '', async () => {
+		const tombe = await uploadPhoto(fichier, '', async () => {
 			throw new Error('Failed to fetch')
 		})
 		expect(tombe).toMatchObject({ ok: false, cause: 'server' })
-		const session = await televerserLaPhoto(fichier, '', reponse(401))
+		const session = await uploadPhoto(fichier, '', reponse(401))
 		expect(session).toMatchObject({ ok: false, session: 'expiree' })
 		expect('cause' in session).toBe(false)
 	})
@@ -228,11 +230,11 @@ describe('une photo refusée : la vraie cause', () => {
 	const ACTUELLE = { id: 5, url: 'https://photos.example.test/a.webp', largeur: 800, hauteur: 600, alt: '' }
 	const REDUITE = new File(['petit'], 'photo.webp', { type: 'image/webp' })
 	async function monter(options: {
-		preparer?: Parameters<typeof EditeurDeLaPhoto>[0]['preparer']
-		televerser?: Parameters<typeof EditeurDeLaPhoto>[0]['televerser']
+		preparer?: Parameters<typeof PhotoEditor>[0]['preparer']
+		televerser?: Parameters<typeof PhotoEditor>[0]['televerser']
 	}) {
 		await fenetre.monter(
-			<EditeurDeLaPhoto
+			<PhotoEditor
 				photo={ACTUELLE}
 				envoyer={async saisie => ({ ok: true, valeurs: { photoPrincipale: saisie.photoPrincipale } })}
 				preparer={
@@ -290,7 +292,7 @@ describe('une photo refusée : la vraie cause', () => {
 
 describe('la suppression du compte', () => {
 	async function supprimer(envoyer: () => Promise<{ ok: true } | { ok: false; message: string }>) {
-		await fenetre.monter(<SuppressionDuCompte mode="mot-de-passe" envoyer={envoyer as never} aller={() => undefined} />)
+		await fenetre.monter(<AccountDeletion mode="mot-de-passe" envoyer={envoyer as never} aller={() => undefined} />)
 		await fenetre.cliquer(fenetre.bouton('Supprimer mon compte'))
 		await fenetre.saisir(fenetre.champ('Retape ton mot de passe pour confirmer'), 'mon secret fictif')
 		await fenetre.cliquer(fenetre.bouton('Supprimer définitivement mon compte'))
@@ -318,9 +320,9 @@ describe('la suppression du compte', () => {
 describe('le changement de vue', () => {
 	async function monter(vue: 'publique' | 'edition') {
 		await fenetre.monter(
-			<LienDeVue vue={vue} href="/auth/apercu-profil">
+			<ViewLink vue={vue} href="/auth/apercu-profil">
 				Voir
-			</LienDeVue>
+			</ViewLink>
 		)
 		const lien = fenetre.w.document.querySelector('a') as HTMLAnchorElement
 		// The page does not really leave: the test only counts.

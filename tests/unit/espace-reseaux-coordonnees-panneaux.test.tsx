@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'bun:test'
-import { EditeurDeCoordonnees, type EnvoiDesCoordonnees } from '@/components/espace/EditeurDeCoordonnees'
-import { EditeurDeReseaux, type EnvoiDesReseaux } from '@/components/espace/EditeurDeReseaux'
-import type { ValeursDesCoordonnees } from '@/lib/espace/coordonnees'
-import type { ValeursDesReseaux } from '@/lib/espace/reseaux'
-import { MESSAGE_ECHEC } from '@/lib/espace/resultat'
+import { ContactDetailsEditor, type ContactDetailsUpload } from '@/components/dashboard/ContactDetailsEditor'
+import { NetworksEditor, type NetworksUpload } from '@/components/dashboard/NetworksEditor'
+import type { ContactDetailsValues } from '@/lib/dashboard/contact-details'
+import type { NetworksValues } from '@/lib/dashboard/networks'
+import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
 import { ouvrirFenetre } from '../outils/dom-react'
 
 /**
@@ -14,14 +14,14 @@ import { ouvrirFenetre } from '../outils/dom-react'
 
 const fenetre = ouvrirFenetre()
 
-const RESEAUX: ValeursDesReseaux = {
+const RESEAUX: NetworksValues = {
 	instagram: 'https://www.instagram.com/studio.fictif',
 	facebook: '',
 	youtube: '',
 	linkedin: '',
 	siteWeb: 'https://studio-fictif.example.test',
 }
-const COORDONNEES: ValeursDesCoordonnees = {
+const COORDONNEES: ContactDetailsValues = {
 	telephone: '06 12 34 56 78',
 	email: 'a@example.test',
 	contactPublic: false,
@@ -32,16 +32,16 @@ const statut = (): string => fenetre.w.document.querySelector('[role="status"]')
 const erreurDe = (id: string): string | undefined => fenetre.w.document.getElementById(id)?.textContent ?? undefined
 
 describe('125 : le panneau des réseaux', () => {
-	function fauxEnvoi(reponse?: Awaited<ReturnType<EnvoiDesReseaux>>) {
-		const appels: ValeursDesReseaux[] = []
-		const envoyer: EnvoiDesReseaux = async valeurs => {
+	function fauxEnvoi(reponse?: Awaited<ReturnType<NetworksUpload>>) {
+		const appels: NetworksValues[] = []
+		const envoyer: NetworksUpload = async valeurs => {
 			appels.push(valeurs)
 			return reponse ?? { ok: true, valeurs }
 		}
 		return { appels, envoyer }
 	}
-	async function ouvrir(envoyer: EnvoiDesReseaux) {
-		await fenetre.monter(<EditeurDeReseaux valeurs={RESEAUX} envoyer={envoyer} />)
+	async function ouvrir(envoyer: NetworksUpload) {
+		await fenetre.monter(<NetworksEditor valeurs={RESEAUX} envoyer={envoyer} />)
 		await fenetre.cliquer(fenetre.bouton('Modifier mes réseaux'))
 	}
 
@@ -83,14 +83,14 @@ describe('125 : le panneau des réseaux', () => {
 	})
 
 	test('E31 : un échec du serveur garde la saisie, dit pourquoi, et la carte ne change pas', async () => {
-		const { envoyer } = fauxEnvoi({ ok: false, message: MESSAGE_ECHEC })
+		const { envoyer } = fauxEnvoi({ ok: false, message: FAILURE_MESSAGE })
 		await ouvrir(envoyer)
 
 		await fenetre.saisir(fenetre.champ('Facebook'), '@studio.fictif')
 		await fenetre.cliquer(fenetre.bouton('Enregistrer'))
 
 		const alerte = await fenetre.attendre(() => fenetre.w.document.querySelector('[role="alert"] p'))
-		expect(alerte.textContent).toBe(MESSAGE_ECHEC)
+		expect(alerte.textContent).toBe(FAILURE_MESSAGE)
 		expect((fenetre.champ('Facebook') as HTMLInputElement).value).toBe('@studio.fictif')
 		expect(statut()).toBe('')
 		expect(dialogue()).not.toBeNull()
@@ -110,21 +110,21 @@ describe('125 : le panneau des réseaux', () => {
 	})
 
 	test('E31 : une fonction d’envoi qui lève donne le message du site', async () => {
-		const lever: EnvoiDesReseaux = async () => {
+		const lever: NetworksUpload = async () => {
 			throw new Error('Failed to fetch')
 		}
 		await ouvrir(lever)
 		await fenetre.saisir(fenetre.champ('Facebook'), '@studio.fictif')
 		await fenetre.cliquer(fenetre.bouton('Enregistrer'))
 		const alerte = await fenetre.attendre(() => fenetre.w.document.querySelector('[role="alert"] p'))
-		expect(alerte.textContent).toBe(MESSAGE_ECHEC)
+		expect(alerte.textContent).toBe(FAILURE_MESSAGE)
 	})
 })
 
 describe('126 : le panneau des coordonnées', () => {
-	function fauxEnvoi(reponse?: Awaited<ReturnType<EnvoiDesCoordonnees>>) {
-		const appels: ValeursDesCoordonnees[] = []
-		const envoyer: EnvoiDesCoordonnees = async valeurs => {
+	function fauxEnvoi(reponse?: Awaited<ReturnType<ContactDetailsUpload>>) {
+		const appels: ContactDetailsValues[] = []
+		const envoyer: ContactDetailsUpload = async valeurs => {
 			appels.push(valeurs)
 			return (
 				reponse ?? {
@@ -135,8 +135,8 @@ describe('126 : le panneau des coordonnées', () => {
 		}
 		return { appels, envoyer }
 	}
-	async function ouvrir(envoyer: EnvoiDesCoordonnees, valeurs = COORDONNEES) {
-		await fenetre.monter(<EditeurDeCoordonnees valeurs={valeurs} envoyer={envoyer} />)
+	async function ouvrir(envoyer: ContactDetailsUpload, valeurs = COORDONNEES) {
+		await fenetre.monter(<ContactDetailsEditor valeurs={valeurs} envoyer={envoyer} />)
 		await fenetre.cliquer(fenetre.bouton('Modifier mes coordonnées'))
 	}
 	const case_ = () => fenetre.champ('Afficher mon téléphone et mon email sur mon profil') as HTMLInputElement
@@ -192,14 +192,14 @@ describe('126 : le panneau des coordonnées', () => {
 	})
 
 	test('E31 : un échec du serveur garde la saisie et le choix, et le dit', async () => {
-		const { envoyer } = fauxEnvoi({ ok: false, message: MESSAGE_ECHEC })
+		const { envoyer } = fauxEnvoi({ ok: false, message: FAILURE_MESSAGE })
 		await ouvrir(envoyer)
 
 		await fenetre.cliquer(case_())
 		await fenetre.cliquer(fenetre.bouton('Enregistrer'))
 
 		const alerte = await fenetre.attendre(() => fenetre.w.document.querySelector('[role="alert"] p'))
-		expect(alerte.textContent).toBe(MESSAGE_ECHEC)
+		expect(alerte.textContent).toBe(FAILURE_MESSAGE)
 		expect(case_().checked).toBe(true)
 		expect(statut()).toBe('')
 		expect(dialogue()).not.toBeNull()

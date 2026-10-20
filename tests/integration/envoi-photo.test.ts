@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, setDefaultTimeout, test } from 'bun:test'
 import sharp from 'sharp'
-import { MESSAGES_D_ENVOI, TAILLE_MAX_PHOTO } from '@/lib/envoi-photo'
+import { PHOTO_SIZE_MAX, UPLOAD_MESSAGES } from '@/lib/photo-upload'
 import { MESSAGES_DES_PHOTOS } from '@/lib/profil/photos'
 import type { Media } from '@/payload-types'
 import { type Espion, espionnerLeStockage, suppressionsSansCorbeille } from '../outils/espion-s3'
@@ -115,7 +115,7 @@ describe('I26 : PDF, SVG, HEIC, vidéo et 12 Mo sont refusés, rien n’est écr
 		const compte = await creerCompte('maquilleuse')
 		const { statut, texte } = await envoyer(compte, fichier(contenu, nom, type))
 		expect(statut).toBe(400)
-		expect(texte).toContain(MESSAGES_D_ENVOI.type)
+		expect(texte).toContain(UPLOAD_MESSAGES.type)
 		expect(ecritures()).toEqual([])
 		expect(await listerLesObjets()).toEqual([])
 		expect(await nombreDeMedias()).toBe(0)
@@ -125,10 +125,10 @@ describe('I26 : PDF, SVG, HEIC, vidéo et 12 Mo sont refusés, rien n’est écr
 		const compte = await creerCompte('maquilleuse')
 		const jpeg = await image('jpeg')
 		const gros = Buffer.concat([jpeg, Buffer.alloc(12 * 1024 * 1024 - jpeg.length)])
-		expect(gros.length).toBeGreaterThan(TAILLE_MAX_PHOTO)
+		expect(gros.length).toBeGreaterThan(PHOTO_SIZE_MAX)
 		const { statut, texte } = await envoyer(compte, fichier(gros, 'gros.jpg', 'image/jpeg'))
 		expect(statut).toBe(400)
-		expect(texte).toContain(MESSAGES_D_ENVOI.taille)
+		expect(texte).toContain(UPLOAD_MESSAGES.taille)
 		expect(ecritures()).toEqual([])
 		expect(await listerLesObjets()).toEqual([])
 		expect(await nombreDeMedias()).toBe(0)

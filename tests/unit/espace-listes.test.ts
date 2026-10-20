@@ -1,17 +1,17 @@
 import { describe, expect, test } from 'bun:test'
-import { EXPERIENCES } from '@/lib/espace/experiences'
-import { FORMATIONS } from '@/lib/espace/formations'
+import { COURSES } from '@/lib/dashboard/courses'
+import { EXPERIENCES } from '@/lib/dashboard/experiences'
 import {
-	erreursDeLaLigne,
-	LIGNES_MAX,
-	lignesDuProfil,
-	memeLigne,
-	nettoyerLaLigne,
+	cleanRow,
+	listSchema,
 	OPTIONS_MAX,
-	rangApresRetrait,
-	schemaDeLaListe,
-} from '@/lib/espace/liste'
-import { OPTIONS_DE_PRESTATION, PRESTATIONS, prixDeLaSaisie } from '@/lib/espace/prestations'
+	profileRows,
+	ROWS_MAX,
+	rankAfterRemoval,
+	rowErrors,
+	sameRow,
+} from '@/lib/dashboard/list'
+import { inputPrice, SERVICE_OFFER_OPTIONS, SERVICE_OFFERS } from '@/lib/dashboard/service-offers'
 
 /**
  * The rules of the lists of her space (tickets 129 to 131; plan 02 U29, U30): what the form and the
@@ -32,10 +32,10 @@ describe('129, U30 : une expérience', () => {
 	}
 
 	test('elle exige l’entreprise, le poste et le début, pas la ville ni la fin ni la description', () => {
-		expect(erreursDeLaLigne(EXPERIENCES, ligne, { avecRequis: true, maintenant: MAINTENANT })).toEqual({})
+		expect(rowErrors(EXPERIENCES, ligne, { avecRequis: true, maintenant: MAINTENANT })).toEqual({})
 		expect(
 			Object.keys(
-				erreursDeLaLigne(
+				rowErrors(
 					EXPERIENCES,
 					{ ...ligne, jobTitle: '', company: '', startDate: '' },
 					{ avecRequis: true, maintenant: MAINTENANT }
@@ -44,7 +44,7 @@ describe('129, U30 : une expérience', () => {
 		).toEqual(['company', 'jobTitle', 'startDate'])
 		// A row that is not added or edited requires nothing: an imported row may have empty fields.
 		expect(
-			erreursDeLaLigne(
+			rowErrors(
 				EXPERIENCES,
 				{ ...ligne, jobTitle: '', company: '', startDate: '' },
 				{ avecRequis: false, maintenant: MAINTENANT }
@@ -53,28 +53,25 @@ describe('129, U30 : une expérience', () => {
 	})
 
 	test('U30 : la fin avant le début est refusée, le même jour est accepté', () => {
-		const refus = erreursDeLaLigne(
+		const refus = rowErrors(
 			EXPERIENCES,
 			{ ...ligne, endDate: '2020-02-28' },
 			{ avecRequis: true, maintenant: MAINTENANT }
 		)
 		expect(refus.endDate).toBe('La fin d’une expérience ne peut pas précéder son début.')
 		expect(
-			erreursDeLaLigne(EXPERIENCES, { ...ligne, endDate: '2020-03-01' }, { avecRequis: true, maintenant: MAINTENANT })
+			rowErrors(EXPERIENCES, { ...ligne, endDate: '2020-03-01' }, { avecRequis: true, maintenant: MAINTENANT })
 		).toEqual({})
 	})
 
 	test('une date qui n’existe pas est refusée, un texte trop long aussi', () => {
 		expect(
-			erreursDeLaLigne(EXPERIENCES, { ...ligne, startDate: '2020-02-30' }, { avecRequis: true, maintenant: MAINTENANT })
+			rowErrors(EXPERIENCES, { ...ligne, startDate: '2020-02-30' }, { avecRequis: true, maintenant: MAINTENANT })
 				.startDate
 		).toBe('Cette date n’est pas valide.')
 		expect(
-			erreursDeLaLigne(
-				EXPERIENCES,
-				{ ...ligne, jobTitle: 'a'.repeat(71) },
-				{ avecRequis: true, maintenant: MAINTENANT }
-			).jobTitle
+			rowErrors(EXPERIENCES, { ...ligne, jobTitle: 'a'.repeat(71) }, { avecRequis: true, maintenant: MAINTENANT })
+				.jobTitle
 		).toBe('Ce texte ne doit pas dépasser 70 caractères.')
 	})
 
@@ -110,48 +107,34 @@ describe('130, U30 : une formation', () => {
 	test('elle exige le diplôme et l’école', () => {
 		expect(
 			Object.keys(
-				erreursDeLaLigne(
-					FORMATIONS,
-					{ ...ligne, diploma: '', school: '' },
-					{ avecRequis: true, maintenant: MAINTENANT }
-				)
+				rowErrors(COURSES, { ...ligne, diploma: '', school: '' }, { avecRequis: true, maintenant: MAINTENANT })
 			).sort()
 		).toEqual(['diploma', 'school'])
 	})
 
 	test('U30 : une date à plus d’un an est refusée, à un an pile elle est acceptée', () => {
-		const refus = erreursDeLaLigne(
-			FORMATIONS,
+		const refus = rowErrors(
+			COURSES,
 			{ ...ligne, graduatedAt: '2027-10-16' },
 			{ avecRequis: true, maintenant: MAINTENANT }
 		)
 		expect(refus.graduatedAt).toBe('Une date d’obtention ne peut pas dépasser d’un an la date du jour.')
 		expect(
-			erreursDeLaLigne(
-				FORMATIONS,
-				{ ...ligne, graduatedAt: '2027-10-15' },
-				{ avecRequis: true, maintenant: MAINTENANT }
-			)
+			rowErrors(COURSES, { ...ligne, graduatedAt: '2027-10-15' }, { avecRequis: true, maintenant: MAINTENANT })
 		).toEqual({})
 	})
 
 	test('une formation à venir et une formation sans date sont acceptées', () => {
 		expect(
-			erreursDeLaLigne(
-				FORMATIONS,
-				{ ...ligne, graduatedAt: '2027-01-01' },
-				{ avecRequis: true, maintenant: MAINTENANT }
-			)
+			rowErrors(COURSES, { ...ligne, graduatedAt: '2027-01-01' }, { avecRequis: true, maintenant: MAINTENANT })
 		).toEqual({})
-		expect(
-			erreursDeLaLigne(FORMATIONS, { ...ligne, graduatedAt: '' }, { avecRequis: true, maintenant: MAINTENANT })
-		).toEqual({})
+		expect(rowErrors(COURSES, { ...ligne, graduatedAt: '' }, { avecRequis: true, maintenant: MAINTENANT })).toEqual({})
 	})
 })
 
 describe('131, U29 : une prestation', () => {
 	const brute = (price: string) => ({ name: 'Mariée', description: '', price })
-	const stockee = (price: string) => PRESTATIONS.versLeStockage(nettoyerLaLigne(PRESTATIONS, brute(price)))
+	const stockee = (price: string) => SERVICE_OFFERS.versLeStockage(cleanRow(SERVICE_OFFERS, brute(price)))
 
 	test('« 80 », « 80 € » et « à partir de 80 » donnent un prix de 80, le texte est gardé', () => {
 		for (const saisie of ['80', '80 €', 'à partir de 80']) {
@@ -168,31 +151,27 @@ describe('131, U29 : une prestation', () => {
 	})
 
 	test('plusieurs formules séparées par « ; » sont rangées une par ligne, et retapées avec « ; »', () => {
-		expect(prixDeLaSaisie('60 € ; sur devis ;')).toBe('60 €\nsur devis')
+		expect(inputPrice('60 € ; sur devis ;')).toBe('60 €\nsur devis')
 		expect(stockee('60 € ; sur devis')).toMatchObject({ priceFrom: 60, priceText: '60 €\nsur devis' })
-		expect(PRESTATIONS.depuisLeStockage({ name: 'x', priceText: '60 €\nsur devis', priceFrom: 60 }).price).toBe(
+		expect(SERVICE_OFFERS.depuisLeStockage({ name: 'x', priceText: '60 €\nsur devis', priceFrom: 60 }).price).toBe(
 			'60 € ; sur devis'
 		)
 	})
 
 	test('un montant stocké sans texte (offre importée) se retape en montant', () => {
-		expect(PRESTATIONS.depuisLeStockage({ name: 'x', priceText: null, priceFrom: 80 }).price).toBe('80')
+		expect(SERVICE_OFFERS.depuisLeStockage({ name: 'x', priceText: null, priceFrom: 80 }).price).toBe('80')
 	})
 
 	test('elle exige le nom seulement, et borne le nom, la description et le prix', () => {
 		expect(
-			erreursDeLaLigne(
-				PRESTATIONS,
-				{ name: '', description: '', price: '' },
-				{ avecRequis: true, maintenant: MAINTENANT }
-			)
+			rowErrors(SERVICE_OFFERS, { name: '', description: '', price: '' }, { avecRequis: true, maintenant: MAINTENANT })
 		).toEqual({
 			name: 'Le nom de la prestation est requis.',
 		})
 		expect(
 			Object.keys(
-				erreursDeLaLigne(
-					PRESTATIONS,
+				rowErrors(
+					SERVICE_OFFERS,
 					{ name: 'a'.repeat(71), description: 'b'.repeat(2001), price: 'c'.repeat(71) },
 					{ avecRequis: true, maintenant: MAINTENANT }
 				)
@@ -202,13 +181,13 @@ describe('131, U29 : une prestation', () => {
 
 	test('les options de la ligne stockée sont gardées, ce que le formulaire ne dit pas', () => {
 		const options = [{ id: 'o1', name: 'Essai', priceText: '30', priceFrom: 30 }]
-		expect(PRESTATIONS.garder?.({ name: 'x', options })).toEqual({ options })
-		expect(PRESTATIONS.garder?.({ name: 'x' })).toEqual({ options: [] })
+		expect(SERVICE_OFFERS.garder?.({ name: 'x', options })).toEqual({ options })
+		expect(SERVICE_OFFERS.garder?.({ name: 'x' })).toEqual({ options: [] })
 	})
 })
 
 describe('le schéma de la requête est strict', () => {
-	const schema = schemaDeLaListe(PRESTATIONS)
+	const schema = listSchema(SERVICE_OFFERS)
 	const valeurs = { name: 'Mariée', description: '', price: '80' }
 
 	test('des lignes avec leurs textes passent, avec ou sans identifiant', () => {
@@ -224,10 +203,8 @@ describe('le schéma de la requête est strict', () => {
 		expect(schema.safeParse({ lignes: [], profil: 3 }).success).toBe(false)
 		expect(schema.safeParse({ lignes: [{ valeurs: { ...valeurs, name: 3 } }] }).success).toBe(false)
 		// Only an offer holds options: another section refuses the key.
-		expect(schemaDeLaListe(EXPERIENCES).safeParse({ lignes: [{ valeurs: {}, options: [] }] }).success).toBe(false)
-		expect(schema.safeParse({ lignes: Array.from({ length: LIGNES_MAX + 1 }, () => ({ valeurs })) }).success).toBe(
-			false
-		)
+		expect(listSchema(EXPERIENCES).safeParse({ lignes: [{ valeurs: {}, options: [] }] }).success).toBe(false)
+		expect(schema.safeParse({ lignes: Array.from({ length: ROWS_MAX + 1 }, () => ({ valeurs })) }).success).toBe(false)
 		expect(schema.safeParse({ lignes: [{ valeurs: { name: 'x' } }] }).success).toBe(false)
 	})
 })
@@ -235,31 +212,31 @@ describe('le schéma de la requête est strict', () => {
 describe('les aides de la liste', () => {
 	test('deux lignes sont les mêmes quand leurs textes le sont, un jour écrit autrement est le même jour', () => {
 		const a = { jobTitle: 'Maquilleuse', company: 'S', city: '', startDate: '2020-03-01', endDate: '', description: '' }
-		expect(memeLigne(EXPERIENCES, a, { ...a, jobTitle: ' Maquilleuse ', startDate: '2020-03-01T12:00:00.000Z' })).toBe(
+		expect(sameRow(EXPERIENCES, a, { ...a, jobTitle: ' Maquilleuse ', startDate: '2020-03-01T12:00:00.000Z' })).toBe(
 			true
 		)
-		expect(memeLigne(EXPERIENCES, a, { ...a, jobTitle: 'maquilleuse' })).toBe(false)
+		expect(sameRow(EXPERIENCES, a, { ...a, jobTitle: 'maquilleuse' })).toBe(false)
 	})
 
 	test('après un retrait, le focus va à la ligne qui prend la place, sinon à celle du dessus, sinon nulle part', () => {
-		expect(rangApresRetrait(2, 0)).toBe(0)
-		expect(rangApresRetrait(2, 2)).toBe(1)
-		expect(rangApresRetrait(0, 0)).toBeNull()
+		expect(rankAfterRemoval(2, 0)).toBe(0)
+		expect(rankAfterRemoval(2, 2)).toBe(1)
+		expect(rankAfterRemoval(0, 0)).toBeNull()
 	})
 
 	test('la page lit les lignes d’un profil avec leur identifiant, et ignore celles qui n’en ont pas', () => {
 		const profil = {
 			serviceOffers: [{ id: 'a', name: 'Mariée', priceText: '80', priceFrom: 80 }, { name: 'sans id' }, null],
 		}
-		expect(lignesDuProfil(PRESTATIONS, profil)).toEqual([
+		expect(profileRows(SERVICE_OFFERS, profil)).toEqual([
 			{ id: 'a', valeurs: { name: 'Mariée', description: '', price: '80' }, options: [] },
 		])
-		expect(lignesDuProfil(PRESTATIONS, null)).toEqual([])
+		expect(profileRows(SERVICE_OFFERS, null)).toEqual([])
 	})
 })
 
 describe('132 : les options d’une prestation', () => {
-	const schema = schemaDeLaListe(PRESTATIONS)
+	const schema = listSchema(SERVICE_OFFERS)
 	const valeurs = { name: 'Mariée', description: '', price: '80' }
 	const option = { name: 'Essai', description: '', price: '30' }
 
@@ -277,7 +254,7 @@ describe('132 : les options d’une prestation', () => {
 				},
 			],
 		}
-		expect(lignesDuProfil(PRESTATIONS, profil)[0]?.options).toEqual([
+		expect(profileRows(SERVICE_OFFERS, profil)[0]?.options).toEqual([
 			{ id: 'o2', valeurs: { name: 'Cils', description: '', price: 'sur devis' } },
 			{ id: 'o1', valeurs: { name: 'Essai', description: '', price: '30' } },
 		])
@@ -299,17 +276,17 @@ describe('132 : les options d’une prestation', () => {
 	})
 
 	test('une option se lit comme une prestation : « 30 » est un montant, « sur devis » est gardé', () => {
-		expect(OPTIONS_DE_PRESTATION.versLeStockage(option)).toEqual({
+		expect(SERVICE_OFFER_OPTIONS.versLeStockage(option)).toEqual({
 			name: 'Essai',
 			description: null,
 			priceText: '30',
 			priceFrom: 30,
 		})
-		expect(OPTIONS_DE_PRESTATION.versLeStockage({ ...option, price: 'sur devis' })).toMatchObject({
+		expect(SERVICE_OFFER_OPTIONS.versLeStockage({ ...option, price: 'sur devis' })).toMatchObject({
 			priceText: 'sur devis',
 			priceFrom: null,
 		})
-		expect(OPTIONS_DE_PRESTATION.requis.name).toBe('Le nom de l’option est requis.')
-		expect(OPTIONS_DE_PRESTATION.retrait('Essai')).toBe('Option Essai retirée')
+		expect(SERVICE_OFFER_OPTIONS.requis.name).toBe('Le nom de l’option est requis.')
+		expect(SERVICE_OFFER_OPTIONS.retrait('Essai')).toBe('Option Essai retirée')
 	})
 })

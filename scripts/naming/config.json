@@ -1,6 +1,5 @@
 {
 	"waiting": [
-		"=src/app/(front)/(espace)",
 		"package.json",
 		"scripts/admin",
 		"scripts/banc.ts",
@@ -13,12 +12,6 @@
 		"scripts/release",
 		"scripts/seo",
 		"scripts/source-strapi.ts",
-		"src/app/(front)/(espace)/auth/apercu-profil",
-		"src/app/(front)/(espace)/auth/error.tsx",
-		"src/app/(front)/(espace)/auth/init-account",
-		"src/app/(front)/(espace)/auth/layout.tsx",
-		"src/app/(front)/(espace)/auth/page.tsx",
-		"src/app/(front)/(espace)/auth/profil",
 		"src/app/(front)/(site)/a-propos",
 		"src/app/(front)/(site)/blog",
 		"src/app/(front)/(site)/cgu",
@@ -66,7 +59,6 @@
 		"src/components/blog",
 		"src/components/contact",
 		"src/components/contenu",
-		"src/components/espace",
 		"src/components/gabarit",
 		"src/components/legal",
 		"src/components/pages-fixes",
@@ -86,8 +78,6 @@
 		"src/lib/departements.ts",
 		"src/lib/emails",
 		"src/lib/env.ts",
-		"src/lib/envoi-photo.ts",
-		"src/lib/espace",
 		"src/lib/format-zone.ts",
 		"src/lib/health.ts",
 		"src/lib/langue-payload.ts",
@@ -192,19 +182,19 @@
 				"reason": "Frozen public address: the folder name is the URL (src/lib/urls-gelees.ts, docs/migration/URLS.md)."
 			},
 			{
-				"path": "src/app/(front)/(espace)/auth/apercu-profil",
+				"path": "src/app/(front)/(dashboard)/auth/apercu-profil",
 				"reason": "Frozen public address: the folder name is the URL (src/lib/urls-gelees.ts, docs/migration/URLS.md)."
 			},
 			{
-				"path": "src/app/(front)/(espace)/auth/mot-de-passe-oublie",
+				"path": "src/app/(front)/(dashboard)/auth/mot-de-passe-oublie",
 				"reason": "Frozen public address: the folder name is the URL (src/lib/urls-gelees.ts, docs/migration/URLS.md)."
 			},
 			{
-				"path": "src/app/(front)/(espace)/auth/profil",
+				"path": "src/app/(front)/(dashboard)/auth/profil",
 				"reason": "Frozen public address: the folder name is the URL (src/lib/urls-gelees.ts, docs/migration/URLS.md)."
 			},
 			{
-				"path": "src/app/(front)/(espace)/auth/reinitialiser",
+				"path": "src/app/(front)/(dashboard)/auth/reinitialiser",
 				"reason": "Frozen public address: the folder name is the URL (src/lib/urls-gelees.ts, docs/migration/URLS.md)."
 			}
 		],

@@ -154,7 +154,7 @@ describe('rien de saisi ne part : lecture du code', () => {
 		expect(lire('src/components/recherche/CarteDeResultat.tsx')).toContain("nom: 'search_result_click'")
 		expect(lire('src/app/(front)/(site)/not-found.tsx')).toContain('<MesureDePageIntrouvable />')
 		expect(lire('src/app/(front)/(site)/error.tsx')).toContain('scope="site"')
-		expect(lire('src/app/(front)/(espace)/auth/error.tsx')).toContain('scope="espace"')
+		expect(lire('src/app/(front)/(dashboard)/auth/error.tsx')).toContain('scope="espace"')
 		expect(lire('src/app/global-error.tsx')).toContain('scope="global"')
 	})
 })

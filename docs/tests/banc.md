@@ -729,7 +729,7 @@ Les noms d'hôte que le traceur compte sont ceux du banc (`NEXT_PUBLIC_UMAMI_DOM
 
 ## La fausse liste des communes
 
-L'espace de la maquilleuse demande la liste officielle des communes (geo.api.gouv.fr) : quand elle cherche sa commune, et quand elle l'enregistre (`src/lib/espace/referentiel-communes.ts`). Depuis les machines de la CI, la vraie liste répondait parfois en plus de 5 secondes, ou pas du tout, et les essais qui choisissent une commune échouaient avec elle (CI du 15/10/2026). L'application des essais de bout en bout ne l'appelle donc plus : elle demande la fausse liste du banc, `tests/outils/faux-communes/`, qui répond aux mêmes questions à partir de quelques communes de la liste officielle (celles du jeu fictif et de la fabrique de profils, et Lillers et Lillebonne, qui partagent le début du nom de Lille).
+L'espace de la maquilleuse demande la liste officielle des communes (geo.api.gouv.fr) : quand elle cherche sa commune, et quand elle l'enregistre (`src/lib/dashboard/city-reference.ts`). Depuis les machines de la CI, la vraie liste répondait parfois en plus de 5 secondes, ou pas du tout, et les essais qui choisissent une commune échouaient avec elle (CI du 15/10/2026). L'application des essais de bout en bout ne l'appelle donc plus : elle demande la fausse liste du banc, `tests/outils/faux-communes/`, qui répond aux mêmes questions à partir de quelques communes de la liste officielle (celles du jeu fictif et de la fabrique de profils, et Lillers et Lillebonne, qui partagent le début du nom de Lille).
 
 | Chemin | Ce qu'il fait |
 |---|---|

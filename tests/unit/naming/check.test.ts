@@ -57,14 +57,14 @@ describe('naming check: what is read', () => {
 	test('file and folder names are read, extensions and digits are not', () => {
 		const report = run(
 			{
-				'src/lib/espace/photo.ts': 'export const photo = 1',
+				'src/lib/maquilleuse/photo.ts': 'export const photo = 1',
 				'src/lib/page.test.tsx': 'export const page = 1',
 				'src/migrations/20261016_044617_comptes_supprimes.ts': 'export const up = 1',
 			},
 			config()
 		)
 		const found = report.failures.map(f => `${f.kind}:${f.file}`).sort()
-		expect(found).toEqual(['directory:src/lib/espace', 'file:src/migrations/20261016_044617_comptes_supprimes.ts'])
+		expect(found).toEqual(['directory:src/lib/maquilleuse', 'file:src/migrations/20261016_044617_comptes_supprimes.ts'])
 	})
 
 	test('strings and comments are not read', () => {
@@ -142,12 +142,12 @@ describe('naming check: what is read', () => {
 
 describe('naming check: waiting list and exceptions', () => {
 	const files = {
-		'src/lib/espace/photo.ts': 'export const lireLaPhoto = 1',
+		'src/lib/maquilleuse/photo.ts': 'export const lireLaPhoto = 1',
 		'src/lib/auth/x.ts': 'export const connecter = 1',
 	}
 
 	test('a folder of the waiting list does not fail, the others do', () => {
-		const report = run(files, config({ waiting: ['src/lib/espace'] }))
+		const report = run(files, config({ waiting: ['src/lib/maquilleuse'] }))
 		expect(report.failures.map(f => f.file)).toEqual(['src/lib/auth/x.ts'])
 		expect(report.waiting.length).toBe(2)
 	})
@@ -159,8 +159,8 @@ describe('naming check: waiting list and exceptions', () => {
 	})
 
 	test('waiting-list entries: prefixes follow folder boundaries, ! takes a path out, = is exact', () => {
-		expect(isWaiting('src/lib/espace/a.ts', ['src/lib/espace'])).toBe(true)
-		expect(isWaiting('src/lib/espace-bis/a.ts', ['src/lib/espace'])).toBe(false)
+		expect(isWaiting('src/lib/maquilleuse/a.ts', ['src/lib/maquilleuse'])).toBe(true)
+		expect(isWaiting('src/lib/maquilleuse-bis/a.ts', ['src/lib/maquilleuse'])).toBe(false)
 		expect(isWaiting('tests/unit/naming/a.ts', ['tests', '!tests/unit/naming'])).toBe(false)
 		expect(isWaiting('tests/unit/other.ts', ['tests', '!tests/unit/naming'])).toBe(true)
 		expect(isWaiting('src/app/(espace)', ['=src/app/(espace)'])).toBe(true)

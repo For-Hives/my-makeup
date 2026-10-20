@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'bun:test'
-import { EditeurDeLaPhoto, type EnvoiDeLaPhoto } from '@/components/espace/EditeurDeLaPhoto'
-import type { ResultatDEnvoiDUnFichier } from '@/lib/espace/envoi-des-photos'
-import { MESSAGE_RESULTAT_INCERTAIN } from '@/lib/espace/envoi-des-photos'
-import { MESSAGES_PHOTO, type PhotoPreparee } from '@/lib/espace/photo'
-import type { PhotoDeLEspace } from '@/lib/espace/photos'
-import { MESSAGE_ECHEC } from '@/lib/espace/resultat'
+import { PhotoEditor, type PhotoUpload } from '@/components/dashboard/PhotoEditor'
+import { MESSAGES_PHOTO, type PreparedPhoto } from '@/lib/dashboard/photo'
+import type { DashboardPhoto } from '@/lib/dashboard/photos'
+import type { FileUploadResult } from '@/lib/dashboard/photos-upload'
+import { UNCERTAIN_RESULT_MESSAGE } from '@/lib/dashboard/photos-upload'
+import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
 import { choisirDesFichiers } from '../outils/choisir-fichiers'
 import { ouvrirFenetre } from '../outils/dom-react'
 
@@ -15,7 +15,7 @@ import { ouvrirFenetre } from '../outils/dom-react'
  */
 
 const fenetre = ouvrirFenetre()
-const ACTUELLE: PhotoDeLEspace = {
+const ACTUELLE: DashboardPhoto = {
 	id: 5,
 	url: 'https://photos.example.test/media/a.webp',
 	largeur: 800,
@@ -26,9 +26,9 @@ const REDUITE = new File(['petit'], 'photo.webp', { type: 'image/webp' })
 
 function banc(
 	options: {
-		preparer?: (f: File) => Promise<PhotoPreparee<File>>
-		televerser?: () => Promise<ResultatDEnvoiDUnFichier>
-		envoyer?: EnvoiDeLaPhoto
+		preparer?: (f: File) => Promise<PreparedPhoto<File>>
+		televerser?: () => Promise<FileUploadResult>
+		envoyer?: PhotoUpload
 	} = {}
 ) {
 	const journal = { prepares: 0, televerses: 0, supprimes: [] as unknown[], enregistres: [] as unknown[] }
@@ -44,7 +44,7 @@ function banc(
 			journal.televerses++
 			return { ok: true as const, id: 9 }
 		})
-	const envoyer: EnvoiDeLaPhoto =
+	const envoyer: PhotoUpload =
 		options.envoyer ??
 		(async saisie => {
 			journal.enregistres.push(saisie)
@@ -54,7 +54,7 @@ function banc(
 		journal,
 		monter: async () => {
 			await fenetre.monter(
-				<EditeurDeLaPhoto
+				<PhotoEditor
 					photo={ACTUELLE}
 					envoyer={envoyer}
 					preparer={preparer}
@@ -115,12 +115,12 @@ describe('enregistrer : le fichier réduit part, puis il est nommé', () => {
 	})
 
 	test('le serveur dit « non » : message en français, fichier envoyé supprimé, panneau ouvert avec le choix', async () => {
-		const b = banc({ envoyer: async () => ({ ok: false, message: MESSAGE_ECHEC }) })
+		const b = banc({ envoyer: async () => ({ ok: false, message: FAILURE_MESSAGE }) })
 		await b.monter()
 		await choisir(new File(['gros'], 'grosse.jpg', { type: 'image/jpeg' }))
 		await fenetre.attendre(() => !(fenetre.bouton('Enregistrer') as HTMLButtonElement).disabled)
 		await fenetre.cliquer(fenetre.bouton('Enregistrer'))
-		await fenetre.attendre(() => alertes().includes(MESSAGE_ECHEC))
+		await fenetre.attendre(() => alertes().includes(FAILURE_MESSAGE))
 		expect(b.journal.supprimes).toEqual([9])
 		expect(dialogue()).not.toBeNull()
 		expect(fenetre.w.document.body.textContent).not.toContain('est enregistrée')
@@ -136,7 +136,7 @@ describe('enregistrer : le fichier réduit part, puis il est nommé', () => {
 		await choisir(new File(['gros'], 'grosse.jpg', { type: 'image/jpeg' }))
 		await fenetre.attendre(() => !(fenetre.bouton('Enregistrer') as HTMLButtonElement).disabled)
 		await fenetre.cliquer(fenetre.bouton('Enregistrer'))
-		await fenetre.attendre(() => alertes().includes(MESSAGE_RESULTAT_INCERTAIN))
+		await fenetre.attendre(() => alertes().includes(UNCERTAIN_RESULT_MESSAGE))
 		expect(b.journal.supprimes).toEqual([])
 	})
 
