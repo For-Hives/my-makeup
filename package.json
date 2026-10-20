@@ -47,8 +47,7 @@
 		"release:publish": "bun --no-env-file scripts/release/publication.ts",
 		"cutover:check": "bun --no-env-file scripts/cutover/run-host-check.ts",
 		"indexnow:all": "bun --no-env-file scripts/seo/indexnow-all.ts",
-		"names:check": "bun --no-env-file scripts/naming/check.ts",
-		"names:rename": "bun --no-env-file scripts/naming/rename.ts"
+		"names:check": "bun --no-env-file scripts/naming/check.ts"
 	},
 	"dependencies": {
 		"@aws-sdk/client-s3": "3.1147.0",

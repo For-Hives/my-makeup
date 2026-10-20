@@ -1,28 +1,6 @@
 {
-	"waiting": [
-		"src/app/(front)/globals.css",
-		"src/app/(front)/layout.tsx",
-		"src/app/(payload)",
-		"src/app/api",
-		"src/app/global-error.tsx",
-		"src/app/global-not-found.tsx",
-		"src/app/robots.ts",
-		"src/app/sitemap.xml",
-		"src/app/u",
-		"src/payload-types.ts"
-	],
-	"owners": {
-		"src/app/(front)/globals.css": 254,
-		"src/app/(front)/layout.tsx": 254,
-		"src/app/(payload)": 254,
-		"src/app/api": 254,
-		"src/app/global-error.tsx": 254,
-		"src/app/global-not-found.tsx": 254,
-		"src/app/robots.ts": 254,
-		"src/app/sitemap.xml": 254,
-		"src/app/u": 254,
-		"src/payload-types.ts": 254
-	},
+	"waiting": [],
+	"owners": {},
 	"exceptions": {
 		"paths": [
 			{

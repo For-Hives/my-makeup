@@ -10,9 +10,9 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET(_requete: Request, { params }: { params: Promise<{ key: string }> }): Promise<Response> {
 	const { key } = await params
-	const attendue = indexNowKey()
-	if (attendue === undefined || key !== attendue) return new Response('Page introuvable', { status: 404 })
-	return new Response(attendue, {
+	const expected = indexNowKey()
+	if (expected === undefined || key !== expected) return new Response('Page introuvable', { status: 404 })
+	return new Response(expected, {
 		headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'public, max-age=300' },
 	})
 }

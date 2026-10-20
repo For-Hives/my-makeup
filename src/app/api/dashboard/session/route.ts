@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic'
  * is answered without touching the database.
  */
 export async function GET(): Promise<Response> {
-	const aLeCookie = (await cookies()).has(SESSION_COOKIE)
-	const signedIn = aLeCookie && (await signedInArtist()) !== null
+	const hasCookie = (await cookies()).has(SESSION_COOKIE)
+	const signedIn = hasCookie && (await signedInArtist()) !== null
 	return Response.json({ signedIn }, { headers: { 'Cache-Control': 'private, no-store' } })
 }

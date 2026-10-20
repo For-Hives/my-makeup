@@ -5,7 +5,7 @@ import { ErrorAnalytics } from '@/components/analytics/PageAnalytics'
 // The last resort, when the shell itself fails: no stylesheet, no component of the site.
 // The shell is gone, and so is the script of the head: the event is kept only if the tracker was
 // already loaded (ticket 145).
-export default function ErreurGlobale({ error }: { error: Error & { digest?: string } }) {
+export default function GlobalError({ error }: { error: Error & { digest?: string } }) {
 	return (
 		<html lang="fr">
 			<body style={{ fontFamily: 'system-ui, sans-serif', margin: '2rem' }}>

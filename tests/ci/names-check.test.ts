@@ -1,12 +1,19 @@
 import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import { evaluate, loadConfig, loadWords, type NamingConfig, namesOfPaths } from '../../scripts/naming/check'
+import {
+	collectRepository,
+	evaluate,
+	loadConfig,
+	loadWords,
+	type NamingConfig,
+	namesOfPaths,
+} from '../../scripts/naming/check'
 import { readWorkflow } from '../support/ci-guardrails'
 
 /**
  * The check of the French names (docs/noms.md) is a step of the job `qualite`, so `ci-ok` is red
- * as soon as it is (ticket 254). Two things are kept here: the step stays in the workflow, alone
+ * as soon as it is (ticket 254, no waiting list). Two things are kept here: the step stays in the workflow, alone
  * and under no condition that could skip it; and, with the committed configuration, a French name
  * added to the code is a failure while a named exception is not.
  */
@@ -34,13 +41,16 @@ describe('the names check in the CI', () => {
 	})
 })
 
-describe('the waiting list of the names check', () => {
-	test('every entry has an owner ticket, and an owner names no entry that is not waiting', () => {
+describe('the names check has no waiting list', () => {
+	test('the waiting list and its owners are empty', () => {
 		const config = loadConfig()
-		const entries = config.waiting.filter(entry => !entry.startsWith('!'))
-		const owners = config.owners ?? {}
-		expect(entries.filter(entry => !Number.isInteger(owners[entry]))).toEqual([])
-		expect(Object.keys(owners).filter(entry => !entries.includes(entry))).toEqual([])
+		expect(config.waiting).toEqual([])
+		expect(config.owners ?? {}).toEqual({})
+	})
+
+	test('the repository as it is holds no French name outside the named exceptions', () => {
+		const report = evaluate(collectRepository(), loadConfig(), loadWords(), { useWaiting: false })
+		expect(report.failures).toEqual([])
 	})
 })
 
@@ -53,7 +63,7 @@ describe('the names check with the committed configuration', () => {
 
 	test('a French name added to a folder outside the waiting list fails the check', () => {
 		const report = evaluate(names({ [frenchFile]: 'export const lireLeProfil = 1\n' }), config, words, {
-			useWaiting: true,
+			useWaiting: false,
 		})
 		expect(report.failures.length).toBeGreaterThan(0)
 	})
@@ -76,7 +86,7 @@ describe('the names check with the committed configuration', () => {
 			},
 		}
 		const report = evaluate(names({ [frenchFile]: 'export const lireLeProfil = 1\n' }), excused, words, {
-			useWaiting: true,
+			useWaiting: false,
 		})
 		expect(report.failures).toEqual([])
 	})

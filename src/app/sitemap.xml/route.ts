@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic'
  * article, with the real date of their last change. A failed reading is a 500, never a shorter sitemap.
  */
 export async function GET(): Promise<Response> {
-	const { profils, talents, articles } = await cachedIndexablePages()
-	const xml = sitemapXml(sitemapEntries({ profils, talents, articles }))
+	const { profils: profiles, talents, articles } = await cachedIndexablePages()
+	const xml = sitemapXml(sitemapEntries({ profils: profiles, talents, articles }))
 	return new Response(xml, { headers: { 'Content-Type': 'application/xml; charset=utf-8' } })
 }

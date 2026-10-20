@@ -14,19 +14,19 @@ export const dynamic = 'force-dynamic'
  * answered without touching the database.
  */
 export async function GET(): Promise<Response> {
-	const entetes = { 'Cache-Control': 'private, no-store' }
-	if (!(await cookies()).has(SESSION_COOKIE)) return Response.json({ pid: null }, { headers: entetes })
-	const contexte = await requestUser()
-	if (contexte === null) return Response.json({ pid: null }, { headers: entetes })
-	const { docs } = await contexte.payload.find({
+	const headers = { 'Cache-Control': 'private, no-store' }
+	if (!(await cookies()).has(SESSION_COOKIE)) return Response.json({ pid: null }, { headers })
+	const context = await requestUser()
+	if (context === null) return Response.json({ pid: null }, { headers })
+	const { docs } = await context.payload.find({
 		collection: 'profiles',
 		depth: 0,
 		limit: 1,
 		overrideAccess: true,
 		pagination: false,
 		select: { strapiId: true },
-		where: { pro: { equals: contexte.utilisateur.id } },
+		where: { pro: { equals: context.utilisateur.id } },
 	})
-	const profil = docs[0]
-	return Response.json({ pid: profil ? profilePid(profil) : null }, { headers: entetes })
+	const profile = docs[0]
+	return Response.json({ pid: profile ? profilePid(profile) : null }, { headers })
 }

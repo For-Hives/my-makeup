@@ -1,6 +1,6 @@
-# Les noms du code : la règle, le contrôle et l'outil de renommage
+# Les noms du code : la règle et le contrôle
 
-Le code de la v3 est en anglais jusque dans ses noms. Ce document dit ce que la règle couvre, comment le contrôle la vérifie, comment un lot de renommage s'y prend et ce que l'outil de renommage fait pour lui. La règle, le glossaire et les exceptions sont dans [`CLAUDE.md`](../CLAUDE.md), « Conventions » et « Glossaire des noms » : ils s'appliquent à toute tâche. Le plan complet (inventaire, risques, ordre des lots) est `PLAN-ANGLAIS.md`, dans le dépôt des plans.
+Le code de la v3 est en anglais jusque dans ses noms. Ce document dit ce que la règle couvre, comment le contrôle la vérifie, ce que fait un changement qui ajoute un nom. La règle, le glossaire et les exceptions sont dans [`CLAUDE.md`](../CLAUDE.md), « Conventions » et « Glossaire des noms » : ils s'appliquent à toute tâche. Le plan complet (inventaire, risques, ordre des lots) est `PLAN-ANGLAIS.md`, dans le dépôt des plans.
 
 ## 1. Ce que le contrôle lit
 
@@ -22,60 +22,34 @@ Un mot anglais qui s'écrit comme un mot français (`table`, `page`, `image`, `m
 
 | Commande | Effet |
 |---|---|
-| `bun run names:check` | Tout le dépôt, hors liste d'attente et exceptions. Code 1 s'il reste un nom français. |
+| `bun run names:check` | Tout le dépôt, hors exceptions nommées. Code 1 s'il reste un nom français. |
 | `bun run names:check src/lib/auth tests/unit` | Un ou plusieurs dossiers ou fichiers. |
-| `bun run names:check --no-waiting` | Sans la liste d'attente : la taille réelle du travail. |
 | `bun run names:check --summary` | Les nombres par famille (français / total) en plus. |
-| `bun run names:check --json` | Le rapport complet : échecs, noms en attente, noms excusés, entrées de la liste d'attente qui ne désignent plus rien. |
+| `bun run names:check --json` | Le rapport complet : échecs, noms en attente, noms excusés, exceptions qui ne désignent plus rien. |
 
-La sortie groupe les noms par fichier, avec les mots français trouvés. Le contrôle tourne dans la CI, dans le job `qualite` (étape « English names »), donc sous `ci-ok` sans nouveau check requis : un nom français hors de la liste d'attente et des exceptions rend la CI rouge. Tant que la liste d'attente n'est pas vide (lots 238 à 248), il tourne avec elle ; la passe finale du ticket 254 (liste vide, décompte final) reste à faire quand ces lots sont fusionnés.
+La sortie groupe les noms par fichier, avec les mots français trouvés. Le contrôle tourne dans la CI, dans le job `qualite` (étape « English names »), donc sous `ci-ok` sans nouveau check requis : un nom français hors des exceptions nommées rend la CI rouge. La liste d'attente est vide depuis le ticket 254 ; `tests/ci/names-check.test.ts` échoue si une entrée y revient.
 
-## 3. La liste d'attente et les exceptions
+## 3. Les exceptions
 
-Les deux vivent dans `scripts/naming/config.json`.
+Elles vivent dans `scripts/naming/config.json`.
 
-- **`waiting`** : les fichiers et dossiers qu'aucun lot n'a encore traités. Une entrée couvre le chemin et tout ce qu'il contient, en respectant les dossiers (`src/lib/maquilleuse` ne couvre pas `src/lib/maquilleuse-bis`). `!chemin` en retire un chemin de la liste (utilisé pour `tests/unit/naming`, que ce lot a écrit en anglais). `=chemin` couvre ce chemin seul, pas ce qu'il contient (le dossier `(espace)` dont le nom est français alors que ses enfants sont listés un à un). **Un lot retire de la liste les entrées qu'il vient de traiter**, dans le même commit que ses renommages : le contrôle dit alors qu'il n'en reste aucun dans ses dossiers. Une entrée qui ne désigne plus aucun chemin est signalée (« à retirer »), de même qu'une exception devenue sans objet (un dossier gelé déplacé, `saisie.ts` renommé).
 - **`exceptions.paths`** : un fichier ou un dossier dont le **nom** reste français, avec sa raison. Ce sont les dossiers des adresses gelées (le nom du dossier est l'adresse). Les workflows de `.github/` (`sondes.yml`, `ci.yml`) sont hors du périmètre du contrôle, qui ne lit que `src/`, `scripts/`, `tests/` et `package.json`. L'exception ne couvre pas ce que le dossier contient.
 - **`exceptions.words`** : un mot qui reste partout, ou seulement sous les chemins de `in`. Aujourd'hui : `specialite`, dans `src/lib/search/input.ts` (le paramètre `?specialite=`).
+- **`waiting`** et **`owners`** : vides. Le mécanisme (un chemin et tout ce qu'il contient, pour un travail de renommage en cours) reste dans le contrôle, mais une entrée n'est plus admise : un nom français se renomme dans le changement qui l'écrit.
 
-Les autres exceptions de `CLAUDE.md` (catalogue Umami, codes d'erreur de l'authentification, noms Strapi, clés des registres, `ci-ok`, titres des tests, lignes de journal) sont des chaînes : le contrôle ne les lit pas, il n'y a rien à écrire. Une exception nouvelle s'ajoute avec une raison d'au moins une phrase, et s'annonce dans le compte rendu du lot.
+Une exception qui ne désigne plus aucun chemin est signalée (« à mettre à jour ou à retirer »). Les autres exceptions de `CLAUDE.md` (catalogue Umami, codes d'erreur de l'authentification, noms Strapi, clés des registres, `ci-ok`, titres des tests, lignes de journal) sont des chaînes : le contrôle ne les lit pas, il n'y a rien à écrire. Une exception nouvelle s'ajoute avec une raison d'au moins une phrase, et s'annonce dans le compte rendu du changement.
 
-## 4. Conduire un lot de renommage
+## 4. Ajouter un nom
 
-C'est la méthode du plan, §8 :
+1. Écrire le nom en anglais, avec le mot du glossaire de `CLAUDE.md` s'il y en a un ; un mot absent s'y ajoute dans le même changement.
+2. `bun run names:check <dossier>` doit sortir 0. Si le contrôle signale un mot anglais qui s'écrit comme un mot français, le retirer de `scripts/naming/french-words.txt`.
+3. `bun run check`, `bun run typecheck`, `bun run test`.
 
-1. Écrire la table du lot : les fichiers et dossiers à déplacer, les noms à renommer (voir §5).
-2. `bun run names:rename table.json --dry-run`, puis sans `--dry-run`. Les déplacements passent par `git mv` : **un commit mécanique à part** pour eux, un second pour les renommages de noms et les corrections.
-3. Corriger à la main ce que l'outil liste comme encore mentionné (documents, JSON, workflows, `README.md`, `CLAUDE.md`).
-4. Retirer de `waiting` les dossiers traités. `bun run names:check <dossiers du lot>` doit sortir 0.
-5. `bun run check`, `bun run typecheck`, `bun run test`. Aucun texte affiché ne change.
+Le test du contrôle est `tests/unit/naming/check.test.ts`.
 
-## 5. L'outil de renommage
+## 5. L'outil de renommage : retiré
 
-`bun run names:rename <table.json> [--dry-run] [--no-git] [--project tsconfig.json]`, lancé depuis la racine. Il passe par le service de langage de TypeScript (déjà installé, aucune dépendance de plus) : jamais de `sed` sur un identifiant.
-
-```json
-{
-  "files": [
-    { "from": "src/lib/maquilleuse", "to": "src/lib/dashboard" },
-    { "from": "src/lib/dashboard/lire.ts", "to": "src/lib/dashboard/read.ts" }
-  ],
-  "names": [
-    { "file": "src/lib/dashboard/read.ts", "from": "lireLeProfil", "to": "readProfile" }
-  ]
-}
-```
-
-- **`files`** s'exécute d'abord, dans l'ordre. Un dossier se déplace avec son contenu. Les importeurs, les imports du fichier déplacé, les alias (`@/…`) et les ré-exports sont réécrits par `getEditsForFileRename`. Les chemins sont relatifs à la racine.
-- **`names`** s'exécute ensuite, sur les chemins **après** les déplacements. Chaque entrée renomme toutes les déclarations de ce nom dans le fichier, et leurs références dans tout le projet (importeurs, ré-exports, propriétés abrégées : `{ lireLeProfil }` devient `{ lireLeProfil: readProfile }`). Les chaînes et les commentaires ne bougent pas.
-- Tout est vérifié avant d'écrire : chemin absent, cible déjà existante, nom non déclaré, nouveau nom déjà déclaré dans le fichier, deux renommages qui se touchent. Une erreur arrête l'outil, rien n'est écrit.
-- Tous les noms de la table sont calculés sur le même état du projet puis appliqués ensemble : une table de plusieurs centaines de noms ne coûte pas une reconstruction par nom. Les déplacements, eux, se font l'un après l'autre (chacun change le projet) : préférer une entrée par dossier à une entrée par fichier.
-- À la fin, l'outil liste (par `git grep`) les fichiers qui citent encore un ancien chemin ou un ancien nom : ce sont des textes que le service de langage ne suit pas, à corriger à la main. Il ne touche ni aux adresses, ni aux valeurs de chaînes, ni aux colonnes de la base.
-- Durées mesurées sur ce poste, sur tout le dépôt : un déplacement coûte environ 45 secondes (le programme TypeScript est reconstruit à chaque déplacement), une table de deux noms avec leurs 38 références environ 4 secondes. Préférer une entrée par dossier à une entrée par fichier.
-
-Un nom qui change de casse seule (`Profile` → `profile`) n'est pas supporté sur un système de fichiers qui ignore la casse ; c'est sans objet sous Linux. **Gardé, avec sa raison** (ticket 254, passe partielle) : les lots 238 à 248 n'ont pas encore tourné, et ils renomment par cet outil ; le retirer maintenant les ferait renommer à la main ou par `sed`. Il se retire dans la passe finale, quand la liste d'attente est vide.
-
-Son test : `tests/unit/naming/rename.test.ts` (un petit projet dans un dossier temporaire). Celui du contrôle : `tests/unit/naming/check.test.ts`.
+Le ticket 254 retire `bun run names:rename` (`scripts/naming/rename.ts` et son test) : les lots 236 à 253 sont faits, et un outil que personne ne lance ne se maintient pas. Il reste dans l'historique de git, au commit qui précède ce retrait, si un renommage de grande taille revient un jour.
 
 ## 6. Les nombres mesurés au ticket 237
 
@@ -92,3 +66,19 @@ Mesure sur `v3` au commit `6a151dc`, sans liste d'attente (`bun run names:check 
 | options des scripts | environ 20 / environ 23 | 19 / 70 | -5 % |
 
 Les totaux du contrôle comptent les fichiers de ce ticket (`scripts/naming/`, `tests/unit/naming/`) et, pour les variables et les options, tout ce qui a la forme d'une variable ou d'une option (le plan ne compte que celles qui sont les nôtres) : seuls les nombres de noms français se comparent.
+
+## 7. Les nombres finaux (ticket 254)
+
+Mesure sur la branche du ticket 254, sans liste d'attente (`bun run names:check --summary`) : il ne reste que les exceptions nommées du §3.
+
+| Famille | Au départ, ticket 237 (français / total) | Final (français / total) | Dont exceptions nommées |
+|---|---:|---:|---:|
+| fichiers de `src/`, `scripts/`, `tests/` | 616 / 860 | 0 / 833 | 0 |
+| dossiers | 54 / 136 | 19 / 136 | 19 (les adresses gelées) |
+| noms déclarés (distincts) | 4 958 / 6 910 | 0 / 6 557 | 0 |
+| noms exportés (distincts) | 2 056 / 2 458 | 0 / 2 450 | 0 |
+| variables d'environnement lues | 25 / 70 | 0 / 70 | 0 |
+| scripts de `package.json` | 20 / 41 | 0 / 40 | 0 |
+| options des scripts | 19 / 70 | 0 / 66 | 0 |
+
+Hors de ce compte, le mot `specialite` reste dans `src/lib/search/input.ts` (le paramètre `?specialite=`, exception de mot). Les totaux baissent parce que l'outil de renommage et son test sont retirés.
