@@ -1,9 +1,9 @@
 'use server'
 
 import { cookies, headers } from 'next/headers'
-import { MESSAGES_DE_SUPPRESSION, type ResultatDeLaSuppression } from '@/lib/dashboard/deletion-confirmation'
-import { utilisatriceDeLaRequete } from '@/lib/dashboard/request'
-import { supprimerMonCompte } from '@/lib/dashboard/delete-account'
+import { deleteMyAccount } from '@/lib/dashboard/delete-account'
+import { DELETION_MESSAGES, type DeletionResult } from '@/lib/dashboard/deletion-confirmation'
+import { requestUser } from '@/lib/dashboard/request'
 
 /**
  * Deletes the account of the signed-in makeup artist (ticket 141), once she has retyped her
@@ -15,19 +15,18 @@ import { supprimerMonCompte } from '@/lib/dashboard/delete-account'
  * sends the browser to the home page. It gives back a message in French otherwise, and nothing was
  * deleted.
  */
-export async function supprimerMonCompteAction(saisie: unknown): Promise<ResultatDeLaSuppression> {
-	const contexte = await utilisatriceDeLaRequete()
-	if (contexte === null) return { ok: false, message: MESSAGES_DE_SUPPRESSION.session, session: 'expiree' }
-	const { payload, utilisateur } = contexte
-	const entetes = await headers()
-	const origine = entetes.get('origin')
-	if (origine !== null && !payload.config.csrf.includes(origine))
-		return { ok: false, message: MESSAGES_DE_SUPPRESSION.echec }
+export async function deleteMyAccountAction(saisie: unknown): Promise<DeletionResult> {
+	const context = await requestUser()
+	if (context === null) return { ok: false, message: DELETION_MESSAGES.session, session: 'expiree' }
+	const { payload, utilisateur: user } = context
+	const requestHeaders = await headers()
+	const origin = requestHeaders.get('origin')
+	if (origin !== null && !payload.config.csrf.includes(origin)) return { ok: false, message: DELETION_MESSAGES.echec }
 
-	const resultat = await supprimerMonCompte({ payload, compte: utilisateur, headers: entetes, saisie })
-	if (resultat.ok) {
+	const result = await deleteMyAccount({ payload, compte: user, headers: requestHeaders, saisie })
+	if (result.ok) {
 		const auth = payload.collections.pros.config.auth
 		;(await cookies()).delete({ name: `${payload.config.cookiePrefix}-token`, path: '/', domain: auth.cookies.domain })
 	}
-	return resultat
+	return result
 }

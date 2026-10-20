@@ -1,11 +1,11 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
-import { BandeauDApercu } from '@/components/dashboard/PreviewBanner'
+import { PreviewBanner } from '@/components/dashboard/PreviewBanner'
 import { VueDuProfil } from '@/components/profil/VueDuProfil'
 import { requireArtist } from '@/lib/auth/session'
-import { CHEMIN_DE_L_APERCU, CHEMIN_DE_L_ESPACE, etatDeLApercu } from '@/lib/dashboard/preview'
-import { identifiantDuProfil } from '@/lib/dashboard/my-profile'
-import { utilisatriceDeLaRequete } from '@/lib/dashboard/request'
+import { profileId } from '@/lib/dashboard/my-profile'
+import { DASHBOARD_PATH, PREVIEW_PATH, previewState } from '@/lib/dashboard/preview'
+import { requestUser } from '@/lib/dashboard/request'
 import { lireLApercuDuProfil } from '@/services/public/profils'
 
 // Read per request: it depends on the session, and the build has no database. Private and never
@@ -21,17 +21,17 @@ export const metadata: Metadata = { title: 'Aperçu de mon profil', robots: { in
  * out of it: it is found by her session, no identifier or slug comes from the request. No structured
  * data and no canonical address: the page is not for a search engine.
  */
-export default async function PageDApercu() {
-	await requireArtist(CHEMIN_DE_L_APERCU)
-	const contexte = await utilisatriceDeLaRequete()
-	const id = contexte === null ? null : await identifiantDuProfil(contexte.payload, contexte.utilisateur)
-	const apercu = contexte === null || id === null ? null : await lireLApercuDuProfil(contexte.payload, id)
+export default async function PreviewPage() {
+	await requireArtist(PREVIEW_PATH)
+	const context = await requestUser()
+	const id = context === null ? null : await profileId(context.payload, context.utilisateur)
+	const preview = context === null || id === null ? null : await lireLApercuDuProfil(context.payload, id)
 	// No profile yet: her space says so, with the way to ask for one.
-	if (apercu === null) redirect(CHEMIN_DE_L_ESPACE)
+	if (preview === null) redirect(DASHBOARD_PATH)
 	return (
 		<>
-			<BandeauDApercu etat={etatDeLApercu(apercu.etat)} />
-			<VueDuProfil profil={apercu.profil} mesure={false} />
+			<PreviewBanner etat={previewState(preview.etat)} />
+			<VueDuProfil profil={preview.profil} mesure={false} />
 		</>
 	)
 }

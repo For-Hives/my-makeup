@@ -1,4 +1,4 @@
-import { type ImageDecodee, type PhotoPreparee, type PortsDePhoto, preparerPhoto } from './photo'
+import { type DecodedImage, type PhotoPorts, type PreparedPhoto, preparePhoto } from './photo'
 
 /**
  * The browser ports of `preparerPhoto` (src/lib/espace/photo.ts): read the first bytes, decode the
@@ -6,13 +6,13 @@ import { type ImageDecodee, type PhotoPreparee, type PortsDePhoto, preparerPhoto
  * themselves are unit tested in photo.ts.
  */
 
-async function lireTete(fichier: File): Promise<Uint8Array> {
+async function readHead(fichier: File): Promise<Uint8Array> {
 	return new Uint8Array(await fichier.slice(0, 16).arrayBuffer())
 }
 
-type Toile = OffscreenCanvas | HTMLCanvasElement
+type Canvas = OffscreenCanvas | HTMLCanvasElement
 
-function toile(largeur: number, hauteur: number): Toile {
+function makeCanvas(largeur: number, hauteur: number): Canvas {
 	if (typeof OffscreenCanvas === 'function') return new OffscreenCanvas(largeur, hauteur)
 	const canvas = document.createElement('canvas')
 	canvas.width = largeur
@@ -20,7 +20,7 @@ function toile(largeur: number, hauteur: number): Toile {
 	return canvas
 }
 
-function encoderToile(canvas: Toile, type: string, qualite: number): Promise<Blob> {
+function encodeCanvas(canvas: Canvas, type: string, qualite: number): Promise<Blob> {
 	if ('convertToBlob' in canvas) return canvas.convertToBlob({ type, quality: qualite })
 	return new Promise((resolve, reject) =>
 		canvas.toBlob(blob => (blob ? resolve(blob) : reject(new Error('encodage'))), type, qualite)
@@ -35,15 +35,15 @@ interface Source {
 }
 
 // Browsers without createImageBitmap: an <img>.
-async function chargerImage(fichier: File): Promise<Source> {
+async function loadImage(fichier: File): Promise<Source> {
 	const url = URL.createObjectURL(fichier)
 	const image = new Image()
 	image.src = url
 	try {
 		await image.decode()
-	} catch (erreur) {
+	} catch (error) {
 		URL.revokeObjectURL(url)
-		throw erreur
+		throw error
 	}
 	return {
 		image,
@@ -53,14 +53,14 @@ async function chargerImage(fichier: File): Promise<Source> {
 	}
 }
 
-async function decoder(fichier: File): Promise<ImageDecodee> {
+async function decoder(fichier: File): Promise<DecodedImage> {
 	// The EXIF orientation of phone photos is applied while decoding (the default of current browsers).
 	let source: Source
 	if (typeof createImageBitmap === 'function') {
 		const bitmap = await createImageBitmap(fichier)
 		source = { image: bitmap, largeur: bitmap.width, hauteur: bitmap.height, liberer: () => bitmap.close() }
 	} else {
-		source = await chargerImage(fichier)
+		source = await loadImage(fichier)
 	}
 	const { image } = source
 	return {
@@ -68,25 +68,25 @@ async function decoder(fichier: File): Promise<ImageDecodee> {
 		hauteur: source.hauteur,
 		liberer: source.liberer,
 		async encoder({ largeur, hauteur, type, qualite }) {
-			const canvas = toile(largeur, hauteur)
-			const contexte = canvas.getContext('2d') as CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null
-			if (contexte === null) throw new Error('canvas')
+			const canvas = makeCanvas(largeur, hauteur)
+			const context = canvas.getContext('2d') as CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null
+			if (context === null) throw new Error('canvas')
 			if (type === 'image/jpeg') {
 				// No transparency in a JPEG: white instead of black.
-				contexte.fillStyle = '#ffffff'
-				contexte.fillRect(0, 0, largeur, hauteur)
+				context.fillStyle = '#ffffff'
+				context.fillRect(0, 0, largeur, hauteur)
 			}
-			contexte.imageSmoothingQuality = 'high'
-			contexte.drawImage(image, 0, 0, largeur, hauteur)
-			return await encoderToile(canvas, type, qualite)
+			context.imageSmoothingQuality = 'high'
+			context.drawImage(image, 0, 0, largeur, hauteur)
+			return await encodeCanvas(canvas, type, qualite)
 		},
 	}
 }
 
-const fabriquerFichier = (blob: Blob, nom: string, type: string): File =>
+const makeFile = (blob: Blob, nom: string, type: string): File =>
 	new File([blob], nom, { type, lastModified: Date.now() })
 
-const PORTS: PortsDePhoto<File, File> = { lireTete, decoder, fabriquerFichier }
+const PORTS: PhotoPorts<File, File> = { lireTete: readHead, decoder, fabriquerFichier: makeFile }
 
 /** The browser's way of preparing a picked file: the default `preparer` of the photo editors. */
-export const preparerPhotoNavigateur = (fichier: File): Promise<PhotoPreparee<File>> => preparerPhoto(fichier, PORTS)
+export const prepareBrowserPhoto = (fichier: File): Promise<PreparedPhoto<File>> => preparePhoto(fichier, PORTS)

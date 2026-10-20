@@ -2,24 +2,24 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { type Suivre, track } from '@/lib/analytics/track'
-import type { ResultatDEnvoiDUnFichier } from '@/lib/dashboard/photos-upload'
-import type { ValeursDeLIdentite } from '@/lib/dashboard/identity'
-import type { ValeursDeLaLocalisation } from '@/lib/dashboard/location'
-import { ETAPES, type EtapeDAccueil, NOMS_DES_ETAPES } from '@/lib/dashboard/onboarding'
-import type { PhotoPreparee } from '@/lib/dashboard/photo'
-import type { IdentifiantDePhoto } from '@/lib/dashboard/photos'
-import type { RechercheDeCommunes } from '../CityField'
-import type { EnvoiDeLaLocalisation } from '../LocationEditor'
-import type { EnvoiDeLIdentite } from '../IdentityEditor'
-import { PAGE_DE_L_ACCUEIL } from './shared'
-import { EtapeIdentite, type Origine } from './IdentityStep'
-import { type EnvoiDeLaPhotoDAccueil, EtapePhoto } from './PhotoStep'
-import { EtapeZone } from './ZoneStep'
+import type { IdentityValues } from '@/lib/dashboard/identity'
+import type { LocationValues } from '@/lib/dashboard/location'
+import { type OnboardingStep, STEPS, STEPS_NAMES } from '@/lib/dashboard/onboarding'
+import type { PreparedPhoto } from '@/lib/dashboard/photo'
+import type { PhotoId } from '@/lib/dashboard/photos'
+import type { FileUploadResult } from '@/lib/dashboard/photos-upload'
+import type { CitiesSearch } from '../CityField'
+import type { IdentityUpload } from '../IdentityEditor'
+import type { LocationUpload } from '../LocationEditor'
+import { IdentityStep, type Origin } from './IdentityStep'
+import { type OnboardingPhotoUpload, PhotoStep } from './PhotoStep'
+import { ONBOARDING_PAGE } from './shared'
+import { ZoneStep } from './ZoneStep'
 
 /** Where she arrives once the server has seen the three steps done. */
-const ESPACE = '/auth/profil'
+const DASHBOARD = '/auth/profil'
 
-const aller = (url: string): void => window.location.assign(url)
+const go = (url: string): void => window.location.assign(url)
 
 /**
  * The onboarding of a new makeup artist (ticket 140): three steps, identity, zone and main photo.
@@ -36,7 +36,7 @@ const aller = (url: string): void => window.location.assign(url)
  * The server actions and the browser work are properties: the page gives the actions, a test gives
  * fakes.
  */
-export function Accueil({
+export function Onboarding({
 	etapeInitiale,
 	identite,
 	localisation,
@@ -47,118 +47,118 @@ export function Accueil({
 	preparer,
 	televerser,
 	supprimer,
-	naviguer = aller,
+	naviguer = go,
 	suivre = track,
 }: {
-	etapeInitiale: EtapeDAccueil
-	identite: ValeursDeLIdentite
-	localisation: ValeursDeLaLocalisation
-	envoyerIdentite: EnvoiDeLIdentite
-	envoyerLocalisation: EnvoiDeLaLocalisation
-	chercherCommunes: RechercheDeCommunes
-	envoyerPhoto: EnvoiDeLaPhotoDAccueil
-	preparer?: (fichier: File) => Promise<PhotoPreparee<File>>
-	televerser?: (fichier: File, alt: string) => Promise<ResultatDEnvoiDUnFichier>
-	supprimer?: (id: IdentifiantDePhoto) => Promise<unknown>
+	etapeInitiale: OnboardingStep
+	identite: IdentityValues
+	localisation: LocationValues
+	envoyerIdentite: IdentityUpload
+	envoyerLocalisation: LocationUpload
+	chercherCommunes: CitiesSearch
+	envoyerPhoto: OnboardingPhotoUpload
+	preparer?: (fichier: File) => Promise<PreparedPhoto<File>>
+	televerser?: (fichier: File, alt: string) => Promise<FileUploadResult>
+	supprimer?: (id: PhotoId) => Promise<unknown>
 	naviguer?: (url: string) => void
 	suivre?: Suivre
 }) {
-	const [etape, setEtape] = useState<EtapeDAccueil>(etapeInitiale)
-	const [valeursIdentite, setValeursIdentite] = useState(identite)
-	const [valeursZone, setValeursZone] = useState(localisation)
-	const [origine, setOrigine] = useState<Origine | null>(null)
-	const titre = useRef<HTMLHeadingElement>(null)
-	const premier = useRef(true)
+	const [step, setStep] = useState<OnboardingStep>(etapeInitiale)
+	const [identityValues, setIdentityValues] = useState(identite)
+	const [zoneValues, setZoneValues] = useState(localisation)
+	const [origin, setOrigin] = useState<Origin | null>(null)
+	const title = useRef<HTMLHeadingElement>(null)
+	const first = useRef(true)
 	// Measure (ticket 148): each step is counted once per visit, the declared origin once, and neither
 	// is ever stored or sent to the server.
-	const etapesMesurees = useRef(new Set<string>())
-	const origineMesuree = useRef(false)
-	const mesurerEtape = (etapeFranchie: 'identite' | 'zone' | 'photo' | 'termine') => {
-		if (etapesMesurees.current.has(etapeFranchie)) return
-		etapesMesurees.current.add(etapeFranchie)
+	const trackedSteps = useRef(new Set<string>())
+	const trackedOrigin = useRef(false)
+	const trackStep = (etapeFranchie: 'identite' | 'zone' | 'photo' | 'termine') => {
+		if (trackedSteps.current.has(etapeFranchie)) return
+		trackedSteps.current.add(etapeFranchie)
 		suivre('onboarding_step', { step: etapeFranchie })
 	}
 
 	// The title of the step that opens takes the focus, so that a keyboard or a screen reader follows.
 	useEffect(() => {
-		if (premier.current) {
-			premier.current = false
+		if (first.current) {
+			first.current = false
 			return
 		}
-		titre.current?.focus()
-	}, [etape])
+		title.current?.focus()
+	}, [step])
 
 	return (
 		<div className="flex flex-col gap-6">
 			<h1 className="font-semibold text-3xl">Prépare ton profil</h1>
 			<nav aria-label="Étapes">
 				<ol className="grid grid-cols-3 gap-2">
-					{ETAPES.map(numero => {
-						const courante = numero === etape
-						const faite = numero < etape
+					{STEPS.map(numero => {
+						const current = numero === step
+						const done = numero < step
 						return (
 							<li
 								key={numero}
-								aria-current={courante ? 'step' : undefined}
+								aria-current={current ? 'step' : undefined}
 								className={`flex min-h-11 items-center justify-center gap-2 rounded-md border px-2 py-2 text-sm ${
-									courante ? 'border-neutral-900 bg-neutral-900 font-medium text-white' : 'border-neutral-400 bg-white'
+									current ? 'border-neutral-900 bg-neutral-900 font-medium text-white' : 'border-neutral-400 bg-white'
 								}`}
 							>
-								<span aria-hidden="true">{faite ? '✓' : numero}</span>
+								<span aria-hidden="true">{done ? '✓' : numero}</span>
 								<span>
-									{NOMS_DES_ETAPES[numero]}
-									{faite ? <span className="sr-only"> (faite)</span> : null}
+									{STEPS_NAMES[numero]}
+									{done ? <span className="sr-only"> (faite)</span> : null}
 								</span>
 							</li>
 						)
 					})}
 				</ol>
 			</nav>
-			{etape === 1 ? (
-				<EtapeIdentite
-					valeurs={valeursIdentite}
+			{step === 1 ? (
+				<IdentityStep
+					valeurs={identityValues}
 					envoyer={envoyerIdentite}
-					origine={origine}
-					choisirOrigine={setOrigine}
-					titre={titre}
+					origine={origin}
+					choisirOrigine={setOrigin}
+					titre={title}
 					surFait={valeurs => {
-						mesurerEtape('identite')
-						if (origine !== null && !origineMesuree.current) {
-							origineMesuree.current = true
-							suivre('onboarding_source', { source: origine })
+						trackStep('identite')
+						if (origin !== null && !trackedOrigin.current) {
+							trackedOrigin.current = true
+							suivre('onboarding_source', { source: origin })
 						}
-						setValeursIdentite(valeurs)
-						setEtape(2)
+						setIdentityValues(valeurs)
+						setStep(2)
 					}}
 				/>
 			) : null}
-			{etape === 2 ? (
-				<EtapeZone
-					valeurs={valeursZone}
+			{step === 2 ? (
+				<ZoneStep
+					valeurs={zoneValues}
 					envoyer={envoyerLocalisation}
 					chercher={chercherCommunes}
-					titre={titre}
+					titre={title}
 					surFait={valeurs => {
-						mesurerEtape('zone')
-						setValeursZone(valeurs)
-						setEtape(3)
+						trackStep('zone')
+						setZoneValues(valeurs)
+						setStep(3)
 					}}
-					retour={() => setEtape(1)}
+					retour={() => setStep(1)}
 				/>
 			) : null}
-			{etape === 3 ? (
-				<EtapePhoto
+			{step === 3 ? (
+				<PhotoStep
 					envoyer={envoyerPhoto}
 					preparer={preparer}
 					televerser={televerser}
 					supprimer={supprimer}
-					titre={titre}
-					retour={() => setEtape(2)}
+					titre={title}
+					retour={() => setStep(2)}
 					surFait={({ position }) => {
-						mesurerEtape('photo')
-						if (position === 'terminee') mesurerEtape('termine')
+						trackStep('photo')
+						if (position === 'terminee') trackStep('termine')
 						// Only the server's reading of the stored profile sends her on; a missing step reads the page again.
-						naviguer(position === 'terminee' ? ESPACE : PAGE_DE_L_ACCUEIL)
+						naviguer(position === 'terminee' ? DASHBOARD : ONBOARDING_PAGE)
 					}}
 				/>
 			) : null}

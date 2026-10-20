@@ -1,12 +1,9 @@
 import { describe, expect, test } from 'bun:test'
 import { act } from 'react'
-import {
-	type EnvoiDeLaDisponibilite,
-	InterrupteurDeDisponibilite,
-} from '@/components/dashboard/AvailabilitySwitch'
-import { cartesDuProfil, type ProfilDeLEspace } from '@/lib/dashboard/cards'
-import { estDisponible, schemaDeLaDisponibilite } from '@/lib/dashboard/availability'
-import { MESSAGE_ECHEC } from '@/lib/dashboard/result'
+import { AvailabilitySwitch, type AvailabilityUpload } from '@/components/dashboard/AvailabilitySwitch'
+import { availabilitySchema, isAvailable } from '@/lib/dashboard/availability'
+import { type DashboardProfile, profileCards } from '@/lib/dashboard/cards'
+import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
 import { ouvrirFenetre } from '../outils/dom-react'
 
 /**
@@ -17,9 +14,9 @@ import { ouvrirFenetre } from '../outils/dom-react'
 
 const fenetre = ouvrirFenetre()
 
-const profil = (disponible: boolean | null | undefined) => ({ id: 1, available: disponible }) as ProfilDeLEspace
+const profil = (disponible: boolean | null | undefined) => ({ id: 1, available: disponible }) as DashboardProfile
 const ligneDeLaCarte = (disponible: boolean | null | undefined) =>
-	cartesDuProfil(profil(disponible))
+	profileCards(profil(disponible))
 		.find(carte => carte.section === 'disponibilite')
 		?.lignes.map(ligne => ligne.valeur)
 
@@ -27,8 +24,8 @@ describe('la carte dit l’état enregistré', () => {
 	test('un profil importé sans valeur est « Disponible »', () => {
 		expect(ligneDeLaCarte(null)).toEqual(['Disponible'])
 		expect(ligneDeLaCarte(undefined)).toEqual(['Disponible'])
-		expect(estDisponible(null)).toBe(true)
-		expect(estDisponible(undefined)).toBe(true)
+		expect(isAvailable(null)).toBe(true)
+		expect(isAvailable(undefined)).toBe(true)
 	})
 
 	test('disponible : « Disponible » ; indisponible : le dit, et dit que la recherche l’écarte', () => {
@@ -50,12 +47,12 @@ describe('U32 : le schéma du serveur est strict', () => {
 		[{ disponible: true, statut: 'publie' }, false],
 		[{ disponible: true, id: 3 }, false],
 	])('%j accepté : %p', (saisie, accepte) => {
-		expect(schemaDeLaDisponibilite.safeParse(saisie).success).toBe(accepte)
+		expect(availabilitySchema.safeParse(saisie).success).toBe(accepte)
 	})
 })
 
-function monter(disponible: boolean, envoyer: EnvoiDeLaDisponibilite) {
-	return fenetre.monter(<InterrupteurDeDisponibilite disponible={disponible} envoyer={envoyer} />)
+function monter(disponible: boolean, envoyer: AvailabilityUpload) {
+	return fenetre.monter(<AvailabilitySwitch disponible={disponible} envoyer={envoyer} />)
 }
 const interrupteur = (): HTMLElement => {
 	const noeud = fenetre.w.document.querySelector<HTMLElement>('[role="switch"]')
@@ -88,12 +85,12 @@ describe('l’interrupteur', () => {
 	})
 
 	test('un échec : retour à l’état enregistré et message en français', async () => {
-		await monter(true, async () => ({ ok: false, message: MESSAGE_ECHEC }))
+		await monter(true, async () => ({ ok: false, message: FAILURE_MESSAGE }))
 
 		await fenetre.cliquer(interrupteur())
 
 		expect(coche()).toBe('true')
-		expect(fenetre.w.document.querySelector('[role="alert"] p')?.textContent).toBe(MESSAGE_ECHEC)
+		expect(fenetre.w.document.querySelector('[role="alert"] p')?.textContent).toBe(FAILURE_MESSAGE)
 		expect(statut()).toBe('')
 	})
 
@@ -105,7 +102,7 @@ describe('l’interrupteur', () => {
 		await fenetre.cliquer(interrupteur())
 
 		expect(coche()).toBe('false')
-		expect(fenetre.w.document.querySelector('[role="alert"] p')?.textContent).toBe(MESSAGE_ECHEC)
+		expect(fenetre.w.document.querySelector('[role="alert"] p')?.textContent).toBe(FAILURE_MESSAGE)
 	})
 
 	test('pendant l’envoi il est verrouillé : deux clics, une seule requête', async () => {

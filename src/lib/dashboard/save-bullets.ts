@@ -1,19 +1,19 @@
 import type { Payload } from 'payload'
-import { identifiantDuProfilAEcrire, type UtilisateurDeLEspace } from './my-profile'
 import {
-	COMPETENCES,
-	dejaDansLaListe,
-	LANGUES,
-	lireLesPuces,
-	type Puce,
-	pucesDeLaListe,
-	type SorteDePuces,
-	type ValeursDesPuces,
+	alreadyInList,
+	type Bullet,
+	type BulletsKind,
+	type BulletsValues,
+	LANGUAGES,
+	listBullets,
+	readBullets,
+	SKILLS,
 } from './bullets'
-import { MESSAGE_ECHEC, type ResultatDEnregistrement } from './result'
-import { MESSAGE_PROFIL_VERROUILLE, ProfilVerrouille } from './lock'
+import { LOCKED_PROFILE_MESSAGE, LockedProfile } from './lock'
+import { type DashboardUser, profileIdToWrite } from './my-profile'
+import { FAILURE_MESSAGE, type SaveResult } from './result'
 
-type LigneStockee = { id?: string | null; name?: string | null; description?: string | null }
+type StoredRow = { id?: string | null; name?: string | null; description?: string | null }
 
 /**
  * Saves a list of chips of the signed-in makeup artist (languages: ticket 127, skills: ticket 128),
@@ -32,18 +32,18 @@ type LigneStockee = { id?: string | null; name?: string | null; description?: st
  * - the chips given back are those the database stored. A failure gives back a message in French
  *   and no value (E31).
  */
-async function enregistrerLesPuces(
-	sorte: SorteDePuces,
+async function saveBullets(
+	sorte: BulletsKind,
 	payload: Payload,
-	utilisateur: UtilisateurDeLEspace,
+	utilisateur: DashboardUser,
 	saisie: unknown
-): Promise<ResultatDEnregistrement<ValeursDesPuces>> {
-	const lue = lireLesPuces(sorte, saisie)
-	if (!lue.ok) return { ok: false, message: lue.message }
+): Promise<SaveResult<BulletsValues>> {
+	const parsed = readBullets(sorte, saisie)
+	if (!parsed.ok) return { ok: false, message: parsed.message }
 	try {
-		const id = await identifiantDuProfilAEcrire(payload, utilisateur)
-		if (id === null) return { ok: false, message: MESSAGE_ECHEC }
-		const actuel = await payload.findByID({
+		const id = await profileIdToWrite(payload, utilisateur)
+		if (id === null) return { ok: false, message: FAILURE_MESSAGE }
+		const current = await payload.findByID({
 			collection: 'profiles',
 			depth: 0,
 			disableErrors: true,
@@ -52,43 +52,43 @@ async function enregistrerLesPuces(
 			select: { [sorte.champ]: true },
 			user: utilisateur,
 		})
-		if (actuel === null) return { ok: false, message: MESSAGE_ECHEC }
-		const stockees = (actuel[sorte.champ] ?? []) as LigneStockee[]
-		const connues = new Map(
-			stockees.flatMap(ligne => (typeof ligne.id === 'string' ? [[ligne.id, ligne] as const] : []))
+		if (current === null) return { ok: false, message: FAILURE_MESSAGE }
+		const storedRows = (current[sorte.champ] ?? []) as StoredRow[]
+		const knownById = new Map(
+			storedRows.flatMap(ligne => (typeof ligne.id === 'string' ? [[ligne.id, ligne] as const] : []))
 		)
 
-		const lignes: { id?: string; name: string; description?: string }[] = []
-		for (const [rang, puce] of lue.puces.entries()) {
-			const stockee = puce.id === undefined ? undefined : connues.get(puce.id)
-			const autres = lue.puces.filter((_, autre) => autre !== rang)
-			if (stockee === undefined && dejaDansLaListe(autres, puce.nom)) return { ok: false, message: sorte.doublon }
-			lignes.push({
-				...(stockee === undefined ? {} : { id: puce.id }),
-				name: puce.nom,
-				...(sorte.champ === 'skills' && stockee?.description ? { description: stockee.description } : {}),
+		const rows: { id?: string; name: string; description?: string }[] = []
+		for (const [rank, bullet] of parsed.puces.entries()) {
+			const storedRow = bullet.id === undefined ? undefined : knownById.get(bullet.id)
+			const others = parsed.puces.filter((_, autre) => autre !== rank)
+			if (storedRow === undefined && alreadyInList(others, bullet.nom)) return { ok: false, message: sorte.doublon }
+			rows.push({
+				...(storedRow === undefined ? {} : { id: bullet.id }),
+				name: bullet.nom,
+				...(sorte.champ === 'skills' && storedRow?.description ? { description: storedRow.description } : {}),
 			})
 		}
-		const stocke = await payload.update({
+		const stored = await payload.update({
 			collection: 'profiles',
-			data: { [sorte.champ]: lignes },
+			data: { [sorte.champ]: rows },
 			depth: 0,
 			id,
 			overrideAccess: false,
 			user: utilisateur,
 		})
-		const puces: Puce[] = pucesDeLaListe((stocke[sorte.champ] ?? []) as LigneStockee[])
-		return { ok: true, valeurs: { puces } }
-	} catch (erreur) {
+		const bullets: Bullet[] = listBullets((stored[sorte.champ] ?? []) as StoredRow[])
+		return { ok: true, valeurs: { puces: bullets } }
+	} catch (error) {
 		// A profile an admin has open (ticket 224) says so; anything else is the generic failure.
-		return { ok: false, message: erreur instanceof ProfilVerrouille ? MESSAGE_PROFIL_VERROUILLE : MESSAGE_ECHEC }
+		return { ok: false, message: error instanceof LockedProfile ? LOCKED_PROFILE_MESSAGE : FAILURE_MESSAGE }
 	}
 }
 
 /** The languages of the signed-in makeup artist (ticket 127). */
-export const enregistrerLangues = (payload: Payload, utilisateur: UtilisateurDeLEspace, saisie: unknown) =>
-	enregistrerLesPuces(LANGUES, payload, utilisateur, saisie)
+export const saveLanguages = (payload: Payload, utilisateur: DashboardUser, saisie: unknown) =>
+	saveBullets(LANGUAGES, payload, utilisateur, saisie)
 
 /** The skills of the signed-in makeup artist (ticket 128). */
-export const enregistrerCompetences = (payload: Payload, utilisateur: UtilisateurDeLEspace, saisie: unknown) =>
-	enregistrerLesPuces(COMPETENCES, payload, utilisateur, saisie)
+export const saveSkills = (payload: Payload, utilisateur: DashboardUser, saisie: unknown) =>
+	saveBullets(SKILLS, payload, utilisateur, saisie)

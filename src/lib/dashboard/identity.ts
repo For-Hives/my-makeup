@@ -13,58 +13,58 @@
 import { z } from 'zod'
 
 /** The longest value of the four fields: the bound of the collection `profils`. */
-export const IDENTITE_MAX = 70
+export const IDENTITY_MAX = 70
 /** The shortest first or last name. */
-export const NOM_MIN = 2
+export const NAME_MIN = 2
 
 /** The four fields she edits, in display order. */
-export const CHAMPS_DE_L_IDENTITE = ['prenom', 'nom', 'nomArtiste', 'specialite'] as const
-export type ChampDeLIdentite = (typeof CHAMPS_DE_L_IDENTITE)[number]
+export const IDENTITY_FIELDS = ['prenom', 'nom', 'nomArtiste', 'specialite'] as const
+export type IdentityField = (typeof IDENTITY_FIELDS)[number]
 
-export type ValeursDeLIdentite = Record<ChampDeLIdentite, string>
+export type IdentityValues = Record<IdentityField, string>
 
 /** The name of each field in a sentence, with its article: « ton prénom ». */
-export const LIBELLES_DE_L_IDENTITE: Readonly<Record<ChampDeLIdentite, { libelle: string; phrase: string }>> = {
+export const IDENTITY_LABELS: Readonly<Record<IdentityField, { libelle: string; phrase: string }>> = {
 	prenom: { libelle: 'Prénom', phrase: 'ton prénom' },
 	nom: { libelle: 'Nom', phrase: 'ton nom' },
 	nomArtiste: { libelle: 'Nom d’artiste', phrase: 'ton nom d’artiste' },
 	specialite: { libelle: 'Spécialité', phrase: 'ta spécialité' },
 }
 
-const maj = (phrase: string): string => phrase.charAt(0).toUpperCase() + phrase.slice(1)
+const capitalize = (phrase: string): string => phrase.charAt(0).toUpperCase() + phrase.slice(1)
 
-function texteBorne(champ: ChampDeLIdentite, minimum: number) {
-	const { phrase } = LIBELLES_DE_L_IDENTITE[champ]
-	const trop = `${maj(phrase)} ne doit pas dépasser ${IDENTITE_MAX} caractères.`
+function boundedText(champ: IdentityField, minimum: number) {
+	const { phrase } = IDENTITY_LABELS[champ]
+	const tooLong = `${capitalize(phrase)} ne doit pas dépasser ${IDENTITY_MAX} caractères.`
 	// A value that is not a text (a forged request) gets the message of an empty field.
 	const base = z.string({ error: minimum > 0 ? `Indique ${phrase}.` : 'Ce champ doit être un texte.' }).trim()
-	if (minimum === 0) return base.max(IDENTITE_MAX, trop)
+	if (minimum === 0) return base.max(IDENTITY_MAX, tooLong)
 	return base
 		.min(1, `Indique ${phrase}.`)
-		.min(minimum, `${maj(phrase)} doit contenir au moins ${minimum} caractères.`)
-		.max(IDENTITE_MAX, trop)
+		.min(minimum, `${capitalize(phrase)} doit contenir au moins ${minimum} caractères.`)
+		.max(IDENTITY_MAX, tooLong)
 }
 
-const FORME = {
-	prenom: texteBorne('prenom', NOM_MIN),
-	nom: texteBorne('nom', NOM_MIN),
-	nomArtiste: texteBorne('nomArtiste', 0),
-	specialite: texteBorne('specialite', 0),
+const SHAPE = {
+	prenom: boundedText('prenom', NAME_MIN),
+	nom: boundedText('nom', NAME_MIN),
+	nomArtiste: boundedText('nomArtiste', 0),
+	specialite: boundedText('specialite', 0),
 }
 
 /** What the form checks before it sends anything: the four fields, trimmed. */
-export const schemaDeLIdentite = z.object(FORME)
+export const identitySchema = z.object(SHAPE)
 
 /** What the server accepts: the same four fields and no other key. */
-export const schemaDeLIdentiteStrict = z.strictObject(FORME)
+export const strictIdentitySchema = z.strictObject(SHAPE)
 
 /** The message of each field that does not pass, the first one when a field has several. */
-export function erreursParChamp(erreur: z.ZodError): Partial<Record<ChampDeLIdentite, string>> {
-	const champs: Partial<Record<ChampDeLIdentite, string>> = {}
+export function errorsByField(erreur: z.ZodError): Partial<Record<IdentityField, string>> {
+	const fields: Partial<Record<IdentityField, string>> = {}
 	for (const { path, message } of erreur.issues) {
-		const champ = path[0]
-		if (CHAMPS_DE_L_IDENTITE.some(nom => nom === champ) && champs[champ as ChampDeLIdentite] === undefined)
-			champs[champ as ChampDeLIdentite] = message
+		const field = path[0]
+		if (IDENTITY_FIELDS.some(nom => nom === field) && fields[field as IdentityField] === undefined)
+			fields[field as IdentityField] = message
 	}
-	return champs
+	return fields
 }

@@ -4,34 +4,29 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { expiredSessionUrl } from '@/lib/auth/return-to'
+import { trackSave } from '@/lib/dashboard/analytics'
 import {
-	CHAMPS_DE_L_IDENTITE,
-	LIBELLES_DE_L_IDENTITE,
-	schemaDeLIdentite,
-	type ValeursDeLIdentite,
-} from '@/lib/dashboard/identity'
-import { mesurerLEnregistrement } from '@/lib/dashboard/analytics'
-import { MESSAGE_ECHEC, MESSAGE_SESSION, type ResultatDEnregistrement } from '@/lib/dashboard/result'
-import {
-	garderLaSaisie,
-	lireLaSaisie,
-	oublierLaSaisie,
-	peutRediriger,
-	type SaisieGardee,
-	type Stockage,
-	stockageDeLOnglet,
+	canRedirect,
+	type DraftStorage,
+	forgetInput,
+	type GuardedInput,
+	guardInput,
+	readInput,
+	tabStorage,
 } from '@/lib/dashboard/guarded-input'
-import { PanneauDEdition } from './EditingPanel'
+import { IDENTITY_FIELDS, IDENTITY_LABELS, type IdentityValues, identitySchema } from '@/lib/dashboard/identity'
+import { FAILURE_MESSAGE, MESSAGE_SESSION, type SaveResult } from '@/lib/dashboard/result'
+import { EditingPanel } from './EditingPanel'
 
-export type EnvoiDeLIdentite = (valeurs: ValeursDeLIdentite) => Promise<ResultatDEnregistrement<ValeursDeLIdentite>>
+export type IdentityUpload = (valeurs: IdentityValues) => Promise<SaveResult<IdentityValues>>
 
 /** The page of the space the editor lives on: where the sign-in page brings her back. */
-const PAGE_DE_L_ESPACE = '/auth/profil'
+const DASHBOARD_PAGE = '/auth/profil'
 
-const aller = (url: string): void => window.location.assign(url)
+const go = (url: string): void => window.location.assign(url)
 
-const BOUTON = 'min-h-11 rounded-md px-4 py-2 font-medium'
-const CHAMP = 'min-h-11 rounded-md border border-neutral-400 bg-white px-3 py-2 text-base'
+const BUTTON = 'min-h-11 rounded-md px-4 py-2 font-medium'
+const FIELD = 'min-h-11 rounded-md border border-neutral-400 bg-white px-3 py-2 text-base'
 
 /**
  * The button « Modifier » of the card of her identity, and the panel it opens (ticket 119). The
@@ -55,80 +50,80 @@ const CHAMP = 'min-h-11 rounded-md border border-neutral-400 bg-white px-3 py-2 
  * `proprietaire` (whose draft it is: another account on this browser never sees it), and the
  * storage and the navigation, which a test replaces.
  */
-export function EditeurDIdentite({
+export function IdentityEditor({
 	valeurs,
 	envoyer,
 	proprietaire,
-	stockage = stockageDeLOnglet,
-	naviguer = aller,
+	stockage = tabStorage,
+	naviguer = go,
 }: {
-	valeurs: ValeursDeLIdentite
-	envoyer: EnvoiDeLIdentite
+	valeurs: IdentityValues
+	envoyer: IdentityUpload
 	proprietaire: string
-	stockage?: () => Stockage | null
+	stockage?: () => DraftStorage | null
 	naviguer?: (url: string) => void
 }) {
-	const [ouvert, setOuvert] = useState(false)
-	const [annonce, setAnnonce] = useState('')
-	const [retrouvee, setRetrouvee] = useState<Record<keyof ValeursDeLIdentite, string> | null>(null)
-	const declencheur = useRef<HTMLButtonElement>(null)
+	const [open, setOpen] = useState(false)
+	const [announcement, setAnnouncement] = useState('')
+	const [retrouvee, setRetrouvee] = useState<Record<keyof IdentityValues, string> | null>(null)
+	const trigger = useRef<HTMLButtonElement>(null)
 
 	// Back from the sign-in page: the typing kept before the redirection opens the panel again.
 	useEffect(() => {
-		const gardee = lireLaSaisie(stockage(), 'identite', proprietaire, CHAMPS_DE_L_IDENTITE, Date.now())
-		if (gardee === null) return
-		if (CHAMPS_DE_L_IDENTITE.every(champ => gardee.valeurs[champ] === valeurs[champ])) {
-			oublierLaSaisie(stockage(), 'identite', proprietaire)
+		const guarded = readInput(stockage(), 'identite', proprietaire, IDENTITY_FIELDS, Date.now())
+		if (guarded === null) return
+		if (IDENTITY_FIELDS.every(champ => guarded.valeurs[champ] === valeurs[champ])) {
+			forgetInput(stockage(), 'identite', proprietaire)
 			return
 		}
-		setRetrouvee(gardee.valeurs)
-		setOuvert(true)
+		setRetrouvee(guarded.valeurs)
+		setOpen(true)
 	}, [proprietaire, stockage, valeurs])
 
 	return (
 		<>
 			<button
-				ref={declencheur}
+				ref={trigger}
 				type="button"
 				aria-haspopup="dialog"
 				aria-label="Modifier mon identité"
 				onClick={() => {
-					setAnnonce('')
+					setAnnouncement('')
 					setRetrouvee(null)
-					setOuvert(true)
+					setOpen(true)
 				}}
 				// Held down, Enter repeats: it opens the panel once.
 				onKeyDown={evenement => {
 					if (evenement.repeat) evenement.preventDefault()
 				}}
-				className={`${BOUTON} border border-neutral-400 bg-white`}
+				className={`${BUTTON} border border-neutral-400 bg-white`}
 			>
 				Modifier
 			</button>
 			<p role="status" className="w-full text-green-800 text-sm">
-				{annonce}
+				{announcement}
 			</p>
-			{ouvert ? (
-				<FormulaireDIdentite
+			{open ? (
+				<IdentityForm
 					valeurs={valeurs}
 					retrouvee={retrouvee}
 					envoyer={envoyer}
 					proprietaire={proprietaire}
 					stockage={stockage}
 					naviguer={naviguer}
-					retour={declencheur}
+					retour={trigger}
 					onEnregistre={() => {
-						setAnnonce('Ton identité est enregistrée.')
-						setOuvert(false)
+						setAnnouncement('Ton identité est enregistrée.')
+						setOpen(false)
 					}}
-					onFermer={() => setOuvert(false)}
+					onFermer={() => setOpen(false)}
 				/>
 			) : null}
 		</>
 	)
 }
 
-function FormulaireDIdentite({
+function IdentityForm({
 	valeurs,
 	retrouvee,
 	envoyer,
@@ -139,11 +134,11 @@ function FormulaireDIdentite({
 	onEnregistre,
 	onFermer,
 }: {
-	valeurs: ValeursDeLIdentite
-	retrouvee: ValeursDeLIdentite | null
-	envoyer: EnvoiDeLIdentite
+	valeurs: IdentityValues
+	retrouvee: IdentityValues | null
+	envoyer: IdentityUpload
 	proprietaire: string
-	stockage: () => Stockage | null
+	stockage: () => DraftStorage | null
 	naviguer: (url: string) => void
 	retour: React.RefObject<HTMLButtonElement | null>
 	onEnregistre: () => void
@@ -156,81 +151,75 @@ function FormulaireDIdentite({
 		setValue,
 		getValues,
 		formState: { errors, isDirty },
-	} = useForm<ValeursDeLIdentite>({ resolver: zodResolver(schemaDeLIdentite), defaultValues: valeurs })
-	const [enCours, setEnCours] = useState(false)
+	} = useForm<IdentityValues>({ resolver: zodResolver(identitySchema), defaultValues: valeurs })
+	const [pending, setPending] = useState(false)
 	const [message, setMessage] = useState('')
-	const [sessionExpiree, setSessionExpiree] = useState(false)
-	const verrou = useRef(false)
+	const [expiredSession, setExpiredSession] = useState(false)
+	const lock = useRef(false)
 
 	// The typing kept before the redirection comes back into the fields, as changes still to save.
 	useEffect(() => {
 		if (retrouvee === null) return
-		for (const champ of CHAMPS_DE_L_IDENTITE) setValue(champ, retrouvee[champ], { shouldDirty: true })
+		for (const field of IDENTITY_FIELDS) setValue(field, retrouvee[field], { shouldDirty: true })
 	}, [retrouvee, setValue])
 
-	const fermer = () => {
-		oublierLaSaisie(stockage(), 'identite', proprietaire)
+	const close = () => {
+		forgetInput(stockage(), 'identite', proprietaire)
 		onFermer()
 	}
 
-	async function enregistrer(saisie: ValeursDeLIdentite) {
-		setEnCours(true)
+	async function save(saisie: IdentityValues) {
+		setPending(true)
 		setMessage('')
-		setSessionExpiree(false)
-		let partie = false
+		setExpiredSession(false)
+		let part = false
 		try {
-			const resultat: ResultatDEnregistrement<ValeursDeLIdentite> = await envoyer(saisie).catch(() => ({
+			const result: SaveResult<IdentityValues> = await envoyer(saisie).catch(() => ({
 				ok: false,
-				message: MESSAGE_ECHEC,
+				message: FAILURE_MESSAGE,
 			}))
-			mesurerLEnregistrement('identite', resultat)
-			if (resultat.ok) {
-				oublierLaSaisie(stockage(), 'identite', proprietaire)
+			trackSave('identite', result)
+			if (result.ok) {
+				forgetInput(stockage(), 'identite', proprietaire)
 				onEnregistre()
 				return
 			}
-			if (resultat.session === 'expiree') {
+			if (result.session === 'expiree') {
 				// Nothing was stored. Keep the typing, then send her to sign in: once, never in a loop.
-				const maintenant = Date.now()
-				const avant = lireLaSaisie(stockage(), 'identite', proprietaire, CHAMPS_DE_L_IDENTITE, maintenant)
-				const redirige = peutRediriger(avant, maintenant)
-				const gardee: SaisieGardee<ValeursDeLIdentite> = {
+				const now = Date.now()
+				const before = readInput(stockage(), 'identite', proprietaire, IDENTITY_FIELDS, now)
+				const redirects = canRedirect(before, now)
+				const guarded: GuardedInput<IdentityValues> = {
 					valeurs: getValues(),
-					le: maintenant,
-					redirigeLe: redirige ? maintenant : (avant?.redirigeLe ?? null),
+					le: now,
+					redirigeLe: redirects ? now : (before?.redirigeLe ?? null),
 				}
-				const gardeeAvecSucces = garderLaSaisie(stockage(), 'identite', proprietaire, gardee)
-				if (redirige && gardeeAvecSucces) {
-					partie = true
-					naviguer(expiredSessionUrl(PAGE_DE_L_ESPACE))
+				const guardedSuccessfully = guardInput(stockage(), 'identite', proprietaire, guarded)
+				if (redirects && guardedSuccessfully) {
+					part = true
+					naviguer(expiredSessionUrl(DASHBOARD_PAGE))
 					return
 				}
-				setSessionExpiree(true)
+				setExpiredSession(true)
 				setMessage(MESSAGE_SESSION)
 				return
 			}
-			setMessage(resultat.message)
-			for (const champ of CHAMPS_DE_L_IDENTITE) {
-				const texte = resultat.champs?.[champ]
-				if (texte) setError(champ, { message: texte })
+			setMessage(result.message)
+			for (const field of IDENTITY_FIELDS) {
+				const text = result.champs?.[field]
+				if (text) setError(field, { message: text })
 			}
 		} finally {
 			// Leaving for the sign-in page: the form stays locked until the page goes.
-			if (!partie) {
-				verrou.current = false
-				setEnCours(false)
+			if (!part) {
+				lock.current = false
+				setPending(false)
 			}
 		}
 	}
 
 	return (
-		<PanneauDEdition
-			titre="Modifier mon identité"
-			enCours={enCours}
-			modifie={isDirty}
-			retour={retour}
-			onFermer={fermer}
-		>
+		<EditingPanel titre="Modifier mon identité" enCours={pending} modifie={isDirty} retour={retour} onFermer={close}>
 			{retrouvee !== null ? (
 				<p role="status" className="mb-4 rounded-md bg-neutral-100 p-3 text-sm">
 					Tu t’es reconnectée : on a retrouvé ce que tu avais saisi. Vérifie-le, puis enregistre.
@@ -238,36 +227,36 @@ function FormulaireDIdentite({
 			) : null}
 			<form
 				noValidate
-				aria-busy={enCours}
+				aria-busy={pending}
 				onSubmit={evenement => {
 					evenement.preventDefault()
-					if (verrou.current) return
-					verrou.current = true
-					void handleSubmit(enregistrer, () => {
-						verrou.current = false
+					if (lock.current) return
+					lock.current = true
+					void handleSubmit(save, () => {
+						lock.current = false
 					})(evenement)
 				}}
 				className="flex flex-col gap-4"
 			>
-				{CHAMPS_DE_L_IDENTITE.map(champ => {
-					const erreur = errors[champ]?.message
+				{IDENTITY_FIELDS.map(champ => {
+					const error = errors[champ]?.message
 					return (
 						<div key={champ} className="flex flex-col gap-1">
 							<label htmlFor={`identite-${champ}`} className="font-medium text-sm">
-								{LIBELLES_DE_L_IDENTITE[champ].libelle}
+								{IDENTITY_LABELS[champ].libelle}
 							</label>
 							<input
 								id={`identite-${champ}`}
 								type="text"
 								autoComplete="off"
-								aria-invalid={erreur ? true : undefined}
-								aria-describedby={erreur ? `identite-${champ}-erreur` : undefined}
-								className={CHAMP}
+								aria-invalid={error ? true : undefined}
+								aria-describedby={error ? `identite-${champ}-erreur` : undefined}
+								className={FIELD}
 								{...register(champ)}
 							/>
-							{erreur ? (
+							{error ? (
 								<p id={`identite-${champ}-erreur`} className="text-red-800 text-sm">
-									{erreur}
+									{error}
 								</p>
 							) : null}
 						</div>
@@ -277,12 +266,12 @@ function FormulaireDIdentite({
 					{message ? (
 						<p className="rounded-md bg-red-50 p-3 text-red-800 text-sm">
 							{message}
-							{sessionExpiree ? (
+							{expiredSession ? (
 								<>
 									{' '}
 									<a
 										className="font-medium underline"
-										href={expiredSessionUrl(PAGE_DE_L_ESPACE)}
+										href={expiredSessionUrl(DASHBOARD_PAGE)}
 										target="_blank"
 										rel="noopener"
 									>
@@ -296,12 +285,12 @@ function FormulaireDIdentite({
 				</div>
 				<button
 					type="submit"
-					disabled={enCours}
-					className={`${BOUTON} bg-neutral-900 text-white disabled:cursor-wait disabled:opacity-60`}
+					disabled={pending}
+					className={`${BUTTON} bg-neutral-900 text-white disabled:cursor-wait disabled:opacity-60`}
 				>
-					{enCours ? 'Enregistrement…' : 'Enregistrer'}
+					{pending ? 'Enregistrement…' : 'Enregistrer'}
 				</button>
 			</form>
-		</PanneauDEdition>
+		</EditingPanel>
 	)
 }

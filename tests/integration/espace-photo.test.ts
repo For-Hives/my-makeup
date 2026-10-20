@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, setDefaultTimeout, test } from 'bun:test'
 import type { Payload } from 'payload'
-import { enregistrerPhotoPrincipale } from '@/lib/dashboard/save-photo'
-import type { UtilisateurDeLEspace } from '@/lib/dashboard/my-profile'
-import { lirePhotosDeLEspace } from '@/lib/dashboard/photos'
-import { MESSAGE_ECHEC } from '@/lib/dashboard/result'
+import type { DashboardUser } from '@/lib/dashboard/my-profile'
+import { readDashboardPhotos } from '@/lib/dashboard/photos'
+import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
+import { saveMainPicture } from '@/lib/dashboard/save-photo'
 import { MESSAGES_DES_PHOTOS } from '@/lib/profil/photos'
 import type { Media } from '@/payload-types'
 import { lireLeProfilPublic } from '@/services/public/profils'
@@ -44,9 +44,9 @@ afterEach(async () => {
 	expect(fautes).toEqual([])
 })
 
-async function utilisateurDe(payload: Payload, compte: Maquilleuse): Promise<UtilisateurDeLEspace> {
+async function utilisateurDe(payload: Payload, compte: Maquilleuse): Promise<DashboardUser> {
 	const doc = await payload.findByID({ collection: 'pros', id: compte.id, depth: 0, overrideAccess: true })
-	return { ...doc, collection: 'pros' } as UtilisateurDeLEspace
+	return { ...doc, collection: 'pros' } as DashboardUser
 }
 
 async function profilDe(compte: Maquilleuse) {
@@ -90,7 +90,7 @@ describe('I24 : remplacer la photo principale envoie l’ancienne à la corbeill
 
 		const ancienne = await envoyer(compte)
 		expect(ancienne.alt).toBe('Photo principale')
-		expect(await enregistrerPhotoPrincipale(payload, utilisateur, { photoPrincipale: ancienne.id })).toEqual({
+		expect(await saveMainPicture(payload, utilisateur, { photoPrincipale: ancienne.id })).toEqual({
 			ok: true,
 			valeurs: { photoPrincipale: ancienne.id },
 		})
@@ -98,7 +98,7 @@ describe('I24 : remplacer la photo principale envoie l’ancienne à la corbeill
 		expect(avant).toBeDefined()
 
 		const nouvelle = await envoyer(compte)
-		expect(await enregistrerPhotoPrincipale(payload, utilisateur, { photoPrincipale: String(nouvelle.id) })).toEqual({
+		expect(await saveMainPicture(payload, utilisateur, { photoPrincipale: String(nouvelle.id) })).toEqual({
 			ok: true,
 			valeurs: { photoPrincipale: nouvelle.id },
 		})
@@ -111,7 +111,7 @@ describe('I24 : remplacer la photo principale envoie l’ancienne à la corbeill
 		expect((await lireUnObjet(`deleted/${cle(ancienne)}`))?.octets).toEqual(avant)
 		expect(await lireUnObjet(cle(nouvelle))).toBeDefined()
 		// What her space shows, and what the public profile shows, is the new photo.
-		const photos = await lirePhotosDeLEspace(payload, profil)
+		const photos = await readDashboardPhotos(payload, profil)
 		expect(photos.photo?.id).toBe(nouvelle.id)
 		const publique = await lireLeProfilPublic(payload, profil.slug ?? '')
 		expect(publique?.photo?.url).toBe(nouvelle.url ?? undefined)
@@ -123,7 +123,7 @@ describe('U03, E36 : un échec laisse l’ancienne photo, et le fichier envoyé 
 		const compte = await maquilleuse()
 		const payload = await payloadDeTest()
 		const ancienne = await envoyer(compte)
-		await enregistrerPhotoPrincipale(payload, await utilisateurDe(payload, compte), { photoPrincipale: ancienne.id })
+		await saveMainPicture(payload, await utilisateurDe(payload, compte), { photoPrincipale: ancienne.id })
 		const objets = (await listerLesObjets()).length
 
 		const pdf = new File([Buffer.from('%PDF-1.7\n')], 'cv.pdf', { type: 'application/pdf' })
@@ -146,11 +146,11 @@ describe('U03, E36 : un échec laisse l’ancienne photo, et le fichier envoyé 
 		const payload = await payloadDeTest()
 		const utilisateur = await utilisateurDe(payload, compte)
 		const ancienne = await envoyer(compte)
-		await enregistrerPhotoPrincipale(payload, utilisateur, { photoPrincipale: ancienne.id })
+		await saveMainPicture(payload, utilisateur, { photoPrincipale: ancienne.id })
 		const celleDeLAutre = await envoyer(autre)
 		const envoyeeEnTrop = await envoyer(compte)
 
-		const resultat = await enregistrerPhotoPrincipale(payload, utilisateur, { photoPrincipale: celleDeLAutre.id })
+		const resultat = await saveMainPicture(payload, utilisateur, { photoPrincipale: celleDeLAutre.id })
 
 		expect(resultat).toMatchObject({ ok: false, champs: { photoPrincipale: MESSAGES_DES_PHOTOS.photoRefusee } })
 		expect((await profilDe(compte)).mainPicture).toBe(ancienne.id)
@@ -180,10 +180,10 @@ describe('la requête de l’action est lue strictement', () => {
 		const payload = await payloadDeTest()
 		const photo = await envoyer(compte)
 
-		const resultat = await enregistrerPhotoPrincipale(payload, await utilisateurDe(payload, compte), saisie(photo.id))
+		const resultat = await saveMainPicture(payload, await utilisateurDe(payload, compte), saisie(photo.id))
 
 		expect(resultat).toMatchObject({ ok: false })
-		if (!resultat.ok) expect([MESSAGE_ECHEC, expect.any(String)]).toContain(resultat.message)
+		if (!resultat.ok) expect([FAILURE_MESSAGE, expect.any(String)]).toContain(resultat.message)
 		expect((await profilDe(compte)).mainPicture ?? null).toBeNull()
 	})
 })

@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
-import { avancementDuProfil } from '@/lib/dashboard/progress'
-import { enregistrerDescription } from '@/lib/dashboard/save-description'
-import { enregistrerIdentite } from '@/lib/dashboard/save-identity'
-import { enregistrerReseaux } from '@/lib/dashboard/save-networks'
-import { profilDeLaMaquilleuse, type UtilisateurDeLEspace } from '@/lib/dashboard/my-profile'
+import { artistProfile, type DashboardUser } from '@/lib/dashboard/my-profile'
+import { profileProgress } from '@/lib/dashboard/progress'
+import { saveDescription } from '@/lib/dashboard/save-description'
+import { saveIdentity } from '@/lib/dashboard/save-identity'
+import { saveNetworks } from '@/lib/dashboard/save-networks'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 
@@ -17,14 +17,14 @@ import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 
 afterEach(viderLaBase)
 
-async function utilisateurDe(payload: Payload, id: number | string): Promise<UtilisateurDeLEspace> {
+async function utilisateurDe(payload: Payload, id: number | string): Promise<DashboardUser> {
 	const doc = await payload.findByID({ collection: 'pros', id, depth: 0, overrideAccess: true })
-	return { ...doc, collection: 'pros' } as UtilisateurDeLEspace
+	return { ...doc, collection: 'pros' } as DashboardUser
 }
 
 /** The page's reading and the stored state of her profile. */
-async function lectures(payload: Payload, utilisateur: UtilisateurDeLEspace) {
-	const profil = await profilDeLaMaquilleuse(payload, utilisateur)
+async function lectures(payload: Payload, utilisateur: DashboardUser) {
+	const profil = await artistProfile(payload, utilisateur)
 	if (profil === null) throw new Error('pas de profil')
 	const { docs } = await payload.find({
 		collection: 'profiles',
@@ -34,7 +34,7 @@ async function lectures(payload: Payload, utilisateur: UtilisateurDeLEspace) {
 	})
 	const stocke = docs[0]
 	if (!stocke) throw new Error('profil non stocké')
-	return { avancement: avancementDuProfil(profil), stocke }
+	return { avancement: profileProgress(profil), stocke }
 }
 
 describe('I20 : le bloc de l’espace égale l’état enregistré par le serveur, à chaque étape', () => {
@@ -55,7 +55,7 @@ describe('I20 : le bloc de l’espace égale l’état enregistré par le serveu
 		expect(vide.score).toBe(0)
 		expect(vide.manques).toHaveLength(13)
 
-		await enregistrerIdentite(payload, utilisateur, {
+		await saveIdentity(payload, utilisateur, {
 			prenom: 'Léa',
 			nom: 'Fictive',
 			nomArtiste: '',
@@ -66,15 +66,15 @@ describe('I20 : le bloc de l’espace égale l’état enregistré par le serveu
 		expect(apresIdentite.etat).toBe('incomplet')
 		expect(apresIdentite.manques.some(m => m.critere === 'specialite')).toBe(false)
 
-		await enregistrerDescription(payload, utilisateur, { description: 'a'.repeat(199) })
+		await saveDescription(payload, utilisateur, { description: 'a'.repeat(199) })
 		const court = await egaux()
 		expect(court.manques.find(m => m.critere === 'description')?.requis).toBe(true)
 
-		await enregistrerDescription(payload, utilisateur, { description: 'a'.repeat(200) })
+		await saveDescription(payload, utilisateur, { description: 'a'.repeat(200) })
 		const long = await egaux()
 		expect(long.manques.some(m => m.critere === 'description')).toBe(false)
 
-		await enregistrerReseaux(payload, utilisateur, {
+		await saveNetworks(payload, utilisateur, {
 			instagram: '@studio.fictif',
 			facebook: '',
 			youtube: '',

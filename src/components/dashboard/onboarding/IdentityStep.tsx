@@ -3,26 +3,21 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { CHAMPS_DE_L_IDENTITE, LIBELLES_DE_L_IDENTITE, type ValeursDeLIdentite } from '@/lib/dashboard/identity'
-import {
-	LIBELLES_DES_ORIGINES,
-	ORIGINES_DECLAREES,
-	schemaDeLIdentiteDAccueil,
-	TITRES_DES_ETAPES,
-} from '@/lib/dashboard/onboarding'
-import { MESSAGE_ECHEC, type ResultatDEnregistrement } from '@/lib/dashboard/result'
-import type { EnvoiDeLIdentite } from '../IdentityEditor'
-import { BOUTON_PRINCIPAL, CadreDEtape, CHAMP, MessageDEchec } from './shared'
+import { IDENTITY_FIELDS, IDENTITY_LABELS, type IdentityValues } from '@/lib/dashboard/identity'
+import { ORIGINES_DECLAREES, ORIGINS_LABELS, onboardingIdentitySchema, STEPS_TITLES } from '@/lib/dashboard/onboarding'
+import { FAILURE_MESSAGE, type SaveResult } from '@/lib/dashboard/result'
+import type { IdentityUpload } from '../IdentityEditor'
+import { FailureMessage, FIELD, MAIN_BUTTON, StepFrame } from './shared'
 
-export type Origine = (typeof ORIGINES_DECLAREES)[number]
+export type Origin = (typeof ORIGINES_DECLAREES)[number]
 
 /**
  * « Comment as-tu connu My Makeup ? » (decision UI-05): one optional answer. It is kept out of the
  * form, of the schema and of every request: nothing about it is stored. The parent counts it (ticket 148) as the
  * `onboarding_source` event once the identity is stored, and nowhere else.
  */
-function QuestionDOrigine({ origine, choisir }: { origine: Origine | null; choisir: (o: Origine | null) => void }) {
-	const premiere = useRef<HTMLInputElement>(null)
+function OriginQuestion({ origine, choisir }: { origine: Origin | null; choisir: (o: Origin | null) => void }) {
+	const first = useRef<HTMLInputElement>(null)
 	return (
 		<fieldset aria-describedby="accueil-origine-aide" className="flex flex-col gap-1">
 			<legend className="font-medium text-sm">
@@ -39,7 +34,7 @@ function QuestionDOrigine({ origine, choisir }: { origine: Origine | null; chois
 						className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md px-2 text-sm"
 					>
 						<input
-							ref={rang === 0 ? premiere : undefined}
+							ref={rang === 0 ? first : undefined}
 							id={`accueil-origine-${valeur}`}
 							type="radio"
 							name="origine"
@@ -48,7 +43,7 @@ function QuestionDOrigine({ origine, choisir }: { origine: Origine | null; chois
 							onChange={() => choisir(valeur)}
 							className="size-5 shrink-0 accent-neutral-900"
 						/>
-						{LIBELLES_DES_ORIGINES[valeur]}
+						{ORIGINS_LABELS[valeur]}
 					</label>
 				))}
 			</div>
@@ -57,7 +52,7 @@ function QuestionDOrigine({ origine, choisir }: { origine: Origine | null; chois
 					type="button"
 					onClick={() => {
 						choisir(null)
-						premiere.current?.focus()
+						first.current?.focus()
 					}}
 					className="min-h-11 w-fit px-2 text-sm underline"
 				>
@@ -73,7 +68,7 @@ function QuestionDOrigine({ origine, choisir }: { origine: Origine | null; chois
  * speciality required. The next step opens only once the server has answered that it stored them; a
  * failure keeps what she typed and says so. Two clicks, or Enter held, send one request.
  */
-export function EtapeIdentite({
+export function IdentityStep({
 	valeurs,
 	envoyer,
 	origine,
@@ -81,100 +76,100 @@ export function EtapeIdentite({
 	titre,
 	surFait,
 }: {
-	valeurs: ValeursDeLIdentite
-	envoyer: EnvoiDeLIdentite
-	origine: Origine | null
-	choisirOrigine: (origine: Origine | null) => void
+	valeurs: IdentityValues
+	envoyer: IdentityUpload
+	origine: Origin | null
+	choisirOrigine: (origine: Origin | null) => void
 	titre: React.RefObject<HTMLHeadingElement | null>
-	surFait: (valeurs: ValeursDeLIdentite) => void
+	surFait: (valeurs: IdentityValues) => void
 }) {
 	const {
 		register,
 		handleSubmit,
 		setError,
 		formState: { errors },
-	} = useForm<ValeursDeLIdentite>({ resolver: zodResolver(schemaDeLIdentiteDAccueil), defaultValues: valeurs })
-	const [enCours, setEnCours] = useState(false)
+	} = useForm<IdentityValues>({ resolver: zodResolver(onboardingIdentitySchema), defaultValues: valeurs })
+	const [pending, setPending] = useState(false)
 	const [message, setMessage] = useState('')
-	const [sessionExpiree, setSessionExpiree] = useState(false)
-	const verrou = useRef(false)
+	const [expiredSession, setExpiredSession] = useState(false)
+	const lock = useRef(false)
 
-	async function enregistrer(saisie: ValeursDeLIdentite) {
-		setEnCours(true)
+	async function save(saisie: IdentityValues) {
+		setPending(true)
 		setMessage('')
-		setSessionExpiree(false)
+		setExpiredSession(false)
 		try {
-			const resultat: ResultatDEnregistrement<ValeursDeLIdentite> = await envoyer(saisie).catch(() => ({
+			const result: SaveResult<IdentityValues> = await envoyer(saisie).catch(() => ({
 				ok: false,
-				message: MESSAGE_ECHEC,
+				message: FAILURE_MESSAGE,
 			}))
-			if (resultat.ok) {
-				surFait(resultat.valeurs)
+			if (result.ok) {
+				surFait(result.valeurs)
 				return
 			}
-			setSessionExpiree(resultat.session === 'expiree')
-			setMessage(resultat.message)
-			for (const champ of CHAMPS_DE_L_IDENTITE) {
-				const texte = resultat.champs?.[champ]
-				if (texte) setError(champ, { message: texte })
+			setExpiredSession(result.session === 'expiree')
+			setMessage(result.message)
+			for (const field of IDENTITY_FIELDS) {
+				const text = result.champs?.[field]
+				if (text) setError(field, { message: text })
 			}
 		} finally {
-			verrou.current = false
-			setEnCours(false)
+			lock.current = false
+			setPending(false)
 		}
 	}
 
 	return (
-		<CadreDEtape
-			titre={TITRES_DES_ETAPES[1]}
+		<StepFrame
+			titre={STEPS_TITLES[1]}
 			explication="Ton prénom, ton nom et ta spécialité seront visibles sur ta page."
 			reference={titre}
 		>
 			<form
 				noValidate
-				aria-busy={enCours}
+				aria-busy={pending}
 				onSubmit={evenement => {
 					evenement.preventDefault()
-					if (verrou.current) return
-					verrou.current = true
-					void handleSubmit(enregistrer, () => {
-						verrou.current = false
+					if (lock.current) return
+					lock.current = true
+					void handleSubmit(save, () => {
+						lock.current = false
 					})(evenement)
 				}}
 				className="flex flex-col gap-4"
 			>
-				{CHAMPS_DE_L_IDENTITE.map(champ => {
-					const erreur = errors[champ]?.message
-					const facultatif = champ === 'nomArtiste'
+				{IDENTITY_FIELDS.map(champ => {
+					const error = errors[champ]?.message
+					const optional = champ === 'nomArtiste'
 					return (
 						<div key={champ} className="flex flex-col gap-1">
 							<label htmlFor={`accueil-${champ}`} className="font-medium text-sm">
-								{LIBELLES_DE_L_IDENTITE[champ].libelle}
-								{facultatif ? <span className="font-normal text-neutral-600"> (facultatif)</span> : null}
+								{IDENTITY_LABELS[champ].libelle}
+								{optional ? <span className="font-normal text-neutral-600"> (facultatif)</span> : null}
 							</label>
 							<input
 								id={`accueil-${champ}`}
 								type="text"
 								autoComplete="off"
-								aria-invalid={erreur ? true : undefined}
-								aria-describedby={erreur ? `accueil-${champ}-erreur` : undefined}
-								className={CHAMP}
+								aria-invalid={error ? true : undefined}
+								aria-describedby={error ? `accueil-${champ}-erreur` : undefined}
+								className={FIELD}
 								{...register(champ)}
 							/>
-							{erreur ? (
+							{error ? (
 								<p id={`accueil-${champ}-erreur`} className="text-red-800 text-sm">
-									{erreur}
+									{error}
 								</p>
 							) : null}
 						</div>
 					)
 				})}
-				<QuestionDOrigine origine={origine} choisir={choisirOrigine} />
-				<MessageDEchec message={message} sessionExpiree={sessionExpiree} />
-				<button type="submit" disabled={enCours} className={BOUTON_PRINCIPAL}>
-					{enCours ? 'Enregistrement…' : 'Suivant'}
+				<OriginQuestion origine={origine} choisir={choisirOrigine} />
+				<FailureMessage message={message} sessionExpiree={expiredSession} />
+				<button type="submit" disabled={pending} className={MAIN_BUTTON}>
+					{pending ? 'Enregistrement…' : 'Suivant'}
 				</button>
 			</form>
-		</CadreDEtape>
+		</StepFrame>
 	)
 }

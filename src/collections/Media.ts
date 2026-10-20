@@ -20,8 +20,8 @@ import {
 	jamais,
 	lectureDesMedias,
 } from '../lib/acces'
-import { CONTEXTE_FICHIER_NOMME, juger, nomImprevisible } from '../lib/photo-upload'
 import { adresseDuMedia } from '../lib/medias'
+import { judge, NAMED_FILE_CONTEXT, unpredictableName } from '../lib/photo-upload'
 
 /**
  * Where the object of a media is and what it is: written by the server only, from the file it
@@ -70,7 +70,7 @@ export const aucunEnvoiSansStockage: CollectionBeforeOperationHook = ({ args, op
 }
 
 const fichierNommeParLeServeur = (req: { context?: Record<string, unknown> }): boolean =>
-	req.context?.[CONTEXTE_FICHIER_NOMME] === true || req.context?.skipCloudStorage === true
+	req.context?.[NAMED_FILE_CONTEXT] === true || req.context?.skipCloudStorage === true
 
 /**
  * A file sent to the site is a JPEG, a PNG or a WebP of 10 MiB at most, read in its content
@@ -85,14 +85,14 @@ export const photoValideEtRenommee: CollectionBeforeOperationHook = ({ args, ope
 	if ((operation !== 'create' && operation !== 'update') || !fichier) return args
 	if (fichierNommeParLeServeur(req)) {
 		// Trusted server code names its file: the type is still read in the content.
-		const verdict = juger(fichier.data, Math.max(fichier.size ?? 0, fichier.data.length))
+		const verdict = judge(fichier.data, Math.max(fichier.size ?? 0, fichier.data.length))
 		if (!verdict.accepte) throw new APIError(verdict.message, 400)
 		return args
 	}
 	const octets = fichier.data
-	const verdict = juger(octets, Math.max(fichier.size ?? 0, octets.length))
+	const verdict = judge(octets, Math.max(fichier.size ?? 0, octets.length))
 	if (!verdict.accepte) throw new APIError(verdict.message, 400)
-	fichier.name = nomImprevisible(verdict.type)
+	fichier.name = unpredictableName(verdict.type)
 	fichier.mimetype = verdict.type
 	return args
 }

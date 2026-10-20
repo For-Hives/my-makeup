@@ -1,4 +1,4 @@
-import { MESSAGE_PROFIL_VERROUILLE, ProfilVerrouille } from './lock'
+import { LOCKED_PROFILE_MESSAGE, LockedProfile } from './lock'
 
 /**
  * What a save of the space gives back to the form (ticket 119): the values as the server stored
@@ -6,7 +6,7 @@ import { MESSAGE_PROFIL_VERROUILLE, ProfilVerrouille } from './lock'
  * Every section of the space (tickets 122 to 135) saves through this contract.
  */
 
-export type ResultatDEnregistrement<Valeurs extends Record<string, unknown>> =
+export type SaveResult<Valeurs extends Record<string, unknown>> =
 	| {
 			ok: true
 			valeurs: Valeurs
@@ -24,7 +24,7 @@ export type ResultatDEnregistrement<Valeurs extends Record<string, unknown>> =
 	  }
 
 /** The message when nothing more precise can be said: the old value stays. */
-export const MESSAGE_ECHEC =
+export const FAILURE_MESSAGE =
 	'L’enregistrement n’a pas abouti : ta modification n’a pas été prise en compte, et rien n’a changé. Réessaie dans un instant.'
 
 /** The message when she is no longer signed in. */
@@ -32,7 +32,7 @@ export const MESSAGE_SESSION =
 	'Ta session a expiré : ta modification n’a pas été enregistrée. Reconnecte-toi, puis recommence.'
 
 /** What a Payload validation error holds, read without trusting its shape. */
-function erreursDeChamp(erreur: unknown): { path: string; message: string }[] {
+function fieldErrors(erreur: unknown): { path: string; message: string }[] {
 	if (typeof erreur !== 'object' || erreur === null || !('data' in erreur)) return []
 	const { data } = erreur as { data: unknown }
 	if (typeof data !== 'object' || data === null || !('errors' in data) || !Array.isArray(data.errors)) return []
@@ -48,7 +48,7 @@ function erreursDeChamp(erreur: unknown): { path: string; message: string }[] {
  * (`data.errors`, French since ticket 221) among the `champs` of the form, else the generic French
  * message. `error.message` is never read: Payload keeps a few messages in English.
  */
-export function echecDePayload<Champ extends string>(
+export function payloadFailure<Champ extends string>(
 	erreur: unknown,
 	champs: readonly Champ[],
 	/**
@@ -58,17 +58,17 @@ export function echecDePayload<Champ extends string>(
 	champDuChemin: string | ((chemin: string) => string) = ''
 ): { ok: false; message: string; champs?: Partial<Record<Champ, string>> } {
 	// An admin has her profile open: nothing was written, and the form keeps what she typed (ticket 224).
-	if (erreur instanceof ProfilVerrouille) return { ok: false, message: MESSAGE_PROFIL_VERROUILLE }
-	const versLeChamp =
+	if (erreur instanceof LockedProfile) return { ok: false, message: LOCKED_PROFILE_MESSAGE }
+	const toField =
 		typeof champDuChemin === 'string'
 			? (chemin: string) => (chemin.startsWith(champDuChemin) ? chemin.slice(champDuChemin.length) : '')
 			: champDuChemin
-	const parChamp: Partial<Record<Champ, string>> = {}
-	for (const { path, message } of erreursDeChamp(erreur)) {
-		const champ = champs.find(nom => nom === versLeChamp(path))
-		if (champ !== undefined && parChamp[champ] === undefined) parChamp[champ] = message
+	const byField: Partial<Record<Champ, string>> = {}
+	for (const { path, message } of fieldErrors(erreur)) {
+		const field = champs.find(nom => nom === toField(path))
+		if (field !== undefined && byField[field] === undefined) byField[field] = message
 	}
-	return Object.keys(parChamp).length > 0
-		? { ok: false, message: 'Un champ n’est pas valide : corrige-le, puis enregistre à nouveau.', champs: parChamp }
-		: { ok: false, message: MESSAGE_ECHEC }
+	return Object.keys(byField).length > 0
+		? { ok: false, message: 'Un champ n’est pas valide : corrige-le, puis enregistre à nouveau.', champs: byField }
+		: { ok: false, message: FAILURE_MESSAGE }
 }

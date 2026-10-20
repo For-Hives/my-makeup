@@ -9,18 +9,18 @@
  */
 
 /** The part of her profile being edited: one key per section, so that the next ones reuse this. */
-export type SectionEditee = 'identite'
+export type EditedSection = 'identite'
 
 /** How long a draft is believed. */
-export const DUREE_DE_VIE_DE_LA_SAISIE_MS = 24 * 60 * 60 * 1000
+export const INPUT_LIFETIME_MS = 24 * 60 * 60 * 1000
 
 /** Under this delay after a redirection, a second expiry does not send her away again: no loop. */
-export const DELAI_ANTI_BOUCLE_MS = 10 * 60 * 1000
+export const ANTI_LOOP_DELAY_MS = 10 * 60 * 1000
 
 /** What `sessionStorage` offers, and what a test fakes. */
-export type Stockage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
+export type DraftStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
 
-export interface SaisieGardee<Valeurs> {
+export interface GuardedInput<Valeurs> {
 	valeurs: Valeurs
 	/** When the draft was kept (ms). */
 	le: number
@@ -28,10 +28,10 @@ export interface SaisieGardee<Valeurs> {
 	redirigeLe: number | null
 }
 
-const cle = (section: SectionEditee, proprietaire: string): string => `mm:saisie:${section}:${proprietaire}`
+const key = (section: EditedSection, proprietaire: string): string => `mm:saisie:${section}:${proprietaire}`
 
 /** The tab's storage, or nothing when the browser refuses it. */
-export function stockageDeLOnglet(): Stockage | null {
+export function tabStorage(): DraftStorage | null {
 	try {
 		return typeof window === 'undefined' ? null : window.sessionStorage
 	} catch {
@@ -39,53 +39,53 @@ export function stockageDeLOnglet(): Stockage | null {
 	}
 }
 
-const estUnTexte = (valeur: unknown): valeur is string => typeof valeur === 'string'
+const isText = (valeur: unknown): valeur is string => typeof valeur === 'string'
 
 /**
  * The draft kept for this section and this account, or nothing: no draft, a draft that is too old,
  * unreadable, or whose values are not the texts of the form. `champs` are the fields of the form.
  */
-export function lireLaSaisie<Champ extends string>(
-	stockage: Stockage | null,
-	section: SectionEditee,
+export function readInput<Champ extends string>(
+	stockage: DraftStorage | null,
+	section: EditedSection,
 	proprietaire: string,
 	champs: readonly Champ[],
 	maintenant: number
-): SaisieGardee<Record<Champ, string>> | null {
+): GuardedInput<Record<Champ, string>> | null {
 	if (stockage === null) return null
 	try {
-		const brut = stockage.getItem(cle(section, proprietaire))
-		if (brut === null) return null
-		const lue: unknown = JSON.parse(brut)
-		if (typeof lue !== 'object' || lue === null) return null
-		const { valeurs, le, redirigeLe } = lue as Record<string, unknown>
-		if (typeof le !== 'number' || maintenant - le > DUREE_DE_VIE_DE_LA_SAISIE_MS || le > maintenant + 60_000) {
-			oublierLaSaisie(stockage, section, proprietaire)
+		const raw = stockage.getItem(key(section, proprietaire))
+		if (raw === null) return null
+		const parsed: unknown = JSON.parse(raw)
+		if (typeof parsed !== 'object' || parsed === null) return null
+		const { valeurs: values, le: savedAt, redirigeLe: redirectedAt } = parsed as Record<string, unknown>
+		if (typeof savedAt !== 'number' || maintenant - savedAt > INPUT_LIFETIME_MS || savedAt > maintenant + 60_000) {
+			forgetInput(stockage, section, proprietaire)
 			return null
 		}
-		if (typeof valeurs !== 'object' || valeurs === null) return null
-		const sortie = {} as Record<Champ, string>
-		for (const champ of champs) {
-			const valeur = (valeurs as Record<string, unknown>)[champ]
-			if (!estUnTexte(valeur)) return null
-			sortie[champ] = valeur
+		if (typeof values !== 'object' || values === null) return null
+		const output = {} as Record<Champ, string>
+		for (const field of champs) {
+			const value = (values as Record<string, unknown>)[field]
+			if (!isText(value)) return null
+			output[field] = value
 		}
-		return { valeurs: sortie, le, redirigeLe: typeof redirigeLe === 'number' ? redirigeLe : null }
+		return { valeurs: output, le: savedAt, redirigeLe: typeof redirectedAt === 'number' ? redirectedAt : null }
 	} catch {
 		return null
 	}
 }
 
 /** Keeps the draft. Returns whether the browser accepted it. */
-export function garderLaSaisie<Valeurs>(
-	stockage: Stockage | null,
-	section: SectionEditee,
+export function guardInput<Valeurs>(
+	stockage: DraftStorage | null,
+	section: EditedSection,
 	proprietaire: string,
-	saisie: SaisieGardee<Valeurs>
+	saisie: GuardedInput<Valeurs>
 ): boolean {
 	if (stockage === null) return false
 	try {
-		stockage.setItem(cle(section, proprietaire), JSON.stringify(saisie))
+		stockage.setItem(key(section, proprietaire), JSON.stringify(saisie))
 		return true
 	} catch {
 		return false
@@ -93,9 +93,9 @@ export function garderLaSaisie<Valeurs>(
 }
 
 /** Forgets the draft: after a successful save, or when she abandons. */
-export function oublierLaSaisie(stockage: Stockage | null, section: SectionEditee, proprietaire: string): void {
+export function forgetInput(stockage: DraftStorage | null, section: EditedSection, proprietaire: string): void {
 	try {
-		stockage?.removeItem(cle(section, proprietaire))
+		stockage?.removeItem(key(section, proprietaire))
 	} catch {
 		// Nothing to forget in a browser that refuses storage.
 	}
@@ -105,6 +105,6 @@ export function oublierLaSaisie(stockage: Stockage | null, section: SectionEdite
  * Whether an expired session may send her to sign in again: once. If she was already sent for this
  * draft a moment ago and the save still says « expired », the message stays in the panel instead.
  */
-export function peutRediriger(avant: SaisieGardee<unknown> | null, maintenant: number): boolean {
-	return avant?.redirigeLe == null || maintenant - avant.redirigeLe > DELAI_ANTI_BOUCLE_MS
+export function canRedirect(avant: GuardedInput<unknown> | null, maintenant: number): boolean {
+	return avant?.redirigeLe == null || maintenant - avant.redirigeLe > ANTI_LOOP_DELAY_MS
 }

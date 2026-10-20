@@ -1,7 +1,7 @@
 import type { Payload } from 'payload'
-import { estDisponible, schemaDeLaDisponibilite, type ValeursDeLaDisponibilite } from './availability'
-import { identifiantDuProfilAEcrire, type UtilisateurDeLEspace } from './my-profile'
-import { echecDePayload, MESSAGE_ECHEC, type ResultatDEnregistrement } from './result'
+import { type AvailabilityValues, availabilitySchema, isAvailable } from './availability'
+import { type DashboardUser, profileIdToWrite } from './my-profile'
+import { FAILURE_MESSAGE, payloadFailure, type SaveResult } from './result'
 
 /**
  * Saves the availability of the signed-in makeup artist (ticket 124), on the contract of ticket
@@ -9,26 +9,26 @@ import { echecDePayload, MESSAGE_ECHEC, type ResultatDEnregistrement } from './r
  * hers (found by her account), the write goes through the access rules as herself, and the value
  * given back is the one the database stored. A failure gives a message in French and no value.
  */
-export async function enregistrerDisponibilite(
+export async function saveAvailability(
 	payload: Payload,
-	utilisateur: UtilisateurDeLEspace,
+	utilisateur: DashboardUser,
 	saisie: unknown
-): Promise<ResultatDEnregistrement<ValeursDeLaDisponibilite>> {
-	const lue = schemaDeLaDisponibilite.safeParse(saisie)
-	if (!lue.success) return { ok: false, message: MESSAGE_ECHEC }
+): Promise<SaveResult<AvailabilityValues>> {
+	const parsed = availabilitySchema.safeParse(saisie)
+	if (!parsed.success) return { ok: false, message: FAILURE_MESSAGE }
 	try {
-		const id = await identifiantDuProfilAEcrire(payload, utilisateur)
-		if (id === null) return { ok: false, message: MESSAGE_ECHEC }
-		const stocke = await payload.update({
+		const id = await profileIdToWrite(payload, utilisateur)
+		if (id === null) return { ok: false, message: FAILURE_MESSAGE }
+		const stored = await payload.update({
 			collection: 'profiles',
-			data: { available: lue.data.disponible },
+			data: { available: parsed.data.disponible },
 			depth: 0,
 			id,
 			overrideAccess: false,
 			user: utilisateur,
 		})
-		return { ok: true, valeurs: { disponible: estDisponible(stocke.available) } }
-	} catch (erreur) {
-		return echecDePayload(erreur, ['disponible'] as const, chemin => (chemin === 'available' ? 'disponible' : ''))
+		return { ok: true, valeurs: { disponible: isAvailable(stored.available) } }
+	} catch (error) {
+		return payloadFailure(error, ['disponible'] as const, chemin => (chemin === 'available' ? 'disponible' : ''))
 	}
 }

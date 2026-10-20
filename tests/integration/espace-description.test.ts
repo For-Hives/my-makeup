@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
-import { enregistrerDescription } from '@/lib/dashboard/save-description'
-import type { UtilisateurDeLEspace } from '@/lib/dashboard/my-profile'
-import { MESSAGE_ECHEC } from '@/lib/dashboard/result'
+import type { DashboardUser } from '@/lib/dashboard/my-profile'
+import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
+import { saveDescription } from '@/lib/dashboard/save-description'
 import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 
@@ -16,9 +16,9 @@ afterEach(viderLaBase)
 
 type Maquilleuse = CompteDeTest<'maquilleuse'>
 
-async function utilisateurDe(payload: Payload, compte: Maquilleuse): Promise<UtilisateurDeLEspace> {
+async function utilisateurDe(payload: Payload, compte: Maquilleuse): Promise<DashboardUser> {
 	const doc = await payload.findByID({ collection: 'pros', id: compte.id, depth: 0, overrideAccess: true })
-	return { ...doc, collection: 'pros' } as UtilisateurDeLEspace
+	return { ...doc, collection: 'pros' } as DashboardUser
 }
 
 async function profilStocke(payload: Payload, compte: Maquilleuse) {
@@ -40,7 +40,7 @@ describe('E19-E29 : la description enregistrée est celle de la base', () => {
 		const payload = await payloadDeTest()
 		const avantB = await profilStocke(payload, b)
 
-		const resultat = await enregistrerDescription(payload, await utilisateurDe(payload, a), {
+		const resultat = await saveDescription(payload, await utilisateurDe(payload, a), {
 			description: '  Maquilleuse mariée.\r\n\r\nJe me déplace dans toute la région.  ',
 		})
 
@@ -54,9 +54,9 @@ describe('E19-E29 : la description enregistrée est celle de la base', () => {
 		const a = await creerCompte('maquilleuse')
 		const payload = await payloadDeTest()
 		const utilisateur = await utilisateurDe(payload, a)
-		await enregistrerDescription(payload, utilisateur, { description: 'Un texte' })
+		await saveDescription(payload, utilisateur, { description: 'Un texte' })
 
-		const resultat = await enregistrerDescription(payload, utilisateur, { description: '   ' })
+		const resultat = await saveDescription(payload, utilisateur, { description: '   ' })
 
 		expect(resultat).toEqual({ ok: true, valeurs: { description: '' } })
 		expect((await profilStocke(payload, a)).description ?? '').toBe('')
@@ -69,11 +69,11 @@ describe('U27 : 2 000 caractères au plus, HTML retiré', () => {
 		const payload = await payloadDeTest()
 		const utilisateur = await utilisateurDe(payload, a)
 
-		const bon = await enregistrerDescription(payload, utilisateur, { description: 'a'.repeat(2000) })
+		const bon = await saveDescription(payload, utilisateur, { description: 'a'.repeat(2000) })
 		expect(bon.ok).toBe(true)
 		const avant = await profilStocke(payload, a)
 
-		const refus = await enregistrerDescription(payload, utilisateur, { description: 'b'.repeat(2001) })
+		const refus = await saveDescription(payload, utilisateur, { description: 'b'.repeat(2001) })
 		expect(refus).toMatchObject({
 			ok: false,
 			champs: { description: 'Ta description ne doit pas dépasser 2000 caractères.' },
@@ -87,7 +87,7 @@ describe('U27 : 2 000 caractères au plus, HTML retiré', () => {
 		const a = await creerCompte('maquilleuse')
 		const payload = await payloadDeTest()
 
-		const resultat = await enregistrerDescription(payload, await utilisateurDe(payload, a), {
+		const resultat = await saveDescription(payload, await utilisateurDe(payload, a), {
 			description: '<p onclick="x()">Bonjour</p>\n<script>alert(1)</script><b>toutes</b>',
 		})
 
@@ -110,12 +110,12 @@ describe('U32, I02 : une requête forgée est refusée, rien ne change', () => {
 		const payload = await payloadDeTest()
 		const avant = await profilStocke(payload, a)
 
-		const resultat = await enregistrerDescription(payload, await utilisateurDe(payload, a), {
+		const resultat = await saveDescription(payload, await utilisateurDe(payload, a), {
 			description: 'Texte',
 			[cle]: valeur,
 		})
 
-		expect(resultat).toEqual({ ok: false, message: MESSAGE_ECHEC })
+		expect(resultat).toEqual({ ok: false, message: FAILURE_MESSAGE })
 		const apres = await profilStocke(payload, a)
 		expect(apres.updatedAt).toBe(avant.updatedAt)
 		expect(apres.description).toBe(avant.description)
@@ -125,10 +125,10 @@ describe('U32, I02 : une requête forgée est refusée, rien ne change', () => {
 		const sansProfil = await creerCompte('maquilleuse-sans-profil')
 		const payload = await payloadDeTest()
 		const doc = await payload.findByID({ collection: 'pros', id: sansProfil.id, depth: 0, overrideAccess: true })
-		const resultat = await enregistrerDescription(payload, { ...doc, collection: 'pros' } as UtilisateurDeLEspace, {
+		const resultat = await saveDescription(payload, { ...doc, collection: 'pros' } as DashboardUser, {
 			description: 'Texte',
 		})
-		expect(resultat).toEqual({ ok: false, message: MESSAGE_ECHEC })
+		expect(resultat).toEqual({ ok: false, message: FAILURE_MESSAGE })
 		expect((await payload.count({ collection: 'profiles', overrideAccess: true })).totalDocs).toBe(0)
 	})
 })
@@ -141,10 +141,10 @@ describe('U05 : la longueur enregistrée rend le profil publiable par la défini
 		const { conditionsPubliable } = await import('@/lib/profil/completude')
 		const { champsDuProfil } = await import('@/lib/profil/etat')
 
-		await enregistrerDescription(payload, utilisateur, { description: 'a'.repeat(199) })
+		await saveDescription(payload, utilisateur, { description: 'a'.repeat(199) })
 		expect(conditionsPubliable(champsDuProfil(await profilStocke(payload, a))).descriptionLongue).toBe(false)
 
-		await enregistrerDescription(payload, utilisateur, { description: 'a'.repeat(200) })
+		await saveDescription(payload, utilisateur, { description: 'a'.repeat(200) })
 		expect(conditionsPubliable(champsDuProfil(await profilStocke(payload, a))).descriptionLongue).toBe(true)
 	})
 })

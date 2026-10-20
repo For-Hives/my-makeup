@@ -2,35 +2,33 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { expiredSessionUrl } from '@/lib/auth/return-to'
+import { localRefusalCause, trackPhotoRefusal, trackSave } from '@/lib/dashboard/analytics'
+import { prepareBrowserPhoto } from '@/lib/dashboard/browser-photo'
+import type { PhotoValues } from '@/lib/dashboard/main-picture'
+import { ACCEPT, type PreparedPhoto } from '@/lib/dashboard/photo'
+import type { DashboardPhoto, PhotoId } from '@/lib/dashboard/photos'
 import {
-	envoyerPuisEnregistrer,
-	type PhotoAEnvoyer,
-	type ResultatDEnvoiDUnFichier,
-	supprimerLeMedia,
-	televerserLaPhoto,
+	deleteMedia,
+	type FileUploadResult,
+	type PhotoToSend,
+	sendThenSave,
+	uploadPhoto,
 } from '@/lib/dashboard/photos-upload'
-import { causeDuRefusLocal, mesurerLEnregistrement, mesurerUnRefusDePhoto } from '@/lib/dashboard/analytics'
-import { ACCEPT, type PhotoPreparee } from '@/lib/dashboard/photo'
-import { preparerPhotoNavigateur } from '@/lib/dashboard/browser-photo'
-import type { ValeursDeLaPhoto } from '@/lib/dashboard/main-picture'
-import type { IdentifiantDePhoto, PhotoDeLEspace } from '@/lib/dashboard/photos'
-import type { ResultatDEnregistrement } from '@/lib/dashboard/result'
-import { PanneauDEdition } from './EditingPanel'
+import type { SaveResult } from '@/lib/dashboard/result'
+import { EditingPanel } from './EditingPanel'
 
-export type EnvoiDeLaPhoto = (saisie: {
-	photoPrincipale: IdentifiantDePhoto
-}) => Promise<ResultatDEnregistrement<ValeursDeLaPhoto>>
+export type PhotoUpload = (saisie: { photoPrincipale: PhotoId }) => Promise<SaveResult<PhotoValues>>
 
 /** The page of the space the editor lives on: where the sign-in page brings her back. */
-const PAGE_DE_L_ESPACE = '/auth/profil'
+const DASHBOARD_PAGE = '/auth/profil'
 
 /** The alternative text a main photo is stored with. */
-export const ALT_PHOTO_PRINCIPALE = 'Photo principale'
+export const MAIN_PICTURE_ALT = 'Photo principale'
 
-const BOUTON = 'min-h-11 rounded-md px-4 py-2 font-medium'
+const BUTTON = 'min-h-11 rounded-md px-4 py-2 font-medium'
 
 /** How a chosen file is shown before it is sent: a local address, or nothing where the browser has none. */
-export function apercuLocal(fichier: Blob): string {
+export function localPreview(fichier: Blob): string {
 	try {
 		return URL.createObjectURL(fichier)
 	} catch {
@@ -39,7 +37,7 @@ export function apercuLocal(fichier: Blob): string {
 }
 
 /** Gives back a local address made by `apercuLocal`. */
-export function libererApercu(adresse: string): void {
+export function releasePreview(adresse: string): void {
 	try {
 		if (adresse !== '') URL.revokeObjectURL(adresse)
 	} catch {
@@ -47,7 +45,7 @@ export function libererApercu(adresse: string): void {
 	}
 }
 
-interface Choisie extends PhotoAEnvoyer {
+interface Chosen extends PhotoToSend {
 	apercu: string
 }
 
@@ -65,65 +63,65 @@ interface Choisie extends PhotoAEnvoyer {
  *
  * The browser work, the network and the server action are properties: a test gives fakes.
  */
-export function EditeurDeLaPhoto({
+export function PhotoEditor({
 	photo,
 	envoyer,
-	preparer = preparerPhotoNavigateur,
-	televerser = (fichier, alt) => televerserLaPhoto(fichier, alt),
-	supprimer = id => supprimerLeMedia(id),
+	preparer = prepareBrowserPhoto,
+	televerser = (fichier, alt) => uploadPhoto(fichier, alt),
+	supprimer = id => deleteMedia(id),
 }: {
-	photo: PhotoDeLEspace | null
-	envoyer: EnvoiDeLaPhoto
-	preparer?: (fichier: File) => Promise<PhotoPreparee<File>>
-	televerser?: (fichier: File, alt: string) => Promise<ResultatDEnvoiDUnFichier>
-	supprimer?: (id: IdentifiantDePhoto) => Promise<unknown>
+	photo: DashboardPhoto | null
+	envoyer: PhotoUpload
+	preparer?: (fichier: File) => Promise<PreparedPhoto<File>>
+	televerser?: (fichier: File, alt: string) => Promise<FileUploadResult>
+	supprimer?: (id: PhotoId) => Promise<unknown>
 }) {
-	const [ouvert, setOuvert] = useState(false)
-	const [annonce, setAnnonce] = useState('')
-	const declencheur = useRef<HTMLButtonElement>(null)
+	const [open, setOpen] = useState(false)
+	const [announcement, setAnnouncement] = useState('')
+	const trigger = useRef<HTMLButtonElement>(null)
 
 	return (
 		<>
 			<button
-				ref={declencheur}
+				ref={trigger}
 				type="button"
 				aria-haspopup="dialog"
 				aria-label="Modifier ma photo principale"
 				onClick={() => {
-					setAnnonce('')
-					setOuvert(true)
+					setAnnouncement('')
+					setOpen(true)
 				}}
 				// Held down, Enter repeats: it opens the panel once.
 				onKeyDown={evenement => {
 					if (evenement.repeat) evenement.preventDefault()
 				}}
-				className={`${BOUTON} border border-neutral-400 bg-white`}
+				className={`${BUTTON} border border-neutral-400 bg-white`}
 			>
 				Modifier
 			</button>
 			<p role="status" className="w-full text-green-800 text-sm">
-				{annonce}
+				{announcement}
 			</p>
-			{ouvert ? (
-				<FormulaireDeLaPhoto
+			{open ? (
+				<PhotoForm
 					photo={photo}
 					envoyer={envoyer}
 					preparer={preparer}
 					televerser={televerser}
 					supprimer={supprimer}
-					retour={declencheur}
+					retour={trigger}
 					onEnregistre={() => {
-						setAnnonce('Ta photo principale est enregistrée.')
-						setOuvert(false)
+						setAnnouncement('Ta photo principale est enregistrée.')
+						setOpen(false)
 					}}
-					onFermer={() => setOuvert(false)}
+					onFermer={() => setOpen(false)}
 				/>
 			) : null}
 		</>
 	)
 }
 
-function FormulaireDeLaPhoto({
+function PhotoForm({
 	photo,
 	envoyer,
 	preparer,
@@ -133,113 +131,113 @@ function FormulaireDeLaPhoto({
 	onEnregistre,
 	onFermer,
 }: {
-	photo: PhotoDeLEspace | null
-	envoyer: EnvoiDeLaPhoto
-	preparer: (fichier: File) => Promise<PhotoPreparee<File>>
-	televerser: (fichier: File, alt: string) => Promise<ResultatDEnvoiDUnFichier>
-	supprimer: (id: IdentifiantDePhoto) => Promise<unknown>
+	photo: DashboardPhoto | null
+	envoyer: PhotoUpload
+	preparer: (fichier: File) => Promise<PreparedPhoto<File>>
+	televerser: (fichier: File, alt: string) => Promise<FileUploadResult>
+	supprimer: (id: PhotoId) => Promise<unknown>
 	retour: React.RefObject<HTMLButtonElement | null>
 	onEnregistre: () => void
 	onFermer: () => void
 }) {
-	const [choisie, setChoisie] = useState<Choisie | null>(null)
-	const [erreur, setErreur] = useState('')
+	const [chosen, setChosen] = useState<Chosen | null>(null)
+	const [error, setError] = useState('')
 	const [message, setMessage] = useState('')
-	const [sessionExpiree, setSessionExpiree] = useState(false)
+	const [expiredSession, setExpiredSession] = useState(false)
 	const [preparation, setPreparation] = useState(false)
-	const [enCours, setEnCours] = useState(false)
-	const verrou = useRef(false)
-	const apercuCourant = useRef('')
+	const [pending, setPending] = useState(false)
+	const lock = useRef(false)
+	const currentPreview = useRef('')
 
 	// The local address is given back when the panel goes.
 	useEffect(
 		() => () => {
-			libererApercu(apercuCourant.current)
+			releasePreview(currentPreview.current)
 		},
 		[]
 	)
 
-	async function choisir(fichier: File) {
-		setErreur('')
+	async function choose(fichier: File) {
+		setError('')
 		setMessage('')
 		setPreparation(true)
 		try {
-			const prete = await preparer(fichier)
-			if (!prete.ok) {
-				mesurerUnRefusDePhoto(causeDuRefusLocal(prete))
-				setErreur(prete.message)
+			const ready = await preparer(fichier)
+			if (!ready.ok) {
+				trackPhotoRefusal(localRefusalCause(ready))
+				setError(ready.message)
 				return
 			}
-			libererApercu(apercuCourant.current)
-			const apercu = apercuLocal(prete.fichier)
-			apercuCourant.current = apercu
-			setChoisie({ cle: 'photo', fichier: prete.fichier, alt: ALT_PHOTO_PRINCIPALE, apercu })
+			releasePreview(currentPreview.current)
+			const preview = localPreview(ready.fichier)
+			currentPreview.current = preview
+			setChosen({ cle: 'photo', fichier: ready.fichier, alt: MAIN_PICTURE_ALT, apercu: preview })
 		} finally {
 			setPreparation(false)
 		}
 	}
 
-	async function enregistrer() {
-		if (choisie === null || verrou.current) return
-		verrou.current = true
-		setEnCours(true)
+	async function save() {
+		if (chosen === null || lock.current) return
+		lock.current = true
+		setPending(true)
 		setMessage('')
-		setSessionExpiree(false)
+		setExpiredSession(false)
 		try {
-			const issue = await envoyerPuisEnregistrer<ValeursDeLaPhoto>({
-				photos: [choisie],
+			const issue = await sendThenSave<PhotoValues>({
+				photos: [chosen],
 				televerser: async (fichier, alt) => {
-					const envoi = await televerser(fichier, alt)
+					const upload = await televerser(fichier, alt)
 					// A session that ended is not a refusal of the photo.
-					if (!envoi.ok && envoi.session !== 'expiree') mesurerUnRefusDePhoto(envoi.cause ?? 'server')
-					return envoi
+					if (!upload.ok && upload.session !== 'expiree') trackPhotoRefusal(upload.cause ?? 'server')
+					return upload
 				},
 				supprimer,
 				enregistrer: async ids => {
 					const [id] = ids
-					const resultat = await envoyer({ photoPrincipale: id as IdentifiantDePhoto })
+					const result = await envoyer({ photoPrincipale: id as PhotoId })
 					// Only an answer of the server is a save; a lost call counts nothing.
-					mesurerLEnregistrement('photo', resultat)
-					return resultat
+					trackSave('photo', result)
+					return result
 				},
-				marquerEnvoyee: (_cle, id) => setChoisie(courante => (courante === null ? courante : { ...courante, id })),
+				marquerEnvoyee: (_cle, id) => setChosen(courante => (courante === null ? courante : { ...courante, id })),
 			})
 			if (issue.ok) {
 				onEnregistre()
 				return
 			}
 			setMessage(issue.champs?.photoPrincipale ?? issue.message)
-			setSessionExpiree(issue.session === 'expiree')
+			setExpiredSession(issue.session === 'expiree')
 		} finally {
-			verrou.current = false
-			setEnCours(false)
+			lock.current = false
+			setPending(false)
 		}
 	}
 
-	const montree = choisie?.apercu || photo?.url || ''
+	const shown = chosen?.apercu || photo?.url || ''
 	return (
-		<PanneauDEdition
+		<EditingPanel
 			titre="Modifier ma photo principale"
-			enCours={enCours || preparation}
-			modifie={choisie !== null}
+			enCours={pending || preparation}
+			modifie={chosen !== null}
 			retour={retour}
 			onFermer={onFermer}
 		>
 			<form
 				noValidate
-				aria-busy={enCours}
+				aria-busy={pending}
 				onSubmit={evenement => {
 					evenement.preventDefault()
-					void enregistrer()
+					void save()
 				}}
 				className="flex flex-col gap-4"
 			>
 				<div className="flex justify-center">
-					{montree ? (
+					{shown ? (
 						// biome-ignore lint/performance/noImgElement: a local preview of a file not sent yet cannot go through the image optimizer
 						<img
-							src={montree}
-							alt={choisie ? 'Aperçu de la photo choisie' : 'Ta photo principale actuelle'}
+							src={shown}
+							alt={chosen ? 'Aperçu de la photo choisie' : 'Ta photo principale actuelle'}
 							className="h-48 w-48 rounded-full object-cover"
 						/>
 					) : (
@@ -248,19 +246,19 @@ function FormulaireDeLaPhoto({
 				</div>
 				<div className="flex flex-col gap-1">
 					<label htmlFor="photo-fichier" className="font-medium text-sm">
-						{photo || choisie ? 'Choisir une autre photo' : 'Choisir une photo'}
+						{photo || chosen ? 'Choisir une autre photo' : 'Choisir une photo'}
 					</label>
 					<input
 						id="photo-fichier"
 						type="file"
 						accept={ACCEPT}
-						disabled={enCours}
+						disabled={pending}
 						aria-describedby="photo-aide"
 						onChange={evenement => {
-							const fichier = evenement.target.files?.[0]
+							const file = evenement.target.files?.[0]
 							// The same file can be picked again.
 							evenement.target.value = ''
-							if (fichier) void choisir(fichier)
+							if (file) void choose(file)
 						}}
 						className="min-h-11 rounded-md border border-neutral-400 bg-white px-3 py-2 text-base"
 					/>
@@ -272,9 +270,9 @@ function FormulaireDeLaPhoto({
 							Préparation de la photo…
 						</p>
 					) : null}
-					{erreur ? (
+					{error ? (
 						<p role="alert" className="text-red-800 text-sm">
-							{erreur}
+							{error}
 						</p>
 					) : null}
 				</div>
@@ -282,12 +280,12 @@ function FormulaireDeLaPhoto({
 					{message ? (
 						<p className="rounded-md bg-red-50 p-3 text-red-800 text-sm">
 							{message}
-							{sessionExpiree ? (
+							{expiredSession ? (
 								<>
 									{' '}
 									<a
 										className="font-medium underline"
-										href={expiredSessionUrl(PAGE_DE_L_ESPACE)}
+										href={expiredSessionUrl(DASHBOARD_PAGE)}
 										target="_blank"
 										rel="noopener"
 									>
@@ -301,12 +299,12 @@ function FormulaireDeLaPhoto({
 				</div>
 				<button
 					type="submit"
-					disabled={enCours || preparation || choisie === null}
-					className={`${BOUTON} bg-neutral-900 text-white disabled:cursor-not-allowed disabled:opacity-60`}
+					disabled={pending || preparation || chosen === null}
+					className={`${BUTTON} bg-neutral-900 text-white disabled:cursor-not-allowed disabled:opacity-60`}
 				>
-					{enCours ? 'Enregistrement…' : 'Enregistrer'}
+					{pending ? 'Enregistrement…' : 'Enregistrer'}
 				</button>
 			</form>
-		</PanneauDEdition>
+		</EditingPanel>
 	)
 }

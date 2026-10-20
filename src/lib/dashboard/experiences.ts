@@ -13,35 +13,36 @@
 import { LONGUEUR_DESCRIPTION, LONGUEUR_NOM, messageDeDate, messageDeFin, messageDeTexte } from '../profil/listes'
 import { texte } from '../profil/nom-affiche'
 import { periode } from '../profil/vue-publique'
-import { type DefinitionDeListe, type ErreursDeLigne, jourDuFormulaire, type ValeursDeLigne } from './list'
+import { formDay, type ListDefinition, type RowErrors, type RowValues } from './list'
 
-const TEXTES: readonly [string, number][] = [
+const TEXTS: readonly [string, number][] = [
 	['company', LONGUEUR_NOM],
 	['jobTitle', LONGUEUR_NOM],
 	['city', LONGUEUR_NOM],
 	['description', LONGUEUR_DESCRIPTION],
 ]
 
-const apresVide = (valeur: string | undefined): string | null => (valeur === undefined || valeur === '' ? null : valeur)
+const afterEmpty = (valeur: string | undefined): string | null =>
+	valeur === undefined || valeur === '' ? null : valeur
 
-function bornes(valeurs: ValeursDeLigne): ErreursDeLigne {
-	const erreurs: Record<string, string> = {}
-	for (const [champ, maximum] of TEXTES) {
-		const message = messageDeTexte(valeurs[champ], maximum)
-		if (message !== null) erreurs[champ] = message
+function bounds(valeurs: RowValues): RowErrors {
+	const errors: Record<string, string> = {}
+	for (const [field, maximum] of TEXTS) {
+		const message = messageDeTexte(valeurs[field], maximum)
+		if (message !== null) errors[field] = message
 	}
-	const startDate = apresVide(valeurs.startDate)
-	const endDate = apresVide(valeurs.endDate)
-	const messageDebut = messageDeDate(startDate)
-	if (messageDebut !== null) erreurs.startDate = messageDebut
-	const messageFin = messageDeFin(endDate, messageDebut === null ? startDate : null)
-	if (messageFin !== null) erreurs.endDate = messageFin
-	return erreurs
+	const startDate = afterEmpty(valeurs.startDate)
+	const endDate = afterEmpty(valeurs.endDate)
+	const startMessage = messageDeDate(startDate)
+	if (startMessage !== null) errors.startDate = startMessage
+	const endMessage = messageDeFin(endDate, startMessage === null ? startDate : null)
+	if (endMessage !== null) errors.endDate = endMessage
+	return errors
 }
 
-const enNull = (valeur: string | undefined): string | null => (valeur ? valeur : null)
+const emptyToNull = (valeur: string | undefined): string | null => (valeur ? valeur : null)
 
-export const EXPERIENCES: DefinitionDeListe = {
+export const EXPERIENCES: ListDefinition = {
 	section: 'experiences',
 	singulier: 'expérience',
 	pluriel: 'expériences',
@@ -60,7 +61,7 @@ export const EXPERIENCES: DefinitionDeListe = {
 		startDate: 'La date de début de l’expérience est requise.',
 	},
 	doublon: 'Une expérience identique est déjà dans la liste.',
-	bornes,
+	bornes: bounds,
 	resume: valeurs =>
 		[
 			valeurs.jobTitle,
@@ -77,16 +78,16 @@ export const EXPERIENCES: DefinitionDeListe = {
 		jobTitle: texte(stockee.jobTitle),
 		company: texte(stockee.company),
 		city: texte(stockee.city),
-		startDate: jourDuFormulaire(stockee.startDate),
-		endDate: jourDuFormulaire(stockee.endDate),
+		startDate: formDay(stockee.startDate),
+		endDate: formDay(stockee.endDate),
 		description: typeof stockee.description === 'string' ? stockee.description.trim() : '',
 	}),
 	versLeStockage: valeurs => ({
-		jobTitle: enNull(valeurs.jobTitle),
-		company: enNull(valeurs.company),
-		city: enNull(valeurs.city),
-		startDate: enNull(valeurs.startDate),
-		endDate: enNull(valeurs.endDate),
-		description: enNull(valeurs.description),
+		jobTitle: emptyToNull(valeurs.jobTitle),
+		company: emptyToNull(valeurs.company),
+		city: emptyToNull(valeurs.city),
+		startDate: emptyToNull(valeurs.startDate),
+		endDate: emptyToNull(valeurs.endDate),
+		description: emptyToNull(valeurs.description),
 	}),
 }

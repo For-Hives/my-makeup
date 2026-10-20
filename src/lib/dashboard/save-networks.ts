@@ -1,25 +1,19 @@
 import type { Payload } from 'payload'
-import { identifiantDuProfilAEcrire, type UtilisateurDeLEspace } from './my-profile'
-import {
-	CHAMPS_DES_RESEAUX,
-	type ChampDeReseau,
-	lireLesReseaux,
-	schemaDesReseauxStrict,
-	type ValeursDesReseaux,
-} from './networks'
-import { echecDePayload, MESSAGE_ECHEC, type ResultatDEnregistrement } from './result'
+import { type DashboardUser, profileIdToWrite } from './my-profile'
+import { NETWORKS_FIELDS, type NetworkField, type NetworksValues, readNetworks, strictNetworksSchema } from './networks'
+import { FAILURE_MESSAGE, payloadFailure, type SaveResult } from './result'
 
 /** The field of the group `networks` each field of the form is stored in. */
-const CHAMP_STOCKE = {
+const STORED_FIELD = {
 	instagram: 'instagram',
 	facebook: 'facebook',
 	youtube: 'youtube',
 	linkedin: 'linkedin',
 	siteWeb: 'website',
-} as const satisfies Record<ChampDeReseau, string>
+} as const satisfies Record<NetworkField, string>
 
 /** The field of the form that each field of the group `networks` belongs to. */
-const CHAMP_DU_CHEMIN: Readonly<Record<string, ChampDeReseau>> = {
+const PATH_FIELD: Readonly<Record<string, NetworkField>> = {
 	instagram: 'instagram',
 	facebook: 'facebook',
 	youtube: 'youtube',
@@ -41,27 +35,27 @@ const CHAMP_DU_CHEMIN: Readonly<Record<string, ChampDeReseau>> = {
  * - the values given back are those the database stored. A failure gives back a message in French
  *   and no value (E31).
  */
-export async function enregistrerReseaux(
+export async function saveNetworks(
 	payload: Payload,
-	utilisateur: UtilisateurDeLEspace,
+	utilisateur: DashboardUser,
 	saisie: unknown
-): Promise<ResultatDEnregistrement<ValeursDesReseaux>> {
-	const forme = schemaDesReseauxStrict.safeParse(saisie)
-	if (!forme.success) return { ok: false, message: MESSAGE_ECHEC }
-	const lue = lireLesReseaux(forme.data)
-	if (!lue.ok)
+): Promise<SaveResult<NetworksValues>> {
+	const shape = strictNetworksSchema.safeParse(saisie)
+	if (!shape.success) return { ok: false, message: FAILURE_MESSAGE }
+	const parsed = readNetworks(shape.data)
+	if (!parsed.ok)
 		return {
 			ok: false,
 			message: 'Un lien n’est pas valide : corrige-le, puis enregistre à nouveau.',
-			champs: lue.champs,
+			champs: parsed.champs,
 		}
 	try {
-		const id = await identifiantDuProfilAEcrire(payload, utilisateur)
-		if (id === null) return { ok: false, message: MESSAGE_ECHEC }
+		const id = await profileIdToWrite(payload, utilisateur)
+		if (id === null) return { ok: false, message: FAILURE_MESSAGE }
 		const networks = Object.fromEntries(
-			CHAMPS_DES_RESEAUX.map(champ => [CHAMP_STOCKE[champ], lue.valeurs[champ] || null])
+			NETWORKS_FIELDS.map(champ => [STORED_FIELD[champ], parsed.valeurs[champ] || null])
 		)
-		const stocke = await payload.update({
+		const stored = await payload.update({
 			collection: 'profiles',
 			data: { networks },
 			depth: 0,
@@ -69,13 +63,13 @@ export async function enregistrerReseaux(
 			overrideAccess: false,
 			user: utilisateur,
 		})
-		const valeurs = Object.fromEntries(
-			CHAMPS_DES_RESEAUX.map(champ => [champ, stocke.networks?.[CHAMP_STOCKE[champ]] ?? ''])
-		) as ValeursDesReseaux
-		return { ok: true, valeurs }
-	} catch (erreur) {
-		return echecDePayload(erreur, CHAMPS_DES_RESEAUX, chemin =>
-			chemin.startsWith('networks.') ? (CHAMP_DU_CHEMIN[chemin.slice('networks.'.length)] ?? '') : ''
+		const values = Object.fromEntries(
+			NETWORKS_FIELDS.map(champ => [champ, stored.networks?.[STORED_FIELD[champ]] ?? ''])
+		) as NetworksValues
+		return { ok: true, valeurs: values }
+	} catch (error) {
+		return payloadFailure(error, NETWORKS_FIELDS, chemin =>
+			chemin.startsWith('networks.') ? (PATH_FIELD[chemin.slice('networks.'.length)] ?? '') : ''
 		)
 	}
 }

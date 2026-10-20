@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'bun:test'
 import { act } from 'react'
-import { EditeurDIdentite, type EnvoiDeLIdentite } from '@/components/dashboard/IdentityEditor'
-import type { ValeursDeLIdentite } from '@/lib/dashboard/identity'
-import { MESSAGE_ECHEC } from '@/lib/dashboard/result'
-import type { Stockage } from '@/lib/dashboard/guarded-input'
+import { IdentityEditor, type IdentityUpload } from '@/components/dashboard/IdentityEditor'
+import type { DraftStorage } from '@/lib/dashboard/guarded-input'
+import type { IdentityValues } from '@/lib/dashboard/identity'
+import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
 import { ouvrirFenetre } from '../outils/dom-react'
 
 /**
@@ -14,21 +14,21 @@ import { ouvrirFenetre } from '../outils/dom-react'
 
 const fenetre = ouvrirFenetre()
 
-const VALEURS: ValeursDeLIdentite = { prenom: 'Léa', nom: 'Fictive', nomArtiste: '', specialite: 'Teint' }
+const VALEURS: IdentityValues = { prenom: 'Léa', nom: 'Fictive', nomArtiste: '', specialite: 'Teint' }
 
 /** A send function that records its calls and answers like the server stores. */
-function faussementEnvoi(reponse?: Awaited<ReturnType<EnvoiDeLIdentite>>) {
-	const appels: ValeursDeLIdentite[] = []
-	const envoyer: EnvoiDeLIdentite = async valeurs => {
+function faussementEnvoi(reponse?: Awaited<ReturnType<IdentityUpload>>) {
+	const appels: IdentityValues[] = []
+	const envoyer: IdentityUpload = async valeurs => {
 		appels.push(valeurs)
 		return reponse ?? { ok: true, valeurs }
 	}
 	return { appels, envoyer }
 }
 
-async function ouvrir(envoyer: EnvoiDeLIdentite) {
+async function ouvrir(envoyer: IdentityUpload) {
 	const zone = await fenetre.monter(
-		<EditeurDIdentite valeurs={VALEURS} envoyer={envoyer} proprietaire="7" stockage={() => null} />
+		<IdentityEditor valeurs={VALEURS} envoyer={envoyer} proprietaire="7" stockage={() => null} />
 	)
 	await fenetre.cliquer(fenetre.bouton('Modifier mon identité'))
 	return zone
@@ -97,14 +97,14 @@ describe('un enregistrement réussi', () => {
 
 describe('E31 : un échec du serveur', () => {
 	test('le panneau reste ouvert avec la saisie, le message est en français', async () => {
-		const { envoyer } = faussementEnvoi({ ok: false, message: MESSAGE_ECHEC })
+		const { envoyer } = faussementEnvoi({ ok: false, message: FAILURE_MESSAGE })
 		await ouvrir(envoyer)
 
 		await fenetre.saisir(fenetre.champ('Prénom'), 'Inès')
 		await fenetre.cliquer(fenetre.bouton('Enregistrer'))
 
 		const alerte = await fenetre.attendre(() => fenetre.w.document.querySelector('[role="alert"] p'))
-		expect(alerte.textContent).toBe(MESSAGE_ECHEC)
+		expect(alerte.textContent).toBe(FAILURE_MESSAGE)
 		expect((fenetre.champ('Prénom') as HTMLInputElement).value).toBe('Inès')
 		expect(statut()).toBe('')
 		expect(dialogue()).not.toBeNull()
@@ -124,14 +124,14 @@ describe('E31 : un échec du serveur', () => {
 	})
 
 	test('une fonction d’envoi qui lève donne le message du site, pas le sien', async () => {
-		const envoyer: EnvoiDeLIdentite = async () => {
+		const envoyer: IdentityUpload = async () => {
 			throw new Error('Failed to fetch')
 		}
 		await ouvrir(envoyer)
 		await fenetre.cliquer(fenetre.bouton('Enregistrer'))
 
 		const alerte = await fenetre.attendre(() => fenetre.w.document.querySelector('[role="alert"] p'))
-		expect(alerte.textContent).toBe(MESSAGE_ECHEC)
+		expect(alerte.textContent).toBe(FAILURE_MESSAGE)
 	})
 
 	test('fermer sans rien changer ferme tout de suite ; avec une saisie, la confirmation passe d’abord', async () => {
@@ -164,8 +164,8 @@ describe('E31 : un échec du serveur', () => {
 describe('un double clic, une touche Entrée maintenue : un seul enregistrement', () => {
 	test('deux clics avant la réponse', async () => {
 		let repondre: (() => void) | undefined
-		const appels: ValeursDeLIdentite[] = []
-		const envoyer: EnvoiDeLIdentite = valeurs => {
+		const appels: IdentityValues[] = []
+		const envoyer: IdentityUpload = valeurs => {
 			appels.push(valeurs)
 			return new Promise(resolve => {
 				repondre = () => resolve({ ok: true, valeurs })
@@ -252,13 +252,13 @@ describe('E68 : le clavier dans le dialogue', () => {
 })
 
 describe('121 (E32) : la session expire pendant la saisie', () => {
-	const EXPIREE: Awaited<ReturnType<EnvoiDeLIdentite>> = {
+	const EXPIREE: Awaited<ReturnType<IdentityUpload>> = {
 		ok: false,
 		message: 'Ta session a expiré : ta modification n’a pas été enregistrée. Reconnecte-toi, puis recommence.',
 		session: 'expiree',
 	}
 
-	function faussementStockage(): Stockage & { contenu: Map<string, string> } {
+	function faussementStockage(): DraftStorage & { contenu: Map<string, string> } {
 		const contenu = new Map<string, string>()
 		return {
 			contenu,
@@ -268,9 +268,9 @@ describe('121 (E32) : la session expire pendant la saisie', () => {
 		}
 	}
 
-	async function monter(envoyer: EnvoiDeLIdentite, stockage: Stockage | null, naviguer: (url: string) => void) {
+	async function monter(envoyer: IdentityUpload, stockage: DraftStorage | null, naviguer: (url: string) => void) {
 		await fenetre.monter(
-			<EditeurDIdentite
+			<IdentityEditor
 				valeurs={VALEURS}
 				envoyer={envoyer}
 				proprietaire="7"

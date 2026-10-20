@@ -3,22 +3,20 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { trackSave } from '@/lib/dashboard/analytics'
 import {
-	CHAMPS_DES_COORDONNEES,
-	type CoordonneesEnregistrees,
-	schemaDesCoordonnees,
-	type ValeursDesCoordonnees,
+	CONTACT_DETAILS_FIELDS,
+	type ContactDetailsValues,
+	contactDetailsSchema,
+	type SavedContactDetails,
 } from '@/lib/dashboard/contact-details'
-import { mesurerLEnregistrement } from '@/lib/dashboard/analytics'
-import { MESSAGE_ECHEC, type ResultatDEnregistrement } from '@/lib/dashboard/result'
-import { PanneauDEdition } from './EditingPanel'
+import { FAILURE_MESSAGE, type SaveResult } from '@/lib/dashboard/result'
+import { EditingPanel } from './EditingPanel'
 
-export type EnvoiDesCoordonnees = (
-	valeurs: ValeursDesCoordonnees
-) => Promise<ResultatDEnregistrement<CoordonneesEnregistrees>>
+export type ContactDetailsUpload = (valeurs: ContactDetailsValues) => Promise<SaveResult<SavedContactDetails>>
 
-const BOUTON = 'min-h-11 rounded-md px-4 py-2 font-medium'
-const CHAMP = 'min-h-11 rounded-md border border-neutral-400 bg-white px-3 py-2 text-base'
+const BUTTON = 'min-h-11 rounded-md px-4 py-2 font-medium'
+const FIELD = 'min-h-11 rounded-md border border-neutral-400 bg-white px-3 py-2 text-base'
 
 /**
  * The button « Modifier » of the card of her contact details, and the panel it opens (ticket 126).
@@ -29,67 +27,67 @@ const CHAMP = 'min-h-11 rounded-md border border-neutral-400 bg-white px-3 py-2 
  * The choice « afficher sur mon profil » is hers: the panel says what it means, and the server
  * dates it. The card shows the date once the page is read again.
  */
-export function EditeurDeCoordonnees({
+export function ContactDetailsEditor({
 	valeurs,
 	envoyer,
 }: {
-	valeurs: ValeursDesCoordonnees
-	envoyer: EnvoiDesCoordonnees
+	valeurs: ContactDetailsValues
+	envoyer: ContactDetailsUpload
 }) {
-	const [ouvert, setOuvert] = useState(false)
-	const [annonce, setAnnonce] = useState('')
-	const declencheur = useRef<HTMLButtonElement>(null)
+	const [open, setOpen] = useState(false)
+	const [announcement, setAnnouncement] = useState('')
+	const trigger = useRef<HTMLButtonElement>(null)
 
 	return (
 		<>
 			<button
-				ref={declencheur}
+				ref={trigger}
 				type="button"
 				aria-haspopup="dialog"
 				aria-label="Modifier mes coordonnées"
 				onClick={() => {
-					setAnnonce('')
-					setOuvert(true)
+					setAnnouncement('')
+					setOpen(true)
 				}}
 				onKeyDown={evenement => {
 					if (evenement.repeat) evenement.preventDefault()
 				}}
-				className={`${BOUTON} border border-neutral-400 bg-white`}
+				className={`${BUTTON} border border-neutral-400 bg-white`}
 			>
 				Modifier
 			</button>
 			<p role="status" className="w-full text-green-800 text-sm">
-				{annonce}
+				{announcement}
 			</p>
-			{ouvert ? (
-				<FormulaireDeCoordonnees
+			{open ? (
+				<ContactDetailsForm
 					valeurs={valeurs}
 					envoyer={envoyer}
-					retour={declencheur}
+					retour={trigger}
 					onEnregistre={affichees => {
-						setAnnonce(
+						setAnnouncement(
 							affichees
 								? 'Tes coordonnées sont enregistrées : elles s’affichent sur ton profil.'
 								: 'Tes coordonnées sont enregistrées : elles ne s’affichent pas sur ton profil.'
 						)
-						setOuvert(false)
+						setOpen(false)
 					}}
-					onFermer={() => setOuvert(false)}
+					onFermer={() => setOpen(false)}
 				/>
 			) : null}
 		</>
 	)
 }
 
-function FormulaireDeCoordonnees({
+function ContactDetailsForm({
 	valeurs,
 	envoyer,
 	retour,
 	onEnregistre,
 	onFermer,
 }: {
-	valeurs: ValeursDesCoordonnees
-	envoyer: EnvoiDesCoordonnees
+	valeurs: ContactDetailsValues
+	envoyer: ContactDetailsUpload
 	retour: React.RefObject<HTMLButtonElement | null>
 	onEnregistre: (affichees: boolean) => void
 	onFermer: () => void
@@ -99,56 +97,56 @@ function FormulaireDeCoordonnees({
 		handleSubmit,
 		setError,
 		formState: { errors, isDirty },
-	} = useForm<ValeursDesCoordonnees>({ resolver: zodResolver(schemaDesCoordonnees), defaultValues: valeurs })
-	const [enCours, setEnCours] = useState(false)
+	} = useForm<ContactDetailsValues>({ resolver: zodResolver(contactDetailsSchema), defaultValues: valeurs })
+	const [pending, setPending] = useState(false)
 	const [message, setMessage] = useState('')
-	const verrou = useRef(false)
+	const lock = useRef(false)
 
-	async function enregistrer(saisie: ValeursDesCoordonnees) {
-		setEnCours(true)
+	async function save(saisie: ContactDetailsValues) {
+		setPending(true)
 		setMessage('')
 		try {
-			const resultat: ResultatDEnregistrement<CoordonneesEnregistrees> = await envoyer(saisie).catch(() => ({
+			const result: SaveResult<SavedContactDetails> = await envoyer(saisie).catch(() => ({
 				ok: false,
-				message: MESSAGE_ECHEC,
+				message: FAILURE_MESSAGE,
 			}))
-			mesurerLEnregistrement('coordonnees', resultat)
-			if (resultat.ok) {
-				onEnregistre(resultat.valeurs.contactPublic)
+			trackSave('coordonnees', result)
+			if (result.ok) {
+				onEnregistre(result.valeurs.contactPublic)
 				return
 			}
-			setMessage(resultat.message)
-			for (const champ of CHAMPS_DES_COORDONNEES) {
-				const texte = resultat.champs?.[champ]
-				if (texte) setError(champ, { message: texte })
+			setMessage(result.message)
+			for (const field of CONTACT_DETAILS_FIELDS) {
+				const text = result.champs?.[field]
+				if (text) setError(field, { message: text })
 			}
 		} finally {
-			verrou.current = false
-			setEnCours(false)
+			lock.current = false
+			setPending(false)
 		}
 	}
 
-	const erreurTelephone = errors.telephone?.message
-	const erreurEmail = errors.email?.message
-	const erreurChoix = errors.contactPublic?.message
+	const phoneError = errors.telephone?.message
+	const emailError = errors.email?.message
+	const choiceError = errors.contactPublic?.message
 
 	return (
-		<PanneauDEdition
+		<EditingPanel
 			titre="Modifier mes coordonnées"
-			enCours={enCours}
+			enCours={pending}
 			modifie={isDirty}
 			retour={retour}
 			onFermer={onFermer}
 		>
 			<form
 				noValidate
-				aria-busy={enCours}
+				aria-busy={pending}
 				onSubmit={evenement => {
 					evenement.preventDefault()
-					if (verrou.current) return
-					verrou.current = true
-					void handleSubmit(enregistrer, () => {
-						verrou.current = false
+					if (lock.current) return
+					lock.current = true
+					void handleSubmit(save, () => {
+						lock.current = false
 					})(evenement)
 				}}
 				className="flex flex-col gap-4"
@@ -161,14 +159,14 @@ function FormulaireDeCoordonnees({
 						id="coordonnees-telephone"
 						type="tel"
 						autoComplete="off"
-						aria-invalid={erreurTelephone ? true : undefined}
-						aria-describedby={erreurTelephone ? 'coordonnees-telephone-erreur' : undefined}
-						className={CHAMP}
+						aria-invalid={phoneError ? true : undefined}
+						aria-describedby={phoneError ? 'coordonnees-telephone-erreur' : undefined}
+						className={FIELD}
 						{...register('telephone')}
 					/>
-					{erreurTelephone ? (
+					{phoneError ? (
 						<p id="coordonnees-telephone-erreur" className="text-red-800 text-sm">
-							{erreurTelephone}
+							{phoneError}
 						</p>
 					) : null}
 				</div>
@@ -182,14 +180,14 @@ function FormulaireDeCoordonnees({
 						autoComplete="off"
 						autoCapitalize="none"
 						spellCheck={false}
-						aria-invalid={erreurEmail ? true : undefined}
-						aria-describedby={erreurEmail ? 'coordonnees-email-erreur' : undefined}
-						className={CHAMP}
+						aria-invalid={emailError ? true : undefined}
+						aria-describedby={emailError ? 'coordonnees-email-erreur' : undefined}
+						className={FIELD}
 						{...register('email')}
 					/>
-					{erreurEmail ? (
+					{emailError ? (
 						<p id="coordonnees-email-erreur" className="text-red-800 text-sm">
-							{erreurEmail}
+							{emailError}
 						</p>
 					) : null}
 				</div>
@@ -208,19 +206,19 @@ function FormulaireDeCoordonnees({
 						Décoché, personne ne les voit : ils restent à toi. Coché, tout le monde peut les lire sur ta page. La date
 						de ton choix est gardée, et tu peux le changer quand tu veux.
 					</p>
-					{erreurChoix ? <p className="text-red-800 text-sm">{erreurChoix}</p> : null}
+					{choiceError ? <p className="text-red-800 text-sm">{choiceError}</p> : null}
 				</div>
 				<div role="alert">
 					{message ? <p className="rounded-md bg-red-50 p-3 text-red-800 text-sm">{message}</p> : null}
 				</div>
 				<button
 					type="submit"
-					disabled={enCours}
-					className={`${BOUTON} bg-neutral-900 text-white disabled:cursor-wait disabled:opacity-60`}
+					disabled={pending}
+					className={`${BUTTON} bg-neutral-900 text-white disabled:cursor-wait disabled:opacity-60`}
 				>
-					{enCours ? 'Enregistrement…' : 'Enregistrer'}
+					{pending ? 'Enregistrement…' : 'Enregistrer'}
 				</button>
 			</form>
-		</PanneauDEdition>
+		</EditingPanel>
 	)
 }

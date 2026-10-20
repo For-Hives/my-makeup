@@ -5,28 +5,28 @@ import { useId, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import {
-	type CommuneProposee,
-	MESSAGE_COMMUNE_A_CHOISIR,
-	rayonDuTexte,
-	schemaDuRayonSaisi,
-	type ValeursDeLaLocalisation,
+	CITY_TO_CHOOSE_MESSAGE,
+	enteredRadiusSchema,
+	type LocationValues,
+	type SuggestedCity,
+	textRadius,
 } from '@/lib/dashboard/location'
-import { TITRES_DES_ETAPES } from '@/lib/dashboard/onboarding'
-import { MESSAGE_ECHEC, type ResultatDEnregistrement } from '@/lib/dashboard/result'
+import { STEPS_TITLES } from '@/lib/dashboard/onboarding'
+import { FAILURE_MESSAGE, type SaveResult } from '@/lib/dashboard/result'
 import { BORNES_DU_RAYON_KM } from '@/lib/profil/zone'
-import { ChampDeCommune, type RechercheDeCommunes } from '../CityField'
-import type { EnvoiDeLaLocalisation } from '../LocationEditor'
-import { BOUTON, BOUTON_PRINCIPAL, CadreDEtape, CHAMP, MessageDEchec } from './shared'
+import { type CitiesSearch, CityField } from '../CityField'
+import type { LocationUpload } from '../LocationEditor'
+import { BUTTON, FailureMessage, FIELD, MAIN_BUTTON, StepFrame } from './shared'
 
-const schemaDuFormulaire = z.object({ rayon: schemaDuRayonSaisi, aDomicile: z.boolean() })
-type ValeursDuFormulaire = z.infer<typeof schemaDuFormulaire>
+const formSchema = z.object({ rayon: enteredRadiusSchema, aDomicile: z.boolean() })
+type FormValues = z.infer<typeof formSchema>
 
 /**
  * The second step: her zone (ticket 140). Her commune, chosen in the official list and sent as its
  * code only, her radius and « à domicile », as in the card of her space. « Précédent » goes back to
  * the identity, whose values are not lost. The next step opens once the server has stored the zone.
  */
-export function EtapeZone({
+export function ZoneStep({
 	valeurs,
 	envoyer,
 	chercher,
@@ -34,154 +34,154 @@ export function EtapeZone({
 	surFait,
 	retour,
 }: {
-	valeurs: ValeursDeLaLocalisation
-	envoyer: EnvoiDeLaLocalisation
-	chercher: RechercheDeCommunes
+	valeurs: LocationValues
+	envoyer: LocationUpload
+	chercher: CitiesSearch
 	titre: React.RefObject<HTMLHeadingElement | null>
-	surFait: (valeurs: ValeursDeLaLocalisation) => void
+	surFait: (valeurs: LocationValues) => void
 	retour: () => void
 }) {
-	const identifiant = useId()
+	const id = useId()
 	const {
 		register,
 		handleSubmit,
 		setError,
 		formState: { errors },
-	} = useForm<ValeursDuFormulaire>({
-		resolver: zodResolver(schemaDuFormulaire),
+	} = useForm<FormValues>({
+		resolver: zodResolver(formSchema),
 		defaultValues: { rayon: valeurs.rayonKm === null ? '' : String(valeurs.rayonKm), aDomicile: valeurs.aDomicile },
 	})
-	const [choisie, setChoisie] = useState<CommuneProposee | null>(
+	const [chosen, setChosen] = useState<SuggestedCity | null>(
 		valeurs.codeInsee === '' ? null : { codeInsee: valeurs.codeInsee, libelle: valeurs.libelle }
 	)
-	const [erreurCommune, setErreurCommune] = useState('')
-	const [enCours, setEnCours] = useState(false)
+	const [cityError, setCityError] = useState('')
+	const [pending, setPending] = useState(false)
 	const [message, setMessage] = useState('')
-	const [sessionExpiree, setSessionExpiree] = useState(false)
-	const verrou = useRef(false)
+	const [expiredSession, setExpiredSession] = useState(false)
+	const lock = useRef(false)
 
-	async function enregistrer(saisie: ValeursDuFormulaire, commune: CommuneProposee) {
-		setEnCours(true)
+	async function save(saisie: FormValues, commune: SuggestedCity) {
+		setPending(true)
 		setMessage('')
-		setSessionExpiree(false)
+		setExpiredSession(false)
 		try {
-			const resultat = await envoyer({
+			const result = await envoyer({
 				codeInsee: commune.codeInsee,
-				rayonKm: rayonDuTexte(saisie.rayon),
+				rayonKm: textRadius(saisie.rayon),
 				aDomicile: saisie.aDomicile,
-			}).catch((): ResultatDEnregistrement<ValeursDeLaLocalisation> => ({ ok: false, message: MESSAGE_ECHEC }))
-			if (resultat.ok) {
-				surFait(resultat.valeurs)
+			}).catch((): SaveResult<LocationValues> => ({ ok: false, message: FAILURE_MESSAGE }))
+			if (result.ok) {
+				surFait(result.valeurs)
 				return
 			}
-			setSessionExpiree(resultat.session === 'expiree')
-			setMessage(resultat.message)
-			if (resultat.champs?.codeInsee) setErreurCommune(resultat.champs.codeInsee)
-			if (resultat.champs?.rayonKm) setError('rayon', { message: resultat.champs.rayonKm })
-			if (resultat.champs?.aDomicile) setError('aDomicile', { message: resultat.champs.aDomicile })
+			setExpiredSession(result.session === 'expiree')
+			setMessage(result.message)
+			if (result.champs?.codeInsee) setCityError(result.champs.codeInsee)
+			if (result.champs?.rayonKm) setError('rayon', { message: result.champs.rayonKm })
+			if (result.champs?.aDomicile) setError('aDomicile', { message: result.champs.aDomicile })
 		} finally {
-			verrou.current = false
-			setEnCours(false)
+			lock.current = false
+			setPending(false)
 		}
 	}
 
-	const erreurRayon = errors.rayon?.message
+	const radiusError = errors.rayon?.message
 	return (
-		<CadreDEtape
-			titre={TITRES_DES_ETAPES[2]}
+		<StepFrame
+			titre={STEPS_TITLES[2]}
 			explication="Dis-nous où tu travailles : seule ta commune apparaît sur ta page, jamais ton adresse."
 			reference={titre}
 		>
 			<form
 				noValidate
-				aria-busy={enCours}
+				aria-busy={pending}
 				onSubmit={evenement => {
 					evenement.preventDefault()
-					if (verrou.current) return
-					verrou.current = true
-					const commune = choisie
-					setErreurCommune(commune === null ? MESSAGE_COMMUNE_A_CHOISIR : '')
+					if (lock.current) return
+					lock.current = true
+					const city = chosen
+					setCityError(city === null ? CITY_TO_CHOOSE_MESSAGE : '')
 					void handleSubmit(
 						saisie => {
 							// Without a commune chosen in the list, nothing is sent.
-							if (commune === null) {
-								verrou.current = false
+							if (city === null) {
+								lock.current = false
 								return undefined
 							}
-							return enregistrer(saisie, commune)
+							return save(saisie, city)
 						},
 						() => {
-							verrou.current = false
+							lock.current = false
 						}
 					)(evenement)
 				}}
 				className="flex flex-col gap-4"
 			>
 				<div className="flex flex-col gap-1">
-					<label htmlFor={`${identifiant}-commune`} className="font-medium text-sm">
+					<label htmlFor={`${id}-commune`} className="font-medium text-sm">
 						Ta commune
 					</label>
-					<ChampDeCommune
-						id={`${identifiant}-commune`}
-						idErreur={`${identifiant}-commune-erreur`}
+					<CityField
+						id={`${id}-commune`}
+						idErreur={`${id}-commune-erreur`}
 						libelleInitial={valeurs.libelle}
 						chercher={chercher}
-						erreur={erreurCommune}
+						erreur={cityError}
 						onChoisir={commune => {
-							setChoisie(commune)
-							if (commune !== null) setErreurCommune('')
+							setChosen(commune)
+							if (commune !== null) setCityError('')
 						}}
 					/>
 				</div>
 				<div className="flex flex-col gap-1">
-					<label htmlFor={`${identifiant}-rayon`} className="font-medium text-sm">
+					<label htmlFor={`${id}-rayon`} className="font-medium text-sm">
 						Rayon d’action (en km) <span className="font-normal text-neutral-600">(facultatif)</span>
 					</label>
 					<input
-						id={`${identifiant}-rayon`}
+						id={`${id}-rayon`}
 						type="text"
 						inputMode="numeric"
 						autoComplete="off"
-						aria-invalid={erreurRayon ? true : undefined}
-						aria-describedby={`${identifiant}-rayon-aide${erreurRayon ? ` ${identifiant}-rayon-erreur` : ''}`}
-						className={`${CHAMP} w-32`}
+						aria-invalid={radiusError ? true : undefined}
+						aria-describedby={`${id}-rayon-aide${radiusError ? ` ${id}-rayon-erreur` : ''}`}
+						className={`${FIELD} w-32`}
 						{...register('rayon')}
 					/>
-					<p id={`${identifiant}-rayon-aide`} className="text-neutral-700 text-sm">
+					<p id={`${id}-rayon-aide`} className="text-neutral-700 text-sm">
 						De {BORNES_DU_RAYON_KM.min} à {BORNES_DU_RAYON_KM.max} km, en kilomètres entiers.
 					</p>
-					{erreurRayon ? (
-						<p id={`${identifiant}-rayon-erreur`} className="text-red-800 text-sm">
-							{erreurRayon}
+					{radiusError ? (
+						<p id={`${id}-rayon-erreur`} className="text-red-800 text-sm">
+							{radiusError}
 						</p>
 					) : null}
 				</div>
 				<div className="flex items-center gap-3">
 					<input
-						id={`${identifiant}-domicile`}
+						id={`${id}-domicile`}
 						type="checkbox"
 						className="size-6 shrink-0 accent-neutral-900"
 						{...register('aDomicile')}
 					/>
-					<label htmlFor={`${identifiant}-domicile`} className="min-h-11 flex-1 content-center font-medium text-sm">
+					<label htmlFor={`${id}-domicile`} className="min-h-11 flex-1 content-center font-medium text-sm">
 						Je me déplace à domicile
 					</label>
 				</div>
-				<MessageDEchec message={message} sessionExpiree={sessionExpiree} />
+				<FailureMessage message={message} sessionExpiree={expiredSession} />
 				<div className="flex flex-wrap gap-3">
 					<button
 						type="button"
-						disabled={enCours}
+						disabled={pending}
 						onClick={retour}
-						className={`${BOUTON} border border-neutral-400 bg-white disabled:opacity-60`}
+						className={`${BUTTON} border border-neutral-400 bg-white disabled:opacity-60`}
 					>
 						Précédent
 					</button>
-					<button type="submit" disabled={enCours} className={BOUTON_PRINCIPAL}>
-						{enCours ? 'Enregistrement…' : 'Suivant'}
+					<button type="submit" disabled={pending} className={MAIN_BUTTON}>
+						{pending ? 'Enregistrement…' : 'Suivant'}
 					</button>
 				</div>
 			</form>
-		</CadreDEtape>
+		</StepFrame>
 	)
 }

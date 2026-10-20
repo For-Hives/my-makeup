@@ -5,7 +5,7 @@ import { MESSAGE_VERIFICATION_IMPOSSIBLE } from '@/lib/auth/errors'
 
 // The space cannot check the session for now (a passing outage): the cookie is untouched, nobody
 // is signed out. The message and the trace of the error stay in the server log; she reads a sentence.
-export default function ErreurDeLEspace({
+export default function DashboardError({
 	error,
 	unstable_retry,
 }: {

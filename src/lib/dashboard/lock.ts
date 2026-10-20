@@ -15,25 +15,25 @@ import type { Payload } from 'payload'
  * user: a makeup artist whose account has the same number as the admin who holds the lock would pass.
  */
 
-export const MESSAGE_PROFIL_VERROUILLE =
+export const LOCKED_PROFILE_MESSAGE =
 	'Ton profil est en cours de modification par l’équipe, réessaie dans quelques minutes.'
 
 /** How long a lock lasts when the collection does not say: Payload's default, in seconds. */
-export const DUREE_DU_VERROU_PAR_DEFAUT_S = 300
+export const DEFAULT_LOCK_DURATION_S = 300
 
 /** The profile is open in the administration: the write of her space waits. */
-export class ProfilVerrouille extends Error {
+export class LockedProfile extends Error {
 	constructor() {
-		super(MESSAGE_PROFIL_VERROUILLE)
+		super(LOCKED_PROFILE_MESSAGE)
 		this.name = 'ProfilVerrouille'
 	}
 }
 
 /** The duration of a lock on the profiles, in seconds; null when the collection has no lock at all. */
-function dureeDuVerrouS(payload: Payload): number | null {
-	const reglage = payload.collections.profiles?.config.lockDocuments
-	if (reglage === false) return null
-	return typeof reglage === 'object' ? reglage.duration : DUREE_DU_VERROU_PAR_DEFAUT_S
+function lockDurationS(payload: Payload): number | null {
+	const setting = payload.collections.profiles?.config.lockDocuments
+	if (setting === false) return null
+	return typeof setting === 'object' ? setting.duration : DEFAULT_LOCK_DURATION_S
 }
 
 /**
@@ -41,13 +41,13 @@ function dureeDuVerrouS(payload: Payload): number | null {
  * duration is no lock (Payload's own rule), and neither is one held by an account that is not an
  * admin's. `maintenant` is the clock, for a test.
  */
-export async function verifierQueLAdminNeTientPasLeProfil(
+export async function checkAdminDoesNotHoldProfile(
 	payload: Payload,
 	idDuProfil: number,
 	maintenant: Date = new Date()
 ): Promise<void> {
-	const duree = dureeDuVerrouS(payload)
-	if (duree === null) return
+	const duration = lockDurationS(payload)
+	if (duration === null) return
 	const { totalDocs } = await payload.count({
 		collection: 'payload-locked-documents',
 		overrideAccess: true,
@@ -56,9 +56,9 @@ export async function verifierQueLAdminNeTientPasLeProfil(
 				{ 'document.relationTo': { equals: 'profiles' } },
 				{ 'document.value': { equals: idDuProfil } },
 				{ 'user.relationTo': { equals: 'admins' } },
-				{ updatedAt: { greater_than: new Date(maintenant.getTime() - duree * 1000).toISOString() } },
+				{ updatedAt: { greater_than: new Date(maintenant.getTime() - duration * 1000).toISOString() } },
 			],
 		},
 	})
-	if (totalDocs > 0) throw new ProfilVerrouille()
+	if (totalDocs > 0) throw new LockedProfile()
 }

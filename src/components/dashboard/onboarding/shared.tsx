@@ -2,18 +2,18 @@ import type { ReactNode } from 'react'
 import { expiredSessionUrl } from '@/lib/auth/return-to'
 
 /** The page of the onboarding: where the sign-in page brings her back. */
-export const PAGE_DE_L_ACCUEIL = '/auth/init-account'
+export const ONBOARDING_PAGE = '/auth/init-account'
 
-export const BOUTON = 'min-h-11 rounded-md px-4 py-2 font-medium'
-export const BOUTON_PRINCIPAL = `${BOUTON} bg-neutral-900 text-white disabled:cursor-wait disabled:opacity-60`
-export const CHAMP = 'min-h-11 w-full rounded-md border border-neutral-400 bg-white px-3 py-2 text-base'
+export const BUTTON = 'min-h-11 rounded-md px-4 py-2 font-medium'
+export const MAIN_BUTTON = `${BUTTON} bg-neutral-900 text-white disabled:cursor-wait disabled:opacity-60`
+export const FIELD = 'min-h-11 w-full rounded-md border border-neutral-400 bg-white px-3 py-2 text-base'
 
 /**
  * The failure of a step, under its form: the message in French, and, when the session ended, the way
  * to sign in again in another tab (what she typed stays in this one). It is a live region that is
  * always in the page, so that a screen reader announces the message when it appears.
  */
-export function MessageDEchec({ message, sessionExpiree }: { message: string; sessionExpiree: boolean }) {
+export function FailureMessage({ message, sessionExpiree }: { message: string; sessionExpiree: boolean }) {
 	return (
 		<div role="alert">
 			{message ? (
@@ -24,7 +24,7 @@ export function MessageDEchec({ message, sessionExpiree }: { message: string; se
 							{' '}
 							<a
 								className="font-medium underline"
-								href={expiredSessionUrl(PAGE_DE_L_ACCUEIL)}
+								href={expiredSessionUrl(ONBOARDING_PAGE)}
 								target="_blank"
 								rel="noopener"
 							>
@@ -40,7 +40,7 @@ export function MessageDEchec({ message, sessionExpiree }: { message: string; se
 }
 
 /** The frame of one step: its title (focused when the step opens) and its explanation. */
-export function CadreDEtape({
+export function StepFrame({
 	titre,
 	explication,
 	reference,

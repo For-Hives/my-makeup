@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react'
-import type { Carte } from '@/lib/dashboard/cards'
+import type { Card } from '@/lib/dashboard/cards'
 
 /** What a card shows for a line with nothing stored: never « null », never a blank. */
-export const A_COMPLETER = 'à compléter'
+export const TO_COMPLETE = 'à compléter'
 
-function Valeur({ valeur }: { valeur: string | null }) {
+function Value({ valeur }: { valeur: string | null }) {
 	return valeur === null ? (
-		<span className="text-neutral-600 italic">{A_COMPLETER}</span>
+		<span className="text-neutral-600 italic">{TO_COMPLETE}</span>
 	) : (
 		<span className="whitespace-pre-line break-words">{valeur}</span>
 	)
@@ -17,8 +17,8 @@ function Valeur({ valeur }: { valeur: string | null }) {
  * on each line or « à compléter », and the slot of the button « Modifier » that each section plugs
  * in as it arrives. A server component: it shows what it is given.
  */
-export function CarteDeSection({ carte, action }: { carte: Carte; action?: ReactNode }) {
-	const libelles = carte.lignes.some(ligne => ligne.libelle !== undefined)
+export function SectionCard({ carte, action }: { carte: Card; action?: ReactNode }) {
+	const labels = carte.lignes.some(ligne => ligne.libelle !== undefined)
 	return (
 		<section
 			aria-labelledby={`carte-${carte.section}`}
@@ -31,13 +31,13 @@ export function CarteDeSection({ carte, action }: { carte: Carte; action?: React
 				</h2>
 				{action}
 			</div>
-			{libelles ? (
+			{labels ? (
 				<dl className="mt-3 flex flex-col gap-2">
 					{carte.lignes.map(ligne => (
 						<div key={ligne.libelle} className="flex min-w-0 flex-col gap-0.5 sm:flex-row sm:gap-3">
 							<dt className="shrink-0 font-medium text-neutral-700 text-sm sm:w-48">{ligne.libelle}</dt>
 							<dd className="min-w-0">
-								<Valeur valeur={ligne.valeur} />
+								<Value valeur={ligne.valeur} />
 							</dd>
 						</div>
 					))}
@@ -47,7 +47,7 @@ export function CarteDeSection({ carte, action }: { carte: Carte; action?: React
 					{carte.lignes.map((ligne, rang) => (
 						// biome-ignore lint/suspicious/noArrayIndexKey: the lines are text of a card, never reordered here
 						<li key={`${rang}-${ligne.valeur}`} className="min-w-0">
-							<Valeur valeur={ligne.valeur} />
+							<Value valeur={ligne.valeur} />
 						</li>
 					))}
 				</ul>

@@ -19,14 +19,14 @@ import {
 	longueurDescription,
 } from '../profil/completude'
 import { champsDuProfil } from '../profil/etat'
-import type { ProfilDeLEspace, Section } from './cards'
-import { estDisponible } from './availability'
+import { isAvailable } from './availability'
+import type { DashboardProfile, Section } from './cards'
 
 /** Where a profile stands for her: the four states the page names. */
-export type EtatAffiche = 'vide' | 'incomplet' | 'publiable' | 'interne'
+export type DisplayedState = 'vide' | 'incomplet' | 'publiable' | 'interne'
 
 /** One point she lacks. */
-export interface Manque {
+export interface Missing {
 	readonly critere: Critere
 	/** What to do, in French. */
 	readonly texte: string
@@ -36,21 +36,21 @@ export interface Manque {
 	readonly requis: boolean
 }
 
-export interface Avancement {
+export interface Progress {
 	readonly score: number
 	readonly sur: 13
 	/** `score` out of `sur`, rounded, 0 to 100. */
 	readonly pourcentage: number
-	readonly etat: EtatAffiche
+	readonly etat: DisplayedState
 	readonly titre: string
 	/** What the state changes for her, in French. */
 	readonly consequence: string
 	/** What she lacks, in the display order of the criteria; the required ones first. */
-	readonly manques: readonly Manque[]
+	readonly manques: readonly Missing[]
 }
 
 /** The card where each criterion of the progress bar is edited. */
-export const SECTION_DU_CRITERE: Record<Critere, Section> = {
+export const CRITERION_SECTION: Record<Critere, Section> = {
 	nom: 'identite',
 	specialite: 'identite',
 	nom_artiste: 'identite',
@@ -66,7 +66,7 @@ export const SECTION_DU_CRITERE: Record<Critere, Section> = {
 	galerie: 'portfolio',
 }
 
-const TEXTE_ABSENT: Record<Critere, string> = {
+const MISSING_TEXT: Record<Critere, string> = {
 	nom: 'Ajoute ton prénom et ton nom.',
 	specialite: 'Indique ta spécialité.',
 	nom_artiste: 'Ajoute ton nom d’artiste.',
@@ -84,7 +84,7 @@ const TEXTE_ABSENT: Record<Critere, string> = {
 }
 
 /** Which of the six conditions of « publiable » a criterion carries, when it carries one. */
-const CONDITION_DU_CRITERE = {
+const CRITERION_CONDITION = {
 	photo: 'photoPrincipale',
 	ville: 'villeExploitable',
 	specialite: 'specialite',
@@ -93,31 +93,31 @@ const CONDITION_DU_CRITERE = {
 	reseaux: 'canalDeContact',
 } as const satisfies Partial<Record<Critere, keyof Completude['conditions']>>
 
-function texteDuManque(critere: Critere, absent: boolean, profil: ProfilDeLEspace): string {
-	if (absent) return TEXTE_ABSENT[critere]
+function missingText(critere: Critere, absent: boolean, profil: DashboardProfile): string {
+	if (absent) return MISSING_TEXT[critere]
 	if (critere === 'description') {
 		return `Allonge ta description : ${DESCRIPTION_MIN} caractères au moins pour être publiable (${longueurDescription(profil.description)} aujourd’hui).`
 	}
 	if (critere === 'offres') {
 		return `Donne un prix en chiffres, entre ${PRIX_MIN} et ${PRIX_MAX.toLocaleString('fr-FR')} €, à l’une de tes prestations.`
 	}
-	return TEXTE_ABSENT[critere]
+	return MISSING_TEXT[critere]
 }
 
-function etatDe(lecture: Completude): EtatAffiche {
+function stateOf(lecture: Completude): DisplayedState {
 	if (lecture.interne) return 'interne'
 	if (lecture.publiable) return 'publiable'
 	return lecture.entierementVide ? 'vide' : 'incomplet'
 }
 
-const TITRES: Record<EtatAffiche, string> = {
+const TITLES: Record<DisplayedState, string> = {
 	vide: 'Ton profil est vide',
 	incomplet: 'Ton profil n’est pas encore publiable',
 	publiable: 'Ton profil est publiable',
 	interne: 'Compte interne My Makeup',
 }
 
-const CONSEQUENCES: Record<EtatAffiche, string> = {
+const CONSEQUENCES: Record<DisplayedState, string> = {
 	vide: 'Un profil entièrement vide n’est pas listé dans la recherche. Dès qu’un des points ci-dessous « pour être publiable » est rempli, il y apparaît.',
 	incomplet:
 		'Ton profil apparaît dans la recherche, mais Google ne l’indexe pas encore : remplis les points « pour être publiable » ci-dessous.',
@@ -125,33 +125,35 @@ const CONSEQUENCES: Record<EtatAffiche, string> = {
 	interne: 'Ce compte est celui de l’équipe : son profil n’est jamais publiable, ni indexé.',
 }
 
-const HORS_RECHERCHE =
+const OUT_OF_SEARCH =
 	' Tu es pourtant marquée « pas disponible » : tant que tu l’es, tu n’apparais pas dans la recherche.'
 
 /**
  * The progress of a profile, by the single definition: what the server stores at every save is
  * computed by the same function from the same fields (plan 02 I20).
  */
-export function avancementDuProfil(profil: ProfilDeLEspace): Avancement {
-	const lecture = completude(champsDuProfil(profil))
-	const absents = new Set<Critere>(lecture.manquants)
-	const manques = CRITERES.flatMap((critere): Manque[] => {
+export function profileProgress(profil: DashboardProfile): Progress {
+	const reading = completude(champsDuProfil(profil))
+	const absents = new Set<Critere>(reading.manquants)
+	const missing = CRITERES.flatMap((critere): Missing[] => {
 		const absent = absents.has(critere)
 		const condition =
-			critere in CONDITION_DU_CRITERE ? CONDITION_DU_CRITERE[critere as keyof typeof CONDITION_DU_CRITERE] : null
-		const requis = condition !== null && !lecture.conditions[condition]
-		if (!(absent || requis)) return []
-		return [{ critere, texte: texteDuManque(critere, absent, profil), section: SECTION_DU_CRITERE[critere], requis }]
+			critere in CRITERION_CONDITION ? CRITERION_CONDITION[critere as keyof typeof CRITERION_CONDITION] : null
+		const required = condition !== null && !reading.conditions[condition]
+		if (!(absent || required)) return []
+		return [
+			{ critere, texte: missingText(critere, absent, profil), section: CRITERION_SECTION[critere], requis: required },
+		]
 	})
-	const etat = etatDe(lecture)
-	const cacheeParLaDisponibilite = (etat === 'incomplet' || etat === 'publiable') && !estDisponible(profil.available)
+	const state = stateOf(reading)
+	const hiddenByAvailability = (state === 'incomplet' || state === 'publiable') && !isAvailable(profil.available)
 	return {
-		score: lecture.score,
-		sur: lecture.sur,
-		pourcentage: Math.round((lecture.score / lecture.sur) * 100),
-		etat,
-		titre: TITRES[etat],
-		consequence: CONSEQUENCES[etat] + (cacheeParLaDisponibilite ? HORS_RECHERCHE : ''),
-		manques: [...manques.filter(m => m.requis), ...manques.filter(m => !m.requis)],
+		score: reading.score,
+		sur: reading.sur,
+		pourcentage: Math.round((reading.score / reading.sur) * 100),
+		etat: state,
+		titre: TITLES[state],
+		consequence: CONSEQUENCES[state] + (hiddenByAvailability ? OUT_OF_SEARCH : ''),
+		manques: [...missing.filter(m => m.requis), ...missing.filter(m => !m.requis)],
 	}
 }

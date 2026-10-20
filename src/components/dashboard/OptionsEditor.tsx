@@ -2,18 +2,18 @@
 
 import { type KeyboardEvent, useEffect, useRef, useState } from 'react'
 import {
-	type ChampDeLigne,
-	type DefinitionDeListe,
-	erreursDeLaLigne,
-	ligneVide,
-	MESSAGES_DE_LISTE,
-	memeLigne,
-	nettoyerLaLigne,
+	cleanRow,
+	emptyRow,
+	LIST_MESSAGES,
+	type ListDefinition,
 	OPTIONS_MAX,
-	rangApresRetrait,
-	type ValeursDeLigne,
+	type RowField,
+	type RowValues,
+	rankAfterRemoval,
+	rowErrors,
+	sameRow,
 } from '@/lib/dashboard/list'
-import { BOUTON, BOUTON_DE_LIGNE, CHAMP, ignorerLaRepetition, type LigneEditee, nouvelleCle } from './list-helpers'
+import { BUTTON, type EditedRow, FIELD, ignoreRepeat, newKey, ROW_BUTTON } from './list-helpers'
 
 /**
  * The options of the offer being edited (ticket 132): the options she already has, each with its three
@@ -32,25 +32,25 @@ import { BOUTON, BOUTON_DE_LIGNE, CHAMP, ignorerLaRepetition, type LigneEditee, 
  */
 
 /** The refusals of every option of the list, by key of option then by field (what is required, then the bounds). */
-export function erreursDesOptions(
-	definition: DefinitionDeListe,
-	options: readonly LigneEditee[],
+export function optionsErrors(
+	definition: ListDefinition,
+	options: readonly EditedRow[],
 	maintenant: Date
 ): Readonly<Record<string, Readonly<Record<string, string>>>> {
 	return Object.fromEntries(
 		options.flatMap(option => {
-			const erreurs = erreursDeLaLigne(definition, nettoyerLaLigne(definition, option.valeurs), {
+			const errors = rowErrors(definition, cleanRow(definition, option.valeurs), {
 				avecRequis: true,
 				maintenant,
 			})
-			return Object.keys(erreurs).length > 0 ? [[option.cle, erreurs] as const] : []
+			return Object.keys(errors).length > 0 ? [[option.cle, errors] as const] : []
 		})
 	)
 }
 
-type Cible = { genre: 'retirer'; cle: string; n: number } | { genre: 'formulaire' | 'titre'; n: number }
+type Target = { genre: 'retirer'; cle: string; n: number } | { genre: 'formulaire' | 'titre'; n: number }
 
-function ChampDOption({
+function OptionField({
 	identifiant,
 	champ,
 	libelle,
@@ -61,7 +61,7 @@ function ChampDOption({
 	onChange,
 }: {
 	identifiant: string
-	champ: ChampDeLigne
+	champ: RowField
 	libelle: string
 	requis: boolean
 	valeur: string
@@ -69,16 +69,16 @@ function ChampDOption({
 	aide?: string
 	onChange: (valeur: string) => void
 }) {
-	const decrit = [aide ? `${identifiant}-aide` : '', erreur ? `${identifiant}-erreur` : ''].filter(Boolean).join(' ')
-	const commun = {
+	const describes = [aide ? `${identifiant}-aide` : '', erreur ? `${identifiant}-erreur` : ''].filter(Boolean).join(' ')
+	const shared = {
 		id: identifiant,
 		name: champ.nom,
 		value: valeur,
 		autoComplete: 'off',
 		'aria-required': requis ? (true as const) : undefined,
 		'aria-invalid': erreur ? (true as const) : undefined,
-		'aria-describedby': decrit || undefined,
-		className: CHAMP,
+		'aria-describedby': describes || undefined,
+		className: FIELD,
 	}
 	return (
 		<div className="flex flex-col gap-1">
@@ -86,10 +86,10 @@ function ChampDOption({
 				{libelle}
 			</label>
 			{champ.genre === 'long' ? (
-				<textarea {...commun} rows={3} onChange={evenement => onChange(evenement.target.value)} />
+				<textarea {...shared} rows={3} onChange={evenement => onChange(evenement.target.value)} />
 			) : (
 				<input
-					{...commun}
+					{...shared}
 					type="text"
 					placeholder={champ.exemple}
 					onChange={evenement => onChange(evenement.target.value)}
@@ -109,7 +109,7 @@ function ChampDOption({
 	)
 }
 
-export function EditeurDOptions({
+export function OptionsEditor({
 	definition,
 	options,
 	onOptions,
@@ -119,38 +119,38 @@ export function EditeurDOptions({
 	onRefus,
 	annoncer,
 }: {
-	definition: DefinitionDeListe
-	options: readonly LigneEditee[]
-	onOptions: (options: LigneEditee[]) => void
+	definition: ListDefinition
+	options: readonly EditedRow[]
+	onOptions: (options: EditedRow[]) => void
 	/** The text of the small form that adds an option. */
-	saisie: ValeursDeLigne
-	onSaisie: (saisie: ValeursDeLigne) => void
+	saisie: RowValues
+	onSaisie: (saisie: RowValues) => void
 	/** The sentence under the small form when an option is refused as a copy (also set by the panel). */
 	refus: string
 	onRefus: (message: string) => void
 	annoncer: (phrase: string) => void
 }) {
-	const racine = useRef<HTMLFieldSetElement>(null)
-	const pointeur = useRef(false)
-	const [erreursDeLAjout, setErreursDeLAjout] = useState<Readonly<Record<string, string>>>({})
-	const [cible, setCible] = useState<Cible | null>(null)
-	const erreurs = erreursDesOptions(definition, options, new Date())
-	const indice = definition.indice?.(nettoyerLaLigne(definition, saisie)) ?? ''
-	const { champs } = definition
+	const root = useRef<HTMLFieldSetElement>(null)
+	const pointer = useRef(false)
+	const [additionErrors, setAdditionErrors] = useState<Readonly<Record<string, string>>>({})
+	const [target, setTarget] = useState<Target | null>(null)
+	const errors = optionsErrors(definition, options, new Date())
+	const hint = definition.indice?.(cleanRow(definition, saisie)) ?? ''
+	const { champs: fields } = definition
 
 	// The focus, once the options have been drawn again.
 	useEffect(() => {
-		if (cible === null) return
-		if (cible.genre === 'retirer') {
-			racine.current?.querySelector<HTMLElement>(`[data-retirer-option="${cible.cle}"]`)?.focus()
-		} else if (cible.genre === 'formulaire') {
-			racine.current?.querySelector<HTMLElement>(`#options-${champs[0]?.nom}`)?.focus()
+		if (target === null) return
+		if (target.genre === 'retirer') {
+			root.current?.querySelector<HTMLElement>(`[data-retirer-option="${target.cle}"]`)?.focus()
+		} else if (target.genre === 'formulaire') {
+			root.current?.querySelector<HTMLElement>(`#options-${fields[0]?.nom}`)?.focus()
 		} else {
-			racine.current?.querySelector<HTMLElement>('[data-titre-options]')?.focus()
+			root.current?.querySelector<HTMLElement>('[data-titre-options]')?.focus()
 		}
-	}, [cible, champs])
+	}, [target, fields])
 
-	function changer(cle: string, nom: string, valeur: string) {
+	function change(cle: string, nom: string, valeur: string) {
 		onRefus('')
 		onOptions(
 			options.map(option =>
@@ -159,106 +159,102 @@ export function EditeurDOptions({
 		)
 	}
 
-	function saisir(nom: string, valeur: string) {
+	function enter(nom: string, valeur: string) {
 		onRefus('')
 		onSaisie({ ...saisie, [nom]: valeur })
-		setErreursDeLAjout(avant => Object.fromEntries(Object.entries(avant).filter(([cle]) => cle !== nom)))
+		setAdditionErrors(avant => Object.fromEntries(Object.entries(avant).filter(([cle]) => cle !== nom)))
 	}
 
-	function ajouter() {
-		const valeurs = nettoyerLaLigne(definition, saisie)
-		const refusees = erreursDeLaLigne(definition, valeurs, { avecRequis: true, maintenant: new Date() })
-		if (Object.keys(refusees).length > 0) {
-			setErreursDeLAjout(refusees)
+	function add() {
+		const values = cleanRow(definition, saisie)
+		const refused = rowErrors(definition, values, { avecRequis: true, maintenant: new Date() })
+		if (Object.keys(refused).length > 0) {
+			setAdditionErrors(refused)
 			onRefus('')
-			const premier = champs.find(({ nom }) => refusees[nom] !== undefined)
-			if (premier) racine.current?.querySelector<HTMLElement>(`#options-${premier.nom}`)?.focus()
+			const first = fields.find(({ nom: name }) => refused[name] !== undefined)
+			if (first) root.current?.querySelector<HTMLElement>(`#options-${first.nom}`)?.focus()
 			return
 		}
-		if (options.some(option => memeLigne(definition, option.valeurs, valeurs))) {
+		if (options.some(option => sameRow(definition, option.valeurs, values))) {
 			onRefus(definition.doublon)
 			return
 		}
 		if (options.length >= OPTIONS_MAX) {
-			onRefus(MESSAGES_DE_LISTE.tropDOptions)
+			onRefus(LIST_MESSAGES.tropDOptions)
 			return
 		}
 		onRefus('')
-		onOptions([...options, { cle: nouvelleCle(), id: null, valeurs }])
-		onSaisie(ligneVide(definition))
-		setErreursDeLAjout({})
+		onOptions([...options, { cle: newKey(), id: null, valeurs: values }])
+		onSaisie(emptyRow(definition))
+		setAdditionErrors({})
 	}
 
-	function retirer(option: LigneEditee, rang: number) {
-		const clavier = !pointeur.current
-		pointeur.current = false
-		const restantes = options.filter(autre => autre.cle !== option.cle)
-		onOptions(restantes)
+	function remove(option: EditedRow, rang: number) {
+		const keyboard = !pointer.current
+		pointer.current = false
+		const remainingRows = options.filter(autre => autre.cle !== option.cle)
+		onOptions(remainingRows)
 		onRefus('')
 		annoncer(definition.retrait(definition.nom(option.valeurs)))
-		const suivant = rangApresRetrait(restantes.length, rang)
-		const restante = suivant === null ? undefined : restantes[suivant]
-		const n = (cible?.n ?? 0) + 1
-		if (restante !== undefined) setCible({ genre: 'retirer', cle: restante.cle, n })
-		else setCible({ genre: clavier ? 'formulaire' : 'titre', n })
+		const next = rankAfterRemoval(remainingRows.length, rang)
+		const remaining = next === null ? undefined : remainingRows[next]
+		const n = (target?.n ?? 0) + 1
+		if (remaining !== undefined) setTarget({ genre: 'retirer', cle: remaining.cle, n })
+		else setTarget({ genre: keyboard ? 'formulaire' : 'titre', n })
 	}
 
 	// Enter in a one-line field never validates the offer: in the small form it adds the option (once, if held down).
-	function surEntree(evenement: KeyboardEvent<HTMLFieldSetElement>) {
-		const cibleDeLEvenement = evenement.target as HTMLElement
-		if (evenement.key !== 'Enter' || cibleDeLEvenement.tagName !== 'INPUT') return
+	function onEntry(evenement: KeyboardEvent<HTMLFieldSetElement>) {
+		const eventTarget = evenement.target as HTMLElement
+		if (evenement.key !== 'Enter' || eventTarget.tagName !== 'INPUT') return
 		evenement.preventDefault()
-		if (!evenement.repeat && cibleDeLEvenement.closest('[data-ajout-option]')) ajouter()
+		if (!evenement.repeat && eventTarget.closest('[data-ajout-option]')) add()
 	}
 
 	return (
-		<fieldset
-			ref={racine}
-			onKeyDown={surEntree}
-			className="flex flex-col gap-3 rounded-md border border-neutral-300 p-3"
-		>
+		<fieldset ref={root} onKeyDown={onEntry} className="flex flex-col gap-3 rounded-md border border-neutral-300 p-3">
 			<legend className="px-1 font-semibold text-base">
 				<span data-titre-options tabIndex={-1}>
 					Options de cette prestation
 				</span>
 			</legend>
 			{options.length === 0 ? (
-				<p className="text-neutral-700 text-sm">{MESSAGES_DE_LISTE.aucune(definition.singulier)}</p>
+				<p className="text-neutral-700 text-sm">{LIST_MESSAGES.aucune(definition.singulier)}</p>
 			) : (
 				<ul className="flex flex-col gap-3" aria-label={`Tes ${definition.pluriel}`}>
 					{options.map((option, rang) => {
-						const nom = definition.nom(option.valeurs)
+						const name = definition.nom(option.valeurs)
 						return (
 							<li key={option.cle} data-option className="flex flex-col gap-2 rounded-md border border-neutral-200 p-3">
-								{champs.map(champ => (
-									<ChampDOption
+								{fields.map(champ => (
+									<OptionField
 										key={champ.nom}
 										identifiant={`option-${option.cle}-${champ.nom}`}
 										champ={champ}
 										libelle={`${champ.libelle}, option ${rang + 1}`}
 										requis={definition.requis[champ.nom] !== undefined}
 										valeur={option.valeurs[champ.nom] ?? ''}
-										erreur={erreurs[option.cle]?.[champ.nom]}
-										onChange={valeur => changer(option.cle, champ.nom, valeur)}
+										erreur={errors[option.cle]?.[champ.nom]}
+										onChange={valeur => change(option.cle, champ.nom, valeur)}
 									/>
 								))}
 								<div>
 									<button
 										type="button"
 										data-retirer-option={option.cle}
-										aria-label={`Retirer ${definition.designation} ${nom}`.trim()}
+										aria-label={`Retirer ${definition.designation} ${name}`.trim()}
 										onKeyDown={evenement => {
-											pointeur.current = false
-											ignorerLaRepetition(evenement)
+											pointer.current = false
+											ignoreRepeat(evenement)
 										}}
 										onMouseDown={() => {
-											pointeur.current = true
+											pointer.current = true
 										}}
 										onPointerDown={() => {
-											pointeur.current = true
+											pointer.current = true
 										}}
-										onClick={() => retirer(option, rang)}
-										className={BOUTON_DE_LIGNE}
+										onClick={() => remove(option, rang)}
+										className={ROW_BUTTON}
 									>
 										Retirer
 									</button>
@@ -270,19 +266,19 @@ export function EditeurDOptions({
 			)}
 			<fieldset data-ajout-option className="flex flex-col gap-3 border-0 p-0">
 				<legend className="font-semibold text-sm">Ajouter une option</legend>
-				{champs.map(champ => (
+				{fields.map(champ => (
 					<div key={champ.nom} className="flex flex-col gap-1">
-						<ChampDOption
+						<OptionField
 							identifiant={`options-${champ.nom}`}
 							champ={champ}
 							libelle={champ.libelle}
 							requis={definition.requis[champ.nom] !== undefined}
 							valeur={saisie[champ.nom] ?? ''}
-							erreur={erreursDeLAjout[champ.nom]}
+							erreur={additionErrors[champ.nom]}
 							aide={champ.nom === 'price' ? champ.aide : undefined}
-							onChange={valeur => saisir(champ.nom, valeur)}
+							onChange={valeur => enter(champ.nom, valeur)}
 						/>
-						{champ.nom === 'price' && indice ? <p className="text-neutral-700 text-sm">{indice}</p> : null}
+						{champ.nom === 'price' && hint ? <p className="text-neutral-700 text-sm">{hint}</p> : null}
 					</div>
 				))}
 				{refus ? (
@@ -293,9 +289,9 @@ export function EditeurDOptions({
 				<div>
 					<button
 						type="button"
-						onKeyDown={ignorerLaRepetition}
-						onClick={ajouter}
-						className={`${BOUTON} border border-neutral-400 bg-white`}
+						onKeyDown={ignoreRepeat}
+						onClick={add}
+						className={`${BUTTON} border border-neutral-400 bg-white`}
 					>
 						Ajouter l’option
 					</button>

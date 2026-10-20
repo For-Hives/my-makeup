@@ -13,22 +13,22 @@ import { z } from 'zod'
 import { ORIGINES_DECLAREES } from '../analytics/events'
 import { completude } from '../profil/completude'
 import { champsDuProfil, type DocumentDuProfil } from '../profil/etat'
-import { IDENTITE_MAX, schemaDeLIdentite, schemaDeLIdentiteStrict } from './identity'
+import { IDENTITY_MAX, identitySchema, strictIdentitySchema } from './identity'
 
-export const ETAPES = [1, 2, 3] as const
-export type EtapeDAccueil = (typeof ETAPES)[number]
+export const STEPS = [1, 2, 3] as const
+export type OnboardingStep = (typeof STEPS)[number]
 
 /** Where she stands: a step still to do, or all three done. */
-export type PositionDAccueil = EtapeDAccueil | 'terminee'
+export type OnboardingPosition = OnboardingStep | 'terminee'
 
-export const TITRES_DES_ETAPES: Readonly<Record<EtapeDAccueil, string>> = {
+export const STEPS_TITLES: Readonly<Record<OnboardingStep, string>> = {
 	1: 'Ton identité',
 	2: 'Ta zone',
 	3: 'Ta photo principale',
 }
 
 /** The chapter of the onboarding where each step is seen from, in the stepper. */
-export const NOMS_DES_ETAPES: Readonly<Record<EtapeDAccueil, string>> = {
+export const STEPS_NAMES: Readonly<Record<OnboardingStep, string>> = {
 	1: 'Identité',
 	2: 'Zone',
 	3: 'Photo',
@@ -41,32 +41,32 @@ export const NOMS_DES_ETAPES: Readonly<Record<EtapeDAccueil, string>> = {
  * 3. a main photo.
  * A profile that holds the three is `actif` by the single rule.
  */
-export function positionDAccueil(profil: DocumentDuProfil | null | undefined): PositionDAccueil {
-	const lecture = completude(champsDuProfil(profil))
-	if (lecture.manquants.includes('nom') || !lecture.conditions.specialite) return 1
-	if (!lecture.conditions.villeExploitable) return 2
-	if (!lecture.conditions.photoPrincipale) return 3
+export function onboardingPosition(profil: DocumentDuProfil | null | undefined): OnboardingPosition {
+	const reading = completude(champsDuProfil(profil))
+	if (reading.manquants.includes('nom') || !reading.conditions.specialite) return 1
+	if (!reading.conditions.villeExploitable) return 2
+	if (!reading.conditions.photoPrincipale) return 3
 	return 'terminee'
 }
 
 /** The message under the speciality, which the onboarding asks for and the space leaves optional. */
-export const MESSAGE_SPECIALITE = 'Indique ta spécialité.'
+export const SPECIALTY_MESSAGE = 'Indique ta spécialité.'
 
-const specialiteRequise = z
-	.string({ error: MESSAGE_SPECIALITE })
+const requiredSpecialty = z
+	.string({ error: SPECIALTY_MESSAGE })
 	.trim()
-	.min(1, MESSAGE_SPECIALITE)
-	.max(IDENTITE_MAX, `Ta spécialité ne doit pas dépasser ${IDENTITE_MAX} caractères.`)
+	.min(1, SPECIALTY_MESSAGE)
+	.max(IDENTITY_MAX, `Ta spécialité ne doit pas dépasser ${IDENTITY_MAX} caractères.`)
 
 /**
  * The identity as the first step asks for it: the four fields of the space, but the speciality is
  * required, since without it the profile cannot be active. The shared schema stays as it is.
  */
-export const schemaDeLIdentiteDAccueil = schemaDeLIdentite.extend({ specialite: specialiteRequise })
-export const schemaDeLIdentiteDAccueilStrict = schemaDeLIdentiteStrict.extend({ specialite: specialiteRequise })
+export const onboardingIdentitySchema = identitySchema.extend({ specialite: requiredSpecialty })
+export const strictOnboardingIdentitySchema = strictIdentitySchema.extend({ specialite: requiredSpecialty })
 
 /** The answers to « Comment as-tu connu My Makeup ? », as the old site words them. */
-export const LIBELLES_DES_ORIGINES: Readonly<Record<(typeof ORIGINES_DECLAREES)[number], string>> = {
+export const ORIGINS_LABELS: Readonly<Record<(typeof ORIGINES_DECLAREES)[number], string>> = {
 	instagram: 'Instagram',
 	google: 'Recherche Google',
 	'bouche-a-oreille': 'Bouche-à-oreille',

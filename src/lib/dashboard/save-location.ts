@@ -1,21 +1,15 @@
 import type { Payload } from 'payload'
-import {
-	erreursParChamp,
-	libelleDeLaCommune,
-	MESSAGE_SERVICE_DES_COMMUNES,
-	schemaDeLaLocalisationStrict,
-	type ValeursDeLaLocalisation,
-} from './location'
-import { identifiantDuProfilAEcrire, type UtilisateurDeLEspace } from './my-profile'
-import { type CommuneDuCode, communeDuCode } from './city-reference'
-import { echecDePayload, MESSAGE_ECHEC, type ResultatDEnregistrement } from './result'
+import { type CityFromCode, cityFromCode } from './city-reference'
+import { CITIES_SERVICE_MESSAGE, cityLabel, errorsByField, type LocationValues, strictLocationSchema } from './location'
+import { type DashboardUser, profileIdToWrite } from './my-profile'
+import { FAILURE_MESSAGE, payloadFailure, type SaveResult } from './result'
 
 /** The question to the list of communes: a parameter so that a test can change it, never a request's. */
-export type QuestionDeCommune = (codeInsee: string) => Promise<CommuneDuCode>
+export type CityQuestion = (codeInsee: string) => Promise<CityFromCode>
 
 /** The fields of the form, and the name Payload gives their paths. */
-const CHAMPS = ['codeInsee', 'rayonKm', 'aDomicile'] as const
-const champDuChemin = (chemin: string): string =>
+const FIELDS = ['codeInsee', 'rayonKm', 'aDomicile'] as const
+const pathField = (chemin: string): string =>
 	chemin.startsWith('city')
 		? 'codeInsee'
 		: chemin === 'radiusKm'
@@ -39,24 +33,24 @@ const champDuChemin = (chemin: string): string =>
  *   false`), the slug untouched;
  * - the values given back are those the database stored, read from the document Payload returns.
  */
-export async function enregistrerLocalisation(
+export async function saveLocation(
 	payload: Payload,
-	utilisateur: UtilisateurDeLEspace,
+	utilisateur: DashboardUser,
 	saisie: unknown,
-	questionner: QuestionDeCommune = communeDuCode
-): Promise<ResultatDEnregistrement<ValeursDeLaLocalisation>> {
-	const lue = schemaDeLaLocalisationStrict.safeParse(saisie)
-	if (!lue.success) {
-		const champs = erreursParChamp(lue.error)
-		return Object.keys(champs).length > 0
-			? { ok: false, message: 'Un champ n’est pas valide : corrige-le, puis enregistre à nouveau.', champs }
-			: { ok: false, message: MESSAGE_ECHEC }
+	questionner: CityQuestion = cityFromCode
+): Promise<SaveResult<LocationValues>> {
+	const parsed = strictLocationSchema.safeParse(saisie)
+	if (!parsed.success) {
+		const fields = errorsByField(parsed.error)
+		return Object.keys(fields).length > 0
+			? { ok: false, message: 'Un champ n’est pas valide : corrige-le, puis enregistre à nouveau.', champs: fields }
+			: { ok: false, message: FAILURE_MESSAGE }
 	}
-	const { codeInsee, rayonKm, aDomicile } = lue.data
+	const { codeInsee, rayonKm: radiusKm, aDomicile: atHome } = parsed.data
 	try {
-		const id = await identifiantDuProfilAEcrire(payload, utilisateur)
-		if (id === null) return { ok: false, message: MESSAGE_ECHEC }
-		const actuel = await payload.findByID({
+		const id = await profileIdToWrite(payload, utilisateur)
+		if (id === null) return { ok: false, message: FAILURE_MESSAGE }
+		const current = await payload.findByID({
 			collection: 'profiles',
 			depth: 0,
 			id,
@@ -66,23 +60,23 @@ export async function enregistrerLocalisation(
 		})
 
 		let city: { name: string; inseeCode: string; latitude: number | null; longitude: number | null } | undefined
-		if (actuel.city?.inseeCode !== codeInsee) {
-			const reponse = await questionner(codeInsee)
-			if (reponse.genre === 'panne') return { ok: false, message: MESSAGE_SERVICE_DES_COMMUNES }
-			if (reponse.genre === 'inconnue') {
+		if (current.city?.inseeCode !== codeInsee) {
+			const response = await questionner(codeInsee)
+			if (response.genre === 'panne') return { ok: false, message: CITIES_SERVICE_MESSAGE }
+			if (response.genre === 'inconnue') {
 				return {
 					ok: false,
 					message: 'Un champ n’est pas valide : corrige-le, puis enregistre à nouveau.',
 					champs: { codeInsee: 'Cette commune n’est pas dans la liste officielle : choisis-la dans les suggestions.' },
 				}
 			}
-			const { nom, latitude, longitude } = reponse.commune
-			city = { name: nom, inseeCode: codeInsee, latitude, longitude }
+			const { nom: name, latitude, longitude } = response.commune
+			city = { name: name, inseeCode: codeInsee, latitude, longitude }
 		}
 
-		const stocke = await payload.update({
+		const stored = await payload.update({
 			collection: 'profiles',
-			data: { ...(city ? { city } : {}), radiusKm: rayonKm, homeService: aDomicile },
+			data: { ...(city ? { city } : {}), radiusKm: radiusKm, homeService: atHome },
 			depth: 0,
 			id,
 			overrideAccess: false,
@@ -91,13 +85,13 @@ export async function enregistrerLocalisation(
 		return {
 			ok: true,
 			valeurs: {
-				codeInsee: stocke.city?.inseeCode ?? '',
-				libelle: libelleDeLaCommune({ nom: stocke.city?.name, departement: stocke.city?.department }),
-				rayonKm: stocke.radiusKm ?? null,
-				aDomicile: stocke.homeService === true,
+				codeInsee: stored.city?.inseeCode ?? '',
+				libelle: cityLabel({ nom: stored.city?.name, departement: stored.city?.department }),
+				rayonKm: stored.radiusKm ?? null,
+				aDomicile: stored.homeService === true,
 			},
 		}
-	} catch (erreur) {
-		return echecDePayload(erreur, CHAMPS, champDuChemin)
+	} catch (error) {
+		return payloadFailure(error, FIELDS, pathField)
 	}
 }

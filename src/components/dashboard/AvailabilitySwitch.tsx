@@ -1,13 +1,11 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import type { ValeursDeLaDisponibilite } from '@/lib/dashboard/availability'
-import { mesurerLEnregistrement } from '@/lib/dashboard/analytics'
-import { MESSAGE_ECHEC, type ResultatDEnregistrement } from '@/lib/dashboard/result'
+import { trackSave } from '@/lib/dashboard/analytics'
+import type { AvailabilityValues } from '@/lib/dashboard/availability'
+import { FAILURE_MESSAGE, type SaveResult } from '@/lib/dashboard/result'
 
-export type EnvoiDeLaDisponibilite = (
-	valeurs: ValeursDeLaDisponibilite
-) => Promise<ResultatDEnregistrement<ValeursDeLaDisponibilite>>
+export type AvailabilityUpload = (valeurs: AvailabilityValues) => Promise<SaveResult<AvailabilityValues>>
 
 /**
  * The switch of the card « Disponibilité » (ticket 124). It shows the stored state and changes it
@@ -18,50 +16,45 @@ export type EnvoiDeLaDisponibilite = (
  * The state is also written on the card (« Disponible » / « Pas disponible en ce moment »), read
  * again from the database after a save: the switch never relies on colour alone.
  */
-export function InterrupteurDeDisponibilite({
-	disponible,
-	envoyer,
-}: {
-	disponible: boolean
-	envoyer: EnvoiDeLaDisponibilite
-}) {
-	const [etat, setEtat] = useState(disponible)
-	const [vu, setVu] = useState(disponible)
-	const [enCours, setEnCours] = useState(false)
+export function AvailabilitySwitch({ disponible, envoyer }: { disponible: boolean; envoyer: AvailabilityUpload }) {
+	const [state, setState] = useState(disponible)
+	const [seen, setSeen] = useState(disponible)
+	const [pending, setPending] = useState(false)
 	const [message, setMessage] = useState('')
-	const [annonce, setAnnonce] = useState('')
-	const verrou = useRef(false)
+	const [announcement, setAnnouncement] = useState('')
+	const lock = useRef(false)
 
 	// The page was read again (another tab, a reload of the data): follow the stored value.
-	if (vu !== disponible) {
-		setVu(disponible)
-		setEtat(disponible)
+	if (seen !== disponible) {
+		setSeen(disponible)
+		setState(disponible)
 	}
 
-	async function basculer() {
-		if (verrou.current) return
-		verrou.current = true
-		setEnCours(true)
+	async function toggle() {
+		if (lock.current) return
+		lock.current = true
+		setPending(true)
 		setMessage('')
-		setAnnonce('')
+		setAnnouncement('')
 		try {
-			const resultat: ResultatDEnregistrement<ValeursDeLaDisponibilite> = await envoyer({ disponible: !etat }).catch(
-				() => ({ ok: false, message: MESSAGE_ECHEC })
-			)
-			mesurerLEnregistrement('disponibilite', resultat)
-			if (resultat.ok) {
-				setEtat(resultat.valeurs.disponible)
-				setAnnonce(
-					resultat.valeurs.disponible
+			const result: SaveResult<AvailabilityValues> = await envoyer({ disponible: !state }).catch(() => ({
+				ok: false,
+				message: FAILURE_MESSAGE,
+			}))
+			trackSave('disponibilite', result)
+			if (result.ok) {
+				setState(result.valeurs.disponible)
+				setAnnouncement(
+					result.valeurs.disponible
 						? 'Tu es disponible : ton profil apparaît dans la recherche.'
 						: 'Tu es indisponible : ton profil n’apparaît plus dans la recherche.'
 				)
 			} else {
-				setMessage(resultat.message)
+				setMessage(result.message)
 			}
 		} finally {
-			verrou.current = false
-			setEnCours(false)
+			lock.current = false
+			setPending(false)
 		}
 	}
 
@@ -70,10 +63,10 @@ export function InterrupteurDeDisponibilite({
 			<button
 				type="button"
 				role="switch"
-				aria-checked={etat}
-				aria-busy={enCours}
-				disabled={enCours}
-				onClick={() => void basculer()}
+				aria-checked={state}
+				aria-busy={pending}
+				disabled={pending}
+				onClick={() => void toggle()}
 				// Held down, Enter repeats: one press toggles once.
 				onKeyDown={evenement => {
 					if (evenement.repeat) evenement.preventDefault()
@@ -83,13 +76,13 @@ export function InterrupteurDeDisponibilite({
 				<span>Je suis disponible</span>
 				<span
 					aria-hidden="true"
-					className={`flex h-6 w-11 items-center rounded-full p-0.5 ${etat ? 'justify-end bg-indigo-700' : 'justify-start bg-neutral-500'}`}
+					className={`flex h-6 w-11 items-center rounded-full p-0.5 ${state ? 'justify-end bg-indigo-700' : 'justify-start bg-neutral-500'}`}
 				>
 					<span className="h-5 w-5 rounded-full bg-white" />
 				</span>
 			</button>
 			<p role="status" className="text-green-800 text-sm">
-				{annonce}
+				{announcement}
 			</p>
 			<div role="alert">
 				{message ? <p className="rounded-md bg-red-50 p-3 text-red-800 text-sm">{message}</p> : null}

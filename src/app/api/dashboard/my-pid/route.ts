@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers'
 import { SESSION_COOKIE } from '@/lib/auth/closed-dashboard'
-import { utilisatriceDeLaRequete } from '@/lib/dashboard/request'
+import { requestUser } from '@/lib/dashboard/request'
 import { pidDuProfil } from '@/lib/profil/pid'
 
 // Read per request: it depends on the session, and the build has no database.
@@ -16,7 +16,7 @@ export const dynamic = 'force-dynamic'
 export async function GET(): Promise<Response> {
 	const entetes = { 'Cache-Control': 'private, no-store' }
 	if (!(await cookies()).has(SESSION_COOKIE)) return Response.json({ pid: null }, { headers: entetes })
-	const contexte = await utilisatriceDeLaRequete()
+	const contexte = await requestUser()
 	if (contexte === null) return Response.json({ pid: null }, { headers: entetes })
 	const { docs } = await contexte.payload.find({
 		collection: 'profiles',

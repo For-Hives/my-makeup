@@ -7,52 +7,52 @@
  */
 
 /** Largest photo the server takes (10 MiB, as the old API). */
-export const TAILLE_MAX_PHOTO = 10 * 1024 * 1024
+export const PHOTO_SIZE_MAX = 10 * 1024 * 1024
 
 /** The types accepted, and the extension each one is stored under. */
-export const TYPES_DE_PHOTO = {
+export const PHOTO_TYPES = {
 	'image/jpeg': 'jpg',
 	'image/png': 'png',
 	'image/webp': 'webp',
 } as const
 
-export type TypeDePhoto = keyof typeof TYPES_DE_PHOTO
+export type PhotoType = keyof typeof PHOTO_TYPES
 
 /** The messages of the old site, word for word (src/lib/photo.js, branch main). */
-export const MESSAGES_D_ENVOI = {
+export const UPLOAD_MESSAGES = {
 	taille: 'La photo dépasse 10 Mo : choisis-en une plus légère.',
 	type: "La photo n'a pas été acceptée : choisis une photo JPEG, PNG ou WebP.",
 } as const
 
-const commencePar = (octets: Uint8Array, signature: number[], decalage = 0): boolean =>
+const startsWith = (octets: Uint8Array, signature: number[], decalage = 0): boolean =>
 	octets.length >= decalage + signature.length && signature.every((octet, i) => octets[decalage + i] === octet)
 
-const ascii = (texte: string): number[] => [...texte].map(lettre => lettre.charCodeAt(0))
+const charCodes = (texte: string): number[] => [...texte].map(lettre => lettre.charCodeAt(0))
 
 /** The type of a photo read in its first bytes, or nothing when it is not a JPEG, a PNG or a WebP. */
-export function typeDeLaPhoto(octets: Uint8Array): TypeDePhoto | undefined {
-	if (commencePar(octets, [0xff, 0xd8, 0xff])) return 'image/jpeg'
-	if (commencePar(octets, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) return 'image/png'
-	if (commencePar(octets, ascii('RIFF')) && commencePar(octets, ascii('WEBP'), 8)) return 'image/webp'
+export function photoType(octets: Uint8Array): PhotoType | undefined {
+	if (startsWith(octets, [0xff, 0xd8, 0xff])) return 'image/jpeg'
+	if (startsWith(octets, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) return 'image/png'
+	if (startsWith(octets, charCodes('RIFF')) && startsWith(octets, charCodes('WEBP'), 8)) return 'image/webp'
 	return undefined
 }
 
-export type VerdictDEnvoi = { accepte: true; type: TypeDePhoto } | { accepte: false; message: string }
+export type UploadVerdict = { accepte: true; type: PhotoType } | { accepte: false; message: string }
 
 /** Whether a file may be stored: its size first, then the type its content shows. */
-export function juger(octets: Uint8Array, taille = octets.length): VerdictDEnvoi {
-	if (taille > TAILLE_MAX_PHOTO) return { accepte: false, message: MESSAGES_D_ENVOI.taille }
-	const type = typeDeLaPhoto(octets)
-	return type ? { accepte: true, type } : { accepte: false, message: MESSAGES_D_ENVOI.type }
+export function judge(octets: Uint8Array, taille = octets.length): UploadVerdict {
+	if (taille > PHOTO_SIZE_MAX) return { accepte: false, message: UPLOAD_MESSAGES.taille }
+	const type = photoType(octets)
+	return type ? { accepte: true, type } : { accepte: false, message: UPLOAD_MESSAGES.type }
 }
 
 /** The name a stored photo gets: a random UUID and the extension of its real type. Nothing of the original name. */
-export const nomImprevisible = (type: TypeDePhoto, uuid: string = crypto.randomUUID()): string =>
-	`${uuid}.${TYPES_DE_PHOTO[type]}`
+export const unpredictableName = (type: PhotoType, uuid: string = crypto.randomUUID()): string =>
+	`${uuid}.${PHOTO_TYPES[type]}`
 
 /**
  * The context key by which server code, never a request, keeps the name of the file it gives: the
  * set of the test bench, whose photos have fixed names. `skipCloudStorage` (the import adopting a
  * photo where it is) keeps it as well. A request cannot set a context.
  */
-export const CONTEXTE_FICHIER_NOMME = 'fichierNomme'
+export const NAMED_FILE_CONTEXT = 'fichierNomme'

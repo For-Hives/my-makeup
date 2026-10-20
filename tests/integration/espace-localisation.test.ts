@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
-import { enregistrerLocalisation } from '@/lib/dashboard/save-location'
-import { MESSAGE_SERVICE_DES_COMMUNES } from '@/lib/dashboard/location'
-import { profilDeLaMaquilleuse, type UtilisateurDeLEspace } from '@/lib/dashboard/my-profile'
-import { MESSAGE_ECHEC } from '@/lib/dashboard/result'
+import { CITIES_SERVICE_MESSAGE } from '@/lib/dashboard/location'
+import { artistProfile, type DashboardUser } from '@/lib/dashboard/my-profile'
+import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
+import { saveLocation } from '@/lib/dashboard/save-location'
 import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
 import { HttpResponse, http, simuler } from '../outils/http-sortant'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
@@ -47,9 +47,9 @@ function listeOfficielle() {
 	return demandes
 }
 
-async function utilisateurDe(payload: Payload, compte: Maquilleuse): Promise<UtilisateurDeLEspace> {
+async function utilisateurDe(payload: Payload, compte: Maquilleuse): Promise<DashboardUser> {
 	const doc = await payload.findByID({ collection: 'pros', id: compte.id, depth: 0, overrideAccess: true })
-	return { ...doc, collection: 'pros' } as UtilisateurDeLEspace
+	return { ...doc, collection: 'pros' } as DashboardUser
 }
 
 async function profilStocke(payload: Payload, compte: Maquilleuse) {
@@ -73,7 +73,7 @@ describe('U16 : « Annecy » choisie, enregistrée', () => {
 		const payload = await payloadDeTest()
 		const avant = await profilStocke(payload, a)
 
-		const resultat = await enregistrerLocalisation(payload, await utilisateurDe(payload, a), SAISIE)
+		const resultat = await saveLocation(payload, await utilisateurDe(payload, a), SAISIE)
 
 		expect(resultat).toEqual({
 			ok: true,
@@ -90,7 +90,7 @@ describe('U16 : « Annecy » choisie, enregistrée', () => {
 		// I19: the slug does not move.
 		expect(stocke.slug).toBe(avant.slug)
 		// What the page reads next is the same commune.
-		const lu = await profilDeLaMaquilleuse(payload, await utilisateurDe(payload, a))
+		const lu = await artistProfile(payload, await utilisateurDe(payload, a))
 		expect(lu?.city).toMatchObject({ name: 'Annecy', inseeCode: '74010', department: '74' })
 	})
 
@@ -99,9 +99,9 @@ describe('U16 : « Annecy » choisie, enregistrée', () => {
 		const a = await creerCompte('maquilleuse')
 		const payload = await payloadDeTest()
 		const utilisateur = await utilisateurDe(payload, a)
-		await enregistrerLocalisation(payload, utilisateur, SAISIE)
+		await saveLocation(payload, utilisateur, SAISIE)
 
-		const resultat = await enregistrerLocalisation(payload, utilisateur, { ...SAISIE, codeInsee: '69123' })
+		const resultat = await saveLocation(payload, utilisateur, { ...SAISIE, codeInsee: '69123' })
 
 		expect(resultat.ok && resultat.valeurs.libelle).toBe('Lyon (69)')
 		const { city: commune } = await profilStocke(payload, a)
@@ -117,7 +117,7 @@ describe('U16 : « Annecy » choisie, enregistrée', () => {
 		const payload = await payloadDeTest()
 		const avantB = await profilStocke(payload, b)
 
-		await enregistrerLocalisation(payload, await utilisateurDe(payload, a), SAISIE)
+		await saveLocation(payload, await utilisateurDe(payload, a), SAISIE)
 
 		const apresB = await profilStocke(payload, b)
 		expect(apresB.city?.inseeCode ?? null).toBe(avantB.city?.inseeCode ?? null)
@@ -131,7 +131,7 @@ describe('le rayon est borné de 0 à 200 km, jamais « & km »', () => {
 		const a = await creerCompte('maquilleuse')
 		const payload = await payloadDeTest()
 
-		const resultat = await enregistrerLocalisation(payload, await utilisateurDe(payload, a), { ...SAISIE, rayonKm })
+		const resultat = await saveLocation(payload, await utilisateurDe(payload, a), { ...SAISIE, rayonKm })
 
 		expect(resultat.ok).toBe(false)
 		if (resultat.ok) return
@@ -151,7 +151,7 @@ describe('le rayon est borné de 0 à 200 km, jamais « & km »', () => {
 			[200, 200],
 			[null, null],
 		] as const) {
-			const resultat = await enregistrerLocalisation(payload, utilisateur, { ...SAISIE, rayonKm })
+			const resultat = await saveLocation(payload, utilisateur, { ...SAISIE, rayonKm })
 			expect(resultat.ok && resultat.valeurs.rayonKm).toBe(attendu)
 			expect((await profilStocke(payload, a)).radiusKm ?? null).toBe(attendu)
 		}
@@ -171,10 +171,10 @@ describe('un texte libre n’est jamais une commune, côté serveur non plus', (
 		const a = await creerCompte('maquilleuse')
 		const payload = await payloadDeTest()
 		const utilisateur = await utilisateurDe(payload, a)
-		await enregistrerLocalisation(payload, utilisateur, SAISIE)
+		await saveLocation(payload, utilisateur, SAISIE)
 		demandes.length = 0
 
-		const resultat = await enregistrerLocalisation(payload, utilisateur, { ...SAISIE, ...remplacement, rayonKm: 99 })
+		const resultat = await saveLocation(payload, utilisateur, { ...SAISIE, ...remplacement, rayonKm: 99 })
 
 		expect(resultat.ok).toBe(false)
 		expect(demandes).toEqual([])
@@ -198,8 +198,8 @@ describe('un texte libre n’est jamais une commune, côté serveur non plus', (
 			{ pro: 999 },
 			{ adresse: '12 rue des Lilas' },
 		]) {
-			const resultat = await enregistrerLocalisation(payload, utilisateur, { ...SAISIE, ...extra })
-			expect(resultat).toEqual({ ok: false, message: MESSAGE_ECHEC })
+			const resultat = await saveLocation(payload, utilisateur, { ...SAISIE, ...extra })
+			expect(resultat).toEqual({ ok: false, message: FAILURE_MESSAGE })
 		}
 		expect(demandes).toEqual([])
 		expect((await profilStocke(payload, a)).city?.inseeCode ?? null).toBeNull()
@@ -210,7 +210,7 @@ describe('un texte libre n’est jamais une commune, côté serveur non plus', (
 		const a = await creerCompte('maquilleuse')
 		const payload = await payloadDeTest()
 
-		const resultat = await enregistrerLocalisation(payload, await utilisateurDe(payload, a), {
+		const resultat = await saveLocation(payload, await utilisateurDe(payload, a), {
 			...SAISIE,
 			codeInsee: '74999',
 		})
@@ -226,7 +226,7 @@ describe('un texte libre n’est jamais une commune, côté serveur non plus', (
 		listeOfficielle()
 		const a = await creerCompte('maquilleuse')
 		const payload = await payloadDeTest()
-		await enregistrerLocalisation(payload, await utilisateurDe(payload, a), SAISIE)
+		await saveLocation(payload, await utilisateurDe(payload, a), SAISIE)
 		expect((await profilStocke(payload, a)).city?.name).toBe('Annecy')
 	})
 })
@@ -241,12 +241,12 @@ describe('le service des communes en panne : message clair, ancienne commune gar
 		const a = await creerCompte('maquilleuse')
 		const payload = await payloadDeTest()
 		const utilisateur = await utilisateurDe(payload, a)
-		await enregistrerLocalisation(payload, utilisateur, SAISIE)
+		await saveLocation(payload, utilisateur, SAISIE)
 
 		simuler(http.get(`${LISTE}/69123`, panne))
-		const resultat = await enregistrerLocalisation(payload, utilisateur, { ...SAISIE, codeInsee: '69123', rayonKm: 80 })
+		const resultat = await saveLocation(payload, utilisateur, { ...SAISIE, codeInsee: '69123', rayonKm: 80 })
 
-		expect(resultat).toEqual({ ok: false, message: MESSAGE_SERVICE_DES_COMMUNES })
+		expect(resultat).toEqual({ ok: false, message: CITIES_SERVICE_MESSAGE })
 		const stocke = await profilStocke(payload, a)
 		expect(stocke.city).toMatchObject({ name: 'Annecy', inseeCode: '74010', department: '74' })
 		// Nothing of the refused save was kept: not the radius either.
@@ -258,11 +258,11 @@ describe('le service des communes en panne : message clair, ancienne commune gar
 		const a = await creerCompte('maquilleuse')
 		const payload = await payloadDeTest()
 		const utilisateur = await utilisateurDe(payload, a)
-		await enregistrerLocalisation(payload, utilisateur, SAISIE)
+		await saveLocation(payload, utilisateur, SAISIE)
 
 		// From here, any call to the list fails (an undeclared request would fail the test too).
 		simuler(http.get(`${LISTE}/:code`, () => new HttpResponse(null, { status: 500 })))
-		const resultat = await enregistrerLocalisation(payload, utilisateur, { ...SAISIE, rayonKm: 45, aDomicile: false })
+		const resultat = await saveLocation(payload, utilisateur, { ...SAISIE, rayonKm: 45, aDomicile: false })
 
 		expect(resultat).toEqual({
 			ok: true,
@@ -280,7 +280,7 @@ describe('I02 : le profil écrit est celui du compte', () => {
 		const admin = await creerCompte('admin')
 		const payload = await payloadDeTest()
 		const doc = await payload.findByID({ collection: 'admins', id: admin.id, depth: 0, overrideAccess: true })
-		const utilisateur = { ...doc, collection: 'admins' } as unknown as UtilisateurDeLEspace
-		expect(await enregistrerLocalisation(payload, utilisateur, SAISIE)).toEqual({ ok: false, message: MESSAGE_ECHEC })
+		const utilisateur = { ...doc, collection: 'admins' } as unknown as DashboardUser
+		expect(await saveLocation(payload, utilisateur, SAISIE)).toEqual({ ok: false, message: FAILURE_MESSAGE })
 	})
 })

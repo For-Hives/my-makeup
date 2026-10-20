@@ -1,5 +1,5 @@
 import type { Payload, RequiredDataFromCollectionSlug } from 'payload'
-import { identifiantDuProfil, type UtilisateurDeLEspace } from './my-profile'
+import { type DashboardUser, profileId } from './my-profile'
 
 /**
  * The profile of this makeup artist, created by the server when she has none (ticket 140). An
@@ -13,20 +13,20 @@ import { identifiantDuProfil, type UtilisateurDeLEspace } from './my-profile'
  *
  * Gives back the identifier of her profile, or `null` when it could not be found nor created.
  */
-export async function garantirLeProfil(payload: Payload, utilisateur: UtilisateurDeLEspace): Promise<number | null> {
-	const existant = await identifiantDuProfil(payload, utilisateur)
-	if (existant !== null) return existant
+export async function ensureProfile(payload: Payload, utilisateur: DashboardUser): Promise<number | null> {
+	const existing = await profileId(payload, utilisateur)
+	if (existing !== null) return existing
 	try {
-		const cree = await payload.create({
+		const created = await payload.create({
 			collection: 'profiles',
 			data: { pro: Number(utilisateur.id) } as RequiredDataFromCollectionSlug<'profiles'>,
 			depth: 0,
 			overrideAccess: true,
 			select: {},
 		})
-		return cree.id
+		return created.id
 	} catch {
 		// The other render won: its profile is the one.
-		return identifiantDuProfil(payload, utilisateur)
+		return profileId(payload, utilisateur)
 	}
 }

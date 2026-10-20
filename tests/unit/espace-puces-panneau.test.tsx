@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import { act } from 'react'
-import { EditeurDePuces, type EnvoiDesPuces } from '@/components/dashboard/BulletsEditor'
-import { COMPETENCES, LANGUES, type Puce, type SorteDePuces } from '@/lib/dashboard/bullets'
-import { MESSAGE_ECHEC } from '@/lib/dashboard/result'
+import { BulletsEditor, type BulletsUpload } from '@/components/dashboard/BulletsEditor'
+import { type Bullet, type BulletsKind, LANGUAGES, SKILLS } from '@/lib/dashboard/bullets'
+import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
 import { ouvrirFenetre } from '../outils/dom-react'
 
 /**
@@ -13,7 +13,7 @@ import { ouvrirFenetre } from '../outils/dom-react'
 
 const fenetre = ouvrirFenetre()
 
-const ENVOI_REUSSI: EnvoiDesPuces = async saisie => ({
+const ENVOI_REUSSI: BulletsUpload = async saisie => ({
 	ok: true,
 	valeurs: { puces: saisie.puces.map((puce, rang) => ({ id: puce.id ?? `serveur-${rang}`, nom: puce.nom })) },
 })
@@ -48,8 +48,8 @@ async function ajouter(nom: string) {
 	await touche(champ, 'Enter')
 }
 
-async function ouvrir(sorte: SorteDePuces, puces: Puce[], envoyer: EnvoiDesPuces = ENVOI_REUSSI) {
-	await fenetre.monter(<EditeurDePuces liste={sorte.champ} puces={puces} envoyer={envoyer} />)
+async function ouvrir(sorte: BulletsKind, puces: Bullet[], envoyer: BulletsUpload = ENVOI_REUSSI) {
+	await fenetre.monter(<BulletsEditor liste={sorte.champ} puces={puces} envoyer={envoyer} />)
 	await fenetre.cliquer(fenetre.bouton(sorte.bouton))
 }
 
@@ -57,13 +57,13 @@ const retirer = (nom: string) => fenetre.bouton(`Retirer ${nom}`)
 
 const LISTES = [
 	{
-		sorte: LANGUES,
+		sorte: LANGUAGES,
 		ticket: 127,
 		deja: 'Cette langue est déjà dans ta liste.',
 		requis: 'Écris une langue avant de l’ajouter.',
 	},
 	{
-		sorte: COMPETENCES,
+		sorte: SKILLS,
 		ticket: 128,
 		deja: 'Cette compétence est déjà dans ta liste.',
 		requis: 'Écris une compétence avant de l’ajouter.',
@@ -110,7 +110,7 @@ for (const { sorte, ticket, deja } of LISTES) {
 		})
 
 		test('L1 : deux puces de même nom : en retirer une laisse l’autre, qui part avec son propre identifiant ; une puce ajoutée part sans', async () => {
-			const envois: Parameters<EnvoiDesPuces>[0][] = []
+			const envois: Parameters<BulletsUpload>[0][] = []
 			await ouvrir(
 				sorte,
 				[
@@ -137,7 +137,7 @@ for (const { sorte, ticket, deja } of LISTES) {
 		})
 
 		test('L2 : 20 caractères saisis un par un gardent le focus dans le champ, avant et après un échec d’enregistrement', async () => {
-			await ouvrir(sorte, [{ id: 'a', nom: 'Anglais' }], async () => ({ ok: false, message: MESSAGE_ECHEC }))
+			await ouvrir(sorte, [{ id: 'a', nom: 'Anglais' }], async () => ({ ok: false, message: FAILURE_MESSAGE }))
 			const champ = () => fenetre.champ(sorte.libelle) as HTMLInputElement
 			const taper = async () => {
 				const mot = 'abcdefghijklmnopqrst'
@@ -323,7 +323,7 @@ for (const { sorte, ticket, deja } of LISTES) {
 		})
 
 		test('enregistrer envoie la liste dans l’ordre, annonce le résultat hors du panneau et le ferme', async () => {
-			const envois: Parameters<EnvoiDesPuces>[0][] = []
+			const envois: Parameters<BulletsUpload>[0][] = []
 			await ouvrir(sorte, [{ id: 'a', nom: 'Anglais' }], async saisie => {
 				envois.push(saisie)
 				return {
@@ -347,7 +347,7 @@ for (const { sorte, ticket, deja } of LISTES) {
 		})
 
 		test('un nom resté dans le champ est ajouté à l’enregistrement, pas perdu', async () => {
-			const envois: Parameters<EnvoiDesPuces>[0][] = []
+			const envois: Parameters<BulletsUpload>[0][] = []
 			await ouvrir(sorte, [], async saisie => {
 				envois.push(saisie)
 				return { ok: true, valeurs: { puces: [] } }
@@ -358,7 +358,7 @@ for (const { sorte, ticket, deja } of LISTES) {
 		})
 
 		test('une liste vidée s’enregistre', async () => {
-			const envois: Parameters<EnvoiDesPuces>[0][] = []
+			const envois: Parameters<BulletsUpload>[0][] = []
 			await ouvrir(sorte, [{ id: 'a', nom: 'Anglais' }], async saisie => {
 				envois.push(saisie)
 				return { ok: true, valeurs: { puces: [] } }
@@ -369,13 +369,13 @@ for (const { sorte, ticket, deja } of LISTES) {
 		})
 
 		test('E31 : un échec du serveur garde la liste modifiée, dit pourquoi, et le panneau reste ouvert', async () => {
-			await ouvrir(sorte, [{ id: 'a', nom: 'Anglais' }], async () => ({ ok: false, message: MESSAGE_ECHEC }))
+			await ouvrir(sorte, [{ id: 'a', nom: 'Anglais' }], async () => ({ ok: false, message: FAILURE_MESSAGE }))
 			await ajouter('Russe')
 			await fenetre.cliquer(fenetre.bouton('Enregistrer'))
 			const alerte = await fenetre.attendre(() =>
 				fenetre.w.document.querySelector('[role="alert"] p.bg-red-50, [role="alert"] .bg-red-50')
 			)
-			expect(alerte.textContent).toBe(MESSAGE_ECHEC)
+			expect(alerte.textContent).toBe(FAILURE_MESSAGE)
 			expect(noms()).toEqual(['Retirer Anglais', 'Retirer Russe'])
 			expect(dialogue()).not.toBeNull()
 			expect(fenetre.w.document.querySelector('[role="status"]')?.textContent).toBe('')
@@ -388,7 +388,7 @@ for (const { sorte, ticket, deja } of LISTES) {
 			await ajouter('Russe')
 			await fenetre.cliquer(fenetre.bouton('Enregistrer'))
 			const alerte = await fenetre.attendre(() => fenetre.w.document.querySelector('.bg-red-50'))
-			expect(alerte.textContent).toBe(MESSAGE_ECHEC)
+			expect(alerte.textContent).toBe(FAILURE_MESSAGE)
 		})
 
 		test('fermer avec une modification non enregistrée demande confirmation', async () => {

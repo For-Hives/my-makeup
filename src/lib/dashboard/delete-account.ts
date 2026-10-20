@@ -5,12 +5,7 @@ import { ipClient } from '../auth/client-ip'
 import { createRateLimit } from '../auth/rate-limit'
 import { failureCode, MAX_PASSWORD_LENGTH } from '../auth/sign-in'
 import { openWithPassword } from '../auth/token'
-import {
-	MESSAGES_DE_SUPPRESSION,
-	modeDeConfirmation,
-	type ResultatDeLaSuppression,
-	schemaDeLaSuppression,
-} from './deletion-confirmation'
+import { confirmationMode, DELETION_MESSAGES, type DeletionResult, deletionSchema } from './deletion-confirmation'
 
 /**
  * She deletes her account from her space (ticket 141; plan 01 P7.7, AUTH-13; plan 02 E33, I36, I38).
@@ -33,53 +28,53 @@ import {
  */
 
 /** Wrong confirmations: 10 per address and per 15 minutes, and 10 per account (ticket 141). */
-export const freinDeLaSuppression = createRateLimit({
+export const deletionRateLimit = createRateLimit({
 	nom: 'suppression-compte',
 	limite: 10,
 	fenetreMs: 15 * 60 * 1000,
 })
 
-export interface EntreesDeLaSuppression {
+export interface DeletionEntries {
 	payload: Payload
 	/** The account of the session. */
 	compte: { id: number | string }
 	headers: Headers
 	saisie: unknown
-	frein?: Frein
+	frein?: RateLimit
 	maintenant?: number
 }
 
-type Frein = typeof freinDeLaSuppression
+type RateLimit = typeof deletionRateLimit
 
 /** True when Payload's own refusal was a 503 raised by the bin. */
-const panneDuStockage = (erreur: unknown): boolean => (erreur as { status?: number } | null)?.status === 503
+const storageOutage = (erreur: unknown): boolean => (erreur as { status?: number } | null)?.status === 503
 
-export async function supprimerMonCompte({
+export async function deleteMyAccount({
 	payload,
 	compte,
 	headers,
 	saisie,
-	frein = freinDeLaSuppression,
+	frein = deletionRateLimit,
 	maintenant,
-}: EntreesDeLaSuppression): Promise<ResultatDeLaSuppression> {
-	const lue = schemaDeLaSuppression.safeParse(saisie)
-	if (!lue.success) return { ok: false, message: MESSAGES_DE_SUPPRESSION.echec }
+}: DeletionEntries): Promise<DeletionResult> {
+	const parsed = deletionSchema.safeParse(saisie)
+	if (!parsed.success) return { ok: false, message: DELETION_MESSAGES.echec }
 
-	const cles = [`adresse:${ipClient(headers)}`, `compte:${compte.id}`]
-	const prises: string[] = []
-	const rendre = () => {
-		for (const cle of prises) frein.rendre(cle, maintenant)
+	const keys = [`adresse:${ipClient(headers)}`, `compte:${compte.id}`]
+	const taken: string[] = []
+	const render = () => {
+		for (const key of taken) frein.rendre(key, maintenant)
 	}
-	for (const cle of cles) {
-		if (!frein.prendre(cle, maintenant).autorise) {
-			rendre()
-			return { ok: false, message: MESSAGES_DE_SUPPRESSION.freine, freine: true }
+	for (const key of keys) {
+		if (!frein.prendre(key, maintenant).autorise) {
+			render()
+			return { ok: false, message: DELETION_MESSAGES.freine, freine: true }
 		}
-		prises.push(cle)
+		taken.push(key)
 	}
 
 	try {
-		const stocke = await payload.findByID({
+		const stored = await payload.findByID({
 			collection: 'pros',
 			depth: 0,
 			disableErrors: true,
@@ -88,51 +83,51 @@ export async function supprimerMonCompte({
 			select: { email: true, legacyProvider: true },
 		})
 		// The account is gone (deleted from another tab, or by an admin): her session is no longer one.
-		if (stocke === null) {
-			rendre()
-			return { ok: false, message: MESSAGES_DE_SUPPRESSION.session, session: 'expiree' }
+		if (stored === null) {
+			render()
+			return { ok: false, message: DELETION_MESSAGES.session, session: 'expiree' }
 		}
-		const mode = modeDeConfirmation(stocke)
-		const juste =
+		const mode = confirmationMode(stored)
+		const correct =
 			mode === 'email'
-				? canonicalEmail(lue.data.confirmation) === canonicalEmail(String(stocke.email))
-				: await motDePasseJuste(payload, String(stocke.email), lue.data.confirmation)
-		if (!juste) return { ok: false, message: MESSAGES_DE_SUPPRESSION[mode === 'email' ? 'email' : 'motDePasse'] }
+				? canonicalEmail(parsed.data.confirmation) === canonicalEmail(String(stored.email))
+				: await isPasswordCorrect(payload, String(stored.email), parsed.data.confirmation)
+		if (!correct) return { ok: false, message: DELETION_MESSAGES[mode === 'email' ? 'email' : 'motDePasse'] }
 		// The confirmation was right: the places go back, whatever happens next.
-		rendre()
+		render()
 		try {
 			await deleteAccountAndDependents(payload, compte.id)
-		} catch (erreur) {
+		} catch (error) {
 			payload.logger.error(`[suppression] account ${compte.id}: the deletion failed, nothing was deleted`)
 			return {
 				ok: false,
-				message: panneDuStockage(erreur) ? MESSAGES_DE_SUPPRESSION.stockage : MESSAGES_DE_SUPPRESSION.echec,
+				message: storageOutage(error) ? DELETION_MESSAGES.stockage : DELETION_MESSAGES.echec,
 			}
 		}
 		return { ok: true }
-	} catch (erreur) {
-		if (erreur instanceof ErreurDeVerification) rendre()
-		return { ok: false, message: MESSAGES_DE_SUPPRESSION.echec }
+	} catch (error) {
+		if (error instanceof VerificationError) render()
+		return { ok: false, message: DELETION_MESSAGES.echec }
 	}
 }
 
 /** The check of the password could not be made: not her failure. */
-class ErreurDeVerification extends Error {}
+class VerificationError extends Error {}
 
 /**
  * Is this the password of the account? Payload's own sign-in decides, as it does for the form of
  * the sign-in; the token it gives back is dropped, and the account goes right after. An address
  * not confirmed yet answers after the password was checked and found right.
  */
-async function motDePasseJuste(payload: Payload, email: string, motDePasse: string): Promise<boolean> {
+async function isPasswordCorrect(payload: Payload, email: string, motDePasse: string): Promise<boolean> {
 	if (motDePasse === '' || motDePasse.length > MAX_PASSWORD_LENGTH) return false
 	try {
 		await openWithPassword(payload, 'pros', { email, password: motDePasse })
 		return true
-	} catch (erreur) {
-		const code = failureCode(erreur)
+	} catch (error) {
+		const code = failureCode(error)
 		if (code === 'email-non-confirme') return true
-		if (code === 'service-indisponible') throw new ErreurDeVerification()
+		if (code === 'service-indisponible') throw new VerificationError()
 		return false
 	}
 }

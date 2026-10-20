@@ -1,18 +1,18 @@
 import type { Payload } from 'payload'
-import { identifiantDuProfil, type UtilisateurDeLEspace } from './my-profile'
-import type { ResultatDEnregistrement } from './result'
+import { type DashboardUser, profileId } from './my-profile'
+import type { SaveResult } from './result'
 
 /** Whether the stored profile is « publiable » (the flag the server computes at every save), or nothing when unknown. */
-async function publiableAujourdhui(payload: Payload, id: number): Promise<boolean | undefined> {
+async function publishableToday(payload: Payload, id: number): Promise<boolean | undefined> {
 	try {
-		const profil = await payload.findByID({
+		const profile = await payload.findByID({
 			collection: 'profiles',
 			depth: 0,
 			id,
 			overrideAccess: true,
 			select: { publishable: true },
 		})
-		return profil.publishable === true
+		return profile.publishable === true
 	} catch {
 		return undefined
 	}
@@ -27,14 +27,14 @@ async function publiableAujourdhui(payload: Payload, id: number): Promise<boolea
  * lose the state all give no flag, so the event is sent once and never for the way back. When the
  * state cannot be read, nothing is said.
  */
-export async function avecPassagePublicable<Valeurs extends Record<string, unknown>>(
+export async function withPublishableTransition<Valeurs extends Record<string, unknown>>(
 	payload: Payload,
-	utilisateur: UtilisateurDeLEspace,
-	enregistrer: () => Promise<ResultatDEnregistrement<Valeurs>>
-): Promise<ResultatDEnregistrement<Valeurs>> {
-	const id = await identifiantDuProfil(payload, utilisateur).catch(() => null)
-	const avant = id === null ? undefined : await publiableAujourdhui(payload, id)
-	const resultat = await enregistrer()
-	if (!resultat.ok || id === null || avant !== false) return resultat
-	return (await publiableAujourdhui(payload, id)) === true ? { ...resultat, devenuPublicable: true } : resultat
+	utilisateur: DashboardUser,
+	enregistrer: () => Promise<SaveResult<Valeurs>>
+): Promise<SaveResult<Valeurs>> {
+	const id = await profileId(payload, utilisateur).catch(() => null)
+	const before = id === null ? undefined : await publishableToday(payload, id)
+	const result = await enregistrer()
+	if (!result.ok || id === null || before !== false) return result
+	return (await publishableToday(payload, id)) === true ? { ...result, devenuPublicable: true } : result
 }

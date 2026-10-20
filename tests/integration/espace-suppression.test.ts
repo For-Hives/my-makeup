@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, setDefaultTimeout, test } from
 import type { Payload } from 'payload'
 import { MESSAGE_PANNE_DU_STOCKAGE } from '@/collections/trash'
 import { deleteAccountAndDependents } from '@/lib/account/deletion'
-import { MESSAGES_DE_SUPPRESSION } from '@/lib/dashboard/deletion-confirmation'
-import { freinDeLaSuppression, supprimerMonCompte } from '@/lib/dashboard/delete-account'
+import { deleteMyAccount, deletionRateLimit } from '@/lib/dashboard/delete-account'
+import { DELETION_MESSAGES } from '@/lib/dashboard/deletion-confirmation'
 import type { Media } from '@/payload-types'
 import { type Espion, espionnerLeStockage, suppressionsSansCorbeille } from '../outils/espion-s3'
 import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
@@ -35,7 +35,7 @@ const depuis = (adresse = `192.0.2.${100 + (++numero % 100)}`) => new Headers({ 
 
 beforeEach(() => {
 	espion = espionnerLeStockage()
-	freinDeLaSuppression.vider()
+	deletionRateLimit.vider()
 })
 
 afterEach(async () => {
@@ -85,7 +85,7 @@ const enPlace = async (media: Media) => (await lireUnObjet(cle(media))) !== unde
 const enCorbeille = async (media: Media) => (await lireUnObjet(`deleted/${cle(media)}`)) !== undefined
 
 const supprimer = (payload: Payload, compte: Maquilleuse, confirmation: string, entetes = depuis()) =>
-	supprimerMonCompte({ payload, compte, headers: entetes, saisie: { confirmation } })
+	deleteMyAccount({ payload, compte, headers: entetes, saisie: { confirmation } })
 
 describe('I36 : tout part avec le compte', () => {
 	test('compte, profil, sessions et photos : les documents disparaissent, les objets vont à la corbeille, l’ancien jeton ne vaut plus', async () => {
@@ -118,7 +118,7 @@ describe('I36 : tout part avec le compte', () => {
 		const payload = await payloadDeTest()
 		const compte = await creerCompte('maquilleuse-sans-profil', { motDePasse: () => MOT_DE_PASSE })
 		expect(
-			await supprimerMonCompte({ payload, compte, headers: depuis(), saisie: { confirmation: MOT_DE_PASSE } })
+			await deleteMyAccount({ payload, compte, headers: depuis(), saisie: { confirmation: MOT_DE_PASSE } })
 		).toEqual({
 			ok: true,
 		})
@@ -131,16 +131,16 @@ describe('I36 : tout part avec le compte', () => {
 		const payload = await payloadDeTest()
 		const compte = await creerCompte('reprise-google')
 
-		const refus = await supprimerMonCompte({
+		const refus = await deleteMyAccount({
 			payload,
 			compte,
 			headers: depuis(),
 			saisie: { confirmation: 'autre@example.test' },
 		})
-		expect(refus).toEqual({ ok: false, message: MESSAGES_DE_SUPPRESSION.email })
+		expect(refus).toEqual({ ok: false, message: DELETION_MESSAGES.email })
 		expect(await present('pros', compte.id)).toBe(true)
 
-		const ok = await supprimerMonCompte({
+		const ok = await deleteMyAccount({
 			payload,
 			compte,
 			headers: depuis(),
@@ -167,10 +167,10 @@ describe('Mot de passe faux : rien de supprimé ; essais freinés', () => {
 
 		expect(await supprimer(payload, compte, 'pas-le-bon')).toEqual({
 			ok: false,
-			message: MESSAGES_DE_SUPPRESSION.motDePasse,
+			message: DELETION_MESSAGES.motDePasse,
 		})
-		expect(await supprimer(payload, compte, '')).toEqual({ ok: false, message: MESSAGES_DE_SUPPRESSION.motDePasse })
-		const enTrop = await supprimerMonCompte({
+		expect(await supprimer(payload, compte, '')).toEqual({ ok: false, message: DELETION_MESSAGES.motDePasse })
+		const enTrop = await deleteMyAccount({
 			payload,
 			compte,
 			headers: depuis(),
@@ -192,12 +192,12 @@ describe('Mot de passe faux : rien de supprimé ; essais freinés', () => {
 		for (let i = 0; i < 10; i++) expect((await supprimer(payload, compte, `faux-${i}`, entetes)).ok).toBe(false)
 
 		const freine = await supprimer(payload, compte, MOT_DE_PASSE, entetes)
-		expect(freine).toEqual({ ok: false, message: MESSAGES_DE_SUPPRESSION.freine, freine: true })
+		expect(freine).toEqual({ ok: false, message: DELETION_MESSAGES.freine, freine: true })
 		expect(await present('pros', compte.id)).toBe(true)
 
 		// Another address: the account itself has used its ten places, so a thief who changes address is braked too.
 		const ailleurs = await supprimer(payload, compte, MOT_DE_PASSE, depuis('192.0.2.8'))
-		expect(ailleurs).toEqual({ ok: false, message: MESSAGES_DE_SUPPRESSION.freine, freine: true })
+		expect(ailleurs).toEqual({ ok: false, message: DELETION_MESSAGES.freine, freine: true })
 		expect(await present('pros', compte.id)).toBe(true)
 	})
 
@@ -233,7 +233,7 @@ describe('I38 : panne du stockage, tout est encore là', () => {
 
 		const resultat = await supprimer(payload, compte, MOT_DE_PASSE)
 
-		expect(resultat).toEqual({ ok: false, message: MESSAGES_DE_SUPPRESSION.stockage })
+		expect(resultat).toEqual({ ok: false, message: DELETION_MESSAGES.stockage })
 		expect(MESSAGE_PANNE_DU_STOCKAGE).toContain('Le stockage des photos ne répond pas')
 		expect(await present('pros', compte.id)).toBe(true)
 		expect(await present('profiles', profil.id)).toBe(true)

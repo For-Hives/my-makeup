@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import { RafraichirSession } from '@/components/dashboard/RefreshSession'
+import { RefreshSession } from '@/components/dashboard/RefreshSession'
 import { createExtension, EXTENSION_ROUTE } from '@/lib/auth/extend'
 import {
 	capReached,
@@ -109,7 +109,7 @@ describe('le composant du navigateur', () => {
 		const original = globalThis.fetch
 		globalThis.fetch = (async (route: string) => void appels.push(route)) as never
 		try {
-			const zone = await fenetre.monter(<RafraichirSession expire={Math.floor(Date.now() / 1000) + 12 * JOUR} />)
+			const zone = await fenetre.monter(<RefreshSession expire={Math.floor(Date.now() / 1000) + 12 * JOUR} />)
 			expect(zone.innerHTML).toBe('')
 			expect(appels).toEqual([])
 		} finally {
@@ -122,8 +122,8 @@ describe('le composant du navigateur', () => {
 		globalThis.fetch = (async (route: string, init?: RequestInit) => void appels.push({ route, init })) as never
 		try {
 			const bientot = Math.floor(Date.now() / 1000) + 2 * JOUR
-			await fenetre.monter(<RafraichirSession expire={bientot} />)
-			await fenetre.monter(<RafraichirSession expire={bientot} />)
+			await fenetre.monter(<RefreshSession expire={bientot} />)
+			await fenetre.monter(<RefreshSession expire={bientot} />)
 			await fenetre.attendre(() => appels.length > 0 || null)
 			expect(appels).toHaveLength(1)
 			expect(appels[0]?.route).toBe('/api/pros/refresh-token')

@@ -1,8 +1,8 @@
 import type { Payload } from 'payload'
 import { identifiantDe } from '../profil/photos'
-import { identifiantDuProfilAEcrire, type UtilisateurDeLEspace } from './my-profile'
-import { schemaDeLaPhoto, type ValeursDeLaPhoto } from './main-picture'
-import { echecDePayload, MESSAGE_ECHEC, type ResultatDEnregistrement } from './result'
+import { type PhotoValues, photoSchema } from './main-picture'
+import { type DashboardUser, profileIdToWrite } from './my-profile'
+import { FAILURE_MESSAGE, payloadFailure, type SaveResult } from './result'
 
 /**
  * Saves the main photo of the signed-in makeup artist (ticket 134), on the contract of ticket 119.
@@ -16,29 +16,29 @@ import { echecDePayload, MESSAGE_ECHEC, type ResultatDEnregistrement } from './r
  *   is done by the hooks of the collection, in the same transaction as this write.
  * - The identifier given back is the one the database stored.
  */
-export async function enregistrerPhotoPrincipale(
+export async function saveMainPicture(
 	payload: Payload,
-	utilisateur: UtilisateurDeLEspace,
+	utilisateur: DashboardUser,
 	saisie: unknown
-): Promise<ResultatDEnregistrement<ValeursDeLaPhoto>> {
-	const lue = schemaDeLaPhoto.safeParse(saisie)
-	if (!lue.success) return { ok: false, message: MESSAGE_ECHEC }
+): Promise<SaveResult<PhotoValues>> {
+	const parsed = photoSchema.safeParse(saisie)
+	if (!parsed.success) return { ok: false, message: FAILURE_MESSAGE }
 	try {
-		const id = await identifiantDuProfilAEcrire(payload, utilisateur)
-		if (id === null) return { ok: false, message: MESSAGE_ECHEC }
-		const stocke = await payload.update({
+		const id = await profileIdToWrite(payload, utilisateur)
+		if (id === null) return { ok: false, message: FAILURE_MESSAGE }
+		const stored = await payload.update({
 			collection: 'profiles',
-			data: { mainPicture: Number(lue.data.photoPrincipale) },
+			data: { mainPicture: Number(parsed.data.photoPrincipale) },
 			depth: 0,
 			id,
 			overrideAccess: false,
 			user: utilisateur,
 		})
-		const photo = identifiantDe(stocke.mainPicture)
-		if (photo === undefined) return { ok: false, message: MESSAGE_ECHEC }
+		const photo = identifiantDe(stored.mainPicture)
+		if (photo === undefined) return { ok: false, message: FAILURE_MESSAGE }
 		return { ok: true, valeurs: { photoPrincipale: photo } }
-	} catch (erreur) {
-		return echecDePayload(erreur, ['photoPrincipale'] as const, chemin =>
+	} catch (error) {
+		return payloadFailure(error, ['photoPrincipale'] as const, chemin =>
 			chemin === 'mainPicture' ? 'photoPrincipale' : ''
 		)
 	}

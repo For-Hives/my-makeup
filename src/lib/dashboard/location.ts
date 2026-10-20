@@ -15,7 +15,7 @@ import { z } from 'zod'
 import { BORNES_DU_RAYON_KM, departementDuCodeInsee, MESSAGES_DE_LA_ZONE } from '../profil/zone'
 
 /** What the card and the panel call a commune: « Annecy (74) » (plan 02 U16). Never « Annecy () ». */
-export function libelleDeLaCommune({ nom, departement }: { nom?: unknown; departement?: unknown }): string {
+export function cityLabel({ nom, departement }: { nom?: unknown; departement?: unknown }): string {
 	const n = typeof nom === 'string' ? nom.trim() : ''
 	const d = typeof departement === 'string' ? departement.trim() : ''
 	if (n === '') return ''
@@ -23,36 +23,36 @@ export function libelleDeLaCommune({ nom, departement }: { nom?: unknown; depart
 }
 
 /** A commune the list proposes: what the panel shows, and the code it sends back. */
-export interface CommuneProposee {
+export interface SuggestedCity {
 	readonly codeInsee: string
 	/** « Annecy (74) ». */
 	readonly libelle: string
 }
 
 /** The shortest and the longest text the search accepts. */
-export const RECHERCHE_MIN = 2
-export const RECHERCHE_MAX = 60
+export const SEARCH_MIN = 2
+export const SEARCH_MAX = 60
 
 /** What a search answers to the panel. */
-export type ResultatDeRecherche =
+export type SearchResult =
 	| {
 			ok: true
-			communes: CommuneProposee[]
+			communes: SuggestedCity[]
 			/** Why there is nothing to propose when the text itself is the reason. */
 			motif?: 'adresse' | 'trop-court'
 	  }
 	| { ok: false; message: string }
 
 /** The message when the list of communes does not answer. */
-export const MESSAGE_SERVICE_DES_COMMUNES =
+export const CITIES_SERVICE_MESSAGE =
 	'Le service qui donne la liste des communes ne répond pas pour le moment. Ta commune n’a pas été modifiée : réessaie dans un instant.'
 
-export const MESSAGE_COMMUNE_A_CHOISIR = 'Choisis ta commune dans la liste qui s’affiche quand tu écris son nom.'
+export const CITY_TO_CHOOSE_MESSAGE = 'Choisis ta commune dans la liste qui s’affiche quand tu écris son nom.'
 
-export const MESSAGE_ADRESSE_REFUSEE = 'Écris le nom de ta commune, pas ton adresse : elle ne s’enregistre jamais.'
+export const REFUSED_ADDRESS_MESSAGE = 'Écris le nom de ta commune, pas ton adresse : elle ne s’enregistre jamais.'
 
 /** The three values of the section as the form and the card read them. */
-export type ValeursDeLaLocalisation = {
+export type LocationValues = {
 	/** The INSEE code of her commune, or '' when she has none yet. */
 	codeInsee: string
 	/** « Annecy (74) », or '' without a commune. */
@@ -62,44 +62,44 @@ export type ValeursDeLaLocalisation = {
 	aDomicile: boolean
 }
 
-const MESSAGE_DOMICILE = 'Dis si tu te déplaces à domicile, oui ou non.'
+const HOME_MESSAGE = 'Dis si tu te déplaces à domicile, oui ou non.'
 
 /**
  * What the server accepts: the code of a commune of the list, the radius and « à domicile », and
  * no other key (a name, coordinates, a département, a reserved field refuse the whole request).
  */
-export const schemaDeLaLocalisationStrict = z.strictObject({
+export const strictLocationSchema = z.strictObject({
 	codeInsee: z
-		.string({ error: MESSAGE_COMMUNE_A_CHOISIR })
+		.string({ error: CITY_TO_CHOOSE_MESSAGE })
 		.trim()
 		.toUpperCase()
-		.refine(code => departementDuCodeInsee(code) !== null, MESSAGE_COMMUNE_A_CHOISIR),
+		.refine(code => departementDuCodeInsee(code) !== null, CITY_TO_CHOOSE_MESSAGE),
 	rayonKm: z
 		.number({ error: MESSAGES_DE_LA_ZONE.rayon })
 		.int(MESSAGES_DE_LA_ZONE.rayon)
 		.min(BORNES_DU_RAYON_KM.min, MESSAGES_DE_LA_ZONE.rayon)
 		.max(BORNES_DU_RAYON_KM.max, MESSAGES_DE_LA_ZONE.rayon)
 		.nullable(),
-	aDomicile: z.boolean({ error: MESSAGE_DOMICILE }),
+	aDomicile: z.boolean({ error: HOME_MESSAGE }),
 })
-export type SaisieDeLaLocalisation = z.infer<typeof schemaDeLaLocalisationStrict>
+export type LocationInput = z.infer<typeof strictLocationSchema>
 
 /** The fields that can be refused, for the messages under them. */
-export const CHAMPS_DE_LA_LOCALISATION = ['codeInsee', 'rayonKm', 'aDomicile'] as const
-export type ChampDeLaLocalisation = (typeof CHAMPS_DE_LA_LOCALISATION)[number]
+export const LOCATION_FIELDS = ['codeInsee', 'rayonKm', 'aDomicile'] as const
+export type LocationField = (typeof LOCATION_FIELDS)[number]
 
 /** The message of each field that does not pass, the first one when a field has several. */
-export function erreursParChamp(erreur: z.ZodError): Partial<Record<ChampDeLaLocalisation, string>> {
-	const champs: Partial<Record<ChampDeLaLocalisation, string>> = {}
+export function errorsByField(erreur: z.ZodError): Partial<Record<LocationField, string>> {
+	const fields: Partial<Record<LocationField, string>> = {}
 	for (const { path, message } of erreur.issues) {
-		const champ = CHAMPS_DE_LA_LOCALISATION.find(nom => nom === path[0])
-		if (champ !== undefined && champs[champ] === undefined) champs[champ] = message
+		const field = LOCATION_FIELDS.find(nom => nom === path[0])
+		if (field !== undefined && fields[field] === undefined) fields[field] = message
 	}
-	return champs
+	return fields
 }
 
 /** What the form checks of the radius she typed: nothing, or whole kilometres within the bounds. */
-export const schemaDuRayonSaisi = z
+export const enteredRadiusSchema = z
 	.string({ error: MESSAGES_DE_LA_ZONE.rayon })
 	.trim()
 	.refine(
@@ -108,7 +108,7 @@ export const schemaDuRayonSaisi = z
 	)
 
 /** The radius typed as the server takes it: whole kilometres, or null when empty. */
-export function rayonDuTexte(texte: string): number | null {
-	const propre = texte.trim()
-	return propre === '' ? null : Number(propre)
+export function textRadius(texte: string): number | null {
+	const clean = texte.trim()
+	return clean === '' ? null : Number(clean)
 }

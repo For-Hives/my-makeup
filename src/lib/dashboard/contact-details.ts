@@ -14,22 +14,22 @@
 import { z } from 'zod'
 import { LONGUEUR_MAX_EMAIL, LONGUEUR_MAX_TELEPHONE } from '../profil/coordonnees'
 
-export const CHAMPS_DES_COORDONNEES = ['telephone', 'email', 'contactPublic'] as const
-export type ChampDesCoordonnees = (typeof CHAMPS_DES_COORDONNEES)[number]
+export const CONTACT_DETAILS_FIELDS = ['telephone', 'email', 'contactPublic'] as const
+export type ContactDetailsField = (typeof CONTACT_DETAILS_FIELDS)[number]
 
-export type ValeursDesCoordonnees = {
+export type ContactDetailsValues = {
 	telephone: string
 	email: string
 	contactPublic: boolean
 }
 
 /** What a save gives back: her three fields as stored, and the date the server dated her choice. */
-export type CoordonneesEnregistrees = ValeursDesCoordonnees & {
+export type SavedContactDetails = ContactDetailsValues & {
 	/** ISO date of the moment she chose to show them; `null` while they are hidden. */
 	consentiLe: string | null
 }
 
-export const MESSAGES_DES_COORDONNEES_DE_L_ESPACE = {
+export const DASHBOARD_CONTACT_DETAILS_MESSAGES = {
 	pasUnTexte: 'Ce champ doit être un texte.',
 	telephoneTropLong: `Ton numéro ne doit pas dépasser ${LONGUEUR_MAX_TELEPHONE} caractères.`,
 	telephoneInvalide: 'Ce numéro n’est pas valide : écris-le avec des chiffres, par exemple 06 12 34 56 78.',
@@ -37,64 +37,64 @@ export const MESSAGES_DES_COORDONNEES_DE_L_ESPACE = {
 	emailInvalide: 'Cet email n’est pas valide : écris-le comme prenom@exemple.fr.',
 } as const
 
-const SEPARATEURS = /^[\d\s+().-]+$/
-const CHIFFRES_MIN = 9
-const CHIFFRES_MAX = 15
+const SEPARATORS = /^[\d\s+().-]+$/
+const DIGITS_MIN = 9
+const DIGITS_MAX = 15
 
-const telephone = z
-	.string({ error: MESSAGES_DES_COORDONNEES_DE_L_ESPACE.pasUnTexte })
+const phone = z
+	.string({ error: DASHBOARD_CONTACT_DETAILS_MESSAGES.pasUnTexte })
 	.trim()
 	.superRefine((valeur, contexte) => {
 		if (valeur === '') return
 		if (valeur.length > LONGUEUR_MAX_TELEPHONE) {
-			contexte.addIssue({ code: 'custom', message: MESSAGES_DES_COORDONNEES_DE_L_ESPACE.telephoneTropLong })
+			contexte.addIssue({ code: 'custom', message: DASHBOARD_CONTACT_DETAILS_MESSAGES.telephoneTropLong })
 			return
 		}
-		const chiffres = valeur.replace(/\D/g, '').length
-		if (!SEPARATEURS.test(valeur) || chiffres < CHIFFRES_MIN || chiffres > CHIFFRES_MAX)
-			contexte.addIssue({ code: 'custom', message: MESSAGES_DES_COORDONNEES_DE_L_ESPACE.telephoneInvalide })
+		const digits = valeur.replace(/\D/g, '').length
+		if (!SEPARATORS.test(valeur) || digits < DIGITS_MIN || digits > DIGITS_MAX)
+			contexte.addIssue({ code: 'custom', message: DASHBOARD_CONTACT_DETAILS_MESSAGES.telephoneInvalide })
 	})
 
 const EMAIL = z.email()
 
 const email = z
-	.string({ error: MESSAGES_DES_COORDONNEES_DE_L_ESPACE.pasUnTexte })
+	.string({ error: DASHBOARD_CONTACT_DETAILS_MESSAGES.pasUnTexte })
 	.trim()
 	.superRefine((valeur, contexte) => {
 		if (valeur === '') return
 		if (!EMAIL.safeParse(valeur).success)
-			contexte.addIssue({ code: 'custom', message: MESSAGES_DES_COORDONNEES_DE_L_ESPACE.emailInvalide })
+			contexte.addIssue({ code: 'custom', message: DASHBOARD_CONTACT_DETAILS_MESSAGES.emailInvalide })
 		else if (valeur.length > LONGUEUR_MAX_EMAIL)
-			contexte.addIssue({ code: 'custom', message: MESSAGES_DES_COORDONNEES_DE_L_ESPACE.emailTropLong })
+			contexte.addIssue({ code: 'custom', message: DASHBOARD_CONTACT_DETAILS_MESSAGES.emailTropLong })
 	})
 
-const FORME = {
-	telephone,
+const SHAPE = {
+	telephone: phone,
 	email,
 	contactPublic: z.boolean({ error: 'Choisis si tes coordonnées s’affichent.' }),
 }
 
 /** What the form checks before it sends anything. */
-export const schemaDesCoordonnees = z.object(FORME)
+export const contactDetailsSchema = z.object(SHAPE)
 
 /** What the server accepts: the three fields and no other key (no date of consent, no identifier). */
-export const schemaDesCoordonneesStrict = z.strictObject(FORME)
+export const strictContactDetailsSchema = z.strictObject(SHAPE)
 
 /** The message of each field that does not pass, the first one when a field has several. */
-export function erreursDesCoordonnees(erreur: z.ZodError): Partial<Record<ChampDesCoordonnees, string>> {
-	const champs: Partial<Record<ChampDesCoordonnees, string>> = {}
+export function contactDetailsErrors(erreur: z.ZodError): Partial<Record<ContactDetailsField, string>> {
+	const fields: Partial<Record<ContactDetailsField, string>> = {}
 	for (const { path, message } of erreur.issues) {
-		const champ = CHAMPS_DES_COORDONNEES.find(nom => nom === path[0])
-		if (champ !== undefined && champs[champ] === undefined) champs[champ] = message
+		const field = CONTACT_DETAILS_FIELDS.find(nom => nom === path[0])
+		if (field !== undefined && fields[field] === undefined) fields[field] = message
 	}
-	return champs
+	return fields
 }
 
-const FORMAT_DE_LA_DATE = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long', timeZone: 'Europe/Paris' })
+const DATE_FORMAT = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long', timeZone: 'Europe/Paris' })
 
 /** « 15 octobre 2026 », in Paris time, or `null` for a date that is missing or unreadable. */
-export function dateLongue(date: unknown): string | null {
+export function longDate(date: unknown): string | null {
 	if (typeof date !== 'string') return null
 	const instant = new Date(date)
-	return Number.isNaN(instant.getTime()) ? null : FORMAT_DE_LA_DATE.format(instant)
+	return Number.isNaN(instant.getTime()) ? null : DATE_FORMAT.format(instant)
 }

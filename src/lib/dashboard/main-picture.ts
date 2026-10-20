@@ -6,12 +6,12 @@
 
 import { z } from 'zod'
 import { MESSAGES_DES_PHOTOS } from '../profil/photos'
-import { estUnIdentifiantDePhoto, type IdentifiantDePhoto } from './photos'
+import { isPhotoId, type PhotoId } from './photos'
 
-export interface ValeursDeLaPhoto extends Record<string, unknown> {
-	photoPrincipale: IdentifiantDePhoto
+export interface PhotoValues extends Record<string, unknown> {
+	photoPrincipale: PhotoId
 }
 
-const identifiant = z.custom<IdentifiantDePhoto>(estUnIdentifiantDePhoto, { error: MESSAGES_DES_PHOTOS.photoRefusee })
+const id = z.custom<PhotoId>(isPhotoId, { error: MESSAGES_DES_PHOTOS.photoRefusee })
 
-export const schemaDeLaPhoto = z.strictObject({ photoPrincipale: identifiant })
+export const photoSchema = z.strictObject({ photoPrincipale: id })

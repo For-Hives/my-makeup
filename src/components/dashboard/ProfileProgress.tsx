@@ -1,13 +1,13 @@
-import type { Avancement, Manque } from '@/lib/dashboard/progress'
+import type { Missing, Progress } from '@/lib/dashboard/progress'
 
-const COULEURS = {
+const COLORS = {
 	vide: 'border-neutral-400 bg-neutral-50',
 	incomplet: 'border-amber-400 bg-amber-50',
 	publiable: 'border-green-600 bg-green-50',
 	interne: 'border-neutral-400 bg-neutral-50',
 } as const
 
-function Liste({ titre, id, manques }: { titre: string; id: string; manques: readonly Manque[] }) {
+function List({ titre, id, manques }: { titre: string; id: string; manques: readonly Missing[] }) {
 	if (manques.length === 0) return null
 	return (
 		<div>
@@ -33,15 +33,15 @@ function Liste({ titre, id, manques }: { titre: string; id: string; manques: rea
  * shows the reading it is given (`avancementDuProfil`), and the page renders again after each save,
  * so it moves without a reload.
  */
-export function AvancementDuProfil({ avancement }: { avancement: Avancement }) {
-	const requis = avancement.manques.filter(m => m.requis)
-	const autres = avancement.manques.filter(m => !m.requis)
+export function ProfileProgress({ avancement }: { avancement: Progress }) {
+	const required = avancement.manques.filter(m => m.requis)
+	const others = avancement.manques.filter(m => !m.requis)
 	return (
 		<section
 			aria-labelledby="avancement-titre"
 			data-testid="avancement"
 			data-etat={avancement.etat}
-			className={`w-full min-w-0 rounded border p-5 sm:p-6 ${COULEURS[avancement.etat]}`}
+			className={`w-full min-w-0 rounded border p-5 sm:p-6 ${COLORS[avancement.etat]}`}
 		>
 			<h2 id="avancement-titre" className="font-bold text-neutral-800 text-xl">
 				{avancement.titre}
@@ -64,8 +64,8 @@ export function AvancementDuProfil({ avancement }: { avancement: Avancement }) {
 				{avancement.consequence}
 			</p>
 			<div className="mt-4 flex flex-col gap-4">
-				<Liste id="avancement-requis" titre="Pour être publiable" manques={requis} />
-				<Liste id="avancement-autres" titre="Pour un profil plus complet" manques={autres} />
+				<List id="avancement-requis" titre="Pour être publiable" manques={required} />
+				<List id="avancement-autres" titre="Pour un profil plus complet" manques={others} />
 			</div>
 		</section>
 	)

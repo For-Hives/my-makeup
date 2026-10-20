@@ -20,12 +20,12 @@ import { texte } from '../profil/nom-affiche'
 import { urlReseau } from '../profil/vue-publique'
 
 /** The five fields, in display order. `siteWeb` is the key of the collection. */
-export const CHAMPS_DES_RESEAUX = ['instagram', 'facebook', 'youtube', 'linkedin', 'siteWeb'] as const
-export type ChampDeReseau = (typeof CHAMPS_DES_RESEAUX)[number]
+export const NETWORKS_FIELDS = ['instagram', 'facebook', 'youtube', 'linkedin', 'siteWeb'] as const
+export type NetworkField = (typeof NETWORKS_FIELDS)[number]
 
-export type ValeursDesReseaux = Record<ChampDeReseau, string>
+export type NetworksValues = Record<NetworkField, string>
 
-interface Reseau {
+interface Network {
 	readonly libelle: string
 	/** The name of the network in a sentence, with its article. */
 	readonly nom: string
@@ -36,7 +36,7 @@ interface Reseau {
 	readonly exemple: string
 }
 
-export const RESEAUX: Readonly<Record<ChampDeReseau, Reseau>> = {
+export const NETWORKS: Readonly<Record<NetworkField, Network>> = {
 	instagram: {
 		libelle: 'Instagram',
 		nom: 'd’Instagram',
@@ -74,27 +74,27 @@ export const RESEAUX: Readonly<Record<ChampDeReseau, Reseau>> = {
 	},
 }
 
-export const MESSAGES_DES_RESEAUX = {
+export const NETWORKS_MESSAGES = {
 	pasUnTexte: 'Ce champ doit être un texte.',
 	tropLong: `Ce lien ne doit pas dépasser ${LONGUEUR_MAX_LIEN} caractères.`,
-	illisible: (canal: ChampDeReseau) =>
+	illisible: (canal: NetworkField) =>
 		canal === 'siteWeb'
-			? `Cette adresse n’est pas lisible : colle l’adresse de ton site, par exemple ${RESEAUX.siteWeb.exemple}.`
-			: `Ce lien n’est pas lisible : écris ton @pseudo ou colle l’adresse de ta page ${RESEAUX[canal].libelle}.`,
-	autreSite: (canal: ChampDeReseau) =>
-		`Cette adresse n’est pas celle ${RESEAUX[canal].nom} : colle l’adresse de ta page ${RESEAUX[canal].libelle} ou écris ton @pseudo.`,
+			? `Cette adresse n’est pas lisible : colle l’adresse de ton site, par exemple ${NETWORKS.siteWeb.exemple}.`
+			: `Ce lien n’est pas lisible : écris ton @pseudo ou colle l’adresse de ta page ${NETWORKS[canal].libelle}.`,
+	autreSite: (canal: NetworkField) =>
+		`Cette adresse n’est pas celle ${NETWORKS[canal].nom} : colle l’adresse de ta page ${NETWORKS[canal].libelle} ou écris ton @pseudo.`,
 	adresseDeSite: 'Ce n’est pas une adresse de site : colle l’adresse de ton site, par exemple https://www.ton-site.fr.',
 } as const
 
 /** The host without a leading `www.`, in lower case. */
-const sansWww = (hote: string): string => hote.replace(/^www\./, '')
+const withoutWww = (hote: string): string => hote.replace(/^www\./, '')
 
 /** True when the host is the network's own, or one of its subdomains (`fr.linkedin.com`, `m.youtube.com`). */
-function estDuReseau(hote: string, hotes: readonly string[]): boolean {
+function isNetwork(hote: string, hotes: readonly string[]): boolean {
 	return hotes.some(propre => hote === propre || hote.endsWith(`.${propre}`))
 }
 
-export type ResultatDeNormalisation = { ok: true; valeur: string } | { ok: false; message: string }
+export type NormalizationResult = { ok: true; valeur: string } | { ok: false; message: string }
 
 /**
  * The one address stored for what she typed in the field of a network, or the message to show
@@ -104,62 +104,62 @@ export type ResultatDeNormalisation = { ok: true; valeur: string } | { ok: false
  * or the `www.` one, without a final slash. Its path, query and anchor stay as she pasted them. A
  * website is stored as she typed it, completed with `https://` when it has no protocol.
  */
-export function normaliserReseau(canal: ChampDeReseau, saisie: unknown): ResultatDeNormalisation {
-	if (typeof saisie !== 'string') return { ok: false, message: MESSAGES_DES_RESEAUX.pasUnTexte }
+export function normalizeNetwork(canal: NetworkField, saisie: unknown): NormalizationResult {
+	if (typeof saisie !== 'string') return { ok: false, message: NETWORKS_MESSAGES.pasUnTexte }
 	const v = texte(saisie)
 	if (v === '') return { ok: true, valeur: '' }
-	const reseau = RESEAUX[canal]
-	if (canal === 'siteWeb' && v.startsWith('@')) return { ok: false, message: MESSAGES_DES_RESEAUX.adresseDeSite }
-	const lien = urlReseau(canal === 'siteWeb' ? 'website' : canal, v)
-	if (lien === null) return { ok: false, message: MESSAGES_DES_RESEAUX.illisible(canal) }
-	const adresse = new URL(lien)
-	if (adresse.username !== '' || adresse.password !== '')
-		return { ok: false, message: MESSAGES_DES_RESEAUX.illisible(canal) }
-	let valeur = lien
-	if (reseau.hotes === null) {
+	const network = NETWORKS[canal]
+	if (canal === 'siteWeb' && v.startsWith('@')) return { ok: false, message: NETWORKS_MESSAGES.adresseDeSite }
+	const link = urlReseau(canal === 'siteWeb' ? 'website' : canal, v)
+	if (link === null) return { ok: false, message: NETWORKS_MESSAGES.illisible(canal) }
+	const address = new URL(link)
+	if (address.username !== '' || address.password !== '')
+		return { ok: false, message: NETWORKS_MESSAGES.illisible(canal) }
+	let value = link
+	if (network.hotes === null) {
 		// A website: any web address with a real name (« localhost », « 12 » are no site of hers).
-		if (!adresse.hostname.includes('.')) return { ok: false, message: MESSAGES_DES_RESEAUX.adresseDeSite }
+		if (!address.hostname.includes('.')) return { ok: false, message: NETWORKS_MESSAGES.adresseDeSite }
 		// Written with its protocol, it stays exactly as she wrote it.
-		if (/^https?:\/\//i.test(v)) valeur = v
+		if (/^https?:\/\//i.test(v)) value = v
 	} else {
-		if (!estDuReseau(adresse.hostname, reseau.hotes) && !estDuReseau(sansWww(adresse.hostname), reseau.hotes))
-			return { ok: false, message: MESSAGES_DES_RESEAUX.autreSite(canal) }
-		adresse.protocol = 'https:'
+		if (!isNetwork(address.hostname, network.hotes) && !isNetwork(withoutWww(address.hostname), network.hotes))
+			return { ok: false, message: NETWORKS_MESSAGES.autreSite(canal) }
+		address.protocol = 'https:'
 		// Only the bare and the `www.` hosts of the network are written one way; a short link
 		// (`youtu.be`, `fb.me`) or a subdomain (`fr.linkedin.com`) stays as it is.
-		if (sansWww(adresse.hostname) === reseau.hotes[0] && reseau.hotePrincipal !== null)
-			adresse.hostname = reseau.hotePrincipal
-		if (adresse.pathname.length > 1) adresse.pathname = adresse.pathname.replace(/\/+$/, '')
-		valeur = adresse.toString()
+		if (withoutWww(address.hostname) === network.hotes[0] && network.hotePrincipal !== null)
+			address.hostname = network.hotePrincipal
+		if (address.pathname.length > 1) address.pathname = address.pathname.replace(/\/+$/, '')
+		value = address.toString()
 		// A bare host has a path of « / » and no more to say: that is no page of the network.
-		if (adresse.pathname === '/' && adresse.search === '' && adresse.hash === '')
-			return { ok: false, message: MESSAGES_DES_RESEAUX.illisible(canal) }
+		if (address.pathname === '/' && address.search === '' && address.hash === '')
+			return { ok: false, message: NETWORKS_MESSAGES.illisible(canal) }
 	}
-	if (valeur.length > LONGUEUR_MAX_LIEN) return { ok: false, message: MESSAGES_DES_RESEAUX.tropLong }
-	return { ok: true, valeur }
+	if (value.length > LONGUEUR_MAX_LIEN) return { ok: false, message: NETWORKS_MESSAGES.tropLong }
+	return { ok: true, valeur: value }
 }
 
-const TEXTE = z.string({ error: MESSAGES_DES_RESEAUX.pasUnTexte })
-const FORME = Object.fromEntries(CHAMPS_DES_RESEAUX.map(champ => [champ, TEXTE])) as Record<ChampDeReseau, typeof TEXTE>
+const TEXT = z.string({ error: NETWORKS_MESSAGES.pasUnTexte })
+const SHAPE = Object.fromEntries(NETWORKS_FIELDS.map(champ => [champ, TEXT])) as Record<NetworkField, typeof TEXT>
 
 /** What the server accepts: the five fields and no other key. */
-export const schemaDesReseauxStrict = z.strictObject(FORME)
+export const strictNetworksSchema = z.strictObject(SHAPE)
 
-export type LectureDesReseaux =
-	| { ok: true; valeurs: ValeursDesReseaux }
-	| { ok: false; champs: Partial<Record<ChampDeReseau, string>> }
+export type NetworksReading =
+	| { ok: true; valeurs: NetworksValues }
+	| { ok: false; champs: Partial<Record<NetworkField, string>> }
 
 /**
  * Reads the five fields as typed: the normalised values, or the message of each field that does
  * not pass. A missing field is read as empty (the form always sends the five).
  */
-export function lireLesReseaux(saisie: Partial<Record<ChampDeReseau, unknown>>): LectureDesReseaux {
-	const valeurs = {} as ValeursDesReseaux
-	const champs: Partial<Record<ChampDeReseau, string>> = {}
-	for (const champ of CHAMPS_DES_RESEAUX) {
-		const lue = normaliserReseau(champ, saisie[champ] ?? '')
-		if (lue.ok) valeurs[champ] = lue.valeur
-		else champs[champ] = lue.message
+export function readNetworks(saisie: Partial<Record<NetworkField, unknown>>): NetworksReading {
+	const values = {} as NetworksValues
+	const fields: Partial<Record<NetworkField, string>> = {}
+	for (const field of NETWORKS_FIELDS) {
+		const parsed = normalizeNetwork(field, saisie[field] ?? '')
+		if (parsed.ok) values[field] = parsed.valeur
+		else fields[field] = parsed.message
 	}
-	return Object.keys(champs).length > 0 ? { ok: false, champs } : { ok: true, valeurs }
+	return Object.keys(fields).length > 0 ? { ok: false, champs: fields } : { ok: true, valeurs: values }
 }

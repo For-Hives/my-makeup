@@ -22,30 +22,30 @@ export const DESCRIPTION_MAX = 2000
 export { DESCRIPTION_MIN }
 
 /** The only field of the section. */
-export const CHAMPS_DE_LA_DESCRIPTION = ['description'] as const
-export type ValeursDeLaDescription = Record<(typeof CHAMPS_DE_LA_DESCRIPTION)[number], string>
+export const DESCRIPTION_FIELDS = ['description'] as const
+export type DescriptionValues = Record<(typeof DESCRIPTION_FIELDS)[number], string>
 
-const BALISES_A_VIDER = /<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi
-const COMMENTAIRES = /<!--[\s\S]*?-->/g
-const BALISES = /<\/?[a-z][^>]*>|<![^>]*>|<\?[^>]*>/gi
+const TAGS_TO_CLEAR = /<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi
+const COMMENTS = /<!--[\s\S]*?-->/g
+const TAGS = /<\/?[a-z][^>]*>|<![^>]*>|<\?[^>]*>/gi
 
 /**
  * The text without any HTML: scripts and styles with their content, comments, then every tag. It
  * starts again until nothing changes, so that `<<b>script>` cannot rebuild a tag from the pieces.
  * A `<` that opens no tag (« 3 < 5 ») is text and stays. Line breaks are `\n`, edge spaces cut.
  */
-export function retirerLeHtml(valeur: string): string {
-	let texte = valeur.replace(/\r\n?/g, '\n')
+export function removeHtml(valeur: string): string {
+	let text = valeur.replace(/\r\n?/g, '\n')
 	for (;;) {
-		const suivant = texte.replace(BALISES_A_VIDER, '').replace(COMMENTAIRES, '').replace(BALISES, '')
-		if (suivant === texte) break
-		texte = suivant
+		const next = text.replace(TAGS_TO_CLEAR, '').replace(COMMENTS, '').replace(TAGS, '')
+		if (next === text) break
+		text = next
 	}
-	return texte.trim()
+	return text.trim()
 }
 
 /** The counter under the field: how many characters count, and where she stands against 200. */
-export interface Compteur {
+export interface Counter {
 	/** The length that counts for « publiable » (U05): runs of spaces and line breaks count once. */
 	readonly compte: number
 	/** The length of the text as it will be stored, against the bound of 2 000. */
@@ -54,30 +54,30 @@ export interface Compteur {
 	readonly assez: boolean
 }
 
-export function compteurDeLaDescription(saisie: string): Compteur {
-	const texte = retirerLeHtml(saisie)
-	const compte = longueurDescription(texte)
-	return { compte, total: texte.length, assez: compte >= DESCRIPTION_MIN }
+export function descriptionCounter(saisie: string): Counter {
+	const text = removeHtml(saisie)
+	const account = longueurDescription(text)
+	return { compte: account, total: text.length, assez: account >= DESCRIPTION_MIN }
 }
 
-const TROP = `Ta description ne doit pas dépasser ${DESCRIPTION_MAX} caractères.`
+const TOO_LONG = `Ta description ne doit pas dépasser ${DESCRIPTION_MAX} caractères.`
 
-const FORME = {
+const SHAPE = {
 	// A value that is not a text (a forged request) gets a message of its own, in French.
 	description: z
 		.string({ error: 'Ta description doit être un texte.' })
-		.transform(retirerLeHtml)
-		.pipe(z.string().max(DESCRIPTION_MAX, TROP)),
+		.transform(removeHtml)
+		.pipe(z.string().max(DESCRIPTION_MAX, TOO_LONG)),
 }
 
 /** What the form checks before it sends anything: the text without HTML, cut to its edges. */
-export const schemaDeLaDescription = z.object(FORME)
+export const descriptionSchema = z.object(SHAPE)
 
 /** What the server accepts: the same field and no other key. */
-export const schemaDeLaDescriptionStrict = z.strictObject(FORME)
+export const strictDescriptionSchema = z.strictObject(SHAPE)
 
 /** The message of the field when it does not pass. */
-export function erreursDeLaDescription(erreur: z.ZodError): Partial<Record<'description', string>> {
-	const premiere = erreur.issues.find(({ path }) => path[0] === 'description')
-	return premiere ? { description: premiere.message } : {}
+export function descriptionErrors(erreur: z.ZodError): Partial<Record<'description', string>> {
+	const first = erreur.issues.find(({ path }) => path[0] === 'description')
+	return first ? { description: first.message } : {}
 }

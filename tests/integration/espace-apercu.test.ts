@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
-import { identifiantDuProfil, type UtilisateurDeLEspace } from '@/lib/dashboard/my-profile'
+import { type DashboardUser, profileId } from '@/lib/dashboard/my-profile'
 import { lireLAdresseDeProfil, lireLApercuDuProfil } from '@/services/public/profils'
 import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
@@ -22,9 +22,9 @@ async function ficheDe(payload: Payload, compte: Maquilleuse) {
 	return fiche
 }
 
-async function utilisateurDe(payload: Payload, compte: Maquilleuse): Promise<UtilisateurDeLEspace> {
+async function utilisateurDe(payload: Payload, compte: Maquilleuse): Promise<DashboardUser> {
 	const doc = await payload.findByID({ collection: 'pros', id: compte.id, depth: 0, overrideAccess: true })
-	return { ...doc, collection: 'pros' } as UtilisateurDeLEspace
+	return { ...doc, collection: 'pros' } as DashboardUser
 }
 
 const COMPLET = {
@@ -100,8 +100,8 @@ describe('139 : seulement le sien', () => {
 		const ficheB = await ficheDe(payload, b)
 		await payload.update({ collection: 'profiles', id: ficheB.id, data: { firstName: 'Bea', lastName: 'Autre' } })
 
-		const idA = await identifiantDuProfil(payload, await utilisateurDe(payload, a))
-		const idB = await identifiantDuProfil(payload, await utilisateurDe(payload, b))
+		const idA = await profileId(payload, await utilisateurDe(payload, a))
+		const idB = await profileId(payload, await utilisateurDe(payload, b))
 		expect(idA).toBe(ficheA.id)
 		expect(idB).toBe(ficheB.id)
 		expect((await lireLApercuDuProfil(payload, idA ?? -1))?.profil.nom).not.toContain('Bea')
@@ -111,8 +111,6 @@ describe('139 : seulement le sien', () => {
 	test('un compte sans profil n’a pas d’aperçu', async () => {
 		const compte = await creerCompte('maquilleuse-sans-profil')
 		const payload = await payloadDeTest()
-		expect(
-			await identifiantDuProfil(payload, await utilisateurDe(payload, compte as unknown as Maquilleuse))
-		).toBeNull()
+		expect(await profileId(payload, await utilisateurDe(payload, compte as unknown as Maquilleuse))).toBeNull()
 	})
 })

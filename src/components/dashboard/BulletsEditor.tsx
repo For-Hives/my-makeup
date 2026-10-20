@@ -1,31 +1,29 @@
 'use client'
 
 import { type FormEvent, useLayoutEffect, useRef, useState } from 'react'
-import { mesurerLEnregistrement } from '@/lib/dashboard/analytics'
+import { trackSave } from '@/lib/dashboard/analytics'
 import {
-	type ChampDePuces,
-	COMPETENCES,
-	LANGUES,
-	lireLesNoms,
-	type Puce,
-	type SorteDePuces,
-	type ValeursDesPuces,
+	type Bullet,
+	type BulletsField,
+	type BulletsKind,
+	type BulletsValues,
+	LANGUAGES,
+	readNames,
+	SKILLS,
 } from '@/lib/dashboard/bullets'
-import { MESSAGE_ECHEC, type ResultatDEnregistrement } from '@/lib/dashboard/result'
-import { PanneauDEdition } from './EditingPanel'
+import { FAILURE_MESSAGE, type SaveResult } from '@/lib/dashboard/result'
+import { EditingPanel } from './EditingPanel'
 
-export type EnvoiDesPuces = (saisie: {
-	puces: { id?: string; nom: string }[]
-}) => Promise<ResultatDEnregistrement<ValeursDesPuces>>
+export type BulletsUpload = (saisie: { puces: { id?: string; nom: string }[] }) => Promise<SaveResult<BulletsValues>>
 
-const SORTES: Record<ChampDePuces, SorteDePuces> = { languages: LANGUES, skills: COMPETENCES }
+const KINDS: Record<BulletsField, BulletsKind> = { languages: LANGUAGES, skills: SKILLS }
 
-const BOUTON = 'min-h-11 rounded-md px-4 py-2 font-medium'
-const CHAMP = 'min-h-11 w-full rounded-md border border-neutral-400 bg-white px-3 py-2 text-base'
+const BUTTON = 'min-h-11 rounded-md px-4 py-2 font-medium'
+const FIELD = 'min-h-11 w-full rounded-md border border-neutral-400 bg-white px-3 py-2 text-base'
 /** The prefix of the identifier of a chip added in the panel: never sent, never stored. */
 const LOCAL = 'nouveau-'
 
-const memesPuces = (a: readonly Puce[], b: readonly Puce[]): boolean =>
+const sameBullets = (a: readonly Bullet[], b: readonly Bullet[]): boolean =>
 	a.length === b.length && a.every((puce, rang) => puce.id === b[rang]?.id && puce.nom === b[rang]?.nom)
 
 /**
@@ -36,228 +34,228 @@ const memesPuces = (a: readonly Puce[], b: readonly Puce[]): boolean =>
  *
  * The seven rules of the lists edited in place (docs/qualite.md §3) are kept in `FormulaireDePuces`.
  */
-export function EditeurDePuces({
-	liste,
-	puces,
+export function BulletsEditor({
+	liste: list,
+	puces: bullets,
 	envoyer,
 }: {
 	/** The list, by name: the kinds hold functions, which a server page cannot hand to the browser. */
-	liste: ChampDePuces
-	puces: readonly Puce[]
-	envoyer: EnvoiDesPuces
+	liste: BulletsField
+	puces: readonly Bullet[]
+	envoyer: BulletsUpload
 }) {
-	const sorte = SORTES[liste]
-	const [ouvert, setOuvert] = useState(false)
-	const [annonce, setAnnonce] = useState('')
+	const kind = KINDS[list]
+	const [open, setOpen] = useState(false)
+	const [announcement, setAnnouncement] = useState('')
 	// What the database stored last: the panel opens on it, whether or not the page was refreshed yet.
-	const [stockees, setStockees] = useState(puces)
-	const declencheur = useRef<HTMLButtonElement>(null)
+	const [storedRows, setStored] = useState(bullets)
+	const trigger = useRef<HTMLButtonElement>(null)
 
 	return (
 		<>
 			<button
-				ref={declencheur}
+				ref={trigger}
 				type="button"
 				aria-haspopup="dialog"
-				aria-label={sorte.bouton}
+				aria-label={kind.bouton}
 				onClick={() => {
-					setAnnonce('')
-					setOuvert(true)
+					setAnnouncement('')
+					setOpen(true)
 				}}
 				onKeyDown={evenement => {
 					if (evenement.repeat) evenement.preventDefault()
 				}}
-				className={`${BOUTON} border border-neutral-400 bg-white`}
+				className={`${BUTTON} border border-neutral-400 bg-white`}
 			>
 				Modifier
 			</button>
 			<p role="status" className="w-full text-green-800 text-sm">
-				{annonce}
+				{announcement}
 			</p>
-			{ouvert ? (
-				<FormulaireDePuces
-					sorte={sorte}
-					initiales={stockees}
+			{open ? (
+				<BulletsForm
+					sorte={kind}
+					initiales={storedRows}
 					envoyer={envoyer}
-					retour={declencheur}
+					retour={trigger}
 					onEnregistre={enregistrees => {
-						setStockees(enregistrees)
-						setAnnonce(sorte.enregistre)
-						setOuvert(false)
+						setStored(enregistrees)
+						setAnnouncement(kind.enregistre)
+						setOpen(false)
 					}}
-					onFermer={() => setOuvert(false)}
+					onFermer={() => setOpen(false)}
 				/>
 			) : null}
 		</>
 	)
 }
 
-function FormulaireDePuces({
-	sorte,
+function BulletsForm({
+	sorte: kind,
 	initiales,
 	envoyer,
 	retour,
 	onEnregistre,
 	onFermer,
 }: {
-	sorte: SorteDePuces
-	initiales: readonly Puce[]
-	envoyer: EnvoiDesPuces
+	sorte: BulletsKind
+	initiales: readonly Bullet[]
+	envoyer: BulletsUpload
 	retour: React.RefObject<HTMLButtonElement | null>
-	onEnregistre: (puces: readonly Puce[]) => void
+	onEnregistre: (puces: readonly Bullet[]) => void
 	onFermer: () => void
 }) {
-	const [puces, setPuces] = useState<readonly Puce[]>(initiales)
-	const [saisie, setSaisie] = useState('')
+	const [bullets, setBullets] = useState<readonly Bullet[]>(initiales)
+	const [input, setInput] = useState('')
 	// The refusal of the name she is typing, said near the field (L6).
-	const [refus, setRefus] = useState('')
+	const [refusal, setRefusal] = useState('')
 	// What the screen readers hear when a chip leaves (L5). `rang` changes at every removal, so two
 	// removals of the same name are two sentences.
-	const [annonce, setAnnonce] = useState({ phrase: '', rang: 0 })
-	const [enCours, setEnCours] = useState(false)
+	const [announcement, setAnnouncement] = useState({ phrase: '', rang: 0 })
+	const [pending, setPending] = useState(false)
 	const [message, setMessage] = useState('')
-	const verrou = useRef(false)
-	const compteur = useRef(0)
+	const lock = useRef(false)
+	const counter = useRef(0)
 	const zone = useRef<HTMLDivElement>(null)
-	const champ = useRef<HTMLInputElement>(null)
+	const field = useRef<HTMLInputElement>(null)
 	// Set by a removal, read once the chip is gone: where the focus goes (L4).
-	const apresRetrait = useRef<{ rang: number; clavier: boolean } | null>(null)
+	const afterRemoval = useRef<{ rang: number; clavier: boolean } | null>(null)
 
 	useLayoutEffect(() => {
-		const retrait = apresRetrait.current
-		if (retrait === null) return
-		apresRetrait.current = null
-		const boutons = [...(zone.current?.querySelectorAll<HTMLElement>('[data-retirer]') ?? [])]
+		const removal = afterRemoval.current
+		if (removal === null) return
+		afterRemoval.current = null
+		const buttons = [...(zone.current?.querySelectorAll<HTMLElement>('[data-retirer]') ?? [])]
 		// The chip that takes the place of the one removed, else the one above it.
-		const cible = boutons[retrait.rang] ?? boutons[retrait.rang - 1]
-		if (cible !== undefined) cible.focus()
+		const target = buttons[removal.rang] ?? buttons[removal.rang - 1]
+		if (target !== undefined) target.focus()
 		// The list is empty. A key goes to the field to add; a click or a tap goes to the title, so
 		// that the keyboard of the phone stays closed.
-		else if (retrait.clavier) champ.current?.focus()
+		else if (removal.clavier) field.current?.focus()
 		else zone.current?.closest<HTMLElement>('[role="dialog"]')?.querySelector<HTMLElement>('h2')?.focus()
-	}, [puces])
+	}, [bullets])
 
 	/** Adds what the field holds. Returns the list after the addition, `null` when a name is refused. */
-	function ajouter(finale: boolean): readonly Puce[] | null {
-		const lues = lireLesNoms(saisie, puces, sorte, finale)
-		const ajoutees = lues.noms.map(nom => ({ id: `${LOCAL}${++compteur.current}`, nom }))
-		const suite = ajoutees.length > 0 ? [...puces, ...ajoutees] : puces
-		if (ajoutees.length > 0) setPuces(suite)
-		setSaisie(lues.reste)
-		setRefus(lues.ok ? '' : lues.message)
-		return lues.ok ? suite : null
+	function add(finale: boolean): readonly Bullet[] | null {
+		const parsedList = readNames(input, bullets, kind, finale)
+		const added = parsedList.noms.map(nom => ({ id: `${LOCAL}${++counter.current}`, nom }))
+		const suite = added.length > 0 ? [...bullets, ...added] : bullets
+		if (added.length > 0) setBullets(suite)
+		setInput(parsedList.reste)
+		setRefusal(parsedList.ok ? '' : parsedList.message)
+		return parsedList.ok ? suite : null
 	}
 
-	function retirer(rang: number, puce: Puce, clavier: boolean) {
-		apresRetrait.current = { rang, clavier }
-		setAnnonce(({ rang: dernier }) => ({
-			phrase: sorte.retiree(puce.nom).replace(/\s+/g, ' ').trim(),
+	function remove(rang: number, puce: Bullet, clavier: boolean) {
+		afterRemoval.current = { rang, clavier }
+		setAnnouncement(({ rang: dernier }) => ({
+			phrase: kind.retiree(puce.nom).replace(/\s+/g, ' ').trim(),
 			rang: dernier + 1,
 		}))
-		setPuces(courantes => courantes.filter(autre => autre.id !== puce.id))
+		setBullets(courantes => courantes.filter(autre => autre.id !== puce.id))
 		// The refusal of a name that was in the list is no longer true once the name is free.
-		setRefus('')
+		setRefusal('')
 	}
 
-	async function enregistrer(evenement: FormEvent) {
+	async function save(evenement: FormEvent) {
 		evenement.preventDefault()
-		if (verrou.current) return
-		verrou.current = true
+		if (lock.current) return
+		lock.current = true
 		try {
 			// What she typed and did not add yet is added, not lost; a refused name stops the save.
-			const liste = saisie.trim() === '' ? puces : ajouter(true)
-			if (liste === null) return
-			setEnCours(true)
+			const list = input.trim() === '' ? bullets : add(true)
+			if (list === null) return
+			setPending(true)
 			setMessage('')
-			const resultat: ResultatDEnregistrement<ValeursDesPuces> = await envoyer({
-				puces: liste.map(({ id, nom }) => (id.startsWith(LOCAL) ? { nom } : { id, nom })),
-			}).catch(() => ({ ok: false, message: MESSAGE_ECHEC }))
-			mesurerLEnregistrement(sorte.mesure, resultat)
-			if (resultat.ok) {
-				onEnregistre(resultat.valeurs.puces)
+			const result: SaveResult<BulletsValues> = await envoyer({
+				puces: list.map(({ id, nom }) => (id.startsWith(LOCAL) ? { nom } : { id, nom })),
+			}).catch(() => ({ ok: false, message: FAILURE_MESSAGE }))
+			trackSave(kind.mesure, result)
+			if (result.ok) {
+				onEnregistre(result.valeurs.puces)
 				return
 			}
-			setMessage(resultat.message)
+			setMessage(result.message)
 		} finally {
-			verrou.current = false
-			setEnCours(false)
+			lock.current = false
+			setPending(false)
 		}
 	}
 
 	return (
-		<PanneauDEdition
-			titre={sorte.titre}
-			enCours={enCours}
-			modifie={saisie.trim() !== '' || !memesPuces(puces, initiales)}
+		<EditingPanel
+			titre={kind.titre}
+			enCours={pending}
+			modifie={input.trim() !== '' || !sameBullets(bullets, initiales)}
 			retour={retour}
 			onFermer={onFermer}
 		>
 			<div ref={zone}>
-				<form noValidate aria-busy={enCours} onSubmit={enregistrer} className="flex flex-col gap-4">
-					<p className="text-neutral-700 text-sm">{sorte.explication}</p>
+				<form noValidate aria-busy={pending} onSubmit={save} className="flex flex-col gap-4">
+					<p className="text-neutral-700 text-sm">{kind.explication}</p>
 					<div className="flex flex-col gap-1">
 						<label htmlFor="puces-champ" className="font-medium text-sm">
-							{sorte.libelle}
+							{kind.libelle}
 						</label>
 						<div className="flex flex-wrap gap-2">
 							<input
-								ref={champ}
+								ref={field}
 								id="puces-champ"
 								type="text"
 								autoComplete="off"
 								enterKeyHint="enter"
-								value={saisie}
-								aria-invalid={refus ? true : undefined}
-								aria-describedby={refus ? 'puces-refus' : undefined}
-								className={`${CHAMP} min-w-0 flex-1`}
+								value={input}
+								aria-invalid={refusal ? true : undefined}
+								aria-describedby={refusal ? 'puces-refus' : undefined}
+								className={`${FIELD} min-w-0 flex-1`}
 								onChange={evenement => {
-									setSaisie(evenement.target.value)
-									setRefus('')
+									setInput(evenement.target.value)
+									setRefusal('')
 									// A « ; » ends a name: what is before it is added at once.
 									if (evenement.target.value.includes(';')) {
-										const lues = lireLesNoms(evenement.target.value, puces, sorte, false)
-										const ajoutees = lues.noms.map(nom => ({ id: `${LOCAL}${++compteur.current}`, nom }))
-										if (ajoutees.length > 0) setPuces([...puces, ...ajoutees])
-										setSaisie(lues.reste)
-										setRefus(lues.ok ? '' : lues.message)
+										const parsedList = readNames(evenement.target.value, bullets, kind, false)
+										const added = parsedList.noms.map(nom => ({ id: `${LOCAL}${++counter.current}`, nom }))
+										if (added.length > 0) setBullets([...bullets, ...added])
+										setInput(parsedList.reste)
+										setRefusal(parsedList.ok ? '' : parsedList.message)
 									}
 								}}
 								onKeyDown={evenement => {
 									if (evenement.key !== 'Enter') return
 									// Enter never sends the form from here, and held down it acts once.
 									evenement.preventDefault()
-									if (!evenement.repeat) ajouter(true)
+									if (!evenement.repeat) add(true)
 								}}
 							/>
 							<button
 								type="button"
 								onClick={() => {
-									ajouter(true)
-									champ.current?.focus()
+									add(true)
+									field.current?.focus()
 								}}
 								onKeyDown={evenement => {
 									if (evenement.repeat) evenement.preventDefault()
 								}}
-								className={`${BOUTON} border border-neutral-400 bg-white`}
+								className={`${BUTTON} border border-neutral-400 bg-white`}
 							>
 								Ajouter
 							</button>
 						</div>
 						<div role="alert">
-							{refus ? (
+							{refusal ? (
 								<p id="puces-refus" className="text-red-800 text-sm">
-									{refus}
+									{refusal}
 								</p>
 							) : null}
 						</div>
 					</div>
 					<div className="flex flex-col gap-2">
-						<h3 className="font-medium text-sm">{sorte.ajoutees}</h3>
-						{puces.length === 0 ? (
-							<p className="text-neutral-600 text-sm italic">{sorte.vide}</p>
+						<h3 className="font-medium text-sm">{kind.ajoutees}</h3>
+						{bullets.length === 0 ? (
+							<p className="text-neutral-600 text-sm italic">{kind.vide}</p>
 						) : (
 							<ul className="flex flex-wrap gap-2">
-								{puces.map((puce, rang) => (
+								{bullets.map((puce, rang) => (
 									<li key={puce.id}>
 										<button
 											type="button"
@@ -267,7 +265,7 @@ function FormulaireDePuces({
 												if (evenement.repeat) evenement.preventDefault()
 											}}
 											// detail 0: Enter or Space. A click or a tap has a count of 1 or more.
-											onClick={evenement => retirer(rang, puce, evenement.detail === 0)}
+											onClick={evenement => remove(rang, puce, evenement.detail === 0)}
 											className="flex min-h-11 items-center gap-2 rounded-full bg-neutral-100 px-4 text-sm"
 										>
 											<span>{puce.nom}</span>
@@ -279,20 +277,20 @@ function FormulaireDePuces({
 						)}
 					</div>
 					<div role="status" aria-live="polite" className="sr-only" data-testid="annonce-de-retrait">
-						<span key={annonce.rang}>{annonce.phrase}</span>
+						<span key={announcement.rang}>{announcement.phrase}</span>
 					</div>
 					<div role="alert">
 						{message ? <p className="rounded-md bg-red-50 p-3 text-red-800 text-sm">{message}</p> : null}
 					</div>
 					<button
 						type="submit"
-						disabled={enCours}
-						className={`${BOUTON} bg-neutral-900 text-white disabled:cursor-wait disabled:opacity-60`}
+						disabled={pending}
+						className={`${BUTTON} bg-neutral-900 text-white disabled:cursor-wait disabled:opacity-60`}
 					>
-						{enCours ? 'Enregistrement…' : 'Enregistrer'}
+						{pending ? 'Enregistrement…' : 'Enregistrer'}
 					</button>
 				</form>
 			</div>
-		</PanneauDEdition>
+		</EditingPanel>
 	)
 }

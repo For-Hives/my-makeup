@@ -14,9 +14,9 @@ import { rayonKm } from '../format-zone'
 import { formatPrix } from '../prix'
 import { texte } from '../profil/nom-affiche'
 import { moisAnnee, periode } from '../profil/vue-publique'
-import { dateLongue } from './contact-details'
-import { estDisponible, TEXTE_DISPONIBLE, TEXTE_HORS_RECHERCHE, TEXTE_INDISPONIBLE } from './availability'
-import { libelleDeLaCommune } from './location'
+import { AVAILABLE_TEXT, isAvailable, OUT_OF_SEARCH_TEXT, UNAVAILABLE_TEXT } from './availability'
+import { longDate } from './contact-details'
+import { cityLabel } from './location'
 
 /** The sections, in the order of the page. Each one will have its « Modifier » button. */
 export const SECTIONS = [
@@ -37,19 +37,19 @@ export const SECTIONS = [
 export type Section = (typeof SECTIONS)[number]
 
 /** One line of a card: its label, if it has one, and its value, or `null` when nothing is stored. */
-export interface LigneDeCarte {
+export interface CardRow {
 	readonly libelle?: string
 	readonly valeur: string | null
 }
 
-export interface Carte {
+export interface Card {
 	readonly section: Section
 	readonly titre: string
-	readonly lignes: readonly LigneDeCarte[]
+	readonly lignes: readonly CardRow[]
 }
 
 /** What the cards read of a profile: the fields of the owner, as `payload.find` gives them. */
-export type ProfilDeLEspace = Pick<
+export type DashboardProfile = Pick<
 	Profile,
 	| 'id'
 	| 'firstName'
@@ -74,41 +74,41 @@ export type ProfilDeLEspace = Pick<
 	| 'consentedAt'
 >
 
-const ou = (valeur: unknown): string | null => texte(valeur) || null
+const or = (valeur: unknown): string | null => texte(valeur) || null
 
-const ligne = (libelle: string | undefined, valeur: unknown): LigneDeCarte => ({
+const row = (libelle: string | undefined, valeur: unknown): CardRow => ({
 	...(libelle === undefined ? {} : { libelle }),
-	valeur: ou(valeur),
+	valeur: or(valeur),
 })
 
 /** The lines of a list: one per row that says something; a single empty line when none does. */
-function lignesDeListe(textes: readonly (string | null)[]): LigneDeCarte[] {
-	const dits = textes.flatMap(valeur => (valeur === null ? [] : [{ valeur }]))
-	return dits.length > 0 ? dits : [{ valeur: null }]
+function listRows(textes: readonly (string | null)[]): CardRow[] {
+	const present = textes.flatMap(valeur => (valeur === null ? [] : [{ valeur }]))
+	return present.length > 0 ? present : [{ valeur: null }]
 }
 
-const rassembler = (parties: readonly unknown[], separateur: string): string | null =>
-	ou(parties.map(texte).filter(Boolean).join(separateur))
+const gather = (parties: readonly unknown[], separateur: string): string | null =>
+	or(parties.map(texte).filter(Boolean).join(separateur))
 
-function carteLocalisation(profil: ProfilDeLEspace): Carte {
-	const commune = texte(profil.city?.name)
+function locationCard(profil: DashboardProfile): Card {
+	const cityName = texte(profil.city?.name)
 	const km = rayonKm(profil.radiusKm)
-	const domicile = profil.homeService === true ? 'Oui' : profil.homeService === false ? 'Non' : null
+	const home = profil.homeService === true ? 'Oui' : profil.homeService === false ? 'Non' : null
 	return {
 		section: 'localisation',
 		titre: 'Localisation',
 		lignes: [
 			{
 				libelle: 'Commune',
-				valeur: ou(libelleDeLaCommune({ nom: profil.city?.name, departement: profil.city?.department })),
+				valeur: or(cityLabel({ nom: profil.city?.name, departement: profil.city?.department })),
 			},
 			{ libelle: 'Rayon', valeur: km === null ? null : `${km} km` },
-			{ libelle: 'Se déplace à domicile', valeur: commune === '' ? null : domicile },
+			{ libelle: 'Se déplace à domicile', valeur: cityName === '' ? null : home },
 		],
 	}
 }
 
-const RESEAUX = [
+const NETWORKS = [
 	['instagram', 'Instagram'],
 	['facebook', 'Facebook'],
 	['linkedin', 'LinkedIn'],
@@ -117,17 +117,17 @@ const RESEAUX = [
 ] as const
 
 /** « Oui, depuis le 15 octobre 2026 » when the server dated her choice, « Oui » without a date, else « Non ». */
-function affichage(profil: ProfilDeLEspace): string {
+function display(profil: DashboardProfile): string {
 	if (profil.publicContact !== true) return 'Non'
-	const depuis = dateLongue(profil.consentedAt)
-	return depuis === null ? 'Oui' : `Oui, depuis le ${depuis}`
+	const from = longDate(profil.consentedAt)
+	return from === null ? 'Oui' : `Oui, depuis le ${from}`
 }
 
 /** The cards of a profile, one per section, in the order of the page. */
-export function cartesDuProfil(profil: ProfilDeLEspace): Carte[] {
-	const reseaux = RESEAUX.flatMap(([cle, libelle]) => {
-		const valeur = ou(profil.networks?.[cle])
-		return valeur === null ? [] : [{ libelle, valeur }]
+export function profileCards(profil: DashboardProfile): Card[] {
+	const networks = NETWORKS.flatMap(([cle, libelle]) => {
+		const value = or(profil.networks?.[cle])
+		return value === null ? [] : [{ libelle, valeur: value }]
 	})
 	const photos = profil.gallery?.length ?? 0
 	return [
@@ -135,21 +135,21 @@ export function cartesDuProfil(profil: ProfilDeLEspace): Carte[] {
 			section: 'identite',
 			titre: 'Identité',
 			lignes: [
-				ligne('Prénom', profil.firstName),
-				ligne('Nom', profil.lastName),
-				ligne('Nom d’artiste', profil.artistName),
-				ligne('Spécialité', profil.specialty),
+				row('Prénom', profil.firstName),
+				row('Nom', profil.lastName),
+				row('Nom d’artiste', profil.artistName),
+				row('Spécialité', profil.specialty),
 			],
 		},
-		{ section: 'description', titre: 'Description', lignes: [ligne(undefined, profil.description)] },
-		carteLocalisation(profil),
+		{ section: 'description', titre: 'Description', lignes: [row(undefined, profil.description)] },
+		locationCard(profil),
 		{
 			section: 'disponibilite',
 			titre: 'Disponibilité',
 			// No value stored (an imported profile) reads « Disponible », as the public list does.
-			lignes: estDisponible(profil.available)
-				? [{ valeur: TEXTE_DISPONIBLE }]
-				: [{ valeur: TEXTE_INDISPONIBLE }, { valeur: TEXTE_HORS_RECHERCHE }],
+			lignes: isAvailable(profil.available)
+				? [{ valeur: AVAILABLE_TEXT }]
+				: [{ valeur: UNAVAILABLE_TEXT }, { valeur: OUT_OF_SEARCH_TEXT }],
 		},
 		{
 			section: 'photo',
@@ -164,48 +164,48 @@ export function cartesDuProfil(profil: ProfilDeLEspace): Carte[] {
 		{
 			section: 'competences',
 			titre: 'Compétences',
-			lignes: lignesDeListe((profil.skills ?? []).map(({ name }) => ou(name))),
+			lignes: listRows((profil.skills ?? []).map(({ name }) => or(name))),
 		},
 		{
 			section: 'formations',
 			titre: 'Formations',
-			lignes: lignesDeListe(
+			lignes: listRows(
 				(profil.courses ?? []).map(({ diploma, school, graduatedAt }) =>
-					rassembler([diploma, school, moisAnnee(graduatedAt)], ' - ')
+					gather([diploma, school, moisAnnee(graduatedAt)], ' - ')
 				)
 			),
 		},
 		{
 			section: 'experiences',
 			titre: 'Expériences',
-			lignes: lignesDeListe(
+			lignes: listRows(
 				(profil.experiences ?? []).map(({ jobTitle, company, city, startDate, endDate }) =>
-					rassembler([jobTitle, company, city, periode({ startDate, endDate })], ' - ')
+					gather([jobTitle, company, city, periode({ startDate, endDate })], ' - ')
 				)
 			),
 		},
 		{
 			section: 'langues',
 			titre: 'Langues',
-			lignes: lignesDeListe((profil.languages ?? []).map(({ name }) => ou(name))),
+			lignes: listRows((profil.languages ?? []).map(({ name }) => or(name))),
 		},
 		{
 			section: 'prestations',
 			titre: 'Prestations',
-			lignes: lignesDeListe(
+			lignes: listRows(
 				(profil.serviceOffers ?? []).map(({ name, priceText, priceFrom }) =>
-					rassembler([name, formatPrix({ priceText, priceFrom }).replace(/\n/g, ', ')], ' - ')
+					gather([name, formatPrix({ priceText, priceFrom }).replace(/\n/g, ', ')], ' - ')
 				)
 			),
 		},
-		{ section: 'reseaux', titre: 'Réseaux', lignes: reseaux.length > 0 ? reseaux : [{ valeur: null }] },
+		{ section: 'reseaux', titre: 'Réseaux', lignes: networks.length > 0 ? networks : [{ valeur: null }] },
 		{
 			section: 'coordonnees',
 			titre: 'Coordonnées',
 			lignes: [
-				ligne('Téléphone', profil.contactDetails?.phone),
-				ligne('Email de contact', profil.contactDetails?.email),
-				{ libelle: 'Affichées sur ton profil', valeur: affichage(profil) },
+				row('Téléphone', profil.contactDetails?.phone),
+				row('Email de contact', profil.contactDetails?.email),
+				{ libelle: 'Affichées sur ton profil', valeur: display(profil) },
 			],
 		},
 	]

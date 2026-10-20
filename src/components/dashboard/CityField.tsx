@@ -1,19 +1,14 @@
 'use client'
 
 import { type KeyboardEvent, useEffect, useId, useRef, useState } from 'react'
-import {
-	type CommuneProposee,
-	MESSAGE_ADRESSE_REFUSEE,
-	RECHERCHE_MIN,
-	type ResultatDeRecherche,
-} from '@/lib/dashboard/location'
+import { REFUSED_ADDRESS_MESSAGE, SEARCH_MIN, type SearchResult, type SuggestedCity } from '@/lib/dashboard/location'
 
-export type RechercheDeCommunes = (texte: string) => Promise<ResultatDeRecherche>
+export type CitiesSearch = (texte: string) => Promise<SearchResult>
 
 /** The pause after the last key before the list is asked. */
-export const PAUSE_DE_LA_RECHERCHE_MS = 250
+export const SEARCH_PAUSE_MS = 250
 
-const CHAMP = 'min-h-11 w-full rounded-md border border-neutral-400 bg-white px-3 py-2 text-base'
+const FIELD = 'min-h-11 w-full rounded-md border border-neutral-400 bg-white px-3 py-2 text-base'
 
 /**
  * The field in which she chooses her commune (ticket 123): an ARIA combobox on the official list.
@@ -31,7 +26,7 @@ const CHAMP = 'min-h-11 w-full rounded-md border border-neutral-400 bg-white px-
  *
  * It holds no data of its own: `onChoisir` tells the form which commune is chosen, or `null`.
  */
-export function ChampDeCommune({
+export function CityField({
 	libelleInitial,
 	chercher,
 	onChoisir,
@@ -41,19 +36,19 @@ export function ChampDeCommune({
 }: {
 	/** « Annecy (74) », or '' when no commune is stored yet. */
 	libelleInitial: string
-	chercher: RechercheDeCommunes
-	onChoisir: (commune: CommuneProposee | null) => void
+	chercher: CitiesSearch
+	onChoisir: (commune: SuggestedCity | null) => void
 	erreur: string
 	idErreur: string
 	id: string
 }) {
-	const liste = useId()
-	const [texte, setTexte] = useState(libelleInitial)
-	const [propositions, setPropositions] = useState<CommuneProposee[]>([])
-	const [ouvert, setOuvert] = useState(false)
-	const [actif, setActif] = useState(-1)
-	const [etat, setEtat] = useState<'repos' | 'recherche' | 'rien' | 'panne' | 'adresse'>('repos')
-	const [messagePanne, setMessagePanne] = useState('')
+	const list = useId()
+	const [text, setText] = useState(libelleInitial)
+	const [suggestions, setSuggestions] = useState<SuggestedCity[]>([])
+	const [open, setOpen] = useState(false)
+	const [active, setActive] = useState(-1)
+	const [state, setState] = useState<'repos' | 'recherche' | 'rien' | 'panne' | 'adresse'>('repos')
+	const [outageMessage, setOutageMessage] = useState('')
 	const question = useRef(0)
 	const pause = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
@@ -65,82 +60,80 @@ export function ChampDeCommune({
 		[]
 	)
 
-	function fermer() {
-		setOuvert(false)
-		setActif(-1)
+	function close() {
+		setOpen(false)
+		setActive(-1)
 	}
 
-	function saisir(valeur: string) {
-		setTexte(valeur)
+	function enter(valeur: string) {
+		setText(valeur)
 		// Typing takes the commune back: free text is never one.
 		onChoisir(null)
 		clearTimeout(pause.current)
-		const numero = ++question.current
-		if (valeur.trim().length < RECHERCHE_MIN) {
-			setPropositions([])
-			setEtat('repos')
-			fermer()
+		const number = ++question.current
+		if (valeur.trim().length < SEARCH_MIN) {
+			setSuggestions([])
+			setState('repos')
+			close()
 			return
 		}
-		setEtat('recherche')
+		setState('recherche')
 		pause.current = setTimeout(() => {
 			void chercher(valeur)
-				.catch(
-					(): ResultatDeRecherche => ({ ok: false, message: 'La recherche n’a pas abouti : réessaie dans un instant.' })
-				)
+				.catch((): SearchResult => ({ ok: false, message: 'La recherche n’a pas abouti : réessaie dans un instant.' }))
 				.then(resultat => {
-					if (numero !== question.current) return
+					if (number !== question.current) return
 					if (!resultat.ok) {
-						setPropositions([])
-						setMessagePanne(resultat.message)
-						setEtat('panne')
-						fermer()
+						setSuggestions([])
+						setOutageMessage(resultat.message)
+						setState('panne')
+						close()
 						return
 					}
-					setPropositions(resultat.communes)
-					setActif(-1)
-					setEtat(resultat.motif === 'adresse' ? 'adresse' : resultat.communes.length === 0 ? 'rien' : 'repos')
-					setOuvert(resultat.communes.length > 0)
+					setSuggestions(resultat.communes)
+					setActive(-1)
+					setState(resultat.motif === 'adresse' ? 'adresse' : resultat.communes.length === 0 ? 'rien' : 'repos')
+					setOpen(resultat.communes.length > 0)
 				})
-		}, PAUSE_DE_LA_RECHERCHE_MS)
+		}, SEARCH_PAUSE_MS)
 	}
 
-	function choisir(commune: CommuneProposee) {
+	function choose(commune: SuggestedCity) {
 		clearTimeout(pause.current)
 		question.current += 1
-		setTexte(commune.libelle)
-		setEtat('repos')
-		fermer()
+		setText(commune.libelle)
+		setState('repos')
+		close()
 		onChoisir(commune)
 	}
 
-	function surTouche(evenement: KeyboardEvent<HTMLInputElement>) {
+	function onKey(evenement: KeyboardEvent<HTMLInputElement>) {
 		const { key } = evenement
 		if (key === 'ArrowDown' || key === 'ArrowUp') {
-			if (propositions.length === 0) return
+			if (suggestions.length === 0) return
 			evenement.preventDefault()
-			const pas = key === 'ArrowDown' ? 1 : -1
-			setOuvert(true)
-			setActif(courant => (courant + pas + propositions.length) % propositions.length)
-		} else if (key === 'Enter' && ouvert && actif >= 0) {
+			const delta = key === 'ArrowDown' ? 1 : -1
+			setOpen(true)
+			setActive(courant => (courant + delta + suggestions.length) % suggestions.length)
+		} else if (key === 'Enter' && open && active >= 0) {
 			// The suggestion in focus is chosen; the form is not sent by this Enter.
 			evenement.preventDefault()
-			const choisie = propositions[actif]
-			if (choisie) choisir(choisie)
-		} else if (key === 'Escape' && ouvert) {
+			const chosen = suggestions[active]
+			if (chosen) choose(chosen)
+		} else if (key === 'Escape' && open) {
 			// The list closes; the panel stays.
 			evenement.preventDefault()
 			evenement.stopPropagation()
-			fermer()
+			close()
 		}
 	}
 
-	const statut =
-		etat === 'recherche'
+	const status =
+		state === 'recherche'
 			? 'Recherche des communes…'
-			: ouvert
-				? `${propositions.length} commune${propositions.length > 1 ? 's' : ''} proposée${propositions.length > 1 ? 's' : ''}.`
-				: etat === 'rien'
+			: open
+				? `${suggestions.length} commune${suggestions.length > 1 ? 's' : ''} proposée${suggestions.length > 1 ? 's' : ''}.`
+				: state === 'rien'
 					? 'Aucune commune ne correspond.'
 					: ''
 
@@ -150,41 +143,41 @@ export function ChampDeCommune({
 				id={id}
 				type="text"
 				role="combobox"
-				aria-expanded={ouvert}
-				aria-controls={liste}
+				aria-expanded={open}
+				aria-controls={list}
 				aria-autocomplete="list"
-				aria-activedescendant={ouvert && actif >= 0 ? `${liste}-${actif}` : undefined}
+				aria-activedescendant={open && active >= 0 ? `${list}-${active}` : undefined}
 				aria-invalid={erreur ? true : undefined}
 				aria-describedby={erreur ? idErreur : undefined}
 				autoComplete="off"
 				autoCapitalize="off"
 				spellCheck={false}
-				value={texte}
-				onChange={evenement => saisir(evenement.target.value)}
-				onKeyDown={surTouche}
-				onBlur={fermer}
-				className={CHAMP}
+				value={text}
+				onChange={evenement => enter(evenement.target.value)}
+				onKeyDown={onKey}
+				onBlur={close}
+				className={FIELD}
 			/>
 			<div
-				id={liste}
+				id={list}
 				role="listbox"
 				aria-label="Communes proposées"
-				hidden={!ouvert}
+				hidden={!open}
 				className="flex flex-col overflow-hidden rounded-md border border-neutral-300 bg-white"
 			>
-				{propositions.map((commune, rang) => (
+				{suggestions.map((commune, rang) => (
 					// biome-ignore lint/a11y/useKeyWithClickEvents: the keyboard works the options from the field (aria-activedescendant)
 					<div
 						key={commune.codeInsee}
-						id={`${liste}-${rang}`}
+						id={`${list}-${rang}`}
 						role="option"
 						tabIndex={-1}
-						aria-selected={rang === actif}
+						aria-selected={rang === active}
 						// Pressing a suggestion must not take the focus from the field: its blur would close the list first.
 						onMouseDown={evenement => evenement.preventDefault()}
-						onClick={() => choisir(commune)}
+						onClick={() => choose(commune)}
 						className={`flex min-h-11 cursor-pointer items-center px-3 py-2 text-base ${
-							rang === actif ? 'bg-neutral-900 text-white' : 'hover:bg-neutral-100'
+							rang === active ? 'bg-neutral-900 text-white' : 'hover:bg-neutral-100'
 						}`}
 					>
 						{commune.libelle}
@@ -192,16 +185,16 @@ export function ChampDeCommune({
 				))}
 			</div>
 			<p role="status" className="text-neutral-700 text-sm">
-				{statut}
+				{status}
 			</p>
-			{etat === 'adresse' ? (
-				<p className="text-amber-900 text-sm">{MESSAGE_ADRESSE_REFUSEE}</p>
+			{state === 'adresse' ? (
+				<p className="text-amber-900 text-sm">{REFUSED_ADDRESS_MESSAGE}</p>
 			) : (
 				<p className="text-neutral-700 text-sm">Écris le nom de ta commune ou son code postal, puis choisis-la.</p>
 			)}
-			{etat === 'panne' ? (
+			{state === 'panne' ? (
 				<p role="alert" className="rounded-md bg-red-50 p-3 text-red-800 text-sm">
-					{messagePanne}
+					{outageMessage}
 				</p>
 			) : null}
 			{erreur ? (

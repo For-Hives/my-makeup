@@ -2,35 +2,35 @@
 
 import { useRef, useState } from 'react'
 import { type Resolver, useForm } from 'react-hook-form'
-import { mesurerLEnregistrement } from '@/lib/dashboard/analytics'
+import { trackSave } from '@/lib/dashboard/analytics'
 import {
-	CHAMPS_DES_RESEAUX,
-	type ChampDeReseau,
-	lireLesReseaux,
-	RESEAUX,
-	type ValeursDesReseaux,
+	NETWORKS,
+	NETWORKS_FIELDS,
+	type NetworkField,
+	type NetworksValues,
+	readNetworks,
 } from '@/lib/dashboard/networks'
-import { MESSAGE_ECHEC, type ResultatDEnregistrement } from '@/lib/dashboard/result'
-import { PanneauDEdition } from './EditingPanel'
+import { FAILURE_MESSAGE, type SaveResult } from '@/lib/dashboard/result'
+import { EditingPanel } from './EditingPanel'
 
-export type EnvoiDesReseaux = (valeurs: ValeursDesReseaux) => Promise<ResultatDEnregistrement<ValeursDesReseaux>>
+export type NetworksUpload = (valeurs: NetworksValues) => Promise<SaveResult<NetworksValues>>
 
-const BOUTON = 'min-h-11 rounded-md px-4 py-2 font-medium'
-const CHAMP = 'min-h-11 rounded-md border border-neutral-400 bg-white px-3 py-2 text-base'
+const BUTTON = 'min-h-11 rounded-md px-4 py-2 font-medium'
+const FIELD = 'min-h-11 rounded-md border border-neutral-400 bg-white px-3 py-2 text-base'
 
 /**
  * The form reads what she typed by the rule of the server (`lireLesReseaux`): « @pseudo » becomes
  * the address, an address of another site is refused under its field, and nothing is sent while a
  * field is refused (E30). The values the form sends are the normalised ones.
  */
-const resolveur: Resolver<ValeursDesReseaux> = values => {
-	const lue = lireLesReseaux(values)
-	if (lue.ok) return { values: lue.valeurs, errors: {} }
+const resolver: Resolver<NetworksValues> = values => {
+	const parsed = readNetworks(values)
+	if (parsed.ok) return { values: parsed.valeurs, errors: {} }
 	return {
 		values: {},
 		errors: Object.fromEntries(
-			CHAMPS_DES_RESEAUX.flatMap(champ => {
-				const message = lue.champs[champ]
+			NETWORKS_FIELDS.flatMap(champ => {
+				const message = parsed.champs[champ]
 				return message === undefined ? [] : [[champ, { type: 'validate', message }]]
 			})
 		),
@@ -45,57 +45,57 @@ const resolveur: Resolver<ValeursDesReseaux> = values => {
  *
  * Emptying a field removes the network. A network is a channel of contact: the panel says so.
  */
-export function EditeurDeReseaux({ valeurs, envoyer }: { valeurs: ValeursDesReseaux; envoyer: EnvoiDesReseaux }) {
-	const [ouvert, setOuvert] = useState(false)
-	const [annonce, setAnnonce] = useState('')
-	const declencheur = useRef<HTMLButtonElement>(null)
+export function NetworksEditor({ valeurs, envoyer }: { valeurs: NetworksValues; envoyer: NetworksUpload }) {
+	const [open, setOpen] = useState(false)
+	const [announcement, setAnnouncement] = useState('')
+	const trigger = useRef<HTMLButtonElement>(null)
 
 	return (
 		<>
 			<button
-				ref={declencheur}
+				ref={trigger}
 				type="button"
 				aria-haspopup="dialog"
 				aria-label="Modifier mes réseaux"
 				onClick={() => {
-					setAnnonce('')
-					setOuvert(true)
+					setAnnouncement('')
+					setOpen(true)
 				}}
 				onKeyDown={evenement => {
 					if (evenement.repeat) evenement.preventDefault()
 				}}
-				className={`${BOUTON} border border-neutral-400 bg-white`}
+				className={`${BUTTON} border border-neutral-400 bg-white`}
 			>
 				Modifier
 			</button>
 			<p role="status" className="w-full text-green-800 text-sm">
-				{annonce}
+				{announcement}
 			</p>
-			{ouvert ? (
-				<FormulaireDeReseaux
+			{open ? (
+				<NetworksForm
 					valeurs={valeurs}
 					envoyer={envoyer}
-					retour={declencheur}
+					retour={trigger}
 					onEnregistre={() => {
-						setAnnonce('Tes réseaux sont enregistrés.')
-						setOuvert(false)
+						setAnnouncement('Tes réseaux sont enregistrés.')
+						setOpen(false)
 					}}
-					onFermer={() => setOuvert(false)}
+					onFermer={() => setOpen(false)}
 				/>
 			) : null}
 		</>
 	)
 }
 
-function FormulaireDeReseaux({
+function NetworksForm({
 	valeurs,
 	envoyer,
 	retour,
 	onEnregistre,
 	onFermer,
 }: {
-	valeurs: ValeursDesReseaux
-	envoyer: EnvoiDesReseaux
+	valeurs: NetworksValues
+	envoyer: NetworksUpload
 	retour: React.RefObject<HTMLButtonElement | null>
 	onEnregistre: () => void
 	onFermer: () => void
@@ -105,52 +105,46 @@ function FormulaireDeReseaux({
 		handleSubmit,
 		setError,
 		formState: { errors, isDirty },
-	} = useForm<ValeursDesReseaux>({ resolver: resolveur, defaultValues: valeurs })
-	const [enCours, setEnCours] = useState(false)
+	} = useForm<NetworksValues>({ resolver: resolver, defaultValues: valeurs })
+	const [pending, setPending] = useState(false)
 	const [message, setMessage] = useState('')
-	const verrou = useRef(false)
+	const lock = useRef(false)
 
-	async function enregistrer(saisie: ValeursDesReseaux) {
-		setEnCours(true)
+	async function save(saisie: NetworksValues) {
+		setPending(true)
 		setMessage('')
 		try {
-			const resultat: ResultatDEnregistrement<ValeursDesReseaux> = await envoyer(saisie).catch(() => ({
+			const result: SaveResult<NetworksValues> = await envoyer(saisie).catch(() => ({
 				ok: false,
-				message: MESSAGE_ECHEC,
+				message: FAILURE_MESSAGE,
 			}))
-			mesurerLEnregistrement('reseaux', resultat)
-			if (resultat.ok) {
+			trackSave('reseaux', result)
+			if (result.ok) {
 				onEnregistre()
 				return
 			}
-			setMessage(resultat.message)
-			for (const champ of CHAMPS_DES_RESEAUX) {
-				const texte = resultat.champs?.[champ]
-				if (texte) setError(champ, { message: texte })
+			setMessage(result.message)
+			for (const field of NETWORKS_FIELDS) {
+				const text = result.champs?.[field]
+				if (text) setError(field, { message: text })
 			}
 		} finally {
-			verrou.current = false
-			setEnCours(false)
+			lock.current = false
+			setPending(false)
 		}
 	}
 
 	return (
-		<PanneauDEdition
-			titre="Modifier mes réseaux"
-			enCours={enCours}
-			modifie={isDirty}
-			retour={retour}
-			onFermer={onFermer}
-		>
+		<EditingPanel titre="Modifier mes réseaux" enCours={pending} modifie={isDirty} retour={retour} onFermer={onFermer}>
 			<form
 				noValidate
-				aria-busy={enCours}
+				aria-busy={pending}
 				onSubmit={evenement => {
 					evenement.preventDefault()
-					if (verrou.current) return
-					verrou.current = true
-					void handleSubmit(enregistrer, () => {
-						verrou.current = false
+					if (lock.current) return
+					lock.current = true
+					void handleSubmit(save, () => {
+						lock.current = false
 					})(evenement)
 				}}
 				className="flex flex-col gap-4"
@@ -159,12 +153,12 @@ function FormulaireDeReseaux({
 					Écris ton @pseudo ou colle l’adresse de ta page. Un champ vide retire le réseau. Un réseau ou un site compte
 					comme un moyen de te contacter.
 				</p>
-				{CHAMPS_DES_RESEAUX.map((champ: ChampDeReseau) => {
-					const erreur = errors[champ]?.message
+				{NETWORKS_FIELDS.map((champ: NetworkField) => {
+					const error = errors[champ]?.message
 					return (
 						<div key={champ} className="flex flex-col gap-1">
 							<label htmlFor={`reseaux-${champ}`} className="font-medium text-sm">
-								{RESEAUX[champ].libelle}
+								{NETWORKS[champ].libelle}
 							</label>
 							<input
 								id={`reseaux-${champ}`}
@@ -173,15 +167,15 @@ function FormulaireDeReseaux({
 								autoComplete="off"
 								autoCapitalize="none"
 								spellCheck={false}
-								placeholder={RESEAUX[champ].exemple}
-								aria-invalid={erreur ? true : undefined}
-								aria-describedby={erreur ? `reseaux-${champ}-erreur` : undefined}
-								className={CHAMP}
+								placeholder={NETWORKS[champ].exemple}
+								aria-invalid={error ? true : undefined}
+								aria-describedby={error ? `reseaux-${champ}-erreur` : undefined}
+								className={FIELD}
 								{...register(champ)}
 							/>
-							{erreur ? (
+							{error ? (
 								<p id={`reseaux-${champ}-erreur`} className="text-red-800 text-sm">
-									{erreur}
+									{error}
 								</p>
 							) : null}
 						</div>
@@ -192,12 +186,12 @@ function FormulaireDeReseaux({
 				</div>
 				<button
 					type="submit"
-					disabled={enCours}
-					className={`${BOUTON} bg-neutral-900 text-white disabled:cursor-wait disabled:opacity-60`}
+					disabled={pending}
+					className={`${BUTTON} bg-neutral-900 text-white disabled:cursor-wait disabled:opacity-60`}
 				>
-					{enCours ? 'Enregistrement…' : 'Enregistrer'}
+					{pending ? 'Enregistrement…' : 'Enregistrer'}
 				</button>
 			</form>
-		</PanneauDEdition>
+		</EditingPanel>
 	)
 }

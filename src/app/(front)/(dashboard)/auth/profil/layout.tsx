@@ -4,7 +4,7 @@ import { Nav } from '@/components/gabarit/Nav'
 
 // The navigation and the footer of the site around her space. The page itself is private and
 // rendered for each request (`page.tsx`); this layout reads no session.
-export default function ProfilLayout({ children }: { children: ReactNode }) {
+export default function ProfileLayout({ children }: { children: ReactNode }) {
 	return (
 		<div className="flex min-h-dvh flex-col">
 			<Nav />

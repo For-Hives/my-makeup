@@ -3,23 +3,21 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { trackSave } from '@/lib/dashboard/analytics'
 import {
-	compteurDeLaDescription,
 	DESCRIPTION_MAX,
 	DESCRIPTION_MIN,
-	schemaDeLaDescription,
-	type ValeursDeLaDescription,
+	type DescriptionValues,
+	descriptionCounter,
+	descriptionSchema,
 } from '@/lib/dashboard/description'
-import { mesurerLEnregistrement } from '@/lib/dashboard/analytics'
-import { MESSAGE_ECHEC, type ResultatDEnregistrement } from '@/lib/dashboard/result'
-import { PanneauDEdition } from './EditingPanel'
+import { FAILURE_MESSAGE, type SaveResult } from '@/lib/dashboard/result'
+import { EditingPanel } from './EditingPanel'
 
-export type EnvoiDeLaDescription = (
-	valeurs: ValeursDeLaDescription
-) => Promise<ResultatDEnregistrement<ValeursDeLaDescription>>
+export type DescriptionUpload = (valeurs: DescriptionValues) => Promise<SaveResult<DescriptionValues>>
 
-const BOUTON = 'min-h-11 rounded-md px-4 py-2 font-medium'
-const CHAMP = 'min-h-64 rounded-md border border-neutral-400 bg-white px-3 py-2 text-base'
+const BUTTON = 'min-h-11 rounded-md px-4 py-2 font-medium'
+const FIELD = 'min-h-64 rounded-md border border-neutral-400 bg-white px-3 py-2 text-base'
 
 /**
  * The button « Modifier » of the card of her description, and the panel it opens (ticket 122). Same
@@ -33,64 +31,58 @@ const CHAMP = 'min-h-64 rounded-md border border-neutral-400 bg-white px-3 py-2 
  *
  * The send function is a property: the page gives the server action, a test gives a fake.
  */
-export function EditeurDeDescription({
-	valeurs,
-	envoyer,
-}: {
-	valeurs: ValeursDeLaDescription
-	envoyer: EnvoiDeLaDescription
-}) {
-	const [ouvert, setOuvert] = useState(false)
-	const [annonce, setAnnonce] = useState('')
-	const declencheur = useRef<HTMLButtonElement>(null)
+export function DescriptionEditor({ valeurs, envoyer }: { valeurs: DescriptionValues; envoyer: DescriptionUpload }) {
+	const [open, setOpen] = useState(false)
+	const [announcement, setAnnouncement] = useState('')
+	const trigger = useRef<HTMLButtonElement>(null)
 
 	return (
 		<>
 			<button
-				ref={declencheur}
+				ref={trigger}
 				type="button"
 				aria-haspopup="dialog"
 				aria-label="Modifier ma description"
 				onClick={() => {
-					setAnnonce('')
-					setOuvert(true)
+					setAnnouncement('')
+					setOpen(true)
 				}}
 				// Held down, Enter repeats: it opens the panel once.
 				onKeyDown={evenement => {
 					if (evenement.repeat) evenement.preventDefault()
 				}}
-				className={`${BOUTON} border border-neutral-400 bg-white`}
+				className={`${BUTTON} border border-neutral-400 bg-white`}
 			>
 				Modifier
 			</button>
 			<p role="status" className="w-full text-green-800 text-sm">
-				{annonce}
+				{announcement}
 			</p>
-			{ouvert ? (
-				<FormulaireDeDescription
+			{open ? (
+				<DescriptionForm
 					valeurs={valeurs}
 					envoyer={envoyer}
-					retour={declencheur}
+					retour={trigger}
 					onEnregistre={() => {
-						setAnnonce('Ta description est enregistrée.')
-						setOuvert(false)
+						setAnnouncement('Ta description est enregistrée.')
+						setOpen(false)
 					}}
-					onFermer={() => setOuvert(false)}
+					onFermer={() => setOpen(false)}
 				/>
 			) : null}
 		</>
 	)
 }
 
-function FormulaireDeDescription({
+function DescriptionForm({
 	valeurs,
 	envoyer,
 	retour,
 	onEnregistre,
 	onFermer,
 }: {
-	valeurs: ValeursDeLaDescription
-	envoyer: EnvoiDeLaDescription
+	valeurs: DescriptionValues
+	envoyer: DescriptionUpload
 	retour: React.RefObject<HTMLButtonElement | null>
 	onEnregistre: () => void
 	onFermer: () => void
@@ -101,51 +93,51 @@ function FormulaireDeDescription({
 		setError,
 		watch,
 		formState: { errors, isDirty },
-	} = useForm<ValeursDeLaDescription>({ resolver: zodResolver(schemaDeLaDescription), defaultValues: valeurs })
-	const [enCours, setEnCours] = useState(false)
+	} = useForm<DescriptionValues>({ resolver: zodResolver(descriptionSchema), defaultValues: valeurs })
+	const [pending, setPending] = useState(false)
 	const [message, setMessage] = useState('')
-	const verrou = useRef(false)
-	const compteur = compteurDeLaDescription(watch('description') ?? '')
-	const erreur = errors.description?.message
+	const lock = useRef(false)
+	const counter = descriptionCounter(watch('description') ?? '')
+	const error = errors.description?.message
 
-	async function enregistrer(saisie: ValeursDeLaDescription) {
-		setEnCours(true)
+	async function save(saisie: DescriptionValues) {
+		setPending(true)
 		setMessage('')
 		try {
-			const resultat: ResultatDEnregistrement<ValeursDeLaDescription> = await envoyer(saisie).catch(() => ({
+			const result: SaveResult<DescriptionValues> = await envoyer(saisie).catch(() => ({
 				ok: false,
-				message: MESSAGE_ECHEC,
+				message: FAILURE_MESSAGE,
 			}))
-			mesurerLEnregistrement('description', resultat)
-			if (resultat.ok) {
+			trackSave('description', result)
+			if (result.ok) {
 				onEnregistre()
 				return
 			}
-			setMessage(resultat.message)
-			if (resultat.champs?.description) setError('description', { message: resultat.champs.description })
+			setMessage(result.message)
+			if (result.champs?.description) setError('description', { message: result.champs.description })
 		} finally {
-			verrou.current = false
-			setEnCours(false)
+			lock.current = false
+			setPending(false)
 		}
 	}
 
 	return (
-		<PanneauDEdition
+		<EditingPanel
 			titre="Modifier ma description"
-			enCours={enCours}
+			enCours={pending}
 			modifie={isDirty}
 			retour={retour}
 			onFermer={onFermer}
 		>
 			<form
 				noValidate
-				aria-busy={enCours}
+				aria-busy={pending}
 				onSubmit={evenement => {
 					evenement.preventDefault()
-					if (verrou.current) return
-					verrou.current = true
-					void handleSubmit(enregistrer, () => {
-						verrou.current = false
+					if (lock.current) return
+					lock.current = true
+					void handleSubmit(save, () => {
+						lock.current = false
 					})(evenement)
 				}}
 				className="flex flex-col gap-4"
@@ -157,21 +149,21 @@ function FormulaireDeDescription({
 					<textarea
 						id="description-texte"
 						autoComplete="off"
-						aria-invalid={erreur ? true : undefined}
-						aria-describedby={`description-compteur${erreur ? ' description-erreur' : ''}`}
-						className={CHAMP}
+						aria-invalid={error ? true : undefined}
+						aria-describedby={`description-compteur${error ? ' description-erreur' : ''}`}
+						className={FIELD}
 						{...register('description')}
 					/>
 					<p id="description-compteur" data-testid="compteur-description" className="text-neutral-700 text-sm">
-						{compteur.compte} / {DESCRIPTION_MIN} caractères pour que ton profil soit publiable ({compteur.total} /{' '}
-						{DESCRIPTION_MAX} au plus{compteur.total > DESCRIPTION_MAX ? ' : c’est trop long' : ''})
+						{counter.compte} / {DESCRIPTION_MIN} caractères pour que ton profil soit publiable ({counter.total} /{' '}
+						{DESCRIPTION_MAX} au plus{counter.total > DESCRIPTION_MAX ? ' : c’est trop long' : ''})
 					</p>
 					<p role="status" className="text-green-800 text-sm">
-						{compteur.assez ? 'Ta description a la longueur qu’il faut pour être publiable.' : ''}
+						{counter.assez ? 'Ta description a la longueur qu’il faut pour être publiable.' : ''}
 					</p>
-					{erreur ? (
+					{error ? (
 						<p id="description-erreur" className="text-red-800 text-sm">
-							{erreur}
+							{error}
 						</p>
 					) : null}
 				</div>
@@ -180,12 +172,12 @@ function FormulaireDeDescription({
 				</div>
 				<button
 					type="submit"
-					disabled={enCours}
-					className={`${BOUTON} bg-neutral-900 text-white disabled:cursor-wait disabled:opacity-60`}
+					disabled={pending}
+					className={`${BUTTON} bg-neutral-900 text-white disabled:cursor-wait disabled:opacity-60`}
 				>
-					{enCours ? 'Enregistrement…' : 'Enregistrer'}
+					{pending ? 'Enregistrement…' : 'Enregistrer'}
 				</button>
 			</form>
-		</PanneauDEdition>
+		</EditingPanel>
 	)
 }

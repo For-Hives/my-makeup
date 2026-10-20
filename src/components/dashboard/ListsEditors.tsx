@@ -1,20 +1,20 @@
 'use client'
 
+import { COURSES } from '@/lib/dashboard/courses'
 import { EXPERIENCES } from '@/lib/dashboard/experiences'
-import { FORMATIONS } from '@/lib/dashboard/courses'
-import type { LigneEnregistree } from '@/lib/dashboard/list'
-import { PRESTATIONS } from '@/lib/dashboard/service-offers'
-import { EditeurDeListe, type EnvoiDeLaListe } from './ListEditor'
+import type { SavedRow } from '@/lib/dashboard/list'
+import { SERVICE_OFFERS } from '@/lib/dashboard/service-offers'
+import { ListEditor, type ListUpload } from './ListEditor'
 
-interface Proprietes {
-	lignes: readonly LigneEnregistree[]
-	envoyer: EnvoiDeLaListe
+interface Props {
+	lignes: readonly SavedRow[]
+	envoyer: ListUpload
 }
 
 /** The panel of her experiences (ticket 129). */
-export function EditeurDExperiences({ lignes, envoyer }: Proprietes) {
+export function ExperiencesEditor({ lignes, envoyer }: Props) {
 	return (
-		<EditeurDeListe
+		<ListEditor
 			definition={EXPERIENCES}
 			lignes={lignes}
 			envoyer={envoyer}
@@ -26,10 +26,10 @@ export function EditeurDExperiences({ lignes, envoyer }: Proprietes) {
 }
 
 /** The panel of her courses (ticket 130). */
-export function EditeurDeFormations({ lignes, envoyer }: Proprietes) {
+export function CoursesEditor({ lignes, envoyer }: Props) {
 	return (
-		<EditeurDeListe
-			definition={FORMATIONS}
+		<ListEditor
+			definition={COURSES}
 			lignes={lignes}
 			envoyer={envoyer}
 			libelleDuBouton="Modifier mes formations"
@@ -40,10 +40,10 @@ export function EditeurDeFormations({ lignes, envoyer }: Proprietes) {
 }
 
 /** The panel of her offers (ticket 131). */
-export function EditeurDePrestations({ lignes, envoyer }: Proprietes) {
+export function ServiceOffersEditor({ lignes, envoyer }: Props) {
 	return (
-		<EditeurDeListe
-			definition={PRESTATIONS}
+		<ListEditor
+			definition={SERVICE_OFFERS}
 			lignes={lignes}
 			envoyer={envoyer}
 			libelleDuBouton="Modifier mes prestations"

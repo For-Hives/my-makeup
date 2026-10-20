@@ -11,17 +11,17 @@
 import { z } from 'zod'
 import { GALERIE_MAX } from '../medias'
 import { MESSAGES_DES_PHOTOS } from '../profil/photos'
-import { estUnIdentifiantDePhoto, type IdentifiantDePhoto } from './photos'
+import { isPhotoId, type PhotoId } from './photos'
 
-export interface ValeursDuPortfolio extends Record<string, unknown> {
-	galerie: IdentifiantDePhoto[]
+export interface PortfolioValues extends Record<string, unknown> {
+	galerie: PhotoId[]
 }
 
-const identifiant = z.custom<IdentifiantDePhoto>(estUnIdentifiantDePhoto, { error: MESSAGES_DES_PHOTOS.photoRefusee })
+const id = z.custom<PhotoId>(isPhotoId, { error: MESSAGES_DES_PHOTOS.photoRefusee })
 
-export const schemaDuPortfolio = z.strictObject({
+export const portfolioSchema = z.strictObject({
 	galerie: z
-		.array(identifiant)
+		.array(id)
 		.max(GALERIE_MAX, MESSAGES_DES_PHOTOS.galeriePleine)
 		.refine(ids => new Set(ids.map(String)).size === ids.length, MESSAGES_DES_PHOTOS.photoRefusee),
 })

@@ -1,12 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import {
-	juger,
-	MESSAGES_D_ENVOI,
-	nomImprevisible,
-	TAILLE_MAX_PHOTO,
-	TYPES_DE_PHOTO,
-	typeDeLaPhoto,
-} from '@/lib/photo-upload'
+import { judge, PHOTO_SIZE_MAX, PHOTO_TYPES, photoType, UPLOAD_MESSAGES, unpredictableName } from '@/lib/photo-upload'
 
 /** What a photo sent to the site may be (ticket 133; plan 02 U79, U80, U81). */
 
@@ -19,11 +12,7 @@ const WEBP = octets('RIFF', [0, 0, 0, 0], 'WEBPVP8 ')
 
 describe('U79 : JPEG, PNG, WebP acceptés ; SVG, AVIF, HEIC, PDF, MP4 refusés, sur le contenu', () => {
 	test('les trois types sont reconnus à leurs premiers octets', () => {
-		expect([typeDeLaPhoto(JPEG), typeDeLaPhoto(PNG), typeDeLaPhoto(WEBP)]).toEqual([
-			'image/jpeg',
-			'image/png',
-			'image/webp',
-		])
+		expect([photoType(JPEG), photoType(PNG), photoType(WEBP)]).toEqual(['image/jpeg', 'image/png', 'image/webp'])
 	})
 
 	test.each([
@@ -37,31 +26,31 @@ describe('U79 : JPEG, PNG, WebP acceptés ; SVG, AVIF, HEIC, PDF, MP4 refusés, 
 		['vide', new Uint8Array()],
 		['un PNG coupé', PNG.slice(0, 5)],
 	])('%s : refusé avec le message de l’ancien site', (_nom, contenu) => {
-		expect(typeDeLaPhoto(contenu)).toBeUndefined()
-		expect(juger(contenu)).toEqual({ accepte: false, message: MESSAGES_D_ENVOI.type })
+		expect(photoType(contenu)).toBeUndefined()
+		expect(judge(contenu)).toEqual({ accepte: false, message: UPLOAD_MESSAGES.type })
 	})
 
 	test('un fichier accepté rend son type', () => {
-		expect(juger(WEBP)).toEqual({ accepte: true, type: 'image/webp' })
+		expect(judge(WEBP)).toEqual({ accepte: true, type: 'image/webp' })
 	})
 })
 
 describe('U80 : 10 Mo au plus par fichier', () => {
 	test('10 Mo passent, un octet de plus est refusé avant même de lire le type', () => {
-		expect(TAILLE_MAX_PHOTO).toBe(10 * 1024 * 1024)
-		expect(juger(JPEG, TAILLE_MAX_PHOTO).accepte).toBe(true)
-		expect(juger(JPEG, TAILLE_MAX_PHOTO + 1)).toEqual({ accepte: false, message: MESSAGES_D_ENVOI.taille })
-		expect(juger(octets('%PDF'), 12 * 1024 * 1024)).toEqual({ accepte: false, message: MESSAGES_D_ENVOI.taille })
+		expect(PHOTO_SIZE_MAX).toBe(10 * 1024 * 1024)
+		expect(judge(JPEG, PHOTO_SIZE_MAX).accepte).toBe(true)
+		expect(judge(JPEG, PHOTO_SIZE_MAX + 1)).toEqual({ accepte: false, message: UPLOAD_MESSAGES.taille })
+		expect(judge(octets('%PDF'), 12 * 1024 * 1024)).toEqual({ accepte: false, message: UPLOAD_MESSAGES.taille })
 	})
 })
 
 describe('U81 : le nom rangé est un UUID et l’extension du vrai type', () => {
 	test('rien du nom d’origine, deux appels ne donnent pas le même nom', () => {
 		const motif = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(jpg|png|webp)$/
-		const noms = [nomImprevisible('image/jpeg'), nomImprevisible('image/jpeg')]
+		const noms = [unpredictableName('image/jpeg'), unpredictableName('image/jpeg')]
 		expect(noms.every(nom => motif.test(nom))).toBe(true)
 		expect(new Set(noms).size).toBe(2)
-		expect(nomImprevisible('image/webp', 'abc')).toBe('abc.webp')
-		expect(Object.values(TYPES_DE_PHOTO).sort()).toEqual(['jpg', 'png', 'webp'])
+		expect(unpredictableName('image/webp', 'abc')).toBe('abc.webp')
+		expect(Object.values(PHOTO_TYPES).sort()).toEqual(['jpg', 'png', 'webp'])
 	})
 })

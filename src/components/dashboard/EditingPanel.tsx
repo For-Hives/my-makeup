@@ -2,14 +2,14 @@
 
 import { type KeyboardEvent, type ReactNode, type RefObject, useEffect, useId, useRef, useState } from 'react'
 
-const FOCALISABLES =
+const FOCUSABLE =
 	'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
-const BOUTON = 'min-h-11 rounded-md px-4 py-2 font-medium'
+const BUTTON = 'min-h-11 rounded-md px-4 py-2 font-medium'
 
 /** The elements the keyboard can reach in a node, in reading order. */
-function focalisables(racine: HTMLElement): HTMLElement[] {
-	return Array.from(racine.querySelectorAll<HTMLElement>(FOCALISABLES))
+function focusable(racine: HTMLElement): HTMLElement[] {
+	return Array.from(racine.querySelectorAll<HTMLElement>(FOCUSABLE))
 }
 
 /**
@@ -24,7 +24,7 @@ function focalisables(racine: HTMLElement): HTMLElement[] {
  *
  * It holds no data: the form is its child, and says through `modifie` whether it has unsaved changes.
  */
-export function PanneauDEdition({
+export function EditingPanel({
 	titre,
 	enCours,
 	modifie,
@@ -42,36 +42,36 @@ export function PanneauDEdition({
 	onFermer: () => void
 	children: ReactNode
 }) {
-	const identifiant = useId()
-	const racine = useRef<HTMLDivElement>(null)
+	const id = useId()
+	const root = useRef<HTMLDivElement>(null)
 	const corps = useRef<HTMLDivElement>(null)
-	const continuer = useRef<HTMLButtonElement>(null)
+	const continueButton = useRef<HTMLButtonElement>(null)
 	const [confirmation, setConfirmation] = useState(false)
 
 	// In on opening; back to the opener on closing. The opener is read when the panel unmounts.
 	useEffect(() => {
-		const declencheur = retour.current
-		const premier = corps.current ? focalisables(corps.current)[0] : undefined
-		;(premier ?? racine.current)?.focus()
-		const defilement = document.body.style.overflow
+		const trigger = retour.current
+		const first = corps.current ? focusable(corps.current)[0] : undefined
+		;(first ?? root.current)?.focus()
+		const scroll = document.body.style.overflow
 		document.body.style.overflow = 'hidden'
 		return () => {
-			document.body.style.overflow = defilement
-			declencheur?.focus()
+			document.body.style.overflow = scroll
+			trigger?.focus()
 		}
 	}, [retour])
 
 	useEffect(() => {
-		if (confirmation) continuer.current?.focus()
+		if (confirmation) continueButton.current?.focus()
 	}, [confirmation])
 
-	function demanderLaFermeture() {
+	function requestClose() {
 		if (enCours) return
 		if (modifie) setConfirmation(true)
 		else onFermer()
 	}
 
-	function surTouche(evenement: KeyboardEvent<HTMLDivElement>) {
+	function onKey(evenement: KeyboardEvent<HTMLDivElement>) {
 		// A key held down repeats: Enter would send the form again and again. A long text keeps its
 		// effect: held down, Enter makes new lines.
 		if (evenement.key === 'Enter' && evenement.repeat && (evenement.target as HTMLElement).tagName !== 'TEXTAREA') {
@@ -82,44 +82,44 @@ export function PanneauDEdition({
 			evenement.preventDefault()
 			evenement.stopPropagation()
 			if (confirmation) setConfirmation(false)
-			else demanderLaFermeture()
+			else requestClose()
 			return
 		}
-		if (evenement.key !== 'Tab' || racine.current === null) return
-		const elements = focalisables(racine.current)
-		const premier = elements[0]
-		const dernier = elements[elements.length - 1]
-		if (premier === undefined || dernier === undefined) return
-		const actif = document.activeElement
-		if (evenement.shiftKey && (actif === premier || !racine.current.contains(actif))) {
+		if (evenement.key !== 'Tab' || root.current === null) return
+		const elements = focusable(root.current)
+		const first = elements[0]
+		const last = elements[elements.length - 1]
+		if (first === undefined || last === undefined) return
+		const active = document.activeElement
+		if (evenement.shiftKey && (active === first || !root.current.contains(active))) {
 			evenement.preventDefault()
-			dernier.focus()
-		} else if (!evenement.shiftKey && (actif === dernier || !racine.current.contains(actif))) {
+			last.focus()
+		} else if (!evenement.shiftKey && (active === last || !root.current.contains(active))) {
 			evenement.preventDefault()
-			premier.focus()
+			first.focus()
 		}
 	}
 
 	return (
 		<div className="fixed inset-0 z-50 bg-black/50 sm:flex sm:items-center sm:justify-center sm:p-6">
 			<div
-				ref={racine}
+				ref={root}
 				role="dialog"
 				aria-modal="true"
-				aria-labelledby={`${identifiant}-titre`}
+				aria-labelledby={`${id}-titre`}
 				tabIndex={-1}
-				onKeyDown={surTouche}
+				onKeyDown={onKey}
 				className="flex h-full w-full flex-col bg-white outline-none sm:h-auto sm:max-h-full sm:max-w-lg sm:rounded-lg"
 			>
 				<div className="flex items-center justify-between gap-3 border-neutral-200 border-b px-5 py-3">
-					<h2 id={`${identifiant}-titre`} tabIndex={-1} className="font-bold text-lg outline-none">
+					<h2 id={`${id}-titre`} tabIndex={-1} className="font-bold text-lg outline-none">
 						{titre}
 					</h2>
 					<button
 						type="button"
-						onClick={demanderLaFermeture}
+						onClick={requestClose}
 						disabled={enCours}
-						className={`${BOUTON} border border-neutral-300 bg-white disabled:opacity-60`}
+						className={`${BUTTON} border border-neutral-300 bg-white disabled:opacity-60`}
 					>
 						Fermer
 					</button>
@@ -132,14 +132,14 @@ export function PanneauDEdition({
 						<p className="text-sm">Tu as des modifications non enregistrées. Si tu fermes, elles seront perdues.</p>
 						<div className="flex flex-wrap gap-3">
 							<button
-								ref={continuer}
+								ref={continueButton}
 								type="button"
 								onClick={() => setConfirmation(false)}
-								className={`${BOUTON} bg-neutral-900 text-white`}
+								className={`${BUTTON} bg-neutral-900 text-white`}
 							>
 								Continuer à modifier
 							</button>
-							<button type="button" onClick={onFermer} className={`${BOUTON} border border-neutral-400 bg-white`}>
+							<button type="button" onClick={onFermer} className={`${BUTTON} border border-neutral-400 bg-white`}>
 								Abandonner mes modifications
 							</button>
 						</div>

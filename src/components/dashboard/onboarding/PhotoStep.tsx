@@ -1,30 +1,28 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import type { ValeursDeLaPhotoDAccueil } from '@/lib/dashboard/save-onboarding'
+import { prepareBrowserPhoto } from '@/lib/dashboard/browser-photo'
+import { STEPS_TITLES } from '@/lib/dashboard/onboarding'
+import { ACCEPT, type PreparedPhoto } from '@/lib/dashboard/photo'
+import type { PhotoId } from '@/lib/dashboard/photos'
 import {
-	envoyerPuisEnregistrer,
-	type PhotoAEnvoyer,
-	type ResultatDEnvoiDUnFichier,
-	supprimerLeMedia,
-	televerserLaPhoto,
+	deleteMedia,
+	type FileUploadResult,
+	type PhotoToSend,
+	sendThenSave,
+	uploadPhoto,
 } from '@/lib/dashboard/photos-upload'
-import { TITRES_DES_ETAPES } from '@/lib/dashboard/onboarding'
-import { ACCEPT, type PhotoPreparee } from '@/lib/dashboard/photo'
-import { preparerPhotoNavigateur } from '@/lib/dashboard/browser-photo'
-import type { IdentifiantDePhoto } from '@/lib/dashboard/photos'
-import type { ResultatDEnregistrement } from '@/lib/dashboard/result'
-import { ALT_PHOTO_PRINCIPALE, apercuLocal, libererApercu } from '../PhotoEditor'
-import { BOUTON, BOUTON_PRINCIPAL, CadreDEtape, CHAMP, MessageDEchec } from './shared'
+import type { SaveResult } from '@/lib/dashboard/result'
+import type { OnboardingPhotoValues } from '@/lib/dashboard/save-onboarding'
+import { localPreview, MAIN_PICTURE_ALT, releasePreview } from '../PhotoEditor'
+import { BUTTON, FailureMessage, FIELD, MAIN_BUTTON, StepFrame } from './shared'
 
-export type EnvoiDeLaPhotoDAccueil = (saisie: {
-	photoPrincipale: IdentifiantDePhoto
-}) => Promise<ResultatDEnregistrement<ValeursDeLaPhotoDAccueil>>
+export type OnboardingPhotoUpload = (saisie: { photoPrincipale: PhotoId }) => Promise<SaveResult<OnboardingPhotoValues>>
 
 /** The alternative text of the preview (a constant: the rule on `alt` reads literals only). */
-const ALT_DE_L_APERCU = 'Aperçu de la photo choisie'
+const PREVIEW_ALT = 'Aperçu de la photo choisie'
 
-interface Choisie extends PhotoAEnvoyer {
+interface Chosen extends PhotoToSend {
 	apercu: string
 }
 
@@ -35,128 +33,128 @@ interface Choisie extends PhotoAEnvoyer {
  * Nothing is claimed here: the step gives the server's answer to its parent, which sends her to her
  * space only if the server reports the three steps done.
  */
-export function EtapePhoto({
+export function PhotoStep({
 	envoyer,
-	preparer = preparerPhotoNavigateur,
-	televerser = (fichier, alt) => televerserLaPhoto(fichier, alt),
-	supprimer = id => supprimerLeMedia(id),
+	preparer = prepareBrowserPhoto,
+	televerser = (fichier, alt) => uploadPhoto(fichier, alt),
+	supprimer = id => deleteMedia(id),
 	titre,
 	surFait,
 	retour,
 }: {
-	envoyer: EnvoiDeLaPhotoDAccueil
-	preparer?: (fichier: File) => Promise<PhotoPreparee<File>>
-	televerser?: (fichier: File, alt: string) => Promise<ResultatDEnvoiDUnFichier>
-	supprimer?: (id: IdentifiantDePhoto) => Promise<unknown>
+	envoyer: OnboardingPhotoUpload
+	preparer?: (fichier: File) => Promise<PreparedPhoto<File>>
+	televerser?: (fichier: File, alt: string) => Promise<FileUploadResult>
+	supprimer?: (id: PhotoId) => Promise<unknown>
 	titre: React.RefObject<HTMLHeadingElement | null>
-	surFait: (valeurs: ValeursDeLaPhotoDAccueil) => void
+	surFait: (valeurs: OnboardingPhotoValues) => void
 	retour: () => void
 }) {
-	const [choisie, setChoisie] = useState<Choisie | null>(null)
-	const [erreur, setErreur] = useState('')
+	const [chosen, setChosen] = useState<Chosen | null>(null)
+	const [error, setError] = useState('')
 	const [message, setMessage] = useState('')
-	const [sessionExpiree, setSessionExpiree] = useState(false)
+	const [expiredSession, setExpiredSession] = useState(false)
 	const [preparation, setPreparation] = useState(false)
-	const [enCours, setEnCours] = useState(false)
-	const verrou = useRef(false)
-	const apercuCourant = useRef('')
+	const [pending, setPending] = useState(false)
+	const lock = useRef(false)
+	const currentPreview = useRef('')
 
 	// The local address is given back when the step goes.
 	useEffect(
 		() => () => {
-			libererApercu(apercuCourant.current)
+			releasePreview(currentPreview.current)
 		},
 		[]
 	)
 
-	async function choisir(fichier: File) {
-		setErreur('')
+	async function choose(fichier: File) {
+		setError('')
 		setMessage('')
 		setPreparation(true)
 		try {
-			const prete = await preparer(fichier)
-			if (!prete.ok) {
-				setErreur(prete.message)
+			const ready = await preparer(fichier)
+			if (!ready.ok) {
+				setError(ready.message)
 				return
 			}
-			libererApercu(apercuCourant.current)
-			const apercu = apercuLocal(prete.fichier)
-			apercuCourant.current = apercu
-			setChoisie({ cle: 'photo', fichier: prete.fichier, alt: ALT_PHOTO_PRINCIPALE, apercu })
+			releasePreview(currentPreview.current)
+			const preview = localPreview(ready.fichier)
+			currentPreview.current = preview
+			setChosen({ cle: 'photo', fichier: ready.fichier, alt: MAIN_PICTURE_ALT, apercu: preview })
 		} finally {
 			setPreparation(false)
 		}
 	}
 
-	async function enregistrer() {
-		if (choisie === null || verrou.current) return
-		verrou.current = true
-		setEnCours(true)
+	async function save() {
+		if (chosen === null || lock.current) return
+		lock.current = true
+		setPending(true)
 		setMessage('')
-		setSessionExpiree(false)
+		setExpiredSession(false)
 		try {
-			const issue = await envoyerPuisEnregistrer<ValeursDeLaPhotoDAccueil>({
-				photos: [choisie],
+			const issue = await sendThenSave<OnboardingPhotoValues>({
+				photos: [chosen],
 				televerser,
 				supprimer,
 				enregistrer: ids => {
 					const [id] = ids
-					return envoyer({ photoPrincipale: id as IdentifiantDePhoto })
+					return envoyer({ photoPrincipale: id as PhotoId })
 				},
-				marquerEnvoyee: (_cle, id) => setChoisie(courante => (courante === null ? courante : { ...courante, id })),
+				marquerEnvoyee: (_cle, id) => setChosen(courante => (courante === null ? courante : { ...courante, id })),
 			})
 			if (issue.ok) {
 				surFait(issue.valeurs)
 				return
 			}
 			setMessage(issue.champs?.photoPrincipale ?? issue.message)
-			setSessionExpiree(issue.session === 'expiree')
+			setExpiredSession(issue.session === 'expiree')
 		} finally {
-			verrou.current = false
-			setEnCours(false)
+			lock.current = false
+			setPending(false)
 		}
 	}
 
 	return (
-		<CadreDEtape
-			titre={TITRES_DES_ETAPES[3]}
+		<StepFrame
+			titre={STEPS_TITLES[3]}
 			explication="Une photo de toi ou de ton travail : c’est la première chose que voient les clientes."
 			reference={titre}
 		>
 			<form
 				noValidate
-				aria-busy={enCours}
+				aria-busy={pending}
 				onSubmit={evenement => {
 					evenement.preventDefault()
-					void enregistrer()
+					void save()
 				}}
 				className="flex flex-col gap-4"
 			>
 				<div className="flex justify-center">
-					{choisie?.apercu ? (
+					{chosen?.apercu ? (
 						// biome-ignore lint/performance/noImgElement: a local preview of a file not sent yet cannot go through the image optimizer
-						<img src={choisie.apercu} alt={ALT_DE_L_APERCU} className="h-48 w-48 rounded-full object-cover" />
+						<img src={chosen.apercu} alt={PREVIEW_ALT} className="h-48 w-48 rounded-full object-cover" />
 					) : (
 						<p className="text-neutral-600 italic">Tu n’as pas encore choisi de photo.</p>
 					)}
 				</div>
 				<div className="flex flex-col gap-1">
 					<label htmlFor="accueil-photo-fichier" className="font-medium text-sm">
-						{choisie ? 'Choisir une autre photo' : 'Choisir une photo'}
+						{chosen ? 'Choisir une autre photo' : 'Choisir une photo'}
 					</label>
 					<input
 						id="accueil-photo-fichier"
 						type="file"
 						accept={ACCEPT}
-						disabled={enCours}
+						disabled={pending}
 						aria-describedby="accueil-photo-aide"
 						onChange={evenement => {
-							const fichier = evenement.target.files?.[0]
+							const file = evenement.target.files?.[0]
 							// The same file can be picked again.
 							evenement.target.value = ''
-							if (fichier) void choisir(fichier)
+							if (file) void choose(file)
 						}}
-						className={CHAMP}
+						className={FIELD}
 					/>
 					<p id="accueil-photo-aide" className="text-neutral-700 text-sm">
 						JPEG, PNG ou WebP. La photo est réduite avant l’envoi, et rien n’est envoyé avant « Terminer ».
@@ -166,31 +164,31 @@ export function EtapePhoto({
 							Préparation de la photo…
 						</p>
 					) : null}
-					{erreur ? (
+					{error ? (
 						<p role="alert" className="text-red-800 text-sm">
-							{erreur}
+							{error}
 						</p>
 					) : null}
 				</div>
-				<MessageDEchec message={message} sessionExpiree={sessionExpiree} />
+				<FailureMessage message={message} sessionExpiree={expiredSession} />
 				<div className="flex flex-wrap gap-3">
 					<button
 						type="button"
-						disabled={enCours}
+						disabled={pending}
 						onClick={retour}
-						className={`${BOUTON} border border-neutral-400 bg-white disabled:opacity-60`}
+						className={`${BUTTON} border border-neutral-400 bg-white disabled:opacity-60`}
 					>
 						Précédent
 					</button>
 					<button
 						type="submit"
-						disabled={enCours || preparation || choisie === null}
-						className={`${BOUTON_PRINCIPAL} disabled:cursor-not-allowed`}
+						disabled={pending || preparation || chosen === null}
+						className={`${MAIN_BUTTON} disabled:cursor-not-allowed`}
 					>
-						{enCours ? 'Enregistrement…' : 'Terminer'}
+						{pending ? 'Enregistrement…' : 'Terminer'}
 					</button>
 				</div>
 			</form>
-		</CadreDEtape>
+		</StepFrame>
 	)
 }

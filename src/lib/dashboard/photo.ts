@@ -12,22 +12,22 @@
  * goes through ports: `photo-navigateur.ts` gives them in the page, a test gives fakes.
  */
 
-export const TYPES_ACCEPTES = ['image/jpeg', 'image/png', 'image/webp'] as const
+export const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const
 
 /** The `accept` attribute of the file inputs. */
-export const ACCEPT = TYPES_ACCEPTES.join(',')
+export const ACCEPT = ACCEPTED_TYPES.join(',')
 
 /** The largest file sent to the server, after the reduction (1 MiB). */
-export const TAILLE_MAX_ENVOI = 1024 * 1024
+export const UPLOAD_SIZE_MAX = 1024 * 1024
 
 /** The largest picture taken before the reduction (a phone photo is far below). */
-export const TAILLE_MAX_CHOIX = 25 * 1024 * 1024
+export const CHOICE_SIZE_MAX = 25 * 1024 * 1024
 
 /** The longest side, in pixels, of a sent picture. */
-export const COTE_MAX = 2000
+export const SIDE_MAX = 2000
 
 /** The steps tried in turn until the encoded picture fits in `TAILLE_MAX_ENVOI`. */
-export const PALIERS = [
+export const LADDER = [
 	{ echelle: 1, qualite: 0.82 },
 	{ echelle: 1, qualite: 0.72 },
 	{ echelle: 1, qualite: 0.62 },
@@ -52,7 +52,7 @@ export const MESSAGES_PHOTO = {
 	doublon: 'Cette photo est déjà dans ta liste : choisis-en une autre.',
 } as const
 
-export type CodeDePhoto = keyof typeof MESSAGES_PHOTO
+export type PhotoCode = keyof typeof MESSAGES_PHOTO
 
 const EXTENSIONS: Readonly<Record<string, string>> = {
 	jpg: 'image/jpeg',
@@ -71,39 +71,39 @@ const EXTENSIONS: Readonly<Record<string, string>> = {
 const TYPES_HEIC = new Set<string | null>(['image/heic', 'image/heif'])
 
 /** The media type guessed from a file name, for the browsers that give none. Empty when unknown. */
-export function typeDepuisNom(nom: string | undefined): string {
+export function typeFromName(nom: string | undefined): string {
 	const extension = /\.([a-z0-9]+)$/i.exec(nom ?? '')?.[1]
 	return (extension && EXTENSIONS[extension.toLowerCase()]) || ''
 }
 
-const commencePar = (tete: ArrayLike<number>, octets: readonly number[], decalage = 0): boolean =>
+const startsWith = (tete: ArrayLike<number>, octets: readonly number[], decalage = 0): boolean =>
 	tete.length >= decalage + octets.length && octets.every((octet, i) => tete[decalage + i] === octet)
 
-const ascii = (texte: string): number[] => [...texte].map(lettre => lettre.charCodeAt(0))
+const charCodes = (texte: string): number[] => [...texte].map(lettre => lettre.charCodeAt(0))
 
 /** The real type of a picture, read in its first bytes. HEIC and AVIF are named to be refused by name. */
-export function typeImageDepuisOctets(tete: ArrayLike<number>): string | null {
-	if (commencePar(tete, [0xff, 0xd8, 0xff])) return 'image/jpeg'
-	if (commencePar(tete, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) return 'image/png'
-	if (commencePar(tete, ascii('RIFF')) && commencePar(tete, ascii('WEBP'), 8)) return 'image/webp'
+export function imageTypeFromBytes(tete: ArrayLike<number>): string | null {
+	if (startsWith(tete, [0xff, 0xd8, 0xff])) return 'image/jpeg'
+	if (startsWith(tete, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) return 'image/png'
+	if (startsWith(tete, charCodes('RIFF')) && startsWith(tete, charCodes('WEBP'), 8)) return 'image/webp'
 	// ISO BMFF: a size (4 bytes), « ftyp », then the major brand.
-	if (commencePar(tete, ascii('ftyp'), 4)) {
-		const marque = String.fromCharCode(...Array.from(tete).slice(8, 12))
-		if (/^(avif|avis)$/.test(marque)) return 'image/avif'
-		if (/^(heic|heix|hevc|hevx|heim|heis|mif1|msf1)$/.test(marque)) return 'image/heic'
+	if (startsWith(tete, charCodes('ftyp'), 4)) {
+		const marker = String.fromCharCode(...Array.from(tete).slice(8, 12))
+		if (/^(avif|avis)$/.test(marker)) return 'image/avif'
+		if (/^(heic|heix|hevc|hevx|heim|heis|mif1|msf1)$/.test(marker)) return 'image/heic'
 	}
 	return null
 }
 
-export interface FichierChoisi {
+export interface ChosenFile {
 	name: string
 	type: string
 	size: number
 }
 
-export type RefusDePhoto = { ok: false; raison: 'type' | 'taille'; code: CodeDePhoto; message: string }
+export type PhotoRefusal = { ok: false; raison: 'type' | 'taille'; code: PhotoCode; message: string }
 
-const refus = (raison: 'type' | 'taille', code: CodeDePhoto): RefusDePhoto => ({
+const refusal = (raison: 'type' | 'taille', code: PhotoCode): PhotoRefusal => ({
 	ok: false,
 	raison,
 	code,
@@ -111,92 +111,92 @@ const refus = (raison: 'type' | 'taille', code: CodeDePhoto): RefusDePhoto => ({
 })
 
 /** Checks a picture before anything else happens to it. `tete`: its first bytes, when they could be read. */
-export function verifierPhoto({
+export function checkPhoto({
 	name,
 	type,
 	size,
-	tete,
-}: Partial<FichierChoisi> & { tete?: ArrayLike<number> }): { ok: true; type: string } | RefusDePhoto {
-	const declare = (type ?? '').toLowerCase() || typeDepuisNom(name)
+	tete: head,
+}: Partial<ChosenFile> & { tete?: ArrayLike<number> }): { ok: true; type: string } | PhotoRefusal {
+	const declare = (type ?? '').toLowerCase() || typeFromName(name)
 	// The bytes, when read, win over the declared type and the name.
-	const reel = tete === undefined ? declare : typeImageDepuisOctets(tete)
-	if (TYPES_HEIC.has(reel) || (reel === null && TYPES_HEIC.has(declare))) return refus('type', 'heic')
-	if (reel === null || !(TYPES_ACCEPTES as readonly string[]).includes(reel)) return refus('type', 'type')
-	if (typeof size !== 'number' || !Number.isFinite(size) || size <= 0) return refus('type', 'illisible')
-	if (size > TAILLE_MAX_CHOIX) return refus('taille', 'taille')
-	return { ok: true, type: reel }
+	const actual = head === undefined ? declare : imageTypeFromBytes(head)
+	if (TYPES_HEIC.has(actual) || (actual === null && TYPES_HEIC.has(declare))) return refusal('type', 'heic')
+	if (actual === null || !(ACCEPTED_TYPES as readonly string[]).includes(actual)) return refusal('type', 'type')
+	if (typeof size !== 'number' || !Number.isFinite(size) || size <= 0) return refusal('type', 'illisible')
+	if (size > CHOICE_SIZE_MAX) return refusal('taille', 'taille')
+	return { ok: true, type: actual }
 }
 
 /** The size of the sent picture: the longest side brought down to `coteMax`, never enlarged. */
-export function dimensionsCibles(
+export function targetDimensions(
 	largeur: number,
 	hauteur: number,
-	coteMax: number = COTE_MAX
+	coteMax: number = SIDE_MAX
 ): { largeur: number; hauteur: number } | null {
 	if (!(Number.isFinite(largeur) && Number.isFinite(hauteur)) || largeur <= 0 || hauteur <= 0 || !(coteMax > 0))
 		return null
-	const echelle = Math.min(1, coteMax / Math.max(largeur, hauteur))
+	const scale = Math.min(1, coteMax / Math.max(largeur, hauteur))
 	return {
-		largeur: Math.max(1, Math.round(largeur * echelle)),
-		hauteur: Math.max(1, Math.round(hauteur * echelle)),
+		largeur: Math.max(1, Math.round(largeur * scale)),
+		hauteur: Math.max(1, Math.round(hauteur * scale)),
 	}
 }
 
-export interface CibleDEncodage {
+export interface EncodingTarget {
 	largeur: number
 	hauteur: number
 	type: string
 	qualite: number
 }
 
-export type Encodeur = (cible: CibleDEncodage) => Promise<Blob>
+export type Encoder = (cible: EncodingTarget) => Promise<Blob>
 
 /**
  * Encodes the picture step by step (`PALIERS`) until it fits in `tailleMax`. WebP first; when the
  * browser answers with another type (Safari before 17 gives PNG for a type it cannot encode), JPEG
  * for this step and the next ones.
  */
-export async function compresserPhoto({
+export async function compressPhoto({
 	largeur,
 	hauteur,
 	encoder,
-	tailleMax = TAILLE_MAX_ENVOI,
-	coteMax = COTE_MAX,
+	tailleMax = UPLOAD_SIZE_MAX,
+	coteMax = SIDE_MAX,
 }: {
 	largeur: number
 	hauteur: number
-	encoder: Encodeur
+	encoder: Encoder
 	tailleMax?: number
 	coteMax?: number
 }): Promise<
 	| { ok: true; blob: Blob; largeur: number; hauteur: number; type: string; qualite: number; essais: number }
 	| { ok: false; code: 'illisible' | 'trop-lourde'; essais: number }
 > {
-	const base = dimensionsCibles(largeur, hauteur, coteMax)
+	const base = targetDimensions(largeur, hauteur, coteMax)
 	if (!base) return { ok: false, code: 'illisible', essais: 0 }
 	let type = 'image/webp'
-	let essais = 0
-	for (const { echelle, qualite } of PALIERS) {
-		const cible = {
-			largeur: Math.max(1, Math.round(base.largeur * echelle)),
-			hauteur: Math.max(1, Math.round(base.hauteur * echelle)),
-			qualite,
+	let attempts = 0
+	for (const { echelle: scale, qualite: quality } of LADDER) {
+		const target = {
+			largeur: Math.max(1, Math.round(base.largeur * scale)),
+			hauteur: Math.max(1, Math.round(base.hauteur * scale)),
+			qualite: quality,
 		}
-		essais++
-		let blob = await encoder({ ...cible, type })
+		attempts++
+		let blob = await encoder({ ...target, type })
 		if (blob && blob.type !== type && type === 'image/webp') {
 			type = 'image/jpeg'
-			essais++
-			blob = await encoder({ ...cible, type })
+			attempts++
+			blob = await encoder({ ...target, type })
 		}
-		if (!blob || blob.type !== type) return { ok: false, code: 'illisible', essais }
-		if (blob.size <= tailleMax) return { ok: true, blob, ...cible, type, essais }
+		if (!blob || blob.type !== type) return { ok: false, code: 'illisible', essais: attempts }
+		if (blob.size <= tailleMax) return { ok: true, blob, ...target, type, essais: attempts }
 	}
-	return { ok: false, code: 'trop-lourde', essais }
+	return { ok: false, code: 'trop-lourde', essais: attempts }
 }
 
 /** The name of the sent file: the original made safe (letters, digits, dashes), with the extension of the sent type. */
-export function nomPhoto(nom: string | undefined, type: string): string {
+export function photoName(nom: string | undefined, type: string): string {
 	const base = (nom ?? '')
 		.replace(/\.[a-z0-9]{1,5}$/i, '')
 		.normalize('NFD')
@@ -210,55 +210,55 @@ export function nomPhoto(nom: string | undefined, type: string): string {
 }
 
 /** What the browser gives of a decoded picture. */
-export interface ImageDecodee {
+export interface DecodedImage {
 	largeur: number
 	hauteur: number
-	encoder: Encodeur
+	encoder: Encoder
 	liberer?: () => void
 }
 
 /** The browser work, given by `photo-navigateur.ts` in the page and by fakes in a test. */
-export interface PortsDePhoto<Fichier extends FichierChoisi, Produit> {
+export interface PhotoPorts<Fichier extends ChosenFile, Produit> {
 	lireTete: (fichier: Fichier) => Promise<Uint8Array>
-	decoder: (fichier: Fichier) => Promise<ImageDecodee>
+	decoder: (fichier: Fichier) => Promise<DecodedImage>
 	fabriquerFichier: (blob: Blob, nom: string, type: string) => Produit
 }
 
-export type PhotoPreparee<Produit> =
+export type PreparedPhoto<Produit> =
 	| { ok: true; fichier: Produit; largeur: number; hauteur: number; taille: number }
-	| RefusDePhoto
+	| PhotoRefusal
 
 /** From the chosen file to the file to send: checks it, decodes it, shrinks it. Never throws. */
-export async function preparerPhoto<Fichier extends FichierChoisi, Produit>(
+export async function preparePhoto<Fichier extends ChosenFile, Produit>(
 	fichier: Fichier,
-	{ lireTete, decoder, fabriquerFichier }: PortsDePhoto<Fichier, Produit>
-): Promise<PhotoPreparee<Produit>> {
-	let tete: Uint8Array
+	{ lireTete, decoder, fabriquerFichier }: PhotoPorts<Fichier, Produit>
+): Promise<PreparedPhoto<Produit>> {
+	let head: Uint8Array
 	try {
-		tete = await lireTete(fichier)
+		head = await lireTete(fichier)
 	} catch {
-		return refus('type', 'illisible')
+		return refusal('type', 'illisible')
 	}
-	const verification = verifierPhoto({ name: fichier.name, type: fichier.type, size: fichier.size, tete })
+	const verification = checkPhoto({ name: fichier.name, type: fichier.type, size: fichier.size, tete: head })
 	if (!verification.ok) return verification
-	let image: ImageDecodee
+	let image: DecodedImage
 	try {
 		image = await decoder(fichier)
 	} catch {
-		return refus('type', 'illisible')
+		return refusal('type', 'illisible')
 	}
 	try {
-		const resultat = await compresserPhoto({ largeur: image.largeur, hauteur: image.hauteur, encoder: image.encoder })
-		if (!resultat.ok) return refus(resultat.code === 'trop-lourde' ? 'taille' : 'type', resultat.code)
+		const result = await compressPhoto({ largeur: image.largeur, hauteur: image.hauteur, encoder: image.encoder })
+		if (!result.ok) return refusal(result.code === 'trop-lourde' ? 'taille' : 'type', result.code)
 		return {
 			ok: true,
-			fichier: fabriquerFichier(resultat.blob, nomPhoto(fichier.name, resultat.type), resultat.type),
-			largeur: resultat.largeur,
-			hauteur: resultat.hauteur,
-			taille: resultat.blob.size,
+			fichier: fabriquerFichier(result.blob, photoName(fichier.name, result.type), result.type),
+			largeur: result.largeur,
+			hauteur: result.hauteur,
+			taille: result.blob.size,
 		}
 	} catch {
-		return refus('type', 'illisible')
+		return refusal('type', 'illisible')
 	} finally {
 		image.liberer?.()
 	}

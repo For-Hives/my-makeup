@@ -1,8 +1,8 @@
 import type { Payload } from 'payload'
 import { MESSAGES_DES_PHOTOS, photosNommees } from '../profil/photos'
-import { identifiantDuProfilAEcrire, type UtilisateurDeLEspace } from './my-profile'
-import { schemaDuPortfolio, type ValeursDuPortfolio } from './portfolio'
-import { echecDePayload, MESSAGE_ECHEC, type ResultatDEnregistrement } from './result'
+import { type DashboardUser, profileIdToWrite } from './my-profile'
+import { type PortfolioValues, portfolioSchema } from './portfolio'
+import { FAILURE_MESSAGE, payloadFailure, type SaveResult } from './result'
 
 /**
  * Saves the portfolio of the signed-in makeup artist (tickets 135 and 136), on the contract of
@@ -18,31 +18,33 @@ import { echecDePayload, MESSAGE_ECHEC, type ResultatDEnregistrement } from './r
  *   photo still her main photo, or in an article, stays where it is.
  * - The list given back is the one the database stored.
  */
-export async function enregistrerPortfolio(
+export async function savePortfolio(
 	payload: Payload,
-	utilisateur: UtilisateurDeLEspace,
+	utilisateur: DashboardUser,
 	saisie: unknown
-): Promise<ResultatDEnregistrement<ValeursDuPortfolio>> {
-	const lue = schemaDuPortfolio.safeParse(saisie)
-	if (!lue.success) {
+): Promise<SaveResult<PortfolioValues>> {
+	const parsed = portfolioSchema.safeParse(saisie)
+	if (!parsed.success) {
 		// Only the messages of the schema are French; a forged key gets the general message.
-		const dit = lue.error.issues.map(({ message }) => message)
-		const message = [MESSAGES_DES_PHOTOS.galeriePleine, MESSAGES_DES_PHOTOS.photoRefusee].find(m => dit.includes(m))
-		return message ? { ok: false, message, champs: { galerie: message } } : { ok: false, message: MESSAGE_ECHEC }
+		const messages = parsed.error.issues.map(({ message }) => message)
+		const message = [MESSAGES_DES_PHOTOS.galeriePleine, MESSAGES_DES_PHOTOS.photoRefusee].find(m =>
+			messages.includes(m)
+		)
+		return message ? { ok: false, message, champs: { galerie: message } } : { ok: false, message: FAILURE_MESSAGE }
 	}
 	try {
-		const id = await identifiantDuProfilAEcrire(payload, utilisateur)
-		if (id === null) return { ok: false, message: MESSAGE_ECHEC }
-		const stocke = await payload.update({
+		const id = await profileIdToWrite(payload, utilisateur)
+		if (id === null) return { ok: false, message: FAILURE_MESSAGE }
+		const stored = await payload.update({
 			collection: 'profiles',
-			data: { gallery: lue.data.galerie.map(Number) },
+			data: { gallery: parsed.data.galerie.map(Number) },
 			depth: 0,
 			id,
 			overrideAccess: false,
 			user: utilisateur,
 		})
-		return { ok: true, valeurs: { galerie: photosNommees(stocke.gallery) } }
-	} catch (erreur) {
-		return echecDePayload(erreur, ['galerie'] as const, chemin => (chemin === 'gallery' ? 'galerie' : ''))
+		return { ok: true, valeurs: { galerie: photosNommees(stored.gallery) } }
+	} catch (error) {
+		return payloadFailure(error, ['galerie'] as const, chemin => (chemin === 'gallery' ? 'galerie' : ''))
 	}
 }

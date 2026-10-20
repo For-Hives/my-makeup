@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
-import { ADRESSE_DES_COMMUNES, adresseDesCommunes } from '@/lib/dashboard/city-reference'
+import { CITIES_ADDRESS, citiesAddress } from '@/lib/dashboard/city-reference'
 import { creerFaussesCommunes } from '../outils/faux-communes/fournisseur'
 
 /**
@@ -63,13 +63,13 @@ describe('la fausse liste des communes', () => {
 
 describe('l’application ne demande la fausse liste que sur ce poste, quand le banc la lui donne', () => {
 	test('sans COMMUNES_DU_BANC, la liste officielle', () => {
-		expect(adresseDesCommunes({})).toBe(ADRESSE_DES_COMMUNES)
-		expect(adresseDesCommunes({ COMMUNES_DU_BANC: ' ' })).toBe(ADRESSE_DES_COMMUNES)
+		expect(citiesAddress({})).toBe(CITIES_ADDRESS)
+		expect(citiesAddress({ COMMUNES_DU_BANC: ' ' })).toBe(CITIES_ADDRESS)
 	})
 
 	test('l’adresse du banc, sur ce poste', () => {
 		expect(
-			adresseDesCommunes({ COMMUNES_DU_BANC: 'http://127.0.0.1:2050', NEXT_PUBLIC_SITE_URL: 'http://localhost:3100' })
+			citiesAddress({ COMMUNES_DU_BANC: 'http://127.0.0.1:2050', NEXT_PUBLIC_SITE_URL: 'http://localhost:3100' })
 		).toBe('http://127.0.0.1:2050')
 	})
 
@@ -80,11 +80,11 @@ describe('l’application ne demande la fausse liste que sur ce poste, quand le 
 		'http://127.0.0.1:2050/communes',
 		'http://127.0.0.1',
 	])('refuse %s', valeur => {
-		expect(() => adresseDesCommunes({ COMMUNES_DU_BANC: valeur })).toThrow('COMMUNES_DU_BANC refusée')
+		expect(() => citiesAddress({ COMMUNES_DU_BANC: valeur })).toThrow('COMMUNES_DU_BANC refusée')
 	})
 
 	test.each(['https://my-makeup.fr'])('refuse toute valeur sur %s', site => {
-		expect(() => adresseDesCommunes({ COMMUNES_DU_BANC: 'http://127.0.0.1:2050', NEXT_PUBLIC_SITE_URL: site })).toThrow(
+		expect(() => citiesAddress({ COMMUNES_DU_BANC: 'http://127.0.0.1:2050', NEXT_PUBLIC_SITE_URL: site })).toThrow(
 			'un site déployé'
 		)
 	})

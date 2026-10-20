@@ -1,16 +1,16 @@
 import type { Payload } from 'payload'
 import {
-	CHAMPS_DE_L_IDENTITE,
-	type ChampDeLIdentite,
-	erreursParChamp,
-	schemaDeLIdentiteStrict,
-	type ValeursDeLIdentite,
+	errorsByField,
+	IDENTITY_FIELDS,
+	type IdentityField,
+	type IdentityValues,
+	strictIdentitySchema,
 } from './identity'
-import { identifiantDuProfilAEcrire, type UtilisateurDeLEspace } from './my-profile'
-import { echecDePayload, MESSAGE_ECHEC, type ResultatDEnregistrement } from './result'
+import { type DashboardUser, profileIdToWrite } from './my-profile'
+import { FAILURE_MESSAGE, payloadFailure, type SaveResult } from './result'
 
 /** The field of the form that each field of the profile belongs to: Payload names the paths of a refusal. */
-const CHAMP_DU_CHEMIN: Readonly<Record<string, ChampDeLIdentite>> = {
+const PATH_FIELD: Readonly<Record<string, IdentityField>> = {
 	firstName: 'prenom',
 	lastName: 'nom',
 	artistName: 'nomArtiste',
@@ -30,42 +30,42 @@ const CHAMP_DU_CHEMIN: Readonly<Record<string, ChampDeLIdentite>> = {
  *
  * It never reads `error.message`: see `echecDePayload`.
  */
-export async function enregistrerIdentite(
+export async function saveIdentity(
 	payload: Payload,
-	utilisateur: UtilisateurDeLEspace,
+	utilisateur: DashboardUser,
 	saisie: unknown
-): Promise<ResultatDEnregistrement<ValeursDeLIdentite>> {
-	const lue = schemaDeLIdentiteStrict.safeParse(saisie)
-	if (!lue.success) {
-		const champs = erreursParChamp(lue.error)
-		return Object.keys(champs).length > 0
-			? { ok: false, message: 'Un champ n’est pas valide : corrige-le, puis enregistre à nouveau.', champs }
-			: { ok: false, message: MESSAGE_ECHEC }
+): Promise<SaveResult<IdentityValues>> {
+	const parsed = strictIdentitySchema.safeParse(saisie)
+	if (!parsed.success) {
+		const fields = errorsByField(parsed.error)
+		return Object.keys(fields).length > 0
+			? { ok: false, message: 'Un champ n’est pas valide : corrige-le, puis enregistre à nouveau.', champs: fields }
+			: { ok: false, message: FAILURE_MESSAGE }
 	}
 	try {
-		const id = await identifiantDuProfilAEcrire(payload, utilisateur)
-		if (id === null) return { ok: false, message: MESSAGE_ECHEC }
-		const stocke = await payload.update({
+		const id = await profileIdToWrite(payload, utilisateur)
+		if (id === null) return { ok: false, message: FAILURE_MESSAGE }
+		const stored = await payload.update({
 			collection: 'profiles',
 			data: {
-				firstName: lue.data.prenom,
-				lastName: lue.data.nom,
-				artistName: lue.data.nomArtiste,
-				specialty: lue.data.specialite,
+				firstName: parsed.data.prenom,
+				lastName: parsed.data.nom,
+				artistName: parsed.data.nomArtiste,
+				specialty: parsed.data.specialite,
 			},
 			depth: 0,
 			id,
 			overrideAccess: false,
 			user: utilisateur,
 		})
-		const valeurs: ValeursDeLIdentite = {
-			prenom: stocke.firstName ?? '',
-			nom: stocke.lastName ?? '',
-			nomArtiste: stocke.artistName ?? '',
-			specialite: stocke.specialty ?? '',
+		const values: IdentityValues = {
+			prenom: stored.firstName ?? '',
+			nom: stored.lastName ?? '',
+			nomArtiste: stored.artistName ?? '',
+			specialite: stored.specialty ?? '',
 		}
-		return { ok: true, valeurs }
-	} catch (erreur) {
-		return echecDePayload(erreur, CHAMPS_DE_L_IDENTITE, chemin => CHAMP_DU_CHEMIN[chemin] ?? '')
+		return { ok: true, valeurs: values }
+	} catch (error) {
+		return payloadFailure(error, IDENTITY_FIELDS, chemin => PATH_FIELD[chemin] ?? '')
 	}
 }

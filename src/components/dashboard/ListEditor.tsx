@@ -1,43 +1,36 @@
 'use client'
 
 import { type FormEvent, type RefObject, useEffect, useRef, useState } from 'react'
+import { trackedListSection, trackSave } from '@/lib/dashboard/analytics'
 import {
-	type DefinitionDeListe,
-	erreursDeLaLigne,
-	type LigneEnregistree,
-	type ListeEnregistree,
-	type ListeEnvoyee,
-	ligneEstVide,
-	ligneVide,
-	MESSAGES_DE_LISTE,
-	memeLigne,
-	memesLignes,
-	nettoyerLaLigne,
-	rangApresRetrait,
-	type ValeursDeLigne,
+	cleanRow,
+	emptyRow,
+	LIST_MESSAGES,
+	type ListDefinition,
+	type RowValues,
+	rankAfterRemoval,
+	rowErrors,
+	rowIsEmpty,
+	type SavedList,
+	type SavedRow,
+	type SentList,
+	sameRow,
+	sameRows,
 } from '@/lib/dashboard/list'
-import { mesurerLEnregistrement, sectionMesureeDeLaListe } from '@/lib/dashboard/analytics'
-import { MESSAGE_ECHEC, type ResultatDEnregistrement } from '@/lib/dashboard/result'
-import {
-	BOUTON,
-	BOUTON_DE_LIGNE,
-	CHAMP,
-	ignorerLaRepetition,
-	nouvelleCle,
-	type LigneEditee as OptionEditee,
-} from './list-helpers'
-import { EditeurDOptions, erreursDesOptions } from './OptionsEditor'
-import { PanneauDEdition } from './EditingPanel'
+import { FAILURE_MESSAGE, type SaveResult } from '@/lib/dashboard/result'
+import { EditingPanel } from './EditingPanel'
+import { BUTTON, FIELD, ignoreRepeat, newKey, type EditedRow as OptionEditee, ROW_BUTTON } from './list-helpers'
+import { OptionsEditor, optionsErrors } from './OptionsEditor'
 
-export type EnvoiDeLaListe = (liste: ListeEnvoyee) => Promise<ResultatDEnregistrement<ListeEnregistree>>
+export type ListUpload = (liste: SentList) => Promise<SaveResult<SavedList>>
 
 /** A row in the panel. `cle` is the key of its display: it belongs to the row, never to what it says (L1, L2). */
-interface LigneEditee extends OptionEditee {
+interface EditedRow extends OptionEditee {
 	/** Its own list, for a section that has one (the options of an offer, ticket 132). */
 	readonly options: readonly OptionEditee[]
 }
 
-type CibleDuFocus =
+type FocusTarget =
 	| { genre: 'retirer'; cle: string; n: number }
 	| { genre: 'formulaire'; n: number }
 	| { genre: 'titre'; n: number }
@@ -60,203 +53,201 @@ type CibleDuFocus =
  * The card changes only once the server has stored the list; a failure keeps the old list and what she
  * typed, and says so (E31).
  */
-export function EditeurDeListe({
+export function ListEditor({
 	definition,
-	lignes,
+	lignes: rows,
 	envoyer,
 	libelleDuBouton,
 	titre,
 	annonceEnregistre,
 }: {
-	definition: DefinitionDeListe
-	lignes: readonly LigneEnregistree[]
-	envoyer: EnvoiDeLaListe
+	definition: ListDefinition
+	lignes: readonly SavedRow[]
+	envoyer: ListUpload
 	/** The name of the button that opens the panel. */
 	libelleDuBouton: string
 	titre: string
 	annonceEnregistre: string
 }) {
-	const [ouvert, setOuvert] = useState(false)
-	const [annonce, setAnnonce] = useState('')
-	const declencheur = useRef<HTMLButtonElement>(null)
+	const [open, setOpen] = useState(false)
+	const [announcement, setAnnouncement] = useState('')
+	const trigger = useRef<HTMLButtonElement>(null)
 
 	return (
 		<>
 			<button
-				ref={declencheur}
+				ref={trigger}
 				type="button"
 				aria-haspopup="dialog"
 				aria-label={libelleDuBouton}
 				onClick={() => {
-					setAnnonce('')
-					setOuvert(true)
+					setAnnouncement('')
+					setOpen(true)
 				}}
-				onKeyDown={ignorerLaRepetition}
-				className={`${BOUTON} border border-neutral-400 bg-white`}
+				onKeyDown={ignoreRepeat}
+				className={`${BUTTON} border border-neutral-400 bg-white`}
 			>
 				Modifier
 			</button>
 			<p role="status" className="w-full text-green-800 text-sm">
-				{annonce}
+				{announcement}
 			</p>
-			{ouvert ? (
-				<PanneauDeListe
+			{open ? (
+				<ListPanel
 					definition={definition}
-					lignes={lignes}
+					lignes={rows}
 					envoyer={envoyer}
 					titre={titre}
-					retour={declencheur}
+					retour={trigger}
 					onEnregistre={() => {
-						setAnnonce(annonceEnregistre)
-						setOuvert(false)
+						setAnnouncement(annonceEnregistre)
+						setOpen(false)
 					}}
-					onFermer={() => setOuvert(false)}
+					onFermer={() => setOpen(false)}
 				/>
 			) : null}
 		</>
 	)
 }
 
-function PanneauDeListe({
+function ListPanel({
 	definition,
-	lignes: depart,
+	lignes: start,
 	envoyer,
 	titre,
 	retour,
 	onEnregistre,
 	onFermer,
 }: {
-	definition: DefinitionDeListe
-	lignes: readonly LigneEnregistree[]
-	envoyer: EnvoiDeLaListe
+	definition: ListDefinition
+	lignes: readonly SavedRow[]
+	envoyer: ListUpload
 	titre: string
 	retour: RefObject<HTMLButtonElement | null>
 	onEnregistre: () => void
 	onFermer: () => void
 }) {
-	const { section, champs, singulier } = definition
-	const vide = ligneVide(definition)
-	const [lignes, setLignes] = useState<LigneEditee[]>(() =>
-		depart.map(ligne => ({
-			cle: nouvelleCle(),
+	const { section, champs: fields, singulier } = definition
+	const empty = emptyRow(definition)
+	const [rows, setRows] = useState<EditedRow[]>(() =>
+		start.map(ligne => ({
+			cle: newKey(),
 			id: ligne.id,
 			valeurs: ligne.valeurs,
-			options: (ligne.options ?? []).map(option => ({ cle: nouvelleCle(), id: option.id, valeurs: option.valeurs })),
+			options: (ligne.options ?? []).map(option => ({ cle: newKey(), id: option.id, valeurs: option.valeurs })),
 		}))
 	)
-	const [initiales] = useState(depart)
-	const definitionDesOptions = definition.options
-	const [formulaire, setFormulaire] = useState<ValeursDeLigne>(vide)
+	const [initiales] = useState(start)
+	const optionsDefinition = definition.options
+	const [form, setForm] = useState<RowValues>(empty)
 	// The options of the row in the form, and the text of the small form that adds one (ticket 132).
-	const [optionsDuFormulaire, setOptionsDuFormulaire] = useState<OptionEditee[]>([])
-	const [saisieDOption, setSaisieDOption] = useState<ValeursDeLigne>(
-		definitionDesOptions === undefined ? {} : ligneVide(definitionDesOptions)
+	const [formOptions, setFormOptions] = useState<OptionEditee[]>([])
+	const [optionInput, setOptionInput] = useState<RowValues>(
+		optionsDefinition === undefined ? {} : emptyRow(optionsDefinition)
 	)
-	const [refusDesOptions, setRefusDesOptions] = useState('')
-	const [enEdition, setEnEdition] = useState<string | null>(null)
-	const [erreurs, setErreurs] = useState<Readonly<Record<string, string>>>({})
-	const [doublon, setDoublon] = useState('')
-	const [annonce, setAnnonce] = useState({ phrase: '', rang: 0 })
-	const [enCours, setEnCours] = useState(false)
+	const [optionsRefusal, setOptionsRefusal] = useState('')
+	const [editing, setEditing] = useState<string | null>(null)
+	const [errors, setErrors] = useState<Readonly<Record<string, string>>>({})
+	const [duplicate, setDuplicate] = useState('')
+	const [announcement, setAnnouncement] = useState({ phrase: '', rang: 0 })
+	const [pending, setPending] = useState(false)
 	const [message, setMessage] = useState('')
-	const [cible, setCible] = useState<CibleDuFocus | null>(null)
-	const racine = useRef<HTMLDivElement>(null)
-	const verrou = useRef(false)
-	const pointeur = useRef(false)
+	const [target, setTarget] = useState<FocusTarget | null>(null)
+	const root = useRef<HTMLDivElement>(null)
+	const lock = useRef(false)
+	const pointer = useRef(false)
 
 	// What the form holds, compared with what it started from: the row being edited, or an empty row.
-	const ligneEditee = lignes.find(ligne => ligne.cle === enEdition)
-	const depuisLeFormulaire = nettoyerLaLigne(definition, formulaire)
-	const optionsNettoyees = optionsDuFormulaire.map(option => ({
+	const editedRow = rows.find(ligne => ligne.cle === editing)
+	const fromForm = cleanRow(definition, form)
+	const cleanedOptions = formOptions.map(option => ({
 		...option,
-		valeurs: definitionDesOptions ? nettoyerLaLigne(definitionDesOptions, option.valeurs) : option.valeurs,
+		valeurs: optionsDefinition ? cleanRow(optionsDefinition, option.valeurs) : option.valeurs,
 	}))
 	/** True when two lists of options say the same; a section without options has none to compare. */
-	const memesOptions = (a: readonly { valeurs: ValeursDeLigne }[], b: readonly { valeurs: ValeursDeLigne }[]) =>
-		definitionDesOptions === undefined || memesLignes(definitionDesOptions, a, b)
-	const optionEnCours =
-		definitionDesOptions !== undefined &&
-		!ligneEstVide(definitionDesOptions, nettoyerLaLigne(definitionDesOptions, saisieDOption))
-	const formulaireEnCours =
-		optionEnCours ||
-		(ligneEditee === undefined
-			? !ligneEstVide(definition, depuisLeFormulaire) || optionsDuFormulaire.length > 0
-			: !memeLigne(definition, ligneEditee.valeurs, depuisLeFormulaire) ||
-				!memesOptions(optionsNettoyees, ligneEditee.options))
-	const listeModifiee =
-		lignes.length !== initiales.length ||
-		lignes.some((ligne, rang) => {
-			const depart = initiales[rang]
+	const sameOptions = (a: readonly { valeurs: RowValues }[], b: readonly { valeurs: RowValues }[]) =>
+		optionsDefinition === undefined || sameRows(optionsDefinition, a, b)
+	const pendingOption =
+		optionsDefinition !== undefined && !rowIsEmpty(optionsDefinition, cleanRow(optionsDefinition, optionInput))
+	const pendingForm =
+		pendingOption ||
+		(editedRow === undefined
+			? !rowIsEmpty(definition, fromForm) || formOptions.length > 0
+			: !sameRow(definition, editedRow.valeurs, fromForm) || !sameOptions(cleanedOptions, editedRow.options))
+	const changedList =
+		rows.length !== initiales.length ||
+		rows.some((ligne, rang) => {
+			const start = initiales[rang]
 			return (
-				ligne.id !== depart?.id ||
-				(depart !== undefined &&
-					(!memeLigne(definition, ligne.valeurs, depart.valeurs) ||
-						!memesOptions(ligne.options, depart.options ?? []) ||
-						ligne.options.map(option => option.id).join() !== (depart.options ?? []).map(option => option.id).join()))
+				ligne.id !== start?.id ||
+				(start !== undefined &&
+					(!sameRow(definition, ligne.valeurs, start.valeurs) ||
+						!sameOptions(ligne.options, start.options ?? []) ||
+						ligne.options.map(option => option.id).join() !== (start.options ?? []).map(option => option.id).join()))
 			)
 		})
 
 	// The focus, once the rows have been drawn again.
 	useEffect(() => {
-		if (cible === null) return
-		const dialogue = racine.current?.closest('[role="dialog"]')
-		if (cible.genre === 'retirer') {
-			racine.current?.querySelector<HTMLElement>(`[data-retirer="${cible.cle}"]`)?.focus()
-		} else if (cible.genre === 'formulaire') {
-			racine.current?.querySelector<HTMLElement>(`#${section}-${champs[0]?.nom}`)?.focus()
+		if (target === null) return
+		const dialogue = root.current?.closest('[role="dialog"]')
+		if (target.genre === 'retirer') {
+			root.current?.querySelector<HTMLElement>(`[data-retirer="${target.cle}"]`)?.focus()
+		} else if (target.genre === 'formulaire') {
+			root.current?.querySelector<HTMLElement>(`#${section}-${fields[0]?.nom}`)?.focus()
 		} else {
-			const entete = dialogue?.querySelector<HTMLElement>('h2')
-			entete?.setAttribute('tabindex', '-1')
-			entete?.focus()
+			const header = dialogue?.querySelector<HTMLElement>('h2')
+			header?.setAttribute('tabindex', '-1')
+			header?.focus()
 		}
-	}, [cible, section, champs])
+	}, [target, section, fields])
 
-	function surChamp(nom: string, valeur: string) {
-		setFormulaire(avant => ({ ...avant, [nom]: valeur }))
-		setDoublon('')
+	function onField(nom: string, valeur: string) {
+		setForm(avant => ({ ...avant, [nom]: valeur }))
+		setDuplicate('')
 		setMessage('')
-		setErreurs(avant =>
+		setErrors(avant =>
 			avant[nom] === undefined ? avant : Object.fromEntries(Object.entries(avant).filter(([cle]) => cle !== nom))
 		)
 	}
 
-	function remettreLeFormulaire() {
-		setFormulaire(vide)
-		setOptionsDuFormulaire([])
-		if (definitionDesOptions) setSaisieDOption(ligneVide(definitionDesOptions))
-		setRefusDesOptions('')
-		setEnEdition(null)
-		setErreurs({})
-		setDoublon('')
+	function restoreForm() {
+		setForm(empty)
+		setFormOptions([])
+		if (optionsDefinition) setOptionInput(emptyRow(optionsDefinition))
+		setOptionsRefusal('')
+		setEditing(null)
+		setErrors({})
+		setDuplicate('')
 	}
 
-	function validerLaLigne(evenement: FormEvent<HTMLFormElement>) {
+	function validateRow(evenement: FormEvent<HTMLFormElement>) {
 		evenement.preventDefault()
-		const valeurs = nettoyerLaLigne(definition, formulaire)
-		const refus = erreursDeLaLigne(definition, valeurs, { avecRequis: true, maintenant: new Date() })
-		if (Object.keys(refus).length > 0) {
-			setErreurs(refus)
-			setDoublon('')
-			const premier = champs.find(({ nom }) => refus[nom] !== undefined)
-			if (premier) racine.current?.querySelector<HTMLElement>(`#${section}-${premier.nom}`)?.focus()
+		const values = cleanRow(definition, form)
+		const refusal = rowErrors(definition, values, { avecRequis: true, maintenant: new Date() })
+		if (Object.keys(refusal).length > 0) {
+			setErrors(refusal)
+			setDuplicate('')
+			const first = fields.find(({ nom: name }) => refusal[name] !== undefined)
+			if (first) root.current?.querySelector<HTMLElement>(`#${section}-${first.nom}`)?.focus()
 			return
 		}
-		if (definitionDesOptions !== undefined && !optionsSontValides(definitionDesOptions)) return
+		if (optionsDefinition !== undefined && !optionsAreValid(optionsDefinition)) return
 		// Validated as it was loaded, a row changes nothing; any other copy of a listed row is refused (L6).
-		const memeQue = (ligne: LigneEditee) =>
-			memeLigne(definition, ligne.valeurs, valeurs) && memesOptions(ligne.options, optionsNettoyees)
-		const inchangee = ligneEditee !== undefined && memeQue(ligneEditee)
-		if (!inchangee && lignes.some(ligne => ligne.cle !== enEdition && memeQue(ligne))) {
-			setDoublon(definition.doublon)
+		const isSameAs = (ligne: EditedRow) =>
+			sameRow(definition, ligne.valeurs, values) && sameOptions(ligne.options, cleanedOptions)
+		const unchanged = editedRow !== undefined && isSameAs(editedRow)
+		if (!unchanged && rows.some(ligne => ligne.cle !== editing && isSameAs(ligne))) {
+			setDuplicate(definition.doublon)
 			return
 		}
 		setMessage('')
-		setLignes(avant =>
-			ligneEditee === undefined
-				? [...avant, { cle: nouvelleCle(), id: null, valeurs, options: optionsNettoyees }]
-				: avant.map(ligne => (ligne.cle === enEdition ? { ...ligne, valeurs, options: optionsNettoyees } : ligne))
+		setRows(avant =>
+			editedRow === undefined
+				? [...avant, { cle: newKey(), id: null, valeurs: values, options: cleanedOptions }]
+				: avant.map(ligne => (ligne.cle === editing ? { ...ligne, valeurs: values, options: cleanedOptions } : ligne))
 		)
-		remettreLeFormulaire()
+		restoreForm()
 	}
 
 	/**
@@ -264,85 +255,84 @@ function PanneauDeListe({
 	 * small form that adds one, every option within its bounds, no two alike. Says why, and puts the focus
 	 * where it is wrong.
 	 */
-	function optionsSontValides(options: DefinitionDeListe): boolean {
-		if (optionEnCours) {
-			setRefusDesOptions(MESSAGES_DE_LISTE.optionEnCours)
-			racine.current?.querySelector<HTMLElement>(`#options-${options.champs[0]?.nom}`)?.focus()
+	function optionsAreValid(options: ListDefinition): boolean {
+		if (pendingOption) {
+			setOptionsRefusal(LIST_MESSAGES.optionEnCours)
+			root.current?.querySelector<HTMLElement>(`#options-${options.champs[0]?.nom}`)?.focus()
 			return false
 		}
-		const erreurs = erreursDesOptions(options, optionsDuFormulaire, new Date())
-		const fautive = optionsDuFormulaire.find(option => erreurs[option.cle] !== undefined)
-		if (fautive) {
-			const champ = options.champs.find(({ nom }) => erreurs[fautive.cle]?.[nom] !== undefined)
-			racine.current?.querySelector<HTMLElement>(`#option-${fautive.cle}-${champ?.nom}`)?.focus()
+		const errors = optionsErrors(options, formOptions, new Date())
+		const faulty = formOptions.find(option => errors[option.cle] !== undefined)
+		if (faulty) {
+			const field = options.champs.find(({ nom: name }) => errors[faulty.cle]?.[name] !== undefined)
+			root.current?.querySelector<HTMLElement>(`#option-${faulty.cle}-${field?.nom}`)?.focus()
 			return false
 		}
 		if (
-			optionsNettoyees.some((option, rang) =>
-				optionsNettoyees.slice(0, rang).some(autre => memeLigne(options, autre.valeurs, option.valeurs))
+			cleanedOptions.some((option, rang) =>
+				cleanedOptions.slice(0, rang).some(autre => sameRow(options, autre.valeurs, option.valeurs))
 			)
 		) {
-			setRefusDesOptions(options.doublon)
-			racine.current?.querySelector<HTMLElement>(`#options-${options.champs[0]?.nom}`)?.focus()
+			setOptionsRefusal(options.doublon)
+			root.current?.querySelector<HTMLElement>(`#options-${options.champs[0]?.nom}`)?.focus()
 			return false
 		}
 		return true
 	}
 
-	function modifier(ligne: LigneEditee) {
-		setOptionsDuFormulaire(ligne.options.map(option => ({ ...option })))
-		if (definitionDesOptions) setSaisieDOption(ligneVide(definitionDesOptions))
-		setRefusDesOptions('')
-		setFormulaire(ligne.valeurs)
-		setEnEdition(ligne.cle)
-		setErreurs({})
-		setDoublon('')
+	function change(ligne: EditedRow) {
+		setFormOptions(ligne.options.map(option => ({ ...option })))
+		if (optionsDefinition) setOptionInput(emptyRow(optionsDefinition))
+		setOptionsRefusal('')
+		setForm(ligne.valeurs)
+		setEditing(ligne.cle)
+		setErrors({})
+		setDuplicate('')
 		setMessage('')
-		setCible({ genre: 'formulaire', n: (cible?.n ?? 0) + 1 })
+		setTarget({ genre: 'formulaire', n: (target?.n ?? 0) + 1 })
 	}
 
-	function retirer(ligne: LigneEditee, rang: number) {
-		const clavier = !pointeur.current
-		pointeur.current = false
-		const restantes = lignes.filter(autre => autre.cle !== ligne.cle)
-		setLignes(restantes)
+	function remove(ligne: EditedRow, rang: number) {
+		const keyboard = !pointer.current
+		pointer.current = false
+		const remainingRows = rows.filter(autre => autre.cle !== ligne.cle)
+		setRows(remainingRows)
 		setMessage('')
-		setAnnonce(({ rang: n }) => ({ phrase: definition.retrait(definition.nom(ligne.valeurs)), rang: n + 1 }))
-		if (ligne.cle === enEdition) {
+		setAnnouncement(({ rang: n }) => ({ phrase: definition.retrait(definition.nom(ligne.valeurs)), rang: n + 1 }))
+		if (ligne.cle === editing) {
 			// The row being edited is gone: back to « Ajouter ». What was typed over it stays, to be added as a
 			// new row; a form left as it was loaded is emptied, or a reflex click would put the row back (L3).
-			if (memeLigne(definition, ligne.valeurs, depuisLeFormulaire) && memesOptions(ligne.options, optionsNettoyees))
-				remettreLeFormulaire()
+			if (sameRow(definition, ligne.valeurs, fromForm) && sameOptions(ligne.options, cleanedOptions)) restoreForm()
 			else {
-				setEnEdition(null)
-				setErreurs({})
-				setDoublon('')
+				setEditing(null)
+				setErrors({})
+				setDuplicate('')
 			}
 		}
-		const suivant = rangApresRetrait(restantes.length, rang)
-		const n = (cible?.n ?? 0) + 1
-		const restante = suivant === null ? undefined : restantes[suivant]
-		if (restante !== undefined) setCible({ genre: 'retirer', cle: restante.cle, n })
+		const next = rankAfterRemoval(remainingRows.length, rang)
+		const n = (target?.n ?? 0) + 1
+		const remaining = next === null ? undefined : remainingRows[next]
+		if (remaining !== undefined) setTarget({ genre: 'retirer', cle: remaining.cle, n })
 		// Emptied, the list sends the focus to the form, unless she clicked or tapped: a field would open the keyboard.
-		else setCible(clavier ? { genre: 'formulaire', n } : { genre: 'titre', n })
+		else setTarget(keyboard ? { genre: 'formulaire', n } : { genre: 'titre', n })
 	}
 
-	async function enregistrer() {
-		if (verrou.current) return
-		if (formulaireEnCours) {
-			setMessage(MESSAGES_DE_LISTE.enCours)
+	async function save() {
+		if (lock.current) return
+		if (pendingForm) {
+			setMessage(LIST_MESSAGES.enCours)
 			return
 		}
-		verrou.current = true
-		setEnCours(true)
+		lock.current = true
+		setPending(true)
 		setMessage('')
 		try {
-			const resultat: ResultatDEnregistrement<ListeEnregistree> = await envoyer({
-				lignes: lignes.map(ligne => ({
+			const result: SaveResult<SavedList> = await envoyer({
+				lignes: rows.map(ligne => ({
 					...(ligne.id === null ? {} : { id: ligne.id }),
 					valeurs: ligne.valeurs,
 					// A section with options always sends them, so that removing the last one is saved too.
-					...(definitionDesOptions === undefined
+					...(optionsDefinition === undefined
 						? {}
 						: {
 								options: ligne.options.map(option => ({
@@ -351,40 +341,40 @@ function PanneauDeListe({
 								})),
 							}),
 				})),
-			}).catch(() => ({ ok: false, message: MESSAGE_ECHEC }))
-			mesurerLEnregistrement(sectionMesureeDeLaListe(section), resultat)
-			if (resultat.ok) {
+			}).catch(() => ({ ok: false, message: FAILURE_MESSAGE }))
+			trackSave(trackedListSection(section), result)
+			if (result.ok) {
 				onEnregistre()
 				return
 			}
-			setMessage(resultat.champs?.lignes ? `${resultat.message} ${resultat.champs.lignes}` : resultat.message)
+			setMessage(result.champs?.lignes ? `${result.message} ${result.champs.lignes}` : result.message)
 		} finally {
-			verrou.current = false
-			setEnCours(false)
+			lock.current = false
+			setPending(false)
 		}
 	}
 
-	const indice = definition.indice?.(depuisLeFormulaire) ?? ''
+	const hint = definition.indice?.(fromForm) ?? ''
 
 	return (
-		<PanneauDEdition
+		<EditingPanel
 			titre={titre}
-			enCours={enCours}
-			modifie={listeModifiee || formulaireEnCours}
+			enCours={pending}
+			modifie={changedList || pendingForm}
 			retour={retour}
 			onFermer={onFermer}
 		>
-			<div ref={racine} className="flex flex-col gap-4" aria-busy={enCours}>
+			<div ref={root} className="flex flex-col gap-4" aria-busy={pending}>
 				{/* Said to a screen reader; there, and empty, when the panel opens (L5). Each sentence is a new node. */}
 				<div role="status" aria-live="polite" className="sr-only">
-					<span key={annonce.rang}>{annonce.phrase}</span>
+					<span key={announcement.rang}>{announcement.phrase}</span>
 				</div>
-				{lignes.length === 0 ? (
-					<p className="text-neutral-700 text-sm">{MESSAGES_DE_LISTE.aucune(singulier)}</p>
+				{rows.length === 0 ? (
+					<p className="text-neutral-700 text-sm">{LIST_MESSAGES.aucune(singulier)}</p>
 				) : (
 					<ul className="flex flex-col gap-2" aria-label={`Tes ${definition.pluriel}`}>
-						{lignes.map((ligne, rang) => {
-							const nom = definition.nom(ligne.valeurs)
+						{rows.map((ligne, rang) => {
+							const name = definition.nom(ligne.valeurs)
 							return (
 								<li
 									key={ligne.cle}
@@ -400,29 +390,29 @@ function PanneauDeListe({
 									<span className="flex gap-2">
 										<button
 											type="button"
-											aria-label={`Modifier ${definition.designation} ${nom}`.trim()}
-											onKeyDown={ignorerLaRepetition}
-											onClick={() => modifier(ligne)}
-											className={BOUTON_DE_LIGNE}
+											aria-label={`Modifier ${definition.designation} ${name}`.trim()}
+											onKeyDown={ignoreRepeat}
+											onClick={() => change(ligne)}
+											className={ROW_BUTTON}
 										>
 											Modifier
 										</button>
 										<button
 											type="button"
 											data-retirer={ligne.cle}
-											aria-label={`Retirer ${definition.designation} ${nom}`.trim()}
+											aria-label={`Retirer ${definition.designation} ${name}`.trim()}
 											onKeyDown={evenement => {
-												pointeur.current = false
-												ignorerLaRepetition(evenement)
+												pointer.current = false
+												ignoreRepeat(evenement)
 											}}
 											onMouseDown={() => {
-												pointeur.current = true
+												pointer.current = true
 											}}
 											onPointerDown={() => {
-												pointeur.current = true
+												pointer.current = true
 											}}
-											onClick={() => retirer(ligne, rang)}
-											className={BOUTON_DE_LIGNE}
+											onClick={() => remove(ligne, rang)}
+											className={ROW_BUTTON}
 										>
 											Retirer
 										</button>
@@ -432,99 +422,95 @@ function PanneauDeListe({
 						})}
 					</ul>
 				)}
-				<form noValidate id={`${section}-ligne`} onSubmit={validerLaLigne} className="flex flex-col gap-4">
+				<form noValidate id={`${section}-ligne`} onSubmit={validateRow} className="flex flex-col gap-4">
 					<h3 className="font-semibold text-base">
-						{enEdition === null ? `Ajouter une ${singulier}` : `Modifier cette ${singulier}`}
+						{editing === null ? `Ajouter une ${singulier}` : `Modifier cette ${singulier}`}
 					</h3>
 					<p className="text-neutral-700 text-sm">
 						Obligatoire :{' '}
-						{champs
-							.filter(({ nom }) => definition.requis[nom])
+						{fields
+							.filter(({ nom: name }) => definition.requis[name])
 							.map(({ libelle }) => libelle.toLowerCase())
 							.join(', ')}
 						.
 					</p>
-					{champs.map(champ => {
-						const identifiant = `${section}-${champ.nom}`
-						const erreur = erreurs[champ.nom]
-						const decrit = [champ.aide ? `${identifiant}-aide` : '', erreur ? `${identifiant}-erreur` : '']
-							.concat(champ.nom === 'price' && indice ? [`${identifiant}-indice`] : [])
+					{fields.map(champ => {
+						const id = `${section}-${champ.nom}`
+						const error = errors[champ.nom]
+						const describes = [champ.aide ? `${id}-aide` : '', error ? `${id}-erreur` : '']
+							.concat(champ.nom === 'price' && hint ? [`${id}-indice`] : [])
 							.filter(Boolean)
 							.join(' ')
-						const commun = {
-							id: identifiant,
+						const shared = {
+							id: id,
 							name: champ.nom,
-							value: formulaire[champ.nom] ?? '',
+							value: form[champ.nom] ?? '',
 							autoComplete: 'off',
 							'aria-required': definition.requis[champ.nom] ? (true as const) : undefined,
-							'aria-invalid': erreur ? (true as const) : undefined,
-							'aria-describedby': decrit || undefined,
-							className: CHAMP,
+							'aria-invalid': error ? (true as const) : undefined,
+							'aria-describedby': describes || undefined,
+							className: FIELD,
 						}
 						return (
 							<div key={champ.nom} className="flex flex-col gap-1">
-								<label htmlFor={identifiant} className="font-medium text-sm">
+								<label htmlFor={id} className="font-medium text-sm">
 									{champ.libelle}
 								</label>
 								{champ.genre === 'long' ? (
-									<textarea {...commun} rows={4} onChange={evenement => surChamp(champ.nom, evenement.target.value)} />
+									<textarea {...shared} rows={4} onChange={evenement => onField(champ.nom, evenement.target.value)} />
 								) : (
 									<input
-										{...commun}
+										{...shared}
 										type={champ.genre === 'date' ? 'date' : 'text'}
 										placeholder={champ.exemple}
-										onChange={evenement => surChamp(champ.nom, evenement.target.value)}
+										onChange={evenement => onField(champ.nom, evenement.target.value)}
 									/>
 								)}
 								{champ.aide ? (
-									<p id={`${identifiant}-aide`} className="text-neutral-700 text-sm">
+									<p id={`${id}-aide`} className="text-neutral-700 text-sm">
 										{champ.aide}
 									</p>
 								) : null}
-								{champ.nom === 'price' && indice ? (
-									<p id={`${identifiant}-indice`} className="text-neutral-700 text-sm">
-										{indice}
+								{champ.nom === 'price' && hint ? (
+									<p id={`${id}-indice`} className="text-neutral-700 text-sm">
+										{hint}
 									</p>
 								) : null}
-								{erreur ? (
-									<p id={`${identifiant}-erreur`} className="text-red-800 text-sm">
-										{erreur}
+								{error ? (
+									<p id={`${id}-erreur`} className="text-red-800 text-sm">
+										{error}
 									</p>
 								) : null}
 							</div>
 						)
 					})}
-					{definitionDesOptions ? (
-						<EditeurDOptions
-							definition={definitionDesOptions}
-							options={optionsDuFormulaire}
-							onOptions={setOptionsDuFormulaire}
-							saisie={saisieDOption}
-							onSaisie={setSaisieDOption}
-							refus={refusDesOptions}
-							onRefus={setRefusDesOptions}
-							annoncer={phrase => setAnnonce(({ rang }) => ({ phrase, rang: rang + 1 }))}
+					{optionsDefinition ? (
+						<OptionsEditor
+							definition={optionsDefinition}
+							options={formOptions}
+							onOptions={setFormOptions}
+							saisie={optionInput}
+							onSaisie={setOptionInput}
+							refus={optionsRefusal}
+							onRefus={setOptionsRefusal}
+							annoncer={phrase => setAnnouncement(({ rang }) => ({ phrase, rang: rang + 1 }))}
 						/>
 					) : null}
-					{doublon ? (
+					{duplicate ? (
 						<p id={`${section}-doublon`} role="alert" className="rounded-md bg-amber-50 p-3 text-amber-900 text-sm">
-							{doublon}
+							{duplicate}
 						</p>
 					) : null}
 					<div className="flex flex-wrap gap-3">
-						<button
-							type="submit"
-							onKeyDown={ignorerLaRepetition}
-							className={`${BOUTON} border border-neutral-400 bg-white`}
-						>
-							{enEdition === null ? 'Ajouter' : 'Valider la modification'}
+						<button type="submit" onKeyDown={ignoreRepeat} className={`${BUTTON} border border-neutral-400 bg-white`}>
+							{editing === null ? 'Ajouter' : 'Valider la modification'}
 						</button>
-						{enEdition === null ? null : (
+						{editing === null ? null : (
 							<button
 								type="button"
-								onKeyDown={ignorerLaRepetition}
-								onClick={remettreLeFormulaire}
-								className={`${BOUTON} border border-neutral-400 bg-white`}
+								onKeyDown={ignoreRepeat}
+								onClick={restoreForm}
+								className={`${BUTTON} border border-neutral-400 bg-white`}
 							>
 								Annuler la modification
 							</button>
@@ -536,14 +522,14 @@ function PanneauDeListe({
 				</div>
 				<button
 					type="button"
-					disabled={enCours}
-					onKeyDown={ignorerLaRepetition}
-					onClick={() => void enregistrer()}
-					className={`${BOUTON} bg-neutral-900 text-white disabled:cursor-wait disabled:opacity-60`}
+					disabled={pending}
+					onKeyDown={ignoreRepeat}
+					onClick={() => void save()}
+					className={`${BUTTON} bg-neutral-900 text-white disabled:cursor-wait disabled:opacity-60`}
 				>
-					{enCours ? 'Enregistrement…' : 'Enregistrer'}
+					{pending ? 'Enregistrement…' : 'Enregistrer'}
 				</button>
 			</div>
-		</PanneauDEdition>
+		</EditingPanel>
 	)
 }

@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
-import { enregistrerIdentite } from '@/lib/dashboard/save-identity'
-import { profilDeLaMaquilleuse, type UtilisateurDeLEspace } from '@/lib/dashboard/my-profile'
-import { MESSAGE_ECHEC } from '@/lib/dashboard/result'
+import { artistProfile, type DashboardUser } from '@/lib/dashboard/my-profile'
+import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
+import { saveIdentity } from '@/lib/dashboard/save-identity'
 import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 
@@ -17,9 +17,9 @@ afterEach(viderLaBase)
 type Maquilleuse = CompteDeTest<'maquilleuse'>
 
 /** The account as Payload hands it to a request: what the access rules read. */
-async function utilisateurDe(payload: Payload, compte: Maquilleuse): Promise<UtilisateurDeLEspace> {
+async function utilisateurDe(payload: Payload, compte: Maquilleuse): Promise<DashboardUser> {
 	const doc = await payload.findByID({ collection: 'pros', id: compte.id, depth: 0, overrideAccess: true })
-	return { ...doc, collection: 'pros' } as UtilisateurDeLEspace
+	return { ...doc, collection: 'pros' } as DashboardUser
 }
 
 async function profilStocke(payload: Payload, compte: Maquilleuse) {
@@ -52,7 +52,7 @@ describe('U54 : la page ne lit que le profil de la maquilleuse connectée', () =
 			},
 		})
 
-		const profilDeA = await profilDeLaMaquilleuse(payload, await utilisateurDe(payload, a))
+		const profilDeA = await artistProfile(payload, await utilisateurDe(payload, a))
 
 		expect(profilDeA?.id).toBe((await profilStocke(payload, a)).id)
 		expect(profilDeA?.lastName).not.toBe('Fictive')
@@ -67,8 +67,8 @@ describe('U54 : la page ne lit que le profil de la maquilleuse connectée', () =
 		const admin = await creerCompte('admin')
 		const payload = await payloadDeTest()
 		const doc = await payload.findByID({ collection: 'admins', id: admin.id, depth: 0, overrideAccess: true })
-		const utilisateur = { ...doc, collection: 'admins' } as unknown as UtilisateurDeLEspace
-		expect(await profilDeLaMaquilleuse(payload, utilisateur)).toBeNull()
+		const utilisateur = { ...doc, collection: 'admins' } as unknown as DashboardUser
+		expect(await artistProfile(payload, utilisateur)).toBeNull()
 	})
 })
 
@@ -79,7 +79,7 @@ describe('E19 : l’identité enregistrée est celle de la base', () => {
 		const payload = await payloadDeTest()
 		const avantB = await profilStocke(payload, b)
 
-		const resultat = await enregistrerIdentite(payload, await utilisateurDe(payload, a), {
+		const resultat = await saveIdentity(payload, await utilisateurDe(payload, a), {
 			...IDENTITE,
 			prenom: '  Léa  ',
 		})
@@ -109,12 +109,12 @@ describe('U32, I03, I02 : une requête forgée est refusée, rien ne change', ()
 		const payload = await payloadDeTest()
 		const avant = await profilStocke(payload, a)
 
-		const resultat = await enregistrerIdentite(payload, await utilisateurDe(payload, a), {
+		const resultat = await saveIdentity(payload, await utilisateurDe(payload, a), {
 			...IDENTITE,
 			[cle]: valeur,
 		})
 
-		expect(resultat).toEqual({ ok: false, message: MESSAGE_ECHEC })
+		expect(resultat).toEqual({ ok: false, message: FAILURE_MESSAGE })
 		const apres = await profilStocke(payload, a)
 		expect(apres.updatedAt).toBe(avant.updatedAt)
 		expect(apres.firstName).toBe(avant.firstName)
@@ -128,7 +128,7 @@ describe('U32, I03, I02 : une requête forgée est refusée, rien ne change', ()
 		const payload = await payloadDeTest()
 		const avant = await profilStocke(payload, a)
 
-		const resultat = await enregistrerIdentite(payload, await utilisateurDe(payload, a), {
+		const resultat = await saveIdentity(payload, await utilisateurDe(payload, a), {
 			...IDENTITE,
 			nom: 'A',
 			specialite: 'x'.repeat(71),
@@ -148,12 +148,8 @@ describe('U32, I03, I02 : une requête forgée est refusée, rien ne change', ()
 		const sansProfil = await creerCompte('maquilleuse-sans-profil')
 		const payload = await payloadDeTest()
 		const doc = await payload.findByID({ collection: 'pros', id: sansProfil.id, depth: 0, overrideAccess: true })
-		const resultat = await enregistrerIdentite(
-			payload,
-			{ ...doc, collection: 'pros' } as UtilisateurDeLEspace,
-			IDENTITE
-		)
-		expect(resultat).toEqual({ ok: false, message: MESSAGE_ECHEC })
+		const resultat = await saveIdentity(payload, { ...doc, collection: 'pros' } as DashboardUser, IDENTITE)
+		expect(resultat).toEqual({ ok: false, message: FAILURE_MESSAGE })
 		expect((await payload.count({ collection: 'profiles', overrideAccess: true })).totalDocs).toBe(0)
 	})
 })
@@ -166,8 +162,8 @@ describe('I19 : changer de nom ne change pas l’adresse du profil', () => {
 		const slug = (await profilStocke(payload, a)).slug
 
 		await Promise.all([
-			enregistrerIdentite(payload, utilisateur, IDENTITE),
-			enregistrerIdentite(payload, utilisateur, { ...IDENTITE, nom: 'Autre', prenom: 'Zoé' }),
+			saveIdentity(payload, utilisateur, IDENTITE),
+			saveIdentity(payload, utilisateur, { ...IDENTITE, nom: 'Autre', prenom: 'Zoé' }),
 		])
 
 		const apres = await profilStocke(payload, a)

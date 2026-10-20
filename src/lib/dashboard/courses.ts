@@ -12,26 +12,26 @@
 import { LONGUEUR_DESCRIPTION, LONGUEUR_NOM, messageDeTexte, messageDObtention } from '../profil/listes'
 import { texte } from '../profil/nom-affiche'
 import { moisAnnee } from '../profil/vue-publique'
-import { type DefinitionDeListe, type ErreursDeLigne, jourDuFormulaire, type ValeursDeLigne } from './list'
+import { formDay, type ListDefinition, type RowErrors, type RowValues } from './list'
 
-function bornes(valeurs: ValeursDeLigne, maintenant: Date): ErreursDeLigne {
-	const erreurs: Record<string, string> = {}
-	for (const [champ, maximum] of [
+function bounds(valeurs: RowValues, maintenant: Date): RowErrors {
+	const errors: Record<string, string> = {}
+	for (const [field, maximum] of [
 		['diploma', LONGUEUR_NOM],
 		['school', LONGUEUR_NOM],
 		['description', LONGUEUR_DESCRIPTION],
 	] as const) {
-		const message = messageDeTexte(valeurs[champ], maximum)
-		if (message !== null) erreurs[champ] = message
+		const message = messageDeTexte(valeurs[field], maximum)
+		if (message !== null) errors[field] = message
 	}
 	const message = messageDObtention(valeurs.graduatedAt ? valeurs.graduatedAt : null, maintenant)
-	if (message !== null) erreurs.graduatedAt = message
-	return erreurs
+	if (message !== null) errors.graduatedAt = message
+	return errors
 }
 
-const enNull = (valeur: string | undefined): string | null => (valeur ? valeur : null)
+const emptyToNull = (valeur: string | undefined): string | null => (valeur ? valeur : null)
 
-export const FORMATIONS: DefinitionDeListe = {
+export const COURSES: ListDefinition = {
 	section: 'courses',
 	singulier: 'formation',
 	pluriel: 'formations',
@@ -47,7 +47,7 @@ export const FORMATIONS: DefinitionDeListe = {
 		school: 'Le nom de l’école est requis.',
 	},
 	doublon: 'Une formation identique est déjà dans la liste.',
-	bornes,
+	bornes: bounds,
 	resume: valeurs =>
 		[valeurs.diploma, valeurs.school, moisAnnee(valeurs.graduatedAt)].map(texte).filter(Boolean).join(' - '),
 	nom: valeurs => texte(valeurs.diploma) || texte(valeurs.school),
@@ -55,13 +55,13 @@ export const FORMATIONS: DefinitionDeListe = {
 	depuisLeStockage: stockee => ({
 		diploma: texte(stockee.diploma),
 		school: texte(stockee.school),
-		graduatedAt: jourDuFormulaire(stockee.graduatedAt),
+		graduatedAt: formDay(stockee.graduatedAt),
 		description: typeof stockee.description === 'string' ? stockee.description.trim() : '',
 	}),
 	versLeStockage: valeurs => ({
-		diploma: enNull(valeurs.diploma),
-		school: enNull(valeurs.school),
-		graduatedAt: enNull(valeurs.graduatedAt),
-		description: enNull(valeurs.description),
+		diploma: emptyToNull(valeurs.diploma),
+		school: emptyToNull(valeurs.school),
+		graduatedAt: emptyToNull(valeurs.graduatedAt),
+		description: emptyToNull(valeurs.description),
 	}),
 }

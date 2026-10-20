@@ -9,13 +9,13 @@
 
 import { type DocumentVisible, estIndexable, estListe, estVisible } from '../profil/visibilite'
 
-export const CHEMIN_DE_L_APERCU = '/auth/apercu-profil'
-export const CHEMIN_DE_L_ESPACE = '/auth/profil'
+export const PREVIEW_PATH = '/auth/apercu-profil'
+export const DASHBOARD_PATH = '/auth/profil'
 
-export type CodeDeLApercu = 'masque' | 'vide' | 'indisponible' | 'non-publiable' | 'complet'
+export type PreviewCode = 'masque' | 'vide' | 'indisponible' | 'non-publiable' | 'complet'
 
-export interface EtatDeLApercu {
-	readonly code: CodeDeLApercu
+export interface PreviewState {
+	readonly code: PreviewCode
 	/** Short text in bold. */
 	readonly titre: string
 	/** The explanation under it. */
@@ -23,7 +23,7 @@ export interface EtatDeLApercu {
 }
 
 /** The banner for the state of her profile. */
-export function etatDeLApercu(profil: DocumentVisible): EtatDeLApercu {
+export function previewState(profil: DocumentVisible): PreviewState {
 	if (!estVisible(profil))
 		return {
 			code: 'masque',

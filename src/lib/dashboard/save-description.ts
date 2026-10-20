@@ -1,12 +1,7 @@
 import type { Payload } from 'payload'
-import {
-	CHAMPS_DE_LA_DESCRIPTION,
-	erreursDeLaDescription,
-	schemaDeLaDescriptionStrict,
-	type ValeursDeLaDescription,
-} from './description'
-import { identifiantDuProfilAEcrire, type UtilisateurDeLEspace } from './my-profile'
-import { echecDePayload, MESSAGE_ECHEC, type ResultatDEnregistrement } from './result'
+import { DESCRIPTION_FIELDS, type DescriptionValues, descriptionErrors, strictDescriptionSchema } from './description'
+import { type DashboardUser, profileIdToWrite } from './my-profile'
+import { FAILURE_MESSAGE, payloadFailure, type SaveResult } from './result'
 
 /**
  * Saves the description of the signed-in makeup artist (ticket 122), the way her identity is saved
@@ -21,31 +16,31 @@ import { echecDePayload, MESSAGE_ECHEC, type ResultatDEnregistrement } from './r
  *
  * It never reads `error.message`: see `echecDePayload`.
  */
-export async function enregistrerDescription(
+export async function saveDescription(
 	payload: Payload,
-	utilisateur: UtilisateurDeLEspace,
+	utilisateur: DashboardUser,
 	saisie: unknown
-): Promise<ResultatDEnregistrement<ValeursDeLaDescription>> {
-	const lue = schemaDeLaDescriptionStrict.safeParse(saisie)
-	if (!lue.success) {
-		const champs = erreursDeLaDescription(lue.error)
-		return Object.keys(champs).length > 0
-			? { ok: false, message: 'Un champ n’est pas valide : corrige-le, puis enregistre à nouveau.', champs }
-			: { ok: false, message: MESSAGE_ECHEC }
+): Promise<SaveResult<DescriptionValues>> {
+	const parsed = strictDescriptionSchema.safeParse(saisie)
+	if (!parsed.success) {
+		const fields = descriptionErrors(parsed.error)
+		return Object.keys(fields).length > 0
+			? { ok: false, message: 'Un champ n’est pas valide : corrige-le, puis enregistre à nouveau.', champs: fields }
+			: { ok: false, message: FAILURE_MESSAGE }
 	}
 	try {
-		const id = await identifiantDuProfilAEcrire(payload, utilisateur)
-		if (id === null) return { ok: false, message: MESSAGE_ECHEC }
-		const stocke = await payload.update({
+		const id = await profileIdToWrite(payload, utilisateur)
+		if (id === null) return { ok: false, message: FAILURE_MESSAGE }
+		const stored = await payload.update({
 			collection: 'profiles',
-			data: lue.data,
+			data: parsed.data,
 			depth: 0,
 			id,
 			overrideAccess: false,
 			user: utilisateur,
 		})
-		return { ok: true, valeurs: { description: stocke.description ?? '' } }
-	} catch (erreur) {
-		return echecDePayload(erreur, CHAMPS_DE_LA_DESCRIPTION)
+		return { ok: true, valeurs: { description: stored.description ?? '' } }
+	} catch (error) {
+		return payloadFailure(error, DESCRIPTION_FIELDS)
 	}
 }

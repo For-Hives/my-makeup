@@ -1,13 +1,13 @@
 import type { Payload } from 'payload'
 import { COLLECTION_PROS } from '../acces'
-import type { ProfilDeLEspace } from './cards'
-import { verifierQueLAdminNeTientPasLeProfil } from './lock'
+import type { DashboardProfile } from './cards'
+import { checkAdminDoesNotHoldProfile } from './lock'
 
 /** The makeup artist as Payload knows her: what the access rules of a request need. */
-export type UtilisateurDeLEspace = NonNullable<Awaited<ReturnType<Payload['auth']>>['user']>
+export type DashboardUser = NonNullable<Awaited<ReturnType<Payload['auth']>>['user']>
 
 /** What the page reads of her profile: nothing the cards do not show. */
-const CHAMPS_LUS = {
+const READ_FIELDS = {
 	firstName: true,
 	lastName: true,
 	artistName: true,
@@ -36,7 +36,7 @@ const CHAMPS_LUS = {
  * server, and gives back an identifier and nothing else. `utilisateur` comes from the session
  * (`payload.auth`), never from the request.
  */
-export async function identifiantDuProfil(payload: Payload, utilisateur: UtilisateurDeLEspace): Promise<number | null> {
+export async function profileId(payload: Payload, utilisateur: DashboardUser): Promise<number | null> {
 	if (utilisateur.collection !== COLLECTION_PROS) return null
 	const { docs } = await payload.find({
 		collection: 'profiles',
@@ -55,12 +55,9 @@ export async function identifiantDuProfil(payload: Payload, utilisateur: Utilisa
  * (`ProfilVerrouille`) while an admin has the profile open in the administration (ticket 224). Null
  * when she has no profile, as `identifiantDuProfil`.
  */
-export async function identifiantDuProfilAEcrire(
-	payload: Payload,
-	utilisateur: UtilisateurDeLEspace
-): Promise<number | null> {
-	const id = await identifiantDuProfil(payload, utilisateur)
-	if (id !== null) await verifierQueLAdminNeTientPasLeProfil(payload, id)
+export async function profileIdToWrite(payload: Payload, utilisateur: DashboardUser): Promise<number | null> {
+	const id = await profileId(payload, utilisateur)
+	if (id !== null) await checkAdminDoesNotHoldProfile(payload, id)
 	return id
 }
 
@@ -69,25 +66,22 @@ export async function identifiantDuProfilAEcrire(
  * never by an identifier that comes from the request, then read with the access rules on
  * (`overrideAccess: false`) as herself. Nobody else's profile can come out of it (U54).
  */
-export async function profilDeLaMaquilleuse(
-	payload: Payload,
-	utilisateur: UtilisateurDeLEspace
-): Promise<ProfilDeLEspace | null> {
-	const id = await identifiantDuProfil(payload, utilisateur)
+export async function artistProfile(payload: Payload, utilisateur: DashboardUser): Promise<DashboardProfile | null> {
+	const id = await profileId(payload, utilisateur)
 	if (id === null) return null
 	// The rule of a field closed to the public (`contactDetails`, `publicContact`, `consentedAt`) reads the
 	// account in `pro` of the document it is given: a selection without it would strip those fields
 	// from her own page. `pro` is read for the rule and dropped before the page gets the profile.
-	const profil = await payload.findByID({
+	const profile = await payload.findByID({
 		collection: 'profiles',
 		depth: 0,
 		disableErrors: true,
 		id,
 		overrideAccess: false,
-		select: { ...CHAMPS_LUS, pro: true },
+		select: { ...READ_FIELDS, pro: true },
 		user: utilisateur,
 	})
-	if (profil === null) return null
-	const { pro: _compte, ...visible } = profil
+	if (profile === null) return null
+	const { pro: _account, ...visible } = profile
 	return visible
 }

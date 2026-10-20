@@ -2,34 +2,32 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { expiredSessionUrl } from '@/lib/auth/return-to'
+import { localRefusalCause, trackPhotoRefusal, trackSave } from '@/lib/dashboard/analytics'
+import { prepareBrowserPhoto } from '@/lib/dashboard/browser-photo'
+import { ACCEPT, MESSAGES_PHOTO, type PreparedPhoto } from '@/lib/dashboard/photo'
+import type { DashboardPhoto, PhotoId } from '@/lib/dashboard/photos'
 import {
-	envoyerPuisEnregistrer,
-	type PhotoAEnvoyer,
-	type ResultatDEnvoiDUnFichier,
-	supprimerLeMedia,
-	televerserLaPhoto,
+	deleteMedia,
+	type FileUploadResult,
+	type PhotoToSend,
+	sendThenSave,
+	uploadPhoto,
 } from '@/lib/dashboard/photos-upload'
-import { causeDuRefusLocal, mesurerLEnregistrement, mesurerUnRefusDePhoto } from '@/lib/dashboard/analytics'
-import { ACCEPT, MESSAGES_PHOTO, type PhotoPreparee } from '@/lib/dashboard/photo'
-import { preparerPhotoNavigateur } from '@/lib/dashboard/browser-photo'
-import type { IdentifiantDePhoto, PhotoDeLEspace } from '@/lib/dashboard/photos'
-import type { ValeursDuPortfolio } from '@/lib/dashboard/portfolio'
-import type { ResultatDEnregistrement } from '@/lib/dashboard/result'
+import type { PortfolioValues } from '@/lib/dashboard/portfolio'
+import type { SaveResult } from '@/lib/dashboard/result'
 import { GALERIE_MAX } from '@/lib/medias'
-import { apercuLocal, libererApercu } from './PhotoEditor'
-import { PanneauDEdition } from './EditingPanel'
+import { EditingPanel } from './EditingPanel'
+import { localPreview, releasePreview } from './PhotoEditor'
 
-export type EnvoiDuPortfolio = (saisie: {
-	galerie: IdentifiantDePhoto[]
-}) => Promise<ResultatDEnregistrement<ValeursDuPortfolio>>
+export type PortfolioUpload = (saisie: { galerie: PhotoId[] }) => Promise<SaveResult<PortfolioValues>>
 
 /** The page of the space the editor lives on: where the sign-in page brings her back. */
-const PAGE_DE_L_ESPACE = '/auth/profil'
+const DASHBOARD_PAGE = '/auth/profil'
 
 /** The alternative text a portfolio photo is stored with. */
 export const ALT_PORTFOLIO = 'Photo du portfolio'
 
-const BOUTON = 'min-h-11 rounded-md px-4 py-2 font-medium'
+const BUTTON = 'min-h-11 rounded-md px-4 py-2 font-medium'
 
 /**
  * One line of the list. `cle` is its own and never changes (L1): it comes from a counter, never
@@ -37,7 +35,7 @@ const BOUTON = 'min-h-11 rounded-md px-4 py-2 font-medium'
  * portfolio has its `id`; a photo chosen in this panel has its reduced `fichier` and a local
  * `apercu`, until « Enregistrer » sends it.
  */
-interface Ligne extends PhotoAEnvoyer {
+interface Row extends PhotoToSend {
 	url: string
 	apercu: string
 	enAttente: boolean
@@ -45,10 +43,10 @@ interface Ligne extends PhotoAEnvoyer {
 	signature: string
 }
 
-const signatureDe = (fichier: File): string => `${fichier.name}|${fichier.size}|${fichier.lastModified}`
+const signatureOf = (fichier: File): string => `${fichier.name}|${fichier.size}|${fichier.lastModified}`
 
 /** « Photo 2 sur 3 de ton portfolio »: the text of a photo for a screen reader, whatever its stored text. */
-export const texteAlternatif = (rang: number, total: number): string => `Photo ${rang} sur ${total} de ton portfolio`
+export const altText = (rang: number, total: number): string => `Photo ${rang} sur ${total} de ton portfolio`
 
 /**
  * The button « Modifier » of the card « Portfolio », and the panel it opens (tickets 135 and 136).
@@ -73,65 +71,65 @@ export const texteAlternatif = (rang: number, total: number): string => `Photo $
  *
  * The browser work, the network and the server action are properties: a test gives fakes.
  */
-export function EditeurDuPortfolio({
+export function PortfolioEditor({
 	photos,
 	envoyer,
-	preparer = preparerPhotoNavigateur,
-	televerser = (fichier, alt) => televerserLaPhoto(fichier, alt),
-	supprimer = id => supprimerLeMedia(id),
+	preparer = prepareBrowserPhoto,
+	televerser = (fichier, alt) => uploadPhoto(fichier, alt),
+	supprimer = id => deleteMedia(id),
 }: {
-	photos: readonly PhotoDeLEspace[]
-	envoyer: EnvoiDuPortfolio
-	preparer?: (fichier: File) => Promise<PhotoPreparee<File>>
-	televerser?: (fichier: File, alt: string) => Promise<ResultatDEnvoiDUnFichier>
-	supprimer?: (id: IdentifiantDePhoto) => Promise<unknown>
+	photos: readonly DashboardPhoto[]
+	envoyer: PortfolioUpload
+	preparer?: (fichier: File) => Promise<PreparedPhoto<File>>
+	televerser?: (fichier: File, alt: string) => Promise<FileUploadResult>
+	supprimer?: (id: PhotoId) => Promise<unknown>
 }) {
-	const [ouvert, setOuvert] = useState(false)
-	const [annonce, setAnnonce] = useState('')
-	const declencheur = useRef<HTMLButtonElement>(null)
+	const [open, setOpen] = useState(false)
+	const [announcement, setAnnouncement] = useState('')
+	const trigger = useRef<HTMLButtonElement>(null)
 
 	return (
 		<>
 			<button
-				ref={declencheur}
+				ref={trigger}
 				type="button"
 				aria-haspopup="dialog"
 				aria-label="Modifier mon portfolio"
 				onClick={() => {
-					setAnnonce('')
-					setOuvert(true)
+					setAnnouncement('')
+					setOpen(true)
 				}}
 				// Held down, Enter repeats: it opens the panel once.
 				onKeyDown={evenement => {
 					if (evenement.repeat) evenement.preventDefault()
 				}}
-				className={`${BOUTON} border border-neutral-400 bg-white`}
+				className={`${BUTTON} border border-neutral-400 bg-white`}
 			>
 				Modifier
 			</button>
 			<p role="status" className="w-full text-green-800 text-sm">
-				{annonce}
+				{announcement}
 			</p>
-			{ouvert ? (
-				<FormulaireDuPortfolio
+			{open ? (
+				<PortfolioForm
 					photos={photos}
 					envoyer={envoyer}
 					preparer={preparer}
 					televerser={televerser}
 					supprimer={supprimer}
-					retour={declencheur}
+					retour={trigger}
 					onEnregistre={() => {
-						setAnnonce('Ton portfolio est enregistré.')
-						setOuvert(false)
+						setAnnouncement('Ton portfolio est enregistré.')
+						setOpen(false)
 					}}
-					onFermer={() => setOuvert(false)}
+					onFermer={() => setOpen(false)}
 				/>
 			) : null}
 		</>
 	)
 }
 
-function FormulaireDuPortfolio({
+function PortfolioForm({
 	photos,
 	envoyer,
 	preparer,
@@ -141,17 +139,17 @@ function FormulaireDuPortfolio({
 	onEnregistre,
 	onFermer,
 }: {
-	photos: readonly PhotoDeLEspace[]
-	envoyer: EnvoiDuPortfolio
-	preparer: (fichier: File) => Promise<PhotoPreparee<File>>
-	televerser: (fichier: File, alt: string) => Promise<ResultatDEnvoiDUnFichier>
-	supprimer: (id: IdentifiantDePhoto) => Promise<unknown>
+	photos: readonly DashboardPhoto[]
+	envoyer: PortfolioUpload
+	preparer: (fichier: File) => Promise<PreparedPhoto<File>>
+	televerser: (fichier: File, alt: string) => Promise<FileUploadResult>
+	supprimer: (id: PhotoId) => Promise<unknown>
 	retour: React.RefObject<HTMLButtonElement | null>
 	onEnregistre: () => void
 	onFermer: () => void
 }) {
-	const compteur = useRef(0)
-	const [lignes, setLignes] = useState<Ligne[]>(() =>
+	const counter = useRef(0)
+	const [rows, setRows] = useState<Row[]>(() =>
 		photos.map(photo => ({
 			cle: `photo-${photo.id}`,
 			fichier: new File([], ''),
@@ -163,203 +161,203 @@ function FormulaireDuPortfolio({
 			signature: '',
 		}))
 	)
-	const [refus, setRefus] = useState<{ cle: string; texte: string }[]>([])
-	const [annonce, setAnnonce] = useState('')
+	const [refusal, setRefusal] = useState<{ cle: string; texte: string }[]>([])
+	const [announcement, setAnnouncement] = useState('')
 	const [message, setMessage] = useState('')
-	const [sessionExpiree, setSessionExpiree] = useState(false)
+	const [expiredSession, setExpiredSession] = useState(false)
 	const [preparation, setPreparation] = useState(false)
-	const [enCours, setEnCours] = useState(false)
-	const verrou = useRef(false)
-	const boutons = useRef(new Map<string, HTMLButtonElement>())
-	const titre = useRef<HTMLHeadingElement>(null)
-	const champ = useRef<HTMLInputElement>(null)
+	const [pending, setPending] = useState(false)
+	const lock = useRef(false)
+	const buttons = useRef(new Map<string, HTMLButtonElement>())
+	const title = useRef<HTMLHeadingElement>(null)
+	const field = useRef<HTMLInputElement>(null)
 	// Where the focus goes once the list is drawn again, and how the last gesture was made.
-	const apres = useRef<{ cle: string | null } | null>(null)
-	const geste = useRef<'clavier' | 'pointeur'>('clavier')
-	const nombreDAnnonces = useRef(0)
-	const lignesCourantes = useRef(lignes)
-	lignesCourantes.current = lignes
+	const after = useRef<{ cle: string | null } | null>(null)
+	const gesture = useRef<'clavier' | 'pointeur'>('clavier')
+	const announcementsCount = useRef(0)
+	const currentRows = useRef(rows)
+	currentRows.current = rows
 
 	// The local addresses are given back when the panel goes.
 	useEffect(
 		() => () => {
-			for (const ligne of lignesCourantes.current) libererApercu(ligne.apercu)
+			for (const row of currentRows.current) releasePreview(row.apercu)
 		},
 		[]
 	)
 
 	// After a removal, the focus stays in the panel (L4).
 	useEffect(() => {
-		const cible = apres.current
-		if (cible === null) return
-		apres.current = null
-		const bouton = cible.cle === null ? undefined : boutons.current.get(cible.cle)
-		if (bouton) bouton.focus()
+		const target = after.current
+		if (target === null) return
+		after.current = null
+		const button = target.cle === null ? undefined : buttons.current.get(target.cle)
+		if (button) button.focus()
 		// Empty list: never a text field after a tap (it would open the keyboard of a phone).
-		else if (geste.current === 'pointeur') titre.current?.focus()
-		else champ.current?.focus()
-	}, [lignes])
+		else if (gesture.current === 'pointeur') title.current?.focus()
+		else field.current?.focus()
+	}, [rows])
 
-	function retirer(cle: string) {
-		const rang = lignes.findIndex(ligne => ligne.cle === cle)
-		const retiree = lignes[rang]
-		if (retiree === undefined) return
-		libererApercu(retiree.apercu)
-		const restantes = lignes.filter(ligne => ligne.cle !== cle)
+	function remove(cle: string) {
+		const rank = rows.findIndex(ligne => ligne.cle === cle)
+		const removed = rows[rank]
+		if (removed === undefined) return
+		releasePreview(removed.apercu)
+		const remainingRows = rows.filter(ligne => ligne.cle !== cle)
 		// The line that takes its place, else the one above, else nothing.
-		apres.current = { cle: (restantes[rang] ?? restantes[rang - 1])?.cle ?? null }
-		setLignes(restantes)
-		setRefus([])
+		after.current = { cle: (remainingRows[rank] ?? remainingRows[rank - 1])?.cle ?? null }
+		setRows(remainingRows)
+		setRefusal([])
 		setMessage('')
 		// The same sentence twice is not read twice: a character no one hears tells the two apart.
-		nombreDAnnonces.current += 1
-		setAnnonce(
-			`${texteAlternatif(rang + 1, lignes.length)} est retirée. Elle disparaît de ton portfolio quand tu enregistres.${nombreDAnnonces.current % 2 === 0 ? '\u200b' : ''}`
+		announcementsCount.current += 1
+		setAnnouncement(
+			`${altText(rank + 1, rows.length)} est retirée. Elle disparaît de ton portfolio quand tu enregistres.${announcementsCount.current % 2 === 0 ? '\u200b' : ''}`
 		)
 	}
 
-	async function choisir(fichiers: File[]) {
+	async function choose(fichiers: File[]) {
 		setMessage('')
 		setPreparation(true)
 		const refuses: { cle: string; texte: string }[] = []
-		const refuser = (fichier: File, texte: string) => {
-			compteur.current += 1
-			refuses.push({ cle: `refus-${compteur.current}`, texte: `${fichier.name} : ${texte}` })
+		const refuse = (fichier: File, texte: string) => {
+			counter.current += 1
+			refuses.push({ cle: `refus-${counter.current}`, texte: `${fichier.name} : ${texte}` })
 		}
 		try {
-			const acceptees: Ligne[] = []
-			const connues = new Set(lignesCourantes.current.map(ligne => ligne.signature).filter(Boolean))
-			for (const fichier of fichiers) {
-				if (lignesCourantes.current.length + acceptees.length >= GALERIE_MAX) {
-					refuser(fichier, MESSAGES_PHOTO['limite-galerie'])
+			const accepted: Row[] = []
+			const knownById = new Set(currentRows.current.map(ligne => ligne.signature).filter(Boolean))
+			for (const file of fichiers) {
+				if (currentRows.current.length + accepted.length >= GALERIE_MAX) {
+					refuse(file, MESSAGES_PHOTO['limite-galerie'])
 					continue
 				}
-				const signature = signatureDe(fichier)
-				if (connues.has(signature)) {
-					refuser(fichier, MESSAGES_PHOTO.doublon)
+				const signature = signatureOf(file)
+				if (knownById.has(signature)) {
+					refuse(file, MESSAGES_PHOTO.doublon)
 					continue
 				}
-				const prete = await preparer(fichier)
-				if (!prete.ok) {
-					mesurerUnRefusDePhoto(causeDuRefusLocal(prete))
-					refuser(fichier, prete.message)
+				const ready = await preparer(file)
+				if (!ready.ok) {
+					trackPhotoRefusal(localRefusalCause(ready))
+					refuse(file, ready.message)
 					continue
 				}
-				connues.add(signature)
-				compteur.current += 1
-				const apercu = apercuLocal(prete.fichier)
-				acceptees.push({
-					cle: `local-${compteur.current}`,
-					fichier: prete.fichier,
+				knownById.add(signature)
+				counter.current += 1
+				const preview = localPreview(ready.fichier)
+				accepted.push({
+					cle: `local-${counter.current}`,
+					fichier: ready.fichier,
 					alt: ALT_PORTFOLIO,
-					url: apercu,
-					apercu,
+					url: preview,
+					apercu: preview,
 					enAttente: true,
 					signature,
 				})
 			}
-			if (acceptees.length > 0) setLignes(courantes => [...courantes, ...acceptees])
-			setRefus(refuses)
+			if (accepted.length > 0) setRows(courantes => [...courantes, ...accepted])
+			setRefusal(refuses)
 		} finally {
 			setPreparation(false)
 		}
 	}
 
-	async function enregistrer() {
-		if (verrou.current) return
-		verrou.current = true
-		setEnCours(true)
+	async function save() {
+		if (lock.current) return
+		lock.current = true
+		setPending(true)
 		setMessage('')
-		setSessionExpiree(false)
+		setExpiredSession(false)
 		try {
-			const issue = await envoyerPuisEnregistrer<ValeursDuPortfolio>({
-				photos: lignes,
+			const issue = await sendThenSave<PortfolioValues>({
+				photos: rows,
 				televerser: async (fichier, alt) => {
-					const envoi = await televerser(fichier, alt)
+					const upload = await televerser(fichier, alt)
 					// A session that ended is not a refusal of the photo.
-					if (!envoi.ok && envoi.session !== 'expiree') mesurerUnRefusDePhoto(envoi.cause ?? 'server')
-					return envoi
+					if (!upload.ok && upload.session !== 'expiree') trackPhotoRefusal(upload.cause ?? 'server')
+					return upload
 				},
 				supprimer,
 				enregistrer: async ids => {
-					const resultat = await envoyer({ galerie: ids })
-					mesurerLEnregistrement('portfolio', resultat)
-					return resultat
+					const result = await envoyer({ galerie: ids })
+					trackSave('portfolio', result)
+					return result
 				},
 				marquerEnvoyee: (cle, id) =>
-					setLignes(courantes => courantes.map(ligne => (ligne.cle === cle ? { ...ligne, id } : ligne))),
+					setRows(courantes => courantes.map(ligne => (ligne.cle === cle ? { ...ligne, id } : ligne))),
 			})
 			if (issue.ok) {
 				onEnregistre()
 				return
 			}
 			setMessage(issue.champs?.galerie ?? issue.message)
-			setSessionExpiree(issue.session === 'expiree')
+			setExpiredSession(issue.session === 'expiree')
 		} finally {
-			verrou.current = false
-			setEnCours(false)
+			lock.current = false
+			setPending(false)
 		}
 	}
 
-	const nouvelles = lignes.filter(ligne => ligne.enAttente).length
-	const gardees = lignes.length - nouvelles
-	const modifie = nouvelles > 0 || gardees !== photos.length
+	const added = rows.filter(ligne => ligne.enAttente).length
+	const guarded = rows.length - added
+	const changed = added > 0 || guarded !== photos.length
 	return (
-		<PanneauDEdition
+		<EditingPanel
 			titre="Modifier mon portfolio"
-			enCours={enCours || preparation}
-			modifie={modifie}
+			enCours={pending || preparation}
+			modifie={changed}
 			retour={retour}
 			onFermer={onFermer}
 		>
 			<form
 				noValidate
-				aria-busy={enCours}
+				aria-busy={pending}
 				onKeyDownCapture={() => {
-					geste.current = 'clavier'
+					gesture.current = 'clavier'
 				}}
 				onMouseDownCapture={() => {
-					geste.current = 'pointeur'
+					gesture.current = 'pointeur'
 				}}
 				onSubmit={evenement => {
 					evenement.preventDefault()
-					void enregistrer()
+					void save()
 				}}
 				className="flex flex-col gap-4"
 			>
-				<h3 ref={titre} tabIndex={-1} className="font-medium outline-none">
-					Photos de ton portfolio ({lignes.length} / {GALERIE_MAX})
+				<h3 ref={title} tabIndex={-1} className="font-medium outline-none">
+					Photos de ton portfolio ({rows.length} / {GALERIE_MAX})
 				</h3>
 				<p role="status" data-testid="annonce-retrait" className="text-sm">
-					{annonce}
+					{announcement}
 				</p>
-				{lignes.length === 0 ? (
+				{rows.length === 0 ? (
 					<p className="text-neutral-600 italic">Tu n’as pas encore de photo dans ton portfolio.</p>
 				) : (
 					<ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-						{lignes.map((ligne, rang) => (
+						{rows.map((ligne, rang) => (
 							<li key={ligne.cle} className="flex min-w-0 flex-col gap-1">
 								{/* biome-ignore lint/performance/noImgElement: a local preview of a file not sent yet cannot go through the image optimizer */}
 								<img
 									src={ligne.url || undefined}
-									alt={texteAlternatif(rang + 1, lignes.length)}
+									alt={altText(rang + 1, rows.length)}
 									className="aspect-square w-full rounded object-cover"
 								/>
 								{ligne.enAttente ? <span className="font-semibold text-indigo-900 text-xs">À enregistrer</span> : null}
 								<button
 									type="button"
 									ref={bouton => {
-										if (bouton) boutons.current.set(ligne.cle, bouton)
-										else boutons.current.delete(ligne.cle)
+										if (bouton) buttons.current.set(ligne.cle, bouton)
+										else buttons.current.delete(ligne.cle)
 									}}
 									aria-label={`Retirer la photo ${rang + 1}`}
-									disabled={enCours}
-									onClick={() => retirer(ligne.cle)}
+									disabled={pending}
+									onClick={() => remove(ligne.cle)}
 									// Held down, Enter repeats: one removal.
 									onKeyDown={evenement => {
 										if (evenement.repeat) evenement.preventDefault()
 									}}
-									className={`${BOUTON} border border-red-300 bg-white text-red-800 disabled:opacity-60`}
+									className={`${BUTTON} border border-red-300 bg-white text-red-800 disabled:opacity-60`}
 								>
 									Retirer
 								</button>
@@ -372,18 +370,18 @@ function FormulaireDuPortfolio({
 						Ajouter des photos
 					</label>
 					<input
-						ref={champ}
+						ref={field}
 						id="portfolio-fichiers"
 						type="file"
 						multiple
 						accept={ACCEPT}
-						disabled={enCours || preparation}
+						disabled={pending || preparation}
 						aria-describedby="portfolio-aide"
 						onChange={evenement => {
-							const choisis = Array.from(evenement.target.files ?? [])
+							const chosen = Array.from(evenement.target.files ?? [])
 							// The same files can be picked again.
 							evenement.target.value = ''
-							if (choisis.length > 0) void choisir(choisis)
+							if (chosen.length > 0) void choose(chosen)
 						}}
 						className="min-h-11 rounded-md border border-neutral-400 bg-white px-3 py-2 text-base"
 					/>
@@ -396,9 +394,9 @@ function FormulaireDuPortfolio({
 							Préparation des photos…
 						</p>
 					) : null}
-					{refus.length > 0 ? (
+					{refusal.length > 0 ? (
 						<ul role="alert" className="list-disc pl-5 text-red-800 text-sm">
-							{refus.map(({ cle, texte }) => (
+							{refusal.map(({ cle, texte }) => (
 								<li key={cle}>{texte}</li>
 							))}
 						</ul>
@@ -408,12 +406,12 @@ function FormulaireDuPortfolio({
 					{message ? (
 						<p className="rounded-md bg-red-50 p-3 text-red-800 text-sm">
 							{message}
-							{sessionExpiree ? (
+							{expiredSession ? (
 								<>
 									{' '}
 									<a
 										className="font-medium underline"
-										href={expiredSessionUrl(PAGE_DE_L_ESPACE)}
+										href={expiredSessionUrl(DASHBOARD_PAGE)}
 										target="_blank"
 										rel="noopener"
 									>
@@ -427,12 +425,12 @@ function FormulaireDuPortfolio({
 				</div>
 				<button
 					type="submit"
-					disabled={enCours || preparation || !modifie}
-					className={`${BOUTON} bg-neutral-900 text-white disabled:cursor-not-allowed disabled:opacity-60`}
+					disabled={pending || preparation || !changed}
+					className={`${BUTTON} bg-neutral-900 text-white disabled:cursor-not-allowed disabled:opacity-60`}
 				>
-					{enCours ? 'Enregistrement…' : 'Enregistrer'}
+					{pending ? 'Enregistrement…' : 'Enregistrer'}
 				</button>
 			</form>
-		</PanneauDEdition>
+		</EditingPanel>
 	)
 }

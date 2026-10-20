@@ -9,16 +9,16 @@
 
 import { z } from 'zod'
 
-export interface ValeursDeLaDisponibilite extends Record<string, unknown> {
+export interface AvailabilityValues extends Record<string, unknown> {
 	disponible: boolean
 }
 
-export const schemaDeLaDisponibilite = z.strictObject({ disponible: z.boolean() })
+export const availabilitySchema = z.strictObject({ disponible: z.boolean() })
 
 /** What is stored, read as the site reads it: only an explicit `false` is unavailable. */
-export const estDisponible = (stocke: boolean | null | undefined): boolean => stocke !== false
+export const isAvailable = (stocke: boolean | null | undefined): boolean => stocke !== false
 
-export const TEXTE_DISPONIBLE = 'Disponible'
-export const TEXTE_INDISPONIBLE = 'Pas disponible en ce moment'
+export const AVAILABLE_TEXT = 'Disponible'
+export const UNAVAILABLE_TEXT = 'Pas disponible en ce moment'
 /** Said on her card while she is unavailable: what it costs her. */
-export const TEXTE_HORS_RECHERCHE = 'Ton profil n’apparaît plus dans les résultats de recherche.'
+export const OUT_OF_SEARCH_TEXT = 'Ton profil n’apparaît plus dans les résultats de recherche.'

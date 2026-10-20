@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
-import { enregistrerDisponibilite } from '@/lib/dashboard/save-availability'
-import type { UtilisateurDeLEspace } from '@/lib/dashboard/my-profile'
-import { MESSAGE_ECHEC } from '@/lib/dashboard/result'
+import type { DashboardUser } from '@/lib/dashboard/my-profile'
+import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
+import { saveAvailability } from '@/lib/dashboard/save-availability'
 import { FILTRE_LISTE } from '@/lib/profil/visibilite'
 import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
@@ -17,9 +17,9 @@ afterEach(viderLaBase)
 
 type Maquilleuse = CompteDeTest<'maquilleuse'>
 
-async function utilisateurDe(payload: Payload, compte: Maquilleuse): Promise<UtilisateurDeLEspace> {
+async function utilisateurDe(payload: Payload, compte: Maquilleuse): Promise<DashboardUser> {
 	const doc = await payload.findByID({ collection: 'pros', id: compte.id, depth: 0, overrideAccess: true })
-	return { ...doc, collection: 'pros' } as UtilisateurDeLEspace
+	return { ...doc, collection: 'pros' } as DashboardUser
 }
 
 async function profilStocke(payload: Payload, compte: Maquilleuse) {
@@ -43,13 +43,13 @@ describe('E19-E29 : la disponibilité enregistrée est celle de la base', () => 
 		const avantB = await profilStocke(payload, b)
 		const slug = (await profilStocke(payload, a)).slug
 
-		expect(await enregistrerDisponibilite(payload, utilisateur, { disponible: false })).toEqual({
+		expect(await saveAvailability(payload, utilisateur, { disponible: false })).toEqual({
 			ok: true,
 			valeurs: { disponible: false },
 		})
 		expect((await profilStocke(payload, a)).available).toBe(false)
 
-		expect(await enregistrerDisponibilite(payload, utilisateur, { disponible: true })).toEqual({
+		expect(await saveAvailability(payload, utilisateur, { disponible: true })).toEqual({
 			ok: true,
 			valeurs: { disponible: true },
 		})
@@ -68,7 +68,7 @@ describe('E19-E29 : la disponibilité enregistrée est celle de la base', () => 
 		await payload.db.updateOne({ collection: 'profiles', id: profil.id, data: { available: null }, returning: false })
 		expect((await profilStocke(payload, a)).available ?? null).toBeNull()
 
-		const resultat = await enregistrerDisponibilite(payload, await utilisateurDe(payload, a), { disponible: true })
+		const resultat = await saveAvailability(payload, await utilisateurDe(payload, a), { disponible: true })
 		expect(resultat).toEqual({ ok: true, valeurs: { disponible: true } })
 	})
 })
@@ -103,9 +103,9 @@ describe('E19-E29 : indisponible, le profil sort de la liste publique', () => {
 			).totalDocs === 1
 
 		expect(await listee()).toBe(true)
-		await enregistrerDisponibilite(payload, utilisateur, { disponible: false })
+		await saveAvailability(payload, utilisateur, { disponible: false })
 		expect(await listee()).toBe(false)
-		await enregistrerDisponibilite(payload, utilisateur, { disponible: true })
+		await saveAvailability(payload, utilisateur, { disponible: true })
 		expect(await listee()).toBe(true)
 	})
 })
@@ -122,9 +122,9 @@ describe('U32, I02 : une requête forgée est refusée, rien ne change', () => {
 		const payload = await payloadDeTest()
 		const avant = await profilStocke(payload, a)
 
-		const resultat = await enregistrerDisponibilite(payload, await utilisateurDe(payload, a), saisie)
+		const resultat = await saveAvailability(payload, await utilisateurDe(payload, a), saisie)
 
-		expect(resultat).toEqual({ ok: false, message: MESSAGE_ECHEC })
+		expect(resultat).toEqual({ ok: false, message: FAILURE_MESSAGE })
 		const apres = await profilStocke(payload, a)
 		expect(apres.updatedAt).toBe(avant.updatedAt)
 		expect(apres.available).toBe(avant.available)
@@ -134,10 +134,10 @@ describe('U32, I02 : une requête forgée est refusée, rien ne change', () => {
 		const sansProfil = await creerCompte('maquilleuse-sans-profil')
 		const payload = await payloadDeTest()
 		const doc = await payload.findByID({ collection: 'pros', id: sansProfil.id, depth: 0, overrideAccess: true })
-		const resultat = await enregistrerDisponibilite(payload, { ...doc, collection: 'pros' } as UtilisateurDeLEspace, {
+		const resultat = await saveAvailability(payload, { ...doc, collection: 'pros' } as DashboardUser, {
 			disponible: false,
 		})
-		expect(resultat).toEqual({ ok: false, message: MESSAGE_ECHEC })
+		expect(resultat).toEqual({ ok: false, message: FAILURE_MESSAGE })
 		expect((await payload.count({ collection: 'profiles', overrideAccess: true })).totalDocs).toBe(0)
 	})
 })

@@ -1,31 +1,31 @@
 import type { Payload } from 'payload'
 import type { Profile } from '@/payload-types'
 import {
-	type DefinitionDeListe,
-	erreursDeLaLigne,
-	type LigneEnvoyee,
-	type ListeEnregistree,
-	lignesDuProfil,
-	MESSAGES_DE_LISTE,
-	memeLigne,
-	nettoyerLaLigne,
-	schemaDeLaListe,
+	cleanRow,
+	LIST_MESSAGES,
+	type ListDefinition,
+	listSchema,
+	profileRows,
+	rowErrors,
+	type SavedList,
+	type SentRow,
+	sameRow,
 } from './list'
-import { identifiantDuProfilAEcrire, type UtilisateurDeLEspace } from './my-profile'
-import { echecDePayload, MESSAGE_ECHEC, type ResultatDEnregistrement } from './result'
+import { type DashboardUser, profileIdToWrite } from './my-profile'
+import { FAILURE_MESSAGE, payloadFailure, type SaveResult } from './result'
 
-const estUneLigne = (valeur: unknown): valeur is Record<string, unknown> =>
+const isRow = (valeur: unknown): valeur is Record<string, unknown> =>
 	typeof valeur === 'object' && valeur !== null && !Array.isArray(valeur)
 
 /** The stored rows of a list, by identifier. */
-const parIdentifiant = (brutes: unknown): Map<string, Record<string, unknown>> =>
+const byId = (brutes: unknown): Map<string, Record<string, unknown>> =>
 	new Map(
 		(Array.isArray(brutes) ? brutes : [])
-			.filter(estUneLigne)
+			.filter(isRow)
 			.flatMap(ligne => (typeof ligne.id === 'string' ? [[ligne.id, ligne] as const] : []))
 	)
 
-type Refus = { readonly message: string }
+type Refusal = { readonly message: string }
 
 /**
  * The options of one row (ticket 132), checked and ready to store, or the refusal. Each option is
@@ -33,34 +33,34 @@ type Refus = { readonly message: string }
  * that say the same are refused (rule L6). An option keeps its identifier only when it is one of
  * the stored options of this very row (rule L1).
  */
-function optionsAEcrire(
-	definition: DefinitionDeListe,
+function optionsToWrite(
+	definition: ListDefinition,
 	nomDeLaLigne: string,
-	envoyees: readonly LigneEnvoyee[],
+	envoyees: readonly SentRow[],
 	stockee: Record<string, unknown> | undefined,
 	maintenant: Date
-): Record<string, unknown>[] | Refus {
-	const sous = definition.options
-	if (sous === undefined) return []
-	const connues = parIdentifiant(stockee?.options)
-	const ecrites: Record<string, unknown>[] = []
-	const vues: Record<string, string>[] = []
-	for (const envoyee of envoyees) {
-		const valeurs = nettoyerLaLigne(sous, envoyee.valeurs)
-		const connue = envoyee.id === undefined ? undefined : connues.get(envoyee.id)
-		const inchangee = connue !== undefined && memeLigne(sous, sous.depuisLeStockage(connue), valeurs)
-		const premiere = Object.values(erreursDeLaLigne(sous, valeurs, { avecRequis: !inchangee, maintenant }))[0]
-		const nom = sous.nom(valeurs) || `option n° ${ecrites.length + 1}`
-		if (premiere !== undefined) return { message: MESSAGES_DE_LISTE.optionInvalide(nomDeLaLigne, nom, premiere) }
-		if (vues.some(autre => memeLigne(sous, autre, valeurs)))
-			return { message: MESSAGES_DE_LISTE.optionsEnDouble(nomDeLaLigne, nom) }
-		vues.push(valeurs)
-		ecrites.push({
-			...(connue === undefined ? {} : { id: envoyee.id }),
-			...sous.versLeStockage(valeurs),
+): Record<string, unknown>[] | Refusal {
+	const subOptions = definition.options
+	if (subOptions === undefined) return []
+	const knownById = byId(stockee?.options)
+	const written: Record<string, unknown>[] = []
+	const views: Record<string, string>[] = []
+	for (const sent of envoyees) {
+		const values = cleanRow(subOptions, sent.valeurs)
+		const known = sent.id === undefined ? undefined : knownById.get(sent.id)
+		const unchanged = known !== undefined && sameRow(subOptions, subOptions.depuisLeStockage(known), values)
+		const first = Object.values(rowErrors(subOptions, values, { avecRequis: !unchanged, maintenant }))[0]
+		const name = subOptions.nom(values) || `option n° ${written.length + 1}`
+		if (first !== undefined) return { message: LIST_MESSAGES.optionInvalide(nomDeLaLigne, name, first) }
+		if (views.some(autre => sameRow(subOptions, autre, values)))
+			return { message: LIST_MESSAGES.optionsEnDouble(nomDeLaLigne, name) }
+		views.push(values)
+		written.push({
+			...(known === undefined ? {} : { id: sent.id }),
+			...subOptions.versLeStockage(values),
 		})
 	}
-	return ecrites
+	return written
 }
 
 /**
@@ -82,19 +82,19 @@ function optionsAEcrire(
  * - the rows given back are those the database stored. A failure gives back a message in French and no
  *   row (E31).
  */
-export async function enregistrerListe(
+export async function saveList(
 	payload: Payload,
-	utilisateur: UtilisateurDeLEspace,
+	utilisateur: DashboardUser,
 	saisie: unknown,
-	definition: DefinitionDeListe,
+	definition: ListDefinition,
 	maintenant: Date = new Date()
-): Promise<ResultatDEnregistrement<ListeEnregistree>> {
-	const forme = schemaDeLaListe(definition).safeParse(saisie)
-	if (!forme.success) return { ok: false, message: MESSAGE_ECHEC }
+): Promise<SaveResult<SavedList>> {
+	const shape = listSchema(definition).safeParse(saisie)
+	if (!shape.success) return { ok: false, message: FAILURE_MESSAGE }
 	try {
-		const id = await identifiantDuProfilAEcrire(payload, utilisateur)
-		if (id === null) return { ok: false, message: MESSAGE_ECHEC }
-		const profil = await payload.findByID({
+		const id = await profileIdToWrite(payload, utilisateur)
+		if (id === null) return { ok: false, message: FAILURE_MESSAGE }
+		const profile = await payload.findByID({
 			collection: 'profiles',
 			depth: 0,
 			disableErrors: true,
@@ -102,47 +102,47 @@ export async function enregistrerListe(
 			overrideAccess: false,
 			user: utilisateur,
 		})
-		if (profil === null) return { ok: false, message: MESSAGE_ECHEC }
-		const stockees = parIdentifiant((profil as unknown as Record<string, unknown>)[definition.section])
+		if (profile === null) return { ok: false, message: FAILURE_MESSAGE }
+		const storedRows = byId((profile as unknown as Record<string, unknown>)[definition.section])
 
-		const lignes: Record<string, unknown>[] = []
-		for (const envoyee of forme.data.lignes as readonly LigneEnvoyee[]) {
-			const valeurs = nettoyerLaLigne(definition, envoyee.valeurs)
-			const stockee = envoyee.id === undefined ? undefined : stockees.get(envoyee.id)
-			const inchangee = stockee !== undefined && memeLigne(definition, definition.depuisLeStockage(stockee), valeurs)
-			const erreurs = erreursDeLaLigne(definition, valeurs, { avecRequis: !inchangee, maintenant })
-			const premiere = Object.values(erreurs)[0]
-			if (premiere !== undefined)
+		const rows: Record<string, unknown>[] = []
+		for (const sent of shape.data.lignes as readonly SentRow[]) {
+			const values = cleanRow(definition, sent.valeurs)
+			const storedRow = sent.id === undefined ? undefined : storedRows.get(sent.id)
+			const unchanged = storedRow !== undefined && sameRow(definition, definition.depuisLeStockage(storedRow), values)
+			const errors = rowErrors(definition, values, { avecRequis: !unchanged, maintenant })
+			const first = Object.values(errors)[0]
+			if (first !== undefined)
 				return {
 					ok: false,
-					message: MESSAGES_DE_LISTE.ligneInvalide(
-						definition.nom(valeurs) || `${definition.singulier} n° ${lignes.length + 1}`,
-						premiere
+					message: LIST_MESSAGES.ligneInvalide(
+						definition.nom(values) || `${definition.singulier} n° ${rows.length + 1}`,
+						first
 					),
 				}
 			// Options sent replace the stored ones; none sent keeps them.
 			const options =
-				envoyee.options === undefined
+				sent.options === undefined
 					? undefined
-					: optionsAEcrire(definition, definition.nom(valeurs), envoyee.options, stockee, maintenant)
+					: optionsToWrite(definition, definition.nom(values), sent.options, storedRow, maintenant)
 			if (options !== undefined && 'message' in options) return { ok: false, message: options.message }
-			lignes.push({
-				...(stockee === undefined ? {} : { id: envoyee.id }),
-				...definition.versLeStockage(valeurs),
-				...(options === undefined ? (stockee === undefined ? {} : definition.garder?.(stockee)) : { options }),
+			rows.push({
+				...(storedRow === undefined ? {} : { id: sent.id }),
+				...definition.versLeStockage(values),
+				...(options === undefined ? (storedRow === undefined ? {} : definition.garder?.(storedRow)) : { options }),
 			})
 		}
 
-		const stocke = await payload.update({
+		const stored = await payload.update({
 			collection: 'profiles',
-			data: { [definition.section]: lignes } as Partial<Profile>,
+			data: { [definition.section]: rows } as Partial<Profile>,
 			depth: 0,
 			id,
 			overrideAccess: false,
 			user: utilisateur,
 		})
-		return { ok: true, valeurs: { lignes: lignesDuProfil(definition, stocke) } }
-	} catch (erreur) {
-		return echecDePayload(erreur, ['lignes'] as const, () => 'lignes')
+		return { ok: true, valeurs: { lignes: profileRows(definition, stored) } }
+	} catch (error) {
+		return payloadFailure(error, ['lignes'] as const, () => 'lignes')
 	}
 }

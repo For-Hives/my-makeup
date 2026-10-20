@@ -17,10 +17,10 @@
 import { formatMontant, formatPrix, parsePrice } from '../prix'
 import { LONGUEUR_DESCRIPTION, LONGUEUR_NOM, messageDeTexte } from '../profil/listes'
 import { texte } from '../profil/nom-affiche'
-import type { DefinitionDeListe, ErreursDeLigne, ValeursDeLigne } from './list'
+import type { ListDefinition, RowErrors, RowValues } from './list'
 
 /** The price as typed (« ; » between several), as the one text that is stored (one per line). */
-export function prixDeLaSaisie(saisie: string): string {
+export function inputPrice(saisie: string): string {
 	return saisie
 		.split(/[;\n]/)
 		.map(ligne => ligne.trim())
@@ -29,30 +29,30 @@ export function prixDeLaSaisie(saisie: string): string {
 }
 
 /** The price as it is typed again in the form: the lines of the stored text, « ; » between them. */
-const prixEnSaisie = (stocke: unknown): string => (typeof stocke === 'string' ? stocke.split('\n').join(' ; ') : '')
+const priceFromInput = (stocke: unknown): string => (typeof stocke === 'string' ? stocke.split('\n').join(' ; ') : '')
 
-export const MESSAGES_DES_PRESTATIONS = {
+export const SERVICE_OFFERS_MESSAGES = {
 	montant: (montant: string) => `Montant retenu pour ton profil : ${montant}.`,
 	sansMontant:
 		'Aucun montant retenu : l’offre est affichée telle quelle, mais elle ne compte pas pour rendre ton profil publiable. Écris par exemple « à partir de 80 € ».',
 } as const
 
-function bornes(valeurs: ValeursDeLigne): ErreursDeLigne {
-	const erreurs: Record<string, string> = {}
-	const nom = messageDeTexte(valeurs.name, LONGUEUR_NOM)
-	if (nom !== null) erreurs.name = nom
+function bounds(valeurs: RowValues): RowErrors {
+	const errors: Record<string, string> = {}
+	const name = messageDeTexte(valeurs.name, LONGUEUR_NOM)
+	if (name !== null) errors.name = name
 	const description = messageDeTexte(valeurs.description, LONGUEUR_DESCRIPTION)
-	if (description !== null) erreurs.description = description
-	const prix = messageDeTexte(prixDeLaSaisie(valeurs.price ?? ''), LONGUEUR_NOM)
-	if (prix !== null) erreurs.price = prix
-	return erreurs
+	if (description !== null) errors.description = description
+	const price = messageDeTexte(inputPrice(valeurs.price ?? ''), LONGUEUR_NOM)
+	if (price !== null) errors.price = price
+	return errors
 }
 
 /** The two stored fields of a price typed in the form. */
-const prixStocke = (saisie: string | undefined) => parsePrice(prixDeLaSaisie(saisie ?? ''))
+const storedPrice = (saisie: string | undefined) => parsePrice(inputPrice(saisie ?? ''))
 
 /** What an offer and an option share: their three fields, bounds, price reading and storage. */
-const COMMUN = {
+const SHARED = {
 	champs: [
 		{ nom: 'name', libelle: 'Nom', genre: 'texte' },
 		{ nom: 'description', libelle: 'Description', genre: 'long' },
@@ -64,14 +64,14 @@ const COMMUN = {
 			aide: 'Un montant (80, 80 €, à partir de 80) ou un texte (sur devis). Pour plusieurs formules, sépare-les par un point-virgule.',
 		},
 	],
-	bornes,
-	resume: (valeurs: ValeursDeLigne) =>
-		[valeurs.name, formatPrix(prixStocke(valeurs.price)).replace(/\n/g, ', ')].map(texte).filter(Boolean).join(' - '),
-	nom: (valeurs: ValeursDeLigne) => texte(valeurs.name),
+	bornes: bounds,
+	resume: (valeurs: RowValues) =>
+		[valeurs.name, formatPrix(storedPrice(valeurs.price)).replace(/\n/g, ', ')].map(texte).filter(Boolean).join(' - '),
+	nom: (valeurs: RowValues) => texte(valeurs.name),
 	depuisLeStockage: (stockee: Readonly<Record<string, unknown>>) => ({
 		name: texte(stockee.name),
 		description: typeof stockee.description === 'string' ? stockee.description.trim() : '',
-		price: prixEnSaisie(
+		price: priceFromInput(
 			// An amount stored without its text (an imported offer) is typed back as the amount.
 			texte(stockee.priceText) !== ''
 				? stockee.priceText
@@ -80,48 +80,48 @@ const COMMUN = {
 					: ''
 		),
 	}),
-	versLeStockage: (valeurs: ValeursDeLigne) => {
-		const { priceText, priceFrom } = prixStocke(valeurs.price)
+	versLeStockage: (valeurs: RowValues) => {
+		const { priceText, priceFrom } = storedPrice(valeurs.price)
 		return { name: valeurs.name || null, description: valeurs.description || null, priceText, priceFrom }
 	},
-	indice: (valeurs: ValeursDeLigne) => {
-		if (prixDeLaSaisie(valeurs.price ?? '') === '') return ''
-		const { priceFrom } = prixStocke(valeurs.price)
+	indice: (valeurs: RowValues) => {
+		if (inputPrice(valeurs.price ?? '') === '') return ''
+		const { priceFrom } = storedPrice(valeurs.price)
 		return priceFrom === null
-			? MESSAGES_DES_PRESTATIONS.sansMontant
-			: MESSAGES_DES_PRESTATIONS.montant(formatMontant(priceFrom))
+			? SERVICE_OFFERS_MESSAGES.sansMontant
+			: SERVICE_OFFERS_MESSAGES.montant(formatMontant(priceFrom))
 	},
 } as const
 
 /** The options of an offer (ticket 132): the same three fields, the name required. */
-export const OPTIONS_DE_PRESTATION: DefinitionDeListe = {
-	...COMMUN,
+export const SERVICE_OFFER_OPTIONS: ListDefinition = {
+	...SHARED,
 	section: 'options',
 	singulier: 'option',
 	pluriel: 'options',
 	designation: 'l’option',
 	champs: [
-		{ ...COMMUN.champs[0], libelle: 'Nom de l’option', exemple: 'Essai avant le jour J' },
-		...COMMUN.champs.slice(1),
+		{ ...SHARED.champs[0], libelle: 'Nom de l’option', exemple: 'Essai avant le jour J' },
+		...SHARED.champs.slice(1),
 	],
 	requis: { name: 'Le nom de l’option est requis.' },
 	doublon: 'Une option identique est déjà dans la liste.',
 	retrait: nom => `Option ${nom} retirée`.replace(/\s+/g, ' '),
 }
 
-export const PRESTATIONS: DefinitionDeListe = {
-	...COMMUN,
+export const SERVICE_OFFERS: ListDefinition = {
+	...SHARED,
 	section: 'serviceOffers',
 	singulier: 'prestation',
 	pluriel: 'prestations',
 	designation: 'la prestation',
 	champs: [
-		{ ...COMMUN.champs[0], libelle: 'Nom de la prestation', exemple: 'Maquillage de mariée' },
-		...COMMUN.champs.slice(1),
+		{ ...SHARED.champs[0], libelle: 'Nom de la prestation', exemple: 'Maquillage de mariée' },
+		...SHARED.champs.slice(1),
 	],
 	requis: { name: 'Le nom de la prestation est requis.' },
 	doublon: 'Une prestation identique est déjà dans la liste.',
 	retrait: nom => `Prestation ${nom} retirée`.replace(/\s+/g, ' '),
-	options: OPTIONS_DE_PRESTATION,
+	options: SERVICE_OFFER_OPTIONS,
 	garder: stockee => ({ options: Array.isArray(stockee.options) ? stockee.options : [] }),
 }

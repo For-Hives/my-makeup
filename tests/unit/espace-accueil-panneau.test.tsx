@@ -1,12 +1,12 @@
 import { describe, expect, test } from 'bun:test'
-import { Accueil } from '@/components/dashboard/onboarding/Onboarding'
-import type { EnvoiDeLaPhotoDAccueil } from '@/components/dashboard/onboarding/PhotoStep'
-import type { EnvoiDeLaLocalisation } from '@/components/dashboard/LocationEditor'
-import type { EnvoiDeLIdentite } from '@/components/dashboard/IdentityEditor'
-import type { ValeursDeLaPhotoDAccueil } from '@/lib/dashboard/save-onboarding'
-import type { ValeursDeLIdentite } from '@/lib/dashboard/identity'
-import type { ValeursDeLaLocalisation } from '@/lib/dashboard/location'
-import { MESSAGE_ECHEC, MESSAGE_SESSION } from '@/lib/dashboard/result'
+import type { IdentityUpload } from '@/components/dashboard/IdentityEditor'
+import type { LocationUpload } from '@/components/dashboard/LocationEditor'
+import { Onboarding } from '@/components/dashboard/onboarding/Onboarding'
+import type { OnboardingPhotoUpload } from '@/components/dashboard/onboarding/PhotoStep'
+import type { IdentityValues } from '@/lib/dashboard/identity'
+import type { LocationValues } from '@/lib/dashboard/location'
+import { FAILURE_MESSAGE, MESSAGE_SESSION } from '@/lib/dashboard/result'
+import type { OnboardingPhotoValues } from '@/lib/dashboard/save-onboarding'
 import { choisirDesFichiers } from '../outils/choisir-fichiers'
 import { ouvrirFenetre } from '../outils/dom-react'
 
@@ -18,9 +18,9 @@ import { ouvrirFenetre } from '../outils/dom-react'
 
 const fenetre = ouvrirFenetre()
 
-const VIDE_IDENTITE: ValeursDeLIdentite = { prenom: '', nom: '', nomArtiste: '', specialite: '' }
-const VIDE_ZONE: ValeursDeLaLocalisation = { codeInsee: '', libelle: '', rayonKm: null, aDomicile: false }
-const ZONE_FAITE: ValeursDeLaLocalisation = {
+const VIDE_IDENTITE: IdentityValues = { prenom: '', nom: '', nomArtiste: '', specialite: '' }
+const VIDE_ZONE: LocationValues = { codeInsee: '', libelle: '', rayonKm: null, aDomicile: false }
+const ZONE_FAITE: LocationValues = {
 	codeInsee: '59350',
 	libelle: 'Lille (59)',
 	rayonKm: null,
@@ -30,11 +30,11 @@ const REDUITE = new File(['petit'], 'photo.webp', { type: 'image/webp' })
 
 interface Options {
 	etape?: 1 | 2 | 3
-	identite?: ValeursDeLIdentite
-	localisation?: ValeursDeLaLocalisation
-	envoyerIdentite?: EnvoiDeLIdentite
-	envoyerLocalisation?: EnvoiDeLaLocalisation
-	envoyerPhoto?: EnvoiDeLaPhotoDAccueil
+	identite?: IdentityValues
+	localisation?: LocationValues
+	envoyerIdentite?: IdentityUpload
+	envoyerLocalisation?: LocationUpload
+	envoyerPhoto?: OnboardingPhotoUpload
 }
 
 function banc(options: Options = {}) {
@@ -46,19 +46,19 @@ function banc(options: Options = {}) {
 		supprimes: [] as unknown[],
 		navigations: [] as string[],
 	}
-	const envoyerIdentite: EnvoiDeLIdentite =
+	const envoyerIdentite: IdentityUpload =
 		options.envoyerIdentite ??
 		(async valeurs => {
 			journal.identite.push(valeurs)
 			return { ok: true, valeurs }
 		})
-	const envoyerLocalisation: EnvoiDeLaLocalisation =
+	const envoyerLocalisation: LocationUpload =
 		options.envoyerLocalisation ??
 		(async saisie => {
 			journal.localisation.push(saisie)
 			return { ok: true, valeurs: { ...ZONE_FAITE, rayonKm: saisie.rayonKm, aDomicile: saisie.aDomicile } }
 		})
-	const envoyerPhoto: EnvoiDeLaPhotoDAccueil =
+	const envoyerPhoto: OnboardingPhotoUpload =
 		options.envoyerPhoto ??
 		(async saisie => {
 			journal.photo.push(saisie)
@@ -68,7 +68,7 @@ function banc(options: Options = {}) {
 		journal,
 		monter: () =>
 			fenetre.monter(
-				<Accueil
+				<Onboarding
 					etapeInitiale={options.etape ?? 1}
 					identite={options.identite ?? VIDE_IDENTITE}
 					localisation={options.localisation ?? VIDE_ZONE}
@@ -164,8 +164,8 @@ describe('le parcours : une étape à la fois, chacune enregistrée avant la sui
 
 describe('RG-07 : un serveur lent ne produit pas de fausse arrivée', () => {
 	test('pendant l’attente de la photo : « Enregistrement… », aucune arrivée ; après la réponse, l’arrivée dans l’espace', async () => {
-		let ouvrir: (v: ValeursDeLaPhotoDAccueil) => void = () => {}
-		const attente = new Promise<ValeursDeLaPhotoDAccueil>(resolve => {
+		let ouvrir: (v: OnboardingPhotoValues) => void = () => {}
+		const attente = new Promise<OnboardingPhotoValues>(resolve => {
 			ouvrir = resolve
 		})
 		const b = banc({
@@ -186,11 +186,11 @@ describe('RG-07 : un serveur lent ne produit pas de fausse arrivée', () => {
 	})
 
 	test('le serveur dit « non » à la photo : pas d’arrivée, message, le fichier envoyé est supprimé, le choix reste', async () => {
-		const b = banc({ etape: 3, envoyerPhoto: async () => ({ ok: false, message: MESSAGE_ECHEC }) })
+		const b = banc({ etape: 3, envoyerPhoto: async () => ({ ok: false, message: FAILURE_MESSAGE }) })
 		await b.monter()
 		await choisirLaPhoto()
 		await fenetre.cliquer(fenetre.bouton('Terminer'))
-		await fenetre.attendre(() => alertes().includes(MESSAGE_ECHEC))
+		await fenetre.attendre(() => alertes().includes(FAILURE_MESSAGE))
 		expect(b.journal.navigations).toEqual([])
 		expect(titreDEtape()).toBe('Ta photo principale')
 		expect(b.journal.supprimes).toEqual([9])
@@ -226,11 +226,11 @@ describe('RG-07 : un serveur lent ne produit pas de fausse arrivée', () => {
 
 describe('un échec reste sur l’étape et garde la saisie', () => {
 	test('identité refusée : on reste à l’étape 1, les champs gardent leur texte, le message est dit', async () => {
-		const b = banc({ envoyerIdentite: async () => ({ ok: false, message: MESSAGE_ECHEC }) })
+		const b = banc({ envoyerIdentite: async () => ({ ok: false, message: FAILURE_MESSAGE }) })
 		await b.monter()
 		await remplirIdentite()
 		await fenetre.cliquer(fenetre.bouton('Suivant'))
-		await fenetre.attendre(() => alertes().includes(MESSAGE_ECHEC))
+		await fenetre.attendre(() => alertes().includes(FAILURE_MESSAGE))
 		expect(titreDEtape()).toBe('Ton identité')
 		expect(champ('Prénom').value).toBe('Léa')
 		expect(champ('Spécialité').value).toBe('Mariée')
@@ -245,7 +245,7 @@ describe('un échec reste sur l’étape et garde la saisie', () => {
 		await b.monter()
 		await remplirIdentite()
 		await fenetre.cliquer(fenetre.bouton('Suivant'))
-		await fenetre.attendre(() => alertes().includes(MESSAGE_ECHEC))
+		await fenetre.attendre(() => alertes().includes(FAILURE_MESSAGE))
 		expect(titreDEtape()).toBe('Ton identité')
 	})
 
@@ -261,11 +261,11 @@ describe('un échec reste sur l’étape et garde la saisie', () => {
 	})
 
 	test('zone refusée : on reste à l’étape 2 avec la commune choisie', async () => {
-		const b = banc({ etape: 2, envoyerLocalisation: async () => ({ ok: false, message: MESSAGE_ECHEC }) })
+		const b = banc({ etape: 2, envoyerLocalisation: async () => ({ ok: false, message: FAILURE_MESSAGE }) })
 		await b.monter()
 		await choisirLaCommune()
 		await fenetre.cliquer(fenetre.bouton('Suivant'))
-		await fenetre.attendre(() => alertes().includes(MESSAGE_ECHEC))
+		await fenetre.attendre(() => alertes().includes(FAILURE_MESSAGE))
 		expect(titreDEtape()).toBe('Ta zone')
 		expect((fenetre.w.document.querySelector('input[role="combobox"]') as HTMLInputElement).value).toContain('Lille')
 	})

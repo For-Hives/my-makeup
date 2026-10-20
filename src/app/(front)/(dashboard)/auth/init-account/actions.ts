@@ -2,14 +2,14 @@
 
 import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
+import type { IdentityValues } from '@/lib/dashboard/identity'
+import { requestUser } from '@/lib/dashboard/request'
+import { FAILURE_MESSAGE, MESSAGE_SESSION, type SaveResult } from '@/lib/dashboard/result'
 import {
-	enregistrerIdentiteDAccueil,
-	enregistrerPhotoDAccueil,
-	type ValeursDeLaPhotoDAccueil,
+	type OnboardingPhotoValues,
+	saveOnboardingIdentity,
+	saveOnboardingPhoto,
 } from '@/lib/dashboard/save-onboarding'
-import type { ValeursDeLIdentite } from '@/lib/dashboard/identity'
-import { utilisatriceDeLaRequete } from '@/lib/dashboard/request'
-import { MESSAGE_ECHEC, MESSAGE_SESSION, type ResultatDEnregistrement } from '@/lib/dashboard/result'
 
 /**
  * The saves of the onboarding that differ from those of the space (ticket 140). An action is a
@@ -17,33 +17,29 @@ import { MESSAGE_ECHEC, MESSAGE_SESSION, type ResultatDEnregistrement } from '@/
  * trusts, and the profile written is the one of her account. The location is saved by
  * `enregistrerMaLocalisation`, as in her space.
  */
-async function contexteDeConfiance() {
-	const contexte = await utilisatriceDeLaRequete()
-	if (contexte === null) return { ok: false as const, message: MESSAGE_SESSION, session: 'expiree' as const }
-	const origine = (await headers()).get('origin')
-	if (origine !== null && !contexte.payload.config.csrf.includes(origine))
-		return { ok: false as const, message: MESSAGE_ECHEC }
-	return contexte
+async function trustContext() {
+	const context = await requestUser()
+	if (context === null) return { ok: false as const, message: MESSAGE_SESSION, session: 'expiree' as const }
+	const origin = (await headers()).get('origin')
+	if (origin !== null && !context.payload.config.csrf.includes(origin))
+		return { ok: false as const, message: FAILURE_MESSAGE }
+	return context
 }
 
 /** Saves the first step: her identity, speciality required. */
-export async function enregistrerMonIdentiteDAccueil(
-	saisie: unknown
-): Promise<ResultatDEnregistrement<ValeursDeLIdentite>> {
-	const contexte = await contexteDeConfiance()
-	if ('ok' in contexte) return contexte
-	const resultat = await enregistrerIdentiteDAccueil(contexte.payload, contexte.utilisateur, saisie)
-	if (resultat.ok) revalidatePath('/auth/profil')
-	return resultat
+export async function saveMyOnboardingIdentity(saisie: unknown): Promise<SaveResult<IdentityValues>> {
+	const context = await trustContext()
+	if ('ok' in context) return context
+	const result = await saveOnboardingIdentity(context.payload, context.utilisateur, saisie)
+	if (result.ok) revalidatePath('/auth/profil')
+	return result
 }
 
 /** Saves the last step: her main photo, and says where she stands once it is saved. */
-export async function enregistrerMaPhotoDAccueil(
-	saisie: unknown
-): Promise<ResultatDEnregistrement<ValeursDeLaPhotoDAccueil>> {
-	const contexte = await contexteDeConfiance()
-	if ('ok' in contexte) return contexte
-	const resultat = await enregistrerPhotoDAccueil(contexte.payload, contexte.utilisateur, saisie)
-	if (resultat.ok) revalidatePath('/auth/profil')
-	return resultat
+export async function saveMyOnboardingPhoto(saisie: unknown): Promise<SaveResult<OnboardingPhotoValues>> {
+	const context = await trustContext()
+	if ('ok' in context) return context
+	const result = await saveOnboardingPhoto(context.payload, context.utilisateur, saisie)
+	if (result.ok) revalidatePath('/auth/profil')
+	return result
 }

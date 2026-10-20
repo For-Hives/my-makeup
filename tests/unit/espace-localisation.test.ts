@@ -1,14 +1,14 @@
 import { describe, expect, test } from 'bun:test'
-import { cartesDuProfil } from '@/lib/dashboard/cards'
+import { profileCards } from '@/lib/dashboard/cards'
 import {
-	erreursParChamp,
-	libelleDeLaCommune,
-	MESSAGE_COMMUNE_A_CHOISIR,
-	rayonDuTexte,
-	schemaDeLaLocalisationStrict,
-	schemaDuRayonSaisi,
+	CITY_TO_CHOOSE_MESSAGE,
+	cityLabel,
+	enteredRadiusSchema,
+	errorsByField,
+	strictLocationSchema,
+	textRadius,
 } from '@/lib/dashboard/location'
-import { echecDePayload } from '@/lib/dashboard/result'
+import { payloadFailure } from '@/lib/dashboard/result'
 import { MESSAGES_DE_LA_ZONE } from '@/lib/profil/zone'
 
 /**
@@ -20,23 +20,23 @@ const VALIDE = { codeInsee: '74010', rayonKm: 30, aDomicile: true }
 
 describe('U16 : une commune INSEE a son libellé « Annecy (74) »', () => {
 	test('le nom et le département', () => {
-		expect(libelleDeLaCommune({ nom: 'Annecy', departement: '74' })).toBe('Annecy (74)')
-		expect(libelleDeLaCommune({ nom: 'Ajaccio', departement: '2A' })).toBe('Ajaccio (2A)')
-		expect(libelleDeLaCommune({ nom: 'Papeete', departement: '987' })).toBe('Papeete (987)')
+		expect(cityLabel({ nom: 'Annecy', departement: '74' })).toBe('Annecy (74)')
+		expect(cityLabel({ nom: 'Ajaccio', departement: '2A' })).toBe('Ajaccio (2A)')
+		expect(cityLabel({ nom: 'Papeete', departement: '987' })).toBe('Papeete (987)')
 	})
 
 	test('sans département le nom seul, sans nom rien : jamais « () », « null » ni « undefined »', () => {
-		expect(libelleDeLaCommune({ nom: 'Annecy' })).toBe('Annecy')
-		expect(libelleDeLaCommune({ nom: ' Annecy ', departement: null })).toBe('Annecy')
-		expect(libelleDeLaCommune({ departement: '74' })).toBe('')
-		expect(libelleDeLaCommune({})).toBe('')
-		expect(libelleDeLaCommune({ nom: null, departement: undefined })).toBe('')
+		expect(cityLabel({ nom: 'Annecy' })).toBe('Annecy')
+		expect(cityLabel({ nom: ' Annecy ', departement: null })).toBe('Annecy')
+		expect(cityLabel({ departement: '74' })).toBe('')
+		expect(cityLabel({})).toBe('')
+		expect(cityLabel({ nom: null, departement: undefined })).toBe('')
 	})
 })
 
 describe('U14, U15 : la carte de la localisation ne dit jamais « & km »', () => {
-	const carte = (profil: Parameters<typeof cartesDuProfil>[0]) => {
-		const trouvee = cartesDuProfil(profil).find(c => c.section === 'localisation')
+	const carte = (profil: Parameters<typeof profileCards>[0]) => {
+		const trouvee = profileCards(profil).find(c => c.section === 'localisation')
 		if (!trouvee) throw new Error('pas de carte')
 		return trouvee.lignes.map(l => l.valeur)
 	}
@@ -69,7 +69,7 @@ describe('U14, U15 : la carte de la localisation ne dit jamais « & km »', () =
 
 describe('le rayon saisi : des kilomètres entiers, de 0 à 200', () => {
 	test.each(['', '   ', '0', '1', '30', '200', ' 45 ', '007'])('« %s » passe', texte => {
-		expect(schemaDuRayonSaisi.safeParse(texte).success).toBe(true)
+		expect(enteredRadiusSchema.safeParse(texte).success).toBe(true)
 	})
 
 	test.each([
@@ -85,27 +85,25 @@ describe('le rayon saisi : des kilomètres entiers, de 0 à 200', () => {
 		'30 km',
 		'0x10',
 	])('« %s » est refusé', texte => {
-		const lu = schemaDuRayonSaisi.safeParse(texte)
+		const lu = enteredRadiusSchema.safeParse(texte)
 		expect(lu.success).toBe(false)
 		expect(lu.error?.issues[0]?.message).toBe(MESSAGES_DE_LA_ZONE.rayon)
 	})
 
 	test('le rayon saisi devient des kilomètres, ou rien quand le champ est vide', () => {
-		expect(rayonDuTexte(' 30 ')).toBe(30)
-		expect(rayonDuTexte('0')).toBe(0)
-		expect(rayonDuTexte('')).toBeNull()
-		expect(rayonDuTexte('  ')).toBeNull()
+		expect(textRadius(' 30 ')).toBe(30)
+		expect(textRadius('0')).toBe(0)
+		expect(textRadius('')).toBeNull()
+		expect(textRadius('  ')).toBeNull()
 	})
 })
 
 describe('le schéma du serveur est strict', () => {
 	test('un code, un rayon et « à domicile » passent ; le code est mis en forme', () => {
-		expect(schemaDeLaLocalisationStrict.parse(VALIDE)).toEqual(VALIDE)
-		expect(schemaDeLaLocalisationStrict.parse({ ...VALIDE, codeInsee: ' 2a004 ', rayonKm: null }).codeInsee).toBe(
-			'2A004'
-		)
-		expect(schemaDeLaLocalisationStrict.parse({ ...VALIDE, rayonKm: 0 }).rayonKm).toBe(0)
-		expect(schemaDeLaLocalisationStrict.parse({ ...VALIDE, codeInsee: '97411' }).codeInsee).toBe('97411')
+		expect(strictLocationSchema.parse(VALIDE)).toEqual(VALIDE)
+		expect(strictLocationSchema.parse({ ...VALIDE, codeInsee: ' 2a004 ', rayonKm: null }).codeInsee).toBe('2A004')
+		expect(strictLocationSchema.parse({ ...VALIDE, rayonKm: 0 }).rayonKm).toBe(0)
+		expect(strictLocationSchema.parse({ ...VALIDE, codeInsee: '97411' }).codeInsee).toBe('97411')
 	})
 
 	test.each([
@@ -118,9 +116,9 @@ describe('le schéma du serveur est strict', () => {
 		undefined,
 		{},
 	])('le rayon %p est refusé avec le message de la zone', rayonKm => {
-		const lu = schemaDeLaLocalisationStrict.safeParse({ ...VALIDE, rayonKm })
+		const lu = strictLocationSchema.safeParse({ ...VALIDE, rayonKm })
 		if (lu.success) throw new Error('doit être refusé')
-		expect(erreursParChamp(lu.error)).toEqual({ rayonKm: MESSAGES_DE_LA_ZONE.rayon })
+		expect(errorsByField(lu.error)).toEqual({ rayonKm: MESSAGES_DE_LA_ZONE.rayon })
 	})
 
 	test.each([
@@ -136,9 +134,9 @@ describe('le schéma du serveur est strict', () => {
 		undefined,
 		{ code: '74010' },
 	])('le texte %p n’est pas une commune : refusé, côté serveur aussi', codeInsee => {
-		const lu = schemaDeLaLocalisationStrict.safeParse({ ...VALIDE, codeInsee })
+		const lu = strictLocationSchema.safeParse({ ...VALIDE, codeInsee })
 		if (lu.success) throw new Error('doit être refusé')
-		expect(erreursParChamp(lu.error)).toEqual({ codeInsee: MESSAGE_COMMUNE_A_CHOISIR })
+		expect(errorsByField(lu.error)).toEqual({ codeInsee: CITY_TO_CHOOSE_MESSAGE })
 	})
 
 	test.each([
@@ -154,12 +152,12 @@ describe('le schéma du serveur est strict', () => {
 		'slug',
 		'id',
 	])('la clé %s refuse la requête entière', cle => {
-		expect(schemaDeLaLocalisationStrict.safeParse({ ...VALIDE, [cle]: 'x' }).success).toBe(false)
+		expect(strictLocationSchema.safeParse({ ...VALIDE, [cle]: 'x' }).success).toBe(false)
 	})
 
 	test('« à domicile » est un oui ou un non', () => {
 		for (const aDomicile of ['oui', 1, null, undefined]) {
-			expect(schemaDeLaLocalisationStrict.safeParse({ ...VALIDE, aDomicile }).success).toBe(false)
+			expect(strictLocationSchema.safeParse({ ...VALIDE, aDomicile }).success).toBe(false)
 		}
 	})
 })
@@ -169,7 +167,7 @@ describe('l’échec de Payload sur la commune se dit sous le champ de la commun
 		const erreur = {
 			data: { errors: [{ path: 'commune.nom', message: MESSAGES_DE_LA_ZONE.nomAdresse }] },
 		}
-		const echec = echecDePayload(erreur, ['codeInsee', 'rayonKm', 'aDomicile'], chemin =>
+		const echec = payloadFailure(erreur, ['codeInsee', 'rayonKm', 'aDomicile'], chemin =>
 			chemin.startsWith('commune') ? 'codeInsee' : chemin
 		)
 		expect(echec.champs).toEqual({ codeInsee: MESSAGES_DE_LA_ZONE.nomAdresse })

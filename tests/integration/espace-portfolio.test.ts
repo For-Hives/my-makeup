@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, setDefaultTimeout, test } from 'bun:test'
 import type { Payload } from 'payload'
 import sharp from 'sharp'
+import type { DashboardUser } from '@/lib/dashboard/my-profile'
+import { readDashboardPhotos } from '@/lib/dashboard/photos'
+import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
+import { savePortfolio } from '@/lib/dashboard/save-portfolio'
 import { serverEnv } from '@/lib/env'
-import { enregistrerPortfolio } from '@/lib/dashboard/save-portfolio'
-import type { UtilisateurDeLEspace } from '@/lib/dashboard/my-profile'
-import { lirePhotosDeLEspace } from '@/lib/dashboard/photos'
-import { MESSAGE_ECHEC } from '@/lib/dashboard/result'
 import { MESSAGES_DES_PHOTOS, photosNommees } from '@/lib/profil/photos'
 import { rapprocherLeStockageEtLaBase } from '@/lib/rapprochement-lecture'
 import { listerLeStockage } from '@/lib/stockage'
@@ -47,9 +47,9 @@ afterEach(async () => {
 	expect(fautes).toEqual([])
 })
 
-async function utilisateurDe(payload: Payload, compte: Maquilleuse): Promise<UtilisateurDeLEspace> {
+async function utilisateurDe(payload: Payload, compte: Maquilleuse): Promise<DashboardUser> {
 	const doc = await payload.findByID({ collection: 'pros', id: compte.id, depth: 0, overrideAccess: true })
-	return { ...doc, collection: 'pros' } as UtilisateurDeLEspace
+	return { ...doc, collection: 'pros' } as DashboardUser
 }
 
 async function profilDe(compte: Maquilleuse) {
@@ -126,12 +126,12 @@ describe('E34 : trois photos ajoutées sont dans la galerie, dans l’ordre, et 
 		const [a, b, c] = await envoyerTrois(compte)
 		expect([a, b, c].map(m => m.alt)).toEqual(['Photo du portfolio', 'Photo du portfolio', 'Photo du portfolio'])
 
-		const resultat = await enregistrerPortfolio(payload, utilisateur, { galerie: [a.id, b.id, c.id] })
+		const resultat = await savePortfolio(payload, utilisateur, { galerie: [a.id, b.id, c.id] })
 
 		expect(resultat).toEqual({ ok: true, valeurs: { galerie: [a.id, b.id, c.id] } })
 		const profil = await profilDe(compte)
 		expect(photosNommees(profil.gallery)).toEqual([a.id, b.id, c.id])
-		const espace = await lirePhotosDeLEspace(payload, profil)
+		const espace = await readDashboardPhotos(payload, profil)
 		expect(espace.galerie.map(p => p.id)).toEqual([a.id, b.id, c.id])
 		const publique = await lireLeProfilPublic(payload, profil.slug ?? '')
 		expect(publique?.galerie.map(p => p.url)).toEqual([a.url, b.url, c.url] as string[])
@@ -143,9 +143,9 @@ describe('E34 : trois photos ajoutées sont dans la galerie, dans l’ordre, et 
 		const payload = await payloadDeTest()
 		const utilisateur = await utilisateurDe(payload, compte)
 		const [a, b, c] = await envoyerTrois(compte)
-		await enregistrerPortfolio(payload, utilisateur, { galerie: [a.id, b.id] })
+		await savePortfolio(payload, utilisateur, { galerie: [a.id, b.id] })
 
-		const resultat = await enregistrerPortfolio(payload, utilisateur, { galerie: [a.id, b.id, c.id] })
+		const resultat = await savePortfolio(payload, utilisateur, { galerie: [a.id, b.id, c.id] })
 
 		expect(resultat.ok).toBe(true)
 		expect(await galerieDe(compte)).toEqual([a.id, b.id, c.id])
@@ -161,8 +161,8 @@ describe('U80 : dix photos au plus', () => {
 		const medias = await envoyerPlusieurs(compte, 11)
 		const dix = medias.slice(0, 10).map(m => m.id)
 
-		expect(await enregistrerPortfolio(payload, utilisateur, { galerie: dix })).toMatchObject({ ok: true })
-		const refus = await enregistrerPortfolio(payload, utilisateur, { galerie: medias.map(m => m.id) })
+		expect(await savePortfolio(payload, utilisateur, { galerie: dix })).toMatchObject({ ok: true })
+		const refus = await savePortfolio(payload, utilisateur, { galerie: medias.map(m => m.id) })
 
 		expect(refus).toEqual({
 			ok: false,
@@ -187,7 +187,7 @@ describe('la requête de l’action est lue strictement', () => {
 		const payload = await payloadDeTest()
 		const photo = await envoyer(compte)
 
-		const resultat = await enregistrerPortfolio(payload, await utilisateurDe(payload, compte), saisie(photo.id))
+		const resultat = await savePortfolio(payload, await utilisateurDe(payload, compte), saisie(photo.id))
 
 		expect(resultat.ok).toBe(false)
 		if (!resultat.ok) expect(resultat.message).not.toMatch(/unrecognized|expected|invalid/i)
@@ -201,7 +201,7 @@ describe('la requête de l’action est lue strictement', () => {
 		const mienne = await envoyer(compte)
 		const sienne = await envoyer(autre)
 
-		const resultat = await enregistrerPortfolio(payload, await utilisateurDe(payload, compte), {
+		const resultat = await savePortfolio(payload, await utilisateurDe(payload, compte), {
 			galerie: [mienne.id, sienne.id],
 		})
 
@@ -215,10 +215,10 @@ describe('la requête de l’action est lue strictement', () => {
 		const admin = await creerCompte('admin')
 		const payload = await payloadDeTest()
 		const doc = await payload.findByID({ collection: 'admins', id: admin.id, depth: 0, overrideAccess: true })
-		const utilisateur = { ...doc, collection: 'admins' } as unknown as UtilisateurDeLEspace
-		expect(await enregistrerPortfolio(payload, utilisateur, { galerie: [] })).toEqual({
+		const utilisateur = { ...doc, collection: 'admins' } as unknown as DashboardUser
+		expect(await savePortfolio(payload, utilisateur, { galerie: [] })).toEqual({
 			ok: false,
-			message: MESSAGE_ECHEC,
+			message: FAILURE_MESSAGE,
 		})
 	})
 })
@@ -228,7 +228,7 @@ describe('E34 : fermer sans valider ne laisse rien', () => {
 		const compte = await maquilleuse()
 		const payload = await payloadDeTest()
 		const a = await envoyer(compte)
-		await enregistrerPortfolio(payload, await utilisateurDe(payload, compte), { galerie: [a.id] })
+		await savePortfolio(payload, await utilisateurDe(payload, compte), { galerie: [a.id] })
 		const avant = await nombreDeMedias()
 
 		// Nothing is sent by the panel before « Enregistrer »: the server sees no request at all.
@@ -249,18 +249,18 @@ describe('E35, I25 : une photo retirée disparaît partout, son objet part à la
 		const payload = await payloadDeTest()
 		const utilisateur = await utilisateurDe(payload, compte)
 		const [a, b, c] = await envoyerTrois(compte)
-		await enregistrerPortfolio(payload, utilisateur, { galerie: [a.id, b.id, c.id] })
+		await savePortfolio(payload, utilisateur, { galerie: [a.id, b.id, c.id] })
 		const cles = clesDe(b)
 		expect(cles.length).toBeGreaterThan(1)
 		const avant = await Promise.all(cles.map(async cle => [cle, (await lireUnObjet(cle))?.octets] as const))
 		expect(avant.every(([, octets]) => octets !== undefined)).toBe(true)
 
-		const resultat = await enregistrerPortfolio(payload, utilisateur, { galerie: [a.id, c.id] })
+		const resultat = await savePortfolio(payload, utilisateur, { galerie: [a.id, c.id] })
 
 		expect(resultat).toEqual({ ok: true, valeurs: { galerie: [a.id, c.id] } })
 		const profil = await profilDe(compte)
 		expect(photosNommees(profil.gallery)).toEqual([a.id, c.id])
-		expect((await lirePhotosDeLEspace(payload, profil)).galerie.map(p => p.id)).toEqual([a.id, c.id])
+		expect((await readDashboardPhotos(payload, profil)).galerie.map(p => p.id)).toEqual([a.id, c.id])
 		expect((await lireLeProfilPublic(payload, profil.slug ?? ''))?.galerie.map(p => p.url)).toEqual([
 			a.url,
 			c.url,
@@ -286,9 +286,9 @@ describe('E35, I25 : une photo retirée disparaît partout, son objet part à la
 			id: (await profilDe(compte)).id,
 			data: { mainPicture: principale.id },
 		})
-		await enregistrerPortfolio(payload, utilisateur, { gallery: [principale.id, autre.id] })
+		await savePortfolio(payload, utilisateur, { gallery: [principale.id, autre.id] })
 
-		await enregistrerPortfolio(payload, utilisateur, { galerie: [autre.id] })
+		await savePortfolio(payload, utilisateur, { galerie: [autre.id] })
 
 		expect(await galerieDe(compte)).toEqual([autre.id])
 		expect((await profilDe(compte)).mainPicture).toBe(principale.id)
@@ -302,9 +302,9 @@ describe('E35, I25 : une photo retirée disparaît partout, son objet part à la
 		const payload = await payloadDeTest()
 		const utilisateur = await utilisateurDe(payload, compte)
 		const [a, b] = [await envoyer(compte), await envoyer(compte)]
-		await enregistrerPortfolio(payload, utilisateur, { galerie: [a.id, b.id] })
+		await savePortfolio(payload, utilisateur, { galerie: [a.id, b.id] })
 
-		expect(await enregistrerPortfolio(payload, utilisateur, { galerie: [] })).toEqual({
+		expect(await savePortfolio(payload, utilisateur, { galerie: [] })).toEqual({
 			ok: true,
 			valeurs: { galerie: [] },
 		})
@@ -323,12 +323,12 @@ describe('E35, I25 : une photo retirée disparaît partout, son objet part à la
 		const payload = await payloadDeTest()
 		const utilisateur = await utilisateurDe(payload, compte)
 		const [a, b] = [await envoyer(compte), await envoyer(compte)]
-		await enregistrerPortfolio(payload, utilisateur, { galerie: [a.id, b.id] })
-		await enregistrerPortfolio(payload, utilisateur, { galerie: [a.id] })
+		await savePortfolio(payload, utilisateur, { galerie: [a.id, b.id] })
+		await savePortfolio(payload, utilisateur, { galerie: [a.id] })
 		const deplacements = () => espion.journal.filter(commande => commande.nom === 'CopyObject').length
 		const avant = deplacements()
 
-		expect(await enregistrerPortfolio(payload, utilisateur, { galerie: [a.id] })).toMatchObject({ ok: true })
+		expect(await savePortfolio(payload, utilisateur, { galerie: [a.id] })).toMatchObject({ ok: true })
 
 		expect(deplacements()).toBe(avant)
 		expect(await orphelins()).toEqual(AUCUN)
@@ -339,11 +339,11 @@ describe('E35, I25 : une photo retirée disparaît partout, son objet part à la
 		const autre = await maquilleuse()
 		const payload = await payloadDeTest()
 		const photoDeB = await envoyer(autre)
-		await enregistrerPortfolio(payload, await utilisateurDe(payload, autre), { galerie: [photoDeB.id] })
+		await savePortfolio(payload, await utilisateurDe(payload, autre), { galerie: [photoDeB.id] })
 		const photoDeA = await envoyer(compte)
 
-		await enregistrerPortfolio(payload, await utilisateurDe(payload, compte), { galerie: [photoDeA.id] })
-		await enregistrerPortfolio(payload, await utilisateurDe(payload, compte), { galerie: [] })
+		await savePortfolio(payload, await utilisateurDe(payload, compte), { galerie: [photoDeA.id] })
+		await savePortfolio(payload, await utilisateurDe(payload, compte), { galerie: [] })
 
 		expect(await galerieDe(autre)).toEqual([photoDeB.id])
 		for (const cle of clesDe(photoDeB)) expect(await lireUnObjet(cle)).toBeDefined()
