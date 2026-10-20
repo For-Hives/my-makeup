@@ -24,6 +24,13 @@ async function signInAction(page: Page, email: string) {
 	await expect(page).toHaveURL(/\/auth\/profil$/)
 }
 
+/**
+ * The markup of a page without its scripts. The scripts carry the RSC stream (`self.__next_f.push`), whose
+ * chunks are written in the order the server finishes them: two requests to the same page may order them
+ * differently (ticket 256). What the visitor sees is the markup, and that is what must not change.
+ */
+const markupOf = (html: string) => html.replace(/<script\b[\s\S]*?<\/script\s*>/gi, '')
+
 const sessionCookie = async (context: BrowserContext) =>
 	(await context.cookies()).find(({ name }) => name === 'payload-token')
 
@@ -204,7 +211,11 @@ test.describe('La Nav lit l’état connecté dans le navigateur', () => {
 			const client = await playwright.request.newContext({ baseURL: baseURL ?? '', extraHTTPHeaders: entetes })
 			try {
 				const response = await client.get('/')
-				return { statut: response.status(), cache: response.headers()['cache-control'], corps: await response.text() }
+				return {
+					statut: response.status(),
+					cache: response.headers()['cache-control'],
+					corps: markupOf(await response.text()),
+				}
 			} finally {
 				await client.dispose()
 			}

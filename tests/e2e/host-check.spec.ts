@@ -1,7 +1,10 @@
+import { readFileSync } from 'node:fs'
 import { expect, test } from '@playwright/test'
 import { checkHost, writeReport } from '../../scripts/cutover/host-check'
+import { DEMO_ARTICLES, DEMO_TALENTS } from '../../src/demo-data/editorial'
 import { setSearchProfiles } from '../fixtures/search-profiles'
 import { createContent, deleteContent, refreshProfilePages } from '../support/public-pages'
+import type { OldSiteTitles } from '../support/url-parity'
 
 /**
  * I45, U61 to U64 on a real host (ticket 173): the command that checks a host reads every address of the
@@ -18,6 +21,24 @@ import { createContent, deleteContent, refreshProfilePages } from '../support/pu
  * the switch the command is run with none.
  */
 const UPCOMING: ReadonlySet<string> = new Set()
+
+/**
+ * The h1 of the old site, less the pages of the bench's own set (ticket 256). The talents and the articles of
+ * the set (src/demo-data/) take slugs of the real site, and `tests/e2e/bench-dataset.spec.ts` loads them into the
+ * database every other test shares and leaves them there: once they are in the sitemap, the command compares their
+ * made-up h1 with the real one of the old site and reports a difference, whenever that test ran first. Those
+ * pages keep the check that applies to any page (one h1, the right status); only the comparison with the old text,
+ * which means nothing for a made-up page, is dropped.
+ */
+const madeUpPages = new Set([
+	...DEMO_TALENTS.map(({ slug }) => `/talent/${slug}`),
+	...DEMO_ARTICLES.map(({ slug }) => `/blog/${slug}`),
+])
+const oldTitles = Object.fromEntries(
+	Object.entries(
+		JSON.parse(readFileSync(new URL('../fixtures/url-parity-h1.json', import.meta.url), 'utf8')) as OldSiteTitles
+	).filter(([address]) => !madeUpPages.has(address.replace(/\/$/, '')))
+) as OldSiteTitles
 
 test('I45 sur un hôte : tout l’inventaire est conforme, aucun 5xx', async ({ request, baseURL }) => {
 	test.setTimeout(300_000)
@@ -40,7 +61,10 @@ test('I45 sur un hôte : tout l’inventaire est conforme, aucun 5xx', async ({ 
 		},
 	]
 	try {
-		const report = await checkHost({ cible: new URL(baseURL) }, { intervalleMs: 0, aVenir: UPCOMING })
+		const report = await checkHost(
+			{ cible: new URL(baseURL) },
+			{ intervalleMs: 0, aVenir: UPCOMING, anciens: oldTitles }
+		)
 		console.log(`\n${writeReport(report)}\n`)
 		expect(report.defauts).toEqual([])
 		expect(report.reponses5xx).toBe(0)
