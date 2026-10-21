@@ -16,6 +16,9 @@
 
 export type CheckedFamily = 'profil' | 'talent' | 'blog'
 
+/** What the proxy learns of an address: no page (`false`), a page (`true`), or the address to redirect to. */
+export type PageAnswer = boolean | { vers: string }
+
 const FAMILIES: readonly CheckedFamily[] = ['profil', 'talent', 'blog']
 
 /** The segment as the visitor wrote it: Next gives it decoded or not, depending on the path. */

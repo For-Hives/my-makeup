@@ -7,22 +7,33 @@
 
 import config from '@payload-config'
 import { getPayload } from 'payload'
-import { type CheckedFamily, existingPagesMemory } from '@/lib/urls/unknown-page'
+import { profilePath } from '@/lib/slug'
+import { type CheckedFamily, existingPagesMemory, type PageAnswer } from '@/lib/urls/unknown-page'
 import { cachedArticle, cachedProfileUrl, cachedTalent } from './cached'
 
 const memory = existingPagesMemory()
 
-/** False only for an address the page would answer with its 404; a redirection of a profile is a page. */
-export async function pageExists(famille: CheckedFamily, segment: string): Promise<boolean> {
+/**
+ * What the page of this address answers, as far as the proxy needs to know: `false` for its 404, `true` for a page,
+ * and for the old address of a profile (an old username, a variant of the slug) the address to send the visitor to.
+ * The redirection is answered by the proxy, not by the page: a `permanentRedirect()` in a page kept in the cache of
+ * Next (ticket 269) leaves with a doubled `Location` header.
+ */
+export async function pageExists(famille: CheckedFamily, segment: string): Promise<PageAnswer> {
 	const key = `${famille}:${segment}`
 	if (memory.connait(key)) return true
 	const payload = await getPayload({ config })
-	const exists =
-		famille === 'profil'
-			? (await cachedProfileUrl(payload, segment)).type !== 'inconnue'
-			: famille === 'talent'
+	let answer: PageAnswer
+	if (famille === 'profil') {
+		const target = await cachedProfileUrl(payload, segment)
+		answer =
+			target.type === 'inconnue' ? false : target.type === 'redirection' ? { vers: profilePath(target.slug) } : true
+	} else {
+		answer =
+			famille === 'talent'
 				? (await cachedTalent(payload, segment)) !== null
 				: (await cachedArticle(payload, segment)) !== null
-	if (exists) memory.retenir(key)
-	return exists
+	}
+	if (answer === true) memory.retenir(key)
+	return answer
 }
