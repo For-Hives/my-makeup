@@ -855,3 +855,27 @@ Ce que la v3 change par rapport au site actuel est dans [`CHANGEMENTS-VOULUS.md`
   - Mesures de l'auteur : `sign-out` 1 échec sur 30 avant, 60 sur 60 verts après ; I45 en échec sur un passage complet avant, deux passages complets verts après (315 chacun).
   - Vérifié après la fusion, sur le banc `mm-integ` : contrôle Biome, types, essais unitaires (3 527), `bun run build`, essais d'intégration (2 151) et essais de bout en bout sur chromium (315) verts.
   - Pas clos : le dernier critère du ticket demande la CI GitHub verte, qui n'a pas encore tourné sur ces commits ; le projet mobile n'a pas été relancé ; l'essai `sign-out` ne compare que le balisage, il échouerait si celui-ci différait entre visiteur connecté et anonyme.
+
+- **Ticket 178 fusionné : les 15 pages clés n'ont aucune violation d'accessibilité grave.**
+  - `tests/e2e/a11y-key-pages.spec.ts` passe axe sur 12 pages publiques et 3 pages de l'espace, à 1440 et 390 px, panneaux ouverts compris (identité, recherche de commune, offres avec options, portfolio) ; deux états de plus : recherche sans résultat et formulaire de contact en erreur. Aucune violation grave ou critique.
+  - Les sept listes modifiables gardent le focus dans le panneau après un retrait et l'annoncent (`tests/e2e/lists-removal.spec.ts`, 14 essais).
+  - Vérifié par l'auteur en local : 34 essais d'accessibilité, 14 de retrait, 8 de `dashboard-lists`, plus le plan du site, verts.
+
+- **Ticket 176 fusionné, pas clos : la suite de parité a un tableau complet, mais `ci-ok` n'est pas requis.**
+  - `docs/tests/suite-parite.md` donne un état aux 255 identifiants (213 verts, 13 hors bascule, 29 remplacés), contrôlé par `tests/unit/parity-table.test.ts`. Quatre sections sans essai navigateur (zone, formations, expériences, offres avec options) ont maintenant `tests/e2e/dashboard-lists.spec.ts`. Un essai instable du plan du site est corrigé à la racine.
+  - CI du 20/10 verte (run 39436197738, 5 min 56 s, 1 essai instable sur 496). Pas clos : la branche `v3` n'est pas protégée sur GitHub (ticket 028, geste d'Andy), donc `ci-ok` n'est pas requis. Les lignes « remplacé » des 31 essais de l'ancien site sont une lecture de l'auteur à confirmer.
+
+- **Ticket 179 fusionné, pas clos : l'outil de mesure de vitesse existe, la mesure n'est pas figée.**
+  - `bun run perf:lighthouse` (5 passages par page, médiane) ; rapport `docs/mesure/lighthouse-v3.md`, marqué « indicatif, non figé » : la machine tournait à une charge de 21 sur 8 cœurs. 17 budgets sur 25 tenus ; LCP hors budget sur les quatre pages, TBT sur trois, et deux LCP pires que le site en ligne (P01, P03). Aucun écart accepté par écrit.
+  - À refaire seul, sur une machine au repos, ou à faire accepter par écrit. Chromium 147 casse Lighthouse 13.5.0 ici (NO_FCP) ; l'outil prend le Chromium 156.
+
+- **Ticket 180 fusionné, pas clos : la répétition complète tient en une commande, mais les 2 heures ne sont pas vérifiées sur la vraie sauvegarde.**
+  - `bun run rehearsal --dump … --decisions … --cities … --consent-date …` rejoue la migration sur son propre banc (`mm-rehearsal`), mesure chacune des 9 étapes, compare à l'instantané, relance l'import (0 création, 0 mise à jour attendues), écrit un rapport sans donnée personnelle et détruit toujours la copie.
+  - Mesuré sur la fausse source (204 lignes, 13 profils de spam) : 18,1 s à froid, sept critères tenus. Rien n'a tourné sur une vraie sauvegarde. Photos non sondées.
+  - À trancher par Andy : `decisions.md` du 16/10 supprime la préproduction et la note du ticket 067 dit que la répétition sur données réelles a déjà eu lieu en production ; cette commande reste utile aux tickets 181 et 184.
+
+- **Tickets 258, 259 et 260 fusionnés : une zone peut être hors de France ou donnée par codes postaux, sans rien changer à l'ancienne règle.**
+  - 258 : `src/lib/countries.ts` compte 232 pays (les 12 codes d'outre-mer et les 5 territoires sans habitants sont exclus, `UNINHABITED_CODES`), avec leurs prépositions ; règles pures de la zone.
+  - 259 : migration `20261020_215218_zone_countries_postal_codes` (ajouts seuls, `down` testé, dérive de schéma nulle) : type de zone, pays, ville à l'étranger, codes postaux de la commune, `zoneReview` privée (jamais lue par le public ni par une autre maquilleuse). Banc : la fausse liste des communes répond `codesPostaux`, le jeu passe à 17 types de profil (cinq profils de zone, chargés par `LOADED_DEMO_PROFILES`).
+  - 260 : la règle du profil publiable et `formatZone` lisent la même zone, y compris un type de zone vide ; aucun drapeau dans les textes (test sur les 232 codes).
+  - Relecture : quatre bloquants et un majeur, corrigés avant la fusion. Pas fait : le déploiement en production, qui demande une sauvegarde de la base et l'accord d'Andy (geste humain). Les pages publiques et la recherche ne lisent pas encore les pays (263, 264). Une clé `city.postalCodes` absente se lit comme `[]`. Les essais bout en bout qui lisent le jeu du banc n'ont pas tourné.
