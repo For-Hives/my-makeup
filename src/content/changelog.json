@@ -205,6 +205,11 @@
 			"id": "sur-telephone-la-fiche-d-une-maquilleuse-met-ses-tarifs-e",
 			"type": "amelioration",
 			"text": "Sur téléphone, la fiche d'une maquilleuse met ses tarifs et son portfolio avant ses compétences, et un lien « Aller au contenu » permet de passer le menu au clavier."
+		},
+		{
+			"id": "la-recherche-range-en-fin-de-liste-les-maquilleuses-qui-n",
+			"type": "amelioration",
+			"text": "La recherche range en fin de liste les maquilleuses qui n’ont pas encore indiqué de coordonnées, et les conditions d’utilisation ne parlent plus d’un formulaire de devis qui n’existe pas."
 		}
 	],
 	"releases": []

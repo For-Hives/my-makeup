@@ -14,6 +14,8 @@ import { type NormalizedTexts, normalizeTexts, rankByRelevance } from './relevan
 /** A profile of the directory as the search reads it: where she works, and (for a word) what she wrote. */
 export interface SearchableProfile extends ProfilePlace {
 	textes?: NormalizedTexts
+	/** True when nothing on her profile lets a client reach her (ticket 291): she goes after the others. */
+	unreachable?: boolean
 }
 
 const NO_TEXT = normalizeTexts({
@@ -27,7 +29,19 @@ const NO_TEXT = normalizeTexts({
 	prenom: '',
 })
 
-/** The profiles a search finds, in their sections. The directory comes in its order, which breaks ties. */
+/** Reachable profiles first, the others after; each group keeps its order (ticket 291). */
+function reachableFirst<T extends SearchableProfile>(profils: readonly T[]): T[] {
+	return [
+		...profils.filter(profil => profil.unreachable !== true),
+		...profils.filter(profil => profil.unreachable === true),
+	]
+}
+
+/**
+ * The profiles a search finds, in their sections. The directory comes in its order, which breaks ties.
+ * In each section, the profiles with no way to be reached go last (ticket 291): they stay listed, and
+ * the count of the title does not change.
+ */
 export function find<T extends SearchableProfile>(
 	annuaire: readonly T[],
 	recherche: Pick<Search, 'search' | 'city'>
@@ -35,5 +49,10 @@ export function find<T extends SearchableProfile>(
 	const found = searchByWord(recherche)
 		? rankByRelevance(annuaire, profil => profil.textes ?? NO_TEXT, recherche.search).map(({ profil }) => profil)
 		: annuaire
-	return sectionsByPlace(found, recherche.city)
+	const places = sectionsByPlace(found, recherche.city)
+	return {
+		...places,
+		locaux: reachableFirst(places.locaux),
+		sections: places.sections.map(section => ({ ...section, profils: reachableFirst(section.profils) })),
+	}
 }

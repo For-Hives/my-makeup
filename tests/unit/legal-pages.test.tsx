@@ -27,7 +27,8 @@ const PAGES = [
 // The words of the live site, as the hash of their plain text (the text itself is the page's). The one
 // wanted differences are in the policy: the paragraph « Formulaire de contact » (ticket 162, register
 // `contact-conservation-12-mois`), and the providers, the email confirmation and the delay of the photos
-// (ticket 189, register `politique-a-jour-a-la-bascule`).
+// (ticket 189, register `politique-a-jour-a-la-bascule`), and the terms without the quote form that does
+// not exist (ticket 291, register `cgu-sans-formulaire-de-devis`).
 const ONLINE: Record<string, { lignes: number; sha: string }> = JSON.parse(
 	readFileSync(path.join(process.cwd(), 'tests/fixtures/legal-pages-text.json'), 'utf8')
 )
@@ -55,6 +56,14 @@ describe('le texte des trois pages', () => {
 			expect(metadata.robots).toBeUndefined()
 		})
 	}
+
+	test('les CGU ne promettent pas de formulaire de devis (ticket 291)', async () => {
+		const { default: Page } = await PAGES[1].module()
+		const text = pageText(renderToStaticMarkup(<Page />))
+		expect(text).not.toContain('Demander un devis')
+		expect(text).not.toMatch(/demandes? de devis/i)
+		expect(text).not.toContain('formulaire')
+	})
 
 	test('seule la politique mène au bouton d’opposition', async () => {
 		const text = async (module: () => Promise<{ default: () => React.JSX.Element }>) => {

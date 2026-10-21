@@ -231,7 +231,7 @@ Elles ne sont pas sous `ci-ok` : elles tournent le lundi à 07:00 par `.github/w
 | E42 | vert | `tests/e2e/city-search.spec.ts` |  |
 | E43 | vert | `tests/unit/public-profile.test.tsx`, `tests/e2e/public-profile.spec.ts` |  |
 | E44 | vert | `tests/unit/profile-gallery.test.tsx`, `tests/unit/public-profile.test.tsx`, `tests/e2e/public-profile.spec.ts` |  |
-| E45 | hors bascule | ticket 214 | « Demander un devis » sur le profil |
+| E45 | hors bascule | ticket 214 | le formulaire de devis sur le profil |
 | E46 | vert | `tests/e2e/public-profile.spec.ts` |  |
 | E47 | vert | `tests/e2e/public-profile.spec.ts` |  |
 | E48 | hors bascule | ticket 214 | « Afficher le téléphone » et `contact_reveal` |

@@ -196,3 +196,35 @@ describe('le bloc affiché', () => {
 		expect(zone.querySelector('[data-etat="publiable"]')).not.toBeNull()
 	})
 })
+
+describe('291 : un profil listé sans moyen de contact passe après les autres', () => {
+	const NO_CONTACT: DashboardProfile = { ...FULL, networks: {} }
+
+	test('listé et sans canal : le message le dit', () => {
+		expect(profileProgress(NO_CONTACT).rankedLast).toBe(true)
+		expect(profileProgress(FULL).rankedLast).toBe(false)
+	})
+
+	test('un profil vide ou indisponible n’est pas dans la recherche : pas de message', () => {
+		expect(profileProgress({ id: 2 }).rankedLast).toBe(false)
+		expect(profileProgress({ ...NO_CONTACT, available: false }).rankedLast).toBe(false)
+	})
+
+	test('un téléphone enregistré mais fermé ne compte pas ; montré, il compte', () => {
+		const closed = { ...NO_CONTACT, contactDetails: { phone: '06 00 00 00 01' }, publicContact: false }
+		expect(profileProgress(closed).rankedLast).toBe(true)
+		expect(profileProgress({ ...closed, publicContact: true }).rankedLast).toBe(false)
+	})
+
+	test('le bloc dit la phrase et mène à la carte Coordonnées', async () => {
+		const zone = await jsdomWindow.monter(<ProfileProgress avancement={profileProgress(NO_CONTACT)} />)
+		const notice = zone.querySelector('[data-testid="avancement-sans-contact"]')
+		expect(notice?.textContent).toContain('Sans moyen de contact, ton profil passe après les autres dans la recherche.')
+		expect(notice?.querySelector('a')?.getAttribute('href')).toBe('#carte-coordonnees')
+	})
+
+	test('avec un contact, le bloc ne dit rien', async () => {
+		const zone = await jsdomWindow.monter(<ProfileProgress avancement={profileProgress(FULL)} />)
+		expect(zone.querySelector('[data-testid="avancement-sans-contact"]')).toBeNull()
+	})
+})
