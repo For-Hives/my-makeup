@@ -101,9 +101,54 @@ describe('les cas du banc', () => {
 		expect(from('/auth/profil')).toMatchObject({ famille: 'espace-prive', statuts: [307] })
 	})
 
-	test('la double barre accepte le 308 de Next, et reste un écart connu', () => {
-		expect(from('//blog')).toMatchObject({ famille: 'double-barre', statuts: [301, 308] })
+	test('la double barre accepte le 301, le 308 de Next et le 200 de Traefik, et reste un écart connu', () => {
+		expect(from('//blog')).toMatchObject({ famille: 'double-barre', statuts: [301, 308, 200], canonique: '/blog' })
 		expect(from('//blog').ecartConnu).toBeDefined()
+	})
+
+	describe('la double barre derrière Traefik (ticket 270)', () => {
+		const html = (head: string): string => `<html><head>${head}</head><body><h1>Blog</h1></body></html>`
+		const page = (status: number, body: string, location: string | null = null): Reply => ({
+			status,
+			location,
+			contentType: 'text/html',
+			corps: async () => body,
+		})
+		const blogCase: ParityCase = { ...from('//blog'), titre: 'non-verifie' }
+
+		test('200 avec le canonical du chemin propre : un écart connu, jamais un échec', async () => {
+			const result = await check(blogCase, async () =>
+				page(200, html('<link rel="canonical" href="https://my-makeup.fr/blog"/>'))
+			)
+			expect(result.etat).toBe('ecart')
+		})
+
+		test('200 sans canonical : rouge', async () => {
+			const result = await check(blogCase, async () => page(200, html('')))
+			expect(result.etat).toBe('rouge')
+			expect(result.etat === 'rouge' && result.defauts.join()).toContain('sans canonical')
+		})
+
+		test('200 avec un autre canonical : rouge', async () => {
+			for (const href of ['https://my-makeup.fr//blog', 'https://my-makeup.fr/a-propos'])
+				expect(
+					(await check(blogCase, async () => page(200, html(`<link rel="canonical" href="${href}"/>`)))).etat
+				).toBe('rouge')
+		})
+
+		test('308 vers le chemin propre : vert', async () => {
+			const result = await check(blogCase, async adresse =>
+				adresse === '//blog' ? page(308, '', '/blog') : page(200, html(''))
+			)
+			expect(result.etat).toBe('vert')
+		})
+
+		test('le canonical se lit quel que soit l’ordre des attributs', async () => {
+			const result = await check(blogCase, async () =>
+				page(200, html('<link href="https://my-makeup.fr/blog" rel="canonical">'))
+			)
+			expect(result.etat).toBe('ecart')
+		})
 	})
 
 	test('une page inconnue doit avoir l’h1 de la 404 de l’ancien site, une recherche un seul h1', () => {
