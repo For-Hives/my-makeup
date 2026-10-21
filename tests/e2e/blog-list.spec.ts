@@ -12,7 +12,8 @@ test.describe('Blog', () => {
 		expect(response?.status()).toBe(200)
 		const title = await page.title()
 		expect(title.length).toBeLessThanOrEqual(60)
-		expect(title).toMatch(/\| My-Makeup$/)
+		// The title is the one of the old site, with no brand (ticket 274).
+		expect(title).toBe('Blog de My-Makeup')
 		const description = await page.locator('meta[name="description"]').getAttribute('content')
 		expect(description?.length).toBeGreaterThanOrEqual(70)
 		expect(description?.length).toBeLessThanOrEqual(155)
