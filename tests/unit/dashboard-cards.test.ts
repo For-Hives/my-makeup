@@ -88,3 +88,56 @@ describe('les valeurs enregistrées', () => {
 		expect(card(sale, 'competences').lignes).toEqual([{ valeur: null }])
 	})
 })
+
+describe('266 : la carte d’une zone de pays dit ce que dit la page publique, sans drapeau', () => {
+	const row = (profil: DashboardProfile) => card(profil, 'localisation').lignes.map(l => [l.libelle, l.valeur])
+
+	test('une ville et un pays, avec un rayon', () => {
+		expect(
+			row({ id: 3, zoneKind: 'countries', countries: ['BE'], town: 'Bruxelles', radiusKm: 30, homeService: true })
+		).toEqual([
+			['Zone', 'Bruxelles (Belgique) et 30 km autour'],
+			['Se déplace à domicile', 'Oui'],
+		])
+	})
+
+	test('un pays seul, plusieurs pays : le rayon n’y est pas lu', () => {
+		expect(row({ id: 3, zoneKind: 'countries', countries: ['BE'], radiusKm: 30, homeService: false })).toEqual([
+			['Zone', 'Belgique'],
+			['Se déplace à domicile', 'Non'],
+		])
+		expect(row({ id: 3, zoneKind: 'countries', countries: ['FR', 'IT'], radiusKm: 30, homeService: true })).toEqual([
+			['Zone', 'France et Italie'],
+			['Se déplace à domicile', 'Oui'],
+		])
+	})
+
+	test('jamais un drapeau dans le texte de la carte', () => {
+		const texts = row({ id: 3, zoneKind: 'countries', countries: ['FR', 'IT', 'BE'] }).map(([, cell]) => cell)
+		for (const cell of texts) expect(cell ?? '').not.toMatch(/\p{Regional_Indicator}/u)
+	})
+
+	test('« à domicile » reste dit quand il n’y a pas de commune', () => {
+		expect(row({ id: 3, zoneKind: 'countries', countries: ['BE'], homeService: true })[1]).toEqual([
+			'Se déplace à domicile',
+			'Oui',
+		])
+	})
+
+	test('une commune se lit comme avant, même avec des pays vides', () => {
+		expect(
+			row({
+				id: 3,
+				zoneKind: 'city',
+				countries: [],
+				city: { name: 'Annecy', department: '74' },
+				radiusKm: 30,
+				homeService: true,
+			})
+		).toEqual([
+			['Commune', 'Annecy (74)'],
+			['Rayon', '30 km'],
+			['Se déplace à domicile', 'Oui'],
+		])
+	})
+})

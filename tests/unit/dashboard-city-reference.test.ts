@@ -3,6 +3,7 @@ import {
 	CITIES_DELAY_MS,
 	cityFromCode,
 	findCities,
+	POSTAL_CODE_SUGGESTIONS_MAX,
 	SUGGESTIONS_MAX,
 	searchQuestion,
 	suggestion,
@@ -20,6 +21,7 @@ const ANNECY = {
 	nom: 'Annecy',
 	code: '74010',
 	codeDepartement: '74',
+	codesPostaux: ['74000'],
 	centre: { type: 'Point', coordinates: [6.1264, 45.9024] },
 }
 
@@ -59,14 +61,25 @@ describe('la recherche de communes', () => {
 
 		expect(response).toEqual({
 			genre: 'communes',
-			communes: [{ nom: 'Annecy', codeInsee: '74010', departement: '74', latitude: 45.9024, longitude: 6.1264 }],
+			communes: [
+				{
+					nom: 'Annecy',
+					codeInsee: '74010',
+					departement: '74',
+					latitude: 45.9024,
+					longitude: 6.1264,
+					codesPostaux: ['74000'],
+				},
+			],
 		})
 		if (response.genre !== 'communes') throw new Error('attendu : des communes')
-		expect(response.communes.map(suggestion)).toEqual([{ codeInsee: '74010', libelle: 'Annecy (74)' }])
+		expect(response.communes.map(suggestion)).toEqual([{ codeInsee: '74010', libelle: 'Annecy (74)', nom: 'Annecy' }])
 		expect(requestValue?.searchParams.get('nom')).toBe('Annecy')
 		expect(requestValue?.searchParams.get('limit')).toBe(String(SUGGESTIONS_MAX))
 		// Nothing of the person goes with the question: no cookie, no account.
 		expect([...(requestValue?.searchParams.keys() ?? [])].sort()).toEqual(['boost', 'fields', 'limit', 'nom'])
+		// The postal codes are asked with the commune (ticket 265).
+		expect(requestValue?.searchParams.get('fields')).toBe('nom,code,codesPostaux,codeDepartement,centre')
 	})
 
 	test('un code postal est demandé par son code postal', async () => {
@@ -80,6 +93,39 @@ describe('la recherche de communes', () => {
 		await findCities('74000')
 		expect(requestValue?.searchParams.get('codePostal')).toBe('74000')
 		expect(requestValue?.searchParams.has('nom')).toBe(false)
+	})
+
+	test('un code postal dit quel code a été demandé ; un nom ne le dit pas (ticket 265)', async () => {
+		simulate(http.get(LIST, () => HttpResponse.json([ANNECY])))
+		expect(await findCities('74000')).toMatchObject({ genre: 'communes', codePostal: '74000' })
+		expect(await findCities('Annecy')).not.toHaveProperty('codePostal')
+	})
+
+	test('un code postal est demandé avec une limite qui couvre ses communes', async () => {
+		let requestValue: URL | undefined
+		simulate(
+			http.get(LIST, ({ request }) => {
+				requestValue = new URL(request.url)
+				return HttpResponse.json([])
+			})
+		)
+		await findCities('62149')
+		expect(requestValue?.searchParams.get('limit')).toBe(String(POSTAL_CODE_SUGGESTIONS_MAX))
+		expect(POSTAL_CODE_SUGGESTIONS_MAX).toBeGreaterThan(SUGGESTIONS_MAX)
+	})
+
+	test('les codes postaux de la liste : triés, sans doublon, cinq chiffres seulement ; aucun si elle n’en donne pas', async () => {
+		simulate(
+			http.get(LIST, () =>
+				HttpResponse.json([
+					{ nom: 'Lille', code: '59350', codesPostaux: ['59800', '59000', '59000', '5900', 'abcde', '59260'] },
+					{ nom: 'Annecy', code: '74010' },
+				])
+			)
+		)
+		const response = await findCities('Lil')
+		if (response.genre !== 'communes') throw new Error('attendu : des communes')
+		expect(response.communes.map(c => c.codesPostaux)).toEqual([['59000', '59260', '59800'], []])
 	})
 
 	test('toute la France : l’outre-mer et la Corse sont proposés, rien n’est filtré par département', async () => {
@@ -182,7 +228,14 @@ describe('la commune d’un code', () => {
 		)
 		expect(await cityFromCode('74010')).toEqual({
 			genre: 'commune',
-			commune: { nom: 'Annecy', codeInsee: '74010', departement: '74', latitude: 45.9024, longitude: 6.1264 },
+			commune: {
+				nom: 'Annecy',
+				codeInsee: '74010',
+				departement: '74',
+				latitude: 45.9024,
+				longitude: 6.1264,
+				codesPostaux: ['74000'],
+			},
 		})
 		expect(requestValue?.pathname).toBe('/communes/74010')
 	})

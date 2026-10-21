@@ -65,7 +65,7 @@ test.describe('E21, E23, E24, E27 : la zone et les listes de lignes, de bout en 
 		await page.goto('/auth/profil')
 		await press(page.getByRole('button', { name: 'Modifier ma localisation', exact: true }))
 		const dialog = page.getByRole('dialog')
-		await dialog.getByRole('combobox', { name: 'Ta commune' }).fill('Lille')
+		await dialog.getByRole('combobox', { name: 'Où travailles-tu ?' }).fill('Lille')
 		await press(page.getByRole('option', { name: /^Lille \(59\)/ }).first())
 		await dialog.getByLabel('Rayon d’action (en km)').fill('35')
 		expect(await violationsSevere(page)).toEqual([])

@@ -11,6 +11,7 @@ import { Talents } from '@/collections/Talents'
 import { Onboarding } from '@/components/dashboard/onboarding/Onboarding'
 import { DECLARED_ORIGINS, eventData } from '@/lib/analytics/events'
 import type { Track } from '@/lib/analytics/track'
+import type { LocationValues } from '@/lib/dashboard/location'
 import { strictOnboardingIdentitySchema } from '@/lib/dashboard/onboarding'
 import { openWindow } from '../support/dom-react'
 import { pickFiles } from '../support/pick-files'
@@ -33,7 +34,15 @@ function spy() {
 }
 
 const REDUCED = new File(['petit'], 'photo.webp', { type: 'image/webp' })
-const ZONE = { codeInsee: '59350', libelle: 'Lille (59)', rayonKm: null, aDomicile: false }
+const ZONE: LocationValues = {
+	kind: 'city',
+	codeInsee: '59350',
+	libelle: 'Lille (59)',
+	countries: [],
+	town: '',
+	rayonKm: null,
+	aDomicile: false,
+}
 
 function bench(options: { etape?: 1 | 2 | 3; photoEnCours?: 'terminee' | 2 } = {}) {
 	const { envois: uploads, suivre: follow } = spy()
@@ -46,7 +55,7 @@ function bench(options: { etape?: 1 | 2 | 3; photoEnCours?: 'terminee' | 2 } = {
 				<Onboarding
 					etapeInitiale={options.etape ?? 1}
 					identite={{ prenom: '', nom: '', nomArtiste: '', specialite: '' }}
-					localisation={{ codeInsee: '', libelle: '', rayonKm: null, aDomicile: false }}
+					localisation={{ ...ZONE, codeInsee: '', libelle: '' }}
 					envoyerIdentite={async valeurs => {
 						received.identite.push(valeurs)
 						return { ok: true, valeurs }
@@ -55,7 +64,10 @@ function bench(options: { etape?: 1 | 2 | 3; photoEnCours?: 'terminee' | 2 } = {
 						received.zone.push(saisie)
 						return { ok: true, valeurs: { ...ZONE, rayonKm: saisie.rayonKm, aDomicile: saisie.aDomicile } }
 					}}
-					chercherCommunes={async () => ({ ok: true, communes: [{ codeInsee: '59350', libelle: 'Lille (59)' }] })}
+					chercherCommunes={async () => ({
+						ok: true,
+						communes: [{ codeInsee: '59350', libelle: 'Lille (59)', nom: 'Lille' }],
+					})}
 					envoyerPhoto={async saisie => {
 						received.photo.push(saisie)
 						return {
@@ -126,7 +138,7 @@ describe('une émission par étape franchie, valeurs fermées', () => {
 			<Onboarding
 				etapeInitiale={1}
 				identite={{ prenom: '', nom: '', nomArtiste: '', specialite: '' }}
-				localisation={{ codeInsee: '', libelle: '', rayonKm: null, aDomicile: false }}
+				localisation={{ ...ZONE, codeInsee: '', libelle: '' }}
 				envoyerIdentite={async () => ({ ok: false, message: 'Échec.' })}
 				envoyerLocalisation={async () => ({ ok: false, message: 'Échec.' })}
 				chercherCommunes={async () => ({ ok: true, communes: [] })}

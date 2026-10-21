@@ -191,7 +191,7 @@ test.describe('142 : la recette de l’espace', { tag: '@mobile' }, () => {
 		await page.getByLabel('Nom', { exact: true }).fill('Fictive')
 		await page.getByLabel(/Spécialité/).fill('Maquillage mariée')
 		await press(page.getByRole('button', { name: /Continuer|Suivant|Enregistrer/ }).first())
-		await expect(page.getByRole('combobox', { name: 'Ta commune' })).toBeVisible()
+		await expect(page.getByRole('combobox', { name: 'Où travailles-tu ?' })).toBeVisible()
 		expect(await violationsSevere(page)).toEqual([])
 	})
 

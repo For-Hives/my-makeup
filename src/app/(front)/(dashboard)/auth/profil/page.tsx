@@ -25,13 +25,14 @@ import { COURSES } from '@/lib/dashboard/courses'
 import { confirmationMode } from '@/lib/dashboard/deletion-confirmation'
 import { EXPERIENCES } from '@/lib/dashboard/experiences'
 import { profileRows } from '@/lib/dashboard/list'
-import { cityLabel } from '@/lib/dashboard/location'
+import { locationValues } from '@/lib/dashboard/location'
 import { artistProfile } from '@/lib/dashboard/my-profile'
 import { readDashboardPhotos } from '@/lib/dashboard/photos'
 import { PREVIEW_PATH } from '@/lib/dashboard/preview'
 import { profileProgress } from '@/lib/dashboard/progress'
 import { requestUser } from '@/lib/dashboard/request'
 import { SERVICE_OFFERS } from '@/lib/dashboard/service-offers'
+import { zoneReviewView } from '@/lib/dashboard/zone-review'
 import { text } from '@/lib/profile/display-name'
 import {
 	saveMyAvailability,
@@ -104,14 +105,10 @@ export default async function ProfilePage() {
 									<DescriptionEditor valeurs={{ description: text(profile.description) }} envoyer={saveMyDescription} />
 								) : carte.section === 'localisation' ? (
 									<LocationEditor
-										valeurs={{
-											codeInsee: text(profile.city?.inseeCode),
-											libelle: cityLabel({ nom: profile.city?.name, departement: profile.city?.department }),
-											rayonKm: typeof profile.radiusKm === 'number' ? profile.radiusKm : null,
-											aDomicile: profile.homeService === true,
-										}}
+										valeurs={locationValues(profile)}
 										envoyer={saveMyLocation}
 										chercher={findMyCities}
+										revue={zoneReviewView(profile.zoneReview)}
 									/>
 								) : carte.section === 'disponibilite' ? (
 									<AvailabilitySwitch disponible={isAvailable(profile.available)} envoyer={saveMyAvailability} />

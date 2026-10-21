@@ -1,30 +1,25 @@
 'use client'
 
-import { zodResolver } from '@hookform/resolvers/zod'
-import { useId, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { z } from 'zod'
-import {
-	CITY_TO_CHOOSE_MESSAGE,
-	enteredRadiusSchema,
-	type LocationValues,
-	type SuggestedCity,
-	textRadius,
-} from '@/lib/dashboard/location'
+import type { LocationInput, LocationValues } from '@/lib/dashboard/location'
 import { STEPS_TITLES } from '@/lib/dashboard/onboarding'
 import { FAILURE_MESSAGE, type SaveResult } from '@/lib/dashboard/result'
-import { RADIUS_BOUNDS_KM } from '@/lib/profile/zone'
-import { type CitiesSearch, CityField } from '../CityField'
+import { initialChoice, radiusAsked, type ZoneChoice, zoneRequest } from '@/lib/dashboard/zone-choice'
+import type { ZoneReviewView } from '@/lib/dashboard/zone-review'
+import type { CitiesSearch } from '../CityField'
 import type { LocationUpload } from '../LocationEditor'
-import { BUTTON, FailureMessage, FIELD, MAIN_BUTTON, StepFrame } from './shared'
-
-const formSchema = z.object({ rayon: enteredRadiusSchema, aDomicile: z.boolean() })
-type FormValues = z.infer<typeof formSchema>
+import { ZoneFields, type ZoneFormValues, zoneResolver } from '../ZoneFields'
+import { ZoneReviewBanner } from '../ZoneReviewBanner'
+import { BUTTON, FailureMessage, MAIN_BUTTON, StepFrame } from './shared'
 
 /**
- * The second step: her zone (ticket 140). Her commune, chosen in the official list and sent as its
- * code only, her radius and « à domicile », as in the card of her space. « Précédent » goes back to
- * the identity, whose values are not lost. The next step opens once the server has stored the zone.
+ * The second step: her zone (tickets 140, 265 and 266). Where she works, as in the card of her
+ * space and with the same component: a commune of the official list (by name or postal code, sent
+ * as its code only), or one to five countries and a town, then her radius and « à domicile ».
+ * « Précédent » goes back to the identity, whose values are not lost. The next step opens once the
+ * server has stored the zone. When the import left the zone to review, a banner on top offers the
+ * communes of her postal code, and a tap saves one like « Suivant » does.
  */
 export function ZoneStep({
 	valeurs,
@@ -33,6 +28,7 @@ export function ZoneStep({
 	titre,
 	surFait,
 	retour,
+	revue = null,
 }: {
 	valeurs: LocationValues
 	envoyer: LocationUpload
@@ -40,43 +36,48 @@ export function ZoneStep({
 	titre: React.RefObject<HTMLHeadingElement | null>
 	surFait: (valeurs: LocationValues) => void
 	retour: () => void
+	/** The zone to review the import left, or null. */
+	revue?: ZoneReviewView | null
 }) {
-	const id = useId()
+	const radiusIsAsked = useRef(true)
+	const [choice, setChoice] = useState<ZoneChoice>(() => initialChoice(valeurs))
+	radiusIsAsked.current = radiusAsked(choice)
 	const {
 		register,
 		handleSubmit,
+		getValues,
 		setError,
 		formState: { errors },
-	} = useForm<FormValues>({
-		resolver: zodResolver(formSchema),
+	} = useForm<ZoneFormValues>({
+		resolver: zoneResolver(radiusIsAsked),
 		defaultValues: { rayon: valeurs.rayonKm === null ? '' : String(valeurs.rayonKm), aDomicile: valeurs.aDomicile },
 	})
-	const [chosen, setChosen] = useState<SuggestedCity | null>(
-		valeurs.codeInsee === '' ? null : { codeInsee: valeurs.codeInsee, libelle: valeurs.libelle }
-	)
-	const [cityError, setCityError] = useState('')
+	const [zoneError, setZoneError] = useState('')
+	const [townError, setTownError] = useState('')
 	const [pending, setPending] = useState(false)
 	const [message, setMessage] = useState('')
+	const [bannerMessage, setBannerMessage] = useState('')
 	const [expiredSession, setExpiredSession] = useState(false)
 	const lock = useRef(false)
 
-	async function save(saisie: FormValues, commune: SuggestedCity) {
+	async function save(saisie: LocationInput, depuisBandeau = false) {
 		setPending(true)
 		setMessage('')
+		setBannerMessage('')
 		setExpiredSession(false)
 		try {
-			const result = await envoyer({
-				codeInsee: commune.codeInsee,
-				rayonKm: textRadius(saisie.rayon),
-				aDomicile: saisie.aDomicile,
-			}).catch((): SaveResult<LocationValues> => ({ ok: false, message: FAILURE_MESSAGE }))
+			const result = await envoyer(saisie).catch(
+				(): SaveResult<LocationValues> => ({ ok: false, message: FAILURE_MESSAGE })
+			)
 			if (result.ok) {
 				surFait(result.valeurs)
 				return
 			}
 			setExpiredSession(result.session === 'expiree')
-			setMessage(result.message)
-			if (result.champs?.codeInsee) setCityError(result.champs.codeInsee)
+			if (depuisBandeau) setBannerMessage(result.message)
+			else setMessage(result.message)
+			setZoneError(result.champs?.codeInsee ?? result.champs?.countries ?? '')
+			setTownError(result.champs?.town ?? '')
 			if (result.champs?.rayonKm) setError('rayon', { message: result.champs.rayonKm })
 			if (result.champs?.aDomicile) setError('aDomicile', { message: result.champs.aDomicile })
 		} finally {
@@ -85,11 +86,10 @@ export function ZoneStep({
 		}
 	}
 
-	const radiusError = errors.rayon?.message
 	return (
 		<StepFrame
 			titre={STEPS_TITLES[2]}
-			explication="Dis-nous où tu travailles : seule ta commune apparaît sur ta page, jamais ton adresse."
+			explication="Dis-nous où tu travailles : seule ta commune ou ton pays apparaît sur ta page, jamais ton adresse."
 			reference={titre}
 		>
 			<form
@@ -99,16 +99,17 @@ export function ZoneStep({
 					evenement.preventDefault()
 					if (lock.current) return
 					lock.current = true
-					const city = chosen
-					setCityError(city === null ? CITY_TO_CHOOSE_MESSAGE : '')
+					const request = zoneRequest(choice, getValues('rayon'), getValues('aDomicile'))
+					setZoneError(!request.ok && request.champ === 'zone' ? request.message : '')
+					setTownError(!request.ok && request.champ === 'ville' ? request.message : '')
 					void handleSubmit(
-						saisie => {
-							// Without a commune chosen in the list, nothing is sent.
-							if (city === null) {
+						() => {
+							// Without a zone that can be sent, nothing is sent.
+							if (!request.ok) {
 								lock.current = false
 								return undefined
 							}
-							return save(saisie, city)
+							return save(request.saisie)
 						},
 						() => {
 							lock.current = false
@@ -117,56 +118,43 @@ export function ZoneStep({
 				}}
 				className="flex flex-col gap-4"
 			>
-				<div className="flex flex-col gap-1">
-					<label htmlFor={`${id}-commune`} className="font-medium text-sm">
-						Ta commune
-					</label>
-					<CityField
-						id={`${id}-commune`}
-						idErreur={`${id}-commune-erreur`}
-						libelleInitial={valeurs.libelle}
-						chercher={chercher}
-						erreur={cityError}
-						onChoisir={commune => {
-							setChosen(commune)
-							if (commune !== null) setCityError('')
+				{revue ? (
+					<ZoneReviewBanner
+						revue={revue}
+						enCours={pending}
+						message={bannerMessage}
+						onChoisir={codeInsee => {
+							if (lock.current) return
+							lock.current = true
+							// The commune she taps, with the radius and « à domicile » as they stand in the form.
+							const request = zoneRequest(
+								{ kind: 'city', city: { codeInsee, libelle: codeInsee, nom: codeInsee } },
+								getValues('rayon'),
+								getValues('aDomicile')
+							)
+							if (!request.ok) {
+								lock.current = false
+								return
+							}
+							void save(request.saisie, true)
 						}}
 					/>
-				</div>
-				<div className="flex flex-col gap-1">
-					<label htmlFor={`${id}-rayon`} className="font-medium text-sm">
-						Rayon d’action (en km) <span className="font-normal text-neutral-600">(facultatif)</span>
-					</label>
-					<input
-						id={`${id}-rayon`}
-						type="text"
-						inputMode="numeric"
-						autoComplete="off"
-						aria-invalid={radiusError ? true : undefined}
-						aria-describedby={`${id}-rayon-aide${radiusError ? ` ${id}-rayon-erreur` : ''}`}
-						className={`${FIELD} w-32`}
-						{...register('rayon')}
-					/>
-					<p id={`${id}-rayon-aide`} className="text-neutral-700 text-sm">
-						De {RADIUS_BOUNDS_KM.min} à {RADIUS_BOUNDS_KM.max} km, en kilomètres entiers.
-					</p>
-					{radiusError ? (
-						<p id={`${id}-rayon-erreur`} className="text-red-800 text-sm">
-							{radiusError}
-						</p>
-					) : null}
-				</div>
-				<div className="flex items-center gap-3">
-					<input
-						id={`${id}-domicile`}
-						type="checkbox"
-						className="size-6 shrink-0 accent-neutral-900"
-						{...register('aDomicile')}
-					/>
-					<label htmlFor={`${id}-domicile`} className="min-h-11 flex-1 content-center font-medium text-sm">
-						Je me déplace à domicile
-					</label>
-				</div>
+				) : null}
+				<ZoneFields
+					valeurs={valeurs}
+					choix={choice}
+					onChoix={next => {
+						setChoice(next)
+						setZoneError('')
+						setTownError('')
+					}}
+					chercher={chercher}
+					erreurZone={zoneError}
+					erreurVille={townError}
+					erreurRayon={errors.rayon?.message}
+					register={register}
+					rayonFacultatif
+				/>
 				<FailureMessage message={message} sessionExpiree={expiredSession} />
 				<div className="flex flex-wrap gap-3">
 					<button

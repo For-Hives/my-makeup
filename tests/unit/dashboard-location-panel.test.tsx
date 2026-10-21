@@ -22,16 +22,19 @@ import { openWindow } from '../support/dom-react'
 const jsdomWindow = openWindow()
 
 const WITH_ANNECY: LocationValues = {
+	kind: 'city',
 	codeInsee: '74010',
 	libelle: 'Annecy (74)',
+	countries: [],
+	town: '',
 	rayonKm: 30,
 	aDomicile: false,
 }
-const WITHOUT_CITY: LocationValues = { codeInsee: '', libelle: '', rayonKm: null, aDomicile: false }
+const WITHOUT_CITY: LocationValues = { ...WITH_ANNECY, codeInsee: '', libelle: '', rayonKm: null }
 
-const ANNECY = { codeInsee: '74010', libelle: 'Annecy (74)' }
-const LYON = { codeInsee: '69123', libelle: 'Lyon (69)' }
-const DENIS_CITY = { codeInsee: '97411', libelle: 'Saint-Denis (974)' }
+const ANNECY = { codeInsee: '74010', libelle: 'Annecy (74)', nom: 'Annecy' }
+const LYON = { codeInsee: '69123', libelle: 'Lyon (69)', nom: 'Lyon' }
+const DENIS_CITY = { codeInsee: '97411', libelle: 'Saint-Denis (974)', nom: 'Saint-Denis' }
 
 type Reply = Awaited<ReturnType<CitiesSearch>>
 
@@ -49,7 +52,7 @@ function fakeUpload(reponse?: Awaited<ReturnType<LocationUpload>>) {
 	const calls: Parameters<LocationUpload>[0][] = []
 	const send: LocationUpload = async saisie => {
 		calls.push(saisie)
-		return reponse ?? { ok: true, valeurs: { ...WITH_ANNECY, ...saisie, libelle: 'Annecy (74)' } }
+		return reponse ?? { ok: true, valeurs: { ...WITH_ANNECY, rayonKm: saisie.rayonKm, aDomicile: saisie.aDomicile } }
 	}
 	return { appels: calls, envoyer: send }
 }
@@ -59,7 +62,7 @@ async function open(envoyer: LocationUpload, chercher: CitiesSearch, valeurs: Lo
 	await jsdomWindow.cliquer(jsdomWindow.bouton('Modifier ma localisation'))
 }
 
-const city = (): HTMLInputElement => jsdomWindow.champ('Ta commune') as HTMLInputElement
+const city = (): HTMLInputElement => jsdomWindow.champ('Où travailles-tu ?') as HTMLInputElement
 const dialogue = (): HTMLElement | null => jsdomWindow.w.document.querySelector('[role="dialog"]')
 const options = (): HTMLElement[] => [...jsdomWindow.w.document.querySelectorAll<HTMLElement>('[role="option"]')]
 /** The announcement of the card (outside the panel). */
@@ -136,7 +139,7 @@ describe('U16 : « Annecy » choisie au doigt, enregistrée par son code', () =>
 		await jsdomWindow.cliquer(jsdomWindow.bouton('Enregistrer'))
 		await jsdomWindow.attendre(() => dialogue() === null)
 
-		expect(calls).toEqual([{ codeInsee: '74010', rayonKm: 30, aDomicile: false }])
+		expect(calls).toEqual([{ kind: 'city', codeInsee: '74010', rayonKm: 30, aDomicile: false }])
 		expect(status()).toBe('Ta localisation est enregistrée.')
 	})
 
@@ -150,7 +153,7 @@ describe('U16 : « Annecy » choisie au doigt, enregistrée par son code', () =>
 		await jsdomWindow.cliquer(option)
 		await jsdomWindow.cliquer(jsdomWindow.bouton('Enregistrer'))
 		await jsdomWindow.attendre(() => dialogue() === null)
-		expect(calls[0]?.codeInsee).toBe('97411')
+		expect(calls[0]).toMatchObject({ codeInsee: '97411' })
 	})
 })
 
@@ -159,7 +162,8 @@ describe('le clavier suffit', () => {
 		const { chercher: find } = fakeSearch({ ok: true, communes: [ANNECY, LYON] })
 		const { appels: calls, envoyer: send } = fakeUpload()
 		await open(send, find, WITHOUT_CITY)
-		await write('An')
+		// No country starts like this text: the list holds the two communes only.
+		await write('Lyo')
 
 		expect(await key(city(), 'ArrowDown')).toBe(true)
 		expect(city().getAttribute('aria-activedescendant')).toBe(options()[0]?.id ?? 'x')
@@ -289,7 +293,7 @@ describe('U14, U15, E30 : le rayon', () => {
 			await jsdomWindow.saisir(jsdomWindow.champ('Rayon d’action (en km)'), input)
 			await jsdomWindow.cliquer(jsdomWindow.bouton('Enregistrer'))
 			await jsdomWindow.attendre(() => dialogue() === null)
-			expect(calls).toEqual([{ codeInsee: '74010', rayonKm: expected, aDomicile: false }])
+			expect(calls).toEqual([{ kind: 'city', codeInsee: '74010', rayonKm: expected, aDomicile: false }])
 			await jsdomWindow.demonter()
 		}
 	})
@@ -300,7 +304,7 @@ describe('U14, U15, E30 : le rayon', () => {
 		await jsdomWindow.cliquer(jsdomWindow.champ('Je me déplace à domicile'))
 		await jsdomWindow.cliquer(jsdomWindow.bouton('Enregistrer'))
 		await jsdomWindow.attendre(() => dialogue() === null)
-		expect(calls).toEqual([{ codeInsee: '74010', rayonKm: 30, aDomicile: true }])
+		expect(calls).toEqual([{ kind: 'city', codeInsee: '74010', rayonKm: 30, aDomicile: true }])
 	})
 })
 
@@ -330,7 +334,7 @@ describe('le service des communes en panne', () => {
 		await jsdomWindow.attendre(() => dialogue() === null)
 
 		expect(texts).toEqual([])
-		expect(calls).toEqual([{ codeInsee: '74010', rayonKm: 45, aDomicile: false }])
+		expect(calls).toEqual([{ kind: 'city', codeInsee: '74010', rayonKm: 45, aDomicile: false }])
 	})
 
 	test('une recherche qui lève donne un message du site, pas le sien', async () => {
@@ -361,7 +365,7 @@ describe('le service des communes en panne', () => {
 			)
 		)
 		expect(alert).toBeTruthy()
-		expect(calls).toEqual([{ codeInsee: '69123', rayonKm: 30, aDomicile: false }])
+		expect(calls).toEqual([{ kind: 'city', codeInsee: '69123', rayonKm: 30, aDomicile: false }])
 		expect(dialogue()).not.toBeNull()
 		expect(city().value).toBe('Lyon (69)')
 		expect(status()).toBe('')

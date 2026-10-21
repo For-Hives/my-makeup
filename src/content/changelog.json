@@ -180,6 +180,16 @@
 			"id": "une-maquilleuse-qui-travaille-a-l-etranger-ou-dans-plusie",
 			"type": "amelioration",
 			"text": "Une maquilleuse qui travaille à l'étranger ou dans plusieurs pays l'affiche sur son profil, avec le drapeau de chaque pays."
+		},
+		{
+			"id": "dans-ton-espace-un-code-postal-d-une-seule-commune-la-cho",
+			"type": "amelioration",
+			"text": "Dans ton espace, un code postal d'une seule commune la choisit tout seul."
+		},
+		{
+			"id": "dans-ton-espace-tu-peux-dire-que-tu-travailles-a-l-etrang",
+			"type": "ajout",
+			"text": "Dans ton espace, tu peux dire que tu travailles à l'étranger ou dans plusieurs pays."
 		}
 	],
 	"releases": []

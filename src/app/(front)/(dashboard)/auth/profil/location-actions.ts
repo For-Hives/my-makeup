@@ -36,7 +36,11 @@ export async function findMyCities(texte: unknown): Promise<SearchResult> {
 	const response = await findCities(texte)
 	if (response.genre === 'panne') return { ok: false, message: CITIES_SERVICE_MESSAGE }
 	if (response.genre === 'rien') return { ok: true, communes: [], motif: response.motif }
-	return { ok: true, communes: response.communes.map(suggestion) }
+	return {
+		ok: true,
+		communes: response.communes.map(suggestion),
+		...(response.codePostal === undefined ? {} : { codePostal: response.codePostal }),
+	}
 }
 
 /**

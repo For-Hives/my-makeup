@@ -8,6 +8,7 @@ import { type OnboardingStep, STEPS, STEPS_NAMES } from '@/lib/dashboard/onboard
 import type { PreparedPhoto } from '@/lib/dashboard/photo'
 import type { PhotoId } from '@/lib/dashboard/photos'
 import type { FileUploadResult } from '@/lib/dashboard/photos-upload'
+import type { ZoneReviewView } from '@/lib/dashboard/zone-review'
 import type { CitiesSearch } from '../CityField'
 import type { IdentityUpload } from '../IdentityEditor'
 import type { LocationUpload } from '../LocationEditor'
@@ -43,6 +44,7 @@ export function Onboarding({
 	envoyerIdentite,
 	envoyerLocalisation,
 	chercherCommunes,
+	revueZone = null,
 	envoyerPhoto,
 	preparer,
 	televerser,
@@ -56,6 +58,8 @@ export function Onboarding({
 	envoyerIdentite: IdentityUpload
 	envoyerLocalisation: LocationUpload
 	chercherCommunes: CitiesSearch
+	/** The zone to review the import left on the profile, or null (ticket 265). */
+	revueZone?: ZoneReviewView | null
 	envoyerPhoto: OnboardingPhotoUpload
 	preparer?: (fichier: File) => Promise<PreparedPhoto<File>>
 	televerser?: (fichier: File, alt: string) => Promise<FileUploadResult>
@@ -66,6 +70,8 @@ export function Onboarding({
 	const [step, setStep] = useState<OnboardingStep>(etapeInitiale)
 	const [identityValues, setIdentityValues] = useState(identite)
 	const [zoneValues, setZoneValues] = useState(localisation)
+	// A zone saved empties the review on the server: the banner does not come back with « Précédent ».
+	const [zoneReview, setZoneReview] = useState(revueZone)
 	const [origin, setOrigin] = useState<Origin | null>(null)
 	const title = useRef<HTMLHeadingElement>(null)
 	const first = useRef(true)
@@ -137,10 +143,12 @@ export function Onboarding({
 					valeurs={zoneValues}
 					envoyer={envoyerLocalisation}
 					chercher={chercherCommunes}
+					revue={zoneReview}
 					titre={title}
 					surFait={valeurs => {
 						trackStep('zone')
 						setZoneValues(valeurs)
+						setZoneReview(null)
 						setStep(3)
 					}}
 					retour={() => setStep(1)}
