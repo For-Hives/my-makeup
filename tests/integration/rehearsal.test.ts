@@ -3,10 +3,13 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSy
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { SQL } from 'bun'
-import { currentBench } from '../../scripts/bench'
+import { currentBench, eraseSchema } from '../../scripts/bench'
 import { BENCH_DATABASE_USER, inContainer } from '../../scripts/migration/rehearsal/engine'
+import { migrations } from '../../src/migrations'
 import { BENCH_CUTOVER_DATE, ROOT } from '../support/bench'
+import { runMigrations } from '../support/bench-schema'
 import { BENCH_DECISION_FILE, BENCH_REFERENCE_FILE } from '../support/import'
+import { emptyBase, testPayload } from '../support/payload-test'
 import { benchSource, createSourceStrapi, eraseSourceStrapi } from '../support/source-strapi'
 
 /**
@@ -82,6 +85,11 @@ beforeAll(async () => {
 }, 60_000)
 
 afterAll(async () => {
+	// The rehearsal rebuilds then destroys the target, which is this bench's own database: put the
+	// schema of the migrations back, empty, for the files that follow.
+	await eraseSchema(bench)
+	await runMigrations(await testPayload(), migrations, 'test')
+	await emptyBase()
 	await eraseSourceStrapi()
 	rmSync(directory, { recursive: true, force: true })
 })
