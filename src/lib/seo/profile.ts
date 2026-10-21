@@ -35,11 +35,22 @@ function profileDetail({ specialite: specialty, lieu, placePhrase }: ProfileDeta
 	return where ? `maquilleuse ${where}` : 'maquilleuse professionnelle'
 }
 
-/** The title: « Nom – détail | My-Makeup » when it fits in 60 characters, else the shorter forms. */
+/**
+ * The title: « Nom – détail | My-Makeup » when it fits in 60 characters, else the shorter forms, from the
+ * most to the least informative: without the brand, then the speciality alone (« Nom – spécialité | My-Makeup »,
+ * ticket 274: a profile in a zone of countries has a long place phrase), then the place alone, then the name.
+ */
 export function profileTitle(profil: Pick<PublicProfile, 'nom'> & ProfileDetail): string {
 	const name = textAbout(profil.nom)
 	const detail = profileDetail(profil)
-	const candidates = [`${name} – ${detail} | ${BRAND}`, `${name} – ${detail}`, `${name} | ${BRAND}`]
+	const place = profil.placePhrase ?? (profil.lieu ? `à ${profil.lieu}` : null)
+	const candidates = [
+		`${name} – ${detail} | ${BRAND}`,
+		`${name} – ${detail}`,
+		...(profil.specialite ? [`${name} – ${profil.specialite} | ${BRAND}`, `${name} – ${profil.specialite}`] : []),
+		...(place ? [`${name} – ${place} | ${BRAND}`] : []),
+		`${name} | ${BRAND}`,
+	]
 	return candidates.find(titre => titre.length <= MAX_TITLE) ?? truncate(name, MAX_TITLE)
 }
 
@@ -49,7 +60,7 @@ export function profileMetadata(profil: PublicProfile): Metadata {
 	return pageMetadata({
 		titre: profileTitle(profil),
 		description: profil.description,
-		repli: `Découvre ${profil.nom}, ${detail}, sur ${BRAND} : prestations, tarifs et moyens de contact.`,
+		repli: `Découvrez ${profil.nom}, ${detail}, sur ${BRAND} : prestations, tarifs et moyens de contact.`,
 		chemin: profilePath(profil.slug),
 		indexable: profil.indexable,
 		typeDePartage: 'profile',

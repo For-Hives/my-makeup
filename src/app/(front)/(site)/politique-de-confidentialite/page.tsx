@@ -8,7 +8,7 @@ import { PURGE_DELAY_DAYS } from '@/lib/tasks/unconfirmed-accounts'
 
 // Static: the text is in the code, and the page reads no cookie and no data (ticket 112).
 export const metadata = pageMetadata({
-	titre: 'Politique de confidentialité',
+	titre: 'Politique de confidentialité - My-Makeup',
 	description:
 		'Quelles données My-Makeup traite, pourquoi, combien de temps, avec quels prestataires, et comment exercer vos droits.',
 	repli:

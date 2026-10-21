@@ -48,7 +48,7 @@ describe('le texte des trois pages', () => {
 			const { metadata } = await module()
 			const description = String(metadata.description)
 
-			expect(String((metadata.title as { absolute: string }).absolute)).toMatch(/ \| My-Makeup$/)
+			expect(String((metadata.title as { absolute: string }).absolute)).toMatch(/ - My-Makeup$/)
 			expect(description.length).toBeGreaterThanOrEqual(70)
 			expect(description.length).toBeLessThanOrEqual(155)
 			expect(metadata.alternates?.canonical).toBe(`https://my-makeup.fr${filePath}`)

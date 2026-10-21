@@ -6,6 +6,7 @@ import { pageMetadata } from '@/lib/seo/metadata'
 // A fixed page: the same text for everyone, rendered once (the head block holds the search, a client component).
 export const metadata: Metadata = pageMetadata({
 	titre: 'Trouver une maquilleuse !',
+	marque: false,
 	description:
 		'Découvrez comment vous pouvez trouver une maquilleuse simplement, et qui correspondra parfaitement à tout vos besoins !',
 	repli:

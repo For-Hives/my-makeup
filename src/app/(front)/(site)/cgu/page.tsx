@@ -5,7 +5,7 @@ import { pageMetadata } from '@/lib/seo/metadata'
 
 // Static: the text is in the code, and the page reads no cookie and no data (ticket 112).
 export const metadata = pageMetadata({
-	titre: "Conditions générales d'utilisation",
+	titre: "Conditions générales d'utilisation - My-Makeup",
 	description:
 		"Les conditions générales d'utilisation de My-Makeup, l'annuaire gratuit de maquilleuses professionnelles.",
 	repli: "Les conditions générales d'utilisation de My-Makeup, l'annuaire gratuit de maquilleuses professionnelles.",
