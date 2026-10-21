@@ -18,7 +18,7 @@ La suite complète se joue **en CI**, une fois, sur la tête de `v3` : `ci-ok` (
 
 | Quoi | Relevé |
 |---|---|
-| Passage | CI 39601115694, commit `169ba7f` (tête de `v3` au 21/10/2026, 14:37 Paris), tous les jobs verts, `ci-ok` en 6 min 47 s. Le passage d'avant, CI 39524638111 sur `10c19b7` (21/10, 02:59 Paris), était vert aussi, comme le précédent, CI 39436197738 sur `db4cb54` (20/10), était vert aussi |
+| Passage | CI 39601115694, commit `169ba7f` (tête de `v3` au 21/10/2026, 14:37 Paris), tous les jobs verts, `ci-ok` en 6 min 47 s. Le passage d'avant, CI 39524638111 sur `10c19b7` (21/10, 02:59 Paris), était vert aussi, et celui d'avant (CI 39436197738 sur `db4cb54`, 20/10) |
 | Durée de `ci-ok` | 6 min 12 s de bout en bout (limite des 15 minutes). Les jobs : `qualite` 1 min 05, `unit` 1 min 30, `build` 2 min 07, `integration` de 3 min 35 à 5 min 54, `e2e` de 4 min 07 à 6 min 04, `ci-ok` 3 s. Médiane des 36 derniers passages verts de `v3` : 5 min 27 s ; le plus long : 10 min 6 s |
 | Tests unitaires | 3 632 verts (173 fichiers), 0 en échec |
 | Tests d'intégration | 2 244 verts (261 + 335 + 1 648), 0 en échec |
