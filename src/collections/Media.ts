@@ -217,6 +217,19 @@ export const Media: CollectionConfig<'media'> = {
 			admin: { readOnly: true },
 		},
 		{
+			name: 'objectMissing',
+			label: 'Objet absent du stockage',
+			type: 'checkbox',
+			defaultValue: false,
+			// Read with the media (the pages leave a marked photo out without asking the storage), written by the import only.
+			access: { create: neverAllowed, update: neverAllowed },
+			admin: {
+				readOnly: true,
+				description:
+					'Posé par l’import : la photo de l’ancien site a été reprise, mais son fichier n’existait plus dans le stockage. Elle n’est pas affichée.',
+			},
+		},
+		{
 			name: 'strapiFormats',
 			label: 'Formats de l’ancien site',
 			type: 'json',

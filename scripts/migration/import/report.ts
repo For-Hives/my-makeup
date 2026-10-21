@@ -175,7 +175,15 @@ export function checkAsText(rapport: Report): string {
 	].join('\n')
 }
 
-const ids = (liste: readonly number[]): string => (liste.length === 0 ? 'aucun' : liste.join(', '))
+/** The identifiers alone, for a line that already says how many there are. */
+const idList = (liste: readonly number[]): string => (liste.length === 0 ? 'aucun' : liste.join(', '))
+
+/**
+ * A list of identifiers, always led by how many there are: « 1 (127) », never the bare « 127 », which
+ * reads as a count (ticket 275). An empty list is « aucun ».
+ */
+const ids = (liste: readonly number[]): string =>
+	liste.length === 0 ? 'aucun' : `${liste.length} (${liste.join(', ')})`
 
 const plural = (nombre: number, singulier: string, pluriel: string): string =>
 	`${nombre} ${nombre > 1 ? pluriel : singulier}`
@@ -203,7 +211,7 @@ function summaryRow(nom: string, bilan: CollectionSummary, mode: Mode): string[]
 		)
 	if (bilan.deletedInV3?.length)
 		rows.push(
-			`  - supprimés dans la v3, ni repris ni leur profil : ${bilan.deletedInV3.length} (${ids(bilan.deletedInV3)})`
+			`  - supprimés dans la v3, ni repris ni leur profil : ${bilan.deletedInV3.length} (${idList(bilan.deletedInV3)})`
 		)
 	if (bilan.withoutOrigin)
 		rows.push(`  - dans la cible, sans identifiant de l’ancien site (ajoutés à la main) : ${bilan.withoutOrigin}`)
@@ -212,7 +220,7 @@ function summaryRow(nom: string, bilan: CollectionSummary, mode: Mode): string[]
 	if (bilan.distribution) rows.push(`  - ${distributionAsText(bilan.distribution)}`)
 	if (bilan.spam?.length)
 		rows.push(
-			`  - écartés, profils vides laissés sans compte par le spam (SCHEMA.md §4.1) : ${bilan.spam.length} (${ids(bilan.spam)})`
+			`  - écartés, profils vides laissés sans compte par le spam (SCHEMA.md §4.1) : ${bilan.spam.length} (${idList(bilan.spam)})`
 		)
 	if (bilan.files) rows.push(...filesRows(bilan.files))
 	if (bilan.cities) rows.push(...citiesRows(bilan.cities, bilan.zones))
@@ -223,22 +231,22 @@ function summaryRow(nom: string, bilan: CollectionSummary, mode: Mode): string[]
 		)
 	if (bilan.photosNotCarriedOver?.length)
 		rows.push(
-			`  - photos non reprises, leur fichier n’étant pas adopté : ${bilan.photosNotCarriedOver
-				.map(({ entry: entree, file }) => `${entree} (fichier ${file})`)
-				.join(', ')}`
+			`  - photos non reprises, leur fichier n’étant pas adopté : ${bilan.photosNotCarriedOver.length} (${bilan.photosNotCarriedOver
+				.map(({ entry: entree, file }) => `${entree} : fichier ${file}`)
+				.join(', ')})`
 		)
 	if (bilan.linksWithoutRow?.length)
 		rows.push(`  - liens de liste qui ne nomment aucune ligne, signalés : ${ids(bilan.linksWithoutRow)}`)
 	if (bilan.prices) rows.push(...priceRows(bilan.prices))
 	if (bilan.contactDetailsToReview?.length)
 		rows.push(
-			`  - coordonnées laissées de côté, que le serveur refuserait (à revoir à la main) : ${bilan.contactDetailsToReview
-				.map(({ profile: profil, field: champ }) => `${profil} (${champ})`)
-				.join(', ')}`
+			`  - coordonnées laissées de côté, que le serveur refuserait (à revoir à la main) : ${bilan.contactDetailsToReview.length} (${bilan.contactDetailsToReview
+				.map(({ profile: profil, field: champ }) => `${profil} : ${champ}`)
+				.join(', ')})`
 		)
 	if (bilan.keptConsents?.length)
 		rows.push(
-			`  - date de consentement déjà posée, gardée (la date demandée est autre) : ${bilan.keptConsents.length} (${ids(bilan.keptConsents)})`
+			`  - date de consentement déjà posée, gardée (la date demandée est autre) : ${bilan.keptConsents.length} (${idList(bilan.keptConsents)})`
 		)
 	if (bilan.radiiToReview?.length)
 		rows.push(
@@ -282,7 +290,9 @@ function filesRows(fichiers: FilesSummary): string[] {
 	for (const { file, reason } of fichiers.notAdopted) byReason.set(reason, [...(byReason.get(reason) ?? []), file])
 	for (const [reason, list] of byReason) rows.push(`  - non adoptés (${reason}) : ${ids(list)}`)
 	if (fichiers.notFound.length > 0)
-		rows.push(`  - 404 connus, adoptés sans objet dans le stockage : ${ids(fichiers.notFound)}`)
+		rows.push(
+			`  - 404 connus, adoptés sans objet dans le stockage : ${fichiers.notFound.length} (${fichiers.notFound.length > 1 ? 'fichiers' : 'fichier'} ${idList(fichiers.notFound)})`
+		)
 	if (fichiers.differentNames.length > 0)
 		rows.push(`  - objet nommé autrement que hash suivi de ext : ${ids(fichiers.differentNames)}`)
 	if (fichiers.uploadedByAnotherAccount.length > 0)
@@ -307,13 +317,13 @@ function zonesRows(zones: ZonesSummary, filledCities: number): string[] {
 	const byReason = (Object.keys(REASON_LABELS) as ReasonToReview[])
 		.map(reason => {
 			const profiles = zones.toReviewByReason[reason]
-			return `${REASON_LABELS[reason]} ${profiles.length}${profiles.length > 0 ? ` (${ids(profiles)})` : ''}`
+			return `${REASON_LABELS[reason]} ${profiles.length}${profiles.length > 0 ? ` (${idList(profiles)})` : ''}`
 		})
 		.join(' ; ')
 	return [
 		`  - zones reconnues, communes et pays : ${zones.recognized} sur ${plural(filledCities, 'ville renseignée', 'villes renseignées')} ` +
 			`(${percentage(zones.part)}, cible 90 %) ; communes seules : ${zones.communesOnly} ; ` +
-			`zones de pays : ${zones.countries.length} (${ids(zones.countries)})`,
+			`zones de pays : ${zones.countries.length} (${idList(zones.countries)})`,
 		`  - villes à revoir, par raison : ${byReason}`,
 	]
 }
@@ -357,7 +367,7 @@ function haltRows({
 	const rows = ['Import arrêté avant toute écriture : rien n’est écrit.']
 	if (emailsPartages.length > 0)
 		rows.push(
-			`- Des comptes de l’ancien site portent le même email, et la table de décision ne dit pas lequel garder. Groupes, par identifiant : ${emailsPartages.map(groupe => `[${groupe.join(', ')}]`).join(' ; ')}.`,
+			`- Des comptes de l’ancien site portent le même email, et la table de décision ne dit pas lequel garder. Groupes, par identifiant : ${emailsPartages.length} (${emailsPartages.map(groupe => `[${groupe.join(', ')}]`).join(' ; ')}).`,
 			'  Une décision par groupe, dans la table donnée par --decisions (docs/migration/IMPORT.md).'
 		)
 	if (profilsDeComptesEcartes.length > 0)
@@ -376,7 +386,7 @@ function haltRows({
 /** How a parity reads: complete, incomplete by its refused documents only, or incomplete. */
 function parityState(p: Parity): string {
 	if (parityComplete(p)) return 'parité complète'
-	const refuses = p.refused.length > 0 ? `${plural(p.refused.length, 'refusé', 'refusés')} (${ids(p.refused)})` : ''
+	const refuses = p.refused.length > 0 ? `${plural(p.refused.length, 'refusé', 'refusés')} (${idList(p.refused)})` : ''
 	if (withoutUnexplainedGap(p)) return `parité incomplète : ${refuses}`
 	return `parité incomplète${refuses ? ` : ${refuses}, et d’autres écarts` : ''}`
 }

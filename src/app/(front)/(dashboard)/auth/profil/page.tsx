@@ -117,7 +117,11 @@ export default async function ProfilePage() {
 								) : carte.section === 'competences' ? (
 									<BulletsEditor liste="skills" puces={listBullets(profile.skills)} envoyer={saveMySkills} />
 								) : carte.section === 'photo' ? (
-									<PhotoEditor photo={photos.photo} envoyer={saveMyMainPicture} />
+									<PhotoEditor
+										photo={photos.photo}
+										manquante={photos.principaleManquante}
+										envoyer={saveMyMainPicture}
+									/>
 								) : carte.section === 'portfolio' ? (
 									<PortfolioEditor photos={photos.galerie} envoyer={saveMyPortfolio} />
 								) : carte.section === 'reseaux' ? (

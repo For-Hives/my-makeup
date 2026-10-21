@@ -246,8 +246,8 @@ describe('La commande', () => {
 
 		expect(code, output).toBe(0)
 		expect(output).toContain('communes : 9 sur 11 villes renseignées (81,8 %, cible 90 %)')
-		expect(output).toContain('villes à revoir, zone vide (liste de revue privée, --review) : 26, 28')
-		expect(output).toContain('adresses postales, dont seule la commune est reprise : 23')
+		expect(output).toContain('villes à revoir, zone vide (liste de revue privée, --review) : 2 (26, 28)')
+		expect(output).toContain('adresses postales, dont seule la commune est reprise : 1 (23)')
 		expect(statSync(file).mode & 0o777).toBe(0o600)
 		const list = JSON.parse(readFileSync(file, 'utf8')) as CaseToReview[]
 		expect(list.map(({ profil }) => profil)).toEqual([26, 28])

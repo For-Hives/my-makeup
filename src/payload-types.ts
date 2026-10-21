@@ -462,6 +462,10 @@ export interface Media {
   owner?: (number | null) | Pro;
   strapiId?: number | null;
   /**
+   * Posé par l’import : la photo de l’ancien site a été reprise, mais son fichier n’existait plus dans le stockage. Elle n’est pas affichée.
+   */
+  objectMissing?: boolean | null;
+  /**
    * Archive : les vignettes de l’ancien site, restées où elles sont.
    */
   strapiFormats?:
@@ -950,6 +954,7 @@ export interface MediaSelect<T extends boolean = true> {
   alt?: T;
   owner?: T;
   strapiId?: T;
+  objectMissing?: T;
   strapiFormats?: T;
   prefix?: T;
   _objectKey?: T;

@@ -328,6 +328,7 @@ export const MEDIA_ADAPTER: Adapter = {
 		width: 'nombre',
 		height: 'nombre',
 		strapiFormats: 'json',
+		objectMissing: 'booleen',
 		owner: 'relation',
 		createdAt: 'date',
 		updatedAt: 'date',
@@ -361,6 +362,8 @@ export function expectedMedia(
 				width: file.width,
 				height: file.height,
 				strapiFormats: formatsOf(file.formats),
+				// The pages leave a photo marked so out instead of drawing a broken image (ticket 275).
+				objectMissing: presence?.present === false,
 				owner: account === null ? null : (comptes.get(account) ?? null),
 				createdAt: file.created_at,
 				updatedAt: file.updated_at,

@@ -19,6 +19,8 @@ export interface DashboardPhoto {
 export interface DashboardPhotos {
 	photo: DashboardPhoto | null
 	galerie: DashboardPhoto[]
+	/** Her main photo is named, but its file was missing when the old site was taken over (ticket 275): she is told to add it again. */
+	principaleManquante: boolean
 }
 
 /** The identifier of a photo in a request: a whole number, or its digits. Nothing else. */
@@ -36,7 +38,7 @@ export async function readDashboardPhotos(
 	const main = namedPhotos(profil.mainPicture)[0]
 	const ranked = namedPhotos(profil.gallery)
 	const requested = [...new Set([...(main === undefined ? [] : [main]), ...ranked].map(String))]
-	if (requested.length === 0) return { photo: null, galerie: [] }
+	if (requested.length === 0) return { photo: null, galerie: [], principaleManquante: false }
 	const { docs } = await payload.find({
 		collection: 'media',
 		depth: 0,
@@ -44,11 +46,17 @@ export async function readDashboardPhotos(
 		overrideAccess: true,
 		pagination: false,
 		// The address is built from the file name and the prefix: they are read with it.
-		select: { url: true, width: true, height: true, alt: true, filename: true, prefix: true },
+		select: { url: true, width: true, height: true, alt: true, filename: true, prefix: true, objectMissing: true },
 		where: { id: { in: requested } },
 	})
 	const byId = new Map<string, DashboardPhoto>()
+	const missing = new Set<string>()
 	for (const media of docs) {
+		// Marked by the import, no new request here: the page leaves it out like a photo that is gone.
+		if (media.objectMissing === true) {
+			missing.add(String(media.id))
+			continue
+		}
 		if (typeof media.url !== 'string' || media.url === '') continue
 		byId.set(String(media.id), {
 			id: media.id,
@@ -61,5 +69,6 @@ export async function readDashboardPhotos(
 	return {
 		photo: (main !== undefined && byId.get(String(main))) || null,
 		galerie: ranked.flatMap(id => byId.get(String(id)) ?? []),
+		principaleManquante: main !== undefined && missing.has(String(main)),
 	}
 }
