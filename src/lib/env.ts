@@ -1,5 +1,13 @@
 import { z } from 'zod'
 import { cleanupEnd } from './auth/legacy-cookies'
+import {
+	CONNECTION_TIMEOUT_MS,
+	CONNECTION_TIMEOUT_RANGE,
+	CONNECTIONS_MAX,
+	CONNECTIONS_MAX_RANGE,
+	DEFAULT_POOL_SIZE,
+	type PoolSize,
+} from './pool-base'
 import { KEY_FORMAT } from './seo/indexnow'
 import type { VersionSources } from './version'
 
@@ -32,6 +40,8 @@ export type RawEnv = Partial<
 		| 'AUTH_VERIFY'
 		| 'CUTOVER_DATE'
 		| 'CONTACT_TO'
+		| 'DATABASE_POOL_MAX'
+		| 'DATABASE_POOL_TIMEOUT_MS'
 		| 'DATABASE_URI'
 		| 'EMAIL_FROM'
 		| 'GOOGLE_CLIENT_ID'
@@ -132,6 +142,8 @@ export type ServerEnv = {
 	 */
 	authVerify: boolean
 	databaseUri: string
+	/** The size of the connection pool and its wait limit (DATABASE_POOL_MAX, DATABASE_POOL_TIMEOUT_MS, ticket 268). */
+	databasePool: PoolSize
 	/**
 	 * Set only on the site, when IMPORT_TOKEN is: the import the container runs once for this token
 	 * (ticket 233). Nothing anywhere else, and never while Next builds.
@@ -250,6 +262,8 @@ const EXPECTED = {
 	AUTH_VERIFY: '« on » (la valeur par défaut) ou « off »',
 	CUTOVER_DATE: 'une date au format AAAA-MM-JJ, comme « 2027-02-01 », qui existe',
 	CONTACT_TO: 'une adresse email seule, comme « equipe@domaine »',
+	DATABASE_POOL_MAX: `un nombre entier de connexions, de ${CONNECTIONS_MAX_RANGE.min} à ${CONNECTIONS_MAX_RANGE.max} (${CONNECTIONS_MAX} par défaut)`,
+	DATABASE_POOL_TIMEOUT_MS: `une attente en millisecondes, de ${CONNECTION_TIMEOUT_RANGE.min} à ${CONNECTION_TIMEOUT_RANGE.max} (${CONNECTION_TIMEOUT_MS} par défaut)`,
 	DATABASE_URI: 'postgres://UTILISATEUR:MOT_DE_PASSE@HÔTE:PORT/BASE',
 	EMAIL_FROM: '« Nom <adresse@domaine> », ou une adresse seule',
 	GOOGLE_CLIENT_ID: 'l’identifiant du client OAuth de la console Google, avec GOOGLE_CLIENT_SECRET',
@@ -694,6 +708,14 @@ function importEnv(raw: RawEnv, problems: { variable: string; problem: string }[
 
 const required = z.string({ error: ABSENT })
 
+/** A whole number written in digits only, within the range; nothing else (« 10.5 », « 1e1 », « 0x10 », « -1 »). */
+function wholeNumberIn(value: string, range: { min: number; max: number }): number | undefined {
+	const text = value.trim()
+	if (!/^\d{1,6}$/.test(text)) return undefined
+	const number = Number(text)
+	return number >= range.min && number <= range.max ? number : undefined
+}
+
 const schema = z.object({
 	AUTH_VERIFY: z
 		.string()
@@ -706,6 +728,14 @@ const schema = z.object({
 	CONTACT_TO: z
 		.string()
 		.refine(value => ADDRESS_ALONE.test(value.trim()), { error: 'illisible' })
+		.optional(),
+	DATABASE_POOL_MAX: z
+		.string()
+		.refine(value => wholeNumberIn(value, CONNECTIONS_MAX_RANGE) !== undefined, { error: 'illisible' })
+		.optional(),
+	DATABASE_POOL_TIMEOUT_MS: z
+		.string()
+		.refine(value => wholeNumberIn(value, CONNECTION_TIMEOUT_RANGE) !== undefined, { error: 'illisible' })
 		.optional(),
 	DATABASE_URI: required.refine(value => postgresUrl(value) !== undefined, { error: 'illisible' }),
 	GOOGLE_CLIENT_ID: z.string().optional(),
@@ -827,6 +857,11 @@ export function parseServerEnv(source: RawEnv): ServerEnv {
 	return {
 		authVerify: parsed.data.AUTH_VERIFY?.trim().toLowerCase() !== 'off',
 		contactTo: contactTo(parsed.data.CONTACT_TO, parsed.data.NEXT_PUBLIC_SITE_URL),
+		databasePool: {
+			max: wholeNumberIn(parsed.data.DATABASE_POOL_MAX ?? '', CONNECTIONS_MAX_RANGE) ?? CONNECTIONS_MAX,
+			timeoutMs:
+				wholeNumberIn(parsed.data.DATABASE_POOL_TIMEOUT_MS ?? '', CONNECTION_TIMEOUT_RANGE) ?? CONNECTION_TIMEOUT_MS,
+		},
 		databaseUri: parsed.data.DATABASE_URI,
 		googleIssuer: issuer?.issuer ?? GOOGLE_ISSUER,
 		...(importation && { importation }),
@@ -856,6 +891,8 @@ function processEnv(): RawEnv {
 		AUTH_VERIFY: process.env.AUTH_VERIFY,
 		CUTOVER_DATE: process.env.CUTOVER_DATE,
 		CONTACT_TO: process.env.CONTACT_TO,
+		DATABASE_POOL_MAX: process.env.DATABASE_POOL_MAX,
+		DATABASE_POOL_TIMEOUT_MS: process.env.DATABASE_POOL_TIMEOUT_MS,
 		DATABASE_URI: process.env.DATABASE_URI,
 		EMAIL_FROM: process.env.EMAIL_FROM,
 		GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
@@ -947,6 +984,8 @@ export function serverEnv(
 		authVerify: true,
 		// Not read while Next builds, where nothing is sent: the server reads it when it starts.
 		contactTo: CONTACT_TO_TEST,
+		// Not read while Next builds, which opens no connection: the server reads it when it starts.
+		databasePool: DEFAULT_POOL_SIZE,
 		databaseUri: raw.DATABASE_URI ?? '',
 		// Not read while Next builds, where nothing talks to a provider: the server reads it when it starts.
 		googleIssuer: GOOGLE_ISSUER,

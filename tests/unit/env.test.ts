@@ -113,6 +113,7 @@ describe('a missing or short secret stops the start', () => {
 		expect(parseServerEnv(valid)).toEqual({
 			authVerify: true,
 			contactTo: 'contact@example.test',
+			databasePool: { max: 10, timeoutMs: 5000 },
 			databaseUri: LOCAL_URI,
 			googleIssuer: 'https://accounts.google.com',
 			localDatabase: true,
@@ -445,6 +446,7 @@ describe('next build needs no secret and no database', () => {
 		expect(serverEnv(building)).toEqual({
 			authVerify: true,
 			contactTo: 'contact@example.test',
+			databasePool: { max: 10, timeoutMs: 5000 },
 			databaseUri: '',
 			googleIssuer: 'https://accounts.google.com',
 			localDatabase: false,
@@ -1056,5 +1058,44 @@ describe('the import of the old site runs on the site only, once per token (tick
 		const construction = serverEnv({ ...request, NEXT_PHASE: 'phase-production-build' })
 		expect(construction.importation).toBeUndefined()
 		expect(construction.sourceStrapi).toBeUndefined()
+	})
+})
+
+describe('the size of the connection pool is set by the environment, with a safe default (ticket 268)', () => {
+	test('absent, blank or empty: 10 connections and 5 seconds, the default for one container', () => {
+		expect(parseServerEnv(valid).databasePool).toEqual({ max: 10, timeoutMs: 5000 })
+		expect(parseServerEnv({ ...valid, DATABASE_POOL_MAX: '  ', DATABASE_POOL_TIMEOUT_MS: '' }).databasePool).toEqual({
+			max: 10,
+			timeoutMs: 5000,
+		})
+	})
+
+	test('both are read, spaces around the digits cut', () => {
+		expect(
+			parseServerEnv({ ...valid, DATABASE_POOL_MAX: ' 20 ', DATABASE_POOL_TIMEOUT_MS: '8000' }).databasePool
+		).toEqual({
+			max: 20,
+			timeoutMs: 8000,
+		})
+	})
+
+	test('the bounds are accepted, what is outside them is refused by name, with no value in the message', () => {
+		for (const [variable, accepted] of [
+			['DATABASE_POOL_MAX', ['1', '50']],
+			['DATABASE_POOL_TIMEOUT_MS', ['1000', '30000']],
+		] as const)
+			for (const value of accepted) expect(() => parseServerEnv({ ...valid, [variable]: value })).not.toThrow()
+
+		for (const [variable, refused] of [
+			['DATABASE_POOL_MAX', ['0', '51', '-1', '10.5', '1e1', '0x10', 'dix', '99999999']],
+			// 0 would mean « wait for ever » to pg: the hang the wait limit exists to prevent.
+			['DATABASE_POOL_TIMEOUT_MS', ['0', '999', '30001', '-5', '5s', '5e3']],
+		] as const)
+			for (const value of refused) {
+				const error = refusal({ ...valid, [variable]: value })
+				expect(error.variables).toEqual([variable])
+				expect(error.message).toContain(`- ${variable} : illisible.`)
+				expect(error.message).not.toContain(`« ${value} »`)
+			}
 	})
 })

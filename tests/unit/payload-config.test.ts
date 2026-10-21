@@ -29,6 +29,8 @@ const online: RawEnv = {
 }
 
 const VARIABLES = [
+	'DATABASE_POOL_MAX',
+	'DATABASE_POOL_TIMEOUT_MS',
 	'DATABASE_URI',
 	'EMAIL_FROM',
 	'NEXT_PHASE',
@@ -70,7 +72,7 @@ async function configUnder(env: RawEnv): Promise<SanitizedConfig> {
 
 type DatabaseOptions = {
 	disableCreateDatabase: boolean
-	poolOptions: { connectionString?: string; max?: number }
+	poolOptions: { connectionString?: string; max?: number; connectionTimeoutMillis?: number }
 	prodMigrations?: unknown[]
 	push: boolean
 }
@@ -89,7 +91,7 @@ describe('src/payload.config.ts is hardened', () => {
 		expect(config.secret).toBe(SECRET)
 		expect(database(config)).toMatchObject({
 			disableCreateDatabase: false,
-			poolOptions: { connectionString: LOCAL_URI, max: 5 },
+			poolOptions: { connectionString: LOCAL_URI, max: 10, connectionTimeoutMillis: 5000 },
 			push: true,
 		})
 	})
@@ -109,12 +111,17 @@ describe('src/payload.config.ts is hardened', () => {
 
 		expect(database(config)).toMatchObject({
 			disableCreateDatabase: true,
-			poolOptions: { connectionString: REMOTE_URI, max: 5 },
+			poolOptions: { connectionString: REMOTE_URI, max: 10, connectionTimeoutMillis: 5000 },
 			push: false,
 		})
 		expect(database(config).prodMigrations).toBe(migrations)
 		expect(config.csrf).toEqual(['https://my-makeup.fr'])
 		expect(config.cors).toEqual([])
+	})
+
+	test('the size of the pool and its wait limit come from the environment (ticket 268)', async () => {
+		const config = await configUnder({ ...online, DATABASE_POOL_MAX: '20', DATABASE_POOL_TIMEOUT_MS: '8000' })
+		expect(database(config)).toMatchObject({ poolOptions: { max: 20, connectionTimeoutMillis: 8000 } })
 	})
 
 	test('a development server pointed at a remote database does not push either', async () => {
