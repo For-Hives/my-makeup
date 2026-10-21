@@ -358,7 +358,10 @@ async function runImport(options: RunOptions): Promise<Report> {
 
 		// Each photo points at its media in Payload, read once the media are written.
 		const mediaIds = await idsInTarget(payload, MEDIA_ADAPTER, allMedia, report.collections.media.refused)
-		const profiles = expectedProfiles(read.profils, accountIds, skipped, cities.communes, mediaIds, consentDate, now)
+		const profiles = expectedProfiles(read.profils, accountIds, skipped, cities.communes, mediaIds, consentDate, now, {
+			countries: cities.countries,
+			reviews: cities.reviews,
+		})
 		if (skipped.spam.length > 0) report.gaps[REFERENCES.profilsDuSpam] = skipped.spam.length
 		const consents = targetInService ? [] : keptConsents(profiles.expected, await readTarget(payload, PROFILES_ADAPTER))
 		const profilesSummary = await importerCollection(options, profilesAdapter, read.profils.length, profiles.expected)
@@ -374,6 +377,7 @@ async function runImport(options: RunOptions): Promise<Report> {
 			statuses: profiles.statuses,
 			statusesDifferingFromSource: profiles.statusesDifferingFromSource,
 			cities: cities.bilan,
+			zones: cities.zones,
 			photosNotCarriedOver: profiles.photosNotCarriedOver,
 			linksWithoutRow: profiles.linksWithoutRow,
 			prices: profiles.prices,

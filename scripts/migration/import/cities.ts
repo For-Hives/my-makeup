@@ -14,22 +14,36 @@
  *   holds too. A text that names several communes (« Saint-Julien »), none, or that is no commune at
  *   all (« France », « Paris, Lyon et Annecy ») leaves the zone empty, and the profile « à revoir »:
  *   it goes to the private list of review, with the communes it could be.
- * - A line of the table of decisions settles a profile « à revoir » (`communes`): the commune of its
- *   INSEE code, or none. A line that names a profile not « à revoir » is without effect.
+ * - A postal code that several communes hold is its own reason, `code-postal-partage`: the zone stays
+ *   empty, the communes are the candidates, and nothing is guessed (plans/PLAN-ZONES.md §3.3, §3.5).
+ * - A commune found keeps its postal codes (`ExpectedCity.postalCodes`).
+ * - A text made only of known countries, one of them foreign, is a zone of countries, in the order of
+ *   the text (« France & Italie »). One foreign country and one town (« Bruxelles-Belgique ») is a zone
+ *   of that country with the town, when the town passes the rules of a name of commune and is neither a
+ *   commune of France (the referential is asked `nom:<town>`), nor a département, nor a region. Any
+ *   other text that names a country stays « à revoir » (./zone-text.ts reads the pieces).
+ * - A line of the table of decisions settles a profile « à revoir » (`cities`): the commune of its
+ *   INSEE code, none, or countries with a town. A line that names a profile not « à revoir » is
+ *   without effect.
  */
 
+import { FRANCE_CODE } from '../../../src/lib/countries'
 import { DEPARTMENTS } from '../../../src/lib/departments'
 import { usableCity } from '../../../src/lib/profile/completeness'
 import { publicPlace } from '../../../src/lib/profile/public-place'
 import {
 	CITY_NAME_MAX,
+	countriesErrors,
 	departmentOfInseeCode,
 	hasNameCharacters,
 	looksLikeAnAddress,
 	roundedCoordinate,
+	townErrors,
+	type ZONE_REVIEW_REASONS,
 } from '../../../src/lib/profile/zone'
 import type { Reference, ReferenceCity } from './reference'
 import { ImportRefuse } from './target'
+import { FRENCH_REGIONS, readZonePieces } from './zone-text'
 
 /** The commune a profile must hold, as the collection stores it (`profiles.city`). */
 export interface ExpectedCity {
@@ -38,6 +52,8 @@ export interface ExpectedCity {
 	department: string | null
 	latitude: number | null
 	longitude: number | null
+	/** The postal codes the referential gives the commune, sorted. */
+	postalCodes: string[]
 }
 
 /** What the import looks for in a city typed: a name, a postal code, a département. Never a street. */
@@ -51,12 +67,23 @@ export interface Search {
 }
 
 /** Why a city is « à revoir ». */
-export type ReasonToReview = 'homonymes' | 'introuvable' | 'pas-une-commune'
+export type ReasonToReview = 'homonymes' | 'introuvable' | 'pas-une-commune' | 'code-postal-partage'
+
+/** The reason as the collection stores it (`zoneReview.reason`). */
+export type StoredReason = (typeof ZONE_REVIEW_REASONS)[number]
+
+const STORED_REASONS: Readonly<Record<ReasonToReview, StoredReason>> = {
+	homonymes: 'homonyms',
+	introuvable: 'notFound',
+	'pas-une-commune': 'notACity',
+	'code-postal-partage': 'sharedPostalCode',
+}
 
 /** What a city typed gives. */
 export type Resolution =
 	| { genre: 'vide' }
 	| { genre: 'commune'; commune: ReferenceCity; adresse: boolean }
+	| { genre: 'pays'; countries: string[]; town: string | null; adresse: false }
 	| {
 			genre: 'a-revoir'
 			motif: ReasonToReview
@@ -159,6 +186,92 @@ const unique = (communes: readonly ReferenceCity[]): ReferenceCity[] =>
 /** How many communes the review shows for a name the referential does not give as it is. */
 const SUGGESTIONS = 5
 
+/** A search that asks nothing: the review of a text that is no commune names no search. */
+const NO_SEARCH: Search = { nom: null, codePostal: null, departement: null, adresse: false }
+
+/** A name that is a département or a region of France, as it is compared. */
+const FRENCH_AREAS: ReadonlySet<string> = new Set(
+	[...Object.values(DEPARTMENTS), ...FRENCH_REGIONS].map(name => comparableName(name))
+)
+
+/** The name asked of the referential for a place: the same form `citySearch` asks. */
+const askedName = (place: string): string => withoutAbbreviation(place).replace(/\s+/g, ' ').trim().toLowerCase()
+
+/**
+ * Whether a place typed next to a foreign country can be the town of that country: the rules of a
+ * name of commune (`usableCity`, six words at most, letters, no address), and `townErrors`, which
+ * the collection applies at every save.
+ */
+function plausibleTown(place: string, country: string): boolean {
+	return (
+		usableCity(place) &&
+		/\p{L}/u.test(place) &&
+		place.split(/\s+/).length <= 6 &&
+		townErrors(place, [country]).length === 0
+	)
+}
+
+/**
+ * What a text that names a foreign country gives, or `null` when it names none (it is then read as
+ * a commune, as before).
+ *
+ * - Only countries: a zone of countries, each once, in the order of the text.
+ * - One foreign country and one place: the town of that country, when the place passes the rules of
+ *   a town, is no département nor region of France, and no commune of France bears its name.
+ * - Anything else: « à revoir », `pas-une-commune`. Nothing is asked unless one country and one
+ *   town are left.
+ */
+async function resolveAbroad(
+	text: string,
+	wholeName: string | null,
+	referentiel: Reference
+): Promise<Resolution | null> {
+	const pieces = readZonePieces(text)
+	const codes = [...new Set(pieces.flatMap(piece => (piece.kind === 'country' ? [piece.code] : [])))]
+	const foreign = codes.filter(code => code !== FRANCE_CODE)
+	if (foreign.length === 0) return null
+	const places = pieces.flatMap(piece => (piece.kind === 'place' ? [piece.text] : []))
+	// A text that is the whole name of a commune of France is never cut: « Saint-Maurice » holds the
+	// country Maurice, « Allemagne-en-Provence » the country Allemagne. Cut only what no commune names.
+	const askWhole =
+		wholeName !== null && (places.length === 0 ? pieces.length === 1 : !/[,;/&+|]|\s+et\s+|\s[-–—]\s/iu.test(text))
+	const matchingCities = !askWhole
+		? []
+		: (await referentiel.repondre({ genre: 'nom', valeur: wholeName ?? '' })).filter(
+				commune => comparableName(commune.nom) === comparableName(wholeName ?? '')
+			)
+	const toReview = (candidats: ReferenceCity[] = [], recherche: Search = NO_SEARCH): Resolution => ({
+		genre: 'a-revoir',
+		motif: 'pas-une-commune',
+		candidats: unique(candidats),
+		adresse: false,
+		recherche,
+	})
+	if (matchingCities.length > 0) {
+		// A text of several pieces or one with a place is a commune of France as it is; a text that is only
+		// countries and also a commune (« Grenade », « Suisse ») is not guessed: the person decides.
+		return places.length === 0 && pieces.length === 1
+			? toReview(matchingCities, { ...NO_SEARCH, nom: wholeName })
+			: null
+	}
+	if (places.length === 0) {
+		return countriesErrors(codes).length === 0
+			? { genre: 'pays', countries: codes, town: null, adresse: false }
+			: toReview()
+	}
+	const [place, ...otherPlaces] = places
+	const [country] = foreign
+	if (place === undefined || country === undefined || otherPlaces.length > 0 || codes.length !== 1) return toReview()
+	if (!plausibleTown(place, country) || FRENCH_AREAS.has(comparableName(place))) return toReview()
+	const name = askedName(place)
+	const search: Search = { ...NO_SEARCH, nom: name }
+	const sameName = (await referentiel.repondre({ genre: 'nom', valeur: name })).filter(
+		commune => comparableName(commune.nom) === comparableName(place)
+	)
+	if (sameName.length > 0) return toReview(sameName, search)
+	return { genre: 'pays', countries: [country], town: place.replace(/\s+/g, ' '), adresse: false }
+}
+
 /**
  * What a city typed gives, asking the referential for the communes of its name and of its postal
  * code (see the top of this file).
@@ -166,6 +279,8 @@ const SUGGESTIONS = 5
 export async function resolveCity(ville: string | null, referentiel: Reference): Promise<Resolution> {
 	const search = citySearch(ville)
 	if (!search) return { genre: 'vide' }
+	const abroad = await resolveAbroad(ville?.trim() ?? '', search.nom, referentiel)
+	if (abroad) return abroad
 	const { nom: name, codePostal, departement: department, adresse: address } = search
 	const toReview = (motif: ReasonToReview, candidats: ReferenceCity[]): Resolution => ({
 		genre: 'a-revoir',
@@ -184,7 +299,7 @@ export async function resolveCity(ville: string | null, referentiel: Reference):
 	if (codePostal && !name) {
 		const [sole] = matchesByCode
 		if (sole && matchesByCode.length === 1) return cityRecord(sole)
-		return toReview(matchesByCode.length > 1 ? 'homonymes' : 'introuvable', matchesByCode)
+		return toReview(matchesByCode.length > 1 ? 'code-postal-partage' : 'introuvable', matchesByCode)
 	}
 	if (codePostal) {
 		const crossed = matchesByName.filter(c => matchesByCode.some(({ code }) => code === c.code))
@@ -213,6 +328,7 @@ export function expectedCity(commune: ReferenceCity): ExpectedCity {
 		department: departmentOfInseeCode(commune.code),
 		latitude: rounded(commune.latitude),
 		longitude: rounded(commune.longitude),
+		postalCodes: [...commune.codesPostaux].sort(),
 	}
 }
 
@@ -228,13 +344,15 @@ export interface CaseToReview {
 	candidats: Pick<ReferenceCity, 'nom' | 'code' | 'departement' | 'codesPostaux'>[]
 }
 
-/** A line of the table of decisions for a profile « à revoir »: the commune of this INSEE code, or none. */
-export interface CityDecision {
-	profile: number
-	inseeCode: string | null
-}
+/**
+ * A line of the table of decisions for a profile « à revoir »: the commune of this INSEE code (or
+ * none), or countries with a town (the rules of the collection apply, `readDecisions` checks them).
+ */
+export type CityDecision =
+	| { profile: number; inseeCode: string | null }
+	| { profile: number; countries: string[]; town: string | null }
 
-/** What the communes of a run give, in numbers and identifiers. */
+/** What the communes and zones of a run give, in numbers and identifiers. */
 export interface CitiesSummary {
 	/** Profiles taken whose city is not empty at the source. */
 	filledCities: number
@@ -254,18 +372,69 @@ export interface CitiesSummary {
 	decided: number[]
 }
 
+/** The zones of a run (communes and countries), in numbers and identifiers: never a text. */
+export interface ZonesSummary {
+	/** Profiles taken whose zone is a commune or countries, out of the cities filled in. */
+	recognized: number
+	/** `recognized` out of the cities filled in, in percent to one decimal; `null` without a city filled in. */
+	part: number | null
+	/** Among the recognised zones, the communes alone. */
+	communesOnly: number
+	/** The profiles whose zone is countries, by identifier. */
+	countries: number[]
+	/** The profiles « à revoir », by identifier, ranged by reason. */
+	toReviewByReason: Record<ReasonToReview, number[]>
+}
+
+/** A zone of countries a profile must hold: the codes in the order of the text, and the town if any. */
+export interface ExpectedCountries {
+	countries: string[]
+	town: string | null
+}
+
+/** What the server must hold in `zoneReview` for a profile « à revoir »: never the text typed. */
+export interface ExpectedReview {
+	reason: StoredReason
+	postalCode: string | null
+	candidates: { inseeCode: string; name: string; department: string | null }[]
+}
+
 export interface ProfileCities {
 	/** For each profile taken, its commune, or `null`. */
 	communes: Map<number, ExpectedCity | null>
+	/** The profiles whose zone is countries. */
+	countries: Map<number, ExpectedCountries>
+	/** The review the server must hold for the profiles « à revoir ». */
+	reviews: Map<number, ExpectedReview>
 	/** The private list of review: the profiles « à revoir », with what was asked and the communes they could be. */
 	revue: CaseToReview[]
 	bilan: CitiesSummary
+	zones: ZonesSummary
 	/** Lines of the table that name no profile « à revoir »: without effect. */
 	sansObjet: number
 }
 
+const REASONS: readonly ReasonToReview[] = ['code-postal-partage', 'homonymes', 'introuvable', 'pas-une-commune']
+
+/** A share in percent to one decimal. */
+const percent = (part: number, whole: number): number | null =>
+	whole === 0 ? null : Math.round((part / whole) * 1000) / 10
+
+/** The review the server holds for a case: the reason, the postal code of a shared one, the communes. */
+function storedReview(motif: ReasonToReview, search: Search, candidates: readonly ReferenceCity[]): ExpectedReview {
+	return {
+		reason: STORED_REASONS[motif],
+		postalCode: motif === 'code-postal-partage' ? search.codePostal : null,
+		candidates: candidates.map(({ code, nom: name, departement: department }) => ({
+			inseeCode: code,
+			name,
+			department,
+		})),
+	}
+}
+
 /**
- * The commune of each profile taken, asked to the referential, and the lines of the table of
+ * The zone of each profile taken, asked to the referential, and the lines of the table of
  * decisions applied to the profiles « à revoir ». A line that gives an INSEE code the referential
  * does not know stops the run before any write (`ImportRefuse`).
  */
@@ -275,43 +444,62 @@ export async function profileCities(
 	decisions: readonly CityDecision[] = []
 ): Promise<ProfileCities> {
 	const cities = new Map<number, ExpectedCity | null>()
+	const countries = new Map<number, ExpectedCountries>()
 	const toReview = new Map<number, Extract<Resolution, { genre: 'a-revoir' }>>()
 	const addresses: number[] = []
 	for (const { id, city } of [...profils].sort((a, b) => a.id - b.id)) {
 		const resolution = await resolveCity(city, referentiel)
 		if (resolution.genre !== 'vide' && resolution.adresse) addresses.push(id)
 		if (resolution.genre === 'a-revoir') toReview.set(id, resolution)
+		if (resolution.genre === 'pays') countries.set(id, { countries: resolution.countries, town: resolution.town })
 		cities.set(id, resolution.genre === 'commune' ? expectedCity(resolution.commune) : null)
 	}
 
 	const decided: number[] = []
 	let pointless = 0
-	for (const { profile, inseeCode: codeInsee } of decisions) {
+	for (const decision of decisions) {
+		const { profile } = decision
 		const reviewCase = toReview.get(profile)
 		if (!reviewCase) {
 			pointless++
 			continue
 		}
-		let chosen: ReferenceCity | undefined
-		if (codeInsee !== null) {
-			chosen =
-				reviewCase.candidats.find(({ code }) => code === codeInsee) ??
-				(await referentiel.repondre({ genre: 'code', valeur: codeInsee }))[0]
-			if (!chosen)
-				throw new ImportRefuse(
-					`La table de décision donne au profil ${profile} une commune que le référentiel ne connaît pas (code INSEE ${codeInsee}) : rien n’est écrit.`
-				)
+		if ('countries' in decision) {
+			countries.set(profile, { countries: decision.countries, town: decision.town })
+			cities.set(profile, null)
+		} else {
+			let chosen: ReferenceCity | undefined
+			const codeInsee = decision.inseeCode
+			if (codeInsee !== null) {
+				chosen =
+					reviewCase.candidats.find(({ code }) => code === codeInsee) ??
+					(await referentiel.repondre({ genre: 'code', valeur: codeInsee }))[0]
+				if (!chosen)
+					throw new ImportRefuse(
+						`La table de décision donne au profil ${profile} une commune que le référentiel ne connaît pas (code INSEE ${codeInsee}) : rien n’est écrit.`
+					)
+			}
+			cities.set(profile, chosen ? expectedCity(chosen) : null)
 		}
-		cities.set(profile, chosen ? expectedCity(chosen) : null)
 		toReview.delete(profile)
 		decided.push(profile)
 	}
 
 	const filled = profils.filter(({ city }) => (city?.trim() ?? '') !== '')
 	const attached = filled.filter(({ id }) => cities.get(id)).length
+	const recognized = filled.filter(({ id }) => cities.get(id) || countries.has(id)).length
 	const notEmpty = profils.filter(({ videALaSource }) => !videALaSource)
+	const reviewedIds = (motif: ReasonToReview): number[] =>
+		[...toReview.entries()].filter(([, found]) => found.motif === motif).map(([id]) => id)
 	return {
 		communes: cities,
+		countries: new Map([...countries.entries()].sort(([a], [b]) => a - b)),
+		reviews: new Map(
+			[...toReview.entries()].map(([profile, found]) => [
+				profile,
+				storedReview(found.motif, found.recherche, found.candidats),
+			])
+		),
 		revue: [...toReview.entries()].map(([profile, { motif, adresse: address, recherche: search, candidats }]) => ({
 			profil: profile,
 			motif,
@@ -333,6 +521,16 @@ export async function profileCities(
 			toReview: [...toReview.keys()],
 			addresses: addresses,
 			decided: decided.sort((a, b) => a - b),
+		},
+		zones: {
+			recognized: recognized,
+			part: percent(recognized, filled.length),
+			communesOnly: attached,
+			countries: [...countries.keys()].sort((a, b) => a - b),
+			toReviewByReason: Object.fromEntries(REASONS.map(motif => [motif, reviewedIds(motif)])) as Record<
+				ReasonToReview,
+				number[]
+			>,
 		},
 		sansObjet: pointless,
 	}

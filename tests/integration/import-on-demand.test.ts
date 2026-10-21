@@ -135,6 +135,13 @@ describe('réel, puis un jeton nouveau n’écrit plus rien', () => {
 		expect(after.talents).toBe(3)
 		expect(after.media).toBeGreaterThan(0)
 		expect(first.log).toContain('Talents : 3 à la source ; 3 créations, 0 mise à jour, 0 inchangé')
+		// Ticket 261: the zones, and each reason to review with its number and its identifiers.
+		expect(first.log).toContain(
+			'  - zones reconnues, communes et pays : 9 sur 11 villes renseignées (81,8 %, cible 90 %) ; communes seules : 9 ; zones de pays : 0 (aucun)'
+		)
+		expect(first.log).toContain(
+			'  - villes à revoir, par raison : code postal partagé 0 ; plusieurs communes de même nom 1 (28) ; commune introuvable 0 ; pas une commune 1 (26)'
+		)
 
 		const second = await pass({ mode: 'real' })
 
@@ -307,6 +314,13 @@ describe('les refus du lieu, de la source et du stockage', () => {
 })
 
 describe('le journal ne porte que des nombres', () => {
+	test('les lignes des zones ne portent ni texte saisi ni nom de commune : des nombres, des raisons et des identifiants', () => {
+		const zoneLines = allLog.filter(line => line.includes('zones reconnues') || line.includes('villes à revoir'))
+
+		expect(zoneLines.length).toBeGreaterThan(0)
+		for (const line of zoneLines) expect(line).not.toMatch(/Pinceaux|Toulouse|Saint-Julien|Annecy|France|Nantes|Lyon/)
+	})
+
 	test('aucune ligne, sur tous les passages du fichier, ne contient un @ ni un hash bcrypt', () => {
 		expect(allLog.length).toBeGreaterThan(50)
 		for (const line of allLog) {

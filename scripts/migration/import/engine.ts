@@ -94,6 +94,13 @@ export interface Adapter {
 	 * created, with all its fields. Used on a target the v3 is already using (ticket 227).
 	 */
 	frozen?: readonly string[]
+	/**
+	 * The value of a compared field when the expected document gives none: what the collection holds
+	 * by default (the type of zone of a profile is « city »), so an expected document names a field
+	 * only when it differs. A target that holds another value is a difference, and the update writes
+	 * the default back (a zone of countries, or a review, left from an earlier run).
+	 */
+	defaults?: Readonly<Record<string, unknown>>
 	/** Options of the writes of one document: a draft, no confirmation email, more context. */
 	options?: (attendu: Expected) => WriteOptions
 }
@@ -137,6 +144,9 @@ function normalizedGroup(valeur: object): string | null {
 	const fields = Object.entries(valeur)
 		.filter(([, sous]) => sous !== null && sous !== undefined && !(Array.isArray(sous) && sous.length === 0))
 		.sort(([a], [b]) => a.localeCompare(b))
+		// A list of objects in a field (the communes of a review) comes back from jsonb with its keys in
+		// another order: the keys are sorted at every depth.
+		.map(([champ, sous]) => [champ, sortedKeys(sous)])
 	return fields.length === 0 ? null : JSON.stringify(fields)
 }
 
@@ -207,7 +217,7 @@ export function differentFields(adaptateur: Adapter, attendu: Expected, existant
 	return Object.entries(adaptateur.fields)
 		.filter(([champ, genre]) => {
 			if (frozen.has(champ)) return false
-			const intended = normalize(genre, attendu.values[champ])
+			const intended = normalize(genre, attendu.values[champ] ?? adaptateur.defaults?.[champ])
 			const present = normalize(genre, existant.values[champ])
 			// A field the import only fills in differs when it is missing in the target, nothing else.
 			if (seeds.has(champ)) return !empty(intended) && empty(present)
@@ -374,7 +384,12 @@ export async function write(payload: Payload, adaptateur: Adapter, plan: Plan): 
 			}
 			const fields = action.fields.filter(champ => !DATES.has(champ) && !computed.has(champ))
 			if (fields.length > 0)
-				await update({ ...common, id: action.id, data: choose(expected.values, fields), draft: false })
+				await update({
+					...common,
+					id: action.id,
+					data: choose({ ...adaptateur.defaults, ...expected.values }, fields),
+					draft: false,
+				})
 			const dates = choose(expected.values, ['createdAt', 'updatedAt'])
 			if (Object.keys(dates).length > 0)
 				await payload.db.updateOne({ collection: adaptateur.collection, id: action.id, data: dates })
@@ -406,7 +421,12 @@ export function documentsFingerprint(
 	const rows = [...documents]
 		.sort((a, b) => a.strapiId - b.strapiId)
 		.map(({ strapiId, values: valeurs }) =>
-			JSON.stringify([strapiId, ...fields.map(champ => normalize(adaptateur.fields[champ] ?? 'texte', valeurs[champ]))])
+			JSON.stringify([
+				strapiId,
+				...fields.map(champ =>
+					normalize(adaptateur.fields[champ] ?? 'texte', valeurs[champ] ?? adaptateur.defaults?.[champ])
+				),
+			])
 		)
 	return createHash('sha256').update(rows.join('\n')).digest('hex')
 }
