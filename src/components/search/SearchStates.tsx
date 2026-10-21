@@ -31,16 +31,25 @@ export function NoResult({
 	search,
 	city,
 	departements = [],
+	codesPostaux = [],
 }: {
 	titre: string
 	search: string
 	city: string
 	/** The codes of the département of the city typed, when they are known. */
 	departements?: readonly string[]
+	/** The postal codes typed (ticket 263): the page then says no commune of these codes has a makeup artist. */
+	codesPostaux?: readonly string[]
 }) {
 	return (
 		<div className={COLUMN}>
 			<h1 className="font-bold text-2xl text-gray-800">{titre}</h1>
+			{codesPostaux.length > 0 && (
+				<p className="text-gray-700">
+					Aucune maquilleuse n’est inscrite dans les communes {codesPostaux.map(code => `du ${code}`).join(' et ')} pour
+					le moment.
+				</p>
+			)}
 			<p className="text-gray-700">
 				Essayez un autre mot (mariage, soirée, effets spéciaux…)
 				{city ? ', une ville voisine ou la recherche sans ville' : ''}.

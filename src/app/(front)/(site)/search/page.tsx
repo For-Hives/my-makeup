@@ -8,7 +8,7 @@ import { fingerprint } from '@/lib/analytics/duplicate'
 import { resultBucket } from '@/lib/analytics/values'
 import { readSearch, resultsTitle, searchByCity, searchByWord } from '@/lib/search/input'
 import { paginate, sectionsOfPage } from '@/lib/search/pagination'
-import { sectionsByPlace } from '@/lib/search/place'
+import { municipalitiesOfPostalCodes, municipalitiesPhrase, readPlace, sectionsByPlace } from '@/lib/search/place'
 import { readWithoutBlocking } from '@/lib/search/read'
 import { find } from '@/lib/search/results'
 import { pageMetadata } from '@/lib/seo/metadata'
@@ -73,6 +73,7 @@ export default async function SearchPage({ searchParams }: PageProps<'/search'>)
 	const directory = reading.valeur
 	const { locaux: localProfiles, parLieu: byPlace, sections } = find(directory, query)
 	const all = [...localProfiles, ...sections.flatMap(section => section.profils)]
+	const municipalities = municipalitiesPhrase(municipalitiesOfPostalCodes(localProfiles, city))
 	const page = paginate(all, query.page)
 	const [localsOfPage = [], ...sectionsOfThisPage] = sectionsOfPage(page, [
 		localProfiles.length,
@@ -103,12 +104,15 @@ export default async function SearchPage({ searchParams }: PageProps<'/search'>)
 					search={search}
 					city={city}
 					departements={city ? sectionsByPlace(directory, city).departements : []}
+					codesPostaux={readPlace(city).postalCodes}
 				/>
 			) : (
 				<div className="w-full px-4 pb-16 md:px-16">
 					<h1 className="mb-8 font-bold text-2xl text-gray-800">
 						{resultsTitle(query, byPlace ? localProfiles.length : all.length)}
 					</h1>
+					{/* Ticket 263: the communes a postal code found, named from the profiles listed. */}
+					{municipalities && <p className="-mt-4 mb-8 text-gray-700">{municipalities}</p>}
 					{byPlace && localProfiles.length === 0 && (
 						<p className="-mt-4 mb-8 text-gray-700">
 							Aucune maquilleuse n’indique « {city} » (ville ou département) dans son profil.

@@ -24,7 +24,15 @@
 
 import type { Payload } from 'payload'
 import { type Pid, profilePid } from '@/lib/analytics/pid'
-import { displayedCity, formatZone, radiusKm } from '@/lib/format-zone'
+import {
+	displayedCity,
+	formatZone,
+	radiusKm,
+	type ZoneInput,
+	zoneCountries,
+	zoneFlags,
+	zoneSentence,
+} from '@/lib/format-zone'
 import { isPriceAmount, minimumPrice } from '@/lib/price'
 import { displayName, text } from '@/lib/profile/display-name'
 import { profilePid as pidDeLaPage } from '@/lib/profile/pid'
@@ -68,6 +76,9 @@ export const CARD_FIELDS = {
 	specialty: true,
 	city: true,
 	radiusKm: true,
+	zoneKind: true,
+	countries: true,
+	town: true,
 	superArtist: true,
 	mainPicture: true,
 } as const
@@ -91,6 +102,9 @@ export const PROFILE_PAGE_FIELDS = {
 	strapiId: true,
 	city: { name: true },
 	radiusKm: true,
+	zoneKind: true,
+	countries: true,
+	town: true,
 	available: true,
 	mainPicture: true,
 	gallery: true,
@@ -122,7 +136,10 @@ export interface PublicProfile {
 	/** The artist name under the h1, only when it adds something to the name (`displayedArtistName`). */
 	nomArtiste: string | null
 	specialite: string | null
-	/** « Annecy », « Annecy et 30 km autour », or `null` (src/lib/format-zone.ts). */
+	/**
+	 * « Annecy », « Annecy et 30 km autour », « Bruxelles (Belgique) et 30 km autour », « France et
+	 * Italie », or `null` (src/lib/format-zone.ts). Never a flag: the flags are `flags`.
+	 */
 	zone: string | null
 	/** False only when she said so: an availability never set counts as available, as on the old site. */
 	disponible: boolean
@@ -130,9 +147,15 @@ export interface PublicProfile {
 	photo: CardPhoto | null
 	/** The photos of her portfolio, in the order she gave, a photo that is gone left out. */
 	galerie: CardPhoto[]
-	/** Her commune, or `null`. */
+	/** Her commune, or her place abroad (« Bruxelles (Belgique) », « France et Italie »), or `null`. */
 	lieu: string | null
-	/** True when she gave a radius around her commune. */
+	/** The flags of her countries, in order, for the display component only; empty for a commune. Never in a text. */
+	flags: string[]
+	/** Where she works inside a sentence: « à Annecy », « en Belgique », « aux Pays-Bas »; `null` without a zone. */
+	placePhrase: string | null
+	/** Where she works, for the structured data; `null` without a zone. */
+	area: PublicArea | null
+	/** True when she gave a radius around her commune, or works in several countries. */
 	seDeplace: boolean
 	/** The sections below hold only rows that say something, in the order she gave them. */
 	prestations: PublicServiceOffer[]
@@ -152,6 +175,12 @@ export interface PublicProfile {
 	/** The lowest amount of her offers (src/lib/price.ts, `minimumPrice`, U37), or `null`. */
 	prixMinimal: number | null
 }
+
+/** Where a profile works, as the structured data says it (src/lib/seo/profile.ts). */
+export type PublicArea =
+	| { kind: 'city'; name: string }
+	| { kind: 'town'; name: string; country: string }
+	| { kind: 'countries'; names: string[] }
 
 /** An offer as the structured data says it: its name, its text, and its amount in euros when it has a usable one. */
 export interface PricedOffer {
@@ -174,8 +203,13 @@ export interface ProfileCard {
 	pid: Pid
 	nom: string
 	specialite: string | null
-	/** « Annecy », « Annecy et 30 km autour », or `null`. */
+	/** « Annecy », « Annecy et 30 km autour », « Bruxelles (Belgique) et 30 km autour », or `null`. */
 	lieu: string | null
+	/**
+	 * The flags of her countries, only for a zone of countries: the key is absent for a commune, so a card
+	 * of a commune is what it was. Decoration for the display component, never part of a text.
+	 */
+	flags?: string[]
 	superMaquilleuse: boolean
 	photo: CardPhoto | null
 }
@@ -198,6 +232,9 @@ type CardProfile = Pick<
 	| 'specialty'
 	| 'city'
 	| 'radiusKm'
+	| 'zoneKind'
+	| 'countries'
+	| 'town'
 	| 'superArtist'
 	| 'mainPicture'
 >
@@ -257,15 +294,28 @@ async function readPids(payload: Payload, profils: readonly { id: number }[]): P
 	return pid
 }
 
+/** The zone of a profile in the shape the text functions read (src/lib/format-zone.ts). */
+function zoneInput(profil: Pick<Profile, 'city' | 'radiusKm' | 'zoneKind' | 'countries' | 'town'>): ZoneInput {
+	return {
+		city: profil.city?.name,
+		radius: profil.radiusKm,
+		zoneKind: profil.zoneKind,
+		countries: profil.countries,
+		town: profil.town,
+	}
+}
+
 /** A profile read for a list, as a card: the keys are frozen (U22), no coordinates and no contact. */
 function cardOf(profil: CardProfile, photos: PhotosById, pids: ReadonlyMap<number, Pid>): ProfileCard {
 	const identifier = photoId(profil.mainPicture)
+	const flags = zoneFlags(zoneInput(profil))
 	return {
 		slug: profil.slug,
 		pid: pids.get(profil.id) ?? profilePid({ id: profil.id }),
 		nom: displayName(profil),
 		specialite: text(profil.specialty) || null,
-		lieu: formatZone({ city: profil.city?.name, radius: profil.radiusKm }) || null,
+		lieu: formatZone(zoneInput(profil)) || null,
+		...(flags.length > 0 && { flags }),
 		superMaquilleuse: profil.superArtist === true,
 		photo: (identifier !== undefined && photos.get(identifier)) || null,
 	}
@@ -445,6 +495,9 @@ export type ProfilePageData = Pick<
 	| 'description'
 	| 'city'
 	| 'radiusKm'
+	| 'zoneKind'
+	| 'countries'
+	| 'town'
 	| 'available'
 	| 'mainPicture'
 	| 'gallery'
@@ -469,18 +522,24 @@ export function publicProfileOf(
 	lu: { photo: CardPhoto | null; galerie: CardPhoto[]; coordonnees: PublicContactDetails | null }
 ): PublicProfile {
 	const name = displayName(profil)
+	const abroad = zoneCountries(zoneInput(profil)).length > 0
+	const place = directoryPlace(profil)
+	const municipality = displayedCity(profil.city?.name)
 	return {
 		slug: profil.slug,
 		pid: pidDeLaPage(profil),
 		nom: name,
 		nomArtiste: displayedArtistName(profil, name),
 		specialite: text(profil.specialty) || null,
-		zone: formatZone({ city: profil.city?.name, radius: profil.radiusKm }) || null,
+		zone: formatZone(zoneInput(profil)) || null,
 		disponible: profil.available !== false,
 		photo: lu.photo,
 		galerie: lu.galerie,
-		lieu: displayedCity(profil.city?.name) || null,
-		seDeplace: displayedCity(profil.city?.name) !== '' && radiusKm(profil.radiusKm) !== null,
+		lieu: (abroad ? place.ville : municipality) || null,
+		flags: zoneFlags(zoneInput(profil)),
+		placePhrase: zoneSentence(zoneInput(profil)) || null,
+		area: areaOf(profil),
+		seDeplace: abroad ? place.seDeplace : municipality !== '' && radiusKm(profil.radiusKm) !== null,
 		prestations: serviceOffers(profil.serviceOffers),
 		competences: names(profil.skills),
 		langues: names(profil.languages),
@@ -497,6 +556,20 @@ export function publicProfileOf(
 		offres: pricedOffers(profil.serviceOffers),
 		prixMinimal: minimumPrice(profil.serviceOffers),
 	}
+}
+
+/** Where a profile works for the structured data: a commune, a town abroad, or countries. */
+function areaOf(profil: Pick<Profile, 'city' | 'radiusKm' | 'zoneKind' | 'countries' | 'town'>): PublicArea | null {
+	const input = zoneInput(profil)
+	const countries = zoneCountries(input)
+	const [only] = countries
+	if (only && countries.length === 1) {
+		const town = displayedCity(profil.town)
+		return town ? { kind: 'town', name: town, country: only.name } : { kind: 'countries', names: [only.name] }
+	}
+	if (countries.length > 1) return { kind: 'countries', names: countries.map(({ name }) => name) }
+	const municipality = displayedCity(profil.city?.name)
+	return municipality ? { kind: 'city', name: municipality } : null
 }
 
 /** The offers with a name, each with its amount when it is one the site counts as a price. */
@@ -545,6 +618,35 @@ export async function listProfiles(
 	}
 }
 
+/**
+ * Where a profile works, as the search reads it (tickets 098 and 263; PLAN-ZONES.md §3.4):
+ * - a commune: its name, the département the server computed, its postal codes, and « travels » when
+ *   she gave a radius;
+ * - countries: the label of the zone without the radius (« Bruxelles (Belgique) », « France et
+ *   Italie »), no département and no postal code; she travels when she names several countries, or one
+ *   country with a radius. No flag: the label is text.
+ */
+export function directoryPlace(
+	profil: Pick<Profile, 'city' | 'radiusKm' | 'zoneKind' | 'countries' | 'town'>
+): Required<ProfilePlace> {
+	const input = zoneInput(profil)
+	const countries = zoneCountries(input)
+	if (countries.length > 0)
+		return {
+			ville: formatZone({ ...input, radius: null }) || null,
+			departement: null,
+			seDeplace: countries.length > 1 || radiusKm(profil.radiusKm) !== null,
+			postalCodes: [],
+		}
+	const municipality = text(profil.city?.name)
+	return {
+		ville: municipality || null,
+		departement: text(profil.city?.department) || null,
+		seDeplace: municipality !== '' && radiusKm(profil.radiusKm) !== null,
+		postalCodes: municipality ? (profil.city?.postalCodes ?? []) : [],
+	}
+}
+
 /** A listed profile with where she works: what the search by city ranks by. */
 export interface DirectoryProfile extends ProfilePlace {
 	carte: ProfileCard
@@ -572,7 +674,7 @@ function textsOf(profil: SearchedProfile): NormalizedTexts {
 	const descriptions = <T extends { description?: string | null }>(liste: readonly T[] | null | undefined): string[] =>
 		(liste ?? []).map(element => text(element.description)).filter(description => description !== '')
 	return normalizeTexts({
-		ville: text(profil.city?.name),
+		ville: directoryPlace(profil).ville ?? '',
 		specialite: text(profil.specialty),
 		description: text(profil.description),
 		competences: names(profil.skills),
@@ -615,9 +717,7 @@ export async function readDirectory(
 		for (const profile of result.docs)
 			directory.push({
 				carte: cardOf(profile, photos, pids),
-				ville: text(profile.city?.name) || null,
-				departement: text(profile.city?.department) || null,
-				seDeplace: text(profile.city?.name) !== '' && radiusKm(profile.radiusKm) !== null,
+				...directoryPlace(profile),
 				...(avecLesTextes && { textes: textsOf(profile) }),
 			})
 		if (!result.hasNextPage) break

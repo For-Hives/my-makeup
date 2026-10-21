@@ -103,6 +103,11 @@ export interface Place {
 	segments: PlaceSegment[]
 	/** Codes of département found in the text. */
 	departements: string[]
+	/**
+	 * The postal codes found in the text (ticket 263), once each. For a profile: the postal codes of her
+	 * commune, as the referential gave them.
+	 */
+	postalCodes: string[]
 }
 
 /** A segment that is a code of département: « 74 », « 2a », « 974 », « 20 ». */
@@ -116,7 +121,9 @@ function segmentCodes(segment: string): string[] {
 export function readPlace(valeur: unknown): Place {
 	const raw = typeof valeur === 'string' ? valeur : ''
 	const departments = new Set<string>()
+	const postalCodes = new Set<string>()
 	for (const [code] of raw.matchAll(/(?<!\d)\d{5}(?!\d)/g)) {
+		postalCodes.add(code)
 		const department = departmentOfPostalCode(code)
 		if (department) departments.add(department)
 	}
@@ -136,10 +143,11 @@ export function readPlace(valeur: unknown): Place {
 		for (const code of byName ?? []) departments.add(code)
 		segments.push({ mots: words, departement: byName !== undefined, large: LARGES.has(words) })
 	}
-	return { segments, departements: [...departments] }
+	return { segments, departements: [...departments], postalCodes: [...postalCodes] }
 }
 
-const emptyPlace = (lieu: Place): boolean => lieu.segments.length === 0 && lieu.departements.length === 0
+const emptyPlace = (lieu: Place): boolean =>
+	lieu.segments.length === 0 && lieu.departements.length === 0 && lieu.postalCodes.length === 0
 
 /** A place that starts with this name of département, and not with a longer one that begins the same. */
 const startsWithDepartment = (texte: string, nom: string): boolean =>
@@ -151,15 +159,21 @@ export interface ProfilePlace {
 	departement: string | null
 	/** True when she gives a city and a radius: she travels. */
 	seDeplace: boolean
+	/**
+	 * The postal codes of her commune (ticket 263), when the referential gave them. A commune without
+	 * any is found by its département, as before.
+	 */
+	postalCodes?: readonly string[]
 }
 
 /** The place of a profile, in the shape of what was typed. */
 export function profilePlace({
 	ville: city,
 	departement: department,
-}: Pick<ProfilePlace, 'ville' | 'departement'>): Place {
+	postalCodes = [],
+}: Pick<ProfilePlace, 'ville' | 'departement' | 'postalCodes'>): Place {
 	const read = readPlace(city)
-	return { segments: read.segments, departements: department ? [department] : [] }
+	return { segments: read.segments, departements: department ? [department] : [], postalCodes: [...postalCodes] }
 }
 
 /**
@@ -168,6 +182,8 @@ export function profilePlace({
  *   not in « Annemasse »); a name of département only at the start of a place and never inside a longer
  *   one (« Savoie » is not « Haute-Savoie »); a country or a region only when it holds nothing else
  *   (« Annecy, Suisse » is Annecy);
+ * - 'ville' also when a postal code typed is one of the postal codes of her commune (ticket 263): a code
+ *   shared by several communes finds the profiles of every one of them;
  * - 'departement': a département in common (postal code, code or name);
  * - null otherwise, and always for a profile without a commune.
  */
@@ -178,8 +194,29 @@ export function placeMatch(profil: Place, cherche: Place): 'ville' | 'departemen
 		if (profil.segments.some(p => (department ? startsWithDepartment(p.mots, words) : contains(p.mots, words))))
 			return 'ville'
 	}
+	if (cherche.postalCodes.some(code => profil.postalCodes.includes(code))) return 'ville'
 	if (cherche.departements.some(code => profil.departements.includes(code))) return 'departement'
 	return null
+}
+
+/**
+ * The communes the postal codes typed found, taken from the profiles listed (ticket 263): each name once,
+ * in the order of the profiles. No call to the referential: a search reads nothing outside the directory.
+ */
+export function municipalitiesOfPostalCodes(profils: readonly ProfilePlace[], city: string): string[] {
+	const typed = readPlace(city).postalCodes
+	if (typed.length === 0) return []
+	const names = new Set<string>()
+	for (const { ville: municipality, postalCodes = [] } of profils)
+		if (municipality && postalCodes.some(code => typed.includes(code))) names.add(municipality)
+	return [...names]
+}
+
+/** « Dans la commune de Cambrin. », « Dans les communes de Cambrin et Cuinchy. »; '' without a commune. */
+export function municipalitiesPhrase(names: readonly string[]): string {
+	if (names.length === 0) return ''
+	if (names.length === 1) return `Dans la commune de ${names[0]}.`
+	return `Dans les communes de ${names.slice(0, -1).join(', ')} et ${names[names.length - 1]}.`
 }
 
 /**
