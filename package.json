@@ -34,6 +34,7 @@
 		"bench:source": "bun --no-env-file scripts/source-strapi.ts",
 		"bench:import": "bun --no-env-file scripts/migration/bench-import.ts",
 		"bench:reconcile": "bun --no-env-file scripts/media/reconciliation.ts",
+		"media:backup": "bun --no-env-file scripts/media/backup.ts",
 		"bench:full": "bun --no-env-file scripts/bench.ts full",
 		"bench:reset": "bun --no-env-file scripts/bench.ts reset",
 		"bench:session": "bun --no-env-file scripts/bench.ts session",
