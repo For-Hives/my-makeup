@@ -60,7 +60,7 @@ Toutes les requêtes du navigateur passent par une seule route (`decide`, dans `
 
 - un GET sur la cible part ; tout le reste reçoit un 204 vide, et est noté dans le rapport ;
 - l'événement de mesure d'audience (`POST /u/api/send`) ne part jamais, et n'est pas un défaut : il n'y a ni visite ni événement compté ;
-- un contexte neuf par largeur d'écran : ni cookie ni stockage, une visiteuse anonyme ;
+- un contexte neuf par largeur d'écran : ni cookie ni stockage, une visiteuse anonyme, avec pour `baseURL` l'origine de la cible (`contextOptions`) : les chemins relatifs mènent à la cible, banc ou adresse distante ;
 - l'accès protégé de l'hôte temporaire est ajouté aux seules requêtes de cet hôte ;
 - **une requête part 500 ms au moins après la précédente**, images et scripts de la page compris : 2 par seconde au plus. Sur ce poste il n'y a pas d'attente.
 
@@ -72,7 +72,7 @@ Une ligne par défaut : `[largeur] adresse : genre : détail`, puis le verdict. 
 
 ## Les tests
 
-- `tests/unit/ui-crawl.test.ts` : chaque genre de défaut, les 40 adresses (sans doublon, dans l'ordre du sitemap, une famille courte, un sitemap trop court), la lecture seule (écriture, autre hôte, `/u`, accès protégé), le rythme de 2 requêtes par seconde avec une horloge simulée. `bun --no-env-file test tests/unit/ui-crawl.test.ts`.
+- `tests/unit/ui-crawl.test.ts` : chaque genre de défaut, les 40 adresses (sans doublon, dans l'ordre du sitemap, une famille courte, un sitemap trop court), la lecture seule (écriture, autre hôte, `/u`, accès protégé), une cible donnée en adresse absolue (`baseURL` du contexte, crawl complet contre un faux site local, accès protégé envoyé à l'origine de la cible seule), le rythme de 2 requêtes par seconde avec une horloge simulée. `bun --no-env-file test tests/unit/ui-crawl.test.ts`.
 - `tests/e2e/ui-crawl.spec.ts` : la commande contre l'application du banc, avec ses profils, six talents et six articles d'essai : 40 adresses, 80 pages, aucun défaut. Un second essai sème exprès un défaut de chaque genre dans une page (deux `h1`, aucune Nav, `undefined` et `null`, un débordement, une image cassée, une erreur de console) et vérifie que chacun est trouvé, qu'une page propre ne donne rien et qu'un 500 est vu.
 
 ## Ce que le crawl ne dit pas
