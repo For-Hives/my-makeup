@@ -3,7 +3,7 @@ import type { Decisions } from '../../scripts/migration/import/decisions'
 import { importer } from '../../scripts/migration/import/importer'
 import type { Query, Source } from '../../scripts/migration/import/source'
 import { openSourceBun } from '../../scripts/migration/import/source-bun'
-import { INDEXABLE_FILTER } from '../../src/lib/profile/visibility'
+import { readIndexableProfiles } from '../../src/services/public/indexable-pages'
 import { BENCH_CUTOVER_DATE } from '../support/bench'
 import { BENCH_DECISIONS, benchReference } from '../support/import'
 import { emptyBase, testPayload } from '../support/payload-test'
@@ -83,18 +83,14 @@ async function profiles() {
 	return docs
 }
 
-/** The strapiId of every profile the sitemap lists: the filter it reads, on the whole collection. */
+/** The strapiId of every profile the sitemap lists: the reader the sitemap itself calls, read anonymously. */
 async function listedInSitemap() {
 	const payload = await testPayload()
-	const { docs } = await payload.find({
-		collection: 'profiles',
-		depth: 0,
-		pagination: false,
-		overrideAccess: true,
-		where: { and: [INDEXABLE_FILTER, { status: { not_equals: 'hidden' } }] },
-		sort: 'strapiId',
-	})
-	return docs.map(({ strapiId }) => strapiId)
+	const slugs = new Set((await readIndexableProfiles(payload)).map(({ slug }) => slug))
+	return (await profiles())
+		.filter(({ slug }) => slugs.has(slug))
+		.map(({ strapiId }) => strapiId)
+		.sort((x, y) => (x ?? 0) - (y ?? 0))
 }
 
 const pick = async (strapiId: number) => (await profiles()).find(profile => profile.strapiId === strapiId)
