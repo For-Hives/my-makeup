@@ -24,7 +24,7 @@
  * Started with `--no-env-file`: a working `.env` never reaches the tests.
  */
 
-import { rmSync } from 'node:fs'
+import { existsSync, readdirSync, rmSync } from 'node:fs'
 import path from 'node:path'
 import { portOpen, RefusedBench, ROOT } from '../tests/support/bench'
 import {
@@ -56,6 +56,15 @@ const notFound = (commande: string) =>
 	new RefusedBench(`La commande « ${commande} » est introuvable sur ce poste : les essais en ont besoin.`)
 
 const isNotFound = (erreur: unknown) => erreur instanceof Error && 'code' in erreur && erreur.code === 'ENOENT'
+
+/** The pages that Next rendered at a visit and kept on the disk (ticket 269): the profiles, the talents, the articles, the home page. */
+function forgetRenderedPages(): void {
+	const cache = path.join(ROOT, '.next/server/route-cache/APP_PAGE')
+	if (!existsSync(cache)) return
+	for (const hash of readdirSync(cache))
+		for (const family of ['profil', 'talent', 'blog', 'home-cached'])
+			rmSync(path.join(cache, hash, '$', family), { recursive: true, force: true })
+}
 
 /** Runs a command in the repository, shows what it prints, and gives back its exit code. */
 async function run(commande: string[], env: Record<string, string>): Promise<number> {
@@ -138,6 +147,8 @@ async function principal(demandes: string[]): Promise<number> {
 		// The pages of the first run (« zoe-lefevre » of the set, for one) must not answer the second one, which writes
 		// its own data without going through the application: the cache on the disk is emptied again.
 		rmSync(path.join(ROOT, '.next/cache/fetch-cache'), { recursive: true, force: true })
+		// The HTML the first run left in the cache of Next (ticket 269) is on the disk too, and would answer the second.
+		forgetRenderedPages()
 		const end = await runPlaywright(testArguments, environment)
 		if (code === 0) code = end
 	}

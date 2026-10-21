@@ -19,7 +19,7 @@ export function ErrorPage({ reessayer }: { reessayer?: () => void }) {
 							Réessayer
 						</button>
 					)}
-					<Link href="/" className="btn-primary-large">
+					<Link href="/" prefetch={false} className="btn-primary-large">
 						Retourner à l'accueil
 					</Link>
 				</div>

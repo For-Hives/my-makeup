@@ -8,7 +8,7 @@ export function NotFoundPage() {
 			<div className="mx-auto w-full max-w-sm lg:mx-0 lg:w-96">
 				<h1 className="my-8 font-semibold text-2xl text-slate-900">404 - Page non trouvée</h1>
 				<p className="text-gray-700">Oops ! La page que vous cherchez n'existe pas.</p>
-				<Link href="/" className="btn-primary-large mt-8">
+				<Link href="/" prefetch={false} className="btn-primary-large mt-8">
 					Retourner à l'accueil
 				</Link>
 			</div>

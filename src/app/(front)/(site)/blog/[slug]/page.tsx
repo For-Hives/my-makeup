@@ -12,9 +12,16 @@ import { editorialMetadata } from '@/lib/seo/metadata'
 import { canonicalUrl } from '@/lib/seo/url'
 import { cachedArticle } from '@/services/public/cached'
 
-// Rendered at each request: the build runs without a database. The article is read through the cache of
-// Next, under its tag `article:<slug>`: a save of an article refreshes it (tickets 047 and 117).
-export const dynamic = 'force-dynamic'
+// The HTML is kept in the cache of Next (ticket 269). Nothing is rendered at build, which runs without a
+// database: no address is generated ahead (`generateStaticParams`), the page is rendered at its first visit,
+// then served from the cache. A save of the document refreshes it by its path and by its tag `article:<slug>`
+// (src/lib/revalidate.ts); the hour is the backstop of the reads of the data (src/services/public/cached.ts).
+// Nothing in this page or in the layout of the site reads a cookie or a header: that is what keeps it cacheable.
+export const revalidate = 3600
+export const dynamicParams = true
+export function generateStaticParams(): { slug: string }[] {
+	return []
+}
 
 /** The page and its metadata read the same article: once per request. */
 const readArticle = cache(async (slug: string) => cachedArticle(await getPayload({ config }), slug))
