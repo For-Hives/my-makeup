@@ -56,7 +56,7 @@ export default function PrivacyPolicyPage() {
 				{`Confirmation de l'adresse email : à l'inscription, nous envoyons à l'adresse indiquée un email contenant un lien. Tant que vous ne l'avez pas suivi, le compte ne permet pas de se connecter, et un compte jamais confirmé est supprimé, avec son profil vide, au bout de ${PURGE_DELAY_DAYS} jours.`}
 			</p>
 			<p>
-				{`Durée : tant que votre compte existe. Vous pouvez supprimer votre compte et votre profil depuis votre espace : votre profil, vos informations et vos photos disparaissent du site aussitôt. Une photo retirée ou remplacée, comme celles d'un compte supprimé, est ensuite effacée définitivement de notre stockage au bout de ${PHOTO_ERASURE_DAYS} jours ; pendant ce délai, elle n'est plus affichée (le cache du service de stockage peut cependant la servir encore quelques heures).`}
+				{`Durée : tant que votre compte existe. Vous pouvez supprimer votre compte et votre profil depuis votre espace : votre profil, vos informations et vos photos disparaissent du site aussitôt. Une photo retirée ou remplacée, comme celles d'un compte supprimé, est ensuite effacée définitivement de notre stockage au bout de ${PHOTO_ERASURE_DAYS} jours ; pendant ce délai, elle n'est plus affichée (le cache du service de stockage peut cependant la servir encore quelques heures). Une copie de sauvegarde de nos photos est faite chaque jour dans un second espace de stockage, et elle ne supprime rien : une photo retirée y reste jusqu'à ce que vous nous demandiez de l'effacer (voir vos droits ci-dessous).`}
 			</p>
 			<p>
 				{`Si vous choisissez « Se connecter avec Google », Google nous transmet votre nom et votre adresse email pour créer ou ouvrir votre compte.`}
