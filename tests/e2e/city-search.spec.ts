@@ -267,21 +267,29 @@ test.describe('Recherche par code postal et par pays', () => {
 		expect(await violationsSevere(page)).toEqual([])
 	})
 
-	test('« Belgique » et « Italie » : les profils de pays au premier rang, le pays écrit, le drapeau décoratif', {
-		tag: '@mobile',
-	}, async ({ page }) => {
-		await page.goto(search('Belgique'))
-		await expect(page.getByRole('heading', { level: 1 })).toHaveText(`1 résultat pour « ${ZONE_WORD} » à « Belgique »`)
-		const card = page.locator(`a[href="/profil/${zone('zone-belgique').slug}"]`)
-		await expect(card).toContainText('Bruxelles (Belgique)')
-		await expect(card.locator('[aria-hidden="true"]', { hasText: '🇧🇪' })).toHaveCount(1)
+	test(
+		'« Belgique » et « Italie » : les profils de pays au premier rang, le pays écrit, le drapeau décoratif',
+		{
+			tag: '@mobile',
+		},
+		async ({ page }, testInfo) => {
+			await page.goto(search('Belgique'))
+			await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+				`1 résultat pour « ${ZONE_WORD} » à « Belgique »`
+			)
+			const card = page.locator(`a[href="/profil/${zone('zone-belgique').slug}"]`)
+			await expect(card).toContainText('Bruxelles (Belgique)')
+			await expect(card.locator('[aria-hidden="true"]', { hasText: '🇧🇪' })).toHaveCount(1)
 
-		await page.goto(search('Italie'))
-		const several = page.locator(`a[href="/profil/${zone('zone-france-italie').slug}"]`)
-		await expect(several).toContainText('France et Italie')
-		await expect(several.locator('[aria-hidden="true"]', { hasText: '🇫🇷 🇮🇹' })).toHaveCount(1)
-		expect(await violationsSevere(page)).toEqual([])
-	})
+			await page.goto(search('Italie'))
+			const several = page.locator(`a[href="/profil/${zone('zone-france-italie').slug}"]`)
+			await expect(several).toContainText('France et Italie')
+			await expect(several.locator('[aria-hidden="true"]', { hasText: '🇫🇷 🇮🇹' })).toHaveCount(1)
+			await page.setViewportSize(SCREENS.mobile)
+			await testInfo.attach('carte-pays-390px', { body: await several.screenshot(), contentType: 'image/png' })
+			expect(await violationsSevere(page)).toEqual([])
+		}
+	)
 
 	test(
 		'la page d’un profil de pays : la zone écrite, le drapeau décoratif, l’adresse canonique, aucune violation grave',
