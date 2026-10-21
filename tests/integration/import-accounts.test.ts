@@ -295,10 +295,10 @@ describe('Un compte que la cible refuse : listé, et la parité le dit (I39)', (
 		const { code, sortie: output } = await importCommand(['--real', '--decisions', BENCH_DECISION_FILE])
 
 		expect(code, output).toBe(5)
-		expect(output).toContain('  - refusé : 4 (refuse-par-payload : email)')
+		expect(output).toContain('  - refusé : identifiant 4 (refuse-par-payload : email)')
 		expect(output).toContain('Comptes : 13 sur 14 égaux, parité incomplète : 1 refusé (4)')
 		// Its profile has no account to point at: refused as well, and counted.
-		expect(output).toContain('  - refusé : 24 (refuse-par-payload : pro)')
+		expect(output).toContain('  - refusé : identifiant 24 (refuse-par-payload : pro)')
 		expect(output).toMatch(/Profils : \d+ sur \d+ égaux, parité incomplète : 1 refusé \(24\)/)
 		expect(output).not.toMatch(/@example\.test/i)
 	}, 60_000)
