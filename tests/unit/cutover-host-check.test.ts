@@ -233,6 +233,28 @@ describe('I45 sur un hôte : le rapport', () => {
 		expect(report.sections.map(s => s.titre)).toContain('Script de mesure')
 	})
 
+	test('un hôte derrière Traefik, qui nettoie `//` : code 0, la double barre en écarts connus (ticket 270)', async () => {
+		const responses = compliantHost()
+		for (const c of benchCase({}, DATASET).filter(testCase => testCase.famille === 'double-barre')) {
+			// Traefik cleans the path: the page of the clean address answers, with its canonical; the redirect of its own rule stays.
+			if (c.statuts[0] === 301 && c.adresse.endsWith('toutes-les-news')) continue
+			responses.set(
+				c.adresse,
+				() =>
+					new Response(
+						`<!doctype html><html><head><link rel="canonical" href="https://my-makeup.fr${c.canonique}"/></head><body><h1>Titre 200</h1></body></html>`,
+						{ status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } }
+					)
+			)
+		}
+		const report = await checkHost(settings, withoutWaiting(transportOf(responses).transport))
+		expect(report.verdict).toBe('conforme')
+		expect(report.adresses.enEchec).toBe(0)
+		expect(report.adresses.ecartsConnus).toBeGreaterThan(0)
+		expect(writeReport(report)).toMatch(/double-barre : \d+ conformes, \d+ écarts? connus?/)
+		expect(writeReport(report)).not.toMatch(/double-barre[^\n]*en échec/)
+	})
+
 	test('une adresse cassée exprès est détectée, et le rapport la nomme', async () => {
 		const responses = compliantHost()
 		responses.set('/a-propos', () => new Response('boom', { status: 500, headers: { 'content-type': 'text/html' } }))

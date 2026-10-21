@@ -128,6 +128,8 @@ export interface ParityCase {
 	titre: TitleWaiting | 'non-verifie'
 	/** The title of the tab must be the one the newsroom wrote (50 to 60 characters, not the h1): the imported talents. */
 	titreDeLOngletRequis?: true
+	/** The path a 200 answer must name as its canonical (family `double-barre`: the address without its repeated slashes). */
+	canonique?: string
 	/** A real profile: no address of it is written in any message. */
 	masque?: true
 	/** A difference we know about and do not hide: the case is reported, not counted green or red. */
@@ -170,7 +172,26 @@ const HOSTING_FAMILIES = new Set(
 )
 
 const GAP_DOUBLE_BAR =
-	'Next répond lui-même à `//` par un 308, avant que le site ne lise l’adresse : pas de 301, et deux sauts si la destination redirige encore.'
+	'Derrière Traefik, `//` est nettoyé avant l’application : la page répond 200 avec le canonical du chemin propre, sans redirection (hors Traefik, Next répond lui-même un 308, et deux sauts si la destination redirige encore).'
+
+/** The path and query of an address with its repeated slashes collapsed: what its canonical must say. */
+const collapsedPath = (adresse: string): string => {
+	const read = splitAddress(adresse)
+	return (read.path.replace(/\/{2,}/g, '/') || '/') + read.search
+}
+
+/** The first statuses a case of the family `double-barre` accepts: 301, 308 and the 200 of a proxy that cleans the path. */
+const DOUBLE_BAR_STATUSES: readonly number[] = [301, 308, 200]
+
+/** The href of the canonical link of a page of HTML, or `null` when it has none. */
+export function canonicalOf(html: string): string | null {
+	for (const tag of withoutScripts(html).matchAll(/<link\b[^>]*>/gi)) {
+		if (!/\brel\s*=\s*["']?canonical["']?/i.test(tag[0])) continue
+		const href = /\bhref\s*=\s*(?:"([^"]*)"|'([^']*)')/i.exec(tag[0])
+		return decodeEntities(href?.[1] ?? href?.[2] ?? '') || null
+	}
+	return null
+}
 
 const familyById = (id: string): FrozenUrlFamily => {
 	const family = FROZEN_URL_FAMILIES.find(candidate => candidate.id === id)
@@ -220,7 +241,7 @@ function caseSinceFamily(
 	const redirected = direct === 301 || direct === 307 || direct === 308
 	const to = redirected && exemple.to ? withoutOrigin(exemple.to) : undefined
 	const statusFinal = redirected ? 200 : direct
-	const statuses = [direct, ...(famille.rule === 'double-slash' ? [308] : (famille.alsoAccepted ?? []))]
+	const statuses = famille.rule === 'double-slash' ? DOUBLE_BAR_STATUSES : [direct, ...(famille.alsoAccepted ?? [])]
 	const finale = to ?? exemple.from
 	const verifiable =
 		!/\.(txt|xml|js|webp|jpg|png|json)$/i.test(splitAddress(finale).path) && !finale.startsWith('/api/')
@@ -232,7 +253,7 @@ function caseSinceFamily(
 		...(to ? { vers: to, familleFinale: familyOf(to, statusFinal) } : {}),
 		statutFinal: statusFinal,
 		titre: verifiable ? titleWaiting(finale, statusFinal, anciens) : 'non-verifie',
-		...(famille.rule === 'double-slash' ? { ecartConnu: GAP_DOUBLE_BAR } : {}),
+		...(famille.rule === 'double-slash' ? { ecartConnu: GAP_DOUBLE_BAR, canonique: collapsedPath(exemple.from) } : {}),
 	}
 }
 
@@ -395,7 +416,13 @@ export function privateListCase(csv: string): ParityCase[] {
 			etiquette: profile ? `profil #${number}` : url,
 			...(profile || isProfileUrl(withoutOrigin(line.url_finale ?? '')) ? { masque: true as const } : {}),
 			famille: family.id,
-			statuts: [...new Set([direct, ...(ambiguous ? families.map(anonymousStatus) : (family.alsoAccepted ?? []))])],
+			statuts: [
+				...new Set(
+					family.rule === 'double-slash'
+						? DOUBLE_BAR_STATUSES
+						: [direct, ...(ambiguous ? families.map(anonymousStatus) : (family.alsoAccepted ?? []))]
+				),
+			],
 			...(redirected && line.url_finale
 				? { vers: withoutOrigin(line.url_finale), familleFinale: familyOf(withoutOrigin(line.url_finale), 200) }
 				: {}),
@@ -406,7 +433,7 @@ export function privateListCase(csv: string): ParityCase[] {
 					: n === 1 && sha && !(splitAddress(url).path === '/search' && splitAddress(url).search !== '')
 						? { mode: 'hash', sha }
 						: { mode: 'un' },
-			...(family.rule === 'double-slash' ? { ecartConnu: GAP_DOUBLE_BAR } : {}),
+			...(family.rule === 'double-slash' ? { ecartConnu: GAP_DOUBLE_BAR, canonique: collapsedPath(url) } : {}),
 			// A talent of the imported copy: its tab is titled by the newsroom (ticket 108).
 			...(family.id === 'talent' && !redirected && direct === 200 ? { titreDeLOngletRequis: true as const } : {}),
 		})
@@ -472,6 +499,18 @@ export async function check(cas: ParityCase, chercher: Find): Promise<Result> {
 	let gap: string | null = null
 	if (!cas.statuts.includes(firstOne.status)) {
 		defaults.push(`statut ${firstOne.status} au lieu de ${cas.statuts.join(' ou ')}`)
+	} else if (cas.canonique !== undefined && firstOne.status === 200) {
+		// A proxy (Traefik) cleans `//` before the application: the page answers 200, and its canonical must be the clean path.
+		const html = isPageHtml(firstOne) ? await firstOne.corps() : ''
+		const canonical = canonicalOf(html)
+		if (canonical === null)
+			defaults.push('200 sans canonical, au lieu d’un canonical sur le chemin sans barre en double')
+		else if (destinationOf(canonical) !== cas.canonique)
+			defaults.push(`canonical ${destinationOf(canonical)} au lieu de ${cas.canonique}`)
+		else {
+			defaults.push(...(await checkTitle(cas, firstOne)))
+			gap = cas.ecartConnu ?? null
+		}
 	} else if (cas.vers !== undefined) {
 		if (firstOne.location === null || destinationOf(firstOne.location) !== cas.vers) {
 			const real = firstOne.location === null ? 'aucune destination' : destinationOf(firstOne.location)
@@ -492,8 +531,6 @@ export async function check(cas: ParityCase, chercher: Find): Promise<Result> {
 	if (defaults.length > 0) return { etat: 'rouge', defauts: say(defaults), destination: say(destination) }
 	if (gap !== null)
 		return { etat: 'ecart', raison: say([gap])[0] ?? '', defauts: defaults, destination: say(destination) }
-	if (cas.ecartConnu && firstOne.status !== cas.statuts[0])
-		return { etat: 'ecart', raison: cas.ecartConnu, defauts: defaults, destination: say(destination) }
 	return { etat: 'vert', destination: say(destination) }
 }
 
