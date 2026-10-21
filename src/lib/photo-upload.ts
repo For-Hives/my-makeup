@@ -9,6 +9,15 @@
 /** Largest photo the server takes (10 MiB, as the old API). */
 export const PHOTO_SIZE_MAX = 10 * 1024 * 1024
 
+/**
+ * What a multipart body may weigh beyond the file itself: the boundaries, the `_payload` field and the
+ * headers of its parts. The whole request is refused past `PHOTO_SIZE_MAX` plus this (ticket 273).
+ */
+export const MULTIPART_OVERHEAD_MAX = 1024 * 1024
+
+/** Largest request body the site reads on a route that receives a file (ticket 273). */
+export const UPLOAD_REQUEST_SIZE_MAX = PHOTO_SIZE_MAX + MULTIPART_OVERHEAD_MAX
+
 /** The types accepted, and the extension each one is stored under. */
 export const PHOTO_TYPES = {
 	'image/jpeg': 'jpg',
@@ -22,6 +31,18 @@ export type PhotoType = keyof typeof PHOTO_TYPES
 export const UPLOAD_MESSAGES = {
 	taille: 'La photo dépasse 10 Mo : choisis-en une plus légère.',
 	type: "La photo n'a pas été acceptée : choisis une photo JPEG, PNG ou WebP.",
+} as const
+
+/**
+ * The limits Payload's multipart parser applies to every request (`upload` of the config, ticket 273).
+ * It reads the body as a stream and stops at the first limit crossed, before the access rules run: a
+ * file past `PHOTO_SIZE_MAX` answers 413 with the usual message, and no more than `UPLOAD_REQUEST_SIZE_MAX`
+ * bytes of any request are read. Payload's defaults are 20 MiB for a file and 50 MiB for a request.
+ */
+export const PAYLOAD_UPLOAD_LIMITS = {
+	limits: { fileSize: PHOTO_SIZE_MAX },
+	requestSizeLimit: UPLOAD_REQUEST_SIZE_MAX,
+	responseOnLimit: UPLOAD_MESSAGES.taille,
 } as const
 
 const startsWith = (octets: Uint8Array, signature: number[], decalage = 0): boolean =>

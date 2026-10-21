@@ -15,6 +15,7 @@ import { REFUSAL_PATH, SIGN_UP_PATH, secondsBeforeSignUp } from '@/lib/auth/sign
 import { CONTACT_PATH, CONTACT_THROTTLED_PATH, secondsBeforeThisRequestMessage } from '@/lib/contact/rate-limit'
 import { rateLimitSearch } from '@/lib/search/rate-limit'
 import { robotsForPath } from '@/lib/seo/robots'
+import { uploadRefusal } from '@/lib/upload-guard'
 import { shapeRedirect } from '@/lib/urls/shape'
 import { type CheckedFamily, urlToCheck } from '@/lib/urls/unknown-page'
 
@@ -42,6 +43,8 @@ import { type CheckedFamily, urlToCheck } from '@/lib/urls/unknown-page'
  * - An unknown slug under `/profil`, `/talent` or `/blog` is rewritten to the 404 page of the site, so that the HTML
  *   of the server carries its h1 (ticket 231; `notFound()` in a page only sends an empty shell). The slug is read
  *   through the same reads as the page, remembered for a minute when the page exists; a failed read lets the page answer.
+ * - A send to the media route with no session cookie answers 403, and one that declares more than the site reads
+ *   answers 413, before Payload reads the body (ticket 273, `src/lib/upload-guard.ts`).
  * - A path that does not decode (`/profil/%E0%A4%A`) answers the 404 page of the site, not Next's error; under
  *   `/api/` it answers a JSON 400 (ticket 223).
  * - A response that carries a cookie of the cleaning is `private, no-store`: no shared cache keeps it (ticket 223).
@@ -61,6 +64,18 @@ function siteProxy(requete: NextRequest) {
 		const notFound = NextResponse.rewrite(new URL(NOT_FOUND_PATH, requete.url ?? requete.nextUrl.href))
 		notFound.headers.set('X-Robots-Tag', 'noindex')
 		return notFound
+	}
+	const upload = uploadRefusal({
+		chemin: pathname,
+		methode: requete.method,
+		cookies: requete.cookies.getAll().map(cookie => cookie.name),
+		longueur: requete.headers.get('content-length'),
+	})
+	if (upload) {
+		// Answered before Payload reads the body (ticket 273).
+		const refusal = NextResponse.json({ errors: [{ message: upload.message }] }, { status: upload.status })
+		refusal.headers.set('X-Robots-Tag', 'noindex')
+		return refusal
 	}
 	// The path as the visitor wrote it: `nextUrl.pathname` may already have lost a repeated slash.
 	const shape = shapeRedirect(writtenPath(requete.url ?? requete.nextUrl.href) ?? pathname)
