@@ -154,9 +154,9 @@ export async function buildByApplication(
 	}
 	const pros: number[] = []
 	const profiles: number[] = []
-	// Each creation holds a database connection while it hashes the password, and the server has 5 of
-	// them (CONNECTIONS_MAX) for every worker and every other test of the shard: two at a time keep two
-	// workers under that limit. Five at a time ran out of connections in CI (« cannot begin transaction:
+	// Each creation holds a database connection while it hashes the password, and the server has a
+	// limited number of them (CONNECTIONS_MAX: 5 when this was written, 10 since ticket 268) for every worker and every
+	// other test of the shard: two at a time keep two workers well under that limit. Five at a time ran out of connections in CI (« cannot begin transaction:
 	// timeout exceeded »), and the retry of the failed hook then met the accounts made by the first try.
 	for (let startedAt = 0; startedAt < n; startedAt += BATCH_BY_APPLICATION) {
 		const batch = await Promise.allSettled(

@@ -84,8 +84,8 @@ export default buildConfig({
 			// Outside this machine, a database that does not exist is an error: Payload must not create an empty one.
 			disableCreateDatabase: !env.localDatabase,
 			migrationDir: path.resolve(dirname, 'migrations'),
-			// 5 connections per process and a wait limit for a free one (src/lib/pool-base.ts, ticket 222).
-			pool: poolSettings(env.databaseUri),
+			// The size of the pool and the wait limit for a free connection (src/lib/pool-base.ts, tickets 222 and 268).
+			pool: poolSettings(env.databaseUri, env.databasePool),
 			// Everywhere else, the schema changes by these migrations: Payload plays them when it starts in production.
 			prodMigrations: migrations,
 			// The schema is pushed into a database of this machine only. Payload never pushes in production.

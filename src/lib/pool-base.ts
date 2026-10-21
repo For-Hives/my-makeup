@@ -6,8 +6,18 @@ import type { DatabaseAdapterObj } from 'payload'
  * `src/payload.config.ts` and by the tests: one place, no copy.
  */
 
-/** Connections per process, not the 10 of `pg`: a build and a server run several processes at once. */
-export const CONNECTIONS_MAX = 5
+/**
+ * Connections per process when `DATABASE_POOL_MAX` is not set: the 10 of `pg`. Ticket 222 had set 5, and
+ * ticket 268 measured that a server that serves a visitor, a crawler and an admin at once (twenty accounts
+ * created while thirty pages are read) held 5 connections at its peak, with no margin left for the day a
+ * request waits on a slow query. One production container uses at most 10 of the 100 connections
+ * (`max_connections`) a default PostgreSQL grants: the room left is for the import, the administration
+ * scripts and a rolling deployment where two containers overlap for a minute. A build opens none.
+ */
+export const CONNECTIONS_MAX = 10
+
+/** The values `DATABASE_POOL_MAX` may take: at least one connection, and never more than half of the 100 of PostgreSQL. */
+export const CONNECTIONS_MAX_RANGE = { min: 1, max: 50 } as const
 
 /**
  * Longest wait for a free connection, in milliseconds. `pg` waits for ever by default: if every
@@ -19,14 +29,25 @@ export const CONNECTIONS_MAX = 5
  */
 export const CONNECTION_TIMEOUT_MS = 5000
 
+/** The values `DATABASE_POOL_TIMEOUT_MS` may take, in milliseconds: never 0, which `pg` reads as « wait for ever ». */
+export const CONNECTION_TIMEOUT_RANGE = { min: 1000, max: 30_000 } as const
+
 export interface PoolSettings {
 	connectionString: string
 	connectionTimeoutMillis: number
 	max: number
 }
 
-export function poolSettings(connectionString: string): PoolSettings {
-	return { connectionString, connectionTimeoutMillis: CONNECTION_TIMEOUT_MS, max: CONNECTIONS_MAX }
+/** The size of the pool and its wait limit, as `DATABASE_POOL_MAX` and `DATABASE_POOL_TIMEOUT_MS` give them. */
+export interface PoolSize {
+	max: number
+	timeoutMs: number
+}
+
+export const DEFAULT_POOL_SIZE: PoolSize = { max: CONNECTIONS_MAX, timeoutMs: CONNECTION_TIMEOUT_MS }
+
+export function poolSettings(connectionString: string, size: PoolSize = DEFAULT_POOL_SIZE): PoolSettings {
+	return { connectionString, connectionTimeoutMillis: size.timeoutMs, max: size.max }
 }
 
 /** What the listener needs of a pool: `pg`'s `Pool` is an event emitter. */
