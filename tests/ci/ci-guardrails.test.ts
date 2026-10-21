@@ -588,6 +588,12 @@ describe('the CI reads no secret', () => {
 	const ALLOWED_SECRETS: string[] = [
 		// release.yml pushes the publication on main with the token of its own run (ticket 036).
 		'GITHUB_TOKEN',
+		// sonde-continue.yml (ticket 277): the protected access of the v3, the key of the email
+		// service for the alert, and the address that receives it. Never printed by the script.
+		'WATCH_ACCESS_USER',
+		'WATCH_ACCESS_PASSWORD',
+		'WATCH_RESEND_KEY',
+		'WATCH_ALERT_TO',
 	]
 
 	test('the CI reads none, and the other workflows only the ones of the allowed list', () => {

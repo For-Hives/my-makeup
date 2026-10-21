@@ -667,6 +667,7 @@ Rien ne se publie avant la fusion de `v3` dans `main`. Le détail, et ce qu'il r
 | `bun run test:e2e` | Les essais de bout en bout de `tests/e2e/`, dans un vrai navigateur, contre l'application construite et branchée sur le banc. Avec un chemin : ce fichier seul |
 | `bun run cutover:check` | Le contrôle d'un hôte (ticket 173) : lit en GET, 2 requêtes par seconde au plus, toutes les adresses de l'inventaire, le sitemap, le fichier robots, les anciennes routes d'authentification et le script de mesure, et écrit un rapport daté. L'hôte, de production seulement (`https://my-makeup.fr`, `https://v3.my-makeup.fr`, ou le banc de ce poste), par `HOST_CHECK_TARGET` (voir [`docs/tests/controle-hote.md`](docs/tests/controle-hote.md)) |
 | `bun run cutover:ui-crawl` | Le crawl des interfaces (ticket 177) : un vrai navigateur ouvre 40 adresses en largeur téléphone (390 px) et bureau (1440 px) et relève les pages en 5xx, les erreurs de console, un `h1` ou une Nav qui n'est pas unique, un « undefined » ou « null » visible, un débordement, une image cassée. Lectures seules, 2 requêtes par seconde au plus. L'hôte, de production seulement ou le banc de ce poste, par `UI_CRAWL_TARGET` (voir [`docs/tests/crawl-interfaces.md`](docs/tests/crawl-interfaces.md)) |
+| `bun run watch:site` | La sonde continue : lit la santé, l'accueil et un profil de `WATCH_TARGET`, alerte après 2 échecs de suite (voir [`docs/tests/sonde-continue.md`](docs/tests/sonde-continue.md)) |
 | `bun run probes` | Les sondes de `tests/probes/` : lisent le site en ligne, en GET seulement, 2 requêtes par seconde au plus. Une autre cible par `PROBES_TARGET` (voir « Les sondes du site en ligne ») |
 | `bun run image:build` | Construit l'image Docker `my-makeup:local` |
 | `bun run image:check` | Vérifie l'image construite contre une base jetable (voir « Image Docker ») |
@@ -692,6 +693,7 @@ Les tests tournent avec `bun test`, lancé par les scripts ci-dessus. Pour un se
 | `tests/integration/` | Tests d'intégration, en `*.test.ts`, contre la pile de test locale |
 | `tests/e2e/` | Essais de bout en bout, en `*.spec.ts` |
 | `tests/probes/` | Sondes du site en ligne, en lecture seule |
+| `scripts/watch/` | La sonde continue (toutes les 5 minutes), en lecture seule |
 | `tests/ci/` | Garde-fous de la CI et de l'image Docker : chacun est joué sur le dépôt, puis sur un exemple fautif |
 | `tests/fixtures/` | Données fictives et fichiers témoins |
 | `tests/support/` | Outils partagés par les tests |
@@ -800,6 +802,7 @@ PROBES_API=aucune bun run probes                     # Strapi est arrêté : plu
 - Une requête à la fois, 2 par seconde au plus. Le rapport désigne un profil par une empreinte, jamais par son adresse.
 - `PROBES_TARGET` n'est lue que par les sondes : la garde des essais refuse toujours la prod.
 - Le lundi à 07:00 (Paris), le workflow `.github/workflows/sondes.yml` les lance sans aucun secret et écrit le rapport dans le résumé de l'exécution ; une sonde rouge fait échouer l'exécution, que le rapport de 07:30 lit par GitHub.
+- Toutes les 5 minutes, `.github/workflows/sonde-continue.yml` lit la santé, l'accueil et un profil de la cible (`WATCH_TARGET`) et écrit à Andy après 2 échecs de suite : [`docs/tests/sonde-continue.md`](docs/tests/sonde-continue.md).
 
 Le détail est dans [`docs/tests/sondes.md`](docs/tests/sondes.md) : chaque sonde, la garde, lire le rapport, retrouver un profil rouge.
 
