@@ -194,6 +194,7 @@ describe('les listes', () => {
 
 describe('altRealisation', () => {
 	test('« Réalisation de <nom> (n/N) »', () => {
-		expect(altWork('Inès Morel', 2, 6)).toBe('Réalisation de Inès Morel (2/6)')
+		expect(altWork('Inès Morel', 2, 6)).toBe('Réalisation d’Inès Morel (2/6)')
+		expect(altWork('Léa Garnier', 1, 3)).toBe('Réalisation de Léa Garnier (1/3)')
 	})
 })

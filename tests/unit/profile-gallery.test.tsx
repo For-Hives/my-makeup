@@ -40,7 +40,7 @@ describe('E44 : la galerie au clavier', () => {
 	test('chaque photo a son texte alternatif « Réalisation de <nom> (n/N) », demandée depuis son adresse d’origine', () => {
 		const html = renderToStaticMarkup(<ProfileGallery photos={photos(6)} nom="Inès Morel" />)
 
-		for (let n = 1; n <= 6; n++) expect(html).toContain(`alt="Réalisation de Inès Morel (${n}/6)"`)
+		for (let n = 1; n <= 6; n++) expect(html).toContain(`alt="Réalisation d’Inès Morel (${n}/6)"`)
 		expect(html.match(/<img /g)).toHaveLength(6)
 		// The optimizer is asked for the original address, whatever width it picks.
 		expect(html).toContain(`url=${encodeURIComponent('https://photos.example.test/media/photo-1.webp')}`)
@@ -51,7 +51,7 @@ describe('E44 : la galerie au clavier', () => {
 	test('une seule photo : pas de boutons ni de position à annoncer', () => {
 		const html = renderToStaticMarkup(<ProfileGallery photos={photos(1)} nom="Inès Morel" />)
 
-		expect(html).toContain('alt="Réalisation de Inès Morel (1/1)"')
+		expect(html).toContain('alt="Réalisation d’Inès Morel (1/1)"')
 		expect(html).not.toContain('Photo suivante')
 		expect(html).not.toContain('aria-live')
 	})
@@ -123,7 +123,7 @@ describe('E44 : la galerie au clavier', () => {
 	test('la rangée se laisse atteindre au clavier et se nomme', async () => {
 		const zone = await jsdomWindow.monter(<ProfileGallery photos={photos(2)} nom="Inès Morel" />)
 
-		expect(track(zone).getAttribute('aria-label')).toBe('Photos de Inès Morel')
+		expect(track(zone).getAttribute('aria-label')).toBe('Photos d’Inès Morel')
 		expect(zone.querySelectorAll('[aria-roledescription="photo"]')).toHaveLength(2)
 		expect(zone.querySelector('[aria-label="1 sur 2"]')).not.toBeNull()
 	})

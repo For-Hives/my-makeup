@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 import { SignInSucceeded } from '@/components/analytics/SignInSucceeded'
 import { WebVitals } from '@/components/analytics/WebVitals'
+import { SkipLink } from '@/components/layout/SkipLink'
 import { umamiLoaderScript, umamiScriptAttributes } from '@/lib/analytics/umami'
 import { versionEnv } from '@/lib/env'
 import { SITE_ORIGIN } from '@/lib/frozen-urls'
@@ -35,6 +36,7 @@ export default function FrontLayout({ children }: { children: ReactNode }) {
 				<script dangerouslySetInnerHTML={{ __html: ANALYTICS_SCRIPT }} />
 			</head>
 			<body className="bg-neutral-50 text-neutral-900 antialiased">
+				<SkipLink />
 				<WebVitals />
 				<SignInSucceeded />
 				{children}

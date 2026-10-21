@@ -33,7 +33,7 @@ export function PageArticle({ contenu }: { contenu: PageContent }) {
 							))}
 						</ul>
 					</div>
-					<p className="flex items-center text-base text-gray-400">
+					<p className="flex items-center text-base text-gray-600">
 						<span className="h-4 w-0.5 rounded-full bg-gray-200" />
 						<span className="ml-3">L&apos;équipe My-Makeup</span>
 					</p>

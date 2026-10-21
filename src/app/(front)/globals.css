@@ -34,3 +34,8 @@
 		@apply rounded-lg border-2 border-white bg-transparent px-4 py-2 font-bold text-sm text-white leading-6;
 	}
 }
+
+/* The page that « Aller au contenu » sends the focus to: a ring around the whole page would say nothing. */
+main:focus {
+	outline: none;
+}

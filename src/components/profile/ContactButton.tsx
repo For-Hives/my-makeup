@@ -19,7 +19,7 @@ import { TrackedContactLink } from './TrackedContactLink'
 
 const RING = 'focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2'
 
-const PRIMARY_BUTTON = `inline-flex min-h-12 items-center justify-center rounded-full bg-indigo-700 px-6 font-semibold text-base text-white hover:bg-indigo-800 ${RING}`
+const PRIMARY_BUTTON = `inline-flex min-h-12 max-w-full items-center justify-center rounded-full bg-indigo-700 px-6 py-2 text-center [overflow-wrap:anywhere] font-semibold text-base text-white hover:bg-indigo-800 ${RING}`
 
 export function ContactButton({
 	placement,
@@ -64,7 +64,7 @@ export function ContactButton({
 			type="button"
 			aria-haspopup="dialog"
 			onClick={() => setOpen(true)}
-			className={`${PRIMARY_BUTTON} ${placement === 'bar' ? 'shrink-0' : 'mt-3'}`}
+			className={`${PRIMARY_BUTTON} ${placement === 'bar' ? 'min-w-0' : 'mt-3'}`}
 		>
 			{label}
 		</button>
@@ -78,7 +78,7 @@ export function ContactButton({
 						price === null ? 'justify-center' : 'justify-between'
 					}`}
 				>
-					{price !== null && <p className="min-w-0 font-semibold text-gray-800">{price}</p>}
+					{price !== null && <p className="shrink-0 font-semibold text-gray-800">{price}</p>}
 					{button}
 				</div>
 			) : (

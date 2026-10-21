@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import { TrackedLink } from '@/components/analytics/TrackedLink'
 import { ZoneText } from '@/components/profile/ZoneText'
+import { ofName } from '@/lib/french-elision'
 import type { ProfileCard } from '@/services/public/profiles'
 
 /** The picture of a card whose artist has no photo yet: the one of the site online. */
@@ -63,7 +64,7 @@ export function ResultCard({
 			<div className="relative h-[350px] w-full">
 				<Image
 					src={photo?.url ?? DEFAULT_PHOTO}
-					alt={photo ? `Photo de ${carte.nom}` : ''}
+					alt={photo ? `Photo ${ofName(carte.nom)}` : ''}
 					fill
 					sizes="(min-width: 1536px) 16vw, (min-width: 768px) 33vw, 100vw"
 					priority={prioritaire}

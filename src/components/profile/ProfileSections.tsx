@@ -8,6 +8,7 @@ import type {
 	PublicServiceOffer,
 } from '@/lib/profile/public-view'
 import { CHANNEL_LABELS } from '@/lib/profile/public-view'
+import { FoldingSection } from './FoldingSection'
 import { ProfileSection } from './ProfileSection'
 import { TrackedContactLink } from './TrackedContactLink'
 
@@ -34,6 +35,18 @@ export function SectionDescription({ lignes }: { lignes: readonly string[] }) {
 		<ProfileSection titre="À propos">
 			<Paragraphs lignes={lignes} className="text-gray-800" />
 		</ProfileSection>
+	)
+}
+
+/** The zone in one sentence (ticket 304): « Se déplace à domicile, jusqu’à 30 km d’Annecy ». */
+export function TravelSection({ phrase }: { phrase: string }) {
+	return (
+		<p className="flex w-full min-w-0 items-center gap-3 rounded border border-gray-300 bg-white p-6 text-gray-800 sm:px-8">
+			<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className="h-6 w-6 shrink-0 text-indigo-900">
+				<path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5Z" />
+			</svg>
+			<span className="min-w-0 break-words">{phrase}</span>
+		</p>
 	)
 }
 
@@ -115,7 +128,7 @@ export function SectionContacts({
 
 export function SkillsSection({ competences }: { competences: readonly string[] }) {
 	return (
-		<ProfileSection titre="Compétences">
+		<FoldingSection titre="Compétences">
 			<ul className="flex flex-wrap gap-3">
 				{competences.map((nom, rang) => (
 					<li
@@ -127,13 +140,13 @@ export function SkillsSection({ competences }: { competences: readonly string[] 
 					</li>
 				))}
 			</ul>
-		</ProfileSection>
+		</FoldingSection>
 	)
 }
 
 export function LanguagesSection({ langues }: { langues: readonly string[] }) {
 	return (
-		<ProfileSection titre="Langues">
+		<FoldingSection titre="Langues">
 			<ul className="flex flex-col gap-3">
 				{langues.map((nom, rang) => (
 					// biome-ignore lint/suspicious/noArrayIndexKey: a language can be listed twice, and the rows never move
@@ -143,13 +156,13 @@ export function LanguagesSection({ langues }: { langues: readonly string[] }) {
 					</li>
 				))}
 			</ul>
-		</ProfileSection>
+		</FoldingSection>
 	)
 }
 
 export function CoursesSection({ formations }: { formations: readonly PublicCourse[] }) {
 	return (
-		<ProfileSection titre="Formations & diplômes">
+		<FoldingSection titre="Formations & diplômes">
 			<ul className="flex flex-col gap-5">
 				{formations.map(({ diploma, school, obtenu, description }, rang) => (
 					// biome-ignore lint/suspicious/noArrayIndexKey: the rows never move
@@ -165,7 +178,7 @@ export function CoursesSection({ formations }: { formations: readonly PublicCour
 					</li>
 				))}
 			</ul>
-		</ProfileSection>
+		</FoldingSection>
 	)
 }
 
@@ -241,7 +254,7 @@ export function ServiceOffersSection({ prestations }: { prestations: readonly Pu
 
 export function SectionExperiences({ experiences }: { experiences: readonly PublicExperience[] }) {
 	return (
-		<ProfileSection titre="Expériences professionnelles">
+		<FoldingSection titre="Expériences professionnelles">
 			<ul className="flex flex-col gap-5">
 				{experiences.map(({ company, jobTitle, city, periode, description }, rang) => (
 					// biome-ignore lint/suspicious/noArrayIndexKey: the rows never move
@@ -258,6 +271,6 @@ export function SectionExperiences({ experiences }: { experiences: readonly Publ
 					</li>
 				))}
 			</ul>
-		</ProfileSection>
+		</FoldingSection>
 	)
 }

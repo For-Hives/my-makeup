@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import type { ReactNode } from 'react'
+import { ofName } from '@/lib/french-elision'
 import { ratioMedia, sizesBox } from '@/lib/image-size'
 import type { PublicProfile } from '@/services/public/profiles'
 import { ZoneText } from './ZoneText'
@@ -51,7 +52,7 @@ export function ProfileHeader({ profil, action }: { profil: PublicProfile; actio
 					{/* A fixed box at every width, and a landscape photo is asked at the width it is drawn. */}
 					<Image
 						src={photo?.url ?? DEFAULT_PHOTO}
-						alt={photo ? `Photo de ${name}` : ''}
+						alt={photo ? `Photo ${ofName(name)}` : ''}
 						priority
 						fill
 						sizes={sizesBox({

@@ -8,6 +8,7 @@
  * - A section with nothing to show is not shown.
  */
 
+import { ofName } from '../french-elision'
 import { priceRows } from '../price'
 import { fullName, type ProfileNames, text } from './display-name'
 
@@ -291,5 +292,6 @@ export function experiences(stockees: unknown): PublicExperience[] {
 	})
 }
 
-/** The names a photo of the portfolio is described with: « Réalisation de <nom> (n/N) », n from 1. */
-export const altWork = (nom: string, rang: number, total: number): string => `Réalisation de ${nom} (${rang}/${total})`
+/** The names a photo of the portfolio is described with: « Réalisation de <nom> (n/N) », n from 1, with the elision (« Réalisation d’Inès »). */
+export const altWork = (nom: string, rang: number, total: number): string =>
+	`Réalisation ${ofName(nom)} (${rang}/${total})`

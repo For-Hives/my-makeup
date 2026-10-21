@@ -61,7 +61,7 @@ describe('E43 : l’en-tête du profil, dans le HTML du serveur', () => {
 		expect(html).toContain('Prend de nouvelles dates')
 		expect(html).toContain('À propos')
 		expect(html).toContain('Maquilleuse professionnelle installée à Annecy')
-		expect(html).toContain('alt="Photo de Inès Morel"')
+		expect(html).toContain('alt="Photo d’Inès Morel"')
 		expect(html).toContain('Inès Morel Maquillage')
 	})
 
@@ -308,7 +308,7 @@ describe('E44 : le portfolio', () => {
 		const html = renderNow(readType(type('reference')))
 
 		expect(html).toContain('Portfolio')
-		for (let n = 1; n <= 6; n++) expect(html).toContain(`alt="Réalisation de Inès Morel (${n}/6)"`)
+		for (let n = 1; n <= 6; n++) expect(html).toContain(`alt="Réalisation d’Inès Morel (${n}/6)"`)
 		expect(html.indexOf('(1/6)')).toBeLessThan(html.indexOf('(6/6)'))
 		expect(html).toContain('Photo 1 sur 6')
 	})
