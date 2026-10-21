@@ -12,6 +12,24 @@
 				"longitude": 6.1264
 			}
 		],
+		"codePostal:74990": [
+			{
+				"nom": "Valbrume",
+				"code": "74990",
+				"departement": "74",
+				"codesPostaux": ["74990"],
+				"latitude": 45.95,
+				"longitude": 6.4
+			},
+			{
+				"nom": "Hautcombe",
+				"code": "74991",
+				"departement": "74",
+				"codesPostaux": ["74990"],
+				"latitude": 45.97,
+				"longitude": 6.43
+			}
+		],
 		"codePostal:75116": [
 			{
 				"nom": "Paris",
@@ -231,6 +249,7 @@
 				"latitude": 43.5299,
 				"longitude": 1.4368
 			}
-		]
+		],
+		"nom:villeneuve-fictive": []
 	}
 }

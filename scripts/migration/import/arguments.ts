@@ -102,6 +102,8 @@ export function readArguments(argumentsDeLaCommande: readonly string[]): ImportA
 		else if (Object.hasOwn(WITH_FILE, option)) {
 			const file = argumentsDeLaCommande[++position]
 			if (!file || file.startsWith('--')) return null
+			// The readable review takes the name of the list with `.md`: a list named `.md` would be overwritten by it.
+			if (option === '--review' && file.toLowerCase().endsWith('.md')) return null
 			read[WITH_FILE[option as keyof typeof WITH_FILE]] = file
 		} else return null
 	}

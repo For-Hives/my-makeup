@@ -391,3 +391,82 @@ describe('le contrôle des offres chiffrées perdues ne lit que les prestations 
 		expect(lostPricedOffer(['80 €', null], [{ priceFrom: 80 }, { priceFrom: null }])).toBe(false)
 	})
 })
+
+describe('ticket 261 : la zone que l’import écrit, commune, pays ou revue', () => {
+	const accounts = new Map([[148, 548]])
+	const only = (edit: Partial<ReadProfile>) => profile(48, { city: 'Bruxelles-Belgique', ...edit })
+
+	test('une zone de pays écrit le type, les pays et la ville ; le profil dont c’est la seule condition est publié', () => {
+		const countries = new Map([[48, { countries: ['BE'], town: 'Bruxelles' }]])
+
+		const [withZone] = expectedProfiles([only({})], accounts, undefined, undefined, undefined, null, undefined, {
+			countries,
+		}).expected
+		const [withoutZone] = expectedProfiles([only({})], accounts).expected
+
+		expect(withZone?.values).toMatchObject({
+			city: null,
+			zoneKind: 'countries',
+			countries: ['BE'],
+			town: 'Bruxelles',
+			status: 'published',
+		})
+		expect(withoutZone?.values.status).toBe('draft')
+		expect(withZone?.gaps.map(({ reference }) => reference)).toContain(REFERENCES.zoneHorsDeFrance)
+		expect(withZone?.gaps.map(({ reference }) => reference)).toContain(REFERENCES.villeEnCommune)
+	})
+
+	test('une revue écrit la raison, le code postal et les communes possibles, jamais le texte', () => {
+		const reviews = new Map([
+			[
+				36,
+				{
+					reason: 'sharedPostalCode' as const,
+					postalCode: '62900',
+					candidates: [{ inseeCode: '62901', name: 'Hameau-Un', department: '62' }],
+				},
+			],
+		])
+
+		const [expected] = expectedProfiles(
+			[profile(36, { city: '62900' })],
+			new Map([[136, 536]]),
+			undefined,
+			undefined,
+			undefined,
+			null,
+			undefined,
+			{ reviews }
+		).expected
+
+		expect(expected?.values.zoneReview).toEqual({
+			reason: 'sharedPostalCode',
+			postalCode: '62900',
+			candidates: [{ inseeCode: '62901', name: 'Hameau-Un', department: '62' }],
+		})
+		expect(expected?.values.city).toBeNull()
+		expect(JSON.stringify(expected?.values)).not.toContain('62900"}')
+	})
+
+	test('un profil de commune garde exactement les valeurs d’avant : aucune clé de zone', () => {
+		const [expected] = expectedProfiles([profile(21, { city: 'Annecy' })], new Map([[121, 501]])).expected
+
+		for (const key of ['zoneKind', 'countries', 'town', 'zoneReview'])
+			expect(Object.hasOwn(expected?.values ?? {}, key), key).toBe(false)
+	})
+
+	test('les champs de zone sont comparés : le type par défaut est « city », une revue d’avant est un écart', () => {
+		expect(PROFILES_ADAPTER.fields).toMatchObject({
+			zoneKind: 'texte',
+			countries: 'liste',
+			town: 'texte',
+			zoneReview: 'objet',
+		})
+		expect(PROFILES_ADAPTER.defaults).toEqual({
+			zoneKind: 'city',
+			countries: [],
+			town: null,
+			zoneReview: { reason: null, postalCode: null, candidates: null },
+		})
+	})
+})

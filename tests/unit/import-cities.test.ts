@@ -19,6 +19,8 @@ import {
 	readAnswers,
 } from '../../scripts/migration/import/reference'
 import { ImportRefuse } from '../../scripts/migration/import/target'
+import { readZonePieces } from '../../scripts/migration/import/zone-text'
+import { COUNTRIES } from '../../src/lib/countries'
 import { delay, HttpResponse, http, simulate } from '../support/outgoing-http'
 import { sourceDefinition } from '../support/source-strapi/data'
 
@@ -65,7 +67,7 @@ type Log = string[]
  * The referential, simulated: a name gives every commune whose name holds it (the real one ranks
  * near names too), a postal code the communes that hold it, an INSEE code its commune or a 404.
  */
-function simulateReference(communes: SimulatedCity[] = CITIES): Log {
+function simulateReference(list: SimulatedCity[] = CITIES): Log {
 	const log: Log = []
 	const fold = (texte: string) => comparableName(texte)
 	simulate(
@@ -74,19 +76,19 @@ function simulateReference(communes: SimulatedCity[] = CITIES): Log {
 			const parameters = new URL(request.url).searchParams
 			const name = parameters.get('nom')
 			const codePostal = parameters.get('codePostal')
-			if (name) return HttpResponse.json(communes.filter(c => fold(c.nom).includes(fold(name))))
-			return HttpResponse.json(communes.filter(c => codePostal !== null && c.codesPostaux.includes(codePostal)))
+			if (name) return HttpResponse.json(list.filter(c => fold(c.nom).includes(fold(name))))
+			return HttpResponse.json(list.filter(c => codePostal !== null && c.codesPostaux.includes(codePostal)))
 		}),
 		http.get(`${REFERENCE_ADDRESS}/communes/:code`, ({ request, params }) => {
 			log.push(request.url)
-			const found = communes.find(({ code }) => code === params.code)
+			const found = list.find(({ code }) => code === params.code)
 			return found ? HttpResponse.json(found) : HttpResponse.json({ code: 404 }, { status: 404 })
 		})
 	)
 	return log
 }
 
-const codes = (communes: readonly Pick<ReferenceCity, 'code'>[]): string[] => communes.map(({ code }) => code)
+const codes = (list: readonly Pick<ReferenceCity, 'code'>[]): string[] => list.map(({ code }) => code)
 
 describe('ce que l’import cherche dans une ville saisie : un nom, un code postal, jamais une rue', () => {
 	test('vide : rien à chercher', () => {
@@ -257,7 +259,14 @@ describe('la ville devient une commune du référentiel (simulé)', () => {
 				latitude: 45.98761,
 				longitude: 6.11147,
 			})
-		).toEqual({ name: 'Bourg-Fictif', inseeCode: '74901', department: '74', latitude: 45.99, longitude: 6.11 })
+		).toEqual({
+			name: 'Bourg-Fictif',
+			inseeCode: '74901',
+			department: '74',
+			latitude: 45.99,
+			longitude: 6.11,
+			postalCodes: [],
+		})
 	})
 })
 
@@ -336,6 +345,7 @@ describe('les villes des profils, la liste de revue et la table de décision', (
 			department: '26',
 			latitude: 44.9,
 			longitude: 5,
+			postalCodes: ['26990'],
 		})
 		expect([cities.get(1)?.inseeCode, cities.get(3), cities.get(4)?.inseeCode]).toEqual(['74901', null, '74901'])
 		expect(summary).toMatchObject({ attached: 4, part: 80, toReview: [], decided: [2, 3, 4] })
@@ -503,5 +513,305 @@ describe('la table de décision et la ligne de commande', () => {
 		})
 		for (const line of [['--cities'], ['--review', '--real'], ['--offline', '--offline']])
 			expect(readArguments(line), line.join(' ')).toBeNull()
+	})
+})
+
+// ---------------------------------------------------------------------------------------------
+// Ticket 261: postal codes kept, countries recognised, a shared postal code never guessed.
+// ---------------------------------------------------------------------------------------------
+
+/** Invented communes added for the zones: two communes that share a postal code, and a real name. */
+const ZONE_CITIES: SimulatedCity[] = [
+	...CITIES,
+	cityAlt('Hameau-Un', '62901', ['62900'], [2.7, 50.5]),
+	cityAlt('Hameau-Deux', '62902', ['62900', '62901'], [2.71, 50.52]),
+	cityAlt('Hameau-Trois', '62903', ['62900'], [2.72, 50.51]),
+	cityAlt('Annecy', '74010', ['74000'], [6.12, 45.9]),
+]
+
+/** The questions a simulated referential received, as `nom:x` or `codePostal:y`. */
+const asked = (log: Log): string[] =>
+	log.map(url => {
+		const parameters = new URL(url).searchParams
+		return parameters.has('nom') ? `nom:${parameters.get('nom')}` : `codePostal:${parameters.get('codePostal')}`
+	})
+
+describe('ticket 261 : une commune trouvée garde ses codes postaux', () => {
+	test('la commune attendue porte les codes postaux du référentiel, triés', async () => {
+		simulateReference(ZONE_CITIES)
+
+		const resolution = await resolveCity('Cité-des-Tests', geoApiReference())
+
+		expect(resolution.genre).toBe('commune')
+		if (resolution.genre !== 'commune') return
+		expect(expectedCity(resolution.commune)).toEqual({
+			name: 'Cité-des-Tests',
+			inseeCode: '75901',
+			department: '75',
+			latitude: 48.86,
+			longitude: 2.35,
+			postalCodes: ['75901', '75902'],
+		})
+	})
+
+	test('un code postal d’une seule commune devient cette commune, avec ses codes postaux', async () => {
+		simulateReference(ZONE_CITIES)
+
+		const { communes: cities } = await profileCities(
+			[{ id: 1, city: '31990', videALaSource: false }],
+			geoApiReference()
+		)
+
+		expect(cities.get(1)).toMatchObject({ inseeCode: '31901', postalCodes: ['31990'] })
+	})
+})
+
+describe('ticket 261 : un code postal partagé n’est jamais deviné', () => {
+	test('plusieurs communes pour le code : raison à part, zone vide, communes en candidates', async () => {
+		simulateReference(ZONE_CITIES)
+
+		const resolution = await resolveCity('62900', geoApiReference())
+
+		expect(resolution).toMatchObject({ genre: 'a-revoir', motif: 'code-postal-partage' })
+		expect(resolution.genre === 'a-revoir' && codes(resolution.candidats)).toEqual(['62901', '62902', '62903'])
+	})
+
+	test('la revue et zoneReview disent le code postal et les candidates, et rien d’autre', async () => {
+		simulateReference(ZONE_CITIES)
+
+		const result = await profileCities([{ id: 36, city: '62900', videALaSource: false }], geoApiReference())
+
+		expect(result.communes.get(36)).toBeNull()
+		expect(result.reviews.get(36)).toEqual({
+			reason: 'sharedPostalCode',
+			postalCode: '62900',
+			candidates: [
+				{ inseeCode: '62901', name: 'Hameau-Un', department: '62' },
+				{ inseeCode: '62902', name: 'Hameau-Deux', department: '62' },
+				{ inseeCode: '62903', name: 'Hameau-Trois', department: '62' },
+			],
+		})
+		expect(result.revue.map(({ profil, motif }) => [profil, motif])).toEqual([[36, 'code-postal-partage']])
+		expect(result.zones.toReviewByReason['code-postal-partage']).toEqual([36])
+	})
+
+	test('une ligne de la table le tranche, et zoneReview disparaît', async () => {
+		simulateReference(ZONE_CITIES)
+
+		const result = await profileCities([{ id: 36, city: '62900', videALaSource: false }], geoApiReference(), [
+			{ profile: 36, inseeCode: '62902' },
+		])
+
+		expect(result.communes.get(36)).toMatchObject({ inseeCode: '62902', postalCodes: ['62900', '62901'] })
+		expect(result.reviews.size).toBe(0)
+		expect(result.bilan.decided).toEqual([36])
+	})
+
+	test('le nom avec le code postal garde le croisement existant', async () => {
+		simulateReference(ZONE_CITIES)
+
+		const resolution = await resolveCity('Hameau-Deux 62900', geoApiReference())
+
+		expect(resolution).toMatchObject({ genre: 'commune', commune: { code: '62902' } })
+	})
+})
+
+describe('ticket 261 : les pays reconnus, sans rien deviner', () => {
+	const resolve = async (text: string) => resolveCity(text, geoApiReference())
+
+	test('« France & Italie » donne FR puis IT, dans l’ordre du texte, sans rien demander', async () => {
+		const log = simulateReference(ZONE_CITIES)
+
+		expect(await resolve('France & Italie')).toEqual({
+			genre: 'pays',
+			countries: ['FR', 'IT'],
+			town: null,
+			adresse: false,
+		})
+		expect(await resolve('Italie / France')).toMatchObject({ countries: ['IT', 'FR'] })
+		expect(await resolve('Suisse; Belgique + Allemagne')).toMatchObject({ countries: ['CH', 'BE', 'DE'] })
+		expect(await resolve('Belgique et Luxembourg')).toMatchObject({ countries: ['BE', 'LU'] })
+		expect(await resolve('Belgique - Italie')).toMatchObject({ countries: ['BE', 'IT'] })
+		expect(await resolve('Belgique-Italie')).toMatchObject({ countries: ['BE', 'IT'] })
+		expect(log).toHaveLength(0)
+	})
+
+	test('« Belgique » seul donne BE ; la France seule n’est pas une zone', async () => {
+		const log = simulateReference(ZONE_CITIES)
+
+		expect(await resolve('Belgique')).toEqual({ genre: 'pays', countries: ['BE'], town: null, adresse: false })
+		expect(await resolve('France')).toMatchObject({ genre: 'a-revoir', motif: 'pas-une-commune' })
+		// « Belgique » alone is asked once: a commune of that name would be a commune, not a country.
+		expect(asked(log)).toEqual(['nom:belgique'])
+	})
+
+	test('« Pays-Bas » et « Royaume-Uni » ne sont jamais coupés', async () => {
+		simulateReference(ZONE_CITIES)
+
+		expect(await resolve('Pays-Bas')).toMatchObject({ countries: ['NL'], town: null })
+		expect(await resolve('Royaume-Uni')).toMatchObject({ countries: ['GB'], town: null })
+		expect(await resolve('Pays-Bas, Royaume-Uni et Belgique')).toMatchObject({ countries: ['NL', 'GB', 'BE'] })
+		expect(await resolve('Belgique-Pays-Bas')).toMatchObject({ countries: ['BE', 'NL'] })
+	})
+
+	test('chaque nom de pays de la liste se lit entier, et un pays collé à un nom de lieu le garde entier', () => {
+		for (const country of COUNTRIES) {
+			for (const name of [country.name, ...(country.aliases ?? [])])
+				expect(readZonePieces(name), name).toEqual([{ kind: 'country', code: country.code }])
+			// A name that holds a separator of its own (« Svalbard et Jan Mayen ») is read whole, but not behind a glued town.
+			if (/\s(?:et|[-–—])\s|[,;/&+|]/i.test(country.name)) continue
+			expect(readZonePieces(`Ville-Fictive-${country.name}`), country.name).toEqual([
+				{ kind: 'place', text: 'Ville-Fictive' },
+				{ kind: 'country', code: country.code },
+			])
+		}
+	})
+
+	test('« Bruxelles-Belgique » donne la Belgique et la ville Bruxelles, après une question au référentiel', async () => {
+		const log = simulateReference(ZONE_CITIES)
+
+		expect(await resolve('Bruxelles-Belgique')).toEqual({
+			genre: 'pays',
+			countries: ['BE'],
+			town: 'Bruxelles',
+			adresse: false,
+		})
+		expect(await resolve('Genève, Suisse')).toMatchObject({ countries: ['CH'], town: 'Genève' })
+		expect(await resolve('Aix-en-Fictif-Belgique')).toMatchObject({ countries: ['BE'], town: 'Aix-en-Fictif' })
+		expect(asked(log)).toEqual([
+			'nom:bruxelles-belgique',
+			'nom:bruxelles',
+			'nom:genève',
+			'nom:aix-en-fictif-belgique',
+			'nom:aix-en-fictif',
+		])
+	})
+
+	test('une commune de France dont le nom contient un pays reste cette commune, sans être découpée', async () => {
+		const names = [
+			['Saint-Maurice', '94079'],
+			['Allemagne-en-Provence', '04006'],
+			['Sainte-Lucie-de-Tallano', '2A308'],
+			["Grenade-sur-l'Adour", '40114'],
+			["Saint-Maurice-l'Exil", '38399'],
+		] as const
+		simulateReference([...ZONE_CITIES, ...names.map(([label, code]) => cityAlt(label, code, [], [2, 46]))])
+		for (const [label, code] of names) {
+			expect(await resolve(label), label).toMatchObject({ genre: 'commune', commune: { code } })
+		}
+	})
+
+	test('un texte qui n’est qu’un pays mais aussi une commune de France est à revoir, pas deviné', async () => {
+		simulateReference([...ZONE_CITIES, cityAlt('Grenade', '31232', ['31330'], [1.3, 43.8])])
+
+		const resolution = await resolve('Grenade')
+
+		expect(resolution).toMatchObject({ genre: 'a-revoir', motif: 'pas-une-commune' })
+		expect(resolution.genre === 'a-revoir' && codes(resolution.candidats)).toEqual(['31232'])
+	})
+
+	test('« Annecy, Suisse » est à revoir : Annecy est une commune de France', async () => {
+		simulateReference(ZONE_CITIES)
+
+		const resolution = await resolve('Annecy, Suisse')
+
+		expect(resolution).toMatchObject({ genre: 'a-revoir', motif: 'pas-une-commune' })
+		expect(resolution.genre === 'a-revoir' && codes(resolution.candidats)).toEqual(['74010'])
+	})
+
+	test('un département ou une région de France n’est pas une ville à l’étranger', async () => {
+		const log = simulateReference(ZONE_CITIES)
+
+		for (const text of ['Suisse et Haute-Savoie', 'Belgique, Bretagne', 'Savoie-Italie', 'Italie, Île-de-France'])
+			expect(await resolve(text), text).toMatchObject({ genre: 'a-revoir', motif: 'pas-une-commune' })
+		// Only the glued « Savoie-Italie » asks whether a commune bears the whole name.
+		expect(asked(log)).toEqual(['nom:savoie-italie'])
+	})
+
+	test('plusieurs villes, ou une ville avec plusieurs pays, ou un pays avec une adresse : à revoir', async () => {
+		simulateReference(ZONE_CITIES)
+
+		for (const text of [
+			'Paris, Lyon et Annecy',
+			'Bruxelles, Gand, Belgique',
+			'Bruxelles, Belgique, Italie',
+			'12 rue des Lilas, Belgique',
+			'12 rue des Lilas, Bruxelles, Belgique',
+			'Bruxelles@Belgique, Belgique',
+			'Belgique, Italie, Suisse, Allemagne, Espagne, Portugal',
+		])
+			expect(await resolve(text), text).toMatchObject({ genre: 'a-revoir', motif: 'pas-une-commune' })
+	})
+
+	test('l’adresse d’un pays étranger n’est jamais reprise : sa ville ne l’est que si elle passe les règles d’un nom de commune', async () => {
+		const log = simulateReference(ZONE_CITIES)
+
+		const resolution = await resolve('3 impasse des Pinceaux-Belgique')
+
+		expect(resolution).toMatchObject({ genre: 'a-revoir', motif: 'pas-une-commune' })
+		expect(JSON.stringify(resolution)).not.toMatch(/impasse|pinceaux/i)
+		expect(log).toHaveLength(0)
+	})
+
+	test('un texte sans pays est lu comme avant, avec les mêmes questions', async () => {
+		const log = simulateReference(ZONE_CITIES)
+
+		expect(await resolve('Bourg-Fictif')).toMatchObject({ genre: 'commune' })
+		expect(asked(log)).toEqual(['nom:bourg-fictif'])
+	})
+})
+
+describe('ticket 261 : les zones d’un lot de profils, le bilan et la table de décision', () => {
+	const profiles = [
+		{ id: 36, city: '62900', videALaSource: false },
+		{ id: 48, city: 'Bruxelles-Belgique', videALaSource: false },
+		{ id: 82, city: 'France & Italie', videALaSource: false },
+		{ id: 1, city: 'Bourg-Fictif', videALaSource: false },
+		{ id: 2, city: 'Annecy, Suisse', videALaSource: false },
+		{ id: 3, city: 'France', videALaSource: false },
+		{ id: 4, city: 'Inconnue-sur-Rien', videALaSource: false },
+		{ id: 5, city: null, videALaSource: true },
+	]
+
+	test('les pays, les revues par raison et le bilan des zones, en nombres et en identifiants', async () => {
+		simulateReference(ZONE_CITIES)
+
+		const result = await profileCities(profiles, geoApiReference())
+
+		expect([...result.countries.entries()]).toEqual([
+			[48, { countries: ['BE'], town: 'Bruxelles' }],
+			[82, { countries: ['FR', 'IT'], town: null }],
+		])
+		expect(result.zones).toEqual({
+			recognized: 3,
+			part: 42.9,
+			communesOnly: 1,
+			countries: [48, 82],
+			toReviewByReason: {
+				'code-postal-partage': [36],
+				homonymes: [],
+				introuvable: [4],
+				'pas-une-commune': [2, 3],
+			},
+		})
+		// The summary of the communes stays what it was: communes alone, every profile to review.
+		expect(result.bilan).toMatchObject({ filledCities: 7, attached: 1, toReview: [2, 3, 4, 36] })
+		expect(JSON.stringify(result.zones)).not.toMatch(/Bruxelles|Suisse|Belgique/)
+	})
+
+	test('une ligne de pays tranche un profil à revoir : la zone countries attendue, plus de revue', async () => {
+		simulateReference(ZONE_CITIES)
+
+		const result = await profileCities(profiles, geoApiReference(), [
+			{ profile: 3, countries: ['FR', 'IT'], town: null },
+			{ profile: 2, countries: ['CH'], town: 'Genève' },
+		])
+
+		expect(result.countries.get(3)).toEqual({ countries: ['FR', 'IT'], town: null })
+		expect(result.countries.get(2)).toEqual({ countries: ['CH'], town: 'Genève' })
+		expect(result.reviews.has(3)).toBe(false)
+		expect(result.bilan.decided).toEqual([2, 3])
+		expect(result.zones.recognized).toBe(5)
+		expect(result.zones.toReviewByReason['pas-une-commune']).toEqual([])
 	})
 })

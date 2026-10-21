@@ -20,13 +20,74 @@
  * - `cities`: for a profile whose city the import leaves « à revoir » (ticket 063), the commune a
  *   person chose, by its INSEE code, or `null` for none: the zone stays empty, and the profile is no
  *   longer « à revoir ». A line for a profile that is not « à revoir » is without effect.
+ *   A line has one of two forms, which exclude each other (ticket 262):
+ *
+ *     { "profile": 36, "inseeCode": "62200" }                         a commune, or `null` for none
+ *     { "profile": 82, "countries": ["FR", "IT"], "town": null }      one to five countries, a town if any
+ *
+ *   A line of countries follows the rules of the collection (src/lib/profile/zone.ts, ticket 258): an
+ *   unknown code, France alone, a town next to several countries or a town that looks like an
+ *   address stop the import before any write.
  */
 
 import { z } from 'zod'
-import { departmentOfInseeCode } from '../../../src/lib/profile/zone'
+import {
+	countriesErrors,
+	departmentOfInseeCode,
+	normalizedCountries,
+	normalizedName,
+	townErrors,
+} from '../../../src/lib/profile/zone'
 import { ImportRefuse } from './target'
 
 const identifier = z.number().int().positive()
+
+/** What a line of `cities` gives once read: a commune (or none), or countries with a town (or none). */
+type CityLine =
+	| { profile: number; inseeCode: string | null }
+	| { profile: number; countries: string[]; town: string | null }
+
+/**
+ * A line of `cities`: strict, one of two forms. The commune form keeps its `inseeCode` (required);
+ * the countries form runs the rules of the collection, so a line the collection would refuse stops
+ * the import here, in French, before any write.
+ */
+const CITY_LINE = z
+	.object({
+		profile: identifier,
+		inseeCode: z
+			.string()
+			.refine(code => departmentOfInseeCode(code) !== null, { message: 'code INSEE mal formé' })
+			.nullable()
+			.optional(),
+		countries: z.array(z.string()).optional(),
+		town: z.string().nullable().optional(),
+	})
+	.strict()
+	.superRefine((line, context) => {
+		const problem = (message: string) => context.addIssue({ code: 'custom', message })
+		const hasInsee = line.inseeCode !== undefined
+		if (hasInsee && line.countries !== undefined)
+			return problem('une ligne donne une commune ou des pays, pas les deux : garde l’une des deux formes')
+		if (line.countries === undefined) {
+			if (line.town !== undefined)
+				return problem('une ville va avec des pays (countries) : ajoute-les, ou retire la ville')
+			if (!hasInsee)
+				return problem('une ligne donne une commune (inseeCode, ou null pour aucune) ou des pays (countries)')
+			return
+		}
+		if (line.countries.length === 0) return problem('au moins un pays est attendu dans countries')
+		for (const message of [...countriesErrors(line.countries), ...townErrors(line.town, line.countries)])
+			problem(message)
+	})
+	.transform((line): CityLine => {
+		if (line.countries === undefined) return { profile: line.profile, inseeCode: line.inseeCode ?? null }
+		return {
+			profile: line.profile,
+			countries: normalizedCountries(line.countries) as string[],
+			town: (normalizedName(line.town ?? null) as string | null) ?? null,
+		}
+	})
 
 const DECISIONS_SCHEMA = z
 	.object({
@@ -48,17 +109,7 @@ const DECISIONS_SCHEMA = z
 			.refine(profils => new Set(profils).size === profils.length, { message: 'un profil est nommé deux fois' })
 			.default([]),
 		cities: z
-			.array(
-				z
-					.object({
-						profile: identifier,
-						inseeCode: z
-							.string()
-							.refine(code => departmentOfInseeCode(code) !== null, { message: 'code INSEE mal formé' })
-							.nullable(),
-					})
-					.strict()
-			)
+			.array(CITY_LINE)
 			.refine(lignes => new Set(lignes.map(({ profile: profil }) => profil)).size === lignes.length, {
 				message: 'un profil est nommé deux fois',
 			})

@@ -8,7 +8,7 @@
  * difference that has no reference is a defect: the parity lists it.
  */
 
-import type { CitiesSummary } from './cities'
+import type { CitiesSummary, ReasonToReview, ZonesSummary } from './cities'
 import type { ImportedCollection, Parity, Summary } from './engine'
 import { parityComplete, withoutUnexplainedGap } from './engine'
 import type { FilesSummary, PhotoNotCarriedOver } from './media'
@@ -52,6 +52,8 @@ export interface CollectionSummary extends Summary {
 	statusesDifferingFromSource?: number[]
 	/** The cities typed, become communes (ticket 063): in numbers and identifiers, never a text. */
 	cities?: CitiesSummary
+	/** The zones of the profiles, communes and countries (ticket 261): in numbers and identifiers, never a text. */
+	zones?: ZonesSummary
 	/** The files of the source, adopted or not (ticket 058): in numbers and identifiers, never an address. */
 	files?: FilesSummary
 	/** Photos of the entries taken whose file is not adopted: reported, never invented (tickets 060, 061). */
@@ -213,7 +215,7 @@ function summaryRow(nom: string, bilan: CollectionSummary, mode: Mode): string[]
 			`  - écartés, profils vides laissés sans compte par le spam (SCHEMA.md §4.1) : ${bilan.spam.length} (${ids(bilan.spam)})`
 		)
 	if (bilan.files) rows.push(...filesRows(bilan.files))
-	if (bilan.cities) rows.push(...citiesRows(bilan.cities))
+	if (bilan.cities) rows.push(...citiesRows(bilan.cities, bilan.zones))
 	if (bilan.statuses) rows.push(`  - ${statusesAsText(bilan.statuses)}`)
 	if (bilan.statusesDifferingFromSource?.length)
 		rows.push(
@@ -292,7 +294,31 @@ function filesRows(fichiers: FilesSummary): string[] {
 const percentage = (part: number | null): string =>
 	part === null ? 'sans objet' : `${String(part).replace('.', ',')} %`
 
-function citiesRows(communes: CitiesSummary): string[] {
+/** What each reason to review is called in the report. */
+const REASON_LABELS: Readonly<Record<ReasonToReview, string>> = {
+	'code-postal-partage': 'code postal partagé',
+	homonymes: 'plusieurs communes de même nom',
+	introuvable: 'commune introuvable',
+	'pas-une-commune': 'pas une commune',
+}
+
+/** The zones in two lines of numbers and identifiers: those recognised, and the profiles to review by reason. */
+function zonesRows(zones: ZonesSummary, filledCities: number): string[] {
+	const byReason = (Object.keys(REASON_LABELS) as ReasonToReview[])
+		.map(reason => {
+			const profiles = zones.toReviewByReason[reason]
+			return `${REASON_LABELS[reason]} ${profiles.length}${profiles.length > 0 ? ` (${ids(profiles)})` : ''}`
+		})
+		.join(' ; ')
+	return [
+		`  - zones reconnues, communes et pays : ${zones.recognized} sur ${plural(filledCities, 'ville renseignée', 'villes renseignées')} ` +
+			`(${percentage(zones.part)}, cible 90 %) ; communes seules : ${zones.communesOnly} ; ` +
+			`zones de pays : ${zones.countries.length} (${ids(zones.countries)})`,
+		`  - villes à revoir, par raison : ${byReason}`,
+	]
+}
+
+function citiesRows(communes: CitiesSummary, zones?: ZonesSummary): string[] {
 	const rows = [
 		`  - communes : ${communes.attached} sur ${plural(communes.filledCities, 'ville renseignée', 'villes renseignées')} ` +
 			`(${percentage(communes.part)}, cible 90 %) ; profils non vides avec une commune : ` +
@@ -303,6 +329,7 @@ function citiesRows(communes: CitiesSummary): string[] {
 	if (communes.addresses.length > 0)
 		rows.push(`  - adresses postales, dont seule la commune est reprise : ${ids(communes.addresses)}`)
 	if (communes.decided.length > 0) rows.push(`  - villes tranchées par la table de décision : ${ids(communes.decided)}`)
+	if (zones) rows.push(...zonesRows(zones, communes.filledCities))
 	return rows
 }
 

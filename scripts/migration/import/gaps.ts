@@ -25,6 +25,8 @@ export const REFERENCES = {
 	profilNonVideEnBrouillon: 'profil-non-vide-en-brouillon',
 	/** The city typed becomes a commune of the official list, never an address; the text is not copied. */
 	villeEnCommune: 'ville-en-commune',
+	/** A city that names countries becomes a zone of countries, with a town abroad if there is one (ticket 261). */
+	zoneHorsDeFrance: 'zone-hors-de-france',
 	/** An availability never set (`null`) is « available ». */
 	disponibiliteParDefaut: 'disponibilite-par-defaut',
 	/** The amount read in the price typed of an offer or an option; the text stays (ticket 062). */

@@ -11,7 +11,12 @@
  * - An availability never set (`null`) is « available » (register, `disponibilite-par-defaut`):
  *   the only exception to « null stays null » (SCHEMA.md, rule 2).
  * - The city typed becomes a commune of the official list, with its INSEE code, never an address
- *   (./cities.ts, ticket 063; register, `ville-en-commune`): the text typed is never copied.
+ *   (./cities.ts, ticket 063; register, `ville-en-commune`): the text typed is never copied. Its
+ *   postal codes come with the commune (ticket 261).
+ * - A city that names countries becomes a zone of countries, with a town abroad when there is one
+ *   (register, `zone-hors-de-france`); a city the import cannot settle leaves the zone empty and
+ *   writes the review of the zone (`zoneReview`: a reason, a postal code, the communes it could be),
+ *   never the text. A profile of a commune holds none of these keys: the collection's defaults stand.
  * - The status is never written: the server computes it at every save from what the import writes
  *   (ticket 044). An entirely empty profile is a draft (register, `profils-vides-brouillon`), any
  *   other is published. The import leaves the choice of the status to the rule (`automatique`): a
@@ -49,7 +54,7 @@ import { type ProfileDocument, profileState, statusAfter } from '../../../src/li
 import { INITIAL_CHOICE, type ProfileStatus } from '../../../src/lib/profile/status'
 import { RADIUS_BOUNDS_KM } from '../../../src/lib/profile/zone'
 import { assignSlugs } from '../../../src/lib/slug'
-import type { ExpectedCity } from './cities'
+import type { ExpectedCity, ExpectedCountries, ExpectedReview } from './cities'
 import { type Adapter, type Expected, type Gap, normalize } from './engine'
 import { REFERENCES } from './gaps'
 import { entryPhotos, type PhotoNotCarriedOver } from './media'
@@ -254,6 +259,10 @@ export const PROFILES_ADAPTER: Adapter = {
 		specialty: 'texte',
 		description: 'texte',
 		city: 'objet',
+		zoneKind: 'texte',
+		countries: 'liste',
+		town: 'texte',
+		zoneReview: 'objet',
 		radiusKm: 'nombre',
 		available: 'booleen',
 		score: 'nombre',
@@ -277,6 +286,13 @@ export const PROFILES_ADAPTER: Adapter = {
 	},
 	// Computed by the server at every save (ticket 044): compared, never sent.
 	computed: ['status'],
+	// The zone of a commune names none of these: the collection's defaults (ticket 259) are what it expects.
+	defaults: {
+		zoneKind: 'city',
+		countries: [],
+		town: null,
+		zoneReview: { reason: null, postalCode: null, candidates: null },
+	},
 	// The date of the consent is the one of the first run that gave it: a later run with another date of
 	// the switch keeps it (ticket 227). The server dates it again when the contact details are closed
 	// then opened (src/lib/profile/contact-details.ts), and the field is empty then, so the run fills it in.
@@ -407,6 +423,12 @@ export function lostPricedOffer(prixDuSource: readonly (string | null)[], ecrite
 	return pricedToSource && minimumPrice(ecrites) === null
 }
 
+/** The zones other than a commune that the profiles must hold (./cities.ts): countries, and the review of an empty zone. */
+export interface ExpectedZones {
+	countries?: ReadonlyMap<number, ExpectedCountries>
+	reviews?: ReadonlyMap<number, ExpectedReview>
+}
+
 export interface ExpectedProfiles {
 	expected: Expected[]
 	/** How many profiles the run takes per status, as the server computes it. */
@@ -451,7 +473,8 @@ export function expectedProfiles(
 	communes: ReadonlyMap<number, ExpectedCity | null> = new Map(),
 	medias: ReadonlyMap<number, number | null> = new Map(),
 	consentiLe: string | null = null,
-	maintenant: Date = new Date()
+	maintenant: Date = new Date(),
+	zones: ExpectedZones = {}
 ): ExpectedProfiles {
 	const notTaken = new Set([...laisses.excluded, ...laisses.spam])
 	// The slugs of the old site, computed on every profile of the source, as the old site did.
@@ -526,6 +549,14 @@ export function expectedProfiles(
 			createdAt: profile.created_at,
 			updatedAt: profile.updated_at,
 		}
+		const countriesZone = zones.countries?.get(profile.id)
+		const review = zones.reviews?.get(profile.id)
+		if (countriesZone) {
+			values.zoneKind = 'countries'
+			values.countries = countriesZone.countries
+			values.town = countriesZone.town
+		}
+		if (review) values.zoneReview = review
 		// The status reads whether the main picture is adopted, even before its media exists (a dry run).
 		const status = computedStatus({ ...values, mainPicture: main.adoptees > 0 ? true : null })
 		values.status = status
@@ -550,6 +581,7 @@ export function expectedProfiles(
 		if (radius) gaps.push({ field: 'radiusKm', reference: REFERENCES.rayon200Km })
 		if (slug !== profile.username) gaps.push({ field: 'slug', reference: REFERENCES.slugStocke })
 		if ((profile.city?.trim() ?? '') !== '') gaps.push({ field: 'city', reference: REFERENCES.villeEnCommune })
+		if (countriesZone) gaps.push({ field: 'zoneKind', reference: REFERENCES.zoneHorsDeFrance })
 		if (profile.available === null) gaps.push({ field: 'available', reference: REFERENCES.disponibiliteParDefaut })
 		if (status === 'draft')
 			gaps.push({
