@@ -4,6 +4,15 @@ import { z } from 'zod'
 const url = z.string().regex(/^https?:\/\/[^\s]+$/)
 const textNotEmpty = z.string().min(1)
 
+/** Where she works (ticket 264): a commune, a town abroad inside its country, a country, or several countries. */
+const country = z.strictObject({ '@type': z.literal('Country'), name: textNotEmpty })
+const city = z.strictObject({
+	'@type': z.literal('City'),
+	name: textNotEmpty,
+	containedInPlace: country.optional(),
+})
+const areaServed = z.union([city, country, z.array(country).min(2)])
+
 /** What the page promises search engines (SEO-26), strict: a key the schema does not know fails. */
 const schemaOffer = z.strictObject({
 	'@type': z.literal('Offer'),
@@ -21,7 +30,7 @@ const schemaOffer = z.strictObject({
 		name: textNotEmpty,
 		description: textNotEmpty.optional(),
 		serviceType: textNotEmpty.optional(),
-		areaServed: z.strictObject({ '@type': z.literal('City'), name: textNotEmpty }).optional(),
+		areaServed: areaServed.optional(),
 		provider: z.strictObject({ '@id': url }),
 	}),
 })
@@ -34,7 +43,7 @@ const schemaPerson = z.strictObject({
 	image: url.optional(),
 	jobTitle: textNotEmpty,
 	description: textNotEmpty.optional(),
-	areaServed: z.strictObject({ '@type': z.literal('City'), name: textNotEmpty }).optional(),
+	areaServed: areaServed.optional(),
 	knowsAbout: z.array(textNotEmpty).max(10).optional(),
 	knowsLanguage: z.array(textNotEmpty).optional(),
 	sameAs: z.array(url).optional(),

@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import { TrackedLink } from '@/components/analytics/TrackedLink'
+import { ZoneText } from '@/components/profile/ZoneText'
 import type { ProfileCard } from '@/services/public/profiles'
 
 /** The picture of a card whose artist has no photo yet: the one of the site online. */
@@ -81,7 +82,9 @@ export function ResultCard({
 					<p className="flex flex-row items-center gap-2 font-light text-sm text-white">
 						<TravelIcon />
 						{/* An empty city is said, never left blank. */}
-						<span className={carte.lieu ? 'font-bold' : 'italic'}>{carte.lieu ?? 'Zone non renseignée'}</span>
+						<span className={carte.lieu ? 'font-bold' : 'italic'}>
+							{carte.lieu === null ? 'Zone non renseignée' : <ZoneText text={carte.lieu} flags={carte.flags} />}
+						</span>
 					</p>
 				</div>
 			</div>

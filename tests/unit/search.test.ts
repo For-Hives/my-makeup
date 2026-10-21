@@ -18,8 +18,16 @@ import {
 	searchPageUrl,
 	validSearch,
 } from '@/lib/search/input'
-import { type ProfilePlace, placeMatch, profilePlace, readPlace, sectionsByPlace } from '@/lib/search/place'
-import { readDirectory } from '@/services/public/profiles'
+import {
+	municipalitiesOfPostalCodes,
+	municipalitiesPhrase,
+	type ProfilePlace,
+	placeMatch,
+	profilePlace,
+	readPlace,
+	sectionsByPlace,
+} from '@/lib/search/place'
+import { directoryPlace, readDirectory } from '@/services/public/profiles'
 
 /** A profile for the sections: its commune, its département, and whether she travels. */
 const profile = (nom: string, ville: string | null, departement: string | null, seDeplace = false) => ({
@@ -377,5 +385,130 @@ describe('la lecture de l’annuaire', () => {
 		])
 		const cards = (await readDirectory(payload)).map(({ carte }) => carte)
 		expect(cards.map(({ photo }) => photo)).toEqual([null, null, null])
+	})
+})
+
+// Ticket 263 (PLAN-ZONES.md §3.3 and §3.4): the postal code of a commune, and the countries.
+
+/** Fictional communes: two share the postal code 74990, the others hold one code each. */
+const WITH_CODES = [
+	{ ...profile('valbrume', 'Valbrume', '74'), postalCodes: ['74990'] },
+	{ ...profile('hautcombe', 'Hautcombe', '74'), postalCodes: ['74990'] },
+	{ ...profile('annecy', 'Annecy', '74', true), postalCodes: ['74000'] },
+	// No postal code stored yet: found by its département, as before.
+	profile('sans-codes', 'Thonon-les-Bains', '74'),
+	{ ...profile('nantes', 'Nantes', '44'), postalCodes: ['44000', '44100'] },
+]
+
+describe('263 : le code postal', () => {
+	test('readPlace garde les codes postaux tapés, une fois chacun, et pas les autres nombres', () => {
+		expect(readPlace('74990').postalCodes).toEqual(['74990'])
+		expect(readPlace('Valbrume 74990, 74990 et 44000').postalCodes).toEqual(['74990', '44000'])
+		expect(readPlace('Annecy 15e').postalCodes).toEqual([])
+		expect(readPlace('749900').postalCodes).toEqual([])
+		expect(readPlace('Annecy').postalCodes).toEqual([])
+	})
+
+	test('un code partagé met les profils de toutes ses communes au premier rang, le département ensuite', () => {
+		const found = sectionsByPlace(WITH_CODES, '74990')
+		expect(names(found.locaux)).toEqual(['valbrume', 'hautcombe', 'annecy', 'sans-codes'])
+		expect(names(found.locaux.slice(0, 2))).toEqual(['valbrume', 'hautcombe'])
+		for (const code of ['valbrume', 'hautcombe'])
+			expect(placeMatch(profilePlace(WITH_CODES.find(p => p.nom === code) as never), readPlace('74990'))).toBe('ville')
+		expect(placeMatch(profilePlace(WITH_CODES[2] as never), readPlace('74990'))).toBe('departement')
+		expect(found.departements).toEqual(['74'])
+	})
+
+	test('un code d’une seule commune la trouve au premier rang, les autres du département suivent', () => {
+		const found = sectionsByPlace(WITH_CODES, '74000')
+		expect(names(found.locaux)).toEqual(['annecy', 'valbrume', 'hautcombe', 'sans-codes'])
+		expect(names(sectionsByPlace(WITH_CODES, '44100').locaux)).toEqual(['nantes'])
+	})
+
+	test('un profil sans codes postaux enregistrés reste trouvé par son département', () => {
+		const place = profilePlace(profile('sans-codes', 'Thonon-les-Bains', '74'))
+		expect(placeMatch(place, readPlace('74990'))).toBe('departement')
+		expect(placeMatch(place, readPlace('74000'))).toBe('departement')
+	})
+
+	test('le nom d’une commune et un code postal ensemble : le nom et le code classent tous deux au premier rang', () => {
+		expect(names(sectionsByPlace(WITH_CODES, 'Nantes 74990').locaux.slice(0, 3))).toEqual([
+			'valbrume',
+			'hautcombe',
+			'nantes',
+		])
+	})
+
+	test('les communes sous le h1 viennent des profils trouvés par le code, dans leur ordre, une fois chacune', () => {
+		const found = sectionsByPlace(WITH_CODES, '74990')
+		expect(municipalitiesOfPostalCodes(found.locaux, '74990')).toEqual(['Valbrume', 'Hautcombe'])
+		expect(municipalitiesOfPostalCodes([...found.locaux, ...found.locaux], '74990')).toEqual(['Valbrume', 'Hautcombe'])
+		expect(municipalitiesOfPostalCodes(found.locaux, 'Annecy')).toEqual([])
+		expect(municipalitiesOfPostalCodes(sectionsByPlace(WITH_CODES, '74000').locaux, '74000')).toEqual(['Annecy'])
+	})
+
+	test('la phrase des communes : une, deux, trois, aucune', () => {
+		expect(municipalitiesPhrase(['Cambrin'])).toBe('Dans la commune de Cambrin.')
+		expect(municipalitiesPhrase(['Cambrin', 'Cuinchy'])).toBe('Dans les communes de Cambrin et Cuinchy.')
+		expect(municipalitiesPhrase(['Annequin', 'Cambrin', 'Cuinchy'])).toBe(
+			'Dans les communes de Annequin, Cambrin et Cuinchy.'
+		)
+		expect(municipalitiesPhrase([])).toBe('')
+	})
+})
+
+/** The place the directory gives a profile of countries. */
+const abroad = (zone: Record<string, unknown>) => directoryPlace({ city: null, radiusKm: null, ...zone } as never)
+
+describe('263 : les pays', () => {
+	const belgium = { ...abroad({ zoneKind: 'countries', countries: ['BE'], town: 'Bruxelles' }), nom: 'belgique' }
+	const belgiumAlone = { ...abroad({ zoneKind: 'countries', countries: ['BE'] }), nom: 'belgique-seule' }
+	const frenchAndItalian = { ...abroad({ zoneKind: 'countries', countries: ['FR', 'IT'] }), nom: 'france-italie' }
+
+	test('la place d’un profil de pays est son libellé, sans rayon, sans drapeau, sans département', () => {
+		expect(belgium).toMatchObject({ ville: 'Bruxelles (Belgique)', departement: null, postalCodes: [] })
+		expect(belgiumAlone.ville).toBe('Belgique')
+		expect(frenchAndItalian.ville).toBe('France et Italie')
+		for (const place of [belgium, belgiumAlone, frenchAndItalian])
+			expect(place.ville).not.toMatch(/[\u{1F1E6}-\u{1F1FF}]/u)
+	})
+
+	test('« Belgique », « Bruxelles » et « Italie » tapés classent le profil au premier rang', () => {
+		for (const input of ['Belgique', 'belgique', 'Bruxelles', 'Bruxelles, Belgique'])
+			expect(placeMatch(profilePlace(belgium), readPlace(input)), input).toBe('ville')
+		expect(placeMatch(profilePlace(belgiumAlone), readPlace('Belgique'))).toBe('ville')
+		expect(placeMatch(profilePlace(belgiumAlone), readPlace('Bruxelles'))).toBeNull()
+		expect(placeMatch(profilePlace(frenchAndItalian), readPlace('Italie'))).toBe('ville')
+		expect(placeMatch(profilePlace(belgium), readPlace('Italie'))).toBeNull()
+	})
+
+	test('plusieurs pays comptent comme « se déplace » ; un pays seul seulement avec un rayon', () => {
+		expect(frenchAndItalian.seDeplace).toBe(true)
+		expect(belgiumAlone.seDeplace).toBe(false)
+		expect(abroad({ zoneKind: 'countries', countries: ['BE'], radiusKm: 40 }).seDeplace).toBe(true)
+		expect(abroad({ zoneKind: 'countries', countries: ['BE'], town: 'Bruxelles', radiusKm: 30 }).seDeplace).toBe(true)
+	})
+
+	test('une recherche française met un profil [FR, IT] sous « qui se déplacent » et jamais sous un département', () => {
+		const directory = [profile('annecy', 'Annecy', '74'), belgium, belgiumAlone, frenchAndItalian]
+		const found = sectionsByPlace(directory, 'Annecy')
+		expect(names(found.locaux)).toEqual(['annecy'])
+		expect(found.sections.map(({ cle }) => cle)).toEqual(['deplacent', 'autres'])
+		expect(names(found.sections[0]?.profils ?? [])).toEqual(['france-italie'])
+		expect(names(found.sections[1]?.profils ?? [])).toEqual(['belgique', 'belgique-seule'])
+		const byDepartment = sectionsByPlace(directory, '74')
+		expect(byDepartment.sections.find(({ cle }) => cle === 'departement')).toBeUndefined()
+	})
+
+	test('une commune garde sa place d’avant : nom, département, codes postaux, rayon', () => {
+		expect(
+			directoryPlace({ city: { name: 'Annecy', department: '74', postalCodes: ['74000'] }, radiusKm: 30 } as never)
+		).toEqual({ ville: 'Annecy', departement: '74', seDeplace: true, postalCodes: ['74000'] })
+		expect(directoryPlace({ city: null, radiusKm: 30 } as never)).toEqual({
+			ville: null,
+			departement: null,
+			seDeplace: false,
+			postalCodes: [],
+		})
 	})
 })

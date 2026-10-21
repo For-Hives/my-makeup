@@ -1,7 +1,11 @@
 import { describe, expect, test } from 'bun:test'
+import { createHash } from 'node:crypto'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { ProfileView } from '@/components/profile/ProfileView'
-import { DEMO_PROFILES, type DemoProfile } from '@/demo-data/profiles'
+import { ResultCard } from '@/components/search/ResultCard'
+import { DEMO_PROFILES, type DemoProfile, LOADED_DEMO_PROFILES } from '@/demo-data/profiles'
 import { displayedArtistName } from '@/lib/profile/public-view'
 import { type ProfilePageData, type PublicProfile, publicProfileOf } from '@/services/public/profiles'
 
@@ -270,5 +274,122 @@ describe('E44 : le portfolio', () => {
 		const profile = readType(type('reference'))
 
 		expect(renderNow({ ...profile, galerie: [] })).not.toContain('Portfolio')
+	})
+})
+
+// Ticket 264 (PLAN-ZONES.md §3.4): a zone abroad on the page, with the flag as decoration only.
+
+const REGIONAL_INDICATORS = /[\u{1F1E6}-\u{1F1FF}]/u
+const zoneType = (key: string): DemoProfile => {
+	const found = LOADED_DEMO_PROFILES.find(profil => profil.cle === key)
+	if (!found) throw new Error(`pas de profil type « ${key} »`)
+	return found
+}
+/** The HTML with every `aria-hidden` span taken out: what a screen reader and a search engine read. */
+const withoutDecoration = (html: string): string => html.replace(/<span aria-hidden="true">[^<]*<\/span>/g, '')
+
+describe('264 : la zone hors de France sur la page du profil', () => {
+	test('une ville à l’étranger : le drapeau dans son span aria-hidden, le pays toujours écrit', () => {
+		const html = renderNow(readType(zoneType('zone-belgique'), { radiusKm: 30 }))
+
+		expect(html).toContain('<span aria-hidden="true">🇧🇪</span> Bruxelles (Belgique) et 30 km autour')
+		// The section of the location says it too, once for the place and once for the area.
+		expect(html).toContain('<span aria-hidden="true">🇧🇪</span> Bruxelles (Belgique)</p>')
+		expect(withoutDecoration(html)).not.toMatch(REGIONAL_INDICATORS)
+		expect(withoutDecoration(html)).toContain('Bruxelles (Belgique) et 30 km autour')
+	})
+
+	test('plusieurs pays : un drapeau par pays, dans l’ordre, et les noms écrits', () => {
+		const html = renderNow(readType(zoneType('zone-france-italie')))
+
+		expect(html).toContain('<span aria-hidden="true">🇫🇷 🇮🇹</span> France et Italie')
+		expect(withoutDecoration(html)).not.toMatch(REGIONAL_INDICATORS)
+		expect(html).not.toContain('km autour')
+	})
+
+	test('le profil public : zone, lieu et phrase sont du texte sans drapeau, les drapeaux sont à part', () => {
+		for (const [key, over, zone, place, phrase, flags] of [
+			[
+				'zone-belgique',
+				{ radiusKm: 30 },
+				'Bruxelles (Belgique) et 30 km autour',
+				'Bruxelles (Belgique)',
+				'à Bruxelles (Belgique)',
+				['🇧🇪'],
+			],
+			['zone-belgique', { town: null }, 'Belgique', 'Belgique', 'en Belgique', ['🇧🇪']],
+			['zone-france-italie', {}, 'France et Italie', 'France et Italie', 'en France et en Italie', ['🇫🇷', '🇮🇹']],
+			['zone-france-italie', { countries: ['NL'] }, 'Pays-Bas', 'Pays-Bas', 'aux Pays-Bas', ['🇳🇱']],
+		] as const) {
+			const profile = readType(zoneType(key), over as Partial<ProfilePageData>)
+			expect(profile, key).toMatchObject({ zone, lieu: place, placePhrase: phrase, flags })
+			expect(JSON.stringify([profile.zone, profile.lieu, profile.placePhrase, profile.area]), key).not.toMatch(
+				REGIONAL_INDICATORS
+			)
+		}
+	})
+
+	test('un pays à l’étranger se déplace s’il a plusieurs pays, ou un rayon', () => {
+		expect(readType(zoneType('zone-france-italie')).seDeplace).toBe(true)
+		expect(readType(zoneType('zone-belgique')).seDeplace).toBe(false)
+		expect(readType(zoneType('zone-belgique'), { radiusKm: 30 }).seDeplace).toBe(true)
+	})
+
+	test('le HTML du serveur d’une commune est identique, au caractère près, à celui d’avant le ticket', () => {
+		const golden = JSON.parse(
+			readFileSync(join(import.meta.dir, '../fixtures/municipality-html-hashes.json'), 'utf8')
+		) as Record<string, { profile: string; card: string }>
+		const hash = (html: string) => createHash('sha256').update(html).digest('hex')
+		expect(Object.keys(golden)).toEqual(DEMO_PROFILES.map(({ cle }) => cle))
+		for (const profileType of DEMO_PROFILES) {
+			const profile = publicProfileOf(
+				{
+					slug: profileType.attendu.slug,
+					status: profileType.attendu.status,
+					publishable: profileType.attendu.publishable,
+					...profileType.profil,
+				},
+				{ photo: null, galerie: [], coordonnees: null }
+			)
+			const card = {
+				slug: profile.slug,
+				pid: 1,
+				nom: profile.nom,
+				specialite: profile.specialite,
+				lieu: profile.zone,
+				superMaquilleuse: false,
+				photo: null,
+			}
+			expect(hash(renderToStaticMarkup(<ProfileView profil={profile} />)), profileType.cle).toBe(
+				golden[profileType.cle]?.profile as string
+			)
+			expect(
+				hash(renderToStaticMarkup(<ResultCard carte={card} prioritaire={false} rang={1} />)),
+				profileType.cle
+			).toBe(golden[profileType.cle]?.card as string)
+		}
+	})
+
+	test('la carte : le drapeau dans son span aria-hidden, le nom du pays écrit ; une commune n’en a pas', () => {
+		const card = (lieu: string | null, flags?: string[]) => ({
+			slug: 'essai',
+			pid: 1,
+			nom: 'Essai',
+			specialite: null,
+			lieu,
+			...(flags && { flags }),
+			superMaquilleuse: false,
+			photo: null,
+		})
+		const html = (lieu: string | null, flags?: string[]) =>
+			renderToStaticMarkup(<ResultCard carte={card(lieu, flags)} prioritaire={false} rang={1} />)
+
+		expect(html('Bruxelles (Belgique) et 30 km autour', ['🇧🇪'])).toContain(
+			'<span aria-hidden="true">🇧🇪</span> Bruxelles (Belgique) et 30 km autour'
+		)
+		expect(html('France et Italie', ['🇫🇷', '🇮🇹'])).toContain('<span aria-hidden="true">🇫🇷 🇮🇹</span> France et Italie')
+		expect(html('Annecy')).not.toMatch(REGIONAL_INDICATORS)
+		expect(html('Annecy')).not.toContain('aria-hidden="true">Annecy')
+		expect(html(null)).toContain('Zone non renseignée')
 	})
 })

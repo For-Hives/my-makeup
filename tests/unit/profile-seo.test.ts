@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'bun:test'
-import { DEMO_PROFILES, type DemoProfile } from '@/demo-data/profiles'
+import { DEMO_PROFILES, type DemoProfile, LOADED_DEMO_PROFILES } from '@/demo-data/profiles'
+import { COUNTRIES } from '@/lib/countries'
 import { minimumPrice } from '@/lib/price'
+import { isIndexable } from '@/lib/profile/visibility'
 import { serializeJsonLd } from '@/lib/seo/json-ld'
 import { profileBreadcrumb, profileMetadata, profileStructuredData, profileTitle } from '@/lib/seo/profile'
 import { DESCRIPTION_MAX, DESCRIPTION_MIN, MAX_TITLE } from '@/lib/seo/text'
@@ -193,5 +195,124 @@ describe('U50 : un texte avec une balise de fermeture de script', () => {
 		expect(output).not.toMatch(/[<>&]/)
 		expect(output.toLowerCase()).not.toContain('</script')
 		expect(() => profileSchema.parse(JSON.parse(output))).not.toThrow()
+	})
+})
+
+// Ticket 264 (PLAN-ZONES.md §3.4, « Le référencement »): the title, the description and `areaServed` of a zone abroad.
+
+const REGIONAL_INDICATORS = /[\u{1F1E6}-\u{1F1FF}]/u
+const zoneType = (key: string): DemoProfile => {
+	const found = LOADED_DEMO_PROFILES.find(profil => profil.cle === key)
+	if (!found) throw new Error(`pas de profil type « ${key} »`)
+	return found
+}
+type Graph = {
+	'@graph': { mainEntity?: { areaServed?: unknown; makesOffer?: { itemOffered: { areaServed?: unknown } }[] } }[]
+}
+const personOf = (profile: PublicProfile) => (profileStructuredData(profile) as Graph)['@graph'][0]?.mainEntity
+
+describe('264 : le titre prend la préposition du pays', () => {
+	test('« en », « au », « aux » et « à » : un pays seul, puis une ville à l’étranger', () => {
+		const belgium = zoneType('zone-belgique')
+		const withCountry = (code: string, town: string | null = null) =>
+			profileTitle(readType(belgium, { countries: [code], town }))
+		expect(withCountry('BE')).toBe('Camille Renard – Maquillage mariage en Belgique | My-Makeup')
+		// The rule of the 60 characters is the one of every title: the brand goes first when it does not fit.
+		expect(withCountry('LU')).toBe('Camille Renard – Maquillage mariage au Luxembourg')
+		expect(withCountry('NL')).toBe('Camille Renard – Maquillage mariage aux Pays-Bas | My-Makeup')
+		expect(withCountry('MT')).toBe('Camille Renard – Maquillage mariage à Malte | My-Makeup')
+		// A town abroad: « à », with its country in brackets, and the brand dropped when it does not fit.
+		expect(withCountry('BE', 'Bruxelles')).toBe('Camille Renard – Maquillage mariage à Bruxelles (Belgique)')
+		expect(profileTitle(readType(zoneType('zone-france-italie')))).toBe(
+			'Elsa Marchand – Maquillage mariage en France et en Italie'
+		)
+	})
+
+	test('les profils de pays : 60 caractères au plus, une description de 70 à 155, jamais de drapeau ni « null »', () => {
+		for (const key of ['zone-belgique', 'zone-france-italie']) {
+			for (const over of [{}, { town: null }, { countries: ['AE', 'GB'] }] as Partial<ProfilePageData>[]) {
+				const meta = profileMetadata(readType(zoneType(key), over))
+				const title = String((meta.title as { absolute: string }).absolute)
+				expect(title.length, `${key} ${title}`).toBeLessThanOrEqual(MAX_TITLE)
+				for (const text of [title, String(meta.description)]) {
+					expect(text).not.toMatch(REGIONAL_INDICATORS)
+					expect(text).not.toMatch(/\b(?:null|undefined|NaN)\b/)
+				}
+				expect(String(meta.description).length).toBeGreaterThanOrEqual(DESCRIPTION_MIN)
+				expect(String(meta.description).length).toBeLessThanOrEqual(DESCRIPTION_MAX)
+			}
+		}
+	})
+
+	test('la description de repli (sans texte) nomme le pays avec sa préposition', () => {
+		const meta = profileMetadata(readType(zoneType('zone-belgique'), { description: null, town: null }))
+		expect(String(meta.description)).toContain('Maquillage mariage en Belgique')
+	})
+
+	test('une commune garde son titre', () => {
+		expect(profileTitle(readType(type('reference')))).toBe(
+			profileTitle({ nom: 'Inès Morel', specialite: 'Maquillage mariage', lieu: 'Annecy' })
+		)
+	})
+})
+
+describe('264 : areaServed', () => {
+	test('une ville à l’étranger : une City contenue dans son Country', () => {
+		const person = personOf(readType(zoneType('zone-belgique')))
+		expect(person?.areaServed).toEqual({
+			'@type': 'City',
+			name: 'Bruxelles',
+			containedInPlace: { '@type': 'Country', name: 'Belgique' },
+		})
+		for (const offer of person?.makesOffer ?? []) expect(offer.itemOffered.areaServed).toEqual(person?.areaServed)
+	})
+
+	test('un pays seul : un Country ; plusieurs pays : une liste de Country', () => {
+		expect(personOf(readType(zoneType('zone-belgique'), { town: null }))?.areaServed).toEqual({
+			'@type': 'Country',
+			name: 'Belgique',
+		})
+		expect(personOf(readType(zoneType('zone-france-italie')))?.areaServed).toEqual([
+			{ '@type': 'Country', name: 'France' },
+			{ '@type': 'Country', name: 'Italie' },
+		])
+	})
+
+	test('une commune : une City, comme avant', () => {
+		expect(personOf(readType(type('reference')))?.areaServed).toEqual({ '@type': 'City', name: 'Annecy' })
+	})
+
+	test('les données structurées des profils de pays passent le schéma, sans drapeau et sans City au nom d’un pays', () => {
+		for (const [key, over] of [
+			['zone-belgique', {}],
+			['zone-belgique', { town: null }],
+			['zone-france-italie', {}],
+			['zone-france-italie', { countries: ['NL'] }],
+		] as [string, Partial<ProfilePageData>][]) {
+			const output = serializeJsonLd(profileStructuredData(readType(zoneType(key), over)))
+			expect(() => profileSchema.parse(JSON.parse(output)), key).not.toThrow()
+			expect(output).not.toMatch(REGIONAL_INDICATORS)
+			const cities = [...output.matchAll(/"@type":"City","name":"([^"]+)"/g)].map(([, name]) => name)
+			for (const name of cities)
+				expect(
+					COUNTRIES.map(country => country.name),
+					name
+				).not.toContain(name)
+		}
+	})
+})
+
+describe('264 : l’index suit « publiable »', () => {
+	test('un profil de pays publiable est indexable : canonique absolue, pas de noindex', () => {
+		for (const key of ['zone-belgique', 'zone-france-italie']) {
+			const profile = readType(zoneType(key))
+			expect(
+				isIndexable({ status: zoneType(key).attendu.status, publishable: zoneType(key).attendu.publishable }),
+				key
+			).toBe(true)
+			const meta = profileMetadata(profile)
+			expect(meta.alternates?.canonical).toBe(`https://my-makeup.fr/profil/${zoneType(key).attendu.slug}`)
+			expect(meta.robots).toBeUndefined()
+		}
 	})
 })

@@ -10,6 +10,7 @@ import type {
 import { CHANNEL_LABELS } from '@/lib/profile/public-view'
 import { ProfileSection } from './ProfileSection'
 import { TrackedContactLink } from './TrackedContactLink'
+import { ZoneText } from './ZoneText'
 
 /**
  * The cards of the page of a profile, one component each (ticket 102). They are server components
@@ -37,17 +38,31 @@ export function SectionDescription({ lignes }: { lignes: readonly string[] }) {
 	)
 }
 
-export function LocationSection({ lieu, seDeplace, zone }: { lieu: string; seDeplace: boolean; zone: string | null }) {
+export function LocationSection({
+	lieu,
+	seDeplace,
+	zone,
+	flags = [],
+}: {
+	lieu: string
+	seDeplace: boolean
+	zone: string | null
+	flags?: readonly string[]
+}) {
 	return (
 		<ProfileSection titre="Localisation & département">
 			<div className="flex flex-col gap-1">
 				<h3 className="font-semibold text-gray-700 text-lg">Localisation</h3>
-				<p className="break-words text-gray-800">{lieu}</p>
+				<p className="break-words text-gray-800">
+					<ZoneText text={lieu} flags={flags} />
+				</p>
 			</div>
 			{seDeplace && zone && (
 				<div className="flex flex-col gap-1">
 					<h3 className="font-semibold text-gray-700 text-lg">Peut travailler chez vous à</h3>
-					<p className="break-words text-gray-800">{zone}</p>
+					<p className="break-words text-gray-800">
+						<ZoneText text={zone} flags={flags} />
+					</p>
 				</div>
 			)}
 		</ProfileSection>

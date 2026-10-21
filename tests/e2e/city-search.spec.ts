@@ -1,5 +1,13 @@
 import { expect, test } from '@playwright/test'
 import { type SearchProfile, setSearchProfiles, TEST_WORD } from '../fixtures/search-profiles'
+import {
+	refreshDirectory,
+	setZoneSearchProfiles,
+	ZONE_WORD,
+	type ZoneSearchProfile,
+} from '../fixtures/zone-search-profiles'
+import { violationsSevere } from '../support/axe'
+import { SCREENS } from '../support/e2e'
 import { refreshProfilePages } from '../support/public-pages'
 
 /**
@@ -178,4 +186,139 @@ test.describe('Recherche par ville', () => {
 		await expect(page.getByLabel('Ville de la prestation')).toHaveValue('Lyon Part-Dieu')
 		await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1)
 	})
+})
+
+/**
+ * The search by postal code and by country (ticket 263; PLAN-ZONES.md §3.3 and §3.4), on the zone profiles of the
+ * fictional set under names of their own (tests/fixtures/zone-search-profiles.ts), found by the word only they carry.
+ * Valbrume and Hautcombe are two fictional communes that share the postal code 74990.
+ */
+test.describe('Recherche par code postal et par pays', () => {
+	let zones: ReadonlyMap<string, ZoneSearchProfile>
+	const zone = (key: string): ZoneSearchProfile => {
+		const found = zones.get(key)
+		if (!found) throw new Error(`pas de profil d’essai « ${key} »`)
+		return found
+	}
+	const search = (city: string, word = ZONE_WORD) =>
+		`/search?search=${encodeURIComponent(word)}&city=${encodeURIComponent(city)}`
+
+	test.beforeAll(async () => {
+		test.setTimeout(180_000)
+		zones = await setZoneSearchProfiles()
+	})
+
+	// The directory the search ranks is kept in the cache of Next: the application refreshes it, as a save does.
+	test.beforeEach(async ({ request }) => {
+		await refreshDirectory(request, zone('code-postal-partage-a'))
+	})
+
+	test(
+		'un code postal partagé : les deux communes au premier rang, un h1 qui les compte, une phrase qui les nomme',
+		{
+			tag: '@mobile',
+		},
+		async ({ page }, testInfo) => {
+			await page.goto(search('74990'))
+
+			await expect(page.getByRole('heading', { level: 1 })).toHaveText(`2 résultats pour « ${ZONE_WORD} » à « 74990 »`)
+			await expect(
+				page.getByText(/^Dans les communes de (Valbrume et Hautcombe|Hautcombe et Valbrume)\.$/)
+			).toBeVisible()
+			const first = page.locator('main ul').first()
+			for (const key of ['code-postal-partage-a', 'code-postal-partage-b'])
+				await expect(first.locator(`a[href="/profil/${zone(key).slug}"]`)).toHaveCount(1)
+			// A zone of several countries travels; a zone of one country with no radius comes last.
+			await expect(
+				page
+					.locator('main section')
+					.filter({ has: page.getByRole('heading', { level: 2, name: 'Autres maquilleuses qui se déplacent' }) })
+					.locator(`a[href="/profil/${zone('zone-france-italie').slug}"]`)
+			).toHaveCount(1)
+			// Each card says the name of the commune, never the postal code.
+			await expect(first).toContainText(/Valbrume|Hautcombe/)
+			await expect(first).not.toContainText('74990')
+
+			for (const screen of [SCREENS.mobile, SCREENS.chromium]) {
+				await page.setViewportSize(screen)
+				expect(
+					await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth),
+					`${screen.width} px`
+				).toBeLessThanOrEqual(0)
+			}
+			expect(await violationsSevere(page)).toEqual([])
+			await page.setViewportSize(SCREENS.mobile)
+			await testInfo.attach('recherche-code-postal-390px', {
+				body: await page.screenshot({ fullPage: true }),
+				contentType: 'image/png',
+			})
+		}
+	)
+
+	test('un code postal où personne ne travaille le dit, avec les mêmes liens, au vouvoiement', async ({ page }) => {
+		await page.goto(search('62149', 'zzqqxxyy'))
+
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText('Aucun résultat pour « zzqqxxyy » à « 62149 »')
+		await expect(
+			page.getByText('Aucune maquilleuse n’est inscrite dans les communes du 62149 pour le moment.')
+		).toBeVisible()
+		await expect(page.getByRole('link', { name: 'Voir les maquilleuses du 62 (Pas-de-Calais)' })).toBeVisible()
+		await expect(page.getByRole('link', { name: 'Créez votre profil' })).toBeVisible()
+		expect(await violationsSevere(page)).toEqual([])
+	})
+
+	test(
+		'« Belgique » et « Italie » : les profils de pays au premier rang, le pays écrit, le drapeau décoratif',
+		{
+			tag: '@mobile',
+		},
+		async ({ page }, testInfo) => {
+			await page.goto(search('Belgique'))
+			await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+				`1 résultat pour « ${ZONE_WORD} » à « Belgique »`
+			)
+			const card = page.locator(`a[href="/profil/${zone('zone-belgique').slug}"]`)
+			await expect(card).toContainText('Bruxelles (Belgique)')
+			await expect(card.locator('[aria-hidden="true"]', { hasText: '🇧🇪' })).toHaveCount(1)
+
+			await page.goto(search('Italie'))
+			const several = page.locator(`a[href="/profil/${zone('zone-france-italie').slug}"]`)
+			await expect(several).toContainText('France et Italie')
+			await expect(several.locator('[aria-hidden="true"]', { hasText: '🇫🇷 🇮🇹' })).toHaveCount(1)
+			await page.setViewportSize(SCREENS.mobile)
+			await testInfo.attach('carte-pays-390px', { body: await several.screenshot(), contentType: 'image/png' })
+			expect(await violationsSevere(page)).toEqual([])
+		}
+	)
+
+	test(
+		'la page d’un profil de pays : la zone écrite, le drapeau décoratif, l’adresse canonique, aucune violation grave',
+		{
+			tag: '@mobile',
+		},
+		async ({ page, request }, testInfo) => {
+			const { slug } = zone('zone-belgique')
+			const html = await (await request.get(`/profil/${slug}`)).text()
+			expect(html).toContain('<span aria-hidden="true">🇧🇪</span> Bruxelles (Belgique)')
+			// The title says the name; its place goes in only when it fits in 60 characters (tests/unit/profile-seo.test.ts).
+			expect(html).toMatch(/<title>Essai Zone Uniform/)
+			expect(/<link rel="canonical" href="([^"]*)"/.exec(html)?.[1]).toMatch(new RegExp(`/profil/${slug}$`))
+			expect(html).not.toMatch(/<meta name="robots" content="noindex/)
+			// The structured data names the town inside its country.
+			expect(html).toContain('"containedInPlace":{"@type":"Country","name":"Belgique"}')
+
+			await page.goto(`/profil/${slug}`)
+			await page.setViewportSize(SCREENS.mobile)
+			await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+			expect(await violationsSevere(page)).toEqual([])
+			await testInfo.attach('profil-zone-belgique-390px', {
+				body: await page.screenshot({ fullPage: true }),
+				contentType: 'image/png',
+			})
+
+			const sitemap = await (await request.get('/sitemap.xml')).text()
+			for (const key of ['zone-belgique', 'zone-france-italie'])
+				expect(sitemap, key).toContain(`/profil/${zone(key).slug}<`)
+		}
+	)
 })

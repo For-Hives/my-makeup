@@ -46,7 +46,7 @@ describe('U20 : listé, indexable, visible', () => {
 })
 
 /** A Payload that records the reads it is given and answers one profile. */
-function payloadSpy() {
+function payloadSpy(surcharge: Record<string, unknown> = {}) {
 	const readings: Record<string, unknown>[] = []
 	const payload = {
 		find: async (options: Record<string, unknown>) => {
@@ -80,6 +80,7 @@ function payloadSpy() {
 						radiusKm: 30,
 						superArtist: true,
 						mainPicture: 7,
+						...surcharge,
 					},
 				],
 				page: 1,
@@ -90,6 +91,9 @@ function payloadSpy() {
 	}
 	return { payload: payload as unknown as Payload, lectures: readings }
 }
+
+/** The keys of a card of a commune (U22). */
+const CARD_KEYS = ['lieu', 'nom', 'photo', 'pid', 'slug', 'specialite', 'superMaquilleuse']
 
 describe('U22 : la carte d’une liste, clés figées', () => {
 	test('ni email, ni téléphone, ni compte, ni score, ni statut : sept clés, la photo et l’identifiant de mesure compris', async () => {
@@ -226,5 +230,44 @@ describe('Un seul point de lecture publique', () => {
 		expect(calls).toHaveLength(1)
 		expect(calls[0]).not.toMatch(/\blimit:/)
 		expect(callsOf('payload.find({ where: { a: { equals: 1 } }, limit: 3 })', 'find')[0]).toMatch(/\blimit:/)
+	})
+})
+
+describe('264 : la carte d’une zone hors de France', () => {
+	const REGIONAL_INDICATORS = /[\u{1F1E6}-\u{1F1FF}]/u
+
+	test('une ville à l’étranger : le lieu dit la ville et le pays, le drapeau est une clé à part', async () => {
+		const { payload } = payloadSpy({
+			city: null,
+			zoneKind: 'countries',
+			countries: ['BE'],
+			town: 'Bruxelles',
+			radiusKm: 30,
+		})
+
+		const [card] = (await listProfiles(payload)).cartes
+
+		expect(card).toMatchObject({ lieu: 'Bruxelles (Belgique) et 30 km autour', flags: ['🇧🇪'] })
+		expect(card?.lieu).not.toMatch(REGIONAL_INDICATORS)
+		expect(Object.keys(card ?? {}).sort()).toEqual([...CARD_KEYS, 'flags'].sort())
+	})
+
+	test('un pays seul, puis plusieurs pays : le nom est écrit, le rayon est ignoré, aucun drapeau dans le texte', async () => {
+		const alone = (
+			await listProfiles(payloadSpy({ city: null, zoneKind: 'countries', countries: ['BE'], radiusKm: 30 }).payload)
+		).cartes[0]
+		const several = (
+			await listProfiles(payloadSpy({ city: null, zoneKind: 'countries', countries: ['FR', 'IT'] }).payload)
+		).cartes[0]
+
+		expect(alone).toMatchObject({ lieu: 'Belgique', flags: ['🇧🇪'] })
+		expect(several).toMatchObject({ lieu: 'France et Italie', flags: ['🇫🇷', '🇮🇹'] })
+		for (const card of [alone, several]) expect(card?.lieu).not.toMatch(REGIONAL_INDICATORS)
+	})
+
+	test('une commune : la carte est ce qu’elle était, sans clé de drapeau', async () => {
+		const [card] = (await listProfiles(payloadSpy().payload)).cartes
+		expect(card?.lieu).toBe('Annecy et 30 km autour')
+		expect(Object.keys(card ?? {}).sort()).toEqual([...CARD_KEYS].sort())
 	})
 })
