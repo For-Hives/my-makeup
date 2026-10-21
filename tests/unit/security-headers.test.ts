@@ -61,7 +61,7 @@ async function headersSentFor(config: NextConfig, pathname: string): Promise<Map
 	return sent
 }
 
-const FIVE = [
+const HEADER_NAMES = [
 	'strict-transport-security',
 	'x-content-type-options',
 	'referrer-policy',
@@ -71,7 +71,7 @@ const FIVE = [
 	'content-security-policy',
 ] as const
 
-const five = (sent: Map<string, string>) => FIVE.map(name => sent.get(name))
+const valuesOf = (sent: Map<string, string>) => HEADER_NAMES.map(name => sent.get(name))
 
 /** The sources of one directive of a policy; empty when the directive is missing. */
 function sourcesOf(policy: string, directive: string): string[] {
@@ -90,7 +90,7 @@ const remoteSources = (policy: string) =>
 		.filter(source => !source.startsWith("'") && source !== 'data:' && source !== 'blob:')
 
 describe('every response leaves with the security headers', () => {
-	test('the home page has the six headers, and none that names the technology', async () => {
+	test('the home page has the seven headers, and none that names the technology', async () => {
 		const config = await production()
 		const sent = await headersSentFor(config, '/')
 
@@ -122,21 +122,21 @@ describe('every response leaves with the security headers', () => {
 		'/_next/image',
 		'/_next/static/chunks/main.js',
 		'/une/adresse/qui/n-existe/pas',
-	])('%s has the same six, with the same values, and no technology header', async pathname => {
+	])('%s has the same seven, with the same values, and no technology header', async pathname => {
 		const config = await production()
 		const sent = await headersSentFor(config, pathname)
 
-		expect(five(sent)).toEqual(five(await headersSentFor(config, '/')))
-		expect(five(sent)).not.toContain(undefined)
+		expect(valuesOf(sent)).toEqual(valuesOf(await headersSentFor(config, '/')))
+		expect(valuesOf(sent)).not.toContain(undefined)
 		expect(sent.has('x-powered-by')).toBe(false)
 	})
 
-	test('the six are exactly these, whatever the options', () => {
+	test('the seven are exactly these, whatever the options', () => {
 		const names = (development: boolean) =>
 			securityHeaders({ development, mediaOrigin: OTHER_MEDIA }).map(({ key }) => key.toLowerCase())
 
-		expect(names(false)).toEqual([...FIVE])
-		expect(names(true)).toEqual([...FIVE])
+		expect(names(false)).toEqual([...HEADER_NAMES])
+		expect(names(true)).toEqual([...HEADER_NAMES])
 	})
 })
 
