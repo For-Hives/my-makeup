@@ -49,16 +49,13 @@ describe('La liste : le vide, l’indisponible et le masqué sont absents', () =
 		const text = JSON.stringify(cards.map(({ photo: _photo, ...reste }) => reste))
 		expect(text).not.toContain('@')
 		expect(text).not.toMatch(/0[1-9][ .]?\d{2}/)
+		// `flags` exists only on a card of a country zone (ticket 264): decoration, never a contact detail.
 		for (const card of cards)
-			expect(Object.keys(card).sort()).toEqual([
-				'lieu',
-				'nom',
-				'photo',
-				'pid',
-				'slug',
-				'specialite',
-				'superMaquilleuse',
-			])
+			expect(
+				Object.keys(card)
+					.filter(key => key !== 'flags')
+					.sort()
+			).toEqual(['lieu', 'nom', 'photo', 'pid', 'slug', 'specialite', 'superMaquilleuse'])
 	})
 
 	test('la pagination est stable : deux pages de cinq se suivent sans se recouper', async () => {
