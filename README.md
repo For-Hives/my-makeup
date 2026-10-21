@@ -481,7 +481,7 @@ Les tests : `tests/unit/create-admin.test.ts` (les règles et la commande), `tes
 
 ### En-têtes de sécurité
 
-Chaque réponse du site part avec six en-têtes, sur toutes les adresses : pages, API, administration, fichiers, erreurs. Une seule sorte de réponse en est privée : la redirection 308 par laquelle Next répond lui-même à une adresse avec `//` (`//blog`), avant que le proxy ne la lise. Les autres redirections, celle du `/` final comprise, passent par le proxy et portent les six en-têtes (relevé du 16/10/2026, ticket 228).
+Chaque réponse du site part avec sept en-têtes, sur toutes les adresses : pages, API, administration, fichiers, erreurs. Une seule sorte de réponse en est privée : la redirection 308 par laquelle Next répond lui-même à une adresse avec `//` (`//blog`), avant que le proxy ne la lise. Les autres redirections, celle du `/` final comprise, passent par le proxy et portent les sept en-têtes (relevé du 16/10/2026, ticket 228).
 
 | En-tête | Valeur | Effet |
 |---|---|---|

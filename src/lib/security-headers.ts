@@ -54,7 +54,7 @@ export function contentSecurityPolicy({ development, mediaOrigin }: SecurityOpti
 export const FRAME_POLICY = "frame-ancestors 'self'"
 
 /**
- * The six headers, the same on every path.
+ * The seven headers, the same on every path.
  *
  * No value may hold « :path »: Next would replace it by the path of the request, since the
  * headers are attached to the source `/:path*` (next.config.ts).
