@@ -129,6 +129,8 @@ export async function buildProfiles(payload: Payload, n: number, options: Factor
 	})
 }
 
+const BATCH_BY_APPLICATION = 2
+
 /** The headers of an admin session, for the REST API of the running application. */
 async function adminHeaders(): Promise<Record<string, string>> {
 	return (await createAccount('admin')).session.enTetes
@@ -152,9 +154,13 @@ export async function buildByApplication(
 	}
 	const pros: number[] = []
 	const profiles: number[] = []
-	for (let startedAt = 0; startedAt < n; startedAt += 5) {
-		const batch = await Promise.all(
-			Array.from({ length: Math.min(5, n - startedAt) }, async (_, i) => {
+	// Each creation holds a database connection while it hashes the password, and the server has 5 of
+	// them (CONNECTIONS_MAX) for every worker and every other test of the shard: two at a time keep two
+	// workers under that limit. Five at a time ran out of connections in CI (« cannot begin transaction:
+	// timeout exceeded »), and the retry of the failed hook then met the accounts made by the first try.
+	for (let startedAt = 0; startedAt < n; startedAt += BATCH_BY_APPLICATION) {
+		const batch = await Promise.allSettled(
+			Array.from({ length: Math.min(BATCH_BY_APPLICATION, n - startedAt) }, async (_, i) => {
 				const rank = startedAt + i
 				const { slug: _slug, ...profile } = generatedProfile(rank, options)
 				const pro = (await (
@@ -171,6 +177,8 @@ export async function buildByApplication(
 						'La création d’un compte'
 					)
 				).json()) as { doc: { id: number } }
+				// Noted at once: a failure further on must still let the cleanup remove this account.
+				pros.push(pro.doc.id)
 				const { docs } = (await (
 					await verified(
 						await request.get(`/api/profiles?where[pro][equals]=${pro.doc.id}&depth=0&limit=1`, { headers: headers }),
@@ -179,16 +187,18 @@ export async function buildByApplication(
 				).json()) as { docs: { id: number }[] }
 				const created = docs[0]
 				if (!created) throw new Error('Le compte créé n’a pas son profil.')
+				profiles.push(created.id)
 				await verified(
 					await request.patch(`/api/profiles/${created.id}`, { headers: headers, data: profile }),
 					'L’écriture d’un profil'
 				)
-				return { pro: pro.doc.id, profil: created.id }
 			})
 		)
-		for (const { pro, profil: profile } of batch) {
-			pros.push(pro)
-			profiles.push(profile)
+		const failed = batch.find((result): result is PromiseRejectedResult => result.status === 'rejected')
+		if (failed) {
+			// Leave nothing behind: the retry of the hook would meet these accounts (same emails) and fail on them.
+			await removeByApplication(request, { pros, profils: profiles })
+			throw failed.reason
 		}
 	}
 	return { pros, profils: profiles }
