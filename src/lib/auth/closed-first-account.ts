@@ -20,3 +20,9 @@ export const firstClosedAccount: Endpoint = {
 		throw new Forbidden(req.t)
 	},
 }
+
+/** Payload's screen of the first account, which the route above makes unusable (ticket 276). */
+export const FIRST_ACCOUNT_SCREEN = '/admin/create-first-user'
+
+/** True for that screen, with or without a final slash. */
+export const isClosedFirstAccountScreen = (path: string): boolean => path.replace(/\/+$/, '') === FIRST_ACCOUNT_SCREEN

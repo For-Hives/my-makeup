@@ -56,6 +56,10 @@ const logLevels = {
 	APIError: 'info',
 	AuthenticationError: 'info',
 	CompteBloque: 'info',
+	// A refused access (an anonymous GET on a private collection) is a normal event too (ticket 276).
+	// `UnauthorizedError` is missing from Payload's `ErrorName` type but is read by the same lookup.
+	Forbidden: 'info',
+	UnauthorizedError: 'info',
 	UnverifiedEmail: 'info',
 } as const
 

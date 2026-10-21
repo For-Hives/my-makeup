@@ -34,7 +34,13 @@ describe('le patch de payload s’applique à la version installée', () => {
 describe('le niveau d’un refus de Payload ne dépend pas du nom des classes (ticket 223, constat 10)', () => {
 	// A production bundle is minified: the classes are renamed, so `err.name` is `c` or `l`. The patched logError
 	// tells the three classes by their constructor. The renaming is simulated by overwriting `name`.
-	const levels = { APIError: 'info', AuthenticationError: 'info', UnverifiedEmail: 'info' }
+	const levels = {
+		APIError: 'info',
+		AuthenticationError: 'info',
+		Forbidden: 'info',
+		UnauthorizedError: 'info',
+		UnverifiedEmail: 'info',
+	}
 	const logged = async (fabrique: (m: typeof import('payload')) => Error) => {
 		const payload = await import('payload')
 		const { logError } = await import(path.join(ROOT, 'node_modules/payload/dist/utilities/logError.js'))
@@ -59,7 +65,13 @@ describe('le niveau d’un refus de Payload ne dépend pas du nom des classes (t
 	test('UnverifiedEmail renommée : une ligne info', async () => {
 		expect(await logged(({ UnverifiedEmail }) => new UnverifiedEmail({ t: undefined } as never))).toEqual(['info'])
 	})
+	test('Forbidden renommée : une ligne info (ticket 276)', async () => {
+		expect(await logged(({ Forbidden }) => new Forbidden())).toEqual(['info'])
+	})
+	test('UnauthorizedError renommée : une ligne info (ticket 276)', async () => {
+		expect(await logged(({ UnauthorizedError }) => new UnauthorizedError())).toEqual(['info'])
+	})
 	test('une autre classe renommée reste une ligne error', async () => {
-		expect(await logged(({ Forbidden }) => new Forbidden())).toEqual(['error'])
+		expect(await logged(({ Locked }) => new Locked('verrou'))).toEqual(['error'])
 	})
 })
