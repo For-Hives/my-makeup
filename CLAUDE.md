@@ -18,6 +18,7 @@ My Makeup est un annuaire de maquilleuses professionnelles indépendantes. Cette
 | émettre un événement de mesure, toucher le chemin `/u` ou le faux Umami | [`docs/mesure/umami.md`](docs/mesure/umami.md) |
 | lancer ou écrire une sonde du site en ligne, en lecture seule | [`docs/tests/sondes.md`](docs/tests/sondes.md) |
 | contrôler en lecture toutes les adresses d'un hôte (jour de la bascule, hôte de production) | [`docs/tests/controle-hote.md`](docs/tests/controle-hote.md) |
+| parcourir en navigateur 40 adresses d'un hôte, à deux largeurs d'écran, pour y chercher des défauts d'interface | [`docs/tests/crawl-interfaces.md`](docs/tests/crawl-interfaces.md) |
 | appeler un service extérieur, ou le simuler dans un test | [`docs/tests/http-sortant.md`](docs/tests/http-sortant.md) |
 | toucher la CI, un workflow ou le `Dockerfile` | [`docs/qualite.md`](docs/qualite.md), §6 à §9 |
 | monter une version, toucher `renovate.json` | [`docs/qualite.md`](docs/qualite.md), §11 |

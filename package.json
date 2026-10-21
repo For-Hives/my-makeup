@@ -47,6 +47,7 @@
 		"notes:add": "bun --no-env-file scripts/release/add-note.ts",
 		"release:publish": "bun --no-env-file scripts/release/publication.ts",
 		"cutover:check": "bun --no-env-file scripts/cutover/run-host-check.ts",
+		"cutover:ui-crawl": "bun --no-env-file scripts/cutover/run-ui-crawl.ts",
 		"indexnow:all": "bun --no-env-file scripts/seo/indexnow-all.ts",
 		"names:check": "bun --no-env-file scripts/naming/check.ts",
 		"perf:lighthouse": "bun --no-env-file scripts/perf/lighthouse.ts",
