@@ -1,4 +1,6 @@
 import { describe, expect, test } from 'bun:test'
+import { existsSync } from 'node:fs'
+import { chromium } from '@playwright/test'
 import {
 	contextOptions,
 	crawl,
@@ -252,19 +254,24 @@ describe('crawl des interfaces (280) : une cible donnée comme une adresse absol
 		)
 	})
 
-	test('le crawl d’une adresse absolue ouvre les 40 adresses aux deux largeurs sans défaut', async () => {
-		const { server, seen } = serveFictionalSite()
-		try {
-			const report = await crawl({ settings: { target: new URL(`http://127.0.0.1:${server.port}`) } })
-			expect(report.addresses).toBe(CRAWL_ADDRESS_COUNT)
-			expect(report.pagesRead).toBe(CRAWL_ADDRESS_COUNT * 2)
-			expect(report.pages.every(page => page.status === 200 || page.address === UNKNOWN_PATH)).toBe(true)
-			expect(report.defectCount).toBe(0)
-			expect(seen.some(request => request.path === '/')).toBe(true)
-		} finally {
-			await server.stop(true)
-		}
-	}, 120_000)
+	// Le travail « unit » de la CI n'installe pas Chromium (le travail e2e le fait) : sans navigateur, l'essai saute.
+	test.skipIf(!existsSync(chromium.executablePath()))(
+		'le crawl d’une adresse absolue ouvre les 40 adresses aux deux largeurs sans défaut',
+		async () => {
+			const { server, seen } = serveFictionalSite()
+			try {
+				const report = await crawl({ settings: { target: new URL(`http://127.0.0.1:${server.port}`) } })
+				expect(report.addresses).toBe(CRAWL_ADDRESS_COUNT)
+				expect(report.pagesRead).toBe(CRAWL_ADDRESS_COUNT * 2)
+				expect(report.pages.every(page => page.status === 200 || page.address === UNKNOWN_PATH)).toBe(true)
+				expect(report.defectCount).toBe(0)
+				expect(seen.some(request => request.path === '/')).toBe(true)
+			} finally {
+				await server.stop(true)
+			}
+		},
+		120_000
+	)
 
 	test('l’accès protégé ne part qu’avec les requêtes vers l’origine de la cible', () => {
 		const settings = readSettings({
