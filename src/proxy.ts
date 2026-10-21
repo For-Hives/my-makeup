@@ -16,8 +16,8 @@ import { REFUSAL_PATH, SIGN_UP_PATH, secondsBeforeSignUp } from '@/lib/auth/sign
 import { CONTACT_PATH, CONTACT_THROTTLED_PATH, secondsBeforeThisRequestMessage } from '@/lib/contact/rate-limit'
 import { rateLimitSearch } from '@/lib/search/rate-limit'
 import { robotsForPath } from '@/lib/seo/robots'
-import { isHomePageInternal } from '@/lib/urls/home-page'
 import { uploadRefusal } from '@/lib/upload-guard'
+import { isHomePageInternal } from '@/lib/urls/home-page'
 import { shapeRedirect } from '@/lib/urls/shape'
 import { type CheckedFamily, type PageAnswer, urlToCheck } from '@/lib/urls/unknown-page'
 
