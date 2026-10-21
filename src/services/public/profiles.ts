@@ -226,6 +226,11 @@ export interface ProfileCard {
 	flags?: string[]
 	superMaquilleuse: boolean
 	photo: CardPhoto | null
+	/**
+	 * True when nothing on her profile lets a client reach her (ticket 291). The key is absent for a
+	 * profile that can be reached, so a card of the list is what it was; only the directory sets it.
+	 */
+	sansContact?: true
 }
 
 /** One page of the listed profiles. */
@@ -668,11 +673,44 @@ export function directoryPlace(
 /** A listed profile with where she works: what the search by city ranks by. */
 export interface DirectoryProfile extends ProfilePlace {
 	carte: ProfileCard
+	/** True when her profile shows no way to reach her (ticket 291): the search ranks her after the others. */
+	unreachable: boolean
 	/**
 	 * What she wrote that a search by a word looks into (ticket 099). Beside the card, never in it: a card
 	 * is what a page renders, and carries none of this. Read only when asked (`avecLesTextes`).
 	 */
 	textes?: NormalizedTexts
+}
+
+/**
+ * Which profiles show no way to be reached (ticket 291), by identifier: no network, no site, and no
+ * telephone nor email she chose to show. The contact details are closed to the public, so they are read
+ * here, by the identifiers the public read of the profiles gave, and only this fact leaves: never a value.
+ */
+async function readUnreachable(payload: Payload, profils: readonly { id: number }[]): Promise<ReadonlySet<number>> {
+	const unreachable = new Set<number>()
+	if (profils.length === 0) return unreachable
+	const { docs } = await payload.find({
+		collection: 'profiles',
+		where: { id: { in: profils.map(({ id }) => id) } },
+		select: { networks: true, publicContact: true, contactDetails: true },
+		depth: 0,
+		limit: LIST_MAX_LIMIT,
+		pagination: false,
+		overrideAccess: true,
+	})
+	const reachable = new Set<number>()
+	for (const doc of docs) {
+		const shown = doc.publicContact === true
+		const links = contacts({
+			reseaux: doc.networks,
+			telephone: shown ? doc.contactDetails?.phone : null,
+			email: shown ? doc.contactDetails?.email : null,
+		})
+		if (links.some(({ href }) => href)) reachable.add(doc.id)
+	}
+	for (const { id } of profils) if (!reachable.has(id)) unreachable.add(id)
+	return unreachable
 }
 
 /** The fields a search by a word reads on top of a card: her texts, and no price, no contact, no link. */
@@ -732,12 +770,17 @@ export async function readDirectory(
 		})
 		const photos = await readPhotos(payload, result.docs)
 		const pids = await readPids(payload, result.docs)
-		for (const profile of result.docs)
+		const unreachable = await readUnreachable(payload, result.docs)
+		for (const profile of result.docs) {
+			const isUnreachable = unreachable.has(profile.id)
+			const card = cardOf(profile, photos, pids)
 			directory.push({
-				carte: cardOf(profile, photos, pids),
+				carte: isUnreachable ? { ...card, sansContact: true } : card,
+				unreachable: isUnreachable,
 				...directoryPlace(profile),
 				...(avecLesTextes && { textes: textsOf(profile) }),
 			})
+		}
 		if (!result.hasNextPage) break
 	}
 	return directory

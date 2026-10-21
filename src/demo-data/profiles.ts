@@ -489,7 +489,7 @@ export const DEMO_PROFILES: readonly DemoProfile[] = [
 		numero: 8,
 		cle: 'sans-contact-public',
 		sertA:
-			'Aucun moyen de contact public : ni réseau, ni coordonnées montrées (enregistrées mais fermées). Le devis est le seul canal.',
+			'Aucun moyen de contact public : ni réseau, ni coordonnées montrées (enregistrées mais fermées). Elle est rangée après les autres dans la recherche.',
 		compte: { email: profileUrl('sans-contact-public'), nom: 'Louise Girard' },
 		profil: {
 			...completeProfile({
@@ -499,7 +499,7 @@ export const DEMO_PROFILES: readonly DemoProfile[] = [
 				specialty: 'Maquillage mariage',
 				city: CITIES.annecy,
 				description:
-					'Maquilleuse à Annecy, je prépare les mariées et leurs proches, chez elles ou sur le lieu de la fête. Pour me joindre, passez par la demande de devis : je vous réponds avec une proposition adaptée à votre journée et à votre budget.',
+					'Maquilleuse à Annecy, je prépare les mariées et leurs proches, chez elles ou sur le lieu de la fête. Je construis chaque maquillage avec vous, selon votre journée, votre teint et votre budget, avec un essai avant le grand jour.',
 				pseudo: 'louise.girard',
 			}),
 			networks: {},

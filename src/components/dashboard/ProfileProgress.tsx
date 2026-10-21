@@ -1,4 +1,4 @@
-import type { Missing, Progress } from '@/lib/dashboard/progress'
+import { CONTACT_SECTION, type Missing, type Progress, RANKED_LAST_TEXT } from '@/lib/dashboard/progress'
 
 const COLORS = {
 	vide: 'border-neutral-400 bg-neutral-50',
@@ -63,6 +63,14 @@ export function ProfileProgress({ avancement }: { avancement: Progress }) {
 			<p data-testid="avancement-consequence" className="mt-2">
 				{avancement.consequence}
 			</p>
+			{avancement.rankedLast && (
+				<p data-testid="avancement-sans-contact" className="mt-2">
+					{RANKED_LAST_TEXT}{' '}
+					<a className="inline-block min-h-11 py-2 underline" href={`#carte-${CONTACT_SECTION}`}>
+						Ajouter mes coordonnées
+					</a>
+				</p>
+			)}
 			<div className="mt-4 flex flex-col gap-4">
 				<List id="avancement-requis" titre="Pour être publiable" manques={required} />
 				<List id="avancement-autres" titre="Pour un profil plus complet" manques={others} />

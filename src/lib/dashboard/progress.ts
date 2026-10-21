@@ -47,7 +47,18 @@ export interface Progress {
 	readonly consequence: string
 	/** What she lacks, in the display order of the criteria; the required ones first. */
 	readonly manques: readonly Missing[]
+	/**
+	 * True when she is listed but shows no way to reach her: the search puts her after the others
+	 * (ticket 291). The card to fix it is `CONTACT_SECTION`.
+	 */
+	readonly rankedLast: boolean
 }
+
+/** The card where she adds her contact details (ticket 291). */
+export const CONTACT_SECTION: Section = 'coordonnees'
+
+/** What the space says to a listed artist who shows no way to reach her (ticket 291). */
+export const RANKED_LAST_TEXT = 'Sans moyen de contact, ton profil passe après les autres dans la recherche.'
 
 /** The card where each criterion of the progress bar is edited. */
 export const CRITERION_SECTION: Record<Criterion, Section> = {
@@ -155,5 +166,9 @@ export function profileProgress(profil: DashboardProfile): Progress {
 		titre: TITLES[state],
 		consequence: CONSEQUENCES[state] + (hiddenByAvailability ? OUT_OF_SEARCH : ''),
 		manques: [...missing.filter(m => m.requis), ...missing.filter(m => !m.requis)],
+		rankedLast:
+			(state === 'incomplet' || state === 'publiable') &&
+			!reading.conditions.canalDeContact &&
+			isAvailable(profil.available),
 	}
 }

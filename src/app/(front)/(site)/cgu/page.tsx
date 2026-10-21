@@ -42,9 +42,6 @@ export default function Cgu() {
 				<li>
 					{`Aux particuliers : la recherche de maquilleuses par mot-clé et par ville, la consultation des profils et des articles, et le contact direct avec la maquilleuse choisie.`}
 				</li>
-				<li>
-					{`Lorsqu'il est proposé sur un profil, un formulaire « Demander un devis » qui transmet la demande à la maquilleuse concernée.`}
-				</li>
 			</ul>
 			<p>
 				{`My-Makeup met en relation, sans être partie aux prestations : le devis, le prix, la date, le règlement et le déroulement de la prestation sont convenus directement entre la cliente ou le client et la maquilleuse. My-Makeup ne gère ni les rendez-vous, ni les règlements, n'affiche pas d'avis clients et ne prélève aucun montant sur les prestations.`}
@@ -52,7 +49,7 @@ export default function Cgu() {
 
 			<h2>3. Gratuité</h2>
 			<p>
-				{`Pour les maquilleuses, le cœur du service est gratuit, sans limite de durée : la page professionnelle, le portfolio, la publication des tarifs et la réception des demandes de devis. Si des services payants sont proposés un jour, ils seront facultatifs, annoncés à l'avance, et ne retireront rien à ce cœur gratuit. La consultation du site et l'envoi de demandes sont gratuits pour les particuliers.`}
+				{`Pour les maquilleuses, le cœur du service est gratuit, sans limite de durée : la page professionnelle, le portfolio, la publication des tarifs et la mise en relation avec les clientes. Si des services payants sont proposés un jour, ils seront facultatifs, annoncés à l'avance, et ne retireront rien à ce cœur gratuit. La consultation du site et la prise de contact avec les maquilleuses sont gratuites pour les particuliers.`}
 			</p>
 
 			<h2>4. Compte maquilleuse</h2>
@@ -77,31 +74,24 @@ export default function Cgu() {
 			</ul>
 			<p>{`En cas de manquement, My-Makeup peut retirer un contenu, masquer un profil ou fermer un compte.`}</p>
 
-			<h2>7. Demandes de devis</h2>
-			<p>
-				{`La demande envoyée par le formulaire est transmise à la maquilleuse concernée avec l'accord de la personne qui l'envoie. My-Makeup en assure le suivi mais ne garantit ni la disponibilité de la maquilleuse, ni sa réponse, ni la conclusion d'une prestation. Les données des demandes sont conservées 12 mois (voir la `}
-				<Link href={'/politique-de-confidentialite'}>politique de confidentialité</Link>
-				{`).`}
-			</p>
-
-			<h2>8. Signalement</h2>
+			<h2>7. Signalement</h2>
 			<p>
 				{`Pour signaler un contenu ou un comportement contraire à ces conditions, écrivez à `}
 				<a href={`mailto:${PUBLISHER.email}`}>{PUBLISHER.email}</a>
 				{` en indiquant l'adresse de la page concernée et le motif.`}
 			</p>
 
-			<h2>9. Disponibilité et responsabilité</h2>
+			<h2>8. Disponibilité et responsabilité</h2>
 			<p>
 				{`Le site est fourni en l'état : nous faisons de notre mieux pour qu'il soit disponible et exact, sans pouvoir le garantir. My-Makeup n'est pas responsable des prestations convenues entre les particuliers et les maquilleuses, ni des informations publiées par les maquilleuses.`}
 			</p>
 
-			<h2>10. Modification des conditions</h2>
+			<h2>9. Modification des conditions</h2>
 			<p>
 				{`Ces conditions peuvent évoluer. En cas de changement important, les maquilleuses inscrites sont prévenues par email avant son entrée en vigueur.`}
 			</p>
 
-			<h2>11. Droit applicable</h2>
+			<h2>10. Droit applicable</h2>
 			<p>
 				{`Ces conditions sont soumises au droit français. En cas de litige, une solution amiable est recherchée en priorité ; à défaut, les tribunaux compétents sont ceux désignés par la loi.`}
 			</p>
