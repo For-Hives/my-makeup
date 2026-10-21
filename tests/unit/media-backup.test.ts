@@ -62,7 +62,7 @@ function fakeCloudflare(initial: Record<string, Record<string, string>>, rules: 
 		}
 		const key = decodeURIComponent(rawKey)
 		if (method === 'PUT') {
-			const body = new TextDecoder().decode(init.body as Uint8Array)
+			const body = await new Response(init.body).text()
 			store.set(key, body)
 			return Response.json({ success: true, result: { etag: md5Hex(encoder.encode(body)) } })
 		}

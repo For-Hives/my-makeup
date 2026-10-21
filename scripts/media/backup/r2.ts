@@ -198,7 +198,7 @@ export class R2Client {
 	async getObject(
 		bucket: string,
 		key: string
-	): Promise<{ bytes: Uint8Array; etag: string; contentType: string | null } | null> {
+	): Promise<{ bytes: Uint8Array<ArrayBuffer>; etag: string; contentType: string | null } | null> {
 		const url = `${this.bucketUrl(bucket)}/objects/${encodeKey(key)}`
 		const response = await this.call('lire', bucket, url, { method: 'GET', headers: { Accept: '*/*' } }, new Set([404]))
 		if (response.status === 404) {
@@ -216,7 +216,7 @@ export class R2Client {
 	async putObject(
 		bucket: string,
 		key: string,
-		bytes: Uint8Array,
+		bytes: Uint8Array<ArrayBuffer>,
 		contentType: string | null
 	): Promise<{ etag: string | null }> {
 		if (bucket === this.options.sourceBucket)
