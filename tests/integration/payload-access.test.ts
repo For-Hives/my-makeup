@@ -484,6 +484,7 @@ const MATRIX: Line[] = [
 			['prefix', 'un-autre-dossier'],
 			['filename', 'un-autre-nom.png'],
 			['strapiId', 999],
+			['objectMissing', true],
 		] as const
 	).map(
 		([champ, valeur]): Line => ({
@@ -543,6 +544,8 @@ const MATRIX: Line[] = [
 		['owner', OWNER_AND_ADMIN],
 		['strapiId', ['admin']],
 		['strapiFormats', ['admin']],
+		// Ticket 275: read with the media (the pages leave a marked photo out), written by the import only.
+		['objectMissing', ROLES],
 	]),
 	{ role: 'admin', collection: 'media', operation: 'lister', attendu: 'tous' },
 	{ role: 'admin', collection: 'media', operation: 'lire', document: 'autreMaquilleuse', attendu: 'autorise' },
@@ -555,6 +558,7 @@ const MATRIX: Line[] = [
 			['owner', { compteDe: 'sansProfil' }, 'autorise'],
 			['prefix', 'un-autre-dossier', 'ignore'],
 			['strapiId', 999, 'ignore'],
+			['objectMissing', true, 'ignore'],
 		] as const
 	).map(
 		([champ, valeur, attendu]): Line => ({
