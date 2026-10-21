@@ -10,7 +10,7 @@
  */
 
 import type { Profile } from '@/payload-types'
-import { radiusKm } from '../format-zone'
+import { formatZone, radiusKm, zoneCountries } from '../format-zone'
 import { formatPrice } from '../price'
 import { text } from '../profile/display-name'
 import { monthYear, period } from '../profile/public-view'
@@ -60,6 +60,10 @@ export type DashboardProfile = Pick<
 	| 'city'
 	| 'radiusKm'
 	| 'homeService'
+	| 'zoneKind'
+	| 'countries'
+	| 'town'
+	| 'zoneReview'
 	| 'available'
 	| 'mainPicture'
 	| 'gallery'
@@ -94,6 +98,24 @@ function locationCard(profil: DashboardProfile): Card {
 	const cityName = text(profil.city?.name)
 	const km = radiusKm(profil.radiusKm)
 	const home = profil.homeService === true ? 'Oui' : profil.homeService === false ? 'Non' : null
+	// A zone of countries says what the public page says (ticket 266), without the flag: that is for the eye only.
+	if (zoneCountries({ zoneKind: profil.zoneKind, countries: profil.countries, city: profil.city?.name }).length > 0) {
+		const zone = formatZone({
+			city: profil.city?.name,
+			radius: profil.radiusKm,
+			zoneKind: profil.zoneKind,
+			countries: profil.countries,
+			town: profil.town,
+		})
+		return {
+			section: 'localisation',
+			titre: 'Localisation',
+			lignes: [
+				{ libelle: 'Zone', valeur: or(zone) },
+				{ libelle: 'Se déplace à domicile', valeur: home },
+			],
+		}
+	}
 	return {
 		section: 'localisation',
 		titre: 'Localisation',

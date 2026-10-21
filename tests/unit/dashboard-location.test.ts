@@ -9,7 +9,7 @@ import {
 	textRadius,
 } from '@/lib/dashboard/location'
 import { payloadFailure } from '@/lib/dashboard/result'
-import { ZONE_MESSAGES } from '@/lib/profile/zone'
+import { ABROAD_MESSAGES, ZONE_MESSAGES } from '@/lib/profile/zone'
 
 /**
  * The rules of the location form (ticket 123; plan 02 U14, U15, U16): the label of a commune, the
@@ -101,9 +101,11 @@ describe('le rayon saisi : des kilomètres entiers, de 0 à 200', () => {
 describe('le schéma du serveur est strict', () => {
 	test('un code, un rayon et « à domicile » passent ; le code est mis en forme', () => {
 		expect(strictLocationSchema.parse(VALID)).toEqual(VALID)
-		expect(strictLocationSchema.parse({ ...VALID, codeInsee: ' 2a004 ', rayonKm: null }).codeInsee).toBe('2A004')
+		expect(strictLocationSchema.parse({ ...VALID, codeInsee: ' 2a004 ', rayonKm: null })).toMatchObject({
+			codeInsee: '2A004',
+		})
 		expect(strictLocationSchema.parse({ ...VALID, rayonKm: 0 }).rayonKm).toBe(0)
-		expect(strictLocationSchema.parse({ ...VALID, codeInsee: '97411' }).codeInsee).toBe('97411')
+		expect(strictLocationSchema.parse({ ...VALID, codeInsee: '97411' })).toMatchObject({ codeInsee: '97411' })
 	})
 
 	test.each([
@@ -151,6 +153,13 @@ describe('le schéma du serveur est strict', () => {
 		'pro',
 		'slug',
 		'id',
+		// Ticket 265: the postal codes are the list's, never a request's; the review is the import's.
+		'postalCodes',
+		'codesPostaux',
+		'codePostal',
+		'zoneReview',
+		'zoneKind',
+		'candidates',
 	])('la clé %s refuse la requête entière', cle => {
 		expect(strictLocationSchema.safeParse({ ...VALID, [cle]: 'x' }).success).toBe(false)
 	})
@@ -159,6 +168,99 @@ describe('le schéma du serveur est strict', () => {
 		for (const toHome of ['oui', 1, null, undefined]) {
 			expect(strictLocationSchema.safeParse({ ...VALID, aDomicile: toHome }).success).toBe(false)
 		}
+	})
+})
+
+describe('266 : la zone est une commune ou des pays, jamais un mélange', () => {
+	const COUNTRIES = { kind: 'countries' as const, countries: ['BE'], town: 'Bruxelles', rayonKm: 30, aDomicile: true }
+	const refused = (saisie: unknown) => {
+		const wasRead = strictLocationSchema.safeParse(saisie)
+		if (wasRead.success) throw new Error('doit être refusé')
+		return errorsByField(wasRead.error)
+	}
+
+	test('sans « kind », c’est une commune ; « city » aussi', () => {
+		expect(strictLocationSchema.parse(VALID)).toEqual(VALID)
+		expect(strictLocationSchema.parse({ ...VALID, kind: 'city' })).toEqual({ ...VALID, kind: 'city' })
+	})
+
+	test('des pays, une ville, un rayon et « à domicile » passent ; les codes sont mis en capitales, dans l’ordre', () => {
+		expect(strictLocationSchema.parse(COUNTRIES)).toEqual(COUNTRIES)
+		expect(
+			strictLocationSchema.parse({ ...COUNTRIES, countries: [' it', 'fr'], town: null, rayonKm: null })
+		).toMatchObject({ countries: ['IT', 'FR'], town: null })
+		expect(strictLocationSchema.parse({ ...COUNTRIES, town: '  ' })).toMatchObject({ town: null })
+	})
+
+	test('[FR] seul : « Choisis au moins un pays étranger… »', () => {
+		expect(refused({ ...COUNTRIES, countries: ['FR'], town: null })).toEqual({
+			countries: 'Choisis au moins un pays étranger : pour la France, écris ta commune.',
+		})
+	})
+
+	test('aucun pays : le même message', () => {
+		expect(refused({ ...COUNTRIES, countries: [], town: null })).toEqual({
+			countries: ABROAD_MESSAGES.countriesFranceOnly,
+		})
+	})
+
+	test('six pays : « 5 pays au plus. »', () => {
+		expect(refused({ ...COUNTRIES, countries: ['BE', 'IT', 'ES', 'DE', 'CH', 'LU'], town: null })).toEqual({
+			countries: '5 pays au plus.',
+		})
+	})
+
+	test('un code inconnu, un pays deux fois, une liste qui n’en est pas une', () => {
+		expect(refused({ ...COUNTRIES, countries: ['ZZ'], town: null })).toEqual({
+			countries: ABROAD_MESSAGES.countriesUnknown,
+		})
+		expect(refused({ ...COUNTRIES, countries: ['BE', 'be'], town: null })).toEqual({
+			countries: ABROAD_MESSAGES.countriesDuplicate,
+		})
+		expect(refused({ ...COUNTRIES, countries: 'BE' })).toMatchObject({ countries: ABROAD_MESSAGES.countriesNotAList })
+	})
+
+	test('une ville qui est une adresse : le message d’adresse', () => {
+		expect(refused({ ...COUNTRIES, town: '12 rue des Lilas' })).toEqual({
+			town: 'Écris le nom de ta ville, pas ton adresse : elle ne s’enregistre jamais.',
+		})
+		expect(refused({ ...COUNTRIES, town: 'Rue des Lilas' })).toEqual({ town: ABROAD_MESSAGES.townAddress })
+	})
+
+	test('une ville avec plusieurs pays : refusée', () => {
+		expect(refused({ ...COUNTRIES, countries: ['BE', 'IT'] })).toEqual({ town: ABROAD_MESSAGES.townSeveralCountries })
+	})
+
+	test('le rayon et « à domicile » se lisent comme pour une commune', () => {
+		expect(refused({ ...COUNTRIES, rayonKm: 201 })).toEqual({ rayonKm: ZONE_MESSAGES.rayon })
+		expect(refused({ ...COUNTRIES, aDomicile: 'oui' })).toHaveProperty('aDomicile')
+	})
+
+	test('une requête qui mêle un code INSEE et des pays est refusée entière, dans les deux sens', () => {
+		expect(strictLocationSchema.safeParse({ ...COUNTRIES, codeInsee: '74010' }).success).toBe(false)
+		expect(strictLocationSchema.safeParse({ ...VALID, countries: ['BE'] }).success).toBe(false)
+		expect(strictLocationSchema.safeParse({ ...VALID, kind: 'city', town: 'Bruxelles' }).success).toBe(false)
+	})
+
+	test.each([
+		'postalCodes',
+		'zoneKind',
+		'zoneReview',
+		'city',
+		'slug',
+		'pro',
+		'id',
+		'nom',
+	])('la clé réservée %s refuse la requête de pays entière', cle => {
+		expect(strictLocationSchema.safeParse({ ...COUNTRIES, [cle]: 'x' }).success).toBe(false)
+	})
+
+	test.each(['pays', 'Countries', '', null, 42])('un « kind » %p n’est ni une commune ni des pays : refusé', kind => {
+		expect(strictLocationSchema.safeParse({ ...VALID, kind }).success).toBe(false)
+	})
+
+	test('une requête qui n’est pas un objet est refusée', () => {
+		for (const input of [null, 'BE', 42, ['BE']]) expect(strictLocationSchema.safeParse(input).success).toBe(false)
 	})
 })
 

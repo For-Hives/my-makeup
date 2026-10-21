@@ -47,6 +47,9 @@ export const CITIES_DELAY_MS = 5000
 /** How many communes the search proposes at most. */
 export const SUGGESTIONS_MAX = 8
 
+/** How many communes a postal code is asked for: a code covers a handful, a few dozen at most. */
+export const POSTAL_CODE_SUGGESTIONS_MAX = 20
+
 /** A commune as the list gives it: public reference data. */
 export interface OfficialCity {
 	readonly nom: string
@@ -54,14 +57,17 @@ export interface OfficialCity {
 	readonly departement: string | null
 	readonly latitude: number | null
 	readonly longitude: number | null
+	/** The postal codes the list gives the commune: sorted, once each, none when it gives none. */
+	readonly codesPostaux: readonly string[]
 }
 
-const REQUESTED_FIELDS = 'nom,code,codeDepartement,centre'
+const REQUESTED_FIELDS = 'nom,code,codesPostaux,codeDepartement,centre'
 
 const API_CITY = z.object({
 	nom: z.string().min(1),
 	code: z.string().min(1),
 	codeDepartement: z.string().optional(),
+	codesPostaux: z.array(z.string()).optional(),
 	centre: z.object({ coordinates: z.tuple([z.number(), z.number()]) }).optional(),
 })
 
@@ -70,7 +76,16 @@ function officialCity(ligne: z.infer<typeof API_CITY>): OfficialCity | null {
 	// A code the collection would refuse is not a commune we can store.
 	if (department === null) return null
 	const [longitude, latitude] = ligne.centre?.coordinates ?? [null, null]
-	return { nom: ligne.nom, codeInsee: ligne.code, departement: department, latitude, longitude }
+	// Only the codes that are five digits are kept: what the profile stores is checked again by the collection.
+	const postalCodes = [...new Set((ligne.codesPostaux ?? []).filter(code => /^\d{5}$/.test(code)))].toSorted()
+	return {
+		nom: ligne.nom,
+		codeInsee: ligne.code,
+		departement: department,
+		latitude,
+		longitude,
+		codesPostaux: postalCodes,
+	}
 }
 
 type Response = { genre: 'ok'; corps: unknown } | { genre: 'inconnue' } | { genre: 'panne' }
@@ -107,7 +122,12 @@ export function searchQuestion(
 }
 
 export type CitiesSearch =
-	| { genre: 'communes'; communes: OfficialCity[] }
+	| {
+			genre: 'communes'
+			communes: OfficialCity[]
+			/** The postal code that was asked, when the text typed was one (ticket 265). */
+			codePostal?: string
+	  }
 	| { genre: 'rien'; motif: 'adresse' | 'trop-court' }
 	| { genre: 'panne' }
 
@@ -115,11 +135,12 @@ export type CitiesSearch =
 export async function findCities(texte: string): Promise<CitiesSearch> {
 	const question = searchQuestion(texte)
 	if (question.genre === 'rien') return question
+	const max = question.genre === 'codePostal' ? POSTAL_CODE_SUGGESTIONS_MAX : SUGGESTIONS_MAX
 	const response = await ask('/communes', {
 		[question.genre]: question.valeur,
 		fields: REQUESTED_FIELDS,
 		boost: 'population',
-		limit: String(SUGGESTIONS_MAX),
+		limit: String(max),
 	})
 	if (response.genre !== 'ok') return { genre: 'panne' }
 	const parsedList = z.array(API_CITY).safeParse(response.corps)
@@ -132,7 +153,10 @@ export async function findCities(texte: string): Promise<CitiesSearch> {
 		views.add(city.codeInsee)
 		cities.push(city)
 	}
-	return { genre: 'communes', communes: cities.slice(0, SUGGESTIONS_MAX) }
+	const found = cities.slice(0, max)
+	return question.genre === 'codePostal'
+		? { genre: 'communes', communes: found, codePostal: question.valeur }
+		: { genre: 'communes', communes: found }
 }
 
 export type CityFromCode = { genre: 'commune'; commune: OfficialCity } | { genre: 'inconnue' } | { genre: 'panne' }
@@ -150,8 +174,9 @@ export async function cityFromCode(codeInsee: string): Promise<CityFromCode> {
 	return city === null || city.codeInsee !== codeInsee ? { genre: 'panne' } : { genre: 'commune', commune: city }
 }
 
-/** A commune as the panel proposes it. */
-export const suggestion = (commune: OfficialCity): { codeInsee: string; libelle: string } => ({
+/** A commune as the panel proposes it: its code, its label « Annecy (74) » and its bare name. */
+export const suggestion = (commune: OfficialCity): { codeInsee: string; libelle: string; nom: string } => ({
 	codeInsee: commune.codeInsee,
 	libelle: cityLabel(commune),
+	nom: commune.nom,
 })

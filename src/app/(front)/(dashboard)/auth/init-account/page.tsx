@@ -4,10 +4,11 @@ import { Onboarding } from '@/components/dashboard/onboarding/Onboarding'
 import { ACCOUNT_ONBOARDING_PAGE, signInUrl } from '@/lib/auth/return-to'
 import { requireArtist } from '@/lib/auth/session'
 import { ensureProfile } from '@/lib/dashboard/empty-profile'
-import { cityLabel } from '@/lib/dashboard/location'
+import { locationValues } from '@/lib/dashboard/location'
 import { artistProfile } from '@/lib/dashboard/my-profile'
 import { onboardingPosition } from '@/lib/dashboard/onboarding'
 import { requestUser } from '@/lib/dashboard/request'
+import { zoneReviewView } from '@/lib/dashboard/zone-review'
 import { text } from '@/lib/profile/display-name'
 import { findMyCities, saveMyLocation } from '../profil/location-actions'
 import { saveMyOnboardingIdentity, saveMyOnboardingPhoto } from './actions'
@@ -43,12 +44,8 @@ export default async function AccountOnboardingPage() {
 					nomArtiste: text(profile.artistName),
 					specialite: text(profile.specialty),
 				}}
-				localisation={{
-					codeInsee: text(profile.city?.inseeCode),
-					libelle: cityLabel({ nom: profile.city?.name, departement: profile.city?.department }),
-					rayonKm: typeof profile.radiusKm === 'number' ? profile.radiusKm : null,
-					aDomicile: profile.homeService === true,
-				}}
+				localisation={locationValues(profile)}
+				revueZone={zoneReviewView(profile.zoneReview)}
 				envoyerIdentite={saveMyOnboardingIdentity}
 				envoyerLocalisation={saveMyLocation}
 				chercherCommunes={findMyCities}

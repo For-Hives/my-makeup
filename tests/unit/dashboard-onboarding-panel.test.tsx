@@ -19,13 +19,16 @@ import { pickFiles } from '../support/pick-files'
 const jsdomWindow = openWindow()
 
 const EMPTY_IDENTITY: IdentityValues = { prenom: '', nom: '', nomArtiste: '', specialite: '' }
-const EMPTY_ZONE: LocationValues = { codeInsee: '', libelle: '', rayonKm: null, aDomicile: false }
-const ZONE_MADE: LocationValues = {
-	codeInsee: '59350',
-	libelle: 'Lille (59)',
+const EMPTY_ZONE: LocationValues = {
+	kind: 'city',
+	codeInsee: '',
+	libelle: '',
+	countries: [],
+	town: '',
 	rayonKm: null,
 	aDomicile: false,
 }
+const ZONE_MADE: LocationValues = { ...EMPTY_ZONE, codeInsee: '59350', libelle: 'Lille (59)' }
 const REDUCED = new File(['petit'], 'photo.webp', { type: 'image/webp' })
 
 interface Options {
@@ -74,7 +77,10 @@ function bench(options: Options = {}) {
 					localisation={options.localisation ?? EMPTY_ZONE}
 					envoyerIdentite={sendIdentity}
 					envoyerLocalisation={sendLocation}
-					chercherCommunes={async () => ({ ok: true, communes: [{ codeInsee: '59350', libelle: 'Lille (59)' }] })}
+					chercherCommunes={async () => ({
+						ok: true,
+						communes: [{ codeInsee: '59350', libelle: 'Lille (59)', nom: 'Lille' }],
+					})}
 					envoyerPhoto={sendPhoto}
 					preparer={async () => ({ ok: true, fichier: REDUCED, largeur: 800, hauteur: 600, taille: 5 })}
 					televerser={async () => {
@@ -132,7 +138,7 @@ describe('le parcours : une étape à la fois, chacune enregistrée avant la sui
 		await pickCity()
 		await jsdomWindow.cliquer(jsdomWindow.bouton('Suivant'))
 		await jsdomWindow.attendre(() => stepTitle() === 'Ta photo principale')
-		expect(b.journal.localisation).toEqual([{ codeInsee: '59350', rayonKm: null, aDomicile: false }])
+		expect(b.journal.localisation).toEqual([{ kind: 'city', codeInsee: '59350', rayonKm: null, aDomicile: false }])
 		expect(b.journal.navigations).toEqual([])
 
 		await pickPhoto()
