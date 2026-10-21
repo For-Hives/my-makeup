@@ -86,6 +86,8 @@ describe('les engagements que le code tient', () => {
 
 	test('une photo retirée est effacée du stockage au bout de 30 jours, comme la règle de la corbeille', () => {
 		expect(text).toContain(`effacée définitivement de notre stockage au bout de ${PHOTO_ERASURE_DAYS} jours`)
+		expect(text).toContain('Une copie de sauvegarde de nos photos est faite chaque jour')
+		expect(text).toContain('elle ne supprime rien')
 		expect(read('src/lib/trash.ts')).toContain('erases what is there 30 days later')
 		expect(read('README.md')).toContain('efface la corbeille au bout de 30 jours')
 	})

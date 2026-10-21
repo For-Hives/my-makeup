@@ -27,7 +27,7 @@ const PAGES = [
 // The words of the live site, as the hash of their plain text (the text itself is the page's). The one
 // wanted differences are in the policy: the paragraph « Formulaire de contact » (ticket 162, register
 // `contact-conservation-12-mois`), and the providers, the email confirmation and the delay of the photos
-// (ticket 189, register `politique-a-jour-a-la-bascule`).
+// (ticket 189, register `politique-a-jour-a-la-bascule`), and the daily photo copy that keeps a removed photo (ticket 278).
 const ONLINE: Record<string, { lignes: number; sha: string }> = JSON.parse(
 	readFileSync(path.join(process.cwd(), 'tests/fixtures/legal-pages-text.json'), 'utf8')
 )
