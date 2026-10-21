@@ -26,6 +26,7 @@ My Makeup est un annuaire de maquilleuses professionnelles indépendantes. Cette
 | lancer l'import des données de l'ancien site, lire son rapport, y ajouter une collection | [`docs/migration/IMPORT.md`](docs/migration/IMPORT.md) |
 | créer, déplacer ou retirer une adresse | [`docs/migration/URLS.md`](docs/migration/URLS.md) |
 | faire autrement que le site en ligne | [`docs/migration/CHANGEMENTS-VOULUS.md`](docs/migration/CHANGEMENTS-VOULUS.md) |
+| jouer la bascule, ou savoir quoi faire à chaque étape du jour J et du retour arrière | [`docs/migration/BASCULE.md`](docs/migration/BASCULE.md) |
 | savoir ce qui est déjà fait et vérifié | [`docs/migration/JOURNAL.md`](docs/migration/JOURNAL.md) |
 | écrire une note de version, comprendre la publication d'une version | [`docs/publication.md`](docs/publication.md) |
 | nommer un fichier, un dossier, une fonction, une variable ou une option ; renommer du code ; lire le contrôle des noms | « Conventions » et « Glossaire des noms » ci-dessous, puis [`docs/noms.md`](docs/noms.md) |

@@ -24,6 +24,7 @@ Les documents, sous `docs/migration/` :
 - [`IMPORT.md`](docs/migration/IMPORT.md) : l'import des données de l'ancien site. Il dit ce que l'import garantit, comment le lancer, à blanc ou pour de vrai, et ce que dit son rapport.
 - [`LECTURE-SEULE.md`](docs/migration/LECTURE-SEULE.md) : le gel de l'ancien site par un réglage (`LEGACY_READ_ONLY`), son retrait en une minute et les correctifs prêts à appliquer à l'ancienne API et à l'ancien site.
 - [`RETOUR-ARRIERE.md`](docs/migration/RETOUR-ARRIERE.md) : le retour arrière après la bascule sans perdre de comptes. Il dit comment télécharger l'export privé de ce que la v3 a reçu depuis la bascule (`/api/cutover/delta`, admins du site seulement) et quoi rejouer dans l'ancien site.
+- [`BASCULE.md`](docs/migration/BASCULE.md) : le pas-à-pas du jour de la bascule. Une liste de feu vert, puis pour chaque étape qui la fait, le geste, le contrôle chiffré, la durée et le critère d'arrêt, et le retour arrière sur une page. Il est gardé par `tests/unit/cutover-steps-doc.test.ts`.
 
 ## Travailler dans ce dépôt
 
