@@ -879,3 +879,23 @@ Ce que la v3 change par rapport au site actuel est dans [`CHANGEMENTS-VOULUS.md`
   - 259 : migration `20261020_215218_zone_countries_postal_codes` (ajouts seuls, `down` testé, dérive de schéma nulle) : type de zone, pays, ville à l'étranger, codes postaux de la commune, `zoneReview` privée (jamais lue par le public ni par une autre maquilleuse). Banc : la fausse liste des communes répond `codesPostaux`, le jeu passe à 17 types de profil (cinq profils de zone, chargés par `LOADED_DEMO_PROFILES`).
   - 260 : la règle du profil publiable et `formatZone` lisent la même zone, y compris un type de zone vide ; aucun drapeau dans les textes (test sur les 232 codes).
   - Relecture : quatre bloquants et un majeur, corrigés avant la fusion. Pas fait : le déploiement en production, qui demande une sauvegarde de la base et l'accord d'Andy (geste humain). Les pages publiques et la recherche ne lisent pas encore les pays (263, 264). Une clé `city.postalCodes` absente se lit comme `[]`. Les essais bout en bout qui lisent le jeu du banc n'ont pas tourné.
+
+## 21/10/2026
+
+- **Tickets 261 et 262 fusionnés : l'import garde les codes postaux, reconnaît les pays et écrit une revue des zones lisible.**
+  - 261 : l'import garde les codes postaux d'une commune, lit un texte de pays (« France & Italie », « Belgique ») ou d'un pays étranger et d'une ville qui n'est pas une commune de France (« Bruxelles-Belgique »), et laisse « à revoir » un code postal partagé. Une commune de France dont le nom contient un nom de pays (Saint-Maurice, Grenade-sur-l'Adour) reste cette commune : le référentiel est interrogé sur le texte entier avant de le couper. Un texte qui n'est qu'un pays et qui est aussi une commune (Grenade, Suisse) va « à revoir ». Limite écrite dans `IMPORT.md` : un nom de commune de ce genre écrit dans une liste (« Saint-Maurice, Lyon ») n'est pas protégé.
+  - 262 : la liste de revue se lit en `.md` (mode 600, appliqué avant l'écriture, `--review` sur un `.md` refusé), se tranche en une ligne, y compris pour un pays ; le code d'exemple est `XX`, refusé par la validation.
+  - Vérifié par l'auteur : tests unitaires, `names:check`, `build` et les essais d'intégration des villes, de l'import à la demande et des profils (47 réussis). Pas lancé par l'auteur : les autres essais d'intégration de l'import, la CI GitHub.
+
+- **Tickets 263 et 264 fusionnés : la recherche et les pages publiques lisent les codes postaux et les pays.**
+  - 263 : la recherche trouve par code postal (partagé compris) et par pays ; 264 : cartes, profil, titres, données structurées (`areaServed`) et sitemap montrent une zone de pays, sans fausse commune ; le drapeau est un décor `aria-hidden`, jamais dans un texte. Le HTML d'un profil de commune est inchangé (empreintes).
+  - Vérifié par l'auteur : essais unitaires, 16 d'intégration et 16 de bout en bout (recherche par ville). Les captures datent d'une tentative précédente.
+  - Corrigé à la fusion : l'essai d'intégration `public-read.test.ts` exigeait la liste exacte des clés d'une carte ; une carte de pays porte maintenant `flags` (absente pour une commune).
+
+- **Tickets 265 et 266 fusionnés : dans son espace et à l'accueil, la maquilleuse choisit sa commune par code postal ou dit qu'elle travaille à l'étranger.**
+  - 265 : un code postal d'une seule commune la choisit sans clic, un code partagé ouvre la liste, un bandeau propose les communes d'une zone « à revoir » (propriétaire seulement). 266 : « Où travailles-tu ? » accepte un à cinq pays, avec ville facultative ; l'étape 2 de l'accueil aussi. Les codes postaux enregistrés sont ceux du référentiel.
+  - Résolu à la fusion : deux conflits de texte (ligne `zone-hors-de-france` du registre des changements voulus, notes de version), les deux côtés gardés.
+
+- **Contrôles de la tête de `v3` après ces fusions** (banc `mm-v3-w1`) : `check` 0 erreur ; `typecheck` vert ; `names:check` 0 ; `test` 3760 réussis, 1 ignoré, 0 échec ; `test:ci-guard` 459 réussis ; `build` réussi ; `test:integration` 2283 essais, 1 échec corrigé (clés d'une carte), puis `public-read` 11 réussis ; `test:e2e` 568 réussis, plus l'essai d'import, 0 échec. L'essai d'intégration complet n'a pas été relancé en entier après la correction. CI GitHub non vérifiée.
+
+- **Tickets 176, 179 : mises à jour, toujours pas clos.** 176 : lecture fraîche de la CI (run 39524638111, commit 10c19b7) toute verte en 6 min 12 s, 0 essai instable sur 552 ; `ci-ok` reste non requis (ticket 028, geste d'Andy). 179 : deuxième mesure Lighthouse, 22 budgets sur 25 tenus (LCP à 2,8 s sur P01, P03, P04 ; P02 à 2,3 s), encore indicative (charge de 10,4 sur 8 cœurs) ; P03 reste pire que le site en ligne (2,8 s contre 2,0 s), sans écart accepté par écrit.
