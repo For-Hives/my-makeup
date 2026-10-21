@@ -225,6 +225,23 @@ async function readSitemap(settings: Settings, pacer: ReturnType<typeof createPa
 	return sitemapAddresses(await response.text())
 }
 
+/**
+ * The options of the browser context for one screen width. `baseURL` is the origin of the target: the crawl
+ * navigates to relative paths, and a browser launched here (not by the Playwright runner, which would add the
+ * base of the bench by itself) has no other way to know where they lead (ticket 280).
+ */
+export function contextOptions(screen: CrawlScreen, settings: Settings) {
+	return {
+		baseURL: settings.target.origin,
+		viewport: CRAWL_SCREENS[screen],
+		isMobile: screen === 'mobile',
+		hasTouch: screen === 'mobile',
+		locale: 'fr-FR',
+		timezoneId: 'Europe/Paris',
+		serviceWorkers: 'block' as const,
+	}
+}
+
 /** Opens the 40 addresses at the two widths of the screen and gives the report. */
 export async function crawl(options: CrawlOptions): Promise<Report> {
 	const { settings } = options
@@ -236,14 +253,7 @@ export async function crawl(options: CrawlOptions): Promise<Report> {
 	let requests = 1
 	try {
 		for (const screen of Object.keys(CRAWL_SCREENS) as CrawlScreen[]) {
-			const context = await browser.newContext({
-				viewport: CRAWL_SCREENS[screen],
-				isMobile: screen === 'mobile',
-				hasTouch: screen === 'mobile',
-				locale: 'fr-FR',
-				timezoneId: 'Europe/Paris',
-				serviceWorkers: 'block',
-			})
+			const context = await browser.newContext(contextOptions(screen, settings))
 			let blocked: string[] = []
 			await context.route('**/*', async route => {
 				const request = route.request()

@@ -1,5 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import {
+	contextOptions,
+	crawl,
 	createPacer,
 	decide,
 	isExpectedNotFound,
@@ -210,5 +212,79 @@ describe('crawl des interfaces (177) : le rythme', () => {
 		})
 		await Promise.all([pacer.wait(), pacer.wait(), pacer.wait()])
 		expect(waited).toBe(0)
+	})
+})
+
+/** A fictional site on this machine: every path answers a clean page, the sitemap names enough addresses. */
+function serveFictionalSite() {
+	const seen: { path: string; authorization: string | null }[] = []
+	const profiles = Array.from({ length: 12 }, (_, n) => `/profil/fictif-${n + 1}`)
+	const talents = Array.from({ length: 6 }, (_, n) => `/talent/fictif-${n + 1}`)
+	const articles = Array.from({ length: 6 }, (_, n) => `/blog/fictif-${n + 1}`)
+	const page = `<!doctype html><html lang="fr"><head><title>Propre</title></head><body><nav aria-label="Navigation principale"><a href="/">Accueil</a></nav><h1>Une page propre</h1></body></html>`
+	const server = Bun.serve({
+		hostname: '127.0.0.1',
+		port: 0,
+		fetch(request) {
+			const { pathname } = new URL(request.url)
+			seen.push({ path: pathname, authorization: request.headers.get('authorization') })
+			if (pathname === '/sitemap.xml') {
+				const urls = [...profiles, ...talents, ...articles].map(path => `<url><loc>http://127.0.0.1${path}</loc></url>`)
+				return new Response(`<?xml version="1.0"?><urlset>${urls.join('')}</urlset>`, {
+					headers: { 'content-type': 'application/xml' },
+				})
+			}
+			const known = pathname === '/une-page-qui-n-existe-pas'
+			return new Response(page, { status: known ? 404 : 200, headers: { 'content-type': 'text/html; charset=utf-8' } })
+		},
+	})
+	return { server, seen }
+}
+
+describe('crawl des interfaces (280) : une cible donnée comme une adresse absolue', () => {
+	test('le contexte du navigateur a la base de la cible, à chaque largeur', () => {
+		const settings: Settings = { target: new URL('https://v3.my-makeup.fr') }
+		for (const screen of ['mobile', 'desktop'] as const) {
+			expect(contextOptions(screen, settings).baseURL).toBe('https://v3.my-makeup.fr')
+		}
+		expect(contextOptions('mobile', { target: new URL('http://127.0.0.1:3100/') }).baseURL).toBe(
+			'http://127.0.0.1:3100'
+		)
+	})
+
+	test('le crawl d’une adresse absolue ouvre les 40 adresses aux deux largeurs sans défaut', async () => {
+		const { server, seen } = serveFictionalSite()
+		try {
+			const report = await crawl({ settings: { target: new URL(`http://127.0.0.1:${server.port}`) } })
+			expect(report.addresses).toBe(CRAWL_ADDRESS_COUNT)
+			expect(report.pagesRead).toBe(CRAWL_ADDRESS_COUNT * 2)
+			expect(report.pages.every(page => page.status === 200 || page.address === UNKNOWN_PATH)).toBe(true)
+			expect(report.defectCount).toBe(0)
+			expect(seen.some(request => request.path === '/')).toBe(true)
+		} finally {
+			await server.stop(true)
+		}
+	}, 120_000)
+
+	test('l’accès protégé ne part qu’avec les requêtes vers l’origine de la cible', () => {
+		const settings = readSettings({
+			UI_CRAWL_TARGET: 'https://v3.my-makeup.fr',
+			UI_CRAWL_ACCESS_USER: 'agent',
+			UI_CRAWL_ACCESS_PASSWORD: 'secret-fictif',
+		})
+		const sent = `Basic ${btoa('agent:secret-fictif')}`
+		// Relative paths are resolved on the base: the browser asks for the absolute address of the target.
+		const own = decide({ method: 'GET', url: new URL('/blog', settings.target).href, hasBody: false }, settings)
+		expect(own).toEqual({ action: 'continue', headers: { authorization: sent } })
+		for (const url of [
+			'https://my-makeup.fr/blog',
+			'https://cdn.exemple.test/a.js',
+			'http://v3.my-makeup.fr/blog',
+			'https://v3.my-makeup.fr:8443/blog',
+		]) {
+			const other = decide({ method: 'GET', url, hasBody: false }, settings)
+			expect(other.action).toBe('answer')
+			expect('headers' in other).toBe(false)
+		}
 	})
 })
