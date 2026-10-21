@@ -146,12 +146,17 @@ function display(profil: DashboardProfile): string {
 }
 
 /** The cards of a profile, one per section, in the order of the page. */
-export function profileCards(profil: DashboardProfile): Card[] {
+export function profileCards(
+	profil: DashboardProfile,
+	shown?: { photo: unknown; galerie: readonly unknown[] }
+): Card[] {
 	const networks = NETWORKS.flatMap(([cle, libelle]) => {
 		const value = or(profil.networks?.[cle])
 		return value === null ? [] : [{ libelle, valeur: value }]
 	})
-	const photos = profil.gallery?.length ?? 0
+	// Given what her space really shows, a photo marked missing by the import (ticket 275) is not counted.
+	const photos = shown === undefined ? (profil.gallery?.length ?? 0) : shown.galerie.length
+	const hasMain = shown === undefined ? Boolean(profil.mainPicture) : shown.photo !== null
 	return [
 		{
 			section: 'identite',
@@ -176,7 +181,7 @@ export function profileCards(profil: DashboardProfile): Card[] {
 		{
 			section: 'photo',
 			titre: 'Photo principale',
-			lignes: [{ valeur: profil.mainPicture ? 'Photo ajoutée' : null }],
+			lignes: [{ valeur: hasMain ? 'Photo ajoutée' : null }],
 		},
 		{
 			section: 'portfolio',
