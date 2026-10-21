@@ -18,17 +18,17 @@ La suite complète se joue **en CI**, une fois, sur la tête de `v3` : `ci-ok` (
 
 | Quoi | Relevé |
 |---|---|
-| Passage | CI 39436197738, commit `db4cb54` (tête de `v3` au 20/10/2026), tous les jobs verts |
-| Durée de `ci-ok` | 5 min 56 s de bout en bout (limite des 15 minutes). Les jobs : `qualite` 1 min 10, `unit` 1 min 12, `build` 1 min 56, `integration` de 3 min 49 à 5 min 47, `e2e` de 3 min 50 à 5 min 29, `ci-ok` 3 s. Médiane des 41 passages verts de `v3` : 5 min 21 s ; le plus long : 10 min 6 s |
-| Tests unitaires | 3 527 verts, 0 en échec |
-| Tests d'intégration | 2 151 verts (321 + 260 + 1 570), 0 en échec |
-| Essais de bout en bout | 496 passés (124 + 133 + 115 + 123 + 1 de l'import réel), dont 1 instable (voir plus bas) |
-| `qualite` | Biome, types, garde-fous de la CI (`bun run test:ci-guard`, qui joue C01 à C08), contrôle des noms |
-| Tests nommés par le ticket | I45, E31, E73 et E18 sont dans le journal des essais de ce passage, passés (`url-parity`, `artist-pages`, `dashboard-*`, `legacy-sign-in`, `legacy-cookies`). U61 à U64 sont dans les tests unitaires (`redirects`, `profile-url`, `slugs`, `sign-in-return`, `legacy-cookies`) |
+| Passage | CI 39524638111, commit `10c19b7` (tête de `v3` au 21/10/2026, 02:59 Paris), tous les jobs verts. Le passage précédent, CI 39436197738 sur `db4cb54` (20/10), était vert aussi |
+| Durée de `ci-ok` | 6 min 12 s de bout en bout (limite des 15 minutes). Les jobs : `qualite` 1 min 05, `unit` 1 min 30, `build` 2 min 07, `integration` de 3 min 35 à 5 min 54, `e2e` de 4 min 07 à 6 min 04, `ci-ok` 3 s. Médiane des 36 derniers passages verts de `v3` : 5 min 27 s ; le plus long : 10 min 6 s |
+| Tests unitaires | 3 632 verts (173 fichiers), 0 en échec |
+| Tests d'intégration | 2 244 verts (261 + 335 + 1 648), 0 en échec |
+| Essais de bout en bout | 552 passés (138 + 147 + 129 + 137 + 1 de l'import réel), 0 échec, 0 instable (aucune ligne « flaky » ni « retry » dans le compte rendu) |
+| `qualite` | Biome, types, garde-fous de la CI (`bun run test:ci-guard`, 459 tests, qui joue C01 à C08), contrôle des noms |
+| Tests nommés par le ticket | I45, E31, E73 et E18 sont dans le journal des essais de ce passage, passés (`host-check`, `url-parity`, `artist-pages`, `dashboard-*`, `legacy-sign-in`, `legacy-cookies`). U61 à U64 sont dans les tests unitaires (`redirects`, `profile-url`, `slugs`, `sign-in-return`, `legacy-cookies`) |
 
 ### Les tests instables : 2 % au plus
 
-- **Le dernier passage vert** : 1 essai instable sur 496, soit 0,2 %. C'est l'essai du plan du site (`tests/e2e/sitemap.spec.ts`, « un seul h1, les mêmes pages fixes que le sitemap… ») : il suivait les liens du plan du site, dont les talents et articles qu'un autre essai crée pour lui puis supprime, en même temps (les deux tailles d'écran tournent côte à côte). Un lien supprimé entre la lecture de la page et sa visite répondait 404. **Réparé à la racine** dans ce ticket : l'essai ne suit plus que ses propres contenus et les pages fixes ; il ne relit plus ce que d'autres essais ajoutent un instant.
+- **Le dernier passage vert (39524638111)** : 0 essai instable sur 552. **Le passage d’avant (39436197738)** : 1 essai instable sur 496, soit 0,2 %. C'est l'essai du plan du site (`tests/e2e/sitemap.spec.ts`, « un seul h1, les mêmes pages fixes que le sitemap… ») : il suivait les liens du plan du site, dont les talents et articles qu'un autre essai crée pour lui puis supprime, en même temps (les deux tailles d'écran tournent côte à côte). Un lien supprimé entre la lecture de la page et sa visite répondait 404. **Réparé à la racine** dans ce ticket : l'essai ne suit plus que ses propres contenus et les pages fixes ; il ne relit plus ce que d'autres essais ajoutent un instant.
 - **Les cinq derniers passages verts** : 2 instables sur 2 480 essais environ, soit 0,08 %. Le second (passage 39393273152, avant les corrections du ticket 256) était un envoi d'action venu d'une autre origine, coupé (« socket hang up ») ; les quatre passages suivants n'en ont plus.
 - Un essai instable est réparé, jamais relancé jusqu'au vert : en CI, `retries: 2` sert à le *voir* dans le compte rendu (« flaky »), et ce compte est relu ici.
 - Depuis la fusion de `v3-ci-vert` (15/10, 17:27) : 29 passages sur 23 commits, 25 verts, 2 rouges (tous deux le 16/10) et 2 annulés. Les 18 commits qui ont suivi le 16/10 à 16:48 ont tous eu un passage vert.
