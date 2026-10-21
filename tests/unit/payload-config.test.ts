@@ -102,7 +102,12 @@ describe('src/payload.config.ts is hardened', () => {
 		// Without it, the panel loads an image computed from the admin's email from a third party.
 		expect(config.admin.avatar).toBe('default')
 		// CompteBloque sets its own `name`: `APIError` does not cover it. Payload reads the level by that name.
-		expect(config.loggingLevels).toMatchObject({ APIError: 'info', CompteBloque: 'info' })
+		expect(config.loggingLevels).toMatchObject({
+			APIError: 'info',
+			CompteBloque: 'info',
+			Forbidden: 'info',
+			UnauthorizedError: 'info',
+		})
 		expect(new BlockedAccount().name).toBe('CompteBloque')
 	})
 

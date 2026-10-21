@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { ipClient } from '@/lib/auth/client-ip'
 import { dashboardDecision, isPrivatePage, SESSION_COOKIE } from '@/lib/auth/closed-dashboard'
+import { isClosedFirstAccountScreen } from '@/lib/auth/closed-first-account'
 import { linkPlan, PASSWORD_RESET_COOKIE } from '@/lib/auth/forgot-password'
 import {
 	CUTOVER_VARIABLE,
@@ -45,6 +46,8 @@ import { type CheckedFamily, urlToCheck } from '@/lib/urls/unknown-page'
  * - A path that does not decode (`/profil/%E0%A4%A`) answers the 404 page of the site, not Next's error; under
  *   `/api/` it answers a JSON 400 (ticket 223).
  * - A response that carries a cookie of the cleaning is `private, no-store`: no shared cache keeps it (ticket 223).
+ * - `/admin/create-first-user` answers the 404 page of the site: the creation of a first account is closed
+ *   (src/lib/auth/closed-first-account.ts), and Payload's own screen of it is a form that cannot work (ticket 276).
  * - Every other response gets the robots directive (ticket 070). The paths of the account and of the
  *   search answer noindex everywhere.
  */
@@ -73,6 +76,11 @@ function siteProxy(requete: NextRequest) {
 		const shapeDirective = robotsForPath(pathname)
 		if (shapeDirective) shapeRedirect.headers.set('X-Robots-Tag', shapeDirective)
 		return shapeRedirect
+	}
+	if (isClosedFirstAccountScreen(pathname)) {
+		const closed = NextResponse.rewrite(new URL(NOT_FOUND_PATH, requete.url ?? requete.nextUrl.href))
+		closed.headers.set('X-Robots-Tag', 'noindex')
+		return closed
 	}
 	const throttled = rateLimitSearch({ chemin: pathname, methode: requete.method, entetes: requete.headers })
 	if (throttled) {
