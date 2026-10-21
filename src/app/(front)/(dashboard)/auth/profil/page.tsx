@@ -85,7 +85,7 @@ export default async function ProfilePage() {
 						Voir mon profil public
 					</ViewLink>
 					<ProfileProgress avancement={profileProgress(profile)} />
-					{profileCards(profile).map(carte => (
+					{profileCards(profile, photos).map(carte => (
 						<SectionCard
 							key={carte.section}
 							carte={carte}

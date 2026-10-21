@@ -141,3 +141,24 @@ describe('266 : la carte d’une zone de pays dit ce que dit la page publique, s
 		])
 	})
 })
+
+describe('photos marquées sans objet (275) : le résumé suit ce que l’espace affiche', () => {
+	const named: DashboardProfile = { id: 1, mainPicture: 126, gallery: [127] }
+	const find = (section: string, shown: Parameters<typeof profileCards>[1]) => {
+		const found = profileCards(named, shown).find(c => c.section === section)
+		if (!found) throw new Error(`pas de carte ${section}`)
+		return found.lignes[0]?.valeur
+	}
+
+	test('photo principale marquée manquante : pas de « Photo ajoutée », portfolio vide', () => {
+		const shown = { photo: null, galerie: [] }
+		expect(find('photo', shown)).toBeNull()
+		expect(find('portfolio', shown)).toBeNull()
+	})
+
+	test('photos affichées : le résumé les compte', () => {
+		const shown = { photo: { id: 126 }, galerie: [{ id: 127 }] }
+		expect(find('photo', shown)).toBe('Photo ajoutée')
+		expect(find('portfolio', shown)).toBe('1 photo')
+	})
+})
