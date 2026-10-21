@@ -32,7 +32,7 @@ export default async function SignUpPage() {
 				</Link>
 			</p>
 			<p>
-				<Link className="underline" href="/">
+				<Link className="underline" href="/" prefetch={false}>
 					Retour à l’accueil
 				</Link>
 			</p>

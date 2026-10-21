@@ -56,6 +56,16 @@ describe('les pages qui sortent du cache de Next', () => {
 		expect(reading).toEqual([])
 	})
 
+	test('chaque lien vers l’accueil coupe le préchargement : la page vit sous une adresse interne, son préchargement ne finit pas', () => {
+		// With `/` rewritten to /home-cached/principal, the client keeps asking for the tree of `/` and the network
+		// is never idle (seen on the forms, ticket 269). A link of Next to `/` carries `prefetch={false}`.
+		const links = sourceFiles(join(ROOT, 'src')).flatMap(fichier =>
+			(readFileSync(fichier, 'utf8').match(/<Link\b[^>]*\bhref="\/"[^>]*>/g) ?? []).map(balise => ({ fichier, balise }))
+		)
+		expect(links.length).toBeGreaterThan(0)
+		expect(links.filter(({ balise }) => !balise.includes('prefetch={false}'))).toEqual([])
+	})
+
 	test('les pages de la session restent dynamiques, avec leurs en-têtes private, no-store', () => {
 		for (const path of [
 			'src/app/(front)/(dashboard)/auth/page.tsx',

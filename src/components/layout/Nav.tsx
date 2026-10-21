@@ -94,7 +94,7 @@ export function Nav() {
 				aria-label="Navigation principale"
 				className="relative mx-auto flex max-w-screen-2xl flex-wrap items-center justify-between gap-x-10 px-6 py-3 lg:flex-nowrap lg:px-16"
 			>
-				<Link href="/" className={`-m-1.5 p-1.5 ${RING}`}>
+				<Link href="/" prefetch={false} className={`-m-1.5 p-1.5 ${RING}`}>
 					<span className="sr-only">My-Makeup</span>
 					<Image alt="Logo My-Makeup" width={50} height={50} src="/assets/logo.webp" priority />
 				</Link>
