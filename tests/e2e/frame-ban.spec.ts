@@ -15,14 +15,19 @@ test('a page of another origin cannot show the sign-in page in a frame', async (
 	const target = new URL(SIGN_IN, baseURL).href
 	const other = createServer((_request, response) => {
 		response.setHeader('content-type', 'text/html; charset=utf-8')
-		response.end(`<!doctype html><title>Autre site</title><iframe id="cadre" src="${target}"></iframe>`)
+		response.end(`<!doctype html><title>Autre site</title><iframe id="framed" src="${target}"></iframe>`)
 	})
 	await new Promise<void>(resolve => other.listen(0, '127.0.0.1', resolve))
 	try {
 		const { port } = other.address() as AddressInfo
 		expect(String(port)).not.toBe(new URL(baseURL).port)
-		await page.goto(`http://127.0.0.1:${port}/`)
-		const frame = page.frameLocator('#cadre')
+		// goto takes paths only (CI guard): leave the site for the other origin by a navigation of the page itself.
+		await page.goto('/robots.txt')
+		await page.evaluate(address => {
+			window.location.href = address
+		}, `http://127.0.0.1:${port}/`)
+		await page.waitForURL(url => url.port === String(port))
+		const frame = page.frameLocator('#framed')
 		// The browser replaces a refused frame by its own error page: the sign-in form never shows.
 		await expect.poll(() => page.frames().some(f => f.url().startsWith('chrome-error:'))).toBe(true)
 		await expect(frame.locator('input[type="email"], input[name="email"]')).toHaveCount(0)
@@ -34,10 +39,10 @@ test('a page of another origin cannot show the sign-in page in a frame', async (
 test('a page of the same origin can still show a page of the site in a frame', async ({ page }) => {
 	await page.goto('/robots.txt')
 	await page.evaluate(src => {
-		const cadre = document.createElement('iframe')
-		cadre.id = 'cadre'
-		cadre.src = src
-		document.body.append(cadre)
+		const framed = document.createElement('iframe')
+		framed.id = 'framed'
+		framed.src = src
+		document.body.append(framed)
 	}, SIGN_IN)
 	await expect.poll(() => page.frames().filter(f => f.url().endsWith(SIGN_IN)).length).toBe(1)
 	expect(page.frames().some(f => f.url().startsWith('chrome-error:'))).toBe(false)
