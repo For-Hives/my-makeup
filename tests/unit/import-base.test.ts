@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import type { SanitizedConfig } from 'payload'
 import { readArguments, renamedOptionHint } from '../../scripts/migration/import/arguments'
+import { readDecisions } from '../../scripts/migration/import/decisions'
 import {
 	type Adapter,
 	documentsFingerprint,
@@ -120,6 +121,8 @@ describe('L9 (ticket 233) : --remote-target exige --expected-database, et la bas
 
 	test('an old name of an option is refused with the new name', () => {
 		expect(readArguments(['--reel'])).toBeNull()
+		expect(readArguments(['--review', 'revue.md'])).toBeNull()
+		expect(readArguments(['--review', 'revue.json'])).toMatchObject({ review: 'revue.json' })
 		expect(renamedOptionHint(['--reel', '--controle'])).toBe(
 			'--reel s’appelle maintenant --real.\n--controle s’appelle maintenant --check.'
 		)
@@ -567,5 +570,205 @@ describe('une erreur de la base : nommée par son code, jamais par son texte', (
 		const strange = Object.assign(new Error('x'), { name: 'zoe@example.test' })
 		expect(unexpectedErrorMessage(strange)).not.toContain('example.test')
 		expect(unexpectedErrorMessage('texte jeté')).not.toContain('texte jeté')
+	})
+})
+
+describe('ticket 262 : la table de décision accepte une ligne de pays, en plus de la commune', () => {
+	const refusal = (text: string): string => {
+		try {
+			readDecisions(text)
+		} catch (error) {
+			if (error instanceof ImportRefuse) return error.message
+			throw error
+		}
+		return ''
+	}
+
+	test('une ligne { profile, countries, town } est lue, les codes en capitales, la ville facultative', () => {
+		const read = readDecisions(
+			`{ "cities": [
+				{ "profile": 82, "countries": ["FR", "IT"], "town": null },
+				{ "profile": 48, "countries": ["be"], "town": "Bruxelles" },
+				{ "profile": 50, "countries": ["CH"] },
+				{ "profile": 36, "inseeCode": "62200" }
+			] }`
+		)
+
+		expect(read.cities).toEqual([
+			{ profile: 82, countries: ['FR', 'IT'], town: null },
+			{ profile: 48, countries: ['BE'], town: 'Bruxelles' },
+			{ profile: 50, countries: ['CH'], town: null },
+			{ profile: 36, inseeCode: '62200' },
+		])
+	})
+
+	test('une table d’aujourd’hui, sans ces clés, est lue comme avant', () => {
+		const text =
+			'{ "sharedEmails": [], "excludedProfiles": [29], "cities": [{ "profile": 28, "inseeCode": "74243" }, { "profile": 26, "inseeCode": null }] }'
+
+		expect(readDecisions(text)).toEqual({
+			sharedEmails: [],
+			excludedProfiles: [29],
+			cities: [
+				{ profile: 28, inseeCode: '74243' },
+				{ profile: 26, inseeCode: null },
+			],
+		})
+	})
+
+	test('les deux formes s’excluent : refusé en français, rien n’est écrit', () => {
+		const message = refusal('{ "cities": [{ "profile": 82, "inseeCode": "74010", "countries": ["FR", "IT"] }] }')
+
+		expect(message).toContain('une commune ou des pays')
+		expect(message).toContain('Rien n’est écrit.')
+	})
+
+	test('un code inconnu, la France seule, six pays, une ville avec deux pays ou sans pays étranger : refusés avant toute écriture', () => {
+		const lines = [
+			'{ "profile": 82, "countries": ["XX"], "town": null }',
+			'{ "profile": 82, "countries": ["FR"], "town": null }',
+			'{ "profile": 82, "countries": [], "town": null }',
+			'{ "profile": 82, "countries": ["BE", "BE"], "town": null }',
+			'{ "profile": 82, "countries": ["BE", "IT", "CH", "DE", "ES", "PT"], "town": null }',
+			'{ "profile": 82, "countries": ["BE", "IT"], "town": "Bruxelles" }',
+			'{ "profile": 82, "countries": ["FR"], "town": "Lyon" }',
+			'{ "profile": 82, "countries": ["BE"], "town": "12 rue des Lilas" }',
+			'{ "profile": 82, "town": "Bruxelles" }',
+			'{ "profile": 82 }',
+			'{ "profile": 82, "countries": ["BE"], "ville": "x" }',
+		]
+		for (const line of lines) {
+			const message = refusal(`{ "cities": [${line}] }`)
+			expect(message, line).toContain('Rien n’est écrit.')
+			expect(message, line).toContain('La table de décision est refusée')
+		}
+		expect(refusal('{ "cities": [{ "profile": 82, "countries": ["FR"], "town": null }] }')).toContain(
+			'Choisis au moins un pays étranger'
+		)
+	})
+
+	test('un profil nommé deux fois reste refusé, quelle que soit la forme', () => {
+		expect(
+			refusal('{ "cities": [{ "profile": 82, "countries": ["BE"] }, { "profile": 82, "inseeCode": null }] }')
+		).toContain('un profil est nommé deux fois')
+	})
+})
+
+describe('ticket 261 : la comparaison d’une zone, valeur par défaut et revue stockée', () => {
+	const adapter: Adapter = {
+		collection: 'profiles',
+		fields: { strapiId: 'nombre', zoneKind: 'texte', countries: 'liste', zoneReview: 'objet' },
+		defaults: { zoneKind: 'city', countries: [], zoneReview: { reason: null, candidates: null } },
+	}
+	const expected = (values: Record<string, unknown>): Expected => ({
+		strapiId: 1,
+		values: { strapiId: 1, ...values },
+		gaps: [],
+	})
+	const existing = (values: Record<string, unknown>): Existing => ({ id: 9, values: { strapiId: 1, ...values } })
+
+	test('une valeur que la source ne donne pas vaut la valeur par défaut : la cible par défaut est inchangée', () => {
+		const target = existing({ zoneKind: 'city', countries: [], zoneReview: { reason: null, candidates: null } })
+
+		expect(planActions(adapter, [expected({})], [target]).actions[0]?.kind).toBe('inchange')
+		// Payload reads an empty list or group as absent: the same.
+		expect(planActions(adapter, [expected({})], [existing({ zoneKind: 'city' })]).actions[0]?.kind).toBe('inchange')
+	})
+
+	test('une zone ou une revue restée dans la cible alors que la source n’en donne plus est un écart, et se remet à zéro', () => {
+		const stale = existing({
+			zoneKind: 'countries',
+			countries: ['BE'],
+			zoneReview: { reason: 'notACity', candidates: [] },
+		})
+
+		const [action] = planActions(adapter, [expected({})], [stale]).actions
+
+		expect(action).toMatchObject({ kind: 'modification' })
+		expect(action?.kind === 'modification' && action.fields.sort()).toEqual(['countries', 'zoneKind', 'zoneReview'])
+	})
+
+	test('les clés d’une liste dans une revue ne comptent pas : jsonb les range à sa façon', () => {
+		const written = {
+			reason: 'sharedPostalCode',
+			candidates: [{ inseeCode: '62901', name: 'Hameau-Un', department: '62' }],
+		}
+		const readBack = {
+			reason: 'sharedPostalCode',
+			candidates: [{ name: 'Hameau-Un', inseeCode: '62901', department: '62' }],
+		}
+
+		expect(normalize('objet', written)).toBe(normalize('objet', readBack))
+		expect(
+			planActions(
+				adapter,
+				[expected({ zoneKind: 'city', zoneReview: written })],
+				[existing({ zoneKind: 'city', zoneReview: readBack })]
+			).actions[0]?.kind
+		).toBe('inchange')
+	})
+})
+
+describe('ticket 261 : le rapport dit les zones en nombres et en identifiants', () => {
+	const profilesReport = (): Report => ({
+		mode: 'dry-run',
+		target: 'local',
+		halt: null,
+		pointlessDecisions: 0,
+		source: { before: {}, after: {}, unchanged: true },
+		collections: {
+			profiles: {
+				source: 8,
+				created: 8,
+				updated: 0,
+				unchanged: 0,
+				refused: [],
+				extra: [],
+				cities: {
+					filledCities: 56,
+					attached: 45,
+					part: 80.4,
+					nonEmptyProfiles: 62,
+					nonEmptyProfilesWithCity: 45,
+					toReview: [36, 18, 45],
+					addresses: [],
+					decided: [],
+				},
+				zones: {
+					recognized: 47,
+					part: 83.9,
+					communesOnly: 45,
+					countries: [48, 82],
+					toReviewByReason: {
+						'code-postal-partage': [36],
+						homonymes: [],
+						introuvable: [45],
+						'pas-une-commune': [18],
+					},
+				},
+			},
+		},
+		gaps: {},
+		parity: null,
+	})
+
+	test('les zones reconnues et leur part, les communes seules, les pays, puis les à revoir par raison', () => {
+		const text = reportAsText(profilesReport())
+
+		expect(text).toContain(
+			'  - zones reconnues, communes et pays : 47 sur 56 villes renseignées (83,9 %, cible 90 %) ; communes seules : 45 ; zones de pays : 2 (48, 82)'
+		)
+		expect(text).toContain(
+			'  - villes à revoir, par raison : code postal partagé 1 (36) ; plusieurs communes de même nom 0 ; commune introuvable 1 (45) ; pas une commune 1 (18)'
+		)
+		// The line of the communes alone stays as it was.
+		expect(text).toContain('  - communes : 45 sur 56 villes renseignées (80,4 %, cible 90 %)')
+		expect(text).toContain('  - villes à revoir, zone vide (liste de revue privée, --review) : 36, 18, 45')
+	})
+
+	test('rien n’y est dit d’un texte saisi, d’un nom ni d’un email', () => {
+		const text = reportAsText(profilesReport())
+
+		expect(text).not.toMatch(/@|Belgique|Bruxelles|Italie/)
 	})
 })

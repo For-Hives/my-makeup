@@ -5,7 +5,7 @@
  *   bun scripts/migration/import.ts --real             writes, then reads the target again (parity)
  *   bun scripts/migration/import.ts --report r.json   also writes the report as JSON
  *   bun scripts/migration/import.ts --decisions d.json the table of decisions (accounts that share an email)
- *   bun scripts/migration/import.ts --review v.json     also writes the private list of the cities to review
+ *   bun scripts/migration/import.ts --review v.json     also writes the private list of the zones to review, as JSON and as a document to read (v.md)
  *   bun scripts/migration/import.ts --check         dry run that says whether the target is the source: exit 4 if not
  *   bun scripts/migration/import.ts --without-photos      no storage of the photos: none is read, none adopted (a rehearsal with no network)
  *   bun scripts/migration/import.ts --consent-date 2026-11-02   the date of the switch: the consent date of the profiles that show a phone or an email today
@@ -52,6 +52,7 @@ import {
 	readAnswers,
 } from './import/reference'
 import { checkAsText, checkExitCode, exitCode, reportAsText } from './import/report'
+import { writeReviewFiles } from './import/review'
 import { openSourceBun } from './import/source-bun'
 import {
 	configurationWithoutSchemaChange,
@@ -160,7 +161,7 @@ async function principal(argumentsDeLaCommande: string[]): Promise<number> {
 			media: mediaBase === null ? undefined : { base: mediaBase },
 			// Read by its owner only: what was asked of the referential for each city to review.
 			onReview: revue => {
-				if (options.review) writeFileSync(options.review, `${JSON.stringify(revue, null, '\t')}\n`, { mode: 0o600 })
+				if (options.review) writeReviewFiles(options.review, revue)
 			},
 		})
 		console.log(reportAsText(report))
