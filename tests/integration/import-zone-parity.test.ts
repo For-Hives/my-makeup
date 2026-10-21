@@ -16,7 +16,7 @@ import { benchSource, createSourceStrapi, eraseSourceStrapi } from '../support/s
  *
  * - 21 reads a postal code two communes share (the shape of the source profile 36): its zone
  *   stays empty, it is to review and not publishable, nothing is guessed;
- * - 23 reads a town and one foreign country (« Bruxelles-Belgique », the source profile 48);
+ * - 23 reads a town and one foreign country (« Bruxelles-Belgique », town glued to the country by a hyphen, the source profile 48);
  * - 22 reads two countries (« France & Italie », the source profile 82), and gets a description of
  *   the length the rule asks for: on the bench it is the only thing it lacks to be publishable.
  *
@@ -29,7 +29,7 @@ const LONG_DESCRIPTION = 'Maquilleuse indépendante, fictive, pour les besoins d
 const CITIES: Readonly<Record<number, string>> = {
 	21: '74990',
 	22: 'France & Italie',
-	23: 'Villeneuve-Fictive, Belgique',
+	23: 'Villeneuve-Fictive-Belgique',
 }
 
 /** Rows of the profiles query read otherwise than the source holds them; the source is not written. */
