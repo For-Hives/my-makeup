@@ -177,6 +177,10 @@ describe('Les photos référencées sont adoptées là où elles sont (ticket 05
 		const photo = ines?.mainPicture as Media | undefined
 
 		expect(photo?.strapiId).toBe(107)
+		// Marked by the import (ticket 275): the pages leave it out. Only that one, the others have their object.
+		expect(photo?.objectMissing).toBe(true)
+		const marked = (await targetMedia()).filter(media => media.objectMissing === true).map(media => media.strapiId)
+		expect(marked).toEqual([107])
 		expect(first.collections.media?.files?.notFound).toEqual([107])
 		expect(first.collections.media?.created).toBe(8)
 	})

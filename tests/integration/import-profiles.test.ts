@@ -261,7 +261,7 @@ describe('Un profil sans compte, hors des 13 profils du spam (SCHEMA.md §4.1)',
 		expect(code, output).toBe(3)
 		expect(output).toContain('Import arrêté avant toute écriture')
 		expect(output).toContain(
-			`Des profils n’ont aucun compte dans la source et ne sont pas parmi les 13 profils du spam (SCHEMA.md §4.1). Profils, par identifiant : ${ORPHAN}.`
+			`Des profils n’ont aucun compte dans la source et ne sont pas parmi les 13 profils du spam (SCHEMA.md §4.1). Profils, par identifiant : 1 (${ORPHAN}).`
 		)
 		expect(await targetProfiles()).toEqual(target)
 	}, 60_000)
@@ -290,7 +290,7 @@ describe('Un profil dont la table de décision écarte le compte (SCHEMA.md §11
 
 			expect(code, output).toBe(3)
 			expect(output).toContain('Import arrêté avant toute écriture')
-			expect(output).toContain('Profils, par identifiant : 29.')
+			expect(output).toContain('Profils, par identifiant : 1 (29).')
 			expect(await targetProfiles()).toEqual(target)
 		} finally {
 			rmSync(folder, { recursive: true, force: true })

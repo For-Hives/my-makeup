@@ -174,3 +174,23 @@ describe('enregistrer : le fichier réduit part, puis il est nommé', () => {
 		expect(b.journal.enregistres).toHaveLength(1)
 	})
 })
+
+describe('ticket 275 : la photo principale que l’import n’a pas pu reprendre est signalée', () => {
+	const noop: PhotoUpload = async saisie => ({ ok: true, valeurs: { photoPrincipale: saisie.photoPrincipale } })
+	const text = () => jsdomWindow.w.document.body.textContent ?? ''
+
+	test('photo nommée mais sans objet : la phrase est sur la carte, avant tout clic', async () => {
+		await jsdomWindow.monter(<PhotoEditor photo={null} manquante envoyer={noop} />)
+
+		expect(text()).toContain('Ta photo principale n’a pas pu être reprise, ajoute-la de nouveau.')
+		expect(jsdomWindow.w.document.querySelector('[data-testid="photo-principale-manquante"]')).not.toBeNull()
+	})
+
+	test('une photo qui s’affiche, ou aucune photo nommée : pas de phrase', async () => {
+		await jsdomWindow.monter(<PhotoEditor photo={CURRENT} manquante={false} envoyer={noop} />)
+		expect(text()).not.toContain('pas pu être reprise')
+
+		await jsdomWindow.monter(<PhotoEditor photo={null} envoyer={noop} />)
+		expect(text()).not.toContain('pas pu être reprise')
+	})
+})

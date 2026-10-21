@@ -22,6 +22,9 @@ export type PhotoUpload = (saisie: { photoPrincipale: PhotoId }) => Promise<Save
 /** The page of the space the editor lives on: where the sign-in page brings her back. */
 const DASHBOARD_PAGE = '/auth/profil'
 
+/** What she reads when her main photo could not be taken over from the old site (ticket 275). */
+export const MISSING_MAIN_PHOTO_MESSAGE = 'Ta photo principale n’a pas pu être reprise, ajoute-la de nouveau.'
+
 /** The alternative text a main photo is stored with. */
 export const MAIN_PICTURE_ALT = 'Photo principale'
 
@@ -65,12 +68,15 @@ interface Chosen extends PhotoToSend {
  */
 export function PhotoEditor({
 	photo,
+	manquante = false,
 	envoyer,
 	preparer = prepareBrowserPhoto,
 	televerser = (fichier, alt) => uploadPhoto(fichier, alt),
 	supprimer = id => deleteMedia(id),
 }: {
 	photo: DashboardPhoto | null
+	/** Her main photo is named but its file could not be taken over: said on the card, until she adds a new one. */
+	manquante?: boolean
 	envoyer: PhotoUpload
 	preparer?: (fichier: File) => Promise<PreparedPhoto<File>>
 	televerser?: (fichier: File, alt: string) => Promise<FileUploadResult>
@@ -99,6 +105,11 @@ export function PhotoEditor({
 			>
 				Modifier
 			</button>
+			{manquante && photo === null ? (
+				<p data-testid="photo-principale-manquante" className="w-full text-amber-900 text-sm">
+					{MISSING_MAIN_PHOTO_MESSAGE}
+				</p>
+			) : null}
 			<p role="status" className="w-full text-green-800 text-sm">
 				{announcement}
 			</p>

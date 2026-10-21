@@ -88,7 +88,14 @@ export const CARD_FIELDS = {
  * and the prefix of the object (`generateFileURL`, src/payload.config.ts), so those two are read to make
  * it, and a card keeps neither.
  */
-export const PHOTO_FIELDS = { url: true, width: true, height: true, filename: true, prefix: true } as const
+export const PHOTO_FIELDS = {
+	url: true,
+	width: true,
+	height: true,
+	filename: true,
+	prefix: true,
+	objectMissing: true,
+} as const
 
 /**
  * What the page of a profile reads (tickets 101 to 103): the fields above, her zone, her
@@ -267,8 +274,9 @@ async function readPhotos(payload: Payload, profils: readonly CardProfile[]): Pr
 		pagination: false,
 		overrideAccess: true,
 	})
+	// A photo adopted without its object (marked by the import, ticket 275) is no photo: the page shows what it shows without one.
 	for (const media of docs)
-		if (typeof media.url === 'string' && media.url !== '')
+		if (typeof media.url === 'string' && media.url !== '' && media.objectMissing !== true)
 			photos.set(media.id, { url: media.url, width: media.width ?? null, height: media.height ?? null })
 	return photos
 }
@@ -365,8 +373,9 @@ async function readProfilePhotos(
 		pagination: false,
 		overrideAccess: true,
 	})
+	// A photo adopted without its object (marked by the import, ticket 275) is no photo: the page shows what it shows without one.
 	for (const media of docs)
-		if (typeof media.url === 'string' && media.url !== '')
+		if (typeof media.url === 'string' && media.url !== '' && media.objectMissing !== true)
 			photos.set(media.id, { url: media.url, width: media.width ?? null, height: media.height ?? null })
 	return photos
 }

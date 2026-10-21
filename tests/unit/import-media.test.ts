@@ -278,6 +278,7 @@ describe('les médias attendus', () => {
 				width: 40,
 				height: 30,
 				strapiFormats: formats,
+				objectMissing: false,
 				owner: 501,
 				createdAt: '2024-01-01T10:00:00.000Z',
 				updatedAt: '2024-01-02T10:00:00.000Z',
@@ -285,6 +286,8 @@ describe('les médias attendus', () => {
 			gaps: [{ field: 'filesize', reference: 'SCHEMA.md §8 (size)' }],
 		})
 		expect(withoutObject?.values).toMatchObject({ prefix: '', filesize: null, owner: null })
+		// Only the object the storage said it does not hold is marked (ticket 275): the pages leave it out.
+		expect(withoutObject?.values.objectMissing).toBe(true)
 		expect(MEDIA_ADAPTER.options?.(media as never)).toEqual({ context: { skipCloudStorage: true } })
 	})
 
@@ -394,17 +397,73 @@ describe('le rapport des fichiers et des photos', () => {
 			expect.arrayContaining([
 				'Médias : 13 à la source ; 8 créations, 0 mise à jour, 0 inchangé, 0 refusé',
 				'  - fichiers : 9 désignés par un profil ou un article repris ; désignés par aucun, donc non adoptés : 0 liés à une entrée non reprise, 2 à une entrée disparue, 2 sans lien',
-				'  - non adoptés (pas-une-image) : 108',
-				'  - 404 connus, adoptés sans objet dans le stockage : 107',
-				'  - objet nommé autrement que hash suivi de ext : 104',
-				'  - envoyés par un autre compte que celui du profil : 109',
-				'  - photos non reprises, leur fichier n’étant pas adopté : 24 (fichier 108)',
-				'  - liens de liste qui ne nomment aucune ligne, signalés : 22',
+				'  - non adoptés (pas-une-image) : 1 (108)',
+				'  - 404 connus, adoptés sans objet dans le stockage : 1 (fichier 107)',
+				'  - objet nommé autrement que hash suivi de ext : 1 (104)',
+				'  - envoyés par un autre compte que celui du profil : 1 (109)',
+				'  - photos non reprises, leur fichier n’étant pas adopté : 1 (24 : fichier 108)',
+				'  - liens de liste qui ne nomment aucune ligne, signalés : 1 (22)',
 				'Écarts voulus, à lire contre le registre ou le schéma : fichiers-non-images-non-repris 1 ; SCHEMA.md §8 (size) 8.',
 			])
 		)
 		expect(text).not.toMatch(/https?:|\.png/)
 		expect(exitCode(report)).toBe(0)
+	})
+
+	// Ticket 275: « 127 » was read as a count of media when it was the identifier of one file.
+	test('chaque liste d’identifiants dit d’abord combien : un élément, plusieurs, aucun', () => {
+		const files = report.collections.media?.files
+		if (!files) throw new Error('fixture without files')
+		const withFiles = (update: Partial<typeof files>): string[] =>
+			reportAsText({
+				...report,
+				collections: { ...report.collections, media: { ...report.collections.media!, files: { ...files, ...update } } },
+			}).split('\n')
+
+		expect(withFiles({ notFound: [127] })).toContain(
+			'  - 404 connus, adoptés sans objet dans le stockage : 1 (fichier 127)'
+		)
+		expect(withFiles({ notFound: [127, 130, 131] })).toContain(
+			'  - 404 connus, adoptés sans objet dans le stockage : 3 (fichiers 127, 130, 131)'
+		)
+		expect(withFiles({ notFound: [], differentNames: [] }).join('\n')).not.toMatch(/404 connus|nommé autrement/)
+		expect(
+			withFiles({
+				notAdopted: [
+					{ file: 5, reason: 'pas-une-image' },
+					{ file: 6, reason: 'pas-une-image' },
+				],
+			})
+		).toContain('  - non adoptés (pas-une-image) : 2 (5, 6)')
+	})
+
+	test('la ligne des prix dit « aucun » pour une liste vide et compte une liste pleine', () => {
+		const media = report.collections.media
+		if (!media) throw new Error('fixture without media')
+		const priceLine = (lostPricedOffers: number[]): string | undefined =>
+			reportAsText({
+				...report,
+				collections: {
+					...report.collections,
+					media: {
+						...media,
+						prices: {
+							prices: 7,
+							withAmount: 2,
+							freeTexts: 3,
+							withoutText: 2,
+							profilesWithPricedOffer: 1,
+							lostPricedOffers,
+							unreadDigits: [],
+						},
+					},
+				},
+			})
+				.split('\n')
+				.find(line => line.includes('offre chiffrée perdue'))
+
+		expect(priceLine([])).toEndWith('offre chiffrée perdue : aucun')
+		expect(priceLine([3, 5])).toEndWith('offre chiffrée perdue : 2 (3, 5)')
 	})
 
 	test('un fichier refusé (adresse hors de la base, deux comptes) attend une décision : code 5', () => {
@@ -420,7 +479,7 @@ describe('le rapport des fichiers et des photos', () => {
 			},
 		}
 
-		expect(reportAsText(refuse)).toContain('  - refusé : 110 (plusieurs-proprietaires : owner)')
+		expect(reportAsText(refuse)).toContain('  - refusé : identifiant 110 (plusieurs-proprietaires : owner)')
 		expect(exitCode(refuse)).toBe(5)
 	})
 })

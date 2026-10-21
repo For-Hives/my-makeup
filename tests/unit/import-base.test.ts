@@ -414,8 +414,8 @@ describe('le rapport', () => {
 			'Cible : une base de ce poste.',
 			'',
 			'Talents : 4 à la source ; 2 créations, 1 mise à jour, 0 inchangé, 1 refusé',
-			'  - refusé : 4 (slug-en-double : slug)',
-			'  - dans la cible, absents de la source, gardés : 9',
+			'  - refusé : identifiant 4 (slug-en-double : slug)',
+			'  - dans la cible, absents de la source, gardés : 1 (9)',
 			'',
 			'Écarts voulus : aucun.',
 			'',
@@ -510,8 +510,8 @@ describe('le rapport', () => {
 			})
 		)
 		expect(text).toContain('Import arrêté avant toute écriture : rien n’est écrit.')
-		expect(text).toContain('Groupes, par identifiant : [9, 10, 11, 12].')
-		expect(text).toContain('Profils, par identifiant : 28, 29.')
+		expect(text).toContain('Groupes, par identifiant : 1 ([9, 10, 11, 12]).')
+		expect(text).toContain('Profils, par identifiant : 2 (28, 29).')
 		expect(text).not.toContain('aucun compte dans la source')
 		const withoutAccount = reportAsText(
 			report({
@@ -521,7 +521,7 @@ describe('le rapport', () => {
 		)
 		expect(withoutAccount).not.toContain('Groupes')
 		expect(withoutAccount).toContain(
-			'Des profils n’ont aucun compte dans la source et ne sont pas parmi les 13 profils du spam (SCHEMA.md §4.1). Profils, par identifiant : 40.'
+			'Des profils n’ont aucun compte dans la source et ne sont pas parmi les 13 profils du spam (SCHEMA.md §4.1). Profils, par identifiant : 1 (40).'
 		)
 	})
 
@@ -763,7 +763,7 @@ describe('ticket 261 : le rapport dit les zones en nombres et en identifiants', 
 		)
 		// The line of the communes alone stays as it was.
 		expect(text).toContain('  - communes : 45 sur 56 villes renseignées (80,4 %, cible 90 %)')
-		expect(text).toContain('  - villes à revoir, zone vide (liste de revue privée, --review) : 36, 18, 45')
+		expect(text).toContain('  - villes à revoir, zone vide (liste de revue privée, --review) : 3 (36, 18, 45)')
 	})
 
 	test('rien n’y est dit d’un texte saisi, d’un nom ni d’un email', () => {
