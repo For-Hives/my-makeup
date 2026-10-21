@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, setDefaultTimeout, test } from 'bun:test'
 import sharp from 'sharp'
-import { PHOTO_SIZE_MAX, UPLOAD_MESSAGES } from '@/lib/photo-upload'
+import { PHOTO_SIZE_MAX, UPLOAD_MESSAGES, UPLOAD_REQUEST_SIZE_MAX } from '@/lib/photo-upload'
 import { PHOTO_MESSAGES } from '@/lib/profile/photos'
 import type { Media } from '@/payload-types'
 import { createAccount } from '../support/account-factory'
@@ -123,7 +123,8 @@ describe('I26 : PDF, SVG, HEIC, vidéo et 12 Mo sont refusés, rien n’est écr
 		const big = Buffer.concat([jpeg, Buffer.alloc(12 * 1024 * 1024 - jpeg.length)])
 		expect(big.length).toBeGreaterThan(PHOTO_SIZE_MAX)
 		const { statut: status, texte: text } = await send(account, file(big, 'gros.jpg', 'image/jpeg'))
-		expect(status).toBe(400)
+		// Cut by the parser at the limit (ticket 273): 413 with the same message, not read to the end.
+		expect(status).toBe(413)
 		expect(text).toContain(UPLOAD_MESSAGES.taille)
 		expect(writes()).toEqual([])
 		expect(await listObjects()).toEqual([])
@@ -150,6 +151,85 @@ describe('Anonyme refusé', () => {
 		expect(status).toBe(403)
 		expect(writes()).toEqual([])
 		expect(await mediaCount()).toBe(0)
+	})
+})
+
+describe('Ticket 273 : un envoi trop gros est coupé avant d’être lu', () => {
+	/** A multipart body of a file of `taille` bytes, produced chunk by chunk; `lus` counts what the server pulled. */
+	function streamedUpload(taille: number, session?: Record<string, string>) {
+		const boundary = '----limite273'
+		const head = Buffer.from(
+			`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="gros.jpg"\r\nContent-Type: image/jpeg\r\n\r\n`
+		)
+		const tail = Buffer.from(`\r\n--${boundary}--\r\n`)
+		const chunk = Buffer.alloc(64 * 1024, 1)
+		const counter = { lus: 0 }
+		let sent = 0
+		let step = 0
+		const body = new ReadableStream<Uint8Array>({
+			pull(controller) {
+				let part: Uint8Array
+				if (step === 0) {
+					part = head
+					step = 1
+				} else if (sent < taille) {
+					part = chunk.subarray(0, Math.min(chunk.length, taille - sent))
+					sent += part.length
+				} else if (step === 1) {
+					part = tail
+					step = 2
+				} else {
+					controller.close()
+					return
+				}
+				counter.lus += part.length
+				controller.enqueue(part)
+			},
+		})
+		const request = new Request(new URL('/api/media?depth=0', process.env.NEXT_PUBLIC_SITE_URL), {
+			method: 'POST',
+			headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}`, ...session },
+			body,
+			duplex: 'half',
+		} as RequestInit)
+		return { request, counter }
+	}
+
+	const post = async (request: Request) => {
+		const { POST } = await import('@/app/(payload)/api/[...slug]/route')
+		return POST(request, { params: Promise.resolve({ slug: ['media'] }) })
+	}
+
+	test('un POST anonyme de 30 Mio : 413, pas plus de la limite lue, rien d’écrit', async () => {
+		const total = 30 * 1024 * 1024
+		const { request, counter } = streamedUpload(total)
+		const rssBefore = process.memoryUsage().rss
+		const response = await post(request)
+		const growth = process.memoryUsage().rss - rssBefore
+		expect([403, 413]).toContain(response.status)
+		// The server stopped pulling at the limit of the request, far from the 30 MiB offered.
+		expect(counter.lus).toBeLessThanOrEqual(UPLOAD_REQUEST_SIZE_MAX + 256 * 1024)
+		expect(growth).toBeLessThan(25 * 1024 * 1024)
+		expect(writes()).toEqual([])
+		expect(await mediaCount()).toBe(0)
+	})
+
+	test('un envoi de 11 Mio par une maquilleuse : refusé avec le message français de taille', async () => {
+		const account = await createAccount('maquilleuse')
+		const { request, counter } = streamedUpload(11 * 1024 * 1024, account.session.enTetes)
+		const response = await post(request)
+		expect(response.status).toBe(413)
+		expect(await response.text()).toContain(UPLOAD_MESSAGES.taille)
+		expect(counter.lus).toBeLessThan(12 * 1024 * 1024 + 256 * 1024)
+		expect(writes()).toEqual([])
+		expect(await mediaCount()).toBe(0)
+	})
+
+	test('la limite de Payload est la constante du site', async () => {
+		const { default: config } = await import('@/payload.config')
+		const built = await config
+		expect(built.upload?.limits?.fileSize).toBe(PHOTO_SIZE_MAX)
+		expect(built.upload?.requestSizeLimit).toBe(UPLOAD_REQUEST_SIZE_MAX)
 	})
 })
 
