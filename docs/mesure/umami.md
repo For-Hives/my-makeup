@@ -60,7 +60,7 @@ Les Web Vitals (`web-vitals`, un événement par mesure : `CLS`, `FCP`, `INP`, `
 
 ## Le clic sur un contact d'un profil public (`contact_click`)
 
-Chaque lien de la section « Réseaux sociaux & contacts » d'un profil public (téléphone, email, Instagram, Facebook, LinkedIn, YouTube, site) émet un `contact_click` avec le `pid` du profil et le `channel`, une fois par clic (le clic du milieu aussi). C'est le principal signal de demande. Le code est `src/lib/analytics/contact-click.ts` (la règle et l'envoi) et `src/components/profile/TrackedContactLink.tsx` (le lien).
+Chaque lien de la section « Réseaux sociaux & contacts » d'un profil public, et chaque bouton de la feuille « Contacter <prénom> » (téléphone, email, Instagram, Facebook, LinkedIn, YouTube, site), émet un `contact_click` avec le `pid` du profil et le `channel`, une fois par clic (le clic du milieu aussi). C'est le principal signal de demande. Le code est `src/lib/analytics/contact-click.ts` (la règle et l'envoi) et `src/components/profile/TrackedContactLink.tsx` (le lien). La feuille (`src/components/profile/ContactButton.tsx`) réutilise ce lien : un appui sur « Contacter » ne compte rien, c'est le clic sur l'une de ses actions qui compte, avec le canal de l'action.
 
 Il ne part pas :
 

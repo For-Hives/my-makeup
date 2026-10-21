@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import { type KeyboardEvent, useCallback, useEffect, useRef, useState } from 'react'
+import { ofName } from '@/lib/french-elision'
 import { DEFAULT_RATIO, ratioMedia, sizesBox } from '@/lib/image-size'
 import { altWork } from '@/lib/profile/public-view'
 
@@ -121,7 +122,7 @@ export function ProfileGallery({ photos, nom }: { photos: readonly GalleryPhoto[
 	return (
 		<section
 			aria-roledescription="carrousel"
-			aria-label={`Portfolio de ${nom}`}
+			aria-label={`Portfolio ${ofName(nom)}`}
 			className="flex w-full min-w-0 flex-col gap-4"
 		>
 			{/* The row is the one tab stop of the photos: focused, the arrow keys move it. */}
@@ -131,7 +132,7 @@ export function ProfileGallery({ photos, nom }: { photos: readonly GalleryPhoto[
 				// biome-ignore lint/a11y/noNoninteractiveTabindex: a scrolling region must be reachable by keyboard
 				tabIndex={0}
 				role="group"
-				aria-label={`Photos de ${nom}`}
+				aria-label={`Photos ${ofName(nom)}`}
 				onKeyDown={onKeyDown}
 				onScroll={onScroll}
 				// A finger or a wheel takes the row over: what follows is read from where it stops.

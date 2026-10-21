@@ -1,4 +1,6 @@
 import Image from 'next/image'
+import type { ReactNode } from 'react'
+import { ofName } from '@/lib/french-elision'
 import { ratioMedia, sizesBox } from '@/lib/image-size'
 import type { PublicProfile } from '@/services/public/profiles'
 import { ZoneText } from './ZoneText'
@@ -21,7 +23,7 @@ function Dot({ disponible }: { disponible: boolean }) {
 			>
 				<circle cx={8} cy={8} r={6} />
 			</svg>
-			{disponible ? 'Disponible' : 'Indisponible'}
+			{disponible ? 'Prend de nouvelles dates' : 'Indisponible'}
 		</span>
 	)
 }
@@ -37,10 +39,11 @@ function Marker() {
 /**
  * The top of the page of a profile, read from the server only (ticket 101): the only h1 of the page
  * is her name, then her speciality, her artist name when it adds something, her zone, her
- * availability and her main photo. A field she left empty is not shown. No postal address can
+ * availability and her main photo. A field she left empty is not shown. `action` is the button of
+ * contact on a computer (ticket 290), under her zone. No postal address can
  * appear: the zone is a commune and a radius.
  */
-export function ProfileHeader({ profil }: { profil: PublicProfile }) {
+export function ProfileHeader({ profil, action }: { profil: PublicProfile; action?: ReactNode }) {
 	const { photo, nom: name } = profil
 	return (
 		<header className="bg-white px-4 pt-10 pb-12 shadow-xl sm:px-6 md:px-8">
@@ -49,7 +52,7 @@ export function ProfileHeader({ profil }: { profil: PublicProfile }) {
 					{/* A fixed box at every width, and a landscape photo is asked at the width it is drawn. */}
 					<Image
 						src={photo?.url ?? DEFAULT_PHOTO}
-						alt={photo ? `Photo de ${name}` : ''}
+						alt={photo ? `Photo ${ofName(name)}` : ''}
 						priority
 						fill
 						sizes={sizesBox({
@@ -78,6 +81,7 @@ export function ProfileHeader({ profil }: { profil: PublicProfile }) {
 							</span>
 						</p>
 					)}
+					{action}
 				</div>
 				<div className="shrink-0">
 					<Dot disponible={profil.disponible} />

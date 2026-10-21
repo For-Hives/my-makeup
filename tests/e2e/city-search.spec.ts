@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { ofName } from '../../src/lib/french-elision'
 import { type SearchProfile, setSearchProfiles, TEST_WORD } from '../fixtures/search-profiles'
 import {
 	refreshDirectory,
@@ -85,7 +86,7 @@ test.describe('Recherche par ville', () => {
 		await expect(card).toContainText('Annecy et 30 km autour')
 		const photo = card.locator('img')
 		await expect(photo).toBeVisible()
-		await expect(photo).toHaveAttribute('alt', `Photo de ${reference.nom}`)
+		await expect(photo).toHaveAttribute('alt', `Photo ${ofName(reference.nom)}`)
 		// The photo is its own, not the default one.
 		await expect(photo).toHaveAttribute('src', /essai-reference-principale/)
 

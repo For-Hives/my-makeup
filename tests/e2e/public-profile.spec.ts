@@ -79,8 +79,8 @@ test.describe('E43 : le profil public, rendu par le serveur', { tag: '@mobile' }
 		expect(html).toMatch(/<h1[^>]*>Page Alpha<\/h1>/)
 		expect(html).toContain('Maquillage mariage')
 		expect(html).toContain('Annecy et 30 km autour')
-		expect(html).toContain('Disponible')
-		expect(html).toContain('Vous en quelques mots')
+		expect(html).toContain('Prend de nouvelles dates')
+		expect(html).toContain('À propos')
 		expect(html).toContain('Maquilleuse professionnelle installée à Annecy')
 		// One Nav, one h1: the template and the page.
 		expect(html.match(/<nav[\s>]/g)?.length).toBeGreaterThanOrEqual(1)
@@ -138,7 +138,7 @@ test.describe('E44 : les offres, les prix et les coordonnées publiées', { tag:
 		// The page, not its structured data (ticket 105), which names the offers too.
 		const html = source.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/g, '')
 
-		expect(html).toContain('Service(s) proposé(s)')
+		expect(html).toContain('Prestations et tarifs')
 		expect(html).toContain('À partir de 180\u00a0€')
 		expect(html).toContain('À partir de 45\u00a0€')
 		expect(html.indexOf('Maquillage de la mariée')).toBeLessThan(html.indexOf('Retouches jusqu’au dîner'))
@@ -168,7 +168,7 @@ test.describe('E44 : les offres, les prix et les coordonnées publiées', { tag:
 		page,
 	}, testInfo) => {
 		await page.goto(`/profil/${profile('textes-maximaux').slug}`)
-		for (const title of ['Compétences', 'Langues', 'Service(s) proposé(s)', 'Expériences professionnelles'])
+		for (const title of ['Compétences', 'Langues', 'Prestations et tarifs', 'Expériences professionnelles'])
 			await expect(page.getByRole('heading', { level: 2, name: title })).toBeVisible()
 		await page.setViewportSize(SCREENS.mobile)
 		expect(await withoutOverflow(page)).toBe(true)

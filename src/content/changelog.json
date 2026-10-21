@@ -190,6 +190,21 @@
 			"id": "dans-ton-espace-tu-peux-dire-que-tu-travailles-a-l-etrang",
 			"type": "ajout",
 			"text": "Dans ton espace, tu peux dire que tu travailles à l'étranger ou dans plusieurs pays."
+		},
+		{
+			"id": "une-fiche-de-maquilleuse-a-un-bouton-contacter-un-appui-o",
+			"type": "amelioration",
+			"text": "Une fiche de maquilleuse a un bouton « Contacter » : un appui ouvre appeler, écrire, Instagram ou son site, sur téléphone comme sur ordinateur."
+		},
+		{
+			"id": "la-fiche-d-une-maquilleuse-a-des-titres-plus-clairs-prest",
+			"type": "amelioration",
+			"text": "La fiche d'une maquilleuse a des titres plus clairs (« Prestations et tarifs », « À propos »), ses tarifs sont mis en avant, et le doublon de la zone a disparu."
+		},
+		{
+			"id": "sur-telephone-la-fiche-d-une-maquilleuse-met-ses-tarifs-e",
+			"type": "amelioration",
+			"text": "Sur téléphone, la fiche d'une maquilleuse met ses tarifs et son portfolio avant ses compétences, et un lien « Aller au contenu » permet de passer le menu au clavier."
 		}
 	],
 	"releases": []
