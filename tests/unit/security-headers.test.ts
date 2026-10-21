@@ -67,6 +67,8 @@ const FIVE = [
 	'referrer-policy',
 	'permissions-policy',
 	'content-security-policy-report-only',
+	'x-frame-options',
+	'content-security-policy',
 ] as const
 
 const five = (sent: Map<string, string>) => FIVE.map(name => sent.get(name))
@@ -88,7 +90,7 @@ const remoteSources = (policy: string) =>
 		.filter(source => !source.startsWith("'") && source !== 'data:' && source !== 'blob:')
 
 describe('every response leaves with the security headers', () => {
-	test('the home page has the five headers, and none that names the technology', async () => {
+	test('the home page has the six headers, and none that names the technology', async () => {
 		const config = await production()
 		const sent = await headersSentFor(config, '/')
 
@@ -99,6 +101,8 @@ describe('every response leaves with the security headers', () => {
 		expect(sent.get('content-security-policy-report-only')).toBe(
 			contentSecurityPolicy({ development: false, mediaOrigin: MEDIA_ORIGIN_DEFAULT })
 		)
+		expect(sent.get('x-frame-options')).toBe('SAMEORIGIN')
+		expect(sent.get('content-security-policy')).toBe("frame-ancestors 'self'")
 
 		// Next adds « X-Powered-By: Next.js » unless told not to, and withPayload its own
 		// « Next.js, Payload » as a header entry: both must be off.
@@ -118,7 +122,7 @@ describe('every response leaves with the security headers', () => {
 		'/_next/image',
 		'/_next/static/chunks/main.js',
 		'/une/adresse/qui/n-existe/pas',
-	])('%s has the same five, with the same values, and no technology header', async pathname => {
+	])('%s has the same six, with the same values, and no technology header', async pathname => {
 		const config = await production()
 		const sent = await headersSentFor(config, pathname)
 
@@ -127,7 +131,7 @@ describe('every response leaves with the security headers', () => {
 		expect(sent.has('x-powered-by')).toBe(false)
 	})
 
-	test('the five are exactly these, whatever the options', () => {
+	test('the six are exactly these, whatever the options', () => {
 		const names = (development: boolean) =>
 			securityHeaders({ development, mediaOrigin: OTHER_MEDIA }).map(({ key }) => key.toLowerCase())
 
@@ -136,12 +140,38 @@ describe('every response leaves with the security headers', () => {
 	})
 })
 
+describe('no page is shown inside the frame of another site (ticket 271)', () => {
+	test.each([
+		'/',
+		'/auth/signin',
+		'/admin',
+		'/profil/une-maquilleuse',
+		'/api/health',
+		'/robots.txt',
+		'/_next/image',
+	])('%s forbids a frame of another origin, twice', async pathname => {
+		for (const config of [await production(), await configUnder({ NODE_ENV: 'development' })]) {
+			const sent = await headersSentFor(config, pathname)
+			expect(sent.get('x-frame-options')).toBe('SAMEORIGIN')
+			// The enforced policy holds this directive and no other: scripts would need nonces.
+			expect(sent.get('content-security-policy')).toBe("frame-ancestors 'self'")
+		}
+	})
+
+	test('the report-only policy is unchanged, and the enforced one is only the frame rule', () => {
+		const options = { development: false, mediaOrigin: MEDIA_ORIGIN_DEFAULT }
+		const enforced = securityHeaders(options).find(({ key }) => key === 'Content-Security-Policy')
+		expect(enforced?.value).toBe("frame-ancestors 'self'")
+		expect(contentSecurityPolicy(options)).toContain("frame-ancestors 'self'")
+	})
+})
+
 describe('the content policy is in report-only mode and names no third-party domain', () => {
-	test('it is never sent as an enforced policy', async () => {
+	test('the full policy is only ever sent in report-only mode', async () => {
 		for (const config of [await production(), await configUnder({ NODE_ENV: 'development' })]) {
 			const sent = await headersSentFor(config, '/')
 			expect(sent.has('content-security-policy-report-only')).toBe(true)
-			expect(sent.has('content-security-policy')).toBe(false)
+			expect(sent.get('content-security-policy')).not.toContain('default-src')
 		}
 	})
 

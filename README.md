@@ -477,7 +477,7 @@ Les tests : `tests/unit/create-admin.test.ts` (les règles et la commande), `tes
 
 ### En-têtes de sécurité
 
-Chaque réponse du site part avec cinq en-têtes, sur toutes les adresses : pages, API, administration, fichiers, erreurs. Une seule sorte de réponse en est privée : la redirection 308 par laquelle Next répond lui-même à une adresse avec `//` (`//blog`), avant que le proxy ne la lise. Les autres redirections, celle du `/` final comprise, passent par le proxy et portent les cinq en-têtes (relevé du 16/10/2026, ticket 228).
+Chaque réponse du site part avec six en-têtes, sur toutes les adresses : pages, API, administration, fichiers, erreurs. Une seule sorte de réponse en est privée : la redirection 308 par laquelle Next répond lui-même à une adresse avec `//` (`//blog`), avant que le proxy ne la lise. Les autres redirections, celle du `/` final comprise, passent par le proxy et portent les six en-têtes (relevé du 16/10/2026, ticket 228).
 
 | En-tête | Valeur | Effet |
 |---|---|---|
@@ -486,9 +486,11 @@ Chaque réponse du site part avec cinq en-têtes, sur toutes les adresses : page
 | `Referrer-Policy` | `strict-origin-when-cross-origin` | Un autre site apprend de quel site vient la visite, sans le chemin ni les paramètres. |
 | `Permissions-Policy` | caméra, micro, position, paiement et USB coupés | Le site ne s'en sert pas : ni une page ni un cadre inclus ne peut les demander. |
 | `Content-Security-Policy-Report-Only` | la politique de contenu | En mode rapport : voir ci-dessous. |
+| `X-Frame-Options` | `SAMEORIGIN` | Aucun autre site ne peut afficher une page du site dans un cadre (détournement de clic). L'aperçu de l'administration, de même origine, marche (ticket 271). |
+| `Content-Security-Policy` | `frame-ancestors 'self'` | La même interdiction, pour les navigateurs qui lisent la politique. Aucune autre directive n'est appliquée. |
 
 - Aucune réponse ne porte d'en-tête `X-Powered-By`, mais Next ajoute encore ses en-têtes `x-nextjs-*` (`x-nextjs-cache`, `x-nextjs-prerender`, `x-nextjs-stale-time`) aux pages prérendues, aux fichiers de `robots.txt` et à l'optimiseur d'images : ils nomment Next. Les retirer est une décision de sécurité qui reste à Andy ; aucun test ne les interdit (relevé du 16/10/2026, ticket 228).
-- La politique de contenu est en mode rapport. Le navigateur écrit dans sa console ce qu'elle refuserait, et ne bloque rien. Aucun rapport n'est envoyé, ni au site ni ailleurs.
+- La politique de contenu complète est en mode rapport (celle appliquée ne porte que `frame-ancestors`, ticket 271 ; sa copie en mode rapport garde cette directive, sans effet). Le navigateur écrit dans sa console ce qu'elle refuserait, et ne bloque rien. Aucun rapport n'est envoyé, ni au site ni ailleurs.
 - Elle ne nomme qu'une origine extérieure : celle des photos. La mesure passe par le site lui-même : aucun domaine tiers n'y figure pour elle, et il ne faut pas en ajouter.
 - Elle autorise les scripts écrits dans la page : Next en a besoin pour les pages rendues d'avance. `bun run dev` autorise en plus `eval`, dont React a besoin en développement.
 - Les valeurs sont dans `src/lib/security-headers.ts`, et `next.config.ts` les pose sur `/:path*`. Un en-tête propre à certaines adresses s'ajoute dans `next.config.ts`, après cette entrée.

@@ -47,7 +47,14 @@ export function contentSecurityPolicy({ development, mediaOrigin }: SecurityOpti
 }
 
 /**
- * The five headers, the same on every path.
+ * The only rule of the content policy that is enforced (ticket 271): a page is shown in a frame of
+ * the same origin only, as the preview of the admin does, never in a frame of another site. Nothing
+ * else is enforced: a script policy would need a nonce per request (see above).
+ */
+export const FRAME_POLICY = "frame-ancestors 'self'"
+
+/**
+ * The six headers, the same on every path.
  *
  * No value may hold « :path »: Next would replace it by the path of the request, since the
  * headers are attached to the source `/:path*` (next.config.ts).
@@ -64,6 +71,10 @@ export function securityHeaders(options: SecurityOptions): ResponseHeader[] {
 		// The site uses none of these, so neither a page nor a frame inside it can ask for them.
 		{ key: 'Permissions-Policy', value: 'camera=(), geolocation=(), microphone=(), payment=(), usb=()' },
 		{ key: 'Content-Security-Policy-Report-Only', value: contentSecurityPolicy(options) },
+		// No other site may frame a page (clickjacking). Twice: the header is read by every browser, the
+		// policy by those that ignore it; a report-only policy never applies `frame-ancestors`.
+		{ key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+		{ key: 'Content-Security-Policy', value: FRAME_POLICY },
 	]
 }
 
