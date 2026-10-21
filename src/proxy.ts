@@ -15,8 +15,9 @@ import { REFUSAL_PATH, SIGN_UP_PATH, secondsBeforeSignUp } from '@/lib/auth/sign
 import { CONTACT_PATH, CONTACT_THROTTLED_PATH, secondsBeforeThisRequestMessage } from '@/lib/contact/rate-limit'
 import { rateLimitSearch } from '@/lib/search/rate-limit'
 import { robotsForPath } from '@/lib/seo/robots'
+import { isHomePageInternal } from '@/lib/urls/home-page'
 import { shapeRedirect } from '@/lib/urls/shape'
-import { type CheckedFamily, urlToCheck } from '@/lib/urls/unknown-page'
+import { type CheckedFamily, type PageAnswer, urlToCheck } from '@/lib/urls/unknown-page'
 
 /**
  * One proxy, no matcher: it runs for every request.
@@ -39,9 +40,13 @@ import { type CheckedFamily, urlToCheck } from '@/lib/urls/unknown-page'
  *   cross-site`, a link in a mail) answers the relay page of the return from Google (ticket 223): Payload
  *   ignores the cookie of a cross-site request with no `Origin`, and the relay restarts the navigation
  *   from the site itself.
+ * - The old address of a profile (an old username, a variant of the slug) answers one 308 to its slug, from the same
+ *   lookup (ticket 269: a redirect raised by a page kept in the cache of Next carries a doubled `Location` header).
  * - An unknown slug under `/profil`, `/talent` or `/blog` is rewritten to the 404 page of the site, so that the HTML
  *   of the server carries its h1 (ticket 231; `notFound()` in a page only sends an empty shell). The slug is read
  *   through the same reads as the page, remembered for a minute when the page exists; a failed read lets the page answer.
+ * - The internal address of the home page (`/home-cached/…`, ticket 269) is no address of the site: it answers
+ *   the 404 page. `/` is rewritten to it by next.config.ts, after the proxy has run.
  * - A path that does not decode (`/profil/%E0%A4%A`) answers the 404 page of the site, not Next's error; under
  *   `/api/` it answers a JSON 400 (ticket 223).
  * - A response that carries a cookie of the cleaning is `private, no-store`: no shared cache keeps it (ticket 223).
@@ -56,7 +61,7 @@ function siteProxy(requete: NextRequest) {
 		refusal.headers.set('X-Robots-Tag', 'noindex')
 		return refusal
 	}
-	if (unreadablePath(pathname)) {
+	if (unreadablePath(pathname) || isHomePageInternal(pathname)) {
 		// An address Next cannot decode answers its own error page: the 404 of the site is what a visitor expects.
 		const notFound = NextResponse.rewrite(new URL(NOT_FOUND_PATH, requete.url ?? requete.nextUrl.href))
 		notFound.headers.set('X-Robots-Tag', 'noindex')
@@ -236,7 +241,7 @@ function passesAsIs(reponse: NextResponse): boolean {
 	return reponse.status === 200 && reponse.headers.has('x-middleware-next')
 }
 
-type PageExistence = (famille: CheckedFamily, segment: string) => Promise<boolean>
+type PageExistence = (famille: CheckedFamily, segment: string) => Promise<PageAnswer>
 
 /** The real lookup, loaded on first use: the proxy of every other path never loads Payload. */
 const realExistence: PageExistence = async (famille, segment) =>
@@ -253,10 +258,24 @@ export async function unknownAddressProxy(
 	{ famille, segment }: { famille: CheckedFamily; segment: string },
 	existe: PageExistence = realExistence
 ): Promise<NextResponse> {
+	let answer: PageAnswer
 	try {
-		if (await existe(famille, segment)) return reponse
+		answer = await existe(famille, segment)
 	} catch {
 		return reponse
+	}
+	if (answer === true) return reponse
+	if (answer !== false) {
+		// The old address of a profile: one 308 to its slug, answered here because a redirect raised by a page kept in
+		// the cache of Next leaves with a doubled `Location` header (ticket 269).
+		const redirection = NextResponse.redirect(
+			new URL(`${answer.vers}${requete.nextUrl.search}`, requete.url ?? requete.nextUrl.href),
+			308
+		)
+		for (const cookie of reponse.cookies.getAll()) redirection.cookies.set(cookie)
+		const cacheOfRedirect = reponse.headers.get('cache-control')
+		if (cacheOfRedirect) redirection.headers.set('Cache-Control', cacheOfRedirect)
+		return redirection
 	}
 	const notFound = NextResponse.rewrite(new URL(NOT_FOUND_PATH, requete.url ?? requete.nextUrl.href))
 	notFound.headers.set('X-Robots-Tag', 'noindex')

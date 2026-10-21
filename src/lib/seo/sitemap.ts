@@ -1,5 +1,6 @@
 import { SITE_ORIGIN } from '../frozen-urls'
 import { profilePath } from '../slug'
+import { HOME_PAGE_PREFIX } from '../urls/home-page'
 import { cleanPath } from './url'
 
 /**
@@ -95,7 +96,7 @@ export const EXCLUDED_PAGES: readonly { readonly chemin: string; readonly raison
 ]
 
 /** Path prefixes that are never in the sitemap: the account, the API, the administration, the measuring relay. */
-export const EXCLUDED_PREFIXES: readonly string[] = ['/auth', '/api', '/admin', '/u']
+export const EXCLUDED_PREFIXES: readonly string[] = ['/auth', '/api', '/admin', '/u', HOME_PAGE_PREFIX]
 
 /** True when the path is left out whatever the data: an exclusion, or under an excluded prefix. */
 export function isExcluded(chemin: string): boolean {

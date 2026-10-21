@@ -15,6 +15,7 @@ import {
 	sitemapEntries,
 	sitemapXml,
 } from '../../src/lib/seo/sitemap'
+import { HOME_PAGE_PREFIX } from '../../src/lib/urls/home-page'
 import {
 	PAGE_SIZE,
 	PAGES_MAX,
@@ -225,6 +226,11 @@ function applicationUrls(): { statiques: string[]; dynamiques: string[] } {
 		if (name === 'robots.ts') filePath.push('robots.txt')
 		if (name === 'sitemap.ts') filePath.push('sitemap.xml')
 		const url = `/${filePath.join('/')}`
+		// The home page lives under a dynamic segment that next.config.ts rewrites `/` to (ticket 269).
+		if (url === `${HOME_PAGE_PREFIX}/[key]`) {
+			staticOnes.push('/')
+			continue
+		}
 		if (url === '/admin' || url.startsWith('/admin/') || url.startsWith('/api')) continue
 		;(filePath.some(segment => /^\[.*\]$/.test(segment)) ? dynamic : staticOnes).push(url)
 	}
