@@ -6,9 +6,9 @@ import { pageMetadata } from '@/lib/seo/metadata'
 import { sendMessage } from './actions'
 
 export const metadata: Metadata = pageMetadata({
-	titre: 'Contact',
+	titre: 'Contact - My-Makeup',
 	description:
-		'Contactez-nous pour toute question, suggestion ou collaboration ! L’équipe My-Makeup est à votre écoute !',
+		"Contactez-nous pour toute question, suggestion ou collaboration ! L'équipe My-Makeup est à votre écoute !",
 	repli: 'Contactez l’équipe My-Makeup pour toute question, suggestion ou collaboration.',
 	chemin: '/contact',
 })

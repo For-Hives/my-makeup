@@ -6,6 +6,8 @@ import { canonicalUrl } from './url'
 export interface PageInputs {
 	/** The title of the page, without the brand: the helper adds it when it fits. */
 	titre: unknown
+	/** False keeps the title as written, without « | My-Makeup » (the old site's title of a few fixed pages). */
+	marque?: boolean
 	/** Candidate texts in order of preference. */
 	description: unknown
 	/** Used when no candidate has 70 characters. */
@@ -22,10 +24,10 @@ export interface PageInputs {
 
 /** The metadata of a page once its description is known. A page that is not indexed keeps its share tags. */
 function assembler(
-	{ titre, chemin, indexable = true, typeDePartage, image }: PageInputs,
+	{ titre, chemin, indexable = true, typeDePartage, image, marque }: PageInputs,
 	description: string
 ): Metadata {
-	const fullTitle = pageTitle(titre)
+	const fullTitle = pageTitle(titre, { marque })
 	return {
 		title: { absolute: fullTitle },
 		description,

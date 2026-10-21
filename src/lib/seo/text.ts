@@ -26,10 +26,13 @@ export function truncate(texte: string, max: number): string {
 	return `${(word.length >= max / 2 ? word : cut).replace(/[\s,;:.–-]+$/, '')}…`
 }
 
-/** « <title> | My-Makeup » when it fits in 60 characters; the brand alone when the title is empty. */
-export function pageTitle(valeur: unknown): string {
+/**
+ * « <title> | My-Makeup » when it fits in 60 characters; the brand alone when the title is empty. With
+ * `marque: false` the title is kept as written (a fixed page whose title on the old site had no brand).
+ */
+export function pageTitle(valeur: unknown, { marque = true }: { marque?: boolean } = {}): string {
 	const title = textAbout(valeur) || BRAND
-	if (title.includes(BRAND)) return truncate(title, MAX_TITLE)
+	if (title.includes(BRAND) || !marque) return truncate(title, MAX_TITLE)
 	const full = `${title} | ${BRAND}`
 	return full.length <= MAX_TITLE ? full : truncate(title, MAX_TITLE)
 }

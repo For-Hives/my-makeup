@@ -12,9 +12,9 @@ export const dynamic = 'force-dynamic'
 // `/toutes-les-news` redirects here (ticket 072): the list shows every published article, not the
 // last three of the old page.
 export const metadata: Metadata = pageMetadata({
-	titre: 'Blog et actualités',
+	titre: 'Blog de My-Makeup',
 	description:
-		"L'actualité de My-Makeup, nos conseils pour choisir une maquilleuse professionnelle et les nouveautés qui arrivent bientôt.",
+		"L'actualité de My-Makeup, ce que nous faisons pour améliorer votre quotidien ! Et les nouveautés qui arrivent bientôt !",
 	repli: "L'actualité de My-Makeup : conseils, nouveautés et articles pour trouver la maquilleuse qui vous correspond.",
 	chemin: '/blog',
 })

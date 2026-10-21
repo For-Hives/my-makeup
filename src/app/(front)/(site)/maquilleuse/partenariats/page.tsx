@@ -7,6 +7,7 @@ import { pageMetadata } from '@/lib/seo/metadata'
 
 export const metadata: Metadata = pageMetadata({
 	titre: 'Communauté et partenariats !',
+	marque: false,
 	description:
 		"Communauté et partenariat chez My-Makeup : une page professionnelle gratuite pour présenter votre travail, et une équipe à l'écoute des maquilleuses.",
 	repli: 'Une page professionnelle gratuite pour présenter votre travail, et une équipe à l’écoute des maquilleuses.',

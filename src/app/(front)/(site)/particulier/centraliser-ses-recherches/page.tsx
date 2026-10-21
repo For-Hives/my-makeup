@@ -6,6 +6,7 @@ import { pageMetadata } from '@/lib/seo/metadata'
 // A fixed page: the same text for everyone, rendered once (the head block holds the search, a client component).
 export const metadata: Metadata = pageMetadata({
 	titre: 'Centraliser ses recherches !',
+	marque: false,
 	description:
 		'Apprenez comment centraliser et organiser vos recherches pour comparer efficacement les maquilleuses et trouver celle qui vous correspond le mieux.',
 	repli:
