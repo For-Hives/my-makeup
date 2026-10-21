@@ -99,7 +99,7 @@ async function fillIdentity(page: Page) {
 }
 
 async function chooseLille(page: Page) {
-	const field = page.getByRole('combobox', { name: 'Ta commune' })
+	const field = page.getByRole('combobox', { name: 'Où travailles-tu ?' })
 	await field.fill('Lille')
 	await press(page.getByRole('option', { name: /^Lille \(59\)/ }).first())
 }
@@ -165,7 +165,7 @@ test.describe('E02 : l’accueil en trois étapes', { tag: '@mobile' }, () => {
 			specialty: 'Maquillage mariée',
 		})
 		// A commune typed but not chosen in the list is no commune.
-		await page.getByRole('combobox', { name: 'Ta commune' }).fill('Lille')
+		await page.getByRole('combobox', { name: 'Où travailles-tu ?' }).fill('Lille')
 		await press(page.getByRole('button', { name: 'Suivant' }))
 		await expect(page.getByText('Choisis ta commune dans la liste')).toBeVisible()
 		await chooseLille(page)
@@ -191,6 +191,37 @@ test.describe('E02 : l’accueil en trois étapes', { tag: '@mobile' }, () => {
 		// The onboarding has nothing left for an active profile.
 		await page.goto(PAGE)
 		await expect(page).toHaveURL(/\/auth\/profil$/)
+	})
+
+	test('ticket 266 : à l’étape 2, une zone à l’étranger suffit : profil actif, arrivée dans l’espace', async ({
+		page,
+	}) => {
+		test.setTimeout(150_000)
+		const email = await newAccount()
+		await signInAction(page, email)
+		await expect(title(page)).toHaveText('Ton identité')
+		await page.waitForLoadState('networkidle')
+		await fillIdentity(page)
+		await press(page.getByRole('button', { name: 'Suivant' }))
+		await expect(title(page)).toHaveText('Ta zone')
+
+		await press(page.getByRole('button', { name: 'Je travaille à l’étranger ou dans plusieurs pays' }))
+		const picker = page.getByRole('combobox', { name: 'Ajouter un pays' })
+		await picker.fill('Belg')
+		await press(page.getByRole('option', { name: /Belgique/ }))
+		await page.getByLabel('Ville (facultatif)').fill('Bruxelles')
+		await takeScreenshot(page, 'etape-2-etranger')
+		expect(await violationsAfterTitle(page)).toEqual([])
+		await press(page.getByRole('button', { name: 'Suivant' }))
+
+		await expect(title(page)).toHaveText('Ta photo principale')
+		expect(await profileOf(email)).toMatchObject({ zoneKind: 'countries', countries: ['BE'], town: 'Bruxelles' })
+		await choosePhoto(page)
+		await press(page.getByRole('button', { name: 'Terminer' }))
+		await expect(page).toHaveURL(/\/auth\/profil$/, { timeout: 60_000 })
+		const profile = await profileOf(email)
+		expect(profile.active).toBe(true)
+		expect(profile.status).toBe('published')
 	})
 
 	test('RG-07 : un serveur qui tarde ne montre ni arrivée ni étape suivante avant sa réponse', async ({ page }) => {
@@ -283,12 +314,12 @@ test.describe('E02 : l’accueil en trois étapes', { tag: '@mobile' }, () => {
 		await expect(title(page)).toHaveText('Ta zone')
 		await expect(title(page)).toBeFocused()
 
-		await page.getByRole('combobox', { name: 'Ta commune' }).focus()
+		await page.getByRole('combobox', { name: 'Où travailles-tu ?' }).focus()
 		await page.keyboard.type('Lille')
 		await expect(page.getByRole('option').first()).toBeVisible()
 		await page.keyboard.press('ArrowDown')
 		await page.keyboard.press('Enter')
-		await expect(page.getByRole('combobox', { name: 'Ta commune' })).toHaveValue(/Lille/)
+		await expect(page.getByRole('combobox', { name: 'Où travailles-tu ?' })).toHaveValue(/Lille/)
 		await page.getByRole('button', { name: 'Suivant' }).focus()
 		await page.keyboard.press('Enter')
 		await expect(title(page)).toHaveText('Ta photo principale')
