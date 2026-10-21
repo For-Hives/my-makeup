@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import { ratioMedia, sizesBox } from '@/lib/image-size'
 import type { PublicProfile } from '@/services/public/profiles'
+import { ZoneText } from './ZoneText'
 
 /** The photo shown when the profile has none: the picture of the site. */
 export const DEFAULT_PHOTO = '/assets/pp_makeup.webp'
@@ -72,7 +73,9 @@ export function ProfileHeader({ profil }: { profil: PublicProfile }) {
 					{profil.zone && (
 						<p className="mt-2 flex max-w-full items-center gap-1 text-gray-700">
 							<Marker />
-							<span className="min-w-0 break-words">{profil.zone}</span>
+							<span className="min-w-0 break-words">
+								<ZoneText text={profil.zone} flags={profil.flags} />
+							</span>
 						</p>
 					)}
 				</div>

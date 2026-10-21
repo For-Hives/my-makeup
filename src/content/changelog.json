@@ -175,6 +175,11 @@
 			"id": "chercher-une-maquilleuse-par-code-postal-trouve-celles-de",
 			"type": "ajout",
 			"text": "Chercher une maquilleuse par code postal trouve celles de chaque commune du code postal."
+		},
+		{
+			"id": "une-maquilleuse-qui-travaille-a-l-etranger-ou-dans-plusie",
+			"type": "amelioration",
+			"text": "Une maquilleuse qui travaille à l'étranger ou dans plusieurs pays l'affiche sur son profil, avec le drapeau de chaque pays."
 		}
 	],
 	"releases": []

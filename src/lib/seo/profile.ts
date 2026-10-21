@@ -21,14 +21,22 @@ import { canonicalUrl } from './url'
 /** The address path of a profile. */
 export const profilePath = (slug: string): string => `/profil/${slug}`
 
-/** « Maquilleuse mariage à Annecy », or whatever of the speciality and the commune she gave. */
-function profileDetail({ specialite: specialty, lieu }: Pick<PublicProfile, 'specialite' | 'lieu'>): string {
-	if (specialty) return lieu ? `${specialty} à ${lieu}` : specialty
-	return lieu ? `maquilleuse à ${lieu}` : 'maquilleuse professionnelle'
+/** What the title and the description read of a profile: placePhrase is « à Annecy », « en Belgique »… */
+type ProfileDetail = Pick<PublicProfile, 'specialite' | 'lieu'> & Partial<Pick<PublicProfile, 'placePhrase'>>
+
+/**
+ * « Maquilleuse mariage à Annecy », « Maquillage mariage en Belgique », or whatever of the speciality
+ * and the zone she gave. The phrase of the zone carries its preposition (ticket 264); without it, a
+ * place is a commune: « à ».
+ */
+function profileDetail({ specialite: specialty, lieu, placePhrase }: ProfileDetail): string {
+	const where = placePhrase ?? (lieu ? `à ${lieu}` : null)
+	if (specialty) return where ? `${specialty} ${where}` : specialty
+	return where ? `maquilleuse ${where}` : 'maquilleuse professionnelle'
 }
 
 /** The title: « Nom – détail | My-Makeup » when it fits in 60 characters, else the shorter forms. */
-export function profileTitle(profil: Pick<PublicProfile, 'nom' | 'specialite' | 'lieu'>): string {
+export function profileTitle(profil: Pick<PublicProfile, 'nom'> & ProfileDetail): string {
 	const name = textAbout(profil.nom)
 	const detail = profileDetail(profil)
 	const candidates = [`${name} – ${detail} | ${BRAND}`, `${name} – ${detail}`, `${name} | ${BRAND}`]
@@ -86,6 +94,25 @@ export function profileBreadcrumb(profil: Pick<PublicProfile, 'nom' | 'slug'>) {
 	}
 }
 
+/**
+ * Where she works, for `areaServed` (ticket 264): a `City` for a commune; a `City` contained in its
+ * `Country` for a town abroad; a `Country` for one country, a list of them for several. A `City` never
+ * carries the name of a country.
+ */
+function areaServed(profil: Pick<PublicProfile, 'lieu'> & Partial<Pick<PublicProfile, 'area'>>) {
+	const area = profil.area ?? (profil.lieu ? { kind: 'city' as const, name: profil.lieu } : null)
+	if (!area) return null
+	if (area.kind === 'city') return { '@type': 'City', name: area.name }
+	if (area.kind === 'town')
+		return {
+			'@type': 'City',
+			name: area.name,
+			containedInPlace: { '@type': 'Country', name: area.country },
+		}
+	const countries = area.names.map(name => ({ '@type': 'Country', name }))
+	return countries.length === 1 ? countries[0] : countries
+}
+
 const unique = <T>(liste: readonly T[]): T[] => [...new Set(liste)]
 const absoluteUrl = (adresse: string | null | undefined): string =>
 	typeof adresse === 'string' && /^https?:\/\//i.test(adresse) ? adresse : ''
@@ -100,7 +127,7 @@ export function profileStructuredData(profil: PublicProfile) {
 	if (!profil.indexable) return withoutEmpty({ '@context': 'https://schema.org', '@graph': [breadcrumb] })
 
 	const personId = `${url}#personne`
-	const zone = profil.lieu ? { '@type': 'City', name: profil.lieu } : null
+	const zone = areaServed(profil)
 	const specialty = profil.specialite ?? ''
 	const person = {
 		'@type': 'Person',
