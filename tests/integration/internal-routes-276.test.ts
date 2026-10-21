@@ -31,10 +31,10 @@ describe('m8 : /api/payload-migrations', () => {
 		['sans session', undefined],
 		['avec une session admin', 'admin'],
 	])('GET %s : 404, aucune adresse interne dans le corps', async (_nom, role) => {
-		const enTetes = role ? (await createAccount('admin')).session.enTetes : undefined
-		const { statut: status, texte } = await callRest('GET', '/api/payload-migrations', { enTetes })
+		const headers = role ? (await createAccount('admin')).session.enTetes : undefined
+		const { statut: status, texte: text } = await callRest('GET', '/api/payload-migrations', { enTetes: headers })
 		expect(status).toBe(404)
-		expect(texte).not.toContain('0.0.0.0')
-		expect(texte).not.toContain('Cannot GET')
+		expect(text).not.toContain('0.0.0.0')
+		expect(text).not.toContain('Cannot GET')
 	})
 })
