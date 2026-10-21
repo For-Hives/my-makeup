@@ -84,7 +84,7 @@ const ICONS: Readonly<Record<ContactLink['canal'], string>> = {
 const NEW_TAB = new Set<ContactLink['canal']>(['instagram', 'facebook', 'linkedin', 'youtube', 'website'])
 
 function ContactLinkAnchor({
-	lien: { canal, libelle },
+	lien: { canal, affichage },
 	href,
 	pid,
 	mesure,
@@ -103,10 +103,10 @@ function ContactLinkAnchor({
 	}
 	return mesure && pid !== null ? (
 		<TrackedContactLink pid={pid} canal={canal} {...properties}>
-			{libelle}
+			{affichage}
 		</TrackedContactLink>
 	) : (
-		<a {...properties}>{libelle}</a>
+		<a {...properties}>{affichage}</a>
 	)
 }
 
@@ -126,14 +126,14 @@ export function SectionContacts({
 	return (
 		<ProfileSection titre="Réseaux sociaux & contacts">
 			<ul className="flex flex-col gap-3">
-				{liens.map(({ canal, libelle, href }) => (
+				{liens.map(({ canal, libelle, affichage, href }) => (
 					<li key={canal} className="flex min-w-0 items-center gap-3 text-sm">
 						{/* The name of the channel is written next to the icon: the icon only decorates. */}
 						<Image src={ICONS[canal]} alt="" width={35} height={35} className="shrink-0" />
 						<div className="min-w-0">
 							<span className="block font-semibold text-gray-700">{CHANNEL_LABELS[canal]}</span>
 							{href ? (
-								<ContactLinkAnchor lien={{ canal, libelle, href }} href={href} pid={pid} mesure={mesure} />
+								<ContactLinkAnchor lien={{ canal, libelle, affichage, href }} href={href} pid={pid} mesure={mesure} />
 							) : (
 								<span className="break-words text-gray-700 [overflow-wrap:anywhere]">{libelle}</span>
 							)}

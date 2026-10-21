@@ -190,6 +190,11 @@
 			"id": "dans-ton-espace-tu-peux-dire-que-tu-travailles-a-l-etrang",
 			"type": "ajout",
 			"text": "Dans ton espace, tu peux dire que tu travailles à l'étranger ou dans plusieurs pays."
+		},
+		{
+			"id": "une-fiche-de-maquilleuse-a-un-bouton-contacter-un-appui-o",
+			"type": "amelioration",
+			"text": "Une fiche de maquilleuse a un bouton « Contacter » : un appui ouvre appeler, écrire, Instagram ou son site, sur téléphone comme sur ordinateur."
 		}
 	],
 	"releases": []

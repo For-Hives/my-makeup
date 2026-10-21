@@ -118,7 +118,45 @@ export interface ContactLink {
 	canal: Channel
 	/** The text of the link: what she typed. */
 	libelle: string
+	/**
+	 * What the page writes for the link when it can be short (ticket 290): « @ines.morel » for a
+	 * network, « ines-morel.fr » for a website, never the whole address. What she typed for an email, a
+	 * telephone or a value that leads nowhere.
+	 */
+	affichage: string
 	href: string | null
+}
+
+const LEADING_WWW = /^www\./i
+const LEADING_AT = /^@/
+
+/** A path segment of an address, decoded when it can be. */
+function segmentOf(segment: string): string {
+	try {
+		return decodeURIComponent(segment)
+	} catch {
+		return segment
+	}
+}
+
+/**
+ * The short text of a link (ticket 290): « @ines.morel » for Instagram and a YouTube handle, the name
+ * of the page for the other networks, the domain without « www. » for a website. The channel name when
+ * the address holds no name (« instagram.com » alone, `profile.php?id=`). What she typed for an email,
+ * a telephone, or a value that leads nowhere.
+ */
+export function readableLabel(canal: Channel, valeur: string, href: string | null): string {
+	if (canal === 'email' || canal === 'phone' || href === null || !URL.canParse(href)) return valeur
+	const address = new URL(href)
+	if (canal === 'website') return address.hostname.replace(LEADING_WWW, '') || valeur
+	const segments = address.pathname.split('/').filter(Boolean).map(segmentOf)
+	const [first = '', second = ''] = segments
+	let name = ''
+	if (canal === 'instagram') name = first === '' ? '' : `@${first.replace(LEADING_AT, '')}`
+	else if (canal === 'linkedin') name = first === 'in' ? second : ''
+	else if (canal === 'youtube') name = segments.find(segment => LEADING_AT.test(segment)) ?? ''
+	else name = first === 'profile.php' ? '' : first
+	return name === '' ? CHANNEL_LABELS[canal] : name
 }
 
 function channelLink(canal: Channel, valeur: string): string | null {
@@ -151,7 +189,9 @@ export function contacts(publies: {
 	}
 	return CHANNELS.flatMap(canal => {
 		const label = values[canal]
-		return label === '' ? [] : [{ canal, libelle: label, href: channelLink(canal, label) }]
+		if (label === '') return []
+		const href = channelLink(canal, label)
+		return [{ canal, libelle: label, affichage: readableLabel(canal, label, href), href }]
 	})
 }
 

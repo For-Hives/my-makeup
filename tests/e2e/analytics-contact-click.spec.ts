@@ -99,7 +99,7 @@ test.describe('E52 : un clic de contact est compté une fois, avec le bon canal'
 		await expect.poll(async () => (await umami.envois('contact_click')).length).toBe(1)
 		await click(page, EMAIL)
 		await expect.poll(async () => (await umami.envois('contact_click')).length).toBe(2)
-		const [popup] = await Promise.all([page.waitForEvent('popup'), click(page, INSTAGRAM)])
+		const [popup] = await Promise.all([page.waitForEvent('popup'), click(page, '@mesure.exemple')])
 		await popup.close()
 		await expect.poll(async () => (await umami.envois('contact_click')).length).toBe(3)
 
@@ -154,11 +154,37 @@ test.describe('E52 : un clic de contact est compté une fois, avec le bon canal'
 		expect(await umami.envois('contact_click')).toHaveLength(0)
 	})
 
+	// Ticket 290: the sheet of the « Contacter » button counts its clicks like the card of contacts.
+	test('290 : la feuille « Contacter » compte le clic du téléphone, et Échap la ferme en rendant le focus', async ({
+		page,
+	}) => {
+		await open(page, `/profil/${slug}`)
+		const opener = page.getByRole('button', { name: 'Contacter Mesure' })
+		await opener.click()
+		const sheet = page.getByRole('dialog', { name: 'Contacter Mesure' })
+		await expect(sheet).toBeVisible()
+
+		await page.keyboard.press('Escape')
+		await expect(sheet).toBeHidden()
+		await expect(opener).toBeFocused()
+		expect(await umami.envois('contact_click')).toHaveLength(0)
+
+		await opener.press('Enter')
+		await expect(sheet).toBeVisible()
+		await sheet.getByRole('link', { name: /^Appeler Mesure/ }).click({ noWaitAfter: true })
+		await expect.poll(async () => (await umami.envois('contact_click')).length).toBe(1)
+		const [received] = (await umami.envois('contact_click')).map(
+			recu => (recu.corps as { payload: { data: Record<string, unknown> } }).payload.data
+		)
+		expect(received?.channel).toBe('phone')
+	})
+
 	test('un profil sans contact public : ni lien ni événement', async ({ page }) => {
 		await page.goto(`/profil/${slugWithoutContact}`)
 		await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
 		await expect(page.locator('main a[href^="tel:"], main a[href^="mailto:"]')).toHaveCount(0)
 		await expect(page.getByText('Réseaux sociaux & contacts')).toHaveCount(0)
+		await expect(page.getByRole('button', { name: /^Contacter/ })).toHaveCount(0)
 		await page.waitForLoadState('networkidle')
 		expect(await umami.envois('contact_click')).toHaveLength(0)
 	})

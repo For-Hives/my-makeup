@@ -8,6 +8,7 @@ import {
 	names,
 	networkUrl,
 	period,
+	readableLabel,
 	rows,
 	serviceOffers,
 } from '@/lib/profile/public-view'
@@ -92,14 +93,53 @@ describe('contacts', () => {
 		const links = contacts({ telephone: '12', email: 'pas-un-email' })
 
 		expect(links).toEqual([
-			{ canal: 'email', libelle: 'pas-un-email', href: null },
-			{ canal: 'phone', libelle: '12', href: null },
+			{ canal: 'email', libelle: 'pas-un-email', affichage: 'pas-un-email', href: null },
+			{ canal: 'phone', libelle: '12', affichage: '12', href: null },
 		])
 	})
 
 	test('rien de publié : aucun canal', () => {
 		expect(contacts({})).toEqual([])
 		expect(contacts({ reseaux: {}, telephone: null, email: 'null' })).toEqual([])
+	})
+})
+
+describe('readableLabel : le texte court d’un lien', () => {
+	const label = (canal: Parameters<typeof readableLabel>[0], typed: string) =>
+		readableLabel(canal, typed, networkUrl(canal === 'email' || canal === 'phone' ? 'website' : canal, typed))
+
+	test('Instagram : « @pseudo », qu’elle ait écrit le pseudo ou l’adresse', () => {
+		expect(label('instagram', 'https://www.instagram.com/ines.morel/?igsh=abc')).toBe('@ines.morel')
+		expect(label('instagram', '@ines.morel')).toBe('@ines.morel')
+		expect(label('instagram', 'ines.morel')).toBe('@ines.morel')
+	})
+
+	test('un site : le domaine, sans « www. » ni chemin', () => {
+		expect(label('website', 'https://www.ines-morel.fr/portfolio')).toBe('ines-morel.fr')
+		expect(label('website', 'ines-morel.fr')).toBe('ines-morel.fr')
+	})
+
+	test('les autres réseaux : le nom de la page, ou le nom du réseau quand l’adresse n’en porte pas', () => {
+		expect(label('linkedin', 'https://www.linkedin.com/in/ines-morel/')).toBe('ines-morel')
+		expect(label('linkedin', 'https://www.linkedin.com/company/studio')).toBe('LinkedIn')
+		expect(label('youtube', 'https://www.youtube.com/@inesmorel')).toBe('@inesmorel')
+		expect(label('youtube', 'https://www.youtube.com/watch?v=abc')).toBe('YouTube')
+		expect(label('facebook', 'https://www.facebook.com/ines.morel')).toBe('ines.morel')
+		expect(label('facebook', 'https://www.facebook.com/profile.php?id=123')).toBe('Facebook')
+		expect(label('instagram', 'https://www.instagram.com/')).toBe('Instagram')
+	})
+
+	test('un email, un téléphone, ou une valeur sans lien : ce qu’elle a saisi', () => {
+		expect(readableLabel('email', 'ines@exemple.test', 'mailto:ines@exemple.test')).toBe('ines@exemple.test')
+		expect(readableLabel('phone', '06 39 98 10 01', 'tel:0639981001')).toBe('06 39 98 10 01')
+		expect(readableLabel('website', 'mon site', null)).toBe('mon site')
+	})
+
+	test('jamais l’adresse complète dans le texte des liens d’une fiche', () => {
+		const links = contacts({
+			reseaux: { instagram: 'https://www.instagram.com/ines.morel', website: 'https://www.ines-morel.fr/a/b' },
+		})
+		expect(links.map(({ affichage }) => affichage)).toEqual(['@ines.morel', 'ines-morel.fr'])
 	})
 })
 

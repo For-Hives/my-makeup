@@ -1,5 +1,8 @@
+import { formatFrom } from '@/lib/price'
+import { contactActions, contactName } from '@/lib/profile/contact-actions'
 import { rows } from '@/lib/profile/public-view'
 import type { PublicProfile } from '@/services/public/profiles'
+import { ContactButton } from './ContactButton'
 import { ProfileGallery } from './ProfileGallery'
 import { ProfileHeader } from './ProfileHeader'
 import { ProfileSection } from './ProfileSection'
@@ -23,9 +26,22 @@ import {
  */
 export function ProfileView({ profil, mesure = true }: { profil: PublicProfile; mesure?: boolean }) {
 	const description = rows(profil.description)
+	// The button of contact: one per way of reaching her that leads somewhere, none when there is no way.
+	const name = contactName(profil)
+	const actions = contactActions(profil.liens, name)
+	const contact = (placement: 'header' | 'bar') => (
+		<ContactButton
+			placement={placement}
+			name={name}
+			price={placement === 'bar' ? formatFrom(profil.prixMinimal) || null : null}
+			actions={actions}
+			pid={profil.pid}
+			mesure={mesure}
+		/>
+	)
 	return (
 		<main className="flex flex-1 flex-col">
-			<ProfileHeader profil={profil} />
+			<ProfileHeader profil={profil} action={actions.length > 0 ? contact('header') : undefined} />
 			<div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 md:px-8">
 				<div className="grid grid-cols-12 gap-5">
 					<div className="col-span-12 flex min-w-0 flex-col items-start gap-5 md:col-span-4">
@@ -54,6 +70,8 @@ export function ProfileView({ profil, mesure = true }: { profil: PublicProfile; 
 					</div>
 				</div>
 			</div>
+			{/* Stuck to the bottom of the screen on a phone, and stopped by the end of the page: it never covers the footer. */}
+			{actions.length > 0 && contact('bar')}
 		</main>
 	)
 }

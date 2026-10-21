@@ -140,6 +140,11 @@ export interface PublicProfile {
 	pid: Pid | null
 	/** The name of the h1 (src/lib/profile/display-name.ts). */
 	nom: string
+	/**
+	 * Her first name, for the texts that speak of her (« Contacter Inès »); `null` when she gave none. The
+	 * pages fall back on `nom` then.
+	 */
+	firstName: string | null
 	/** The artist name under the h1, only when it adds something to the name (`displayedArtistName`). */
 	nomArtiste: string | null
 	specialite: string | null
@@ -164,6 +169,8 @@ export interface PublicProfile {
 	area: PublicArea | null
 	/** True when she gave a radius around her commune, or works in several countries. */
 	seDeplace: boolean
+	/** Her radius in km around her commune or her town abroad, or `null` (src/lib/format-zone.ts, `radiusKm`). */
+	radiusKm: number | null
 	/** The sections below hold only rows that say something, in the order she gave them. */
 	prestations: PublicServiceOffer[]
 	competences: string[]
@@ -538,6 +545,7 @@ export function publicProfileOf(
 		slug: profil.slug,
 		pid: pidDeLaPage(profil),
 		nom: name,
+		firstName: text(profil.firstName) || null,
 		nomArtiste: displayedArtistName(profil, name),
 		specialite: text(profil.specialty) || null,
 		zone: formatZone(zoneInput(profil)) || null,
@@ -549,6 +557,7 @@ export function publicProfileOf(
 		placePhrase: zoneSentence(zoneInput(profil)) || null,
 		area: areaOf(profil),
 		seDeplace: abroad ? place.seDeplace : municipality !== '' && radiusKm(profil.radiusKm) !== null,
+		radiusKm: radiusKm(profil.radiusKm),
 		prestations: serviceOffers(profil.serviceOffers),
 		competences: names(profil.skills),
 		langues: names(profil.languages),
