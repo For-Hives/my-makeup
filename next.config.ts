@@ -5,7 +5,6 @@ import type { NextConfig } from 'next'
 import { dashboardHeaders } from './src/lib/auth/dashboard-headers'
 import { mediaOrigin } from './src/lib/env'
 import { benchImages, mediaRemotePattern, securityHeaders } from './src/lib/security-headers'
-import { HOME_PAGE_PATH } from './src/lib/urls/home-page'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -50,12 +49,7 @@ const nextConfig: NextConfig = {
 	},
 	// The key file of IndexNow, `/<key>.txt` at the root (ticket 219), is answered by a route that reads
 	// INDEXNOW_KEY: it is no file of the repository. Only a 32-character hexadecimal name is rewritten.
-	// The home page `/` is served by a page of a dynamic segment, so that its HTML is kept in the cache of Next
-	// without being rendered at build (ticket 269, src/lib/urls/home-page.ts).
-	rewrites: async () => [
-		{ source: '/:key([0-9a-f]{32}).txt', destination: '/api/indexnow/:key' },
-		{ source: '/', destination: HOME_PAGE_PATH },
-	],
+	rewrites: async () => [{ source: '/:key([0-9a-f]{32}).txt', destination: '/api/indexnow/:key' }],
 	// Every path leaves with the security headers (src/lib/security-headers.ts). A ticket that
 	// needs a header on some paths adds its own entry after this one.
 	headers: async () => [

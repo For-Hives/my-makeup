@@ -1,6 +1,5 @@
 import { describe, expect, test } from 'bun:test'
 import { NextRequest } from 'next/server'
-import type { PageAnswer } from '@/lib/urls/unknown-page'
 import { proxy, unknownAddressProxy } from '@/proxy'
 
 /** Ticket 231, on the proxy: the lookup is made only for a plain pass-through, and a failure lets the page answer. */
@@ -10,11 +9,7 @@ const requestAlt = (chemin: string, methode = 'GET', entetes: Record<string, str
 	new NextRequest(`${SITE}${chemin}`, { method: methode, headers: entetes })
 
 /** The proxy as Next calls it, with a made-up lookup in place of the database. */
-async function respond(
-	chemin: string,
-	existe: (famille: string, segment: string) => Promise<PageAnswer>,
-	entetes = {}
-) {
+async function respond(chemin: string, existe: (famille: string, segment: string) => Promise<boolean>, entetes = {}) {
 	const request = requestAlt(chemin, 'GET', entetes)
 	const firstOne = proxy(request)
 	// A plain pass-through is the one answer the lookup may replace.
@@ -36,15 +31,6 @@ describe('une adresse inconnue sous /profil, /talent ou /blog', () => {
 		const response = await respond(chemin, async () => false)
 		expect(new URL(response.headers.get('x-middleware-rewrite') ?? '').pathname).toBe('/unknown-page')
 		expect(response.headers.get('x-robots-tag')).toBe('noindex')
-	})
-
-	test('l’ancienne adresse d’un profil répond un seul 308 vers son slug, sans passer par la page (269)', async () => {
-		const response = await respond('/profil/Zoe%20Lefevre?utm=1', async () => ({ vers: '/profil/zoe-lefevre' }))
-		expect(response.status).toBe(308)
-		const location = response.headers.get('location') ?? ''
-		expect(location).not.toContain(',')
-		expect(new URL(location).pathname).toBe('/profil/zoe-lefevre')
-		expect(new URL(location).search).toBe('?utm=1')
 	})
 
 	test('une page qui existe passe jusqu’à la page', async () => {

@@ -64,7 +64,7 @@ describe('aucune promesse retirée par CONF-01', () => {
 		const files = [
 			...filesOf(join(ROOT, 'src/components/home')),
 			...filesOf(join(ROOT, 'src/components/blocks')),
-			join(ROOT, 'src/app/(front)/(site)/home-cached/[key]/page.tsx'),
+			join(ROOT, 'src/app/(front)/(site)/page.tsx'),
 		]
 		expect(files.length).toBeGreaterThan(8)
 		const found = files.filter(fichier =>
