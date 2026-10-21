@@ -1,4 +1,5 @@
 import { APIError, type CollectionBeforeOperationHook } from 'payload'
+import { log } from './auth-log'
 
 /**
  * The hooks and flags of `pros` for the forgotten password (tickets 085 and 086).
@@ -17,4 +18,19 @@ export const closeForgotPasswordRestDoors: CollectionBeforeOperationHook = ({ op
 	if (req.payloadAPI !== 'REST') return
 	if (operation === 'forgotPassword' || operation === 'resetPassword')
 		throw new APIError('Cette opération passe par les pages du site.', 403, null, true)
+}
+
+/**
+ * The same closing for `admins` (ticket 272), plus one row of the journal for each refused request.
+ * The row holds a kind and a code only, never the address (the journal has no field for it), so
+ * a script that knocks leaves a trace without leaving an email.
+ */
+export const closeAdminForgotPasswordRestDoors: CollectionBeforeOperationHook = async ({ operation, req }) => {
+	if (req.payloadAPI !== 'REST') return
+	if (operation !== 'forgotPassword' && operation !== 'resetPassword') return
+	await log(req.payload, {
+		type: operation === 'forgotPassword' ? 'forgot-password' : 'password-reset',
+		code: 'inconnu',
+	})
+	throw new APIError('Cette opération n’est pas ouverte pour les comptes admin.', 403, null, true)
 }

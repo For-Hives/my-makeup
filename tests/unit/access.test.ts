@@ -220,7 +220,8 @@ describe('La collection admins (ticket 018)', () => {
 	})
 
 	test('la connexion est freinée par adresse, et une connexion réussie rend sa place (ticket 094)', () => {
-		expect(Admins.hooks?.beforeOperation).toHaveLength(1)
+		// The brake, then the closed forgotten-password doors (ticket 272).
+		expect(Admins.hooks?.beforeOperation).toHaveLength(2)
 		expect(Admins.hooks?.afterLogin).toHaveLength(1)
 	})
 

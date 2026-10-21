@@ -2,6 +2,7 @@ import { afterEach, describe, expect, setSystemTime, test } from 'bun:test'
 import { z } from 'zod'
 import { ADMIN_SESSION_DURATION_S } from '@/collections/Admins'
 import { createAccount } from '../support/account-factory'
+import { countMails, emptySink } from '../support/mailpit'
 import { emptyBase, testPayload } from '../support/payload-test'
 import { callRest } from '../support/rest'
 
@@ -182,5 +183,52 @@ describe('Le frein par adresse sur la connexion du back-office (ticket 094)', ()
 
 		expect(status).toBe(200)
 		expect(headers.get('set-cookie') ?? '').toStartWith('payload-token=')
+	})
+})
+
+describe('Mot de passe oublié des comptes admin : portes REST fermées (ticket 272)', () => {
+	afterEach(async () => {
+		await emptyBase()
+		await emptySink()
+	})
+
+	test('forgot-password et reset-password répondent 403, aucun mail ne part, même après 11 demandes', async () => {
+		const account = await createAccount('admin')
+		await emptySink()
+		const unknown = `inconnue-${crypto.randomUUID()}@example.test`
+
+		for (let i = 0; i < 11; i++) {
+			const r = await callRest('POST', '/api/admins/forgot-password', {
+				corps: { email: i % 2 ? account.email : unknown },
+				enTetes: { 'x-forwarded-for': '203.0.113.72' },
+			})
+			expect(r.statut).toBe(403)
+		}
+		const reset = await callRest('POST', '/api/admins/reset-password', {
+			corps: { token: 'a'.repeat(40), password: 'nouveau-mot-de-passe-fictif' },
+		})
+		expect(reset.statut).toBe(403)
+
+		expect(await countMails()).toBe(0)
+		const payload = await testPayload()
+		const line = await payload.findByID({ collection: 'admins', id: account.id, depth: 0, overrideAccess: true })
+		expect((line as { resetPasswordToken?: string | null }).resetPasswordToken ?? null).toBeNull()
+	})
+
+	test('le journal garde une ligne par demande refusée, sans adresse', async () => {
+		const account = await createAccount('admin')
+		const payload = await testPayload()
+		const count = async (type: 'forgot-password' | 'password-reset') =>
+			(await payload.count({ collection: 'auth-events', where: { type: { equals: type } } })).totalDocs
+		const [before, beforeReset] = [await count('forgot-password'), await count('password-reset')]
+
+		await callRest('POST', '/api/admins/forgot-password', { corps: { email: account.email } })
+		await callRest('POST', '/api/admins/forgot-password', { corps: { email: account.email } })
+		await callRest('POST', '/api/admins/reset-password', { corps: { token: 'b'.repeat(40), password: 'x'.repeat(14) } })
+
+		expect(await count('forgot-password')).toBe(before + 2)
+		expect(await count('password-reset')).toBe(beforeReset + 1)
+		const rows = await payload.find({ collection: 'auth-events', depth: 0, limit: 1000 })
+		expect(JSON.stringify(rows.docs)).not.toContain(account.email)
 	})
 })
