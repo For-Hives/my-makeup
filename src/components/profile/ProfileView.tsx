@@ -9,7 +9,6 @@ import { ProfileSection } from './ProfileSection'
 import {
 	CoursesSection,
 	LanguagesSection,
-	LocationSection,
 	SectionContacts,
 	SectionDescription,
 	SectionExperiences,
@@ -45,14 +44,6 @@ export function ProfileView({ profil, mesure = true }: { profil: PublicProfile; 
 			<div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 md:px-8">
 				<div className="grid grid-cols-12 gap-5">
 					<div className="col-span-12 flex min-w-0 flex-col items-start gap-5 md:col-span-4">
-						{profil.lieu && (
-							<LocationSection
-								lieu={profil.lieu}
-								seDeplace={profil.seDeplace}
-								zone={profil.zone}
-								flags={profil.flags}
-							/>
-						)}
 						{profil.liens.length > 0 && <SectionContacts liens={profil.liens} pid={profil.pid} mesure={mesure} />}
 						{profil.competences.length > 0 && <SkillsSection competences={profil.competences} />}
 						{profil.langues.length > 0 && <LanguagesSection langues={profil.langues} />}

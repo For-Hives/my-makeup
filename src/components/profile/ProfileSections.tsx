@@ -10,7 +10,6 @@ import type {
 import { CHANNEL_LABELS } from '@/lib/profile/public-view'
 import { ProfileSection } from './ProfileSection'
 import { TrackedContactLink } from './TrackedContactLink'
-import { ZoneText } from './ZoneText'
 
 /**
  * The cards of the page of a profile, one component each (ticket 102). They are server components
@@ -32,39 +31,8 @@ function Paragraphs({ lignes, className }: { lignes: readonly string[]; classNam
 
 export function SectionDescription({ lignes }: { lignes: readonly string[] }) {
 	return (
-		<ProfileSection titre="Vous en quelques mots">
+		<ProfileSection titre="À propos">
 			<Paragraphs lignes={lignes} className="text-gray-800" />
-		</ProfileSection>
-	)
-}
-
-export function LocationSection({
-	lieu,
-	seDeplace,
-	zone,
-	flags = [],
-}: {
-	lieu: string
-	seDeplace: boolean
-	zone: string | null
-	flags?: readonly string[]
-}) {
-	return (
-		<ProfileSection titre="Localisation & département">
-			<div className="flex flex-col gap-1">
-				<h3 className="font-semibold text-gray-700 text-lg">Localisation</h3>
-				<p className="break-words text-gray-800">
-					<ZoneText text={lieu} flags={flags} />
-				</p>
-			</div>
-			{seDeplace && zone && (
-				<div className="flex flex-col gap-1">
-					<h3 className="font-semibold text-gray-700 text-lg">Peut travailler chez vous à</h3>
-					<p className="break-words text-gray-800">
-						<ZoneText text={zone} flags={flags} />
-					</p>
-				</div>
-			)}
 		</ProfileSection>
 	)
 }
@@ -216,7 +184,7 @@ function PriceAndDescription({ element }: { element: PublicOption }) {
 						<p
 							// biome-ignore lint/suspicious/noArrayIndexKey: the lines are fixed text, never reordered
 							key={`${rang}-${ligne}`}
-							className="max-w-full whitespace-pre-line break-words rounded-full bg-gray-50 px-3 py-2 text-right text-gray-500 text-md italic"
+							className="max-w-full whitespace-pre-line break-words text-right font-semibold text-indigo-900 text-lg"
 						>
 							{ligne}
 						</p>
@@ -229,7 +197,7 @@ function PriceAndDescription({ element }: { element: PublicOption }) {
 
 export function ServiceOffersSection({ prestations }: { prestations: readonly PublicServiceOffer[] }) {
 	return (
-		<ProfileSection titre="Service(s) proposé(s)">
+		<ProfileSection titre="Prestations et tarifs">
 			<ul className="flex flex-col gap-8">
 				{prestations.map((prestation, rang) => (
 					// biome-ignore lint/suspicious/noArrayIndexKey: the rows never move

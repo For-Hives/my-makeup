@@ -22,7 +22,7 @@ function Dot({ disponible }: { disponible: boolean }) {
 			>
 				<circle cx={8} cy={8} r={6} />
 			</svg>
-			{disponible ? 'Disponible' : 'Indisponible'}
+			{disponible ? 'Prend de nouvelles dates' : 'Indisponible'}
 		</span>
 	)
 }

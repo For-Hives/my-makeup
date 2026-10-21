@@ -58,18 +58,18 @@ describe('E43 : l’en-tête du profil, dans le HTML du serveur', () => {
 		expect(html).toMatch(/<h1[^>]*>Inès Morel<\/h1>/)
 		expect(html).toContain('Maquillage mariage')
 		expect(html).toContain('Annecy et 30 km autour')
-		expect(html).toContain('Disponible')
-		expect(html).toContain('Vous en quelques mots')
+		expect(html).toContain('Prend de nouvelles dates')
+		expect(html).toContain('À propos')
 		expect(html).toContain('Maquilleuse professionnelle installée à Annecy')
 		expect(html).toContain('alt="Photo de Inès Morel"')
 		expect(html).toContain('Inès Morel Maquillage')
 	})
 
 	test('une disponibilité jamais posée compte comme disponible ; seul « false » dit indisponible', () => {
-		expect(renderNow(readType(type('disponibilite-inconnue')))).toContain('Disponible')
+		expect(renderNow(readType(type('disponibilite-inconnue')))).toContain('Prend de nouvelles dates')
 		const html = renderNow(readType(type('indisponible')))
 		expect(html).toContain('Indisponible')
-		expect(html).not.toMatch(/>Disponible</)
+		expect(html).not.toContain('Prend de nouvelles dates')
 	})
 
 	test('sans photo, la photo du site est montrée sans texte alternatif', () => {
@@ -84,7 +84,7 @@ describe('E43 : l’en-tête du profil, dans le HTML du serveur', () => {
 		const html = renderNow(readType(type('vide')))
 
 		expect(html).not.toMatch(FORBIDDEN_WORDS)
-		expect(html).not.toContain('Vous en quelques mots')
+		expect(html).not.toContain('À propos')
 		expect(html).not.toContain('km autour')
 		expect(html).not.toMatch(/<p[^>]*><\/p>/)
 	})
@@ -98,7 +98,7 @@ describe('E43 : l’en-tête du profil, dans le HTML du serveur', () => {
 	test('la description s’affiche une ligne par paragraphe, sans ligne vide', () => {
 		const html = renderNow(readType(type('reference'), { description: 'Première ligne.\n\n  \nDeuxième ligne.\nnull' }))
 
-		const section = html.slice(html.indexOf('Vous en quelques mots'))
+		const section = html.slice(html.indexOf('À propos'))
 		expect(section.slice(0, section.indexOf('</section>')).match(/<p /g)).toHaveLength(2)
 		expect(html).toContain('Première ligne.')
 		expect(html).toContain('Deuxième ligne.')
@@ -136,7 +136,7 @@ describe('E44 : les sections du profil', () => {
 	test('les prestations : prix formatés par la règle unique, options dans l’ordre', () => {
 		const html = renderNow(readType(type('reference')))
 
-		expect(html).toContain('Service(s) proposé(s)')
+		expect(html).toContain('Prestations et tarifs')
 		expect(html).toContain('Maquillage de la mariée')
 		expect(html).toContain('À partir de 180\u00a0€')
 		expect(html).toContain('60\u00a0€')
@@ -186,7 +186,14 @@ describe('E44 : les sections du profil', () => {
 			})
 		)
 
-		for (const title of ['Compétences', 'Langues', 'Formations', 'Expériences', 'Service(s)', 'Réseaux sociaux'])
+		for (const title of [
+			'Compétences',
+			'Langues',
+			'Formations',
+			'Expériences',
+			'Prestations et tarifs',
+			'Réseaux sociaux',
+		])
 			expect(html, title).not.toContain(title)
 		expect(html).not.toMatch(FORBIDDEN_WORDS)
 	})
@@ -253,6 +260,49 @@ describe('E44 : les sections du profil', () => {
 	})
 })
 
+describe('301 : la fiche parle à la cliente', () => {
+	const h2s = (html: string) => [...html.matchAll(/<h2[^>]*>([^<]*)<\/h2>/g)].map(match => match[1])
+
+	test('les nouveaux titres sont rendus, les anciens ne le sont plus', () => {
+		const html = renderNow(readType(type('reference')))
+
+		expect(h2s(html)).toContain('Prestations et tarifs')
+		expect(h2s(html)).toContain('À propos')
+		for (const old of ['Service(s) proposé(s)', 'Vous en quelques mots', 'Localisation', 'Peut travailler chez vous'])
+			expect(html, old).not.toContain(old)
+		expect(html).toContain('Prend de nouvelles dates')
+		expect(html).not.toMatch(/>Disponible</)
+	})
+
+	test('la carte « Localisation & département » (doublon de l’en-tête) est absente, la zone reste dans l’en-tête', () => {
+		for (const key of ['reference', 'textes-maximaux', 'ville-eloignee']) {
+			const html = renderNow(readType(type(key)))
+			expect(html, key).not.toContain('Localisation &amp; département')
+			expect(html.match(/km autour/g)?.length ?? 0, key).toBeLessThanOrEqual(1)
+		}
+		expect(renderNow(readType(type('reference')))).toContain('Annecy et 30 km autour')
+	})
+
+	test('un seul h1, les titres de section sont des h2, les noms de prestation des h3', () => {
+		const html = renderNow(readType(type('reference')))
+
+		expect(html.match(/<h1[\s>]/g)).toHaveLength(1)
+		expect(html.match(/<h2[\s>]/g)?.length).toBe(h2s(html).length)
+		expect(html).toMatch(/<h3[^>]*>Maquillage de la mariée<\/h3>/)
+		expect(html.indexOf('<h1')).toBeLessThan(html.indexOf('<h2'))
+	})
+
+	test('le prix est dans l’élément de la prestation, en indigo, au corps du nom de la prestation', () => {
+		const html = renderNow(readType(type('reference')))
+		const offer = html.slice(html.indexOf('Maquillage de la mariée'), html.indexOf('Maquillage des invitées'))
+
+		expect(offer).toMatch(/<p[^>]*text-indigo-900[^>]*text-lg[^>]*>À partir de 180\u00a0€<\/p>/)
+		expect(offer).not.toContain('italic text-md')
+		// The name of the offer is at the same size.
+		expect(html).toMatch(/<h3[^>]*text-lg[^>]*>Maquillage de la mariée<\/h3>/)
+	})
+})
+
 describe('E44 : le portfolio', () => {
 	test('six photos, chacune avec son texte alternatif, dans l’ordre donné', () => {
 		const html = renderNow(readType(type('reference')))
@@ -293,8 +343,8 @@ describe('264 : la zone hors de France sur la page du profil', () => {
 		const html = renderNow(readType(zoneType('zone-belgique'), { radiusKm: 30 }))
 
 		expect(html).toContain('<span aria-hidden="true">🇧🇪</span> Bruxelles (Belgique) et 30 km autour')
-		// The section of the location says it too, once for the place and once for the area.
-		expect(html).toContain('<span aria-hidden="true">🇧🇪</span> Bruxelles (Belgique)</p>')
+		// The card of the location is gone (ticket 301): the header is the only place that says it.
+		expect(html.match(/🇧🇪/g)).toHaveLength(1)
 		expect(withoutDecoration(html)).not.toMatch(REGIONAL_INDICATORS)
 		expect(withoutDecoration(html)).toContain('Bruxelles (Belgique) et 30 km autour')
 	})

@@ -195,6 +195,11 @@
 			"id": "une-fiche-de-maquilleuse-a-un-bouton-contacter-un-appui-o",
 			"type": "amelioration",
 			"text": "Une fiche de maquilleuse a un bouton « Contacter » : un appui ouvre appeler, écrire, Instagram ou son site, sur téléphone comme sur ordinateur."
+		},
+		{
+			"id": "la-fiche-d-une-maquilleuse-a-des-titres-plus-clairs-prest",
+			"type": "amelioration",
+			"text": "La fiche d'une maquilleuse a des titres plus clairs (« Prestations et tarifs », « À propos »), ses tarifs sont mis en avant, et le doublon de la zone a disparu."
 		}
 	],
 	"releases": []
