@@ -292,8 +292,10 @@ describe('Avant le premier test ou essai, une base que les migrations n’ont pa
 
 describe('La migration de la zone (ticket 259) : des ajouts seulement, sur une base déjà remplie', () => {
 	const zone = migrations.find(({ name }) => name.endsWith('_zone_countries_postal_codes'))
-	// The migration after it (ticket 275) is taken back first and played again last, so that the zone's own down is checked alone.
-	const objectMissing = migrations.find(({ name }) => name.endsWith('_media_object_missing'))
+	// Every migration after it (ticket 275 and the next ones) is taken back first, in reverse order, and played again
+	// last, so that the zone's own up and down are checked alone and a later migration needs no edit here.
+	const zoneIndex = migrations.findIndex(({ name }) => name.endsWith('_zone_countries_postal_codes'))
+	const later = migrations.slice(zoneIndex + 1)
 
 	/** What the rule stores of each profile, read from the table itself: nothing the migration adds. */
 	async function profileStates() {
@@ -309,7 +311,7 @@ describe('La migration de la zone (ticket 259) : des ajouts seulement, sur une b
 	})
 
 	test('jouée sur le jeu du banc : rien d’existant ne change, chaque profil est de type city, et son down retire ses seuls objets', async () => {
-		if (!zone || !objectMissing) throw new Error('la migration de la zone manque')
+		if (!zone) throw new Error('la migration de la zone manque')
 		const args = { db: payload.db.drizzle, payload, req: {} as never }
 		try {
 			await eraseSchema()
@@ -318,13 +320,16 @@ describe('La migration de la zone (ticket 259) : des ajouts seulement, sur une b
 			const afterInit = await baseSchema()
 			expect(await runMigrations(payload, migrations, 'test')).toEqual(NAMES.filter(name => name !== INIT))
 			const afterZone = await baseSchema()
+			for (const migration of [...later].reverse()) await migration.down(args)
+			const zoneOnly = await baseSchema()
+			for (const migration of later) await migration.up(args)
+			expect(await baseSchema()).toEqual(afterZone)
 
 			// Additions only: every column, index, constraint and type of init is still there, as it was.
 			for (const line of afterInit) expect(afterZone, line).toContain(line)
-			const added = afterZone.filter(line => !afterInit.includes(line))
+			const added = zoneOnly.filter(line => !afterInit.includes(line))
 			expect(added.length).toBeGreaterThan(0)
-			for (const line of added)
-				expect(line, line).toMatch(/zone_kind|zone_review|profiles\.town|profiles_texts|media\.object_missing/)
+			for (const line of added) expect(line, line).toMatch(/zone_kind|zone_review|profiles\.town|profiles_texts/)
 
 			// The set of the bench is loaded on the schema of the code, then the migration is played back
 			// on a table that holds its profiles: down, then up again.
@@ -350,13 +355,13 @@ describe('La migration de la zone (ticket 259) : des ajouts seulement, sur une b
 				})
 			}
 
-			await objectMissing.down(args)
+			for (const migration of [...later].reverse()) await migration.down(args)
 			await zone.down(args)
 			expect(await baseSchema()).toEqual(afterInit)
 			expect(await profileStates()).toEqual(before)
 
 			await zone.up(args)
-			await objectMissing.up(args)
+			for (const migration of later) await migration.up(args)
 			expect(await baseSchema()).toEqual(afterZone)
 			expect(await profileStates()).toEqual(before)
 			const kinds = await payload.db.pool.query('SELECT DISTINCT zone_kind FROM profiles')

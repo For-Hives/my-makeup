@@ -414,7 +414,7 @@ describe('le rapport', () => {
 			'Cible : une base de ce poste.',
 			'',
 			'Talents : 4 à la source ; 2 créations, 1 mise à jour, 0 inchangé, 1 refusé',
-			'  - refusé : 4 (slug-en-double : slug)',
+			'  - refusé : identifiant 4 (slug-en-double : slug)',
 			'  - dans la cible, absents de la source, gardés : 1 (9)',
 			'',
 			'Écarts voulus : aucun.',

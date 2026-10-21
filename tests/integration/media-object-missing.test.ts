@@ -2,7 +2,9 @@ import { afterEach, describe, expect, setDefaultTimeout, test } from 'bun:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { ProfileView } from '@/components/profile/ProfileView'
+import type { DashboardUser } from '@/lib/dashboard/my-profile'
 import { readDashboardPhotos } from '@/lib/dashboard/photos'
+import { savePortfolio } from '@/lib/dashboard/save-portfolio'
 import { listProfiles, readProfilePreview, readPublicProfile } from '@/services/public/profiles'
 import { createAccount } from '../support/account-factory'
 import { ANNECY } from '../support/completeness-cases'
@@ -103,5 +105,33 @@ describe('le média marqué sans objet', () => {
 
 		expect(profile.mainPicture).not.toBeNull()
 		expect(profile.completeness).toBeGreaterThan(0)
+	})
+
+	test('une photo de galerie marquée : absente de la galerie publique et de son espace, retirée à son prochain enregistrement', async () => {
+		const { payload, profile, media } = await artistWithLostPhoto()
+		await payload.update({
+			collection: 'profiles',
+			id: profile.id,
+			data: { gallery: [media.id] },
+			overrideAccess: true,
+		})
+		const stored = await payload.findByID({ collection: 'profiles', id: profile.id, depth: 0 })
+
+		expect((await readPublicProfile(payload, profile.slug ?? ''))?.galerie).toEqual([])
+		expect((await readDashboardPhotos(payload, stored)).galerie).toEqual([])
+
+		// Accepted: the gallery is replaced by the list her editor sends, which cannot hold a photo it does not show.
+		const pro = await payload.findByID({
+			collection: 'pros',
+			id: profile.pro as number,
+			depth: 0,
+			overrideAccess: true,
+		})
+		const user = { ...pro, collection: 'pros' } as DashboardUser
+		const result = await savePortfolio(payload, user, { galerie: [] })
+
+		expect(result.ok).toBe(true)
+		const after = await payload.findByID({ collection: 'profiles', id: profile.id, depth: 0 })
+		expect(after.gallery ?? []).toEqual([])
 	})
 })

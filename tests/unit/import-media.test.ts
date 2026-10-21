@@ -437,6 +437,35 @@ describe('le rapport des fichiers et des photos', () => {
 		).toContain('  - non adoptés (pas-une-image) : 2 (5, 6)')
 	})
 
+	test('la ligne des prix dit « aucun » pour une liste vide et compte une liste pleine', () => {
+		const media = report.collections.media
+		if (!media) throw new Error('fixture without media')
+		const priceLine = (lostPricedOffers: number[]): string | undefined =>
+			reportAsText({
+				...report,
+				collections: {
+					...report.collections,
+					media: {
+						...media,
+						prices: {
+							prices: 7,
+							withAmount: 2,
+							freeTexts: 3,
+							withoutText: 2,
+							profilesWithPricedOffer: 1,
+							lostPricedOffers,
+							unreadDigits: [],
+						},
+					},
+				},
+			})
+				.split('\n')
+				.find(line => line.includes('offre chiffrée perdue'))
+
+		expect(priceLine([])).toEndWith('offre chiffrée perdue : aucun')
+		expect(priceLine([3, 5])).toEndWith('offre chiffrée perdue : 2 (3, 5)')
+	})
+
 	test('un fichier refusé (adresse hors de la base, deux comptes) attend une décision : code 5', () => {
 		const media = report.collections.media
 		const refuse: Report = {
@@ -450,7 +479,7 @@ describe('le rapport des fichiers et des photos', () => {
 			},
 		}
 
-		expect(reportAsText(refuse)).toContain('  - refusé : 110 (plusieurs-proprietaires : owner)')
+		expect(reportAsText(refuse)).toContain('  - refusé : identifiant 110 (plusieurs-proprietaires : owner)')
 		expect(exitCode(refuse)).toBe(5)
 	})
 })

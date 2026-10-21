@@ -197,7 +197,7 @@ function summaryRow(nom: string, bilan: CollectionSummary, mode: Mode): string[]
 	]
 	for (const refusal of bilan.refused)
 		rows.push(
-			`  - refusé : ${refusal.strapiId} (${refusal.reason}${refusal.fields?.length ? ` : ${refusal.fields.join(', ')}` : ''})`
+			`  - refusé : identifiant ${refusal.strapiId} (${refusal.reason}${refusal.fields?.length ? ` : ${refusal.fields.join(', ')}` : ''})`
 		)
 	if (bilan.extra.length > 0) rows.push(`  - dans la cible, absents de la source, gardés : ${ids(bilan.extra)}`)
 	if (bilan.excluded?.length) rows.push(`  - écartés par la table de décision : ${ids(bilan.excluded)}`)
