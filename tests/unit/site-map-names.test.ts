@@ -105,3 +105,24 @@ describe('299 : un nom réel dans le titre, le JSON-LD et le sitemap, et des cha
 		}
 	})
 })
+
+describe('299 : les états vide et erreur du plan du site', () => {
+	test('sans profil, sans talent ni article : les pages fixes restent, aucune section vide', () => {
+		const html = renderToStaticMarkup(SiteMapBody({ profils: [], talents: [], articles: [] }))
+		expect(html).toContain('<h3>')
+		expect(html).not.toContain('plan-des-profils')
+		expect(html).not.toContain('<h3>Maquilleuses</h3>')
+		expect(html).not.toContain('<h3>Talents</h3>')
+		expect(html).not.toContain('<h3>Blog</h3>')
+		expect(html).not.toContain('<ul></ul>')
+	})
+
+	test('si la base échoue, la lecture lève : le plan ne montre jamais une liste coupée', async () => {
+		const failing = {
+			find: async () => {
+				throw new Error('base indisponible')
+			},
+		} as unknown as Payload
+		await expect(readIndexablePages(failing)).rejects.toThrow('base indisponible')
+	})
+})
