@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page, test } from '@playwright/test'
+import { NO_PROFILE_CONTEXT } from '../../src/collections/Profiles'
 import { createAccount } from '../support/account-factory'
 import { violationsSevere } from '../support/axe'
 import { testPayload } from '../support/payload-test'
@@ -137,6 +138,81 @@ async function keepActions(page: Page) {
 	}
 }
 
+/** Signs in by the form, from the sign-in page with the given `callbackUrl` (none: the page by itself). */
+async function signInFrom(page: Page, email: string, callbackUrl?: string) {
+	await page.goto(
+		callbackUrl === undefined ? '/auth/signin' : `/auth/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`
+	)
+	await page.waitForLoadState('networkidle')
+	await page.getByLabel('Adresse email').fill(email)
+	await page.getByLabel('Mot de passe').fill(PASSWORD)
+	await page.getByRole('button', { name: 'Se connecter' }).click()
+}
+
+test.describe('ticket 296 : revenir avec un profil encore vide', { tag: '@mobile' }, () => {
+	test('« Me connecter » sans lien précis, ou depuis son espace fermé : l’accueil, sans cycle', async ({ page }) => {
+		const email = await newAccount()
+		await signInFrom(page, email)
+		await expect(page).toHaveURL(/\/auth\/init-account$/)
+		await expect(title(page)).toHaveText('Ton identité')
+		// Signed out, the closed space asks for the same sign-in: the same arrival.
+		await page.context().clearCookies()
+		await signInFrom(page, email, '/auth/profil')
+		await expect(page).toHaveURL(/\/auth\/init-account$/)
+		await expect(title(page)).toHaveText('Ton identité')
+	})
+
+	test('un lien précis vers une page privée est respecté', async ({ page }) => {
+		const email = await newAccount()
+		await signInFrom(page, email, '/auth/apercu-profil')
+		await expect(page).toHaveURL(/\/auth\/apercu-profil$/)
+	})
+
+	test('un compte repris sans profil : l’accueil, et le profil est créé', async ({ page }) => {
+		const email = `accueil-${crypto.randomUUID()}@example.test`
+		const payload = await testPayload()
+		await payload.create({
+			collection: 'pros',
+			data: { email, password: PASSWORD, name: `Sans profil ${randomInLetters()}`, _verified: true },
+			context: NO_PROFILE_CONTEXT,
+			disableVerificationEmail: true,
+			overrideAccess: true,
+		})
+		created.push(email)
+		await signInFrom(page, email)
+		await expect(page).toHaveURL(/\/auth\/init-account$/)
+		await expect(title(page)).toHaveText('Ton identité')
+		expect((await profileOf(email)).id).toBeGreaterThan(0)
+	})
+
+	test('dans l’espace, le bandeau compte les étapes qui restent et « Reprendre » mène à la première', async ({
+		page,
+	}) => {
+		const email = await newAccount()
+		const profile = await profileOf(email)
+		const payload = await testPayload()
+		await payload.update({
+			collection: 'profiles',
+			id: profile.id,
+			data: { firstName: 'Léa', lastName: 'Fictive', specialty: 'Mariée' },
+			overrideAccess: true,
+		})
+		await signInFrom(page, email, '/auth/profil')
+		// Two steps remain, so she is offered the onboarding; the space is reached by its own address.
+		await expect(page).toHaveURL(/\/auth\/init-account$/)
+		await expect(title(page)).toHaveText('Ta zone')
+		await page.goto('/auth/profil')
+		const banner = page.getByTestId('bandeau-accueil')
+		await expect(banner).toContainText('Il te reste 2 étapes pour être visible.')
+		await expect(banner).toHaveAttribute('data-premiere', '2')
+		await takeScreenshot(page, 'bandeau')
+		await press(banner.getByRole('link', { name: /Reprendre/ }))
+		await expect(page).toHaveURL(/\/auth\/init-account$/)
+		await expect(title(page)).toHaveText('Ta zone')
+		expect(await violationsAfterTitle(page)).toEqual([])
+	})
+})
+
 test.describe('E02 : l’accueil en trois étapes', { tag: '@mobile' }, () => {
 	test('identité, zone, photo : profil actif, arrivée dans l’espace', async ({ page }) => {
 		test.setTimeout(150_000)
@@ -188,7 +264,8 @@ test.describe('E02 : l’accueil en trois étapes', { tag: '@mobile' }, () => {
 		expect(profile.active).toBe(true)
 		expect(profile.status).toBe('published')
 
-		// The onboarding has nothing left for an active profile.
+		// The onboarding has nothing left for an active profile, and the banner of the steps is gone (ticket 296).
+		await expect(page.getByTestId('bandeau-accueil')).toHaveCount(0)
 		await page.goto(PAGE)
 		await expect(page).toHaveURL(/\/auth\/profil$/)
 	})

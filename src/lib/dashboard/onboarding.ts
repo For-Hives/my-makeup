@@ -34,6 +34,16 @@ export const STEPS_NAMES: Readonly<Record<OnboardingStep, string>> = {
 	3: 'Photo',
 }
 
+/** Which of the three steps her stored profile has done, by the single rule of a profile. */
+export function stepsDone(profil: ProfileDocument | null | undefined): Readonly<Record<OnboardingStep, boolean>> {
+	const reading = completeness(profileFields(profil))
+	return {
+		1: !reading.manquants.includes('nom') && reading.conditions.specialite,
+		2: reading.conditions.villeExploitable,
+		3: reading.conditions.photoPrincipale,
+	}
+}
+
 /**
  * The first step her stored profile has not done yet, or `terminee`:
  * 1. her first and last name and a speciality;
@@ -42,11 +52,22 @@ export const STEPS_NAMES: Readonly<Record<OnboardingStep, string>> = {
  * A profile that holds the three is `actif` by the single rule.
  */
 export function onboardingPosition(profil: ProfileDocument | null | undefined): OnboardingPosition {
-	const reading = completeness(profileFields(profil))
-	if (reading.manquants.includes('nom') || !reading.conditions.specialite) return 1
-	if (!reading.conditions.villeExploitable) return 2
-	if (!reading.conditions.photoPrincipale) return 3
-	return 'terminee'
+	const done = stepsDone(profil)
+	return STEPS.find(step => !done[step]) ?? 'terminee'
+}
+
+/**
+ * What the onboarding still has to do for this profile (ticket 296): how many of the three steps are
+ * not done, and the first of them, where « Reprendre » leads. `reste` is 0 and `premiere` null when all
+ * three are done; a profile that is not stored yet (`null`) has all three left.
+ */
+export function remainingSteps(profil: ProfileDocument | null | undefined): {
+	readonly reste: number
+	readonly premiere: OnboardingStep | null
+} {
+	const done = stepsDone(profil)
+	const left = STEPS.filter(step => !done[step])
+	return { reste: left.length, premiere: left[0] ?? null }
 }
 
 /** The message under the speciality, which the onboarding asks for and the space leaves optional. */

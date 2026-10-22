@@ -225,6 +225,11 @@
 			"id": "dans-ton-espace-le-message-d-accueil-te-salue-par-ton-pre",
 			"type": "correction",
 			"text": "Dans ton espace, le message d'accueil te salue par ton prénom au lieu de « Bonjour toi »."
+		},
+		{
+			"id": "quand-tu-reviens-te-connecter-avec-un-profil-encore-vide",
+			"type": "amelioration",
+			"text": "Quand tu reviens te connecter avec un profil encore vide, on te propose tout de suite l’accueil en trois étapes, et ton espace te dit combien d’étapes il te reste pour être visible."
 		}
 	],
 	"releases": []

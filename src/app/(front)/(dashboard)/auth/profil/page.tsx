@@ -10,6 +10,7 @@ import { IdentityEditor } from '@/components/dashboard/IdentityEditor'
 import { CoursesEditor, ExperiencesEditor, ServiceOffersEditor } from '@/components/dashboard/ListsEditors'
 import { LocationEditor } from '@/components/dashboard/LocationEditor'
 import { NetworksEditor } from '@/components/dashboard/NetworksEditor'
+import { OnboardingBanner } from '@/components/dashboard/OnboardingBanner'
 import { PhotoEditor } from '@/components/dashboard/PhotoEditor'
 import { PortfolioEditor } from '@/components/dashboard/PortfolioEditor'
 import { ProfileProgress } from '@/components/dashboard/ProfileProgress'
@@ -28,6 +29,7 @@ import { greetingName } from '@/lib/dashboard/greeting'
 import { profileRows } from '@/lib/dashboard/list'
 import { locationValues } from '@/lib/dashboard/location'
 import { artistProfile } from '@/lib/dashboard/my-profile'
+import { remainingSteps } from '@/lib/dashboard/onboarding'
 import { readDashboardPhotos } from '@/lib/dashboard/photos'
 import { PREVIEW_PATH } from '@/lib/dashboard/preview'
 import { profileProgress } from '@/lib/dashboard/progress'
@@ -69,6 +71,10 @@ export default async function ProfilePage() {
 	// An account that came without a profile (some accounts of the old site) gets one in the onboarding (ticket 140).
 	if (context === null || profile === null) return redirect(ACCOUNT_ONBOARDING_PAGE)
 	const photos = await readDashboardPhotos(context.payload, profile)
+	const progress = profileProgress(profile)
+	const steps = remainingSteps(profile)
+	// Not for a page the team hid, nor for the team's own account: the onboarding is not their next step.
+	const showBanner = steps.premiere !== null && progress.etat !== 'masque' && progress.etat !== 'interne'
 
 	return (
 		<main className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-8">
@@ -85,7 +91,10 @@ export default async function ProfilePage() {
 					>
 						Voir mon profil public
 					</ViewLink>
-					<ProfileProgress avancement={profileProgress(profile)} reprendre={saveMyAvailability} />
+					{showBanner && steps.premiere !== null ? (
+						<OnboardingBanner reste={steps.reste} premiere={steps.premiere} />
+					) : null}
+					<ProfileProgress avancement={progress} reprendre={saveMyAvailability} />
 					{profileCards(profile, photos).map(carte => (
 						<SectionCard
 							key={carte.section}
