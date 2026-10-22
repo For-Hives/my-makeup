@@ -14,6 +14,7 @@ with-secret cloudflare -- bun run media:backup -- --lifecycle --apply    # pose,
 - La règle s'appelle `Erase the bin after 30 days` : préfixe `deleted/`, suppression après 30 jours (`PHOTO_ERASURE_DAYS`, 2 592 000 s). Aucun objet hors de `deleted/` n'est dans son périmètre.
 - L'API pose la liste **entière** des règles d'un coup. L'outil relit les règles du compartiment, y ajoute la sienne et renvoie le tout : la règle `Default Multipart Abort` reste telle quelle. Après la pose, il relit la liste et vérifie que la règle est celle voulue et que **toutes les autres sont identiques** (code de sortie 1 sinon).
 - Si une autre règle active supprime des objets hors de `deleted/`, l'outil ne pose rien et la nomme.
+- Relevé du 22/10/2026 (lecture seule, `GET` des règles du compartiment `my-makeup`) : une seule règle, `Default Multipart Abort Rule` (active, sans préfixe, abandon des envois fragmentés après 604 800 s) ; `--lifecycle` répond `action: add`, aucune règle dangereuse. Le corps que la pose enverra : `[{"id":"Default Multipart Abort Rule",…inchangée…},{"id":"Erase the bin after 30 days","enabled":true,"conditions":{"prefix":"deleted/"},"deleteObjectsTransition":{"condition":{"maxAge":2592000,"type":"Age"}}}]`.
 - Poser la règle demande l'accord d'Andy. À recopier ici après la pose (relecture par `GET`) : *à faire, la règle n'est pas encore posée sur le compartiment réel.*
 
 ## 2. La copie quotidienne
