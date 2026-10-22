@@ -24,6 +24,7 @@ import { profileCards } from '@/lib/dashboard/cards'
 import { COURSES } from '@/lib/dashboard/courses'
 import { confirmationMode } from '@/lib/dashboard/deletion-confirmation'
 import { EXPERIENCES } from '@/lib/dashboard/experiences'
+import { greetingName } from '@/lib/dashboard/greeting'
 import { profileRows } from '@/lib/dashboard/list'
 import { locationValues } from '@/lib/dashboard/location'
 import { artistProfile } from '@/lib/dashboard/my-profile'
@@ -73,7 +74,7 @@ export default async function ProfilePage() {
 		<main className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-8">
 			<h1 className="font-semibold text-3xl">Mon espace</h1>
 			<RefreshSession expire={artist.expire} />
-			<p>Bonjour {text(artist.nom) || 'toi'}, tu es connectée.</p>
+			<p>Bonjour {greetingName({ firstName: profile.firstName, accountName: artist.name })}, tu es connectée.</p>
 			{profile === null ? null : (
 				<>
 					<ViewLink

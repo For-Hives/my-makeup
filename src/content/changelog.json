@@ -210,6 +210,11 @@
 			"id": "la-recherche-range-en-fin-de-liste-les-maquilleuses-qui-n",
 			"type": "amelioration",
 			"text": "La recherche range en fin de liste les maquilleuses qui n’ont pas encore indiqué de coordonnées, et les conditions d’utilisation ne parlent plus d’un formulaire de devis qui n’existe pas."
+		},
+		{
+			"id": "dans-ton-espace-le-message-d-accueil-te-salue-par-ton-pre",
+			"type": "correction",
+			"text": "Dans ton espace, le message d'accueil te salue par ton prénom au lieu de « Bonjour toi »."
 		}
 	],
 	"releases": []
