@@ -313,12 +313,21 @@ test.describe('E02 : l’accueil en trois étapes', { tag: '@mobile' }, () => {
 
 		const field = page.getByRole('combobox', { name: 'Où travailles-tu ?' })
 		const choose = page.getByRole('button', { name: 'Choisir un pays' })
+		await takeScreenshot(page, 'etape-2-normal')
 		await field.fill('Genève')
 		await expect(page.getByText('Pas de commune française de ce nom.')).toBeVisible()
 		await expect(choose).toBeVisible()
 		await takeScreenshot(page, 'etape-2-aucune-commune')
 		const box = await choose.boundingBox()
 		expect(box?.height ?? 0).toBeGreaterThanOrEqual(44)
+		expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+		expect(await violationsAfterTitle(page)).toEqual([])
+
+		// Error state: « Suivant » with a text that is no commune says so, and the way out stays there.
+		await press(page.getByRole('button', { name: 'Suivant' }))
+		await expect(page.getByText('Choisis ta commune dans la liste')).toBeVisible()
+		await expect(choose).toBeVisible()
+		await takeScreenshot(page, 'etape-2-erreur')
 		expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 		expect(await violationsAfterTitle(page)).toEqual([])
 
