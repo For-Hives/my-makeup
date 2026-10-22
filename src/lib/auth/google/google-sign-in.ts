@@ -1,5 +1,6 @@
 import { timingSafeEqual } from 'node:crypto'
 import type { Payload } from 'payload'
+import { googleSignInDestination } from '../../dashboard/sign-in-destination'
 import type { EventCode, Log } from '../auth-log'
 import type { GoogleErrorCode } from '../errors'
 import { googleCallbackRateLimit, type RateLimit } from '../rate-limit'
@@ -170,6 +171,8 @@ export async function finishGoogleSignIn({
 		ok: true,
 		token,
 		nouveau: account.nouveau,
-		destination: account.nouveau ? ACCOUNT_ONBOARDING_PAGE : request.retour,
+		destination: account.nouveau
+			? ACCOUNT_ONBOARDING_PAGE
+			: await googleSignInDestination(payload, account.id, request.retour),
 	}
 }

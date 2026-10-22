@@ -33,6 +33,16 @@ export function safeReturnTo(brut: unknown, origine: string, defaut: string = DE
 	}
 }
 
+/**
+ * Where a successful sign-in leads (ticket 296). A makeup artist who asked for no precise page (none, or
+ * her space itself, which is what a closed page of her space asks for) and whose onboarding is not
+ * done lands on the onboarding, so a profile still empty is offered the three steps. A precise page
+ * (a private page other than her space) is always respected: nothing is forced against a link.
+ */
+export function destinationAfterSignIn(returnTo: string, onboardingToDo: boolean): string {
+	return returnTo === DEFAULT_DASHBOARD && onboardingToDo ? ACCOUNT_ONBOARDING_PAGE : returnTo
+}
+
 /** The sign-in page that brings the visitor back to `chemin` (path and query of the closed page). */
 export const signInUrl = (chemin: string): string => `${SIGN_IN_PAGE}?callbackUrl=${encodeURIComponent(chemin)}`
 

@@ -1,6 +1,7 @@
 import { expect, type Locator, test } from '@playwright/test'
 import { createAccount, type TestAccount } from '../support/account-factory'
 import { violationsSevere } from '../support/axe'
+import { openFurtherCards } from '../support/further-cards'
 import { testPayload } from '../support/payload-test'
 
 /**
@@ -63,6 +64,7 @@ test.describe('E21, E23, E24, E27 : la zone et les listes de lignes, de bout en 
 	}) => {
 		const { id } = await artist(context)
 		await page.goto('/auth/profil')
+		await openFurtherCards(page)
 		await press(page.getByRole('button', { name: 'Modifier ma localisation', exact: true }))
 		const dialog = page.getByRole('dialog')
 		await dialog.getByRole('combobox', { name: 'Où travailles-tu ?' }).fill('Lille')
@@ -78,12 +80,14 @@ test.describe('E21, E23, E24, E27 : la zone et les listes de lignes, de bout en 
 		expect(profile.radiusKm).toBe(35)
 
 		await page.reload()
+		await openFurtherCards(page)
 		await expect(page.getByTestId('carte-localisation')).toContainText('Lille')
 	})
 
 	test('E23 : une formation ajoutée, enregistrée, relue après rechargement', async ({ context, page }) => {
 		const { id } = await artist(context)
 		await page.goto('/auth/profil')
+		await openFurtherCards(page)
 		await press(page.getByRole('button', { name: 'Modifier mes formations', exact: true }))
 		const dialog = page.getByRole('dialog')
 		await dialog.getByLabel('Diplôme', { exact: true }).fill('CAP esthétique')
@@ -102,6 +106,7 @@ test.describe('E21, E23, E24, E27 : la zone et les listes de lignes, de bout en 
 		expect(rows[0]?.graduatedAt?.slice(0, 10)).toBe('2018-06-30')
 
 		await page.reload()
+		await openFurtherCards(page)
 		await expect(page.getByTestId('carte-formations')).toContainText('CAP esthétique - École Fictive')
 	})
 
@@ -111,6 +116,7 @@ test.describe('E21, E23, E24, E27 : la zone et les listes de lignes, de bout en 
 	}) => {
 		const { id } = await artist(context)
 		await page.goto('/auth/profil')
+		await openFurtherCards(page)
 		await press(page.getByRole('button', { name: 'Modifier mes expériences', exact: true }))
 		const dialog = page.getByRole('dialog')
 		await dialog.getByLabel('Poste', { exact: true }).fill('Maquilleuse')
@@ -139,6 +145,7 @@ test.describe('E21, E23, E24, E27 : la zone et les listes de lignes, de bout en 
 		expect(rows[0]?.endDate ?? null).toBeNull()
 
 		await page.reload()
+		await openFurtherCards(page)
 		await expect(page.getByTestId('carte-experiences')).toContainText('Maquilleuse - Studio Fictif')
 	})
 
@@ -148,6 +155,7 @@ test.describe('E21, E23, E24, E27 : la zone et les listes de lignes, de bout en 
 	}) => {
 		const { id } = await artist(context)
 		await page.goto('/auth/profil')
+		await openFurtherCards(page)
 		await press(page.getByRole('button', { name: 'Modifier mes prestations', exact: true }))
 		const dialog = page.getByRole('dialog')
 		await dialog.locator('#serviceOffers-name').fill('Maquillage de soirée')
@@ -173,6 +181,7 @@ test.describe('E21, E23, E24, E27 : la zone et les listes de lignes, de bout en 
 		expect((offers[0]?.options ?? []).map(({ name }) => name)).toEqual(['Essai avant le jour J'])
 
 		await page.reload()
+		await openFurtherCards(page)
 		await expect(page.getByTestId('carte-prestations')).toContainText('Maquillage de soirée')
 	})
 })

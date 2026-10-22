@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { createAccount } from '../support/account-factory'
+import { activateProfile } from '../support/active-profile'
 
 /**
  * The closed pages of the space (ticket 075; plan 02 E09, E16): one redirection without a session,
@@ -131,6 +132,7 @@ test.describe('E09 : le retour après la connexion', () => {
 
 	test('un retour vers un autre site est ignoré', async ({ page }) => {
 		const account = await createAccount('maquilleuse', { motDePasse: () => PASSWORD })
+		await activateProfile(account.id)
 
 		for (const returned of ['https://evil.example/', '//evil.example']) {
 			await page.context().clearCookies()
@@ -144,6 +146,7 @@ test.describe('E09 : le retour après la connexion', () => {
 
 	test('déjà connectée, un retour à segment de points ne mène pas vers un autre site', async ({ page }) => {
 		const account = await createAccount('maquilleuse', { motDePasse: () => PASSWORD })
+		await activateProfile(account.id)
 		await page.goto('/auth/signin')
 		await page.getByLabel('Adresse email').fill(account.email)
 		await page.getByLabel('Mot de passe').fill(PASSWORD)

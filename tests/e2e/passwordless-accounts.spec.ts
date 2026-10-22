@@ -1,5 +1,6 @@
 import { type BrowserContext, expect, type Page, test } from '@playwright/test'
 import { createAccount } from '../support/account-factory'
+import { activateProfile } from '../support/active-profile'
 import { fakeGoogle } from '../support/fake-google'
 import { waitMail } from '../support/mailpit'
 import { testPayload } from '../support/payload-test'
@@ -84,6 +85,7 @@ test.describe('E74 : un compte sans mot de passe en définit un', () => {
 		page,
 	}) => {
 		const account = await createAccount('reprise-google')
+		await activateProfile(account.id)
 		const before = await profiles(account.id)
 		await context.clearCookies()
 
@@ -104,6 +106,7 @@ test.describe('E74 : un compte sans mot de passe en définit un', () => {
 		page,
 	}) => {
 		const account = await createAccount('reprise-facebook')
+		await activateProfile(account.id)
 		const before = await profiles(account.id)
 		expect(before).toHaveLength(1)
 

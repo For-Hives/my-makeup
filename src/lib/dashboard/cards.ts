@@ -18,23 +18,36 @@ import { AVAILABLE_TEXT, isAvailable, OUT_OF_SEARCH_TEXT, UNAVAILABLE_TEXT } fro
 import { longDate } from './contact-details'
 import { cityLabel } from './location'
 
-/** The sections, in the order of the page. Each one will have its « Modifier » button. */
+/**
+ * The sections, in the order of the page (ticket 307; audit UX n° 11): what clients see first, then the
+ * rest, and her availability last, since it is a switch in the header of her space, not a card.
+ */
 export const SECTIONS = [
-	'identite',
-	'description',
-	'localisation',
-	'disponibilite',
 	'photo',
+	'identite',
+	'localisation',
+	'prestations',
+	'coordonnees',
+	'description',
 	'portfolio',
 	'competences',
 	'formations',
 	'experiences',
 	'langues',
-	'prestations',
 	'reseaux',
-	'coordonnees',
+	'disponibilite',
 ] as const
 export type Section = (typeof SECTIONS)[number]
+
+/** « Ce que voient les clientes en premier »: the cards that stay open, in this order. */
+export const FIRST_GROUP = ['photo', 'identite', 'localisation', 'prestations', 'coordonnees', 'description'] as const
+
+/** « Pour aller plus loin »: the cards of the group that is folded, in this order. */
+export const FURTHER_GROUP = ['portfolio', 'competences', 'formations', 'experiences', 'langues', 'reseaux'] as const
+
+/** The title of each group, as the page words it. */
+export const FIRST_GROUP_TITLE = 'Ce que voient les clientes en premier'
+export const FURTHER_GROUP_TITLE = 'Pour aller plus loin'
 
 /** One line of a card: its label, if it has one, and its value, or `null` when nothing is stored. */
 export interface CardRow {
@@ -78,7 +91,9 @@ export type DashboardProfile = Pick<
 	| 'contactDetails'
 	| 'publicContact'
 	| 'consentedAt'
->
+> &
+	// The address of her public page (ticket 306): read by her space, shown on no card.
+	Partial<Pick<Profile, 'slug'>>
 
 const or = (valeur: unknown): string | null => text(valeur) || null
 
@@ -159,7 +174,7 @@ export function profileCards(
 	// Given what her space really shows, a photo marked missing by the import (ticket 275) is not counted.
 	const photos = shown === undefined ? (profil.gallery?.length ?? 0) : shown.galerie.length
 	const hasMain = shown === undefined ? Boolean(profil.mainPicture) : shown.photo !== null
-	return [
+	const cards: Card[] = [
 		{
 			section: 'identite',
 			titre: 'Identité',
@@ -238,4 +253,13 @@ export function profileCards(
 			],
 		},
 	]
+	// The order of the page is the order of `SECTIONS`, whatever the order they are written in here.
+	return SECTIONS.flatMap(section => cards.filter(card => card.section === section))
+}
+
+/** The cards of the two groups of the page, each in its order; the availability is in neither (it is a switch). */
+export function groupedCards(cards: readonly Card[]): { first: Card[]; further: Card[] } {
+	const pick = (sections: readonly Section[]) =>
+		sections.flatMap(section => cards.filter(card => card.section === section))
+	return { first: pick(FIRST_GROUP), further: pick(FURTHER_GROUP) }
 }

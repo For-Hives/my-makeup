@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { createAccount, type TestAccount } from '../support/account-factory'
 import { violationsSevere } from '../support/axe'
+import { openFurtherCards } from '../support/further-cards'
 import { testPayload } from '../support/payload-test'
 
 /**
@@ -45,6 +46,7 @@ test.describe('125 : les réseaux', { tag: '@mobile' }, () => {
 	test('U28 : « @pseudo » est rangé comme l’adresse complète, et la valeur est stockée', async ({ context, page }) => {
 		const account = await artist(context)
 		await page.goto('/auth/profil')
+		await openFurtherCards(page)
 
 		await page.getByRole('button', { name: 'Modifier mes réseaux' }).click()
 		await page.getByLabel('Instagram').fill('@studio.fictif')
@@ -64,6 +66,7 @@ test.describe('125 : les réseaux', { tag: '@mobile' }, () => {
 			if (requete.method() === 'POST' && new URL(requete.url()).pathname === '/auth/profil') uploads.push(requete.url())
 		})
 		await page.goto('/auth/profil')
+		await openFurtherCards(page)
 
 		await page.getByRole('button', { name: 'Modifier mes réseaux' }).click()
 		await page.getByLabel('Instagram').fill('https://www.facebook.com/studio.fictif')
@@ -81,6 +84,7 @@ test.describe('125 : les réseaux', { tag: '@mobile' }, () => {
 		const account = await artist(context)
 		await modifySheet(account, { networks: { instagram: 'https://www.instagram.com/studio.fictif' } })
 		await page.goto('/auth/profil')
+		await openFurtherCards(page)
 		await page.getByRole('button', { name: 'Modifier mes réseaux' }).click()
 		await page.route('**/auth/profil', route =>
 			route.request().method() === 'POST' ? route.abort() : route.continue()
@@ -105,6 +109,7 @@ test.describe('126 : les coordonnées', { tag: '@mobile' }, () => {
 	test('E30 : un téléphone invalide a son message sous le champ, sans requête', async ({ context, page }) => {
 		await artist(context)
 		await page.goto('/auth/profil')
+		await openFurtherCards(page)
 
 		await page.getByRole('button', { name: 'Modifier mes coordonnées' }).click()
 		await page.getByLabel('Téléphone', { exact: true }).fill('06 ab')
@@ -123,6 +128,7 @@ test.describe('126 : les coordonnées', { tag: '@mobile' }, () => {
 		const account = await artist(context)
 		const slug = (await sheetOf(account)).slug
 		await page.goto('/auth/profil')
+		await openFurtherCards(page)
 		await expect(page.getByTestId('carte-coordonnees')).toContainText('Non')
 
 		await page.getByRole('button', { name: 'Modifier mes coordonnées' }).click()

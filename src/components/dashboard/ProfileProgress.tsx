@@ -1,9 +1,12 @@
 import { ResumeRequests, type ResumeUpload } from '@/components/dashboard/ResumeRequests'
 import {
+	bonusText,
 	CONTACT_SECTION,
+	essentialsText,
 	HIDDEN_CONTACT_EMAIL,
 	type Missing,
 	type Progress,
+	pageIsOnline,
 	RANKED_LAST_TEXT,
 } from '@/lib/dashboard/progress'
 
@@ -71,21 +74,24 @@ export function ProfileProgress({ avancement, reprendre }: { avancement: Progres
 			</h2>
 			<div
 				role="progressbar"
-				aria-label="Complétude de ton profil"
+				aria-label="Les six points indispensables de ta page"
 				aria-valuemin={0}
-				aria-valuemax={avancement.sur}
-				aria-valuenow={avancement.score}
-				aria-valuetext={`${avancement.score} sur ${avancement.sur}`}
+				aria-valuemax={avancement.essentials.total}
+				aria-valuenow={avancement.essentials.done}
+				aria-valuetext={`${avancement.essentials.done} sur ${avancement.essentials.total} indispensables`}
 				data-grise={hidden ? 'true' : undefined}
 				className="mt-3 h-3 w-full overflow-hidden rounded-full bg-neutral-200"
 			>
 				<div
 					className={`h-full ${hidden ? 'bg-neutral-400' : 'bg-neutral-900'}`}
-					style={{ width: `${avancement.pourcentage}%` }}
+					style={{ width: `${(avancement.essentials.done / avancement.essentials.total) * 100}%` }}
 				/>
 			</div>
 			<p data-testid="avancement-score" className="mt-2 font-medium">
-				{avancement.score} sur {avancement.sur} ({avancement.pourcentage} %)
+				{essentialsText(avancement.essentials, pageIsOnline(avancement))}
+			</p>
+			<p data-testid="avancement-bonus" className="text-neutral-700 text-sm">
+				{bonusText(avancement.bonus)}
 			</p>
 			<p data-testid="avancement-consequence" className="mt-2">
 				{hidden ? <WithMailLink texte={avancement.consequence} /> : avancement.consequence}
@@ -102,7 +108,15 @@ export function ProfileProgress({ avancement, reprendre }: { avancement: Progres
 			{!hidden && (
 				<div className="mt-4 flex flex-col gap-4">
 					<List id="avancement-requis" titre="Pour être publiable" manques={required} />
-					<List id="avancement-autres" titre="Pour un profil plus complet" manques={others} />
+					{others.length > 0 ? (
+						// Folded (ticket 307): on a phone, thirteen links pushed the cards that matter below 2 400 px.
+						<details data-testid="avancement-autres-details">
+							<summary className="flex min-h-11 cursor-pointer items-center font-semibold text-neutral-800 underline">
+								Pour un profil plus complet ({others.length})
+							</summary>
+							<List id="avancement-autres" titre="Pour un profil plus complet" manques={others} />
+						</details>
+					) : null}
 				</div>
 			)}
 		</section>

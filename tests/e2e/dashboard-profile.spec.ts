@@ -1,5 +1,6 @@
 import { expect, type Page, test } from '@playwright/test'
 import { createAccount, type TestAccount } from '../support/account-factory'
+import { activateProfile } from '../support/active-profile'
 import { violationsSevere } from '../support/axe'
 import { testPayload } from '../support/payload-test'
 import { openSessionWithoutPassword } from '../support/session'
@@ -335,6 +336,8 @@ test.describe('121 : la session expire pendant l’édition', { tag: '@mobile' }
 		const payload = await testPayload()
 		const sheet = await sheetOf(account)
 		await payload.update({ collection: 'profiles', id: sheet.id, data: IDENTITY })
+		// Active, so that the sign-in after the expiry brings her back to her space and not to the welcome (ticket 296).
+		await activateProfile(account.id)
 		await context.addCookies(account.session.cookies)
 		const start = new Set<string>()
 		page.on('response', reponse => {

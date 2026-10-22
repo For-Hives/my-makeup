@@ -2,6 +2,7 @@ import { expect, type Locator, type Page, test } from '@playwright/test'
 import sharp from 'sharp'
 import { createAccount, type TestAccount } from '../support/account-factory'
 import { violationsSevere } from '../support/axe'
+import { openFurtherCards } from '../support/further-cards'
 import { testPayload } from '../support/payload-test'
 import { generatedProfile } from '../support/profile-factory'
 
@@ -86,6 +87,8 @@ async function openDashboard(page: Page) {
 	await page.goto('/auth/profil')
 	await expect(page.getByRole('heading', { level: 1, name: 'Mon espace' })).toBeVisible()
 	await expect(page.getByTestId('carte-identite')).toBeVisible()
+	// The twelve panels are tried: the folded group « Pour aller plus loin » is open (ticket 307).
+	await openFurtherCards(page)
 }
 
 const dialogue = (page: Page) => page.getByRole('dialog')
@@ -103,9 +106,11 @@ async function overlaps(page: Page): Promise<string[]> {
 		const visible = [...root.querySelectorAll<HTMLElement>(SELECTOR)].flatMap(element => {
 			const style = getComputedStyle(element)
 			const cache = style.visibility === 'hidden' || style.display === 'none' || Number(style.opacity) === 0
+			// What a folded `<details>` holds is not shown (its boxes still exist in the layout), except its summary.
+			const folded = element.closest('details:not([open])') !== null && element.closest('summary') === null
 			// The « sr-only » helpers and the skip links are not read as boxes.
 			const mailboxes = [...element.getClientRects()].filter(boite => boite.width >= 4 && boite.height >= 4)
-			return cache || mailboxes.length === 0 ? [] : [{ element, boites: mailboxes }]
+			return cache || folded || mailboxes.length === 0 ? [] : [{ element, boites: mailboxes }]
 		})
 		const name = (element: HTMLElement) =>
 			`${element.tagName.toLowerCase()}[${(element.getAttribute('aria-label') ?? element.textContent ?? '').trim().slice(0, 40)}]`

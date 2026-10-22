@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import {
 	onboardingIdentitySchema,
 	onboardingPosition,
+	remainingSteps,
 	strictOnboardingIdentitySchema,
 } from '@/lib/dashboard/onboarding'
 
@@ -41,6 +42,28 @@ describe('la position : première étape que le profil enregistré n’a pas fai
 	test('une photo sans le reste ne saute pas d’étape', () => {
 		expect(onboardingPosition({ mainPicture: { id: 4 } })).toBe(1)
 		expect(onboardingPosition({ ...IDENTITY, mainPicture: { id: 4 } })).toBe(2)
+	})
+})
+
+describe('les étapes qui restent (ticket 296)', () => {
+	test('un profil vide a les trois étapes à faire, la première est la 1', () => {
+		expect(remainingSteps({})).toEqual({ reste: 3, premiere: 1 })
+		expect(remainingSteps(null)).toEqual({ reste: 3, premiere: 1 })
+	})
+
+	test('chaque étape faite en retire une, la première non faite est celle où mène « Reprendre »', () => {
+		expect(remainingSteps(IDENTITY)).toEqual({ reste: 2, premiere: 2 })
+		expect(remainingSteps({ ...IDENTITY, city: CITY })).toEqual({ reste: 1, premiere: 3 })
+	})
+
+	test('une photo sans le reste compte pour une étape faite : il en reste deux, la première est la 1', () => {
+		expect(remainingSteps({ mainPicture: { id: 4 } })).toEqual({ reste: 2, premiere: 1 })
+	})
+
+	test('les trois faites : plus rien, et c’est exactement la position « terminée »', () => {
+		const done = { ...IDENTITY, city: CITY, mainPicture: { id: 4 } }
+		expect(remainingSteps(done)).toEqual({ reste: 0, premiere: null })
+		expect(onboardingPosition(done)).toBe('terminee')
 	})
 })
 

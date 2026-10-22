@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { createAccount, type TestAccount } from '../support/account-factory'
 import { violationsSevere } from '../support/axe'
+import { openFurtherCards } from '../support/further-cards'
 import { testPayload } from '../support/payload-test'
 
 /**
@@ -47,6 +48,7 @@ test.describe('127 : les langues', { tag: '@mobile' }, () => {
 		const account = await artist(context)
 		await modifySheet(account, { languages: [{ name: 'Français' }, { name: 'Anglais' }] })
 		await page.goto('/auth/profil')
+		await openFurtherCards(page)
 
 		await page.getByRole('button', { name: 'Modifier mes langues' }).click()
 		const field = page.getByLabel('Langue', { exact: true })
@@ -83,6 +85,7 @@ test.describe('127 : les langues', { tag: '@mobile' }, () => {
 		const account = await artist(context)
 		await modifySheet(account, { languages: [{ name: 'Français' }] })
 		await page.goto('/auth/profil')
+		await openFurtherCards(page)
 		await page.getByRole('button', { name: 'Modifier mes langues' }).click()
 		await page.route('**/auth/profil', route =>
 			route.request().method() === 'POST' ? route.abort() : route.continue()
@@ -110,6 +113,7 @@ test.describe('128 : les compétences', { tag: '@mobile' }, () => {
 			if (requete.method() === 'POST' && new URL(requete.url()).pathname === '/auth/profil') uploads.push(requete.url())
 		})
 		await page.goto('/auth/profil')
+		await openFurtherCards(page)
 
 		await page.getByRole('button', { name: 'Modifier mes compétences' }).click()
 		const field = page.getByLabel('Compétence', { exact: true })

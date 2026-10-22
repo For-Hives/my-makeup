@@ -1,5 +1,6 @@
 import { type Browser, type BrowserContext, expect, type Page, test } from '@playwright/test'
 import { createAccount } from '../support/account-factory'
+import { activateProfile } from '../support/active-profile'
 import { testPayload } from '../support/payload-test'
 
 /**
@@ -46,6 +47,7 @@ test.describe('E10 : la déconnexion', { tag: '@mobile' }, () => {
 		page,
 	}) => {
 		const account = await createAccount('maquilleuse', { motDePasse: () => PASSWORD })
+		await activateProfile(account.id)
 		await signInAction(page, account.email)
 		expect(await sessionCookie(context)).toBeDefined()
 
@@ -64,6 +66,7 @@ test.describe('E10 : la déconnexion', { tag: '@mobile' }, () => {
 
 	test('la déconnexion laisse une ligne « deconnexion » au journal', async ({ page }) => {
 		const account = await createAccount('maquilleuse', { motDePasse: () => PASSWORD })
+		await activateProfile(account.id)
 		const payload = await testPayload()
 		// The rows belong to nobody, and the other tests sign out at the same time: the exact count of
 		// one sign-out is the integration test's (tests/integration/auth-sign-out.test.ts).
@@ -87,6 +90,7 @@ test.describe('E10 : la déconnexion', { tag: '@mobile' }, () => {
 test.describe('E11 : l’ancien cookie réinjecté', () => {
 	test('dans un contexte neuf, il est refusé : on arrive sur la connexion', async ({ browser, context, page }) => {
 		const account = await createAccount('maquilleuse', { motDePasse: () => PASSWORD })
+		await activateProfile(account.id)
 		await signInAction(page, account.email)
 		const old = await sessionCookie(context)
 		if (!old) throw new Error('Pas de cookie de session après la connexion.')
@@ -112,6 +116,7 @@ test.describe('E11 : l’ancien cookie réinjecté', () => {
 test.describe('E17 : la déconnexion dans un onglet', () => {
 	test('l’autre onglet est renvoyé à la connexion à sa prochaine navigation', async ({ context, page }) => {
 		const account = await createAccount('maquilleuse', { motDePasse: () => PASSWORD })
+		await activateProfile(account.id)
 		await signInAction(page, account.email)
 		const tab = await context.newPage()
 		await tab.goto('/auth/profil')
@@ -132,6 +137,7 @@ test.describe('Me déconnecter de tous les appareils', () => {
 		page,
 	}) => {
 		const account = await createAccount('maquilleuse', { motDePasse: () => PASSWORD })
+		await activateProfile(account.id)
 		await signInAction(page, account.email)
 		const otherDevice = await browser.newContext({ extraHTTPHeaders: { 'x-forwarded-for': url() } })
 		const other = await otherDevice.newPage()
@@ -157,6 +163,7 @@ test.describe('Me déconnecter de tous les appareils', () => {
 
 	test('une action sans la confirmation ne ferme rien', async ({ page, request }) => {
 		const account = await createAccount('maquilleuse', { motDePasse: () => PASSWORD })
+		await activateProfile(account.id)
 		await signInAction(page, account.email)
 		await page.getByRole('button', { name: 'Me déconnecter de tous les appareils' }).click()
 		// The confirmation field is the page's: take it out, and send the form.

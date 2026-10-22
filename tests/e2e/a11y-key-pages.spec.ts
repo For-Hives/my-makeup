@@ -2,6 +2,7 @@ import { expect, type Locator, test } from '@playwright/test'
 import { type PageProfile, setPageProfiles } from '../fixtures/page-profiles'
 import { createAccount, type TestAccount } from '../support/account-factory'
 import { violationsSevere } from '../support/axe'
+import { openFurtherCards } from '../support/further-cards'
 import { users } from '../support/lock'
 import { testPayload } from '../support/payload-test'
 import { createContent, deleteContent } from '../support/public-pages'
@@ -198,6 +199,9 @@ test.describe('178 : les 3 pages de l’espace, panneaux ouverts', { tag: '@mobi
 		await expect(page.getByRole('heading', { level: 1, name: 'Mon espace' })).toBeVisible()
 		await expect(page.getByTestId('carte-identite')).toBeVisible()
 		expect(await violationsSevere(page), SPACE_PAGES[0].name).toEqual([])
+		// The folded group « Pour aller plus loin » (ticket 307): its cards are read too once it is open.
+		await openFurtherCards(page)
+		expect(await violationsSevere(page), `${SPACE_PAGES[0].name}, groupe ouvert`).toEqual([])
 
 		for (const panel of [
 			'Modifier mon identité',

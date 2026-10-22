@@ -1,5 +1,11 @@
 import { describe, expect, test } from 'bun:test'
-import { safeReturnTo, signInUrl } from '@/lib/auth/return-to'
+import {
+	ACCOUNT_ONBOARDING_PAGE,
+	DEFAULT_DASHBOARD,
+	destinationAfterSignIn,
+	safeReturnTo,
+	signInUrl,
+} from '@/lib/auth/return-to'
 
 const SITE = 'https://my-makeup.fr'
 
@@ -42,5 +48,27 @@ describe('retourSur : le retour après la connexion (U63)', () => {
 describe('urlDeConnexion', () => {
 	test('la page de connexion avec la page de retour', () => {
 		expect(signInUrl('/auth/profil')).toBe('/auth/signin?callbackUrl=%2Fauth%2Fprofil')
+	})
+})
+
+describe('destinationAfterSignIn : le profil encore à accueillir passe par l’accueil (ticket 296)', () => {
+	test('sans lien précis, un accueil à faire mène à l’accueil', () => {
+		expect(destinationAfterSignIn(DEFAULT_DASHBOARD, true)).toBe(ACCOUNT_ONBOARDING_PAGE)
+	})
+
+	test('sans lien précis, un accueil terminé (profil actif) mène à l’espace', () => {
+		expect(destinationAfterSignIn(DEFAULT_DASHBOARD, false)).toBe(DEFAULT_DASHBOARD)
+	})
+
+	test('un lien précis vers une page privée est respecté, accueil à faire ou non', () => {
+		for (const page of ['/auth/apercu-profil', '/auth/profil?x=1#carte-photo', '/auth/init-account']) {
+			expect(destinationAfterSignIn(page, true)).toBe(page)
+			expect(destinationAfterSignIn(page, false)).toBe(page)
+		}
+	})
+
+	test('un lien du même site vide ou hors site retombe sur la page par défaut, puis suit la règle', () => {
+		expect(destinationAfterSignIn(safeReturnTo('https://evil.example/x', SITE), true)).toBe(ACCOUNT_ONBOARDING_PAGE)
+		expect(destinationAfterSignIn(safeReturnTo(undefined, SITE), true)).toBe(ACCOUNT_ONBOARDING_PAGE)
 	})
 })

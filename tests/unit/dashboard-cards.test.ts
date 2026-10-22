@@ -1,5 +1,12 @@
 import { describe, expect, test } from 'bun:test'
-import { type DashboardProfile, profileCards, SECTIONS } from '@/lib/dashboard/cards'
+import {
+	type DashboardProfile,
+	FIRST_GROUP,
+	FURTHER_GROUP,
+	groupedCards,
+	profileCards,
+	SECTIONS,
+} from '@/lib/dashboard/cards'
 
 /** The cards of the page of her space (ticket 118): the value stored, or nothing — never « null ». */
 
@@ -19,8 +26,8 @@ describe('une carte par section, dans l’ordre de la page', () => {
 			expect(lines.length).toBeGreaterThan(0)
 		}
 		const values = cards.flatMap(c => c.lignes.map(l => l.valeur))
-		// The coordinates line « shown on your profile » is a yes/no; an empty profile reads « Disponible » (ticket 124); the rest is empty.
-		expect(values.filter(v => v !== null)).toEqual(['Disponible', 'Non'])
+		// The coordinates line « shown on your profile » is a yes/no; an empty profile reads « Disponible » (ticket 124), last since the page order of ticket 307; the rest is empty.
+		expect(values.filter(v => v !== null)).toEqual(['Non', 'Disponible'])
 	})
 })
 
@@ -160,5 +167,33 @@ describe('photos marquées sans objet (275) : le résumé suit ce que l’espace
 		const shown = { photo: { id: 126 }, galerie: [{ id: 127 }] }
 		expect(find('photo', shown)).toBe('Photo ajoutée')
 		expect(find('portfolio', shown)).toBe('1 photo')
+	})
+})
+
+describe('307 : les cartes dans l’ordre de ce qui compte, en deux groupes', () => {
+	const NAMES = (cards: readonly { section: string }[]) => cards.map(c => c.section)
+
+	test('groupe 1 : photo, identité, zone, prestations, contact, description', () => {
+		expect([...FIRST_GROUP]).toEqual(['photo', 'identite', 'localisation', 'prestations', 'coordonnees', 'description'])
+		expect(NAMES(groupedCards(profileCards(EMPTY)).first)).toEqual([...FIRST_GROUP])
+	})
+
+	test('groupe 2, replié : portfolio, compétences, formations, expériences, langues, réseaux', () => {
+		expect([...FURTHER_GROUP]).toEqual(['portfolio', 'competences', 'formations', 'experiences', 'langues', 'reseaux'])
+		expect(NAMES(groupedCards(profileCards(EMPTY)).further)).toEqual([...FURTHER_GROUP])
+	})
+
+	test('la disponibilité n’est dans aucun groupe (c’est l’interrupteur de l’en-tête), et aucune carte ne se perd', () => {
+		const groups = groupedCards(profileCards(EMPTY))
+		const shown = [...NAMES(groups.first), ...NAMES(groups.further)]
+		expect(shown).not.toContain('disponibilite')
+		expect(new Set([...shown, 'disponibilite'])).toEqual(new Set(SECTIONS))
+		expect(shown).toHaveLength(SECTIONS.length - 1)
+		// The card is still read, for the words of the header.
+		expect(card(EMPTY, 'disponibilite').lignes[0]?.valeur).toBe('Disponible')
+	})
+
+	test('l’ordre de la liste des cartes est celui de la page', () => {
+		expect(NAMES(profileCards(EMPTY))).toEqual([...FIRST_GROUP, ...FURTHER_GROUP, 'disponibilite'])
 	})
 })

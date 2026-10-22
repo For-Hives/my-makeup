@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { createAccount, FIXTURE_LEGACY_PASSWORD } from '../support/account-factory'
+import { activateProfile } from '../support/active-profile'
 import { testPayload } from '../support/payload-test'
 
 /**
@@ -27,6 +28,7 @@ test.describe('Compte de l’ancien site', () => {
 		page,
 	}) => {
 		const account = await createAccount('reprise-avec-hash')
+		await activateProfile(account.id)
 		const before = await hashOf(account.id)
 		expect(before.legacyBcrypt).toMatch(/^\$2a\$10\$/)
 

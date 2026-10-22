@@ -235,6 +235,26 @@
 			"id": "quand-personne-n-est-inscrite-pres-de-la-ville-que-vous-c",
 			"type": "correction",
 			"text": "Quand personne n’est inscrite près de la ville que vous cherchez, la page le dit clairement au lieu de lister toutes les maquilleuses."
+		},
+		{
+			"id": "quand-tu-reviens-te-connecter-avec-un-profil-encore-vide",
+			"type": "amelioration",
+			"text": "Quand tu reviens te connecter avec un profil encore vide, on te propose tout de suite l’accueil en trois étapes, et ton espace te dit combien d’étapes il te reste pour être visible."
+		},
+		{
+			"id": "dans-ton-espace-la-jauge-compte-d-abord-les-six-points-in",
+			"type": "amelioration",
+			"text": "Dans ton espace, la jauge compte d’abord les six points indispensables (« 6/6 : ta page est prête »), puis une carte « Ta page est en ligne ! » te donne l’adresse de ta page avec un bouton pour copier le lien, le partager et l’ajouter à ta bio Instagram."
+		},
+		{
+			"id": "pour-ajouter-des-photos-a-ton-portfolio-un-grand-bouton-a",
+			"type": "amelioration",
+			"text": "Pour ajouter des photos à ton portfolio, un grand bouton « Ajouter des photos » remplace le champ de fichier brut."
+		},
+		{
+			"id": "ton-espace-presente-d-abord-ce-que-voient-les-clientes-ph",
+			"type": "amelioration",
+			"text": "Ton espace présente d’abord ce que voient les clientes (photo, identité, zone, prestations, contact, description), range le reste dans « Pour aller plus loin », met ta disponibilité en interrupteur en haut et ta déconnexion avec la suppression du compte en bas."
 		}
 	],
 	"releases": []

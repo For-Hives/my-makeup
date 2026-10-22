@@ -4,6 +4,7 @@ import { MESSAGES_PHOTO } from '@/lib/dashboard/photo'
 import { namedPhotos } from '@/lib/profile/photos'
 import { createAccount, type TestAccount } from '../support/account-factory'
 import { violationsSevere } from '../support/axe'
+import { openFurtherCards } from '../support/further-cards'
 import { testPayload } from '../support/payload-test'
 import { fileForPayload } from '../support/photos'
 import { readObject } from '../support/s3'
@@ -137,6 +138,7 @@ test.describe('135 : le portfolio, ajouter des photos', { tag: '@mobile' }, () =
 		test.setTimeout(120_000)
 		const { compte: account, slug } = await artist(context)
 		await page.goto('/auth/profil')
+		await openFurtherCards(page)
 		await expect(page.getByTestId('carte-portfolio')).toContainText('à compléter')
 		await open(page)
 		const sent = uploads(page)
@@ -167,6 +169,7 @@ test.describe('135 : le portfolio, ajouter des photos', { tag: '@mobile' }, () =
 		expect(await orphansOf(account)).toEqual([])
 
 		await page.reload()
+		await openFurtherCards(page)
 		await open(page)
 		await expect(lines(page)).toHaveCount(3)
 		await expect(dialogue(page).getByText('À enregistrer')).toHaveCount(0)
@@ -181,6 +184,7 @@ test.describe('135 : le portfolio, ajouter des photos', { tag: '@mobile' }, () =
 		const folder = process.env.DASHBOARD_SCREENSHOTS
 		if (folder) {
 			await page.goto('/auth/profil')
+			await openFurtherCards(page)
 			await open(page)
 			await page.screenshot({ path: `${folder}/portfolio-${test.info().project.name}.png` })
 		}
@@ -193,6 +197,7 @@ test.describe('135 : le portfolio, ajouter des photos', { tag: '@mobile' }, () =
 		test.setTimeout(120_000)
 		const { compte: account } = await artist(context, 8)
 		await page.goto('/auth/profil')
+		await openFurtherCards(page)
 		await open(page)
 		const sent = uploads(page)
 
@@ -226,6 +231,7 @@ test.describe('135 : le portfolio, ajouter des photos', { tag: '@mobile' }, () =
 		const before = (await mediaOf(account)).length
 		const sent = uploads(page)
 		await page.goto('/auth/profil')
+		await openFurtherCards(page)
 		await open(page)
 
 		await page.getByLabel('Ajouter des photos').setInputFiles([await filePng(821), await filePng(822)])
@@ -245,6 +251,7 @@ test.describe('135 : le portfolio, ajouter des photos', { tag: '@mobile' }, () =
 	test('coupure pendant l’envoi : le portfolio reste comme il était, aucun orphelin', async ({ context, page }) => {
 		const { compte: account } = await artist(context, 1)
 		await page.goto('/auth/profil')
+		await openFurtherCards(page)
 		await open(page)
 		// The second file never gets there.
 		let n = 0
@@ -278,6 +285,7 @@ test.describe('136 : le portfolio, retirer une photo', { tag: '@mobile' }, () =>
 		const bytes = (await readObject(`media/${removed.filename}`))?.octets
 		expect(bytes).toBeDefined()
 		await page.goto('/auth/profil')
+		await openFurtherCards(page)
 		await expect(page.getByTestId('carte-portfolio')).toContainText('3 photos')
 		await open(page)
 
@@ -310,6 +318,7 @@ test.describe('136 : le portfolio, retirer une photo', { tag: '@mobile' }, () =>
 		const { compte: account } = await artist(context, 2)
 		const before = namedPhotos((await storedProfile(account)).gallery)
 		await page.goto('/auth/profil')
+		await openFurtherCards(page)
 		await open(page)
 
 		await page.getByRole('button', { name: 'Retirer la photo 1' }).click()
@@ -330,6 +339,7 @@ test.describe('136 : le portfolio, retirer une photo', { tag: '@mobile' }, () =>
 	}) => {
 		await artist(context, 4)
 		await page.goto('/auth/profil')
+		await openFurtherCards(page)
 		await open(page)
 
 		await dialogue(page).getByRole('button', { name: 'Retirer la photo 2' }).focus()

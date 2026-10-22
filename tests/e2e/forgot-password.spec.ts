@@ -1,5 +1,6 @@
 import { type Browser, expect, type Page, test } from '@playwright/test'
 import { createAccount } from '../support/account-factory'
+import { activateProfile } from '../support/active-profile'
 import { violationsSevere } from '../support/axe'
 import { mailReceived, waitMail } from '../support/mailpit'
 
@@ -58,6 +59,7 @@ async function otherBrowser(browser: Browser, email: string, motDePasse: string)
 test.describe('E08 : le mot de passe oublié de bout en bout', { tag: '@mobile' }, () => {
 	test('le lien du mail, un nouveau mot de passe, la connexion avec lui, l’ancien refusé', async ({ page }) => {
 		const account = await createAccount('maquilleuse', { motDePasse: () => OLD })
+		await activateProfile(account.id)
 
 		// From the sign-in page, by the link.
 		await page.goto('/auth/signin')
@@ -127,6 +129,7 @@ test.describe('E08 : le mot de passe oublié de bout en bout', { tag: '@mobile' 
 test.describe('E15 : choisir un nouveau mot de passe déconnecte l’autre navigateur', () => {
 	test('la session ouverte ailleurs est fermée', async ({ browser, page }) => {
 		const account = await createAccount('maquilleuse', { motDePasse: () => OLD })
+		await activateProfile(account.id)
 		const elsewhere = await otherBrowser(browser, account.email, OLD)
 
 		await ask(page, account.email)
