@@ -68,7 +68,11 @@ export const PUBLIC_PROFILE_FIELDS = {
 	description: true,
 } as const
 
-/** What a card of a list reads: the identity, the badge, the zone and the main photo. */
+/**
+ * What a card of a list reads: the identity, the badge, the zone, the main photo and her offers (ticket
+ * 303). Of the offers only the name and the amount are read: never a description, a typed price or an
+ * option, and `cardOf` keeps the two names and the lowest amount.
+ */
 export const CARD_FIELDS = {
 	slug: true,
 	firstName: true,
@@ -82,6 +86,7 @@ export const CARD_FIELDS = {
 	town: true,
 	superArtist: true,
 	mainPicture: true,
+	serviceOffers: { name: true, priceFrom: true },
 } as const
 
 /**
@@ -232,6 +237,13 @@ export interface ProfileCard {
 	 * profile that can be reached, so a card of the list is what it was; only the directory sets it.
 	 */
 	unreachable?: true
+	/**
+	 * The names of her first two offers (ticket 303), shown as chips. The key is absent when she named
+	 * none, so a card without offers keeps the keys it had.
+	 */
+	offerNames?: string[]
+	/** The lowest amount of her offers, in euros (`minimumPrice`). Absent when no offer has an amount. */
+	startingPrice?: number
 }
 
 /** One page of the listed profiles. */
@@ -257,7 +269,11 @@ type CardProfile = Pick<
 	| 'town'
 	| 'superArtist'
 	| 'mainPicture'
+	| 'serviceOffers'
 >
+
+/** The most chips of offers a card shows. */
+export const CARD_OFFER_NAMES = 2
 
 /** The photos of the cards, by the identifier of the media. */
 type PhotosById = ReadonlyMap<number | string, CardPhoto>
@@ -330,6 +346,11 @@ function zoneInput(profil: Pick<Profile, 'city' | 'radiusKm' | 'zoneKind' | 'cou
 function cardOf(profil: CardProfile, photos: PhotosById, pids: ReadonlyMap<number, Pid>): ProfileCard {
 	const identifier = photoId(profil.mainPicture)
 	const flags = zoneFlags(zoneInput(profil))
+	const offerNames = (profil.serviceOffers ?? [])
+		.map(offer => text(offer?.name))
+		.filter(name => name !== '')
+		.slice(0, CARD_OFFER_NAMES)
+	const startingPrice = minimumPrice(profil.serviceOffers)
 	return {
 		slug: profil.slug,
 		pid: pids.get(profil.id) ?? profilePid({ id: profil.id }),
@@ -339,6 +360,8 @@ function cardOf(profil: CardProfile, photos: PhotosById, pids: ReadonlyMap<numbe
 		...(flags.length > 0 && { flags }),
 		superMaquilleuse: profil.superArtist === true,
 		photo: (identifier !== undefined && photos.get(identifier)) || null,
+		...(offerNames.length > 0 && { offerNames }),
+		...(startingPrice !== null && { startingPrice }),
 	}
 }
 
@@ -707,6 +730,8 @@ export interface DirectoryProfile extends ProfilePlace, ProfileGeometry {
 	carte: ProfileCard
 	/** True when her profile shows no way to reach her (ticket 291): the search ranks her after the others. */
 	unreachable: boolean
+	/** True when her profile is publishable (`isIndexable`): the pages of a speciality show only those (ticket 305). */
+	indexable: boolean
 	/**
 	 * What she wrote that a search by a word looks into (ticket 099). Beside the card, never in it: a card
 	 * is what a page renders, and carries none of this. Read only when asked (`avecLesTextes`).
@@ -745,7 +770,7 @@ async function readUnreachable(payload: Payload, profils: readonly { id: number 
 	return unreachable
 }
 
-/** The fields a search by a word reads on top of a card: her texts, and no price, no contact, no link. */
+/** The fields a search by a word reads on top of a card: her texts and her whole offers (for their descriptions), and no contact, no link. */
 const SEARCH_FIELDS = {
 	...CARD_FIELDS,
 	description: true,
@@ -792,7 +817,7 @@ export async function readDirectory(
 		const result = await payload.find({
 			collection: 'profiles',
 			where: LISTED_FILTER,
-			select: avecLesTextes ? SEARCH_FIELDS : CARD_FIELDS,
+			select: { ...(avecLesTextes ? SEARCH_FIELDS : CARD_FIELDS), publishable: true },
 			sort: ['-completeness', '-updatedAt', 'slug'],
 			depth: 0,
 			limit: LIST_MAX_LIMIT,
@@ -809,6 +834,7 @@ export async function readDirectory(
 			directory.push({
 				carte: isUnreachable ? { ...card, unreachable: true } : card,
 				unreachable: isUnreachable,
+				indexable: profile.publishable === true,
 				...directoryPlace(profile),
 				...directoryGeometry(profile),
 				sortName: displayName(profile),

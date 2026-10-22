@@ -53,7 +53,7 @@ export function payloadStorage(payload: Pick<Payload, 'create' | 'update'>): Req
 						mailStatus: 'pending',
 						firstName: message.prenom,
 						lastName: message.nom,
-						phone: message.telephone,
+						phone: message.telephone === '' ? undefined : message.telephone,
 						email: message.email,
 						message: message.message,
 					},

@@ -337,7 +337,7 @@ describe('la lecture de l’annuaire', () => {
 		expect(JSON.stringify(directory)).not.toContain('codeInsee')
 	})
 
-	test('avec les textes, chaque profil porte ce qu’une recherche par mot lit, à côté de sa carte et sans prix', async () => {
+	test('avec les textes, chaque profil porte ce qu’une recherche par mot lit, à côté de sa carte, qui ne garde que les noms et le montant de départ', async () => {
 		const { payload, lectures: readings } = payloadSpy([
 			[
 				doc('a', {
@@ -381,7 +381,11 @@ describe('la lecture de l’annuaire', () => {
 		// Without the option, the texts are neither read nor carried.
 		const without = (await readDirectory(payload))[0]
 		expect(without).not.toHaveProperty('textes')
-		expect(JSON.stringify(without)).not.toContain('150')
+		// The card keeps the names of two offers and the lowest amount (ticket 303), never what the offers say or cost in text.
+		expect(without?.carte).toMatchObject({ offerNames: ['Mariée', 'Soirée'], startingPrice: 150 })
+		expect(JSON.stringify(without)).not.toContain('Essai inclus')
+		expect(JSON.stringify(without)).not.toContain('150 €')
+		expect(JSON.stringify(without)).not.toContain('Cils')
 	})
 
 	test('une photo qui n’est qu’un identifiant, ou sans adresse, donne une carte sans photo', async () => {

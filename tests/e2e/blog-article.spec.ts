@@ -77,7 +77,7 @@ test.describe('E59 et E65 : l’article du blog', { tag: '@mobile' }, () => {
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText(`Article d’essai ${suffix}`)
 		// « # » of the text is an h2, « ## » too: nothing takes the place of the title.
 		await expect(page.getByRole('heading', { level: 2, name: 'Un titre du texte' })).toBeVisible()
-		await expect(page.getByText('Auteur.e : Une rédactrice fictive')).toBeVisible()
+		await expect(page.getByText('Par Une rédactrice fictive')).toBeVisible()
 		await expect(page.getByRole('navigation', { name: 'Navigation principale' })).toBeVisible()
 	})
 
@@ -129,6 +129,7 @@ test.describe('E59 et E65 : l’article du blog', { tag: '@mobile' }, () => {
 		const text = await page.locator('main').innerText()
 		expect(text).not.toMatch(/\b(?:null|undefined)\b/)
 		expect(text).not.toContain('Auteur.e')
+		await expect(page.getByTestId('auteur')).toHaveCount(0)
 		expect((await request.get(`/blog/${bare}`)).status()).toBe(200)
 	})
 

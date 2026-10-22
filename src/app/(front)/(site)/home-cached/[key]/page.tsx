@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { Cta } from '@/components/blocks/Cta'
 import { Hero } from '@/components/blocks/Hero'
+import { AccountDeletedNotice } from '@/components/home/AccountDeletedNotice'
 import { Collaboration } from '@/components/home/Collaboration'
 import { Presentation } from '@/components/home/Presentation'
 import { Project } from '@/components/home/Project'
@@ -55,6 +56,7 @@ export default async function HomePage({ params }: PageProps<'/home-cached/[key]
 	const talents = await readTalents()
 	return (
 		<main className="relative">
+			<AccountDeletedNotice />
 			<script
 				type="application/ld+json"
 				// biome-ignore lint/security/noDangerouslySetInnerHtml: serializeJsonLd escapes <, > and &, so the data cannot close the tag.

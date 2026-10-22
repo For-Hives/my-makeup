@@ -6,12 +6,14 @@ import { getPayload } from 'payload'
 import { cache } from 'react'
 import { Cta } from '@/components/blocks/Cta'
 import { Hero } from '@/components/blocks/Hero'
+import { ProfileBlock } from '@/components/blocks/ProfileBlock'
 import { MarkdownContent } from '@/components/content/MarkdownContent'
 import { markdownToHtml } from '@/lib/markdown'
 import { breadcrumbStructuredData, SITE_NAME, serializeJsonLd } from '@/lib/seo/json-ld'
 import { editorialMetadata } from '@/lib/seo/metadata'
 import { canonicalUrl } from '@/lib/seo/url'
-import { cachedTalent } from '@/services/public/cached'
+import { cachedProfileBlock, cachedTalent } from '@/services/public/cached'
+import { TALENT_BLOCK_SIZE, talentBlockTitle } from '@/services/public/profile-block'
 
 // The HTML is kept in the cache of Next (ticket 269). Nothing is rendered at build, which runs without a
 // database: no address is generated ahead (`generateStaticParams`), the page is rendered at its first visit,
@@ -42,16 +44,26 @@ export async function generateMetadata({ params }: PageProps<'/talent/[slug]'>):
 	})
 }
 
+/** The makeup artists of the speciality. A failed read leaves the page without its block, never a 500. */
+async function readBlock(title: string) {
+	try {
+		return await cachedProfileBlock(title, TALENT_BLOCK_SIZE)
+	} catch {
+		return []
+	}
+}
+
 /**
  * The page of a speciality, rendered by the server (ticket 108): its title is the only h1, then its
- * presentation, its content (markdown turned into sanitized HTML, src/lib/markdown.ts) and a link to the
- * search. An unknown slug and a draft answer 404 in French (E59). The structured data is the breadcrumb (E65).
+ * presentation, its content (markdown turned into sanitized HTML, src/lib/markdown.ts), a link to the
+ * search and, when the speciality has some, six makeup artists (ticket 305). An unknown slug and a draft answer 404 in French (E59). The structured data is the breadcrumb (E65).
  */
 export default async function TalentPage({ params }: PageProps<'/talent/[slug]'>) {
 	const { slug } = await params
 	const talent = await readTalentOnce(slug)
 	if (!talent) notFound()
 	const html = await markdownToHtml(talent.contenu)
+	const cards = await readBlock(talent.titre)
 	const breadcrumb = breadcrumbStructuredData([
 		{ nom: 'Accueil', url: canonicalUrl('/') },
 		{ nom: talent.titre, url: canonicalUrl(`/talent/${talent.slug}`) },
@@ -82,6 +94,7 @@ export default async function TalentPage({ params }: PageProps<'/talent/[slug]'>
 						</p>
 					</article>
 				</div>
+				<ProfileBlock titre={talentBlockTitle(talent.titre)} cartes={cards} specialite={talent.titre} />
 			</div>
 			<Cta />
 		</main>

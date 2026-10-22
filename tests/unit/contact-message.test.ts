@@ -38,6 +38,17 @@ describe('les cinq champs du formulaire, avec les limites du site en ligne', () 
 		})
 	})
 
+	test('305 : le téléphone est facultatif ; l’e-mail invalide est toujours refusé', () => {
+		const without = validateMessage(fields({ telephone: undefined }))
+		expect(without).toEqual({ ok: true, message: expect.objectContaining({ telephone: '' }) })
+		expect(validateMessage(fields({ telephone: '   ' })).ok).toBe(true)
+		expect(validateMessage(fields({ telephone: undefined, email: 'pas-une-adresse' }))).toEqual({
+			ok: false,
+			erreurs: { email: 'L’e-mail est invalide' },
+		})
+		expect(validateMessage(fields({ telephone: '01 99 00 12 34' })).ok).toBe(true)
+	})
+
 	test('un champ vide ou fait d’espaces dit sa phrase, dans les mots du site en ligne', () => {
 		const verified = validateMessage(fields({ prenom: '', nom: '   ', telephone: undefined, message: '' }))
 		expect(verified).toEqual({
@@ -45,7 +56,6 @@ describe('les cinq champs du formulaire, avec les limites du site en ligne', () 
 			erreurs: {
 				prenom: 'Le prénom est requis',
 				nom: 'Le nom est requis',
-				telephone: 'Le numéro de téléphone est requis',
 				message: 'Le message est requis',
 			},
 		})

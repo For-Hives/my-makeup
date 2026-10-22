@@ -24,7 +24,7 @@ const LABELS: Record<ContactField, string> = {
 	prenom: 'Prénom',
 	nom: 'Nom',
 	email: 'Email',
-	telephone: 'Numéro de téléphone',
+	telephone: 'Numéro de téléphone (facultatif)',
 	message: 'Message',
 }
 

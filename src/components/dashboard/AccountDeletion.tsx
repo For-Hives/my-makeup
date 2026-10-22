@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import { markAccountDeleted } from '@/lib/account-deleted'
 import { trackAccountDeletion } from '@/lib/dashboard/analytics'
 import {
 	type ConfirmationMode,
@@ -110,6 +111,8 @@ function DeletionForm({
 				trackAccountDeletion()
 				// The lock stays on: nothing more can be sent, the browser leaves.
 				setFait(true)
+				// The home page says « Ton compte est supprimé » (ticket 305): the flag lives in this tab only.
+				markAccountDeleted()
 				aller(PAGE_AFTER_DELETION)
 				return
 			}

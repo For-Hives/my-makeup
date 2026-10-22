@@ -5,12 +5,14 @@ import { notFound } from 'next/navigation'
 import { getPayload } from 'payload'
 import { cache } from 'react'
 import { Cta } from '@/components/blocks/Cta'
+import { ProfileBlock } from '@/components/blocks/ProfileBlock'
 import { MarkdownContent } from '@/components/content/MarkdownContent'
 import { markdownToHtml } from '@/lib/markdown'
 import { articleStructuredData, breadcrumbStructuredData, SITE_NAME, serializeJsonLd } from '@/lib/seo/json-ld'
 import { editorialMetadata } from '@/lib/seo/metadata'
 import { canonicalUrl } from '@/lib/seo/url'
-import { cachedArticle } from '@/services/public/cached'
+import { cachedArticle, cachedProfileBlock } from '@/services/public/cached'
+import { ARTICLE_BLOCK_SIZE } from '@/services/public/profile-block'
 
 // The HTML is kept in the cache of Next (ticket 269). Nothing is rendered at build, which runs without a
 // database: no address is generated ahead (`generateStaticParams`), the page is rendered at its first visit,
@@ -51,6 +53,15 @@ function dateInFrench(iso: string): string {
 	})
 }
 
+/** The makeup artists under the article. A failed read leaves the page without its block, never a 500. */
+async function readBlock() {
+	try {
+		return await cachedProfileBlock('', ARTICLE_BLOCK_SIZE)
+	} catch {
+		return []
+	}
+}
+
 function LeftArrow() {
 	return (
 		<svg
@@ -79,6 +90,7 @@ export default async function ArticlePage({ params }: PageProps<'/blog/[slug]'>)
 	const article = await readArticle(slug)
 	if (!article) notFound()
 	const html = await markdownToHtml(article.contenu)
+	const cards = await readBlock()
 	const articleUrl = canonicalUrl(`/blog/${article.slug}`)
 	const data = [
 		articleStructuredData({
@@ -125,13 +137,14 @@ export default async function ArticlePage({ params }: PageProps<'/blog/[slug]'>)
 						<div className="flex flex-col">
 							<MarkdownContent html={html} />
 							{article.auteur && (
-								<p className="flex items-center text-base text-gray-600">
+								<p data-testid="auteur" className="flex items-center text-base text-gray-600">
 									<span className="h-4 w-0.5 rounded-full bg-gray-200" />
-									<span className="ml-3">Auteur.e : {article.auteur}</span>
+									<span className="ml-3">Par {article.auteur}</span>
 								</p>
 							)}
 						</div>
 					</article>
+					<ProfileBlock titre="Des maquilleuses près de chez vous" cartes={cards} compact />
 				</div>
 			</div>
 			<Cta />

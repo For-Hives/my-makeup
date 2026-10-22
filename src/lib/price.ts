@@ -99,6 +99,12 @@ export function formatFrom(montant: number | null | undefined): string {
 	return displayed === '' ? '' : `À partir de ${displayed}`
 }
 
+/** « dès 150 € », the starting price on a card of a list; '' without an amount. */
+export function formatFromShort(montant: number | null | undefined): string {
+	const displayed = formatAmount(montant)
+	return displayed === '' ? '' : `dès ${displayed}`
+}
+
 /** The text with its first letter as a capital; the rest is left as typed. */
 function capital(texte: string): string {
 	const [first = ''] = texte

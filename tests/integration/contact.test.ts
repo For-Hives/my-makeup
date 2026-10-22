@@ -100,6 +100,21 @@ describe('I32 adapté : le message est écrit avant l’envoi, puis marqué tran
 		})
 	})
 
+	test('305 : sans téléphone, la ligne est écrite sans numéro et le mail part sans ligne de téléphone', async () => {
+		const v = visitor({ telephone: '' })
+		const { resultat: result, termine: finished } = await sendForm(v)
+		await finished()
+
+		expect(result).toEqual({ ok: true })
+		const mail = await waitMail({ pour: v.equipe })
+		expect(mail.texte).toContain('une question sur le site.')
+		expect(mail.texte).not.toContain('Numéro de téléphone')
+		const lines = await linesOf(v.champs.email as string)
+		expect(lines).toHaveLength(1)
+		expect(lines[0]).toMatchObject({ status: 'forwarded', mailStatus: 'sent' })
+		expect(lines[0]?.phone ?? null).toBeNull()
+	})
+
 	test('ce que la visiteuse a tapé est du texte : le HTML du mail échappe une balise', async () => {
 		const v = visitor({ message: '<script>alert(1)</script>' })
 		const { termine: finished } = await sendForm(v)

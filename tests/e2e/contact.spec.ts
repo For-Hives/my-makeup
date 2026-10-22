@@ -43,7 +43,7 @@ async function fill(page: Page, s: Input) {
 	await page.getByLabel('Prénom').fill(s.prenom)
 	await page.getByLabel('Nom', { exact: true }).fill(s.nom)
 	await page.getByLabel('Email').fill(s.email)
-	await page.getByLabel('Numéro de téléphone').fill(s.telephone)
+	await page.getByLabel('Numéro de téléphone (facultatif)').fill(s.telephone)
 	await page.getByLabel('Message').fill(s.message)
 }
 
@@ -110,7 +110,7 @@ test.describe('E51 : les erreurs sont en français, sous le champ, et le focus v
 		await expect(page.getByTestId('erreur-prenom')).toHaveText('Le prénom est requis')
 		await expect(page.getByTestId('erreur-nom')).toHaveText('Le nom est requis')
 		await expect(page.getByTestId('erreur-email')).toHaveText('L’e-mail est invalide')
-		await expect(page.getByTestId('erreur-telephone')).toHaveText('Le numéro de téléphone est requis')
+		await expect(page.getByTestId('erreur-telephone')).toHaveText('')
 		await expect(page.getByTestId('erreur-message')).toHaveText('Le message est requis')
 		await expect(page.getByLabel('Prénom')).toBeFocused()
 		await expect(page.getByLabel('Prénom')).toHaveAttribute('aria-invalid', 'true')
