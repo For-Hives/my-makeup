@@ -36,10 +36,12 @@ Raisons qui doivent rester dynamiques, et qui le restent :
 
 ## Mesure en ligne
 
-À faire après le déploiement, 5 essais chacun, le même jour que l'ancien site : temps de premier octet médian de `/`, d'un profil publiable et d'un talent, au plus 20 % au-dessus de celui de l'ancien site. Les chiffres s'écrivent ici.
+Mesure du 22/10/2026, depuis le même poste, `curl` sur l'adresse complète, premier essai écarté (échauffement), médiane des 5 suivants, temps de premier octet en secondes. Les trois pages de la v3 répondent `x-nextjs-cache: HIT` et `s-maxage=3600, stale-while-revalidate` : le HTML sort du cache.
 
 | Page | v3 (médiane de 5) | Ancien site (médiane de 5) | Écart |
 |---|---|---|---|
-| `/` | à mesurer | à mesurer | |
-| un profil publiable | à mesurer | à mesurer | |
-| un talent | à mesurer | à mesurer | |
+| `/` | 0,162 | 0,129 | +25 % |
+| un profil publiable (`/profil/cinquin-maeva`) | 0,166 | 0,106 | +57 % |
+| un talent (`/talent/maquillage-femme`) | 0,168 | 0,108 | +55 % |
+
+L'écart dépasse 20 %, le critère de mesure du ticket n'est donc pas tenu. Mais la cause n'est plus le rendu de la page : toute réponse de la v3 qui passe l'accès protégé coûte environ 60 ms de plus que sur l'ancien site, même `/api/health` ou `/robots.txt` (0,16 s, contre 0,10 s pour `/robots.txt` de l'ancien site). Contrôle : sur la v3, une requête sans identifiants répond 401 en 0,100 s (médiane de 4), une requête avec un mauvais mot de passe répond 401 en 0,159 s (médiane de 4) : la vérification du mot de passe de l'accès protégé coûte environ 58 ms, et c'est la différence. Les deux sites sont sur la même adresse IP. Retranché de la v3, l'écart serait d'environ -19 % sur `/`, +2 % sur un profil et +1 % sur un talent : une estimation, pas la mesure du critère. La mesure qui compte se refait une fois l'accès protégé levé (à la bascule), sans identifiants.
