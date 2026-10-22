@@ -92,7 +92,7 @@ export function ResultCard({
 			<div className="flex w-full flex-col gap-4 p-4 pt-6">
 				{carte.specialite && <p className="font-bold text-gray-900 text-lg">{carte.specialite}</p>}
 				{/* Ticket 291: no way to reach her is said, and the card carries no contact button. */}
-				{carte.sansContact && (
+				{carte.unreachable && (
 					<p className="rounded bg-gray-100 px-3 py-2 text-gray-700 text-sm">Coordonnées pas encore indiquées</p>
 				)}
 			</div>

@@ -230,7 +230,7 @@ export interface ProfileCard {
 	 * True when nothing on her profile lets a client reach her (ticket 291). The key is absent for a
 	 * profile that can be reached, so a card of the list is what it was; only the directory sets it.
 	 */
-	sansContact?: true
+	unreachable?: true
 }
 
 /** One page of the listed profiles. */
@@ -775,7 +775,7 @@ export async function readDirectory(
 			const isUnreachable = unreachable.has(profile.id)
 			const card = cardOf(profile, photos, pids)
 			directory.push({
-				carte: isUnreachable ? { ...card, sansContact: true } : card,
+				carte: isUnreachable ? { ...card, unreachable: true } : card,
 				unreachable: isUnreachable,
 				...directoryPlace(profile),
 				...(avecLesTextes && { textes: textsOf(profile) }),

@@ -85,7 +85,7 @@ describe('291 : la carte', () => {
 
 	test('sans contact : « Coordonnées pas encore indiquées »', () => {
 		expect(
-			renderToStaticMarkup(<ResultCard carte={{ ...CARD, sansContact: true }} prioritaire={false} rang={1} />)
+			renderToStaticMarkup(<ResultCard carte={{ ...CARD, unreachable: true }} prioritaire={false} rang={1} />)
 		).toContain('Coordonnées pas encore indiquées')
 	})
 
@@ -128,7 +128,7 @@ describe('291 : la lecture de l’annuaire', () => {
 	test('un réseau, ou un téléphone montré, rend joignable ; des coordonnées fermées ou rien, non', async () => {
 		const directory = await readDirectory(payload)
 		expect(directory.map(item => item.unreachable)).toEqual([false, false, true, true])
-		expect(directory.map(item => item.carte.sansContact)).toEqual([undefined, undefined, true, true])
+		expect(directory.map(item => item.carte.unreachable)).toEqual([undefined, undefined, true, true])
 	})
 
 	test('aucune coordonnée ne sort de la lecture', async () => {
