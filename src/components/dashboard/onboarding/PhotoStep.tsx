@@ -15,7 +15,8 @@ import {
 import type { SaveResult } from '@/lib/dashboard/result'
 import type { OnboardingPhotoValues } from '@/lib/dashboard/save-onboarding'
 import { localPreview, MAIN_PICTURE_ALT, releasePreview } from '../PhotoEditor'
-import { BUTTON, FailureMessage, FIELD, MAIN_BUTTON, StepFrame } from './shared'
+import { PhotoPickerButton } from '../PhotoPickerButton'
+import { BUTTON, FailureMessage, MAIN_BUTTON, StepFrame } from './shared'
 
 export type OnboardingPhotoUpload = (saisie: { photoPrincipale: PhotoId }) => Promise<SaveResult<OnboardingPhotoValues>>
 
@@ -138,23 +139,19 @@ export function PhotoStep({
 						<p className="text-neutral-600 italic">Tu n’as pas encore choisi de photo.</p>
 					)}
 				</div>
-				<div className="flex flex-col gap-1">
-					<label htmlFor="accueil-photo-fichier" className="font-medium text-sm">
-						{chosen ? 'Choisir une autre photo' : 'Choisir une photo'}
-					</label>
-					<input
+				<div className="flex flex-col gap-2">
+					<PhotoPickerButton
 						id="accueil-photo-fichier"
-						type="file"
+						libelle={chosen ? 'Choisir une autre photo' : 'Choisir une photo'}
 						accept={ACCEPT}
 						disabled={pending}
-						aria-describedby="accueil-photo-aide"
+						aideId="accueil-photo-aide"
 						onChange={evenement => {
 							const file = evenement.target.files?.[0]
 							// The same file can be picked again.
 							evenement.target.value = ''
 							if (file) void choose(file)
 						}}
-						className={FIELD}
 					/>
 					<p id="accueil-photo-aide" className="text-neutral-700 text-sm">
 						JPEG, PNG ou WebP. La photo est réduite avant l’envoi, et rien n’est envoyé avant « Terminer ».

@@ -230,6 +230,16 @@
 			"id": "quand-tu-reviens-te-connecter-avec-un-profil-encore-vide",
 			"type": "amelioration",
 			"text": "Quand tu reviens te connecter avec un profil encore vide, on te propose tout de suite l’accueil en trois étapes, et ton espace te dit combien d’étapes il te reste pour être visible."
+		},
+		{
+			"id": "dans-ton-espace-la-jauge-compte-d-abord-les-six-points-in",
+			"type": "amelioration",
+			"text": "Dans ton espace, la jauge compte d’abord les six points indispensables (« 6/6 : ta page est prête »), puis une carte « Ta page est en ligne ! » te donne l’adresse de ta page avec un bouton pour copier le lien, le partager et l’ajouter à ta bio Instagram."
+		},
+		{
+			"id": "pour-ajouter-des-photos-a-ton-portfolio-un-grand-bouton-a",
+			"type": "amelioration",
+			"text": "Pour ajouter des photos à ton portfolio, un grand bouton « Ajouter des photos » remplace le champ de fichier brut."
 		}
 	],
 	"releases": []

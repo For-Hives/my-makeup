@@ -37,6 +37,7 @@ const READ_FIELDS = {
 	contactDetails: true,
 	publicContact: true,
 	consentedAt: true,
+	slug: true,
 } as const
 
 /**

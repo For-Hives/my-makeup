@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { ProfileProgress } from '@/components/dashboard/ProfileProgress'
 import type { DashboardProfile } from '@/lib/dashboard/cards'
 import { SECTIONS } from '@/lib/dashboard/cards'
-import { profileProgress } from '@/lib/dashboard/progress'
+import { bonusText, essentialsText, pageIsOnline, profileProgress } from '@/lib/dashboard/progress'
 import { CRITERIA } from '@/lib/profile/completeness'
 import { ANNECY, caseDocument, completenessInV3, SHARED_CASE } from '../support/completeness-cases'
 import { openWindow } from '../support/dom-react'
@@ -73,7 +73,7 @@ describe('U02 : profil complet', () => {
 	test('13 sur 13, 100 %, publiable, aucun manque', () => {
 		const a = profileProgress(FULL)
 		expect(a).toMatchObject({ score: 13, pourcentage: 100, etat: 'publiable', manques: [] })
-		expect(a.consequence).toContain('Google peut l’indexer')
+		expect(a.consequence).toContain('Google peut maintenant te trouver')
 	})
 })
 
@@ -176,12 +176,13 @@ describe('U08 : aucun calcul propre à la page, les cas partagés avec l’ancie
 describe('le bloc affiché', () => {
 	test('score, pourcentage, barre de progression et liens vers les cartes', async () => {
 		const zone = await jsdomWindow.monter(<ProfileProgress avancement={profileProgress({ id: 2 })} />)
-		expect(zone.textContent).toContain('0 sur 13 (0 %)')
+		expect(zone.querySelector('[data-testid="avancement-score"]')?.textContent).toBe('0/6 indispensables')
+		expect(zone.querySelector('[data-testid="avancement-bonus"]')?.textContent).toBe('Bonus : 0/7')
 		expect(zone.textContent).toContain('Ton profil est vide')
 		expect(zone.textContent).not.toContain('null')
 		const bar = zone.querySelector('[role="progressbar"]')
 		expect(bar?.getAttribute('aria-valuenow')).toBe('0')
-		expect(bar?.getAttribute('aria-valuemax')).toBe('13')
+		expect(bar?.getAttribute('aria-valuemax')).toBe('6')
 		const links = [...zone.querySelectorAll('a')].map(a => a.getAttribute('href'))
 		expect(links).toHaveLength(13)
 		expect(links).toContain('#carte-photo')
@@ -191,9 +192,67 @@ describe('le bloc affiché', () => {
 
 	test('un profil publiable : pas de liste de manques', async () => {
 		const zone = await jsdomWindow.monter(<ProfileProgress avancement={profileProgress(FULL)} />)
-		expect(zone.textContent).toContain('13 sur 13 (100 %)')
+		expect(zone.querySelector('[data-testid="avancement-score"]')?.textContent).toBe('6/6 : ta page est prête')
+		expect(zone.querySelector('[data-testid="avancement-bonus"]')?.textContent).toBe('Bonus : 7/7')
 		expect(zone.querySelectorAll('a')).toHaveLength(0)
 		expect(zone.querySelector('[data-etat="publiable"]')).not.toBeNull()
+	})
+})
+
+describe('306 : la jauge compte d’abord les six indispensables, les bonus à part', () => {
+	test('profil vide : 0/6 et 0/7 ; profil complet : 6/6 et 7/7, la page est en ligne', () => {
+		const empty = profileProgress({ id: 2 })
+		expect([empty.essentials, empty.bonus]).toEqual([
+			{ done: 0, total: 6 },
+			{ done: 0, total: 7 },
+		])
+		const full = profileProgress(FULL)
+		expect([full.essentials, full.bonus]).toEqual([
+			{ done: 6, total: 6 },
+			{ done: 7, total: 7 },
+		])
+		expect(pageIsOnline(full)).toBe(true)
+		expect(pageIsOnline(empty)).toBe(false)
+	})
+
+	test('cinq indispensables : 5/6, le manque est dit, pas de page en ligne', async () => {
+		const progress = profileProgress(without('networks'))
+		expect(progress.essentials).toEqual({ done: 5, total: 6 })
+		expect(pageIsOnline(progress)).toBe(false)
+		expect(essentialsText(progress.essentials, pageIsOnline(progress))).toBe('5/6 indispensables')
+		const zone = await jsdomWindow.monter(<ProfileProgress avancement={progress} />)
+		expect(zone.querySelector('[data-testid="avancement-score"]')?.textContent).toBe('5/6 indispensables')
+		expect([...zone.querySelectorAll('li')].map(li => li.getAttribute('data-critere'))).toEqual(['reseaux'])
+	})
+
+	test('les bonus ne comptent pas dans les six, et les six ne comptent pas dans les bonus', () => {
+		const onlyBonus = profileProgress({ id: 3, languages: [{ name: 'Français' }], gallery: [6] })
+		expect([onlyBonus.essentials.done, onlyBonus.bonus.done]).toEqual([0, 2])
+		const noBonus = profileProgress({ ...FULL, languages: [], gallery: [], skills: [], courses: [], experiences: [] })
+		expect([noBonus.essentials.done, noBonus.bonus.done]).toEqual([6, 2])
+		expect(bonusText(noBonus.bonus)).toBe('Bonus : 2/7')
+	})
+
+	test('une description de 150 caractères remplit un critère mais pas un indispensable', () => {
+		const progress = profileProgress({ ...FULL, description: 'a'.repeat(150) })
+		expect(progress.essentials.done).toBe(5)
+		expect(progress.score).toBe(13)
+	})
+
+	test('masquée par l’équipe : jamais « ta page est prête », la carte verte ne s’affiche pas', () => {
+		const hidden = profileProgress({ ...FULL, status: 'hidden' })
+		expect(pageIsOnline(hidden)).toBe(false)
+		expect(essentialsText(hidden.essentials, pageIsOnline(hidden))).toBe('6/6 indispensables')
+		const internal = profileProgress({ ...FULL, specialty: 'CEO/CTO My Makeup' })
+		expect(pageIsOnline(internal)).toBe(false)
+	})
+
+	test('les états en mots : plus de « indexe », « Google peut maintenant te trouver »', () => {
+		const said = [FULL, { id: 2 }, without('networks'), { ...FULL, specialty: 'CEO/CTO My Makeup' }].map(
+			p => profileProgress(p).consequence
+		)
+		expect(said.join(' ')).not.toMatch(/index/)
+		expect(said[0]).toContain('Google peut maintenant te trouver')
 	})
 })
 
@@ -273,7 +332,7 @@ describe('292 : l’espace dit la vérité à une maquilleuse masquée ou en pau
 	test('publiée et disponible : le texte ne change pas', () => {
 		const progress = profileProgress({ ...FULL, status: 'published', reason: null })
 		expect(progress.etat).toBe('publiable')
-		expect(progress.consequence).toBe('Ton profil apparaît dans la recherche et Google peut l’indexer.')
+		expect(progress.consequence).toBe('Ton profil apparaît dans la recherche et Google peut maintenant te trouver.')
 		expect(progress.enPause).toBe(false)
 		expect(progress.reason).toBeNull()
 	})

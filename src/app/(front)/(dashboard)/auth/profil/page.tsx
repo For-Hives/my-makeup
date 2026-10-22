@@ -11,6 +11,7 @@ import { CoursesEditor, ExperiencesEditor, ServiceOffersEditor } from '@/compone
 import { LocationEditor } from '@/components/dashboard/LocationEditor'
 import { NetworksEditor } from '@/components/dashboard/NetworksEditor'
 import { OnboardingBanner } from '@/components/dashboard/OnboardingBanner'
+import { PageOnline } from '@/components/dashboard/PageOnline'
 import { PhotoEditor } from '@/components/dashboard/PhotoEditor'
 import { PortfolioEditor } from '@/components/dashboard/PortfolioEditor'
 import { ProfileProgress } from '@/components/dashboard/ProfileProgress'
@@ -32,7 +33,8 @@ import { artistProfile } from '@/lib/dashboard/my-profile'
 import { remainingSteps } from '@/lib/dashboard/onboarding'
 import { readDashboardPhotos } from '@/lib/dashboard/photos'
 import { PREVIEW_PATH } from '@/lib/dashboard/preview'
-import { profileProgress } from '@/lib/dashboard/progress'
+import { pageIsOnline, profileProgress } from '@/lib/dashboard/progress'
+import { publicAddress } from '@/lib/dashboard/public-address'
 import { requestUser } from '@/lib/dashboard/request'
 import { SERVICE_OFFERS } from '@/lib/dashboard/service-offers'
 import { zoneReviewView } from '@/lib/dashboard/zone-review'
@@ -95,6 +97,7 @@ export default async function ProfilePage() {
 						<OnboardingBanner reste={steps.reste} premiere={steps.premiere} />
 					) : null}
 					<ProfileProgress avancement={progress} reprendre={saveMyAvailability} />
+					{pageIsOnline(progress) && profile.slug ? <PageOnline adresse={publicAddress(profile.slug)} /> : null}
 					{profileCards(profile, photos).map(carte => (
 						<SectionCard
 							key={carte.section}

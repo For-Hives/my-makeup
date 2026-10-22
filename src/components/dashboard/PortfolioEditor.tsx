@@ -18,6 +18,7 @@ import type { SaveResult } from '@/lib/dashboard/result'
 import { GALLERY_MAX } from '@/lib/media'
 import { EditingPanel } from './EditingPanel'
 import { localPreview, releasePreview } from './PhotoEditor'
+import { PhotoPickerButton } from './PhotoPickerButton'
 
 export type PortfolioUpload = (saisie: { galerie: PhotoId[] }) => Promise<SaveResult<PortfolioValues>>
 
@@ -365,25 +366,21 @@ function PortfolioForm({
 						))}
 					</ul>
 				)}
-				<div className="flex flex-col gap-1">
-					<label htmlFor="portfolio-fichiers" className="font-medium text-sm">
-						Ajouter des photos
-					</label>
-					<input
-						ref={field}
+				<div className="flex flex-col gap-2">
+					<PhotoPickerButton
 						id="portfolio-fichiers"
-						type="file"
-						multiple
+						libelle="Ajouter des photos"
 						accept={ACCEPT}
+						multiple
 						disabled={pending || preparation}
-						aria-describedby="portfolio-aide"
+						aideId="portfolio-aide"
+						inputRef={field}
 						onChange={evenement => {
 							const chosen = Array.from(evenement.target.files ?? [])
 							// The same files can be picked again.
 							evenement.target.value = ''
 							if (chosen.length > 0) void choose(chosen)
 						}}
-						className="min-h-11 rounded-md border border-neutral-400 bg-white px-3 py-2 text-base"
 					/>
 					<p id="portfolio-aide" className="text-neutral-700 text-sm">
 						JPEG, PNG ou WebP, {GALLERY_MAX} photos au plus. Les photos sont réduites avant l’envoi, et rien n’est
