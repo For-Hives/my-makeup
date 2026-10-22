@@ -280,6 +280,11 @@
 			"id": "tes-photos-sont-converties-en-webp-a-l-envoi-pour-charger",
 			"type": "amelioration",
 			"text": "Tes photos sont converties en WebP à l’envoi pour charger plus vite, tu vois la place qu’elles prennent et combien il t’en reste, et tu peux en envoyer jusqu’à 12 Mo chacune."
+		},
+		{
+			"id": "une-maquilleuse-dont-la-ville-n-est-pas-reconnue-ou-n-est",
+			"type": "amelioration",
+			"text": "Une maquilleuse dont la ville n'est pas reconnue, ou n'est pas indiquée, reste trouvable dans la recherche : elle apparaît simplement après celles dont la zone est connue."
 		}
 	],
 	"releases": []

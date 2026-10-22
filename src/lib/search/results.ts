@@ -16,6 +16,7 @@ import {
 	readPlace,
 	sectionsByDistance,
 	sectionsByPlace,
+	zoneKnownFirst,
 } from './place'
 import { type NormalizedTexts, normalizeTexts, rankByRelevance } from './relevance'
 
@@ -57,8 +58,8 @@ export interface SearchOrigin {
 
 /**
  * The profiles a search finds, in their sections. The directory comes in its order, which breaks ties.
- * In each section, the profiles with no way to be reached go last (ticket 291): they stay listed, and
- * the count of the title does not change.
+ * In each section, the profiles with no way to be reached go last (ticket 291), then those with no zone
+ * (ticket 310): they stay listed, and the count of the title does not change.
  *
  * With `origin` (ticket 294), the place typed is a point and the profiles are ranked by distance
  * (sectionsByDistance). Without it, or when only a code of département was typed, the search keeps
@@ -84,8 +85,11 @@ export function find<T extends SearchableProfile>(
 			: sectionsByPlace(found, recherche.city)
 	return {
 		...places,
-		locaux: reachableFirst(places.locaux),
-		sections: places.sections.map(section => ({ ...section, profils: reachableFirst(section.profils) })),
+		locaux: zoneKnownFirst(reachableFirst(places.locaux)),
+		sections: places.sections.map(section => ({
+			...section,
+			profils: zoneKnownFirst(reachableFirst(section.profils)),
+		})),
 	}
 }
 
