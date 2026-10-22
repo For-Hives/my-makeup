@@ -162,10 +162,10 @@ describe('308 : l’admin choisit une commune de la revue d’un appui', () => {
 		const owner = await createAccount('maquilleuse')
 		const id = await profileToReview(payload, owner)
 		const editor = await createAccount('redaction')
-		for (const enTetes of [editor.session.enTetes, owner.session.enTetes, {}]) {
+		for (const asked of [editor.session.enTetes, owner.session.enTetes, {}]) {
 			const response = await callRest('POST', `/api/profiles/${id}/choose-city`, {
 				corps: { inseeCode: '74991' },
-				enTetes,
+				enTetes: asked,
 			})
 			expect(response.statut).toBe(403)
 		}

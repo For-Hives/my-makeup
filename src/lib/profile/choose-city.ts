@@ -64,13 +64,13 @@ export async function chooseReviewCity(
 	if (answer.genre === 'panne') return refused('service-down')
 	if (answer.genre === 'inconnue') return refused('unknown-city')
 
-	const { nom: name, latitude, longitude, codesPostaux } = answer.commune
+	const { nom: name, latitude, longitude, codesPostaux: postalCodes } = answer.commune
 	try {
 		await payload.update({
 			collection: 'profiles',
 			data: {
 				zoneKind: 'city',
-				city: { name, inseeCode, latitude, longitude, postalCodes: [...codesPostaux] },
+				city: { name, inseeCode, latitude, longitude, postalCodes: [...postalCodes] },
 			},
 			depth: 0,
 			id: profileId,
