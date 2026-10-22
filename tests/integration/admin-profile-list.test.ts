@@ -54,8 +54,10 @@ const expected = (garde: (profil: (typeof LOADED_DEMO_PROFILES)[number]) => bool
 describe('La liste des profils de l’admin (ticket 165)', () => {
 	test('la liste montre l’adresse, la commune, la complétude, le caractère publiable, le statut, la zone à revoir et la dernière activité, la plus récente d’abord', () => {
 		expect(Profiles.admin?.defaultColumns).toEqual([
+			// The person first (ticket 308): photo and name, then her zone as the public pages write it.
+			'listName',
+			'listZone',
 			'slug',
-			'city.name',
 			'completeness',
 			'publishable',
 			'status',

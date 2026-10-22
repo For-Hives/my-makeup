@@ -73,6 +73,8 @@ export default buildConfig({
 		// Without it the admin panel asks gravatar.com for an image computed from the admin's email: a
 		// fingerprint of the address sent to a third party (ticket 223).
 		avatar: 'default',
+		// Dates in the lists and the sheets as the team writes them: 22/10/2026 14:05 (ticket 308).
+		dateFormat: 'dd/MM/yyyy HH:mm',
 		user: Admins.slug,
 		importMap: { baseDir: dirname },
 		// 'off' closes /api/og: an image rendered on demand, for anyone, with or without a session.

@@ -165,6 +165,12 @@ export const ContactRequests: CollectionConfig<'contact-requests'> = {
 			maxLength: CONTACT_LIMITS.message,
 			access: frozen,
 		},
+		// Ticket 308: « Répondre par email », a link `mailto:` with the address and the subject only.
+		{
+			name: 'reply',
+			type: 'ui',
+			admin: { components: { Field: '/components/admin/ReplyByEmail#ReplyByEmail' } },
+		},
 		{
 			name: 'resend',
 			type: 'ui',

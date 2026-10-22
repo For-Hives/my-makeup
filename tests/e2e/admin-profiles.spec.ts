@@ -96,7 +96,7 @@ test.describe('L’admin retrouve, corrige et masque un profil', () => {
 			// The columns of the list: the address, the commune, the completeness, publishable, the status.
 			await page.goto(`/admin/collections/profiles?limit=100&where[and][0][status][exists]=true&${his}`)
 			const header = page.locator('thead')
-			for (const column of ['Adresse du profil', 'Commune', 'Complétude', 'Publiable', 'Statut'])
+			for (const column of ['Profil', 'Zone', 'Adresse du profil', 'Complétude', 'Publiable', 'Statut'])
 				await expect(header).toContainText(column)
 			await expect(page.locator('tbody tr')).toHaveCount(3)
 
