@@ -220,6 +220,11 @@
 			"id": "dans-ton-espace-le-lien-je-travaille-a-l-etranger-reagit",
 			"type": "amelioration",
 			"text": "Dans ton espace, le lien « Je travaille à l’étranger » réagit dès le premier appui, et si ta ville n’est pas en France (Genève, Liège, Turin), on te propose directement le pays."
+		},
+		{
+			"id": "dans-ton-espace-le-message-d-accueil-te-salue-par-ton-pre",
+			"type": "correction",
+			"text": "Dans ton espace, le message d'accueil te salue par ton prénom au lieu de « Bonjour toi »."
 		}
 	],
 	"releases": []

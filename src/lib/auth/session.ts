@@ -3,19 +3,11 @@ import { cookies, headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { getPayload } from 'payload'
 import { COLLECTION_PROS } from '../access'
+import { type Artist, artistFromAccount } from './artist'
 import { SESSION_COOKIE } from './closed-dashboard'
 import { expiredSessionUrl, signInUrl } from './return-to'
 import { tokenExpiration } from './session-duration'
 import { classifySession, type SessionState, tokenState, type Verification, verifySession } from './session-state'
-
-/** What a page of the space may know about the makeup artist: never the account document. */
-export interface Artist {
-	id: number | string
-	nom: string
-	email: string
-	/** When her session ends (Unix seconds), read from the cookie; nothing if the token did not come by the cookie. */
-	expire: number | null
-}
 
 /** Thrown by the guard when the session cannot be checked: the error page of the space answers it. */
 export class VerificationImpossible extends Error {
@@ -50,10 +42,9 @@ async function verify(): Promise<
 		},
 	})
 	if (result.verification !== 'acceptee') return result
-	const user = result.utilisateur as { id: number | string; nom?: string | null; email: unknown }
 	return {
 		verification: 'acceptee',
-		maquilleuse: { id: user.id, nom: user.nom ?? '', email: String(user.email), expire: null },
+		maquilleuse: artistFromAccount(result.utilisateur as Parameters<typeof artistFromAccount>[0]),
 	}
 }
 
