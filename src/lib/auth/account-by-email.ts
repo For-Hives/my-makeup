@@ -29,7 +29,8 @@ export interface AccountFound {
 
 type Row = { email: string; verifie: boolean | null; jeton: string | null }
 
-const USED_PREFIX = 'utilise:'
+/** `utilise:` (spent) and `pending:` (confirmed, session of the link unclaimed, ticket 302) are traces of a token, never a link. */
+const TRACE = /^(utilise|pending):/
 
 export async function findAccount(payload: Pick<Payload, 'db'>, email: string): Promise<AccountFound | undefined> {
 	const address = email.trim().toLowerCase()
@@ -47,6 +48,6 @@ export async function findAccount(payload: Pick<Payload, 'db'>, email: string): 
 	)
 	const row = rows[0]
 	if (!row) return undefined
-	const token = row.jeton && !row.jeton.startsWith(USED_PREFIX) ? row.jeton : null
+	const token = row.jeton && !TRACE.test(row.jeton) ? row.jeton : null
 	return { email: row.email, verifie: row.verifie === true, jeton: token, parVariante: row.email !== address }
 }

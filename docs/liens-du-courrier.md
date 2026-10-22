@@ -27,3 +27,6 @@ Chaque ouverture écrit une ligne `sign-in` dont la méthode est `confirmation` 
 
 - Un lien envoyé à quelqu'un d'autre (la personne qui le reçoit clique) connecte celle qui clique au compte du lien : c'est la propriété de tout lien de connexion par courrier, bornée ici par l'heure, l'usage unique et le clic.
 - Le marqueur de mesure `login_result` n'est pas posé par ces deux chemins.
+- Une personne à qui un tiers fait suivre un lien frais (un compte créé par ce tiers) arrive sur « Continuer » avec le code du tiers dans son cookie : si elle clique, elle est connectée au compte du tiers. Même propriété que le mot de passe oublié ; bornée à une heure et à un clic. Relevé par le relecteur sécurité, accepté.
+- Le jeton brut figure dans les journaux d'accès du serveur avant la redirection : inévitable pour un lien de courrier.
+- Une ouverture par lien n'écrit pas `lastSignInAt` (le chemin Google l'écrit) : à décider avec la mesure.
