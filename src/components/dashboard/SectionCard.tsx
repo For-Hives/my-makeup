@@ -17,7 +17,16 @@ function Value({ valeur }: { valeur: string | null }) {
  * on each line or « à compléter », and the slot of the button « Modifier » that each section plugs
  * in as it arrives. A server component: it shows what it is given.
  */
-export function SectionCard({ carte, action }: { carte: Card; action?: ReactNode }) {
+export function SectionCard({
+	carte,
+	action,
+	visuel,
+}: {
+	carte: Card
+	action?: ReactNode
+	/** What the card shows in place of its lines, when a picture says it better (the thumbnail of her main photo, ticket 307). */
+	visuel?: ReactNode
+}) {
 	const labels = carte.lignes.some(ligne => ligne.libelle !== undefined)
 	return (
 		<section
@@ -31,7 +40,9 @@ export function SectionCard({ carte, action }: { carte: Card; action?: ReactNode
 				</h2>
 				{action}
 			</div>
-			{labels ? (
+			{visuel !== undefined ? (
+				<div className="mt-3">{visuel}</div>
+			) : labels ? (
 				<dl className="mt-3 flex flex-col gap-2">
 					{carte.lignes.map(ligne => (
 						<div key={ligne.libelle} className="flex min-w-0 flex-col gap-0.5 sm:flex-row sm:gap-3">

@@ -108,7 +108,15 @@ export function ProfileProgress({ avancement, reprendre }: { avancement: Progres
 			{!hidden && (
 				<div className="mt-4 flex flex-col gap-4">
 					<List id="avancement-requis" titre="Pour être publiable" manques={required} />
-					<List id="avancement-autres" titre="Pour un profil plus complet" manques={others} />
+					{others.length > 0 ? (
+						// Folded (ticket 307): on a phone, thirteen links pushed the cards that matter below 2 400 px.
+						<details data-testid="avancement-autres-details">
+							<summary className="flex min-h-11 cursor-pointer items-center font-semibold text-neutral-800 underline">
+								Pour un profil plus complet ({others.length})
+							</summary>
+							<List id="avancement-autres" titre="Pour un profil plus complet" manques={others} />
+						</details>
+					) : null}
 				</div>
 			)}
 		</section>

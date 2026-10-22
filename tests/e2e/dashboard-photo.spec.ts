@@ -141,7 +141,7 @@ test.describe('134 : la photo principale', { tag: '@mobile' }, () => {
 		expect(Math.max(media.width ?? 0, media.height ?? 0)).toBeLessThanOrEqual(2000)
 
 		await page.reload()
-		await expect(page.getByTestId('carte-photo')).toContainText('Photo ajoutée')
+		await expect(page.getByTestId('carte-photo').getByTestId('photo-principale-vignette')).toBeVisible()
 		await open(page)
 		await expect(page.getByRole('img', { name: 'Ta photo principale actuelle' })).toBeVisible()
 		await page.keyboard.press('Escape')

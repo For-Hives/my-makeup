@@ -1,6 +1,7 @@
 import { expect, type Locator, type Page, test } from '@playwright/test'
 import { createAccount, type TestAccount } from '../support/account-factory'
 import { violationsSevere } from '../support/axe'
+import { openFurtherCards } from '../support/further-cards'
 import { testPayload } from '../support/payload-test'
 import { fileForPayload } from '../support/photos'
 
@@ -174,6 +175,7 @@ test.describe('178 : chaque liste de l’espace, au retrait d’une ligne', { ta
 			test.setTimeout(90_000)
 			await artistWithLists(context)
 			await page.goto('/auth/profil')
+			await openFurtherCards(page)
 			await expect(page.getByRole('heading', { level: 1, name: 'Mon espace' })).toBeVisible()
 			await press(page.getByRole('button', { name: list.open, exact: true }))
 			await expect(dialog(page)).toBeVisible()

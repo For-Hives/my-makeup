@@ -240,6 +240,11 @@
 			"id": "pour-ajouter-des-photos-a-ton-portfolio-un-grand-bouton-a",
 			"type": "amelioration",
 			"text": "Pour ajouter des photos à ton portfolio, un grand bouton « Ajouter des photos » remplace le champ de fichier brut."
+		},
+		{
+			"id": "ton-espace-presente-d-abord-ce-que-voient-les-clientes-ph",
+			"type": "amelioration",
+			"text": "Ton espace présente d’abord ce que voient les clientes (photo, identité, zone, prestations, contact, description), range le reste dans « Pour aller plus loin », met ta disponibilité en interrupteur en haut et ta déconnexion avec la suppression du compte en bas."
 		}
 	],
 	"releases": []
