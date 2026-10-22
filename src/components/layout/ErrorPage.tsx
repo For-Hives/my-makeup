@@ -15,11 +15,11 @@ export function ErrorPage({ reessayer }: { reessayer?: () => void }) {
 				</p>
 				<div className="mt-8 flex flex-col gap-4">
 					{reessayer && (
-						<button type="button" onClick={reessayer} className="btn-primary-large">
+						<button type="button" onClick={reessayer} className="btn-primary-large min-h-11 items-center">
 							Réessayer
 						</button>
 					)}
-					<Link href="/" prefetch={false} className="btn-primary-large">
+					<Link href="/" prefetch={false} className="btn-primary-large min-h-11 items-center">
 						Retourner à l'accueil
 					</Link>
 				</div>
