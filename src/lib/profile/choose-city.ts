@@ -4,7 +4,8 @@
  * the official list gives for the code, its centre and its postal codes included, then the server empties the
  * review (`clearZoneReview`, ticket 259). The radius and « à domicile » are left as they are.
  *
- * Only a commune of the review is accepted: a code that is not one of its candidates is refused before the
+ * Any commune the review lists is accepted, whatever the reason (a shared postal code, homonyms), because the
+ * admin sees them all; the makeup artist's banner offers only the shared postal code. Only a commune of the review is accepted: a code that is not one of its candidates is refused before the
  * list is asked, so a request cannot put any commune on a profile.
  *
  * Relative imports on purpose: the route of the collection calls it, the Payload CLI loads that.
@@ -12,7 +13,7 @@
 
 import type { Payload } from 'payload'
 import { type CityFromCode, cityFromCode } from '../dashboard/city-reference'
-import { reviewButtons, zoneReviewView } from '../dashboard/zone-review'
+import { zoneReviewView } from '../dashboard/zone-review'
 
 /** The user the write is made as: an admin's account. */
 type Actor = NonNullable<Awaited<ReturnType<Payload['auth']>>['user']>
@@ -57,7 +58,7 @@ export async function chooseReviewCity(
 	if (!profile) return refused('not-found')
 
 	const view = zoneReviewView(profile.zoneReview)
-	if (view === null || !reviewButtons(view).some(candidate => candidate.codeInsee === inseeCode))
+	if (view === null || !view.communes.some(candidate => candidate.codeInsee === inseeCode))
 		return refused('not-a-candidate')
 
 	const answer = await deps.ask(inseeCode)

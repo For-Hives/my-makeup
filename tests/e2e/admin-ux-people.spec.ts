@@ -85,6 +85,10 @@ test.describe('308 : l’administration montre des personnes et aide à répondr
 			const abroadRow = rows.filter({ hasText: abroad.slug })
 			await expect(abroadRow).toContainText(/Belgique/)
 			await expect(abroadRow.locator('img')).toHaveCount(1)
+			// The photo must load, not only exist: an address without its storage folder is a 404.
+			await expect
+				.poll(() => abroadRow.locator('img').evaluate(image => (image as HTMLImageElement).naturalWidth))
+				.toBeGreaterThan(0)
 			await expect(abroadRow).not.toContainText('Pas de Nom')
 			const emptyRow = rows.filter({ hasText: empty.slug })
 			await expect(emptyRow).toContainText('Sans nom')

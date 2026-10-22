@@ -1,25 +1,50 @@
 import type { DefaultServerCellComponentProps } from 'payload'
+import { cache } from 'react'
 import { type AdminListProfile, adminProfileName } from '../../lib/profile/admin-list'
 
+type Payload = DefaultServerCellComponentProps['payload']
+
+/** One batch per page render: the rows ask in the same tick, one read answers them all. */
+const batchOf = cache((): { ids: Set<string>; answers: Promise<Map<string, string | null>> | null } => ({
+	ids: new Set(),
+	answers: null,
+}))
+
+/**
+ * The photos of the rows of one page, read once (not one read per row). The media is read with all its fields
+ * (no `select`): the address of a thumbnail is built from the prefix and the file name, which a select of `url`
+ * alone leaves out, and the address then misses its `media/` folder. The list is reached by admins only.
+ */
+function thumbnailsOf(payload: Payload, wanted: string): Promise<string | null> {
+	const batch = batchOf()
+	batch.ids.add(wanted)
+	batch.answers ??= Promise.resolve().then(async () => {
+		const found = new Map<string, string | null>()
+		const ids = [...batch.ids]
+		// A row that asks after this read starts opens the next batch.
+		batch.ids = new Set()
+		batch.answers = null
+		const { docs } = await payload
+			.find({
+				collection: 'media',
+				depth: 0,
+				limit: ids.length,
+				overrideAccess: true,
+				pagination: false,
+				where: { id: { in: ids } },
+			})
+			.catch(() => ({ docs: [] }))
+		for (const media of docs) found.set(String(media.id), media.sizes?.thumbnail?.url ?? media.url ?? null)
+		return found
+	})
+	return batch.answers.then(found => found.get(wanted) ?? null)
+}
+
 /** The photo a row shows, if any: the thumbnail, else the file itself. */
-async function thumbnailOf(
-	payload: DefaultServerCellComponentProps['payload'],
-	picture: unknown
-): Promise<string | null> {
+function thumbnailOf(payload: Payload, picture: unknown): Promise<string | null> {
 	const id = typeof picture === 'object' && picture !== null ? (picture as { id?: unknown }).id : picture
-	if (typeof id !== 'number' && typeof id !== 'string') return null
-	const media = await payload
-		.findByID({
-			collection: 'media',
-			depth: 0,
-			disableErrors: true,
-			id,
-			// The row is one the list already gave to the admin; only an address is read.
-			overrideAccess: true,
-			select: { url: true, sizes: true },
-		})
-		.catch(() => null)
-	return media?.sizes?.thumbnail?.url ?? media?.url ?? null
+	if (typeof id !== 'number' && typeof id !== 'string') return Promise.resolve(null)
+	return thumbnailsOf(payload, String(id))
 }
 
 /**
@@ -27,7 +52,7 @@ async function thumbnailOf(
  * The photo is decorative: the name beside it says who she is.
  */
 export async function ProfileName({ payload, rowData }: DefaultServerCellComponentProps) {
-	const profile = rowData as AdminListProfile & { mainPicture?: unknown }
+	const profile = (rowData ?? {}) as AdminListProfile & { mainPicture?: unknown }
 	const thumbnail = await thumbnailOf(payload, profile.mainPicture)
 	return (
 		<span data-testid="profile-name" style={{ alignItems: 'center', display: 'inline-flex', gap: '0.75rem' }}>

@@ -59,7 +59,11 @@ function officialList() {
 	return asked
 }
 
-async function profileToReview(payload: Payload, account: TestAccount<'maquilleuse'>) {
+async function profileToReview(
+	payload: Payload,
+	account: TestAccount<'maquilleuse'>,
+	review: NonNullable<Profile['zoneReview']> = REVIEW
+) {
 	const { docs } = await payload.find({
 		collection: 'profiles',
 		depth: 0,
@@ -71,7 +75,7 @@ async function profileToReview(payload: Payload, account: TestAccount<'maquilleu
 	await payload.update({
 		collection: 'profiles',
 		id: profile.id,
-		data: { radiusKm: 25, homeService: true, zoneReview: REVIEW },
+		data: { radiusKm: 25, homeService: true, zoneReview: review },
 		overrideAccess: true,
 	})
 	return profile.id
@@ -106,6 +110,28 @@ describe('308 : l’admin choisit une commune de la revue d’un appui', () => {
 		expect(profile.zoneReview).toMatchObject({ reason: null, postalCode: null, candidates: null })
 		expect(profile.radiusKm).toBe(25)
 		expect(profile.homeService).toBe(true)
+	})
+
+	test('des homonymes sans code postal partagé : l’admin choisit aussi, la revue est vidée', async () => {
+		const asked = officialList()
+		const payload = await testPayload()
+		const id = await profileToReview(payload, await createAccount('maquilleuse'), {
+			reason: 'homonyms',
+			postalCode: null,
+			candidates: REVIEW.candidates,
+		})
+		const admin = await createAccount('admin')
+
+		const response = await callRest('POST', `/api/profiles/${id}/choose-city`, {
+			corps: { inseeCode: '74990' },
+			enTetes: admin.session.enTetes,
+		})
+
+		expect(response.statut).toBe(200)
+		expect(asked).toEqual(['74990'])
+		const profile = await stored(payload, id)
+		expect(profile.city).toMatchObject({ name: 'Valbrume', inseeCode: '74990' })
+		expect(profile.zoneReview).toMatchObject({ reason: null, candidates: null })
 	})
 
 	test('une commune qui n’est pas dans la revue est refusée, même si la liste officielle la connaît', async () => {
