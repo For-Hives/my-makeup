@@ -145,7 +145,8 @@ describe('I29 : ni email ni téléphone, et une réponse légère', () => {
 
 	test('l’annuaire entier ne porte jamais les coordonnées publiées, même dans les textes cherchés', async () => {
 		const directory = await readDirectory(payload, { avecLesTextes: true })
-		const text = JSON.stringify(directory)
+		// The commune centre is public referential data read for the ranking by distance (ticket 294): `center` only.
+		const text = JSON.stringify(directory, (key, value: unknown) => (key === 'center' ? undefined : value))
 		for (const forbidden of [PHONE, EMAIL, 'latitude', 'longitude', 'inseeCode'])
 			expect(text, forbidden).not.toContain(forbidden)
 		const visible = directory.find(({ carte }) => carte.slug === 'recherche-visible')

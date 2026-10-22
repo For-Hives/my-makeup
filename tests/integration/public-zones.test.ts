@@ -55,7 +55,10 @@ describe('263 : la recherche sur l’annuaire de la base', () => {
 		const annecy = directory.find(({ carte }) => carte.slug === slugOf('reference'))
 		expect(annecy?.postalCodes).toEqual(['74000'])
 		expect(find(directory, { search: '', city: '74000' }).locaux[0]?.carte.slug).toBe(slugOf('reference'))
-		expect(JSON.stringify(directory)).not.toMatch(/latitude|longitude|inseeCode/)
+		// The commune centre is read beside the card for the ranking by distance (ticket 294): `center` only.
+		expect(JSON.stringify(directory, (key, value: unknown) => (key === 'center' ? undefined : value))).not.toMatch(
+			/latitude|longitude|inseeCode/
+		)
 	})
 
 	test('« Belgique », « Bruxelles » et « Italie » classent les profils de pays au premier rang', async () => {
