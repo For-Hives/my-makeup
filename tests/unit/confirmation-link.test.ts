@@ -37,11 +37,13 @@ describe('le lien de confirmation : le proxy range le code dans un cookie', () =
 
 describe('la fenêtre de la session ouverte par le lien', () => {
 	const NOW = Date.UTC(2026, 9, 22, 12, 0, 0)
-	test('une heure depuis la création du compte, pas une seconde de plus', () => {
-		expect(SESSION_OFFER_WINDOW_MS).toBe(3_600_000)
-		expect(sessionOfferOpen(new Date(NOW - 59 * 60_000).toISOString(), NOW)).toBe(true)
+	test('24 heures depuis la création du compte, pas une seconde de plus (ticket 311)', () => {
+		expect(SESSION_OFFER_WINDOW_MS).toBe(24 * 3_600_000)
+		expect(sessionOfferOpen(new Date(NOW - (SESSION_OFFER_WINDOW_MS - 1_000)).toISOString(), NOW)).toBe(true)
+		expect(sessionOfferOpen(new Date(NOW - 23 * 3_600_000).toISOString(), NOW)).toBe(true)
 		expect(sessionOfferOpen(new Date(NOW - SESSION_OFFER_WINDOW_MS).toISOString(), NOW)).toBe(false)
-		expect(sessionOfferOpen(new Date(NOW - 3 * 3_600_000).toISOString(), NOW)).toBe(false)
+		expect(sessionOfferOpen(new Date(NOW - (SESSION_OFFER_WINDOW_MS + 1_000)).toISOString(), NOW)).toBe(false)
+		expect(sessionOfferOpen(new Date(NOW - 48 * 3_600_000).toISOString(), NOW)).toBe(false)
 	})
 
 	test('une date absente ou illisible ferme la fenêtre', () => {

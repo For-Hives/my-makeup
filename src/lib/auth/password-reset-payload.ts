@@ -41,7 +41,7 @@ import { type OpenSession, openSessionForLink } from './session-after-link'
  *
  * The choice of the new password (`resetPassword`)
  * - One transaction: Payload's reset (new hash, all the sessions of the account emptied, the link
- *   spent), then the session that reset opens is dropped (she signs in with her new password, as on
+ *   spent, the address marked confirmed: the link proves the mailbox, ticket 311), then the session that reset opens is dropped (she signs in with her new password, as on
  *   the old site), the hash of the old site is dropped (the old password must not work through the
  *   legacy path) and the token is erased.
  * - A code that is not ours, or whose link is spent or past its hour, is `code-invalide`.
@@ -274,7 +274,10 @@ export async function resetPassword({
 		if (!row) throw new Error('Le compte a disparu pendant la réinitialisation.')
 		await payload.db.updateOne({
 			collection: 'pros',
-			data: { ...row, sessions: [], legacyBcrypt: null, resetPasswordToken: null },
+			// The link went to the mailbox of the account: choosing a password through it proves the address as
+			// the confirmation link does (ticket 311). Without this, an account whose address was never confirmed
+			// (a lost mail, an account of the old site) could neither sign in nor get a session.
+			data: { ...row, sessions: [], legacyBcrypt: null, resetPasswordToken: null, _verified: true },
 			id: user.id as number,
 			req,
 			returning: false,

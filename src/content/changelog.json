@@ -275,6 +275,11 @@
 			"id": "apres-avoir-confirme-ton-adresse-un-clic-sur-continuer-ve",
 			"type": "amelioration",
 			"text": "Après avoir confirmé ton adresse (un clic sur « Continuer vers mon profil ») ou choisi un nouveau mot de passe, tu es connectée : plus besoin de retaper ton email et ton mot de passe."
+		},
+		{
+			"id": "le-lien-de-confirmation-recu-par-courrier-te-connecte-dir",
+			"type": "amelioration",
+			"text": "Le lien de confirmation reçu par courrier te connecte directement pendant 24 heures, et choisir un nouveau mot de passe par un lien confirme aussi ton adresse : tu n’as plus à te reconnecter pour rien."
 		}
 	],
 	"releases": []

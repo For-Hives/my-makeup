@@ -137,8 +137,21 @@ describe('302 : le lien de confirmation, puis un clic, ouvre la session une seul
 		expect((await row(account.id))?.sessions).toHaveLength(1)
 	})
 
-	test('un jeton périmé (compte créé il y a plus d’une heure) confirme le compte mais ne propose ni n’ouvre aucune session', async () => {
-		const account = await waitingAccount({ createdAgoMs: 2 * 3_600_000 })
+	test('un jeton de 23 h 59 min offre et ouvre encore la session ; un jeton de 24 h 01 min confirme le compte sans rien ouvrir', async () => {
+		const justInside = await waitingAccount({ createdAgoMs: 24 * 3_600_000 - 60_000 })
+		const payload = await testPayload()
+		expect(await confirmLink(payload, justInside.token)).toEqual({ result: 'ok', sessionOffered: true })
+		expect((await openAfterConfirmation(justInside.token)).ok).toBe(true)
+
+		const justOutside = await waitingAccount({ createdAgoMs: 24 * 3_600_000 + 60_000 })
+		expect(await confirmLink(payload, justOutside.token)).toEqual({ result: 'ok', sessionOffered: false })
+		expect((await row(justOutside.id))?._verified).toBe(true)
+		expect((await openAfterConfirmation(justOutside.token)).ok).toBe(false)
+		expect((await row(justOutside.id))?.sessions ?? []).toHaveLength(0)
+	})
+
+	test('un jeton périmé (compte créé il y a plus de 24 heures) confirme le compte mais ne propose ni n’ouvre aucune session', async () => {
+		const account = await waitingAccount({ createdAgoMs: 25 * 3_600_000 })
 		const payload = await testPayload()
 
 		expect(await confirmLink(payload, account.token)).toEqual({ result: 'ok', sessionOffered: false })
@@ -153,7 +166,7 @@ describe('302 : le lien de confirmation, puis un clic, ouvre la session une seul
 		await confirmLink(payload, account.token)
 		await payload.db.updateOne({
 			collection: 'pros',
-			data: { createdAt: new Date(Date.now() - 2 * 3_600_000).toISOString() },
+			data: { createdAt: new Date(Date.now() - 25 * 3_600_000).toISOString() },
 			returning: false,
 			where: { id: { equals: account.id } },
 		})
@@ -283,12 +296,28 @@ describe('302 : le nouveau mot de passe ouvre la session', () => {
 		expect((await row(account.id))?.sessions ?? []).toHaveLength(0)
 	})
 
-	test('une adresse jamais confirmée n’obtient pas de session par ce chemin : la porte de la confirmation reste fermée', async () => {
+	test('une adresse jamais confirmée : le lien du mot de passe prouve la boîte, l’adresse est confirmée et la session s’ouvre (ticket 311)', async () => {
 		const account = await waitingAccount()
 		const result = await reset(await linkToken(account.email), openWithoutPassword)
 
-		expect(result).toEqual({ ok: true })
-		expect((await row(account.id))?.sessions ?? []).toHaveLength(0)
+		expect(result.ok && result.token).toMatch(/^[\w-]+\.[\w-]+\.[\w-]+$/)
+		const stored = await row(account.id)
+		expect(stored?._verified).toBe(true)
+		expect(stored?.sessions).toHaveLength(1)
+		// The link of the confirmation mail, followed later, only says the address is confirmed: no second door.
+		const payload = await testPayload()
+		expect(await confirmLink(payload, account.token)).toEqual({ result: 'deja-confirme', sessionOffered: false })
+		expect((await openAfterConfirmation(account.token)).ok).toBe(false)
+	})
+
+	test('un compte bloqué et jamais confirmé : ni le mot de passe ni la confirmation ne passent', async () => {
+		const account = await waitingAccount({ blocked: true })
+		const result = await reset(await linkToken(account.email), openWithoutPassword)
+
+		expect(result).toEqual({ ok: false, code: 'code-invalide' })
+		const stored = await row(account.id)
+		expect(stored?._verified).not.toBe(true)
+		expect(stored?.sessions ?? []).toHaveLength(0)
 	})
 
 	test('une ouverture qui échoue : le mot de passe est enregistré, le résultat est celui d’aujourd’hui', async () => {

@@ -85,6 +85,23 @@ test.describe('E08 : le mot de passe oublié de bout en bout', { tag: '@mobile' 
 		await expect(page.getByTestId('erreur-connexion')).toContainText('Email ou mot de passe incorrect.')
 	})
 
+	test('une adresse jamais confirmée : le mot de passe choisi par le lien confirme l’adresse et ouvre l’espace, sans reconnexion (ticket 311)', async ({
+		page,
+	}) => {
+		const account = await createAccount('maquilleuse-non-verifiee', { motDePasse: () => OLD })
+
+		await ask(page, account.email)
+		await page.goto(await mailLink(account.email))
+		await choose(page, NEW_PASSWORD)
+		await expect(page).toHaveURL(/\/auth\/(profil|init-account)$/)
+		expect((await page.context().cookies()).some(({ name }) => name === 'payload-token')).toBe(true)
+
+		// The address is confirmed: the password alone signs her in later.
+		await page.context().clearCookies()
+		await signInAction(page, account.email, NEW_PASSWORD)
+		await expect(page).toHaveURL(/\/auth\/(profil|init-account)$/)
+	})
+
 	test('le lien ne sert qu’une fois : le rejouer dit qu’il n’est plus valable, avec le lien pour en demander un autre', async ({
 		browser,
 		page,
