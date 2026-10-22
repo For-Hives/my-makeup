@@ -8,7 +8,7 @@ import { createPlaceResolver } from '@/lib/search/place-point'
  * call leaves the machine.
  */
 
-const commune = (
+const makeCity = (
 	nom: string,
 	codeInsee: string,
 	latitude: number,
@@ -23,9 +23,9 @@ const commune = (
 	codesPostaux: codes,
 })
 
-const OLD_ANNECY = commune('Annecy-le-Vieux', '74999', 45.9183, 6.1445, ['74940'])
-const ANNECY = commune('Annecy', '74010', 45.8992, 6.1294, ['74000'])
-const NO_CENTER: OfficialCity = { ...commune('Sansgps', '74998', 0, 0, ['74500']), latitude: null, longitude: null }
+const OLD_ANNECY = makeCity('Annecy-le-Vieux', '74999', 45.9183, 6.1445, ['74940'])
+const ANNECY = makeCity('Annecy', '74010', 45.8992, 6.1294, ['74000'])
+const NO_CENTER: OfficialCity = { ...makeCity('Sansgps', '74998', 0, 0, ['74500']), latitude: null, longitude: null }
 
 /** A fake list that answers by name or by postal code, and counts its calls. */
 function fakeList() {
