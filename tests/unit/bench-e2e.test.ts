@@ -13,7 +13,10 @@ import {
 	portTakenMessage,
 	RESULT_FOLDER,
 	requireBenchTarget,
+	TEST_CRAWL_ON_BENCH,
+	TEST_CRAWL_PROJECT,
 	TEST_ONLY_ON_BENCH,
+	TRACES_CRAWL_FOLDER,
 	TRACES_FINAL_FOLDER,
 	TRACES_FOLDER,
 	testApplication,
@@ -121,6 +124,7 @@ describe('la configuration de Playwright', () => {
 		expect(projects.map(({ name, use }) => [name, use?.viewport?.width, use?.browserName])).toEqual([
 			['chromium', 1440, 'chromium'],
 			['mobile', 390, 'chromium'],
+			['crawl-alone', 1440, 'chromium'],
 			['import-final', 1440, 'chromium'],
 		])
 		const [bureau, mobile] = projects
@@ -134,13 +138,24 @@ describe('la configuration de Playwright', () => {
 	})
 
 	test('l’import réel veut le banc pour lui : un projet à part, que ni l’une ni l’autre des deux tailles ne joue', () => {
-		const [bureau, mobile, only] = projects
+		const [bureau, mobile, , only] = projects
 
 		expect(only?.dependencies).toBeUndefined()
 		expect(only?.testMatch).toBe(TEST_ONLY_ON_BENCH)
-		expect(bureau?.testIgnore).toBe(TEST_ONLY_ON_BENCH)
-		expect(mobile?.testIgnore).toBe(TEST_ONLY_ON_BENCH)
+		expect(bureau?.testIgnore).toContain(TEST_ONLY_ON_BENCH)
+		expect(mobile?.testIgnore).toContain(TEST_ONLY_ON_BENCH)
 		expect(only?.testMatch).toMatch(/imported-profile-slice\.spec\.ts$/)
+	})
+
+	test('le crawl veut lire des pages que personne ne change : un projet à part, joué seul (ticket 312)', () => {
+		const [bureau, mobile, crawl] = projects
+
+		expect(crawl?.name).toBe(TEST_CRAWL_PROJECT)
+		expect(crawl?.dependencies).toBeUndefined()
+		expect(crawl?.testMatch).toBe(TEST_CRAWL_ON_BENCH)
+		expect(crawl?.testMatch).toMatch(/ui-crawl\.spec\.ts$/)
+		expect(bureau?.testIgnore).toContain(TEST_CRAWL_ON_BENCH)
+		expect(mobile?.testIgnore).toContain(TEST_CRAWL_ON_BENCH)
 	})
 
 	test('trace, vidéo et capture sont gardées pour un essai en échec, dès la première tentative', () => {
@@ -265,9 +280,16 @@ describe('ce que « bun run test:e2e » donne au build et à Playwright', () => 
 		})
 	})
 
-	test('sans demande, deux passages : tous les essais aux deux tailles, puis l’import réel seul (ticket 225)', () => {
+	test('sans demande, trois passages : tous les essais, puis le crawl seul, puis l’import réel seul (tickets 225 et 312)', () => {
 		expect(playwrightPhases([])).toEqual({
 			principale: ['test', '--project=chromium', '--project=mobile', '--pass-with-no-tests'],
+			crawl: [
+				'test',
+				'--project=crawl-alone',
+				'--pass-with-no-tests',
+				'--reporter=list',
+				'--output=test-results/essais-crawl',
+			],
 			finale: [
 				'test',
 				'--project=import-final',
@@ -278,8 +300,12 @@ describe('ce que « bun run test:e2e » donne au build et à Playwright', () => 
 		})
 	})
 
-	test('ce qui est demandé passe tel quel dans les deux passages : un fichier, une option, un quart', () => {
-		const { principale: main, finale } = playwrightPhases(['tests/e2e/shell.spec.ts', '--workers=1', '--shard=2/4'])
+	test('ce qui est demandé passe tel quel dans les trois passages : un fichier, une option, un quart', () => {
+		const {
+			principale: main,
+			crawl,
+			finale,
+		} = playwrightPhases(['tests/e2e/shell.spec.ts', '--workers=1', '--shard=2/4'])
 
 		expect(main).toEqual([
 			'test',
@@ -290,10 +316,11 @@ describe('ce que « bun run test:e2e » donne au build et à Playwright', () => 
 			'--project=mobile',
 			'--pass-with-no-tests',
 		])
+		expect(crawl?.slice(0, 4)).toEqual(['test', 'tests/e2e/shell.spec.ts', '--workers=1', '--shard=2/4'])
 		expect(finale?.slice(0, 4)).toEqual(['test', 'tests/e2e/shell.spec.ts', '--workers=1', '--shard=2/4'])
 	})
 
-	test('un projet demandé, sous ses deux écritures, choisit son passage et ne se répète pas dans l’autre', () => {
+	test('un projet demandé, sous ses deux écritures, choisit son passage et ne se répète pas dans les autres', () => {
 		expect(playwrightPhases(['--project=mobile', '--headed'])).toEqual({
 			principale: ['test', '--headed', '--project=mobile', '--pass-with-no-tests'],
 		})
@@ -306,19 +333,31 @@ describe('ce que « bun run test:e2e » donne au build et à Playwright', () => 
 		])
 		const only = playwrightPhases(['--project=import-final'])
 		expect(only.principale).toBeUndefined()
+		expect(only.crawl).toBeUndefined()
 		expect(only.finale).toContain('--project=import-final')
+		const alone = playwrightPhases(['--project=crawl-alone'])
+		expect(alone.principale).toBeUndefined()
+		expect(alone.finale).toBeUndefined()
+		expect(alone.crawl).toContain('--project=crawl-alone')
 		const both = playwrightPhases(['--project=mobile', '--project=import-final'])
 		expect(both.principale).toContain('--project=mobile')
+		expect(both.principale).not.toContain('--project=import-final')
+		expect(both.crawl).toBeUndefined()
 		expect(both.finale).toContain('--project=import-final')
 		expect(both.finale).not.toContain('--project=mobile')
 	})
 
-	test('le passage de l’import réel garde ses traces à part : il n’efface ni le rapport ni les traces du premier', () => {
-		const { finale } = playwrightPhases([])
+	test('les passages seuls gardent leurs traces à part : ils n’effacent ni le rapport ni les traces du premier', () => {
+		const { crawl, finale } = playwrightPhases([])
 
+		expect(crawl).toContain(`--output=${TRACES_CRAWL_FOLDER}`)
 		expect(finale).toContain(`--output=${TRACES_FINAL_FOLDER}`)
-		expect(TRACES_FINAL_FOLDER.startsWith(`${RESULT_FOLDER}/`)).toBe(true)
-		expect(TRACES_FINAL_FOLDER).not.toBe(TRACES_FOLDER)
+		for (const folder of [TRACES_CRAWL_FOLDER, TRACES_FINAL_FOLDER]) {
+			expect(folder.startsWith(`${RESULT_FOLDER}/`)).toBe(true)
+			expect(folder).not.toBe(TRACES_FOLDER)
+		}
+		expect(TRACES_CRAWL_FOLDER).not.toBe(TRACES_FINAL_FOLDER)
+		expect(crawl).toContain('--reporter=list')
 		expect(finale).toContain('--reporter=list')
 	})
 

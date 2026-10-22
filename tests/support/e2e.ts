@@ -26,6 +26,18 @@ export const TEST_PATTERN = '**/*.spec.ts'
 export const TEST_ONLY_ON_BENCH = '**/imported-profile-slice.spec.ts'
 export const TEST_ONLY_PROJECT = 'import-final'
 
+/**
+ * The crawl of the interfaces reads the 40 addresses of the public site, the search and the home page included, which
+ * list whatever profiles the bench holds at that moment. Every other test creates profiles and takes them away through
+ * its own Payload, which never tells the cache of the application: a listing then still shows a card whose photo is
+ * gone, and the image optimizer answers 404 for it, on every retry (« upstream image response failed … 404 », the
+ * red of `ui-crawl` for weeks). No test can keep out of the way of a crawl that reads everyone's profiles, so the
+ * crawl is a project of its own, which `bun run test:e2e` plays in a run of its own, on an application started again
+ * and a cache emptied, when every other test is over and before the import that empties the bench (ticket 312).
+ */
+export const TEST_CRAWL_ON_BENCH = '**/ui-crawl.spec.ts'
+export const TEST_CRAWL_PROJECT = 'crawl-alone'
+
 /** A test carries this tag to run at the phone width too. */
 export const LABEL_MOBILE = '@mobile'
 
@@ -43,6 +55,8 @@ export const REPORT_FOLDER = 'playwright-report'
 export const RESULT_FOLDER = 'test-results'
 /** Trace, video and screenshot of each failed test. Playwright empties this folder when a run starts. */
 export const TRACES_FOLDER = `${RESULT_FOLDER}/essais`
+/** The traces of the run of the crawl, alone on the bench. */
+export const TRACES_CRAWL_FOLDER = `${RESULT_FOLDER}/essais-crawl`
 /** The traces of the last run, the one that plays the test that has the bench to itself. */
 export const TRACES_FINAL_FOLDER = `${RESULT_FOLDER}/essais-final`
 /** The results of the last run, for the tools that read them. */
@@ -198,13 +212,13 @@ export function testConfiguration(variables: Variables = process.env): Playwrigh
 		projects: [
 			{
 				name: 'chromium',
-				testIgnore: TEST_ONLY_ON_BENCH,
+				testIgnore: [TEST_ONLY_ON_BENCH, TEST_CRAWL_ON_BENCH],
 				use: { browserName: 'chromium', viewport: SCREENS.chromium },
 			},
 			{
 				name: 'mobile',
 				grep: new RegExp(LABEL_MOBILE),
-				testIgnore: TEST_ONLY_ON_BENCH,
+				testIgnore: [TEST_ONLY_ON_BENCH, TEST_CRAWL_ON_BENCH],
 				use: {
 					browserName: 'chromium',
 					viewport: SCREENS.mobile,
@@ -212,6 +226,11 @@ export function testConfiguration(variables: Variables = process.env): Playwrigh
 					hasTouch: true,
 					deviceScaleFactor: 3,
 				},
+			},
+			{
+				name: TEST_CRAWL_PROJECT,
+				testMatch: TEST_CRAWL_ON_BENCH,
+				use: { browserName: 'chromium', viewport: SCREENS.chromium },
 			},
 			{
 				name: TEST_ONLY_PROJECT,
@@ -288,23 +307,26 @@ export function playwrightEnvironment(
 	}
 }
 
-/** The two runs of a `bun run test:e2e`: the arguments of `playwright test` for each, or nothing for a run not asked for. */
+/** The runs of a `bun run test:e2e`: the arguments of `playwright test` for each, or nothing for a run not asked for. */
 export interface PlaywrightPhases {
-	/** Everything but the test that has the bench to itself, at the screen sizes asked for. */
+	/** Everything but the tests that need the bench to themselves, at the screen sizes asked for. */
 	principale?: string[]
-	/** That test, alone, once the first run is over. */
+	/** The crawl of the interfaces, alone, once the first run is over (ticket 312). */
+	crawl?: string[]
+	/** The real import, alone, once the others are over. */
 	finale?: string[]
 }
 
 /**
- * Splits what was asked for (`bun run test:e2e …`) into the two runs of `playwright test`. Everything goes through as
+ * Splits what was asked for (`bun run test:e2e …`) into the runs of `playwright test`. Everything goes through as
  * it is, a file like an option (`--shard`, `--workers`, `-g`), except the projects, which each run takes for itself:
- * the first one plays `chromium` and `mobile`, the second plays `import-final` (PROJET_DE_L_ESSAI_SEUL). Asked for
- * nothing, both run; `--project=mobile` runs the first one only; `--project=import-final` the second one only.
+ * the first one plays `chromium` and `mobile`, the second plays `crawl-alone`, the third plays `import-final`
+ * (TEST_CRAWL_PROJECT, TEST_ONLY_PROJECT). Asked for nothing, all three run; `--project=mobile` runs the first one
+ * only; `--project=crawl-alone` the second one only; `--project=import-final` the third one only.
  *
- * Each run passes when it finds no test: a file, a title or a shard that belongs to the other run leaves this one empty.
- * The second one reads its results on screen and keeps its traces in a folder of its own, so that it does not erase the
- * report and the traces of the first.
+ * Each run passes when it finds no test: a file, a title or a shard that belongs to another run leaves this one empty.
+ * The second and the third read their results on screen and keep their traces in a folder of their own, so that they
+ * do not erase the report and the traces of the first.
  */
 export function playwrightPhases(demandes: readonly string[]): PlaywrightPhases {
 	const projects: string[] = []
@@ -316,23 +338,24 @@ export function playwrightPhases(demandes: readonly string[]): PlaywrightPhases 
 			projects.push(demandes[++i] ?? '')
 		else rest.push(argument)
 	}
-	const screen = projects.filter(projet => projet !== TEST_ONLY_PROJECT)
+	const alone = [TEST_CRAWL_PROJECT, TEST_ONLY_PROJECT]
+	const screen = projects.filter(projet => !alone.includes(projet))
 	const main = projects.length === 0 ? ['chromium', 'mobile'] : screen
-	const finale = projects.length === 0 || projects.includes(TEST_ONLY_PROJECT)
+	const aloneRun = (project: string, folder: string): string[] => [
+		'test',
+		...rest,
+		`--project=${project}`,
+		'--pass-with-no-tests',
+		'--reporter=list',
+		`--output=${folder}`,
+	]
+	const wants = (project: string): boolean => projects.length === 0 || projects.includes(project)
 	return {
 		...(main.length > 0 && {
 			principale: ['test', ...rest, ...main.map(projet => `--project=${projet}`), '--pass-with-no-tests'],
 		}),
-		...(finale && {
-			finale: [
-				'test',
-				...rest,
-				`--project=${TEST_ONLY_PROJECT}`,
-				'--pass-with-no-tests',
-				'--reporter=list',
-				`--output=${TRACES_FINAL_FOLDER}`,
-			],
-		}),
+		...(wants(TEST_CRAWL_PROJECT) && { crawl: aloneRun(TEST_CRAWL_PROJECT, TRACES_CRAWL_FOLDER) }),
+		...(wants(TEST_ONLY_PROJECT) && { finale: aloneRun(TEST_ONLY_PROJECT, TRACES_FINAL_FOLDER) }),
 	}
 }
 

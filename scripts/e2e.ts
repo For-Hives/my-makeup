@@ -16,9 +16,11 @@
  *   4. runs Playwright under Node with the environment of the bench. Playwright starts the
  *      application on the port of the instance, waits until it is healthy, refuses a database
  *      its migrations did not build as the code describes it (tests/support/e2e-server.ts), runs
- *      the tests and stops it (tests/support/e2e.ts). It runs twice, in one process each: every
- *      test but one, then the real import of the fake source, which empties the bench and so
- *      must not meet any other test (`phasesDePlaywright`, ticket 225).
+ *      the tests and stops it (tests/support/e2e.ts). It runs three times, in one process each: every
+ *      test but two, then the crawl of the interfaces, which reads the pages that list everyone's
+ *      profiles and so must not meet a test that takes one away (ticket 312), then the real import
+ *      of the fake source, which empties the bench and so must not meet any other test
+ *      (`playwrightPhases`, ticket 225).
  *
  * The instance (name and ports) comes from BENCH_INSTANCE and BENCH_OFFSET, like the bench.
  * Started with `--no-env-file`: a working `.env` never reaches the tests.
@@ -35,6 +37,7 @@ import {
 	portTakenMessage,
 	REPORT_FOLDER,
 	requireBenchTarget,
+	TRACES_CRAWL_FOLDER,
 	TRACES_FINAL_FOLDER,
 	TRACES_FOLDER,
 	testTarget,
@@ -137,15 +140,16 @@ async function principal(demandes: string[]): Promise<number> {
 			'Le build de l’application a échoué : le message de Next est ci-dessus. Aucun essai n’a tourné.'
 		)
 
-	// Two runs, one after the other (ticket 225): everything, then the one test that needs the bench to itself.
-	// The second one runs even when the first one failed, so that one run shows every red test.
+	// Three runs, one after the other (tickets 225 and 312): everything, then the crawl alone, then the one test that
+	// empties the bench. A run starts even when the one before failed, so that one run shows every red test.
 	const environment = playwrightEnvironment(process.env, bench.instance, bench.environnement)
-	const { principale: main, finale } = playwrightPhases(demandes)
+	const { principale: main, crawl, finale } = playwrightPhases(demandes)
 	let code = 0
-	for (const testArguments of [main, finale]) {
+	for (const testArguments of [main, crawl, finale]) {
 		if (!testArguments || stopRequested) continue
-		// The pages of the first run (« zoe-lefevre » of the set, for one) must not answer the second one, which writes
-		// its own data without going through the application: the cache on the disk is emptied again.
+		// The pages of the first run (« zoe-lefevre » of the set, for one) must not answer the next one, which reads
+		// the bench as it is now or writes its own data without going through the application: the cache on the disk is
+		// emptied again, and the application is started again (Playwright stops it at the end of each run).
 		rmSync(path.join(ROOT, '.next/cache/fetch-cache'), { recursive: true, force: true })
 		// The HTML the first run left in the cache of Next (ticket 269) is on the disk too, and would answer the second.
 		forgetRenderedPages()
@@ -156,7 +160,7 @@ async function principal(demandes: string[]): Promise<number> {
 		console.error(
 			[
 				'',
-				`Pour chaque essai en échec, sa trace, sa vidéo et sa capture sont dans ${TRACES_FOLDER}/ (le dernier essai, celui de l’import réel : ${TRACES_FINAL_FOLDER}/).`,
+				`Pour chaque essai en échec, sa trace, sa vidéo et sa capture sont dans ${TRACES_FOLDER}/ (le crawl : ${TRACES_CRAWL_FOLDER}/ ; l’import réel : ${TRACES_FINAL_FOLDER}/).`,
 				`Le rapport se lit par : bunx playwright show-report ${REPORT_FOLDER}`,
 			].join('\n')
 		)

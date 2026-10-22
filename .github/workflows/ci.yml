@@ -163,6 +163,11 @@ jobs:
           bun-version-file: package.json
       - name: Install
         run: bun install --frozen-lockfile
+      # Ticket 312: on 22/10/2026 the Ubuntu mirror of the runner served the packages of the browser so slowly that
+      # a shard spent its 10 minutes there and was cancelled, before any test. A stalled connection now gives up after
+      # 20 seconds and is tried again (5 times), instead of waiting for the circuit breaker of the job.
+      - name: Apt gives up on a stalled mirror
+        run: printf 'Acquire::Retries "5";\nAcquire::http::Timeout "20";\nAcquire::https::Timeout "20";\n' | sudo tee /etc/apt/apt.conf.d/99-ci-network > /dev/null
       - name: Browser of Playwright
         run: bunx playwright install --with-deps chromium
       - name: Start the test bench

@@ -83,7 +83,17 @@ test.describe('Recherche par distance', () => {
 				has: page.getByRole('heading', { level: 2, name: 'Se déplacent jusqu’à vous' }),
 			})
 			await expect(covering.locator(`a[href="/profil/${reference.slug}"]`)).toHaveCount(1)
-			await expect(page.getByRole('heading', { level: 2, name: /Autres maquilleuses/ })).toHaveCount(0)
+			// Since ticket 310 a profile with no zone is listed last, under « Autres maquilleuses », never dropped: the
+			// bench always holds some (the empty type of the search set). The section is not absent; it comes after the
+			// ones of distance, and the profile that covers Annecy-le-Vieux is not in it.
+			const others = page.locator('main section').filter({
+				has: page.getByRole('heading', { level: 2, name: /^Autres maquilleuses/ }),
+			})
+			await expect(others.locator(`a[href="/profil/${reference.slug}"]`)).toHaveCount(0)
+			const titles = await page.locator('main section h2').allTextContents()
+			expect(titles.indexOf('Se déplacent jusqu’à vous')).toBeGreaterThanOrEqual(0)
+			for (const title of titles.filter(text => /^Autres maquilleuses/.test(text)))
+				expect(titles.indexOf(title)).toBeGreaterThan(titles.indexOf('Se déplacent jusqu’à vous'))
 			await checkScreen(page, 'recherche-annecy-le-vieux', info)
 		}
 	)
