@@ -4,6 +4,7 @@ import { rows } from '@/lib/profile/public-view'
 import { travelSentence } from '@/lib/profile/travel-sentence'
 import type { PublicProfile } from '@/services/public/profiles'
 import { ContactButton } from './ContactButton'
+import type { ProfileEdit } from './edit-slots'
 import { ProfileGallery } from './ProfileGallery'
 import { ProfileHeader } from './ProfileHeader'
 import { ProfileSection } from './ProfileSection'
@@ -41,7 +42,16 @@ const PHONE_ORDER = {
  * database, and the HTML of the server holds all of it. `mesure` false: the contact links count no click
  * (the preview of her own page, ticket 144).
  */
-export function ProfileView({ profil, mesure = true }: { profil: PublicProfile; mesure?: boolean }) {
+export function ProfileView({
+	profil,
+	mesure = true,
+	edit,
+}: {
+	profil: PublicProfile
+	mesure?: boolean
+	/** Her own page in edit mode (issue 1008): the blocks she can change. Never given on the public page. */
+	edit?: ProfileEdit
+}) {
 	const description = rows(profil.description)
 	const travel = travelSentence(profil)
 	// The button of contact: one per way of reaching her that leads somewhere, none when there is no way.
@@ -59,7 +69,11 @@ export function ProfileView({ profil, mesure = true }: { profil: PublicProfile; 
 	)
 	return (
 		<main className="flex flex-1 flex-col">
-			<ProfileHeader profil={profil} action={actions.length > 0 ? contact('header') : undefined} />
+			<ProfileHeader
+				profil={profil}
+				action={actions.length > 0 ? contact('header') : undefined}
+				{...(edit ? { edit: edit.header } : {})}
+			/>
 			<div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 md:px-8">
 				{/*
 				 * The HTML is in the order of a computer: left column, then right column. On a phone the two

@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { ofName } from '@/lib/french-elision'
 import { ratioMedia, sizesBox } from '@/lib/image-size'
 import type { PublicProfile } from '@/services/public/profiles'
+import type { HeaderEdit } from './edit-slots'
 import { ZoneText } from './ZoneText'
 
 /** The photo shown when the profile has none: the picture of the site. */
@@ -43,50 +44,64 @@ function Marker() {
  * contact on a computer (ticket 290), under her zone. No postal address can
  * appear: the zone is a commune and a radius.
  */
-export function ProfileHeader({ profil, action }: { profil: PublicProfile; action?: ReactNode }) {
+export function ProfileHeader({
+	profil,
+	action,
+	edit,
+}: {
+	profil: PublicProfile
+	action?: ReactNode
+	/** Her own page in edit mode (issue 1008): each block is wrapped by these functions. Nothing for a visitor. */
+	edit?: HeaderEdit
+}) {
 	const { photo, nom: name } = profil
+	const photoNode = (
+		// A fixed box at every width, and a landscape photo is asked at the width it is drawn.
+		<Image
+			src={photo?.url ?? DEFAULT_PHOTO}
+			alt={photo ? `Photo ${ofName(name)}` : ''}
+			priority
+			fill
+			sizes={sizesBox({
+				largeur: PHOTO_SIDE,
+				hauteur: PHOTO_SIDE,
+				ratio: photo ? ratioMedia(photo) : 1,
+			})}
+			className="rounded-full object-cover"
+		/>
+	)
+	const nameNodes = (
+		<>
+			<h1 className="max-w-full break-words font-bold text-3xl text-gray-800 tracking-tight">{name}</h1>
+			{profil.specialite && (
+				<p className="max-w-full break-words font-semibold text-gray-700 text-xl tracking-tight">{profil.specialite}</p>
+			)}
+			{profil.nomArtiste && (
+				<p className="max-w-full break-words text-gray-800 text-lg tracking-tight">{profil.nomArtiste}</p>
+			)}
+		</>
+	)
+	const zoneNode = profil.zone ? (
+		<p className="mt-2 flex max-w-full items-center gap-1 text-gray-700">
+			<Marker />
+			<span className="min-w-0 break-words">
+				<ZoneText text={profil.zone} flags={profil.flags} />
+			</span>
+		</p>
+	) : null
+	const statusNode = <Dot disponible={profil.disponible} />
 	return (
 		<header className="bg-white px-4 pt-10 pb-12 shadow-xl sm:px-6 md:px-8">
 			<div className="mx-auto flex w-full max-w-7xl flex-col items-center gap-8 md:flex-row md:items-center">
-				<div className="relative h-[200px] w-[200px] shrink-0">
-					{/* A fixed box at every width, and a landscape photo is asked at the width it is drawn. */}
-					<Image
-						src={photo?.url ?? DEFAULT_PHOTO}
-						alt={photo ? `Photo ${ofName(name)}` : ''}
-						priority
-						fill
-						sizes={sizesBox({
-							largeur: PHOTO_SIDE,
-							hauteur: PHOTO_SIDE,
-							ratio: photo ? ratioMedia(photo) : 1,
-						})}
-						className="rounded-full object-cover"
-					/>
-				</div>
+				{edit ? edit.photo(photoNode) : <div className="relative h-[200px] w-[200px] shrink-0">{photoNode}</div>}
 				<div className="flex min-w-0 flex-1 flex-col items-center gap-2 text-center md:items-start md:text-left">
-					<h1 className="max-w-full break-words font-bold text-3xl text-gray-800 tracking-tight">{name}</h1>
-					{profil.specialite && (
-						<p className="max-w-full break-words font-semibold text-gray-700 text-xl tracking-tight">
-							{profil.specialite}
-						</p>
-					)}
-					{profil.nomArtiste && (
-						<p className="max-w-full break-words text-gray-800 text-lg tracking-tight">{profil.nomArtiste}</p>
-					)}
-					{profil.zone && (
-						<p className="mt-2 flex max-w-full items-center gap-1 text-gray-700">
-							<Marker />
-							<span className="min-w-0 break-words">
-								<ZoneText text={profil.zone} flags={profil.flags} />
-							</span>
-						</p>
-					)}
+					{edit ? edit.identity(nameNodes, { missingSpecialty: !profil.specialite }) : nameNodes}
+					{edit ? edit.place(zoneNode) : zoneNode}
 					{action}
 				</div>
-				<div className="shrink-0">
-					<Dot disponible={profil.disponible} />
-				</div>
+				<div className="shrink-0">{edit ? edit.status(statusNode) : statusNode}</div>
 			</div>
+			{edit?.panel}
 		</header>
 	)
 }

@@ -26,6 +26,7 @@ My Makeup est un annuaire de maquilleuses professionnelles indépendantes. Cette
 | créer ou changer une collection, un champ, ou l'import des données | [`docs/migration/SCHEMA.md`](docs/migration/SCHEMA.md) |
 | lancer l'import des données de l'ancien site, lire son rapport, y ajouter une collection | [`docs/migration/IMPORT.md`](docs/migration/IMPORT.md) |
 | créer, déplacer ou retirer une adresse | [`docs/migration/URLS.md`](docs/migration/URLS.md) |
+| toucher à l'édition directe du profil (blocs éditables, mode édition, jetons de la direction artistique) | [`docs/edition-directe.md`](docs/edition-directe.md) |
 | faire autrement que le site en ligne | [`docs/migration/CHANGEMENTS-VOULUS.md`](docs/migration/CHANGEMENTS-VOULUS.md) |
 | jouer la bascule, ou savoir quoi faire à chaque étape du jour J et du retour arrière | [`docs/migration/BASCULE.md`](docs/migration/BASCULE.md) |
 | savoir ce qui est déjà fait et vérifié | [`docs/migration/JOURNAL.md`](docs/migration/JOURNAL.md) |
@@ -194,6 +195,7 @@ Le même mot français a le même mot anglais partout (source : `PLAN-ANGLAIS.md
 | jeu de données (du banc) / capture (d'écran) | `dataset` / `screenshot` | écoute (adresse d'un faux service) / décalage (de ports) | `listen` / `offset` |
 | pays / ville (à l'étranger) | `country` / `town` | type de zone / code postal | `zoneKind` / `postalCode` |
 | revue de zone (privée, d'un profil) / candidate (commune possible) | `zoneReview` / `candidate` | à l'étranger / drapeau | `abroad` / `flag` |
+| édition directe (sur la page) / bloc éditable | `direct-edit` (dossier `src/components/direct-edit`) / `EditableBlock` (jamais « zone » : le mot est pris par la localisation) | mode édition / session d'édition | `edit mode` / `EditSession` |
 
 ## Pièges
 

@@ -300,6 +300,11 @@
 			"id": "tu-peux-changer-ton-mot-de-passe-depuis-ton-espace-sans-p",
 			"type": "amelioration",
 			"text": "Tu peux changer ton mot de passe depuis ton espace, sans passer par ta boîte mail : tu retapes l’actuel, tes autres appareils sont déconnectés et un email te prévient."
+		},
+		{
+			"id": "tu-peux-modifier-l-en-tete-de-ta-page-directement-dessus",
+			"type": "amelioration",
+			"text": "Tu peux modifier l’en-tête de ta page directement dessus : ta photo, ton nom, ta spécialité, ta zone et ta disponibilité, avec l’aperçu de ce que voient les visiteuses."
 		}
 	],
 	"releases": []
