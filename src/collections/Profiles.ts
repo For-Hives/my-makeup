@@ -22,6 +22,7 @@ import {
 	publishedProfileOrOwner,
 } from '../lib/access'
 import { GALLERY_MAX } from '../lib/media'
+import { chooseCity } from '../lib/profile/choose-city-route'
 import {
 	CONSENT_SOURCES,
 	consentAfter,
@@ -290,7 +291,17 @@ export const Profiles: CollectionConfig<'profiles'> = {
 	// flags (`publishable`, `fullyEmpty`, `status`), so they cost no computation.
 	admin: {
 		useAsTitle: 'slug',
-		defaultColumns: ['slug', 'city.name', 'completeness', 'publishable', 'status', 'zoneReview.reason', 'updatedAt'],
+		// Ticket 308: the person first (photo and name, then her zone as the public pages write it), then the address.
+		defaultColumns: [
+			'listName',
+			'listZone',
+			'slug',
+			'completeness',
+			'publishable',
+			'status',
+			'zoneReview.reason',
+			'updatedAt',
+		],
 		listSearchableFields: ['slug', 'firstName', 'lastName', 'artistName', 'city.name'],
 		hidden: hiddenExceptAdmin,
 	},
@@ -300,6 +311,8 @@ export const Profiles: CollectionConfig<'profiles'> = {
 		update: adminOrOwner,
 		delete: adminOnly,
 	},
+	// Ticket 308: an admin picks a commune of a zone review by a button (src/lib/profile/choose-city.ts).
+	endpoints: [chooseCity],
 	hooks: {
 		beforeOperation: [refuseFilterOnUnknownStatus, wholeZone],
 		beforeValidate: [refuseUnknownChoice],
@@ -319,6 +332,25 @@ export const Profiles: CollectionConfig<'profiles'> = {
 		afterDelete: [REFRESH.apresSuppression],
 	},
 	fields: [
+		// Ticket 308: « Voir la page publique » and « Masquer… », at the top of the sheet. No data, no column.
+		{
+			name: 'profileActions',
+			type: 'ui',
+			admin: { components: { Field: '/components/admin/ProfileActions#ProfileActions' } },
+		},
+		// Ticket 308: the two first columns of the list. Virtual: they hold nothing, they read the row.
+		{
+			name: 'listName',
+			label: 'Profil',
+			type: 'ui',
+			admin: { components: { Cell: '/components/admin/ProfileName#ProfileName' }, disableListColumn: false },
+		},
+		{
+			name: 'listZone',
+			label: 'Zone',
+			type: 'ui',
+			admin: { components: { Cell: '/components/admin/ProfileZone#ProfileZone' }, disableListColumn: false },
+		},
 		{
 			name: 'pro',
 			label: 'Compte',

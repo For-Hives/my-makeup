@@ -219,7 +219,11 @@ export const zoneFields: Field[] = [
 				name: 'candidates',
 				label: 'Communes possibles',
 				type: 'json',
-				admin: { description: 'Code INSEE, nom et département de chaque commune possible.' },
+				// Ticket 308: buttons « Choisir <commune> » in place of the JSON editor.
+				admin: {
+					components: { Field: '/components/admin/ZoneCandidates#ZoneCandidates' },
+					description: 'Code INSEE, nom et département de chaque commune possible.',
+				},
 			},
 		],
 	},
