@@ -86,8 +86,10 @@ for (const width of VISUAL_WIDTHS)
 				test.setTimeout(90_000)
 				await page.goto(path())
 				await page.waitForLoadState('networkidle')
-				// Lazy images: go down the page once so that every one is asked for, then back up.
+				// Lazy images: ask for every one (a carousel hides some at this width, they would never be asked for by a
+				// scroll), go down the page once, then back up.
 				await page.evaluate(async () => {
+					for (const image of document.images) image.loading = 'eager'
 					for (let y = 0; y < document.body.scrollHeight; y += 600) {
 						window.scrollTo(0, y)
 						await new Promise(resolve => requestAnimationFrame(() => resolve(undefined)))
@@ -95,7 +97,9 @@ for (const width of VISUAL_WIDTHS)
 					window.scrollTo(0, 0)
 				})
 				await page.evaluate(() => document.fonts.ready)
-				await page.waitForFunction(() => [...document.images].every(image => image.complete))
+				await page.waitForFunction(() => [...document.images].every(image => image.complete), undefined, {
+					timeout: 45_000,
+				})
 				await expect(page).toHaveScreenshot(`${name}-${width}.png`, {
 					fullPage: true,
 					animations: 'disabled',
