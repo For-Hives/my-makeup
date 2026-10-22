@@ -629,7 +629,7 @@ export const BENCH_JOBS = {
 	],
 	e2e: [
 		'bun install --frozen-lockfile',
-		'bunx playwright install --with-deps chromium',
+		'bun run browser:install',
 		'bun run bench:up',
 		`bun run test:e2e --shard=${SHARD}/${SHARDS.e2e}`,
 	],
