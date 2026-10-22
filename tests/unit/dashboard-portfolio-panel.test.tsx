@@ -5,6 +5,7 @@ import type { DashboardPhoto } from '@/lib/dashboard/photos'
 import type { FileUploadResult } from '@/lib/dashboard/photos-upload'
 import { UNCERTAIN_RESULT_MESSAGE } from '@/lib/dashboard/photos-upload'
 import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
+import type { PhotoUsageView } from '@/lib/photo-limits'
 import { openWindow } from '../support/dom-react'
 import { pickFiles } from '../support/pick-files'
 
@@ -32,6 +33,7 @@ const source = (nom: string, type = 'image/jpeg') =>
 function bench(
 	options: {
 		existantes?: DashboardPhoto[]
+		usage?: PhotoUsageView
 		refuser?: (f: File) => string | null
 		televerser?: (fichier: File) => Promise<FileUploadResult>
 		envoyer?: PortfolioUpload
@@ -74,6 +76,7 @@ function bench(
 			await jsdomWindow.monter(
 				<PortfolioEditor
 					photos={options.existantes ?? []}
+					usage={options.usage}
 					envoyer={send}
 					preparer={prepare}
 					televerser={upload}
@@ -453,5 +456,44 @@ describe('L7 : Entrée maintenue retire une seule photo', () => {
 		active()?.dispatchEvent(suite)
 		expect(suite.defaultPrevented).toBe(true)
 		expect(images()).toHaveLength(2)
+	})
+})
+
+describe('ticket 309 : le volume utilisé et les photos restantes, dits avant l’envoi', () => {
+	const MIB = 1024 * 1024
+	const usage = (count: number, bytes = 12.3 * MIB): PhotoUsageView => ({
+		count,
+		bytes,
+		countMax: 45,
+		bytesMax: 60 * MIB,
+	})
+	const sentence = () => jsdomWindow.w.document.querySelector('[data-testid="photo-usage"]')?.textContent
+
+	test('la carte dit le volume pris et combien de photos il reste', async () => {
+		const b = bench({ usage: usage(14) })
+		await b.monter()
+		expect(sentence()).toBe('Tes photos prennent 12,3 Mo sur 60 Mo. Il te reste 31 photos.')
+	})
+
+	test('à la limite du profil : le message dit quoi faire ; une photo choisie est refusée sans être préparée ni envoyée', async () => {
+		const b = bench({ usage: usage(44), existantes: [dashboardPhoto(1)] })
+		await b.monter()
+		await pick('a.jpg', 'b.jpg')
+		await jsdomWindow.attendre(() => alerts().includes('b.jpg'))
+
+		// One photo left: the first fits, the second is refused before the browser works on it.
+		expect(alerts()).toContain(`b.jpg : ${MESSAGES_PHOTO['limite-profil']}`)
+		expect(alerts()).not.toContain('a.jpg :')
+		expect(b.journal.prepares).toEqual(['a.jpg'])
+		expect(b.journal.televerses).toEqual([])
+	})
+
+	test('au-dessus de la limite : la phrase l’annonce, aucune photo n’est ajoutée', async () => {
+		const b = bench({ usage: usage(50, 70 * MIB) })
+		await b.monter()
+		expect(sentence()).toContain('Tu as atteint la limite')
+		await pick('a.jpg')
+		await jsdomWindow.attendre(() => alerts().includes('a.jpg'))
+		expect(b.journal.prepares).toEqual([])
 	})
 })

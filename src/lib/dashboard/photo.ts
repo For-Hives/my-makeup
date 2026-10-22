@@ -12,6 +12,8 @@
  * goes through ports: `browser-photo.ts` gives them in the page, a test gives fakes.
  */
 
+import { TOO_HEAVY_MESSAGE } from '../photo-limits'
+
 export const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const
 
 /** The `accept` attribute of the file inputs. */
@@ -45,10 +47,12 @@ export const MESSAGES_PHOTO = {
 	taille: 'Cette photo pèse plus de 25 Mo : choisis-en une plus légère.',
 	illisible: 'Impossible de lire cette photo : choisis une autre photo JPEG, PNG ou WebP.',
 	'trop-lourde': 'Cette photo reste trop lourde même réduite : choisis-en une autre.',
-	'refus-taille': 'La photo dépasse 10 Mo : choisis-en une plus légère.',
+	'refus-taille': TOO_HEAVY_MESSAGE,
 	'refus-type': "La photo n'a pas été acceptée : choisis une photo JPEG, PNG ou WebP.",
 	'envoi-impossible': "L'envoi de la photo a échoué, rien n'a été enregistré : réessaie dans quelques minutes.",
 	'limite-galerie': 'Ton portfolio contient déjà 10 photos : retires-en une pour en ajouter une autre.',
+	'limite-profil':
+		'Tu as atteint la limite de photos de ton espace : retire une photo, puis enregistre, avant d’en ajouter une autre.',
 	doublon: 'Cette photo est déjà dans ta liste : choisis-en une autre.',
 } as const
 

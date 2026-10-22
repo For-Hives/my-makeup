@@ -1,6 +1,13 @@
 import { z } from 'zod'
 import { cleanupEnd } from './auth/legacy-cookies'
 import {
+	PHOTO_LIMIT_SETTINGS,
+	type PhotoLimits,
+	type PhotoLimitVariable,
+	photoLimitsFrom,
+	settingInvalid,
+} from './photo-limits'
+import {
 	CONNECTION_TIMEOUT_MS,
 	CONNECTION_TIMEOUT_RANGE,
 	CONNECTIONS_MAX,
@@ -59,6 +66,11 @@ export type RawEnv = Partial<
 		| 'NODE_ENV'
 		| 'PAYLOAD_DROP_DATABASE'
 		| 'PAYLOAD_SECRET'
+		| 'PHOTO_PROFILE_MAX_COUNT'
+		| 'PHOTO_PROFILE_MAX_MB'
+		| 'PHOTO_SIDE_MAX_PX'
+		| 'PHOTO_UPLOAD_MAX_MB'
+		| 'PHOTO_WEBP_QUALITY'
 		| 'PORT'
 		| 'S3_ACCESS_KEY_ID'
 		| 'S3_BUCKET'
@@ -142,6 +154,8 @@ export type ServerEnv = {
 	 */
 	authVerify: boolean
 	databaseUri: string
+	/** What a profile may store and how a photo is converted (PHOTO_*, ticket 309). */
+	photoLimits: PhotoLimits
 	/** The size of the connection pool and its wait limit (DATABASE_POOL_MAX, DATABASE_POOL_TIMEOUT_MS, ticket 268). */
 	databasePool: PoolSize
 	/**
@@ -277,6 +291,7 @@ const EXPECTED = {
 	IMPORT_MODE: '« dry-run » (la valeur par défaut), « real » ou « check »',
 	INDEXNOW_KEY: '32 caractères hexadécimaux en minuscules, comme la sortie de « openssl rand -hex 16 »',
 	NEXT_PUBLIC_SITE_URL: `${DEPLOYED_ORIGINS.join(', ')} ou une adresse de ce poste comme http://localhost:${DEFAULT_PORT}, sans « / » final`,
+	...photoExpected(),
 	PAYLOAD_SECRET: `au moins ${SECRET_MIN_LENGTH} caractères, par exemple la sortie de « openssl rand -hex 32 »`,
 	R2_PUBLIC_URL: 'une adresse https://HÔTE, sans chemin ni « / » final',
 	S3_ACCESS_KEY_ID: 'l’identifiant de la clé d’accès au stockage des photos',
@@ -716,6 +731,37 @@ function wholeNumberIn(value: string, range: { min: number; max: number }): numb
 	return number >= range.min && number <= range.max ? number : undefined
 }
 
+/** The `EXPECTED` sentences of the photo settings (ticket 309): the range and the default of each. */
+function photoExpected(): Record<PhotoLimitVariable, string> {
+	const sentence = (name: PhotoLimitVariable, what: string): string => {
+		const { min, max, fallback, unit } = PHOTO_LIMIT_SETTINGS[name]
+		return `${what}, de ${min} à ${max}${unit === '' ? '' : ` ${unit}`} (${fallback} par défaut)`
+	}
+	return {
+		PHOTO_UPLOAD_MAX_MB: sentence('PHOTO_UPLOAD_MAX_MB', 'un nombre entier de mégaoctets par envoi de photo'),
+		PHOTO_PROFILE_MAX_COUNT: sentence('PHOTO_PROFILE_MAX_COUNT', 'un nombre entier de photos par profil'),
+		PHOTO_PROFILE_MAX_MB: sentence('PHOTO_PROFILE_MAX_MB', 'un nombre entier de mégaoctets de photos par profil'),
+		PHOTO_WEBP_QUALITY: sentence('PHOTO_WEBP_QUALITY', 'une qualité WebP entière'),
+		PHOTO_SIDE_MAX_PX: sentence('PHOTO_SIDE_MAX_PX', 'un nombre entier de pixels pour le grand côté'),
+	}
+}
+
+/** The schema entries of the photo settings: optional, a whole number in the range of each. */
+function photoSchema() {
+	const entry = (name: PhotoLimitVariable) =>
+		z
+			.string()
+			.refine(value => !settingInvalid(name, value), { error: 'illisible' })
+			.optional()
+	return {
+		PHOTO_UPLOAD_MAX_MB: entry('PHOTO_UPLOAD_MAX_MB'),
+		PHOTO_PROFILE_MAX_COUNT: entry('PHOTO_PROFILE_MAX_COUNT'),
+		PHOTO_PROFILE_MAX_MB: entry('PHOTO_PROFILE_MAX_MB'),
+		PHOTO_WEBP_QUALITY: entry('PHOTO_WEBP_QUALITY'),
+		PHOTO_SIDE_MAX_PX: entry('PHOTO_SIDE_MAX_PX'),
+	}
+}
+
 const schema = z.object({
 	AUTH_VERIFY: z
 		.string()
@@ -756,6 +802,7 @@ const schema = z.object({
 		.string()
 		.refine(value => siteOrigin(value) !== undefined, { error: 'refusée' })
 		.optional(),
+	...photoSchema(),
 	PAYLOAD_SECRET: required.refine(value => value.trim().length >= SECRET_MIN_LENGTH, { error: 'trop courte' }),
 	UMAMI_ORIGIN: z
 		.string()
@@ -873,6 +920,7 @@ export function parseServerEnv(source: RawEnv): ServerEnv {
 		localDatabase: isLocalDatabase(parsed.data.DATABASE_URI),
 		...(mail && { mail }),
 		payloadSecret: parsed.data.PAYLOAD_SECRET,
+		photoLimits: photoLimitsFrom(parsed.data),
 		...(storage && { storage }),
 		...(parsed.data.STATS_TOKEN !== undefined && { statsToken: parsed.data.STATS_TOKEN.trim() }),
 		...(umami && { umami }),
@@ -910,6 +958,11 @@ function processEnv(): RawEnv {
 		NODE_ENV: process.env.NODE_ENV,
 		PAYLOAD_DROP_DATABASE: process.env.PAYLOAD_DROP_DATABASE,
 		PAYLOAD_SECRET: process.env.PAYLOAD_SECRET,
+		PHOTO_PROFILE_MAX_COUNT: process.env.PHOTO_PROFILE_MAX_COUNT,
+		PHOTO_PROFILE_MAX_MB: process.env.PHOTO_PROFILE_MAX_MB,
+		PHOTO_SIDE_MAX_PX: process.env.PHOTO_SIDE_MAX_PX,
+		PHOTO_UPLOAD_MAX_MB: process.env.PHOTO_UPLOAD_MAX_MB,
+		PHOTO_WEBP_QUALITY: process.env.PHOTO_WEBP_QUALITY,
 		PORT: process.env.PORT,
 		S3_ACCESS_KEY_ID: process.env.S3_ACCESS_KEY_ID,
 		S3_BUCKET: process.env.S3_BUCKET,
@@ -991,6 +1044,8 @@ export function serverEnv(
 		googleIssuer: GOOGLE_ISSUER,
 		localDatabase: isLocalDatabase(raw.DATABASE_URI ?? ''),
 		payloadSecret: raw.PAYLOAD_SECRET ?? '',
+		// Not read while Next builds, where nothing is received: the server reads it when it starts.
+		photoLimits: photoLimitsFrom({}),
 		trustedOrigins: trustedOrigins(site, raw.NODE_ENV === 'production', raw.PORT),
 	}
 }

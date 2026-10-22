@@ -40,6 +40,8 @@ import { publicAddress } from '@/lib/dashboard/public-address'
 import { requestUser } from '@/lib/dashboard/request'
 import { SERVICE_OFFERS } from '@/lib/dashboard/service-offers'
 import { zoneReviewView } from '@/lib/dashboard/zone-review'
+import { usageView } from '@/lib/photo-limits'
+import { readPhotoUsage } from '@/lib/photo-usage'
 import { text } from '@/lib/profile/display-name'
 import {
 	saveMyAvailability,
@@ -75,6 +77,8 @@ export default async function ProfilePage() {
 	// An account that came without a profile (some accounts of the old site) gets one in the onboarding (ticket 140).
 	if (context === null || profile === null) return redirect(ACCOUNT_ONBOARDING_PAGE)
 	const photos = await readDashboardPhotos(context.payload, profile)
+	// What she stores and what the site allows (ticket 309): the volume used and the photos left.
+	const usage = usageView(await readPhotoUsage(context.payload, artist.id))
 	const progress = profileProgress(profile)
 	const steps = remainingSteps(profile)
 	// Not for a page the team hid, nor for the team's own account: the onboarding is not their next step.
@@ -114,7 +118,7 @@ export default async function ProfilePage() {
 		) : carte.section === 'photo' ? (
 			<PhotoEditor photo={photos.photo} manquante={photos.principaleManquante} envoyer={saveMyMainPicture} />
 		) : carte.section === 'portfolio' ? (
-			<PortfolioEditor photos={photos.galerie} envoyer={saveMyPortfolio} />
+			<PortfolioEditor photos={photos.galerie} usage={usage} envoyer={saveMyPortfolio} />
 		) : carte.section === 'reseaux' ? (
 			<NetworksEditor
 				valeurs={{

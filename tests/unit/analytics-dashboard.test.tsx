@@ -207,7 +207,7 @@ describe('une photo refusée : la vraie cause', () => {
 
 	test.each([
 		[413, '', 'size'],
-		[400, 'La photo dépasse 10 Mo : choisis-en une plus légère.', 'size'],
+		[400, 'La photo est trop lourde : choisis-en une plus légère.', 'size'],
 		[400, 'autre chose', 'type'],
 		[415, '', 'type'],
 		[500, '', 'server'],

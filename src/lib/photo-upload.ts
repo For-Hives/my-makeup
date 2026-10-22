@@ -1,22 +1,13 @@
 /**
  * What a photo sent to the site may be (ticket 133; plan 01 §6.1, plan 02 U79, U80, U81): a JPEG,
- * a PNG or a WebP of 10 MiB at most, recognised by its first bytes, never by the type or the name
- * the sender declares. It is stored under a name the server draws, never the original one.
+ * a PNG or a WebP of 12 MiB at most (a setting, `PHOTO_UPLOAD_MAX_MB`, ticket 309), recognised by its
+ * first bytes, never by the type or the name the sender declares. It is converted to WebP and stored
+ * under a name the server draws, never the original one.
  *
  * Ported from the old API (api-my-makeup src/utils/upload-rules.js). Pure: no I/O.
  */
 
-/** Largest photo the server takes (10 MiB, as the old API). */
-export const PHOTO_SIZE_MAX = 10 * 1024 * 1024
-
-/**
- * What a multipart body may weigh beyond the file itself: the boundaries, the `_payload` field and the
- * headers of its parts. The whole request is refused past `PHOTO_SIZE_MAX` plus this (ticket 273).
- */
-export const MULTIPART_OVERHEAD_MAX = 1024 * 1024
-
-/** Largest request body the site reads on a route that receives a file (ticket 273). */
-export const UPLOAD_REQUEST_SIZE_MAX = PHOTO_SIZE_MAX + MULTIPART_OVERHEAD_MAX
+import { photoLimits, TOO_HEAVY_MESSAGE, uploadRequestSizeMax } from './photo-limits'
 
 /** The types accepted, and the extension each one is stored under. */
 export const PHOTO_TYPES = {
@@ -27,23 +18,24 @@ export const PHOTO_TYPES = {
 
 export type PhotoType = keyof typeof PHOTO_TYPES
 
-/** The messages of the old site, word for word (src/lib/photo.js, branch main). */
+/** The messages of the old site (src/lib/photo.js, branch main); the size one no longer names a number, the limit is a setting (ticket 309). */
 export const UPLOAD_MESSAGES = {
-	taille: 'La photo dépasse 10 Mo : choisis-en une plus légère.',
+	taille: TOO_HEAVY_MESSAGE,
 	type: "La photo n'a pas été acceptée : choisis une photo JPEG, PNG ou WebP.",
 } as const
 
 /**
  * The limits Payload's multipart parser applies to every request (`upload` of the config, ticket 273).
  * It reads the body as a stream and stops at the first limit crossed, before the access rules run: a
- * file past `PHOTO_SIZE_MAX` answers 413 with the usual message, and no more than `UPLOAD_REQUEST_SIZE_MAX`
- * bytes of any request are read. Payload's defaults are 20 MiB for a file and 50 MiB for a request.
+ * file past the setting answers 413 with the usual message, and no more than the setting plus the
+ * overhead of a multipart body of any request is read. Payload's defaults are 20 MiB for a file and 50 MiB for a request.
  */
-export const PAYLOAD_UPLOAD_LIMITS = {
-	limits: { fileSize: PHOTO_SIZE_MAX },
-	requestSizeLimit: UPLOAD_REQUEST_SIZE_MAX,
-	responseOnLimit: UPLOAD_MESSAGES.taille,
-} as const
+export const uploadLimits = (uploadBytes: number = photoLimits().uploadBytes) =>
+	({
+		limits: { fileSize: uploadBytes },
+		requestSizeLimit: uploadRequestSizeMax({ ...photoLimits(), uploadBytes }),
+		responseOnLimit: UPLOAD_MESSAGES.taille,
+	}) as const
 
 const startsWith = (octets: Uint8Array, signature: number[], decalage = 0): boolean =>
 	octets.length >= decalage + signature.length && signature.every((octet, i) => octets[decalage + i] === octet)
@@ -61,8 +53,8 @@ export function photoType(octets: Uint8Array): PhotoType | undefined {
 export type UploadVerdict = { accepte: true; type: PhotoType } | { accepte: false; message: string }
 
 /** Whether a file may be stored: its size first, then the type its content shows. */
-export function judge(octets: Uint8Array, taille = octets.length): UploadVerdict {
-	if (taille > PHOTO_SIZE_MAX) return { accepte: false, message: UPLOAD_MESSAGES.taille }
+export function judge(octets: Uint8Array, taille = octets.length, sizeMax = photoLimits().uploadBytes): UploadVerdict {
+	if (taille > sizeMax) return { accepte: false, message: UPLOAD_MESSAGES.taille }
 	const type = photoType(octets)
 	return type ? { accepte: true, type } : { accepte: false, message: UPLOAD_MESSAGES.type }
 }

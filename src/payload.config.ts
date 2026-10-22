@@ -22,7 +22,7 @@ import { mediaBaseUrl, serverEnv } from './lib/env'
 import { mediaUrl, UPLOAD_PREFIX } from './lib/media'
 import { PAYLOAD_LANGUAGE } from './lib/payload-language'
 import { reserveLocksToAdmins } from './lib/payload-locks'
-import { PAYLOAD_UPLOAD_LIMITS } from './lib/photo-upload'
+import { uploadLimits } from './lib/photo-upload'
 import { poolSettings, withPoolListener } from './lib/pool-base'
 import { createObjectStorage } from './lib/storage'
 import { runOnDemandImport } from './migration/on-demand-import'
@@ -114,7 +114,7 @@ export default buildConfig({
 	// REST and the Local API are the only ways in. The two GraphQL routes answer 404 by themselves.
 	graphQL: { disable: true },
 	// The size a file or a request may reach, read as a stream and cut at the limit (ticket 273).
-	upload: { ...PAYLOAD_UPLOAD_LIMITS, limits: { ...PAYLOAD_UPLOAD_LIMITS.limits } },
+	upload: uploadLimits(env.photoLimits.uploadBytes),
 	// Payload speaks French only: its errors, its own messages and the admin panel, whatever
 	// language a request asks for (src/lib/payload-language.ts, ticket 221).
 	i18n: PAYLOAD_LANGUAGE,

@@ -140,7 +140,12 @@ test.describe('135 : le portfolio, ajouter des photos', { tag: '@mobile' }, () =
 		await page.goto('/auth/profil')
 		await openFurtherCards(page)
 		await expect(page.getByTestId('carte-portfolio')).toContainText('à compléter')
+		// Ticket 309: the volume used and the photos left, on the card and in the panel.
+		await expect(page.getByTestId('photo-usage')).toHaveText(
+			'Tes photos prennent 0 Mo sur 60 Mo. Il te reste 45 photos.'
+		)
 		await open(page)
+		await expect(dialogue(page)).toContainText('Il te reste 45 photos.')
 		const sent = uploads(page)
 
 		await page
