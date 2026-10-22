@@ -123,6 +123,36 @@ test.describe('U14 à U16 : le code postal, la zone à revoir, l’étranger', {
 		await expect(page.getByTestId('zone-a-revoir')).toHaveCount(0)
 	})
 
+	test('ticket 297 : « Genève » dans le panneau propose « Choisir un pays », un appui suffit', async ({
+		context,
+		page,
+	}) => {
+		test.setTimeout(90_000)
+		const { id } = await artist(context)
+		await openPanel(page)
+		const dialog = page.getByRole('dialog')
+		const field = dialog.getByRole('combobox', { name: 'Où travailles-tu ?' })
+		const choose = dialog.getByRole('button', { name: 'Choisir un pays' })
+
+		await takeScreenshot(page, 'panneau-normal')
+		await field.fill('Genève')
+		await expect(dialog.getByText('Pas de commune française de ce nom.')).toBeVisible()
+		await expect(choose).toBeVisible()
+		await takeScreenshot(page, 'panneau-aucune-commune')
+		expect((await choose.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44)
+		expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+		expect(await violationsSevere(page)).toEqual([])
+
+		await press(choose)
+		await expect(dialog.getByRole('button', { name: 'Retirer Suisse' })).toBeVisible()
+		await expect(choose).toHaveCount(0)
+		await takeScreenshot(page, 'panneau-pays-prechoisi')
+		expect(await violationsSevere(page)).toEqual([])
+		await press(dialog.getByRole('button', { name: 'Enregistrer' }))
+		await expect(page.getByRole('dialog')).toHaveCount(0)
+		expect(await stored(id)).toMatchObject({ zoneKind: 'countries', countries: ['CH'] })
+	})
+
 	test('l’étranger : la Belgique et Bruxelles, puis la France et l’Italie, puis une commune', async ({
 		context,
 		page,
