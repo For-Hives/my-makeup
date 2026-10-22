@@ -154,6 +154,17 @@ const emptyPlace = (lieu: Place): boolean =>
 const startsWithDepartment = (texte: string, nom: string): boolean =>
 	startsWith(texte, nom) && !(LONGEST_NAMES.get(nom) ?? []).some(long => startsWith(texte, long))
 
+/** True when the profile states where she works: a commune, or a place abroad (ticket 310). */
+export const hasZone = (profil: Pick<ProfilePlace, 'ville'>): boolean => (profil.ville ?? '').trim() !== ''
+
+/**
+ * The profiles that state a zone first, the others after (ticket 310): a serious profile whose city the
+ * list does not know, with a typo or none stays listed, only lower. Each group keeps its order.
+ */
+export function zoneKnownFirst<T extends Pick<ProfilePlace, 'ville'>>(profils: readonly T[]): T[] {
+	return [...profils.filter(hasZone), ...profils.filter(profil => !hasZone(profil))]
+}
+
 /** Where a profile works, as the search reads it: its commune, and the département of its INSEE code. */
 export interface ProfilePlace {
 	ville: string | null
@@ -282,7 +293,7 @@ export function sectionsByPlace<T extends ProfilePlace>(profils: readonly T[], c
 	const localProfiles = [...cityProfiles, ...department]
 	const departments = searchDepartments(localProfiles, city)
 	const inSearchedDepartment = others.filter(profil => profil.departement && departments.includes(profil.departement))
-	const elsewhere = others.filter(profil => !inSearchedDepartment.includes(profil))
+	const elsewhere = zoneKnownFirst(others.filter(profil => !inSearchedDepartment.includes(profil)))
 	const section = (cle: OthersSection<T>['cle'], titre: string, liste: T[]): OthersSection<T>[] =>
 		liste.length ? [{ cle, titre, profils: liste }] : []
 	return {
@@ -347,6 +358,7 @@ export function sectionsByDistance<T extends ProfilePlace & ProfileGeometry>(
 	const distanceOf = (profil: T): number => distances.get(profil) ?? Number.POSITIVE_INFINITY
 	const cityProfiles: T[] = []
 	const withoutCenter: T[] = []
+	const withoutZone: T[] = []
 	const covering: T[] = []
 	const nearby: T[] = []
 	for (const profile of profils) {
@@ -354,6 +366,7 @@ export function sectionsByDistance<T extends ProfilePlace & ProfileGeometry>(
 		const known = profile.center != null && validPoint(profile.center)
 		if (known && profile.center) distances.set(profile, distanceKm(origin.point, profile.center))
 		if (match === 'ville') cityProfiles.push(profile)
+		else if (!hasZone(profile)) withoutZone.push(profile)
 		else if (!known) {
 			if (match === 'departement') withoutCenter.push(profile)
 		} else {
@@ -380,6 +393,8 @@ export function sectionsByDistance<T extends ProfilePlace & ProfileGeometry>(
 		sections: [
 			...section('covering', 'Se déplacent jusqu’à vous', covering),
 			...section('nearby', `Plus loin, à moins de ${NEARBY_MAX_KM} km`, nearby),
+			// Ticket 310: a profile with no zone is not near nor far; it is listed last, never dropped.
+			...section('autres', 'Autres maquilleuses', withoutZone),
 		],
 	}
 }

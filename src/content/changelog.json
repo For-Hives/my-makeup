@@ -275,6 +275,11 @@
 			"id": "apres-avoir-confirme-ton-adresse-un-clic-sur-continuer-ve",
 			"type": "amelioration",
 			"text": "Après avoir confirmé ton adresse (un clic sur « Continuer vers mon profil ») ou choisi un nouveau mot de passe, tu es connectée : plus besoin de retaper ton email et ton mot de passe."
+		},
+		{
+			"id": "une-maquilleuse-dont-la-ville-n-est-pas-reconnue-ou-n-est",
+			"type": "amelioration",
+			"text": "Une maquilleuse dont la ville n'est pas reconnue, ou n'est pas indiquée, reste trouvable dans la recherche : elle apparaît simplement après celles dont la zone est connue."
 		}
 	],
 	"releases": []

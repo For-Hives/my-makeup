@@ -64,7 +64,7 @@ export function buildSearchView<T extends SearchableProfile>(
 	const ranked = found.localTitle !== undefined
 	const byCityAlone = searchByCity(query)
 	const noLocal = found.parLieu && found.locaux.length === 0
-	const nobody = byCityAlone && noLocal && (!ranked || found.sections.length === 0)
+	const nobody = byCityAlone && noLocal && (!ranked || found.sections.every(section => section.cle === 'autres'))
 	const places: ProfilesByPlace<T> = nobody ? { ...found, sections: [] } : found
 	const shown = [...places.locaux, ...places.sections.flatMap(section => section.profils)]
 	const empty = shown.length === 0
