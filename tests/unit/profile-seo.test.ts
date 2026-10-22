@@ -66,13 +66,22 @@ describe('titre et description du profil', () => {
 	test('274 : la description de repli vouvoie, comme le site public', () => {
 		const meta = profileMetadata(readType(type('reference'), { description: null }))
 		expect(String(meta.description)).toStartWith('Découvrez Inès Morel, ')
+		expect(String(meta.description)).toBe(
+			'Découvrez Inès Morel, Maquillage mariage à Annecy, sur My-Makeup : prestations, tarifs et moyens de contact.'
+		)
 		expect(String(meta.description)).not.toContain('Découvre ')
 	})
 
 	test('274 : un titre trop long essaie « Nom – spécialité | My-Makeup » avant le nom seul', () => {
 		const name = 'Marguerite Dubonnets' // 20 characters
 		expect(name).toHaveLength(20)
-		const two = { nom: name, specialite: 'Maquillage mariage', lieu: null, placePhrase: 'en France et en Italie' }
+		const two = {
+			nom: name,
+			specialite: 'Maquillage mariage',
+			lieu: null,
+			placePhrase: 'en France et en Italie',
+			flags: ['🇫🇷', '🇮🇹'],
+		}
 		const title = profileTitle(two)
 		expect(title).toBe('Marguerite Dubonnets – Maquillage mariage | My-Makeup')
 		expect(title.length).toBeLessThanOrEqual(MAX_TITLE)
@@ -80,6 +89,18 @@ describe('titre et description du profil', () => {
 		expect(profileTitle({ ...two, nom: 'N'.repeat(40), specialite: 'Maquillage mariage' })).toBe(
 			`${'N'.repeat(40)} | My-Makeup`
 		)
+	})
+
+	test('274 : une commune au titre trop long garde la forme de l’ancien site, le nom seul avec la marque', () => {
+		// The old site tried « Nom – détail | My-Makeup », « Nom – détail », then « Nom | My-Makeup »: no form in between.
+		const municipality = {
+			nom: 'Marguerite Dubonnets',
+			specialite: 'Maquillage mariage et coiffure de cérémonie',
+			lieu: 'Annecy',
+			placePhrase: 'à Annecy',
+			flags: [],
+		}
+		expect(profileTitle(municipality)).toBe('Marguerite Dubonnets | My-Makeup')
 	})
 
 	test('publiable : adresse canonique absolue sans barre finale ; sinon noindex et pas de canonique', () => {

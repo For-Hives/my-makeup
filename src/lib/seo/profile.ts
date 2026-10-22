@@ -22,7 +22,7 @@ import { canonicalUrl } from './url'
 export const profilePath = (slug: string): string => `/profil/${slug}`
 
 /** What the title and the description read of a profile: placePhrase is « à Annecy », « en Belgique »… */
-type ProfileDetail = Pick<PublicProfile, 'specialite' | 'lieu'> & Partial<Pick<PublicProfile, 'placePhrase'>>
+type ProfileDetail = Pick<PublicProfile, 'specialite' | 'lieu'> & Partial<Pick<PublicProfile, 'placePhrase' | 'flags'>>
 
 /**
  * « Maquilleuse mariage à Annecy », « Maquillage mariage en Belgique », or whatever of the speciality
@@ -36,19 +36,23 @@ function profileDetail({ specialite: specialty, lieu, placePhrase }: ProfileDeta
 }
 
 /**
- * The title: « Nom – détail | My-Makeup » when it fits in 60 characters, else the shorter forms, from the
- * most to the least informative: without the brand, then the speciality alone (« Nom – spécialité | My-Makeup »,
- * ticket 274: a profile in a zone of countries has a long place phrase), then the place alone, then the name.
+ * The title: « Nom – détail | My-Makeup » when it fits in 60 characters, else « Nom – détail », else the name
+ * and the brand, as on the old site. A profile in a zone of countries (ticket 274) has a long place phrase
+ * (« en France et en Italie »): it tries two intermediate forms first, the speciality alone, then the place alone.
+ * A commune keeps the old site's forms, so that no title differs from it outside the register.
  */
 export function profileTitle(profil: Pick<PublicProfile, 'nom'> & ProfileDetail): string {
 	const name = textAbout(profil.nom)
 	const detail = profileDetail(profil)
+	const abroad = (profil.flags?.length ?? 0) > 0
 	const place = profil.placePhrase ?? (profil.lieu ? `à ${profil.lieu}` : null)
 	const candidates = [
 		`${name} – ${detail} | ${BRAND}`,
 		`${name} – ${detail}`,
-		...(profil.specialite ? [`${name} – ${profil.specialite} | ${BRAND}`, `${name} – ${profil.specialite}`] : []),
-		...(place ? [`${name} – ${place} | ${BRAND}`] : []),
+		...(abroad && profil.specialite
+			? [`${name} – ${profil.specialite} | ${BRAND}`, `${name} – ${profil.specialite}`]
+			: []),
+		...(abroad && place ? [`${name} – ${place} | ${BRAND}`] : []),
 		`${name} | ${BRAND}`,
 	]
 	return candidates.find(titre => titre.length <= MAX_TITLE) ?? truncate(name, MAX_TITLE)
