@@ -6,6 +6,9 @@
 # so that a page that is not the same twice in a row fails here and not in the night. It commits nothing: the
 # references are handed over as the file `visual-references`, to put in tests/e2e/visual.spec.ts-snapshots/.
 #
+# GitHub only offers `workflow_dispatch` for a workflow that is on the DEFAULT branch: until the v3 is there, the run is
+# made by a push on v3 that touches this file.
+#
 # Rules: no secret, no step allowed to fail, every action pinned by its commit.
 name: References visuelles
 
