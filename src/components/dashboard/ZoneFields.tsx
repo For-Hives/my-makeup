@@ -10,6 +10,7 @@ import { enteredRadiusSchema, type LocationValues, type SuggestedCity } from '@/
 import { radiusAsked, type ZoneChoice } from '@/lib/dashboard/zone-choice'
 import { COUNTRIES_MAX, RADIUS_BOUNDS_KM } from '@/lib/profile/zone'
 import { type CitiesSearch, CityField } from './CityField'
+import { useFirstPress } from './first-press'
 
 /** What the form holds beside the zone: the radius as typed, and « à domicile ». */
 export const zoneFormSchema = z.object({ rayon: enteredRadiusSchema, aDomicile: z.boolean() })
@@ -68,6 +69,11 @@ export function ZoneFields({
 	useEffect(() => {
 		if (focusPicker > 0) pickerRef.current?.focus()
 	}, [focusPicker])
+	// The link answers the first press, even with the list of suggestions open (ticket 297).
+	const abroadPress = useFirstPress(() => {
+		onChoix({ kind: 'countries', countries: [], town: '' })
+		setFocusPicker(count => count + 1)
+	})
 
 	return (
 		<div className="flex flex-col gap-4">
@@ -87,15 +93,13 @@ export function ZoneFields({
 							onChoix({ kind: 'countries', countries: [code], town: '' })
 							setFocusPicker(count => count + 1)
 						}}
-					/>
-					<button
-						type="button"
-						className={LINK}
-						onClick={() => {
-							onChoix({ kind: 'countries', countries: [], town: '' })
+						onAbroad={code => {
+							// A country the text names is pre-selected; she can remove it. Nothing is chosen otherwise.
+							onChoix({ kind: 'countries', countries: code === undefined ? [] : [code], town: '' })
 							setFocusPicker(count => count + 1)
 						}}
-					>
+					/>
+					<button type="button" className={LINK} {...abroadPress}>
 						Je travaille à l’étranger ou dans plusieurs pays
 					</button>
 				</div>

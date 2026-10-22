@@ -256,7 +256,109 @@ describe('un texte libre n’est jamais une commune', () => {
 		const { envoyer: send } = fakeUpload()
 		await open(send, find, WITHOUT_CITY)
 		await write('Zzzzz')
-		expect(fieldStatus()).toContain('Aucune commune ne correspond.')
+		expect(fieldStatus()).toContain('Pas de commune française de ce nom.')
+	})
+})
+
+/** A press as a finger makes it: the pointer goes down, the field loses the focus, nothing else comes. */
+async function pressWithoutClick(target: Element) {
+	const field = city()
+	await act(async () => {
+		target.dispatchEvent(new jsdomWindow.w.MouseEvent('pointerdown', { bubbles: true, cancelable: true, button: 0 }))
+		target.dispatchEvent(new jsdomWindow.w.MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 }))
+	})
+	await act(async () => {
+		field.blur()
+	})
+}
+
+const countriesMode = (): boolean => jsdomWindow.w.document.querySelector('fieldset') !== null
+const chips = (): string[] =>
+	[...jsdomWindow.w.document.querySelectorAll('[aria-label="Pays choisis"] li > span:nth-of-type(2)')].map(
+		chip => chip.textContent ?? ''
+	)
+
+describe('ticket 297 : le lien « étranger » réagit au premier appui', () => {
+	test('liste ouverte, un seul appui (le champ perd le focus, aucun clic ne suit) bascule en mode pays', async () => {
+		const { chercher: find } = fakeSearch({ ok: true, communes: [ANNECY, LYON] })
+		const { envoyer: send } = fakeUpload()
+		await open(send, find, WITHOUT_CITY)
+		await write('Lyo')
+		expect(city().getAttribute('aria-expanded')).toBe('true')
+
+		await pressWithoutClick(jsdomWindow.bouton('Je travaille à l’étranger ou dans plusieurs pays'))
+
+		expect(countriesMode()).toBe(true)
+		expect(chips()).toEqual([])
+	})
+
+	test('un appui suivi de son clic ne joue l’action qu’une fois', async () => {
+		const { chercher: find } = fakeSearch({ ok: true, communes: [] })
+		const { envoyer: send } = fakeUpload()
+		await open(send, find, WITHOUT_CITY)
+		await write('Zzzzz')
+		const button = jsdomWindow.bouton('Choisir un pays')
+		await act(async () => {
+			button.dispatchEvent(new jsdomWindow.w.MouseEvent('pointerdown', { bubbles: true, cancelable: true, button: 0 }))
+		})
+		expect(countriesMode()).toBe(true)
+		// The button is gone with the field: nothing is left to receive the click.
+		expect(jsdomWindow.w.document.body.textContent).not.toContain('Choisir un pays')
+	})
+
+	test('au clavier, Tab atteint le lien et Entrée le déclenche, liste ouverte ou fermée', async () => {
+		const { chercher: find } = fakeSearch({ ok: true, communes: [ANNECY, LYON] })
+		const { envoyer: send } = fakeUpload()
+		for (const listOpen of [true, false]) {
+			await open(send, find, WITHOUT_CITY)
+			if (listOpen) await write('Lyo')
+			const link = jsdomWindow.bouton('Je travaille à l’étranger ou dans plusieurs pays')
+			expect(link.tabIndex).toBeGreaterThanOrEqual(0)
+			// Enter on a button is a click with no press before it (detail 0).
+			await act(async () => {
+				link.dispatchEvent(new jsdomWindow.w.MouseEvent('click', { bubbles: true, cancelable: true, detail: 0 }))
+			})
+			expect(countriesMode()).toBe(true)
+			await jsdomWindow.demonter()
+		}
+	})
+
+	test.each([
+		['Genève', 'Suisse'],
+		['Liège', 'Belgique'],
+		['Turin', 'Italie'],
+	])('« %s » : la phrase et le bouton, le pays « %s » déjà choisi', async (saisie, pays) => {
+		const { chercher: find } = fakeSearch({ ok: true, communes: [] })
+		const { envoyer: send } = fakeUpload()
+		await open(send, find, WITHOUT_CITY)
+		await write(saisie)
+		const text = dialogue()?.textContent ?? ''
+		expect(text).toContain('Pas de commune française de ce nom.')
+		expect(text).toContain('Tu travailles hors de France ?')
+		expect(text).not.toContain('Aucune commune ne correspond.')
+
+		await pressWithoutClick(jsdomWindow.bouton('Choisir un pays'))
+		expect(chips()).toEqual([pays])
+	})
+
+	test('une ville inconnue : le mode pays s’ouvre, aucun pays n’est choisi à sa place', async () => {
+		const { chercher: find } = fakeSearch({ ok: true, communes: [] })
+		const { envoyer: send } = fakeUpload()
+		await open(send, find, WITHOUT_CITY)
+		await write('Zzzzz')
+		await jsdomWindow.cliquer(jsdomWindow.bouton('Choisir un pays'))
+		expect(countriesMode()).toBe(true)
+		expect(chips()).toEqual([])
+	})
+
+	test('un code postal partagé ne propose rien à l’étranger et ne choisit rien', async () => {
+		const { chercher: find } = fakeSearch({ ok: true, communes: [ANNECY, LYON], codePostal: '74990' })
+		const { appels: calls, envoyer: send } = fakeUpload()
+		await open(send, find, WITHOUT_CITY)
+		await write('74990')
+		expect(dialogue()?.textContent).not.toContain('Choisir un pays')
+		expect(fieldStatus()).toContain('Ce code postal couvre 2 communes : choisis la tienne.')
+		expect(calls).toHaveLength(0)
 	})
 })
 

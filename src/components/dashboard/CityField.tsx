@@ -4,7 +4,9 @@ import { type KeyboardEvent, useEffect, useId, useMemo, useRef, useState } from 
 import type { Country } from '@/lib/countries'
 import { flag } from '@/lib/countries'
 import { matchingCountries } from '@/lib/dashboard/country-search'
+import { foreignCountryOf } from '@/lib/dashboard/foreign-cities'
 import { REFUSED_ADDRESS_MESSAGE, SEARCH_MIN, type SearchResult, type SuggestedCity } from '@/lib/dashboard/location'
+import { useFirstPress } from './first-press'
 
 export type CitiesSearch = (texte: string) => Promise<SearchResult>
 
@@ -28,6 +30,10 @@ type Item = { type: 'commune'; commune: SuggestedCity } | { type: 'pays'; countr
  * - Countries (ticket 266): with `onChoisirPays`, the countries of the embedded list that start like
  *   the text are proposed under « À l’étranger », filtered here with no request. Choosing one hands
  *   it to the parent, which turns the zone into countries.
+ * - Nothing French (ticket 297): when no commune matches and no country is proposed, the field says
+ *   « Pas de commune française de ce nom. Tu travailles hors de France ? » with a button « Choisir
+ *   un pays » (`onAbroad`), which answers the first press. For a big foreign city it knows
+ *   (« Genève »), the button hands over the country, to be pre-selected; never for her.
  * - Keyboard: the arrows move in the suggestions (both groups), Enter chooses the one in focus (and
  *   does not send the form), Escape closes the list (and not the panel around it). A second Escape
  *   closes the panel.
@@ -45,6 +51,7 @@ export function CityField({
 	chercher,
 	onChoisir,
 	onChoisirPays,
+	onAbroad,
 	erreur,
 	idErreur,
 	id,
@@ -55,6 +62,8 @@ export function CityField({
 	onChoisir: (commune: SuggestedCity | null) => void
 	/** Given, the countries are proposed too; it receives the code of the one she chooses. */
 	onChoisirPays?: (code: string) => void
+	/** Given, a text no commune matches proposes « Choisir un pays »; it receives the country the text names, if known. */
+	onAbroad?: (code: string | undefined) => void
 	erreur: string
 	idErreur: string
 	id: string
@@ -82,6 +91,13 @@ export function CityField({
 		...countries.map((country): Item => ({ type: 'pays', country })),
 	]
 	const isOpen = open && items.length > 0
+	const noFrench = onAbroad !== undefined && state === 'rien' && countries.length === 0 && !isOpen
+	const abroadPress = useFirstPress(() => {
+		clearTimeout(pause.current)
+		question.current += 1
+		close()
+		onAbroad?.(foreignCountryOf(text))
+	})
 
 	useEffect(
 		() => () => {
@@ -206,7 +222,9 @@ export function CityField({
 				: isOpen
 					? proposed
 					: state === 'rien'
-						? 'Aucune commune ne correspond.'
+						? noFrench
+							? 'Pas de commune française de ce nom.'
+							: 'Aucune commune ne correspond.'
 						: ''
 
 	const cityOption = (commune: SuggestedCity) =>
@@ -294,6 +312,18 @@ export function CityField({
 					</div>
 				) : null}
 			</div>
+			{noFrench ? (
+				<p className="flex flex-wrap items-center gap-x-2 text-neutral-700 text-sm">
+					Tu travailles hors de France ?
+					<button
+						type="button"
+						className="min-h-11 rounded-md px-1 font-medium text-indigo-900 underline"
+						{...abroadPress}
+					>
+						Choisir un pays
+					</button>
+				</p>
+			) : null}
 			{state === 'adresse' ? (
 				<p className="text-amber-900 text-sm">{REFUSED_ADDRESS_MESSAGE}</p>
 			) : (
