@@ -10,6 +10,7 @@ import {
 	type UploadConfig,
 	type Where,
 } from 'payload'
+import sharp from 'sharp'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import {
 	adminEditorOrArtist,
@@ -21,7 +22,9 @@ import {
 	neverAllowed,
 } from '../lib/access'
 import { mediaUrl } from '../lib/media'
+import { photoLimits, quotaVerdict, UNREADABLE_MESSAGE } from '../lib/photo-limits'
 import { judge, NAMED_FILE_CONTEXT, unpredictableName } from '../lib/photo-upload'
+import { readPhotoUsage } from '../lib/photo-usage'
 
 /**
  * Where the object of a media is and what it is: written by the server only, from the file it
@@ -73,14 +76,36 @@ const fileNamedByServer = (req: { context?: Record<string, unknown> }): boolean 
 	req.context?.[NAMED_FILE_CONTEXT] === true || req.context?.skipCloudStorage === true
 
 /**
- * A file sent to the site is a JPEG, a PNG or a WebP of 10 MiB at most, read in its content
- * (ticket 133, `src/lib/photo-upload.ts`), whoever sends it. Anything else is refused (400) before
- * Payload reads it, so that nothing reaches the storage. The photo is then stored under a name the
- * server draws (`<uuid>.<extension of its real type>`): the original name appears nowhere.
- *
- * The import sends no file (it adopts photos where they are) and is not concerned.
+ * The most pixels sharp decodes for one photo (a decompression bomb is refused, not decoded): a phone
+ * photo is 12 to 50 million pixels.
  */
-export const photoValidatedAndRenamed: CollectionBeforeOperationHook = ({ args, operation, req }) => {
+export const INPUT_PIXELS_MAX = 100_000_000
+
+/**
+ * A photo, as it is stored (ticket 309): turned upright by its EXIF orientation, brought down to the
+ * longest side of the settings (never enlarged), and encoded as WebP at the quality of the settings.
+ * Sharp writes no metadata unless asked to: the EXIF block, the GPS position of a phone photo included,
+ * does not survive. The original is not kept.
+ */
+export async function convertToWebp(bytes: Uint8Array, { sidePx, webpQuality } = photoLimits()): Promise<Buffer> {
+	return await sharp(bytes, { limitInputPixels: INPUT_PIXELS_MAX })
+		.rotate()
+		.resize({ width: sidePx, height: sidePx, fit: 'inside', withoutEnlargement: true })
+		.webp({ quality: webpQuality })
+		.toBuffer()
+}
+
+/**
+ * A file sent to the site is a JPEG, a PNG or a WebP of the size the settings allow, read in its content
+ * (ticket 133, `src/lib/photo-upload.ts`), whoever sends it. Anything else is refused (400) before
+ * Payload reads it, so that nothing reaches the storage. The photo is then converted to WebP, shrunk and
+ * stripped of its metadata (`convertToWebp`, ticket 309), and stored under a name the server draws
+ * (`<uuid>.webp`): the original name appears nowhere, and the original file is not kept.
+ *
+ * The import sends no file (it adopts photos where they are) and is not concerned. Server code that names
+ * its own file (the test bench) is checked but neither converted nor renamed.
+ */
+export const photoValidatedAndRenamed: CollectionBeforeOperationHook = async ({ args, operation, req }) => {
 	const file = req.file
 	if ((operation !== 'create' && operation !== 'update') || !file) return args
 	if (fileNamedByServer(req)) {
@@ -92,9 +117,45 @@ export const photoValidatedAndRenamed: CollectionBeforeOperationHook = ({ args, 
 	const bytes = file.data
 	const verdict = judge(bytes, Math.max(file.size ?? 0, bytes.length))
 	if (!verdict.accepte) throw new APIError(verdict.message, 400)
-	file.name = unpredictableName(verdict.type)
-	file.mimetype = verdict.type
+	let converted: Buffer
+	try {
+		converted = await convertToWebp(bytes)
+	} catch {
+		// Right by its first bytes, but not a picture sharp can decode (cut short, too many pixels).
+		throw new APIError(UNREADABLE_MESSAGE, 400)
+	}
+	file.data = converted
+	file.size = converted.length
+	file.name = unpredictableName('image/webp')
+	file.mimetype = 'image/webp'
 	return args
+}
+
+/** The status of a refusal for the limit of a profile: neither 403 (an ended session) nor 400 (a bad file). */
+export const QUOTA_STATUS = 409
+
+/**
+ * A makeup artist stores a bounded number of photos and bytes (ticket 309, `src/lib/photo-limits.ts`),
+ * counted on her media, not on what her profile names, so that a photo sent straight to the API weighs
+ * as much as one in her portfolio. It runs once the file is converted, with its real size, and before
+ * the storage plugin writes the object: a refused photo leaves nothing. A file that replaces another
+ * of hers counts for the difference. The admin, the newsroom and server code are not limited; a
+ * profile already above a limit keeps its photos and adds none until it is back under.
+ */
+export const quotaOfProfile: CollectionBeforeChangeHook = async ({ data, operation, originalDoc, req }) => {
+	const { user, file } = req
+	if (!file || !user || !isArtist(user) || (operation !== 'create' && operation !== 'update')) return data
+	if (fileNamedByServer(req)) return data
+	const replacedId = operation === 'update' ? (originalDoc as { id?: number | string } | undefined)?.id : undefined
+	// Without the media whose file is replaced: what she holds besides it, then the new file on top.
+	const usage = await readPhotoUsage(req.payload, user.id, { except: replacedId, req })
+	const verdict = quotaVerdict({
+		usage,
+		addedBytes: typeof data.filesize === 'number' ? data.filesize : file.size,
+		replacing: replacedId !== undefined,
+	})
+	if (!verdict.ok) throw new APIError(verdict.message, QUOTA_STATUS)
+	return data
 }
 
 /** A handler of Payload's own route for the file of a media. */
@@ -193,7 +254,7 @@ export const Media: CollectionConfig<'media'> = {
 	upload: MEDIA_UPLOAD,
 	hooks: {
 		beforeOperation: [fileMetadataSetByServer, photoValidatedAndRenamed],
-		beforeChange: [fileOnCreate, ownerOnUpload],
+		beforeChange: [fileOnCreate, ownerOnUpload, quotaOfProfile],
 	},
 	fields: [
 		{ name: 'alt', label: 'Texte alternatif', type: 'text' },

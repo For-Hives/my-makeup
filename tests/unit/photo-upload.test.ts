@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import { judge, PHOTO_SIZE_MAX, PHOTO_TYPES, photoType, UPLOAD_MESSAGES, unpredictableName } from '@/lib/photo-upload'
+import { photoLimitsFrom } from '@/lib/photo-limits'
+import { judge, PHOTO_TYPES, photoType, UPLOAD_MESSAGES, unpredictableName } from '@/lib/photo-upload'
 
 /** What a photo sent to the site may be (ticket 133; plan 02 U79, U80, U81). */
 
@@ -35,12 +36,24 @@ describe('U79 : JPEG, PNG, WebP acceptés ; SVG, AVIF, HEIC, PDF, MP4 refusés, 
 	})
 })
 
-describe('U80 : 10 Mo au plus par fichier', () => {
-	test('10 Mo passent, un octet de plus est refusé avant même de lire le type', () => {
-		expect(PHOTO_SIZE_MAX).toBe(10 * 1024 * 1024)
-		expect(judge(JPEG, PHOTO_SIZE_MAX).accepte).toBe(true)
-		expect(judge(JPEG, PHOTO_SIZE_MAX + 1)).toEqual({ accepte: false, message: UPLOAD_MESSAGES.taille })
-		expect(judge(bytes('%PDF'), 12 * 1024 * 1024)).toEqual({ accepte: false, message: UPLOAD_MESSAGES.taille })
+describe('U80 : 12 Mo au plus par fichier, réglage PHOTO_UPLOAD_MAX_MB (décision du 22/10/2026, ticket 309)', () => {
+	const max = photoLimitsFrom({}).uploadBytes
+
+	test('12 Mo passent, un octet de plus est refusé avant même de lire le type', () => {
+		expect(max).toBe(12 * 1024 * 1024)
+		expect(judge(JPEG, max, max).accepte).toBe(true)
+		expect(judge(JPEG, max + 1, max)).toEqual({ accepte: false, message: UPLOAD_MESSAGES.taille })
+		expect(judge(bytes('%PDF'), 13 * 1024 * 1024, max)).toEqual({ accepte: false, message: UPLOAD_MESSAGES.taille })
+	})
+
+	test('le plafond suit le réglage, sans autre code', () => {
+		const five = photoLimitsFrom({ PHOTO_UPLOAD_MAX_MB: '5' }).uploadBytes
+		expect(judge(JPEG, 6 * 1024 * 1024, five).accepte).toBe(false)
+		expect(judge(JPEG, 6 * 1024 * 1024, max).accepte).toBe(true)
+	})
+
+	test('le message ne nomme aucun chiffre : la limite est un réglage', () => {
+		expect(UPLOAD_MESSAGES.taille).not.toMatch(/\d/)
 	})
 })
 

@@ -118,6 +118,13 @@ describe('a missing or short secret stops the start', () => {
 			googleIssuer: 'https://accounts.google.com',
 			localDatabase: true,
 			payloadSecret: SECRET,
+			photoLimits: {
+				uploadBytes: 12 * 1024 * 1024,
+				profileCount: 45,
+				profileBytes: 60 * 1024 * 1024,
+				webpQuality: 82,
+				sidePx: 2000,
+			},
 			trustedOrigins: ['http://localhost:3000', 'http://127.0.0.1:3000'],
 		})
 	})
@@ -451,6 +458,13 @@ describe('next build needs no secret and no database', () => {
 			googleIssuer: 'https://accounts.google.com',
 			localDatabase: false,
 			payloadSecret: '',
+			photoLimits: {
+				uploadBytes: 12 * 1024 * 1024,
+				profileCount: 45,
+				profileBytes: 60 * 1024 * 1024,
+				webpQuality: 82,
+				sidePx: 2000,
+			},
 			trustedOrigins: ['http://localhost:3000', 'http://127.0.0.1:3000'],
 		})
 	})
@@ -1097,5 +1111,58 @@ describe('the size of the connection pool is set by the environment, with a safe
 				expect(error.message).toContain(`- ${variable} : illisible.`)
 				expect(error.message).not.toContain(`« ${value} »`)
 			}
+	})
+})
+
+describe('what a profile may store is set by the environment, with a default (ticket 309)', () => {
+	test('absent or blank: 12 Mo per send, 45 photos and 60 Mo per profile, WebP at 82, 2000 px', () => {
+		const expected = {
+			uploadBytes: 12 * 1024 * 1024,
+			profileCount: 45,
+			profileBytes: 60 * 1024 * 1024,
+			webpQuality: 82,
+			sidePx: 2000,
+		}
+		expect(parseServerEnv(valid).photoLimits).toEqual(expected)
+		expect(parseServerEnv({ ...valid, PHOTO_UPLOAD_MAX_MB: ' ', PHOTO_PROFILE_MAX_COUNT: '' }).photoLimits).toEqual(
+			expected
+		)
+	})
+
+	test('the five are read, spaces around the digits cut', () => {
+		expect(
+			parseServerEnv({
+				...valid,
+				PHOTO_UPLOAD_MAX_MB: ' 5 ',
+				PHOTO_PROFILE_MAX_COUNT: '20',
+				PHOTO_PROFILE_MAX_MB: '30',
+				PHOTO_WEBP_QUALITY: '70',
+				PHOTO_SIDE_MAX_PX: '1600',
+			}).photoLimits
+		).toEqual({
+			uploadBytes: 5 * 1024 * 1024,
+			profileCount: 20,
+			profileBytes: 30 * 1024 * 1024,
+			webpQuality: 70,
+			sidePx: 1600,
+		})
+	})
+
+	test('the bounds are accepted, what is outside them is refused by name, with no value in the message', () => {
+		for (const [variable, accepted, refused] of [
+			['PHOTO_UPLOAD_MAX_MB', ['1', '50'], ['0', '51', '-1', '2.5', '1e1', 'douze']],
+			['PHOTO_PROFILE_MAX_COUNT', ['1', '500'], ['0', '501', '-3', '4.2']],
+			['PHOTO_PROFILE_MAX_MB', ['1', '2000'], ['0', '2001', '1e3']],
+			['PHOTO_WEBP_QUALITY', ['40', '95'], ['39', '96', '0', '82.5']],
+			['PHOTO_SIDE_MAX_PX', ['800', '4000'], ['799', '4001', '2000px']],
+		] as const) {
+			for (const value of accepted) expect(() => parseServerEnv({ ...valid, [variable]: value })).not.toThrow()
+			for (const value of refused) {
+				const error = refusal({ ...valid, [variable]: value })
+				expect(error.variables).toEqual([variable])
+				expect(error.message).toContain(`- ${variable} : illisible.`)
+				expect(error.message).not.toContain(`« ${value} »`)
+			}
+		}
 	})
 })

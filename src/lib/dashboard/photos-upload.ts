@@ -62,6 +62,16 @@ export async function uploadPhoto(
 	}
 	if (response.status === 401 || response.status === 403)
 		return { ok: false, message: MESSAGE_SESSION, session: 'expiree' }
+	// The limit of her space (ticket 309): the server says which one, in words she can act on.
+	if (response.status === 409) {
+		const body: unknown = await response.json().catch(() => null)
+		const said = (body as { errors?: { message?: unknown }[] } | null)?.errors?.[0]?.message
+		return {
+			ok: false,
+			message: typeof said === 'string' && said !== '' ? said : MESSAGES_PHOTO['limite-profil'],
+			cause: 'size',
+		}
+	}
 	if (response.status === 413) return { ok: false, message: MESSAGES_PHOTO['refus-taille'], cause: 'size' }
 	if (response.status === 400 || response.status === 415) {
 		const text = await response.text().catch(() => '')

@@ -16,6 +16,7 @@ import {
 import type { PortfolioValues } from '@/lib/dashboard/portfolio'
 import type { SaveResult } from '@/lib/dashboard/result'
 import { GALLERY_MAX } from '@/lib/media'
+import { type PhotoUsageView, photosLeft, usageSentence } from '@/lib/photo-limits'
 import { EditingPanel } from './EditingPanel'
 import { localPreview, releasePreview } from './PhotoEditor'
 import { PhotoPickerButton } from './PhotoPickerButton'
@@ -74,12 +75,15 @@ export const altText = (rang: number, total: number): string => `Photo ${rang} s
  */
 export function PortfolioEditor({
 	photos,
+	usage,
 	envoyer,
 	preparer = prepareBrowserPhoto,
 	televerser = (fichier, alt) => uploadPhoto(fichier, alt),
 	supprimer = id => deleteMedia(id),
 }: {
 	photos: readonly DashboardPhoto[]
+	/** What she stores and what the site allows (ticket 309): the sentence under the button, and the refusal before the send. */
+	usage?: PhotoUsageView | undefined
 	envoyer: PortfolioUpload
 	preparer?: (fichier: File) => Promise<PreparedPhoto<File>>
 	televerser?: (fichier: File, alt: string) => Promise<FileUploadResult>
@@ -111,9 +115,15 @@ export function PortfolioEditor({
 			<p role="status" className="w-full text-green-800 text-sm">
 				{announcement}
 			</p>
+			{usage ? (
+				<p data-testid="photo-usage" className="w-full text-neutral-700 text-sm">
+					{usageSentence(usage)}
+				</p>
+			) : null}
 			{open ? (
 				<PortfolioForm
 					photos={photos}
+					usage={usage}
 					envoyer={envoyer}
 					preparer={preparer}
 					televerser={televerser}
@@ -132,6 +142,7 @@ export function PortfolioEditor({
 
 function PortfolioForm({
 	photos,
+	usage,
 	envoyer,
 	preparer,
 	televerser,
@@ -141,6 +152,7 @@ function PortfolioForm({
 	onFermer,
 }: {
 	photos: readonly DashboardPhoto[]
+	usage: PhotoUsageView | undefined
 	envoyer: PortfolioUpload
 	preparer: (fichier: File) => Promise<PreparedPhoto<File>>
 	televerser: (fichier: File, alt: string) => Promise<FileUploadResult>
@@ -231,6 +243,12 @@ function PortfolioForm({
 			for (const file of fichiers) {
 				if (currentRows.current.length + accepted.length >= GALLERY_MAX) {
 					refuse(file, MESSAGES_PHOTO['limite-galerie'])
+					continue
+				}
+				// Her space holds a bounded number of photos (ticket 309): the server decides, this says it before the send.
+				const pendingCount = currentRows.current.filter(ligne => ligne.enAttente).length + accepted.length
+				if (usage && photosLeft(usage) - pendingCount <= 0) {
+					refuse(file, MESSAGES_PHOTO['limite-profil'])
 					continue
 				}
 				const signature = signatureOf(file)
@@ -382,6 +400,7 @@ function PortfolioForm({
 							if (chosen.length > 0) void choose(chosen)
 						}}
 					/>
+					{usage ? <p className="text-neutral-700 text-sm">{usageSentence(usage)}</p> : null}
 					<p id="portfolio-aide" className="text-neutral-700 text-sm">
 						JPEG, PNG ou WebP, {GALLERY_MAX} photos au plus. Les photos sont réduites avant l’envoi, et rien n’est
 						envoyé avant « Enregistrer ».

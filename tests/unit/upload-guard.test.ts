@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { NextRequest } from 'next/server'
-import { UPLOAD_MESSAGES, UPLOAD_REQUEST_SIZE_MAX } from '@/lib/photo-upload'
+import { uploadRequestSizeMax } from '@/lib/photo-limits'
+import { UPLOAD_MESSAGES } from '@/lib/photo-upload'
 import { uploadRefusal } from '@/lib/upload-guard'
 import { proxy } from '@/proxy'
 
@@ -21,7 +22,7 @@ describe('uploadRefusal', () => {
 	})
 
 	test('a length at the limit, an absent length, a garbled one: left to Payload', () => {
-		expect(ask('/api/media', 'POST', ['payload-token'], String(UPLOAD_REQUEST_SIZE_MAX))).toBeUndefined()
+		expect(ask('/api/media', 'POST', ['payload-token'], String(uploadRequestSizeMax()))).toBeUndefined()
 		expect(ask('/api/media', 'POST', ['payload-token'], null)).toBeUndefined()
 		expect(ask('/api/media', 'POST', ['payload-token'], 'abc')).toBeUndefined()
 	})

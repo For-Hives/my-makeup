@@ -161,6 +161,11 @@ describe('E36 : le refus du serveur est dit avec sa cause', () => {
 			session: 'expiree',
 		})
 		expect(await withValue(async () => response(500))).toMatchObject({ message: MESSAGES_PHOTO['envoi-impossible'] })
+		// The limit of her space (ticket 309): 409, with the sentence the server wrote, or ours when it wrote none.
+		expect(
+			await withValue(async () => response(409, { errors: [{ message: 'Tu as atteint la limite de 45 photos : …' }] }))
+		).toMatchObject({ ok: false, message: 'Tu as atteint la limite de 45 photos : …' })
+		expect(await withValue(async () => response(409))).toMatchObject({ message: MESSAGES_PHOTO['limite-profil'] })
 		expect(
 			await withValue(async () => {
 				throw new TypeError('Failed to fetch')
