@@ -2,7 +2,16 @@ import { describe, expect, test } from 'bun:test'
 import { mkdirSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { newestChromium, otherProcesses, Refused, readOptions, requireLocalBase } from '../../scripts/perf/lighthouse'
+import {
+	checkProductionOptions,
+	maskedPath,
+	newestChromium,
+	otherProcesses,
+	PRODUCTION_ORIGIN,
+	Refused,
+	readOptions,
+	requireLocalBase,
+} from '../../scripts/perf/lighthouse'
 import {
 	BUDGETS,
 	browserOf,
@@ -247,6 +256,18 @@ describe('le rapport', () => {
 		expect(accepted).toContain('Aucune page n’est moins bonne')
 	})
 
+	test('un rapport de production le dit, avec la version déployée', () => {
+		const text = renderReport({ ...measure([]), target: 'production', commit: '3a75c9f' }, references)
+		expect(text).toContain('site de production, version déployée `3a75c9f`')
+		expect(text).not.toContain('banc de test')
+	})
+
+	test('en production, le profil mesuré n’est jamais nommé dans le rapport', () => {
+		expect(maskedPath('P03', '/profil/une-vraie-personne', true)).toBe('/profil/<publiable>')
+		expect(maskedPath('P03', '/profil/ines-morel', false)).toBe('/profil/ines-morel')
+		expect(maskedPath('P04', '/talent/maquillage-femme', true)).toBe('/talent/maquillage-femme')
+	})
+
 	test('cinq passages par page et la médiane sont dits', () => {
 		expect(renderReport(measure([]), references)).toContain('5 passages par page, **médiane**')
 	})
@@ -259,6 +280,24 @@ describe('la commande', () => {
 		expect(() => requireLocalBase('https://my-makeup.fr')).toThrow(Refused)
 		expect(() => requireLocalBase('http://127.0.0.1.example.com')).toThrow(Refused)
 		expect(() => requireLocalBase('pas une adresse')).toThrow(Refused)
+	})
+
+	test('--production ne mesure que le domaine principal, en lecture seule, avec une pause plus longue', () => {
+		expect(PRODUCTION_ORIGIN).toBe('https://my-makeup.fr')
+		expect(requireLocalBase(PRODUCTION_ORIGIN, true).origin).toBe(PRODUCTION_ORIGIN)
+		expect(() => requireLocalBase('https://www.my-makeup.fr', true)).toThrow(Refused)
+		expect(() => requireLocalBase('https://my-makeup.fr.example.com', true)).toThrow(Refused)
+		expect(() => requireLocalBase('http://127.0.0.1:3100', true)).toThrow(Refused)
+		const options = readOptions(['--production', '--profile', '/profil/x'], {})
+		expect(options).toMatchObject({ production: true, base: PRODUCTION_ORIGIN, runs: 5, profile: '/profil/x' })
+		expect(options.pauseMs).toBeGreaterThanOrEqual(10_000)
+		// the default report is the bench's: a production run never overwrites it, it names its own file
+		expect(() => checkProductionOptions(options)).toThrow(Refused)
+		expect(() => checkProductionOptions({ ...options, out: 'docs/mesure/lighthouse-v3.md' })).toThrow(Refused)
+		expect(() => checkProductionOptions({ ...options, out: 'docs/mesure/lighthouse-production.md' })).not.toThrow()
+		expect(readOptions([], {})).toMatchObject({ production: false, pauseMs: 3000 })
+		// a remote base without --production stays refused
+		expect(() => requireLocalBase(PRODUCTION_ORIGIN)).toThrow(Refused)
 	})
 
 	test('les options : 5 passages, le port de l’instance du banc, et un refus net pour le reste', () => {

@@ -335,6 +335,8 @@ export interface Measure {
 	cores: number
 	/** Empty when the machine was at rest before and during the runs. */
 	busy: string[]
+	/** Where it was measured: the bench of this machine (default) or the production site. */
+	target?: 'bench' | 'production'
 }
 
 const NAME: Record<PlanPage, string> = {
@@ -357,7 +359,11 @@ export function renderReport(
 	lines.push('# Vitesse de la v3 : les quatre pages de référence')
 	lines.push('')
 	lines.push(
-		`Mesure du ${measure.date}, application construite depuis le commit \`${measure.commit}\`, servie par \`next start\` sur le banc de test de ce poste (jeu fictif, aucune donnée réelle). Lighthouse ${measure.lighthouse}, ${measure.browser}, **mobile** (réglages par défaut : Moto G Power émulé, débit simulé de 1,6 Mb/s, latence de 150 ms, processeur ralenti ×4). ${measure.runsPerPage} passages par page, **médiane** de chaque mesure prise séparément.`
+		`Mesure du ${measure.date}, ${
+			measure.target === 'production'
+				? `site de production, version déployée \`${measure.commit}\`, lu en lecture seule depuis ce poste, réseau réel`
+				: `application construite depuis le commit \`${measure.commit}\`, servie par \`next start\` sur le banc de test de ce poste (jeu fictif, aucune donnée réelle)`
+		}. Lighthouse ${measure.lighthouse}, ${measure.browser}, **mobile** (réglages par défaut : Moto G Power émulé, débit simulé de 1,6 Mb/s, latence de 150 ms, processeur ralenti ×4). ${measure.runsPerPage} passages par page, **médiane** de chaque mesure prise séparément.`
 	)
 	lines.push('')
 	lines.push(

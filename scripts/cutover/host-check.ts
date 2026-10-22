@@ -41,6 +41,9 @@ import {
 	ForbiddenQuery,
 	type GuardedRead,
 	keep,
+	keepAliases,
+	MAIN_HOST,
+	REDIRECTED_ORIGINS,
 	TargetRefused,
 	TEMPORARY_HOST,
 	type Transport,
@@ -70,6 +73,9 @@ export const SITEMAP_PATH = '/sitemap.xml'
 export const ROBOTS_PATH = '/robots.txt'
 export const HEALTH_PATH = '/api/health'
 export const SCRIPT_PATH = '/u/script.js'
+
+/** The address read on www and on http to see where they send (a path and a query string, to see both kept). */
+export const REDIRECT_CHECK_PATH = '/a-propos?verif=redirection'
 
 /** The old authentication routes, which the v3 does not serve: each answers 404 to a GET. */
 export const OLD_ROUTES: readonly string[] = [
@@ -250,8 +256,11 @@ const sitemapOnlyCase = (adresse: string): ParityCase => ({
 export async function checkHost(reglages: Settings, outils: Tools = {}): Promise<Report> {
 	const { cible: target, autorisation: authorization } = reglages
 	const reading: GuardedRead = keep(target, outils.transport, authorization)
+	const aliasReading: GuardedRead = keepAliases(target, outils.transport)
 	const reader: Reader = createReader({
-		lecture: (adresse, init) => reading(String(adresse), init),
+		// A full address is a redirected origin of the main host (issue 990); anything else is a path of the target.
+		lecture: (adresse, init) =>
+			String(adresse).startsWith('http') ? aliasReading(String(adresse), init) : reading(String(adresse), init),
 		horloge: outils.horloge ?? REAL_CLOCK,
 		...(outils.intervalleMs === undefined ? {} : { intervalleMs: outils.intervalleMs }),
 	})
@@ -266,8 +275,10 @@ export async function checkHost(reglages: Settings, outils: Tools = {}): Promise
 
 	// 1. The version served.
 	let version: string | null = null
+	let hsts: string | null = null
 	try {
 		const health = await read(HEALTH_PATH)
+		hsts = health.entetes.get('strict-transport-security')
 		if (health.statut === 200) {
 			const corps = JSON.parse(health.corps) as { version?: unknown }
 			version = typeof corps.version === 'string' ? corps.version : null
@@ -426,6 +437,42 @@ export async function checkHost(reglages: Settings, outils: Tools = {}): Promise
 		}
 		sections.push({ titre: 'Script de mesure', conforme: problems.length === 0, constats: [...problems, ...info] })
 		if (problems.length > 0) defaults.push(`Script de mesure : ${problems.join(' ; ')}`)
+	}
+
+	// 6b. www and http redirect to the main domain, permanently and in one hop (issue 990). Main host only.
+	if (target.protocol === 'https:' && target.hostname === MAIN_HOST) {
+		const problems: string[] = []
+		const info: string[] = []
+		const expected = `${target.origin}${REDIRECT_CHECK_PATH}`
+		for (const origin of REDIRECTED_ORIGINS) {
+			const name = origin.startsWith('https://www') ? 'www' : 'http'
+			try {
+				const page = await read(`${origin}${REDIRECT_CHECK_PATH}`)
+				const location = page.entetes.get('location')
+				if (page.statut !== 301 && page.statut !== 308)
+					problems.push(`${name} répond ${page.statut} au lieu de 301 ou 308`)
+				else if (location !== expected)
+					problems.push(
+						`${name} envoie vers une autre adresse que le domaine principal en un saut (chemin et paramètres gardés)`
+					)
+				else info.push(`${name} : ${page.statut} vers le domaine principal, en un saut, chemin et paramètres gardés.`)
+			} catch (error) {
+				if (error instanceof ForbiddenQuery) throw error
+				problems.push(`${name} : aucune réponse (${reason(error)})`)
+			}
+		}
+		const maxAge = /max-age=(\d+)/i.exec(hsts ?? '')?.[1]
+		info.push(
+			maxAge
+				? `HSTS max-age=${maxAge}, ${/includesubdomains/i.test(hsts ?? '') ? 'avec' : 'sans'} includeSubDomains.`
+				: 'Aucun en-tête HSTS sur la santé.'
+		)
+		sections.push({
+			titre: 'Redirections de www et de http',
+			conforme: problems.length === 0,
+			constats: [...problems, ...info],
+		})
+		if (problems.length > 0) defaults.push(`Redirections de www et de http : ${problems.join(' ; ')}`)
 	}
 
 	// 7. No 5xx anywhere.

@@ -171,3 +171,40 @@ export function keep(cible: URL, transport: Transport = realTransport, autorisat
 		})
 	}
 }
+
+/**
+ * The two other addresses of the main host, which the proxy redirects to it (issue 990): `https://www` and the
+ * plain `http`. Read only by the check of the main host, one GET each, to see the redirect and not follow it.
+ */
+export const REDIRECTED_ORIGINS: readonly string[] = [`https://www.${MAIN_HOST}`, `http://${MAIN_HOST}`]
+
+/**
+ * The guarded reader of the redirected origins: given the full address (not a path), hands the transport a GET,
+ * or throws `RequeteInterdite` without calling it. Only for a target that is the main host, and only for the two
+ * origins above. Same rules as `keep`: anonymous, no body, nothing under `/u`, no redirect followed.
+ */
+export function keepAliases(cible: URL, transport: Transport = realTransport): GuardedRead {
+	return async (adresse, init = {}) => {
+		if (cible.protocol !== 'https:' || cible.hostname !== MAIN_HOST)
+			throw new ForbiddenQuery(`Requête interrompue : www et http ne se lisent que pour https://${MAIN_HOST}.`)
+		const address = URL.canParse(adresse) ? new URL(adresse) : undefined
+		if (!address || !REDIRECTED_ORIGINS.includes(address.origin))
+			throw new ForbiddenQuery(
+				`Requête interrompue : seules ${REDIRECTED_ORIGINS.join(' et ')} se lisent en plus de la cible.`
+			)
+		if (readPaths(address).some(chemin => chemin === ANALYTICS_PATH || chemin.startsWith(`${ANALYTICS_PATH}/`)))
+			throw new ForbiddenQuery(`Requête interrompue : rien ne se lit sous ${ANALYTICS_PATH} sur www ni sur http.`)
+		// The same rules as for the target (method, body, cookie, audience measurement), on this origin.
+		const { adresse: checked, entetes: headers } = checkQuery(
+			`${address.pathname}${address.search}`,
+			init,
+			new URL(address.origin)
+		)
+		return transport(checked, {
+			method: READ_METHOD,
+			headers,
+			redirect: 'manual',
+			...(init.signal ? { signal: init.signal } : {}),
+		})
+	}
+}

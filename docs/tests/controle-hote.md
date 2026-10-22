@@ -36,6 +36,7 @@ La commande ne lit aucun fichier `.env`.
 4. `/robots.txt` : 200, du texte brut, `User-agent`, la ligne `Sitemap` et l'API interdite.
 5. Les anciennes routes d'authentification et l'ancien envoi du formulaire : `/api/auth/signin`, `/api/auth/signout`, `/api/auth/session`, `/api/auth/csrf`, `/api/auth/providers`, `/api/auth/callback/credentials`, `/api/auth/callback/google`, `/api/sendMail`. Toutes en 404.
 6. `/u/script.js` : 200, du JavaScript, non vide. C'est le script de mesure, servi par le site lui-même.
+7. **Pour `https://my-makeup.fr` seulement** (issue #990) : `https://www.my-makeup.fr/a-propos?verif=redirection` et `http://my-makeup.fr/a-propos?verif=redirection`, un GET chacun, sans suivre la redirection. Chacune doit répondre **301 ou 308 vers `https://my-makeup.fr/a-propos?verif=redirection`**, en un saut, chemin et paramètres gardés. Le rapport relève aussi l'en-tête HSTS de la santé (`max-age`, avec ou sans `includeSubDomains`). Ces deux origines passent par `keepAliases()`, qui n'accepte que ces deux origines et que pour le domaine principal, et qui n'ouvre jamais `/u`.
 
 Une redirection n'est jamais suivie : la première réponse est lue, puis sa destination une fois. Une adresse de la table qui promet un saut unique et qui en fait deux est un défaut.
 
@@ -50,6 +51,7 @@ Toute requête passe par `garder()` (`scripts/cutover/host-guard.ts`), qui laiss
 - **Sous `/u`**, où le site relaie sa mesure d'audience, quatre adresses seulement, en GET et sans paramètre : `/u`, `/u/script.js`, `/u/api/send`, `/u/autre-chemin`. Ce sont celles de l'inventaire. Un GET n'enregistre aucun événement (un événement est un POST) ; tout autre chemin sous `/u`, avec ou sans encodage, est interrompu.
 - **Anonyme** : ni cookie, ni `Authorization` de l'appelant. La seule identité est l'accès protégé de l'hôte temporaire, posé par la commande et envoyé à cet hôte seul.
 - **Aucune redirection suivie.**
+- **Deux origines de plus, pour le domaine principal seulement** : `https://www.my-makeup.fr` et `http://my-makeup.fr` (voir 7 plus haut), mêmes règles, rien sous `/u`.
 
 Une requête interdite arrête le contrôle : c'est un défaut de la commande, pas de l'hôte.
 

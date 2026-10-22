@@ -9,7 +9,8 @@
  * median of each measure is kept. The report compares the medians with the budgets of the plan and with the
  * measure of the site that is online (docs/mesure/lighthouse-en-ligne-2026-10-16.json).
  *
- * Only an address of this machine is measured: nothing is sent to a production host. Lighthouse is not a
+ * Only an address of this machine is measured, unless `--production` is given: then the main domain only
+ * (https://my-makeup.fr), by GET on public pages, with a pause of 10 s between two runs (issue 983). Lighthouse is not a
  * dependency of the repository: it runs through `npx` at the version below, which is the one that measured
  * the site online (published on 18/09/2026, no advisory in the GitHub database nor in its repository's).
  *
@@ -58,20 +59,33 @@ export const BENCH_REFERENCE_PROFILE = '/profil/ines-morel'
 /** The talent the measure of the site online took (`/talent/maquillage-mariee`), also in the bench dataset: P04. */
 export const BENCH_TALENT = '/talent/maquillage-mariee'
 
+const DEFAULT_OUT = 'docs/mesure/lighthouse-v3.md'
+
 /** Pause between two runs, so that the machine settles. */
 const PAUSE_MS = 3000
+
+/** Pause between two runs on the production site: one page load every 10 s at most, nothing in parallel. */
+const PRODUCTION_PAUSE_MS = 10_000
+
+/** The one host `--production` measures: the main domain, read only (GET of public pages, nothing is written). */
+export const PRODUCTION_ORIGIN = 'https://my-makeup.fr'
 
 export class Refused extends Error {
 	override name = 'Refused'
 }
 
-/** Only an address of this machine is measured. */
-export function requireLocalBase(base: string): URL {
+/** Only an address of this machine is measured, or with `production` the main domain and nothing else. */
+export function requireLocalBase(base: string, production = false): URL {
 	let url: URL
 	try {
 		url = new URL(base)
 	} catch {
 		throw new Refused(`« ${base} » n’est pas une adresse.`)
+	}
+	if (production) {
+		if (url.origin !== PRODUCTION_ORIGIN)
+			throw new Refused(`--production ne mesure que ${PRODUCTION_ORIGIN}, pas « ${url.origin} ».`)
+		return url
 	}
 	if (!['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname) || !['http:', 'https:'].includes(url.protocol))
 		throw new Refused(
@@ -89,6 +103,20 @@ export interface Options {
 	out: string
 	indicative: boolean
 	accepted: string[]
+	/** Measure the production site (read only) instead of the bench of this machine. */
+	production: boolean
+	pauseMs: number
+}
+
+/** A production run names its report: the default one belongs to the bench, and the repository is public. */
+export function checkProductionOptions(options: Options): void {
+	if (options.production && (options.out === DEFAULT_OUT || !options.out))
+		throw new Refused('--production demande --out <fichier> (le rapport du banc ne se réécrit pas).')
+}
+
+/** In the report of a production run, the profile measured is a person: it is never named. */
+export function maskedPath(page: PlanPage, target: string, production: boolean): string {
+	return production && page === 'P03' ? '/profil/<publiable>' : target
 }
 
 export function readOptions(args: readonly string[], env: Record<string, string | undefined>): Options {
@@ -98,9 +126,11 @@ export function readOptions(args: readonly string[], env: Record<string, string 
 		runs: 5,
 		profile: BENCH_REFERENCE_PROFILE,
 		talent: BENCH_TALENT,
-		out: 'docs/mesure/lighthouse-v3.md',
+		out: DEFAULT_OUT,
 		indicative: false,
 		accepted: [],
+		production: false,
+		pauseMs: PAUSE_MS,
 	}
 	for (let i = 0; i < args.length; i++) {
 		const name = args[i]
@@ -117,7 +147,11 @@ export function readOptions(args: readonly string[], env: Record<string, string 
 		else if (name === '--out') options.out = value()
 		else if (name === '--indicative') options.indicative = true
 		else if (name === '--accept') options.accepted.push(value())
-		else throw new Refused(`Option inconnue : ${name}`)
+		else if (name === '--production') {
+			options.production = true
+			options.base = PRODUCTION_ORIGIN
+			options.pauseMs = PRODUCTION_PAUSE_MS
+		} else throw new Refused(`Option inconnue : ${name}`)
 	}
 	if (!Number.isInteger(options.runs) || options.runs < 1)
 		throw new Refused('--runs veut un nombre entier d’au moins 1.')
@@ -145,6 +179,13 @@ export function otherProcesses(
 		names.add(words.slice(0, 2).join(' ').slice(0, 40))
 	}
 	return [...names]
+}
+
+/** The version the production site says it runs (`/api/health`). */
+async function deployedVersion(base: URL): Promise<string> {
+	const answer = await fetch(new URL('/api/health', base)).catch(() => undefined)
+	const body = (await answer?.json().catch(() => undefined)) as { version?: unknown } | undefined
+	return typeof body?.version === 'string' ? body.version : 'inconnu'
 }
 
 function runningProcesses(): string[] {
@@ -209,7 +250,8 @@ export async function run(args: readonly string[], env: Record<string, string | 
 	let options: Options
 	try {
 		options = readOptions(args, env)
-		const base = requireLocalBase(options.base)
+		checkProductionOptions(options)
+		const base = requireLocalBase(options.base, options.production)
 		const cores = cpus().length
 		const before = busyBefore({
 			cores,
@@ -243,7 +285,7 @@ export async function run(args: readonly string[], env: Record<string, string | 
 
 		const chrome = options.chrome ?? newestChromium()
 		const folder = mkdtempSync(path.join(tmpdir(), 'my-makeup-lighthouse-'))
-		const results: PageResult[] = PLAN_PAGES.map(page => ({ page, path: targets[page], runs: [] }))
+		const results: PageResult[] = PLAN_PAGES.map(page => ({ page, path: targets[page], runs: [] as Run[] }))
 		let version = LIGHTHOUSE_VERSION
 		let browser = 'inconnu'
 		try {
@@ -257,7 +299,7 @@ export async function run(args: readonly string[], env: Record<string, string | 
 					console.log(
 						`passage ${pass}/${options.runs} ${result.page} : performance ${Math.round((result.runs.at(-1) as Run).performance * 100)}`
 					)
-					await wait(PAUSE_MS)
+					await wait(options.pauseMs)
 				}
 			}
 		} finally {
@@ -271,8 +313,9 @@ export async function run(args: readonly string[], env: Record<string, string | 
 				cores
 			),
 		]
-		const commit =
-			spawnSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: ROOT, encoding: 'utf8' }).stdout.trim() || 'inconnu'
+		const commit = options.production
+			? await deployedVersion(base)
+			: spawnSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: ROOT, encoding: 'utf8' }).stdout.trim() || 'inconnu'
 		const measure: Measure = {
 			date: new Date().toLocaleDateString('fr-FR', { timeZone: 'Europe/Paris' }),
 			commit,
@@ -282,7 +325,9 @@ export async function run(args: readonly string[], env: Record<string, string | 
 			pages: results,
 			cores,
 			busy,
+			target: options.production ? 'production' : 'bench',
 		}
+		for (const result of results) result.path = maskedPath(result.page, result.path, options.production)
 		const references = JSON.parse(readFileSync(REFERENCE_FILE, 'utf8')).pages as Record<PlanPage, Reference>
 		const out = path.resolve(ROOT, options.out)
 		mkdirSync(path.dirname(out), { recursive: true })

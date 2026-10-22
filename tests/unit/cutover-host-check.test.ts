@@ -3,6 +3,7 @@ import {
 	CheckRefused,
 	checkHost,
 	OLD_ROUTES,
+	REDIRECT_CHECK_PATH,
 	readSettings,
 	run,
 	type Settings,
@@ -17,6 +18,7 @@ import {
 	checkTarget,
 	ForbiddenQuery,
 	keep,
+	keepAliases,
 	TargetRefused,
 	type Transport,
 } from '../../scripts/cutover/host-guard'
@@ -338,5 +340,121 @@ describe('deux requêtes par seconde au plus', () => {
 		})
 		expect(report.requetes).toBeGreaterThan(30)
 		expect(report.ecartMinimalMs).toBeGreaterThanOrEqual(500)
+	})
+})
+
+describe('les redirections de www et de http vers le domaine principal (issue 990)', () => {
+	const MAIN = new URL('https://my-makeup.fr')
+	const WWW = `https://www.my-makeup.fr${REDIRECT_CHECK_PATH}`
+	const PLAIN = `http://my-makeup.fr${REDIRECT_CHECK_PATH}`
+	const GOAL = `https://my-makeup.fr${REDIRECT_CHECK_PATH}`
+
+	/** The main host, compliant, with www and http answering what `answers` says (by full address). */
+	function mainHost(answers: Record<string, () => Response>): Transport {
+		const { transport } = transportOf(compliantHost())
+		return async (adresse, init) => {
+			if (adresse.origin === MAIN.origin) return transport(adresse, init)
+			const answer = answers[adresse.href]
+			return answer ? answer() : new Response(null, { status: 404 })
+		}
+	}
+	const moved =
+		(status: number, to = GOAL) =>
+		() =>
+			new Response(null, { status, headers: { location: to } })
+	const withMain = (transport: Transport) => checkHost({ cible: MAIN }, withoutWaiting(transport))
+
+	test('301 ou 308 vers le domaine principal en un saut, chemin et paramètres gardés : conforme', async () => {
+		for (const status of [301, 308]) {
+			const report = await withMain(mainHost({ [WWW]: moved(status), [PLAIN]: moved(status) }))
+			expect(report.defauts).toEqual([])
+			const section = report.sections.find(s => s.titre === 'Redirections de www et de http')
+			expect(section?.conforme).toBe(true)
+			expect(section?.constats.join(' ')).toContain(`${status}`)
+		}
+	})
+
+	test('une redirection temporaire (302), un second saut ou une autre destination est un défaut', async () => {
+		const temporary = await withMain(mainHost({ [WWW]: moved(302), [PLAIN]: moved(301) }))
+		expect(temporary.verdict).toBe('non-conforme')
+		expect(temporary.defauts.join(' ')).toContain('www')
+		const twoHops = await withMain(
+			mainHost({ [WWW]: moved(301), [PLAIN]: moved(301, `https://www.my-makeup.fr${REDIRECT_CHECK_PATH}`) })
+		)
+		expect(twoHops.verdict).toBe('non-conforme')
+		expect(twoHops.defauts.join(' ')).toContain('http')
+		const lostQuery = await withMain(
+			mainHost({ [WWW]: moved(301, 'https://my-makeup.fr/a-propos'), [PLAIN]: moved(301) })
+		)
+		expect(lostQuery.verdict).toBe('non-conforme')
+		const answers200 = await withMain(mainHost({ [WWW]: () => html(200), [PLAIN]: moved(301) }))
+		expect(answers200.verdict).toBe('non-conforme')
+	})
+
+	test('les deux lectures sont des GET anonymes, sans suivre la redirection', async () => {
+		const seen: { href: string; method: string; redirect?: string; headers: Headers }[] = []
+		const base = mainHost({ [WWW]: moved(301), [PLAIN]: moved(301) })
+		await withMain(async (adresse, init) => {
+			if (adresse.origin !== MAIN.origin)
+				seen.push({
+					href: adresse.href,
+					method: String(init.method),
+					headers: new Headers(init.headers),
+					...(init.redirect ? { redirect: init.redirect } : {}),
+				})
+			return base(adresse, init)
+		})
+		expect(seen.map(({ href }) => href).sort()).toEqual([PLAIN, WWW].sort())
+		for (const call of seen) {
+			expect(call.method).toBe('GET')
+			expect(call.redirect).toBe('manual')
+			expect(call.headers.has('cookie') || call.headers.has('authorization')).toBe(false)
+		}
+	})
+
+	test('l’en-tête HSTS du domaine est relevé dans le rapport, includeSubDomains dit oui ou non', async () => {
+		const withHeader = (value: string) => {
+			const base = mainHost({ [WWW]: moved(301), [PLAIN]: moved(301) })
+			return async (adresse: URL, init: RequestInit) => {
+				const answer = await base(adresse, init)
+				if (adresse.pathname !== '/api/health' || adresse.origin !== MAIN.origin) return answer
+				return new Response(answer.body, { status: answer.status, headers: { 'strict-transport-security': value } })
+			}
+		}
+		const without = await withMain(withHeader('max-age=31536000'))
+		expect(without.sections.find(s => s.titre === 'Redirections de www et de http')?.constats.join(' ')).toContain(
+			'HSTS max-age=31536000, sans includeSubDomains'
+		)
+		const withSub = await withMain(withHeader('max-age=63072000; includeSubDomains'))
+		expect(withSub.sections.find(s => s.titre === 'Redirections de www et de http')?.constats.join(' ')).toContain(
+			'HSTS max-age=63072000, avec includeSubDomains'
+		)
+	})
+
+	test('sur un autre hôte (le banc, l’hôte temporaire), ces deux lectures ne sont pas faites', async () => {
+		const { transport, appels: calls } = transportOf(compliantHost())
+		const report = await checkHost(settings, withoutWaiting(transport))
+		expect(report.sections.map(s => s.titre)).not.toContain('Redirections de www et de http')
+		expect(calls.some(({ chemin }) => chemin.includes('controle-redirection'))).toBe(false)
+	})
+
+	test('la garde des alias : GET sur www et sur http seulement, et seulement pour le domaine principal', async () => {
+		const calls: URL[] = []
+		const transport: Transport = async adresse => {
+			calls.push(adresse)
+			return new Response(null, { status: 301 })
+		}
+		const read = keepAliases(MAIN, transport)
+		await read(WWW)
+		await read(PLAIN)
+		expect(calls.map(({ href }) => href)).toEqual([WWW, PLAIN])
+		await expect(read('https://autre.my-makeup.fr/')).rejects.toThrow(ForbiddenQuery)
+		await expect(read('https://www.my-makeup.fr.evil.test/')).rejects.toThrow(ForbiddenQuery)
+		await expect(read(WWW, { method: 'POST' })).rejects.toThrow(ForbiddenQuery)
+		await expect(read(WWW, { headers: { cookie: 'a=b' } })).rejects.toThrow(ForbiddenQuery)
+		await expect(read(`https://www.my-makeup.fr/u/api/send`)).rejects.toThrow(ForbiddenQuery)
+		await expect(keepAliases(new URL('https://v3.my-makeup.fr'), transport)(WWW)).rejects.toThrow(ForbiddenQuery)
+		await expect(keepAliases(new URL('http://127.0.0.1:3100'), transport)(WWW)).rejects.toThrow(ForbiddenQuery)
+		expect(calls).toHaveLength(2)
 	})
 })
