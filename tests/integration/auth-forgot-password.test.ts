@@ -108,8 +108,8 @@ beforeEach(async () => {
 	await emptySink()
 })
 
-describe('I10 : la demande envoie un mail avec un lien d’une heure', () => {
-	test('un mail, un lien du site, un jeton de 40 caractères, une heure de vie', async () => {
+describe('I10 : la demande envoie un mail avec un lien de 24 heures', () => {
+	test('un mail, un lien du site, un jeton de 40 caractères, 24 heures de vie', async () => {
 		const account = await knownAccount()
 		const before = Date.now()
 
@@ -126,16 +126,40 @@ describe('I10 : la demande envoie un mail avec un lien d’une heure', () => {
 		const end = new Date(stored?.resetPasswordExpiration ?? 0).getTime()
 		expect(end).toBeGreaterThan(before + LINK_DURATION_MS - 1000)
 		expect(end).toBeLessThan(Date.now() + LINK_DURATION_MS + 1000)
-		expect(LINK_DURATION_MS).toBe(3_600_000)
+		expect(LINK_DURATION_MS).toBe(86_400_000)
 	})
 
-	test('le lien est refusé une fois l’heure passée', async () => {
+	test('le lien tient à 23 h 59 et est refusé à 24 h 01 (ticket 311, décision du 22/10/2026)', async () => {
+		const payload = await testPayload()
+		const MINUTE = 60_000
+		// The clock is not faked: moving the clock forward by `elapsed` is moving the stored expiration back by as much.
+		const elapse = async (accountId: number | string, storedEnd: number, elapsedMs: number) =>
+			payload.db.updateOne({
+				collection: 'pros',
+				data: { resetPasswordExpiration: new Date(storedEnd - elapsedMs).toISOString() },
+				returning: false,
+				where: { id: { equals: accountId } },
+			})
+		for (const [elapsedMs, valid] of [
+			[24 * 60 * MINUTE - MINUTE, true],
+			[24 * 60 * MINUTE + MINUTE, false],
+		] as const) {
+			const account = await knownAccount()
+			await request(account.email)
+			const token = await mailToken(account.email)
+			const storedEnd = new Date((await line(account.id))?.resetPasswordExpiration ?? 0).getTime()
+			await elapse(account.id, storedEnd, elapsedMs)
+			expect(await linkStillValid(payload, token)).toBe(valid)
+		}
+	})
+
+	test('le lien est refusé une fois les 24 heures passées', async () => {
 		const account = await knownAccount()
 		await request(account.email)
 		const token = await mailToken(account.email)
 		expect(await linkStillValid(await testPayload(), token)).toBe(true)
 
-		// The hour has passed: the expiration is set in the past, the clock is not faked.
+		// The 24 hours have passed: the expiration is set in the past, the clock is not faked.
 		const payload = await testPayload()
 		await payload.db.updateOne({
 			collection: 'pros',

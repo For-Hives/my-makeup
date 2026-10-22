@@ -1,3 +1,4 @@
+import { MAIL_LINK_WINDOW_WORDS } from '../auth/mail-link-window'
 import type { EmailContent } from './layout'
 
 /**
@@ -17,7 +18,7 @@ export function passwordResetEmailContent(jeton: string): EmailContent {
 		titre: 'Choisis un nouveau mot de passe',
 		paragraphes: [
 			'Tu as demandé à changer ton mot de passe My Makeup. Clique sur le bouton pour en choisir un nouveau.',
-			'Ce lien est valable une heure et ne sert qu’une fois. Si tu n’as rien demandé, ignore cet email : ton mot de passe ne change pas.',
+			`Ce lien est valable ${MAIL_LINK_WINDOW_WORDS} et ne sert qu’une fois. Si tu n’as rien demandé, ignore cet email : ton mot de passe ne change pas.`,
 		],
 		action: {
 			libelle: 'Choisir un nouveau mot de passe',

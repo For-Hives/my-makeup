@@ -31,7 +31,7 @@ import { type OpenSession, openSessionForLink } from './session-after-link'
  * - Takes a place in the brake of the client address first, and never gives it back: a place given
  *   back only for a known address would tell which ones are known.
  * - Answers the same, in the same time, for an address with an account and one without. Payload's
- *   own forgotten-password operation makes the token (one hour), and the mail leaves by the one
+ *   own forgotten-password operation makes the token (24 hours), and the mail leaves by the one
  *   door of the site (ticket 073, text and HTML), but AFTER the answer: `apres` schedules it (the
  *   Server Action gives `after`), and the answer waits for a floor of 300 ms. What the relay takes
  *   to send a mail therefore never reaches the visitor. The operation is called with its own mail

@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
+import { SESSION_OFFER_WINDOW_MS } from '@/lib/auth/confirmation-link'
 import {
 	FORGOT_PASSWORD_FLOOR_MS,
 	LINK_DURATION_MS,
@@ -11,6 +12,7 @@ import {
 	validateNewPassword,
 } from '@/lib/auth/forgot-password'
 import { closeForgotPasswordRestDoors } from '@/lib/auth/forgot-payload'
+import { MAIL_LINK_WINDOW_MS } from '@/lib/auth/mail-link-window'
 import { requestPasswordLink } from '@/lib/auth/password-reset-payload'
 import { createRateLimit } from '@/lib/auth/rate-limit'
 import { composerEmail } from '@/lib/emails/layout'
@@ -76,10 +78,16 @@ describe('le jeton du lien', () => {
 describe('le lien du mail sort de l’adresse (proxy)', () => {
 	const params = (requete: string) => new URLSearchParams(requete)
 
-	test('le lien du mail : un cookie d’une heure, et l’adresse sans code', () => {
+	test('le lien du mail : un cookie de 24 heures, et l’adresse sans code', () => {
 		const plan = linkPlan('/auth/reinitialiser', params(`code=${TOKEN}`))
-		expect(plan).toEqual({ aller: '/auth/reinitialiser', cookie: { valeur: TOKEN, maxAgeS: 3600 } })
-		expect(LINK_DURATION_MS / 1000).toBe(3600)
+		expect(plan).toEqual({ aller: '/auth/reinitialiser', cookie: { valeur: TOKEN, maxAgeS: 86_400 } })
+		expect(LINK_DURATION_MS / 1000).toBe(86_400)
+	})
+
+	test('un seul réglage pour les deux liens du courrier (ticket 311, décision du 22/10/2026)', () => {
+		expect(MAIL_LINK_WINDOW_MS).toBe(24 * 3_600_000)
+		expect(LINK_DURATION_MS).toBe(MAIL_LINK_WINDOW_MS)
+		expect(SESSION_OFFER_WINDOW_MS).toBe(MAIL_LINK_WINDOW_MS)
 	})
 	test('un lien de l’ancien site (128 caractères) est gardé : la page dira « plus valable »', () => {
 		const old = 'a1'.repeat(64)
@@ -109,7 +117,7 @@ describe('le mail', () => {
 		expect(email.sujet).toBe('Réinitialise ton mot de passe My Makeup')
 		expect(email.lien).toBe(`https://my-makeup.fr/auth/reinitialiser?code=${TOKEN}`)
 		expect(email.texte).toContain(email.lien ?? 'x')
-		expect(email.html).toContain('valable une heure')
+		expect(email.html).toContain('valable 24 heures')
 		expect(email.html).toContain('ne sert qu’une fois')
 		expect(email.html + email.texte).not.toContain('/admin')
 	})

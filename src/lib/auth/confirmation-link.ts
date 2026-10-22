@@ -1,4 +1,5 @@
 import type { LinkPlan } from './forgot-password'
+import { MAIL_LINK_WINDOW_MS } from './mail-link-window'
 
 /**
  * The link of the confirmation mail and the session it can open (ticket 302). Pure: the proxy, the
@@ -22,10 +23,10 @@ export const CONFIRMATION_COOKIE = 'mm-confirm'
 /**
  * How long after the creation of the account the link can still open a session: 24 hours (ticket 311,
  * decision of 22/10/2026; ticket 302 had one hour). The link stays single-use and behind a click; the
- * window is the one setting to change. The link of a forgotten password keeps its own hour
+ * window is the one setting `MAIL_LINK_WINDOW_MS`, shared with the link of a forgotten password
  * (`LINK_DURATION_MS`).
  */
-export const SESSION_OFFER_WINDOW_MS = 24 * 60 * 60 * 1000
+export const SESSION_OFFER_WINDOW_MS = MAIL_LINK_WINDOW_MS
 
 /** The token Payload makes for a confirmation: 20 random bytes in hexadecimal. */
 export const CONFIRMATION_TOKEN = /^[0-9a-f]{40}$/

@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { MAIL_LINK_WINDOW_MS } from './mail-link-window'
 import { EMAIL_MAX, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from './sign-up'
 
 /**
@@ -15,8 +16,8 @@ import { EMAIL_MAX, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from './sign-up'
  * - The texts are the ones of the current site, word for word.
  */
 
-/** How long the link lives: one hour (plan 01 §2.3). */
-export const LINK_DURATION_MS = 60 * 60 * 1000
+/** How long the link lives: 24 hours, the one setting shared with the confirmation link (`MAIL_LINK_WINDOW_MS`; one hour until the decision of 22/10/2026, ticket 311). */
+export const LINK_DURATION_MS = MAIL_LINK_WINDOW_MS
 
 /** The shortest time a request takes, whatever the address (plan 01 §2.3). */
 export const FORGOT_PASSWORD_FLOOR_MS = 300

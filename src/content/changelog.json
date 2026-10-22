@@ -44,7 +44,7 @@
 		{
 			"id": "tu-peux-retrouver-l-acces-a-ton-compte-mot-de-passe-oubli",
 			"type": "amelioration",
-			"text": "Tu peux retrouver l’accès à ton compte : « Mot de passe oublié ? » t’envoie par email un lien, valable une heure, pour choisir un nouveau mot de passe, et tes autres appareils sont alors déconnectés."
+			"text": "Tu peux retrouver l’accès à ton compte : « Mot de passe oublié ? » t’envoie par email un lien, valable 24 heures, pour choisir un nouveau mot de passe, et tes autres appareils sont alors déconnectés."
 		},
 		{
 			"id": "avec-google-l-inscription-arrive-directement-dans-ton-acc",

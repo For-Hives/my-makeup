@@ -95,7 +95,7 @@ export const Pros: CollectionConfig<'pros'> = {
 					process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
 				).html,
 		},
-		// The link of a forgotten password lives one hour and serves once (tickets 085 and 086). The request
+		// The link of a forgotten password lives 24 hours (`MAIL_LINK_WINDOW_MS`, decision of 22/10/2026, ticket 311) and serves once (tickets 085 and 086). The request
 		// goes through the site (`requestPasswordLink`), which sends the mail by the one door of the site; the native REST doors are closed (`closeForgotPasswordRestDoors`).
 		forgotPassword: {
 			expiration: LINK_DURATION_MS,
