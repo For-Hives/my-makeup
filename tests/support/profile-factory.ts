@@ -29,6 +29,14 @@ const CITIES = [
 	{ name: 'Marseille', inseeCode: '13055', latitude: 43.3, longitude: 5.37 },
 ] as const
 
+/** A commune of the list, as the factory writes it into a profile. */
+export interface FactoryCity {
+	readonly name: string
+	readonly inseeCode: string
+	readonly latitude: number
+	readonly longitude: number
+}
+
 export const GENERATED_SPECIALTIES = [
 	'Maquillage mariée',
 	'Maquillage de plateau',
@@ -53,14 +61,18 @@ const PHRASES = [
 /** The marker word of the profiles of the factory, held by none of the vocabulary above. */
 export const GENERATED_PROFILE_WORD = 'zyglo'
 
-/** The communes far from the Haute-Savoie and from Nantes, for a run that must not change the other searches of a shared bench. */
-export const DISTANT_CITIES = CITIES.filter(({ name }) =>
-	['Lille', 'Bordeaux', 'Toulouse', 'Rennes', 'Marseille'].includes(name)
-)
+/**
+ * Two communes about 42 km apart, far from the Haute-Savoie and from Nantes (ticket 295): a search by « Lille »
+ * lists the profiles of Lille, then those of Lillers under « Plus loin, à moins de 50 km », and nobody else.
+ */
+export const LILLE_AREA: readonly FactoryCity[] = [
+	{ name: 'Lille', inseeCode: '59350', latitude: 50.63, longitude: 3.06 },
+	{ name: 'Lillers', inseeCode: '62516', latitude: 50.5626, longitude: 2.4793 },
+]
 
 export interface FactoryOptions {
 	/** The communes the profiles are spread over (default: ten communes, one profile in ten in Annecy). */
-	communes?: readonly (typeof CITIES)[number][]
+	communes?: readonly FactoryCity[]
 	/** False: no profile travels (default: one in three has a radius of 30 km). */
 	seDeplacent?: boolean
 	/** Starts the slug and the address of each profile: two runs with other prefixes do not meet. */

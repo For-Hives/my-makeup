@@ -7,7 +7,7 @@
  * No `next` import: read by the page and by the tests.
  */
 
-import type { GeoPoint } from './geo-distance'
+import { distanceKm, type GeoPoint } from './geo-distance'
 import { type Search, searchByWord } from './input'
 import {
 	type ProfileGeometry,
@@ -24,6 +24,8 @@ export interface SearchableProfile extends ProfilePlace, ProfileGeometry {
 	/** The name a tie of a ranking by distance is broken by (ticket 294). */
 	sortName?: string
 	textes?: NormalizedTexts
+	/** True when she goes far: a radius of 100 km or more, or several countries (ticket 295). */
+	farReach?: boolean
 	/** True when nothing on her profile lets a client reach her (ticket 291): she goes after the others. */
 	unreachable?: boolean
 }
@@ -85,4 +87,29 @@ export function find<T extends SearchableProfile>(
 		locaux: reachableFirst(places.locaux),
 		sections: places.sections.map(section => ({ ...section, profils: reachableFirst(section.profils) })),
 	}
+}
+
+/** How many « Elles se déplacent loin » cards the empty state shows at most (ticket 295). */
+export const FAR_TRAVELLERS_MAX = 4
+
+/**
+ * The profiles that go far, for the page that found nobody near the place (ticket 295; audit UX
+ * improvement 21): a radius of 100 km or more, or several countries. At most `FAR_TRAVELLERS_MAX`; the
+ * ones with a way to be reached first (ticket 291), then the nearest to the place when it is known, then
+ * the directory order. Nobody else: never the whole directory.
+ */
+export function farTravellers<T extends SearchableProfile>(annuaire: readonly T[], origin: SearchOrigin | null): T[] {
+	const distanceOf = (profil: T): number =>
+		origin && profil.center ? distanceKm(origin.point, profil.center) : Number.POSITIVE_INFINITY
+	return annuaire
+		.filter(profil => profil.farReach === true)
+		.map((profil, rank) => ({ profil, rank }))
+		.toSorted(
+			(a, b) =>
+				Number(a.profil.unreachable === true) - Number(b.profil.unreachable === true) ||
+				Math.round(distanceOf(a.profil) * 10) - Math.round(distanceOf(b.profil) * 10) ||
+				a.rank - b.rank
+		)
+		.slice(0, FAR_TRAVELLERS_MAX)
+		.map(({ profil }) => profil)
 }

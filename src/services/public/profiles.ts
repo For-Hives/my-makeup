@@ -689,10 +689,21 @@ export function directoryGeometry(
 	}
 }
 
+/** The radius from which a profile is said to travel far, in km (ticket 295). */
+export const FAR_REACH_KM = 100
+
+/** A radius of 100 km or more, or several countries: what « Elles se déplacent loin » lists. */
+export function reachesFar(profil: Pick<Profile, 'radiusKm' | 'zoneKind' | 'countries' | 'town'>): boolean {
+	const radius = radiusKm(profil.radiusKm)
+	return zoneCountries(zoneInput(profil)).length > 1 || (radius !== null && radius >= FAR_REACH_KM)
+}
+
 /** A listed profile with where she works: what the search by city ranks by. */
 export interface DirectoryProfile extends ProfilePlace, ProfileGeometry {
 	/** The name a tie of the ranking by distance is broken by (ticket 294). */
 	sortName: string
+	/** True when she goes far: a radius of 100 km or more, or several countries (ticket 295). */
+	farReach: boolean
 	carte: ProfileCard
 	/** True when her profile shows no way to reach her (ticket 291): the search ranks her after the others. */
 	unreachable: boolean
@@ -801,6 +812,7 @@ export async function readDirectory(
 				...directoryPlace(profile),
 				...directoryGeometry(profile),
 				sortName: displayName(profile),
+				farReach: reachesFar(profile),
 				...(avecLesTextes && { textes: textsOf(profile) }),
 			})
 		}

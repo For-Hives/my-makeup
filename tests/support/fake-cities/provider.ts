@@ -41,6 +41,14 @@ export const CITIES: readonly City[] = [
 		population: 131_000,
 	},
 	{
+		nom: 'Annecy-le-Vieux',
+		code: '74011',
+		codeDepartement: '74',
+		codesPostaux: ['74940'],
+		centre: [6.1445, 45.9183],
+		population: 21_000,
+	},
+	{
 		nom: 'Annemasse',
 		code: '74012',
 		codeDepartement: '74',
