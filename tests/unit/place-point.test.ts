@@ -8,7 +8,13 @@ import { createPlaceResolver } from '@/lib/search/place-point'
  * call leaves the machine.
  */
 
-const commune = (nom: string, codeInsee: string, latitude: number, longitude: number, codes: string[]): OfficialCity => ({
+const commune = (
+	nom: string,
+	codeInsee: string,
+	latitude: number,
+	longitude: number,
+	codes: string[]
+): OfficialCity => ({
 	nom,
 	codeInsee,
 	departement: '74',
@@ -185,6 +191,8 @@ describe('293 : la distance à vol d’oiseau', () => {
 
 	test('Annecy–Annecy-le-Vieux : environ 2,4 km', () => {
 		// 0,0191° de latitude = 2,12 km ; 0,0151° de longitude × cos 45,9° = 1,17 km ; racine de la somme des carrés = 2,42 km.
-		expect(Math.abs(distanceKm({ latitude: 45.8992, longitude: 6.1294 }, { latitude: 45.9183, longitude: 6.1445 }) - 2.42)).toBeLessThan(1)
+		expect(
+			Math.abs(distanceKm({ latitude: 45.8992, longitude: 6.1294 }, { latitude: 45.9183, longitude: 6.1445 }) - 2.42)
+		).toBeLessThan(1)
 	})
 })

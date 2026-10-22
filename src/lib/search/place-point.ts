@@ -53,7 +53,11 @@ function placeQuestion(typed: string): string {
 export const placeKey = (question: string): string => normalizePlace(question)
 
 /** The commune the list found for a question: the exact name if there is one, else the first with a centre. */
-function chosenCity(question: string, communes: readonly OfficialCity[], typedDepartment: boolean): OfficialCity | null {
+function chosenCity(
+	question: string,
+	communes: readonly OfficialCity[],
+	typedDepartment: boolean
+): OfficialCity | null {
 	const withCenter = communes.filter(commune => validPoint(commune))
 	if (/^\d{5}$/.test(question)) {
 		// A postal code shared by several communes: the first, the most populated (the list is asked by population).
@@ -81,7 +85,10 @@ export function createPlaceResolver(options: PlaceResolverOptions = {}): (typed:
 
 	function remember(key: string, value: ResolvedPlace): void {
 		cache.delete(key)
-		cache.set(key, { value, expires: now() + (value.genre === 'point' ? PLACE_CACHE_FOUND_MS : PLACE_CACHE_UNKNOWN_MS) })
+		cache.set(key, {
+			value,
+			expires: now() + (value.genre === 'point' ? PLACE_CACHE_FOUND_MS : PLACE_CACHE_UNKNOWN_MS),
+		})
 		// The oldest entries go first (a Map keeps its insertion order).
 		while (cache.size > maxEntries) {
 			const oldest = cache.keys().next()
