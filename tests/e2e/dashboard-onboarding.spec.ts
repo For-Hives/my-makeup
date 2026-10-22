@@ -301,6 +301,57 @@ test.describe('E02 : l’accueil en trois étapes', { tag: '@mobile' }, () => {
 		expect(profile.status).toBe('published')
 	})
 
+	test('ticket 297 : « Genève » propose « Choisir un pays », au premier appui comme au clavier', async ({ page }) => {
+		test.setTimeout(150_000)
+		const email = await newAccount()
+		await signInAction(page, email)
+		await expect(title(page)).toHaveText('Ton identité')
+		await page.waitForLoadState('networkidle')
+		await fillIdentity(page)
+		await press(page.getByRole('button', { name: 'Suivant' }))
+		await expect(title(page)).toHaveText('Ta zone')
+
+		const field = page.getByRole('combobox', { name: 'Où travailles-tu ?' })
+		const choose = page.getByRole('button', { name: 'Choisir un pays' })
+		await field.fill('Genève')
+		await expect(page.getByText('Pas de commune française de ce nom.')).toBeVisible()
+		await expect(choose).toBeVisible()
+		await takeScreenshot(page, 'etape-2-aucune-commune')
+		const box = await choose.boundingBox()
+		expect(box?.height ?? 0).toBeGreaterThanOrEqual(44)
+		expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+		expect(await violationsAfterTitle(page)).toEqual([])
+
+		// One press, the list of suggestions still open: the panel changes to the country mode with Suisse chosen.
+		await press(choose)
+		await expect(page.getByText('Suisse', { exact: true }).first()).toBeVisible()
+		await expect(choose).toHaveCount(0)
+		await takeScreenshot(page, 'etape-2-pays-prechoisi')
+		expect(await violationsAfterTitle(page)).toEqual([])
+	})
+
+	test('ticket 297 : au clavier, Tab atteint « Choisir un pays » et Entrée le déclenche', async ({ page }) => {
+		test.setTimeout(150_000)
+		const email = await newAccount()
+		await signInAction(page, email)
+		await expect(title(page)).toHaveText('Ton identité')
+		await page.waitForLoadState('networkidle')
+		await fillIdentity(page)
+		await press(page.getByRole('button', { name: 'Suivant' }))
+		await expect(title(page)).toHaveText('Ta zone')
+
+		const field = page.getByRole('combobox', { name: 'Où travailles-tu ?' })
+		await field.fill('Genève')
+		const choose = page.getByRole('button', { name: 'Choisir un pays' })
+		await expect(choose).toBeVisible()
+		await field.focus()
+		await page.keyboard.press('Tab')
+		await expect(choose).toBeFocused()
+		await page.keyboard.press('Enter')
+		await expect(choose).toHaveCount(0)
+		await expect(page.getByText('Suisse', { exact: true }).first()).toBeVisible()
+	})
+
 	test('RG-07 : un serveur qui tarde ne montre ni arrivée ni étape suivante avant sa réponse', async ({ page }) => {
 		test.setTimeout(150_000)
 		const email = await newAccount()
