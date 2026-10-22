@@ -1,6 +1,7 @@
 import { expect, type Page, test } from '@playwright/test'
 import { COOKIE_SURVIVAL_AFTER_END_S, readExpiration } from '../../src/lib/auth/session-state'
 import { createAccount } from '../support/account-factory'
+import { activateProfile } from '../support/active-profile'
 import { testPayload } from '../support/payload-test'
 import { openSessionWithoutPassword } from '../support/session'
 
@@ -160,6 +161,7 @@ test.describe('le cookie posé par la connexion', () => {
 		page,
 	}) => {
 		const account = await createAccount('maquilleuse', { motDePasse: () => PASSWORD })
+		await activateProfile(account.id)
 
 		await page.goto('/auth/signin')
 		await page.getByLabel('Adresse email').fill(account.email)

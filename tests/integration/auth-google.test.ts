@@ -114,7 +114,8 @@ describe('E07 : un compte venu de Google se retrouve par son email vérifié', (
 
 		if (!issue.ok) throw new Error(`refusé : ${issue.code}`)
 		expect(issue.nouveau).toBe(false)
-		expect(issue.destination).toBe('/auth/profil')
+		// Her profile is still empty: no precise page asked, so the welcome is offered (ticket 296).
+		expect(issue.destination).toBe('/auth/init-account')
 		expect((await which(issue.token))?.id).toBe(Number(account.id))
 		expect((await payload.count({ collection: 'pros' })).totalDocs).toBe(before.totalDocs)
 		const profiles = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: account.id } } })
@@ -291,7 +292,10 @@ describe('091 : une personne sans compte s’inscrit avec Google', () => {
 		expect(first.issue.ok && first.issue.nouveau).toBe(true)
 		if (!second.issue.ok) throw new Error(`refusé : ${second.issue.code}`)
 		expect(second.issue.nouveau).toBe(false)
-		expect(second.issue.destination).toBe('/auth/profil')
+		// The profile is still empty: the welcome is offered again (ticket 296); a precise page is respected.
+		expect(second.issue.destination).toBe('/auth/init-account')
+		const precise = await pass({ email }, { retourSouhaite: '/auth/apercu-profil' })
+		expect(precise.issue.ok && precise.issue.destination).toBe('/auth/apercu-profil')
 		expect(await accounts(email)).toHaveLength(1)
 		expect((await which(second.issue.token))?.id).toBe(pro?.id)
 		expect(

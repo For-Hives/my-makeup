@@ -1,5 +1,6 @@
 import { expect, type Page, test } from '@playwright/test'
 import { createAccount } from '../support/account-factory'
+import { activateProfile } from '../support/active-profile'
 import { fakeGoogle } from '../support/fake-google'
 import { mailReceived } from '../support/mailpit'
 import { testPayload } from '../support/payload-test'
@@ -50,6 +51,7 @@ test.describe('E07 : connexion et inscription avec Google', { tag: '@mobile' }, 
 		page,
 	}) => {
 		const account = await createAccount('reprise-google')
+		await activateProfile(account.id)
 		await choose(context, { email: account.email })
 
 		await page.goto('/auth/signin')
@@ -89,6 +91,7 @@ test.describe('E07 : connexion et inscription avec Google', { tag: '@mobile' }, 
 
 	test('une adresse de retour d’un autre site est ignorée', async ({ context, page }) => {
 		const account = await createAccount('reprise-google')
+		await activateProfile(account.id)
 		await choose(context, { email: account.email })
 
 		await page.goto(`/auth/signin?callbackUrl=${encodeURIComponent('https://autre.example.test/piege')}`)
@@ -128,7 +131,8 @@ test.describe('E07 : connexion et inscription avec Google', { tag: '@mobile' }, 
 		await expect(page).toHaveURL(/\/$/)
 
 		await clickOnGoogle(page, '/auth/signup', 'S’inscrire avec Google')
-		await expect(page).toHaveURL(/\/auth\/profil$/)
+		// Her profile is still empty: the second pass is a sign-in, and it offers the welcome again (ticket 296).
+		await expect(page).toHaveURL(/\/auth\/init-account$/)
 		expect((await payload.find({ collection: 'pros', depth: 0, where: { email: { equals: email } } })).totalDocs).toBe(
 			1
 		)
@@ -206,6 +210,7 @@ test.describe('E07 : connexion et inscription avec Google', { tag: '@mobile' }, 
 		request,
 	}) => {
 		const account = await createAccount('reprise-google')
+		await activateProfile(account.id)
 		// 1. A return nobody asked for: no cookie of the departure.
 		const withoutCookie = await request.get('/auth/google/callback?code=code-forge&state=state-forge', {
 			maxRedirects: 0,
