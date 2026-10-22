@@ -214,7 +214,7 @@ describe('connexion avant confirmation', () => {
 })
 
 describe('le lien du mail : à usage unique', () => {
-	test('le lien confirme le compte ; suivi une seconde fois il dit « déjà confirmé » et ne change rien ; la connexion marche', async () => {
+	test('le lien confirme le compte ; suivi une seconde fois avant le clic il ne change rien ; la connexion marche', async () => {
 		const { email } = await signUp({})
 		const mail = await waitMail({ pour: email })
 		const code = linkCode(mail.liens.find(l => l.includes('verification-complete')) ?? '')
@@ -223,13 +223,14 @@ describe('le lien du mail : à usage unique', () => {
 
 		expect(await confirmEmail(payload, code, authLog(payload))).toBe('ok')
 		expect((await account(email))?._verified).toBe(true)
-		expect(await confirmEmail(payload, code, authLog(payload))).toBe('deja-confirme')
+		// Before the click of « Continuer » the offer stays (ticket 302); the spent link is tested in auth-session-after-link.
+		expect(await confirmEmail(payload, code, authLog(payload))).toBe('ok')
 		expect(await confirmEmail(payload, 'f'.repeat(40), authLog(payload))).toBe('lien-invalide')
 
 		expect((await signInAction(email, PASSWORD)).ok).toBe(true)
 		expect((await log()).slice(before).map(({ type, code }) => [type, code])).toEqual([
 			['confirmation', 'ok'],
-			['confirmation', 'deja-confirme'],
+			['confirmation', 'ok'],
 			['confirmation', 'lien-invalide'],
 			['sign-in', 'ok'],
 		])
