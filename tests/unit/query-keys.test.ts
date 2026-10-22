@@ -34,7 +34,7 @@ function sourceFiles(folder: string): Map<string, string> {
 let loads = 0
 
 /** The real configuration, under a local development environment. Nothing connects. */
-async function realCollections(): Promise<readonly CollectionShape[]> {
+async function loadCollections(): Promise<readonly CollectionShape[]> {
 	const names = ['DATABASE_URI', 'NODE_ENV', 'PAYLOAD_SECRET', 'PORT'] as const
 	const before = names.map(name => [name, process.env[name]] as const)
 	Reflect.set(process.env, 'DATABASE_URI', 'postgres://banc:banc@127.0.0.1:5442/mymakeup_test')
@@ -52,6 +52,13 @@ async function realCollections(): Promise<readonly CollectionShape[]> {
 			else Reflect.set(process.env, name, value)
 		}
 	}
+}
+
+/** Loaded once for the file: other test files change the environment while the suite runs. */
+let collectionsLoaded: Promise<readonly CollectionShape[]> | undefined
+const realCollections = () => {
+	collectionsLoaded ??= loadCollections()
+	return collectionsLoaded
 }
 
 /** Reads one made-up file and checks it against the real collections. */
