@@ -6,7 +6,10 @@ import { checkAdminDoesNotHoldProfile } from './lock'
 /** The makeup artist as Payload knows her: what the access rules of a request need. */
 export type DashboardUser = NonNullable<Awaited<ReturnType<Payload['auth']>>['user']>
 
-/** What the page reads of her profile: nothing the cards do not show. */
+/**
+ * What the page reads of her profile: the cards' fields, and the status and the reason an admin wrote
+ * when hiding it (ticket 292). Both are readable by her and the admin only (field access).
+ */
 const READ_FIELDS = {
 	firstName: true,
 	lastName: true,
@@ -21,6 +24,8 @@ const READ_FIELDS = {
 	town: true,
 	zoneReview: true,
 	available: true,
+	status: true,
+	reason: true,
 	mainPicture: true,
 	gallery: true,
 	skills: true,
