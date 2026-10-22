@@ -719,6 +719,8 @@ export interface DirectoryProfile extends ProfilePlace, ProfileGeometry {
 	carte: ProfileCard
 	/** True when her profile shows no way to reach her (ticket 291): the search ranks her after the others. */
 	unreachable: boolean
+	/** True when her profile is publishable (`isIndexable`): the pages of a speciality show only those (ticket 305). */
+	indexable: boolean
 	/**
 	 * What she wrote that a search by a word looks into (ticket 099). Beside the card, never in it: a card
 	 * is what a page renders, and carries none of this. Read only when asked (`avecLesTextes`).
@@ -804,7 +806,7 @@ export async function readDirectory(
 		const result = await payload.find({
 			collection: 'profiles',
 			where: LISTED_FILTER,
-			select: avecLesTextes ? SEARCH_FIELDS : CARD_FIELDS,
+			select: { ...(avecLesTextes ? SEARCH_FIELDS : CARD_FIELDS), publishable: true },
 			sort: ['-completeness', '-updatedAt', 'slug'],
 			depth: 0,
 			limit: LIST_MAX_LIMIT,
@@ -821,6 +823,7 @@ export async function readDirectory(
 			directory.push({
 				carte: isUnreachable ? { ...card, unreachable: true } : card,
 				unreachable: isUnreachable,
+				indexable: profile.publishable === true,
 				...directoryPlace(profile),
 				...directoryGeometry(profile),
 				sortName: displayName(profile),

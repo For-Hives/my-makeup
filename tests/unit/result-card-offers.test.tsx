@@ -64,10 +64,10 @@ describe('303 : la carte montre le prix de départ et deux prestations', () => {
 			{ name: 'Soirée', priceFrom: 90_000 },
 			{ name: 'Photo', priceFrom: null, priceText: 'Sur devis' },
 		])
-		const { cartes } = await listProfiles(payload)
-		expect(cartes[0]?.startingPrice).toBe(150)
-		expect(cartes[0]?.offerNames).toEqual(['Mariée', 'Essai'])
-		const html = render(cartes[0] as ProfileCard)
+		const { cartes: cards } = await listProfiles(payload)
+		expect(cards[0]?.startingPrice).toBe(150)
+		expect(cards[0]?.offerNames).toEqual(['Mariée', 'Essai'])
+		const html = render(cards[0] as ProfileCard)
 		expect(html).toContain(`dès 150${NBSP}€`)
 		expect(html).toContain('Mariée')
 		expect(html).toContain('Essai')
@@ -77,10 +77,10 @@ describe('303 : la carte montre le prix de départ et deux prestations', () => {
 
 	test('sans prestation chiffrée : aucune mention de prix ni de « 0 € »', async () => {
 		const { payload } = payloadWith([{ name: 'Mariée', priceFrom: null, priceText: 'Sur devis' }, { name: '  ' }])
-		const { cartes } = await listProfiles(payload)
-		expect(cartes[0]?.startingPrice).toBeUndefined()
-		expect(cartes[0]?.offerNames).toEqual(['Mariée'])
-		const html = render(cartes[0] as ProfileCard)
+		const { cartes: cards } = await listProfiles(payload)
+		expect(cards[0]?.startingPrice).toBeUndefined()
+		expect(cards[0]?.offerNames).toEqual(['Mariée'])
+		const html = render(cards[0] as ProfileCard)
 		expect(html).not.toContain('dès')
 		expect(html).not.toContain('0 €')
 		expect(html).not.toContain('€')
@@ -88,8 +88,8 @@ describe('303 : la carte montre le prix de départ et deux prestations', () => {
 
 	test('sans prestation : la carte garde ses clés d’avant', async () => {
 		const { payload } = payloadWith([])
-		const { cartes } = await listProfiles(payload)
-		expect(Object.keys(cartes[0] ?? {}).sort()).toEqual([
+		const { cartes: cards } = await listProfiles(payload)
+		expect(Object.keys(cards[0] ?? {}).sort()).toEqual([
 			'lieu',
 			'nom',
 			'photo',
@@ -98,7 +98,7 @@ describe('303 : la carte montre le prix de départ et deux prestations', () => {
 			'specialite',
 			'superMaquilleuse',
 		])
-		const html = render(cartes[0] as ProfileCard)
+		const html = render(cards[0] as ProfileCard)
 		expect(html).not.toContain('dès')
 		expect(html).not.toContain('Prestations')
 	})
@@ -113,8 +113,8 @@ describe('303 : la carte montre le prix de départ et deux prestations', () => {
 				options: [{ name: 'SECRET-OPT' }],
 			},
 		])
-		const { cartes } = await listProfiles(payload)
-		expect(Object.keys(cartes[0] ?? {}).sort()).toEqual([
+		const { cartes: cards } = await listProfiles(payload)
+		expect(Object.keys(cards[0] ?? {}).sort()).toEqual([
 			'lieu',
 			'nom',
 			'offerNames',
@@ -125,7 +125,7 @@ describe('303 : la carte montre le prix de départ et deux prestations', () => {
 			'startingPrice',
 			'superMaquilleuse',
 		])
-		const text = JSON.stringify(cartes) + render(cartes[0] as ProfileCard)
+		const text = JSON.stringify(cards) + render(cards[0] as ProfileCard)
 		for (const forbidden of ['SECRET-DESC', 'SECRET-TEXT', 'SECRET-OPT']) expect(text).not.toContain(forbidden)
 	})
 
@@ -176,12 +176,12 @@ describe('303 : champs publics, photo et mise en page', () => {
 	})
 
 	test('les deux premières cartes de la page chargent tout de suite, pas les autres', () => {
-		const cartes = [1, 2, 3, 4].map(n => ({
+		const cards = [1, 2, 3, 4].map(n => ({
 			...CARD,
 			slug: `p-${n}`,
 			photo: { ...CARD.photo!, url: `https://photos.example.test/m/${n}.webp` },
 		}))
-		const html = renderToStaticMarkup(<ResultList cartes={cartes} premiereDeLaPage />)
+		const html = renderToStaticMarkup(<ResultList cartes={cards} premiereDeLaPage />)
 		const images = html.match(/<img[^>]*>/g) ?? []
 		expect(images).toHaveLength(4)
 		expect(images.map(image => image.includes('loading="lazy"'))).toEqual([false, false, true, true])

@@ -230,6 +230,16 @@
 			"id": "les-resultats-de-recherche-montrent-le-prix-de-depart-et",
 			"type": "amelioration",
 			"text": "Les résultats de recherche montrent le prix de départ et les prestations de chaque maquilleuse, et tiennent deux à trois par écran de téléphone."
+		},
+		{
+			"id": "les-pages-des-specialites-montrent-des-maquilleuses-a-con",
+			"type": "amelioration",
+			"text": "Les pages des spécialités montrent des maquilleuses à contacter, et la page de contact n’exige plus ton numéro de téléphone."
+		},
+		{
+			"id": "apres-la-suppression-de-ton-compte-l-accueil-te-le-confir",
+			"type": "amelioration",
+			"text": "Après la suppression de ton compte, l’accueil te le confirme, et le chapeau du blog parle enfin de ses articles."
 		}
 	],
 	"releases": []

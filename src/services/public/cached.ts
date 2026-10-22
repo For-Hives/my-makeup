@@ -21,6 +21,7 @@ import { isSlug } from '@/lib/slug'
 import { listArticles } from './article-list'
 import { type ArticlePublic, readPublicArticle } from './articles'
 import { readIndexablePages } from './indexable-pages'
+import { profileBlockCards } from './profile-block'
 import { type ProfileUrlTarget, readDirectory, readProfileUrlTarget } from './profiles'
 import { listTalents, readTalent, type TalentPageData } from './talents'
 
@@ -48,6 +49,19 @@ export const cachedDirectory = unstable_cache(
 export const cachedDirectoryWithTexts = unstable_cache(
 	async () => readDirectory(await getPayload({ config }), { avecLesTextes: true }),
 	['public:annuaire-textes'],
+	{ tags: [TAGS.profils], revalidate: ONE_HOUR }
+)
+
+/**
+ * The block of makeup artists under a page of text (ticket 305): the cards for a search word (the title of
+ * a talent) or, for an empty word, the first ones of the directory. Kept under the tag of the profiles: the
+ * publication, the change or the hiding of a profile refreshes the pages that show it. The word and the
+ * size are the key of the entry.
+ */
+export const cachedProfileBlock = unstable_cache(
+	async (search: string, limit: number) =>
+		profileBlockCards(search === '' ? await cachedDirectory() : await cachedDirectoryWithTexts(), { search, limit }),
+	['public:profile-block'],
 	{ tags: [TAGS.profils], revalidate: ONE_HOUR }
 )
 

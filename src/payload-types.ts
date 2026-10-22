@@ -639,7 +639,7 @@ export interface ContactRequest {
   firstName: string;
   lastName: string;
   email: string;
-  phone: string;
+  phone?: string | null;
   message: string;
   updatedAt: string;
   createdAt: string;

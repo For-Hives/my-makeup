@@ -49,7 +49,7 @@ export function payloadResendStorage(payload: Payload): ResendStorage {
 			if (!row) return null
 			const { firstName, lastName, email, phone, message, mailStatus } = row
 			return {
-				message: { prenom: firstName, nom: lastName, email, telephone: phone, message },
+				message: { prenom: firstName, nom: lastName, email, telephone: phone ?? '', message },
 				etatMail: mailStatus,
 			}
 		},

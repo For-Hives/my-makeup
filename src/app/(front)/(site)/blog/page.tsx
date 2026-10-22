@@ -28,8 +28,8 @@ export default async function BlogPage() {
 					<div className="mx-auto mb-10">
 						<h1 className="w-full text-start font-bold text-4xl text-gray-900 tracking-tight">Blog & News</h1>
 						<p className="mt-6 w-full text-start text-gray-700 text-lg md:w-2/3">
-							Les actualités de My-Makeup, ce que nous faisons pour améliorer votre quotidien ! Et les nouveautés qui
-							arrivent bientôt !
+							Des conseils pour préparer votre mariage, prendre soin de votre peau et suivre les tendances, et les
+							nouveautés de My-Makeup, pour trouver la maquilleuse qui vous correspond.
 						</p>
 					</div>
 					<ArticleList articles={articles} />

@@ -153,7 +153,7 @@ export const ContactRequests: CollectionConfig<'contact-requests'> = {
 			name: 'phone',
 			label: 'Numéro de téléphone',
 			type: 'text',
-			required: true,
+			// Optional since ticket 305: the form sends the message without it.
 			maxLength: CONTACT_LIMITS.telephone,
 			access: frozen,
 		},

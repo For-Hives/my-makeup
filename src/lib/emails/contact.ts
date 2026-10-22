@@ -26,7 +26,7 @@ export function contactEmailContent(message: ContactMessage): EmailContent {
 			`Nom : ${message.nom}`,
 			`Prénom : ${message.prenom}`,
 			`Email : ${message.email}`,
-			`Numéro de téléphone : ${message.telephone}`,
+			...(message.telephone === '' ? [] : [`Numéro de téléphone : ${message.telephone}`]),
 			'Message :',
 			...message.message.split(/\r\n|\r|\n/),
 		],

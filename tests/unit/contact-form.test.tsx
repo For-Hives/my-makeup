@@ -29,7 +29,7 @@ async function fill(valeurs: Partial<ContactMessage> = {}) {
 	await jsdomWindow.saisir(jsdomWindow.champ('Prénom'), v.prenom)
 	await jsdomWindow.saisir(jsdomWindow.champ('Nom'), v.nom)
 	await jsdomWindow.saisir(jsdomWindow.champ('Email'), v.email)
-	await jsdomWindow.saisir(jsdomWindow.champ('Numéro de téléphone'), v.telephone)
+	await jsdomWindow.saisir(jsdomWindow.champ('Numéro de téléphone (facultatif)'), v.telephone)
 	await jsdomWindow.saisir(jsdomWindow.champ('Message'), v.message)
 }
 
@@ -40,7 +40,7 @@ test('les cinq champs du site en ligne, étiquetés, avec les attributs des navi
 	expect(jsdomWindow.champ('Prénom').getAttribute('autocomplete')).toBe('given-name')
 	expect(jsdomWindow.champ('Nom').getAttribute('autocomplete')).toBe('family-name')
 	expect(jsdomWindow.champ('Email').getAttribute('type')).toBe('email')
-	expect(jsdomWindow.champ('Numéro de téléphone').getAttribute('type')).toBe('tel')
+	expect(jsdomWindow.champ('Numéro de téléphone (facultatif)').getAttribute('type')).toBe('tel')
 	expect(jsdomWindow.champ('Message').tagName).toBe('TEXTAREA')
 	expect(zone.querySelector('form')?.hasAttribute('novalidate')).toBe(true)
 	expect(zone.querySelector('a[href="/politique-de-confidentialite"]')).toBeTruthy()
@@ -82,14 +82,14 @@ test('E51 : les erreurs sont sous leur champ, en français, et le premier champ 
 
 test('E69 : une erreur annonce un résumé, et la saisie reste dans les champs', async () => {
 	const { element } = mount(async () => ({
-		erreurs: { telephone: 'Le numéro de téléphone est requis' },
+		erreurs: { email: 'L’e-mail est invalide' },
 		valeurs: { ...VALUES, telephone: '' },
 	}))
 	const zone = await jsdomWindow.monter(element)
 	await fill({ telephone: '' })
 
 	await jsdomWindow.cliquer(jsdomWindow.bouton('Envoyer l’email'))
-	await jsdomWindow.attendre(() => zone.querySelector('[data-testid="erreur-telephone"]')?.textContent)
+	await jsdomWindow.attendre(() => zone.querySelector('[data-testid="erreur-email"]')?.textContent)
 
 	expect(jsdomWindow.champ('Prénom').value).toBe('Léa')
 	expect(jsdomWindow.champ('Email').value).toBe('lea.temoin@example.test')
@@ -108,7 +108,7 @@ test('après un échec d’enregistrement, la saisie reste et le message le dit'
 	expect(jsdomWindow.champ('Prénom').value).toBe('Léa')
 	expect(jsdomWindow.champ('Nom').value).toBe('Témoin')
 	expect(jsdomWindow.champ('Email').value).toBe('lea.temoin@example.test')
-	expect(jsdomWindow.champ('Numéro de téléphone').value).toBe('01 99 00 12 34')
+	expect(jsdomWindow.champ('Numéro de téléphone (facultatif)').value).toBe('01 99 00 12 34')
 	expect(jsdomWindow.champ('Message').value).toBe('Une question.')
 	// She can send again.
 	expect((jsdomWindow.bouton('Envoyer l’email') as HTMLButtonElement).disabled).toBe(false)

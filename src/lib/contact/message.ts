@@ -3,7 +3,8 @@
  * tests share them. No `next` import, no Payload.
  *
  * - The five fields of the live site, all required, with its limits (100, 100, 254, 30 and 5000
- *   characters). The phone number is required, as it is today.
+ *   characters). The phone number is optional (ticket 305): left empty, the message goes without it;
+ *   typed, it keeps its limit.
  * - The server checks everything before it writes anything: a message that fails a rule creates no
  *   row and sends no mail, whoever called the action.
  * - The sentences are the ones of the live site, word for word, so that the form says the same thing
@@ -28,11 +29,11 @@ export type ContactMessage = Record<ContactField, string>
 /** One sentence for each field in error. */
 export type ContactErrors = Partial<Record<ContactField, string>>
 
-const REQUIRED: Record<ContactField, string> = {
+/** The sentence of a field left empty. The phone number has none: it may stay empty (ticket 305). */
+const REQUIRED: Record<Exclude<ContactField, 'telephone'>, string> = {
 	prenom: 'Le prénom est requis',
 	nom: 'Le nom est requis',
 	email: 'L’e-mail est invalide',
-	telephone: 'Le numéro de téléphone est requis',
 	message: 'Le message est requis',
 }
 
@@ -93,8 +94,9 @@ export function validateMessage(
 	for (const field of CONTACT_FIELDS) {
 		const value = message[field]
 		const limit = CONTACT_LIMITS[field]
-		if (value === '') errors[field] = REQUIRED[field]
-		else if (value.length > limit) errors[field] = `${NAME_GROUP[field]} ne doit pas dépasser ${limit} caractères`
+		if (value === '') {
+			if (field !== 'telephone') errors[field] = REQUIRED[field]
+		} else if (value.length > limit) errors[field] = `${NAME_GROUP[field]} ne doit pas dépasser ${limit} caractères`
 		else if (field === 'email' && !validAddress(value)) errors[field] = REQUIRED.email
 	}
 	return Object.keys(errors).length === 0 ? { ok: true, message } : { ok: false, erreurs: errors }

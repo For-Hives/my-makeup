@@ -49,11 +49,12 @@ describe('La liste : le vide, l’indisponible et le masqué sont absents', () =
 		const text = JSON.stringify(cards.map(({ photo: _photo, ...reste }) => reste))
 		expect(text).not.toContain('@')
 		expect(text).not.toMatch(/0[1-9][ .]?\d{2}/)
-		// `flags` exists only on a card of a country zone (ticket 264): decoration, never a contact detail.
+		// `flags` exists only on a card of a country zone (ticket 264), `offerNames` and `startingPrice` only on a card
+		// with offers (ticket 303): decoration and public figures, never a contact detail.
 		for (const card of cards)
 			expect(
 				Object.keys(card)
-					.filter(key => key !== 'flags')
+					.filter(key => !['flags', 'offerNames', 'startingPrice'].includes(key))
 					.sort()
 			).toEqual(['lieu', 'nom', 'photo', 'pid', 'slug', 'specialite', 'superMaquilleuse'])
 	})
