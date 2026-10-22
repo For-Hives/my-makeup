@@ -15,7 +15,7 @@ PROBES_API=aucune bun run probes                     # Strapi est arrêté : plu
 
 - `PROBES_TARGET` est une origine seule : `https://` et un hôte, ou `http://` sur ce poste (`localhost`, `127.0.0.1`, `::1`). Un chemin, un paramètre ou un identifiant dans l'adresse est refusé.
 - `PROBES_STATS_TOKEN` : le jeton de service de la route `/api/stats/weekly` (variable `STATS_TOKEN` de l'application). Sans lui, R02 dit « inconnu ». Il ne part que vers cette route, sur la cible, jamais ailleurs, et le rapport ne l'écrit jamais. Le workflow du lundi n'en a pas (aucun secret de prod) : R02 y reste « inconnu » tant qu'Andy ne lance pas les sondes à la main avec le jeton (voir « Le lancement du lundi »).
-- `PROBES_API` : l'origine de l'API Strapi lue par R05. Par défaut `https://api.my-makeup.fr` quand la cible est le site en ligne, rien ailleurs. `aucune` retire la partie Strapi : à poser le jour où Strapi s'arrête, sinon la redirection de l'ancienne adresse de l'API la rend rouge.
+- `PROBES_API` : l'origine de l'API Strapi lue par R05. Par défaut **aucune** (Strapi est arrêté depuis la bascule du 22/10/2026 : l'ancienne adresse de l'API répond 503 et rendait R05 rouge). Donner une origine pour relire une API Strapi ; `aucune` reste accepté.
 - La commande ne lit aucun fichier `.env`. Les deux variables viennent de l'environnement du shell.
 - Un lancement contre le banc fait 16 requêtes (7,7 s mesurées le 15/10/2026). Contre le site en ligne : autant sur le site, plus 3 sur l'API Strapi, 1 à 3 sur les registres de domaines (RDAP), et 5 poignées TLS sans requête.
 

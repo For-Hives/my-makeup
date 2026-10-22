@@ -995,10 +995,11 @@ describe('R05 : en-têtes présents, listes privées fermées, anciennes routes 
 		expect(r05.constats).toContain(constat)
 	})
 
-	test('l’API de Strapi : celle du vrai site par défaut, aucune sur demande, aucune ailleurs', () => {
+	test('l’API de Strapi est arrêtée : aucune par défaut, même pour le vrai site, sauf si PROBES_API la donne', () => {
 		const prod = probeTarget('https://my-makeup.fr')
 
-		expect(probeApi(undefined, prod)?.origin).toBe('https://api.my-makeup.fr')
+		// The old API is stopped since the switch of 22/10/2026 (issue 981): by default the real site has none to read.
+		expect(probeApi(undefined, prod)).toBeUndefined()
 		expect(probeApi('aucune', prod)).toBeUndefined()
 		expect(probeApi('https://api-autre.example.test', prod)?.origin).toBe('https://api-autre.example.test')
 		expect(probeApi(undefined, TARGET)).toBeUndefined()

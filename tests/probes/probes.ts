@@ -90,7 +90,7 @@ const since = (id: ProbeId, { verdict, constats: findings }: Finding): Result =>
 	constats: findings,
 })
 
-/** The Strapi API of the real site, read by R05 while it runs. */
+/** The Strapi API of the real site, read by R05 when `PROBES_API` names it: stopped since 22/10/2026, no longer the default. */
 export const API_STRAPI_BY_DEFAULT = 'https://api.my-makeup.fr'
 
 const reason = reasonOf
@@ -395,11 +395,14 @@ export function formatReport(rapport: Report): string {
 	return lines.join('\n')
 }
 
-/** The Strapi API to read: `PROBES_API`, an origin; `aucune` once Strapi is stopped. The real site has its API by default. */
-export function probeApi(valeur: string | undefined, cible: URL): URL | undefined {
-	if (valeur === 'aucune') return undefined
-	if (valeur) return probeTarget(valeur)
-	return cible.origin === SITE_ORIGIN ? new URL(API_STRAPI_BY_DEFAULT) : undefined
+/**
+ * The Strapi API to read: `PROBES_API`, an origin, or nothing. Strapi has been stopped since the switch of
+ * 22/10/2026 (issue 981): without `PROBES_API`, no API is read, not even for the real site (it answered 503, and R05
+ * went red every Monday). `aucune` stays accepted.
+ */
+export function probeApi(valeur: string | undefined, _cible: URL): URL | undefined {
+	if (!valeur || valeur === 'aucune') return undefined
+	return probeTarget(valeur)
 }
 
 if (import.meta.main) {
