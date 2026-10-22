@@ -6,7 +6,8 @@
  * - The reading keeps the access rules of the collections (`overrideAccess: false`), as an anonymous
  *   visitor: a draft, and a profile that is not published, are not found. A profile is kept when it is
  *   publishable (`INDEXABLE_FILTER`); an entirely empty one never is, a hidden one is not published.
- * - The fields are chosen one by one: a slug, a name, the date of the last change. No contact detail.
+ * - The fields are chosen one by one: a slug, the names of her page (`firstName`, `lastName`, `artistName`), the date
+ *   of the last change. No contact detail.
  * - A list is read in pages of 100. If the pages run out of the bound, or the database fails, the reading
  *   throws: a sitemap with missing addresses would be worse than an error (`sitemap.xml` answers 500).
  *
@@ -68,7 +69,7 @@ export async function readIndexableProfiles(payload: Payload): Promise<Indexable
 		payload.find({
 			collection: 'profiles',
 			where: INDEXABLE_FILTER,
-			select: { slug: true, prenom: true, nom: true, nomArtiste: true, updatedAt: true },
+			select: { slug: true, firstName: true, lastName: true, artistName: true, updatedAt: true },
 			sort: ['slug', 'id'],
 			depth: 0,
 			limit: PAGE_SIZE,
