@@ -1,10 +1,18 @@
-import { CONTACT_SECTION, type Missing, type Progress, RANKED_LAST_TEXT } from '@/lib/dashboard/progress'
+import { ResumeRequests, type ResumeUpload } from '@/components/dashboard/ResumeRequests'
+import {
+	CONTACT_SECTION,
+	HIDDEN_CONTACT_EMAIL,
+	type Missing,
+	type Progress,
+	RANKED_LAST_TEXT,
+} from '@/lib/dashboard/progress'
 
 const COLORS = {
 	vide: 'border-neutral-400 bg-neutral-50',
 	incomplet: 'border-amber-400 bg-amber-50',
 	publiable: 'border-green-600 bg-green-50',
 	interne: 'border-neutral-400 bg-neutral-50',
+	masque: 'border-red-700 bg-red-50',
 } as const
 
 function List({ titre, id, manques }: { titre: string; id: string; manques: readonly Missing[] }) {
@@ -27,13 +35,28 @@ function List({ titre, id, manques }: { titre: string; id: string; manques: read
 	)
 }
 
+/** The sentence of a hidden page, its address as a link to write to. */
+function WithMailLink({ texte }: { texte: string }) {
+	const [before = '', after = ''] = texte.split(HIDDEN_CONTACT_EMAIL)
+	return (
+		<>
+			{before}
+			<a className="inline-block min-h-11 py-2 underline" href={`mailto:${HIDDEN_CONTACT_EMAIL}`}>
+				{HIDDEN_CONTACT_EMAIL}
+			</a>
+			{after}
+		</>
+	)
+}
+
 /**
  * Where her profile stands, at the top of her space (ticket 138): the percentage, the state, what
  * the state changes, and what she lacks, each point linked to its card. A server component: it
  * shows the reading it is given (`profileProgress`), and the page renders again after each save,
  * so it moves without a reload.
  */
-export function ProfileProgress({ avancement }: { avancement: Progress }) {
+export function ProfileProgress({ avancement, reprendre }: { avancement: Progress; reprendre?: ResumeUpload }) {
+	const hidden = avancement.etat === 'masque'
 	const required = avancement.manques.filter(m => m.requis)
 	const others = avancement.manques.filter(m => !m.requis)
 	return (
@@ -53,16 +76,21 @@ export function ProfileProgress({ avancement }: { avancement: Progress }) {
 				aria-valuemax={avancement.sur}
 				aria-valuenow={avancement.score}
 				aria-valuetext={`${avancement.score} sur ${avancement.sur}`}
+				data-grise={hidden ? 'true' : undefined}
 				className="mt-3 h-3 w-full overflow-hidden rounded-full bg-neutral-200"
 			>
-				<div className="h-full bg-neutral-900" style={{ width: `${avancement.pourcentage}%` }} />
+				<div
+					className={`h-full ${hidden ? 'bg-neutral-400' : 'bg-neutral-900'}`}
+					style={{ width: `${avancement.pourcentage}%` }}
+				/>
 			</div>
 			<p data-testid="avancement-score" className="mt-2 font-medium">
 				{avancement.score} sur {avancement.sur} ({avancement.pourcentage} %)
 			</p>
 			<p data-testid="avancement-consequence" className="mt-2">
-				{avancement.consequence}
+				{hidden ? <WithMailLink texte={avancement.consequence} /> : avancement.consequence}
 			</p>
+			{reprendre && !hidden && <ResumeRequests enPause={avancement.enPause} envoyer={reprendre} />}
 			{avancement.rankedLast && (
 				<p data-testid="avancement-sans-contact" className="mt-2">
 					{RANKED_LAST_TEXT}{' '}
@@ -71,10 +99,12 @@ export function ProfileProgress({ avancement }: { avancement: Progress }) {
 					</a>
 				</p>
 			)}
-			<div className="mt-4 flex flex-col gap-4">
-				<List id="avancement-requis" titre="Pour être publiable" manques={required} />
-				<List id="avancement-autres" titre="Pour un profil plus complet" manques={others} />
-			</div>
+			{!hidden && (
+				<div className="mt-4 flex flex-col gap-4">
+					<List id="avancement-requis" titre="Pour être publiable" manques={required} />
+					<List id="avancement-autres" titre="Pour un profil plus complet" manques={others} />
+				</div>
+			)}
 		</section>
 	)
 }

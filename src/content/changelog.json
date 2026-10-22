@@ -210,6 +210,11 @@
 			"id": "la-recherche-range-en-fin-de-liste-les-maquilleuses-qui-n",
 			"type": "amelioration",
 			"text": "La recherche range en fin de liste les maquilleuses qui n’ont pas encore indiqué de coordonnées, et les conditions d’utilisation ne parlent plus d’un formulaire de devis qui n’existe pas."
+		},
+		{
+			"id": "si-ta-page-est-masquee-par-l-equipe-ton-espace-te-le-dit",
+			"type": "amelioration",
+			"text": "Si ta page est masquée par l’équipe, ton espace te le dit avec le motif, et si tu es en pause, tu peux reprendre les demandes d’un clic."
 		}
 	],
 	"releases": []

@@ -85,3 +85,50 @@ describe('I20 : le bloc de l’espace égale l’état enregistré par le serveu
 		expect(networks.manques.some(m => m.critere === 'reseaux')).toBe(false)
 	})
 })
+
+describe('292 : le motif du masquage n’est lu que par sa propriétaire', () => {
+	test('elle lit son statut et son motif ; une autre maquilleuse n’en lit rien, et le bloc le dit', async () => {
+		const owner = await createAccount('maquilleuse')
+		const other = await createAccount('maquilleuse')
+		const payload = await testPayload()
+		const ownerUser = await userOf(payload, owner.id)
+		const otherUser = await userOf(payload, other.id)
+		const reason = 'Photos sans rapport avec le maquillage.'
+
+		const mine = await artistProfile(payload, ownerUser)
+		if (mine === null) throw new Error('pas de profil')
+		await payload.update({
+			collection: 'profiles',
+			id: mine.id,
+			data: { chosenStatus: 'hidden', reason },
+			overrideAccess: true,
+		})
+
+		const seen = await artistProfile(payload, ownerUser)
+		expect(seen?.status).toBe('hidden')
+		expect(seen?.reason).toBe(reason)
+		const block = profileProgress(seen as NonNullable<typeof seen>)
+		expect(block.etat).toBe('masque')
+		expect(block.consequence).toContain(reason)
+
+		// Another artist reads her own profile only, and nothing of the first one's reason.
+		const hers = await artistProfile(payload, otherUser)
+		expect(JSON.stringify(hers)).not.toContain(reason)
+		expect(hers?.id).not.toBe(mine.id)
+
+		// Asked for by identifier, as another artist, with the rules on: refused, or without the field.
+		const direct = await payload
+			.findByID({ collection: 'profiles', id: mine.id, depth: 0, overrideAccess: false, user: otherUser })
+			.catch(() => null)
+		expect(JSON.stringify(direct)).not.toContain(reason)
+
+		// Anonymous: the hidden profile is not readable at all.
+		const anonymous = await payload.find({
+			collection: 'profiles',
+			depth: 0,
+			overrideAccess: false,
+			where: { id: { equals: mine.id } },
+		})
+		expect(JSON.stringify(anonymous.docs)).not.toContain(reason)
+	}, 30_000)
+})

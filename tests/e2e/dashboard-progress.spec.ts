@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { createAccount } from '../support/account-factory'
 import { violationsSevere } from '../support/axe'
+import { testPayload } from '../support/payload-test'
 
 /**
  * The progress block at the top of her space (ticket 138; plan 02 U01, I20): an empty profile reads
@@ -70,5 +71,76 @@ test.describe('138 : où en est le profil', { tag: '@mobile' }, () => {
 		expect(await page.evaluate(() => (window as unknown as { __sansRechargement?: boolean }).__sansRechargement)).toBe(
 			true
 		)
+	})
+})
+
+test.describe('292 : le vrai statut, masqué ou en pause', { tag: '@mobile' }, () => {
+	async function profileOf(accountId: number | string) {
+		const payload = await testPayload()
+		const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: accountId } } })
+		const [sheet] = docs
+		if (!sheet) throw new Error('pas de profil')
+		return { payload, id: sheet.id }
+	}
+
+	test('masquée par l’équipe : le motif, l’adresse, la jauge grise, aucune promesse fausse', async ({
+		context,
+		page,
+	}) => {
+		const account = await createAccount('maquilleuse')
+		const { payload, id } = await profileOf(account.id)
+		await payload.update({
+			collection: 'profiles',
+			id,
+			data: {
+				firstName: 'Léa',
+				lastName: 'Fictive',
+				chosenStatus: 'hidden',
+				reason: 'Photos sans rapport avec le maquillage.',
+			},
+		})
+		await context.addCookies(account.session.cookies)
+		await page.goto('/auth/profil')
+
+		const block = page.getByTestId('avancement')
+		await expect(block).toHaveAttribute('data-etat', 'masque')
+		await expect(block).toContainText('Ta page est masquée par l’équipe My Makeup : elle n’est plus visible.')
+		await expect(block).toContainText('Motif : Photos sans rapport avec le maquillage.')
+		await expect(block.getByRole('link', { name: 'contact@my-makeup.fr' })).toBeVisible()
+		await expect(block).not.toContainText(/publiable|apparaît dans la recherche|indexe/)
+		await expect(block.getByRole('progressbar')).toHaveAttribute('data-grise', 'true')
+		await page.screenshot({ path: test.info().outputPath('avancement-masque.png') })
+		expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+		expect(await violationsSevere(page)).toEqual([])
+	})
+
+	test('en pause : une phrase, et « Reprendre les demandes » remet la disponibilité', async ({ context, page }) => {
+		const account = await createAccount('maquilleuse')
+		const { payload, id } = await profileOf(account.id)
+		await payload.update({
+			collection: 'profiles',
+			id,
+			data: { firstName: 'Léa', lastName: 'Fictive', specialty: 'Mariage', available: false },
+		})
+		await context.addCookies(account.session.cookies)
+		await page.goto('/auth/profil')
+
+		const block = page.getByTestId('avancement')
+		await expect(page.getByTestId('avancement-consequence')).toHaveText(
+			'Tu es en pause : ta page reste en ligne, mais tu n’apparais pas dans la recherche.'
+		)
+		await page.screenshot({ path: test.info().outputPath('avancement-pause.png') })
+		const button = block.getByRole('button', { name: 'Reprendre les demandes' })
+		const box = await button.boundingBox()
+		expect(box?.height ?? 0).toBeGreaterThanOrEqual(44)
+		if (test.info().project.name === 'mobile') await button.tap()
+		else await button.click()
+
+		await expect(block.getByRole('status')).toContainText('Tu as repris les demandes')
+		await expect(block.getByRole('button', { name: 'Reprendre les demandes' })).toHaveCount(0)
+		await expect(page.getByTestId('avancement-consequence')).not.toContainText('en pause')
+		const stored = await payload.findByID({ collection: 'profiles', id, depth: 0 })
+		expect(stored.available).toBe(true)
+		expect(await violationsSevere(page)).toEqual([])
 	})
 })

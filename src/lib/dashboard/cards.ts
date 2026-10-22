@@ -65,6 +65,8 @@ export type DashboardProfile = Pick<
 	| 'town'
 	| 'zoneReview'
 	| 'available'
+	| 'status'
+	| 'reason'
 	| 'mainPicture'
 	| 'gallery'
 	| 'skills'

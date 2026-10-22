@@ -152,7 +152,7 @@ describe('U07 : un compte interne n’est jamais publiable', () => {
 
 describe('disponibilité', () => {
 	test('un profil publiable marqué indisponible le dit : il n’est pas dans la recherche', () => {
-		expect(profileProgress({ ...FULL, available: false }).consequence).toContain('pas disponible')
+		expect(profileProgress({ ...FULL, available: false }).consequence).toContain('Tu es en pause')
 		expect(profileProgress({ ...FULL, available: true }).consequence).not.toContain('pas disponible')
 		expect(profileProgress({ id: 2, available: false }).consequence).not.toContain('pas disponible')
 	})
@@ -226,5 +226,102 @@ describe('291 : un profil listé sans moyen de contact passe après les autres',
 	test('avec un contact, le bloc ne dit rien', async () => {
 		const zone = await jsdomWindow.monter(<ProfileProgress avancement={profileProgress(FULL)} />)
 		expect(zone.querySelector('[data-testid="avancement-sans-contact"]')).toBeNull()
+	})
+})
+
+describe('292 : l’espace dit la vérité à une maquilleuse masquée ou en pause', () => {
+	const REASON = 'Photos sans rapport avec le maquillage.'
+	const HIDDEN: DashboardProfile = { ...FULL, status: 'hidden', reason: REASON }
+	const PAUSED: DashboardProfile = { ...FULL, available: false }
+	const FORBIDDEN = /publiable|apparaît dans la recherche|indexe|indexer/
+
+	test('masquée avec motif : le texte porte le motif et aucune promesse de publication', () => {
+		const progress = profileProgress(HIDDEN)
+		expect(progress.etat).toBe('masque')
+		expect(progress.reason).toBe(REASON)
+		const said = `${progress.titre} ${progress.consequence}`
+		expect(said).toContain('Ta page est masquée par l’équipe My Makeup : elle n’est plus visible.')
+		expect(said).toContain(`Motif : ${REASON}`)
+		expect(said).not.toMatch(FORBIDDEN)
+	})
+
+	test('masquée sans motif : pas de ligne « Motif » vide', () => {
+		for (const reason of [undefined, null, '', '   ']) {
+			const progress = profileProgress({ ...FULL, status: 'hidden', reason })
+			expect(progress.reason).toBeNull()
+			expect(progress.consequence).not.toContain('Motif')
+		}
+	})
+
+	test('masquée, même vide ou indisponible : le masquage prime', () => {
+		expect(profileProgress({ id: 2, status: 'hidden' }).etat).toBe('masque')
+		expect(profileProgress({ ...HIDDEN, available: false }).etat).toBe('masque')
+		expect(profileProgress({ ...HIDDEN, networks: {} }).rankedLast).toBe(false)
+	})
+
+	test('en pause : une seule phrase, sans contradiction', () => {
+		const progress = profileProgress(PAUSED)
+		expect(progress.enPause).toBe(true)
+		expect(progress.consequence).toBe(
+			'Tu es en pause : ta page reste en ligne, mais tu n’apparais pas dans la recherche.'
+		)
+		const incomplete = profileProgress({ ...PAUSED, description: '' })
+		expect(incomplete.etat).toBe('incomplet')
+		expect(incomplete.consequence).toBe(progress.consequence)
+	})
+
+	test('publiée et disponible : le texte ne change pas', () => {
+		const progress = profileProgress({ ...FULL, status: 'published', reason: null })
+		expect(progress.etat).toBe('publiable')
+		expect(progress.consequence).toBe('Ton profil apparaît dans la recherche et Google peut l’indexer.')
+		expect(progress.enPause).toBe(false)
+		expect(progress.reason).toBeNull()
+	})
+
+	test('un profil vide en pause garde sa phrase : il n’est pas listé de toute façon', () => {
+		const progress = profileProgress({ id: 2, available: false })
+		expect(progress.enPause).toBe(false)
+		expect(progress.etat).toBe('vide')
+	})
+
+	test('le bandeau masqué : motif, adresse pour en parler, jauge grisée, pas de liste « publiable »', async () => {
+		const zone = await jsdomWindow.monter(<ProfileProgress avancement={profileProgress(HIDDEN)} />)
+		expect(zone.querySelector('[data-etat="masque"]')).not.toBeNull()
+		expect(zone.textContent).toContain(REASON)
+		expect(zone.textContent).not.toMatch(FORBIDDEN)
+		expect(zone.querySelector('a[href^="mailto:"]')).not.toBeNull()
+		expect(zone.querySelector('[role="progressbar"]')?.getAttribute('data-grise')).toBe('true')
+		expect(zone.querySelector('[data-testid="avancement-sans-contact"]')).toBeNull()
+		expect(zone.querySelector('button')).toBeNull()
+	})
+
+	test('« Reprendre les demandes » remet la disponibilité et annonce le résultat', async () => {
+		const sent: unknown[] = []
+		const resume = async (valeurs: { disponible: boolean }) => {
+			sent.push(valeurs)
+			return { ok: true as const, valeurs }
+		}
+		const zone = await jsdomWindow.monter(<ProfileProgress avancement={profileProgress(PAUSED)} reprendre={resume} />)
+		const status = zone.querySelector('[role="status"]')
+		expect(status?.textContent).toBe('')
+		await jsdomWindow.cliquer(jsdomWindow.bouton('Reprendre les demandes'))
+		await jsdomWindow.attendre(() => (status?.textContent ?? '') !== '')
+		expect(sent).toEqual([{ disponible: true }])
+		expect(status?.textContent).toContain('Tu as repris les demandes')
+	})
+
+	test('« Reprendre les demandes » : l’échec est dit et le bouton reste', async () => {
+		const fail = async () => ({ ok: false as const, message: 'Enregistrement impossible.' })
+		const zone = await jsdomWindow.monter(<ProfileProgress avancement={profileProgress(PAUSED)} reprendre={fail} />)
+		await jsdomWindow.cliquer(jsdomWindow.bouton('Reprendre les demandes'))
+		await jsdomWindow.attendre(() => zone.textContent?.includes('Enregistrement impossible.') === true)
+		expect(jsdomWindow.bouton('Reprendre les demandes')).not.toBeNull()
+	})
+
+	test('pas de bouton quand la maquilleuse est disponible', async () => {
+		const zone = await jsdomWindow.monter(
+			<ProfileProgress avancement={profileProgress(FULL)} reprendre={async v => ({ ok: true, valeurs: v })} />
+		)
+		expect(zone.querySelector('button')).toBeNull()
 	})
 })
