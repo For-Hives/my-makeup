@@ -41,7 +41,7 @@ describe('la page d’une visiteuse : le HTML ne change pas', () => {
 			const type = DEMO_PROFILES.find(profile => profile.cle === key)
 			if (!type) throw new Error(`pas de profil type « ${key} »`)
 			const html = renderToStaticMarkup(<ProfileView profil={readType(type)} />)
-			const file = join(GOLDEN, `${name}.html`)
+			const file = join(GOLDEN, `${name}.golden`)
 			if (process.env.UPDATE_GOLDEN === '1') writeFileSync(file, html)
 			expect(html).toBe(readFileSync(file, 'utf8'))
 			expect(html).not.toContain('data-direct-edit')
