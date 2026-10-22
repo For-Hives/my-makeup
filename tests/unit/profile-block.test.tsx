@@ -43,6 +43,7 @@ function entry(slug: string, specialty: string, over: Partial<DirectoryProfile> 
 		postalCodes: [],
 		center: null,
 		radiusKm: null,
+		farReach: false,
 		sortName: slug,
 		textes: normalizeTexts({
 			ville: 'Annecy',
