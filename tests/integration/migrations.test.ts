@@ -145,8 +145,10 @@ describe('I22 : la migration init, sur une base effacée, puis rejouée', () => 
 
 		const first = await payloadCommand('migrate')
 
+		// « Done. » is the last line of the command and is not checked: Payload's logger writes it, then the
+		// command ends, and on a loaded runner that line was seen lost (ticket 312, a replay that printed its first
+		// line only). That the command went to its end is what the code 0 and the table of the migrations say.
 		expect(first.sortie).toContain(`Migrating: ${INIT}`)
-		expect(first.sortie).toContain('Done.')
 		expect(first.code).toBe(0)
 		// The row the migration writes when it has run: answered « no », Payload's « dev mode »
 		// question ends the command with code 0 too, but before anything is played or written.
@@ -157,7 +159,7 @@ describe('I22 : la migration init, sur une base effacée, puis rejouée', () => 
 
 		const second = await payloadCommand('migrate')
 
-		expect(second.sortie).toContain('Done.')
+		expect(second.sortie).toContain('Reading migration files')
 		expect(second.sortie).not.toContain('Migrating:')
 		expect(second.code).toBe(0)
 		expect(await migrationRun(payload)).toEqual(BATCH_ONE)

@@ -1044,9 +1044,9 @@ describe('the CI runs the integration tests and the end-to-end tests on the test
 		],
 		[
 			'end-to-end tests without their browser',
-			'      - name: Browser of Playwright\n        run: bun run browser:install\n',
+			'      - name: Browser of Playwright\n        run: bunx playwright install chromium\n',
 			'',
-			'job e2e : il doit lancer « bun run browser:install »',
+			'job e2e : il doit lancer « bunx playwright install chromium »',
 		],
 		[
 			'end-to-end tests without Node',
