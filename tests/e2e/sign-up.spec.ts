@@ -139,7 +139,7 @@ test.describe('302 : le lien ouvre la session, sur un autre appareil aussi', () 
 		expect(cookie).toContain('HttpOnly')
 		expect(cookie).toContain('Path=/auth/verification-complete')
 		expect(cookie).toContain('SameSite=lax')
-		expect(cookie).toContain('Max-Age=3600')
+		expect(cookie).toContain('Max-Age=86400')
 		expect(response.headers()['referrer-policy']).toBe('no-referrer')
 		expect(response.headers()['cache-control']).toContain('no-store')
 

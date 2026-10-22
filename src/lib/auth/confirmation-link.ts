@@ -19,8 +19,13 @@ export const CONFIRMATION_PAGE = '/auth/verification-complete'
 /** The cookie of that page alone that holds the code between the link and the click. */
 export const CONFIRMATION_COOKIE = 'mm-confirm'
 
-/** How long after the creation of the account the link can still open a session: one hour, as a forgotten-password link lives. */
-export const SESSION_OFFER_WINDOW_MS = 60 * 60 * 1000
+/**
+ * How long after the creation of the account the link can still open a session: 24 hours (ticket 311,
+ * decision of 22/10/2026; ticket 302 had one hour). The link stays single-use and behind a click; the
+ * window is the one setting to change. The link of a forgotten password keeps its own hour
+ * (`LINK_DURATION_MS`).
+ */
+export const SESSION_OFFER_WINDOW_MS = 24 * 60 * 60 * 1000
 
 /** The token Payload makes for a confirmation: 20 random bytes in hexadecimal. */
 export const CONFIRMATION_TOKEN = /^[0-9a-f]{40}$/

@@ -285,6 +285,11 @@
 			"id": "une-maquilleuse-dont-la-ville-n-est-pas-reconnue-ou-n-est",
 			"type": "amelioration",
 			"text": "Une maquilleuse dont la ville n'est pas reconnue, ou n'est pas indiquée, reste trouvable dans la recherche : elle apparaît simplement après celles dont la zone est connue."
+		},
+		{
+			"id": "le-lien-de-confirmation-recu-par-courrier-te-connecte-dir",
+			"type": "amelioration",
+			"text": "Le lien de confirmation reçu par courrier te connecte directement pendant 24 heures, et choisir un nouveau mot de passe par un lien confirme aussi ton adresse : tu n’as plus à te reconnecter pour rien."
 		}
 	],
 	"releases": []
