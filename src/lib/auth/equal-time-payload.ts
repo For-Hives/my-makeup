@@ -40,6 +40,7 @@ export const equalizeRestWork =
 		// Payload answers 400 to these before any lookup: nothing to equalise.
 		if (!email || typeof data?.password !== 'string' || data.password.trim() === '') return
 
+		// query-keys: ignore `collection` is admins or pros, both have an email (tests/unit/query-keys.test.ts)
 		const account = (await req.payload.db.findOne({
 			collection: collection.slug,
 			req,

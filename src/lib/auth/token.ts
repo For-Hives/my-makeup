@@ -87,6 +87,7 @@ export async function openWithoutPassword(
 	let sid: string | undefined
 	try {
 		await reserveAccount(req, { collection, id })
+		// query-keys: ignore `collection` is admins or pros, and `id` is on every document
 		const found = await payload.db.findOne<TypedUser>({ collection, req, where: { id: { equals: id } } })
 		if (!found) throw new Error(`Aucun compte « ${collection} » ne porte l’identifiant ${id}.`)
 		account = found

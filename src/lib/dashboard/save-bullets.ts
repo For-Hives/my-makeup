@@ -49,6 +49,7 @@ async function saveBullets(
 			disableErrors: true,
 			id,
 			overrideAccess: false,
+			// query-keys: ignore `sorte.champ` is the field of LANGUAGES or SKILLS (tests/unit/query-keys.test.ts)
 			select: { [sorte.champ]: true },
 			user: utilisateur,
 		})

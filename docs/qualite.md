@@ -1,11 +1,12 @@
 # Qualité
 
-Ce document garde les règles de qualité de la v3. Il a quatre parties :
+Ce document garde les règles de qualité de la v3. Il a cinq parties :
 
 - **Les règles du travail, §1 à §5** : comment on teste, les sept règles des listes éditées en place, et ce qu'un écran doit tenir à 390 px. Ce sont des critères permanents : ils valent pour chaque ticket, sans être recopiés dans chacun.
 - **La CI, §6 à §10** : ce qui empêche une modification cassée d'entrer dans `v3`. Ces parties décrivent la CI de la v3, le check `ci-ok`, les garde-fous qui empêchent de rendre la CI menteuse, et le canari. Le fichier de la CI est `.github/workflows/ci.yml`. Les garde-fous sont dans `tests/ci/ci-guardrails.test.ts`.
 - **Les mises à jour, §11** : les règles que Renovate suivra pour proposer les nouvelles versions, et pourquoi elles n'ont aucun effet avant la bascule. Le fichier est `renovate.json`. Sa garde est dans `tests/ci/renovate.test.ts`.
 - **La dérive de schéma, §12** : le contrôle qui dit si les collections du code et la dernière migration décrivent le même schéma. Il est prêt, et devient un contrôle bloquant de la CI à la clôture de P3.
+- **Les clés lues par Payload, §13** : le test qui refuse un `select`, un `where`, un `sort` ou un `populate` qui nomme un champ que la collection n'a pas.
 
 À lire avec ce document :
 
@@ -477,3 +478,13 @@ Le schéma de P3 est figé dans une seule migration, `init` (ticket 049), qui a 
 - La garde de `tests/ci/schema-drift.test.ts` garde l'étape : la commande exacte, seule dans son étape, après l'installation, sans condition qui la sauterait (`schemaDriftProblems`, `tests/support/ci-guardrails.ts`). Le même test prouve que la commande voit une colonne ajoutée, une table ajoutée et une colonne renommée, et qu'elle ne trouve aucune dérive sur le dépôt.
 - La commande compare les collections à l'instantané de la dernière migration, pas au SQL de la migration. Une migration dont le SQL ne crée pas ce que son instantané déclare lui échappe : c'est le banc de test qui la voit, avant le premier test d'intégration et avant le premier essai de bout en bout ([`docs/tests/banc.md`](tests/banc.md), « Préparer la base du banc »).
 - Relevé du 14/10/2026 : aucune dérive, contre `20261014_134242_init` (depuis le 19/10/2026, contre l'`init` réécrite, ticket 249). Un champ ajouté à `talents` sans sa migration, essayé sur un poste puis retiré : code 1, avec les deux instructions qu'une migration contiendrait (la table et ses versions).
+
+## 13. Les clés lues par Payload (ticket 300)
+
+Payload accepte sans erreur une clé qu'il ne connaît pas dans un `select`, un `where`, un `sort` ou un `populate` : le résultat est seulement vide. C'est ainsi que deux champs renommés (`prenom`, `nomArtiste`) ont passé tous les tests (tickets 298 et 299).
+
+- **Le contrôle** : `tests/unit/query-keys.test.ts`, dans la suite unitaire (`bun run test`), donc dans la CI sans étape à part. Il lit tout `src/` (`scripts/query-keys/collect.ts`) et vérifie chaque clé contre la configuration réelle de Payload (`src/payload.config.ts`, champs aplatis des collections : `scripts/query-keys/check.ts`). Aucune liste de noms n'est recopiée : un champ ajouté ou renommé dans une collection est connu du contrôle aussitôt. Seul `id`, que la configuration ne liste pas, est admis d'office.
+- **Ce qu'il lit** : un objet qui porte `collection` et, à côté, `select`, `where`, `sort` ou `populate`. La valeur peut être écrite sur place ou nommée (constante du même fichier ou importée, `...CHAMPS`, `cond && { … }`, `cond ? A : B`). Un chemin pointé (`pro.email`) est suivi à travers les groupes, les listes, les blocs et les relations. La mesure du 22/10/2026 : environ 370 clés lues dans `src/`, 0,8 s pour la lecture et la vérification, 2,6 s pour tout le fichier de tests (la limite est 10 s).
+- **Ce qu'il ne dit pas** : il lit des clés écrites dans le code, pas des propriétés lues sur un document. Une propriété lue sur un document typé par Payload est vue par `bun run typecheck`, pas par ce contrôle ; une propriété lue derrière une conversion de type écrite à la main (`as { nom?: string }`, c'était le défaut du ticket 298) n'est vue par aucun des deux.
+- **Ce qu'il ne peut pas suivre** (une collection reçue en paramètre, une clé calculée, un filtre rendu par une fonction) est refusé tant qu'il n'est pas dit : le test échoue en nommant le fichier et la ligne.
+- **Ajouter une exception justifiée** : une ligne `// query-keys: ignore <raison>` sur la ligne de la lecture ou juste au-dessus. La raison est obligatoire (une marque sans raison ne compte pas). Dis aussi où les clés sont contrôlées : ajoute-les au test « les lectures qui portent une marque » de `tests/unit/query-keys.test.ts`, qui les vérifie contre la configuration.

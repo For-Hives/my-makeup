@@ -22,6 +22,7 @@ export async function AccountFilters({ payload }: ServerProps) {
 	const counts = await Promise.all(
 		KEYS.map(cle =>
 			payload
+				// query-keys: ignore the keys of `filterWhere` are read in tests/unit/query-keys.test.ts
 				.count({ collection: 'pros', where: filterWhere(cle, owners), overrideAccess: true })
 				.then(({ totalDocs }) => totalDocs)
 		)

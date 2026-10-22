@@ -47,6 +47,7 @@ async function readPublicState(
 	id: number | string
 ): Promise<PublicState | null> {
 	const { champ: field, valeur: value } = VISIBILITY[contenu]
+	// query-keys: ignore `contenu` is profiles, articles or talents; their keys are read in tests/unit/query-keys.test.ts
 	const row = await req.payload.db.findOne<StoredRow>({
 		collection: contenu,
 		req,

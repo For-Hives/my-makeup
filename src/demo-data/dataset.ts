@@ -38,6 +38,7 @@ export interface DemoSummary {
 
 /** True when a document of this collection already carries the slug, a draft included. */
 async function exists(payload: Payload, collection: 'talents' | 'articles', slug: string): Promise<boolean> {
+	// query-keys: ignore `collection` is talents or articles, both have a slug (tests/unit/query-keys.test.ts)
 	const { totalDocs } = await payload.find({
 		collection,
 		depth: 0,

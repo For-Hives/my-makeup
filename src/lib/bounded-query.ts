@@ -210,6 +210,7 @@ export const boundedListRead: Endpoint = {
 			req.query
 		)
 		const bound = !isAdmin(req.user)
+		// query-keys: ignore the REST route passes the keys of the request as they come, no key is written here
 		const result = await findOperation({
 			collection,
 			depth,
