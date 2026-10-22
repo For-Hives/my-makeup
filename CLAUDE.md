@@ -32,7 +32,7 @@ My Makeup est un annuaire de maquilleuses professionnelles indépendantes. Cette
 | écrire une note de version, comprendre la publication d'une version | [`docs/publication.md`](docs/publication.md) |
 | nommer un fichier, un dossier, une fonction, une variable ou une option ; renommer du code ; lire le contrôle des noms | « Conventions » et « Glossaire des noms » ci-dessous, puis [`docs/noms.md`](docs/noms.md) |
 
-Les tickets et les plans cités par leur numéro vivent dans le dépôt des plans, hors de ce dépôt.
+Les tickets cités par un numéro à trois chiffres (001 à 312) et les plans vivent dans le dépôt privé des plans, hors de ce dépôt. Le nouveau travail est suivi dans les issues GitHub de ce dépôt (voir « Agent skills » ci-dessous).
 
 ## Commandes
 
@@ -208,3 +208,17 @@ Le même mot français a le même mot anglais partout (source : `PLAN-ANGLAIS.md
 - **`slugField()` de Payload** échoue à la création d'un document publié sans slug. Le slug d'un profil vient de `src/lib/slug.ts`.
 - **Un client qui n'est pas un navigateur** (`curl`, un test) envoie l'en-tête `Origin` d'une origine de confiance avec son cookie de session, sinon le cookie est ignoré (README, « Accès »).
 - **Ces guides sont écrits à la main.** Le serveur de développement de Next n'en génère pas (`agentRules: false` dans `next.config.ts`). Un test les garde : `bun --no-env-file test tests/unit/guides-agents.test.ts`.
+
+## Agent skills
+
+### Issue tracker
+
+Les tickets sont des issues GitHub de `For-Hives/my-makeup` (dépôt public : aucun secret, aucune donnée personnelle dans une issue). Voir `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Vocabulaire par défaut : `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix` ; catégories `bug` et `feature`. Voir `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Contexte unique : le glossaire est dans ce guide et dans `docs/noms.md`. Voir `docs/agents/domain.md`.
