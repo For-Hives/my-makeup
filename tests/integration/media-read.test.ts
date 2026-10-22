@@ -212,7 +212,8 @@ describe('Adresse publique = préfixe du document + nom de fichier, à la racine
 
 		expect(media.prefix).toBe('media')
 		expect(media.url).toBe(`${base()}/media/${media.filename}`)
-		expect((await readObject(`media/${media.filename}`))?.type).toBe('image/png')
+		// Ticket 309: every accepted photo is stored as WebP, whatever its sent type.
+		expect((await readObject(`media/${media.filename}`))?.type).toBe('image/webp')
 	})
 
 	test('une photo de l’ancien site adoptée où elle est, à la racine ou sous son préfixe : son adresse suit', async () => {
