@@ -225,6 +225,11 @@
 			"id": "dans-ton-espace-le-message-d-accueil-te-salue-par-ton-pre",
 			"type": "correction",
 			"text": "Dans ton espace, le message d'accueil te salue par ton prénom au lieu de « Bonjour toi »."
+		},
+		{
+			"id": "les-resultats-de-recherche-montrent-le-prix-de-depart-et",
+			"type": "amelioration",
+			"text": "Les résultats de recherche montrent le prix de départ et les prestations de chaque maquilleuse, et tiennent deux à trois par écran de téléphone."
 		}
 	],
 	"releases": []
