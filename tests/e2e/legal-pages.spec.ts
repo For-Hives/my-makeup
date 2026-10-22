@@ -21,7 +21,7 @@ test.describe('Les pages juridiques', { tag: '@mobile' }, () => {
 
 			expect(response?.status()).toBe(200)
 			await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1)
-			await expect(page.getByRole('heading', { level: 1 })).toHaveText(title.replaceAll(' ', ' '))
+			await expect(page.getByRole('heading', { level: 1 })).toHaveText(title)
 			await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', `https://my-makeup.fr${path}`)
 			await expect(page.locator('meta[name="robots"]')).toHaveCount(0)
 			await expect(page.locator('article h2').first()).toBeVisible()

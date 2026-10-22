@@ -15,6 +15,7 @@
  */
 
 import { z } from 'zod'
+import { stripMarkup } from '../html/strip-markup'
 import { DESCRIPTION_MIN, descriptionLength } from '../profile/completeness'
 
 /** The longest description: the bound of the collection `profils`. */
@@ -25,23 +26,13 @@ export { DESCRIPTION_MIN }
 export const DESCRIPTION_FIELDS = ['description'] as const
 export type DescriptionValues = Record<(typeof DESCRIPTION_FIELDS)[number], string>
 
-const TAGS_TO_CLEAR = /<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi
-const COMMENTS = /<!--[\s\S]*?-->/g
-const TAGS = /<\/?[a-z][^>]*>|<![^>]*>|<\?[^>]*>/gi
-
 /**
  * The text without any HTML: scripts and styles with their content, comments, then every tag. It
  * starts again until nothing changes, so that `<<b>script>` cannot rebuild a tag from the pieces.
  * A `<` that opens no tag (« 3 < 5 ») is text and stays. Line breaks are `\n`, edge spaces cut.
  */
 export function removeHtml(valeur: string): string {
-	let text = valeur.replace(/\r\n?/g, '\n')
-	for (;;) {
-		const next = text.replace(TAGS_TO_CLEAR, '').replace(COMMENTS, '').replace(TAGS, '')
-		if (next === text) break
-		text = next
-	}
-	return text.trim()
+	return stripMarkup(valeur.replace(/\r\n?/g, '\n'), { dropContentOf: ['script', 'style'] }).trim()
 }
 
 /** The counter under the field: how many characters count, and where she stands against 200. */

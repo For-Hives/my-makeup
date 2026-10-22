@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test'
+import { stripMarkup } from '../../src/lib/html/strip-markup'
 import { type PageProfile, setPageProfiles } from '../fixtures/page-profiles'
 import { SCREENS } from '../support/e2e'
 import { users } from '../support/lock'
@@ -55,11 +56,7 @@ const profile = (cle: string): PageProfile => {
 
 /** The text of the page as the server sends it, tags and scripts out: the words a visitor would read. */
 function visibleText(html: string): string {
-	return html
-		.replace(/<script[\s\S]*?<\/script>/g, ' ')
-		.replace(/<style[\s\S]*?<\/style>/g, ' ')
-		.replace(/<[^>]+>/g, ' ')
-		.replace(/\s+/g, ' ')
+	return stripMarkup(html, { dropContentOf: ['script', 'style'], tagText: ' ' }).replace(/\s+/g, ' ')
 }
 
 async function withoutOverflow(page: Page): Promise<boolean> {

@@ -95,7 +95,7 @@ describe('Test coquille : la base, le stockage d’objets et le capteur de mails
 			to: `Léa Martin <${recipient}>`,
 			subject: 'Vérifie ton adresse email',
 			// In HTML, the « & » of an address is written « &amp; »: the link is read as a browser reads it.
-			html: `<p>Bonjour Léa,</p><p><a href="${link.replace('&', '&amp;')}">Vérifier mon adresse</a></p><p><a href="mailto:contact@example.test">Nous écrire</a></p>`,
+			html: `<p>Bonjour Léa,</p><p><a href="${link.replaceAll('&', '&amp;')}">Vérifier mon adresse</a></p><p><a href="mailto:contact@example.test">Nous écrire</a></p>`,
 			text: `Bonjour Léa,\nouvre ce lien pour vérifier ton adresse : ${link}\n`,
 		})
 		const mail = await waitMail({ pour: recipient })

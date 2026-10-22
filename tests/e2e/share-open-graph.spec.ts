@@ -94,7 +94,7 @@ test.afterAll(async ({ request }) => {
 /** The value of a `<meta>` (by `name` or `property`) in the HTML the server sent. */
 function tag(html: string, cle: string): string | null {
 	const reason = new RegExp(`<meta (?:name|property)="${cle}" content="([^"]*)"`)
-	return reason.exec(html)?.[1]?.replaceAll('&amp;', '&').replaceAll('&quot;', '"') ?? null
+	return reason.exec(html)?.[1]?.replaceAll('&quot;', '"').replaceAll('&amp;', '&') ?? null
 }
 
 interface Url {

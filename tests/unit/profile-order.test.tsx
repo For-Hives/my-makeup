@@ -68,7 +68,7 @@ describe('304 : l’ordre de la fiche sur téléphone', () => {
 			'Langues',
 			'Formations & diplômes',
 			'Expériences professionnelles',
-		].map(title => ranks.get(title.replace('&', '&amp;')))
+		].map(title => ranks.get(title.replaceAll('&', '&amp;')))
 
 		expect(order.every(rank => rank !== undefined)).toBe(true)
 		expect([...order]).toEqual([...order].sort((a, b) => (a as number) - (b as number)))

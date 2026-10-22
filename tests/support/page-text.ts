@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto'
+import { stripMarkup } from '../../src/lib/html/strip-markup'
 
 /**
  * The plain text of a page, the way a reader meets it (ticket 112): scripts and styles dropped, a line
@@ -19,11 +20,7 @@ function decoder(texte: string): string {
 }
 
 export function pageText(html: string): string {
-	const withoutCode = html
-		.replace(/<!--[\s\S]*?-->/g, '')
-		.replace(/<(script|style|svg)\b[\s\S]*?<\/\1\s*>/gi, '')
-		.replace(/<\/(p|li|h[1-6]|div|header|article|main|section|ul|ol)\s*>|<br\s*\/?>/gi, '\n')
-		.replace(/<[^>]*>/g, '')
+	const withoutCode = stripMarkup(html, { dropContentOf: ['script', 'style', 'svg'], lineBreaks: true })
 	return decoder(withoutCode)
 		.split('\n')
 		.map(ligne => ligne.replace(/\s+/g, ' ').trim())

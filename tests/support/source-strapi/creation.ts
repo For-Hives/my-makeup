@@ -15,7 +15,6 @@
  * Only Node's own modules: no API of bun.
  */
 
-import { createHash } from 'node:crypto'
 import type { Line, SourceDefinition, Value } from './data'
 import { CONVERSIONS, identifier, TABLE_NAMES, TABLES, type TableName, tableCreation } from './schema'
 
@@ -79,13 +78,19 @@ export async function requireRevocation(executer: Run, role: string): Promise<vo
 
 /** A salt of bcrypt drawn from the id of the account: the same account always gets the same hash. */
 export function saltBcrypt(id: number): string {
-	const bytes = createHash('sha256').update(`sel-factice-${id}`).digest()
+	// Not a hash: a small generator seeded by the id (mulberry32), so no password-hashing rule applies to a salt
+	// that is only a repeatable test value.
+	let state = (id * 0x9e3779b1 + 0x7f4a7c15) >>> 0
+	const next = (): number => {
+		state = (state + 0x6d2b79f5) >>> 0
+		let mixed = Math.imul(state ^ (state >>> 15), state | 1)
+		mixed ^= mixed + Math.imul(mixed ^ (mixed >>> 7), mixed | 61)
+		return ((mixed ^ (mixed >>> 14)) >>> 0) & 0xff
+	}
 	// 16 bytes of salt in 22 characters of 6 bits: the last character carries the last 2 bits only,
 	// its 4 low bits stay at 0, as bcrypt writes them.
-	const characters = Array.from({ length: 22 }, (_vide, rang) => {
-		const value = bytes[rang] ?? 0
-		return ALPHABET_BCRYPT[rang === 21 ? value & 0x30 : value & 0x3f] ?? '.'
-	})
+	const bytes = Array.from({ length: 22 }, next)
+	const characters = bytes.map((value, rang) => ALPHABET_BCRYPT[rang === 21 ? value & 0x30 : value & 0x3f] ?? '.')
 	return `$2a$${COST_BCRYPT}$${characters.join('')}`
 }
 

@@ -30,6 +30,7 @@ import {
 	SITE_ORIGIN,
 	splitAddress,
 } from '../../src/lib/frozen-urls'
+import { stripMarkup } from '../../src/lib/html/strip-markup'
 import { indexNowKey } from '../../src/lib/seo/indexnow'
 
 /* ------------------------------------------------------------------------------------------
@@ -50,10 +51,7 @@ function decodeEntities(texte: string): string {
 }
 
 const withoutScripts = (html: string): string =>
-	html
-		.replace(/<!--[\s\S]*?-->/g, '')
-		.replace(/<script\b[\s\S]*?<\/script\s*>/gi, '')
-		.replace(/<style\b[\s\S]*?<\/style\s*>/gi, '')
+	stripMarkup(html, { dropContentOf: ['script', 'style'], keepTags: true })
 
 const textOf = (fragment: string): string =>
 	decodeEntities(fragment.replace(/<[^>]*>/g, ' '))

@@ -1,4 +1,5 @@
 import { type Browser, type BrowserContext, expect, type Page, test } from '@playwright/test'
+import { stripMarkup } from '../../src/lib/html/strip-markup'
 import { createAccount } from '../support/account-factory'
 import { activateProfile } from '../support/active-profile'
 import { testPayload } from '../support/payload-test'
@@ -30,7 +31,7 @@ async function signInAction(page: Page, email: string) {
  * chunks are written in the order the server finishes them: two requests to the same page may order them
  * differently (ticket 256). What the visitor sees is the markup, and that is what must not change.
  */
-const markupOf = (html: string) => html.replace(/<script\b[\s\S]*?<\/script\s*>/gi, '')
+const markupOf = (html: string) => stripMarkup(html, { dropContentOf: ['script'], keepTags: true })
 
 const sessionCookie = async (context: BrowserContext) =>
 	(await context.cookies()).find(({ name }) => name === 'payload-token')
