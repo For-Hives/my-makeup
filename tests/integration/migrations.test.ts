@@ -326,7 +326,8 @@ describe('La migration de la zone (ticket 259) : des ajouts seulement, sur une b
 			expect(await baseSchema()).toEqual(afterZone)
 
 			// Additions only: every column, index, constraint and type of init is still there, as it was.
-			for (const line of afterInit) expect(afterZone, line).toContain(line)
+			// Read on the schema with the later migrations taken back: one of them (ticket 305) loosens a column of init.
+			for (const line of afterInit) expect(zoneOnly, line).toContain(line)
 			const added = zoneOnly.filter(line => !afterInit.includes(line))
 			expect(added.length).toBeGreaterThan(0)
 			for (const line of added) expect(line, line).toMatch(/zone_kind|zone_review|profiles\.town|profiles_texts/)
