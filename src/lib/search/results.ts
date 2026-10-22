@@ -7,12 +7,22 @@
  * No `next` import: read by the page and by the tests.
  */
 
+import type { GeoPoint } from './geo-distance'
 import { type Search, searchByWord } from './input'
-import { type ProfilePlace, type ProfilesByPlace, sectionsByPlace } from './place'
+import {
+	type ProfileGeometry,
+	type ProfilePlace,
+	type ProfilesByPlace,
+	readPlace,
+	sectionsByDistance,
+	sectionsByPlace,
+} from './place'
 import { type NormalizedTexts, normalizeTexts, rankByRelevance } from './relevance'
 
 /** A profile of the directory as the search reads it: where she works, and (for a word) what she wrote. */
-export interface SearchableProfile extends ProfilePlace {
+export interface SearchableProfile extends ProfilePlace, ProfileGeometry {
+	/** The name a tie of a ranking by distance is broken by (ticket 294). */
+	sortName?: string
 	textes?: NormalizedTexts
 	/** True when nothing on her profile lets a client reach her (ticket 291): she goes after the others. */
 	unreachable?: boolean
@@ -37,19 +47,39 @@ function reachableFirst<T extends SearchableProfile>(profils: readonly T[]): T[]
 	]
 }
 
+/** Where the place typed is on the map, with its name (ticket 293). */
+export interface SearchOrigin {
+	point: GeoPoint
+	label: string
+}
+
 /**
  * The profiles a search finds, in their sections. The directory comes in its order, which breaks ties.
  * In each section, the profiles with no way to be reached go last (ticket 291): they stay listed, and
  * the count of the title does not change.
+ *
+ * With `origin` (ticket 294), the place typed is a point and the profiles are ranked by distance
+ * (sectionsByDistance). Without it, or when only a code of département was typed, the search keeps
+ * its way of before: by the name of the place.
  */
 export function find<T extends SearchableProfile>(
 	annuaire: readonly T[],
-	recherche: Pick<Search, 'search' | 'city'>
+	recherche: Pick<Search, 'search' | 'city'>,
+	origin: SearchOrigin | null = null
 ): ProfilesByPlace<T> {
-	const found = searchByWord(recherche)
-		? rankByRelevance(annuaire, profil => profil.textes ?? NO_TEXT, recherche.search).map(({ profil }) => profil)
-		: annuaire
-	const places = sectionsByPlace(found, recherche.city)
+	const ranked = searchByWord(recherche)
+		? rankByRelevance(annuaire, profil => profil.textes ?? NO_TEXT, recherche.search)
+		: null
+	const found = ranked ? ranked.map(({ profil }) => profil) : annuaire
+	const typed = readPlace(recherche.city)
+	const places =
+		origin && (typed.segments.length > 0 || typed.postalCodes.length > 0)
+			? sectionsByDistance(found, recherche.city, {
+					origin,
+					relevance: ranked ? new Map(ranked.map(({ profil, score }) => [profil, score])) : undefined,
+					name: profil => profil.sortName ?? '',
+				})
+			: sectionsByPlace(found, recherche.city)
 	return {
 		...places,
 		locaux: reachableFirst(places.locaux),

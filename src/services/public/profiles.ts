@@ -52,7 +52,8 @@ import {
 import { PUBLISHED_STATUS } from '@/lib/profile/status'
 import { urlTarget, valuesToSearch } from '@/lib/profile/url'
 import { isIndexable, LISTED_FILTER } from '@/lib/profile/visibility'
-import type { ProfilePlace } from '@/lib/search/place'
+import { validPoint } from '@/lib/search/geo-distance'
+import type { ProfileGeometry, ProfilePlace } from '@/lib/search/place'
 import { type NormalizedTexts, normalizeTexts } from '@/lib/search/relevance'
 import { isSlug } from '@/lib/slug'
 import type { Profile } from '@/payload-types'
@@ -670,8 +671,28 @@ export function directoryPlace(
 	}
 }
 
+/**
+ * The centre of the commune of a profile and her radius, for the ranking by distance (ticket 294). None
+ * for a zone abroad, and none for a commune the list gave no coordinates: she is then found by her name.
+ */
+export function directoryGeometry(
+	profil: Pick<Profile, 'city' | 'radiusKm' | 'zoneKind' | 'countries' | 'town'>
+): Required<ProfileGeometry> {
+	if (zoneCountries(zoneInput(profil)).length > 0) return { center: null, radiusKm: null }
+	const { latitude, longitude, name } = profil.city ?? {}
+	return {
+		center:
+			text(name) !== '' && validPoint({ latitude, longitude })
+				? { latitude: latitude as number, longitude: longitude as number }
+				: null,
+		radiusKm: text(name) !== '' ? radiusKm(profil.radiusKm) : null,
+	}
+}
+
 /** A listed profile with where she works: what the search by city ranks by. */
-export interface DirectoryProfile extends ProfilePlace {
+export interface DirectoryProfile extends ProfilePlace, ProfileGeometry {
+	/** The name a tie of the ranking by distance is broken by (ticket 294). */
+	sortName: string
 	carte: ProfileCard
 	/** True when her profile shows no way to reach her (ticket 291): the search ranks her after the others. */
 	unreachable: boolean
@@ -778,6 +799,8 @@ export async function readDirectory(
 				carte: isUnreachable ? { ...card, unreachable: true } : card,
 				unreachable: isUnreachable,
 				...directoryPlace(profile),
+				...directoryGeometry(profile),
+				sortName: displayName(profile),
 				...(avecLesTextes && { textes: textsOf(profile) }),
 			})
 		}

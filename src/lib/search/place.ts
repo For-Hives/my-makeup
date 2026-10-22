@@ -11,6 +11,7 @@
  */
 
 import { DEPARTMENTS, departmentOfPostalCode, normalizePlace } from '../departments'
+import { distanceKm, type GeoPoint, validPoint } from './geo-distance'
 
 const DEPARTMENT_NAMES = new Map<string, string[]>([
 	...Object.entries(DEPARTMENTS).map(([code, nom]): [string, string[]] => [normalizePlace(nom), [code]]),
@@ -240,7 +241,7 @@ export const inDepartment = (codes: readonly string[]): string =>
 	codes.map(code => `du ${code}${DEPARTMENTS[code] ? ` (${DEPARTMENTS[code]})` : ''}`).join(' et ')
 
 export interface OthersSection<T> {
-	cle: 'departement' | 'deplacent' | 'autres'
+	cle: 'departement' | 'deplacent' | 'autres' | 'covering' | 'nearby'
 	/** Its h2. */
 	titre: string
 	profils: T[]
@@ -253,6 +254,8 @@ export interface ProfilesByPlace<T> {
 	parLieu: boolean
 	departements: string[]
 	sections: OthersSection<T>[]
+	/** Its h2 « À <place> », only for a search ranked by distance (ticket 294). */
+	localTitle?: string
 }
 
 /**
@@ -298,6 +301,85 @@ export function sectionsByPlace<T extends ProfilePlace>(profils: readonly T[], c
 				'Autres maquilleuses',
 				elsewhere.filter(profil => !profil.seDeplace)
 			),
+		],
+	}
+}
+
+/** Where the centre of a profile's commune is and how far she goes: what the ranking by distance reads (ticket 294). */
+export interface ProfileGeometry {
+	/** The centre of her commune, or none (a commune without coordinates, a zone abroad). */
+	center?: GeoPoint | null
+	/** Her radius in km around her commune, or none. */
+	radiusKm?: number | null
+}
+
+/** The farthest a profile that does not cover the client is still shown, in km. */
+export const NEARBY_MAX_KM = 50
+
+/** What a ranking by distance needs besides the profiles. */
+export interface DistanceOptions<T> {
+	/** Where the place typed is, and its name. */
+	origin: { point: GeoPoint; label: string }
+	/** How well a profile matched the words typed (lower is better); equal for all when none. */
+	relevance?: ReadonlyMap<T, number>
+	/** The name a tie is broken by. */
+	name?: (profil: T) => string
+}
+
+/**
+ * A search by city ranked by distance (ticket 294; audit UX improvement 3), every profile at most once:
+ * - `locaux`: the profiles whose commune is the place typed (« À <place> »), the nearest first; then,
+ *   as before, those without coordinates that share its département. The only ones the title counts;
+ * - `covering` (« Se déplacent jusqu’à vous »): her radius reaches the place;
+ * - `nearby` (« Plus loin, à moins de 50 km »): her centre is within 50 km but her radius does not reach.
+ * A profile farther than that is in no section. One whose commune has no coordinates is found by its
+ * name only: it is never put « farther ». Inside a list: distance, then relevance, then name.
+ */
+export function sectionsByDistance<T extends ProfilePlace & ProfileGeometry>(
+	profils: readonly T[],
+	city: string,
+	{ origin, relevance, name }: DistanceOptions<T>
+): ProfilesByPlace<T> {
+	const searched = readPlace(city)
+	if (emptyPlace(searched)) return { locaux: [...profils], parLieu: false, departements: [], sections: [] }
+
+	const distances = new Map<T, number>()
+	const distanceOf = (profil: T): number => distances.get(profil) ?? Number.POSITIVE_INFINITY
+	const cityProfiles: T[] = []
+	const withoutCenter: T[] = []
+	const covering: T[] = []
+	const nearby: T[] = []
+	for (const profile of profils) {
+		const match = placeMatch(profilePlace(profile), searched)
+		const known = profile.center != null && validPoint(profile.center)
+		if (known && profile.center) distances.set(profile, distanceKm(origin.point, profile.center))
+		if (match === 'ville') cityProfiles.push(profile)
+		else if (!known) {
+			if (match === 'departement') withoutCenter.push(profile)
+		} else {
+			const distance = distanceOf(profile)
+			const radius = profile.radiusKm ?? null
+			if (profile.seDeplace && radius !== null && distance <= radius) covering.push(profile)
+			else if (distance <= NEARBY_MAX_KM) nearby.push(profile)
+		}
+	}
+	// Distance to the tenth of a km (the profiles of one commune are at the very same distance), then the words, then the name.
+	const byDistance = (a: T, b: T): number =>
+		Math.round(distanceOf(a) * 10) - Math.round(distanceOf(b) * 10) ||
+		(relevance?.get(a) ?? 0) - (relevance?.get(b) ?? 0) ||
+		(name?.(a) ?? '').localeCompare(name?.(b) ?? '', 'fr')
+	const ranked = (liste: T[]): T[] => liste.toSorted(byDistance)
+	const localProfiles = [...ranked(cityProfiles), ...withoutCenter]
+	const section = (cle: OthersSection<T>['cle'], titre: string, liste: T[]): OthersSection<T>[] =>
+		liste.length ? [{ cle, titre, profils: ranked(liste) }] : []
+	return {
+		locaux: localProfiles,
+		parLieu: true,
+		departements: searchDepartments(localProfiles, city),
+		localTitle: `À ${origin.label}`,
+		sections: [
+			...section('covering', 'Se déplacent jusqu’à vous', covering),
+			...section('nearby', `Plus loin, à moins de ${NEARBY_MAX_KM} km`, nearby),
 		],
 	}
 }

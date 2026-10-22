@@ -319,7 +319,7 @@ describe('la lecture de l’annuaire', () => {
 		).toHaveLength(10)
 	})
 
-	test('la place d’un profil est sa commune et son département ; le centre de la commune n’en sort pas', async () => {
+	test('la place d’un profil est sa commune et son département ; le centre de la commune reste hors de la carte (ticket 294)', async () => {
 		const { payload } = payloadSpy([[doc('a'), doc('b', { city: null, radiusKm: 30 }), doc('c', { radiusKm: null })]])
 
 		const [a, b, c] = await readDirectory(payload)
@@ -327,9 +327,14 @@ describe('la lecture de l’annuaire', () => {
 		expect(a).toMatchObject({ ville: 'Annecy', departement: '74', seDeplace: true })
 		expect(b).toMatchObject({ ville: null, departement: null, seDeplace: false })
 		expect(c).toMatchObject({ ville: 'Annecy', seDeplace: false })
-		const text = JSON.stringify(await readDirectory(payload))
-		for (const forbidden of ['latitude', 'longitude', 'codeInsee', 'filename', '45.9'])
-			expect(text, forbidden).not.toContain(forbidden)
+		// The centre of the commune is read for the ranking by distance (ticket 294): beside the card, never in it.
+		expect(a?.center).toEqual({ latitude: 45.9, longitude: 6.13 })
+		expect(b?.center).toBeNull()
+		const directory = await readDirectory(payload)
+		const cards = JSON.stringify(directory.map(({ carte }) => carte))
+		for (const forbidden of ['latitude', 'longitude', 'center', 'codeInsee', 'filename', '45.9'])
+			expect(cards, forbidden).not.toContain(forbidden)
+		expect(JSON.stringify(directory)).not.toContain('codeInsee')
 	})
 
 	test('avec les textes, chaque profil porte ce qu’une recherche par mot lit, à côté de sa carte et sans prix', async () => {
