@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { ipClient } from '@/lib/auth/client-ip'
 import { dashboardDecision, isPrivatePage, SESSION_COOKIE } from '@/lib/auth/closed-dashboard'
 import { isClosedFirstAccountScreen } from '@/lib/auth/closed-first-account'
+import { CONFIRMATION_COOKIE, confirmationLinkPlan } from '@/lib/auth/confirmation-link'
 import { linkPlan, PASSWORD_RESET_COOKIE } from '@/lib/auth/forgot-password'
 import {
 	CUTOVER_VARIABLE,
@@ -30,7 +31,8 @@ import { type CheckedFamily, type PageAnswer, urlToCheck } from '@/lib/urls/unkn
  *   « session expirée » message). The authoritative check is the page's own (`requireArtist`).
  * - The link of a forgotten-password mail (`/auth/reinitialiser?code=…`) answers one redirection to the bare
  *   page, the code kept in a cookie of that page only (ticket 085): it never reaches a page, the audience
- *   measurement, the history or a Referer.
+ *   measurement, the history or a Referer. The link of the confirmation mail (`/auth/verification-complete?code=…`)
+ *   is treated the same way (ticket 302).
  * - The search answers 429, in French, past 60 requests a minute from one address (ticket 100). No other
  *   page is braked.
  * - The cookies of the old authentication are expired on the first request, and the sign-in page tells
@@ -160,18 +162,25 @@ function siteProxy(requete: NextRequest) {
 			})
 		return reponse
 	}
-	const link = linkPlan(pathname, requete.nextUrl.searchParams)
+	const resetPlan = linkPlan(pathname, requete.nextUrl.searchParams)
+	const confirmationPlan = confirmationLinkPlan(pathname, requete.nextUrl.searchParams)
+	const link = resetPlan
+		? { plan: resetPlan, cookieName: PASSWORD_RESET_COOKIE }
+		: confirmationPlan
+			? { plan: confirmationPlan, cookieName: CONFIRMATION_COOKIE }
+			: null
 	if (link) {
+		const { plan, cookieName } = link
 		const target = requete.nextUrl.clone()
-		target.pathname = link.aller
+		target.pathname = plan.aller
 		target.search = ''
 		// 303: whatever the method, the next request is a GET of the bare page.
 		const redirection = NextResponse.redirect(target, 303)
 		redirection.cookies.set({
-			name: PASSWORD_RESET_COOKIE,
-			value: link.cookie.valeur,
-			maxAge: link.cookie.maxAgeS,
-			path: link.aller,
+			name: cookieName,
+			value: plan.cookie.valeur,
+			maxAge: plan.cookie.maxAgeS,
+			path: plan.aller,
 			httpOnly: true,
 			sameSite: 'lax',
 			secure: process.env.NODE_ENV === 'production',

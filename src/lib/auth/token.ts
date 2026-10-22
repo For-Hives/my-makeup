@@ -43,6 +43,14 @@ export async function openWithPassword(
 	return { token: result.token, exp: result.exp }
 }
 
+/** Thrown by `openWithoutPassword` when the caller's rule refuses the account: no session was opened. */
+export class SessionRefused extends Error {
+	constructor(readonly code: 'compte-bloque' | 'email-non-confirme') {
+		super('La session n’a pas été ouverte.')
+		this.name = 'SessionRefused'
+	}
+}
+
 /** An account designated by its collection and its identifier. */
 export interface DesignatedAccount {
 	collection: AuthCollectionSlug
@@ -73,11 +81,16 @@ async function reserveAccount(req: PayloadRequest, { collection, id }: Designate
  * back whole: two sign-ins of the same account at the same moment (two first passages through Google,
  * ticket 235) read the same list, and the second write collided with the first or erased it. So the
  * read and the write happen in one transaction, behind a lock on the account. `dureeS` replaces the lifetime of the collection (tests only).
+ *
+ * `refuse` is the caller's rule, asked of the account as it is read INSIDE the locked transaction (a
+ * block written a moment before is seen): a code refuses the account and `SessionRefused` is thrown, with
+ * no session written (ticket 302).
  */
 export async function openWithoutPassword(
 	payload: Payload,
 	{ collection, id }: DesignatedAccount,
-	dureeS?: number
+	dureeS?: number,
+	refuse?: (compte: Record<string, unknown>) => SessionRefused['code'] | null
 ): Promise<Required<SessionToken>> {
 	const collectionConfig = payload.collections[collection].config
 	const req = await createLocalReq({}, payload)
@@ -90,6 +103,8 @@ export async function openWithoutPassword(
 		// query-keys: ignore `collection` is admins or pros, and `id` is on every document
 		const found = await payload.db.findOne<TypedUser>({ collection, req, where: { id: { equals: id } } })
 		if (!found) throw new Error(`Aucun compte « ${collection} » ne porte l’identifiant ${id}.`)
+		const refusal = refuse?.(found as unknown as Record<string, unknown>)
+		if (refusal) throw new SessionRefused(refusal)
 		account = found
 		user = { ...found, collection } as TypedUser
 		;({ sid } = await addSessionToUser({ collectionConfig, payload, req, user }))

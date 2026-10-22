@@ -142,9 +142,12 @@ describe('l’email de confirmation', () => {
 
 describe('confirmerLEmail : la logique du lien, sans base', () => {
 	const TOKEN = 'cd34'.repeat(10)
-	const TRACE = `utilise:${createHash('sha256').update(TOKEN).digest('hex')}`
+	const HASH = createHash('sha256').update(TOKEN).digest('hex')
+	const TRACE = `utilise:${HASH}`
+	// Confirmed, the session of the link not yet claimed (ticket 302).
+	const PENDING = `pending:${HASH}`
 
-	function fakePayload(ligne: Record<string, unknown> | null) {
+	function fakePayload(ligne: Record<string, unknown> | null, claim: Record<string, unknown> | null = { id: 4 }) {
 		const writes: Record<string, unknown>[] = []
 		const requests: unknown[] = []
 		const payload = {
@@ -155,7 +158,7 @@ describe('confirmerLEmail : la logique du lien, sans base', () => {
 				},
 				updateOne: (options: { data: Record<string, unknown> }) => {
 					writes.push(options.data)
-					return Promise.resolve(null)
+					return Promise.resolve(claim)
 				},
 			},
 		} as unknown as Payload
@@ -179,8 +182,13 @@ describe('confirmerLEmail : la logique du lien, sans base', () => {
 		const { payload, ecritures: writes } = fakePayload({ id: 4, _verified: false, _verificationToken: TOKEN })
 		expect(await confirmEmail(payload, TOKEN)).toBe('ok')
 		expect(writes).toHaveLength(1)
-		expect(writes[0]).toMatchObject({ _verified: true, _verificationToken: TRACE })
+		expect(writes[0]).toMatchObject({ _verified: true, _verificationToken: PENDING })
 		expect(JSON.stringify(writes)).not.toContain(TOKEN)
+	})
+
+	test('la prise du lien se perd contre un autre qui l’a prise au même instant : déjà confirmé', async () => {
+		const { payload } = fakePayload({ id: 4, _verified: false, _verificationToken: TOKEN }, null)
+		expect(await confirmEmail(payload, TOKEN)).toBe('deja-confirme')
 	})
 
 	test('le même lien une seconde fois : déjà confirmé, rien n’est écrit', async () => {

@@ -270,6 +270,11 @@
 			"id": "apres-la-suppression-de-ton-compte-l-accueil-te-le-confir",
 			"type": "amelioration",
 			"text": "Après la suppression de ton compte, l’accueil te le confirme, et le chapeau du blog parle enfin de ses articles."
+		},
+		{
+			"id": "apres-avoir-confirme-ton-adresse-un-clic-sur-continuer-ve",
+			"type": "amelioration",
+			"text": "Après avoir confirmé ton adresse (un clic sur « Continuer vers mon profil ») ou choisi un nouveau mot de passe, tu es connectée : plus besoin de retaper ton email et ton mot de passe."
 		}
 	],
 	"releases": []

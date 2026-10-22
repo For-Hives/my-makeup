@@ -73,11 +73,11 @@ test.describe('E08 : le mot de passe oublié de bout en bout', { tag: '@mobile' 
 		expect(page.url()).not.toContain('code')
 		await expect(page.getByRole('heading', { name: 'Nouveau mot de passe' })).toBeVisible()
 		await choose(page, NEW_PASSWORD)
-		await expect(page.getByTestId('mot-de-passe-modifie')).toContainText('Ton mot de passe est modifié.')
-
-		await page.getByRole('link', { name: 'Me connecter' }).click()
-		await signInAction(page, account.email, NEW_PASSWORD)
+		// The new password opens her session (ticket 302): her space, without typing the address again.
 		await expect(page).toHaveURL(/\/auth\/profil$/)
+		expect((await page.context().cookies()).some(({ name }) => name === 'payload-token')).toBe(true)
+		// The code of the link is gone with the form: it cannot serve again.
+		expect((await page.context().cookies()).some(({ name }) => name === 'mm-reset')).toBe(false)
 
 		// The old one is refused, in the common words.
 		await page.context().clearCookies()
@@ -94,7 +94,8 @@ test.describe('E08 : le mot de passe oublié de bout en bout', { tag: '@mobile' 
 		const link = await mailLink(account.email)
 		await page.goto(link)
 		await choose(page, NEW_PASSWORD)
-		await expect(page.getByTestId('mot-de-passe-modifie')).toBeVisible()
+		// A profile still empty goes to the onboarding (ticket 296).
+		await expect(page).toHaveURL(/\/auth\/init-account$/)
 
 		const browserContext = await browser.newContext({ extraHTTPHeaders: { 'x-forwarded-for': url() } })
 		const other = await browserContext.newPage()
@@ -122,7 +123,7 @@ test.describe('E08 : le mot de passe oublié de bout en bout', { tag: '@mobile' 
 		await page.getByLabel('Nouveau mot de passe').fill(NEW_PASSWORD)
 		await page.getByLabel('Confirme le mot de passe').fill(NEW_PASSWORD)
 		await page.getByRole('button', { name: 'Enregistrer' }).click()
-		await expect(page.getByTestId('mot-de-passe-modifie')).toBeVisible()
+		await expect(page).toHaveURL(/\/auth\/init-account$/)
 	})
 })
 
@@ -135,7 +136,7 @@ test.describe('E15 : choisir un nouveau mot de passe déconnecte l’autre navig
 		await ask(page, account.email)
 		await page.goto(await mailLink(account.email))
 		await choose(page, NEW_PASSWORD)
-		await expect(page.getByTestId('mot-de-passe-modifie')).toBeVisible()
+		await expect(page).toHaveURL(/\/auth\/profil$/)
 
 		await elsewhere.page.goto('/auth/profil')
 		await expect(elsewhere.page).toHaveURL(/\/auth\/signin/)

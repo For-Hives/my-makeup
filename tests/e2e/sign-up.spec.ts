@@ -74,14 +74,16 @@ test.describe('E01 : inscription, mur, lien, connexion, onboarding', { tag: '@mo
 		// Signed out: the cookie of the session is not there.
 		expect((await page.context().cookies()).some(({ name }) => name === 'payload-token')).toBe(false)
 
-		// The link of the mail confirms the account.
+		// The link of the mail confirms the account; the code leaves the address (ticket 302).
 		await page.goto(await mailLink(email))
+		await expect(page).toHaveURL(/\/auth\/verification-complete$/)
 		await expect(page.getByRole('heading', { name: /Ton compte My Makeup est maintenant activé/ })).toBeVisible()
+		// The link alone opened nothing.
+		expect((await page.context().cookies()).some(({ name }) => name === 'payload-token')).toBe(false)
 
-		// Sign in from the page: she lands in the onboarding.
-		await page.getByRole('link', { name: 'Se connecter' }).click()
-		await expect(page).toHaveURL(/\/auth\/signin\?callbackUrl=%2Fauth%2Finit-account$/)
-		await signInAction(page, email, '/auth/init-account')
+		// One click opens her session and leads to the onboarding: no address and no password typed again.
+		await page.waitForLoadState('networkidle')
+		await page.getByRole('button', { name: 'Continuer vers mon profil' }).click()
 		await expect(page).toHaveURL(/\/auth\/init-account$/)
 		await expect(page.getByRole('heading', { level: 1, name: 'Prépare ton profil' })).toBeVisible()
 		// Her profile and its address were made by the server, with the account.
@@ -90,6 +92,96 @@ test.describe('E01 : inscription, mur, lien, connexion, onboarding', { tag: '@mo
 		const profile = (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: account?.id } } }))
 			.docs[0]
 		expect(profile?.slug).toMatch(/^lea-fictive(-\d+)?$/)
+	})
+})
+
+test.describe('302 : le lien ouvre la session, sur un autre appareil aussi', () => {
+	test('le lien ouvert dans un autre navigateur que celui de l’inscription, puis un clic : l’accueil, connectée', async ({
+		browser,
+		page,
+	}) => {
+		const email = url()
+		await signUpAction(page, email)
+		await expect(page).toHaveURL(/\/auth\/verification-wall$/)
+		const link = await mailLink(email)
+
+		const phone = await browser.newContext({
+			extraHTTPHeaders: { 'x-forwarded-for': `203.0.113.${40 + (counter++ % 200)}` },
+		})
+		const other = await phone.newPage()
+		await other.goto(link)
+		await other.waitForLoadState('networkidle')
+		await other.getByRole('button', { name: 'Continuer vers mon profil' }).click()
+		await expect(other).toHaveURL(/\/auth\/init-account$/)
+		await expect(other.getByRole('heading', { level: 1, name: 'Prépare ton profil' })).toBeVisible()
+		// She stays signed in on her space, and the browser of the sign-up stayed signed out.
+		await other.goto('/auth/profil')
+		await expect(other).toHaveURL(/\/auth\/(profil|init-account)$/)
+		expect((await page.context().cookies()).some(({ name }) => name === 'payload-token')).toBe(false)
+
+		// The same link again: it opened its session, it opens nothing more.
+		await other.context().clearCookies()
+		await other.goto(link)
+		await expect(other.getByRole('heading', { name: 'Ton adresse email est déjà confirmée.' })).toBeVisible()
+		await expect(other.getByRole('button', { name: 'Continuer vers mon profil' })).toHaveCount(0)
+		await phone.close()
+	})
+
+	test('le lien du mail passe par une redirection qui range le code dans un cookie de la page ; un code mal formé efface le cookie', async ({
+		request,
+	}) => {
+		const response = await request.get(`/auth/verification-complete?code=${'a'.repeat(40)}`, { maxRedirects: 0 })
+		expect(response.status()).toBe(303)
+		const location = new URL(response.headers().location ?? '', 'http://x')
+		expect([location.pathname, location.search]).toEqual(['/auth/verification-complete', ''])
+		const cookie = response.headers()['set-cookie'] ?? ''
+		expect(cookie).toContain('mm-confirm=')
+		expect(cookie).toContain('HttpOnly')
+		expect(cookie).toContain('Path=/auth/verification-complete')
+		expect(cookie).toContain('SameSite=lax')
+		expect(cookie).toContain('Max-Age=3600')
+		expect(response.headers()['referrer-policy']).toBe('no-referrer')
+		expect(response.headers()['cache-control']).toContain('no-store')
+
+		const bad = await request.get('/auth/verification-complete?code=abc', { maxRedirects: 0 })
+		expect(bad.status()).toBe(303)
+		expect(bad.headers()['set-cookie'] ?? '').toMatch(/mm-confirm=;/)
+	})
+
+	test('la page qui propose la session : cibles de 44 px, pas de défilement horizontal, aucune violation grave, sans Referer', async ({
+		page,
+	}) => {
+		const email = url()
+		await signUpAction(page, email)
+		await expect(page).toHaveURL(/\/auth\/verification-wall$/)
+		await page.goto(await mailLink(email))
+		const button = page.getByRole('button', { name: 'Continuer vers mon profil' })
+		await expect(button).toBeVisible()
+
+		for (const target of [button, page.getByRole('link', { name: 'Se connecter' })]) {
+			const box = await target.boundingBox()
+			expect(box?.height ?? 0).toBeGreaterThanOrEqual(44)
+		}
+		expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+		expect(await violationsSevere(page)).toEqual([])
+		expect(await page.locator('meta[name="referrer"]').getAttribute('content')).toBe('no-referrer')
+	})
+
+	test('le lien d’un compte bloqué par l’équipe : la page est la même, et le clic ne connecte personne', async ({
+		page,
+	}) => {
+		const email = url()
+		await signUpAction(page, email)
+		await expect(page).toHaveURL(/\/auth\/verification-wall$/)
+		const payload = await testPayload()
+		const account = (await payload.find({ collection: 'pros', depth: 0, where: { email: { equals: email } } })).docs[0]
+		await payload.update({ collection: 'pros', id: account?.id ?? 0, data: { blocked: true }, overrideAccess: true })
+
+		await page.goto(await mailLink(email))
+		await page.waitForLoadState('networkidle')
+		await page.getByRole('button', { name: 'Continuer vers mon profil' }).click()
+		await expect(page).toHaveURL(/\/auth\/signin\?callbackUrl=%2Fauth%2Finit-account$/)
+		expect((await page.context().cookies()).some(({ name }) => name === 'payload-token')).toBe(false)
 	})
 })
 
@@ -121,6 +213,13 @@ test.describe('avant le lien', () => {
 
 		await page.goto(link)
 		await expect(page.getByRole('heading', { name: /maintenant activé/ })).toBeVisible()
+		// Opened a second time before the click (a mail reader came first): the offer is still there.
+		await page.goto(link)
+		await expect(page.getByRole('heading', { name: /maintenant activé/ })).toBeVisible()
+		await page.waitForLoadState('networkidle')
+		await page.getByRole('button', { name: 'Continuer vers mon profil' }).click()
+		await expect(page).toHaveURL(/\/auth\/init-account$/)
+		await page.context().clearCookies()
 		await page.goto(link)
 		await expect(page.getByRole('heading', { name: 'Ton adresse email est déjà confirmée.' })).toBeVisible()
 		await page.goto(link.slice(0, -5))

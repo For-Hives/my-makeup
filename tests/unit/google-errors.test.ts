@@ -48,8 +48,10 @@ describe('?error= : une liste fermée, jamais ce qui est écrit dans l’adresse
 })
 
 describe('le journal garde la méthode, dans une liste fermée', () => {
-	test('google et mot de passe sont écrits, tout le reste est ignoré', () => {
-		expect(EVENT_METHODS).toEqual(['password', 'google'])
+	test('google, mot de passe et les deux liens du courrier sont écrits, tout le reste est ignoré', () => {
+		expect(EVENT_METHODS).toEqual(['password', 'google', 'confirmation', 'password-reset'])
+		expect(authLogRow({ type: 'sign-in', code: 'ok', method: 'confirmation' }).method).toBe('confirmation')
+		expect(authLogRow({ type: 'sign-in', code: 'ok', method: 'password-reset' }).method).toBe('password-reset')
 		expect(authLogRow({ type: 'sign-in', code: 'ok', method: 'google' }).method).toBe('google')
 		const slid = 'lea@example.test' as unknown as 'google'
 		expect('method' in authLogRow({ type: 'sign-in', code: 'ok', method: slid })).toBe(false)

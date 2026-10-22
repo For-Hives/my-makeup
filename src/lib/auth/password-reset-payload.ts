@@ -21,6 +21,7 @@ import {
 } from './forgot-password'
 import { PASSWORD_RESET_CONTEXT } from './forgot-payload'
 import { forgotPasswordRateLimit, passwordResetRateLimit, type RateLimit } from './rate-limit'
+import { type OpenSession, openSessionForLink } from './session-after-link'
 
 /**
  * The forgotten password, server side (tickets 085 and 086). Two steps, and no `next` import: the
@@ -178,7 +179,8 @@ export async function requestPasswordLink({
 	return { ok: true }
 }
 
-export type PasswordResetResult = { ok: true } | { ok: false; code: PasswordResetFailureCode }
+/** `token` is there only when the caller asked for a session (`ouvrirSession`) and one was opened (ticket 302). */
+export type PasswordResetResult = { ok: true; token?: string } | { ok: false; code: PasswordResetFailureCode }
 
 export interface PasswordResetInputs {
 	payload: Payload
@@ -189,6 +191,11 @@ export interface PasswordResetInputs {
 	confirmation: unknown
 	frein?: RateLimit
 	journal?: Log
+	/**
+	 * Opens a session for the account once the new password is saved (ticket 302). Without it no session is
+	 * opened. The reset has emptied every session of the account first, so that this one is the only one.
+	 */
+	ouvrirSession?: OpenSession
 }
 
 export async function resetPassword({
@@ -199,6 +206,7 @@ export async function resetPassword({
 	confirmation,
 	frein = passwordResetRateLimit,
 	journal,
+	ouvrirSession,
 }: PasswordResetInputs): Promise<PasswordResetResult> {
 	const start = Date.now()
 	const record = async (code: EventCode) => {
@@ -231,6 +239,7 @@ export async function resetPassword({
 
 	const req = await createLocalReq({ context: { [PASSWORD_RESET_CONTEXT]: true } }, payload)
 	await initTransaction(req)
+	let accountId: number | string
 	try {
 		// Claims the link first, in this transaction: the write locks the row, so that a second submit of
 		// the same link waits for this one to commit, then finds the token gone and is refused.
@@ -271,6 +280,7 @@ export async function resetPassword({
 			returning: false,
 		})
 		await commitTransaction(req)
+		accountId = user.id as number | string
 	} catch (error) {
 		await killTransaction(req)
 		const status = (error as { status?: number } | null)?.status
@@ -280,7 +290,18 @@ export async function resetPassword({
 	}
 	frein.rendre(key)
 	await record('ok')
-	return { ok: true }
+	if (!ouvrirSession) return { ok: true }
+	// After the commit: opening a session takes its own transaction and a lock on the account, which the
+	// reset's write held until now. A refusal (blocked, address not confirmed) or a failure leaves the
+	// password changed and gives the result of before: she signs in with it.
+	const session = await openSessionForLink({
+		payload,
+		accountId,
+		origin: 'password-reset',
+		journal,
+		open: ouvrirSession,
+	})
+	return session.ok ? { ok: true, token: session.token } : { ok: true }
 }
 
 /**

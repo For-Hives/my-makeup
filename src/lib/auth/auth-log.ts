@@ -56,10 +56,11 @@ export const EVENT_CODES = [
 export type EventCode = (typeof EVENT_CODES)[number]
 
 /**
- * How the person proved who she is (ticket 090). Older rows have none. Closed list, like the others:
- * a value outside it is not written.
+ * How the person proved who she is (ticket 090), or which link of a mail opened her session (ticket
+ * 302: `confirmation` for the link of the confirmation mail, `password-reset` for the choice of a new
+ * password). Older rows have none. Closed list, like the others: a value outside it is not written.
  */
-export const EVENT_METHODS = ['password', 'google'] as const
+export const EVENT_METHODS = ['password', 'google', 'confirmation', 'password-reset'] as const
 export type EventMethod = (typeof EVENT_METHODS)[number]
 
 /** How long a row is kept, in days (plan 01 §2.3). */

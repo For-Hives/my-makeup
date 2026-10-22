@@ -39,6 +39,8 @@ const CODE_LABELS: Record<(typeof EVENT_CODES)[number], string> = {
 const METHOD_LABELS: Record<(typeof EVENT_METHODS)[number], string> = {
 	password: 'Mot de passe',
 	google: 'Google',
+	confirmation: 'Lien de confirmation de l’email',
+	'password-reset': 'Nouveau mot de passe choisi',
 }
 
 /**

@@ -620,7 +620,7 @@ export interface AuthEvent {
     | 'retour-invalide'
     | 'inconnu'
     | 'champ-piege';
-  method?: ('password' | 'google') | null;
+  method?: ('password' | 'google' | 'confirmation' | 'password-reset') | null;
   durationMs?: number | null;
   date: string;
 }

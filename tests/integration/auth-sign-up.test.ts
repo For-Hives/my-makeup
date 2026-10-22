@@ -246,7 +246,8 @@ describe('le lien du mail : à usage unique', () => {
 			collection: 'pros',
 			where: { email: { equals: email } },
 		})
-		expect(line?._verificationToken).toStartWith('utilise:')
+		// Confirmed, the session of the link not yet claimed (ticket 302): a trace of the token, never the token.
+		expect(line?._verificationToken).toStartWith('pending:')
 		expect(line?._verificationToken).not.toContain(code)
 	})
 

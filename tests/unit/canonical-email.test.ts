@@ -84,7 +84,12 @@ describe('confirmerSousFrein : le lien du mail, freiné par adresse cliente', ()
 			)
 
 		// The two first reach the table (which fails here, so the page would say so); the others never do.
-		expect(tests).toEqual(['erreur', 'erreur', 'lien-invalide', 'lien-invalide'])
+		expect(tests).toEqual([
+			'erreur',
+			'erreur',
+			{ result: 'lien-invalide', sessionOffered: false },
+			{ result: 'lien-invalide', sessionOffered: false },
+		])
 		expect(lines).toEqual([])
 	})
 })
