@@ -18,6 +18,7 @@ export function useFirstPress(action: () => void) {
 			if (event.button !== 0) return
 			pressed.current = true
 			action()
+			swallowNextClick()
 		},
 		onMouseDown(event: MouseEvent<HTMLElement>) {
 			event.preventDefault()
@@ -29,4 +30,32 @@ export function useFirstPress(action: () => void) {
 			if (!followsPress) action()
 		},
 	}
+}
+
+/** How long the click that follows a press may still arrive. */
+const CLICK_WINDOW_MS = 600
+
+/**
+ * The action moved the layout: the click that ends the press lands on whatever now sits under the
+ * finger (the control that replaced this one), and would trigger it. That one click is stopped
+ * before it reaches the page.
+ */
+function swallowNextClick() {
+	if (typeof document === 'undefined') return
+	const stop = (event: Event) => {
+		// A click of the keyboard (detail 0) is not the end of this press.
+		if ((event as globalThis.MouseEvent).detail === 0) return
+		event.stopPropagation()
+		event.preventDefault()
+		done()
+	}
+	const timer = setTimeout(() => done(), CLICK_WINDOW_MS)
+	function done() {
+		clearTimeout(timer)
+		document.removeEventListener('click', stop, true)
+		document.removeEventListener('pointerdown', done, true)
+	}
+	document.addEventListener('click', stop, true)
+	// A new press is another gesture: the click of this one will not come.
+	document.addEventListener('pointerdown', done, true)
 }

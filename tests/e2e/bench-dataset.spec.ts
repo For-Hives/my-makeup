@@ -24,9 +24,9 @@ test.describe('Le jeu du banc dans l’administration', () => {
 		await context.addCookies(session.cookies)
 
 		await page.goto('/admin/collections/profiles?limit=100')
-		// The list shows the slug of a profile, no longer the address of its account (ticket 165).
+		// The list shows the slug of a profile in its own column, no longer the address of its account (tickets 165, 308).
 		for (const { attendu: expected } of LOADED_DEMO_PROFILES)
-			await expect(page.getByRole('link', { name: expected.slug, exact: true })).toHaveCount(1)
+			await expect(page.getByRole('cell', { name: expected.slug, exact: true })).toHaveCount(1)
 		expect(LOADED_DEMO_PROFILES).toHaveLength(BENCH_CONTENT.profilsTypes)
 
 		await page.goto('/admin/collections/talents?limit=100')
