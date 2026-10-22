@@ -215,6 +215,11 @@
 			"id": "si-ta-page-est-masquee-par-l-equipe-ton-espace-te-le-dit",
 			"type": "amelioration",
 			"text": "Si ta page est masquée par l’équipe, ton espace te le dit avec le motif, et si tu es en pause, tu peux reprendre les demandes d’un clic."
+		},
+		{
+			"id": "dans-ton-espace-le-lien-je-travaille-a-l-etranger-reagit",
+			"type": "amelioration",
+			"text": "Dans ton espace, le lien « Je travaille à l’étranger » réagit dès le premier appui, et si ta ville n’est pas en France (Genève, Liège, Turin), on te propose directement le pays."
 		}
 	],
 	"releases": []
