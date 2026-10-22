@@ -311,7 +311,7 @@ const A_COMMIT = '1'.repeat(40)
 
 test('the workflows of the repository are read: the CI is one of them', () => {
 	expect(workflows.map(workflow => workflow.file)).toContain(CI)
-	expect(Object.keys(ci.jobs)).toEqual(['qualite', 'unit', 'build', 'integration', 'e2e', AGGREGATOR])
+	expect(Object.keys(ci.jobs)).toEqual(['qualite', 'unit', 'build', 'integration', 'e2e', 'perf', AGGREGATOR])
 })
 
 describe('C01: no step and no job is allowed to fail', () => {
@@ -522,8 +522,8 @@ describe('C03: the required checks exist under their exact names', () => {
 describe('C04: the workflows install the Node of .nvmrc and the bun of package.json', () => {
 	test('every setup step reads its version in the repository', () => {
 		expect(misalignedSetups(workflows)).toEqual([])
-		expect(ciText.match(/node-version-file: \.nvmrc/g)).toHaveLength(2)
-		expect(ciText.match(/bun-version-file: package\.json/g)).toHaveLength(5)
+		expect(ciText.match(/node-version-file: \.nvmrc/g)).toHaveLength(3)
+		expect(ciText.match(/bun-version-file: package\.json/g)).toHaveLength(6)
 	})
 
 	test.each([
@@ -780,9 +780,13 @@ describe('ci-ok is red when a job failed, was cancelled or was skipped', () => {
 		return { code: ran.exitCode, output: ran.stdout.toString() }
 	}
 
-	/** The results of the five jobs, in the order of `needs`: every one a success, but the ones given. */
-	const results = (changed: Partial<Record<'qualite' | 'unit' | 'build' | 'integration' | 'e2e', string>> = {}) =>
-		(['qualite', 'unit', 'build', 'integration', 'e2e'] as const).map(job => changed[job] ?? 'success').join(' ')
+	/** The results of the six jobs, in the order of `needs`: every one a success, but the ones given. */
+	const results = (
+		changed: Partial<Record<'qualite' | 'unit' | 'build' | 'integration' | 'e2e' | 'perf', string>> = {}
+	) =>
+		(['qualite', 'unit', 'build', 'integration', 'e2e', 'perf'] as const)
+			.map(job => changed[job] ?? 'success')
+			.join(' ')
 
 	test('green when every job succeeded', () => {
 		expect(verdict(results())).toMatchObject({ code: 0 })
@@ -815,7 +819,7 @@ describe('ci-ok is red when a job failed, was cancelled or was skipped', () => {
 
 	test('it always runs, waits for every other job, and nothing can be skipped by a condition', () => {
 		expect(aggregatorProblems(ci, AGGREGATOR)).toEqual([])
-		expect(ci.jobs[AGGREGATOR]?.needs).toEqual(['qualite', 'unit', 'build', 'integration', 'e2e'])
+		expect(ci.jobs[AGGREGATOR]?.needs).toEqual(['qualite', 'unit', 'build', 'integration', 'e2e', 'perf'])
 	})
 
 	test.each([
@@ -823,14 +827,14 @@ describe('ci-ok is red when a job failed, was cancelled or was skipped', () => {
 		['a ci-ok that runs on success only', '    if: always()\n', '    if: success()\n', 'sans « if: always() »'],
 		[
 			'a job ci-ok does not wait for',
-			'needs: [qualite, unit, build, integration, e2e]',
-			'needs: [qualite, unit, build, integration]',
+			'needs: [qualite, unit, build, integration, e2e, perf]',
+			'needs: [qualite, unit, build, integration, perf]',
 			'il n’attend pas le job « e2e »',
 		],
 		[
 			'the integration tests left out of ci-ok',
-			'needs: [qualite, unit, build, integration, e2e]',
-			'needs: [qualite, unit, build, e2e]',
+			'needs: [qualite, unit, build, integration, e2e, perf]',
+			'needs: [qualite, unit, build, e2e, perf]',
 			'il n’attend pas le job « integration »',
 		],
 		[
@@ -841,7 +845,7 @@ describe('ci-ok is red when a job failed, was cancelled or was skipped', () => {
 		],
 		[
 			'a needed job that does not exist',
-			'needs: [qualite, unit, build, integration, e2e]',
+			'needs: [qualite, unit, build, integration, e2e, perf]',
 			'needs: [qualite, unit, build, integration, e2e, lighthouse]',
 			'il attend « lighthouse », qui n’existe pas',
 		],
@@ -1486,5 +1490,15 @@ describe('Ticket 137: the reconciliation of the storage and the database runs af
 			'        continue-on-error: true\n        run: bun run bench:reconcile --outside-import\n'
 		)
 		expect(toleratedFailures([tolerant]).length).toBeGreaterThan(0)
+	})
+})
+
+describe('issue 984: the CI watches the speed of the four reference pages', () => {
+	test('a perf job runs the gate after the application is up on the bench, and ci-ok waits for it', () => {
+		const steps = (ci.jobs.perf?.steps ?? []).map(step => step.run ?? '')
+		expect(steps.some(run => run.includes('bun run bench:full'))).toBe(true)
+		expect(steps.at(-1)).toBe('bun run perf:ci')
+		expect(ci.jobs[AGGREGATOR]?.needs).toContain('perf')
+		// Warning, then error: the switch is a dated rule of the script, tested in tests/unit/perf-ci-gate.test.ts.
 	})
 })

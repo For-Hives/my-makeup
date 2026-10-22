@@ -53,6 +53,7 @@
 		"indexnow:all": "bun --no-env-file scripts/seo/indexnow-all.ts",
 		"names:check": "bun --no-env-file scripts/naming/check.ts",
 		"perf:lighthouse": "bun --no-env-file scripts/perf/lighthouse.ts",
+		"perf:ci": "bun --no-env-file scripts/perf/ci.ts",
 		"perf:pool-load": "bun --no-env-file scripts/perf/pool-load.ts"
 	},
 	"dependencies": {

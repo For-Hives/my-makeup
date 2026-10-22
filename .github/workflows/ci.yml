@@ -190,12 +190,51 @@ jobs:
             test-results
           retention-days: 14
 
+  # Issue 984: the speed of the four reference pages (P01 to P04, plan 02 §7.5). The application is built and started
+  # on the bench (bench:full), Lighthouse measures it in mobile (3 runs per page, median), and scripts/perf/ci-gate.ts
+  # judges the medians with the budgets of the plan: a warning until 06/11/2026, an error from that day. The softness is
+  # in the script, not in the workflow (no `continue-on-error`): the date and the rules are tested in
+  # tests/unit/perf-ci-gate.test.ts. Parallel to the other jobs: nothing waits for the build job.
+  perf:
+    name: perf
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      # Lighthouse runs under Node, through npx.
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - name: Install
+        run: bun install --frozen-lockfile
+      # A Chromium newer than the one of the repository's Playwright: with Chromium 147, Lighthouse 13.5.0 never gets
+      # the first paint of a page that has a Referrer-Policy header (docs/mesure/lighthouse.md, « Le navigateur »).
+      # scripts/perf/lighthouse.ts takes the newest Chromium of ~/.cache/ms-playwright.
+      - name: Browser for Lighthouse
+        run: npx --yes playwright@1.64.1 install chromium
+      - name: Start the application on the bench
+        run: |
+          bun run bench:full > bench-full.log 2>&1 &
+          for _ in $(seq 1 100); do
+            if curl -fsS -o /dev/null http://127.0.0.1:3100/api/health; then break; fi
+            sleep 3
+          done
+          curl -fsS http://127.0.0.1:3100/api/health
+      - name: Speed of the four reference pages
+        run: bun run perf:ci
+
   # THE required check. A needed job that failed, was cancelled or was skipped makes it red:
   # GitHub counts a skipped required job as passed, this job does not.
   ci-ok:
     name: ci-ok
     if: always()
-    needs: [qualite, unit, build, integration, e2e]
+    needs: [qualite, unit, build, integration, e2e, perf]
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:
