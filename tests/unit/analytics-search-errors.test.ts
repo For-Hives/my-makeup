@@ -138,7 +138,7 @@ describe('rien de saisi ne part : lecture du code', () => {
 		const page = read('src/app/(front)/(site)/search/page.tsx')
 		const tag = page.match(/<SearchAnalytics[\s\S]*?\/>/)?.[0] ?? ''
 		expect(tag).toContain("aUneVille={city !== ''}")
-		expect(tag).toContain('resultBucket(all.length)')
+		expect(tag).toContain('resultBucket(view.total)')
 		expect(tag).toContain('fingerprint(')
 		expect(tag).not.toMatch(/search=\{search\}|city=\{city\}|recherche=/)
 	})

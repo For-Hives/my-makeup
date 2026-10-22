@@ -2,7 +2,7 @@ import { randomInt } from 'node:crypto'
 import { gzipSync } from 'node:zlib'
 import { type APIRequestContext, expect, request as pwRequest, test } from '@playwright/test'
 import { type SearchProfile, setSearchProfiles, TEST_WORD } from '../fixtures/search-profiles'
-import { buildByApplication, DISTANT_CITIES, removeByApplication } from '../support/profile-factory'
+import { buildByApplication, LILLE_AREA, removeByApplication } from '../support/profile-factory'
 import { refreshProfilePages } from '../support/public-pages'
 
 /**
@@ -49,33 +49,29 @@ test.describe('Recherche par mot, par pages', () => {
 		await expect(page).toHaveURL(`/search?search=mariage+${KEYWORD}&city=Annecy`)
 		const title = page.getByRole('heading', { level: 1 })
 		await expect(title).toHaveCount(1)
-		await expect(title).toHaveText(`5 résultats pour « mariage ${TEST_WORD} » à « Annecy »`)
-		// The artists of Annecy whose profile speaks of marriage lead the list; the title counts them only.
+		// Ticket 295: the artists of Annecy whose profile speaks of marriage (5) and the one within 50 km (Annemasse).
+		await expect(title).toHaveText(`6 résultats pour « mariage ${TEST_WORD} » à « Annecy »`)
 		const first = page.locator('main ul').first()
 		await expect(first.locator(link('reference'))).toHaveCount(1)
-		const account = Number(((await title.textContent()) ?? '').match(/^(\d+)/)?.[1])
-		expect(await first.locator('> li').count()).toBe(account)
-		// Nantes and Annemasse are not in the first list, and not left out: they follow, under their own headings.
-		await expect(first.locator(link('ville-eloignee'))).toHaveCount(0)
-		await expect(page.locator('main section').locator(link('ville-eloignee'))).toHaveCount(1)
+		expect(await first.locator('> li').count()).toBe(5)
+		await expect(first.locator(link('ville-voisine'))).toHaveCount(0)
+		await expect(page.locator('main section').locator(link('ville-voisine'))).toHaveCount(1)
+		// Nantes is far and does not travel: it is not listed.
+		await expect(page.locator(link('ville-eloignee'))).toHaveCount(0)
 		// The form keeps what was typed.
 		await expect(page.getByLabel('Prestation recherchée')).toHaveValue(`mariage ${TEST_WORD}`)
 		await expect(page.getByLabel('Ville de la prestation')).toHaveValue('Annecy')
 	})
 
-	test('un mot qu’aucun profil de la ville ne porte le dit, et garde les autres sous leurs titres', async ({
-		page,
-	}) => {
+	test('un mot qu’aucun profil proche ne porte le dit, sans lister les autres', async ({ page }) => {
 		await page.goto(`/search?search=%C3%A9v%C3%A9nementiel+${KEYWORD}&city=Annecy`)
 
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText(
 			`Aucun résultat pour « événementiel ${TEST_WORD} » à « Annecy »`
 		)
-		await expect(
-			page.getByText('Aucune maquilleuse n’indique « Annecy » (ville ou département) dans son profil.')
-		).toBeVisible()
-		// Chloé Bertin, in Nantes, is the one who writes it: she follows, she is not left out.
-		await expect(page.locator(link('ville-eloignee'))).toHaveCount(1)
+		await expect(page.getByRole('link', { name: `Chercher « événementiel ${TEST_WORD} » partout` })).toBeVisible()
+		// Ticket 295: Chloé Bertin, in Nantes, writes it but is far and does not travel: nobody else is listed.
+		await expect(page.locator(link('ville-eloignee'))).toHaveCount(0)
 		await expect(page.locator(link('reference'))).toHaveCount(0)
 	})
 
@@ -168,8 +164,8 @@ test.describe('Recherche par mot, par pages', () => {
 })
 
 // The pages need more than 20 results, which the bench does not hold: 45 profiles are created through the
-// application for these tests and removed after them. They are far from Annecy and Nantes and none travels,
-// so for every other search of the shared bench they come last, under « Autres maquilleuses ».
+// application for these tests and removed after them. They are in Lille and Lillers, far from Annecy and Nantes,
+// and none travels: no other search of the shared bench lists them.
 test.describe('Pages de résultats', () => {
 	test.describe.configure({ mode: 'serial' })
 
@@ -189,7 +185,7 @@ test.describe('Pages de résultats', () => {
 		created = await buildByApplication(context, GENERATED, {
 			prefixe: prefix,
 			marqueur: marker,
-			communes: DISTANT_CITIES,
+			communes: LILLE_AREA,
 			seDeplacent: false,
 		})
 	})
@@ -243,7 +239,7 @@ test.describe('Pages de résultats', () => {
 	}) => {
 		const seen: string[] = []
 		for (const number of [1, 2, 3]) {
-			await page.goto(`/search?search=${marker}&city=Annecy${number > 1 ? `&page=${number}` : ''}`)
+			await page.goto(`/search?search=${marker}&city=Lille${number > 1 ? `&page=${number}` : ''}`)
 			await expect(page.getByText(`Page ${number} sur 3`)).toBeVisible()
 			seen.push(
 				...(await page

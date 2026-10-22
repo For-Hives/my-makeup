@@ -1,16 +1,15 @@
 import Image from 'next/image'
 import { SearchAnalytics } from '@/components/analytics/PageAnalytics'
 import { SearchBlock } from '@/components/blocks/SearchBlock'
-import { ResultList } from '@/components/search/ResultList'
-import { ResultPages } from '@/components/search/ResultPages'
+import { SearchResults } from '@/components/search/SearchResults'
 import { NoResult, SearchFailed } from '@/components/search/SearchStates'
 import { fingerprint } from '@/lib/analytics/duplicate'
 import { resultBucket } from '@/lib/analytics/values'
-import { readSearch, resultsTitle, searchByCity, searchByWord } from '@/lib/search/input'
-import { paginate, sectionsOfPage } from '@/lib/search/pagination'
-import { municipalitiesOfPostalCodes, municipalitiesPhrase, readPlace, sectionsByPlace } from '@/lib/search/place'
+import { readSearch, searchByCity, searchByWord } from '@/lib/search/input'
+import { readPlace } from '@/lib/search/place'
+import { resolvePlace } from '@/lib/search/place-point'
 import { readWithoutBlocking } from '@/lib/search/read'
-import { find } from '@/lib/search/results'
+import { buildSearchView } from '@/lib/search/view'
 import { pageMetadata } from '@/lib/seo/metadata'
 import { cachedDirectory, cachedDirectoryWithTexts } from '@/services/public/cached'
 
@@ -31,7 +30,8 @@ export const metadata = pageMetadata({
  * The search page: `/search?search=…&city=…&page=…`. The address is the only source of the search.
  *
  * - By city (ticket 098): the artists of the city or of the département typed come first and are the
- *   only ones the title counts; the others follow under their own headings.
+ *   only ones the title counts; the others follow under their own headings. When the commune is known
+ *   (ticket 295) they are ranked by distance, and a city where nobody is near gets the honest empty state.
  * - By a word, alone or with a city (ticket 099): the listed profiles that hold the words, best first
  *   (src/lib/search/relevance.ts); with a city, hers come first, as above.
  * - Pages of 20, every profile once (ticket 100), and an error state with « Réessayer » when the
@@ -61,7 +61,11 @@ export default async function SearchPage({ searchParams }: PageProps<'/search'>)
 		)
 	}
 
-	const reading = await readWithoutBlocking(searchByWord(query) ? cachedDirectoryWithTexts : cachedDirectory)
+	// The place typed is resolved beside the read of the directory: the two waits do not add up (ticket 295).
+	const [reading, place] = await Promise.all([
+		readWithoutBlocking(searchByWord(query) ? cachedDirectoryWithTexts : cachedDirectory),
+		city === '' ? ({ genre: 'unknown' } as const) : resolvePlace(city),
+	])
 	if (!reading.reussie)
 		return (
 			<main className="relative flex flex-1 flex-col">
@@ -71,23 +75,7 @@ export default async function SearchPage({ searchParams }: PageProps<'/search'>)
 		)
 
 	const directory = reading.valeur
-	const { locaux: localProfiles, parLieu: byPlace, sections } = find(directory, query)
-	const all = [...localProfiles, ...sections.flatMap(section => section.profils)]
-	const municipalities = municipalitiesPhrase(municipalitiesOfPostalCodes(localProfiles, city))
-	const page = paginate(all, query.page)
-	const [localsOfPage = [], ...sectionsOfThisPage] = sectionsOfPage(page, [
-		localProfiles.length,
-		...sections.map(section => section.profils.length),
-	])
-	// The sections that have something on this page, in order.
-	const groups = sections
-		.map((section, rang) => ({ section, profils: sectionsOfThisPage[rang] ?? [] }))
-		.filter(({ profils }) => profils.length > 0)
-	// The rank of a card is its place in the whole list, over all the pages: the sections follow one another.
-	const startRanks = groups.reduce<number[]>(
-		(departs, { profils }, i) => [...departs, (departs[i] ?? 0) + profils.length],
-		[page.premier + localsOfPage.length]
-	)
+	const view = buildSearchView(directory, query, place)
 
 	return (
 		<main className="relative flex flex-1 flex-col">
@@ -95,58 +83,22 @@ export default async function SearchPage({ searchParams }: PageProps<'/search'>)
 			{/* Two facts and a hash: never the words (ticket 145). Page 1 and page 2 are the same search. */}
 			<SearchAnalytics
 				aUneVille={city !== ''}
-				resultats={resultBucket(all.length)}
+				resultats={resultBucket(view.total)}
 				empreinte={fingerprint(`${search}|${city}`)}
 			/>
-			{all.length === 0 ? (
+			{view.empty ? (
 				<NoResult
-					titre={resultsTitle(query, 0)}
+					titre={view.title}
 					search={search}
 					city={city}
-					departements={city ? sectionsByPlace(directory, city).departements : []}
+					departements={view.departments}
 					codesPostaux={readPlace(city).postalCodes}
+					foreignCity={view.foreignCity}
+					foreignCountry={view.foreignCountry}
+					loin={view.far.map(({ carte }) => carte)}
 				/>
 			) : (
-				<div className="w-full px-4 pb-16 md:px-16">
-					<h1 className="mb-8 font-bold text-2xl text-gray-800">
-						{resultsTitle(query, byPlace ? localProfiles.length : all.length)}
-					</h1>
-					{/* Ticket 263: the communes a postal code found, named from the profiles listed. */}
-					{municipalities && <p className="-mt-4 mb-8 text-gray-700">{municipalities}</p>}
-					{byPlace && localProfiles.length === 0 && (
-						<p className="-mt-4 mb-8 text-gray-700">
-							Aucune maquilleuse n’indique « {city} » (ville ou département) dans son profil.
-						</p>
-					)}
-					{localsOfPage.length > 0 && (
-						<section aria-labelledby="recherche-titre-locaux">
-							<h2 id="recherche-titre-locaux" className="sr-only">
-								{byPlace ? `Maquilleuses de « ${city} »` : 'Résultats'}
-							</h2>
-							<ResultList
-								cartes={localsOfPage.map(({ carte }) => carte)}
-								premiereDeLaPage
-								rangDuPremier={page.premier}
-							/>
-						</section>
-					)}
-					{groups.map(({ section, profils }, rang) => (
-						<section key={section.cle} aria-labelledby={`recherche-titre-${section.cle}`}>
-							<h2
-								id={`recherche-titre-${section.cle}`}
-								className={`mb-8 font-bold text-gray-800 text-xl ${rang > 0 || localsOfPage.length > 0 ? 'mt-12' : ''}`}
-							>
-								{section.titre}
-							</h2>
-							<ResultList
-								cartes={profils.map(({ carte }) => carte)}
-								rangDuPremier={startRanks[rang] ?? page.premier}
-								premiereDeLaPage={rang === 0 && localsOfPage.length === 0}
-							/>
-						</section>
-					))}
-					<ResultPages recherche={query} page={page.page} pages={page.pages} />
-				</div>
+				<SearchResults vue={view} recherche={query} />
 			)}
 		</main>
 	)

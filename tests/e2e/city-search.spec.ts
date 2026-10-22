@@ -44,6 +44,10 @@ const A_ANNECY = [
 	'verifiee',
 ] as const
 
+// Ticket 295: a search by « Annecy » shows the ones of Annecy and the ones within 50 km (Annemasse); Thonon, 57 km
+// away, and Nantes are in no section.
+const NEAR_ANNECY = [...A_ANNECY, 'ville-voisine'] as const
+
 let profiles: ReadonlyMap<string, SearchProfile>
 const profile = (cle: string): SearchProfile => {
 	const found = profiles.get(cle)
@@ -64,19 +68,20 @@ test.describe('Recherche par ville', () => {
 	})
 
 	// E38
-	test('E38 : par ville, des cartes avec nom, spécialité, zone et photo, et un titre qui ne compte que la ville', {
+	test('E38 : par ville, des cartes avec nom, spécialité, zone et photo, et un titre qui compte ce qui est montré', {
 		tag: ['@smoke', '@mobile'],
 	}, async ({ page }) => {
 		await page.goto(find('Annecy'))
 
 		const title = page.getByRole('heading', { level: 1 })
 		await expect(title).toHaveCount(1)
-		await expect(title).toHaveText(`${A_ANNECY.length} résultats pour « ${TEST_WORD} » à « Annecy »`)
-		const account = Number(((await title.textContent()) ?? '').match(/^(\d+)/)?.[1])
-		// The title counts the artists of Annecy: the first list, before the first section.
-		expect(await page.locator('main ul').first().locator('> li').count()).toBe(account)
+		// Ticket 295: the title counts what is shown, the artists of Annecy and the ones within 50 km.
+		await expect(title).toHaveText(`${NEAR_ANNECY.length} résultats pour « ${TEST_WORD} » à « Annecy »`)
+		// The first list is the artists of Annecy, under « À Annecy ».
+		expect(await page.locator('main ul').first().locator('> li').count()).toBe(A_ANNECY.length)
+		await expect(page.getByRole('heading', { level: 2, name: 'À Annecy' })).toBeVisible()
 		const total = await page.locator('main li a[href^="/profil/"]').count()
-		expect(total).toBe(LISTS.length)
+		expect(total).toBe(NEAR_ANNECY.length)
 
 		const reference = profile('reference')
 		const card = page.locator(`a[href="/profil/${reference.slug}"]`)
@@ -95,24 +100,23 @@ test.describe('Recherche par ville', () => {
 		expect(overflow).toBeLessThanOrEqual(0)
 	})
 
-	test('les maquilleuses de la ville d’abord, puis le même département, puis celles qui se déplacent', async ({
+	test('les maquilleuses de la ville d’abord, puis celles qui sont à moins de 50 km, et personne de plus loin', async ({
 		page,
 	}) => {
 		await page.goto(find('Annecy'))
 
-		// The sections under the artists of the city: the list of the city has its own, with a hidden title.
-		const sections = page.locator('main section').filter({ hasNot: page.locator('#recherche-titre-locaux') })
-		await expect(sections.first().getByRole('heading', { level: 2 })).toHaveText(
-			'Autres maquilleuses du 74 (Haute-Savoie)'
-		)
-		for (const key of ['ville-voisine', 'ancien-nom-accentue'])
-			await expect(sections.first().locator(`a[href="/profil/${profile(key).slug}"]`)).toHaveCount(1)
-		const move = sections.filter({
-			has: page.getByRole('heading', { level: 2, name: 'Autres maquilleuses qui se déplacent' }),
+		const sections = page.locator('main section')
+		await expect(sections.first().getByRole('heading', { level: 2 })).toHaveText('À Annecy')
+		const nearby = sections.filter({
+			has: page.getByRole('heading', { level: 2, name: 'Plus loin, à moins de 50 km' }),
 		})
-		await expect(move.locator(`a[href="/profil/${profile('ville-eloignee').slug}"]`)).toHaveCount(1)
-		// The ones of the city are not repeated under a section.
-		for (const key of A_ANNECY) await expect(sections.locator(`a[href="/profil/${profile(key).slug}"]`)).toHaveCount(0)
+		await expect(nearby.locator(`a[href="/profil/${profile('ville-voisine').slug}"]`)).toHaveCount(1)
+		// Thonon is past 50 km and Nantes far away: in no section, and the whole directory is not listed.
+		for (const key of ['ancien-nom-accentue', 'ville-eloignee'])
+			await expect(page.locator(`a[href="/profil/${profile(key).slug}"]`)).toHaveCount(0)
+		await expect(page.getByRole('heading', { level: 2, name: /Autres maquilleuses/ })).toHaveCount(0)
+		// The ones of the city are not repeated under another section.
+		for (const key of A_ANNECY) await expect(nearby.locator(`a[href="/profil/${profile(key).slug}"]`)).toHaveCount(0)
 	})
 
 	test('un département tapé ouvre la liste par ses maquilleuses', async ({ page }) => {
@@ -146,7 +150,7 @@ test.describe('Recherche par ville', () => {
 		const urls = await page
 			.locator('main li a[href^="/profil/"]')
 			.evaluateAll(liens => liens.map(lien => lien.getAttribute('href')))
-		for (const key of LISTS) expect(urls, key).toContain(`/profil/${profile(key).slug}`)
+		for (const key of NEAR_ANNECY) expect(urls, key).toContain(`/profil/${profile(key).slug}`)
 		for (const key of ABSENTS) expect(urls, key).not.toContain(`/profil/${profile(key).slug}`)
 		expect(new Set(urls).size).toBe(urls.length)
 	})
@@ -229,13 +233,8 @@ test.describe('Recherche par code postal et par pays', () => {
 			const first = page.locator('main ul').first()
 			for (const key of ['code-postal-partage-a', 'code-postal-partage-b'])
 				await expect(first.locator(`a[href="/profil/${zone(key).slug}"]`)).toHaveCount(1)
-			// A zone of several countries travels; a zone of one country with no radius comes last.
-			await expect(
-				page
-					.locator('main section')
-					.filter({ has: page.getByRole('heading', { level: 2, name: 'Autres maquilleuses qui se déplacent' }) })
-					.locator(`a[href="/profil/${zone('zone-france-italie').slug}"]`)
-			).toHaveCount(1)
+			// A zone of several countries has no centre to measure from: it is found by the name of a country only.
+			await expect(page.locator(`a[href="/profil/${zone('zone-france-italie').slug}"]`)).toHaveCount(0)
 			// Each card says the name of the commune, never the postal code.
 			await expect(first).toContainText(/Valbrume|Hautcombe/)
 			await expect(first).not.toContainText('74990')

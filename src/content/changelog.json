@@ -225,6 +225,16 @@
 			"id": "dans-ton-espace-le-message-d-accueil-te-salue-par-ton-pre",
 			"type": "correction",
 			"text": "Dans ton espace, le message d'accueil te salue par ton prénom au lieu de « Bonjour toi »."
+		},
+		{
+			"id": "votre-recherche-par-ville-tient-compte-de-la-distance-les",
+			"type": "amelioration",
+			"text": "Votre recherche par ville tient compte de la distance : les maquilleuses de votre commune d’abord, puis celles qui se déplacent jusqu’à vous, puis celles qui sont à moins de 50 km."
+		},
+		{
+			"id": "quand-personne-n-est-inscrite-pres-de-la-ville-que-vous-c",
+			"type": "correction",
+			"text": "Quand personne n’est inscrite près de la ville que vous cherchez, la page le dit clairement au lieu de lister toutes les maquilleuses."
 		}
 	],
 	"releases": []

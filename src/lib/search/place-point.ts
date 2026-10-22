@@ -29,10 +29,18 @@ export const PLACE_CACHE_FOUND_MS = 24 * 60 * 60 * 1000
 /** How long a place the list does not know is kept. */
 export const PLACE_CACHE_UNKNOWN_MS = 60 * 60 * 1000
 
-/** The place resolved: a point and the name of the commune it is the centre of, or nothing. */
-export type ResolvedPlace = { genre: 'point'; point: GeoPoint; label: string } | { genre: 'unknown' }
+/**
+ * The place resolved: a point and the name of the commune it is the centre of; or `unknown` (the list
+ * answered and has no such commune: a foreign city, a typo, a département, a country); or `unavailable`
+ * (the list was slow or down: nothing is known, ticket 295). Both leave the search as it was.
+ */
+export type ResolvedPlace =
+	| { genre: 'point'; point: GeoPoint; label: string }
+	| { genre: 'unknown' }
+	| { genre: 'unavailable' }
 
 const UNKNOWN: ResolvedPlace = { genre: 'unknown' }
+const UNAVAILABLE: ResolvedPlace = { genre: 'unavailable' }
 
 /** What the resolver needs from outside: the list, a clock, the limits. All have a default. */
 export interface PlaceResolverOptions {
@@ -116,7 +124,7 @@ export function createPlaceResolver(options: PlaceResolverOptions = {}): (typed:
 			})
 			const answer = await Promise.race([ask(question), timeout]).finally(() => clearTimeout(timer))
 			// Nothing is kept of a failure: the next search asks again.
-			if (answer === 'timeout' || answer.genre === 'panne') return UNKNOWN
+			if (answer === 'timeout' || answer.genre === 'panne') return UNAVAILABLE
 			if (answer.genre === 'rien') return UNKNOWN
 			const typedDepartment = place.segments.some(segment => segment.departement)
 			const city = chosenCity(question, answer.communes, typedDepartment)
@@ -132,7 +140,7 @@ export function createPlaceResolver(options: PlaceResolverOptions = {}): (typed:
 			remember(key, found)
 			return found
 		} catch {
-			return UNKNOWN
+			return UNAVAILABLE
 		}
 	}
 }

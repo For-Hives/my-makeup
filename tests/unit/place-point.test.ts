@@ -89,7 +89,7 @@ describe('293 : un lieu tapé devient un point', () => {
 })
 
 describe('293 : le référentiel lent ou en panne', () => {
-	test('en panne : « inconnu », et rien n’est gardé', async () => {
+	test('en panne : « indisponible », et rien n’est gardé', async () => {
 		let calls = 0
 		const resolve = createPlaceResolver({
 			findCities: async () => {
@@ -97,24 +97,24 @@ describe('293 : le référentiel lent ou en panne', () => {
 				return { genre: 'panne' }
 			},
 		})
-		expect(await resolve('Annecy')).toEqual({ genre: 'unknown' })
-		expect(await resolve('Annecy')).toEqual({ genre: 'unknown' })
+		expect(await resolve('Annecy')).toEqual({ genre: 'unavailable' })
+		expect(await resolve('Annecy')).toEqual({ genre: 'unavailable' })
 		expect(calls).toBe(2)
 	})
 
-	test('qui lève une exception : « inconnu »', async () => {
+	test('qui lève une exception : « indisponible »', async () => {
 		const resolve = createPlaceResolver({
 			findCities: async () => {
 				throw new Error('boom')
 			},
 		})
-		expect(await resolve('Annecy')).toEqual({ genre: 'unknown' })
+		expect(await resolve('Annecy')).toEqual({ genre: 'unavailable' })
 	})
 
-	test('qui ne répond pas dans le délai : « inconnu » à temps', async () => {
+	test('qui ne répond pas dans le délai : « indisponible » à temps', async () => {
 		const resolve = createPlaceResolver({ findCities: () => new Promise<CitiesSearch>(() => {}), delayMs: 20 })
 		const start = performance.now()
-		expect(await resolve('Annecy')).toEqual({ genre: 'unknown' })
+		expect(await resolve('Annecy')).toEqual({ genre: 'unavailable' })
 		expect(performance.now() - start).toBeLessThan(500)
 	})
 })
