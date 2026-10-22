@@ -38,6 +38,14 @@ export const TEST_ONLY_PROJECT = 'import-final'
 export const TEST_CRAWL_ON_BENCH = '**/ui-crawl.spec.ts'
 export const TEST_CRAWL_PROJECT = 'crawl-alone'
 
+/**
+ * The visual comparison of the key pages (issue 984): 9 pages at 3 widths against the references committed beside the
+ * spec. It is played at night (.github/workflows/nuit.yml), on the bench loaded with the whole set, and never by the
+ * CI of a pull request: it is a project of its own, which neither screen size plays.
+ */
+export const TEST_VISUAL_ON_BENCH = '**/visual.spec.ts'
+export const TEST_VISUAL_PROJECT = 'visual'
+
 /** A test carries this tag to run at the phone width too. */
 export const LABEL_MOBILE = '@mobile'
 
@@ -212,13 +220,13 @@ export function testConfiguration(variables: Variables = process.env): Playwrigh
 		projects: [
 			{
 				name: 'chromium',
-				testIgnore: [TEST_ONLY_ON_BENCH, TEST_CRAWL_ON_BENCH],
+				testIgnore: [TEST_ONLY_ON_BENCH, TEST_CRAWL_ON_BENCH, TEST_VISUAL_ON_BENCH],
 				use: { browserName: 'chromium', viewport: SCREENS.chromium },
 			},
 			{
 				name: 'mobile',
 				grep: new RegExp(LABEL_MOBILE),
-				testIgnore: [TEST_ONLY_ON_BENCH, TEST_CRAWL_ON_BENCH],
+				testIgnore: [TEST_ONLY_ON_BENCH, TEST_CRAWL_ON_BENCH, TEST_VISUAL_ON_BENCH],
 				use: {
 					browserName: 'chromium',
 					viewport: SCREENS.mobile,
@@ -235,6 +243,11 @@ export function testConfiguration(variables: Variables = process.env): Playwrigh
 			{
 				name: TEST_ONLY_PROJECT,
 				testMatch: TEST_ONLY_ON_BENCH,
+				use: { browserName: 'chromium', viewport: SCREENS.chromium },
+			},
+			{
+				name: TEST_VISUAL_PROJECT,
+				testMatch: TEST_VISUAL_ON_BENCH,
 				use: { browserName: 'chromium', viewport: SCREENS.chromium },
 			},
 		],

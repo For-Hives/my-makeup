@@ -1,0 +1,62 @@
+# The references of the visual comparison (issue 984): taken on a CI runner, because the fonts and the anti-aliasing of a
+# developer's machine are not those of the night suite (.github/workflows/nuit.yml). Run by hand
+# (`gh workflow run references-visuelles.yml`) whenever a change of look is wanted, or when a run of this file changes.
+#
+# It plays the visual project twice: the first time to write the references, the second time to compare with them,
+# so that a page that is not the same twice in a row fails here and not in the night. It commits nothing: the
+# references are handed over as the file `visual-references`, to put in tests/e2e/visual.spec.ts-snapshots/.
+#
+# Rules: no secret, no step allowed to fail, every action pinned by its commit.
+name: References visuelles
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [v3]
+    paths:
+      - .github/workflows/references-visuelles.yml
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: references-visuelles
+  cancel-in-progress: false
+
+jobs:
+  references:
+    name: references
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - name: Install
+        run: bun install --frozen-lockfile
+      - name: Browser of Playwright
+        run: bunx playwright install chromium
+      - name: Start the test bench
+        run: bun run bench:up
+      - name: Take the references
+        run: bun run test:e2e --project=visual --update-snapshots
+      - name: Compare with the references just taken
+        run: bun run test:e2e --project=visual
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: visual-references
+          path: tests/e2e/visual.spec.ts-snapshots
+          if-no-files-found: error
+          retention-days: 14

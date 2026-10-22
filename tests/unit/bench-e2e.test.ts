@@ -16,6 +16,8 @@ import {
 	TEST_CRAWL_ON_BENCH,
 	TEST_CRAWL_PROJECT,
 	TEST_ONLY_ON_BENCH,
+	TEST_VISUAL_ON_BENCH,
+	TEST_VISUAL_PROJECT,
 	TRACES_CRAWL_FOLDER,
 	TRACES_FINAL_FOLDER,
 	TRACES_FOLDER,
@@ -126,6 +128,7 @@ describe('la configuration de Playwright', () => {
 			['mobile', 390, 'chromium'],
 			['crawl-alone', 1440, 'chromium'],
 			['import-final', 1440, 'chromium'],
+			['visual', 1440, 'chromium'],
 		])
 		const [bureau, mobile] = projects
 
@@ -156,6 +159,19 @@ describe('la configuration de Playwright', () => {
 		expect(crawl?.testMatch).toMatch(/ui-crawl\.spec\.ts$/)
 		expect(bureau?.testIgnore).toContain(TEST_CRAWL_ON_BENCH)
 		expect(mobile?.testIgnore).toContain(TEST_CRAWL_ON_BENCH)
+	})
+
+	test('la comparaison visuelle (issue 984) est un projet à part, joué la nuit : ni l’une ni l’autre des deux tailles ne le joue', () => {
+		const [bureau, mobile, , , visual] = projects
+
+		expect(visual?.name).toBe(TEST_VISUAL_PROJECT)
+		expect(visual?.testMatch).toBe(TEST_VISUAL_ON_BENCH)
+		expect(visual?.testMatch).toMatch(/visual\.spec\.ts$/)
+		expect(bureau?.testIgnore).toContain(TEST_VISUAL_ON_BENCH)
+		expect(mobile?.testIgnore).toContain(TEST_VISUAL_ON_BENCH)
+		// Asked for nothing, `bun run test:e2e` does not play it: only the two screen sizes, the crawl and the import.
+		expect(playwrightPhases([]).principale).toEqual(expect.not.arrayContaining([`--project=${TEST_VISUAL_PROJECT}`]))
+		expect(playwrightPhases(['--project=visual']).principale).toContain('--project=visual')
 	})
 
 	test('trace, vidéo et capture sont gardées pour un essai en échec, dès la première tentative', () => {

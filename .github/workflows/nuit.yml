@@ -1,0 +1,106 @@
+# The night suite (issue 984; plan 02 §5): the slow journeys and the visual comparison of the key pages. They are too
+# slow, or too fragile to a pixel, for the CI of a pull request, which stays under 15 minutes.
+#
+# - `lent`: the end-to-end journeys that carry the tag @lent (a real expiry of a session, a session that slides),
+#   at the desktop width, on the test bench, as the CI plays them;
+# - `visuel`: 9 key pages at 390, 768 and 1440 px against the references committed in
+#   tests/e2e/visual.spec.ts-snapshots/ (taken on a runner by references-visuelles.yml, never on a developer's machine).
+#
+# Rules, enforced by the guard rails of every workflow (tests/ci/ci-guardrails.test.ts): no secret, no step allowed to
+# fail, every action pinned by its commit. A red night is a red run of this workflow, which GitHub mails; the pull
+# request CI does not wait for it.
+#
+# GitHub only schedules a workflow that is on the DEFAULT branch. Until the v3 is there, the schedule does not fire;
+# a change of this file or of the visual spec runs it from v3 (the push trigger below), and `workflow_dispatch` runs it
+# by hand.
+name: Nuit
+
+on:
+  schedule:
+    - cron: '30 2 * * *'
+      timezone: Europe/Paris
+  workflow_dispatch:
+  push:
+    branches: [v3]
+    paths:
+      - .github/workflows/nuit.yml
+      - tests/e2e/visual.spec.ts
+      - tests/e2e/visual.spec.ts-snapshots/**
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+# Two nights at once would fight for the same ports of the bench on a shared runner pool: the second waits.
+concurrency:
+  group: nuit
+  cancel-in-progress: false
+
+jobs:
+  lent:
+    name: lent
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - name: Install
+        run: bun install --frozen-lockfile
+      - name: Browser of Playwright
+        run: bunx playwright install chromium
+      - name: Start the test bench
+        run: bun run bench:up
+      - name: Slow journeys
+        run: bun run test:e2e --project=chromium --grep @lent
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: failure()
+        with:
+          name: nuit-lent
+          path: |
+            playwright-report
+            test-results
+          retention-days: 14
+
+  visuel:
+    name: visuel
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - name: Install
+        run: bun install --frozen-lockfile
+      - name: Browser of Playwright
+        run: bunx playwright install chromium
+      - name: Start the test bench
+        run: bun run bench:up
+      - name: Visual comparison of the key pages
+        run: bun run test:e2e --project=visual
+      # The actual image, the reference and the difference of each page that moved.
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: failure()
+        with:
+          name: nuit-visuel
+          path: |
+            playwright-report
+            test-results
+          retention-days: 14

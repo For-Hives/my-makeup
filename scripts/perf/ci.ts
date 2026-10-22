@@ -56,7 +56,7 @@ export async function main(
 	for (const line of annotations(evaluation)) console.log(line)
 	const verdict = evaluation.findings.length === 0 && !evaluation.failure ? 'dans les budgets' : 'budgets manqués'
 	console.log(
-		`Vitesse des quatre pages : ${verdict} (mode ${evaluation.mode === 'error' ? 'blocage' : `avertissement jusqu’au ${BLOCKING_FROM}`}).`
+		`Vitesse des quatre pages : ${verdict} (mode ${evaluation.mode === 'error' ? 'blocage' : `avertissement, blocage à partir du ${BLOCKING_FROM}`}).`
 	)
 	return exitCode(evaluation)
 }
