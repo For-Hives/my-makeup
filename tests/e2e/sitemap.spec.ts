@@ -1,7 +1,9 @@
 import { type APIRequestContext, expect, test } from '@playwright/test'
 import { SITE_ORIGIN } from '../../src/lib/frozen-urls'
+import { NEUTRAL_NAME } from '../../src/lib/profile/display-name'
 import { deliveredStaticPages } from '../../src/lib/seo/sitemap'
 import { SEARCH_PROFILES, setSearchProfiles } from '../fixtures/search-profiles'
+import { violationsSevere } from '../support/axe'
 import { testPayload } from '../support/payload-test'
 import { createContent, deleteContent, refreshProfilePages } from '../support/public-pages'
 
@@ -209,6 +211,26 @@ test.describe('Plan du site (ticket 114)', () => {
 					const link = await request.get(`${baseURL}${path}`, { maxRedirects: 0 })
 					expect(link.status(), path).toBe(200)
 				}
+
+				// Each listed profile carries her real name (ticket 299), read from the HTML as a crawler gets it, without
+				// JavaScript; none carries the neutral label.
+				const html = await (await request.get('/site-map')).text()
+				expect(html).not.toContain(NEUTRAL_NAME)
+				for (const { cle: key, slug, indexee: indexed } of state) {
+					if (!indexed) continue
+					const label = await page.locator(`main a[href="/profil/${slug}"]`).innerText()
+					expect(label, key).toMatch(/\S/)
+					expect(label, key).not.toBe(NEUTRAL_NAME)
+					expect(html, key).toContain(`>${label.replaceAll('&', '&amp;')}</a>`)
+				}
+
+				// No sideways scroll, targets of 44 px at least, no serious axe violation (ticket 299).
+				expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+				const heights = await page
+					.locator('main article li a')
+					.evaluateAll(links => links.map(link => link.getBoundingClientRect().height))
+				for (const height of heights) expect(height).toBeGreaterThanOrEqual(44)
+				expect(await violationsSevere(page)).toEqual([])
 
 				// The capture of the page at the size of the project (390 px wide on the phone).
 				await page.screenshot({ path: testInfo.outputPath('plan-du-site.png'), fullPage: true })

@@ -35,7 +35,8 @@ export function SiteMapBody({ profils: profiles, talents, articles }: IndexableP
 								My-Makeup la plateforme pour les maquilleuses !
 							</h2>
 						</header>
-						<div className="prose xl:prose-lg my-8">
+						{/* Every link of the plan is a target of 44 px at least (ticket 299). */}
+						<div className="prose xl:prose-lg my-8 [&_a]:inline-flex [&_a]:min-h-11 [&_a]:items-center">
 							{SITE_MAP_GROUPS.map(groupe => (
 								<section key={groupe.id}>
 									<h3>{groupe.titre}</h3>
