@@ -108,7 +108,7 @@ describe('299 : un nom réel dans le titre, le JSON-LD et le sitemap, et des cha
 
 describe('299 : les états vide et erreur du plan du site', () => {
 	test('sans profil, sans talent ni article : les pages fixes restent, aucune section vide', () => {
-		const html = renderToStaticMarkup(SiteMapBody({ profils: [], talents: [], articles: [] }))
+		const html = renderToStaticMarkup(SiteMapBody({ profils: [], zones: [], talents: [], articles: [] }))
 		expect(html).toContain('<h3>')
 		expect(html).not.toContain('plan-des-profils')
 		expect(html).not.toContain('<h3>Maquilleuses</h3>')

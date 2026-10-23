@@ -2,16 +2,19 @@ import Link from 'next/link'
 import { Cta } from '@/components/blocks/Cta'
 import { Hero } from '@/components/blocks/Hero'
 import { deliveredStaticPages, SITE_MAP_GROUPS } from '@/lib/seo/sitemap'
+import { zoneLabel } from '@/lib/seo/zone-page'
+import { zonePath } from '@/lib/seo/zones'
 import { profilePath } from '@/lib/slug'
 import type { IndexablePages } from '@/services/public/indexable-pages'
 
 /**
  * The body of the plan of the site (ticket 114): the fixed pages of the table the sitemap reads, then the
- * articles, the talents and the publishable profiles, each by the address the sitemap lists for it. The profile
+ * articles, the talents, the zones that have the threshold (ticket 1015) and the publishable profiles, each by the
+ * address the sitemap lists for it. The profile
  * links are the only links of the site to the profiles that a crawler reads without running JavaScript.
  * Apart from the page so that a test renders it with fictional pages, without Next's cache (ticket 299).
  */
-export function SiteMapBody({ profils: profiles, talents, articles }: IndexablePages) {
+export function SiteMapBody({ profils: profiles, zones, talents, articles }: IndexablePages) {
 	const pages = deliveredStaticPages()
 	// Her name, then her slug when two share a name.
 	const byName = [...profiles].sort((a, b) => a.nom.localeCompare(b.nom, 'fr') || a.slug.localeCompare(b.slug))
@@ -70,6 +73,18 @@ export function SiteMapBody({ profils: profiles, talents, articles }: IndexableP
 										{talents.map(talent => (
 											<li key={talent.slug}>
 												<Link href={`/talent/${talent.slug}`}>{talent.titre}</Link>
+											</li>
+										))}
+									</ul>
+								</section>
+							)}
+							{zones.length > 0 && (
+								<section>
+									<h3>Maquilleuses par département</h3>
+									<ul data-testid="plan-des-zones">
+										{zones.map(zone => (
+											<li key={zone.code}>
+												<Link href={zonePath(zone.code)}>{zoneLabel(zone.code)}</Link>
 											</li>
 										))}
 									</ul>

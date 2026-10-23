@@ -266,9 +266,10 @@ describe('La table des pages fixes couvre les pages de l’application, dans les
 		expect(gap.map(({ chemin: filePath }) => filePath)).toEqual([])
 	})
 
-	test('une route à segment dynamique est une famille à données : profil, talent, article', () => {
+	test('une route à segment dynamique est une famille à données : profil, talent, article, zone (1015)', () => {
 		expect(dynamic.filter(chemin => !excluded(chemin)).sort()).toEqual([
 			'/blog/[slug]',
+			'/maquilleuses/[department]',
 			'/profil/[slug]',
 			'/talent/[slug]',
 		])

@@ -17,7 +17,9 @@
 import type { Payload } from 'payload'
 import { displayName, text } from '@/lib/profile/display-name'
 import { INDEXABLE_FILTER } from '@/lib/profile/visibility'
+import { type IndexableZone, indexableZones } from '@/lib/seo/zones'
 import { isSlug } from '@/lib/slug'
+import { directoryPlace } from './profiles'
 
 /** The size of a page of the reading, and the number of pages past which it fails: 10 000 documents. */
 export const PAGE_SIZE = 100
@@ -29,6 +31,10 @@ export interface IndexableProfile {
 	/** The name of her page (the h1). */
 	nom: string
 	misAJourLe: string | null
+	/** The code of the département of her commune, or `null` (no commune, a zone abroad): what a zone page counts her by. */
+	departement: string | null
+	/** Neither unavailable nor hidden nor entirely empty: a zone page shows her only then (src/lib/seo/zones.ts). */
+	listed: boolean
 }
 
 /** A talent or an article as the sitemap and the plan show it. */
@@ -40,6 +46,8 @@ export interface IndexableContent {
 
 export interface IndexablePages {
 	profils: IndexableProfile[]
+	/** The zones that have the threshold of profiles (src/lib/seo/zones.ts): the sitemap and the plan list those alone. */
+	zones: IndexableZone[]
 	talents: IndexableContent[]
 	articles: IndexableContent[]
 }
@@ -69,7 +77,20 @@ export async function readIndexableProfiles(payload: Payload): Promise<Indexable
 		payload.find({
 			collection: 'profiles',
 			where: INDEXABLE_FILTER,
-			select: { slug: true, firstName: true, lastName: true, artistName: true, updatedAt: true },
+			select: {
+				slug: true,
+				firstName: true,
+				lastName: true,
+				artistName: true,
+				updatedAt: true,
+				available: true,
+				fullyEmpty: true,
+				city: { name: true, department: true },
+				zoneKind: true,
+				countries: true,
+				radiusKm: true,
+				town: true,
+			},
 			sort: ['slug', 'id'],
 			depth: 0,
 			limit: PAGE_SIZE,
@@ -79,7 +100,17 @@ export async function readIndexableProfiles(payload: Payload): Promise<Indexable
 		})
 	)
 	return docs.flatMap(profil =>
-		isSlug(profil.slug) ? [{ slug: profil.slug, nom: displayName(profil), misAJourLe: date(profil.updatedAt) }] : []
+		isSlug(profil.slug)
+			? [
+					{
+						slug: profil.slug,
+						nom: displayName(profil),
+						misAJourLe: date(profil.updatedAt),
+						departement: directoryPlace(profil).departement,
+						listed: profil.available !== false && profil.fullyEmpty !== true,
+					},
+				]
+			: []
 	)
 }
 
@@ -132,5 +163,6 @@ export async function readIndexablePages(payload: Payload): Promise<IndexablePag
 		readIndexableTalents(payload),
 		readIndexableArticles(payload),
 	])
-	return { profils: profiles, talents, articles }
+	const zoneProfiles = profiles.map(profil => ({ ...profil, publishable: true }))
+	return { profils: profiles, zones: indexableZones(zoneProfiles), talents, articles }
 }
