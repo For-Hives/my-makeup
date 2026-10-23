@@ -84,12 +84,14 @@ export function searchPageUrl({
 	search = '',
 	city = '',
 	page = 1,
+	specialty = null,
 	maxPrice = null,
 	sort = 'relevance',
 }: Partial<Search> & Partial<SearchFilters> = {}): string {
 	const params = new URLSearchParams()
 	if (field(search)) params.set('search', field(search))
 	if (field(city)) params.set('city', field(city))
+	if (specialty !== null) params.set('specialty', specialty)
 	if (maxPrice !== null) params.set('maxPrice', String(maxPrice))
 	if (sort !== 'relevance') params.set('sort', sort)
 	if (page > 1) params.set('page', String(Math.min(Math.trunc(page), PAGE_MAX)))

@@ -1,4 +1,4 @@
-import { PRICE_CEILINGS, type SearchFilters, SORT_LABELS, SORTS } from '@/lib/search/filters'
+import { filtersActive, PRICE_CEILINGS, type SearchFilters, SORT_LABELS, SORTS } from '@/lib/search/filters'
 import { type Search, searchPageUrl } from '@/lib/search/input'
 
 const CONTROL =
@@ -12,15 +12,38 @@ const CONTROL =
 export function SearchRefine({
 	recherche: query,
 	filtres: filters,
+	specialites: specialties = [],
 }: {
 	recherche: Pick<Search, 'search' | 'city'>
 	filtres: SearchFilters
+	/** The speciality bullets offered: those a listed profile chose. */
+	specialites?: readonly { value: string; label: string }[]
 }) {
 	return (
 		<form action="/search" method="get" aria-label="Affiner les résultats" className="mb-8 flex flex-col gap-3">
 			{query.search && <input type="hidden" name="search" value={query.search} />}
 			{query.city && <input type="hidden" name="city" value={query.city} />}
 			<div className="flex flex-col gap-3 md:flex-row md:items-end">
+				{specialties.length > 0 && (
+					<div className="flex flex-col gap-1">
+						<label htmlFor="recherche-specialite" className="font-semibold text-gray-800 text-sm">
+							Spécialité
+						</label>
+						<select
+							id="recherche-specialite"
+							name="specialty"
+							defaultValue={filters.specialty ?? ''}
+							className={CONTROL}
+						>
+							<option value="">Toutes les spécialités</option>
+							{specialties.map(({ value, label }) => (
+								<option key={value} value={value}>
+									{label}
+								</option>
+							))}
+						</select>
+					</div>
+				)}
 				<div className="flex flex-col gap-1">
 					<label htmlFor="recherche-prix" className="font-semibold text-gray-800 text-sm">
 						Prix de départ
@@ -49,7 +72,7 @@ export function SearchRefine({
 				<button type="submit" className="btn-primary min-h-[44px] md:w-auto">
 					Appliquer
 				</button>
-				{(filters.maxPrice !== null || filters.sort !== 'relevance') && (
+				{filtersActive(filters) && (
 					<a
 						href={searchPageUrl(query)}
 						className="inline-flex min-h-[44px] items-center font-semibold text-indigo-900 underline"

@@ -95,7 +95,7 @@ export default async function SearchPage({ searchParams }: PageProps<'/search'>)
 				departement={departmentOfSearch(city, place.genre === 'point' ? place.department : null)}
 			/>
 			{view.filteredOut ? (
-				<NoMatchForFilters titre={view.title} recherche={query} filtres={filters} />
+				<NoMatchForFilters titre={view.title} recherche={query} filtres={filters} specialites={view.specialties} />
 			) : view.empty ? (
 				<NoResult
 					titre={view.title}

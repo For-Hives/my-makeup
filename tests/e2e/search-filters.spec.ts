@@ -1,7 +1,11 @@
 import { expect, type Page, test } from '@playwright/test'
+import { placeProfile, readDemoPhoto } from '../../src/demo-data/loading'
+import { DEMO_PROFILES } from '../../src/demo-data/profiles'
 import { setSearchProfiles, TEST_WORD } from '../fixtures/search-profiles'
 import { violationsSevere } from '../support/axe'
 import { SCREENS } from '../support/e2e'
+import { testPayload } from '../support/payload-test'
+import { refreshProfilePages } from '../support/public-pages'
 
 /**
  * The filters and the sort of the search (issue 1011), at 390 px and at 1440 px: the form keeps the word
@@ -13,9 +17,46 @@ import { SCREENS } from '../support/e2e'
 const SIZES = [SCREENS.mobile, SCREENS.chromium] as const
 const WORD = encodeURIComponent(TEST_WORD)
 
+/** A profile of its own, named by a word only it carries, that chose the bullet « Cinéma et scène ». */
+const SPECIALTY_WORD = `Specialite${Date.now().toString(36)}`
+let specialtyProfile: { id: number; slug: string }
+
 test.beforeAll(async () => {
 	test.setTimeout(180_000)
 	await setSearchProfiles()
+	const template = DEMO_PROFILES.find(type => type.cle === 'reference')
+	if (!template) throw new Error('Le profil type « reference » du jeu fictif manque.')
+	const placed = await placeProfile(
+		await testPayload(),
+		{
+			...template,
+			cle: `essai-${SPECIALTY_WORD.toLowerCase()}`,
+			compte: { email: `essai-${SPECIALTY_WORD.toLowerCase()}@example.test`, nom: `Essai ${SPECIALTY_WORD}` },
+			profil: {
+				...template.profil,
+				firstName: 'Essai',
+				lastName: SPECIALTY_WORD,
+				artistName: `Essai ${SPECIALTY_WORD} Maquillage`,
+				specialtyBullets: ['screenStage'],
+			},
+			photos: { principale: template.photos.principale, galerie: [] },
+		},
+		readDemoPhoto,
+		false
+	)
+	specialtyProfile = { id: placed.profil, slug: placed.slug }
+})
+
+test.afterAll(async () => {
+	test.setTimeout(180_000)
+	const payload = await testPayload()
+	const profile = await payload
+		.findByID({ collection: 'profiles', id: specialtyProfile.id, depth: 0, select: { pro: true } })
+		.catch(() => null)
+	if (!profile) return
+	await payload.delete({ collection: 'profiles', id: specialtyProfile.id }).catch(() => undefined)
+	const pro = typeof profile.pro === 'object' ? profile.pro.id : profile.pro
+	if (pro !== undefined && pro !== null) await payload.delete({ collection: 'pros', id: pro }).catch(() => undefined)
 })
 
 async function checkScreen(page: Page, label: string): Promise<void> {
@@ -104,6 +145,29 @@ for (const size of SIZES) {
 			const firstPriced = firstSection.filter(price => !Number.isNaN(price))
 			expect(firstPriced).toEqual(firstPriced.toSorted((a, b) => a - b))
 			await checkScreen(page, 'tri par prix')
+		})
+
+		test('la spécialité : seules les puces choisies par une maquilleuse sont proposées, et le filtre les garde', async ({
+			page,
+			request,
+		}) => {
+			await refreshProfilePages(request, { id: specialtyProfile.id, specialite: null })
+			await page.goto(`/search?search=${SPECIALTY_WORD}`)
+			await expect(page.getByLabel('Spécialité')).toBeVisible()
+			await expect(page.getByLabel('Spécialité').locator('option')).toContainText([
+				'Toutes les spécialités',
+				'Cinéma et scène',
+			])
+			await expect(page.getByLabel('Spécialité').locator('option', { hasText: 'Effets spéciaux' })).toHaveCount(0)
+
+			await page.getByLabel('Spécialité').selectOption('screenStage')
+			await page.getByRole('button', { name: 'Appliquer' }).click()
+			await expect(page).toHaveURL(/specialty=screenStage/)
+			await expect(page.locator(`a[href="/profil/${specialtyProfile.slug}"]`)).toBeVisible()
+			await checkScreen(page, 'filtre de spécialité')
+
+			await page.goto(`/search?search=${SPECIALTY_WORD}&specialty=wedding`)
+			await expect(page.getByRole('heading', { level: 1 })).toHaveText('Aucune maquilleuse ne correspond à ces filtres')
 		})
 
 		test('un filtre qui ne laisse personne le dit, et propose de le retirer', async ({ page }) => {

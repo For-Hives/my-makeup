@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, test } from 'bun:test'
-import { DEFAULT_FILTERS, filtersActive, PRICE_CEILINGS, readFilters } from '@/lib/search/filters'
+import { DEFAULT_FILTERS, filtersActive, offeredSpecialties, PRICE_CEILINGS, readFilters } from '@/lib/search/filters'
 import type { GeoPoint } from '@/lib/search/geo-distance'
 import { searchPageUrl } from '@/lib/search/input'
 import type { ResolvedPlace } from '@/lib/search/place-point'
@@ -35,20 +35,25 @@ const shown = (view: ReturnType<typeof buildSearchView<Fake>>): string[] =>
 describe('1011 : lecture des filtres dans l’adresse', () => {
 	test('sans paramètre, ou avec une valeur inconnue, c’est la vue d’avant', () => {
 		expect(readFilters({})).toEqual(DEFAULT_FILTERS)
-		expect(readFilters({ maxPrice: 'abc', sort: 'nimportequoi' })).toEqual(DEFAULT_FILTERS)
-		expect(readFilters({ maxPrice: '77', sort: '' })).toEqual(DEFAULT_FILTERS)
+		expect(readFilters({ specialty: null, maxPrice: 'abc', sort: 'nimportequoi' })).toEqual(DEFAULT_FILTERS)
+		expect(readFilters({ specialty: null, maxPrice: '77', sort: '' })).toEqual(DEFAULT_FILTERS)
 		expect(filtersActive(DEFAULT_FILTERS)).toBe(false)
 	})
 
 	test('un plafond de la liste et un tri connu sont lus ; un paramètre répété donne le premier', () => {
 		const ceiling = PRICE_CEILINGS[1] as number
-		expect(readFilters({ maxPrice: String(ceiling), sort: 'price' })).toEqual({ maxPrice: ceiling, sort: 'price' })
-		expect(readFilters({ maxPrice: [String(ceiling), '50'], sort: ['recent', 'price'] })).toEqual({
+		expect(readFilters({ specialty: null, maxPrice: String(ceiling), sort: 'price' })).toEqual({
+			specialty: null,
+			maxPrice: ceiling,
+			sort: 'price',
+		})
+		expect(readFilters({ specialty: null, maxPrice: [String(ceiling), '50'], sort: ['recent', 'price'] })).toEqual({
+			specialty: null,
 			maxPrice: ceiling,
 			sort: 'recent',
 		})
-		expect(filtersActive({ maxPrice: ceiling, sort: 'relevance' })).toBe(true)
-		expect(filtersActive({ maxPrice: null, sort: 'recent' })).toBe(true)
+		expect(filtersActive({ specialty: null, maxPrice: ceiling, sort: 'relevance' })).toBe(true)
+		expect(filtersActive({ specialty: null, maxPrice: null, sort: 'recent' })).toBe(true)
 	})
 
 	test('l’adresse garde les filtres, et ne les écrit pas quand ils sont par défaut', () => {
@@ -57,6 +62,54 @@ describe('1011 : lecture des filtres dans l’adresse', () => {
 			'/search?city=Annecy&maxPrice=100&sort=price&page=2'
 		)
 		expect(searchPageUrl({ city: 'Annecy', ...DEFAULT_FILTERS })).toBe('/search?city=Annecy')
+	})
+})
+
+describe('1011 : la spécialité', () => {
+	const directory: Fake[] = [
+		artist('mariage', { specialtyBullets: ['wedding'] }),
+		artist('mariage-et-cinema', { specialtyBullets: ['wedding', 'screenStage'] }),
+		artist('autre-seulement', { specialtyBullets: [] }),
+		artist('sans-champ'),
+	]
+
+	test('une puce de la liste est lue dans l’adresse, une valeur inconnue est ignorée', () => {
+		expect(readFilters({ specialty: 'wedding' }).specialty).toBe('wedding')
+		expect(readFilters({ specialty: 'Mariage' }).specialty).toBeNull()
+		expect(readFilters({ specialty: ['screenStage', 'wedding'] }).specialty).toBe('screenStage')
+		expect(filtersActive({ ...DEFAULT_FILTERS, specialty: 'wedding' })).toBe(true)
+		expect(searchPageUrl({ city: 'Annecy', specialty: 'wedding' })).toBe('/search?city=Annecy&specialty=wedding')
+	})
+
+	test('le filtre garde les profils qui ont choisi la puce, jamais ceux dont la spécialité est un texte libre', () => {
+		const view = buildSearchView(directory, { search: '', city: 'Annecy' }, POINT, {
+			...DEFAULT_FILTERS,
+			specialty: 'screenStage',
+		})
+		expect(shown(view)).toEqual(['mariage-et-cinema'])
+		const wedding = buildSearchView(directory, { search: '', city: 'Annecy' }, POINT, {
+			...DEFAULT_FILTERS,
+			specialty: 'wedding',
+		})
+		expect(shown(wedding).toSorted()).toEqual(['mariage', 'mariage-et-cinema'])
+	})
+
+	test('la page ne propose que les puces qu’au moins un profil listé a choisies, dans l’ordre de la liste', () => {
+		expect(offeredSpecialties(directory)).toEqual([
+			{ value: 'wedding', label: 'Mariage' },
+			{ value: 'screenStage', label: 'Cinéma et scène' },
+		])
+		expect(offeredSpecialties([artist('a')])).toEqual([])
+		expect(buildSearchView(directory, { search: '', city: 'Annecy' }, POINT).specialties).toHaveLength(2)
+	})
+
+	test('une puce que personne n’a choisie vide la recherche : l’état dit que ce sont les filtres', () => {
+		const view = buildSearchView(directory, { search: '', city: 'Annecy' }, POINT, {
+			...DEFAULT_FILTERS,
+			specialty: 'specialEffects',
+		})
+		expect(view.filteredOut).toBe(true)
+		expect(view.title).toBe('Aucune maquilleuse ne correspond à ces filtres')
 	})
 })
 
@@ -76,7 +129,11 @@ describe('1011 : le prix de départ', () => {
 	})
 
 	test('un plafond garde les profils dont le prix de départ le respecte, jamais ceux sans prix', () => {
-		const view = buildSearchView(directory, { search: '', city: 'Annecy' }, POINT, { maxPrice: 100, sort: 'relevance' })
+		const view = buildSearchView(directory, { search: '', city: 'Annecy' }, POINT, {
+			specialty: null,
+			maxPrice: 100,
+			sort: 'relevance',
+		})
 		expect(shown(view).toSorted()).toEqual(['bon-marche', 'moyenne'])
 		expect(view.total).toBe(2)
 	})
@@ -89,6 +146,7 @@ describe('1011 : le prix de départ', () => {
 			startingPrice: 60,
 		})
 		const view = buildSearchView([...directory, far], { search: '', city: 'Annecy' }, POINT, {
+			specialty: null,
 			maxPrice: 100,
 			sort: 'relevance',
 		})
@@ -113,7 +171,11 @@ describe('1011 : le tri', () => {
 			farAway('d-90', 90),
 			farAway('e-20', 20),
 		]
-		const view = buildSearchView(directory, { search: '', city: 'Annecy' }, POINT, { maxPrice: null, sort: 'price' })
+		const view = buildSearchView(directory, { search: '', city: 'Annecy' }, POINT, {
+			specialty: null,
+			maxPrice: null,
+			sort: 'price',
+		})
 		expect(names(view.places.locaux)).toEqual(['c-30', 'a-120', 'b-sans-prix'])
 		// The sections stay what they were: the sort never mixes them.
 		expect(view.places.sections.map(section => section.cle)).toEqual(['nearby'])
@@ -126,7 +188,11 @@ describe('1011 : le tri', () => {
 			artist('recente', { updatedAt: 3000 }),
 			artist('moyenne', { updatedAt: 2000 }),
 		]
-		const view = buildSearchView(directory, { search: '', city: 'Annecy' }, POINT, { maxPrice: null, sort: 'recent' })
+		const view = buildSearchView(directory, { search: '', city: 'Annecy' }, POINT, {
+			specialty: null,
+			maxPrice: null,
+			sort: 'recent',
+		})
 		expect(names(view.places.locaux)).toEqual(['recente', 'moyenne', 'ancienne'])
 	})
 
@@ -142,6 +208,7 @@ describe('1011 : le tri', () => {
 			{ search: '', city: '' },
 			{ genre: 'unknown' },
 			{
+				specialty: null,
 				maxPrice: null,
 				sort: 'price',
 			}
@@ -159,7 +226,11 @@ describe('1011 : l’état vide d’un filtre', () => {
 	const directory: Fake[] = [artist('chere', { startingPrice: 300 })]
 
 	test('un filtre qui ne laisse personne ne dit pas que personne n’est inscrite près de la ville', () => {
-		const view = buildSearchView(directory, { search: '', city: 'Annecy' }, POINT, { maxPrice: 50, sort: 'relevance' })
+		const view = buildSearchView(directory, { search: '', city: 'Annecy' }, POINT, {
+			specialty: null,
+			maxPrice: 50,
+			sort: 'relevance',
+		})
 		expect(view.empty).toBe(true)
 		expect(view.filteredOut).toBe(true)
 		expect(view.title).toBe('Aucune maquilleuse ne correspond à ces filtres')
@@ -167,14 +238,22 @@ describe('1011 : l’état vide d’un filtre', () => {
 	})
 
 	test('sans filtre, la ville sans personne garde son état d’avant', () => {
-		const view = buildSearchView([], { search: '', city: 'Annecy' }, POINT, { maxPrice: 50, sort: 'relevance' })
+		const view = buildSearchView([], { search: '', city: 'Annecy' }, POINT, {
+			specialty: null,
+			maxPrice: 50,
+			sort: 'relevance',
+		})
 		expect(view.filteredOut).toBe(false)
 		expect(view.title).toBe('Personne n’est encore inscrite près de Annecy.')
 	})
 
 	test('le total mesuré est celui de la recherche sans les filtres', () => {
 		const many: Fake[] = [artist('a', { startingPrice: 300 }), artist('b', { startingPrice: 20 }), artist('c')]
-		const view = buildSearchView(many, { search: '', city: 'Annecy' }, POINT, { maxPrice: 50, sort: 'price' })
+		const view = buildSearchView(many, { search: '', city: 'Annecy' }, POINT, {
+			specialty: null,
+			maxPrice: 50,
+			sort: 'price',
+		})
 		expect(view.total).toBe(1)
 		expect(view.baselineTotal).toBe(3)
 	})

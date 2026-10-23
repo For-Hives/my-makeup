@@ -136,18 +136,18 @@ export function NoMatchForFilters({
 	titre,
 	recherche: query,
 	filtres: filters,
+	specialites,
 }: {
 	titre: string
 	recherche: Pick<Search, 'search' | 'city'>
 	filtres: SearchFilters
+	specialites?: readonly { value: string; label: string }[]
 }) {
 	return (
 		<div className="w-full px-4 pb-16 md:px-16">
 			<h1 className="mb-4 font-bold text-2xl text-gray-800">{titre}</h1>
-			<p className="mb-8 text-gray-700">
-				Changez le prix maximum, ou retirez les filtres pour voir toutes les maquilleuses.
-			</p>
-			<SearchRefine recherche={query} filtres={filters} />
+			<p className="mb-8 text-gray-700">Changez les filtres, ou retirez-les pour voir toutes les maquilleuses.</p>
+			<SearchRefine recherche={query} filtres={filters} specialites={specialites} />
 			<a href={searchPageUrl(query)} className={LIST_LINK}>
 				Voir toutes les maquilleuses de cette recherche
 			</a>
