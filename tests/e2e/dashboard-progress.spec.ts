@@ -17,12 +17,24 @@ test.beforeEach(({ context }) =>
 	context.setExtraHTTPHeaders({ 'x-forwarded-for': `192.0.2.${100 + (++counter % 50)}` })
 )
 
+/** The accounts a test made: a published profile left behind would show in the lists of the crawl (the page of a talent lists its profiles). */
+const created: number[] = []
+test.afterEach(async () => {
+	const payload = await testPayload()
+	for (const account of created.splice(0)) {
+		const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: account } } })
+		for (const { id } of docs) await payload.delete({ collection: 'profiles', id }).catch(() => undefined)
+		await payload.delete({ collection: 'pros', id: account }).catch(() => undefined)
+	}
+})
+
 test.describe('138 : où en est le profil', { tag: '@mobile' }, () => {
 	test('U01 : profil vide, 0/6 indispensables, tous les manques liés à leur carte, sans débordement', async ({
 		context,
 		page,
 	}) => {
 		const account = await createAccount('maquilleuse')
+		created.push(Number(account.id))
 		await context.addCookies(account.session.cookies)
 		await page.goto('/auth/profil')
 
@@ -52,6 +64,7 @@ test.describe('138 : où en est le profil', { tag: '@mobile' }, () => {
 		page,
 	}) => {
 		const account = await createAccount('maquilleuse')
+		created.push(Number(account.id))
 		await context.addCookies(account.session.cookies)
 		await page.goto('/auth/profil')
 		await expect(page.getByTestId('avancement-score')).toHaveText('0/6 indispensables')
@@ -89,6 +102,7 @@ test.describe('292 : le vrai statut, masqué ou en pause', { tag: '@mobile' }, (
 		page,
 	}) => {
 		const account = await createAccount('maquilleuse')
+		created.push(Number(account.id))
 		const { payload, id } = await profileOf(account.id)
 		await payload.update({
 			collection: 'profiles',
@@ -117,6 +131,7 @@ test.describe('292 : le vrai statut, masqué ou en pause', { tag: '@mobile' }, (
 
 	test('en pause : une phrase, et « Reprendre les demandes » remet la disponibilité', async ({ context, page }) => {
 		const account = await createAccount('maquilleuse')
+		created.push(Number(account.id))
 		const { payload, id } = await profileOf(account.id)
 		await payload.update({
 			collection: 'profiles',
@@ -152,6 +167,7 @@ test.describe('306 : la jauge honnête et « Ta page est en ligne ! »', { tag: 
 	/** A profile with the six essentials, but the contact channel when `contact` is false. */
 	async function artist(contact: boolean) {
 		const account = await createAccount('maquilleuse')
+		created.push(Number(account.id))
 		const payload = await testPayload()
 		const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: account.id } } })
 		const [sheet] = docs
