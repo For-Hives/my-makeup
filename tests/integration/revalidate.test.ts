@@ -125,13 +125,16 @@ describe('Un profil publié modifié rafraîchit sa page, la recherche et le sit
 		const hidden = await spyCache(() =>
 			write('PATCH', `/api/profiles/${profile.id}`, {
 				enTetes: headers,
-				corps: { chosenStatus: 'hidden', reason: 'Test' },
+				corps: { chosenStatus: 'hidden', reason: 'Masqué pour le test' },
 			})
 		)
 		expect(targets(hidden)).toEqual(profilePages(profile.slug))
 
 		// Shown again, then deleted while published.
-		await write('PATCH', `/api/profiles/${profile.id}`, { enTetes: headers, corps: { chosenStatus: 'automatic' } })
+		await write('PATCH', `/api/profiles/${profile.id}`, {
+			enTetes: headers,
+			corps: { chosenStatus: 'automatic', reason: 'Rétabli après le test' },
+		})
 		const deleted = await spyCache(() => write('DELETE', `/api/profiles/${profile.id}`, { enTetes: headers }))
 		expect(targets(deleted)).toEqual(profilePages(profile.slug))
 	})
@@ -167,7 +170,7 @@ describe('Un brouillon qui reste brouillon ne rafraîchit rien', () => {
 		const [admin, { compte: account, profil: profile }] = await Promise.all([createAccount('admin'), publishedArtist()])
 		await write('PATCH', `/api/profiles/${profile.id}`, {
 			enTetes: admin.session.enTetes,
-			corps: { chosenStatus: 'hidden', reason: 'Test' },
+			corps: { chosenStatus: 'hidden', reason: 'Masqué pour le test' },
 		})
 
 		const refreshed = await spyCache(() =>

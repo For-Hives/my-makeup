@@ -88,7 +88,7 @@ describe('Liste anonyme refusée ; média d’un profil publié lu ; d’un prof
 		// The admin hides it by her choice of status: the status itself is the server's (ticket 044).
 		await callRest('PATCH', `/api/profiles/${profile.id}`, {
 			enTetes: admin.session.enTetes,
-			corps: { chosenStatus: 'hidden' },
+			corps: { chosenStatus: 'hidden', reason: 'Masqué pour le test' },
 		})
 
 		expect((await callRest('GET', `/api/media/${main.id}`)).statut).toBe(404)

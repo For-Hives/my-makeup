@@ -332,7 +332,7 @@ describe('Un profil masqué reste masqué quelle que soit la sauvegarde', () => 
 		expect((await callRest('GET', `/api/profiles/${profile}`)).statut).toBe(404)
 
 		// Only an admin shows it again, by handing it back to the rule.
-		await modify(admin, profile, { chosenStatus: 'automatic' })
+		await modify(admin, profile, { chosenStatus: 'automatic', reason: 'Rétabli pour le test' })
 		expect(await state(profile)).toMatchObject({ publishable: true, status: 'published' })
 	}, 30_000)
 })
