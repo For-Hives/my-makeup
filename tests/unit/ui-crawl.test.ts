@@ -155,13 +155,24 @@ describe('crawl des interfaces (177) : la lecture seule', () => {
 			get('http://challenges.cloudflare.com/x'),
 			get('https://challenges.cloudflare.com:8443/x'),
 			get('https://user@challenges.cloudflare.com/x'),
-			decide({ method: 'POST', url: 'https://challenges.cloudflare.com/x', hasBody: true }, settings),
+			decide({ method: 'POST', url: 'https://evil.challenges.cloudflare.com/x', hasBody: true }, settings),
+			decide({ method: 'POST', url: 'https://challenges.cloudflare.com:8443/x', hasBody: true }, settings),
+			decide({ method: 'POST', url: 'https://user@challenges.cloudflare.com/x', hasBody: true }, settings),
+			decide({ method: 'POST', url: 'https://cdn.exemple.test/x', hasBody: true }, settings),
 		]) {
 			expect(decision.action).toBe('answer')
 			if (decision.action === 'answer') expect(decision.blocked).not.toBeNull()
 		}
 		const other = get('https://cdn.exemple.test/a.js')
 		expect(other).toEqual({ action: 'answer', blocked: 'GET vers un autre hôte (cdn.exemple.test)' })
+	})
+
+	test('le widget Turnstile poste vers son hôte : la requête est répondue sans partir, et ce n’est pas un défaut', () => {
+		const decision = decide(
+			{ method: 'POST', url: 'https://challenges.cloudflare.com/cdn-cgi/challenge-platform/x', hasBody: true },
+			settings
+		)
+		expect(decision).toEqual({ action: 'answer', blocked: null })
 	})
 
 	test('l’événement de mesure ne part jamais, et n’est pas un défaut', () => {
