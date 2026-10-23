@@ -131,7 +131,7 @@ const MISSING_TEXT: Record<Criterion, string> = {
 	specialite: 'Indique ta spécialité.',
 	nom_artiste: 'Ajoute ton nom d’artiste.',
 	ville: 'Choisis ta commune.',
-	description: 'Écris ta description.',
+	description: `Écris ta description : ${DESCRIPTION_MIN} caractères au moins.`,
 	photo: 'Ajoute ta photo principale.',
 	competences: 'Ajoute au moins une compétence.',
 	experiences: 'Ajoute au moins une expérience.',

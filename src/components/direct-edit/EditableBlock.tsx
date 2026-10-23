@@ -2,6 +2,7 @@
 
 import { type KeyboardEvent, type ReactNode, useEffect, useId, useRef } from 'react'
 import { createPortal } from 'react-dom'
+import { blockAnchor } from '@/lib/dashboard/draft-notice'
 import { EditorFrame } from './EditorFrame'
 import { useEditSession } from './EditSession'
 
@@ -74,9 +75,10 @@ export function EditableBlock({
 		: 'ring-2 ring-transparent hover:ring-lipstick focus-within:ring-lipstick'
 	return (
 		<div
+			id={blockAnchor(id)}
 			data-direct-edit={id}
 			data-open={isOpen ? 'true' : undefined}
-			className={`group relative min-h-11 min-w-11 ${SHAPES[shape]} ${ring} transition-[box-shadow,opacity] duration-150 motion-reduce:transition-none ${dimmed ? 'opacity-50' : ''} ${className}`}
+			className={`group relative scroll-mt-24 min-h-11 min-w-11 ${SHAPES[shape]} ${ring} transition-[box-shadow,opacity] duration-150 motion-reduce:transition-none ${dimmed ? 'opacity-50' : ''} ${className}`}
 		>
 			{empty ? (
 				<span

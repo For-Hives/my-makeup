@@ -338,7 +338,15 @@ test.describe('E02 : l’accueil en cinq étapes', { tag: '@mobile' }, () => {
 		await expect(page).toHaveURL(/\/auth\/init-account\?etape=fin$/, { timeout: 60_000 })
 		await expect(page.getByTestId('accueil-fin')).toBeVisible()
 		await expect(page.getByTestId('page-en-ligne')).toHaveCount(0)
-		await expect(page.getByTestId('accueil-fin-manques')).toContainText('description')
+		await expect(page.getByTestId('brouillon-pastille')).toHaveText('En brouillon')
+		await expect(page.getByTestId('brouillon')).toContainText(
+			'Ta page n’est pas encore en ligne : les clientes ne la voient pas.'
+		)
+		await expect(page.getByTestId('brouillon-manques')).toContainText('200 caractères')
+		await expect(page.getByRole('link', { name: 'Compléter ma page' })).toHaveAttribute(
+			'href',
+			/mode=edition#bloc-about$/
+		)
 		await takeScreenshot(page, 'fin-non-publiable')
 		await expectLayout(page)
 		expect(await violationsAfterTitle(page)).toEqual([])
@@ -369,6 +377,7 @@ test.describe('E02 : l’accueil en cinq étapes', { tag: '@mobile' }, () => {
 		await expect(page).toHaveURL(/\/auth\/init-account\?etape=fin$/, { timeout: 60_000 })
 		await expect(page.getByTestId('page-en-ligne')).toBeVisible()
 		await expect(page.getByTestId('page-en-ligne-adresse')).toContainText('/profil/')
+		await expect(page.getByTestId('brouillon')).toHaveCount(0)
 		await takeScreenshot(page, 'fin-en-ligne')
 		await expectLayout(page)
 		expect(await violationsAfterTitle(page)).toEqual([])
@@ -401,7 +410,7 @@ test.describe('E02 : l’accueil en cinq étapes', { tag: '@mobile' }, () => {
 
 		// Skipped: the end page says the page is not online, with the way back to the onboarding.
 		await expect(page).toHaveURL(/\/auth\/init-account\?etape=fin$/, { timeout: 60_000 })
-		await expect(page.getByTestId('accueil-fin-manques')).toBeVisible()
+		await expect(page.getByTestId('brouillon-manques')).toBeVisible()
 		await expect(page.getByRole('link', { name: 'Reprendre l’accueil' })).toBeVisible()
 		const after = await profileOf(email)
 		expect(after.networks?.facebook).toBe('https://www.facebook.com/studio.fictif')

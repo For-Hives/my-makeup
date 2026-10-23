@@ -400,6 +400,11 @@
 			"id": "a-l-inscription-tu-indiques-ton-prenom-et-ton-nom-une-seu",
 			"type": "amelioration",
 			"text": "À l'inscription, tu indiques ton prénom et ton nom une seule fois (Google les remplit pour toi), et ton accueil ne te les redemande pas."
+		},
+		{
+			"id": "tant-que-ta-page-n-est-pas-publiable-un-encadre-en-brouil",
+			"type": "amelioration",
+			"text": "Tant que ta page n’est pas publiable, un encadré « En brouillon » te dit qu’elle n’est pas encore en ligne, ce qu’il te manque, et te mène au bloc à compléter."
 		}
 	],
 	"releases": []

@@ -5,6 +5,7 @@ import { OnboardingRoute } from '@/components/dashboard/onboarding/OnboardingRou
 import { body, display } from '@/components/direct-edit/fonts'
 import { ACCOUNT_ONBOARDING_PAGE, signInUrl } from '@/lib/auth/return-to'
 import { requireArtist } from '@/lib/auth/session'
+import { draftNotice } from '@/lib/dashboard/draft-notice'
 import { ensureProfile } from '@/lib/dashboard/empty-profile'
 import { profileRows } from '@/lib/dashboard/list'
 import { locationValues } from '@/lib/dashboard/location'
@@ -66,7 +67,7 @@ export default async function AccountOnboardingPage({ searchParams }: PageProps<
 					<OnboardingDone
 						online={progress.etat === 'publiable'}
 						address={profile.slug ? publicAddress(profile.slug) : ''}
-						missing={progress.manques.filter(point => point.requis)}
+						notice={draftNotice(progress)}
 						resume={!done[4] || !done[5]}
 						editPath={editPath()}
 						dashboardPath={DASHBOARD_PATH}
