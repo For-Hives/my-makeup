@@ -165,12 +165,12 @@ describe('un seul bloc ouvert à la fois, avec la question quand il y a des modi
 	test('avec une modification, ouvrir un autre bloc demande : Continuer garde la saisie, Abandonner la jette', async () => {
 		await bench().monter()
 		await jsdomWindow.cliquer(jsdomWindow.bouton('Modifier mon nom et ma spécialité'))
-		await jsdomWindow.saisir(jsdomWindow.champ('Spécialité'), 'Maquillage soirée')
+		await jsdomWindow.saisir(jsdomWindow.champ('Autre (précise)'), 'Maquillage soirée')
 		await jsdomWindow.cliquer(jsdomWindow.bouton('Modifier ma disponibilité'))
 		expect(alerts()).toContain('modifications non enregistrées')
 
 		await jsdomWindow.cliquer(jsdomWindow.bouton('Continuer à modifier'))
-		expect((jsdomWindow.champ('Spécialité') as HTMLInputElement).value).toBe('Maquillage soirée')
+		expect((jsdomWindow.champ('Autre (précise)') as HTMLInputElement).value).toBe('Maquillage soirée')
 
 		await jsdomWindow.cliquer(jsdomWindow.bouton('Modifier ma disponibilité'))
 		await jsdomWindow.cliquer(jsdomWindow.bouton('Abandonner mes modifications'))
@@ -181,7 +181,7 @@ describe('un seul bloc ouvert à la fois, avec la question quand il y a des modi
 		await bench().monter()
 		const block = jsdomWindow.bouton('Modifier mon nom et ma spécialité')
 		await jsdomWindow.cliquer(block)
-		const field = jsdomWindow.champ('Spécialité')
+		const field = jsdomWindow.champ('Autre (précise)')
 		await jsdomWindow.w.document.defaultView?.dispatchEvent(new jsdomWindow.w.Event('noop'))
 		field.dispatchEvent(new jsdomWindow.w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
 		await jsdomWindow.attendre(() => editor() === null || null)
@@ -200,7 +200,7 @@ describe('un enregistrement honnête', () => {
 		})
 		await b.monter()
 		await jsdomWindow.cliquer(jsdomWindow.bouton('Modifier mon nom et ma spécialité'))
-		await jsdomWindow.saisir(jsdomWindow.champ('Spécialité'), 'Maquillage soirée')
+		await jsdomWindow.saisir(jsdomWindow.champ('Autre (précise)'), 'Maquillage soirée')
 		await jsdomWindow.cliquer(jsdomWindow.bouton('Enregistrer'))
 
 		expect(status()).toBe('Enregistrement…')
@@ -215,11 +215,17 @@ describe('un enregistrement honnête', () => {
 		const b = bench()
 		await b.monter()
 		await jsdomWindow.cliquer(jsdomWindow.bouton('Modifier mon nom et ma spécialité'))
-		await jsdomWindow.saisir(jsdomWindow.champ('Spécialité'), 'Maquillage soirée')
+		await jsdomWindow.saisir(jsdomWindow.champ('Autre (précise)'), 'Maquillage soirée')
 		await jsdomWindow.cliquer(jsdomWindow.bouton('Enregistrer'))
 		await jsdomWindow.attendre(() => b.journal.identities.length || null)
 		expect(b.journal.identities).toEqual([
-			{ prenom: 'Inès', nom: 'Morel', nomArtiste: 'Inès Morel Maquillage', specialite: 'Maquillage soirée' },
+			{
+				prenom: 'Inès',
+				nom: 'Morel',
+				nomArtiste: 'Inès Morel Maquillage',
+				specialtyBullets: '',
+				specialtyOther: 'Maquillage soirée',
+			},
 		])
 	})
 
@@ -238,10 +244,10 @@ describe('un enregistrement honnête', () => {
 		const b = bench({ saveIdentity: async () => ({ ok: false, message: FAILURE_MESSAGE }) })
 		await b.monter()
 		await jsdomWindow.cliquer(jsdomWindow.bouton('Modifier mon nom et ma spécialité'))
-		await jsdomWindow.saisir(jsdomWindow.champ('Spécialité'), 'Maquillage soirée')
+		await jsdomWindow.saisir(jsdomWindow.champ('Autre (précise)'), 'Maquillage soirée')
 		await jsdomWindow.cliquer(jsdomWindow.bouton('Enregistrer'))
 		await jsdomWindow.attendre(() => alerts().includes(FAILURE_MESSAGE) || null)
-		expect((jsdomWindow.champ('Spécialité') as HTMLInputElement).value).toBe('Maquillage soirée')
+		expect((jsdomWindow.champ('Autre (précise)') as HTMLInputElement).value).toBe('Maquillage soirée')
 		expect(b.journal.refreshes).toBe(0)
 		expect(status()).toBe('Pas enregistré : ta modification est toujours là')
 	})
@@ -254,7 +260,7 @@ describe('un enregistrement honnête', () => {
 		})
 		await b.monter()
 		await jsdomWindow.cliquer(jsdomWindow.bouton('Modifier mon nom et ma spécialité'))
-		await jsdomWindow.saisir(jsdomWindow.champ('Spécialité'), 'Maquillage soirée')
+		await jsdomWindow.saisir(jsdomWindow.champ('Autre (précise)'), 'Maquillage soirée')
 		await jsdomWindow.cliquer(jsdomWindow.bouton('Enregistrer'))
 		await jsdomWindow.attendre(() => alerts().includes(FAILURE_MESSAGE) || null)
 		expect((jsdomWindow.bouton('Enregistrer') as HTMLButtonElement).disabled).toBe(false)
@@ -264,14 +270,14 @@ describe('un enregistrement honnête', () => {
 		const b = bench({ saveIdentity: async () => ({ ok: false, message: MESSAGE_SESSION, session: 'expiree' }) })
 		await b.monter()
 		await jsdomWindow.cliquer(jsdomWindow.bouton('Modifier mon nom et ma spécialité'))
-		await jsdomWindow.saisir(jsdomWindow.champ('Spécialité'), 'Maquillage soirée')
+		await jsdomWindow.saisir(jsdomWindow.champ('Autre (précise)'), 'Maquillage soirée')
 		await jsdomWindow.cliquer(jsdomWindow.bouton('Enregistrer'))
 		await jsdomWindow.attendre(() => alerts().includes(MESSAGE_SESSION) || null)
 		const link = doc().querySelector<HTMLAnchorElement>('[role="alert"] a')
 		expect(link?.getAttribute('href')).toContain('/auth/signin?callbackUrl=')
 		expect(decodeURIComponent(link?.getAttribute('href') ?? '')).toContain('/auth/apercu-profil?mode=edition')
 		expect(link?.getAttribute('target')).toBe('_blank')
-		expect((jsdomWindow.champ('Spécialité') as HTMLInputElement).value).toBe('Maquillage soirée')
+		expect((jsdomWindow.champ('Autre (précise)') as HTMLInputElement).value).toBe('Maquillage soirée')
 	})
 
 	test('deux clics sur Enregistrer envoient une seule demande', async () => {

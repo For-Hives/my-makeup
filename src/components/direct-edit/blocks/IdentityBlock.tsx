@@ -3,6 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import type { ReactNode } from 'react'
 import { useForm } from 'react-hook-form'
+import { SpecialtyChoice } from '@/components/dashboard/SpecialtyChoice'
 import { trackSave } from '@/lib/dashboard/analytics'
 import { IDENTITY_FIELDS, IDENTITY_LABELS, type IdentityValues, identitySchema } from '@/lib/dashboard/identity'
 import { FAILURE_MESSAGE, type SaveResult } from '@/lib/dashboard/result'
@@ -62,6 +63,8 @@ function IdentityForm({ values, save }: { values: IdentityValues; save: Identity
 		register,
 		handleSubmit,
 		setError,
+		setValue,
+		watch,
 		formState: { errors, isDirty },
 	} = useForm<IdentityValues>({ resolver: zodResolver(identitySchema), defaultValues: values })
 
@@ -93,7 +96,7 @@ function IdentityForm({ values, save }: { values: IdentityValues; save: Identity
 			}
 		>
 			<div className="grid gap-4 sm:grid-cols-2">
-				{IDENTITY_FIELDS.map(field => {
+				{IDENTITY_FIELDS.filter(field => !field.startsWith('specialty')).map(field => {
 					const error = errors[field]?.message
 					return (
 						<div key={field} className="flex flex-col gap-1">
@@ -117,6 +120,19 @@ function IdentityForm({ values, save }: { values: IdentityValues; save: Identity
 						</div>
 					)
 				})}
+				<div className="sm:col-span-2">
+					<SpecialtyChoice
+						idPrefix="direct-identity"
+						bullets={watch('specialtyBullets')}
+						other={watch('specialtyOther')}
+						onChange={(bullets, other) => {
+							setValue('specialtyBullets', bullets, { shouldDirty: true })
+							setValue('specialtyOther', other, { shouldDirty: true })
+						}}
+						error={errors.specialtyBullets?.message}
+						otherError={errors.specialtyOther?.message}
+					/>
+				</div>
 			</div>
 		</BlockForm>
 	)
