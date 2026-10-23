@@ -77,6 +77,7 @@ export const COLLECTIONS = [
 	'auth-events',
 	'contact-requests',
 	'deleted-accounts',
+	'search-counts',
 	'payload-locked-documents',
 ] as const
 export type MatrixCollection = (typeof COLLECTIONS)[number]
@@ -161,6 +162,8 @@ export type Distribution = Record<Role, Actor> & {
 	demande: number
 	/** A deleted account of the old site (ticket 227): it belongs to nobody, only an admin reads it. */
 	compteSupprime: number
+	/** A row of the daily search counts (issue 1002): it belongs to nobody, only an admin reads it. */
+	compteurDeRecherches: number
 }
 
 /** A fresh address for each document a line creates or changes. */
@@ -246,6 +249,19 @@ const deletedAccount = async (payload: Payload): Promise<number> =>
 		})
 	).id
 
+/** The data of a row of the daily search counts: a day far in the past (the pair day and département is unique). */
+const searchCountData = () => ({
+	day: new Date(Date.UTC(1990, 0, 1) + Math.floor(Math.random() * 30_000) * 86_400_000).toISOString(),
+	department: '74' as const,
+	total: 3,
+	withCity: 2,
+	noResult: 1,
+})
+
+/** A row of the daily search counts, written by the server as it writes them: without access control. */
+const searchCount = async (payload: Payload): Promise<number> =>
+	(await payload.create({ collection: 'search-counts', data: searchCountData() })).id
+
 /** What the matrix needs to know of a collection to play its lines. */
 interface Portrait {
 	/** The field a line changes when it names none, and a new value for it. */
@@ -314,6 +330,12 @@ const PORTRAITS: Record<MatrixCollection, Portrait> = {
 		nouvelleValeur: () => 999,
 		donneesDeCreation: () => Promise.resolve({ type: 'sign-in', code: 'ok', durationMs: 1 }),
 		jetable: event,
+	},
+	'search-counts': {
+		champ: 'total',
+		nouvelleValeur: () => 999,
+		donneesDeCreation: () => Promise.resolve(searchCountData()),
+		jetable: searchCount,
 	},
 	'deleted-accounts': {
 		champ: 'strapiId',
@@ -441,6 +463,7 @@ export async function distribute(): Promise<Distribution> {
 		evenement: await event(payload),
 		demande: await request(payload),
 		compteSupprime: await deletedAccount(payload),
+		compteurDeRecherches: await searchCount(payload),
 	}
 }
 
@@ -527,6 +550,7 @@ function documentOf(distribution: Distribution, ligne: Line): number {
 	if (collection === 'auth-events') return distribution.evenement
 	if (collection === 'contact-requests') return distribution.demande
 	if (collection === 'deleted-accounts') return distribution.compteSupprime
+	if (collection === 'search-counts') return distribution.compteurDeRecherches
 	const state = (etat: State) =>
 		isEditorial(collection)
 			? distribution.contenus[collection][etat]
@@ -574,6 +598,7 @@ async function list(voie: Street, acteur: Actor, ligne: Line, distribution: Dist
 		...(collection === 'auth-events' ? [distribution.evenement] : []),
 		...(collection === 'contact-requests' ? [distribution.demande] : []),
 		...(collection === 'deleted-accounts' ? [distribution.compteSupprime] : []),
+		...(collection === 'search-counts' ? [distribution.compteurDeRecherches] : []),
 	]
 	const publicOnes = await publicOf(collection, distributed)
 	const ownAndPublic = [...new Set([...own, ...publicOnes])].sort((a, b) => a - b)

@@ -52,7 +52,11 @@ describe('293 : un lieu tapé devient un point', () => {
 		const a = await resolve('annecy le vieux')
 		const b = await resolve('Annecy-le-Vieux')
 		const c = await resolve('74940')
-		expect(a).toEqual({ genre: 'point', point: { latitude: 45.9183, longitude: 6.1445 }, label: 'Annecy-le-Vieux' })
+		expect(a).toMatchObject({
+			genre: 'point',
+			point: { latitude: 45.9183, longitude: 6.1445 },
+			label: 'Annecy-le-Vieux',
+		})
 		expect(b).toEqual(a)
 		expect(c).toEqual(a)
 	})

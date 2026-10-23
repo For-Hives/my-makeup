@@ -60,7 +60,16 @@ Clés facultatives (ticket 169), pour les relevés de J+1, J+7 et J+30. Un lecte
 - `auth` : les événements du journal d'authentification de la période, par type (`byType`) ; pour les seules connexions (`signIns`), le total, le compte par issue (`byCode`, dont `heritee` pour une connexion avec l'ancien mot de passe) et `durationP95Ms`, le 95e centile de leur durée en millisecondes (rang le plus proche ; `null` sans aucune durée). Le journal ne garde ni IP ni email : il n'y a rien à retirer. Il est purgé après 90 jours, ce qui borne la période utile.
 - `inherited` : une photo du jour, pas de la période. `remainingHashes` est le nombre de comptes qui ont encore le hash de l'ancien site (le suivi M6 du plan technique) ; `withoutPasswordByProvider` compte, par fournisseur d'origine (`google`, `facebook`, `other`), les comptes sans hash hérité. Les comptes `local` n'y sont pas : sans hash, ils se sont déjà connectés avec leur ancien mot de passe et en ont un. Payload ne garde aucune marque d'un mot de passe posé plus tard par le lien de réinitialisation : un compte Google ou Facebook qui en a posé un reste compté, donc ce nombre est un plafond. Le hash lui-même n'est jamais lu, seulement compté.
 
-Pas de zone pilote (abandonnée le 13/10/2026). Les vues de profil et les recherches par jour viennent avec les tickets 212 et 213.
+- `searches` (issue 1002) : les recherches de la période, comptées par jour sans aucun texte. `total`, `withCity` (une ville ou un département tapé), `noResult` (personne à montrer), `noResultShare` (la part sans résultat, de 0 à 1, trois décimales ; `null` sans aucune recherche) et `byDepartment` (`total` et `noResult` par code de département, `unknown` quand la recherche n'en vise aucun ou en vise plusieurs). Les jours sont ceux de Paris, de celui de `from` compris à celui de `to` exclu. L'outil du rapport (dépôt des plans) doit lire cette clé facultative et afficher la part sans résultat et les départements où elle est la plus haute : c'est la liste de prospection.
+
+Pas de zone pilote (abandonnée le 13/10/2026). Les vues de profil par jour viennent avec l'issue 1001.
+
+### Le compteur de recherches (issue 1002)
+
+- **Quand on compte.** Le navigateur ajoute 1 une fois par recherche, par la même décision que l'événement Umami `search_submit` (`src/lib/analytics/duplicate.ts`) : les autres pages des résultats et le retour arrière ne recomptent pas, une validation du formulaire compte. Un navigateur qui s'est opposé à la mesure (`umami.disabled`) ne compte pas. Un automate sans JavaScript ne compte pas non plus. Le compte est une Server Action (`src/app/(front)/(site)/search/actions.ts`), freinée à 60 par minute et par adresse, qui ne répond rien.
+- **Ce qui est gardé.** Une ligne par jour de Paris et par département : trois nombres (`total`, `withCity`, `noResult`). Jamais le texte tapé, ni la ville tapée, ni l'adresse IP, ni un identifiant, ni un cookie. Le département est calculé par le serveur de la page (celui que la recherche nomme, ou celui de la commune connue de la liste officielle) ; le serveur du compte n'accepte que trois clés et un code de la liste fermée.
+- **Combien de temps.** 400 jours, puis la tâche quotidienne `purge-compteurs-recherche` supprime les lignes (`src/lib/tasks/search-counts.ts`). La politique de confidentialité le dit.
+- **Précision.** Le département vient du navigateur : un client malveillant peut gonfler un compteur (freiné par adresse), pas lire quoi que ce soit.
 
 ## Garde-fous
 

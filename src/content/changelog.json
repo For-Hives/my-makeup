@@ -345,6 +345,11 @@
 			"id": "tu-choisis-ta-specialite-dans-une-liste-de-puces-mariage",
 			"type": "amelioration",
 			"text": "Tu choisis ta spécialité dans une liste de puces (mariage, soirée, photo et mode, cinéma et scène, effets spéciaux, cours d’auto-maquillage), et « Autre » te laisse écrire la tienne."
+		},
+		{
+			"id": "une-recherche-est-maintenant-comptee-sans-jamais-garder-c",
+			"type": "amelioration",
+			"text": "Une recherche est maintenant comptée, sans jamais garder ce que vous avez tapé, pour que My Makeup voie dans quels départements il manque des maquilleuses."
 		}
 	],
 	"releases": []

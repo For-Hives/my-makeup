@@ -4,6 +4,7 @@ import * as migration_20261021_120000_media_object_missing from './20261021_1200
 import * as migration_20261022_054854_contact_phone_optional from './20261022_054854_contact_phone_optional'
 import * as migration_20261022_090403_auth_events_link_methods from './20261022_090403_auth_events_link_methods'
 import * as migration_20261023_031452_specialty_bullets from './20261023_031452_specialty_bullets'
+import * as migration_20261023_031614_search_counts from './20261023_031614_search_counts'
 
 export const migrations = [
 	{
@@ -35,5 +36,10 @@ export const migrations = [
 		up: migration_20261023_031452_specialty_bullets.up,
 		down: migration_20261023_031452_specialty_bullets.down,
 		name: '20261023_031452_specialty_bullets',
+	},
+	{
+		up: migration_20261023_031614_search_counts.up,
+		down: migration_20261023_031614_search_counts.down,
+		name: '20261023_031614_search_counts',
 	},
 ]

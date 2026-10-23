@@ -35,7 +35,7 @@ export const PLACE_CACHE_UNKNOWN_MS = 60 * 60 * 1000
  * (the list was slow or down: nothing is known, ticket 295). Both leave the search as it was.
  */
 export type ResolvedPlace =
-	| { genre: 'point'; point: GeoPoint; label: string }
+	| { genre: 'point'; point: GeoPoint; label: string; department?: string | null }
 	| { genre: 'unknown' }
 	| { genre: 'unavailable' }
 
@@ -136,6 +136,7 @@ export function createPlaceResolver(options: PlaceResolverOptions = {}): (typed:
 				genre: 'point',
 				point: { latitude: city.latitude, longitude: city.longitude },
 				label: city.nom,
+				department: city.departement,
 			}
 			remember(key, found)
 			return found
