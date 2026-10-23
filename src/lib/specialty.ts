@@ -90,7 +90,7 @@ export function specialtyPatch(data: SpecialtyFields, stored: SpecialtyFields | 
 	const bullets = normalizeBullets(
 		data.specialtyBullets !== undefined ? data.specialtyBullets : stored?.specialtyBullets
 	)
-	const other = ((data.specialtyOther !== undefined ? data.specialtyOther : stored?.specialtyOther) ?? ''
+	const other = (data.specialtyOther !== undefined ? data.specialtyOther : stored?.specialtyOther) ?? ''
 	const storedBullets = normalizeBullets(stored?.specialtyBullets)
 	const storedOther = stored?.specialtyOther ?? ''
 	const created = stored == null && (data.specialtyBullets !== undefined || data.specialtyOther !== undefined)
