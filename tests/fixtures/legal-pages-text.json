@@ -4,11 +4,11 @@
 		"sha": "0394b59874b60b0ccdf2849569f5779c549e938660721ae508026c06fc2d61a7"
 	},
 	"/cgu": {
-		"lignes": 31,
-		"sha": "1639a2301a9c1bee19f9dcb1e3f84d558ab731820fb3fa108b7ffb6e42ada374"
+		"lignes": 34,
+		"sha": "65b41764c129bc23696f89457e1ad7fc0ccc663faa2911e5ab295a513da7c726"
 	},
 	"/politique-de-confidentialite": {
-		"lignes": 41,
-		"sha": "b184cef36a3d357b4791f4356822f1441883d50a81de18ddfa5b1d596e4d7b2f"
+		"lignes": 43,
+		"sha": "502c3cb14160418ec241149371a7523ec86c1243e902223770656091c9e6ce44"
 	}
 }

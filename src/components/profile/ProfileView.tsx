@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
+import { type QuoteAction, QuoteRequestForm } from '@/components/quote/QuoteRequestForm'
 import { formatFrom } from '@/lib/price'
-import { contactActions, contactName } from '@/lib/profile/contact-actions'
+import { contactActions, contactName, subjectOf } from '@/lib/profile/contact-actions'
 import { type ContactLink, rows } from '@/lib/profile/public-view'
 import { travelSentence } from '@/lib/profile/travel-sentence'
 import type { PublicProfile } from '@/services/public/profiles'
@@ -47,9 +48,15 @@ export function ProfileView({
 	profil,
 	mesure = true,
 	edit,
+	quote,
 }: {
 	profil: PublicProfile
 	mesure?: boolean
+	/**
+	 * The quote request form (issue 1003), given by the page only when the site offers it and this profile takes
+	 * requests (src/lib/quote/shown.ts). Never given on her own page.
+	 */
+	quote?: { action: QuoteAction; siteKey?: string }
 	/** Her own page in edit mode (issue 1008): the blocks she can change. Never given on the public page. */
 	edit?: ProfileEdit
 }) {
@@ -163,6 +170,20 @@ export function ProfileView({
 					</div>
 				</div>
 			</div>
+			{quote && (
+				<div id="devis" className="mx-auto w-full max-w-7xl scroll-mt-4 px-4 pb-8 sm:px-6 md:px-8">
+					<ProfileSection titre="Demander un devis">
+						<p className="text-gray-700">
+							{`Indiquez la date, le lieu et le type de prestation : ${subjectOf(name)} vous répond directement.`}
+						</p>
+						<QuoteRequestForm
+							action={quote.action}
+							slug={profil.slug}
+							{...(quote.siteKey !== undefined && { siteKey: quote.siteKey })}
+						/>
+					</ProfileSection>
+				</div>
+			)}
 			{/* Stuck to the bottom of the screen on a phone, and stopped by the end of the page: it never covers the footer. */}
 			{actions.length > 0 && contact('bar')}
 		</main>

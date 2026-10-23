@@ -19,6 +19,7 @@ import { PasswordChange } from '@/components/dashboard/PasswordChange'
 import { PhotoEditor } from '@/components/dashboard/PhotoEditor'
 import { PortfolioEditor } from '@/components/dashboard/PortfolioEditor'
 import { ProfileProgress } from '@/components/dashboard/ProfileProgress'
+import { QuoteRequests } from '@/components/dashboard/QuoteRequests'
 import { RefreshSession } from '@/components/dashboard/RefreshSession'
 import { SectionCard } from '@/components/dashboard/SectionCard'
 import { ViewLink } from '@/components/dashboard/ViewLink'
@@ -44,9 +45,11 @@ import { publicAddress } from '@/lib/dashboard/public-address'
 import { requestUser } from '@/lib/dashboard/request'
 import { SERVICE_OFFERS } from '@/lib/dashboard/service-offers'
 import { zoneReviewView } from '@/lib/dashboard/zone-review'
+import { serverEnv } from '@/lib/env'
 import { usageView } from '@/lib/photo-limits'
 import { readPhotoUsage } from '@/lib/photo-usage'
 import { text } from '@/lib/profile/display-name'
+import { readMyQuotes } from '@/lib/quote/dashboard'
 import { specialtyFormValues } from '@/lib/specialty'
 import {
 	saveMyAvailability,
@@ -63,6 +66,7 @@ import { deleteMyAccountAction } from './deletion-actions'
 import { saveMyCourses, saveMyExperiences, saveMyServiceOffers } from './lists-actions'
 import { findMyCities, saveMyLocation } from './location-actions'
 import { changeMyPasswordAction, requestSetPasswordLinkAction } from './password-actions'
+import { markMyQuoteRequest } from './quote-actions'
 
 // Read per request: it depends on the session, and the build has no database. A page that reads
 // the session is never shared nor stored (`private, no-store`, ticket 075).
@@ -89,6 +93,10 @@ export default async function ProfilePage() {
 	// Her views of the last 30 days, once her page is published (ticket 1001): her own profile, found by her session.
 	const myProfileId = profile.status === 'published' ? await profileId(context.payload, context.utilisateur) : null
 	const myViews = myProfileId === null ? undefined : await readMyViews(context.payload, myProfileId)
+	// Her quote requests (issue 1003): shown when the site offers the form, and as long as she holds one.
+	const allProfileId = myProfileId ?? (await profileId(context.payload, context.utilisateur))
+	const myQuotes = allProfileId === null ? [] : await readMyQuotes(context.payload, allProfileId)
+	const showQuotes = serverEnv().quoteRequests || myQuotes === null || myQuotes.length > 0
 	const steps = remainingSteps(profile)
 	// Not for a page the team hid, nor for the team's own account: the onboarding is not their next step.
 	const showBanner = steps.premiere !== null && progress.etat !== 'masque' && progress.etat !== 'interne'
@@ -209,6 +217,7 @@ export default async function ProfilePage() {
 			<ProfileProgress avancement={progress} reprendre={saveMyAvailability} />
 			{pageIsOnline(progress) && profile.slug ? <PageOnline adresse={publicAddress(profile.slug)} /> : null}
 			{myViews === undefined ? null : <MyViews jours={myViews} />}
+			{showQuotes ? <QuoteRequests quotes={myQuotes} mark={markMyQuoteRequest} /> : null}
 			<section aria-labelledby="groupe-premier" data-testid="groupe-premier" className="flex flex-col gap-5">
 				<h2 id="groupe-premier" className="font-semibold text-neutral-700 text-lg">
 					{FIRST_GROUP_TITLE}

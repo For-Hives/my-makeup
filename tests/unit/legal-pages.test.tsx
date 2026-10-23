@@ -28,7 +28,8 @@ const PAGES = [
 // wanted differences are in the policy: the paragraph « Formulaire de contact » (ticket 162, register
 // `contact-conservation-12-mois`), and the providers, the email confirmation and the delay of the photos
 // (ticket 189, register `politique-a-jour-a-la-bascule`), Cloudflare Turnstile on the contact form (ticket 1000, register `contact-verifie-par-turnstile`), the daily photo copy that keeps a removed photo (ticket 278),
-// the terms without the quote form that does not exist (ticket 291, register `cgu-sans-formulaire-de-devis`),
+// the terms without the quote form that did not exist (ticket 291), then with it again (issue 1003, register `cgu-sans-formulaire-de-devis`),
+// the paragraph on the quote requests (issue 1003, register `devis-natifs`),
 // the paragraph on the count of the searches by day (issue 1002, register `compteur-recherches-par-jour`),
 // and the paragraph on the counter of views (ticket 1001, register `espace-vues-de-la-page`).
 const ONLINE: Record<string, { lignes: number; sha: string }> = JSON.parse(
@@ -59,12 +60,13 @@ describe('le texte des trois pages', () => {
 		})
 	}
 
-	test('les CGU ne promettent pas de formulaire de devis (ticket 291)', async () => {
+	test('les CGU décrivent le formulaire de devis et sa durée de conservation (issue 1003)', async () => {
 		const { default: Page } = await PAGES[1].module()
 		const text = pageText(renderToStaticMarkup(<Page />))
-		expect(text).not.toContain('Demander un devis')
-		expect(text).not.toMatch(/demandes? de devis/i)
-		expect(text).not.toContain('formulaire')
+		expect(text).toContain('« Demander un devis »')
+		expect(text).toContain('7. Demandes de devis')
+		expect(text).toContain('Les données des demandes sont conservées 6 mois')
+		expect(text).toContain('11. Droit applicable')
 	})
 
 	test('seule la politique mène au bouton d’opposition', async () => {

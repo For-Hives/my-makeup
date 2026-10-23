@@ -380,6 +380,11 @@
 			"id": "le-formulaire-de-contact-se-protege-des-robots-sans-vous",
 			"type": "amelioration",
 			"text": "Le formulaire de contact se protège des robots sans vous demander quoi que ce soit, et vos messages passent même si le contrôle est indisponible."
+		},
+		{
+			"id": "sur-la-fiche-d-une-maquilleuse-tu-peux-demander-un-devis",
+			"type": "ajout",
+			"text": "Sur la fiche d’une maquilleuse, tu peux demander un devis : date, lieu et type de prestation, et elle te répond directement ; elle retrouve les demandes dans son espace."
 		}
 	],
 	"releases": []

@@ -119,6 +119,7 @@ describe('a missing or short secret stops the start', () => {
 			localDatabase: true,
 			payloadSecret: SECRET,
 			remindersSend: false,
+			quoteRequests: false,
 			photoLimits: {
 				uploadBytes: 12 * 1024 * 1024,
 				profileCount: 45,
@@ -460,6 +461,7 @@ describe('next build needs no secret and no database', () => {
 			localDatabase: false,
 			payloadSecret: '',
 			remindersSend: false,
+			quoteRequests: false,
 			photoLimits: {
 				uploadBytes: 12 * 1024 * 1024,
 				profileCount: 45,

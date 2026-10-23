@@ -81,6 +81,7 @@ export const COLLECTIONS = [
 	'profile-views',
 	'reminder-reports',
 	'reminder-states',
+	'quote-requests',
 	'payload-locked-documents',
 ] as const
 export type MatrixCollection = (typeof COLLECTIONS)[number]
@@ -173,6 +174,8 @@ export type Distribution = Record<Role, Actor> & {
 	rapportDeRelances: number
 	/** A row of the state of the reminders of a profile (issue 1006): only an admin reads it. */
 	etatDeRelances: number
+	/** A quote request (issue 1003): it belongs to a profile, only an admin reads it, nobody writes it through an API. */
+	demandeDeDevis: number
 }
 
 /** A fresh address for each document a line creates or changes. */
@@ -322,6 +325,28 @@ const reminderState = async (payload: Payload): Promise<number> => {
 	).id
 }
 
+/** The data of a quote request, as the server writes them. */
+const quoteRequestData = (profile: number) => ({
+	profile,
+	status: 'new' as const,
+	mailStatus: 'sent' as const,
+	eventDate: '2030-01-01',
+	place: 'Annecy',
+	serviceType: 'wedding' as const,
+	message: 'Une demande de test.',
+	clientFirstName: 'Camille',
+	clientEmail: `devis-${crypto.randomUUID()}@example.test`,
+	consentAt: new Date().toISOString(),
+})
+
+/** A quote request, written by the server as it writes them: on the first profile. */
+const quoteRequest = async (payload: Payload): Promise<number> => {
+	const { docs } = await payload.find({ collection: 'profiles', depth: 0, limit: 1, select: {} })
+	const profile = docs[0]
+	if (!profile) throw new Error('La matrice n’a aucun profil pour y poser une demande de devis.')
+	return (await payload.create({ collection: 'quote-requests', data: quoteRequestData(profile.id) })).id
+}
+
 /** What the matrix needs to know of a collection to play its lines. */
 interface Portrait {
 	/** The field a line changes when it names none, and a new value for it. */
@@ -426,6 +451,12 @@ const PORTRAITS: Record<MatrixCollection, Portrait> = {
 		nouvelleValeur: () => new Date().toISOString(),
 		donneesDeCreation: () => Promise.resolve({ lastSentAt: new Date().toISOString() }),
 		jetable: reminderState,
+	},
+	'quote-requests': {
+		champ: 'status',
+		nouvelleValeur: () => 'answered',
+		donneesDeCreation: () => Promise.resolve(quoteRequestData(1)),
+		jetable: quoteRequest,
 	},
 	// Contact messages (ticket 158): the server writes them, an admin reads them, nobody else reaches them.
 	'contact-requests': {
@@ -551,6 +582,7 @@ export async function distribute(): Promise<Distribution> {
 		vueDeProfil: await profileView(payload),
 		rapportDeRelances: await reminderReport(payload),
 		etatDeRelances: await reminderState(payload),
+		demandeDeDevis: await quoteRequest(payload),
 	}
 }
 
@@ -641,6 +673,7 @@ function documentOf(distribution: Distribution, ligne: Line): number {
 	if (collection === 'profile-views') return distribution.vueDeProfil
 	if (collection === 'reminder-reports') return distribution.rapportDeRelances
 	if (collection === 'reminder-states') return distribution.etatDeRelances
+	if (collection === 'quote-requests') return distribution.demandeDeDevis
 	const state = (etat: State) =>
 		isEditorial(collection)
 			? distribution.contenus[collection][etat]
@@ -692,6 +725,7 @@ async function list(voie: Street, acteur: Actor, ligne: Line, distribution: Dist
 		...(collection === 'profile-views' ? [distribution.vueDeProfil] : []),
 		...(collection === 'reminder-reports' ? [distribution.rapportDeRelances] : []),
 		...(collection === 'reminder-states' ? [distribution.etatDeRelances] : []),
+		...(collection === 'quote-requests' ? [distribution.demandeDeDevis] : []),
 	]
 	const publicOnes = await publicOf(collection, distributed)
 	const ownAndPublic = [...new Set([...own, ...publicOnes])].sort((a, b) => a - b)

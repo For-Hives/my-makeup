@@ -74,6 +74,7 @@ export type RawEnv = Partial<
 		| 'PHOTO_WEBP_QUALITY'
 		| 'PORT'
 		| 'REMINDERS_SEND'
+		| 'QUOTE_REQUESTS'
 		| 'S3_ACCESS_KEY_ID'
 		| 'S3_BUCKET'
 		| 'S3_ENDPOINT'
@@ -204,6 +205,13 @@ export type ServerEnv = {
 	 * daily task only writes its internal report ("dry-run" list). Never refused at start: a typo must not stop the site.
 	 */
 	remindersSend: boolean
+	/**
+	 * Whether the quote request form is offered on the profiles (QUOTE_REQUESTS, issue 1003). True only when the
+	 * variable is exactly « on »: turning it on makes the site write to real makeup artists when a client sends a
+	 * request, which the owner keeps in his hands. Absent, empty or any other value: no form on the pages and the
+	 * server refuses every request. Never refused at start: a typo must not stop the site.
+	 */
+	quoteRequests: boolean
 	/**
 	 * Nothing when S3_ENDPOINT is not set: no photo can then be sent, and the application writes
 	 * nothing on its own disk.
@@ -986,6 +994,7 @@ export function parseServerEnv(source: RawEnv): ServerEnv {
 		payloadSecret: parsed.data.PAYLOAD_SECRET,
 		photoLimits: photoLimitsFrom(parsed.data),
 		remindersSend: raw.REMINDERS_SEND?.trim() === 'on',
+		quoteRequests: raw.QUOTE_REQUESTS?.trim() === 'on',
 		...(storage && { storage }),
 		...(parsed.data.STATS_TOKEN !== undefined && { statsToken: parsed.data.STATS_TOKEN.trim() }),
 		...(turnstile && { turnstile }),
@@ -1032,6 +1041,7 @@ function processEnv(): RawEnv {
 		PHOTO_WEBP_QUALITY: process.env.PHOTO_WEBP_QUALITY,
 		PORT: process.env.PORT,
 		REMINDERS_SEND: process.env.REMINDERS_SEND,
+		QUOTE_REQUESTS: process.env.QUOTE_REQUESTS,
 		S3_ACCESS_KEY_ID: process.env.S3_ACCESS_KEY_ID,
 		S3_BUCKET: process.env.S3_BUCKET,
 		S3_ENDPOINT: process.env.S3_ENDPOINT,
@@ -1115,6 +1125,8 @@ export function serverEnv(
 		payloadSecret: raw.PAYLOAD_SECRET ?? '',
 		// Not read while Next builds, where nothing is sent: the server reads it when it starts.
 		remindersSend: false,
+		// Not read while Next builds, where nothing is rendered for a visitor: the server reads it when it starts.
+		quoteRequests: false,
 		// Not read while Next builds, where nothing is received: the server reads it when it starts.
 		photoLimits: photoLimitsFrom({}),
 		trustedOrigins: trustedOrigins(site, raw.NODE_ENV === 'production', raw.PORT),

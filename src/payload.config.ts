@@ -15,6 +15,7 @@ import { closedStorageFields, MEDIA_UPLOAD, Media, noUploadWithoutStorage, toPub
 import { Profiles } from './collections/Profiles'
 import { ProfileViews } from './collections/ProfileViews'
 import { Pros } from './collections/Pros'
+import { QuoteRequests } from './collections/QuoteRequests'
 import { ReminderReports } from './collections/ReminderReports'
 import { ReminderStates } from './collections/ReminderStates'
 import { SearchCounts } from './collections/SearchCounts'
@@ -98,6 +99,7 @@ export default buildConfig({
 		ProfileViews,
 		ReminderReports,
 		ReminderStates,
+		QuoteRequests,
 	],
 	// The site and the API share one origin: no other site may read this API from a browser.
 	cors: [],

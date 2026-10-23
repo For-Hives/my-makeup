@@ -65,7 +65,7 @@ export const ERRORS_SUMMARY = 'Le message n’a pas été envoyé : corrigez les
 const BARE_ADDRESS = /^[^@\s<>()[\]\\,;:"]+@[^@\s<>()[\]\\,;:"]+$/
 const ADDRESS_DOMAIN = /^[^@\s]+@[^@\s]+\.[^@\s.]{2,}$/
 
-function validAddress(valeur: string): boolean {
+export function validAddress(valeur: string): boolean {
 	return BARE_ADDRESS.test(valeur) && ADDRESS_DOMAIN.test(valeur)
 }
 

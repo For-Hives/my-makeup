@@ -196,6 +196,7 @@ Le même mot français a le même mot anglais partout (source : `PLAN-ANGLAIS.md
 | pays / ville (à l'étranger) | `country` / `town` | type de zone / code postal | `zoneKind` / `postalCode` |
 | revue de zone (privée, d'un profil) / candidate (commune possible) | `zoneReview` / `candidate` | à l'étranger / drapeau | `abroad` / `flag` |
 | relance (courriel de rappel) / désinscription | `reminder` / `unsubscribe` | inactif (compte sans activité) / rapport (interne) | `inactive` / `report` |
+| devis (demande de) / formulaire de devis | `quoteRequest` / `quote form` | consentement / interrupteur (d'exploitation) | `consent` / `switch` |
 | édition directe (sur la page) / bloc éditable | `direct-edit` (dossier `src/components/direct-edit`) / `EditableBlock` (jamais « zone » : le mot est pris par la localisation) | mode édition / session d'édition | `edit mode` / `EditSession` |
 
 ## Pièges

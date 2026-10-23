@@ -81,6 +81,7 @@ export interface Config {
     'profile-views': ProfileView;
     'reminder-reports': ReminderReport;
     'reminder-states': ReminderState;
+    'quote-requests': QuoteRequest;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -105,6 +106,7 @@ export interface Config {
     'profile-views': ProfileViewsSelect<false> | ProfileViewsSelect<true>;
     'reminder-reports': ReminderReportsSelect<false> | ReminderReportsSelect<true>;
     'reminder-states': ReminderStatesSelect<false> | ReminderStatesSelect<true>;
+    'quote-requests': QuoteRequestsSelect<false> | QuoteRequestsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -843,6 +845,26 @@ export interface ReminderState {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "quote-requests".
+ */
+export interface QuoteRequest {
+  id: number;
+  profile?: (number | null) | Profile;
+  status: 'new' | 'answered';
+  mailStatus: 'pending' | 'sent' | 'failed';
+  eventDate: string;
+  place: string;
+  serviceType: 'wedding' | 'event' | 'shoot' | 'lesson' | 'other';
+  message: string;
+  clientFirstName: string;
+  clientEmail: string;
+  clientPhone?: string | null;
+  consentAt: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -916,6 +938,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'reminder-states';
         value: number | ReminderState;
+      } | null)
+    | ({
+        relationTo: 'quote-requests';
+        value: number | QuoteRequest;
       } | null);
   globalSlug?: string | null;
   user:
@@ -1335,6 +1361,25 @@ export interface ReminderStatesSelect<T extends boolean = true> {
   profile?: T;
   lastSentAt?: T;
   unsubscribedAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "quote-requests_select".
+ */
+export interface QuoteRequestsSelect<T extends boolean = true> {
+  profile?: T;
+  status?: T;
+  mailStatus?: T;
+  eventDate?: T;
+  place?: T;
+  serviceType?: T;
+  message?: T;
+  clientFirstName?: T;
+  clientEmail?: T;
+  clientPhone?: T;
+  consentAt?: T;
   updatedAt?: T;
   createdAt?: T;
 }
