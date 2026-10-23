@@ -166,24 +166,35 @@ export function findDefects(facts: PageFacts, expectedStatus = 200): Defect[] {
 /** Longest wait for a page to load. */
 export const PAGE_DELAY_MS = 30_000
 
-/** Longest wait, after the scroll, for the images to finish loading. */
-export const IMAGE_DELAY_MS = 5_000
+/**
+ * Longest wait, after the scroll, for the images the page asked: the same ceiling as the page itself. A slow image is
+ * waited for, not reported (issue 997); only an image that is still unanswered at the ceiling is a defect.
+ */
+export const IMAGE_DELAY_MS = PAGE_DELAY_MS
+
+/** How long the images must stay quiet (none asked, none unfinished) before the page is read: a lazy image asked after the last scroll step. */
+const IMAGE_QUIET_MS = 150
+
+/** How often the images are looked at while waiting. */
+const IMAGE_POLL_MS = 50
+
+/** Scrolls through the whole page so that the images loaded on demand are asked. Pure DOM: no import, it is serialised. */
+async function scrollThrough() {
+	const step = Math.max(200, Math.floor(window.innerHeight * 0.8))
+	for (let y = 0; y < document.documentElement.scrollHeight; y += step) {
+		window.scrollTo(0, y)
+		await new Promise(resolve => setTimeout(resolve, 60))
+	}
+	window.scrollTo(0, document.documentElement.scrollHeight)
+}
+
+/** Images the page has started to load and that are not finished. Pure DOM, serialised. */
+function unfinishedImages(): number {
+	return [...document.images].filter(image => image.currentSrc !== '' && !image.complete).length
+}
 
 /** What the page reports about itself, read inside the browser. Pure DOM: no import, it is serialised. */
-function readDom(args: { navName: string; imageDelay: number }) {
-	const scrollToEnd = async () => {
-		const step = Math.max(200, Math.floor(window.innerHeight * 0.8))
-		for (let y = 0; y < document.documentElement.scrollHeight; y += step) {
-			window.scrollTo(0, y)
-			await new Promise(resolve => setTimeout(resolve, 60))
-		}
-		window.scrollTo(0, document.documentElement.scrollHeight)
-	}
-	const loadedImages = async () => {
-		const deadline = Date.now() + args.imageDelay
-		const pending = () => [...document.images].filter(image => image.currentSrc !== '' && !image.complete)
-		while (pending().length > 0 && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 100))
-	}
+function readDom(args: { navName: string }) {
 	const selectorOf = (element: Element): string => {
 		const id = element.id ? `#${element.id}` : ''
 		const classes = [...element.classList].slice(0, 2)
@@ -197,31 +208,27 @@ function readDom(args: { navName: string; imageDelay: number }) {
 			return source
 		}
 	}
-	return (async () => {
-		await scrollToEnd()
-		await loadedImages()
-		window.scrollTo(0, 0)
-		const root = document.documentElement
-		const overflow = root.scrollWidth - root.clientWidth
-		const overflowing =
-			overflow > 0
-				? [...document.body.querySelectorAll('*')]
-						.filter(element => element.getBoundingClientRect().right > root.clientWidth + 1)
-						.slice(0, 3)
-						.map(selectorOf)
-				: []
-		const broken = [...document.images]
-			.filter(image => image.currentSrc !== '' && (!image.complete || image.naturalWidth === 0))
-			.map(image => withoutQuery(image.currentSrc))
-		return {
-			h1Count: document.querySelectorAll('h1').length,
-			navCount: document.querySelectorAll(`nav[aria-label="${args.navName}"]`).length,
-			text: document.body.innerText,
-			overflow,
-			overflowing,
-			brokenImages: [...new Set(broken)],
-		}
-	})()
+	window.scrollTo(0, 0)
+	const root = document.documentElement
+	const overflow = root.scrollWidth - root.clientWidth
+	const overflowing =
+		overflow > 0
+			? [...document.body.querySelectorAll('*')]
+					.filter(element => element.getBoundingClientRect().right > root.clientWidth + 1)
+					.slice(0, 3)
+					.map(selectorOf)
+			: []
+	const broken = [...document.images]
+		.filter(image => image.currentSrc !== '' && (!image.complete || image.naturalWidth === 0))
+		.map(image => withoutQuery(image.currentSrc))
+	return {
+		h1Count: document.querySelectorAll('h1').length,
+		navCount: document.querySelectorAll(`nav[aria-label="${args.navName}"]`).length,
+		text: document.body.innerText,
+		overflow,
+		overflowing,
+		brokenImages: [...new Set(broken)],
+	}
 }
 
 export interface CrawlPageOptions {
@@ -229,6 +236,8 @@ export interface CrawlPageOptions {
 	blockedRequests?: () => string[]
 	/** Console messages to leave out: none by default, every error counts. */
 	ignoreConsole?: (message: string) => boolean
+	/** Longest wait, after the scroll, for the images still loading (default `IMAGE_DELAY_MS`). */
+	imageDelay?: number
 }
 
 /**
@@ -239,6 +248,10 @@ export interface CrawlPageOptions {
 export async function crawlPage(page: Page, path: string, options: CrawlPageOptions = {}): Promise<PageFacts> {
 	const consoleErrors: string[] = []
 	const failedImages: string[] = []
+	// The images asked and not yet finished, seen from the network: an image whose answer has not started has no
+	// `currentSrc` yet, so the page cannot say it is loading (issue 997). Reading the DOM while one is on its way
+	// reported it broken when its headers came in between the two looks, or missed it altogether.
+	const inFlight = new Set<import('@playwright/test').Request>()
 	const onConsole = (message: import('@playwright/test').ConsoleMessage) => {
 		if (message.type() !== 'error') return
 		const text = `${message.text()} ${message.location().url}`.trim()
@@ -250,22 +263,47 @@ export async function crawlPage(page: Page, path: string, options: CrawlPageOpti
 		if (response.request().resourceType() === 'image' && response.status() >= 400)
 			failedImages.push(`${new URL(response.url()).pathname} (${response.status()})`)
 	}
+	const onRequest = (request: import('@playwright/test').Request) => {
+		if (request.resourceType() === 'image') inFlight.add(request)
+	}
+	const onSettled = (request: import('@playwright/test').Request) => {
+		inFlight.delete(request)
+	}
 	page.on('console', onConsole)
 	page.on('pageerror', onPageError)
 	page.on('response', onResponse)
+	page.on('request', onRequest)
+	page.on('requestfinished', onSettled)
+	page.on('requestfailed', onSettled)
 	try {
 		const response = await page.goto(path, { waitUntil: 'load', timeout: PAGE_DELAY_MS })
-		const dom = await page.evaluate(readDom, { navName: NAV_NAME, imageDelay: IMAGE_DELAY_MS })
+		await page.evaluate(scrollThrough)
+		// Quiet means: no image asked and unfinished (network), none started and unfinished (page), for a moment.
+		const deadline = Date.now() + (options.imageDelay ?? IMAGE_DELAY_MS)
+		let quietSince: number | null = null
+		while (Date.now() < deadline) {
+			const busy = inFlight.size > 0 || (await page.evaluate(unfinishedImages)) > 0
+			if (busy) quietSince = null
+			else if (quietSince === null) quietSince = Date.now()
+			else if (Date.now() - quietSince >= IMAGE_QUIET_MS) break
+			await new Promise(resolve => setTimeout(resolve, IMAGE_POLL_MS))
+		}
+		const dom = await page.evaluate(readDom, { navName: NAV_NAME })
+		// Still unanswered at the ceiling: the page cannot show them, the network can.
+		const unanswered = [...inFlight].map(request => new URL(request.url()).pathname)
 		return {
 			status: response?.status() ?? 0,
 			consoleErrors,
 			...dom,
-			brokenImages: [...new Set([...dom.brokenImages, ...failedImages])],
+			brokenImages: [...new Set([...dom.brokenImages, ...failedImages, ...unanswered])],
 			blockedRequests: options.blockedRequests?.() ?? [],
 		}
 	} finally {
 		page.off('console', onConsole)
 		page.off('pageerror', onPageError)
 		page.off('response', onResponse)
+		page.off('request', onRequest)
+		page.off('requestfinished', onSettled)
+		page.off('requestfailed', onSettled)
 	}
 }
