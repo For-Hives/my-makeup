@@ -27,3 +27,14 @@ Application construite pour la production et démarrée sur le banc (`bun run te
 Ces chiffres viennent du banc, pas du site : le trafic réel est plus calme que les essais, mais le jeu de données du site est plus gros que celui du banc.
 
 **Valeur proposée : 2 Gio** (la crête mesurée, 1,37 Gio, plus environ 50 % de marge). Une fois le site en ligne, relever la mémoire réelle dans Coolify pendant une semaine : si elle reste sous 600 Mio, ramener la limite à 1 Gio.
+
+## La conversion des photos en mémoire (issue 996)
+
+Chaque photo envoyée est décodée puis réduite par sharp (`convertToWebp`, ticket 309). Mesure sur le poste (23/10/2026, bun 1.3.14, sharp 0.35.5, conversion seule, mémoire résidente du processus au plus haut, 82 Mo au repos), grand côté 2 000 px, qualité 82 :
+
+| Photo envoyée | 1 conversion | 4 conversions en même temps |
+|---|---|---|
+| JPEG de 50 millions de pixels (8 000 × 6 250, 18 Mo) | + 41 Mo | + 163 Mo |
+| PNG de 100 millions de pixels, un aplat de 3 Mo (le maximum que sharp accepte, `INPUT_PIXELS_MAX`) | + 76 Mo | + 305 Mo |
+
+Une photo plus grande que 100 millions de pixels est refusée avant d'être décodée. Un envoi de 12 Mo au plus (`PHOTO_UPLOAD_MAX_MB`) rend le pire cas réaliste de l'ordre de 80 Mo par conversion ; une maquilleuse qui envoie ses photos l'une après l'autre en tient une à la fois. Quatre conversions simultanées du pire cas ajoutent environ 300 Mo : cela tient dans la marge des 2 Gio proposés plus haut (crête mesurée 1,37 Gio). Le verrou des envois d'un même compte ne couvre pas la conversion : seul le contrôle de quota est en file.

@@ -341,6 +341,42 @@ describe('Ticket 309 : tout est rangé en WebP, sans métadonnées, et une maqui
 		expect(await mediaCount()).toBe(2)
 	})
 
+	test('deux envois simultanés ne dépassent pas le nombre autorisé : un seul passe, l’autre est refusé (409)', async () => {
+		setting('PHOTO_PROFILE_MAX_COUNT', '1')
+		const account = await createAccount('maquilleuse')
+		const png = await image('png')
+		const answers = await Promise.all(
+			Array.from({ length: 6 }, (_, index) => send(account, file(png, `p${index}.png`, 'image/png')))
+		)
+		expect(answers.map(({ statut }) => statut).sort()).toEqual([201, 409, 409, 409, 409, 409])
+		expect(await mediaCount()).toBe(1)
+	})
+
+	test('deux envois simultanés ne dépassent pas le volume autorisé', async () => {
+		setting('PHOTO_PROFILE_MAX_MB', '1')
+		const account = await createAccount('maquilleuse')
+		const payload = await testPayload()
+		const photo = await image('webp')
+		// Room for exactly one photo more: 1 Mo minus a little more than one photo.
+		await payload.create({
+			collection: 'media',
+			data: {
+				filename: 'ancienne.webp',
+				prefix: '7',
+				mimeType: 'image/webp',
+				filesize: MIB - photo.length - 10,
+				owner: Number(account.id),
+			},
+			context: { skipCloudStorage: true },
+			overrideAccess: true,
+		})
+		const answers = await Promise.all(
+			Array.from({ length: 3 }, (_, index) => send(account, file(photo, `p${index}.webp`, 'image/webp')))
+		)
+		expect(answers.map(({ statut }) => statut).sort()).toEqual([201, 409, 409])
+		expect(await mediaCount()).toBe(2)
+	})
+
 	test('au volume maximal : refusée (409) avec le message du volume, rien d’écrit', async () => {
 		setting('PHOTO_PROFILE_MAX_MB', '1')
 		const account = await createAccount('maquilleuse')

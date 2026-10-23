@@ -24,7 +24,7 @@ import {
 import { mediaUrl } from '../lib/media'
 import { photoLimits, quotaVerdict, UNREADABLE_MESSAGE } from '../lib/photo-limits'
 import { judge, NAMED_FILE_CONTEXT, unpredictableName } from '../lib/photo-upload'
-import { readPhotoUsage } from '../lib/photo-usage'
+import { lockPhotoUsage, readPhotoUsage } from '../lib/photo-usage'
 
 /**
  * Where the object of a media is and what it is: written by the server only, from the file it
@@ -147,6 +147,7 @@ export const quotaOfProfile: CollectionBeforeChangeHook = async ({ data, operati
 	if (!file || !user || !isArtist(user) || (operation !== 'create' && operation !== 'update')) return data
 	if (fileNamedByServer(req)) return data
 	const replacedId = operation === 'update' ? (originalDoc as { id?: number | string } | undefined)?.id : undefined
+	await lockPhotoUsage(req, user.id)
 	// Without the media whose file is replaced: what she holds besides it, then the new file on top.
 	const usage = await readPhotoUsage(req.payload, user.id, { except: replacedId, req })
 	const verdict = quotaVerdict({
