@@ -1,3 +1,4 @@
+import { type PostgresAdapter, sql } from '@payloadcms/db-postgres'
 import type { Payload, PayloadRequest } from 'payload'
 import type { PhotoUsage } from './photo-limits'
 
@@ -34,4 +35,18 @@ export async function readPhotoUsage(
 					},
 	})
 	return { count: docs.length, bytes: docs.reduce((total, doc) => total + (doc.filesize ?? 0), 0) }
+}
+
+/**
+ * Two photos of one makeup artist wait for each other (ticket 996): the second reads her usage once the
+ * first has committed. Without it, two sends at the same moment both read the same count and both passed
+ * the limit. A lock of PostgreSQL held until the end of the transaction of the send, on her account alone:
+ * two other accounts never wait for each other. Outside a transaction there is nothing to wait for.
+ */
+export async function lockPhotoUsage(req: PayloadRequest, owner: number | string): Promise<void> {
+	const id = await req.transactionID
+	// The adapter of the configuration is the PostgreSQL one; `sessions` holds the transaction of each request.
+	const { sessions } = req.payload.db as unknown as Pick<PostgresAdapter, 'sessions'>
+	const transaction = id === undefined || id === null ? undefined : sessions?.[id]
+	await transaction?.db.execute(sql`select pg_advisory_xact_lock(hashtext(${`media.photo-usage:${owner}`}))`)
 }
