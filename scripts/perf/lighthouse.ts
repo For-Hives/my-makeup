@@ -10,7 +10,7 @@
  * measure of the site that is online (docs/mesure/lighthouse-en-ligne-2026-10-16.json).
  *
  * Only an address of this machine is measured, unless `--production` is given: then the main domain only
- * (https://my-makeup.fr), by GET on public pages, with a pause of 10 s between two runs (issue 983). Lighthouse is not a
+ * (https://my-makeup.fr), by GET on public pages, with a pause of 10 s between two runs (issue 983). P03 is then the first profile of the sitemap of the site (the profile of the bench answers 404 there), never named in the report. Lighthouse is not a
  * dependency of the repository: it runs through `npx` at the version below, which is the one that measured
  * the site online (published on 18/09/2026, no advisory in the GitHub database nor in its repository's).
  *
@@ -29,6 +29,7 @@ import { spawn, spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { cpus, homedir, loadavg, tmpdir } from 'node:os'
 import path from 'node:path'
+import { sitemapAddresses } from '../cutover/host-check'
 import {
 	browserOf,
 	busyBefore,
@@ -117,6 +118,15 @@ export function checkProductionOptions(options: Options): void {
 /** In the report of a production run, the profile measured is a person: it is never named. */
 export function maskedPath(page: PlanPage, target: string, production: boolean): string {
 	return production && page === 'P03' ? '/profil/<publiable>' : target
+}
+
+/**
+ * The profile a production run measures: the first profile page the sitemap lists (`/profil/<slug>`, nothing
+ * after the slug, no query), or undefined when it lists none. The sitemap holds the published, indexable
+ * profiles only. Pure: the caller reads the sitemap.
+ */
+export function firstSitemapProfile(sitemapXml: string): string | undefined {
+	return sitemapAddresses(sitemapXml).find(address => /^\/profil\/[^/?#]+$/.test(address))
 }
 
 export function readOptions(args: readonly string[], env: Record<string, string | undefined>): Options {
@@ -269,6 +279,13 @@ export async function run(args: readonly string[], env: Record<string, string | 
 		const health = await fetch(new URL('/api/health', base)).catch(() => undefined)
 		if (!health?.ok)
 			throw new Refused(`L’application ne répond pas sur ${base.origin} (/api/health) : \`bun run bench:full\`.`)
+		// The profile of the bench answers 404 on the production site: take a real one from its sitemap, one read.
+		if (options.production && options.profile === BENCH_REFERENCE_PROFILE) {
+			const sitemap = await fetch(new URL('/sitemap.xml', base)).catch(() => undefined)
+			const chosen = sitemap?.ok ? firstSitemapProfile(await sitemap.text()) : undefined
+			if (!chosen) throw new Refused('Le sitemap de production ne donne aucun profil à mesurer pour P03.')
+			options.profile = chosen
+		}
 		const targets: Record<PlanPage, string> = {
 			P01: '/',
 			P02: '/search?city=Annecy',
@@ -279,7 +296,7 @@ export async function run(args: readonly string[], env: Record<string, string | 
 			const answer = await fetch(new URL(target, base)).catch(() => undefined)
 			if (answer?.status !== 200)
 				throw new Refused(
-					`${page} (${target}) répond ${answer?.status ?? 'rien'} : le jeu du banc est-il chargé (\`bun run bench:full\`) ?`
+					`${page} (${maskedPath(page as PlanPage, target, options.production)}) répond ${answer?.status ?? 'rien'} : le jeu du banc est-il chargé (\`bun run bench:full\`) ?`
 				)
 		}
 
