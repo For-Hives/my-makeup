@@ -97,7 +97,8 @@ describe('the text of the mail', () => {
 		expect(email.texte).toContain(link(7))
 		expect(email.html).toContain(link(7).replaceAll('&', '&amp;'))
 		const links = [...`${email.texte}\n${email.html}`.matchAll(/https?:\/\/[^\s"<)]+/g)].map(match => match[0])
-		for (const found of links) expect(found.startsWith(SITE)).toBe(true)
+		// The origin is compared, not the beginning of the text: `https://site.test.evil` also begins with the site.
+		for (const found of links) expect(new URL(found).origin).toBe(new URL(SITE).origin)
 	})
 
 	test('it holds no name, and nothing of another profile: the other one’s token and number are absent', () => {
