@@ -114,7 +114,7 @@ describe('/llms.txt', () => {
 		const links = [...text.matchAll(/\]\((https?:\/\/[^)\s]+)\)/g)].map(match => match[1] ?? '')
 		expect(links.length).toBeGreaterThan(10)
 		for (const link of links) {
-			expect(link.startsWith('https://my-makeup.fr')).toBe(true)
+			expect(new URL(link).origin).toBe('https://my-makeup.fr')
 			expect(link).not.toMatch(/\/(auth|admin|api|search|u|profil)(\/|$|\?)/)
 		}
 	})
