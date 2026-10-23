@@ -133,6 +133,37 @@ describe('crawl des interfaces (177) : la lecture seule', () => {
 		}
 	})
 
+	test('le widget Turnstile du formulaire de contact : seul cet hôte, en GET, passe, sans l’accès protégé', () => {
+		const widget = get('https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit')
+		expect(widget).toEqual({ action: 'continue', headers: {} })
+		const temporary = readSettings({
+			UI_CRAWL_TARGET: 'https://v3.my-makeup.fr',
+			UI_CRAWL_ACCESS_USER: 'agent',
+			UI_CRAWL_ACCESS_PASSWORD: 'secret-fictif',
+		})
+		expect(
+			decide({ method: 'GET', url: 'https://challenges.cloudflare.com/turnstile/v0/api.js', hasBody: false }, temporary)
+		).toEqual({ action: 'continue', headers: {} })
+	})
+
+	test('la liste blanche est exacte : ni joker, ni autre hôte, ni autre schéma, ni écriture', () => {
+		for (const decision of [
+			get('https://evil.challenges.cloudflare.com/x'),
+			get('https://challenges.cloudflare.com.evil.test/x'),
+			get('https://cloudflare.com/x'),
+			get('https://static.cloudflare.com/x'),
+			get('http://challenges.cloudflare.com/x'),
+			get('https://challenges.cloudflare.com:8443/x'),
+			get('https://user@challenges.cloudflare.com/x'),
+			decide({ method: 'POST', url: 'https://challenges.cloudflare.com/x', hasBody: true }, settings),
+		]) {
+			expect(decision.action).toBe('answer')
+			if (decision.action === 'answer') expect(decision.blocked).not.toBeNull()
+		}
+		const other = get('https://cdn.exemple.test/a.js')
+		expect(other).toEqual({ action: 'answer', blocked: 'GET vers un autre hôte (cdn.exemple.test)' })
+	})
+
 	test('l’événement de mesure ne part jamais, et n’est pas un défaut', () => {
 		expect(decide({ method: 'POST', url: 'https://my-makeup.fr/u/api/send', hasBody: true }, settings)).toEqual({
 			action: 'answer',

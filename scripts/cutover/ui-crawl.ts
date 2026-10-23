@@ -25,6 +25,7 @@
 import { createHash } from 'node:crypto'
 import { writeFileSync } from 'node:fs'
 import { type Browser, chromium } from '@playwright/test'
+import { TURNSTILE_ORIGIN } from '../../src/lib/security-headers'
 import { type Clock, REAL_CLOCK } from '../../tests/probes/reader'
 import {
 	CRAWL_ADDRESS_COUNT,
@@ -131,6 +132,14 @@ export type Decision =
 	| { action: 'answer'; blocked: string | null }
 
 /**
+ * The only other origin a page may read from, by name (no wildcard, no other host): the Cloudflare Turnstile widget
+ * of the contact form (issue 1000, src/components/contact/TurnstileWidget.tsx) loads its script and its frame there.
+ * Only a GET without credentials in the address goes out, and the protected access is never added to it. A bench
+ * where Turnstile is not configured never asks for it.
+ */
+export const ALLOWED_WIDGET_ORIGINS: readonly string[] = [TURNSTILE_ORIGIN]
+
+/**
  * The decision for one request of the browser, by the rules of the guard of the check of a host. `method` and
  * `url` are the request's; `hasBody` says whether it carries a body.
  */
@@ -138,6 +147,14 @@ export function decide(request: { method: string; url: string; hasBody: boolean 
 	const url = URL.canParse(request.url) ? new URL(request.url) : undefined
 	// Inline resources (data:, blob:) never leave the machine: the browser serves them itself.
 	if (url && (url.protocol === 'data:' || url.protocol === 'blob:')) return { action: 'continue', headers: {} }
+	if (
+		url &&
+		request.method === 'GET' &&
+		url.username === '' &&
+		url.password === '' &&
+		ALLOWED_WIDGET_ORIGINS.includes(url.origin)
+	)
+		return { action: 'continue', headers: {} }
 	if (!url || url.origin !== settings.target.origin)
 		return { action: 'answer', blocked: `${request.method} vers un autre hôte (${url?.host ?? 'adresse illisible'})` }
 	// The audience measurement posts here: it does not leave, and it is not a defect of the page.

@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import {
 	checkProductionOptions,
+	firstSitemapProfile,
 	maskedPath,
 	newestChromium,
 	otherProcesses,
@@ -298,6 +299,25 @@ describe('la commande', () => {
 		expect(readOptions([], {})).toMatchObject({ production: false, pauseMs: 3000 })
 		// a remote base without --production stays refused
 		expect(() => requireLocalBase(PRODUCTION_ORIGIN)).toThrow(Refused)
+	})
+
+	test('en production, le profil mesuré est le premier profil du sitemap fourni', () => {
+		const sitemap = `<?xml version="1.0"?><urlset>
+			<url><loc>https://my-makeup.fr/</loc></url>
+			<url><loc>https://my-makeup.fr/blog/un-article</loc></url>
+			<url><loc>https://my-makeup.fr/profil/</loc></url>
+			<url><loc>https://my-makeup.fr/profil/premiere-personne-fictive</loc></url>
+			<url><loc>https://my-makeup.fr/profil/seconde-personne-fictive</loc></url>
+		</urlset>`
+		expect(firstSitemapProfile(sitemap)).toBe('/profil/premiere-personne-fictive')
+		// an address with a query or a deeper path is not a profile page
+		expect(
+			firstSitemapProfile(
+				'<urlset><url><loc>https://my-makeup.fr/profil/a/b</loc></url><url><loc>https://my-makeup.fr/profil/c?d=1</loc></url><url><loc>https://my-makeup.fr/profil/bon</loc></url></urlset>'
+			)
+		).toBe('/profil/bon')
+		expect(firstSitemapProfile('<urlset><url><loc>https://my-makeup.fr/blog/x</loc></url></urlset>')).toBeUndefined()
+		expect(firstSitemapProfile('')).toBeUndefined()
 	})
 
 	test('les options : 5 passages, le port de l’instance du banc, et un refus net pour le reste', () => {
