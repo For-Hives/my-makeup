@@ -132,6 +132,20 @@ export const WeeklyStats = z.strictObject({
 			withoutPasswordByProvider: z.record(z.string(), account),
 		})
 		.optional(),
+	/**
+	 * Issue 1002. The searches of the period, counted by day with no text: how many, how many with a
+	 * city, how many found nobody, the share of those (`null` without any search), and the same by
+	 * département (`unknown` when the search points at none or at several).
+	 */
+	searches: z
+		.strictObject({
+			total: account,
+			withCity: account,
+			noResult: account,
+			noResultShare: z.number().min(0).max(1).nullable(),
+			byDepartment: z.record(z.string(), z.strictObject({ total: account, noResult: account })),
+		})
+		.optional(),
 })
 
 export type WeeklyStats = z.infer<typeof WeeklyStats>
@@ -298,6 +312,45 @@ export function aggregateContact(demandes: readonly RequestForStats[]): NonNulla
 		add(byMailState, mailStatus)
 	}
 	return { total: demandes.length, byStatus, byMailState }
+}
+
+/** What the count of the searches reads of a row of `search-counts`: numbers and a code of the list. */
+export interface SearchCountForStats {
+	department?: string | null
+	total?: number | string | null
+	withCity?: number | string | null
+	noResult?: number | string | null
+}
+
+const whole = (valeur: unknown): number => {
+	const n = Number(valeur)
+	return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0
+}
+
+/** The searches of the period (the caller read the daily rows): totals, share without result, and by département. */
+export function aggregateSearches(rows: readonly SearchCountForStats[]): NonNullable<WeeklyStats['searches']> {
+	let total = 0
+	let withCity = 0
+	let noResult = 0
+	const byDepartment: Record<string, { total: number; noResult: number }> = {}
+	for (const row of rows) {
+		const counts = { total: whole(row.total), withCity: whole(row.withCity), noResult: whole(row.noResult) }
+		total += counts.total
+		withCity += counts.withCity
+		noResult += counts.noResult
+		const key = row.department || 'unknown'
+		const kept = byDepartment[key] ?? { total: 0, noResult: 0 }
+		kept.total += counts.total
+		kept.noResult += counts.noResult
+		byDepartment[key] = kept
+	}
+	return {
+		total,
+		withCity,
+		noResult,
+		noResultShare: total === 0 ? null : Math.round((noResult / total) * 1000) / 1000,
+		byDepartment: Object.fromEntries(Object.entries(byDepartment).sort(([a], [b]) => a.localeCompare(b))),
+	}
 }
 
 /** What the count of the sign-ins reads of a row of the journal. */

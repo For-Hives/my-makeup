@@ -82,6 +82,9 @@ export default function PrivacyPolicyPage() {
 			<p>
 				{`La mesure passe par notre propre site, qui transmet à Umami votre adresse IP, sans vos cookies, pour en déduire le pays et distinguer les visiteurs ; Umami ne la conserve pas.`}
 			</p>
+			<p>
+				{`Chaque recherche est aussi comptée sur notre serveur, pour savoir dans quels départements l'offre manque : le jour, le département visé s'il y en a un, si une ville a été indiquée et si la recherche n'a rien trouvé. Ce sont des nombres, ajoutés à un total du jour. Le texte tapé, la ville tapée, votre adresse IP et tout identifiant ne sont ni envoyés ni gardés, et aucun cookie n'est déposé. Les totaux sont conservés 400 jours, puis supprimés. Si vous vous êtes opposé à la mesure d'audience sur ce navigateur (ci-dessous), la recherche n'est pas comptée.`}
+			</p>
 			{/* TODO(Andy): 25 months is the CNIL ceiling for audience
 								    measurement. Self-hosted Umami keeps events until they are
 								    deleted: schedule the purge (see the deploy notes) before

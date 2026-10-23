@@ -13,13 +13,16 @@
  */
 
 import type { Payload } from 'payload'
+import { searchCountInstant } from '@/lib/search/count'
 import {
 	aggregateAuth,
 	aggregateContact,
+	aggregateSearches,
 	aggregateStats,
 	LEGACY_PROVIDERS,
 	type Period,
 	type ProfileForStats,
+	parisDay,
 	type WeeklyStats,
 } from '@/lib/weekly-stats'
 
@@ -29,7 +32,12 @@ export async function readWeeklyStats(
 	maintenant: Date = new Date()
 ): Promise<WeeklyStats> {
 	const inPeriod = { greater_than_equal: periode.debut.toISOString(), less_than: periode.fin.toISOString() }
-	const [profiles, accounts, requests, events, remainingHashes, withoutHash] = await Promise.all([
+	// The daily rows hold a Paris day: the days of the period are those of `from` (included) to `to` (excluded).
+	const searchDays = {
+		greater_than_equal: searchCountInstant(parisDay(periode.debut)),
+		less_than: searchCountInstant(parisDay(periode.fin)),
+	}
+	const [profiles, accounts, requests, events, searchRows, remainingHashes, withoutHash] = await Promise.all([
 		payload.find({
 			collection: 'profiles',
 			select: {
@@ -73,6 +81,14 @@ export async function readWeeklyStats(
 			pagination: false,
 			overrideAccess: true,
 		}),
+		payload.find({
+			collection: 'search-counts',
+			where: { day: searchDays },
+			select: { department: true, total: true, withCity: true, noResult: true },
+			depth: 0,
+			pagination: false,
+			overrideAccess: true,
+		}),
 		payload.count({
 			collection: 'pros',
 			where: { legacyBcrypt: { exists: true } },
@@ -108,6 +124,7 @@ export async function readWeeklyStats(
 		...stats,
 		contact: aggregateContact(requests.docs),
 		auth: aggregateAuth(events.docs),
+		searches: aggregateSearches(searchRows.docs),
 		inherited: {
 			remainingHashes: remainingHashes.totalDocs,
 			withoutPasswordByProvider: Object.fromEntries(withoutHash),

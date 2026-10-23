@@ -14,6 +14,7 @@ import { DeletedAccounts } from './collections/DeletedAccounts'
 import { closedStorageFields, MEDIA_UPLOAD, Media, noUploadWithoutStorage, toPublicUrl } from './collections/Media'
 import { Profiles } from './collections/Profiles'
 import { Pros } from './collections/Pros'
+import { SearchCounts } from './collections/SearchCounts'
 import { Talents } from './collections/Talents'
 import { withTrash } from './collections/trash'
 import { boundedQueries } from './lib/bounded-query'
@@ -80,7 +81,18 @@ export default buildConfig({
 		// 'off' closes /api/og: an image rendered on demand, for anyone, with or without a session.
 		meta: { defaultOGImageType: 'off' },
 	},
-	collections: [Admins, Pros, Profiles, media, Talents, Articles, AuthEvents, ContactRequests, DeletedAccounts],
+	collections: [
+		Admins,
+		Pros,
+		Profiles,
+		media,
+		Talents,
+		Articles,
+		AuthEvents,
+		ContactRequests,
+		DeletedAccounts,
+		SearchCounts,
+	],
 	// The site and the API share one origin: no other site may read this API from a browser.
 	cors: [],
 	// A session cookie is accepted from these origins only (src/lib/env.ts).

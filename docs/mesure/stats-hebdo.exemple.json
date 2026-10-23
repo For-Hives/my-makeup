@@ -216,5 +216,16 @@
       "facebook": 9,
       "other": 0
     }
+  },
+  "searches": {
+    "total": 412,
+    "withCity": 301,
+    "noResult": 37,
+    "noResultShare": 0.09,
+    "byDepartment": {
+      "13": { "total": 40, "noResult": 9 },
+      "74": { "total": 55, "noResult": 2 },
+      "unknown": { "total": 317, "noResult": 26 }
+    }
   }
 }

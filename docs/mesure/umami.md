@@ -83,6 +83,8 @@ Un profil sans contact public n'a ni section ni lien, donc aucun événement. Le
 
 **Aucun texte saisi ne part.** La page de résultats ne donne au navigateur que deux faits (une ville, une tranche) et une empreinte courte des mots, qui sert à ne pas recompter la même recherche ; l'empreinte n'est jamais envoyée. Le message d'une erreur n'est jamais lu.
 
+**Le compteur de recherches (issue 1002).** La même décision (`shouldEmit`) ajoute aussi 1 au total du jour en base, sans Umami : jour, département, avec ville, sans résultat, jamais de texte. Voir `docs/mesure/statistiques-hebdomadaires.md`, « Le compteur de recherches ».
+
 **Aucun doublon.** Le navigateur retient, pour l'onglet (`sessionStorage`, clé `mm-analytics-last`), la dernière vue comptée. Une 404 ou une page d'erreur rechargée n'est pas recomptée ; une recherche revue (page suivante, retour) non plus, sauf si le formulaire vient d'être envoyé (`src/lib/analytics/duplicate.ts`). Un stockage bloqué compte chaque vue.
 
 **Le traceur sur les pages qui l'ont perdu.** Le script de l'en-tête ne s'exécute pas quand le navigateur dessine lui-même la page après un échec du serveur : la 404 d'une adresse que rien ne sert (`src/app/global-not-found.tsx`), celle d'un profil, d'un talent ou d'un article inconnu, et toute page d'erreur. Ces pages ajoutent donc le traceur elles-mêmes avant d'émettre (`src/lib/analytics/loader.ts`), s'il n'est pas déjà là. La page d'erreur globale (`global-error.tsx`) fait de même.

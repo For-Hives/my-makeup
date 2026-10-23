@@ -5,6 +5,7 @@ import { SearchResults } from '@/components/search/SearchResults'
 import { NoResult, SearchFailed } from '@/components/search/SearchStates'
 import { fingerprint } from '@/lib/analytics/duplicate'
 import { resultBucket } from '@/lib/analytics/values'
+import { departmentOfSearch } from '@/lib/search/count'
 import { readSearch, searchByCity, searchByWord } from '@/lib/search/input'
 import { readPlace } from '@/lib/search/place'
 import { resolvePlace } from '@/lib/search/place-point'
@@ -85,6 +86,7 @@ export default async function SearchPage({ searchParams }: PageProps<'/search'>)
 				aUneVille={city !== ''}
 				resultats={resultBucket(view.total)}
 				empreinte={fingerprint(`${search}|${city}`)}
+				departement={departmentOfSearch(city, place.genre === 'point' ? place.department : null)}
 			/>
 			{view.empty ? (
 				<NoResult
