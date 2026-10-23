@@ -1,4 +1,4 @@
-import { createLocalReq, type Payload, type Where } from 'payload'
+import { createLocalReq, type Payload } from 'payload'
 import { ACTIVITY_CHECKS_COLLECTION } from '../../collections/ActivityChecks'
 import { revalidateChange } from '../../collections/revalidate'
 import { type ActivityOutcome, BADGE_OUTCOME } from '../activity/outcome'
@@ -60,42 +60,67 @@ const OUTCOME_OF: Readonly<Partial<Record<RegistryAnswer['kind'], ActivityOutcom
 
 type Id = number
 
-/** The rows to ask today: never tried first, then the oldest failed tries, then the badges to renew. */
-async function dueRows(
-	payload: Payload,
-	now: Date,
-	cap: number
-): Promise<{ id: Id; profile: Id; outcome: ActivityOutcome }[]> {
+/** What a row to ask is, once read. */
+interface DueRow {
+	id: Id
+	profile: Id
+	outcome: ActivityOutcome
+}
+
+/**
+ * The rows to ask today, in this order: never tried, then the failed tries that are old enough, then the badges
+ * to renew. Three plain reads (the check of the keys of the queries follows literals), each bounded by what the
+ * cap leaves.
+ */
+async function dueRows(payload: Payload, now: Date, cap: number): Promise<DueRow[]> {
 	const retryBefore = new Date(now.getTime() - RETRY_AFTER_MS).toISOString()
 	const renewBefore = new Date(now.getTime() - RENEW_AFTER_MS).toISOString()
-	const lookups: { and: Where[]; sort: string }[] = [
-		{ and: [{ outcome: { equals: 'pending' } }, { attemptedAt: { exists: false } }], sort: 'createdAt' },
-		{ and: [{ outcome: { equals: 'pending' } }, { attemptedAt: { less_than: retryBefore } }], sort: 'attemptedAt' },
-		{
-			and: [
-				{ outcome: { equals: 'active' } },
-				{ checkedAt: { less_than: renewBefore } },
-				{ or: [{ attemptedAt: { exists: false } }, { attemptedAt: { less_than: retryBefore } }] },
-			],
-			sort: 'checkedAt',
-		},
-	]
-	const rows: { id: Id; profile: Id; outcome: ActivityOutcome }[] = []
-	for (const { and, sort } of lookups) {
-		if (rows.length >= cap) break
-		const { docs } = await payload.find({
+	const rows: DueRow[] = []
+	const keep = (docs: Parameters<typeof toRow>[0][]) => {
+		for (const doc of docs) {
+			const row = toRow(doc)
+			if (row) rows.push({ id: row.id, profile: row.profile, outcome: row.outcome })
+		}
+	}
+	const neverTried = await payload.find({
+		collection: ACTIVITY_CHECKS_COLLECTION,
+		depth: 0,
+		limit: cap,
+		overrideAccess: true,
+		pagination: false,
+		sort: 'createdAt',
+		where: { and: [{ outcome: { equals: 'pending' } }, { attemptedAt: { exists: false } }] },
+	})
+	keep(neverTried.docs)
+	if (rows.length < cap) {
+		const failed = await payload.find({
 			collection: ACTIVITY_CHECKS_COLLECTION,
 			depth: 0,
 			limit: cap - rows.length,
 			overrideAccess: true,
 			pagination: false,
-			sort,
-			where: { and },
+			sort: 'attemptedAt',
+			where: { and: [{ outcome: { equals: 'pending' } }, { attemptedAt: { less_than: retryBefore } }] },
 		})
-		for (const doc of docs) {
-			const row = toRow(doc)
-			if (row) rows.push({ id: row.id, profile: row.profile, outcome: row.outcome })
-		}
+		keep(failed.docs)
+	}
+	if (rows.length < cap) {
+		const renewals = await payload.find({
+			collection: ACTIVITY_CHECKS_COLLECTION,
+			depth: 0,
+			limit: cap - rows.length,
+			overrideAccess: true,
+			pagination: false,
+			sort: 'checkedAt',
+			where: {
+				and: [
+					{ outcome: { equals: 'active' } },
+					{ checkedAt: { less_than: renewBefore } },
+					{ or: [{ attemptedAt: { exists: false } }, { attemptedAt: { less_than: retryBefore } }] },
+				],
+			},
+		})
+		keep(renewals.docs)
 	}
 	return rows
 }

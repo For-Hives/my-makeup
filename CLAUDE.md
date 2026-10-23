@@ -28,6 +28,7 @@ My Makeup est un annuaire de maquilleuses professionnelles indépendantes. Cette
 | créer, déplacer ou retirer une adresse | [`docs/migration/URLS.md`](docs/migration/URLS.md) |
 | toucher à l'édition directe du profil (blocs éditables, mode édition, jetons de la direction artistique) | [`docs/edition-directe.md`](docs/edition-directe.md) |
 | préparer, lister ou lancer le courriel aux membres après la bascule (liste à blanc, verrous, journal d'envoi) | [`docs/membres-courriel.md`](docs/membres-courriel.md) |
+| toucher au SIRET, au badge « Activité vérifiée » ou à l'appel de l'annuaire des entreprises | [`docs/activite-verifiee.md`](docs/activite-verifiee.md) |
 | faire autrement que le site en ligne | [`docs/migration/CHANGEMENTS-VOULUS.md`](docs/migration/CHANGEMENTS-VOULUS.md) |
 | jouer la bascule, ou savoir quoi faire à chaque étape du jour J et du retour arrière | [`docs/migration/BASCULE.md`](docs/migration/BASCULE.md) |
 | savoir ce qui est déjà fait et vérifié | [`docs/migration/JOURNAL.md`](docs/migration/JOURNAL.md) |
@@ -202,6 +203,7 @@ Le même mot français a le même mot anglais partout (source : `PLAN-ANGLAIS.md
 | courriel aux membres (envoi unique) / journal d'envoi | `membersMail` / `sendLog` | plafond (d'une passe) / destinataire | `limit` / `recipient` |
 | édition directe (sur la page) / bloc éditable | `direct-edit` (dossier `src/components/direct-edit`) / `EditableBlock` (jamais « zone » : le mot est pris par la localisation) | mode édition / session d'édition | `edit mode` / `EditSession` |
 | modèle (de prestation) / médiane (des prix) | `OfferModel` (`src/lib/price-median.ts`) / `median` | prestation phare / noms de départ (du profil) | `flagship` (`flagship-offer.ts`) / `initialNames` |
+| annuaire public des entreprises (l'API « Recherche d'entreprises », jamais `directory`, pris par la liste des profils) / établissement | `businessRegistry` (`src/lib/activity/registry.ts`) / `establishment` | contrôle d'activité (du SIRET) / cessée | `activityCheck` (dossier `src/lib/activity`) / `ceased` |
 
 ## Pièges
 

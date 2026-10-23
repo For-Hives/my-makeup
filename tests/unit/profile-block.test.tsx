@@ -138,7 +138,7 @@ describe('305 : les maquilleuses d’une spécialité', () => {
 		const payload = {
 			find: async (options: Record<string, unknown>) => {
 				const select = options.select as Record<string, unknown>
-				if (options.collection === 'media') return { docs: [] }
+				if (options.collection === 'media' || options.collection === 'activity-checks') return { docs: [] }
 				if (select?.strapiId === true) return { docs: [] }
 				if (select?.networks === true) return { docs: [] }
 				expect(select.publishable).toBe(true)

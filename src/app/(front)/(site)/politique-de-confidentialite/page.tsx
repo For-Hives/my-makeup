@@ -66,6 +66,20 @@ export default function PrivacyPolicyPage() {
 				{`Journal de modération : quand un administrateur masque, suspend ou rétablit un profil, il note le motif de sa décision, et le site en garde une trace : le numéro de l'administrateur, le numéro du profil, l'action, le motif et la date, sans nom, email ni téléphone. Seuls les administrateurs de My Makeup peuvent lire ce journal (intérêt légitime : protéger le service et les maquilleuses, et pouvoir expliquer une décision). Durée : ${MODERATION_RETENTION_MONTHS} mois (5 ans) après la date de l'action, puis suppression automatique. Supprimer votre compte ne supprime pas ces lignes avant ce délai, mais elles ne portent ni votre nom ni vos coordonnées.`}
 			</p>
 
+			<h2>SIRET et contrôle de l&apos;activité (facultatif)</h2>
+			<p>
+				{`Données : le numéro SIRET de votre entreprise, si vous choisissez de le donner depuis votre espace. Pour un entrepreneur individuel, ce numéro peut permettre de vous identifier : nous le traitons comme une donnée personnelle.`}
+			</p>
+			<p>
+				{`Pourquoi : vérifier chaque jour, dans l'annuaire public des entreprises (le service « Recherche d'entreprises » de l'État, sur api.gouv.fr), qu'un établissement en activité existe pour ce numéro, afin d'afficher le badge « Activité vérifiée » sur votre page et dans la recherche. Seul le numéro est envoyé à cet annuaire, sans votre nom ni aucune autre donnée, et ce qu'il nous répond est une information publique. Le badge indique seulement qu'un établissement en activité a été trouvé : il ne dit rien de la qualité de votre travail et ne change pas votre place dans la recherche. Si l'annuaire ne répond pas, rien ne change. Aucune décision à votre sujet n'est prise automatiquement.`}
+			</p>
+			<p>
+				{`Base légale : votre consentement, que vous donnez en saisissant votre SIRET. Vous le retirez à tout moment en vidant le champ dans votre espace.`}
+			</p>
+			<p>
+				{`Qui le voit : vous et les administrateurs de My Makeup, seulement. Le numéro n'est jamais affiché sur le site, ni transmis à un autre service que l'annuaire public, ni écrit dans nos journaux ou nos statistiques d'audience. Nous gardons le résultat du dernier contrôle (activité en cours, cessée ou introuvable) et sa date. Durée : tant que le numéro est sur votre profil. Vider le champ ou changer le numéro efface ce résultat ; supprimer votre compte supprime le numéro et le résultat aussitôt.`}
+			</p>
+
 			<h2>Formulaire de contact</h2>
 			<p>
 				{`Données : nom, prénom, email, téléphone et message. Le message est enregistré sur notre serveur, puis envoyé par email à l'équipe via le service Resend, pour vous répondre (intérêt légitime). Seuls les administrateurs de My Makeup peuvent le lire. Durée : 12 mois après sa réception, puis suppression automatique de notre serveur. La copie reçue par email est effacée de notre boîte dans le même délai.`}

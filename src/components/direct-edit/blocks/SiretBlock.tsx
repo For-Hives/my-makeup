@@ -132,7 +132,10 @@ function SiretForm({ view, save }: { view: ActivityView; save: SiretSave }) {
 				<p>
 					Il n’est jamais affiché ni transmis aux clientes. Sans SIRET, tu n’es ni moins bien classée ni moins bien
 					placée dans la recherche. Vide le champ pour le supprimer.{' '}
-					<Link href={BADGE_HELP_PATH} className="font-semibold text-ink underline underline-offset-2">
+					<Link
+						href={BADGE_HELP_PATH}
+						className="inline-flex min-h-11 items-center font-semibold text-ink underline underline-offset-2"
+					>
 						Qu’est-ce que c’est ?
 					</Link>
 				</p>

@@ -5,10 +5,10 @@
 	},
 	"/cgu": {
 		"lignes": 34,
-		"sha": "65b41764c129bc23696f89457e1ad7fc0ccc663faa2911e5ab295a513da7c726"
+		"sha": "afa80edd6140cdea175c2cdfaa0dcebe83bdb7628dd47a9635c449dcbcecb93e"
 	},
 	"/politique-de-confidentialite": {
-		"lignes": 44,
-		"sha": "84524e2f06bcc8a52e11f5b7b0c108031c3a9bf5618a4d542aeba96be3c503be"
+		"lignes": 49,
+		"sha": "cad2ddbbcf47a86f8167134b7ed5e0a9b3b45fd8169c45f403aae97c91b953ad"
 	}
 }
