@@ -23,6 +23,7 @@ import {
 	saveMyIdentity,
 	saveMyLanguages,
 	saveMyMainPicture,
+	saveMyNetworks,
 	saveMyPortfolio,
 	saveMySkills,
 } from '../profil/actions'
@@ -102,6 +103,7 @@ export default async function PreviewPage({ searchParams }: PageProps<'/auth/ape
 								saveServices: saveMyServiceOffers,
 								savePortfolio: saveMyPortfolio,
 								saveContacts: saveMyContactDetails,
+								saveNetworks: saveMyNetworks,
 								saveMainPicture: saveMyMainPicture,
 								savePlace: saveMyLocation,
 								searchCities: findMyCities,

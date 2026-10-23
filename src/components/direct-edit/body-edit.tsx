@@ -14,6 +14,7 @@ import { AboutBlock, type AboutSave } from './blocks/AboutBlock'
 import { BulletsBlock, type BulletsSave } from './blocks/BulletsBlock'
 import { ContactsBlock, type ContactsSave } from './blocks/ContactsBlock'
 import { GalleryBlock, type GalleryWork, type MainPictureSave, type PortfolioSave } from './blocks/GalleryBlock'
+import { NetworksBlock, type NetworksSave } from './blocks/NetworksBlock'
 import type { PlaceSave } from './blocks/PlaceBlock'
 import { RowsBlock, type RowsSave } from './blocks/RowsBlock'
 import { TravelBlock } from './blocks/TravelBlock'
@@ -28,6 +29,7 @@ export interface BodyActions {
 	savePortfolio: PortfolioSave
 	saveMainPicture: MainPictureSave
 	saveContacts: ContactsSave
+	saveNetworks: NetworksSave
 	savePlace: PlaceSave
 	searchCities: CitiesSearch
 }
@@ -56,6 +58,20 @@ export function bodyEdit({
 	const mainInGallery =
 		photos.photo !== null && photos.galerie.some(photo => String(photo.id) === String(photos.photo?.id))
 	return {
+		networks: read => (
+			<NetworksBlock
+				values={{
+					instagram: text(profile.networks?.instagram),
+					facebook: text(profile.networks?.facebook),
+					youtube: text(profile.networks?.youtube),
+					linkedin: text(profile.networks?.linkedin),
+					siteWeb: text(profile.networks?.website),
+				}}
+				save={actions.saveNetworks}
+			>
+				{read}
+			</NetworksBlock>
+		),
 		contacts: read => (
 			<ContactsBlock
 				values={{

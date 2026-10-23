@@ -335,6 +335,11 @@
 			"id": "tu-peux-modifier-ton-telephone-et-ton-email-directement-s",
 			"type": "amelioration",
 			"text": "Tu peux modifier ton téléphone et ton email directement sur ta page, et choisir de les montrer ou non : si tu retires ton accord, ils disparaissent de ta page dès l’enregistrement."
+		},
+		{
+			"id": "tu-peux-modifier-tes-reseaux-et-ton-site-directement-sur",
+			"type": "amelioration",
+			"text": "Tu peux modifier tes réseaux et ton site directement sur ta page : écris ton pseudo ou colle une adresse, et tu vois comment elle s’affichera avant d’enregistrer."
 		}
 	],
 	"releases": []
