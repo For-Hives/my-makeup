@@ -31,7 +31,8 @@ const PAGES = [
 // the terms without the quote form that did not exist (ticket 291), then with it again (issue 1003, register `cgu-sans-formulaire-de-devis`),
 // the paragraph on the quote requests (issue 1003, register `devis-natifs`),
 // the paragraph on the count of the searches by day (issue 1002, register `compteur-recherches-par-jour`),
-// and the paragraph on the counter of views (ticket 1001, register `espace-vues-de-la-page`).
+// the paragraph on the counter of views (ticket 1001, register `espace-vues-de-la-page`),
+// and the paragraph on the moderation journal, kept 60 months (issue 1005, register `moderation-motif-et-journal`).
 const ONLINE: Record<string, { lignes: number; sha: string }> = JSON.parse(
 	readFileSync(path.join(process.cwd(), 'tests/fixtures/legal-pages-text.json'), 'utf8')
 )

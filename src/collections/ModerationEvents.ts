@@ -11,7 +11,8 @@ import { ACTION_LABELS, MODERATION_ACTIONS, REASON_MAX } from '../lib/profile/mo
  *   The reason is free text typed by an admin, who is told not to put a name in it.
  * - Only an admin reads it. Nobody writes it through an API, an admin included: the server writes the
  *   line in the same transaction as the change of the profile (src/collections/Profiles.ts), so a change
- *   without its line cannot happen. Nothing deletes it: the journal is the trace.
+ *   without its line cannot happen. Nothing deletes it through an API: the journal is the trace. Only the daily purge removes a line, 60 months
+ *   after its date (src/lib/tasks/moderation-events.ts); deleting an admin account keeps its lines (a number, no link).
  * - No `createdAt` or `updatedAt`: `date` is the one date.
  */
 export const ModerationEvents: CollectionConfig<'moderation-events'> = {

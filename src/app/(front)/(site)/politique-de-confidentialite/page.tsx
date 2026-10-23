@@ -4,6 +4,7 @@ import { LegalPage } from '@/components/legal/LegalPage'
 import { formatSiret, PUBLISHER } from '@/lib/legal'
 import { PHOTO_ERASURE_DAYS, PROVIDERS } from '@/lib/providers'
 import { pageMetadata } from '@/lib/seo/metadata'
+import { MODERATION_RETENTION_MONTHS } from '@/lib/tasks/moderation-events'
 import { PURGE_DELAY_DAYS } from '@/lib/tasks/unconfirmed-accounts'
 
 // Static: the text is in the code, and the page reads no cookie and no data (ticket 112).
@@ -60,6 +61,9 @@ export default function PrivacyPolicyPage() {
 			</p>
 			<p>
 				{`Si vous choisissez « Se connecter avec Google », Google nous transmet votre nom et votre adresse email pour créer ou ouvrir votre compte.`}
+			</p>
+			<p>
+				{`Journal de modération : quand un administrateur masque, suspend ou rétablit un profil, il note le motif de sa décision, et le site en garde une trace : le numéro de l'administrateur, le numéro du profil, l'action, le motif et la date, sans nom, email ni téléphone. Seuls les administrateurs de My Makeup peuvent lire ce journal (intérêt légitime : protéger le service et les maquilleuses, et pouvoir expliquer une décision). Durée : ${MODERATION_RETENTION_MONTHS} mois (5 ans) après la date de l'action, puis suppression automatique. Supprimer votre compte ne supprime pas ces lignes avant ce délai, mais elles ne portent ni votre nom ni vos coordonnées.`}
 			</p>
 
 			<h2>Formulaire de contact</h2>

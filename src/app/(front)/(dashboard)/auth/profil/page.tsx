@@ -7,6 +7,7 @@ import { BulletsEditor } from '@/components/dashboard/BulletsEditor'
 import { CollapsibleCards } from '@/components/dashboard/CollapsibleCards'
 import { ContactDetailsEditor } from '@/components/dashboard/ContactDetailsEditor'
 import { DescriptionEditor } from '@/components/dashboard/DescriptionEditor'
+import { DraftNotice } from '@/components/dashboard/DraftNotice'
 import { IdentityEditor } from '@/components/dashboard/IdentityEditor'
 import { CoursesEditor, ExperiencesEditor, ServiceOffersEditor } from '@/components/dashboard/ListsEditors'
 import { LocationEditor } from '@/components/dashboard/LocationEditor'
@@ -31,6 +32,7 @@ import { type Card, FIRST_GROUP_TITLE, FURTHER_GROUP_TITLE, groupedCards, profil
 import { readPasswordChangeMode } from '@/lib/dashboard/change-password'
 import { COURSES } from '@/lib/dashboard/courses'
 import { confirmationMode } from '@/lib/dashboard/deletion-confirmation'
+import { draftNotice } from '@/lib/dashboard/draft-notice'
 import { EXPERIENCES } from '@/lib/dashboard/experiences'
 import { greetingName } from '@/lib/dashboard/greeting'
 import { profileRows } from '@/lib/dashboard/list'
@@ -100,6 +102,8 @@ export default async function ProfilePage() {
 	const showQuotes =
 		(serverEnv().quoteRequests && profile.status === 'published') || myQuotes === null || myQuotes.length > 0
 	const steps = remainingSteps(profile)
+	// « En brouillon » while the profile is not publishable (decision of 23/10/2026); nothing once it is.
+	const draftNoticeOf = draftNotice(progress)
 	// Not for a page the team hid, nor for the team's own account: the onboarding is not their next step.
 	const showBanner = steps.premiere !== null && progress.etat !== 'masque' && progress.etat !== 'interne'
 
@@ -216,6 +220,7 @@ export default async function ProfilePage() {
 			{showBanner && steps.premiere !== null ? (
 				<OnboardingBanner reste={steps.reste} premiere={steps.premiere} />
 			) : null}
+			{draftNoticeOf === null ? null : <DraftNotice notice={draftNoticeOf} />}
 			<ProfileProgress avancement={progress} reprendre={saveMyAvailability} />
 			{pageIsOnline(progress) && profile.slug ? <PageOnline adresse={publicAddress(profile.slug)} /> : null}
 			{myViews === undefined ? null : <MyViews jours={myViews} />}

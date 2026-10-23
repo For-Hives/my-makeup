@@ -43,6 +43,7 @@ test.describe('138 : où en est le profil', { tag: '@mobile' }, () => {
 		await expect(page.getByTestId('avancement-score')).toHaveText('0/6 indispensables')
 		await expect(page.getByTestId('avancement-consequence')).toContainText('n’est pas listé dans la recherche')
 		await expect(block.locator('li')).toHaveCount(13)
+		await expect(page.getByTestId('brouillon-manques').locator('li')).toHaveCount(6)
 		expect(await page.locator('h1').count()).toBe(1)
 
 		await page.screenshot({
@@ -79,7 +80,7 @@ test.describe('138 : où en est le profil', { tag: '@mobile' }, () => {
 		await page.getByRole('button', { name: 'Enregistrer' }).click()
 
 		await expect(page.getByTestId('avancement-score')).toHaveText('1/6 indispensables')
-		await expect(page.getByTestId('avancement').getByRole('link', { name: 'Écris ta description.' })).toHaveCount(0)
+		await expect(page.getByTestId('avancement').getByRole('link', { name: /^Écris ta description/ })).toHaveCount(0)
 		await expect(page.getByTestId('avancement').getByRole('link', { name: /Allonge ta description/ })).toHaveCount(0)
 		// Same document: the page was not loaded again.
 		expect(await page.evaluate(() => (window as unknown as { __sansRechargement?: boolean }).__sansRechargement)).toBe(
@@ -204,7 +205,22 @@ test.describe('306 : la jauge honnête et « Ta page est en ligne ! »', { tag: 
 		await expect(page.getByTestId('avancement-score')).toHaveText('5/6 indispensables')
 		await expect(page.getByTestId('avancement').locator('li')).toHaveCount(7)
 		await expect(page.getByTestId('page-en-ligne')).toHaveCount(0)
+
+		// « En brouillon » (decision of 23/10/2026): plain words, what is missing, a button of 44 px to the block.
+		const notice = page.getByTestId('brouillon')
+		await expect(notice.getByTestId('brouillon-pastille')).toHaveText('En brouillon')
+		await expect(notice).toContainText('Ta page n’est pas encore en ligne : les clientes ne la voient pas.')
+		await expect(notice.getByTestId('brouillon-manques').locator('li')).toHaveCount(1)
+		await expect(notice.getByTestId('brouillon-manques')).toContainText('moyen de te contacter')
+		const completeLink = notice.getByRole('link', { name: 'Compléter ma page' })
+		expect((await completeLink.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44)
+		expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+		await notice.screenshot({ path: test.info().outputPath('brouillon.png') })
 		expect(await violationsSevere(page)).toEqual([])
+
+		await completeLink.click()
+		await expect(page).toHaveURL(/\/auth\/apercu-profil\?mode=edition#bloc-networks$/)
+		await expect(page.locator('#bloc-networks')).toBeVisible()
 	})
 
 	test('six indispensables : 6/6, la carte donne l’adresse exacte, copie le lien et annonce « Lien copié »', async ({
@@ -216,6 +232,7 @@ test.describe('306 : la jauge honnête et « Ta page est en ligne ! »', { tag: 
 		await context.addCookies(account.session.cookies)
 		await page.goto('/auth/profil')
 		await expect(page.getByTestId('avancement-score')).toHaveText('6/6 : ta page est prête')
+		await expect(page.getByTestId('brouillon')).toHaveCount(0)
 		const card = page.getByTestId('page-en-ligne')
 		await expect(card.getByRole('heading', { name: 'Ta page est en ligne !' })).toBeVisible()
 		const address = `https://my-makeup.fr/profil/${slug}`
@@ -247,5 +264,6 @@ test.describe('306 : la jauge honnête et « Ta page est en ligne ! »', { tag: 
 		await page.goto('/auth/profil')
 		await expect(page.getByTestId('avancement')).toHaveAttribute('data-etat', 'masque')
 		await expect(page.getByTestId('page-en-ligne')).toHaveCount(0)
+		await expect(page.getByTestId('brouillon')).toHaveCount(0)
 	})
 })
