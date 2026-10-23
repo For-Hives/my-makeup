@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { crawl } from '../../scripts/cutover/ui-crawl'
 import { setSearchProfiles } from '../fixtures/search-profiles'
+import { answerLate } from '../support/late-answer'
 import { createContent, deleteContent, refreshProfilePages } from '../support/public-pages'
 import {
 	CRAWL_ADDRESS_COUNT,
@@ -113,5 +114,81 @@ test.describe('Crawl des interfaces (177)', () => {
 
 		const down = findDefects(await crawlPage(page, '/page-en-panne-du-crawl'))
 		expect(down.map(defect => defect.kind)).toContain('status')
+	})
+	// Issue 997: the crawl failed once in a full run on « image cassée » for a talent page, and passed alone. A lazy image
+	// has no `currentSrc` until its answer starts, so the page cannot say it is loading: the crawl, which asked the DOM, took
+	// an image whose headers came in between its two looks for a broken one, and let the others go. The crawl now follows
+	// the images on the network and reads the page when none is left. The pages here are planted, so that nothing depends on
+	// the load of the machine running the test.
+	const LAZY_IMAGE_PAGE = (source: string) =>
+		`<!doctype html><html lang="fr"><head><title>Image lente</title></head><body>${FIXTURE_NAV}<h1>Une image lente</h1><div style="height:3000px">espace</div><img src="${source}" loading="lazy" alt="lente" width="40" height="40"></body></html>`
+	// A 1 × 1 PNG.
+	const PIXEL = Buffer.from(
+		'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+		'base64'
+	)
+
+	test('une image différée qui répond lentement n’est pas une image cassée', { tag: '@mobile' }, async ({ page }) => {
+		test.setTimeout(60_000)
+		await page.route('**/page-image-lente', route =>
+			route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: LAZY_IMAGE_PAGE('/image-lente.png') })
+		)
+		await page.route('**/image-lente.png', route =>
+			answerLate(route, 3_000, { status: 200, contentType: 'image/png', body: PIXEL })
+		)
+		const facts = await crawlPage(page, '/page-image-lente')
+		// The page was read once the image had come, not before it.
+		expect(await page.evaluate(() => document.images[0]?.naturalWidth)).toBe(1)
+		expect(facts.brokenImages).toEqual([])
+		expect(findDefects(facts)).toEqual([])
+	})
+
+	test('une photo d’un pixel de large, servie en `srcset`, n’est pas une image cassée', { tag: '@mobile' }, async ({
+		page,
+	}) => {
+		// With a `srcset` of widths the browser divides the width of the picture by the density it chose: a one-pixel photo
+		// has a `naturalWidth` of 0 and is fine. Other tests leave such photos on the bench, and a talent page lists them.
+		await page.route('**/page-photo-minuscule', route =>
+			route.fulfill({
+				status: 200,
+				contentType: 'text/html; charset=utf-8',
+				body: `<!doctype html><html lang="fr"><head><title>Minuscule</title></head><body>${FIXTURE_NAV}<h1>Une photo minuscule</h1><img src="/photo-minuscule.png?w=640" srcset="/photo-minuscule.png?w=256 256w, /photo-minuscule.png?w=640 640w" sizes="140px" alt="minuscule" width="140" height="140"></body></html>`,
+			})
+		)
+		await page.route('**/photo-minuscule.png*', route =>
+			route.fulfill({ status: 200, contentType: 'image/png', body: PIXEL })
+		)
+		const facts = await crawlPage(page, '/page-photo-minuscule')
+		expect(await page.evaluate(() => document.images[0]?.naturalWidth)).toBe(0)
+		expect(facts.brokenImages).toEqual([])
+		expect(findDefects(facts)).toEqual([])
+	})
+
+	test('une image différée qui ne répond jamais est signalée, et une image qui échoue l’est tout de suite', {
+		tag: '@mobile',
+	}, async ({ page }) => {
+		await page.route('**/page-image-muette', route =>
+			route.fulfill({
+				status: 200,
+				contentType: 'text/html; charset=utf-8',
+				body: LAZY_IMAGE_PAGE('/image-muette.png'),
+			})
+		)
+		await page.route('**/image-muette.png', () => {
+			// Never answered.
+		})
+		const silent = await crawlPage(page, '/page-image-muette', { imageDelay: 1_500 })
+		expect(silent.brokenImages).toEqual(['/image-muette.png (sans réponse)'])
+
+		await page.route('**/page-image-morte', route =>
+			route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: LAZY_IMAGE_PAGE('/image-morte.png') })
+		)
+		await page.route('**/image-morte.png', route =>
+			route.fulfill({ status: 200, contentType: 'image/png', body: 'pas une image' })
+		)
+		const started = Date.now()
+		const dead = await crawlPage(page, '/page-image-morte', { imageDelay: 20_000 })
+		expect(dead.brokenImages).toEqual(['/image-morte.png (réponse 200, image illisible)'])
+		expect(Date.now() - started).toBeLessThan(10_000)
 	})
 })

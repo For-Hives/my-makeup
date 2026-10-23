@@ -51,7 +51,7 @@ Moins de 40 adresses en tout est une erreur, jamais un crawl plus court. Les pag
 | `nav` | Autre chose qu'une seule navigation nommée « Navigation principale » |
 | `visible-text` | Un `undefined`, un `null`, un `NaN` ou un `[object Object]` dans le texte que la visiteuse lit. Le plan 02 nomme `undefined` et `null` ; `NaN` et `[object Object]` sont de la même famille |
 | `overflow` | `scrollWidth` plus grand que `clientWidth` : la page se fait défiler de côté. Le rapport nomme jusqu'à trois éléments qui dépassent |
-| `broken-image` | Une image qui ne s'est pas chargée, ou dont la réponse est en 4xx ou 5xx |
+| `broken-image` | Une image que le navigateur ne sait pas décoder, dont la réponse est en 4xx ou 5xx, ou qui n'a toujours pas de réponse au bout de 30 s. Le rapport dit pourquoi entre parenthèses (réponse 404, échec du réseau, image illisible, sans réponse). Ce n'est pas `naturalWidth` à 0 : avec un `srcset` de largeurs, le navigateur divise la largeur de l'image par la densité choisie, et une photo d'un pixel de large (celles que d'autres essais laissent sur le banc) a un `naturalWidth` de 0 sans être cassée. Une image lente n'est pas non plus une image cassée : après le défilement, le crawl suit les images sur le réseau et lit la page quand plus aucune n'est en route (issue 997) |
 | `blocked-request` | Une requête que la page a faite et que le crawl a refusée : un autre hôte, une écriture, un chemin de mesure hors inventaire |
 
 ## Ce qui le garde en lecture seule
