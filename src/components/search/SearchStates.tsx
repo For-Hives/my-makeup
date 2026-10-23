@@ -1,5 +1,5 @@
-import type { SearchFilters } from '@/lib/search/filters'
 import { RankingLink } from '@/components/ranking/RankingLink'
+import type { SearchFilters } from '@/lib/search/filters'
 import { type Search, searchPageUrl } from '@/lib/search/input'
 import { inDepartment } from '@/lib/search/place'
 import type { ProfileCard } from '@/services/public/profiles'
