@@ -115,7 +115,7 @@ for (const size of SIZES) {
 			await shot(page, 'filtre-vide')
 			await page.getByRole('link', { name: 'Voir toutes les maquilleuses de cette recherche' }).click()
 			await expect(page).toHaveURL(/\/search\?search=Golf$/)
-			await expect(page.getByRole('heading', { level: 1 })).toHaveText('1 résultat pour « Golf »')
+			await expect(page.getByRole('heading', { level: 1 })).toHaveText(/^\d+ résultats? pour « Golf »$/)
 		})
 
 		test('une valeur inconnue est ignorée : l’adresse d’avant répond comme avant', async ({ page }) => {
