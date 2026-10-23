@@ -1,11 +1,14 @@
+import Link from 'next/link'
 import { DASHBOARD_PATH, type PreviewState } from '@/lib/dashboard/preview'
+import { editPath } from '@/lib/direct-edit/edit-mode'
 import { ViewLink } from './ViewLink'
 
 /**
  * The banner above the preview of her own page (ticket 139): what a visitor sees below, where her
- * profile stands, and the way back to her space. A server component: it shows what it is given.
+ * profile stands, and the way back to her space (and, from the preview, to her page in edit mode:
+ * issue 1008). A server component: it shows what it is given.
  */
-export function PreviewBanner({ etat }: { etat: PreviewState }) {
+export function PreviewBanner({ etat, editable = false }: { etat: PreviewState; editable?: boolean }) {
 	const alert = etat.code !== 'complet'
 	return (
 		<section
@@ -18,6 +21,15 @@ export function PreviewBanner({ etat }: { etat: PreviewState }) {
 				<p className="min-w-0 flex-1 basis-64">
 					<strong className="font-semibold">{etat.titre}</strong> {etat.texte}
 				</p>
+				{editable ? (
+					<Link
+						href={editPath()}
+						data-testid="modifier-sur-ma-page"
+						className="flex min-h-[44px] items-center rounded-lg px-2 font-semibold underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600"
+					>
+						Modifier sur ma page
+					</Link>
+				) : null}
 				<ViewLink
 					vue="edition"
 					href={DASHBOARD_PATH}

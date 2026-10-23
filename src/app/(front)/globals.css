@@ -4,6 +4,33 @@
 	--color-my-makeup-900: #16191c;
 }
 
+/*
+ * The tokens of the art direction of her own page (issues 1007 and 1008), defined once and used by the
+ * edit mode only. Lipstick red is reserved for what can be changed. Contrasts, on white or on blush:
+ * ink 17:1, mute 5.7:1, lipstick 6.4:1, lipstick-800 on lipstick-50 7.7:1.
+ */
+@theme {
+	--color-blush: #f8f4f1;
+	--color-ink: #1f1519;
+	--color-lipstick: #b0294a;
+	--color-lipstick-50: #f6e1e6;
+	--color-lipstick-800: #8a1f3a;
+	--color-nude-100: #f2e8e1;
+	--color-nude-200: #ebddd4;
+	--color-nude-300: #cdb8ac;
+	--color-hairline: #e3d6cd;
+	--color-mute: #6f6168;
+	--color-ok: #2f6b4f;
+	--color-warm: #8a5a12;
+	--radius-card: 22px;
+}
+
+/* The faces are loaded by the private route (src/components/direct-edit/fonts.ts) and set these variables. */
+@theme inline {
+	--font-display: var(--font-bodoni-moda), ui-serif, Georgia, serif;
+	--font-body: var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
 /* Buttons of the site, as they are online. */
 @layer components {
 	.btn-primary-large {
