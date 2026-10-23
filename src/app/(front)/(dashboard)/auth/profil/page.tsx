@@ -14,6 +14,7 @@ import { MainPhotoThumbnail } from '@/components/dashboard/MainPhotoThumbnail'
 import { NetworksEditor } from '@/components/dashboard/NetworksEditor'
 import { OnboardingBanner } from '@/components/dashboard/OnboardingBanner'
 import { PageOnline } from '@/components/dashboard/PageOnline'
+import { PasswordChange } from '@/components/dashboard/PasswordChange'
 import { PhotoEditor } from '@/components/dashboard/PhotoEditor'
 import { PortfolioEditor } from '@/components/dashboard/PortfolioEditor'
 import { ProfileProgress } from '@/components/dashboard/ProfileProgress'
@@ -25,6 +26,7 @@ import { requireArtist } from '@/lib/auth/session'
 import { isAvailable } from '@/lib/dashboard/availability'
 import { listBullets } from '@/lib/dashboard/bullets'
 import { type Card, FIRST_GROUP_TITLE, FURTHER_GROUP_TITLE, groupedCards, profileCards } from '@/lib/dashboard/cards'
+import { readPasswordChangeMode } from '@/lib/dashboard/change-password'
 import { COURSES } from '@/lib/dashboard/courses'
 import { confirmationMode } from '@/lib/dashboard/deletion-confirmation'
 import { EXPERIENCES } from '@/lib/dashboard/experiences'
@@ -57,6 +59,7 @@ import {
 import { deleteMyAccountAction } from './deletion-actions'
 import { saveMyCourses, saveMyExperiences, saveMyServiceOffers } from './lists-actions'
 import { findMyCities, saveMyLocation } from './location-actions'
+import { changeMyPasswordAction, requestSetPasswordLinkAction } from './password-actions'
 
 // Read per request: it depends on the session, and the build has no database. A page that reads
 // the session is never shared nor stored (`private, no-store`, ticket 075).
@@ -215,6 +218,11 @@ export default async function ProfilePage() {
 				<div className="flex justify-center">
 					<SignOutButtons />
 				</div>
+				<PasswordChange
+					mode={await readPasswordChangeMode(context.payload, artist.id)}
+					envoyer={changeMyPasswordAction}
+					demanderLien={requestSetPasswordLinkAction}
+				/>
 				<AccountDeletion mode={confirmationMode(context.utilisateur)} envoyer={deleteMyAccountAction} />
 			</section>
 		</main>

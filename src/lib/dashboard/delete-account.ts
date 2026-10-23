@@ -2,6 +2,7 @@ import type { Payload } from 'payload'
 import { deleteAccountAndDependents } from '../account/deletion'
 import { canonicalEmail } from '../auth/canonical-email'
 import { ipClient } from '../auth/client-ip'
+import { PASSWORD_RESET_CONTEXT } from '../auth/forgot-payload'
 import { createRateLimit } from '../auth/rate-limit'
 import { failureCode, MAX_PASSWORD_LENGTH } from '../auth/sign-in'
 import { openWithPassword } from '../auth/token'
@@ -112,17 +113,18 @@ export async function deleteMyAccount({
 }
 
 /** The check of the password could not be made: not her failure. */
-class VerificationError extends Error {}
+export class VerificationError extends Error {}
 
 /**
  * Is this the password of the account? Payload's own sign-in decides, as it does for the form of
  * the sign-in; the token it gives back is dropped, and the account goes right after. An address
  * not confirmed yet answers after the password was checked and found right.
  */
-async function isPasswordCorrect(payload: Payload, email: string, motDePasse: string): Promise<boolean> {
+export async function isPasswordCorrect(payload: Payload, email: string, motDePasse: string): Promise<boolean> {
 	if (motDePasse === '' || motDePasse.length > MAX_PASSWORD_LENGTH) return false
 	try {
-		await openWithPassword(payload, 'pros', { email, password: motDePasse })
+		// Marked as no sign-in: the date of the last sign-in stays what it was.
+		await openWithPassword(payload, 'pros', { email, password: motDePasse }, { [PASSWORD_RESET_CONTEXT]: true })
 		return true
 	} catch (error) {
 		const code = failureCode(error)
