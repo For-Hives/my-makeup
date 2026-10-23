@@ -100,7 +100,7 @@ async function openZoneStep(page: Page): Promise<void> {
 	await page.waitForLoadState('networkidle')
 	await page.getByLabel('Prénom').fill('Léa')
 	await page.getByLabel('Nom', { exact: true }).fill('Fictive')
-	await page.getByLabel(/Spécialité/).fill('Maquillage mariée')
+	await page.getByLabel('Mariage', { exact: true }).check()
 	await press(page.getByRole('button', { name: 'Suivant' }))
 	await expect(page.locator('#accueil-titre-etape')).toHaveText('Ta zone')
 }
