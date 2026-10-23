@@ -29,7 +29,6 @@ import { EMAIL_MAX_LENGTH, LINK_MAX_LENGTH, PHONE_MAX_LENGTH } from '../lib/prof
 import { DESCRIPTION_MAX_LENGTH, NAME_MAX_LENGTH } from '../lib/profile/lists'
 import type { ProfileStatus } from '../lib/profile/status'
 import { RADIUS_BOUNDS_KM } from '../lib/profile/zone'
-import { composeSpecialty, SPECIALTY_OTHER_MAX, SPECIALTY_VALUES } from '../lib/specialty'
 import type { Profile } from '../payload-types'
 
 /** The photos of the set, in ./photos/: 400 × 400, WebP, under 30 KB each. */
@@ -585,13 +584,7 @@ export const DEMO_PROFILES: readonly DemoProfile[] = [
 			firstName: LONGEST_FIRST_NAME,
 			lastName: LONGEST_NAME,
 			artistName: textOfLength('Maison de maquillage des mariées du lac et des montagnes', NAME_MAX_LENGTH),
-			// Every bullet and a full « Autre »: the longest composed text (ticket 1010).
-			specialty: composeSpecialty(
-				SPECIALTY_VALUES,
-				textOfLength('Body painting, maquillage de carnaval et de cirque', SPECIALTY_OTHER_MAX)
-			),
-			specialtyBullets: [...SPECIALTY_VALUES],
-			specialtyOther: textOfLength('Body painting, maquillage de carnaval et de cirque', SPECIALTY_OTHER_MAX),
+			specialty: textOfLength('Maquillage mariage, soirée, mode, cinéma et effets spéciaux', NAME_MAX_LENGTH),
 			city: CITIES.laPlusLongue,
 			radiusKm: RADIUS_BOUNDS_KM.max,
 			homeService: true,
