@@ -118,6 +118,7 @@ describe('a missing or short secret stops the start', () => {
 			googleIssuer: 'https://accounts.google.com',
 			localDatabase: true,
 			payloadSecret: SECRET,
+			remindersSend: false,
 			photoLimits: {
 				uploadBytes: 12 * 1024 * 1024,
 				profileCount: 45,
@@ -458,6 +459,7 @@ describe('next build needs no secret and no database', () => {
 			googleIssuer: 'https://accounts.google.com',
 			localDatabase: false,
 			payloadSecret: '',
+			remindersSend: false,
 			photoLimits: {
 				uploadBytes: 12 * 1024 * 1024,
 				profileCount: 45,

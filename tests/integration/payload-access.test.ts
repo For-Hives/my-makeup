@@ -680,6 +680,21 @@ const MATRIX: Line[] = [
 		]
 	}),
 
+	// The internal reports of the reminders (issue 1006): only an admin reads them, and nobody writes them through
+	// an API, an admin included. The server writes the report of the day and the state of a profile.
+	...(['reminder-reports', 'reminder-states'] as const).flatMap(collection =>
+		ROLES.flatMap((role): Line[] => {
+			const reads = role === 'admin'
+			return [
+				{ role, collection, operation: 'lister', attendu: reads ? 'tous' : 'refuse' },
+				{ role, collection, operation: 'lire', attendu: reads ? 'autorise' : 'refuse' },
+				{ role, collection, operation: 'creer', attendu: 'refuse' },
+				{ role, collection, operation: 'modifier', attendu: 'refuse' },
+				{ role, collection, operation: 'supprimer', attendu: 'refuse' },
+			]
+		})
+	),
+
 	// The accounts of the old site deleted in the v3 (ticket 227): only an admin reads them, and nobody
 	// writes them through an API, an admin included. The server writes the row when an account goes.
 	...ROLES.flatMap((role): Line[] => {

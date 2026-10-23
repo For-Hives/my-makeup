@@ -73,6 +73,7 @@ export type RawEnv = Partial<
 		| 'PHOTO_UPLOAD_MAX_MB'
 		| 'PHOTO_WEBP_QUALITY'
 		| 'PORT'
+		| 'REMINDERS_SEND'
 		| 'S3_ACCESS_KEY_ID'
 		| 'S3_BUCKET'
 		| 'S3_ENDPOINT'
@@ -197,6 +198,12 @@ export type ServerEnv = {
 	 */
 	mail?: MailEnv
 	payloadSecret: string
+	/**
+	 * Whether the reminders to the profiles that are close to publishable really leave (REMINDERS_SEND, issue 1006).
+	 * True only when the variable is exactly « on »: absent, empty or any other value, nothing is sent, and the
+	 * daily task only writes its internal report ("dry-run" list). Never refused at start: a typo must not stop the site.
+	 */
+	remindersSend: boolean
 	/**
 	 * Nothing when S3_ENDPOINT is not set: no photo can then be sent, and the application writes
 	 * nothing on its own disk.
@@ -978,6 +985,7 @@ export function parseServerEnv(source: RawEnv): ServerEnv {
 		...(mail && { mail }),
 		payloadSecret: parsed.data.PAYLOAD_SECRET,
 		photoLimits: photoLimitsFrom(parsed.data),
+		remindersSend: raw.REMINDERS_SEND?.trim() === 'on',
 		...(storage && { storage }),
 		...(parsed.data.STATS_TOKEN !== undefined && { statsToken: parsed.data.STATS_TOKEN.trim() }),
 		...(turnstile && { turnstile }),
@@ -1023,6 +1031,7 @@ function processEnv(): RawEnv {
 		PHOTO_UPLOAD_MAX_MB: process.env.PHOTO_UPLOAD_MAX_MB,
 		PHOTO_WEBP_QUALITY: process.env.PHOTO_WEBP_QUALITY,
 		PORT: process.env.PORT,
+		REMINDERS_SEND: process.env.REMINDERS_SEND,
 		S3_ACCESS_KEY_ID: process.env.S3_ACCESS_KEY_ID,
 		S3_BUCKET: process.env.S3_BUCKET,
 		S3_ENDPOINT: process.env.S3_ENDPOINT,
@@ -1104,6 +1113,8 @@ export function serverEnv(
 		googleIssuer: GOOGLE_ISSUER,
 		localDatabase: isLocalDatabase(raw.DATABASE_URI ?? ''),
 		payloadSecret: raw.PAYLOAD_SECRET ?? '',
+		// Not read while Next builds, where nothing is sent: the server reads it when it starts.
+		remindersSend: false,
 		// Not read while Next builds, where nothing is received: the server reads it when it starts.
 		photoLimits: photoLimitsFrom({}),
 		trustedOrigins: trustedOrigins(site, raw.NODE_ENV === 'production', raw.PORT),
