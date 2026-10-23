@@ -31,14 +31,16 @@ export interface SessionToken {
 export async function openWithPassword(
 	payload: Payload,
 	collection: AuthCollectionSlug,
-	data: { email: string; password: string }
+	data: { email: string; password: string },
+	/** The context of the request of Payload: a caller that checks a password without signing in marks it (see `PASSWORD_RESET_CONTEXT`). */
+	context?: Record<string, unknown>
 ): Promise<SessionToken> {
 	const result = await loginOperation({
 		collection: payload.collections[collection],
 		data,
 		depth: 0,
 		overrideAccess: true,
-		req: await createLocalReq({}, payload),
+		req: await createLocalReq({ context }, payload),
 	})
 	return { token: result.token, exp: result.exp }
 }

@@ -295,6 +295,11 @@
 			"id": "les-assistants-en-ligne-qui-repondent-aux-questions-des-p",
 			"type": "amelioration",
 			"text": "Les assistants en ligne qui répondent aux questions des particuliers peuvent désormais lire les pages publiques de My Makeup et les citer, alors que les robots qui servent à entraîner des modèles en sont écartés."
+		},
+		{
+			"id": "tu-peux-changer-ton-mot-de-passe-depuis-ton-espace-sans-p",
+			"type": "amelioration",
+			"text": "Tu peux changer ton mot de passe depuis ton espace, sans passer par ta boîte mail : tu retapes l’actuel, tes autres appareils sont déconnectés et un email te prévient."
 		}
 	],
 	"releases": []

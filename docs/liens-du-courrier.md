@@ -17,6 +17,17 @@ Le lien de mot de passe oublié vit **24 heures** et ne sert qu'une fois (ticket
 
 **Une adresse jamais confirmée est confirmée par ce lien (ticket 311).** Le lien est parti vers la boîte du compte : le suivre prouve l'adresse autant que le lien de confirmation. Dans la même transaction que le nouveau mot de passe, `_verified` passe à vrai, puis la session s'ouvre. Avant, un compte repris de l'ancien site et jamais confirmé, ou un compte dont le courrier de confirmation était perdu, choisissait un mot de passe et restait sans session ni connexion possible (la connexion refuse une adresse non confirmée) : il lui fallait encore le lien de confirmation. Le lien de confirmation suivi plus tard dit « déjà confirmée » et n'ouvre rien. Si l'ouverture de la session échoue, l'écran « Ton mot de passe est modifié » d'avant reste.
 
+## Changer son mot de passe depuis l'espace (ticket 999)
+
+Sans passer par le courrier : le bloc « Mon mot de passe » de `/auth/profil` (`src/lib/dashboard/change-password.ts`, action `password-actions.ts`).
+
+- **Le mot de passe actuel est demandé.** Une session seule ne suffit pas : une session volée ne peut pas changer le mot de passe. La vérification est celle de la suppression du compte : elle n'ouvre aucune session et ne touche pas à la date de dernière connexion.
+- **Un compte sans mot de passe qu'elle connaît** (venu de Google ou de Facebook, ou qui garde le hash de l'ancien site) n'a pas de champs : « Définir un mot de passe » envoie le lien du mot de passe oublié à l'adresse du compte, qui prouve la boîte. Question ouverte pour Andy : autoriser aussi à en définir un depuis la session seule (non : prise permanente si la session est volée).
+- **Essais** : un mot de passe actuel faux compte pour le frein, 10 par quart d'heure, par adresse cliente ET par compte, comme la suppression. Il ne touche jamais la connexion : personne n'est bloqué dehors.
+- **Les autres sessions sont fermées, celle-ci reste** : la mise à jour du mot de passe par Payload garde la session de la requête (`_sid`) et vide les autres ; le hash de l'ancien site disparaît par les crochets de `pros`.
+- **Un courriel prévient le compte** (`src/lib/emails/password-changed.ts`) : ni mot de passe ni jeton, le chemin du mot de passe oublié si ce n'était pas elle. Il part après la réponse ; son échec n'annule pas le changement.
+- **Journal** : une ligne de type `password-reset` et de méthode `password` (les réinitialisations par lien n'ont pas de méthode) ; jamais un mot de passe.
+
 ## Les parcours et leurs reconnexions
 
 Chaque parcours a été joué de bout en bout (tests de bout en bout cités). « Saisies » compte les champs remplis par la maquilleuse, hors clic sur le courrier.
