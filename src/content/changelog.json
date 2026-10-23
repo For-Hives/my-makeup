@@ -360,6 +360,11 @@
 			"id": "une-nouvelle-page-explique-comment-les-maquilleuses-sont",
 			"type": "ajout",
 			"text": "Une nouvelle page explique comment les maquilleuses sont classées dans la recherche : aucun classement payant, et un lien sous chaque liste."
+		},
+		{
+			"id": "sur-l-accueil-un-formulaire-guide-evenement-et-lieu-libel",
+			"type": "amelioration",
+			"text": "Sur l'accueil, un formulaire guidé (événement et lieu, libellés visibles) mène à la recherche, et trois maquilleuses récemment mises à jour sont visibles dès l'arrivée."
 		}
 	],
 	"releases": []

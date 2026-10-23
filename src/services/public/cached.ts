@@ -21,7 +21,7 @@ import { isSlug } from '@/lib/slug'
 import { listArticles } from './article-list'
 import { type ArticlePublic, readPublicArticle } from './articles'
 import { readIndexablePages } from './indexable-pages'
-import { profileBlockCards } from './profile-block'
+import { profileBlockCards, RECENT_PROFILES_COUNT, recentCards } from './profile-block'
 import { type ProfileUrlTarget, readDirectory, readProfileUrlTarget } from './profiles'
 import { listTalents, readTalent, type TalentPageData } from './talents'
 
@@ -62,6 +62,16 @@ export const cachedProfileBlock = unstable_cache(
 	async (search: string, limit: number) =>
 		profileBlockCards(search === '' ? await cachedDirectory() : await cachedDirectoryWithTexts(), { search, limit }),
 	['public:profile-block'],
+	{ tags: [TAGS.profils], revalidate: ONE_HOUR }
+)
+
+/**
+ * The cards of « Récemment mises à jour » on the home page (issue 1013). Kept under the tag of the profiles: a save
+ * of a profile refreshes the home page. Read from the cached directory, so it asks the database nothing more.
+ */
+export const cachedRecentProfiles = unstable_cache(
+	async () => recentCards(await cachedDirectory(), RECENT_PROFILES_COUNT),
+	['public:recent-profiles'],
 	{ tags: [TAGS.profils], revalidate: ONE_HOUR }
 )
 

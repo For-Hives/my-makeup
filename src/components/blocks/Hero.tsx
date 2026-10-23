@@ -13,6 +13,11 @@ interface PropsHero {
 	recherche?: boolean
 	/** A button to the sign-up page under the text. */
 	inscription?: boolean
+	/**
+	 * A form of its own under the text, in the flow of the page (the guided search of the home page): the
+	 * floating search block is not shown, and the room it needed is not kept.
+	 */
+	formulaire?: ReactNode
 }
 
 /**
@@ -25,10 +30,11 @@ export function Hero({
 	image = '/assets/back.webp',
 	recherche = true,
 	inscription = false,
+	formulaire,
 }: PropsHero) {
 	return (
 		<div className="relative bg-white 2xl:pt-[90px]">
-			{recherche && (
+			{recherche && formulaire === undefined && (
 				<div className="absolute bottom-0 left-1/2 z-20 flex w-full -translate-x-1/2 transform items-end justify-center px-4">
 					<SearchBlock />
 				</div>
@@ -43,12 +49,15 @@ export function Hero({
 					>
 						<polygon points="0,0 90,0 50,100 0,100" />
 					</svg>
-					<div className="relative z-10 px-6 py-12 pb-8 sm:py-24 sm:pb-24 lg:px-8 lg:pt-36 lg:pr-0 lg:pb-80">
+					<div
+						className={`relative z-10 px-6 py-12 pb-8 sm:py-24 sm:pb-24 lg:px-8 lg:pt-36 lg:pr-0 ${formulaire === undefined ? 'lg:pb-80' : 'lg:pb-24'}`}
+					>
 						<div className="mx-auto flex max-w-2xl flex-col gap-8 lg:mx-0 lg:max-w-xl">
 							<div className="flex flex-col gap-4">
 								<h1 className="font-bold text-2xl text-gray-900 tracking-tight sm:text-4xl md:text-5xl">{titre}</h1>
 								<p className="text-gray-700 text-lg leading-8">{description}</p>
 							</div>
+							{formulaire}
 							{inscription && (
 								<div>
 									<Link href="/auth/signin" className="btn-primary">
@@ -60,7 +69,9 @@ export function Hero({
 					</div>
 				</div>
 			</div>
-			<div className="bg-white pb-24 md:pb-8 lg:absolute lg:inset-y-0 lg:right-0 lg:w-1/2 lg:pb-0">
+			<div
+				className={`bg-white ${formulaire === undefined ? 'pb-24 md:pb-8' : 'pb-8'} lg:absolute lg:inset-y-0 lg:right-0 lg:w-1/2 lg:pb-0`}
+			>
 				<Image
 					className="aspect-[3/2] object-contain md:object-center lg:aspect-auto lg:h-full lg:w-full xl:object-top"
 					width={1000}

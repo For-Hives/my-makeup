@@ -62,7 +62,7 @@ interface ContentPages {
 const PLANS = ['/site-map', '/sitemap.xml'] as const
 
 /**
- * Where each collection is shown. A profile is listed by the search, the plan of the site and the
+ * Where each collection is shown. A profile is listed by the search, the home page (its recently updated ones), the plan of the site and the
  * sitemap; an article by the blog; a talent by the home page. The search lists profiles only.
  */
 export const PUBLIC_PAGES: Readonly<Record<PublicContent, ContentPages>> = {
@@ -70,7 +70,7 @@ export const PUBLIC_PAGES: Readonly<Record<PublicContent, ContentPages>> = {
 		page: slug => `/profil/${slug}`,
 		etiquette: TAGS.profil,
 		etiquetteDeLaListe: TAGS.profils,
-		listes: ['/search', ...PLANS],
+		listes: ['/', '/search', ...PLANS],
 	},
 	articles: {
 		page: slug => `/blog/${slug}`,

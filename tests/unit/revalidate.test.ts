@@ -20,7 +20,7 @@ const NOTHING = { chemins: [], etiquettes: [] }
 describe('les pages qu’un enregistrement rend périmées', () => {
 	test('un profil publié modifié : sa page, la recherche, le plan du site et le sitemap (I21)', () => {
 		expect(changeTargets('profiles', published('zoe-lefevre'), published('zoe-lefevre'))).toEqual({
-			chemins: ['/profil/zoe-lefevre', '/search', '/site-map', '/sitemap.xml'],
+			chemins: ['/profil/zoe-lefevre', '/', '/search', '/site-map', '/sitemap.xml'],
 			etiquettes: ['profil:zoe-lefevre', 'profils'],
 		})
 	})
@@ -34,7 +34,7 @@ describe('les pages qu’un enregistrement rend périmées', () => {
 
 	test('un document qui entre ou qui sort du public : sa page et les listes', () => {
 		const expected = {
-			chemins: ['/profil/zoe-lefevre', '/search', '/site-map', '/sitemap.xml'],
+			chemins: ['/profil/zoe-lefevre', '/', '/search', '/site-map', '/sitemap.xml'],
 			etiquettes: ['profil:zoe-lefevre', 'profils'],
 		}
 		// Published, created published, hidden, deleted.
@@ -71,7 +71,7 @@ describe('les pages qu’un enregistrement rend périmées', () => {
 
 	test('un slug qui n’en est pas un, comme le slug provisoire d’un profil en création, ne donne aucune page', () => {
 		expect(changeTargets('profiles', null, published('_provisoire-1234'))).toEqual({
-			chemins: ['/search', '/site-map', '/sitemap.xml'],
+			chemins: ['/', '/search', '/site-map', '/sitemap.xml'],
 			etiquettes: ['profils'],
 		})
 	})
@@ -117,7 +117,7 @@ describe('les crochets de Payload', () => {
 		const { appels: calls, chemins: paths, etiquettes: labels } = await spyCache(() => update(req, {}))
 
 		expect(findOne).toHaveBeenCalledTimes(2)
-		expect(paths).toEqual(['/profil/zoe-lefevre', '/search', '/site-map', '/sitemap.xml'])
+		expect(paths).toEqual(['/', '/profil/zoe-lefevre', '/search', '/site-map', '/sitemap.xml'])
 		expect(labels).toEqual(['profil:zoe-lefevre', 'profils'])
 		for (const call of calls.filter(({ fonction }) => fonction === 'revalidateTag'))
 			expect(call.option).toEqual({ expire: 0 })
