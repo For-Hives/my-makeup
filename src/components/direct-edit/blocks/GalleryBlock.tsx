@@ -321,7 +321,7 @@ function GalleryForm({
 					gesture.current = 'pointer'
 				}}
 			>
-				<h3 ref={title} tabIndex={-1} className="font-semibold text-base outline-none">
+				<h3 ref={title} tabIndex={-1} className="font-display font-medium text-xl outline-none">
 					Photos de ton portfolio ({rows.length} / {GALLERY_MAX})
 				</h3>
 				<p role="status" data-testid="gallery-announcement" className="text-mute text-sm">

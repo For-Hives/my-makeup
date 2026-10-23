@@ -37,9 +37,12 @@ export function EditorFrame({ title, buttonId, children }: { title: string; butt
 			aria-label={`${title}, en cours de modification`}
 			data-direct-edit-editor={buttonId}
 			onKeyDown={onKeyDown}
-			className="mt-6 w-full rounded-card border-2 border-lipstick bg-white p-5 font-body text-ink shadow-[0_24px_48px_-28px_rgba(176,41,74,0.55)] sm:p-7"
+			className="mt-6 w-full scroll-mt-4 rounded-card border-2 border-lipstick bg-white p-5 font-body text-ink shadow-[0_24px_48px_-28px_rgba(176,41,74,0.55)] sm:p-7"
 		>
-			<p className="mb-4 font-semibold text-lipstick text-xs uppercase tracking-[0.14em]">{title} · je modifie</p>
+			<p className="mb-5 flex items-center gap-2 font-semibold text-lipstick text-xs uppercase tracking-[0.14em]">
+				<span aria-hidden="true" className="size-2 rounded-full bg-lipstick" />
+				{title} · je modifie
+			</p>
 			{session.confirmation !== null ? (
 				<div role="alert" className="mb-4 flex flex-col gap-3 rounded-2xl bg-nude-100 p-4 text-ink">
 					<p className="text-sm">Tu as des modifications non enregistrées. Si tu continues, elles seront perdues.</p>

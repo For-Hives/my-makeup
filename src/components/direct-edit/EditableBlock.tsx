@@ -76,12 +76,12 @@ export function EditableBlock({
 		<div
 			data-direct-edit={id}
 			data-open={isOpen ? 'true' : undefined}
-			className={`group relative min-h-11 min-w-11 ${SHAPES[shape]} ${ring} transition-[box-shadow,opacity] ${dimmed ? 'opacity-50' : ''} ${className}`}
+			className={`group relative min-h-11 min-w-11 ${SHAPES[shape]} ${ring} transition-[box-shadow,opacity] duration-150 motion-reduce:transition-none ${dimmed ? 'opacity-50' : ''} ${className}`}
 		>
 			{empty ? (
 				<span
 					data-direct-edit-empty
-					className={`flex min-h-14 items-center gap-3 border-2 border-nude-300 border-dashed bg-blush px-4 py-3 font-body font-medium text-mute text-sm ${shape === 'round' ? 'h-full w-full justify-center rounded-full text-center' : 'rounded-2xl'}`}
+					className={`flex min-h-14 items-center gap-3 border-2 border-nude-300 border-dashed bg-blush px-4 py-3 font-body font-medium text-mute text-sm [&_b]:font-display [&_b]:font-medium [&_b]:text-base ${shape === 'round' ? 'h-full w-full justify-center rounded-full text-center' : 'rounded-2xl'}`}
 				>
 					{invitation}
 				</span>

@@ -26,7 +26,14 @@ export function EditBar() {
 					<strong className="font-semibold">Tu modifies ta page.</strong>{' '}
 					<span className="text-mute">Touche une zone pour la changer ; seule toi vois ces contrôles.</span>
 				</p>
-				<p role="status" data-testid="edit-status" className={`min-h-6 font-medium text-sm ${color}`}>
+				<p
+					role="status"
+					data-testid="edit-status"
+					className={`flex min-h-6 items-center gap-2 font-medium text-sm ${color}`}
+				>
+					{status.kind === 'resting' ? null : (
+						<span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-current" />
+					)}
 					{status.text}
 				</p>
 				<Link

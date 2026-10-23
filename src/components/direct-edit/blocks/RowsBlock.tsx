@@ -438,7 +438,7 @@ function RowsForm({
 			}}
 		>
 			<div ref={root} className="flex flex-col gap-4">
-				<h3 ref={title} tabIndex={-1} className="font-semibold text-base outline-none">
+				<h3 ref={title} tabIndex={-1} className="font-display font-medium text-xl outline-none">
 					Tes {definition.pluriel}
 				</h3>
 				{/* Said to a screen reader; there, and empty, when the editor opens (L5). Each sentence is a new node. */}

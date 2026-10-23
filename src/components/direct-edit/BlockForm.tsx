@@ -108,19 +108,19 @@ export function BlockForm({
 					</p>
 				) : null}
 			</div>
-			<div className="flex flex-wrap items-center justify-end gap-3">
+			<div className="flex flex-col-reverse gap-3 border-hairline border-t pt-4 sm:flex-row sm:items-center sm:justify-end">
 				<button
 					type="button"
 					onClick={session.close}
 					disabled={pending}
-					className="min-h-11 rounded-full border border-ink bg-white px-6 font-semibold text-ink text-sm disabled:opacity-60"
+					className="min-h-11 w-full rounded-full border border-ink bg-white px-6 font-semibold text-ink text-sm transition-colors hover:bg-nude-100 focus-visible:outline-2 focus-visible:outline-ink focus-visible:outline-offset-2 disabled:opacity-60 motion-reduce:transition-none sm:w-auto"
 				>
 					Annuler
 				</button>
 				<button
 					type="submit"
 					disabled={pending || disabled}
-					className="min-h-11 rounded-full border border-lipstick bg-lipstick px-6 font-semibold text-sm text-white disabled:cursor-not-allowed disabled:opacity-60"
+					className="min-h-11 w-full rounded-full border border-lipstick bg-lipstick px-6 font-semibold text-sm text-white transition-colors hover:bg-lipstick-800 focus-visible:outline-2 focus-visible:outline-lipstick focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transition-none sm:w-auto"
 				>
 					{pending ? 'Enregistrement…' : submitLabel}
 				</button>
