@@ -51,9 +51,15 @@ export function PlaceBlock({
 			className="mt-2 max-w-full"
 			penClassName="-right-3 -top-3"
 			invitation={
-				<span className="pr-8">
-					<b className="text-lipstick">Dis où tu travailles.</b> Ta commune ou ton pays, pour qu’on te trouve.
-				</span>
+				review ? (
+					<span className="pr-8">
+						<b className="text-lipstick">Ta zone est à revoir.</b> Choisis ta commune pour qu’on te trouve.
+					</span>
+				) : (
+					<span className="pr-8">
+						<b className="text-lipstick">Dis où tu travailles.</b> Ta commune ou ton pays, pour qu’on te trouve.
+					</span>
+				)
 			}
 			editor={<PlaceForm values={values} save={save} search={search} review={review} />}
 		>
@@ -62,12 +68,14 @@ export function PlaceBlock({
 	)
 }
 
-function PlaceForm({
+export function PlaceForm({
 	values,
 	save,
 	search,
 	review,
+	title = 'Modifier ma zone',
 }: {
+	title?: string
 	values: LocationValues
 	save: PlaceSave
 	search: CitiesSearch
@@ -117,7 +125,7 @@ function PlaceForm({
 
 	return (
 		<BlockForm
-			title="Modifier ma zone"
+			title={title}
 			dirty={isDirty || choiceChanged(choice, values)}
 			keepsHint="ta saisie est toujours là"
 			onFailure={failure => {

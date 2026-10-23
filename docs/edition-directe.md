@@ -20,6 +20,7 @@ Issue 1008 (cadre : 1007). L'espace de la maquilleuse devient le profil public l
 - **Compétences et langues** (`BulletsBlock`) : des puces ; les règles des listes L1 à L7.
 - **Formations** (`RowsBlock`) : des lignes ; un seul bouton, « Enregistrer cette formation », ajoute la ligne en cours et enregistre la liste. `RowsBlock` sert aussi aux prestations (issue 1017) : modèles, suggestions, aide au prix, options derrière « Ajouter une option ». Le bloc est nommé (`kind`) et non reçu en objet, car les définitions de listes portent des fonctions qu'une page serveur ne peut pas passer au navigateur.
 - **Portfolio** (`GalleryBlock`, issue 1018) : même code d'envoi que la carte du portfolio (`sendThenSave`), ordre par boutons « Avancer / Reculer », photo principale choisie parmi la galerie (deux actions de l'espace, la galerie puis la photo principale), texte alternatif par la route des médias.
+- **Déplacements** (`TravelBlock`, issue 1019) : la phrase « Se déplace à domicile… » ouvre le formulaire de zone de l'en-tête (`PlaceForm`, exporté par `PlaceBlock`) : un champ, des pays en puces, le rayon, « à domicile ». Les deux blocs écrivent la même zone par la même action.
 - Pas de `<form>` dans un `<form>` : l'éditeur d'un bloc vit dans le formulaire du bloc (`BlockForm`), Entrée dans un champ est « enregistrer ».
 - L'éditeur d'un bloc du corps s'ouvre sous l'en-tête, dans le même emplacement que celui de l'en-tête (`EditorFrame` le fait défiler dans la vue).
 

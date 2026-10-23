@@ -85,8 +85,12 @@ export function benchOf(
 		'saveContacts',
 		'saveNetworks',
 		'saveMainPicture',
+		'savePlace',
 	]
-	const actions = Object.fromEntries(names.map(name => [name, fake(name, own[name])])) as never
+	const actions = {
+		...Object.fromEntries(names.map(name => [name, fake(name, own[name])])),
+		searchCities: (async () => ({ ok: true, communes: [] })) as Action,
+	} as never
 	const header = headerEdit({
 		profile,
 		photos: { photo, galerie: gallery, principaleManquante: false },

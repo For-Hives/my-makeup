@@ -325,6 +325,11 @@
 			"id": "tu-peux-gerer-ton-portfolio-directement-sur-ta-page-ajout",
 			"type": "amelioration",
 			"text": "Tu peux gérer ton portfolio directement sur ta page : ajouter des photos, les retirer, changer leur ordre, choisir ta photo principale parmi elles et décrire chaque photo."
+		},
+		{
+			"id": "tu-peux-regler-directement-sur-ta-page-ou-tu-te-deplaces",
+			"type": "amelioration",
+			"text": "Tu peux régler directement sur ta page où tu te déplaces : ta commune, ton rayon et le déplacement à domicile, sans jamais indiquer d’adresse."
 		}
 	],
 	"releases": []

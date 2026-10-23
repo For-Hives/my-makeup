@@ -50,7 +50,11 @@ export async function checkScreen(page: Page, label: string): Promise<void> {
 			),
 		]
 			.filter(element => {
-				const box = element.getBoundingClientRect()
+				// A box or a radio is pressed through its label, which is what must be 44 px high.
+				const label = element instanceof HTMLInputElement ? element.labels?.[0] : undefined
+				const box = (
+					label && ['checkbox', 'radio'].includes((element as HTMLInputElement).type) ? label : element
+				).getBoundingClientRect()
 				return box.width > 0 && box.height > 0 && box.height < 44
 			})
 			.map(

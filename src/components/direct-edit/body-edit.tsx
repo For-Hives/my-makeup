@@ -3,14 +3,19 @@ import { listBullets } from '@/lib/dashboard/bullets'
 import type { DashboardProfile } from '@/lib/dashboard/cards'
 import { COURSES } from '@/lib/dashboard/courses'
 import { profileRows } from '@/lib/dashboard/list'
+import { locationValues } from '@/lib/dashboard/location'
 import type { DashboardPhotos } from '@/lib/dashboard/photos'
 import { SERVICE_OFFERS } from '@/lib/dashboard/service-offers'
+import { zoneReviewView } from '@/lib/dashboard/zone-review'
 import type { PhotoUsageView } from '@/lib/photo-limits'
 import { text } from '@/lib/profile/display-name'
+import type { CitiesSearch } from '../dashboard/CityField'
 import { AboutBlock, type AboutSave } from './blocks/AboutBlock'
 import { BulletsBlock, type BulletsSave } from './blocks/BulletsBlock'
 import { GalleryBlock, type GalleryWork, type MainPictureSave, type PortfolioSave } from './blocks/GalleryBlock'
+import type { PlaceSave } from './blocks/PlaceBlock'
 import { RowsBlock, type RowsSave } from './blocks/RowsBlock'
+import { TravelBlock } from './blocks/TravelBlock'
 
 /** The server actions the body of the page saves through: the ones of her space, given by the page. */
 export interface BodyActions {
@@ -21,6 +26,8 @@ export interface BodyActions {
 	saveServices: RowsSave
 	savePortfolio: PortfolioSave
 	saveMainPicture: MainPictureSave
+	savePlace: PlaceSave
+	searchCities: CitiesSearch
 }
 
 /**
@@ -47,6 +54,16 @@ export function bodyEdit({
 	const mainInGallery =
 		photos.photo !== null && photos.galerie.some(photo => String(photo.id) === String(photos.photo?.id))
 	return {
+		travel: read => (
+			<TravelBlock
+				values={locationValues(profile)}
+				save={actions.savePlace}
+				search={actions.searchCities}
+				review={zoneReviewView(profile.zoneReview)}
+			>
+				{read}
+			</TravelBlock>
+		),
 		gallery: read => (
 			<GalleryBlock
 				photos={photos.galerie}

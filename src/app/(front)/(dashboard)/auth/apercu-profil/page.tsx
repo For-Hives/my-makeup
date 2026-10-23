@@ -101,6 +101,8 @@ export default async function PreviewPage({ searchParams }: PageProps<'/auth/ape
 								saveServices: saveMyServiceOffers,
 								savePortfolio: saveMyPortfolio,
 								saveMainPicture: saveMyMainPicture,
+								savePlace: saveMyLocation,
+								searchCities: findMyCities,
 							},
 						}),
 					}}
