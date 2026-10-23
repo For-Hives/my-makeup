@@ -96,7 +96,9 @@ export default async function ProfilePage() {
 	// Her quote requests (issue 1003): shown when the site offers the form, and as long as she holds one.
 	const allProfileId = myProfileId ?? (await profileId(context.payload, context.utilisateur))
 	const myQuotes = allProfileId === null ? [] : await readMyQuotes(context.payload, allProfileId)
-	const showQuotes = serverEnv().quoteRequests || myQuotes === null || myQuotes.length > 0
+	// An empty profile has no page to send a request to: its card would only push the first steps of the space down.
+	const showQuotes =
+		(serverEnv().quoteRequests && profile.status === 'published') || myQuotes === null || myQuotes.length > 0
 	const steps = remainingSteps(profile)
 	// Not for a page the team hid, nor for the team's own account: the onboarding is not their next step.
 	const showBanner = steps.premiere !== null && progress.etat !== 'masque' && progress.etat !== 'interne'
