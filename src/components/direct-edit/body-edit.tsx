@@ -12,6 +12,7 @@ import { text } from '@/lib/profile/display-name'
 import type { CitiesSearch } from '../dashboard/CityField'
 import { AboutBlock, type AboutSave } from './blocks/AboutBlock'
 import { BulletsBlock, type BulletsSave } from './blocks/BulletsBlock'
+import { ContactsBlock, type ContactsSave } from './blocks/ContactsBlock'
 import { GalleryBlock, type GalleryWork, type MainPictureSave, type PortfolioSave } from './blocks/GalleryBlock'
 import type { PlaceSave } from './blocks/PlaceBlock'
 import { RowsBlock, type RowsSave } from './blocks/RowsBlock'
@@ -26,6 +27,7 @@ export interface BodyActions {
 	saveServices: RowsSave
 	savePortfolio: PortfolioSave
 	saveMainPicture: MainPictureSave
+	saveContacts: ContactsSave
 	savePlace: PlaceSave
 	searchCities: CitiesSearch
 }
@@ -54,6 +56,19 @@ export function bodyEdit({
 	const mainInGallery =
 		photos.photo !== null && photos.galerie.some(photo => String(photo.id) === String(photos.photo?.id))
 	return {
+		contacts: read => (
+			<ContactsBlock
+				values={{
+					telephone: text(profile.contactDetails?.phone),
+					email: text(profile.contactDetails?.email),
+					contactPublic: profile.publicContact === true,
+				}}
+				consentedAt={profile.consentedAt ?? null}
+				save={actions.saveContacts}
+			>
+				{read}
+			</ContactsBlock>
+		),
 		travel: read => (
 			<TravelBlock
 				values={locationValues(profile)}

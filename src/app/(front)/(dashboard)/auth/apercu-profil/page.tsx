@@ -18,6 +18,7 @@ import { readPhotoUsage } from '@/lib/photo-usage'
 import { readProfilePreview } from '@/services/public/profiles'
 import {
 	saveMyAvailability,
+	saveMyContactDetails,
 	saveMyDescription,
 	saveMyIdentity,
 	saveMyLanguages,
@@ -100,6 +101,7 @@ export default async function PreviewPage({ searchParams }: PageProps<'/auth/ape
 								saveCourses: saveMyCourses,
 								saveServices: saveMyServiceOffers,
 								savePortfolio: saveMyPortfolio,
+								saveContacts: saveMyContactDetails,
 								saveMainPicture: saveMyMainPicture,
 								savePlace: saveMyLocation,
 								searchCities: findMyCities,

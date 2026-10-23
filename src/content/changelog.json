@@ -330,6 +330,11 @@
 			"id": "tu-peux-regler-directement-sur-ta-page-ou-tu-te-deplaces",
 			"type": "amelioration",
 			"text": "Tu peux régler directement sur ta page où tu te déplaces : ta commune, ton rayon et le déplacement à domicile, sans jamais indiquer d’adresse."
+		},
+		{
+			"id": "tu-peux-modifier-ton-telephone-et-ton-email-directement-s",
+			"type": "amelioration",
+			"text": "Tu peux modifier ton téléphone et ton email directement sur ta page, et choisir de les montrer ou non : si tu retires ton accord, ils disparaissent de ta page dès l’enregistrement."
 		}
 	],
 	"releases": []
