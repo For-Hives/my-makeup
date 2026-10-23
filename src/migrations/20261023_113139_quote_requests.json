@@ -3990,6 +3990,239 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.reminder_reports": {
+      "name": "reminder_reports",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "day": {
+          "name": "day",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "incomplete_count": {
+          "name": "incomplete_count",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "incomplete_ids": {
+          "name": "incomplete_ids",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "inactive_count": {
+          "name": "inactive_count",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "inactive_ids": {
+          "name": "inactive_ids",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sent_count": {
+          "name": "sent_count",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "send_enabled": {
+          "name": "send_enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "reminder_reports_day_idx": {
+          "name": "reminder_reports_day_idx",
+          "columns": [
+            {
+              "expression": "day",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "reminder_reports_updated_at_idx": {
+          "name": "reminder_reports_updated_at_idx",
+          "columns": [
+            {
+              "expression": "updated_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "reminder_reports_created_at_idx": {
+          "name": "reminder_reports_created_at_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.reminder_states": {
+      "name": "reminder_states",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "profile_id": {
+          "name": "profile_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_sent_at": {
+          "name": "last_sent_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "unsubscribed_at": {
+          "name": "unsubscribed_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "reminder_states_profile_idx": {
+          "name": "reminder_states_profile_idx",
+          "columns": [
+            {
+              "expression": "profile_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "reminder_states_updated_at_idx": {
+          "name": "reminder_states_updated_at_idx",
+          "columns": [
+            {
+              "expression": "updated_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "reminder_states_created_at_idx": {
+          "name": "reminder_states_created_at_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "reminder_states_profile_id_profiles_id_fk": {
+          "name": "reminder_states_profile_id_profiles_id_fk",
+          "tableFrom": "reminder_states",
+          "tableTo": "profiles",
+          "columnsFrom": [
+            "profile_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.quote_requests": {
       "name": "quote_requests",
       "schema": "",
@@ -4410,6 +4643,18 @@
           "primaryKey": false,
           "notNull": false
         },
+        "reminder_reports_id": {
+          "name": "reminder_reports_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reminder_states_id": {
+          "name": "reminder_states_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "quote_requests_id": {
           "name": "quote_requests_id",
           "type": "integer",
@@ -4628,6 +4873,36 @@
           "method": "btree",
           "with": {}
         },
+        "payload_locked_documents_rels_reminder_reports_id_idx": {
+          "name": "payload_locked_documents_rels_reminder_reports_id_idx",
+          "columns": [
+            {
+              "expression": "reminder_reports_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "payload_locked_documents_rels_reminder_states_id_idx": {
+          "name": "payload_locked_documents_rels_reminder_states_id_idx",
+          "columns": [
+            {
+              "expression": "reminder_states_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "payload_locked_documents_rels_quote_requests_id_idx": {
           "name": "payload_locked_documents_rels_quote_requests_id_idx",
           "columns": [
@@ -4794,6 +5069,32 @@
           "tableTo": "profile_views",
           "columnsFrom": [
             "profile_views_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "payload_locked_documents_rels_reminder_reports_fk": {
+          "name": "payload_locked_documents_rels_reminder_reports_fk",
+          "tableFrom": "payload_locked_documents_rels",
+          "tableTo": "reminder_reports",
+          "columnsFrom": [
+            "reminder_reports_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "payload_locked_documents_rels_reminder_states_fk": {
+          "name": "payload_locked_documents_rels_reminder_states_fk",
+          "tableFrom": "payload_locked_documents_rels",
+          "tableTo": "reminder_states",
+          "columnsFrom": [
+            "reminder_states_id"
           ],
           "columnsTo": [
             "id"
@@ -5475,6 +5776,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "894e1b8d-dc76-4044-af6e-774de31f0356",
+  "id": "a26c9b9d-a0c7-4ceb-ada2-66294c318b32",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }
