@@ -480,6 +480,89 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.profiles_specialty_bullets": {
+      "name": "profiles_specialty_bullets",
+      "schema": "",
+      "columns": {
+        "order": {
+          "name": "order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "parent_id": {
+          "name": "parent_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value": {
+          "name": "value",
+          "type": "enum_profiles_specialty_bullets",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "profiles_specialty_bullets_order_idx": {
+          "name": "profiles_specialty_bullets_order_idx",
+          "columns": [
+            {
+              "expression": "order",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "profiles_specialty_bullets_parent_idx": {
+          "name": "profiles_specialty_bullets_parent_idx",
+          "columns": [
+            {
+              "expression": "parent_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "profiles_specialty_bullets_parent_fk": {
+          "name": "profiles_specialty_bullets_parent_fk",
+          "tableFrom": "profiles_specialty_bullets",
+          "tableTo": "profiles",
+          "columnsFrom": [
+            "parent_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.profiles_service_offers_options": {
       "name": "profiles_service_offers_options",
       "schema": "",
@@ -1104,6 +1187,12 @@
         },
         "specialty": {
           "name": "specialty",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "specialty_other": {
+          "name": "specialty_other",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
@@ -3649,6 +3738,111 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.search_counts": {
+      "name": "search_counts",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "day": {
+          "name": "day",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "department": {
+          "name": "department",
+          "type": "enum_search_counts_department",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "total": {
+          "name": "total",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "with_city": {
+          "name": "with_city",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "no_result": {
+          "name": "no_result",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        }
+      },
+      "indexes": {
+        "search_counts_day_idx": {
+          "name": "search_counts_day_idx",
+          "columns": [
+            {
+              "expression": "day",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "search_counts_department_idx": {
+          "name": "search_counts_department_idx",
+          "columns": [
+            {
+              "expression": "department",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "day_department_idx": {
+          "name": "day_department_idx",
+          "columns": [
+            {
+              "expression": "day",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "department",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.profile_views": {
       "name": "profile_views",
       "schema": "",
@@ -4010,6 +4204,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "search_counts_id": {
+          "name": "search_counts_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "profile_views_id": {
           "name": "profile_views_id",
           "type": "integer",
@@ -4198,6 +4398,21 @@
           "method": "btree",
           "with": {}
         },
+        "payload_locked_documents_rels_search_counts_id_idx": {
+          "name": "payload_locked_documents_rels_search_counts_id_idx",
+          "columns": [
+            {
+              "expression": "search_counts_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "payload_locked_documents_rels_profile_views_id_idx": {
           "name": "payload_locked_documents_rels_profile_views_id_idx",
           "columns": [
@@ -4338,6 +4553,19 @@
           "tableTo": "deleted_accounts",
           "columnsFrom": [
             "deleted_accounts_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "payload_locked_documents_rels_search_counts_fk": {
+          "name": "payload_locked_documents_rels_search_counts_fk",
+          "tableFrom": "payload_locked_documents_rels",
+          "tableTo": "search_counts",
+          "columnsFrom": [
+            "search_counts_id"
           ],
           "columnsTo": [
             "id"
@@ -4707,6 +4935,18 @@
         "editor"
       ]
     },
+    "public.enum_profiles_specialty_bullets": {
+      "name": "enum_profiles_specialty_bullets",
+      "schema": "public",
+      "values": [
+        "wedding",
+        "event",
+        "photoFashion",
+        "screenStage",
+        "specialEffects",
+        "selfMakeupCourse"
+      ]
+    },
     "public.enum_profiles_zone_kind": {
       "name": "enum_profiles_zone_kind",
       "schema": "public",
@@ -4859,6 +5099,114 @@
         "sent",
         "failed"
       ]
+    },
+    "public.enum_search_counts_department": {
+      "name": "enum_search_counts_department",
+      "schema": "public",
+      "values": [
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "21",
+        "22",
+        "23",
+        "24",
+        "25",
+        "26",
+        "27",
+        "28",
+        "29",
+        "30",
+        "31",
+        "32",
+        "33",
+        "34",
+        "35",
+        "36",
+        "37",
+        "38",
+        "39",
+        "40",
+        "41",
+        "42",
+        "43",
+        "44",
+        "45",
+        "46",
+        "47",
+        "48",
+        "49",
+        "50",
+        "51",
+        "52",
+        "53",
+        "54",
+        "55",
+        "56",
+        "57",
+        "58",
+        "59",
+        "60",
+        "61",
+        "62",
+        "63",
+        "64",
+        "65",
+        "66",
+        "67",
+        "68",
+        "69",
+        "70",
+        "71",
+        "72",
+        "73",
+        "74",
+        "75",
+        "76",
+        "77",
+        "78",
+        "79",
+        "80",
+        "81",
+        "82",
+        "83",
+        "84",
+        "85",
+        "86",
+        "87",
+        "88",
+        "89",
+        "90",
+        "91",
+        "92",
+        "93",
+        "94",
+        "95",
+        "971",
+        "972",
+        "973",
+        "974",
+        "976",
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08",
+        "09",
+        "2A",
+        "2B",
+        "unknown"
+      ]
     }
   },
   "schemas": {},
@@ -4871,6 +5219,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "076af687-efbf-4293-961d-63b5c6b06610",
+  "id": "0f84bd7c-dbab-4ff3-856b-e70bc3e7018a",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }
