@@ -8,6 +8,7 @@ import {
 	contactDetailsToReview,
 	emptyToSource,
 	expectedProfiles,
+	legacySpecialty,
 	lostPricedOffer,
 	PROFILES_ADAPTER,
 	type ReadProfile,
@@ -211,6 +212,8 @@ describe('les profils attendus', () => {
 			lastName: null,
 			artistName: null,
 			specialty: 'Mariage',
+			specialtyBullets: ['wedding'],
+			specialtyOther: null,
 			description: null,
 			city: null,
 			// Its radius (ticket 226): none at the source, none in the target.
@@ -468,5 +471,24 @@ describe('ticket 261 : la zone que l’import écrit, commune, pays ou revue', (
 			town: null,
 			zoneReview: { reason: null, postalCode: null, candidates: null },
 		})
+	})
+})
+
+describe('1010 : la spécialité de l’ancien site est rangée sans perte', () => {
+	test('une puce exacte devient une puce, tout autre texte reste entier dans « Autre »', () => {
+		expect(legacySpecialty('Mariage')).toEqual({ specialtyBullets: ['wedding'], specialtyOther: null })
+		expect(legacySpecialty('Maquilleuse mariée')).toEqual({
+			specialtyBullets: [],
+			specialtyOther: 'Maquilleuse mariée',
+		})
+		expect(legacySpecialty(null)).toEqual({ specialtyBullets: [], specialtyOther: null })
+	})
+
+	test('les valeurs attendues portent le texte d’origine et les champs rangés, et la comparaison les voit égaux au second passage', () => {
+		for (const field of ['specialty', 'specialtyBullets', 'specialtyOther'])
+			expect(Object.keys(PROFILES_ADAPTER.fields)).toContain(field)
+		const stored = legacySpecialty('Mariage, Effets spéciaux')
+		expect(normalize('liste', stored.specialtyBullets)).toBe(normalize('liste', ['wedding', 'specialEffects']))
+		expect(normalize('texte', stored.specialtyOther)).toBe(normalize('texte', undefined))
 	})
 })

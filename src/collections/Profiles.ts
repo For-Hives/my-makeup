@@ -11,6 +11,7 @@ import type {
 	Validate,
 } from 'payload'
 import { APIError, ValidationError } from 'payload'
+import { SPECIALTY_BULLETS, SPECIALTY_MAX, SPECIALTY_OTHER_MAX, specialtyPatch } from '@/lib/specialty'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import {
 	adminOnly,
@@ -132,6 +133,12 @@ export const fallbackSlugAfterCreate: CollectionAfterChangeHook = async ({ doc, 
 	await req.payload.update({ collection: 'profiles', data: { slug }, depth: 0, id: doc.id, overrideAccess: true, req })
 	return { ...doc, slug }
 }
+
+/** Ticket 1010: the shown specialty is composed from the bullets and « Autre » (src/lib/specialty.ts). */
+export const composeSpecialty: CollectionBeforeChangeHook = ({ data, originalDoc }) => ({
+	...data,
+	...specialtyPatch(data, originalDoc),
+})
 
 /**
  * The trace of the consent to show the contact details (ticket 042): when `publicContact` is
@@ -320,6 +327,7 @@ export const Profiles: CollectionConfig<'profiles'> = {
 		// reads the stored row, which no hook changes before the write.
 		beforeChange: [
 			REFRESH.avantEcriture,
+			composeSpecialty,
 			rowIdentitiesBeforeWrite,
 			slugOnCreate,
 			consentTrace,
@@ -372,7 +380,25 @@ export const Profiles: CollectionConfig<'profiles'> = {
 		{ name: 'firstName', label: 'Prénom', type: 'text', maxLength: 70 },
 		{ name: 'lastName', label: 'Nom', type: 'text', maxLength: 70 },
 		{ name: 'artistName', label: 'Nom d’artiste', type: 'text', maxLength: 70 },
-		{ name: 'specialty', label: 'Spécialité', type: 'text', maxLength: 70 },
+		// Ticket 1010: the specialty is chosen from bullets, with « Autre » for a free text. `specialty` stays the
+		// text shown and searched; the hook `composeSpecialty` writes it from the two fields below.
+		{
+			name: 'specialty',
+			label: 'Spécialité (texte affiché)',
+			type: 'text',
+			maxLength: SPECIALTY_MAX,
+			admin: {
+				description: 'Composé à partir des puces et du texte « Autre » ; un texte saisi ici est rangé dans « Autre ».',
+			},
+		},
+		{
+			name: 'specialtyBullets',
+			label: 'Spécialité : puces',
+			type: 'select',
+			hasMany: true,
+			options: SPECIALTY_BULLETS.map(({ label, value }) => ({ label, value })),
+		},
+		{ name: 'specialtyOther', label: 'Spécialité : Autre', type: 'text', maxLength: SPECIALTY_OTHER_MAX },
 		// Its commune, its radius and « à domicile », public with the profile (ticket 041).
 		...zoneFields,
 		{ name: 'description', label: 'Description', type: 'textarea', maxLength: 2000 },

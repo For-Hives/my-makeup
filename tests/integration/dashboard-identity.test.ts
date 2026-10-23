@@ -34,7 +34,13 @@ async function storedProfile(payload: Payload, compte: Artist) {
 	return profile
 }
 
-const IDENTITY = { prenom: 'Léa', nom: 'Fictive', nomArtiste: 'Studio Fictif', specialite: 'Maquillage mariée' }
+const IDENTITY = {
+	prenom: 'Léa',
+	nom: 'Fictive',
+	nomArtiste: 'Studio Fictif',
+	specialtyBullets: '',
+	specialtyOther: 'Maquillage mariée',
+}
 
 describe('U54 : la page ne lit que le profil de la maquilleuse connectée', () => {
 	test('A lit le sien, jamais celui de B', async () => {
@@ -48,7 +54,7 @@ describe('U54 : la page ne lit que le profil de la maquilleuse connectée', () =
 				firstName: IDENTITY.prenom,
 				lastName: IDENTITY.nom,
 				artistName: IDENTITY.nomArtiste,
-				specialty: IDENTITY.specialite,
+				specialty: IDENTITY.specialtyOther,
 			},
 		})
 
@@ -131,14 +137,15 @@ describe('U32, I03, I02 : une requête forgée est refusée, rien ne change', ()
 		const result = await saveIdentity(payload, await userOf(payload, a), {
 			...IDENTITY,
 			nom: 'A',
-			specialite: 'x'.repeat(71),
+			specialtyBullets: '',
+			specialtyOther: 'x'.repeat(71),
 		})
 
 		expect(result).toMatchObject({
 			ok: false,
 			champs: {
 				nom: 'Ton nom doit contenir au moins 2 caractères.',
-				specialite: 'Ta spécialité ne doit pas dépasser 70 caractères.',
+				specialtyOther: 'Ta spécialité ne doit pas dépasser 70 caractères.',
 			},
 		})
 		expect((await storedProfile(payload, a)).updatedAt).toBe(before.updatedAt)
@@ -169,5 +176,57 @@ describe('I19 : changer de nom ne change pas l’adresse du profil', () => {
 		const after = await storedProfile(payload, a)
 		expect(after.slug).toBe(slug)
 		expect(['Fictive', 'Autre']).toContain(after.lastName ?? '')
+	})
+})
+
+describe('1010 : la spécialité par puces', () => {
+	test('les puces et « Autre » sont gardées, le texte affiché est composé, la recherche par mot le trouve', async () => {
+		const a = await createAccount('maquilleuse')
+		const payload = await testPayload()
+
+		const result = await saveIdentity(payload, await userOf(payload, a), {
+			...IDENTITY,
+			specialtyBullets: 'specialEffects,wedding',
+			specialtyOther: 'Body painting',
+		})
+
+		expect(result).toEqual({
+			ok: true,
+			valeurs: { ...IDENTITY, specialtyBullets: 'wedding,specialEffects', specialtyOther: 'Body painting' },
+		})
+		expect(await storedProfile(payload, a)).toMatchObject({
+			specialty: 'Mariage, Effets spéciaux, Body painting',
+			specialtyBullets: ['wedding', 'specialEffects'],
+			specialtyOther: 'Body painting',
+		})
+	})
+
+	test('un texte écrit sans les puces (administration, ancien appelant) est rangé dans « Autre » sans rien perdre', async () => {
+		const a = await createAccount('maquilleuse')
+		const payload = await testPayload()
+		const id = (await storedProfile(payload, a)).id
+
+		await payload.update({ collection: 'profiles', id, data: { specialty: 'Maquillage mariée et soirée' } })
+		expect(await storedProfile(payload, a)).toMatchObject({
+			specialty: 'Maquillage mariée et soirée',
+			specialtyOther: 'Maquillage mariée et soirée',
+		})
+
+		await payload.update({ collection: 'profiles', id, data: { specialty: 'Mariage' } })
+		const stored = await storedProfile(payload, a)
+		expect(stored.specialty).toBe('Mariage')
+		expect(stored.specialtyBullets).toEqual(['wedding'])
+		expect(stored.specialtyOther ?? null).toBeNull()
+	})
+
+	test('vider les puces et « Autre » vide la spécialité', async () => {
+		const a = await createAccount('maquilleuse')
+		const payload = await testPayload()
+		const user = await userOf(payload, a)
+		await saveIdentity(payload, user, { ...IDENTITY, specialtyBullets: 'event', specialtyOther: '' })
+		await saveIdentity(payload, user, { ...IDENTITY, specialtyBullets: '', specialtyOther: '' })
+		const stored = await storedProfile(payload, a)
+		expect(stored.specialty ?? null).toBeNull()
+		expect(stored.specialtyBullets ?? []).toEqual([])
 	})
 })

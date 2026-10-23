@@ -3,6 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { SpecialtyChoice } from '@/components/dashboard/SpecialtyChoice'
 import { IDENTITY_FIELDS, IDENTITY_LABELS, type IdentityValues } from '@/lib/dashboard/identity'
 import { ORIGINES_DECLAREES, ORIGINS_LABELS, onboardingIdentitySchema, STEPS_TITLES } from '@/lib/dashboard/onboarding'
 import { FAILURE_MESSAGE, type SaveResult } from '@/lib/dashboard/result'
@@ -86,7 +87,9 @@ export function IdentityStep({
 	const {
 		register,
 		handleSubmit,
+		watch,
 		setError,
+		setValue,
 		formState: { errors },
 	} = useForm<IdentityValues>({ resolver: zodResolver(onboardingIdentitySchema), defaultValues: valeurs })
 	const [pending, setPending] = useState(false)
@@ -138,7 +141,7 @@ export function IdentityStep({
 				}}
 				className="flex flex-col gap-4"
 			>
-				{IDENTITY_FIELDS.map(champ => {
+				{IDENTITY_FIELDS.filter(champ => !champ.startsWith('specialty')).map(champ => {
 					const error = errors[champ]?.message
 					const optional = champ === 'nomArtiste'
 					return (
@@ -164,6 +167,17 @@ export function IdentityStep({
 						</div>
 					)
 				})}
+				<SpecialtyChoice
+					idPrefix="accueil"
+					bullets={watch('specialtyBullets')}
+					other={watch('specialtyOther')}
+					onChange={(bullets, other) => {
+						setValue('specialtyBullets', bullets, { shouldDirty: true })
+						setValue('specialtyOther', other, { shouldDirty: true })
+					}}
+					error={errors.specialtyBullets?.message}
+					otherError={errors.specialtyOther?.message}
+				/>
 				<OriginQuestion origine={origine} choisir={choisirOrigine} />
 				<FailureMessage message={message} sessionExpiree={expiredSession} />
 				<button type="submit" disabled={pending} className={MAIN_BUTTON}>

@@ -340,6 +340,11 @@
 			"id": "tu-peux-modifier-tes-reseaux-et-ton-site-directement-sur",
 			"type": "amelioration",
 			"text": "Tu peux modifier tes réseaux et ton site directement sur ta page : écris ton pseudo ou colle une adresse, et tu vois comment elle s’affichera avant d’enregistrer."
+		},
+		{
+			"id": "tu-choisis-ta-specialite-dans-une-liste-de-puces-mariage",
+			"type": "amelioration",
+			"text": "Tu choisis ta spécialité dans une liste de puces (mariage, soirée, photo et mode, cinéma et scène, effets spéciaux, cours d’auto-maquillage), et « Autre » te laisse écrire la tienne."
 		}
 	],
 	"releases": []

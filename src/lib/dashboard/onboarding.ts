@@ -13,7 +13,7 @@ import { z } from 'zod'
 import { DECLARED_ORIGINS } from '../analytics/events'
 import { completeness } from '../profile/completeness'
 import { type ProfileDocument, profileFields } from '../profile/state'
-import { IDENTITY_MAX, identitySchema, strictIdentitySchema } from './identity'
+import { identitySchema, strictIdentitySchema } from './identity'
 
 export const STEPS = [1, 2, 3] as const
 export type OnboardingStep = (typeof STEPS)[number]
@@ -73,18 +73,18 @@ export function remainingSteps(profil: ProfileDocument | null | undefined): {
 /** The message under the speciality, which the onboarding asks for and the space leaves optional. */
 export const SPECIALTY_MESSAGE = 'Indique ta spécialité.'
 
-const requiredSpecialty = z
-	.string({ error: SPECIALTY_MESSAGE })
-	.trim()
-	.min(1, SPECIALTY_MESSAGE)
-	.max(IDENTITY_MAX, `Ta spécialité ne doit pas dépasser ${IDENTITY_MAX} caractères.`)
+/** A speciality is a bullet or an « Autre » text: one of the two at least. */
+const hasSpecialty = (identity: { specialtyBullets: string; specialtyOther: string }): boolean =>
+	identity.specialtyBullets !== '' || identity.specialtyOther !== ''
+const SPECIALTY_REFINEMENT = { error: SPECIALTY_MESSAGE, path: ['specialtyBullets'] }
 
 /**
- * The identity as the first step asks for it: the four fields of the space, but the speciality is
- * required, since without it the profile cannot be active. The shared schema stays as it is.
+ * The identity as the first step asks for it: the fields of the space, but a speciality is required
+ * (a bullet, or « Autre » filled in), since without it the profile cannot be active. The shared schema
+ * stays as it is.
  */
-export const onboardingIdentitySchema = identitySchema.extend({ specialite: requiredSpecialty })
-export const strictOnboardingIdentitySchema = strictIdentitySchema.extend({ specialite: requiredSpecialty })
+export const onboardingIdentitySchema = identitySchema.refine(hasSpecialty, SPECIALTY_REFINEMENT)
+export const strictOnboardingIdentitySchema = strictIdentitySchema.refine(hasSpecialty, SPECIALTY_REFINEMENT)
 
 /** The answers to « Comment as-tu connu My Makeup ? », as the old site words them. */
 export const ORIGINS_LABELS: Readonly<Record<(typeof DECLARED_ORIGINS)[number], string>> = {

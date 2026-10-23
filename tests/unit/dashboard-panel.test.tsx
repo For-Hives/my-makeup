@@ -14,7 +14,13 @@ import { openWindow } from '../support/dom-react'
 
 const jsdomWindow = openWindow()
 
-const VALUES: IdentityValues = { prenom: 'Léa', nom: 'Fictive', nomArtiste: '', specialite: 'Teint' }
+const VALUES: IdentityValues = {
+	prenom: 'Léa',
+	nom: 'Fictive',
+	nomArtiste: '',
+	specialtyBullets: '',
+	specialtyOther: 'Teint',
+}
 
 /** A send function that records its calls and answers like the server stores. */
 function falselyUpload(reponse?: Awaited<ReturnType<IdentityUpload>>) {
@@ -57,7 +63,7 @@ describe('le panneau s’ouvre, avec les valeurs enregistrées', () => {
 		expect(title?.textContent).toBe('Modifier mon identité')
 		expect(jsdomWindow.champ('Prénom')).toBe(jsdomWindow.w.document.activeElement as never)
 		expect((jsdomWindow.champ('Prénom') as HTMLInputElement).value).toBe('Léa')
-		expect((jsdomWindow.champ('Spécialité') as HTMLInputElement).value).toBe('Teint')
+		expect((jsdomWindow.champ('Autre (précise)') as HTMLInputElement).value).toBe('Teint')
 	})
 })
 
@@ -95,6 +101,38 @@ describe('un enregistrement réussi', () => {
 	})
 })
 
+describe('1010 : la spécialité se choisit dans des puces', () => {
+	test('cocher des puces les envoie, « Autre » décoché efface son texte', async () => {
+		const { appels: calls, envoyer: send } = falselyUpload()
+		await open(send)
+
+		await jsdomWindow.cliquer(jsdomWindow.champ('Mariage'))
+		await jsdomWindow.cliquer(jsdomWindow.champ('Effets spéciaux'))
+		await jsdomWindow.cliquer(jsdomWindow.champ('Autre'))
+		expect(jsdomWindow.w.document.getElementById('identite-specialtyOther')).toBeNull()
+		await jsdomWindow.cliquer(jsdomWindow.bouton('Enregistrer'))
+
+		await jsdomWindow.attendre(() => calls.length === 1)
+		expect(calls[0]).toMatchObject({ specialtyBullets: 'wedding,specialEffects', specialtyOther: '' })
+	})
+
+	test('« Autre » ouvre un champ libre, fermé tant qu’aucun texte n’existe', async () => {
+		const { envoyer: send } = falselyUpload()
+		await jsdomWindow.monter(
+			<IdentityEditor
+				valeurs={{ ...VALUES, specialtyOther: '' }}
+				envoyer={send}
+				proprietaire="7"
+				stockage={() => null}
+			/>
+		)
+		await jsdomWindow.cliquer(jsdomWindow.bouton('Modifier mon identité'))
+		expect(jsdomWindow.w.document.getElementById('identite-specialtyOther')).toBeNull()
+		await jsdomWindow.cliquer(jsdomWindow.champ('Autre'))
+		expect(jsdomWindow.w.document.getElementById('identite-specialtyOther')).not.toBeNull()
+	})
+})
+
 describe('E31 : un échec du serveur', () => {
 	test('le panneau reste ouvert avec la saisie, le message est en français', async () => {
 		const { envoyer: send } = falselyUpload({ ok: false, message: FAILURE_MESSAGE })
@@ -114,12 +152,14 @@ describe('E31 : un échec du serveur', () => {
 		const { envoyer: send } = falselyUpload({
 			ok: false,
 			message: 'Un champ n’est pas valide.',
-			champs: { specialite: 'Ce champ est trop long.' },
+			champs: { specialtyOther: 'Ce champ est trop long.' },
 		})
 		await open(send)
 		await jsdomWindow.cliquer(jsdomWindow.bouton('Enregistrer'))
 
-		const error = await jsdomWindow.attendre(() => jsdomWindow.w.document.getElementById('identite-specialite-erreur'))
+		const error = await jsdomWindow.attendre(() =>
+			jsdomWindow.w.document.getElementById('identite-specialtyOther-erreur')
+		)
 		expect(error.textContent).toBe('Ce champ est trop long.')
 	})
 

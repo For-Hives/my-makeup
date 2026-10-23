@@ -135,7 +135,8 @@ test.describe('119 : l’identité s’enregistre pour de vrai', { tag: '@mobile
 		await open(page)
 
 		await page.getByLabel('Prénom').fill('  Inès  ')
-		await page.getByLabel('Spécialité').fill('Effets spéciaux')
+		await page.getByLabel('Autre', { exact: true }).uncheck()
+		await page.getByLabel('Effets spéciaux').check()
 		await page.getByRole('button', { name: 'Enregistrer' }).click()
 
 		await expect(dialogue(page)).toHaveCount(0)
@@ -149,6 +150,36 @@ test.describe('119 : l’identité s’enregistre pour de vrai', { tag: '@mobile
 		expect(await sheetOf(account)).toMatchObject({ firstName: 'Inès', specialty: 'Effets spéciaux', slug })
 	})
 
+	test('1010 : des puces et « Autre », texte composé, cibles de 44 px, sans défilement horizontal', async ({
+		context,
+		page,
+	}) => {
+		const account = await artist(context)
+		await page.goto('/auth/profil')
+		await open(page)
+
+		await page.getByLabel('Autre', { exact: true }).uncheck()
+		await page.getByLabel('Mariage', { exact: true }).check()
+		await page.getByLabel('Effets spéciaux').check()
+		await page.getByLabel('Autre', { exact: true }).check()
+		await page.getByLabel('Autre (précise)').fill('Body painting')
+		for (const name of ['Mariage', 'Cours d’auto-maquillage', 'Autre']) {
+			const box = await page.getByText(name, { exact: true }).first().boundingBox()
+			expect(box?.height ?? 0, name).toBeGreaterThanOrEqual(44)
+		}
+		expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+		expect(await violationsSevere(page)).toEqual([])
+
+		await page.getByRole('button', { name: 'Enregistrer' }).click()
+		await expect(dialogue(page)).toHaveCount(0)
+		await expect(page.getByTestId('carte-identite')).toContainText('Mariage, Effets spéciaux, Body painting')
+		expect(await sheetOf(account)).toMatchObject({
+			specialty: 'Mariage, Effets spéciaux, Body painting',
+			specialtyBullets: ['wedding', 'specialEffects'],
+			specialtyOther: 'Body painting',
+		})
+	})
+
 	test('E30 : hors bornes, un message sous le champ et aucune requête', async ({ context, page }) => {
 		await artist(context)
 		const uploads = followUploads(page)
@@ -157,7 +188,7 @@ test.describe('119 : l’identité s’enregistre pour de vrai', { tag: '@mobile
 
 		await page.getByLabel('Nom', { exact: true }).fill('A')
 		await page.getByLabel('Prénom').fill('')
-		await page.getByLabel('Spécialité').fill('x'.repeat(71))
+		await page.getByLabel('Autre (précise)').fill('x'.repeat(71))
 		await page.getByRole('button', { name: 'Enregistrer' }).click()
 
 		await expect(page.getByText('Ton nom doit contenir au moins 2 caractères.')).toBeVisible()
@@ -349,7 +380,8 @@ test.describe('121 : la session expire pendant l’édition', { tag: '@mobile' }
 		await page.goto('/auth/profil')
 		await open(page)
 		await page.getByLabel('Prénom').fill('Inès')
-		await page.getByLabel('Spécialité').fill('Effets spéciaux')
+		await page.getByLabel('Autre', { exact: true }).uncheck()
+		await page.getByLabel('Effets spéciaux').check()
 
 		// The session ends while she types: the browser now holds a token that has run out.
 		const expired = await openSessionWithoutPassword(payload, { collection: 'pros', id: account.id }, process.env, {
@@ -374,7 +406,7 @@ test.describe('121 : la session expire pendant l’édition', { tag: '@mobile' }
 		await expect(dialogue(page)).toBeVisible()
 		await expect(page.getByText('on a retrouvé ce que tu avais saisi')).toBeVisible()
 		await expect(page.getByLabel('Prénom')).toHaveValue('Inès')
-		await expect(page.getByLabel('Spécialité')).toHaveValue('Effets spéciaux')
+		await expect(page.getByLabel('Effets spéciaux')).toBeChecked()
 		await expect(page.getByTestId('carte-identite')).toContainText('Léa')
 
 		await page.getByRole('button', { name: 'Enregistrer' }).click()
@@ -401,7 +433,13 @@ test.describe('121 : la session expire pendant l’édition', { tag: '@mobile' }
 				window.sessionStorage.setItem(
 					key,
 					JSON.stringify({
-						valeurs: { prenom: 'Gardée', nom: 'Fictive', nomArtiste: '', specialite: 'Teint' },
+						valeurs: {
+							prenom: 'Gardée',
+							nom: 'Fictive',
+							nomArtiste: '',
+							specialtyBullets: '',
+							specialtyOther: 'Teint',
+						},
 						le: Date.now(),
 						redirigeLe: null,
 					})

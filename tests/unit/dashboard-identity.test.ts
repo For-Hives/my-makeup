@@ -7,7 +7,7 @@ import { FAILURE_MESSAGE, payloadFailure } from '@/lib/dashboard/result'
  * the field, the strict schema of the server, and the failures of Payload told in French.
  */
 
-const VALID = { prenom: 'Léa', nom: 'Fictive', nomArtiste: '', specialite: '' }
+const VALID = { prenom: 'Léa', nom: 'Fictive', nomArtiste: '', specialtyBullets: '', specialtyOther: '' }
 
 describe('U26 : les bornes des noms, espaces retirés', () => {
 	test('un prénom et un nom de 2 à 70 caractères passent, rognés', () => {
@@ -24,7 +24,9 @@ describe('U26 : les bornes des noms, espaces retirés', () => {
 
 	test('le nom d’artiste et la spécialité peuvent rester vides, 70 caractères au plus', () => {
 		expect(identitySchema.safeParse(VALID).success).toBe(true)
-		expect(identitySchema.safeParse({ ...VALID, specialite: 'x'.repeat(IDENTITY_MAX + 1) }).success).toBe(false)
+		expect(
+			identitySchema.safeParse({ ...VALID, specialtyBullets: '', specialtyOther: 'x'.repeat(IDENTITY_MAX + 1) }).success
+		).toBe(false)
 		expect(identitySchema.safeParse({ ...VALID, nomArtiste: 'x'.repeat(IDENTITY_MAX + 1) }).success).toBe(false)
 	})
 })
@@ -35,19 +37,20 @@ describe('U25 : un message en français par champ', () => {
 			prenom: '',
 			nom: 'A',
 			nomArtiste: 'x'.repeat(71),
-			specialite: 'y'.repeat(71),
+			specialtyBullets: '',
+			specialtyOther: 'y'.repeat(71),
 		})
 		if (wasRead.success) throw new Error('doit être refusé')
 		expect(errorsByField(wasRead.error)).toEqual({
 			prenom: 'Indique ton prénom.',
 			nom: 'Ton nom doit contenir au moins 2 caractères.',
 			nomArtiste: 'Ton nom d’artiste ne doit pas dépasser 70 caractères.',
-			specialite: 'Ta spécialité ne doit pas dépasser 70 caractères.',
+			specialtyOther: 'Ta spécialité ne doit pas dépasser 70 caractères.',
 		})
 	})
 
 	test('une valeur qui n’est pas un texte (requête forgée) a un message français aussi', () => {
-		const wasRead = strictIdentitySchema.safeParse({ ...VALID, prenom: 42, specialite: { a: 1 } })
+		const wasRead = strictIdentitySchema.safeParse({ ...VALID, prenom: 42, specialtyOther: { a: 1 } })
 		if (wasRead.success) throw new Error('doit être refusé')
 		const messages = Object.values(errorsByField(wasRead.error))
 		expect(messages).toHaveLength(2)
@@ -75,7 +78,7 @@ describe('U32 : le schéma du serveur est strict', () => {
 })
 
 describe('les échecs de Payload se disent en français', () => {
-	const FIELDS = ['prenom', 'nom', 'nomArtiste', 'specialite'] as const
+	const FIELDS = ['prenom', 'nom', 'nomArtiste', 'specialtyBullets', 'specialtyOther'] as const
 
 	test('le message d’un champ vient de data.errors', () => {
 		const error = Object.assign(new Error('The following field is invalid: Prénom'), {

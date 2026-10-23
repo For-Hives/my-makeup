@@ -54,6 +54,7 @@ import { type ProfileDocument, profileState, statusAfter } from '../../../src/li
 import { INITIAL_CHOICE, type ProfileStatus } from '../../../src/lib/profile/status'
 import { RADIUS_BOUNDS_KM } from '../../../src/lib/profile/zone'
 import { assignSlugs } from '../../../src/lib/slug'
+import { splitLegacySpecialty } from '../../../src/lib/specialty'
 import type { ExpectedCity, ExpectedCountries, ExpectedReview } from './cities'
 import { type Adapter, type Expected, type Gap, normalize } from './engine'
 import { REFERENCES } from './gaps'
@@ -247,6 +248,15 @@ export function cutoverDate(texte: string): string | null {
 	return Number.isNaN(date.getTime()) ? null : date.toISOString()
 }
 
+/**
+ * The old free specialty, ranged into the bullets and « Autre » (ticket 1010) without losing a word. The
+ * shown text stays the old one, so a second run finds the same values and changes nothing.
+ */
+export function legacySpecialty(text: string | null): { specialtyBullets: string[]; specialtyOther: string | null } {
+	const { bullets, other } = splitLegacySpecialty(text)
+	return { specialtyBullets: bullets, specialtyOther: other || null }
+}
+
 export const PROFILES_ADAPTER: Adapter = {
 	collection: 'profiles',
 	fields: {
@@ -257,6 +267,8 @@ export const PROFILES_ADAPTER: Adapter = {
 		lastName: 'texte',
 		artistName: 'texte',
 		specialty: 'texte',
+		specialtyBullets: 'liste',
+		specialtyOther: 'texte',
 		description: 'texte',
 		city: 'objet',
 		zoneKind: 'texte',
@@ -532,6 +544,7 @@ export function expectedProfiles(
 			lastName: profile.last_name,
 			artistName: profile.company_artist_name,
 			specialty: profile.speciality,
+			...legacySpecialty(profile.speciality),
 			description: profile.description,
 			city: communes.get(profile.id) ?? null,
 			radiusKm: sourceRadius(profile),

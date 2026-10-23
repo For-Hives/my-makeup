@@ -114,17 +114,19 @@ describe('E02 : les trois étapes donnent un profil actif', () => {
 			prenom: 'Léa',
 			nom: 'Fictive',
 			nomArtiste: '',
-			specialite: ' ',
+			specialtyBullets: '',
+			specialtyOther: ' ',
 		})
 		expect(without.ok).toBe(false)
-		expect(without.ok ? '' : without.champs?.specialite).toBe('Indique ta spécialité.')
+		expect(without.ok ? '' : without.champs?.specialtyBullets).toBe('Indique ta spécialité.')
 		expect((await accountProfiles(account))[0]?.firstName ?? null).toBeNull()
 
 		const identity = await saveOnboardingIdentity(payload, user, {
 			prenom: 'Léa',
 			nom: 'Fictive',
 			nomArtiste: '',
-			specialite: 'Mariée',
+			specialtyBullets: '',
+			specialtyOther: 'Mariée',
 		})
 		expect(identity.ok).toBe(true)
 		expect(onboardingPosition(await artistProfile(payload, user))).toBe(2)
@@ -165,7 +167,8 @@ describe('E02 : les trois étapes donnent un profil actif', () => {
 			prenom: 'Léa',
 			nom: 'Fictive',
 			nomArtiste: '',
-			specialite: 'Mariée',
+			specialtyBullets: '',
+			specialtyOther: 'Mariée',
 			status: 'published',
 			origine: 'ia',
 		})

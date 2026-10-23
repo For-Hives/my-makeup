@@ -6,6 +6,7 @@ import { SQL } from 'bun'
 import { SPAM_PROFILES } from '../../scripts/migration/import/profiles'
 import { IMPORT_CONTEXT } from '../../src/lib/import-context'
 import { assignSlugs } from '../../src/lib/slug'
+import { composeSpecialty } from '../../src/lib/specialty'
 import { PUBLIC_PROFILE_FIELDS, readPublicProfile } from '../../src/services/public/profiles'
 import { BENCH_DECISION_FILE, BENCH_DECISIONS, importCommand, importOnBench } from '../support/import'
 import { countMails, emptySink } from '../support/mailpit'
@@ -324,6 +325,16 @@ describe('La lecture publique d’un profil repris', () => {
 			const text = JSON.stringify(profile)
 			expect(text).not.toContain('06 39 98')
 			expect(text).not.toContain('@example.test')
+		}
+	})
+
+	test('1010 : la spécialité de l’ancien site est rangée en puces ou en « Autre », texte inchangé', async () => {
+		const payload = await testPayload()
+		for (const profile of await targetProfiles()) {
+			const stored = await payload.findByID({ collection: 'profiles', id: profile.id, depth: 0 })
+			const source = String(TAKEN.find(({ id }) => Number(id) === profile.strapiId)?.speciality ?? '') || null
+			expect(stored.specialty ?? null, String(profile.strapiId)).toBe(source)
+			expect(composeSpecialty(stored.specialtyBullets, stored.specialtyOther) || null).toBe(source || null)
 		}
 	})
 

@@ -3,6 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { SpecialtyChoice } from '@/components/dashboard/SpecialtyChoice'
 import { expiredSessionUrl } from '@/lib/auth/return-to'
 import { trackSave } from '@/lib/dashboard/analytics'
 import {
@@ -147,6 +148,7 @@ function IdentityForm({
 	const {
 		register,
 		handleSubmit,
+		watch,
 		setError,
 		setValue,
 		getValues,
@@ -238,7 +240,7 @@ function IdentityForm({
 				}}
 				className="flex flex-col gap-4"
 			>
-				{IDENTITY_FIELDS.map(champ => {
+				{IDENTITY_FIELDS.filter(champ => !champ.startsWith('specialty')).map(champ => {
 					const error = errors[champ]?.message
 					return (
 						<div key={champ} className="flex flex-col gap-1">
@@ -262,6 +264,17 @@ function IdentityForm({
 						</div>
 					)
 				})}
+				<SpecialtyChoice
+					idPrefix="identite"
+					bullets={watch('specialtyBullets')}
+					other={watch('specialtyOther')}
+					onChange={(bullets, other) => {
+						setValue('specialtyBullets', bullets, { shouldDirty: true })
+						setValue('specialtyOther', other, { shouldDirty: true })
+					}}
+					error={errors.specialtyBullets?.message}
+					otherError={errors.specialtyOther?.message}
+				/>
 				<div role="alert">
 					{message ? (
 						<p className="rounded-md bg-red-50 p-3 text-red-800 text-sm">
