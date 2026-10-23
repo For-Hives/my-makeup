@@ -34,6 +34,7 @@ import {
 	validateNetworkLink,
 	validatePhone,
 } from '../lib/profile/contact-details'
+import { initialNamesOf } from '../lib/profile/initial-names'
 import {
 	HOLD_ACTIONS,
 	type ModerationAction,
@@ -41,7 +42,6 @@ import {
 	REASON_MESSAGE,
 	validReason,
 } from '../lib/profile/moderation'
-import { initialNamesOf } from '../lib/profile/initial-names'
 import { ownerPhotos, validateGallery, validateMainPhoto } from '../lib/profile/photos'
 import { validateSiret } from '../lib/profile/siret'
 import {

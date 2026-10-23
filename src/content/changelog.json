@@ -390,6 +390,16 @@
 			"id": "quand-l-equipe-masque-suspend-ou-retablit-ton-profil-elle",
 			"type": "amelioration",
 			"text": "Quand l’équipe masque, suspend ou rétablit ton profil, elle te dit pourquoi : tu lis le motif dans ton espace."
+		},
+		{
+			"id": "ton-accueil-est-plus-court-et-plus-complet-cinq-etapes-ta",
+			"type": "amelioration",
+			"text": "Ton accueil est plus court et plus complet : cinq étapes (ta spécialité, ta zone, ta photo, comment te joindre, ta prestation phare avec son prix), enregistrées une à une, et tu les reprends où tu t'es arrêtée."
+		},
+		{
+			"id": "a-l-inscription-tu-indiques-ton-prenom-et-ton-nom-une-seu",
+			"type": "amelioration",
+			"text": "À l'inscription, tu indiques ton prénom et ton nom une seule fois (Google les remplit pour toi), et ton accueil ne te les redemande pas."
 		}
 	],
 	"releases": []
