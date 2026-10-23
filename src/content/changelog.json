@@ -365,6 +365,11 @@
 			"id": "sur-l-accueil-un-formulaire-guide-evenement-et-lieu-libel",
 			"type": "amelioration",
 			"text": "Sur l'accueil, un formulaire guidé (événement et lieu, libellés visibles) mène à la recherche, et trois maquilleuses récemment mises à jour sont visibles dès l'arrivée."
+		},
+		{
+			"id": "les-pages-s-affichent-plus-vite-sur-telephone-surtout-a-l",
+			"type": "amelioration",
+			"text": "Les pages s’affichent plus vite sur téléphone, surtout à la première visite."
 		}
 	],
 	"releases": []

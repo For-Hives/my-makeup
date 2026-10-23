@@ -385,6 +385,8 @@ describe('264 : la zone hors de France sur la page du profil', () => {
 		expect(readType(zoneType('zone-belgique'), { radiusKm: 30 }).seDeplace).toBe(true)
 	})
 
+	// Issue 1033: the photo of the head of the profile is asked first (`fetchPriority="high"` on the image and on its preload).
+	// The 12 hashes of `profile` were taken again; each equals the old one once that attribute is taken out.
 	test('le HTML du serveur d’une commune est identique, au caractère près, à celui d’avant le ticket', () => {
 		const golden = JSON.parse(
 			readFileSync(join(import.meta.dir, '../fixtures/municipality-html-hashes.json'), 'utf8')

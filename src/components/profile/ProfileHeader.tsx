@@ -61,6 +61,7 @@ export function ProfileHeader({
 			src={photo?.url ?? DEFAULT_PHOTO}
 			alt={photo ? `Photo ${ofName(name)}` : ''}
 			priority
+			fetchPriority="high"
 			fill
 			sizes={sizesBox({
 				largeur: PHOTO_SIDE,

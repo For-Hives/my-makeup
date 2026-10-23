@@ -341,6 +341,50 @@ describe('R2_PUBLIC_URL, the media origin', () => {
 	})
 })
 
+describe('no client hint is asked on the public pages (issue 1033)', () => {
+	// withPayload adds `Accept-CH`, `Critical-CH` and `Vary` for `Sec-CH-Prefers-Color-Scheme` to every path, for the theme
+	// of the administration. A page that carries `Critical-CH` makes Chrome send the request again with the hint, once the
+	// first answer is read: on a fresh visit every page of the site paid a second round trip (+144 to +338 ms in the
+	// Lighthouse runs of 23/10/2026, a 307 before the real 200), and the HTML does not depend on the hint.
+	const HINT_HEADERS = ['accept-ch', 'critical-ch'] as const
+	const PUBLIC_PATHS = [
+		'/',
+		'/search',
+		'/profil/ines-morel',
+		'/talent/maquillage-mariee',
+		'/blog/un-article',
+		'/contact',
+	]
+
+	test('a public page sends neither Accept-CH nor Critical-CH, and does not vary on a hint', async () => {
+		const config = await production()
+		for (const pathname of PUBLIC_PATHS) {
+			const sent = await headersSentFor(config, pathname)
+			for (const name of HINT_HEADERS) expect([pathname, name, sent.get(name)]).toEqual([pathname, name, undefined])
+			expect([pathname, (sent.get('vary') ?? '').toLowerCase().includes('sec-ch')]).toEqual([pathname, false])
+		}
+	})
+
+	test('the administration keeps the hint its theme reads', async () => {
+		const config = await production()
+		for (const pathname of ['/admin', '/admin/collections/pros']) {
+			const sent = await headersSentFor(config, pathname)
+			expect(sent.get('accept-ch')).toBe('Sec-CH-Prefers-Color-Scheme')
+			expect(sent.get('critical-ch')).toBe('Sec-CH-Prefers-Color-Scheme')
+			expect(sent.get('vary')).toBe('Sec-CH-Prefers-Color-Scheme')
+		}
+	})
+
+	test('the security headers stay on both', async () => {
+		const config = await production()
+		for (const pathname of ['/', '/admin']) {
+			const sent = await headersSentFor(config, pathname)
+			expect(sent.get('strict-transport-security')).toBe('max-age=31536000')
+			expect(sent.get('x-frame-options')).toBe('SAMEORIGIN')
+		}
+	})
+})
+
 describe('the register of intended changes', () => {
 	const register = readFileSync(path.resolve(import.meta.dir, '../../docs/migration/CHANGEMENTS-VOULUS.md'), 'utf8')
 	const line = register.split('\n').find(row => row.startsWith('| `en-tetes-securite` |')) ?? ''
