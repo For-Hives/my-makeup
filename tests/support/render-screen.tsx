@@ -12,7 +12,7 @@ export const SCREENS_TO_RENDER = ['site-map-empty', 'error-page'] as const
 
 const screen = process.argv[2]
 if (screen === 'site-map-empty')
-	process.stdout.write(renderToStaticMarkup(SiteMapBody({ profils: [], talents: [], articles: [] })))
+	process.stdout.write(renderToStaticMarkup(SiteMapBody({ profils: [], zones: [], talents: [], articles: [] })))
 else if (screen === 'error-page') process.stdout.write(renderToStaticMarkup(ErrorPage({ reessayer: () => undefined })))
 else {
 	process.stderr.write(`Écran inconnu : ${screen}. Écrans : ${SCREENS_TO_RENDER.join(', ')}\n`)

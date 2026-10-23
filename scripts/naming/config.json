@@ -16,6 +16,10 @@
 				"reason": "Frozen public address: the folder name is the URL (src/lib/frozen-urls.ts, docs/migration/URLS.md)."
 			},
 			{
+				"path": "src/app/(front)/(site)/maquilleuses",
+				"reason": "New public address of the zone pages (ticket 1015): the folder name is the URL (docs/migration/URLS.md)."
+			},
+			{
 				"path": "src/app/(front)/(site)/maquilleuse/partenariats",
 				"reason": "Frozen public address: the folder name is the URL (src/lib/frozen-urls.ts, docs/migration/URLS.md)."
 			},

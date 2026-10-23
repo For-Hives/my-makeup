@@ -2,6 +2,7 @@ import { SITE_ORIGIN } from '../frozen-urls'
 import { profilePath } from '../slug'
 import { HOME_PAGE_PREFIX } from '../urls/home-page'
 import { cleanPath } from './url'
+import { type IndexableZone, zonePath } from './zones'
 
 /**
  * The sitemap (tickets 113 and 114; plan 03 SEO-22, SEO-23; plan 02 U38 to U43): every address that is
@@ -145,11 +146,14 @@ export function sitemapEntries({
 	profils = [],
 	talents = [],
 	articles = [],
+	zones = [],
 }: {
 	pages?: readonly StaticPage[]
 	profils?: readonly IndexableDocument[]
 	talents?: readonly IndexableDocument[]
 	articles?: readonly IndexableDocument[]
+	/** The zones that have the threshold (src/lib/seo/zones.ts): the caller gives those alone. */
+	zones?: readonly IndexableZone[]
 }): SitemapEntry[] {
 	const entries = new Map<string, SitemapEntry>()
 	const add = (chemin: string, date: string | null | undefined): void => {
@@ -159,6 +163,7 @@ export function sitemapEntries({
 	}
 	for (const page of pages) add(page.chemin, null)
 	for (const profile of profils) if (profile.slug) add(profilePath(profile.slug), profile.misAJourLe)
+	for (const zone of zones) add(zonePath(zone.code), zone.misAJourLe)
 	for (const talent of talents) if (talent.slug) add(`/talent/${encodeURIComponent(talent.slug)}`, talent.misAJourLe)
 	for (const article of articles) if (article.slug) add(`/blog/${encodeURIComponent(article.slug)}`, article.misAJourLe)
 	return [...entries.values()]

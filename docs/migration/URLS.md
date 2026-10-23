@@ -192,6 +192,7 @@ La v3 ouvre des adresses que l'ancien site n'avait pas. La table ne dit rien d'e
 
 - `/admin` et ce qui suit : l'administration de Payload. L'ancien site y répondait 404.
 - `/api/…` : l'API de Payload. Seules `/api/health`, `/api/auth/*` et `/api/sendMail` sont gelées.
+- `/maquilleuses/<département>` (ticket 1015) : la page d'un département, par exemple `/maquilleuses/haute-savoie`. Indexable et dans `/sitemap.xml` à partir de 3 profils publiables et visibles dans la liste ; 1 ou 2 : 200 en `noindex`, sans adresse canonique ; aucun profil, ou un département inconnu : 404. La règle est dans `src/lib/seo/zones.ts`, les décisions dans [`docs/seo/pages-de-zone.md`](../seo/pages-de-zone.md).
 - `/api/stats/weekly` : les statistiques du rapport du lundi, en `GET` seulement et avec un jeton de service (401 sans lui, 405 pour un autre verbe, jamais en cache) : [`docs/mesure/statistiques-hebdomadaires.md`](../mesure/statistiques-hebdomadaires.md).
 - `/_next/…` : les fichiers du build, qui changent à chaque déploiement.
 

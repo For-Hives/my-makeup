@@ -305,6 +305,11 @@
 			"id": "tu-peux-modifier-l-en-tete-de-ta-page-directement-dessus",
 			"type": "amelioration",
 			"text": "Tu peux modifier l’en-tête de ta page directement dessus : ta photo, ton nom, ta spécialité, ta zone et ta disponibilité, avec l’aperçu de ce que voient les visiteuses."
+		},
+		{
+			"id": "une-page-par-departement-reunit-les-maquilleuses-de-la-zo",
+			"type": "ajout",
+			"text": "Une page par département réunit les maquilleuses de la zone, pour que les particuliers trouvent plus facilement une maquilleuse près de chez eux."
 		}
 	],
 	"releases": []

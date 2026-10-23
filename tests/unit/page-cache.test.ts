@@ -19,6 +19,7 @@ const CACHED_PAGES = [
 	'src/app/(front)/(site)/profil/[slug]/page.tsx',
 	'src/app/(front)/(site)/talent/[slug]/page.tsx',
 	'src/app/(front)/(site)/blog/[slug]/page.tsx',
+	'src/app/(front)/(site)/maquilleuses/[department]/page.tsx',
 ]
 
 const sourceFiles = (dossier: string): string[] =>
