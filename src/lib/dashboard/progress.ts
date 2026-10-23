@@ -173,6 +173,9 @@ function stateOf(lecture: Completeness): DisplayedState {
 	return lecture.entierementVide ? 'vide' : 'incomplet'
 }
 
+/** The title when the team suspended the page (issue 1005): same effect as hidden, another word. */
+const SUSPENDED_TITLE = 'Ta page est suspendue par l’équipe My Makeup : elle n’est plus visible.'
+
 const TITLES: Record<DisplayedState, string> = {
 	vide: 'Ton profil est vide',
 	incomplet: 'Ton profil n’est pas encore publiable',
@@ -235,7 +238,7 @@ export function profileProgress(profil: DashboardProfile): Progress {
 			total: BONUS_CRITERIA.length,
 		},
 		etat: state,
-		titre: TITLES[state],
+		titre: hidden && profil.moderationAction === 'suspend' ? SUSPENDED_TITLE : TITLES[state],
 		consequence: hidden ? hiddenText(reason) : paused ? PAUSE_TEXT : CONSEQUENCES[state],
 		manques: [...missing.filter(m => m.requis), ...missing.filter(m => !m.requis)],
 		reason,

@@ -290,6 +290,7 @@ const MATRIX: Line[] = [
 			// Reserved to the role `admin` (ticket 021, I03, U55).
 			['status', 'hidden'],
 			['reason', 'Motif envoyé par la maquilleuse'],
+			['moderationAction', 'suspend'],
 			['verified', true],
 			['verifiedAt', '2026-10-14T00:00:00.000Z'],
 			['siret', '12345678901234'],
@@ -393,6 +394,7 @@ const MATRIX: Line[] = [
 		['legacyUsername', OWNER_AND_ADMIN],
 		['status', OWNER_AND_ADMIN],
 		['reason', OWNER_AND_ADMIN],
+		['moderationAction', OWNER_AND_ADMIN],
 		['verified', OWNER_AND_ADMIN],
 		['verifiedAt', OWNER_AND_ADMIN],
 		['siret', OWNER_AND_ADMIN],
@@ -433,7 +435,10 @@ const MATRIX: Line[] = [
 			['pro', { compteDe: 'sansProfil' }, 'autorise'],
 			// The admin chooses the status; the server computes it, from her choice (ticket 044).
 			['status', 'hidden', 'ignore'],
-			['chosenStatus', 'hidden', 'autorise'],
+			// Hiding needs a reason in the same request (issue 1005); without it the save is refused
+			// (tests/integration/profile-moderation.test.ts).
+			['chosenStatus', 'hidden', 'autorise', { reason: 'Photos sans rapport avec le maquillage.' }],
+			['moderationAction', 'suspend', 'autorise'],
 			['reason', 'Photos sans rapport avec le maquillage', 'autorise'],
 			['verified', true, 'autorise'],
 			['siret', '12345678901234', 'autorise'],
@@ -449,13 +454,14 @@ const MATRIX: Line[] = [
 			...SENT_STATE.map(([champ, valeur]) => [champ, valeur, 'ignore'] as const),
 		] as const
 	).map(
-		([champ, valeur, attendu]): Line => ({
+		([champ, valeur, attendu, avec]: readonly [string, unknown, Line['attendu'], Record<string, unknown>?]): Line => ({
 			role: 'admin',
 			collection: 'profiles',
 			operation: 'modifier',
 			document: 'maquilleuse',
 			champ,
 			valeur,
+			...(avec ? { avec } : {}),
 			attendu,
 		})
 	),
@@ -655,6 +661,20 @@ const MATRIX: Line[] = [
 	// API, an admin included. The server adds to them, and a daily task purges them after 400 days.
 	...ROLES.flatMap((role): Line[] => {
 		const collection = 'search-counts'
+		const reads = role === 'admin'
+		return [
+			{ role, collection, operation: 'lister', attendu: reads ? 'tous' : 'refuse' },
+			{ role, collection, operation: 'lire', attendu: reads ? 'autorise' : 'refuse' },
+			{ role, collection, operation: 'creer', attendu: 'refuse' },
+			{ role, collection, operation: 'modifier', attendu: 'refuse' },
+			{ role, collection, operation: 'supprimer', attendu: 'refuse' },
+		]
+	}),
+
+	// The moderation journal (issue 1005): only an admin reads it, and nobody writes it through an API, an
+	// admin included. The server writes the line in the transaction of the moderation of a profile.
+	...ROLES.flatMap((role): Line[] => {
+		const collection = 'moderation-events'
 		const reads = role === 'admin'
 		return [
 			{ role, collection, operation: 'lister', attendu: reads ? 'tous' : 'refuse' },

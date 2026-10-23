@@ -130,24 +130,26 @@ test.describe('L’admin retrouve, corrige et masque un profil', () => {
 		const profile = await setProfile('reference', suffix)
 		const slug = profile.slug
 		const pageStatus = async () => (await request.get(`/profil/${slug}`)).status()
-		const saveWith = async (choix: string) => {
+		const saveWith = async (choix: string, motif: string) => {
 			await page.goto(`/admin/collections/profiles/${profile.id}`)
 			// The form hydrates after it shows: a click that comes too early opens nothing, so it is made again.
 			await expect(async () => {
 				await page.locator('#field-chosenStatus .rs__control').click()
 				await page.getByRole('option', { name: choix }).first().click({ timeout: 2_000 })
 			}).toPass({ timeout: 20_000 })
+			// Hiding and restoring need a reason of their own (issue 1005).
+			await page.locator('#field-reason').fill(motif)
 			await page.locator('#action-save').click()
 			await expect(page.getByText('Mis à jour avec succès').first()).toBeVisible()
 		}
 
 		try {
 			expect(await pageStatus()).toBe(200)
-			await saveWith('Masqué')
+			await saveWith('Masqué', 'Photos sans rapport avec le maquillage.')
 			await expect.poll(pageStatus, { timeout: ONE_MINUTE }).toBe(404)
 			expect((await payload.findByID({ collection: 'profiles', id: profile.id, depth: 0 })).status).toBe('hidden')
 
-			await saveWith('Automatique')
+			await saveWith('Automatique', 'Photos remplacées, profil conforme.')
 			await expect.poll(pageStatus, { timeout: ONE_MINUTE }).toBe(200)
 			const sitemap = await (await request.get('/sitemap.xml')).text()
 			expect(sitemap).toContain(`/profil/${slug}`)

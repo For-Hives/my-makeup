@@ -28,6 +28,7 @@ const READ_FIELDS = {
 	available: true,
 	status: true,
 	reason: true,
+	moderationAction: true,
 	mainPicture: true,
 	gallery: true,
 	skills: true,

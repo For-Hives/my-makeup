@@ -384,7 +384,10 @@
 		{
 			"id": "sur-la-fiche-d-une-maquilleuse-tu-peux-demander-un-devis",
 			"type": "ajout",
-			"text": "Sur la fiche d’une maquilleuse, tu peux demander un devis : date, lieu et type de prestation, et elle te répond directement ; elle retrouve les demandes dans son espace."
+			"text": "Sur la fiche d’une maquilleuse, tu peux demander un devis : date, lieu et type de prestation, et elle te répond directement ; elle retrouve les demandes dans son espace.",
+			"id": "quand-l-equipe-masque-suspend-ou-retablit-ton-profil-elle",
+			"type": "amelioration",
+			"text": "Quand l’équipe masque, suspend ou rétablit ton profil, elle te dit pourquoi : tu lis le motif dans ton espace."
 		}
 	],
 	"releases": []

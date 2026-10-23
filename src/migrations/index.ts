@@ -6,6 +6,7 @@ import * as migration_20261022_090403_auth_events_link_methods from './20261022_
 import * as migration_20261023_031452_specialty_bullets from './20261023_031452_specialty_bullets'
 import * as migration_20261023_031614_search_counts from './20261023_031614_search_counts'
 import * as migration_20261023_031822_profile_views from './20261023_031822_profile_views'
+import * as migration_20261023_110237_moderation from './20261023_110237_moderation'
 import * as migration_20261023_110850_reminders from './20261023_110850_reminders'
 import * as migration_20261023_113139_quote_requests from './20261023_113139_quote_requests'
 
@@ -49,6 +50,11 @@ export const migrations = [
 		up: migration_20261023_031822_profile_views.up,
 		down: migration_20261023_031822_profile_views.down,
 		name: '20261023_031822_profile_views',
+	},
+	{
+		up: migration_20261023_110237_moderation.up,
+		down: migration_20261023_110237_moderation.down,
+		name: '20261023_110237_moderation',
 	},
 	{
 		up: migration_20261023_110850_reminders.up,

@@ -75,6 +75,7 @@ export interface Config {
     talents: Talent;
     articles: Article;
     'auth-events': AuthEvent;
+    'moderation-events': ModerationEvent;
     'contact-requests': ContactRequest;
     'deleted-accounts': DeletedAccount;
     'search-counts': SearchCount;
@@ -100,6 +101,7 @@ export interface Config {
     talents: TalentsSelect<false> | TalentsSelect<true>;
     articles: ArticlesSelect<false> | ArticlesSelect<true>;
     'auth-events': AuthEventsSelect<false> | AuthEventsSelect<true>;
+    'moderation-events': ModerationEventsSelect<false> | ModerationEventsSelect<true>;
     'contact-requests': ContactRequestsSelect<false> | ContactRequestsSelect<true>;
     'deleted-accounts': DeletedAccountsSelect<false> | DeletedAccountsSelect<true>;
     'search-counts': SearchCountsSelect<false> | SearchCountsSelect<true>;
@@ -413,9 +415,13 @@ export interface Profile {
    */
   chosenStatus?: ('automatic' | 'draft' | 'published' | 'hidden') | null;
   /**
-   * Pourquoi le profil est masqué. La maquilleuse le lit.
+   * Obligatoire pour masquer, suspendre ou rétablir (10 à 500 caractères, un motif nouveau à chaque action). Pourquoi le profil est masqué : la maquilleuse le lit. N’y mets aucun nom ni coordonnée.
    */
   reason?: string | null;
+  /**
+   * Le mot que la maquilleuse lit. Les deux retirent le profil du public ; rien d’autre n’en découle.
+   */
+  moderationAction?: ('hide' | 'suspend') | null;
   verified?: boolean | null;
   verifiedAt?: string | null;
   /**
@@ -638,6 +644,18 @@ export interface AuthEvent {
     | 'champ-piege';
   method?: ('password' | 'google' | 'confirmation' | 'password-reset') | null;
   durationMs?: number | null;
+  date: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "moderation-events".
+ */
+export interface ModerationEvent {
+  id: number;
+  profile: number;
+  admin?: number | null;
+  action: 'hide' | 'suspend' | 'restore';
+  reason: string;
   date: string;
 }
 /**
@@ -916,6 +934,10 @@ export interface PayloadLockedDocument {
         value: number | AuthEvent;
       } | null)
     | ({
+        relationTo: 'moderation-events';
+        value: number | ModerationEvent;
+      } | null)
+    | ({
         relationTo: 'contact-requests';
         value: number | ContactRequest;
       } | null)
@@ -1160,6 +1182,7 @@ export interface ProfilesSelect<T extends boolean = true> {
   status?: T;
   chosenStatus?: T;
   reason?: T;
+  moderationAction?: T;
   verified?: T;
   verifiedAt?: T;
   siret?: T;
@@ -1290,6 +1313,17 @@ export interface AuthEventsSelect<T extends boolean = true> {
   code?: T;
   method?: T;
   durationMs?: T;
+  date?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "moderation-events_select".
+ */
+export interface ModerationEventsSelect<T extends boolean = true> {
+  profile?: T;
+  admin?: T;
+  action?: T;
+  reason?: T;
   date?: T;
 }
 /**
