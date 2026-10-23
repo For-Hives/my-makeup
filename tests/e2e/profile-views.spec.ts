@@ -17,6 +17,20 @@ test.beforeEach(({ context }) =>
 	context.setExtraHTTPHeaders({ 'x-forwarded-for': `192.0.2.${150 + (++counter % 50)}` })
 )
 
+// What a test made, taken away at its end: a published profile left behind would show in the lists of the crawl.
+const made: (number | string)[] = []
+test.afterEach(async () => {
+	const payload = await testPayload()
+	for (const account of made.splice(0)) {
+		const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: account } } })
+		for (const { id } of docs) {
+			await payload.delete({ collection: 'profile-views', where: { profile: { equals: id } } }).catch(() => undefined)
+			await payload.delete({ collection: 'profiles', id }).catch(() => undefined)
+		}
+		await payload.delete({ collection: 'pros', id: account }).catch(() => undefined)
+	}
+})
+
 async function publishedProfile() {
 	const account = await createAccount('maquilleuse')
 	const payload = await testPayload()
@@ -26,13 +40,14 @@ async function publishedProfile() {
 	await payload.update({
 		collection: 'profiles',
 		id: profile.id,
-		data: { firstName: 'Léa', lastName: 'Fictive', specialty: 'Mariage', chosenStatus: 'published' },
+		data: { firstName: 'Léa', lastName: 'Fictive', specialty: 'Spécialité fictive', chosenStatus: 'published' },
 	})
 	const { docs: fresh } = await payload.find({
 		collection: 'profiles',
 		depth: 0,
 		where: { id: { equals: profile.id } },
 	})
+	made.push(account.id)
 	return { account, payload, id: profile.id, slug: fresh[0]?.slug ?? '' }
 }
 
@@ -126,6 +141,7 @@ test.describe('1001 : ses vues dans son espace', { tag: '@mobile' }, () => {
 
 	test('un profil qui n’est pas publié n’affiche pas la carte', async ({ context, page }) => {
 		const account = await createAccount('maquilleuse')
+		made.push(account.id)
 		await context.addCookies(account.session.cookies)
 		await page.goto('/auth/profil')
 		await expect(page.getByTestId('mes-vues')).toHaveCount(0)
