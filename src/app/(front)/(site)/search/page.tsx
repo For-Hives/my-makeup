@@ -2,10 +2,11 @@ import Image from 'next/image'
 import { SearchAnalytics } from '@/components/analytics/PageAnalytics'
 import { SearchBlock } from '@/components/blocks/SearchBlock'
 import { SearchResults } from '@/components/search/SearchResults'
-import { NoResult, SearchFailed } from '@/components/search/SearchStates'
+import { NoMatchForFilters, NoResult, SearchFailed } from '@/components/search/SearchStates'
 import { fingerprint } from '@/lib/analytics/duplicate'
 import { resultBucket } from '@/lib/analytics/values'
 import { departmentOfSearch } from '@/lib/search/count'
+import { readFilters } from '@/lib/search/filters'
 import { readSearch, searchByCity, searchByWord } from '@/lib/search/input'
 import { readPlace } from '@/lib/search/place'
 import { resolvePlace } from '@/lib/search/place-point'
@@ -35,6 +36,9 @@ export const metadata = pageMetadata({
  *   (ticket 295) they are ranked by distance, and a city where nobody is near gets the honest empty state.
  * - By a word, alone or with a city (ticket 099): the listed profiles that hold the words, best first
  *   (src/lib/search/relevance.ts); with a city, hers come first, as above.
+ * - Filters and a sort (issue 1011): a ceiling on the starting price, and a sort inside each section, both
+ *   read from the address and both optional (src/lib/search/filters.ts). A filtered view is the same search for
+ *   the measure.
  * - Pages of 20, every profile once (ticket 100), and an error state with « Réessayer » when the
  *   directory cannot be read in time. The brake by address is the proxy's (src/proxy.ts).
  *
@@ -42,7 +46,9 @@ export const metadata = pageMetadata({
  * (src/lib/profile/visibility.ts). The text typed is never logged and never measured.
  */
 export default async function SearchPage({ searchParams }: PageProps<'/search'>) {
-	const query = readSearch(await searchParams)
+	const parameters = await searchParams
+	const query = readSearch(parameters)
+	const filters = readFilters(parameters)
 	const { search, city } = query
 
 	if (!searchByCity(query) && !searchByWord(query)) {
@@ -71,12 +77,12 @@ export default async function SearchPage({ searchParams }: PageProps<'/search'>)
 		return (
 			<main className="relative flex flex-1 flex-col">
 				<SearchBlock search={search} city={city} surLaPageDeRecherche />
-				<SearchFailed recherche={query} />
+				<SearchFailed recherche={{ ...query, ...filters }} />
 			</main>
 		)
 
 	const directory = reading.valeur
-	const view = buildSearchView(directory, query, place)
+	const view = buildSearchView(directory, query, place, filters)
 
 	return (
 		<main className="relative flex flex-1 flex-col">
@@ -84,11 +90,13 @@ export default async function SearchPage({ searchParams }: PageProps<'/search'>)
 			{/* Two facts and a hash: never the words (ticket 145). Page 1 and page 2 are the same search. */}
 			<SearchAnalytics
 				aUneVille={city !== ''}
-				resultats={resultBucket(view.total)}
+				resultats={resultBucket(view.baselineTotal)}
 				empreinte={fingerprint(`${search}|${city}`)}
 				departement={departmentOfSearch(city, place.genre === 'point' ? place.department : null)}
 			/>
-			{view.empty ? (
+			{view.filteredOut ? (
+				<NoMatchForFilters titre={view.title} recherche={query} filtres={filters} specialites={view.specialties} />
+			) : view.empty ? (
 				<NoResult
 					titre={view.title}
 					search={search}
@@ -100,7 +108,7 @@ export default async function SearchPage({ searchParams }: PageProps<'/search'>)
 					loin={view.far.map(({ carte }) => carte)}
 				/>
 			) : (
-				<SearchResults vue={view} recherche={query} />
+				<SearchResults vue={view} recherche={query} filtres={filters} />
 			)}
 		</main>
 	)
