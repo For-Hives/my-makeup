@@ -10,6 +10,7 @@
  * No `next` import: read by the page and by the tests.
  */
 
+import { BADGE_NO_BONUS } from '@/lib/activity/badge-text'
 import { FAR_REACH_KM } from '@/services/public/profiles'
 import { PER_PAGE } from './pagination'
 import { NEARBY_MAX_KM } from './place'
@@ -142,7 +143,7 @@ export const RANKING_EXCLUDED = [
 	'Aucun paiement, aucune publicité, aucun abonnement : rien de payant n’existe dans le classement.',
 	'Le badge « Pro » des cartes est posé par l’équipe et n’avance personne.',
 	'Il n’y a pas d’avis de clientes sur My Makeup : aucune note n’entre dans le classement.',
-	'Le profil n’est pas « vérifié » : aucune vérification ne fait monter une maquilleuse.',
+	BADGE_NO_BONUS,
 ] as const
 
 export type RankingExcluded = (typeof RANKING_EXCLUDED)[number]

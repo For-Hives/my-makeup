@@ -23,6 +23,7 @@
  */
 
 import type { Payload } from 'payload'
+import { badgedProfiles } from '@/lib/activity/store'
 import { type Pid, profilePid } from '@/lib/analytics/pid'
 import {
 	displayedCity,
@@ -194,6 +195,11 @@ export interface PublicProfile {
 	offres: PricedOffer[]
 	/** The lowest amount of her offers (src/lib/price.ts, `minimumPrice`, U37), or `null`. */
 	prixMinimal: number | null
+	/**
+	 * Her establishment exists and is active according to the registry (issue 1004), with the date of the last answer
+	 * (`null` if unknown). The key is absent without the badge, so a page without it is what it was. Never her SIRET.
+	 */
+	activityVerified?: { checkedAt: string | null }
 }
 
 /** Where a profile works, as the structured data says it (src/lib/seo/profile.ts). */
@@ -244,6 +250,11 @@ export interface ProfileCard {
 	offerNames?: string[]
 	/** The lowest amount of her offers, in euros (`minimumPrice`). Absent when no offer has an amount. */
 	startingPrice?: number
+	/**
+	 * True when the registry says her establishment exists and is active (issue 1004). The key is absent otherwise,
+	 * so a card without the badge is what it was. Never her SIRET, never a date.
+	 */
+	activityVerified?: true
 }
 
 /** One page of the listed profiles. */
@@ -343,7 +354,12 @@ function zoneInput(profil: Pick<Profile, 'city' | 'radiusKm' | 'zoneKind' | 'cou
 }
 
 /** A profile read for a list, as a card: the keys are frozen (U22), no coordinates and no contact. */
-function cardOf(profil: CardProfile, photos: PhotosById, pids: ReadonlyMap<number, Pid>): ProfileCard {
+function cardOf(
+	profil: CardProfile,
+	photos: PhotosById,
+	pids: ReadonlyMap<number, Pid>,
+	badged: ReadonlyMap<number, string | null> = new Map()
+): ProfileCard {
 	const identifier = photoId(profil.mainPicture)
 	const flags = zoneFlags(zoneInput(profil))
 	const offerNames = (profil.serviceOffers ?? [])
@@ -362,6 +378,7 @@ function cardOf(profil: CardProfile, photos: PhotosById, pids: ReadonlyMap<numbe
 		photo: (identifier !== undefined && photos.get(identifier)) || null,
 		...(offerNames.length > 0 && { offerNames }),
 		...(startingPrice !== null && { startingPrice }),
+		...(badged.has(profil.id) && { activityVerified: true as const }),
 	}
 }
 
@@ -480,7 +497,13 @@ async function publicProfileRead(payload: Payload, profil: ProfilePageData & { i
 		photo: (main !== undefined && photos.get(main)) || null,
 		galerie: ranked.flatMap(identifiant => (identifiant !== undefined && photos.get(identifiant)) || []),
 		coordonnees: await readPublishedContactDetails(payload, profil.id),
+		...activityOf(await badgedProfiles(payload, [profil.id]), profil.id),
 	})
+}
+
+/** The badge of one profile, as `publicProfileOf` takes it: nothing when she does not hold it. */
+function activityOf(badged: ReadonlyMap<number, string | null>, id: number): { activity?: { checkedAt: string | null } } {
+	return badged.has(id) ? { activity: { checkedAt: badged.get(id) ?? null } } : {}
 }
 
 /** Where her profile stands, as the preview banner says it (src/lib/dashboard/preview.ts). */
@@ -564,7 +587,13 @@ export type ProfilePageData = Pick<
  */
 export function publicProfileOf(
 	profil: ProfilePageData & { id?: number },
-	lu: { photo: CardPhoto | null; galerie: CardPhoto[]; coordonnees: PublicContactDetails | null }
+	lu: {
+		photo: CardPhoto | null
+		galerie: CardPhoto[]
+		coordonnees: PublicContactDetails | null
+		/** The date of the last answer of the registry, when the badge is held (`null` for a date unknown). */
+		activity?: { checkedAt: string | null }
+	}
 ): PublicProfile {
 	const name = displayName(profil)
 	const abroad = zoneCountries(zoneInput(profil)).length > 0
@@ -602,6 +631,7 @@ export function publicProfileOf(
 		coordonnees: lu.coordonnees,
 		offres: pricedOffers(profil.serviceOffers),
 		prixMinimal: minimumPrice(profil.serviceOffers),
+		...(lu.activity && { activityVerified: { checkedAt: lu.activity.checkedAt } }),
 	}
 }
 
@@ -657,8 +687,12 @@ export async function listProfiles(
 	})
 	const photos = await readPhotos(payload, result.docs)
 	const pids = await readPids(payload, result.docs)
+	const badged = await badgedProfiles(
+		payload,
+		result.docs.map(({ id }) => id)
+	)
 	return {
-		cartes: result.docs.map(profil => cardOf(profil, photos, pids)),
+		cartes: result.docs.map(profil => cardOf(profil, photos, pids, badged)),
 		page: result.page ?? 1,
 		totalDocs: result.totalDocs,
 		hasNextPage: result.hasNextPage,
@@ -839,10 +873,14 @@ export async function readDirectory(
 		})
 		const photos = await readPhotos(payload, result.docs)
 		const pids = await readPids(payload, result.docs)
+	const badged = await badgedProfiles(
+		payload,
+		result.docs.map(({ id }) => id)
+	)
 		const unreachable = await readUnreachable(payload, result.docs)
 		for (const profile of result.docs) {
 			const isUnreachable = unreachable.has(profile.id)
-			const card = cardOf(profile, photos, pids)
+			const card = cardOf(profile, photos, pids, badged)
 			directory.push({
 				carte: isUnreachable ? { ...card, unreachable: true } : card,
 				unreachable: isUnreachable,

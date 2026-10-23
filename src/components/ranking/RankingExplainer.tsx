@@ -1,3 +1,4 @@
+import { BADGE_ANCHOR, BADGE_EXPLANATION, BADGE_TITLE } from '@/lib/activity/badge-text'
 import { RANKING_EXCLUDED, RANKING_GROUPS, RANKING_RULES } from '@/lib/search/ranking'
 
 /**
@@ -34,6 +35,16 @@ export function RankingExplainer() {
 						<li key={line}>{line}</li>
 					))}
 				</ul>
+			</section>
+			<section id={BADGE_ANCHOR} aria-labelledby="classement-badge" className="mt-10 scroll-mt-6">
+				<h2 id="classement-badge" className="font-bold text-gray-900 text-xl">
+					{BADGE_TITLE}
+				</h2>
+				<div className="mt-4 flex flex-col gap-3 text-gray-700 leading-7">
+					{BADGE_EXPLANATION.map(paragraph => (
+						<p key={paragraph}>{paragraph}</p>
+					))}
+				</div>
 			</section>
 			<p className="mt-10 text-gray-700">
 				Une erreur dans cette page, ou un résultat qui ne la suit pas ?{' '}

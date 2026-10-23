@@ -3,6 +3,7 @@ import { type PostgresAdapter, sql } from '@payloadcms/db-postgres'
 import type {
 	CollectionAfterChangeHook,
 	CollectionBeforeChangeHook,
+	CollectionBeforeDeleteHook,
 	CollectionBeforeOperationHook,
 	CollectionBeforeValidateHook,
 	CollectionConfig,
@@ -23,6 +24,7 @@ import {
 	profileFieldAdminOrOwner,
 	publishedProfileOrOwner,
 } from '../lib/access'
+import { deleteCheck, resetCheck } from '../lib/activity/store'
 import { GALLERY_MAX } from '../lib/media'
 import { chooseCity } from '../lib/profile/choose-city-route'
 import {
@@ -315,6 +317,44 @@ export const logModeration: CollectionAfterChangeHook = async ({ context, doc, r
 	return doc
 }
 
+/** Where the beforeChange hook tells the afterChange hook that the SIRET changed in this write. */
+const SIRET_CHANGED_KEY = 'siretChanged'
+
+/**
+ * The SIRET is set, changed or emptied (issue 1004): remembered here, acted on once the row is written, when the
+ * identifier is known (`resetCheckOnSiretChange`). A save that does not send it, or sends the same, leaves the
+ * cache alone: the registry is never asked again for a number that did not change.
+ */
+const noteSiretChange: CollectionBeforeChangeHook = ({ context, data, operation, originalDoc }) => {
+	const sent: unknown = data?.siret
+	if (sent === undefined) return data
+	const before = operation === 'create' ? '' : String(originalDoc?.siret ?? '')
+	if (before !== String(sent ?? '')) context[SIRET_CHANGED_KEY] = true
+	return data
+}
+
+/** Starts the check of the new SIRET over (or drops it when the SIRET is gone), in the transaction of the save. */
+const resetCheckOnSiretChange: CollectionAfterChangeHook = async ({ context, doc, req }) => {
+	if (context[SIRET_CHANGED_KEY] !== true) return doc
+	delete context[SIRET_CHANGED_KEY]
+	const stored = await req.payload.db.findOne<{ id: number; siret?: unknown }>({
+		collection: 'profiles',
+		req,
+		select: { siret: true },
+		where: { id: { equals: doc.id } },
+	})
+	await resetCheck(req.payload, doc.id, typeof stored?.siret === 'string' && stored.siret !== '', req)
+	return doc
+}
+
+/**
+ * What the check of the SIRET kept of a profile goes with it. Before the deletion: once the profile is gone the
+ * database has emptied the link, and the row could no longer be found by her.
+ */
+const deleteActivityCheck: CollectionBeforeDeleteHook = async ({ id, req }) => {
+	await deleteCheck(req.payload, Number(id), req)
+}
+
 /** What only the role `admin` writes, and only `admin` and the owner read (ticket 021). */
 const OWNER_READ_RESERVED = {
 	read: profileFieldAdminOrOwner,
@@ -346,8 +386,9 @@ const INTERNAL = { read: fieldAdminOnly, create: fieldAdminOnly, update: fieldAd
  *   that choice: the date and the source of the consent (ticket 042).
  * - `pro` (the account that owns it) is written by an admin only; `slug` by the server only, at
  *   the creation; `strapiId` and `legacyUsername` by the import only; the choice of the status,
- *   the reason, the verification, the SIRET, the internal note, the score and the badge by an
- *   admin only (I03, U55): what a makeup artist sends on them is ignored. The status itself is
+ *   the reason, the verification, the internal note, the score and the badge by an
+ *   admin only (I03, U55): what a makeup artist sends on them is ignored. The SIRET (issue 1004) is optional and written by its owner
+ *   and an admin, read by them only; each change of it starts its check over (src/collections/ActivityChecks.ts). The status itself is
  *   computed by the server (ticket 044).
  * - Its lists keep their order and the identifier of each row (src/collections/profile-lists.ts).
  * - Its zone is a commune with its INSEE code and postal codes, or one to five countries and a town
@@ -404,12 +445,13 @@ export const Profiles: CollectionConfig<'profiles'> = {
 			slugOnCreate,
 			consentTrace,
 			clearZoneReview,
+			noteSiretChange,
 			moderate,
 			stateBeforeWrite,
 		],
 		// The refresh comes after the fallback slug: a profile created public gets its final address.
-		afterChange: [fallbackSlugAfterCreate, logModeration, REFRESH.apresEcriture],
-		beforeDelete: [REFRESH.avantSuppression],
+		afterChange: [fallbackSlugAfterCreate, logModeration, resetCheckOnSiretChange, REFRESH.apresEcriture],
+		beforeDelete: [REFRESH.avantSuppression, deleteActivityCheck],
 		afterDelete: [REFRESH.apresSuppression],
 	},
 	fields: [
@@ -652,8 +694,14 @@ export const Profiles: CollectionConfig<'profiles'> = {
 			label: 'SIRET',
 			type: 'text',
 			validate: validateSiret,
-			access: OWNER_READ_RESERVED,
-			admin: { position: 'sidebar', description: '14 chiffres, sans espace.' },
+			// Optional, and for her to give (issue 1004): the owner and an admin read and write it, nobody else, and it is
+			// never in a public read, a log or an event of the measure (src/services/public/ selects its fields one by one).
+			access: { read: profileFieldAdminOrOwner, create: fieldAdminOnly, update: profileFieldAdminOrOwner },
+			admin: {
+				position: 'sidebar',
+				description:
+					'14 chiffres, sans espace, facultatif. Il sert au contrôle de l’activité (badge « Activité vérifiée »), jamais affiché.',
+			},
 		},
 		{
 			name: 'internalNote',

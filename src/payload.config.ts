@@ -19,6 +19,7 @@ import { Pros } from './collections/Pros'
 import { QuoteRequests } from './collections/QuoteRequests'
 import { ReminderReports } from './collections/ReminderReports'
 import { ReminderStates } from './collections/ReminderStates'
+import { ActivityChecks } from './collections/ActivityChecks'
 import { SearchCounts } from './collections/SearchCounts'
 import { Talents } from './collections/Talents'
 import { withTrash } from './collections/trash'
@@ -104,6 +105,7 @@ export default buildConfig({
 		ReminderReports,
 		ReminderStates,
 		QuoteRequests,
+		ActivityChecks,
 	],
 	// The site and the API share one origin: no other site may read this API from a browser.
 	cors: [],

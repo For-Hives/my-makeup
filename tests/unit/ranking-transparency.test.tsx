@@ -11,6 +11,7 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { Payload } from 'payload'
 import { renderToStaticMarkup } from 'react-dom/server'
+import { BADGE_ANCHOR, BADGE_EXPLANATION, BADGE_NO_BONUS, BADGE_TITLE } from '@/lib/activity/badge-text'
 import { ProfileBlock } from '@/components/blocks/ProfileBlock'
 import { RankingExplainer } from '@/components/ranking/RankingExplainer'
 import { SearchResults } from '@/components/search/SearchResults'
@@ -278,6 +279,14 @@ describe('1012 : la page dit ce que dit la source, et rien d’autre', () => {
 		for (const line of RANKING_EXCLUDED) expect(text).toContain(line)
 	})
 
+	test('issue 1004 : la page explique le badge, avec les mots de la source, à l’adresse que les profils pointent', () => {
+		expect(html).toContain(`id="${BADGE_ANCHOR}"`)
+		expect(text).toContain(BADGE_TITLE)
+		for (const paragraph of BADGE_EXPLANATION) expect(text).toContain(paragraph)
+		// What is checked is said, and what is not.
+		expect(text).toContain('Il ne dit rien de la qualité de son travail')
+	})
+
 	test('les chiffres de la page sont ceux du code', () => {
 		expect(text).toContain(`à moins de ${NEARBY_MAX_KM} km`)
 		expect(text).toContain(`au plus ${FAR_TRAVELLERS_MAX} maquilleuses`)
@@ -296,6 +305,23 @@ describe('1012 : rien de payant n’entre dans le classement', () => {
 		expect(order(noCity(make(true)))).toEqual(order(noCity(make(false))))
 	})
 
+	test('issue 1004 : le badge « Activité vérifiée » ne change aucun ordre, avec ou sans ville', () => {
+		const make = (badge: boolean) => [
+			artist('a', { carte: { ...artist('a').carte, ...(badge && { activityVerified: true as const }) } }),
+			artist('b'),
+			artist('c', { carte: { ...artist('c').carte, ...(!badge && { activityVerified: true as const }) } }),
+		]
+		expect(order(byPoint(make(true)))).toEqual(order(byPoint(make(false))))
+		expect(order(noCity(make(true)))).toEqual(order(noCity(make(false))))
+		expect(order(noCity(make(true), 'mariage'))).toEqual(order(noCity(make(false), 'mariage')))
+	})
+
+	test('issue 1004 : la page le dit en une phrase, et le code qui classe ne lit ni le badge ni le SIRET', () => {
+		expect(RANKING_EXCLUDED).toContain(BADGE_NO_BONUS)
+		expect(BADGE_NO_BONUS).toContain('aucun avantage')
+		expect(BADGE_NO_BONUS).toContain('ni pénalisée')
+	})
+
 	test('le code qui classe ne lit aucune notion payante', () => {
 		const files = [
 			...readdirSync(join(import.meta.dir, '../../src/lib/search')).map(file => `src/lib/search/${file}`),
@@ -303,7 +329,9 @@ describe('1012 : rien de payant n’entre dans le classement', () => {
 		].filter(file => !file.endsWith('ranking.ts'))
 		for (const file of files) {
 			const source = readFileSync(join(import.meta.dir, '../..', file), 'utf8')
-			expect(source, file).not.toMatch(/superMaquilleuse|superArtist|sponsor|premium|paid|subscription|stripe|advert/i)
+			expect(source, file).not.toMatch(
+				/superMaquilleuse|superArtist|sponsor|premium|paid|subscription|stripe|advert|siret|activity|verified|verif/i
+			)
 		}
 		expect(DIRECTORY_SORT.join(' ')).not.toMatch(/super|premium|paid|sponsor/i)
 	})

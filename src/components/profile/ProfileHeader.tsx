@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { ofName } from '@/lib/french-elision'
 import { ratioMedia, sizesBox } from '@/lib/image-size'
 import type { PublicProfile } from '@/services/public/profiles'
+import { ActivityBadge } from './ActivityBadge'
 import type { HeaderEdit } from './edit-slots'
 import { ZoneText } from './ZoneText'
 
@@ -98,6 +99,7 @@ export function ProfileHeader({
 				<div className="flex min-w-0 flex-1 flex-col items-center gap-2 text-center md:items-start md:text-left">
 					{edit ? edit.identity(nameNodes, { missingSpecialty: !profil.specialite }) : nameNodes}
 					{edit ? edit.place(zoneNode) : zoneNode}
+					{profil.activityVerified && <ActivityBadge checkedAt={profil.activityVerified.checkedAt} />}
 					{action}
 				</div>
 				<div className="shrink-0">{edit ? edit.status(statusNode) : statusNode}</div>
