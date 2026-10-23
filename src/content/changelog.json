@@ -315,6 +315,11 @@
 			"id": "tu-peux-modifier-ta-presentation-tes-competences-tes-lang",
 			"type": "amelioration",
 			"text": "Tu peux modifier ta présentation, tes compétences, tes langues et tes formations directement sur ta page : le texte dit sa limite avant de la refuser, et chaque liste garde ce que tu as tapé."
+		},
+		{
+			"id": "tu-peux-modifier-tes-prestations-et-tes-tarifs-directemen",
+			"type": "amelioration",
+			"text": "Tu peux modifier tes prestations et tes tarifs directement sur ta page : un seul bouton ajoute la prestation et enregistre la liste, avec des modèles, des exemples de prix et des options."
 		}
 	],
 	"releases": []

@@ -3,6 +3,7 @@ import { listBullets } from '@/lib/dashboard/bullets'
 import type { DashboardProfile } from '@/lib/dashboard/cards'
 import { COURSES } from '@/lib/dashboard/courses'
 import { profileRows } from '@/lib/dashboard/list'
+import { SERVICE_OFFERS } from '@/lib/dashboard/service-offers'
 import { text } from '@/lib/profile/display-name'
 import { AboutBlock, type AboutSave } from './blocks/AboutBlock'
 import { BulletsBlock, type BulletsSave } from './blocks/BulletsBlock'
@@ -14,6 +15,7 @@ export interface BodyActions {
 	saveSkills: BulletsSave
 	saveLanguages: BulletsSave
 	saveCourses: RowsSave
+	saveServices: RowsSave
 }
 
 /**
@@ -38,6 +40,11 @@ export function bodyEdit({ profile, actions }: { profile: DashboardProfile; acti
 			<BulletsBlock list="languages" bullets={listBullets(profile.languages)} save={actions.saveLanguages}>
 				{read}
 			</BulletsBlock>
+		),
+		services: read => (
+			<RowsBlock kind="services" rows={profileRows(SERVICE_OFFERS, profile)} save={actions.saveServices}>
+				{read}
+			</RowsBlock>
 		),
 		courses: read => (
 			<RowsBlock kind="courses" rows={profileRows(COURSES, profile)} save={actions.saveCourses}>

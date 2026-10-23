@@ -103,7 +103,7 @@ export function EditableBlock({
 			/>
 			<span
 				aria-hidden="true"
-				className={`pointer-events-none absolute ${penClassName} flex h-11 min-w-11 items-center justify-center gap-2 rounded-full border border-hairline bg-white px-3 font-body font-medium text-mute text-sm shadow-sm group-focus-within:border-lipstick group-focus-within:bg-lipstick group-focus-within:text-white group-hover:border-lipstick group-hover:bg-lipstick group-hover:text-white ${isOpen ? 'border-lipstick bg-lipstick text-white' : ''}`}
+				className={`pointer-events-none absolute ${penClassName} flex h-11 min-w-11 items-center justify-center gap-2 rounded-full border border-hairline bg-white px-3 font-body font-medium text-mute text-sm shadow-sm ${dimmed ? '' : 'group-focus-within:border-lipstick group-focus-within:bg-lipstick group-focus-within:text-white group-hover:border-lipstick group-hover:bg-lipstick group-hover:text-white'} ${isOpen ? 'border-lipstick bg-lipstick text-white' : ''}`}
 			>
 				<svg
 					width="18"
@@ -117,7 +117,7 @@ export function EditableBlock({
 				>
 					<path d="M4 20h4L19 9l-4-4L4 16z" />
 				</svg>
-				<span className="hidden group-focus-within:inline group-hover:inline">Modifier</span>
+				<span className={dimmed ? 'hidden' : 'hidden group-focus-within:inline group-hover:inline'}>Modifier</span>
 			</span>
 			{isOpen && session.slot !== null
 				? createPortal(

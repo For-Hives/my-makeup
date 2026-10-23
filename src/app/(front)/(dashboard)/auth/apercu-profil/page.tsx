@@ -22,7 +22,7 @@ import {
 	saveMyMainPicture,
 	saveMySkills,
 } from '../profil/actions'
-import { saveMyCourses } from '../profil/lists-actions'
+import { saveMyCourses, saveMyServiceOffers } from '../profil/lists-actions'
 import { findMyCities, saveMyLocation } from '../profil/location-actions'
 
 // Read per request: it depends on the session, and the build has no database. Private and never
@@ -91,6 +91,7 @@ export default async function PreviewPage({ searchParams }: PageProps<'/auth/ape
 								saveSkills: saveMySkills,
 								saveLanguages: saveMyLanguages,
 								saveCourses: saveMyCourses,
+								saveServices: saveMyServiceOffers,
 							},
 						}),
 					}}

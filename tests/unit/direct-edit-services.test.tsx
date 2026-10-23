@@ -17,6 +17,8 @@ const rows = () => [...doc().querySelectorAll('[data-row]')].map(row => row.text
 const announced = () => doc().querySelector('[data-testid="removal-announcement"]')?.textContent
 const press = (button: Element, detail: 0 | 1) =>
 	act(async () => {
+		// A finger or a mouse presses first; Enter does not.
+		if (detail === 1) button.dispatchEvent(new window_.w.MouseEvent('mousedown', { bubbles: true }))
 		button.dispatchEvent(new window_.w.MouseEvent('click', { bubbles: true, detail }))
 	})
 const open = async (bench = benchOf(window_)) => {
@@ -39,7 +41,7 @@ type Sent = {
 describe('la liste', () => {
 	test('chaque prestation est une ligne « nom · prix », avec ses options comptées', async () => {
 		await open()
-		expect(rows()).toEqual(['Maquillage de la mariée · dès 150 € · 1 option Modifier Retirer'])
+		expect(rows()).toEqual(['Maquillage de la mariée · dès 150 € · 1 optionModifierRetirer'])
 	})
 
 	test('un bloc vide reste sur la page et dit quoi faire', async () => {
@@ -65,7 +67,7 @@ describe('ajouter une prestation', () => {
 		expect(doc().querySelector('datalist option')).not.toBeNull()
 		expect(doc().body.textContent).toContain('Exemples : 150, à partir de 150, sur devis')
 		await window_.saisir(window_.champ('Prix'), 'à partir de 150')
-		expect(doc().body.textContent).toContain('Montant retenu pour ton profil : 150 €')
+		expect(doc().body.textContent).toMatch(/Montant retenu pour ton profil : 150\s€/)
 		await window_.saisir(window_.champ('Prix'), 'sur devis')
 		expect(doc().body.textContent).toContain('Aucun montant retenu')
 	})

@@ -21,6 +21,8 @@ import {
 	sameRows,
 } from '@/lib/dashboard/list'
 import { FAILURE_MESSAGE, type SaveResult } from '@/lib/dashboard/result'
+import { inputPrice, SERVICE_OFFERS } from '@/lib/dashboard/service-offers'
+import { parsePrice, priceRows } from '@/lib/price'
 import { BlockForm, FIELD_CLASS } from '../BlockForm'
 import { EditableBlock } from '../EditableBlock'
 
@@ -116,8 +118,49 @@ const COURSES_WORDS: RowsWords = {
 	folded: ['description'],
 }
 
+/** « Maquillage de la mariée · dès 150 € »: the name, then the first line of the price as the page shows it. */
+function serviceLine(values: RowValues): string {
+	const price = priceRows(parsePrice(inputPrice(values.price ?? '')))
+		.join(', ')
+		.replace(/^À partir de /, 'dès ')
+	return [values.name, price].filter(Boolean).join(' · ')
+}
+
+const SERVICES_WORDS: RowsWords = {
+	id: 'services',
+	title: 'Prestations et tarifs',
+	pen: 'Modifier mes prestations',
+	invitation: (
+		<span className="pr-8">
+			<b className="text-lipstick">Ajoute tes prestations et tes tarifs.</b> Par exemple : maquillage de la mariée, dès
+			150 €.
+		</span>
+	),
+	add: 'Ajouter une prestation',
+	saveRow: 'Enregistrer cette prestation',
+	line: serviceLine,
+	folded: ['description'],
+	addOption: 'Ajouter une option (ex. essai, retouches)',
+	suggestions: [
+		'Maquillage de la mariée',
+		'Maquillage de soirée',
+		'Maquillage de jour',
+		'Maquillage invitée',
+		'Essai maquillage',
+		'Cours d’auto-maquillage',
+	],
+	templates: [
+		{ label: 'Mariée', name: 'Maquillage de la mariée' },
+		{ label: 'Soirée', name: 'Maquillage de soirée' },
+		{ label: 'Essai', name: 'Essai maquillage' },
+	],
+	priceHelp: 'Exemples : 150, à partir de 150, sur devis',
+	afterTemplate: 'price',
+}
+
 const KINDS = {
 	courses: { words: COURSES_WORDS, definition: COURSES },
+	services: { words: SERVICES_WORDS, definition: SERVICE_OFFERS },
 } satisfies Record<string, { words: RowsWords; definition: ListDefinition }>
 
 export type RowsKind = keyof typeof KINDS
@@ -480,6 +523,7 @@ function RowsForm({
 										<button
 											key={label}
 											type="button"
+											aria-label={`Modèle ${label}`}
 											onKeyDown={ignoreRepeat}
 											onClick={() => {
 												setField(fields[0]?.nom ?? 'name', name)
