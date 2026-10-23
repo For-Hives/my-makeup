@@ -1,13 +1,13 @@
 import { createLocalReq, type Payload, type Where } from 'payload'
-import { revalidateChange } from '../../collections/revalidate'
 import { ACTIVITY_CHECKS_COLLECTION } from '../../collections/ActivityChecks'
+import { revalidateChange } from '../../collections/revalidate'
+import { type ActivityOutcome, BADGE_OUTCOME } from '../activity/outcome'
+import { type BusinessRegistry, createBusinessRegistry, type RegistryAnswer } from '../activity/registry'
+import { toRow } from '../activity/store'
 import { serverEnv } from '../env'
 import { importInProgress } from '../import-context'
 import { PUBLISHED_STATUS } from '../profile/status'
 import { changeTargets } from '../revalidate'
-import { type ActivityOutcome, BADGE_OUTCOME } from '../activity/outcome'
-import { type BusinessRegistry, createBusinessRegistry, type RegistryAnswer } from '../activity/registry'
-import { toRow } from '../activity/store'
 import type { DailyTask } from './daily'
 
 /**
@@ -61,7 +61,11 @@ const OUTCOME_OF: Readonly<Partial<Record<RegistryAnswer['kind'], ActivityOutcom
 type Id = number
 
 /** The rows to ask today: never tried first, then the oldest failed tries, then the badges to renew. */
-async function dueRows(payload: Payload, now: Date, cap: number): Promise<{ id: Id; profile: Id; outcome: ActivityOutcome }[]> {
+async function dueRows(
+	payload: Payload,
+	now: Date,
+	cap: number
+): Promise<{ id: Id; profile: Id; outcome: ActivityOutcome }[]> {
 	const retryBefore = new Date(now.getTime() - RETRY_AFTER_MS).toISOString()
 	const renewBefore = new Date(now.getTime() - RENEW_AFTER_MS).toISOString()
 	const lookups: { and: Where[]; sort: string }[] = [

@@ -35,6 +35,7 @@ const PHONE_ORDER = {
 	languages: 'order-7 w-full min-w-0 md:order-none',
 	courses: 'order-8 w-full min-w-0 md:order-none',
 	experiences: 'order-9 w-full min-w-0 md:order-none',
+	activity: 'order-10 w-full min-w-0 md:order-none',
 } as const
 
 /**
@@ -136,6 +137,7 @@ export function ProfileView({
 							PHONE_ORDER.languages,
 							profil.langues.length > 0 ? <LanguagesSection langues={profil.langues} /> : null
 						)}
+						{block('activity', PHONE_ORDER.activity, null)}
 						{block(
 							'courses',
 							PHONE_ORDER.courses,

@@ -4,6 +4,7 @@ import { EditBar } from '@/components/direct-edit/EditBar'
 import { EditSession } from '@/components/direct-edit/EditSession'
 import { headerEdit } from '@/components/direct-edit/header-edit'
 import { ProfileView } from '@/components/profile/ProfileView'
+import type { ActivityView } from '@/lib/dashboard/activity'
 import type { DashboardProfile } from '@/lib/dashboard/cards'
 import type { DashboardPhoto } from '@/lib/dashboard/photos'
 import { type PublicProfile, publicProfileOf } from '@/services/public/profiles'
@@ -61,6 +62,8 @@ export function benchOf(
 		gallery?: DashboardPhoto[]
 		actions?: Record<string, Action>
 		galleryWork?: GalleryWork
+		/** Where the check of her SIRET stands: without it, the page has no SIRET card. */
+		activity?: ActivityView
 	} = {}
 ) {
 	const profile = options.profile ?? FULL
@@ -84,6 +87,7 @@ export function benchOf(
 		'savePortfolio',
 		'saveContacts',
 		'saveNetworks',
+		'saveSiret',
 		'saveMainPicture',
 		'savePlace',
 	]
@@ -130,6 +134,7 @@ export function benchOf(
 								profile,
 								photos: { photo, galerie: gallery, principaleManquante: false },
 								actions,
+								...(options.activity ? { activity: options.activity } : {}),
 								...(options.galleryWork ? { galleryWork: options.galleryWork } : {}),
 							}),
 						}}

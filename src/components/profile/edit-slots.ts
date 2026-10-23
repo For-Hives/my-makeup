@@ -42,6 +42,11 @@ export interface BodyEdit {
 	networks: BlockSlot
 	/** Her phone and her contact email, shown only with her dated consent. */
 	contacts: BlockSlot
+	/**
+	 * Her SIRET and where its check stands (issue 1004): a private card, drawn only on her own page. It is given
+	 * `null`: a visitor has nothing to read there.
+	 */
+	activity: BlockSlot
 }
 
 export interface ProfileEdit {

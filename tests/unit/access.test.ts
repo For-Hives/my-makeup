@@ -351,13 +351,12 @@ describe('La collection profils (ticket 020)', () => {
 		expect(fieldValue(Profiles.fields, 'superArtist')?.access?.read).toBeUndefined()
 	})
 
-	test('choix du statut, motif, vérifiée, SIRET, note interne, score, badge et compte : seul admin les écrit (U55)', () => {
+	test('choix du statut, motif, vérifiée, note interne, score, badge et compte : seul admin les écrit (U55)', () => {
 		for (const name of [
 			'chosenStatus',
 			'reason',
 			'verified',
 			'verifiedAt',
-			'siret',
 			'internalNote',
 			'score',
 			'superArtist',
@@ -372,6 +371,19 @@ describe('La collection profils (ticket 020)', () => {
 			])
 			expect(access.create as unknown).toBe(fieldAdminOnly)
 		}
+		// Issue 1004: the SIRET is optional and hers to write, with the admin; the rule is the same as the one that reads it.
+		const siret = fieldValue(Profiles.fields, 'siret')?.access as Record<string, unknown>
+		expect(siret.update).toBe(profileFieldAdminOrOwner)
+		expect(siret.read).toBe(profileFieldAdminOrOwner)
+		expect(siret.create).toBe(fieldAdminOnly)
+		const write = (user: User | null, doc: Record<string, unknown>) =>
+			profileFieldAdminOrOwner({ req: { user } as PayloadRequest, doc } as never)
+		expect([write(admin, { pro: 9 }), write(artist, { pro: 7 }), write(artist, { pro: 9 })]).toEqual([
+			true,
+			true,
+			false,
+		])
+		expect([write(editorial, { pro: 7 }), write(null, { pro: 7 })]).toEqual([false, false])
 		// The status itself is computed by the server from that choice (ticket 044): no API writes it.
 		const status = fieldValue(Profiles.fields, 'status')?.access as Record<string, (args: unknown) => boolean>
 		for (const operation of ['create', 'update'])

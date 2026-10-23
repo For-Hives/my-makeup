@@ -195,7 +195,6 @@ describe('Statut, vérifié et score envoyés par la maquilleuse restent inchang
 				verifiedAt: '2026-10-14T00:00:00.000Z',
 				score: 99,
 				reason: 'Envoyé par la maquilleuse',
-				siret: '98765432109876',
 				internalNote: 'Envoyée par la maquilleuse',
 				superArtist: false,
 				pro: Number(other.id),
@@ -211,12 +210,51 @@ describe('Statut, vérifié et score envoyés par la maquilleuse restent inchang
 			'verifiedAt',
 			'score',
 			'reason',
-			'siret',
 			'internalNote',
 			'superArtist',
 			'pro',
 		] as const
 		for (const field of reserves) expect([field, after[field]]).toEqual([field, before[field]])
+	})
+
+	test('issue 1004 : la maquilleuse écrit son SIRET, pas une autre ; le public ne le lit jamais', async () => {
+		const { compte: account, profil: profile } = await artistWithProfile('published')
+		const other = await createAccount('maquilleuse')
+		const NEW_SIRET = '00000000100016'
+
+		const mine = await callRest('PATCH', `/api/profiles/${profile.id}`, {
+			enTetes: account.session.enTetes,
+			corps: { siret: NEW_SIRET },
+		})
+		expect(mine.statut).toBe(200)
+		expect((await stored(profile.id)).siret).toBe(NEW_SIRET)
+
+		const hers = await callRest('PATCH', `/api/profiles/${profile.id}`, {
+			enTetes: other.session.enTetes,
+			corps: { siret: '00000000200014' },
+		})
+		expect(hers.statut).toBeGreaterThanOrEqual(400)
+		expect((await stored(profile.id)).siret).toBe(NEW_SIRET)
+
+		for (const path of [`/api/profiles/${profile.id}?depth=2`, '/api/profiles?depth=1']) {
+			const { texte: text } = await callRest('GET', path)
+			expect(text).not.toContain(NEW_SIRET)
+			expect(text).not.toContain('"siret"')
+		}
+	})
+
+	test('issue 1004 : une clé de contrôle fausse est refusée en français, pour elle comme pour un admin', async () => {
+		const { compte: account, profil: profile } = await artistWithProfile('published')
+		const admin = await createAccount('admin')
+		for (const headers of [account.session.enTetes, admin.session.enTetes]) {
+			const { statut: status, texte: text } = await callRest('PATCH', `/api/profiles/${profile.id}`, {
+				enTetes: headers,
+				corps: { siret: '00000000100017' },
+			})
+			expect(status).toBe(400)
+			expect(text).toContain('faute de frappe')
+		}
+		expect((await stored(profile.id)).siret).toBe(RESERVE.siret)
 	})
 
 	test('un SIRET mal formé est refusé en français, même pour un admin', async () => {

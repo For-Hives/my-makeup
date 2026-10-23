@@ -502,7 +502,10 @@ async function publicProfileRead(payload: Payload, profil: ProfilePageData & { i
 }
 
 /** The badge of one profile, as `publicProfileOf` takes it: nothing when she does not hold it. */
-function activityOf(badged: ReadonlyMap<number, string | null>, id: number): { activity?: { checkedAt: string | null } } {
+function activityOf(
+	badged: ReadonlyMap<number, string | null>,
+	id: number
+): { activity?: { checkedAt: string | null } } {
 	return badged.has(id) ? { activity: { checkedAt: badged.get(id) ?? null } } : {}
 }
 
@@ -873,10 +876,10 @@ export async function readDirectory(
 		})
 		const photos = await readPhotos(payload, result.docs)
 		const pids = await readPids(payload, result.docs)
-	const badged = await badgedProfiles(
-		payload,
-		result.docs.map(({ id }) => id)
-	)
+		const badged = await badgedProfiles(
+			payload,
+			result.docs.map(({ id }) => id)
+		)
 		const unreachable = await readUnreachable(payload, result.docs)
 		for (const profile of result.docs) {
 			const isUnreachable = unreachable.has(profile.id)

@@ -293,7 +293,6 @@ const MATRIX: Line[] = [
 			['moderationAction', 'suspend'],
 			['verified', true],
 			['verifiedAt', '2026-10-14T00:00:00.000Z'],
-			['siret', '12345678901237'],
 			['internalNote', 'Note envoyée par la maquilleuse'],
 			['score', 99],
 			['superArtist', true],
@@ -323,6 +322,8 @@ const MATRIX: Line[] = [
 			['contactDetails', { phone: '06 39 98 11 11', email: 'contact-a@example.test' }],
 			['publicContact', true],
 			['countries', ['BE', 'IT']],
+			// Her SIRET, optional (issue 1004): hers to write, as an admin's.
+			['siret', '12345678901237'],
 		] as const
 	).map(
 		([champ, valeur]): Line => ({
@@ -333,6 +334,17 @@ const MATRIX: Line[] = [
 			champ,
 			valeur,
 			attendu: 'autorise',
+		})
+	),
+	...(['autreMaquilleuse', 'sansProfil', 'redaction', 'anonyme'] as const).map(
+		(role): Line => ({
+			role,
+			collection: 'profiles',
+			operation: 'modifier',
+			document: 'maquilleuse',
+			champ: 'siret',
+			valeur: '12345678901237',
+			attendu: 'refuse',
 		})
 	),
 	{
@@ -702,7 +714,8 @@ const MATRIX: Line[] = [
 
 	// The internal reports of the reminders (issue 1006): only an admin reads them, and nobody writes them through
 	// an API, an admin included. The server writes the report of the day and the state of a profile.
-	...(['reminder-reports', 'reminder-states'] as const).flatMap(collection =>
+	// The cache of the activity check (issue 1004) is closed in the same way: the SIRET is not in it, the daily task writes it.
+	...(['reminder-reports', 'reminder-states', 'activity-checks'] as const).flatMap(collection =>
 		ROLES.flatMap((role): Line[] => {
 			const reads = role === 'admin'
 			return [

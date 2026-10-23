@@ -10,7 +10,8 @@ import { luhnValid } from '../legal'
  * of the activity check (src/lib/activity/).
  */
 export const MESSAGE_SIRET = 'Le SIRET compte 14 chiffres, sans espace.'
-export const MESSAGE_SIRET_CHECK = 'Ce SIRET n’est pas valide : vérifie les chiffres, il y a sans doute une faute de frappe.'
+export const MESSAGE_SIRET_CHECK =
+	'Ce SIRET n’est pas valide : vérifie les chiffres, il y a sans doute une faute de frappe.'
 
 /** The SIREN of La Poste: its establishments do not follow Luhn, their digits add up to a multiple of 5. */
 const LA_POSTE_SIREN = '356000000'
