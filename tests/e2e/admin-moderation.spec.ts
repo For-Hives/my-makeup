@@ -169,7 +169,7 @@ test.describe('1005 : modérer un profil avec un motif, et le tableau de bord', 
 		await context.addCookies((await createAccount('redaction')).session.cookies)
 		await withoutOutsideNetwork(context)
 		await page.goto('/admin')
-		await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible()
+		await expect(page.getByRole('link', { name: 'Articles' }).first()).toBeVisible()
 		await expect(page.getByTestId('dashboard-overview')).toHaveCount(0)
 	})
 })

@@ -82,7 +82,9 @@ export function ProfileActions() {
 	}
 
 	return (
-		<div data-testid="profile-actions" style={{ marginBottom: 'var(--base)' }}>
+		<div className="profile-actions" data-testid="profile-actions" style={{ marginBottom: 'var(--base)' }}>
+			{/* Targets of 44 px at least, on a phone as on a desk (issue 1005). */}
+			<style>{'.profile-actions .btn, .profile-actions button { min-height: 44px; }'}</style>
 			<div style={{ alignItems: 'center', display: 'flex', flexWrap: 'wrap', gap: 'calc(var(--base) / 2)' }}>
 				{online ? (
 					<Button buttonStyle="secondary" el="anchor" newTab url={`/profil/${slug}`}>
