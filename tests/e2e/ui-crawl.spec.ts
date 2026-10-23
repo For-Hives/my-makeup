@@ -143,6 +143,27 @@ test.describe('Crawl des interfaces (177)', () => {
 		expect(findDefects(facts)).toEqual([])
 	})
 
+	test('une photo d’un pixel de large, servie en `srcset`, n’est pas une image cassée', { tag: '@mobile' }, async ({
+		page,
+	}) => {
+		// With a `srcset` of widths the browser divides the width of the picture by the density it chose: a one-pixel photo
+		// has a `naturalWidth` of 0 and is fine. Other tests leave such photos on the bench, and a talent page lists them.
+		await page.route('**/page-photo-minuscule', route =>
+			route.fulfill({
+				status: 200,
+				contentType: 'text/html; charset=utf-8',
+				body: `<!doctype html><html lang="fr"><head><title>Minuscule</title></head><body>${FIXTURE_NAV}<h1>Une photo minuscule</h1><img src="/photo-minuscule.png?w=640" srcset="/photo-minuscule.png?w=256 256w, /photo-minuscule.png?w=640 640w" sizes="140px" alt="minuscule" width="140" height="140"></body></html>`,
+			})
+		)
+		await page.route('**/photo-minuscule.png*', route =>
+			route.fulfill({ status: 200, contentType: 'image/png', body: PIXEL })
+		)
+		const facts = await crawlPage(page, '/page-photo-minuscule')
+		expect(await page.evaluate(() => document.images[0]?.naturalWidth)).toBe(0)
+		expect(facts.brokenImages).toEqual([])
+		expect(findDefects(facts)).toEqual([])
+	})
+
 	test('une image différée qui ne répond jamais est signalée, et une image qui échoue l’est tout de suite', {
 		tag: '@mobile',
 	}, async ({ page }) => {
@@ -157,7 +178,7 @@ test.describe('Crawl des interfaces (177)', () => {
 			// Never answered.
 		})
 		const silent = await crawlPage(page, '/page-image-muette', { imageDelay: 1_500 })
-		expect(silent.brokenImages).toEqual(['/image-muette.png'])
+		expect(silent.brokenImages).toEqual(['/image-muette.png (sans réponse)'])
 
 		await page.route('**/page-image-morte', route =>
 			route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: LAZY_IMAGE_PAGE('/image-morte.png') })
@@ -167,7 +188,7 @@ test.describe('Crawl des interfaces (177)', () => {
 		)
 		const started = Date.now()
 		const dead = await crawlPage(page, '/page-image-morte', { imageDelay: 20_000 })
-		expect(dead.brokenImages).toEqual(['/image-morte.png'])
+		expect(dead.brokenImages).toEqual(['/image-morte.png (réponse 200, image illisible)'])
 		expect(Date.now() - started).toBeLessThan(10_000)
 	})
 })

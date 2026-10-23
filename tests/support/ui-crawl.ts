@@ -194,19 +194,11 @@ function unfinishedImages(): number {
 }
 
 /** What the page reports about itself, read inside the browser. Pure DOM: no import, it is serialised. */
-function readDom(args: { navName: string }) {
+async function readDom(args: { navName: string }) {
 	const selectorOf = (element: Element): string => {
 		const id = element.id ? `#${element.id}` : ''
 		const classes = [...element.classList].slice(0, 2)
 		return `${element.tagName.toLowerCase()}${id}${classes.map(name => `.${name}`).join('')}`
-	}
-	const withoutQuery = (source: string): string => {
-		try {
-			const url = new URL(source, document.baseURI)
-			return `${url.pathname}`
-		} catch {
-			return source
-		}
 	}
 	window.scrollTo(0, 0)
 	const root = document.documentElement
@@ -218,16 +210,27 @@ function readDom(args: { navName: string }) {
 					.slice(0, 3)
 					.map(selectorOf)
 			: []
-	const broken = [...document.images]
-		.filter(image => image.currentSrc !== '' && (!image.complete || image.naturalWidth === 0))
-		.map(image => withoutQuery(image.currentSrc))
+	// An image is broken when it cannot be decoded, not when `naturalWidth` is 0: with a `srcset` of widths, the browser
+	// divides the width of the picture by the density it chose, so a picture one pixel wide has a `naturalWidth` of 0 and
+	// is fine (issue 997: the one-pixel photos that other tests leave on the bench, listed on a talent page).
+	const broken: { source: string; finished: boolean }[] = []
+	for (const image of document.images) {
+		if (image.currentSrc === '') continue
+		const readable =
+			image.complete &&
+			(await image.decode().then(
+				() => true,
+				() => false
+			))
+		if (!readable) broken.push({ source: image.currentSrc, finished: image.complete })
+	}
 	return {
 		h1Count: document.querySelectorAll('h1').length,
 		navCount: document.querySelectorAll(`nav[aria-label="${args.navName}"]`).length,
 		text: document.body.innerText,
 		overflow,
 		overflowing,
-		brokenImages: [...new Set(broken)],
+		broken,
 	}
 }
 
@@ -240,6 +243,15 @@ export interface CrawlPageOptions {
 	imageDelay?: number
 }
 
+/** The path of an address, its query left out. */
+const pathOf = (source: string): string => {
+	try {
+		return new URL(source).pathname
+	} catch {
+		return source
+	}
+}
+
 /**
  * Opens `path` in `page`, scrolls to the bottom so that images load, and reads the facts of the page. The
  * page's own viewport sets the width. Errors of the console, uncaught errors and images that answer 4xx or 5xx are
@@ -247,7 +259,9 @@ export interface CrawlPageOptions {
  */
 export async function crawlPage(page: Page, path: string, options: CrawlPageOptions = {}): Promise<PageFacts> {
 	const consoleErrors: string[] = []
-	const failedImages: string[] = []
+	// What the network said of each image, by address with its query: a status, or the failure of the connection.
+	const answered = new Map<string, number>()
+	const failures = new Map<string, string>()
 	// The images asked and not yet finished, seen from the network: an image whose answer has not started has no
 	// `currentSrc` yet, so the page cannot say it is loading (issue 997). Reading the DOM while one is on its way
 	// reported it broken when its headers came in between the two looks, or missed it altogether.
@@ -260,14 +274,15 @@ export async function crawlPage(page: Page, path: string, options: CrawlPageOpti
 	}
 	const onPageError = (error: Error) => consoleErrors.push(`Erreur non rattrapée : ${error.message}`)
 	const onResponse = (response: import('@playwright/test').Response) => {
-		if (response.request().resourceType() === 'image' && response.status() >= 400)
-			failedImages.push(`${new URL(response.url()).pathname} (${response.status()})`)
+		if (response.request().resourceType() === 'image') answered.set(response.url(), response.status())
 	}
 	const onRequest = (request: import('@playwright/test').Request) => {
 		if (request.resourceType() === 'image') inFlight.add(request)
 	}
 	const onSettled = (request: import('@playwright/test').Request) => {
 		inFlight.delete(request)
+		const failure = request.failure()
+		if (request.resourceType() === 'image' && failure) failures.set(request.url(), failure.errorText)
 	}
 	page.on('console', onConsole)
 	page.on('pageerror', onPageError)
@@ -290,12 +305,34 @@ export async function crawlPage(page: Page, path: string, options: CrawlPageOpti
 		}
 		const dom = await page.evaluate(readDom, { navName: NAV_NAME })
 		// Still unanswered at the ceiling: the page cannot show them, the network can.
-		const unanswered = [...inFlight].map(request => new URL(request.url()).pathname)
+		const unanswered = [...inFlight].map(request => `${pathOf(request.url())} (sans réponse)`)
+		// Each broken image says why, so that a report names the cause: the query of the address stays out of it.
+		const reasons = dom.broken.map(({ source, finished }) => {
+			const status = answered.get(source)
+			const failure = failures.get(source)
+			const reason = failure
+				? `échec du réseau : ${failure}`
+				: status !== undefined && status >= 400
+					? `réponse ${status}`
+					: finished
+						? status === undefined
+							? 'sans réponse du réseau, image vide'
+							: `réponse ${status}, image illisible`
+						: 'chargement non terminé'
+			return `${pathOf(source)} (${reason})`
+		})
+		const failedByStatus = [...answered]
+			.filter(([, status]) => status >= 400)
+			.map(([source, status]) => `${pathOf(source)} (réponse ${status})`)
 		return {
 			status: response?.status() ?? 0,
 			consoleErrors,
-			...dom,
-			brokenImages: [...new Set([...dom.brokenImages, ...failedImages, ...unanswered])],
+			h1Count: dom.h1Count,
+			navCount: dom.navCount,
+			text: dom.text,
+			overflow: dom.overflow,
+			overflowing: dom.overflowing,
+			brokenImages: [...new Set([...reasons, ...failedByStatus, ...unanswered])],
 			blockedRequests: options.blockedRequests?.() ?? [],
 		}
 	} finally {
