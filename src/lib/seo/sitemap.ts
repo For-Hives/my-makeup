@@ -51,6 +51,7 @@ export const STATIC_PAGES: readonly StaticPage[] = [
 	{ chemin: '/a-propos', titre: 'À propos', groupe: 'site' },
 	{ chemin: '/blog', titre: 'Blog', groupe: 'solutions' },
 	{ chemin: '/contact', titre: 'Contact', groupe: 'site' },
+	{ chemin: '/classement', titre: 'Comment sont classées les maquilleuses', groupe: 'particuliers' },
 	{
 		chemin: '/pourquoi-utiliser-my-makeup-en-tant-que-particulier',
 		titre: 'Pourquoi My-Makeup ?',

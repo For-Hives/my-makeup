@@ -647,6 +647,17 @@ export const FROZEN_URL_FAMILIES: readonly FrozenUrlFamily[] = [
 		after: 'Créé (ticket 1014) : un guide en texte, sans nom de maquilleuse, qui ne cite que des pages publiques',
 		examples: [{ from: '/llms.txt' }],
 	},
+	{
+		id: 'classement',
+		kind: 'page',
+		patterns: ['/classement'],
+		statusToday: [404],
+		status: 200,
+		servedBy: 'application',
+		today: 'Page inexistante',
+		after: 'Créée (issue 1012) : comment sont classées les maquilleuses, indexable, liée sous chaque liste',
+		examples: [{ from: '/classement' }],
+	},
 ]
 
 export interface Unwanted404 {

@@ -1,3 +1,4 @@
+import { RankingLink } from '@/components/ranking/RankingLink'
 import { ResultCard } from '@/components/search/ResultCard'
 import type { ProfileCard } from '@/services/public/profiles'
 
@@ -39,6 +40,7 @@ export function ProfileBlock({
 					</li>
 				))}
 			</ul>
+			<RankingLink className="mt-4" />
 			<form action="/search" method="get" className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-end">
 				{specialite !== undefined && <input type="hidden" name="specialite" value={specialite} />}
 				<div className="flex-1">
