@@ -76,6 +76,7 @@ export function ResultCard({
 					fill
 					sizes="(min-width: 1536px) 16vw, (min-width: 768px) 33vw, 140px"
 					priority={prioritaire}
+					fetchPriority={prioritaire ? 'high' : undefined}
 					className="object-cover object-center"
 				/>
 				{carte.superMaquilleuse && (

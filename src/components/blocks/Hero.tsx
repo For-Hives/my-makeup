@@ -77,6 +77,11 @@ export function Hero({
 					width={1000}
 					height={1000}
 					priority
+					// `priority` preloads the picture but does not raise its priority, and without `sizes` a phone of 1.75 dppx asked
+					// the 2048 px copy of a picture drawn 412 px wide (issue 1033). The picture fills the width of the screen, then
+					// the right half of it from 1024 px.
+					fetchPriority="high"
+					sizes="(min-width: 1024px) 50vw, 100vw"
 					src={image}
 					alt="trouver une maquilleuse professionnelle freelance"
 				/>

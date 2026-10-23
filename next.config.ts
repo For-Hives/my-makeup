@@ -66,4 +66,22 @@ const nextConfig: NextConfig = {
 }
 
 // withPayload must stay the outermost wrapper: it adds Payload's server packages and aliases.
-export default withPayload(nextConfig, { devBundleServerPackages: false })
+const withPayloadConfig = withPayload(nextConfig, { devBundleServerPackages: false })
+
+/**
+ * withPayload sends `Accept-CH`, `Critical-CH` and `Vary` for `Sec-CH-Prefers-Color-Scheme` on every path, for the theme
+ * of its administration. On the public pages a `Critical-CH` the browser has not answered makes Chrome send the request
+ * again with the hint: a second round trip before the first byte of every page on a fresh visit (+144 to +338 ms in the
+ * Lighthouse runs of 23/10/2026, issue 1033), for a hint the public HTML never reads. The entry is kept for the
+ * administration, the only reader of the hint.
+ */
+const carriesHint = (entry: { headers: { key: string }[] }): boolean =>
+	entry.headers.some(({ key }) => key.toLowerCase() === 'critical-ch')
+
+export default {
+	...withPayloadConfig,
+	headers: async () =>
+		((await withPayloadConfig.headers?.()) ?? []).map(entry =>
+			carriesHint(entry) ? { ...entry, source: '/admin/:path*' } : entry
+		),
+} satisfies NextConfig
