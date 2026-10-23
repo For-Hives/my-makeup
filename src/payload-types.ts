@@ -239,7 +239,13 @@ export interface Profile {
   firstName?: string | null;
   lastName?: string | null;
   artistName?: string | null;
+  /**
+   * Composé à partir des puces et du texte « Autre » ; un texte saisi ici est rangé dans « Autre ».
+   */
   specialty?: string | null;
+  specialtyBullets?:
+    ('wedding' | 'event' | 'photoFashion' | 'screenStage' | 'specialEffects' | 'selfMakeupCourse')[] | null;
+  specialtyOther?: string | null;
   /**
    * Une commune de la liste officielle, avec son code INSEE. Jamais une adresse.
    */
@@ -830,6 +836,8 @@ export interface ProfilesSelect<T extends boolean = true> {
   lastName?: T;
   artistName?: T;
   specialty?: T;
+  specialtyBullets?: T;
+  specialtyOther?: T;
   city?:
     | T
     | {

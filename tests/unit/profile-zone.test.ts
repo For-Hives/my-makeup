@@ -357,14 +357,10 @@ describe('les champs de la zone dans la collection des profils', () => {
 	const fields = Profiles.fields.filter((champ): champ is Field & { name: string } => 'name' in champ)
 	const field = (nom: string) => fields.find(({ name }) => name === nom)
 
-	test('commune, rayonKm et aDomicile, aux noms de SCHEMA.md, après la spécialité', () => {
+	test('commune, rayonKm et aDomicile, aux noms de SCHEMA.md, après la spécialité (puces et « Autre »)', () => {
 		const names = fields.map(({ name }) => name)
-		expect(names.slice(names.indexOf('specialty'), names.indexOf('specialty') + 4)).toEqual([
-			'specialty',
-			'city',
-			'radiusKm',
-			'homeService',
-		])
+		const last = names.indexOf('specialtyOther')
+		expect(names.slice(last, last + 4)).toEqual(['specialtyOther', 'city', 'radiusKm', 'homeService'])
 		expect(field('radiusKm')?.type).toBe('number')
 		expect(field('homeService')?.type).toBe('checkbox')
 	})

@@ -45,6 +45,7 @@ import { zoneReviewView } from '@/lib/dashboard/zone-review'
 import { usageView } from '@/lib/photo-limits'
 import { readPhotoUsage } from '@/lib/photo-usage'
 import { text } from '@/lib/profile/display-name'
+import { specialtyFormValues } from '@/lib/specialty'
 import {
 	saveMyAvailability,
 	saveMyContactDetails,
@@ -100,7 +101,7 @@ export default async function ProfilePage() {
 					prenom: text(profile.firstName),
 					nom: text(profile.lastName),
 					nomArtiste: text(profile.artistName),
-					specialite: text(profile.specialty),
+					...specialtyFormValues(profile),
 				}}
 				envoyer={saveMyIdentity}
 				proprietaire={String(artist.id)}

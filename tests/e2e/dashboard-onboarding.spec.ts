@@ -96,7 +96,7 @@ async function profileOf(email: string) {
 async function fillIdentity(page: Page) {
 	await page.getByLabel('Prénom').fill('Léa')
 	await page.getByLabel('Nom', { exact: true }).fill('Fictive')
-	await page.getByLabel(/Spécialité/).fill('Maquillage mariée')
+	await page.getByLabel('Mariage', { exact: true }).check()
 }
 
 async function chooseLille(page: Page) {
@@ -238,7 +238,7 @@ test.describe('E02 : l’accueil en trois étapes', { tag: '@mobile' }, () => {
 		expect(await profileOf(email)).toMatchObject({
 			firstName: 'Léa',
 			lastName: 'Fictive',
-			specialty: 'Maquillage mariée',
+			specialty: 'Mariage',
 		})
 		// A commune typed but not chosen in the list is no commune.
 		await page.getByRole('combobox', { name: 'Où travailles-tu ?' }).fill('Lille')
@@ -415,7 +415,7 @@ test.describe('E02 : l’accueil en trois étapes', { tag: '@mobile' }, () => {
 		await expect(page.getByRole('alert').filter({ hasText: 'n’a pas abouti' })).toBeVisible()
 		await expect(title(page)).toHaveText('Ton identité')
 		await expect(page.getByLabel('Prénom')).toHaveValue('Léa')
-		await expect(page.getByLabel(/Spécialité/)).toHaveValue('Maquillage mariée')
+		await expect(page.getByLabel('Mariage', { exact: true })).toBeChecked()
 		expect((await profileOf(email)).firstName ?? null).toBeNull()
 
 		// The network is back: the same form passes.
@@ -446,7 +446,8 @@ test.describe('E02 : l’accueil en trois étapes', { tag: '@mobile' }, () => {
 		await page.keyboard.type('Fictive')
 		await page.keyboard.press('Tab')
 		await page.keyboard.press('Tab')
-		await page.keyboard.type('Maquillage mariée')
+		await page.keyboard.press('Space')
+		await page.getByRole('button', { name: 'Suivant' }).focus()
 		await page.keyboard.press('Enter')
 		await expect(title(page)).toHaveText('Ta zone')
 		await expect(title(page)).toBeFocused()

@@ -54,7 +54,7 @@ function bench(options: { etape?: 1 | 2 | 3; photoEnCours?: 'terminee' | 2 } = {
 			jsdomWindow.monter(
 				<Onboarding
 					etapeInitiale={options.etape ?? 1}
-					identite={{ prenom: '', nom: '', nomArtiste: '', specialite: '' }}
+					identite={{ prenom: '', nom: '', nomArtiste: '', specialtyBullets: '', specialtyOther: '' }}
 					localisation={{ ...ZONE, codeInsee: '', libelle: '' }}
 					envoyerIdentite={async valeurs => {
 						received.identite.push(valeurs)
@@ -91,7 +91,7 @@ const field = (nom: string) => jsdomWindow.champ(nom) as HTMLInputElement
 async function identity(origine?: string) {
 	await jsdomWindow.saisir(field('Prénom'), 'Léa')
 	await jsdomWindow.saisir(field('Nom'), 'Fictive')
-	await jsdomWindow.saisir(field('Spécialité'), 'Mariée')
+	await jsdomWindow.cliquer(field('Mariage'))
 	if (origine)
 		await jsdomWindow.cliquer(jsdomWindow.w.document.getElementById(`accueil-origine-${origine}`) as HTMLElement)
 	await jsdomWindow.cliquer(jsdomWindow.bouton('Suivant'))
@@ -137,7 +137,7 @@ describe('une émission par étape franchie, valeurs fermées', () => {
 		await jsdomWindow.monter(
 			<Onboarding
 				etapeInitiale={1}
-				identite={{ prenom: '', nom: '', nomArtiste: '', specialite: '' }}
+				identite={{ prenom: '', nom: '', nomArtiste: '', specialtyBullets: '', specialtyOther: '' }}
 				localisation={{ ...ZONE, codeInsee: '', libelle: '' }}
 				envoyerIdentite={async () => ({ ok: false, message: 'Échec.' })}
 				envoyerLocalisation={async () => ({ ok: false, message: 'Échec.' })}
@@ -148,7 +148,7 @@ describe('une émission par étape franchie, valeurs fermées', () => {
 		)
 		await jsdomWindow.saisir(field('Prénom'), 'Léa')
 		await jsdomWindow.saisir(field('Nom'), 'Fictive')
-		await jsdomWindow.saisir(field('Spécialité'), 'Mariée')
+		await jsdomWindow.cliquer(field('Mariage'))
 		await jsdomWindow.cliquer(jsdomWindow.w.document.getElementById('accueil-origine-ia') as HTMLElement)
 		await jsdomWindow.cliquer(jsdomWindow.bouton('Suivant'))
 		await jsdomWindow.attendre(() =>
@@ -229,7 +229,9 @@ describe('la réponse n’est stockée nulle part', () => {
 		const b = bench()
 		await b.monter()
 		await identity('instagram')
-		expect(b.recu.identite).toEqual([{ prenom: 'Léa', nom: 'Fictive', nomArtiste: '', specialite: 'Mariée' }])
+		expect(b.recu.identite).toEqual([
+			{ prenom: 'Léa', nom: 'Fictive', nomArtiste: '', specialtyBullets: 'wedding', specialtyOther: '' },
+		])
 		await zone()
 		await photo()
 		await jsdomWindow.attendre(() => b.recu.photo.length === 1)
@@ -238,7 +240,7 @@ describe('la réponse n’est stockée nulle part', () => {
 	})
 
 	test('le schéma strict du serveur refuse un champ d’origine', () => {
-		const base = { prenom: 'Léa', nom: 'Fictive', nomArtiste: '', specialite: 'Mariée' }
+		const base = { prenom: 'Léa', nom: 'Fictive', nomArtiste: '', specialtyBullets: 'wedding', specialtyOther: '' }
 		expect(strictOnboardingIdentitySchema.safeParse(base).success).toBe(true)
 		expect(strictOnboardingIdentitySchema.safeParse({ ...base, origine: 'ia' }).success).toBe(false)
 	})

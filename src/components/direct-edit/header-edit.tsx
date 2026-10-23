@@ -6,6 +6,7 @@ import { locationValues } from '@/lib/dashboard/location'
 import type { DashboardPhotos } from '@/lib/dashboard/photos'
 import { zoneReviewView } from '@/lib/dashboard/zone-review'
 import { text } from '@/lib/profile/display-name'
+import { specialtyFormValues } from '@/lib/specialty'
 import type { CitiesSearch } from '../dashboard/CityField'
 import { IdentityBlock, type IdentitySave } from './blocks/IdentityBlock'
 import { PhotoBlock, type PhotoSave, type PhotoWork } from './blocks/PhotoBlock'
@@ -44,7 +45,7 @@ export function headerEdit({
 		prenom: text(profile.firstName),
 		nom: text(profile.lastName),
 		nomArtiste: text(profile.artistName),
-		specialite: text(profile.specialty),
+		...specialtyFormValues(profile),
 	}
 	return {
 		photo: read => (

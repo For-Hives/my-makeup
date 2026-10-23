@@ -1,4 +1,5 @@
 import type { Payload } from 'payload'
+import { parseSpecialtyBullets, specialtyFormValues } from '@/lib/specialty'
 import {
 	errorsByField,
 	IDENTITY_FIELDS,
@@ -14,7 +15,9 @@ const PATH_FIELD: Readonly<Record<string, IdentityField>> = {
 	firstName: 'prenom',
 	lastName: 'nom',
 	artistName: 'nomArtiste',
-	specialty: 'specialite',
+	specialty: 'specialtyBullets',
+	specialtyBullets: 'specialtyBullets',
+	specialtyOther: 'specialtyOther',
 }
 
 /**
@@ -51,7 +54,8 @@ export async function saveIdentity(
 				firstName: parsed.data.prenom,
 				lastName: parsed.data.nom,
 				artistName: parsed.data.nomArtiste,
-				specialty: parsed.data.specialite,
+				specialtyBullets: parseSpecialtyBullets(parsed.data.specialtyBullets),
+				specialtyOther: parsed.data.specialtyOther,
 			},
 			depth: 0,
 			id,
@@ -62,7 +66,7 @@ export async function saveIdentity(
 			prenom: stored.firstName ?? '',
 			nom: stored.lastName ?? '',
 			nomArtiste: stored.artistName ?? '',
-			specialite: stored.specialty ?? '',
+			...specialtyFormValues(stored),
 		}
 		return { ok: true, valeurs: values }
 	} catch (error) {

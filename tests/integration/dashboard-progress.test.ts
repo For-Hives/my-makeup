@@ -59,7 +59,8 @@ describe('I20 : le bloc de l’espace égale l’état enregistré par le serveu
 			prenom: 'Léa',
 			nom: 'Fictive',
 			nomArtiste: '',
-			specialite: 'Mariage',
+			specialtyBullets: '',
+			specialtyOther: 'Mariage',
 		})
 		const afterIdentity = await equal()
 		expect(afterIdentity.score).toBe(2)

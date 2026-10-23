@@ -55,6 +55,8 @@ const PUBLIC_KEYS = [
 	'skills',
 	'slug',
 	'specialty',
+	'specialtyBullets',
+	'specialtyOther',
 	'superArtist',
 	'town',
 	'updatedAt',

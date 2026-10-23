@@ -15,6 +15,8 @@ const READ_FIELDS = {
 	lastName: true,
 	artistName: true,
 	specialty: true,
+	specialtyBullets: true,
+	specialtyOther: true,
 	description: true,
 	city: true,
 	radiusKm: true,

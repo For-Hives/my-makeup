@@ -10,6 +10,7 @@ import { onboardingPosition } from '@/lib/dashboard/onboarding'
 import { requestUser } from '@/lib/dashboard/request'
 import { zoneReviewView } from '@/lib/dashboard/zone-review'
 import { text } from '@/lib/profile/display-name'
+import { specialtyFormValues } from '@/lib/specialty'
 import { findMyCities, saveMyLocation } from '../profil/location-actions'
 import { saveMyOnboardingIdentity, saveMyOnboardingPhoto } from './actions'
 
@@ -42,7 +43,7 @@ export default async function AccountOnboardingPage() {
 					prenom: text(profile.firstName),
 					nom: text(profile.lastName),
 					nomArtiste: text(profile.artistName),
-					specialite: text(profile.specialty),
+					...specialtyFormValues(profile),
 				}}
 				localisation={locationValues(profile)}
 				revueZone={zoneReviewView(profile.zoneReview)}

@@ -76,7 +76,7 @@ for (const size of SIZES) {
 			const editor = page.locator('[data-direct-edit-editor]')
 			await expect(editor).toContainText('Nom et spécialité · je modifie')
 			await expect(page.locator('#direct-identity-prenom')).toBeFocused()
-			await page.locator('#direct-identity-specialite').fill('Maquillage soirée')
+			await page.locator('#direct-identity-specialtyOther').fill('Maquillage soirée')
 			await expect(page.getByTestId('edit-status')).toHaveText('Modification en cours')
 			await checkScreen(page, 'édition')
 			await shot(page, 'edition')
@@ -98,7 +98,7 @@ for (const size of SIZES) {
 		}) => {
 			const profile = await open(page, context, 'reference')
 			await pen(page, 'Modifier mon nom et ma spécialité').click()
-			await page.locator('#direct-identity-specialite').fill('Maquillage naturel')
+			await page.locator('#direct-identity-specialtyOther').fill('Maquillage naturel')
 			const cut = (route: {
 				request: () => { method: () => string }
 				abort: () => Promise<void>
@@ -107,7 +107,7 @@ for (const size of SIZES) {
 			await page.route('**/auth/apercu-profil**', cut)
 			await page.getByRole('button', { name: 'Enregistrer' }).click()
 			await expect(page.getByRole('alert').filter({ hasText: FAILURE_MESSAGE })).toBeVisible()
-			await expect(page.locator('#direct-identity-specialite')).toHaveValue('Maquillage naturel')
+			await expect(page.locator('#direct-identity-specialtyOther')).toHaveValue('Maquillage naturel')
 			await expect(page.getByTestId('edit-status')).toContainText('Pas enregistré')
 			await checkScreen(page, 'erreur')
 			await shot(page, 'erreur')
@@ -127,13 +127,13 @@ for (const size of SIZES) {
 		}) => {
 			await open(page, context, 'reference')
 			await pen(page, 'Modifier mon nom et ma spécialité').click()
-			await page.locator('#direct-identity-specialite').fill('Maquillage de scène')
+			await page.locator('#direct-identity-specialtyOther').fill('Maquillage de scène')
 			await context.clearCookies()
 			await page.getByRole('button', { name: 'Enregistrer' }).click()
 			const alert = page.getByRole('alert').filter({ hasText: MESSAGE_SESSION })
 			await expect(alert).toBeVisible()
 			await expect(alert.getByRole('link', { name: /Te reconnecter/ })).toHaveAttribute('target', '_blank')
-			await expect(page.locator('#direct-identity-specialite')).toHaveValue('Maquillage de scène')
+			await expect(page.locator('#direct-identity-specialtyOther')).toHaveValue('Maquillage de scène')
 			await shot(page, 'session-expiree')
 		})
 

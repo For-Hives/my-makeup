@@ -18,7 +18,7 @@ import { pickFiles } from '../support/pick-files'
 
 const jsdomWindow = openWindow()
 
-const EMPTY_IDENTITY: IdentityValues = { prenom: '', nom: '', nomArtiste: '', specialite: '' }
+const EMPTY_IDENTITY: IdentityValues = { prenom: '', nom: '', nomArtiste: '', specialtyBullets: '', specialtyOther: '' }
 const EMPTY_ZONE: LocationValues = {
 	kind: 'city',
 	codeInsee: '',
@@ -106,7 +106,7 @@ const field = (nom: string) => jsdomWindow.champ(nom) as HTMLInputElement
 async function fillIdentity() {
 	await jsdomWindow.saisir(field('Prénom'), 'Léa')
 	await jsdomWindow.saisir(field('Nom'), 'Fictive')
-	await jsdomWindow.saisir(field('Spécialité'), 'Mariée')
+	await jsdomWindow.cliquer(field('Mariage'))
 }
 
 async function pickCity() {
@@ -133,7 +133,9 @@ describe('le parcours : une étape à la fois, chacune enregistrée avant la sui
 		await fillIdentity()
 		await jsdomWindow.cliquer(jsdomWindow.bouton('Suivant'))
 		await jsdomWindow.attendre(() => stepTitle() === 'Ta zone')
-		expect(b.journal.identite).toEqual([{ prenom: 'Léa', nom: 'Fictive', nomArtiste: '', specialite: 'Mariée' }])
+		expect(b.journal.identite).toEqual([
+			{ prenom: 'Léa', nom: 'Fictive', nomArtiste: '', specialtyBullets: 'wedding', specialtyOther: '' },
+		])
 
 		await pickCity()
 		await jsdomWindow.cliquer(jsdomWindow.bouton('Suivant'))
@@ -149,7 +151,10 @@ describe('le parcours : une étape à la fois, chacune enregistrée avant la sui
 	})
 
 	test('la reprise : le serveur dit étape 2, la page s’ouvre sur la zone avec l’identité déjà enregistrée', async () => {
-		const b = bench({ etape: 2, identite: { prenom: 'Léa', nom: 'Fictive', nomArtiste: '', specialite: 'Mariée' } })
+		const b = bench({
+			etape: 2,
+			identite: { prenom: 'Léa', nom: 'Fictive', nomArtiste: '', specialtyBullets: '', specialtyOther: 'Mariée' },
+		})
 		await b.monter()
 		expect(stepTitle()).toBe('Ta zone')
 		const current = jsdomWindow.w.document.querySelector('[aria-current="step"]')
@@ -241,7 +246,7 @@ describe('un échec reste sur l’étape et garde la saisie', () => {
 		await jsdomWindow.attendre(() => alerts().includes(FAILURE_MESSAGE))
 		expect(stepTitle()).toBe('Ton identité')
 		expect(field('Prénom').value).toBe('Léa')
-		expect(field('Spécialité').value).toBe('Mariée')
+		expect(field('Mariage').checked).toBe(true)
 	})
 
 	test('l’appel qui lève compte comme un échec', async () => {
@@ -332,7 +337,13 @@ describe('« Comment as-tu connu My Makeup ? » : facultative, jamais envoyée',
 		await fillIdentity()
 		await jsdomWindow.cliquer(jsdomWindow.bouton('Suivant'))
 		await jsdomWindow.attendre(() => stepTitle() === 'Ta zone')
-		expect(Object.keys(b.journal.identite[0] as object).sort()).toEqual(['nom', 'nomArtiste', 'prenom', 'specialite'])
+		expect(Object.keys(b.journal.identite[0] as object).sort()).toEqual([
+			'nom',
+			'nomArtiste',
+			'prenom',
+			'specialtyBullets',
+			'specialtyOther',
+		])
 		expect(JSON.stringify(b.journal)).not.toContain('"ia"')
 	})
 

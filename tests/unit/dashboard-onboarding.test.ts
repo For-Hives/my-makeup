@@ -69,20 +69,39 @@ describe('les étapes qui restent (ticket 296)', () => {
 
 describe('l’identité de l’accueil : la spécialité est obligatoire', () => {
 	test('sans spécialité, le message est sous le champ', () => {
-		const read = onboardingIdentitySchema.safeParse({ prenom: 'Léa', nom: 'Fictive', nomArtiste: '', specialite: '  ' })
+		const read = onboardingIdentitySchema.safeParse({
+			prenom: 'Léa',
+			nom: 'Fictive',
+			nomArtiste: '',
+			specialtyBullets: '',
+			specialtyOther: '  ',
+		})
 		expect(read.success).toBe(false)
-		expect(read.error?.issues.map(i => [i.path[0], i.message])).toEqual([['specialite', 'Indique ta spécialité.']])
+		expect(read.error?.issues.map(i => [i.path[0], i.message])).toEqual([
+			['specialtyBullets', 'Indique ta spécialité.'],
+		])
+	})
+
+	test('une puce seule suffit, une clé inconnue est refusée', () => {
+		const base = { prenom: 'Léa', nom: 'Fictive', nomArtiste: '', specialtyOther: '' }
+		expect(onboardingIdentitySchema.safeParse({ ...base, specialtyBullets: 'wedding,event' }).success).toBe(true)
+		expect(onboardingIdentitySchema.safeParse({ ...base, specialtyBullets: 'wedding,nope' }).success).toBe(false)
 	})
 
 	test('le nom d’artiste reste facultatif', () => {
 		expect(
-			onboardingIdentitySchema.safeParse({ prenom: 'Léa', nom: 'Fictive', nomArtiste: '', specialite: 'Mariée' })
-				.success
+			onboardingIdentitySchema.safeParse({
+				prenom: 'Léa',
+				nom: 'Fictive',
+				nomArtiste: '',
+				specialtyBullets: '',
+				specialtyOther: 'Mariée',
+			}).success
 		).toBe(true)
 	})
 
 	test('la version stricte refuse un champ réservé', () => {
-		const base = { prenom: 'Léa', nom: 'Fictive', nomArtiste: '', specialite: 'Mariée' }
+		const base = { prenom: 'Léa', nom: 'Fictive', nomArtiste: '', specialtyBullets: '', specialtyOther: 'Mariée' }
 		expect(strictOnboardingIdentitySchema.safeParse(base).success).toBe(true)
 		expect(strictOnboardingIdentitySchema.safeParse({ ...base, statut: 'publie' }).success).toBe(false)
 		expect(strictOnboardingIdentitySchema.safeParse({ ...base, origine: 'ia' }).success).toBe(false)

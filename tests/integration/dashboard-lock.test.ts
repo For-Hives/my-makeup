@@ -44,7 +44,13 @@ async function openInAdministration(payload: Payload, profil: number, admin: num
 	})
 }
 
-const IDENTITY = { prenom: 'Léa', nom: 'Fictive', nomArtiste: 'Studio Fictif', specialite: 'Maquillage mariée' }
+const IDENTITY = {
+	prenom: 'Léa',
+	nom: 'Fictive',
+	nomArtiste: 'Studio Fictif',
+	specialtyBullets: '',
+	specialtyOther: 'Maquillage mariée',
+}
 
 describe('un admin tient le profil : l’espace ne l’écrase pas', () => {
 	test('l’enregistrement est refusé en français, rien n’est écrit ; verrou levé, il passe', async () => {
