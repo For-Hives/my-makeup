@@ -66,6 +66,9 @@ export default function PrivacyPolicyPage() {
 			<p>
 				{`Données : nom, prénom, email, téléphone et message. Le message est enregistré sur notre serveur, puis envoyé par email à l'équipe via le service Resend, pour vous répondre (intérêt légitime). Seuls les administrateurs de My Makeup peuvent le lire. Durée : 12 mois après sa réception, puis suppression automatique de notre serveur. La copie reçue par email est effacée de notre boîte dans le même délai.`}
 			</p>
+			<p>
+				{`Le formulaire est protégé contre les robots par Cloudflare Turnstile : en général sans que vous ayez rien à faire, votre navigateur passe un contrôle technique auprès de Cloudflare, qui renvoie un jeton à usage unique que notre serveur fait vérifier avant d'enregistrer le message. Cloudflare ne reçoit ni votre message ni vos coordonnées, et notre serveur ne lui envoie aucune adresse IP. Ce contrôle ne sert qu'à bloquer les envois automatiques (intérêt légitime) ; si Cloudflare est injoignable, le message est tout de même accepté, avec une limite d'envois plus stricte.`}
+			</p>
 
 			<h2>Mesure d&apos;audience</h2>
 			<p>

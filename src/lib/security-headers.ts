@@ -15,6 +15,9 @@ export type SecurityOptions = {
 	mediaOrigin: string
 }
 
+/** Cloudflare's challenge origin: the script and the frame of the Turnstile widget on the contact form (ticket 1000). */
+export const TURNSTILE_ORIGIN = 'https://challenges.cloudflare.com'
+
 /** One year, in seconds. */
 const HSTS_MAX_AGE = 365 * 24 * 60 * 60
 
@@ -22,7 +25,7 @@ const HSTS_MAX_AGE = 365 * 24 * 60 * 60
  * The content policy, sent in report-only mode: a browser reports what it would have refused
  * (in its console, no report is sent anywhere) and refuses nothing.
  *
- * It names one remote origin, the photos. Measurement goes through the site's own `/u` path:
+ * It names one remote origin for images, the photos, and Cloudflare's challenge origin for the Turnstile widget. Measurement goes through the site's own `/u` path:
  * no third-party domain is listed for it, and none must be added.
  */
 export function contentSecurityPolicy({ development, mediaOrigin }: SecurityOptions): string {
@@ -30,12 +33,14 @@ export function contentSecurityPolicy({ development, mediaOrigin }: SecurityOpti
 		['default-src', ["'self'"]],
 		// Next writes inline scripts into every page to hand the server render over to React, and
 		// a page rendered ahead of time cannot carry a nonce per request.
-		['script-src', ["'self'", "'unsafe-inline'", ...(development ? ["'unsafe-eval'"] : [])]],
+		['script-src', ["'self'", "'unsafe-inline'", TURNSTILE_ORIGIN, ...(development ? ["'unsafe-eval'"] : [])]],
 		['style-src', ["'self'", "'unsafe-inline'"]],
 		// data: and blob: are the placeholders and the preview of a photo before it is sent.
 		['img-src', ["'self'", 'data:', 'blob:', mediaOrigin]],
 		['font-src', ["'self'"]],
 		['connect-src', ["'self'"]],
+		// The Turnstile widget of the contact form (ticket 1000) is a frame of Cloudflare.
+		['frame-src', [TURNSTILE_ORIGIN]],
 		['worker-src', ["'self'", 'blob:']],
 		['object-src', ["'none'"]],
 		['base-uri', ["'self'"]],

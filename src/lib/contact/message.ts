@@ -51,6 +51,9 @@ export const MESSAGE_NOT_SAVED =
 /** Said when a brake refuses the send (ticket 161): the proxy's 429 and the action's own refusal use the same sentence. */
 export const MESSAGE_TOO_MANY_MESSAGES =
 	'Vous avez envoyé beaucoup de messages en peu de temps. Ce que vous avez écrit est conservé : patientez un peu, puis réessayez.'
+/** Said when the Turnstile check fails (ticket 1000): nothing is stored and what she typed is kept. */
+export const MESSAGE_VERIFICATION_FAILED =
+	'La vérification anti-robot n’a pas abouti. Ce que vous avez écrit est conservé : réessayez dans un instant.'
 /** The trap field of the form (ticket 161): out of sight, never filled by a person. */
 export const CONTACT_TRAP_FIELD = 'commentaire'
 export const ERRORS_SUMMARY = 'Le message n’a pas été envoyé : corrigez les champs signalés.'
@@ -110,4 +113,6 @@ export type ContactState =
 	| { echec: true; reseau?: true; valeurs: ContactMessage }
 	/** A brake refused the send (ticket 161). The typing comes back. */
 	| { limite: true; valeurs: ContactMessage }
+	/** The anti-robot check (Turnstile) did not pass (ticket 1000). The typing comes back. */
+	| { verification: true; valeurs: ContactMessage }
 	| null

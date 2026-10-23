@@ -1,7 +1,9 @@
 import type { Metadata } from 'next'
+import { connection } from 'next/server'
 import { Cta } from '@/components/blocks/Cta'
 import { Hero } from '@/components/blocks/Hero'
 import { ContactForm } from '@/components/contact/ContactForm'
+import { serverEnv } from '@/lib/env'
 import { pageMetadata } from '@/lib/seo/metadata'
 import { sendMessage } from './actions'
 
@@ -21,7 +23,10 @@ const CONTACT_DETAILS = [
 	{ titre: 'Aide et questions', email: 'help@my-makeup.fr' },
 ] as const
 
-export default function PageContact() {
+/** Rendered on request: the site key of the widget is read when the server runs, not frozen into the build (ticket 1000). */
+export default async function PageContact() {
+	await connection()
+	const siteKey = serverEnv().turnstile?.siteKey
 	return (
 		<main className="relative">
 			<Hero
@@ -36,7 +41,7 @@ export default function PageContact() {
 					Une demande particulière, un bug, une idée ? N’hésitez pas à nous contacter via le formulaire ci-dessous !
 				</p>
 			</div>
-			<ContactForm action={sendMessage} />
+			<ContactForm action={sendMessage} {...(siteKey !== undefined && { siteKey })} />
 			<section className="relative py-20">
 				<div className="mx-auto flex max-w-7xl flex-col px-4 md:flex-row md:px-8 xl:px-0">
 					<div className="mx-auto mb-10 w-full md:w-1/2">

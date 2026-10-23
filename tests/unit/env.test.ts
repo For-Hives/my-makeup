@@ -580,6 +580,47 @@ describe('the mails leave through the relay the environment names, or not at all
 		expect(statsTokenFromEnv(` ${'z'.repeat(32)} `)).toBe('z'.repeat(32))
 	})
 
+	test('Turnstile: both keys or none, nothing without the secret, and a test key never on the site (ticket 1000)', () => {
+		const base = { DATABASE_URI: 'postgres://u:p@localhost:5432/base', PAYLOAD_SECRET: 'x'.repeat(40) }
+		expect(parseServerEnv(base).turnstile).toBeUndefined()
+		expect(parseServerEnv({ ...base, NEXT_PUBLIC_TURNSTILE_SITE_KEY: '0x4AAAAAAexample' }).turnstile).toBeUndefined()
+		expect(
+			parseServerEnv({
+				...base,
+				TURNSTILE_SECRET_KEY: '0x4AAAAAAsecret-fictive',
+				NEXT_PUBLIC_TURNSTILE_SITE_KEY: '0x4AAAAAAexample',
+			}).turnstile
+		).toEqual({ secret: '0x4AAAAAAsecret-fictive', siteKey: '0x4AAAAAAexample' })
+		// One half alone is refused, by name, and the value is never in the message.
+		const alone = refusal({ ...base, TURNSTILE_SECRET_KEY: '0x4AAAAAAsecret-fictive' })
+		expect(alone.variables).toEqual(['NEXT_PUBLIC_TURNSTILE_SITE_KEY'])
+		expect(alone.message).not.toContain('secret-fictive')
+		// Cloudflare’s published test keys work on this machine and the bench…
+		const testKeys = {
+			TURNSTILE_SECRET_KEY: '1x0000000000000000000000000000000AA',
+			NEXT_PUBLIC_TURNSTILE_SITE_KEY: '1x00000000000000000000AA',
+		}
+		expect(parseServerEnv({ ...base, ...testKeys }).turnstile?.siteKey).toBe(testKeys.NEXT_PUBLIC_TURNSTILE_SITE_KEY)
+		// … and stop the start of the site itself.
+		const site = {
+			...base,
+			...SITE_RELAY,
+			NODE_ENV: 'production',
+			NEXT_PUBLIC_SITE_URL: 'https://my-makeup.fr',
+		} as RawEnv
+		expect(refusal({ ...site, ...testKeys }).variables.sort()).toEqual([
+			'NEXT_PUBLIC_TURNSTILE_SITE_KEY',
+			'TURNSTILE_SECRET_KEY',
+		])
+		expect(
+			parseServerEnv({
+				...site,
+				TURNSTILE_SECRET_KEY: '0x4AAAAAAsecret-fictive',
+				NEXT_PUBLIC_TURNSTILE_SITE_KEY: '0x4AAAAAAexample',
+			}).turnstile
+		).toBeDefined()
+	})
+
 	test('SMTP_HOST, SMTP_PORT and EMAIL_FROM give the relay and the sender', () => {
 		expect(parseServerEnv(relay).mail).toEqual({
 			fromAddress: 'ne-pas-repondre@example.test',

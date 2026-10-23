@@ -10,7 +10,7 @@ import { HOST } from './legal'
  * Plain data, no import of the server: the page is static.
  */
 
-export type ProviderId = 'hebergement' | 'mesure' | 'photos' | 'email' | 'google'
+export type ProviderId = 'hebergement' | 'mesure' | 'photos' | 'verification' | 'email' | 'google'
 
 export type Provider = {
 	id: ProviderId
@@ -46,6 +46,13 @@ export const PROVIDERS: readonly Provider[] = [
 		nom: 'Cloudflare (service R2)',
 		phrase: 'stockage des photos des profils.',
 		configuration: 'r2.cloudflarestorage.com',
+	},
+	{
+		id: 'verification',
+		nom: 'Cloudflare (service Turnstile)',
+		phrase:
+			'vérification anti-robot du formulaire de contact ; Cloudflare reçoit un contrôle technique de votre navigateur (dont son adresse IP), jamais votre message ni vos coordonnées.',
+		configuration: 'challenges.cloudflare.com',
 	},
 	{
 		id: 'email',

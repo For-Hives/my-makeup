@@ -250,3 +250,56 @@ test('161 : le 429 du proxy, relevé par le script de Next, redevient une limite
 
 	expect(await action(null, formValue)).toEqual({ limite: true, valeurs: VALUES })
 })
+
+// Turnstile (ticket 1000).
+const TURNSTILE_SRC = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'
+
+test('Turnstile : sans clé de site, aucun script et aucun cadre', async () => {
+	const { element } = mount(async () => null)
+	const zone = await jsdomWindow.monter(element)
+
+	expect(jsdomWindow.w.document.querySelector(`script[src="${TURNSTILE_SRC}"]`)).toBeNull()
+	expect(zone.querySelector('[data-testid="turnstile"]')).toBeNull()
+})
+
+test('Turnstile : avec une clé, le script de Cloudflare est chargé et, tant qu’il va bien, aucun signal de panne n’est envoyé', async () => {
+	const measured: Analytics[] = []
+	const element = (
+		<ContactForm
+			action={async () => null}
+			siteKey="0x4AAAAAAexample"
+			suivre={(nom, proprietes) => void measured.push({ nom, proprietes })}
+		/>
+	)
+	const zone = await jsdomWindow.monter(element)
+
+	expect(jsdomWindow.w.document.querySelector(`script[src="${TURNSTILE_SRC}"]`)).toBeTruthy()
+	expect(zone.querySelector('[data-testid="turnstile"]')).toBeTruthy()
+	expect(zone.querySelector('input[name="turnstile-unavailable"]')).toBeNull()
+})
+
+test('Turnstile : un script qui ne charge pas (bloqueur, panne) pose le signal de panne et le formulaire reste utilisable', async () => {
+	const zone = await jsdomWindow.monter(<ContactForm action={async () => null} siteKey="0x4AAAAAAexample" />)
+	const script = jsdomWindow.w.document.querySelector(`script[src="${TURNSTILE_SRC}"]`)
+	expect(script).toBeTruthy()
+
+	await jsdomWindow.attendre(() => {
+		script?.dispatchEvent(new jsdomWindow.w.Event('error'))
+		return zone.querySelector('input[name="turnstile-unavailable"]')
+	})
+
+	expect(zone.querySelector<HTMLInputElement>('input[name="turnstile-unavailable"]')?.value).toBe('1')
+	expect((jsdomWindow.bouton('Envoyer l’email') as HTMLButtonElement).disabled).toBe(false)
+})
+
+test('Turnstile : une vérification refusée garde la saisie et le dit', async () => {
+	const { element } = mount(async () => ({ verification: true, valeurs: VALUES }))
+	const zone = await jsdomWindow.monter(element)
+	await fill()
+
+	await jsdomWindow.cliquer(jsdomWindow.bouton('Envoyer l’email'))
+	await jsdomWindow.attendre(() => zone.querySelector('[role="alert"] p'))
+
+	expect(zone.querySelector('[role="alert"]')?.textContent).toContain('La vérification anti-robot n’a pas abouti.')
+	expect(jsdomWindow.champ('Message').value).toBe('Une question.')
+})

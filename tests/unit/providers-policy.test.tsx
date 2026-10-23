@@ -6,6 +6,7 @@ import Page from '@/app/(front)/(site)/politique-de-confidentialite/page'
 import { GOOGLE_ISSUER, UMAMI_ORIGIN_DEFAULT } from '@/lib/env'
 import { HOST } from '@/lib/legal'
 import { PHOTO_ERASURE_DAYS, PROVIDERS } from '@/lib/providers'
+import { TURNSTILE_ORIGIN } from '@/lib/security-headers'
 import { PURGE_DELAY_DAYS } from '@/lib/tasks/unconfirmed-accounts'
 import { pageText } from '../support/page-text'
 
@@ -30,8 +31,15 @@ describe('la liste des sous-traitants', () => {
 		expect(renderToStaticMarkup(<Page />).match(/<li[\s>]/g)).toHaveLength(PROVIDERS.length)
 	})
 
-	test('une seule entrée par rôle, les cinq rôles du site', () => {
-		expect(PROVIDERS.map(({ id }) => id).sort()).toEqual(['email', 'google', 'hebergement', 'mesure', 'photos'])
+	test('une seule entrée par rôle, les six rôles du site', () => {
+		expect(PROVIDERS.map(({ id }) => id).sort()).toEqual([
+			'email',
+			'google',
+			'hebergement',
+			'mesure',
+			'photos',
+			'verification',
+		])
 	})
 
 	test('l’hébergeur est celui des mentions légales', () => {
@@ -45,6 +53,12 @@ describe('la liste des sous-traitants', () => {
 
 	test('la connexion Google est celle de l’émetteur configuré', () => {
 		expect(new URL(GOOGLE_ISSUER).hostname).toBe(byId('google')?.configuration as string)
+	})
+
+	test('la vérification anti-robot est l’origine que la politique de contenu et le script nomment (ticket 1000)', () => {
+		expect(new URL(TURNSTILE_ORIGIN).hostname).toBe(byId('verification')?.configuration as string)
+		expect(read('src/components/contact/TurnstileWidget.tsx')).not.toContain('http://')
+		expect(text).toContain('Cloudflare Turnstile')
 	})
 
 	test('le stockage des photos et le relais d’emails sont ceux de la configuration d’exemple', () => {

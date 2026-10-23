@@ -9,7 +9,13 @@ import { buildCustomRoute } from 'next/dist/server/lib/router-utils/filesystem'
 import { hasRemoteMatch } from 'next/dist/shared/lib/match-remote-pattern'
 import { compileNonPath } from 'next/dist/shared/lib/router/utils/prepare-destination'
 import { EnvError, MEDIA_ORIGIN_DEFAULT, mediaOrigin } from '@/lib/env'
-import { benchImages, contentSecurityPolicy, mediaRemotePattern, securityHeaders } from '@/lib/security-headers'
+import {
+	benchImages,
+	contentSecurityPolicy,
+	mediaRemotePattern,
+	securityHeaders,
+	TURNSTILE_ORIGIN,
+} from '@/lib/security-headers'
 
 // Made-up hosts only: a name in `.test` never resolves.
 const OTHER_MEDIA = 'https://medias.exemple.test'
@@ -175,13 +181,15 @@ describe('the content policy is in report-only mode and names no third-party dom
 		}
 	})
 
-	test('the photos are the only remote origin: nothing for measurement, no report sent elsewhere', async () => {
+	test('the photos and Turnstile are the only remote origins: nothing for measurement, no report sent elsewhere', async () => {
 		const policy = (await headersSentFor(await production(), '/')).get('content-security-policy-report-only') ?? ''
 
-		expect(remoteSources(policy)).toEqual([MEDIA_ORIGIN_DEFAULT])
+		// The photos, and Cloudflare's challenge origin for the Turnstile widget (ticket 1000): script and frame only.
+		expect(remoteSources(policy)).toEqual([TURNSTILE_ORIGIN, MEDIA_ORIGIN_DEFAULT, TURNSTILE_ORIGIN])
+		expect(sourcesOf(policy, 'frame-src')).toEqual([TURNSTILE_ORIGIN])
 		expect(sourcesOf(policy, 'img-src')).toEqual(["'self'", 'data:', 'blob:', MEDIA_ORIGIN_DEFAULT])
 		// Scripts and requests stay on the site: the measurement script and its sends go through /u.
-		expect(sourcesOf(policy, 'script-src')).toEqual(["'self'", "'unsafe-inline'"])
+		expect(sourcesOf(policy, 'script-src')).toEqual(["'self'", "'unsafe-inline'", TURNSTILE_ORIGIN])
 		expect(sourcesOf(policy, 'connect-src')).toEqual(["'self'"])
 		expect(sourcesOf(policy, 'default-src')).toEqual(["'self'"])
 		expect(policy).not.toContain('*')
@@ -202,7 +210,7 @@ describe('the content policy is in report-only mode and names no third-party dom
 		const config = await configUnder({ NODE_ENV: 'production', R2_PUBLIC_URL: OTHER_MEDIA })
 		const policy = (await headersSentFor(config, '/')).get('content-security-policy-report-only') ?? ''
 
-		expect(remoteSources(policy)).toEqual([OTHER_MEDIA])
+		expect(remoteSources(policy)).toEqual([TURNSTILE_ORIGIN, OTHER_MEDIA, TURNSTILE_ORIGIN])
 	})
 })
 
