@@ -102,6 +102,7 @@ describe('1002 : lecture du code', () => {
 		const pages = read('src/components/analytics/PageAnalytics.tsx')
 		expect(pages).toContain('recordSearch(')
 		expect(pages).toContain('analyticsRefused(')
+		expect(pages).toContain('navigator.webdriver')
 		// One decision: the pagination and the back button are skipped for both.
 		expect(pages.match(/shouldEmit\('search_submit'/g)?.length).toBe(1)
 	})

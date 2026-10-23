@@ -25,7 +25,8 @@ function optOutStorage(): Storage | undefined {
  * Renders nothing.
  *
  * The same decision also adds one to the count of the day (issue 1002): three facts and a code of the
- * list of the départements, no text, no identifier. A browser that opted out of the measure does not count.
+ * list of the départements, no text, no identifier. A browser that opted out of the measure, or an automated
+ * one (`navigator.webdriver`), does not count.
  */
 export function SearchAnalytics({
 	aUneVille,
@@ -43,7 +44,8 @@ export function SearchAnalytics({
 		const form = formSubmission(browser)
 		if (!shouldEmit('search_submit', empreinte, 'meme-vue', browser) && !form) return
 		track('search_submit', { has_city: aUneVille, results: resultats, from: form ? 'formulaire' : 'lien' })
-		if (!analyticsRefused(optOutStorage()))
+		// An automated browser (a crawler, a test) counts nothing, like the Umami event (src/lib/analytics/track.ts).
+		if (!navigator.webdriver && !analyticsRefused(optOutStorage()))
 			void recordSearch({ withCity: aUneVille, noResult: resultats === '0', department: departement })
 	}, [aUneVille, resultats, empreinte, departement])
 	return null
