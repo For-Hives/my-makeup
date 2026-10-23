@@ -40,3 +40,20 @@ export function talentBlockTitle(talentTitle: string): string {
 	const [first = ''] = talentTitle.trim()
 	return `Des maquilleuses pour votre ${first.toLowerCase()}${talentTitle.trim().slice(first.length)}`
 }
+
+/** How many cards « Récemment mises à jour » shows on the home page (issue 1013). */
+export const RECENT_PROFILES_COUNT = 3
+
+/**
+ * The cards of « Récemment mises à jour »: the profiles whose last save is the most recent, the order of the
+ * directory (most complete first) breaking a tie. Only those the block of a page of text also shows: publishable,
+ * and with a way to be reached. At most `limit`.
+ */
+export function recentCards(directory: readonly DirectoryProfile[], limit: number): ProfileCard[] {
+	return directory
+		.filter(profile => profile.indexable && !profile.unreachable)
+		.map((profile, rank) => ({ profile, rank }))
+		.toSorted((a, b) => (b.profile.updatedAt ?? 0) - (a.profile.updatedAt ?? 0) || a.rank - b.rank)
+		.slice(0, limit)
+		.map(({ profile }) => profile.carte)
+}

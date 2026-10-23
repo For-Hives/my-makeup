@@ -41,7 +41,8 @@ test.describe('La mesure de la recherche, des appels à l’action et de la 404'
 	test('la soumission du formulaire : une fois, la tranche et la ville, jamais le texte ; le clic donne rang et profil', async ({
 		page,
 	}) => {
-		await page.goto('/')
+		// The free text is typed in the form of the search page: the guided form of the home page sends a fixed word.
+		await page.goto('/search')
 		await page.getByLabel('Prestation recherchée').fill('mariage lea@example.test')
 		await page.getByLabel('Ville de la prestation').fill('Annecy')
 		await page.getByRole('button', { name: 'Trouver une maquilleuse' }).click()

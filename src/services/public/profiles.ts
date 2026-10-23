@@ -734,7 +734,7 @@ export interface DirectoryProfile extends ProfilePlace, ProfileGeometry {
 	startingPrice?: number | null
 	/** The speciality bullets she chose: what the speciality filter reads (issue 1011). */
 	specialtyBullets?: readonly string[]
-	/** When her profile was last saved, in milliseconds: what the sort by update reads (issue 1011). */
+	/** When her profile was last saved, in milliseconds: what the sort by update and « Récemment mises à jour » read (issues 1011 and 1013). */
 	updatedAt?: number
 	/** True when her profile is publishable (`isIndexable`): the pages of a speciality show only those (ticket 305). */
 	indexable: boolean
