@@ -1,4 +1,4 @@
-import type { Payload, PayloadRequest, Where } from 'payload'
+import type { Payload, PayloadRequest } from 'payload'
 import { isAdmin } from '../access'
 
 /**
@@ -34,8 +34,7 @@ type User = PayloadRequest['user'] | undefined
 
 export async function readOverview(payload: Payload, user: User): Promise<Overview | null> {
 	if (!isAdmin(user)) return null
-	const count = async (collection: 'profiles' | 'pros' | 'contact-requests', where: Where): Promise<number> =>
-		(await payload.count({ collection, where, overrideAccess: false, user })).totalDocs
+	const total = (result: { totalDocs: number }): number => result.totalDocs
 	const [
 		published,
 		draft,
@@ -47,13 +46,32 @@ export async function readOverview(payload: Payload, user: User): Promise<Overvi
 		messages,
 		moderations,
 	] = await Promise.all([
-		count('profiles', { status: { equals: 'published' } }),
-		count('profiles', { status: { equals: 'draft' } }),
-		count('profiles', { status: { equals: 'hidden' } }),
-		count('pros', { _verified: { not_equals: true } }),
-		count('contact-requests', { mailStatus: { equals: 'failed' } }),
-		count('contact-requests', { status: { equals: 'new' } }),
-		count('profiles', { 'zoneReview.reason': { exists: true } }),
+		payload
+			.count({ collection: 'profiles', where: { status: { equals: 'published' } }, overrideAccess: false, user })
+			.then(total),
+		payload
+			.count({ collection: 'profiles', where: { status: { equals: 'draft' } }, overrideAccess: false, user })
+			.then(total),
+		payload
+			.count({ collection: 'profiles', where: { status: { equals: 'hidden' } }, overrideAccess: false, user })
+			.then(total),
+		payload
+			.count({ collection: 'pros', where: { _verified: { not_equals: true } }, overrideAccess: false, user })
+			.then(total),
+		payload
+			.count({
+				collection: 'contact-requests',
+				where: { mailStatus: { equals: 'failed' } },
+				overrideAccess: false,
+				user,
+			})
+			.then(total),
+		payload
+			.count({ collection: 'contact-requests', where: { status: { equals: 'new' } }, overrideAccess: false, user })
+			.then(total),
+		payload
+			.count({ collection: 'profiles', where: { 'zoneReview.reason': { exists: true } }, overrideAccess: false, user })
+			.then(total),
 		payload.find({
 			collection: 'contact-requests',
 			depth: 0,

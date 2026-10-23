@@ -9,7 +9,7 @@ function fakePayload() {
 			asked.push({ collection, where })
 			const key = JSON.stringify(where)
 			const answers: Record<string, number> = {
-				[JSON.stringify({ status: { equals: 'published' } })]: collection === 'profiles' ? 7 : 2,
+				[JSON.stringify({ status: { equals: 'published' } })]: 7,
 				[JSON.stringify({ status: { equals: 'draft' } })]: 3,
 				[JSON.stringify({ status: { equals: 'hidden' } })]: 1,
 				[JSON.stringify({ _verified: { not_equals: true } })]: 4,
