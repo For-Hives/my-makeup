@@ -52,7 +52,8 @@ export function composeSpecialty(
 	other: string | null | undefined
 ): string {
 	const labels = normalizeBullets(bullets).map(labelOf)
-	const free = (other ?? '').trim()
+	// Not trimmed here: the forms trim, and an existing text must come back as it was.
+	const free = other ?? ''
 	return [...labels, ...(free ? [free] : [])].join(SEPARATOR)
 }
 
@@ -77,32 +78,34 @@ interface SpecialtyFields {
 }
 
 /**
- * What a save of a profile writes for the specialty. The shown text is always composed here, so the
- * three fields never disagree:
- * - the bullets or the « Autre » text are in the save: the text is composed from them (the one that is
- *   not in the save keeps its stored value);
- * - only the text is in the save (the administration, an older caller) and it is not what the stored
- *   fields compose: it is ranged like an existing text (`splitLegacySpecialty`);
- * - nothing about the specialty is in the save: nothing is written.
+ * What a save of a profile writes for the specialty. Payload hands the hook the whole document, so the
+ * fields are compared with the stored ones to know which the caller changed. The shown text is always
+ * composed here, so the three fields never disagree:
+ * - the bullets or the « Autre » text changed: the text is composed from them;
+ * - only the text changed (the administration, an older caller) and it is not what the stored fields
+ *   compose: it is ranged like an existing text (`splitLegacySpecialty`);
+ * - nothing changed: nothing is written.
  */
 export function specialtyPatch(data: SpecialtyFields, stored: SpecialtyFields | null | undefined): SpecialtyFields {
-	const hasBullets = data.specialtyBullets !== undefined
-	const hasOther = data.specialtyOther !== undefined
-	if (hasBullets || hasOther) {
-		const bullets = normalizeBullets(hasBullets ? data.specialtyBullets : stored?.specialtyBullets)
-		const other = ((hasOther ? data.specialtyOther : stored?.specialtyOther) ?? '').trim()
-		// An empty text is stored as nothing, as the import reads it from the old site.
+	const bullets = normalizeBullets(
+		data.specialtyBullets !== undefined ? data.specialtyBullets : stored?.specialtyBullets
+	)
+	const other = ((data.specialtyOther !== undefined ? data.specialtyOther : stored?.specialtyOther) ?? ''
+	const storedBullets = normalizeBullets(stored?.specialtyBullets)
+	const storedOther = stored?.specialtyOther ?? ''
+	const created = stored == null && (data.specialtyBullets !== undefined || data.specialtyOther !== undefined)
+	// An empty text is stored as nothing, as the import reads it from the old site.
+	if (created || bullets.join() !== storedBullets.join() || other !== storedOther)
 		return {
 			specialty: composeSpecialty(bullets, other) || null,
 			specialtyBullets: bullets,
 			specialtyOther: other || null,
 		}
-	}
-	if (data.specialty === undefined) return {}
+	if (data.specialty === undefined || (data.specialty ?? '') === (stored?.specialty ?? '')) return {}
 	const text = data.specialty ?? ''
-	if (text === composeSpecialty(stored?.specialtyBullets, stored?.specialtyOther)) return {}
-	const { bullets, other } = splitLegacySpecialty(text)
-	return { specialtyBullets: bullets, specialtyOther: other || null }
+	if (text === composeSpecialty(storedBullets, storedOther)) return {}
+	const legacy = splitLegacySpecialty(text)
+	return { specialtyBullets: legacy.bullets, specialtyOther: legacy.other || null }
 }
 
 /**

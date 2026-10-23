@@ -27,7 +27,8 @@ describe('1010 : les puces de spécialité', () => {
 		expect(composeSpecialty(['specialEffects', 'wedding'], 'Body painting')).toBe(
 			'Mariage, Effets spéciaux, Body painting'
 		)
-		expect(composeSpecialty([], '  Teint  ')).toBe('Teint')
+		expect(composeSpecialty([], 'Teint')).toBe('Teint')
+		expect(composeSpecialty([], ' Teint ')).toBe(' Teint ')
 		expect(composeSpecialty([], '')).toBe('')
 	})
 
@@ -66,7 +67,7 @@ describe('1010 : les puces de spécialité', () => {
 })
 
 describe('1010 : ce qu’un enregistrement de profil écrit', () => {
-	test('des puces ou « Autre » dans l’enregistrement : le texte est composé', () => {
+	test('des puces ou « Autre » changés : le texte est composé', () => {
 		expect(specialtyPatch({ specialtyBullets: ['event', 'wedding'] }, null)).toEqual({
 			specialty: 'Mariage, Soirée et événement',
 			specialtyBullets: ['wedding', 'event'],
@@ -77,12 +78,30 @@ describe('1010 : ce qu’un enregistrement de profil écrit', () => {
 		)
 	})
 
-	test('le texte seul : rangé comme un texte existant, sauf s’il est déjà celui des champs', () => {
+	test('Payload donne le document entier : seul ce qui diffère du stocké compte', () => {
+		const stored = { specialty: 'Mariage', specialtyBullets: ['wedding'], specialtyOther: null }
+		// Nothing changed: nothing written.
+		expect(specialtyPatch({ ...stored }, stored)).toEqual({})
+		// Only the text changed (administration): ranged in « Autre », whole.
+		expect(specialtyPatch({ ...stored, specialty: 'Teint lumineux' }, stored)).toEqual({
+			specialtyBullets: [],
+			specialtyOther: 'Teint lumineux',
+		})
+		// The same text as the stored fields compose: nothing written.
+		expect(specialtyPatch({ specialty: 'Mariage' }, stored)).toEqual({})
+		// Cleared bullets: the text is emptied.
+		expect(specialtyPatch({ ...stored, specialtyBullets: [] }, stored)).toEqual({
+			specialty: null,
+			specialtyBullets: [],
+			specialtyOther: null,
+		})
+	})
+
+	test('un texte seul sur un profil neuf est rangé comme un texte existant', () => {
 		expect(specialtyPatch({ specialty: 'Teint lumineux' }, null)).toEqual({
 			specialtyBullets: [],
 			specialtyOther: 'Teint lumineux',
 		})
-		expect(specialtyPatch({ specialty: 'Mariage' }, { specialtyBullets: ['wedding'] })).toEqual({})
 		expect(specialtyPatch({}, null)).toEqual({})
 	})
 })
