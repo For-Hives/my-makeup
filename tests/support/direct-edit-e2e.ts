@@ -45,7 +45,8 @@ export async function checkScreen(page: Page, label: string): Promise<void> {
 	const small = await page.evaluate(() =>
 		[
 			...document.querySelectorAll<HTMLElement>(
-				'main button, main input:not([type="hidden"]), [data-direct-edit-editor] a'
+				// A file field is drawn as the big button of its label (56 px): the field itself is only read by a keyboard.
+				'main button, main input:not([type="hidden"]):not([type="file"]), [data-direct-edit-editor] a'
 			),
 		]
 			.filter(element => {

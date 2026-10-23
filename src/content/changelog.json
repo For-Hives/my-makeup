@@ -320,6 +320,11 @@
 			"id": "tu-peux-modifier-tes-prestations-et-tes-tarifs-directemen",
 			"type": "amelioration",
 			"text": "Tu peux modifier tes prestations et tes tarifs directement sur ta page : un seul bouton ajoute la prestation et enregistre la liste, avec des modèles, des exemples de prix et des options."
+		},
+		{
+			"id": "tu-peux-gerer-ton-portfolio-directement-sur-ta-page-ajout",
+			"type": "amelioration",
+			"text": "Tu peux gérer ton portfolio directement sur ta page : ajouter des photos, les retirer, changer leur ordre, choisir ta photo principale parmi elles et décrire chaque photo."
 		}
 	],
 	"releases": []

@@ -1,3 +1,4 @@
+import type { GalleryWork } from '@/components/direct-edit/blocks/GalleryBlock'
 import { bodyEdit } from '@/components/direct-edit/body-edit'
 import { EditBar } from '@/components/direct-edit/EditBar'
 import { EditSession } from '@/components/direct-edit/EditSession'
@@ -59,6 +60,7 @@ export function benchOf(
 		photo?: DashboardPhoto | null
 		gallery?: DashboardPhoto[]
 		actions?: Record<string, Action>
+		galleryWork?: GalleryWork
 	} = {}
 ) {
 	const profile = options.profile ?? FULL
@@ -120,7 +122,12 @@ export function benchOf(
 						mesure={false}
 						edit={{
 							header,
-							body: bodyEdit({ profile, actions }),
+							body: bodyEdit({
+								profile,
+								photos: { photo, galerie: gallery, principaleManquante: false },
+								actions,
+								...(options.galleryWork ? { galleryWork: options.galleryWork } : {}),
+							}),
 						}}
 					/>
 				</EditSession>
