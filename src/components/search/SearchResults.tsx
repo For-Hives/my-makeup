@@ -1,3 +1,4 @@
+import { RankingLink } from '@/components/ranking/RankingLink'
 import { ResultList } from '@/components/search/ResultList'
 import { ResultPages } from '@/components/search/ResultPages'
 import { SearchRefine } from '@/components/search/SearchRefine'
@@ -77,6 +78,7 @@ export function SearchResults({
 					/>
 				</section>
 			))}
+			<RankingLink />
 			<ResultPages recherche={{ ...query, ...filters }} page={page.page} pages={page.pages} />
 		</div>
 	)

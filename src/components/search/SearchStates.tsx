@@ -1,3 +1,4 @@
+import { RankingLink } from '@/components/ranking/RankingLink'
 import type { SearchFilters } from '@/lib/search/filters'
 import { type Search, searchPageUrl } from '@/lib/search/input'
 import { inDepartment } from '@/lib/search/place'
@@ -122,6 +123,7 @@ export function NoResult({
 						Elles se déplacent loin
 					</h2>
 					<ResultList cartes={loin} />
+					<RankingLink />
 				</section>
 			)}
 		</>

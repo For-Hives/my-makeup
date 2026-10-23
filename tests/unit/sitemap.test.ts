@@ -185,7 +185,7 @@ describe('U43 : talents et articles par slug, pages fixes d’une table explicit
 
 	test('la table des pages fixes est celle des adresses gelées, ni plus ni moins', () => {
 		const frozen = FROZEN_URL_FAMILIES.filter(({ id }) =>
-			['accueil', 'pages-fixes', 'mentions-legales', 'blog'].includes(id)
+			['accueil', 'pages-fixes', 'mentions-legales', 'blog', 'classement'].includes(id)
 		).flatMap(({ patterns }) => patterns)
 		expect([...STATIC_PAGES.map(({ chemin: filePath }) => filePath)].sort()).toEqual([...frozen].sort())
 	})

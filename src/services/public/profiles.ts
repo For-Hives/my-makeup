@@ -829,6 +829,7 @@ export async function readDirectory(
 				updatedAt: true,
 				specialtyBullets: true,
 			},
+			// The order the page `/classement` announces (DIRECTORY_SORT, src/lib/search/ranking.ts): a test compares the two.
 			sort: ['-completeness', '-updatedAt', 'slug'],
 			depth: 0,
 			limit: LIST_MAX_LIMIT,

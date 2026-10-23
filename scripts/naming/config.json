@@ -8,6 +8,10 @@
 				"reason": "Frozen public address: the folder name is the URL (src/lib/frozen-urls.ts, docs/migration/URLS.md)."
 			},
 			{
+				"path": "src/app/(front)/(site)/classement",
+				"reason": "Public address: the folder name is the URL (src/lib/frozen-urls.ts, docs/migration/URLS.md)."
+			},
+			{
 				"path": "src/app/(front)/(site)/demande-envoyee",
 				"reason": "Frozen public address: the folder name is the URL (src/lib/frozen-urls.ts, docs/migration/URLS.md)."
 			},

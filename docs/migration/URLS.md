@@ -50,6 +50,7 @@ Chaque ligne de la table `01` §6.3 est reprise ici : la dernière colonne donne
 | `plan-du-site` | `/site-map` | Plan du site | Régénéré depuis Payload, profils publiables seulement | 200 | 13 |
 | `demande-envoyee` | `/demande-envoyee` | Page de remerciement, en `noindex` | Identique, en `noindex` | 200 | — |
 | `adresse-inconnue` | `/*` | Toute autre adresse | Page 404 en français, jamais 500 | 404 | — |
+| `classement` | `/classement` | Page inexistante | Créée (issue 1012) : comment sont classées les maquilleuses, indexable, liée sous chaque liste | 200 | — |
 <!-- urls:familles:pages:fin -->
 
 Les quatre familles qui partagent le motif `/profil/<slug>` ne se distinguent que par les données : c'est la base qui sait si un slug est connu. Un profil non publiable reste joignable en 200, avec `noindex`, comme aujourd'hui.
@@ -184,6 +185,7 @@ Ce tableau liste les familles dont le code change pour une visiteuse sans sessio
 | `api-nextauth` | `/api/auth/*` | 200, 302, 404 | 404 |
 | `api-sendmail` | `/api/sendMail` | 405 | 404 |
 | `llms-txt` | `/llms.txt` | 404 | 200 |
+| `classement` | `/classement` | 404 | 200 |
 <!-- urls:ecarts:fin -->
 
 ## Adresses nouvelles, hors gel
