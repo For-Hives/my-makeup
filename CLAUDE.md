@@ -27,6 +27,7 @@ My Makeup est un annuaire de maquilleuses professionnelles indépendantes. Cette
 | lancer l'import des données de l'ancien site, lire son rapport, y ajouter une collection | [`docs/migration/IMPORT.md`](docs/migration/IMPORT.md) |
 | créer, déplacer ou retirer une adresse | [`docs/migration/URLS.md`](docs/migration/URLS.md) |
 | toucher à l'édition directe du profil (blocs éditables, mode édition, jetons de la direction artistique) | [`docs/edition-directe.md`](docs/edition-directe.md) |
+| préparer, lister ou lancer le courriel aux membres après la bascule (liste à blanc, verrous, journal d'envoi) | [`docs/membres-courriel.md`](docs/membres-courriel.md) |
 | faire autrement que le site en ligne | [`docs/migration/CHANGEMENTS-VOULUS.md`](docs/migration/CHANGEMENTS-VOULUS.md) |
 | jouer la bascule, ou savoir quoi faire à chaque étape du jour J et du retour arrière | [`docs/migration/BASCULE.md`](docs/migration/BASCULE.md) |
 | savoir ce qui est déjà fait et vérifié | [`docs/migration/JOURNAL.md`](docs/migration/JOURNAL.md) |
@@ -65,6 +66,7 @@ Tout se lance depuis la racine du dépôt. La table complète est dans le README
 | `bun run schema:drift` | Dit s'il manque une migration aux collections du code, sans base ni secret. Bloquant en CI depuis la migration `init` (ticket 049) : une collection changée sans sa migration rend le job `qualite` rouge. |
 | `bun scripts/migration/urls-doc.ts` | Après un changement de la table des URL (voir « URL »). Avec `--check`, il dit seulement si le document suit la table. |
 | `bun run notes:add <type> "<phrase>"` | Un changement qui se remarque par rapport au site en ligne : sa note de version, dans le même commit. Type `ajout`, `amelioration` ou `correction` (voir `docs/publication.md`). |
+| `bun run members:mail [options]` | Le courriel unique aux membres (issue 998). Sans option, une liste à blanc : rien ne part, un rapport de nombres et de numéros de profil. L'envoi exige `--send`, `MEMBERS_MAIL_SEND=on`, `--limit` et `--send-log`. `bun run bench:members-mail` la joue sur le banc (voir [`docs/membres-courriel.md`](docs/membres-courriel.md)). |
 | `bun run names:check [dossier…]` | Liste les noms encore français (fichiers, dossiers, noms déclarés, scripts, variables d'environnement, options), hors exceptions nommées. Code de sortie 1 s'il en reste. `--summary` donne les nombres (voir « Conventions » et [`docs/noms.md`](docs/noms.md)). Tourne dans la CI (job `qualite`, étape « English names »), sous `ci-ok` : un nom français nouveau la rend rouge. La liste d'attente est vide. |
 | `bun run release:publish --dry-run` | Montre ce que ferait la prochaine publication : le numéro, les notes rangées dessous. N'écrit rien. Seul le workflow `release.yml` publie. |
 
@@ -197,6 +199,7 @@ Le même mot français a le même mot anglais partout (source : `PLAN-ANGLAIS.md
 | revue de zone (privée, d'un profil) / candidate (commune possible) | `zoneReview` / `candidate` | à l'étranger / drapeau | `abroad` / `flag` |
 | relance (courriel de rappel) / désinscription | `reminder` / `unsubscribe` | inactif (compte sans activité) / rapport (interne) | `inactive` / `report` |
 | devis (demande de) / formulaire de devis | `quoteRequest` / `quote form` | consentement / interrupteur (d'exploitation) | `consent` / `switch` |
+| courriel aux membres (envoi unique) / journal d'envoi | `membersMail` / `sendLog` | plafond (d'une passe) / destinataire | `limit` / `recipient` |
 | édition directe (sur la page) / bloc éditable | `direct-edit` (dossier `src/components/direct-edit`) / `EditableBlock` (jamais « zone » : le mot est pris par la localisation) | mode édition / session d'édition | `edit mode` / `EditSession` |
 | modèle (de prestation) / médiane (des prix) | `OfferModel` (`src/lib/price-median.ts`) / `median` | prestation phare / noms de départ (du profil) | `flagship` (`flagship-offer.ts`) / `initialNames` |
 
