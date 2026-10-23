@@ -22,6 +22,7 @@ import { DESCRIPTION_MAX_LENGTH, NAME_MAX_LENGTH } from '@/lib/profile/lists'
 import { profileState, statusAfter } from '@/lib/profile/state'
 import { RADIUS_BOUNDS_KM } from '@/lib/profile/zone'
 import { slugify } from '@/lib/slug'
+import { composeSpecialty, SPECIALTY_MAX, SPECIALTY_VALUES } from '@/lib/specialty'
 import { benchEnvironment, ROOT } from '../support/bench'
 
 /**
@@ -214,8 +215,12 @@ describe('Les 12 profils types du plan 02 §6', () => {
 			return field && 'maxLength' in field && typeof field.maxLength === 'number' ? field.maxLength : Number.NaN
 		}
 
-		for (const name of ['firstName', 'lastName', 'artistName', 'specialty', 'description'] as const)
+		for (const name of ['firstName', 'lastName', 'artistName', 'specialtyOther', 'description'] as const)
 			expect({ nom: name, longueur: profile[name]?.length }).toEqual({ nom: name, longueur: bound(name) })
+		// The shown specialty is every bullet and the full « Autre », within the bound of the field.
+		expect(profile.specialty).toBe(composeSpecialty(profile.specialtyBullets, profile.specialtyOther))
+		expect(profile.specialtyBullets).toHaveLength(SPECIALTY_VALUES.length)
+		expect(profile.specialty?.length).toBeLessThanOrEqual(SPECIALTY_MAX)
 		expect(profile.radiusKm).toBe(RADIUS_BOUNDS_KM.max)
 		expect(photos.galerie).toHaveLength(GALLERY_MAX)
 		for (const serviceOffer of profile.serviceOffers ?? []) {
