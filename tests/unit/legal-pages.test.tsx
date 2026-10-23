@@ -27,7 +27,7 @@ const PAGES = [
 // The words of the live site, as the hash of their plain text (the text itself is the page's). The one
 // wanted differences are in the policy: the paragraph « Formulaire de contact » (ticket 162, register
 // `contact-conservation-12-mois`), and the providers, the email confirmation and the delay of the photos
-// (ticket 189, register `politique-a-jour-a-la-bascule`), the daily photo copy that keeps a removed photo (ticket 278),
+// (ticket 189, register `politique-a-jour-a-la-bascule`), Cloudflare Turnstile on the contact form (ticket 1000, register `contact-verifie-par-turnstile`), the daily photo copy that keeps a removed photo (ticket 278),
 // the terms without the quote form that does not exist (ticket 291, register `cgu-sans-formulaire-de-devis`),
 // the paragraph on the count of the searches by day (issue 1002, register `compteur-recherches-par-jour`),
 // and the paragraph on the counter of views (ticket 1001, register `espace-vues-de-la-page`).
