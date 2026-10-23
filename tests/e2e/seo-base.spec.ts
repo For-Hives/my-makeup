@@ -27,7 +27,8 @@ test.describe('Socle SEO', () => {
 
 		expect(response.headers()['x-robots-tag']).toBe('noindex, follow')
 		const robots = await request.get('/robots.txt')
-		if (robots.ok()) expect(await robots.text()).not.toMatch(/Disallow:\s*\/(search|auth)/)
+		// Only the general group: the groups of the assistants' crawlers close /search and /auth (ticket 1014).
+		if (robots.ok()) expect((await robots.text()).split(/\n\s*\n/)[0] ?? '').not.toMatch(/Disallow:\s*\/(search|auth)/)
 	})
 
 	test('une page publique ne coupe jamais la reprise par les assistants', async ({ page }) => {
