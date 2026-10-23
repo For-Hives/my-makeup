@@ -20,6 +20,31 @@ export interface HeaderEdit {
 	panel: ReactNode
 }
 
+/**
+ * What wraps a block of the body of the page (issues 1016 to 1021). It is given the block as the
+ * visitor sees it, or `null` when the block has nothing to show: the public page leaves such a block
+ * out, her own page keeps it, with an invitation in its place.
+ */
+export type BlockSlot = (read: ReactNode | null) => ReactNode
+
+/** The blocks of the body of the page she can change; a block without a function is drawn as the visitor sees it. */
+export interface BodyEdit {
+	/** « À propos », her presentation text. */
+	about: BlockSlot
+	skills: BlockSlot
+	languages: BlockSlot
+	courses: BlockSlot
+	services: BlockSlot
+	gallery: BlockSlot
+	/** The sentence of her travels. */
+	travel: BlockSlot
+	/** Her networks and her website. */
+	networks: BlockSlot
+	/** Her phone and her contact email, shown only with her dated consent. */
+	contacts: BlockSlot
+}
+
 export interface ProfileEdit {
 	header: HeaderEdit
+	body?: Partial<BodyEdit>
 }

@@ -30,6 +30,7 @@ export function BlockForm({
 	onFailure,
 	disabled = false,
 	keepsHint,
+	submitLabel = 'Enregistrer',
 	children,
 }: {
 	title: string
@@ -42,6 +43,8 @@ export function BlockForm({
 	disabled?: boolean
 	/** What the session message says stays: « ta photo est toujours là ». */
 	keepsHint: string
+	/** The words of the button that saves, when the block says more than « Enregistrer » (« Enregistrer cette prestation »). */
+	submitLabel?: string
 	children: ReactNode
 }) {
 	const session = useEditSession()
@@ -119,7 +122,7 @@ export function BlockForm({
 					disabled={pending || disabled}
 					className="min-h-11 rounded-full border border-lipstick bg-lipstick px-6 font-semibold text-sm text-white disabled:cursor-not-allowed disabled:opacity-60"
 				>
-					{pending ? 'Enregistrement…' : 'Enregistrer'}
+					{pending ? 'Enregistrement…' : submitLabel}
 				</button>
 			</div>
 		</form>

@@ -12,6 +12,16 @@ Issue 1008 (cadre : 1007). L'espace de la maquilleuse devient le profil public l
 - **Les blocs de l'en-tête** (`blocks/`) : photo principale, nom et spécialité (les quatre champs partent ensemble : le serveur n'en accepte pas moins), zone (le champ unique de l'espace), disponibilité. Ils réutilisent les actions serveur de l'espace (`saveMyMainPicture`, `saveMyIdentity`, `saveMyLocation`, `saveMyAvailability`) : mêmes gardes (session relue, origine, profil trouvé par le compte), mêmes limites d'envoi des photos (issue 309). Aucune règle d'accès nouvelle.
 - **Les jetons** de la direction artistique sont dans `src/app/(front)/globals.css` (`@theme`) : `blush`, `ink`, `lipstick` (réservé à ce qui se modifie), `nude-*`, `hairline`, `mute`, `rounded-card`, `font-display`, `font-body`. Bodoni Moda et Instrument Sans sont chargés par `src/components/direct-edit/fonts.ts`, importé par la seule route privée.
 
+## Les blocs du corps de la page
+
+`ProfileView` reçoit aussi, en mode édition, `edit.body` (`BodyEdit`, `edit-slots.ts`) : une fonction par bloc du corps, bâtie par `body-edit.tsx` à partir de son profil (`artistProfile`) et des actions serveur de l'espace. Elle reçoit le bloc tel que la visiteuse le voit, ou `null` quand il n'y a rien à montrer : la page publique omet ce bloc, la page de la propriétaire le garde avec son invitation. Un bloc sans fonction est dessiné comme pour une visiteuse.
+
+- **Présentation** (`AboutBlock`, issue 1016) : le texte et son compteur (2 000 caractères au plus, dits pendant la saisie).
+- **Compétences et langues** (`BulletsBlock`) : des puces ; les règles des listes L1 à L7.
+- **Formations** (`RowsBlock`) : des lignes ; un seul bouton, « Enregistrer cette formation », ajoute la ligne en cours et enregistre la liste. `RowsBlock` sert aussi aux prestations (issue 1017).
+- Pas de `<form>` dans un `<form>` : l'éditeur d'un bloc vit dans le formulaire du bloc (`BlockForm`), Entrée dans un champ est « enregistrer ».
+- L'éditeur d'un bloc du corps s'ouvre sous l'en-tête, dans le même emplacement que celui de l'en-tête (`EditorFrame` le fait défiler dans la vue).
+
 ## Ajouter une zone de la page
 
 Une autre tranche (issues 1016 à 1021) ajoute un bloc : un composant client dans `blocks/` fondé sur `EditableBlock` et `BlockForm`, une fonction d'emplacement dans `edit-slots.ts`, et son câblage dans `header-edit.tsx` (ou un équivalent pour le corps de la page).

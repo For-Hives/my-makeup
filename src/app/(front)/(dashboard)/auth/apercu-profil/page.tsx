@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { PreviewBanner } from '@/components/dashboard/PreviewBanner'
+import { bodyEdit } from '@/components/direct-edit/body-edit'
 import { EditBar } from '@/components/direct-edit/EditBar'
 import { body, display } from '@/components/direct-edit/fonts'
 import { headerEdit } from '@/components/direct-edit/header-edit'
@@ -13,7 +14,15 @@ import { DASHBOARD_PATH, PREVIEW_PATH, previewState } from '@/lib/dashboard/prev
 import { requestUser } from '@/lib/dashboard/request'
 import { EDIT_QUERY, editPath, isEditRequest } from '@/lib/direct-edit/edit-mode'
 import { readProfilePreview } from '@/services/public/profiles'
-import { saveMyAvailability, saveMyIdentity, saveMyMainPicture } from '../profil/actions'
+import {
+	saveMyAvailability,
+	saveMyDescription,
+	saveMyIdentity,
+	saveMyLanguages,
+	saveMyMainPicture,
+	saveMySkills,
+} from '../profil/actions'
+import { saveMyCourses } from '../profil/lists-actions'
 import { findMyCities, saveMyLocation } from '../profil/location-actions'
 
 // Read per request: it depends on the session, and the build has no database. Private and never
@@ -73,6 +82,15 @@ export default async function PreviewPage({ searchParams }: PageProps<'/auth/ape
 								savePlace: saveMyLocation,
 								saveStatus: saveMyAvailability,
 								searchCities: findMyCities,
+							},
+						}),
+						body: bodyEdit({
+							profile,
+							actions: {
+								saveAbout: saveMyDescription,
+								saveSkills: saveMySkills,
+								saveLanguages: saveMyLanguages,
+								saveCourses: saveMyCourses,
 							},
 						}),
 					}}
