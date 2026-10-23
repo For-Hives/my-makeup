@@ -1,0 +1,25 @@
+# What `docker build` may read. Everything is refused, then what the build needs is let
+# through, one line each: a local .env, a dump of .migration/, the git history or the tests
+# never reach the builder, even under a name nobody thought of.
+#
+# The only files of scripts/ and tests/ let through are the import and the fake Strapi source of
+# the bench, which is fictional. They stay for the import that runs in the container of the site
+# (ticket 233); the pre-production that used them is gone (ticket 232).
+#
+# The list is frozen by tests/ci/ci-guardrails.test.ts: a new line is added there too.
+*
+!package.json
+!bun.lock
+!patches
+!next.config.ts
+!tsconfig.json
+!postcss.config.json
+!src
+!public
+!scripts/migration/import
+!tests/support/source-strapi/creation.ts
+!tests/support/source-strapi/data.ts
+!tests/support/source-strapi/images.ts
+!tests/support/source-strapi/schema.ts
+!tests/fixtures/import/bench-decisions.json
+!tests/fixtures/import/bench-reference.json

@@ -1,5 +1,5 @@
 {
-	"$schema": "https://biomejs.dev/schemas/2.5.13/schema.json",
+	"$schema": "https://biomejs.dev/schemas/2.4.11/schema.json",
 	"vcs": {
 		"enabled": true,
 		"clientKind": "git",
@@ -7,9 +7,28 @@
 		"defaultBranch": "main"
 	},
 	"files": {
-		"ignoreUnknown": false,
-		"includes": ["**", "!pnpm-lock.yaml", "!**/*.svg"],
-		"maxSize": 1048576
+		"ignoreUnknown": true,
+		"includes": [
+			"src/**/*",
+			"tests/**/*",
+			"scripts/**/*",
+			"!!**/.claude",
+			"*.ts",
+			"*.tsx",
+			"*.js",
+			"*.jsx",
+			"!src/payload-types.ts",
+			"!src/app/(payload)/admin/importMap.js",
+			"!src/content/changelog.json",
+			"!src/migrations/*.json",
+			"!next-env.d.ts"
+		],
+		"maxSize": 10485760
+	},
+	"html": {
+		"formatter": {
+			"indentScriptAndStyle": true
+		}
 	},
 	"formatter": {
 		"enabled": true,
@@ -20,8 +39,7 @@
 		"lineWidth": 120,
 		"attributePosition": "auto",
 		"bracketSameLine": false,
-		"bracketSpacing": true,
-		"useEditorconfig": true
+		"bracketSpacing": true
 	},
 	"css": {
 		"parser": {
@@ -29,13 +47,12 @@
 		}
 	},
 	"linter": {
-		"domains": {
-			"next": "recommended",
-			"test": "recommended"
-		},
 		"enabled": true,
+		"domains": {
+			"next": "recommended"
+		},
 		"rules": {
-			"preset": "recommended",
+			"recommended": true,
 			"correctness": {
 				"useExhaustiveDependencies": "off",
 				"noUnusedVariables": "error",
@@ -51,13 +68,7 @@
 			},
 			"suspicious": {
 				"noArrayIndexKey": "warn",
-				"noUnknownAtRules": "off",
-				"noConsole": {
-					"level": "warn",
-					"options": {
-						"allow": ["error", "warn"]
-					}
-				}
+				"noUnknownAtRules": "off"
 			},
 			"security": {
 				"noDangerouslySetInnerHtml": "off"
@@ -67,6 +78,19 @@
 			}
 		}
 	},
+	"overrides": [
+		{
+			"includes": ["tests/**/*"],
+			"linter": {
+				"rules": {
+					"suspicious": {
+						"noFocusedTests": "error",
+						"noSkippedTests": "error"
+					}
+				}
+			}
+		}
+	],
 	"javascript": {
 		"formatter": {
 			"jsxQuoteStyle": "double",
@@ -80,12 +104,6 @@
 			"bracketSpacing": true
 		}
 	},
-	"html": {
-		"formatter": {
-			"selfCloseVoidElements": "always",
-			"indentScriptAndStyle": true
-		}
-	},
 	"assist": {
 		"enabled": true,
 		"actions": {
@@ -93,17 +111,5 @@
 				"organizeImports": "on"
 			}
 		}
-	},
-	"overrides": [
-		{
-			"includes": ["**/scripts/**"],
-			"linter": {
-				"rules": {
-					"suspicious": {
-						"noConsole": "off"
-					}
-				}
-			}
-		}
-	]
+	}
 }

@@ -1,0 +1,56 @@
+# The weekly probes of the live site (ticket 157, plan 02 §7.6 and §8.2, docs/tests/sondes.md).
+# Every Monday at 07:00 in Paris (the cron has its own time zone, so summer and winter time do not
+# move it) it runs R01 to R06 against the live site, read-only, and writes the report in the
+# summary of the run. The weekly report of 07:30 reads the result through GitHub: the conclusion of
+# the latest run of this workflow (docs/tests/sondes.md, « Le lancement du lundi »).
+#
+# Rules, enforced by tests/unit/probes-monday-ci.test.ts and the guard rails of every workflow
+# (tests/ci/ci-guardrails.test.ts):
+# - no secret of production, no token, no variable: the probes read as an anonymous visitor.
+#   R02 (sitemap against the publishable profiles) needs the token of the service, so here it
+#   stays « inconnu », which is not a failure; Andy plays it by hand with the token;
+# - a red probe, or a probe not run, fails the run (exit code 1 of `bun run probes`): that is
+#   what the weekly report turns into an alert. Nothing here softens a failure (no
+#   `continue-on-error`, no `|| true`);
+# - the target is the live site, written in the probes, never an input of this file.
+name: Sondes du lundi
+
+on:
+  schedule:
+    - cron: '0 7 * * 1'
+      timezone: Europe/Paris
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# With `shell: bash`, GitHub runs every command under `bash -eo pipefail`: the exit code of the
+# probes survives the `tee` of the summary.
+defaults:
+  run:
+    shell: bash
+
+# Two runs at once would double the requests on the site: the second waits.
+concurrency:
+  group: sondes
+  cancel-in-progress: false
+
+jobs:
+  sondes:
+    name: sondes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - name: Run the probes on the live site
+        run: |
+          echo '### Sondes du site en ligne' >> "$GITHUB_STEP_SUMMARY"
+          echo "Lancées le $(TZ=Europe/Paris date '+%d/%m/%Y à %H:%M') (heure de Paris)." >> "$GITHUB_STEP_SUMMARY"
+          echo >> "$GITHUB_STEP_SUMMARY"
+          bun run probes 2>&1 | sed 's/^/    /' | tee -a "$GITHUB_STEP_SUMMARY"

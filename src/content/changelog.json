@@ -1,0 +1,296 @@
+{
+	"description": "Les notes de version du site, en français : ce qu'une visiteuse ou une maquilleuse peut remarquer. Une note s'ajoute par « bun run notes:add » et attend dans « pending » ; la publication la range sous son numéro, dans « releases ». Voir docs/publication.md.",
+	"pending": [
+		{
+			"id": "les-pages-introuvables-et-les-pages-d-erreur-s-affichent",
+			"type": "amelioration",
+			"text": "Les pages introuvables et les pages d'erreur s'affichent en français, dans le même cadre que le reste du site."
+		},
+		{
+			"id": "tu-peux-te-deconnecter-de-tous-tes-appareils-d-un-seul-co",
+			"type": "ajout",
+			"text": "Tu peux te déconnecter de tous tes appareils d’un seul coup, depuis ton espace."
+		},
+		{
+			"id": "la-deconnexion-ferme-vraiment-ta-session-et-te-ramene-a-l",
+			"type": "correction",
+			"text": "La déconnexion ferme vraiment ta session, et te ramène à l’accueil au lieu d’une page introuvable."
+		},
+		{
+			"id": "quand-tu-t-inscris-tu-recois-un-email-pour-confirmer-ton",
+			"type": "ajout",
+			"text": "Quand tu t’inscris, tu reçois un email pour confirmer ton adresse, puis tu arrives sur ton espace."
+		},
+		{
+			"id": "a-l-inscription-ton-nom-est-libre-et-ton-mot-de-passe-n-a",
+			"type": "amelioration",
+			"text": "À l’inscription, ton nom est libre et ton mot de passe n’a plus besoin de majuscule ni de chiffre : huit caractères suffisent."
+		},
+		{
+			"id": "tu-restes-connectee-tant-que-tu-passes-dans-ton-espace-pe",
+			"type": "amelioration",
+			"text": "Tu restes connectée tant que tu passes dans ton espace, pendant 90 jours au plus."
+		},
+		{
+			"id": "si-ton-email-n-arrive-pas-tu-peux-le-renvoyer-depuis-la-p",
+			"type": "amelioration",
+			"text": "Si ton email n’arrive pas, tu peux le renvoyer depuis la page qui te demande de vérifier ta boîte mail."
+		},
+		{
+			"id": "s-inscrire-avec-l-adresse-de-quelqu-un-d-autre-ne-cree-pl",
+			"type": "correction",
+			"text": "S’inscrire avec l’adresse de quelqu’un d’autre ne crée plus de second compte, et les faux comptes jamais confirmés disparaissent au bout de 7 jours."
+		},
+		{
+			"id": "tu-peux-retrouver-l-acces-a-ton-compte-mot-de-passe-oubli",
+			"type": "amelioration",
+			"text": "Tu peux retrouver l’accès à ton compte : « Mot de passe oublié ? » t’envoie par email un lien, valable 24 heures, pour choisir un nouveau mot de passe, et tes autres appareils sont alors déconnectés."
+		},
+		{
+			"id": "avec-google-l-inscription-arrive-directement-dans-ton-acc",
+			"type": "amelioration",
+			"text": "Avec Google, l’inscription arrive directement dans ton accueil sans email de confirmation, et si Google n’a pas confirmé ton adresse, un message te le dit au lieu d’une page d’erreur."
+		},
+		{
+			"id": "quand-une-recherche-ne-trouve-personne-la-page-propose-ma",
+			"type": "amelioration",
+			"text": "Quand une recherche ne trouve personne, la page propose maintenant la zone voisine, et un lien pour créer ton profil si tu es maquilleuse."
+		},
+		{
+			"id": "sur-le-profil-d-une-maquilleuse-les-competences-langues-f",
+			"type": "amelioration",
+			"text": "Sur le profil d’une maquilleuse, les compétences, langues, formations, expériences, prestations avec leurs prix et réseaux sont lisibles dès l’ouverture de la page, même sans JavaScript."
+		},
+		{
+			"id": "le-portfolio-d-une-maquilleuse-se-parcourt-au-doigt-et-au",
+			"type": "amelioration",
+			"text": "Le portfolio d’une maquilleuse se parcourt au doigt et au clavier, avec les flèches, et annonce la photo affichée (« Photo 2 sur 6 »)."
+		},
+		{
+			"id": "ton-espace-affiche-ton-profil-section-par-section-avec-a",
+			"type": "ajout",
+			"text": "Ton espace affiche ton profil section par section, avec « à compléter » là où il manque quelque chose."
+		},
+		{
+			"id": "tu-modifies-ton-prenom-ton-nom-ton-nom-d-artiste-et-ta-sp",
+			"type": "ajout",
+			"text": "Tu modifies ton prénom, ton nom, ton nom d’artiste et ta spécialité depuis ton espace : la page n’affiche la nouvelle valeur qu’une fois enregistrée, et un échec te le dit."
+		},
+		{
+			"id": "le-panneau-de-modification-de-ton-espace-s-ouvre-des-le-p",
+			"type": "amelioration",
+			"text": "Le panneau de modification de ton espace s’ouvre dès le premier tap, prend tout l’écran du téléphone, se parcourt au clavier (Échap pour fermer) et annonce le résultat aux lecteurs d’écran."
+		},
+		{
+			"id": "tu-rediges-ta-description-depuis-ton-espace-avec-un-compt",
+			"type": "ajout",
+			"text": "Tu rédiges ta description depuis ton espace, avec un compteur qui montre les 200 caractères qui rendent ton profil publiable, une limite de 2 000 caractères et tes sauts de ligne gardés."
+		},
+		{
+			"id": "tu-choisis-ta-commune-dans-la-liste-officielle-avec-ton-r",
+			"type": "ajout",
+			"text": "Tu choisis ta commune dans la liste officielle, avec ton rayon d’action et « à domicile », depuis ton espace."
+		},
+		{
+			"id": "tu-peux-te-declarer-disponible-ou-indisponible-depuis-ton",
+			"type": "ajout",
+			"text": "Tu peux te déclarer disponible ou indisponible depuis ton espace. Indisponible, ton profil n’apparaît plus dans la recherche."
+		},
+		{
+			"id": "tu-choisis-si-ton-telephone-et-ton-email-s-affichent-sur",
+			"type": "ajout",
+			"text": "Tu choisis si ton téléphone et ton email s’affichent sur ton profil, et ton espace te dit depuis quand."
+		},
+		{
+			"id": "tu-peux-renseigner-tes-reseaux-et-ton-site-depuis-ton-esp",
+			"type": "ajout",
+			"text": "Tu peux renseigner tes réseaux et ton site depuis ton espace : écris ton pseudo ou colle l’adresse, on s’occupe du reste."
+		},
+		{
+			"id": "quand-tu-modifies-ton-profil-ta-page-publique-est-a-jour",
+			"type": "amelioration",
+			"text": "Quand tu modifies ton profil, ta page publique est à jour en moins d’une minute, ainsi que la recherche et le plan du site."
+		},
+		{
+			"id": "tu-modifies-tes-langues-et-tes-competences-depuis-ton-esp",
+			"type": "ajout",
+			"text": "Tu modifies tes langues et tes compétences depuis ton espace : Entrée ajoute, un nom déjà dans ta liste est refusé avec un message, chaque retrait est annoncé et le focus reste dans le panneau."
+		},
+		{
+			"id": "tu-peux-modifier-tes-experiences-tes-formations-et-tes-pr",
+			"type": "amelioration",
+			"text": "Tu peux modifier tes expériences, tes formations et tes prestations ligne par ligne dans ton espace, et ton prix se lit tout seul : « à partir de 80 € » compte pour rendre ton profil publiable, « sur devis » reste affiché tel quel."
+		},
+		{
+			"id": "tu-peux-choisir-ta-photo-principale-et-composer-ton-portf",
+			"type": "ajout",
+			"text": "Tu peux choisir ta photo principale et composer ton portfolio depuis ton espace : tes photos sont réduites avant l’envoi, une photo refusée est écartée sans perdre les autres, et chaque photo retirée est annoncée."
+		},
+		{
+			"id": "ton-espace-te-dit-ou-en-est-ton-profil-un-pourcentage-de",
+			"type": "ajout",
+			"text": "Ton espace te dit où en est ton profil : un pourcentage de complétude, ce qui te manque pour être publiable, et ce que ça change pour ta visibilité dans la recherche."
+		},
+		{
+			"id": "tu-peux-voir-ta-page-comme-une-visiteuse-la-voit-meme-si",
+			"type": "amelioration",
+			"text": "Tu peux voir ta page comme une visiteuse la voit, même si ton profil n’est pas encore affiché dans l’annuaire : le bouton « Voir mon profil public » ouvre ton aperçu, avec un bandeau qui te dit où en est ton profil."
+		},
+		{
+			"id": "tu-ajoutes-modifies-et-retires-les-options-de-chaque-pres",
+			"type": "ajout",
+			"text": "Tu ajoutes, modifies et retires les options de chaque prestation depuis ton espace, sans perdre ta place dans le champ pendant que tu tapes, même juste après un enregistrement."
+		},
+		{
+			"id": "apres-avoir-confirme-ton-adresse-tu-crees-ton-profil-en-t",
+			"type": "ajout",
+			"text": "Après avoir confirmé ton adresse, tu crées ton profil en trois étapes (identité, zone, photo) et tu peux reprendre là où tu t’étais arrêtée."
+		},
+		{
+			"id": "tu-peux-supprimer-ton-compte-depuis-ton-espace-tu-retapes",
+			"type": "amelioration",
+			"text": "Tu peux supprimer ton compte depuis ton espace : tu retapes ton mot de passe pour confirmer, et ton profil, ton compte et tes photos disparaissent d'un seul coup."
+		},
+		{
+			"id": "tu-peux-ecrire-a-l-equipe-depuis-la-page-contact-ton-mess",
+			"type": "ajout",
+			"text": "Vous pouvez écrire à l’équipe depuis la page Contact : votre message est enregistré avant d’être envoyé, il ne se perd plus si l’envoi de l’email échoue, et les erreurs s’affichent sous les champs."
+		},
+		{
+			"id": "chaque-page-de-specialite-a-un-titre-d-onglet-plus-comple",
+			"type": "amelioration",
+			"text": "Chaque page de spécialité a un titre d’onglet plus complet, pour mieux apparaître dans les résultats de recherche."
+		},
+		{
+			"id": "quand-tu-ouvres-ton-espace-depuis-un-lien-dans-un-mail-ou",
+			"type": "correction",
+			"text": "Quand tu ouvres ton espace depuis un lien dans un mail ou un autre site, tu restes connectée au lieu d’arriver sur la page de connexion."
+		},
+		{
+			"id": "quand-l-equipe-a-ton-profil-ouvert-pour-le-modifier-ton-e",
+			"type": "amelioration",
+			"text": "Quand l’équipe a ton profil ouvert pour le modifier, ton enregistrement est refusé avec un message clair, et ce que tu as saisi reste dans le formulaire."
+		},
+		{
+			"id": "chercher-une-maquilleuse-par-code-postal-trouve-celles-de",
+			"type": "ajout",
+			"text": "Chercher une maquilleuse par code postal trouve celles de chaque commune du code postal."
+		},
+		{
+			"id": "une-maquilleuse-qui-travaille-a-l-etranger-ou-dans-plusie",
+			"type": "amelioration",
+			"text": "Une maquilleuse qui travaille à l'étranger ou dans plusieurs pays l'affiche sur son profil, avec le drapeau de chaque pays."
+		},
+		{
+			"id": "dans-ton-espace-un-code-postal-d-une-seule-commune-la-cho",
+			"type": "amelioration",
+			"text": "Dans ton espace, un code postal d'une seule commune la choisit tout seul."
+		},
+		{
+			"id": "dans-ton-espace-tu-peux-dire-que-tu-travailles-a-l-etrang",
+			"type": "ajout",
+			"text": "Dans ton espace, tu peux dire que tu travailles à l'étranger ou dans plusieurs pays."
+		},
+		{
+			"id": "une-fiche-de-maquilleuse-a-un-bouton-contacter-un-appui-o",
+			"type": "amelioration",
+			"text": "Une fiche de maquilleuse a un bouton « Contacter » : un appui ouvre appeler, écrire, Instagram ou son site, sur téléphone comme sur ordinateur."
+		},
+		{
+			"id": "la-fiche-d-une-maquilleuse-a-des-titres-plus-clairs-prest",
+			"type": "amelioration",
+			"text": "La fiche d'une maquilleuse a des titres plus clairs (« Prestations et tarifs », « À propos »), ses tarifs sont mis en avant, et le doublon de la zone a disparu."
+		},
+		{
+			"id": "sur-telephone-la-fiche-d-une-maquilleuse-met-ses-tarifs-e",
+			"type": "amelioration",
+			"text": "Sur téléphone, la fiche d'une maquilleuse met ses tarifs et son portfolio avant ses compétences, et un lien « Aller au contenu » permet de passer le menu au clavier."
+		},
+		{
+			"id": "la-recherche-range-en-fin-de-liste-les-maquilleuses-qui-n",
+			"type": "amelioration",
+			"text": "La recherche range en fin de liste les maquilleuses qui n’ont pas encore indiqué de coordonnées, et les conditions d’utilisation ne parlent plus d’un formulaire de devis qui n’existe pas."
+		},
+		{
+			"id": "si-ta-page-est-masquee-par-l-equipe-ton-espace-te-le-dit",
+			"type": "amelioration",
+			"text": "Si ta page est masquée par l’équipe, ton espace te le dit avec le motif, et si tu es en pause, tu peux reprendre les demandes d’un clic."
+		},
+		{
+			"id": "dans-ton-espace-le-lien-je-travaille-a-l-etranger-reagit",
+			"type": "amelioration",
+			"text": "Dans ton espace, le lien « Je travaille à l’étranger » réagit dès le premier appui, et si ta ville n’est pas en France (Genève, Liège, Turin), on te propose directement le pays."
+		},
+		{
+			"id": "dans-ton-espace-le-message-d-accueil-te-salue-par-ton-pre",
+			"type": "correction",
+			"text": "Dans ton espace, le message d'accueil te salue par ton prénom au lieu de « Bonjour toi »."
+		},
+		{
+			"id": "votre-recherche-par-ville-tient-compte-de-la-distance-les",
+			"type": "amelioration",
+			"text": "Votre recherche par ville tient compte de la distance : les maquilleuses de votre commune d’abord, puis celles qui se déplacent jusqu’à vous, puis celles qui sont à moins de 50 km."
+		},
+		{
+			"id": "quand-personne-n-est-inscrite-pres-de-la-ville-que-vous-c",
+			"type": "correction",
+			"text": "Quand personne n’est inscrite près de la ville que vous cherchez, la page le dit clairement au lieu de lister toutes les maquilleuses."
+		},
+		{
+			"id": "quand-tu-reviens-te-connecter-avec-un-profil-encore-vide",
+			"type": "amelioration",
+			"text": "Quand tu reviens te connecter avec un profil encore vide, on te propose tout de suite l’accueil en trois étapes, et ton espace te dit combien d’étapes il te reste pour être visible."
+		},
+		{
+			"id": "dans-ton-espace-la-jauge-compte-d-abord-les-six-points-in",
+			"type": "amelioration",
+			"text": "Dans ton espace, la jauge compte d’abord les six points indispensables (« 6/6 : ta page est prête »), puis une carte « Ta page est en ligne ! » te donne l’adresse de ta page avec un bouton pour copier le lien, le partager et l’ajouter à ta bio Instagram."
+		},
+		{
+			"id": "pour-ajouter-des-photos-a-ton-portfolio-un-grand-bouton-a",
+			"type": "amelioration",
+			"text": "Pour ajouter des photos à ton portfolio, un grand bouton « Ajouter des photos » remplace le champ de fichier brut."
+		},
+		{
+			"id": "ton-espace-presente-d-abord-ce-que-voient-les-clientes-ph",
+			"type": "amelioration",
+			"text": "Ton espace présente d’abord ce que voient les clientes (photo, identité, zone, prestations, contact, description), range le reste dans « Pour aller plus loin », met ta disponibilité en interrupteur en haut et ta déconnexion avec la suppression du compte en bas."
+		},
+		{
+			"id": "les-resultats-de-recherche-montrent-le-prix-de-depart-et",
+			"type": "amelioration",
+			"text": "Les résultats de recherche montrent le prix de départ et les prestations de chaque maquilleuse, et tiennent deux à trois par écran de téléphone."
+		},
+		{
+			"id": "les-pages-des-specialites-montrent-des-maquilleuses-a-con",
+			"type": "amelioration",
+			"text": "Les pages des spécialités montrent des maquilleuses à contacter, et la page de contact n’exige plus ton numéro de téléphone."
+		},
+		{
+			"id": "apres-la-suppression-de-ton-compte-l-accueil-te-le-confir",
+			"type": "amelioration",
+			"text": "Après la suppression de ton compte, l’accueil te le confirme, et le chapeau du blog parle enfin de ses articles."
+		},
+		{
+			"id": "apres-avoir-confirme-ton-adresse-un-clic-sur-continuer-ve",
+			"type": "amelioration",
+			"text": "Après avoir confirmé ton adresse (un clic sur « Continuer vers mon profil ») ou choisi un nouveau mot de passe, tu es connectée : plus besoin de retaper ton email et ton mot de passe."
+		},
+		{
+			"id": "tes-photos-sont-converties-en-webp-a-l-envoi-pour-charger",
+			"type": "amelioration",
+			"text": "Tes photos sont converties en WebP à l’envoi pour charger plus vite, tu vois la place qu’elles prennent et combien il t’en reste, et tu peux en envoyer jusqu’à 12 Mo chacune."
+		},
+		{
+			"id": "une-maquilleuse-dont-la-ville-n-est-pas-reconnue-ou-n-est",
+			"type": "amelioration",
+			"text": "Une maquilleuse dont la ville n'est pas reconnue, ou n'est pas indiquée, reste trouvable dans la recherche : elle apparaît simplement après celles dont la zone est connue."
+		},
+		{
+			"id": "le-lien-de-confirmation-recu-par-courrier-te-connecte-dir",
+			"type": "amelioration",
+			"text": "Le lien de confirmation reçu par courrier te connecte directement pendant 24 heures, et choisir un nouveau mot de passe par un lien confirme aussi ton adresse : tu n’as plus à te reconnecter pour rien."
+		}
+	],
+	"releases": []
+}

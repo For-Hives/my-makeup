@@ -1,0 +1,246 @@
+{
+	"description": "Jeu fictif figé (plan 01 §6.2, ticket 016) : les réponses de l'ancien site sur des profils inventés. Il ne vit que dans ce dépôt : l'ancien site ne le contient pas et ne le rejoue pas. Les valeurs attendues (slugAttendu, ordreDeCreation, segments) sont les résultats de src/lib/slug.js de la branche main, calculés sous Node. Elles ne se corrigent jamais à la main : un écart est un défaut du port. Pour les recalculer : la marche à suivre est au-dessus du bloc de tests du jeu, dans tests/unit/slugs.test.ts.",
+	"source": "origin/main 3585098, src/lib/slug.js (dernier changement : 897be06)",
+	"profils": [
+		{ "id": 3, "username": "zoé  lefèvre", "createdAt": "2025-06-01T10:00:00.000Z", "slugAttendu": "zoe-lefevre-4" },
+		{ "id": 1, "username": "Zoé Lefèvre", "createdAt": "2023-01-10T09:00:00.000Z", "slugAttendu": "zoe-lefevre" },
+		{ "id": 2, "username": "ZOE LEFEVRE", "createdAt": "2024-03-01T10:00:00.000Z", "slugAttendu": "zoe-lefevre-3" },
+		{
+			"id": 40,
+			"username": "Zoe  Lefevre",
+			"createdAt": "2024-03-01T11:30:00.000+02:00",
+			"slugAttendu": "zoe-lefevre-2"
+		},
+		{ "id": 39, "username": "Zoé Lefèvre", "createdAt": "2026-02-14T10:00:00.000Z", "slugAttendu": "zoe-lefevre-5" },
+		{ "id": 4, "username": "zoe-lefevre-2", "createdAt": "2025-07-01T10:00:00.000Z", "slugAttendu": "zoe-lefevre-2-2" },
+		{ "id": 5, "username": "Léa D'Angelo", "createdAt": "2023-02-11T08:30:00.000Z", "slugAttendu": "lea-d-angelo" },
+		{ "id": 6, "username": "Léa D’Angelo", "createdAt": "2023-02-12T08:30:00.000Z", "slugAttendu": "lea-d-angelo-2" },
+		{
+			"id": 7,
+			"username": "  Make-up ✨ by   Inès !! ",
+			"createdAt": "2023-03-01T10:00:00.000Z",
+			"slugAttendu": "make-up-by-ines"
+		},
+		{
+			"id": 8,
+			"username": "anne--marie__b.c",
+			"createdAt": "2023-03-02T10:00:00.000Z",
+			"slugAttendu": "anne-marie-b-c"
+		},
+		{ "id": 9, "username": "Chloé_74", "createdAt": "2023-03-03T10:00:00.000Z", "slugAttendu": "chloe-74" },
+		{
+			"id": 10,
+			"username": "Œuvre Ærø Straße",
+			"createdAt": "2023-03-04T10:00:00.000Z",
+			"slugAttendu": "oeuvre-aero-strasse"
+		},
+		{
+			"id": 11,
+			"username": "Łucja Đorđe Ðís Þór",
+			"createdAt": "2023-03-05T10:00:00.000Z",
+			"slugAttendu": "lucja-dorde-dis-thor"
+		},
+		{
+			"id": 41,
+			"username": "œil æther ßeta øre łuna đakovo ðis þing",
+			"createdAt": "2023-03-05T11:00:00.000Z",
+			"slugAttendu": "oeil-aether-sseta-ore-luna-dakovo-dis-thing"
+		},
+		{ "id": 12, "username": "ÇA", "createdAt": "2023-03-06T10:00:00.000Z", "slugAttendu": "ca" },
+		{
+			"id": 13,
+			"username": "testine.recette@example.test",
+			"createdAt": "2023-04-01T10:00:00.000Z",
+			"slugAttendu": "testine-recette-example-test"
+		},
+		{
+			"id": 14,
+			"username": "Testine.Recette@example.test",
+			"createdAt": "2023-04-02T10:00:00.000Z",
+			"slugAttendu": "testine-recette-example-test-2"
+		},
+		{ "id": 15, "username": "✨✨", "createdAt": "2023-05-01T10:00:00.000Z", "slugAttendu": "maquilleuse-15" },
+		{ "id": 16, "username": null, "createdAt": "2023-05-02T10:00:00.000Z", "slugAttendu": "maquilleuse-16-2" },
+		{ "id": 17, "username": "", "createdAt": "2023-05-03T10:00:00.000Z", "slugAttendu": "maquilleuse-17" },
+		{ "id": 18, "username": "   ", "createdAt": "2023-05-04T10:00:00.000Z", "slugAttendu": "maquilleuse-18" },
+		{ "id": 19, "username": "---", "createdAt": "2023-05-05T10:00:00.000Z", "slugAttendu": "maquilleuse-19" },
+		{
+			"id": 20,
+			"username": "maquilleuse-16",
+			"createdAt": "2023-04-20T10:00:00.000Z",
+			"slugAttendu": "maquilleuse-16"
+		},
+		{ "id": 21, "username": "Маша Тест", "createdAt": "2023-05-06T10:00:00.000Z", "slugAttendu": "maquilleuse-21" },
+		{ "id": 22, "username": "ﬁona ２４", "createdAt": "2023-05-07T10:00:00.000Z", "slugAttendu": "fiona-24" },
+		{
+			"id": 23,
+			"username": "Maëlle Ünal İpek ılgın",
+			"createdAt": "2023-05-08T10:00:00.000Z",
+			"slugAttendu": "maelle-unal-ipek-lg-n"
+		},
+		{
+			"id": 24,
+			"username": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"createdAt": "2023-06-01T10:00:00.000Z",
+			"slugAttendu": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+		},
+		{
+			"id": 25,
+			"username": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"createdAt": "2023-06-02T10:00:00.000Z",
+			"slugAttendu": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-2"
+		},
+		{
+			"id": 26,
+			"username": "abcdefghij abcdefghij abcdefghij abcdefghij abcdefghij abcdefghij abcdefghij abcdefghij abcdefghij abcdefghij ",
+			"createdAt": "2023-06-03T10:00:00.000Z",
+			"slugAttendu": "abcdefghij-abcdefghij-abcdefghij-abcdefghij-abcdefghij-abcdefghij-abcd"
+		},
+		{
+			"id": 42,
+			"username": "abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefgh-ij",
+			"createdAt": "2023-06-04T10:00:00.000Z",
+			"slugAttendu": "abcdefghi-abcdefghi-abcdefghi-abcdefghi-abcdefghi-abcdefghi-abcdefgh-i"
+		},
+		{
+			"id": 43,
+			"username": "abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefgh ij",
+			"createdAt": "2023-06-05T10:00:00.000Z",
+			"slugAttendu": "abcdefghi-abcdefghi-abcdefghi-abcdefghi-abcdefghi-abcdefghi-abcdefgh-2"
+		},
+		{ "id": 28, "username": "ana", "createdAt": "2024-01-01T00:00:00.000Z", "slugAttendu": "ana-2" },
+		{ "id": 27, "username": "Ana", "createdAt": "2024-01-01T00:00:00.000Z", "slugAttendu": "ana" },
+		{ "id": 29, "username": "ana-2", "createdAt": "2026-10-01T00:00:00.000Z", "slugAttendu": "ana-2-2" },
+		{
+			"id": 30,
+			"username": "Camille Annemasse",
+			"createdAt": "2024-02-01T10:00:00.000Z",
+			"slugAttendu": "camille-annemasse"
+		},
+		{ "id": 31, "username": "LeaNantes", "createdAt": "2024-03-15T10:00:00.000Z", "slugAttendu": "leanantes" },
+		{
+			"id": 32,
+			"username": "Élodie & Sarah / Studio n°5",
+			"createdAt": "2024-04-01T10:00:00.000Z",
+			"slugAttendu": "elodie-sarah-studio-n-5"
+		},
+		{
+			"id": 33,
+			"username": "Noël ½ journée ²",
+			"createdAt": "2024-04-02T10:00:00.000Z",
+			"slugAttendu": "noel-1-2-journee-2"
+		},
+		{ "id": 34, "username": "Sans Date", "createdAt": null, "slugAttendu": "sans-date" },
+		{ "id": 44, "username": "sans date", "slugAttendu": "sans-date-3" },
+		{ "id": 35, "username": "SANS DATE", "createdAt": "pas-une-date", "slugAttendu": "sans-date-2" },
+		{ "id": 36, "username": "Première Inscrite", "createdAt": "2022-05-05", "slugAttendu": "premiere-inscrite" },
+		{ "id": 37, "username": "42", "createdAt": "2024-05-01T10:00:00.000Z", "slugAttendu": "42" },
+		{
+			"id": 38,
+			"username": "Inès\tAnnecy\n74",
+			"createdAt": "2024-05-02T10:00:00.000Z",
+			"slugAttendu": "ines-annecy-74"
+		},
+		{
+			"id": 45,
+			"username": "İstanbul Güzeli",
+			"createdAt": "2024-05-03T10:00:00.000Z",
+			"slugAttendu": "istanbul-guzeli"
+		},
+		{
+			"id": 46,
+			"username": "e\u0301lodie de\u0301compose\u0301e",
+			"createdAt": "2024-05-04T10:00:00.000Z",
+			"slugAttendu": "elodie-decomposee"
+		},
+		{
+			"id": 47,
+			"username": "élodie décomposée",
+			"createdAt": "2024-05-05T10:00:00.000Z",
+			"slugAttendu": "elodie-decomposee-2"
+		},
+		{
+			"id": 48,
+			"username": "👩🏽\u200d🎨 Studio Recette 💄",
+			"createdAt": "2024-05-06T10:00:00.000Z",
+			"slugAttendu": "studio-recette"
+		},
+		{
+			"id": 49,
+			"username": "studio.recette",
+			"createdAt": "2024-05-07T10:00:00.000Z",
+			"slugAttendu": "studio-recette-2"
+		},
+		{
+			"id": 50,
+			"username": "STUDIO_RECETTE",
+			"createdAt": "2024-05-07T10:00:00.000Z",
+			"slugAttendu": "studio-recette-3"
+		}
+	],
+	"ordreDeCreation": [
+		36, 1, 5, 6, 7, 8, 9, 10, 11, 41, 12, 13, 14, 20, 15, 16, 17, 18, 19, 21, 22, 23, 24, 25, 26, 42, 43, 27, 28, 30,
+		40, 2, 31, 32, 33, 37, 38, 45, 46, 47, 48, 49, 50, 3, 4, 39, 29, 34, 35, 44
+	],
+	"segments": [
+		{ "segment": "zoe-lefevre", "id": 1, "slug": "zoe-lefevre", "redirection": false },
+		{ "segment": "Zoé Lefèvre", "id": 1, "slug": "zoe-lefevre", "redirection": true },
+		{ "segment": "ZOE LEFEVRE", "id": 2, "slug": "zoe-lefevre-3", "redirection": true },
+		{ "segment": "zoé lefèvre", "id": 1, "slug": "zoe-lefevre", "redirection": true },
+		{ "segment": "zoe-lefevre-2", "id": 40, "slug": "zoe-lefevre-2", "redirection": false },
+		{ "segment": "zoe-lefevre-2-2", "id": 4, "slug": "zoe-lefevre-2-2", "redirection": false },
+		{ "segment": "zoe-lefevre-99", "id": null, "slug": null },
+		{ "segment": "LeaNantes", "id": 31, "slug": "leanantes", "redirection": true },
+		{ "segment": "leanantes", "id": 31, "slug": "leanantes", "redirection": false },
+		{ "segment": "Camille-Annemasse", "id": 30, "slug": "camille-annemasse", "redirection": true },
+		{ "segment": "camille annemasse", "id": 30, "slug": "camille-annemasse", "redirection": true },
+		{ "segment": "Camille Annemasse", "id": 30, "slug": "camille-annemasse", "redirection": true },
+		{
+			"segment": "testine.recette@example.test",
+			"id": 13,
+			"slug": "testine-recette-example-test",
+			"redirection": true
+		},
+		{
+			"segment": "Testine.Recette@example.test",
+			"id": 14,
+			"slug": "testine-recette-example-test-2",
+			"redirection": true
+		},
+		{
+			"segment": "TESTINE RECETTE EXAMPLE TEST",
+			"id": 13,
+			"slug": "testine-recette-example-test",
+			"redirection": true
+		},
+		{ "segment": "✨✨", "id": 15, "slug": "maquilleuse-15", "redirection": true },
+		{ "segment": "   ", "id": 18, "slug": "maquilleuse-18", "redirection": true },
+		{ "segment": "maquilleuse-16", "id": 20, "slug": "maquilleuse-16", "redirection": false },
+		{ "segment": "MAQUILLEUSE-21", "id": 21, "slug": "maquilleuse-21", "redirection": true },
+		{ "segment": "Маша Тест", "id": 21, "slug": "maquilleuse-21", "redirection": true },
+		{ "segment": "ana", "id": 27, "slug": "ana", "redirection": false },
+		{ "segment": "Ana", "id": 27, "slug": "ana", "redirection": true },
+		{ "segment": "ana-2", "id": 28, "slug": "ana-2", "redirection": false },
+		{ "segment": "ANA-2", "id": 28, "slug": "ana-2", "redirection": true },
+		{ "segment": "Sans Date", "id": 34, "slug": "sans-date", "redirection": true },
+		{ "segment": "sans-date-3", "id": 44, "slug": "sans-date-3", "redirection": false },
+		{ "segment": "studio.recette", "id": 49, "slug": "studio-recette-2", "redirection": true },
+		{ "segment": "Studio Recette", "id": 48, "slug": "studio-recette", "redirection": true },
+		{
+			"segment": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"id": 24,
+			"slug": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"redirection": true
+		},
+		{
+			"segment": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"id": 24,
+			"slug": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"redirection": false
+		},
+		{ "segment": "inconnue", "id": null, "slug": null },
+		{ "segment": "", "id": null, "slug": null },
+		{ "segment": "---", "id": 19, "slug": "maquilleuse-19", "redirection": true },
+		{ "segment": "✨", "id": null, "slug": null }
+	]
+}

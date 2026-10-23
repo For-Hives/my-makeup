@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+@theme {
+	--color-my-makeup-900: #16191c;
+}
+
+/* Buttons of the site, as they are online. */
+@layer components {
+	.btn-primary-large {
+		@apply flex w-full justify-center rounded-md bg-indigo-900 px-3 py-2 font-semibold text-sm text-white hover:bg-indigo-700 focus-visible:outline-2 focus-visible:outline-indigo-900 focus-visible:outline-offset-2;
+	}
+
+	.btn-primary-simple {
+		@apply border-indigo-900 border-b-2 font-bold text-indigo-900 text-sm leading-6;
+	}
+
+	.btn-primary-with-icon {
+		@apply flex items-center rounded-lg border-2 border-indigo-900 bg-transparent px-4 py-2 text-indigo-900 text-sm leading-6;
+	}
+
+	.btn-primary {
+		@apply rounded-lg border-2 border-indigo-900 bg-indigo-900 px-4 py-2 font-bold text-sm text-white leading-6 focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2;
+	}
+
+	.btn-alt-primary {
+		@apply rounded-lg border-2 border-indigo-900 bg-transparent px-4 py-2 font-bold text-indigo-900 text-sm leading-6 focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2;
+	}
+
+	.btn-secondary-white {
+		@apply rounded-lg border-2 border-white bg-white px-4 py-2 font-bold text-indigo-900 text-sm leading-6;
+	}
+
+	.btn-secondary-white-bordered {
+		@apply rounded-lg border-2 border-white bg-transparent px-4 py-2 font-bold text-sm text-white leading-6;
+	}
+}
+
+/* The page that « Aller au contenu » sends the focus to: a ring around the whole page would say nothing. */
+main:focus {
+	outline: none;
+}

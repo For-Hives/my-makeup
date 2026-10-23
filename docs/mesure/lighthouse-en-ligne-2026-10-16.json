@@ -1,0 +1,42 @@
+{
+	"description": "Le site en ligne, mesuré en mobile le 16/10/2026 (ticket 056 : 5 passages par page, médiane, machine au repos, version déployée 7f43f1b, Lighthouse 13.5.0). La v3 se compare à ces valeurs (ticket 179). Copie des médianes de outils/migration/sortie/lighthouse du dépôt des plans ; aucune adresse de profil.",
+	"date": "2026-10-16",
+	"pages": {
+		"P01": {
+			"performance": 0.88,
+			"accessibility": 0.96,
+			"seo": 1,
+			"lcpMs": 3362,
+			"cls": 0,
+			"tbtMs": 235,
+			"scriptBytes": 218367
+		},
+		"P02": {
+			"performance": 0.79,
+			"accessibility": 1,
+			"seo": 0.66,
+			"lcpMs": 4431,
+			"cls": 0.0518,
+			"tbtMs": 253,
+			"scriptBytes": 213484
+		},
+		"P03": {
+			"performance": 0.95,
+			"accessibility": 1,
+			"seo": 1,
+			"lcpMs": 1993,
+			"cls": 0.0265,
+			"tbtMs": 192,
+			"scriptBytes": 248478
+		},
+		"P04": {
+			"performance": 0.9,
+			"accessibility": 0.96,
+			"seo": 1,
+			"lcpMs": 3022,
+			"cls": 0,
+			"tbtMs": 245,
+			"scriptBytes": 224513
+		}
+	}
+}

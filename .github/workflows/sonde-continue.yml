@@ -1,0 +1,69 @@
+# The continuous watch of the site (ticket 277, audit S4/M2, docs/tests/sonde-continue.md).
+# Every 5 minutes it reads /api/health, the home page and one profile of the target, from a
+# GitHub runner (outside the Coolify host), and writes to Andy after 2 failures in a row.
+#
+# Rules, enforced by tests/unit/watch.test.ts and the guard rails of every workflow:
+# - read-only on the site: GET only (scripts/watch/watch.ts). The only POST goes to the email
+#   service, to send the alert;
+# - the target is the repository variable WATCH_TARGET (an origin: https://v3.my-makeup.fr before
+#   the swap, https://my-makeup.fr after it): one setting, no input of this file;
+# - the secrets are the protected access of the v3, the key of the email service and the address
+#   of Andy. None is written in a log: the script prints statuses, times and fingerprints;
+# - nothing here tolerates a failure: a failed read fails the run, which is also what the next
+#   run counts to decide on the alert. GitHub mails the failed runs by itself as a second net;
+# - GitHub only schedules a workflow that is on the DEFAULT branch (main for now). Until the v3
+#   is merged there, a copy of this file sits on main and the variable WATCH_REF names the
+#   branch whose script it runs (docs/tests/sonde-continue.md, « Où elle tourne »).
+name: Sonde continue
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+# `actions: read` only lets the run list the conclusions of its previous runs.
+permissions:
+  contents: read
+  actions: read
+
+defaults:
+  run:
+    shell: bash
+
+# Two runs at once would count the same failure twice: the second waits.
+concurrency:
+  group: sonde-continue
+  cancel-in-progress: false
+
+jobs:
+  sonde:
+    name: sonde
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ vars.WATCH_REF }}
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - name: Read the conclusions of the previous runs
+        id: history
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          previous=$(gh run list --workflow sonde-continue.yml --status completed --limit 6 \
+            --json conclusion --jq '[.[].conclusion] | join(",")')
+          echo "previous=${previous}" >> "$GITHUB_OUTPUT"
+      - name: Watch the site
+        env:
+          WATCH_TARGET: ${{ vars.WATCH_TARGET }}
+          WATCH_PREVIOUS: ${{ steps.history.outputs.previous }}
+          WATCH_ACCESS_USER: ${{ secrets.WATCH_ACCESS_USER }}
+          WATCH_ACCESS_PASSWORD: ${{ secrets.WATCH_ACCESS_PASSWORD }}
+          WATCH_RESEND_KEY: ${{ secrets.WATCH_RESEND_KEY }}
+          WATCH_ALERT_TO: ${{ secrets.WATCH_ALERT_TO }}
+          WATCH_ALERT_FROM: ${{ vars.WATCH_ALERT_FROM }}
+        run: bun run watch:site 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"

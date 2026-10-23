@@ -1,0 +1,14 @@
+{
+	"/mentions-legales": {
+		"lignes": 25,
+		"sha": "0394b59874b60b0ccdf2849569f5779c549e938660721ae508026c06fc2d61a7"
+	},
+	"/cgu": {
+		"lignes": 31,
+		"sha": "1639a2301a9c1bee19f9dcb1e3f84d558ab731820fb3fa108b7ffb6e42ada374"
+	},
+	"/politique-de-confidentialite": {
+		"lignes": 37,
+		"sha": "03523a4a2c4d930a1ccd33e1316e7dff118c553d1ce73092020ba106c1006e7a"
+	}
+}

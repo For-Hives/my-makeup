@@ -1,0 +1,19 @@
+# Versions are pinned exactly: `bun add` writes "1.2.3", never "^1.2.3".
+[install]
+exact = true
+
+# Every `bun test` loads three files before any test file, in this order (bun reads this file from
+# the folder it is started in: the repository root).
+# 1. The guard: it stops the run when the environment could reach anything else than the local
+#    test bench (tests/support/environment-guard.ts). First, so that nothing is loaded after a refusal.
+# 2. Inside a jsdom window given back at once, the libraries that look for a browser while they
+#    load (tests/support/preload-react-dom.ts): a React component is then tested the same way
+#    whatever the order of the files.
+# 3. The interception of outgoing HTTP (tests/support/preload-outgoing-http.ts): a service outside
+#    this machine is simulated by the test, or the test fails. No test calls the Internet.
+[test]
+preload = [
+	"./tests/support/environment-guard.ts",
+	"./tests/support/preload-react-dom.ts",
+	"./tests/support/preload-outgoing-http.ts",
+]

@@ -1,0 +1,137 @@
+# The test bench: the six services the integration and end-to-end tests talk to. The same
+# file serves on a developer machine and in CI. It holds no real data and no real secret:
+# every value below is a throwaway one, also written in .env.test.
+#
+# Start and stop it with `bun run bench:up` and `bun run bench:down` (README, « Banc de test »):
+# these commands give the project name and the ports of the instance. Started bare
+# (`docker compose -f compose.test.yml up -d --wait`), the defaults below are those of .env.test.
+#
+# Nothing is kept: PostgreSQL writes in memory, the mail catcher and the object storage in
+# their own container, the fake Google nowhere at all. Every image is pinned by tag and digest.
+# Every port is published on the loopback interface only, never on 0.0.0.0.
+name: ${BENCH_INSTANCE:-my-makeup-test}
+
+services:
+  postgres:
+    image: postgres:18.6-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873
+    environment:
+      POSTGRES_USER: banc
+      POSTGRES_PASSWORD: mot-de-passe-factice
+      POSTGRES_DB: mymakeup_test
+    # Durability is switched off: this database is thrown away with its container.
+    command: ["postgres", "-c", "fsync=off", "-c", "synchronous_commit=off", "-c", "full_page_writes=off"]
+    ports:
+      # Host port 5443 by default: 5442 is the development database, 5432 another project.
+      - "127.0.0.1:${BENCH_PORT_POSTGRES:-5443}:5432"
+    tmpfs:
+      # In memory. PostgreSQL 18 keeps its data in /var/lib/postgresql/18/docker: the parent
+      # folder is mounted, not /var/lib/postgresql/data as before.
+      - /var/lib/postgresql
+    healthcheck:
+      # Over TCP on purpose: the temporary server of the first initialisation listens on the
+      # socket only, so this passes once the real server accepts connections.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U banc -d mymakeup_test"]
+      interval: 1s
+      timeout: 3s
+      retries: 60
+
+  # Mail catcher: every mail the application sends on the bench lands here, none goes out.
+  mailpit:
+    image: axllent/mailpit:v1.31.4@sha256:b68349e3a014b90c5610bfb26b2ae36f3892d7b8cf25ee140c6c71c98d2fcf48
+    ports:
+      - "127.0.0.1:${BENCH_PORT_SMTP:-1025}:1025"
+      - "127.0.0.1:${BENCH_PORT_MAILPIT:-8025}:8025"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 1s
+      timeout: 3s
+      retries: 60
+
+  # Object storage with the S3 API, and its bucket created at startup.
+  s3mock:
+    image: adobe/s3mock:5.2.3@sha256:ab01a6946750f451ca215a47e91030695b260e4003b8a5a6201d25029b8fca92
+    environment:
+      COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS: mymakeup-test
+    ports:
+      - "127.0.0.1:${BENCH_PORT_S3:-9090}:9090"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/favicon.ico"]
+      interval: 1s
+      timeout: 3s
+      retries: 60
+
+  # The fake Google: an OpenID Connect provider that stands in for Google, with made-up
+  # identities only (docs/tests/banc.md, « Le faux Google »). It is the code of
+  # tests/support/fake-google/, run by the bun of the Dockerfile: same image, same digest.
+  fake-google:
+    image: oven/bun:1.3.14@sha256:e10577f0db68676a7024391c6e5cb4b879ebd17188ab750cf10024a6d700e5c4
+    command: ["bun", "/bench/server.ts"]
+    environment:
+      # The address it is reached at from this machine, which is the issuer of its tokens: the
+      # host port, not the one of the container.
+      GOOGLE_OIDC_ISSUER: http://127.0.0.1:${BENCH_PORT_GOOGLE:-7080}
+      # The made-up client of .env.test: the only one it accepts.
+      GOOGLE_CLIENT_ID: client-google-factice-du-banc
+      GOOGLE_CLIENT_SECRET: secret-google-factice-du-banc-de-test
+      FAKE_GOOGLE_LISTEN: 0.0.0.0
+      FAKE_GOOGLE_PORT: "7080"
+    # Its code is read from the repository, read-only, and the container can write nowhere.
+    read_only: true
+    volumes:
+      - ./tests/support/fake-google:/bench:ro
+    security_opt:
+      # Where SELinux is enforced (Fedora, with Podman), a container may not read a folder of
+      # the repository without this. Without SELinux it changes nothing.
+      - label=disable
+    ports:
+      - "127.0.0.1:${BENCH_PORT_GOOGLE:-7080}:7080"
+    healthcheck:
+      test: ["CMD", "bun", "-e", "fetch('http://127.0.0.1:7080/.well-known/openid-configuration').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 1s
+      timeout: 3s
+      retries: 60
+
+  # The fake Umami: the instance the site relays its audience measure to (docs/tests/banc.md,
+  # « Le faux Umami »). It records what it receives and serves a small tracker. It is the code of
+  # tests/support/fake-umami/, run by the same bun as the fake Google.
+  fake-umami:
+    image: oven/bun:1.3.14@sha256:e10577f0db68676a7024391c6e5cb4b879ebd17188ab750cf10024a6d700e5c4
+    command: ["bun", "/bench/server.ts"]
+    environment:
+      FAKE_UMAMI_LISTEN: 0.0.0.0
+      FAKE_UMAMI_PORT: "4200"
+    read_only: true
+    volumes:
+      - ./tests/support/fake-umami:/bench:ro
+    security_opt:
+      - label=disable
+    ports:
+      - "127.0.0.1:${BENCH_PORT_UMAMI:-4200}:4200"
+    healthcheck:
+      test: ["CMD", "bun", "-e", "fetch('http://127.0.0.1:4200/_sante').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 1s
+      timeout: 3s
+      retries: 60
+
+  # The fake list of the communes: what the application of the end-to-end tests asks instead of
+  # geo.api.gouv.fr (docs/tests/banc.md, « La fausse liste des communes »), so that a test that
+  # chooses a commune never calls the Internet. It is the code of tests/support/fake-cities/, run
+  # by the same bun as the fake Google.
+  fake-cities:
+    image: oven/bun:1.3.14@sha256:e10577f0db68676a7024391c6e5cb4b879ebd17188ab750cf10024a6d700e5c4
+    command: ["bun", "/bench/server.ts"]
+    environment:
+      FAKE_CITIES_LISTEN: 0.0.0.0
+      FAKE_CITIES_PORT: "2050"
+    read_only: true
+    volumes:
+      - ./tests/support/fake-cities:/bench:ro
+    security_opt:
+      - label=disable
+    ports:
+      - "127.0.0.1:${BENCH_PORT_CITIES:-2050}:2050"
+    healthcheck:
+      test: ["CMD", "bun", "-e", "fetch('http://127.0.0.1:2050/_sante').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 1s
+      timeout: 3s
+      retries: 60

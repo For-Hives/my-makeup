@@ -1,40 +1,131 @@
 {
 	"$schema": "https://docs.renovatebot.com/renovate-schema.json",
-	"extends": ["config:recommended"],
+	"description": "Mises à jour de la v3. Sans effet tant que la branche par défaut porte l'ancien site : Renovate ne lit que le renovate.json de la branche par défaut. Règles et garde : docs/qualite.md, « Renovate ».",
+	"extends": ["config:recommended", ":semanticCommits", "helpers:pinGitHubActionDigests"],
 	"timezone": "Europe/Paris",
-	"automerge": false,
+	"schedule": ["before 7am on monday"],
+	"minimumReleaseAge": "7 days",
+	"internalChecksFilter": "strict",
+	"prConcurrentLimit": 3,
+	"prHourlyLimit": 2,
+	"rangeStrategy": "pin",
+	"dependencyDashboard": true,
 	"osvVulnerabilityAlerts": true,
 	"vulnerabilityAlerts": {
+		"description": "Un correctif de sécurité est proposé tout de suite, sans les 7 jours d'attente. Il n'est jamais fusionné seul : il a moins de 7 jours.",
 		"enabled": true,
+		"schedule": ["at any time"],
+		"minimumReleaseAge": null,
 		"automerge": false,
-		"labels": ["security"]
+		"labels": ["securite"]
+	},
+	"lockFileMaintenance": {
+		"description": "Une fois par mois, bun.lock est recalculé. Jamais fusionné seul : les dépendances indirectes y montent sans les 7 jours d'attente.",
+		"enabled": true,
+		"schedule": ["before 7am on the first day of the month"]
 	},
 	"packageRules": [
 		{
-			"description": "Security fixes only: every other update is off, npm packages, GitHub Actions and Docker images alike (vulnerabilityAlerts overrides this rule)",
-			"matchUpdateTypes": [
-				"major",
-				"minor",
-				"patch",
-				"pin",
-				"pinDigest",
-				"digest",
-				"lockFileMaintenance",
-				"replacement",
-				"rollback",
-				"bump"
+			"description": "Fusion automatique des mineures, des correctifs et des empreintes, par une pull request que GitHub fusionne quand les checks requis sont verts (ci-ok). Jamais pour une version 0.x. Les règles suivantes retirent des paquets de cette fusion.",
+			"matchUpdateTypes": ["minor", "patch", "digest"],
+			"matchCurrentVersion": "!/^v?0\\./",
+			"automerge": true,
+			"automergeType": "pr",
+			"platformAutomerge": true
+		},
+		{
+			"description": "Payload et ses paquets montent ensemble, à la même version exacte. Jamais fusionnés seuls : relire les migrations et les fichiers générés.",
+			"groupName": "payload",
+			"matchPackageNames": ["payload", "@payloadcms/**"],
+			"automerge": false,
+			"addLabels": ["payload", "migration-a-verifier"]
+		},
+		{
+			"description": "Next et ses paquets montent ensemble. Jamais fusionnés seuls.",
+			"groupName": "next",
+			"matchPackageNames": ["next", "@next/**"],
+			"automerge": false
+		},
+		{
+			"description": "Next reste en 16.3 : Payload 3 nomme ses erreurs par le nom de leur classe, et Next 16.4 raccourcit ces noms en production. À lever quand une version 3.x de Payload porte le correctif (docs/migration/CHANGEMENTS-VOULUS.md, repère next-16-3).",
+			"matchPackageNames": ["next", "@next/**"],
+			"allowedVersions": "<16.4.0"
+		},
+		{
+			"description": "React, react-dom et leurs types montent ensemble.",
+			"groupName": "react",
+			"matchPackageNames": ["react", "react-dom", "@types/react", "@types/react-dom"]
+		},
+		{
+			"description": "Tailwind et son plugin PostCSS montent ensemble : le plugin exige la même version exacte.",
+			"groupName": "tailwind",
+			"matchPackageNames": ["tailwindcss", "@tailwindcss/**"]
+		},
+		{
+			"description": "Biome monte en même temps que dans le dépôt de référence, PortefolioAndy, et biome.json nomme sa version. Jamais fusionné seul.",
+			"groupName": "biome",
+			"matchPackageNames": ["@biomejs/**"],
+			"automerge": false
+		},
+		{
+			"description": "Playwright, ses navigateurs et axe montent ensemble, à la version de PortefolioAndy. Jamais fusionnés seuls.",
+			"groupName": "playwright",
+			"matchPackageNames": [
+				"@playwright/**",
+				"playwright",
+				"playwright-core",
+				"@axe-core/playwright",
+				"mcr.microsoft.com/playwright"
 			],
+			"automerge": false
+		},
+		{
+			"description": "Node : .nvmrc et les images du Dockerfile montent ensemble (garde C04), sur une ligne à support long seulement.",
+			"groupName": "node",
+			"matchDatasources": ["docker", "node-version"],
+			"matchPackageNames": ["node"],
+			"allowedVersions": "/^(24|26)\\./"
+		},
+		{
+			"description": "engines.node vaut « 24.x » : la garde C04 le tient sur la ligne de .nvmrc, à la main. Renovate le figerait sur une version exacte.",
+			"matchDepTypes": ["engines"],
 			"enabled": false
 		},
 		{
-			"description": "Next 16 is a migration that comes with the v3: no next above 15. Only GitHub alerts keep this cap: an OSV alert sets its own allowedVersions after these rules and can still open a 16.x PR, to close until the v3",
-			"matchPackageNames": ["next"],
-			"allowedVersions": "<16"
+			"description": "bun : packageManager, l'image du Dockerfile et les types montent ensemble (garde C04). Jamais fusionné seul : bun installe, construit et teste, et Payload ne le nomme pas parmi ses outils.",
+			"groupName": "bun",
+			"matchPackageNames": ["bun", "oven/bun", "@types/bun"],
+			"automerge": false
 		},
 		{
-			"description": "Tailwind CSS 4 needs a migration (postcss plugin, config, CSS entry): stay on v3. Same limit as next: an OSV alert can still open a 4.x PR, to close until the v3",
-			"matchPackageNames": ["tailwindcss"],
-			"allowedVersions": "<4"
+			"description": "PostgreSQL : la base de développement et celle du banc de test montent ensemble, à la version de la base de prod, qui se règle chez l'hébergeur. Jamais fusionné seul.",
+			"groupName": "postgres",
+			"matchDatasources": ["docker"],
+			"matchPackageNames": ["postgres"],
+			"automerge": false
+		},
+		{
+			"description": "TypeScript reste en 6 : ni Next 16.3 ni Payload 3 ne sont construits avec la 7.",
+			"matchPackageNames": ["typescript"],
+			"allowedVersions": "<7"
+		},
+		{
+			"description": "Les versions forcées sous Payload (overrides) sortent de la plage qu'il déclare : jamais fusionnées seules.",
+			"matchDepTypes": ["overrides"],
+			"automerge": false,
+			"addLabels": ["version-forcee"]
+		},
+		{
+			"description": "Actions des workflows : jamais fusionnées seules. Les avis de sécurité du dépôt de l'action se relisent à la main, et la garde de la CI cite la version (docs/qualite.md, « Modifier la CI »).",
+			"matchManagers": ["github-actions"],
+			"automerge": false
+		},
+		{
+			"description": "Une version majeure n'est proposée qu'après une case cochée au tableau de bord, et n'est jamais fusionnée seule.",
+			"matchUpdateTypes": ["major"],
+			"automerge": false,
+			"dependencyDashboardApproval": true,
+			"addLabels": ["majeure"]
 		}
 	]
 }

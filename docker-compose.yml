@@ -1,0 +1,32 @@
+# Local development database. Nothing else belongs here: the test stack and the
+# production image have their own files.
+#
+# The user, password and database name below are throwaway values for a database that
+# holds no real data and is reachable from this machine only. Never reuse them elsewhere.
+name: my-makeup-dev
+
+services:
+  postgres:
+    image: postgres:18.6-alpine
+    environment:
+      POSTGRES_USER: mymakeup
+      POSTGRES_PASSWORD: local-dev-only
+      POSTGRES_DB: mymakeup_dev
+    ports:
+      # Published on the loopback interface only, never on 0.0.0.0.
+      # Host port 5442, not 5432: the default port is often taken by another project.
+      - "127.0.0.1:5442:5432"
+    volumes:
+      # PostgreSQL 18 keeps its data in /var/lib/postgresql/18/docker: the volume is
+      # mounted on the parent folder, not on /var/lib/postgresql/data as before.
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      # Over TCP on purpose: the temporary server of the first initialisation listens on
+      # the socket only, so this passes once the real server accepts connections.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U mymakeup -d mymakeup_dev"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  postgres-data:

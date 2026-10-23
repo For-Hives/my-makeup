@@ -1,0 +1,55 @@
+diff --git a/node_modules/payload/.bun-tag-93bf82f2668d14a3 b/.bun-tag-93bf82f2668d14a3
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/node_modules/payload/.bun-tag-d5662fff3433d31 b/.bun-tag-d5662fff3433d31
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/dist/utilities/checkDocumentLockStatus.js b/dist/utilities/checkDocumentLockStatus.js
+index 502abc62a4a1281e86509bf6957f5a3b79f76bac..eb39b1b90c118e89dc5e34e3dda2462d93a98ce0 100644
+--- a/dist/utilities/checkDocumentLockStatus.js
++++ b/dist/utilities/checkDocumentLockStatus.js
+@@ -46,6 +46,9 @@ export const checkDocumentLockStatus = async ({ id, collectionSlug, globalSlug,
+             collection: lockedDocumentsCollectionSlug,
+             limit: 1,
+             pagination: false,
++            // In the transaction of the operation, like the deleteMany below: without req, postgres reads on a
++            // second connection while the operation holds one, and enough saves at once exhaust the pool for good.
++            req: payload.db.name === 'mongoose' ? undefined : req,
+             sort: '-updatedAt',
+             where: lockedDocumentQuery
+         });
+diff --git a/dist/utilities/logError.js b/dist/utilities/logError.js
+index 33f02c36528bb62be4d781e7d57acd1d59181ce5..6a494cb2df2db231afb7f0ec6ee6e1406d252db8 100644
+--- a/dist/utilities/logError.js
++++ b/dist/utilities/logError.js
+@@ -1,7 +1,28 @@
++import { APIError } from '../errors/APIError.js';
++import { AuthenticationError } from '../errors/AuthenticationError.js';
++import { Forbidden } from '../errors/Forbidden.js';
++import { UnauthorizedError } from '../errors/UnauthorizedError.js';
++import { UnverifiedEmail } from '../errors/UnverifiedEmail.js';
++// The level is read by the name of the error class. A minified server bundle renames the classes, so
++// `err.name` of an APIError is `c` there and the `APIError` key of `loggingLevels` never matched (ticket 223).
++// The classes Payload throws for a refusal are told by their constructor, which no renaming changes
++// (Forbidden and UnauthorizedError added by ticket 276: a refusal of access is not an application error).
++const nameOf = (err)=>{
++    if (err && typeof err === 'object') {
++        if (err.constructor === Forbidden) return 'Forbidden';
++        if (err.constructor === UnauthorizedError) return 'UnauthorizedError';
++        if (err.constructor === APIError) return 'APIError';
++        if (err.constructor === AuthenticationError) return 'AuthenticationError';
++        if (err.constructor === UnverifiedEmail) return 'UnverifiedEmail';
++        if ('name' in err && typeof err.name === 'string') return err.name;
++    }
++    return undefined;
++};
+ export const logError = ({ err, payload })=>{
+     let level = 'error';
+-    if (err && typeof err === 'object' && 'name' in err && typeof err.name === 'string' && typeof payload.config.loggingLevels[err.name] !== 'undefined') {
+-        level = payload.config.loggingLevels[err.name];
++    const name = nameOf(err);
++    if (name !== undefined && typeof payload.config.loggingLevels[name] !== 'undefined') {
++        level = payload.config.loggingLevels[name];
+     }
+     if (level) {
+         const logObject = {};

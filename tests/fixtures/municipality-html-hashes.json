@@ -1,0 +1,50 @@
+{
+	"reference": {
+		"profile": "a903d2ebe435be2d75ab34ced43537c92ff6540b73c4d43eaa44f2d7a6fc0872",
+		"card": "8ef8bc5c772a60828eb1b4fa1930fe67ce50a863ad0273e294163175b610d62b"
+	},
+	"ville-voisine": {
+		"profile": "182a66608d1b57111997de11f93d5d4b85866fa3e8a6a87894a8026c4c91701c",
+		"card": "759be7cceffe740b94daf440b5f9d05da47afe1e8270d33265c0c7ae9d2bf896"
+	},
+	"ville-eloignee": {
+		"profile": "28fad78ee991371182723dbd570cf2d51441c2e958b0e67a930cc8f367ed27af",
+		"card": "af71530a63eebc1a48b5249e3bdf1bd650cee04fe792d15a93bdc2eed57d0864"
+	},
+	"indisponible": {
+		"profile": "3a62d3144aa1a0d4801322c78c119f9a81e0a85bf85bfb1c820a8a6c3e798d2d",
+		"card": "9ea2a822974e43cf5a3f5e37ba571c039c3ea293bf0d34a5eda6857c118220b4"
+	},
+	"disponibilite-inconnue": {
+		"profile": "bce930686dceed5b6078849af983a0b7420152ae3736d200ea921201a2984aa1",
+		"card": "073bbd1cf1b654b84d514d97922d715f25bd3c998f37d27f4edd28b0c91b7ee3"
+	},
+	"vide": {
+		"profile": "a334ec739e68bb799ef5c20bc764ce4132c0424e01334a232c7dbdb81c9887d1",
+		"card": "16379b314751cb8994fd3258fddec51fae0cc999db72466e673c00afd8b9f951"
+	},
+	"actif-non-publiable": {
+		"profile": "4f09f5d5834c94c87a0d525792267c813005c9e308d37b0df6eb2cc6dae7fbce",
+		"card": "41d452ef8a58c0f63f2ac1f22f981b970e0e3c970c7f172c2bf8518805153298"
+	},
+	"sans-contact-public": {
+		"profile": "afa4065fb97d9a2ec0f36cdf5ff293707986514c2c0d65eabea03e341d6c2ad1",
+		"card": "708740d919a0cbccf40351fbb27511d802eeeaf4e24e6873bb6946afecf79977"
+	},
+	"ancien-nom-accentue": {
+		"profile": "64a8c37a383825d9ab1c74ca6689edd52bba17b476803f9dc8cf1e2d0f2d0493",
+		"card": "81992b4923ed6d45ca39dff25e97c3e2814ffaa6b5e0a28ebe74470d435b52aa"
+	},
+	"verifiee": {
+		"profile": "34c44a36f53e4e8e962676f8d52b6c27d802d113c3bcda09f70bfad242296b2c",
+		"card": "cd659fd5642fae54ca106403da1559e011323e1b35ab20e9f389375b833e840d"
+	},
+	"masquee": {
+		"profile": "4802b855578da425ea0cd98b496fdd3ff13ad8c85f8e580bc8177e001a7b42f7",
+		"card": "c135908b3b716e2b726b3129c136b0826b7b64fff8713516adf8c6657f0d613b"
+	},
+	"textes-maximaux": {
+		"profile": "831c56d3b3a9cb4e98f388af2f20c5e4eb4963059a5401342a00e5c0592b7ffc",
+		"card": "27f009a71ad7132c93fd26e215ec2309250ef0afa19fc12a13f8094fff3dbd39"
+	}
+}

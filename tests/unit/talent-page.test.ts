@@ -1,0 +1,140 @@
+import { describe, expect, test } from 'bun:test'
+import type { Payload } from 'payload'
+import { validatePageTitle } from '@/collections/Talents'
+import { editorialMetadata } from '@/lib/seo/metadata'
+import { MAX_TITLE, TALENT_MIN_TITLE } from '@/lib/seo/text'
+import { readTalent, TALENT_PAGE_FIELDS } from '@/services/public/talents'
+
+/**
+ * The page of a talent without a database (ticket 108): what its reading asks for, the title of the page the
+ * newsroom writes (50 to 60 characters, different from the h1), and the metadata that title feeds. The runs
+ * against the bench: tests/e2e/talent.spec.ts.
+ */
+
+function payloadSpy(docs: Record<string, unknown>[]) {
+	const readings: Record<string, unknown>[] = []
+	const payload = {
+		find: async (options: Record<string, unknown>) => {
+			readings.push(options)
+			return { docs }
+		},
+	} as unknown as Payload
+	return { payload, lectures: readings }
+}
+
+const TALENT = {
+	slug: 'maquillage-fictif',
+	title: 'Maquillage fictif',
+	seo_title: ' Un maquillage fictif pour les fêtes ',
+	titreDeLaPage: null,
+	description: null,
+	seo_description: undefined,
+	content: null,
+}
+
+describe('lireLeTalent : la lecture publique d’un talent', () => {
+	test('elle choisit ses champs, garde les règles d’accès et se borne à un document', async () => {
+		const { payload, lectures: readings } = payloadSpy([TALENT])
+		await readTalent(payload, 'maquillage-fictif')
+		expect(readings).toHaveLength(1)
+		expect(readings[0]).toMatchObject({
+			collection: 'talents',
+			where: { slug: { equals: 'maquillage-fictif' } },
+			select: TALENT_PAGE_FIELDS,
+			overrideAccess: false,
+			limit: 1,
+			depth: 0,
+		})
+	})
+
+	test('les champs lus sont figés : ni identifiant de l’ancien site, ni état de brouillon', () => {
+		expect(Object.keys(TALENT_PAGE_FIELDS).sort()).toEqual(
+			['content', 'description', 'seo_description', 'seo_title', 'slug', 'title', 'pageTitle'].sort()
+		)
+	})
+
+	test('le h1 est le titre « seo_title » rogné, le titre du talent à défaut ; un champ jamais rempli est vide', async () => {
+		const { payload } = payloadSpy([TALENT])
+		expect(await readTalent(payload, 'maquillage-fictif')).toEqual({
+			slug: 'maquillage-fictif',
+			titre: 'Maquillage fictif',
+			titreAffiche: 'Un maquillage fictif pour les fêtes',
+			titreDeLaPage: '',
+			presentation: '',
+			descriptionSeo: '',
+			contenu: '',
+		})
+		const withoutSeo = payloadSpy([{ ...TALENT, seo_title: 'null' }])
+		expect((await readTalent(withoutSeo.payload, 'maquillage-fictif'))?.titreAffiche).toBe('Maquillage fictif')
+	})
+
+	test('un brouillon ou un inconnu : null ; une adresse qui n’est pas un slug ne touche pas la base', async () => {
+		expect(await readTalent(payloadSpy([]).payload, 'inconnu')).toBeNull()
+		const { payload, lectures: readings } = payloadSpy([TALENT])
+		for (const bad of ['', 'Maquillage Fictif', '../etc']) expect(await readTalent(payload, bad)).toBeNull()
+		expect(readings).toHaveLength(0)
+	})
+})
+
+/** What Payload hands to a validation: only what the text validation reads. */
+const arguments_ = (seoTitle?: string) =>
+	({
+		required: false,
+		siblingData: { seo_title: seoTitle },
+		req: { payload: { config: {} }, t: (cle: string) => cle },
+	}) as never
+
+describe('validerTitreDeLaPage : de 50 à 60 caractères, différent du h1', () => {
+	const from = (n: number) => `${'Titre '.repeat(20)}`.slice(0, n).trim().padEnd(n, 'x')
+
+	test('vide : accepté, la page garde le titre du site actuel', () => {
+		for (const empty of [undefined, null, '', '   ']) expect(validatePageTitle(empty, arguments_())).toBe(true)
+	})
+
+	test('50 à 60 caractères : accepté', () => {
+		for (const n of [TALENT_MIN_TITLE, 55, MAX_TITLE])
+			expect(validatePageTitle(from(n), arguments_()), String(n)).toBe(true)
+	})
+
+	test('49 ou 61 caractères : refusé, avec la longueur dite', () => {
+		for (const n of [49, 61, 10]) {
+			const message = validatePageTitle(from(n), arguments_())
+			expect(message).toContain(`de ${TALENT_MIN_TITLE} à ${MAX_TITLE} caractères`)
+			expect(message).toContain(`en compte ${n}`)
+		}
+	})
+
+	test('identique au h1 : refusé', () => {
+		const title = from(55)
+		expect(validatePageTitle(title, arguments_(title))).toContain('différent')
+		expect(validatePageTitle(title, arguments_(`${title.slice(1)}z`))).toBe(true)
+	})
+})
+
+describe('les métadonnées d’un talent', () => {
+	const entries = {
+		descriptionRedigee: '',
+		autres: ['Une présentation écrite pour l’essai, assez longue pour dépasser les soixante-dix caractères.'],
+		repli: 'Un texte de repli.',
+		chemin: '/talent/maquillage-fictif',
+	}
+
+	test('le titre écrit par la rédaction est repris tel quel, sans la marque : il fait déjà 50 à 60 caractères', () => {
+		const title = 'Maquillage fictif : trouvez une maquilleuse près de chez vous'.slice(0, 58)
+		const meta = editorialMetadata({ ...entries, titre: title })
+		expect(meta.title).toEqual({ absolute: title })
+		expect(title.length).toBeGreaterThanOrEqual(TALENT_MIN_TITLE)
+	})
+
+	test('sans lui, le titre court du talent suivi du nom du site, comme aujourd’hui', () => {
+		expect(editorialMetadata({ ...entries, titre: 'Maquillage fictif' }).title).toEqual({
+			absolute: 'Maquillage fictif | My-Makeup',
+		})
+	})
+
+	test('la description et l’adresse canonique', () => {
+		const meta = editorialMetadata({ ...entries, titre: 'x' })
+		expect(meta.description).toStartWith('Une présentation écrite pour l’essai')
+		expect(meta.alternates?.canonical).toBe('https://my-makeup.fr/talent/maquillage-fictif')
+	})
+})

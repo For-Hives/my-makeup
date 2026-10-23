@@ -1,0 +1,41 @@
+import { describe, expect, test } from 'bun:test'
+import { isRequestStatus, REQUEST_STATUSES, transitionAllowed } from '@/lib/contact/states'
+
+/**
+ * U78, reduced to the contact message (ticket 163): `new` → `forwarded` → `answered`, and `spam`.
+ * `conclue` and `perdue` of the plan belong to the requests to a makeup artist, which have no ticket yet.
+ */
+describe('U78 : le cycle des statuts d’un message de contact', () => {
+	test('les statuts sont ceux du cycle, et aucun autre', () => {
+		expect([...REQUEST_STATUSES]).toEqual(['new', 'forwarded', 'answered', 'spam'])
+		expect(isRequestStatus('spam')).toBe(true)
+		expect(isRequestStatus('conclue')).toBe(false)
+		expect(isRequestStatus(undefined)).toBe(false)
+	})
+
+	test('le message avance : nouvelle, transmise, répondue', () => {
+		expect(transitionAllowed('new', 'forwarded')).toBe(true)
+		expect(transitionAllowed('forwarded', 'answered')).toBe(true)
+	})
+
+	test('un admin peut répondre à un message dont l’email a échoué : il l’a lu dans l’administration', () => {
+		expect(transitionAllowed('new', 'answered')).toBe(true)
+	})
+
+	test('le spam se marque depuis tous les statuts, et se défait vers « nouvelle »', () => {
+		for (const from of ['new', 'forwarded', 'answered'] as const) expect(transitionAllowed(from, 'spam')).toBe(true)
+		expect(transitionAllowed('spam', 'new')).toBe(true)
+	})
+
+	test('une réponse ne se défait pas, et le spam ne devient pas « répondue » d’un coup', () => {
+		expect(transitionAllowed('answered', 'forwarded')).toBe(false)
+		expect(transitionAllowed('answered', 'new')).toBe(false)
+		expect(transitionAllowed('forwarded', 'new')).toBe(false)
+		expect(transitionAllowed('spam', 'answered')).toBe(false)
+		expect(transitionAllowed('spam', 'forwarded')).toBe(false)
+	})
+
+	test('rester où l’on est est toujours permis', () => {
+		for (const status of REQUEST_STATUSES) expect(transitionAllowed(status, status)).toBe(true)
+	})
+})

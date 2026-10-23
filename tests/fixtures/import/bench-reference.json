@@ -1,0 +1,255 @@
+{
+	"version": 1,
+	"source": "https://geo.api.gouv.fr",
+	"reponses": {
+		"codePostal:74000": [
+			{
+				"nom": "Annecy",
+				"code": "74010",
+				"departement": "74",
+				"codesPostaux": ["74000", "74370", "74600", "74940", "74960"],
+				"latitude": 45.9024,
+				"longitude": 6.1264
+			}
+		],
+		"codePostal:74990": [
+			{
+				"nom": "Valbrume",
+				"code": "74990",
+				"departement": "74",
+				"codesPostaux": ["74990"],
+				"latitude": 45.95,
+				"longitude": 6.4
+			},
+			{
+				"nom": "Hautcombe",
+				"code": "74991",
+				"departement": "74",
+				"codesPostaux": ["74990"],
+				"latitude": 45.97,
+				"longitude": 6.43
+			}
+		],
+		"codePostal:75116": [
+			{
+				"nom": "Paris",
+				"code": "75056",
+				"departement": "75",
+				"codesPostaux": [
+					"75001",
+					"75002",
+					"75003",
+					"75004",
+					"75005",
+					"75006",
+					"75007",
+					"75008",
+					"75009",
+					"75010",
+					"75011",
+					"75012",
+					"75013",
+					"75014",
+					"75015",
+					"75016",
+					"75017",
+					"75018",
+					"75019",
+					"75020",
+					"75116"
+				],
+				"latitude": 48.8589,
+				"longitude": 2.347
+			}
+		],
+		"nom:annecy": [
+			{
+				"nom": "Annecy",
+				"code": "74010",
+				"departement": "74",
+				"codesPostaux": ["74000", "74370", "74600", "74940", "74960"],
+				"latitude": 45.9024,
+				"longitude": 6.1264
+			}
+		],
+		"nom:annemasse": [
+			{
+				"nom": "Annemasse",
+				"code": "74012",
+				"departement": "74",
+				"codesPostaux": ["74100"],
+				"latitude": 46.189,
+				"longitude": 6.2476
+			}
+		],
+		"nom:lyon": [
+			{
+				"nom": "Lyon",
+				"code": "69123",
+				"departement": "69",
+				"codesPostaux": ["69001", "69002", "69003", "69004", "69005", "69006", "69007", "69008", "69009"],
+				"latitude": 45.758,
+				"longitude": 4.8351
+			},
+			{
+				"nom": "Cognat-Lyonne",
+				"code": "03080",
+				"departement": "03",
+				"codesPostaux": ["03110"],
+				"latitude": 46.11,
+				"longitude": 3.3002
+			},
+			{
+				"nom": "Lyons-la-Forêt",
+				"code": "27377",
+				"departement": "27",
+				"codesPostaux": ["27480"],
+				"latitude": 49.3969,
+				"longitude": 1.4761
+			},
+			{
+				"nom": "Beauvoir-en-Lyons",
+				"code": "76067",
+				"departement": "76",
+				"codesPostaux": ["76220"],
+				"latitude": 49.487,
+				"longitude": 1.5852
+			},
+			{
+				"nom": "Beauficel-en-Lyons",
+				"code": "27048",
+				"departement": "27",
+				"codesPostaux": ["27480"],
+				"latitude": 49.4056,
+				"longitude": 1.518
+			},
+			{
+				"nom": "Chazelles-sur-Lyon",
+				"code": "42059",
+				"departement": "42",
+				"codesPostaux": ["42140"],
+				"latitude": 45.6293,
+				"longitude": 4.3717
+			},
+			{
+				"nom": "Sainte-Foy-lès-Lyon",
+				"code": "69202",
+				"departement": "69",
+				"codesPostaux": ["69110"],
+				"latitude": 45.7362,
+				"longitude": 4.7926
+			}
+		],
+		"nom:nantes": [
+			{
+				"nom": "Nantes",
+				"code": "44109",
+				"departement": "44",
+				"codesPostaux": ["44000", "44100", "44200", "44300"],
+				"latitude": 47.2382,
+				"longitude": -1.5603
+			},
+			{
+				"nom": "Nantes-en-Ratier",
+				"code": "38273",
+				"departement": "38",
+				"codesPostaux": ["38350"],
+				"latitude": 44.9294,
+				"longitude": 5.8285
+			}
+		],
+		"nom:saint-julien": [
+			{
+				"nom": "Saint-Julien",
+				"code": "21555",
+				"departement": "21",
+				"codesPostaux": ["21490"],
+				"latitude": 47.3987,
+				"longitude": 5.1427
+			},
+			{
+				"nom": "Saint-Julien",
+				"code": "22307",
+				"departement": "22",
+				"codesPostaux": ["22940"],
+				"latitude": 48.4486,
+				"longitude": -2.8177
+			},
+			{
+				"nom": "Saint-Julien",
+				"code": "34271",
+				"departement": "34",
+				"codesPostaux": ["34390"],
+				"latitude": 43.583,
+				"longitude": 2.8955
+			},
+			{
+				"nom": "Saint-Julien",
+				"code": "69215",
+				"departement": "69",
+				"codesPostaux": ["69640"],
+				"latitude": 46.0252,
+				"longitude": 4.648
+			},
+			{
+				"nom": "Saint-Julien",
+				"code": "83113",
+				"departement": "83",
+				"codesPostaux": ["83560"],
+				"latitude": 43.7045,
+				"longitude": 5.9143
+			},
+			{
+				"nom": "Saint-Julien",
+				"code": "88421",
+				"departement": "88",
+				"codesPostaux": ["88410"],
+				"latitude": 48.0202,
+				"longitude": 5.9082
+			},
+			{
+				"nom": "Saint-Julien-le-Petit",
+				"code": "87153",
+				"departement": "87",
+				"codesPostaux": ["87460"],
+				"latitude": 45.8209,
+				"longitude": 1.707
+			},
+			{
+				"nom": "Saint-Julien-d'Armagnac",
+				"code": "40265",
+				"departement": "40",
+				"codesPostaux": ["40240"],
+				"latitude": 43.993,
+				"longitude": -0.1387
+			}
+		],
+		"nom:toulouse": [
+			{
+				"nom": "Toulouse",
+				"code": "31555",
+				"departement": "31",
+				"codesPostaux": ["31000", "31100", "31200", "31300", "31400", "31500"],
+				"latitude": 43.6007,
+				"longitude": 1.4328
+			},
+			{
+				"nom": "Toulouse-le-Château",
+				"code": "39533",
+				"departement": "39",
+				"codesPostaux": ["39230"],
+				"latitude": 46.8221,
+				"longitude": 5.5845
+			},
+			{
+				"nom": "Vieille-Toulouse",
+				"code": "31575",
+				"departement": "31",
+				"codesPostaux": ["31320"],
+				"latitude": 43.5299,
+				"longitude": 1.4368
+			}
+		],
+		"nom:villeneuve-fictive": []
+	}
+}

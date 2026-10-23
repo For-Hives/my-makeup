@@ -1,0 +1,257 @@
+# The CI of the v3. One check is required to merge: ci-ok, the last job of this file.
+#
+# Rules, each of them enforced by tests/ci/ci-guardrails.test.ts (docs/qualite.md):
+# - no path filter: a required check that does not run stays « pending », and a pending
+#   check ends up merged around;
+# - no step allowed to fail, no command under a condition that could skip it, no step that
+#   depends on a cache;
+# - every action pinned by its commit, with its version in a comment;
+# - no secret: every value below is a public placeholder.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, v3]
+
+permissions:
+  contents: read
+
+# With `shell: bash`, GitHub runs every command under `bash -eo pipefail`: a command that
+# fails in a pipe fails its step. Without this line it would be `bash -e`, and it would pass.
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  qualite:
+    name: qualite
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - name: Install
+        run: bun install --frozen-lockfile
+      # The six checks below run even when an earlier one failed: one push shows every
+      # fault at once. The job is red as soon as one of them is.
+      - name: Generated files are up to date
+        if: ${{ !cancelled() }}
+        env:
+          # Placeholders, not secrets: the Payload CLI refuses to load the configuration
+          # without these two variables, and neither generator connects to a database.
+          DATABASE_URI: postgres://generation@127.0.0.1:5432/generation
+          PAYLOAD_SECRET: valeur-de-remplissage-sans-aucun-secret-0123456789
+        run: bun run payload:types && bun run payload:importmap && git diff --exit-code
+      # A collection changed without its migration: red. No database and no secret, the
+      # command sets its own placeholders (docs/qualite.md, « La dérive de schéma »).
+      - name: Schema drift
+        if: ${{ !cancelled() }}
+        run: bun run schema:drift
+      - name: Types
+        if: ${{ !cancelled() }}
+        run: bun run typecheck
+      - name: Biome
+        if: ${{ !cancelled() }}
+        run: bun run ci:biome
+      - name: Guard rails of the CI
+        if: ${{ !cancelled() }}
+        run: bun run test:ci-guard
+      # A French name in the code (files, folders, declared names, scripts, variables, options) makes
+      # this step, then ci-ok, red. The waiting list and the named exceptions are in
+      # scripts/naming/config.json (docs/noms.md). No new required check: the step is in `qualite`.
+      - name: English names
+        if: ${{ !cancelled() }}
+        run: bun run names:check
+
+  unit:
+    name: unit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - name: Install
+        run: bun install --frozen-lockfile
+      - name: Unit tests
+        run: bun run test:unit
+
+  build:
+    name: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - name: Install
+        run: bun install --frozen-lockfile
+      # No secret and no database: the only thing the build receives is the commit.
+      - name: Build the image
+        run: bun run image:build --build-arg "SOURCE_COMMIT=$GITHUB_SHA"
+      - name: Check the image against a throwaway database
+        run: IMAGE_CHECK_COMMIT="$GITHUB_SHA" bun run image:check
+
+  # The integration tests, against the containers of the test bench (compose.test.yml): the
+  # same commands as on a developer's machine (docs/tests/banc.md), in three shards side by side.
+  # bun splits the test files between them; each shard starts its own bench.
+  integration:
+    name: integration (${{ matrix.shard }}/3)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    strategy:
+      # A failed shard does not stop the others: one push shows every failed test.
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - name: Install
+        run: bun install --frozen-lockfile
+      - name: Start the test bench
+        run: bun run bench:up
+      - name: Integration tests
+        run: bun run test:integration --shard=${{ matrix.shard }}/3
+
+  # The end-to-end tests, in four shards side by side. Each shard starts its own bench and builds
+  # the application itself (docs/tests/e2e.md): nothing waits for the build job, so the longest
+  # chain of jobs stays under 15 minutes (docs/qualite.md, « Durée de la CI »).
+  e2e:
+    name: e2e (${{ matrix.shard }}/4)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    strategy:
+      # A failed shard does not stop the others: one push shows every failed test.
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      # Playwright runs under Node, not bun.
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - name: Install
+        run: bun install --frozen-lockfile
+      # Ticket 312: the browser alone, without `--with-deps`. The runner image already holds every library the
+      # headless Chromium reads; `--with-deps` only added fonts (Japanese, Thai, Chinese) and a virtual screen the tests
+      # never use, fetched from the Ubuntu mirror of the runner. That mirror stalled on 22/10/2026 (one package of 5 MB
+      # in 80 seconds, then not a byte for 7 minutes): three shards in eight spent their 10 minutes there, before any test.
+      - name: Browser of Playwright
+        run: bunx playwright install chromium
+      - name: Start the test bench
+        run: bun run bench:up
+      # GitHub sets CI=true: a test left in `.only` fails the run, a failed test is retried twice.
+      - name: End-to-end tests
+        run: bun run test:e2e --shard=${{ matrix.shard }}/4
+      # Ticket 137: after the journeys, the objects of the storage outside the bin must be exactly
+      # those of the photos the profiles and articles name. An orphan makes this step, then ci-ok, red.
+      # It reads and removes nothing. `--outside-import`: the media the import adopted from the fake source
+      # (erased at the end of its test) do not count; what the v3 wrote does. No `continue-on-error`.
+      - name: Reconcile the storage and the database
+        run: bun run bench:reconcile --outside-import
+      # Trace, video and screenshot of each failed test, and the report: sent only after a failure.
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: failure()
+        with:
+          name: e2e-${{ matrix.shard }}
+          path: |
+            playwright-report
+            test-results
+          retention-days: 14
+
+  # Issue 984: the speed of the four reference pages (P01 to P04, plan 02 §7.5). The application is built and started
+  # on the bench (bench:full), Lighthouse measures it in mobile (3 runs per page, median), and scripts/perf/ci-gate.ts
+  # judges the medians with the budgets of the plan: a warning until 06/11/2026, an error from that day. The softness is
+  # in the script, not in the workflow (no `continue-on-error`): the date and the rules are tested in
+  # tests/unit/perf-ci-gate.test.ts. Parallel to the other jobs: nothing waits for the build job.
+  perf:
+    name: perf
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      # Lighthouse runs under Node, through npx.
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - name: Install
+        run: bun install --frozen-lockfile
+      # A Chromium newer than the one of the repository's Playwright: with Chromium 147, Lighthouse 13.5.0 never gets
+      # the first paint of a page that has a Referrer-Policy header (docs/mesure/lighthouse.md, « Le navigateur »).
+      # scripts/perf/lighthouse.ts takes the newest Chromium of ~/.cache/ms-playwright.
+      - name: Browser for Lighthouse
+        run: npx --yes playwright@1.64.1 install chromium
+      - name: Start the application on the bench
+        run: |
+          bun run bench:full > bench-full.log 2>&1 &
+          for _ in $(seq 1 100); do
+            if curl -fsS -o /dev/null http://127.0.0.1:3100/api/health; then break; fi
+            sleep 3
+          done
+          curl -fsS http://127.0.0.1:3100/api/health
+      - name: Speed of the four reference pages
+        run: bun run perf:ci
+
+  # THE required check. A needed job that failed, was cancelled or was skipped makes it red:
+  # GitHub counts a skipped required job as passed, this job does not.
+  ci-ok:
+    name: ci-ok
+    if: always()
+    needs: [qualite, unit, build, integration, e2e, perf]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Every job must have succeeded
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+          DETAIL: ${{ toJSON(needs) }}
+        run: |
+          echo "$DETAIL"
+          if [ -z "$RESULTS" ]; then
+            echo "::error::ci-ok n'a reçu le résultat d'aucun job."
+            exit 1
+          fi
+          for result in $RESULTS; do
+            if [ "$result" != "success" ]; then
+              echo "::error::Un job n'a pas réussi ($result) : ci-ok est rouge."
+              exit 1
+            fi
+          done
+          echo "Tous les jobs ont réussi : ci-ok est vert."

@@ -1,0 +1,91 @@
+{
+	"waiting": [],
+	"owners": {},
+	"exceptions": {
+		"paths": [
+			{
+				"path": "src/app/(front)/(site)/a-propos",
+				"reason": "Frozen public address: the folder name is the URL (src/lib/frozen-urls.ts, docs/migration/URLS.md)."
+			},
+			{
+				"path": "src/app/(front)/(site)/demande-envoyee",
+				"reason": "Frozen public address: the folder name is the URL (src/lib/frozen-urls.ts, docs/migration/URLS.md)."
+			},
+			{
+				"path": "src/app/(front)/(site)/maquilleuse",
+				"reason": "Frozen public address: the folder name is the URL (src/lib/frozen-urls.ts, docs/migration/URLS.md)."
+			},
+			{
+				"path": "src/app/(front)/(site)/maquilleuse/partenariats",
+				"reason": "Frozen public address: the folder name is the URL (src/lib/frozen-urls.ts, docs/migration/URLS.md)."
+			},
+			{
+				"path": "src/app/(front)/(site)/mentions-legales",
+				"reason": "Frozen public address: the folder name is the URL (src/lib/frozen-urls.ts, docs/migration/URLS.md)."
+			},
+			{
+				"path": "src/app/(front)/(site)/particulier",
+				"reason": "Frozen public address: the folder name is the URL (src/lib/frozen-urls.ts, docs/migration/URLS.md)."
+			},
+			{
+				"path": "src/app/(front)/(site)/particulier/centraliser-ses-recherches",
+				"reason": "Frozen public address: the folder name is the URL (src/lib/frozen-urls.ts, docs/migration/URLS.md)."
+			},
+			{
+				"path": "src/app/(front)/(site)/particulier/explorer-les-profils",
+				"reason": "Frozen public address: the folder name is the URL (src/lib/frozen-urls.ts, docs/migration/URLS.md)."
+			},
+			{
+				"path": "src/app/(front)/(site)/particulier/trouver-une-maquilleuse",
+				"reason": "Frozen public address: the folder name is the URL (src/lib/frozen-urls.ts, docs/migration/URLS.md)."
+			},
+			{
+				"path": "src/app/(front)/(site)/politique-de-confidentialite",
+				"reason": "Frozen public address: the folder name is the URL (src/lib/frozen-urls.ts, docs/migration/URLS.md)."
+			},
+			{
+				"path": "src/app/(front)/(site)/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse",
+				"reason": "Frozen public address: the folder name is the URL (src/lib/frozen-urls.ts, docs/migration/URLS.md)."
+			},
+			{
+				"path": "src/app/(front)/(site)/pourquoi-utiliser-my-makeup-en-tant-que-particulier",
+				"reason": "Frozen public address: the folder name is the URL (src/lib/frozen-urls.ts, docs/migration/URLS.md)."
+			},
+			{
+				"path": "src/app/(front)/(site)/profil",
+				"reason": "Frozen public address: the folder name is the URL (src/lib/frozen-urls.ts, docs/migration/URLS.md)."
+			},
+			{
+				"path": "src/app/(front)/(site)/solutions/pour-les-maquilleuses",
+				"reason": "Frozen public address: the folder name is the URL (src/lib/frozen-urls.ts, docs/migration/URLS.md)."
+			},
+			{
+				"path": "src/app/(front)/(site)/solutions/pour-les-particuliers",
+				"reason": "Frozen public address: the folder name is the URL (src/lib/frozen-urls.ts, docs/migration/URLS.md)."
+			},
+			{
+				"path": "src/app/(front)/(dashboard)/auth/apercu-profil",
+				"reason": "Frozen public address: the folder name is the URL (src/lib/frozen-urls.ts, docs/migration/URLS.md)."
+			},
+			{
+				"path": "src/app/(front)/(dashboard)/auth/mot-de-passe-oublie",
+				"reason": "Frozen public address: the folder name is the URL (src/lib/frozen-urls.ts, docs/migration/URLS.md)."
+			},
+			{
+				"path": "src/app/(front)/(dashboard)/auth/profil",
+				"reason": "Frozen public address: the folder name is the URL (src/lib/frozen-urls.ts, docs/migration/URLS.md)."
+			},
+			{
+				"path": "src/app/(front)/(dashboard)/auth/reinitialiser",
+				"reason": "Frozen public address: the folder name is the URL (src/lib/frozen-urls.ts, docs/migration/URLS.md)."
+			}
+		],
+		"words": [
+			{
+				"word": "specialite",
+				"in": ["src/lib/search/input.ts"],
+				"reason": "The ?specialite= parameter of /search: links of the old site carry it."
+			}
+		]
+	}
+}

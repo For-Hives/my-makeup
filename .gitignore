@@ -1,43 +1,41 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
 # dependencies
 /node_modules
-/.pnp
-.pnp.js
 
-# testing
-/coverage
+# one lockfile only: bun.lock
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+bun.lockb
 
 # next.js
 /.next/
-/.next-test-auth*/
-/.next-test-regression*/
 /out/
+/build/
+next-env.d.ts
+*.tsbuildinfo
 
-# production
-/build
+# environment: real values are never committed, only the empty example is
+.env
+.env.*
+!.env.exemple
+# the environment of the local test bench: made-up values only, read by the tests
+!.env.test
+
+# migration working files (dumps, snapshots): local only
+/.migration/
+
+# tests
+/coverage/
+/playwright-report/
+/test-results/
+
+# logs
+*.log
 
 # misc
 .DS_Store
 *.pem
-
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-
-# vercel
-.vercel
-
 .idea
-pnpm-lock.yaml
 
-.env
-
-.env.local
-
-# local Cypress secrets, kept ignored until old local copies are gone
-cypress.env.json
-
-yarn.lock
+# sessions of the test bench, written by `bun run bench:session`
+/.banc/
