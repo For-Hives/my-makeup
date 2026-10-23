@@ -2,6 +2,7 @@ import type { Payload } from 'payload'
 import { AUTH_LOG_COLLECTION, purgeThreshold } from '../auth/auth-log'
 import { purgeContactMessages } from './contact-messages'
 import { purgeSearchCounts } from './search-counts'
+import { purgeProfileViews } from './profile-views'
 import { retryStuckMessages } from './stuck-messages'
 import { purgeUnconfirmedAccounts } from './unconfirmed-accounts'
 
@@ -47,6 +48,7 @@ export const DAILY_TASKS: readonly DailyTask[] = [
 	purgeUnconfirmedAccounts,
 	purgeContactMessages,
 	purgeSearchCounts,
+	purgeProfileViews,
 	retryStuckMessages,
 ]
 

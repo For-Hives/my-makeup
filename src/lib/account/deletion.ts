@@ -8,6 +8,7 @@ import {
 } from 'payload'
 // Relative import on purpose: the bin is the one in the collections, and this file may be loaded outside of Next.
 import { heldTrash } from '../../collections/trash'
+import { PROFILE_VIEWS_COLLECTION } from '../views/profile-views'
 
 /**
  * The deletion of an account and everything that hangs on it (ticket 141; plan 01 AUTH-13, P7.7;
@@ -105,8 +106,17 @@ async function remove(payload: Payload, id: number | string): Promise<DeletionSu
 				where: { pro: { equals: id } },
 			})
 			// One by one, by identifier: the bin refuses a deletion by `where`, and never runs side by side.
-			for (const profile of docs)
+			for (const profile of docs) {
+				// Her counters of views go with her profile (ticket 1001); the daily purge would take the orphans anyway.
+				await payload.delete({
+					collection: PROFILE_VIEWS_COLLECTION,
+					depth: 0,
+					overrideAccess: true,
+					req,
+					where: { profile: { equals: profile.id } },
+				})
 				await payload.delete({ collection: 'profiles', depth: 0, id: profile.id, overrideAccess: true, req })
+			}
 			await payload.delete({ collection: 'pros', depth: 0, id, overrideAccess: true, req })
 			// She came from the old site, which the import still reads: her identifier is kept so that a
 			// rerun never brings her back. Same transaction: both happen or neither.

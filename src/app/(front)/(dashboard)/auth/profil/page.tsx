@@ -11,6 +11,7 @@ import { IdentityEditor } from '@/components/dashboard/IdentityEditor'
 import { CoursesEditor, ExperiencesEditor, ServiceOffersEditor } from '@/components/dashboard/ListsEditors'
 import { LocationEditor } from '@/components/dashboard/LocationEditor'
 import { MainPhotoThumbnail } from '@/components/dashboard/MainPhotoThumbnail'
+import { MyViews } from '@/components/dashboard/MyViews'
 import { NetworksEditor } from '@/components/dashboard/NetworksEditor'
 import { OnboardingBanner } from '@/components/dashboard/OnboardingBanner'
 import { PageOnline } from '@/components/dashboard/PageOnline'
@@ -33,7 +34,8 @@ import { EXPERIENCES } from '@/lib/dashboard/experiences'
 import { greetingName } from '@/lib/dashboard/greeting'
 import { profileRows } from '@/lib/dashboard/list'
 import { locationValues } from '@/lib/dashboard/location'
-import { artistProfile } from '@/lib/dashboard/my-profile'
+import { artistProfile, profileId } from '@/lib/dashboard/my-profile'
+import { readMyViews } from '@/lib/dashboard/my-views'
 import { remainingSteps } from '@/lib/dashboard/onboarding'
 import { readDashboardPhotos } from '@/lib/dashboard/photos'
 import { PREVIEW_PATH } from '@/lib/dashboard/preview'
@@ -84,6 +86,9 @@ export default async function ProfilePage() {
 	// What she stores and what the site allows (ticket 309): the volume used and the photos left.
 	const usage = usageView(await readPhotoUsage(context.payload, artist.id))
 	const progress = profileProgress(profile)
+	// Her views of the last 30 days, once her page is published (ticket 1001): her own profile, found by her session.
+	const myProfileId = profile.status === 'published' ? await profileId(context.payload, context.utilisateur) : null
+	const myViews = myProfileId === null ? undefined : await readMyViews(context.payload, myProfileId)
 	const steps = remainingSteps(profile)
 	// Not for a page the team hid, nor for the team's own account: the onboarding is not their next step.
 	const showBanner = steps.premiere !== null && progress.etat !== 'masque' && progress.etat !== 'interne'
@@ -203,6 +208,7 @@ export default async function ProfilePage() {
 			) : null}
 			<ProfileProgress avancement={progress} reprendre={saveMyAvailability} />
 			{pageIsOnline(progress) && profile.slug ? <PageOnline adresse={publicAddress(profile.slug)} /> : null}
+			{myViews === undefined ? null : <MyViews jours={myViews} />}
 			<section aria-labelledby="groupe-premier" data-testid="groupe-premier" className="flex flex-col gap-5">
 				<h2 id="groupe-premier" className="font-semibold text-neutral-700 text-lg">
 					{FIRST_GROUP_TITLE}

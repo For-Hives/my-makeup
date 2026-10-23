@@ -78,6 +78,7 @@ export const COLLECTIONS = [
 	'contact-requests',
 	'deleted-accounts',
 	'search-counts',
+	'profile-views',
 	'payload-locked-documents',
 ] as const
 export type MatrixCollection = (typeof COLLECTIONS)[number]
@@ -164,6 +165,8 @@ export type Distribution = Record<Role, Actor> & {
 	compteSupprime: number
 	/** A row of the daily search counts (issue 1002): it belongs to nobody, only an admin reads it. */
 	compteurDeRecherches: number
+	/** A row of the counter of views (ticket 1001): it belongs to nobody, only an admin reads it. */
+	vueDeProfil: number
 }
 
 /** A fresh address for each document a line creates or changes. */
@@ -262,6 +265,23 @@ const searchCountData = () => ({
 const searchCount = async (payload: Payload): Promise<number> =>
 	(await payload.create({ collection: 'search-counts', data: searchCountData() })).id
 
+/** A row of the counter of views, written by the server as it writes them: on the first profile, a day nobody reuses. */
+const profileView = async (payload: Payload): Promise<number> => {
+	const { docs } = await payload.find({ collection: 'profiles', depth: 0, limit: 1, select: {} })
+	const profile = docs[0]
+	if (!profile) throw new Error('La matrice n’a aucun profil pour y compter des vues.')
+	return (
+		await payload.create({
+			collection: 'profile-views',
+			data: {
+				profile: profile.id,
+				day: `2020-01-${String(1 + Math.floor(Math.random() * 28)).padStart(2, '0')}`,
+				count: 1,
+			},
+		})
+	).id
+}
+
 /** What the matrix needs to know of a collection to play its lines. */
 interface Portrait {
 	/** The field a line changes when it names none, and a new value for it. */
@@ -342,6 +362,12 @@ const PORTRAITS: Record<MatrixCollection, Portrait> = {
 		nouvelleValeur: () => 1,
 		donneesDeCreation: () => Promise.resolve({ strapiId: 8_000_000 + Math.floor(Math.random() * 1_000_000_000) }),
 		jetable: deletedAccount,
+	},
+	'profile-views': {
+		champ: 'count',
+		nouvelleValeur: () => 999,
+		donneesDeCreation: () => Promise.resolve({ day: '2020-02-01', count: 1 }),
+		jetable: profileView,
 	},
 	// Contact messages (ticket 158): the server writes them, an admin reads them, nobody else reaches them.
 	'contact-requests': {
@@ -464,6 +490,7 @@ export async function distribute(): Promise<Distribution> {
 		demande: await request(payload),
 		compteSupprime: await deletedAccount(payload),
 		compteurDeRecherches: await searchCount(payload),
+		vueDeProfil: await profileView(payload),
 	}
 }
 
@@ -551,6 +578,7 @@ function documentOf(distribution: Distribution, ligne: Line): number {
 	if (collection === 'contact-requests') return distribution.demande
 	if (collection === 'deleted-accounts') return distribution.compteSupprime
 	if (collection === 'search-counts') return distribution.compteurDeRecherches
+	if (collection === 'profile-views') return distribution.vueDeProfil
 	const state = (etat: State) =>
 		isEditorial(collection)
 			? distribution.contenus[collection][etat]
@@ -599,6 +627,7 @@ async function list(voie: Street, acteur: Actor, ligne: Line, distribution: Dist
 		...(collection === 'contact-requests' ? [distribution.demande] : []),
 		...(collection === 'deleted-accounts' ? [distribution.compteSupprime] : []),
 		...(collection === 'search-counts' ? [distribution.compteurDeRecherches] : []),
+		...(collection === 'profile-views' ? [distribution.vueDeProfil] : []),
 	]
 	const publicOnes = await publicOf(collection, distributed)
 	const ownAndPublic = [...new Set([...own, ...publicOnes])].sort((a, b) => a - b)

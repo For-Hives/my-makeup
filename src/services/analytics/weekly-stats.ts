@@ -14,11 +14,13 @@
 
 import type { Payload } from 'payload'
 import { searchCountInstant } from '@/lib/search/count'
+import { PROFILE_VIEWS_COLLECTION } from '@/lib/views/profile-views'
 import {
 	aggregateAuth,
 	aggregateContact,
 	aggregateSearches,
 	aggregateStats,
+	aggregateViews,
 	LEGACY_PROVIDERS,
 	type Period,
 	type ProfileForStats,
@@ -37,7 +39,7 @@ export async function readWeeklyStats(
 		greater_than_equal: searchCountInstant(parisDay(periode.debut)),
 		less_than: searchCountInstant(parisDay(periode.fin)),
 	}
-	const [profiles, accounts, requests, events, searchRows, remainingHashes, withoutHash] = await Promise.all([
+	const [profiles, accounts, requests, events, searchRows, remainingHashes, withoutHash, views] = await Promise.all([
 		payload.find({
 			collection: 'profiles',
 			select: {
@@ -113,6 +115,19 @@ export async function readWeeklyStats(
 				] as const
 			})
 		),
+		payload.find({
+			collection: PROFILE_VIEWS_COLLECTION,
+			where: {
+				and: [
+					{ day: { greater_than_equal: parisDay(periode.debut) } },
+					{ day: { less_than_equal: parisDay(new Date(periode.fin.getTime() - 1)) } },
+				],
+			},
+			select: { day: true, count: true },
+			depth: 0,
+			pagination: false,
+			overrideAccess: true,
+		}),
 	])
 	const stats = aggregateStats({
 		profils: profiles.docs as ProfileForStats[],
@@ -125,6 +140,10 @@ export async function readWeeklyStats(
 		contact: aggregateContact(requests.docs),
 		auth: aggregateAuth(events.docs),
 		searches: aggregateSearches(searchRows.docs),
+		views: aggregateViews(
+			views.docs.map(({ day, count }) => ({ day, count })),
+			periode
+		),
 		inherited: {
 			remainingHashes: remainingHashes.totalDocs,
 			withoutPasswordByProvider: Object.fromEntries(withoutHash),

@@ -80,6 +80,9 @@ export default function PrivacyPolicyPage() {
 				{`Lors d'une connexion avec Google, un simple repère « connexion en cours », sans identifiant ni donnée sur vous, est gardé dans l'onglet de votre navigateur le temps de l'aller-retour, pour compter si la connexion a abouti. Ce n'est pas un cookie : il est effacé à votre retour sur le site, et au plus tard à la fermeture de l'onglet.`}
 			</p>
 			<p>
+				{`Nous comptons aussi, sur nos propres serveurs, combien de fois la page de chaque maquilleuse est ouverte, pour le lui montrer dans son espace. Seul un nombre par profil et par jour est enregistré : ni votre adresse IP, ni identifiant, ni appareil, ni cookie. Un simple repère « page déjà comptée », sans identifiant, est gardé dans l'onglet de votre navigateur pour ne pas compter deux fois un rechargement ; il n'est jamais envoyé et disparaît à la fermeture de l'onglet. Les visites de la maquilleuse elle-même, des robots et des profils masqués ne sont pas comptées. Ces nombres sont conservés 92 jours, puis supprimés. L'opposition proposée plus bas empêche aussi ce comptage sur ce navigateur.`}
+			</p>
+			<p>
 				{`La mesure passe par notre propre site, qui transmet à Umami votre adresse IP, sans vos cookies, pour en déduire le pays et distinguer les visiteurs ; Umami ne la conserve pas.`}
 			</p>
 			<p>

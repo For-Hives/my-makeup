@@ -78,6 +78,7 @@ export interface Config {
     'contact-requests': ContactRequest;
     'deleted-accounts': DeletedAccount;
     'search-counts': SearchCount;
+    'profile-views': ProfileView;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -99,6 +100,7 @@ export interface Config {
     'contact-requests': ContactRequestsSelect<false> | ContactRequestsSelect<true>;
     'deleted-accounts': DeletedAccountsSelect<false> | DeletedAccountsSelect<true>;
     'search-counts': SearchCountsSelect<false> | SearchCountsSelect<true>;
+    'profile-views': ProfileViewsSelect<false> | ProfileViewsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -779,6 +781,18 @@ export interface SearchCount {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "profile-views".
+ */
+export interface ProfileView {
+  id: number;
+  profile?: (number | null) | Profile;
+  day: string;
+  count: number;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -840,6 +854,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'search-counts';
         value: number | SearchCount;
+      } | null)
+    | ({
+        relationTo: 'profile-views';
+        value: number | ProfileView;
       } | null);
   globalSlug?: string | null;
   user:
@@ -1224,6 +1242,17 @@ export interface SearchCountsSelect<T extends boolean = true> {
   total?: T;
   withCity?: T;
   noResult?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "profile-views_select".
+ */
+export interface ProfileViewsSelect<T extends boolean = true> {
+  profile?: T;
+  day?: T;
+  count?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
