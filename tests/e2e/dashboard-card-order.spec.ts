@@ -41,6 +41,9 @@ const cardsOrder = (page: Page) =>
 		.locator('section[data-testid^="carte-"]:not([data-testid="carte-disponibilite"])')
 		.evaluateAll(elements => elements.map(element => (element.getAttribute('data-testid') ?? '').replace('carte-', '')))
 
+// 2 400 px before the draft notice (decision of 23/10/2026); the notice is about 240 px tall at 390 px.
+const CARDS_WITHIN = 2650
+
 test.describe('307 : les cartes de l’espace dans l’ordre de ce qui compte', { tag: '@mobile' }, () => {
 	test('l’ordre rendu : six cartes, puis le groupe replié, puis « Mon compte »', async ({ context, page }) => {
 		await artist(context)
@@ -61,7 +64,7 @@ test.describe('307 : les cartes de l’espace dans l’ordre de ce qui compte', 
 		expect(await violationsSevere(page)).toEqual([])
 	})
 
-	test('à 390 px, sur un profil vide, Prestations et Contact sont dans les 2 400 premiers pixels', async ({
+	test('à 390 px, sur un profil vide, Prestations et Contact sont dans les 2 650 premiers pixels', async ({
 		context,
 		page,
 	}) => {
@@ -74,7 +77,7 @@ test.describe('307 : les cartes de l’espace dans l’ordre de ce qui compte', 
 			const box = await page.getByTestId(`carte-${name}`).boundingBox()
 			// Positions are measured from the top of the page.
 			const top = (box?.y ?? Number.POSITIVE_INFINITY) + (await page.evaluate(() => window.scrollY))
-			expect(top, `haut de la carte ${name}`).toBeLessThanOrEqual(2400)
+			expect(top, `haut de la carte ${name}`).toBeLessThanOrEqual(CARDS_WITHIN)
 		}
 	})
 

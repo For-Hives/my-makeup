@@ -43,7 +43,9 @@ test.describe('138 : où en est le profil', { tag: '@mobile' }, () => {
 		await expect(page.getByTestId('avancement-score')).toHaveText('0/6 indispensables')
 		await expect(page.getByTestId('avancement-consequence')).toContainText('n’est pas listé dans la recherche')
 		await expect(block.locator('li')).toHaveCount(13)
-		await expect(page.getByTestId('brouillon-manques').locator('li')).toHaveCount(6)
+		await expect(page.getByTestId('brouillon-manques')).toContainText(
+			'ta spécialité, ta commune, une description de 200 caractères au moins, ta photo principale, une prestation avec un prix en chiffres, un moyen de te contacter.'
+		)
 		expect(await page.locator('h1').count()).toBe(1)
 
 		await page.screenshot({
@@ -210,7 +212,6 @@ test.describe('306 : la jauge honnête et « Ta page est en ligne ! »', { tag: 
 		const notice = page.getByTestId('brouillon')
 		await expect(notice.getByTestId('brouillon-pastille')).toHaveText('En brouillon')
 		await expect(notice).toContainText('Ta page n’est pas encore en ligne : les clientes ne la voient pas.')
-		await expect(notice.getByTestId('brouillon-manques').locator('li')).toHaveCount(1)
 		await expect(notice.getByTestId('brouillon-manques')).toContainText('moyen de te contacter')
 		const completeLink = notice.getByRole('link', { name: 'Compléter ma page' })
 		expect((await completeLink.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44)
