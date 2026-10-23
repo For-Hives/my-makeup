@@ -3,9 +3,18 @@ import { contactEmailContent } from '../emails/contact'
 import { composerEmail } from '../emails/layout'
 import { type Log, NO_RELAY, type SendEmail } from '../emails/send'
 import { SITE_ORIGIN } from '../env'
+import { isLocalAddress } from '../search/rate-limit'
 import { CONTACT_TRAP_FIELD, type ContactErrors, type ContactMessage, validateMessage } from './message'
 import { CONTACT_RATE_LIMITS, type ContactRateLimits, takeContactSlot } from './rate-limit'
 import type { MailState, RequestStatus } from './states'
+import {
+	TURNSTILE_TOKEN_FIELD,
+	TURNSTILE_UNAVAILABLE_FIELD,
+	type TurnstileCheck,
+	takeUnverifiedSlot,
+	UNVERIFIED_LIMITS,
+	verifyTurnstile,
+} from './turnstile'
 
 /**
  * A contact message, server side (tickets 158 and 159). No `next` import: the Server Action calls it,
@@ -16,6 +25,8 @@ import type { MailState, RequestStatus } from './states'
  *    anyone, and nothing is stored, sent or counted.
  * 1. The message is checked. A message that fails a rule creates no row and sends no mail, whoever
  *    called the action.
+ *    Then, when Turnstile is set (ticket 1000), the token is verified: a refused, missing or spent token
+ *    stores nothing; an outage on Cloudflare's side lets the message through under a tighter brake.
  *    Then the brakes (ticket 161): 5 an hour by client address, 20 a day by mailbox. A refused message is
  *    neither stored nor sent.
  * 2. It is stored in `contact-requests` (`new`, mail `pending`). If the store fails, nothing is sent and
@@ -75,6 +86,7 @@ export type ContactResult =
 	| { ok: true }
 	| { ok: false; code: 'donnees-invalides'; erreurs: ContactErrors }
 	| { ok: false; code: 'enregistrement-impossible' }
+	| { ok: false; code: 'verification-echouee' }
 	| { ok: false; code: 'trop-de-messages'; reessayerDansS: number }
 
 export interface ContactInput {
@@ -93,6 +105,8 @@ export interface ContactInput {
 	client: string
 	/** The brakes in use; the shared ones by default. */
 	freins?: ContactRateLimits
+	/** Set when Turnstile is on (ticket 1000): the secret, and for a test a short deadline and brakes of its own. */
+	turnstile?: TurnstileCheck
 }
 
 /** The kind of a failure, in a word: what a log may keep of an error that may quote what was typed. */
@@ -179,6 +193,29 @@ export async function saveContactMessage(entrees: ContactInput): Promise<Contact
 
 	const checked = validateMessage(entrees.formulaire)
 	if (!checked.ok) return { ok: false, code: 'donnees-invalides', erreurs: checked.erreurs }
+
+	if (entrees.turnstile) {
+		const token = entrees.formulaire.get(TURNSTILE_TOKEN_FIELD)
+		const claimsOutage = entrees.formulaire.get(TURNSTILE_UNAVAILABLE_FIELD) === '1'
+		const hasToken = typeof token === 'string' && token !== ''
+		const outcome = hasToken
+			? await verifyTurnstile(entrees.turnstile.secret, token, entrees.turnstile.deadlineMs)
+			: claimsOutage
+				? 'unavailable'
+				: 'rejected'
+		if (outcome === 'rejected') return { ok: false, code: 'verification-echouee' }
+		if (outcome === 'unavailable') {
+			entrees.journal.erreur(
+				'La vérification Turnstile d’un message de contact n’a pas pu se faire : le message passe sous un frein serré.'
+			)
+			const tight = takeUnverifiedSlot(
+				entrees.client,
+				isLocalAddress(entrees.client),
+				entrees.turnstile.unverified ?? UNVERIFIED_LIMITS
+			)
+			if (!tight.allowed) return { ok: false, code: 'trop-de-messages', reessayerDansS: tight.retryInSeconds }
+		}
+	}
 
 	const place = takeContactSlot(entrees.client, checked.message.email, entrees.freins ?? CONTACT_RATE_LIMITS)
 	if (!place.autorise) return { ok: false, code: 'trop-de-messages', reessayerDansS: place.reessayerDansS }

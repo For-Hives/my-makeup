@@ -19,6 +19,9 @@ import { serverEnv } from '@/lib/env'
  * a real 429 past 5 messages an hour from one address or 20 a day from one mailbox; the check here is the
  * authoritative one (it takes the places), and shows the same sentence with her typing kept if the proxy saw nothing.
  *
+ * Turnstile (ticket 1000): when the secret is set, the token of the widget is verified before anything is stored
+ * (src/lib/contact/turnstile.ts).
+ *
  * Whatever the mail does, a stored message is answered with the confirmation. Nothing she typed is logged.
  */
 export async function sendMessage(_precedent: ContactState, formulaire: FormData): Promise<ContactState> {
@@ -35,6 +38,7 @@ export async function sendMessage(_precedent: ContactState, formulaire: FormData
 		envoyer: payloadSendEmail(payload, env),
 		destinataire: env.contactTo,
 		client,
+		...(env.turnstile && { turnstile: { secret: env.turnstile.secret } }),
 		apres: travail => after(travail),
 		journal: {
 			info: ligne => payload.logger.info({ msg: ligne }),
@@ -42,6 +46,7 @@ export async function sendMessage(_precedent: ContactState, formulaire: FormData
 		},
 	})
 	if (result.ok) return { envoye: true }
+	if (result.code === 'verification-echouee') return { verification: true, valeurs: values }
 	if (result.code === 'trop-de-messages') return { limite: true, valeurs: values }
 	if (result.code === 'donnees-invalides') return { erreurs: result.erreurs, valeurs: values }
 	return { echec: true, valeurs: values }

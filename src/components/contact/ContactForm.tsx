@@ -10,7 +10,9 @@ import {
 	MESSAGE_NOT_SAVED,
 	MESSAGE_SENT,
 	MESSAGE_TOO_MANY_MESSAGES,
+	MESSAGE_VERIFICATION_FAILED,
 } from '@/lib/contact/message'
+import { TurnstileWidget } from './TurnstileWidget'
 
 export type ContactAction = (precedent: ContactState, formulaire: FormData) => Promise<ContactState>
 
@@ -33,6 +35,7 @@ function issue(etat: Exclude<ContactState, null>): { ok: boolean; status: number
 	if ('envoye' in etat) return { ok: true, status: 200 }
 	if ('erreurs' in etat) return { ok: false, status: 400 }
 	if ('limite' in etat) return { ok: false, status: 429 }
+	if ('verification' in etat) return { ok: false, status: 403 }
 	return { ok: false, status: etat.reseau ? 0 : 500 }
 }
 
@@ -103,7 +106,16 @@ function Field({
  *   answered, so the fields are remounted with each answer and take her typing back as their value.
  * - The event of the measure is sent once for each answer.
  */
-export function ContactForm({ action, suivre = track }: { action: ContactAction; suivre?: TrackContact }) {
+export function ContactForm({
+	action,
+	suivre = track,
+	siteKey,
+}: {
+	action: ContactAction
+	suivre?: TrackContact
+	/** The public key of the Turnstile widget (ticket 1000). Without it, no widget. */
+	siteKey?: string
+}) {
 	const [state, submit, pending] = useActionState(withNetworkFailure(action), null)
 	const lock = useRef(false)
 	const form = useRef<HTMLFormElement>(null)
@@ -200,10 +212,14 @@ export function ContactForm({ action, suivre = track }: { action: ContactAction;
 					/>
 				</label>
 			</div>
+			{siteKey ? <TurnstileWidget siteKey={siteKey} answer={generation} /> : null}
 			<div role="alert" data-testid="erreur-contact" className="mt-6 empty:hidden">
 				{errors ? <p className="rounded-md bg-red-50 p-3 text-red-800 text-sm">{ERRORS_SUMMARY}</p> : null}
 				{state && 'echec' in state ? (
 					<p className="rounded-md bg-red-50 p-3 text-red-800 text-sm">{MESSAGE_NOT_SAVED}</p>
+				) : null}
+				{state && 'verification' in state ? (
+					<p className="rounded-md bg-red-50 p-3 text-red-800 text-sm">{MESSAGE_VERIFICATION_FAILED}</p>
 				) : null}
 				{state && 'limite' in state ? (
 					<p className="rounded-md bg-red-50 p-3 text-red-800 text-sm">{MESSAGE_TOO_MANY_MESSAGES}</p>

@@ -63,6 +63,7 @@ export type RawEnv = Partial<
 		| 'INDEXNOW_KEY'
 		| 'NEXT_PHASE'
 		| 'NEXT_PUBLIC_SITE_URL'
+		| 'NEXT_PUBLIC_TURNSTILE_SITE_KEY'
 		| 'NODE_ENV'
 		| 'PAYLOAD_DROP_DATABASE'
 		| 'PAYLOAD_SECRET'
@@ -82,6 +83,7 @@ export type RawEnv = Partial<
 		| 'SMTP_USER'
 		| 'STATS_TOKEN'
 		| 'STRAPI_SOURCE_URI'
+		| 'TURNSTILE_SECRET_KEY'
 		| 'UMAMI_ORIGIN',
 		string
 	>
@@ -138,6 +140,14 @@ export type UmamiEnv = {
 	origin: string
 	/** True when the instance is on this machine: the fake Umami of the test bench. */
 	local: boolean
+}
+
+/** Cloudflare Turnstile on the contact form (ticket 1000): both keys, or the check is off. */
+export type TurnstileEnv = {
+	/** The secret key. Never leaves the server, never logged. */
+	secret: string
+	/** The public key of the widget. */
+	siteKey: string
 }
 
 export type ServerEnv = {
@@ -202,6 +212,11 @@ export type ServerEnv = {
 	 * then answers 404. On the site, unset means the current instance.
 	 */
 	umami?: UmamiEnv
+	/**
+	 * Nothing when TURNSTILE_SECRET_KEY is not set: the contact form then checks nothing with Cloudflare
+	 * (the trap field and the brakes stay). Never a test key on the site.
+	 */
+	turnstile?: TurnstileEnv
 	/** The only origins a session cookie is accepted from. Never empty: for Payload, empty means « any ». */
 	trustedOrigins: string[]
 }
@@ -304,6 +319,9 @@ const EXPECTED = {
 	SMTP_PORT: 'un numéro de port, de 1 à 65535',
 	SMTP_USER: 'l’identifiant du relais (pour Resend, « resend »), avec SMTP_PASSWORD',
 	UMAMI_ORIGIN: `une origine https://HÔTE (un chemin est permis, jamais de paramètres), ou sur ce poste celle du faux Umami du banc de test, comme http://127.0.0.1:4200`,
+	NEXT_PUBLIC_TURNSTILE_SITE_KEY:
+		'la clé de site publique du widget Turnstile de Cloudflare, avec TURNSTILE_SECRET_KEY',
+	TURNSTILE_SECRET_KEY: 'la clé secrète du widget Turnstile de Cloudflare, avec NEXT_PUBLIC_TURNSTILE_SITE_KEY',
 	STATS_TOKEN: `au moins ${SECRET_MIN_LENGTH} caractères, par exemple la sortie de « openssl rand -hex 32 »`,
 	STRAPI_SOURCE_URI: 'postgres://UTILISATEUR:MOT_DE_PASSE@HÔTE:PORT/BASE, le rôle en lecture seule de la base Strapi',
 } as const
@@ -808,6 +826,8 @@ const schema = z.object({
 		.string()
 		.refine(value => umamiOrigin(value.trim()) !== undefined, { error: 'refusée' })
 		.optional(),
+	NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string().optional(),
+	TURNSTILE_SECRET_KEY: z.string().optional(),
 	STATS_TOKEN: z
 		.string()
 		.refine(value => value.trim().length >= SECRET_MIN_LENGTH, { error: 'trop courte' })
@@ -817,6 +837,41 @@ const schema = z.object({
 /** An empty or blank variable is a missing one: `NAME=` in a .env file gives an empty text. */
 function withoutBlanks(source: RawEnv): RawEnv {
 	return Object.fromEntries(Object.entries(source).filter(([, value]) => value !== undefined && value.trim() !== ''))
+}
+
+/** The test keys Cloudflare publishes (always passes, always blocks, token already spent). */
+const TURNSTILE_TEST_KEY = /^[123]x0{10,}(AA|BB)$/
+
+/**
+ * The two keys of Turnstile (ticket 1000): both or none; none means the check is off. On the site itself,
+ * one of Cloudflare's published test keys would let every bot through (or block everybody): the start is refused.
+ */
+function turnstileEnv(
+	raw: RawEnv,
+	problems: { variable: string; problem: string }[],
+	inSite: boolean
+): TurnstileEnv | undefined {
+	const secret = raw.TURNSTILE_SECRET_KEY?.trim()
+	const siteKey = raw.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim()
+	if (secret === undefined) return undefined
+	if (siteKey === undefined) {
+		problems.push({
+			variable: 'NEXT_PUBLIC_TURNSTILE_SITE_KEY',
+			problem: `${ABSENT}, alors que TURNSTILE_SECRET_KEY est réglée. Attendu : ${EXPECTED.NEXT_PUBLIC_TURNSTILE_SITE_KEY}.`,
+		})
+		return undefined
+	}
+	if (inSite)
+		for (const [variable, value] of [
+			['TURNSTILE_SECRET_KEY', secret],
+			['NEXT_PUBLIC_TURNSTILE_SITE_KEY', siteKey],
+		] as const)
+			if (TURNSTILE_TEST_KEY.test(value))
+				problems.push({
+					variable,
+					problem: `refusée, car c’est une clé de test de Cloudflare et ceci est le site (${SITE_ORIGIN}). Attendu : ${EXPECTED[variable]}.`,
+				})
+	return { secret, siteKey }
 }
 
 /**
@@ -899,6 +954,8 @@ export function parseServerEnv(source: RawEnv): ServerEnv {
 			})
 	}
 
+	const turnstile = turnstileEnv(raw, problems, inSite)
+
 	if (!parsed.success || problems.length > 0) throw new EnvError(problems)
 
 	return {
@@ -923,6 +980,7 @@ export function parseServerEnv(source: RawEnv): ServerEnv {
 		photoLimits: photoLimitsFrom(parsed.data),
 		...(storage && { storage }),
 		...(parsed.data.STATS_TOKEN !== undefined && { statsToken: parsed.data.STATS_TOKEN.trim() }),
+		...(turnstile && { turnstile }),
 		...(umami && { umami }),
 		trustedOrigins: trustedOrigins(parsed.data.NEXT_PUBLIC_SITE_URL, production, raw.PORT),
 	}
@@ -955,6 +1013,7 @@ function processEnv(): RawEnv {
 		INDEXNOW_KEY: process.env.INDEXNOW_KEY,
 		NEXT_PHASE: process.env.NEXT_PHASE,
 		NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
+		NEXT_PUBLIC_TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
 		NODE_ENV: process.env.NODE_ENV,
 		PAYLOAD_DROP_DATABASE: process.env.PAYLOAD_DROP_DATABASE,
 		PAYLOAD_SECRET: process.env.PAYLOAD_SECRET,
@@ -974,6 +1033,7 @@ function processEnv(): RawEnv {
 		SMTP_USER: process.env.SMTP_USER,
 		STATS_TOKEN: process.env.STATS_TOKEN,
 		STRAPI_SOURCE_URI: process.env.STRAPI_SOURCE_URI,
+		TURNSTILE_SECRET_KEY: process.env.TURNSTILE_SECRET_KEY,
 		UMAMI_ORIGIN: process.env.UMAMI_ORIGIN,
 	}
 }

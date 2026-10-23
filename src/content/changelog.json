@@ -375,6 +375,11 @@
 			"id": "tu-vois-combien-de-fois-ta-page-a-ete-vue-ces-30-derniers",
 			"type": "ajout",
 			"text": "Tu vois combien de fois ta page a été vue ces 30 derniers jours, jour par jour, dans ton espace."
+		},
+		{
+			"id": "le-formulaire-de-contact-se-protege-des-robots-sans-vous",
+			"type": "amelioration",
+			"text": "Le formulaire de contact se protège des robots sans vous demander quoi que ce soit, et vos messages passent même si le contrôle est indisponible."
 		}
 	],
 	"releases": []
