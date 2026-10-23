@@ -789,16 +789,17 @@ describe('renovate.json: the rules Renovate will follow', () => {
 		})
 	})
 
-	describe('the version limits: Next stays in 16.3, TypeScript in 6, Node on a long-term line', () => {
+	describe('the version limits: TypeScript stays in 6, Node on a long-term line', () => {
 		test('each limit stops what it is there to stop, and nothing else', () => {
 			expect(capProblems(config)).toEqual([])
-			expect(outcomeFor(config, dependency('next'), 'minor').allowedVersions).toBe('<16.4.0')
+			expect(outcomeFor(config, dependency('typescript'), 'minor').allowedVersions).toBe('<7')
+			expect(outcomeFor(config, dependency('next'), 'minor').allowedVersions).toBeUndefined()
 			expect(outcomeFor(config, dependency('zod'), 'minor').allowedVersions).toBeUndefined()
 		})
 
 		test.each([
-			['a range lets a version of its line through', '<16.4.0', '16.3.9', true],
-			['a range stops the next line', '<16.4.0', '16.4.0', false],
+			['a range lets a version of its line through', '<7', '6.1.0', true],
+			['a range stops the next line', '<7', '7.0.0', false],
 			['an expression lets its lines through', '/^(24|26)\\./', '26.1.0', true],
 			['an expression stops the others', '/^(24|26)\\./', '25.0.0', false],
 			['no limit lets everything through', undefined, '99.0.0', true],
@@ -807,27 +808,6 @@ describe('renovate.json: the rules Renovate will follow', () => {
 		})
 
 		test.each([
-			[
-				'Next 16.4 let through',
-				(copy: RenovateConfig) => {
-					rules(copy).splice(rules(copy).indexOf(holding(copy, 'allowedVersions', '<16.4.0')), 1)
-				},
-				'next (bun) : la version 16.4.0 passerait. Next reste en 16.3',
-			],
-			[
-				'a limit that only holds next itself',
-				(copy: RenovateConfig) => {
-					holding(copy, 'allowedVersions', '<16.4.0').matchPackageNames = ['next']
-				},
-				'@next/third-parties (bun) : la version 16.4.0 passerait',
-			],
-			[
-				'a limit of Next that stops its own line',
-				(copy: RenovateConfig) => {
-					holding(copy, 'allowedVersions', '<16.4.0').allowedVersions = '<=16.3.8'
-				},
-				'next (bun) : la version 16.3.9 serait refusée, sans raison',
-			],
 			[
 				'TypeScript 7 let through',
 				(copy: RenovateConfig) => {

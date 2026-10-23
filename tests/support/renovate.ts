@@ -691,15 +691,6 @@ interface Cap {
 /** The version limits of the repository. Lifting one means removing its line here, with the reason gone. */
 export const CAPS: readonly Cap[] = [
 	{
-		holds: [
-			{ name: 'next', manager: 'bun', datasource: 'npm' },
-			{ name: '@next/third-parties', manager: 'bun', datasource: 'npm' },
-		],
-		allowed: ['16.3.9', '16.3.20'],
-		refused: ['16.4.0', '16.4.7', '17.0.0'],
-		why: 'Next reste en 16.3 tant qu’une version 3.x de Payload ne porte pas le correctif des noms d’erreurs (registre, repère next-16-3)',
-	},
-	{
 		holds: [{ name: 'typescript', manager: 'bun', datasource: 'npm' }],
 		allowed: ['6.0.4', '6.1.0'],
 		refused: ['7.0.0', '7.0.2'],

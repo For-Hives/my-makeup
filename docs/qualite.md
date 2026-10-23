@@ -381,7 +381,7 @@ gh pr list --repo For-Hives/my-makeup --author "app/renovate" --state open
 | Majeures | Proposées seulement après une case cochée au tableau de bord de Renovate, et jamais fusionnées seules. |
 | Sécurité | Un correctif de sécurité est proposé tout de suite, sans les 7 jours, avec l'étiquette `securite`. Il n'est jamais fusionné seul : il a moins de 7 jours. |
 | `bun.lock` | Recalculé une fois par mois, le premier du mois. Jamais fusionné seul : les dépendances indirectes y montent sans les 7 jours d'attente. |
-| Limites | Next reste en 16.3, TypeScript en 6, Node sur une ligne à support long (24, puis 26). |
+| Limites | TypeScript reste en 6, Node sur une ligne à support long (24, puis 26). |
 | Non suivi | `engines.node` : il vaut « 24.x », et Renovate le figerait sur une version exacte. |
 
 Ce qui monte ensemble, dans une seule pull request :
@@ -438,8 +438,8 @@ Le validateur tourne dans l'image officielle de Renovate, figée par son étique
 - **Une action de la CI** : la garde de la CI cite la version de `actions/checkout`, et le tableau de « Modifier la CI » liste les versions. La pull request reste rouge tant que le test n'est pas mis à jour, et les avis de sécurité du dépôt de l'action se relisent avant de fusionner.
 - **Biome** : `biome.json` nomme la version dans l'adresse de son schéma.
 - **Payload** : relancer `bun run payload:types` et `bun run payload:importmap`. La CI refuse des fichiers générés qui ne sont plus à jour.
-- **Une alerte de sécurité ne respecte pas les limites de version.** Renovate peut ouvrir une pull request de sécurité vers Next 16.4 : elle se ferme à la main tant que la limite tient.
-- **Lever la limite de Next** : quand une version 3.x de Payload porte le correctif des noms d'erreurs, retirer la règle, sa ligne dans la garde et la ligne `next-16-3` du registre des changements voulus, ensemble.
+- **Une alerte de sécurité ne respecte pas les limites de version.** Renovate peut ouvrir une pull request de sécurité qui franchit une limite (TypeScript 7, Node hors des lignes à support long) : elle se ferme à la main tant que la limite tient.
+- **Next n'a plus de limite** depuis le passage en 16.4.1 (23/10/2026, correctif de sécurité GHSA-2464-fhr4-w9xw, GHSA-673q-mjm6-r5xr, GHSA-p3m5-59mp-jv5r). Les majeures restent soumises à la case du tableau de bord de Renovate.
 
 ### Relevés
 

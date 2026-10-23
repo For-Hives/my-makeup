@@ -154,7 +154,7 @@ describe('les crochets de Payload', () => {
 		expect(log.error).not.toHaveBeenCalled()
 	})
 
-	test('le refus de Next hors de ses requêtes est reconnu à son code, et seulement lui', () => {
+	test('le refus de Next hors de ses requêtes est reconnu à son message, et seulement lui', () => {
 		let refusal: unknown
 		try {
 			revalidateTag('profils', { expire: 0 })
@@ -163,6 +163,7 @@ describe('les crochets de Payload', () => {
 		}
 		expect(outsideNextRequest(refusal)).toBe(true)
 		expect(outsideNextRequest(new Error('Invariant: static generation store missing'))).toBe(false)
-		expect(outsideNextRequest('E263')).toBe(false)
+		expect(outsideNextRequest(new Error('static generation store missing in revalidateTag("x")'))).toBe(false)
+		expect(outsideNextRequest('Invariant: static generation store missing in revalidateTag("x")')).toBe(false)
 	})
 })
