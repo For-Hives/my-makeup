@@ -5,12 +5,15 @@ import { getPayload } from 'payload'
 import { cache } from 'react'
 import { ProfileView } from '@/components/profile/ProfileView'
 import { ProfileViewCounter } from '@/components/profile/ProfileViewCounter'
+import { serverEnv } from '@/lib/env'
+import { quoteFormShown } from '@/lib/quote/shown'
 import { serializeJsonLd } from '@/lib/seo/json-ld'
 import { profileMetadata, profileStructuredData } from '@/lib/seo/profile'
 import { profilePath } from '@/lib/slug'
 import { writtenSegment } from '@/lib/urls/unknown-page'
 import { cachedProfileUrl } from '@/services/public/cached'
 import type { ProfileUrlTarget } from '@/services/public/profiles'
+import { sendQuoteRequest } from './actions'
 
 // The HTML is kept in the cache of Next (ticket 269). Nothing is rendered at build, which runs without a
 // database: no address is generated ahead (`generateStaticParams`), the page is rendered at its first visit,
@@ -56,6 +59,17 @@ export default async function ProfilePage({ params }: PageProps<'/profil/[slug]'
 	const target = await profileUrlTarget(slug)
 	if (target.type === 'redirection') permanentRedirect(profilePath(target.slug))
 	if (target.type === 'inconnue') notFound()
+	// The quote form (issue 1003): shown when the site offers it and this profile takes requests. The page is kept in
+	// the cache, so the server checks all of it again when a request arrives. Reads the environment, never a cookie.
+	const env = serverEnv()
+	const quote = quoteFormShown({
+		enabled: env.quoteRequests,
+		published: target.publie,
+		reachable: target.profil.liens.some(({ href }) => href),
+		available: target.profil.disponible,
+	})
+		? { action: sendQuoteRequest, ...(env.turnstile && { siteKey: env.turnstile.siteKey }) }
+		: undefined
 	return (
 		<>
 			<script
@@ -63,7 +77,7 @@ export default async function ProfilePage({ params }: PageProps<'/profil/[slug]'
 				// biome-ignore lint/security/noDangerouslySetInnerHtml: serializeJsonLd escapes <, > and &, so the data cannot close the tag.
 				dangerouslySetInnerHTML={{ __html: serializeJsonLd(profileStructuredData(target.profil)) }}
 			/>
-			<ProfileView profil={target.profil} />
+			<ProfileView profil={target.profil} {...(quote && { quote })} />
 			<ProfileViewCounter slug={target.profil.slug} />
 		</>
 	)

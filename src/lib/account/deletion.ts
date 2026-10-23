@@ -6,6 +6,7 @@ import {
 	type Payload,
 	type PayloadRequest,
 } from 'payload'
+import { QUOTE_REQUESTS_COLLECTION } from '../../collections/QuoteRequests'
 import { REMINDER_STATES_COLLECTION } from '../../collections/ReminderStates'
 // Relative import on purpose: the bin is the one in the collections, and this file may be loaded outside of Next.
 import { heldTrash } from '../../collections/trash'
@@ -119,6 +120,14 @@ async function remove(payload: Payload, id: number | string): Promise<DeletionSu
 				// What the reminders keep of her (the date of the last one, an unsubscribe) goes with her profile (issue 1006).
 				await payload.delete({
 					collection: REMINDER_STATES_COLLECTION,
+					depth: 0,
+					overrideAccess: true,
+					req,
+					where: { profile: { equals: profile.id } },
+				})
+				// The quote requests sent to her go with her profile (issue 1003): they hold the contact of clients.
+				await payload.delete({
+					collection: QUOTE_REQUESTS_COLLECTION,
 					depth: 0,
 					overrideAccess: true,
 					req,

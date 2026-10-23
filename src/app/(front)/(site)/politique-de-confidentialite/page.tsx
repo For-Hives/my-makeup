@@ -70,6 +70,11 @@ export default function PrivacyPolicyPage() {
 				{`Le formulaire est protégé contre les robots par Cloudflare Turnstile : en général sans que vous ayez rien à faire, votre navigateur passe un contrôle technique auprès de Cloudflare, qui renvoie un jeton à usage unique que notre serveur fait vérifier avant d'enregistrer le message. Cloudflare ne reçoit ni votre message ni vos coordonnées, et notre serveur ne lui envoie aucune adresse IP. Ce contrôle ne sert qu'à bloquer les envois automatiques (intérêt légitime) ; si Cloudflare est injoignable, le message est tout de même accepté, avec une limite d'envois plus stricte.`}
 			</p>
 
+			<h2>Demandes de devis</h2>
+			<p>
+				{`Données : prénom, adresse email, téléphone (facultatif), date et lieu de l'événement, type de prestation et message. La demande est enregistrée sur notre serveur, puis envoyée par email, via le service Resend, à la maquilleuse que vous avez choisie, à l'adresse de son compte, pour qu'elle vous réponde (exécution de votre demande, avec votre consentement, que vous donnez en cochant la case du formulaire). Un email de confirmation, qui ne reprend pas votre message, vous est adressé. Seuls la maquilleuse concernée et les administrateurs de My Makeup peuvent lire la demande ; vos coordonnées ne sont jamais affichées sur le site ni reprises par les moteurs de recherche. Durée : 6 mois après sa réception, puis suppression automatique de notre serveur, et de l'espace de la maquilleuse. La copie reçue par email par la maquilleuse est gardée par elle, sous sa responsabilité. Le formulaire est protégé contre les robots par Cloudflare Turnstile, dans les mêmes conditions que le formulaire de contact.`}
+			</p>
+
 			<h2>Mesure d&apos;audience</h2>
 			<p>
 				{`Nous mesurons la fréquentation du site avec Umami, un outil que nous installons et administrons nous-mêmes, sur un serveur loué (voir « Hébergement et prestataires »). Il ne dépose aucun cookie, n'enregistre aucun identifiant sur votre appareil et ne conserve pas votre adresse IP. Il compte les pages vues, le site de provenance, le type d'appareil et de navigateur, le pays, la rapidité d'affichage des pages, et les clics sur certains boutons (contact d'une maquilleuse, recherche) sans jamais enregistrer ce que vous saisissez, ni votre identité, ni vos coordonnées.`}

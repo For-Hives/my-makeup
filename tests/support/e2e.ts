@@ -144,6 +144,8 @@ export function applicationEnvironment(environnement: Environment): ProcessEnvir
 		...environnement,
 		...benchImages(environnement),
 		...benchCities(environnement),
+		// The quote request form (issue 1003) is on in the application of the tests: the site keeps it off until the owner says so.
+		QUOTE_REQUESTS: 'on',
 		...WITHOUT_FILE_ENV,
 		...WITHOUT_TELEMETRY,
 		NODE_ENV: 'production',

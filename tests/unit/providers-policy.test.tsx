@@ -86,8 +86,16 @@ describe('la liste des sous-traitants', () => {
 })
 
 describe('ce que la politique ne dit plus', () => {
-	test.each(['devis', 'Mailgun', 'Typeform', 'Tally', 'Brevo'])('aucune mention de %s', mot => {
+	test.each(['Mailgun', 'Typeform', 'Tally', 'Brevo'])('aucune mention de %s', mot => {
 		expect(text.toLowerCase()).not.toContain(mot.toLowerCase())
+	})
+})
+
+describe('les demandes de devis (issue 1003)', () => {
+	test('la politique dit ce qui est gardé, pour qui, et combien de temps', () => {
+		expect(text).toContain('Demandes de devis')
+		expect(text).toContain('Durée : 6 mois après sa réception')
+		expect(text).toContain('vos coordonnées ne sont jamais affichées sur le site ni reprises')
 	})
 })
 

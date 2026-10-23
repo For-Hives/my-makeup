@@ -51,14 +51,14 @@ export const PROVIDERS: readonly Provider[] = [
 		id: 'verification',
 		nom: 'Cloudflare (service Turnstile)',
 		phrase:
-			'vérification anti-robot du formulaire de contact ; Cloudflare reçoit un contrôle technique de votre navigateur (dont son adresse IP), jamais votre message ni vos coordonnées.',
+			'vérification anti-robot du formulaire de contact et du formulaire de demande de devis ; Cloudflare reçoit un contrôle technique de votre navigateur (dont son adresse IP), jamais votre message ni vos coordonnées.',
 		configuration: 'challenges.cloudflare.com',
 	},
 	{
 		id: 'email',
 		nom: 'Resend, Inc. (États-Unis)',
 		phrase:
-			"envoi des emails du site (confirmation de l'inscription, formulaire de contact, réinitialisation du mot de passe), depuis ses serveurs situés dans l'Union européenne (Irlande) ; le transfert vers la société est encadré comme indiqué ci-dessous.",
+			"envoi des emails du site (confirmation de l'inscription, formulaire de contact, demandes de devis, réinitialisation du mot de passe), depuis ses serveurs situés dans l'Union européenne (Irlande) ; le transfert vers la société est encadré comme indiqué ci-dessous.",
 		configuration: 'smtp.resend.com',
 	},
 	{

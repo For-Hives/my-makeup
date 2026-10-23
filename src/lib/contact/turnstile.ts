@@ -1,4 +1,6 @@
 import { createRateLimit, type RateLimit } from '../auth/rate-limit'
+import type { Log } from '../emails/send'
+import { isLocalAddress } from '../search/rate-limit'
 
 /**
  * Cloudflare Turnstile on the contact form (ticket 1000). No `next` import: the Server Action calls it,
@@ -112,4 +114,45 @@ export function takeUnverifiedSlot(
 		}
 	}
 	return { allowed: true }
+}
+
+/** What a form that carries the widget hands to the gate: the fields, who is sending, and what the log says it was. */
+export interface TurnstileGateInput {
+	form: { get: (name: string) => unknown }
+	turnstile: TurnstileCheck
+	client: string
+	log: Log
+	/** What is being checked, for the log line: « d’un message de contact », « d’une demande de devis ». */
+	what: string
+	/** What goes through under the tight brake: « le message », « la demande ». */
+	noun: string
+}
+
+export type TurnstileGate =
+	| { ok: true }
+	| { ok: false; code: 'verification-echouee' }
+	| { ok: false; code: 'trop-de-messages'; reessayerDansS: number }
+
+/**
+ * The gate every form that carries the widget goes through (ticket 1000; shared with the quote requests, issue
+ * 1003): the token is verified; a refused, missing or spent token stops the request; an outage on Cloudflare's
+ * side, or a browser that says its widget could not load, lets it through under the tight brake.
+ */
+export async function passTurnstileGate(input: TurnstileGateInput): Promise<TurnstileGate> {
+	const { form, turnstile, client, log, what, noun } = input
+	const token = form.get(TURNSTILE_TOKEN_FIELD)
+	const claimsOutage = form.get(TURNSTILE_UNAVAILABLE_FIELD) === '1'
+	const hasToken = typeof token === 'string' && token !== ''
+	const outcome = hasToken
+		? await verifyTurnstile(turnstile.secret, token, turnstile.deadlineMs)
+		: claimsOutage
+			? 'unavailable'
+			: 'rejected'
+	if (outcome === 'rejected') return { ok: false, code: 'verification-echouee' }
+	if (outcome === 'unavailable') {
+		log.erreur(`La vérification Turnstile ${what} n’a pas pu se faire : ${noun} passe sous un frein serré.`)
+		const tight = takeUnverifiedSlot(client, isLocalAddress(client), turnstile.unverified ?? UNVERIFIED_LIMITS)
+		if (!tight.allowed) return { ok: false, code: 'trop-de-messages', reessayerDansS: tight.retryInSeconds }
+	}
+	return { ok: true }
 }

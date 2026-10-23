@@ -694,6 +694,20 @@ const MATRIX: Line[] = [
 			]
 		})
 	),
+	// The quote requests (issue 1003): only an admin reads them, and nobody writes them through an API, an admin
+	// included. The server writes them; a makeup artist reads her own through the server, never through this
+	// collection, which is closed to her whoever she is.
+	...ROLES.flatMap((role): Line[] => {
+		const collection = 'quote-requests'
+		const reads = role === 'admin'
+		return [
+			{ role, collection, operation: 'lister', attendu: reads ? 'tous' : 'refuse' },
+			{ role, collection, operation: 'lire', attendu: reads ? 'autorise' : 'refuse' },
+			{ role, collection, operation: 'creer', attendu: 'refuse' },
+			{ role, collection, operation: 'modifier', attendu: 'refuse' },
+			{ role, collection, operation: 'supprimer', attendu: 'refuse' },
+		]
+	}),
 
 	// The accounts of the old site deleted in the v3 (ticket 227): only an admin reads them, and nobody
 	// writes them through an API, an admin included. The server writes the row when an account goes.

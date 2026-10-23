@@ -130,10 +130,10 @@ for (const size of SIZES) {
 			await shot(page, 'espace')
 		})
 
-		test('les CGU : plus de formulaire de devis', async ({ page }) => {
+		test('les CGU : le formulaire de devis est décrit (issue 1003)', async ({ page }) => {
 			await page.goto('/cgu')
 			await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
-			await expect(page.locator('main')).not.toContainText('Demander un devis')
+			await expect(page.locator('main')).toContainText('7. Demandes de devis')
 			await checkScreen(page, 'cgu')
 			await shot(page, 'cgu')
 		})
