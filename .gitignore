@@ -39,3 +39,6 @@ next-env.d.ts
 
 # sessions of the test bench, written by `bun run bench:session`
 /.banc/
+
+# report and send log of `bun run members:mail` (docs/membres-courriel.md): profile numbers, local only
+/.members-mail/

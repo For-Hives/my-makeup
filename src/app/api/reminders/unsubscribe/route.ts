@@ -64,7 +64,7 @@ async function unsubscribe(request: Request): Promise<Response> {
 	return new Response(
 		page(
 			'C’est fait',
-			'Tu ne recevras plus de rappels de My Makeup sur ton profil. Tu peux toujours le compléter depuis ton espace.'
+			'Tu ne recevras plus de rappels ni de courriels d’information de My Makeup sur ton profil. Tu peux toujours le compléter depuis ton espace.'
 		),
 		{ status: 200, headers: HEADERS }
 	)

@@ -73,7 +73,7 @@ function listable(subject: ReminderSubject): boolean {
 }
 
 /** The conditions of a publishable profile that this profile does not meet, in the display order. */
-function unmet(subject: ReminderSubject): MissingCondition[] {
+export function unmetConditions(subject: ReminderSubject): MissingCondition[] {
 	const conditions = publishableConditions(profileFields(subject.document))
 	return (Object.keys(conditions) as MissingCondition[]).filter(name => !conditions[name])
 }
@@ -93,7 +93,7 @@ export function missingConditions(subject: ReminderSubject, now: Date): MissingC
 	if (time(subject.profileUpdatedAt) > now.getTime() - REMINDER_IDLE_DAYS * DAY_MS) return []
 	const lastSentAt = subject.state?.lastSentAt
 	if (lastSentAt && time(lastSentAt) > now.getTime() - REMINDER_PERIOD_DAYS * DAY_MS) return []
-	const missing = unmet(subject)
+	const missing = unmetConditions(subject)
 	return missing.length >= 1 && missing.length <= MISSING_MAX ? missing : []
 }
 
