@@ -370,6 +370,11 @@
 			"id": "les-pages-s-affichent-plus-vite-sur-telephone-surtout-a-l",
 			"type": "amelioration",
 			"text": "Les pages s’affichent plus vite sur téléphone, surtout à la première visite."
+		},
+		{
+			"id": "tu-vois-combien-de-fois-ta-page-a-ete-vue-ces-30-derniers",
+			"type": "ajout",
+			"text": "Tu vois combien de fois ta page a été vue ces 30 derniers jours, jour par jour, dans ton espace."
 		}
 	],
 	"releases": []

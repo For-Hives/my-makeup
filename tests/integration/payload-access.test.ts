@@ -665,6 +665,21 @@ const MATRIX: Line[] = [
 		]
 	}),
 
+	// The counter of the views of a profile (ticket 1001): only an admin reads it, and nobody writes it through
+	// an API, an admin included. The server adds 1 and purges after 92 days. A makeup artist reads her own
+	// numbers in her space, through the server.
+	...ROLES.flatMap((role): Line[] => {
+		const collection = 'profile-views'
+		const reads = role === 'admin'
+		return [
+			{ role, collection, operation: 'lister', attendu: reads ? 'tous' : 'refuse' },
+			{ role, collection, operation: 'lire', attendu: reads ? 'autorise' : 'refuse' },
+			{ role, collection, operation: 'creer', attendu: 'refuse' },
+			{ role, collection, operation: 'modifier', attendu: 'refuse' },
+			{ role, collection, operation: 'supprimer', attendu: 'refuse' },
+		]
+	}),
+
 	// The accounts of the old site deleted in the v3 (ticket 227): only an admin reads them, and nobody
 	// writes them through an API, an admin included. The server writes the row when an account goes.
 	...ROLES.flatMap((role): Line[] => {

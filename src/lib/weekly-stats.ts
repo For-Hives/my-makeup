@@ -146,6 +146,11 @@ export const WeeklyStats = z.strictObject({
 			byDepartment: z.record(z.string(), z.strictObject({ total: account, noResult: account })),
 		})
 		.optional(),
+	/**
+	 * Ticket 1001. The views of the profiles in the period, from the daily counter: the total and the number
+	 * of each day (a day of Paris), all profiles together. A reader that does not find the key says « inconnu ».
+	 */
+	views: z.strictObject({ total: account, byDay: z.record(day, account) }).optional(),
 })
 
 export type WeeklyStats = z.infer<typeof WeeklyStats>
@@ -285,6 +290,23 @@ export function aggregateStats({
 			slugs: slugs.sort(),
 		},
 	}
+}
+
+/** The views of the profiles in the period (the caller read the rows of the counter): the total and the days, all profiles together. */
+export function aggregateViews(
+	rows: readonly { day: string; count: number }[],
+	periode: Period
+): NonNullable<WeeklyStats['views']> {
+	const first = parisDay(periode.debut)
+	const last = parisDay(new Date(periode.fin.getTime() - 1))
+	const byDay: Record<string, number> = {}
+	let total = 0
+	for (const { day: rowDay, count } of rows) {
+		if (rowDay < first || rowDay > last) continue
+		byDay[rowDay] = (byDay[rowDay] ?? 0) + count
+		total += count
+	}
+	return { total, byDay: Object.fromEntries(Object.entries(byDay).sort(([a], [b]) => a.localeCompare(b))) }
 }
 
 /** The closed lists, as counters at zero: a count that is zero is in the answer, not missing from it. */

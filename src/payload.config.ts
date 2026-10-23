@@ -13,6 +13,7 @@ import { ContactRequests } from './collections/ContactRequests'
 import { DeletedAccounts } from './collections/DeletedAccounts'
 import { closedStorageFields, MEDIA_UPLOAD, Media, noUploadWithoutStorage, toPublicUrl } from './collections/Media'
 import { Profiles } from './collections/Profiles'
+import { ProfileViews } from './collections/ProfileViews'
 import { Pros } from './collections/Pros'
 import { SearchCounts } from './collections/SearchCounts'
 import { Talents } from './collections/Talents'
@@ -92,6 +93,7 @@ export default buildConfig({
 		ContactRequests,
 		DeletedAccounts,
 		SearchCounts,
+		ProfileViews,
 	],
 	// The site and the API share one origin: no other site may read this API from a browser.
 	cors: [],

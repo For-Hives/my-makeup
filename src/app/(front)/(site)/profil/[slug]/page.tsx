@@ -4,6 +4,7 @@ import { notFound, permanentRedirect } from 'next/navigation'
 import { getPayload } from 'payload'
 import { cache } from 'react'
 import { ProfileView } from '@/components/profile/ProfileView'
+import { ProfileViewCounter } from '@/components/profile/ProfileViewCounter'
 import { serializeJsonLd } from '@/lib/seo/json-ld'
 import { profileMetadata, profileStructuredData } from '@/lib/seo/profile'
 import { profilePath } from '@/lib/slug'
@@ -63,6 +64,7 @@ export default async function ProfilePage({ params }: PageProps<'/profil/[slug]'
 				dangerouslySetInnerHTML={{ __html: serializeJsonLd(profileStructuredData(target.profil)) }}
 			/>
 			<ProfileView profil={target.profil} />
+			<ProfileViewCounter slug={target.profil.slug} />
 		</>
 	)
 }
