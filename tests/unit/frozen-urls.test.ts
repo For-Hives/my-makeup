@@ -381,6 +381,7 @@ describe('every row of plan 01 §6.3 is in the table, with its expected status',
 			['/u', 404],
 			['/sitemap.xml', 200],
 			['/robots.txt', 200],
+			['/llms.txt', 200],
 		]
 		for (const [address, status] of expected) {
 			const found = familiesFor(address)
@@ -414,16 +415,20 @@ describe('the 13 unwanted 404 of 2026-10-09, one by one', () => {
 		expect([...unwanted].sort()).toEqual([...paths].sort())
 	})
 
-	test('each one is an expected 404 of the table, in one family', () => {
-		for (const path of paths) {
+	test('each one is an expected 404 of the table, in one family, unless a ticket created the page since', () => {
+		for (const entry of UNWANTED_404_OF_2026_10_09) {
+			const { path } = entry
 			const found = familiesFor(path)
 			expect({ path, families: found.length }).toEqual({ path, families: 1 })
-			expect({ path, status: found[0]?.status, kind: found[0]?.kind }).toEqual({
-				path,
-				status: 404,
-				kind: 'historique',
-			})
+			expect({ path, status: found[0]?.status, kind: found[0]?.kind }).toEqual(
+				entry.createdBy ? { path, status: 200, kind: 'technique' } : { path, status: 404, kind: 'historique' }
+			)
 		}
+	})
+
+	test('only the guide for the assistants was created since (ticket 1014)', () => {
+		const created = UNWANTED_404_OF_2026_10_09.filter(entry => entry.createdBy)
+		expect(created.map(entry => [entry.path, entry.createdBy])).toEqual([['/llms.txt', '1014']])
 	})
 
 	test('a page that took over is a page of the table that answers 200', () => {

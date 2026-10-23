@@ -638,13 +638,13 @@ export const FROZEN_URL_FAMILIES: readonly FrozenUrlFamily[] = [
 	},
 	{
 		id: 'llms-txt',
-		kind: 'historique',
+		kind: 'technique',
 		patterns: ['/llms.txt'],
 		statusToday: [404],
-		status: 404,
+		status: 200,
 		servedBy: 'application',
 		today: 'Fichier pour les assistants, jamais créé',
-		after: 'Page 404, attendue : ce fichier dépasse la parité, il se décide après la bascule',
+		after: 'Créé (ticket 1014) : un guide en texte, sans nom de maquilleuse, qui ne cite que des pages publiques',
 		examples: [{ from: '/llms.txt' }],
 	},
 ]
@@ -657,6 +657,8 @@ export interface Unwanted404 {
 	successor?: string
 	/** Why the 404 is kept after the switch. */
 	reason: string
+	/** The ticket that created the page afterwards: the address then answers 200 and the 404 is no longer kept. */
+	createdBy?: string
 }
 
 const EMPTY_PAGE = "Page d'attente sans contenu (un titre seul)"
@@ -672,7 +674,8 @@ export const UNWANTED_404_OF_2026_10_09: readonly Unwanted404[] = [
 	{
 		path: '/llms.txt',
 		was: 'Jamais créé',
-		reason: 'Le fichier pour les assistants dépasse la parité : il attend une décision, après la bascule.',
+		reason: 'Le fichier pour les assistants dépassait la parité ; il a été créé ensuite et répond 200 (ticket 1014).',
+		createdBy: '1014',
 	},
 	{
 		path: '/maquilleuse',

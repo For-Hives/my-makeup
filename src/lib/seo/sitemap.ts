@@ -89,6 +89,7 @@ export const EXCLUDED_PAGES: readonly { readonly chemin: string; readonly raison
 	{ chemin: '/toutes-les-news', raison: 'Elle redirige vers /blog (301) : une adresse du sitemap répond 200.' },
 	{ chemin: '/sitemap.xml', raison: 'Le sitemap lui-même.' },
 	{ chemin: '/robots.txt', raison: 'Le fichier robots.' },
+	{ chemin: '/llms.txt', raison: 'Le guide pour les assistants (ticket 1014).' },
 	{
 		chemin: '/contact/throttled',
 		raison: 'La route qui répond 429 à un message de contact freiné (ticket 161) : aucune page.',
