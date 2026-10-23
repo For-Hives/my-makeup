@@ -1387,6 +1387,13 @@
           "primaryKey": false,
           "notNull": false
         },
+        "moderation_action": {
+          "name": "moderation_action",
+          "type": "enum_profiles_moderation_action",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
         "verified": {
           "name": "verified",
           "type": "boolean",
@@ -3513,6 +3520,117 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.moderation_events": {
+      "name": "moderation_events",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "profile": {
+          "name": "profile",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "admin": {
+          "name": "admin",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "action": {
+          "name": "action",
+          "type": "enum_moderation_events_action",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reason": {
+          "name": "reason",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "date": {
+          "name": "date",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "moderation_events_profile_idx": {
+          "name": "moderation_events_profile_idx",
+          "columns": [
+            {
+              "expression": "profile",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "moderation_events_admin_idx": {
+          "name": "moderation_events_admin_idx",
+          "columns": [
+            {
+              "expression": "admin",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "moderation_events_action_idx": {
+          "name": "moderation_events_action_idx",
+          "columns": [
+            {
+              "expression": "action",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "moderation_events_date_idx": {
+          "name": "moderation_events_date_idx",
+          "columns": [
+            {
+              "expression": "date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.contact_requests": {
       "name": "contact_requests",
       "schema": "",
@@ -4619,6 +4737,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "moderation_events_id": {
+          "name": "moderation_events_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "contact_requests_id": {
           "name": "contact_requests_id",
           "type": "integer",
@@ -4803,6 +4927,21 @@
           "columns": [
             {
               "expression": "auth_events_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "payload_locked_documents_rels_moderation_events_id_idx": {
+          "name": "payload_locked_documents_rels_moderation_events_id_idx",
+          "columns": [
+            {
+              "expression": "moderation_events_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -5017,6 +5156,19 @@
           "tableTo": "auth_events",
           "columnsFrom": [
             "auth_events_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "payload_locked_documents_rels_moderation_events_fk": {
+          "name": "payload_locked_documents_rels_moderation_events_fk",
+          "tableFrom": "payload_locked_documents_rels",
+          "tableTo": "moderation_events",
+          "columnsFrom": [
+            "moderation_events_id"
           ],
           "columnsTo": [
             "id"
@@ -5522,6 +5674,14 @@
         "hidden"
       ]
     },
+    "public.enum_profiles_moderation_action": {
+      "name": "enum_profiles_moderation_action",
+      "schema": "public",
+      "values": [
+        "hide",
+        "suspend"
+      ]
+    },
     "public.enum_talents_status": {
       "name": "enum_talents_status",
       "schema": "public",
@@ -5601,6 +5761,15 @@
         "google",
         "confirmation",
         "password-reset"
+      ]
+    },
+    "public.enum_moderation_events_action": {
+      "name": "enum_moderation_events_action",
+      "schema": "public",
+      "values": [
+        "hide",
+        "suspend",
+        "restore"
       ]
     },
     "public.enum_contact_requests_type": {
@@ -5776,6 +5945,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "a26c9b9d-a0c7-4ceb-ada2-66294c318b32",
+  "id": "a340823c-f5d8-42ba-a5d8-9d92b1b445f0",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }
