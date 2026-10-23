@@ -198,6 +198,7 @@ Le même mot français a le même mot anglais partout (source : `PLAN-ANGLAIS.md
 | relance (courriel de rappel) / désinscription | `reminder` / `unsubscribe` | inactif (compte sans activité) / rapport (interne) | `inactive` / `report` |
 | devis (demande de) / formulaire de devis | `quoteRequest` / `quote form` | consentement / interrupteur (d'exploitation) | `consent` / `switch` |
 | édition directe (sur la page) / bloc éditable | `direct-edit` (dossier `src/components/direct-edit`) / `EditableBlock` (jamais « zone » : le mot est pris par la localisation) | mode édition / session d'édition | `edit mode` / `EditSession` |
+| modèle (de prestation) / médiane (des prix) | `OfferModel` (`src/lib/price-median.ts`) / `median` | prestation phare / noms de départ (du profil) | `flagship` (`flagship-offer.ts`) / `initialNames` |
 
 ## Pièges
 

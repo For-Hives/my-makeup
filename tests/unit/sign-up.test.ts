@@ -5,19 +5,25 @@ import { UnverifiedEmail } from 'payload'
 import { confirmEmail } from '@/lib/auth/confirmation'
 import { errorMessage } from '@/lib/auth/errors'
 import { failureCode } from '@/lib/auth/sign-in'
-import { SIGN_UP_FAILURE_MESSAGES, SIGN_UP_FIELDS, SIGN_UP_MESSAGES, validateSignUp } from '@/lib/auth/sign-up'
+import {
+	accountName,
+	SIGN_UP_FAILURE_MESSAGES,
+	SIGN_UP_FIELDS,
+	SIGN_UP_MESSAGES,
+	validateSignUp,
+} from '@/lib/auth/sign-up'
 import { failureCode as codeDeLEchecDInscription, isAddressAlreadyTaken } from '@/lib/auth/sign-up-payload'
 import { confirmationEmailContent } from '@/lib/emails/confirmation'
 import { composerEmail } from '@/lib/emails/layout'
 
-const GOOD = { nom: 'Léa Fictive', email: 'lea@example.test', password: 'aaaaaaaa', cgu: 'on' }
+const GOOD = { prenom: 'Léa', nom: 'Fictive', email: 'lea@example.test', password: 'aaaaaaaa', cgu: 'on' }
 
 describe('U24 : les règles de l’inscription', () => {
 	test('un email valide, 8 caractères et les conditions cochées : accepté, nom et email nettoyés', () => {
-		const result = validateSignUp({ ...GOOD, nom: '  Léa Fictive ', email: ' lea@example.test ' })
+		const result = validateSignUp({ ...GOOD, prenom: '  Léa ', nom: ' Fictive ', email: ' lea@example.test ' })
 		expect(result).toEqual({
 			ok: true,
-			donnees: { nom: 'Léa Fictive', email: 'lea@example.test', password: 'aaaaaaaa' },
+			donnees: { prenom: 'Léa', nom: 'Fictive', email: 'lea@example.test', password: 'aaaaaaaa' },
 		})
 	})
 
@@ -33,9 +39,22 @@ describe('U24 : les règles de l’inscription', () => {
 		expect(result.ok && result.donnees.password).toBe('  abcdefg  ')
 	})
 
-	test('le nom est libre : un nom de 1 caractère passe, un nom pris par une autre maquilleuse n’est pas vérifié ici', () => {
-		expect(validateSignUp({ ...GOOD, nom: 'Z' }).ok).toBe(true)
-		expect(validateSignUp({ ...GOOD, nom: 'Marie' }).ok).toBe(true)
+	test('le prénom et le nom sont libres : un caractère passe, un nom pris par une autre maquilleuse n’est pas vérifié ici', () => {
+		expect(validateSignUp({ ...GOOD, prenom: 'Z', nom: 'Z' }).ok).toBe(true)
+		expect(validateSignUp({ ...GOOD, prenom: 'Marie', nom: 'Marie' }).ok).toBe(true)
+	})
+
+	test('le prénom et le nom sont demandés tous les deux, chacun avec son message', () => {
+		expect(validateSignUp({ ...GOOD, prenom: '  ' })).toEqual({
+			ok: false,
+			erreurs: { prenom: SIGN_UP_MESSAGES.prenom.vide },
+		})
+		expect(validateSignUp({ ...GOOD, nom: '' })).toEqual({ ok: false, erreurs: { nom: SIGN_UP_MESSAGES.nom.vide } })
+	})
+
+	test('le compte porte « Prénom Nom », d’où vient son adresse de page', () => {
+		const result = validateSignUp(GOOD)
+		expect(result.ok && accountName(result.donnees)).toBe('Léa Fictive')
 	})
 
 	test('les conditions générales sont obligatoires', () => {
@@ -53,7 +72,7 @@ describe('U24 : les règles de l’inscription', () => {
 	})
 
 	test('des valeurs qui ne sont pas du texte sont des champs vides', () => {
-		const result = validateSignUp({ nom: 1, email: null, password: undefined, cgu: 'on' })
+		const result = validateSignUp({ prenom: 2, nom: 1, email: null, password: undefined, cgu: 'on' })
 		expect(result.ok).toBe(false)
 	})
 })
@@ -64,6 +83,7 @@ describe('U25 : un message en français par champ', () => {
 		expect(result).toEqual({
 			ok: false,
 			erreurs: {
+				prenom: SIGN_UP_MESSAGES.prenom.vide,
 				nom: SIGN_UP_MESSAGES.nom.vide,
 				email: SIGN_UP_MESSAGES.email.vide,
 				password: SIGN_UP_MESSAGES.password.vide,
@@ -104,7 +124,7 @@ describe('U25 : un message en français par champ', () => {
 			expect(message, message).toMatch(/^[A-ZÉ].*[.!)]$/)
 			expect(message, message).not.toMatch(/\b(zod|undefined|null|invalid|required|too|string)\b/i)
 		}
-		expect(SIGN_UP_FIELDS).toEqual(['nom', 'email', 'password', 'cgu'])
+		expect(SIGN_UP_FIELDS).toEqual(['prenom', 'nom', 'email', 'password', 'cgu'])
 	})
 })
 

@@ -5,10 +5,11 @@ import { alreadyRegisteredEmailContent } from '../emails/already-registered'
 import { confirmationEmailContent } from '../emails/confirmation'
 import { composerEmail } from '../emails/layout'
 import { EmailSendFailed, type SendEmail } from '../emails/send'
+import { INITIAL_NAMES_KEY } from '../profile/initial-names'
 import { type AccountFound, findAccount } from './account-by-email'
 import type { EventCode, Log } from './auth-log'
 import { mailboxKey } from './canonical-email'
-import { SIGN_UP_MESSAGES, type SignUpData, type SignUpErrors, type SignUpFailureCode } from './sign-up'
+import { accountName, SIGN_UP_MESSAGES, type SignUpData, type SignUpErrors, type SignUpFailureCode } from './sign-up'
 import { MAILBOX_RATE_LIMITS, type MailboxRateLimits, takeMailFor } from './sign-up-rate-limits'
 
 /**
@@ -207,8 +208,10 @@ export async function signUpAccount({
 		try {
 			const account = await payload.create({
 				collection: 'pros',
-				data: { email: donnees.email, password: donnees.password, name: donnees.nom, _verified: !verifier },
+				data: { email: donnees.email, password: donnees.password, name: accountName(donnees), _verified: !verifier },
 				depth: 0,
+				// Her profile starts with the two names she typed (issue 1009).
+				context: { [INITIAL_NAMES_KEY]: { firstName: donnees.prenom, lastName: donnees.nom } },
 				disableVerificationEmail: true,
 				overrideAccess: true,
 				req,

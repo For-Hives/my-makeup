@@ -59,12 +59,13 @@ export async function signUp(_precedent: SignUpState, formulaire: FormData): Pro
 		redirect(VERIFICATION_WALL_PAGE)
 	}
 	const input = {
+		prenom: formulaire.get('prenom'),
 		nom: formulaire.get('nom'),
 		email: formulaire.get('email'),
 		password: formulaire.get('password'),
 		cgu: formulaire.get('cgu'),
 	}
-	const values = { nom: text(input.nom), email: text(input.email), cgu: input.cgu === 'on' }
+	const values = { prenom: text(input.prenom), nom: text(input.nom), email: text(input.email), cgu: input.cgu === 'on' }
 	const validation = validateSignUp(input)
 	if (!validation.ok) {
 		await logRefusal(log, client, 'sign-up', 'donnees-invalides')

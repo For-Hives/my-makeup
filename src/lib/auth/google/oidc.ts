@@ -242,6 +242,9 @@ export interface Claims {
 	email?: string
 	emailVerifie: boolean
 	nom?: string
+	/** Her first and last name as Google gives them (`given_name`, `family_name`): her profile starts with them. */
+	givenName?: string
+	familyName?: string
 }
 
 const Tokens = z.object({ id_token: z.string().min(1) })
@@ -378,5 +381,7 @@ export async function verifyToken(
 		...(charge.email !== undefined && { email: charge.email }),
 		emailVerifie: charge.email_verified === true || charge.email_verified === 'true',
 		...(name !== undefined && { nom: name }),
+		...(charge.given_name?.trim() && { givenName: charge.given_name.trim() }),
+		...(charge.family_name?.trim() && { familyName: charge.family_name.trim() }),
 	}
 }

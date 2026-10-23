@@ -68,9 +68,11 @@ export const PROFILE_SECTIONS = [
 ] as const
 
 /**
- * Value of `step` of `onboarding_step` (ticket 148). `identite`, `zone` and `photo` are the three
- * steps of the onboarding of the space, sent once the server stored the step; `termine` is sent once
- * the server reported the profile active. `verification_email` and `compte_cree` are the steps of the
+ * Value of `step` of `onboarding_step` (ticket 148, issue 1009). `identite`, `zone` and `photo` are the
+ * three first steps of the onboarding of the space, `contact` and `prestation` the two that follow (how
+ * to reach her, her flagship offer); each is sent once the server stored the step, the first time it did.
+ * `termine` keeps its meaning: it is sent once the three essential steps are stored, that is when the
+ * profile became active. `verification_email` and `compte_cree` are the steps of the
  * live site: they stay listed so that its series keep their names.
  */
 export const MEASURED_ONBOARDING_STEPS = [
@@ -79,6 +81,8 @@ export const MEASURED_ONBOARDING_STEPS = [
 	'identite',
 	'zone',
 	'photo',
+	'contact',
+	'prestation',
 	'termine',
 ] as const
 

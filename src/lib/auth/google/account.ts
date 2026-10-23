@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto'
 import { commitTransaction, createLocalReq, initTransaction, killTransaction, type Payload } from 'payload'
+import { INITIAL_NAMES_KEY } from '../../profile/initial-names'
 import { EMAIL_MAX, MAX_NAME_LENGTH } from '../sign-up'
 import type { Claims } from './oidc'
 
@@ -75,7 +76,10 @@ export async function googleAccount(payload: Payload, revendications: Claims): P
 		for (let trial = 1; trial <= MAX_ATTEMPTS; trial++) {
 			const known = await find(payload, address)
 			if (known) return await welcome(payload, known)
-			const created = await create(payload, address, accountName(revendications, address))
+			const created = await create(payload, address, accountName(revendications, address), {
+				firstName: revendications.givenName ?? '',
+				lastName: revendications.familyName ?? '',
+			})
 			if (created.ok) return created
 		}
 	} catch {
@@ -101,7 +105,8 @@ async function welcome(payload: Payload, compte: AccountFound): Promise<AccountR
 async function create(
 	payload: Payload,
 	adresse: string,
-	nom: string
+	nom: string,
+	names: { firstName: string; lastName: string }
 ): Promise<AccountResult | { ok: false; code: 'service-indisponible' }> {
 	const req = await createLocalReq({}, payload)
 	await initTransaction(req)
@@ -119,6 +124,8 @@ async function create(
 			depth: 0,
 			disableVerificationEmail: true,
 			overrideAccess: true,
+			// Her profile starts with the names Google gave (issue 1009).
+			context: { [INITIAL_NAMES_KEY]: names },
 			req,
 		})
 		await commitTransaction(req)

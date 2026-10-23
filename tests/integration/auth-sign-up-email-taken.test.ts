@@ -57,7 +57,7 @@ async function signUp(
 	const payload = await testPayload()
 	return signUpAccount({
 		payload,
-		donnees: { nom: 'Léa Fictive', email, password: PASSWORD },
+		donnees: { prenom: 'Léa', nom: 'Fictive', email, password: PASSWORD },
 		verifier: options.verifier ?? true,
 		envoyer: payloadSendEmail(payload, serverEnv()),
 		site: SITE,
@@ -157,7 +157,7 @@ describe('E03 : une adresse déjà utilisée ne révèle rien et ne crée pas de
 		const call = (adresse: string) =>
 			signUpAccount({
 				payload,
-				donnees: { nom: 'Léa Fictive', email: adresse, password: PASSWORD },
+				donnees: { prenom: 'Léa', nom: 'Fictive', email: adresse, password: PASSWORD },
 				verifier: true,
 				envoyer: down,
 				site: SITE,

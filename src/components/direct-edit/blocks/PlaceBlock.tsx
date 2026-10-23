@@ -74,8 +74,15 @@ export function PlaceForm({
 	search,
 	review,
 	title = 'Modifier ma zone',
+	submitLabel,
+	cancel,
+	rayonFacultatif = false,
 }: {
 	title?: string
+	submitLabel?: string
+	cancel?: ReactNode
+	/** The radius may stay empty (the onboarding asks for the commune only). */
+	rayonFacultatif?: boolean
 	values: LocationValues
 	save: PlaceSave
 	search: CitiesSearch
@@ -126,6 +133,8 @@ export function PlaceForm({
 	return (
 		<BlockForm
 			title={title}
+			{...(submitLabel === undefined ? {} : { submitLabel })}
+			{...(cancel === undefined ? {} : { cancel })}
 			dirty={isDirty || choiceChanged(choice, values)}
 			keepsHint="ta saisie est toujours là"
 			onFailure={failure => {
@@ -175,7 +184,7 @@ export function PlaceForm({
 				erreurVille={townError}
 				erreurRayon={errors.rayon?.message}
 				register={register}
-				rayonFacultatif={false}
+				rayonFacultatif={rayonFacultatif}
 			/>
 		</BlockForm>
 	)

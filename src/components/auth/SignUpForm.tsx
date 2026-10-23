@@ -14,7 +14,7 @@ import {
 export type SignUpState = {
 	erreurs?: SignUpErrors
 	echec?: SignUpFailureCode
-	valeurs?: { nom: string; email: string; cgu: boolean }
+	valeurs?: { prenom: string; nom: string; email: string; cgu: boolean }
 } | null
 export type SignUpAction = (precedent: SignUpState, formulaire: FormData) => Promise<SignUpState>
 
@@ -49,7 +49,12 @@ export function withProxyRefusal(action: SignUpAction): SignUpAction {
 			}
 			return {
 				echec: 'trop-de-tentatives',
-				valeurs: { nom: text('nom'), email: text('email'), cgu: formulaire.get('cgu') === 'on' },
+				valeurs: {
+					prenom: text('prenom'),
+					nom: text('nom'),
+					email: text('email'),
+					cgu: formulaire.get('cgu') === 'on',
+				},
 			}
 		}
 	}
@@ -95,13 +100,26 @@ export function SignUpForm({ action, suivre = track }: { action: SignUpAction; s
 			}}
 			className="flex w-full max-w-sm flex-col gap-4 text-left"
 		>
+			<label className="flex flex-col gap-1 font-medium text-sm" htmlFor="prenom">
+				Prénom
+				<input
+					id="prenom"
+					name="prenom"
+					type="text"
+					autoComplete="given-name"
+					defaultValue={state?.valeurs?.prenom}
+					className={FIELD}
+					{...properties('prenom')}
+				/>
+			</label>
+			<FormError champ="prenom" erreurs={errors} />
 			<label className="flex flex-col gap-1 font-medium text-sm" htmlFor="nom">
 				Nom
 				<input
 					id="nom"
 					name="nom"
 					type="text"
-					autoComplete="name"
+					autoComplete="family-name"
 					defaultValue={state?.valeurs?.nom}
 					className={FIELD}
 					{...properties('nom')}

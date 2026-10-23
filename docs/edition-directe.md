@@ -26,6 +26,10 @@ Issue 1008 (cadre : 1007). L'espace de la maquilleuse devient le profil public l
 - Pas de `<form>` dans un `<form>` : l'éditeur d'un bloc vit dans le formulaire du bloc (`BlockForm`), Entrée dans un champ est « enregistrer ».
 - L'éditeur d'un bloc du corps s'ouvre sous l'en-tête, dans le même emplacement que celui de l'en-tête (`EditorFrame` le fait défiler dans la vue).
 
+## L'accueil réutilise ces formulaires (issue 1009)
+
+L'accueil de la maquilleuse (`/auth/init-account`, cinq étapes) n'écrit pas ses champs : chaque étape pose le formulaire du bloc correspondant dans une `EditSession` à elle (`src/components/dashboard/onboarding/Onboarding.tsx`) et appelle les mêmes actions serveur. L'étape « Toi » est `IdentityForm` (avec `schema` qui exige la spécialité et `askNames` faux quand le prénom et le nom viennent de l'inscription), « Où » est `PlaceForm`, « Photo » est `PhotoForm`. `BlockForm` a une propriété `cancel` pour remplacer « Annuler » par « Précédent » et « Plus tard » ; elle est absente de l'édition directe, dont le HTML ne change pas. « Contact » (`ContactStep`) et « Prestation phare » (`OfferStep`) assemblent les règles des blocs réseaux, coordonnées et prestations (`readContactStep`, `flagshipRows`) et envoient aussi la liste entière : ce que l'import a enregistré reste. Le repère de prix est `readOfferMedians` (`src/services/public/offer-medians.ts`), pur calcul de `src/lib/price-median.ts`.
+
 ## Ajouter une zone de la page
 
 Une autre tranche (issues 1016 à 1021) ajoute un bloc : un composant client dans `blocks/` fondé sur `EditableBlock` et `BlockForm`, une fonction d'emplacement dans `edit-slots.ts`, et son câblage dans `header-edit.tsx` (ou un équivalent pour le corps de la page).

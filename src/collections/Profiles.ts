@@ -34,6 +34,7 @@ import {
 	validateNetworkLink,
 	validatePhone,
 } from '../lib/profile/contact-details'
+import { initialNamesOf } from '../lib/profile/initial-names'
 import {
 	HOLD_ACTIONS,
 	type ModerationAction,
@@ -176,8 +177,10 @@ const NETWORKS = [
  */
 export const profileOnAccountCreation: CollectionAfterChangeHook = async ({ context, doc, operation, req }) => {
 	if (operation !== 'create' || context.profilAutomatique === false) return doc
-	// The slug is not given: the collection computes it (`slugOnCreate`).
-	const profile = { pro: doc.id } as RequiredDataFromCollectionSlug<'profiles'>
+	// The slug is not given: the collection computes it (`slugOnCreate`). The names are those the sign-up
+	// (or Google) handed over, when it did (issue 1009).
+	const names = initialNamesOf(context)
+	const profile = { pro: doc.id, ...names } as RequiredDataFromCollectionSlug<'profiles'>
 	await req.payload.create({ collection: 'profiles', data: profile, depth: 0, overrideAccess: true, req })
 	return doc
 }

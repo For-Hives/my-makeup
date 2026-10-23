@@ -13,23 +13,26 @@ test('U25 : un message par champ, sous le champ, relié à lui pour un lecteur d
 	const zone = await jsdomWindow.monter(
 		formValue(async () => ({
 			erreurs: {
+				prenom: SIGN_UP_MESSAGES.prenom.vide,
 				nom: SIGN_UP_MESSAGES.nom.vide,
 				email: SIGN_UP_MESSAGES.email.invalide,
 				password: SIGN_UP_MESSAGES.password.court,
 				cgu: SIGN_UP_MESSAGES.cgu.refusees,
 			},
-			valeurs: { nom: '', email: 'lea', cgu: false },
+			valeurs: { prenom: '', nom: '', email: 'lea', cgu: false },
 		}))
 	)
 
 	await jsdomWindow.cliquer(jsdomWindow.bouton('S’inscrire'))
 
 	await jsdomWindow.attendre(() => zone.querySelector('#erreur-nom')?.textContent)
+	expect(zone.querySelector('#erreur-prenom')?.textContent).toBe(SIGN_UP_MESSAGES.prenom.vide)
 	expect(zone.querySelector('#erreur-nom')?.textContent).toBe(SIGN_UP_MESSAGES.nom.vide)
 	expect(zone.querySelector('#erreur-email')?.textContent).toBe(SIGN_UP_MESSAGES.email.invalide)
 	expect(zone.querySelector('#erreur-password')?.textContent).toBe(SIGN_UP_MESSAGES.password.court)
 	expect(zone.querySelector('#erreur-cgu')?.textContent).toBe(SIGN_UP_MESSAGES.cgu.refusees)
 	for (const [id, field] of [
+		['prenom', 'prenom'],
 		['nom', 'nom'],
 		['email', 'email'],
 		['password', 'password'],
@@ -45,7 +48,7 @@ test('ce qu’elle a tapé revient, le mot de passe jamais', async () => {
 	const zone = await jsdomWindow.monter(
 		formValue(async () => ({
 			erreurs: { password: SIGN_UP_MESSAGES.password.court },
-			valeurs: { nom: 'Léa Fictive', email: 'lea@example.test', cgu: true },
+			valeurs: { prenom: 'Léa', nom: 'Fictive', email: 'lea@example.test', cgu: true },
 		}))
 	)
 	await jsdomWindow.saisir(jsdomWindow.champ('Mot de passe'), 'secret-tape-12345')
@@ -53,7 +56,8 @@ test('ce qu’elle a tapé revient, le mot de passe jamais', async () => {
 	await jsdomWindow.cliquer(jsdomWindow.bouton('S’inscrire'))
 	await jsdomWindow.attendre(() => zone.querySelector('#erreur-password')?.textContent)
 
-	expect((jsdomWindow.champ('Nom') as HTMLInputElement).value).toBe('Léa Fictive')
+	expect((jsdomWindow.champ('Prénom') as HTMLInputElement).value).toBe('Léa')
+	expect((jsdomWindow.champ('Nom') as HTMLInputElement).value).toBe('Fictive')
 	expect((jsdomWindow.champ('Adresse email') as HTMLInputElement).value).toBe('lea@example.test')
 	expect((jsdomWindow.champ('Mot de passe') as HTMLInputElement).value).toBe('')
 	expect(zone.innerHTML).not.toContain('secret-tape-12345')
@@ -70,7 +74,8 @@ test('un refus du serveur qui n’est pas un champ (adresse déjà utilisée) s�
 
 test('les attributs des gestionnaires de mots de passe : nom, email, nouveau mot de passe', async () => {
 	const zone = await jsdomWindow.monter(formValue(async () => null))
-	expect(zone.querySelector('#nom')?.getAttribute('autocomplete')).toBe('name')
+	expect(zone.querySelector('#prenom')?.getAttribute('autocomplete')).toBe('given-name')
+	expect(zone.querySelector('#nom')?.getAttribute('autocomplete')).toBe('family-name')
 	expect(zone.querySelector('#email')?.getAttribute('autocomplete')).toBe('email')
 	expect(zone.querySelector('#password')?.getAttribute('autocomplete')).toBe('new-password')
 	expect(zone.querySelector('form')?.hasAttribute('novalidate')).toBe(true)

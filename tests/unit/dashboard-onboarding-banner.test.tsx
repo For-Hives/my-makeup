@@ -23,6 +23,6 @@ describe('le bandeau de l’accueil à finir', () => {
 		expect(link?.getAttribute('href')).toBe('/auth/init-account')
 		expect(link?.textContent).toContain('Reprendre')
 		// The step is told to a screen reader, not shown twice.
-		expect(link?.textContent).toContain('Zone')
+		expect(link?.textContent).toContain('Où')
 	})
 })

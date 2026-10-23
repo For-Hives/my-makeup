@@ -31,6 +31,7 @@ export function BlockForm({
 	disabled = false,
 	keepsHint,
 	submitLabel = 'Enregistrer',
+	cancel,
 	children,
 }: {
 	title: string
@@ -45,6 +46,8 @@ export function BlockForm({
 	keepsHint: string
 	/** The words of the button that saves, when the block says more than « Enregistrer » (« Enregistrer cette prestation »). */
 	submitLabel?: string
+	/** What stands where « Annuler » does, when the form is not an editor that closes (the onboarding: « Précédent », « Plus tard »). `null` leaves nothing. */
+	cancel?: ReactNode
 	children: ReactNode
 }) {
 	const session = useEditSession()
@@ -109,14 +112,18 @@ export function BlockForm({
 				) : null}
 			</div>
 			<div className="flex flex-col-reverse gap-3 border-hairline border-t pt-4 sm:flex-row sm:items-center sm:justify-end">
-				<button
-					type="button"
-					onClick={session.close}
-					disabled={pending}
-					className="min-h-11 w-full rounded-full border border-ink bg-white px-6 font-semibold text-ink text-sm transition-colors hover:bg-nude-100 focus-visible:outline-2 focus-visible:outline-ink focus-visible:outline-offset-2 disabled:opacity-60 motion-reduce:transition-none sm:w-auto"
-				>
-					Annuler
-				</button>
+				{cancel === undefined ? (
+					<button
+						type="button"
+						onClick={session.close}
+						disabled={pending}
+						className="min-h-11 w-full rounded-full border border-ink bg-white px-6 font-semibold text-ink text-sm transition-colors hover:bg-nude-100 focus-visible:outline-2 focus-visible:outline-ink focus-visible:outline-offset-2 disabled:opacity-60 motion-reduce:transition-none sm:w-auto"
+					>
+						Annuler
+					</button>
+				) : (
+					cancel
+				)}
 				<button
 					type="submit"
 					disabled={pending || disabled}
