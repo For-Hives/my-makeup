@@ -35,7 +35,7 @@ const targets = ({ chemins, etiquettes }: Refreshed) => ({ chemins, etiquettes }
 
 /** What a change of a public profile refreshes: its page, the search, the plan of the site, the sitemap. */
 const profilePages = (slug: string) => ({
-	chemins: [`/profil/${slug}`, '/search', '/site-map', '/sitemap.xml'].sort(),
+	chemins: [`/profil/${slug}`, '/', '/search', '/site-map', '/sitemap.xml'].sort(),
 	etiquettes: [`profil:${slug}`, 'profils'],
 })
 

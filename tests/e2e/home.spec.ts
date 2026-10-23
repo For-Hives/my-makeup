@@ -98,9 +98,9 @@ test.describe('Accueil', () => {
 		tag: '@mobile',
 	}, async ({ page }) => {
 		await page.goto('/')
-		await page.getByLabel('Ville de la prestation').fill('Annecy')
-		await page.getByLabel('Prestation recherchée').fill('mariage')
-		await page.getByRole('button', { name: 'Trouver une maquilleuse' }).click()
+		await page.getByLabel('Pour quel événement ?').selectOption({ label: 'Mariage' })
+		await page.getByLabel('Où ?').fill('Annecy')
+		await page.getByRole('button', { name: 'Voir les maquilleuses' }).click()
 
 		await expect(page).toHaveURL(/\/search\?search=mariage&city=Annecy$/)
 	})
@@ -109,8 +109,9 @@ test.describe('Accueil', () => {
 		page,
 	}) => {
 		await page.goto('/')
-		await page.getByLabel('Ville de la prestation').fill('Annecy')
-		await page.getByRole('button', { name: 'Trouver une maquilleuse' }).click()
+		await page.getByLabel('Pour quel événement ?').selectOption({ label: 'Autre' })
+		await page.getByLabel('Où ?').fill('Annecy')
+		await page.getByRole('button', { name: 'Voir les maquilleuses' }).click()
 
 		await expect(page).toHaveURL(/\/search\?search=&city=Annecy$/)
 		await expect(page.getByLabel('Ville de la prestation')).toHaveValue('Annecy')
