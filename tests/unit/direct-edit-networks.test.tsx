@@ -3,6 +3,17 @@ import { FAILURE_MESSAGE, MESSAGE_SESSION } from '@/lib/dashboard/result'
 import { benchOf, EMPTY, FULL } from '../support/direct-edit-bench'
 import { openWindow } from '../support/dom-react'
 
+/** True when the address is on instagram.com itself (its host), not merely a text that contains the name. */
+const isInstagramLink = (href: string | null): boolean => {
+	if (!href) return false
+	try {
+		const host = new URL(href).hostname
+		return host === 'instagram.com' || host.endsWith('.instagram.com')
+	} catch {
+		return false
+	}
+}
+
 /**
  * Réseaux et liens on her own page in edit mode (issue 1021): « @pseudo » and the domain are shown instead
  * of raw addresses, an invalid address is refused with a clear message, the outgoing links carry the
@@ -31,7 +42,7 @@ describe('le bloc', () => {
 
 	test('affiche « @pseudo » au lieu de l’adresse, et le lien sort avec les attributs de sécurité', async () => {
 		await benchOf(window_).mount()
-		const link = [...doc().querySelectorAll('a')].find(anchor => anchor.getAttribute('href')?.includes('instagram.com'))
+		const link = [...doc().querySelectorAll('a')].find(anchor => isInstagramLink(anchor.getAttribute('href')))
 		expect(link?.textContent).toBe('@ines.fictive')
 		expect(link?.getAttribute('target')).toBe('_blank')
 		expect(link?.getAttribute('rel')).toBe('noopener nofollow noreferrer')
