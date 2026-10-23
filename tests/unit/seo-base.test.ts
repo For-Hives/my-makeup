@@ -143,14 +143,14 @@ describe('reprise par les assistants', () => {
 describe('robots.txt (E63)', () => {
 	test('ouvre tout sauf l’API, avec le sitemap en adresse absolue', () => {
 		const { rules, sitemap } = robotsRules()
-		expect(rules).toEqual({ userAgent: '*', allow: '/', disallow: ['/api/'] })
+		expect(rules[0]).toEqual({ userAgent: '*', allow: '/', disallow: ['/api/'] })
 		expect(sitemap).toBe('https://my-makeup.fr/sitemap.xml')
 	})
 
-	test('n’interdit ni /auth ni /search, et ne vise aucun robot d’assistant', () => {
-		const text = JSON.stringify(robotsRules())
-		for (const filePath of NOINDEX_PATHS) expect(text).not.toContain(filePath)
-		expect(text).not.toMatch(/GPTBot|ClaudeBot|CCBot|Google-Extended|Perplexity|Claude-|OAI-/)
+	test('n’interdit ni /auth ni /search aux moteurs de recherche : leur noindex doit être lu', () => {
+		const [general] = robotsRules().rules
+		expect(JSON.stringify(general)).not.toMatch(/\/auth|\/search/)
+		for (const filePath of NOINDEX_PATHS) expect(JSON.stringify(general)).not.toContain(filePath)
 	})
 
 	test('une seule source : la route lit reglesRobots, aucun fichier statique', () => {

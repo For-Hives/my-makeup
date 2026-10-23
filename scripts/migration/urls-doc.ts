@@ -144,7 +144,7 @@ function unwanted404Table(): string {
 		code(entry.path),
 		entry.was,
 		entry.successor ? code(entry.successor) : '—',
-		'404 attendue',
+		entry.createdBy ? `200 (créée, ticket ${entry.createdBy})` : '404 attendue',
 		entry.reason,
 	])
 	return table(['N°', 'Adresse', "Ce que c'était", 'Page qui a pris la suite', 'Après la bascule', 'Pourquoi'], rows)

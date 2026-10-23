@@ -115,6 +115,7 @@ Un chemin inconnu sous `/auth` est une adresse inconnue : 404.
 | `sitemap` | `/sitemap.xml` | Sitemap | Régénéré depuis Payload, profils publiables seulement | 200 | 13 |
 | `robots` | `/robots.txt` | Fichier robots | Généré par le site, mêmes règles | 200 | 13 |
 | `fichiers-publics` | `/favicon.webp`, `/assets/*` : fichier présent dans `public/` | Icône du site et images de `public/assets/` | Identiques : le dossier `public/` est conservé | 200 | — |
+| `llms-txt` | `/llms.txt` | Fichier pour les assistants, jamais créé | Créé (ticket 1014) : un guide en texte, sans nom de maquilleuse, qui ne cite que des pages publiques | 200 | — |
 <!-- urls:familles:techniques:fin -->
 
 ### Fichiers de vérification des moteurs
@@ -138,7 +139,6 @@ Sans ces deux fichiers à la racine du site, la vérification de Bing peut tombe
 | Famille | Adresses | Aujourd'hui | Après la bascule | Code attendu | Ligne de 01 §6.3 |
 | --- | --- | --- | --- | --- | --- |
 | `historiques` | `/maquilleuse`, `/particulier`, `/maquilleuse/partenaires`, `/affiliation`, `/cgv`, `/help`, `/parrainage`, `/recrutement`, `/deposer-un-projet`, `/profil`, `/signin`, `/signup` | Les 12 routes supprimées ou renommées en 2023 | Page 404 en français, attendue | 404 | — |
-| `llms-txt` | `/llms.txt` | Fichier pour les assistants, jamais créé | Page 404, attendue : ce fichier dépasse la parité, il se décide après la bascule | 404 | — |
 <!-- urls:familles:historiques:fin -->
 
 ## Les 13 adresses en 404 non voulue du 09/10, une à une
@@ -148,7 +148,7 @@ L'inventaire du 09/10/2026 avait relevé 13 adresses en 404 que personne n'avait
 <!-- urls:classement-404:debut -->
 | N° | Adresse | Ce que c'était | Page qui a pris la suite | Après la bascule | Pourquoi |
 | --- | --- | --- | --- | --- | --- |
-| 1 | `/llms.txt` | Jamais créé | — | 404 attendue | Le fichier pour les assistants dépasse la parité : il attend une décision, après la bascule. |
+| 1 | `/llms.txt` | Jamais créé | — | 200 (créée, ticket 1014) | Le fichier pour les assistants dépassait la parité ; il a été créé ensuite et répond 200 (ticket 1014). |
 | 2 | `/maquilleuse` | Page renommée le 18/06/2023 | `/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse` | 404 attendue | Aucune impression sur 28 jours au relevé Search Console du 13/10/2026, et plus aucun lien du site n'y mène. |
 | 3 | `/particulier` | Page renommée le 18/06/2023 | `/pourquoi-utiliser-my-makeup-en-tant-que-particulier` | 404 attendue | Aucune impression sur 28 jours au relevé Search Console du 13/10/2026, et plus aucun lien du site n'y mène. |
 | 4 | `/maquilleuse/partenaires` | Page d'attente sans contenu (un titre seul), supprimée le 16/06/2023 | `/maquilleuse/partenariats` | 404 attendue | La page des partenariats existait déjà à côté ; celle-ci n'a jamais eu de contenu. |
@@ -183,6 +183,7 @@ Ce tableau liste les familles dont le code change pour une visiteuse sans sessio
 | `espace-google` | `/auth/google`, `/auth/google/callback` | 404 | 307 en un saut |
 | `api-nextauth` | `/api/auth/*` | 200, 302, 404 | 404 |
 | `api-sendmail` | `/api/sendMail` | 405 | 404 |
+| `llms-txt` | `/llms.txt` | 404 | 200 |
 <!-- urls:ecarts:fin -->
 
 ## Adresses nouvelles, hors gel
@@ -232,7 +233,7 @@ Relevé du 14/10/2026 à 00:07 UTC : **207 adresses**, 295 requêtes GET. 91 son
 | `sitemap` | 1 | 200 | 200 |
 | `robots` | 1 | 200 | 200 |
 | `historiques` | 12 | 404 | 404 |
-| `llms-txt` | 1 | 404 | 404 |
+| `llms-txt` | 1 | 404 | 200 |
 | **Total** | **207** |  |  |
 <!-- urls:inventaire:familles:fin -->
 
@@ -306,7 +307,7 @@ Le relevé du 09/10/2026 comptait 206 adresses. Celui du 14/10/2026 en compte 20
 | `http://my-makeup.fr/blog` | 302, puis 200 en 1 saut | 301 ou 308 en un saut | `http` |
 | `https://www.my-makeup.fr/` | 302, puis 200 en 1 saut | 301 ou 308 en un saut | `www` |
 | `https://www.my-makeup.fr/blog` | 302, puis 200 en 1 saut | 301 ou 308 en un saut | `www` |
-| `/llms.txt` | 404 | 404 | `llms-txt` |
+| `/llms.txt` | 404 | 200 | `llms-txt` |
 | `/demande-envoyee` | 200 | 200 | `demande-envoyee` |
 | `/404` | 404 | 404 | `adresse-inconnue` |
 | `/blog/` | 308, puis 200 en 1 saut | 308 en un saut | `barre-finale` |
