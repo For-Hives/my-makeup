@@ -232,7 +232,18 @@ async function find(capteur: Sink, pour: string): Promise<Resume[]> {
 	}
 	return resumes
 		.filter(({ To, Cc, Bcc }) => [...To, ...Cc, ...Bcc].some(({ adresse }) => sameUrl(adresse, pour)))
-		.sort((un, autre) => autre.Created.localeCompare(un.Created))
+		.sort(mostRecentFirst)
+}
+
+/**
+ * Most recent first, by the instant `Created` stands for. Not by the text: Mailpit writes that date
+ * with the trailing zeros of the fraction cut (« …57.86Z » for 860 ms, « …58Z » for a whole second),
+ * so « …57.86Z » sorts after « …57.861Z » as a string though it is one millisecond earlier. Two mails
+ * of the very same millisecond keep the order Mailpit answered them in (`sort` is stable), which is
+ * newest first.
+ */
+function mostRecentFirst(un: Resume, autre: Resume): number {
+	return Date.parse(autre.Created) - Date.parse(un.Created)
 }
 
 async function read(capteur: Sink, id: string): Promise<Mail> {

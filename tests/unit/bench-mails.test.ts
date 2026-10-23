@@ -329,6 +329,45 @@ describe('Ce que le capteur répond', () => {
 		expect(read).toEqual(['/api/v1/message/mail-229'])
 	})
 
+	describe('le plus récent d’abord, de façon déterministe', () => {
+		const recipient = 'lea@example.test'
+		/** The id of the mail `waitMail` reads, when the catcher answers this search. */
+		const readWhen = async (messages: ReturnType<typeof resume>[]): Promise<string | undefined> => {
+			let read: string | undefined
+			const sink = fakeSink(url => {
+				if (url.pathname === '/api/v1/search') return json({ messages_count: messages.length, messages })
+				read = decodeURIComponent(url.pathname.split('/').at(-1) ?? '')
+				const mail = messages.find(({ ID }) => ID === read) ?? resume(0, recipient)
+				return json({ ...mail, From: null, ReplyTo: [], Date: mail.Created, Text: '', HTML: '' })
+			})
+			await waitMail({ pour: recipient }, { capteur: sink })
+			return read
+		}
+		const at = (rang: number, created: string) => ({ ...resume(rang, recipient), Created: created })
+
+		// Mailpit cuts the trailing zeros of the fraction: 860 ms is « .86Z », which as text sorts after « .861Z ».
+		test('860 ms puis 861 ms : le second est le plus récent, quel que soit l’ordre de la réponse', async () => {
+			const [older, newer] = [at(1, '2026-10-23T03:44:57.86Z'), at(2, '2026-10-23T03:44:57.861Z')]
+
+			expect(await readWhen([older, newer])).toBe('mail-2')
+			expect(await readWhen([newer, older])).toBe('mail-2')
+		})
+
+		test('une seconde pleine (« 58Z », sans fraction) est plus récente que 500 ms (« 57.5Z »)', async () => {
+			const [whole, half] = [at(3, '2026-10-23T03:44:58Z'), at(4, '2026-10-23T03:44:57.5Z')]
+
+			expect(await readWhen([half, whole])).toBe('mail-3')
+			expect(await readWhen([whole, half])).toBe('mail-3')
+		})
+
+		test('deux mails de la même milliseconde : l’ordre de la réponse du capteur (le plus récent d’abord) est gardé', async () => {
+			const [first, second] = [at(5, '2026-10-23T03:44:57.123Z'), at(6, '2026-10-23T03:44:57.123Z')]
+
+			expect(await readWhen([second, first])).toBe('mail-6')
+			expect(await readWhen([first, second])).toBe('mail-5')
+		})
+	})
+
 	test.each([
 		['une erreur', () => new Response('panne', { status: 500 }), 'a répondu 500 à la demande « chercher ».'],
 		[
