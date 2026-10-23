@@ -83,6 +83,7 @@ export interface Config {
     'reminder-reports': ReminderReport;
     'reminder-states': ReminderState;
     'quote-requests': QuoteRequest;
+    'activity-checks': ActivityCheck;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -109,6 +110,7 @@ export interface Config {
     'reminder-reports': ReminderReportsSelect<false> | ReminderReportsSelect<true>;
     'reminder-states': ReminderStatesSelect<false> | ReminderStatesSelect<true>;
     'quote-requests': QuoteRequestsSelect<false> | QuoteRequestsSelect<true>;
+    'activity-checks': ActivityChecksSelect<false> | ActivityChecksSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -425,7 +427,7 @@ export interface Profile {
   verified?: boolean | null;
   verifiedAt?: string | null;
   /**
-   * 14 chiffres, sans espace.
+   * 14 chiffres, sans espace, facultatif. Il sert au contrôle de l’activité (badge « Activité vérifiée »), jamais affiché.
    */
   siret?: string | null;
   /**
@@ -883,6 +885,19 @@ export interface QuoteRequest {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "activity-checks".
+ */
+export interface ActivityCheck {
+  id: number;
+  profile?: (number | null) | Profile;
+  outcome: 'pending' | 'active' | 'ceased' | 'not-found';
+  checkedAt?: string | null;
+  attemptedAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -964,6 +979,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'quote-requests';
         value: number | QuoteRequest;
+      } | null)
+    | ({
+        relationTo: 'activity-checks';
+        value: number | ActivityCheck;
       } | null);
   globalSlug?: string | null;
   user:
@@ -1414,6 +1433,18 @@ export interface QuoteRequestsSelect<T extends boolean = true> {
   clientEmail?: T;
   clientPhone?: T;
   consentAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "activity-checks_select".
+ */
+export interface ActivityChecksSelect<T extends boolean = true> {
+  profile?: T;
+  outcome?: T;
+  checkedAt?: T;
+  attemptedAt?: T;
   updatedAt?: T;
   createdAt?: T;
 }

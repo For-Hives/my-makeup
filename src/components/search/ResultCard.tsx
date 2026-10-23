@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { TrackedLink } from '@/components/analytics/TrackedLink'
+import { ActivityBadgePill } from '@/components/profile/ActivityBadge'
 import { ZoneText } from '@/components/profile/ZoneText'
 import { ofName } from '@/lib/french-elision'
 import { formatFromShort } from '@/lib/price'
@@ -97,6 +98,11 @@ export function ResultCard({
 						{carte.lieu === null ? 'Zone non renseignée' : <ZoneText text={carte.lieu} flags={carte.flags} />}
 					</span>
 				</p>
+				{carte.activityVerified && (
+					<p>
+						<ActivityBadgePill size="small" />
+					</p>
+				)}
 				{carte.specialite && <p className="truncate text-gray-900 text-xs md:text-base">{carte.specialite}</p>}
 				{carte.offerNames && (
 					<ul className="flex flex-wrap gap-1.5" aria-label="Prestations">

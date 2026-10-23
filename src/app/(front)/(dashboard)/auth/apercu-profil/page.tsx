@@ -7,7 +7,9 @@ import { body, display } from '@/components/direct-edit/fonts'
 import { headerEdit } from '@/components/direct-edit/header-edit'
 import { OwnerEditSession } from '@/components/direct-edit/OwnerEditSession'
 import { ProfileView } from '@/components/profile/ProfileView'
+import { readCheck } from '@/lib/activity/store'
 import { requireArtist } from '@/lib/auth/session'
+import { activityView } from '@/lib/dashboard/activity'
 import { artistProfile, profileId } from '@/lib/dashboard/my-profile'
 import { readDashboardPhotos } from '@/lib/dashboard/photos'
 import { DASHBOARD_PATH, PREVIEW_PATH, previewState } from '@/lib/dashboard/preview'
@@ -25,6 +27,7 @@ import {
 	saveMyMainPicture,
 	saveMyNetworks,
 	saveMyPortfolio,
+	saveMySiret,
 	saveMySkills,
 } from '../profil/actions'
 import { saveMyCourses, saveMyServiceOffers } from '../profil/lists-actions'
@@ -70,6 +73,8 @@ export default async function PreviewPage({ searchParams }: PageProps<'/auth/ape
 	const photos = await readDashboardPhotos(context.payload, profile)
 	// What she stores and what the site allows (issue 309): the volume used and the photos left.
 	const usage = usageView(await readPhotoUsage(context.payload, artist.id))
+	// Her SIRET and where its check stands: for her eyes only (issue 1004).
+	const activity = activityView(profile.siret, await readCheck(context.payload, profile.id))
 	return (
 		<div className={`${display.variable} ${body.variable} flex flex-1 flex-col`}>
 			<OwnerEditSession>
@@ -95,6 +100,7 @@ export default async function PreviewPage({ searchParams }: PageProps<'/auth/ape
 							profile,
 							photos,
 							usage,
+							activity,
 							actions: {
 								saveAbout: saveMyDescription,
 								saveSkills: saveMySkills,
@@ -104,6 +110,7 @@ export default async function PreviewPage({ searchParams }: PageProps<'/auth/ape
 								savePortfolio: saveMyPortfolio,
 								saveContacts: saveMyContactDetails,
 								saveNetworks: saveMyNetworks,
+								saveSiret: saveMySiret,
 								saveMainPicture: saveMyMainPicture,
 								savePlace: saveMyLocation,
 								searchCities: findMyCities,

@@ -92,6 +92,7 @@ export type DashboardProfile = Pick<
 	| 'contactDetails'
 	| 'publicContact'
 	| 'consentedAt'
+	| 'siret'
 > &
 	// The address of her public page (ticket 306): read by her space, shown on no card.
 	Partial<Pick<Profile, 'slug'>>

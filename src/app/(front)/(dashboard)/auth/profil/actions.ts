@@ -21,6 +21,8 @@ import { saveIdentity } from '@/lib/dashboard/save-identity'
 import { saveNetworks } from '@/lib/dashboard/save-networks'
 import { saveMainPicture } from '@/lib/dashboard/save-photo'
 import { savePortfolio } from '@/lib/dashboard/save-portfolio'
+import { saveSiret } from '@/lib/dashboard/save-siret'
+import type { SiretValues } from '@/lib/dashboard/siret'
 
 /**
  * Saves the identity of the signed-in makeup artist (ticket 119). An action is a public endpoint:
@@ -166,6 +168,24 @@ export async function saveMyPortfolio(saisie: unknown): Promise<SaveResult<Portf
 	if (origin !== null && !payload.config.csrf.includes(origin)) return { ok: false, message: FAILURE_MESSAGE }
 
 	const result = await withPublishableTransition(payload, user, () => savePortfolio(payload, user, saisie))
+	if (result.ok) revalidatePath('/auth/profil')
+	return result
+}
+
+/**
+ * Saves the optional SIRET of the signed-in makeup artist (issue 1004): same guards as the other fields, the session
+ * read again, the origin checked, the profile found by her account. The number goes in no log, no event and no
+ * answer but her own; her page is read again to show where the check stands. The registry is not asked here: the
+ * daily task does it.
+ */
+export async function saveMySiret(saisie: unknown): Promise<SaveResult<SiretValues>> {
+	const context = await requestUser()
+	if (context === null) return { ok: false, message: MESSAGE_SESSION, session: 'expiree' }
+	const { payload, utilisateur: user } = context
+	const origin = (await headers()).get('origin')
+	if (origin !== null && !payload.config.csrf.includes(origin)) return { ok: false, message: FAILURE_MESSAGE }
+
+	const result = await saveSiret(payload, user, saisie)
 	if (result.ok) revalidatePath('/auth/profil')
 	return result
 }

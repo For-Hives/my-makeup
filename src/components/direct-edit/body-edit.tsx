@@ -1,4 +1,5 @@
 import type { BodyEdit } from '@/components/profile/edit-slots'
+import type { ActivityView } from '@/lib/dashboard/activity'
 import { listBullets } from '@/lib/dashboard/bullets'
 import type { DashboardProfile } from '@/lib/dashboard/cards'
 import { COURSES } from '@/lib/dashboard/courses'
@@ -17,6 +18,7 @@ import { GalleryBlock, type GalleryWork, type MainPictureSave, type PortfolioSav
 import { NetworksBlock, type NetworksSave } from './blocks/NetworksBlock'
 import type { PlaceSave } from './blocks/PlaceBlock'
 import { RowsBlock, type RowsSave } from './blocks/RowsBlock'
+import { SiretBlock, type SiretSave } from './blocks/SiretBlock'
 import { TravelBlock } from './blocks/TravelBlock'
 
 /** The server actions the body of the page saves through: the ones of her space, given by the page. */
@@ -30,6 +32,8 @@ export interface BodyActions {
 	saveMainPicture: MainPictureSave
 	saveContacts: ContactsSave
 	saveNetworks: NetworksSave
+	/** Her SIRET (issue 1004): only needed with `activity`. */
+	saveSiret?: SiretSave
 	savePlace: PlaceSave
 	searchCities: CitiesSearch
 }
@@ -46,6 +50,7 @@ export function bodyEdit({
 	usage,
 	actions,
 	galleryWork,
+	activity,
 }: {
 	profile: DashboardProfile
 	photos: DashboardPhotos
@@ -54,10 +59,14 @@ export function bodyEdit({
 	actions: BodyActions
 	/** The browser work and the network of the gallery: the page gives none (the defaults), a test gives fakes. */
 	galleryWork?: GalleryWork
+	/** Where the check of her SIRET stands (issue 1004): without it, the page has no SIRET card. */
+	activity?: ActivityView
 }): Partial<BodyEdit> {
 	const mainInGallery =
 		photos.photo !== null && photos.galerie.some(photo => String(photo.id) === String(photos.photo?.id))
+	const saveSiret = actions.saveSiret
 	return {
+		...(activity && saveSiret && { activity: () => <SiretBlock view={activity} save={saveSiret} /> }),
 		networks: read => (
 			<NetworksBlock
 				values={{

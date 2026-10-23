@@ -200,6 +200,12 @@ export type ServerEnv = {
 	mail?: MailEnv
 	payloadSecret: string
 	/**
+	 * Whether the daily task may ask the public business registry about the SIRET of the profiles (issue 1004). True
+	 * on the site only (NODE_ENV=production and the address of the site): the bench, a work station and every
+	 * other deployment never call the registry. No variable to set.
+	 */
+	activityCheck: boolean
+	/**
 	 * Whether the reminders to the profiles that are close to publishable really leave (REMINDERS_SEND, issue 1006).
 	 * True only when the variable is exactly « on »: absent, empty or any other value, nothing is sent, and the
 	 * daily task only writes its internal report ("dry-run" list). Never refused at start: a typo must not stop the site.
@@ -991,6 +997,7 @@ export function parseServerEnv(source: RawEnv): ServerEnv {
 			}),
 		localDatabase: isLocalDatabase(parsed.data.DATABASE_URI),
 		...(mail && { mail }),
+		activityCheck: inSite,
 		payloadSecret: parsed.data.PAYLOAD_SECRET,
 		photoLimits: photoLimitsFrom(parsed.data),
 		remindersSend: raw.REMINDERS_SEND?.trim() === 'on',
@@ -1122,6 +1129,7 @@ export function serverEnv(
 		// Not read while Next builds, where nothing talks to a provider: the server reads it when it starts.
 		googleIssuer: GOOGLE_ISSUER,
 		localDatabase: isLocalDatabase(raw.DATABASE_URI ?? ''),
+		activityCheck: false,
 		payloadSecret: raw.PAYLOAD_SECRET ?? '',
 		// Not read while Next builds, where nothing is sent: the server reads it when it starts.
 		remindersSend: false,

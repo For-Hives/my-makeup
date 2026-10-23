@@ -1,5 +1,6 @@
 import type { Payload } from 'payload'
 import { AUTH_LOG_COLLECTION, purgeThreshold } from '../auth/auth-log'
+import { activityCheckTask } from './activity-check'
 import { purgeContactMessages } from './contact-messages'
 import { purgeModerationEvents } from './moderation-events'
 import { purgeProfileViews } from './profile-views'
@@ -57,6 +58,7 @@ export const DAILY_TASKS: readonly DailyTask[] = [
 	retryStuckMessages,
 	remindersTask,
 	purgeReminderReports,
+	activityCheckTask,
 ]
 
 export type TaskResult = { nom: string; supprimes: number } | { nom: string; echec: true }

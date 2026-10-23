@@ -5,6 +5,7 @@ import { nodemailerAdapter } from '@payloadcms/email-nodemailer'
 import { s3Storage } from '@payloadcms/storage-s3'
 import { buildConfig, type CollectionConfig } from 'payload'
 import sharp from 'sharp'
+import { ActivityChecks } from './collections/ActivityChecks'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { Admins } from './collections/Admins'
 import { Articles } from './collections/Articles'
@@ -104,6 +105,7 @@ export default buildConfig({
 		ReminderReports,
 		ReminderStates,
 		QuoteRequests,
+		ActivityChecks,
 	],
 	// The site and the API share one origin: no other site may read this API from a browser.
 	cors: [],

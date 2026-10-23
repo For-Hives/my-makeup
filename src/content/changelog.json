@@ -405,6 +405,11 @@
 			"id": "tant-que-ta-page-n-est-pas-publiable-un-encadre-en-brouil",
 			"type": "amelioration",
 			"text": "Tant que ta page n’est pas publiable, un encadré « En brouillon » te dit qu’elle n’est pas encore en ligne, ce qu’il te manque, et te mène au bloc à compléter."
+		},
+		{
+			"id": "tu-peux-donner-ton-siret-facultatif-pour-afficher-le-badg",
+			"type": "ajout",
+			"text": "Tu peux donner ton SIRET (facultatif) pour afficher le badge « Activité vérifiée » : ton activité est contrôlée chaque jour dans l’annuaire public des entreprises, et les clientes voient le badge sur ta page et dans la recherche."
 		}
 	],
 	"releases": []

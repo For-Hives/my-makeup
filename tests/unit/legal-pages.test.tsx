@@ -32,7 +32,8 @@ const PAGES = [
 // the paragraph on the quote requests (issue 1003, register `devis-natifs`),
 // the paragraph on the count of the searches by day (issue 1002, register `compteur-recherches-par-jour`),
 // the paragraph on the counter of views (ticket 1001, register `espace-vues-de-la-page`),
-// and the paragraph on the moderation journal, kept 60 months (issue 1005, register `moderation-motif-et-journal`).
+// the paragraph on the moderation journal, kept 60 months (issue 1005, register `moderation-motif-et-journal`),
+// and the section on the SIRET and the activity check, with one sentence of the terms (issue 1004, register `badge-activite-verifiee`).
 const ONLINE: Record<string, { lignes: number; sha: string }> = JSON.parse(
 	readFileSync(path.join(process.cwd(), 'tests/fixtures/legal-pages-text.json'), 'utf8')
 )
@@ -68,6 +69,34 @@ describe('le texte des trois pages', () => {
 		expect(text).toContain('7. Demandes de devis')
 		expect(text).toContain('Les données des demandes sont conservées 6 mois')
 		expect(text).toContain('11. Droit applicable')
+	})
+
+	test('issue 1004 : la politique dit la finalité, la source publique, la conservation et l’effacement du SIRET', async () => {
+		const { default: Page } = await PAGES[2].module()
+		const text = pageText(renderToStaticMarkup(<Page />))
+		expect(text).toContain("SIRET et contrôle de l'activité (facultatif)")
+		// Purpose, and the public source it is asked of.
+		expect(text).toContain('afficher le badge « Activité vérifiée »')
+		expect(text).toContain('annuaire public des entreprises')
+		expect(text).toContain('une information publique')
+		// Legal basis, who sees it, where it never goes.
+		expect(text).toContain('Base légale : votre consentement')
+		expect(text).toContain('Qui le voit : vous et les administrateurs de My Makeup, seulement.')
+		expect(text).toContain("Le numéro n'est jamais affiché sur le site")
+		// Retention and erasure with the account.
+		expect(text).toContain('Vider le champ ou changer le numéro efface ce résultat')
+		expect(text).toContain('supprimer votre compte supprime le numéro et le résultat aussitôt')
+		// A personal datum for a sole trader, and no automatic decision about her.
+		expect(text).toContain('entrepreneur individuel')
+		expect(text).toContain("Aucune décision à votre sujet n'est prise automatiquement.")
+	})
+
+	test('issue 1004 : les CGU disent ce que le badge garantit et ce qu’il ne garantit pas', async () => {
+		const { default: Page } = await PAGES[1].module()
+		const text = pageText(renderToStaticMarkup(<Page />))
+		expect(text).toContain('le badge « Activité vérifiée »')
+		expect(text).toContain('Il ne garantit ni la qualité du travail, ni le contenu du profil.')
+		expect(text).not.toContain('ne sont pas vérifiés par My-Makeup à ce jour')
 	})
 
 	test('seule la politique mène au bouton d’opposition', async () => {

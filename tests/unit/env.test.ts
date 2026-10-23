@@ -118,6 +118,7 @@ describe('a missing or short secret stops the start', () => {
 			googleIssuer: 'https://accounts.google.com',
 			localDatabase: true,
 			payloadSecret: SECRET,
+			activityCheck: false,
 			remindersSend: false,
 			quoteRequests: false,
 			photoLimits: {
@@ -210,6 +211,14 @@ describe('trusted origins: the site and this machine, each for itself', () => {
 
 	test('in production: the site trusts itself only', () => {
 		expect(origins({ ...production, NEXT_PUBLIC_SITE_URL: 'https://my-makeup.fr' })).toEqual(['https://my-makeup.fr'])
+	})
+
+	test('issue 1004: the activity check may call the business registry on the site only', () => {
+		const activity = (raw: RawEnv) => parseServerEnv(raw).activityCheck
+		expect(activity({ ...production, NEXT_PUBLIC_SITE_URL: 'https://my-makeup.fr' })).toBe(true)
+		expect(activity({ ...valid, NEXT_PUBLIC_SITE_URL: 'https://my-makeup.fr' })).toBe(false)
+		expect(activity({ ...production, NEXT_PUBLIC_SITE_URL: 'http://localhost:3123' })).toBe(false)
+		expect(activity(valid)).toBe(false)
 	})
 
 	test('in production on this machine: the stated address under both of its names, whatever PORT says', () => {
@@ -460,6 +469,7 @@ describe('next build needs no secret and no database', () => {
 			googleIssuer: 'https://accounts.google.com',
 			localDatabase: false,
 			payloadSecret: '',
+			activityCheck: false,
 			remindersSend: false,
 			quoteRequests: false,
 			photoLimits: {

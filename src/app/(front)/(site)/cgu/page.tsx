@@ -62,7 +62,7 @@ export default function Cgu() {
 
 			<h2>5. Contenus publiés</h2>
 			<p>
-				{`Chaque maquilleuse est responsable de son profil. Elle garantit détenir les droits sur les textes et les photos qu'elle publie, et avoir l'accord des personnes photographiées. Elle autorise My-Makeup, gratuitement et pour la durée de la publication, à afficher ces contenus sur le site et dans les aperçus de partage de sa page. Les profils ne sont pas vérifiés par My-Makeup à ce jour.`}
+				{`Chaque maquilleuse est responsable de son profil. Elle garantit détenir les droits sur les textes et les photos qu'elle publie, et avoir l'accord des personnes photographiées. Elle autorise My-Makeup, gratuitement et pour la durée de la publication, à afficher ces contenus sur le site et dans les aperçus de partage de sa page. Les profils ne sont pas vérifiés par My-Makeup, à une exception : le badge « Activité vérifiée », facultatif, signale qu'un établissement en activité a été trouvé dans l'annuaire public des entreprises pour le SIRET donné par la maquilleuse. Il ne garantit ni la qualité du travail, ni le contenu du profil.`}
 			</p>
 
 			<h2>6. Règles de conduite</h2>

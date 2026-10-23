@@ -81,6 +81,7 @@ export const COLLECTIONS = [
 	'profile-views',
 	'reminder-reports',
 	'reminder-states',
+	'activity-checks',
 	'quote-requests',
 	'moderation-events',
 	'payload-locked-documents',
@@ -177,6 +178,8 @@ export type Distribution = Record<Role, Actor> & {
 	rapportDeRelances: number
 	/** A row of the state of the reminders of a profile (issue 1006): only an admin reads it. */
 	etatDeRelances: number
+	/** The cached answer of the activity check of a profile (issue 1004): only an admin reads it. */
+	controleDActivite: number
 	/** A quote request (issue 1003): it belongs to a profile, only an admin reads it, nobody writes it through an API. */
 	demandeDeDevis: number
 	/** A line of the moderation journal (issue 1005): it belongs to nobody, only an admin reads it. */
@@ -345,6 +348,13 @@ const reminderState = async (payload: Payload): Promise<number> => {
 	).id
 }
 
+/**
+ * A row of the activity check, without a profile: the matrix deletes profiles, and a profile takes its row with it,
+ * so a row tied to one could vanish between two lines. The access rules do not read the link.
+ */
+const activityCheck = async (payload: Payload): Promise<number> =>
+	(await payload.create({ collection: 'activity-checks', data: { outcome: 'pending' } })).id
+
 /** The data of a quote request, as the server writes them. */
 const quoteRequestData = (profile: number) => ({
 	profile,
@@ -485,6 +495,12 @@ const PORTRAITS: Record<MatrixCollection, Portrait> = {
 		donneesDeCreation: () => Promise.resolve({ lastSentAt: new Date().toISOString() }),
 		jetable: reminderState,
 	},
+	'activity-checks': {
+		champ: 'outcome',
+		nouvelleValeur: () => 'active',
+		donneesDeCreation: () => Promise.resolve({ outcome: 'pending' }),
+		jetable: activityCheck,
+	},
 	'quote-requests': {
 		champ: 'status',
 		nouvelleValeur: () => 'answered',
@@ -615,6 +631,7 @@ export async function distribute(): Promise<Distribution> {
 		vueDeProfil: await profileView(payload),
 		rapportDeRelances: await reminderReport(payload),
 		etatDeRelances: await reminderState(payload),
+		controleDActivite: await activityCheck(payload),
 		demandeDeDevis: await quoteRequest(payload),
 		actionDeModeration: await moderationLine(payload),
 	}
@@ -707,6 +724,7 @@ function documentOf(distribution: Distribution, ligne: Line): number {
 	if (collection === 'profile-views') return distribution.vueDeProfil
 	if (collection === 'reminder-reports') return distribution.rapportDeRelances
 	if (collection === 'reminder-states') return distribution.etatDeRelances
+	if (collection === 'activity-checks') return distribution.controleDActivite
 	if (collection === 'quote-requests') return distribution.demandeDeDevis
 	if (collection === 'moderation-events') return distribution.actionDeModeration
 	const state = (etat: State) =>
@@ -760,6 +778,7 @@ async function list(voie: Street, acteur: Actor, ligne: Line, distribution: Dist
 		...(collection === 'profile-views' ? [distribution.vueDeProfil] : []),
 		...(collection === 'reminder-reports' ? [distribution.rapportDeRelances] : []),
 		...(collection === 'reminder-states' ? [distribution.etatDeRelances] : []),
+		...(collection === 'activity-checks' ? [distribution.controleDActivite] : []),
 		...(collection === 'quote-requests' ? [distribution.demandeDeDevis] : []),
 		...(collection === 'moderation-events' ? [distribution.actionDeModeration] : []),
 	]

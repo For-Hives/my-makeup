@@ -40,6 +40,8 @@ const READ_FIELDS = {
 	contactDetails: true,
 	publicContact: true,
 	consentedAt: true,
+	// Optional, for her eyes only (issue 1004): her page shows it to her, and nobody else's.
+	siret: true,
 	slug: true,
 } as const
 
