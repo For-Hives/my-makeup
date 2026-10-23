@@ -7,6 +7,7 @@
  * No `next` import: read by the page and by the tests.
  */
 
+import { DEFAULT_FILTERS, type Filterable, type SearchFilters, sortSection } from './filters'
 import { distanceKm, type GeoPoint } from './geo-distance'
 import { type Search, searchByWord } from './input'
 import {
@@ -21,7 +22,7 @@ import {
 import { type NormalizedTexts, normalizeTexts, rankByRelevance } from './relevance'
 
 /** A profile of the directory as the search reads it: where she works, and (for a word) what she wrote. */
-export interface SearchableProfile extends ProfilePlace, ProfileGeometry {
+export interface SearchableProfile extends ProfilePlace, ProfileGeometry, Filterable {
 	/** The name a tie of a ranking by distance is broken by (ticket 294). */
 	sortName?: string
 	textes?: NormalizedTexts
@@ -64,11 +65,16 @@ export interface SearchOrigin {
  * With `origin` (ticket 294), the place typed is a point and the profiles are ranked by distance
  * (sectionsByDistance). Without it, or when only a code of département was typed, the search keeps
  * its way of before: by the name of the place.
+ *
+ * With a sort other than the default (issue 1011), each section is sorted on its own, before the two rules
+ * above are applied: the sections stay what they were, and a profile with no way to be reached, or with no
+ * zone, is still after the others.
  */
 export function find<T extends SearchableProfile>(
 	annuaire: readonly T[],
 	recherche: Pick<Search, 'search' | 'city'>,
-	origin: SearchOrigin | null = null
+	origin: SearchOrigin | null = null,
+	filters: SearchFilters = DEFAULT_FILTERS
 ): ProfilesByPlace<T> {
 	const ranked = searchByWord(recherche)
 		? rankByRelevance(annuaire, profil => profil.textes ?? NO_TEXT, recherche.search)
@@ -83,13 +89,11 @@ export function find<T extends SearchableProfile>(
 					name: profil => profil.sortName ?? '',
 				})
 			: sectionsByPlace(found, recherche.city)
+	const arranged = (profils: T[]): T[] => zoneKnownFirst(reachableFirst(sortSection(profils, filters)))
 	return {
 		...places,
-		locaux: zoneKnownFirst(reachableFirst(places.locaux)),
-		sections: places.sections.map(section => ({
-			...section,
-			profils: zoneKnownFirst(reachableFirst(section.profils)),
-		})),
+		locaux: arranged(places.locaux),
+		sections: places.sections.map(section => ({ ...section, profils: arranged(section.profils) })),
 	}
 }
 

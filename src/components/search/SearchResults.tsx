@@ -1,5 +1,7 @@
 import { ResultList } from '@/components/search/ResultList'
 import { ResultPages } from '@/components/search/ResultPages'
+import { SearchRefine } from '@/components/search/SearchRefine'
+import { DEFAULT_FILTERS, type SearchFilters } from '@/lib/search/filters'
 import type { Search } from '@/lib/search/input'
 import { paginate, sectionsOfPage } from '@/lib/search/pagination'
 import { municipalitiesOfPostalCodes, municipalitiesPhrase } from '@/lib/search/place'
@@ -14,9 +16,11 @@ import type { DirectoryProfile } from '@/services/public/profiles'
 export function SearchResults({
 	vue: view,
 	recherche: query,
+	filtres: filters = DEFAULT_FILTERS,
 }: {
 	vue: SearchView<DirectoryProfile>
 	recherche: Pick<Search, 'search' | 'city' | 'page'>
+	filtres?: SearchFilters
 }) {
 	const { places, ranked } = view
 	const { locaux: localProfiles, parLieu: byPlace, sections } = places
@@ -43,6 +47,7 @@ export function SearchResults({
 	return (
 		<div className="w-full px-4 pb-16 md:px-16">
 			<h1 className="mb-8 font-bold text-2xl text-gray-800">{view.title}</h1>
+			<SearchRefine recherche={query} filtres={filters} />
 			{municipalities && <p className="-mt-4 mb-8 text-gray-700">{municipalities}</p>}
 			{!ranked && byPlace && localProfiles.length === 0 && (
 				<p className="-mt-4 mb-8 text-gray-700">
@@ -72,7 +77,7 @@ export function SearchResults({
 					/>
 				</section>
 			))}
-			<ResultPages recherche={query} page={page.page} pages={page.pages} />
+			<ResultPages recherche={{ ...query, ...filters }} page={page.page} pages={page.pages} />
 		</div>
 	)
 }

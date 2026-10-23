@@ -730,6 +730,10 @@ export interface DirectoryProfile extends ProfilePlace, ProfileGeometry {
 	carte: ProfileCard
 	/** True when her profile shows no way to reach her (ticket 291): the search ranks her after the others. */
 	unreachable: boolean
+	/** The lowest amount of her offers, in euros: what the price filter and the price sort read (issue 1011). */
+	startingPrice?: number | null
+	/** When her profile was last saved, in milliseconds: what the sort by update reads (issue 1011). */
+	updatedAt?: number
 	/** True when her profile is publishable (`isIndexable`): the pages of a speciality show only those (ticket 305). */
 	indexable: boolean
 	/**
@@ -817,7 +821,7 @@ export async function readDirectory(
 		const result = await payload.find({
 			collection: 'profiles',
 			where: LISTED_FILTER,
-			select: { ...(avecLesTextes ? SEARCH_FIELDS : CARD_FIELDS), publishable: true },
+			select: { ...(avecLesTextes ? SEARCH_FIELDS : CARD_FIELDS), publishable: true, updatedAt: true },
 			sort: ['-completeness', '-updatedAt', 'slug'],
 			depth: 0,
 			limit: LIST_MAX_LIMIT,
@@ -834,6 +838,8 @@ export async function readDirectory(
 			directory.push({
 				carte: isUnreachable ? { ...card, unreachable: true } : card,
 				unreachable: isUnreachable,
+				startingPrice: card.startingPrice ?? null,
+				updatedAt: Date.parse(profile.updatedAt) || 0,
 				indexable: profile.publishable === true,
 				...directoryPlace(profile),
 				...directoryGeometry(profile),

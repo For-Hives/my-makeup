@@ -1,7 +1,9 @@
+import type { SearchFilters } from '@/lib/search/filters'
 import { type Search, searchPageUrl } from '@/lib/search/input'
 import { inDepartment } from '@/lib/search/place'
 import type { ProfileCard } from '@/services/public/profiles'
 import { ResultList } from './ResultList'
+import { SearchRefine } from './SearchRefine'
 
 const COLUMN = 'mx-auto flex w-full max-w-2xl flex-col items-center gap-4 px-4 py-24 text-center'
 const COLUMN_ABOVE_CARDS = 'mx-auto flex w-full max-w-2xl flex-col items-center gap-4 px-4 pt-24 pb-12 text-center'
@@ -13,7 +15,11 @@ const LIST_LINK = 'inline-flex min-h-[44px] items-center font-semibold text-indi
  * The search could not be read (the database is cut off or too slow, ticket 100): what happened in
  * words, and a link that asks the same search again. Never a blank page.
  */
-export function SearchFailed({ recherche }: { recherche: Pick<Search, 'search' | 'city' | 'page'> }) {
+export function SearchFailed({
+	recherche,
+}: {
+	recherche: Pick<Search, 'search' | 'city' | 'page'> & Partial<SearchFilters>
+}) {
 	return (
 		<div className={COLUMN}>
 			<h1 className="font-bold text-2xl text-gray-800">La recherche n’a pas abouti</h1>
@@ -119,5 +125,32 @@ export function NoResult({
 				</section>
 			)}
 		</>
+	)
+}
+
+/**
+ * The filters left nobody (issue 1011), while the search without them finds someone: the page says so, lets
+ * the visitor change the filters, and links to the search without them. It never says nobody is registered.
+ */
+export function NoMatchForFilters({
+	titre,
+	recherche: query,
+	filtres: filters,
+}: {
+	titre: string
+	recherche: Pick<Search, 'search' | 'city'>
+	filtres: SearchFilters
+}) {
+	return (
+		<div className="w-full px-4 pb-16 md:px-16">
+			<h1 className="mb-4 font-bold text-2xl text-gray-800">{titre}</h1>
+			<p className="mb-8 text-gray-700">
+				Changez le prix maximum, ou retirez les filtres pour voir toutes les maquilleuses.
+			</p>
+			<SearchRefine recherche={query} filtres={filters} />
+			<a href={searchPageUrl(query)} className={LIST_LINK}>
+				Voir toutes les maquilleuses de cette recherche
+			</a>
+		</div>
 	)
 }

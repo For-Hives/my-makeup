@@ -8,6 +8,7 @@
 
 import { countryByCode } from '../countries'
 import { foreignCountryOf } from '../dashboard/foreign-cities'
+import { DEFAULT_FILTERS, filterByPrice, filtersActive, type SearchFilters } from './filters'
 import { resultsTitle, type Search, searchByCity } from './input'
 import type { ProfilesByPlace } from './place'
 import { readPlace, sectionsByPlace } from './place'
@@ -15,6 +16,10 @@ import type { ResolvedPlace } from './place-point'
 import { farTravellers, find, type SearchableProfile } from './results'
 
 export interface SearchView<T extends SearchableProfile> {
+	/** True when the filters left nobody although the search without them finds someone (issue 1011). */
+	filteredOut: boolean
+	/** What the search without its filters shows: what the measure counts, so that a filter is not a new search. */
+	baselineTotal: number
 	/** True when the profiles are ranked by distance from a point (ticket 294). */
 	ranked: boolean
 	/** The profiles in their sections. Without any profile for a city alone: no whole-directory tail. */
@@ -57,10 +62,47 @@ function namesACity(city: string): boolean {
 export function buildSearchView<T extends SearchableProfile>(
 	directory: readonly T[],
 	query: Pick<Search, 'search' | 'city'>,
-	place: ResolvedPlace
+	place: ResolvedPlace,
+	filters: SearchFilters = DEFAULT_FILTERS
 ): SearchView<T> {
+	if (filtersActive(filters)) return buildFilteredView(directory, query, place, filters)
+	const view = buildView(directory, query, place, DEFAULT_FILTERS)
+	return { ...view, filteredOut: false, baselineTotal: view.total }
+}
+
+/**
+ * The view with filters (issue 1011): the directory under the price ceiling is searched like the whole one.
+ * When that leaves nobody but the search without filters finds someone, the page says the filters did it,
+ * never « Personne n’est encore inscrite près de … ».
+ */
+function buildFilteredView<T extends SearchableProfile>(
+	directory: readonly T[],
+	query: Pick<Search, 'search' | 'city'>,
+	place: ResolvedPlace,
+	filters: SearchFilters
+): SearchView<T> {
+	const baseline = buildView(directory, query, place, DEFAULT_FILTERS)
+	const view = buildView(filterByPrice(directory, filters), query, place, filters)
+	const filteredOut = view.empty && !baseline.empty
+	return {
+		...view,
+		filteredOut,
+		baselineTotal: baseline.total,
+		...(filteredOut && { title: NO_MATCH_FOR_FILTERS, far: [], foreignCity: false, foreignCountry: null }),
+	}
+}
+
+/** The h1 of a search the filters emptied. */
+export const NO_MATCH_FOR_FILTERS = 'Aucune maquilleuse ne correspond à ces filtres'
+
+function buildView<T extends SearchableProfile>(
+	directory: readonly T[],
+	query: Pick<Search, 'search' | 'city'>,
+	place: ResolvedPlace,
+	filters: SearchFilters
+): Omit<SearchView<T>, 'filteredOut' | 'baselineTotal'> {
 	const origin = place.genre === 'point' ? { point: place.point, label: place.label } : null
-	const found = find(directory, query, origin)
+	const found = find(directory, query, origin, filters)
 	const ranked = found.localTitle !== undefined
 	const byCityAlone = searchByCity(query)
 	const noLocal = found.parLieu && found.locaux.length === 0

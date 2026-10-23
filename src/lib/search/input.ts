@@ -10,6 +10,7 @@
  * No `next` import: read by the page and by the tests.
  */
 
+import type { SearchFilters } from './filters'
 import { readPlace } from './place'
 
 export const INPUT_MAX_LENGTH = 100
@@ -78,11 +79,19 @@ export function usablePlace(city: string): boolean {
 	return place.segments.length > 0 || place.departements.length > 0
 }
 
-/** The path of the search page for a search; empty fields and the first page are left out. */
-export function searchPageUrl({ search = '', city = '', page = 1 }: Partial<Search> = {}): string {
+/** The path of the search page for a search; empty fields, the first page and the default filters are left out. */
+export function searchPageUrl({
+	search = '',
+	city = '',
+	page = 1,
+	maxPrice = null,
+	sort = 'relevance',
+}: Partial<Search> & Partial<SearchFilters> = {}): string {
 	const params = new URLSearchParams()
 	if (field(search)) params.set('search', field(search))
 	if (field(city)) params.set('city', field(city))
+	if (maxPrice !== null) params.set('maxPrice', String(maxPrice))
+	if (sort !== 'relevance') params.set('sort', sort)
 	if (page > 1) params.set('page', String(Math.min(Math.trunc(page), PAGE_MAX)))
 	const text = params.toString()
 	return text ? `/search?${text}` : '/search'

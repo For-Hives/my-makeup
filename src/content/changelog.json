@@ -350,6 +350,11 @@
 			"id": "une-recherche-est-maintenant-comptee-sans-jamais-garder-c",
 			"type": "amelioration",
 			"text": "Une recherche est maintenant comptée, sans jamais garder ce que vous avez tapé, pour que My Makeup voie dans quels départements il manque des maquilleuses."
+		},
+		{
+			"id": "dans-la-recherche-tu-peux-limiter-les-resultats-a-un-prix",
+			"type": "ajout",
+			"text": "Dans la recherche, tu peux limiter les résultats à un prix de départ maximum et les trier par prix ou par mise à jour récente."
 		}
 	],
 	"releases": []

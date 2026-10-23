@@ -1,3 +1,4 @@
+import type { SearchFilters } from '@/lib/search/filters'
 import { type Search, searchPageUrl } from '@/lib/search/input'
 
 /**
@@ -10,7 +11,7 @@ export function ResultPages({
 	page,
 	pages,
 }: {
-	recherche: Pick<Search, 'search' | 'city'>
+	recherche: Pick<Search, 'search' | 'city'> & Partial<SearchFilters>
 	page: number
 	pages: number
 }) {
