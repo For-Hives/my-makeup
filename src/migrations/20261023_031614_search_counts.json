@@ -480,6 +480,89 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.profiles_specialty_bullets": {
+      "name": "profiles_specialty_bullets",
+      "schema": "",
+      "columns": {
+        "order": {
+          "name": "order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "parent_id": {
+          "name": "parent_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value": {
+          "name": "value",
+          "type": "enum_profiles_specialty_bullets",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "profiles_specialty_bullets_order_idx": {
+          "name": "profiles_specialty_bullets_order_idx",
+          "columns": [
+            {
+              "expression": "order",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "profiles_specialty_bullets_parent_idx": {
+          "name": "profiles_specialty_bullets_parent_idx",
+          "columns": [
+            {
+              "expression": "parent_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "profiles_specialty_bullets_parent_fk": {
+          "name": "profiles_specialty_bullets_parent_fk",
+          "tableFrom": "profiles_specialty_bullets",
+          "tableTo": "profiles",
+          "columnsFrom": [
+            "parent_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.profiles_service_offers_options": {
       "name": "profiles_service_offers_options",
       "schema": "",
@@ -1104,6 +1187,12 @@
         },
         "specialty": {
           "name": "specialty",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "specialty_other": {
+          "name": "specialty_other",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
@@ -4665,6 +4754,18 @@
         "editor"
       ]
     },
+    "public.enum_profiles_specialty_bullets": {
+      "name": "enum_profiles_specialty_bullets",
+      "schema": "public",
+      "values": [
+        "wedding",
+        "event",
+        "photoFashion",
+        "screenStage",
+        "specialEffects",
+        "selfMakeupCourse"
+      ]
+    },
     "public.enum_profiles_zone_kind": {
       "name": "enum_profiles_zone_kind",
       "schema": "public",
@@ -4937,6 +5038,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "b0c5f03b-9c18-48fd-be00-36604c19cdfc",
+  "id": "fd53e61f-765a-471f-bff7-dd79bbeb6598",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }
