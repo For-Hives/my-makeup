@@ -6,6 +6,7 @@ import {
 	type Payload,
 	type PayloadRequest,
 } from 'payload'
+import { REMINDER_STATES_COLLECTION } from '../../collections/ReminderStates'
 // Relative import on purpose: the bin is the one in the collections, and this file may be loaded outside of Next.
 import { heldTrash } from '../../collections/trash'
 import { PROFILE_VIEWS_COLLECTION } from '../views/profile-views'
@@ -110,6 +111,14 @@ async function remove(payload: Payload, id: number | string): Promise<DeletionSu
 				// Her counters of views go with her profile (ticket 1001); the daily purge would take the orphans anyway.
 				await payload.delete({
 					collection: PROFILE_VIEWS_COLLECTION,
+					depth: 0,
+					overrideAccess: true,
+					req,
+					where: { profile: { equals: profile.id } },
+				})
+				// What the reminders keep of her (the date of the last one, an unsubscribe) goes with her profile (issue 1006).
+				await payload.delete({
+					collection: REMINDER_STATES_COLLECTION,
 					depth: 0,
 					overrideAccess: true,
 					req,

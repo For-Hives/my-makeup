@@ -79,6 +79,8 @@ export const COLLECTIONS = [
 	'deleted-accounts',
 	'search-counts',
 	'profile-views',
+	'reminder-reports',
+	'reminder-states',
 	'payload-locked-documents',
 ] as const
 export type MatrixCollection = (typeof COLLECTIONS)[number]
@@ -167,6 +169,10 @@ export type Distribution = Record<Role, Actor> & {
 	compteurDeRecherches: number
 	/** A row of the counter of views (ticket 1001): it belongs to nobody, only an admin reads it. */
 	vueDeProfil: number
+	/** A row of the report of the reminders (issue 1006): it belongs to nobody, only an admin reads it. */
+	rapportDeRelances: number
+	/** A row of the state of the reminders of a profile (issue 1006): only an admin reads it. */
+	etatDeRelances: number
 }
 
 /** A fresh address for each document a line creates or changes. */
@@ -282,6 +288,40 @@ const profileView = async (payload: Payload): Promise<number> => {
 	).id
 }
 
+/** A row of the report of the reminders, written by the server as it writes them: a day nobody reuses. */
+const reminderReport = async (payload: Payload): Promise<number> =>
+	(
+		await payload.create({
+			collection: 'reminder-reports',
+			data: {
+				day: `2019-${String(1 + Math.floor(Math.random() * 12)).padStart(2, '0')}-${String(1 + Math.floor(Math.random() * 28)).padStart(2, '0')}`,
+				incompleteCount: 0,
+				inactiveCount: 0,
+				sentCount: 0,
+			},
+		})
+	).id
+
+/** A row of the state of the reminders: on a profile that has none yet, as the server writes it. */
+const reminderState = async (payload: Payload): Promise<number> => {
+	const { docs } = await payload.find({ collection: 'profiles', depth: 0, limit: 1, select: {}, sort: '-id' })
+	const profile = docs[0]
+	if (!profile) throw new Error('La matrice n’a aucun profil pour y poser l’état des relances.')
+	const taken = await payload.find({
+		collection: 'reminder-states',
+		depth: 0,
+		limit: 1,
+		where: { profile: { equals: profile.id } },
+	})
+	if (taken.docs[0]) return taken.docs[0].id
+	return (
+		await payload.create({
+			collection: 'reminder-states',
+			data: { profile: profile.id, lastSentAt: new Date().toISOString() },
+		})
+	).id
+}
+
 /** What the matrix needs to know of a collection to play its lines. */
 interface Portrait {
 	/** The field a line changes when it names none, and a new value for it. */
@@ -368,6 +408,24 @@ const PORTRAITS: Record<MatrixCollection, Portrait> = {
 		nouvelleValeur: () => 999,
 		donneesDeCreation: () => Promise.resolve({ day: '2020-02-01', count: 1 }),
 		jetable: profileView,
+	},
+	'reminder-reports': {
+		champ: 'sentCount',
+		nouvelleValeur: () => 999,
+		donneesDeCreation: () =>
+			Promise.resolve({
+				day: `2018-${String(1 + Math.floor(Math.random() * 12)).padStart(2, '0')}-${String(1 + Math.floor(Math.random() * 28)).padStart(2, '0')}`,
+				incompleteCount: 0,
+				inactiveCount: 0,
+				sentCount: 0,
+			}),
+		jetable: reminderReport,
+	},
+	'reminder-states': {
+		champ: 'lastSentAt',
+		nouvelleValeur: () => new Date().toISOString(),
+		donneesDeCreation: () => Promise.resolve({ lastSentAt: new Date().toISOString() }),
+		jetable: reminderState,
 	},
 	// Contact messages (ticket 158): the server writes them, an admin reads them, nobody else reaches them.
 	'contact-requests': {
@@ -491,6 +549,8 @@ export async function distribute(): Promise<Distribution> {
 		compteSupprime: await deletedAccount(payload),
 		compteurDeRecherches: await searchCount(payload),
 		vueDeProfil: await profileView(payload),
+		rapportDeRelances: await reminderReport(payload),
+		etatDeRelances: await reminderState(payload),
 	}
 }
 
@@ -579,6 +639,8 @@ function documentOf(distribution: Distribution, ligne: Line): number {
 	if (collection === 'deleted-accounts') return distribution.compteSupprime
 	if (collection === 'search-counts') return distribution.compteurDeRecherches
 	if (collection === 'profile-views') return distribution.vueDeProfil
+	if (collection === 'reminder-reports') return distribution.rapportDeRelances
+	if (collection === 'reminder-states') return distribution.etatDeRelances
 	const state = (etat: State) =>
 		isEditorial(collection)
 			? distribution.contenus[collection][etat]
@@ -628,6 +690,8 @@ async function list(voie: Street, acteur: Actor, ligne: Line, distribution: Dist
 		...(collection === 'deleted-accounts' ? [distribution.compteSupprime] : []),
 		...(collection === 'search-counts' ? [distribution.compteurDeRecherches] : []),
 		...(collection === 'profile-views' ? [distribution.vueDeProfil] : []),
+		...(collection === 'reminder-reports' ? [distribution.rapportDeRelances] : []),
+		...(collection === 'reminder-states' ? [distribution.etatDeRelances] : []),
 	]
 	const publicOnes = await publicOf(collection, distributed)
 	const ownAndPublic = [...new Set([...own, ...publicOnes])].sort((a, b) => a - b)

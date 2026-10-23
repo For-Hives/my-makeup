@@ -1,4 +1,5 @@
 import type { Payload } from 'payload'
+import { monthsBefore } from '../calendar'
 import { importInProgress } from '../import-context'
 import type { DailyTask } from './daily'
 
@@ -20,14 +21,7 @@ export const CONTACT_RETENTION_MONTHS = 12
 
 /** The date before which a message is deleted: `maintenant` minus 12 calendar months, in UTC. */
 export function contactPurgeThreshold(maintenant: Date): Date {
-	const threshold = new Date(maintenant.getTime())
-	const day = threshold.getUTCDate()
-	// Day 1 first, so that 31 March minus a month does not spill over into the month after.
-	threshold.setUTCDate(1)
-	threshold.setUTCMonth(threshold.getUTCMonth() - CONTACT_RETENTION_MONTHS)
-	const lastDay = new Date(Date.UTC(threshold.getUTCFullYear(), threshold.getUTCMonth() + 1, 0)).getUTCDate()
-	threshold.setUTCDate(Math.min(day, lastDay))
-	return threshold
+	return monthsBefore(maintenant, CONTACT_RETENTION_MONTHS)
 }
 
 export const purgeContactMessages: DailyTask = {

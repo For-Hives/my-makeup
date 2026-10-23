@@ -79,6 +79,8 @@ export interface Config {
     'deleted-accounts': DeletedAccount;
     'search-counts': SearchCount;
     'profile-views': ProfileView;
+    'reminder-reports': ReminderReport;
+    'reminder-states': ReminderState;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -101,6 +103,8 @@ export interface Config {
     'deleted-accounts': DeletedAccountsSelect<false> | DeletedAccountsSelect<true>;
     'search-counts': SearchCountsSelect<false> | SearchCountsSelect<true>;
     'profile-views': ProfileViewsSelect<false> | ProfileViewsSelect<true>;
+    'reminder-reports': ReminderReportsSelect<false> | ReminderReportsSelect<true>;
+    'reminder-states': ReminderStatesSelect<false> | ReminderStatesSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -792,6 +796,52 @@ export interface ProfileView {
   createdAt: string;
 }
 /**
+ * La liste à blanc des relances : combien de profils seraient relancés, lesquels (par numéro), combien de comptes sont inactifs depuis 24 mois. Rien n’est envoyé tant que REMINDERS_SEND n’est pas « on ».
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "reminder-reports".
+ */
+export interface ReminderReport {
+  id: number;
+  day: string;
+  incompleteCount: number;
+  incompleteIds?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  inactiveCount: number;
+  inactiveIds?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  sentCount: number;
+  sendEnabled?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "reminder-states".
+ */
+export interface ReminderState {
+  id: number;
+  profile?: (number | null) | Profile;
+  lastSentAt?: string | null;
+  unsubscribedAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
@@ -858,6 +908,14 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'profile-views';
         value: number | ProfileView;
+      } | null)
+    | ({
+        relationTo: 'reminder-reports';
+        value: number | ReminderReport;
+      } | null)
+    | ({
+        relationTo: 'reminder-states';
+        value: number | ReminderState;
       } | null);
   globalSlug?: string | null;
   user:
@@ -1251,6 +1309,32 @@ export interface ProfileViewsSelect<T extends boolean = true> {
   profile?: T;
   day?: T;
   count?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "reminder-reports_select".
+ */
+export interface ReminderReportsSelect<T extends boolean = true> {
+  day?: T;
+  incompleteCount?: T;
+  incompleteIds?: T;
+  inactiveCount?: T;
+  inactiveIds?: T;
+  sentCount?: T;
+  sendEnabled?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "reminder-states_select".
+ */
+export interface ReminderStatesSelect<T extends boolean = true> {
+  profile?: T;
+  lastSentAt?: T;
+  unsubscribedAt?: T;
   updatedAt?: T;
   createdAt?: T;
 }
