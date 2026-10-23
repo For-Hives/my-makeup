@@ -155,6 +155,16 @@ export function decide(request: { method: string; url: string; hasBody: boolean 
 		ALLOWED_WIDGET_ORIGINS.includes(url.origin)
 	)
 		return { action: 'continue', headers: {} }
+	// The widget also posts to its own host (its answers and its measures): the crawl reads only, so the request is
+	// answered here and goes nowhere, and it is not a defect of the page. Only that exact origin, never another host.
+	if (
+		url &&
+		request.method === 'POST' &&
+		url.username === '' &&
+		url.password === '' &&
+		ALLOWED_WIDGET_ORIGINS.includes(url.origin)
+	)
+		return { action: 'answer', blocked: null }
 	if (!url || url.origin !== settings.target.origin)
 		return { action: 'answer', blocked: `${request.method} vers un autre hôte (${url?.host ?? 'adresse illisible'})` }
 	// The audience measurement posts here: it does not leave, and it is not a defect of the page.
