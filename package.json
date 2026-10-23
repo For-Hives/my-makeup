@@ -47,7 +47,6 @@
 		"test:integration": "bun --no-env-file scripts/bench.ts test",
 		"test:e2e": "bun --no-env-file scripts/e2e.ts",
 		"probes": "bun --no-env-file tests/probes/probes.ts",
-		"watch:site": "bun --no-env-file scripts/watch/run-watch.ts",
 		"notes:add": "bun --no-env-file scripts/release/add-note.ts",
 		"release:publish": "bun --no-env-file scripts/release/publication.ts",
 		"cutover:check": "bun --no-env-file scripts/cutover/run-host-check.ts",

@@ -266,8 +266,7 @@ describe('BASCULE.md: what it points to exists', () => {
 		)
 		expect(names.has('IMPORT_TOKEN')).toBe(true)
 		for (const name of names) {
-			// WATCH_* are settings of the GitHub repository (sonde-continue.yml), not of the application.
-			if (elsewhere.has(name) || name.startsWith('HOST_CHECK_') || name.startsWith('WATCH_')) continue
+			if (elsewhere.has(name) || name.startsWith('HOST_CHECK_')) continue
 			expect(known, name).toContain(name)
 		}
 	})

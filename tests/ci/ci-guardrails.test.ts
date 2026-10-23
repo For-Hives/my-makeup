@@ -573,6 +573,26 @@ describe('every action is pinned by its commit', () => {
 	})
 })
 
+describe('the list of the workflows', () => {
+	/** Frozen here: a workflow is added or removed only by changing this list, in the same commit. */
+	const EXPECTED_WORKFLOWS = ['ci.yml', 'nuit.yml', 'references-visuelles.yml', 'release.yml', 'sondes.yml']
+
+	test('the workflows are exactly the expected ones', () => {
+		const files = readdirSync(path.join(ROOT, WORKFLOWS))
+			.filter(file => /\.ya?ml$/.test(file))
+			.sort()
+		expect(files).toEqual(EXPECTED_WORKFLOWS)
+	})
+
+	test('the continuous GitHub probe is gone: no workflow, script or command names it', () => {
+		expect(existsSync(path.join(ROOT, WORKFLOWS, 'sonde-continue.yml'))).toBe(false)
+		expect(existsSync(path.join(ROOT, 'scripts/watch'))).toBe(false)
+		expect(read('package.json')).not.toContain('watch:site')
+		const texts = workflows.map(workflow => readFileSync(path.join(ROOT, workflow.file), 'utf8')).join('\n')
+		expect(texts).not.toMatch(/WATCH_|watch:site|scripts\/watch/)
+	})
+})
+
 describe('there is no pre-production workflow (ticket 232)', () => {
 	test('the two workflows of the pre-production are gone, and no remaining workflow, script or file names it', () => {
 		for (const name of ['preprod.yml', 'preprod-controles.yml'])
@@ -588,12 +608,6 @@ describe('the CI reads no secret', () => {
 	const ALLOWED_SECRETS: string[] = [
 		// release.yml pushes the publication on main with the token of its own run (ticket 036).
 		'GITHUB_TOKEN',
-		// sonde-continue.yml (ticket 277): the protected access of the v3, the key of the email
-		// service for the alert, and the address that receives it. Never printed by the script.
-		'WATCH_ACCESS_USER',
-		'WATCH_ACCESS_PASSWORD',
-		'WATCH_RESEND_KEY',
-		'WATCH_ALERT_TO',
 	]
 
 	test('the CI reads none, and the other workflows only the ones of the allowed list', () => {
