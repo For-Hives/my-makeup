@@ -7,15 +7,17 @@ import { z } from 'zod'
  * - The email is a valid address, 255 characters at most; the server lower-cases it.
  * - The password has 8 characters at least and no rule of composition (AUTH-11: the old rule asked
  *   for a capital, a small letter and a digit). It is never trimmed, and 255 characters at most.
- * - The name is free and need not be unique (AUTH-04: « Marie » can sign up when another « Marie »
- *   exists, and three letters are not required). It is trimmed; it must not be empty.
+ * - The first name and the last name are free and need not be unique (AUTH-04: « Marie » can sign up
+ *   when another « Marie » exists, and three letters are not required). They are trimmed; neither
+ *   may be empty. The account keeps « first last » as its name (`accountName`), and her profile starts
+ *   with the two (issue 1009): she types her name once.
  * - The terms must be accepted.
  *
  * Each field has one message in French, the first rule it breaks. Every message names the field's
  * problem and what to do, in the tone of the space (« tu »). No `next` import.
  */
 
-export const SIGN_UP_FIELDS = ['nom', 'email', 'password', 'cgu'] as const
+export const SIGN_UP_FIELDS = ['prenom', 'nom', 'email', 'password', 'cgu'] as const
 export type SignUpField = (typeof SIGN_UP_FIELDS)[number]
 export type SignUpErrors = Partial<Record<SignUpField, string>>
 
@@ -25,6 +27,10 @@ export const MAX_NAME_LENGTH = 100
 export const EMAIL_MAX = 255
 
 export const SIGN_UP_MESSAGES = {
+	prenom: {
+		vide: 'Indique ton prénom.',
+		long: `Ton prénom est trop long (${MAX_NAME_LENGTH} caractères au plus).`,
+	},
 	nom: { vide: 'Indique ton nom.', long: `Ton nom est trop long (${MAX_NAME_LENGTH} caractères au plus).` },
 	email: {
 		vide: 'Indique ton adresse email.',
@@ -42,6 +48,7 @@ export const SIGN_UP_MESSAGES = {
 const text = (valeur: unknown): string => (typeof valeur === 'string' ? valeur : '')
 
 const schema = z.object({
+	prenom: z.string().trim().min(1, SIGN_UP_MESSAGES.prenom.vide).max(MAX_NAME_LENGTH, SIGN_UP_MESSAGES.prenom.long),
 	nom: z.string().trim().min(1, SIGN_UP_MESSAGES.nom.vide).max(MAX_NAME_LENGTH, SIGN_UP_MESSAGES.nom.long),
 	email: z
 		.string()
@@ -58,6 +65,7 @@ const schema = z.object({
 })
 
 export interface SignUpData {
+	prenom: string
 	nom: string
 	email: string
 	password: string
@@ -70,20 +78,22 @@ const checked = (valeur: unknown): boolean => valeur === 'on' || valeur === 'tru
 
 /** Checks what the form sent (a `FormData` read field by field, or any record). */
 export function validateSignUp(entree: {
+	prenom?: unknown
 	nom?: unknown
 	email?: unknown
 	password?: unknown
 	cgu?: unknown
 }): SignUpValidation {
 	const result = schema.safeParse({
+		prenom: text(entree.prenom),
 		nom: text(entree.nom),
 		email: text(entree.email),
 		password: text(entree.password),
 		cgu: checked(entree.cgu),
 	})
 	if (result.success) {
-		const { nom: name, email, password } = result.data
-		return { ok: true, donnees: { nom: name, email, password } }
+		const { prenom: firstName, nom: lastName, email, password } = result.data
+		return { ok: true, donnees: { prenom: firstName, nom: lastName, email, password } }
 	}
 	const errors: SignUpErrors = {}
 	for (const problem of result.error.issues) {
@@ -94,6 +104,11 @@ export function validateSignUp(entree: {
 		}
 	}
 	return { ok: false, erreurs: errors }
+}
+
+/** The name of the account: « first last ». The slug of her page is made from it. */
+export function accountName(data: Pick<SignUpData, 'prenom' | 'nom'>): string {
+	return `${data.prenom} ${data.nom}`
 }
 
 /** The codes of a sign-up that failed for a reason that is not one field, and what each says. The code « email-deja-pris » is the answer only when the confirmation is off (ticket 083). */

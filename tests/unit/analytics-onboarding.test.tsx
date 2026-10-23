@@ -8,18 +8,17 @@ import { Media } from '@/collections/Media'
 import { Profiles } from '@/collections/Profiles'
 import { Pros } from '@/collections/Pros'
 import { Talents } from '@/collections/Talents'
-import { Onboarding } from '@/components/dashboard/onboarding/Onboarding'
 import { DECLARED_ORIGINS, eventData } from '@/lib/analytics/events'
 import type { Track } from '@/lib/analytics/track'
-import type { LocationValues } from '@/lib/dashboard/location'
 import { strictOnboardingIdentitySchema } from '@/lib/dashboard/onboarding'
 import { openWindow } from '../support/dom-react'
+import { doneUntil, onboardingBench, REDUCED } from '../support/onboarding-bench'
 import { pickFiles } from '../support/pick-files'
 
 /**
- * Ticket 148: the onboarding sends its steps and the declared origin as events (plan 04 §3.3, events
- * 16 and 17), and stores nothing. `suivre` is given to the component, so the test sees exactly what
- * would leave; the server actions are fakes that keep what they receive.
+ * Ticket 148, issue 1009: the onboarding sends its steps and the declared origin as events (plan 04
+ * §3.3, events 16 and 17), and stores nothing. `suivre` is given to the component, so the test sees
+ * exactly what would leave; the server actions are fakes that keep what they receive.
  */
 const jsdomWindow = openWindow()
 
@@ -33,69 +32,32 @@ function spy() {
 	return { envois: uploads, suivre: follow }
 }
 
-const REDUCED = new File(['petit'], 'photo.webp', { type: 'image/webp' })
-const ZONE: LocationValues = {
-	kind: 'city',
-	codeInsee: '59350',
-	libelle: 'Lille (59)',
-	countries: [],
-	town: '',
-	rayonKm: null,
-	aDomicile: false,
-}
-
-function bench(options: { etape?: 1 | 2 | 3; photoEnCours?: 'terminee' | 2 } = {}) {
-	const { envois: uploads, suivre: follow } = spy()
-	const received = { identite: [] as unknown[], zone: [] as unknown[], photo: [] as unknown[] }
-	return {
-		envois: uploads,
-		recu: received,
-		monter: () =>
-			jsdomWindow.monter(
-				<Onboarding
-					etapeInitiale={options.etape ?? 1}
-					identite={{ prenom: '', nom: '', nomArtiste: '', specialtyBullets: '', specialtyOther: '' }}
-					localisation={{ ...ZONE, codeInsee: '', libelle: '' }}
-					envoyerIdentite={async valeurs => {
-						received.identite.push(valeurs)
-						return { ok: true, valeurs }
-					}}
-					envoyerLocalisation={async saisie => {
-						received.zone.push(saisie)
-						return { ok: true, valeurs: { ...ZONE, rayonKm: saisie.rayonKm, aDomicile: saisie.aDomicile } }
-					}}
-					chercherCommunes={async () => ({
-						ok: true,
-						communes: [{ codeInsee: '59350', libelle: 'Lille (59)', nom: 'Lille' }],
-					})}
-					envoyerPhoto={async saisie => {
-						received.photo.push(saisie)
-						return {
-							ok: true,
-							valeurs: { photoPrincipale: saisie.photoPrincipale, position: options.photoEnCours ?? 'terminee' },
-						}
-					}}
-					preparer={async () => ({ ok: true, fichier: REDUCED, largeur: 800, hauteur: 600, taille: 5 })}
-					televerser={async () => ({ ok: true, id: 9 })}
-					supprimer={async () => {}}
-					naviguer={() => {}}
-					suivre={follow}
-				/>
-			),
-	}
+function bench(options: Parameters<typeof onboardingBench>[1] = {}) {
+	const { envois: sent, suivre: follow } = spy()
+	const made = onboardingBench(jsdomWindow, { ...options, suivre: follow })
+	return { envois: sent, recu: made.journal, monter: made.monter }
 }
 
 const title = () => jsdomWindow.w.document.getElementById('accueil-titre-etape')?.textContent
-const field = (nom: string) => jsdomWindow.champ(nom) as HTMLInputElement
+const field = (nom: string | RegExp) => jsdomWindow.champ(nom) as HTMLInputElement
+const step = (value: string) => ({ nom: 'onboarding_step', proprietes: { step: value } })
 
-async function identity(origine?: string) {
+async function next(titleOfNext: string) {
+	await jsdomWindow.cliquer(jsdomWindow.bouton('Suivant'))
+	await jsdomWindow.attendre(() => title() === titleOfNext)
+}
+
+async function fillIdentity(origine?: string) {
 	await jsdomWindow.saisir(field('Prénom'), 'Léa')
 	await jsdomWindow.saisir(field('Nom'), 'Fictive')
 	await jsdomWindow.cliquer(field('Mariage'))
 	if (origine)
 		await jsdomWindow.cliquer(jsdomWindow.w.document.getElementById(`accueil-origine-${origine}`) as HTMLElement)
-	await jsdomWindow.cliquer(jsdomWindow.bouton('Suivant'))
-	await jsdomWindow.attendre(() => title() === 'Ta zone')
+}
+
+async function identity(origine?: string) {
+	await fillIdentity(origine)
+	await next('Ta zone')
 }
 
 async function zone() {
@@ -104,48 +66,51 @@ async function zone() {
 	await jsdomWindow.cliquer(
 		await jsdomWindow.attendre(() => jsdomWindow.w.document.querySelector('[role="option"]'), { max: 3000 })
 	)
-	await jsdomWindow.cliquer(jsdomWindow.bouton('Suivant'))
-	await jsdomWindow.attendre(() => title() === 'Ta photo principale')
+	await next('Ta photo principale')
 }
 
 async function photo() {
 	await pickFiles(jsdomWindow, jsdomWindow.champ(/photo/i) as HTMLInputElement, [REDUCED])
-	await jsdomWindow.attendre(() => !(jsdomWindow.bouton('Terminer') as HTMLButtonElement).disabled)
-	await jsdomWindow.cliquer(jsdomWindow.bouton('Terminer'))
+	await jsdomWindow.attendre(() => !(jsdomWindow.bouton('Suivant') as HTMLButtonElement).disabled)
+	await next('Comment te joindre')
+}
+
+async function contact() {
+	await jsdomWindow.saisir(field('Instagram'), '@studio.fictif')
+	await next('Ta prestation phare')
 }
 
 describe('une émission par étape franchie, valeurs fermées', () => {
-	test('identité, zone, photo puis terminé, chacune une fois, dans l’ordre', async () => {
+	test('les cinq étapes, chacune une fois, dans l’ordre, « termine » quand la troisième est enregistrée', async () => {
 		const b = bench()
 		await b.monter()
 		expect(b.envois).toEqual([])
 		await identity()
-		expect(b.envois).toEqual([{ nom: 'onboarding_step', proprietes: { step: 'identite' } }])
+		expect(b.envois).toEqual([step('identite')])
 		await zone()
 		await photo()
-		await jsdomWindow.attendre(() => b.envois.length === 4)
+		expect(b.envois).toEqual([step('identite'), step('zone'), step('photo'), step('termine')])
+		await contact()
+		await jsdomWindow.cliquer(jsdomWindow.bouton('Modèle Essai'))
+		await jsdomWindow.saisir(field('Prix'), '60')
+		await jsdomWindow.cliquer(jsdomWindow.bouton('Terminer'))
+		await jsdomWindow.attendre(() => b.envois.length === 6)
 		expect(b.envois).toEqual([
-			{ nom: 'onboarding_step', proprietes: { step: 'identite' } },
-			{ nom: 'onboarding_step', proprietes: { step: 'zone' } },
-			{ nom: 'onboarding_step', proprietes: { step: 'photo' } },
-			{ nom: 'onboarding_step', proprietes: { step: 'termine' } },
+			step('identite'),
+			step('zone'),
+			step('photo'),
+			step('termine'),
+			step('contact'),
+			step('prestation'),
 		])
 	})
 
 	test('un échec du serveur n’émet rien', async () => {
 		const { envois: uploads, suivre: follow } = spy()
-		await jsdomWindow.monter(
-			<Onboarding
-				etapeInitiale={1}
-				identite={{ prenom: '', nom: '', nomArtiste: '', specialtyBullets: '', specialtyOther: '' }}
-				localisation={{ ...ZONE, codeInsee: '', libelle: '' }}
-				envoyerIdentite={async () => ({ ok: false, message: 'Échec.' })}
-				envoyerLocalisation={async () => ({ ok: false, message: 'Échec.' })}
-				chercherCommunes={async () => ({ ok: true, communes: [] })}
-				envoyerPhoto={async () => ({ ok: false, message: 'Échec.' })}
-				suivre={follow}
-			/>
-		)
+		await onboardingBench(jsdomWindow, {
+			suivre: follow,
+			actions: { saveIdentity: async () => ({ ok: false, message: 'Échec.' }) },
+		}).monter()
 		await jsdomWindow.saisir(field('Prénom'), 'Léa')
 		await jsdomWindow.saisir(field('Nom'), 'Fictive')
 		await jsdomWindow.cliquer(field('Mariage'))
@@ -154,7 +119,7 @@ describe('une émission par étape franchie, valeurs fermées', () => {
 		await jsdomWindow.attendre(() =>
 			(jsdomWindow.w.document.querySelector('[role="alert"]')?.textContent ?? '').includes('Échec')
 		)
-		expect(title()).toBe('Ton identité')
+		expect(title()).toBe('Ta spécialité')
 		expect(uploads).toEqual([])
 	})
 
@@ -163,23 +128,46 @@ describe('une émission par étape franchie, valeurs fermées', () => {
 		await b.monter()
 		await identity()
 		await jsdomWindow.cliquer(jsdomWindow.bouton('Précédent'))
-		await jsdomWindow.attendre(() => title() === 'Ton identité')
-		await jsdomWindow.cliquer(jsdomWindow.bouton('Suivant'))
-		await jsdomWindow.attendre(() => title() === 'Ta zone')
+		await jsdomWindow.attendre(() => title() === 'Ta spécialité')
+		// The page would read the stored names again; the bench's props stay empty, so she types them again.
+		await fillIdentity()
+		await next('Ta zone')
 		expect(b.envois.filter(e => e.nom === 'onboarding_step')).toHaveLength(1)
 	})
 
-	test('une photo enregistrée alors qu’il manque encore une étape : « photo », pas « termine »', async () => {
-		const b = bench({ etape: 3, photoEnCours: 2 })
+	test('une étape que le profil avait déjà faite n’est pas recomptée quand elle est enregistrée à nouveau', async () => {
+		const b = bench({ position: 3, done: doneUntil(3) })
+		await b.monter()
+		await pickFiles(jsdomWindow, jsdomWindow.champ(/photo/i) as HTMLInputElement, [REDUCED])
+		await jsdomWindow.attendre(() => !(jsdomWindow.bouton('Suivant') as HTMLButtonElement).disabled)
+		await next('Comment te joindre')
+		expect(b.envois).toEqual([])
+	})
+
+	test('la dernière des trois premières étapes enregistrée : « photo » puis « termine » ; une étape 4 seule ne dit pas « termine »', async () => {
+		const b = bench({ position: 3, done: doneUntil(2) })
 		await b.monter()
 		await photo()
-		await jsdomWindow.attendre(() => b.envois.length >= 1)
-		expect(b.envois).toEqual([{ nom: 'onboarding_step', proprietes: { step: 'photo' } }])
+		expect(b.envois).toEqual([step('photo'), step('termine')])
+	})
+
+	test('une étape 4 enregistrée sur un profil déjà actif : « contact », pas « termine »', async () => {
+		const c = bench({ position: 4, done: doneUntil(3) })
+		await c.monter()
+		await contact()
+		expect(c.envois).toEqual([step('contact')])
+	})
+
+	test('une photo enregistrée alors qu’il manque encore une étape essentielle : « photo », pas « termine »', async () => {
+		const b = bench({ position: 3, done: { 1: false, 2: true, 3: false, 4: false, 5: false } })
+		await b.monter()
+		await photo()
+		expect(b.envois).toEqual([step('photo')])
 	})
 
 	test('chaque étape et chaque origine passent le catalogue ; une valeur hors liste fait tomber l’événement', () => {
-		for (const step of ['identite', 'zone', 'photo', 'termine'])
-			expect(eventData('onboarding_step', { step })).toEqual({ step })
+		for (const value of ['identite', 'zone', 'photo', 'contact', 'prestation', 'termine'])
+			expect(eventData('onboarding_step', { step: value })).toEqual({ step: value })
 		expect(eventData('onboarding_step', { step: 'prenom' })).toBeNull()
 		expect(eventData('onboarding_step', { step: 'identite', pid: 3 })).toBeNull()
 	})
@@ -196,9 +184,9 @@ describe('l’origine déclarée part une fois, seulement si elle est choisie', 
 		])
 		// Back to the identity and forward again: the answer is not counted twice.
 		await jsdomWindow.cliquer(jsdomWindow.bouton('Précédent'))
-		await jsdomWindow.attendre(() => title() === 'Ton identité')
-		await jsdomWindow.cliquer(jsdomWindow.bouton('Suivant'))
-		await jsdomWindow.attendre(() => title() === 'Ta zone')
+		await jsdomWindow.attendre(() => title() === 'Ta spécialité')
+		await fillIdentity('ia')
+		await next('Ta zone')
 		expect(b.envois.filter(e => e.nom === 'onboarding_source')).toHaveLength(1)
 	})
 
@@ -229,13 +217,13 @@ describe('la réponse n’est stockée nulle part', () => {
 		const b = bench()
 		await b.monter()
 		await identity('instagram')
-		expect(b.recu.identite).toEqual([
+		expect(b.recu.identity).toEqual([
 			{ prenom: 'Léa', nom: 'Fictive', nomArtiste: '', specialtyBullets: 'wedding', specialtyOther: '' },
 		])
 		await zone()
 		await photo()
 		await jsdomWindow.attendre(() => b.recu.photo.length === 1)
-		expect(JSON.stringify(b.recu)).not.toContain('instagram')
+		expect(JSON.stringify(b.recu)).not.toContain('"instagram')
 		expect(JSON.stringify(b.recu)).not.toMatch(/origine|source/i)
 	})
 

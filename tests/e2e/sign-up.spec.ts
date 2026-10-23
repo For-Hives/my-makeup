@@ -18,10 +18,11 @@ test.beforeEach(({ context }, info) => context.setExtraHTTPHeaders({ 'x-forwarde
 
 const url = () => `inscrite-${crypto.randomUUID()}@example.test`
 
-async function signUpAction(page: Page, email: string, nom = 'Léa Fictive') {
+async function signUpAction(page: Page, email: string, nom = 'Fictive', prenom = 'Léa') {
 	await page.goto('/auth/signup')
 	// A click before the page has hydrated sends nothing: the form is only a placeholder until then.
 	await page.waitForLoadState('networkidle')
+	await page.getByLabel('Prénom').fill(prenom)
 	await page.getByLabel('Nom', { exact: true }).fill(nom)
 	await page.getByLabel('Adresse email').fill(email)
 	await page.getByLabel('Mot de passe').fill(PASSWORD)
@@ -235,6 +236,7 @@ test.describe('U25 : les messages du formulaire', () => {
 
 		await page.getByRole('button', { name: 'S’inscrire' }).click()
 
+		await expect(page.getByTestId('erreur-prenom')).toHaveText('Indique ton prénom.')
 		await expect(page.getByTestId('erreur-nom')).toHaveText('Indique ton nom.')
 		await expect(page.getByTestId('erreur-email')).toHaveText('Indique ton adresse email.')
 		await expect(page.getByTestId('erreur-password')).toHaveText('Choisis un mot de passe.')
@@ -246,6 +248,7 @@ test.describe('U25 : les messages du formulaire', () => {
 		const email = url()
 		await page.goto('/auth/signup')
 		await page.waitForLoadState('networkidle')
+		await page.getByLabel('Prénom').fill('Prénom Gardé')
 		await page.getByLabel('Nom', { exact: true }).fill('Nom Gardé')
 		await page.getByLabel('Adresse email').fill(email)
 		await page.getByLabel('Mot de passe').fill('1234567')
@@ -254,6 +257,7 @@ test.describe('U25 : les messages du formulaire', () => {
 		await page.getByRole('button', { name: 'S’inscrire' }).click()
 
 		await expect(page.getByTestId('erreur-password')).toHaveText('Ton mot de passe doit faire au moins 8 caractères.')
+		await expect(page.getByLabel('Prénom')).toHaveValue('Prénom Gardé')
 		await expect(page.getByLabel('Nom', { exact: true })).toHaveValue('Nom Gardé')
 		await expect(page.getByLabel('Adresse email')).toHaveValue(email)
 		await expect(page.getByLabel('Mot de passe')).toHaveValue('')
@@ -269,7 +273,7 @@ test.describe('U25 : les messages du formulaire', () => {
 		const urlAccounts = () => payload.count({ collection: 'pros', where: { email: { equals: email } } })
 		expect((await urlAccounts()).totalDocs).toBe(1)
 
-		await signUpAction(page, email, 'Autre Personne')
+		await signUpAction(page, email, 'Personne', 'Autre')
 
 		// The same wall as for a new address, no message about the address, no second account.
 		await expect(page).toHaveURL(/\/auth\/verification-wall$/)
@@ -402,7 +406,8 @@ test.describe('Contre les faux comptes (ticket 084)', () => {
 		const before = await lines()
 		await page.goto('/auth/signup')
 		await page.waitForLoadState('networkidle')
-		await page.getByLabel('Nom', { exact: true }).fill('Script Fictif')
+		await page.getByLabel('Prénom').fill('Script')
+		await page.getByLabel('Nom', { exact: true }).fill('Fictif')
 		await page.getByLabel('Adresse email').fill(email)
 		await page.getByLabel('Mot de passe').fill(PASSWORD)
 		await page.getByLabel('J’accepte les conditions générales').check()

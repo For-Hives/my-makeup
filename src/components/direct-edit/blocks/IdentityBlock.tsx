@@ -58,7 +58,31 @@ export function IdentityBlock({
 	)
 }
 
-function IdentityForm({ values, save }: { values: IdentityValues; save: IdentitySave }) {
+/**
+ * The form of the name and the speciality. The onboarding (issue 1009) uses it too: `schema` is then the
+ * one that requires a speciality, `askNames` is false while the names are already known (they come from
+ * the sign-up) so that only the speciality is asked, and the four values still travel together.
+ */
+export function IdentityForm({
+	values,
+	save,
+	schema = identitySchema,
+	askNames = true,
+	title = 'Modifier mon nom et ma spécialité',
+	submitLabel,
+	cancel,
+	after,
+}: {
+	values: IdentityValues
+	save: IdentitySave
+	schema?: typeof identitySchema
+	askNames?: boolean
+	title?: string
+	submitLabel?: string
+	cancel?: ReactNode
+	/** What stands under the speciality, inside the form (the optional question of the onboarding). */
+	after?: ReactNode
+}) {
 	const {
 		register,
 		handleSubmit,
@@ -66,11 +90,13 @@ function IdentityForm({ values, save }: { values: IdentityValues; save: Identity
 		setValue,
 		watch,
 		formState: { errors, isDirty },
-	} = useForm<IdentityValues>({ resolver: zodResolver(identitySchema), defaultValues: values })
+	} = useForm<IdentityValues>({ resolver: zodResolver(schema), defaultValues: values })
 
 	return (
 		<BlockForm
-			title="Modifier mon nom et ma spécialité"
+			title={title}
+			{...(submitLabel === undefined ? {} : { submitLabel })}
+			{...(cancel === undefined ? {} : { cancel })}
 			dirty={isDirty}
 			keepsHint="ta saisie est toujours là"
 			onFailure={failure => {
@@ -96,7 +122,7 @@ function IdentityForm({ values, save }: { values: IdentityValues; save: Identity
 			}
 		>
 			<div className="grid gap-4 sm:grid-cols-2">
-				{IDENTITY_FIELDS.filter(field => !field.startsWith('specialty')).map(field => {
+				{IDENTITY_FIELDS.filter(field => askNames && !field.startsWith('specialty')).map(field => {
 					const error = errors[field]?.message
 					return (
 						<div key={field} className="flex flex-col gap-1">
@@ -133,6 +159,7 @@ function IdentityForm({ values, save }: { values: IdentityValues; save: Identity
 						otherError={errors.specialtyOther?.message}
 					/>
 				</div>
+				{after ? <div className="sm:col-span-2">{after}</div> : null}
 			</div>
 		</BlockForm>
 	)

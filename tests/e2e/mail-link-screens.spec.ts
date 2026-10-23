@@ -45,7 +45,8 @@ for (const size of SIZES) {
 			const email = `ecrans-311-${crypto.randomUUID()}@example.test`
 			await page.goto('/auth/signup')
 			await page.waitForLoadState('networkidle')
-			await page.getByLabel('Nom', { exact: true }).fill('Léa Fictive')
+			await page.getByLabel('Prénom').fill('Léa')
+			await page.getByLabel('Nom', { exact: true }).fill('Fictive')
 			await page.getByLabel('Adresse email').fill(email)
 			await page.getByLabel('Mot de passe').fill(PASSWORD)
 			await page.getByLabel('J’accepte les conditions générales').check()

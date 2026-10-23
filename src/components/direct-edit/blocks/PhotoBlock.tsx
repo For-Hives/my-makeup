@@ -82,18 +82,20 @@ export function PhotoBlock({
 	)
 }
 
-function PhotoForm({
+/** The form of the main photo; the onboarding (issue 1009) draws it too, with its own buttons. */
+export function PhotoForm({
 	photo,
 	save,
-	prepare,
-	upload,
-	remove,
-}: {
+	prepare = prepareBrowserPhoto,
+	upload = (file, alt) => uploadPhoto(file, alt),
+	remove = id => deleteMedia(id),
+	submitLabel,
+	cancel,
+}: PhotoWork & {
 	photo: DashboardPhoto | null
 	save: PhotoSave
-	prepare: (file: File) => Promise<PreparedPhoto<File>>
-	upload: (file: File, alt: string) => Promise<FileUploadResult>
-	remove: (id: PhotoId) => Promise<unknown>
+	submitLabel?: string
+	cancel?: ReactNode
 }) {
 	const [chosen, setChosen] = useState<Chosen | null>(null)
 	const [error, setError] = useState('')
@@ -153,6 +155,8 @@ function PhotoForm({
 	return (
 		<BlockForm
 			title="Modifier ma photo principale"
+			{...(submitLabel === undefined ? {} : { submitLabel })}
+			{...(cancel === undefined ? {} : { cancel })}
 			dirty={chosen !== null}
 			disabled={chosen === null || preparing}
 			onSend={send}
@@ -168,7 +172,7 @@ function PhotoForm({
 							className="h-full w-full object-cover"
 						/>
 					) : (
-						<span className="px-4 text-center text-mute text-sm">Pas encore de photo</span>
+						<span className="px-4 text-center text-ink text-sm">Pas encore de photo</span>
 					)}
 				</div>
 				<div className="flex min-w-0 flex-1 flex-col gap-2">

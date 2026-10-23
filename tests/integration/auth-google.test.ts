@@ -274,6 +274,8 @@ describe('091 : une personne sans compte s’inscrit avec Google', () => {
 		const profiles = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: pro?.id } } })
 		expect(profiles.totalDocs).toBe(1)
 		expect(profiles.docs[0]?.slug).toMatch(/^lea-fictive(-\d+)?$/)
+		// Google gave her names: her profile starts with them (issue 1009).
+		expect([profiles.docs[0]?.firstName, profiles.docs[0]?.lastName]).toEqual(['Léa', 'Fictive'])
 		expect((await which(issue.token))?.id).toBe(pro?.id)
 		expect(await countMails()).toBe(0)
 		const lines = (await logLines()).filter(l => l.method === 'google').map(({ type, code }) => `${type}:${code}`)

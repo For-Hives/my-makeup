@@ -211,6 +211,8 @@ describe('le jeton d’identité', () => {
 	test('le nom vient du prénom et du nom de famille quand « name » manque', async () => {
 		const r = await check(await sign(validLoad({ name: undefined, given_name: 'Léa', family_name: 'Fictive' })))
 		expect(r.nom).toBe('Léa Fictive')
+		// Her profile starts with the two names Google gave (issue 1009).
+		expect([r.givenName, r.familyName]).toEqual(['Léa', 'Fictive'])
 	})
 
 	test('« email_verified » est vrai pour true et pour "true", faux pour tout le reste', async () => {

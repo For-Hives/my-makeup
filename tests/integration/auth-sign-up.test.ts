@@ -36,6 +36,7 @@ const address = (prefixe: string) => `${prefixe}-${crypto.randomUUID()}@example.
 
 async function signUp(options: {
 	email?: string
+	prenom?: string
 	nom?: string
 	verifier?: boolean
 	envoyer?: Parameters<typeof signUpAccount>[0]['envoyer']
@@ -46,7 +47,7 @@ async function signUp(options: {
 	const email = options.email ?? address('nouvelle')
 	const result = await signUpAccount({
 		payload,
-		donnees: { nom: options.nom ?? 'Léa Fictive', email, password: PASSWORD },
+		donnees: { prenom: options.prenom ?? 'Léa', nom: options.nom ?? 'Fictive', email, password: PASSWORD },
 		verifier: options.verifier ?? true,
 		envoyer: options.envoyer ?? payloadSendEmail(payload, serverEnv()),
 		site: SITE,
@@ -81,7 +82,7 @@ const linkCode = (lien: string): string => new URL(lien).searchParams.get('code'
 
 describe('I08 : l’inscription envoie le mail de confirmation, et le compte attend le lien', () => {
 	test('compte non confirmé, profil vide avec son slug fait par le serveur, un mail avec le lien', async () => {
-		const { resultat: result, email } = await signUp({ nom: 'Léa Fictive' })
+		const { resultat: result, email } = await signUp({ prenom: 'Léa', nom: 'Fictive' })
 
 		expect(result).toEqual({ ok: true, confirmee: false })
 		const pro = await account(email)
@@ -91,6 +92,8 @@ describe('I08 : l’inscription envoie le mail de confirmation, et le compte att
 		const profiles = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: pro?.id } } })
 		expect(profiles.totalDocs).toBe(1)
 		expect(profiles.docs[0]?.slug).toMatch(/^lea-fictive(-\d+)?$/)
+		// She typed her names once: her profile already holds them (issue 1009).
+		expect([profiles.docs[0]?.firstName, profiles.docs[0]?.lastName]).toEqual(['Léa', 'Fictive'])
 		const mail = await waitMail({ pour: email })
 		expect(mail.sujet).toContain('Confirme ton adresse email')
 		const link = mail.liens.find(l => l.includes('/auth/verification-complete'))
@@ -109,8 +112,8 @@ describe('I08 : l’inscription envoie le mail de confirmation, et le compte att
 	})
 
 	test('deux maquilleuses peuvent porter le même nom : deux comptes, deux slugs', async () => {
-		const a = await signUp({ nom: 'Marie Homonyme' })
-		const b = await signUp({ nom: 'Marie Homonyme' })
+		const a = await signUp({ prenom: 'Marie', nom: 'Homonyme' })
+		const b = await signUp({ prenom: 'Marie', nom: 'Homonyme' })
 		expect(a.resultat.ok && b.resultat.ok).toBe(true)
 		const payload = await testPayload()
 		const slugs = (

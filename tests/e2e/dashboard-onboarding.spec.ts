@@ -1,15 +1,17 @@
 import { expect, type Locator, type Page, test } from '@playwright/test'
 import { NO_PROFILE_CONTEXT } from '../../src/collections/Profiles'
 import { createAccount } from '../support/account-factory'
+import { activateProfile } from '../support/active-profile'
 import { violationsSevere } from '../support/axe'
 import { testPayload } from '../support/payload-test'
 import { largePhotoSynthetic } from '../support/synthetic-photo'
 
 /**
- * The onboarding in three steps (ticket 140; plan 02 E02, RG-07): a new account lands on the first
- * step, each step is saved before the next opens, a failure stays on the step with the typing, she
- * resumes at step 2 after leaving, a slow server never produces a false arrival, and an
- * account that came without a profile gets one. At 390 px (tap) as at 1440 px (click).
+ * The onboarding in five steps (ticket 140; plan 02 E02, RG-07; issue 1009): a new account lands on the
+ * first step, each step is saved before the next opens, a failure stays on the step with the typing, she
+ * resumes where she left, a slow server never produces a false arrival, a step the profile already holds
+ * is skipped, the last two steps can wait, the last screen says what the server reads, and an account
+ * that came without a profile gets one. At 390 px (tap) as at 1440 px (click).
  *
  * The accounts these tests make are removed after each test: an active, published profile would
  * crowd the lists of the search specs. The brake of the sign-in counts by client address: each test
@@ -77,6 +79,39 @@ async function takeScreenshot(page: Page, nom: string) {
 	const folder = process.env.DASHBOARD_SCREENSHOTS
 	if (folder)
 		await page.screenshot({ path: `${folder}/accueil-${nom}-${test.info().project.name}.png`, fullPage: true })
+}
+
+/** No horizontal scroll, and every control at least 44 px tall (the rule of the art direction). */
+async function expectLayout(page: Page) {
+	expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+	const small = await page.evaluate(() =>
+		[
+			...document.querySelectorAll<HTMLElement>(
+				'main button, main input:not([type="radio"]):not([type="checkbox"]), main a'
+			),
+		]
+			.filter(element => element.getClientRects().length > 0 && !element.classList.contains('sr-only'))
+			.map(element => ({
+				label: element.getAttribute('aria-label') ?? element.textContent?.trim().slice(0, 30),
+				height: element.getBoundingClientRect().height,
+			}))
+			.filter(({ height }) => height < 43.5)
+	)
+	expect(small).toEqual([])
+}
+
+/** An active profile (identity, commune, photo) with a description of 200 characters: only the contact and the offer are missing. */
+async function activateAndDescribe(email: string, profileId: number) {
+	const payload = await testPayload()
+	const account = (await payload.find({ collection: 'pros', depth: 0, where: { email: { equals: email } } })).docs[0]
+	if (!account) throw new Error('pas de compte')
+	await activateProfile(account.id)
+	await payload.update({
+		collection: 'profiles',
+		id: profileId,
+		data: { description: 'Une présentation vraie et complète de mon travail. '.repeat(6) },
+		overrideAccess: true,
+	})
 }
 
 /** A finger on a phone, a click elsewhere. */
@@ -154,12 +189,12 @@ test.describe('ticket 296 : revenir avec un profil encore vide', { tag: '@mobile
 		const email = await newAccount()
 		await signInFrom(page, email)
 		await expect(page).toHaveURL(/\/auth\/init-account$/)
-		await expect(title(page)).toHaveText('Ton identité')
+		await expect(title(page)).toHaveText('Ta spécialité')
 		// Signed out, the closed space asks for the same sign-in: the same arrival.
 		await page.context().clearCookies()
 		await signInFrom(page, email, '/auth/profil')
 		await expect(page).toHaveURL(/\/auth\/init-account$/)
-		await expect(title(page)).toHaveText('Ton identité')
+		await expect(title(page)).toHaveText('Ta spécialité')
 	})
 
 	test('un lien précis vers une page privée est respecté', async ({ page }) => {
@@ -181,7 +216,7 @@ test.describe('ticket 296 : revenir avec un profil encore vide', { tag: '@mobile
 		created.push(email)
 		await signInFrom(page, email)
 		await expect(page).toHaveURL(/\/auth\/init-account$/)
-		await expect(title(page)).toHaveText('Ton identité')
+		await expect(title(page)).toHaveText('Ta spécialité')
 		expect((await profileOf(email)).id).toBeGreaterThan(0)
 	})
 
@@ -213,15 +248,16 @@ test.describe('ticket 296 : revenir avec un profil encore vide', { tag: '@mobile
 	})
 })
 
-test.describe('E02 : l’accueil en trois étapes', { tag: '@mobile' }, () => {
-	test('identité, zone, photo : profil actif, arrivée dans l’espace', async ({ page }) => {
-		test.setTimeout(150_000)
+test.describe('E02 : l’accueil en cinq étapes', { tag: '@mobile' }, () => {
+	test('les cinq étapes : profil actif après la troisième, page de fin lue sur le serveur', async ({ page }) => {
+		test.setTimeout(180_000)
 		const email = await newAccount()
 		await signInAction(page, email)
 
 		// Step 1: the speciality is required, and nothing is sent without it.
 		await expect(page.getByRole('heading', { level: 1, name: 'Prépare ton profil' })).toBeVisible()
-		await expect(title(page)).toHaveText('Ton identité')
+		await expect(title(page)).toHaveText('Ta spécialité')
+		await expect(page.getByTestId('etape-courante')).toHaveText('Étape 1 sur 5 · Toi')
 		await page.waitForLoadState('networkidle')
 		await press(page.getByRole('button', { name: 'Suivant' }))
 		await expect(page.getByText('Indique ton prénom.')).toBeVisible()
@@ -230,6 +266,7 @@ test.describe('E02 : l’accueil en trois étapes', { tag: '@mobile' }, () => {
 		expect(await violationsAfterTitle(page)).toEqual([])
 		await fillIdentity(page)
 		await takeScreenshot(page, 'etape-1')
+		await expectLayout(page)
 		await press(page.getByRole('button', { name: 'Suivant' }))
 
 		// Step 2: the identity is stored before the zone opens, and the title has the focus.
@@ -246,6 +283,7 @@ test.describe('E02 : l’accueil en trois étapes', { tag: '@mobile' }, () => {
 		await expect(page.getByText('Choisis ta commune dans la liste')).toBeVisible()
 		await chooseLille(page)
 		await takeScreenshot(page, 'etape-2')
+		await expectLayout(page)
 		expect(await violationsAfterTitle(page)).toEqual([])
 		await press(page.getByRole('button', { name: 'Suivant' }))
 
@@ -254,29 +292,170 @@ test.describe('E02 : l’accueil en trois étapes', { tag: '@mobile' }, () => {
 		expect((await profileOf(email)).city?.inseeCode).toBe('59350')
 		await choosePhoto(page)
 		await takeScreenshot(page, 'etape-3')
+		await expectLayout(page)
+		expect(await violationsAfterTitle(page)).toEqual([])
+		await press(page.getByRole('button', { name: 'Suivant' }))
+
+		// The photo is stored: the profile is active and published, before the two optional steps.
+		await expect(title(page)).toHaveText('Comment te joindre')
+		await expect(page.getByTestId('etape-courante')).toHaveText('Étape 4 sur 5 · Contact')
+		const active = await profileOf(email)
+		expect(active.active).toBe(true)
+		expect(active.status).toBe('published')
+
+		// Step 4: nothing typed says what to do; a link of another site is refused under Instagram.
+		await press(page.getByRole('button', { name: 'Suivant' }))
+		await expect(page.getByRole('alert').filter({ hasText: 'Plus tard' })).toBeVisible()
+		await page.getByLabel('Instagram').fill('https://www.facebook.com/studio.fictif')
+		await press(page.getByRole('button', { name: 'Suivant' }))
+		await expect(page.getByText('Cette adresse n’est pas celle d’Instagram')).toBeVisible()
+		await page.getByLabel('Instagram').fill('@studio.fictif')
+		await expect(page.getByText('Sur ta page : @studio.fictif')).toBeVisible()
+		await page.getByLabel('Téléphone', { exact: true }).fill('06 12 34 56 78')
+		await takeScreenshot(page, 'etape-4')
+		await expectLayout(page)
+		expect(await violationsAfterTitle(page)).toEqual([])
+		await press(page.getByRole('button', { name: 'Suivant' }))
+
+		// Step 5: a model, one price. The phone was typed without ticking the case: it is stored, hidden.
+		await expect(title(page)).toHaveText('Ta prestation phare')
+		const contact = await profileOf(email)
+		expect(contact.networks?.instagram).toBe('https://www.instagram.com/studio.fictif')
+		expect(contact.contactDetails?.phone).toBe('06 12 34 56 78')
+		expect(contact.publicContact).toBe(false)
+		await press(page.getByRole('button', { name: 'Modèle Mariée' }))
+		await expect(page.getByLabel('Nom de la prestation')).toHaveValue('Maquillage de la mariée')
+		await expect(page.getByLabel('Prix')).toBeFocused()
+		await press(page.getByRole('button', { name: 'Terminer' }))
+		await expect(page.getByText('Indique un montant')).toBeVisible()
+		await page.getByLabel('Prix').fill('à partir de 150')
+		await takeScreenshot(page, 'etape-5')
+		await expectLayout(page)
 		expect(await violationsAfterTitle(page)).toEqual([])
 		await press(page.getByRole('button', { name: 'Terminer' }))
 
-		// The server saw the three steps done: she arrives in her space, with an active, published profile.
-		await expect(page).toHaveURL(/\/auth\/profil$/, { timeout: 60_000 })
-		await expect(page.getByRole('heading', { name: 'Mon espace' })).toBeVisible()
-		const profile = await profileOf(email)
-		expect(profile.active).toBe(true)
-		expect(profile.status).toBe('published')
+		// The end page is read by the server: no description yet, so the page is not online, and it says what is missing.
+		await expect(page).toHaveURL(/\/auth\/init-account\?etape=fin$/, { timeout: 60_000 })
+		await expect(page.getByTestId('accueil-fin')).toBeVisible()
+		await expect(page.getByTestId('page-en-ligne')).toHaveCount(0)
+		await expect(page.getByTestId('accueil-fin-manques')).toContainText('description')
+		await takeScreenshot(page, 'fin-non-publiable')
+		await expectLayout(page)
+		expect(await violationsAfterTitle(page)).toEqual([])
+		expect((await profileOf(email)).serviceOffers?.[0]?.priceFrom).toBe(150)
 
-		// The onboarding has nothing left for an active profile, and the banner of the steps is gone (ticket 296).
-		await expect(page.getByTestId('bandeau-accueil')).toHaveCount(0)
+		// Nothing left in the steps: the plain address leads to her space.
 		await page.goto(PAGE)
 		await expect(page).toHaveURL(/\/auth\/profil$/)
 	})
 
-	test('ticket 266 : à l’étape 2, une zone à l’étranger suffit : profil actif, arrivée dans l’espace', async ({
+	test('un profil déjà prêt à publier : la dernière étape mène à « Ta page est en ligne »', async ({ page }) => {
+		test.setTimeout(150_000)
+		const email = await newAccount()
+		const profile = await profileOf(email)
+		await activateAndDescribe(email, profile.id)
+		await signInAction(page, email)
+
+		// Active already: the three first steps are skipped, the page opens on the contact.
+		await expect(title(page)).toHaveText('Comment te joindre')
+		await page.waitForLoadState('networkidle')
+		await page.getByLabel('Instagram').fill('@studio.fictif')
+		await press(page.getByRole('button', { name: 'Suivant' }))
+		await expect(title(page)).toHaveText('Ta prestation phare')
+		await press(page.getByRole('button', { name: 'Modèle Soirée' }))
+		await page.getByLabel('Prix').fill('90')
+		await press(page.getByRole('button', { name: 'Terminer' }))
+
+		await expect(page).toHaveURL(/\/auth\/init-account\?etape=fin$/, { timeout: 60_000 })
+		await expect(page.getByTestId('page-en-ligne')).toBeVisible()
+		await expect(page.getByTestId('page-en-ligne-adresse')).toContainText('/profil/')
+		await takeScreenshot(page, 'fin-en-ligne')
+		await expectLayout(page)
+		expect(await violationsAfterTitle(page)).toEqual([])
+		expect((await profileOf(email)).publishable).toBe(true)
+	})
+
+	test('un profil importé : l’étape du contact est sautée, « Plus tard » laisse la prestation, et rien n’est effacé', async ({
+		page,
+	}) => {
+		test.setTimeout(150_000)
+		const email = await newAccount()
+		const profile = await profileOf(email)
+		await activateAndDescribe(email, profile.id)
+		const payload = await testPayload()
+		await payload.update({
+			collection: 'profiles',
+			id: profile.id,
+			data: {
+				networks: { facebook: 'https://www.facebook.com/studio.fictif' },
+				serviceOffers: [{ name: 'Cours d’auto-maquillage', description: 'Deux heures' }],
+			},
+			overrideAccess: true,
+		})
+		await signInAction(page, email)
+		// A network is a way to reach her already: the contact step is skipped, the offer has no price yet.
+		await expect(title(page)).toHaveText('Ta prestation phare')
+		await expect(page.getByTestId('etape-courante')).toHaveText('Étape 5 sur 5 · Prestation')
+		await page.waitForLoadState('networkidle')
+		await press(page.getByRole('button', { name: 'Plus tard' }))
+
+		// Skipped: the end page says the page is not online, with the way back to the onboarding.
+		await expect(page).toHaveURL(/\/auth\/init-account\?etape=fin$/, { timeout: 60_000 })
+		await expect(page.getByTestId('accueil-fin-manques')).toBeVisible()
+		await expect(page.getByRole('link', { name: 'Reprendre l’accueil' })).toBeVisible()
+		const after = await profileOf(email)
+		expect(after.networks?.facebook).toBe('https://www.facebook.com/studio.fictif')
+		expect(after.serviceOffers?.map(offer => offer.name)).toEqual(['Cours d’auto-maquillage'])
+
+		// « Reprendre l'accueil » opens on the step still to do; a priced model joins the offer she had.
+		await press(page.getByRole('link', { name: 'Reprendre l’accueil' }))
+		await expect(title(page)).toHaveText('Ta prestation phare')
+		await page.waitForLoadState('networkidle')
+		await press(page.getByRole('button', { name: 'Modèle Soirée' }))
+		await page.getByLabel('Prix').fill('90')
+		await press(page.getByRole('button', { name: 'Terminer' }))
+		await expect(page.getByTestId('page-en-ligne')).toBeVisible({ timeout: 60_000 })
+		const done = await profileOf(email)
+		expect(done.serviceOffers?.map(offer => offer.name)).toEqual(['Cours d’auto-maquillage', 'Maquillage de soirée'])
+		expect(done.serviceOffers?.[0]?.description).toBe('Deux heures')
+		expect(done.serviceOffers?.[1]?.priceFrom).toBe(90)
+	})
+
+	test('un téléphone montré compte comme un moyen de joindre : l’étape 4 est faite', async ({ page }) => {
+		test.setTimeout(150_000)
+		const email = await newAccount()
+		const profile = await profileOf(email)
+		await activateAndDescribe(email, profile.id)
+		await signInAction(page, email)
+		await expect(title(page)).toHaveText('Comment te joindre')
+		await page.waitForLoadState('networkidle')
+		await page.getByLabel('Téléphone', { exact: true }).fill('06 12 34 56 78')
+		await page.getByLabel('Afficher mon téléphone et mon email sur ma page').check()
+		await press(page.getByRole('button', { name: 'Suivant' }))
+		await expect(title(page)).toHaveText('Ta prestation phare')
+		const stored = await profileOf(email)
+		expect(stored.publicContact).toBe(true)
+		expect(stored.consentedAt).toBeTruthy()
+		await page.goto(PAGE)
+		// Contact done, offer not: the page opens on the offer.
+		await expect(title(page)).toHaveText('Ta prestation phare')
+	})
+
+	test('l’adresse de fin demandée trop tôt renvoie aux étapes', async ({ page }) => {
+		const email = await newAccount()
+		await signInAction(page, email)
+		await page.goto(`${PAGE}?etape=fin`)
+		await expect(page).toHaveURL(/\/auth\/init-account$/)
+		await expect(title(page)).toHaveText('Ta spécialité')
+	})
+
+	test('ticket 266 : à l’étape 2, une zone à l’étranger suffit : profil actif, l’étape du contact s’ouvre', async ({
 		page,
 	}) => {
 		test.setTimeout(150_000)
 		const email = await newAccount()
 		await signInAction(page, email)
-		await expect(title(page)).toHaveText('Ton identité')
+		await expect(title(page)).toHaveText('Ta spécialité')
 		await page.waitForLoadState('networkidle')
 		await fillIdentity(page)
 		await press(page.getByRole('button', { name: 'Suivant' }))
@@ -294,8 +473,8 @@ test.describe('E02 : l’accueil en trois étapes', { tag: '@mobile' }, () => {
 		await expect(title(page)).toHaveText('Ta photo principale')
 		expect(await profileOf(email)).toMatchObject({ zoneKind: 'countries', countries: ['BE'], town: 'Bruxelles' })
 		await choosePhoto(page)
-		await press(page.getByRole('button', { name: 'Terminer' }))
-		await expect(page).toHaveURL(/\/auth\/profil$/, { timeout: 60_000 })
+		await press(page.getByRole('button', { name: 'Suivant' }))
+		await expect(title(page)).toHaveText('Comment te joindre')
 		const profile = await profileOf(email)
 		expect(profile.active).toBe(true)
 		expect(profile.status).toBe('published')
@@ -305,7 +484,7 @@ test.describe('E02 : l’accueil en trois étapes', { tag: '@mobile' }, () => {
 		test.setTimeout(150_000)
 		const email = await newAccount()
 		await signInAction(page, email)
-		await expect(title(page)).toHaveText('Ton identité')
+		await expect(title(page)).toHaveText('Ta spécialité')
 		await page.waitForLoadState('networkidle')
 		await fillIdentity(page)
 		await press(page.getByRole('button', { name: 'Suivant' }))
@@ -343,7 +522,7 @@ test.describe('E02 : l’accueil en trois étapes', { tag: '@mobile' }, () => {
 		test.setTimeout(150_000)
 		const email = await newAccount()
 		await signInAction(page, email)
-		await expect(title(page)).toHaveText('Ton identité')
+		await expect(title(page)).toHaveText('Ta spécialité')
 		await page.waitForLoadState('networkidle')
 		await fillIdentity(page)
 		await press(page.getByRole('button', { name: 'Suivant' }))
@@ -373,7 +552,7 @@ test.describe('E02 : l’accueil en trois étapes', { tag: '@mobile' }, () => {
 		await press(page.getByRole('button', { name: 'Suivant' }))
 		// The server has not answered: the step says so, and nothing else opens.
 		await expect(page.getByRole('button', { name: 'Enregistrement…' })).toBeDisabled()
-		await expect(title(page)).toHaveText('Ton identité')
+		await expect(title(page)).toHaveText('Ta spécialité')
 		expect((await profileOf(email)).firstName ?? null).toBeNull()
 		server.liberer()
 		await expect(title(page)).toHaveText('Ta zone')
@@ -388,14 +567,27 @@ test.describe('E02 : l’accueil en trois étapes', { tag: '@mobile' }, () => {
 
 		await choosePhoto(page)
 		server.armer()
-		await press(page.getByRole('button', { name: 'Terminer' }))
-		// The last answer has not come: she is still on the step, no arrival is claimed.
+		await press(page.getByRole('button', { name: 'Suivant' }))
 		await expect(page.getByRole('button', { name: 'Enregistrement…' })).toBeDisabled()
-		await expect(page).toHaveURL(/\/auth\/init-account$/)
+		await expect(title(page)).toHaveText('Ta photo principale')
 		await expect.poll(async () => (await profileOf(email)).mainPicture ?? null, { timeout: 5000 }).toBeNull()
 		server.liberer()
-		await expect(page).toHaveURL(/\/auth\/profil$/, { timeout: 60_000 })
+		await expect(title(page)).toHaveText('Comment te joindre')
 		expect((await profileOf(email)).active).toBe(true)
+
+		await press(page.getByRole('button', { name: 'Plus tard' }))
+		await expect(title(page)).toHaveText('Ta prestation phare')
+		await press(page.getByRole('button', { name: 'Modèle Essai' }))
+		await page.getByLabel('Prix').fill('60')
+		server.armer()
+		await press(page.getByRole('button', { name: 'Terminer' }))
+		// The last answer has not come: she is still on the step, the end page is not asked for.
+		await expect(page.getByRole('button', { name: 'Enregistrement…' })).toBeDisabled()
+		await expect(page).toHaveURL(/\/auth\/init-account$/)
+		await expect.poll(async () => (await profileOf(email)).serviceOffers?.length ?? 0, { timeout: 5000 }).toBe(0)
+		server.liberer()
+		await expect(page).toHaveURL(/\/auth\/init-account\?etape=fin$/, { timeout: 60_000 })
+		expect((await profileOf(email)).serviceOffers?.[0]?.priceFrom).toBe(60)
 	})
 
 	test('un échec reste sur l’étape, la saisie est gardée, puis ça passe ; reprise à l’étape 2 après un départ', async ({
@@ -413,7 +605,7 @@ test.describe('E02 : l’accueil en trois étapes', { tag: '@mobile' }, () => {
 		await fillIdentity(page)
 		await press(page.getByRole('button', { name: 'Suivant' }))
 		await expect(page.getByRole('alert').filter({ hasText: 'n’a pas abouti' })).toBeVisible()
-		await expect(title(page)).toHaveText('Ton identité')
+		await expect(title(page)).toHaveText('Ta spécialité')
 		await expect(page.getByLabel('Prénom')).toHaveValue('Léa')
 		await expect(page.getByLabel('Mariage', { exact: true })).toBeChecked()
 		expect((await profileOf(email)).firstName ?? null).toBeNull()
@@ -428,7 +620,7 @@ test.describe('E02 : l’accueil en trois étapes', { tag: '@mobile' }, () => {
 		await expect(page.getByRole('heading', { name: 'Mon espace' })).toBeVisible()
 		await page.goto(PAGE)
 		await expect(title(page)).toHaveText('Ta zone')
-		await expect(page.locator('[aria-current="step"]')).toContainText('Zone')
+		await expect(page.locator('[aria-current="step"]')).toContainText('Où')
 		await page.reload()
 		await expect(title(page)).toHaveText('Ta zone')
 	})
@@ -479,7 +671,7 @@ test.describe('E02 : l’accueil en trois étapes', { tag: '@mobile' }, () => {
 			await page.goto('/auth/profil')
 			// Her space sends her to the onboarding, which makes the profile.
 			await expect(page).toHaveURL(/\/auth\/init-account$/)
-			await expect(title(page)).toHaveText('Ton identité')
+			await expect(title(page)).toHaveText('Ta spécialité')
 			const after = await profiles()
 			expect(after).toHaveLength(1)
 			await page.reload()
