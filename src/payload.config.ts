@@ -12,6 +12,7 @@ import { AuthEvents } from './collections/AuthEvents'
 import { ContactRequests } from './collections/ContactRequests'
 import { DeletedAccounts } from './collections/DeletedAccounts'
 import { closedStorageFields, MEDIA_UPLOAD, Media, noUploadWithoutStorage, toPublicUrl } from './collections/Media'
+import { ModerationEvents } from './collections/ModerationEvents'
 import { Profiles } from './collections/Profiles'
 import { ProfileViews } from './collections/ProfileViews'
 import { Pros } from './collections/Pros'
@@ -81,6 +82,8 @@ export default buildConfig({
 		// Dates in the lists and the sheets as the team writes them: 22/10/2026 14:05 (ticket 308).
 		dateFormat: 'dd/MM/yyyy HH:mm',
 		user: Admins.slug,
+		// The numbers of the team above the collections (issue 1005); admins only, counts and dates.
+		components: { beforeDashboard: ['/components/admin/DashboardOverview#DashboardOverview'] },
 		importMap: { baseDir: dirname },
 		// 'off' closes /api/og: an image rendered on demand, for anyone, with or without a session.
 		meta: { defaultOGImageType: 'off' },
@@ -93,6 +96,7 @@ export default buildConfig({
 		Talents,
 		Articles,
 		AuthEvents,
+		ModerationEvents,
 		ContactRequests,
 		DeletedAccounts,
 		SearchCounts,

@@ -304,6 +304,14 @@ describe('292 : l’espace dit la vérité à une maquilleuse masquée ou en pau
 		expect(said).not.toMatch(FORBIDDEN)
 	})
 
+	test('suspendue (issue 1005) : le mot « suspendue » et le motif, le même effet', () => {
+		const progress = profileProgress({ ...HIDDEN, moderationAction: 'suspend' })
+		expect(progress.etat).toBe('masque')
+		expect(progress.titre).toBe('Ta page est suspendue par l’équipe My Makeup : elle n’est plus visible.')
+		expect(progress.consequence).toContain(`Motif : ${REASON}`)
+		expect(profileProgress({ ...HIDDEN, moderationAction: 'hide' }).titre).toContain('masquée')
+	})
+
 	test('masquée sans motif : pas de ligne « Motif » vide', () => {
 		for (const reason of [undefined, null, '', '   ']) {
 			const progress = profileProgress({ ...FULL, status: 'hidden', reason })

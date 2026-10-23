@@ -82,6 +82,7 @@ export const COLLECTIONS = [
 	'reminder-reports',
 	'reminder-states',
 	'quote-requests',
+	'moderation-events',
 	'payload-locked-documents',
 ] as const
 export type MatrixCollection = (typeof COLLECTIONS)[number]
@@ -135,6 +136,8 @@ export interface Line {
 	 */
 	champ?: string
 	valeur?: unknown
+	/** `modifier`: other fields sent in the same request (a moderation reason travels with the status). */
+	avec?: Record<string, unknown>
 	attendu: Issue
 }
 
@@ -176,6 +179,8 @@ export type Distribution = Record<Role, Actor> & {
 	etatDeRelances: number
 	/** A quote request (issue 1003): it belongs to a profile, only an admin reads it, nobody writes it through an API. */
 	demandeDeDevis: number
+	/** A line of the moderation journal (issue 1005): it belongs to nobody, only an admin reads it. */
+	actionDeModeration: number
 }
 
 /** A fresh address for each document a line creates or changes. */
@@ -273,6 +278,21 @@ const searchCountData = () => ({
 /** A row of the daily search counts, written by the server as it writes them: without access control. */
 const searchCount = async (payload: Payload): Promise<number> =>
 	(await payload.create({ collection: 'search-counts', data: searchCountData() })).id
+
+/** A line of the moderation journal, written by the server as it writes them: without access control. */
+const moderationLine = async (payload: Payload): Promise<number> =>
+	(
+		await payload.create({
+			collection: 'moderation-events',
+			data: {
+				profile: 1,
+				admin: 1,
+				action: 'hide',
+				reason: 'Une ligne fictive de la matrice d’accès.',
+				date: new Date().toISOString(),
+			},
+		})
+	).id
 
 /** A row of the counter of views, written by the server as it writes them: on the first profile, a day nobody reuses. */
 const profileView = async (payload: Payload): Promise<number> => {
@@ -427,6 +447,19 @@ const PORTRAITS: Record<MatrixCollection, Portrait> = {
 		nouvelleValeur: () => 1,
 		donneesDeCreation: () => Promise.resolve({ strapiId: 8_000_000 + Math.floor(Math.random() * 1_000_000_000) }),
 		jetable: deletedAccount,
+	},
+	'moderation-events': {
+		champ: 'reason',
+		nouvelleValeur: () => 'Un autre motif fictif de la matrice.',
+		donneesDeCreation: () =>
+			Promise.resolve({
+				profile: 1,
+				admin: 1,
+				action: 'hide' as const,
+				reason: 'Un motif fictif de la matrice.',
+				date: new Date().toISOString(),
+			}),
+		jetable: moderationLine,
 	},
 	'profile-views': {
 		champ: 'count',
@@ -583,6 +616,7 @@ export async function distribute(): Promise<Distribution> {
 		rapportDeRelances: await reminderReport(payload),
 		etatDeRelances: await reminderState(payload),
 		demandeDeDevis: await quoteRequest(payload),
+		actionDeModeration: await moderationLine(payload),
 	}
 }
 
@@ -674,6 +708,7 @@ function documentOf(distribution: Distribution, ligne: Line): number {
 	if (collection === 'reminder-reports') return distribution.rapportDeRelances
 	if (collection === 'reminder-states') return distribution.etatDeRelances
 	if (collection === 'quote-requests') return distribution.demandeDeDevis
+	if (collection === 'moderation-events') return distribution.actionDeModeration
 	const state = (etat: State) =>
 		isEditorial(collection)
 			? distribution.contenus[collection][etat]
@@ -726,6 +761,7 @@ async function list(voie: Street, acteur: Actor, ligne: Line, distribution: Dist
 		...(collection === 'reminder-reports' ? [distribution.rapportDeRelances] : []),
 		...(collection === 'reminder-states' ? [distribution.etatDeRelances] : []),
 		...(collection === 'quote-requests' ? [distribution.demandeDeDevis] : []),
+		...(collection === 'moderation-events' ? [distribution.actionDeModeration] : []),
 	]
 	const publicOnes = await publicOf(collection, distributed)
 	const ownAndPublic = [...new Set([...own, ...publicOnes])].sort((a, b) => a - b)
@@ -791,14 +827,18 @@ async function update(voie: Street, acteur: Actor, ligne: Line, distribution: Di
 	const id = documentOf(distribution, ligne)
 	const field = ligne.champ ?? portrait.champ
 	const value = ligne.champ ? valueFrom(ligne.valeur, distribution) : portrait.nouvelleValeur()
-	const before = (await stored(ligne.collection, id))?.[field]
+	const stored0 = await stored(ligne.collection, id)
+	const before = stored0?.[field]
+	const extraBefore = Object.fromEntries(Object.keys(ligne.avec ?? {}).map(key => [key, stored0?.[key] ?? null]))
 	const sessions = await accountSessions(ligne.collection, id)
-	const response = await makeRequest(voie, acteur, { ...ligne, id, donnees: { [field]: value } })
-	const after = (await stored(ligne.collection, id))?.[field]
-	if (!equal(after, before)) {
+	const response = await makeRequest(voie, acteur, { ...ligne, id, donnees: { ...ligne.avec, [field]: value } })
+	const stored1 = await stored(ligne.collection, id)
+	const after = stored1?.[field]
+	const extraChanged = Object.keys(extraBefore).some(key => !equal(stored1?.[key] ?? null, extraBefore[key]))
+	if (!equal(after, before) || extraChanged) {
 		// Put the cast back as it was, whatever the line found.
 		const payload = await testPayload()
-		await payload.update({ collection: ligne.collection, id, data: { [field]: before } })
+		await payload.update({ collection: ligne.collection, id, data: { [field]: before, ...extraBefore } })
 		// Blocking an account closes its sessions (ticket 089): the cast gets its own back.
 		if (sessions !== undefined)
 			await payload.db.updateOne({ collection: 'pros', id, data: { sessions }, returning: false })

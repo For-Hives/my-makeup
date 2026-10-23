@@ -133,7 +133,7 @@ test.describe('Fraîcheur des pages publiques (117)', () => {
 			await expect.poll(() => inPlan(request, profile.slug), { timeout: ONE_MINUTE }).toBe(true)
 			expect((await readPage(request, profile.slug)).statut).toBe(200)
 
-			await save(request, profile, { chosenStatus: 'hidden' })
+			await save(request, profile, { chosenStatus: 'hidden', reason: 'Masqué pour le test' })
 
 			await expect.poll(async () => (await readPage(request, profile.slug)).statut, { timeout: ONE_MINUTE }).toBe(404)
 			await expect.poll(() => inSearch(request, profile.mot, profile.slug), { timeout: ONE_MINUTE }).toBe(false)

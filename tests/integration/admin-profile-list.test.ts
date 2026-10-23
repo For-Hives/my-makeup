@@ -200,7 +200,7 @@ describe('Masquer un profil depuis sa fiche (ticket 166)', () => {
 
 		const republished = await callRest('PATCH', `/api/profiles/${id}`, {
 			enTetes: headers,
-			corps: { chosenStatus: 'automatic' },
+			corps: { chosenStatus: 'automatic', reason: 'Photos remplacées, profil conforme.' },
 		})
 		expect(republished.statut).toBe(200)
 		const returned = await payload.findByID({ collection: 'profiles', id, depth: 0 })

@@ -224,6 +224,8 @@ describe('the register of intended changes', () => {
 			'`photos-noms-imprevisibles`',
 			'`emails-resend`',
 			'`groupe-front`',
+			'`moderation-motif-et-journal`',
+			'`tableau-de-bord-admin`',
 		])
 		expect(register).toContain('La case « Pages touchées » ne nomme que les familles où un écart est attendu')
 	})

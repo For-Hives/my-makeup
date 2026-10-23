@@ -18,6 +18,7 @@ import {
 	adminOrOwner,
 	fieldAdminOnly,
 	hiddenExceptAdmin,
+	isAdmin,
 	neverAllowed,
 	profileFieldAdminOrOwner,
 	publishedProfileOrOwner,
@@ -33,6 +34,13 @@ import {
 	validateNetworkLink,
 	validatePhone,
 } from '../lib/profile/contact-details'
+import {
+	HOLD_ACTIONS,
+	type ModerationAction,
+	moderationActionOf,
+	REASON_MESSAGE,
+	validReason,
+} from '../lib/profile/moderation'
 import { ownerPhotos, validateGallery, validateMainPhoto } from '../lib/profile/photos'
 import { validateSiret } from '../lib/profile/siret'
 import {
@@ -243,6 +251,67 @@ export const refuseUnknownChoice: CollectionBeforeValidateHook = ({ data, req })
 	return data
 }
 
+/** What `moderate` hands to `logModeration`, in the context of the request. */
+const MODERATION_KEY = 'moderationEvent'
+interface PendingModeration {
+	readonly action: ModerationAction
+	readonly reason: string
+	readonly admin: number | null
+}
+
+/**
+ * Issue 1005: an admin who hides, suspends or restores a profile gives a reason in the same request,
+ * a new one (not the one already stored). Without it the save is refused and nothing changes. The word
+ * (hide or suspend) is kept with the reason for the makeup artist; a restore empties both, and the
+ * journal keeps them. A write by the server itself (the import, the demo data) has no admin and is not
+ * moderation: it asks for nothing and writes no line.
+ */
+export const moderate: CollectionBeforeChangeHook = ({ context, data, operation, originalDoc, req }) => {
+	if (operation !== 'update' || !isAdmin(req.user)) return data
+	const action = moderationActionOf(originalDoc, data)
+	if (action === null) return data
+	const reason: unknown = data.reason
+	const changed = typeof reason === 'string' && reason.trim() !== String(originalDoc?.reason ?? '').trim()
+	if (!(changed && validReason(reason)))
+		throw new ValidationError({
+			collection: 'profiles',
+			errors: [{ message: REASON_MESSAGE, path: 'reason' }],
+			req,
+		})
+	const pending: PendingModeration = { action, reason: reason.trim(), admin: Number(req.user?.id) || null }
+	context[MODERATION_KEY] = pending
+	return action === 'restore'
+		? { ...data, reason: null, moderationAction: null }
+		: {
+				...data,
+				reason: pending.reason,
+				moderationAction: (HOLD_ACTIONS as readonly string[]).includes(data.moderationAction)
+					? data.moderationAction
+					: 'hide',
+			}
+}
+
+/** The line of the journal, written in the transaction of the change: both happen, or neither. */
+export const logModeration: CollectionAfterChangeHook = async ({ context, doc, req }) => {
+	const pending = context[MODERATION_KEY] as PendingModeration | undefined
+	if (pending === undefined) return doc
+	delete context[MODERATION_KEY]
+	await req.payload.create({
+		collection: 'moderation-events',
+		data: {
+			profile: doc.id,
+			admin: pending.admin,
+			action: pending.action,
+			reason: pending.reason,
+			date: new Date().toISOString(),
+		},
+		depth: 0,
+		overrideAccess: true,
+		req,
+	})
+	return doc
+}
+
 /** What only the role `admin` writes, and only `admin` and the owner read (ticket 021). */
 const OWNER_READ_RESERVED = {
 	read: profileFieldAdminOrOwner,
@@ -332,10 +401,11 @@ export const Profiles: CollectionConfig<'profiles'> = {
 			slugOnCreate,
 			consentTrace,
 			clearZoneReview,
+			moderate,
 			stateBeforeWrite,
 		],
 		// The refresh comes after the fallback slug: a profile created public gets its final address.
-		afterChange: [fallbackSlugAfterCreate, REFRESH.apresEcriture],
+		afterChange: [fallbackSlugAfterCreate, logModeration, REFRESH.apresEcriture],
 		beforeDelete: [REFRESH.avantSuppression],
 		afterDelete: [REFRESH.apresSuppression],
 	},
@@ -541,7 +611,23 @@ export const Profiles: CollectionConfig<'profiles'> = {
 			label: 'Motif',
 			type: 'textarea',
 			access: OWNER_READ_RESERVED,
-			admin: { position: 'sidebar', description: 'Pourquoi le profil est masqué. La maquilleuse le lit.' },
+			admin: {
+				position: 'sidebar',
+				description:
+					'Obligatoire pour masquer, suspendre ou rétablir (10 à 500 caractères, un motif nouveau à chaque action). Pourquoi le profil est masqué : la maquilleuse le lit. N’y mets aucun nom ni coordonnée.',
+			},
+		},
+		{
+			name: 'moderationAction',
+			label: 'Masqué ou suspendu',
+			type: 'select',
+			options: HOLD_ACTIONS.map(action => ({ label: action === 'hide' ? 'Masqué' : 'Suspendu', value: action })),
+			access: OWNER_READ_RESERVED,
+			admin: {
+				position: 'sidebar',
+				description:
+					'Le mot que la maquilleuse lit. Les deux retirent le profil du public ; rien d’autre n’en découle.',
+			},
 		},
 		{
 			name: 'verified',

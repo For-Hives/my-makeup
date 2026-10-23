@@ -141,6 +141,10 @@ test.describe('308 : l’administration montre des personnes et aide à répondr
 			expect(await pageStatus()).toBe(200)
 
 			await page.getByRole('button', { name: 'Masquer…' }).click()
+			// No reason, no change (issue 1005).
+			await page.getByRole('button', { name: 'Masquer le profil' }).click()
+			await expect(page.getByText('Dis pourquoi')).toBeVisible()
+			await page.getByLabel('Motif (obligatoire)').fill('Photos sans rapport avec le maquillage.')
 			await page.getByRole('button', { name: 'Masquer le profil' }).click()
 			await expect(page.getByRole('status').filter({ hasText: 'Statut choisi : masqué' })).toBeVisible()
 			// Nothing is written before the sheet is saved.

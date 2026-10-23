@@ -80,6 +80,7 @@ export type DashboardProfile = Pick<
 	| 'available'
 	| 'status'
 	| 'reason'
+	| 'moderationAction'
 	| 'mainPicture'
 	| 'gallery'
 	| 'skills'
