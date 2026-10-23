@@ -207,7 +207,7 @@ describe('the register of intended changes', () => {
 	})
 
 	test('the deviations from the technical plan say they touch no page', () => {
-		const deviations = ['emails-resend', 'groupe-front', 'next-16-3']
+		const deviations = ['emails-resend', 'groupe-front']
 		for (const key of deviations) expect(lineOf(key)?.pages, key).toStartWith('Aucune')
 	})
 
@@ -215,7 +215,7 @@ describe('the register of intended changes', () => {
 		const withoutPage = lines.filter(line => line.pages.startsWith('Aucune')).map(line => line.key)
 
 		// The three lines whose pages answer as today, the bin and the names of the photos, which only the storage
-		// sees, and the three deviations from the technical plan
+		// sees, and the two deviations from the technical plan
 		expect(withoutPage).toEqual([
 			'`slug-stocke`',
 			'`comptes-email-partage`',
@@ -224,7 +224,6 @@ describe('the register of intended changes', () => {
 			'`photos-noms-imprevisibles`',
 			'`emails-resend`',
 			'`groupe-front`',
-			'`next-16-3`',
 		])
 		expect(register).toContain('La case « Pages touchées » ne nomme que les familles où un écart est attendu')
 	})

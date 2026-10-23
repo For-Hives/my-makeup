@@ -47,11 +47,6 @@
 			"automerge": false
 		},
 		{
-			"description": "Next reste en 16.3 : Payload 3 nomme ses erreurs par le nom de leur classe, et Next 16.4 raccourcit ces noms en production. À lever quand une version 3.x de Payload porte le correctif (docs/migration/CHANGEMENTS-VOULUS.md, repère next-16-3).",
-			"matchPackageNames": ["next", "@next/**"],
-			"allowedVersions": "<16.4.0"
-		},
-		{
 			"description": "React, react-dom et leurs types montent ensemble.",
 			"groupName": "react",
 			"matchPackageNames": ["react", "react-dom", "@types/react", "@types/react-dom"]
@@ -105,7 +100,7 @@
 			"automerge": false
 		},
 		{
-			"description": "TypeScript reste en 6 : ni Next 16.3 ni Payload 3 ne sont construits avec la 7.",
+			"description": "TypeScript reste en 6 : ni Next 16 ni Payload 3 ne sont construits avec la 7.",
 			"matchPackageNames": ["typescript"],
 			"allowedVersions": "<7"
 		},

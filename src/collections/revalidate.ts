@@ -88,9 +88,14 @@ function resume(context: RequestContext, contenu: PublicContent, id: number | st
 	return state
 }
 
-/** True for the refusal of Next outside one of its requests (`E263`, « static generation store missing »). */
+/**
+ * True for the refusal of Next outside one of its requests: « Invariant: static generation store missing in
+ * revalidateTag(…) » (or `revalidatePath(…)`). Next 16.3 put the code `E263` on this error; Next 16.4 no longer
+ * does, so the refusal is told by its message, which names the function that was refused.
+ */
 export const outsideNextRequest = (erreur: unknown): boolean =>
-	erreur instanceof Error && '__NEXT_ERROR_CODE' in erreur && erreur.__NEXT_ERROR_CODE === 'E263'
+	erreur instanceof Error &&
+	/^Invariant: static generation store missing in revalidate(Tag|Path)\(/.test(erreur.message)
 
 /**
  * Tells Next which pages are stale. A tag expires at once, rather than being served stale one last
