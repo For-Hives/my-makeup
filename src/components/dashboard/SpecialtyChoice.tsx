@@ -5,7 +5,40 @@ import { joinSpecialtyBullets, parseSpecialtyBullets, SPECIALTY_BULLETS, type Sp
 
 const FIELD = 'min-h-11 w-full rounded-md border border-neutral-400 bg-white px-3 py-2 text-base'
 const CHIP =
-	'flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-neutral-400 bg-white px-4 text-sm has-[:checked]:border-neutral-900 has-[:checked]:bg-neutral-100 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2'
+	'relative flex min-h-11 items-center gap-2 rounded-full border border-neutral-400 bg-white px-4 text-sm has-[:checked]:border-neutral-900 has-[:checked]:bg-neutral-100 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2'
+
+/**
+ * One bullet to tick. The real checkbox covers the whole bullet (44 px high) and is invisible; a box
+ * drawn next to the label shows its state. A touch anywhere on the bullet ticks it.
+ */
+function Chip({
+	id,
+	label,
+	checked,
+	onChange,
+}: {
+	id: string
+	label: string
+	checked: boolean
+	onChange: (checked: boolean) => void
+}) {
+	return (
+		<label htmlFor={id} className={CHIP}>
+			<input
+				id={id}
+				type="checkbox"
+				checked={checked}
+				onChange={event => onChange(event.target.checked)}
+				className="peer absolute inset-0 size-full cursor-pointer opacity-0"
+			/>
+			<span
+				aria-hidden="true"
+				className="flex size-5 shrink-0 items-center justify-center rounded border border-neutral-500 bg-white peer-checked:border-neutral-900 peer-checked:bg-neutral-900 peer-checked:after:-mt-0.5 peer-checked:after:block peer-checked:after:h-2.5 peer-checked:after:w-1.5 peer-checked:after:rotate-45 peer-checked:after:border-white peer-checked:after:border-r-2 peer-checked:after:border-b-2 peer-checked:after:content-['']"
+			/>
+			{label}
+		</label>
+	)
+}
 
 /**
  * The speciality as bullets to tick, several possible, and « Autre » which opens a free text (ticket
@@ -41,30 +74,23 @@ export function SpecialtyChoice({
 			<p className="text-neutral-700 text-sm">Choisis une ou plusieurs spécialités.</p>
 			<div className="flex flex-wrap gap-2">
 				{SPECIALTY_BULLETS.map(({ value, label }) => (
-					<label key={value} htmlFor={`${idPrefix}-specialite-${value}`} className={CHIP}>
-						<input
-							id={`${idPrefix}-specialite-${value}`}
-							type="checkbox"
-							checked={chosen.includes(value)}
-							onChange={event => toggle(value, event.target.checked)}
-							className="size-5 shrink-0 accent-neutral-900"
-						/>
-						{label}
-					</label>
-				))}
-				<label htmlFor={`${idPrefix}-specialite-autre`} className={CHIP}>
-					<input
-						id={`${idPrefix}-specialite-autre`}
-						type="checkbox"
-						checked={otherOpen}
-						onChange={event => {
-							setOtherOpen(event.target.checked)
-							if (!event.target.checked) onChange(bullets, '')
-						}}
-						className="size-5 shrink-0 accent-neutral-900"
+					<Chip
+						key={value}
+						id={`${idPrefix}-specialite-${value}`}
+						label={label}
+						checked={chosen.includes(value)}
+						onChange={ticked => toggle(value, ticked)}
 					/>
-					Autre
-				</label>
+				))}
+				<Chip
+					id={`${idPrefix}-specialite-autre`}
+					label="Autre"
+					checked={otherOpen}
+					onChange={ticked => {
+						setOtherOpen(ticked)
+						if (!ticked) onChange(bullets, '')
+					}}
+				/>
 			</div>
 			{error ? (
 				<p id={`${idPrefix}-specialite-erreur`} className="text-red-800 text-sm">
