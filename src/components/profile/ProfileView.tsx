@@ -1,10 +1,11 @@
+import type { ReactNode } from 'react'
 import { formatFrom } from '@/lib/price'
 import { contactActions, contactName } from '@/lib/profile/contact-actions'
-import { rows } from '@/lib/profile/public-view'
+import { type ContactLink, rows } from '@/lib/profile/public-view'
 import { travelSentence } from '@/lib/profile/travel-sentence'
 import type { PublicProfile } from '@/services/public/profiles'
 import { ContactButton } from './ContactButton'
-import type { ProfileEdit } from './edit-slots'
+import type { BodyEdit, ProfileEdit } from './edit-slots'
 import { ProfileGallery } from './ProfileGallery'
 import { ProfileHeader } from './ProfileHeader'
 import { ProfileSection } from './ProfileSection'
@@ -57,6 +58,21 @@ export function ProfileView({
 	// The button of contact: one per way of reaching her that leads somewhere, none when there is no way.
 	const name = contactName(profil)
 	const actions = contactActions(profil.liens, name)
+	// A block is drawn when it has something to show. On her own page (edit mode) it is drawn anyway when
+	// it can be changed, with an invitation in place of its content: the slot gets `null`.
+	const body = edit?.body
+	const block = (key: keyof BodyEdit, order: string, read: ReactNode | null) => {
+		const wrap = body?.[key]
+		if (wrap) return <div className={order}>{wrap(read)}</div>
+		return read === null ? null : <div className={order}>{read}</div>
+	}
+	// Networks and contact details are two blocks on her page, one card for the visitor.
+	const split = body?.networks !== undefined || body?.contacts !== undefined
+	const isNetwork = (link: ContactLink) => link.canal !== 'email' && link.canal !== 'phone'
+	const contactsCard = (links: readonly ContactLink[], title?: string) =>
+		links.length > 0 ? (
+			<SectionContacts liens={links} pid={profil.pid} mesure={mesure} {...(title ? { titre: title } : {})} />
+		) : null
 	const contact = (placement: 'header' | 'bar') => (
 		<ContactButton
 			placement={placement}
@@ -83,49 +99,61 @@ export function ProfileView({
 				 */}
 				<div className="flex flex-col gap-5 md:grid md:grid-cols-12">
 					<div className="contents md:col-span-4 md:flex md:min-w-0 md:flex-col md:items-start md:gap-5">
-						{travel !== null && (
-							<div className={PHONE_ORDER.travel}>
-								<TravelSection phrase={travel} />
-							</div>
+						{block('travel', PHONE_ORDER.travel, travel !== null ? <TravelSection phrase={travel} /> : null)}
+						{split ? (
+							<>
+								{block(
+									'networks',
+									PHONE_ORDER.contact,
+									contactsCard(profil.liens.filter(isNetwork), 'Réseaux sociaux')
+								)}
+								{block(
+									'contacts',
+									PHONE_ORDER.contact,
+									contactsCard(
+										profil.liens.filter(link => !isNetwork(link)),
+										'Contacts'
+									)
+								)}
+							</>
+						) : (
+							block('contacts', PHONE_ORDER.contact, contactsCard(profil.liens))
 						)}
-						{profil.liens.length > 0 && (
-							<div className={PHONE_ORDER.contact}>
-								<SectionContacts liens={profil.liens} pid={profil.pid} mesure={mesure} />
-							</div>
+						{block(
+							'skills',
+							PHONE_ORDER.skills,
+							profil.competences.length > 0 ? <SkillsSection competences={profil.competences} /> : null
 						)}
-						{profil.competences.length > 0 && (
-							<div className={PHONE_ORDER.skills}>
-								<SkillsSection competences={profil.competences} />
-							</div>
+						{block(
+							'languages',
+							PHONE_ORDER.languages,
+							profil.langues.length > 0 ? <LanguagesSection langues={profil.langues} /> : null
 						)}
-						{profil.langues.length > 0 && (
-							<div className={PHONE_ORDER.languages}>
-								<LanguagesSection langues={profil.langues} />
-							</div>
-						)}
-						{profil.formations.length > 0 && (
-							<div className={PHONE_ORDER.courses}>
-								<CoursesSection formations={profil.formations} />
-							</div>
+						{block(
+							'courses',
+							PHONE_ORDER.courses,
+							profil.formations.length > 0 ? <CoursesSection formations={profil.formations} /> : null
 						)}
 					</div>
 					<div className="contents md:col-span-8 md:flex md:min-w-0 md:flex-col md:items-start md:gap-5">
-						{description.length > 0 && (
-							<div className={PHONE_ORDER.about}>
-								<SectionDescription lignes={description} />
-							</div>
+						{block(
+							'about',
+							PHONE_ORDER.about,
+							description.length > 0 ? <SectionDescription lignes={description} /> : null
 						)}
-						{profil.galerie.length > 0 && (
-							<div className={PHONE_ORDER.portfolio}>
+						{block(
+							'gallery',
+							PHONE_ORDER.portfolio,
+							profil.galerie.length > 0 ? (
 								<ProfileSection titre="Portfolio">
 									<ProfileGallery photos={profil.galerie} nom={profil.nom} />
 								</ProfileSection>
-							</div>
+							) : null
 						)}
-						{profil.prestations.length > 0 && (
-							<div className={PHONE_ORDER.services}>
-								<ServiceOffersSection prestations={profil.prestations} />
-							</div>
+						{block(
+							'services',
+							PHONE_ORDER.services,
+							profil.prestations.length > 0 ? <ServiceOffersSection prestations={profil.prestations} /> : null
 						)}
 						{profil.experiences.length > 0 && (
 							<div className={PHONE_ORDER.experiences}>

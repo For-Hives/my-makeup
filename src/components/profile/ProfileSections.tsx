@@ -99,13 +99,16 @@ export function SectionContacts({
 	liens,
 	pid,
 	mesure = true,
+	titre = 'Réseaux sociaux & contacts',
 }: {
 	liens: readonly ContactLink[]
 	pid: Pid | null
 	mesure?: boolean
+	/** Her own page in edit mode shows networks and contact details as two blocks (issues 1020, 1021). */
+	titre?: string
 }) {
 	return (
-		<ProfileSection titre="Réseaux sociaux & contacts">
+		<ProfileSection titre={titre}>
 			<ul className="flex flex-col gap-3">
 				{liens.map(({ canal, libelle, affichage, href }) => (
 					<li key={canal} className="flex min-w-0 items-center gap-3 text-sm">

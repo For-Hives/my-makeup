@@ -310,6 +310,36 @@
 			"id": "une-page-par-departement-reunit-les-maquilleuses-de-la-zo",
 			"type": "ajout",
 			"text": "Une page par département réunit les maquilleuses de la zone, pour que les particuliers trouvent plus facilement une maquilleuse près de chez eux."
+		},
+		{
+			"id": "tu-peux-modifier-ta-presentation-tes-competences-tes-lang",
+			"type": "amelioration",
+			"text": "Tu peux modifier ta présentation, tes compétences, tes langues et tes formations directement sur ta page : le texte dit sa limite avant de la refuser, et chaque liste garde ce que tu as tapé."
+		},
+		{
+			"id": "tu-peux-modifier-tes-prestations-et-tes-tarifs-directemen",
+			"type": "amelioration",
+			"text": "Tu peux modifier tes prestations et tes tarifs directement sur ta page : un seul bouton ajoute la prestation et enregistre la liste, avec des modèles, des exemples de prix et des options."
+		},
+		{
+			"id": "tu-peux-gerer-ton-portfolio-directement-sur-ta-page-ajout",
+			"type": "amelioration",
+			"text": "Tu peux gérer ton portfolio directement sur ta page : ajouter des photos, les retirer, changer leur ordre, choisir ta photo principale parmi elles et décrire chaque photo."
+		},
+		{
+			"id": "tu-peux-regler-directement-sur-ta-page-ou-tu-te-deplaces",
+			"type": "amelioration",
+			"text": "Tu peux régler directement sur ta page où tu te déplaces : ta commune, ton rayon et le déplacement à domicile, sans jamais indiquer d’adresse."
+		},
+		{
+			"id": "tu-peux-modifier-ton-telephone-et-ton-email-directement-s",
+			"type": "amelioration",
+			"text": "Tu peux modifier ton téléphone et ton email directement sur ta page, et choisir de les montrer ou non : si tu retires ton accord, ils disparaissent de ta page dès l’enregistrement."
+		},
+		{
+			"id": "tu-peux-modifier-tes-reseaux-et-ton-site-directement-sur",
+			"type": "amelioration",
+			"text": "Tu peux modifier tes réseaux et ton site directement sur ta page : écris ton pseudo ou colle une adresse, et tu vois comment elle s’affichera avant d’enregistrer."
 		}
 	],
 	"releases": []

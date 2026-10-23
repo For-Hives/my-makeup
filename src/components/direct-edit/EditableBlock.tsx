@@ -76,12 +76,12 @@ export function EditableBlock({
 		<div
 			data-direct-edit={id}
 			data-open={isOpen ? 'true' : undefined}
-			className={`group relative min-h-11 min-w-11 ${SHAPES[shape]} ${ring} transition-[box-shadow,opacity] ${dimmed ? 'opacity-50' : ''} ${className}`}
+			className={`group relative min-h-11 min-w-11 ${SHAPES[shape]} ${ring} transition-[box-shadow,opacity] duration-150 motion-reduce:transition-none ${dimmed ? 'opacity-50' : ''} ${className}`}
 		>
 			{empty ? (
 				<span
 					data-direct-edit-empty
-					className={`flex min-h-14 items-center gap-3 border-2 border-nude-300 border-dashed bg-blush px-4 py-3 font-body font-medium text-mute text-sm ${shape === 'round' ? 'h-full w-full justify-center rounded-full text-center' : 'rounded-2xl'}`}
+					className={`flex min-h-14 items-center gap-3 border-2 border-nude-300 border-dashed bg-blush px-4 py-3 font-body font-medium text-mute text-sm [&_b]:font-display [&_b]:font-medium [&_b]:text-base ${shape === 'round' ? 'h-full w-full justify-center rounded-full text-center' : 'rounded-2xl'}`}
 				>
 					{invitation}
 				</span>
@@ -103,7 +103,7 @@ export function EditableBlock({
 			/>
 			<span
 				aria-hidden="true"
-				className={`pointer-events-none absolute ${penClassName} flex h-11 min-w-11 items-center justify-center gap-2 rounded-full border border-hairline bg-white px-3 font-body font-medium text-mute text-sm shadow-sm group-focus-within:border-lipstick group-focus-within:bg-lipstick group-focus-within:text-white group-hover:border-lipstick group-hover:bg-lipstick group-hover:text-white ${isOpen ? 'border-lipstick bg-lipstick text-white' : ''}`}
+				className={`pointer-events-none absolute ${penClassName} flex h-11 min-w-11 items-center justify-center gap-2 rounded-full border border-hairline bg-white px-3 font-body font-medium text-mute text-sm shadow-sm ${dimmed ? '' : 'group-focus-within:border-lipstick group-focus-within:bg-lipstick group-focus-within:text-white group-hover:border-lipstick group-hover:bg-lipstick group-hover:text-white'} ${isOpen ? 'border-lipstick bg-lipstick text-white' : ''}`}
 			>
 				<svg
 					width="18"
@@ -117,7 +117,7 @@ export function EditableBlock({
 				>
 					<path d="M4 20h4L19 9l-4-4L4 16z" />
 				</svg>
-				<span className="hidden group-focus-within:inline group-hover:inline">Modifier</span>
+				<span className={dimmed ? 'hidden' : 'hidden group-focus-within:inline group-hover:inline'}>Modifier</span>
 			</span>
 			{isOpen && session.slot !== null
 				? createPortal(

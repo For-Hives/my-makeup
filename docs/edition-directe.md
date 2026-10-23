@@ -12,6 +12,20 @@ Issue 1008 (cadre : 1007). L'espace de la maquilleuse devient le profil public l
 - **Les blocs de l'en-tête** (`blocks/`) : photo principale, nom et spécialité (les quatre champs partent ensemble : le serveur n'en accepte pas moins), zone (le champ unique de l'espace), disponibilité. Ils réutilisent les actions serveur de l'espace (`saveMyMainPicture`, `saveMyIdentity`, `saveMyLocation`, `saveMyAvailability`) : mêmes gardes (session relue, origine, profil trouvé par le compte), mêmes limites d'envoi des photos (issue 309). Aucune règle d'accès nouvelle.
 - **Les jetons** de la direction artistique sont dans `src/app/(front)/globals.css` (`@theme`) : `blush`, `ink`, `lipstick` (réservé à ce qui se modifie), `nude-*`, `hairline`, `mute`, `rounded-card`, `font-display`, `font-body`. Bodoni Moda et Instrument Sans sont chargés par `src/components/direct-edit/fonts.ts`, importé par la seule route privée.
 
+## Les blocs du corps de la page
+
+`ProfileView` reçoit aussi, en mode édition, `edit.body` (`BodyEdit`, `edit-slots.ts`) : une fonction par bloc du corps, bâtie par `body-edit.tsx` à partir de son profil (`artistProfile`) et des actions serveur de l'espace. Elle reçoit le bloc tel que la visiteuse le voit, ou `null` quand il n'y a rien à montrer : la page publique omet ce bloc, la page de la propriétaire le garde avec son invitation. Un bloc sans fonction est dessiné comme pour une visiteuse.
+
+- **Présentation** (`AboutBlock`, issue 1016) : le texte et son compteur (2 000 caractères au plus, dits pendant la saisie).
+- **Compétences et langues** (`BulletsBlock`) : des puces ; les règles des listes L1 à L7.
+- **Formations** (`RowsBlock`) : des lignes ; un seul bouton, « Enregistrer cette formation », ajoute la ligne en cours et enregistre la liste. `RowsBlock` sert aussi aux prestations (issue 1017) : modèles, suggestions, aide au prix, options derrière « Ajouter une option ». Le bloc est nommé (`kind`) et non reçu en objet, car les définitions de listes portent des fonctions qu'une page serveur ne peut pas passer au navigateur.
+- **Portfolio** (`GalleryBlock`, issue 1018) : même code d'envoi que la carte du portfolio (`sendThenSave`), ordre par boutons « Avancer / Reculer », photo principale choisie parmi la galerie (deux actions de l'espace, la galerie puis la photo principale), texte alternatif par la route des médias.
+- **Déplacements** (`TravelBlock`, issue 1019) : la phrase « Se déplace à domicile… » ouvre le formulaire de zone de l'en-tête (`PlaceForm`, exporté par `PlaceBlock`) : un champ, des pays en puces, le rayon, « à domicile ». Les deux blocs écrivent la même zone par la même action.
+- **Coordonnées** (`ContactsBlock`, issue 1020) : téléphone, email et consentement (la requête ne porte aucune date : le serveur la pose). Sur la page de la propriétaire, la carte « Réseaux sociaux & contacts » est scindée en deux blocs par `ProfileView` (réseaux et site d'un côté, téléphone et email de l'autre) ; la page publique garde une seule carte.
+- **Réseaux** (`NetworksBlock`, issue 1021) : cinq champs dans l'ordre de la page, lus par `readNetworks` (la règle du serveur), avec l'aperçu « Sur ta page : @pseudo » (`readableLabel`, la règle de l'affichage public). L'ordre des liens est fixe (`CHANNELS`) : le rendre réglable demande un champ d'ordre dans la collection, donc une migration, et change le HTML public ; hors de cette tranche.
+- Pas de `<form>` dans un `<form>` : l'éditeur d'un bloc vit dans le formulaire du bloc (`BlockForm`), Entrée dans un champ est « enregistrer ».
+- L'éditeur d'un bloc du corps s'ouvre sous l'en-tête, dans le même emplacement que celui de l'en-tête (`EditorFrame` le fait défiler dans la vue).
+
 ## Ajouter une zone de la page
 
 Une autre tranche (issues 1016 à 1021) ajoute un bloc : un composant client dans `blocks/` fondé sur `EditableBlock` et `BlockForm`, une fonction d'emplacement dans `edit-slots.ts`, et son câblage dans `header-edit.tsx` (ou un équivalent pour le corps de la page).

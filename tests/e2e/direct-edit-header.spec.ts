@@ -1,11 +1,8 @@
-import { expect, type Locator, type Page, test } from '@playwright/test'
+import { expect, type Page, test } from '@playwright/test'
 import { MESSAGES_PHOTO } from '@/lib/dashboard/photo'
 import { FAILURE_MESSAGE, MESSAGE_SESSION } from '@/lib/dashboard/result'
-import { type PageProfile, pageProfilesUnderPrefix, setPageProfiles } from '../fixtures/page-profiles'
-import { violationsSevere } from '../support/axe'
-import { SCREENS } from '../support/e2e'
+import { block, checkScreen, EDIT_PATH, editHarness, pen, SIZES, shot as shotOf } from '../support/direct-edit-e2e'
 import { testPayload } from '../support/payload-test'
-import { openSessionWithoutPassword } from '../support/session'
 import { largePhotoSynthetic } from '../support/synthetic-photo'
 
 /**
@@ -16,55 +13,7 @@ import { largePhotoSynthetic } from '../support/synthetic-photo'
  * profiles of its own (the two sizes run side by side).
  */
 
-const SIZES = [
-	{ ...SCREENS.mobile, prefix: 'Directphone', touch: true },
-	{ ...SCREENS.chromium, prefix: 'Directlarge', touch: false },
-] as const
-const EDIT_PATH = '/auth/apercu-profil?mode=edition'
-
-async function sessionOf(profile: PageProfile) {
-	const payload = await testPayload()
-	const sheet = await payload.findByID({ collection: 'profiles', id: profile.id, depth: 0, select: { pro: true } })
-	const pro = typeof sheet.pro === 'object' ? sheet.pro.id : sheet.pro
-	if (pro === undefined || pro === null) throw new Error('pas de compte')
-	return openSessionWithoutPassword(payload, { collection: 'pros', id: pro })
-}
-
-async function shot(page: Page, name: string): Promise<void> {
-	if (process.env.SCREENSHOT_DIR)
-		await page.screenshot({
-			path: `${process.env.SCREENSHOT_DIR}/1008-${name}-${page.viewportSize()?.width}.png`,
-			fullPage: true,
-		})
-}
-
-/** The checks of the issue on the screen that is open: no sideways scroll, targets of 44 px, axe. */
-async function checkScreen(page: Page, label: string): Promise<void> {
-	expect(
-		await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth),
-		`${label} : défilement horizontal`
-	).toBeLessThanOrEqual(0)
-	const small = await page.evaluate(() =>
-		[
-			...document.querySelectorAll<HTMLElement>(
-				'main button, main input:not([type="hidden"]), [data-direct-edit-editor] a'
-			),
-		]
-			.filter(element => {
-				const box = element.getBoundingClientRect()
-				return box.width > 0 && box.height > 0 && box.height < 44
-			})
-			.map(
-				element =>
-					`${element.tagName} ${(element.getAttribute('aria-label') ?? element.textContent ?? '').trim().slice(0, 40)}`
-			)
-	)
-	expect(small, `${label} : cibles de moins de 44 px`).toEqual([])
-	expect(await violationsSevere(page), `${label} : axe`).toEqual([])
-}
-
-const block = (page: Page, id: string): Locator => page.locator(`[data-direct-edit="${id}"]`)
-const pen = (page: Page, name: string): Locator => page.getByRole('button', { name })
+const shot = (page: Page, name: string) => shotOf(page, '1008', name)
 
 for (const size of SIZES) {
 	test.describe(`1008 à ${size.width} px`, () => {
@@ -74,42 +23,7 @@ for (const size of SIZES) {
 
 		// The tests of a file run in several workers at once: each one makes the profile it needs, under a
 		// name of its own, and takes it away at its end (never a profile another worker may be using).
-		const made: PageProfile[] = []
-		async function makeProfile(key: string): Promise<PageProfile> {
-			const letters = Math.random()
-				.toString(36)
-				.replace(/[^a-z]/g, '')
-				.slice(0, 6)
-			const type = pageProfilesUnderPrefix(`${size.prefix}${letters}`).get(key)
-			if (!type) throw new Error(`profil d’essai « ${key} » manquant`)
-			const profile = (await setPageProfiles(new Map([[key, type]]))).get(key)
-			if (!profile) throw new Error(`profil d’essai « ${key} » non créé`)
-			made.push(profile)
-			return profile
-		}
-		test.afterEach(async () => {
-			const payload = await testPayload()
-			for (const { id } of made.splice(0)) {
-				const profile = await payload
-					.findByID({ collection: 'profiles', id, depth: 0, select: { pro: true } })
-					.catch(() => null)
-				if (!profile) continue
-				await payload.delete({ collection: 'profiles', id }).catch(() => undefined)
-				const pro = typeof profile.pro === 'object' ? profile.pro.id : profile.pro
-				if (pro !== undefined && pro !== null)
-					await payload.delete({ collection: 'pros', id: pro }).catch(() => undefined)
-			}
-		})
-
-		async function open(page: Page, context: Page['context'] extends () => infer C ? C : never, key: string) {
-			const profile = await makeProfile(key)
-			const session = await sessionOf(profile)
-			await context.addCookies(session.cookies)
-			await context.setExtraHTTPHeaders({ 'x-forwarded-for': `198.51.100.${(size.width + key.length) % 200}` })
-			await page.goto(EDIT_PATH)
-			await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
-			return profile
-		}
+		const { open } = editHarness(size)
 
 		test('l’état normal : quatre blocs, chacun un bouton de 44 px, aucune erreur d’accessibilité', async ({
 			context,

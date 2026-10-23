@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { PreviewBanner } from '@/components/dashboard/PreviewBanner'
+import { bodyEdit } from '@/components/direct-edit/body-edit'
 import { EditBar } from '@/components/direct-edit/EditBar'
 import { body, display } from '@/components/direct-edit/fonts'
 import { headerEdit } from '@/components/direct-edit/header-edit'
@@ -12,8 +13,21 @@ import { readDashboardPhotos } from '@/lib/dashboard/photos'
 import { DASHBOARD_PATH, PREVIEW_PATH, previewState } from '@/lib/dashboard/preview'
 import { requestUser } from '@/lib/dashboard/request'
 import { EDIT_QUERY, editPath, isEditRequest } from '@/lib/direct-edit/edit-mode'
+import { usageView } from '@/lib/photo-limits'
+import { readPhotoUsage } from '@/lib/photo-usage'
 import { readProfilePreview } from '@/services/public/profiles'
-import { saveMyAvailability, saveMyIdentity, saveMyMainPicture } from '../profil/actions'
+import {
+	saveMyAvailability,
+	saveMyContactDetails,
+	saveMyDescription,
+	saveMyIdentity,
+	saveMyLanguages,
+	saveMyMainPicture,
+	saveMyNetworks,
+	saveMyPortfolio,
+	saveMySkills,
+} from '../profil/actions'
+import { saveMyCourses, saveMyServiceOffers } from '../profil/lists-actions'
 import { findMyCities, saveMyLocation } from '../profil/location-actions'
 
 // Read per request: it depends on the session, and the build has no database. Private and never
@@ -34,7 +48,7 @@ export const metadata: Metadata = { title: 'Aperçu de mon profil', robots: { in
  * `noindex`; the public address of the profile never carries an editing control.
  */
 export default async function PreviewPage({ searchParams }: PageProps<'/auth/apercu-profil'>) {
-	await requireArtist(isEditRequest((await searchParams)[EDIT_QUERY]) ? editPath() : PREVIEW_PATH)
+	const artist = await requireArtist(isEditRequest((await searchParams)[EDIT_QUERY]) ? editPath() : PREVIEW_PATH)
 	const editing = isEditRequest((await searchParams)[EDIT_QUERY])
 	const context = await requestUser()
 	const id = context === null ? null : await profileId(context.payload, context.utilisateur)
@@ -54,6 +68,8 @@ export default async function PreviewPage({ searchParams }: PageProps<'/auth/ape
 	const profile = await artistProfile(context.payload, context.utilisateur)
 	if (profile === null) redirect(DASHBOARD_PATH)
 	const photos = await readDashboardPhotos(context.payload, profile)
+	// What she stores and what the site allows (issue 309): the volume used and the photos left.
+	const usage = usageView(await readPhotoUsage(context.payload, artist.id))
 	return (
 		<div className={`${display.variable} ${body.variable} flex flex-1 flex-col`}>
 			<OwnerEditSession>
@@ -72,6 +88,24 @@ export default async function PreviewPage({ searchParams }: PageProps<'/auth/ape
 								saveIdentity: saveMyIdentity,
 								savePlace: saveMyLocation,
 								saveStatus: saveMyAvailability,
+								searchCities: findMyCities,
+							},
+						}),
+						body: bodyEdit({
+							profile,
+							photos,
+							usage,
+							actions: {
+								saveAbout: saveMyDescription,
+								saveSkills: saveMySkills,
+								saveLanguages: saveMyLanguages,
+								saveCourses: saveMyCourses,
+								saveServices: saveMyServiceOffers,
+								savePortfolio: saveMyPortfolio,
+								saveContacts: saveMyContactDetails,
+								saveNetworks: saveMyNetworks,
+								saveMainPicture: saveMyMainPicture,
+								savePlace: saveMyLocation,
 								searchCities: findMyCities,
 							},
 						}),
