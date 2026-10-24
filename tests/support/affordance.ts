@@ -252,6 +252,8 @@ function lookOf(selector: string): string {
 	const nodes = [
 		root,
 		...(root.parentElement ? [root.parentElement] : []),
+		// The halo a button that covers its block hands the hover and the focus to (EditableBlock, issue 1070).
+		...(root.parentElement ? [...root.parentElement.querySelectorAll(':scope > [data-direct-edit-halo]')] : []),
 		...[...root.querySelectorAll('*')].slice(0, 40),
 	]
 	return nodes
@@ -285,7 +287,10 @@ function ringOf(selector: string): string {
 		style.outlineStyle === 'none' || Number.parseFloat(style.outlineWidth) === 0
 			? ''
 			: `outline ${style.outlineWidth} ${style.outlineColor}`
-	const shadow = style.boxShadow === 'none' ? '' : `shadow ${style.boxShadow}`
+	// A button that covers its block draws its keyboard ring on the halo layer next to it.
+	const halo = element.parentElement?.querySelector(':scope > [data-direct-edit-halo]')
+	const ringShadow = halo ? getComputedStyle(halo).boxShadow : style.boxShadow
+	const shadow = ringShadow === 'none' ? '' : `shadow ${ringShadow}`
 	return `${outline}|${shadow}`
 }
 
