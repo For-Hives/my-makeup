@@ -60,7 +60,7 @@ export function PageOnline({ adresse }: { adresse: string }) {
 		<section
 			aria-labelledby="page-en-ligne-titre"
 			data-testid="page-en-ligne"
-			className="w-full min-w-0 rounded border border-green-600 bg-green-50 p-5 sm:p-6"
+			className="w-full min-w-0 rounded-[22px] border border-[#2F6B4F] bg-[#EAF4EE] p-5 text-[#1A1417] sm:p-6"
 		>
 			<h2 id="page-en-ligne-titre" className="font-bold text-neutral-800 text-xl">
 				Ta page est en ligne !

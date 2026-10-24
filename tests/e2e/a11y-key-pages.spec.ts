@@ -2,7 +2,6 @@ import { expect, type Locator, test } from '@playwright/test'
 import { type PageProfile, setPageProfiles } from '../fixtures/page-profiles'
 import { createAccount, type TestAccount } from '../support/account-factory'
 import { violationsSevere } from '../support/axe'
-import { openFurtherCards } from '../support/further-cards'
 import { users } from '../support/lock'
 import { testPayload } from '../support/payload-test'
 import { createContent, deleteContent } from '../support/public-pages'
@@ -192,23 +191,21 @@ async function fullArtist(context: { addCookies: (c: Artist['session']['cookies'
 }
 
 test.describe('178 : les 3 pages de l’espace, panneaux ouverts', { tag: '@mobile' }, () => {
-	test('l’espace et quatre panneaux de nature différente : aucune violation grave', async ({ context, page }) => {
+	test('l’espace (le résumé) et ses deux fenêtres, le mot de passe et la suppression : aucune violation grave', async ({
+		context,
+		page,
+	}) => {
 		test.setTimeout(120_000)
 		await fullArtist(context)
 		await page.goto(SPACE_PAGES[0].path)
 		await expect(page.getByRole('heading', { level: 1, name: 'Mon espace' })).toBeVisible()
-		await expect(page.getByTestId('carte-identite')).toBeVisible()
+		await expect(page.getByTestId('avancement')).toBeVisible()
 		expect(await violationsSevere(page), SPACE_PAGES[0].name).toEqual([])
-		// The folded group « Pour aller plus loin » (ticket 307): its cards are read too once it is open.
-		await openFurtherCards(page)
-		expect(await violationsSevere(page), `${SPACE_PAGES[0].name}, groupe ouvert`).toEqual([])
+		// The list of what misses, opened: its links are read too.
+		await page.getByTestId('avancement-autres-details').locator('summary').click()
+		expect(await violationsSevere(page), `${SPACE_PAGES[0].name}, liste ouverte`).toEqual([])
 
-		for (const panel of [
-			'Modifier mon identité',
-			'Modifier ma localisation',
-			'Modifier mes prestations',
-			'Modifier mon portfolio',
-		]) {
+		for (const panel of ['Changer mon mot de passe', 'Supprimer mon compte']) {
 			const button = page.getByRole('button', { name: panel, exact: true })
 			await button.scrollIntoViewIfNeeded()
 			await press(button)
@@ -217,6 +214,28 @@ test.describe('178 : les 3 pages de l’espace, panneaux ouverts', { tag: '@mobi
 			expect(await violationsSevere(page), panel).toEqual([])
 			await page.keyboard.press('Escape')
 			await expect(page.getByRole('dialog'), panel).toHaveCount(0)
+		}
+	})
+
+	test('l’édition directe et quatre blocs de nature différente : aucune violation grave', async ({ context, page }) => {
+		test.setTimeout(120_000)
+		await fullArtist(context)
+		await page.goto('/auth/apercu-profil?mode=edition')
+		await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+		expect(await violationsSevere(page), 'l’édition').toEqual([])
+		for (const block of [
+			'Modifier mon nom et ma spécialité',
+			'Modifier ma zone',
+			'Modifier mes prestations',
+			'Modifier mon portfolio',
+		]) {
+			const button = page.getByRole('button', { name: block, exact: true })
+			await button.scrollIntoViewIfNeeded()
+			await press(button)
+			await expect(page.locator('[data-direct-edit-editor]'), block).toBeVisible()
+			expect(await violationsSevere(page), block).toEqual([])
+			await page.keyboard.press('Escape')
+			await expect(page.locator('[data-direct-edit-editor]'), block).toHaveCount(0)
 		}
 	})
 

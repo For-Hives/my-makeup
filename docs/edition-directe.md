@@ -34,6 +34,10 @@ L'accueil de la maquilleuse (`/auth/init-account`, cinq étapes) n'écrit pas se
 
 `src/lib/dashboard/edit-blocks.ts` donne, pour chaque critère de la règle unique (`completeness.ts`), le bloc de l'édition qui le complète (`CRITERION_BLOCK`), l'ancre d'un bloc (`blockAnchor`) et le lien (`editBlockHref`). `gaugePercent` (`progress.ts`) est le pourcentage des 13 critères, plafonné à 99 tant qu'un point indispensable manque. Le bandeau de l'édition, l'encadré « En brouillon » et le tableau de bord de l'espace lisent ce module : un essai lit la page d'édition et vérifie que chaque ancre existe, un autre échoue si un critère est recompté ailleurs. Les expériences sont un bloc (`RowsBlock`, `kind="experiences"`).
 
+## « Mon espace » est un résumé (issue 1073)
+
+`/auth/profil` ne modifie pas le profil : l'édition est ici, et seulement ici. La page (`src/components/dashboard/overview/`) dit où en est la page (`overviewStatus`), « Ton profil est rempli à N % » (`gaugePercent`) et ce qui manque, chaque point étant un lien `editBlockHref(CRITERION_BLOCK[critère])` vers son bloc. Un essai garde la page sans éditeur (aucun import d'éditeur, aucune action d'enregistrement du profil).
+
 ## Ajouter une zone de la page
 
 Une autre tranche (issues 1016 à 1021) ajoute un bloc : un composant client dans `blocks/` fondé sur `EditableBlock` et `BlockForm`, une fonction d'emplacement dans `edit-slots.ts`, et son câblage dans `header-edit.tsx` (ou un équivalent pour le corps de la page).

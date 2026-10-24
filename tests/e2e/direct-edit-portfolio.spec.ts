@@ -4,15 +4,15 @@ import { MESSAGES_PHOTO } from '@/lib/dashboard/photo'
 import { namedPhotos } from '@/lib/profile/photos'
 import { createAccount, type TestAccount } from '../support/account-factory'
 import { violationsSevere } from '../support/axe'
-import { openFurtherCards } from '../support/further-cards'
+import { EDIT_PATH } from '../support/direct-edit-e2e'
 import { testPayload } from '../support/payload-test'
 import { fileForPayload } from '../support/photos'
 import { readObject } from '../support/s3'
 
 /**
- * The portfolio in her space (tickets 135 and 136; plan 02 E34, E35, E36, U80): several photos
- * chosen at once, sent at « Enregistrer » only, ten at most, in the order they were added, on her
- * space and on her public profile; a file that is refused is set aside without losing the others.
+ * The portfolio on her page (tickets 135 and 136 moved to the block « Portfolio », issues 1018 and 1022; plan 02
+ * E34, E35, E36, U80): several photos chosen at once, sent at « Enregistrer » only, ten at most, in the order they
+ * were added, on her page and on her public profile; a file that is refused is set aside without losing the others.
  * Made-up people and photos.
  *
  * The brake of the sign-in counts by client address: each test sends its own made-up address.
@@ -108,7 +108,13 @@ const filePng = async (largeur: number) => ({
 })
 
 const modify = (page: Page) => page.getByRole('button', { name: 'Modifier mon portfolio' })
-const dialogue = (page: Page) => page.getByRole('dialog', { name: 'Modifier mon portfolio' })
+const dialogue = (page: Page) => page.locator('[data-direct-edit-editor]')
+const files = (page: Page) => dialogue(page).locator('#direct-gallery-files')
+const announcement = (page: Page) => dialogue(page).getByTestId('gallery-announcement')
+const closeUnsaved = async (page: Page) => {
+	await page.getByRole('button', { name: 'Annuler' }).click()
+	await page.getByRole('button', { name: 'Abandonner mes modifications' }).click()
+}
 
 async function open(page: Page) {
 	if (test.info().project.name === 'mobile') await modify(page).tap()
@@ -125,10 +131,7 @@ function uploads(page: Page): string[] {
 	return list
 }
 
-const lines = (page: Page) =>
-	dialogue(page)
-		.locator('li')
-		.filter({ has: page.locator('img') })
+const lines = (page: Page) => dialogue(page).locator('li[data-photo]')
 
 test.describe('135 : le portfolio, ajouter des photos', { tag: '@mobile' }, () => {
 	test('E34 : trois photos choisies d’un coup, enregistrées dans l’ordre, visibles dans l’espace et en public', async ({
@@ -137,15 +140,11 @@ test.describe('135 : le portfolio, ajouter des photos', { tag: '@mobile' }, () =
 	}) => {
 		test.setTimeout(120_000)
 		const { compte: account, slug } = await artist(context)
-		await page.goto('/auth/profil')
-		await openFurtherCards(page)
-		await expect(page.getByTestId('carte-portfolio')).toContainText('à compléter')
-		// Ticket 309: the volume used and the photos left, on the card and in the panel.
-		await expect(page.getByTestId('photo-usage')).toHaveText(
-			'Tes photos prennent 0 Mo sur 60 Mo. Il te reste 45 photos.'
-		)
+		await page.goto(EDIT_PATH)
+		await expect(page.locator('[data-direct-edit="gallery"] [data-direct-edit-empty]')).toBeVisible()
 		await open(page)
-		await expect(dialogue(page)).toContainText('Il te reste 45 photos.')
+		// Ticket 309: the volume used and the photos left, in the editor.
+		await expect(dialogue(page)).toContainText('Tes photos prennent 0 Mo sur 60 Mo. Il te reste 45 photos.')
 		const sent = uploads(page)
 
 		await page
@@ -158,9 +157,9 @@ test.describe('135 : le portfolio, ajouter des photos', { tag: '@mobile' }, () =
 		await page.getByRole('button', { name: 'Enregistrer' }).click()
 
 		await expect(dialogue(page)).toHaveCount(0, { timeout: 60_000 })
-		await expect(page.getByRole('status').filter({ hasText: 'Ton portfolio est enregistré.' })).toBeVisible()
+		await expect(page.getByTestId('edit-status')).toHaveText('Enregistré à l’instant')
 		await expect(modify(page)).toBeFocused()
-		await expect(page.getByTestId('carte-portfolio')).toContainText('3 photos')
+		await expect(page.locator('[data-direct-edit="gallery"] [data-direct-edit-empty]')).toHaveCount(0)
 		expect(sent).toHaveLength(3)
 
 		// Stored in the order they were added, with their default alternative text.
@@ -174,7 +173,6 @@ test.describe('135 : le portfolio, ajouter des photos', { tag: '@mobile' }, () =
 		expect(await orphansOf(account)).toEqual([])
 
 		await page.reload()
-		await openFurtherCards(page)
 		await open(page)
 		await expect(lines(page)).toHaveCount(3)
 		await expect(dialogue(page).getByText('À enregistrer')).toHaveCount(0)
@@ -185,14 +183,6 @@ test.describe('135 : le portfolio, ajouter des photos', { tag: '@mobile' }, () =
 			const image = page.getByRole('img', { name: `Réalisation de Léa Fictive (${rank}/3)` })
 			await expect(image).toBeAttached()
 		}
-
-		const folder = process.env.DASHBOARD_SCREENSHOTS
-		if (folder) {
-			await page.goto('/auth/profil')
-			await openFurtherCards(page)
-			await open(page)
-			await page.screenshot({ path: `${folder}/portfolio-${test.info().project.name}.png` })
-		}
 	})
 
 	test('U80 : la 11e photo est refusée, les autres sont gardées ; E36 : un PDF est écarté sans perdre les autres', async ({
@@ -201,8 +191,7 @@ test.describe('135 : le portfolio, ajouter des photos', { tag: '@mobile' }, () =
 	}) => {
 		test.setTimeout(120_000)
 		const { compte: account } = await artist(context, 8)
-		await page.goto('/auth/profil')
-		await openFurtherCards(page)
+		await page.goto(EDIT_PATH)
 		await open(page)
 		const sent = uploads(page)
 
@@ -235,14 +224,12 @@ test.describe('135 : le portfolio, ajouter des photos', { tag: '@mobile' }, () =
 		const { compte: account } = await artist(context, 1)
 		const before = (await mediaOf(account)).length
 		const sent = uploads(page)
-		await page.goto('/auth/profil')
-		await openFurtherCards(page)
+		await page.goto(EDIT_PATH)
 		await open(page)
 
-		await page.getByLabel('Ajouter des photos').setInputFiles([await filePng(821), await filePng(822)])
+		await files(page).setInputFiles([await filePng(821), await filePng(822)])
 		await expect(lines(page)).toHaveCount(3, { timeout: 30_000 })
-		await page.getByRole('button', { name: 'Fermer' }).click()
-		await page.getByRole('button', { name: 'Abandonner mes modifications' }).click()
+		await closeUnsaved(page)
 
 		await expect(dialogue(page)).toHaveCount(0)
 		expect(sent).toHaveLength(0)
@@ -255,8 +242,7 @@ test.describe('135 : le portfolio, ajouter des photos', { tag: '@mobile' }, () =
 
 	test('coupure pendant l’envoi : le portfolio reste comme il était, aucun orphelin', async ({ context, page }) => {
 		const { compte: account } = await artist(context, 1)
-		await page.goto('/auth/profil')
-		await openFurtherCards(page)
+		await page.goto(EDIT_PATH)
 		await open(page)
 		// The second file never gets there.
 		let n = 0
@@ -265,7 +251,7 @@ test.describe('135 : le portfolio, ajouter des photos', { tag: '@mobile' }, () =
 			return ++n === 2 ? route.abort() : route.continue()
 		})
 
-		await page.getByLabel('Ajouter des photos').setInputFiles([await filePng(831), await filePng(832)])
+		await files(page).setInputFiles([await filePng(831), await filePng(832)])
 		await expect(lines(page)).toHaveCount(3, { timeout: 30_000 })
 		await page.getByRole('button', { name: 'Enregistrer' }).click()
 
@@ -289,16 +275,12 @@ test.describe('136 : le portfolio, retirer une photo', { tag: '@mobile' }, () =>
 		const removed = await payload.findByID({ collection: 'media', id: Number(before[1]), depth: 0 })
 		const bytes = (await readObject(`media/${removed.filename}`))?.octets
 		expect(bytes).toBeDefined()
-		await page.goto('/auth/profil')
-		await openFurtherCards(page)
-		await expect(page.getByTestId('carte-portfolio')).toContainText('3 photos')
+		await page.goto(EDIT_PATH)
 		await open(page)
 
 		await page.getByRole('button', { name: 'Retirer la photo 2' }).click()
 		await expect(lines(page)).toHaveCount(2)
-		await expect(dialogue(page).getByTestId('annonce-retrait')).toContainText(
-			'Photo 2 sur 3 de ton portfolio est retirée'
-		)
+		await expect(announcement(page)).toContainText('Photo 2 sur 3 de ton portfolio est retirée')
 		// The focus stays in the panel, on the photo that takes the place of the one removed.
 		await expect(dialogue(page).getByRole('button', { name: 'Retirer la photo 2' })).toBeFocused()
 		expect(namedPhotos((await storedProfile(account)).gallery)).toHaveLength(3)
@@ -306,7 +288,6 @@ test.describe('136 : le portfolio, retirer une photo', { tag: '@mobile' }, () =>
 		await page.getByRole('button', { name: 'Enregistrer' }).click()
 
 		await expect(dialogue(page)).toHaveCount(0, { timeout: 60_000 })
-		await expect(page.getByTestId('carte-portfolio')).toContainText('2 photos')
 		expect(namedPhotos((await storedProfile(account)).gallery)).toEqual([before[0], before[2]])
 		expect(await readObject(`media/${removed.filename}`)).toBeUndefined()
 		expect((await readObject(`deleted/media/${removed.filename}`))?.octets).toEqual(bytes)
@@ -322,14 +303,12 @@ test.describe('136 : le portfolio, retirer une photo', { tag: '@mobile' }, () =>
 	test('retirer puis fermer sans valider : la photo est toujours là, rien n’a changé', async ({ context, page }) => {
 		const { compte: account } = await artist(context, 2)
 		const before = namedPhotos((await storedProfile(account)).gallery)
-		await page.goto('/auth/profil')
-		await openFurtherCards(page)
+		await page.goto(EDIT_PATH)
 		await open(page)
 
 		await page.getByRole('button', { name: 'Retirer la photo 1' }).click()
 		await expect(lines(page)).toHaveCount(1)
-		await page.getByRole('button', { name: 'Fermer' }).click()
-		await page.getByRole('button', { name: 'Abandonner mes modifications' }).click()
+		await closeUnsaved(page)
 		await expect(dialogue(page)).toHaveCount(0)
 
 		expect(namedPhotos((await storedProfile(account)).gallery)).toEqual(before)
@@ -338,13 +317,12 @@ test.describe('136 : le portfolio, retirer une photo', { tag: '@mobile' }, () =>
 		expect(await orphansOf(account)).toEqual([])
 	})
 
-	test('L7 : Entrée maintenue sur « Retirer » ne retire qu’une photo, le focus reste dans le panneau', async ({
+	test('L7 : Entrée maintenue sur « Retirer » ne retire qu’une photo, le focus reste dans l’éditeur', async ({
 		context,
 		page,
 	}) => {
 		await artist(context, 4)
-		await page.goto('/auth/profil')
-		await openFurtherCards(page)
+		await page.goto(EDIT_PATH)
 		await open(page)
 
 		await dialogue(page).getByRole('button', { name: 'Retirer la photo 2' }).focus()
@@ -354,7 +332,9 @@ test.describe('136 : le portfolio, retirer une photo', { tag: '@mobile' }, () =>
 
 		await expect(lines(page)).toHaveCount(3)
 		await expect(dialogue(page)).toBeVisible()
-		const focus = await page.evaluate(() => document.querySelector('[role="dialog"]')?.contains(document.activeElement))
+		const focus = await page.evaluate(() =>
+			document.querySelector('[data-direct-edit-editor]')?.contains(document.activeElement)
+		)
 		expect(focus).toBe(true)
 	})
 })

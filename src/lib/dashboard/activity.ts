@@ -24,3 +24,26 @@ export function activityView(siret: string | null | undefined, row: CheckRow | n
 	if (typeof siret !== 'string' || !/^\d{14}$/.test(siret)) return { siret: null, state: 'none', checkedOn: null }
 	return { siret: formatSiret(siret), state: row?.outcome ?? 'pending', checkedOn: longDate(row?.checkedAt) }
 }
+
+const BADGE_LABEL = 'Activité vérifiée'
+
+/**
+ * Where the check of her SIRET stands, told to her in a sentence (the summary of her space, issue 1073; the block of the edit
+ * mode says the same words: tests/unit/direct-edit-siret.test.tsx keeps the two together).
+ */
+export function activitySentence(view: ActivityView): string {
+	switch (view.state) {
+		case 'pending':
+			return 'Ton SIRET est enregistré. Le contrôle a lieu dans la journée qui suit : le badge apparaît dès que l’annuaire public confirme ton activité.'
+		case 'active':
+			return view.checkedOn
+				? `Le badge « ${BADGE_LABEL} » s’affiche sur ta page. Dernier contrôle : le ${view.checkedOn}.`
+				: `Le badge « ${BADGE_LABEL} » s’affiche sur ta page.`
+		case 'ceased':
+			return 'L’annuaire public indique que cette activité est cessée : le badge ne s’affiche pas. Si ce n’est pas le bon numéro, remplace-le.'
+		case 'not-found':
+			return 'Ce SIRET est introuvable dans l’annuaire public : le badge ne s’affiche pas. Vérifie ton numéro et corrige-le au besoin ; un nouveau numéro relance le contrôle.'
+		default:
+			return 'Facultatif : avec ton SIRET, un contrôle quotidien peut afficher le badge « Activité vérifiée » sur ta page.'
+	}
+}

@@ -109,7 +109,7 @@ for (const size of SIZES) {
 			await shot(page, 'recherche-vide')
 		})
 
-		test('son espace : le message et le lien vers la carte Coordonnées', async ({ context, page }) => {
+		test('son espace : le message et le lien vers le bloc des coordonnées', async ({ context, page }) => {
 			const profile = spaceProfiles.get('sans-contact-public')
 			if (!profile) throw new Error('profil d’essai manquant')
 			const payload = await testPayload()
@@ -124,8 +124,7 @@ for (const size of SIZES) {
 			const message = page.getByTestId('avancement-sans-contact')
 			await expect(message).toContainText('Sans moyen de contact, ton profil passe après les autres dans la recherche.')
 			const link = message.getByRole('link', { name: 'Ajouter mes coordonnées' })
-			await expect(link).toHaveAttribute('href', '#carte-coordonnees')
-			await expect(page.locator('#carte-coordonnees')).toHaveCount(1)
+			await expect(link).toHaveAttribute('href', '/auth/apercu-profil?mode=edition#bloc-contacts')
 			await checkScreen(page, 'espace')
 			await shot(page, 'espace')
 		})

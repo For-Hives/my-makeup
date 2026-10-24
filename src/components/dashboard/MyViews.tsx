@@ -17,7 +17,7 @@ export function MyViews({ jours }: { jours: readonly ViewRow[] | null }) {
 			<section
 				aria-labelledby="mes-vues-titre"
 				data-testid="mes-vues"
-				className="rounded border border-neutral-300 bg-white p-4 sm:p-5"
+				className="rounded-[22px] border border-[#E6DCD5] bg-white p-5 text-[#1A1417] sm:p-6"
 			>
 				<h2 id="mes-vues-titre" className="font-semibold text-lg">
 					Les vues de ta page
@@ -30,7 +30,7 @@ export function MyViews({ jours }: { jours: readonly ViewRow[] | null }) {
 		<section
 			aria-labelledby="mes-vues-titre"
 			data-testid="mes-vues"
-			className="w-full min-w-0 rounded border border-neutral-300 bg-white p-4 sm:p-5"
+			className="w-full min-w-0 rounded-[22px] border border-[#E6DCD5] bg-white p-5 text-[#1A1417] sm:p-6"
 		>
 			<h2 id="mes-vues-titre" className="font-semibold text-lg">
 				Les vues de ta page
@@ -42,7 +42,7 @@ export function MyViews({ jours }: { jours: readonly ViewRow[] | null }) {
 				{jours.map(({ day, count }) => (
 					<div
 						key={day}
-						className="min-w-0 flex-1 rounded-t bg-indigo-700"
+						className="min-w-0 flex-1 rounded-t bg-[#1A1417]"
 						style={{ height: count === 0 ? '2px' : `${Math.max(6, Math.round((count / max) * 100))}%` }}
 					/>
 				))}
