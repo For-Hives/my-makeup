@@ -1,4 +1,5 @@
 import Image from 'next/image'
+import { SectionHead } from './SectionHead'
 
 const COLUMNS = [
 	{
@@ -23,21 +24,16 @@ const COLUMNS = [
 
 export function Presentation() {
 	return (
-		<section className="relative px-4 py-20 md:px-0">
+		<section className="home-section relative border-indigo-900/10 border-t px-4 py-16 md:px-8 md:py-28">
 			<div className="mx-auto max-w-7xl">
-				<div className="mx-auto">
-					<h2 className="text-center font-bold text-4xl text-gray-900 tracking-tight sm:text-4xl">
-						My-Makeup c&apos;est avant tout une communauté
-					</h2>
-					<p className="mt-6 text-center text-gray-700 text-lg leading-8">
-						Où les maquilleuses et les particuliers se retrouvent pour collaborer en toute simplicité.
-					</p>
-				</div>
+				<SectionHead align="center" titre={<>My-Makeup c&apos;est avant tout une communauté</>}>
+					Où les maquilleuses et les particuliers se retrouvent pour collaborer en toute simplicité.
+				</SectionHead>
 			</div>
-			<div className="mx-auto mt-10 max-w-7xl">
+			<div className="mx-auto mt-12 max-w-7xl md:mt-20">
 				<div className="mx-auto flex flex-col items-center justify-center gap-16 md:flex-row lg:gap-32">
 					{COLUMNS.map(colonne => (
-						<div key={colonne.titre} className="flex flex-col items-center justify-center gap-2">
+						<div key={colonne.titre} className="reveal flex flex-col items-center justify-center gap-2">
 							<Image alt={colonne.alt} src={colonne.image} width={140} height={140} />
 							<h3 className="text-center font-bold text-4xl text-gray-700 tracking-tight sm:text-xl">
 								{colonne.titre}
