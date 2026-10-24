@@ -1,7 +1,6 @@
 /**
  * The home page (issue 1013): a short guided form with visible labels that leads to the search with the
- * parameters of before, three recently updated makeup artists, and the marketing texts folded into a section
- * that stays in the HTML. Made-up profiles, no database.
+ * parameters of before. The selection and the texts of the page are in tests/unit/home-featured.test.tsx (issue 1066). Made-up profiles, no database.
  */
 
 import { describe, expect, test } from 'bun:test'
@@ -9,13 +8,11 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { GuidedSearch } from '@/components/home/GuidedSearch'
-import { RecentProfiles } from '@/components/home/RecentProfiles'
 import { PUBLIC_PAGES } from '@/lib/revalidate'
 import { EVENT_CHOICES } from '@/lib/search/event-choices'
 import { readSearch, searchByWord } from '@/lib/search/input'
 import { normalizeTexts } from '@/lib/search/relevance'
 import { find } from '@/lib/search/results'
-import { RECENT_PROFILES_COUNT, recentCards } from '@/services/public/profile-block'
 import type { DirectoryProfile } from '@/services/public/profiles'
 
 const read = (file: string): string => readFileSync(join(import.meta.dir, '../..', file), 'utf8')
@@ -25,6 +22,7 @@ function entry(slug: string, over: Partial<DirectoryProfile> = {}): DirectoryPro
 		carte: { slug, pid: 1 as never, nom: slug, specialite: null, lieu: 'Annecy', superMaquilleuse: false, photo: null },
 		unreachable: false,
 		indexable: true,
+		featured: false,
 		ville: 'Annecy',
 		departement: '74',
 		seDeplace: false,
@@ -96,39 +94,6 @@ describe('1013 : le formulaire guidé', () => {
 	})
 })
 
-describe('1013 : « Récemment mises à jour »', () => {
-	test('trois cartes au plus, les plus récentes d’abord ; ni profil non publiable, ni profil sans contact', () => {
-		const directory = [
-			entry('ancienne', { updatedAt: 1000 }),
-			entry('recente', { updatedAt: 5000 }),
-			entry('sans-contact', { updatedAt: 9000, unreachable: true }),
-			entry('non-publiable', { updatedAt: 9500, indexable: false }),
-			entry('moyenne', { updatedAt: 3000 }),
-			entry('autre', { updatedAt: 2000 }),
-		]
-		expect(RECENT_PROFILES_COUNT).toBe(3)
-		expect(recentCards(directory, RECENT_PROFILES_COUNT).map(card => card.slug)).toEqual([
-			'recente',
-			'moyenne',
-			'autre',
-		])
-	})
-
-	test('à date égale, l’ordre de l’annuaire décide ; un annuaire vide ne donne rien', () => {
-		const directory = [entry('un'), entry('deux'), entry('trois'), entry('quatre')]
-		expect(recentCards(directory, 3).map(card => card.slug)).toEqual(['un', 'deux', 'trois'])
-		expect(recentCards([], 3)).toEqual([])
-	})
-
-	test('le bloc porte son titre, trois cartes sans suivi de rang, et rien sans carte', () => {
-		const cards = [entry('un'), entry('deux'), entry('trois')].map(profile => profile.carte)
-		const html = renderToStaticMarkup(<RecentProfiles cartes={cards} />)
-		expect(html).toContain('Récemment mises à jour')
-		expect(html.match(/href="\/profil\//g)).toHaveLength(3)
-		expect(renderToStaticMarkup(<RecentProfiles cartes={[]} />)).toBe('')
-	})
-})
-
 describe('1013 : la page d’accueil', () => {
 	const page = read('src/app/(front)/(site)/home-cached/[key]/page.tsx')
 
@@ -136,20 +101,6 @@ describe('1013 : la page d’accueil', () => {
 		expect(page).toContain('Trouver la maquilleuse qui vous correspond n&apos;a jamais été aussi simple')
 		expect(page).toContain("const TITLE = 'Maquilleuse professionnelle près de chez vous'")
 		expect(page).toContain('homeStructuredData')
-		for (const component of ['Presentation', 'Project', 'Collaboration']) expect(page).toContain(`<${component} />`)
-	})
-
-	test('les textes repliés sont dans un <details> : ils restent dans le HTML', () => {
-		expect(page).toMatch(/<details[\s\S]*Comment ça marche[\s\S]*<Presentation \/>[\s\S]*<\/details>/)
-	})
-
-	test('les profils récents se lisent dans le cache de Next, sous l’étiquette des profils, sans casser la page', () => {
-		const cached = read('src/services/public/cached.ts')
-		const declaration = cached.slice(cached.indexOf('export const cachedRecentProfiles'))
-		expect(declaration.slice(0, declaration.indexOf('\n)\n'))).toContain('tags: [TAGS.profils]')
-		expect(page).toContain('cachedRecentProfiles')
-		expect(page).toMatch(/catch[\s\S]*return \[\]/)
-		expect(page).not.toMatch(/cookies\(|headers\(/)
 	})
 
 	test('l’enregistrement d’un profil rafraîchit l’accueil', () => {

@@ -33,7 +33,8 @@ const PAGES = [
 // the paragraph on the count of the searches by day (issue 1002, register `compteur-recherches-par-jour`),
 // the paragraph on the counter of views (ticket 1001, register `espace-vues-de-la-page`),
 // the paragraph on the moderation journal, kept 60 months (issue 1005, register `moderation-motif-et-journal`),
-// and the section on the SIRET and the activity check, with one sentence of the terms (issue 1004, register `badge-activite-verifiee`).
+// the section on the SIRET and the activity check, with one sentence of the terms (issue 1004, register `badge-activite-verifiee`),
+// and one sentence on the same journal for « Mise en avant » (issue 1066, register `accueil-refonte`).
 const ONLINE: Record<string, { lignes: number; sha: string }> = JSON.parse(
 	readFileSync(path.join(process.cwd(), 'tests/fixtures/legal-pages-text.json'), 'utf8')
 )

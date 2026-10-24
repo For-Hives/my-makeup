@@ -10,6 +10,7 @@ import * as migration_20261023_110237_moderation from './20261023_110237_moderat
 import * as migration_20261023_110850_reminders from './20261023_110850_reminders'
 import * as migration_20261023_113139_quote_requests from './20261023_113139_quote_requests'
 import * as migration_20261023_155258_activity_checks from './20261023_155258_activity_checks'
+import * as migration_20261024_022750_featured from './20261024_022750_featured'
 
 export const migrations = [
 	{
@@ -71,5 +72,10 @@ export const migrations = [
 		up: migration_20261023_155258_activity_checks.up,
 		down: migration_20261023_155258_activity_checks.down,
 		name: '20261023_155258_activity_checks',
+	},
+	{
+		up: migration_20261024_022750_featured.up,
+		down: migration_20261024_022750_featured.down,
+		name: '20261024_022750_featured',
 	},
 ]

@@ -349,6 +349,8 @@ describe('La collection profils (ticket 020)', () => {
 			expect(fieldValue(Profiles.fields, name)?.access?.read).toBe(fieldAdminOnly)
 		// The badge of the search is public.
 		expect(fieldValue(Profiles.fields, 'superArtist')?.access?.read).toBeUndefined()
+		// « Mise en avant » is public too: the home page reads it through the directory (issue 1066).
+		expect(fieldValue(Profiles.fields, 'featured')?.access?.read).toBeUndefined()
 	})
 
 	test('choix du statut, motif, vérifiée, note interne, score, badge et compte : seul admin les écrit (U55)', () => {
@@ -360,6 +362,7 @@ describe('La collection profils (ticket 020)', () => {
 			'internalNote',
 			'score',
 			'superArtist',
+			'featured',
 			'pro',
 		]) {
 			const access = fieldValue(Profiles.fields, name)?.access as Record<string, (args: unknown) => boolean>

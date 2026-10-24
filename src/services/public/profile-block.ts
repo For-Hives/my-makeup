@@ -41,19 +41,15 @@ export function talentBlockTitle(talentTitle: string): string {
 	return `Des maquilleuses pour votre ${first.toLowerCase()}${talentTitle.trim().slice(first.length)}`
 }
 
-/** How many cards « Récemment mises à jour » shows on the home page (issue 1013). */
-export const RECENT_PROFILES_COUNT = 3
-
 /**
- * The cards of « Récemment mises à jour »: the profiles whose last save is the most recent, the order of the
- * directory (most complete first) breaking a tie. Only those the block of a page of text also shows: publishable,
- * and with a way to be reached. At most `limit`.
+ * The cards of « Mise en avant » (issue 1066): the profiles an admin ticked, in the order of the directory (most
+ * complete first). Only those the block of a page of text also shows: publishable, and with a way to be reached; a
+ * hidden, suspended or empty profile is not in the directory at all, so a ticked box never brings it back. At most
+ * `limit` (FEATURED_MAX).
  */
-export function recentCards(directory: readonly DirectoryProfile[], limit: number): ProfileCard[] {
+export function featuredCards(directory: readonly DirectoryProfile[], limit: number): ProfileCard[] {
 	return directory
-		.filter(profile => profile.indexable && !profile.unreachable)
-		.map((profile, rank) => ({ profile, rank }))
-		.toSorted((a, b) => (b.profile.updatedAt ?? 0) - (a.profile.updatedAt ?? 0) || a.rank - b.rank)
+		.filter(profile => profile.featured === true && profile.indexable && !profile.unreachable)
 		.slice(0, limit)
-		.map(({ profile }) => profile.carte)
+		.map(profile => profile.carte)
 }

@@ -15,13 +15,14 @@
 import config from '@payload-config'
 import { unstable_cache } from 'next/cache'
 import { getPayload, type Payload } from 'payload'
+import { FEATURED_MAX } from '@/lib/profile/featured'
 import { valuesToSearch } from '@/lib/profile/url'
 import { TAGS } from '@/lib/revalidate'
 import { isSlug } from '@/lib/slug'
 import { listArticles } from './article-list'
 import { type ArticlePublic, readPublicArticle } from './articles'
 import { readIndexablePages } from './indexable-pages'
-import { profileBlockCards, RECENT_PROFILES_COUNT, recentCards } from './profile-block'
+import { featuredCards, profileBlockCards } from './profile-block'
 import { type ProfileUrlTarget, readDirectory, readProfileUrlTarget } from './profiles'
 import { listTalents, readTalent, type TalentPageData } from './talents'
 
@@ -66,12 +67,13 @@ export const cachedProfileBlock = unstable_cache(
 )
 
 /**
- * The cards of « Récemment mises à jour » on the home page (issue 1013). Kept under the tag of the profiles: a save
- * of a profile refreshes the home page. Read from the cached directory, so it asks the database nothing more.
+ * The cards of « Mise en avant » on the home page (issue 1066): the profiles an admin ticked, six at most. Kept under
+ * the tag of the profiles: a save of a profile (the box included) refreshes the home page. Read from the cached
+ * directory, so it asks the database nothing more.
  */
-export const cachedRecentProfiles = unstable_cache(
-	async () => recentCards(await cachedDirectory(), RECENT_PROFILES_COUNT),
-	['public:recent-profiles'],
+export const cachedFeaturedProfiles = unstable_cache(
+	async () => featuredCards(await cachedDirectory(), FEATURED_MAX),
+	['public:featured-profiles'],
 	{ tags: [TAGS.profils], revalidate: ONE_HOUR }
 )
 

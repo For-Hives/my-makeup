@@ -20,10 +20,13 @@ export type ModerationAction = (typeof MODERATION_ACTIONS)[number]
 export const HOLD_ACTIONS = ['hide', 'suspend'] as const
 export type HoldAction = (typeof HOLD_ACTIONS)[number]
 
-export const ACTION_LABELS: Record<ModerationAction, string> = {
+export const ACTION_LABELS: Record<ModerationAction | 'feature' | 'unfeature', string> = {
 	hide: 'Masqué',
 	suspend: 'Suspendu',
 	restore: 'Rétabli',
+	// Issue 1066: the lines of « Mise en avant », in the same journal (src/lib/profile/featured.ts).
+	feature: 'Mis en avant',
+	unfeature: 'Retiré de la mise en avant',
 }
 
 export const REASON_MIN = 10

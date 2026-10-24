@@ -443,6 +443,10 @@ export interface Profile {
    */
   superArtist?: boolean | null;
   /**
+   * Montre le profil dans « Mise en avant », sur l’accueil (six profils au plus, dans l’ordre de l’annuaire). Un profil non publiable ou masqué n’y figure jamais, même coché. Chaque changement est écrit au journal de modération.
+   */
+  featured?: boolean | null;
+  /**
    * Critères remplis, sur 13. Calculée par le serveur.
    */
   completeness?: number | null;
@@ -656,8 +660,8 @@ export interface ModerationEvent {
   id: number;
   profile: number;
   admin?: number | null;
-  action: 'hide' | 'suspend' | 'restore';
-  reason: string;
+  action: 'hide' | 'suspend' | 'restore' | 'feature' | 'unfeature';
+  reason?: string | null;
   date: string;
 }
 /**
@@ -1208,6 +1212,7 @@ export interface ProfilesSelect<T extends boolean = true> {
   internalNote?: T;
   score?: T;
   superArtist?: T;
+  featured?: T;
   completeness?: T;
   active?: T;
   activeSince?: T;
