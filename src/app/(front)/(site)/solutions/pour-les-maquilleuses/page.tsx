@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Cta } from '@/components/blocks/Cta'
 import { Hero } from '@/components/blocks/Hero'
 import { ARTIST_SOLUTIONS } from '@/components/static-pages/artist-texts'
+import { ContentPage } from '@/components/static-pages/EditorialArticle'
 import { PageArticle } from '@/components/static-pages/PageArticle'
 import { pageMetadata } from '@/lib/seo/metadata'
 
@@ -15,7 +16,7 @@ export const metadata: Metadata = pageMetadata({
 
 export default function ArtistSolutionsPage() {
 	return (
-		<main className="relative">
+		<ContentPage>
 			<Hero
 				image="/assets/back/maquilleuse_asiatique_white.webp"
 				titre={
@@ -29,8 +30,8 @@ export default function ArtistSolutionsPage() {
 				recherche={false}
 				inscription
 			/>
-			<PageArticle contenu={ARTIST_SOLUTIONS} />
+			<PageArticle eyebrow="Solutions" contenu={ARTIST_SOLUTIONS} />
 			<Cta />
-		</main>
+		</ContentPage>
 	)
 }

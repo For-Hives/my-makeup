@@ -890,3 +890,29 @@ main:has(> .home-section) {
 	font-size: 0.9em;
 	line-height: 1.5;
 }
+
+/*
+ * Content pages (issue 1102): the public pages of text (guides, fixed pages for makeup artists, À propos, contact,
+ * thank-you, zone and talent pages, legal pages). `ContentPage` (src/components/static-pages/EditorialArticle.tsx)
+ * sets the scope and the two faces; the shared `Hero` is not edited, its title only takes the display face here.
+ * No motion is declared in this block: the apparitions are the `.reveal` and `.enter-*` classes of the motion system.
+ */
+.content-page h1 {
+	font-family: var(--font-bodoni-moda), ui-serif, Georgia, serif;
+	font-weight: 600;
+	letter-spacing: -0.015em;
+	text-wrap: balance;
+}
+.content-page .content-prose :is(h2, h3, h4) {
+	font-family: var(--font-bodoni-moda), ui-serif, Georgia, serif;
+	font-weight: 600;
+	letter-spacing: -0.01em;
+}
+.content-page .content-prose > p:first-child {
+	font-size: 1.25rem;
+	line-height: 2.25rem;
+	color: var(--color-gray-900);
+}
+.content-page .content-prose :is(p, li) {
+	max-width: 66ch;
+}

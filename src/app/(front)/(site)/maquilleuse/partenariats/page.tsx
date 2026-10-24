@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Cta } from '@/components/blocks/Cta'
 import { Hero } from '@/components/blocks/Hero'
 import { PARTNERSHIPS } from '@/components/static-pages/artist-texts'
+import { ContentPage } from '@/components/static-pages/EditorialArticle'
 import { PageArticle } from '@/components/static-pages/PageArticle'
 import { pageMetadata } from '@/lib/seo/metadata'
 
@@ -16,7 +17,7 @@ export const metadata: Metadata = pageMetadata({
 
 export default function PartnershipsPage() {
 	return (
-		<main className="relative">
+		<ContentPage>
 			<Hero
 				image="/assets/back/maquilleuse_italienne_white.webp"
 				titre={
@@ -29,8 +30,8 @@ export default function PartnershipsPage() {
 				recherche={false}
 				inscription
 			/>
-			<PageArticle contenu={PARTNERSHIPS} />
+			<PageArticle eyebrow="Maquilleuse" contenu={PARTNERSHIPS} />
 			<Cta />
-		</main>
+		</ContentPage>
 	)
 }
