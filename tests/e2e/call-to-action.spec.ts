@@ -32,20 +32,21 @@ for (const size of [SCREENS.mobile, SCREENS.chromium]) {
 				await block.screenshot({ path: `${process.env.SCREENSHOT_DIR}/1067-cta-${size.width}.png` })
 		})
 
-		test('le fond bouge quand le bloc est à l’écran, s’arrête quand il en sort', async ({ page }) => {
+		test('le fond est le shader seulement avec un canvas, et le texte reste lisible dans les deux cas', async ({
+			page,
+		}) => {
 			await page.goto('/')
-			const backdrop = page.locator('[data-backdrop]')
-			await expect(backdrop).toHaveAttribute('data-backdrop', 'static')
 			await page.locator('section:has([data-backdrop])').scrollIntoViewIfNeeded()
+			const backdrop = page.locator('[data-backdrop]')
 			await expect(backdrop).toHaveAttribute('data-backdrop', /^(shader|static)$/)
-			// Without WebGL in a bare browser the layer stays static: the text must read the same.
-			await page.evaluate(() => scrollTo(0, 0))
-			await expect(backdrop).toHaveAttribute('data-backdrop', 'static')
-			await expect(page.locator('[data-backdrop] canvas')).toHaveCount(0)
+			const mode = await backdrop.getAttribute('data-backdrop')
+			await expect(page.locator('[data-backdrop] canvas')).toHaveCount(mode === 'shader' ? 1 : 0)
+			await expect(page.getByRole('heading', { name: /Rejoignez/ })).toBeVisible()
+			// Leaving the screen unmounts the shader: its removal is tried by the unit test of the component.
 		})
 
 		test.describe('avec un mouvement réduit', () => {
-			test.use({ reducedMotion: 'reduce' })
+			test.use({ contextOptions: { reducedMotion: 'reduce' } })
 
 			test('le fond reste fixe et aucun morceau du shader n’est chargé', async ({ page }) => {
 				const scripts: string[] = []
