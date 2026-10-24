@@ -10,7 +10,7 @@ Issue 1008 (cadre : 1007). L'espace de la maquilleuse devient le profil public l
 - **La session d'édition** (`EditSession`) : le bloc ouvert, les modifications non enregistrées (question « Continuer à modifier / Abandonner mes modifications » à la fermeture, à l'ouverture d'un autre bloc, à Échap), l'état du dernier enregistrement dit dans la barre (`role="status"`). L'enregistrement suit la réponse du serveur : la page est relue (`router.refresh()`) seulement après « ok ».
 - **Le formulaire de bloc** (`BlockForm`) : Annuler / Enregistrer, un seul envoi à la fois, échec en français avec la saisie gardée, session expirée distinguée (lien de reconnexion dans un autre onglet, saisie intacte).
 - **Les blocs de l'en-tête** (`blocks/`) : photo principale, nom et spécialité (les quatre champs partent ensemble : le serveur n'en accepte pas moins), zone (le champ unique de l'espace), disponibilité. Ils réutilisent les actions serveur de l'espace (`saveMyMainPicture`, `saveMyIdentity`, `saveMyLocation`, `saveMyAvailability`) : mêmes gardes (session relue, origine, profil trouvé par le compte), mêmes limites d'envoi des photos (issue 309). Aucune règle d'accès nouvelle.
-- **Les jetons** de la direction artistique sont dans `src/app/(front)/globals.css` (`@theme`) : `blush`, `ink`, `lipstick` (réservé à ce qui se modifie), `nude-*`, `hairline`, `mute`, `rounded-card`, `font-display`, `font-body`. Bodoni Moda et Instrument Sans sont chargés par `src/components/direct-edit/fonts.ts`, importé par la seule route privée.
+- **Les jetons** de la direction artistique sont dans `src/app/(front)/globals.css` (`@theme`), à cet endroit seul (voir « Couleurs et halo » plus bas) : `page`, `blush`, `ink`, `lipstick` (réservé à ce qui se modifie), `nude-*`, `hairline`, `mute`, `rounded-card`, `font-display`, `font-body`. Bodoni Moda et Instrument Sans sont chargés par `src/components/direct-edit/fonts.ts`, importé par la seule route privée.
 
 ## Les blocs du corps de la page
 
@@ -37,6 +37,26 @@ L'accueil de la maquilleuse (`/auth/init-account`, cinq étapes) n'écrit pas se
 ## « Mon espace » est un résumé (issue 1073)
 
 `/auth/profil` ne modifie pas le profil : l'édition est ici, et seulement ici. La page (`src/components/dashboard/overview/`) dit où en est la page (`overviewStatus`), « Ton profil est rempli à N % » (`gaugePercent`) et ce qui manque, chaque point étant un lien `editBlockHref(CRITERION_BLOCK[critère])` vers son bloc. Un essai garde la page sans éditeur (aucun import d'éditeur, aucune action d'enregistrement du profil).
+
+## Couleurs et halo (issues 1070 et 1071)
+
+Les valeurs sont dans `@theme` de `src/app/(front)/globals.css`, nulle part ailleurs ; `tests/unit/direct-edit-contrast.test.ts` les lit là et échoue sous 7:1 (texte courant), 4,5:1 (texte secondaire, rouge à lèvres en texte) ou 3:1 (contours, icônes), pour les états normal, survol, focus, édition, erreur et désactivé.
+
+| Jeton | Valeur | Rôle | Contraste (blanc / page / surface) |
+|---|---|---|---|
+| `page` | `#FBFAF8` | fond de la page en mode édition (blanc cassé) | |
+| carte | blanc | cartes et éditeur | |
+| `blush` | `#F5F2EF` | surface secondaire à peine teintée | |
+| `ink` | `#1A1417` | texte | 18,2 / 17,4 / 16,3 |
+| `mute` | `#463B41` | texte secondaire, libellés, aides | 10,7 / 10,3 / 9,6 |
+| `lipstick` | `#B0294A` | ce qui se modifie (halo, bouton, contour) | 6,4 / 6,2 / 5,8 |
+| `lipstick-800` | `#8A1F3A` | texte rouge (titre « Tu modifies : … », erreurs), crayon au survol | 9,0 / 8,6 / 8,1 |
+| `nude-300` | `#7D6E75` | contour des champs, du crayon, de l'invitation | 4,8 / 4,6 / 4,3 |
+| `ok`, `warm` | `#1D5A3E`, `#6B4309` | « Enregistré », « En cours » (toujours avec une icône) | au moins 7,3 |
+
+Le mode édition seul (`data-edit-page` sur la page privée) redessine les gris du visiteur avec ces jetons (`text-gray-500` à `800`, `border-gray-300`, `bg-gray-50`) : le HTML public ne change pas. Les autres blocs gardent une opacité de 0,8 (`DIMMED_OPACITY`) : l'encre y garde 7:1.
+
+**Le halo est le bloc.** Il est dessiné dans le bloc (`data-direct-edit-halo`, un calque `absolute inset-0` au rayon du bloc, ombre `inset`), jamais autour : pas de `ring`, pas d'`outline-offset`, pas de `border` qui change d'épaisseur, donc aucun saut de mise en page. Le premier nœud que le visiteur voit dans un `EditableBlock` prend le rayon du bloc (`globals.css`, `[data-direct-edit] > :first-child`) : 22 px pour une carte, rond pour la photo et la pastille. `tests/e2e/direct-edit-halo.spec.ts` mesure, pour chaque bloc, à 390 et 1440 px, le rectangle et le rayon du halo, du bloc et du cadre (1 px d'écart au plus) avant, pendant le survol (ou le focus) et à l'ouverture.
 
 ## Ajouter une zone de la page
 

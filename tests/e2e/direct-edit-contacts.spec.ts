@@ -62,7 +62,7 @@ for (const size of SIZES) {
 			expect(visible).toContain(PHONE)
 			expect(visible).toContain(email)
 			await pen(page, PEN).click()
-			await expect(page.locator('[data-direct-edit-editor]')).toContainText('Coordonnées · je modifie')
+			await expect(page.locator('[data-direct-edit-editor]')).toContainText('Tu modifies : Coordonnées')
 			await expect(page.locator('#direct-contacts-phone')).toBeFocused()
 			await page.getByLabel('Afficher mon téléphone et mon email sur ma page').uncheck()
 			await checkScreen(page, 'édition')

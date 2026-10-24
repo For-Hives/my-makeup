@@ -54,7 +54,7 @@ for (const size of SIZES) {
 				await photo.hover()
 			}
 			await expect(label).toBeVisible()
-			await expect(photo).toHaveCSS('--tw-ring-color', /.+/)
+			await expect(photo.locator('[data-direct-edit-halo]')).toHaveCSS('box-shadow', /rgb\(176, 41, 74\)/)
 			await shot(page, 'survol')
 		})
 
@@ -74,7 +74,7 @@ for (const size of SIZES) {
 			const profile = await open(page, context, 'reference')
 			await pen(page, 'Modifier mon nom et ma spécialité').click()
 			const editor = page.locator('[data-direct-edit-editor]')
-			await expect(editor).toContainText('Nom et spécialité · je modifie')
+			await expect(editor).toContainText('Tu modifies : Nom et spécialité')
 			await expect(page.locator('#direct-identity-prenom')).toBeFocused()
 			await page.locator('#direct-identity-specialtyOther').fill('Maquillage soirée')
 			await expect(page.getByTestId('edit-status')).toHaveText('Modification en cours')
@@ -173,7 +173,7 @@ for (const size of SIZES) {
 			const status = pen(page, 'Modifier ma disponibilité')
 			await status.focus()
 			await page.keyboard.press('Enter')
-			await expect(page.locator('[data-direct-edit-editor]')).toContainText('Disponibilité · je modifie')
+			await expect(page.locator('[data-direct-edit-editor]')).toContainText('Tu modifies : Disponibilité')
 			await expect(page.getByRole('radio').first()).toBeFocused()
 			await page.keyboard.press('Escape')
 			await expect(page.locator('[data-direct-edit-editor]')).toHaveCount(0)

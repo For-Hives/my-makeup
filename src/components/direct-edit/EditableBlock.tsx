@@ -16,8 +16,11 @@ import { useEditSession } from './EditSession'
  * - when there is nothing to show, an invitation that says what to do, in place of the content;
  * - when it opens, its editor under the header (`EditorSlot`), the other blocks dimmed.
  *
- * `shape` is the outline of the block, for the ring and for the button that covers it.
+ * `shape` is the outline of the block, for the halo and for the button that covers it.
  */
+
+/** What the blocks other than the open one keep of their opacity: dimmed, still readable (7:1 for the ink on the page, issue 1071). */
+export const DIMMED_OPACITY = 0.8
 
 export type BlockShape = 'round' | 'card' | 'pill'
 
@@ -70,20 +73,23 @@ export function EditableBlock({
 	}, [isOpen])
 
 	const dimmed = session.openId !== null && !isOpen
-	const ring = isOpen
-		? 'ring-2 ring-lipstick'
-		: 'ring-2 ring-transparent hover:ring-lipstick focus-within:ring-lipstick'
+	// The halo is drawn inside the block (an inset shadow on a layer that has the block's own radius): it cannot
+	// stick out, move anything or change a border (issue 1070). Keyboard focus thickens it.
+	const halo = isOpen
+		? 'shadow-[inset_0_0_0_3px_var(--color-lipstick)]'
+		: 'shadow-[inset_0_0_0_2px_transparent] group-hover:shadow-[inset_0_0_0_2px_var(--color-lipstick)] group-focus-within:shadow-[inset_0_0_0_2px_var(--color-lipstick)] group-has-[:focus-visible]:shadow-[inset_0_0_0_4px_var(--color-lipstick)]'
 	return (
 		<div
 			id={blockAnchor(id)}
 			data-direct-edit={id}
 			data-open={isOpen ? 'true' : undefined}
-			className={`group relative scroll-mt-24 min-h-11 min-w-11 ${SHAPES[shape]} ${ring} transition-[box-shadow,opacity] duration-150 motion-reduce:transition-none ${dimmed ? 'opacity-50' : ''} ${className}`}
+			className={`group relative scroll-mt-24 min-h-11 min-w-11 ${SHAPES[shape]} transition-opacity duration-150 motion-reduce:transition-none ${className}`}
+			style={dimmed ? { opacity: DIMMED_OPACITY } : undefined}
 		>
 			{empty ? (
 				<span
 					data-direct-edit-empty
-					className={`flex min-h-14 items-center gap-3 border-2 border-nude-300 border-dashed bg-blush px-4 py-3 font-body font-medium text-mute text-sm [&_b]:font-display [&_b]:font-medium [&_b]:text-base ${shape === 'round' ? 'h-full w-full justify-center rounded-full text-center' : 'rounded-2xl'}`}
+					className={`flex min-h-14 items-center gap-3 border-2 border-nude-300 border-dashed bg-blush px-4 py-3 font-body font-medium text-ink text-sm [&_b]:font-display [&_b]:font-medium [&_b]:text-base ${shape === 'round' ? 'h-full w-full justify-center rounded-full text-center' : 'rounded-2xl'}`}
 				>
 					{invitation}
 				</span>
@@ -101,11 +107,16 @@ export function EditableBlock({
 				onKeyDown={(event: KeyboardEvent<HTMLButtonElement>) => {
 					if (event.repeat) event.preventDefault()
 				}}
-				className={`absolute inset-0 ${SHAPES[shape]} focus-visible:outline-2 focus-visible:outline-lipstick focus-visible:outline-offset-2`}
+				className={`absolute inset-0 ${SHAPES[shape]} focus-visible:outline-none`}
 			/>
 			<span
 				aria-hidden="true"
-				className={`pointer-events-none absolute ${penClassName} flex h-11 min-w-11 items-center justify-center gap-2 rounded-full border border-hairline bg-white px-3 font-body font-medium text-mute text-sm shadow-sm ${dimmed ? '' : 'group-focus-within:border-lipstick group-focus-within:bg-lipstick group-focus-within:text-white group-hover:border-lipstick group-hover:bg-lipstick group-hover:text-white'} ${isOpen ? 'border-lipstick bg-lipstick text-white' : ''}`}
+				data-direct-edit-halo
+				className={`pointer-events-none absolute inset-0 rounded-[inherit] transition-shadow duration-150 motion-reduce:transition-none ${halo}`}
+			/>
+			<span
+				aria-hidden="true"
+				className={`pointer-events-none absolute ${penClassName} flex h-11 min-w-11 items-center justify-center gap-2 rounded-full border border-nude-300 bg-white px-3 font-body font-medium text-ink text-sm shadow-sm ${dimmed ? '' : 'group-focus-within:border-lipstick-800 group-focus-within:bg-lipstick-800 group-focus-within:text-white group-hover:border-lipstick-800 group-hover:bg-lipstick-800 group-hover:text-white'} ${isOpen ? 'border-lipstick-800 bg-lipstick-800 text-white' : ''}`}
 			>
 				<svg
 					width="18"

@@ -52,7 +52,7 @@ for (const size of SIZES) {
 			const before = await payload.findByID({ collection: 'profiles', id: profile.id, depth: 1 })
 			await pen(page, PEN).click()
 			const editor = page.locator('[data-direct-edit-editor]')
-			await expect(editor).toContainText('Mes déplacements · je modifie')
+			await expect(editor).toContainText('Tu modifies : Mes déplacements')
 			await page.getByLabel(/Rayon d’action/).fill('42')
 			await checkScreen(page, 'édition')
 			await shot(page, 'edition')

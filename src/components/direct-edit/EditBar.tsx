@@ -24,16 +24,14 @@ export function EditBar() {
 			<div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3 sm:px-6 md:px-8">
 				<p className="min-w-0 flex-1 basis-64 text-ink">
 					<strong className="font-semibold">Tu modifies ta page.</strong>{' '}
-					<span className="text-mute">Touche une zone pour la changer ; seule toi vois ces contrôles.</span>
+					<span className="text-mute">Touche un bloc pour le changer ; seule toi vois ces contrôles.</span>
 				</p>
 				<p
 					role="status"
 					data-testid="edit-status"
 					className={`flex min-h-6 items-center gap-2 font-medium text-sm ${color}`}
 				>
-					{status.kind === 'resting' ? null : (
-						<span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-current" />
-					)}
+					{status.kind === 'resting' ? null : <StatusIcon kind={status.kind} />}
 					{status.text}
 				</p>
 				<Link
@@ -44,5 +42,36 @@ export function EditBar() {
 				</Link>
 			</div>
 		</section>
+	)
+}
+
+/** A shape for each state, so that it is never told by its colour alone (issue 1071). */
+function StatusIcon({ kind }: { kind: 'editing' | 'saving' | 'saved' | 'error' }) {
+	return (
+		<svg
+			aria-hidden="true"
+			width="18"
+			height="18"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			strokeWidth="2.2"
+			strokeLinecap="round"
+			strokeLinejoin="round"
+			className="shrink-0"
+		>
+			{kind === 'saved' ? (
+				<path d="M5 12.5l4.5 4.5L19 7.5" />
+			) : kind === 'error' ? (
+				<>
+					<circle cx="12" cy="12" r="9" />
+					<path d="M12 7v6M12 16.5v.5" />
+				</>
+			) : kind === 'saving' ? (
+				<path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8" />
+			) : (
+				<path d="M4 20h4L19 9l-4-4L4 16z" />
+			)}
+		</svg>
 	)
 }
