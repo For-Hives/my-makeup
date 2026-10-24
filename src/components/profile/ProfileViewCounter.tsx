@@ -2,8 +2,7 @@
 
 import { useEffect } from 'react'
 import { analyticsRefused } from '@/lib/analytics/opt-out'
-import { PROFILE_VIEWS_PATH } from '@/lib/views/profile-views'
-import { reportProfileView } from '@/lib/views/report-view'
+import { PROFILE_VIEWS_PATH, reportProfileView } from '@/lib/views/report-view'
 
 /**
  * Tells the server that this page was opened (ticket 1001), once per tab. Renders nothing. The HTML of

@@ -1,6 +1,7 @@
 import { createRateLimit, type RateLimit } from '../auth/rate-limit'
 import type { Log } from '../emails/send'
 import { isLocalAddress } from '../search/rate-limit'
+import { TURNSTILE_TOKEN_FIELD, TURNSTILE_UNAVAILABLE_FIELD } from './turnstile-fields'
 
 /**
  * Cloudflare Turnstile on the contact form (ticket 1000). No `next` import: the Server Action calls it,
@@ -25,11 +26,7 @@ import { isLocalAddress } from '../search/rate-limit'
 
 export const TURNSTILE_VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify'
 
-/** The field the widget adds to the form: its name is Cloudflare's. */
-export const TURNSTILE_TOKEN_FIELD = 'cf-turnstile-response'
-
-/** The field the form sets when its widget could not load or failed: the one our code names. */
-export const TURNSTILE_UNAVAILABLE_FIELD = 'turnstile-unavailable'
+export { TURNSTILE_TOKEN_FIELD, TURNSTILE_UNAVAILABLE_FIELD }
 
 /** How long Cloudflare is given: under the 10 seconds a visitor may wait. */
 export const TURNSTILE_DEADLINE_MS = 3_000
