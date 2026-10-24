@@ -1,7 +1,7 @@
 /**
  * The text of an article, already turned into HTML by `markdownToDocument` (src/lib/markdown.ts), which
  * sanitizes it and leaves no h1. The reading column and its titles, quotes, lists, links and images are
- * styled by `.article-prose` (src/app/(front)/globals.css, « Blog article prose »): 65 characters wide,
+ * styled by `.article-prose` (src/app/(front)/globals.css, « Blog article prose »): about 65 characters wide,
  * 18 px (20 px from 1024 px), a line height of 1.7. `MarkdownContent` stays the one of the talents.
  */
 export function ArticleBody({ html }: { html: string }) {

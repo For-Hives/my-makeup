@@ -751,13 +751,13 @@ main:has(> .home-section) {
 .home-eyebrow-center::after {
 	flex: 0 0 3rem;
 /*
- * Blog article prose (issue 1103). The text of an article in its reading column: 65 characters wide, 18 px (20 px from
+ * Blog article prose (issue 1103). The text of an article in its reading column: 42rem (672 px), about 65 characters at these sizes, 18 px (20 px from
  * 1024 px), a line height of 1.7. The titles are in the display type, the quotes too, large; links stay underlined,
  * lists keep their markers, images never overflow. Nothing here moves: no transition, no animation. The page that
  * uses it sets the Bodoni Moda variable (`--font-bodoni-moda`) on its `<main>`.
  */
 .article-prose {
-	max-width: 65ch;
+	max-width: 42rem;
 	font-size: 1.125rem;
 	line-height: 1.7;
 	color: var(--color-gray-800);

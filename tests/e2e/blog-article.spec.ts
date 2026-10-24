@@ -175,7 +175,7 @@ test.describe('E59 et E65 : l’article du blog', { tag: '@mobile' }, () => {
 				line: parseFloat(style.lineHeight),
 			}
 		})
-		// 65 characters at 18-20 px, never wider than 700 px, and a line height of 1.7.
+		// about 65 characters at 18-20 px: never wider than 700 px, and a line height of 1.7.
 		expect(metrics.width).toBeLessThanOrEqual(700)
 		expect(metrics.size).toBeGreaterThanOrEqual(18)
 		expect(Math.round((metrics.line / metrics.size) * 10) / 10).toBe(1.7)
