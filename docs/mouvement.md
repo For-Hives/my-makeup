@@ -85,7 +85,8 @@ Les navigations de Next.js se font dans la page, sans chargement : `@view-transi
 | talent (`/talent/<slug>`) | aucune | l'article, les cartes des maquilleuses, le champ « Votre ville » |
 | zone (`/maquilleuses/<département>`) | `Hero` : titre, phrase | l'introduction, les cartes, le champ « Votre ville » |
 | pages fixes (`/a-propos`, `/contact`, partenariats, « pourquoi… », « solutions… », `/demande-envoyee`) | `Hero` : titre, phrase, bouton d'inscription | contact : introduction, « Contactez-nous », cartes d'adresse |
-| blog | titre (masque) | chaque article de la liste ; pied d'un article : les cartes |
+| blog (liste) | surtitre et phrase (`.enter`), titre (masque) | le dernier article en grand et chaque carte |
+| blog (article, issue 1103) | retour, date et signature (`.enter`), titre (masque), chapeau (`.enter`) ; le texte n'est jamais animé | « À lire aussi », puis les cartes des maquilleuses et leur champ de ville |
 | classement | titre (masque) | chaque section |
 | connexion, inscription | aucune (tout tient dans le premier écran) | l'aide « Mot de passe », les liens du bas |
 | « Mon espace » | aucune | chaque carte |

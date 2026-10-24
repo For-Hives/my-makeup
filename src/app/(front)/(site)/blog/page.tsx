@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
+import type { CSSProperties } from 'react'
 import { Cta } from '@/components/blocks/Cta'
 import { ArticleList } from '@/components/blog/ArticleList'
+import { body, display } from '@/components/direct-edit/fonts'
 import { pageMetadata } from '@/lib/seo/metadata'
 import { cachedArticles } from '@/services/public/cached'
 
@@ -19,22 +21,33 @@ export const metadata: Metadata = pageMetadata({
 	chemin: '/blog',
 })
 
+/** The order of the load-in (src/app/(front)/globals.css, `.enter*`): 0, 1, 2. */
+const enterOrder = (index: 0 | 1 | 2) => ({ '--enter-i': index }) as CSSProperties
+
 export default async function BlogPage() {
 	const articles = await cachedArticles()
 	return (
-		<main className="relative">
-			<section className="relative px-4 py-20 md:px-8 2xl:px-0">
+		<main className={`${display.variable} ${body.variable} relative font-body`}>
+			<section className="relative px-4 pt-14 pb-16 md:px-8 md:pt-24 md:pb-24 2xl:px-0">
 				<div className="mx-auto max-w-7xl">
-					<div className="reveal mx-auto mb-10">
-						<h1 className="enter-mask w-full text-start font-bold text-4xl text-gray-900 tracking-tight">
+					<header className="max-w-3xl">
+						<p className="enter text-gray-700 text-xs uppercase tracking-[0.14em]" style={enterOrder(0)}>
+							Le blog de My-Makeup
+						</p>
+						<h1
+							className="enter-mask mt-4 text-balance font-display font-medium text-5xl text-gray-900 leading-none tracking-tight md:text-7xl"
+							style={enterOrder(1)}
+						>
 							Blog & News
 						</h1>
-						<p className="mt-6 w-full text-start text-gray-700 text-lg md:w-2/3">
+						<p className="enter mt-6 max-w-[60ch] text-gray-700 text-lg leading-8" style={enterOrder(2)}>
 							Des conseils pour préparer votre mariage, prendre soin de votre peau et suivre les tendances, et les
 							nouveautés de My-Makeup, pour trouver la maquilleuse qui vous correspond.
 						</p>
+					</header>
+					<div className="mt-12 md:mt-16">
+						<ArticleList articles={articles} />
 					</div>
-					<ArticleList articles={articles} />
 				</div>
 			</section>
 			<Cta />

@@ -2,6 +2,9 @@ import { describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { ArticleList, articleDate } from '../../src/components/blog/ArticleList'
+import { ArticleOutline } from '../../src/components/blog/ArticleOutline'
+import { ArticleShare } from '../../src/components/blog/ArticleShare'
+import { RelatedArticles, relatedArticles } from '../../src/components/blog/RelatedArticles'
 import {
 	ARTICLES_LIMIT,
 	byRecency,
@@ -81,18 +84,49 @@ describe('Affichage', () => {
 		expect(articleDate('hier')).toBe('')
 	})
 
-	test('chaque article est un lien vers sa page, son titre est un h2 et la page n’a pas de h1 à elle', () => {
+	test('chaque article est un lien vers sa page, par son titre, et la page n’a pas de h1 à elle', () => {
 		const html = renderToStaticMarkup(
 			<ArticleList articles={[article('un', '2026-10-14T10:00:00.000Z'), article('deux', null, { extrait: '' })]} />
 		)
 
 		expect(html).toContain('href="/blog/un"')
 		expect(html).toContain('href="/blog/deux"')
-		expect(html).toContain('<h2 class="font-semibold text-gray-900 text-lg">Titre un</h2>')
+		expect(html).toMatch(/<h2[^>]*><a[^>]*href="\/blog\/un"[^>]*>Titre un<\/a><\/h2>/)
 		expect(html).toContain('Extrait un')
 		expect(html).toContain('14 octobre 2026')
 		expect(html).not.toContain('Extrait deux')
 		expect(html).not.toContain('<h1')
+		// One link per article, named by its title: the « Lire l'article » of a card is decoration.
+		expect(html.match(/<a /g)).toHaveLength(2)
+	})
+
+	test('le plus récent est en grand, les autres dans la grille, dans l’ordre reçu', () => {
+		const html = renderToStaticMarkup(
+			<ArticleList
+				articles={[article('un', '2026-10-14T10:00:00.000Z'), article('deux', null), article('trois', null)]}
+			/>
+		)
+
+		expect(html.match(/data-featured/g)).toHaveLength(1)
+		expect(html.match(/data-article-card/g)).toHaveLength(2)
+		expect(html.indexOf('href="/blog/un"')).toBeLessThan(html.indexOf('data-article-card'))
+		expect(html.indexOf('href="/blog/deux"')).toBeLessThan(html.indexOf('href="/blog/trois"'))
+		expect(html).toContain('Dernier article')
+	})
+
+	test('un seul article : il est en grand et il n’y a pas de grille vide', () => {
+		const html = renderToStaticMarkup(<ArticleList articles={[article('un', null)]} />)
+
+		expect(html).toContain('data-featured')
+		expect(html).not.toContain('data-article-card')
+		expect(html).not.toContain('<ul')
+	})
+
+	test('un article sans image a un panneau typographique : la première lettre de son titre', () => {
+		const html = renderToStaticMarkup(<ArticleList articles={[article('un', null, { titre: 'élégance du teint' })]} />)
+
+		expect(html).toContain('>É</span>')
+		expect(html).not.toMatch(/<img/)
 	})
 
 	test('un texte d’article ne devient jamais du HTML', () => {
@@ -104,7 +138,59 @@ describe('Affichage', () => {
 		expect(html).toContain('&lt;script&gt;')
 	})
 
-	test('sans article, la page le dit', () => {
-		expect(renderToStaticMarkup(<ArticleList articles={[]} />)).toContain('Aucun article')
+	test('sans article, la page le dit et propose la recherche', () => {
+		const html = renderToStaticMarkup(<ArticleList articles={[]} />)
+
+		expect(html).toContain('Aucun article')
+		expect(html).toContain('href="/search"')
+		expect(html).not.toContain('Reviens')
+	})
+})
+
+describe('À lire aussi', () => {
+	const list = [article('a', '2026-10-04T00:00:00.000Z'), article('b', null), article('c', null), article('d', null)]
+
+	test('les trois plus récents, sans l’article lu', () => {
+		expect(relatedArticles(list, 'a').map(({ slug }) => slug)).toEqual(['b', 'c', 'd'])
+		expect(relatedArticles(list, 'c').map(({ slug }) => slug)).toEqual(['a', 'b', 'd'])
+		expect(relatedArticles(list, 'inconnu')).toHaveLength(3)
+	})
+
+	test('un blog d’un seul article n’a aucun article lié, donc aucun bloc', () => {
+		expect(relatedArticles([article('a', null)], 'a')).toEqual([])
+		expect(renderToStaticMarkup(<RelatedArticles articles={[]} />)).toBe('')
+	})
+
+	test('le bloc a un h2, et chaque carte un h3', () => {
+		const html = renderToStaticMarkup(<RelatedArticles articles={relatedArticles(list, 'a')} />)
+
+		expect(html).toContain('À lire aussi')
+		expect(html.match(/<h2/g)).toHaveLength(1)
+		expect(html.match(/<h3/g)).toHaveLength(3)
+	})
+})
+
+describe('Pied d’article', () => {
+	test('retour au blog et trois partages, sans script', () => {
+		const html = renderToStaticMarkup(<ArticleShare title="Un titre & plus" url="https://example.test/blog/un" />)
+
+		expect(html).toContain('href="/blog"')
+		expect(html).toContain('mailto:?subject=Un%20titre%20%26%20plus&amp;body=https%3A%2F%2Fexample.test%2Fblog%2Fun')
+		expect(html).toContain('sharing/share-offsite/?url=https%3A%2F%2Fexample.test%2Fblog%2Fun')
+		expect(html).toContain('sharer.php?u=https%3A%2F%2Fexample.test%2Fblog%2Fun')
+		expect(html.match(/rel="noopener noreferrer"/g)).toHaveLength(2)
+		expect(html).not.toContain('<script')
+	})
+})
+
+describe('Sommaire', () => {
+	test('un lien par partie, vers son identifiant', () => {
+		const html = renderToStaticMarkup(<ArticleOutline headings={[{ id: 'section-a', text: 'Partie A', level: 2 }]} />)
+
+		expect(html).toContain('href="#section-a"')
+		expect(html).toContain('Dans cet article')
+	})
+	test('sans partie, rien', () => {
+		expect(renderToStaticMarkup(<ArticleOutline headings={[]} />)).toBe('')
 	})
 })

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { markdownToHtml } from '@/lib/markdown'
+import { markdownToDocument, markdownToHtml } from '@/lib/markdown'
 
 /**
  * The markdown of the newsroom, turned into HTML (ticket 106): a script slid into a text does not come
@@ -66,5 +66,43 @@ describe('markdownEnHtml : le markdown assaini', () => {
 
 	test('rien, null, undefined ou un nombre : une chaîne vide, jamais « null »', async () => {
 		for (const empty of [undefined, null, '', '   \n ', 12, {}]) expect(await markdownToHtml(empty)).toBe('')
+	})
+})
+
+describe('markdownToDocument : les titres ont une ancre (issue 1103)', () => {
+	test('chaque h2 et h3 a un identifiant, et la liste des titres suit le texte', async () => {
+		const { html, headings } = await markdownToDocument(
+			'# Un titre\n\n## Une partie\n\n### Un détail\n\n#### Plus bas\n'
+		)
+
+		expect(html).toContain('<h2 id="section-un-titre">Un titre</h2>')
+		expect(html).toContain('<h3 id="section-un-detail">Un détail</h3>')
+		expect(headings).toEqual([
+			{ id: 'section-un-titre', text: 'Un titre', level: 2 },
+			{ id: 'section-une-partie', text: 'Une partie', level: 2 },
+			{ id: 'section-un-detail', text: 'Un détail', level: 3 },
+		])
+	})
+
+	test('deux titres identiques ont deux identifiants, un titre sans lettre en a un quand même', async () => {
+		const { headings } = await markdownToDocument('## Astuce\n\n## Astuce\n\n## ???\n')
+
+		expect(headings.map(({ id }) => id)).toEqual(['section-astuce', 'section-astuce-2', 'section-partie'])
+	})
+
+	test('le texte d’un titre garde son texte seul : le gras et le lien ne s’y glissent pas', async () => {
+		const { headings } = await markdownToDocument('## Un **gros** [titre](/blog)\n')
+
+		expect(headings[0]?.text).toBe('Un gros titre')
+	})
+
+	test('un texte vide ou absent : rien', async () => {
+		expect(await markdownToDocument(null)).toEqual({ html: '', headings: [] })
+		expect(await markdownToDocument('  ')).toEqual({ html: '', headings: [] })
+	})
+
+	test('markdownToHtml, lui, ne pose aucun identifiant : la page d’un talent ne change pas', async () => {
+		const html = await markdownToHtml('## A\n\nTexte.')
+		expect(html).toBe('<h2>A</h2>\n<p>Texte.</p>')
 	})
 })

@@ -750,4 +750,141 @@ main:has(> .home-section) {
 
 .home-eyebrow-center::after {
 	flex: 0 0 3rem;
+/*
+ * Blog article prose (issue 1103). The text of an article in its reading column: 65 characters wide, 18 px (20 px from
+ * 1024 px), a line height of 1.7. The titles are in the display type, the quotes too, large; links stay underlined,
+ * lists keep their markers, images never overflow. Nothing here moves: no transition, no animation. The page that
+ * uses it sets the Bodoni Moda variable (`--font-bodoni-moda`) on its `<main>`.
+ */
+.article-prose {
+	max-width: 65ch;
+	font-size: 1.125rem;
+	line-height: 1.7;
+	color: var(--color-gray-800);
+	overflow-wrap: break-word;
+	hyphens: manual;
+}
+@media (min-width: 1024px) {
+	.article-prose {
+		font-size: 1.25rem;
+	}
+}
+.article-prose > :first-child {
+	margin-top: 0;
+}
+.article-prose > :last-child {
+	margin-bottom: 0;
+}
+.article-prose :is(p, ul, ol, table, pre) {
+	margin-block: 1.25em;
+}
+.article-prose :is(h2, h3, h4) {
+	font-family: var(--font-bodoni-moda), ui-serif, Georgia, serif;
+	font-weight: 500;
+	color: var(--color-gray-900);
+	text-wrap: balance;
+	scroll-margin-top: 6rem;
+}
+.article-prose h2 {
+	margin: 2.4em 0 0.6em;
+	font-size: 1.75rem;
+	line-height: 1.2;
+	letter-spacing: -0.01em;
+}
+.article-prose h3 {
+	margin: 2em 0 0.5em;
+	font-size: 1.4rem;
+	line-height: 1.25;
+}
+.article-prose h4 {
+	margin: 1.6em 0 0.4em;
+	font-size: 1.15rem;
+	line-height: 1.3;
+}
+@media (min-width: 1024px) {
+	.article-prose h2 {
+		font-size: 2.125rem;
+	}
+	.article-prose h3 {
+		font-size: 1.6rem;
+	}
+}
+.article-prose strong {
+	font-weight: 600;
+	color: var(--color-gray-900);
+}
+.article-prose a {
+	color: var(--color-indigo-800);
+	text-decoration-line: underline;
+	text-decoration-thickness: 1px;
+	text-underline-offset: 3px;
+}
+.article-prose :is(ul, ol) {
+	padding-left: 1.5em;
+}
+.article-prose ul {
+	list-style: disc;
+}
+.article-prose ol {
+	list-style: decimal;
+}
+.article-prose li {
+	margin-block: 0.5em;
+	padding-left: 0.25em;
+}
+.article-prose li::marker {
+	color: var(--color-indigo-900);
+}
+.article-prose li > :is(p, ul, ol) {
+	margin-block: 0.5em;
+}
+.article-prose blockquote {
+	margin: 2em 0;
+	padding-left: 1.25em;
+	border-left: 2px solid var(--color-indigo-900);
+	font-family: var(--font-bodoni-moda), ui-serif, Georgia, serif;
+	font-size: 1.35em;
+	line-height: 1.4;
+	color: var(--color-gray-900);
+}
+.article-prose blockquote > p {
+	margin-block: 0.5em;
+}
+.article-prose hr {
+	width: 4rem;
+	height: 1px;
+	margin: 3em auto 3em 0;
+	border: 0;
+	background: var(--color-gray-400);
+}
+.article-prose img {
+	display: block;
+	max-width: 100%;
+	height: auto;
+	margin-block: 2em;
+}
+.article-prose table {
+	display: block;
+	max-width: 100%;
+	overflow-x: auto;
+	font-size: 0.9em;
+}
+.article-prose :is(td, th) {
+	padding: 0.5em 0.75em;
+	border: 1px solid var(--color-gray-300);
+	text-align: left;
+}
+.article-prose :not(pre) > code {
+	padding: 0.1em 0.3em;
+	border-radius: 0.25rem;
+	background: var(--color-gray-100);
+	font-size: 0.9em;
+}
+.article-prose pre {
+	overflow-x: auto;
+	padding: 1em;
+	border-radius: 0.5rem;
+	background: var(--color-gray-100);
+	font-size: 0.9em;
+	line-height: 1.5;
 }

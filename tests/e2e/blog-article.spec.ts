@@ -11,6 +11,7 @@ const suffix = Date.now().toString(36)
 const published = `essai-article-${suffix}`
 const draft = `essai-article-brouillon-${suffix}`
 const bare = `essai-article-nu-${suffix}`
+const long = `essai-article-long-${suffix}`
 
 const CONTENT = [
 	'# Un titre du texte',
@@ -25,6 +26,14 @@ const CONTENT = [
 	'',
 	'<img src="https://photos.example.test/a.webp" onerror="window.__glisse = true">',
 ].join('\n')
+
+/** About 1 300 words under four titles: long enough for the table of contents. */
+const LONG_CONTENT = [
+	'Un début.',
+	...['Première', 'Deuxième', 'Troisième', 'Quatrième'].map(
+		part => `## Partie ${part}\n\n${'Un texte fictif de l’essai, assez long pour compter. '.repeat(32)}`
+	),
+].join('\n\n')
 
 const identifiers: { collection: 'articles'; id: number }[] = []
 
@@ -55,6 +64,15 @@ test.beforeAll(async ({ request }) => {
 		{
 			collection: 'articles',
 			id: await createContent(request, 'articles', { title: `Article nu ${suffix}`, slug: bare, _status: 'published' }),
+		},
+		{
+			collection: 'articles',
+			id: await createContent(request, 'articles', {
+				title: `Article long ${suffix}`,
+				slug: long,
+				content: LONG_CONTENT,
+				_status: 'published',
+			}),
 		}
 	)
 })
@@ -141,6 +159,49 @@ test.describe('E59 et E65 : l’article du blog', { tag: '@mobile' }, () => {
 			await expect(page.getByRole('navigation', { name: 'Navigation principale' })).toBeVisible()
 			// Without a browser, as a robot reads it: the status.
 			expect((await request.get(`/blog/${slug}`)).status(), slug).toBe(404)
+		}
+	})
+
+	test('issue 1103 : colonne de lecture, titre en Bodoni, temps de lecture, partage et articles liés', async ({
+		page,
+	}) => {
+		await page.goto(`/blog/${published}`)
+		const body = page.getByTestId('article-body')
+		const metrics = await body.evaluate(element => {
+			const style = getComputedStyle(element)
+			return {
+				width: element.getBoundingClientRect().width,
+				size: parseFloat(style.fontSize),
+				line: parseFloat(style.lineHeight),
+			}
+		})
+		// 65 characters at 18-20 px, never wider than 700 px, and a line height of 1.7.
+		expect(metrics.width).toBeLessThanOrEqual(700)
+		expect(metrics.size).toBeGreaterThanOrEqual(18)
+		expect(Math.round((metrics.line / metrics.size) * 10) / 10).toBe(1.7)
+		expect(await page.getByRole('heading', { level: 1 }).evaluate(h1 => getComputedStyle(h1).fontFamily)).toMatch(
+			/bodoni/i
+		)
+		await expect(page.getByTestId('temps-de-lecture')).toHaveText(/^\d+ min de lecture$/)
+		// A short article has no table of contents.
+		await expect(page.getByTestId('sommaire')).toHaveCount(0)
+		const share = page.getByTestId('partage')
+		await expect(share.getByRole('link', { name: '← Tous les articles' })).toHaveAttribute('href', '/blog')
+		await expect(share.getByRole('link', { name: /LinkedIn/ })).toHaveAttribute('rel', 'noopener noreferrer')
+		// The other articles, never the one being read.
+		const related = page.getByTestId('articles-lies')
+		await expect(related.getByRole('heading', { level: 2, name: 'À lire aussi' })).toBeVisible()
+		await expect(related.locator(`a[href="/blog/${published}"]`)).toHaveCount(0)
+		await expect(related.locator(`a[href="/blog/${bare}"]`)).toHaveCount(1)
+	})
+
+	test('issue 1103 : un article long a son sommaire, dont chaque lien mène à un titre', async ({ page }) => {
+		await page.goto(`/blog/${long}`)
+		const links = page.getByTestId('sommaire').getByRole('link')
+		await expect(links).toHaveCount(4)
+		for (const href of await links.evaluateAll(anchors => anchors.map(anchor => anchor.getAttribute('href') ?? ''))) {
+			expect(href).toMatch(/^#section-/)
+			await expect(page.locator(href)).toHaveCount(1)
 		}
 	})
 
