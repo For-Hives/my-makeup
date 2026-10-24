@@ -165,9 +165,9 @@ describe('nothing is hidden by default (issue 1069)', () => {
 		}
 	})
 
-	test('a revealed block shows its end state outside its range: the fill is backwards only', () => {
+	test('a revealed block shows its end state outside its range: there is no fill, so it is plain before its range', () => {
 		const rule = RULES.find(item => item.selector === '.reveal' && item.declarations.length > 2)
-		expect(rule?.declarations.find(([property]) => property === 'animation-fill-mode')?.[1]).toBe('backwards')
+		expect(rule?.declarations.find(([property]) => property === 'animation-fill-mode')?.[1]).toBe('none')
 	})
 })
 

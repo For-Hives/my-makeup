@@ -250,7 +250,7 @@
  * moves is declared inside `prefers-reduced-motion: no-preference`: with reduced motion nothing slides or fades, and
  * every state change (hover tint, underline, shadow) still shows, at once. Nothing is hidden by default: the reveal
  * is a scroll-driven animation, so without the browser support, without animation, in print and without script
- * the content is simply there. The first screen is never animated: a block already in view is past its range.
+ * the content is simply there. Before its range a block is simply there (no fill), so content below the fold is never hidden.
  */
 @keyframes motion-reveal {
 	from {
@@ -300,7 +300,7 @@
 		.reveal {
 			animation-name: motion-reveal;
 			animation-timing-function: var(--ease-out-soft);
-			animation-fill-mode: backwards;
+			animation-fill-mode: none;
 			animation-timeline: view();
 			animation-range: entry 0px entry 220px;
 		}
