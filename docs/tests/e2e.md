@@ -170,12 +170,12 @@ En CI, un essai en échec est rejoué deux fois, et un essai laissé en `.only` 
 
 ## En CI
 
-Le job `e2e` de `.github/workflows/ci.yml` lance les essais en quatre lots côte à côte, de `e2e (1/4)` à `e2e (4/4)`. Chaque lot fait ce qu'on fait sur un poste :
+Le job `e2e` de `.github/workflows/ci.yml` lance les essais en cinq lots côte à côte, de `e2e (1/5)` à `e2e (5/5)`. Chaque lot fait ce qu'on fait sur un poste :
 
 ```sh
 bunx playwright install --with-deps chromium   # le navigateur, et les bibliothèques du système qu'il demande
 bun run bench:up
-bun run test:e2e --shard=1/4                   # son quart des essais ; les autres lots lancent --shard=2/4 à 4/4
+bun run test:e2e --shard=1/5                   # son cinquième des essais ; les autres lots lancent --shard=2/5 à 5/5
 ```
 
 - Playwright partage les essais entre les lots ; chaque lot construit l'application lui-même, démarre son banc et ne dépend d'aucun autre. Un lot en échec n'arrête pas les autres.
@@ -184,7 +184,7 @@ bun run test:e2e --shard=1/4                   # son quart des essais ; les autr
 - GitHub règle `CI=true` : un essai en échec est rejoué deux fois, et un essai laissé en `.only` fait échouer le lancement.
 - Un lot a 10 minutes au plus : au-delà, il est arrêté, et `ci-ok` est rouge.
 - Après un échec, le lot envoie `playwright-report/` et `test-results/` : l'artefact `e2e-1` à `e2e-4` du passage, sur la page de la CI, gardé 14 jours. Le rapport s'ouvre par `bunx playwright show-report playwright-report`, une fois l'artefact décompressé.
-- Pour le rejouer sur un poste, banc démarré : `CI=true bun run test:e2e --shard=1/4 --workers=2`.
+- Pour le rejouer sur un poste, banc démarré : `CI=true bun run test:e2e --shard=1/5 --workers=2`.
 
 ## Ce qui empêche de viser la prod
 

@@ -137,18 +137,18 @@ jobs:
       - name: Integration tests
         run: bun run test:integration --shard=${{ matrix.shard }}/3
 
-  # The end-to-end tests, in four shards side by side. Each shard starts its own bench and builds
+  # The end-to-end tests, in five shards side by side. Each shard starts its own bench and builds
   # the application itself (docs/tests/e2e.md): nothing waits for the build job, so the longest
   # chain of jobs stays under 15 minutes (docs/qualite.md, « Durée de la CI »).
   e2e:
-    name: e2e (${{ matrix.shard }}/4)
+    name: e2e (${{ matrix.shard }}/5)
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     strategy:
       # A failed shard does not stop the others: one push shows every failed test.
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5]
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
@@ -173,7 +173,7 @@ jobs:
         run: bun run bench:up
       # GitHub sets CI=true: a test left in `.only` fails the run, a failed test is retried twice.
       - name: End-to-end tests
-        run: bun run test:e2e --shard=${{ matrix.shard }}/4
+        run: bun run test:e2e --shard=${{ matrix.shard }}/5
       # Ticket 137: after the journeys, the objects of the storage outside the bin must be exactly
       # those of the photos the profiles and articles name. An orphan makes this step, then ci-ok, red.
       # It reads and removes nothing. `--outside-import`: the media the import adopted from the fake source
