@@ -31,6 +31,7 @@ My Makeup est un annuaire de maquilleuses professionnelles indépendantes. Cette
 | toucher l'accueil public (haut de page, « Mise en avant », textes de la communauté) | [`docs/accueil.md`](docs/accueil.md) |
 | toucher l'invitation à l'action du bas des pages (fond animé, dépendance) | [`docs/appel-a-l-action.md`](docs/appel-a-l-action.md) |
 | toucher au mouvement du site (apparitions, survols, jetons de durée et de courbe, mouvement réduit) | [`docs/mouvement.md`](docs/mouvement.md) |
+| toucher la barre de navigation du site public (entrées, menus déroulants, survol, clavier, « Me connecter ») | [`docs/navbar.md`](docs/navbar.md) |
 | faire autrement que le site en ligne | [`docs/migration/CHANGEMENTS-VOULUS.md`](docs/migration/CHANGEMENTS-VOULUS.md) |
 | jouer la bascule, ou savoir quoi faire à chaque étape du jour J et du retour arrière | [`docs/migration/BASCULE.md`](docs/migration/BASCULE.md) |
 | savoir ce qui est déjà fait et vérifié | [`docs/migration/JOURNAL.md`](docs/migration/JOURNAL.md) |
