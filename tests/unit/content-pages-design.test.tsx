@@ -25,6 +25,7 @@ const FOLDERS: Record<string, string> = {
 	'/pourquoi-utiliser-my-makeup-en-tant-que-particulier': 'pourquoi-utiliser-my-makeup-en-tant-que-particulier',
 	'/solutions/pour-les-maquilleuses': 'solutions/pour-les-maquilleuses',
 	'/solutions/pour-les-particuliers': 'solutions/pour-les-particuliers',
+	'/demande-envoyee': 'demande-envoyee',
 }
 
 const GUIDES = [
