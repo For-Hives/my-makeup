@@ -68,7 +68,7 @@ export function ArticleShell({
 }) {
 	const split = layout === 'split'
 	return (
-		<section className="border-gray-200 border-t bg-neutral-50 px-4 py-20 sm:px-6 md:py-28 lg:px-8">
+		<article className="border-gray-200 border-t bg-neutral-50 px-4 py-20 sm:px-6 md:py-28 lg:px-8">
 			<div className={`mx-auto ${split ? 'grid max-w-6xl gap-10 lg:grid-cols-12 lg:gap-16' : 'max-w-3xl'}`}>
 				<header className={`reveal ${split ? 'lg:sticky lg:top-28 lg:col-span-5 lg:self-start' : 'mb-10'}`}>
 					{eyebrow !== undefined && <Eyebrow>{eyebrow}</Eyebrow>}
@@ -81,7 +81,7 @@ export function ArticleShell({
 				</header>
 				<div className={split ? 'lg:col-span-7' : ''}>{children}</div>
 			</div>
-		</section>
+		</article>
 	)
 }
 

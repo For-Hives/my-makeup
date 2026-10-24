@@ -355,6 +355,7 @@ describe('the reveal reaches the pages (issue 1088)', () => {
 		['src/components/static-pages/ClientGuide.tsx', 1, 'guides for the people looking for a makeup artist (steps)'],
 		['src/components/static-pages/PageArticle.tsx', 1, 'À propos, partnerships, solutions for makeup artists (parts)'],
 		['src/components/static-pages/Benefits.tsx', 2, 'the two « Pourquoi… » pages (head, cards)'],
+		['src/app/(front)/(site)/demande-envoyee/page.tsx', 1, 'thank-you page'],
 		['src/app/(front)/(site)/contact/page.tsx', 3, 'contact'],
 		['src/app/(front)/(dashboard)/auth/signin/page.tsx', 2, 'sign-in'],
 		['src/app/(front)/(dashboard)/auth/signup/page.tsx', 2, 'sign-up'],

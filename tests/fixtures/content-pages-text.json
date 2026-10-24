@@ -203,5 +203,11 @@
 		"Rejoignez My-Makeup, la communauté qui fait la différence.",
 		"Que vous cherchiez une maquilleuse ou que vous le soyez : la recherche est gratuite, et la page professionnelle l'est aussi.",
 		"Trouver ma maquilleuseJe suis maquilleuse"
+	],
+	"/demande-envoyee": [
+		"Votre demande est transmise",
+		"Vous recevrez une réponse sous 48 h. Merci de votre confiance !",
+		"Nous transmettons votre demande à la maquilleuse. Si elle n'est pas disponible, nous vous proposerons une autre maquilleuse de votre secteur, avec votre accord.",
+		"Voir d'autres maquilleuses"
 	]
 }
