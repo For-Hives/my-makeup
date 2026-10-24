@@ -205,7 +205,7 @@ Le même mot français a le même mot anglais partout (source : `PLAN-ANGLAIS.md
 | courriel aux membres (envoi unique) / journal d'envoi | `membersMail` / `sendLog` | plafond (d'une passe) / destinataire | `limit` / `recipient` |
 | édition directe (sur la page) / bloc éditable | `direct-edit` (dossier `src/components/direct-edit`) / `EditableBlock` (jamais « zone » : le mot est pris par la localisation) | mode édition / session d'édition | `edit mode` / `EditSession` |
 | modèle (de prestation) / médiane (des prix) | `OfferModel` (`src/lib/price-median.ts`) / `median` | prestation phare / noms de départ (du profil) | `flagship` (`flagship-offer.ts`) / `initialNames` |
-| mise en avant (accueil) / sélection | `featured` (`src/lib/profile/featured.ts`) / `selection` | | |
+| mise en avant (accueil) / sélection | `featured` (`src/lib/profile/featured.ts`) / `selection` | vérifiée (case d'un admin, réserve de la mise en avant) / candidats (du tirage) | `verified` (`src/lib/profile/verified.ts`) / `candidates` |
 | annuaire public des entreprises (l'API « Recherche d'entreprises », jamais `directory`, pris par la liste des profils) / établissement | `businessRegistry` (`src/lib/activity/registry.ts`) / `establishment` | contrôle d'activité (du SIRET) / cessée | `activityCheck` (dossier `src/lib/activity`) / `ceased` |
 
 ## Pièges

@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test'
+import { expect, type Locator, type Page, test } from '@playwright/test'
 import { setSearchProfiles } from '../fixtures/search-profiles'
 import { createAccount } from '../support/account-factory'
 import { violationsSevere } from '../support/axe'
@@ -7,8 +7,8 @@ import { refreshProfilePages } from '../support/public-pages'
 
 /**
  * The home page (issues 1013 and 1066), at 390 px and at 1440 px: a guided form with labels in sight that leads to
- * the search, the block that says what the platform does, « Mise en avant » (absent until an admin ticks a profile,
- * six cards at most, never a profile that is not publishable), and the texts of the community, unfolded and without
+ * the search, the block that says what the platform does, « Mise en avant » (absent until a profile is verified,
+ * six cards at most, drawn at random at each load, never a profile that is not publishable), and the texts of the community, unfolded and without
  * the old title « Comment ça marche ». On each screen: no horizontal scroll, every control at least 44 px tall, axe finds no
  * « serious » or « critical » violation. Set `SCREENSHOT_DIR` to keep the screenshots. All made-up people.
  */
@@ -104,25 +104,32 @@ for (const size of SIZES) {
 	})
 }
 
-// The selection is a state of the whole bench: one test sets it, then looks at both screens (two tests at once, one per
-// size, would tick and untick the same profiles under each other).
-test('« Mise en avant » : absente sans profil coché, six cartes au plus, jamais un profil non publiable', async ({
+// The pool is a state of the whole bench: one test sets it, then looks at both screens (two tests at once, one per
+// size, would tick and untick the same profiles under each other). The bench ships one profile already verified
+// (`essai-verifiee`): the test saves what each profile was and puts it back.
+test('« Mise en avant » : absente sans profil vérifié, six cartes au plus tirées parmi les profils vérifiés, jamais un profil non publiable', async ({
+	browser,
 	page,
 	request,
 }) => {
-	test.setTimeout(120_000)
+	test.setTimeout(180_000)
 	const profiles = await setSearchProfiles()
 	const headers = (await createAccount('admin')).session.enTetes
 	const ids = [...profiles.values()].map(({ id }) => id)
-	const set = async (featured: boolean) => {
+	const set = async (verified: boolean) => {
 		for (const id of ids) {
-			const response = await request.patch(`/api/profiles/${id}`, { headers, data: { featured } })
+			const response = await request.patch(`/api/profiles/${id}`, { headers, data: { verified } })
 			expect(response.ok(), `profil ${id}`).toBe(true)
 		}
 	}
 	const reference = profiles.get('reference')
 	const unpublishable = profiles.get('actif-non-publiable')
-	if (!(reference && unpublishable)) throw new Error('profil d’essai manquant')
+	const alreadyVerified = profiles.get('verifiee')
+	if (!(reference && unpublishable && alreadyVerified)) throw new Error('profil d’essai manquant')
+	const shownSlugs = (block: Locator) =>
+		block
+			.locator('.featured-list > li:visible a[href^="/profil/"]')
+			.evaluateAll(links => links.map(link => (link.getAttribute('href') ?? '').replace('/profil/', '')))
 	try {
 		await set(false)
 		await refreshProfilePages(request, reference)
@@ -140,16 +147,59 @@ test('« Mise en avant » : absente sans profil coché, six cartes au plus, jama
 			await page.goto('/')
 			const block = page.getByTestId('maquilleuses-mises-en-avant')
 			await expect(block.getByRole('heading', { name: 'Mise en avant' })).toBeVisible()
-			const cards = block.locator('a[href^="/profil/"]')
-			expect(await cards.count()).toBeGreaterThan(0)
-			expect(await cards.count()).toBeLessThanOrEqual(6)
+			const visible = (await shownSlugs(block)).length
+			expect(visible).toBeGreaterThan(0)
+			expect(visible).toBeLessThanOrEqual(6)
 			await expect(block.locator(`a[href="/profil/${unpublishable.slug}"]`)).toHaveCount(0)
 			await checkScreen(page, `accueil avec sélection à ${size.width} px`)
 			if (process.env.SCREENSHOT_DIR)
 				await page.screenshot({ path: `${process.env.SCREENSHOT_DIR}/1066-accueil-${size.width}.png`, fullPage: true })
 		}
+
+		// The draw (issue 1066): the cached HTML carries every candidate; the browser shows six of them, drawn at load.
+		await page.setViewportSize(SCREENS.chromium)
+		await page.goto('/')
+		const block = page.getByTestId('maquilleuses-mises-en-avant')
+		const candidates = await block.locator('.featured-list > li').count()
+		const inOrder = await block
+			.locator('.featured-list > li a[href^="/profil/"]')
+			.evaluateAll(links => links.map(link => (link.getAttribute('href') ?? '').replace('/profil/', '')))
+		expect(candidates).toBe(inOrder.length)
+		if (candidates > 6) {
+			const drawWith = async (value: number): Promise<string[]> => {
+				const context = await browser.newContext({ viewport: SCREENS.chromium })
+				try {
+					const drawn = await context.newPage()
+					await drawn.addInitScript(fixed => {
+						Math.random = () => fixed
+					}, value)
+					await drawn.goto('/')
+					const slugs = await shownSlugs(drawn.getByTestId('maquilleuses-mises-en-avant'))
+					expect(slugs).toHaveLength(6)
+					expect(new Set(slugs).size).toBe(6)
+					for (const slug of slugs) expect(inOrder).toContain(slug)
+					return slugs
+				} finally {
+					await context.close()
+				}
+			}
+			expect(await drawWith(0.01)).not.toEqual(await drawWith(0.99))
+			// Without JavaScript: the first six, in the order of the directory, the same at each load.
+			const plain = await browser.newContext({ javaScriptEnabled: false, viewport: SCREENS.chromium })
+			try {
+				const noScript = await plain.newPage()
+				await noScript.goto('/')
+				expect(await shownSlugs(noScript.getByTestId('maquilleuses-mises-en-avant'))).toEqual(inOrder.slice(0, 6))
+			} finally {
+				await plain.close()
+			}
+		} else {
+			expect(await shownSlugs(block)).toEqual(inOrder)
+		}
 	} finally {
 		await set(false)
+		const response = await request.patch(`/api/profiles/${alreadyVerified.id}`, { headers, data: { verified: true } })
+		expect(response.ok()).toBe(true)
 		await refreshProfilePages(request, reference)
 	}
 })

@@ -36,7 +36,6 @@ import {
 	validateNetworkLink,
 	validatePhone,
 } from '../lib/profile/contact-details'
-import { type FeatureAction, featureActionOf } from '../lib/profile/featured'
 import { initialNamesOf } from '../lib/profile/initial-names'
 import {
 	HOLD_ACTIONS,
@@ -55,6 +54,7 @@ import {
 	STATUS_CHOICES,
 	STATUS_LABELS,
 } from '../lib/profile/status'
+import { type VerifyAction, verifyActionOf } from '../lib/profile/verified'
 import { ZONE_KINDS, ZONE_REVIEW_REASONS } from '../lib/profile/zone'
 import { fallbackSlug, firstFreeSlug, slugify } from '../lib/slug'
 import { LIST_FIELDS, rowIdentitiesBeforeWrite } from './profile-lists'
@@ -318,32 +318,32 @@ export const logModeration: CollectionAfterChangeHook = async ({ context, doc, r
 	return doc
 }
 
-/** What `noteFeature` hands to `logFeature`, in the context of the request. */
-const FEATURE_KEY = 'featureEvent'
-interface PendingFeature {
-	readonly action: FeatureAction
+/** What `noteVerification` hands to `logVerification`, in the context of the request. */
+const VERIFY_KEY = 'verifyEvent'
+interface PendingVerification {
+	readonly action: VerifyAction
 	readonly admin: number | null
 }
 
 /**
- * Issue 1066: an admin ticks or unticks « Mise en avant ». The change is remembered here and written to the journal
- * once the row is saved (`logFeature`). Only a save by an admin counts: a write by the server itself (the import, the
- * demo data) has no admin and writes no line. A save that leaves the box as it is writes none either.
+ * Issue 1066: an admin ticks or unticks « Vérifiée ». The change is remembered here and written to the journal once
+ * the row is saved (`logVerification`). Only a save by an admin counts: a write by the server itself (the import,
+ * the demo data) has no admin and writes no line. A save that leaves the box as it is writes none either.
  */
-const noteFeature: CollectionBeforeChangeHook = ({ context, data, originalDoc, req }) => {
+const noteVerification: CollectionBeforeChangeHook = ({ context, data, originalDoc, req }) => {
 	if (!isAdmin(req.user)) return data
-	const action = featureActionOf(originalDoc, data)
+	const action = verifyActionOf(originalDoc, data)
 	if (action === null) return data
-	const pending: PendingFeature = { action, admin: Number(req.user?.id) || null }
-	context[FEATURE_KEY] = pending
+	const pending: PendingVerification = { action, admin: Number(req.user?.id) || null }
+	context[VERIFY_KEY] = pending
 	return data
 }
 
 /** The line of the journal, in the transaction of the change: both happen, or neither. No reason, no name: numbers only. */
-export const logFeature: CollectionAfterChangeHook = async ({ context, doc, req }) => {
-	const pending = context[FEATURE_KEY] as PendingFeature | undefined
+export const logVerification: CollectionAfterChangeHook = async ({ context, doc, req }) => {
+	const pending = context[VERIFY_KEY] as PendingVerification | undefined
 	if (pending === undefined) return doc
-	delete context[FEATURE_KEY]
+	delete context[VERIFY_KEY]
 	await req.payload.create({
 		collection: 'moderation-events',
 		data: { profile: doc.id, admin: pending.admin, action: pending.action, date: new Date().toISOString() },
@@ -484,11 +484,17 @@ export const Profiles: CollectionConfig<'profiles'> = {
 			clearZoneReview,
 			noteSiretChange,
 			moderate,
-			noteFeature,
+			noteVerification,
 			stateBeforeWrite,
 		],
 		// The refresh comes after the fallback slug: a profile created public gets its final address.
-		afterChange: [fallbackSlugAfterCreate, logModeration, logFeature, resetCheckOnSiretChange, REFRESH.apresEcriture],
+		afterChange: [
+			fallbackSlugAfterCreate,
+			logModeration,
+			logVerification,
+			resetCheckOnSiretChange,
+			REFRESH.apresEcriture,
+		],
 		beforeDelete: [REFRESH.avantSuppression, deleteActivityCheck],
 		afterDelete: [REFRESH.apresSuppression],
 	},
@@ -718,7 +724,11 @@ export const Profiles: CollectionConfig<'profiles'> = {
 			type: 'checkbox',
 			defaultValue: false,
 			access: OWNER_READ_RESERVED,
-			admin: { position: 'sidebar' },
+			admin: {
+				position: 'sidebar',
+				description:
+					'Vérifiée : l’équipe a validé le profil ; les profils vérifiés sont tirés au hasard dans la Mise en avant de l’accueil.',
+			},
 		},
 		{
 			name: 'verifiedAt',
@@ -766,19 +776,6 @@ export const Profiles: CollectionConfig<'profiles'> = {
 			defaultValue: false,
 			access: { create: fieldAdminOnly, update: fieldAdminOnly },
 			admin: { position: 'sidebar', description: 'Le badge des cartes de la recherche. Public.' },
-		},
-		{
-			// Written by an admin only, read by everyone (the home page reads it through the directory): issue 1066.
-			name: 'featured',
-			label: 'Mise en avant',
-			type: 'checkbox',
-			defaultValue: false,
-			access: { create: fieldAdminOnly, update: fieldAdminOnly },
-			admin: {
-				position: 'sidebar',
-				description:
-					'Montre le profil dans « Mise en avant », sur l’accueil (six profils au plus, dans l’ordre de l’annuaire). Un profil non publiable ou masqué n’y figure jamais, même coché. Chaque changement est écrit au journal de modération.',
-			},
 		},
 		// Computed by the server at every save (ticket 044).
 		...STATE_FIELDS,
