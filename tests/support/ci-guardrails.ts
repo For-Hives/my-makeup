@@ -617,7 +617,7 @@ export function durationProblems(workflow: Workflow, limit: number): string[] {
  * the job shows it, and the command of the tests divides by it. A matrix and a divisor that differ
  * would drop tests without a word (`--shard=3/2` runs nothing) or run some twice.
  */
-export const SHARDS = { integration: 3, e2e: 4 } as const
+export const SHARDS = { integration: 3, e2e: 5 } as const
 /** An expression of GitHub Actions, written so that it is not read as a template here. */
 const SHARD = '${{ matrix.shard }}'
 /** The two jobs that run on the test bench, and the commands each one runs, in this order, one per step. */
