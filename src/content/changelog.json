@@ -450,6 +450,11 @@
 			"id": "le-site-bouge-avec-douceur-les-cartes-se-soulevent-au-sur",
 			"type": "amelioration",
 			"text": "Le site bouge avec douceur : les cartes se soulèvent au survol, les blocs apparaissent en glissant au défilement, et rien ne bouge si tu as demandé moins de mouvement."
+		},
+		{
+			"id": "en-allant-d-une-page-a-l-autre-du-site-par-exemple-de-la",
+			"type": "amelioration",
+			"text": "En allant d'une page à l'autre du site, par exemple de la recherche à une fiche, le contenu change en douceur : l'ancienne page s'efface, la nouvelle apparaît en fondu, et rien ne bouge si tu as demandé moins de mouvement."
 		}
 	],
 	"releases": []

@@ -369,6 +369,73 @@
 	}
 }
 
+/*
+ * Page transition (issue 1087, docs/mouvement.md). `src/app/(front)/(site)/template.tsx` wraps the page in React's
+ * `<ViewTransition>`: on a client-side navigation between two public pages the browser snapshots the old and the new
+ * content and these rules animate them. The snapshot of the rest of the page (navigation, footer) swaps at once, so
+ * the navigation never moves. The old content fades out (100 ms), then the new one fades in and rises 12 px, for
+ * 360 ms in all. A browser without the API navigates as usual; the first load, a full reload and the dashboard are
+ * never animated.
+ */
+@keyframes page-out {
+	to {
+		opacity: 0;
+	}
+}
+
+@keyframes page-in {
+	from {
+		opacity: 0;
+		transform: translateY(var(--motion-distance));
+	}
+}
+
+/* The live page stays clickable while the overlay plays, and the whole-page snapshot does not cross-fade. */
+::view-transition {
+	pointer-events: none;
+}
+
+::view-transition-group(root) {
+	animation: none;
+}
+
+::view-transition-old(root) {
+	display: none;
+}
+
+::view-transition-new(root) {
+	animation: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	::view-transition-old(.page-out) {
+		animation: page-out var(--duration-hover) var(--ease-in-soft) both;
+	}
+
+	/* It waits for the exit and lasts what is left of the page duration. */
+	::view-transition-new(.page-in) {
+		animation: page-in calc(var(--duration-page) - var(--duration-hover)) var(--ease-out-soft) var(--duration-hover)
+			both;
+	}
+}
+
+/* Reduced motion, and the edit page (its blocks are measured and clicked at once): the content swaps without animation. */
+@media (prefers-reduced-motion: reduce) {
+	::view-transition-group(*),
+	::view-transition-old(*),
+	::view-transition-new(*) {
+		animation: none !important;
+	}
+}
+
+:root:has([data-edit-page]) {
+	&::view-transition-group(*),
+	&::view-transition-old(*),
+	&::view-transition-new(*) {
+		animation: none !important;
+	}
+}
+
 /* Reduced motion: whatever a component still declares (a Tailwind `transition`) ends at once, and nothing loops. */
 @media (prefers-reduced-motion: reduce) {
 	*,
