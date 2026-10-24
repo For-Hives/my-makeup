@@ -156,9 +156,16 @@ test.describe('1005 : modérer un profil avec un motif, et le tableau de bord', 
 		await page.goto('/admin')
 		const overview = page.getByTestId('dashboard-overview')
 		await expect(overview).toBeVisible()
-		await expect(page.getByTestId('count-published')).toHaveText(String(await count('published')))
-		await expect(page.getByTestId('count-draft')).toHaveText(String(await count('draft')))
-		await expect(page.getByTestId('count-hidden')).toHaveText(String(await count('hidden')))
+		// The other files of the run create and remove profiles on the same bench while this one reads: the page and
+		// the base are read again together until they agree, instead of comparing a page with a count taken later.
+		await expect(async () => {
+			await page.reload()
+			await expect(overview).toBeVisible()
+			for (const status of ['published', 'draft', 'hidden']) {
+				const [shown, total] = await Promise.all([page.getByTestId(`count-${status}`).textContent(), count(status)])
+				expect(shown?.trim(), `nombre « ${status} »`).toBe(String(total))
+			}
+		}).toPass({ timeout: 30_000 })
 		await shot(page, 'tableau-de-bord', testInfo)
 		expect(await noHorizontalScroll(page)).toBe(true)
 		expect(await smallestTarget(page, '[data-testid="dashboard-overview"] a')).toBeGreaterThanOrEqual(44)
