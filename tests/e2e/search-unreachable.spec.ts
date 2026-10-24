@@ -4,6 +4,7 @@ import { type SearchProfile, setSearchProfiles, TEST_WORD } from '../fixtures/se
 import { violationsSevere } from '../support/axe'
 import { SCREENS } from '../support/e2e'
 import { testPayload } from '../support/payload-test'
+import { refreshProfilePages } from '../support/public-pages'
 import { openSessionWithoutPassword } from '../support/session'
 
 /**
@@ -80,10 +81,15 @@ for (const size of SIZES) {
 	test.describe(`291 à ${size.width} px`, () => {
 		test.use({ viewport: size })
 
-		test('la recherche : joignables d’abord, puis les profils sans contact avec leur bandeau', async ({ page }) => {
+		test('la recherche : joignables d’abord, puis les profils sans contact avec leur bandeau', async ({
+			page,
+			request,
+		}) => {
 			const reachable = profiles.get('reference')
 			const unreachable = profiles.get('sans-contact-public')
 			if (!reachable || !unreachable) throw new Error('profils d’essai manquants')
+			// The directory of the search is cached by Next: an earlier spec of the shard may have cached it before these profiles.
+			await refreshProfilePages(request, reachable)
 			await page.goto(`/search?search=${encodeURIComponent(TEST_WORD)}&city=Annecy`)
 			await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
 

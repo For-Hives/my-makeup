@@ -3,6 +3,7 @@ import { RANKING_LINK_TEXT, RANKING_PATH, RANKING_RULES } from '../../src/lib/se
 import { setSearchProfiles, TEST_WORD } from '../fixtures/search-profiles'
 import { violationsSevere } from '../support/axe'
 import { SCREENS } from '../support/e2e'
+import { refreshProfilePages } from '../support/public-pages'
 
 /**
  * The page that explains the ranking (issue 1012), at 390 px and 1440 px: it is a public, indexable page, it says
@@ -12,9 +13,13 @@ import { SCREENS } from '../support/e2e'
 
 const SIZES = [SCREENS.mobile, SCREENS.chromium] as const
 
+let reference: { id: number; specialite: string | null }
+
 test.beforeAll(async () => {
 	test.setTimeout(180_000)
-	await setSearchProfiles()
+	const found = (await setSearchProfiles()).get('reference')
+	if (!found) throw new Error('Le profil d’essai « reference » manque.')
+	reference = found
 })
 
 async function checkScreen(page: Page, label: string): Promise<void> {
@@ -58,7 +63,10 @@ for (const size of SIZES) {
 			expect(await sitemap.text()).toContain('/classement</loc>')
 		})
 
-		test('les résultats de la recherche renvoient vers la page', async ({ page }) => {
+		test('les résultats de la recherche renvoient vers la page', async ({ page, request }) => {
+			// The search keeps the directory in the cache of Next: what an earlier spec of the shard cached has not
+			// these profiles yet (they are loaded by the test process, which does not refresh it).
+			await refreshProfilePages(request, reference)
 			await page.goto(`/search?search=${encodeURIComponent(TEST_WORD)}&city=Annecy`)
 			const link = page.getByRole('link', { name: RANKING_LINK_TEXT })
 			await expect(link).toHaveAttribute('href', RANKING_PATH)

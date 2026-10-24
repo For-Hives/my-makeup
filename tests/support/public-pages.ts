@@ -36,22 +36,23 @@ export async function deleteContent(
 	await request.delete(`/api/${collection}/${identifiant}`, { headers: await adminHeaderList() })
 }
 
-let refreshed = false
+const refreshed = new Set<number>()
 
 /**
- * Has the application refresh the pages that list the profiles, once for this process: a save of a
+ * Has the application refresh the pages that list the profiles, once per profile for this process: a save of a
  * published profile through the application does it (its page, the search, the sitemap). The profile is
- * saved with the specialty it has, so nothing changes.
+ * saved with the specialty it has, so nothing changes. Once per profile and not once per process: a profile
+ * loaded after the first refresh (a spec that places its own) is not in the directory that was cached by then.
  */
 export async function refreshProfilePages(
 	request: APIRequestContext,
 	profil: { id: number; specialite: string | null }
 ): Promise<void> {
-	if (refreshed) return
+	if (refreshed.has(profil.id)) return
 	const response = await request.patch(`/api/profiles/${profil.id}`, {
 		headers: await adminHeaderList(),
 		data: { specialite: profil.specialite ?? '' },
 	})
 	if (!response.ok()) throw new Error(`Le rafraîchissement a répondu ${response.status()} : ${await response.text()}`)
-	refreshed = true
+	refreshed.add(profil.id)
 }
