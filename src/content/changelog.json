@@ -420,6 +420,11 @@
 			"id": "ton-espace-devient-un-tableau-de-bord-ou-en-est-ta-page-c",
 			"type": "amelioration",
 			"text": "Ton espace devient un tableau de bord : où en est ta page, ce qu'il te manque avec un lien vers l'endroit où le compléter, tes vues, tes demandes de devis et ton compte."
+		},
+		{
+			"id": "le-bas-des-pages-du-site-invite-d-un-geste-a-trouver-votr",
+			"type": "amelioration",
+			"text": "Le bas des pages du site invite d’un geste à trouver votre maquilleuse ou à rejoindre My-Makeup, dans un bloc plus soigné."
 		}
 	],
 	"releases": []

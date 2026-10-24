@@ -18,6 +18,7 @@ const SRC = join(import.meta.dir, '../../src')
 
 /** The folders whose client components are loaded by a public page (profile, layout, analytics, forms of the page). */
 const PUBLIC_CLIENT_FOLDERS = [
+	'components/blocks',
 	'components/profile',
 	'components/layout',
 	'components/analytics',

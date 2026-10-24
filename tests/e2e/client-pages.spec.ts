@@ -32,7 +32,7 @@ test.describe('Les pages pour les particuliers', { tag: '@mobile' }, () => {
 			expect(response?.status()).toBe(200)
 			await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1)
 			await expect(page.getByRole('heading', { level: 1 })).toHaveText(h1)
-			await expect(page.getByRole('link', { name: 'Je cherche des maquilleuses' })).toHaveAttribute('href', '/search')
+			await expect(page.getByRole('link', { name: 'Trouver ma maquilleuse' })).toHaveAttribute('href', '/search')
 			expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 			expect(await violationsSevere(page)).toEqual([])
 		})
