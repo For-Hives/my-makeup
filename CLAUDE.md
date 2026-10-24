@@ -28,6 +28,7 @@ My Makeup est un annuaire de maquilleuses professionnelles indépendantes. Cette
 | toucher à l'édition directe du profil (blocs éditables, mode édition, jetons de la direction artistique) | [`docs/edition-directe.md`](docs/edition-directe.md) |
 | préparer, lister ou lancer le courriel aux membres après la bascule (liste à blanc, verrous, journal d'envoi) | [`docs/membres-courriel.md`](docs/membres-courriel.md) |
 | toucher au SIRET, au badge « Activité vérifiée » ou à l'appel de l'annuaire des entreprises | [`docs/activite-verifiee.md`](docs/activite-verifiee.md) |
+| toucher l'invitation à l'action du bas des pages (fond animé, dépendance) | [`docs/appel-a-l-action.md`](docs/appel-a-l-action.md) |
 | faire autrement que le site en ligne | [`docs/migration/CHANGEMENTS-VOULUS.md`](docs/migration/CHANGEMENTS-VOULUS.md) |
 | jouer la bascule, ou savoir quoi faire à chaque étape du jour J et du retour arrière | [`docs/migration/BASCULE.md`](docs/migration/BASCULE.md) |
 | savoir ce qui est déjà fait et vérifié | [`docs/migration/JOURNAL.md`](docs/migration/JOURNAL.md) |
