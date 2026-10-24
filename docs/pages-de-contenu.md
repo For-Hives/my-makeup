@@ -17,7 +17,7 @@ Tout est dans `src/components/static-pages/`, une brique pour chaque besoin :
 
 ## Les règles
 
-- **Les mots ne bougent pas.** `tests/fixtures/content-pages-text.json` garde les lignes des pages d'avant la passe ; `tests/unit/content-pages-design.test.tsx` vérifie que chacune est encore là, dans l'ordre. 
+- **Les mots ne bougent pas.** `tests/fixtures/content-pages-text.json` garde les lignes des pages d'avant la passe ; `tests/unit/content-pages-design.test.tsx` vérifie que chacune est encore là, dans l'ordre. Les pages légales gardent leur empreinte (`tests/fixtures/legal-pages-text.json`) : leur coquille (`LegalPage`) n'ajoute aucun texte, ni étiquette ni signature.
 - **Le `Hero` n'est pas modifié.** Son titre prend la police d'affichage par la règle `.content-page h1` du bloc « Content pages » de `globals.css` (le seul bloc de feuille de style de cette passe).
 - **Mesure de lecture** de 66 caractères (`max-w-[66ch]`) ; un test de navigateur refuse un paragraphe plus large.
 - **Mouvement.** Les blocs portent `.reveal` (voir `docs/mouvement.md`) ; aucune animation n'est déclarée dans ce bloc.

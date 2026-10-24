@@ -9,6 +9,8 @@ import { violationsSevere } from '../support/axe'
  */
 const URLS = [
 	'/a-propos',
+	'/contact',
+	'/demande-envoyee',
 	'/maquilleuse/partenariats',
 	'/particulier/trouver-une-maquilleuse',
 	'/particulier/centraliser-ses-recherches',
@@ -17,6 +19,9 @@ const URLS = [
 	'/pourquoi-utiliser-my-makeup-en-tant-que-particulier',
 	'/solutions/pour-les-maquilleuses',
 	'/solutions/pour-les-particuliers',
+	'/cgu',
+	'/mentions-legales',
+	'/politique-de-confidentialite',
 ] as const
 
 test.describe('Les pages de contenu', { tag: '@mobile' }, () => {
@@ -49,7 +54,8 @@ test.describe('Les pages de contenu', { tag: '@mobile' }, () => {
 			// The title takes the display face, the page the body face.
 			const faces = await page.evaluate(() => ({
 				h1: getComputedStyle(document.querySelector('h1') as Element).fontFamily,
-				h2: getComputedStyle(document.querySelector('main h2') as Element).fontFamily,
+				// The thank-you page has no h2: its title is the h1.
+				h2: getComputedStyle((document.querySelector('main h2') ?? document.querySelector('h1')) as Element).fontFamily,
 				main: getComputedStyle(document.querySelector('main') as Element).fontFamily,
 			}))
 			expect(faces.h1).toMatch(/bodoni/i)

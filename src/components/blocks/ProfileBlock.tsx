@@ -27,7 +27,7 @@ export function ProfileBlock({
 		<section aria-labelledby={headingId} data-testid="bloc-maquilleuses" className="mt-16 md:mt-24">
 			<h2
 				id={headingId}
-				className={`font-bold text-gray-900 tracking-tight ${compact ? 'text-xl md:text-2xl' : 'text-2xl md:text-3xl'}`}
+				className={`text-gray-900 tracking-tight ${compact ? 'font-bold text-xl md:text-2xl' : 'font-display font-medium text-3xl md:text-4xl'}`}
 			>
 				{titre}
 			</h2>
