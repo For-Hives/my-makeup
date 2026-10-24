@@ -18,7 +18,7 @@ export function ResultList({
 	return (
 		<ul className="grid w-full grid-cols-1 gap-3 md:gap-8 md:grid-cols-3 2xl:grid-cols-6">
 			{cartes.map((carte, rang) => (
-				<li key={carte.slug} className="col-span-1">
+				<li key={carte.slug} className="reveal col-span-1">
 					<ResultCard
 						carte={carte}
 						prioritaire={premiereDeLaPage && rang < PRIORITY_CARDS}

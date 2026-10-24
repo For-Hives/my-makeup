@@ -41,7 +41,7 @@ export function Project() {
 						<div className="flex flex-col gap-2">
 							{TABS.map(onglet => (
 								<div key={onglet.titre}>
-									<div className="rounded-2xl border border-gray-200 bg-gray-50 p-10 shadow-lg transition-all duration-300 ease-in-out hover:bg-gray-50 hover:shadow-lg md:border-none md:bg-none md:shadow-none">
+									<div className="rounded-2xl border border-gray-200 bg-gray-50 p-10 shadow-lg hover:bg-gray-50 hover:shadow-lg md:border-none md:bg-none md:shadow-none">
 										<h3 className="mb-4 font-bold text-gray-700 text-xl">{onglet.titre}</h3>
 										<p className="text-gray-500 text-sm">{onglet.contenu}</p>
 									</div>

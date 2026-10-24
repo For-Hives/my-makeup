@@ -13,7 +13,7 @@ const BUTTON =
 export function Cta() {
 	return (
 		<section className="px-4 py-12 md:px-8 md:py-20">
-			<div className="relative isolate mx-auto max-w-5xl overflow-hidden rounded-2xl bg-indigo-900 px-6 py-12 shadow-lg sm:px-14 sm:py-16">
+			<div className="reveal relative isolate mx-auto max-w-5xl overflow-hidden rounded-2xl bg-indigo-900 px-6 py-12 shadow-lg sm:px-14 sm:py-16">
 				<CtaBackdrop />
 				<div className="relative flex flex-col items-start gap-8">
 					<div className="flex max-w-2xl flex-col gap-4">
@@ -32,7 +32,7 @@ export function Cta() {
 							className={`${BUTTON} bg-white text-indigo-900 hover:bg-indigo-50`}
 						>
 							Trouver ma maquilleuse
-							<ArrowUpRightIcon className="h-5 w-5" />
+							<ArrowUpRightIcon className="motion-arrow h-5 w-5" />
 						</TrackedLink>
 						<TrackedLink
 							suivi={{ nom: 'cta_click', proprietes: { where: 'cta_inscription' } }}

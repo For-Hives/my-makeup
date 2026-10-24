@@ -5,6 +5,22 @@
 }
 
 /*
+ * Motion tokens (issue 1069, docs/mouvement.md): the only durations, curves and distances the site moves with.
+ * `static` keeps them in the stylesheet even when no utility reads them. Ranges are held by tests/unit/motion-system.test.ts.
+ */
+@theme static {
+	--duration-hover: 100ms;
+	--duration-lift: 200ms;
+	--duration-appear: 280ms;
+	--duration-page: 360ms;
+	--ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+	--ease-in-soft: cubic-bezier(0.64, 0, 0.78, 0);
+	--motion-distance: 12px;
+	--motion-lift: 3px;
+	--motion-zoom: 1.03;
+}
+
+/*
  * The tokens of the art direction of her own page (issues 1007, 1008, 1071), defined once, here, and used by
  * the edit mode and her space. Lipstick red is reserved for what can be changed. The page is a very light
  * off-white, the cards are white, the text is black or nearly. Contrasts measured by
@@ -225,6 +241,144 @@
 			filter: none;
 			opacity: 1;
 		}
+	}
+}
+
+/*
+ * Motion (issue 1069, docs/mouvement.md). One small system: a role before an effect (feedback, guidance, linking two
+ * states), `transform` and `opacity` only (plus paint-only colors), no layout property ever moves. Everything that
+ * moves is declared inside `prefers-reduced-motion: no-preference`: with reduced motion nothing slides or fades, and
+ * every state change (hover tint, underline, shadow) still shows, at once. Nothing is hidden by default: the reveal
+ * is a scroll-driven animation, so without the browser support, without animation, in print and without script
+ * the content is simply there. The first screen is never animated: a block already in view is past its range.
+ */
+@keyframes motion-reveal {
+	from {
+		opacity: 0;
+		transform: translateY(var(--motion-distance));
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+@keyframes motion-underline {
+	from {
+		text-decoration-color: transparent;
+	}
+}
+
+/* A card or a link that leads to a page: a shadow shows the hover, with or without motion. */
+@media (hover: hover) {
+	.card-hover:hover {
+		box-shadow: 0 10px 24px -12px rgb(26 20 23 / 0.28);
+	}
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	/* Feedback: the controls of the affordance rules above ease their state instead of snapping to it (100 ms). */
+	@layer base {
+		:where(
+				a[href],
+				button,
+				summary,
+				select,
+				[role="button"],
+				[role="tab"],
+				[role="switch"],
+				label:has(input:is([type="checkbox"], [type="radio"], [type="file"]))
+			) {
+			transition-property: background-color, color, filter, opacity, box-shadow, transform, text-decoration-color;
+			transition-duration: var(--duration-hover);
+			transition-timing-function: var(--ease-out-soft);
+		}
+	}
+
+	/* Guidance: a block fades in and rises 12 px as it enters the screen, once its top is 220 px inside. */
+	@supports (animation-timeline: view()) {
+		.reveal {
+			animation-name: motion-reveal;
+			animation-timing-function: var(--ease-out-soft);
+			animation-fill-mode: backwards;
+			animation-timeline: view();
+			animation-range: entry 0px entry 220px;
+		}
+		/* In print, and on the owner's page in edit mode: its blocks are measured and clicked, they never move. */
+		@media print {
+			.reveal {
+				animation: none;
+			}
+		}
+		[data-edit-page] .reveal {
+			animation: none;
+		}
+	}
+
+	@media (hover: hover) {
+		/* A link underlines, and the line fades in with it. */
+		:where(a[href]):hover {
+			animation: motion-underline var(--duration-hover) var(--ease-out-soft);
+		}
+
+		/* A button rises 1 px (it comes back when pressed). */
+		:where(
+				.btn-primary-large,
+				.btn-primary,
+				.btn-alt-primary,
+				.btn-primary-with-icon,
+				.btn-secondary-white,
+				.btn-secondary-white-bordered
+			):not(:disabled, [aria-disabled="true"]):hover {
+			transform: translateY(-1px);
+		}
+		:where(
+				.btn-primary-large,
+				.btn-primary,
+				.btn-alt-primary,
+				.btn-primary-with-icon,
+				.btn-secondary-white,
+				.btn-secondary-white-bordered
+			):not(:disabled, [aria-disabled="true"]):active {
+			transform: none;
+		}
+
+		/* A card lifts 3 px and its picture grows 3 %: the card clips the picture, so nothing moves around it. */
+		.card-hover {
+			transition-property: transform, box-shadow;
+			transition-duration: var(--duration-lift);
+			transition-timing-function: var(--ease-out-soft);
+		}
+		.card-hover:hover {
+			transform: translateY(calc(var(--motion-lift) * -1));
+		}
+		.card-zoom {
+			transition: transform var(--duration-lift) var(--ease-out-soft);
+		}
+		.card-hover:hover .card-zoom {
+			transform: scale(var(--motion-zoom));
+		}
+
+		/* The arrow of a button moves ahead of the label. */
+		.motion-arrow {
+			transition: transform var(--duration-hover) var(--ease-out-soft);
+		}
+		:is(a, button):hover .motion-arrow {
+			transform: translate(2px, -2px);
+		}
+	}
+}
+
+/* Reduced motion: whatever a component still declares (a Tailwind `transition`) ends at once, and nothing loops. */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	::before,
+	::after {
+		animation-duration: 0.01ms !important;
+		animation-delay: 0s !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		transition-delay: 0s !important;
 	}
 }
 
