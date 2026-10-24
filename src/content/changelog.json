@@ -425,6 +425,11 @@
 			"id": "le-bas-des-pages-du-site-invite-d-un-geste-a-trouver-votr",
 			"type": "amelioration",
 			"text": "Le bas des pages du site invite d’un geste à trouver votre maquilleuse ou à rejoindre My-Makeup, dans un bloc plus soigné."
+		},
+		{
+			"id": "quand-tu-modifies-ta-page-le-fond-est-plus-clair-les-text",
+			"type": "amelioration",
+			"text": "Quand tu modifies ta page, le fond est plus clair, les textes sont plus foncés et plus lisibles, le bloc que tu modifies est annoncé « Tu modifies : … », et le cadre qui s’allume au survol épouse exactement la forme de chaque bloc."
 		}
 	],
 	"releases": []

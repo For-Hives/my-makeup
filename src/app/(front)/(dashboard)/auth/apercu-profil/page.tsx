@@ -76,7 +76,7 @@ export default async function PreviewPage({ searchParams }: PageProps<'/auth/ape
 	// Her SIRET and where its check stands: for her eyes only (issue 1004).
 	const activity = activityView(profile.siret, await readCheck(context.payload, profile.id))
 	return (
-		<div className={`${display.variable} ${body.variable} flex flex-1 flex-col`}>
+		<div data-edit-page className={`${display.variable} ${body.variable} flex flex-1 flex-col`}>
 			<OwnerEditSession>
 				<EditBar />
 				{/* "This is your page as visitors see it" would be wrong here: only what needs her attention is said. */}

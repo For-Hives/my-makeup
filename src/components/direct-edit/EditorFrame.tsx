@@ -4,7 +4,7 @@ import { type KeyboardEvent, type ReactNode, useEffect, useRef } from 'react'
 import { useEditSession } from './EditSession'
 
 /**
- * The card an open block draws its editor in (issue 1008): « <block> · je modifie », the question
+ * The card an open block draws its editor in (issue 1008): « Tu modifies : <block> », the question
  * « Continuer / Abandonner » when she tries to leave with changes not saved, and Escape to close.
  * The focus goes to its first field when it opens.
  */
@@ -37,14 +37,32 @@ export function EditorFrame({ title, buttonId, children }: { title: string; butt
 			aria-label={`${title}, en cours de modification`}
 			data-direct-edit-editor={buttonId}
 			onKeyDown={onKeyDown}
-			className="mt-6 w-full scroll-mt-4 rounded-card border-2 border-lipstick bg-white p-5 font-body text-ink shadow-[0_24px_48px_-28px_rgba(176,41,74,0.55)] sm:p-7"
+			className="mt-6 w-full scroll-mt-4 rounded-card border-2 border-lipstick bg-white p-5 font-body text-ink shadow-[0_18px_40px_-24px_rgba(26,20,23,0.45)] sm:p-7"
 		>
-			<p className="mb-5 flex items-center gap-2 font-semibold text-lipstick text-xs uppercase tracking-[0.14em]">
-				<span aria-hidden="true" className="size-2 rounded-full bg-lipstick" />
-				{title} · je modifie
+			<p
+				data-testid="editor-title"
+				className="mb-5 flex items-center gap-2 border-hairline border-b pb-4 font-semibold text-base text-lipstick-800"
+			>
+				<svg
+					aria-hidden="true"
+					width="18"
+					height="18"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					strokeWidth="2"
+					strokeLinecap="round"
+					strokeLinejoin="round"
+				>
+					<path d="M4 20h4L19 9l-4-4L4 16z" />
+				</svg>
+				Tu modifies : {title}
 			</p>
 			{session.confirmation !== null ? (
-				<div role="alert" className="mb-4 flex flex-col gap-3 rounded-2xl bg-nude-100 p-4 text-ink">
+				<div
+					role="alert"
+					className="mb-4 flex flex-col gap-3 rounded-2xl border border-nude-300 bg-nude-100 p-4 text-ink"
+				>
 					<p className="text-sm">Tu as des modifications non enregistrées. Si tu continues, elles seront perdues.</p>
 					<div className="flex flex-wrap gap-3">
 						<button

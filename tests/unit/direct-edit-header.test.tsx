@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import type { PhotoWork } from '@/components/direct-edit/blocks/PhotoBlock'
+import { DIMMED_OPACITY } from '@/components/direct-edit/EditableBlock'
 import { EditBar } from '@/components/direct-edit/EditBar'
 import { EditSession } from '@/components/direct-edit/EditSession'
 import { type HeaderActions, headerEdit } from '@/components/direct-edit/header-edit'
@@ -151,8 +152,10 @@ describe('un seul bloc ouvert à la fois, avec la question quand il y a des modi
 	test('ouvrir le nom ouvre son éditeur sous l’en-tête et estompe les autres', async () => {
 		await bench().monter()
 		await jsdomWindow.cliquer(jsdomWindow.bouton('Modifier mon nom et ma spécialité'))
-		expect(editor()?.textContent).toContain('Nom et spécialité · je modifie')
-		expect(doc().querySelector('[data-direct-edit="photo"]')?.className).toContain('opacity-50')
+		expect(editor()?.textContent).toContain('Tu modifies : Nom et spécialité')
+		expect((doc().querySelector('[data-direct-edit="photo"]') as HTMLElement | null)?.style.opacity).toBe(
+			String(DIMMED_OPACITY)
+		)
 		expect(status()).toBe('Modification en cours')
 	})
 
@@ -175,7 +178,7 @@ describe('un seul bloc ouvert à la fois, avec la question quand il y a des modi
 
 		await jsdomWindow.cliquer(jsdomWindow.bouton('Modifier ma disponibilité'))
 		await jsdomWindow.cliquer(jsdomWindow.bouton('Abandonner mes modifications'))
-		expect(editor()?.textContent).toContain('Disponibilité · je modifie')
+		expect(editor()?.textContent).toContain('Tu modifies : Disponibilité')
 	})
 
 	test('Échap referme un éditeur propre, et le focus revient sur le bloc', async () => {

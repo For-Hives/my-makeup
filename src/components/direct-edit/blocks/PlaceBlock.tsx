@@ -63,7 +63,7 @@ export function PlaceBlock({
 			}
 			editor={<PlaceForm values={values} save={save} search={search} review={review} />}
 		>
-			<div className="pr-10">{children}</div>
+			<div className="flex min-h-11 items-center pr-10 [&>p]:mt-0">{children}</div>
 		</EditableBlock>
 	)
 }

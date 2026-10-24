@@ -8,7 +8,7 @@ import { type BlockOutcome, type BlockSave, saveFromOutcome } from '@/lib/direct
 import { useEditSession } from './EditSession'
 
 export const FIELD_CLASS =
-	'min-h-11 w-full rounded-2xl border-[1.5px] border-nude-300 bg-blush px-4 py-2 text-base text-ink outline-none focus-visible:border-lipstick focus-visible:outline-2 focus-visible:outline-lipstick'
+	'min-h-11 w-full rounded-2xl border-[1.5px] border-nude-300 bg-white px-4 py-2 text-base text-ink outline-none placeholder:text-mute hover:border-ink focus-visible:border-lipstick focus-visible:outline-2 focus-visible:outline-lipstick disabled:border-nude-200 disabled:bg-nude-200 disabled:text-mute'
 
 /**
  * The form every block of the direct edition draws in its editor (issue 1008): the fields, then
@@ -92,22 +92,38 @@ export function BlockForm({
 			{children}
 			<div role="alert">
 				{save.kind === 'error' || save.kind === 'expired' ? (
-					<p className="rounded-2xl bg-lipstick-50 p-4 text-lipstick-800 text-sm">
-						{save.message}
-						{save.kind === 'expired' ? (
-							<>
-								{' '}
-								<a
-									className="font-semibold underline"
-									href={expiredSessionUrl(editPath())}
-									target="_blank"
-									rel="noopener"
-								>
-									Te reconnecter (nouvel onglet)
-								</a>
-								, puis reviens ici et enregistre à nouveau : {keepsHint}.
-							</>
-						) : null}
+					<p className="flex gap-2 rounded-2xl border border-lipstick-800 bg-lipstick-50 p-4 text-lipstick-800 text-sm">
+						<svg
+							aria-hidden="true"
+							width="18"
+							height="18"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							strokeWidth="2"
+							strokeLinecap="round"
+							className="mt-0.5 shrink-0"
+						>
+							<circle cx="12" cy="12" r="9" />
+							<path d="M12 7v6M12 16.5v.5" />
+						</svg>
+						<span>
+							{save.message}
+							{save.kind === 'expired' ? (
+								<>
+									{' '}
+									<a
+										className="font-semibold underline"
+										href={expiredSessionUrl(editPath())}
+										target="_blank"
+										rel="noopener"
+									>
+										Te reconnecter (nouvel onglet)
+									</a>
+									, puis reviens ici et enregistre à nouveau : {keepsHint}.
+								</>
+							) : null}
+						</span>
 					</p>
 				) : null}
 			</div>
@@ -117,7 +133,7 @@ export function BlockForm({
 						type="button"
 						onClick={session.close}
 						disabled={pending}
-						className="min-h-11 w-full rounded-full border border-ink bg-white px-6 font-semibold text-ink text-sm transition-colors hover:bg-nude-100 focus-visible:outline-2 focus-visible:outline-ink focus-visible:outline-offset-2 disabled:opacity-60 motion-reduce:transition-none sm:w-auto"
+						className="min-h-11 w-full rounded-full border border-ink bg-white px-6 font-semibold text-ink text-sm transition-colors hover:bg-nude-100 focus-visible:outline-2 focus-visible:outline-ink focus-visible:outline-offset-2 disabled:border-nude-300 disabled:bg-nude-200 disabled:text-mute motion-reduce:transition-none sm:w-auto"
 					>
 						Annuler
 					</button>
@@ -127,7 +143,7 @@ export function BlockForm({
 				<button
 					type="submit"
 					disabled={pending || disabled}
-					className="min-h-11 w-full rounded-full border border-lipstick bg-lipstick px-6 font-semibold text-sm text-white transition-colors hover:bg-lipstick-800 focus-visible:outline-2 focus-visible:outline-lipstick focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transition-none sm:w-auto"
+					className="min-h-11 w-full rounded-full border border-lipstick bg-lipstick px-6 font-semibold text-sm text-white transition-colors hover:bg-lipstick-800 focus-visible:outline-2 focus-visible:outline-lipstick focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:border-nude-300 disabled:bg-nude-200 disabled:text-mute motion-reduce:transition-none sm:w-auto"
 				>
 					{pending ? 'Enregistrement…' : submitLabel}
 				</button>

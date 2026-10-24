@@ -5,24 +5,69 @@
 }
 
 /*
- * The tokens of the art direction of her own page (issues 1007 and 1008), defined once and used by the
- * edit mode only. Lipstick red is reserved for what can be changed. Contrasts, on white or on blush:
- * ink 17:1, mute 5.7:1, lipstick 6.4:1, lipstick-800 on lipstick-50 7.7:1.
+ * The tokens of the art direction of her own page (issues 1007, 1008, 1071), defined once, here, and used by
+ * the edit mode and her space. Lipstick red is reserved for what can be changed. The page is a very light
+ * off-white, the cards are white, the text is black or nearly. Contrasts measured by
+ * tests/unit/direct-edit-contrast.test.ts, on white, on the page and on the soft surface: ink 17:1 to 18:1,
+ * mute 9.6:1 to 10.7:1 (secondary text, aimed at 7:1), lipstick as text 5.8:1 to 6.4:1, lipstick-800 on
+ * lipstick-50 8:1, borders of the fields (nude-300) 4.3:1 to 4.8:1 (3:1 asked). See docs/edition-directe.md.
  */
 @theme {
-	--color-blush: #f8f4f1;
-	--color-ink: #1f1519;
+	--color-page: #fbfaf8;
+	--color-blush: #f5f2ef;
+	--color-ink: #1a1417;
 	--color-lipstick: #b0294a;
-	--color-lipstick-50: #f6e1e6;
+	--color-lipstick-50: #fbeaee;
 	--color-lipstick-800: #8a1f3a;
-	--color-nude-100: #f2e8e1;
-	--color-nude-200: #ebddd4;
-	--color-nude-300: #cdb8ac;
-	--color-hairline: #e3d6cd;
-	--color-mute: #6f6168;
-	--color-ok: #2f6b4f;
-	--color-warm: #8a5a12;
+	--color-nude-100: #f3efec;
+	--color-nude-200: #e7e1dc;
+	--color-nude-300: #7d6e75;
+	--color-hairline: #d3cbc5;
+	--color-mute: #463b41;
+	--color-ok: #1d5a3e;
+	--color-warm: #6b4309;
 	--radius-card: 22px;
+}
+
+/*
+ * Edit mode only: the halo of a block is the block. Whatever the visitor's markup draws as the first
+ * node of an editable block takes the radius of the block (22 px for a card, a full round for a pill or the
+ * photo), so that the halo, the block and its button have one outline (issue 1070). The public page has no
+ * editable block: its HTML and its styles do not change.
+ */
+[data-direct-edit] > :first-child {
+	border-radius: inherit;
+}
+[data-direct-edit="status"] > :first-child {
+	display: flex;
+}
+[data-direct-edit="status"] > :first-child > * {
+	min-height: 2.75rem;
+}
+
+/*
+ * Edit mode only (issue 1071): the visitor's greys are drawn as the tokens above, for the owner's page, so that
+ * the text reads at 7:1 and the page is not grey. The public page does not carry the attribute.
+ */
+[data-edit-page] {
+	background-color: var(--color-page);
+	color: var(--color-ink);
+}
+[data-edit-page] .text-gray-500,
+[data-edit-page] .text-gray-600 {
+	color: var(--color-mute);
+}
+[data-edit-page] .text-gray-700,
+[data-edit-page] .text-gray-800 {
+	color: var(--color-ink);
+}
+[data-edit-page] .border-gray-300 {
+	border-color: var(--color-hairline);
+}
+[data-edit-page] .bg-gray-50,
+[data-edit-page] .bg-gray-100,
+[data-edit-page] .bg-neutral-50 {
+	background-color: var(--color-blush);
 }
 
 /* The faces are loaded by the private route (src/components/direct-edit/fonts.ts) and set these variables. */

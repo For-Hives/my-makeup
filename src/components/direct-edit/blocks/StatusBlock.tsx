@@ -33,10 +33,10 @@ export function StatusBlock({
 			invitation={null}
 			shape="pill"
 			className="shrink-0"
-			penClassName="-right-3 -top-3"
+			penClassName="-right-2 -top-6"
 			editor={<StatusForm available={available} save={save} />}
 		>
-			<div className="py-1 pr-3">{children}</div>
+			<div>{children}</div>
 		</EditableBlock>
 	)
 }

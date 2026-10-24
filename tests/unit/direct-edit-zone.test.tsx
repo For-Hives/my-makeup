@@ -51,7 +51,7 @@ describe('l’édition', () => {
 		const bench = benchOf(window_)
 		await bench.mount()
 		await window_.cliquer(window_.bouton('Modifier mes déplacements'))
-		expect(doc().querySelector('[data-direct-edit-editor]')?.textContent).toContain('Mes déplacements · je modifie')
+		expect(doc().querySelector('[data-direct-edit-editor]')?.textContent).toContain('Tu modifies : Mes déplacements')
 		await window_.saisir(window_.champ(/Rayon d’action/), '50')
 		await window_.cliquer(window_.bouton('Enregistrer'))
 		await window_.attendre(() => bench.calls.savePlace?.length || null)

@@ -39,7 +39,7 @@ for (const size of SIZES) {
 			const profile = await open(page, context, 'reference')
 			await pen(page, PEN).click()
 			const editor = page.locator('[data-direct-edit-editor]')
-			await expect(editor).toContainText('SIRET et badge « Activité vérifiée » · je modifie')
+			await expect(editor).toContainText('Tu modifies : SIRET et badge « Activité vérifiée »')
 			await expect(page.locator('#direct-siret')).toBeFocused()
 			await expect(editor).toContainText(
 				'Sans SIRET, tu n’es ni moins bien classée ni moins bien placée dans la recherche.'
