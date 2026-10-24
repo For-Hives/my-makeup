@@ -3,9 +3,9 @@ import type { Payload } from 'payload'
 import { act } from 'react'
 import { AccountDeletion } from '@/components/dashboard/AccountDeletion'
 import { AvailabilitySwitch } from '@/components/dashboard/AvailabilitySwitch'
-import { DescriptionEditor } from '@/components/dashboard/DescriptionEditor'
-import { PhotoEditor } from '@/components/dashboard/PhotoEditor'
 import { ViewLink } from '@/components/dashboard/ViewLink'
+import { PhotoForm, type PhotoWork } from '@/components/direct-edit/blocks/PhotoBlock'
+import { EditSession } from '@/components/direct-edit/EditSession'
 import { eventData } from '@/lib/analytics/events'
 import type { Track } from '@/lib/analytics/track'
 import { holder } from '@/lib/dashboard/analytics'
@@ -13,6 +13,7 @@ import { MESSAGES_PHOTO } from '@/lib/dashboard/photo'
 import { uploadPhoto } from '@/lib/dashboard/photos-upload'
 import { withPublishableTransition } from '@/lib/dashboard/publishable-transition'
 import { FAILURE_MESSAGE, type SaveResult } from '@/lib/dashboard/result'
+import { benchOf } from '../support/direct-edit-bench'
 import { openWindow } from '../support/dom-react'
 import { pickFiles } from '../support/pick-files'
 
@@ -121,26 +122,25 @@ describe('l’enregistrement d’une section', () => {
 })
 
 describe('Entrée maintenue pendant un enregistrement : un seul événement', () => {
-	test('le panneau de la description envoie une requête et un profile_save, quelle que soit la répétition', async () => {
+	test('le bloc de la présentation envoie une requête et un profile_save, quelle que soit la répétition', async () => {
 		let requests = 0
 		let finish: () => void = () => undefined
-		await jsdomWindow.monter(
-			<DescriptionEditor
-				valeurs={{ description: 'Maquilleuse mariée.' }}
-				envoyer={valeurs => {
+		await benchOf(jsdomWindow, {
+			actions: {
+				saveAbout: input => {
 					requests += 1
 					return new Promise(fin => {
-						finish = () => fin({ ok: true, valeurs })
+						finish = () => fin({ ok: true, valeurs: input })
 					})
-				}}
-			/>
-		)
-		await jsdomWindow.cliquer(jsdomWindow.bouton('Modifier ma description'))
-		const field = jsdomWindow.champ('Ta description') as HTMLTextAreaElement
+				},
+			},
+		}).mount()
+		await jsdomWindow.cliquer(jsdomWindow.bouton('Modifier ma présentation'))
+		const field = jsdomWindow.champ(/Ce qui te distingue/) as HTMLTextAreaElement
 		await jsdomWindow.saisir(field, 'Maquilleuse mariée, je me déplace partout.')
 		const button = jsdomWindow.bouton('Enregistrer')
 		await jsdomWindow.cliquer(button)
-		// The key is still down: its repeats reach the panel while the save is under way.
+		// The key is still down: its repeats reach the block while the save is under way.
 		for (let i = 0; i < 4; i += 1) {
 			await act(async () => {
 				button.dispatchEvent(
@@ -229,23 +229,21 @@ describe('une photo refusée : la vraie cause', () => {
 
 	const CURRENT = { id: 5, url: 'https://photos.example.test/a.webp', largeur: 800, hauteur: 600, alt: '' }
 	const REDUCED = new File(['petit'], 'photo.webp', { type: 'image/webp' })
-	async function mount(options: {
-		preparer?: Parameters<typeof PhotoEditor>[0]['preparer']
-		televerser?: Parameters<typeof PhotoEditor>[0]['televerser']
-	}) {
+	async function mount(options: PhotoWork) {
 		await jsdomWindow.monter(
-			<PhotoEditor
-				photo={CURRENT}
-				envoyer={async saisie => ({ ok: true, valeurs: { photoPrincipale: saisie.photoPrincipale } })}
-				preparer={
-					options.preparer ??
-					(async () => ({ ok: true as const, fichier: REDUCED, largeur: 800, hauteur: 600, taille: 5 }))
-				}
-				televerser={options.televerser ?? (async () => ({ ok: true as const, id: 9 }))}
-				supprimer={async () => undefined}
-			/>
+			<EditSession refresh={() => undefined}>
+				<PhotoForm
+					photo={CURRENT}
+					save={async saisie => ({ ok: true, valeurs: { photoPrincipale: saisie.photoPrincipale } })}
+					prepare={
+						options.prepare ??
+						(async () => ({ ok: true as const, fichier: REDUCED, largeur: 800, hauteur: 600, taille: 5 }))
+					}
+					upload={options.upload ?? (async () => ({ ok: true as const, id: 9 }))}
+					remove={async () => undefined}
+				/>
+			</EditSession>
 		)
-		await jsdomWindow.cliquer(jsdomWindow.bouton('Modifier ma photo principale'))
 		await pickFiles(jsdomWindow, jsdomWindow.champ(/photo/i) as HTMLInputElement, [
 			new File(['gros'], 'grosse.jpg', { type: 'image/jpeg' }),
 		])
@@ -253,20 +251,20 @@ describe('une photo refusée : la vraie cause', () => {
 
 	test('refusée avant l’envoi (trop lourde) : upload_error size, rien d’autre', async () => {
 		await mount({
-			preparer: async () => ({ ok: false, raison: 'taille', code: 'taille', message: MESSAGES_PHOTO.taille }),
+			prepare: async () => ({ ok: false, raison: 'taille', code: 'taille', message: MESSAGES_PHOTO.taille }),
 		})
 		await jsdomWindow.attendre(() => uploads.length > 0)
 		expect(uploads).toEqual([{ nom: 'upload_error', proprietes: { kind: 'size' } }])
 	})
 
 	test('refusée avant l’envoi (mauvais type) : upload_error type', async () => {
-		await mount({ preparer: async () => ({ ok: false, raison: 'type', code: 'heic', message: MESSAGES_PHOTO.heic }) })
+		await mount({ prepare: async () => ({ ok: false, raison: 'type', code: 'heic', message: MESSAGES_PHOTO.heic }) })
 		await jsdomWindow.attendre(() => uploads.length > 0)
 		expect(uploads).toEqual([{ nom: 'upload_error', proprietes: { kind: 'type' } }])
 	})
 
 	test('refusée par le serveur : la cause du serveur, et aucun profile_save (rien n’a été enregistré)', async () => {
-		await mount({ televerser: async () => ({ ok: false, message: MESSAGES_PHOTO['refus-type'], cause: 'type' }) })
+		await mount({ upload: async () => ({ ok: false, message: MESSAGES_PHOTO['refus-type'], cause: 'type' }) })
 		await jsdomWindow.attendre(() => !(jsdomWindow.bouton('Enregistrer') as HTMLButtonElement).disabled)
 		await jsdomWindow.cliquer(jsdomWindow.bouton('Enregistrer'))
 		await jsdomWindow.attendre(() => uploads.length > 0)
@@ -274,7 +272,7 @@ describe('une photo refusée : la vraie cause', () => {
 	})
 
 	test('une session finie pendant l’envoi n’est pas un refus de la photo', async () => {
-		await mount({ televerser: async () => ({ ok: false, message: 'Session finie', session: 'expiree' }) })
+		await mount({ upload: async () => ({ ok: false, message: 'Session finie', session: 'expiree' }) })
 		await jsdomWindow.attendre(() => !(jsdomWindow.bouton('Enregistrer') as HTMLButtonElement).disabled)
 		await jsdomWindow.cliquer(jsdomWindow.bouton('Enregistrer'))
 		await jsdomWindow.attendre(() => jsdomWindow.w.document.body.textContent?.includes('Session finie') ?? false)

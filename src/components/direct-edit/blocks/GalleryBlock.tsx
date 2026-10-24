@@ -16,10 +16,9 @@ import {
 import type { PortfolioValues } from '@/lib/dashboard/portfolio'
 import { FAILURE_MESSAGE, type SaveResult } from '@/lib/dashboard/result'
 import { changeAlt } from '@/lib/direct-edit/media-alt'
+import { ALT_PORTFOLIO, localPreview, releasePreview } from '@/lib/direct-edit/photo-preview'
 import { GALLERY_MAX } from '@/lib/media'
 import { type PhotoUsageView, photosLeft, usageSentence } from '@/lib/photo-limits'
-import { localPreview, releasePreview } from '../../dashboard/PhotoEditor'
-import { ALT_PORTFOLIO } from '../../dashboard/PortfolioEditor'
 import { BlockForm } from '../BlockForm'
 import { EditableBlock } from '../EditableBlock'
 

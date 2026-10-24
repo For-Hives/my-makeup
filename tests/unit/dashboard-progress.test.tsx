@@ -1,19 +1,23 @@
 import { describe, expect, test } from 'bun:test'
-import { ProfileProgress } from '@/components/dashboard/ProfileProgress'
-import type { DashboardProfile } from '@/lib/dashboard/cards'
-import { SECTIONS } from '@/lib/dashboard/cards'
-import { bonusText, essentialsText, pageIsOnline, profileProgress } from '@/lib/dashboard/progress'
+import { OverviewStatus } from '@/components/dashboard/overview/OverviewStatus'
+import type { DashboardProfile } from '@/lib/dashboard/dashboard-profile'
+import { BLOCK_IDS, CRITERION_BLOCK, editBlockHref } from '@/lib/dashboard/edit-blocks'
+import { type Progress, pageIsOnline, profileProgress } from '@/lib/dashboard/progress'
 import { CRITERIA } from '@/lib/profile/completeness'
 import { ANNECY, caseDocument, completenessInV3, SHARED_CASE } from '../support/completeness-cases'
 import { openWindow } from '../support/dom-react'
 
 /**
- * The progress block at the top of her space (ticket 138; plan 02 U01, U02, U04-U08): the figures
+ * The summary of her space (ticket 138 moved to issue 1073; plan 02 U01, U02, U04-U08): the figures
  * and the list come from the single definition of a profile, never from a rule of the page.
  * Made-up values only.
  */
 
 const jsdomWindow = openWindow()
+
+/** The summary of her space, as the page draws it. */
+const panel = (progress: Progress, resume?: (valeurs: { disponible: boolean }) => Promise<never>) =>
+	jsdomWindow.monter(<OverviewStatus progress={progress} {...(resume ? { resume: resume as never } : {})} />)
 
 const DESCRIPTION = 'Maquilleuse fictive. '.repeat(12)
 
@@ -59,7 +63,7 @@ describe('U01 : profil vide', () => {
 	})
 
 	test('chaque manque mène à une carte qui existe', () => {
-		for (const gap of empty.manques) expect(SECTIONS).toContain(gap.section)
+		for (const gap of empty.manques) expect(BLOCK_IDS).toContain(CRITERION_BLOCK[gap.critere])
 	})
 
 	test('les six points requis passent avant les autres', () => {
@@ -90,7 +94,7 @@ describe('U04-U06 : actif mais pas publiable, les manques exacts', () => {
 		const a = profileProgress({ ...FULL, serviceOffers: [{ name: 'Sur devis', priceText: 'Sur devis' }] })
 		expect(a.etat).toBe('incomplet')
 		expect(a.manques).toHaveLength(1)
-		expect(a.manques[0]).toMatchObject({ critere: 'offres', requis: true, section: 'prestations' })
+		expect(a.manques[0]).toMatchObject({ critere: 'offres', requis: true })
 		expect(a.manques[0]?.texte).toContain('prix en chiffres')
 	})
 
@@ -105,7 +109,7 @@ describe('U04-U06 : actif mais pas publiable, les manques exacts', () => {
 	test('U06 : sans canal de contact, un manque requis qui mène aux réseaux', () => {
 		const a = profileProgress(without('networks'))
 		expect(a.manques).toHaveLength(1)
-		expect(a.manques[0]).toMatchObject({ critere: 'reseaux', requis: true, section: 'reseaux' })
+		expect(a.manques[0]).toMatchObject({ critere: 'reseaux', requis: true })
 	})
 
 	test('le téléphone compte seulement affiché sur le profil', () => {
@@ -173,29 +177,26 @@ describe('U08 : aucun calcul propre à la page, les cas partagés avec l’ancie
 	})
 })
 
-describe('le bloc affiché', () => {
-	test('score, pourcentage, barre de progression et liens vers les cartes', async () => {
-		const zone = await jsdomWindow.monter(<ProfileProgress avancement={profileProgress({ id: 2 })} />)
-		expect(zone.querySelector('[data-testid="avancement-score"]')?.textContent).toBe('0/6 indispensables')
-		expect(zone.querySelector('[data-testid="avancement-bonus"]')?.textContent).toBe('Bonus : 0/7')
-		expect(zone.textContent).toContain('Ton profil est vide')
+describe('le panneau affiché', () => {
+	test('pourcentage, barre de progression et liens vers les blocs', async () => {
+		const zone = await panel(profileProgress({ id: 2 }))
+		expect(zone.querySelector('[data-testid="avancement-score"]')?.textContent).toBe('Ton profil est rempli à 0 %')
 		expect(zone.textContent).not.toContain('null')
 		const bar = zone.querySelector('[role="progressbar"]')
 		expect(bar?.getAttribute('aria-valuenow')).toBe('0')
-		expect(bar?.getAttribute('aria-valuemax')).toBe('6')
-		const links = [...zone.querySelectorAll('a')].map(a => a.getAttribute('href'))
+		expect(bar?.getAttribute('aria-valuemax')).toBe('100')
+		const links = [...zone.querySelectorAll('li[data-critere] a')].map(a => a.getAttribute('href'))
 		expect(links).toHaveLength(13)
-		expect(links).toContain('#carte-photo')
-		expect(links).toContain('#carte-prestations')
+		expect(links).toContain(editBlockHref('photo'))
+		expect(links).toContain(editBlockHref('services'))
 		expect(zone.querySelectorAll('h2')).toHaveLength(1)
 	})
 
 	test('un profil publiable : pas de liste de manques', async () => {
-		const zone = await jsdomWindow.monter(<ProfileProgress avancement={profileProgress(FULL)} />)
-		expect(zone.querySelector('[data-testid="avancement-score"]')?.textContent).toBe('6/6 : ta page est prête')
-		expect(zone.querySelector('[data-testid="avancement-bonus"]')?.textContent).toBe('Bonus : 7/7')
+		const zone = await panel(profileProgress(FULL))
 		expect(zone.querySelectorAll('a')).toHaveLength(0)
 		expect(zone.querySelector('[data-etat="publiable"]')).not.toBeNull()
+		expect(zone.querySelector('[data-testid="brouillon-pastille"]')).toBeNull()
 	})
 })
 
@@ -219,10 +220,10 @@ describe('306 : la jauge compte d’abord les six indispensables, les bonus à p
 		const progress = profileProgress(without('networks'))
 		expect(progress.essentials).toEqual({ done: 5, total: 6 })
 		expect(pageIsOnline(progress)).toBe(false)
-		expect(essentialsText(progress.essentials, pageIsOnline(progress))).toBe('5/6 indispensables')
-		const zone = await jsdomWindow.monter(<ProfileProgress avancement={progress} />)
-		expect(zone.querySelector('[data-testid="avancement-score"]')?.textContent).toBe('5/6 indispensables')
-		expect([...zone.querySelectorAll('li')].map(li => li.getAttribute('data-critere'))).toEqual(['reseaux'])
+		const zone = await panel(progress)
+		expect(
+			[...zone.querySelectorAll('li[data-critere] a')].map(link => link.closest('li')?.getAttribute('data-critere'))
+		).toEqual(['reseaux'])
 	})
 
 	test('les bonus ne comptent pas dans les six, et les six ne comptent pas dans les bonus', () => {
@@ -230,7 +231,6 @@ describe('306 : la jauge compte d’abord les six indispensables, les bonus à p
 		expect([onlyBonus.essentials.done, onlyBonus.bonus.done]).toEqual([0, 2])
 		const noBonus = profileProgress({ ...FULL, languages: [], gallery: [], skills: [], courses: [], experiences: [] })
 		expect([noBonus.essentials.done, noBonus.bonus.done]).toEqual([6, 2])
-		expect(bonusText(noBonus.bonus)).toBe('Bonus : 2/7')
 	})
 
 	test('une description de 150 caractères remplit un critère mais pas un indispensable', () => {
@@ -242,7 +242,6 @@ describe('306 : la jauge compte d’abord les six indispensables, les bonus à p
 	test('masquée par l’équipe : jamais « ta page est prête », la carte verte ne s’affiche pas', () => {
 		const hidden = profileProgress({ ...FULL, status: 'hidden' })
 		expect(pageIsOnline(hidden)).toBe(false)
-		expect(essentialsText(hidden.essentials, pageIsOnline(hidden))).toBe('6/6 indispensables')
 		const internal = profileProgress({ ...FULL, specialty: 'CEO/CTO My Makeup' })
 		expect(pageIsOnline(internal)).toBe(false)
 	})
@@ -275,15 +274,15 @@ describe('291 : un profil listé sans moyen de contact passe après les autres',
 		expect(profileProgress({ ...closed, publicContact: true }).rankedLast).toBe(false)
 	})
 
-	test('le bloc dit la phrase et mène à la carte Coordonnées', async () => {
-		const zone = await jsdomWindow.monter(<ProfileProgress avancement={profileProgress(NO_CONTACT)} />)
+	test('le panneau dit la phrase et mène au bloc des coordonnées', async () => {
+		const zone = await panel(profileProgress(NO_CONTACT))
 		const notice = zone.querySelector('[data-testid="avancement-sans-contact"]')
 		expect(notice?.textContent).toContain('Sans moyen de contact, ton profil passe après les autres dans la recherche.')
-		expect(notice?.querySelector('a')?.getAttribute('href')).toBe('#carte-coordonnees')
+		expect(notice?.querySelector('a')?.getAttribute('href')).toBe(editBlockHref('contacts'))
 	})
 
-	test('avec un contact, le bloc ne dit rien', async () => {
-		const zone = await jsdomWindow.monter(<ProfileProgress avancement={profileProgress(FULL)} />)
+	test('avec un contact, le panneau ne dit rien', async () => {
+		const zone = await panel(profileProgress(FULL))
 		expect(zone.querySelector('[data-testid="avancement-sans-contact"]')).toBeNull()
 	})
 })
@@ -351,8 +350,8 @@ describe('292 : l’espace dit la vérité à une maquilleuse masquée ou en pau
 		expect(progress.etat).toBe('vide')
 	})
 
-	test('le bandeau masqué : motif, adresse pour en parler, jauge grisée, pas de liste « publiable »', async () => {
-		const zone = await jsdomWindow.monter(<ProfileProgress avancement={profileProgress(HIDDEN)} />)
+	test('le panneau masqué : motif, adresse pour en parler, jauge grisée, pas de liste « publiable »', async () => {
+		const zone = await panel(profileProgress(HIDDEN))
 		expect(zone.querySelector('[data-etat="masque"]')).not.toBeNull()
 		expect(zone.textContent).toContain(REASON)
 		expect(zone.textContent).not.toMatch(FORBIDDEN)
@@ -368,7 +367,7 @@ describe('292 : l’espace dit la vérité à une maquilleuse masquée ou en pau
 			sent.push(valeurs)
 			return { ok: true as const, valeurs }
 		}
-		const zone = await jsdomWindow.monter(<ProfileProgress avancement={profileProgress(PAUSED)} reprendre={resume} />)
+		const zone = await panel(profileProgress(PAUSED), resume as never)
 		const status = zone.querySelector('[role="status"]')
 		expect(status?.textContent).toBe('')
 		await jsdomWindow.cliquer(jsdomWindow.bouton('Reprendre les demandes'))
@@ -379,16 +378,17 @@ describe('292 : l’espace dit la vérité à une maquilleuse masquée ou en pau
 
 	test('« Reprendre les demandes » : l’échec est dit et le bouton reste', async () => {
 		const fail = async () => ({ ok: false as const, message: 'Enregistrement impossible.' })
-		const zone = await jsdomWindow.monter(<ProfileProgress avancement={profileProgress(PAUSED)} reprendre={fail} />)
+		const zone = await panel(profileProgress(PAUSED), fail as never)
 		await jsdomWindow.cliquer(jsdomWindow.bouton('Reprendre les demandes'))
 		await jsdomWindow.attendre(() => zone.textContent?.includes('Enregistrement impossible.') === true)
 		expect(jsdomWindow.bouton('Reprendre les demandes')).not.toBeNull()
 	})
 
 	test('pas de bouton quand la maquilleuse est disponible', async () => {
-		const zone = await jsdomWindow.monter(
-			<ProfileProgress avancement={profileProgress(FULL)} reprendre={async v => ({ ok: true, valeurs: v })} />
-		)
+		const zone = await panel(profileProgress(FULL), (async (v: { disponible: boolean }) => ({
+			ok: true,
+			valeurs: v,
+		})) as never)
 		expect(zone.querySelector('button')).toBeNull()
 	})
 })

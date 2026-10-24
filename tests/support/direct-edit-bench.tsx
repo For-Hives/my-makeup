@@ -5,8 +5,9 @@ import { EditSession } from '@/components/direct-edit/EditSession'
 import { headerEdit } from '@/components/direct-edit/header-edit'
 import { ProfileView } from '@/components/profile/ProfileView'
 import type { ActivityView } from '@/lib/dashboard/activity'
-import type { DashboardProfile } from '@/lib/dashboard/cards'
+import type { DashboardProfile } from '@/lib/dashboard/dashboard-profile'
 import type { DashboardPhoto } from '@/lib/dashboard/photos'
+import type { PhotoUsageView } from '@/lib/photo-limits'
 import { type PublicProfile, publicProfileOf } from '@/services/public/profiles'
 import type { DomWindow } from './dom-react'
 
@@ -74,6 +75,8 @@ export function benchOf(
 		galleryWork?: GalleryWork
 		/** Where the check of her SIRET stands: without it, the page has no SIRET card. */
 		activity?: ActivityView
+		/** What she stores and what the site allows (issue 309). */
+		usage?: PhotoUsageView
 	} = {}
 ) {
 	const profile = options.profile ?? FULL
@@ -145,6 +148,7 @@ export function benchOf(
 								profile,
 								photos: { photo, galerie: gallery, principaleManquante: false },
 								actions,
+								...(options.usage ? { usage: options.usage } : {}),
 								...(options.activity ? { activity: options.activity } : {}),
 								...(options.galleryWork ? { galleryWork: options.galleryWork } : {}),
 							}),

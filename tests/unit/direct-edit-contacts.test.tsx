@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import type { DashboardProfile } from '@/lib/dashboard/cards'
+import type { DashboardProfile } from '@/lib/dashboard/dashboard-profile'
 import { FAILURE_MESSAGE, MESSAGE_SESSION } from '@/lib/dashboard/result'
 import { benchOf, EMPTY, FULL } from '../support/direct-edit-bench'
 import { openWindow } from '../support/dom-react'

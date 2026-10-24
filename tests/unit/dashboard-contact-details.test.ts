@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'bun:test'
-import { type DashboardProfile, profileCards } from '@/lib/dashboard/cards'
 import {
 	contactDetailsErrors,
 	contactDetailsSchema,
@@ -100,27 +99,9 @@ describe('le schéma du serveur est strict : elle n’écrit pas la date de son 
 	})
 })
 
-describe('la carte dit si les coordonnées sont affichées, et depuis quand', () => {
-	const line = (profil: DashboardProfile) =>
-		profileCards(profil)
-			.find(carte => carte.section === 'coordonnees')
-			?.lignes.find(l => l.libelle === 'Affichées sur ton profil')?.valeur
-
-	test('masquées : « Non », même avec une date restée d’avant', () => {
-		expect(line({ id: 1, publicContact: false })).toBe('Non')
-		expect(line({ id: 1, publicContact: false, consentedAt: '2026-10-15T10:00:00.000Z' })).toBe('Non')
-	})
-
-	test('affichées avec la date du serveur : « Oui, depuis le … », à l’heure de Paris', () => {
-		expect(line({ id: 1, publicContact: true, consentedAt: '2026-10-15T10:00:00.000Z' })).toBe(
-			'Oui, depuis le 15 octobre 2026'
-		)
-		// 23:30 UTC the 14th is already the 15th in Paris.
+describe('la date du choix est lue à l’heure de Paris', () => {
+	test('23:30 UTC le 14 est déjà le 15 à Paris', () => {
 		expect(longDate('2026-10-14T23:30:00.000Z')).toBe('15 octobre 2026')
-	})
-
-	test('affichées sans date lisible : « Oui » seulement', () => {
-		expect(line({ id: 1, publicContact: true })).toBe('Oui')
-		expect(line({ id: 1, publicContact: true, consentedAt: 'pas une date' })).toBe('Oui')
+		expect(longDate('pas une date')).toBeNull()
 	})
 })

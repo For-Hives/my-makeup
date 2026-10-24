@@ -1,7 +1,7 @@
 import type { Payload } from 'payload'
 import { possibleId } from '../access'
 import { namedPhotos } from '../profile/photos'
-import type { DashboardProfile } from './cards'
+import type { DashboardProfile } from './dashboard-profile'
 
 /** An identifier of a media, as Payload gives it (a number) or a request spells it (digits). */
 export type PhotoId = number | string

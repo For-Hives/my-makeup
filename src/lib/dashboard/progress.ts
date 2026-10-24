@@ -21,7 +21,7 @@ import {
 } from '../profile/completeness'
 import { profileFields } from '../profile/state'
 import { isAvailable } from './availability'
-import type { DashboardProfile, Section } from './cards'
+import type { DashboardProfile } from './dashboard-profile'
 
 /** Where a profile stands for her: the four states the page names. */
 export type DisplayedState = 'vide' | 'incomplet' | 'publiable' | 'interne' | 'masque'
@@ -31,8 +31,6 @@ export interface Missing {
 	readonly critere: Criterion
 	/** What to do, in French. */
 	readonly texte: string
-	/** The card to go to: the link is `#carte-<section>`. */
-	readonly section: Section
 	/** True when the point stands between her profile and « publiable ». */
 	readonly requis: boolean
 }
@@ -64,7 +62,7 @@ export interface Progress {
 	readonly manques: readonly Missing[]
 	/**
 	 * True when she is listed but shows no way to reach her: the search puts her after the others
-	 * (ticket 291). The card to fix it is `CONTACT_SECTION`.
+	 * (ticket 291).
 	 */
 	readonly rankedLast: boolean
 	/** The reason the team wrote when hiding her page, trimmed; null when hidden without one or not hidden (ticket 292). */
@@ -76,28 +74,8 @@ export interface Progress {
 	readonly enPause: boolean
 }
 
-/** The card where she adds her contact details (ticket 291). */
-export const CONTACT_SECTION: Section = 'coordonnees'
-
 /** What the space says to a listed artist who shows no way to reach her (ticket 291). */
 export const RANKED_LAST_TEXT = 'Sans moyen de contact, ton profil passe après les autres dans la recherche.'
-
-/** The card where each criterion of the progress bar is edited. */
-export const CRITERION_SECTION: Record<Criterion, Section> = {
-	nom: 'identite',
-	specialite: 'identite',
-	nom_artiste: 'identite',
-	ville: 'localisation',
-	description: 'description',
-	photo: 'photo',
-	competences: 'competences',
-	experiences: 'experiences',
-	formations: 'formations',
-	offres: 'prestations',
-	reseaux: 'reseaux',
-	langues: 'langues',
-	galerie: 'portfolio',
-}
 
 /** The six conditions of « publiable », in the display order of the criteria. */
 const ESSENTIAL_CONDITIONS = [
@@ -108,17 +86,6 @@ const ESSENTIAL_CONDITIONS = [
 	'descriptionLongue',
 	'canalDeContact',
 ] as const
-
-/** What the gauge says when the six essentials are met. */
-export const PAGE_READY_TEXT = 'ta page est prête'
-
-/**
- * « 5/6 indispensables », or « 6/6 : ta page est prête » when her page is publishable (ticket 306).
- * A page the team hid, or an internal account, never says it is ready, whatever the six points.
- */
-export function essentialsText({ done, total }: Gauge, publishable: boolean): string {
-	return publishable && done === total ? `${done}/${total} : ${PAGE_READY_TEXT}` : `${done}/${total} indispensables`
-}
 
 /**
  * The percentage her space says (issues 1072 and 1073): « Ton profil est rempli à N % ». It is the share of the 13 criteria
@@ -168,9 +135,6 @@ export function overviewStatus(progress: Pick<Progress, 'etat' | 'titre' | 'cons
 			}
 	}
 }
-
-/** « Bonus : 2/7 » (ticket 306). */
-export const bonusText = ({ done, total }: Gauge): string => `Bonus : ${done}/${total}`
 
 /** True when the card « Ta page est en ligne ! » is shown: her page is publishable, so it is online (ticket 306). */
 export const pageIsOnline = (avancement: Pick<Progress, 'etat'>): boolean => avancement.etat === 'publiable'
@@ -266,9 +230,7 @@ export function profileProgress(profil: DashboardProfile): Progress {
 			critere in CRITERION_CONDITION ? CRITERION_CONDITION[critere as keyof typeof CRITERION_CONDITION] : null
 		const required = condition !== null && !reading.conditions[condition]
 		if (!(absent || required)) return []
-		return [
-			{ critere, texte: missingText(critere, absent, profil), section: CRITERION_SECTION[critere], requis: required },
-		]
+		return [{ critere, texte: missingText(critere, absent, profil), requis: required }]
 	})
 	const hidden = profil.status === 'hidden'
 	const state: DisplayedState = hidden ? 'masque' : stateOf(reading)

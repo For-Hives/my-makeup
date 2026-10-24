@@ -4,7 +4,7 @@ import path from 'node:path'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { MyViews } from '@/components/dashboard/MyViews'
 import { OverviewStatus } from '@/components/dashboard/overview/OverviewStatus'
-import type { DashboardProfile } from '@/lib/dashboard/cards'
+import type { DashboardProfile } from '@/lib/dashboard/dashboard-profile'
 import { blockAnchor, CRITERION_BLOCK } from '@/lib/dashboard/edit-blocks'
 import { gaugePercent, type Missing, overviewStatus, profileProgress } from '@/lib/dashboard/progress'
 import { editPath } from '@/lib/direct-edit/edit-mode'
@@ -53,7 +53,7 @@ describe('le statut du profil', () => {
 })
 
 describe('l’avancement', () => {
-	const missing = (requis: boolean): Missing => ({ critere: 'description', texte: '', section: 'description', requis })
+	const missing = (requis: boolean): Missing => ({ critere: 'description', texte: '', requis })
 
 	test('le pourcentage de la règle unique, jamais 100 % tant qu’un point indispensable manque', () => {
 		expect(gaugePercent(profileProgress(PUBLISHABLE))).toBe(profileProgress(PUBLISHABLE).pourcentage)
