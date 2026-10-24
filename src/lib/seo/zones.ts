@@ -7,12 +7,14 @@ import { slugify } from '../slug'
  * One rule decides everything about a zone: its page, its robots tag, its line in the sitemap and in the plan of
  * the site. The sitemap and the page both count the profiles that are publishable AND listed (neither
  * unavailable nor hidden nor entirely empty), and the page shows exactly those, so a page is never indexed with
- * fewer than three of them in front of the reader.
+ * none of them in front of the reader.
  *
  * - 0 profiles: no page (404), never an empty one.
- * - 1 or 2 profiles: the page answers 200 in noindex, with no canonical address, and stays out of the sitemap.
- * - 3 or more: the page is indexable and in the sitemap. When a zone falls back under 3 it turns noindex and
- *   leaves the sitemap by itself, at the next refresh of the pages, with no deletion.
+ * - 1 or more: the page is indexable and in the sitemap (owner decision of 24/10/2026: the threshold was 3
+ *   before). When a zone falls back to 0 its page answers 404 and leaves the sitemap by itself, at the next
+ *   refresh of the pages, with no deletion.
+ * - A threshold above 1 is still supported by the rule: between 1 and the threshold the page would answer 200 in
+ *   noindex, with no canonical address, and stay out of the sitemap.
  *
  * A zone abroad is no zone (its profiles have no département). The profiles of the zone are the ones whose
  * commune is in the département; those who only travel there (a radius) are not counted: a wider rule would
@@ -22,7 +24,7 @@ import { slugify } from '../slug'
  */
 
 /** The number of profiles from which a zone page is indexed. */
-export const ZONE_THRESHOLD = 3
+export const ZONE_THRESHOLD = 1
 
 /** The base of the addresses of the zone pages. */
 export const ZONE_BASE_PATH = '/maquilleuses'

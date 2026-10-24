@@ -54,7 +54,7 @@ const countText = (count: number): string =>
 
 /**
  * The page of a département (ticket 1015): a single h1, the number of profiles, their cards, a way to refine in the
- * search. From three profiles it is indexable; under that it answers 200 in noindex, with no canonical address; with
+ * search. From one profile it is indexable (the threshold is in src/lib/seo/zones.ts); with
  * none, or for an unknown département, it answers 404. The text says what the data says and nothing more: no rating,
  * no local text nobody wrote. The structured data is the breadcrumb and the list of the profile addresses.
  */

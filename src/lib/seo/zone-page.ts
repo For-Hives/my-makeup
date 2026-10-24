@@ -16,7 +16,7 @@ export const zoneLabel = (code: string): string => `${departmentName(code)} (${c
 
 export const zoneTitle = (code: string): string => `Maquilleuses près de chez vous : ${zoneLabel(code)}`
 
-/** The metadata of a zone page: indexable from the threshold, noindex and no canonical address under it. */
+/** The metadata of a zone page: indexable from the threshold, noindex and no canonical address under it (never reached at the threshold of 1). */
 export function zonePageMetadata({ code, count }: { code: string; count: number }): Metadata {
 	return pageMetadata({
 		titre: zoneTitle(code),
