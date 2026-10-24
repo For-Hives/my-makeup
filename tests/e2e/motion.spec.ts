@@ -8,8 +8,10 @@ import { createContent, deleteContent } from '../support/public-pages'
 
 /**
  * The motion system (issue 1069, docs/mouvement.md), end to end, at 390 px and 1440 px: the first screen is never
- * hidden at first paint, the layout never shifts (CLS 0) while the whole page is scrolled, the content is in the page
- * without script, and with reduced motion nothing slides or fades and every transition ends at once.
+ * hidden at first paint (the LCP element is whole at the very first frame of the load-in), the layout never shifts
+ * (CLS 0) and never scrolls sideways while the whole page is scrolled, the content is in the page without script, a
+ * block below the fold is revealed once when it comes into view, and with reduced motion nothing slides or fades
+ * and every transition ends at once.
  */
 
 /** The pages of the first system (issue 1069), then those of issue 1088: the blog, the ranking, the contact page, the sign-in and the sign-up. */
@@ -26,6 +28,7 @@ async function scrollThrough(page: Page): Promise<void> {
 			await new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done)))
 		}
 	})
+	await settle(page)
 }
 
 /** How many `.reveal` blocks of the page are not whole (faded or shifted) right now. */
@@ -33,6 +36,13 @@ const notWhole = (page: Page): Promise<number> =>
 	page
 		.locator('.reveal')
 		.evaluateAll(elements => elements.filter(element => Number(getComputedStyle(element).opacity) < 1).length)
+
+/** Waits for every animation and transition of the page to end (the load-in, the reveals): the page is then at rest. */
+function settle(page: Page): Promise<void> {
+	return page.evaluate(async () => {
+		await Promise.all(document.getAnimations().map(animation => animation.finished.catch(() => undefined)))
+	})
+}
 
 /** The sum of the layout shifts that no input explains, read from the browser after the page has been scrolled through. */
 async function layoutShift(page: Page): Promise<number> {
@@ -54,13 +64,14 @@ async function layoutShift(page: Page): Promise<number> {
 	})
 }
 
-/** Elements whose top is inside the first screen, except the last 220 px (the range of the reveal), that are not fully opaque. */
+/** Elements whose top is inside the first screen that are not fully opaque once the load-in is over. */
 async function dimmedOnFirstScreen(page: Page): Promise<string[]> {
+	await settle(page)
 	return page.evaluate(() => {
 		const dimmed: string[] = []
 		for (const element of document.body.querySelectorAll('*')) {
 			const box = element.getBoundingClientRect()
-			if (box.height === 0 || box.top >= innerHeight - 220 || box.bottom <= 0) continue
+			if (box.height === 0 || box.top >= innerHeight || box.bottom <= 0) continue
 			for (let node: Element | null = element; node; node = node.parentElement)
 				if (Number(getComputedStyle(node).opacity) < 1 && getComputedStyle(node).display !== 'none') {
 					dimmed.push(`${element.tagName.toLowerCase()}.${String(element.className).slice(0, 40)}`)
@@ -95,6 +106,131 @@ for (const size of [SCREENS.mobile, SCREENS.chromium]) {
 			})
 		}
 
+		for (const path of PAGES) {
+			test(`${path} : à la première image de l’entrée, l’élément du LCP est entier (jamais à opacité 0)`, async ({
+				page,
+			}) => {
+				await page.addInitScript(() => {
+					new PerformanceObserver(list => {
+						for (const entry of list.getEntries())
+							(window as unknown as { __lcp?: Element }).__lcp = (entry as unknown as { element: Element }).element
+					}).observe({ type: 'largest-contentful-paint', buffered: true })
+				})
+				await page.goto(path)
+				await settle(page)
+				const state = await page.evaluate(() => {
+					// Play the load-in again and hold it on its very first frame: what a first paint shows.
+					for (const element of document.querySelectorAll<HTMLElement>('.enter, .enter-fade, .enter-mask')) {
+						const names = [...element.classList].filter(name => name.startsWith('enter'))
+						element.classList.remove(...names)
+						void element.offsetWidth
+						element.classList.add(...names)
+					}
+					for (const animation of document.getAnimations()) {
+						animation.pause()
+						animation.currentTime = 0
+					}
+					const lcp = (window as unknown as { __lcp?: Element }).__lcp
+					const chain: number[] = []
+					for (let node: Element | null = lcp ?? null; node; node = node.parentElement)
+						chain.push(Number(getComputedStyle(node).opacity))
+					return {
+						hasLcp: Boolean(lcp),
+						lcpFaded: chain.some(opacity => opacity < 1),
+						// Only a block without text of its own may fade (the form card, the drawing): never what holds the LCP.
+						insideFade: lcp
+							? [...document.querySelectorAll('.enter-fade')].some(element => element.contains(lcp))
+							: false,
+						textFaded: [...document.querySelectorAll('.enter, .enter-mask')].filter(
+							element => Number(getComputedStyle(element).opacity) < 1
+						).length,
+					}
+				})
+				expect(state).toEqual({ hasLcp: true, lcpFaded: false, insideFade: false, textFaded: 0 })
+			})
+
+			test(`${path} : aucun défilement latéral, ni à la première image, ni en cours d’entrée, ni la page parcourue`, async ({
+				page,
+			}) => {
+				await page.goto(path)
+				await settle(page)
+				const widths = await page.evaluate(async () => {
+					const wide = () => document.documentElement.scrollWidth > innerWidth
+					const seen: boolean[] = []
+					for (const time of [0, 200, 450]) {
+						for (const element of document.querySelectorAll<HTMLElement>('.enter, .enter-fade, .enter-mask')) {
+							const names = [...element.classList].filter(name => name.startsWith('enter'))
+							element.classList.remove(...names)
+							void element.offsetWidth
+							element.classList.add(...names)
+						}
+						for (const animation of document.getAnimations()) {
+							animation.pause()
+							animation.currentTime = time
+						}
+						seen.push(wide())
+					}
+					return seen
+				})
+				expect(widths).toEqual([false, false, false])
+				await page.reload()
+				await scrollThrough(page)
+				expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+			})
+		}
+
+		test('/classement : un bloc sous la ligne de flottaison est caché, puis monte une seule fois à l’entrée dans l’écran', async ({
+			page,
+		}) => {
+			await page.goto('/classement')
+			const waiting = page.locator('.reveal[data-reveal="wait"]')
+			await expect.poll(() => waiting.count()).toBeGreaterThan(0)
+			await waiting.last().evaluate(element => element.setAttribute('data-probe', 'reveal'))
+			const block = page.locator('[data-probe="reveal"]')
+			const read = () =>
+				block.evaluate(element => {
+					const style = getComputedStyle(element)
+					return {
+						opacity: Number(style.opacity),
+						transform: style.transform,
+						shift: new DOMMatrix(style.transform).m42,
+						duration: style.transitionDuration,
+					}
+				})
+			// Hidden, shifted by 28 px.
+			const before = await read()
+			expect(before.opacity).toBe(0)
+			expect(before.shift).toBeCloseTo(28, 0)
+			await block.evaluate(element => element.scrollIntoView({ block: 'center' }))
+			await expect(block).toHaveAttribute('data-reveal', 'in')
+			expect((await read()).duration).toBe('0.6s, 0.6s')
+			await settle(page)
+			const after = await read()
+			expect(after.opacity).toBe(1)
+			expect(after.transform).toBe('none')
+			// Once: scrolled away and back, it stays where it is and nothing plays again.
+			await page.evaluate(() => scrollTo(0, 0))
+			await block.evaluate(element => element.scrollIntoView({ block: 'center' }))
+			await expect(block).toHaveAttribute('data-reveal', 'in')
+			expect(await block.evaluate(element => element.getAnimations().length)).toBe(0)
+			expect((await read()).opacity).toBe(1)
+		})
+
+		test('/classement : les blocs du haut de page ne sont jamais cachés ni décalés', async ({ page }) => {
+			await page.goto('/classement')
+			await expect.poll(() => page.locator('.reveal[data-reveal]').count()).toBeGreaterThan(0)
+			const firstScreen = await page.locator('.reveal[data-reveal="seen"]').evaluateAll(elements =>
+				elements.map(element => ({
+					top: element.getBoundingClientRect().top,
+					opacity: getComputedStyle(element).opacity,
+				}))
+			)
+			for (const { top, opacity } of firstScreen) {
+				expect(top).toBeLessThan(size.height)
+				expect(opacity).toBe('1')
+			}
+		})
+
 		test.describe('avec un mouvement réduit', () => {
 			test.use({ contextOptions: { reducedMotion: 'reduce' } })
 
@@ -121,6 +257,20 @@ for (const size of [SCREENS.mobile, SCREENS.chromium]) {
 					expect(state).toEqual({ animated: [], slow: [], dimmed: 0 })
 				})
 			}
+
+			test('/classement : aucun bloc n’attend ni ne se décale, même la page parcourue', async ({ page }) => {
+				await page.goto('/classement')
+				await scrollThrough(page)
+				expect(await page.locator('.reveal[data-reveal="wait"]').count()).toBe(0)
+				const moving = await page.locator('.reveal').evaluateAll(
+					elements =>
+						elements.filter(element => {
+							const style = getComputedStyle(element)
+							return Number(style.opacity) < 1 || style.transform !== 'none'
+						}).length
+				)
+				expect(moving).toBe(0)
+			})
 		})
 	})
 }
@@ -194,6 +344,14 @@ test.describe('1069 : une fiche et des résultats', () => {
 					await card.scrollIntoViewIfNeeded()
 					await card.hover()
 					await expect.poll(() => card.evaluate(element => getComputedStyle(element).transform)).not.toBe('none')
+					// It rises slowly (400 ms), and its photo grows as slowly.
+					expect(await card.evaluate(element => getComputedStyle(element).transitionDuration)).toContain('0.4s')
+					expect(
+						await card
+							.locator('.card-zoom')
+							.first()
+							.evaluate(element => getComputedStyle(element).transitionDuration)
+					).toBe('0.4s')
 				}
 			})
 		})

@@ -75,8 +75,11 @@ export interface OptionsDAxe {
  * Empty when there is none. Wait for the state to check before calling: axe reads the page once.
  */
 export async function violationsSevere(page: Page, { sauf = [] }: OptionsDAxe = {}): Promise<ViolationSevere[]> {
-	// Axe judges the settled page: a block caught half way through its scroll-driven reveal (issue 1069) is not a contrast fault.
-	await page.addStyleTag({ content: '.reveal{animation:none!important}' })
+	// Axe judges the settled page: a block caught half way through its reveal or load-in (issue 1069) is not a contrast fault.
+	await page.addStyleTag({
+		content:
+			'.reveal[data-reveal]{opacity:1!important;transform:none!important;transition:none!important}.enter,.enter-fade,.enter-mask{animation:none!important}',
+	})
 	let axe = new AxeBuilder({ page }).withTags([...REFERENCES])
 	for (const selector of sauf) axe = axe.exclude(selector)
 	const { violations } = await axe.analyze()

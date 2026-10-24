@@ -56,7 +56,7 @@ export default async function SearchPage({ searchParams }: PageProps<'/search'>)
 			<main className="relative flex flex-1 flex-col">
 				<SearchBlock search={search} city={city} surLaPageDeRecherche />
 				<div className="flex w-full flex-col items-center justify-center gap-4 px-4 py-8 md:py-16 2xl:py-32">
-					<h1 className="font-bold text-2xl text-gray-800">Rechercher une maquilleuse</h1>
+					<h1 className="enter-mask font-bold text-2xl text-gray-800">Rechercher une maquilleuse</h1>
 					<div className="flex flex-col items-center justify-center gap-8">
 						<Image src="/assets/vectorials-used/catSearch.svg" alt="" width={200} height={200} />
 						<p className="px-8 text-center text-gray-700 text-lg md:text-xl">

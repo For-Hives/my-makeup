@@ -47,7 +47,7 @@ export function SearchResults({
 
 	return (
 		<div className="w-full px-4 pb-16 md:px-16">
-			<h1 className="mb-8 font-bold text-2xl text-gray-800">{view.title}</h1>
+			<h1 className="enter-mask mb-8 font-bold text-2xl text-gray-800">{view.title}</h1>
 			<SearchRefine recherche={query} filtres={filters} specialites={view.specialties} />
 			{municipalities && <p className="-mt-4 mb-8 text-gray-700">{municipalities}</p>}
 			{!ranked && byPlace && localProfiles.length === 0 && (

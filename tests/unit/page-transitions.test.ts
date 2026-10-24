@@ -82,7 +82,7 @@ describe('the stylesheet of the page transition (issue 1087)', () => {
 		expect(enter).toMatch(/var\(--duration-hover\)\s+both|animation-delay:\s*var\(--duration-hover\)/)
 	})
 
-	test('only opacity and a 12 px rise move (keyframes)', () => {
+	test('only opacity and a 16 px rise move (keyframes)', () => {
 		for (const name of ['page-in', 'page-out']) {
 			const body = blocks(`@keyframes ${name}`)[0] ?? ''
 			expect(body).not.toBe('')
