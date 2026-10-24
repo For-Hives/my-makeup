@@ -440,6 +440,11 @@
 			"id": "tout-ce-qui-se-clique-sur-le-site-se-reconnait-mieux-le-c",
 			"type": "amelioration",
 			"text": "Tout ce qui se clique sur le site se reconnaît mieux : le curseur devient une main, les boutons et les liens réagissent au survol et à l’appui, et le contour au clavier est plus net."
+		},
+		{
+			"id": "en-haut-de-ta-page-en-mode-edition-tu-vois-la-liste-de-to",
+			"type": "amelioration",
+			"text": "En haut de ta page en mode édition, tu vois la liste de tout ce qui manque pour que ton profil soit visible de tous, chaque point mène au bloc à compléter, et elle se met à jour quand tu enregistres."
 		}
 	],
 	"releases": []
