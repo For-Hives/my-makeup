@@ -2,6 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import type { TalentPublic } from '@/services/public/talents'
 import { DemoCard } from './DemoCard'
+import { SectionHead } from './SectionHead'
 
 /** The talents that have an icon under `public/assets/talents/`: a talent created later is shown without one. */
 export const TALENTS_WITH_ICON: ReadonlySet<string> = new Set([
@@ -27,17 +28,13 @@ export const TALENTS_WITH_ICON: ReadonlySet<string> = new Set([
  */
 export function Talents({ talents }: { talents: readonly TalentPublic[] }) {
 	return (
-		<section className="relative px-4 py-20 md:px-8 2xl:px-0">
-			<div className="mx-auto max-w-7xl py-10">
-				<div className="mx-auto">
-					<h2 className="text-right font-bold text-4xl text-gray-900 tracking-tight sm:text-4xl">
-						Vos projets, nos meilleurs talents.
-					</h2>
-				</div>
-			</div>
+		<section className="home-section relative border-indigo-900/10 border-t bg-indigo-50/50 px-4 py-16 md:px-8 md:py-28 2xl:px-0">
 			<div className="mx-auto max-w-7xl">
+				<SectionHead align="end" titre="Vos projets, nos meilleurs talents." />
+			</div>
+			<div className="mx-auto mt-10 max-w-7xl md:mt-16">
 				<div className="mx-auto flex w-full flex-col md:flex-row md:gap-24">
-					<div className="relative flex h-auto items-center justify-center gap-2 pb-10 md:w-1/5 md:gap-0 md:p-0">
+					<div className="reveal relative flex h-auto items-center justify-center gap-2 pb-10 md:w-1/5 md:gap-0 md:p-0">
 						<div className="md:-translate-x-[40%] md:-translate-y-[40%] md:absolute md:top-1/2 md:left-1/2 md:z-20">
 							<DemoCard src="/assets/Maquilleuse_Professionnelle.webp" coeur />
 						</div>
@@ -47,7 +44,7 @@ export function Talents({ talents }: { talents: readonly TalentPublic[] }) {
 					</div>
 					<ul className="xs:grid-cols-3 grid w-full grid-cols-2 gap-4 md:w-4/5 md:grid-cols-4 md:gap-8">
 						{talents.map(talent => (
-							<li key={talent.slug} className="flex">
+							<li key={talent.slug} className="reveal flex">
 								<Link
 									href={`/talent/${talent.slug}`}
 									className="group relative flex w-full focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2"

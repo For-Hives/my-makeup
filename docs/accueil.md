@@ -8,6 +8,8 @@ L'accueil (`/`, servi par `src/app/(front)/(site)/home-cached/[key]/page.tsx`) s
 4. **Les textes de la communauté**, sans titre ni pli ni étapes : « avant tout une communauté » (`Presentation`), le projet (`Project`), la collaboration (`Collaboration`). Tous visibles, mot pour mot.
 5. **L'invitation à l'action** du bas (voir [`appel-a-l-action.md`](appel-a-l-action.md)).
 
+Chaque section sous le héros (2 à 4) s'ouvre par la même tête (`SectionHead` : filet numéroté, titre, phrase), a le même rythme (64 px d'air sur téléphone, 112 px sur grand écran, un filet en haut, un fond indigo très clair une section sur deux) et apparaît au défilement (issue 1101, voir [`mouvement.md`](mouvement.md), « Les sections de l'accueil »). Les textes de la communauté ne changent pas d'un mot ; un test les relit.
+
 ## « Mise en avant »
 
 Depuis l'issue 1066, la section montre **des profils vérifiés, tirés au hasard à chaque chargement de la page** (décision d'Andy du 24/10/2026). La case « Mise en avant » de l'issue 1066 (`profiles.featured`) n'existe plus.

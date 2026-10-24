@@ -79,7 +79,7 @@ Les navigations de Next.js se font dans la page, sans chargement : `@view-transi
 
 | Page | Entrée du haut de page (dans le temps) | Blocs qui apparaissent au défilement |
 |---|---|---|
-| accueil | titre (masque), phrase, formulaire guidé et illustration (en fondu), 660 ms | cartes de « Mise en avant », bloc du projet, invitation à l'action |
+| accueil | titre (masque), phrase, formulaire guidé et illustration (en fondu), 660 ms | sous le héros, chaque section : filet numéroté, titre et phrase (`SectionHead`), cartes de « Mise en avant », colonne de cartes et spécialités, colonnes de la communauté, onglets et image du projet, titre, textes, boutons et image de chaque bloc de la collaboration ; invitation à l'action (voir « Les sections de l'accueil ») |
 | recherche | titre (masque) | cartes des résultats |
 | fiche (`/profil/<slug>`) | aucune (le HTML de la fiche est tenu au caractère près par des fichiers de référence) | cartes et sections repliables |
 | talent (`/talent/<slug>`) | aucune | l'article, les cartes des maquilleuses, le champ « Votre ville » |
@@ -91,6 +91,17 @@ Les navigations de Next.js se font dans la page, sans chargement : `@view-transi
 | « Mon espace » | aucune | chaque carte |
 
 Les tests (`motion-system.test.ts`, section « the reveal reaches the pages ») refusent qu'une de ces pages perde son apparition, ou qu'un composant client d'une page publique la porte.
+
+## Les sections de l'accueil (issue 1101)
+
+**Pourquoi rien ne bougeait sous « Vos projets, nos meilleurs talents. »** : aucun des composants de la page (`Talents`, `Presentation`, `Project`, `Collaboration`) ne portait la classe `.reveal`. Le script d'apparition et la feuille de style étaient intacts (les cartes de « Mise en avant » et l'invitation du bas, qui la portaient, apparaissaient), mais le script ne voit que les éléments marqués. Le tableau ci-dessus annonçait « bloc du projet » sans que rien ne le vérifie : `motion-system.test.ts` ne listait aucun composant de l'accueil, et liste désormais chacun (section « the reveal reaches the pages »).
+
+Ce que fait chaque section :
+
+- **Une tête commune**, `src/components/home/SectionHead.tsx` : un filet numéroté (le numéro est un compteur CSS, `.home-eyebrow`, bloc « Home sections » de `globals.css` : il suit les sections présentes, car « Mise en avant » et les spécialités sont facultatives, et il n'est ni dans le texte de la page ni lu par un lecteur d'écran), le titre, et la phrase qui le suit quand il y en a une. Trois frères qui portent chacun `.reveal` : ils entrent ensemble et le script les échelonne (0, 70, 140 ms). Le `h2` garde son texte et son identifiant.
+- **Séparation.** Chaque section a 64 px d'air en haut et en bas sur téléphone, 112 px dès `md`, un filet (`border-t`) et, une section sur deux, un fond `indigo-50/50` (les spécialités et le projet). Les quatre blocs de la collaboration sont séparés par un filet. Les textes sur fond teinté tiennent 4,5:1 (le texte des onglets du projet passe de `gray-500` à `gray-600`, la teinte baissant le contraste de `gray-500` sous 4,5:1).
+- **Où est `.reveal`.** Sur des enveloppes sans transformation propre, jamais sur un lien ni un bouton (la transition de l'apparition remplacerait les leurs), jamais imbriquée : la colonne de cartes des spécialités et chaque spécialité (`li`), chaque colonne de la communauté, chaque onglet et l'image du projet, et, pour chaque bloc de la collaboration, le titre, le groupe de paragraphes, l'enveloppe du bouton et l'enveloppe de l'image (la photo retournée garde sa propre transformation). L'invitation du bas (`Cta`) est partagée par treize pages : inchangée.
+- **Pas de Bodoni.** La police d'affichage n'est chargée que par l'édition directe ; la charger ici serait une requête de plus et un risque pour le LCP. Les titres restent dans la police du site.
 
 ## Ce qui n'est pas fait, et pourquoi
 
@@ -115,6 +126,7 @@ Les tests (`motion-system.test.ts`, section « the reveal reaches the pages ») 
 ## Tests
 
 - `tests/unit/motion-system.test.ts` : jetons dans leurs plages (dont l'entrée de 500 à 700 ms et l'écart de 60 à 80 ms entre cartes), aucune propriété de mise en page animée, tout mouvement sous `no-preference`, le mouvement réduit ramène tout à 0,01 ms, `opacity: 0` seulement sur un bloc `wait` posé par le script, jamais de fondu sur un titre ni un paragraphe, entrée coupée à l'impression et en mode édition, apparition dans le temps (pas de `animation-timeline`), script en ligne de moins de 1 Ko joué contre une fausse page (blocs sous la ligne de flottaison en attente, premier écran intact, rien sans `IntersectionObserver`, avec mouvement réduit ou en mode édition, écart 0 à 5, bloc passé montré tout de suite), aucun `transition-all`, rebond ou pulsation dans le code.
+- `tests/e2e/home-sections.spec.ts`, à 390 et 1440 px : chaque section sous le héros a sa tête et des blocs qui attendent ; ils montent une fois à l'entrée dans l'écran, les blocs d'un même passage en cascade, puis tout est entier ; air, filet ou fond, numéros 01, 02… ; textes de la communauté au mot près ; mouvement réduit et sans JavaScript : rien n'attend.
 - `tests/e2e/motion.spec.ts`, à 390 et 1440 px : rien n'est atténué sur le premier écran une fois l'entrée finie ; à la première image de l'entrée, l'élément du LCP et ses parents sont à pleine opacité ; aucun défilement latéral (première image, 200 ms, 450 ms, page parcourue) ; sur `/classement`, un bloc sous la ligne de flottaison est caché et décalé de 28 px, monte en 600 ms une seule fois (rien ne rejoue quand on y revient) ; CLS à 0 en parcourant toute la page ; sans JavaScript le texte est là ; avec mouvement réduit aucune animation ni transition, aucun bloc en attente ; une carte monte au survol en 400 ms.
 - `tests/unit/page-transitions.test.ts` : le gabarit est un composant serveur du groupe public seul, ses classes et les règles de la feuille de style (durées par jetons, total ≤ `--duration-page`, rien ne bouge hors `no-preference`, mouvement réduit et page d'édition sans animation).
 - `tests/e2e/page-transitions.spec.ts`, à 390 et 1440 px : recherche vers fiche reste dans la même page, la transition de vue joue (animations `page-in` et `page-out`), aucun décalage de mise en page ; avec mouvement réduit, aucune animation de transition.

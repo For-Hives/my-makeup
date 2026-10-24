@@ -361,6 +361,13 @@ describe('the reveal reaches the pages (issue 1088)', () => {
 		['src/components/dashboard/PasswordChange.tsx', 1, 'space'],
 		['src/components/dashboard/PageOnline.tsx', 1, 'space'],
 		['src/components/dashboard/MyViews.tsx', 2, 'space'],
+		// Below the hero of the home page (issue 1101): every section reveals its title and its blocks.
+		['src/components/home/FeaturedProfiles.tsx', 1, 'home (Mise en avant)'],
+		['src/components/home/Talents.tsx', 2, 'home (talents)'],
+		['src/components/home/Presentation.tsx', 1, 'home (community)'],
+		['src/components/home/Project.tsx', 2, 'home (project)'],
+		['src/components/home/Collaboration.tsx', 4, 'home (collaboration)'],
+		['src/components/home/SectionHead.tsx', 3, 'home (heading of each section)'],
 	]
 	/** Class strings that begin with the shared class, whatever the quotes (JSX attribute, constant). */
 	const reveals = (text: string) => text.match(/["'`]reveal[\s"'`]/g) ?? []

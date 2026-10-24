@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import { SectionHead } from './SectionHead'
 
 interface Block {
 	titre: string
@@ -70,7 +71,7 @@ const BLOCKS: readonly Block[] = [
 
 function BlockImage({ image, cote }: { image: Block['image']; cote: 'gauche' | 'droite' }) {
 	return (
-		<div className="flex h-[250px] w-full items-center justify-center md:h-auto md:w-3/5">
+		<div className="reveal flex h-[250px] w-full items-center justify-center md:h-auto md:w-3/5">
 			<div
 				className={`relative flex h-full w-full items-center justify-center ${cote === 'droite' ? 'md:ml-32' : 'md:mr-32'}`}
 			>
@@ -82,37 +83,37 @@ function BlockImage({ image, cote }: { image: Block['image']; cote: 'gauche' | '
 
 export function Collaboration() {
 	return (
-		<section className="relative flex flex-col gap-10 px-4 py-20 md:px-8 2xl:px-0">
+		<section className="home-section relative border-indigo-900/10 border-t px-4 py-16 md:px-8 md:py-28 2xl:px-0">
 			<div className="mx-auto max-w-7xl">
-				<div className="mx-auto">
-					<h2 className="text-center font-bold text-4xl text-gray-900 tracking-tight sm:text-4xl">
-						Vous allez adorer cette nouvelle façon de collaborer
-					</h2>
-				</div>
+				<SectionHead align="center" titre="Vous allez adorer cette nouvelle façon de collaborer" />
 			</div>
-			{BLOCKS.map(bloc => (
-				<div key={bloc.titre} className="mx-auto mt-20 max-w-7xl">
-					<div
-						className={`mx-auto flex w-full gap-16 ${bloc.imageAGauche ? 'flex-col-reverse md:flex-row md:gap-0' : 'flex-col md:flex-row'}`}
-					>
-						{bloc.imageAGauche && <BlockImage image={bloc.image} cote="gauche" />}
-						<div className="relative flex h-auto w-full flex-col items-start justify-center gap-8 md:w-2/5">
-							<h3 className="text-left font-bold text-4xl text-gray-900 tracking-tight sm:text-3xl">{bloc.titre}</h3>
-							<div className="flex flex-col gap-4">
-								{bloc.paragraphes.map(paragraphe => (
-									<p key={paragraphe}>{paragraphe}</p>
-								))}
+			<div className="mx-auto mt-12 max-w-7xl divide-y divide-indigo-900/10 md:mt-16">
+				{BLOCKS.map(bloc => (
+					<div key={bloc.titre} className="py-12 md:py-20">
+						<div
+							className={`mx-auto flex w-full gap-16 ${bloc.imageAGauche ? 'flex-col-reverse md:flex-row md:gap-0' : 'flex-col md:flex-row'}`}
+						>
+							{bloc.imageAGauche && <BlockImage image={bloc.image} cote="gauche" />}
+							<div className="relative flex h-auto w-full flex-col items-start justify-center gap-8 md:w-2/5">
+								<h3 className="reveal text-left font-bold text-4xl text-gray-900 tracking-tight sm:text-3xl">
+									{bloc.titre}
+								</h3>
+								<div className="reveal flex flex-col gap-4">
+									{bloc.paragraphes.map(paragraphe => (
+										<p key={paragraphe}>{paragraphe}</p>
+									))}
+								</div>
+								<div className="reveal flex">
+									<Link href={bloc.bouton.href} className="btn-primary">
+										{bloc.bouton.libelle}
+									</Link>
+								</div>
 							</div>
-							<div className="flex">
-								<Link href={bloc.bouton.href} className="btn-primary">
-									{bloc.bouton.libelle}
-								</Link>
-							</div>
+							{!bloc.imageAGauche && <BlockImage image={bloc.image} cote="droite" />}
 						</div>
-						{!bloc.imageAGauche && <BlockImage image={bloc.image} cote="droite" />}
 					</div>
-				</div>
-			))}
+				))}
+			</div>
 		</section>
 	)
 }

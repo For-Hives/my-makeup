@@ -1,4 +1,5 @@
 import Image from 'next/image'
+import { SectionHead } from './SectionHead'
 
 const TABS = [
 	{
@@ -25,31 +26,26 @@ const TABS = [
 
 export function Project() {
 	return (
-		<section className="relative px-4 py-20 md:px-8 2xl:px-0">
+		<section className="home-section relative border-indigo-900/10 border-t bg-indigo-50/50 px-4 py-16 md:px-8 md:py-28 2xl:px-0">
 			<div className="mx-auto max-w-7xl">
-				<div className="mx-auto mb-10">
-					<h2 className="text-start font-bold text-4xl text-gray-900 tracking-tight sm:text-4xl">
-						Gardez votre projet beauté en tête, on vous aide à trouver la bonne maquilleuse
-					</h2>
-					<p className="mt-6 text-start text-gray-700 text-lg md:w-1/2">
-						Trouvez une maquilleuse près de chez vous, comparez les profils et contactez-la directement, gratuitement.
-					</p>
-				</div>
+				<SectionHead titre="Gardez votre projet beauté en tête, on vous aide à trouver la bonne maquilleuse">
+					Trouvez une maquilleuse près de chez vous, comparez les profils et contactez-la directement, gratuitement.
+				</SectionHead>
 
-				<div className="mx-auto flex max-w-7xl flex-col-reverse gap-16 md:flex-row md:gap-32">
+				<div className="mx-auto mt-12 flex max-w-7xl flex-col-reverse gap-12 md:mt-20 md:flex-row md:gap-32">
 					<div className="w-full md:w-1/2">
 						<div className="flex flex-col gap-2">
 							{TABS.map(onglet => (
-								<div key={onglet.titre}>
+								<div key={onglet.titre} className="reveal">
 									<div className="rounded-2xl border border-gray-200 bg-gray-50 p-10 shadow-lg hover:bg-gray-50 hover:shadow-lg md:border-none md:bg-none md:shadow-none">
 										<h3 className="mb-4 font-bold text-gray-700 text-xl">{onglet.titre}</h3>
-										<p className="text-gray-500 text-sm">{onglet.contenu}</p>
+										<p className="text-gray-600 text-sm">{onglet.contenu}</p>
 									</div>
 								</div>
 							))}
 						</div>
 					</div>
-					<div className="flex items-center justify-center md:w-1/2">
+					<div className="reveal flex items-center justify-center md:w-1/2">
 						<Image
 							className="h-[250px] w-full rounded-2xl object-cover object-top md:h-[500px]"
 							src="/assets/maquilleuse_project.webp"

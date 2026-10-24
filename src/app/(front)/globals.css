@@ -703,3 +703,51 @@ main:focus {
 	}
 }
 /* End of the navbar */
+/*
+ * Home sections below the hero (issue 1101, src/components/home/SectionHead.tsx). Each section opens with a numbered
+ * hairline: the number is a CSS counter, so it follows the sections that exist (« Mise en avant » and the talents are
+ * optional) and is not in the text of the page. The element is `aria-hidden` and empty. Nothing here moves; the
+ * entrance is the `.reveal` class (docs/mouvement.md).
+ */
+main:has(> .home-section) {
+	counter-reset: home-section;
+}
+
+.home-section {
+	counter-increment: home-section;
+}
+
+.home-eyebrow {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	font-size: 0.8125rem;
+	font-weight: 600;
+	letter-spacing: 0.2em;
+	line-height: 1;
+	color: #3730a3;
+	font-variant-numeric: tabular-nums;
+}
+
+.home-eyebrow::before {
+	content: counter(home-section, decimal-leading-zero);
+}
+
+.home-eyebrow::after {
+	content: "";
+	flex: 1 1 auto;
+	height: 1px;
+	background: rgb(49 46 129 / 0.2);
+}
+
+.home-eyebrow-end {
+	flex-direction: row-reverse;
+}
+
+.home-eyebrow-center {
+	justify-content: center;
+}
+
+.home-eyebrow-center::after {
+	flex: 0 0 3rem;
+}
