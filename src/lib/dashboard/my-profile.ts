@@ -1,6 +1,6 @@
 import type { Payload } from 'payload'
 import { COLLECTION_PROS } from '../access'
-import type { DashboardProfile } from './cards'
+import type { DashboardProfile } from './dashboard-profile'
 import { checkAdminDoesNotHoldProfile } from './lock'
 
 /** The makeup artist as Payload knows her: what the access rules of a request need. */

@@ -14,7 +14,12 @@ import {
 	uploadPhoto,
 } from '@/lib/dashboard/photos-upload'
 import type { SaveResult } from '@/lib/dashboard/result'
-import { localPreview, MAIN_PICTURE_ALT, MISSING_MAIN_PHOTO_MESSAGE, releasePreview } from '../../dashboard/PhotoEditor'
+import {
+	localPreview,
+	MAIN_PICTURE_ALT,
+	MISSING_MAIN_PHOTO_MESSAGE,
+	releasePreview,
+} from '@/lib/direct-edit/photo-preview'
 import { BlockForm, FIELD_CLASS } from '../BlockForm'
 import { EditableBlock } from '../EditableBlock'
 

@@ -45,7 +45,7 @@ describe('le pourcentage', () => {
 	const missing = (requis: boolean): Missing => ({
 		critere: 'description',
 		texte: '',
-		section: 'description',
+
 		requis,
 	})
 

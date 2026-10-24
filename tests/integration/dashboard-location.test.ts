@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
-import { profileCards } from '@/lib/dashboard/cards'
 import { CITIES_SERVICE_MESSAGE } from '@/lib/dashboard/location'
 import { artistProfile, type DashboardUser } from '@/lib/dashboard/my-profile'
 import { withPublishableTransition } from '@/lib/dashboard/publishable-transition'
 import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
 import { saveLocation } from '@/lib/dashboard/save-location'
 import { zoneReviewView } from '@/lib/dashboard/zone-review'
+import { formatZone } from '@/lib/format-zone'
 import type { Profile } from '@/payload-types'
 import { createAccount, type TestAccount } from '../support/account-factory'
 import { HttpResponse, http, simulate } from '../support/outgoing-http'
@@ -497,15 +497,22 @@ describe('265 : la zone à revoir se règle d’un appui sur une commune', () =>
 describe('266 : une zone de pays, enregistrée toute seule', () => {
 	const BELGIUM = { kind: 'countries', countries: ['BE'], town: 'Bruxelles', rayonKm: 30, aDomicile: true } as const
 
-	test('[BE] avec Bruxelles, puis [FR, IT], puis une commune : chaque fois la seule forme envoyée, et la carte la montre', async () => {
+	test('[BE] avec Bruxelles, puis [FR, IT], puis une commune : chaque fois la seule forme envoyée, et la page la dit', async () => {
 		officialList()
 		const a = await createAccount('maquilleuse')
 		const payload = await testPayload()
 		const user = await userOf(payload, a)
-		const cardZone = async () =>
-			profileCards((await artistProfile(payload, user)) ?? { id: 0 })
-				.find(c => c.section === 'localisation')
-				?.lignes.map(l => l.valeur)
+		// The zone as the public page says it (the card of the old space said the same words).
+		const publicZone = async () => {
+			const profile = await artistProfile(payload, user)
+			return formatZone({
+				city: profile?.city?.name,
+				radius: profile?.radiusKm,
+				zoneKind: profile?.zoneKind,
+				countries: profile?.countries,
+				town: profile?.town,
+			})
+		}
 
 		await saveLocation(payload, user, INPUT)
 		expect((await storedZone(payload, a)).city?.inseeCode).toBe('74010')
@@ -528,7 +535,7 @@ describe('266 : une zone de pays, enregistrée toute seule', () => {
 		// The commune is gone, with its postal codes.
 		expect(stored.city?.name ?? null).toBeNull()
 		expect(stored.city?.postalCodes ?? []).toEqual([])
-		expect(await cardZone()).toEqual(['Bruxelles (Belgique) et 30 km autour', 'Oui'])
+		expect(await publicZone()).toBe('Bruxelles (Belgique) et 30 km autour')
 
 		const two = await saveLocation(payload, user, {
 			kind: 'countries',
@@ -541,7 +548,7 @@ describe('266 : une zone de pays, enregistrée toute seule', () => {
 		stored = await storedZone(payload, a)
 		expect(stored).toMatchObject({ zoneKind: 'countries', countries: ['FR', 'IT'] })
 		expect(stored.town ?? null).toBeNull()
-		expect(await cardZone()).toEqual(['France et Italie', 'Oui'])
+		expect(await publicZone()).toBe('France et Italie')
 
 		const back = await saveLocation(payload, user, { ...INPUT, kind: 'city', codeInsee: '69123' })
 		expect(back.ok && back.valeurs).toMatchObject({ kind: 'city', codeInsee: '69123', countries: [], town: '' })
@@ -550,7 +557,6 @@ describe('266 : une zone de pays, enregistrée toute seule', () => {
 		expect(stored.city).toMatchObject({ name: 'Lyon', inseeCode: '69123' })
 		expect(stored.countries ?? []).toEqual([])
 		expect(stored.town ?? null).toBeNull()
-		expect(await cardZone()).toEqual(['Lyon (69)', '30 km', 'Oui'])
 	})
 
 	test('l’ordre des pays est celui de la maquilleuse', async () => {

@@ -4,9 +4,10 @@ import { EditBar } from '@/components/direct-edit/EditBar'
 import { EditSession } from '@/components/direct-edit/EditSession'
 import { type HeaderActions, headerEdit } from '@/components/direct-edit/header-edit'
 import { ProfileView } from '@/components/profile/ProfileView'
-import type { DashboardProfile } from '@/lib/dashboard/cards'
+import type { DashboardProfile } from '@/lib/dashboard/dashboard-profile'
 import { MESSAGES_PHOTO } from '@/lib/dashboard/photo'
 import type { DashboardPhoto } from '@/lib/dashboard/photos'
+import { UNCERTAIN_RESULT_MESSAGE } from '@/lib/dashboard/photos-upload'
 import { FAILURE_MESSAGE, MESSAGE_SESSION } from '@/lib/dashboard/result'
 import { type PublicProfile, publicProfileOf } from '@/services/public/profiles'
 import { openWindow } from '../support/dom-react'
@@ -388,5 +389,71 @@ describe('la photo principale : mêmes règles que l’espace', () => {
 		await jsdomWindow.attendre(() => alerts().includes(MESSAGE_SESSION) || null)
 		expect(alerts()).toContain('ta photo est toujours là')
 		expect(b.journal.removed).toEqual([])
+	})
+})
+
+describe('la photo principale : les échecs de l’envoi (ticket 134, E31 et E32, issue 1074)', () => {
+	const PREPARED = new File(['petit'], 'photo.webp', { type: 'image/webp' })
+	const ready = async () => ({ ok: true as const, fichier: PREPARED, largeur: 400, hauteur: 400, taille: 5 })
+	const field = () => doc().querySelector<HTMLInputElement>('input[type="file"]') as HTMLInputElement
+	const pick = (file: File) => pickFiles(jsdomWindow, field(), [file])
+
+	test('la réponse se perd : message d’incertitude, rien n’est supprimé', async () => {
+		const b = bench({
+			photoWork: { prepare: ready },
+			savePhoto: async () => {
+				throw new Error('Failed to fetch')
+			},
+		})
+		await b.monter()
+		await jsdomWindow.cliquer(jsdomWindow.bouton('Modifier ma photo principale'))
+		await pick(new File(['gros'], 'grosse.jpg', { type: 'image/jpeg' }))
+		await jsdomWindow.attendre(() => doc().querySelector('img[alt="Aperçu de la photo choisie"]') ?? null)
+		await jsdomWindow.cliquer(jsdomWindow.bouton('Enregistrer'))
+		await jsdomWindow.attendre(() => alerts().includes(UNCERTAIN_RESULT_MESSAGE) || null)
+		expect(b.journal.removed).toEqual([])
+	})
+
+	test('coupure pendant l’envoi du fichier : message, rien d’enregistré, la photo en place reste', async () => {
+		const b = bench({
+			photoWork: {
+				prepare: ready,
+				upload: async () => ({ ok: false, message: MESSAGES_PHOTO['envoi-impossible'] }),
+			},
+		})
+		await b.monter()
+		await jsdomWindow.cliquer(jsdomWindow.bouton('Modifier ma photo principale'))
+		await pick(new File(['gros'], 'grosse.jpg', { type: 'image/jpeg' }))
+		await jsdomWindow.attendre(() => doc().querySelector('img[alt="Aperçu de la photo choisie"]') ?? null)
+		await jsdomWindow.cliquer(jsdomWindow.bouton('Enregistrer'))
+		await jsdomWindow.attendre(() => alerts().includes(MESSAGES_PHOTO['envoi-impossible']) || null)
+		expect(b.journal.photos).toEqual([])
+		expect(editor()).not.toBeNull()
+	})
+
+	test('double clic pendant l’envoi : un seul envoi', async () => {
+		let openDoor: () => void = () => undefined
+		const door = new Promise<void>(resolve => {
+			openDoor = resolve
+		})
+		const b = bench({
+			photoWork: {
+				prepare: ready,
+				upload: async () => {
+					await door
+					return { ok: true, id: 9 }
+				},
+			},
+		})
+		await b.monter()
+		await jsdomWindow.cliquer(jsdomWindow.bouton('Modifier ma photo principale'))
+		await pick(new File(['gros'], 'grosse.jpg', { type: 'image/jpeg' }))
+		await jsdomWindow.attendre(() => doc().querySelector('img[alt="Aperçu de la photo choisie"]') ?? null)
+		const button = jsdomWindow.bouton('Enregistrer')
+		await jsdomWindow.cliquer(button)
+		await jsdomWindow.cliquer(button)
+		openDoor()
+		await jsdomWindow.attendre(() => b.journal.refreshes || null)
+		expect(b.journal.photos).toHaveLength(1)
 	})
 })

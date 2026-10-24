@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'bun:test'
-import { profileCards } from '@/lib/dashboard/cards'
 import {
 	CITY_TO_CHOOSE_MESSAGE,
 	cityLabel,
@@ -31,39 +30,6 @@ describe('U16 : une commune INSEE a son libellé « Annecy (74) »', () => {
 		expect(cityLabel({ departement: '74' })).toBe('')
 		expect(cityLabel({})).toBe('')
 		expect(cityLabel({ nom: null, departement: undefined })).toBe('')
-	})
-})
-
-describe('U14, U15 : la carte de la localisation ne dit jamais « & km »', () => {
-	const card = (profil: Parameters<typeof profileCards>[0]) => {
-		const found = profileCards(profil).find(c => c.section === 'localisation')
-		if (!found) throw new Error('pas de carte')
-		return found.lignes.map(l => l.valeur)
-	}
-
-	test('une commune, un rayon et « à domicile » enregistrés', () => {
-		expect(card({ id: 1, city: { name: 'Annecy', department: '74' }, radiusKm: 30, homeService: true })).toEqual([
-			'Annecy (74)',
-			'30 km',
-			'Oui',
-		])
-	})
-
-	test('un rayon de 0 ou absent n’écrit pas de kilomètres', () => {
-		for (const radiusKm of [0, null, undefined]) {
-			const values = card({
-				id: 1,
-				city: { name: 'Annecy', department: '74' },
-				radiusKm: radiusKm,
-				homeService: false,
-			})
-			expect(values).toEqual(['Annecy (74)', null, 'Non'])
-			expect(values.join(' ')).not.toMatch(/&|null km|undefined|NaN/)
-		}
-	})
-
-	test('un rayon seul, sans commune, ne dit rien', () => {
-		expect(card({ id: 1, radiusKm: 40, homeService: true })).toEqual([null, '40 km', null])
 	})
 })
 

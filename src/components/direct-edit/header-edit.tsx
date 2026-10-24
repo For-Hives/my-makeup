@@ -1,6 +1,6 @@
 import type { HeaderEdit } from '@/components/profile/edit-slots'
 import { isAvailable } from '@/lib/dashboard/availability'
-import type { DashboardProfile } from '@/lib/dashboard/cards'
+import type { DashboardProfile } from '@/lib/dashboard/dashboard-profile'
 import type { IdentityValues } from '@/lib/dashboard/identity'
 import { locationValues } from '@/lib/dashboard/location'
 import type { DashboardPhotos } from '@/lib/dashboard/photos'

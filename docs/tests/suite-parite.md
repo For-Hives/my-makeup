@@ -59,7 +59,7 @@ Elles ne sont pas sous `ci-ok` : elles tournent le lundi à 07:00 par `.github/w
 | U02 | vert | `tests/unit/completeness.test.ts`, `tests/unit/dashboard-progress.test.tsx`, `tests/unit/profile-state.test.ts` (+1) |  |
 | U03 | vert | `tests/unit/completeness.test.ts`, `tests/unit/dashboard-photo.test.ts`, `tests/unit/profile-state.test.ts` (+4) |  |
 | U04 | vert | `tests/unit/completeness.test.ts`, `tests/unit/dashboard-progress.test.tsx`, `tests/unit/profile-state.test.ts` (+2) |  |
-| U05 | vert | `tests/unit/completeness.test.ts`, `tests/unit/dashboard-description-panel.test.tsx`, `tests/unit/dashboard-description.test.ts` (+5) |  |
+| U05 | vert | `tests/unit/completeness.test.ts`, `tests/unit/direct-edit-about.test.tsx`, `tests/unit/dashboard-description.test.ts` (+5) |  |
 | U06 | vert | `tests/unit/completeness.test.ts`, `tests/unit/dashboard-progress.test.tsx`, `tests/unit/profile-state.test.ts` (+1) |  |
 | U07 | vert | `tests/unit/completeness.test.ts`, `tests/unit/dashboard-progress.test.tsx`, `tests/unit/profile-state.test.ts` (+1) |  |
 | U08 | vert | `tests/unit/completeness.test.ts`, `tests/unit/dashboard-progress.test.tsx`, `tests/unit/profile-state.test.ts` (+1) |  |
@@ -68,9 +68,9 @@ Elles ne sont pas sous `ci-ok` : elles tournent le lundi à 07:00 par `.github/w
 | U11 | vert | `tests/unit/slugs.test.ts` |  |
 | U12 | vert | `tests/unit/slugs.test.ts` |  |
 | U13 | vert | `tests/unit/profile-url.test.ts`, `tests/unit/slugs.test.ts` |  |
-| U14 | vert | `tests/unit/dashboard-location-panel.test.tsx`, `tests/unit/dashboard-location.test.ts`, `tests/unit/format-zone.test.ts` |  |
-| U15 | vert | `tests/unit/dashboard-location-panel.test.tsx`, `tests/unit/dashboard-location.test.ts` |  |
-| U16 | vert | `tests/unit/dashboard-location-panel.test.tsx`, `tests/unit/dashboard-location.test.ts`, `tests/integration/dashboard-location.test.ts` |  |
+| U14 | vert | `tests/unit/direct-edit-zone-form.test.tsx`, `tests/unit/dashboard-location.test.ts`, `tests/unit/format-zone.test.ts` |  |
+| U15 | vert | `tests/unit/direct-edit-zone-form.test.tsx`, `tests/unit/dashboard-location.test.ts` |  |
+| U16 | vert | `tests/unit/direct-edit-zone-form.test.tsx`, `tests/unit/dashboard-location.test.ts`, `tests/integration/dashboard-location.test.ts` |  |
 | U17 | vert | `tests/unit/search.test.ts` |  |
 | U18 | vert | `tests/unit/search-pages.test.ts`, `tests/unit/search.test.ts` |  |
 | U19 | vert | `tests/unit/search.test.ts` |  |
@@ -81,10 +81,10 @@ Elles ne sont pas sous `ci-ok` : elles tournent le lundi à 07:00 par `.github/w
 | U24 | vert | `tests/unit/sign-up.test.ts` |  |
 | U25 | vert | `tests/unit/dashboard-identity.test.ts`, `tests/unit/sign-up-form.test.tsx`, `tests/unit/sign-up.test.ts` (+1) |  |
 | U26 | vert | `tests/unit/dashboard-identity.test.ts` |  |
-| U27 | vert | `tests/unit/dashboard-description-panel.test.tsx`, `tests/unit/dashboard-description.test.ts`, `tests/integration/dashboard-description.test.ts` (+1) |  |
-| U28 | vert | `tests/unit/dashboard-contact-details.test.ts`, `tests/unit/dashboard-networks-contact-details-panels.test.tsx`, `tests/unit/dashboard-networks.test.ts` (+2) |  |
-| U29 | vert | `tests/unit/dashboard-lists-panels.test.tsx`, `tests/unit/dashboard-lists.test.ts`, `tests/unit/profile-lists.test.ts` (+1) |  |
-| U30 | vert | `tests/unit/dashboard-lists-panels.test.tsx`, `tests/unit/dashboard-lists.test.ts`, `tests/unit/profile-lists.test.ts` (+1) |  |
+| U27 | vert | `tests/unit/direct-edit-about.test.tsx`, `tests/unit/dashboard-description.test.ts`, `tests/integration/dashboard-description.test.ts` (+1) |  |
+| U28 | vert | `tests/unit/dashboard-contact-details.test.ts`, `tests/unit/direct-edit-networks.test.tsx`, `tests/unit/dashboard-networks.test.ts` (+2) |  |
+| U29 | vert | `tests/unit/direct-edit-about.test.tsx`, `tests/unit/dashboard-lists.test.ts`, `tests/unit/profile-lists.test.ts` (+1) |  |
+| U30 | vert | `tests/unit/direct-edit-about.test.tsx`, `tests/unit/dashboard-lists.test.ts`, `tests/unit/profile-lists.test.ts` (+1) |  |
 | U31 | hors bascule | ticket 214 | le formulaire de devis n’existe pas (décision du 08/10) ; les cinq champs du contact sont testés en U76 |
 | U32 | vert | `tests/unit/dashboard-availability.test.tsx`, `tests/unit/dashboard-description.test.ts`, `tests/unit/dashboard-identity.test.ts` (+5) |  |
 | U33 | vert | `tests/unit/price.test.ts` |  |
@@ -134,7 +134,7 @@ Elles ne sont pas sous `ci-ok` : elles tournent le lundi à 07:00 par `.github/w
 | U77 | vert | `tests/unit/contact-rate-limit.test.ts` |  |
 | U78 | vert | `tests/unit/contact-statuses.test.ts` |  |
 | U79 | vert | `tests/unit/dashboard-photo.test.ts`, `tests/unit/photo-upload.test.ts`, `tests/integration/photo-upload.test.ts` |  |
-| U80 | vert | `tests/unit/dashboard-portfolio-panel.test.tsx`, `tests/unit/photo-upload.test.ts`, `tests/integration/dashboard-portfolio.test.ts` (+4) |  |
+| U80 | vert | `tests/unit/direct-edit-gallery-limits.test.tsx`, `tests/unit/photo-upload.test.ts`, `tests/integration/dashboard-portfolio.test.ts` (+4) |  |
 | U81 | vert | `tests/unit/photo-upload.test.ts`, `tests/integration/photo-upload.test.ts` |  |
 | U82 | vert | `tests/unit/analytics-dashboard.test.tsx`, `tests/unit/analytics-events.test.ts`, `tests/unit/analytics-auth.test.tsx` |  |
 | U83 | vert | `tests/unit/analytics-events.test.ts`, `tests/unit/analytics-auth.test.tsx` |  |
@@ -216,13 +216,13 @@ Elles ne sont pas sous `ci-ok` : elles tournent le lundi à 07:00 par `.github/w
 | E27 | vert | `tests/e2e/direct-edit-services.spec.ts`, `tests/integration/dashboard-availability.test.ts` | section : les offres et leurs options |
 | E28 | vert | `tests/e2e/dashboard-availability.spec.ts`, `tests/integration/dashboard-availability.test.ts` | section : la disponibilité |
 | E29 | vert | `tests/e2e/direct-edit-photo.spec.ts`, `tests/integration/dashboard-availability.test.ts` | section : la photo principale |
-| E30 | vert | `tests/unit/dashboard-bullets-panel.test.tsx`, `tests/unit/dashboard-bullets.test.ts`, `tests/unit/dashboard-location-panel.test.tsx` (+9) |  |
-| E31 | vert | `tests/unit/dashboard-bullets-panel.test.tsx`, `tests/unit/dashboard-description-panel.test.tsx`, `tests/unit/dashboard-lists-panels.test.tsx` (+10) |  |
-| E32 | vert | `tests/unit/dashboard-panel.test.tsx`, `tests/e2e/direct-edit-header.spec.ts` |  |
+| E30 | vert | `tests/unit/direct-edit-about.test.tsx`, `tests/unit/dashboard-bullets.test.ts`, `tests/unit/direct-edit-zone-form.test.tsx` (+9) |  |
+| E31 | vert | `tests/unit/direct-edit-zone-form.test.tsx`,`tests/unit/direct-edit-about.test.tsx`, `tests/unit/direct-edit-about.test.tsx`, `tests/unit/direct-edit-about.test.tsx` (+10) |  |
+| E32 | vert | `tests/unit/direct-edit-header.test.tsx`, `tests/e2e/direct-edit-header.spec.ts` |  |
 | E33 | vert | `tests/e2e/dashboard-deletion.spec.ts`, `tests/unit/dashboard-deletion.test.tsx`, `tests/integration/dashboard-deletion.test.ts` |  |
-| E34 | vert | `tests/unit/dashboard-portfolio-panel.test.tsx`, `tests/integration/dashboard-portfolio.test.ts`, `tests/e2e/direct-edit-portfolio.spec.ts` |  |
-| E35 | vert | `tests/unit/dashboard-portfolio-panel.test.tsx`, `tests/integration/dashboard-portfolio.test.ts`, `tests/e2e/direct-edit-portfolio.spec.ts` |  |
-| E36 | vert | `tests/unit/dashboard-photo-panel.test.tsx`, `tests/unit/dashboard-photo.test.ts`, `tests/unit/dashboard-portfolio-panel.test.tsx` (+4) |  |
+| E34 | vert | `tests/unit/direct-edit-gallery-limits.test.tsx`, `tests/integration/dashboard-portfolio.test.ts`, `tests/e2e/direct-edit-portfolio.spec.ts` |  |
+| E35 | vert | `tests/unit/direct-edit-gallery-limits.test.tsx`, `tests/integration/dashboard-portfolio.test.ts`, `tests/e2e/direct-edit-portfolio.spec.ts` |  |
+| E36 | vert | `tests/unit/direct-edit-header.test.tsx`, `tests/unit/dashboard-photo.test.ts`, `tests/unit/direct-edit-gallery-limits.test.tsx` (+4) |  |
 | E37 | vert | `tests/e2e/direct-edit-acceptance.spec.ts` |  |
 | E38 | vert | `tests/e2e/city-search.spec.ts` |  |
 | E39 | vert | `tests/e2e/keyword-search.spec.ts` | adapté |
@@ -254,7 +254,7 @@ Elles ne sont pas sous `ci-ok` : elles tournent le lundi à 07:00 par `.github/w
 | E65 | vert | `tests/unit/blog-article.test.ts`, `tests/e2e/blog-article.spec.ts`, `tests/e2e/profile-seo.spec.ts` (+2) |  |
 | E66 | vert | `tests/e2e/public-profile.spec.ts` |  |
 | E67 | vert | `tests/e2e/direct-edit-acceptance.spec.ts`, `tests/e2e/a11y-key-pages.spec.ts` |  |
-| E68 | vert | `tests/unit/dashboard-panel.test.tsx`, `tests/e2e/direct-edit-acceptance.spec.ts`, `tests/e2e/direct-edit-header.spec.ts` (+1) |  |
+| E68 | vert | `tests/unit/direct-edit-header.test.tsx`, `tests/e2e/direct-edit-acceptance.spec.ts`, `tests/e2e/direct-edit-header.spec.ts` (+1) |  |
 | E69 | vert | `tests/unit/contact-form.test.tsx`, `tests/e2e/contact.spec.ts` |  |
 | E70 | hors bascule | ticket 214 | le parcours mobile avec demande de devis |
 | E71 | vert | `tests/e2e/layout.spec.ts` |  |

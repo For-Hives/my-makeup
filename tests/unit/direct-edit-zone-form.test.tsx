@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import { act } from 'react'
 import { type CitiesSearch, SEARCH_PAUSE_MS } from '@/components/dashboard/CityField'
-import { LocationEditor, type LocationUpload } from '@/components/dashboard/LocationEditor'
+import { PlaceForm, type PlaceSave } from '@/components/direct-edit/blocks/PlaceBlock'
+import { EditSession } from '@/components/direct-edit/EditSession'
 import {
 	CITIES_SERVICE_MESSAGE,
 	CITY_TO_CHOOSE_MESSAGE,
@@ -13,10 +14,10 @@ import { ZONE_MESSAGES } from '@/lib/profile/zone'
 import { openWindow } from '../support/dom-react'
 
 /**
- * The panel of the location (ticket 123; plan 02 U14, U15, U16, E30, E31): the commune chosen in
- * the list with the keyboard and with a tap, free text refused, the radius out of bounds, the
- * service of the communes down, and a single save for a double click. The send and search functions
- * are fakes: no network.
+ * The zone form (ticket 123 moved from the card of her old space to the block « Zone » by issue 1023; plan 02
+ * U14, U15, U16, E30, E31): the commune chosen in the list with the keyboard and with a tap, free text refused, the
+ * radius out of bounds, the service of the communes down, and a single save for a double click. The form is the one
+ * of the block and of the onboarding (`PlaceForm`); the send and search functions are fakes: no network.
  */
 
 const jsdomWindow = openWindow()
@@ -48,25 +49,34 @@ function fakeSearch(reponse: Reply | ((texte: string) => Reply | Promise<Reply>)
 	return { chercher: find, textes: texts }
 }
 
-function fakeUpload(reponse?: Awaited<ReturnType<LocationUpload>>) {
-	const calls: Parameters<LocationUpload>[0][] = []
-	const send: LocationUpload = async saisie => {
+function fakeUpload(reponse?: Awaited<ReturnType<PlaceSave>>) {
+	const calls: Parameters<PlaceSave>[0][] = []
+	const send: PlaceSave = async saisie => {
 		calls.push(saisie)
 		return reponse ?? { ok: true, valeurs: { ...WITH_ANNECY, rayonKm: saisie.rayonKm, aDomicile: saisie.aDomicile } }
 	}
 	return { appels: calls, envoyer: send }
 }
 
-async function open(envoyer: LocationUpload, chercher: CitiesSearch, valeurs: LocationValues = WITH_ANNECY) {
-	await jsdomWindow.monter(<LocationEditor valeurs={valeurs} envoyer={envoyer} chercher={chercher} />)
-	await jsdomWindow.cliquer(jsdomWindow.bouton('Modifier ma localisation'))
+/** True once the session was told the save succeeded: the editor of the block closes then. */
+let closed = false
+
+async function open(envoyer: PlaceSave, chercher: CitiesSearch, valeurs: LocationValues = WITH_ANNECY) {
+	closed = false
+	await jsdomWindow.monter(
+		<EditSession
+			refresh={() => {
+				closed = true
+			}}
+		>
+			<PlaceForm values={valeurs} save={envoyer} search={chercher} review={null} />
+		</EditSession>
+	)
 }
 
 const city = (): HTMLInputElement => jsdomWindow.champ('Où travailles-tu ?') as HTMLInputElement
-const dialogue = (): HTMLElement | null => jsdomWindow.w.document.querySelector('[role="dialog"]')
+const dialogue = (): HTMLElement | null => (closed ? null : jsdomWindow.w.document.querySelector('form'))
 const options = (): HTMLElement[] => [...jsdomWindow.w.document.querySelectorAll<HTMLElement>('[role="option"]')]
-/** The announcement of the card (outside the panel). */
-const status = (): string => jsdomWindow.w.document.querySelector('body > div > [role="status"]')?.textContent ?? ''
 /** The announcement of the field of the commune (inside the panel). */
 const fieldStatus = (): string => dialogue()?.querySelector('[role="status"]')?.textContent ?? ''
 
@@ -87,16 +97,11 @@ async function key(cible: Element, key: string) {
 	return event?.defaultPrevented ?? false
 }
 
-describe('le panneau s’ouvre avec la localisation enregistrée', () => {
-	test('un dialogue nommé, la commune, le rayon et « à domicile » enregistrés', async () => {
+describe('le formulaire s’ouvre avec la zone enregistrée', () => {
+	test('la commune, le rayon et « à domicile » enregistrés', async () => {
 		const { envoyer: send } = fakeUpload()
 		await open(send, fakeSearch({ ok: true, communes: [] }).chercher)
 
-		const d = dialogue()
-		expect(d?.getAttribute('aria-modal')).toBe('true')
-		expect(jsdomWindow.w.document.getElementById(d?.getAttribute('aria-labelledby') ?? '')?.textContent).toBe(
-			'Modifier ma localisation'
-		)
 		expect(city().value).toBe('Annecy (74)')
 		expect((jsdomWindow.champ('Rayon d’action (en km)') as HTMLInputElement).value).toBe('30')
 		expect((jsdomWindow.champ('Je me déplace à domicile') as HTMLInputElement).checked).toBe(false)
@@ -140,7 +145,6 @@ describe('U16 : « Annecy » choisie au doigt, enregistrée par son code', () =>
 		await jsdomWindow.attendre(() => dialogue() === null)
 
 		expect(calls).toEqual([{ kind: 'city', codeInsee: '74010', rayonKm: 30, aDomicile: false }])
-		expect(status()).toBe('Ta localisation est enregistrée.')
 	})
 
 	test('l’outre-mer se choisit comme le reste : Saint-Denis (974)', async () => {
@@ -182,7 +186,7 @@ describe('le clavier suffit', () => {
 		expect(dialogue()).not.toBeNull()
 	})
 
-	test('Échap ferme la liste, pas le panneau ; un second Échap ferme le panneau', async () => {
+	test('Échap ferme la liste', async () => {
 		const { chercher: find } = fakeSearch({ ok: true, communes: [ANNECY] })
 		const { envoyer: send } = fakeUpload()
 		await open(send, find, WITHOUT_CITY)
@@ -192,10 +196,6 @@ describe('le clavier suffit', () => {
 		await key(city(), 'Escape')
 		expect(city().getAttribute('aria-expanded')).toBe('false')
 		expect(dialogue()).not.toBeNull()
-
-		await key(city(), 'Escape')
-		// Nothing is changed: no commune was chosen, so closing needs no confirmation.
-		expect(dialogue()).toBeNull()
 	})
 
 	test('chaque suggestion fait au moins 44 px (min-h-11) et la liste est annoncée', async () => {
@@ -470,7 +470,6 @@ describe('le service des communes en panne', () => {
 		expect(calls).toEqual([{ kind: 'city', codeInsee: '69123', rayonKm: 30, aDomicile: false }])
 		expect(dialogue()).not.toBeNull()
 		expect(city().value).toBe('Lyon (69)')
-		expect(status()).toBe('')
 	})
 })
 
@@ -499,7 +498,7 @@ describe('E31 : un échec du serveur', () => {
 	})
 
 	test('une fonction d’envoi qui lève donne le message du site', async () => {
-		const send: LocationUpload = async () => {
+		const send: PlaceSave = async () => {
 			throw new Error('Failed to fetch')
 		}
 		await open(send, fakeSearch({ ok: true, communes: [] }).chercher)
@@ -516,7 +515,7 @@ describe('un double clic n’envoie qu’une requête', () => {
 			release = fin
 		})
 		const calls: unknown[] = []
-		const send: LocationUpload = async saisie => {
+		const send: PlaceSave = async saisie => {
 			calls.push(saisie)
 			await waiting
 			return { ok: true, valeurs: { ...WITH_ANNECY } }

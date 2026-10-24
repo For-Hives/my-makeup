@@ -2,7 +2,6 @@ import { describe, expect, test } from 'bun:test'
 import { act } from 'react'
 import { AvailabilitySwitch, type AvailabilityUpload } from '@/components/dashboard/AvailabilitySwitch'
 import { availabilitySchema, isAvailable } from '@/lib/dashboard/availability'
-import { type DashboardProfile, profileCards } from '@/lib/dashboard/cards'
 import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
 import { openWindow } from '../support/dom-react'
 
@@ -14,26 +13,12 @@ import { openWindow } from '../support/dom-react'
 
 const jsdomWindow = openWindow()
 
-const profile = (disponible: boolean | null | undefined) => ({ id: 1, available: disponible }) as DashboardProfile
-const cardLine = (disponible: boolean | null | undefined) =>
-	profileCards(profile(disponible))
-		.find(carte => carte.section === 'disponibilite')
-		?.lignes.map(ligne => ligne.valeur)
-
-describe('la carte dit l’état enregistré', () => {
-	test('un profil importé sans valeur est « Disponible »', () => {
-		expect(cardLine(null)).toEqual(['Disponible'])
-		expect(cardLine(undefined)).toEqual(['Disponible'])
+describe('l’état enregistré', () => {
+	test('un profil importé sans valeur est disponible', () => {
 		expect(isAvailable(null)).toBe(true)
 		expect(isAvailable(undefined)).toBe(true)
-	})
-
-	test('disponible : « Disponible » ; indisponible : le dit, et dit que la recherche l’écarte', () => {
-		expect(cardLine(true)).toEqual(['Disponible'])
-		expect(cardLine(false)).toEqual([
-			'Pas disponible en ce moment',
-			'Ton profil n’apparaît plus dans les résultats de recherche.',
-		])
+		expect(isAvailable(true)).toBe(true)
+		expect(isAvailable(false)).toBe(false)
 	})
 })
 

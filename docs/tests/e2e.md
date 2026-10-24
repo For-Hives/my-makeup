@@ -111,11 +111,11 @@ expect(await violationsSevere(page)).toEqual([])
 
 ## La recette de l'espace maquilleuse (ticket 142)
 
-`tests/e2e/dashboard-acceptance.spec.ts` se joue une fois, aux deux tailles, quand toutes les sections de l'espace sont livrées ; la CI le rejoue avec les autres essais, puis compte les orphelins (`bun run bench:reconcile --outside-import`).
+`tests/e2e/direct-edit-acceptance.spec.ts` se joue une fois, aux deux tailles, sur la page d'édition directe ; la CI le rejoue avec les autres essais, puis compte les orphelins (`bun run bench:reconcile --outside-import`).
 
-- **E67, E68** : une maquilleuse au profil plein ouvre l'un après l'autre les 12 panneaux et la fenêtre de suppression. Pour chacun : 0 violation grave d'axe, Échap le ferme, le focus revient sur son bouton. La liste des boutons est comparée à celle de la page : un panneau ajouté sans entrer dans la recette fait échouer l'essai.
+- **E67, E68** : une maquilleuse au profil plein ouvre l'un après l'autre les 15 blocs de l'édition directe. Pour chacun : 0 violation grave d'axe, Échap le ferme, le focus revient sur son bouton. La liste des boutons est comparée à celle de la page : un panneau ajouté sans entrer dans la recette fait échouer l'essai.
 - **E37** : la photo principale est changée deux fois par l'interface ; l'`og:image` du profil public change, et sert la nouvelle image.
-- **Zoom à 200 %** : la largeur de la fenêtre est divisée par deux (320 px au plus bas, la largeur de la règle WCAG 1.4.10 de reflux). Ni défilement de côté, ni deux liens, boutons, champs ou titres qui se recouvrent, sur la page et dans chaque panneau. Le contrôle de recouvrement compare les boîtes ligne par ligne et prouve qu'il sait échouer.
+- **Zoom à 200 %** : la largeur de la fenêtre est divisée par deux (320 px au plus bas, la largeur de la règle WCAG 1.4.10 de reflux). Ni défilement de côté, ni deux liens, boutons, champs ou titres qui se recouvrent, dans chaque éditeur. Le contrôle de recouvrement compare les boîtes ligne par ligne et prouve qu'il sait échouer.
 - Le reste de la liste du ticket (E02, E19 à E36, U25 à U32, U79 à U81, I23 à I27, I36, I38) est joué par les essais de chaque section.
 
 ## Les 15 pages clés et les listes, une dernière fois (ticket 178)
@@ -124,7 +124,7 @@ Deux essais se jouent à la fin, quand tout est livré ; la CI les rejoue avec l
 
 - **`frame-ban.spec.ts`** (ticket 271) : une page d'une autre origine (un petit serveur de l'essai, sur un autre port de `127.0.0.1`) met `/auth/signin` dans un `iframe` : le navigateur le refuse (page d'erreur `chrome-error:`, aucun formulaire) ; un cadre de même origine s'affiche et se lit.
 - **`a11y-key-pages.spec.ts`** : axe ne trouve aucune violation « serious » ni « critical » sur 15 pages, aux deux tailles. Les 12 pages ouvertes à tous : accueil, recherche d'une ville, un profil public, un talent, le blog, un article, le contact, les mentions légales, la connexion, l'inscription, le mot de passe oublié, la page 404. Les 3 pages de l'espace : l'espace lui-même (avec quatre panneaux de nature différente ouverts l'un après l'autre : un texte, la recherche de commune, une liste avec ses options, le portfolio), l'aperçu du profil, la première étape de l'accueil. Deux états s'y ajoutent : la recherche sans résultat et le formulaire de contact avec ses erreurs. Le dernier essai compte les 15 pages. E67 et E68 parcourent les douze panneaux et la suppression (`dashboard-acceptance.spec.ts`).
-- **`lists-removal.spec.ts`** : sur chacune des sept listes (langues, compétences, expériences, formations, prestations, options d'une prestation, photos du portfolio), la zone `role="status"` est là et vide à l'ouverture ; un retrait au clavier puis un retrait au clic ou au toucher laissent le focus dans le panneau (jamais sur un champ de saisie après un clic), et chacun est annoncé par une phrase qui change. Ce sont les règles L4 et L5 de [`docs/qualite.md`](../qualite.md), §3, dans un vrai navigateur ; les sept règles ont chacune leur test en unitaire pour chaque panneau.
+- **`lists-removal.spec.ts`** : sur chacune des sept listes de l'édition directe (langues, compétences, expériences, formations, prestations, options d'une prestation, photos du portfolio), la zone `role="status"` est là et vide à l'ouverture ; un retrait au clavier puis un retrait au clic ou au toucher laissent le focus dans le panneau (jamais sur un champ de saisie après un clic), et chacun est annoncé par une phrase qui change. Ce sont les règles L4 et L5 de [`docs/qualite.md`](../qualite.md), §3, dans un vrai navigateur ; les sept règles ont chacune leur test en unitaire pour chaque panneau.
 
 ## La parité des adresses (I45)
 
