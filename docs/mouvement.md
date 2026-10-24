@@ -84,10 +84,9 @@ Les navigations de Next.js se font dans la page, sans chargement : `@view-transi
 | fiche (`/profil/<slug>`) | aucune (le HTML de la fiche est tenu au caractère près par des fichiers de référence) | cartes et sections repliables |
 | talent (`/talent/<slug>`) | aucune | l'article, les cartes des maquilleuses, le champ « Votre ville » |
 | zone (`/maquilleuses/<département>`) | `Hero` : titre, phrase | l'introduction, les cartes, le champ « Votre ville » |
-| pages fixes (`/a-propos`, `/contact`, partenariats, « pourquoi… », « solutions… », `/demande-envoyee`) | `Hero` : titre, phrase, bouton d'inscription | contact : introduction, « Contactez-nous », cartes d'adresse |
 | blog (liste) | surtitre et phrase (`.enter`), titre (masque) | le dernier article en grand et chaque carte |
 | blog (article, issue 1103) | retour, date et signature (`.enter`), titre (masque), chapeau (`.enter`) ; le texte n'est jamais animé | « À lire aussi », puis les cartes des maquilleuses et leur champ de ville |
-| pages fixes (`/a-propos`, `/contact`, partenariats, « pourquoi… », « solutions… », guides du particulier, `/demande-envoyee`) | `Hero` : titre, phrase, bouton d'inscription | titre de l'article, chapô, chaque étape ou partie, chaque carte d'avantage, signature ; contact : introduction, « Contactez-nous », cartes d'adresse |
+| pages fixes (`/a-propos`, `/contact`, partenariats, « pourquoi… », « solutions… », guides du particulier, `/demande-envoyee`) | `Hero` : titre, phrase, bouton d'inscription | titre de l'article, chapô, chaque étape ou partie, chaque carte d'avantage, signature ; contact : introduction, « Contactez-nous », cartes d'adresse ; confirmation de `/demande-envoyee` |
 | blog | titre (masque) | chaque article de la liste ; pied d'un article : les cartes |
 | classement | titre (masque) | chaque section |
 | connexion, inscription | aucune (tout tient dans le premier écran) | l'aide « Mot de passe », les liens du bas |

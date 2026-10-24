@@ -3,6 +3,8 @@ import { connection } from 'next/server'
 import { Cta } from '@/components/blocks/Cta'
 import { Hero } from '@/components/blocks/Hero'
 import { ContactForm } from '@/components/contact/ContactForm'
+import { ContentPage, Eyebrow } from '@/components/static-pages/EditorialArticle'
+import { EnvelopeIcon } from '@/components/static-pages/icons'
 import { serverEnv } from '@/lib/env'
 import { pageMetadata } from '@/lib/seo/metadata'
 import { sendMessage } from './actions'
@@ -28,50 +30,64 @@ export default async function PageContact() {
 	await connection()
 	const siteKey = serverEnv().turnstile?.siteKey
 	return (
-		<main className="relative">
+		<ContentPage>
 			<Hero
 				image="/assets/back/maquilleuse_europeenne_white.webp"
 				titre="Contact"
 				description="Une idée, une envie de collaborer, une question ? N’hésitez pas à nous contacter !"
 				recherche={false}
 			/>
-			<div className="reveal mx-auto mt-32 max-w-2xl px-4 text-center md:px-0">
-				<h2 className="font-bold text-3xl text-gray-900 tracking-tight sm:text-4xl">Un message en particulier ?</h2>
-				<p className="mt-2 text-gray-600 text-lg leading-8">
+			<div className="reveal mx-auto mt-24 max-w-2xl px-4 text-center md:mt-32 md:px-0">
+				<span aria-hidden="true" className="mx-auto mb-6 block h-0.5 w-12 bg-indigo-900" />
+				<h2 className="font-display font-medium text-3xl text-balance text-gray-900 tracking-tight sm:text-4xl">
+					Un message en particulier ?
+				</h2>
+				<p className="mx-auto mt-4 max-w-[56ch] text-gray-700 text-lg leading-8">
 					Une demande particulière, un bug, une idée ? N’hésitez pas à nous contacter via le formulaire ci-dessous !
 				</p>
 			</div>
 			<ContactForm action={sendMessage} {...(siteKey !== undefined && { siteKey })} />
-			<section className="relative py-20">
-				<div className="mx-auto flex max-w-7xl flex-col px-4 md:flex-row md:px-8 xl:px-0">
-					<div className="reveal mx-auto mb-10 w-full md:w-1/2">
-						<h2 className="w-full text-start font-bold text-4xl text-gray-900 tracking-tight sm:text-4xl md:w-1/2">
+			<section className="border-gray-200 border-t bg-white px-4 py-20 md:px-8 md:py-28">
+				<div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-12 lg:gap-16">
+					<div className="reveal lg:col-span-5">
+						<Eyebrow>Contact</Eyebrow>
+						<h2 className="mt-4 font-display font-medium text-3xl text-balance text-gray-900 tracking-tight sm:text-4xl">
 							Contactez-nous
 						</h2>
-						<p className="mt-6 w-full text-start text-gray-700 text-lg md:w-1/2">
+						<span aria-hidden="true" className="mt-6 block h-0.5 w-12 bg-indigo-900" />
+						<p className="mt-6 max-w-[40ch] text-gray-700 text-lg leading-8">
 							My-Makeup, plus qu’une plateforme de mise en relation, une équipe de passionnés à votre service !
 						</p>
 					</div>
-					<div className="grid w-full grid-cols-1 gap-6 sm:grid-cols-2 md:w-1/2 lg:col-span-2 lg:gap-8">
+					<ul className="grid list-none grid-cols-1 gap-6 p-0 sm:grid-cols-2 lg:col-span-7">
 						{CONTACT_DETAILS.map(({ titre, email }) => (
-							<div key={email} className="reveal rounded-2xl bg-gray-50 p-10">
-								<h3 className="font-semibold text-base text-gray-900 leading-7">{titre}</h3>
-								<dl className="mt-3 space-y-1 text-gray-600 text-sm leading-6">
+							<li
+								key={email}
+								className="reveal flex flex-col gap-4 rounded-2xl border border-gray-200 bg-neutral-50 p-8"
+							>
+								<span className="flex h-11 w-11 items-center justify-center rounded-full bg-indigo-50 text-indigo-900">
+									<EnvelopeIcon className="h-6 w-6" />
+								</span>
+								<h3 className="font-display font-medium text-gray-900 text-xl leading-snug tracking-tight">{titre}</h3>
+								<dl className="text-sm leading-6">
 									<div>
 										<dt className="sr-only">Email</dt>
 										<dd>
-											<a className="font-semibold text-indigo-600" href={`mailto:${email}`}>
+											<a
+												className="break-all font-semibold text-indigo-800 underline decoration-indigo-300 underline-offset-4"
+												href={`mailto:${email}`}
+											>
 												{email}
 											</a>
 										</dd>
 									</div>
 								</dl>
-							</div>
+							</li>
 						))}
-					</div>
+					</ul>
 				</div>
 			</section>
 			<Cta />
-		</main>
+		</ContentPage>
 	)
 }

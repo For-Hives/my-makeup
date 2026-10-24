@@ -8,6 +8,7 @@ import { Cta } from '@/components/blocks/Cta'
 import { Hero } from '@/components/blocks/Hero'
 import { ProfileBlock } from '@/components/blocks/ProfileBlock'
 import { MarkdownContent } from '@/components/content/MarkdownContent'
+import { ContentPage, TeamSignature } from '@/components/static-pages/EditorialArticle'
 import { markdownToHtml } from '@/lib/markdown'
 import { breadcrumbStructuredData, SITE_NAME, serializeJsonLd } from '@/lib/seo/json-ld'
 import { editorialMetadata } from '@/lib/seo/metadata'
@@ -69,7 +70,7 @@ export default async function TalentPage({ params }: PageProps<'/talent/[slug]'>
 		{ nom: talent.titre, url: canonicalUrl(`/talent/${talent.slug}`) },
 	])
 	return (
-		<main className="relative">
+		<ContentPage>
 			<script
 				type="application/ld+json"
 				// serializeJsonLd escapes <, > and &, so the data cannot close the tag.
@@ -83,20 +84,17 @@ export default async function TalentPage({ params }: PageProps<'/talent/[slug]'>
 			/>
 			<div className="relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0">
 				<div className="mx-auto max-w-2xl">
-					<article className="reveal">
+					<article className="reveal content-prose">
 						<MarkdownContent html={html} />
 						<Link href="/search" className="btn-primary">
 							Trouver une maquilleuse
 						</Link>
-						<p className="mt-12 flex items-center text-base text-gray-600">
-							<span className="h-4 w-0.5 rounded-full bg-gray-200" />
-							<span className="ml-3">L&apos;équipe My-Makeup</span>
-						</p>
+						<TeamSignature />
 					</article>
 				</div>
 				<ProfileBlock titre={talentBlockTitle(talent.titre)} cartes={cards} specialite={talent.titre} />
 			</div>
 			<Cta />
-		</main>
+		</ContentPage>
 	)
 }
