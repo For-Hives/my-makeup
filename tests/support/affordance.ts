@@ -296,7 +296,10 @@ function ringOf(selector: string): string {
 
 /** Cuts the transitions, so that a state is read at once and not half way through its fade. */
 export async function freezeMotion(page: Page): Promise<void> {
-	await page.addStyleTag({ content: '*,*::before,*::after{transition:none!important;animation:none!important}' })
+	await page.addStyleTag({
+		content:
+			'*,*::before,*::after{transition:none!important;animation:none!important}.reveal[data-reveal]{opacity:1!important;transform:none!important}',
+	})
 }
 
 /**

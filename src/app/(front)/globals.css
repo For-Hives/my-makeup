@@ -9,15 +9,20 @@
  * `static` keeps them in the stylesheet even when no utility reads them. Ranges are held by tests/unit/motion-system.test.ts.
  */
 @theme static {
-	--duration-hover: 100ms;
-	--duration-lift: 200ms;
+	--duration-hover: 200ms;
+	--duration-lift: 400ms;
 	--duration-appear: 280ms;
-	--duration-page: 360ms;
+	--duration-enter: 500ms;
+	--duration-reveal: 600ms;
+	--duration-page: 520ms;
 	--ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
 	--ease-in-soft: cubic-bezier(0.64, 0, 0.78, 0);
-	--motion-distance: 12px;
-	--motion-lift: 3px;
-	--motion-zoom: 1.03;
+	--motion-distance: 16px;
+	--motion-rise: 28px;
+	--motion-lift: 5px;
+	--motion-zoom: 1.05;
+	--stagger-enter: 80ms;
+	--stagger-card: 70ms;
 }
 
 /*
@@ -255,21 +260,40 @@
 }
 
 /*
- * Motion (issue 1069, docs/mouvement.md). One small system: a role before an effect (feedback, guidance, linking two
- * states), `transform` and `opacity` only (plus paint-only colors), no layout property ever moves. Everything that
- * moves is declared inside `prefers-reduced-motion: no-preference`: with reduced motion nothing slides or fades, and
- * every state change (hover tint, underline, shadow) still shows, at once. Nothing is hidden by default: the reveal
- * is a scroll-driven animation, so without the browser support, without animation, in print and without script
- * the content is simply there. Before its range a block is simply there (no fill), so content below the fold is never hidden.
+ * Motion (issue 1069, then 1088 and the visible pass, docs/mouvement.md). One small system: a role before an effect
+ * (feedback, guidance, linking two states), `transform` and `opacity` only (plus paint-only colors and a clip-path
+ * for the mask of a heading), no layout property ever moves. Everything that moves is declared inside
+ * `prefers-reduced-motion: no-preference`: with reduced motion nothing slides or fades and every state change
+ * (hover tint, underline, shadow) still shows, at once.
+ *
+ * Two entrances, both time-based:
+ * - the load-in (`.enter*`, pure CSS): the top of a page rises into place, a few tens of ms apart;
+ * - the reveal (`.reveal`): a block below the fold rises 28 px and fades in, once, when it comes into view. A tiny
+ *   inline script (src/lib/motion/reveal-script.ts) watches the blocks and flips `data-reveal`. Nothing is hidden
+ *   by the stylesheet alone: only the script, after it has seen a block below the fold, hides it. Without script,
+ *   with reduced motion, in print and in edit mode the content is simply there.
  */
-@keyframes motion-reveal {
+@keyframes enter-rise {
+	from {
+		transform: translateY(var(--motion-rise));
+	}
+}
+
+@keyframes enter-fade {
 	from {
 		opacity: 0;
-		transform: translateY(var(--motion-distance));
+		transform: translateY(var(--motion-rise));
+	}
+}
+
+/* The mask of a heading: the line rises out of a clip that opens downwards. It is never faded, so its text is painted from the first frame. */
+@keyframes enter-mask {
+	from {
+		clip-path: inset(-0.1em -0.1em 100% -0.1em);
+		transform: translateY(var(--motion-rise));
 	}
 	to {
-		opacity: 1;
-		transform: none;
+		clip-path: inset(-0.1em -0.1em -0.1em -0.1em);
 	}
 }
 
@@ -282,12 +306,12 @@
 /* A card or a link that leads to a page: a shadow shows the hover, with or without motion. */
 @media (hover: hover) {
 	.card-hover:hover {
-		box-shadow: 0 10px 24px -12px rgb(26 20 23 / 0.28);
+		box-shadow: 0 18px 36px -16px rgb(26 20 23 / 0.34);
 	}
 }
 
 @media (prefers-reduced-motion: no-preference) {
-	/* Feedback: the controls of the affordance rules above ease their state instead of snapping to it (100 ms). */
+	/* Feedback: the controls of the affordance rules above ease their state instead of snapping to it (200 ms). */
 	@layer base {
 		:where(
 				a[href],
@@ -305,24 +329,63 @@
 		}
 	}
 
-	/* Guidance: a block fades in and rises 12 px as it enters the screen, once its top is 220 px inside. */
-	@supports (animation-timeline: view()) {
-		.reveal {
-			animation-name: motion-reveal;
-			animation-timing-function: var(--ease-out-soft);
-			animation-fill-mode: none;
-			animation-timeline: view();
-			animation-range: entry 0px entry 220px;
-		}
-		/* In print, and on the owner's page in edit mode: its blocks are measured and clicked, they never move. */
-		@media print {
-			.reveal {
-				animation: none;
-			}
-		}
-		[data-edit-page] .reveal {
+	/* The load-in: the top of a page rises into place, `--enter-i` (0, 1, 2) sets the order. Time-based, not scroll-linked. */
+	.enter,
+	.enter-fade,
+	.enter-mask {
+		animation-duration: var(--duration-enter);
+		animation-timing-function: var(--ease-out-soft);
+		animation-delay: calc(var(--enter-i, 0) * var(--stagger-enter));
+		animation-fill-mode: backwards;
+	}
+	.enter {
+		animation-name: enter-rise;
+	}
+	.enter-fade {
+		animation-name: enter-fade;
+	}
+	.enter-mask {
+		animation-name: enter-mask;
+	}
+	/* A page change plays its own transition (below): the load-in would double it. */
+	@supports selector(:active-view-transition) {
+		:root:active-view-transition :is(.enter, .enter-fade, .enter-mask) {
 			animation: none;
 		}
+	}
+	/* In print, and on the owner's page in edit mode: its blocks are measured and clicked, they never move. */
+	@media print {
+		:is(.enter, .enter-fade, .enter-mask) {
+			animation: none;
+		}
+	}
+	[data-edit-page] :is(.enter, .enter-fade, .enter-mask) {
+		animation: none;
+	}
+
+	/* The reveal: the script puts a block below the fold on `wait` (it comes back to its place when it is seen). */
+	.reveal {
+		transition:
+			opacity var(--duration-reveal) var(--ease-out-soft),
+			transform var(--duration-reveal) var(--ease-out-soft);
+		transition-delay: calc(var(--reveal-i, 0) * var(--stagger-card));
+	}
+	.reveal[data-reveal="wait"] {
+		opacity: 0;
+		transform: translateY(var(--motion-rise));
+		transition: none;
+	}
+	@media print {
+		.reveal[data-reveal] {
+			opacity: 1;
+			transform: none;
+			transition: none;
+		}
+	}
+	[data-edit-page] .reveal[data-reveal] {
+		opacity: 1;
+		transform: none;
+		transition: none;
 	}
 
 	@media (hover: hover) {
@@ -331,7 +394,7 @@
 			animation: motion-underline var(--duration-hover) var(--ease-out-soft);
 		}
 
-		/* A button rises 1 px (it comes back when pressed). */
+		/* A button rises 2 px (it comes back when pressed). */
 		:where(
 				.btn-primary-large,
 				.btn-primary,
@@ -340,7 +403,7 @@
 				.btn-secondary-white,
 				.btn-secondary-white-bordered
 			):not(:disabled, [aria-disabled="true"]):hover {
-			transform: translateY(-1px);
+			transform: translateY(-2px);
 		}
 		:where(
 				.btn-primary-large,
@@ -353,7 +416,7 @@
 			transform: none;
 		}
 
-		/* A card lifts 3 px and its picture grows 3 %: the card clips the picture, so nothing moves around it. */
+		/* A card lifts 5 px and its picture grows 5 %, slowly (400 ms): the card clips the picture, so nothing moves around it. */
 		.card-hover {
 			transition-property: transform, box-shadow;
 			transition-duration: var(--duration-lift);
@@ -374,7 +437,7 @@
 			transition: transform var(--duration-hover) var(--ease-out-soft);
 		}
 		:is(a, button):hover .motion-arrow {
-			transform: translate(2px, -2px);
+			transform: translate(3px, -3px);
 		}
 	}
 }
@@ -383,8 +446,8 @@
  * Page transition (issue 1087, docs/mouvement.md). `src/app/(front)/(site)/template.tsx` wraps the page in React's
  * `<ViewTransition>`: on a client-side navigation between two public pages the browser snapshots the old and the new
  * content and these rules animate them. The snapshot of the rest of the page (navigation, footer) swaps at once, so
- * the navigation never moves. The old content fades out (100 ms), then the new one fades in and rises 12 px, for
- * 360 ms in all. A browser without the API navigates as usual; the first load, a full reload and the dashboard are
+ * the navigation never moves. The old content fades out (200 ms), then the new one fades in and rises 16 px, for
+ * 520 ms in all. A browser without the API navigates as usual; the first load, a full reload and the dashboard are
  * never animated.
  */
 @keyframes page-out {

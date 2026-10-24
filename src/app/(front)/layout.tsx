@@ -6,6 +6,7 @@ import { SkipLink } from '@/components/layout/SkipLink'
 import { umamiLoaderScript, umamiScriptAttributes } from '@/lib/analytics/umami'
 import { versionEnv } from '@/lib/env'
 import { SITE_ORIGIN } from '@/lib/frozen-urls'
+import { revealScript } from '@/lib/motion/reveal-script'
 import packageJson from '../../../package.json'
 import './globals.css'
 
@@ -40,6 +41,8 @@ export default function FrontLayout({ children }: { children: ReactNode }) {
 				<WebVitals />
 				<SignInSucceeded />
 				{children}
+				{/* The reveal of the blocks below the fold (docs/mouvement.md): inline, no module, no byte in the bundles. */}
+				<script dangerouslySetInnerHTML={{ __html: revealScript }} />
 			</body>
 		</html>
 	)

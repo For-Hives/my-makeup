@@ -1,6 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { SearchBlock } from './SearchBlock'
 
 interface PropsHero {
@@ -24,6 +24,15 @@ interface PropsHero {
 	 * edge (clip-path): the white one of the text side would cut the drawing.
 	 */
 	visuel?: ReactNode
+}
+
+/**
+ * The order of the load-in (docs/mouvement.md): the heading first, the line under it, then the form and the
+ * drawing together. Index 2 at most: with the tokens, the whole sequence is 660 ms. The picture of the fixed pages
+ * is the LCP and never moves; the heading is only clipped and moved (never faded), so its text is painted at once.
+ */
+function enterOrder(index: 1 | 2): CSSProperties {
+	return { '--enter-i': index } as CSSProperties
 }
 
 /**
@@ -61,12 +70,20 @@ export function Hero({
 					>
 						<div className="mx-auto flex max-w-2xl flex-col gap-8 lg:mx-0 lg:max-w-xl">
 							<div className="flex flex-col gap-4">
-								<h1 className="font-bold text-2xl text-gray-900 tracking-tight sm:text-4xl md:text-5xl">{titre}</h1>
-								<p className="text-gray-700 text-lg leading-8">{description}</p>
+								<h1 className="enter-mask font-bold text-2xl text-gray-900 tracking-tight sm:text-4xl md:text-5xl">
+									{titre}
+								</h1>
+								<p className="enter text-gray-700 text-lg leading-8" style={enterOrder(1)}>
+									{description}
+								</p>
 							</div>
-							{formulaire}
+							{formulaire !== undefined && (
+								<div className="enter-fade" style={enterOrder(2)}>
+									{formulaire}
+								</div>
+							)}
 							{inscription && (
-								<div>
+								<div className="enter-fade" style={enterOrder(2)}>
 									<Link href="/auth/signin" className="btn-primary">
 										S&apos;inscrire sur My-Makeup
 									</Link>
@@ -96,7 +113,9 @@ export function Hero({
 				</div>
 			) : (
 				<div className="relative z-20 bg-indigo-50 px-4 py-10 lg:absolute lg:inset-y-0 lg:right-0 lg:flex lg:w-1/2 lg:items-center lg:justify-center lg:py-0 lg:pr-8 lg:pl-28 lg:[clip-path:polygon(18%_0,100%_0,100%_100%,0_100%)]">
-					{visuel}
+					<div className="enter-fade w-full" style={enterOrder(2)}>
+						{visuel}
+					</div>
 				</div>
 			)}
 		</div>

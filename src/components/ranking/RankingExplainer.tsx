@@ -9,7 +9,9 @@ import { RANKING_EXCLUDED, RANKING_GROUPS, RANKING_RULES } from '@/lib/search/ra
 export function RankingExplainer() {
 	return (
 		<article className="mx-auto w-full max-w-3xl px-4 py-12 text-gray-800 md:py-16">
-			<h1 className="font-bold text-3xl text-gray-900 tracking-tight">Comment sont classées les maquilleuses</h1>
+			<h1 className="enter-mask font-bold text-3xl text-gray-900 tracking-tight">
+				Comment sont classées les maquilleuses
+			</h1>
 			<p className="mt-4 text-gray-700 text-lg leading-8">
 				My Makeup classe les maquilleuses de façon neutre : personne ne peut payer pour passer devant. Voici, dans
 				l’ordre, ce que fait la recherche, et ce qu’elle ne fait pas.
