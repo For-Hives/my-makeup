@@ -73,7 +73,16 @@ function resolve(specifier: string, from: string): string | undefined {
 	return undefined
 }
 
-const USE_SERVER = /^\s*(?:\/\/[^\n]*\n\s*|\/\*[\s\S]*?\*\/\s*)*['"]use server['"]/
+/** True when the first statement of the file, after its comments, is the `'use server'` directive. */
+function isServerActionFile(code: string): boolean {
+	let rest = code.trimStart()
+	while (rest.startsWith('//') || rest.startsWith('/*')) {
+		const end = rest.startsWith('//') ? rest.indexOf('\n') : rest.indexOf('*/') + 1
+		if (end <= 0) return false
+		rest = rest.slice(end + 1).trimStart()
+	}
+	return rest.startsWith("'use server'") || rest.startsWith('"use server"')
+}
 
 const own = (file: string) => relative(SRC, file)
 
@@ -85,7 +94,7 @@ function violations(root: string): string[] {
 	while (queue.length > 0) {
 		const { file, path } = queue.shift() as { file: string; path: string[] }
 		// A Server Action file stays on the server: the client only gets a reference to it.
-		if (path.length > 1 && USE_SERVER.test(readFileSync(file, 'utf8'))) continue
+		if (path.length > 1 && isServerActionFile(readFileSync(file, 'utf8'))) continue
 		for (const rule of REFUSED) {
 			if (path.length > 1 && rule.test('', own(file))) found.push(`${rule.what}: ${path.join(' > ')}`)
 		}
