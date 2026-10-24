@@ -10,10 +10,9 @@
 
 import { parisDay } from '../weekly-stats'
 
-export const PROFILE_VIEWS_COLLECTION = 'profile-views'
+export { PROFILE_VIEWS_PATH } from './report-view'
 
-/** The route the profile page calls once per tab (src/app/api/profile-views/route.ts). */
-export const PROFILE_VIEWS_PATH = '/api/profile-views'
+export const PROFILE_VIEWS_COLLECTION = 'profile-views'
 
 /** The rows older than this many days are deleted every day: the longest period of the statistics route. */
 export const VIEWS_RETENTION_DAYS = 92

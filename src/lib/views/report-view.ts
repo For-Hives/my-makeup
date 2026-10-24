@@ -10,6 +10,13 @@
 
 export const VIEW_KEY_PREFIX = 'mm.view:'
 
+/**
+ * The route the profile page calls once per tab (src/app/api/profile-views/route.ts). It lives here, in a file
+ * with no import, because the browser component reads it: from `profile-views.ts` it would drag the statistics
+ * (zod, `node:crypto`, the lists of countries) into the JavaScript of every profile page (issue 1033).
+ */
+export const PROFILE_VIEWS_PATH = '/api/profile-views'
+
 export interface ReportEnvironment {
 	slug: string
 	storage: Pick<Storage, 'getItem' | 'setItem'> | undefined

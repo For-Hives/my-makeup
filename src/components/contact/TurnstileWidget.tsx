@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { TURNSTILE_UNAVAILABLE_FIELD } from '@/lib/contact/turnstile'
+import { TURNSTILE_UNAVAILABLE_FIELD } from '@/lib/contact/turnstile-fields'
 
 /** The part of Cloudflare's `window.turnstile` this widget uses. */
 interface TurnstileApi {
