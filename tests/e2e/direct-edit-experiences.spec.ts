@@ -32,7 +32,9 @@ for (const size of SIZES) {
 		}) => {
 			const profile = await open(page, context, 'reference')
 			await pen(page, 'Modifier mes expériences').click()
-			await expect(page.locator('[data-direct-edit-editor]')).toContainText('Tu modifies : Expériences professionnelles')
+			await expect(page.locator('[data-direct-edit-editor]')).toContainText(
+				'Tu modifies : Expériences professionnelles'
+			)
 			await page.getByRole('button', { name: 'Ajouter une expérience' }).click()
 			await page.getByLabel('Poste', { exact: true }).fill('Maquilleuse cinéma')
 			await page.getByLabel('Entreprise', { exact: true }).fill('Production Fictive')
