@@ -18,6 +18,7 @@ import rehypeStringify from 'rehype-stringify'
 import remarkParse from 'remark-parse'
 import remarkRehype from 'remark-rehype'
 import { unified } from 'unified'
+import type { ArticleHeading } from './article-reading'
 
 /** Walks the tree and gives each element to `visiteur`. */
 function walk(noeud: Root | Element, visiteur: (element: Element) => void): void {
@@ -39,6 +40,46 @@ function adjustHtml() {
 	}
 }
 
+/** The plain text of an element: its text nodes, whatever the bold or the link around them. */
+function textOf(node: Root | Element): string {
+	return node.children
+		.map(child => (child.type === 'text' ? child.value : child.type === 'element' ? textOf(child) : ''))
+		.join('')
+}
+
+/** « Un détail » gives `un-detail`: no accent, no sign, words joined by dashes; '' when nothing is left. */
+function slugOfTitle(text: string): string {
+	return text
+		.normalize('NFD')
+		.replace(/\p{M}/gu, '')
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/^-+|-+$/g, '')
+}
+
+/**
+ * The anchors of the titles (issue 1103): each h2 and h3 gets an `id` (`section-<title>`, numbered when two titles
+ * are alike), and the list of the titles goes to `file.data.headings` for the table of contents of a long article.
+ * Run after the sanitizing, so the prefix of rehype-sanitize does not apply: the ids are the page's own.
+ */
+function addAnchors() {
+	return (tree: Root, file: { data: Record<string, unknown> }): void => {
+		const seen = new Map<string, number>()
+		const headings: ArticleHeading[] = []
+		walk(tree, element => {
+			if (element.tagName !== 'h2' && element.tagName !== 'h3') return
+			const text = textOf(element).replace(/\s+/g, ' ').trim()
+			const base = slugOfTitle(text) || 'partie'
+			const count = (seen.get(base) ?? 0) + 1
+			seen.set(base, count)
+			const id = `section-${base}${count > 1 ? `-${count}` : ''}`
+			element.properties = { ...element.properties, id }
+			if (text) headings.push({ id, text, level: element.tagName === 'h2' ? 2 : 3 })
+		})
+		file.data.headings = headings
+	}
+}
+
 const converter = unified().use(remarkParse).use(remarkRehype).use(rehypeSanitize).use(adjustHtml).use(rehypeStringify)
 
 /**
@@ -48,4 +89,22 @@ const converter = unified().use(remarkParse).use(remarkRehype).use(rehypeSanitiz
 export async function markdownToHtml(source: unknown): Promise<string> {
 	if (typeof source !== 'string' || source.trim() === '') return ''
 	return String(await converter.process(source))
+}
+
+const documentConverter = unified()
+	.use(remarkParse)
+	.use(remarkRehype)
+	.use(rehypeSanitize)
+	.use(adjustHtml)
+	.use(addAnchors)
+	.use(rehypeStringify)
+
+/**
+ * The same HTML as `markdownToHtml`, with an anchor on each h2 and h3, and the list of those titles (the page
+ * of an article builds its table of contents from it). A text that is not one gives no HTML and no title.
+ */
+export async function markdownToDocument(source: unknown): Promise<{ html: string; headings: ArticleHeading[] }> {
+	if (typeof source !== 'string' || source.trim() === '') return { html: '', headings: [] }
+	const file = await documentConverter.process(source)
+	return { html: String(file), headings: (file.data.headings as ArticleHeading[] | undefined) ?? [] }
 }

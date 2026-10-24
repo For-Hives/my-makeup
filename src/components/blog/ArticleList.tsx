@@ -1,47 +1,36 @@
 import Link from 'next/link'
 import type { ListedArticle } from '@/services/public/article-list'
+import { ArticleCard, FeaturedArticle } from './ArticleCard'
 
-/** « 14 octobre 2026 », in the Paris time zone; '' for a missing or unreadable date. */
-export function articleDate(date: string | null): string {
-	if (!date) return ''
-	const instant = new Date(date)
-	if (Number.isNaN(instant.getTime())) return ''
-	return instant.toLocaleDateString('fr-FR', {
-		day: 'numeric',
-		month: 'long',
-		year: 'numeric',
-		timeZone: 'Europe/Paris',
-	})
-}
+export { articleDate } from './article-date'
 
-/** The cards of the blog: date, title, excerpt and a link to the article. Server component. */
+/**
+ * The blog (issue 1103): the most recent article large, the others in a grid of cards. Server component.
+ * Without an article, a framed message and the way to the search, never an empty grid.
+ */
 export function ArticleList({ articles }: { articles: readonly ListedArticle[] }) {
-	if (articles.length === 0)
-		return <p className="text-gray-700">Aucun article n&apos;est publié pour le moment. Reviens bientôt !</p>
+	const [first, ...others] = articles
+	if (!first)
+		return (
+			<div className="reveal border border-gray-300 border-t-2 border-t-indigo-900 bg-white p-8 md:p-12">
+				<p className="max-w-[40ch] font-display font-medium text-2xl text-gray-900 leading-snug md:text-3xl">
+					Aucun article n&apos;est publié pour le moment. Revenez bientôt !
+				</p>
+				<Link href="/search" className="btn-primary mt-8 inline-flex min-h-11 items-center">
+					Trouver ma maquilleuse
+				</Link>
+			</div>
+		)
 	return (
-		<ul className="grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-4">
-			{articles.map(article => {
-				const date = articleDate(article.publieLe)
-				return (
-					<li key={article.slug} className="reveal flex flex-col gap-2">
-						{date && (
-							<p className="relative pl-2 text-base text-gray-700">
-								<time dateTime={article.publieLe ?? undefined}>{date}</time>
-								<span aria-hidden="true" className="absolute top-0 left-0 h-full w-0.5 bg-gray-300" />
-							</p>
-						)}
-						<h2 className="font-semibold text-gray-900 text-lg">{article.titre}</h2>
-						{article.extrait && <p className="text-gray-700 text-sm">{article.extrait}</p>}
-						<Link
-							href={`/blog/${article.slug}`}
-							className="flex items-center font-medium text-indigo-900 focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2"
-						>
-							Lire l&apos;article
-							<span className="sr-only"> : {article.titre}</span>
-						</Link>
-					</li>
-				)
-			})}
-		</ul>
+		<div className="flex flex-col gap-6 md:gap-8">
+			<FeaturedArticle article={first} />
+			{others.length > 0 && (
+				<ul className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8 lg:grid-cols-3">
+					{others.map(article => (
+						<ArticleCard key={article.slug} article={article} />
+					))}
+				</ul>
+			)}
+		</div>
 	)
 }

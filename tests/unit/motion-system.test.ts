@@ -349,7 +349,7 @@ describe('the reveal reaches the pages (issue 1088)', () => {
 		['src/app/(front)/(site)/talent/[slug]/page.tsx', 1, 'talent'],
 		['src/app/(front)/(site)/maquilleuses/[department]/page.tsx', 1, 'zone'],
 		['src/components/blog/ArticleList.tsx', 1, 'articles (list)'],
-		['src/app/(front)/(site)/blog/page.tsx', 1, 'articles (heading)'],
+		['src/components/blog/ArticleCard.tsx', 2, 'articles (cards, featured)'],
 		['src/components/ranking/RankingExplainer.tsx', 3, 'ranking'],
 		['src/app/(front)/(site)/contact/page.tsx', 3, 'contact'],
 		['src/app/(front)/(dashboard)/auth/signin/page.tsx', 2, 'sign-in'],

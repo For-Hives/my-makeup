@@ -55,6 +55,9 @@ test.describe('Blog', () => {
 			expect(mainTitles(html)).toEqual(['Blog & News'])
 			expect(html.indexOf(`href="/blog/${recent}"`)).toBeLessThan(html.indexOf(`href="/blog/${old}"`))
 			expect(html).toContain('Un extrait fictif.')
+			// One article is the large one, and it comes before the cards (other files make articles in parallel: which one is not asked).
+			expect(html.match(/<article data-featured/g)).toHaveLength(1)
+			expect(html.indexOf('<article data-featured')).toBeLessThan(html.indexOf('<article data-article-card'))
 			expect(html).not.toContain(draft)
 		} finally {
 			for (const id of identifiers) await deleteContent(request, 'articles', id)
