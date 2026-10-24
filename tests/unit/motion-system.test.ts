@@ -140,7 +140,7 @@ describe('what may move (issue 1069)', () => {
 	})
 
 	test('reduced motion ends every transition and animation at once and stops loops', () => {
-		const rule = RULES.find(item => item.context.includes(REDUCE) && item.selector.includes('*'))
+		const rule = RULES.find(item => item.context.includes(REDUCE) && item.selector.startsWith('*'))
 		const value = (property: string) => rule?.declarations.find(([name]) => name === property)?.[1]
 		expect(value('transition-duration')).toContain('0.01ms')
 		expect(value('animation-duration')).toContain('0.01ms')
