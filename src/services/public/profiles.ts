@@ -771,8 +771,10 @@ export interface DirectoryProfile extends ProfilePlace, ProfileGeometry {
 	startingPrice?: number | null
 	/** The speciality bullets she chose: what the speciality filter reads (issue 1011). */
 	specialtyBullets?: readonly string[]
-	/** When her profile was last saved, in milliseconds: what the sort by update and « Récemment mises à jour » read (issues 1011 and 1013). */
+	/** When her profile was last saved, in milliseconds: what the sort by update reads (issue 1011). */
 	updatedAt?: number
+	/** True when an admin ticked « Mise en avant » on her profile (issue 1066): what the home page selection reads. */
+	featured?: boolean
 	/** True when her profile is publishable (`isIndexable`): the pages of a speciality show only those (ticket 305). */
 	indexable: boolean
 	/**
@@ -865,6 +867,7 @@ export async function readDirectory(
 				publishable: true,
 				updatedAt: true,
 				specialtyBullets: true,
+				featured: true,
 			},
 			// The order the page `/classement` announces (DIRECTORY_SORT, src/lib/search/ranking.ts): a test compares the two.
 			sort: ['-completeness', '-updatedAt', 'slug'],
@@ -891,6 +894,7 @@ export async function readDirectory(
 				specialtyBullets: profile.specialtyBullets ?? [],
 				updatedAt: Date.parse(profile.updatedAt) || 0,
 				indexable: profile.publishable === true,
+				featured: profile.featured === true,
 				...directoryPlace(profile),
 				...directoryGeometry(profile),
 				sortName: displayName(profile),

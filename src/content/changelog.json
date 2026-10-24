@@ -430,6 +430,11 @@
 			"id": "quand-tu-modifies-ta-page-le-fond-est-plus-clair-les-text",
 			"type": "amelioration",
 			"text": "Quand tu modifies ta page, le fond est plus clair, les textes sont plus foncés et plus lisibles, le bloc que tu modifies est annoncé « Tu modifies : … », et le cadre qui s’allume au survol épouse exactement la forme de chaque bloc."
+		},
+		{
+			"id": "l-accueil-dit-plus-clairement-ce-que-my-makeup-fait-pour",
+			"type": "amelioration",
+			"text": "L’accueil dit plus clairement ce que My-Makeup fait pour vous, et met en avant une sélection de maquilleuses choisies par l’équipe."
 		}
 	],
 	"releases": []

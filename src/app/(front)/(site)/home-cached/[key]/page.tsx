@@ -4,16 +4,17 @@ import { Cta } from '@/components/blocks/Cta'
 import { Hero } from '@/components/blocks/Hero'
 import { AccountDeletedNotice } from '@/components/home/AccountDeletedNotice'
 import { Collaboration } from '@/components/home/Collaboration'
+import { FeaturedProfiles } from '@/components/home/FeaturedProfiles'
 import { GuidedSearch } from '@/components/home/GuidedSearch'
+import { HeroIllustration } from '@/components/home/HeroIllustration'
 import { Presentation } from '@/components/home/Presentation'
 import { Project } from '@/components/home/Project'
-import { RecentProfiles } from '@/components/home/RecentProfiles'
 import { Talents } from '@/components/home/Talents'
 import { NETWORKS } from '@/components/layout/links'
 import { homeStructuredData, serializeJsonLd } from '@/lib/seo/json-ld'
 import { pageMetadata } from '@/lib/seo/metadata'
 import { HOME_PAGE_KEY } from '@/lib/urls/home-page'
-import { cachedRecentProfiles, cachedTalents } from '@/services/public/cached'
+import { cachedFeaturedProfiles, cachedTalents } from '@/services/public/cached'
 import type { ProfileCard } from '@/services/public/profiles'
 import type { TalentPublic } from '@/services/public/talents'
 
@@ -54,19 +55,22 @@ async function readTalents(): Promise<readonly TalentPublic[]> {
 	}
 }
 
-/** The recently updated makeup artists, or none when the database does not answer: the home page stays a page. */
-async function readRecentProfiles(): Promise<readonly ProfileCard[]> {
+/** The profiles the team picked, or none when the database does not answer: the home page stays a page. */
+async function readFeaturedProfiles(): Promise<readonly ProfileCard[]> {
 	try {
-		return await cachedRecentProfiles()
+		return await cachedFeaturedProfiles()
 	} catch (error) {
-		console.error('[accueil] les profils récents ne se lisent pas :', error instanceof Error ? error.message : error)
+		console.error(
+			'[accueil] les profils mis en avant ne se lisent pas :',
+			error instanceof Error ? error.message : error
+		)
 		return []
 	}
 }
 
 export default async function HomePage({ params }: PageProps<'/home-cached/[key]'>) {
 	if ((await params).key !== HOME_PAGE_KEY) notFound()
-	const [talents, recent] = await Promise.all([readTalents(), readRecentProfiles()])
+	const [talents, featured] = await Promise.all([readTalents(), readFeaturedProfiles()])
 	return (
 		<main className="relative">
 			<AccountDeletedNotice />
@@ -84,18 +88,14 @@ export default async function HomePage({ params }: PageProps<'/home-cached/[key]
 					</>
 				}
 				formulaire={<GuidedSearch />}
+				visuel={<HeroIllustration />}
 			/>
-			<RecentProfiles cartes={recent} />
+			<FeaturedProfiles cartes={featured} />
 			{talents.length > 0 && <Talents talents={talents} />}
-			{/* Folded, not removed: the text stays in the HTML for the search engines (issue 1013). */}
-			<details className="relative z-20 border-gray-200 border-t bg-white">
-				<summary className="mx-auto flex min-h-[44px] max-w-7xl cursor-pointer items-center px-4 py-4 font-bold text-gray-900 text-xl md:px-8">
-					Comment ça marche
-				</summary>
-				<Presentation />
-				<Project />
-				<Collaboration />
-			</details>
+			{/* The words of the community: no title, no fold, no steps (issue 1066). They stay in the HTML as before. */}
+			<Presentation />
+			<Project />
+			<Collaboration />
 			<Cta />
 		</main>
 	)

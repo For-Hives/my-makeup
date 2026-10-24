@@ -18,6 +18,12 @@ interface PropsHero {
 	 * floating search block is not shown, and the room it needed is not kept.
 	 */
 	formulaire?: ReactNode
+	/**
+	 * Components in place of the picture on the right (the drawing of the home page, issue 1066): they are not
+	 * an image to fetch, so the text of the page is what the browser paints first. Their panel has its own diagonal
+	 * edge (clip-path): the white one of the text side would cut the drawing.
+	 */
+	visuel?: ReactNode
 }
 
 /**
@@ -31,6 +37,7 @@ export function Hero({
 	recherche = true,
 	inscription = false,
 	formulaire,
+	visuel,
 }: PropsHero) {
 	return (
 		<div className="relative bg-white 2xl:pt-[90px]">
@@ -69,23 +76,29 @@ export function Hero({
 					</div>
 				</div>
 			</div>
-			<div
-				className={`bg-white ${formulaire === undefined ? 'pb-24 md:pb-8' : 'pb-8'} lg:absolute lg:inset-y-0 lg:right-0 lg:w-1/2 lg:pb-0`}
-			>
-				<Image
-					className="aspect-[3/2] object-contain md:object-center lg:aspect-auto lg:h-full lg:w-full xl:object-top"
-					width={1000}
-					height={1000}
-					priority
-					// `priority` preloads the picture but does not raise its priority, and without `sizes` a phone of 1.75 dppx asked
-					// the 2048 px copy of a picture drawn 412 px wide (issue 1033). The picture fills the width of the screen, then
-					// the right half of it from 1024 px.
-					fetchPriority="high"
-					sizes="(min-width: 1024px) 50vw, 100vw"
-					src={image}
-					alt="trouver une maquilleuse professionnelle freelance"
-				/>
-			</div>
+			{visuel === undefined ? (
+				<div
+					className={`bg-white ${formulaire === undefined ? 'pb-24 md:pb-8' : 'pb-8'} lg:absolute lg:inset-y-0 lg:right-0 lg:w-1/2 lg:pb-0`}
+				>
+					<Image
+						className="aspect-[3/2] object-contain md:object-center lg:aspect-auto lg:h-full lg:w-full xl:object-top"
+						width={1000}
+						height={1000}
+						priority
+						// `priority` preloads the picture but does not raise its priority, and without `sizes` a phone of 1.75 dppx asked
+						// the 2048 px copy of a picture drawn 412 px wide (issue 1033). The picture fills the width of the screen, then
+						// the right half of it from 1024 px.
+						fetchPriority="high"
+						sizes="(min-width: 1024px) 50vw, 100vw"
+						src={image}
+						alt="trouver une maquilleuse professionnelle freelance"
+					/>
+				</div>
+			) : (
+				<div className="relative z-20 bg-indigo-50 px-4 py-10 lg:absolute lg:inset-y-0 lg:right-0 lg:flex lg:w-1/2 lg:items-center lg:justify-center lg:py-0 lg:pr-8 lg:pl-28 lg:[clip-path:polygon(18%_0,100%_0,100%_100%,0_100%)]">
+					{visuel}
+				</div>
+			)}
 		</div>
 	)
 }

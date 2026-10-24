@@ -1,6 +1,6 @@
 import type { ServerProps } from 'payload'
 import { readOverview } from '../../lib/admin/overview'
-import { ACTION_LABELS, type ModerationAction } from '../../lib/profile/moderation'
+import { ACTION_LABELS } from '../../lib/profile/moderation'
 
 const STATUS_LABELS: Record<string, string> = {
 	new: 'Nouvelle',
@@ -124,8 +124,8 @@ export async function DashboardOverview({ payload, user }: ServerProps) {
 							{lastModerations.map(line => (
 								<li key={line.id}>
 									<a href={`/admin/collections/moderation-events/${line.id}`} style={link}>
-										{frenchDate(line.date)} · {ACTION_LABELS[line.action as ModerationAction] ?? line.action} · profil
-										n° {line.profile}
+										{frenchDate(line.date)} · {ACTION_LABELS[line.action as keyof typeof ACTION_LABELS] ?? line.action}{' '}
+										· profil n° {line.profile}
 									</a>
 								</li>
 							))}

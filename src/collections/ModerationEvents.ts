@@ -1,10 +1,12 @@
 import type { CollectionConfig } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { adminOnly, hiddenExceptAdmin } from '../lib/access'
+import { FEATURE_ACTIONS } from '../lib/profile/featured'
 import { ACTION_LABELS, MODERATION_ACTIONS, REASON_MAX } from '../lib/profile/moderation'
 
 /**
- * The moderation journal (issue 1005): one line each time an admin hides, suspends or restores a profile.
+ * The moderation journal (issue 1005): one line each time an admin hides, suspends or restores a profile. Issue 1066
+ * adds two lines of the same kind, `feature` and `unfeature`: an admin ticks or unticks « Mise en avant » (no reason).
  *
  * - Who (the number of the admin account), what (the action), on which profile (its number), why (the
  *   reason the admin typed) and when. Numbers and the reason only: no name, email or phone is copied here.
@@ -39,9 +41,14 @@ export const ModerationEvents: CollectionConfig<'moderation-events'> = {
 			type: 'select',
 			required: true,
 			index: true,
-			options: MODERATION_ACTIONS.map(action => ({ label: ACTION_LABELS[action], value: action })),
+			options: [...MODERATION_ACTIONS, ...FEATURE_ACTIONS].map(action => ({
+				label: ACTION_LABELS[action],
+				value: action,
+			})),
 		},
-		{ name: 'reason', label: 'Motif', type: 'textarea', required: true, maxLength: REASON_MAX },
+		// Required for hiding, suspending and restoring (the hooks of the profile ask for it); a line of « Mise en avant
+		// » has none (issue 1066).
+		{ name: 'reason', label: 'Motif', type: 'textarea', maxLength: REASON_MAX },
 		{
 			name: 'date',
 			label: 'Date',

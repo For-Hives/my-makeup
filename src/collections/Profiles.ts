@@ -36,6 +36,7 @@ import {
 	validateNetworkLink,
 	validatePhone,
 } from '../lib/profile/contact-details'
+import { type FeatureAction, featureActionOf } from '../lib/profile/featured'
 import { initialNamesOf } from '../lib/profile/initial-names'
 import {
 	HOLD_ACTIONS,
@@ -317,6 +318,42 @@ export const logModeration: CollectionAfterChangeHook = async ({ context, doc, r
 	return doc
 }
 
+/** What `noteFeature` hands to `logFeature`, in the context of the request. */
+const FEATURE_KEY = 'featureEvent'
+interface PendingFeature {
+	readonly action: FeatureAction
+	readonly admin: number | null
+}
+
+/**
+ * Issue 1066: an admin ticks or unticks « Mise en avant ». The change is remembered here and written to the journal
+ * once the row is saved (`logFeature`). Only a save by an admin counts: a write by the server itself (the import, the
+ * demo data) has no admin and writes no line. A save that leaves the box as it is writes none either.
+ */
+const noteFeature: CollectionBeforeChangeHook = ({ context, data, originalDoc, req }) => {
+	if (!isAdmin(req.user)) return data
+	const action = featureActionOf(originalDoc, data)
+	if (action === null) return data
+	const pending: PendingFeature = { action, admin: Number(req.user?.id) || null }
+	context[FEATURE_KEY] = pending
+	return data
+}
+
+/** The line of the journal, in the transaction of the change: both happen, or neither. No reason, no name: numbers only. */
+export const logFeature: CollectionAfterChangeHook = async ({ context, doc, req }) => {
+	const pending = context[FEATURE_KEY] as PendingFeature | undefined
+	if (pending === undefined) return doc
+	delete context[FEATURE_KEY]
+	await req.payload.create({
+		collection: 'moderation-events',
+		data: { profile: doc.id, admin: pending.admin, action: pending.action, date: new Date().toISOString() },
+		depth: 0,
+		overrideAccess: true,
+		req,
+	})
+	return doc
+}
+
 /** Where the beforeChange hook tells the afterChange hook that the SIRET changed in this write. */
 const SIRET_CHANGED_KEY = 'siretChanged'
 
@@ -447,10 +484,11 @@ export const Profiles: CollectionConfig<'profiles'> = {
 			clearZoneReview,
 			noteSiretChange,
 			moderate,
+			noteFeature,
 			stateBeforeWrite,
 		],
 		// The refresh comes after the fallback slug: a profile created public gets its final address.
-		afterChange: [fallbackSlugAfterCreate, logModeration, resetCheckOnSiretChange, REFRESH.apresEcriture],
+		afterChange: [fallbackSlugAfterCreate, logModeration, logFeature, resetCheckOnSiretChange, REFRESH.apresEcriture],
 		beforeDelete: [REFRESH.avantSuppression, deleteActivityCheck],
 		afterDelete: [REFRESH.apresSuppression],
 	},
@@ -728,6 +766,19 @@ export const Profiles: CollectionConfig<'profiles'> = {
 			defaultValue: false,
 			access: { create: fieldAdminOnly, update: fieldAdminOnly },
 			admin: { position: 'sidebar', description: 'Le badge des cartes de la recherche. Public.' },
+		},
+		{
+			// Written by an admin only, read by everyone (the home page reads it through the directory): issue 1066.
+			name: 'featured',
+			label: 'Mise en avant',
+			type: 'checkbox',
+			defaultValue: false,
+			access: { create: fieldAdminOnly, update: fieldAdminOnly },
+			admin: {
+				position: 'sidebar',
+				description:
+					'Montre le profil dans « Mise en avant », sur l’accueil (six profils au plus, dans l’ordre de l’annuaire). Un profil non publiable ou masqué n’y figure jamais, même coché. Chaque changement est écrit au journal de modération.',
+			},
 		},
 		// Computed by the server at every save (ticket 044).
 		...STATE_FIELDS,

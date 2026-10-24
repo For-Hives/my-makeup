@@ -40,6 +40,7 @@ const PUBLIC_KEYS = [
 	'createdAt',
 	'description',
 	'experiences',
+	'featured',
 	'firstName',
 	'fullyEmpty',
 	'gallery',
@@ -197,6 +198,7 @@ describe('Statut, vérifié et score envoyés par la maquilleuse restent inchang
 				reason: 'Envoyé par la maquilleuse',
 				internalNote: 'Envoyée par la maquilleuse',
 				superArtist: false,
+				featured: true,
 				pro: Number(other.id),
 			},
 		})
@@ -212,6 +214,7 @@ describe('Statut, vérifié et score envoyés par la maquilleuse restent inchang
 			'reason',
 			'internalNote',
 			'superArtist',
+			'featured',
 			'pro',
 		] as const
 		for (const field of reserves) expect([field, after[field]]).toEqual([field, before[field]])

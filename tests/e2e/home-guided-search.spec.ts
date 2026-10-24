@@ -1,13 +1,15 @@
 import { expect, type Page, test } from '@playwright/test'
 import { setSearchProfiles } from '../fixtures/search-profiles'
+import { createAccount } from '../support/account-factory'
 import { violationsSevere } from '../support/axe'
 import { SCREENS } from '../support/e2e'
 import { refreshProfilePages } from '../support/public-pages'
 
 /**
- * The home page (issue 1013), at 390 px and at 1440 px: a guided form with labels in sight that leads to the
- * search, three recently updated makeup artists in the first screens, the folded « Comment ça marche » whose text
- * stays in the HTML. On each screen: no horizontal scroll, every control at least 44 px tall, axe finds no
+ * The home page (issues 1013 and 1066), at 390 px and at 1440 px: a guided form with labels in sight that leads to
+ * the search, the block that says what the platform does, « Mise en avant » (absent until an admin ticks a profile,
+ * six cards at most, never a profile that is not publishable), and the texts of the community, unfolded and without
+ * the old title « Comment ça marche ». On each screen: no horizontal scroll, every control at least 44 px tall, axe finds no
  * « serious » or « critical » violation. Set `SCREENSHOT_DIR` to keep the screenshots. All made-up people.
  */
 
@@ -73,31 +75,81 @@ for (const size of SIZES) {
 			await expect(page).toHaveURL(/\/search\?search=&city=Annecy$/)
 		})
 
-		test('des maquilleuses sont visibles dès l’arrivée, et le texte replié reste dans le HTML', async ({
+		test('le bloc de droite dit ce que fait la plateforme, sans image à charger', async ({ page }) => {
+			await page.goto('/')
+			for (const line of [
+				'Cherchez par événement et par lieu',
+				'Consultez des profils vérifiés',
+				'Écrivez en direct à la maquilleuse',
+			])
+				await expect(page.getByText(line)).toBeVisible()
+			await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+				"Trouver la maquilleuse qui vous correspond n'a jamais été aussi simple"
+			)
+			await checkScreen(page, 'accueil')
+		})
+
+		test('« Comment ça marche » n’a plus de titre ni de pli, et le texte de la communauté reste', async ({
 			page,
 			request,
 		}) => {
-			const profiles = await setSearchProfiles()
-			const reference = profiles.get('reference')
-			if (!reference) throw new Error('profil d’essai manquant')
-			await refreshProfilePages(request, reference)
-			await page.goto('/')
-			const block = page.getByTestId('maquilleuses-recentes')
-			await expect(block.getByRole('heading', { name: 'Récemment mises à jour' })).toBeVisible()
-			const cards = block.locator('a[href^="/profil/"]')
-			expect(await cards.count()).toBeGreaterThan(0)
-			expect(await cards.count()).toBeLessThanOrEqual(3)
-			const box = await block.boundingBox()
-			expect(box?.y ?? 9999, 'le bloc commence dans les deux premiers écrans').toBeLessThan(size.height * 2)
-
 			const html = await (await request.get('/')).text()
-			expect(html).toContain('Comment ça marche')
+			expect(html).not.toContain('Comment ça marche')
+			expect(html).toContain('My-Makeup c&#x27;est avant tout une communauté')
 			expect(html).toContain('Vous allez adorer cette nouvelle façon de collaborer')
-			const details = page.locator('main details')
-			await expect(details).not.toHaveAttribute('open', '')
-			await details.locator('summary').click()
-			await expect(details).toHaveAttribute('open', '')
+			await page.goto('/')
+			await expect(page.locator('main details')).toHaveCount(0)
 			await expect(page.getByText('Vous allez adorer cette nouvelle façon de collaborer')).toBeVisible()
 		})
 	})
 }
+
+// The selection is a state of the whole bench: one test sets it, then looks at both screens (two tests at once, one per
+// size, would tick and untick the same profiles under each other).
+test('« Mise en avant » : absente sans profil coché, six cartes au plus, jamais un profil non publiable', async ({
+	page,
+	request,
+}) => {
+	test.setTimeout(120_000)
+	const profiles = await setSearchProfiles()
+	const headers = (await createAccount('admin')).session.enTetes
+	const ids = [...profiles.values()].map(({ id }) => id)
+	const set = async (featured: boolean) => {
+		for (const id of ids) {
+			const response = await request.patch(`/api/profiles/${id}`, { headers, data: { featured } })
+			expect(response.ok(), `profil ${id}`).toBe(true)
+		}
+	}
+	const reference = profiles.get('reference')
+	const unpublishable = profiles.get('actif-non-publiable')
+	if (!(reference && unpublishable)) throw new Error('profil d’essai manquant')
+	try {
+		await set(false)
+		await refreshProfilePages(request, reference)
+		for (const size of SIZES) {
+			await page.setViewportSize(size)
+			await page.goto('/')
+			await expect(page.getByTestId('maquilleuses-mises-en-avant')).toHaveCount(0)
+			await expect(page.getByText('Mise en avant')).toHaveCount(0)
+		}
+
+		await set(true)
+		await refreshProfilePages(request, reference)
+		for (const size of SIZES) {
+			await page.setViewportSize(size)
+			await page.goto('/')
+			const block = page.getByTestId('maquilleuses-mises-en-avant')
+			await expect(block.getByRole('heading', { name: 'Mise en avant' })).toBeVisible()
+			const cards = block.locator('a[href^="/profil/"]')
+			expect(await cards.count()).toBeGreaterThan(0)
+			expect(await cards.count()).toBeLessThanOrEqual(6)
+			await expect(block.locator(`a[href="/profil/${unpublishable.slug}"]`)).toHaveCount(0)
+			await checkScreen(page, `accueil avec sélection à ${size.width} px`)
+			if (process.env.SCREENSHOT_DIR)
+				await page.screenshot({ path: `${process.env.SCREENSHOT_DIR}/1066-accueil-${size.width}.png`, fullPage: true })
+		}
+	} finally {
+		await set(false)
+		await refreshProfilePages(request, reference)
+	}
+})

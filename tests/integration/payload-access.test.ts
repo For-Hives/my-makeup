@@ -296,6 +296,8 @@ const MATRIX: Line[] = [
 			['internalNote', 'Note envoyée par la maquilleuse'],
 			['score', 99],
 			['superArtist', true],
+			// Issue 1066: « Mise en avant » is the team's to tick.
+			['featured', true],
 			// Traced by the server only (ticket 042).
 			['consentedAt', '2020-01-01T00:00:00.000Z'],
 			['consentSource', 'import'],
@@ -400,6 +402,7 @@ const MATRIX: Line[] = [
 		['mainPicture', ROLES],
 		['gallery', ROLES],
 		['superArtist', ROLES],
+		['featured', ROLES],
 		// Her account, what the import wrote, what an admin decided (021, I01).
 		['pro', OWNER_AND_ADMIN],
 		['strapiId', OWNER_AND_ADMIN],
@@ -457,6 +460,7 @@ const MATRIX: Line[] = [
 			['internalNote', 'Relancée par téléphone', 'autorise'],
 			['score', 4.5, 'autorise'],
 			['superArtist', true, 'autorise'],
+			['featured', true, 'autorise'],
 			['contactDetails', { phone: '06 39 98 44 44', email: 'contact-admin@example.test' }, 'autorise'],
 			['consentedAt', '2020-01-01T00:00:00.000Z', 'ignore'],
 			['consentSource', 'import', 'ignore'],
