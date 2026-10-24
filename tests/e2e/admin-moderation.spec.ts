@@ -156,9 +156,25 @@ test.describe('1005 : modérer un profil avec un motif, et le tableau de bord', 
 		await page.goto('/admin')
 		const overview = page.getByTestId('dashboard-overview')
 		await expect(overview).toBeVisible()
-		await expect(page.getByTestId('count-published')).toHaveText(String(await count('published')))
-		await expect(page.getByTestId('count-draft')).toHaveText(String(await count('draft')))
-		await expect(page.getByTestId('count-hidden')).toHaveText(String(await count('hidden')))
+		// Other files of the run create and remove profiles at the same time: the numbers on the page and in the database
+		// agree only when read together, so the page is read again until they do.
+		await expect
+			.poll(
+				async () => {
+					await page.reload()
+					const shown = await Promise.all(
+						['published', 'draft', 'hidden'].map(async status =>
+							(await page.getByTestId(`count-${status}`).textContent())?.trim()
+						)
+					)
+					const stored = await Promise.all(
+						['published', 'draft', 'hidden'].map(async status => String(await count(status)))
+					)
+					return shown.join(',') === stored.join(',')
+				},
+				{ timeout: 60_000, intervals: [500, 1000, 2000] }
+			)
+			.toBe(true)
 		await shot(page, 'tableau-de-bord', testInfo)
 		expect(await noHorizontalScroll(page)).toBe(true)
 		expect(await smallestTarget(page, '[data-testid="dashboard-overview"] a')).toBeGreaterThanOrEqual(44)
