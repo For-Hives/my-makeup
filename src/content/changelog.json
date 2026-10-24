@@ -1,13 +1,19 @@
 {
 	"description": "Les notes de version du site, en français : ce qu'une visiteuse ou une maquilleuse peut remarquer. Une note s'ajoute par « bun run notes:add » et attend dans « pending » ; la publication la range sous son numéro, dans « releases ». Voir docs/publication.md.",
-	"pending": [
-		{
-			"id": "une-page-par-departement-existe-des-qu-une-maquilleuse-y",
-			"type": "amelioration",
-			"text": "Une page par département existe dès qu’une maquilleuse y est visible, au lieu d’en attendre trois : plus de zones sont trouvables près de chez toi."
-		}
-	],
+	"pending": [],
 	"releases": [
+		{
+			"version": "3.0.2",
+			"date": "2026-10-24",
+			"commit": "4303896b82fabe408802d08022634b21feb08b1b",
+			"notes": [
+				{
+					"id": "une-page-par-departement-existe-des-qu-une-maquilleuse-y",
+					"type": "amelioration",
+					"text": "Une page par département existe dès qu’une maquilleuse y est visible, au lieu d’en attendre trois : plus de zones sont trouvables près de chez toi."
+				}
+			]
+		},
 		{
 			"version": "3.0.1",
 			"date": "2026-10-24",
