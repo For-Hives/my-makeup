@@ -57,13 +57,13 @@ export default async function SignInPage({
 			{google ? <GoogleButton libelle="Se connecter avec Google" retour={returnTo} /> : null}
 			<SignInForm action={signIn} retour={returnTo} />
 			<PasswordlessHelp />
-			<p>
+			<p className="reveal">
 				Pas encore de compte ?{' '}
 				<Link className="underline" href="/auth/signup">
 					Inscris-toi
 				</Link>
 			</p>
-			<p>
+			<p className="reveal">
 				<Link className="underline" href="/" prefetch={false}>
 					Retour à l’accueil
 				</Link>

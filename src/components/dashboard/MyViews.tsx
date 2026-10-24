@@ -17,7 +17,7 @@ export function MyViews({ jours }: { jours: readonly ViewRow[] | null }) {
 			<section
 				aria-labelledby="mes-vues-titre"
 				data-testid="mes-vues"
-				className="rounded-[22px] border border-[#E6DCD5] bg-white p-5 text-[#1A1417] sm:p-6"
+				className="reveal rounded-[22px] border border-[#E6DCD5] bg-white p-5 text-[#1A1417] sm:p-6"
 			>
 				<h2 id="mes-vues-titre" className="font-semibold text-lg">
 					Les vues de ta page
@@ -30,7 +30,7 @@ export function MyViews({ jours }: { jours: readonly ViewRow[] | null }) {
 		<section
 			aria-labelledby="mes-vues-titre"
 			data-testid="mes-vues"
-			className="w-full min-w-0 rounded-[22px] border border-[#E6DCD5] bg-white p-5 text-[#1A1417] sm:p-6"
+			className="reveal w-full min-w-0 rounded-[22px] border border-[#E6DCD5] bg-white p-5 text-[#1A1417] sm:p-6"
 		>
 			<h2 id="mes-vues-titre" className="font-semibold text-lg">
 				Les vues de ta page

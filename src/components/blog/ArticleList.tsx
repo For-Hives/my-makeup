@@ -23,7 +23,7 @@ export function ArticleList({ articles }: { articles: readonly ListedArticle[] }
 			{articles.map(article => {
 				const date = articleDate(article.publieLe)
 				return (
-					<li key={article.slug} className="flex flex-col gap-2">
+					<li key={article.slug} className="reveal flex flex-col gap-2">
 						{date && (
 							<p className="relative pl-2 text-base text-gray-700">
 								<time dateTime={article.publieLe ?? undefined}>{date}</time>

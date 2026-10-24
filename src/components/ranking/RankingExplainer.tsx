@@ -15,7 +15,7 @@ export function RankingExplainer() {
 				l’ordre, ce que fait la recherche, et ce qu’elle ne fait pas.
 			</p>
 			{RANKING_GROUPS.map(group => (
-				<section key={group.id} aria-labelledby={`classement-${group.id}`} className="mt-10">
+				<section key={group.id} aria-labelledby={`classement-${group.id}`} className="reveal mt-10">
 					<h2 id={`classement-${group.id}`} className="font-bold text-gray-900 text-xl">
 						{group.title}
 					</h2>
@@ -26,7 +26,7 @@ export function RankingExplainer() {
 					</ol>
 				</section>
 			))}
-			<section aria-labelledby="classement-exclus" className="mt-10">
+			<section aria-labelledby="classement-exclus" className="reveal mt-10">
 				<h2 id="classement-exclus" className="font-bold text-gray-900 text-xl">
 					Ce qui ne compte pas
 				</h2>
@@ -36,7 +36,7 @@ export function RankingExplainer() {
 					))}
 				</ul>
 			</section>
-			<section id={BADGE_ANCHOR} aria-labelledby="classement-badge" className="mt-10 scroll-mt-6">
+			<section id={BADGE_ANCHOR} aria-labelledby="classement-badge" className="reveal mt-10 scroll-mt-6">
 				<h2 id="classement-badge" className="font-bold text-gray-900 text-xl">
 					{BADGE_TITLE}
 				</h2>

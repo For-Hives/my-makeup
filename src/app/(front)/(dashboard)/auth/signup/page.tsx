@@ -25,13 +25,13 @@ export default async function SignUpPage() {
 			<h1 className="font-semibold text-3xl">S’inscrire</h1>
 			{isGoogleActive() ? <GoogleButton libelle="S’inscrire avec Google" /> : null}
 			<SignUpForm action={signUp} />
-			<p>
+			<p className="reveal">
 				Déjà un compte ?{' '}
 				<Link className="underline" href="/auth/signin">
 					Connecte-toi
 				</Link>
 			</p>
-			<p>
+			<p className="reveal">
 				<Link className="underline" href="/" prefetch={false}>
 					Retour à l’accueil
 				</Link>

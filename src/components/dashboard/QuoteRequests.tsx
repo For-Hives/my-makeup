@@ -26,7 +26,7 @@ export function QuoteRequests({
 		<section
 			aria-labelledby="mes-devis-titre"
 			data-testid="mes-devis"
-			className="w-full min-w-0 rounded-[22px] border border-[#E6DCD5] bg-white p-5 text-[#1A1417] sm:p-6"
+			className="reveal w-full min-w-0 rounded-[22px] border border-[#E6DCD5] bg-white p-5 text-[#1A1417] sm:p-6"
 		>
 			<h2 id="mes-devis-titre" className="font-semibold text-lg">
 				Demandes de devis

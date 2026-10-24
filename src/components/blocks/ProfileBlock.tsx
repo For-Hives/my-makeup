@@ -35,13 +35,13 @@ export function ProfileBlock({
 				className={`mt-6 grid grid-cols-1 gap-3 md:gap-6 ${compact ? 'md:grid-cols-3' : 'md:grid-cols-2 lg:grid-cols-3'}`}
 			>
 				{cartes.map(carte => (
-					<li key={carte.slug}>
+					<li key={carte.slug} className="reveal">
 						<ResultCard carte={carte} prioritaire={false} />
 					</li>
 				))}
 			</ul>
 			<RankingLink className="mt-4" />
-			<form action="/search" method="get" className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-end">
+			<form action="/search" method="get" className="reveal mt-6 flex flex-col gap-3 sm:flex-row sm:items-end">
 				{specialite !== undefined && <input type="hidden" name="specialite" value={specialite} />}
 				<div className="flex-1">
 					<label htmlFor={`${headingId}-ville`} className="block font-semibold text-gray-900 text-sm leading-6">

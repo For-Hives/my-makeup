@@ -1,4 +1,4 @@
-# Le mouvement du site (issue 1069)
+# Le mouvement du site (issues 1069 et 1088)
 
 Un petit système, pas du cas par cas : des jetons dans `src/app/(front)/globals.css` (`@theme static`, bloc « Motion tokens »), quelques classes partagées, et des tests qui tiennent les règles. Andy veut du sobre et du travaillé : pas de parallaxe, pas de rebond, pas de cascade qui fait apparaître tout le site.
 
@@ -31,7 +31,7 @@ Un petit système, pas du cas par cas : des jetons dans `src/app/(front)/globals
 
 | Brique | Ce qu'elle fait | Où |
 |---|---|---|
-| `.reveal` | Le bloc apparaît en fondu et monte de 12 px quand son haut entre dans l'écran (plage de 220 px). Animation pilotée par le défilement (`animation-timeline: view()`), sous `@supports` : un navigateur qui ne la connaît pas montre le bloc sans effet. Sans remplissage : avant et après sa plage le bloc est tel quel, donc un bloc sous la ligne de flottaison n'est jamais caché (le contrôle d'accessibilité juge la page posée : son aide coupe `.reveal`). Coupée à l'impression et sur la page de la maquilleuse en mode édition (`[data-edit-page]`), dont les blocs se mesurent et se cliquent. | cartes de la recherche et de « Mise en avant », cartes de la fiche, cadre de l'invitation à l'action, cartes de « Mon espace » |
+| `.reveal` | Le bloc apparaît en fondu et monte de 12 px quand son haut entre dans l'écran (plage de 220 px). Animation pilotée par le défilement (`animation-timeline: view()`), sous `@supports` : un navigateur qui ne la connaît pas montre le bloc sans effet. Sans remplissage : avant et après sa plage le bloc est tel quel, donc un bloc sous la ligne de flottaison n'est jamais caché (le contrôle d'accessibilité juge la page posée : son aide coupe `.reveal`). Coupée à l'impression et sur la page de la maquilleuse en mode édition (`[data-edit-page]`), dont les blocs se mesurent et se cliquent. | voir « Où est l'apparition » ci-dessous |
 | Contrôles (liens, boutons, résumés, champs à cocher) | Les états de l'affordance (`:hover`, `:active`) s'adoucissent en 100 ms au lieu de claquer. Un lien se souligne et le trait apparaît en fondu. Les boutons `.btn-*` montent de 1 px (retour au clic). Dans la couche `base`, sous `:where` : un composant qui style son propre état gagne. | tout le site |
 | `.card-hover` + `.card-zoom` | La carte monte de 3 px, prend une ombre ; l'image grandit de 3 % (la carte la rogne : rien ne bouge autour). L'ombre reste avec le mouvement réduit. | carte de profil (`ResultCard`) |
 | `.motion-arrow` | La flèche d'un bouton avance de 2 px. | « Trouver ma maquilleuse » |
@@ -52,6 +52,29 @@ Les navigations de Next.js se font dans la page, sans chargement : `@view-transi
 ## Ce qui n'est pas fait, et pourquoi
 
 - **Une seule apparition par bloc.** Une animation pilotée par le défilement suit le défilement dans les deux sens : un bloc qui sort par le bas se recache hors de l'écran, puis réapparaît. Une apparition « une fois » demanderait un `IntersectionObserver`, donc du JavaScript.
+## Où est l'apparition (issue 1088)
+
+`.reveal` est posée sur les blocs de chaque page, jamais sur un composant client d'une page publique (le test le garde : aucun octet de JavaScript de plus). Une liste n'a pas de classe de plus : chaque `<li>` porte la sienne, et le défilement étale lui-même les lignes (pas de cascade).
+
+| Page | Blocs qui apparaissent |
+|---|---|
+| accueil, recherche | cartes de « Mise en avant » et des résultats, bloc du projet, invitation à l'action (issue 1069) |
+| fiche (`/profil/<slug>`) | cartes et sections repliables (issue 1069) |
+| talent (`/talent/<slug>`) | l'article, les cartes des maquilleuses de la spécialité, le champ « Votre ville » |
+| zone (`/maquilleuses/<département>`) | l'introduction, les cartes, le champ « Votre ville » |
+| blog | l'en-tête, chaque article de la liste ; pied d'un article : les cartes (`ProfileBlock`) |
+| classement | chaque section (groupes de règles, « Ce qui ne compte pas », badge) |
+| contact | l'introduction du formulaire, le bloc « Contactez-nous », chaque carte d'adresse |
+| connexion, inscription | l'aide « Mot de passe » et les liens du bas. Tout le reste tient dans le premier écran : par règle, il n'est pas animé, donc ces pages n'ont que les transitions de contrôles |
+| « Mon espace » | chaque carte (`CARD` et les cartes qui ne l'utilisent pas : disponibilité, vues, demandes de devis, mot de passe, suppression, page en ligne) |
+
+Les tests (`motion-system.test.ts`, section « the reveal reaches the pages ») refusent qu'une de ces pages perde son apparition, ou qu'un composant client d'une page publique la porte.
+
+## Ce qui n'est pas fait, et pourquoi
+
+- **Transition de page.** Les navigations de Next.js sont faites dans la page : seule l'API View Transitions en JavaScript (ou l'option expérimentale de Next, qui dépend de React canari) peut les animer, et `@view-transition { navigation: auto }` ne vaut que pour les chargements complets, qu'il retarde. Rien de gratuit : décision à prendre (voir la PR).
+- **Une seule apparition par bloc.** Une animation pilotée par le défilement suit le défilement dans les deux sens : un bloc qui sort par le bas se recache hors de l'écran, puis réapparaît. Une apparition « une fois » demanderait un `IntersectionObserver`, donc du JavaScript : refusé à l'issue 1088 pour garder le JavaScript du premier chargement à zéro octet de plus (décision à confirmer par Andy, voir la PR).
+- **Entrée de la connexion et de l'inscription.** Leur contenu est tout entier dans le premier écran, qui n'est jamais animé. Une entrée à l'ouverture de la page (animation dans le temps) cacherait le texte au premier affichage ou retarderait le LCP : non faite.
 - **Pli des cartes de la fiche.** Un `<details>` qui s'ouvre en glissant anime une hauteur : interdit. Le chevron tourne déjà.
 - **Éditeurs de l'édition directe.** Le halo garde sa transition de 150 ms (`EditableBlock`), déjà couverte par `motion-reduce`.
 
@@ -61,4 +84,5 @@ Les navigations de Next.js se font dans la page, sans chargement : `@view-transi
 - `tests/e2e/motion.spec.ts`, à 390 et 1440 px : rien n'est atténué sur le premier écran (accueil, recherche, page fixe, fiche, liste de cartes), CLS à 0 en parcourant toute la page, sans JavaScript le texte est là, avec mouvement réduit aucune animation ni transition, une carte monte au survol.
 - `tests/unit/page-transitions.test.ts` : le gabarit est un composant serveur du groupe public seul, ses classes et les règles de la feuille de style (durées par jetons, total ≤ `--duration-page`, rien ne bouge hors `no-preference`, mouvement réduit et page d'édition sans animation).
 - `tests/e2e/page-transitions.spec.ts`, à 390 et 1440 px : recherche vers fiche reste dans la même page, la transition de vue joue (animations `page-in` et `page-out`), aucun décalage de mise en page ; avec mouvement réduit, aucune animation de transition.
+- `tests/e2e/motion.spec.ts`, à 390 et 1440 px : rien n'est atténué sur le premier écran (accueil, recherche, page fixe, blog, classement, contact, connexion, inscription, fiche, liste de cartes, talent, « Mon espace »), les blocs révélés sont entiers une fois la page parcourue, CLS à 0 en parcourant toute la page, sans JavaScript le texte est là, avec mouvement réduit aucune animation ni transition, une carte monte au survol.
 - `tests/e2e/interaction-affordance.spec.ts` et `tests/e2e/direct-edit-halo.spec.ts` gardent leurs hypothèses (`freezeMotion`, halo mesuré sans décalage).
