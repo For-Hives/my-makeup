@@ -36,6 +36,16 @@ export const FULL = {
 	],
 	languages: [{ id: 'l1', name: 'Français' }],
 	courses: [{ id: 'c1', diploma: 'CAP esthétique', school: 'École Fictive', graduatedAt: '2016-06-30T00:00:00.000Z' }],
+	experiences: [
+		{
+			id: 'x1',
+			jobTitle: 'Maquilleuse mariage',
+			company: 'Studio Fictif',
+			city: 'Annecy',
+			startDate: '2019-09-01T00:00:00.000Z',
+			endDate: null,
+		},
+	],
 	serviceOffers: [
 		{
 			id: 'o1',
@@ -83,6 +93,7 @@ export function benchOf(
 		'saveSkills',
 		'saveLanguages',
 		'saveCourses',
+		'saveExperiences',
 		'saveServices',
 		'savePortfolio',
 		'saveContacts',

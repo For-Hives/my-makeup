@@ -4,6 +4,7 @@ import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { ignoreRepeat, newKey } from '@/components/dashboard/list-helpers'
 import { trackedListSection, trackSave } from '@/lib/dashboard/analytics'
 import { COURSES } from '@/lib/dashboard/courses'
+import { EXPERIENCES } from '@/lib/dashboard/experiences'
 import {
 	cleanRow,
 	emptyRow,
@@ -118,6 +119,22 @@ const COURSES_WORDS: RowsWords = {
 	folded: ['description'],
 }
 
+const EXPERIENCES_WORDS: RowsWords = {
+	id: 'experiences',
+	title: 'Expériences professionnelles',
+	pen: 'Modifier mes expériences',
+	invitation: (
+		<span className="pr-8">
+			<b className="text-lipstick">Ajoute tes expériences.</b> Par exemple : maquilleuse mariage, Studio Fictif, depuis
+			2019.
+		</span>
+	),
+	add: 'Ajouter une expérience',
+	saveRow: 'Enregistrer cette expérience',
+	line: values => EXPERIENCES.resume(values),
+	folded: ['description'],
+}
+
 /** « Maquillage de la mariée · dès 150 € »: the name, then the first line of the price as the page shows it. */
 function serviceLine(values: RowValues): string {
 	const price = priceRows(parsePrice(inputPrice(values.price ?? '')))
@@ -160,6 +177,7 @@ const SERVICES_WORDS: RowsWords = {
 
 const KINDS = {
 	courses: { words: COURSES_WORDS, definition: COURSES },
+	experiences: { words: EXPERIENCES_WORDS, definition: EXPERIENCES },
 	services: { words: SERVICES_WORDS, definition: SERVICE_OFFERS },
 } satisfies Record<string, { words: RowsWords; definition: ListDefinition }>
 
@@ -389,6 +407,9 @@ function RowsForm({
 	}
 
 	function removeOption(option: EditedRow) {
+		// L4: after a key, the focus goes to the first field of the row; after a click or a tap, to the title, so that no keyboard opens.
+		const keyboard = !pointer.current
+		pointer.current = false
 		setDraft(current =>
 			current ? { ...current, options: current.options.filter(other => other.cle !== option.cle) } : current
 		)
@@ -396,7 +417,7 @@ function RowsForm({
 			phrase: optionsDefinition?.retrait(optionsDefinition.nom(option.valeurs)) ?? '',
 			rank: rank + 1,
 		}))
-		focusIn('draft')
+		focusIn(keyboard ? 'draft' : 'title')
 	}
 
 	const hint = definition.indice?.(draftValues) ?? ''
@@ -641,7 +662,16 @@ function RowsForm({
 										})}
 										<button
 											type="button"
-											onKeyDown={ignoreRepeat}
+											onKeyDown={event => {
+												pointer.current = false
+												ignoreRepeat(event)
+											}}
+											onMouseDown={() => {
+												pointer.current = true
+											}}
+											onPointerDown={() => {
+												pointer.current = true
+											}}
 											onClick={() => removeOption(option)}
 											aria-label={`Retirer l’option ${optionName(option) || rank + 1}`}
 											className="min-h-11 w-fit rounded-full border border-hairline bg-white px-4 font-semibold text-sm"

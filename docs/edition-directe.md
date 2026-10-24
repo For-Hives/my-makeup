@@ -30,6 +30,10 @@ Issue 1008 (cadre : 1007). L'espace de la maquilleuse devient le profil public l
 
 L'accueil de la maquilleuse (`/auth/init-account`, cinq étapes) n'écrit pas ses champs : chaque étape pose le formulaire du bloc correspondant dans une `EditSession` à elle (`src/components/dashboard/onboarding/Onboarding.tsx`) et appelle les mêmes actions serveur. L'étape « Toi » est `IdentityForm` (avec `schema` qui exige la spécialité et `askNames` faux quand le prénom et le nom viennent de l'inscription), « Où » est `PlaceForm`, « Photo » est `PhotoForm`. `BlockForm` a une propriété `cancel` pour remplacer « Annuler » par « Précédent » et « Plus tard » ; elle est absente de l'édition directe, dont le HTML ne change pas. « Contact » (`ContactStep`) et « Prestation phare » (`OfferStep`) assemblent les règles des blocs réseaux, coordonnées et prestations (`readContactStep`, `flagshipRows`) et envoient aussi la liste entière : ce que l'import a enregistré reste. Le repère de prix est `readOfferMedians` (`src/services/public/offer-medians.ts`), pur calcul de `src/lib/price-median.ts`.
 
+## Ce qui manque, dit une seule fois (issue 1075)
+
+`src/lib/dashboard/edit-blocks.ts` donne, pour chaque critère de la règle unique (`completeness.ts`), le bloc de l'édition qui le complète (`CRITERION_BLOCK`), l'ancre d'un bloc (`blockAnchor`) et le lien (`editBlockHref`). `gaugePercent` (`progress.ts`) est le pourcentage des 13 critères, plafonné à 99 tant qu'un point indispensable manque. Le bandeau de l'édition, l'encadré « En brouillon » et le tableau de bord de l'espace lisent ce module : un essai lit la page d'édition et vérifie que chaque ancre existe, un autre échoue si un critère est recompté ailleurs. Les expériences sont un bloc (`RowsBlock`, `kind="experiences"`).
+
 ## Ajouter une zone de la page
 
 Une autre tranche (issues 1016 à 1021) ajoute un bloc : un composant client dans `blocks/` fondé sur `EditableBlock` et `BlockForm`, une fonction d'emplacement dans `edit-slots.ts`, et son câblage dans `header-edit.tsx` (ou un équivalent pour le corps de la page).

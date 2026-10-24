@@ -67,17 +67,19 @@ export function PhotoBlock({
 			invitation={
 				<span>
 					<b className="block text-lipstick">Ajoute ta photo</b>
-					<span className="text-xs">Ta photo principale est la première chose qu’on voit.</span>
+					{missing ? (
+						// Her main photo is named but its file is gone (ticket 275): the invitation says so, in place of the usual line.
+						<span data-testid="photo-principale-manquante" className="text-xs">
+							{MISSING_MAIN_PHOTO_MESSAGE}
+						</span>
+					) : (
+						<span className="text-xs">Ta photo principale est la première chose qu’on voit.</span>
+					)}
 				</span>
 			}
 			editor={<PhotoForm photo={photo} save={save} prepare={prepare} upload={upload} remove={remove} />}
 		>
 			{children}
-			{missing && photo === null ? (
-				<p data-testid="photo-principale-manquante" className="sr-only">
-					{MISSING_MAIN_PHOTO_MESSAGE}
-				</p>
-			) : null}
 		</EditableBlock>
 	)
 }

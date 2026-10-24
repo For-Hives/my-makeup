@@ -164,10 +164,10 @@ export function ProfileView({
 							PHONE_ORDER.services,
 							profil.prestations.length > 0 ? <ServiceOffersSection prestations={profil.prestations} /> : null
 						)}
-						{profil.experiences.length > 0 && (
-							<div className={PHONE_ORDER.experiences}>
-								<SectionExperiences experiences={profil.experiences} />
-							</div>
+						{block(
+							'experiences',
+							PHONE_ORDER.experiences,
+							profil.experiences.length > 0 ? <SectionExperiences experiences={profil.experiences} /> : null
 						)}
 					</div>
 				</div>
