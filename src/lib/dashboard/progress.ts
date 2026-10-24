@@ -120,6 +120,15 @@ export function essentialsText({ done, total }: Gauge, publishable: boolean): st
 	return publishable && done === total ? `${done}/${total} : ${PAGE_READY_TEXT}` : `${done}/${total} indispensables`
 }
 
+/**
+ * The percentage her space says (issues 1072 and 1073): « Ton profil est rempli à N % ». It is the share of the 13 criteria
+ * of the single rule that are filled (`pourcentage`), never above 99 while a point that stands between her profile and
+ * « publiable » is missing: the 13 criteria and the 6 conditions of a publishable page are not the same (a description can
+ * fill its criterion and still be too short), and « 100 % » next to a missing point would be false.
+ */
+export const gaugePercent = (progress: Pick<Progress, 'pourcentage' | 'manques'>): number =>
+	progress.manques.some(point => point.requis) ? Math.min(progress.pourcentage, 99) : progress.pourcentage
+
 /** « Bonus : 2/7 » (ticket 306). */
 export const bonusText = ({ done, total }: Gauge): string => `Bonus : ${done}/${total}`
 

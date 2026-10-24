@@ -34,6 +34,8 @@ export interface BodyEdit {
 	skills: BlockSlot
 	languages: BlockSlot
 	courses: BlockSlot
+	/** Her professional experiences. */
+	experiences: BlockSlot
 	services: BlockSlot
 	gallery: BlockSlot
 	/** The sentence of her travels. */

@@ -410,6 +410,11 @@
 			"id": "tu-peux-donner-ton-siret-facultatif-pour-afficher-le-badg",
 			"type": "ajout",
 			"text": "Tu peux donner ton SIRET (facultatif) pour afficher le badge « Activité vérifiée » : ton activité est contrôlée chaque jour dans l’annuaire public des entreprises, et les clientes voient le badge sur ta page et dans la recherche."
+		},
+		{
+			"id": "tu-peux-maintenant-modifier-tes-experiences-directement-s",
+			"type": "amelioration",
+			"text": "Tu peux maintenant modifier tes expériences directement sur ta page, et ta photo principale manquante t'est signalée quand tu modifies ta page."
 		}
 	],
 	"releases": []
