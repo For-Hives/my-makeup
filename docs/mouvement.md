@@ -45,6 +45,7 @@ La première version (issues 1069 et 1088) était juste mais trop timide : une a
 | `.reveal` | Un bloc sous la ligne de flottaison attend (`data-reveal="wait"`, invisible, décalé de 28 px), puis monte en fondu en 600 ms quand il entre dans l'écran, **une seule fois**. `--reveal-i` (0 à 5) décale de 70 ms les blocs qui entrent ensemble (les cartes d'une ligne). Hors `no-preference`, à l'impression et en mode édition (`[data-edit-page]`), il est tel quel. | voir « Où sont l'entrée et l'apparition » |
 | Contrôles (liens, boutons, résumés, champs à cocher) | Les états de l'affordance (`:hover`, `:active`) s'adoucissent en 200 ms. Un lien se souligne en fondu. Les boutons `.btn-*` montent de 2 px (retour au clic). Dans la couche `base`, sous `:where` : un composant qui style son propre état gagne. | tout le site |
 | `.card-hover` + `.card-zoom` | La carte monte de 5 px et prend une ombre plus marquée, en 400 ms ; la photo grandit de 5 % en 400 ms (la carte la rogne : rien ne bouge autour). L'ombre reste avec le mouvement réduit. | carte de profil (`ResultCard`) |
+| `.nav-link`, `.nav-sub`, panneau des groupes | Le trait qui glisse sous une entrée de la barre et la carte qui apparaît (voir [`navbar.md`](navbar.md)). | barre de navigation |
 | `.motion-arrow` | La flèche d'un bouton avance de 3 px. | « Trouver ma maquilleuse » |
 
 Le survol n'existe que pour une souris (`@media (hover: hover)`) : l'affordance du site (voir `src/app/(front)/globals.css`, « What a hand on the mouse sees ») ne dépend d'aucun mouvement.

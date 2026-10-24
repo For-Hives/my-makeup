@@ -3,17 +3,28 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useEffect, useRef, useState } from 'react'
+import {
+	type FocusEvent,
+	type KeyboardEvent as ReactKeyboardEvent,
+	type PointerEvent as ReactPointerEvent,
+	useEffect,
+	useId,
+	useRef,
+	useState,
+} from 'react'
 import { signOut } from '@/app/(front)/(dashboard)/auth/actions'
 import { TrackedLink } from '@/components/analytics/TrackedLink'
 import { DASHBOARD_LINK, NAVIGATION, SEARCH_LINK, SIGN_IN_LINK } from './links'
 
-const LINK = 'font-semibold text-gray-900 text-sm leading-6'
 const RING = 'focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2'
+/** A hand that rests on a group this long opens it, and one that leaves it this long closes it: no flicker on the way across. */
+const OPEN_DELAY = 90
+const CLOSE_DELAY = 200
+const isWide = () => window.matchMedia('(min-width: 1024px)').matches
 
 function Chevron() {
 	return (
-		<svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+		<svg aria-hidden="true" className="nav-chevron h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
 			<path
 				fillRule="evenodd"
 				d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z"
@@ -29,19 +40,19 @@ function Chevron() {
  * neither read the cookie nor depend on it. Until the answer comes, and whenever it cannot come,
  * the visitor is taken for signed out, which is what a shared page says.
  */
-function useSignedIn(chemin: string): boolean {
+function useSignedIn(pathname: string): boolean {
 	const [signedIn, setSignedIn] = useState(false)
 	// A new page asks again: the visitor may have signed in or out since the last one.
 	useEffect(() => {
 		const stop = new AbortController()
 		fetch('/api/dashboard/session', { cache: 'no-store', credentials: 'same-origin', signal: stop.signal })
-			.then(reponse => (reponse.ok ? reponse.json() : { signedIn: false }))
-			.then((corps: { signedIn?: unknown }) => setSignedIn(corps.signedIn === true))
+			.then(response => (response.ok ? response.json() : { signedIn: false }))
+			.then((body: { signedIn?: unknown }) => setSignedIn(body.signedIn === true))
 			.catch(() => {
 				if (!stop.signal.aborted) setSignedIn(false)
 			})
 		return () => stop.abort()
-	}, [chemin])
+	}, [pathname])
 	return signedIn
 }
 
@@ -56,43 +67,101 @@ export function Nav() {
 	const [group, setGroup] = useState<string | null>(null)
 	const root = useRef<HTMLElement>(null)
 	const menuButton = useRef<HTMLButtonElement>(null)
+	const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
+	const pointerType = useRef('mouse')
+	const focusFirst = useRef(false)
+	const ids = useId()
 	const path = usePathname()
 	const signedIn = useSignedIn(path)
 
+	const settle = (next: string | null, delay: number) => {
+		clearTimeout(timer.current)
+		timer.current = setTimeout(() => setGroup(next), delay)
+	}
+	/** The hover of a mouse on a computer opens and closes the groups; a touch screen and a narrow window use the click. */
+	const hover = (event: ReactPointerEvent<HTMLElement>, name: string | null) => {
+		if (event.pointerType !== 'mouse' || !isWide()) return
+		if (name === null) settle(null, CLOSE_DELAY)
+		else settle(name, group === null ? OPEN_DELAY : 0)
+	}
+
 	useEffect(() => {
+		clearTimeout(timer.current)
 		setMenuOpen(false)
 		setGroup(null)
 	}, [path])
 
+	useEffect(() => () => clearTimeout(timer.current), [])
+
+	useEffect(() => {
+		if (!focusFirst.current || group === null) return
+		focusFirst.current = false
+		root.current?.querySelector<HTMLElement>(`[data-panel="${group}"] a`)?.focus()
+	}, [group])
+
 	useEffect(() => {
 		if (!menuOpen && group === null) return
-		const onKeyDown = (evenement: KeyboardEvent) => {
-			if (evenement.key !== 'Escape') return
+		const onKeyDown = (event: KeyboardEvent) => {
+			if (event.key !== 'Escape') return
+			clearTimeout(timer.current)
 			if (group !== null) {
-				root.current?.querySelector<HTMLElement>(`[data-groupe="${group}"]`)?.focus()
+				root.current?.querySelector<HTMLElement>(`[data-group="${group}"]`)?.focus()
 				setGroup(null)
 			} else {
 				menuButton.current?.focus()
 				setMenuOpen(false)
 			}
 		}
-		const onClick = (evenement: PointerEvent) => {
-			if (root.current && !root.current.contains(evenement.target as Node)) setGroup(null)
+		const onPointerDown = (event: PointerEvent) => {
+			if (root.current && !root.current.contains(event.target as Node)) setGroup(null)
 		}
 		document.addEventListener('keydown', onKeyDown)
-		document.addEventListener('pointerdown', onClick)
+		document.addEventListener('pointerdown', onPointerDown)
 		return () => {
 			document.removeEventListener('keydown', onKeyDown)
-			document.removeEventListener('pointerdown', onClick)
+			document.removeEventListener('pointerdown', onPointerDown)
 		}
 	}, [menuOpen, group])
+
+	/** Arrows move through a group: down from its button enters it, up from its first link goes back to the button. */
+	const onGroupKeyDown = (event: ReactKeyboardEvent<HTMLLIElement>, name: string) => {
+		const trigger = event.currentTarget.querySelector<HTMLElement>('[data-group]')
+		const links = [...event.currentTarget.querySelectorAll<HTMLElement>('[data-panel] a')]
+		const at = links.indexOf(event.target as HTMLElement)
+		if (event.target === trigger) {
+			if (event.key !== 'ArrowDown') return
+			event.preventDefault()
+			if (group === name) links[0]?.focus()
+			else {
+				focusFirst.current = true
+				setGroup(name)
+			}
+			return
+		}
+		if (at === -1) return
+		const target =
+			event.key === 'ArrowDown'
+				? links[Math.min(at + 1, links.length - 1)]
+				: event.key === 'ArrowUp'
+					? at === 0
+						? trigger
+						: links[at - 1]
+					: event.key === 'Home'
+						? links[0]
+						: event.key === 'End'
+							? links[links.length - 1]
+							: undefined
+		if (!target) return
+		event.preventDefault()
+		target.focus()
+	}
 
 	return (
 		<header className="sticky top-0 z-30 border-gray-300 border-b bg-white">
 			<nav
 				ref={root}
 				aria-label="Navigation principale"
-				className="relative mx-auto flex max-w-screen-2xl flex-wrap items-center justify-between gap-x-10 px-6 py-3 lg:flex-nowrap lg:px-16"
+				className="relative mx-auto flex max-w-screen-2xl flex-wrap items-center justify-between gap-x-10 px-6 py-3 lg:flex-nowrap lg:px-16 lg:py-5"
 			>
 				<Link href="/" prefetch={false} className={`-m-1.5 p-1.5 ${RING}`}>
 					<span className="sr-only">My-Makeup</span>
@@ -121,54 +190,92 @@ export function Nav() {
 				</button>
 				<div
 					id="menu-principal"
-					className={`${menuOpen ? 'flex' : 'hidden'} absolute inset-x-0 top-full max-h-[calc(100dvh-4.5rem)] flex-col gap-8 overflow-y-auto border-gray-300 border-b bg-white px-6 py-6 lg:static lg:flex lg:max-h-none lg:flex-1 lg:flex-row lg:items-center lg:justify-between lg:gap-10 lg:overflow-visible lg:border-0 lg:p-0`}
+					className={`${menuOpen ? 'flex' : 'hidden'} absolute inset-x-0 top-full max-h-[calc(100dvh-4.5rem)] flex-col gap-6 overflow-y-auto border-gray-300 border-b bg-white px-6 py-6 lg:static lg:flex lg:max-h-none lg:flex-1 lg:flex-row lg:items-center lg:justify-between lg:gap-10 lg:overflow-visible lg:border-0 lg:p-0`}
 				>
-					<ul className="flex flex-col gap-8 lg:flex-row lg:items-center lg:gap-10">
-						{NAVIGATION.map(entree => (
-							<li key={entree.nom} className="lg:relative">
-								{'href' in entree ? (
-									<Link href={entree.href} className={`${LINK} ${RING}`}>
-										{entree.nom}
+					<ul className="flex flex-col gap-1 lg:flex-row lg:items-center lg:gap-2">
+						{NAVIGATION.map((entry, entryIndex) => (
+							<li
+								key={entry.nom}
+								className="lg:relative"
+								{...('enfants' in entry
+									? {
+											onPointerEnter: (event: ReactPointerEvent<HTMLElement>) => hover(event, entry.nom),
+											onPointerLeave: (event: ReactPointerEvent<HTMLElement>) => hover(event, null),
+											onKeyDown: (event: ReactKeyboardEvent<HTMLLIElement>) => onGroupKeyDown(event, entry.nom),
+											onBlur: (event: FocusEvent<HTMLLIElement>) => {
+												if (!isWide() || group !== entry.nom) return
+												const next = event.relatedTarget as Node | null
+												if (next ? event.currentTarget.contains(next) : event.currentTarget.matches(':hover')) return
+												setGroup(null)
+											},
+										}
+									: {})}
+							>
+								{'href' in entry ? (
+									<Link
+										href={entry.href}
+										aria-current={path === entry.href ? 'page' : undefined}
+										className={`nav-link ${RING}`}
+									>
+										{entry.nom}
 									</Link>
 								) : (
 									<>
 										<button
 											type="button"
-											data-groupe={entree.nom}
-											aria-expanded={group === entree.nom}
-											aria-controls={`groupe-${entree.nom}`}
-											onClick={() => setGroup(group === entree.nom ? null : entree.nom)}
-											className={`inline-flex items-center gap-x-1 ${LINK} ${RING}`}
+											data-group={entry.nom}
+											aria-expanded={group === entry.nom}
+											aria-controls={`group-${entry.nom}`}
+											onPointerDown={event => {
+												pointerType.current = event.pointerType
+											}}
+											onClick={event => {
+												clearTimeout(timer.current)
+												// A mouse that has just opened the group by resting on it keeps it open on the click.
+												const keepOpen =
+													group === entry.nom && pointerType.current === 'mouse' && event.detail > 0 && isWide()
+												setGroup(group === entry.nom && !keepOpen ? null : entry.nom)
+											}}
+											className={`nav-link ${RING}`}
 										>
-											{entree.nom}
+											{entry.nom}
 											<Chevron />
 										</button>
-										<ul
-											id={`groupe-${entree.nom}`}
-											className={`${group === entree.nom ? 'flex' : 'hidden'} mt-4 flex-col gap-4 lg:absolute lg:top-full lg:left-0 lg:mt-3 lg:w-96 lg:rounded-3xl lg:bg-white lg:p-4 lg:shadow-lg lg:ring-1 lg:ring-gray-900/5`}
+										<div
+											id={`group-${entry.nom}`}
+											data-panel={entry.nom}
+											className={`${group === entry.nom ? 'block' : 'hidden'} nav-panel lg:absolute lg:top-full lg:left-0 lg:w-96`}
 										>
-											{entree.enfants.map(enfant => (
-												<li key={enfant.href} className="relative rounded-lg lg:p-4 lg:hover:bg-gray-50">
-													<Link href={enfant.href} className={`font-semibold text-gray-900 text-sm ${RING}`}>
-														{enfant.nom}
-														<span className="absolute inset-0" />
-													</Link>
-													<p className="mt-1 text-gray-600 text-sm">{enfant.description}</p>
-												</li>
-											))}
-										</ul>
+											<ul className="nav-panel-card flex flex-col gap-1">
+												{entry.enfants.map((child, childIndex) => (
+													<li key={child.href}>
+														<Link
+															href={child.href}
+															aria-labelledby={`${ids}-${entryIndex}-${childIndex}`}
+															aria-current={path === child.href ? 'page' : undefined}
+															className={`nav-sub ${RING}`}
+														>
+															<span id={`${ids}-${entryIndex}-${childIndex}`} className="nav-sub-title">
+																{child.nom}
+															</span>
+															<span className="mt-1 block text-gray-600 text-sm">{child.description}</span>
+														</Link>
+													</li>
+												))}
+											</ul>
+										</div>
 									</>
 								)}
 							</li>
 						))}
 					</ul>
-					<div className="flex flex-col items-start gap-8 lg:flex-row lg:items-center lg:gap-10">
+					<div className="flex flex-col items-start gap-4 lg:flex-row lg:items-center lg:gap-6">
 						<TrackedLink
 							href={SEARCH_LINK.href}
 							suivi={{ nom: 'nav_recherche' }}
-							className={`btn-primary-with-icon ${RING}`}
+							className={`btn-primary-with-icon nav-search ${RING}`}
 						>
-							<svg aria-hidden="true" className="mr-2 h-5 w-5 text-indigo-900" viewBox="0 0 20 20" fill="currentColor">
+							<svg aria-hidden="true" className="mr-2 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
 								<path
 									fillRule="evenodd"
 									d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.45 4.39l3.58 3.58a.75.75 0 1 1-1.06 1.06l-3.58-3.58A7 7 0 0 1 2 9Z"
@@ -179,17 +286,17 @@ export function Nav() {
 						</TrackedLink>
 						{signedIn ? (
 							<>
-								<Link href={DASHBOARD_LINK.href} className={`${LINK} ${RING}`}>
+								<Link href={DASHBOARD_LINK.href} className={`nav-link ${RING}`}>
 									{DASHBOARD_LINK.nom}
 								</Link>
 								<form action={signOut}>
-									<button type="submit" className={`btn-primary-simple ${RING}`}>
+									<button type="submit" className={`nav-link nav-link-strong ${RING}`}>
 										Me déconnecter
 									</button>
 								</form>
 							</>
 						) : (
-							<Link href={SIGN_IN_LINK.href} className={`btn-primary-simple ${RING}`}>
+							<Link href={SIGN_IN_LINK.href} className={`nav-link nav-link-strong ${RING}`}>
 								{SIGN_IN_LINK.nom}
 							</Link>
 						)}
