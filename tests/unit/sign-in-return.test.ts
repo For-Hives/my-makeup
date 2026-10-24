@@ -60,8 +60,17 @@ describe('destinationAfterSignIn : le profil encore à accueillir passe par l’
 		expect(destinationAfterSignIn(DEFAULT_DASHBOARD, false)).toBe(DEFAULT_DASHBOARD)
 	})
 
+	test('l’ancienne adresse de l’aperçu mène tout de suite à sa page (issue 1022), accueil à faire ou non', () => {
+		for (const toDo of [true, false]) {
+			expect(destinationAfterSignIn(safeReturnTo('/auth/apercu-profil', SITE), toDo)).toBe('/auth/profil?mode=preview')
+			expect(destinationAfterSignIn(safeReturnTo('/auth/apercu-profil?mode=edition', SITE), toDo)).toBe(
+				toDo ? ACCOUNT_ONBOARDING_PAGE : '/auth/profil'
+			)
+		}
+	})
+
 	test('un lien précis vers une page privée est respecté, accueil à faire ou non', () => {
-		for (const page of ['/auth/apercu-profil', '/auth/profil?x=1#carte-photo', '/auth/init-account']) {
+		for (const page of ['/auth/profil?mode=preview', '/auth/profil?x=1#bloc-photo', '/auth/init-account']) {
 			expect(destinationAfterSignIn(page, true)).toBe(page)
 			expect(destinationAfterSignIn(page, false)).toBe(page)
 		}

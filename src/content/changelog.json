@@ -410,6 +410,11 @@
 			"id": "tu-peux-donner-ton-siret-facultatif-pour-afficher-le-badg",
 			"type": "ajout",
 			"text": "Tu peux donner ton SIRET (facultatif) pour afficher le badge « Activité vérifiée » : ton activité est contrôlée chaque jour dans l’annuaire public des entreprises, et les clientes voient le badge sur ta page et dans la recherche."
+		},
+		{
+			"id": "ton-espace-s-ouvre-maintenant-sur-ton-profil-tu-le-modifi",
+			"type": "amelioration",
+			"text": "Ton espace s'ouvre maintenant sur ton profil : tu le modifies directement, avec ton avancement en haut de la page, et tes réglages de compte sont sur une page « Mon compte »."
 		}
 	],
 	"releases": []

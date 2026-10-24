@@ -4,7 +4,8 @@ import { violationsSevere } from '../support/axe'
 import { testPayload } from '../support/payload-test'
 
 /**
- * The zone in her space and on the second step of the onboarding (tickets 265 and 266; plan 02
+ * The zone in the block « Zone » of her page and on the second step of the onboarding (tickets 265 and 266, moved
+ * to the block by issue 1022; plan 02
  * U14 to U16, PLAN-ZONES.md §3.3 and §3.4): a postal code that names one commune chooses it, a shared
  * one opens the list, a zone to review offers its communes, and a zone abroad is told with countries.
  * The communes come from the fake list of the bench (tests/support/fake-cities): nothing leaves the
@@ -53,10 +54,10 @@ const stored = async (id: number) =>
 
 async function openPanel(page: Page) {
 	await page.goto('/auth/profil')
-	await expect(page.getByRole('heading', { level: 1, name: 'Mon espace' })).toBeVisible()
+	await expect(page.getByTestId('completeness')).toBeVisible()
 	await page.waitForLoadState('networkidle')
-	await press(page.getByRole('button', { name: 'Modifier ma localisation', exact: true }))
-	await expect(page.getByRole('dialog')).toBeVisible()
+	await press(page.getByRole('button', { name: 'Modifier ma zone', exact: true }))
+	await expect(page.locator('[data-direct-edit-editor]')).toBeVisible()
 }
 
 test.describe('U14 à U16 : le code postal, la zone à revoir, l’étranger', { tag: '@mobile' }, () => {
@@ -64,7 +65,7 @@ test.describe('U14 à U16 : le code postal, la zone à revoir, l’étranger', {
 		test.setTimeout(90_000)
 		const { id } = await artist(context)
 		await openPanel(page)
-		const dialog = page.getByRole('dialog')
+		const dialog = page.locator('[data-direct-edit-editor]')
 		const field = dialog.getByRole('combobox', { name: 'Où travailles-tu ?' })
 
 		await field.fill('51290')
@@ -83,7 +84,7 @@ test.describe('U14 à U16 : le code postal, la zone à revoir, l’étranger', {
 		await field.press('Enter')
 		await expect(field).toHaveValue(/Valbrume|Hautcombe/)
 		await press(dialog.getByRole('button', { name: 'Enregistrer' }))
-		await expect(page.getByRole('dialog')).toHaveCount(0)
+		await expect(page.locator('[data-direct-edit-editor]')).toHaveCount(0)
 		const profile = await stored(id)
 		expect(profile.zoneKind).toBe('city')
 		expect(profile.city?.postalCodes).toEqual(['74990'])
@@ -109,7 +110,7 @@ test.describe('U14 à U16 : le code postal, la zone à revoir, l’étranger', {
 				},
 			},
 		})
-		await page.goto('/auth/profil')
+		await openPanel(page)
 		const banner = page.getByTestId('zone-a-revoir')
 		await expect(banner).toContainText('le code postal 74990 couvre 2 communes. Choisis la tienne.')
 		await takeScreenshot(page, 'bandeau')
@@ -120,6 +121,8 @@ test.describe('U14 à U16 : le code postal, la zone à revoir, l’étranger', {
 		expect(profile.city?.inseeCode).toBe('74991')
 		expect(profile.zoneReview?.reason ?? null).toBeNull()
 		await page.reload()
+		await page.waitForLoadState('networkidle')
+		await press(page.getByRole('button', { name: 'Modifier ma zone', exact: true }))
 		await expect(page.getByTestId('zone-a-revoir')).toHaveCount(0)
 	})
 
@@ -130,7 +133,7 @@ test.describe('U14 à U16 : le code postal, la zone à revoir, l’étranger', {
 		test.setTimeout(90_000)
 		const { id } = await artist(context)
 		await openPanel(page)
-		const dialog = page.getByRole('dialog')
+		const dialog = page.locator('[data-direct-edit-editor]')
 		const field = dialog.getByRole('combobox', { name: 'Où travailles-tu ?' })
 		const choose = dialog.getByRole('button', { name: 'Choisir un pays' })
 
@@ -149,7 +152,7 @@ test.describe('U14 à U16 : le code postal, la zone à revoir, l’étranger', {
 		await takeScreenshot(page, 'panneau-pays-prechoisi')
 		expect(await violationsSevere(page)).toEqual([])
 		await press(dialog.getByRole('button', { name: 'Enregistrer' }))
-		await expect(page.getByRole('dialog')).toHaveCount(0)
+		await expect(page.locator('[data-direct-edit-editor]')).toHaveCount(0)
 		expect(await stored(id)).toMatchObject({ zoneKind: 'countries', countries: ['CH'] })
 	})
 
@@ -160,7 +163,7 @@ test.describe('U14 à U16 : le code postal, la zone à revoir, l’étranger', {
 		test.setTimeout(120_000)
 		const { id } = await artist(context)
 		await openPanel(page)
-		const dialog = page.getByRole('dialog')
+		const dialog = page.locator('[data-direct-edit-editor]')
 
 		await press(dialog.getByRole('button', { name: 'Je travaille à l’étranger ou dans plusieurs pays' }))
 		const picker = dialog.getByRole('combobox', { name: 'Ajouter un pays' })
@@ -171,13 +174,13 @@ test.describe('U14 à U16 : le code postal, la zone à revoir, l’étranger', {
 		await takeScreenshot(page, 'etranger')
 		expect(await violationsSevere(page)).toEqual([])
 		await press(dialog.getByRole('button', { name: 'Enregistrer' }))
-		await expect(page.getByRole('dialog')).toHaveCount(0)
+		await expect(page.locator('[data-direct-edit-editor]')).toHaveCount(0)
 		await expect(page.getByText('Bruxelles (Belgique)')).toBeVisible()
 		expect(await stored(id)).toMatchObject({ zoneKind: 'countries', countries: ['BE'], town: 'Bruxelles' })
 
 		// Two countries, the keyboard only.
 		await openPanelAgain(page)
-		const again = page.getByRole('dialog')
+		const again = page.locator('[data-direct-edit-editor]')
 		await again.getByRole('button', { name: 'Retirer Belgique' }).focus()
 		await page.keyboard.press('Enter')
 		const picker2 = again.getByRole('combobox', { name: 'Ajouter un pays' })
@@ -190,18 +193,18 @@ test.describe('U14 à U16 : le code postal, la zone à revoir, l’étranger', {
 		await expect(again.getByRole('button', { name: 'Retirer France' })).toBeVisible()
 		await expect(again.getByRole('button', { name: 'Retirer Italie' })).toBeVisible()
 		await press(again.getByRole('button', { name: 'Enregistrer' }))
-		await expect(page.getByRole('dialog')).toHaveCount(0)
+		await expect(page.locator('[data-direct-edit-editor]')).toHaveCount(0)
 		expect(await stored(id)).toMatchObject({ zoneKind: 'countries', countries: ['FR', 'IT'] })
 		await expect(page.getByText('France et Italie')).toBeVisible()
 
 		// Back to a commune: the countries are emptied.
 		await openPanelAgain(page)
-		const last = page.getByRole('dialog')
+		const last = page.locator('[data-direct-edit-editor]')
 		await press(last.getByRole('button', { name: 'Revenir à une commune en France' }))
 		await last.getByRole('combobox', { name: 'Où travailles-tu ?' }).fill('51290')
 		await expect(last.getByRole('combobox', { name: 'Où travailles-tu ?' })).toHaveValue(/Saint-Remy/)
 		await press(last.getByRole('button', { name: 'Enregistrer' }))
-		await expect(page.getByRole('dialog')).toHaveCount(0)
+		await expect(page.locator('[data-direct-edit-editor]')).toHaveCount(0)
 		const back = await stored(id)
 		expect(back.zoneKind).toBe('city')
 		expect(back.countries ?? []).toEqual([])
@@ -212,9 +215,10 @@ test.describe('U14 à U16 : le code postal, la zone à revoir, l’étranger', {
 		test.setTimeout(90_000)
 		await artist(context)
 		const size = page.viewportSize()
-		if (size) await page.setViewportSize({ width: Math.round(size.width / 2), height: size.height })
+		// 200 % of zoom halves the width in CSS pixels; the phone width is floored at 320, the width of WCAG 1.4.10.
+		if (size) await page.setViewportSize({ width: Math.max(320, Math.round(size.width / 2)), height: size.height })
 		await openPanel(page)
-		const dialog = page.getByRole('dialog')
+		const dialog = page.locator('[data-direct-edit-editor]')
 		await press(dialog.getByRole('button', { name: 'Je travaille à l’étranger ou dans plusieurs pays' }))
 		const picker = dialog.getByRole('combobox', { name: 'Ajouter un pays' })
 		await picker.fill('Belg')
@@ -227,6 +231,6 @@ test.describe('U14 à U16 : le code postal, la zone à revoir, l’étranger', {
 })
 
 async function openPanelAgain(page: Page) {
-	await press(page.getByRole('button', { name: 'Modifier ma localisation', exact: true }))
-	await expect(page.getByRole('dialog')).toBeVisible()
+	await press(page.getByRole('button', { name: 'Modifier ma zone', exact: true }))
+	await expect(page.locator('[data-direct-edit-editor]')).toBeVisible()
 }

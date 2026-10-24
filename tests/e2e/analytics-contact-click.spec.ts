@@ -147,7 +147,7 @@ test.describe('E52 : un clic de contact est compté une fois, avec le bon canal'
 	test('U84 : l’aperçu de sa propre page, depuis son espace, ne compte pas', async ({ context, page }) => {
 		await context.addCookies(account.session.cookies)
 		// The preview asks nothing about the visitor: it counts no click at all.
-		await page.goto('/auth/apercu-profil')
+		await page.goto('/auth/profil?mode=preview')
 		await expect(page.getByRole('link', { name: PHONE })).toBeVisible()
 		await click(page, PHONE)
 		await page.waitForLoadState('networkidle')

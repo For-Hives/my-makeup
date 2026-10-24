@@ -17,7 +17,7 @@ export const SIZES = [
 ] as const
 export type Size = (typeof SIZES)[number]
 
-export const EDIT_PATH = '/auth/apercu-profil?mode=edition'
+export const EDIT_PATH = '/auth/profil'
 
 export async function sessionOf(profile: PageProfile) {
 	const payload = await testPayload()

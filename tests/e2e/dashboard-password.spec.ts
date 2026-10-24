@@ -23,7 +23,7 @@ test.beforeEach(({ context }) =>
 )
 
 async function openDialog(page: Page) {
-	await page.goto('/auth/profil')
+	await page.goto('/auth/account')
 	await expect(page.getByTestId('zone-mot-de-passe')).toBeVisible()
 	await page.getByTestId('zone-mot-de-passe').getByRole('button', { name: 'Changer mon mot de passe' }).click()
 	await expect(page.getByRole('dialog', { name: 'Changer mon mot de passe' })).toBeVisible()
@@ -45,7 +45,7 @@ test.describe('999 : changer mon mot de passe', { tag: '@mobile' }, () => {
 		const otherContext = await browser.newContext()
 		await otherContext.addCookies(other.cookies as never[])
 		const otherPage = await otherContext.newPage()
-		await otherPage.goto('/auth/profil')
+		await otherPage.goto('/auth/account')
 		await expect(otherPage.getByTestId('zone-mot-de-passe')).toBeVisible()
 
 		await openDialog(page)
@@ -88,7 +88,7 @@ test.describe('999 : changer mon mot de passe', { tag: '@mobile' }, () => {
 	}) => {
 		const account = await createAccount('reprise-google')
 		await context.addCookies(account.session.cookies as never[])
-		await page.goto('/auth/profil')
+		await page.goto('/auth/account')
 		await expect(page.getByTestId('zone-mot-de-passe')).toBeVisible()
 		await expect(page.getByRole('button', { name: 'Changer mon mot de passe' })).toHaveCount(0)
 		expect(await violationsSevere(page)).toEqual([])

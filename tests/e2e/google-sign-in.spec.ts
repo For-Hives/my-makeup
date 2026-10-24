@@ -59,7 +59,7 @@ test.describe('E07 : connexion et inscription avec Google', { tag: '@mobile' }, 
 		await page.getByRole('link', { name: 'Se connecter avec Google' }).click()
 
 		await expect(page).toHaveURL(/\/auth\/profil$/)
-		await expect(page.getByRole('heading', { level: 1, name: 'Mon espace' })).toBeVisible()
+		await expect(page.getByTestId('completeness')).toBeVisible()
 		const cookie = await sessionCookie(context)
 		expect(cookie).toMatchObject({ httpOnly: true, path: '/', sameSite: 'Lax' })
 		// The cookie of the departure is spent.
@@ -69,6 +69,7 @@ test.describe('E07 : connexion et inscription avec Google', { tag: '@mobile' }, 
 			(await payload.find({ collection: 'pros', depth: 0, where: { email: { equals: account.email } } })).totalDocs
 		).toBe(1)
 
+		await page.goto('/auth/account')
 		await page.getByRole('main').getByRole('button', { name: 'Me déconnecter', exact: true }).click()
 
 		await expect(page).toHaveURL(/\/$/)
@@ -127,6 +128,7 @@ test.describe('E07 : connexion et inscription avec Google', { tag: '@mobile' }, 
 		expect(await mailReceived(email)).toEqual([])
 
 		await page.goto('/auth/profil')
+		await page.goto('/auth/account')
 		await page.getByRole('main').getByRole('button', { name: 'Me déconnecter', exact: true }).click()
 		await expect(page).toHaveURL(/\/$/)
 

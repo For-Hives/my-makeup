@@ -5,7 +5,7 @@ import { tokenState } from './session-state'
 export const SESSION_COOKIE = 'payload-token'
 
 /** The private pages of the space. Their sub-paths are private too. */
-export const PRIVATE_PAGES = ['/auth/profil', '/auth/apercu-profil', '/auth/init-account'] as const
+export const PRIVATE_PAGES = ['/auth/profil', '/auth/account', '/auth/apercu-profil', '/auth/init-account'] as const
 
 export const isPrivatePage = (chemin: string): boolean =>
 	PRIVATE_PAGES.some(page => chemin === page || chemin.startsWith(`${page}/`))

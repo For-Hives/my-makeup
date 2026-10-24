@@ -16,7 +16,7 @@ Les autres causes possibles ont été cherchées dans ces quatre pages, dans le 
 Raisons qui doivent rester dynamiques, et qui le restent :
 
 - l'espace et la connexion (`/auth/*`) lisent la session (`cookies()`), et la configuration y pose `Cache-Control: private, no-store` (`src/lib/auth/dashboard-headers.ts`) ;
-- l'aperçu du profil (`/auth/apercu-profil`) est dans l'espace ;
+- l’aperçu du profil (`/auth/profil?mode=preview`) et le compte (`/auth/account`) sont dans l’espace ;
 - `/search` lit l'adresse (`searchParams`), `/sitemap.xml` et `/site-map` lisent la base à la demande, `/blog` (la liste) reste en `force-dynamic` : ces pages ne sont pas dans le périmètre du ticket.
 
 ## Ce que le ticket change

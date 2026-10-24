@@ -13,7 +13,8 @@ import { type BarStatus, type BlockSave, barStatus } from '@/lib/direct-edit/sav
  * modifier » / « Abandonner mes modifications »): nothing she typed is dropped without her say.
  */
 
-export type Confirmation = { next: string | null } | null
+/** What she is asked before she leaves: the block she wanted to open (or none), or the page she wanted to go to. */
+export type Confirmation = { next: string | null; href?: string } | null
 
 interface Session {
 	openId: string | null
@@ -27,6 +28,8 @@ interface Session {
 	open: (id: string) => void
 	/** Closes the open block, or asks first when it holds changes. */
 	close: () => void
+	/** Goes to another page of her space (the preview, her account), or asks first when the open block holds changes. */
+	leave: (href: string) => void
 	/** Throws the changes away and goes where she wanted to go. */
 	abandon: () => void
 	keepEditing: () => void
@@ -44,7 +47,16 @@ export function useEditSession(): Session {
 	return session
 }
 
-export function EditSession({ refresh, children }: { refresh: () => void; children: ReactNode }) {
+export function EditSession({
+	refresh,
+	navigate,
+	children,
+}: {
+	refresh: () => void
+	/** Goes to an address of the site: the router of the page. Without it, `leave` has nowhere to go. */
+	navigate?: (href: string) => void
+	children: ReactNode
+}) {
 	const [openId, setOpenId] = useState<string | null>(null)
 	const [dirty, setDirtyState] = useState(false)
 	const [save, setSave] = useState<BlockSave>({ kind: 'idle' })
@@ -75,6 +87,15 @@ export function EditSession({ refresh, children }: { refresh: () => void; childr
 		else goTo(null)
 	}, [dirty, goTo])
 
+	const leave = useCallback(
+		(href: string) => {
+			if (busy.current) return
+			if (dirty) setConfirmation({ next: null, href })
+			else navigate?.(href)
+		},
+		[dirty, navigate]
+	)
+
 	const reportSave = useCallback((next: BlockSave) => {
 		busy.current = next.kind === 'saving'
 		setSave(next)
@@ -101,7 +122,12 @@ export function EditSession({ refresh, children }: { refresh: () => void; childr
 			setSlot,
 			open,
 			close,
-			abandon: () => goTo(confirmation?.next ?? null),
+			leave,
+			abandon: () => {
+				const href = confirmation?.href
+				goTo(confirmation?.next ?? null)
+				if (href !== undefined) navigate?.(href)
+			},
 			keepEditing: () => setConfirmation(null),
 			setDirty: setDirtyState,
 			reportSave,
@@ -114,7 +140,7 @@ export function EditSession({ refresh, children }: { refresh: () => void; childr
 				refresh()
 			},
 		}),
-		[openId, dirty, save, confirmation, slot, open, close, goTo, reportSave, refresh]
+		[openId, dirty, save, confirmation, slot, open, close, leave, goTo, reportSave, refresh, navigate]
 	)
 	return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
 }

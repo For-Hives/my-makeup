@@ -77,13 +77,13 @@ for (const size of SIZES) {
 				abort: () => Promise<void>
 				continue: () => Promise<void>
 			}) => (route.request().method() === 'POST' ? route.abort() : route.continue())
-			await page.route('**/auth/apercu-profil**', cut)
+			await page.route('**/auth/profil**', cut)
 			await page.getByRole('button', { name: 'Enregistrer' }).click()
 			await expect(page.getByRole('alert').filter({ hasText: FAILURE_MESSAGE })).toBeVisible()
 			await expect(page.getByLabel(/Rayon d’action/)).toHaveValue('37')
 			await checkScreen(page, 'erreur')
 			await shot(page, 'erreur')
-			await page.unroute('**/auth/apercu-profil**', cut)
+			await page.unroute('**/auth/profil**', cut)
 			await page.getByRole('button', { name: 'Enregistrer' }).click()
 			await expect(page.getByTestId('edit-status')).toHaveText('Enregistré à l’instant')
 			const payload = await testPayload()

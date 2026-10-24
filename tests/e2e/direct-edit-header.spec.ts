@@ -104,7 +104,7 @@ for (const size of SIZES) {
 				abort: () => Promise<void>
 				continue: () => Promise<void>
 			}) => (route.request().method() === 'POST' ? route.abort() : route.continue())
-			await page.route('**/auth/apercu-profil**', cut)
+			await page.route('**/auth/profil**', cut)
 			await page.getByRole('button', { name: 'Enregistrer' }).click()
 			await expect(page.getByRole('alert').filter({ hasText: FAILURE_MESSAGE })).toBeVisible()
 			await expect(page.locator('#direct-identity-specialtyOther')).toHaveValue('Maquillage naturel')
@@ -112,7 +112,7 @@ for (const size of SIZES) {
 			await checkScreen(page, 'erreur')
 			await shot(page, 'erreur')
 
-			await page.unroute('**/auth/apercu-profil**', cut)
+			await page.unroute('**/auth/profil**', cut)
 			await page.getByRole('button', { name: 'Enregistrer' }).click()
 			await expect(page.getByTestId('edit-status')).toHaveText('Enregistré à l’instant')
 			const payload = await testPayload()
@@ -178,6 +178,59 @@ for (const size of SIZES) {
 			await page.keyboard.press('Escape')
 			await expect(page.locator('[data-direct-edit-editor]')).toHaveCount(0)
 			await expect(status).toBeFocused()
+		})
+
+		test('la disponibilité : indisponible est stocké et relu, la page le dit (ancien interrupteur, ticket 124)', async ({
+			context,
+			page,
+		}) => {
+			const profile = await open(page, context, 'reference')
+			const status = block(page, 'status')
+			await expect(status).toContainText('Prend de nouvelles dates')
+			await pen(page, 'Modifier ma disponibilité').click()
+			await page.getByRole('radio', { name: /Je suis indisponible/ }).check()
+			await page.getByRole('button', { name: 'Enregistrer' }).click()
+			await expect(page.getByTestId('edit-status')).toHaveText('Enregistré à l’instant')
+			await expect(status).toContainText('Indisponible')
+			const payload = await testPayload()
+			expect((await payload.findByID({ collection: 'profiles', id: profile.id, depth: 0 })).available).toBe(false)
+			// The gauge says it too, and the button gives the requests back.
+			await expect(page.getByTestId('completeness-consequence')).toContainText('Tu es en pause')
+			await page.reload()
+			await expect(block(page, 'status')).toContainText('Indisponible')
+
+			await pen(page, 'Modifier ma disponibilité').click()
+			await page.getByRole('radio', { name: /Je prends de nouvelles dates/ }).check()
+			await page.getByRole('button', { name: 'Enregistrer' }).click()
+			await expect(block(page, 'status')).toContainText('Prend de nouvelles dates')
+			expect((await payload.findByID({ collection: 'profiles', id: profile.id, depth: 0 })).available).toBe(true)
+		})
+
+		test('la disponibilité : un profil importé sans valeur se lit « Prend de nouvelles dates »', async ({
+			context,
+			page,
+		}) => {
+			await open(page, context, 'disponibilite-inconnue')
+			await expect(block(page, 'status')).toContainText('Prend de nouvelles dates')
+			await pen(page, 'Modifier ma disponibilité').click()
+			await expect(page.getByRole('radio', { name: /Je prends de nouvelles dates/ })).toBeChecked()
+		})
+
+		test('la disponibilité : un échec laisse l’état enregistré, le message le dit, rien n’est stocké', async ({
+			context,
+			page,
+		}) => {
+			const profile = await open(page, context, 'reference')
+			await pen(page, 'Modifier ma disponibilité').click()
+			await page.getByRole('radio', { name: /Je suis indisponible/ }).check()
+			await page.route('**/auth/profil**', route =>
+				route.request().method() === 'POST' ? route.abort() : route.continue()
+			)
+			await page.getByRole('button', { name: 'Enregistrer' }).click()
+			await expect(page.getByRole('alert').filter({ hasText: FAILURE_MESSAGE })).toBeVisible()
+			await expect(block(page, 'status')).toContainText('Prend de nouvelles dates')
+			const payload = await testPayload()
+			expect((await payload.findByID({ collection: 'profiles', id: profile.id, depth: 0 })).available).toBe(true)
 		})
 
 		test('la page publique ne porte aucun contrôle d’édition, même pour la propriétaire connectée', async ({

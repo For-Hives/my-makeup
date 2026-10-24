@@ -145,13 +145,13 @@ for (const size of SIZES) {
 				abort: () => Promise<void>
 				continue: () => Promise<void>
 			}) => (route.request().method() === 'POST' ? route.abort() : route.continue())
-			await page.route('**/auth/apercu-profil**', cut)
+			await page.route('**/auth/profil**', cut)
 			await page.getByRole('button', { name: 'Enregistrer' }).click()
 			await expect(page.getByRole('alert').filter({ hasText: UNCERTAIN_RESULT_MESSAGE })).toBeVisible()
 			await expect(page.getByRole('button', { name: 'Avancer la photo 2' })).toBeVisible()
 			await checkScreen(page, 'erreur')
 			await shot(page, 'erreur')
-			await page.unroute('**/auth/apercu-profil**', cut)
+			await page.unroute('**/auth/profil**', cut)
 			await page.getByRole('button', { name: 'Enregistrer' }).click()
 			await expect(page.getByTestId('edit-status')).toHaveText('Enregistré à l’instant', { timeout: 60_000 })
 			expect((await galleryOf(profile.id)).slice(0, 2)).toEqual([before[1], before[0]])

@@ -179,6 +179,18 @@ describe('les sept règles des listes', () => {
 		expect(doc().activeElement?.tagName).toBe('H3')
 	})
 
+	test('L4 : le retrait d’une option au toucher n’ouvre jamais un clavier : le focus va au titre, au clavier au premier champ', async () => {
+		await open()
+		await window_.cliquer(window_.bouton('Modifier la prestation Maquillage de la mariée'))
+		await press(window_.bouton('Retirer l’option Essai'), 0)
+		expect(doc().activeElement?.tagName).toBe('INPUT')
+		await window_.demonter()
+		await open()
+		await window_.cliquer(window_.bouton('Modifier la prestation Maquillage de la mariée'))
+		await press(window_.bouton('Retirer l’option Essai'), 1)
+		expect(doc().activeElement?.tagName).toBe('H3')
+	})
+
 	test('L5 : le retrait est annoncé, la zone est là et vide à l’ouverture', async () => {
 		await open()
 		expect(announced()).toBe('')

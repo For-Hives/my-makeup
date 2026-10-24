@@ -1,3 +1,4 @@
+import { blockAnchor, CRITERION_BLOCK } from '../direct-edit/blocks'
 import { editPath } from '../direct-edit/edit-mode'
 import { type Criterion, DESCRIPTION_MIN } from '../profile/completeness'
 import type { Progress } from './progress'
@@ -9,16 +10,6 @@ import type { Progress } from './progress'
  * rule of a profile (src/lib/profile/completeness.ts). Pure, no server code.
  */
 
-/** The block of the direct edition (the `id` of its `EditableBlock`) that completes each required point. */
-const BLOCK_OF: Partial<Record<Criterion, string>> = {
-	specialite: 'identity',
-	ville: 'place',
-	description: 'about',
-	photo: 'photo',
-	offres: 'services',
-	reseaux: 'networks',
-}
-
 /** What each required point is called in the sentence « Il te manque : … », short so that the list stays small on a phone. */
 const LABEL_OF: Partial<Record<Criterion, string>> = {
 	specialite: 'ta spécialité',
@@ -28,9 +19,6 @@ const LABEL_OF: Partial<Record<Criterion, string>> = {
 	offres: 'une prestation avec un prix en chiffres',
 	reseaux: 'un moyen de te contacter',
 }
-
-/** The anchor of a block of the direct edition; the block carries it as its `id`. */
-export const blockAnchor = (block: string): string => `bloc-${block}`
 
 export interface DraftNotice {
 	/** What she lacks, a few words each, in the order of her profile. */
@@ -44,7 +32,8 @@ export function draftNotice(progress: Pick<Progress, 'etat' | 'manques'>): Draft
 	if (progress.etat !== 'vide' && progress.etat !== 'incomplet') return null
 	const required = progress.manques.filter(point => point.requis)
 	if (required.length === 0) return null
-	const block = BLOCK_OF[required[0]?.critere as Criterion]
+	const first = required[0]?.critere
+	const block = first === undefined ? undefined : CRITERION_BLOCK[first]
 	return {
 		lines: required.map(point => LABEL_OF[point.critere] ?? point.texte),
 		href: block === undefined ? editPath() : `${editPath()}#${blockAnchor(block)}`,

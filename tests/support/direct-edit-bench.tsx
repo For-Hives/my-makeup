@@ -1,5 +1,6 @@
 import type { GalleryWork } from '@/components/direct-edit/blocks/GalleryBlock'
 import { bodyEdit } from '@/components/direct-edit/body-edit'
+import { CompletenessPanel } from '@/components/direct-edit/CompletenessPanel'
 import { EditBar } from '@/components/direct-edit/EditBar'
 import { EditSession } from '@/components/direct-edit/EditSession'
 import { headerEdit } from '@/components/direct-edit/header-edit'
@@ -7,6 +8,7 @@ import { ProfileView } from '@/components/profile/ProfileView'
 import type { ActivityView } from '@/lib/dashboard/activity'
 import type { DashboardProfile } from '@/lib/dashboard/cards'
 import type { DashboardPhoto } from '@/lib/dashboard/photos'
+import { profileProgress } from '@/lib/dashboard/progress'
 import { type PublicProfile, publicProfileOf } from '@/services/public/profiles'
 import type { DomWindow } from './dom-react'
 
@@ -36,6 +38,16 @@ export const FULL = {
 	],
 	languages: [{ id: 'l1', name: 'Français' }],
 	courses: [{ id: 'c1', diploma: 'CAP esthétique', school: 'École Fictive', graduatedAt: '2016-06-30T00:00:00.000Z' }],
+	experiences: [
+		{
+			id: 'x1',
+			jobTitle: 'Maquilleuse mariage',
+			company: 'Studio Fictif',
+			city: 'Annecy',
+			startDate: '2019-09-01T00:00:00.000Z',
+			endDate: null,
+		},
+	],
 	serviceOffers: [
 		{
 			id: 'o1',
@@ -64,6 +76,8 @@ export function benchOf(
 		galleryWork?: GalleryWork
 		/** Where the check of her SIRET stands: without it, the page has no SIRET card. */
 		activity?: ActivityView
+		/** Draws the completeness panel above the page, as the private route does. */
+		withPanel?: boolean
 	} = {}
 ) {
 	const profile = options.profile ?? FULL
@@ -71,6 +85,7 @@ export function benchOf(
 	const gallery = options.gallery ?? []
 	const calls: Record<string, unknown[]> = {}
 	let refreshes = 0
+	const navigations: string[] = []
 	const fake =
 		(name: string, own?: Action): Action =>
 		async input => {
@@ -83,6 +98,7 @@ export function benchOf(
 		'saveSkills',
 		'saveLanguages',
 		'saveCourses',
+		'saveExperiences',
 		'saveServices',
 		'savePortfolio',
 		'saveContacts',
@@ -118,13 +134,15 @@ export function benchOf(
 	)
 	return {
 		calls,
+		navigations,
 		get refreshes() {
 			return refreshes
 		},
 		mount: () =>
 			window.monter(
-				<EditSession refresh={() => void refreshes++}>
+				<EditSession refresh={() => void refreshes++} navigate={href => void navigations.push(href)}>
 					<EditBar />
+					{options.withPanel ? <CompletenessPanel progress={profileProgress(profile)} /> : null}
 					<ProfileView
 						profil={publicProfile}
 						mesure={false}

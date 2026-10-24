@@ -26,6 +26,12 @@ async function signInAction(page: Page, email: string) {
 	await expect(page).toHaveURL(/\/auth\/profil$/)
 }
 
+/** The ways out of the space are on the page of her account (issue 1022), not on her profile. */
+async function openAccount(page: Page) {
+	if (!page.url().endsWith('/auth/account')) await page.goto('/auth/account')
+	await expect(page.getByRole('heading', { level: 1, name: 'Mon compte' })).toBeVisible()
+}
+
 /**
  * The markup of a page without its scripts. The scripts carry the RSC stream (`self.__next_f.push`), whose
  * chunks are written in the order the server finishes them: two requests to the same page may order them
@@ -52,6 +58,7 @@ test.describe('E10 : la déconnexion', { tag: '@mobile' }, () => {
 		await signInAction(page, account.email)
 		expect(await sessionCookie(context)).toBeDefined()
 
+		await openAccount(page)
 		await page.getByRole('main').getByRole('button', { name: 'Me déconnecter', exact: true }).click()
 
 		await expect(page).toHaveURL(/\/$/)
@@ -61,7 +68,7 @@ test.describe('E10 : la déconnexion', { tag: '@mobile' }, () => {
 
 		await page.goBack()
 		await expect(page).toHaveURL(/\/auth\/signin/)
-		await expect(page.getByRole('heading', { name: 'Mon espace' })).toHaveCount(0)
+		await expect(page.getByTestId('completeness')).toHaveCount(0)
 		await expect(page.getByRole('button', { name: 'Se connecter' })).toBeVisible()
 	})
 
@@ -81,6 +88,7 @@ test.describe('E10 : la déconnexion', { tag: '@mobile' }, () => {
 			).totalDocs
 		await signInAction(page, account.email)
 
+		await openAccount(page)
 		await page.getByRole('main').getByRole('button', { name: 'Me déconnecter', exact: true }).click()
 		await expect(page).toHaveURL(/\/$/)
 
@@ -99,9 +107,10 @@ test.describe('E11 : l’ancien cookie réinjecté', () => {
 		const before = await contextWith(browser, old)
 		const pageBefore = await before.newPage()
 		await pageBefore.goto('/auth/profil')
-		await expect(pageBefore.getByRole('heading', { name: 'Mon espace' })).toBeVisible()
+		await expect(pageBefore.getByTestId('completeness')).toBeVisible()
 		await before.close()
 
+		await openAccount(page)
 		await page.getByRole('main').getByRole('button', { name: 'Me déconnecter', exact: true }).click()
 		await expect(page).toHaveURL(/\/$/)
 
@@ -121,8 +130,9 @@ test.describe('E17 : la déconnexion dans un onglet', () => {
 		await signInAction(page, account.email)
 		const tab = await context.newPage()
 		await tab.goto('/auth/profil')
-		await expect(tab.getByRole('heading', { name: 'Mon espace' })).toBeVisible()
+		await expect(tab.getByTestId('completeness')).toBeVisible()
 
+		await openAccount(page)
 		await page.getByRole('main').getByRole('button', { name: 'Me déconnecter', exact: true }).click()
 		await expect(page).toHaveURL(/\/$/)
 
@@ -144,13 +154,14 @@ test.describe('Me déconnecter de tous les appareils', () => {
 		const other = await otherDevice.newPage()
 		await signInAction(other, account.email)
 
+		await openAccount(page)
 		await page.getByRole('button', { name: 'Me déconnecter de tous les appareils' }).click()
 		await expect(page.getByText('Tu seras déconnectée de tous tes appareils')).toBeVisible()
 		// Cancelled: nothing is closed.
 		await page.getByRole('button', { name: 'Annuler' }).click()
 		await expect(page.getByText('Tu seras déconnectée de tous tes appareils')).toHaveCount(0)
 		await other.goto('/auth/profil')
-		await expect(other.getByRole('heading', { name: 'Mon espace' })).toBeVisible()
+		await expect(other.getByTestId('completeness')).toBeVisible()
 
 		await page.getByRole('button', { name: 'Me déconnecter de tous les appareils' }).click()
 		await page.getByRole('button', { name: 'Oui, me déconnecter partout' }).click()
@@ -166,6 +177,7 @@ test.describe('Me déconnecter de tous les appareils', () => {
 		const account = await createAccount('maquilleuse', { motDePasse: () => PASSWORD })
 		await activateProfile(account.id)
 		await signInAction(page, account.email)
+		await openAccount(page)
 		await page.getByRole('button', { name: 'Me déconnecter de tous les appareils' }).click()
 		// The confirmation field is the page's: take it out, and send the form.
 		await page.locator('input[name="confirmation"]').evaluate(champ => champ.remove())
@@ -175,7 +187,7 @@ test.describe('Me déconnecter de tous les appareils', () => {
 		const response = await request.get('/api/dashboard/session')
 		expect(response.status()).toBe(200)
 		await page.reload()
-		await expect(page.getByRole('heading', { name: 'Mon espace' })).toBeVisible()
+		await expect(page.getByTestId('completeness')).toBeVisible()
 	})
 })
 

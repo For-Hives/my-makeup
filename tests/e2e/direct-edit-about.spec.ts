@@ -92,14 +92,14 @@ for (const size of SIZES) {
 				abort: () => Promise<void>
 				continue: () => Promise<void>
 			}) => (route.request().method() === 'POST' ? route.abort() : route.continue())
-			await page.route('**/auth/apercu-profil**', cut)
+			await page.route('**/auth/profil**', cut)
 			await page.getByRole('button', { name: 'Enregistrer' }).click()
 			await expect(page.getByRole('alert').filter({ hasText: FAILURE_MESSAGE })).toBeVisible()
 			await expect(page.locator('#direct-about-text')).toHaveValue('Un texte plus court mais honnête.')
 			await expect(page.getByTestId('edit-status')).toContainText('Pas enregistré')
 			await checkScreen(page, 'erreur')
 			await shot(page, 'erreur')
-			await page.unroute('**/auth/apercu-profil**', cut)
+			await page.unroute('**/auth/profil**', cut)
 			await page.getByRole('button', { name: 'Enregistrer' }).click()
 			await expect(page.getByTestId('edit-status')).toHaveText('Enregistré à l’instant')
 			const payload = await testPayload()
@@ -128,6 +128,43 @@ for (const size of SIZES) {
 			expect(stored.skills?.filter(skill => skill.name?.toLowerCase() === 'peaux très matures')).toHaveLength(1)
 		})
 
+		test('E30 : un nom de plus de 70 caractères est refusé sans requête, et la liste enregistrée garde sa description (ancien panneau, ticket 128)', async ({
+			context,
+			page,
+		}) => {
+			const profile = await open(page, context, 'reference')
+			const payload = await testPayload()
+			await payload.update({
+				collection: 'profiles',
+				id: profile.id,
+				data: { skills: [{ name: 'Teint', description: 'Peaux mates.' }] },
+			})
+			await page.reload()
+			const uploads: string[] = []
+			page.on('request', request => {
+				if (request.method() === 'POST' && new URL(request.url()).pathname === '/auth/profil')
+					uploads.push(request.url())
+			})
+			await pen(page, 'Modifier mes compétences').click()
+			const field = page.getByLabel('Compétence', { exact: true })
+			await field.fill('x'.repeat(71))
+			await field.press('Enter')
+			await expect(page.getByText('Une compétence ne doit pas dépasser 70 caractères.')).toBeVisible()
+			await page.getByRole('button', { name: 'Enregistrer' }).click()
+			await expect(page.getByText('Une compétence ne doit pas dépasser 70 caractères.')).toBeVisible()
+			expect(uploads).toHaveLength(0)
+
+			await field.fill('Yeux')
+			await field.press('Enter')
+			await page.getByRole('button', { name: 'Enregistrer' }).click()
+			await expect(page.getByTestId('edit-status')).toHaveText('Enregistré à l’instant')
+			const stored = (await payload.findByID({ collection: 'profiles', id: profile.id, depth: 0 })).skills ?? []
+			expect(stored.map(({ name, description }) => [name, description ?? null])).toEqual([
+				['Teint', 'Peaux mates.'],
+				['Yeux', null],
+			])
+		})
+
 		test('les formations : une ligne ajoutée est enregistrée avec la liste par un seul bouton', async ({
 			context,
 			page,
@@ -145,6 +182,56 @@ for (const size of SIZES) {
 			const payload = await testPayload()
 			const stored = await payload.findByID({ collection: 'profiles', id: profile.id, depth: 0 })
 			expect(stored.courses?.map(course => course.diploma)).toContain('Certificat de maquillage de scène')
+		})
+
+		test('les expériences : une ligne ajoutée est enregistrée, une fin avant le début est refusée sous le champ', async ({
+			context,
+			page,
+		}) => {
+			const profile = await open(page, context, 'reference')
+			await pen(page, 'Modifier mes expériences').click()
+			await expect(page.locator('[data-direct-edit-editor]')).toContainText('Expériences professionnelles · je modifie')
+			await page.getByRole('button', { name: 'Ajouter une expérience' }).click()
+			await page.getByLabel('Poste', { exact: true }).fill('Maquilleuse cinéma')
+			await page.getByLabel('Entreprise', { exact: true }).fill('Production Fictive')
+			await page.getByLabel('Début', { exact: true }).fill('2022-01-10')
+			await page.getByLabel('Fin', { exact: true }).fill('2021-01-10')
+			await page.getByRole('button', { name: 'Enregistrer cette expérience' }).click()
+			await expect(page.getByText('La fin d’une expérience ne peut pas précéder son début.')).toBeVisible()
+			await page.getByLabel('Fin', { exact: true }).fill('')
+			await checkScreen(page, 'expériences')
+			await shot(page, 'experiences')
+			await page.getByRole('button', { name: 'Enregistrer cette expérience' }).click()
+			await expect(page.getByTestId('edit-status')).toHaveText('Enregistré à l’instant')
+			const payload = await testPayload()
+			const stored = await payload.findByID({ collection: 'profiles', id: profile.id, depth: 0 })
+			expect(stored.experiences?.map(experience => experience.company)).toContain('Production Fictive')
+			// On a phone the card is folded: the text is there, whatever its state.
+			await expect(block(page, 'experiences')).toContainText('Production Fictive')
+		})
+
+		test('la présentation : les sauts de ligne sont gardés et montrés, le HTML collé est retiré (ancien panneau, ticket 122)', async ({
+			context,
+			page,
+		}) => {
+			const profile = await open(page, context, 'reference')
+			await pen(page, 'Modifier ma présentation').click()
+			await page.locator('#direct-about-text').fill('Maquilleuse de mariée.\n\nJe me déplace dans toute la région.')
+			await page.getByRole('button', { name: 'Enregistrer' }).click()
+			await expect(page.getByTestId('edit-status')).toHaveText('Enregistré à l’instant')
+			const payload = await testPayload()
+			const stored = () => payload.findByID({ collection: 'profiles', id: profile.id, depth: 0 })
+			expect((await stored()).description).toBe('Maquilleuse de mariée.\n\nJe me déplace dans toute la région.')
+			// The line breaks are shown, not folded: each line is a paragraph of the page.
+			await page.reload()
+			await expect(block(page, 'about').getByText('Maquilleuse de mariée.', { exact: true })).toBeVisible()
+			await expect(block(page, 'about').getByText('Je me déplace dans toute la région.', { exact: true })).toBeVisible()
+
+			await pen(page, 'Modifier ma présentation').click()
+			await page.locator('#direct-about-text').fill('<b>Bonjour</b>\n<script>alert(1)</script>à toutes')
+			await page.getByRole('button', { name: 'Enregistrer' }).click()
+			await expect(page.getByTestId('edit-status')).toHaveText('Enregistré à l’instant')
+			expect((await stored()).description).toBe('Bonjour\nà toutes')
 		})
 
 		test('au clavier : Entrée ouvre le bloc, Échap le ferme, le focus revient', async ({ context, page }) => {

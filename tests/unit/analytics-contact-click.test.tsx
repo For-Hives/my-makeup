@@ -186,7 +186,7 @@ describe('la page du profil', () => {
 	test('l’aperçu de sa propre page garde les liens, et dit qu’il ne les compte pas', () => {
 		const p = profile({}, { telephone: '06 12 34 56 78', email: null })
 		expect(renderNow(p, false)).toContain('href="tel:0612345678"')
-		const preview = readFileSync(path.join(ROOT, 'src/app/(front)/(dashboard)/auth/apercu-profil/page.tsx'), 'utf8')
+		const preview = readFileSync(path.join(ROOT, 'src/app/(front)/(dashboard)/auth/profil/page.tsx'), 'utf8')
 		expect(preview).toContain('<ProfileView profil={preview.profil} mesure={false} />')
 	})
 })

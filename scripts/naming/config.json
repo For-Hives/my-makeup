@@ -72,10 +72,6 @@
 				"reason": "Frozen public address: the folder name is the URL (src/lib/frozen-urls.ts, docs/migration/URLS.md)."
 			},
 			{
-				"path": "src/app/(front)/(dashboard)/auth/apercu-profil",
-				"reason": "Frozen public address: the folder name is the URL (src/lib/frozen-urls.ts, docs/migration/URLS.md)."
-			},
-			{
 				"path": "src/app/(front)/(dashboard)/auth/mot-de-passe-oublie",
 				"reason": "Frozen public address: the folder name is the URL (src/lib/frozen-urls.ts, docs/migration/URLS.md)."
 			},

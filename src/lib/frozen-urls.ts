@@ -406,7 +406,7 @@ export const FROZEN_URL_FAMILIES: readonly FrozenUrlFamily[] = [
 		id: 'espace-prive',
 		kind: 'espace',
 		planRow: 7,
-		patterns: ['/auth/profil', '/auth/apercu-profil', '/auth/init-account'],
+		patterns: ['/auth/profil', '/auth/account', '/auth/apercu-profil', '/auth/init-account'],
 		statusToday: [307],
 		status: 200,
 		withoutSession: {
@@ -415,9 +415,11 @@ export const FROZEN_URL_FAMILIES: readonly FrozenUrlFamily[] = [
 		},
 		servedBy: 'application',
 		today: 'Espace et onboarding ; sans session, une 307 en un saut vers la connexion',
-		after: 'Mêmes chemins, `noindex`, `private, no-store`',
+		after:
+			"Mêmes chemins, `noindex`, `private, no-store` ; `/auth/profil` est le profil en édition directe (`?mode=preview` : l'aperçu), `/auth/account` le compte, et `/auth/apercu-profil` répond par une 308 en un saut vers `/auth/profil?mode=preview`",
 		examples: [
 			{ from: '/auth/profil', to: '/auth/signin?callbackUrl=%2Fauth%2Fprofil' },
+			{ from: '/auth/account', to: '/auth/signin?callbackUrl=%2Fauth%2Faccount' },
 			{ from: '/auth/apercu-profil', to: '/auth/signin?callbackUrl=%2Fauth%2Fapercu-profil' },
 			{ from: '/auth/init-account', to: '/auth/signin?callbackUrl=%2Fauth%2Finit-account' },
 		],

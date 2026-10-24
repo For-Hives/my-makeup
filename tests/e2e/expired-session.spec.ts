@@ -98,7 +98,7 @@ test.describe('E12 : un jeton expiré', { tag: '@mobile' }, () => {
 		await page.getByRole('button', { name: 'Se connecter' }).click()
 
 		await expect(page).toHaveURL(/\/auth\/profil\?onglet=photos$/)
-		await expect(page.getByRole('heading', { level: 1, name: 'Mon espace' })).toBeVisible()
+		await expect(page.getByTestId('completeness')).toBeVisible()
 		// One valid cookie, the old one replaced.
 		expect((await context.cookies()).map(c => c.name)).toEqual(['payload-token'])
 	})
@@ -135,7 +135,7 @@ test.describe('E13 : une expiration réelle', () => {
 		const redirects = followRedirects(page)
 
 		await page.goto('/auth/profil')
-		await expect(page.getByRole('heading', { level: 1, name: 'Mon espace' })).toBeVisible()
+		await expect(page.getByTestId('completeness')).toBeVisible()
 		expect([...redirects]).toEqual([])
 
 		// The clock does the rest: no cookie was touched between the visits. Wait on the state, not on a duration.

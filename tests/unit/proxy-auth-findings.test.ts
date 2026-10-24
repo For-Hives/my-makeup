@@ -144,3 +144,24 @@ describe('constat 8 : une réponse qui efface des cookies n’est jamais gardée
 		expect(response.headers.get('cache-control')).toBeNull()
 	})
 })
+
+describe('1022 : l’ancienne adresse de l’aperçu', () => {
+	const session = { cookie: `payload-token=${inCourse}` }
+
+	test('avec une session : une 308 en un saut vers la page du profil, sans cache', () => {
+		const preview = proxy(request('/auth/apercu-profil', session))
+		expect(preview.status).toBe(308)
+		expect(preview.headers.get('location')).toBe(`${SITE}/auth/profil?mode=preview`)
+		expect(preview.headers.get('cache-control')).toBe('private, no-store')
+		expect(preview.headers.get('x-robots-tag')).toContain('noindex')
+		const edit = proxy(request('/auth/apercu-profil?mode=edition', session))
+		expect(edit.status).toBe(308)
+		expect(edit.headers.get('location')).toBe(`${SITE}/auth/profil`)
+	})
+
+	test('sans session : la connexion, qui ramène à cette adresse, comme avant', () => {
+		const response = proxy(request('/auth/apercu-profil'))
+		expect(response.status).toBe(307)
+		expect(response.headers.get('location')).toBe(`${SITE}/auth/signin?callbackUrl=%2Fauth%2Fapercu-profil`)
+	})
+})

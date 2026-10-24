@@ -2,7 +2,7 @@
 
 import { type KeyboardEvent, type ReactNode, useEffect, useId, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { blockAnchor } from '@/lib/dashboard/draft-notice'
+import { blockAnchor } from '@/lib/direct-edit/blocks'
 import { EditorFrame } from './EditorFrame'
 import { useEditSession } from './EditSession'
 

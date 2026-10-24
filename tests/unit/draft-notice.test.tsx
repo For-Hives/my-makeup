@@ -41,7 +41,7 @@ describe('draftNotice', () => {
 		const notice = draftNotice(profileProgress(SHORT))
 		expect(notice?.lines).toHaveLength(1)
 		expect(notice?.lines[0]).toContain('200 caractères')
-		expect(notice?.href).toBe('/auth/apercu-profil?mode=edition#bloc-about')
+		expect(notice?.href).toBe('/auth/profil#bloc-about')
 	})
 
 	test('an empty profile lists the six conditions', () => {
@@ -59,7 +59,7 @@ describe('DraftNotice', () => {
 		expect(html).toContain('Il te manque : ')
 		expect(html).toContain('une description de 200 caractères au moins.')
 		expect(html).toContain('Compléter ma page')
-		expect(html).toContain('href="/auth/apercu-profil?mode=edition#bloc-about"')
+		expect(html).toContain('href="/auth/profil#bloc-about"')
 		expect(html).not.toMatch(/red|lipstick-800|role="alert"/)
 	})
 })
@@ -68,7 +68,7 @@ describe('the last screen of the onboarding', () => {
 	const props = {
 		address: '',
 		resume: false,
-		editPath: '/auth/apercu-profil?mode=edition',
+		editPath: '/auth/profil',
 		dashboardPath: '/auth/profil',
 	}
 

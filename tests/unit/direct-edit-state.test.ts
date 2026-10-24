@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { EDIT_QUERY, editPath, isEditRequest } from '@/lib/direct-edit/edit-mode'
+import { EDIT_QUERY, editPath, formerPreviewTarget, isPreviewRequest, previewPath } from '@/lib/direct-edit/edit-mode'
 import { barStatus, saveFromOutcome } from '@/lib/direct-edit/save-state'
 
 /**
@@ -8,17 +8,28 @@ import { barStatus, saveFromOutcome } from '@/lib/direct-edit/save-state'
  * told apart from any other failure.
  */
 
-describe('le mode édition se demande par l’adresse, pas par le profil', () => {
-	test('seule la valeur « edition » ouvre le mode édition', () => {
-		expect(isEditRequest('edition')).toBe(true)
-		expect(isEditRequest(undefined)).toBe(false)
-		expect(isEditRequest('')).toBe(false)
-		expect(isEditRequest('apercu')).toBe(false)
-		expect(isEditRequest(['edition', 'x'])).toBe(false)
+describe('l’aperçu se demande par l’adresse, pas par le profil', () => {
+	test('seule la valeur « preview » ouvre l’aperçu', () => {
+		expect(isPreviewRequest('preview')).toBe(true)
+		expect(isPreviewRequest(undefined)).toBe(false)
+		expect(isPreviewRequest('')).toBe(false)
+		expect(isPreviewRequest('edition')).toBe(false)
+		expect(isPreviewRequest(['preview', 'x'])).toBe(false)
 	})
 
-	test('l’adresse du mode édition est celle de l’aperçu avec son paramètre', () => {
-		expect(editPath()).toBe(`/auth/apercu-profil?${EDIT_QUERY}=edition`)
+	test('l’édition est la page du profil, l’aperçu en est un mode (ancien mode : /auth/apercu-profil?mode=edition)', () => {
+		expect(editPath()).toBe('/auth/profil')
+		expect(previewPath()).toBe(`/auth/profil?${EDIT_QUERY}=preview`)
+	})
+})
+
+describe('l’ancienne adresse de l’aperçu', () => {
+	test('l’ancien mode édition va à la page en édition, le reste à l’aperçu, aucune autre adresse n’est touchée', () => {
+		expect(formerPreviewTarget('/auth/apercu-profil', null)).toBe('/auth/profil?mode=preview')
+		expect(formerPreviewTarget('/auth/apercu-profil', 'edition')).toBe('/auth/profil')
+		expect(formerPreviewTarget('/auth/apercu-profil', 'autre')).toBe('/auth/profil?mode=preview')
+		expect(formerPreviewTarget('/auth/profil', null)).toBeNull()
+		expect(formerPreviewTarget('/auth/apercu-profil/x', null)).toBeNull()
 	})
 })
 

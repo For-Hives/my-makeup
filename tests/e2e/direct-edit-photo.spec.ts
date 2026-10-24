@@ -8,9 +8,10 @@ import { fileForPayload } from '../support/photos'
 import { readObject } from '../support/s3'
 
 /**
- * The main photo in her space (ticket 134; plan 02 E36, I24, U03): reduced in the browser before
- * it leaves, sent only at « Enregistrer », replaced with the former one in the bin, refused with a
- * message before anything is sent. A photo of 8 MiB is made up for the test (tests/support/photo-8-mb.ts).
+ * The main photo on her page (ticket 134 moved to the block « Photo principale », issues 1008 and 1022; plan 02
+ * E36, I24, U03): reduced in the browser before it leaves, sent only at « Enregistrer », replaced with the former
+ * one in the bin, refused with a message before anything is sent. A photo of 8 MiB is made up for the test
+ * (tests/support/photo-8-mb.ts). The refusal of a file that is no photo is in tests/e2e/direct-edit-header.spec.ts.
  *
  * The brake of the sign-in counts by client address: each test sends its own made-up address.
  */
@@ -87,12 +88,14 @@ async function storedProfile(compte: Artist) {
 const mediaCount = async (compte: Artist) =>
 	(await (await testPayload()).count({ collection: 'media', where: { owner: { equals: compte.id } } })).totalDocs
 const modify = (page: Page) => page.getByRole('button', { name: 'Modifier ma photo principale' })
-const dialogue = (page: Page) => page.getByRole('dialog', { name: 'Modifier ma photo principale' })
+const editor = (page: Page) => page.locator('[data-direct-edit-editor]')
+const saved = (page: Page) => page.getByTestId('edit-status')
+const file = (page: Page) => editor(page).locator('input[type="file"]')
 
 async function open(page: Page) {
 	if (test.info().project.name === 'mobile') await modify(page).tap()
 	else await modify(page).click()
-	await expect(dialogue(page)).toBeVisible()
+	await expect(editor(page)).toBeVisible()
 }
 
 /** The requests that send a photo to the server. */
@@ -104,7 +107,7 @@ function uploads(page: Page): string[] {
 	return list
 }
 
-test.describe('134 : la photo principale', { tag: '@mobile' }, () => {
+test.describe('134 : la photo principale (1022 : sur la page)', { tag: '@mobile' }, () => {
 	test('E36 : une photo de 8 Mo est réduite avant l’envoi, enregistrée, visible après rechargement et sur le profil public', async ({
 		context,
 		page,
@@ -116,16 +119,14 @@ test.describe('134 : la photo principale', { tag: '@mobile' }, () => {
 		await page.goto('/auth/profil')
 		await open(page)
 
-		await page
-			.getByLabel('Choisir une photo')
-			.setInputFiles({ name: 'grosse.jpg', mimeType: 'image/jpeg', buffer: original })
+		await file(page).setInputFiles({ name: 'grosse.jpg', mimeType: 'image/jpeg', buffer: original })
 		await expect(page.getByRole('img', { name: 'Aperçu de la photo choisie' })).toBeVisible({ timeout: 60_000 })
 		expect(await violationsSevere(page)).toEqual([])
 		const sent = uploads(page)
 		await page.getByRole('button', { name: 'Enregistrer' }).click()
 
-		await expect(dialogue(page)).toHaveCount(0, { timeout: 60_000 })
-		await expect(page.getByRole('status').filter({ hasText: 'Ta photo principale est enregistrée.' })).toBeVisible()
+		await expect(editor(page)).toHaveCount(0, { timeout: 60_000 })
+		await expect(saved(page)).toHaveText('Enregistré à l’instant')
 		await expect(modify(page)).toBeFocused()
 		expect(sent).toHaveLength(1)
 
@@ -141,7 +142,7 @@ test.describe('134 : la photo principale', { tag: '@mobile' }, () => {
 		expect(Math.max(media.width ?? 0, media.height ?? 0)).toBeLessThanOrEqual(2000)
 
 		await page.reload()
-		await expect(page.getByTestId('carte-photo').getByTestId('photo-principale-vignette')).toBeVisible()
+		await expect(page.locator('[data-direct-edit="photo"] img').first()).toBeVisible()
 		await open(page)
 		await expect(page.getByRole('img', { name: 'Ta photo principale actuelle' })).toBeVisible()
 		await page.keyboard.press('Escape')
@@ -161,16 +162,16 @@ test.describe('134 : la photo principale', { tag: '@mobile' }, () => {
 		await page.goto('/auth/profil')
 		await open(page)
 
-		await page.getByLabel('Choisir une photo').setInputFiles({
+		await file(page).setInputFiles({
 			name: 'a.jpg',
 			mimeType: 'image/jpeg',
 			buffer: await eightMbPhoto(),
 		})
 		await expect(page.getByRole('img', { name: 'Aperçu de la photo choisie' })).toBeVisible({ timeout: 60_000 })
-		await page.getByRole('button', { name: 'Fermer' }).click()
+		await page.getByRole('button', { name: 'Annuler' }).click()
 		await page.getByRole('button', { name: 'Abandonner mes modifications' }).click()
 
-		await expect(dialogue(page)).toHaveCount(0)
+		await expect(editor(page)).toHaveCount(0)
 		expect(sent).toHaveLength(0)
 		expect(await mediaCount(account)).toBe(0)
 		expect((await storedProfile(account)).mainPicture ?? null).toBeNull()
@@ -190,14 +191,14 @@ test.describe('134 : la photo principale', { tag: '@mobile' }, () => {
 		await page.goto('/auth/profil')
 		await open(page)
 
-		await page.getByLabel('Choisir une autre photo').setInputFiles({
+		await file(page).setInputFiles({
 			name: 'nouvelle.jpg',
 			mimeType: 'image/jpeg',
 			buffer: await eightMbPhoto(),
 		})
 		await expect(page.getByRole('img', { name: 'Aperçu de la photo choisie' })).toBeVisible({ timeout: 60_000 })
 		await page.getByRole('button', { name: 'Enregistrer' }).click()
-		await expect(dialogue(page)).toHaveCount(0, { timeout: 60_000 })
+		await expect(editor(page)).toHaveCount(0, { timeout: 60_000 })
 
 		const profile = await storedProfile(account)
 		expect(profile.mainPicture).not.toBe(former)
@@ -206,25 +207,6 @@ test.describe('134 : la photo principale', { tag: '@mobile' }, () => {
 		expect(
 			await payload.findByID({ collection: 'media', id: Number(former), depth: 0, disableErrors: true })
 		).toBeNull()
-	})
-
-	test('E36 : un PDF est refusé avec son message, avant tout envoi', async ({ context, page }) => {
-		const { compte: account } = await artist(context)
-		const sent = uploads(page)
-		await page.goto('/auth/profil')
-		await open(page)
-
-		await page.getByLabel('Choisir une photo').setInputFiles({
-			name: 'cv.pdf',
-			mimeType: 'application/pdf',
-			buffer: Buffer.from('%PDF-1.7\n1 0 obj\n<<>>\nendobj\n'),
-		})
-
-		await expect(page.getByRole('alert').filter({ hasText: MESSAGES_PHOTO.type })).toBeVisible()
-		await expect(page.getByRole('button', { name: 'Enregistrer' })).toBeDisabled()
-		expect(sent).toHaveLength(0)
-		expect(await mediaCount(account)).toBe(0)
-		expect((await storedProfile(account)).mainPicture ?? null).toBeNull()
 	})
 
 	test('U03 : coupure pendant l’envoi : l’ancienne photo reste en place, le profil reste actif', async ({
@@ -237,7 +219,7 @@ test.describe('134 : la photo principale', { tag: '@mobile' }, () => {
 		await open(page)
 		await page.route('**/api/media*', route => (route.request().method() === 'POST' ? route.abort() : route.continue()))
 
-		await page.getByLabel('Choisir une autre photo').setInputFiles({
+		await file(page).setInputFiles({
 			name: 'nouvelle.jpg',
 			mimeType: 'image/jpeg',
 			buffer: await eightMbPhoto(),
@@ -246,7 +228,7 @@ test.describe('134 : la photo principale', { tag: '@mobile' }, () => {
 		await page.getByRole('button', { name: 'Enregistrer' }).click()
 
 		await expect(page.getByRole('alert').filter({ hasText: MESSAGES_PHOTO['envoi-impossible'] })).toBeVisible()
-		await expect(dialogue(page)).toBeVisible()
+		await expect(editor(page)).toBeVisible()
 		const profile = await storedProfile(account)
 		expect(profile.mainPicture).toBe(former)
 		expect(profile.active).toBe(true)

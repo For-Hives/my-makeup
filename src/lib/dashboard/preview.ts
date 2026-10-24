@@ -9,7 +9,8 @@
 
 import { type DocumentVisible, isIndexable, isList, isVisible } from '../profile/visibility'
 
-export const PREVIEW_PATH = '/auth/apercu-profil'
+/** The former address of the preview (ticket 139): it only redirects, to `previewPath()` (issue 1022). */
+export const FORMER_PREVIEW_PATH = '/auth/apercu-profil'
 export const DASHBOARD_PATH = '/auth/profil'
 
 export type PreviewCode = 'masque' | 'vide' | 'indisponible' | 'non-publiable' | 'complet'

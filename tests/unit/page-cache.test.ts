@@ -71,7 +71,7 @@ describe('les pages qui sortent du cache de Next', () => {
 		for (const path of [
 			'src/app/(front)/(dashboard)/auth/page.tsx',
 			'src/app/(front)/(dashboard)/auth/profil/page.tsx',
-			'src/app/(front)/(dashboard)/auth/apercu-profil/page.tsx',
+			'src/app/(front)/(dashboard)/auth/account/page.tsx',
 			'src/app/(front)/(dashboard)/auth/signin/page.tsx',
 		])
 			expect(read(path), path).toContain("export const dynamic = 'force-dynamic'")

@@ -3,6 +3,7 @@ import type { ActivityView } from '@/lib/dashboard/activity'
 import { listBullets } from '@/lib/dashboard/bullets'
 import type { DashboardProfile } from '@/lib/dashboard/cards'
 import { COURSES } from '@/lib/dashboard/courses'
+import { EXPERIENCES } from '@/lib/dashboard/experiences'
 import { profileRows } from '@/lib/dashboard/list'
 import { locationValues } from '@/lib/dashboard/location'
 import type { DashboardPhotos } from '@/lib/dashboard/photos'
@@ -27,6 +28,7 @@ export interface BodyActions {
 	saveSkills: BulletsSave
 	saveLanguages: BulletsSave
 	saveCourses: RowsSave
+	saveExperiences: RowsSave
 	saveServices: RowsSave
 	savePortfolio: PortfolioSave
 	saveMainPicture: MainPictureSave
@@ -133,6 +135,11 @@ export function bodyEdit({
 		),
 		services: read => (
 			<RowsBlock kind="services" rows={profileRows(SERVICE_OFFERS, profile)} save={actions.saveServices}>
+				{read}
+			</RowsBlock>
+		),
+		experiences: read => (
+			<RowsBlock kind="experiences" rows={profileRows(EXPERIENCES, profile)} save={actions.saveExperiences}>
 				{read}
 			</RowsBlock>
 		),

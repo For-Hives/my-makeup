@@ -1,3 +1,5 @@
+import { formerPreviewTarget } from '../direct-edit/edit-mode'
+
 /**
  * Where to go after signing in, and where a closed page sends a visitor (tickets 074 and 075).
  */
@@ -24,7 +26,9 @@ export function safeReturnTo(brut: unknown, origine: string, defaut: string = DE
 		if (url.origin !== base.origin) return defaut
 		if (PAGES_WITHOUT_RETURN_TO.some(page => url.pathname === page.replace(/\/$/, '') || url.pathname.startsWith(page)))
 			return defaut
-		const output = `${url.pathname}${url.search}${url.hash}`
+		// The former address of the preview goes straight to its successor (issue 1022): no hop after the sign-in.
+		const moved = formerPreviewTarget(url.pathname, url.searchParams.get('mode'))
+		const output = moved ?? `${url.pathname}${url.search}${url.hash}`
 		// A dot segment can leave a path that starts with `//` (`/.//host`): a browser reads it as another site.
 		if (/^[/\\]{2}/.test(output) || new URL(output, base).origin !== base.origin) return defaut
 		return output

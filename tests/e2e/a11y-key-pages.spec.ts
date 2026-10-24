@@ -2,7 +2,6 @@ import { expect, type Locator, test } from '@playwright/test'
 import { type PageProfile, setPageProfiles } from '../fixtures/page-profiles'
 import { createAccount, type TestAccount } from '../support/account-factory'
 import { violationsSevere } from '../support/axe'
-import { openFurtherCards } from '../support/further-cards'
 import { users } from '../support/lock'
 import { testPayload } from '../support/payload-test'
 import { createContent, deleteContent } from '../support/public-pages'
@@ -13,10 +12,9 @@ import { createContent, deleteContent } from '../support/public-pages'
  *
  * - the 12 pages anyone can open: home, search, a public profile, a talent, the blog, an article, the contact
  *   page, a legal page, the sign-in, the sign-up, the forgotten-password page, and the 404;
- * - the 3 pages of her space: the space itself, the preview of her profile and the first step of the
- *   onboarding. On the space, four panels of different kinds are opened one after the other (a text, a
- *   commune search, a list with options, the portfolio): E67 and E68 (tests/e2e/dashboard-acceptance.spec.ts)
- *   walk all twelve and the deletion.
+ * - the 3 pages of her space: her profile in edit mode (issue 1022), its preview and the first step of the
+ *   onboarding. On the profile, four blocks of different kinds are opened one after the other (a name, a
+ *   commune search, a list with options, the portfolio): tests/e2e/direct-edit-home.spec.ts walks all of them.
  *
  * Each page waits for its own heading before axe reads it. The list of the 15 is a value of this file, and the
  * last test fails if it does not hold 15 pages: a page cannot be dropped without the count saying so.
@@ -127,7 +125,7 @@ const PUBLIC_PAGES: readonly (() => KeyPage)[] = [
 
 const SPACE_PAGES = [
 	{ name: 'l’espace', path: '/auth/profil' },
-	{ name: 'l’aperçu du profil', path: '/auth/apercu-profil' },
+	{ name: 'l’aperçu du profil', path: '/auth/profil?mode=preview' },
 	{ name: 'la première étape de l’accueil', path: '/auth/init-account' },
 ] as const
 
@@ -192,31 +190,31 @@ async function fullArtist(context: { addCookies: (c: Artist['session']['cookies'
 }
 
 test.describe('178 : les 3 pages de l’espace, panneaux ouverts', { tag: '@mobile' }, () => {
-	test('l’espace et quatre panneaux de nature différente : aucune violation grave', async ({ context, page }) => {
+	test('l’espace et quatre blocs de nature différente : aucune violation grave', async ({ context, page }) => {
 		test.setTimeout(120_000)
 		await fullArtist(context)
 		await page.goto(SPACE_PAGES[0].path)
-		await expect(page.getByRole('heading', { level: 1, name: 'Mon espace' })).toBeVisible()
-		await expect(page.getByTestId('carte-identite')).toBeVisible()
+		// Her space is her profile (issue 1022): the name is the h1, the gauge sits above it.
+		await expect(page.getByRole('heading', { level: 1, name: 'Léa Axe' })).toBeVisible()
+		await expect(page.getByTestId('completeness')).toBeVisible()
 		expect(await violationsSevere(page), SPACE_PAGES[0].name).toEqual([])
-		// The folded group « Pour aller plus loin » (ticket 307): its cards are read too once it is open.
-		await openFurtherCards(page)
-		expect(await violationsSevere(page), `${SPACE_PAGES[0].name}, groupe ouvert`).toEqual([])
+		// The list of what she lacks, opened: its links are read too.
+		await page.getByTestId('completeness-others').locator('summary').click()
+		expect(await violationsSevere(page), `${SPACE_PAGES[0].name}, liste ouverte`).toEqual([])
 
-		for (const panel of [
-			'Modifier mon identité',
-			'Modifier ma localisation',
+		for (const block of [
+			'Modifier mon nom et ma spécialité',
+			'Modifier ma zone',
 			'Modifier mes prestations',
 			'Modifier mon portfolio',
 		]) {
-			const button = page.getByRole('button', { name: panel, exact: true })
+			const button = page.getByRole('button', { name: block, exact: true })
 			await button.scrollIntoViewIfNeeded()
 			await press(button)
-			await expect(page.getByRole('dialog'), panel).toBeVisible()
-			await expect(page.locator('[role="dialog"] :focus, [role="dialog"]:focus').first(), panel).toBeAttached()
-			expect(await violationsSevere(page), panel).toEqual([])
+			await expect(page.locator('[data-direct-edit-editor]'), block).toBeVisible()
+			expect(await violationsSevere(page), block).toEqual([])
 			await page.keyboard.press('Escape')
-			await expect(page.getByRole('dialog'), panel).toHaveCount(0)
+			await expect(page.locator('[data-direct-edit-editor]'), block).toHaveCount(0)
 		}
 	})
 

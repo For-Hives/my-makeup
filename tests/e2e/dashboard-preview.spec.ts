@@ -4,7 +4,7 @@ import { violationsSevere } from '../support/axe'
 import { testPayload } from '../support/payload-test'
 
 /**
- * « Voir mon profil public » (ticket 139; plan 02 RG-06): a link that works at 390, 1024 and 1440 px,
+ * « Aperçu » (ticket 139, moved to the bar of her page by issue 1022; plan 02 RG-06): a link that works at 390, 1024 and 1440 px,
  * a preview with the content of the public page, a banner that says where the profile stands, and a
  * page that is private and not indexed. All made-up people.
  *
@@ -45,7 +45,7 @@ const overflow = (page: Page) =>
 	page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
 
 test.describe('139 : voir mon profil public', { tag: '@mobile' }, () => {
-	test('RG-06 : le lien est visible, cliquable à 390, 1024 et 1440 px, et mène à l’aperçu', async ({
+	test('RG-06 : « Aperçu » est visible, cliquable à 390, 1024 et 1440 px, et mène à l’aperçu', async ({
 		context,
 		page,
 	}) => {
@@ -53,13 +53,13 @@ test.describe('139 : voir mon profil public', { tag: '@mobile' }, () => {
 		for (const width of [390, 1024, 1440]) {
 			await page.setViewportSize({ width: width, height: 900 })
 			await page.goto('/auth/profil')
-			const link = page.getByRole('link', { name: 'Voir mon profil public' })
+			const link = page.getByTestId('mode-apercu')
 			await expect(link).toBeVisible()
 			const mailbox = await link.boundingBox()
 			expect(mailbox?.height ?? 0, `hauteur du lien à ${width} px`).toBeGreaterThanOrEqual(44)
 			expect(await overflow(page), `débordement à ${width} px`).toBeLessThanOrEqual(0)
 			await link.click()
-			await expect(page).toHaveURL(/\/auth\/apercu-profil$/)
+			await expect(page).toHaveURL(/\/auth\/profil\?mode=preview$/)
 			await expect(page.getByRole('heading', { level: 1, name: 'Léa Aperçu' })).toBeVisible()
 			expect(await overflow(page), `débordement de l’aperçu à ${width} px`).toBeLessThanOrEqual(0)
 		}
@@ -71,7 +71,7 @@ test.describe('139 : voir mon profil public', { tag: '@mobile' }, () => {
 		request,
 	}) => {
 		const { slug } = await artist(context, FULL)
-		await page.goto('/auth/apercu-profil')
+		await page.goto('/auth/profil?mode=preview')
 		const banner = page.getByTestId('bandeau-apercu')
 		await expect(banner).toHaveAttribute('data-etat', 'non-publiable')
 
@@ -88,7 +88,7 @@ test.describe('139 : voir mon profil public', { tag: '@mobile' }, () => {
 			expect(await publicValue.text()).toContain(text)
 		}
 
-		const response = await page.request.get('/auth/apercu-profil')
+		const response = await page.request.get('/auth/profil?mode=preview')
 		expect(response.headers()['cache-control']).toBe('private, no-store')
 		expect(response.headers()['x-robots-tag']).toContain('noindex')
 		expect(await page.locator('meta[name="robots"]').getAttribute('content')).toContain('noindex')
@@ -104,10 +104,10 @@ test.describe('139 : voir mon profil public', { tag: '@mobile' }, () => {
 		request,
 	}) => {
 		const { slug } = await artist(context, { firstName: 'Zoé', lastName: 'Brouillon', available: false })
-		await page.goto('/auth/apercu-profil')
+		await page.goto('/auth/profil?mode=preview')
 		await expect(page.getByTestId('bandeau-apercu')).toHaveAttribute('data-etat', 'indisponible')
 		await expect(page.getByRole('heading', { level: 1, name: 'Zoé Brouillon' })).toBeVisible()
-		await expect(page.getByRole('link', { name: 'Modifier mon profil' })).toBeVisible()
+		await expect(page.getByRole('link', { name: 'Modifier ma page' })).toBeVisible()
 		// A visitor without a session is sent to the sign-in page, in one redirection.
 		const visitor = await request.get('/auth/apercu-profil', { maxRedirects: 0 })
 		expect(visitor.status()).toBe(307)

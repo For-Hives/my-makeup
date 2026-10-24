@@ -1,16 +1,15 @@
 import { expect, type Locator, type Page, test } from '@playwright/test'
 import { createAccount, type TestAccount } from '../support/account-factory'
 import { violationsSevere } from '../support/axe'
-import { openFurtherCards } from '../support/further-cards'
 import { testPayload } from '../support/payload-test'
 import { fileForPayload } from '../support/photos'
 
 /**
  * The last check of the lessons of October on the lists edited in place (ticket 178; docs/qualite.md §3,
- * rules L4 and L5), played in a real browser on every list of the space, once all the sections are delivered:
+ * rules L4 and L5), played in a real browser on every list of her page (the blocks of the direct edition, issue 1022):
  *
- * - L4: after a removal, the focus stays inside the panel, by the keyboard and by a click or a tap;
- * - L5: the status zone is there and empty when the panel opens, and each removal is said in it.
+ * - L4: after a removal, the focus stays inside the editor, by the keyboard and by a click or a tap;
+ * - L5: the status zone is there and empty when the editor opens, and each removal is said in it.
  *
  * The seven lists: languages, skills (the chips), experiences, courses, service offers, the options of an
  * offer, and the photos of the portfolio. Each list has two rows or more, so a removal never empties it.
@@ -90,99 +89,108 @@ async function artistWithLists(context: { addCookies: (c: Artist['session']['coo
 const isMobile = () => test.info().project.name === 'mobile'
 const press = (cible: Locator) => (isMobile() ? cible.tap() : cible.click())
 
-const dialog = (page: Page) => page.getByRole('dialog')
+const editor = (page: Page) => page.locator('[data-direct-edit-editor]')
 
-/** True when the element that has the focus is inside the open panel. */
+/** True when the element that has the focus is inside the open editor. */
 const focusInPanel = (page: Page) =>
 	page.evaluate(() => {
-		const panel = document.querySelector('[role="dialog"]')
+		const panel = document.querySelector('[data-direct-edit-editor]')
 		const active = document.activeElement
 		return Boolean(panel && active && active !== panel && panel.contains(active))
 	})
 
 interface List {
 	name: string
-	/** The button of the card that opens the panel. */
+	/** The button of the block that opens the editor. */
 	open: string
-	/** The buttons that remove a row of the list, inside the panel. */
+	/** The buttons that remove a row of the list, inside the editor. */
 	removals: (page: Page) => Locator
+	/** The zone that says each removal. */
+	zone: (page: Page) => Locator
 	/** What the status zone says after the removal of the first row. */
 	announced: RegExp
-	/** Opens the part of the panel the removals are in, when it is not in view at once. */
+	/** Opens the part of the editor the removals are in, when it is not in view at once. */
 	prepare?: (page: Page) => Promise<void>
 }
+
+const announcement = (page: Page) => editor(page).getByTestId('removal-announcement')
+const rowRemovals = (page: Page) => editor(page).locator('li[data-row] button[data-remove]')
 
 const LISTS: readonly List[] = [
 	{
 		name: 'les langues',
 		open: 'Modifier mes langues',
-		removals: page => dialog(page).getByRole('button', { name: /^Retirer / }),
+		removals: page => editor(page).locator('button[data-remove]'),
+		zone: announcement,
 		announced: /^Langue Français retirée$/,
 	},
 	{
 		name: 'les compétences',
 		open: 'Modifier mes compétences',
-		removals: page => dialog(page).getByRole('button', { name: /^Retirer / }),
+		removals: page => editor(page).locator('button[data-remove]'),
+		zone: announcement,
 		announced: /^Compétence Teint retirée$/,
 	},
 	{
 		name: 'les expériences',
 		open: 'Modifier mes expériences',
-		removals: page => dialog(page).getByRole('button', { name: /^Retirer / }),
+		removals: rowRemovals,
+		zone: announcement,
 		announced: /^Expérience Studio Fictif retirée$/,
 	},
 	{
 		name: 'les formations',
 		open: 'Modifier mes formations',
-		removals: page => dialog(page).getByRole('button', { name: /^Retirer / }),
+		removals: rowRemovals,
+		zone: announcement,
 		announced: /^Formation CAP esthétique retirée$/,
 	},
 	{
 		name: 'les prestations',
 		open: 'Modifier mes prestations',
-		removals: page => dialog(page).locator('li[data-ligne] button[aria-label^="Retirer "]'),
+		removals: rowRemovals,
+		zone: announcement,
 		announced: /^Prestation Maquillage de mariée retirée$/,
 	},
 	{
 		name: 'les options d’une prestation',
 		open: 'Modifier mes prestations',
-		removals: page => dialog(page).locator('[data-retirer-option]'),
+		removals: page => editor(page).getByRole('button', { name: /^Retirer l’option / }),
+		zone: announcement,
 		announced: /^Option Essai retirée$/,
 		prepare: async page => {
 			await press(
-				dialog(page)
-					.locator('li[data-ligne]')
+				editor(page)
+					.locator('li[data-row]')
 					.first()
 					.getByRole('button', { name: /^Modifier / })
 			)
-			await expect(dialog(page).locator('li[data-option]')).toHaveCount(2)
+			await expect(editor(page).getByRole('button', { name: /^Retirer l’option / })).toHaveCount(2)
 		},
 	},
 	{
 		name: 'les photos du portfolio',
 		open: 'Modifier mon portfolio',
-		removals: page => dialog(page).getByRole('button', { name: /^Retirer la photo / }),
+		removals: page => editor(page).getByRole('button', { name: /^Retirer la photo / }),
+		zone: page => editor(page).getByTestId('gallery-announcement'),
 		announced: /^Photo 1 sur 3 de ton portfolio est retirée\./,
 	},
 ]
 
-test.describe('178 : chaque liste de l’espace, au retrait d’une ligne', { tag: '@mobile' }, () => {
+test.describe('178 : chaque liste de sa page, au retrait d’une ligne', { tag: '@mobile' }, () => {
 	for (const list of LISTS) {
-		test(`L4, L5 : ${list.name} : le focus reste dans le panneau, le retrait est annoncé`, async ({
-			context,
-			page,
-		}) => {
+		test(`L4, L5 : ${list.name} : le focus reste dans l’éditeur, le retrait est annoncé`, async ({ context, page }) => {
 			test.setTimeout(90_000)
 			await artistWithLists(context)
 			await page.goto('/auth/profil')
-			await openFurtherCards(page)
-			await expect(page.getByRole('heading', { level: 1, name: 'Mon espace' })).toBeVisible()
+			await expect(page.getByTestId('completeness')).toBeVisible()
+			await page.waitForLoadState('networkidle')
 			await press(page.getByRole('button', { name: list.open, exact: true }))
-			await expect(dialog(page)).toBeVisible()
+			await expect(editor(page)).toBeVisible()
 			await list.prepare?.(page)
 
-			// L5: the zone is there when the panel opens, and empty.
-			const zone = dialog(page).getByRole('status')
+			// L5: the zone is there when the editor opens, and empty.
+			const zone = list.zone(page)
 			await expect(zone).toBeAttached()
 			await expect(zone).toHaveText('')
 

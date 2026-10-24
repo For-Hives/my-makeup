@@ -193,7 +193,14 @@ test.describe('Pages publiques en cache (269)', () => {
 	})
 
 	test('les pages de la session ne sont jamais dans un cache partagé', async ({ request }) => {
-		for (const path of ['/auth', '/auth/signin', '/auth/signup', '/auth/profil', '/auth/apercu-profil']) {
+		for (const path of [
+			'/auth',
+			'/auth/signin',
+			'/auth/signup',
+			'/auth/profil',
+			'/auth/account',
+			'/auth/apercu-profil',
+		]) {
 			const page = await visit(request, path)
 			expect(page.cacheControl, path).toContain('private')
 			expect(page.cacheControl, path).toContain('no-store')

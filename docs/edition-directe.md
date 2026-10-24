@@ -4,13 +4,21 @@ Issue 1008 (cadre : 1007). L'espace de la maquilleuse devient le profil public l
 
 ## Ce qui existe
 
-- **Le mode édition** est celui de la page privée `/auth/apercu-profil?mode=edition` (`src/lib/direct-edit/edit-mode.ts`). Sans le paramètre, la page est l'aperçu d'une visiteuse, inchangé. Les deux sont `private, no-store` et `noindex`. Jamais sur `/profil/<slug>` : son HTML est servi du cache partagé et ne lit ni cookie ni en-tête.
+- **Le mode édition** est la page privée `/auth/profil` (`src/lib/direct-edit/edit-mode.ts`) : l'espace de la maquilleuse EST son profil. Avec `?mode=preview`, la même route est l'aperçu d'une visiteuse, inchangé. L'ancienne adresse `/auth/apercu-profil` redirige (308, un saut). Les deux sont `private, no-store` et `noindex`. Jamais sur `/profil/<slug>` : son HTML est servi du cache partagé et ne lit ni cookie ni en-tête.
 - **Un composant, deux modes.** `ProfileView` et `ProfileHeader` reçoivent, en mode édition seulement, des *emplacements* (`src/components/profile/edit-slots.ts`) : des fonctions qui enveloppent chaque bloc. Sans emplacements, le HTML est celui d'avant (garde : `tests/unit/direct-edit-read-mode.test.tsx`, fichiers de référence dans `tests/fixtures/direct-edit/`). Rien du chemin public n'importe `src/components/direct-edit/` : le code d'édition et les polices ne sont chargés que pour la propriétaire.
 - **Le bloc éditable** (`EditableBlock`) : un bouton couvre tout le bloc et porte son nom (« Modifier ma photo principale ») ; un crayon toujours visible, « Modifier » au survol et au focus ; une invitation à la place du contenu quand il est vide ; l'éditeur s'ouvre sur place, sous l'en-tête, les autres blocs estompés. Un seul bloc ouvert à la fois.
 - **La session d'édition** (`EditSession`) : le bloc ouvert, les modifications non enregistrées (question « Continuer à modifier / Abandonner mes modifications » à la fermeture, à l'ouverture d'un autre bloc, à Échap), l'état du dernier enregistrement dit dans la barre (`role="status"`). L'enregistrement suit la réponse du serveur : la page est relue (`router.refresh()`) seulement après « ok ».
 - **Le formulaire de bloc** (`BlockForm`) : Annuler / Enregistrer, un seul envoi à la fois, échec en français avec la saisie gardée, session expirée distinguée (lien de reconnexion dans un autre onglet, saisie intacte).
 - **Les blocs de l'en-tête** (`blocks/`) : photo principale, nom et spécialité (les quatre champs partent ensemble : le serveur n'en accepte pas moins), zone (le champ unique de l'espace), disponibilité. Ils réutilisent les actions serveur de l'espace (`saveMyMainPicture`, `saveMyIdentity`, `saveMyLocation`, `saveMyAvailability`) : mêmes gardes (session relue, origine, profil trouvé par le compte), mêmes limites d'envoi des photos (issue 309). Aucune règle d'accès nouvelle.
 - **Les jetons** de la direction artistique sont dans `src/app/(front)/globals.css` (`@theme`) : `blush`, `ink`, `lipstick` (réservé à ce qui se modifie), `nude-*`, `hairline`, `mute`, `rounded-card`, `font-display`, `font-body`. Bodoni Moda et Instrument Sans sont chargés par `src/components/direct-edit/fonts.ts`, importé par la seule route privée.
+
+## L'espace s'ouvre sur le profil (issue 1022)
+
+`/auth/profil` (`src/app/(front)/(dashboard)/auth/profil/page.tsx`) empile : la barre `EditBar` (état de l'enregistrement, « Édition » / « Aperçu », « Mon compte »), le bandeau « Il te reste N étapes » tant que l'accueil n'est pas fini, `CompletenessPanel`, la page (`ProfileView` avec ses emplacements), puis ses vues et ses demandes de devis. Les compte (déconnexion, mot de passe, suppression) sont sur `/auth/account`.
+
+- **La jauge** lit `profileProgress` (la règle unique) : `gaugePercent` est le pourcentage des 13 critères, plafonné à 99 tant qu'un point indispensable manque (les 13 critères et les 6 conditions ne sont pas les mêmes). Chaque point est un lien vers `#bloc-<id>` que `CRITERION_BLOCK` (`src/lib/direct-edit/blocks.ts`) donne pour chaque critère : un critère sans bloc ne compile pas. Un appui ouvre le bloc par la session d'édition.
+- **Quitter la page avec une saisie** : `EditSession.leave` demande avant d'aller à l'aperçu ou à « Mon compte » (le garde du navigateur ne voit pas une navigation du routeur).
+- **Les expériences** sont un bloc (`RowsBlock`, `kind="experiences"`) : la dernière liste de l'ancien espace.
 
 ## Les blocs du corps de la page
 

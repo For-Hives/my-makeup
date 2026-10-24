@@ -15,6 +15,7 @@ import {
 import { comesFromOtherSite, RELAY_HEADERS, relayPage } from '@/lib/auth/relay-page'
 import { REFUSAL_PATH, SIGN_UP_PATH, secondsBeforeSignUp } from '@/lib/auth/sign-up-refusal'
 import { CONTACT_PATH, CONTACT_THROTTLED_PATH, secondsBeforeThisRequestMessage } from '@/lib/contact/rate-limit'
+import { EDIT_QUERY, formerPreviewTarget } from '@/lib/direct-edit/edit-mode'
 import { rateLimitSearch } from '@/lib/search/rate-limit'
 import { robotsForPath } from '@/lib/seo/robots'
 import { uploadRefusal } from '@/lib/upload-guard'
@@ -216,6 +217,20 @@ function siteProxy(requete: NextRequest) {
 		const relayDirective = robotsForPath(pathname)
 		if (relayDirective) relay.headers.set('X-Robots-Tag', relayDirective)
 		return withCleanup(relay)
+	}
+	const former =
+		requete.method === 'GET' ? formerPreviewTarget(pathname, requete.nextUrl.searchParams.get(EDIT_QUERY)) : null
+	if (former !== null) {
+		// The former address of the preview (issue 1022): one permanent hop to the page of her profile, a session cookie present.
+		const [path = '', searchQuery = ''] = former.split('?')
+		const target = requete.nextUrl.clone()
+		target.pathname = path
+		target.search = searchQuery ? `?${searchQuery}` : ''
+		const moved = NextResponse.redirect(target, 308)
+		moved.headers.set('Cache-Control', 'private, no-store')
+		const movedDirective = robotsForPath(pathname)
+		if (movedDirective) moved.headers.set('X-Robots-Tag', movedDirective)
+		return withCleanup(moved)
 	}
 	const response = withCleanup(NextResponse.next({ request: { headers: headers } }))
 	const robotsDirective = robotsForPath(pathname)

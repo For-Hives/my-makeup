@@ -96,7 +96,7 @@ for (const size of SIZES) {
 			})
 
 			// Her page: the badge, what it says, and the card of her SIRET that says it is shown.
-			await page.goto('/auth/apercu-profil?mode=edition')
+			await page.goto('/auth/profil')
 			await expect(page.getByText(BADGE_LABEL, { exact: true }).first()).toBeVisible()
 			await expect(page.getByText('contrôlé le 20 octobre 2026')).toBeVisible()
 			await expect(block(page, 'siret')).toContainText(`Le badge « ${BADGE_LABEL} » s’affiche sur ta page.`)

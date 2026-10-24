@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { PreviewBanner } from '@/components/dashboard/PreviewBanner'
-import { DASHBOARD_PATH, PREVIEW_PATH, previewState } from '@/lib/dashboard/preview'
+import { FORMER_PREVIEW_PATH, previewState } from '@/lib/dashboard/preview'
+import { editPath } from '@/lib/direct-edit/edit-mode'
 
 /**
  * The preview of her own page (ticket 139; plan 02 RG-06): the banner says where her profile stands,
@@ -50,15 +51,16 @@ describe('139 : le bandeau', () => {
 			const html = renderToStaticMarkup(<PreviewBanner etat={state} />)
 			expect(html).toContain(`data-etat="${state.code}"`)
 			expect(html).toContain(state.titre)
-			expect(html).toContain(`href="${DASHBOARD_PATH}"`)
-			expect(html).toContain('Modifier mon profil')
+			expect(html).toContain(`href="${editPath()}"`)
+			expect(html).toContain('Modifier ma page')
 			expect(html).not.toMatch(/\b(?:undefined|null)\b/)
 		}
 	})
 
-	test('l’aperçu est une page de l’espace : privée et sans cache comme lui', async () => {
+	test('l’aperçu est un mode de la page du profil, privée comme elle ; l’ancienne adresse reste fermée sans session', async () => {
 		const { isPrivatePage: isPagePrivate } = await import('@/lib/auth/closed-dashboard')
-		expect(PREVIEW_PATH.startsWith('/auth/')).toBe(true)
-		expect(isPagePrivate(PREVIEW_PATH)).toBe(true)
+		const { previewPath } = await import('@/lib/direct-edit/edit-mode')
+		expect(isPagePrivate(previewPath().split('?')[0] ?? '')).toBe(true)
+		expect(isPagePrivate(FORMER_PREVIEW_PATH)).toBe(true)
 	})
 })

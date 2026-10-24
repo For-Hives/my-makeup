@@ -48,7 +48,7 @@ const exists = async (collection: 'pros' | 'profiles' | 'media', id: number | st
 	null
 
 async function openWindow(page: Page) {
-	await page.goto('/auth/profil')
+	await page.goto('/auth/account')
 	await expect(page.getByTestId('zone-suppression')).toBeVisible()
 	await page.getByTestId('zone-suppression').getByRole('button', { name: 'Supprimer mon compte' }).click()
 	await expect(page.getByRole('dialog', { name: 'Supprimer mon compte' })).toBeVisible()
@@ -102,7 +102,8 @@ test.describe('141 : supprimer mon compte', { tag: '@mobile' }, () => {
 		const { compte: account } = await artist(context)
 		const uploads: string[] = []
 		page.on('request', requete => {
-			if (requete.method() === 'POST' && new URL(requete.url()).pathname === '/auth/profil') uploads.push(requete.url())
+			if (requete.method() === 'POST' && new URL(requete.url()).pathname === '/auth/account')
+				uploads.push(requete.url())
 		})
 		await openWindow(page)
 		await field(page).fill(PASSWORD)

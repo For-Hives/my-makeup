@@ -200,7 +200,8 @@ test.describe('ticket 296 : revenir avec un profil encore vide', { tag: '@mobile
 	test('un lien précis vers une page privée est respecté', async ({ page }) => {
 		const email = await newAccount()
 		await signInFrom(page, email, '/auth/apercu-profil')
-		await expect(page).toHaveURL(/\/auth\/apercu-profil$/)
+		// The former address of the preview goes on, for good and in one hop, to the page of her profile (issue 1022).
+		await expect(page).toHaveURL(/\/auth\/profil\?mode=preview$/)
 	})
 
 	test('un compte repris sans profil : l’accueil, et le profil est créé', async ({ page }) => {
@@ -345,7 +346,7 @@ test.describe('E02 : l’accueil en cinq étapes', { tag: '@mobile' }, () => {
 		await expect(page.getByTestId('brouillon-manques')).toContainText('200 caractères')
 		await expect(page.getByRole('link', { name: 'Compléter ma page' })).toHaveAttribute(
 			'href',
-			/mode=edition#bloc-about$/
+			/\/auth\/profil#bloc-about$/
 		)
 		await takeScreenshot(page, 'fin-non-publiable')
 		await expectLayout(page)
@@ -626,7 +627,7 @@ test.describe('E02 : l’accueil en cinq étapes', { tag: '@mobile' }, () => {
 
 		// She leaves, and comes back later: step 2, not step 1.
 		await page.goto('/auth/profil')
-		await expect(page.getByRole('heading', { name: 'Mon espace' })).toBeVisible()
+		await expect(page.getByTestId('completeness')).toBeVisible()
 		await page.goto(PAGE)
 		await expect(title(page)).toHaveText('Ta zone')
 		await expect(page.locator('[aria-current="step"]')).toContainText('Où')

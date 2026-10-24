@@ -108,7 +108,7 @@ Elles ne sont pas sous `ci-ok` : elles tournent le lundi à 07:00 par `.github/w
 | U51 | vert | `tests/unit/share-open-graph.test.ts`, `tests/e2e/share-open-graph.spec.ts` |  |
 | U52 | vert | `tests/unit/seo-base.test.ts` |  |
 | U53 | vert | `tests/unit/access.test.ts`, `tests/integration/profile-public-read.test.ts`, `tests/integration/payload-access.test.ts` |  |
-| U54 | vert | `tests/unit/access.test.ts`, `tests/integration/dashboard-identity.test.ts`, `tests/e2e/dashboard-profile.spec.ts` (+1) |  |
+| U54 | vert | `tests/unit/access.test.ts`, `tests/integration/dashboard-identity.test.ts`, `tests/e2e/direct-edit-ownership.spec.ts` (+1) |  |
 | U55 | vert | `tests/unit/access.test.ts`, `tests/integration/profile-public-read.test.ts`, `tests/integration/payload-access.test.ts` |  |
 | U56 | vert | `tests/unit/access.test.ts`, `tests/integration/media-read.test.ts`, `tests/integration/payload-access.test.ts` |  |
 | U57 | vert | `tests/unit/access.test.ts`, `tests/integration/payload-access.test.ts` |  |
@@ -161,7 +161,7 @@ Elles ne sont pas sous `ci-ok` : elles tournent le lundi à 07:00 par `.github/w
 | I17 | vert | `tests/integration/auth-forgot-password.test.ts` |  |
 | I18 | vert | `tests/integration/payload-hooks.test.ts` |  |
 | I19 | vert | `tests/integration/dashboard-identity.test.ts`, `tests/integration/payload-hooks.test.ts`, `tests/integration/dashboard-location.test.ts` |  |
-| I20 | vert | `tests/integration/dashboard-progress.test.ts`, `tests/integration/profile-completeness.test.ts`, `tests/e2e/dashboard-progress.spec.ts` |  |
+| I20 | vert | `tests/integration/dashboard-progress.test.ts`, `tests/integration/profile-completeness.test.ts`, `tests/e2e/direct-edit-completeness.spec.ts` |  |
 | I21 | vert | `tests/unit/revalidate.test.ts`, `tests/integration/revalidate.test.ts`, `tests/e2e/page-freshness.spec.ts` |  |
 | I22 | vert | `tests/integration/migrations.test.ts`, `tests/unit/migration-init.test.ts` |  |
 | I23 | vert | `tests/integration/photo-upload.test.ts` |  |
@@ -202,28 +202,28 @@ Elles ne sont pas sous `ci-ok` : elles tournent le lundi à 07:00 par `.github/w
 | E13 | vert | `tests/e2e/expired-session.spec.ts` |  |
 | E14 | vert | `tests/e2e/sliding-session.spec.ts` |  |
 | E15 | vert | `tests/e2e/forgot-password.spec.ts`, `tests/integration/auth-forgot-password.test.ts` |  |
-| E16 | vert | `tests/e2e/private-dashboard.spec.ts`, `tests/e2e/dashboard-profile.spec.ts` |  |
+| E16 | vert | `tests/e2e/private-dashboard.spec.ts`, `tests/e2e/direct-edit-ownership.spec.ts` |  |
 | E17 | vert | `tests/e2e/sign-out.spec.ts` |  |
 | E18 | vert | `tests/e2e/legacy-cookies.spec.ts` |  |
-| E19 | vert | `tests/e2e/dashboard-profile.spec.ts`, `tests/unit/dashboard-availability.test.tsx` | section : l’identité |
+| E19 | vert | `tests/e2e/direct-edit-header.spec.ts`, `tests/unit/dashboard-availability.test.tsx` | section : l’identité |
 | E20 | vert | `tests/e2e/dashboard-description.spec.ts`, `tests/integration/dashboard-availability.test.ts` | section : la description |
-| E21 | vert | `tests/e2e/dashboard-lists.spec.ts`, `tests/integration/dashboard-availability.test.ts` | section : la zone |
-| E22 | vert | `tests/e2e/dashboard-bullets.spec.ts`, `tests/integration/dashboard-availability.test.ts` | section : les compétences |
-| E23 | vert | `tests/e2e/dashboard-lists.spec.ts`, `tests/integration/dashboard-availability.test.ts` | section : les formations |
-| E24 | vert | `tests/e2e/dashboard-lists.spec.ts`, `tests/integration/dashboard-availability.test.ts` | section : les expériences |
-| E25 | vert | `tests/e2e/dashboard-bullets.spec.ts`, `tests/integration/dashboard-availability.test.ts` | section : les langues |
-| E26 | vert | `tests/e2e/dashboard-networks-contact-details.spec.ts`, `tests/integration/dashboard-availability.test.ts` | section : les réseaux et les coordonnées |
-| E27 | vert | `tests/e2e/dashboard-lists.spec.ts`, `tests/integration/dashboard-availability.test.ts` | section : les offres et leurs options |
-| E28 | vert | `tests/e2e/dashboard-availability.spec.ts`, `tests/integration/dashboard-availability.test.ts` | section : la disponibilité |
-| E29 | vert | `tests/e2e/dashboard-photo.spec.ts`, `tests/integration/dashboard-availability.test.ts` | section : la photo principale |
+| E21 | vert | `tests/e2e/direct-edit-zone.spec.ts`, `tests/integration/dashboard-availability.test.ts` | section : la zone |
+| E22 | vert | `tests/e2e/direct-edit-about.spec.ts`, `tests/integration/dashboard-availability.test.ts` | section : les compétences |
+| E23 | vert | `tests/e2e/direct-edit-about.spec.ts`, `tests/integration/dashboard-availability.test.ts` | section : les formations |
+| E24 | vert | `tests/e2e/direct-edit-about.spec.ts`, `tests/integration/dashboard-availability.test.ts` | section : les expériences |
+| E25 | vert | `tests/e2e/direct-edit-about.spec.ts`, `tests/integration/dashboard-availability.test.ts` | section : les langues |
+| E26 | vert | `tests/e2e/direct-edit-contacts.spec.ts`, `tests/integration/dashboard-availability.test.ts` | section : les réseaux et les coordonnées |
+| E27 | vert | `tests/e2e/direct-edit-services.spec.ts`, `tests/integration/dashboard-availability.test.ts` | section : les offres et leurs options |
+| E28 | vert | `tests/e2e/direct-edit-header.spec.ts`, `tests/integration/dashboard-availability.test.ts` | section : la disponibilité |
+| E29 | vert | `tests/e2e/direct-edit-photo.spec.ts`, `tests/integration/dashboard-availability.test.ts` | section : la photo principale |
 | E30 | vert | `tests/unit/dashboard-bullets-panel.test.tsx`, `tests/unit/dashboard-bullets.test.ts`, `tests/unit/dashboard-location-panel.test.tsx` (+9) |  |
 | E31 | vert | `tests/unit/dashboard-bullets-panel.test.tsx`, `tests/unit/dashboard-description-panel.test.tsx`, `tests/unit/dashboard-lists-panels.test.tsx` (+10) |  |
-| E32 | vert | `tests/unit/dashboard-panel.test.tsx`, `tests/e2e/dashboard-profile.spec.ts` |  |
+| E32 | vert | `tests/unit/dashboard-panel.test.tsx`, `tests/e2e/direct-edit-header.spec.ts` |  |
 | E33 | vert | `tests/e2e/dashboard-deletion.spec.ts`, `tests/unit/dashboard-deletion.test.tsx`, `tests/integration/dashboard-deletion.test.ts` |  |
-| E34 | vert | `tests/unit/dashboard-portfolio-panel.test.tsx`, `tests/integration/dashboard-portfolio.test.ts`, `tests/e2e/dashboard-portfolio.spec.ts` |  |
-| E35 | vert | `tests/unit/dashboard-portfolio-panel.test.tsx`, `tests/integration/dashboard-portfolio.test.ts`, `tests/e2e/dashboard-portfolio.spec.ts` |  |
+| E34 | vert | `tests/unit/dashboard-portfolio-panel.test.tsx`, `tests/integration/dashboard-portfolio.test.ts`, `tests/e2e/direct-edit-portfolio.spec.ts` |  |
+| E35 | vert | `tests/unit/dashboard-portfolio-panel.test.tsx`, `tests/integration/dashboard-portfolio.test.ts`, `tests/e2e/direct-edit-portfolio.spec.ts` |  |
 | E36 | vert | `tests/unit/dashboard-photo-panel.test.tsx`, `tests/unit/dashboard-photo.test.ts`, `tests/unit/dashboard-portfolio-panel.test.tsx` (+4) |  |
-| E37 | vert | `tests/e2e/dashboard-acceptance.spec.ts` |  |
+| E37 | vert | `tests/e2e/direct-edit-acceptance.spec.ts` |  |
 | E38 | vert | `tests/e2e/city-search.spec.ts` |  |
 | E39 | vert | `tests/e2e/keyword-search.spec.ts` | adapté |
 | E40 | vert | `tests/e2e/keyword-search.spec.ts` |  |
@@ -253,8 +253,8 @@ Elles ne sont pas sous `ci-ok` : elles tournent le lundi à 07:00 par `.github/w
 | E64 | vert | `tests/e2e/artist-pages.spec.ts`, `tests/e2e/blog-list.spec.ts`, `tests/e2e/home.spec.ts` (+2) |  |
 | E65 | vert | `tests/unit/blog-article.test.ts`, `tests/e2e/blog-article.spec.ts`, `tests/e2e/profile-seo.spec.ts` (+2) |  |
 | E66 | vert | `tests/e2e/public-profile.spec.ts` |  |
-| E67 | vert | `tests/e2e/dashboard-acceptance.spec.ts`, `tests/e2e/a11y-key-pages.spec.ts` |  |
-| E68 | vert | `tests/unit/dashboard-panel.test.tsx`, `tests/e2e/dashboard-acceptance.spec.ts`, `tests/e2e/dashboard-profile.spec.ts` (+1) |  |
+| E67 | vert | `tests/e2e/direct-edit-acceptance.spec.ts`, `tests/e2e/a11y-key-pages.spec.ts` |  |
+| E68 | vert | `tests/unit/dashboard-panel.test.tsx`, `tests/e2e/direct-edit-acceptance.spec.ts`, `tests/e2e/direct-edit-header.spec.ts` (+1) |  |
 | E69 | vert | `tests/unit/contact-form.test.tsx`, `tests/e2e/contact.spec.ts` |  |
 | E70 | hors bascule | ticket 214 | le parcours mobile avec demande de devis |
 | E71 | vert | `tests/e2e/layout.spec.ts` |  |

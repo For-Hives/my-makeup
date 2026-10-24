@@ -275,7 +275,7 @@ describe('un enregistrement honnête', () => {
 		await jsdomWindow.attendre(() => alerts().includes(MESSAGE_SESSION) || null)
 		const link = doc().querySelector<HTMLAnchorElement>('[role="alert"] a')
 		expect(link?.getAttribute('href')).toContain('/auth/signin?callbackUrl=')
-		expect(decodeURIComponent(link?.getAttribute('href') ?? '')).toContain('/auth/apercu-profil?mode=edition')
+		expect(decodeURIComponent(link?.getAttribute('href') ?? '')).toContain('/auth/profil')
 		expect(link?.getAttribute('target')).toBe('_blank')
 		expect((jsdomWindow.champ('Autre (précise)') as HTMLInputElement).value).toBe('Maquillage soirée')
 	})

@@ -64,7 +64,7 @@ test.describe('E14 : une activité régulière prolonge la session', { tag: '@le
 			page.goto('/auth/profil'),
 		])
 		expect(response.status()).toBe(200)
-		await expect(page.getByRole('heading', { name: 'Mon espace' })).toBeVisible()
+		await expect(page.getByTestId('completeness')).toBeVisible()
 
 		const after = (await context.cookies()).find(c => c.name === 'payload-token')
 		const exp = tokenExpiration(after?.value) ?? 0
@@ -73,7 +73,7 @@ test.describe('E14 : une activité régulière prolonge la session', { tag: '@le
 
 		// The session now has 14 days left: a second visit asks for nothing.
 		await page.reload()
-		await expect(page.getByRole('heading', { name: 'Mon espace' })).toBeVisible()
+		await expect(page.getByTestId('completeness')).toBeVisible()
 		expect(requests).toEqual(['POST'])
 	})
 
@@ -86,7 +86,7 @@ test.describe('E14 : une activité régulière prolonge la session', { tag: '@le
 		})
 
 		await page.goto('/auth/profil')
-		await expect(page.getByRole('heading', { name: 'Mon espace' })).toBeVisible()
+		await expect(page.getByTestId('completeness')).toBeVisible()
 
 		expect(requests).toEqual([])
 	})
