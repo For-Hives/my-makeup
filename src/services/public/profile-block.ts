@@ -40,16 +40,3 @@ export function talentBlockTitle(talentTitle: string): string {
 	const [first = ''] = talentTitle.trim()
 	return `Des maquilleuses pour votre ${first.toLowerCase()}${talentTitle.trim().slice(first.length)}`
 }
-
-/**
- * The cards of « Mise en avant » (issue 1066): the profiles an admin ticked, in the order of the directory (most
- * complete first). Only those the block of a page of text also shows: publishable, and with a way to be reached; a
- * hidden, suspended or empty profile is not in the directory at all, so a ticked box never brings it back. At most
- * `limit` (FEATURED_MAX).
- */
-export function featuredCards(directory: readonly DirectoryProfile[], limit: number): ProfileCard[] {
-	return directory
-		.filter(profile => profile.featured === true && profile.indexable && !profile.unreachable)
-		.slice(0, limit)
-		.map(profile => profile.carte)
-}

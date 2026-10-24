@@ -424,6 +424,9 @@ export interface Profile {
    * Le mot que la maquilleuse lit. Les deux retirent le profil du public ; rien d’autre n’en découle.
    */
   moderationAction?: ('hide' | 'suspend') | null;
+  /**
+   * Vérifiée : l’équipe a validé le profil ; les profils vérifiés sont tirés au hasard dans la Mise en avant de l’accueil.
+   */
   verified?: boolean | null;
   verifiedAt?: string | null;
   /**
@@ -442,10 +445,6 @@ export interface Profile {
    * Le badge des cartes de la recherche. Public.
    */
   superArtist?: boolean | null;
-  /**
-   * Montre le profil dans « Mise en avant », sur l’accueil (six profils au plus, dans l’ordre de l’annuaire). Un profil non publiable ou masqué n’y figure jamais, même coché. Chaque changement est écrit au journal de modération.
-   */
-  featured?: boolean | null;
   /**
    * Critères remplis, sur 13. Calculée par le serveur.
    */
@@ -660,7 +659,7 @@ export interface ModerationEvent {
   id: number;
   profile: number;
   admin?: number | null;
-  action: 'hide' | 'suspend' | 'restore' | 'feature' | 'unfeature';
+  action: 'hide' | 'suspend' | 'restore' | 'feature' | 'unfeature' | 'verify' | 'unverify';
   reason?: string | null;
   date: string;
 }
@@ -1212,7 +1211,6 @@ export interface ProfilesSelect<T extends boolean = true> {
   internalNote?: T;
   score?: T;
   superArtist?: T;
-  featured?: T;
   completeness?: T;
   active?: T;
   activeSince?: T;

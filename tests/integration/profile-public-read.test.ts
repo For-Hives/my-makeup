@@ -40,7 +40,6 @@ const PUBLIC_KEYS = [
 	'createdAt',
 	'description',
 	'experiences',
-	'featured',
 	'firstName',
 	'fullyEmpty',
 	'gallery',
@@ -192,13 +191,13 @@ describe('Statut, vérifié et score envoyés par la maquilleuse restent inchang
 			corps: {
 				firstName: 'Nouveau Prénom',
 				status: 'published',
-				verified: false,
+				// She cannot verify herself: the box is the pool of « Mise en avant » (issue 1066).
+				verified: true,
 				verifiedAt: '2026-10-14T00:00:00.000Z',
 				score: 99,
 				reason: 'Envoyé par la maquilleuse',
 				internalNote: 'Envoyée par la maquilleuse',
 				superArtist: false,
-				featured: true,
 				pro: Number(other.id),
 			},
 		})
@@ -214,7 +213,6 @@ describe('Statut, vérifié et score envoyés par la maquilleuse restent inchang
 			'reason',
 			'internalNote',
 			'superArtist',
-			'featured',
 			'pro',
 		] as const
 		for (const field of reserves) expect([field, after[field]]).toEqual([field, before[field]])

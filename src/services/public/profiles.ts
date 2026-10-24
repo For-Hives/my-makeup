@@ -773,8 +773,11 @@ export interface DirectoryProfile extends ProfilePlace, ProfileGeometry {
 	specialtyBullets?: readonly string[]
 	/** When her profile was last saved, in milliseconds: what the sort by update reads (issue 1011). */
 	updatedAt?: number
-	/** True when an admin ticked « Mise en avant » on her profile (issue 1066): what the home page selection reads. */
-	featured?: boolean
+	/**
+	 * True when an admin ticked « Vérifiée » on her profile (issue 1066): the pool of « Mise en avant » on the
+	 * home page. The box is closed to the public read, so it is read apart (`readVerified`) and only this fact stays here.
+	 */
+	verified?: boolean
 	/** True when her profile is publishable (`isIndexable`): the pages of a speciality show only those (ticket 305). */
 	indexable: boolean
 	/**
@@ -813,6 +816,25 @@ async function readUnreachable(payload: Payload, profils: readonly { id: number 
 	}
 	for (const { id } of profils) if (!reachable.has(id)) unreachable.add(id)
 	return unreachable
+}
+
+/**
+ * Which profiles an admin ticked « Vérifiée » on (issue 1066), by identifier. The box is for the owner and the
+ * admins to read, so the public read of the directory does not carry it: it is read here, by the identifiers that
+ * read gave, and only this fact leaves (never on a card, never in a response).
+ */
+async function readVerified(payload: Payload, profils: readonly { id: number }[]): Promise<ReadonlySet<number>> {
+	if (profils.length === 0) return new Set()
+	const { docs } = await payload.find({
+		collection: 'profiles',
+		where: { and: [{ id: { in: profils.map(({ id }) => id) } }, { verified: { equals: true } }] },
+		select: { verified: true },
+		depth: 0,
+		limit: LIST_MAX_LIMIT,
+		pagination: false,
+		overrideAccess: true,
+	})
+	return new Set(docs.map(({ id }) => id))
 }
 
 /** The fields a search by a word reads on top of a card: her texts and her whole offers (for their descriptions), and no contact, no link. */
@@ -867,7 +889,6 @@ export async function readDirectory(
 				publishable: true,
 				updatedAt: true,
 				specialtyBullets: true,
-				featured: true,
 			},
 			// The order the page `/classement` announces (DIRECTORY_SORT, src/lib/search/ranking.ts): a test compares the two.
 			sort: ['-completeness', '-updatedAt', 'slug'],
@@ -884,6 +905,7 @@ export async function readDirectory(
 			result.docs.map(({ id }) => id)
 		)
 		const unreachable = await readUnreachable(payload, result.docs)
+		const verified = await readVerified(payload, result.docs)
 		for (const profile of result.docs) {
 			const isUnreachable = unreachable.has(profile.id)
 			const card = cardOf(profile, photos, pids, badged)
@@ -894,7 +916,7 @@ export async function readDirectory(
 				specialtyBullets: profile.specialtyBullets ?? [],
 				updatedAt: Date.parse(profile.updatedAt) || 0,
 				indexable: profile.publishable === true,
-				featured: profile.featured === true,
+				verified: verified.has(profile.id),
 				...directoryPlace(profile),
 				...directoryGeometry(profile),
 				sortName: displayName(profile),

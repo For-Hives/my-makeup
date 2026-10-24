@@ -13,6 +13,9 @@
  * Relative imports on purpose: shared with the collections, loaded by the Payload CLI.
  */
 
+import type { LegacyFeatureAction } from './featured'
+import type { VerifyAction } from './verified'
+
 export const MODERATION_ACTIONS = ['hide', 'suspend', 'restore'] as const
 export type ModerationAction = (typeof MODERATION_ACTIONS)[number]
 
@@ -20,13 +23,16 @@ export type ModerationAction = (typeof MODERATION_ACTIONS)[number]
 export const HOLD_ACTIONS = ['hide', 'suspend'] as const
 export type HoldAction = (typeof HOLD_ACTIONS)[number]
 
-export const ACTION_LABELS: Record<ModerationAction | 'feature' | 'unfeature', string> = {
+export const ACTION_LABELS: Record<ModerationAction | VerifyAction | LegacyFeatureAction, string> = {
 	hide: 'Masqué',
 	suspend: 'Suspendu',
 	restore: 'Rétabli',
-	// Issue 1066: the lines of « Mise en avant », in the same journal (src/lib/profile/featured.ts).
-	feature: 'Mis en avant',
-	unfeature: 'Retiré de la mise en avant',
+	// Issue 1066: the lines of the box « Vérifiée », in the same journal (src/lib/profile/verified.ts).
+	verify: 'Vérifiée',
+	unverify: 'Vérification retirée',
+	// Issue 1066: the lines of the first box « Mise en avant », no longer written, kept readable (src/lib/profile/featured.ts).
+	feature: 'Mis en avant (ancienne case)',
+	unfeature: 'Retiré de la mise en avant (ancienne case)',
 }
 
 export const REASON_MIN = 10

@@ -141,11 +141,45 @@ describe('305 : les maquilleuses d’une spécialité', () => {
 				if (options.collection === 'media' || options.collection === 'activity-checks') return { docs: [] }
 				if (select?.strapiId === true) return { docs: [] }
 				if (select?.networks === true) return { docs: [] }
+				if (select?.verified === true) return { docs: [] }
 				expect(select.publishable).toBe(true)
 				return { docs: [doc(1, true), doc(2, false), doc(3, null)], page: 1, totalDocs: 3, hasNextPage: false }
 			},
 		} as unknown as Payload
 		expect((await readDirectory(payload)).map(item => item.indexable)).toEqual([true, false, false])
+	})
+
+	test('l’annuaire lit « Vérifiée » à part, règles ouvertes, et n’en garde que le fait (issue 1066)', async () => {
+		const doc = (id: number) => ({
+			id,
+			slug: `p-${id}`,
+			firstName: 'Zoé',
+			lastName: `P${id}`,
+			specialty: 'Mariage',
+			city: { name: 'Annecy', inseeCode: '74010', department: '74' },
+			mainPicture: null,
+			publishable: true,
+		})
+		const reads: { select: Record<string, unknown>; overrideAccess: unknown }[] = []
+		const payload = {
+			find: async (options: Record<string, unknown>) => {
+				const select = options.select as Record<string, unknown>
+				reads.push({ select, overrideAccess: options.overrideAccess })
+				if (options.collection === 'media' || options.collection === 'activity-checks') return { docs: [] }
+				if (select?.strapiId === true || select?.networks === true) return { docs: [] }
+				if (select?.verified === true) return { docs: [{ id: 2 }] }
+				return { docs: [doc(1), doc(2), doc(3)], page: 1, totalDocs: 3, hasNextPage: false }
+			},
+		} as unknown as Payload
+		const directory = await readDirectory(payload)
+		expect(directory.map(item => item.verified)).toEqual([false, true, false])
+		// The box is closed to the public read: the listing never selects it, the apart read has the rules open.
+		const listing = reads.find(read => read.select.publishable === true)
+		expect(listing?.select.verified).toBeUndefined()
+		expect(listing?.overrideAccess).toBe(false)
+		expect(reads.find(read => read.select.verified === true)?.overrideAccess).toBe(true)
+		// And a card carries nothing of it.
+		expect(JSON.stringify(directory.map(item => item.carte))).not.toContain('verified')
 	})
 
 	test('le bloc est gardé sous l’étiquette des profils : la publication d’un profil le rafraîchit', () => {

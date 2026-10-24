@@ -1,12 +1,15 @@
 import type { CollectionConfig } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { adminOnly, hiddenExceptAdmin } from '../lib/access'
-import { FEATURE_ACTIONS } from '../lib/profile/featured'
+import { LEGACY_FEATURE_ACTIONS } from '../lib/profile/featured'
 import { ACTION_LABELS, MODERATION_ACTIONS, REASON_MAX } from '../lib/profile/moderation'
+import { VERIFY_ACTIONS } from '../lib/profile/verified'
 
 /**
  * The moderation journal (issue 1005): one line each time an admin hides, suspends or restores a profile. Issue 1066
- * adds two lines of the same kind, `feature` and `unfeature`: an admin ticks or unticks « Mise en avant » (no reason).
+ * adds two lines of the same kind, `feature` and `unfeature`: an admin ticked or unticked « Mise en avant » (no reason).
+ * Issue 1066 replaces that box by « Vérifiée »: its changes write `verify` and `unverify` (no reason either), and the
+ * two older actions stay in the enum and in the rows already written, so that the history keeps reading.
  *
  * - Who (the number of the admin account), what (the action), on which profile (its number), why (the
  *   reason the admin typed) and when. Numbers and the reason only: no name, email or phone is copied here.
@@ -41,13 +44,13 @@ export const ModerationEvents: CollectionConfig<'moderation-events'> = {
 			type: 'select',
 			required: true,
 			index: true,
-			options: [...MODERATION_ACTIONS, ...FEATURE_ACTIONS].map(action => ({
+			options: [...MODERATION_ACTIONS, ...LEGACY_FEATURE_ACTIONS, ...VERIFY_ACTIONS].map(action => ({
 				label: ACTION_LABELS[action],
 				value: action,
 			})),
 		},
-		// Required for hiding, suspending and restoring (the hooks of the profile ask for it); a line of « Mise en avant
-		// » has none (issue 1066).
+		// Required for hiding, suspending and restoring (the hooks of the profile ask for it); a line of « Vérifiée » or
+		// of the old « Mise en avant » has none (issue 1066).
 		{ name: 'reason', label: 'Motif', type: 'textarea', maxLength: REASON_MAX },
 		{
 			name: 'date',

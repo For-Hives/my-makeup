@@ -245,6 +245,16 @@
 }
 
 /*
+ * « Mise en avant » on the home page (issue 1066, src/lib/profile/featured.ts): the cached HTML carries every candidate,
+ * and the list shows the first six, the stable block of a visitor without JavaScript. The inline script that draws the
+ * cards at each load adds a rule of its own (`display: none !important` on every item, then `block` on the six it
+ * drew), which wins over this one. `display: none`, never `opacity: 0`: a hidden card is out of the page, not faded.
+ */
+.featured-list > li:nth-child(n + 7) {
+	display: none;
+}
+
+/*
  * Motion (issue 1069, docs/mouvement.md). One small system: a role before an effect (feedback, guidance, linking two
  * states), `transform` and `opacity` only (plus paint-only colors), no layout property ever moves. Everything that
  * moves is declared inside `prefers-reduced-motion: no-preference`: with reduced motion nothing slides or fades, and
