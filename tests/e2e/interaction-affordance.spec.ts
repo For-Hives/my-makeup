@@ -51,7 +51,7 @@ interface PageReading {
 }
 
 async function read(page: Page, path: string): Promise<PageReading> {
-	await page.goto(path, { waitUntil: 'networkidle' })
+	await page.goto(path, { waitUntil: 'load' })
 	await freezeMotion(page)
 	return { path, items: await page.evaluate(readAffordance) }
 }
@@ -73,9 +73,8 @@ async function dataPages(page: Page): Promise<string[]> {
  * ring on keyboard focus, a change while pressed. Two things need no state of their own: the skip link is
  * seen only on focus, and a label is not a tab stop (the box it holds is the one that is focused).
  */
-async function stateFailures(page: Page, path: string): Promise<string[]> {
+async function stateFailures(page: Page, path: string, seen: Set<string>): Promise<string[]> {
 	const failures: string[] = []
-	const seen = new Set<string>()
 	const items = await page.evaluate(readAffordance)
 	for (const covered of await page.evaluate(readCovered)) failures.push(`${path} : ${covered}`)
 	for (const item of items) {
@@ -170,10 +169,12 @@ test.describe('interactions : curseur, survol, focus et état actif (1068)', () 
 		page,
 	}) => {
 		const failures: string[] = []
+		// One element per way of drawing, across all the pages: the same classes are the same look.
+		const drawn = new Set<string>()
 		for (const { path } of readings) {
-			await page.goto(path, { waitUntil: 'networkidle' })
+			await page.goto(path, { waitUntil: 'load' })
 			await freezeMotion(page)
-			failures.push(...(await stateFailures(page, path)))
+			failures.push(...(await stateFailures(page, path, drawn)))
 		}
 		expect(failures).toEqual([])
 	})
@@ -197,6 +198,7 @@ test.describe('interactions : curseur, survol, focus et état actif (1068)', () 
 		await context.addCookies(session.cookies)
 		const page = await context.newPage()
 		const failures: string[] = []
+		const drawn = new Set<string>()
 		for (const path of SPACE_PAGES) {
 			const { items } = await read(page, path)
 			expect(
@@ -211,7 +213,7 @@ test.describe('interactions : curseur, survol, focus et état actif (1068)', () 
 				console.log(
 					`affordance ${path} : ${items.filter(item => item.role === 'clickable').length} cliquables, ${items.filter(item => item.role === 'inert').length} inertes, ${items.filter(item => affordanceDefect(item)).length} écarts`
 				)
-			failures.push(...(await stateFailures(page, path)))
+			failures.push(...(await stateFailures(page, path, drawn)))
 		}
 		await context.close()
 		const payload = await testPayload()
@@ -225,7 +227,7 @@ test.describe('interactions : curseur, survol, focus et état actif (1068)', () 
 	test('un contrôle désactivé montre « interdit », un texte simple garde la flèche, une case et son libellé la main', async ({
 		page,
 	}) => {
-		await page.goto('/contact', { waitUntil: 'networkidle' })
+		await page.goto('/contact', { waitUntil: 'load' })
 		await page.evaluate(() => {
 			document.body.insertAdjacentHTML(
 				'beforeend',
@@ -276,7 +278,7 @@ test.describe('interactions au tactile (1068)', () => {
 		tag: '@mobile',
 	}, async ({ page }) => {
 		for (const path of ['/contact', '/auth/signin', '/auth/signup', '/auth/mot-de-passe-oublie', '/search']) {
-			await page.goto(path, { waitUntil: 'networkidle' })
+			await page.goto(path, { waitUntil: 'load' })
 			expect(
 				await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth),
 				`${path} : défilement horizontal`

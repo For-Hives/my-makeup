@@ -217,7 +217,8 @@ export function readCovered(): string[] {
 		if (kind !== 'clickable') continue
 		if (element.matches('.sr-only') || element.closest('.sr-only')) continue
 		element.scrollIntoView({ block: 'center', inline: 'center' })
-		const box = element.getBoundingClientRect()
+		// A link that wraps over two lines has a box whose center may fall on the text beside it: ask its first line.
+		const box = element.getClientRects()[0] ?? element.getBoundingClientRect()
 		if (box.width < 4 || box.height < 4) continue
 		const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2)
 		if (!hit) continue
