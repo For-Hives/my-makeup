@@ -30,6 +30,7 @@ My Makeup est un annuaire de maquilleuses professionnelles indépendantes. Cette
 | toucher au SIRET, au badge « Activité vérifiée » ou à l'appel de l'annuaire des entreprises | [`docs/activite-verifiee.md`](docs/activite-verifiee.md) |
 | toucher l'accueil public (haut de page, « Mise en avant », textes de la communauté) | [`docs/accueil.md`](docs/accueil.md) |
 | toucher l'invitation à l'action du bas des pages (fond animé, dépendance) | [`docs/appel-a-l-action.md`](docs/appel-a-l-action.md) |
+| toucher la mise en page des pages de texte du site public (guides, À propos, « Pourquoi… ») | [`docs/pages-de-contenu.md`](docs/pages-de-contenu.md) |
 | toucher au mouvement du site (apparitions, survols, jetons de durée et de courbe, mouvement réduit) | [`docs/mouvement.md`](docs/mouvement.md) |
 | toucher la barre de navigation du site public (entrées, menus déroulants, survol, clavier, « Me connecter ») | [`docs/navbar.md`](docs/navbar.md) |
 | faire autrement que le site en ligne | [`docs/migration/CHANGEMENTS-VOULUS.md`](docs/migration/CHANGEMENTS-VOULUS.md) |

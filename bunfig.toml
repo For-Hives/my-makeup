@@ -2,7 +2,7 @@
 [install]
 exact = true
 
-# Every `bun test` loads three files before any test file, in this order (bun reads this file from
+# Every `bun test` loads four files before any test file, in this order (bun reads this file from
 # the folder it is started in: the repository root).
 # 1. The guard: it stops the run when the environment could reach anything else than the local
 #    test bench (tests/support/environment-guard.ts). First, so that nothing is loaded after a refusal.
@@ -11,9 +11,12 @@ exact = true
 #    whatever the order of the files.
 # 3. The interception of outgoing HTTP (tests/support/preload-outgoing-http.ts): a service outside
 #    this machine is simulated by the test, or the test fails. No test calls the Internet.
+# 4. The faces of `next/font/google`, replaced by plain objects (tests/support/preload-fonts.ts): the module only
+#    exists inside the build of Next, and the content pages set the faces of the art direction.
 [test]
 preload = [
 	"./tests/support/environment-guard.ts",
 	"./tests/support/preload-react-dom.ts",
 	"./tests/support/preload-outgoing-http.ts",
+	"./tests/support/preload-fonts.ts",
 ]

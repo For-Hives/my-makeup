@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Cta } from '@/components/blocks/Cta'
 import { Hero } from '@/components/blocks/Hero'
 import { ArtistBenefits } from '@/components/static-pages/ArtistBenefits'
+import { ContentPage } from '@/components/static-pages/EditorialArticle'
 import { pageMetadata } from '@/lib/seo/metadata'
 
 export const metadata: Metadata = pageMetadata({
@@ -14,7 +15,7 @@ export const metadata: Metadata = pageMetadata({
 
 export default function WhyJoinPage() {
 	return (
-		<main className="relative">
+		<ContentPage>
 			<Hero
 				image="/assets/back/maquilleuse_italienne_white.webp"
 				titre={
@@ -29,6 +30,6 @@ export default function WhyJoinPage() {
 			/>
 			<ArtistBenefits />
 			<Cta />
-		</main>
+		</ContentPage>
 	)
 }

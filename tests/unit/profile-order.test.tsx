@@ -175,10 +175,12 @@ describe('304 : la zone en une phrase', () => {
 
 describe('23 : le contraste de la signature des pages de texte', () => {
 	test('la signature « L’équipe My-Makeup » n’est plus en gris clair', () => {
-		const html = renderToStaticMarkup(<PageArticle contenu={{ titre: 'T', introduction: 'I', parties: [] }} />)
+		const html = renderToStaticMarkup(
+			<PageArticle eyebrow="E" contenu={{ titre: 'T', introduction: 'I', parties: [] }} />
+		)
 
 		expect(html).not.toContain('text-gray-400')
-		expect(html).toContain('text-gray-600')
+		expect(html).toContain('text-gray-700')
 	})
 })
 

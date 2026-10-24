@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Cta } from '@/components/blocks/Cta'
 import { Hero } from '@/components/blocks/Hero'
 import { ClientBenefits } from '@/components/static-pages/ClientBenefits'
+import { ContentPage } from '@/components/static-pages/EditorialArticle'
 import { pageMetadata } from '@/lib/seo/metadata'
 
 const DESCRIPTION = 'Découvrez pourquoi vous devriez utiliser My-Makeup en tant que particulier & professionnel'
@@ -15,7 +16,7 @@ export const metadata: Metadata = pageMetadata({
 
 export default function Page() {
 	return (
-		<main className="relative">
+		<ContentPage>
 			<Hero
 				image="/assets/back/maquilleuse_africaine_white.webp"
 				titre={
@@ -27,6 +28,6 @@ export default function Page() {
 			/>
 			<ClientBenefits />
 			<Cta />
-		</main>
+		</ContentPage>
 	)
 }
