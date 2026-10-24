@@ -57,7 +57,8 @@ for (const size of [SCREENS.mobile, SCREENS.chromium]) {
 			for (const section of report) {
 				expect(section.head).toBe(1)
 				expect(section.title).toBe(1)
-				expect(section.blocks).toBeGreaterThanOrEqual(4)
+				// The head (the hairline and the title) and at least one block: « Mise en avant » may hold a single card.
+				expect(section.blocks).toBeGreaterThanOrEqual(3)
 				// A section whose head is below the first screen hides its blocks until it comes into view.
 				if (section.top > size.height) expect(section.waiting).toBeGreaterThan(0)
 			}
