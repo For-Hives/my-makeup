@@ -57,7 +57,8 @@ function content(banner: Banner) {
 				{banner.paused ? (
 					<span className="text-mute text-sm">Tu es en pause : tu n’apparais pas dans la recherche.</span>
 				) : null}
-				<Link href={banner.href} className={LINK}>
+				{/* No prefetch: the public page is cached and shared, her own page must not warm it. */}
+				<Link href={banner.href} prefetch={false} className={LINK}>
 					Voir ma page publique
 				</Link>
 			</p>
