@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { PreviewBanner } from '@/components/dashboard/PreviewBanner'
 import { bodyEdit } from '@/components/direct-edit/body-edit'
+import { EditBanner } from '@/components/direct-edit/EditBanner'
 import { EditBar } from '@/components/direct-edit/EditBar'
 import { body, display } from '@/components/direct-edit/fonts'
 import { headerEdit } from '@/components/direct-edit/header-edit'
@@ -10,9 +11,11 @@ import { ProfileView } from '@/components/profile/ProfileView'
 import { readCheck } from '@/lib/activity/store'
 import { requireArtist } from '@/lib/auth/session'
 import { activityView } from '@/lib/dashboard/activity'
+import { editBanner } from '@/lib/dashboard/edit-banner'
 import { artistProfile, profileId } from '@/lib/dashboard/my-profile'
 import { readDashboardPhotos } from '@/lib/dashboard/photos'
 import { DASHBOARD_PATH, PREVIEW_PATH, previewState } from '@/lib/dashboard/preview'
+import { profileProgress } from '@/lib/dashboard/progress'
 import { requestUser } from '@/lib/dashboard/request'
 import { EDIT_QUERY, editPath, isEditRequest } from '@/lib/direct-edit/edit-mode'
 import { usageView } from '@/lib/photo-limits'
@@ -79,8 +82,13 @@ export default async function PreviewPage({ searchParams }: PageProps<'/auth/ape
 		<div data-edit-page className={`${display.variable} ${body.variable} flex flex-1 flex-col`}>
 			<OwnerEditSession>
 				<EditBar />
-				{/* "This is your page as visitors see it" would be wrong here: only what needs her attention is said. */}
-				{state.code === 'complet' ? null : banner}
+				{/* Where her page stands for everyone, and what is missing, from the single rule (issue 1072); read again after a save. */}
+				<EditBanner
+					banner={editBanner(profileProgress(profile), {
+						slug: preview.profil.slug,
+						moderationAction: profile.moderationAction,
+					})}
+				/>
 				<ProfileView
 					profil={preview.profil}
 					mesure={false}

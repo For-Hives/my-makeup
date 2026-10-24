@@ -1,5 +1,5 @@
 import { type Criterion, DESCRIPTION_MIN } from '../profile/completeness'
-import { blockAnchor, CRITERION_BLOCK, editBlockHref } from './edit-blocks'
+import { type BlockId, blockAnchor, CRITERION_BLOCK, editBlockHref } from './edit-blocks'
 import type { Progress } from './progress'
 
 /**
@@ -22,6 +22,30 @@ const LABEL_OF: Partial<Record<Criterion, string>> = {
 /** The anchor of a block: kept here for the blocks of the direct edition, which import it. */
 export { blockAnchor }
 
+/** One point she lacks for a visible page, and the block of her page that completes it (issue 1072). */
+export interface MissingItem {
+	readonly criterion: Criterion
+	readonly label: string
+	readonly block: BlockId
+	readonly href: string
+}
+
+/**
+ * The required points of the single rule that her profile does not meet, in the order of her profile, each with its
+ * words (those of the draft notice and of the end of the onboarding) and the block that completes it. Nothing is
+ * computed here: the points are the `requis` ones of `profileProgress`.
+ */
+export function missingItems(progress: Pick<Progress, 'manques'>): MissingItem[] {
+	return progress.manques
+		.filter(point => point.requis)
+		.map(point => ({
+			criterion: point.critere,
+			label: LABEL_OF[point.critere] ?? point.texte,
+			block: CRITERION_BLOCK[point.critere],
+			href: editBlockHref(CRITERION_BLOCK[point.critere]),
+		}))
+}
+
 export interface DraftNotice {
 	/** What she lacks, a few words each, in the order of her profile. */
 	readonly lines: readonly string[]
@@ -32,11 +56,7 @@ export interface DraftNotice {
 /** The notice of a profile that is not publishable yet, or null: a publishable, hidden or internal profile has none. */
 export function draftNotice(progress: Pick<Progress, 'etat' | 'manques'>): DraftNotice | null {
 	if (progress.etat !== 'vide' && progress.etat !== 'incomplet') return null
-	const required = progress.manques.filter(point => point.requis)
-	if (required.length === 0) return null
-	const first = required[0]?.critere
-	return {
-		lines: required.map(point => LABEL_OF[point.critere] ?? point.texte),
-		href: editBlockHref(first === undefined ? null : CRITERION_BLOCK[first]),
-	}
+	const items = missingItems(progress)
+	if (items.length === 0) return null
+	return { lines: items.map(item => item.label), href: items[0]?.href ?? editBlockHref(null) }
 }

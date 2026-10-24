@@ -57,6 +57,9 @@ Les valeurs sont dans `@theme` de `src/app/(front)/globals.css`, nulle part aill
 Le mode édition seul (`data-edit-page` sur la page privée) redessine les gris du visiteur avec ces jetons (`text-gray-500` à `800`, `border-gray-300`, `bg-gray-50`) : le HTML public ne change pas. Les autres blocs gardent une opacité de 0,8 (`DIMMED_OPACITY`) : l'encre y garde 7:1.
 
 **Le halo est le bloc.** Il est dessiné dans le bloc (`data-direct-edit-halo`, un calque `absolute inset-0` au rayon du bloc, ombre `inset`), jamais autour : pas de `ring`, pas d'`outline-offset`, pas de `border` qui change d'épaisseur, donc aucun saut de mise en page. Le premier nœud que le visiteur voit dans un `EditableBlock` prend le rayon du bloc (`globals.css`, `[data-direct-edit] > :first-child`) : 22 px pour une carte, rond pour la photo et la pastille. `tests/e2e/direct-edit-halo.spec.ts` mesure, pour chaque bloc, à 390 et 1440 px, le rectangle et le rayon du halo, du bloc et du cadre (1 px d'écart au plus) avant, pendant le survol (ou le focus) et à l'ouverture.
+## Le bandeau du haut : ce qui manque (issue 1072)
+
+`EditBanner` (`src/components/direct-edit/EditBanner.tsx`) dit où en est la page pour tout le monde, d'après `editBanner` (`src/lib/dashboard/edit-banner.ts`) : *brouillon* (profil entièrement vide) et *incomplet* listent, sous « Ton profil n'est pas encore visible. Il manque : », chaque condition requise de la règle unique (`missingItems`, `src/lib/dashboard/draft-notice.ts` : les mêmes mots que l'écran de fin de l'accueil), chacune un lien de 44 px vers son bloc (`CRITERION_BLOCK`) ; *publiable* dit « Ton profil est visible » avec le lien vers la page publique ; *masqué*, *suspendu* et *compte interne* ont leur message et aucune liste. Rien n'est recalculé : la page est relue par le serveur après chaque enregistrement (`router.refresh()`), donc un point fait disparaît de la liste sans recharger la page.
 
 ## Ajouter une zone de la page
 
