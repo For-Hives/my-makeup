@@ -6,8 +6,8 @@ import { cachedIndexablePages } from '@/services/public/cached'
 export const dynamic = 'force-dynamic'
 
 /**
- * /sitemap.xml (ticket 113): the fixed pages, every publishable profile by its slug, every zone that has three of
- * them (ticket 1015), every talent and every
+ * /sitemap.xml (ticket 113): the fixed pages, every publishable profile by its slug, every zone that has at least one
+ * of them (ticket 1015), every talent and every
  * article, with the real date of their last change. A failed reading is a 500, never a shorter sitemap.
  */
 export async function GET(): Promise<Response> {

@@ -19,7 +19,7 @@ import { isSlug } from '../../src/lib/slug'
 import { readIndexablePages } from '../../src/services/public/indexable-pages'
 
 /**
- * Ticket 1015: a page « maquilleuse près de chez vous » by département, indexable from 3 publishable profiles.
+ * Ticket 1015: a page « maquilleuse près de chez vous » by département, indexable from 1 publishable profile (owner decision of 24/10/2026).
  * One rule (src/lib/seo/zones.ts) decides the page, the robots tag, the sitemap and the plan of the site.
  */
 
@@ -37,26 +37,24 @@ const many = (count: number, extra: Partial<ZoneProfile> = {}): ZoneProfile[] =>
 	Array.from({ length: count }, (_, index) => profile(index + 1, extra))
 
 describe('the threshold, at its bounds', () => {
-	test('the threshold is 3', () => {
-		expect(ZONE_THRESHOLD).toBe(3)
+	test('the threshold is 1: a single publishable, listed profile makes the zone indexable', () => {
+		expect(ZONE_THRESHOLD).toBe(1)
 	})
 
 	test.each([
 		[0, 'absent'],
-		[1, 'below'],
-		[2, 'below'],
+		[1, 'indexable'],
+		[2, 'indexable'],
 		[3, 'indexable'],
-		[4, 'indexable'],
 	] as const)('%i profiles: %s', (count, expected) => {
 		expect(zoneStatus(count)).toBe(expected)
 	})
 
-	test('a zone with 2, 3 and 4 listed publishable profiles is in the list of indexable zones from 3 only', () => {
+	test('a zone with 0, 1 and 2 listed publishable profiles is in the list of indexable zones from 1', () => {
 		for (const [count, expected] of [
 			[0, 0],
-			[2, 0],
-			[3, 1],
-			[4, 1],
+			[1, 1],
+			[2, 1],
 		] as const)
 			expect({ count, zones: indexableZones(many(count)).length }).toEqual({ count, zones: expected })
 	})
@@ -76,12 +74,16 @@ describe('who counts in a zone', () => {
 			profile(13, { departement: null }),
 		]
 		expect(zoneMembers(profiles, '74').map(({ slug }) => slug)).toEqual(['artiste-1', 'artiste-2'])
-		expect(indexableZones(profiles)).toEqual([])
+		expect(indexableZones(profiles).map(({ code, count }) => [code, count])).toEqual([
+			['74', 2],
+			['73', 1],
+		])
 	})
 
-	test('a zone just under the threshold stays under it when the others do not count', () => {
-		const profiles = [...many(2), profile(10, { listed: false }), profile(11, { publishable: false })]
-		expect(zoneStatus(zoneMembers(profiles, '74').length)).toBe('below')
+	test('a zone whose only profiles do not count has no page at all, never an empty one', () => {
+		const profiles = [profile(10, { listed: false }), profile(11, { publishable: false })]
+		expect(zoneStatus(zoneMembers(profiles, '74').length)).toBe('absent')
+		expect(indexableZones(profiles)).toEqual([])
 	})
 
 	test('the indexable zones are listed by slug, each with its count and its latest change', () => {
@@ -90,10 +92,12 @@ describe('who counts in a zone', () => {
 				i === 1 ? { ...p, misAJourLe: '2026-03-04T00:00:00.000Z' } : p
 			),
 			...many(3, { departement: '73' }).map(p => ({ ...p, slug: `b-${p.slug}` })),
-			...many(2, { departement: '38' }).map(p => ({ ...p, slug: `c-${p.slug}` })),
+			...many(1, { departement: '38' }).map(p => ({ ...p, slug: `c-${p.slug}` })),
+			...many(1, { departement: '69', listed: false }).map(p => ({ ...p, slug: `d-${p.slug}` })),
 		]
 		expect(indexableZones(profiles)).toEqual([
 			{ code: '74', slug: 'haute-savoie', name: 'Haute-Savoie', count: 3, misAJourLe: '2026-03-04T00:00:00.000Z' },
+			{ code: '38', slug: 'isere', name: 'Isère', count: 1, misAJourLe: null },
 			{ code: '73', slug: 'savoie', name: 'Savoie', count: 3, misAJourLe: null },
 		])
 	})
@@ -120,8 +124,12 @@ describe('the address of a zone', () => {
 })
 
 describe('the sitemap', () => {
-	test('lists an indexable zone, and never a zone under the threshold', () => {
-		const zones = indexableZones([...many(3), ...many(2, { departement: '73' })])
+	test('lists a zone from one profile, and never a zone with no profile that counts', () => {
+		const zones = indexableZones([
+			...many(1),
+			...many(1, { departement: '73', listed: false }).map(p => ({ ...p, slug: `b-${p.slug}` })),
+			...many(1, { departement: '38', publishable: false }).map(p => ({ ...p, slug: `c-${p.slug}` })),
+		])
 		const locs = sitemapEntries({ zones }).map(({ loc }) => loc)
 		expect(locs).toContain('https://my-makeup.fr/maquilleuses/haute-savoie')
 		expect(locs.filter(loc => loc.includes('/maquilleuses/'))).toEqual([
@@ -142,15 +150,20 @@ describe('the sitemap', () => {
 })
 
 describe('the metadata and the structured data of a zone page', () => {
-	test('indexable from 3: a canonical address, no noindex', () => {
+	test('indexable from 1: a canonical address, no noindex', () => {
+		for (const count of [1, 2, 3]) {
+			const metadata = zonePageMetadata({ code: '74', count })
+			expect(metadata.alternates?.canonical).toBe('https://my-makeup.fr/maquilleuses/haute-savoie')
+			expect(metadata.robots).toBeUndefined()
+		}
 		const metadata = zonePageMetadata({ code: '74', count: 3 })
 		expect(metadata.alternates?.canonical).toBe('https://my-makeup.fr/maquilleuses/haute-savoie')
 		expect(metadata.robots).toBeUndefined()
 		expect(String(JSON.stringify(metadata.title))).toContain('Haute-Savoie')
 	})
 
-	test('under 3: noindex, follow, and no canonical address', () => {
-		for (const count of [1, 2]) {
+	test('with no profile (a state the page never serves: it answers 404): noindex, follow, and no canonical address', () => {
+		for (const count of [0]) {
 			const metadata = zonePageMetadata({ code: '74', count })
 			expect(metadata.robots).toEqual({ index: false, follow: true })
 			expect(metadata.alternates).toBeUndefined()
@@ -214,15 +227,19 @@ describe('the reading that gives the zones to the sitemap', () => {
 				doc('b-deux', { city: { name: 'Chambéry', department: '73' } }),
 			])
 		)
-		expect(pages.zones.map(({ code, count }) => [code, count])).toEqual([['74', 3]])
+		expect(pages.zones.map(({ code, count }) => [code, count])).toEqual([
+			['74', 3],
+			['73', 2],
+		])
 		expect(pages.profils).toHaveLength(8)
 	})
 
-	test('two profiles in a département are under the threshold, three are at it, four above', async () => {
+	test('no profile gives no zone, one gives a zone, and so do two and three', async () => {
 		for (const [count, zones] of [
-			[2, 0],
+			[0, 0],
+			[1, 1],
+			[2, 1],
 			[3, 1],
-			[4, 1],
 		] as const) {
 			const pages = await readIndexablePages(payload(Array.from({ length: count }, (_, i) => doc(`p-${i}`))))
 			expect({ count, zones: pages.zones.length }).toEqual({ count, zones })
