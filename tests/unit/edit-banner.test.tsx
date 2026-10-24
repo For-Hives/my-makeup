@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { EditBanner } from '@/components/direct-edit/EditBanner'
-import type { DashboardProfile } from '@/lib/dashboard/cards'
+import type { DashboardProfile } from '@/lib/dashboard/dashboard-profile'
 import { draftNotice } from '@/lib/dashboard/draft-notice'
 import { editBanner } from '@/lib/dashboard/edit-banner'
 import { BLOCK_IDS, CRITERION_BLOCK } from '@/lib/dashboard/edit-blocks'
