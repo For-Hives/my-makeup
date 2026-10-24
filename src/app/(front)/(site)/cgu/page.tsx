@@ -71,7 +71,7 @@ export default function Cgu() {
 				<li>{`de publier un contenu illicite, trompeur, injurieux ou portant atteinte aux droits d'autrui ;`}</li>
 				<li>{`de se faire passer pour une autre personne ;`}</li>
 				<li>
-					{`de collecter de façon automatisée les profils ou les coordonnées publiées, ou de les utiliser pour de la prospection non sollicitée ;`}
+					{`de collecter de façon automatisée les coordonnées publiées sur les profils, ou de les utiliser pour de la prospection non sollicitée ;`}
 				</li>
 				<li>{`de perturber le fonctionnement du site ou de tenter d'accéder aux comptes d'autres personnes.`}</li>
 			</ul>

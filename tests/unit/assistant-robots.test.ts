@@ -11,9 +11,9 @@ import {
 import { deliveredStaticPages, EXCLUDED_PAGES, isExcluded } from '../../src/lib/seo/sitemap'
 
 /**
- * Ticket 1014: the assistants' crawlers. The ones that fetch a page to answer someone (search, on-demand
- * reading) may read the public content; the ones that gather text to train a model are turned away. Neither
- * ever gets the account area, the administration, the API or the search.
+ * Ticket 1014: the assistants' crawlers. Owner decision of 24/10/2026: every robot is allowed, the ones that
+ * fetch a page to answer someone (search, on-demand reading) and the ones that gather text to train a model
+ * alike: more visits. None of them gets the account area, the administration, the API or the search.
  */
 
 const ROOT = join(import.meta.dir, '../..')
@@ -29,9 +29,9 @@ const ruleFor = (bot: string): Rule | undefined =>
 	rulesOf().find(rule => asList(rule.userAgent).some(agent => agent.toLowerCase() === bot.toLowerCase()))
 
 describe('robots.txt for the assistants', () => {
-	test('each search or on-demand bot reads the public site and never the private paths', () => {
+	test('each search, on-demand or training bot reads the public site and never the private paths', () => {
 		expect(ASSISTANT_SEARCH_BOTS.length).toBeGreaterThanOrEqual(4)
-		for (const bot of ASSISTANT_SEARCH_BOTS) {
+		for (const bot of [...ASSISTANT_SEARCH_BOTS, ...ASSISTANT_TRAINING_BOTS]) {
 			const rule = ruleFor(bot)
 			expect({ bot, found: rule !== undefined }).toEqual({ bot, found: true })
 			expect(asList(rule?.allow)).toEqual(['/'])
@@ -41,15 +41,12 @@ describe('robots.txt for the assistants', () => {
 		}
 	})
 
-	test('each training bot is turned away from the whole site', () => {
+	test('no training bot is turned away: the main ones are named and allowed, and nothing blocks the whole site', () => {
 		expect(ASSISTANT_TRAINING_BOTS).toContain('GPTBot')
 		expect(ASSISTANT_TRAINING_BOTS).toContain('ClaudeBot')
 		expect(ASSISTANT_TRAINING_BOTS).toContain('Google-Extended')
-		for (const bot of ASSISTANT_TRAINING_BOTS) {
-			const rule = ruleFor(bot)
-			expect({ bot, disallow: asList(rule?.disallow) }).toEqual({ bot, disallow: ['/'] })
-			expect(asList(rule?.allow)).toEqual([])
-		}
+		for (const bot of ASSISTANT_TRAINING_BOTS) expect(asList(ruleFor(bot)?.allow)).toEqual(['/'])
+		for (const rule of rulesOf()) expect(asList(rule.disallow)).not.toContain('/')
 	})
 
 	test('a bot is either a search bot or a training bot, never both, and listed once', () => {
