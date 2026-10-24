@@ -435,6 +435,11 @@
 			"id": "l-accueil-dit-plus-clairement-ce-que-my-makeup-fait-pour",
 			"type": "amelioration",
 			"text": "L’accueil dit plus clairement ce que My-Makeup fait pour vous, et met en avant une sélection de maquilleuses choisies par l’équipe."
+		},
+		{
+			"id": "tout-ce-qui-se-clique-sur-le-site-se-reconnait-mieux-le-c",
+			"type": "amelioration",
+			"text": "Tout ce qui se clique sur le site se reconnaît mieux : le curseur devient une main, les boutons et les liens réagissent au survol et à l’appui, et le contour au clavier est plus net."
 		}
 	],
 	"releases": []

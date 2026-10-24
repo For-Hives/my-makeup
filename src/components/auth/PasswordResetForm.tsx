@@ -8,7 +8,7 @@ import { MIN_PASSWORD_LENGTH } from '@/lib/auth/sign-up'
 export type PasswordResetState = { modifie: true } | { code: PasswordResetFailureCode } | null
 export type PasswordResetAction = (precedent: PasswordResetState, formulaire: FormData) => Promise<PasswordResetState>
 
-const FIELD = 'rounded-md border border-neutral-300 bg-white px-3 py-2 font-normal text-base'
+const FIELD = 'min-h-11 rounded-md border border-neutral-300 bg-white px-3 py-2 font-normal text-base'
 
 /** The second step: the new password twice. The code is not in the form; the server reads it from the cookie of the link. */
 export function PasswordResetForm({ action }: { action: PasswordResetAction }) {

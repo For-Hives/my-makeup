@@ -53,7 +53,7 @@ export function SignInForm({
 					type="email"
 					autoComplete="email"
 					required
-					className="rounded-md border border-neutral-300 bg-white px-3 py-2 font-normal text-base"
+					className="min-h-11 rounded-md border border-neutral-300 bg-white px-3 py-2 font-normal text-base"
 				/>
 			</label>
 			<label className="flex flex-col gap-1 font-medium text-sm" htmlFor="password">
@@ -64,7 +64,7 @@ export function SignInForm({
 					type="password"
 					autoComplete="current-password"
 					required
-					className="rounded-md border border-neutral-300 bg-white px-3 py-2 font-normal text-base"
+					className="min-h-11 rounded-md border border-neutral-300 bg-white px-3 py-2 font-normal text-base"
 				/>
 			</label>
 			<p className="text-right text-sm">

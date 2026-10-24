@@ -20,7 +20,7 @@ export type ContactAction = (precedent: ContactState, formulaire: FormData) => P
 export type TrackContact = (nom: 'platform_contact_submit', proprietes: { ok: boolean; status: number }) => unknown
 
 const FIELD =
-	'block w-full rounded-md border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-600 sm:text-sm sm:leading-6'
+	'block min-h-11 w-full rounded-md border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-600 sm:text-sm sm:leading-6'
 
 const LABELS: Record<ContactField, string> = {
 	prenom: 'Prénom',
@@ -230,7 +230,7 @@ export function ContactForm({
 					type="submit"
 					disabled={pending}
 					aria-busy={pending}
-					className="block w-full rounded-md bg-indigo-900 px-3.5 py-2.5 text-center font-semibold text-sm text-white shadow-sm hover:bg-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-900 focus-visible:outline-offset-2 disabled:cursor-wait disabled:opacity-60"
+					className="block min-h-11 w-full rounded-md bg-indigo-900 px-3.5 py-2.5 text-center font-semibold text-sm text-white shadow-sm hover:bg-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-900 focus-visible:outline-offset-2 disabled:cursor-wait disabled:opacity-60"
 				>
 					{pending ? 'Envoi…' : 'Envoyer l’email'}
 				</button>

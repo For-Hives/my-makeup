@@ -98,12 +98,133 @@
 		@apply rounded-lg border-2 border-indigo-900 bg-transparent px-4 py-2 font-bold text-indigo-900 text-sm leading-6 focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2;
 	}
 
+	/* These two sit on the indigo band that closes the pages: the keyboard ring is white there (12:1). */
 	.btn-secondary-white {
-		@apply rounded-lg border-2 border-white bg-white px-4 py-2 font-bold text-indigo-900 text-sm leading-6;
+		@apply rounded-lg border-2 border-white bg-white px-4 py-2 font-bold text-indigo-900 text-sm leading-6 focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2;
 	}
 
 	.btn-secondary-white-bordered {
-		@apply rounded-lg border-2 border-white bg-transparent px-4 py-2 font-bold text-sm text-white leading-6;
+		@apply rounded-lg border-2 border-white bg-transparent px-4 py-2 font-bold text-sm text-white leading-6 focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2;
+	}
+}
+
+/*
+ * What a hand on the mouse sees (issue 1068): one rule for the whole site instead of a class on each control.
+ * Tailwind 4 gives buttons the arrow, so every element that can be clicked says so here: the hand, a hover, a
+ * ring for the keyboard and a pressed state. All of it sits in the base layer and under `:where`, so a component
+ * that styles its own state (a `hover:` or a `focus-visible:` class) keeps winning, and a disabled control shows
+ * « not allowed » unless a component says it is busy (`cursor-wait`). Text fields keep the text cursor: they are
+ * not pressed. The hover is also drawn for the mouse only, a touch screen has none: the pencil, the arrows and
+ * the underline of the links stay visible without it. Tested by tests/e2e/interaction-affordance.spec.ts.
+ */
+@layer base {
+	:where(
+			a[href],
+			area[href],
+			button,
+			summary,
+			select,
+			[role="button"],
+			[role="link"],
+			[role="tab"],
+			[role="menuitem"],
+			[role="switch"],
+			[role="option"],
+			[role="checkbox"],
+			[role="radio"],
+			input[type="checkbox"],
+			input[type="radio"],
+			input[type="file"],
+			input[type="submit"],
+			input[type="button"],
+			input[type="reset"],
+			input[type="image"],
+			label:has(input:is([type="checkbox"], [type="radio"], [type="file"]))
+		),
+	::file-selector-button {
+		cursor: pointer;
+	}
+
+	:where(:disabled, [aria-disabled="true"], label:has(input:disabled)) {
+		cursor: not-allowed;
+	}
+
+	/*
+	 * The keyboard: one ring (8:1 on white). Text fields keep their own: a click puts them in `:focus-visible` too, and a
+	 * second ring over their `focus:ring` would double it.
+	 */
+	:where(
+			a[href],
+			area[href],
+			button,
+			summary,
+			select,
+			input:is([type="checkbox"], [type="radio"], [type="file"], [type="submit"], [type="button"], [type="reset"]),
+			[role="button"],
+			[role="link"],
+			[role="tab"],
+			[role="switch"],
+			[tabindex]
+		):focus-visible {
+		outline: 2px solid var(--color-indigo-700);
+		outline-offset: 2px;
+	}
+
+	@media (hover: hover) {
+		/* A link shows it is one: it underlines, or thickens the underline it already has. */
+		:where(a[href]):hover {
+			text-decoration-line: underline;
+			text-decoration-thickness: 2px;
+			text-underline-offset: 3px;
+		}
+
+		/*
+		 * A control without a background of its own is tinted with its own text color; one that has a background
+		 * darkens. A button that covers its block (the pen of the direct edition, `inset-0`) is left out: the block draws
+		 * its own ring, and a tint over a photo would dim it.
+		 */
+		:where(
+				button,
+				summary,
+				[role="button"],
+				[role="tab"],
+				[role="switch"],
+				label:has(input:is([type="checkbox"], [type="radio"], [type="file"]))
+			):not(:disabled, [aria-disabled="true"], .inset-0):hover {
+			background-color: color-mix(in srgb, currentColor 8%, transparent);
+			filter: brightness(0.92);
+		}
+
+		:where(select, input[type="checkbox"], input[type="radio"], input[type="file"]):not(:disabled):hover {
+			box-shadow: inset 0 0 0 1px currentColor;
+			filter: brightness(0.92);
+		}
+	}
+
+	/* Pressed: every control dims for as long as the button is down. */
+	:where(
+			a[href],
+			button,
+			summary,
+			select,
+			[role="button"],
+			[role="tab"],
+			[role="switch"],
+			input[type="checkbox"],
+			input[type="radio"],
+			input[type="file"],
+			label:has(input:is([type="checkbox"], [type="radio"], [type="file"]))
+		):not(:disabled, [aria-disabled="true"]):active {
+		opacity: 0.75;
+	}
+
+	/* A control that its component makes dead (the folded cards of a profile, from 768 px) shows no hover and no press. */
+	@media (min-width: 768px) {
+		summary.md\:cursor-default:is(:hover, :active) {
+			background-color: transparent;
+			filter: none;
+			opacity: 1;
+		}
 	}
 }
 

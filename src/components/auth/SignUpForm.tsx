@@ -19,7 +19,7 @@ export type SignUpState = {
 export type SignUpAction = (precedent: SignUpState, formulaire: FormData) => Promise<SignUpState>
 
 const FIELD =
-	'rounded-md border border-neutral-300 bg-white px-3 py-2 font-normal text-base aria-[invalid=true]:border-red-600'
+	'min-h-11 rounded-md border border-neutral-300 bg-white px-3 py-2 font-normal text-base aria-[invalid=true]:border-red-600'
 
 function FormError({ champ, erreurs: errors }: { champ: SignUpField; erreurs: SignUpErrors | undefined }) {
 	const message = errors?.[champ]
