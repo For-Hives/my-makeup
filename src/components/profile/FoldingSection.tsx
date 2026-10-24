@@ -24,7 +24,7 @@ export function FoldingSection({ titre, children }: { titre: string; children: R
 	}, [])
 
 	return (
-		<section className="w-full min-w-0 rounded border border-gray-300 bg-white">
+		<section className="reveal w-full min-w-0 rounded border border-gray-300 bg-white">
 			<details ref={details} open className="group">
 				{/* biome-ignore lint/a11y/noStaticElementInteractions: summary is a native control; the handler only keeps it open on a computer */}
 				<summary

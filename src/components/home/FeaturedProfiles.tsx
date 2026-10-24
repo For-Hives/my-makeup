@@ -20,7 +20,7 @@ export function FeaturedProfiles({ cartes }: { cartes: readonly ProfileCard[] })
 				</h2>
 				<ul className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-3 md:gap-6">
 					{cartes.map(carte => (
-						<li key={carte.slug}>
+						<li key={carte.slug} className="reveal">
 							<ResultCard carte={carte} prioritaire={false} />
 						</li>
 					))}

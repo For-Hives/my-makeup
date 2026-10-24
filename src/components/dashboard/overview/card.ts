@@ -4,7 +4,7 @@
  * on the page background). Whole class names, so that Tailwind finds them. The lipstick red is for the links that lead to
  * the edit mode: nothing on these cards is changed in place.
  */
-export const CARD = 'w-full min-w-0 rounded-[22px] border border-[#E6DCD5] bg-white p-5 text-[#1A1417] sm:p-6'
+export const CARD = 'reveal w-full min-w-0 rounded-[22px] border border-[#E6DCD5] bg-white p-5 text-[#1A1417] sm:p-6'
 export const SECONDARY = 'text-[#554950]'
 export const TITLE = 'font-display font-medium text-[#1A1417] text-xl'
 export const EDIT_LINK =

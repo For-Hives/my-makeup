@@ -67,7 +67,7 @@ export function ResultCard({
 }) {
 	const photo = carte.photo
 	const className =
-		'flex w-full flex-row overflow-hidden rounded border border-gray-300 bg-white focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2 md:flex-col'
+		'card-hover flex w-full flex-row overflow-hidden rounded border border-gray-300 bg-white focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2 md:flex-col'
 	const content = (
 		<>
 			<div className="relative h-[140px] w-[140px] shrink-0 md:aspect-[4/3] md:h-auto md:w-full">
@@ -78,7 +78,7 @@ export function ResultCard({
 					sizes="(min-width: 1536px) 16vw, (min-width: 768px) 33vw, 140px"
 					priority={prioritaire}
 					fetchPriority={prioritaire ? 'high' : undefined}
-					className="object-cover object-center"
+					className="card-zoom object-cover object-center"
 				/>
 				{carte.superMaquilleuse && (
 					<div className="absolute top-0 left-0 flex items-center justify-center pt-2 md:pt-4">

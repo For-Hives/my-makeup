@@ -445,6 +445,11 @@
 			"id": "en-haut-de-ta-page-en-mode-edition-tu-vois-la-liste-de-to",
 			"type": "amelioration",
 			"text": "En haut de ta page en mode édition, tu vois la liste de tout ce qui manque pour que ton profil soit visible de tous, chaque point mène au bloc à compléter, et elle se met à jour quand tu enregistres."
+		},
+		{
+			"id": "le-site-bouge-avec-douceur-les-cartes-se-soulevent-au-sur",
+			"type": "amelioration",
+			"text": "Le site bouge avec douceur : les cartes se soulèvent au survol, les blocs apparaissent en glissant au défilement, et rien ne bouge si tu as demandé moins de mouvement."
 		}
 	],
 	"releases": []

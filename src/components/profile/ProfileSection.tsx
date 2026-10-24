@@ -6,7 +6,7 @@ import type { ReactNode } from 'react'
  */
 export function ProfileSection({ titre, children }: { titre: string; children: ReactNode }) {
 	return (
-		<section className="w-full min-w-0 rounded border border-gray-300 bg-white p-6 sm:p-8">
+		<section className="reveal w-full min-w-0 rounded border border-gray-300 bg-white p-6 sm:p-8">
 			<div className="flex w-full flex-col gap-4">
 				<h2 className="font-bold text-gray-700 text-xl">{titre}</h2>
 				{children}
