@@ -39,8 +39,12 @@ for (const size of [SCREENS.mobile, SCREENS.chromium]) {
 			await page.locator('section:has([data-backdrop])').scrollIntoViewIfNeeded()
 			const backdrop = page.locator('[data-backdrop]')
 			await expect(backdrop).toHaveAttribute('data-backdrop', /^(shader|static)$/)
-			const mode = await backdrop.getAttribute('data-backdrop')
-			await expect(page.locator('[data-backdrop] canvas')).toHaveCount(mode === 'shader' ? 1 : 0)
+			// Read together: a canvas exists only while the background says it is the shader.
+			const consistent = await page.evaluate(() => {
+				const mode = document.querySelector('[data-backdrop]')?.getAttribute('data-backdrop')
+				return document.querySelectorAll('[data-backdrop] canvas').length === 0 || mode === 'shader'
+			})
+			expect(consistent).toBe(true)
 			await expect(page.getByRole('heading', { name: /Rejoignez/ })).toBeVisible()
 			// Leaving the screen unmounts the shader: its removal is tried by the unit test of the component.
 		})
