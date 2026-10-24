@@ -129,6 +129,46 @@ export function essentialsText({ done, total }: Gauge, publishable: boolean): st
 export const gaugePercent = (progress: Pick<Progress, 'pourcentage' | 'manques'>): number =>
 	progress.manques.some(point => point.requis) ? Math.min(progress.pourcentage, 99) : progress.pourcentage
 
+/** What her summary says of her page, in four codes (issue 1073). */
+export type OverviewCode = 'visible' | 'draft' | 'hidden' | 'internal'
+
+export interface OverviewState {
+	readonly code: OverviewCode
+	/** In bold: where her page stands for a visitor. */
+	readonly title: string
+	/** The sentence under it. */
+	readonly text: string
+	/** True when her page is visible but she set herself unavailable: the search leaves her out. */
+	readonly paused: boolean
+}
+
+/**
+ * Where her page stands, for the summary of her space (issue 1073): visible to everyone, a draft, hidden by the team (with
+ * its reason), or the team's own account. Worded from the reading of the single rule (`profileProgress`), never recomputed.
+ */
+export function overviewStatus(progress: Pick<Progress, 'etat' | 'titre' | 'consequence' | 'enPause'>): OverviewState {
+	switch (progress.etat) {
+		case 'masque':
+			return { code: 'hidden', title: progress.titre, text: progress.consequence, paused: false }
+		case 'interne':
+			return { code: 'internal', title: progress.titre, text: progress.consequence, paused: false }
+		case 'publiable':
+			return {
+				code: 'visible',
+				title: 'Ta page est visible de toutes',
+				text: progress.enPause ? progress.consequence : 'Elle apparaît dans la recherche et Google peut la trouver.',
+				paused: progress.enPause,
+			}
+		default:
+			return {
+				code: 'draft',
+				title: 'Ta page est en brouillon',
+				text: 'Les clientes ne la voient pas encore. Complète les points ci-dessous pour la publier.',
+				paused: progress.enPause,
+			}
+	}
+}
+
 /** « Bonus : 2/7 » (ticket 306). */
 export const bonusText = ({ done, total }: Gauge): string => `Bonus : ${done}/${total}`
 

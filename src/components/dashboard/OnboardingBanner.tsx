@@ -18,9 +18,9 @@ export function OnboardingBanner({ reste, premiere }: { reste: number; premiere:
 			data-testid="bandeau-accueil"
 			data-restantes={reste}
 			data-premiere={premiere}
-			className="flex w-full min-w-0 flex-wrap items-center justify-between gap-3 rounded border border-indigo-300 bg-indigo-50 p-4"
+			className="flex w-full min-w-0 flex-wrap items-center justify-between gap-3 rounded-[22px] border border-[#E6DCD5] bg-white p-4 text-[#1A1417]"
 		>
-			<p className="font-medium text-indigo-950">{remainingStepsText(reste)}</p>
+			<p className="font-medium text-[#1A1417]">{remainingStepsText(reste)}</p>
 			<a
 				href={ACCOUNT_ONBOARDING_PAGE}
 				className="inline-flex min-h-11 items-center rounded-md bg-neutral-900 px-4 py-2 font-medium text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600"

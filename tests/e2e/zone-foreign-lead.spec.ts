@@ -1,6 +1,7 @@
 import { expect, type Locator, type Page, test } from '@playwright/test'
 import { createAccount } from '../support/account-factory'
 import { violationsSevere } from '../support/axe'
+import { EDIT_PATH } from '../support/direct-edit-e2e'
 import { SCREENS } from '../support/e2e'
 import { testPayload } from '../support/payload-test'
 
@@ -110,11 +111,11 @@ async function openZonePanel(page: Page, context: { addCookies: (c: never) => Pr
 	const account = await createAccount('maquilleuse')
 	createdAccounts.push(Number(account.id))
 	await context.addCookies(account.session.cookies as never)
-	await page.goto('/auth/profil')
-	await expect(page.getByRole('heading', { level: 1, name: 'Mon espace' })).toBeVisible()
+	await page.goto(EDIT_PATH)
+	await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
 	await page.waitForLoadState('networkidle')
-	await press(page.getByRole('button', { name: 'Modifier ma localisation', exact: true }))
-	await expect(page.getByRole('dialog')).toBeVisible()
+	await press(page.getByRole('button', { name: 'Modifier ma zone', exact: true }))
+	await expect(page.locator('[data-direct-edit-editor]')).toBeVisible()
 }
 
 for (const size of SIZES) {
@@ -161,21 +162,21 @@ for (const size of SIZES) {
 		}) => {
 			test.setTimeout(120_000)
 			await openZonePanel(page, context)
-			const dialog = page.getByRole('dialog')
+			const dialog = page.locator('[data-direct-edit-editor]')
 			const field = dialog.getByRole('combobox', { name: 'Où travailles-tu ?' })
 			const choose = dialog.getByRole('button', { name: 'Choisir un pays' })
 
-			await checkScreen(page, 'panneau normal', '[role="dialog"]')
+			await checkScreen(page, 'panneau normal', '[data-direct-edit-editor]')
 			await shot(page, 'panneau-normal')
 
 			await field.fill('Genève')
 			await expect(dialog.getByText(LEAD)).toBeVisible()
-			await checkScreen(page, 'panneau, aucune commune', '[role="dialog"]')
+			await checkScreen(page, 'panneau, aucune commune', '[data-direct-edit-editor]')
 			await shot(page, 'panneau-aucune-commune')
 
 			await press(choose)
 			await expect(dialog.getByRole('button', { name: 'Retirer Suisse' })).toBeVisible()
-			await checkScreen(page, 'panneau, pays choisi', '[role="dialog"]')
+			await checkScreen(page, 'panneau, pays choisi', '[data-direct-edit-editor]')
 			await shot(page, 'panneau-pays-prechoisi')
 
 			// Back to the commune, the list of suggestions open: one press on the foreign link is enough.
@@ -194,7 +195,7 @@ for (const size of SIZES) {
 		}) => {
 			test.setTimeout(120_000)
 			await openZonePanel(page, context)
-			const dialog = page.getByRole('dialog')
+			const dialog = page.locator('[data-direct-edit-editor]')
 			const field = dialog.getByRole('combobox', { name: 'Où travailles-tu ?' })
 			const back = dialog.getByRole('button', { name: 'Revenir à une commune en France' })
 			const picker = dialog.getByRole('combobox', { name: 'Ajouter un pays' })

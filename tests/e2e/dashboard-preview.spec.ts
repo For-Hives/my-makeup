@@ -4,7 +4,7 @@ import { violationsSevere } from '../support/axe'
 import { testPayload } from '../support/payload-test'
 
 /**
- * « Voir mon profil public » (ticket 139; plan 02 RG-06): a link that works at 390, 1024 and 1440 px,
+ * « Voir ma page » (ticket 139 ; issue 1073; plan 02 RG-06): a link that works at 390, 1024 and 1440 px,
  * a preview with the content of the public page, a banner that says where the profile stands, and a
  * page that is private and not indexed. All made-up people.
  *
@@ -53,7 +53,7 @@ test.describe('139 : voir mon profil public', { tag: '@mobile' }, () => {
 		for (const width of [390, 1024, 1440]) {
 			await page.setViewportSize({ width: width, height: 900 })
 			await page.goto('/auth/profil')
-			const link = page.getByRole('link', { name: 'Voir mon profil public' })
+			const link = page.getByRole('link', { name: 'Voir ma page' })
 			await expect(link).toBeVisible()
 			const mailbox = await link.boundingBox()
 			expect(mailbox?.height ?? 0, `hauteur du lien à ${width} px`).toBeGreaterThanOrEqual(44)

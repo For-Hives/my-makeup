@@ -5,9 +5,9 @@ import { testPayload } from '../support/payload-test'
 import { fileForPayload } from '../support/photos'
 
 /**
- * The progress block at the top of her space (ticket 138; plan 02 U01, I20): an empty profile reads
- * 0 of the 6 essentials with every point to fill and what the state changes for her; a save moves the block
- * without the page being loaded again; nothing overflows at phone width. All made-up people.
+ * The summary of her space (ticket 138 moved to issue 1073; plan 02 U01, I20): where her page stands (visible, a draft,
+ * hidden by the team with its reason, paused), « Ton profil est rempli à N % », and every point that misses as a link to
+ * its block of the edit mode; no editor of her profile on the page; nothing overflows at phone width. All made-up people.
  *
  * The brake of the sign-in counts by client address: each test sends its own made-up address.
  */
@@ -29,7 +29,7 @@ test.afterEach(async () => {
 })
 
 test.describe('138 : où en est le profil', { tag: '@mobile' }, () => {
-	test('U01 : profil vide, 0/6 indispensables, tous les manques liés à leur carte, sans débordement', async ({
+	test('U01 : profil vide, 6 points indispensables et 13 au total, chacun mène à son bloc de l’édition, aucun éditeur', async ({
 		context,
 		page,
 	}) => {
@@ -40,29 +40,47 @@ test.describe('138 : où en est le profil', { tag: '@mobile' }, () => {
 
 		const block = page.getByTestId('avancement')
 		await expect(block).toHaveAttribute('data-etat', 'vide')
-		await expect(page.getByTestId('avancement-score')).toHaveText('0/6 indispensables')
-		await expect(page.getByTestId('avancement-consequence')).toContainText('n’est pas listé dans la recherche')
+		await expect(block).toHaveAttribute('data-statut', 'draft')
+		await expect(page.getByTestId('avancement-score')).toHaveText(/^Ton profil est rempli à \d+ %$/)
+		await expect(page.getByTestId('brouillon-pastille')).toHaveText('En brouillon')
+		await expect(page.getByTestId('avancement-consequence')).toContainText('Les clientes ne la voient pas encore.')
 		await expect(block.locator('li')).toHaveCount(13)
-		await expect(page.getByTestId('brouillon-manques')).toContainText(
-			'ta spécialité, ta commune, une description de 200 caractères au moins, ta photo principale, une prestation avec un prix en chiffres, un moyen de te contacter.'
-		)
+		await expect(block.locator('[aria-labelledby="avancement-requis"] li')).toHaveCount(6)
 		expect(await page.locator('h1').count()).toBe(1)
+		await block.screenshot({ path: test.info().outputPath('avancement.png') })
 
-		await page.screenshot({
-			fullPage: false,
-			clip: undefined,
-			path: test.info().outputPath('avancement.png'),
-		})
+		// No editor of her profile lives here: the way to change anything is the edit mode.
+		await expect(page.locator('button[aria-label^="Modifier m"]')).toHaveCount(0)
+		await expect(page.getByRole('dialog')).toHaveCount(0)
+		await expect(page.getByTestId('modifier-mon-profil')).toHaveAttribute('href', '/auth/apercu-profil?mode=edition')
 
-		// A point leads to its card.
+		// A point leads to its block of the edit mode.
 		await block.getByRole('link', { name: 'Ajoute ta photo principale.' }).click()
-		await expect(page).toHaveURL(/#carte-photo$/)
-
-		expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
-		expect(await violationsSevere(page)).toEqual([])
+		await expect(page).toHaveURL(/\/auth\/apercu-profil\?mode=edition#bloc-photo$/)
+		await expect(page.locator('#bloc-photo')).toBeVisible()
 	})
 
-	test('I20 : une description de 200 caractères enregistrée fait bouger le bloc sans recharger la page', async ({
+	test('un point manquant disparaît du résumé une fois la présentation écrite (I20)', async ({ context, page }) => {
+		const account = await createAccount('maquilleuse')
+		created.push(Number(account.id))
+		const payload = await testPayload()
+		const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: account.id } } })
+		await context.addCookies(account.session.cookies)
+		await page.goto('/auth/profil')
+		const required = page.locator('[aria-labelledby="avancement-requis"] li')
+		await expect(required).toHaveCount(6)
+		const before = await page.getByTestId('avancement-score').innerText()
+
+		await payload.update({ collection: 'profiles', id: docs[0]?.id as number, data: { description: 'a'.repeat(200) } })
+		await page.reload()
+		await expect(required).toHaveCount(5)
+		await expect(page.getByTestId('avancement-score')).not.toHaveText(before)
+		await expect(page.getByTestId('avancement').getByRole('link', { name: /^Écris ta description/ })).toHaveCount(0)
+	})
+})
+
+test.describe('1073 : « Mon espace » est un tableau de bord', { tag: '@mobile' }, () => {
+	test('les deux boutons, le statut, l’avancement, puis le compte, sans défilement de côté, avec des cibles de 44 px', async ({
 		context,
 		page,
 	}) => {
@@ -70,24 +88,43 @@ test.describe('138 : où en est le profil', { tag: '@mobile' }, () => {
 		created.push(Number(account.id))
 		await context.addCookies(account.session.cookies)
 		await page.goto('/auth/profil')
-		await expect(page.getByTestId('avancement-score')).toHaveText('0/6 indispensables')
-		await page.evaluate(() => {
-			;(window as unknown as { __sansRechargement: boolean }).__sansRechargement = true
-		})
+		await expect(page.getByRole('heading', { level: 1, name: 'Mon espace' })).toBeVisible()
+		const edit = page.getByTestId('modifier-mon-profil')
+		const view = page.getByTestId('voir-mon-profil-public')
+		await expect(edit).toHaveText('Modifier mon profil')
+		await expect(view).toHaveText('Voir ma page')
+		for (const button of [edit, view]) expect((await button.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44)
+		const top = (locator: typeof edit) => locator.evaluate(node => node.getBoundingClientRect().top + window.scrollY)
+		const order = [
+			await top(edit),
+			await top(page.getByTestId('avancement')),
+			await top(page.getByTestId('carte-disponibilite')),
+			await top(page.getByTestId('mon-compte')),
+		]
+		expect([...order].sort((a, b) => a - b)).toEqual(order)
+		expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+		expect(await violationsSevere(page)).toEqual([])
+		const folder = process.env.SCREENSHOT_DIR
+		if (folder)
+			await page.screenshot({ path: `${folder}/1073-espace-${page.viewportSize()?.width}.png`, fullPage: true })
+		// « Voir ma page » is the preview of her page; « Modifier mon profil » is the edit mode.
+		await view.click()
+		await expect(page).toHaveURL(/\/auth\/apercu-profil$/)
+	})
 
-		const button = page.getByRole('button', { name: 'Modifier ma description' })
-		if (test.info().project.name === 'mobile') await button.tap()
-		else await button.click()
-		await page.getByLabel('Ta description').fill('a'.repeat(200))
-		await page.getByRole('button', { name: 'Enregistrer' }).click()
-
-		await expect(page.getByTestId('avancement-score')).toHaveText('1/6 indispensables')
-		await expect(page.getByTestId('avancement').getByRole('link', { name: /^Écris ta description/ })).toHaveCount(0)
-		await expect(page.getByTestId('avancement').getByRole('link', { name: /Allonge ta description/ })).toHaveCount(0)
-		// Same document: the page was not loaded again.
-		expect(await page.evaluate(() => (window as unknown as { __sansRechargement?: boolean }).__sansRechargement)).toBe(
-			true
-		)
+	test('le SIRET et « Activité vérifiée » : l’état est dit, un lien mène au bloc de l’édition', async ({
+		context,
+		page,
+	}) => {
+		const account = await createAccount('maquilleuse')
+		created.push(Number(account.id))
+		await context.addCookies(account.session.cookies)
+		await page.goto('/auth/profil')
+		const card = page.getByTestId('activite')
+		await expect(card).toHaveAttribute('data-activity-state', 'none')
+		await expect(card).toContainText('Activité vérifiée')
+		await card.getByRole('link', { name: 'Ajouter mon SIRET' }).click()
+		await expect(page).toHaveURL(/\/auth\/apercu-profil\?mode=edition#bloc-siret$/)
 	})
 })
 
@@ -145,7 +182,7 @@ test.describe('292 : le vrai statut, masqué ou en pause', { tag: '@mobile' }, (
 		await page.goto('/auth/profil')
 
 		const block = page.getByTestId('avancement')
-		await expect(page.getByTestId('avancement-consequence')).toHaveText(
+		await expect(page.getByTestId('avancement-pause')).toHaveText(
 			'Tu es en pause : ta page reste en ligne, mais tu n’apparais pas dans la recherche.'
 		)
 		await page.screenshot({ path: test.info().outputPath('avancement-pause.png') })
@@ -157,7 +194,7 @@ test.describe('292 : le vrai statut, masqué ou en pause', { tag: '@mobile' }, (
 
 		await expect(block.getByRole('status')).toContainText('Tu as repris les demandes')
 		await expect(block.getByRole('button', { name: 'Reprendre les demandes' })).toHaveCount(0)
-		await expect(page.getByTestId('avancement-consequence')).not.toContainText('en pause')
+		await expect(page.getByTestId('avancement-pause')).toHaveCount(0)
 		const stored = await payload.findByID({ collection: 'profiles', id, depth: 0 })
 		expect(stored.available).toBe(true)
 		expect(await violationsSevere(page)).toEqual([])
@@ -197,26 +234,27 @@ test.describe('306 : la jauge honnête et « Ta page est en ligne ! »', { tag: 
 		return { account, payload, id: sheet.id, slug: profile.slug ?? '' }
 	}
 
-	test('cinq indispensables : 5/6, le manque est lié à sa carte, aucune carte « en ligne »', async ({
+	test('cinq indispensables : un seul point à remplir, il mène au bloc de l’édition, aucune carte « en ligne »', async ({
 		context,
 		page,
 	}) => {
 		const { account } = await artist(false)
 		await context.addCookies(account.session.cookies)
 		await page.goto('/auth/profil')
-		await expect(page.getByTestId('avancement-score')).toHaveText('5/6 indispensables')
 		await expect(page.getByTestId('avancement').locator('li')).toHaveCount(7)
+		await expect(page.getByTestId('avancement').locator('[aria-labelledby="avancement-requis"] li')).toHaveCount(1)
 		await expect(page.getByTestId('page-en-ligne')).toHaveCount(0)
 
-		// « En brouillon » (decision of 23/10/2026): plain words, what is missing, a button of 44 px to the block.
-		const notice = page.getByTestId('brouillon')
-		await expect(notice.getByTestId('brouillon-pastille')).toHaveText('En brouillon')
-		await expect(notice).toContainText('Ta page n’est pas encore en ligne : les clientes ne la voient pas.')
-		await expect(notice.getByTestId('brouillon-manques')).toContainText('moyen de te contacter')
-		const completeLink = notice.getByRole('link', { name: 'Compléter ma page' })
+		// « En brouillon » (decision of 23/10/2026): plain words, what is missing, a link of 44 px to the block.
+		await expect(page.getByTestId('brouillon-pastille')).toHaveText('En brouillon')
+		await expect(page.getByTestId('avancement-consequence')).toContainText('Les clientes ne la voient pas encore.')
+		const completeLink = page
+			.getByTestId('avancement')
+			.locator('[aria-labelledby="avancement-requis"]')
+			.getByRole('link', { name: /moyen de te contacter/ })
 		expect((await completeLink.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44)
 		expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
-		await notice.screenshot({ path: test.info().outputPath('brouillon.png') })
+		await page.getByTestId('avancement').screenshot({ path: test.info().outputPath('brouillon.png') })
 		expect(await violationsSevere(page)).toEqual([])
 
 		await completeLink.click()
@@ -232,13 +270,14 @@ test.describe('306 : la jauge honnête et « Ta page est en ligne ! »', { tag: 
 		await context.grantPermissions(['clipboard-read', 'clipboard-write'])
 		await context.addCookies(account.session.cookies)
 		await page.goto('/auth/profil')
-		await expect(page.getByTestId('avancement-score')).toHaveText('6/6 : ta page est prête')
-		await expect(page.getByTestId('brouillon')).toHaveCount(0)
+		await expect(page.getByTestId('avancement')).toHaveAttribute('data-statut', 'visible')
+		await expect(page.getByTestId('statut-pastille')).toHaveText('Visible')
+		await expect(page.getByTestId('brouillon-pastille')).toHaveCount(0)
 		const card = page.getByTestId('page-en-ligne')
 		await expect(card.getByRole('heading', { name: 'Ta page est en ligne !' })).toBeVisible()
 		const address = `https://my-makeup.fr/profil/${slug}`
 		await expect(card.getByTestId('page-en-ligne-adresse')).toHaveText(address)
-		await expect(page.getByTestId('avancement-consequence')).toContainText('Google peut maintenant te trouver')
+		await expect(page.getByTestId('avancement-consequence')).toContainText('Google peut la trouver')
 
 		await page.waitForLoadState('networkidle')
 		const copy = card.getByRole('button', { name: 'Copier le lien' })
@@ -265,6 +304,6 @@ test.describe('306 : la jauge honnête et « Ta page est en ligne ! »', { tag: 
 		await page.goto('/auth/profil')
 		await expect(page.getByTestId('avancement')).toHaveAttribute('data-etat', 'masque')
 		await expect(page.getByTestId('page-en-ligne')).toHaveCount(0)
-		await expect(page.getByTestId('brouillon')).toHaveCount(0)
+		await expect(page.getByTestId('brouillon-pastille')).toHaveCount(0)
 	})
 })

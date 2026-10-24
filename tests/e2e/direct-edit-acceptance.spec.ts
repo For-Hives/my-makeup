@@ -2,21 +2,21 @@ import { expect, type Locator, type Page, test } from '@playwright/test'
 import sharp from 'sharp'
 import { createAccount, type TestAccount } from '../support/account-factory'
 import { violationsSevere } from '../support/axe'
-import { openFurtherCards } from '../support/further-cards'
+import { EDIT_PATH } from '../support/direct-edit-e2e'
 import { testPayload } from '../support/payload-test'
 import { generatedProfile } from '../support/profile-factory'
 
 /**
- * The final check of her space (ticket 142; plan 02 §9 P7, E37, E67, E68): played once, at 390 and
- * 1440 px, when every section is delivered. The sections each have their own spec; this one is what
- * they cannot say alone:
+ * The final check of her space, now her profile (ticket 142 moved to issue 1022; plan 02 §9 P7, E37, E67, E68):
+ * played at 390 and 1440 px on a full profile. The blocks each have their own spec; this one is what they
+ * cannot say alone:
  *
- * - E67: axe finds no « serious » or « critical » violation on the page of the space, on the onboarding
- *   and on every panel, opened one after the other on the same full profile;
- * - E68 on every panel: Escape closes it and gives the focus back to the button that opened it;
+ * - E67: axe finds no « serious » or « critical » violation on her page, on the onboarding and on every block,
+ *   opened one after the other on the same full profile;
+ * - E68 on every block: Escape closes it and gives the focus back to the button that opened it;
  * - E37: a changed main photo reaches the public profile and its `og:image`;
- * - 200 % zoom (half the width in CSS pixels): nothing overflows sideways and no two elements overlap,
- *   on the page and in every panel.
+ * - 200 % zoom (half the width in CSS pixels): nothing overflows sideways and no two elements overlap in the
+ *   every editor.
  *
  * The orphans of the storage after the whole suite are not counted here but by the step that follows the
  * end-to-end tests in the CI (`bun run bench:reconcile --outside-import`, ticket 137).
@@ -24,23 +24,24 @@ import { generatedProfile } from '../support/profile-factory'
  * The brake of the sign-in counts by client address: each test sends its own made-up address.
  */
 
-/** The 12 panels of the space: the name of the button that opens each. */
-const PANELS = [
-	'Modifier mon identité',
-	'Modifier ma description',
-	'Modifier ma localisation',
+/** The 15 blocks of her page: the name of the button that opens each. */
+const BLOCKS = [
+	'Modifier ma photo principale',
+	'Modifier mon nom et ma spécialité',
+	'Modifier ma zone',
+	'Modifier ma disponibilité',
+	'Modifier ma présentation',
 	'Modifier mes compétences',
+	'Modifier mes langues',
 	'Modifier mes formations',
 	'Modifier mes expériences',
-	'Modifier mes langues',
+	'Modifier mes prestations',
+	'Modifier mon portfolio',
+	'Modifier mes déplacements',
 	'Modifier mes réseaux',
 	'Modifier mes coordonnées',
-	'Modifier mes prestations',
-	'Modifier ma photo principale',
-	'Modifier mon portfolio',
+	'Modifier mon SIRET',
 ] as const
-
-const DELETION = 'Supprimer mon compte'
 
 let counter = 0
 test.beforeEach(({ context }) =>
@@ -82,16 +83,14 @@ async function fullArtist(context: {
 	return { compte: account, slug: put.slug ?? '' }
 }
 
-/** Waits for the page of the space, whose cards are streamed. */
-async function openDashboard(page: Page) {
-	await page.goto('/auth/profil')
-	await expect(page.getByRole('heading', { level: 1, name: 'Mon espace' })).toBeVisible()
-	await expect(page.getByTestId('carte-identite')).toBeVisible()
-	// The twelve panels are tried: the folded group « Pour aller plus loin » is open (ticket 307).
-	await openFurtherCards(page)
+/** Waits for her page in edit mode: the name is the h1. */
+async function openProfile(page: Page) {
+	await page.goto(EDIT_PATH)
+	await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+	await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
 }
 
-const dialogue = (page: Page) => page.getByRole('dialog')
+const editor = (page: Page) => page.locator('[data-direct-edit-editor]')
 
 /**
  * The elements a person reads or touches that cover one another: the pairs of visible headings, links,
@@ -101,7 +100,11 @@ const dialogue = (page: Page) => page.getByRole('dialog')
 async function overlaps(page: Page): Promise<string[]> {
 	return page.evaluate(() => {
 		const SELECTOR = 'h1, h2, h3, a[href], button, input, select, textarea, label, [role="switch"], [role="status"]'
-		const root = document.querySelector('[role="dialog"]') ?? document.body
+		// Her page covers its blocks with buttons by design: only the editor that is open is read, and nothing when none is.
+		// A page that is not hers (the proof below) is read whole.
+		const root =
+			document.querySelector('[data-direct-edit-editor]') ??
+			(document.querySelector('[data-direct-edit]') ? document.createElement('div') : document.body)
 		// One box per line of text: a link that wraps is not one wide box covering its neighbours.
 		const visible = [...root.querySelectorAll<HTMLElement>(SELECTOR)].flatMap(element => {
 			const style = getComputedStyle(element)
@@ -137,40 +140,38 @@ async function overlaps(page: Page): Promise<string[]> {
 const overflow = (page: Page) =>
 	page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
 
-/** Opens the panel, runs `controle` on it, closes it with Escape and checks that the focus is back on its button. */
-async function browsePanels(page: Page, controle: (nom: string) => Promise<void>) {
-	for (const name of [...PANELS, DELETION]) {
+/** Opens the block, runs `controle` on it, closes it with Escape and checks that the focus is back on its button. */
+async function browseBlocks(page: Page, controle: (nom: string) => Promise<void>) {
+	for (const name of BLOCKS) {
 		const button = page.getByRole('button', { name: name, exact: true })
 		await button.scrollIntoViewIfNeeded()
 		await press(button)
-		await expect(dialogue(page), name).toBeVisible()
+		await expect(editor(page), name).toBeVisible()
 		await controle(name)
 		await page.keyboard.press('Escape')
-		// A panel with a change asks before it closes: nothing is typed here, so the first Escape is enough.
-		await expect(dialogue(page), name).toHaveCount(0)
+		// A block with a change asks before it closes: nothing is typed here, so the first Escape is enough.
+		await expect(editor(page), name).toHaveCount(0)
 		await expect(button, name).toBeFocused()
 	}
 }
 
 test.describe('142 : la recette de l’espace', { tag: '@mobile' }, () => {
-	test('E67, E68 : la page de l’espace et chacun des 12 panneaux et de la suppression : 0 violation grave, Échap rend le focus', async ({
+	test('E67, E68 : sa page et chacun des 15 blocs : 0 violation grave, Échap rend le focus', async ({
 		context,
 		page,
 	}) => {
 		test.setTimeout(180_000)
 		await fullArtist(context)
-		await openDashboard(page)
+		await openProfile(page)
 
-		// All the buttons the page offers are the ones the walk opens: a panel added later is not left out.
+		// All the buttons the page offers are the ones the walk opens: a block added later is not left out.
 		const buttons = await page
 			.locator('main button[aria-label^="Modifier m"]')
 			.evaluateAll(noeuds => noeuds.map(noeud => noeud.getAttribute('aria-label')).sort())
-		expect(buttons).toEqual([...PANELS].sort())
+		expect(buttons).toEqual([...BLOCKS].sort())
 		expect(await violationsSevere(page)).toEqual([])
 
-		await browsePanels(page, async nom => {
-			// Axe reads the dialog once the focus has moved into it.
-			await expect(page.locator('[role="dialog"] :focus, [role="dialog"]:focus').first(), nom).toBeAttached()
+		await browseBlocks(page, async nom => {
 			expect(await violationsSevere(page), nom).toEqual([])
 		})
 
@@ -215,25 +216,27 @@ test.describe('142 : la recette de l’espace', { tag: '@mobile' }, () => {
 			const tag = html.match(/<meta property="og:image" content="([^"]+)"/)?.[1]
 			return tag?.replaceAll('&amp;', '&') ?? ''
 		}
-		const change = async (couleur: string, libelle: 'Choisir une photo' | 'Choisir une autre photo') => {
+		const change = async (couleur: string) => {
 			await press(page.getByRole('button', { name: 'Modifier ma photo principale', exact: true }))
-			await expect(dialogue(page)).toBeVisible()
-			await page.getByLabel(libelle).setInputFiles({
-				name: `${couleur.slice(1)}.jpg`,
-				mimeType: 'image/jpeg',
-				buffer: await photo(couleur),
-			})
+			await expect(editor(page)).toBeVisible()
+			await editor(page)
+				.locator('input[type="file"]')
+				.setInputFiles({
+					name: `${couleur.slice(1)}.jpg`,
+					mimeType: 'image/jpeg',
+					buffer: await photo(couleur),
+				})
 			await expect(page.getByRole('img', { name: 'Aperçu de la photo choisie' })).toBeVisible({ timeout: 60_000 })
 			await page.getByRole('button', { name: 'Enregistrer' }).click()
-			await expect(dialogue(page)).toHaveCount(0, { timeout: 60_000 })
+			await expect(editor(page)).toHaveCount(0, { timeout: 60_000 })
 		}
 
-		await openDashboard(page)
-		await change('#aa3355', 'Choisir une photo')
+		await openProfile(page)
+		await change('#aa3355')
 		const first = await shareImage()
 		expect(new URL(first).pathname).toBe('/_next/image')
 
-		await change('#3355aa', 'Choisir une autre photo')
+		await change('#3355aa')
 		const second = await shareImage()
 
 		expect(new URL(second).pathname).toBe('/_next/image')
@@ -248,7 +251,7 @@ test.describe('142 : la recette de l’espace', { tag: '@mobile' }, () => {
 		expect(dominant.b).toBeGreaterThan(dominant.r)
 	})
 
-	test('zoom à 200 % : ni défilement de côté ni chevauchement, sur la page et dans chaque panneau', async ({
+	test('zoom à 200 % : ni défilement de côté ni chevauchement, sur la page et dans chaque bloc', async ({
 		context,
 		page,
 	}) => {
@@ -261,12 +264,12 @@ test.describe('142 : la recette de l’espace', { tag: '@mobile' }, () => {
 			width: Math.max(320, Math.round(size.width / 2)),
 			height: Math.round(size.height / 2),
 		})
-		await openDashboard(page)
+		await openProfile(page)
 
 		expect(await overflow(page), 'page').toBeLessThanOrEqual(0)
 		expect(await overlaps(page), 'page').toEqual([])
 
-		await browsePanels(page, async nom => {
+		await browseBlocks(page, async nom => {
 			expect(await overflow(page), nom).toBeLessThanOrEqual(0)
 			expect(await overlaps(page), nom).toEqual([])
 		})

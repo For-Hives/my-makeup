@@ -44,7 +44,7 @@ export function AccountDeletion({
 		<section
 			aria-labelledby="supprimer-mon-compte"
 			data-testid="zone-suppression"
-			className="w-full min-w-0 rounded border border-red-300 bg-white p-5 sm:p-6"
+			className="w-full min-w-0 rounded-[22px] border border-[#E6DCD5] bg-white p-5 text-[#1A1417] sm:p-6"
 		>
 			<div className="flex flex-wrap items-start justify-between gap-3">
 				<div className="flex min-w-0 flex-col gap-1">
