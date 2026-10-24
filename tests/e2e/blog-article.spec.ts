@@ -192,7 +192,9 @@ test.describe('E59 et E65 : l’article du blog', { tag: '@mobile' }, () => {
 		const related = page.getByTestId('articles-lies')
 		await expect(related.getByRole('heading', { level: 2, name: 'À lire aussi' })).toBeVisible()
 		await expect(related.locator(`a[href="/blog/${published}"]`)).toHaveCount(0)
-		await expect(related.locator(`a[href="/blog/${bare}"]`)).toHaveCount(1)
+		// Three at most, the most recent others (other articles are made in parallel: which ones is not asked).
+		expect(await related.locator('li').count()).toBeGreaterThanOrEqual(1)
+		expect(await related.locator('li').count()).toBeLessThanOrEqual(3)
 	})
 
 	test('issue 1103 : un article long a son sommaire, dont chaque lien mène à un titre', async ({ page }) => {
