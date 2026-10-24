@@ -9,7 +9,7 @@ import Link from 'next/link'
  */
 export function PasswordlessHelp() {
 	return (
-		<p data-testid="aide-sans-mot-de-passe" className="max-w-sm rounded-md bg-neutral-100 p-3 text-left text-sm">
+		<p data-testid="aide-sans-mot-de-passe" className="reveal max-w-sm rounded-md bg-neutral-100 p-3 text-left text-sm">
 			Tu t’étais inscrite avec Facebook ? Ce bouton n’existe plus : clique sur{' '}
 			<Link className="font-medium underline" href="/auth/mot-de-passe-oublie">
 				Mot de passe oublié

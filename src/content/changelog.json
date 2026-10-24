@@ -455,6 +455,11 @@
 			"id": "en-allant-d-une-page-a-l-autre-du-site-par-exemple-de-la",
 			"type": "amelioration",
 			"text": "En allant d'une page à l'autre du site, par exemple de la recherche à une fiche, le contenu change en douceur : l'ancienne page s'efface, la nouvelle apparaît en fondu, et rien ne bouge si tu as demandé moins de mouvement."
+		},
+		{
+			"id": "les-blocs-des-pages-talents-articles-classement-contact",
+			"type": "amelioration",
+			"text": "Les blocs des pages des spécialités, des départements, du blog, du classement, du contact et de Mon espace apparaissent aussi en douceur quand tu fais défiler la page."
 		}
 	],
 	"releases": []

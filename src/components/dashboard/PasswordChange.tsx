@@ -63,7 +63,7 @@ export function PasswordChange({
 		<section
 			aria-labelledby="mon-mot-de-passe"
 			data-testid="zone-mot-de-passe"
-			className="w-full min-w-0 rounded-[22px] border border-[#E6DCD5] bg-white p-5 text-[#1A1417] sm:p-6"
+			className="reveal w-full min-w-0 rounded-[22px] border border-[#E6DCD5] bg-white p-5 text-[#1A1417] sm:p-6"
 		>
 			<div className="flex flex-wrap items-start justify-between gap-3">
 				<div className="flex min-w-0 flex-col gap-1">

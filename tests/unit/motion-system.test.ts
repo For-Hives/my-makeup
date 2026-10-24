@@ -191,3 +191,51 @@ describe('the components follow the system (issue 1069)', () => {
 		}
 	})
 })
+
+describe('the reveal reaches the pages (issue 1088)', () => {
+	/** Where a block is revealed, and how many times at least: the file is the proof that its page is covered. */
+	const REVEALED: [path: string, minimum: number, page: string][] = [
+		[
+			'src/components/blocks/ProfileBlock.tsx',
+			2,
+			'talents, zones, articles (cards of the makeup artists, search form)',
+		],
+		['src/app/(front)/(site)/talent/[slug]/page.tsx', 1, 'talent'],
+		['src/app/(front)/(site)/maquilleuses/[department]/page.tsx', 1, 'zone'],
+		['src/components/blog/ArticleList.tsx', 1, 'articles (list)'],
+		['src/app/(front)/(site)/blog/page.tsx', 1, 'articles (heading)'],
+		['src/components/ranking/RankingExplainer.tsx', 3, 'ranking'],
+		['src/app/(front)/(site)/contact/page.tsx', 3, 'contact'],
+		['src/app/(front)/(dashboard)/auth/signin/page.tsx', 2, 'sign-in'],
+		['src/app/(front)/(dashboard)/auth/signup/page.tsx', 2, 'sign-up'],
+		['src/components/auth/PasswordlessHelp.tsx', 1, 'sign-in'],
+		['src/components/dashboard/overview/card.ts', 1, 'space (cards)'],
+		['src/components/dashboard/AccountDeletion.tsx', 1, 'space'],
+		['src/components/dashboard/QuoteRequests.tsx', 1, 'space'],
+		['src/components/dashboard/PasswordChange.tsx', 1, 'space'],
+		['src/components/dashboard/PageOnline.tsx', 1, 'space'],
+		['src/components/dashboard/MyViews.tsx', 2, 'space'],
+	]
+	/** Class strings that begin with the shared class, whatever the quotes (JSX attribute, constant). */
+	const reveals = (text: string) => text.match(/["'`]reveal[\s"'`]/g) ?? []
+
+	test('every listed page has its blocks revealed with the shared class, and nowhere a second system', () => {
+		for (const [path, minimum, page] of REVEALED) {
+			const text = readFileSync(join(ROOT, path), 'utf8')
+			expect(`${page}: ${path}: ${reveals(text).length >= minimum}`).toBe(`${page}: ${path}: true`)
+		}
+	})
+
+	test('no revealed block of a public page is in a client component: the reveal costs no JavaScript there', () => {
+		// « Mon espace » (src/components/dashboard) loads its client components anyway: a class name there is a few bytes.
+		for (const [path] of REVEALED.filter(([file]) => !file.includes('/dashboard/')))
+			expect(`${path}: ${/^\s*['"]use client['"]/.test(readFileSync(join(ROOT, path), 'utf8'))}`).toBe(`${path}: false`)
+	})
+
+	test('the edit page and print stay free of reveal, and the sheet adds no JavaScript hook', () => {
+		const rules = RULES.filter(rule => rule.selector === '[data-edit-page] .reveal')
+		expect(rules.length).toBeGreaterThan(0)
+		for (const rule of rules) expect(rule.declarations.find(([property]) => property === 'animation')?.[1]).toBe('none')
+		expect(CSS).not.toMatch(/\.reveal[^{]*\.(is-visible|in-view|visible)/)
+	})
+})

@@ -79,7 +79,7 @@ export default async function ZonePage({ params }: PageProps<'/maquilleuses/[dep
 				recherche={false}
 			/>
 			<div className="relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0">
-				<div className="mx-auto max-w-2xl">
+				<div className="reveal mx-auto max-w-2xl">
 					<p className="text-base text-gray-700" data-testid="zone-count">
 						{countText(cards.length)} dans ce département. Elles sont classées de la fiche la plus complète à la plus
 						récemment mise à jour.
