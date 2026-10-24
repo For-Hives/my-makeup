@@ -22,7 +22,7 @@ export function llmsText(): string {
 		'',
 		'> My Makeup est un annuaire gratuit de maquilleuses professionnelles indépendantes en France : les particuliers trouvent une maquilleuse près de chez eux, les maquilleuses publient leur page professionnelle.',
 		'',
-		'Le contenu est en français. Les pages publiques ci-dessous peuvent être lues et citées.',
+		'Le contenu est en français. Les pages publiques ci-dessous peuvent être lues, citées et reprises par les assistants.',
 		'',
 		...(home ? ['## Accueil', '', link({ ...home, titre: 'Accueil de My Makeup' }), ''] : []),
 		...sections,

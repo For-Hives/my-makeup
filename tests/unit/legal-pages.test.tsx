@@ -34,7 +34,8 @@ const PAGES = [
 // the paragraph on the counter of views (ticket 1001, register `espace-vues-de-la-page`),
 // the paragraph on the moderation journal, kept 60 months (issue 1005, register `moderation-motif-et-journal`),
 // the section on the SIRET and the activity check, with one sentence of the terms (issue 1004, register `badge-activite-verifiee`),
-// and one sentence on the same journal for « Vérifiée » (issue 1066, register `accueil-refonte`).
+// one sentence on the same journal for « Vérifiée » (issue 1066, register `accueil-refonte`),
+// and the rule of conduct on automated collection, narrowed to the contact details because every robot is allowed (issue 1014, register `cgu-collecte-automatisee`).
 const ONLINE: Record<string, { lignes: number; sha: string }> = JSON.parse(
 	readFileSync(path.join(process.cwd(), 'tests/fixtures/legal-pages-text.json'), 'utf8')
 )
@@ -70,6 +71,14 @@ describe('le texte des trois pages', () => {
 		expect(text).toContain('7. Demandes de devis')
 		expect(text).toContain('Les données des demandes sont conservées 6 mois')
 		expect(text).toContain('11. Droit applicable')
+	})
+
+	test('issue 1014 : les CGU n’interdisent pas la lecture automatisée des pages publiques, seulement la collecte des coordonnées', async () => {
+		const { default: Page } = await PAGES[1].module()
+		const text = pageText(renderToStaticMarkup(<Page />))
+		expect(text).toContain('de collecter de façon automatisée les coordonnées publiées sur les profils')
+		expect(text).not.toContain('les profils ou les coordonnées publiées')
+		expect(text).not.toMatch(/entra[iî]nement|intelligence artificielle/i)
 	})
 
 	test('issue 1004 : la politique dit la finalité, la source publique, la conservation et l’effacement du SIRET', async () => {

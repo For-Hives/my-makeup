@@ -70,7 +70,9 @@ test.describe('Socle SEO', () => {
 		expect(searchGroup).toMatch(/Disallow: \/admin/)
 		expect(searchGroup).toMatch(/Disallow: \/auth/)
 		const trainingGroup = groups.find(group => /User-Agent: GPTBot/i.test(group)) ?? ''
-		expect(trainingGroup).toMatch(/Disallow: \/(\n|$)/)
-		expect(trainingGroup).not.toContain('Allow:')
+		// Owner decision of 24/10/2026: training bots are allowed like the others, and no group blocks the whole site.
+		expect(trainingGroup).toContain('Allow: /\n')
+		expect(trainingGroup).toMatch(/Disallow: \/admin/)
+		expect(text).not.toMatch(/Disallow: \/(\n|$)/)
 	})
 })
