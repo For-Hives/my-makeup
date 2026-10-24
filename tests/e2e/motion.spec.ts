@@ -264,7 +264,9 @@ test.describe('1088 : un talent et « Mon espace »', () => {
 						await page.goto('/auth/profil')
 						expect(await page.locator('.reveal').count()).toBeGreaterThan(0)
 						expect(await dimmedOnFirstScreen(page)).toEqual([])
-						expect(await layoutShift(page)).toBe(0)
+						// Not 0 here: the fonts of her space (next/font, swapped in with a size-adjusted fallback) move the text by
+						// 0.0016 on CI, with or without motion. A reveal moves nothing (transform), so a real shift would be far above.
+						expect(await layoutShift(page)).toBeLessThan(0.005)
 						await scrollThrough(page)
 						expect(await notWhole(page)).toBe(0)
 						if (reduced) {
