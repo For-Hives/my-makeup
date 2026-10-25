@@ -4,7 +4,7 @@ Le bloc `src/components/blocks/Cta.tsx` ferme treize pages publiques : l'accueil
 
 ## Direction artistique (refonte du 25/10/2026)
 
-`Cta` n'est plus qu'un habillage : il donne ses mots et ses deux clics mesurés à `ArtCta` (`src/components/art/ArtCta.tsx`, [`direction-artistique.md`](direction-artistique.md)) : cadre blanc, grand panneau `art-night`, titre en Bodoni (un mot en italique), deux pilules de 52 px, 144 px d'air au-dessus et au-dessous du panneau sur ordinateur, lueurs diffuses autour. Le fond (statique, puis le shader) est le même `CtaBackdrop`. Ce qui suit sur le cadre indigo, les boutons `rounded-lg` et `min-h-12` décrit l'ancien bloc ; le fond, la dépendance et le budget valent toujours.
+`Cta` n'est plus qu'un habillage : il donne ses mots et ses deux clics mesurés à `ArtCta` (`src/components/art/ArtCta.tsx`, [`direction-artistique.md`](direction-artistique.md)) : grand panneau `art-night` posé **directement sur le fond de la page** (plus de cadre blanc : il faisait une grosse barre blanche autour du panneau, retour d'Andy du 25/10/2026), titre en Bodoni (un mot en italique), deux pilules de 52 px, 144 px d'air au-dessus et au-dessous du panneau sur ordinateur, lueurs diffuses autour. Le fond (statique, puis le shader) est le même `CtaBackdrop`. Ce qui suit sur le cadre indigo, les boutons `rounded-lg` et `min-h-12` décrit l'ancien bloc ; le fond, la dépendance et le budget valent toujours.
 
 ### Ancien cadre (avant la refonte)
 

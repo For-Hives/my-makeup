@@ -5,8 +5,8 @@ import { body, display } from '@/components/direct-edit/fonts'
 /**
  * The shell and the small shared pieces of the content pages that wear the art direction kit (issue 1111,
  * docs/direction-artistique.md): paper background, the two preloaded faces of the content pages (so the load and the
- * layout shift of these routes do not change), the scope of the `content-page` rules of globals.css. The legal pages do
- * not use this shell: they keep `ContentPage` and their text, byte for byte.
+ * layout shift of these routes do not change), the scope of the `content-page` rules of globals.css. The legal pages and the site plan
+ * use it too (25/10/2026, no white band): their text is unchanged, byte for byte.
  */
 
 /** The `<main>` of a page in the kit's look: paper, ink, the faces of the content pages. */

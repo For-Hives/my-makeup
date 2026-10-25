@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Cta } from '@/components/blocks/Cta'
-import { Hero } from '@/components/blocks/Hero'
+import { ArtPage } from '@/components/static-pages/ArtPage'
+import { PageHead } from '@/components/static-pages/PageHead'
 import { deliveredStaticPages, SITE_MAP_GROUPS } from '@/lib/seo/sitemap'
 import { zoneLabel } from '@/lib/seo/zone-page'
 import { zonePath } from '@/lib/seo/zones'
@@ -19,16 +20,15 @@ export function SiteMapBody({ profils: profiles, zones, talents, articles }: Ind
 	// Her name, then her slug when two share a name.
 	const byName = [...profiles].sort((a, b) => a.nom.localeCompare(b.nom, 'fr') || a.slug.localeCompare(b.slug))
 	return (
-		<main className="relative">
-			<Hero
+		<ArtPage>
+			<PageHead
 				image="/assets/back/maquilleuse_europeenne_white.webp"
-				titre={
+				title={
 					<>
 						Le plan du site&nbsp;<span className="text-indigo-900">My&nbsp;Makeup</span>
 					</>
 				}
 				description="La globalité de toutes les pages qui sont présentes dans l'arborescence du site !"
-				recherche={false}
 			/>
 			<div className="relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0">
 				<div className="mx-auto max-w-2xl">
@@ -110,6 +110,6 @@ export function SiteMapBody({ profils: profiles, zones, talents, articles }: Ind
 				</div>
 			</div>
 			<Cta />
-		</main>
+		</ArtPage>
 	)
 }

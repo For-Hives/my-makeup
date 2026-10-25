@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
-import { Hero } from '@/components/blocks/Hero'
-import { ArticleShell, ContentPage } from '@/components/static-pages/EditorialArticle'
+import { ArtPage } from '@/components/static-pages/ArtPage'
+import { ArticleShell } from '@/components/static-pages/EditorialArticle'
+import { PageHead } from '@/components/static-pages/PageHead'
 
 interface LegalPageProps {
 	/** The only h1 of the page. */
@@ -15,15 +16,15 @@ interface LegalPageProps {
 }
 
 /**
- * The shell of the three legal pages (ticket 112, laid out again in issue 1102): the head of the page, then the text in
+ * The shell of the three legal pages (ticket 112, laid out again in issue 1102): the head of the page (the kit's `PageHead`, on the paper: the white `Hero` made a band, 25/10/2026), then the text in
  * one column at a reading measure. The project has no typography plugin, so the styles of the text are written here,
  * on the elements the pages use. No word is added around the text: the legal pages are held to the character
  * (tests/fixtures/legal-pages-text.json).
  */
 export function LegalPage({ titre, description, titreDuTexte, image, children }: LegalPageProps) {
 	return (
-		<ContentPage>
-			<Hero titre={titre} description={description} recherche={false} {...(image ? { image } : {})} />
+		<ArtPage>
+			<PageHead title={titre} description={description} {...(image ? { image } : {})} />
 			<ArticleShell title={titreDuTexte} layout="single">
 				<div
 					className={[
@@ -37,6 +38,6 @@ export function LegalPage({ titre, description, titreDuTexte, image, children }:
 					{children}
 				</div>
 			</ArticleShell>
-		</ContentPage>
+		</ArtPage>
 	)
 }
