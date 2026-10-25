@@ -37,7 +37,10 @@ const notWhole = (page: Page): Promise<number> =>
 		.locator('.reveal')
 		.evaluateAll(elements => elements.filter(element => Number(getComputedStyle(element).opacity) < 1).length)
 
-/** Waits for every animation and transition of the page to end (the load-in, the reveals): the page is then at rest. */
+/**
+ * Waits for every animation and transition of the page to end (the load-in, the reveals): the page is then at rest.
+ * An animation that never ends (the banner of the kit slides for ever) is not waited for.
+ */
 function settle(page: Page): Promise<void> {
 	return page.evaluate(async () => {
 		// The loops of the kit (the sliding banner, the turning badge) never finish: they are not part of a load-in.
@@ -68,7 +71,11 @@ async function layoutShift(page: Page): Promise<number> {
 	})
 }
 
-/** Elements whose top is inside the first screen that are not fully opaque once the load-in is over. */
+/**
+ * Elements whose top is inside the first screen that are not fully opaque once the load-in is over. Decoration
+ * (`aria-hidden`, drawings: the soft glows of the kit are 70 % opaque, the echo stroke of the ellipse is lighter)
+ * holds no content and is left out.
+ */
 async function dimmedOnFirstScreen(page: Page): Promise<string[]> {
 	await settle(page)
 	return page.evaluate(() => {
@@ -78,6 +85,7 @@ async function dimmedOnFirstScreen(page: Page): Promise<string[]> {
 			if (box.height === 0 || box.top >= innerHeight || box.bottom <= 0) continue
 			// A glow of the kit is a translucent light on purpose (decoration, never text): it is not a block that waits.
 			if (element.closest('.art-glow')) continue
+			if (element.closest('[aria-hidden="true"], svg')) continue
 			for (let node: Element | null = element; node; node = node.parentElement)
 				if (Number(getComputedStyle(node).opacity) < 1 && getComputedStyle(node).display !== 'none') {
 					dimmed.push(`${element.tagName.toLowerCase()}.${String(element.className).slice(0, 40)}`)

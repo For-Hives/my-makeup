@@ -349,7 +349,7 @@ describe('the reveal reaches the pages (issue 1088)', () => {
 		['src/app/(front)/(site)/talent/[slug]/page.tsx', 1, 'talent'],
 		['src/app/(front)/(site)/maquilleuses/[department]/page.tsx', 1, 'zone'],
 		['src/components/blog/ArticleList.tsx', 1, 'articles (list)'],
-		['src/components/blog/ArticleCard.tsx', 2, 'articles (cards, featured)'],
+		['src/components/blog/RelatedArticles.tsx', 1, 'articles (« À lire aussi »)'],
 		['src/components/ranking/RankingExplainer.tsx', 3, 'ranking'],
 		['src/components/static-pages/EditorialArticle.tsx', 2, 'content pages (article head, lead, signature)'],
 		['src/components/static-pages/ClientGuide.tsx', 1, 'guides for the people looking for a makeup artist (steps)'],

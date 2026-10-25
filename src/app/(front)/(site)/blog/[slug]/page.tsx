@@ -1,9 +1,11 @@
 import config from '@payload-config'
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getPayload } from 'payload'
 import { type CSSProperties, cache } from 'react'
+import { BlogPanel } from '@/components/art/BlogCard'
+import { GlowBlob } from '@/components/art/graphics'
+import { Pill } from '@/components/art/Pill'
 import { Cta } from '@/components/blocks/Cta'
 import { ProfileBlock } from '@/components/blocks/ProfileBlock'
 import { ArticleBody } from '@/components/blog/ArticleBody'
@@ -104,7 +106,7 @@ export default async function ArticlePage({ params }: PageProps<'/blog/[slug]'>)
 		]),
 	]
 	return (
-		<main className={`${display.variable} ${body.variable} relative font-body`}>
+		<main className={`${display.variable} ${body.variable} relative overflow-hidden bg-art-paper font-body text-ink`}>
 			{data.map(bloc => (
 				<script
 					key={bloc['@type']}
@@ -113,19 +115,18 @@ export default async function ArticlePage({ params }: PageProps<'/blog/[slug]'>)
 					dangerouslySetInnerHTML={{ __html: serializeJsonLd(bloc) }}
 				/>
 			))}
+			<GlowBlob size="md" tone="rose" className="-top-52 -right-72" />
+			<GlowBlob size="sm" tone="indigo" className="top-[60rem] -left-72 opacity-40" />
 			<div className="relative mx-auto max-w-5xl px-4 pt-10 md:px-8 md:pt-16">
 				<article className="mx-auto max-w-3xl">
-					<header className="border-indigo-900 border-t-2 pt-6">
+					<header className="border-ink border-t pt-6">
 						<div className="enter flex flex-wrap items-center gap-x-4 gap-y-2" style={enterOrder(0)}>
-							<Link
-								href="/blog"
-								className="inline-flex min-h-11 items-center font-medium text-gray-900 text-sm underline decoration-gray-300 underline-offset-4"
-							>
+							<Pill href="/blog" size="sm">
 								← Tous les articles
-							</Link>
+							</Pill>
 						</div>
 						<p
-							className="enter mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-gray-700 text-xs uppercase tracking-[0.14em]"
+							className="enter mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-mute text-xs uppercase tracking-[0.14em]"
 							style={enterOrder(0)}
 						>
 							<time dateTime={article.modifieLe}>{articleDate(article.modifieLe)}</time>
@@ -143,17 +144,20 @@ export default async function ArticlePage({ params }: PageProps<'/blog/[slug]'>)
 							)}
 						</p>
 						<h1
-							className="enter-mask mt-5 text-balance font-display font-medium text-4xl text-gray-900 leading-[1.08] tracking-tight md:text-6xl"
+							className="enter-mask mt-5 text-balance font-display font-medium text-4xl text-ink leading-[1.08] tracking-tight md:text-6xl"
 							style={enterOrder(1)}
 						>
 							{article.titre}
 						</h1>
 						{article.extrait && (
-							<p className="enter mt-6 max-w-[60ch] text-gray-700 text-xl leading-8" style={enterOrder(2)}>
+							<p className="enter mt-6 max-w-[60ch] text-mute text-xl leading-8" style={enterOrder(2)}>
 								{article.extrait}
 							</p>
 						)}
 					</header>
+					<div className="reveal mt-10 md:mt-12">
+						<BlogPanel slug={article.slug} shape="cover" />
+					</div>
 					<div className="mt-10 md:mt-14">
 						<ArticleOutline headings={outline} />
 						<ArticleBody html={html} />

@@ -595,7 +595,12 @@ main:focus {
 		color: var(--color-indigo-900);
 	}
 
-	/* « Me connecter » and « Me déconnecter »: the same single underline, a notch stronger. */
+	/* The current page is ringed by a hand-drawn ellipse (SwirlEllipse): it takes the place of the bar, which would double it. */
+	.nav-link[aria-current="page"]::after {
+		content: none;
+	}
+
+	/* « Me connecter » and « Me déconnecter »: a soft pill (utilities in Nav.tsx) with the same single underline, a notch stronger. */
 	.nav-link-strong {
 		color: var(--color-indigo-900);
 		font-weight: 700;
@@ -607,13 +612,6 @@ main:focus {
 
 	.nav-link[aria-expanded="true"] .nav-chevron {
 		transform: rotate(180deg);
-	}
-
-	/* « Trouver une maquilleuse »: the outline fills with indigo, the label and the glass turn white, no underline. */
-	.nav-search:hover {
-		background-color: var(--color-indigo-900);
-		color: #fff;
-		text-decoration: none;
 	}
 
 	/* The panel of a group. The transparent top padding is the bridge between the button and the card: the hand never leaves the group. */
