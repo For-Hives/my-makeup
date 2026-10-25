@@ -81,6 +81,8 @@ async function dimmedOnFirstScreen(page: Page): Promise<string[]> {
 	return page.evaluate(() => {
 		const dimmed: string[] = []
 		for (const element of document.body.querySelectorAll('*')) {
+			// A glow is a soft light drawn with its own opacity: decoration, hidden from screen readers, it holds no content.
+			if (element.closest('.art-glow')) continue
 			const box = element.getBoundingClientRect()
 			if (box.height === 0 || box.top >= innerHeight || box.bottom <= 0) continue
 			// A glow of the kit is a translucent light on purpose (decoration, never text): it is not a block that waits.
