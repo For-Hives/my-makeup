@@ -7,13 +7,13 @@ import { BlogPanel } from '@/components/art/BlogCard'
 import { GlowBlob } from '@/components/art/graphics'
 import { Pill } from '@/components/art/Pill'
 import { Cta } from '@/components/blocks/Cta'
-import { ProfileBlock } from '@/components/blocks/ProfileBlock'
 import { ArticleBody } from '@/components/blog/ArticleBody'
 import { ArticleOutline } from '@/components/blog/ArticleOutline'
 import { ArticleShare } from '@/components/blog/ArticleShare'
 import { articleDate } from '@/components/blog/article-date'
 import { RelatedArticles, relatedArticles } from '@/components/blog/RelatedArticles'
 import { body, display } from '@/components/direct-edit/fonts'
+import { ProfileGrid } from '@/components/static-pages/ProfileGrid'
 import { outlineOf, readingMinutes } from '@/lib/article-reading'
 import { markdownToDocument } from '@/lib/markdown'
 import { articleStructuredData, breadcrumbStructuredData, SITE_NAME, serializeJsonLd } from '@/lib/seo/json-ld'
@@ -165,8 +165,8 @@ export default async function ArticlePage({ params }: PageProps<'/blog/[slug]'>)
 					</div>
 				</article>
 				<RelatedArticles articles={related} />
-				<div className="mx-auto mt-4 max-w-5xl [&_h2]:font-display [&_h2]:font-medium">
-					<ProfileBlock titre="Des maquilleuses près de chez vous" cartes={cards} compact />
+				<div className="mx-auto mt-4 max-w-6xl">
+					<ProfileGrid titre="Des maquilleuses près de chez vous" cartes={cards} />
 				</div>
 			</div>
 			<div className="mt-16 md:mt-24">

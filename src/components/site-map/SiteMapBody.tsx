@@ -1,6 +1,7 @@
 import Link from 'next/link'
+import { TitleAccent } from '@/components/art/TitleWithCapsules'
 import { Cta } from '@/components/blocks/Cta'
-import { ArtPage } from '@/components/static-pages/ArtPage'
+import { ArticleHeading, ArtPage } from '@/components/static-pages/ArtPage'
 import { PageHead } from '@/components/static-pages/PageHead'
 import { deliveredStaticPages, SITE_MAP_GROUPS } from '@/lib/seo/sitemap'
 import { zoneLabel } from '@/lib/seo/zone-page'
@@ -25,21 +26,17 @@ export function SiteMapBody({ profils: profiles, zones, talents, articles }: Ind
 				image="/assets/back/maquilleuse_europeenne_white.webp"
 				title={
 					<>
-						Le plan du site&nbsp;<span className="text-indigo-900">My&nbsp;Makeup</span>
+						Le plan du site&nbsp;<TitleAccent>My&nbsp;Makeup</TitleAccent>
 					</>
 				}
 				description="La globalité de toutes les pages qui sont présentes dans l'arborescence du site !"
 			/>
-			<div className="relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0">
-				<div className="mx-auto max-w-2xl">
+			<div className="relative mx-auto max-w-5xl px-4 pb-24 sm:px-6">
+				<div className="rounded-art-frame bg-white px-6 py-10 sm:px-12 sm:py-14">
 					<article>
-						<header className="flex flex-col">
-							<h2 className="mt-6 font-bold text-3xl text-gray-800 tracking-tight sm:text-4xl">
-								My-Makeup la plateforme pour les maquilleuses !
-							</h2>
-						</header>
+						<ArticleHeading title="My-Makeup la plateforme pour les maquilleuses !" />
 						{/* Every link of the plan is a target of 44 px at least (ticket 299). */}
-						<div className="prose xl:prose-lg my-8 [&_a]:inline-flex [&_a]:min-h-11 [&_a]:items-center">
+						<div className="mt-10 columns-1 gap-12 sm:columns-2 [&_a]:inline-flex [&_a]:min-h-11 [&_a]:items-center [&_a]:text-indigo-800 [&_a]:underline-offset-4 [&_a:hover]:text-indigo-950 [&_a:hover]:underline [&_h3]:mb-2 [&_h3]:font-display [&_h3]:font-medium [&_h3]:text-2xl [&_h3]:text-ink [&_section]:mb-10 [&_section]:break-inside-avoid [&_ul]:list-none [&_ul]:p-0">
 							{SITE_MAP_GROUPS.map(groupe => (
 								<section key={groupe.id}>
 									<h3>{groupe.titre}</h3>

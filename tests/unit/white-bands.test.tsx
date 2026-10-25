@@ -57,14 +57,15 @@ describe('the full-width sections of the content pages', () => {
 		expect(classes(html).some(value => /\bbg-white\b/.test(value))).toBe(false)
 	})
 
-	test('a legal page has no white head and no off-white article: it sits on the paper', () => {
+	test('a legal page has no white head and no off-white article: it sits on the paper, its text in a white card', () => {
 		const html = renderToStaticMarkup(
 			<LegalPage titre="Titre" description="Une ligne." titreDuTexte="Le texte">
 				<p>Texte.</p>
 			</LegalPage>
 		)
 		for (const value of classes(html)) {
-			expect(value).not.toMatch(/\bbg-white\b/)
+			// White is for the rounded card that holds the text, never for a full-width band.
+			if (!/\brounded-art-frame\b/.test(value)) expect(value).not.toMatch(/\bbg-white\b/)
 			expect(value).not.toMatch(/\bbg-neutral-50\b/)
 		}
 		expect(html).toContain('bg-art-paper')
@@ -72,7 +73,9 @@ describe('the full-width sections of the content pages', () => {
 
 	test('the site plan has no white head and sits on the paper', () => {
 		const html = renderToStaticMarkup(<SiteMapBody profils={[]} zones={[]} talents={[]} articles={[]} />)
-		for (const value of classes(html)) expect(value).not.toMatch(/\bbg-white\b/)
+		for (const value of classes(html)) {
+			if (!/\brounded-art-frame\b/.test(value)) expect(value).not.toMatch(/\bbg-white\b/)
+		}
 		expect(html).toContain('bg-art-paper')
 	})
 })
