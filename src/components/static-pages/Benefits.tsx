@@ -44,10 +44,7 @@ export function Benefits({
 	palette: BenefitsPalette
 }) {
 	return (
-		<section
-			data-benefits
-			className="relative isolate overflow-hidden border-nude-200 border-y bg-white px-4 py-20 sm:px-6 md:py-28 lg:px-8"
-		>
+		<section data-benefits className="relative isolate overflow-hidden px-4 py-20 sm:px-6 md:py-28 lg:px-8">
 			<GlowBlob size="lg" tone="blush" className="-bottom-60 -left-80" />
 			<div className="relative mx-auto max-w-7xl">
 				<SectionHead eyebrow={eyebrow} title="Nos Avantages">

@@ -26,7 +26,7 @@ Tout est dans `src/components/static-pages/`, une brique pour chaque besoin :
 
 ## Le kit sur ces pages (issue 1111, 25/10/2026)
 
-Les pages de contenu portent maintenant la direction artistique ([`direction-artistique.md`](direction-artistique.md)) : `ArtPage` (fond papier, mêmes deux polices préchargées que `ContentPage`, qui reste celle des pages légales : leurs mots et leur HTML ne bougent pas), `PageHead` (le `Hero` reste à l'accueil), `ProfileGrid` (cartes en arche pour les zones et les talents, mêmes règles que `ProfileBlock`, qui reste sous les articles du blog). `<Cta />` est inchangé sur chaque page.
+Les pages de contenu portent maintenant la direction artistique ([`direction-artistique.md`](direction-artistique.md)) : `ArtPage` (fond papier, mêmes deux polices préchargées que `ContentPage`, qui reste exportée ; les pages légales et le plan du site passent elles aussi par `ArtPage` et `PageHead` depuis le 25/10/2026 : leurs mots ne bougent pas, la tête blanche et l'article gris disparaissent), `PageHead` (le `Hero` reste à l'accueil), `ProfileGrid` (cartes en arche pour les zones et les talents, mêmes règles que `ProfileBlock`, qui reste sous les articles du blog). `<Cta />` est inchangé sur chaque page.
 
 | Famille | Pages | Disposition du kit |
 |---|---|---|
