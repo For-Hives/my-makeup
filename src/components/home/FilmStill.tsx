@@ -12,8 +12,9 @@ interface FilmStillProps {
 }
 
 /**
- * A still of the film in the arch, as a `<picture>`: the server draws it (it is the poster, and may be the largest
- * element of the first screen on a wide screen), and the film draws the end still over it when `play()` is refused.
+ * A still of the film in the arch, as a `<picture>`: the server draws it (it is the poster, and the largest element of
+ * the first screen on a wide screen or a tablet held upright, `POSTER_SCREENS` of film.ts), and the film draws the end
+ * still over it when `play()` is refused.
  * Its size is given, so its box is known before it loads.
  */
 export function FilmStill({ still, reduced = [], alt, className, loading }: FilmStillProps) {

@@ -99,8 +99,9 @@ function RibbonList({ hidden }: { hidden: boolean }) {
  * and its two pictures are decoration (`alt=""`, `aria-hidden`), so the heading's name does not change.
  */
 export function HomeHero() {
-	// The poster is lazy (below the first screen of a phone); from 768 px, where it is the largest paint, these preloads
-	// in the head ask for it as early as the stylesheets, the very file its <picture> takes there (film.ts).
+	// The poster is lazy (below the first screen of a phone, upright or sideways). Where the arch is in the first screen
+	// and its poster the largest paint (`POSTER_SCREENS`: from 64rem, or a tablet held upright), these preloads in the
+	// head ask for it as early as the stylesheets, the very file its <picture> takes there (film.ts).
 	for (const { href, type, media } of POSTER_PRELOADS)
 		preload(href, { as: 'image', type, media, fetchPriority: 'high' })
 	return (

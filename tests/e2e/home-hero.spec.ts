@@ -211,34 +211,106 @@ const stillRequests = (page: Page): Promise<{ file: string; by: string }[]> =>
 			.map(entry => ({ file: new URL(entry.name).pathname, by: entry.initiatorType }))
 	)
 
+/**
+ * The last candidate of the largest paint, read before any scroll: whether it is the poster, when it was painted, and
+ * when the poster was asked (`null`: not yet).
+ */
+const largestPaint = (page: Page): Promise<{ poster: boolean; paintedAt: number; posterAskedAt: number | null }> =>
+	page.evaluate(async () => {
+		const entries = await new Promise<PerformanceEntryList>(resolve =>
+			new PerformanceObserver(list => resolve(list.getEntries())).observe({
+				type: 'largest-contentful-paint',
+				buffered: true,
+			})
+		)
+		// `paintTime`: the end of the paint step of its frame (Chromium, since 2025); `renderTime` adds the time to show it.
+		const last = entries.at(-1) as (LargestContentfulPaint & { paintTime?: number }) | undefined
+		const asked = (performance.getEntriesByType('resource') as PerformanceResourceTiming[]).find(entry =>
+			/\/ombre-nette-(debut|fin)-/.test(entry.name)
+		)
+		return {
+			poster: last?.element === document.querySelector('.home-hero-arch > picture img'),
+			paintedAt: last?.paintTime ?? Number.NaN,
+			posterAskedAt: asked?.startTime ?? null,
+		}
+	})
+
+/** Two more screens than those of the projects: a tablet held upright, and a phone held sideways. */
+const TABLET_UPRIGHT = { width: 768, height: 1024 } as const
+const PHONE_SIDEWAYS = { width: 844, height: 390 } as const
+
+/** Where the top of the arch is, against the height of the first screen (motion reduced: no rise, no mask). */
+const archTop = (page: Page): Promise<{ top: number; fold: number }> =>
+	page.evaluate(() => ({
+		top: document.querySelector('.home-hero-arch')?.getBoundingClientRect().top ?? Number.NaN,
+		fold: innerHeight,
+	}))
+
 test.describe('l’affiche de l’arche, demandée une fois, au bon moment', () => {
-	// The poster is lazy: on a phone the arch is below the first screen, and a byte asked before the sentence is painted
-	// delays the largest paint (LCP of P01). From 768 px it is that largest paint, and a preload in the head asks for it
-	// early. The preload must be the very file the <picture> takes, or the browser downloads two.
+	// The poster is lazy: on a phone, upright or sideways, the arch is under the text, below the first screen, and a byte
+	// asked before the largest paint delays it (LCP of P01). Where the arch is in the first screen, the poster is that
+	// largest paint, and a preload in the head asks for it early (`POSTER_SCREENS` of film.ts: from 64rem, or a tablet held
+	// upright). The preload must be the very file the <picture> takes, or the browser downloads two.
 	for (const reducedMotion of ['no-preference', 'reduce'] as const) {
 		const still = reducedMotion === 'reduce' ? FILM_STILLS.end : FILM_STILLS.start
 		const file = still[0]?.src ?? 'avif'
 		test.describe(`mouvement ${reducedMotion}`, () => {
 			test.use({ contextOptions: { reducedMotion } })
 
-			test(`à ${SCREENS.chromium.width} px : préchargée dans l’en-tête, un seul téléchargement, celui que l’image affiche`, async ({
-				page,
-			}) => {
-				await page.setViewportSize(SCREENS.chromium)
-				await page.goto('/')
-				const preloads = page.locator('head link[rel="preload"][as="image"][media*="min-width: 768px"]')
-				await expect(preloads).toHaveCount(2)
-				const poster = page.locator('.home-hero-arch > picture img')
-				await expect(poster).toHaveJSProperty('complete', true)
-				expect(await poster.evaluate(image => (image as HTMLImageElement).currentSrc)).toContain(file)
-				expect(await stillRequests(page)).toEqual([{ file, by: 'link' }])
-			})
+			for (const screen of [SCREENS.chromium, TABLET_UPRIGHT])
+				test(`à ${screen.width} × ${screen.height} px : l’arche dans le premier écran, l’affiche préchargée, un seul téléchargement, celui que l’image affiche`, async ({
+					page,
+				}) => {
+					await page.setViewportSize(screen)
+					await page.goto('/')
+					await expect(page.locator('head link[rel="preload"][as="image"][href*="/ombre-nette-"]')).toHaveCount(2)
+					const poster = page.locator('.home-hero-arch > picture img')
+					await expect(poster).toHaveJSProperty('complete', true)
+					expect(await poster.evaluate(image => (image as HTMLImageElement).currentSrc)).toContain(file)
+					expect(await stillRequests(page)).toEqual([{ file, by: 'link' }])
+					if (reducedMotion === 'reduce') {
+						const { top, fold } = await archTop(page)
+						expect(top).toBeLessThan(fold)
+						// From the first frame. With motion the arch rises under a mask first (about 0.8 s), and whether Chromium
+						// then counts the poster depends on when it was first painted: not checked there.
+						expect((await largestPaint(page)).poster).toBe(true)
+					}
+				})
 
-			test(`à ${SCREENS.mobile.width} px : rien n’est préchargé, l’image la demande elle-même, une fois`, async ({
+			test(`à ${SCREENS.mobile.width} px : rien n’est préchargé ; l’image la demande elle-même, une fois, jamais avant la plus grande peinture`, async ({
 				page,
 			}) => {
 				await page.setViewportSize(SCREENS.mobile)
 				await page.goto('/')
+				await page.waitForLoadState('networkidle')
+				// Before any scroll. Lazy, the poster is asked once the page is laid out, after the paint of its largest element
+				// (with reduced motion in that very frame, after its paint and before it is shown), or not at all yet. Not lazy,
+				// the parser would ask for it long before that paint.
+				const before = await largestPaint(page)
+				expect(before.poster).toBe(false)
+				expect(before.paintedAt).toBeGreaterThan(0)
+				if (before.posterAskedAt !== null) expect(before.posterAskedAt).toBeGreaterThanOrEqual(before.paintedAt)
+				await showArch(page)
+				const poster = page.locator('.home-hero-arch > picture img')
+				await expect(poster).toHaveJSProperty('complete', true)
+				expect(await poster.evaluate(image => (image as HTMLImageElement).currentSrc)).toContain(file)
+				expect(await stillRequests(page)).toEqual([{ file, by: 'img' }])
+			})
+
+			// Wider than 768 px, but the arch is under the text, far below the first screen: no preload (it had one before).
+			// The order against the largest paint is not checked here: with motion that paint is the pill of the lips, lazy
+			// itself, painted once it has loaded, after the poster was asked.
+			test(`à ${PHONE_SIDEWAYS.width} × ${PHONE_SIDEWAYS.height} px (téléphone couché) : l’arche sous le premier écran, rien n’est préchargé, l’image la demande elle-même, une fois`, async ({
+				page,
+			}) => {
+				await page.setViewportSize(PHONE_SIDEWAYS)
+				await page.goto('/')
+				await page.waitForLoadState('networkidle')
+				expect((await largestPaint(page)).poster).toBe(false)
+				if (reducedMotion === 'reduce') {
+					const { top, fold } = await archTop(page)
+					expect(top).toBeGreaterThan(fold)
+				}
 				await showArch(page)
 				const poster = page.locator('.home-hero-arch > picture img')
 				await expect(poster).toHaveJSProperty('complete', true)

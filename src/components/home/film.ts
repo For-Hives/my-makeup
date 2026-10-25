@@ -61,8 +61,24 @@ export const FILM_SIZE = { width: 1080, height: 1400 } as const
 /** The file an `<img>` shows when no `<source>` of its `<picture>` applies. */
 export const fallbackOf = (sources: readonly FilmSource[]): string => sources.at(-1)?.src ?? ''
 
-/** The widths where the arch stands beside the text and its poster is the largest paint of the first screen. */
-export const WIDE_SCREEN = '(min-width: 768px)'
+/**
+ * The screens where the arch is in the first screen and its poster is the largest paint there (measured in Chromium on
+ * 25/10/2026, docs/accueil.md, « Comment il se lance »):
+ *
+ * - from 64rem the arch stands beside the text (`.home-hero-grid`, globals.css), its top 13 to 21rem down the page
+ *   (206 to 331 px): a screen 30rem tall shows at least 9rem of it;
+ * - from 40rem to 64rem it comes under the text, its top 42 to 45rem down (671 to 709 px): it is in the first screen of
+ *   a tablet held upright, 56rem tall or more (11rem of it at least), not in that of a phone held sideways (under 30rem
+ *   tall);
+ * - below 40rem, a phone, it is under the text, the form and the steps.
+ *
+ * With reduced motion the poster is the largest paint from the first frame; with motion it becomes it once the arch has
+ * risen (`enter-arch`, about 0.8 s). Elsewhere the largest paint is a text, and the poster waits (`loading="lazy"`).
+ */
+export const POSTER_SCREENS = [
+	'(min-width: 64rem) and (min-height: 30rem)',
+	'(min-width: 40rem) and (min-height: 56rem)',
+] as const
 
 /** A preload of the poster: the file, its type, and the screens it is asked on. */
 export interface PosterPreload {
@@ -72,11 +88,13 @@ export interface PosterPreload {
 }
 
 /**
- * The poster is `loading="lazy"`: on a phone the arch comes after the text, below the first screen, and a byte asked
- * before the largest paint there (the sentence under the headline) delays it (LCP of P01). From 768 px the poster is
- * that largest paint: these preloads ask for it as early as before, on those screens only. Each one is the file the
- * `<picture>` of the poster takes there, AVIF, once per motion setting (the end still under reduced motion): a preload
- * of another file would be a second download, and a browser without AVIF skips it by its type.
+ * The poster is `loading="lazy"`: on a phone, upright or sideways, the arch comes after the text, below the first screen,
+ * and a byte asked before the largest paint there (the sentence or the headline) delays it (LCP of P01). On the screens
+ * of `POSTER_SCREENS` the poster is that largest paint: these preloads ask for it from the head, on those screens only.
+ * Each one is the file the `<picture>` of the poster takes there, AVIF, once per motion setting (the end still under
+ * reduced motion): a preload of another file would be a second download, and a browser without AVIF skips it by its
+ * type. The motion setting is written in each screen of the list: in a media list, a condition joined to the last item
+ * only would leave the other items true under both settings, and both files would be preloaded.
  */
 export const POSTER_PRELOADS: readonly PosterPreload[] = [
 	{ still: FILM_STILLS.start, motion: 'no-preference' },
@@ -84,7 +102,7 @@ export const POSTER_PRELOADS: readonly PosterPreload[] = [
 ].map(({ still, motion }) => ({
 	href: still[0]?.src ?? '',
 	type: still[0]?.type ?? '',
-	media: `${WIDE_SCREEN} and (prefers-reduced-motion: ${motion})`,
+	media: POSTER_SCREENS.map(screen => `${screen} and (prefers-reduced-motion: ${motion})`).join(', '),
 }))
 
 /** What the visitor's browser says, read once the page runs its script. */

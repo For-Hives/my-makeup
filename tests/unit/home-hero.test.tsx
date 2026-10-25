@@ -166,8 +166,9 @@ describe('l’arche et son affiche', () => {
 		expect(picture).toContain('object-cover')
 	})
 
-	test('l’affiche attend son tour sur un téléphone ; dès 768 px, chaque préchargement est le fichier que la <picture> y prend', () => {
-		// Below the first screen of a phone: asked once the page is laid out, never before the sentence is painted (P01).
+	test('l’affiche attend son tour sur un téléphone ; là où l’arche est dans le premier écran, chaque préchargement est le fichier que la <picture> y prend', () => {
+		// Below the first screen of a phone, upright or sideways: asked once the page is laid out, never before the largest
+		// paint there (P01).
 		const image = /<img\b[^>]*>/.exec(picture)?.[0] ?? ''
 		expect(image).toContain('loading="lazy"')
 		expect(image).not.toMatch(/fetchpriority/i)
@@ -182,16 +183,21 @@ describe('l’arche et son affiche', () => {
 					(source.media === undefined || source.media === `(prefers-reduced-motion: ${motion})`) &&
 					source.type === 'image/avif'
 			)?.src
+		// The screens where the arch is in the first screen (film.ts, measured): from 64rem, beside the text, unless the
+		// screen is very low; from 40rem, under the text, on a tablet held upright. Not a phone held sideways (844 × 390):
+		// there the arch is under the text, far below the first screen. Each item carries the motion setting.
 		expect(POSTER_PRELOADS).toEqual([
 			{
 				href: taken('no-preference') ?? 'aucune',
 				type: 'image/avif',
-				media: '(min-width: 768px) and (prefers-reduced-motion: no-preference)',
+				media:
+					'(min-width: 64rem) and (min-height: 30rem) and (prefers-reduced-motion: no-preference), (min-width: 40rem) and (min-height: 56rem) and (prefers-reduced-motion: no-preference)',
 			},
 			{
 				href: taken('reduce') ?? 'aucune',
 				type: 'image/avif',
-				media: '(min-width: 768px) and (prefers-reduced-motion: reduce)',
+				media:
+					'(min-width: 64rem) and (min-height: 30rem) and (prefers-reduced-motion: reduce), (min-width: 40rem) and (min-height: 56rem) and (prefers-reduced-motion: reduce)',
 			},
 		])
 		// The hero writes them (React puts them in the head of the page), high priority: there the poster is the LCP.
