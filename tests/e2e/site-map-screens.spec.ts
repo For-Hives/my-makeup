@@ -51,7 +51,7 @@ async function checkScreen(page: Page, label: string): Promise<void> {
 	expect(await violationsSevere(page), `${label} : axe`).toEqual([])
 }
 
-/** The markup of a screen, rendered by bun (tests/support/render-screen.tsx): Playwright's Node does not read `src/`. */
+/** The markup of a screen, rendered by bun (tests/support/render-screen.tsx): Playwright's Node does not read `src/`. The plain faces of `bun test` stand in for `next/font/google`, which only exists inside Next's build. */
 const render = (screen: 'site-map-empty' | 'error-page'): string =>
 	execFileSync(
 		'bun',

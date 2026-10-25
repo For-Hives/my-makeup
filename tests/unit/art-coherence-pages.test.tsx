@@ -44,7 +44,7 @@ describe('page publique d’un profil', () => {
 		expect(page).toContain('profile-art')
 		expect(page).toContain('bg-art-paper')
 		const css = read('src/app/(front)/globals.css')
-		expect(css).toContain('.profile-art :is(h1, h2)')
+		expect(css).not.toContain('.profile-art :is(h1, h2)')
 		expect(css).toContain('.profile-art section.reveal')
 	})
 })
