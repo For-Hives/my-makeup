@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { TrackedLink } from '@/components/analytics/TrackedLink'
 import { CtaBackdrop } from '@/components/blocks/CtaBackdrop'
 import type { MyMakeupEvents } from '@/lib/analytics/events'
-import { LineDrawing, PrintMark } from './graphics'
+import { GlowBlob, LineDrawing, PrintMark } from './graphics'
 import { pillClassName } from './Pill'
 
 type Where = MyMakeupEvents['cta_click']['where']
@@ -34,9 +34,11 @@ export function ArtCta({
 	secondary: ArtCtaLink
 }) {
 	return (
-		<section className="px-4 py-12 md:px-8 md:py-24">
-			<div className="reveal mx-auto max-w-6xl rounded-[calc(var(--radius-art-frame)+12px)] border border-nude-200 bg-white p-3.5 md:p-11">
-				<div className="art-cta-open relative isolate overflow-hidden rounded-art-frame bg-art-night px-6 py-16 text-center text-white md:px-24 md:py-32">
+		<section className="relative overflow-hidden bg-art-paper px-4 py-16 md:px-8 md:py-36">
+			<GlowBlob size="lg" tone="indigo" className="-top-40 -left-96 opacity-50" />
+			<GlowBlob size="md" tone="rose" className="-right-72 -bottom-48" />
+			<div className="reveal relative mx-auto max-w-6xl rounded-[calc(var(--radius-art-frame)+12px)] border border-nude-200 bg-white p-3.5 md:p-12">
+				<div className="art-cta-open relative isolate overflow-hidden rounded-art-frame bg-art-night px-6 py-20 text-center text-white md:px-24 md:py-44">
 					<CtaBackdrop />
 					<div aria-hidden="true" className="pointer-events-none absolute inset-0 hidden text-white/35 md:block">
 						<LineDrawing name="lips" className="absolute top-12 left-10 h-16 w-28" />
@@ -45,11 +47,11 @@ export function ArtCta({
 						<PrintMark kind="ring" className="absolute bottom-16 left-24 h-4 w-4" />
 					</div>
 					<div className="relative">
-						<h2 className="mx-auto max-w-[17ch] text-balance font-display font-medium text-4xl leading-[1.04] tracking-tight sm:text-5xl lg:text-7xl">
+						<h2 className="mx-auto max-w-[16ch] text-balance font-display font-medium text-[2rem] leading-[1.06] tracking-tight sm:text-5xl lg:text-[5rem]">
 							{title}
 						</h2>
-						<p className="mx-auto mt-6 max-w-[48ch] text-balance text-lg text-white md:mt-7">{children}</p>
-						<div className="mt-10 flex flex-wrap justify-center gap-4 md:mt-11">
+						<p className="mx-auto mt-7 max-w-[48ch] text-balance text-lg text-white md:mt-9 md:text-xl">{children}</p>
+						<div className="mt-11 flex flex-wrap justify-center gap-4 md:mt-14">
 							<TrackedLink
 								href={primary.href}
 								suivi={{ nom: 'cta_click', proprietes: { where: primary.where } }}

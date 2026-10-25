@@ -32,7 +32,13 @@ async function scrollThrough(page: Page): Promise<void> {
 		}
 	})
 	await page.evaluate(async () => {
-		await Promise.all(document.getAnimations().map(animation => animation.finished.catch(() => undefined)))
+		// The banner under the hero slides for ever (a loop never finishes): only the finite animations are waited for.
+		await Promise.all(
+			document
+				.getAnimations()
+				.filter(animation => animation.effect?.getComputedTiming().iterations !== Number.POSITIVE_INFINITY)
+				.map(animation => animation.finished.catch(() => undefined))
+		)
 	})
 }
 
