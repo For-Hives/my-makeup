@@ -24,10 +24,12 @@ describe('1067 : l’invitation à l’action', () => {
 	})
 
 	test('le titre et la phrase sont ceux du site, au mot près', () => {
-		const text = html
-			.replace(/<[^>]+>/g, '')
+		// The text nodes between tags, in order (the markup is never stripped, only read).
+		const text = [...html.matchAll(/>([^<]+)</g)]
+			.map(match => match[1])
+			.join('')
 			.replaceAll('&nbsp;', ' ')
-			.replaceAll(' ', ' ')
+			.replaceAll('\u00a0', ' ')
 			.replaceAll('&#x27;', "'")
 		expect(text).toContain('Rejoignez My-Makeup, la communauté qui fait la différence.')
 		expect(text).toContain(

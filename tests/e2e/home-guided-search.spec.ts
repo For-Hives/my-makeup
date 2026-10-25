@@ -95,10 +95,11 @@ for (const size of SIZES) {
 		}) => {
 			const html = await (await request.get('/')).text()
 			expect(html).not.toContain('Comment ça marche')
-			// The last word is an italic span: read the text, not the markup.
-			expect(html.replace(/<[^>]+>/g, '')).toContain('My-Makeup c&#x27;est avant tout une communauté')
-			expect(html.replace(/<[^>]+>/g, '')).toContain('Vous allez adorer cette nouvelle façon de collaborer')
 			await page.goto('/')
+			// The last word of each title is an italic span: the headings are read as text by the browser, not from the markup.
+			const headings = await page.locator('main h2').allInnerTexts()
+			expect(headings.map(text => text.replaceAll('’', "'"))).toContain("My-Makeup c'est avant tout une communauté")
+			expect(headings).toContain('Vous allez adorer cette nouvelle façon de collaborer')
 			await expect(page.locator('main details')).toHaveCount(0)
 			await expect(page.getByText('Vous allez adorer cette nouvelle façon de collaborer')).toBeVisible()
 		})
