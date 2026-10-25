@@ -38,7 +38,7 @@ export function SearchGrid({
 			data-layout={layout}
 			className={
 				rail
-					? '-mx-4 flex snap-x snap-mandatory gap-5 overflow-x-auto px-4 pb-4 [scrollbar-width:none] md:mx-0 md:grid md:grid-cols-[repeat(3,minmax(0,1fr))] md:gap-x-8 md:gap-y-12 md:overflow-visible md:px-0'
+					? '-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-5 overflow-x-auto px-4 pb-4 [scrollbar-width:none] md:mx-0 md:grid md:grid-cols-[repeat(3,minmax(0,1fr))] md:gap-x-8 md:gap-y-12 md:overflow-visible md:px-0'
 					: layout === 'grid'
 						? 'grid grid-cols-[minmax(0,1fr)] gap-x-8 gap-y-12 sm:grid-cols-[repeat(2,minmax(0,1fr))] lg:grid-cols-[repeat(3,minmax(0,1fr))]'
 						: 'grid grid-cols-[minmax(0,1fr)] gap-4 md:gap-5'
@@ -47,7 +47,11 @@ export function SearchGrid({
 			{cartes.map((carte, index) => (
 				<li
 					key={carte.slug}
-					className={rail ? 'reveal w-[78%] max-w-sm flex-none snap-start md:w-auto md:max-w-none' : 'reveal'}
+					className={
+						rail
+							? 'reveal w-[78%] max-w-sm flex-none snap-start [overflow-wrap:anywhere] md:w-auto md:max-w-none'
+							: 'reveal [overflow-wrap:anywhere]'
+					}
 				>
 					<Card
 						profile={carte}

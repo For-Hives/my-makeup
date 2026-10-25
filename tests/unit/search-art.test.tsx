@@ -76,6 +76,17 @@ describe('les résultats : une carte en ligne ou en grille', () => {
 	})
 })
 
+describe('un nom très long ne fait pas déborder la carte', () => {
+	test('la colonne de texte de chaque carte est une piste qui peut rétrécir (sinon un nom sans coupure élargit la page)', () => {
+		const long = card('long', { nom: 'Marie-Apolline-Joséphine-Bérénice-Eugénie-Héloïse-Delaunay-Vasseur-de-La-Roche' })
+		for (const layout of ['list', 'grid'] as const) {
+			const out = html(<SearchGrid cartes={[long]} layout={layout} />)
+			expect(out).toContain('grid-cols-[minmax(0,1fr)] gap-2.5')
+			expect(out).toContain('[overflow-wrap:anywhere]')
+		}
+	})
+})
+
 describe('le bandeau de recherche', () => {
 	test('un formulaire GET vers /search, les deux champs gardent leurs libellés et le bouton son texte', () => {
 		const out = html(<SearchBar search="mariage" city="Annecy" />)

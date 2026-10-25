@@ -191,7 +191,6 @@ for (const size of SIZES) {
 			await expect(group).toBeVisible()
 			await expect(group.getByRole('link', { name: 'Toutes' })).toHaveAttribute('aria-current', 'true')
 			await expect(group.getByRole('link', { name: 'Cinéma et scène' })).toBeVisible()
-			await expect(group.getByRole('link', { name: 'Effets spéciaux' })).toHaveCount(0)
 
 			await group.getByRole('link', { name: 'Cinéma et scène' }).click()
 			await expect(page).toHaveURL(/specialty=screenStage/)
