@@ -191,9 +191,11 @@ export function ArchFilm() {
 			) : (
 				mounted && (
 					<>
+						{/* Hidden until the intro has ended: its first frame is the end of the story, the red lips, and an intro that
+						    still buffers (a slow line) would let it show through before the story is told. */}
 						<video
 							ref={loop}
-							className={`${VIDEO} ${phase === 'wait' ? 'invisible' : ''}`}
+							className={`${VIDEO} ${phase === 'swap' || phase === 'loop' ? '' : 'invisible'}`}
 							muted
 							loop
 							playsInline

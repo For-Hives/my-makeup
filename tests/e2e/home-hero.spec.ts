@@ -79,6 +79,9 @@ for (const size of [SCREENS.mobile, SCREENS.chromium]) {
 			const intro = page.locator('.home-hero-arch video:not([loop])')
 			const loop = page.locator('.home-hero-arch video[loop]')
 			await expect.poll(() => loop.evaluate(video => (video as HTMLVideoElement).readyState)).toBeGreaterThanOrEqual(2)
+			// The first frame of the loop is the end of the story, the red lips: while the intro plays (or still buffers on
+			// a slow line), the loop under it stays hidden, or the ending shows before the story.
+			expect(await loop.evaluate(video => getComputedStyle(video).visibility)).toBe('hidden')
 			// To its last quarter of a second rather than waiting for it: the end is what is checked.
 			await intro.evaluate(video => {
 				const element = video as HTMLVideoElement
