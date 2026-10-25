@@ -2,7 +2,7 @@
 
 > Vocabulaire : ce que le mainteneur appelle une **pastille** (une image en forme de pilule, posée dans un titre) s'écrit `capsule` dans le code (`CapsuleImage`, `TitleWithCapsules`, `CapsuleFrame`, `.art-capsule`) : `pastille` est un mot français que le contrôle des noms refuse.
 
-Le kit est la base commune des pages : des jetons, des polices, une bibliothèque d'assets et des composants de base, que chaque page applique ensuite. Il vient de la maquette que le mainteneur a validée le 25/10/2026 (éditorial, mode : papier crème, indigo, rose pâle, Bodoni, filets fins). **Application page par page.** Les pages de contenu, de contact, de zone et de talent le portent depuis le 25/10/2026 (voir [`pages-de-contenu.md`](pages-de-contenu.md), « Le kit sur ces pages ») ; le blog (liste et article), les deux boutons de la barre de navigation et le pied de page le portent aussi (voir « Le blog, la barre et le pied de page ») ; l'accueil et la recherche sont d'autres chantiers.
+Le kit est la base commune des pages : des jetons, des polices, une bibliothèque d'assets et des composants de base, que chaque page applique ensuite. Il vient de la maquette que le mainteneur a validée le 25/10/2026 (éditorial, mode : papier crème, indigo, rose pâle, Bodoni, filets fins). **Application page par page.** Les pages de contenu, de contact, de zone et de talent le portent depuis le 25/10/2026 (voir [`pages-de-contenu.md`](pages-de-contenu.md), « Le kit sur ces pages ») ; le blog (liste et article), les deux boutons de la barre de navigation et le pied de page le portent aussi (voir « Le blog, la barre et le pied de page ») ; l'accueil et la recherche ont suivi (voir [`accueil.md`](accueil.md) et [`recherche.md`](recherche.md)) ; la passe de cohérence du 25/10/2026 a pris le reste du site public (voir « La passe de cohérence »).
 
 Le code est dans `src/components/art/`. Les jetons et les quelques règles de feuille de style sont dans **un seul bloc** de `src/app/(front)/globals.css`, nommé « ART DIRECTION KIT ». Les règles de mouvement sont celles de [`mouvement.md`](mouvement.md), la barre de navigation celle de [`navbar.md`](navbar.md).
 
@@ -136,6 +136,14 @@ Tous dans `src/components/art/`, en anglais, composants serveur sauf mention. Au
 - **Article** : la colonne de lecture de 42 rem (`.article-prose`), le sommaire, les données structurées, les textes et les adresses sont **inchangés** ; fond papier, lueurs, lien de retour et pied de partage en pilule et puces (`Pill`, `Chip`), « À lire aussi » en `SectionHead` et `BlogCard`.
 - **Barre** : voir [`navbar.md`](navbar.md). `pillClassName` vit désormais dans `pill-class.ts` (sans import, ré-exporté par `Pill`), `SwirlEllipse` dans `SwirlEllipse.tsx` (ré-exporté par `graphics`).
 - **Pied de page** (`Footer`, serveur, sans bannière ni script : la bannière ajouterait son bouton client à chaque page) : papier, **sans filet ni marge au-dessus** (le fond de la page se prolonge dans le pied : un filet à plus et une marge d'une autre couleur faisaient une barre blanche et un `hr` laid, retour d'Andy du 25/10/2026), réseaux en pastilles rondes de 44 px, colonnes avec titre en Bodoni et liens de 44 px, un dessin au trait (`hand-brush`) et une lueur. Les liens et les textes sont ceux du site.
+
+## La passe de cohérence (25/10/2026)
+
+Un passage sur toutes les pages publiques, aux deux largeurs, a relevé ce qui n'avait pas encore pris le kit. Le tableau de l'audit est dans la description de la PR (issue 1111).
+
+- **Une coquille pour l'authentification** (`AuthShell`, `src/components/auth/`) : papier, un seul `h1` en Bodoni, une lueur et une marque d'imprimerie derrière, colonne centrée. Elle sert la connexion, l'inscription, le mot de passe oublié et sa réinitialisation, les deux pages de vérification et la page d'erreur de connexion. Elle ne met aucun mot : la page donne le titre.
+- **Les classes de formulaire sont dans un seul fichier** (`src/components/art/form-classes.ts`, sans import hors `pill-class` : les formulaires client le lisent sans tirer les dessins) : champ à 28 px d'arrondi (`ART_FIELD`, aussi celui du contact et du devis), étiquette, bouton en pilule indigo (`ART_SUBMIT`), lien-bouton, lien de texte (44 px de haut), quatre tons d'avis (`ART_NOTICE`). Plus aucun champ carré ni bouton noir `rounded-md` sur les pages publiques hors accueil.
+- **404 et erreur** : papier, Bodoni, pilules (la classe vient de `pill-class`, car la page d'erreur est l'enfant d'un composant client). `global-not-found.tsx` pose enfin les trois variables de police sur `<html>` (sans elles, la 404 d'une adresse inconnue peignait le titre et le pied de page en sans empattement).
 
 ### Deux pièges mesurés en passant (CLS)
 

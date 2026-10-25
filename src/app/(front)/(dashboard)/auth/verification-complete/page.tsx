@@ -3,6 +3,8 @@ import type { Metadata } from 'next'
 import { cookies, headers } from 'next/headers'
 import Link from 'next/link'
 import { getPayload } from 'payload'
+import { ART_LINK, ART_LINK_BUTTON } from '@/components/art/form-classes'
+import { AuthShell } from '@/components/auth/AuthShell'
 import { authLog } from '@/lib/auth/auth-log'
 import { ipClient } from '@/lib/auth/client-ip'
 import { type ConfirmationResult, confirmWithRateLimit } from '@/lib/auth/confirmation'
@@ -49,32 +51,24 @@ export default async function EmailConfirmation() {
 	const signIn = `/auth/signin?callbackUrl=${encodeURIComponent(ACCOUNT_ONBOARDING_PAGE)}`
 
 	return (
-		<main className="flex min-h-dvh flex-col items-center justify-center gap-6 p-6 text-center">
-			<h1 className="max-w-md font-semibold text-3xl">{TITLES[result]}</h1>
-			<p className="max-w-sm text-neutral-700">{TEXTS[result]}</p>
+		<AuthShell title={TITLES[result]} titleClassName="max-w-2xl">
+			<p className="max-w-sm text-mute">{TEXTS[result]}</p>
 			{sessionOffered ? (
 				<form action={continueAfterConfirmation} className="flex flex-col items-center gap-3">
-					<button
-						type="submit"
-						className="min-h-11 rounded-md bg-neutral-900 px-4 py-2 font-medium text-white"
-						data-testid="continuer-apres-confirmation"
-					>
+					<button type="submit" className={ART_LINK_BUTTON} data-testid="continuer-apres-confirmation">
 						Continuer vers mon profil
 					</button>
-					<Link className="inline-flex min-h-11 items-center px-2 text-neutral-700 underline" href={signIn}>
+					<Link className={ART_LINK} href={signIn}>
 						Se connecter
 					</Link>
 				</form>
 			) : (
 				<p>
-					<Link
-						className="inline-flex min-h-11 items-center rounded-md bg-neutral-900 px-4 py-2 font-medium text-white"
-						href={result === 'lien-invalide' ? '/auth/signin' : signIn}
-					>
+					<Link className={ART_LINK_BUTTON} href={result === 'lien-invalide' ? '/auth/signin' : signIn}>
 						Se connecter
 					</Link>
 				</p>
 			)}
-		</main>
+		</AuthShell>
 	)
 }

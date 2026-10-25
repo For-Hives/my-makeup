@@ -1,6 +1,7 @@
 'use client'
 
 import { type ReactNode, useActionState, useEffect, useMemo, useRef } from 'react'
+import { ART_FIELD } from '@/components/art/form-classes'
 import { track } from '@/lib/analytics/track'
 import {
 	CONTACT_TRAP_FIELD,
@@ -19,8 +20,7 @@ export type ContactAction = (precedent: ContactState, formulaire: FormData) => P
 /** What the form needs of the measure: `track`, and a double in a test. */
 export type TrackContact = (nom: 'platform_contact_submit', proprietes: { ok: boolean; status: number }) => unknown
 
-const FIELD =
-	'block min-h-12 w-full rounded-art-field border-0 bg-art-paper px-5 py-3 text-base text-ink ring-1 ring-inset ring-art-line placeholder:text-mute focus:ring-2 focus:ring-inset focus:ring-indigo-700 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-600'
+const FIELD = ART_FIELD
 
 const LABELS: Record<ContactField, string> = {
 	prenom: 'Prénom',

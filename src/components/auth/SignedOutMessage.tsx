@@ -10,9 +10,9 @@ export function SignedOutMessage({ google }: { google: boolean }) {
 		<section
 			role="status"
 			data-testid="message-reconnexion"
-			className="w-full max-w-sm rounded-md bg-neutral-100 p-4 text-left text-sm"
+			className="w-full max-w-sm rounded-art-field bg-white px-5 py-4 text-left text-sm ring-1 ring-art-line ring-inset"
 		>
-			<h2 className="font-semibold text-base">Reconnecte-toi une fois</h2>
+			<h2 className="font-display font-medium text-xl">Reconnecte-toi une fois</h2>
 			<p className="mt-2">
 				Le site a changé : ton ancienne connexion ne fonctionne plus.{' '}
 				{google
@@ -21,7 +21,10 @@ export function SignedOutMessage({ google }: { google: boolean }) {
 			</p>
 			<p className="mt-2">
 				Tu as oublié ton mot de passe ? Passe par{' '}
-				<Link className="underline" href="/auth/mot-de-passe-oublie">
+				<Link
+					className="font-medium text-indigo-800 underline underline-offset-4 hover:text-indigo-950"
+					href="/auth/mot-de-passe-oublie"
+				>
 					Mot de passe oublié
 				</Link>{' '}
 				pour en choisir un nouveau.

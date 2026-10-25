@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useActionState, useEffect, useRef } from 'react'
+import { ART_FIELD, ART_LABEL, ART_LINK, ART_NOTICE, ART_SUBMIT } from '@/components/art/form-classes'
 import { type Track, track } from '@/lib/analytics/track'
 import { type ErrorCode, errorMessage } from '@/lib/auth/errors'
 
@@ -42,21 +43,14 @@ export function SignInForm({
 				if (lock.current) evenement.preventDefault()
 				else lock.current = true
 			}}
-			className="flex w-full max-w-sm flex-col gap-4 text-left"
+			className="flex w-full max-w-sm flex-col gap-5 text-left"
 		>
 			<input type="hidden" name="callbackUrl" value={retour} />
-			<label className="flex flex-col gap-1 font-medium text-sm" htmlFor="email">
+			<label className={ART_LABEL} htmlFor="email">
 				Adresse email
-				<input
-					id="email"
-					name="email"
-					type="email"
-					autoComplete="email"
-					required
-					className="min-h-11 rounded-md border border-neutral-300 bg-white px-3 py-2 font-normal text-base"
-				/>
+				<input id="email" name="email" type="email" autoComplete="email" required className={ART_FIELD} />
 			</label>
-			<label className="flex flex-col gap-1 font-medium text-sm" htmlFor="password">
+			<label className={ART_LABEL} htmlFor="password">
 				Mot de passe
 				<input
 					id="password"
@@ -64,23 +58,18 @@ export function SignInForm({
 					type="password"
 					autoComplete="current-password"
 					required
-					className="min-h-11 rounded-md border border-neutral-300 bg-white px-3 py-2 font-normal text-base"
+					className={ART_FIELD}
 				/>
 			</label>
 			<p className="text-right text-sm">
-				<Link className="inline-flex min-h-11 items-center font-medium underline" href="/auth/mot-de-passe-oublie">
+				<Link className={ART_LINK} href="/auth/mot-de-passe-oublie">
 					Mot de passe oublié ?
 				</Link>
 			</p>
 			<div role="alert" data-testid="erreur-connexion">
-				{state ? <p className="rounded-md bg-red-50 p-3 text-red-800 text-sm">{errorMessage(state.code)}</p> : null}
+				{state ? <p className={ART_NOTICE.error}>{errorMessage(state.code)}</p> : null}
 			</div>
-			<button
-				type="submit"
-				disabled={inProgress}
-				aria-busy={inProgress}
-				className="min-h-11 rounded-md bg-neutral-900 px-4 py-2 font-medium text-white disabled:cursor-wait disabled:opacity-60"
-			>
+			<button type="submit" disabled={inProgress} aria-busy={inProgress} className={ART_SUBMIT}>
 				{inProgress ? 'Connexion…' : 'Se connecter'}
 			</button>
 		</form>
