@@ -975,7 +975,7 @@ describe('the CI runs the integration tests and the end-to-end tests on the test
 	const E2E_TESTS = `run: bun run test:e2e --shard=${SHARD}/6`
 
 	test('each job starts the bench before its tests; three shards of integration tests, six of end-to-end tests, each in less than 10 minutes', () => {
-		expect(SHARDS).toEqual({ integration: 3, e2e: 5 })
+		expect(SHARDS).toEqual({ integration: 3, e2e: 6 })
 		expect(benchJobProblems(ci, BENCH_LIMIT_MINUTES)).toEqual([])
 		expect(ci.jobs.integration?.['timeout-minutes']).toBeLessThanOrEqual(BENCH_LIMIT_MINUTES)
 		expect(ci.jobs.e2e?.['timeout-minutes']).toBeLessThanOrEqual(BENCH_LIMIT_MINUTES)
