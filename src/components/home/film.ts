@@ -61,6 +61,32 @@ export const FILM_SIZE = { width: 1080, height: 1400 } as const
 /** The file an `<img>` shows when no `<source>` of its `<picture>` applies. */
 export const fallbackOf = (sources: readonly FilmSource[]): string => sources.at(-1)?.src ?? ''
 
+/** The widths where the arch stands beside the text and its poster is the largest paint of the first screen. */
+export const WIDE_SCREEN = '(min-width: 768px)'
+
+/** A preload of the poster: the file, its type, and the screens it is asked on. */
+export interface PosterPreload {
+	href: string
+	type: string
+	media: string
+}
+
+/**
+ * The poster is `loading="lazy"`: on a phone the arch comes after the text, below the first screen, and a byte asked
+ * before the largest paint there (the sentence under the headline) delays it (LCP of P01). From 768 px the poster is
+ * that largest paint: these preloads ask for it as early as before, on those screens only. Each one is the file the
+ * `<picture>` of the poster takes there, AVIF, once per motion setting (the end still under reduced motion): a preload
+ * of another file would be a second download, and a browser without AVIF skips it by its type.
+ */
+export const POSTER_PRELOADS: readonly PosterPreload[] = [
+	{ still: FILM_STILLS.start, motion: 'no-preference' },
+	{ still: FILM_STILLS.end, motion: 'reduce' },
+].map(({ still, motion }) => ({
+	href: still[0]?.src ?? '',
+	type: still[0]?.type ?? '',
+	media: `${WIDE_SCREEN} and (prefers-reduced-motion: ${motion})`,
+}))
+
 /** What the visitor's browser says, read once the page runs its script. */
 export interface FilmConditions {
 	/** `prefers-reduced-motion: reduce`. */

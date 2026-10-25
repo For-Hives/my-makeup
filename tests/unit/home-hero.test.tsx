@@ -21,6 +21,7 @@ import {
 	fallbackOf,
 	filmButtonName,
 	mountsFilm,
+	POSTER_PRELOADS,
 	playsFilm,
 } from '@/components/home/film'
 import { ArchFilm, FilmButton, HeroStage } from '@/components/home/HeroFilm'
@@ -64,8 +65,9 @@ describe('le titre : le h1 du site en ligne, au caractère près', () => {
 			expect(image).toContain('aria-hidden="true"')
 			expect(image).toMatch(/width="342"/)
 			expect(image).toMatch(/height="171"/)
-			// Low priority: React then writes no preload for it in the head, in front of the stylesheets (LCP of P01).
-			expect(image).toMatch(/fetchpriority="low"/i)
+			// Lazy: React writes no preload for it in the head, and it is asked after the first paint (LCP of P01).
+			expect(image).toContain('loading="lazy"')
+			expect(image).not.toMatch(/fetchpriority/i)
 			const webp = /src="([^"]+)"/.exec(image)?.[1] ?? ''
 			const avif = /<source srcSet="([^"]+)" type="image\/avif"\/>/.exec(picture)?.[1] ?? ''
 			expect(picture.indexOf('<source')).toBeLessThan(picture.indexOf('<img'))
@@ -162,6 +164,43 @@ describe('l’arche et son affiche', () => {
 		expect(picture).toContain(`width="${FILM_SIZE.width}" height="${FILM_SIZE.height}"`)
 		expect(picture).toMatch(/alt="[^"]{20,}"/)
 		expect(picture).toContain('object-cover')
+	})
+
+	test('l’affiche attend son tour sur un téléphone ; dès 768 px, chaque préchargement est le fichier que la <picture> y prend', () => {
+		// Below the first screen of a phone: asked once the page is laid out, never before the sentence is painted (P01).
+		const image = /<img\b[^>]*>/.exec(picture)?.[0] ?? ''
+		expect(image).toContain('loading="lazy"')
+		expect(image).not.toMatch(/fetchpriority/i)
+		// What the <picture> takes in a browser that reads AVIF: the first source whose media applies, by motion setting.
+		const sources = [...picture.matchAll(/<source (?:media="([^"]+)" )?srcSet="([^"]+)" type="([^"]+)"\/>/g)].map(
+			([, media, src, type]) => ({ media, src, type })
+		)
+		expect(sources).toHaveLength(FILM_STILLS.start.length + FILM_STILLS.end.length)
+		const taken = (motion: 'reduce' | 'no-preference') =>
+			sources.find(
+				source =>
+					(source.media === undefined || source.media === `(prefers-reduced-motion: ${motion})`) &&
+					source.type === 'image/avif'
+			)?.src
+		expect(POSTER_PRELOADS).toEqual([
+			{
+				href: taken('no-preference') ?? 'aucune',
+				type: 'image/avif',
+				media: '(min-width: 768px) and (prefers-reduced-motion: no-preference)',
+			},
+			{
+				href: taken('reduce') ?? 'aucune',
+				type: 'image/avif',
+				media: '(min-width: 768px) and (prefers-reduced-motion: reduce)',
+			},
+		])
+		// The hero writes them (React puts them in the head of the page), high priority: there the poster is the LCP.
+		expect([...(html.match(/<link rel="preload"[^>]*>/g) ?? [])]).toEqual(
+			POSTER_PRELOADS.map(
+				({ href, type, media }) =>
+					`<link rel="preload" href="${href}" as="image" type="${type}" fetchPriority="high" media="${media}"/>`
+			)
+		)
 	})
 
 	test('l’arche n’est jamais dans un bloc en fondu : elle entre par un masque', () => {
@@ -472,23 +511,59 @@ describe('la police du haut de page', () => {
 			['bodoni-moda-display-italic.woff2', 'italic'],
 			['bodoni-moda-text-italic.woff2', 'italic'],
 		])
-		// About 100 KB of variable font were preloaded before (LCP of P01): each cut stays small.
+		// About 100 KB of variable font were preloaded before (LCP of P01), then 27 KB of cuts with every French letter:
+		// each cut now holds the characters of its text only.
 		for (const [file] of cuts) {
 			const bytes = readFileSync(join(ROOT, FONTS, file ?? ''))
 			expect([file, bytes.subarray(0, 4).toString('latin1')]).toEqual([file, 'wOF2'])
-			expect(bytes.length).toBeLessThan(14 * 1024)
+			expect(bytes.length).toBeLessThan(6 * 1024)
 		}
 		expect(read(`${FONTS}/OFL.txt`)).toContain('SIL OPEN FONT LICENSE Version 1.1')
 		expect(read(`${FONTS}/OFL.txt`)).toContain('The Bodoni Moda Project Authors')
 		expect(read('src/components/direct-edit/fonts.ts')).not.toContain('opsz')
 	})
 
+	test('les caractères que chaque coupe dessine sont ceux de ses sous-ensembles : un texte changé demande de nouvelles coupes', () => {
+		// The cuts hold these characters only (docs/accueil.md, « La police », the recipe): a character outside them would
+		// be drawn by the fallback serif. A text of the hero that changes makes this test fail first, then the cuts are
+		// made again; tests/e2e/home-hero.spec.ts checks in Chromium which fonts drew each text.
+		const document = new JSDOM(html).window.document
+		const chars = (texts: (string | null | undefined)[]) => [...new Set(texts.join(' '))].sort().join('')
+		const title = document.querySelector('h1')
+		const italic = title?.querySelector('em')?.textContent
+		const upright = [...(title?.querySelectorAll('.home-hero-line') ?? [])].map(line =>
+			[...line.childNodes]
+				.filter(node => node.nodeName !== 'EM')
+				.map(node => node.textContent)
+				.join('')
+		)
+		const textCut = [
+			...[...document.querySelectorAll('.home-hero-step-number')].map(number => number.textContent),
+			...[...document.querySelectorAll('.home-hero-ribbon-list li')].map(item => item.textContent),
+		]
+		expect(chars(upright)).toBe(" 'Taeijlmnopqrstuvé")
+		expect(chars([italic])).toBe(' cdeinopqrsuv')
+		expect(chars(textCut)).toBe(' -.CEMPSacdefghilmnopqrstuvxèé’')
+	})
+
 	test('chaque coupe a sa variable, change sans attendre et se remplace par un repli serif ajusté ; le haut de page porte les deux', () => {
 		expect(font.match(/display: 'swap'/g)).toHaveLength(2)
-		expect(font.match(/adjustFontFallback: 'Times New Roman'/g)).toHaveLength(2)
+		// The fallback is set by hand (next/font reads the widths of a to z, which the subsets no longer all carry), with
+		// the values next/font computed from the full cuts: Times New Roman at the measures of each cut.
+		expect(font.match(/adjustFontFallback: false/g)).toHaveLength(2)
+		expect(font).toContain("fallback: ['hero-serif-fallback'],")
+		expect(font).toContain("fallback: ['hero-serif-text-fallback'],")
+		const css = read('src/app/(front)/globals.css').replace(/\s+/g, ' ')
+		expect(css).toContain(
+			'@font-face { font-family: hero-serif-fallback; src: local("Times New Roman"); ascent-override: 99.06%; descent-override: 35.22%; line-gap-override: 0%; size-adjust: 113.57%; }'
+		)
+		expect(css).toContain(
+			'@font-face { font-family: hero-serif-text-fallback; src: local("Times New Roman"); ascent-override: 105.29%; descent-override: 37.44%; line-gap-override: 0%; size-adjust: 106.85%; }'
+		)
 		expect(font).toContain("variable: '--font-hero-serif',")
 		expect(font).toContain("variable: '--font-hero-serif-text',")
-		// Both preloaded: their text is in the first screen of a wide screen, a late swap would move it.
+		// All preloaded: their text is in the first screen of a wide screen, a late swap would move it. Held out of the
+		// preloads, the italic cuts were still asked before the paint of a phone, only later (docs/accueil.md, « La police »).
 		expect(font).not.toContain('preload: false')
 		expect(element(html, /<section\b/).slice(0, 120)).toMatch(
 			/^<section class="home-hero --font-hero-serif --font-hero-serif-text"/
@@ -500,8 +575,14 @@ describe('la police du haut de page', () => {
 		const block = css.slice(css.indexOf('.home-hero {'), css.indexOf('.article-prose {'))
 		expect(block.length).toBeGreaterThan(1000)
 		expect(block).not.toMatch(/font-variation-settings|font-optical-sizing/)
-		const familyOf = (selector: string) =>
-			new RegExp(`${selector.replace(/[.[\]]/g, '\\$&')} \\{[^}]*font-family: ([^;]+);`).exec(block)?.[1]
+		// The rule of a selector, found as text (`selector {` up to its `}`), then its font-family: no pattern built from
+		// the selector, whose characters would each need escaping (CodeQL, incomplete escaping).
+		const familyOf = (selector: string) => {
+			const start = block.indexOf(`${selector} {`)
+			if (start === -1) return undefined
+			const rule = block.slice(start, block.indexOf('}', start))
+			return /font-family: ([^;]+);/.exec(rule)?.[1]
+		}
 		expect(familyOf('.home-hero-title')).toBe('var(--hero-serif)')
 		expect(familyOf('.home-hero-step-number')).toBe('var(--hero-serif-text)')
 		expect(familyOf('.home-hero-ribbon-list li')).toBe('var(--hero-serif-text)')

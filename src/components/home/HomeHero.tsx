@@ -1,7 +1,8 @@
 import type { CSSProperties } from 'react'
+import { preload } from 'react-dom'
 import { SPECIALTY_BULLETS } from '@/lib/specialty'
 import { FilmStill } from './FilmStill'
-import { FILM_SIZE, FILM_STILLS } from './film'
+import { FILM_SIZE, FILM_STILLS, POSTER_PRELOADS } from './film'
 import { GuidedSearch } from './GuidedSearch'
 import { ArchFilm, FilmButton, HeroStage } from './HeroFilm'
 import { heroSerif, heroSerifText } from './hero-font'
@@ -52,8 +53,9 @@ export const HERO_PILLS = {
 
 /**
  * A picture inside the heading: decoration, so it adds no word to the name of the heading. Its size is fixed in em, so
- * it moves nothing when it comes. Low priority: React writes no preload for it in the head, where it would come before
- * the stylesheets and slow down what a phone paints first (the sentence under the heading).
+ * it moves nothing when it comes. Lazy: React writes no preload for it in the head, and the browser asks for it once the
+ * page is laid out, after the first paint, so it is no request in front of what a phone paints first (the sentence
+ * under the heading, LCP of P01); the brush, hidden below 640 px, is then never asked on a phone.
  */
 function Pill({ pill, className }: { pill: (typeof HERO_PILLS)[keyof typeof HERO_PILLS]; className: string }) {
 	return (
@@ -66,7 +68,7 @@ function Pill({ pill, className }: { pill: (typeof HERO_PILLS)[keyof typeof HERO
 				aria-hidden="true"
 				width={342}
 				height={171}
-				fetchPriority="low"
+				loading="lazy"
 				className={`home-hero-pill ${className}`}
 			/>
 		</picture>
@@ -97,6 +99,10 @@ function RibbonList({ hidden }: { hidden: boolean }) {
  * and its two pictures are decoration (`alt=""`, `aria-hidden`), so the heading's name does not change.
  */
 export function HomeHero() {
+	// The poster is lazy (below the first screen of a phone); from 768 px, where it is the largest paint, these preloads
+	// in the head ask for it as early as the stylesheets, the very file its <picture> takes there (film.ts).
+	for (const { href, type, media } of POSTER_PRELOADS)
+		preload(href, { as: 'image', type, media, fetchPriority: 'high' })
 	return (
 		<HeroStage className={`home-hero ${heroSerif.variable} ${heroSerifText.variable}`}>
 			<div className="home-hero-grid">
@@ -139,6 +145,7 @@ export function HomeHero() {
 							still={FILM_STILLS.start}
 							reduced={FILM_STILLS.end}
 							alt={POSTER_ALT}
+							loading="lazy"
 							className="absolute inset-0 h-full w-full object-cover"
 						/>
 						{/* Without script the film never comes to bring the poster into focus: the end still covers it. */}

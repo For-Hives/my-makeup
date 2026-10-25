@@ -133,6 +133,8 @@ for (const size of [SCREENS.mobile, SCREENS.chromium]) {
 				return [...faces].sort()
 			}
 			expect(await drawnBy('.home-hero-line')).toEqual(['BodoniModa-96pt', 'BodoniModaItalic-96ptItalic'])
+			// The italic line by the italic cut alone: in a family without it, the upright cut would be slanted instead.
+			expect(await drawnBy('.home-hero-title em')).toEqual(['BodoniModaItalic-96ptItalic'])
 			expect(await drawnBy('.home-hero-step-number')).toEqual(['BodoniModaItalic-11ptItalic'])
 			expect(await drawnBy('.home-hero-ribbon-list li')).toEqual(['BodoniModaItalic-11ptItalic'])
 		})
@@ -197,6 +199,52 @@ test.describe('avec un mouvement réduit', () => {
 			await expect(page.locator('button.home-hero-disc')).toHaveCount(0)
 			expect(await playState(page, '.home-hero-ring')).toBe('none')
 			expect(await playState(page, '.home-hero-ribbon-track')).toBe('none')
+		})
+	}
+})
+
+/** The requests the page made for the two stills (poster and end), in order: the file and what asked for it. */
+const stillRequests = (page: Page): Promise<{ file: string; by: string }[]> =>
+	page.evaluate(() =>
+		(performance.getEntriesByType('resource') as PerformanceResourceTiming[])
+			.filter(entry => /\/ombre-nette-(debut|fin)-/.test(entry.name))
+			.map(entry => ({ file: new URL(entry.name).pathname, by: entry.initiatorType }))
+	)
+
+test.describe('l’affiche de l’arche, demandée une fois, au bon moment', () => {
+	// The poster is lazy: on a phone the arch is below the first screen, and a byte asked before the sentence is painted
+	// delays the largest paint (LCP of P01). From 768 px it is that largest paint, and a preload in the head asks for it
+	// early. The preload must be the very file the <picture> takes, or the browser downloads two.
+	for (const reducedMotion of ['no-preference', 'reduce'] as const) {
+		const still = reducedMotion === 'reduce' ? FILM_STILLS.end : FILM_STILLS.start
+		const file = still[0]?.src ?? 'avif'
+		test.describe(`mouvement ${reducedMotion}`, () => {
+			test.use({ contextOptions: { reducedMotion } })
+
+			test(`à ${SCREENS.chromium.width} px : préchargée dans l’en-tête, un seul téléchargement, celui que l’image affiche`, async ({
+				page,
+			}) => {
+				await page.setViewportSize(SCREENS.chromium)
+				await page.goto('/')
+				const preloads = page.locator('head link[rel="preload"][as="image"][media*="min-width: 768px"]')
+				await expect(preloads).toHaveCount(2)
+				const poster = page.locator('.home-hero-arch > picture img')
+				await expect(poster).toHaveJSProperty('complete', true)
+				expect(await poster.evaluate(image => (image as HTMLImageElement).currentSrc)).toContain(file)
+				expect(await stillRequests(page)).toEqual([{ file, by: 'link' }])
+			})
+
+			test(`à ${SCREENS.mobile.width} px : rien n’est préchargé, l’image la demande elle-même, une fois`, async ({
+				page,
+			}) => {
+				await page.setViewportSize(SCREENS.mobile)
+				await page.goto('/')
+				await showArch(page)
+				const poster = page.locator('.home-hero-arch > picture img')
+				await expect(poster).toHaveJSProperty('complete', true)
+				expect(await poster.evaluate(image => (image as HTMLImageElement).currentSrc)).toContain(file)
+				expect(await stillRequests(page)).toEqual([{ file, by: 'img' }])
+			})
 		})
 	}
 })

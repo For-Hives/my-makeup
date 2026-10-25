@@ -764,6 +764,30 @@ main:has(> .home-section) {
  * site for the paragraph, the form and the steps. Own block, to ease rebases. Nothing here is translucent through
  * `opacity` (the first screen is never dimmed): a tint is a color with alpha. What moves is in the next block.
  */
+
+/*
+ * The fallbacks of the two families, drawn while a cut loads: Times New Roman at the measures of the cut, so a swap
+ * moves nothing. The values are those next/font computed from the full cuts (`adjustFontFallback`, 25/10/2026): the
+ * subsets no longer carry all the letters a to z it reads, and the widths of a glyph do not change with the subset.
+ */
+@font-face {
+	font-family: hero-serif-fallback;
+	src: local("Times New Roman");
+	ascent-override: 99.06%;
+	descent-override: 35.22%;
+	line-gap-override: 0%;
+	size-adjust: 113.57%;
+}
+
+@font-face {
+	font-family: hero-serif-text-fallback;
+	src: local("Times New Roman");
+	ascent-override: 105.29%;
+	descent-override: 37.44%;
+	line-gap-override: 0%;
+	size-adjust: 106.85%;
+}
+
 .home-hero {
 	--hero-ivory: #f6efe4;
 	--hero-serif: var(--font-hero-serif), "Bodoni Moda", Didot, Georgia, serif;

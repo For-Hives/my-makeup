@@ -7,6 +7,8 @@ interface FilmStillProps {
 	reduced?: readonly FilmSource[]
 	alt: string
 	className: string
+	/** `lazy` for the poster: below the first screen of a phone, it must not be asked before the largest paint there. */
+	loading?: 'lazy'
 }
 
 /**
@@ -14,7 +16,7 @@ interface FilmStillProps {
  * element of the first screen on a wide screen), and the film draws the end still over it when `play()` is refused.
  * Its size is given, so its box is known before it loads.
  */
-export function FilmStill({ still, reduced = [], alt, className }: FilmStillProps) {
+export function FilmStill({ still, reduced = [], alt, className, loading }: FilmStillProps) {
 	return (
 		<picture>
 			{reduced.map(source => (
@@ -24,7 +26,14 @@ export function FilmStill({ still, reduced = [], alt, className }: FilmStillProp
 				<source key={source.src} srcSet={source.src} type={source.type} />
 			))}
 			{/* A <picture> chooses by `prefers-reduced-motion`, which the image component cannot do; the files are sized and versioned. */}
-			<img src={fallbackOf(still)} width={FILM_SIZE.width} height={FILM_SIZE.height} alt={alt} className={className} />
+			<img
+				src={fallbackOf(still)}
+				width={FILM_SIZE.width}
+				height={FILM_SIZE.height}
+				alt={alt}
+				loading={loading}
+				className={className}
+			/>
 		</picture>
 	)
 }
