@@ -248,12 +248,9 @@ describe('titles, heads and pictures', () => {
 		expect(title).toContain('<br/>')
 		expect(title).toContain('font-display')
 		expect(title.match(/<span aria-hidden="true"[^>]*art-capsule/g)).toHaveLength(1)
-		expect(
-			title
-				.replace(/<[^>]+>/g, '')
-				.replace(/\s+/g, ' ')
-				.trim()
-		).toBe('Trouvez la maquilleuse de votre grand jour')
+		// The text nodes between tags, in order: the capsule has none, so the heading reads as its words.
+		const words = [...title.matchAll(/>([^<]+)</g)].map(match => match[1]).join(' ')
+		expect(words.replace(/\s+/g, ' ').trim()).toBe('Trouvez la maquilleuse de votre grand jour')
 		expect(title).toContain('text-art-berry')
 		expect(html(<TitleAccent>x</TitleAccent>)).toContain('text-indigo-700')
 	})
