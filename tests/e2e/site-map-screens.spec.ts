@@ -53,7 +53,11 @@ async function checkScreen(page: Page, label: string): Promise<void> {
 
 /** The markup of a screen, rendered by bun (tests/support/render-screen.tsx): Playwright's Node does not read `src/`. */
 const render = (screen: 'site-map-empty' | 'error-page'): string =>
-	execFileSync('bun', ['--no-env-file', 'tests/support/render-screen.tsx', screen], { cwd: ROOT, encoding: 'utf8' })
+	execFileSync(
+		'bun',
+		['--no-env-file', '--preload', './tests/support/preload-fonts.ts', 'tests/support/render-screen.tsx', screen],
+		{ cwd: ROOT, encoding: 'utf8' }
+	)
 
 /** Puts the markup of a component in the `main` of the page that is open. */
 async function putInMain(page: Page, html: string): Promise<void> {
