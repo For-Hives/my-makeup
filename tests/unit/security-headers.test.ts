@@ -393,6 +393,22 @@ describe('no client hint is asked on the public pages (issue 1033)', () => {
 	})
 })
 
+describe('the files of the home hero (decision of 25/10/2026)', () => {
+	test('a versioned file of /assets/accueil/ is kept a year, unchanged; the other assets and the pages are not', async () => {
+		const config = await production()
+		for (const pathname of ['/assets/accueil/ombre-nette-intro-v0.av1.mp4', '/assets/accueil/pilule-levres-v0.webp']) {
+			const sent = await headersSentFor(config, pathname)
+			expect([pathname, sent.get('cache-control')]).toEqual([pathname, 'public, max-age=31536000, immutable'])
+			expect(valuesOf(sent)).toEqual(valuesOf(await headersSentFor(config, '/')))
+		}
+		for (const pathname of ['/', '/assets/logo.webp', '/auth/signin'])
+			expect([pathname, (await headersSentFor(config, pathname)).get('cache-control') ?? '']).not.toEqual([
+				pathname,
+				'public, max-age=31536000, immutable',
+			])
+	})
+})
+
 describe('the register of intended changes', () => {
 	const register = readFileSync(path.resolve(import.meta.dir, '../../docs/migration/CHANGEMENTS-VOULUS.md'), 'utf8')
 	const line = register.split('\n').find(row => row.startsWith('| `en-tetes-securite` |')) ?? ''

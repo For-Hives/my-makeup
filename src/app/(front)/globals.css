@@ -23,11 +23,15 @@
 	--motion-zoom: 1.05;
 	--stagger-enter: 80ms;
 	--stagger-card: 70ms;
+	/* The two slow loops of the home hero: one turn of the badge's ring, and one length of the ribbon of specialties. */
+	--duration-ring: 40s;
+	--duration-ribbon: 60s;
 }
 
 /*
  * The tokens of the art direction of her own page (issues 1007, 1008, 1071), defined once, here, and used by
- * the edit mode and her space. Lipstick red is reserved for what can be changed. The page is a very light
+ * the edit mode and her space. Lipstick red is reserved for what can be changed (one exception since 25/10/2026: the
+ * hero of the home page, with ink and Bodoni Moda, docs/accueil.md). The page is a very light
  * off-white, the cards are white, the text is black or nearly. Contrasts measured by
  * tests/unit/direct-edit-contrast.test.ts, on white, on the page and on the soft surface: ink 17:1 to 18:1,
  * mute 9.6:1 to 10.7:1 (secondary text, aimed at 7:1), lipstick as text 5.8:1 to 6.4:1, lipstick-800 on
@@ -751,6 +755,579 @@ main:has(> .home-section) {
 .home-eyebrow-center::after {
 	flex: 0 0 3rem;
 }
+
+/*
+ * Home hero « en arche » (decision of 25/10/2026, docs/accueil.md, src/components/home/HomeHero.tsx). Ink, lipstick and
+ * Bodoni Moda in its display cut (`--font-hero-serif`, set by the hero itself) on the page tone; the sans of the site
+ * for the paragraph, the form and the steps. Own block, to ease rebases. Nothing here is translucent through
+ * `opacity` (the first screen is never dimmed): a tint is a color with alpha. What moves is in the next block.
+ */
+.home-hero {
+	--hero-ivory: #f6efe4;
+	--hero-serif: var(--font-hero-serif), "Bodoni Moda", Didot, Georgia, serif;
+	overflow-x: clip;
+	background-color: var(--color-page);
+	color: var(--color-ink);
+}
+
+.home-hero-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	row-gap: 3.5rem;
+	max-width: 80rem;
+	margin-inline: auto;
+	padding: 2.25rem 1rem 0;
+}
+
+.home-hero-text {
+	min-width: 0;
+	padding-bottom: 0.5rem;
+}
+
+.home-hero-eyebrow {
+	display: flex;
+	align-items: center;
+	gap: 0.875rem;
+	margin-bottom: 1.25rem;
+	font-size: 0.6875rem;
+	line-height: 1.35;
+	letter-spacing: 0.22em;
+	text-transform: uppercase;
+	color: var(--color-mute);
+}
+
+.home-hero-eyebrow::before {
+	content: "";
+	flex: 0 0 2.5rem;
+	height: 1px;
+	background-color: var(--color-ink);
+}
+
+.home-hero-title {
+	font-family: var(--hero-serif);
+	font-size: clamp(2.125rem, 2.6vw + 1.2rem, 3.75rem);
+	font-weight: 400;
+	font-variation-settings: "opsz" 96;
+	line-height: 1.12;
+	letter-spacing: -0.015em;
+	color: var(--color-ink);
+}
+
+.home-hero-title em {
+	font-style: italic;
+	color: var(--color-lipstick);
+}
+
+/* On a phone the four lines flow as one text; from 640 px each is a line of its own. */
+.home-hero-line {
+	display: inline;
+}
+
+.home-hero-pill {
+	display: inline-block;
+	width: 1.9em;
+	height: 0.95em;
+	border-radius: 9999px;
+	object-fit: cover;
+	vertical-align: -0.06em;
+}
+
+.home-hero-pill-after {
+	margin-inline: 0.12em 0.3em;
+}
+
+.home-hero-pill-before {
+	display: none;
+	margin-inline: 0.12em 0.36em;
+	outline: 1px solid rgb(26 20 23 / 0.12);
+	outline-offset: -1px;
+}
+
+.home-hero-lede {
+	max-width: 33em;
+	margin-top: 1.25rem;
+	font-size: 1.03125rem;
+	line-height: 1.6;
+	color: var(--color-mute);
+}
+
+.home-hero-search {
+	margin-top: 2.5rem;
+}
+
+.home-hero-steps {
+	display: flex;
+	flex-direction: column;
+	gap: 0.625rem;
+	max-width: 40rem;
+	margin-top: 2rem;
+	font-size: 0.84375rem;
+	line-height: 1.45;
+	color: var(--color-mute);
+}
+
+.home-hero-steps li {
+	display: flex;
+	gap: 0.625rem;
+}
+
+.home-hero-step-number {
+	flex: none;
+	font-family: var(--hero-serif);
+	font-size: 0.9375rem;
+	font-style: italic;
+	line-height: 1.3;
+	color: var(--color-lipstick);
+}
+
+/* The arch: a lit window of the shadow theatre, and its cast shadow in nude behind it. */
+.home-hero-arch-wrap {
+	position: relative;
+	justify-self: center;
+	width: 82%;
+	max-width: 26rem;
+	margin-bottom: 2.25rem;
+}
+
+.home-hero-arch-wrap::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	border-radius: 9999px 9999px 0 0;
+	background-color: var(--color-nude-200);
+	transform: translateX(6%);
+}
+
+.home-hero-arch {
+	position: relative;
+	overflow: hidden;
+	border-radius: 9999px 9999px 0 0;
+	background-color: #efe5d6;
+}
+
+/* The badge sits on the bottom-left corner of the arch: the title of the film around the button that stops it. */
+.home-hero-badge {
+	position: absolute;
+	left: 0;
+	bottom: 0;
+	width: 5.25rem;
+	height: 5.25rem;
+	border-radius: 9999px;
+	background-color: var(--color-page);
+	transform: translate(-50%, 50%);
+}
+
+.home-hero-ring {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	font-size: 9.6px;
+	font-weight: 600;
+	fill: var(--color-ink);
+}
+
+.home-hero-disc {
+	position: absolute;
+	inset: 1.25rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 9999px;
+	background-color: var(--color-ink);
+	color: var(--hero-ivory);
+}
+
+.home-hero-disc:focus-visible {
+	outline: 2px solid var(--color-ink);
+	outline-offset: 3px;
+}
+
+.home-hero-glyph {
+	width: 1rem;
+	height: 1rem;
+	fill: currentColor;
+}
+
+.home-hero-seal {
+	width: 0.375rem;
+	height: 0.375rem;
+	border-radius: 9999px;
+	background-color: var(--color-lipstick);
+}
+
+/* The ribbon of specialties under the hero, full width. It slides only once the script allows it (next block). */
+.home-hero-ribbon {
+	display: flex;
+	align-items: center;
+	height: 3.25rem;
+	margin-top: 2.5rem;
+	overflow: hidden;
+	background-color: var(--color-ink);
+	color: var(--hero-ivory);
+}
+
+.home-hero-ribbon-track,
+.home-hero-ribbon-list {
+	display: flex;
+	flex: none;
+}
+
+/* The text cut of the face (`opsz` 11): ivory on ink at 20 px, the hairlines of the display cut vanish (the hyphen of « auto-maquillage » with them). */
+.home-hero-ribbon-list li {
+	display: inline-flex;
+	align-items: center;
+	padding-inline: 1.75rem;
+	font-family: var(--hero-serif);
+	font-size: 1.25rem;
+	font-style: italic;
+	font-variation-settings: "opsz" 11;
+	white-space: nowrap;
+}
+
+.home-hero-ribbon-list li::after {
+	content: "";
+	width: 6px;
+	height: 6px;
+	margin-left: 3.5rem;
+	border-radius: 9999px;
+	background-color: var(--color-lipstick);
+}
+
+/*
+ * The guided search (src/components/home/GuidedSearch.tsx): a card of two fields over a full-width button on a phone,
+ * one outlined pill from 640 px. Each field fills its segment (the 44 px targets), and its label sits over its top
+ * without catching the press. The focus ring is an inset ink line on the field itself, in the shape of its segment.
+ */
+.guided-search {
+	display: flex;
+	flex-direction: column;
+	max-width: 42.5rem;
+	padding: 0.375rem;
+	border: 1px solid var(--color-ink);
+	border-radius: 1.5rem;
+	background-color: #fff;
+}
+
+.guided-search-field {
+	position: relative;
+	display: flex;
+	border-radius: 1.125rem;
+}
+
+.guided-search-place::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: 1rem;
+	right: 1rem;
+	height: 1px;
+	background-color: var(--color-hairline);
+}
+
+.guided-search-label {
+	position: absolute;
+	top: 0.75rem;
+	left: 1rem;
+	pointer-events: none;
+	font-size: 0.6875rem;
+	font-weight: 600;
+	line-height: 1;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--color-mute);
+}
+
+.guided-search-control {
+	width: 100%;
+	min-height: 4rem;
+	padding: 1.625rem 1rem 0.625rem;
+	border: 0;
+	border-radius: inherit;
+	background-color: transparent;
+	font-size: 1rem;
+	color: var(--color-ink);
+	appearance: none;
+}
+
+.guided-search-control:focus-visible,
+.guided-search-control:is(input):focus {
+	outline: none;
+	box-shadow: inset 0 0 0 2px var(--color-ink);
+}
+
+.guided-search-control::placeholder {
+	color: #6f6469;
+	opacity: 1;
+}
+
+.guided-search-event .guided-search-control {
+	padding-right: 2.75rem;
+}
+
+.guided-search-chevron {
+	position: absolute;
+	top: calc(50% + 0.25rem);
+	right: 1.25rem;
+	width: 0.75rem;
+	height: 0.75rem;
+	pointer-events: none;
+	fill: none;
+	stroke: var(--color-ink);
+	stroke-width: 1.5;
+}
+
+.guided-search-submit {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.75rem;
+	min-height: 3.25rem;
+	margin-top: 0.375rem;
+	padding: 0 1.5rem;
+	border-radius: 9999px;
+	background-color: var(--color-ink);
+	font-size: 0.9375rem;
+	font-weight: 500;
+	white-space: nowrap;
+	color: var(--hero-ivory, #f6efe4);
+}
+
+.guided-search-submit:focus-visible {
+	outline: 2px solid var(--color-ink);
+	outline-offset: 2px;
+}
+
+.guided-search-arrow {
+	width: 1rem;
+	height: 1rem;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 1.5;
+}
+
+/* A hand on the mouse: the segment warms, the disc of the badge turns lipstick. The select keeps no box of its own. */
+@media (hover: hover) {
+	.guided-search-field:hover {
+		background-color: rgb(26 20 23 / 0.035);
+	}
+
+	.guided-search-control:hover:not(:focus-visible, :is(input):focus) {
+		box-shadow: none;
+		filter: none;
+	}
+
+	button.home-hero-disc:hover {
+		background-color: var(--color-lipstick);
+		filter: none;
+	}
+}
+
+@media (min-width: 40rem) {
+	.home-hero-grid {
+		padding: 3.5rem 2rem 0;
+	}
+
+	.home-hero-eyebrow {
+		margin-bottom: 1.75rem;
+		font-size: 0.75rem;
+	}
+
+	.home-hero-line {
+		display: block;
+		white-space: nowrap;
+	}
+
+	.home-hero-pill-before {
+		display: inline-block;
+	}
+
+	.home-hero-pill-after {
+		margin-right: 0;
+	}
+
+	.home-hero-lede {
+		margin-top: 1.75rem;
+		font-size: 1.125rem;
+	}
+
+	.home-hero-steps {
+		flex-direction: row;
+		gap: 2rem;
+	}
+
+	.home-hero-steps li {
+		flex: 1 1 0;
+	}
+
+	.home-hero-badge {
+		width: 7rem;
+		height: 7rem;
+	}
+
+	.home-hero-disc {
+		inset: 1.625rem;
+	}
+
+	.home-hero-glyph {
+		width: 1.25rem;
+		height: 1.25rem;
+	}
+
+	.home-hero-ribbon-list li {
+		font-size: 1.5rem;
+	}
+
+	.guided-search {
+		flex-direction: row;
+		align-items: stretch;
+		height: 4.25rem;
+		padding: 0;
+		border-radius: 9999px;
+	}
+
+	.guided-search-field {
+		border-radius: 9999px;
+	}
+
+	.guided-search-event {
+		flex: 0 0 13.25rem;
+	}
+
+	.guided-search-place {
+		flex: 1 1 0;
+		min-width: 0;
+	}
+
+	.guided-search-place::before {
+		top: 0;
+		bottom: 0;
+		left: 0;
+		right: auto;
+		width: 1px;
+		height: auto;
+	}
+
+	.guided-search-label {
+		top: 1rem;
+		left: 1.25rem;
+	}
+
+	.guided-search-control {
+		min-height: 0;
+		height: 100%;
+		padding: 1.8125rem 1.25rem 0.8125rem;
+	}
+
+	.guided-search-chevron {
+		right: 1.25rem;
+	}
+
+	.guided-search-submit {
+		gap: 0.625rem;
+		min-height: 0;
+		margin: 0.375rem;
+		padding: 0 1.25rem 0 1.375rem;
+	}
+}
+
+@media (min-width: 64rem) {
+	/* Two columns. Up to 1280 px the gutters are narrow, so the search keeps room for its placeholder. */
+	.home-hero-grid {
+		grid-template-columns: minmax(0, 1fr) clamp(17rem, 28vw, 26rem);
+		column-gap: 2.5rem;
+		align-items: end;
+		padding: 4.5rem 1.5rem 0;
+	}
+
+	.home-hero-arch-wrap {
+		justify-self: end;
+		width: 100%;
+		max-width: none;
+		margin-bottom: 0;
+	}
+
+	.home-hero-ribbon {
+		height: 3.75rem;
+		margin-top: 6rem;
+	}
+}
+
+@media (min-width: 80rem) {
+	.home-hero-grid {
+		column-gap: clamp(2.5rem, 6vw, 6rem);
+		padding-inline: 4rem;
+	}
+}
+
+/*
+ * What moves in the home hero (docs/mouvement.md, « L'accueil en arche »). The arch rises into place with the load-in,
+ * revealed by a clip (never faded: its poster may be the largest element of a wide first screen). The ring of the badge
+ * turns once in 40 s while the film plays; the ribbon slides by one length of its list in 60 s. The two loops run only
+ * under `data-hero-motion`, which the client part of the hero sets once it runs and the visitor has not asked for less
+ * motion: without script nothing loops, and the button of the badge stops both (`paused`).
+ */
+@keyframes enter-arch {
+	from {
+		clip-path: inset(-30% -30% 100% -30%);
+		transform: translateY(var(--motion-rise));
+	}
+	to {
+		clip-path: inset(-30% -30% -30% -30%);
+	}
+}
+
+@keyframes home-hero-ring {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+@keyframes home-hero-ribbon {
+	to {
+		transform: translateX(-25%);
+	}
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	.enter-arch {
+		animation: enter-arch var(--duration-reveal) var(--ease-out-soft) backwards;
+		animation-delay: calc(var(--enter-i, 0) * var(--stagger-enter));
+	}
+	@supports selector(:active-view-transition) {
+		:root:active-view-transition .enter-arch {
+			animation: none;
+		}
+	}
+	@media print {
+		.enter-arch {
+			animation: none;
+		}
+	}
+
+	.home-hero[data-hero-motion] .home-hero-ribbon-track {
+		animation: home-hero-ribbon var(--duration-ribbon) linear infinite;
+	}
+	.home-hero[data-hero-motion="paused"] .home-hero-ribbon-track {
+		animation-play-state: paused;
+	}
+	.home-hero[data-hero-motion] .home-hero-ring {
+		animation: home-hero-ring var(--duration-ring) linear infinite paused;
+	}
+	.home-hero[data-hero-motion="running"][data-film="playing"] .home-hero-ring {
+		animation-play-state: running;
+	}
+
+	@media (hover: hover) {
+		.guided-search-arrow {
+			transition: transform var(--duration-hover) var(--ease-out-soft);
+		}
+		.guided-search-submit:hover .guided-search-arrow {
+			transform: translateX(3px);
+		}
+	}
+}
+/* End of the home hero */
 
 /*
  * Blog article prose (issue 1103). The text of an article in its reading column: 42rem (672 px), about 65 characters at these sizes, 18 px (20 px from

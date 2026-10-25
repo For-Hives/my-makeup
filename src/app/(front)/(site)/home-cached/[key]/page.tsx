@@ -1,12 +1,10 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { Cta } from '@/components/blocks/Cta'
-import { Hero } from '@/components/blocks/Hero'
 import { AccountDeletedNotice } from '@/components/home/AccountDeletedNotice'
 import { Collaboration } from '@/components/home/Collaboration'
 import { FeaturedProfiles } from '@/components/home/FeaturedProfiles'
-import { GuidedSearch } from '@/components/home/GuidedSearch'
-import { HeroIllustration } from '@/components/home/HeroIllustration'
+import { HomeHero } from '@/components/home/HomeHero'
 import { Presentation } from '@/components/home/Presentation'
 import { Project } from '@/components/home/Project'
 import { Talents } from '@/components/home/Talents'
@@ -79,17 +77,8 @@ export default async function HomePage({ params }: PageProps<'/home-cached/[key]
 				// biome-ignore lint/security/noDangerouslySetInnerHtml: serializeJsonLd escapes <, > and &, so the data cannot close the tag.
 				dangerouslySetInnerHTML={{ __html: serializeJsonLd(homeStructuredData(PUBLIC_NETWORKS)) }}
 			/>
-			<Hero
-				titre={<>Trouver la maquilleuse qui vous correspond n&apos;a jamais été aussi simple</>}
-				description={
-					<>
-						Trouvez la maquilleuse spécialisée dans le domaine que vous recherchez, maquillage pour les mariées,
-						maquillage de soirée, maquillage professionnel...
-					</>
-				}
-				formulaire={<GuidedSearch />}
-				visuel={<HeroIllustration />}
-			/>
+			{/* The hero « en arche » (decision of 25/10/2026): the h1 is the one of the site online, to the character. */}
+			<HomeHero />
 			<FeaturedProfiles cartes={featured} />
 			{talents.length > 0 && <Talents talents={talents} />}
 			{/* The words of the community: no title, no fold, no steps (issue 1066). They stay in the HTML as before. */}

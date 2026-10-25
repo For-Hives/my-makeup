@@ -209,6 +209,7 @@ Le même mot français a le même mot anglais partout (source : `PLAN-ANGLAIS.md
 | modèle (de prestation) / médiane (des prix) | `OfferModel` (`src/lib/price-median.ts`) / `median` | prestation phare / noms de départ (du profil) | `flagship` (`flagship-offer.ts`) / `initialNames` |
 | mise en avant (accueil) / sélection | `featured` (`src/lib/profile/featured.ts`) / `selection` | vérifiée (case d'un admin, réserve de la mise en avant) / candidats (du tirage) | `verified` (`src/lib/profile/verified.ts`) / `candidates` |
 | annuaire public des entreprises (l'API « Recherche d'entreprises », jamais `directory`, pris par la liste des profils) / établissement | `businessRegistry` (`src/lib/activity/registry.ts`) / `establishment` | contrôle d'activité (du SIRET) / cessée | `activityCheck` (dossier `src/lib/activity`) / `ceased` |
+| arche (haut de l'accueil) / film (« L'Ombre nette ») / scène (la section qui porte l'état du mouvement) | `arch` / `film` (`src/components/home/film.ts`) / `stage` (`HeroStage`) | bandeau (des spécialités) / pastille (image du titre) / affiche (image fixe du film) | `ribbon` / `pill` / `still` |
 
 ## Pièges
 

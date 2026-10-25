@@ -4,7 +4,7 @@ Le bloc `src/components/blocks/Cta.tsx` ferme treize pages publiques : l'accueil
 
 ## Direction artistique
 
-Celle du site public : un cadre arrondi (`rounded-2xl`) en `indigo-900`, du texte blanc, des boutons `rounded-lg` en gras, comme les boutons du site. Aucune couleur ni police de l'espace de la maquilleuse (rouge à lèvres, Bodoni, Instrument Sans). Le site n'a pas de thème sombre : ni `next-themes`, ni variante.
+Celle du site public : un cadre arrondi (`rounded-2xl`) en `indigo-900`, du texte blanc, des boutons `rounded-lg` en gras, comme les boutons du site. Aucune couleur ni police de l'espace de la maquilleuse (rouge à lèvres, Bodoni, Instrument Sans). Le haut de l'accueil, lui, prend l'encre, le rouge à lèvres et Bodoni Moda depuis la décision d'Andy du 25/10/2026 ([`accueil.md`](accueil.md)) : l'invitation reste indigo jusqu'à l'harmonisation des sections sous le haut de page. Le site n'a pas de thème sombre : ni `next-themes`, ni variante.
 
 Les boutons font 48 px de haut (`min-h-12`), montrent leur focus (contour blanc décalé) et ne dépendent pas du fond.
 

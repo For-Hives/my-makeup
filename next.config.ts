@@ -62,6 +62,12 @@ const nextConfig: NextConfig = {
 		{ source: '/:path*', headers: securityHeaders({ development, mediaOrigin: media }) },
 		// The authentication pages and the space: never cached, never indexed (tickets 074 and 075).
 		{ source: '/auth/:path*', headers: dashboardHeaders() },
+		// The film and the pictures of the home hero carry a version in their name (src/components/home/film.ts): a new
+		// render is a new name, so a browser keeps a file for a year without asking again.
+		{
+			source: '/assets/accueil/:path*',
+			headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+		},
 	],
 }
 

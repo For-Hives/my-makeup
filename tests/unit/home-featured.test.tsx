@@ -12,7 +12,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { ModerationEvents } from '@/collections/ModerationEvents'
 import { Profiles } from '@/collections/Profiles'
 import { FeaturedProfiles } from '@/components/home/FeaturedProfiles'
-import { HeroIllustration } from '@/components/home/HeroIllustration'
+import { HomeHero } from '@/components/home/HomeHero'
 import {
 	FEATURED_CANDIDATES_MAX,
 	FEATURED_MAX,
@@ -24,6 +24,7 @@ import { ACTION_LABELS } from '@/lib/profile/moderation'
 import { verifyActionOf } from '@/lib/profile/verified'
 import { featuredCandidates } from '@/services/public/featured'
 import type { DirectoryProfile } from '@/services/public/profiles'
+import { mainTitles } from '../support/url-parity'
 
 const read = (file: string): string => readFileSync(join(import.meta.dir, '../..', file), 'utf8')
 
@@ -231,8 +232,9 @@ describe('1066 : le bloc « Mise en avant »', () => {
 	})
 })
 
-describe('1066 : le bloc à droite du haut de page', () => {
-	const html = renderToStaticMarkup(<HeroIllustration />)
+describe('1066 : ce que la plateforme fait pour la cliente, dans le haut de page', () => {
+	// The drawing of issue 1066 gave way to the arch (decision of 25/10/2026): its three lines stay, word for word.
+	const html = renderToStaticMarkup(<HomeHero />)
 
 	test('dit en trois lignes ce que la plateforme fait pour la cliente', () => {
 		expect(html).toContain('Cherchez par événement et par lieu')
@@ -240,10 +242,9 @@ describe('1066 : le bloc à droite du haut de page', () => {
 		expect(html).toContain('Écrivez en direct à la maquilleuse')
 	})
 
-	test('une illustration faite de composants : ni photo, ni nom, ni donnée personnelle', () => {
-		expect(html).not.toContain('<img')
+	test('ni nom, ni donnée personnelle : l’arche montre des ombres, le titre deux images décoratives', () => {
 		expect(html).not.toMatch(/@|\d{2} \d{2} \d{2}/)
-		expect(html).toContain('aria-hidden="true"')
+		expect(html.match(/<img\b[^>]*alt=""[^>]*aria-hidden="true"/g)).toHaveLength(2)
 	})
 })
 
@@ -251,10 +252,13 @@ describe('1066 : la page d’accueil', () => {
 	const page = read('src/app/(front)/(site)/home-cached/[key]/page.tsx')
 
 	test('l’accroche, le titre, les données structurées sont gardés au caractère près', () => {
-		expect(page).toContain('Trouver la maquilleuse qui vous correspond n&apos;a jamais été aussi simple')
+		expect(mainTitles(renderToStaticMarkup(<HomeHero />))).toEqual([
+			"Trouver la maquilleuse qui vous correspond n'a jamais été aussi simple",
+		])
 		expect(page).toContain("const TITLE = 'Maquilleuse professionnelle près de chez vous'")
 		expect(page).toContain('homeStructuredData')
-		expect(page).toContain('<GuidedSearch />')
+		expect(page).toContain('<HomeHero />')
+		expect(read('src/components/home/HomeHero.tsx')).toContain('<GuidedSearch />')
 	})
 
 	test('« Comment ça marche » n’a plus de titre ni de pli ; les trois textes restent', () => {

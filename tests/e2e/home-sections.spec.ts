@@ -31,8 +31,17 @@ async function scrollThrough(page: Page): Promise<void> {
 			await new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done)))
 		}
 	})
+	// The loops of the hero (the ring of the badge, the ribbon) repeat forever or wait in pause: they never end, so they
+	// are left out on purpose. tests/e2e/home-hero.spec.ts checks that they run and stop at the button of the badge.
 	await page.evaluate(async () => {
-		await Promise.all(document.getAnimations().map(animation => animation.finished.catch(() => undefined)))
+		const ending = document
+			.getAnimations()
+			.filter(
+				animation =>
+					animation.playState !== 'paused' &&
+					animation.effect?.getComputedTiming().iterations !== Number.POSITIVE_INFINITY
+			)
+		await Promise.all(ending.map(animation => animation.finished.catch(() => undefined)))
 	})
 }
 

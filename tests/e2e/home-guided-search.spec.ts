@@ -6,8 +6,8 @@ import { SCREENS } from '../support/e2e'
 import { refreshProfilePages } from '../support/public-pages'
 
 /**
- * The home page (issues 1013 and 1066), at 390 px and at 1440 px: a guided form with labels in sight that leads to
- * the search, the block that says what the platform does, « Mise en avant » (absent until a profile is verified,
+ * The home page (issues 1013 and 1066, hero « en arche » of 25/10/2026), at 390 px and at 1440 px: a guided form with
+ * labels in sight that leads to the search, the three lines that say what the platform does, « Mise en avant » (absent until a profile is verified,
  * six cards at most, drawn at random at each load, never a profile that is not publishable), and the texts of the community, unfolded and without
  * the old title « Comment ça marche ». On each screen: no horizontal scroll, every control at least 44 px tall, axe finds no
  * « serious » or « critical » violation. Set `SCREENSHOT_DIR` to keep the screenshots. All made-up people.
@@ -75,7 +75,9 @@ for (const size of SIZES) {
 			await expect(page).toHaveURL(/\/search\?search=&city=Annecy$/)
 		})
 
-		test('le bloc de droite dit ce que fait la plateforme, sans image à charger', async ({ page }) => {
+		test('le haut de page dit ce que fait la plateforme, et son titre reste celui du site en ligne', async ({
+			page,
+		}) => {
 			await page.goto('/')
 			for (const line of [
 				'Cherchez par événement et par lieu',

@@ -37,10 +37,22 @@ const notWhole = (page: Page): Promise<number> =>
 		.locator('.reveal')
 		.evaluateAll(elements => elements.filter(element => Number(getComputedStyle(element).opacity) < 1).length)
 
-/** Waits for every animation and transition of the page to end (the load-in, the reveals): the page is then at rest. */
+/**
+ * Waits for every animation and transition of the page to end (the load-in, the reveals): the page is then at rest.
+ * An animation that repeats forever or is paused never ends (the ring of the badge and the ribbon of the home hero):
+ * it is left out on purpose, else this would wait for ever. tests/e2e/home-hero.spec.ts checks that those two run,
+ * and stop at the button of the badge, so leaving them out here hides nothing.
+ */
 function settle(page: Page): Promise<void> {
 	return page.evaluate(async () => {
-		await Promise.all(document.getAnimations().map(animation => animation.finished.catch(() => undefined)))
+		const ending = document
+			.getAnimations()
+			.filter(
+				animation =>
+					animation.playState !== 'paused' &&
+					animation.effect?.getComputedTiming().iterations !== Number.POSITIVE_INFINITY
+			)
+		await Promise.all(ending.map(animation => animation.finished.catch(() => undefined)))
 	})
 }
 

@@ -10,6 +10,18 @@ import { violationsSevere } from '../support/axe'
 
 const nav = (page: Page) => page.getByRole('navigation', { name: 'Navigation principale' })
 
+/**
+ * Puts the page's timers in the test's hands: the clock is installed, then paused, so the open and close delays only
+ * run in `runFor`. Installed alone, the clock also runs on its own: on a busy page (the film of the home hero playing
+ * on a loaded machine) a mouse move of four steps lasted 400 ms, and the close delay of 200 ms ran out before the
+ * panel was checked.
+ */
+async function driveClock(page: Page): Promise<void> {
+	await page.clock.install()
+	await page.reload()
+	await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000))
+}
+
 /** Waits for the transitions and animations of the bar to end. */
 const settle = (page: Page) =>
 	page.evaluate(() =>
@@ -101,8 +113,7 @@ test.describe('Barre de navigation, sur ordinateur', () => {
 		page,
 	}) => {
 		// The page's timers are driven by hand: the delays are played exactly, not waited for.
-		await page.clock.install()
-		await page.reload()
+		await driveClock(page)
 		const trigger = nav(page).getByRole('button', { name: 'Particulier', exact: true })
 		const panel = page.locator('[data-panel="Particulier"]')
 		await expect(panel).toBeHidden()
@@ -130,8 +141,7 @@ test.describe('Barre de navigation, sur ordinateur', () => {
 	})
 
 	test('un survol qui passe sans s’arrêter n’ouvre rien', async ({ page }) => {
-		await page.clock.install()
-		await page.reload()
+		await driveClock(page)
 		const trigger = nav(page).getByRole('button', { name: 'Maquilleuse', exact: true })
 		const box = await trigger.boundingBox()
 		if (!box) throw new Error('boîte manquante')
