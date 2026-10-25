@@ -1,6 +1,7 @@
 'use client'
 
 import { useActionState, useEffect, useRef } from 'react'
+import { ART_FIELD, ART_LABEL, ART_NOTICE, ART_SUBMIT } from '@/components/art/form-classes'
 import { type Track, track } from '@/lib/analytics/track'
 import {
 	MIN_PASSWORD_LENGTH,
@@ -18,8 +19,7 @@ export type SignUpState = {
 } | null
 export type SignUpAction = (precedent: SignUpState, formulaire: FormData) => Promise<SignUpState>
 
-const FIELD =
-	'min-h-11 rounded-md border border-neutral-300 bg-white px-3 py-2 font-normal text-base aria-[invalid=true]:border-red-600'
+const FIELD = ART_FIELD
 
 function FormError({ champ, erreurs: errors }: { champ: SignUpField; erreurs: SignUpErrors | undefined }) {
 	const message = errors?.[champ]
@@ -98,9 +98,9 @@ export function SignUpForm({ action, suivre = track }: { action: SignUpAction; s
 					started.current = true
 				}
 			}}
-			className="flex w-full max-w-sm flex-col gap-4 text-left"
+			className="flex w-full max-w-sm flex-col gap-5 text-left"
 		>
-			<label className="flex flex-col gap-1 font-medium text-sm" htmlFor="prenom">
+			<label className={ART_LABEL} htmlFor="prenom">
 				Prénom
 				<input
 					id="prenom"
@@ -113,7 +113,7 @@ export function SignUpForm({ action, suivre = track }: { action: SignUpAction; s
 				/>
 			</label>
 			<FormError champ="prenom" erreurs={errors} />
-			<label className="flex flex-col gap-1 font-medium text-sm" htmlFor="nom">
+			<label className={ART_LABEL} htmlFor="nom">
 				Nom
 				<input
 					id="nom"
@@ -126,7 +126,7 @@ export function SignUpForm({ action, suivre = track }: { action: SignUpAction; s
 				/>
 			</label>
 			<FormError champ="nom" erreurs={errors} />
-			<label className="flex flex-col gap-1 font-medium text-sm" htmlFor="email">
+			<label className={ART_LABEL} htmlFor="email">
 				Adresse email
 				<input
 					id="email"
@@ -140,7 +140,7 @@ export function SignUpForm({ action, suivre = track }: { action: SignUpAction; s
 				/>
 			</label>
 			<FormError champ="email" erreurs={errors} />
-			<label className="flex flex-col gap-1 font-medium text-sm" htmlFor="password">
+			<label className={ART_LABEL} htmlFor="password">
 				Mot de passe
 				<input
 					id="password"
@@ -152,22 +152,27 @@ export function SignUpForm({ action, suivre = track }: { action: SignUpAction; s
 					aria-invalid={errors?.password ? true : undefined}
 				/>
 			</label>
-			<p id="aide-password" className="-mt-2 text-neutral-600 text-xs">
+			<p id="aide-password" className="-mt-2 text-mute text-xs">
 				{MIN_PASSWORD_LENGTH} caractères au moins.
 			</p>
 			<FormError champ="password" erreurs={errors} />
-			<label className="flex items-start gap-2 text-sm" htmlFor="cgu">
+			<label className="flex items-start gap-3 text-sm" htmlFor="cgu">
 				<input
 					id="cgu"
 					name="cgu"
 					type="checkbox"
 					defaultChecked={state?.valeurs?.cgu}
-					className="mt-1 h-4 w-4"
+					className="mt-1 h-5 w-5 accent-indigo-700"
 					{...properties('cgu')}
 				/>
 				<span>
 					J’accepte les {/* A plain link: it opens in another tab, so the form she is filling stays as it is. */}
-					<a href="/cgu" className="underline" target="_blank" rel="noopener">
+					<a
+						href="/cgu"
+						className="font-medium text-indigo-800 underline underline-offset-4 hover:text-indigo-950"
+						target="_blank"
+						rel="noopener"
+					>
 						conditions générales
 					</a>
 					.
@@ -182,16 +187,9 @@ export function SignUpForm({ action, suivre = track }: { action: SignUpAction; s
 				</label>
 			</div>
 			<div role="alert" data-testid="erreur-inscription">
-				{state?.echec ? (
-					<p className="rounded-md bg-red-50 p-3 text-red-800 text-sm">{SIGN_UP_FAILURE_MESSAGES[state.echec]}</p>
-				) : null}
+				{state?.echec ? <p className={ART_NOTICE.error}>{SIGN_UP_FAILURE_MESSAGES[state.echec]}</p> : null}
 			</div>
-			<button
-				type="submit"
-				disabled={inProgress}
-				aria-busy={inProgress}
-				className="min-h-11 rounded-md bg-neutral-900 px-4 py-2 font-medium text-white disabled:cursor-wait disabled:opacity-60"
-			>
+			<button type="submit" disabled={inProgress} aria-busy={inProgress} className={ART_SUBMIT}>
 				{inProgress ? 'Inscription…' : 'S’inscrire'}
 			</button>
 		</form>

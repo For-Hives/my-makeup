@@ -1,6 +1,7 @@
 'use client'
 
 import { type ReactNode, useActionState, useEffect, useMemo, useRef } from 'react'
+import { ART_FIELD, ART_NOTICE, ART_SUBMIT } from '@/components/art/form-classes'
 import { TurnstileWidget } from '@/components/contact/TurnstileWidget'
 import {
 	QUOTE_ERRORS_SUMMARY,
@@ -34,8 +35,7 @@ export function withNetworkFailure(action: QuoteAction): QuoteAction {
 	}
 }
 
-const FIELD =
-	'block min-h-11 w-full rounded-md border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-600 sm:text-sm sm:leading-6'
+const FIELD = ART_FIELD
 
 const LABELS: Record<Exclude<QuoteField, 'consent'>, string> = {
 	eventDate: 'Date de l’événement',
@@ -123,17 +123,13 @@ export function QuoteRequestForm({
 
 	if (state && 'sent' in state)
 		return (
-			<p
-				role="status"
-				data-testid="devis-envoye"
-				className="rounded-md bg-green-50 p-4 font-semibold text-green-900 text-sm"
-			>
+			<p role="status" data-testid="devis-envoye" className={`${ART_NOTICE.success} font-semibold`}>
 				{QUOTE_SENT}
 			</p>
 		)
 	if (state && 'unavailable' in state)
 		return (
-			<p role="status" data-testid="devis-indisponible" className="rounded-md bg-gray-50 p-4 text-gray-800 text-sm">
+			<p role="status" data-testid="devis-indisponible" className={ART_NOTICE.soft}>
 				{QUOTE_UNAVAILABLE}
 			</p>
 		)
@@ -249,24 +245,13 @@ export function QuoteRequestForm({
 			</div>
 			{siteKey ? <TurnstileWidget siteKey={siteKey} answer={generation} /> : null}
 			<div role="alert" data-testid="devis-erreur" className="mt-5 empty:hidden">
-				{errors ? <p className="rounded-md bg-red-50 p-3 text-red-800 text-sm">{QUOTE_ERRORS_SUMMARY}</p> : null}
-				{state && 'failure' in state ? (
-					<p className="rounded-md bg-red-50 p-3 text-red-800 text-sm">{QUOTE_NOT_SAVED}</p>
-				) : null}
-				{state && 'verification' in state ? (
-					<p className="rounded-md bg-red-50 p-3 text-red-800 text-sm">{QUOTE_VERIFICATION_FAILED}</p>
-				) : null}
-				{state && 'throttled' in state ? (
-					<p className="rounded-md bg-red-50 p-3 text-red-800 text-sm">{QUOTE_THROTTLED}</p>
-				) : null}
+				{errors ? <p className={ART_NOTICE.error}>{QUOTE_ERRORS_SUMMARY}</p> : null}
+				{state && 'failure' in state ? <p className={ART_NOTICE.error}>{QUOTE_NOT_SAVED}</p> : null}
+				{state && 'verification' in state ? <p className={ART_NOTICE.error}>{QUOTE_VERIFICATION_FAILED}</p> : null}
+				{state && 'throttled' in state ? <p className={ART_NOTICE.error}>{QUOTE_THROTTLED}</p> : null}
 			</div>
 			<div className="mt-6">
-				<button
-					type="submit"
-					disabled={pending}
-					aria-busy={pending}
-					className="block min-h-12 w-full rounded-md bg-indigo-900 px-3.5 py-2.5 text-center font-semibold text-sm text-white shadow-sm hover:bg-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-900 focus-visible:outline-offset-2 disabled:cursor-wait disabled:opacity-60 sm:w-auto sm:px-8"
-				>
+				<button type="submit" disabled={pending} aria-busy={pending} className={`${ART_SUBMIT} sm:w-auto`}>
 					{pending ? 'Envoi…' : 'Envoyer ma demande'}
 				</button>
 			</div>

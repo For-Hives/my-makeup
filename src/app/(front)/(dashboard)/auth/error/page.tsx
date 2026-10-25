@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { ART_LINK, ART_NOTICE } from '@/components/art/form-classes'
+import { AuthShell } from '@/components/auth/AuthShell'
 import { urlError } from '@/lib/auth/errors'
 
 // Read per request: the sentence depends on the address.
@@ -23,18 +25,13 @@ export default async function SignInErrorPage({
 	const { error } = await searchParams
 	const message = urlError(error)?.message ?? DEFAULT_MESSAGE
 	return (
-		<main className="flex min-h-dvh flex-col items-center justify-center gap-6 p-6 text-center">
-			<h1 className="font-semibold text-3xl">Connexion impossible</h1>
-			<p
-				role="alert"
-				data-testid="auth-error-message"
-				className="max-w-sm rounded-md bg-red-50 p-3 text-red-800 text-sm"
-			>
+		<AuthShell title="Connexion impossible">
+			<p role="alert" data-testid="auth-error-message" className={`max-w-sm ${ART_NOTICE.error}`}>
 				{message}
 			</p>
-			<Link className="underline" href="/auth/signin">
+			<Link className={ART_LINK} href="/auth/signin">
 				Revenir à la connexion
 			</Link>
-		</main>
+		</AuthShell>
 	)
 }

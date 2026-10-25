@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { ART_LINK, ART_NOTICE } from '@/components/art/form-classes'
+import { AuthShell } from '@/components/auth/AuthShell'
 import { GoogleButton } from '@/components/auth/GoogleButton'
 import { PasswordlessHelp } from '@/components/auth/PasswordlessHelp'
 import { SignedOutMessage } from '@/components/auth/SignedOutMessage'
@@ -41,14 +43,13 @@ export default async function SignInPage({
 	const signedOut = (await headers()).get(MESSAGE_HEADER) === '1'
 
 	return (
-		<main className="flex min-h-dvh flex-col items-center justify-center gap-6 p-6 text-center">
+		<AuthShell title="Se connecter">
 			<SignInPageEvents code={urlFailure?.code ?? null} />
-			<h1 className="font-semibold text-3xl">Se connecter</h1>
 			{message ? (
 				<p
 					role="status"
 					data-testid={urlFailure?.code === 'session-expiree' ? 'session-expiree' : 'erreur-google'}
-					className="max-w-sm rounded-md bg-amber-50 p-3 text-amber-900 text-sm"
+					className={`max-w-sm ${ART_NOTICE.soft}`}
 				>
 					{message}
 				</p>
@@ -59,15 +60,15 @@ export default async function SignInPage({
 			<PasswordlessHelp />
 			<p className="reveal">
 				Pas encore de compte ?{' '}
-				<Link className="underline" href="/auth/signup">
+				<Link className={ART_LINK} href="/auth/signup">
 					Inscris-toi
 				</Link>
 			</p>
 			<p className="reveal">
-				<Link className="underline" href="/" prefetch={false}>
+				<Link className={ART_LINK} href="/" prefetch={false}>
 					Retour à l’accueil
 				</Link>
 			</p>
-		</main>
+		</AuthShell>
 	)
 }

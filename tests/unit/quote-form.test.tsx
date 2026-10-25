@@ -52,8 +52,8 @@ test('chaque cible a au moins 44 px : les champs, le bouton et la case', async (
 	for (const control of zone.querySelectorAll(
 		'input[type="date"], select, input[type="text"][id^="devis-"], input[type="email"], input[type="tel"]'
 	))
-		expect(control.className).toContain('min-h-11')
-	expect(jsdomWindow.bouton('Envoyer ma demande').className).toContain('min-h-12')
+		expect(control.className).toMatch(/min-h-(11|12|13)/)
+	expect(jsdomWindow.bouton('Envoyer ma demande').className).toMatch(/min-h-(12|13)/)
 	expect(zone.querySelector('label[for="devis-consent"]')?.className).toContain('min-h-11')
 })
 

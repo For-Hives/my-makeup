@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { ART_LINK } from '@/components/art/form-classes'
+import { AuthShell } from '@/components/auth/AuthShell'
 import { ForgotPasswordForm } from '@/components/auth/ForgotPasswordForm'
 import { forgotPassword } from './actions'
 
@@ -11,14 +13,13 @@ export const metadata: Metadata = {
 // The first step of the forgotten password (ticket 085).
 export default function ForgotPasswordPage() {
 	return (
-		<main className="flex min-h-dvh flex-col items-center justify-center gap-6 p-6 text-center">
-			<h1 className="font-semibold text-3xl">Mot de passe oublié</h1>
+		<AuthShell title="Mot de passe oublié">
 			<ForgotPasswordForm action={forgotPassword} />
 			<p>
-				<Link className="underline" href="/auth/signin">
+				<Link className={ART_LINK} href="/auth/signin">
 					Revenir à la connexion
 				</Link>
 			</p>
-		</main>
+		</AuthShell>
 	)
 }

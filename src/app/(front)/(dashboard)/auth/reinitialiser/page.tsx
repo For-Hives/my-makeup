@@ -3,6 +3,8 @@ import type { Metadata } from 'next'
 import { cookies } from 'next/headers'
 import Link from 'next/link'
 import { getPayload } from 'payload'
+import { ART_LINK_BUTTON, ART_NOTICE } from '@/components/art/form-classes'
+import { AuthShell } from '@/components/auth/AuthShell'
 import { PasswordResetForm } from '@/components/auth/PasswordResetForm'
 import { FORGOT_PASSWORD_PAGE, PASSWORD_MESSAGES, PASSWORD_RESET_COOKIE } from '@/lib/auth/forgot-password'
 import { linkStillValid } from '@/lib/auth/password-reset-payload'
@@ -29,23 +31,19 @@ export default async function PasswordResetPage() {
 	const state = !token ? 'code-absent' : (await linkStillValid(payload, token)) ? 'valable' : 'code-invalide'
 
 	return (
-		<main className="flex min-h-dvh flex-col items-center justify-center gap-6 p-6 text-center">
-			<h1 className="font-semibold text-3xl">Nouveau mot de passe</h1>
+		<AuthShell title="Nouveau mot de passe">
 			{state === 'valable' ? (
 				<PasswordResetForm action={choosePassword} />
 			) : (
 				<>
-					<p role="alert" data-testid="lien-perime" className="max-w-sm rounded-md bg-red-50 p-3 text-red-800 text-sm">
+					<p role="alert" data-testid="lien-perime" className={`max-w-sm ${ART_NOTICE.error}`}>
 						{PASSWORD_MESSAGES[state]}
 					</p>
-					<Link
-						className="inline-flex min-h-11 items-center rounded-md bg-neutral-900 px-4 py-2 font-medium text-white"
-						href={FORGOT_PASSWORD_PAGE}
-					>
+					<Link className={ART_LINK_BUTTON} href={FORGOT_PASSWORD_PAGE}>
 						Demander un nouveau lien
 					</Link>
 				</>
 			)}
-		</main>
+		</AuthShell>
 	)
 }
