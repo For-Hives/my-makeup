@@ -26,7 +26,7 @@ export interface ProfileCardCommonProps {
 /** The name of the card, as the one link that stretches over the card (so the whole card is a target, and a screen reader hears the name only). */
 function NameLink({ profile, rank, children }: { profile: ProfileCardData; rank?: number; children: ReactNode }) {
 	const className =
-		'after:absolute after:inset-0 after:z-10 focus-visible:outline-2 focus-visible:outline-indigo-700 focus-visible:outline-offset-4 hover:no-underline'
+		'inline-flex min-h-11 items-center after:absolute after:inset-0 after:z-10 focus-visible:outline-2 focus-visible:outline-indigo-700 focus-visible:outline-offset-4 hover:no-underline'
 	const href = `/profil/${profile.slug}`
 	return rank === undefined ? (
 		<Link href={href} className={className}>

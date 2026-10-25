@@ -95,8 +95,9 @@ for (const size of SIZES) {
 		}) => {
 			const html = await (await request.get('/')).text()
 			expect(html).not.toContain('Comment ça marche')
-			expect(html).toContain('My-Makeup c&#x27;est avant tout une communauté')
-			expect(html).toContain('Vous allez adorer cette nouvelle façon de collaborer')
+			// The last word is an italic span: read the text, not the markup.
+			expect(html.replace(/<[^>]+>/g, '')).toContain('My-Makeup c&#x27;est avant tout une communauté')
+			expect(html.replace(/<[^>]+>/g, '')).toContain('Vous allez adorer cette nouvelle façon de collaborer')
 			await page.goto('/')
 			await expect(page.locator('main details')).toHaveCount(0)
 			await expect(page.getByText('Vous allez adorer cette nouvelle façon de collaborer')).toBeVisible()
