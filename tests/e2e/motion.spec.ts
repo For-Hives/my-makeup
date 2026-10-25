@@ -40,7 +40,11 @@ const notWhole = (page: Page): Promise<number> =>
 /** Waits for every animation and transition of the page to end (the load-in, the reveals): the page is then at rest. */
 function settle(page: Page): Promise<void> {
 	return page.evaluate(async () => {
-		await Promise.all(document.getAnimations().map(animation => animation.finished.catch(() => undefined)))
+		// The loops of the kit (the sliding banner, the turning badge) never finish: they are not part of a load-in.
+		const finite = document
+			.getAnimations()
+			.filter(animation => animation.effect?.getComputedTiming().iterations !== Number.POSITIVE_INFINITY)
+		await Promise.all(finite.map(animation => animation.finished.catch(() => undefined)))
 	})
 }
 
