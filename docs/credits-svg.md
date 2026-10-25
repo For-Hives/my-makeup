@@ -38,7 +38,7 @@ Les noms sont ceux du code (`MakeupObject name=…`, `LineDrawing name=…`). Le
 Faites par `scripts/art/extract-drawings.ts`, qui relit les fichiers d'origine et réécrit `src/components/art/drawings.ts` :
 
 - les remplissages bleus à deux tons sont retirés (contour seul) ; les traits blancs de détail deviennent de simples traits ; les remplissages blancs sans trait (reflets, trous) sont retirés ;
-- les couleurs, l'épaisseur de trait d'origine (4) et les extrémités sont retirées : le composant dessine chaque forme en `currentColor`, extrémités et jointures arrondies, avec **une seule épaisseur pour toute la famille** (variable CSS `--art-drawing-stroke`, `.art-drawing` dans `globals.css`) ;
+- les couleurs, l'épaisseur de trait d'origine (4) et les extrémités sont retirées : le composant dessine chaque forme en `currentColor`, extrémités et jointures arrondies, avec **une seule épaisseur pour toute la famille** (variable CSS `--art-drawing-stroke`, `.art-drawing` dans `globals.css`, 1,75 px à l'écran quelle que soit la taille) ;
 - le chemin de découpe (`clip-path`) de `brush` est retiré (il couvrait toute la grille, sans effet) ;
 - le balisage est réduit à des formes nues (`path`, `rect`, `circle`, `ellipse`, `line`, `polyline`, `polygon`) avec leur seule géométrie : ni script, ni style, ni lien, ni métadonnée, ni commentaire, ni espace de noms d'éditeur ;
 - la grille de 48 est gardée : tous les dessins ont la même échelle et le même poids.
