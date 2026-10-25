@@ -35,7 +35,7 @@ export function ProfileGrid({
 			</h2>
 			<ul className="mt-12 grid list-none grid-cols-[minmax(0,1fr)] gap-x-8 gap-y-14 p-0 sm:grid-cols-2 lg:grid-cols-3">
 				{cartes.map((carte, index) => (
-					<li key={carte.slug} className="reveal min-w-0 pr-4">
+					<li key={carte.slug} className="reveal min-w-0 pr-4 [&_article>.grid]:grid-cols-[minmax(0,1fr)]">
 						<ProfileCard
 							profile={carte}
 							tint={TINTS[index % TINTS.length] ?? 'blush'}
