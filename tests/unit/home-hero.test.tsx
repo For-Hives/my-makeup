@@ -9,6 +9,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import { existsSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
+import { JSDOM } from 'jsdom'
 import { act } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import {
@@ -45,9 +46,8 @@ describe('le titre : le h1 du site en ligne, au caractère près', () => {
 	})
 
 	test('le texte du h1, lu comme un navigateur, n’a ni espace en trop ni mot venu des images', () => {
-		const h1 = /<h1\b[^>]*>([\s\S]*?)<\/h1>/.exec(html)?.[1] ?? ''
-		// The text nodes as they are, without collapsing the spaces: what textContent gives.
-		const text = h1.replace(/<[^>]*>/g, '').replaceAll('&#x27;', "'")
+		// Parsed as a browser does, and read without collapsing the spaces: what textContent gives.
+		const text = new JSDOM(html).window.document.querySelector('h1')?.textContent
 		expect(text).toBe(ONLINE_H1)
 	})
 
