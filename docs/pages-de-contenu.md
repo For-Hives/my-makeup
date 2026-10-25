@@ -27,6 +27,7 @@ Tout est dans `src/components/static-pages/`, une brique pour chaque besoin :
 ## Le kit sur ces pages (issue 1111, 25/10/2026)
 
 Les pages de contenu portent maintenant la direction artistique ([`direction-artistique.md`](direction-artistique.md)) : `ArtPage` (fond papier, mêmes deux polices préchargées que `ContentPage`, qui reste exportée ; les pages légales et le plan du site passent elles aussi par `ArtPage` et `PageHead` depuis le 25/10/2026 : leurs mots ne bougent pas, la tête blanche et l'article gris disparaissent), `PageHead` (le `Hero` reste à l'accueil), `ProfileGrid` (cartes en arche pour les zones et les talents, mêmes règles que `ProfileBlock`, qui reste sous les articles du blog). `<Cta />` est inchangé sur chaque page.
+Les pages de contenu portent maintenant la direction artistique ([`direction-artistique.md`](direction-artistique.md)) : `ArtPage` (fond papier, mêmes deux polices préchargées que `ContentPage`, que plus aucune page n'utilise ; les pages légales prennent `ArtPage` depuis la passe de cohérence du 25/10/2026, leurs mots ne bougent pas), `PageHead` (le `Hero` reste à l'accueil), `ProfileGrid` (cartes en arche pour les zones et les talents, mêmes règles que `ProfileBlock`, qui reste sous les articles du blog). `<Cta />` est inchangé sur chaque page.
 
 | Famille | Pages | Disposition du kit |
 |---|---|---|
@@ -40,3 +41,10 @@ Les pages de contenu portent maintenant la direction artistique ([`direction-art
 | Talent | `/talent/<slug>` | tête A (illustration choisie par le slug) puis texte dans un cadre blanc, cartes en arche |
 
 Règles : aucun mot nouveau ; les pastilles, objets et dessins sont décoratifs (`aria-hidden`) ; pas de témoignage, de chiffre ni de nom de presse inventés (les dispositions C et F du kit n'emploient que des données réelles, D que le texte de la page) ; les emplacements d'illustration à remplacer par de futurs portraits sont les arches de `AboutArticle`, de `/demande-envoyee` et l'argument `image` de `PageHead` (`pickIllustration` pour les talents). Les bannières sont sous la ligne de flottaison (la police script n'est pas préchargée). L'ordre des lignes de `tests/fixtures/content-pages-text.json` : la recherche des guides vient après la description et non avant le titre.
+
+## La passe de cohérence (25/10/2026)
+
+- **Plan du site, classement, pages légales** passent par `ArtPage` et `PageHead`, avec le texte dans un cadre blanc ; les mots et les `h3` du plan ne changent pas (les essais les gardent, comme les empreintes des pages légales). Sur le classement, la phrase d'introduction devient le sous-titre de la tête.
+- **Pied d'article du blog** : `ProfileGrid` (cartes en arche) remplace `ProfileBlock` ; celui-ci n'a plus d'autre usage que ses essais, comme `ContentPage`, `ArticleShell`, `Eyebrow`, `Lead` et `TeamSignature` (code à retirer dans un nettoyage).
+- **Page publique d'un profil** : son HTML est gelé par les fichiers `tests/fixtures/direct-edit/*.golden`, donc la page est seulement enveloppée de `.profile-art` (papier derrière, Bodoni pour les titres, arrondi et filet des cartes du kit : un bloc de `globals.css`). Les classes de `ProfileView` ne bougent pas.
+

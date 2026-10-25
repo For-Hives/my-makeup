@@ -1251,3 +1251,18 @@ main:has(> .home-section) {
 .art-cta-open .cta-backdrop-mask {
 	mask-image: none;
 }
+
+/*
+ * The public profile page in the kit's look (coherence pass, 25/10/2026). The HTML of the page is frozen by the golden
+ * files (tests/fixtures/direct-edit/*.golden), so the look is given by this scope only: the page wraps it in
+ * `.profile-art`. Paper behind, Bodoni for the titles, the card radius and the hairline of the kit on the cards.
+ */
+.profile-art :is(h1, h2) {
+	font-family: var(--font-bodoni-moda), ui-serif, Georgia, serif;
+	font-weight: 500;
+	color: var(--color-ink);
+}
+.profile-art section.reveal {
+	border-radius: var(--radius-card);
+	border-color: var(--color-hairline);
+}
