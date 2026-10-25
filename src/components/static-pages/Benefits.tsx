@@ -1,6 +1,6 @@
 import { type ArchBand, ArchImage } from '@/components/art/ArchImage'
 import type { Tint } from '@/components/art/CapsuleImage'
-import type { MakeupObjectName } from '@/components/art/generated-art'
+import type { MakeupObjectName } from '@/components/art/drawings'
 import { GlowBlob, MakeupObject } from '@/components/art/graphics'
 import { SectionHead } from '@/components/art/SectionHead'
 
@@ -17,13 +17,13 @@ export interface BenefitsPalette {
 }
 
 export const CLIENT_PALETTE: BenefitsPalette = {
-	objects: ['compact', 'mirror', 'lipstick', 'sponge', 'brush', 'mascara', 'nail-polish'],
+	objects: ['compact', 'mirror', 'lipstick', 'perfume', 'brush', 'mascara', 'nail-polish'],
 	tints: ['lavender', 'blush', 'sand'],
 	bands: ['band', 'rose', 'night'],
 }
 
 export const ARTIST_PALETTE: BenefitsPalette = {
-	objects: ['brush', 'lipstick', 'mascara', 'compact', 'nail-polish', 'sponge', 'mirror', 'brush'],
+	objects: ['brush', 'lipstick', 'mascara', 'compact', 'nail-polish', 'comb', 'mirror', 'brush'],
 	tints: ['sand', 'rose', 'lavender'],
 	bands: ['rose', 'band', 'night'],
 }

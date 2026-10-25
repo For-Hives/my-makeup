@@ -1,6 +1,6 @@
 /**
  * The class of a pill, in a file with no import: the navigation bar is a client component and may read it without
- * pulling the drawings (52 KB) with it (tests/unit/public-client-graph.test.ts).
+ * pulling the drawings with it (tests/unit/public-client-graph.test.ts).
  */
 /** The looks of a pill button: ink outline, solid indigo, white (on a dark band), ghost (on a dark band), and the round « play » disc. */
 export type PillVariant = 'outline' | 'filled' | 'light' | 'ghost-light' | 'play'

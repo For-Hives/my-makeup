@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { TrackedLink } from '@/components/analytics/TrackedLink'
 import { CtaBackdrop } from '@/components/blocks/CtaBackdrop'
 import type { MyMakeupEvents } from '@/lib/analytics/events'
-import { GlowBlob, LineDrawing, PrintMark } from './graphics'
+import { GlowBlob, LineDrawing, MakeupObject, PrintMark } from './graphics'
 import { pillClassName } from './Pill'
 
 type Where = MyMakeupEvents['cta_click']['where']
@@ -41,7 +41,7 @@ export function ArtCta({
 				<CtaBackdrop />
 				<div aria-hidden="true" className="pointer-events-none absolute inset-0 hidden text-white/35 md:block">
 					<LineDrawing name="lips" className="absolute top-12 left-10 h-16 w-28" />
-					<LineDrawing name="hand-brush" className="absolute right-10 bottom-10 h-36 w-24" />
+					<MakeupObject name="brush" className="absolute right-10 bottom-10 h-28 w-28" />
 					<PrintMark kind="plus" className="absolute top-14 right-20 h-5 w-5" />
 					<PrintMark kind="ring" className="absolute bottom-16 left-24 h-4 w-4" />
 				</div>

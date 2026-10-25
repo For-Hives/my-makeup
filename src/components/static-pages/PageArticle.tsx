@@ -1,6 +1,6 @@
 import type { Tint } from '@/components/art/CapsuleImage'
 import { CapsuleImage } from '@/components/art/CapsuleImage'
-import type { MakeupObjectName } from '@/components/art/generated-art'
+import type { MakeupObjectName } from '@/components/art/drawings'
 import { ArticleHeading, ArtLead, ArtSignature } from './ArtPage'
 import { TitleWithAccent } from './EditorialArticle'
 
@@ -23,7 +23,7 @@ export function partTitles(contenu: PageContent): string[] {
 	return contenu.parties.map(({ titre }) => titre.replace(TRAILING_EMOJI, ''))
 }
 
-const OBJECTS: readonly MakeupObjectName[] = ['brush', 'lipstick', 'compact', 'mirror', 'mascara', 'sponge']
+const OBJECTS: readonly MakeupObjectName[] = ['brush', 'lipstick', 'compact', 'mirror', 'mascara', 'perfume']
 const TINTS: readonly Tint[] = ['blush', 'lavender', 'sand', 'rose']
 
 /**

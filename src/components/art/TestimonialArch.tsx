@@ -2,7 +2,7 @@ import Image from 'next/image'
 import type { ReactNode } from 'react'
 import { type ArchBand, ArchImage } from './ArchImage'
 import type { Tint } from './CapsuleImage'
-import type { MakeupObjectName } from './generated-art'
+import type { MakeupObjectName } from './drawings'
 import { MakeupObject } from './graphics'
 
 /**
