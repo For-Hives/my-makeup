@@ -60,10 +60,10 @@ Les sources sont des listes, la meilleure d'abord (`FILM_VIDEOS`, `FILM_STILLS` 
 | Mesure | Résultat |
 |---|---|
 | Police d'affichage ajoutée à `/` | 99 888 octets de woff2, préchargés : Bodoni Moda variable (`wght` et `opsz`), sous-ensemble latin, droit 46 248 octets et italique 53 640 octets. Les autres sous-ensembles (latin étendu, symboles) ne sont demandés que si la page porte leurs caractères |
-| JavaScript du premier chargement (`route-bundle-stats.json`, `main` contre la branche) | `/` : +4 946 octets (+1 556 compressés) ; aucune autre route ne change |
+| JavaScript du premier chargement (`route-bundle-stats.json`, `main` contre la branche) | `/` : +5 304 octets non compressés (dont 358 pour l'image de fin quand le film ne viendra pas) ; aucune autre route ne change |
 | HTML de `/` (même jeu de données) | 131 950 octets avant, 132 118 après |
-| Images du haut de page | affiche 3 234 octets (début) ou 4 112 (fin, mouvement réduit), pilules 2 720 et 3 526 octets |
-| Film (brouillons) | 48 915 octets en AV1 (Chrome, Firefox), 115 715 en H.264 (Safari), demandés après le chargement, l'arche dans l'écran |
+| Images du haut de page | affiche 5 524 octets en AVIF, 21 468 en WebP (début) ; image de fin 10 291 en AVIF, 25 990 en WebP (mouvement réduit, Save-Data, sans script, lecture refusée) ; à 1080 × 1400. Pilules 2 720 et 3 526 octets, sans préchargement (`fetchPriority="low"`) |
+| Film (rendu v1, intro et boucle) | 185 631 octets en AV1 (Chrome, Firefox), 313 068 en HEVC (Safari), 950 108 en H.264 (ce qui ne lit ni l'un ni l'autre), demandés après le chargement, l'arche dans l'écran ; aucun sous Save-Data ni en mouvement réduit |
 | Décalage de mise en page (CLS) | 0 à 390, 768, 1024, 1280 et 1440 px |
 | Élément du LCP | la phrase sur un téléphone (390 px) ; l'affiche de l'arche dès 768 px |
 
