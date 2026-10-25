@@ -1,8 +1,9 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
-import { Hero } from '@/components/blocks/Hero'
-import { ContentPage } from '@/components/static-pages/EditorialArticle'
-import { CheckCircleIcon } from '@/components/static-pages/icons'
+import { ArchImage } from '@/components/art/ArchImage'
+import { GlowBlob } from '@/components/art/graphics'
+import { Pill } from '@/components/art/Pill'
+import { ArtPage } from '@/components/static-pages/ArtPage'
+import { PageHead } from '@/components/static-pages/PageHead'
 import { pageMetadata } from '@/lib/seo/metadata'
 
 // The thank-you page: a page, but not one to find in a search engine. No canonical address, `noindex`.
@@ -14,28 +15,42 @@ export const metadata: Metadata = pageMetadata({
 	indexable: false,
 })
 
+/** A centred head, then one small arch (a slot for an illustration) beside the reassurance and a pill back to the search. */
 export default function RequestSentPage() {
 	return (
-		<ContentPage>
-			<Hero
-				titre="Votre demande est transmise"
+		<ArtPage>
+			<PageHead
+				layout="centered"
+				glow="blush"
+				drawing="lips"
+				title="Votre demande est transmise"
 				description="Vous recevrez une réponse sous 48 h. Merci de votre confiance !"
-				recherche={false}
 			/>
-			<section className="border-gray-200 border-t bg-neutral-50 px-4 py-20 md:py-28">
-				<div className="reveal mx-auto flex max-w-xl flex-col items-center gap-6 rounded-2xl border border-gray-200 bg-white p-8 text-center sm:p-12">
-					<span className="flex h-14 w-14 items-center justify-center rounded-full bg-indigo-50 text-indigo-900">
-						<CheckCircleIcon className="h-8 w-8" />
-					</span>
-					<p className="max-w-[48ch] text-gray-700 text-lg leading-8">
-						Nous transmettons votre demande à la maquilleuse. Si elle n&apos;est pas disponible, nous vous proposerons
-						une autre maquilleuse de votre secteur, avec votre accord.
-					</p>
-					<Link href="/search" className="btn-primary">
-						Voir d&apos;autres maquilleuses
-					</Link>
+			<section className="relative isolate overflow-hidden px-4 pb-20 sm:px-6 md:pb-32">
+				<GlowBlob size="md" tone="indigo" className="-bottom-40 -left-60" />
+				<div className="reveal relative mx-auto grid max-w-4xl items-center gap-10 rounded-art-frame border border-nude-200 bg-white p-8 sm:p-12 md:grid-cols-[minmax(0,220px)_minmax(0,1fr)] md:gap-14">
+					<div className="mx-auto w-full max-w-[180px] pr-3 md:max-w-none">
+						<ArchImage
+							src="/assets/back/maquilleuse_metisse_white.webp"
+							alt=""
+							tint="blush"
+							band="band"
+							size="sm"
+							mark={false}
+							sizes="220px"
+						/>
+					</div>
+					<div className="flex flex-col items-start gap-8">
+						<p className="max-w-[48ch] text-lg text-mute leading-8">
+							Nous transmettons votre demande à la maquilleuse. Si elle n&apos;est pas disponible, nous vous proposerons
+							une autre maquilleuse de votre secteur, avec votre accord.
+						</p>
+						<Pill href="/search" variant="filled" arrow>
+							Voir d&apos;autres maquilleuses
+						</Pill>
+					</div>
 				</div>
 			</section>
-		</ContentPage>
+		</ArtPage>
 	)
 }

@@ -180,7 +180,7 @@ describe('23 : le contraste de la signature des pages de texte', () => {
 		)
 
 		expect(html).not.toContain('text-gray-400')
-		expect(html).toContain('text-gray-700')
+		expect(html).toContain('text-mute')
 	})
 })
 

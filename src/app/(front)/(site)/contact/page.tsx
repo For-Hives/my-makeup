@@ -1,10 +1,10 @@
 import type { Metadata } from 'next'
 import { connection } from 'next/server'
+import { GlowBlob, PrintMark } from '@/components/art/graphics'
 import { Cta } from '@/components/blocks/Cta'
-import { Hero } from '@/components/blocks/Hero'
 import { ContactForm } from '@/components/contact/ContactForm'
-import { ContentPage, Eyebrow } from '@/components/static-pages/EditorialArticle'
-import { EnvelopeIcon } from '@/components/static-pages/icons'
+import { ArtEyebrow, ArtPage } from '@/components/static-pages/ArtPage'
+import { PageHead } from '@/components/static-pages/PageHead'
 import { serverEnv } from '@/lib/env'
 import { pageMetadata } from '@/lib/seo/metadata'
 import { sendMessage } from './actions'
@@ -25,62 +25,70 @@ const CONTACT_DETAILS = [
 	{ titre: 'Aide et questions', email: 'help@my-makeup.fr' },
 ] as const
 
-/** Rendered on request: the site key of the widget is read when the server runs, not frozen into the build (ticket 1000). */
+/**
+ * Rendered on request: the site key of the widget is read when the server runs, not frozen into the build (ticket 1000).
+ * Layout F of the kit, in its real-data version: a row of wordmarks becomes the four addresses of the team, in Bodoni, in two columns
+ * separated by hairlines and print marks. The form sits in a white panel under a centred head.
+ */
 export default async function PageContact() {
 	await connection()
 	const siteKey = serverEnv().turnstile?.siteKey
 	return (
-		<ContentPage>
-			<Hero
-				image="/assets/back/maquilleuse_europeenne_white.webp"
-				titre="Contact"
+		<ArtPage>
+			<PageHead
+				layout="centered"
+				drawing="eye"
+				glow="rose"
+				title="Contact"
 				description="Une idée, une envie de collaborer, une question ? N’hésitez pas à nous contacter !"
-				recherche={false}
 			/>
-			<div className="reveal mx-auto mt-24 max-w-2xl px-4 text-center md:mt-32 md:px-0">
-				<span aria-hidden="true" className="mx-auto mb-6 block h-0.5 w-12 bg-indigo-900" />
-				<h2 className="font-display font-medium text-3xl text-balance text-gray-900 tracking-tight sm:text-4xl">
-					Un message en particulier ?
-				</h2>
-				<p className="mx-auto mt-4 max-w-[56ch] text-gray-700 text-lg leading-8">
-					Une demande particulière, un bug, une idée ? N’hésitez pas à nous contacter via le formulaire ci-dessous !
-				</p>
-			</div>
-			<ContactForm action={sendMessage} {...(siteKey !== undefined && { siteKey })} />
-			<section className="border-gray-200 border-t bg-white px-4 py-20 md:px-8 md:py-28">
-				<div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-12 lg:gap-16">
+			<section className="px-4 pb-16 sm:px-6 md:pb-24">
+				<div className="mx-auto max-w-3xl rounded-art-frame border border-nude-200 bg-white px-4 py-14 sm:px-10 md:py-20">
+					<div className="reveal mx-auto max-w-2xl text-center">
+						<h2 className="text-balance font-display font-medium text-3xl tracking-tight sm:text-4xl">
+							Un message en particulier ?
+						</h2>
+						<p className="mx-auto mt-4 max-w-[56ch] text-lg text-mute leading-8">
+							Une demande particulière, un bug, une idée ? N’hésitez pas à nous contacter via le formulaire ci-dessous !
+						</p>
+					</div>
+					<ContactForm action={sendMessage} {...(siteKey !== undefined && { siteKey })} />
+				</div>
+			</section>
+			<section className="relative isolate overflow-hidden border-nude-200 border-t px-4 py-20 sm:px-6 md:py-28">
+				<GlowBlob size="lg" tone="blush" className="-right-96 top-0" />
+				<div className="relative mx-auto grid max-w-6xl gap-12 lg:grid-cols-12 lg:gap-16">
 					<div className="reveal lg:col-span-5">
-						<Eyebrow>Contact</Eyebrow>
-						<h2 className="mt-4 font-display font-medium text-3xl text-balance text-gray-900 tracking-tight sm:text-4xl">
+						<ArtEyebrow>Contact</ArtEyebrow>
+						<h2 className="mt-4 text-balance font-display font-medium text-3xl tracking-tight sm:text-4xl lg:text-[2.6rem] lg:leading-[1.1]">
 							Contactez-nous
 						</h2>
-						<span aria-hidden="true" className="mt-6 block h-0.5 w-12 bg-indigo-900" />
-						<p className="mt-6 max-w-[40ch] text-gray-700 text-lg leading-8">
+						<p className="mt-6 max-w-[40ch] text-lg text-mute leading-8">
 							My-Makeup, plus qu’une plateforme de mise en relation, une équipe de passionnés à votre service !
 						</p>
 					</div>
-					<ul className="grid list-none grid-cols-1 gap-6 p-0 sm:grid-cols-2 lg:col-span-7">
-						{CONTACT_DETAILS.map(({ titre, email }) => (
+					<ul className="grid list-none grid-cols-1 border-ink/20 border-t p-0 sm:grid-cols-2 lg:col-span-7">
+						{CONTACT_DETAILS.map(({ titre, email }, index) => (
 							<li
 								key={email}
-								className="reveal flex flex-col gap-4 rounded-2xl border border-gray-200 bg-neutral-50 p-8"
+								className={`reveal relative flex flex-col gap-3 border-ink/20 border-b px-0 py-9 sm:px-8 ${index % 2 === 0 ? 'sm:border-r sm:pl-0' : ''}`}
 							>
-								<span className="flex h-11 w-11 items-center justify-center rounded-full bg-indigo-50 text-indigo-900">
-									<EnvelopeIcon className="h-6 w-6" />
-								</span>
-								<h3 className="font-display font-medium text-gray-900 text-xl leading-snug tracking-tight">{titre}</h3>
-								<dl className="text-sm leading-6">
-									<div>
-										<dt className="sr-only">Email</dt>
-										<dd>
-											<a
-												className="break-all font-semibold text-indigo-800 underline decoration-indigo-300 underline-offset-4"
-												href={`mailto:${email}`}
-											>
-												{email}
-											</a>
-										</dd>
-									</div>
+								{index === 1 && (
+									<span aria-hidden="true" className="absolute top-3 right-0 text-indigo-700">
+										<PrintMark kind="plus" className="h-4 w-4" />
+									</span>
+								)}
+								<h3 className="font-semibold text-[13px] text-indigo-800 uppercase tracking-[0.14em]">{titre}</h3>
+								<dl>
+									<dt className="sr-only">Email</dt>
+									<dd>
+										<a
+											className="inline-flex min-h-11 items-center break-all font-display font-medium text-2xl text-ink underline decoration-indigo-300 underline-offset-4 hover:text-indigo-800"
+											href={`mailto:${email}`}
+										>
+											{email}
+										</a>
+									</dd>
 								</dl>
 							</li>
 						))}
@@ -88,6 +96,6 @@ export default async function PageContact() {
 				</div>
 			</section>
 			<Cta />
-		</ContentPage>
+		</ArtPage>
 	)
 }

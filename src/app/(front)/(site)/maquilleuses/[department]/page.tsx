@@ -1,11 +1,12 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { cache } from 'react'
+import { LineDrawing } from '@/components/art/graphics'
+import { Pill } from '@/components/art/Pill'
 import { Cta } from '@/components/blocks/Cta'
-import { Hero } from '@/components/blocks/Hero'
-import { ProfileBlock } from '@/components/blocks/ProfileBlock'
-import { ContentPage } from '@/components/static-pages/EditorialArticle'
+import { ArtPage } from '@/components/static-pages/ArtPage'
+import { PageHead } from '@/components/static-pages/PageHead'
+import { ProfileGrid } from '@/components/static-pages/ProfileGrid'
 import { serializeJsonLd } from '@/lib/seo/json-ld'
 import { zoneLabel, zonePageMetadata, zoneStructuredData, zoneTitle } from '@/lib/seo/zone-page'
 import { departmentFromSlug, zoneMembers, zoneStatus } from '@/lib/seo/zones'
@@ -63,8 +64,9 @@ export default async function ZonePage({ params }: PageProps<'/maquilleuses/[dep
 	const zone = await readZoneOnce((await params).department)
 	if (!zone) notFound()
 	const { code, cards } = zone
+	const [figure = '', ...rest] = countText(cards.length).split(' ')
 	return (
-		<ContentPage>
+		<ArtPage>
 			{zoneStructuredData({ code, slugs: cards.map(({ slug }) => slug) }).map(data => (
 				<script
 					key={data['@type']}
@@ -73,25 +75,39 @@ export default async function ZonePage({ params }: PageProps<'/maquilleuses/[dep
 					dangerouslySetInnerHTML={{ __html: serializeJsonLd(data) }}
 				/>
 			))}
-			<Hero
-				image="/assets/back/maquilleuse_europeenne_white.webp"
-				titre={zoneTitle(code)}
+			<PageHead
+				layout="centered"
+				drawing="profile"
+				glow="blush"
+				title={zoneTitle(code)}
 				description={`${countText(cards.length)} du département ${zoneLabel(code)} présentent leur travail et leurs tarifs. Contactez directement celle qui vous correspond.`}
-				recherche={false}
 			/>
-			<div className="relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0">
-				<div className="reveal mx-auto max-w-2xl border-indigo-900 border-l-2 pl-6">
-					<p className="max-w-[62ch] text-gray-900 text-lg leading-8" data-testid="zone-count">
-						{countText(cards.length)} dans ce département. Elles sont classées de la fiche la plus complète à la plus
-						récemment mise à jour.
-					</p>
-					<Link href="/search" className="btn-primary mt-6 inline-flex">
-						Chercher une prestation ou une autre ville
-					</Link>
+			<section className="relative isolate overflow-hidden bg-indigo-800 px-4 py-14 text-white sm:px-6 md:py-20">
+				<div
+					aria-hidden="true"
+					className="pointer-events-none absolute -right-6 -bottom-10 hidden text-white/15 md:block"
+				>
+					<LineDrawing name="lips" className="h-40 w-72" />
 				</div>
-				<ProfileBlock titre={`Les maquilleuses du département ${zoneLabel(code)}`} cartes={cards} />
+				<div className="reveal relative mx-auto flex max-w-5xl flex-col items-start gap-8 md:flex-row md:items-center md:gap-14">
+					<p className="max-w-[46ch] text-lg leading-8 md:flex-1" data-testid="zone-count">
+						<span className="mr-3 align-middle font-display font-medium text-6xl leading-none md:text-8xl">
+							{figure}
+						</span>
+						{rest.join(' ')} dans ce département. Elles sont classées de la fiche la plus complète à la plus récemment
+						mise à jour.
+					</p>
+					<Pill href="/search" variant="light" arrow className="whitespace-normal! max-w-full">
+						Chercher une prestation ou une autre ville
+					</Pill>
+				</div>
+			</section>
+			<div className="px-4 py-20 sm:px-6 md:py-28 lg:px-8">
+				<div className="mx-auto max-w-7xl">
+					<ProfileGrid titre={`Les maquilleuses du département ${zoneLabel(code)}`} cartes={cards} />
+				</div>
 			</div>
 			<Cta />
-		</ContentPage>
+		</ArtPage>
 	)
 }

@@ -2,7 +2,7 @@
 
 > Vocabulaire : ce que le mainteneur appelle une **pastille** (une image en forme de pilule, posée dans un titre) s'écrit `capsule` dans le code (`CapsuleImage`, `TitleWithCapsules`, `CapsuleFrame`, `.art-capsule`) : `pastille` est un mot français que le contrôle des noms refuse.
 
-Le kit est la base commune des pages : des jetons, des polices, une bibliothèque d'assets et des composants de base, que chaque page applique ensuite. Il vient de la maquette que le mainteneur a validée le 25/10/2026 (éditorial, mode : papier crème, indigo, rose pâle, Bodoni, filets fins). **Il n'est encore appliqué à aucune page** : aucun écran n'a changé. L'accueil (le héros) est un autre chantier.
+Le kit est la base commune des pages : des jetons, des polices, une bibliothèque d'assets et des composants de base, que chaque page applique ensuite. Il vient de la maquette que le mainteneur a validée le 25/10/2026 (éditorial, mode : papier crème, indigo, rose pâle, Bodoni, filets fins). **Application page par page.** Les pages de contenu, de contact, de zone et de talent le portent depuis le 25/10/2026 (voir [`pages-de-contenu.md`](pages-de-contenu.md), « Le kit sur ces pages ») ; l'accueil, la recherche et le blog sont d'autres chantiers.
 
 Le code est dans `src/components/art/`. Les jetons et les quelques règles de feuille de style sont dans **un seul bloc** de `src/app/(front)/globals.css`, nommé « ART DIRECTION KIT ». Les règles de mouvement sont celles de [`mouvement.md`](mouvement.md), la barre de navigation celle de [`navbar.md`](navbar.md).
 

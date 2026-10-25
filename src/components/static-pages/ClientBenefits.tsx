@@ -1,4 +1,4 @@
-import { Benefits } from './Benefits'
+import { Benefits, CLIENT_PALETTE } from './Benefits'
 
 /** The advantages of the service for the people looking for a makeup artist (CONF-01: no promise the service does not keep). */
 export const CLIENT_BENEFITS: readonly { titre: string; description: string }[] = [
@@ -41,6 +41,7 @@ export function ClientBenefits() {
 	return (
 		<Benefits
 			eyebrow="Particulier"
+			palette={CLIENT_PALETTE}
 			items={CLIENT_BENEFITS.map(({ titre, description }) => ({ titre, texte: description }))}
 		/>
 	)

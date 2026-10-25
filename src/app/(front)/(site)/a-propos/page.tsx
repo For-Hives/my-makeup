@@ -1,9 +1,12 @@
 import type { Metadata } from 'next'
+import { CapsuleImage } from '@/components/art/CapsuleImage'
+import { MarqueeBanner } from '@/components/art/MarqueeBanner'
+import { TitleAccent } from '@/components/art/TitleWithCapsules'
 import { Cta } from '@/components/blocks/Cta'
-import { Hero } from '@/components/blocks/Hero'
+import { AboutArticle } from '@/components/static-pages/AboutArticle'
+import { ArtPage } from '@/components/static-pages/ArtPage'
 import { ABOUT } from '@/components/static-pages/artist-texts'
-import { ContentPage } from '@/components/static-pages/EditorialArticle'
-import { PageArticle } from '@/components/static-pages/PageArticle'
+import { PageHead } from '@/components/static-pages/PageHead'
 import { pageMetadata } from '@/lib/seo/metadata'
 
 export const metadata: Metadata = pageMetadata({
@@ -14,22 +17,28 @@ export const metadata: Metadata = pageMetadata({
 	chemin: '/a-propos',
 })
 
+/** The kit's layout D (statement and two arches) under a centred head with a capsule in the title; the banner is the mission, in the page's words. */
 export default function AboutPage() {
 	return (
-		<ContentPage>
-			<Hero
-				image="/assets/back/maquilleuse_europeenne_white.webp"
-				titre={
+		<ArtPage>
+			<PageHead
+				layout="centered"
+				drawing="profile"
+				glow="indigo"
+				title={
 					<>
-						La solution de vos rêves&nbsp;:&nbsp;<span className="text-indigo-900">My&nbsp;Makeup</span>
+						La solution de vos rêves&nbsp;:&nbsp;<TitleAccent>My&nbsp;Makeup</TitleAccent>{' '}
+						<CapsuleImage shape="pill" tint="blush" line="lips" />
 					</>
 				}
 				description="Découvrez comment My-Makeup peut aider les personnes à trouver la maquilleuse professionnelle qui leur correspond. Et comment nous pouvons aider les maquilleuses professionnelles à présenter leur travail et à se faire connaître de nouveaux clients."
-				recherche={false}
-				inscription
+				signUp
 			/>
-			<PageArticle eyebrow="À propos" contenu={ABOUT} />
+			<AboutArticle eyebrow="À propos" contenu={ABOUT} />
+			<div className="pb-16 md:pb-24">
+				<MarqueeBanner variant="band" label="La mission de My-Makeup" items={['Rendre la beauté accessible à tous']} />
+			</div>
 			<Cta />
-		</ContentPage>
+		</ArtPage>
 	)
 }
