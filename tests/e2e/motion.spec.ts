@@ -4,7 +4,7 @@ import { createAccount } from '../support/account-factory'
 import { SCREENS } from '../support/e2e'
 import { users } from '../support/lock'
 import { testPayload } from '../support/payload-test'
-import { createContent, deleteContent } from '../support/public-pages'
+import { createContent, deleteContent, refreshProfilePages } from '../support/public-pages'
 
 /**
  * The motion system (issue 1069, docs/mouvement.md), end to end, at 390 px and 1440 px: the first screen is never
@@ -315,10 +315,15 @@ test.describe('1069 : une fiche et des résultats', () => {
 
 	test.describe.configure({ mode: 'serial' })
 
-	test.beforeAll(async () => {
+	test.beforeAll(async ({ request }) => {
 		test.setTimeout(180_000)
 		await users('profils-de-page', 1)
 		profiles = await setPageProfiles()
+		// The search keeps its directory in the cache of Next: have the application refresh it now that the profiles are
+		// there, or it lists what an earlier spec of the shard cached before ("Aucun résultat pour Page").
+		const reference = profiles.get('reference')
+		if (reference)
+			await refreshProfilePages(request, { id: reference.id, specialite: reference.type.profil.specialty ?? null })
 	})
 
 	test.afterAll(async () => {

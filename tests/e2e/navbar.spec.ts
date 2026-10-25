@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test'
+import { expect, type Locator, type Page, test } from '@playwright/test'
 import { violationsSevere } from '../support/axe'
 
 /**
@@ -9,6 +9,27 @@ import { violationsSevere } from '../support/axe'
  */
 
 const nav = (page: Page) => page.getByRole('navigation', { name: 'Navigation principale' })
+
+/**
+ * Waits for React to have hydrated the element: a pointer resting on it before is not seen as entering it once the
+ * handlers are there, so the hover of a group would open nothing.
+ */
+const hydrated = (locator: Locator) =>
+	expect
+		.poll(() => locator.evaluate(element => Object.keys(element).some(key => key.startsWith('__reactProps'))))
+		.toBe(true)
+
+/**
+ * Puts the timers of the page in the hands of the test. `clock.install` alone lets the time run on at its own pace, so
+ * on a loaded machine the real time of the mouse moves added to `runFor` closes a group (200 ms) before the test
+ * has looked at it: the clock is paused, and only `runFor` makes it move.
+ */
+async function handTimers(page: Page) {
+	const start = new Date('2026-01-01T00:00:00Z')
+	await page.clock.install({ time: start })
+	await page.reload()
+	await page.clock.pauseAt(new Date(start.getTime() + 1000))
+}
 
 /** Waits for the transitions and animations of the bar to end. */
 const settle = (page: Page) =>
@@ -117,11 +138,11 @@ test.describe('Barre de navigation, sur ordinateur', () => {
 		page,
 	}) => {
 		// The page's timers are driven by hand: the delays are played exactly, not waited for.
-		await page.clock.install()
-		await page.reload()
+		await handTimers(page)
 		const trigger = nav(page).getByRole('button', { name: 'Particulier', exact: true })
 		const panel = page.locator('[data-panel="Particulier"]')
 		await expect(panel).toBeHidden()
+		await hydrated(trigger)
 		await trigger.hover()
 		await page.clock.runFor(150)
 		await expect(panel).toBeVisible()
@@ -146,9 +167,9 @@ test.describe('Barre de navigation, sur ordinateur', () => {
 	})
 
 	test('un survol qui passe sans s’arrêter n’ouvre rien', async ({ page }) => {
-		await page.clock.install()
-		await page.reload()
+		await handTimers(page)
 		const trigger = nav(page).getByRole('button', { name: 'Maquilleuse', exact: true })
+		await hydrated(trigger)
 		const box = await trigger.boundingBox()
 		if (!box) throw new Error('boîte manquante')
 		await page.mouse.move(box.x + box.width / 2, box.y - 30)

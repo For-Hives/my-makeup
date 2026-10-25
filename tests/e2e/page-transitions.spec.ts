@@ -59,10 +59,15 @@ test.describe('1087 : transition entre la recherche et une fiche', () => {
 
 	test.describe.configure({ mode: 'serial' })
 
-	test.beforeAll(async () => {
+	test.beforeAll(async ({ request }) => {
 		test.setTimeout(180_000)
 		await users('profils-de-page', 1)
 		profiles = await setPageProfiles()
+		// The search keeps its directory in the cache of Next: have the application refresh it now that the profiles are
+		// there, or it lists what an earlier spec of the shard cached before ("Aucun résultat pour Page").
+		const reference = profiles.get('reference')
+		if (reference)
+			await refreshProfilePages(request, { id: reference.id, specialite: reference.type.profil.specialty ?? null })
 	})
 
 	// The search keeps the directory in the cache of Next, and its page without a word reads it too (the preset): a spec
