@@ -612,7 +612,7 @@ Chaque pull request et chaque poussée sur `v3` lancent `.github/workflows/ci.ym
 | `unit` | `bun run test:unit` |
 | `build` | `bun run image:build` sans secret ni base, puis `bun run image:check` |
 | `integration` | En trois lots côte à côte : `bun run bench:up`, puis `bun run test:integration --shard=N/3` sur un tiers des fichiers : le banc de test, en CI comme sur un poste |
-| `e2e` | En cinq lots côte à côte : le Chromium de Playwright, `bun run bench:up`, puis `bun run test:e2e --shard=N/5` sur un cinquième des essais |
+| `e2e` | En six lots côte à côte : le Chromium de Playwright, `bun run bench:up`, puis `bun run test:e2e --shard=N/6` sur un sixième des essais |
 | `ci-ok` | Rouge si l'un des cinq a échoué, a été annulé ou a été sauté |
 
 Avant de pousser, les mêmes commandes se lancent en local : `bun run check`, `bun run typecheck`, `bun run test`, `bun run test:ci-guard`, et, banc démarré, `bun run test:integration` et `bun run test:e2e`.

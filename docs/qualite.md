@@ -155,7 +155,7 @@ La CI se lance à chaque pull request et à chaque poussée sur `v3`. Cinq jobs 
 | `unit` | `bun run test:unit` | 10 min |
 | `build` | `bun run image:build`, sans secret ni base, puis `bun run image:check` | 12 min |
 | `integration` | En trois lots côte à côte, de `integration (1/3)` à `integration (3/3)`. Chacun lance `bun run bench:up`, puis `bun run test:integration --shard=N/3` : un tiers des fichiers de tests d'intégration, sur son propre banc de test ([`docs/tests/banc.md`](tests/banc.md)) | 10 min par lot |
-| `e2e` | En cinq lots côte à côte, de `e2e (1/5)` à `e2e (5/5)`. Chacun installe le Chromium de Playwright, lance `bun run bench:up`, puis `bun run test:e2e --shard=N/5` sur son cinquième des essais ([`docs/tests/e2e.md`](tests/e2e.md)) | 10 min par lot |
+| `e2e` | En six lots côte à côte, de `e2e (1/6)` à `e2e (6/6)`. Chacun installe le Chromium de Playwright, lance `bun run bench:up`, puis `bun run test:e2e --shard=N/6` sur son sixième des essais ([`docs/tests/e2e.md`](tests/e2e.md)) | 10 min par lot |
 | `ci-ok` | Rouge si l'un des cinq a échoué, a été annulé ou a été sauté | 2 min |
 
 - Dans `qualite`, les six contrôles sont tous joués, même quand l'un échoue : une seule poussée montre toutes les fautes.
@@ -234,7 +234,7 @@ Le même fichier garde aussi :
 - les permissions : `ci.yml` lit le dépôt, rien de plus. Le workflow de publication donne l'écriture à son seul job ; `tests/ci/publication.test.ts` le garde, avec sa dépendance à `ci-ok` ;
 - `ci-ok` : il tourne toujours et attend tous les jobs. Aucun job n'est sous condition. Une commande (`run`) ne porte que `always()` ou `!cancelled()`, qui la font tourner plus souvent, jamais moins. `failure()` est réservé aux actions (`uses`) qui envoient un rapport : sous cette condition, une commande serait sautée quand tout va bien, et le job resterait vert sans elle ;
 - les durées : chaque job a sa limite, et la somme des limites de la plus longue chaîne reste sous 15 minutes (voir « Durée de la CI ») ;
-- le banc de test en CI : les jobs `integration` et `e2e` existent ; chacun lance `bun run bench:up` avant ses tests, chaque commande seule dans son étape ; chacun tourne en lots, trois pour `integration`, cinq pour `e2e` (`matrix: shard: [1, …, N]`, et rien d'autre ; le même N dans le nom du job et dans le diviseur de `--shard`), sans qu'un lot en échec annule les autres (`fail-fast: false`), et la limite d'un lot ne dépasse pas 10 minutes ; `e2e` tourne sous Node, avec le Chromium de Playwright ;
+- le banc de test en CI : les jobs `integration` et `e2e` existent ; chacun lance `bun run bench:up` avant ses tests, chaque commande seule dans son étape ; chacun tourne en lots, trois pour `integration`, six pour `e2e` (`matrix: shard: [1, …, N]`, et rien d'autre ; le même N dans le nom du job et dans le diviseur de `--shard`), sans qu'un lot en échec annule les autres (`fail-fast: false`), et la limite d'un lot ne dépasse pas 10 minutes ; `e2e` tourne sous Node, avec le Chromium de Playwright ;
 - l'image Docker : variables publiques seulement (`NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_APP_VERSION`, `SOURCE_COMMIT` et `R2_PUBLIC_URL`, la liste de `scripts/image/rules.ts`), quelle que soit la casse de leur nom, utilisateur sans droits, contrôle de santé, contexte de build en liste blanche (voir le README, « Image Docker »).
 
 ### Ce que les garde-fous ne voient pas

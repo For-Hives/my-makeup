@@ -972,9 +972,9 @@ describe('the CI runs the integration tests and the end-to-end tests on the test
 		'      - name: Start the test bench\n        run: bun run bench:up\n      - name: Integration tests\n'
 	const SHARD = expression('matrix.shard')
 	const INTEGRATION_TESTS = `run: bun run test:integration --shard=${SHARD}/3`
-	const E2E_TESTS = `run: bun run test:e2e --shard=${SHARD}/5`
+	const E2E_TESTS = `run: bun run test:e2e --shard=${SHARD}/6`
 
-	test('each job starts the bench before its tests; three shards of integration tests, five of end-to-end tests, each in less than 10 minutes', () => {
+	test('each job starts the bench before its tests; three shards of integration tests, six of end-to-end tests, each in less than 10 minutes', () => {
 		expect(SHARDS).toEqual({ integration: 3, e2e: 5 })
 		expect(benchJobProblems(ci, BENCH_LIMIT_MINUTES)).toEqual([])
 		expect(ci.jobs.integration?.['timeout-minutes']).toBeLessThanOrEqual(BENCH_LIMIT_MINUTES)
@@ -1052,13 +1052,13 @@ describe('the CI runs the integration tests and the end-to-end tests on the test
 			'every end-to-end test in each shard',
 			E2E_TESTS,
 			'run: bun run test:e2e',
-			`job e2e : il doit lancer « bun run test:e2e --shard=${SHARD}/5 »`,
+			`job e2e : il doit lancer « bun run test:e2e --shard=${SHARD}/6 »`,
 		],
 		[
 			'end-to-end tests divided by another number than their shards',
 			E2E_TESTS,
 			`run: bun run test:e2e --shard=${SHARD}/2`,
-			`job e2e : il doit lancer « bun run test:e2e --shard=${SHARD}/5 »`,
+			`job e2e : il doit lancer « bun run test:e2e --shard=${SHARD}/6 »`,
 		],
 		[
 			'end-to-end tests without their browser',
@@ -1072,47 +1072,47 @@ describe('the CI runs the integration tests and the end-to-end tests on the test
 			'',
 			'job e2e : Playwright tourne sous Node, installé avant les essais',
 		],
-		['a single shard', 'shard: [1, 2, 3, 4, 5]', 'shard: [1]', 'job e2e : les tests tournent en 5 lots'],
+		['a single shard', 'shard: [1, 2, 3, 4, 5, 6]', 'shard: [1]', 'job e2e : les tests tournent en 6 lots'],
 		[
-			'six shards for a command that cuts in five',
-			'shard: [1, 2, 3, 4, 5]',
+			'seven shards for a command that cuts in six',
 			'shard: [1, 2, 3, 4, 5, 6]',
-			'job e2e : les tests tournent en 5 lots',
+			'shard: [1, 2, 3, 4, 5, 6, 7]',
+			'job e2e : les tests tournent en 6 lots',
 		],
 		[
 			'a shard counted from zero',
-			'shard: [1, 2, 3, 4, 5]',
-			'shard: [0, 1, 2, 3, 4]',
-			'job e2e : les tests tournent en 5 lots',
+			'shard: [1, 2, 3, 4, 5, 6]',
+			'shard: [0, 1, 2, 3, 4, 5]',
+			'job e2e : les tests tournent en 6 lots',
 		],
 		[
 			'a second dimension that runs every shard twice',
-			'        shard: [1, 2, 3, 4, 5]\n',
-			'        shard: [1, 2, 3, 4, 5]\n        navigateur: [chromium, firefox]\n',
-			'job e2e : les tests tournent en 5 lots, « matrix: shard: [1, 2, 3, 4, 5] », et rien d’autre',
+			'        shard: [1, 2, 3, 4, 5, 6]\n',
+			'        shard: [1, 2, 3, 4, 5, 6]\n        navigateur: [chromium, firefox]\n',
+			'job e2e : les tests tournent en 6 lots, « matrix: shard: [1, 2, 3, 4, 5, 6] », et rien d’autre',
 		],
 		[
 			'a name that says another number of shards',
-			`    name: e2e (${SHARD}/5)`,
+			`    name: e2e (${SHARD}/6)`,
 			`    name: e2e (${SHARD}/2)`,
-			`job e2e : son nom dit ses lots, « e2e (${SHARD}/5) »`,
+			`job e2e : son nom dit ses lots, « e2e (${SHARD}/6) »`,
 		],
 		[
 			'a failed shard that cancels the others',
-			'      fail-fast: false\n      matrix:\n        shard: [1, 2, 3, 4, 5]\n',
-			'      fail-fast: true\n      matrix:\n        shard: [1, 2, 3, 4, 5]\n',
+			'      fail-fast: false\n      matrix:\n        shard: [1, 2, 3, 4, 5, 6]\n',
+			'      fail-fast: true\n      matrix:\n        shard: [1, 2, 3, 4, 5, 6]\n',
 			'job e2e : « fail-fast: false », sinon un lot en échec annule les autres',
 		],
 		[
 			'the default of GitHub, which cancels the other shards',
-			'      fail-fast: false\n      matrix:\n        shard: [1, 2, 3, 4, 5]\n',
-			'      matrix:\n        shard: [1, 2, 3, 4, 5]\n',
+			'      fail-fast: false\n      matrix:\n        shard: [1, 2, 3, 4, 5, 6]\n',
+			'      matrix:\n        shard: [1, 2, 3, 4, 5, 6]\n',
 			'job e2e : « fail-fast: false », sinon un lot en échec annule les autres',
 		],
 		[
 			'end-to-end tests allowed 15 minutes',
-			'    timeout-minutes: 10\n    strategy:\n      # A failed shard does not stop the others: one push shows every failed test.\n      fail-fast: false\n      matrix:\n        shard: [1, 2, 3, 4, 5]',
-			'    timeout-minutes: 15\n    strategy:\n      # A failed shard does not stop the others: one push shows every failed test.\n      fail-fast: false\n      matrix:\n        shard: [1, 2, 3, 4, 5]',
+			'    timeout-minutes: 10\n    strategy:\n      # A failed shard does not stop the others: one push shows every failed test.\n      fail-fast: false\n      matrix:\n        shard: [1, 2, 3, 4, 5, 6]',
+			'    timeout-minutes: 15\n    strategy:\n      # A failed shard does not stop the others: one push shows every failed test.\n      fail-fast: false\n      matrix:\n        shard: [1, 2, 3, 4, 5, 6]',
 			'job e2e : sa limite est de 15 minutes ; chaque lot doit tenir en 10',
 		],
 	])('red on %s', (_fault, from, to, expected) => {
