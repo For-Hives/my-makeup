@@ -38,12 +38,6 @@ for (const size of [SCREENS.mobile, SCREENS.chromium]) {
 			const hero = page.locator('section.home-hero')
 			await expect(hero).toHaveAttribute('data-hero-motion', 'running')
 			await expect.poll(() => playState(page, '.home-hero-ribbon-track')).toBe('running')
-			// The ring waits for the film: seen on a phone, where the arch is below the fold until the page is scrolled (on a
-			// wide screen the film may already play by now).
-			if (size.width < 640) {
-				await expect(hero).not.toHaveAttribute('data-film', 'playing')
-				expect(await playState(page, '.home-hero-ring')).toBe('paused')
-			}
 
 			await showArch(page)
 			await expect(hero).toHaveAttribute('data-film', 'playing', { timeout: 20_000 })
@@ -52,6 +46,14 @@ for (const size of [SCREENS.mobile, SCREENS.chromium]) {
 			await expect(videos).toHaveCount(2)
 			// The bundled Chromium has no H.264 decoder: it takes the AV1 file, the first of the list.
 			expect(await videos.last().evaluate(video => (video as HTMLVideoElement).currentSrc)).toContain('.av1.mp4')
+
+			// Off the screen the film pauses, and the ring with it: it turns only while the film plays.
+			await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight))
+			await expect(hero).not.toHaveAttribute('data-film', 'playing')
+			expect(await playState(page, '.home-hero-ring')).toBe('paused')
+			await expect(hero).toHaveAttribute('data-hero-motion', 'running')
+			await showArch(page)
+			await expect(hero).toHaveAttribute('data-film', 'playing')
 
 			await page.getByRole('button', { name: 'Mettre le film en pause' }).click()
 			await expect(hero).toHaveAttribute('data-hero-motion', 'paused')
