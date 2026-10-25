@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
+import { BACKDROP_COLORS } from '@/components/blocks/cta-palette'
 
 /**
  * The tokens of the art direction kit (issue 1111): one named block of `globals.css`, the existing tokens untouched,
@@ -35,7 +36,7 @@ export function contrast(a: string, b: string): number {
 }
 
 // The Tailwind indigo values the kit leans on (tailwindcss 4 theme, sRGB).
-const INDIGO = { 100: '#e0e7ff', 700: '#432dd7', 800: '#372aac', 900: '#312c85', 50: '#eef2ff' }
+const INDIGO = { 100: '#e0e7ff', 700: '#432dd7', 800: '#372aac', 900: '#312c85' }
 
 describe('the kit block of globals.css', () => {
 	test('is one clearly named block with its own theme', () => {
@@ -72,6 +73,20 @@ describe('the kit block of globals.css', () => {
 	})
 })
 
+describe('the utilities the kit uses exist', () => {
+	test('every `*-art-*` utility in src/components/art is a token of the kit block', () => {
+		const defined = new Set([...THEME.matchAll(/--(?:color|radius|shadow)-(art-[a-z0-9-]+):/g)].map(match => match[1]))
+		const used = new Set<string>()
+		for (const file of sources(join(ROOT, 'src/components/art')))
+			for (const [, name] of readFileSync(file, 'utf8').matchAll(
+				/(?:bg|text|border|fill|stroke|rounded|shadow|ring|outline|from|to|via)-(art-[a-z0-9-]+)/g
+			))
+				used.add(name as string)
+		expect(used.size).toBeGreaterThan(5)
+		expect([...used].filter(name => !defined.has(name))).toEqual([])
+	})
+})
+
 describe('contrast of the kit pairs (WCAG AA, 4.5:1 for text)', () => {
 	const paper = token('color-art-paper')
 	const blush = token('color-art-blush')
@@ -90,7 +105,6 @@ describe('contrast of the kit pairs (WCAG AA, 4.5:1 for text)', () => {
 		['night on white light button', token('color-art-night'), '#ffffff'],
 		['night on blush light button hover', token('color-art-night'), blush],
 		['rose accent on night (cta)', token('color-art-rose'), token('color-art-night')],
-		['indigo-50 lede on night (cta)', INDIGO[50], token('color-art-night')],
 		['indigo-700 hover text on white chip', INDIGO[700], '#ffffff'],
 	]
 	for (const [name, foreground, background] of pairs)
@@ -98,8 +112,18 @@ describe('contrast of the kit pairs (WCAG AA, 4.5:1 for text)', () => {
 			expect(contrast(foreground, background)).toBeGreaterThanOrEqual(4.5)
 		})
 
-	test('white on the brightest indigo the shader draws stays at 4.5:1 (existing guard)', () => {
-		expect(contrast('#ffffff', '#625fff')).toBeGreaterThanOrEqual(4.5)
+	test('the call to action: white text holds 4.5:1 on every colour the shader can draw, so the side mask is not needed', () => {
+		for (const colour of Object.values(BACKDROP_COLORS)) expect(contrast('#ffffff', colour)).toBeGreaterThanOrEqual(4.5)
+		expect(contrast('#ffffff', token('color-art-night'))).toBeGreaterThanOrEqual(4.5)
+	})
+
+	test('the rose accent is for flat dark panels only: over the brightest shader colour it falls under 4.5:1, so ArtCta writes its text in white', () => {
+		expect(contrast(token('color-art-rose'), BACKDROP_COLORS.front)).toBeLessThan(4.5)
+		const cta = readFileSync(join(ROOT, 'src/components/art/ArtCta.tsx'), 'utf8')
+		const writing = [...cta.matchAll(/<(?:h2|p)\s[^>]*className="([^"]*)"/g)].map(match => match[1]).join(' ')
+		expect(writing.length).toBeGreaterThan(20)
+		expect(writing).not.toMatch(/text-art-rose|text-indigo-|text-white\/\d/)
+		expect(cta).toContain('text-white md:mt-7')
 	})
 })
 

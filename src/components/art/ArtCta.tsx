@@ -48,7 +48,7 @@ export function ArtCta({
 						<h2 className="mx-auto max-w-[17ch] text-balance font-display font-medium text-4xl leading-[1.04] tracking-tight sm:text-5xl lg:text-7xl">
 							{title}
 						</h2>
-						<p className="mx-auto mt-6 max-w-[48ch] text-balance text-lg text-indigo-50 md:mt-7">{children}</p>
+						<p className="mx-auto mt-6 max-w-[48ch] text-balance text-lg text-white md:mt-7">{children}</p>
 						<div className="mt-10 flex flex-wrap justify-center gap-4 md:mt-11">
 							<TrackedLink
 								href={primary.href}

@@ -172,7 +172,7 @@ export function ProfileRowCard({
 	return (
 		<article
 			data-profile-row-card
-			className="card-hover group relative grid grid-cols-[96px_minmax(0,1fr)] items-center gap-x-[18px] gap-y-3.5 rounded-art-card border border-nude-200 bg-white p-[18px] md:grid-cols-[148px_minmax(0,1fr)_auto] md:gap-x-7 md:py-[22px] md:pr-7 md:pl-[22px]"
+			className="card-hover group relative grid grid-cols-[96px_minmax(0,1fr)] items-center gap-x-[18px] gap-y-3.5 rounded-card border border-nude-200 bg-white p-[18px] md:grid-cols-[148px_minmax(0,1fr)_auto] md:gap-x-7 md:py-[22px] md:pr-7 md:pl-[22px]"
 		>
 			<div className="relative">
 				<ArchImage

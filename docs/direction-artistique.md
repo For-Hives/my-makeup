@@ -53,9 +53,11 @@ L'indigo (50 à 950) est celui de Tailwind, déjà dans le site : le kit ne le r
 
 ## Polices
 
-`src/components/art/fonts.ts` charge **une seule fois** Bodoni Moda (romain et italique), Instrument Sans et Pinyon Script par `next/font/google`, donc **hébergées par le site** (aucune requête vers un service de polices). Le gabarit public (`src/app/(front)/layout.tsx`) pose les trois variables sur `<html>` ; `font-display`, `font-body` et `font-script` (Tailwind) les lisent partout. Les routes qui chargeaient Bodoni et Instrument Sans une à une (`direct-edit/fonts.ts`) les relisent maintenant de ce seul fichier : rien n'est téléchargé deux fois.
+`src/components/art/fonts.ts` déclare **une seule fois pour tout le site public** Bodoni Moda (romain et italique), Instrument Sans et Pinyon Script par `next/font/google`, donc **hébergées par le site** (aucune requête vers un service de polices). Le gabarit public (`src/app/(front)/layout.tsx`) pose les trois variables sur `<html>` ; `font-display`, `font-body` et `font-script` (Tailwind) les lisent partout.
 
-`preload: false` sur les trois : le navigateur ne va chercher une police que si la page peint du texte dedans, donc **une page qui n'en utilise aucune ne paie rien** (pas de `<link rel="preload">` qui concurrence le LCP). Une page qui peint un titre en Bodoni au-dessus de la ligne de flottaison passe `preload` à `true` pour `display` (une ligne dans `fonts.ts`) et remesure son LCP. Mesures : voir « Mesures » plus bas.
+`preload: false` sur les trois : le navigateur ne va chercher une police que si la page peint du texte dedans, donc **une page qui n'en utilise aucune ne paie rien**. Mesuré (voir « Mesures »), `preload: true` dans le gabarit ajoute trois requêtes de polices (86 Ko) à chaque page et fait passer le LCP d'une page qui n'en utilise aucune de 548 à 912 ms.
+
+Les routes qui peignent déjà du Bodoni et de l'Instrument Sans au-dessus de la ligne de flottaison (pages de texte, blog, édition directe) gardent la paire préchargée de `src/components/direct-edit/fonts.ts`, **inchangée** : leur chargement et leur CLS ne bougent pas (sans cela, le CLS de `/mentions-legales` passait de 0,04 à 0,16, faute de préchargement). Quand toutes les pages auront pris le kit, cette paire part et `preload` passe à `true` ici pour `display` et `body`.
 
 ## Assets
 
@@ -136,13 +138,33 @@ Tous dans `src/components/art/`, en anglais, composants serveur sauf mention. Au
 
 ## Mesures
 
-À la fin du document, remplies au moment de la PR (voir la description de la PR pour les chiffres du jour).
+Faites le 25/10/2026 sur deux builds de production (le `main` du jour et cette branche), servis en local sans base de données (les pages statiques seulement : l'accueil et la recherche lisent la base, ils n'ont pas pu être mesurés), Chromium 390 px, réseau « 4G lente » (1,6 Mb/s, 150 ms), processeur ralenti 4 fois, 8 chargements par page, médiane.
+
+| Mesure | `main` | Cette branche |
+|---|---|---|
+| JavaScript des paquets (`.next/static/chunks`) | 3 839 847 octets, 1 188 495 gzip | 3 839 847 octets, 1 188 492 gzip : **0 octet de plus** (aucune route n'importe encore `MarqueePauseButton`, son poids n'est donc pas mesuré : un composant client de 20 lignes) |
+| CSS du site public | 64 587 octets gzip | **+3 327 octets gzip** (+18 828 octets bruts) : les 13 `@font-face` (1,8 Ko gzip) et le bloc du kit |
+| `<link rel="preload">` de polices | 2 sur les pages de texte, 0 ailleurs | **identique** (la paire préchargée de `direct-edit/fonts.ts` est gardée) |
+| LCP `/classement` (aucune police) | 528 à 572 ms | 556 à 580 ms : dans le bruit, au plus +40 ms (le CSS en plus, qui bloque le rendu) |
+| LCP `/a-propos` (Bodoni) | 808 à 844 ms | 860 à 940 ms (une série à 1 140 ms) : bruit de mesure, mêmes polices, mêmes préchargements |
+| CLS `/a-propos`, `/mentions-legales`, `/cgu` | 0,0414 (0 en série) | 0,0414 (identique) |
+
+Les polices (woff2, sous-ensemble latin, une face n'est téléchargée que si une page l'utilise) : Bodoni Moda romain environ 26 Ko, italique environ 30 Ko, Instrument Sans environ 30 Ko, Pinyon Script environ 28 Ko, soit environ 114 Ko si une page les utilise toutes les quatre.
+
+Deux essais écartés, mesurés sur les mêmes pages :
+
+| Essai | Résultat |
+|---|---|
+| `preload: true` pour Bodoni et Instrument Sans dans le gabarit | `/classement` passe de 548 à 912 ms de LCP (+360 ms) : trois requêtes de polices (86 Ko) de plus sur chaque page |
+| Une seule paire, `preload: false`, sans garder celle de `direct-edit/fonts.ts` | LCP des pages de texte meilleur (le texte se peint avec la police de secours), mais CLS de `/mentions-legales` à 0,157 contre 0,041 |
+
+Le shader WebGL n'a pas pu être vu dans le navigateur de travail (pas de WebGL) : seul le fond statique, qui est celui de repli, a été regardé. Le code du shader est celui du site, inchangé ; sa couleur la plus claire tient 4,57:1 sous du texte blanc (test).
 
 ## Décisions (à valider par le mainteneur)
 
 1. **Marques d'imprimerie à la place des étoiles** (plus, cercle ouvert, point, trait de pinceau), très rares et immobiles.
 2. **Dessins au trait continu et balayages de pinceau à la place des fleurs**, sans rien de botanique.
-3. **Polices : `preload: false`.** Le kit ne coûte rien aux pages qui ne s'en servent pas. À renverser, page par page, pour un titre Bodoni visible dès le chargement.
+3. **Polices : déclarées une fois dans le gabarit, `preload: false`.** Le kit ne coûte rien aux pages qui ne s'en servent pas ; la paire préchargée de `direct-edit/fonts.ts` reste pour les routes qui peignent déjà du Bodoni (sinon : CLS de `/mentions-legales` à 0,16). À renverser quand toutes les pages auront pris le kit.
 4. **`ArtCta` à côté de `Cta`**, pas à la place : treize pages portent `Cta`, elles basculent avec leur page.
 5. **La pince à cils** générée est la moins réussie du lot (lisible, mais proche de ciseaux) : à regénérer (0,08 USD) si elle doit servir en grand.
 6. **Pas de flèches de carrousel** : le défilement par glissement (`scroll-snap`) suffit ; `RoundButton` est prêt si une page en demande.

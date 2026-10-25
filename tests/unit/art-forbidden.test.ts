@@ -105,11 +105,16 @@ describe('the rules of the look', () => {
 		expect(clients).toEqual(['components/art/MarqueePauseButton.tsx'])
 	})
 
-	test('fonts are self-hosted by next/font and loaded once: the public layout sets the variables, no other file loads a face', () => {
+	test('fonts are self-hosted by next/font and declared for the whole site once: the public layout sets the variables, two files load a face', () => {
 		const loaders = files(SRC).filter(
 			path => /\.tsx?$/.test(path) && /from ['"]next\/font\/(google|local)['"]/.test(readFileSync(path, 'utf8'))
 		)
-		expect(loaders.map(path => relative(SRC, path))).toEqual(['components/art/fonts.ts'])
+		// The kit declares the faces once for the whole site; the preloaded pair of the routes that paint Bodoni above the fold
+		// (content pages, blog, edit mode) stays in `direct-edit/fonts.ts`: no other file loads a face.
+		expect(loaders.map(path => relative(SRC, path)).sort()).toEqual([
+			'components/art/fonts.ts',
+			'components/direct-edit/fonts.ts',
+		])
 		const layout = readFileSync(join(SRC, 'app/(front)/layout.tsx'), 'utf8')
 		expect(layout).toContain('FONT_VARIABLES')
 		expect(layout).toMatch(/<html lang="fr" className=\{FONT_VARIABLES\}>/)
