@@ -24,7 +24,7 @@ import {
 	playsFilm,
 } from '@/components/home/film'
 import { ArchFilm, FilmButton, HeroStage } from '@/components/home/HeroFilm'
-import { HERO_STEPS, HomeHero, RIBBON_WORDS } from '@/components/home/HomeHero'
+import { HERO_PILLS, HERO_STEPS, HomeHero, RIBBON_WORDS } from '@/components/home/HomeHero'
 import { SPECIALTY_BULLETS } from '@/lib/specialty'
 import { openWindow } from '../support/dom-react'
 import { mainTitles, sha256, titleFingerprint } from '../support/url-parity'
@@ -53,21 +53,41 @@ describe('le titre : le h1 du site en ligne, au caractère près', () => {
 		expect(text).toBe(ONLINE_H1)
 	})
 
-	test('les deux images du titre sont décoratives, d’une taille donnée, et pèsent moins de 8 Ko', () => {
+	test('les deux images du titre sont décoratives, d’une taille donnée, AVIF puis WebP, et pèsent moins de 8 Ko', async () => {
 		const h1 = /<h1\b[^>]*>([\s\S]*?)<\/h1>/.exec(html)?.[1] ?? ''
-		const pictures = h1.match(/<img\b[^>]*>/g) ?? []
+		const pictures = h1.match(/<picture>[\s\S]*?<\/picture>/g) ?? []
 		expect(pictures).toHaveLength(2)
+		expect(h1.match(/<img\b[^>]*>/g) ?? []).toHaveLength(2)
 		for (const picture of pictures) {
-			expect(picture).toContain('alt=""')
-			expect(picture).toContain('aria-hidden="true"')
-			expect(picture).toMatch(/width="228"/)
-			expect(picture).toMatch(/height="114"/)
-			const src = /src="([^"]+)"/.exec(picture)?.[1] ?? ''
-			expect(src).toMatch(/^\/assets\/accueil\/pilule-[a-z-]+-v\d+\.webp$/)
-			expect(statSync(join(ROOT, 'public', src)).size).toBeLessThan(8 * 1024)
+			const image = /<img\b[^>]*>/.exec(picture)?.[0] ?? ''
+			expect(image).toContain('alt=""')
+			expect(image).toContain('aria-hidden="true"')
+			expect(image).toMatch(/width="342"/)
+			expect(image).toMatch(/height="171"/)
 			// Low priority: React then writes no preload for it in the head, in front of the stylesheets (LCP of P01).
-			expect(picture).toMatch(/fetchpriority="low"/i)
+			expect(image).toMatch(/fetchpriority="low"/i)
+			const webp = /src="([^"]+)"/.exec(image)?.[1] ?? ''
+			const avif = /<source srcSet="([^"]+)" type="image\/avif"\/>/.exec(picture)?.[1] ?? ''
+			expect(picture.indexOf('<source')).toBeLessThan(picture.indexOf('<img'))
+			expect(webp).toMatch(/^\/assets\/accueil\/pilule-[a-z-]+-v1\.webp$/)
+			expect(avif).toBe(webp.replace(/\.webp$/, '.avif'))
+			// The crops of the final render, at three times their size on screen (1.9 × 0.95 em of a 60 px heading).
+			for (const [src, format] of [
+				[webp, 'webp'],
+				[avif, 'heif'],
+			] as const) {
+				expect(statSync(join(ROOT, 'public', src)).size).toBeLessThan(8 * 1024)
+				const meta = await sharp(join(ROOT, 'public', src)).metadata()
+				expect([src, meta.format, meta.width, meta.height]).toEqual([src, format, 342, 171])
+			}
 		}
+		expect(Object.values(HERO_PILLS).map(pill => pill.webp)).toEqual([
+			'/assets/accueil/pilule-levres-v1.webp',
+			'/assets/accueil/pilule-pinceau-v1.webp',
+		])
+		// The drafts (crops of the concept frames) are gone.
+		for (const draft of ['pilule-levres-v0.webp', 'pilule-pinceau-v0.webp'])
+			expect(existsSync(join(ROOT, 'public/assets/accueil', draft))).toBe(false)
 	})
 
 	test('le mot « qui vous correspond » est en italique rouge, et le titre entre par son masque', () => {
@@ -438,12 +458,52 @@ describe('la feuille de style du haut de page', () => {
 })
 
 describe('la police du haut de page', () => {
-	test('une instance à part, en coupe d’affichage avec son italique ; celle de l’édition directe ne change pas', () => {
-		const font = read('src/components/home/hero-font.ts')
-		expect(font).toContain("axes: ['opsz']")
-		expect(font).toContain("style: ['normal', 'italic']")
-		expect(font).toContain("display: 'swap'")
+	const FONTS = 'src/components/home/fonts'
+	const font = read('src/components/home/hero-font.ts')
+
+	test('trois coupes statiques du dépôt, sous-ensembles légers, avec la licence à côté ; celle de l’édition directe ne change pas', () => {
+		expect(font).toContain("from 'next/font/local'")
+		expect(font).not.toContain("from 'next/font/google'")
+		const cuts = [...font.matchAll(/path: '\.\/fonts\/([^']+)', weight: '400', style: '(normal|italic)'/g)].map(
+			([, file, style]) => [file, style]
+		)
+		expect(cuts).toEqual([
+			['bodoni-moda-display-regular.woff2', 'normal'],
+			['bodoni-moda-display-italic.woff2', 'italic'],
+			['bodoni-moda-text-italic.woff2', 'italic'],
+		])
+		// About 100 KB of variable font were preloaded before (LCP of P01): each cut stays small.
+		for (const [file] of cuts) {
+			const bytes = readFileSync(join(ROOT, FONTS, file ?? ''))
+			expect([file, bytes.subarray(0, 4).toString('latin1')]).toEqual([file, 'wOF2'])
+			expect(bytes.length).toBeLessThan(14 * 1024)
+		}
+		expect(read(`${FONTS}/OFL.txt`)).toContain('SIL OPEN FONT LICENSE Version 1.1')
+		expect(read(`${FONTS}/OFL.txt`)).toContain('The Bodoni Moda Project Authors')
 		expect(read('src/components/direct-edit/fonts.ts')).not.toContain('opsz')
-		expect(read('src/components/home/HomeHero.tsx')).toContain('heroSerif.variable')
+	})
+
+	test('chaque coupe a sa variable, change sans attendre et se remplace par un repli serif ajusté ; le haut de page porte les deux', () => {
+		expect(font.match(/display: 'swap'/g)).toHaveLength(2)
+		expect(font.match(/adjustFontFallback: 'Times New Roman'/g)).toHaveLength(2)
+		expect(font).toContain("variable: '--font-hero-serif',")
+		expect(font).toContain("variable: '--font-hero-serif-text',")
+		// Both preloaded: their text is in the first screen of a wide screen, a late swap would move it.
+		expect(font).not.toContain('preload: false')
+		expect(element(html, /<section\b/).slice(0, 120)).toMatch(
+			/^<section class="home-hero --font-hero-serif --font-hero-serif-text"/
+		)
+	})
+
+	test('la feuille de style prend la coupe dans le fichier : aucun réglage d’axe, le bandeau et les numéros en coupe de texte', () => {
+		const css = read('src/app/(front)/globals.css').replace(/\/\*[\s\S]*?\*\//g, '')
+		const block = css.slice(css.indexOf('.home-hero {'), css.indexOf('.article-prose {'))
+		expect(block.length).toBeGreaterThan(1000)
+		expect(block).not.toMatch(/font-variation-settings|font-optical-sizing/)
+		const familyOf = (selector: string) =>
+			new RegExp(`${selector.replace(/[.[\]]/g, '\\$&')} \\{[^}]*font-family: ([^;]+);`).exec(block)?.[1]
+		expect(familyOf('.home-hero-title')).toBe('var(--hero-serif)')
+		expect(familyOf('.home-hero-step-number')).toBe('var(--hero-serif-text)')
+		expect(familyOf('.home-hero-ribbon-list li')).toBe('var(--hero-serif-text)')
 	})
 })

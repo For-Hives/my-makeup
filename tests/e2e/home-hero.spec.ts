@@ -114,6 +114,29 @@ for (const size of [SCREENS.mobile, SCREENS.chromium]) {
 			} else expect(facts.pills).toEqual(['inline-block', 'none'])
 		})
 
+		test('chaque texte en Bodoni est dessiné par sa coupe du dépôt, sans un glyphe de repli', async ({ page }) => {
+			// The cuts are subsets (src/components/home/hero-font.ts): a character left out would be drawn by the fallback
+			// serif, which the computed style does not say. Chromium does: the fonts that drew the text of a node.
+			await page.goto('/')
+			await page.evaluate(() => document.fonts.ready)
+			const cdp = await page.context().newCDPSession(page)
+			await cdp.send('DOM.enable')
+			await cdp.send('CSS.enable')
+			const { root } = await cdp.send('DOM.getDocument', { depth: -1 })
+			const drawnBy = async (selector: string): Promise<string[]> => {
+				const { nodeIds } = await cdp.send('DOM.querySelectorAll', { nodeId: root.nodeId, selector })
+				expect(nodeIds.length, selector).toBeGreaterThan(0)
+				const faces = new Set<string>()
+				for (const nodeId of nodeIds)
+					for (const font of (await cdp.send('CSS.getPlatformFontsForNode', { nodeId })).fonts)
+						faces.add(font.isCustomFont ? font.postScriptName : `repli ${font.familyName}`)
+				return [...faces].sort()
+			}
+			expect(await drawnBy('.home-hero-line')).toEqual(['BodoniModa-96pt', 'BodoniModaItalic-96ptItalic'])
+			expect(await drawnBy('.home-hero-step-number')).toEqual(['BodoniModaItalic-11ptItalic'])
+			expect(await drawnBy('.home-hero-ribbon-list li')).toEqual(['BodoniModaItalic-11ptItalic'])
+		})
+
 		test('les trois lignes sous la recherche : le texte part du même bord, quelle que soit la largeur du numéro', async ({
 			page,
 		}) => {

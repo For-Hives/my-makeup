@@ -4,7 +4,7 @@ import { FilmStill } from './FilmStill'
 import { FILM_SIZE, FILM_STILLS } from './film'
 import { GuidedSearch } from './GuidedSearch'
 import { ArchFilm, FilmButton, HeroStage } from './HeroFilm'
-import { heroSerif } from './hero-font'
+import { heroSerif, heroSerifText } from './hero-font'
 
 /** The three things the platform does for a client, word for word those of the hero of issue 1066. */
 export const HERO_STEPS = [
@@ -42,22 +42,34 @@ function enterOrder(index: 1 | 2): CSSProperties {
 }
 
 /**
+ * The two pictures of the heading: crops of the final render of the film, at three times their size on screen (114 × 57
+ * at 60 px). AVIF first, the WebP as the image of the `<img>`.
+ */
+export const HERO_PILLS = {
+	lips: { avif: '/assets/accueil/pilule-levres-v1.avif', webp: '/assets/accueil/pilule-levres-v1.webp' },
+	brush: { avif: '/assets/accueil/pilule-pinceau-v1.avif', webp: '/assets/accueil/pilule-pinceau-v1.webp' },
+} as const
+
+/**
  * A picture inside the heading: decoration, so it adds no word to the name of the heading. Its size is fixed in em, so
  * it moves nothing when it comes. Low priority: React writes no preload for it in the head, where it would come before
  * the stylesheets and slow down what a phone paints first (the sentence under the heading).
  */
-function Pill({ src, className }: { src: string; className: string }) {
+function Pill({ pill, className }: { pill: (typeof HERO_PILLS)[keyof typeof HERO_PILLS]; className: string }) {
 	return (
-		// biome-ignore lint/performance/noImgElement: a 228 × 114 file made for this size; the image optimizer would add a request for nothing
-		<img
-			src={src}
-			alt=""
-			aria-hidden="true"
-			width={228}
-			height={114}
-			fetchPriority="low"
-			className={`home-hero-pill ${className}`}
-		/>
+		<picture>
+			<source srcSet={pill.avif} type="image/avif" />
+			{/* Files made for this size: the image optimizer would add a request for nothing. */}
+			<img
+				src={pill.webp}
+				alt=""
+				aria-hidden="true"
+				width={342}
+				height={171}
+				fetchPriority="low"
+				className={`home-hero-pill ${className}`}
+			/>
+		</picture>
 	)
 }
 
@@ -86,7 +98,7 @@ function RibbonList({ hidden }: { hidden: boolean }) {
  */
 export function HomeHero() {
 	return (
-		<HeroStage className={`home-hero ${heroSerif.variable}`}>
+		<HeroStage className={`home-hero ${heroSerif.variable} ${heroSerifText.variable}`}>
 			<div className="home-hero-grid">
 				<div className="home-hero-text">
 					<p className="home-hero-eyebrow enter-mask">Maquilleuses professionnelles, partout en France</p>
@@ -95,11 +107,10 @@ export function HomeHero() {
 						{/* The space between the second and the third line is before the first picture: on a phone, where the lines
 						flow, the picture can go to the next line without a space left in front of it. */}
 						<span className="home-hero-line">
-							<em>qui vous correspond</em>{' '}
-							<Pill src="/assets/accueil/pilule-levres-v0.webp" className="home-hero-pill-after" />
+							<em>qui vous correspond</em> <Pill pill={HERO_PILLS.lips} className="home-hero-pill-after" />
 						</span>
 						<span className="home-hero-line">
-							<Pill src="/assets/accueil/pilule-pinceau-v0.webp" className="home-hero-pill-before" />
+							<Pill pill={HERO_PILLS.brush} className="home-hero-pill-before" />
 							n&apos;a jamais été
 						</span>{' '}
 						<span className="home-hero-line">aussi simple</span>

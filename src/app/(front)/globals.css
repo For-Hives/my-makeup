@@ -758,13 +758,16 @@ main:has(> .home-section) {
 
 /*
  * Home hero « en arche » (decision of 25/10/2026, docs/accueil.md, src/components/home/HomeHero.tsx). Ink, lipstick and
- * Bodoni Moda in its display cut (`--font-hero-serif`, set by the hero itself) on the page tone; the sans of the site
- * for the paragraph, the form and the steps. Own block, to ease rebases. Nothing here is translucent through
+ * Bodoni Moda on the page tone: its display cut for the headline (`--font-hero-serif`, `opsz` 96), its text cut for the
+ * ribbon and the numerals of the steps (`--font-hero-serif-text`, `opsz` 11), both static files set by the hero itself
+ * (src/components/home/hero-font.ts): the optical size is in the file, not in `font-variation-settings`. The sans of the
+ * site for the paragraph, the form and the steps. Own block, to ease rebases. Nothing here is translucent through
  * `opacity` (the first screen is never dimmed): a tint is a color with alpha. What moves is in the next block.
  */
 .home-hero {
 	--hero-ivory: #f6efe4;
 	--hero-serif: var(--font-hero-serif), "Bodoni Moda", Didot, Georgia, serif;
+	--hero-serif-text: var(--font-hero-serif-text), "Bodoni Moda", Didot, Georgia, serif;
 	overflow-x: clip;
 	background-color: var(--color-page);
 	color: var(--color-ink);
@@ -810,7 +813,6 @@ main:has(> .home-section) {
 	font-family: var(--hero-serif);
 	font-size: clamp(2.125rem, 2.6vw + 1.2rem, 3.75rem);
 	font-weight: 400;
-	font-variation-settings: "opsz" 96;
 	line-height: 1.12;
 	letter-spacing: -0.015em;
 	text-wrap: pretty;
@@ -875,11 +877,11 @@ main:has(> .home-section) {
 	gap: 0.625rem;
 }
 
-/* One width for i., ii. and iii.: the three texts start from the same edge. */
+/* One width for i., ii. and iii.: the three texts start from the same edge. The text cut: they are 15 px high. */
 .home-hero-step-number {
 	flex: none;
 	min-width: 1.6em;
-	font-family: var(--hero-serif);
+	font-family: var(--hero-serif-text);
 	font-size: 0.9375rem;
 	font-style: italic;
 	line-height: 1.3;
@@ -1009,10 +1011,9 @@ main:has(> .home-section) {
 	display: inline-flex;
 	align-items: center;
 	padding-inline: 1.75rem;
-	font-family: var(--hero-serif);
+	font-family: var(--hero-serif-text);
 	font-size: 1.25rem;
 	font-style: italic;
-	font-variation-settings: "opsz" 11;
 	white-space: nowrap;
 }
 

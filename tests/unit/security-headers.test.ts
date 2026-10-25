@@ -399,7 +399,7 @@ describe('the files of the home hero (decision of 25/10/2026)', () => {
 		for (const pathname of [
 			'/assets/accueil/ombre-nette-intro-v1.hevc.mp4',
 			'/assets/accueil/ombre-nette-fin-v1.avif',
-			'/assets/accueil/pilule-levres-v0.webp',
+			'/assets/accueil/pilule-levres-v1.avif',
 		]) {
 			const sent = await headersSentFor(config, pathname)
 			expect([pathname, sent.get('cache-control')]).toEqual([pathname, 'public, max-age=31536000, immutable'])
