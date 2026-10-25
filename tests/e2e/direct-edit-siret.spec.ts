@@ -119,12 +119,13 @@ for (const size of SIZES) {
 			expect(await violationsSevere(page)).toEqual([])
 			await shot(page, 'explication')
 
-			// A card of the search: a readable text, inside the one link of the card, and no link in the link.
+			// A card of the search: a readable badge, and the name as the one link of the card.
 			await page.goto(`/search?search=${encodeURIComponent(profile.slug.split('-')[0] ?? '')}`)
-			const card = page.locator(`a[href="/profil/${profile.slug}"]`)
+			const card = page.locator('article', { has: page.locator(`a[href="/profil/${profile.slug}"]`) })
 			await expect(card).toBeVisible()
 			await expect(card.getByText(BADGE_LABEL, { exact: true })).toBeVisible()
-			expect(await card.locator('a').count()).toBe(0)
+			// One link on the card (its name, stretched over it): the badge is text, not a link.
+			expect(await card.locator('a').count()).toBe(1)
 			expect(await violationsSevere(page)).toEqual([])
 			expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0)
 			await shot(page, 'badge-carte')

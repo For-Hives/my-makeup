@@ -98,9 +98,7 @@ describe('295 : personne n’est près de la ville tapée', () => {
 				loin={view.far.map(item => item.carte)}
 			/>
 		)
-		expect(html).toContain(
-			'<h1 class="font-bold text-2xl text-gray-800">Personne n’est encore inscrite près de Lyon.</h1>'
-		)
+		expect(html).toMatch(/<h1[^>]*>Personne n’est encore inscrite près de Lyon\.<\/h1>/)
 		expect(html).toContain('href="/auth/signup"')
 		expect(html).toContain('Elles se déplacent loin')
 		expect(html.match(/href="\/profil\//g)).toHaveLength(4)
@@ -131,7 +129,7 @@ describe('295 : quelqu’un est près de la ville tapée', () => {
 		const html = renderToStaticMarkup(<SearchResults vue={view as never} recherche={query} />)
 		const titles = [...html.matchAll(/<h2[^>]*>(.*?)<\/h2>/g)].map(match => match[1])
 		expect(titles).toEqual(['À Annecy-le-Vieux', 'Se déplacent jusqu’à vous', 'Plus loin, à moins de 50 km'])
-		expect(html).not.toContain('sr-only')
+		expect(html).not.toMatch(/<h2[^>]*sr-only/)
 	})
 })
 

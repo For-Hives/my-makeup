@@ -139,7 +139,7 @@ export function ProfileCard({
 				/>
 				{profile.superMaquilleuse && <Pro />}
 			</div>
-			<div className="grid gap-2.5">
+			<div className="grid grid-cols-[minmax(0,1fr)] gap-2.5">
 				<Heading className="font-display font-medium text-[28px] text-ink leading-[1.1]">
 					<NameLink profile={profile} rank={rank}>
 						{profile.nom}
@@ -187,7 +187,7 @@ export function ProfileRowCard({
 				/>
 				{profile.superMaquilleuse && <Pro />}
 			</div>
-			<div className="grid min-w-0 gap-2.5">
+			<div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-2.5">
 				<Heading className="font-display font-medium text-[22px] text-ink leading-[1.1] md:text-[26px]">
 					<NameLink profile={profile} rank={rank}>
 						{profile.nom}

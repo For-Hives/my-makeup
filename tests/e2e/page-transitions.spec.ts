@@ -3,6 +3,7 @@ import { type PageProfile, setPageProfiles } from '../fixtures/page-profiles'
 import { SCREENS } from '../support/e2e'
 import { users } from '../support/lock'
 import { testPayload } from '../support/payload-test'
+import { refreshProfilePages } from '../support/public-pages'
 
 /**
  * The page transition (issue 1087, docs/mouvement.md), end to end, at 390 px and 1440 px: going from the search to a
@@ -64,6 +65,13 @@ test.describe('1087 : transition entre la recherche et une fiche', () => {
 		profiles = await setPageProfiles()
 	})
 
+	// The search keeps the directory in the cache of Next, and its page without a word reads it too (the preset): a spec
+	// that loads profiles with the test process has the application refresh it before it looks for them.
+	test.beforeEach(async ({ request }) => {
+		const first = profiles.values().next().value
+		if (first) await refreshProfilePages(request, { id: first.id, specialite: null })
+	})
+
 	test.afterAll(async () => {
 		test.setTimeout(180_000)
 		if ((await users('profils-de-page', -1)) > 0 || !profiles) return
@@ -90,7 +98,7 @@ test.describe('1087 : transition entre la recherche et une fiche', () => {
 				await page.evaluate(() => {
 					;(window as unknown as { __kept: boolean }).__kept = true
 				})
-				await page.locator('a.card-hover').first().click()
+				await page.locator('article.card-hover').first().click()
 				await page.waitForURL(/\/profil\//)
 				await expect(page.locator('h1').first()).toBeVisible()
 				// Same document: it was not a full load.
@@ -124,7 +132,7 @@ test.describe('1087 : transition entre la recherche et une fiche', () => {
 				// And back to the search: the same, in the other direction.
 				await page.goBack()
 				await page.waitForURL(/\/search/)
-				await expect(page.locator('a.card-hover').first()).toBeVisible()
+				await expect(page.locator('article.card-hover').first()).toBeVisible()
 			})
 
 			test.describe('avec un mouvement réduit', () => {
@@ -133,7 +141,7 @@ test.describe('1087 : transition entre la recherche et une fiche', () => {
 				test('la navigation marche et aucune animation de transition de vue ne joue', async ({ page }) => {
 					await watchTransitions(page)
 					await page.goto('/search?search=Page')
-					await page.locator('a.card-hover').first().click()
+					await page.locator('article.card-hover').first().click()
 					await page.waitForURL(/\/profil\//)
 					await expect(page.locator('h1').first()).toBeVisible()
 					// The browser may start a transition: it ends at once, with nothing played.

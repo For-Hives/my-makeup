@@ -14,9 +14,13 @@ let reference: SearchProfile
 async function checkScreen(page: Page, name: string, info: TestInfo) {
 	const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
 	expect(overflow).toBeLessThanOrEqual(0)
-	const small = await page
-		.locator('main ul li > a')
-		.evaluateAll(links => links.filter(link => link.getBoundingClientRect().height < 44).map(link => link.textContent))
+	// A card is one target: its name link is stretched over the article, so the article is what is measured.
+	const small = await page.locator('main a').evaluateAll(links =>
+		links
+			.filter(link => !link.closest('p'))
+			.filter(link => (link.closest('article') ?? link).getBoundingClientRect().height < 44)
+			.map(link => link.textContent)
+	)
 	expect(small, 'liens plus bas que 44 px').toEqual([])
 	expect(await violationsSevere(page)).toEqual([])
 	await info.attach(`${name}-${info.project.name}`, {

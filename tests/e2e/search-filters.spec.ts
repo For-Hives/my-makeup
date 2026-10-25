@@ -8,9 +8,9 @@ import { testPayload } from '../support/payload-test'
 import { refreshProfilePages } from '../support/public-pages'
 
 /**
- * The filters and the sort of the search (issue 1011), at 390 px and at 1440 px: the form keeps the word
- * and the city, the ceiling and the sort are in the address and survive the pages, an emptied search says
- * the filters did it. On each screen: no horizontal scroll, every control at least 44 px tall, axe finds no
+ * The filters and the sort of the search (issue 1011), at 390 px and at 1440 px: every choice is a link that keeps
+ * the word and the city, the budget, the sort and the layout are in the address and survive the pages, an emptied
+ * search says the filters did it. On each screen: no horizontal scroll, every control at least 44 px tall, axe finds no
  * « serious » or « critical » violation. Set `SCREENSHOT_DIR` to keep the screenshots. All made-up people.
  */
 
@@ -67,7 +67,8 @@ async function checkScreen(page: Page, label: string): Promise<void> {
 	const small = await page.evaluate(() =>
 		[...document.querySelectorAll<HTMLElement>('main a, main button, main select, main summary')]
 			.filter(element => {
-				const box = element.getBoundingClientRect()
+				// A card is one target: its name link is stretched over the article, which is what is measured.
+				const box = (element.closest('article') ?? element).getBoundingClientRect()
 				if (box.width === 0 || box.height === 0) return false
 				if (element.tagName === 'A' && element.closest('p')) return false
 				return box.height < 44
@@ -96,25 +97,55 @@ for (const size of SIZES) {
 	test.describe(`1011 à ${size.width} px`, () => {
 		test.use({ viewport: size })
 
-		test('le prix maximum se choisit, reste dans l’adresse et réduit la liste', async ({ page }) => {
+		test('le budget de l’adresse est lu, signalé, et réduit la liste ; sans prix assez variés, aucune tranche n’est devinée', async ({
+			page,
+		}) => {
 			await page.goto(`/search?search=${WORD}&city=Annecy`)
 			const all = await countOf(page)
 			expect(all).toBeGreaterThan(1)
 			await checkScreen(page, 'recherche')
 			await shot(page, 'recherche')
 
-			await page.getByLabel('Prix de départ').selectOption('50')
-			await page.getByRole('button', { name: 'Appliquer' }).click()
-			await expect(page).toHaveURL(/maxPrice=50/)
-			await expect(page).toHaveURL(new RegExp(`search=${TEST_WORD}`))
-			await expect(page).toHaveURL(/city=Annecy/)
+			// The bench has one starting price for everyone: no band is offered (a cut would be a guess), and a budget
+			// in the address is still read and shown as a choice of its own.
+			await expect(page.getByRole('group', { name: 'Budget' })).toHaveCount(0)
+			await page.goto(`/search?search=${WORD}&city=Annecy&maxPrice=50`)
+			const budget = page.getByRole('group', { name: 'Budget' })
+			await expect(budget.getByRole('link', { name: /^Jusqu’à 50/ })).toHaveAttribute('aria-current', 'true')
 			const filtered = await countOf(page)
 			expect(filtered).toBeGreaterThan(0)
 			expect(filtered).toBeLessThan(all)
-			await expect(page.getByLabel('Prix de départ')).toHaveValue('50')
+			await expect(page).toHaveURL(new RegExp(`search=${TEST_WORD}`))
+			await expect(page).toHaveURL(/city=Annecy/)
 			await expect(page.getByText('sur devis', { exact: false })).toBeVisible()
-			await checkScreen(page, 'filtre de prix')
-			await shot(page, 'filtre-prix')
+			await expect(page.getByRole('link', { name: 'Réinitialiser' })).toBeVisible()
+			await checkScreen(page, 'filtre de budget')
+			await shot(page, 'filtre-budget')
+		})
+
+		test('un budget d’un lien partagé reste visible, se lit dans l’adresse et se retire', async ({ page }) => {
+			await page.goto(`/search?search=${WORD}&city=Annecy&minPrice=7&maxPrice=1234`)
+			await expect(page.getByRole('link', { name: /^De 7 à 1234/ })).toHaveAttribute('aria-current', 'true')
+			await page.getByRole('link', { name: 'Réinitialiser' }).click()
+			await expect(page).toHaveURL(new RegExp(`/search\\?search=${TEST_WORD}&city=Annecy$`))
+		})
+
+		test('la présentation : la liste en cartes en ligne, la grille en cartes verticales, dans l’adresse', async ({
+			page,
+		}) => {
+			await page.goto(`/search?search=${WORD}&city=Annecy`)
+			const all = await countOf(page)
+			await expect(page.locator('[data-profile-row-card]')).toHaveCount(all)
+			await expect(page.locator('[data-profile-card]')).toHaveCount(0)
+			await page.getByRole('link', { name: 'Grille' }).click()
+			await expect(page).toHaveURL(/layout=grid/)
+			await expect(page.locator('[data-profile-card]')).toHaveCount(all)
+			await expect(page.getByRole('link', { name: 'Grille' })).toHaveAttribute('aria-current', 'true')
+			await checkScreen(page, 'grille')
+			await shot(page, 'grille')
+			await page.getByRole('link', { name: 'Liste' }).click()
+			await expect(page).not.toHaveURL(/layout/)
+			await expect(page.locator('[data-profile-row-card]')).toHaveCount(all)
 		})
 
 		test('le tri par prix met le moins cher en premier, sans changer le nombre de résultats', async ({ page }) => {
@@ -122,9 +153,12 @@ for (const size of SIZES) {
 			const all = await countOf(page)
 			await page.goto(`/search?search=${WORD}&city=Annecy&sort=price`)
 			expect(await countOf(page)).toBe(all)
-			await expect(page.getByLabel('Trier par')).toHaveValue('price')
+			await expect(page.getByRole('group', { name: 'Trier par' }).getByRole('link', { name: /bas/ })).toHaveAttribute(
+				'aria-current',
+				'true'
+			)
 			const prices = await page
-				.locator('main a[href^="/profil/"]')
+				.locator('main article')
 				.evaluateAll(cards =>
 					cards.map(card =>
 						Number(/dès\s+(\d[\d\s  ]*)/.exec(card.textContent ?? '')?.[1]?.replace(/\D/g, '') ?? Number.NaN)
@@ -136,7 +170,7 @@ for (const size of SIZES) {
 			const firstSection = await page
 				.locator('section')
 				.first()
-				.locator('a[href^="/profil/"]')
+				.locator('article')
 				.evaluateAll(cards =>
 					cards.map(card =>
 						Number(/dès\s+(\d[\d\s  ]*)/.exec(card.textContent ?? '')?.[1]?.replace(/\D/g, '') ?? Number.NaN)
@@ -153,15 +187,12 @@ for (const size of SIZES) {
 		}) => {
 			await refreshProfilePages(request, { id: specialtyProfile.id, specialite: null })
 			await page.goto(`/search?search=${SPECIALTY_WORD}`)
-			await expect(page.getByLabel('Spécialité')).toBeVisible()
-			await expect(page.getByLabel('Spécialité').locator('option')).toContainText([
-				'Toutes les spécialités',
-				'Cinéma et scène',
-			])
-			await expect(page.getByLabel('Spécialité').locator('option', { hasText: 'Effets spéciaux' })).toHaveCount(0)
+			const group = page.getByRole('group', { name: 'Spécialité' })
+			await expect(group).toBeVisible()
+			await expect(group.getByRole('link', { name: 'Toutes' })).toHaveAttribute('aria-current', 'true')
+			await expect(group.getByRole('link', { name: 'Cinéma et scène' })).toBeVisible()
 
-			await page.getByLabel('Spécialité').selectOption('screenStage')
-			await page.getByRole('button', { name: 'Appliquer' }).click()
+			await group.getByRole('link', { name: 'Cinéma et scène' }).click()
 			await expect(page).toHaveURL(/specialty=screenStage/)
 			await expect(page.locator(`a[href="/profil/${specialtyProfile.slug}"]`)).toBeVisible()
 			await checkScreen(page, 'filtre de spécialité')
@@ -185,10 +216,13 @@ for (const size of SIZES) {
 		test('une valeur inconnue est ignorée : l’adresse d’avant répond comme avant', async ({ page }) => {
 			await page.goto(`/search?search=${WORD}&city=Annecy`)
 			const before = await countOf(page)
-			await page.goto(`/search?search=${WORD}&city=Annecy&maxPrice=999&sort=nimportequoi`)
+			await page.goto(`/search?search=${WORD}&city=Annecy&maxPrice=3&minPrice=abc&layout=mosaic&sort=nimportequoi`)
 			expect(await countOf(page)).toBe(before)
-			await expect(page.getByLabel('Prix de départ')).toHaveValue('')
-			await expect(page.getByLabel('Trier par')).toHaveValue('relevance')
+			await expect(page.getByRole('link', { name: 'Réinitialiser' })).toHaveCount(0)
+			await expect(
+				page.getByRole('group', { name: 'Trier par' }).getByRole('link', { name: 'Pertinence' })
+			).toHaveAttribute('aria-current', 'true')
+			await expect(page.locator('[data-profile-row-card]').first()).toBeVisible()
 		})
 	})
 }

@@ -22,6 +22,13 @@ import { paginate } from '@/lib/search/pagination'
 import { NEARBY_MAX_KM } from '@/lib/search/place'
 import type { ResolvedPlace } from '@/lib/search/place-point'
 import {
+	MOST_VIEWED_MIN_PROFILES,
+	MOST_VIEWED_MIN_VIEWS,
+	orderMostViewed,
+	PRESET_SIZE,
+	selectPreset,
+} from '@/lib/search/preset'
+import {
 	DIRECTORY_SORT,
 	RANKING_EXCLUDED,
 	RANKING_GROUPS,
@@ -244,6 +251,27 @@ const CHECKS: Record<RankingRuleId, () => void> = {
 			artist('bonne', { textes: texts('Mariage') }),
 		]
 		expect(profileBlockCards(directory, { search: 'mariage', limit: 6 }).map(card => card.slug)).toEqual(['bonne'])
+	},
+	preset: () => {
+		const directory = Array.from({ length: 9 }, (_, i) => artist(`p${i + 1}`))
+		const views = new Map(directory.map((profile, i) => [profile.carte.slug, MOST_VIEWED_MIN_VIEWS + i]))
+		// Enough profiles with enough visits: the most visited first, six of them.
+		const ranked = selectPreset(directory, orderMostViewed(views))
+		expect(ranked.kind).toBe('most-viewed')
+		expect(ranked.profiles.map(profile => profile.nom)).toEqual(['p9', 'p8', 'p7', 'p6', 'p5', 'p4'])
+		expect(ranked.profiles).toHaveLength(PRESET_SIZE)
+		// One visit short of the floor, or one profile short of the minimum: the order of the directory, said as such.
+		const short = new Map([...views].slice(0, MOST_VIEWED_MIN_PROFILES - 1))
+		expect(selectPreset(directory, orderMostViewed(short)).kind).toBe('best-ranked')
+		expect(orderMostViewed(new Map([['p1', MOST_VIEWED_MIN_VIEWS - 1]]))).toEqual([])
+		expect(selectPreset(directory, null).profiles.map(profile => profile.nom)).toEqual([
+			'p1',
+			'p2',
+			'p3',
+			'p4',
+			'p5',
+			'p6',
+		])
 	},
 	pages: () => {
 		const all = Array.from({ length: 45 }, (_, i) => i)

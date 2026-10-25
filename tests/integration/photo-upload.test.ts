@@ -24,7 +24,9 @@ type Account = Awaited<ReturnType<typeof createAccount<'maquilleuse'>>>
 
 let spy: Spy
 
-beforeEach(() => {
+beforeEach(async () => {
+	// Objects another file of the shard left behind would be read as this file's own.
+	await emptyStorage()
 	spy = spyStorage()
 })
 

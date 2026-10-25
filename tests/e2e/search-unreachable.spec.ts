@@ -60,7 +60,8 @@ async function checkScreen(page: Page, label: string, targets = true): Promise<v
 	const small = await page.evaluate(() =>
 		[...document.querySelectorAll<HTMLElement>('main a, main button, main summary')]
 			.filter(element => {
-				const box = element.getBoundingClientRect()
+				// A card is one target: its name link is stretched over the article, which is what is measured.
+				const box = (element.closest('article') ?? element).getBoundingClientRect()
 				if (box.width === 0 || box.height === 0) return false
 				if (
 					element.closest('p, li')?.textContent !== element.textContent &&
@@ -100,9 +101,10 @@ for (const size of SIZES) {
 			expect(first).toBeGreaterThanOrEqual(0)
 			expect(last).toBeGreaterThan(first)
 
-			const card = page.locator(`a[href="/profil/${unreachable.slug}"]`)
+			const cardOf = (slug: string) => page.locator('article', { has: page.locator(`a[href="/profil/${slug}"]`) })
+			const card = cardOf(unreachable.slug)
 			await expect(card).toContainText(UNREACHABLE_TEXT)
-			await expect(page.locator(`a[href="/profil/${reachable.slug}"]`)).not.toContainText(UNREACHABLE_TEXT)
+			await expect(cardOf(reachable.slug)).not.toContainText(UNREACHABLE_TEXT)
 			await expect(card.getByRole('button')).toHaveCount(0)
 			await checkScreen(page, 'recherche')
 			await shot(page, 'recherche')

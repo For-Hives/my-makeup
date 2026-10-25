@@ -8,7 +8,15 @@
 
 import { countryByCode } from '../countries'
 import { foreignCountryOf } from '../dashboard/foreign-cities'
-import { applyFilters, DEFAULT_FILTERS, filtersActive, offeredSpecialties, type SearchFilters } from './filters'
+import {
+	applyFilters,
+	DEFAULT_FILTERS,
+	filtersActive,
+	offeredSpecialties,
+	type PriceBand,
+	priceBands,
+	type SearchFilters,
+} from './filters'
 import { resultsTitle, type Search, searchByCity } from './input'
 import type { ProfilesByPlace } from './place'
 import { readPlace, sectionsByPlace } from './place'
@@ -18,6 +26,8 @@ import { farTravellers, find, type SearchableProfile } from './results'
 export interface SearchView<T extends SearchableProfile> {
 	/** The speciality bullets the filter offers: those at least one listed profile chose. */
 	specialties: ReturnType<typeof offeredSpecialties>
+	/** The budgets the filter offers, cut from the real starting prices of the whole directory (none with too few prices). */
+	bands: PriceBand[]
 	/** True when the filters left nobody although the search without them finds someone (issue 1011). */
 	filteredOut: boolean
 	/** What the search without its filters shows: what the measure counts, so that a filter is not a new search. */
@@ -69,7 +79,13 @@ export function buildSearchView<T extends SearchableProfile>(
 ): SearchView<T> {
 	if (filtersActive(filters)) return buildFilteredView(directory, query, place, filters)
 	const view = buildView(directory, query, place, DEFAULT_FILTERS)
-	return { ...view, specialties: offeredSpecialties(directory), filteredOut: false, baselineTotal: view.total }
+	return {
+		...view,
+		specialties: offeredSpecialties(directory),
+		bands: priceBands(directory),
+		filteredOut: false,
+		baselineTotal: view.total,
+	}
 }
 
 /**
@@ -89,6 +105,7 @@ function buildFilteredView<T extends SearchableProfile>(
 	return {
 		...view,
 		specialties: offeredSpecialties(directory),
+		bands: priceBands(directory),
 		filteredOut,
 		baselineTotal: baseline.total,
 		...(filteredOut && { title: NO_MATCH_FOR_FILTERS, far: [], foreignCity: false, foreignCountry: null }),
@@ -103,7 +120,7 @@ function buildView<T extends SearchableProfile>(
 	query: Pick<Search, 'search' | 'city'>,
 	place: ResolvedPlace,
 	filters: SearchFilters
-): Omit<SearchView<T>, 'filteredOut' | 'baselineTotal' | 'specialties'> {
+): Omit<SearchView<T>, 'filteredOut' | 'baselineTotal' | 'specialties' | 'bands'> {
 	const origin = place.genre === 'point' ? { point: place.point, label: place.label } : null
 	const found = find(directory, query, origin, filters)
 	const ranked = found.localTitle !== undefined
