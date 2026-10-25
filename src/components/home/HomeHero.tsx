@@ -34,8 +34,8 @@ function enterOrder(index: 1 | 2): CSSProperties {
 }
 
 /**
- * The picture of the heading: a crop of a frame of the film (the red lips), at three times its size on a wide screen. AVIF
- * first, the WebP as the image of the `<img>`.
+ * The picture of the heading: a crop of a frame of the film (the red lips), 342 × 171, more than twice its size on a wide
+ * screen (131 × 66 at 1440 px). AVIF first, the WebP as the image of the `<img>`.
  */
 export const HERO_PILL = {
 	avif: '/assets/accueil/pilule-levres-v2.avif',
@@ -101,8 +101,8 @@ export function HomeHero() {
 				<div className="home-hero-text">
 					<h1 className="home-hero-title enter-mask">
 						<span className="home-hero-line">Trouvez la maquilleuse</span>{' '}
-						{/* The space between the second and the third line is before the picture: where the lines flow, the picture
-						can go to the next line without a space left in front of it. */}
+						{/* The space between the second and the third line is the one before the picture: the text reads « correspond
+						près », and the picture, decoration, adds nothing to it. */}
 						<span className="home-hero-line">
 							<em>qui vous correspond</em> <Pill />
 						</span>
