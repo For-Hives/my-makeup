@@ -1,23 +1,29 @@
 {
 	"description": "Les notes de version du site, en français : ce qu'une visiteuse ou une maquilleuse peut remarquer. Une note s'ajoute par « bun run notes:add » et attend dans « pending » ; la publication la range sous son numéro, dans « releases ». Voir docs/publication.md.",
-	"pending": [
-		{
-			"id": "le-site-prepare-une-nouvelle-identite-visuelle-plus-edito",
-			"type": "amelioration",
-			"text": "Le site prépare une nouvelle identité visuelle, plus éditoriale et plus douce : elle arrivera page par page, sans changer vos habitudes de recherche."
-		},
-		{
-			"id": "les-pages-d-aide-de-contact-de-zone-et-de-specialite-pren",
-			"type": "amelioration",
-			"text": "Les pages d'aide, de contact, de zone et de spécialité prennent un nouveau style : titres en Bodoni, arches, pastilles et boutons arrondis."
-		},
-		{
-			"id": "le-blog-la-barre-du-haut-et-le-bas-de-page-changent-de-lo",
-			"type": "amelioration",
-			"text": "Le blog, la barre du haut et le bas de page changent de look : des articles avec un dessin de maquillage, des boutons en pilule et un bandeau qui défile, sans que les textes ni les adresses changent."
-		}
-	],
+	"pending": [],
 	"releases": [
+		{
+			"version": "3.0.9",
+			"date": "2026-10-25",
+			"commit": "9703bab06d205dd080672a69040d12ebf98993cf",
+			"notes": [
+				{
+					"id": "le-site-prepare-une-nouvelle-identite-visuelle-plus-edito",
+					"type": "amelioration",
+					"text": "Le site prépare une nouvelle identité visuelle, plus éditoriale et plus douce : elle arrivera page par page, sans changer vos habitudes de recherche."
+				},
+				{
+					"id": "les-pages-d-aide-de-contact-de-zone-et-de-specialite-pren",
+					"type": "amelioration",
+					"text": "Les pages d'aide, de contact, de zone et de spécialité prennent un nouveau style : titres en Bodoni, arches, pastilles et boutons arrondis."
+				},
+				{
+					"id": "le-blog-la-barre-du-haut-et-le-bas-de-page-changent-de-lo",
+					"type": "amelioration",
+					"text": "Le blog, la barre du haut et le bas de page changent de look : des articles avec un dessin de maquillage, des boutons en pilule et un bandeau qui défile, sans que les textes ni les adresses changent."
+				}
+			]
+		},
 		{
 			"version": "3.0.8",
 			"date": "2026-10-25",
