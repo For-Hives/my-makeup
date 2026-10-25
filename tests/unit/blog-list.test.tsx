@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
 import { renderToStaticMarkup } from 'react-dom/server'
+import { BlogPanel } from '../../src/components/art/BlogCard'
+import { blogArt } from '../../src/components/art/blog-art'
 import { ArticleList, articleDate } from '../../src/components/blog/ArticleList'
 import { ArticleOutline } from '../../src/components/blog/ArticleOutline'
 import { ArticleShare } from '../../src/components/blog/ArticleShare'
@@ -122,11 +124,42 @@ describe('Affichage', () => {
 		expect(html).not.toContain('<ul')
 	})
 
-	test('un article sans image a un panneau typographique : la première lettre de son titre', () => {
+	test('un article sans image a un panneau dessiné : un objet de maquillage, jamais une photo', () => {
 		const html = renderToStaticMarkup(<ArticleList articles={[article('un', null, { titre: 'élégance du teint' })]} />)
 
-		expect(html).toContain('>É</span>')
+		expect(html).toMatch(/<div aria-hidden="true" data-tint="[a-z]+" data-panel="true"/)
+		expect(html).toContain('<svg')
 		expect(html).not.toMatch(/<img/)
+		// The first letter of the title is no longer the picture.
+		expect(html).not.toContain('>É</span>')
+	})
+
+	test('les panneaux sont variés mais stables : un même article garde son dessin, des articles différents non', () => {
+		const panel = (slug: string) => renderToStaticMarkup(<BlogPanel slug={slug} />)
+		expect(panel('choisir-sa-maquilleuse')).toBe(panel('choisir-sa-maquilleuse'))
+		const slugs = ['un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit']
+		const looks = new Set(slugs.map(slug => `${blogArt(slug).tint}/${blogArt(slug).object}/${blogArt(slug).side}`))
+		expect(looks.size).toBeGreaterThanOrEqual(5)
+		for (const slug of slugs) expect(blogArt(slug).second).not.toBe(blogArt(slug).object)
+	})
+
+	test('le panneau est du décor : caché aux lecteurs d’écran, sans titre ni texte, sans étincelle ni fleur', () => {
+		const html = renderToStaticMarkup(<BlogPanel slug="un" shape="cover" />)
+		expect(html).not.toContain('<title')
+		expect(html).not.toMatch(/sparkle|flower|twinkle/i)
+		// No text node at all: only tags follow tags.
+		expect(html).not.toMatch(/>[^<]+</)
+	})
+
+	test('le plus récent porte son étiquette, la grille a une tête de section et chaque carte une flèche décorative', () => {
+		const html = renderToStaticMarkup(<ArticleList articles={[article('un', null), article('deux', null)]} />)
+		expect(html).toContain('Dernier article')
+		expect(html).toMatch(/<h2[^>]*id="tous-les-articles"[^>]*>Tous les articles<\/h2>/)
+		expect(html).toContain('aria-labelledby="tous-les-articles"')
+		expect(html).toContain('Lire l&#x27;article')
+		// Three titles at most share the page: the large one, the head of the grid, the one card.
+		expect(html.match(/<h2/g)).toHaveLength(3)
+		expect(renderToStaticMarkup(<ArticleList articles={[article('un', null)]} />)).not.toContain('Tous les articles')
 	})
 
 	test('un texte d’article ne devient jamais du HTML', () => {
@@ -179,6 +212,8 @@ describe('Pied d’article', () => {
 		expect(html).toContain('sharing/share-offsite/?url=https%3A%2F%2Fexample.test%2Fblog%2Fun')
 		expect(html).toContain('sharer.php?u=https%3A%2F%2Fexample.test%2Fblog%2Fun')
 		expect(html.match(/rel="noopener noreferrer"/g)).toHaveLength(2)
+		// Chips and a pill: every target is 44 px high at least.
+		expect(html.match(/min-h-11/g)?.length).toBeGreaterThanOrEqual(4)
 		expect(html).not.toContain('<script')
 	})
 })

@@ -2,7 +2,7 @@
 
 > Vocabulaire : ce que le mainteneur appelle une **pastille** (une image en forme de pilule, posée dans un titre) s'écrit `capsule` dans le code (`CapsuleImage`, `TitleWithCapsules`, `CapsuleFrame`, `.art-capsule`) : `pastille` est un mot français que le contrôle des noms refuse.
 
-Le kit est la base commune des pages : des jetons, des polices, une bibliothèque d'assets et des composants de base, que chaque page applique ensuite. Il vient de la maquette que le mainteneur a validée le 25/10/2026 (éditorial, mode : papier crème, indigo, rose pâle, Bodoni, filets fins). **Application page par page.** Les pages de contenu, de contact, de zone et de talent le portent depuis le 25/10/2026 (voir [`pages-de-contenu.md`](pages-de-contenu.md), « Le kit sur ces pages ») ; l'accueil, la recherche et le blog sont d'autres chantiers.
+Le kit est la base commune des pages : des jetons, des polices, une bibliothèque d'assets et des composants de base, que chaque page applique ensuite. Il vient de la maquette que le mainteneur a validée le 25/10/2026 (éditorial, mode : papier crème, indigo, rose pâle, Bodoni, filets fins). **Application page par page.** Les pages de contenu, de contact, de zone et de talent le portent depuis le 25/10/2026 (voir [`pages-de-contenu.md`](pages-de-contenu.md), « Le kit sur ces pages ») ; le blog (liste et article), les deux boutons de la barre de navigation et le pied de page le portent aussi (voir « Le blog, la barre et le pied de page ») ; l'accueil et la recherche sont d'autres chantiers.
 
 Le code est dans `src/components/art/`. Les jetons et les quelques règles de feuille de style sont dans **un seul bloc** de `src/app/(front)/globals.css`, nommé « ART DIRECTION KIT ». Les règles de mouvement sont celles de [`mouvement.md`](mouvement.md), la barre de navigation celle de [`navbar.md`](navbar.md).
 
@@ -129,11 +129,25 @@ Tous dans `src/components/art/`, en anglais, composants serveur sauf mention. Au
 4. Pas d'image pour un texte : les articles n'ont pas de photo, les cartes de blog dessinent un objet.
 5. Avant de fusionner : un test de la page, une capture à 390 px, et si le titre au-dessus de la ligne de flottaison est en Bodoni, la mesure du LCP (`preload`, voir « Polices »).
 
+## Le blog, la barre et le pied de page
+
+- **Le panneau d'un article** (`BlogPanel`, dans `BlogCard.tsx`, choix dans `blog-art.ts` par `blogArt(slug)`) : une teinte, un liseré, une arche, un objet de maquillage incliné et un second plus petit à côté, deux marques d'imprimerie, une lueur diffuse, et pour les grands formats (`feature`, `cover`) un dessin au trait. Tout vient du `slug` : une liste variée, et un article qui garde son dessin de la liste à sa page (le même panneau couvre le haut de l'article). Aucune photo, aucun texte, décor caché aux lecteurs d'écran.
+- **Liste** (`ArticleList`) : le dernier article en `BlogCard variant="feature"` avec l'étiquette « Dernier article », une `SectionHead` (« 02 — Le blog », « Tous les articles »), la grille de cartes dans des `<li className="reveal">`, une bannière `MarqueeBanner variant="blush"` sous le titre (les sujets de la phrase d'introduction), une arche avec un pinceau au bord du titre (ordinateur seulement), des lueurs. `ArticleCard.tsx` est supprimé.
+- **Article** : la colonne de lecture de 42 rem (`.article-prose`), le sommaire, les données structurées, les textes et les adresses sont **inchangés** ; fond papier, lueurs, lien de retour et pied de partage en pilule et puces (`Pill`, `Chip`), « À lire aussi » en `SectionHead` et `BlogCard`.
+- **Barre** : voir [`navbar.md`](navbar.md). `pillClassName` vit désormais dans `pill-class.ts` (sans import, ré-exporté par `Pill`), `SwirlEllipse` dans `SwirlEllipse.tsx` (ré-exporté par `graphics`).
+- **Pied de page** (`Footer`, serveur, sans bannière ni script : la bannière ajouterait son bouton client à chaque page) : papier, filet à plus fin, réseaux en pastilles rondes de 44 px, colonnes avec titre en Bodoni et liens de 44 px, un dessin au trait (`hand-brush`) et une lueur. Les liens et les textes sont ceux du site.
+
+### Deux pièges mesurés en passant (CLS)
+
+- **Un mot coloré ou italique dans un `h1` à masque d'entrée** (`.enter-mask` + `TitleAccent`) fait compter un décalage de mise en page (0,0005 : le rectangle du nœud de texte suit le `clip-path` qui s'ouvre). Le titre du blog reste donc un seul texte, sans accent. Une page qui veut un accent dans son `h1` doit mesurer son CLS (`tests/e2e/motion.spec.ts`).
+- **La bannière `band` (cursive Pinyon Script, `preload: false`)** décale ses éléments quand la police arrive (0,003 à 1440 px) : sa largeur change sous un défilement déjà lancé. La liste du blog prend la variante `blush` (Bodoni, déjà préchargé par la route) ; la variante `band` demande de précharger la cursive sur sa route.
+
 ## Tests
 
 - `tests/unit/art-tokens.test.ts` : un seul bloc de jetons, tous préfixés `art-`, ceux du site intacts, pas de rouge à lèvres dans le kit, 16 contrastes à 4,5:1 au moins.
 - `tests/unit/art-components.test.tsx` : le rendu de chaque composant (balisage, nom accessible, cible de 44 px, focus, décor `aria-hidden`), la bannière (une lecture, pause, mouvement réduit), les cartes (mêmes données et mêmes règles que celles de la recherche), l'invitation à l'action.
 - `tests/unit/art-forbidden.test.ts` : aucun fichier, import, classe ni nom d'étincelle ou de fleur ; ni rebond ni néon ; un seul composant client ; les polices chargées une fois, par `next/font`.
+- `tests/unit/blog-list.test.tsx` (panneaux variés et stables, tête de section), `tests/unit/footer.test.tsx` (liens gardés, cibles de 44 px, décor caché).
 - `tests/unit/public-client-graph.test.ts` suit désormais `components/art` : rien d'interdit n'arrive à un visiteur.
 
 ## Mesures

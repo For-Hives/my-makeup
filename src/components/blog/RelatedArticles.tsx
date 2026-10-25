@@ -1,5 +1,6 @@
+import { BlogCard } from '@/components/art/BlogCard'
+import { SectionHead } from '@/components/art/SectionHead'
 import type { ListedArticle } from '@/services/public/article-list'
-import { ArticleCard } from './ArticleCard'
 
 /** How many other articles the foot of an article suggests. */
 export const RELATED_COUNT = 3
@@ -17,12 +18,12 @@ export function RelatedArticles({ articles }: { articles: readonly ListedArticle
 	if (articles.length === 0) return null
 	return (
 		<section aria-labelledby="a-lire-aussi" data-testid="articles-lies" className="mt-20 md:mt-28">
-			<h2 id="a-lire-aussi" className="font-display font-medium text-3xl text-gray-900 tracking-tight">
-				À lire aussi
-			</h2>
-			<ul className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-3">
+			<SectionHead variant="left" eyebrow="Le blog" title="À lire aussi" id="a-lire-aussi" />
+			<ul className="mt-10 grid grid-cols-1 gap-x-8 gap-y-12 md:grid-cols-3">
 				{articles.map(article => (
-					<ArticleCard key={article.slug} article={article} level={3} />
+					<li key={article.slug} className="reveal">
+						<BlogCard article={article} headingLevel={3} />
+					</li>
 				))}
 			</ul>
 		</section>

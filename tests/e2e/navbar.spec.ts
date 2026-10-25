@@ -71,6 +71,22 @@ test.describe('Barre de navigation, sur ordinateur', () => {
 		expect(await blog.evaluate(element => getComputedStyle(element).color)).not.toBe(colorBefore)
 	})
 
+	test('la page courante est entourée d’une ellipse, sans trait en plus, et les deux boutons sont des pilules de 44 px', async ({
+		page,
+	}) => {
+		await page.goto('/blog')
+		const blog = nav(page).getByRole('link', { name: 'Blog', exact: true })
+		await expect(blog).toHaveAttribute('aria-current', 'page')
+		await expect(blog.locator('svg')).toHaveCount(1)
+		expect(await blog.evaluate(element => getComputedStyle(element, '::after').content)).toBe('none')
+		for (const name of ['Trouver une maquilleuse', 'Me connecter']) {
+			const link = nav(page).getByRole('link', { name, exact: true })
+			const box = await link.boundingBox()
+			expect(box?.height, name).toBeGreaterThanOrEqual(44)
+			expect(await link.evaluate(element => getComputedStyle(element).borderTopLeftRadius), name).not.toBe('8px')
+		}
+	})
+
 	test('la transition du survol dure 200 ms avec le mouvement permis', async ({ page }) => {
 		const { duration } = await underlineOf(page, 'Blog')
 		expect(duration).toContain('0.2s')
