@@ -31,6 +31,8 @@ export type TitleSegment =
 const SIZE = {
 	section: 'text-4xl md:text-5xl lg:text-6xl',
 	hero: 'text-[2.4rem] sm:text-5xl lg:text-7xl',
+	/** A block title inside a column (an h3 beside a photo). */
+	card: 'text-3xl md:text-4xl',
 } as const
 
 /**

@@ -449,9 +449,12 @@ describe('the call to action of the kit', () => {
 	})
 
 	test('is bigger and airier than the site call to action', () => {
-		const old = readFileSync(join(ROOT, 'src/components/blocks/Cta.tsx'), 'utf8')
-		expect(old).toContain('py-12 shadow-lg sm:px-14 sm:py-16')
-		expect(cta).toContain('md:py-32')
+		// The shared block of the site (13 pages) now is this one: it only gives it its words and its two measured links.
+		const shared = readFileSync(join(ROOT, 'src/components/blocks/Cta.tsx'), 'utf8')
+		expect(shared).toContain('<ArtCta')
+		expect(shared).not.toContain('CtaBackdrop')
+		expect(cta).toContain('md:py-44')
+		expect(cta).toContain('md:py-36')
 		expect(cta).toContain('md:px-24')
 		expect(cta).toContain('max-w-6xl')
 	})
