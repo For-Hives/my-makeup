@@ -33,6 +33,7 @@ My Makeup est un annuaire de maquilleuses professionnelles indépendantes. Cette
 | toucher la mise en page des pages de texte du site public (guides, À propos, « Pourquoi… », contact, pages légales) | [`docs/pages-de-contenu.md`](docs/pages-de-contenu.md) |
 | toucher au mouvement du site (apparitions, survols, jetons de durée et de courbe, mouvement réduit) | [`docs/mouvement.md`](docs/mouvement.md) |
 | toucher la barre de navigation du site public (entrées, menus déroulants, survol, clavier, « Me connecter ») | [`docs/navbar.md`](docs/navbar.md) |
+| appliquer la direction artistique du site public à une page (jetons `art-`, polices, dessins, cartes, bannière, invitation à l'action ; interdits : étoiles, fleurs, rebond, néon) | [`docs/direction-artistique.md`](docs/direction-artistique.md) |
 | faire autrement que le site en ligne | [`docs/migration/CHANGEMENTS-VOULUS.md`](docs/migration/CHANGEMENTS-VOULUS.md) |
 | jouer la bascule, ou savoir quoi faire à chaque étape du jour J et du retour arrière | [`docs/migration/BASCULE.md`](docs/migration/BASCULE.md) |
 | savoir ce qui est déjà fait et vérifié | [`docs/migration/JOURNAL.md`](docs/migration/JOURNAL.md) |
@@ -209,6 +210,7 @@ Le même mot français a le même mot anglais partout (source : `PLAN-ANGLAIS.md
 | modèle (de prestation) / médiane (des prix) | `OfferModel` (`src/lib/price-median.ts`) / `median` | prestation phare / noms de départ (du profil) | `flagship` (`flagship-offer.ts`) / `initialNames` |
 | mise en avant (accueil) / sélection | `featured` (`src/lib/profile/featured.ts`) / `selection` | vérifiée (case d'un admin, réserve de la mise en avant) / candidats (du tirage) | `verified` (`src/lib/profile/verified.ts`) / `candidates` |
 | annuaire public des entreprises (l'API « Recherche d'entreprises », jamais `directory`, pris par la liste des profils) / établissement | `businessRegistry` (`src/lib/activity/registry.ts`) / `establishment` | contrôle d'activité (du SIRET) / cessée | `activityCheck` (dossier `src/lib/activity`) / `ceased` |
+| pastille (image en pilule dans un titre) / carte en arche | `capsule` (`CapsuleImage`, dossier `src/components/art`) / `ArchImage` |
 
 ## Pièges
 
