@@ -3,6 +3,7 @@ import { type PageProfile, setPageProfiles } from '../fixtures/page-profiles'
 import { SCREENS } from '../support/e2e'
 import { users } from '../support/lock'
 import { testPayload } from '../support/payload-test'
+import { refreshProfilePages } from '../support/public-pages'
 
 /**
  * The page transition (issue 1087, docs/mouvement.md), end to end, at 390 px and 1440 px: going from the search to a
@@ -58,10 +59,15 @@ test.describe('1087 : transition entre la recherche et une fiche', () => {
 
 	test.describe.configure({ mode: 'serial' })
 
-	test.beforeAll(async () => {
+	test.beforeAll(async ({ request }) => {
 		test.setTimeout(180_000)
 		await users('profils-de-page', 1)
 		profiles = await setPageProfiles()
+		// The search keeps its directory in the cache of Next: have the application refresh it now that the profiles are
+		// there, or it lists what an earlier spec of the shard cached before ("Aucun résultat pour Page").
+		const reference = profiles.get('reference')
+		if (reference)
+			await refreshProfilePages(request, { id: reference.id, specialite: reference.type.profil.specialty ?? null })
 	})
 
 	test.afterAll(async () => {
