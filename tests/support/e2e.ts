@@ -333,11 +333,38 @@ export interface PlaywrightPhases {
 }
 
 /**
+ * The shard of the job that plays the first shard of each run alone, when the tests are sharded (`--shard=k/n`, the
+ * CI). Playwright gives the first tests of a run to its first shard, and the first test of each run alone is its long
+ * one: the crawl of 40 addresses at two widths (1.5 to 1.9 min on one worker) and the real import (about 20 s, after its
+ * own start of the application). Shard 1 of the job used to carry both on top of its fifth of the other tests, about
+ * 2 min more than any other: on a slow runner it met the 10 min limit of its job (main at 0d532e9a, and twice on PR
+ * #1117 on 25/10/2026, cancelled in the crawl, at the import or just after it), while shards 3 and 4, the shortest of
+ * the eight runs read then (5.3 to 7.2 min), ended 2 to 4 min before it. The crawl now goes to shard 4, the import to
+ * shard 3.
+ */
+export const ALONE_RUN_FIRST_SHARD = { crawl: 4, finale: 3 } as const
+
+/**
+ * `--shard=k/n` of the job, as the shard of a run alone whose first shard is played by shard `first` of the job: `first`
+ * plays 1, `first + 1` plays 2, and so on around, so each of the n shards still plays exactly one. Any other argument,
+ * and a shard count smaller than `first`, are given back as they are.
+ */
+export function aloneRunShard(argument: string, first: number): string {
+	const match = /^--shard=(\d+)\/(\d+)$/.exec(argument)
+	const current = Number(match?.[1])
+	const total = Number(match?.[2])
+	if (!match || total < first || current < 1 || current > total) return argument
+	return `--shard=${((current - first + total) % total) + 1}/${total}`
+}
+
+/**
  * Splits what was asked for (`bun run test:e2e …`) into the runs of `playwright test`. Everything goes through as
  * it is, a file like an option (`--shard`, `--workers`, `-g`), except the projects, which each run takes for itself:
  * the first one plays `chromium` and `mobile`, the second plays `crawl-alone`, the third plays `import-final`
  * (TEST_CRAWL_PROJECT, TEST_ONLY_PROJECT). Asked for nothing, all three run; `--project=mobile` runs the first one
- * only; `--project=crawl-alone` the second one only; `--project=import-final` the third one only.
+ * only; `--project=crawl-alone` the second one only; `--project=import-final` the third one only. A shard given as
+ * `--shard=k/n` is moved around for the two runs alone (ALONE_RUN_FIRST_SHARD), so that their long first test does
+ * not land on the shard of the job that plays the first shard of the other tests.
  *
  * Each run passes when it finds no test: a file, a title or a shard that belongs to another run leaves this one empty.
  * The second and the third read their results on screen and keep their traces in a folder of their own, so that they
@@ -358,7 +385,12 @@ export function playwrightPhases(demandes: readonly string[]): PlaywrightPhases 
 	const main = projects.length === 0 ? ['chromium', 'mobile'] : screen
 	const aloneRun = (project: string, folder: string): string[] => [
 		'test',
-		...rest,
+		...rest.map(argument =>
+			aloneRunShard(
+				argument,
+				project === TEST_CRAWL_PROJECT ? ALONE_RUN_FIRST_SHARD.crawl : ALONE_RUN_FIRST_SHARD.finale
+			)
+		),
 		`--project=${project}`,
 		'--pass-with-no-tests',
 		'--reporter=list',
