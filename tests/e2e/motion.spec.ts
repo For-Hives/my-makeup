@@ -76,6 +76,8 @@ async function dimmedOnFirstScreen(page: Page): Promise<string[]> {
 		for (const element of document.body.querySelectorAll('*')) {
 			const box = element.getBoundingClientRect()
 			if (box.height === 0 || box.top >= innerHeight || box.bottom <= 0) continue
+			// A glow of the kit is a translucent light on purpose (decoration, never text): it is not a block that waits.
+			if (element.closest('.art-glow')) continue
 			for (let node: Element | null = element; node; node = node.parentElement)
 				if (Number(getComputedStyle(node).opacity) < 1 && getComputedStyle(node).display !== 'none') {
 					dimmed.push(`${element.tagName.toLowerCase()}.${String(element.className).slice(0, 40)}`)
