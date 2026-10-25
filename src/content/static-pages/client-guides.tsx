@@ -1,3 +1,4 @@
+import { TitleAccent } from '@/components/art/TitleWithCapsules'
 import type { GuideContent } from '@/components/static-pages/ClientGuide'
 
 /**
@@ -8,10 +9,12 @@ import type { GuideContent } from '@/components/static-pages/ClientGuide'
 
 export const GUIDE_FIND_AN_ARTIST: GuideContent = {
 	image: '/assets/back/maquilleuse_africaine_white.webp',
+	tint: 'blush',
+	band: 'band',
 	titre: (
 		<>
 			Trouver une maquilleuse, avec&nbsp;
-			<span className="text-indigo-900">My&nbsp;Makeup</span>
+			<TitleAccent>My&nbsp;Makeup</TitleAccent>
 			&nbsp;ça n&apos;a jamais été aussi simple !
 		</>
 	),
@@ -50,11 +53,13 @@ export const GUIDE_FIND_AN_ARTIST: GuideContent = {
 }
 
 export const GUIDE_GATHER_SEARCHES: GuideContent = {
-	image: '/assets/back/maquilleuse_africaine_white.webp',
+	image: '/assets/back/maquilleuse_metisse_white.webp',
+	tint: 'lavender',
+	band: 'rose',
 	titre: (
 		<>
 			Centraliser ses recherches avec&nbsp;
-			<span className="text-indigo-900">My&nbsp;Makeup</span>
+			<TitleAccent>My&nbsp;Makeup</TitleAccent>
 			&nbsp;ça n&apos;a jamais été aussi simple !
 		</>
 	),
@@ -98,11 +103,13 @@ export const GUIDE_GATHER_SEARCHES: GuideContent = {
 }
 
 export const GUIDE_EXPLORE_PROFILES: GuideContent = {
-	image: '/assets/back/maquilleuse_africaine_white.webp',
+	image: '/assets/back/maquilleuse_europeenne_white.webp',
+	tint: 'sand',
+	band: 'night',
 	titre: (
 		<>
 			Explorer les profils avec&nbsp;
-			<span className="text-indigo-900">My&nbsp;Makeup</span>
+			<TitleAccent>My&nbsp;Makeup</TitleAccent>
 			&nbsp;ça n&apos;a jamais été aussi simple !
 		</>
 	),
@@ -147,10 +154,12 @@ export const GUIDE_EXPLORE_PROFILES: GuideContent = {
 
 export const GUIDE_CLIENT_SOLUTIONS: GuideContent = {
 	image: '/assets/back/maquilleuse_asiatique_white.webp',
+	tint: 'rose',
+	band: 'band',
 	titre: (
 		<>
 			Trouvez Votre Maquilleuse Idéale avec&nbsp;
-			<span className="text-indigo-900">My&nbsp;Makeup&nbsp;</span>
+			<TitleAccent>My&nbsp;Makeup&nbsp;</TitleAccent>
 			La solution de vos rêves&nbsp;!
 		</>
 	),

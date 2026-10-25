@@ -23,3 +23,20 @@ Tout est dans `src/components/static-pages/`, une brique pour chaque besoin :
 - **Mouvement.** Les blocs portent `.reveal` (voir `docs/mouvement.md`) ; aucune animation n'est déclarée dans ce bloc.
 - **Polices.** `next/font` ne s'exécute pas sous `bun test` : `tests/support/preload-fonts.ts` (chargé par `bunfig.toml`) les remplace par des objets simples. Ce que font les vraies polices (échange, repli à la même taille) est mesuré en navigateur : `tests/e2e/content-pages.spec.ts` (décalage de mise en page sous 0,005, comme « Mon espace »).
 - **Sans emoji nouveau, sans photo, sans chiffre inventé.** Les accents sont des pastilles, des filets et des chiffres d'ordre.
+
+## Le kit sur ces pages (issue 1111, 25/10/2026)
+
+Les pages de contenu portent maintenant la direction artistique ([`direction-artistique.md`](direction-artistique.md)) : `ArtPage` (fond papier, mêmes deux polices préchargées que `ContentPage`, qui reste celle des pages légales : leurs mots et leur HTML ne bougent pas), `PageHead` (le `Hero` reste à l'accueil), `ProfileGrid` (cartes en arche pour les zones et les talents, mêmes règles que `ProfileBlock`, qui reste sous les articles du blog). `<Cta />` est inchangé sur chaque page.
+
+| Famille | Pages | Disposition du kit |
+|---|---|---|
+| Guides du particulier | trouver une maquilleuse, centraliser ses recherches, explorer les profils, solutions pour les particuliers | tête A (arche à droite, une illustration et une teinte par guide) puis E (étapes en pastilles numérotées sur un filet, dans un cadre blanc) |
+| « Pourquoi… » | maquilleuse, particulier | tête centrée avec une pastille dans le titre, puis B (arches étagées, un objet dessiné par avantage ; un jeu d'objets, de teintes et de bandes par page), bannière script (maquilleuse) ou rose (particulier) |
+| Pages pour les maquilleuses | partenariats, solutions pour les maquilleuses | tête A inversée (arche à gauche), parties en lignes à pastille ronde, bannière « filets » ou rose qui reprend les titres des parties |
+| À propos | `/a-propos` | tête centrée, puis D (énoncé en Bodoni entre deux arches, sans guillemets : ce n'est pas une citation), quatre cartes teintées, bannière script |
+| Contact | `/contact` | formulaire en champs arrondis dans un cadre, puis F version données réelles : les quatre adresses de l'équipe en Bodoni entre des filets |
+| Remerciement | `/demande-envoyee` | tête centrée, une petite arche, une pilule |
+| Zone | `/maquilleuses/<département>` | bande C (le vrai nombre de maquilleuses en grand sur indigo) puis grille de cartes en arche |
+| Talent | `/talent/<slug>` | tête A (illustration choisie par le slug) puis texte dans un cadre blanc, cartes en arche |
+
+Règles : aucun mot nouveau ; les pastilles, objets et dessins sont décoratifs (`aria-hidden`) ; pas de témoignage, de chiffre ni de nom de presse inventés (les dispositions C et F du kit n'emploient que des données réelles, D que le texte de la page) ; les emplacements d'illustration à remplacer par de futurs portraits sont les arches de `AboutArticle`, de `/demande-envoyee` et l'argument `image` de `PageHead` (`pickIllustration` pour les talents). Les bannières sont sous la ligne de flottaison (la police script n'est pas préchargée). L'ordre des lignes de `tests/fixtures/content-pages-text.json` : la recherche des guides vient après la description et non avant le titre.

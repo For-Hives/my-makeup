@@ -1,9 +1,11 @@
 import type { Metadata } from 'next'
+import { MarqueeBanner } from '@/components/art/MarqueeBanner'
+import { TitleAccent } from '@/components/art/TitleWithCapsules'
 import { Cta } from '@/components/blocks/Cta'
-import { Hero } from '@/components/blocks/Hero'
+import { ArtPage } from '@/components/static-pages/ArtPage'
 import { ARTIST_SOLUTIONS } from '@/components/static-pages/artist-texts'
-import { ContentPage } from '@/components/static-pages/EditorialArticle'
-import { PageArticle } from '@/components/static-pages/PageArticle'
+import { PageArticle, partTitles } from '@/components/static-pages/PageArticle'
+import { PageHead } from '@/components/static-pages/PageHead'
 import { pageMetadata } from '@/lib/seo/metadata'
 
 export const metadata: Metadata = pageMetadata({
@@ -14,24 +16,32 @@ export const metadata: Metadata = pageMetadata({
 	chemin: '/solutions/pour-les-maquilleuses',
 })
 
+/** Family « maquilleuse »: the arch on the left of the head (layout A, mirrored), then rows with a capsule each, and a pink banner of the parts' own titles. */
 export default function ArtistSolutionsPage() {
 	return (
-		<ContentPage>
-			<Hero
+		<ArtPage>
+			<PageHead
+				mirrored
 				image="/assets/back/maquilleuse_asiatique_white.webp"
-				titre={
+				tint="rose"
+				band="night"
+				mark="ring"
+				glow="indigo"
+				title={
 					<>
 						Développez Votre Carrière de Maquilleuse avec&nbsp;
-						<span className="text-indigo-900">My&nbsp;Makeup&nbsp;</span>
+						<TitleAccent>My&nbsp;Makeup&nbsp;</TitleAccent>
 						La solution de vos rêves&nbsp;!
 					</>
 				}
 				description="Découvrez comment My-Makeup peut aider les maquilleuses professionnelles à présenter leur travail et à se faire connaître des particuliers qui cherchent une maquilleuse, gratuitement."
-				recherche={false}
-				inscription
+				signUp
 			/>
 			<PageArticle eyebrow="Solutions" contenu={ARTIST_SOLUTIONS} />
+			<div className="pb-16 md:pb-24">
+				<MarqueeBanner variant="blush" label="Les points de la page" items={partTitles(ARTIST_SOLUTIONS)} />
+			</div>
 			<Cta />
-		</ContentPage>
+		</ArtPage>
 	)
 }

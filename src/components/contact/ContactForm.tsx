@@ -20,7 +20,7 @@ export type ContactAction = (precedent: ContactState, formulaire: FormData) => P
 export type TrackContact = (nom: 'platform_contact_submit', proprietes: { ok: boolean; status: number }) => unknown
 
 const FIELD =
-	'block min-h-11 w-full rounded-md border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-600 sm:text-sm sm:leading-6'
+	'block min-h-12 w-full rounded-art-field border-0 bg-art-paper px-5 py-3 text-base text-ink ring-1 ring-inset ring-art-line placeholder:text-mute focus:ring-2 focus:ring-inset focus:ring-indigo-700 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-600'
 
 const LABELS: Record<ContactField, string> = {
 	prenom: 'Prénom',
@@ -80,7 +80,7 @@ function Field({
 }) {
 	return (
 		<div className={large ? 'sm:col-span-2' : undefined}>
-			<label htmlFor={champ} className="block font-semibold text-gray-900 text-sm leading-6">
+			<label htmlFor={champ} className="block font-semibold text-ink text-sm leading-6">
 				{LABELS[champ]}
 			</label>
 			<div className="mt-2.5">
@@ -146,7 +146,7 @@ export function ContactForm({
 			<p
 				role="status"
 				data-testid="contact-envoye"
-				className="mx-auto my-32 max-w-xl rounded-md bg-green-50 p-4 text-center font-semibold text-green-900 text-sm"
+				className="mx-auto mt-12 max-w-xl rounded-art-field bg-green-50 p-5 text-center font-semibold text-green-900 text-sm"
 			>
 				{MESSAGE_SENT}
 			</p>
@@ -171,7 +171,7 @@ export function ContactForm({
 				if (lock.current) evenement.preventDefault()
 				else lock.current = true
 			}}
-			className="relative mx-auto my-32 max-w-xl px-4 sm:mt-20 md:px-0"
+			className="relative mx-auto mt-12 max-w-xl"
 		>
 			<div key={generation} className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2">
 				<Field champ="prenom" large={false} erreur={errors?.prenom}>
@@ -190,7 +190,7 @@ export function ContactForm({
 					<textarea rows={4} {...properties('message')} />
 				</Field>
 				<div className="sm:col-span-2">
-					<p className="text-gray-600 text-sm leading-6">
+					<p className="text-mute text-sm leading-6">
 						En envoyant votre message, vous acceptez notre{' '}
 						<a href="/politique-de-confidentialite" className="font-semibold">
 							politique&nbsp;de&nbsp;confidentialité.
@@ -230,7 +230,7 @@ export function ContactForm({
 					type="submit"
 					disabled={pending}
 					aria-busy={pending}
-					className="block min-h-11 w-full rounded-md bg-indigo-900 px-3.5 py-2.5 text-center font-semibold text-sm text-white shadow-sm hover:bg-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-900 focus-visible:outline-offset-2 disabled:cursor-wait disabled:opacity-60"
+					className="block min-h-13 w-full rounded-full border border-indigo-700 bg-indigo-700 px-7 py-3 text-center font-medium text-base text-white hover:border-indigo-900 hover:bg-indigo-900 focus-visible:outline-2 focus-visible:outline-indigo-700 focus-visible:outline-offset-4 disabled:cursor-wait disabled:opacity-60"
 				>
 					{pending ? 'Envoi…' : 'Envoyer l’email'}
 				</button>

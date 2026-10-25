@@ -5,6 +5,11 @@
 			"id": "le-site-prepare-une-nouvelle-identite-visuelle-plus-edito",
 			"type": "amelioration",
 			"text": "Le site prépare une nouvelle identité visuelle, plus éditoriale et plus douce : elle arrivera page par page, sans changer vos habitudes de recherche."
+		},
+		{
+			"id": "les-pages-d-aide-de-contact-de-zone-et-de-specialite-pren",
+			"type": "amelioration",
+			"text": "Les pages d'aide, de contact, de zone et de spécialité prennent un nouveau style : titres en Bodoni, arches, pastilles et boutons arrondis."
 		}
 	],
 	"releases": [
