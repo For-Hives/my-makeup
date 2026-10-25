@@ -784,9 +784,10 @@ main:has(> .home-section) {
 	padding-bottom: 0.5rem;
 }
 
+/* The hairline sits on the middle of the first line (half the line height), also when the eyebrow wraps on a phone. */
 .home-hero-eyebrow {
 	display: flex;
-	align-items: center;
+	align-items: flex-start;
 	gap: 0.875rem;
 	margin-bottom: 1.25rem;
 	font-size: 0.6875rem;
@@ -800,9 +801,11 @@ main:has(> .home-section) {
 	content: "";
 	flex: 0 0 2.5rem;
 	height: 1px;
+	margin-top: 0.675em;
 	background-color: var(--color-ink);
 }
 
+/* `pretty`: on a narrow phone the last line keeps two words, not « simple » alone. From 640 px each line is nowrap. */
 .home-hero-title {
 	font-family: var(--hero-serif);
 	font-size: clamp(2.125rem, 2.6vw + 1.2rem, 3.75rem);
@@ -810,6 +813,7 @@ main:has(> .home-section) {
 	font-variation-settings: "opsz" 96;
 	line-height: 1.12;
 	letter-spacing: -0.015em;
+	text-wrap: pretty;
 	color: var(--color-ink);
 }
 
@@ -871,8 +875,10 @@ main:has(> .home-section) {
 	gap: 0.625rem;
 }
 
+/* One width for i., ii. and iii.: the three texts start from the same edge. */
 .home-hero-step-number {
 	flex: none;
+	min-width: 1.6em;
 	font-family: var(--hero-serif);
 	font-size: 0.9375rem;
 	font-style: italic;
@@ -956,8 +962,13 @@ main:has(> .home-section) {
 	background-color: var(--color-lipstick);
 }
 
-/* The ribbon of specialties under the hero, full width. It slides only once the script allows it (next block). */
+/*
+ * The ribbon of specialties under the hero, full width. It slides only once the script allows it (next block). Its two
+ * ends fade into the ink, so a word enters and leaves softly, and is never cut in the middle of a letter when it stands
+ * still (reduced motion, no script, before the hydration).
+ */
 .home-hero-ribbon {
+	position: relative;
 	display: flex;
 	align-items: center;
 	height: 3.25rem;
@@ -965,6 +976,26 @@ main:has(> .home-section) {
 	overflow: hidden;
 	background-color: var(--color-ink);
 	color: var(--hero-ivory);
+}
+
+.home-hero-ribbon::before,
+.home-hero-ribbon::after {
+	content: "";
+	position: absolute;
+	inset-block: 0;
+	z-index: 1;
+	width: 3rem;
+	pointer-events: none;
+}
+
+.home-hero-ribbon::before {
+	left: 0;
+	background: linear-gradient(90deg, var(--color-ink), rgb(26 20 23 / 0));
+}
+
+.home-hero-ribbon::after {
+	right: 0;
+	background: linear-gradient(270deg, var(--color-ink), rgb(26 20 23 / 0));
 }
 
 .home-hero-ribbon-track,
@@ -1054,6 +1085,15 @@ main:has(> .home-section) {
 .guided-search-control:is(input):focus {
 	outline: none;
 	box-shadow: inset 0 0 0 2px var(--color-ink);
+}
+
+/* Forced colors (Windows high contrast) drop every shadow: the ring is then an outline, in the color of the system. */
+@media (forced-colors: active) {
+	.guided-search-control:focus-visible,
+	.guided-search-control:is(input):focus {
+		outline: 2px solid CanvasText;
+		outline-offset: -2px;
+	}
 }
 
 .guided-search-control::placeholder {

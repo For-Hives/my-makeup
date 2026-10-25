@@ -27,6 +27,7 @@
 		"test:ci-guard": "bun --no-env-file test ./tests/ci",
 		"image:build": "docker build --tag my-makeup:local .",
 		"image:check": "bun --no-env-file scripts/image/check.ts",
+		"film:check": "bun --no-env-file scripts/film/check.ts",
 		"test": "bun run test:unit",
 		"bench:up": "bun --no-env-file scripts/bench.ts up",
 		"bench:down": "bun --no-env-file scripts/bench.ts down",

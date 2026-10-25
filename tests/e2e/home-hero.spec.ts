@@ -6,8 +6,9 @@ import { SCREENS } from '../support/e2e'
  * The home hero « en arche » (decision of 25/10/2026, docs/accueil.md), in a browser, at 390 px and 1440 px: the
  * film comes once the page is loaded and the arch is seen, plays its intro then swaps to the loop; the ring of the
  * badge turns only while the film plays and the ribbon slides, and the button of the badge stops all three and
- * starts them again. With reduced motion: the end still, no video, nothing turns, no button. Without script: the
- * poster and the whole heading, and no loop runs. The files of the film are kept a year and served by ranges.
+ * starts them again. With reduced motion: the end still, no video, nothing turns, no button. With Save-Data: the end
+ * still, no video. Without script: the end still over the poster, the whole heading, and no loop runs. The files of
+ * the film are kept a year and served by ranges.
  *
  * The helpers that wait for every animation to end (`settle` of motion.spec.ts, `scrollThrough` of
  * home-sections.spec.ts) leave out the endless and paused animations: this file is what checks that they run.
@@ -112,6 +113,43 @@ for (const size of [SCREENS.mobile, SCREENS.chromium]) {
 				expect(facts.pills).toEqual(['inline-block', 'inline-block'])
 			} else expect(facts.pills).toEqual(['inline-block', 'none'])
 		})
+
+		test('les trois lignes sous la recherche : le texte part du même bord, quelle que soit la largeur du numéro', async ({
+			page,
+		}) => {
+			await page.goto('/')
+			await page.evaluate(() => document.fonts.ready)
+			const offsets = await page.locator('.home-hero-steps li').evaluateAll(items =>
+				items.map(item => {
+					const [number, text] = [...item.children].map(child => child.getBoundingClientRect().left)
+					return Math.round((text ?? 0) - (number ?? 0))
+				})
+			)
+			expect(offsets).toHaveLength(3)
+			expect(new Set(offsets).size).toBe(1)
+		})
+
+		test('avec Save-Data : aucune vidéo, l’image de fin dans l’arche, et le bandeau s’arrête encore au bouton', async ({
+			page,
+		}) => {
+			await page.addInitScript(() =>
+				Object.defineProperty(navigator, 'connection', { configurable: true, value: { saveData: true } })
+			)
+			await page.goto('/')
+			await page.waitForLoadState('networkidle')
+			await showArch(page)
+			await expect(page.locator('[data-film-phase]')).toHaveAttribute('data-film-phase', 'still')
+			const still = page.locator('[data-film-phase] img')
+			await expect(still).toHaveJSProperty('complete', true)
+			expect(await still.evaluate(image => (image as HTMLImageElement).currentSrc)).toContain(
+				FILM_STILLS.end[0]?.src ?? 'fin'
+			)
+			await expect(page.locator('.home-hero-arch video')).toHaveCount(0)
+			const hero = page.locator('section.home-hero')
+			await expect(hero).not.toHaveAttribute('data-film', 'playing')
+			await page.getByRole('button', { name: 'Mettre le film en pause' }).click()
+			expect(await playState(page, '.home-hero-ribbon-track')).toBe('paused')
+		})
 	})
 }
 
@@ -143,7 +181,9 @@ test.describe('avec un mouvement réduit', () => {
 test.describe('sans script', () => {
 	test.use({ javaScriptEnabled: false })
 
-	test('l’affiche du début, le titre entier, et aucune boucle ne tourne', async ({ page }) => {
+	test('l’image de fin, nette, sur l’affiche du début ; le titre entier, et aucune boucle ne tourne', async ({
+		page,
+	}) => {
 		await page.goto('/')
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText(ONLINE_H1)
 		await expect(page.locator('section.home-hero')).not.toHaveAttribute('data-hero-motion')
@@ -152,11 +192,18 @@ test.describe('sans script', () => {
 				.locator('.home-hero-ring, .home-hero-ribbon-track')
 				.evaluateAll(elements => elements.map(element => getComputedStyle(element).animationName))
 		).toEqual(['none', 'none'])
-		const poster = page.locator('.home-hero-arch img')
-		await expect(poster).toHaveJSProperty('complete', true)
-		expect(await poster.evaluate(image => (image as HTMLImageElement).currentSrc)).toContain(
-			FILM_STILLS.start[0]?.src ?? 'debut'
+		// The film that would bring the poster into focus never comes: the end still covers it.
+		const still = page.locator('.home-hero-arch noscript img')
+		await expect(still).toHaveJSProperty('complete', true)
+		expect(await still.evaluate(image => (image as HTMLImageElement).currentSrc)).toContain(
+			FILM_STILLS.end[0]?.src ?? 'fin'
 		)
+		const covers = await page.evaluate(() => {
+			const arch = document.querySelector('.home-hero-arch')?.getBoundingClientRect()
+			const box = document.querySelector('.home-hero-arch noscript img')?.getBoundingClientRect()
+			return arch && box ? [box.width - arch.width, box.height - arch.height] : null
+		})
+		expect(covers?.map(Math.round)).toEqual([0, 0])
 		await expect(page.locator('button.home-hero-disc')).toHaveCount(0)
 	})
 })
@@ -164,9 +211,9 @@ test.describe('sans script', () => {
 test('les fichiers du film sont gardés un an, du bon type, et servis par morceaux', async ({ request }) => {
 	const intro = FILM_VIDEOS.intro[0]?.src ?? ''
 	for (const [path, type] of [
-		[intro, 'video/mp4'],
-		[FILM_STILLS.start[0]?.src ?? '', 'image/webp'],
-	] as const) {
+		...[...FILM_VIDEOS.intro, ...FILM_VIDEOS.loop].map(source => [source.src, 'video/mp4'] as const),
+		...[...FILM_STILLS.start, ...FILM_STILLS.end].map(source => [source.src, source.type] as const),
+	]) {
 		const whole = await request.get(path)
 		expect(whole.status(), path).toBe(200)
 		expect(whole.headers()['cache-control'], path).toBe('public, max-age=31536000, immutable')

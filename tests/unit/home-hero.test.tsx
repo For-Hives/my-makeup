@@ -12,11 +12,13 @@ import { join } from 'node:path'
 import { JSDOM } from 'jsdom'
 import { act } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
+import sharp from 'sharp'
 import {
 	FILM_SIZE,
 	FILM_STILLS,
 	FILM_VIDEOS,
 	type FilmConditions,
+	fallbackOf,
 	filmButtonName,
 	mountsFilm,
 	playsFilm,
@@ -63,6 +65,8 @@ describe('le titre : le h1 du site en ligne, au caractère près', () => {
 			const src = /src="([^"]+)"/.exec(picture)?.[1] ?? ''
 			expect(src).toMatch(/^\/assets\/accueil\/pilule-[a-z-]+-v\d+\.webp$/)
 			expect(statSync(join(ROOT, 'public', src)).size).toBeLessThan(8 * 1024)
+			// Low priority: React then writes no preload for it in the head, in front of the stylesheets (LCP of P01).
+			expect(picture).toMatch(/fetchpriority="low"/i)
 		}
 	})
 
@@ -131,9 +135,9 @@ describe('l’arche et son affiche', () => {
 	const picture = /<picture>[\s\S]*?<\/picture>/.exec(arch)?.[0] ?? ''
 
 	test('le serveur dessine l’affiche : la fin du film avec un mouvement réduit, le début sinon, à une taille donnée', () => {
-		expect(picture).toContain(
-			`<source media="(prefers-reduced-motion: reduce)" srcSet="${FILM_STILLS.end[0]?.src}" type="image/webp"/>`
-		)
+		for (const { src, type } of FILM_STILLS.end)
+			expect(picture).toContain(`<source media="(prefers-reduced-motion: reduce)" srcSet="${src}" type="${type}"/>`)
+		for (const { src, type } of FILM_STILLS.start) expect(picture).toContain(`<source srcSet="${src}" type="${type}"/>`)
 		expect(picture).toContain(`src="${FILM_STILLS.start.at(-1)?.src}"`)
 		expect(picture).toContain(`width="${FILM_SIZE.width}" height="${FILM_SIZE.height}"`)
 		expect(picture).toMatch(/alt="[^"]{20,}"/)
@@ -148,7 +152,20 @@ describe('l’arche et son affiche', () => {
 		expect(html).not.toContain('<video')
 		expect(html).not.toContain('data-hero-motion')
 		expect(html).not.toMatch(/<button[^>]*home-hero-disc/)
-		expect(html).toContain('L’OMBRE NETTE · UN FILM MY MAKEUP · ')
+	})
+
+	test('le titre du film fait le tour du badge, avec une espace qui ne fond pas entre la fin et le début', () => {
+		// An ordinary space at the end of an SVG text is dropped by the collapsing of white space: the dot then touched
+		// the « L » where the ring closes. A no-break space is kept, and textLength spreads it like the others.
+		expect(html).toContain(`L’OMBRE NETTE · UN FILM MY MAKEUP ·${String.fromCharCode(0xa0)}</textPath>`)
+	})
+
+	test('sans script, l’image de fin, nette, couvre l’affiche du début : le film ne viendra pas la mettre au point', () => {
+		const noscript = /<noscript>([\s\S]*?)<\/noscript>/.exec(arch)?.[1] ?? ''
+		expect(noscript).toContain(`src="${fallbackOf(FILM_STILLS.end)}"`)
+		for (const { src, type } of FILM_STILLS.end) expect(noscript).toContain(`<source srcSet="${src}" type="${type}"/>`)
+		expect(noscript).toContain('alt=""')
+		expect(noscript).toContain(`width="${FILM_SIZE.width}" height="${FILM_SIZE.height}"`)
 	})
 
 	test('chaque fichier du film existe, porte sa version dans son nom, et le meilleur format vient d’abord', () => {
@@ -157,13 +174,25 @@ describe('l’arche et son affiche', () => {
 			expect(src).toMatch(/^\/assets\/accueil\/ombre-nette-[a-z]+-v\d+\.[a-z0-9.]+$/)
 			expect(existsSync(join(ROOT, 'public', src))).toBe(true)
 		}
+		// The codecs read from the files themselves (av1C, hvcC and avcC boxes): AV1 10 bits, then HEVC Main 10 for
+		// Safari, then H.264 for what plays neither.
 		for (const part of [FILM_VIDEOS.intro, FILM_VIDEOS.loop]) {
 			expect(part.map(source => source.type)).toEqual([
-				'video/mp4; codecs="av01.0.04M.08"',
-				'video/mp4; codecs="avc1.64001E"',
+				'video/mp4; codecs="av01.0.08M.10"',
+				'video/mp4; codecs="hvc1.2.4.L120.90"',
+				'video/mp4; codecs="avc1.640032"',
 			])
 		}
+		for (const still of [FILM_STILLS.start, FILM_STILLS.end])
+			expect(still.map(source => source.type)).toEqual(['image/avif', 'image/webp'])
 		expect(FILM_SIZE.width / FILM_SIZE.height).toBeCloseTo(0.77, 2)
+	})
+
+	test('les images fixes sont à la taille du rendu : nettes sur un écran de densité 2', async () => {
+		for (const { src } of [...FILM_STILLS.start, ...FILM_STILLS.end]) {
+			const { width, height } = await sharp(join(ROOT, 'public', src)).metadata()
+			expect({ src, width, height }).toEqual({ src, ...FILM_SIZE })
+		}
 	})
 })
 
@@ -212,20 +241,30 @@ describe('la partie qui bouge, dans une fausse fenêtre', () => {
 	let calls: string[] = []
 	let refuse = false
 
-	function setUp({ reduced }: { reduced: boolean }): void {
+	function setUp({
+		reduced,
+		saveData = false,
+		withObserver = true,
+	}: {
+		reduced: boolean
+		saveData?: boolean
+		withObserver?: boolean
+	}): void {
 		const w = jsdomWindow.w as unknown as Record<string, unknown>
 		w.matchMedia = (query: string) => ({
 			matches: reduced && query.includes('prefers-reduced-motion: reduce'),
 			addEventListener: () => {},
 			removeEventListener: () => {},
 		})
-		;(globalThis as Record<string, unknown>).IntersectionObserver = class {
-			constructor(callback: Observer['callback']) {
-				observer = { callback }
+		Object.defineProperty(jsdomWindow.w.navigator, 'connection', { configurable: true, value: { saveData } })
+		if (withObserver)
+			(globalThis as Record<string, unknown>).IntersectionObserver = class {
+				constructor(callback: Observer['callback']) {
+					observer = { callback }
+				}
+				observe() {}
+				disconnect() {}
 			}
-			observe() {}
-			disconnect() {}
-		}
 		const media = (w.HTMLMediaElement as { prototype: Record<string, unknown> }).prototype
 		media.play = function (this: HTMLVideoElement) {
 			calls.push(`play ${this.loop ? 'loop' : 'intro'}`)
@@ -263,7 +302,12 @@ describe('la partie qui bouge, dans une fausse fenêtre', () => {
 	afterEach(() => {
 		observer = undefined
 		delete (globalThis as Record<string, unknown>).IntersectionObserver
+		Reflect.deleteProperty(jsdomWindow.w.navigator, 'connection')
 	})
+
+	/** The phase the film says it is in (`data-film-phase`). */
+	const phaseOf = (zone: HTMLElement): string | null | undefined =>
+		zone.querySelector('[data-film-phase]')?.getAttribute('data-film-phase')
 
 	test('mouvement réduit : rien ne bouge, aucune vidéo, et le disque n’est pas un bouton', async () => {
 		setUp({ reduced: true })
@@ -334,6 +378,35 @@ describe('la partie qui bouge, dans une fausse fenêtre', () => {
 		)
 		expect(zone.querySelector('video')).toBeNull()
 		expect(zone.querySelector('img')?.getAttribute('src')).toBe(FILM_STILLS.end.at(-1)?.src)
+	})
+
+	test('Save-Data : aucune vidéo, l’image de fin à la place de l’affiche du début ; le bouton arrête encore le bandeau', async () => {
+		setUp({ reduced: false, saveData: true })
+		const zone = await mount()
+		await see(true)
+		await jsdomWindow.attendre(() => (phaseOf(zone) === 'still' ? true : null))
+		expect(zone.querySelector('video')).toBeNull()
+		expect(zone.querySelector('[data-film-phase] img')?.getAttribute('src')).toBe(fallbackOf(FILM_STILLS.end))
+		const section = zone.querySelector('section') as HTMLElement
+		expect(section.hasAttribute('data-film')).toBe(false)
+		await jsdomWindow.cliquer(jsdomWindow.bouton('Mettre le film en pause'))
+		expect(section.getAttribute('data-hero-motion')).toBe('paused')
+	})
+
+	test('sans IntersectionObserver : le film ne saurait pas quand jouer, l’image de fin le remplace', async () => {
+		setUp({ reduced: false, withObserver: false })
+		const zone = await mount()
+		await jsdomWindow.attendre(() => (phaseOf(zone) === 'still' ? true : null))
+		expect(zone.querySelector('video')).toBeNull()
+		expect(zone.querySelector('[data-film-phase] img')?.getAttribute('src')).toBe(fallbackOf(FILM_STILLS.end))
+	})
+
+	test('mouvement réduit et Save-Data : rien de plus que l’affiche du serveur, qui montre déjà la fin', async () => {
+		setUp({ reduced: true, saveData: true })
+		const zone = await mount()
+		await see(true)
+		expect(phaseOf(zone)).toBe('wait')
+		expect(zone.querySelector('[data-film-phase] img')).toBeNull()
 	})
 })
 

@@ -21,8 +21,14 @@ export const RIBBON_WORDS: readonly string[] = SPECIALTY_BULLETS.map(bullet => b
 /** The hidden copies that follow the list in the ribbon: enough to cover a very wide screen while it slides by one. */
 const RIBBON_COPIES = ['copy-1', 'copy-2', 'copy-3'] as const
 
-/** The film's title around the badge. */
-const RING_TEXT = 'L’OMBRE NETTE · UN FILM MY MAKEUP · '
+/** U+00A0, written by its code point: as a character it would not show in this file. */
+const NO_BREAK_SPACE = String.fromCharCode(0xa0)
+
+/**
+ * The film's title around the badge. It ends on a no-break space: an ordinary one, last in the text, is dropped by the
+ * collapsing of white space, and the dot would touch the « L » where the ring closes.
+ */
+const RING_TEXT = `L’OMBRE NETTE · UN FILM MY MAKEUP ·${NO_BREAK_SPACE}`
 
 /** The poster says what the film shows: it is the picture of the hero, the film only brings it to life. */
 const POSTER_ALT = 'Ombres chinoises : une maquilleuse pose le rouge sur les lèvres de sa cliente'
@@ -35,11 +41,23 @@ function enterOrder(index: 1 | 2): CSSProperties {
 	return { '--enter-i': index } as CSSProperties
 }
 
-/** A picture inside the heading: decoration, so it adds no word to the name of the heading. Its size is fixed in em. */
+/**
+ * A picture inside the heading: decoration, so it adds no word to the name of the heading. Its size is fixed in em, so
+ * it moves nothing when it comes. Low priority: React writes no preload for it in the head, where it would come before
+ * the stylesheets and slow down what a phone paints first (the sentence under the heading).
+ */
 function Pill({ src, className }: { src: string; className: string }) {
 	return (
 		// biome-ignore lint/performance/noImgElement: a 228 × 114 file made for this size; the image optimizer would add a request for nothing
-		<img src={src} alt="" aria-hidden="true" width={228} height={114} className={`home-hero-pill ${className}`} />
+		<img
+			src={src}
+			alt=""
+			aria-hidden="true"
+			width={228}
+			height={114}
+			fetchPriority="low"
+			className={`home-hero-pill ${className}`}
+		/>
 	)
 }
 
@@ -112,6 +130,10 @@ export function HomeHero() {
 							alt={POSTER_ALT}
 							className="absolute inset-0 h-full w-full object-cover"
 						/>
+						{/* Without script the film never comes to bring the poster into focus: the end still covers it. */}
+						<noscript>
+							<FilmStill still={FILM_STILLS.end} alt="" className="absolute inset-0 h-full w-full object-cover" />
+						</noscript>
 						<ArchFilm />
 					</div>
 					<div className="home-hero-badge">

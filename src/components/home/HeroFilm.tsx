@@ -77,7 +77,12 @@ const VIDEO = 'absolute inset-0 h-full w-full object-cover'
  * met (the script runs, motion is welcome, no Save-Data, the arch on the screen, the tab in front, the page loaded
  * and the browser idle). The intro plays once; the loop is loaded while it plays, stacked under it, and shown when the
  * intro ends: its first frame is the last frame of the intro, so the swap has no gap. Off the screen, in a tab behind
- * or stopped by the button, the film pauses. A refused `play()` shows the end still instead.
+ * or stopped by the button, the film pauses.
+ *
+ * When the film will not come although motion is welcome, the end still covers the poster: the poster is the first
+ * frame of the intro, the artists still blurred, and nothing would ever bring them into focus. That is a refused
+ * `play()`, Save-Data (no byte of video), and a browser without IntersectionObserver (no way to know when the arch is
+ * seen). Under reduced motion the poster already is the end still (`<source media>` of the server).
  */
 export function ArchFilm() {
 	const { motion, userPaused, setPlaying } = useContext(StageContext)
@@ -88,13 +93,19 @@ export function ArchFilm() {
 	const [visible, setVisible] = useState(false)
 	const [settled, setSettled] = useState(false)
 	const [saveData, setSaveData] = useState(false)
+	// Read in an effect, like Save-Data: the server has no IntersectionObserver either, and its markup must be the first one.
+	const [observable, setObservable] = useState(true)
 	const [refused, setRefused] = useState(false)
 	const [mounted, setMounted] = useState(false)
 	const [phase, setPhase] = useState<Phase>('wait')
 
 	useEffect(() => {
 		const element = host.current
-		if (!element || typeof IntersectionObserver === 'undefined') return
+		if (!element) return
+		if (typeof IntersectionObserver === 'undefined') {
+			setObservable(false)
+			return
+		}
 		const observer = new IntersectionObserver(entries => setInView(entries.some(entry => entry.isIntersecting)))
 		observer.observe(element)
 		return () => observer.disconnect()
@@ -170,9 +181,12 @@ export function ArchFilm() {
 	const playing = () => setPlaying(true)
 	const paused = () => setPlaying(false)
 
+	// The film will not come: Save-Data, or no way to know when the arch is seen (a refused play() has its own phase).
+	const stillOnly = motion && (saveData || !observable)
+
 	return (
-		<div ref={host} className="absolute inset-0" data-film-phase={refused ? 'refused' : phase}>
-			{refused ? (
+		<div ref={host} className="absolute inset-0" data-film-phase={refused ? 'refused' : stillOnly ? 'still' : phase}>
+			{refused || stillOnly ? (
 				<FilmStill still={FILM_STILLS.end} alt="" className={VIDEO} />
 			) : (
 				mounted && (

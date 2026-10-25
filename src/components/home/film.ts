@@ -1,8 +1,9 @@
 /**
- * The film in the arch of the home hero, « L'Ombre nette » (decision of 25/10/2026): an intro that plays once, then
- * a loop whose first frame is the last frame of the intro. Its files live under `public/assets/accueil/`, with a
- * version in their name: next.config.ts serves them as immutable, so a new render is a new name, never the same name
- * with new bytes.
+ * The film in the arch of the home hero, « L'Ombre nette » (decision of 25/10/2026): an intro that plays once and ends
+ * on the red lip, then a loop that rests on it, whose first frame is the last frame of the intro and the last frame
+ * its own first. Its files live under `public/assets/accueil/`, with a version in their name: next.config.ts serves
+ * them as immutable, so a new render is a new name, never the same name with new bytes. `bun run film:check`
+ * (scripts/film/check.ts) checks the seams of the files listed here before a render goes in.
  *
  * No React, no `next` import: read by the server part of the hero, by its client part and by the tests.
  */
@@ -16,33 +17,45 @@ export interface FilmSource {
 }
 
 /**
- * The sources of each part, best first: the browser takes the first type it can play. The final render adds its HEVC
- * file with one line in each list, before the H.264 one: `{ src: …hevc.mp4, type: 'video/mp4; codecs="hvc1"' }`.
- * The codecs are those of the files (ffprobe): AV1 Main, level 4.0, 8 bits; H.264 High, level 3.0.
+ * The sources of each part, best first: the browser takes the first type it can play. AV1 for Chrome, Firefox and the
+ * Apple devices that decode it, HEVC for the other Safaris, H.264 for what plays neither. The intro and the loop list
+ * the same formats in the same order (scripts/film/seams.ts refuses otherwise). The codecs are read from the files
+ * themselves (their av1C, hvcC and avcC boxes): AV1 Main, level 4.0, 10 bits; HEVC Main 10, level 4.0; H.264 High,
+ * level 5.0. A new render reads them again: a wrong string makes a browser skip a file it could play.
  */
 export const FILM_VIDEOS: Readonly<Record<'intro' | 'loop', readonly FilmSource[]>> = {
 	intro: [
-		{ src: `${FOLDER}/ombre-nette-intro-v0.av1.mp4`, type: 'video/mp4; codecs="av01.0.04M.08"' },
-		{ src: `${FOLDER}/ombre-nette-intro-v0.h264.mp4`, type: 'video/mp4; codecs="avc1.64001E"' },
+		{ src: `${FOLDER}/ombre-nette-intro-v1.av1.mp4`, type: 'video/mp4; codecs="av01.0.08M.10"' },
+		{ src: `${FOLDER}/ombre-nette-intro-v1.hevc.mp4`, type: 'video/mp4; codecs="hvc1.2.4.L120.90"' },
+		{ src: `${FOLDER}/ombre-nette-intro-v1.h264.mp4`, type: 'video/mp4; codecs="avc1.640032"' },
 	],
 	loop: [
-		{ src: `${FOLDER}/ombre-nette-boucle-v0.av1.mp4`, type: 'video/mp4; codecs="av01.0.04M.08"' },
-		{ src: `${FOLDER}/ombre-nette-boucle-v0.h264.mp4`, type: 'video/mp4; codecs="avc1.64001E"' },
+		{ src: `${FOLDER}/ombre-nette-boucle-v1.av1.mp4`, type: 'video/mp4; codecs="av01.0.08M.10"' },
+		{ src: `${FOLDER}/ombre-nette-boucle-v1.hevc.mp4`, type: 'video/mp4; codecs="hvc1.2.4.L120.90"' },
+		{ src: `${FOLDER}/ombre-nette-boucle-v1.h264.mp4`, type: 'video/mp4; codecs="avc1.640032"' },
 	],
 }
 
 /**
- * The two still frames, best format first: the first frame of the intro (soft silhouettes, the client sharp) and the
- * end state (the red lip), which is also the first frame of the loop. The final render adds its `.avif` files with one
- * line at the top of each list, `{ src: ….avif, type: 'image/avif' }`. The last entry of a list is the one an `<img>`
- * falls back to.
+ * The two still frames, best format first: the first frame of the intro (the artists blurred, the client sharp) and
+ * the end state (the red lip), which is the last frame of the intro and the first of the loop. The last entry of a list
+ * is the one an `<img>` falls back to.
  */
 export const FILM_STILLS: Readonly<Record<'start' | 'end', readonly FilmSource[]>> = {
-	start: [{ src: `${FOLDER}/ombre-nette-debut-v0.webp`, type: 'image/webp' }],
-	end: [{ src: `${FOLDER}/ombre-nette-fin-v0.webp`, type: 'image/webp' }],
+	start: [
+		{ src: `${FOLDER}/ombre-nette-debut-v1.avif`, type: 'image/avif' },
+		{ src: `${FOLDER}/ombre-nette-debut-v1.webp`, type: 'image/webp' },
+	],
+	end: [
+		{ src: `${FOLDER}/ombre-nette-fin-v1.avif`, type: 'image/avif' },
+		{ src: `${FOLDER}/ombre-nette-fin-v1.webp`, type: 'image/webp' },
+	],
 }
 
-/** The size the film is rendered at (the placeholders are half of it): the box of the arch has the same shape. */
+/**
+ * The size the film and its stills are rendered at: the widest arch is 26 rem (416 px), so a screen of density 2 gets
+ * all its pixels. The box of the arch has the same shape.
+ */
 export const FILM_SIZE = { width: 1080, height: 1400 } as const
 
 /** The file an `<img>` shows when no `<source>` of its `<picture>` applies. */

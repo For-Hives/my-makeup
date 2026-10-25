@@ -65,6 +65,25 @@ for (const size of SIZES) {
 			expect(await page.locator('main a[href^="/profil/"]').count()).toBeGreaterThan(0)
 		})
 
+		test('en couleurs forcées (contraste élevé de Windows), les deux champs gardent un anneau de focus', async ({
+			page,
+		}) => {
+			await page.emulateMedia({ forcedColors: 'active' })
+			await page.goto('/')
+			// From the keyboard, so that :focus-visible matches the select as it does the input.
+			for (const id of ['accueil-evenement', 'accueil-lieu']) {
+				const field = page.locator(`#${id}`)
+				await page.keyboard.press('Shift')
+				await field.focus()
+				const ring = await field.evaluate(element => {
+					const style = getComputedStyle(element)
+					return { style: style.outlineStyle, width: Number.parseFloat(style.outlineWidth) }
+				})
+				expect(ring.style, id).not.toBe('none')
+				expect(ring.width, id).toBeGreaterThanOrEqual(2)
+			}
+		})
+
 		test('une ville vide est refusée par le formulaire, « Autre » ne tape aucun mot', async ({ page }) => {
 			await page.goto('/')
 			await page.getByRole('button', { name: 'Voir les maquilleuses' }).click()
