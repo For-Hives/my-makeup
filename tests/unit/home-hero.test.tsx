@@ -7,7 +7,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
-import { existsSync, readFileSync, statSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { JSDOM } from 'jsdom'
 import { act } from 'react'
@@ -71,9 +71,9 @@ describe('le titre : le h1 du site en ligne, au caractère près', () => {
 			const webp = /src="([^"]+)"/.exec(image)?.[1] ?? ''
 			const avif = /<source srcSet="([^"]+)" type="image\/avif"\/>/.exec(picture)?.[1] ?? ''
 			expect(picture.indexOf('<source')).toBeLessThan(picture.indexOf('<img'))
-			expect(webp).toMatch(/^\/assets\/accueil\/pilule-[a-z-]+-v1\.webp$/)
+			expect(webp).toMatch(/^\/assets\/accueil\/pilule-[a-z-]+-v2\.webp$/)
 			expect(avif).toBe(webp.replace(/\.webp$/, '.avif'))
-			// The crops of the final render, at three times their size on screen (1.9 × 0.95 em of a 60 px heading).
+			// Crops of the frames of the film, at three times their size on screen (1.9 × 0.95 em of a 60 px heading).
 			for (const [src, format] of [
 				[webp, 'webp'],
 				[avif, 'heif'],
@@ -84,12 +84,14 @@ describe('le titre : le h1 du site en ligne, au caractère près', () => {
 			}
 		}
 		expect(Object.values(HERO_PILLS).map(pill => pill.webp)).toEqual([
-			'/assets/accueil/pilule-levres-v1.webp',
-			'/assets/accueil/pilule-pinceau-v1.webp',
+			'/assets/accueil/pilule-levres-v2.webp',
+			'/assets/accueil/pilule-pinceau-v2.webp',
 		])
-		// The drafts (crops of the concept frames) are gone.
-		for (const draft of ['pilule-levres-v0.webp', 'pilule-pinceau-v0.webp'])
-			expect(existsSync(join(ROOT, 'public/assets/accueil', draft))).toBe(false)
+		// The drafts (crops of the concept frames) and the crops of the Blender render v1 are gone.
+		for (const version of ['v0', 'v1'])
+			for (const name of ['pilule-levres', 'pilule-pinceau'])
+				for (const format of ['webp', 'avif'])
+					expect(existsSync(join(ROOT, 'public/assets/accueil', `${name}-${version}.${format}`))).toBe(false)
 	})
 
 	test('le mot « qui vous correspond » est en italique rouge, et le titre entre par son masque', () => {
@@ -239,6 +241,9 @@ describe('l’arche et son affiche', () => {
 			expect(src).toMatch(/^\/assets\/accueil\/ombre-nette-[a-z]+-v\d+\.[a-z0-9.]+$/)
 			expect(existsSync(join(ROOT, 'public', src))).toBe(true)
 		}
+		// A former render leaves the folder with its names: only the files listed here are served.
+		const served = readdirSync(join(ROOT, 'public/assets/accueil')).filter(name => name.startsWith('ombre-nette-'))
+		expect(served.sort()).toEqual(all.map(({ src }) => src.split('/').at(-1) ?? '').sort())
 		// The codecs read from the files themselves (av1C, hvcC and avcC boxes): AV1 10 bits, then HEVC Main 10 for
 		// Safari, then H.264 for what plays neither.
 		for (const part of [FILM_VIDEOS.intro, FILM_VIDEOS.loop]) {

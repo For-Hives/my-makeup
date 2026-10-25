@@ -1,8 +1,9 @@
 /**
  * The film in the arch of the home hero, « L'Ombre nette » (decision of 25/10/2026): an intro that plays once and ends
  * on the red lip, then a loop that rests on it, whose first frame is the last frame of the intro and the last frame
- * its own first. Its files live under `public/assets/accueil/`, with a version in their name: next.config.ts serves
- * them as immutable, so a new render is a new name, never the same name with new bytes. `bun run film:check`
+ * its own first. Since v2 it is an AI video made from key frames (docs/accueil.md, « Le film »): the people in it are
+ * generated, nobody real. Its files live under `public/assets/accueil/`, with a version in their name: next.config.ts
+ * serves them as immutable, so a new render is a new name, never the same name with new bytes. `bun run film:check`
  * (scripts/film/check.ts) checks the seams of the files listed here before a render goes in.
  *
  * No React, no `next` import: read by the server part of the hero, by its client part and by the tests.
@@ -25,14 +26,14 @@ export interface FilmSource {
  */
 export const FILM_VIDEOS: Readonly<Record<'intro' | 'loop', readonly FilmSource[]>> = {
 	intro: [
-		{ src: `${FOLDER}/ombre-nette-intro-v1.av1.mp4`, type: 'video/mp4; codecs="av01.0.08M.10"' },
-		{ src: `${FOLDER}/ombre-nette-intro-v1.hevc.mp4`, type: 'video/mp4; codecs="hvc1.2.4.L120.90"' },
-		{ src: `${FOLDER}/ombre-nette-intro-v1.h264.mp4`, type: 'video/mp4; codecs="avc1.640032"' },
+		{ src: `${FOLDER}/ombre-nette-intro-v2.av1.mp4`, type: 'video/mp4; codecs="av01.0.08M.10"' },
+		{ src: `${FOLDER}/ombre-nette-intro-v2.hevc.mp4`, type: 'video/mp4; codecs="hvc1.2.4.L120.90"' },
+		{ src: `${FOLDER}/ombre-nette-intro-v2.h264.mp4`, type: 'video/mp4; codecs="avc1.640032"' },
 	],
 	loop: [
-		{ src: `${FOLDER}/ombre-nette-boucle-v1.av1.mp4`, type: 'video/mp4; codecs="av01.0.08M.10"' },
-		{ src: `${FOLDER}/ombre-nette-boucle-v1.hevc.mp4`, type: 'video/mp4; codecs="hvc1.2.4.L120.90"' },
-		{ src: `${FOLDER}/ombre-nette-boucle-v1.h264.mp4`, type: 'video/mp4; codecs="avc1.640032"' },
+		{ src: `${FOLDER}/ombre-nette-boucle-v2.av1.mp4`, type: 'video/mp4; codecs="av01.0.08M.10"' },
+		{ src: `${FOLDER}/ombre-nette-boucle-v2.hevc.mp4`, type: 'video/mp4; codecs="hvc1.2.4.L120.90"' },
+		{ src: `${FOLDER}/ombre-nette-boucle-v2.h264.mp4`, type: 'video/mp4; codecs="avc1.640032"' },
 	],
 }
 
@@ -43,12 +44,12 @@ export const FILM_VIDEOS: Readonly<Record<'intro' | 'loop', readonly FilmSource[
  */
 export const FILM_STILLS: Readonly<Record<'start' | 'end', readonly FilmSource[]>> = {
 	start: [
-		{ src: `${FOLDER}/ombre-nette-debut-v1.avif`, type: 'image/avif' },
-		{ src: `${FOLDER}/ombre-nette-debut-v1.webp`, type: 'image/webp' },
+		{ src: `${FOLDER}/ombre-nette-debut-v2.avif`, type: 'image/avif' },
+		{ src: `${FOLDER}/ombre-nette-debut-v2.webp`, type: 'image/webp' },
 	],
 	end: [
-		{ src: `${FOLDER}/ombre-nette-fin-v1.avif`, type: 'image/avif' },
-		{ src: `${FOLDER}/ombre-nette-fin-v1.webp`, type: 'image/webp' },
+		{ src: `${FOLDER}/ombre-nette-fin-v2.avif`, type: 'image/avif' },
+		{ src: `${FOLDER}/ombre-nette-fin-v2.webp`, type: 'image/webp' },
 	],
 }
 

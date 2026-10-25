@@ -43,12 +43,12 @@ function enterOrder(index: 1 | 2): CSSProperties {
 }
 
 /**
- * The two pictures of the heading: crops of the final render of the film, at three times their size on screen (114 × 57
- * at 60 px). AVIF first, the WebP as the image of the `<img>`.
+ * The two pictures of the heading: crops of two frames of the film (the red lips, the hand and the brush), at three times
+ * their size on screen (114 × 57 at 60 px). AVIF first, the WebP as the image of the `<img>`.
  */
 export const HERO_PILLS = {
-	lips: { avif: '/assets/accueil/pilule-levres-v1.avif', webp: '/assets/accueil/pilule-levres-v1.webp' },
-	brush: { avif: '/assets/accueil/pilule-pinceau-v1.avif', webp: '/assets/accueil/pilule-pinceau-v1.webp' },
+	lips: { avif: '/assets/accueil/pilule-levres-v2.avif', webp: '/assets/accueil/pilule-levres-v2.webp' },
+	brush: { avif: '/assets/accueil/pilule-pinceau-v2.avif', webp: '/assets/accueil/pilule-pinceau-v2.webp' },
 } as const
 
 /**

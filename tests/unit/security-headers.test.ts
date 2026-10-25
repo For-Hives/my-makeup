@@ -397,9 +397,9 @@ describe('the files of the home hero (decision of 25/10/2026)', () => {
 	test('a versioned file of /assets/accueil/ is kept a year, unchanged; the other assets and the pages are not', async () => {
 		const config = await production()
 		for (const pathname of [
-			'/assets/accueil/ombre-nette-intro-v1.hevc.mp4',
-			'/assets/accueil/ombre-nette-fin-v1.avif',
-			'/assets/accueil/pilule-levres-v1.avif',
+			'/assets/accueil/ombre-nette-intro-v2.hevc.mp4',
+			'/assets/accueil/ombre-nette-fin-v2.avif',
+			'/assets/accueil/pilule-levres-v2.avif',
 		]) {
 			const sent = await headersSentFor(config, pathname)
 			expect([pathname, sent.get('cache-control')]).toEqual([pathname, 'public, max-age=31536000, immutable'])
