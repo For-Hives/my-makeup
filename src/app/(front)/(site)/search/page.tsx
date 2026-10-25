@@ -1,5 +1,6 @@
 import { SearchAnalytics } from '@/components/analytics/PageAnalytics'
 import { Chip } from '@/components/art/Chip'
+import { body, display } from '@/components/direct-edit/fonts'
 import { PresetRow } from '@/components/search/PresetRow'
 import { SearchBar } from '@/components/search/SearchBar'
 import { ChipGroup } from '@/components/search/SearchRefine'
@@ -18,6 +19,9 @@ import { readWithoutBlocking } from '@/lib/search/read'
 import { buildSearchView } from '@/lib/search/view'
 import { pageMetadata } from '@/lib/seo/metadata'
 import { cachedDirectory, cachedDirectoryWithTexts, cachedMostViewed } from '@/services/public/cached'
+
+/** The page is on the paper of the kit, in the preloaded pair of faces of the text pages (a Bodoni title above the fold: no shift). */
+const MAIN = `${display.variable} ${body.variable} relative flex flex-1 flex-col bg-art-paper font-body`
 
 // The address is the search: read at each request. The directory it ranks is read through the cache
 // of Next, tagged `profils` (ticket 047); so is the order of the most viewed profiles of the preset.
@@ -69,7 +73,7 @@ export default async function SearchPage({ searchParams }: PageProps<'/search'>)
 		])
 		const preset = directory.reussie ? selectPreset(directory.valeur, viewed.reussie ? viewed.valeur : null) : null
 		return (
-			<main className="relative flex flex-1 flex-col bg-art-paper">
+			<main className={MAIN}>
 				<SearchBar
 					search={search}
 					city={city}
@@ -103,7 +107,7 @@ export default async function SearchPage({ searchParams }: PageProps<'/search'>)
 	])
 	if (!reading.reussie)
 		return (
-			<main className="relative flex flex-1 flex-col bg-art-paper">
+			<main className={MAIN}>
 				<SearchBar search={search} city={city} />
 				<SearchFailed recherche={{ ...query, ...filters }} />
 			</main>
@@ -113,7 +117,7 @@ export default async function SearchPage({ searchParams }: PageProps<'/search'>)
 	const view = buildSearchView(directory, query, place, filters)
 
 	return (
-		<main className="relative flex flex-1 flex-col bg-art-paper">
+		<main className={MAIN}>
 			<SearchBar search={search} city={city} />
 			{/* Two facts and a hash: never the words (ticket 145). Page 1 and page 2 are the same search. */}
 			<SearchAnalytics

@@ -3,6 +3,7 @@ import { type PageProfile, setPageProfiles } from '../fixtures/page-profiles'
 import { SCREENS } from '../support/e2e'
 import { users } from '../support/lock'
 import { testPayload } from '../support/payload-test'
+import { refreshProfilePages } from '../support/public-pages'
 
 /**
  * The page transition (issue 1087, docs/mouvement.md), end to end, at 390 px and 1440 px: going from the search to a
@@ -62,6 +63,13 @@ test.describe('1087 : transition entre la recherche et une fiche', () => {
 		test.setTimeout(180_000)
 		await users('profils-de-page', 1)
 		profiles = await setPageProfiles()
+	})
+
+	// The search keeps the directory in the cache of Next, and its page without a word reads it too (the preset): a spec
+	// that loads profiles with the test process has the application refresh it before it looks for them.
+	test.beforeEach(async ({ request }) => {
+		const first = profiles.values().next().value
+		if (first) await refreshProfilePages(request, { id: first.id, specialite: null })
 	})
 
 	test.afterAll(async () => {

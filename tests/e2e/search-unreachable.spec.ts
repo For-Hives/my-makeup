@@ -60,7 +60,8 @@ async function checkScreen(page: Page, label: string, targets = true): Promise<v
 	const small = await page.evaluate(() =>
 		[...document.querySelectorAll<HTMLElement>('main a, main button, main summary')]
 			.filter(element => {
-				const box = element.getBoundingClientRect()
+				// A card is one target: its name link is stretched over the article, which is what is measured.
+				const box = (element.closest('article') ?? element).getBoundingClientRect()
 				if (box.width === 0 || box.height === 0) return false
 				if (
 					element.closest('p, li')?.textContent !== element.textContent &&
