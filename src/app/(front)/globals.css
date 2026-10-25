@@ -1185,6 +1185,12 @@ main:has(> .home-section) {
 .art-marquee:focus-within :focus-visible {
 	outline-color: currentColor;
 }
+/* With scripting on, the words wait (invisible, still laid out) until the banner's typeface has arrived: no visible shift. */
+@media (scripting: enabled) {
+	.art-marquee:not([data-ready]) .art-marquee__track {
+		visibility: hidden;
+	}
+}
 
 @keyframes art-slide {
 	to {
