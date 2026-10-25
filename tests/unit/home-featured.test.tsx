@@ -232,28 +232,30 @@ describe('1066 : le bloc « Mise en avant »', () => {
 	})
 })
 
-describe('1066 : ce que la plateforme fait pour la cliente, dans le haut de page', () => {
-	// The drawing of issue 1066 gave way to the arch (decision of 25/10/2026): its three lines stay, word for word.
+describe('1066 : le haut de page', () => {
+	// The drawing of issue 1066 gave way to the arch (decision of 25/10/2026), and its three lines to the essential: the
+	// heading, one sentence and the search (Andy, 25/10/2026).
 	const html = renderToStaticMarkup(<HomeHero />)
 
-	test('dit en trois lignes ce que la plateforme fait pour la cliente', () => {
-		expect(html).toContain('Cherchez par événement et par lieu')
-		expect(html).toContain('Consultez des profils vérifiés')
-		expect(html).toContain('Écrivez en direct à la maquilleuse')
+	test('il ne dit plus en trois lignes ce que fait la plateforme : la phrase et la recherche le disent', () => {
+		expect(html).not.toContain('Cherchez par événement et par lieu')
+		expect(html).not.toContain('Consultez des profils vérifiés')
+		expect(html).toContain('des maquilleuses professionnelles')
+		expect(html).toContain('action="/search"')
 	})
 
-	test('ni nom, ni donnée personnelle : l’arche montre des ombres, le titre deux images décoratives', () => {
+	test('ni nom, ni donnée personnelle : l’arche montre des ombres, le titre une image décorative', () => {
 		expect(html).not.toMatch(/@|\d{2} \d{2} \d{2}/)
-		expect(html.match(/<img\b[^>]*alt=""[^>]*aria-hidden="true"/g)).toHaveLength(2)
+		expect(html.match(/<img\b[^>]*alt=""[^>]*aria-hidden="true"/g)).toHaveLength(1)
 	})
 })
 
 describe('1066 : la page d’accueil', () => {
 	const page = read('src/app/(front)/(site)/home-cached/[key]/page.tsx')
 
-	test('l’accroche, le titre, les données structurées sont gardés au caractère près', () => {
+	test('le titre de l’onglet et les données structurées sont gardés ; le h1 est celui du haut de page en arche', () => {
 		expect(mainTitles(renderToStaticMarkup(<HomeHero />))).toEqual([
-			"Trouver la maquilleuse qui vous correspond n'a jamais été aussi simple",
+			'Trouvez la maquilleuse qui vous correspond près de chez vous.',
 		])
 		expect(page).toContain("const TITLE = 'Maquilleuse professionnelle près de chez vous'")
 		expect(page).toContain('homeStructuredData')

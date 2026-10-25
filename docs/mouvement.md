@@ -43,7 +43,7 @@ La première version (issues 1069 et 1088) était juste mais trop timide : une a
 |---|---|---|
 | `.enter-mask` | Entrée d'un titre : le titre monte de 28 px en sortant d'un masque (`clip-path`) qui s'ouvre vers le bas, 500 ms, rang 0. Jamais de fondu : son texte est peint dès la première image. | le `h1` de `Hero`, de la recherche (page et résultats), du blog, du classement (pas la fiche : son HTML est tenu au caractère près par des fichiers de référence) |
 | `.enter` | Entrée d'un texte : il monte de 28 px, sans fondu (c'est lui qui porte le LCP sur un téléphone), rang 1 (80 ms de retard). | la phrase sous le titre de `Hero` |
-| `.enter-fade` | Entrée d'un bloc sans texte de LCP : il monte de 28 px en fondu, rang 2 (160 ms de retard). | le formulaire et les trois lignes (accueil), le bouton d'inscription de `Hero` |
+| `.enter-fade` | Entrée d'un bloc sans texte de LCP : il monte de 28 px en fondu, rang 2 (160 ms de retard). | le formulaire (accueil), le bouton d'inscription de `Hero` |
 | `.enter-arch` | Entrée de l'arche de l'accueil : elle monte de 28 px en sortant d'un masque (`clip-path`) qui s'ouvre vers le bas, 600 ms, rang 1. Jamais de fondu : son affiche peut être le LCP d'un grand écran. | l'arche de l'accueil |
 | `.reveal` | Un bloc sous la ligne de flottaison attend (`data-reveal="wait"`, invisible, décalé de 28 px), puis monte en fondu en 600 ms quand il entre dans l'écran, **une seule fois**. `--reveal-i` (0 à 5) décale de 70 ms les blocs qui entrent ensemble (les cartes d'une ligne). Hors `no-preference`, à l'impression et en mode édition (`[data-edit-page]`), il est tel quel. | voir « Où sont l'entrée et l'apparition » |
 | Contrôles (liens, boutons, résumés, champs à cocher) | Les états de l'affordance (`:hover`, `:active`) s'adoucissent en 200 ms. Un lien se souligne en fondu. Les boutons `.btn-*` montent de 2 px (retour au clic). Dans la couche `base`, sous `:where` : un composant qui style son propre état gagne. | tout le site |
@@ -82,7 +82,7 @@ Les navigations de Next.js se font dans la page, sans chargement : `@view-transi
 
 | Page | Entrée du haut de page (dans le temps) | Blocs qui apparaissent au défilement |
 |---|---|---|
-| accueil | surtitre et titre (masque), phrase, arche (masque, rang 1), formulaire guidé et trois lignes (en fondu), 680 ms | sous le héros, chaque section : filet numéroté, titre et phrase (`SectionHead`), cartes de « Mise en avant », colonne de cartes et spécialités, colonnes de la communauté, onglets et image du projet, titre, textes, boutons et image de chaque bloc de la collaboration ; invitation à l'action (voir « Les sections de l'accueil ») |
+| accueil | titre (masque), phrase, arche (masque, rang 1), formulaire guidé (en fondu), 680 ms | sous le héros, chaque section : filet numéroté, titre et phrase (`SectionHead`), cartes de « Mise en avant », colonne de cartes et spécialités, colonnes de la communauté, onglets et image du projet, titre, textes, boutons et image de chaque bloc de la collaboration ; invitation à l'action (voir « Les sections de l'accueil ») |
 | recherche | titre (masque) | cartes des résultats |
 | fiche (`/profil/<slug>`) | aucune (le HTML de la fiche est tenu au caractère près par des fichiers de référence) | cartes et sections repliables |
 | talent (`/talent/<slug>`) | aucune | l'article, les cartes des maquilleuses, le champ « Votre ville » |

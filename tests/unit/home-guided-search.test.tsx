@@ -99,11 +99,12 @@ describe('1013 : le formulaire guidé', () => {
 describe('1013 : la page d’accueil', () => {
 	const page = read('src/app/(front)/(site)/home-cached/[key]/page.tsx')
 
-	test('le h1, le titre, les données structurées et le texte de référencement sont gardés', () => {
-		// The h1 is drawn by the hero « en arche » in lines with pictures: its rendered text is read, not the source.
+	test('le titre de l’onglet, les données structurées et le texte de référencement sont gardés ; le h1 est celui du haut de page en arche', () => {
+		// The h1 is drawn by the hero « en arche » in lines with a picture: its rendered text is read, not the source. It
+		// changed on 25/10/2026 (register line `accueil-titre`); the title of the tab did not.
 		expect(page).toContain('<HomeHero />')
 		expect(mainTitles(renderToStaticMarkup(<HomeHero />))).toEqual([
-			"Trouver la maquilleuse qui vous correspond n'a jamais été aussi simple",
+			'Trouvez la maquilleuse qui vous correspond près de chez vous.',
 		])
 		expect(page).toContain("const TITLE = 'Maquilleuse professionnelle près de chez vous'")
 		expect(page).toContain('homeStructuredData')

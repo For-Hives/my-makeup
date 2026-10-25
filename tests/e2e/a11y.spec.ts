@@ -20,7 +20,7 @@ test.describe('Accessibilité : aucune violation « serious » ni « critical »
 		await expect(
 			page.getByRole('heading', {
 				level: 1,
-				name: "Trouver la maquilleuse qui vous correspond n'a jamais été aussi simple",
+				name: 'Trouvez la maquilleuse qui vous correspond près de chez vous.',
 			})
 		).toBeVisible()
 

@@ -14,7 +14,8 @@ import { SCREENS } from '../support/e2e'
  * home-sections.spec.ts) leave out the endless and paused animations: this file is what checks that they run.
  */
 
-const ONLINE_H1 = "Trouver la maquilleuse qui vous correspond n'a jamais été aussi simple"
+/** The h1 of the home page since 25/10/2026 (register line `accueil-titre`). */
+const HOME_H1 = 'Trouvez la maquilleuse qui vous correspond près de chez vous.'
 
 /** The play state of the animation of an element (`running`, `paused`), or `none` when it has none. */
 const playState = (page: Page, selector: string): Promise<string> =>
@@ -93,28 +94,37 @@ for (const size of [SCREENS.mobile, SCREENS.chromium]) {
 			await expect.poll(() => loop.evaluate(video => !(video as HTMLVideoElement).paused)).toBe(true)
 		})
 
-		test('le titre tient ses lignes, la police d’affichage est celle du titre seul', async ({ page }) => {
+		test('le titre tient ses trois lignes dans sa colonne, la police d’affichage est celle du titre seul', async ({
+			page,
+		}) => {
 			await page.goto('/')
 			const title = page.getByRole('heading', { level: 1 })
-			await expect(title).toHaveText(ONLINE_H1)
-			await expect(page.getByRole('heading', { level: 1, name: ONLINE_H1, exact: true })).toBeVisible()
+			await expect(title).toHaveText(HOME_H1)
+			await expect(page.getByRole('heading', { level: 1, name: HOME_H1, exact: true })).toBeVisible()
 			await page.evaluate(() => document.fonts.ready)
 			const facts = await title.evaluate(element => {
 				const style = getComputedStyle(element)
-				const pills = [...element.querySelectorAll('img')].map(image => getComputedStyle(image).display)
+				const column = (document.querySelector('.home-hero-text') as Element).getBoundingClientRect()
+				// The right end of the ink of each line, picture included: never past its column (the hero clips what
+				// overflows, so no horizontal scroll would tell).
+				const ends = [...element.querySelectorAll('.home-hero-line')].map(line => {
+					const range = document.createRange()
+					range.selectNodeContents(line)
+					return range.getBoundingClientRect().right
+				})
 				return {
 					lines: Math.round(element.getBoundingClientRect().height / Number.parseFloat(style.lineHeight)),
+					overflow: Math.max(...ends) - column.right,
 					family: style.fontFamily,
 					lede: getComputedStyle(document.querySelector('.home-hero-lede') as Element).fontFamily,
-					pills,
+					pills: [...element.querySelectorAll('img')].map(image => getComputedStyle(image).display),
 				}
 			})
 			expect(facts.family).toMatch(/bodoni/i)
 			expect(facts.lede).not.toMatch(/bodoni/i)
-			if (size.width >= 640) {
-				expect(facts.lines).toBe(4)
-				expect(facts.pills).toEqual(['inline-block', 'inline-block'])
-			} else expect(facts.pills).toEqual(['inline-block', 'none'])
+			expect(facts.lines).toBe(3)
+			expect(facts.overflow).toBeLessThanOrEqual(0)
+			expect(facts.pills).toEqual(['inline-block'])
 		})
 
 		test('chaque texte en Bodoni est dessiné par sa coupe du dépôt, sans un glyphe de repli', async ({ page }) => {
@@ -138,23 +148,7 @@ for (const size of [SCREENS.mobile, SCREENS.chromium]) {
 			expect(await drawnBy('.home-hero-line')).toEqual(['BodoniModa-96pt', 'BodoniModaItalic-96ptItalic'])
 			// The italic line by the italic cut alone: in a family without it, the upright cut would be slanted instead.
 			expect(await drawnBy('.home-hero-title em')).toEqual(['BodoniModaItalic-96ptItalic'])
-			expect(await drawnBy('.home-hero-step-number')).toEqual(['BodoniModaItalic-11ptItalic'])
 			expect(await drawnBy('.home-hero-ribbon-list li')).toEqual(['BodoniModaItalic-11ptItalic'])
-		})
-
-		test('les trois lignes sous la recherche : le texte part du même bord, quelle que soit la largeur du numéro', async ({
-			page,
-		}) => {
-			await page.goto('/')
-			await page.evaluate(() => document.fonts.ready)
-			const offsets = await page.locator('.home-hero-steps li').evaluateAll(items =>
-				items.map(item => {
-					const [number, text] = [...item.children].map(child => child.getBoundingClientRect().left)
-					return Math.round((text ?? 0) - (number ?? 0))
-				})
-			)
-			expect(offsets).toHaveLength(3)
-			expect(new Set(offsets).size).toBe(1)
 		})
 
 		test('avec Save-Data : aucune vidéo, l’image de fin dans l’arche, et le bandeau s’arrête encore au bouton', async ({
@@ -249,9 +243,64 @@ const archTop = (page: Page): Promise<{ top: number; fold: number }> =>
 		fold: innerHeight,
 	}))
 
+test.describe('sur un téléphone, le texte tient le premier écran et l’arche commence dessous', () => {
+	// The text block is as tall as the first screen less the navbar and the gutters (`min-height` in svh, globals.css):
+	// whatever the height of the phone, the poster is never its largest paint (LCP of P01, the sentence), and the film,
+	// which waits for the arch to be on the screen, is not downloaded before a scroll, as when the eyebrow and the three
+	// steps pushed the arch below.
+	test.use({ contextOptions: { reducedMotion: 'reduce' } })
+	for (const phone of [
+		{ width: 360, height: 740 },
+		SCREENS.mobile,
+		{ width: 412, height: 823 },
+		{ width: 430, height: 932 },
+	])
+		test(`à ${phone.width} × ${phone.height} px`, async ({ page }) => {
+			await page.setViewportSize(phone)
+			await page.goto('/')
+			await page.waitForLoadState('networkidle')
+			const { top, fold } = await archTop(page)
+			expect(top).toBeGreaterThan(fold)
+			expect(top - fold).toBeLessThanOrEqual(48)
+			expect((await largestPaint(page)).poster).toBe(false)
+			const search = await page.locator('form.guided-search').boundingBox()
+			expect((search?.y ?? fold) + (search?.height ?? 0)).toBeLessThan(fold)
+		})
+})
+
+test.describe('sur un téléphone, avec le mouvement', () => {
+	test.use({ contextOptions: { reducedMotion: 'no-preference' } })
+
+	test('aucune vidéo n’est demandée avant que l’arche entre dans l’écran', async ({ page }) => {
+		// 412 × 823, the screen of Lighthouse mobile (P01). Before the text block filled the first screen, a peek of the arch
+		// was enough for the film to come at load: 855 KB of AV1 that nobody had scrolled to.
+		await page.setViewportSize({ width: 412, height: 823 })
+		await page.goto('/')
+		await page.waitForLoadState('networkidle')
+		await expect(page.locator('section.home-hero')).toHaveAttribute('data-hero-motion', 'running')
+		// Past the moment the film waits for (the load, then the browser at rest): two idle periods, then a frame for React.
+		await page.evaluate(
+			() =>
+				new Promise<void>(done =>
+					requestIdleCallback(() => requestIdleCallback(() => requestAnimationFrame(() => done()), { timeout: 2000 }), {
+						timeout: 2000,
+					})
+				)
+		)
+		await expect(page.locator('.home-hero-arch video')).toHaveCount(0)
+		const videos = () =>
+			page.evaluate(() =>
+				performance.getEntriesByType('resource').filter(entry => /\.mp4$/.test(new URL(entry.name).pathname))
+			)
+		expect(await videos()).toHaveLength(0)
+		await showArch(page)
+		await expect(page.locator('.home-hero-arch video')).toHaveCount(2, { timeout: 20_000 })
+	})
+})
+
 test.describe('l’affiche de l’arche, demandée une fois, au bon moment', () => {
-	// The poster is lazy: on a phone, upright or sideways, the arch is under the text, below the first screen, and a byte
-	// asked before the largest paint delays it (LCP of P01). Where the arch is in the first screen, the poster is that
+	// The poster is lazy: on a phone the arch shows only its top at the foot of the first screen, sideways it is below
+	// it, and a byte asked before the largest paint delays it (LCP of P01). Where the arch is in the first screen, the poster is that
 	// largest paint, and a preload in the head asks for it early (`POSTER_SCREENS` of film.ts: from 64rem, or a tablet held
 	// upright). The preload must be the very file the <picture> takes, or the browser downloads two.
 	for (const reducedMotion of ['no-preference', 'reduce'] as const) {
@@ -331,7 +380,7 @@ test.describe('sans script', () => {
 		page,
 	}) => {
 		await page.goto('/')
-		await expect(page.getByRole('heading', { level: 1 })).toHaveText(ONLINE_H1)
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText(HOME_H1)
 		await expect(page.locator('section.home-hero')).not.toHaveAttribute('data-hero-motion')
 		expect(
 			await page

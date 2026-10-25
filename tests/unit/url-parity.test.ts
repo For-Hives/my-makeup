@@ -160,6 +160,10 @@ describe('les cas du banc', () => {
 		expect(from('/search').titre).toEqual({ mode: 'hash', sha: hash('/search') })
 	})
 
+	test('l’accueil, dont le h1 a changé (registre `accueil-titre`), doit en avoir un seul, sans comparer son texte', () => {
+		expect(from('/').titre).toEqual({ mode: 'un' })
+	})
+
 	test('une page à deux h1 sur l’ancien site doit en avoir un seul', () => {
 		expect(from('/a-propos').titre).toEqual({ mode: 'un' })
 	})

@@ -1,9 +1,9 @@
 /**
- * The home hero « en arche » (decision of 25/10/2026, docs/accueil.md): the h1 of the site online kept to the character
- * while its lines carry two pictures, the new paragraph, the three steps, the ribbon of the real specialties, the poster
- * of the arch and the rules of its film (when the videos come, when they play), the button of the badge, and the
- * stylesheet rules that keep the loops behind the script and under `no-preference`. What only a browser shows (the
- * film playing, the swap, the layout) is in tests/e2e/home-hero.spec.ts.
+ * The home hero « en arche » (decisions of 25/10/2026, docs/accueil.md): three elements and no more (the h1 on three
+ * lines with one picture, one sentence, the guided search), the ribbon of the real specialties, the poster of the arch
+ * and the rules of its film (when the videos come, when they play), the button of the badge, and the stylesheet rules
+ * that keep the loops behind the script and under `no-preference`. What only a browser shows (the film playing, the
+ * swap, the layout) is in tests/e2e/home-hero.spec.ts.
  */
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
@@ -25,13 +25,15 @@ import {
 	playsFilm,
 } from '@/components/home/film'
 import { ArchFilm, FilmButton, HeroStage } from '@/components/home/HeroFilm'
-import { HERO_PILLS, HERO_STEPS, HomeHero, RIBBON_WORDS } from '@/components/home/HomeHero'
+import { HERO_PILL, HomeHero, RIBBON_WORDS } from '@/components/home/HomeHero'
 import { SPECIALTY_BULLETS } from '@/lib/specialty'
 import { openWindow } from '../support/dom-react'
 import { mainTitles, sha256, titleFingerprint } from '../support/url-parity'
 
 const ROOT = join(import.meta.dir, '../..')
 const read = (file: string): string => readFileSync(join(ROOT, file), 'utf8')
+/** The h1 of the home page since 25/10/2026 (register line `accueil-titre`): no longer the one of the site online. */
+const HOME_H1 = 'Trouvez la maquilleuse qui vous correspond près de chez vous.'
 const ONLINE_H1 = "Trouver la maquilleuse qui vous correspond n'a jamais été aussi simple"
 const html = renderToStaticMarkup(<HomeHero />)
 
@@ -42,23 +44,29 @@ function element(markup: string, opening: RegExp): string {
 	return markup.slice(start)
 }
 
-describe('le titre : le h1 du site en ligne, au caractère près', () => {
-	test('un seul h1, dont le texte et l’empreinte sont ceux du site en ligne', () => {
-		expect(mainTitles(html)).toEqual([ONLINE_H1])
-		expect(titleFingerprint(html)).toEqual({ n: 1, sha: sha256(ONLINE_H1) })
+describe('le titre : trois lignes, une image', () => {
+	test('un seul h1, le nouveau titre (registre `accueil-titre`) : plus celui du site en ligne', () => {
+		expect(mainTitles(html)).toEqual([HOME_H1])
+		expect(titleFingerprint(html)).toEqual({ n: 1, sha: sha256(HOME_H1) })
+		expect(mainTitles(html)).not.toContain(ONLINE_H1)
 	})
 
-	test('le texte du h1, lu comme un navigateur, n’a ni espace en trop ni mot venu des images', () => {
+	test('le texte du h1, lu comme un navigateur, n’a ni espace en trop ni mot venu de l’image', () => {
 		// Parsed as a browser does, and read without collapsing the spaces: what textContent gives.
-		const text = new JSDOM(html).window.document.querySelector('h1')?.textContent
-		expect(text).toBe(ONLINE_H1)
+		const document = new JSDOM(html).window.document
+		expect(document.querySelector('h1')?.textContent).toBe(HOME_H1)
+		expect([...document.querySelectorAll('h1 .home-hero-line')].map(line => line.textContent)).toEqual([
+			'Trouvez la maquilleuse',
+			'qui vous correspond ',
+			'près de chez vous.',
+		])
 	})
 
-	test('les deux images du titre sont décoratives, d’une taille donnée, AVIF puis WebP, et pèsent moins de 8 Ko', async () => {
+	test('l’image du titre est décorative, d’une taille donnée, AVIF puis WebP, et pèse moins de 8 Ko', async () => {
 		const h1 = /<h1\b[^>]*>([\s\S]*?)<\/h1>/.exec(html)?.[1] ?? ''
 		const pictures = h1.match(/<picture>[\s\S]*?<\/picture>/g) ?? []
-		expect(pictures).toHaveLength(2)
-		expect(h1.match(/<img\b[^>]*>/g) ?? []).toHaveLength(2)
+		expect(pictures).toHaveLength(1)
+		expect(h1.match(/<img\b[^>]*>/g) ?? []).toHaveLength(1)
 		for (const picture of pictures) {
 			const image = /<img\b[^>]*>/.exec(picture)?.[0] ?? ''
 			expect(image).toContain('alt=""')
@@ -83,15 +91,11 @@ describe('le titre : le h1 du site en ligne, au caractère près', () => {
 				expect([src, meta.format, meta.width, meta.height]).toEqual([src, format, 342, 171])
 			}
 		}
-		expect(Object.values(HERO_PILLS).map(pill => pill.webp)).toEqual([
-			'/assets/accueil/pilule-levres-v2.webp',
-			'/assets/accueil/pilule-pinceau-v2.webp',
-		])
-		// The drafts (crops of the concept frames) and the crops of the Blender render v1 are gone.
-		for (const version of ['v0', 'v1'])
-			for (const name of ['pilule-levres', 'pilule-pinceau'])
-				for (const format of ['webp', 'avif'])
-					expect(existsSync(join(ROOT, 'public/assets/accueil', `${name}-${version}.${format}`))).toBe(false)
+		expect(HERO_PILL.webp).toBe('/assets/accueil/pilule-levres-v2.webp')
+		// The drafts (crops of the concept frames), the crops of the Blender render v1, and the brush of the old heading
+		// are not served: the folder holds this picture only.
+		const pills = readdirSync(join(ROOT, 'public/assets/accueil')).filter(name => name.startsWith('pilule-'))
+		expect(pills.sort()).toEqual(['pilule-levres-v2.avif', 'pilule-levres-v2.webp'])
 	})
 
 	test('le mot « qui vous correspond » est en italique rouge, et le titre entre par son masque', () => {
@@ -100,13 +104,28 @@ describe('le titre : le h1 du site en ligne, au caractère près', () => {
 	})
 })
 
-describe('le texte, le formulaire et les trois lignes', () => {
-	test('le surtitre et la nouvelle phrase, avec l’espace fine avant les deux-points', () => {
-		expect(html).toContain('Maquilleuses professionnelles, partout en France')
-		expect(html).toContain(
-			'Mariage, soirée, photo : trouvez une maquilleuse professionnelle près de chez vous, découvrez son travail et écrivez-lui directement.'
-		)
+describe('le texte et le formulaire : rien de plus', () => {
+	test('une seule phrase, avec l’espace fine avant les deux-points et l’espace insécable après « à »', () => {
+		const lede = new JSDOM(html).window.document.querySelector('.home-hero-lede')?.textContent
+		expect(lede).toBe('Mariage, soirée, shooting\u202f: des maquilleuses professionnelles, à\u00a0contacter en direct.')
+		expect(lede).not.toMatch(/\d/)
+		expect(lede).not.toMatch(/milliers|gratuit|meilleur|garanti|paiement sécurisé|avis vérifiés/i)
 		expect(html).not.toContain('Trouvez la maquilleuse spécialisée dans le domaine que vous recherchez')
+	})
+
+	test('ni surtitre ni lignes numérotées : le titre, la phrase et la recherche, dans cet ordre', () => {
+		// Andy, 25/10/2026: fewer elements, to the essential. The eyebrow and the three lines i. ii. iii. are gone.
+		const document = new JSDOM(html).window.document
+		const text = document.querySelector('.home-hero-text')
+		expect([...(text?.children ?? [])].map(child => child.className.split(' ')[0])).toEqual([
+			'home-hero-title',
+			'home-hero-lede',
+			'home-hero-search',
+		])
+		expect(html).not.toContain('Maquilleuses professionnelles, partout en France')
+		expect(document.querySelector('.home-hero ol')).toBeNull()
+		for (const line of ['Cherchez par événement et par lieu', 'Consultez des profils vérifiés'])
+			expect(html).not.toContain(line)
 	})
 
 	test('le formulaire guidé est dans le haut de page, la mesure de la recherche dans le même formulaire', () => {
@@ -117,15 +136,14 @@ describe('le texte, le formulaire et les trois lignes', () => {
 		expect(form).toContain('type="submit"')
 	})
 
-	test('les trois lignes de l’issue 1066, mot pour mot, numérotées i. ii. iii. sans que le numéro soit lu', () => {
-		expect(HERO_STEPS).toEqual([
-			'Cherchez par événement et par lieu',
-			'Consultez des profils vérifiés',
-			'Écrivez en direct à la maquilleuse',
-		])
-		const list = /<ol\b[\s\S]*?<\/ol>/.exec(html)?.[0] ?? ''
-		for (const step of HERO_STEPS) expect(list).toContain(`<span>${step}</span>`)
-		for (const numeral of ['i.', 'ii.', 'iii.']) expect(list).toContain(`aria-hidden="true">${numeral}</span>`)
+	test('les deux champs ont chacun une icône décorative, sous leur libellé visible', () => {
+		const form = /<form\b[\s\S]*?<\/form>/.exec(html)?.[0] ?? ''
+		const icons = form.match(/<svg class="guided-search-icon"[^>]*>/g) ?? []
+		expect(icons).toHaveLength(2)
+		for (const icon of icons) expect(icon).toContain('aria-hidden="true"')
+		expect(form).toContain('<label for="accueil-evenement" class="guided-search-label">Pour quel événement ?</label>')
+		expect(form).toContain('<label for="accueil-lieu" class="guided-search-label">Où ?</label>')
+		expect(form).not.toContain('sr-only')
 	})
 
 	test('l’ordre de l’entrée reste à deux rangs au plus (660 ms en tout)', () => {
@@ -193,13 +211,13 @@ describe('l’arche et son affiche', () => {
 				href: taken('no-preference') ?? 'aucune',
 				type: 'image/avif',
 				media:
-					'(min-width: 64rem) and (min-height: 30rem) and (prefers-reduced-motion: no-preference), (min-width: 40rem) and (min-height: 56rem) and (prefers-reduced-motion: no-preference)',
+					'(min-width: 64rem) and (min-height: 22rem) and (prefers-reduced-motion: no-preference), (min-width: 40rem) and (min-height: 50rem) and (prefers-reduced-motion: no-preference)',
 			},
 			{
 				href: taken('reduce') ?? 'aucune',
 				type: 'image/avif',
 				media:
-					'(min-width: 64rem) and (min-height: 30rem) and (prefers-reduced-motion: reduce), (min-width: 40rem) and (min-height: 56rem) and (prefers-reduced-motion: reduce)',
+					'(min-width: 64rem) and (min-height: 22rem) and (prefers-reduced-motion: reduce), (min-width: 40rem) and (min-height: 50rem) and (prefers-reduced-motion: reduce)',
 			},
 		])
 		// The hero writes them (React puts them in the head of the page), high priority: there the poster is the LCP.
@@ -500,6 +518,26 @@ describe('la feuille de style du haut de page', () => {
 		expect(block.slice(0, block.indexOf('@keyframes enter-arch'))).not.toMatch(/\b(animation|transition)\b/)
 	})
 
+	test('la recherche se dessine selon la largeur qu’on lui donne : carte, deux champs côte à côte, puis une pilule', () => {
+		// Container queries on the box of the search, not the width of the screen: beside the arch at 1024 px or alone at
+		// 680 px, the pill comes where its placeholder and its button fit, nowhere else (the placeholder was cut at 640-695 px).
+		expect(block).toMatch(/\.home-hero-search \{[^}]*container-type: inline-size;/)
+		const containers = [...block.matchAll(/@container \(min-width: ([\d.]+)rem\)/g)].map(match => Number(match[1]))
+		expect(containers).toEqual([30, 44.5])
+		const pill = block.slice(block.indexOf('@container (min-width: 44.5rem)'))
+		expect(pill).toMatch(/\.guided-search \{[^}]*height: 4\.5rem;[^}]*border-radius: 9999px;/)
+		expect(block).toMatch(/\.guided-search \{[^}]*max-width: 44\.5rem;/)
+	})
+
+	test('sur un téléphone, le bloc de texte tient le premier écran : l’arche commence dessous', () => {
+		// The svh of the phone, less the navbar and the gutters (docs/accueil.md, « Le LCP du téléphone »): the poster is
+		// never the largest paint there, and the film waits for a scroll. From 40rem the block is laid out as it comes.
+		expect(block).toMatch(/\.home-hero-text \{[^}]*min-height: calc\(100svh - 9\.5rem\);/)
+		expect(block).toMatch(
+			/@media \(min-width: 40rem\) \{[\s\S]*?\.home-hero-text \{\s*display: block;\s*min-height: 0;\s*padding-bottom: 0;/
+		)
+	})
+
 	test('un tour d’anneau en 40 s, une longueur de bandeau en 60 s', () => {
 		const tokens = /@theme static\s*\{([\s\S]*?)\}/.exec(css)?.[1] ?? ''
 		expect(tokens).toMatch(/--duration-ring:\s*40s;/)
@@ -548,13 +586,10 @@ describe('la police du haut de page', () => {
 				.map(node => node.textContent)
 				.join('')
 		)
-		const textCut = [
-			...[...document.querySelectorAll('.home-hero-step-number')].map(number => number.textContent),
-			...[...document.querySelectorAll('.home-hero-ribbon-list li')].map(item => item.textContent),
-		]
-		expect(chars(upright)).toBe(" 'Taeijlmnopqrstuvé")
+		const textCut = [...document.querySelectorAll('.home-hero-ribbon-list li')].map(item => item.textContent)
+		expect(chars(upright)).toBe(' .Tacdehilmopqrsuvzè')
 		expect(chars([italic])).toBe(' cdeinopqrsuv')
-		expect(chars(textCut)).toBe(' -.CEMPSacdefghilmnopqrstuvxèé’')
+		expect(chars(textCut)).toBe(' -CEMPSacdefghilmnopqrstuvxèé’')
 	})
 
 	test('chaque coupe a sa variable, change sans attendre et se remplace par un repli serif ajusté ; le haut de page porte les deux', () => {
@@ -581,7 +616,7 @@ describe('la police du haut de page', () => {
 		)
 	})
 
-	test('la feuille de style prend la coupe dans le fichier : aucun réglage d’axe, le bandeau et les numéros en coupe de texte', () => {
+	test('la feuille de style prend la coupe dans le fichier : aucun réglage d’axe, le bandeau en coupe de texte', () => {
 		const css = read('src/app/(front)/globals.css').replace(/\/\*[\s\S]*?\*\//g, '')
 		const block = css.slice(css.indexOf('.home-hero {'), css.indexOf('.article-prose {'))
 		expect(block.length).toBeGreaterThan(1000)
@@ -595,7 +630,6 @@ describe('la police du haut de page', () => {
 			return /font-family: ([^;]+);/.exec(rule)?.[1]
 		}
 		expect(familyOf('.home-hero-title')).toBe('var(--hero-serif)')
-		expect(familyOf('.home-hero-step-number')).toBe('var(--hero-serif-text)')
 		expect(familyOf('.home-hero-ribbon-list li')).toBe('var(--hero-serif-text)')
 	})
 })

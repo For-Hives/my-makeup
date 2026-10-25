@@ -110,7 +110,7 @@ const profileSlug = (): string => {
 
 /** The 12 pages anyone can open. The addresses that hold a slug are built when the test runs. */
 const PUBLIC_PAGES: readonly (() => KeyPage)[] = [
-	() => ({ name: 'l’accueil', path: '/', heading: /Trouver la maquilleuse/ }),
+	() => ({ name: 'l’accueil', path: '/', heading: /Trouvez la maquilleuse/ }),
 	() => ({ name: 'la recherche d’une ville', path: '/search?city=Annecy', heading: /\S/ }),
 	() => ({ name: 'un profil public', path: `/profil/${profileSlug()}`, heading: /\S/ }),
 	() => ({ name: 'un talent', path: `/talent/${talent}`, heading: `Talent ${suffix}` }),

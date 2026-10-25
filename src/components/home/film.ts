@@ -54,7 +54,7 @@ export const FILM_STILLS: Readonly<Record<'start' | 'end', readonly FilmSource[]
 }
 
 /**
- * The size the film and its stills are rendered at: the widest arch is 26 rem (416 px), so a screen of density 2 gets
+ * The size the film and its stills are rendered at: the widest arch is 28.5 rem (456 px), so a screen of density 2 gets
  * all its pixels. The box of the arch has the same shape.
  */
 export const FILM_SIZE = { width: 1080, height: 1400 } as const
@@ -64,21 +64,20 @@ export const fallbackOf = (sources: readonly FilmSource[]): string => sources.at
 
 /**
  * The screens where the arch is in the first screen and its poster is the largest paint there (measured in Chromium on
- * 25/10/2026, docs/accueil.md, « Comment il se lance »):
+ * 25/10/2026 with the hero of three elements, docs/accueil.md, « Comment il se lance »):
  *
- * - from 64rem the arch stands beside the text (`.home-hero-grid`, globals.css), its top 13 to 21rem down the page
- *   (206 to 331 px): a screen 30rem tall shows at least 9rem of it;
- * - from 40rem to 64rem it comes under the text, its top 42 to 45rem down (671 to 709 px): it is in the first screen of
- *   a tablet held upright, 56rem tall or more (11rem of it at least), not in that of a phone held sideways (under 30rem
- *   tall);
- * - below 40rem, a phone, it is under the text, the form and the steps.
+ * - from 64rem the arch stands beside the text (`.home-hero-grid`, globals.css), its top 9 to 12.5rem down the page
+ *   (139 to 197 px): from 22rem tall the poster is the largest paint (at 20rem, a line of the headline);
+ * - from 40rem to 64rem it comes under the text, its top 33 to 39rem down (532 to 618 px): from 50rem tall the poster
+ *   is the largest paint (a tablet held upright), not on a phone held sideways (under 30rem tall, the arch below);
+ * - below 40rem, a phone, the text block fills the first screen and the arch starts just below it.
  *
  * With reduced motion the poster is the largest paint from the first frame; with motion it becomes it once the arch has
  * risen (`enter-arch`, about 0.8 s). Elsewhere the largest paint is a text, and the poster waits (`loading="lazy"`).
  */
 export const POSTER_SCREENS = [
-	'(min-width: 64rem) and (min-height: 30rem)',
-	'(min-width: 40rem) and (min-height: 56rem)',
+	'(min-width: 64rem) and (min-height: 22rem)',
+	'(min-width: 40rem) and (min-height: 50rem)',
 ] as const
 
 /** A preload of the poster: the file, its type, and the screens it is asked on. */

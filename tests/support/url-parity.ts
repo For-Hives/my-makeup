@@ -219,6 +219,8 @@ export function titleWaiting(adresseFinale: string, statutFinal: number, anciens
 	if (path === '/search' && splitAddress(adresseFinale).search !== '') return { mode: 'un' }
 	// The four pages of the sign-in and of the confirmation say « tu » and drop « sur My-Makeup »: one h1, and the text of the old site is not compared (CHANGEMENTS-VOULUS, `espace-titres-tutoiement`).
 	if (REWRITTEN_DASHBOARD_TITLES.includes(path)) return { mode: 'un' }
+	// The h1 of the home page was rewritten on 25/10/2026 (CHANGEMENTS-VOULUS, `accueil-titre`): one h1, its text not compared.
+	if (path === '/') return { mode: 'un' }
 	const old = anciens[adresseFinale]
 	if (old?.n === 1 && old.sha) return { mode: 'hash', sha: old.sha }
 	if (old && old.n === 0) return { mode: 'aucun' }
