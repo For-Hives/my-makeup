@@ -349,7 +349,7 @@ test.describe('1069 : une fiche et des résultats', () => {
 				expect(await layoutShift(page)).toBe(0)
 
 				await page.goto('/search?search=Page')
-				const cards = page.locator('a.card-hover')
+				const cards = page.locator('article.card-hover')
 				expect(await cards.count()).toBeGreaterThan(0)
 				expect(await dimmedOnFirstScreen(page)).toEqual([])
 				expect(await layoutShift(page)).toBe(0)

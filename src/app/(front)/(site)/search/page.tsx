@@ -1,22 +1,26 @@
-import Image from 'next/image'
 import { SearchAnalytics } from '@/components/analytics/PageAnalytics'
-import { SearchBlock } from '@/components/blocks/SearchBlock'
-import { SearchResults } from '@/components/search/SearchResults'
+import { Chip } from '@/components/art/Chip'
+import { PresetRow } from '@/components/search/PresetRow'
+import { SearchBar } from '@/components/search/SearchBar'
+import { ChipGroup } from '@/components/search/SearchRefine'
+import { PAGE_TITLE, SearchResults } from '@/components/search/SearchResults'
 import { NoMatchForFilters, NoResult, SearchFailed } from '@/components/search/SearchStates'
 import { fingerprint } from '@/lib/analytics/duplicate'
 import { resultBucket } from '@/lib/analytics/values'
 import { departmentOfSearch } from '@/lib/search/count'
-import { readFilters } from '@/lib/search/filters'
-import { readSearch, searchByCity, searchByWord } from '@/lib/search/input'
+import { EVENT_CHOICES } from '@/lib/search/event-choices'
+import { readFilters, readLayout } from '@/lib/search/filters'
+import { readSearch, searchByCity, searchByWord, searchPageUrl } from '@/lib/search/input'
 import { readPlace } from '@/lib/search/place'
 import { resolvePlace } from '@/lib/search/place-point'
+import { selectPreset } from '@/lib/search/preset'
 import { readWithoutBlocking } from '@/lib/search/read'
 import { buildSearchView } from '@/lib/search/view'
 import { pageMetadata } from '@/lib/seo/metadata'
-import { cachedDirectory, cachedDirectoryWithTexts } from '@/services/public/cached'
+import { cachedDirectory, cachedDirectoryWithTexts, cachedMostViewed } from '@/services/public/cached'
 
 // The address is the search: read at each request. The directory it ranks is read through the cache
-// of Next, tagged `profils` (ticket 047).
+// of Next, tagged `profils` (ticket 047); so is the order of the most viewed profiles of the preset.
 export const dynamic = 'force-dynamic'
 
 // Never indexed: no canonical address, a noindex tag here and a noindex header from the proxy.
@@ -42,6 +46,10 @@ export const metadata = pageMetadata({
  * - Pages of 20, every profile once (ticket 100), and an error state with « Réessayer » when the
  *   directory cannot be read in time. The brake by address is the proxy's (src/proxy.ts).
  *
+ * - Without a word or a city, the page shows its preset (src/lib/search/preset.ts): « Les plus consultées en France »
+ *   (the views of the last 30 days, the order only) or, when they do not say enough, « Les mieux classées » (the
+ *   documented order). The layout of the results (`layout=list|grid`) is read from the address too.
+ *
  * A profile that is hidden, unavailable or entirely empty is not in the directory it ranks
  * (src/lib/profile/visibility.ts). The text typed is never logged and never measured.
  */
@@ -51,18 +59,38 @@ export default async function SearchPage({ searchParams }: PageProps<'/search'>)
 	const filters = readFilters(parameters)
 	const { search, city } = query
 
+	const layout = readLayout(parameters)
+
 	if (!searchByCity(query) && !searchByWord(query)) {
+		// The preset is a bonus: a directory or a counter that cannot be read leaves the page as it was, never an error.
+		const [directory, viewed] = await Promise.all([
+			readWithoutBlocking(cachedDirectory),
+			readWithoutBlocking(cachedMostViewed, 3000, 'des visites'),
+		])
+		const preset = directory.reussie ? selectPreset(directory.valeur, viewed.reussie ? viewed.valeur : null) : null
 		return (
-			<main className="relative flex flex-1 flex-col">
-				<SearchBlock search={search} city={city} surLaPageDeRecherche />
-				<div className="flex w-full flex-col items-center justify-center gap-4 px-4 py-8 md:py-16 2xl:py-32">
-					<h1 className="enter-mask font-bold text-2xl text-gray-800">Rechercher une maquilleuse</h1>
-					<div className="flex flex-col items-center justify-center gap-8">
-						<Image src="/assets/vectorials-used/catSearch.svg" alt="" width={200} height={200} />
-						<p className="px-8 text-center text-gray-700 text-lg md:text-xl">
-							Indiquez une prestation, une ville, ou les deux, pour voir les maquilleuses
-						</p>
-					</div>
+			<main className="relative flex flex-1 flex-col bg-art-paper">
+				<SearchBar
+					search={search}
+					city={city}
+					heading={
+						<div className="mb-8 max-w-3xl">
+							<h1 className={`${PAGE_TITLE} mb-4`}>Rechercher une maquilleuse</h1>
+							<p className="text-lg text-mute">
+								Indiquez une prestation, une ville, ou les deux, pour voir les maquilleuses
+							</p>
+						</div>
+					}
+				/>
+				<div className="mx-auto grid w-full max-w-6xl grid-cols-[minmax(0,1fr)] gap-14 px-4 py-12 md:px-16 md:py-16">
+					<ChipGroup label="Une idée pour commencer">
+						{EVENT_CHOICES.filter(choice => choice.search !== '').map(choice => (
+							<Chip key={choice.label} href={searchPageUrl({ search: choice.search })} prefetch={false}>
+								{choice.label}
+							</Chip>
+						))}
+					</ChipGroup>
+					{preset && <PresetRow preset={preset} />}
 				</div>
 			</main>
 		)
@@ -75,8 +103,8 @@ export default async function SearchPage({ searchParams }: PageProps<'/search'>)
 	])
 	if (!reading.reussie)
 		return (
-			<main className="relative flex flex-1 flex-col">
-				<SearchBlock search={search} city={city} surLaPageDeRecherche />
+			<main className="relative flex flex-1 flex-col bg-art-paper">
+				<SearchBar search={search} city={city} />
 				<SearchFailed recherche={{ ...query, ...filters }} />
 			</main>
 		)
@@ -85,8 +113,8 @@ export default async function SearchPage({ searchParams }: PageProps<'/search'>)
 	const view = buildSearchView(directory, query, place, filters)
 
 	return (
-		<main className="relative flex flex-1 flex-col">
-			<SearchBlock search={search} city={city} surLaPageDeRecherche />
+		<main className="relative flex flex-1 flex-col bg-art-paper">
+			<SearchBar search={search} city={city} />
 			{/* Two facts and a hash: never the words (ticket 145). Page 1 and page 2 are the same search. */}
 			<SearchAnalytics
 				aUneVille={city !== ''}
@@ -95,7 +123,15 @@ export default async function SearchPage({ searchParams }: PageProps<'/search'>)
 				departement={departmentOfSearch(city, place.genre === 'point' ? place.department : null)}
 			/>
 			{view.filteredOut ? (
-				<NoMatchForFilters titre={view.title} recherche={query} filtres={filters} specialites={view.specialties} />
+				<NoMatchForFilters
+					titre={view.title}
+					recherche={query}
+					filtres={filters}
+					specialites={view.specialties}
+					tranches={view.bands}
+					layout={layout}
+					baselineTotal={view.baselineTotal}
+				/>
 			) : view.empty ? (
 				<NoResult
 					titre={view.title}
@@ -108,7 +144,7 @@ export default async function SearchPage({ searchParams }: PageProps<'/search'>)
 					loin={view.far.map(({ carte }) => carte)}
 				/>
 			) : (
-				<SearchResults vue={view} recherche={query} filtres={filters} />
+				<SearchResults vue={view} recherche={query} filtres={filters} layout={layout} />
 			)}
 		</main>
 	)

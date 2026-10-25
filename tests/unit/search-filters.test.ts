@@ -5,7 +5,14 @@
  */
 
 import { describe, expect, test } from 'bun:test'
-import { DEFAULT_FILTERS, filtersActive, offeredSpecialties, PRICE_CEILINGS, readFilters } from '@/lib/search/filters'
+import {
+	DEFAULT_FILTERS,
+	filtersActive,
+	offeredSpecialties,
+	priceBands,
+	readFilters,
+	readLayout,
+} from '@/lib/search/filters'
 import type { GeoPoint } from '@/lib/search/geo-distance'
 import { searchPageUrl } from '@/lib/search/input'
 import type { ResolvedPlace } from '@/lib/search/place-point'
@@ -35,25 +42,41 @@ const shown = (view: ReturnType<typeof buildSearchView<Fake>>): string[] =>
 describe('1011 : lecture des filtres dans l’adresse', () => {
 	test('sans paramètre, ou avec une valeur inconnue, c’est la vue d’avant', () => {
 		expect(readFilters({})).toEqual(DEFAULT_FILTERS)
-		expect(readFilters({ specialty: null, maxPrice: 'abc', sort: 'nimportequoi' })).toEqual(DEFAULT_FILTERS)
-		expect(readFilters({ specialty: null, maxPrice: '77', sort: '' })).toEqual(DEFAULT_FILTERS)
+		expect(readFilters({ specialty: null, maxPrice: 'abc', minPrice: '-3', sort: 'nimportequoi' })).toEqual(
+			DEFAULT_FILTERS
+		)
+		expect(readFilters({ maxPrice: '3', minPrice: '20000', sort: '' })).toEqual(DEFAULT_FILTERS)
+		expect(readFilters({ maxPrice: '77.5' })).toEqual(DEFAULT_FILTERS)
 		expect(filtersActive(DEFAULT_FILTERS)).toBe(false)
 	})
 
-	test('un plafond de la liste et un tri connu sont lus ; un paramètre répété donne le premier', () => {
-		const ceiling = PRICE_CEILINGS[1] as number
-		expect(readFilters({ specialty: null, maxPrice: String(ceiling), sort: 'price' })).toEqual({
-			specialty: null,
-			maxPrice: ceiling,
+	test('un budget entier entre les bornes des prix est lu, même s’il n’est dans aucune tranche proposée (un lien partagé reste vrai)', () => {
+		expect(readFilters({ maxPrice: '137', sort: 'price' })).toEqual({
+			...DEFAULT_FILTERS,
+			maxPrice: 137,
 			sort: 'price',
 		})
-		expect(readFilters({ specialty: null, maxPrice: [String(ceiling), '50'], sort: ['recent', 'price'] })).toEqual({
-			specialty: null,
-			maxPrice: ceiling,
+		expect(readFilters({ minPrice: '40', maxPrice: '120' })).toEqual({
+			...DEFAULT_FILTERS,
+			minPrice: 40,
+			maxPrice: 120,
+		})
+		expect(readFilters({ maxPrice: ['100', '50'], sort: ['recent', 'price'] })).toEqual({
+			...DEFAULT_FILTERS,
+			maxPrice: 100,
 			sort: 'recent',
 		})
-		expect(filtersActive({ specialty: null, maxPrice: ceiling, sort: 'relevance' })).toBe(true)
-		expect(filtersActive({ specialty: null, maxPrice: null, sort: 'recent' })).toBe(true)
+		expect(filtersActive({ ...DEFAULT_FILTERS, maxPrice: 100 })).toBe(true)
+		expect(filtersActive({ ...DEFAULT_FILTERS, minPrice: 40 })).toBe(true)
+		expect(filtersActive({ ...DEFAULT_FILTERS, sort: 'recent' })).toBe(true)
+	})
+
+	test('un minimum au-dessus du maximum est une demande vide : les deux sont gardés tels quels, rien n’est deviné', () => {
+		expect(readFilters({ minPrice: '200', maxPrice: '100' })).toEqual({
+			...DEFAULT_FILTERS,
+			minPrice: 200,
+			maxPrice: 100,
+		})
 	})
 
 	test('l’adresse garde les filtres, et ne les écrit pas quand ils sont par défaut', () => {
@@ -61,7 +84,66 @@ describe('1011 : lecture des filtres dans l’adresse', () => {
 		expect(searchPageUrl({ city: 'Annecy', maxPrice: 100, sort: 'price', page: 2 })).toBe(
 			'/search?city=Annecy&maxPrice=100&sort=price&page=2'
 		)
+		expect(searchPageUrl({ city: 'Annecy', minPrice: 50, maxPrice: 100 })).toBe(
+			'/search?city=Annecy&minPrice=50&maxPrice=100'
+		)
 		expect(searchPageUrl({ city: 'Annecy', ...DEFAULT_FILTERS })).toBe('/search?city=Annecy')
+	})
+
+	test('la présentation (liste ou grille) est lue dans l’adresse : la liste est celle d’avant, la grille s’écrit', () => {
+		expect(readLayout({})).toBe('list')
+		expect(readLayout({ layout: 'grid' })).toBe('grid')
+		expect(readLayout({ layout: ['grid', 'list'] })).toBe('grid')
+		expect(readLayout({ layout: 'mosaic' })).toBe('list')
+		expect(searchPageUrl({ city: 'Annecy', layout: 'grid' })).toBe('/search?city=Annecy&layout=grid')
+		expect(searchPageUrl({ city: 'Annecy', layout: 'list' })).toBe('/search?city=Annecy')
+	})
+})
+
+describe('budget : les tranches viennent des prix de départ réels', () => {
+	const real = (...prices: number[]) => prices.map(startingPrice => ({ startingPrice }))
+
+	test('trop peu de prix chiffrés : aucune tranche, la page ne devine rien', () => {
+		expect(priceBands(real(40, 60, 80, 120, 200))).toEqual([])
+		expect(priceBands([])).toEqual([])
+		expect(priceBands([{ startingPrice: null }, {}, { startingPrice: undefined }])).toEqual([])
+	})
+
+	test('trois tranches coupées aux tiers des prix réels, arrondies, qui couvrent tout sans se chevaucher', () => {
+		const bands = priceBands(real(30, 40, 45, 60, 70, 80, 90, 110, 130, 150, 200, 400))
+		expect(bands.map(({ min, max }) => [min, max])).toEqual([
+			[null, 69],
+			[70, 129],
+			[130, null],
+		])
+		expect(bands.map(({ label }) => label)).toEqual(['Moins de 70\u00a0€', 'De 70 à 129\u00a0€', '130\u00a0€ et plus'])
+		for (const band of bands) expect(band.count).toBe(4)
+	})
+
+	test('des prix tous égaux, ou sans prix : aucune tranche, un filtre qui ne sépare personne n’aide personne', () => {
+		expect(priceBands([...real(50, 50, 50, 50, 50, 50, 50, 50), { startingPrice: null }, {}])).toEqual([])
+	})
+
+	test('les profils sans prix ne comptent pour aucune tranche', () => {
+		const bands = priceBands([...real(20, 30, 60, 80, 120, 300), { startingPrice: null }, {}])
+		expect(bands.reduce((total, { count }) => total + count, 0)).toBe(6)
+		for (const band of bands) expect(band.count).toBeGreaterThan(0)
+	})
+
+	test('une tranche sert de filtre : elle garde exactement les profils comptés', () => {
+		const directory = real(30, 40, 45, 60, 70, 80, 90, 110, 130, 150, 200, 400).map((price, rank) => ({
+			...artist(`p${rank}`),
+			...price,
+		}))
+		for (const band of priceBands(directory)) {
+			const view = buildSearchView(
+				directory,
+				{ search: '', city: '' },
+				{ genre: 'unknown' },
+				{ ...DEFAULT_FILTERS, minPrice: band.min, maxPrice: band.max }
+			)
+			expect(view.total).toBe(band.count)
+		}
 	})
 })
 
@@ -131,6 +213,7 @@ describe('1011 : le prix de départ', () => {
 	test('un plafond garde les profils dont le prix de départ le respecte, jamais ceux sans prix', () => {
 		const view = buildSearchView(directory, { search: '', city: 'Annecy' }, POINT, {
 			specialty: null,
+			minPrice: null,
 			maxPrice: 100,
 			sort: 'relevance',
 		})
@@ -147,6 +230,7 @@ describe('1011 : le prix de départ', () => {
 		})
 		const view = buildSearchView([...directory, far], { search: '', city: 'Annecy' }, POINT, {
 			specialty: null,
+			minPrice: null,
 			maxPrice: 100,
 			sort: 'relevance',
 		})
@@ -173,6 +257,7 @@ describe('1011 : le tri', () => {
 		]
 		const view = buildSearchView(directory, { search: '', city: 'Annecy' }, POINT, {
 			specialty: null,
+			minPrice: null,
 			maxPrice: null,
 			sort: 'price',
 		})
@@ -190,6 +275,7 @@ describe('1011 : le tri', () => {
 		]
 		const view = buildSearchView(directory, { search: '', city: 'Annecy' }, POINT, {
 			specialty: null,
+			minPrice: null,
 			maxPrice: null,
 			sort: 'recent',
 		})
@@ -209,6 +295,7 @@ describe('1011 : le tri', () => {
 			{ genre: 'unknown' },
 			{
 				specialty: null,
+				minPrice: null,
 				maxPrice: null,
 				sort: 'price',
 			}
@@ -228,6 +315,7 @@ describe('1011 : l’état vide d’un filtre', () => {
 	test('un filtre qui ne laisse personne ne dit pas que personne n’est inscrite près de la ville', () => {
 		const view = buildSearchView(directory, { search: '', city: 'Annecy' }, POINT, {
 			specialty: null,
+			minPrice: null,
 			maxPrice: 50,
 			sort: 'relevance',
 		})
@@ -240,6 +328,7 @@ describe('1011 : l’état vide d’un filtre', () => {
 	test('sans filtre, la ville sans personne garde son état d’avant', () => {
 		const view = buildSearchView([], { search: '', city: 'Annecy' }, POINT, {
 			specialty: null,
+			minPrice: null,
 			maxPrice: 50,
 			sort: 'relevance',
 		})
@@ -251,6 +340,7 @@ describe('1011 : l’état vide d’un filtre', () => {
 		const many: Fake[] = [artist('a', { startingPrice: 300 }), artist('b', { startingPrice: 20 }), artist('c')]
 		const view = buildSearchView(many, { search: '', city: 'Annecy' }, POINT, {
 			specialty: null,
+			minPrice: null,
 			maxPrice: 50,
 			sort: 'price',
 		})

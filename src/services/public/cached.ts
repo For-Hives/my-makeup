@@ -23,6 +23,7 @@ import { listArticles } from './article-list'
 import { type ArticlePublic, readPublicArticle } from './articles'
 import { featuredCandidates } from './featured'
 import { readIndexablePages } from './indexable-pages'
+import { readMostViewedSlugs } from './most-viewed'
 import { profileBlockCards } from './profile-block'
 import { type ProfileUrlTarget, readDirectory, readProfileUrlTarget } from './profiles'
 import { listTalents, readTalent, type TalentPageData } from './talents'
@@ -76,6 +77,18 @@ export const cachedProfileBlock = unstable_cache(
 export const cachedFeaturedProfiles = unstable_cache(
 	async () => featuredCandidates(await cachedDirectory(), FEATURED_CANDIDATES_MAX),
 	['public:featured-profiles'],
+	{ tags: [TAGS.profils], revalidate: ONE_HOUR }
+)
+
+/**
+ * The slugs of the most viewed profiles of the last 30 days, in order, for the preset of the search page (no number is
+ * kept). Under the tag of the profiles, like the directory it is crossed with, and an hour at most: the counter moves all
+ * day. A failed read is not kept (`unstable_cache` keeps a value, never a failure): the page falls back to the
+ * documented order.
+ */
+export const cachedMostViewed = unstable_cache(
+	async () => readMostViewedSlugs(await getPayload({ config })),
+	['public:most-viewed'],
 	{ tags: [TAGS.profils], revalidate: ONE_HOUR }
 )
 

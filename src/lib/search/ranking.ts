@@ -11,9 +11,11 @@
  */
 
 import { BADGE_NO_BONUS } from '@/lib/activity/badge-text'
+import { VIEWS_WINDOW_DAYS } from '@/lib/views/profile-views'
 import { FAR_REACH_KM } from '@/services/public/profiles'
 import { PER_PAGE } from './pagination'
 import { NEARBY_MAX_KM } from './place'
+import { MOST_VIEWED_MIN_PROFILES, MOST_VIEWED_MIN_VIEWS, PRESET_SIZE } from './preset'
 import { THRESHOLD } from './relevance'
 import { FAR_TRAVELLERS_MAX } from './results'
 
@@ -128,6 +130,11 @@ export const RANKING_RULES = [
 		id: 'blocks',
 		group: 'other',
 		text: 'Sous une page de spécialité ou un article, les maquilleuses montrées sont celles qui correspondent le mieux au thème, dans le même ordre que la recherche. Seuls les profils complets et joignables y figurent.',
+	},
+	{
+		id: 'preset',
+		group: 'other',
+		text: `Quand vous n’avez tapé ni mot ni ville, la page montre ${PRESET_SIZE} maquilleuses en tête. Si au moins ${MOST_VIEWED_MIN_PROFILES} maquilleuses visibles, joignables et installées dans une commune de France ont chacune au moins ${MOST_VIEWED_MIN_VIEWS} visites de leur page sur les ${VIEWS_WINDOW_DAYS} derniers jours, ce sont « Les plus consultées en France », de la plus visitée à la moins visitée (on ne compte ni les robots, ni la maquilleuse elle-même, ni l’équipe, et une visite par onglet ; aucun nombre de visites n’est affiché). Sinon, ce sont « Les mieux classées » : le début de l’ordre de l’annuaire, le profil le plus complet d’abord.`,
 	},
 	{
 		id: 'pages',

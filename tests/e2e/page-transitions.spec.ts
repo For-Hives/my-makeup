@@ -90,7 +90,7 @@ test.describe('1087 : transition entre la recherche et une fiche', () => {
 				await page.evaluate(() => {
 					;(window as unknown as { __kept: boolean }).__kept = true
 				})
-				await page.locator('a.card-hover').first().click()
+				await page.locator('article.card-hover').first().click()
 				await page.waitForURL(/\/profil\//)
 				await expect(page.locator('h1').first()).toBeVisible()
 				// Same document: it was not a full load.
@@ -124,7 +124,7 @@ test.describe('1087 : transition entre la recherche et une fiche', () => {
 				// And back to the search: the same, in the other direction.
 				await page.goBack()
 				await page.waitForURL(/\/search/)
-				await expect(page.locator('a.card-hover').first()).toBeVisible()
+				await expect(page.locator('article.card-hover').first()).toBeVisible()
 			})
 
 			test.describe('avec un mouvement réduit', () => {
@@ -133,7 +133,7 @@ test.describe('1087 : transition entre la recherche et une fiche', () => {
 				test('la navigation marche et aucune animation de transition de vue ne joue', async ({ page }) => {
 					await watchTransitions(page)
 					await page.goto('/search?search=Page')
-					await page.locator('a.card-hover').first().click()
+					await page.locator('article.card-hover').first().click()
 					await page.waitForURL(/\/profil\//)
 					await expect(page.locator('h1').first()).toBeVisible()
 					// The browser may start a transition: it ends at once, with nothing played.

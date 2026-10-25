@@ -10,7 +10,7 @@
  * No `next` import: read by the page and by the tests.
  */
 
-import type { SearchFilters } from './filters'
+import type { Layout, SearchFilters } from './filters'
 import { readPlace } from './place'
 
 export const INPUT_MAX_LENGTH = 100
@@ -85,15 +85,19 @@ export function searchPageUrl({
 	city = '',
 	page = 1,
 	specialty = null,
+	minPrice = null,
 	maxPrice = null,
 	sort = 'relevance',
-}: Partial<Search> & Partial<SearchFilters> = {}): string {
+	layout = 'list',
+}: Partial<Search> & Partial<SearchFilters> & { layout?: Layout } = {}): string {
 	const params = new URLSearchParams()
 	if (field(search)) params.set('search', field(search))
 	if (field(city)) params.set('city', field(city))
 	if (specialty !== null) params.set('specialty', specialty)
+	if (minPrice !== null) params.set('minPrice', String(minPrice))
 	if (maxPrice !== null) params.set('maxPrice', String(maxPrice))
 	if (sort !== 'relevance') params.set('sort', sort)
+	if (layout !== 'list') params.set('layout', layout)
 	if (page > 1) params.set('page', String(Math.min(Math.trunc(page), PAGE_MAX)))
 	const text = params.toString()
 	return text ? `/search?${text}` : '/search'
