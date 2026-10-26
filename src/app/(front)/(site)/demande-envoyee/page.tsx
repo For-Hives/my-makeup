@@ -26,7 +26,7 @@ export default function RequestSentPage() {
 				title="Votre demande est transmise"
 				description="Vous recevrez une réponse sous 48 h. Merci de votre confiance !"
 			/>
-			<section className="relative isolate overflow-hidden px-4 pb-20 sm:px-6 md:pb-32">
+			<section className="relative isolate overflow-hidden px-6 pb-20 md:pb-32">
 				<GlowBlob size="md" tone="indigo" className="-bottom-40 -left-60" />
 				<div className="reveal relative mx-auto grid max-w-4xl items-center gap-10 rounded-art-frame border border-nude-200 bg-white p-8 sm:p-12 md:grid-cols-[minmax(0,220px)_minmax(0,1fr)] md:gap-14">
 					<div className="mx-auto w-full max-w-[180px] pr-3 md:max-w-none">

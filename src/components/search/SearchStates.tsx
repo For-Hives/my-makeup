@@ -8,9 +8,9 @@ import type { ProfileCard } from '@/services/public/profiles'
 import { SearchGrid } from './SearchGrid'
 import { SearchRefine } from './SearchRefine'
 
-const COLUMN = 'relative mx-auto flex w-full max-w-2xl flex-col items-center gap-4 px-4 py-20 text-center md:py-28'
+const COLUMN = 'relative mx-auto flex w-full max-w-2xl flex-col items-center gap-4 px-6 py-20 text-center md:py-28'
 const COLUMN_ABOVE_CARDS =
-	'relative mx-auto flex w-full max-w-2xl flex-col items-center gap-4 px-4 pt-20 pb-12 text-center md:pt-28'
+	'relative mx-auto flex w-full max-w-2xl flex-col items-center gap-4 px-6 pt-20 pb-12 text-center md:pt-28'
 const LINK = 'font-semibold text-indigo-800 underline underline-offset-4'
 /** A link on its own line: at least 44 px high to touch (ticket 295). */
 const LIST_LINK = 'inline-flex min-h-11 items-center font-semibold text-indigo-800 underline underline-offset-4'

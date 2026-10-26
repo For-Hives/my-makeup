@@ -46,7 +46,7 @@ export function ClientGuide({ contenu }: { contenu: GuideContent }) {
 				tint={contenu.tint ?? 'blush'}
 				band={contenu.band ?? 'band'}
 			/>
-			<div className="relative z-10 mx-auto max-w-5xl px-4 pb-10 sm:px-6 md:pb-14">
+			<div className="relative z-10 mx-auto max-w-5xl px-6 pb-10 md:pb-14">
 				<GuideSearch />
 			</div>
 			<article className="page-frame pb-16 md:pb-24">

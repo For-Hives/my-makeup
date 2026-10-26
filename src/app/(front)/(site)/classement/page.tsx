@@ -15,7 +15,10 @@ export const metadata: Metadata = pageMetadata({
 export default function RankingPage() {
 	return (
 		<ArtPage>
-			<RankingExplainer />
+			{/* The frame of the pages: on a phone the white card keeps the gutter of the others instead of touching the edges. */}
+			<div className="page-frame">
+				<RankingExplainer />
+			</div>
 		</ArtPage>
 	)
 }

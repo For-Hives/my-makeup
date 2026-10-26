@@ -117,7 +117,7 @@ export default async function ArticlePage({ params }: PageProps<'/blog/[slug]'>)
 			))}
 			<GlowBlob size="md" tone="rose" className="-top-52 -right-72" />
 			<GlowBlob size="sm" tone="indigo" className="top-[60rem] -left-72 opacity-40" />
-			<div className="relative mx-auto max-w-5xl px-4 pt-10 md:px-8 md:pt-16">
+			<div className="relative mx-auto max-w-5xl px-6 pt-10 md:pt-16">
 				<article className="mx-auto max-w-3xl">
 					<header className="border-ink border-t pt-6">
 						<div className="enter flex flex-wrap items-center gap-x-4 gap-y-2" style={enterOrder(0)}>

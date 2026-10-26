@@ -36,7 +36,7 @@ export default function Page() {
 				}
 				description="Découvrez les avantages à utiliser notre plateforme pour développer votre activité et trouver des passionnées expérimentées !"
 			/>
-			<div className="relative z-10 mx-auto max-w-5xl px-4 pb-16 sm:px-6">
+			<div className="relative z-10 mx-auto max-w-5xl px-6 pb-16">
 				<GuideSearch />
 			</div>
 			<ClientBenefits />

@@ -135,7 +135,7 @@ export function ProfileCard({
 					tint={tint}
 					band={band}
 					priority={priority}
-					sizes="(min-width: 1536px) 440px, (min-width: 1024px) 30vw, (min-width: 640px) 45vw, 90vw"
+					sizes="(min-width: 1536px) 440px, (min-width: 1024px) 30vw, (min-width: 768px) 45vw, 90vw"
 				/>
 				{profile.superMaquilleuse && <Pro />}
 			</div>
