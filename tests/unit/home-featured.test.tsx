@@ -265,7 +265,12 @@ describe('1066 : le haut de page', () => {
 	})
 
 	test('ni nom, ni donnée personnelle : l’arche montre des ombres, le titre des mots seuls', () => {
-		expect(html).not.toMatch(/@|\d{2} \d{2} \d{2}/)
+		// The numbers of an icon path (`d="…"`) are not text: they are left out before looking for a phone number.
+		const text = html
+			.split(' d="')
+			.map((part, index) => (index === 0 ? part : part.slice(part.indexOf('"') + 1)))
+			.join('')
+		expect(text).not.toMatch(/@|\d{2} \d{2} \d{2}/)
 		expect(html.match(/<img\b[^>]*aria-hidden="true"/g)).toBeNull()
 	})
 })

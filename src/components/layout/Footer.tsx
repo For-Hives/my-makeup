@@ -1,6 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { GlowBlob, MakeupObject } from '@/components/art/graphics'
+import { GlowBlob, Icon, MakeupObject } from '@/components/art/graphics'
 import { FOOTER_COLUMNS, NETWORKS } from './links'
 import { Signature } from './Signature'
 
@@ -39,9 +39,14 @@ export function Footer() {
 										<Link
 											href={reseau.href}
 											rel="noopener nofollow noreferrer"
+											aria-label={'icon' in reseau ? reseau.nom : undefined}
 											className="grid size-11 place-items-center rounded-full border border-ink hover:bg-art-blush hover:no-underline"
 										>
-											<Image src={reseau.icone} width={26} height={26} alt={reseau.nom} />
+											{'icon' in reseau ? (
+												<Icon name={reseau.icon} className="h-6 w-6" />
+											) : (
+												<Image src={reseau.icone} width={26} height={26} alt={reseau.nom} />
+											)}
 										</Link>
 									</li>
 								))}

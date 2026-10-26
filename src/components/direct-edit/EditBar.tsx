@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { Icon } from '@/components/art/Icon'
 import { PREVIEW_PATH } from '@/lib/dashboard/preview'
 import { useEditSession } from './EditSession'
 
@@ -47,31 +48,6 @@ export function EditBar() {
 
 /** A shape for each state, so that it is never told by its colour alone (issue 1071). */
 function StatusIcon({ kind }: { kind: 'editing' | 'saving' | 'saved' | 'error' }) {
-	return (
-		<svg
-			aria-hidden="true"
-			width="18"
-			height="18"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2.2"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-			className="shrink-0"
-		>
-			{kind === 'saved' ? (
-				<path d="M5 12.5l4.5 4.5L19 7.5" />
-			) : kind === 'error' ? (
-				<>
-					<circle cx="12" cy="12" r="9" />
-					<path d="M12 7v6M12 16.5v.5" />
-				</>
-			) : kind === 'saving' ? (
-				<path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8" />
-			) : (
-				<path d="M4 20h4L19 9l-4-4L4 16z" />
-			)}
-		</svg>
-	)
+	const name = kind === 'saved' ? 'check' : kind === 'error' ? 'alert-circle' : kind === 'saving' ? 'loader' : 'pencil'
+	return <Icon name={name} className="h-[18px] w-[18px] shrink-0" />
 }

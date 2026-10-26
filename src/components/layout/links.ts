@@ -141,7 +141,7 @@ export const NETWORKS = [
 		href: 'https://www.linkedin.com/company/forhives-my-makeup/',
 		icone: '/assets/brand/030-linkedin.svg',
 	},
-	{ nom: 'Mail My-Makeup', href: 'mailto:contact@my-makeup.fr', icone: '/assets/brand/017-telegram.svg' },
+	{ nom: 'Mail My-Makeup', href: 'mailto:contact@my-makeup.fr', icon: 'mail' },
 	{
 		nom: 'Facebook My-Makeup',
 		href: 'https://facebook.com/forhives.my.makeup',

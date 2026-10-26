@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import type { ReactNode } from 'react'
+import { Icon } from '@/components/art/Icon'
 import { ofName } from '@/lib/french-elision'
 import { ratioMedia, sizesBox } from '@/lib/image-size'
 import type { PublicProfile } from '@/services/public/profiles'
@@ -17,25 +18,17 @@ function Dot({ disponible }: { disponible: boolean }) {
 	const colors = disponible ? 'bg-indigo-100 text-indigo-800' : 'bg-red-100 text-red-800'
 	return (
 		<span className={`inline-flex items-center rounded-full px-5 py-2 font-medium text-sm ${colors}`}>
-			<svg
-				className={`-ml-1 mr-1.5 h-3 w-3 ${disponible ? 'text-indigo-600' : 'text-red-600'}`}
-				fill="currentColor"
-				viewBox="0 0 16 16"
+			<span
 				aria-hidden="true"
-			>
-				<circle cx={8} cy={8} r={6} />
-			</svg>
+				className={`-ml-1 mr-1.5 inline-block h-3 w-3 rounded-full bg-current ${disponible ? 'text-indigo-600' : 'text-red-600'}`}
+			/>
 			{disponible ? 'Prend de nouvelles dates' : 'Indisponible'}
 		</span>
 	)
 }
 
 function Marker() {
-	return (
-		<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className="h-6 w-6 shrink-0 text-indigo-900">
-			<path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5Z" />
-		</svg>
-	)
+	return <Icon name="pin" className="h-6 w-6 shrink-0 text-indigo-900" />
 }
 
 /**

@@ -1,6 +1,7 @@
 'use client'
 
 import { type KeyboardEvent, type MouseEvent, useEffect, useId, useRef, useState } from 'react'
+import { Icon } from '@/components/art/Icon'
 import type { Pid } from '@/lib/analytics/events'
 import { type ContactAction, subjectOf } from '@/lib/profile/contact-actions'
 import { TrackedContactLink } from './TrackedContactLink'
@@ -152,17 +153,7 @@ function ContactSheet({
 						className={`inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full text-gray-700 hover:bg-gray-100 ${RING}`}
 					>
 						<span className="sr-only">Fermer</span>
-						<svg
-							aria-hidden="true"
-							viewBox="0 0 24 24"
-							className="h-6 w-6"
-							fill="none"
-							stroke="currentColor"
-							strokeWidth="2"
-							strokeLinecap="round"
-						>
-							<path d="M6 6l12 12M18 6L6 18" />
-						</svg>
+						<Icon name="close" className="h-6 w-6" />
 					</button>
 				</div>
 				<ul className="flex flex-col gap-3">
