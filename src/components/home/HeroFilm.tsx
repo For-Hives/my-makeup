@@ -297,8 +297,9 @@ export function ArchFilm() {
 export function PauseButton() {
 	const { motion, userPaused, toggle } = useContext(StageContext)
 	if (!motion) return null
+	// Hidden as the skip link of the site is (SkipLink.tsx): `sr-only` until the focus, then the pill of `.home-hero-pause`.
 	return (
-		<button type="button" className="home-hero-pause" onClick={toggle}>
+		<button type="button" className="home-hero-pause sr-only focus:not-sr-only" onClick={toggle}>
 			{pauseButtonName(userPaused)}
 		</button>
 	)

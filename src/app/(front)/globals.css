@@ -1011,15 +1011,19 @@ main:has(> .home-section) {
 }
 
 /*
- * The pause button (HeroFilm.tsx, WCAG 2.2.2): out of sight until it takes the keyboard focus, like a skip link, then a
- * small ink pill on the arch, above the badge. Clipped to nothing rather than hidden, so it stays in the tab order, and
- * at its full size, so it is a 44 px target the moment it shows. Never transparent by `opacity` (this block has none).
+ * The pause button (HeroFilm.tsx, WCAG 2.2.2): out of sight until it takes the keyboard focus, as the skip link of the
+ * site is (`sr-only focus:not-sr-only`: clipped, never `display: none` or `visibility: hidden`, which would take it out
+ * of the tab order, never `opacity`), then a small ink pill of 44 px on the arch, above the badge. Its ring is ink, with
+ * a band of ivory between it and the pill: it reads on the page, on a dark frame of the film and on a light one.
  */
 .home-hero-pause {
 	position: absolute;
 	z-index: 2;
 	left: 0.75rem;
 	bottom: 4.75rem;
+}
+
+.home-hero-pause:focus {
 	min-height: 2.75rem;
 	padding-inline: 1.125rem;
 	border-radius: 9999px;
@@ -1028,15 +1032,9 @@ main:has(> .home-section) {
 	font-size: 0.875rem;
 	font-weight: 600;
 	white-space: nowrap;
-}
-
-.home-hero-pause:not(:focus) {
-	clip-path: inset(50%);
-}
-
-.home-hero-pause:focus {
-	outline: 2px solid var(--hero-ivory);
-	outline-offset: -5px;
+	box-shadow: 0 0 0 2px var(--hero-ivory);
+	outline: 2px solid var(--color-ink);
+	outline-offset: 2px;
 }
 
 /*

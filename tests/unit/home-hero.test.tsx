@@ -560,7 +560,8 @@ describe('la partie qui bouge, dans une fausse fenêtre', () => {
 		expect(section.getAttribute('data-hero-motion')).toBe('running')
 		// A real button, named by its text (shown at the keyboard focus, globals.css), which says what a press does.
 		const pause = zone.querySelector('button') as HTMLButtonElement
-		expect(pause.className).toBe('home-hero-pause')
+		// Hidden as the skip link of the site is (SkipLink.tsx), until the keyboard focus.
+		expect(pause.className).toBe('home-hero-pause sr-only focus:not-sr-only')
 		expect(pause.getAttribute('type')).toBe('button')
 		expect(pause.textContent).toBe('Mettre le film en pause')
 		expect(pause.hasAttribute('aria-label')).toBe(false)
@@ -777,10 +778,13 @@ describe('la feuille de style du haut de page', () => {
 	})
 
 	test('le bouton de pause : hors de la vue jusqu’au focus du clavier, jamais retiré de l’ordre du clavier', () => {
-		const at = block.indexOf('.home-hero-pause {')
-		const pause = block.slice(at, block.indexOf('}', at))
-		expect(pause).toContain('min-height: 2.75rem;')
-		expect(block).toMatch(/\.home-hero-pause:not\(:focus\) \{\s*clip-path: inset\(50%\);\s*\}/)
+		// Hidden by `sr-only` (HeroFilm.tsx), as the skip link of the site; at the focus, a pill of 44 px, with an ink
+		// ring that reads on the page (3:1 at least, tests/e2e/interaction-affordance.spec.ts).
+		const at = block.indexOf('.home-hero-pause:focus {')
+		const pill = block.slice(at, block.indexOf('}', at))
+		expect(pill).toContain('min-height: 2.75rem;')
+		expect(pill).toContain('outline: 2px solid var(--color-ink);')
+		expect(read('src/components/layout/SkipLink.tsx')).toContain('sr-only focus:not-sr-only')
 		// Neither `display: none` nor `visibility: hidden`, which would take it out of the tab order, nor `opacity`.
 		expect(block).not.toMatch(/\.home-hero-pause[^{]*\{[^}]*(display: none|visibility: hidden|opacity)/)
 	})

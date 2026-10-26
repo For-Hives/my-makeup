@@ -31,6 +31,9 @@ async function checkScreen(page: Page, label: string): Promise<void> {
 			.filter(element => {
 				const box = element.getBoundingClientRect()
 				if (box.width === 0 || box.height === 0) return false
+				// A control drawn only at the keyboard focus, as a skip link (the pause button of the hero): its size is
+				// read once it shows (tests/e2e/home-hero.spec.ts).
+				if (element.matches('.sr-only')) return false
 				if (element.tagName === 'A' && element.closest('p, li > div')) return false
 				return box.height < 44
 			})
