@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { parisDayBefore } from '../../src/lib/weekly-stats'
 import { createAccount } from '../support/account-factory'
 import { violationsSevere } from '../support/axe'
 import { testPayload } from '../support/payload-test'
@@ -120,9 +121,8 @@ test.describe('1001 : ses vues dans son espace', { tag: '@mobile' }, () => {
 			[1, 3],
 			[40, 100],
 		] as const) {
-			const day = new Date(today.getTime() - back * 86_400_000).toLocaleDateString('en-CA', {
-				timeZone: 'Europe/Paris',
-			})
+			// Days of the calendar, as her space counts them (a step of 24 hours shifts a day across a change of hour).
+			const day = parisDayBefore(today, back)
 			await payload.create({ collection: 'profile-views', data: { profile: id, day, count: n } })
 		}
 		await context.addCookies(account.session.cookies)

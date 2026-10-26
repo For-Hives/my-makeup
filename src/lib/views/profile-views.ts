@@ -8,7 +8,7 @@
  * Relative imports on purpose: the Payload CLI and the scripts load this file outside of Next.
  */
 
-import { parisDay } from '../weekly-stats'
+import { parisDayBefore } from '../weekly-stats'
 
 export { PROFILE_VIEWS_PATH } from './report-view'
 
@@ -22,8 +22,6 @@ export const VIEWS_WINDOW_DAYS = 30
 
 /** The longest slug the route reads: a longer one is no slug of ours. */
 const SLUG_MAX = 200
-
-const DAY_MS = 86_400_000
 
 /** The body of a count: the slug of the page, nothing else. */
 export function readViewBody(body: unknown): { slug: string } | undefined {
@@ -44,9 +42,9 @@ export function isAutomatedAgent(userAgent: string | null | undefined): boolean 
 	return AUTOMATED.test(userAgent)
 }
 
-/** The first day kept: rows of an earlier day are deleted (the day of Paris, 92 days back). */
+/** The first day kept: rows of an earlier day are deleted (the day of Paris, 92 days of the calendar back). */
 export function viewsPurgeDay(now: Date): string {
-	return parisDay(new Date(now.getTime() - VIEWS_RETENTION_DAYS * DAY_MS))
+	return parisDayBefore(now, VIEWS_RETENTION_DAYS)
 }
 
 export interface ViewRow {
@@ -59,8 +57,9 @@ export function lastViewDays(rows: readonly ViewRow[], now: Date, days: number =
 	const byDay = new Map<string, number>()
 	for (const { day, count } of rows) byDay.set(day, (byDay.get(day) ?? 0) + count)
 	const result: ViewRow[] = []
+	// Days of the calendar, never steps of 24 hours: across a change of hour they repeat a day and lose one.
 	for (let back = days - 1; back >= 0; back--) {
-		const day = parisDay(new Date(now.getTime() - back * DAY_MS))
+		const day = parisDayBefore(now, back)
 		result.push({ day, count: byDay.get(day) ?? 0 })
 	}
 	return result

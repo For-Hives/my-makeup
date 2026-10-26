@@ -4,6 +4,7 @@ import { DEMO_PROFILES, type DemoProfile } from '../../src/demo-data/profiles'
 import { createAccount } from '../support/account-factory'
 import { violationsSevere } from '../support/axe'
 import { testPayload } from '../support/payload-test'
+import { refreshProfilePages } from '../support/public-pages'
 
 /**
  * The page of a département (ticket 1015): three publishable profiles of Annecy make `/maquilleuses/haute-savoie`
@@ -71,6 +72,10 @@ test.describe('La page d’un département', { tag: '@mobile' }, () => {
 		page,
 		request,
 	}) => {
+		// The profiles are placed in this process, by Payload's local API: the application's cache of the page does
+		// not hear of them, and a page rendered earlier in the run (the other project, the sitemap) would be served
+		// without them. A save through the application refreshes the pages that list the profiles.
+		for (const seeded of profiles) await refreshProfilePages(request, { id: seeded.id, specialite: null })
 		const raw = await request.get(PAGE)
 		expect(raw.status()).toBe(200)
 		const html = await raw.text()

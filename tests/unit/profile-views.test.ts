@@ -4,7 +4,7 @@ import { runDailyTasks } from '@/lib/tasks/daily'
 import { purgeProfileViews } from '@/lib/tasks/profile-views'
 import { isAutomatedAgent, lastViewDays, readViewBody, viewsPurgeDay } from '@/lib/views/profile-views'
 import { reportProfileView } from '@/lib/views/report-view'
-import { aggregateViews, WeeklyStats } from '@/lib/weekly-stats'
+import { aggregateViews, parisDayBefore, WeeklyStats } from '@/lib/weekly-stats'
 
 /** Ticket 1001: the daily counter of the views of a profile. The same lines against the real store: tests/integration/profile-views.test.ts. */
 
@@ -78,6 +78,52 @@ describe('the 30 days of the dashboard', () => {
 		expect(days[29]).toEqual({ day: '2026-10-23', count: 4 })
 		expect(days.find(entry => entry.day === '2026-10-01')?.count).toBe(2)
 		expect(days.some(entry => entry.day === '2026-09-23')).toBe(false)
+	})
+
+	/** The days of the calendar from `first` to `last`, both included. */
+	const calendar = (first: string, last: string): string[] => {
+		const days: string[] = []
+		for (
+			let day = new Date(`${first}T12:00:00Z`);
+			day <= new Date(`${last}T12:00:00Z`);
+			day.setUTCDate(day.getUTCDate() + 1)
+		)
+			days.push(day.toISOString().slice(0, 10))
+		return days
+	}
+
+	// A step of 24 hours back from the instant crosses a change of hour: at 23:27 in Paris on 26/10/2026 (winter time),
+	// the instant two days earlier is 00:27 on 25/10 in summer time. The day of 25/10 came twice, its views counted
+	// twice, and 24/10 was gone (red on the CI at 22:27 UTC, 26/10/2026). The days are days of the calendar.
+	test.each([
+		[
+			'the last hour of the day, the day after the change to winter time',
+			'2026-10-26T22:27:00.000Z',
+			'2026-09-27',
+			'2026-10-26',
+		],
+		['the last hour of the day, a month after it', '2026-11-20T22:59:00.000Z', '2026-10-22', '2026-11-20'],
+		[
+			'the first hour of the day, after the change to summer time',
+			'2027-03-28T22:30:00.000Z',
+			'2027-02-28',
+			'2027-03-29',
+		],
+		['the first hour of the day, in summer time', '2027-04-10T22:10:00.000Z', '2027-03-13', '2027-04-11'],
+	])('30 distinct days in a row, whatever the hour: %s', (_case, instant, first, last) => {
+		const days = lastViewDays([], new Date(instant)).map(entry => entry.day)
+		expect(days).toEqual(calendar(first, last))
+	})
+})
+
+describe('a day of Paris, some days of the calendar before', () => {
+	test.each([
+		['2026-10-26T22:27:00.000Z', 2, '2026-10-24'],
+		['2026-10-26T22:27:00.000Z', 92, '2026-07-26'],
+		['2027-03-28T22:30:00.000Z', 1, '2027-03-28'],
+		['2026-10-23T10:00:00.000Z', 0, '2026-10-23'],
+	])('%s, %i days before: %s', (instant, back, expected) => {
+		expect(parisDayBefore(new Date(instant), back)).toBe(expected)
 	})
 })
 
