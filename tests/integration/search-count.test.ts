@@ -69,11 +69,16 @@ describe('1002 : le compteur de recherches', () => {
 
 	test('la tâche quotidienne supprime les lignes de plus de 400 jours et garde les autres', async () => {
 		const payload = await testPayload()
-		const old = new Date(NOW.getTime() - 401 * 86_400_000)
-		const kept = new Date(NOW.getTime() - 399 * 86_400_000)
+		// A row is dated by its day in Paris. Counted back from the real hour, 401 days could land on the next day
+		// there: at 23:00 in winter, the same instant 401 days earlier is 00:00 the next day in summer time, and the
+		// row was then only 400 days old (red on the CI at 22:00 UTC, 26/10/2026). Ten o'clock UTC is the middle of
+		// the day in Paris in every season: the days apart are the days of the calendar.
+		const today = new Date(`${searchCountDay(NOW)}T10:00:00Z`)
+		const old = new Date(today.getTime() - 401 * 86_400_000)
+		const kept = new Date(today.getTime() - 399 * 86_400_000)
 		await recordSearchCount(payload, { withCity: true, noResult: false, department: '69' }, old)
 		await recordSearchCount(payload, { withCity: true, noResult: false, department: '69' }, kept)
-		const deleted = await purgeSearchCounts.executer(payload, NOW)
+		const deleted = await purgeSearchCounts.executer(payload, today)
 		expect(deleted).toBe(1)
 		const { docs } = await payload.find({
 			collection: SEARCH_COUNT_COLLECTION,
@@ -83,6 +88,6 @@ describe('1002 : le compteur de recherches', () => {
 		expect(docs).toHaveLength(1)
 		expect(String(docs[0]?.day).slice(0, 10)).toBe(searchCountDay(kept))
 		// Idempotent: a second run has nothing left to remove.
-		expect(await purgeSearchCounts.executer(payload, NOW)).toBe(0)
+		expect(await purgeSearchCounts.executer(payload, today)).toBe(0)
 	})
 })
