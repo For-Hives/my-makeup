@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Icon } from './graphics'
+import { Icon } from './Icon'
 
 /**
  * The pause button of the scrolling banner (WCAG 2.2.2: moving text that lasts more than five seconds can be stopped).

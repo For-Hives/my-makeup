@@ -12,7 +12,7 @@ Le code est dans `src/components/art/`. Les jetons et les quelques règles de fe
 |---|---|
 | Les petites étoiles à quatre branches | Des **marques d'imprimerie** (`PrintMark`) : un fin plus, un petit cercle ouvert, un point, un court trait de pinceau. Très rares (deux ou trois par section), **jamais animées** |
 | Les petites fleurs et leurs pop-ups au trait | Des **dessins au trait** (`LineDrawing` : lèvres, œil) de la même famille que les objets. Mode et éditorial, jamais botanique |
-| Les objets de maquillage faits à la main, puis ceux générés par une IA (refusés pour leur style disparate) | Huit **vrais objets** vectoriels d'une seule famille de contours (`MakeupObject`), dessinés par des personnes, sous licence libre (voir « Assets » et [`credits-svg.md`](credits-svg.md)) |
+| Les objets de maquillage faits à la main, puis ceux générés par une IA (refusés pour leur style disparate), puis un jeu libre (IconPark) | Un **jeu sur mesure** d'une seule famille (`MakeupObject`, `LineDrawing`, `Icon`) : 41 icônes pleines, un seul poids, générées par une IA puis tracées, ou dessinées à la main, finies dans VectorCraft (voir « Assets » et [`credits-svg.md`](credits-svg.md)) |
 | Les halos de couleur trop serrés | Des **lueurs** (`GlowBlob`) plus diffuses, plus grandes et plus larges, en trois tailles |
 | Un fond d'invitation à l'action dessiné à la main | Le **vrai shader WebGL** du site (`CtaBackdrop`), repris par `ArtCta`, plus grand, avec plus d'air |
 
@@ -20,7 +20,7 @@ Le code est dans `src/components/art/`. Les jetons et les quelques règles de fe
 
 Ces règles n'ont pas d'exception ; `tests/unit/art-forbidden.test.ts` les tient.
 
-- **Aucun SVG généré par une IA, aucun SVG sans licence libre listée.** Tout dessin de `src/components/art/` (et de `public/art/`) est une œuvre humaine, sous CC0, MIT, ISC ou Apache-2.0, et a sa ligne dans [`credits-svg.md`](credits-svg.md) (source, auteur, licence, modification). Un fichier ou un export nommé « generated » ne peut plus exister dans le kit ; un dessin sans ligne rend la CI rouge. Ajouter un dessin : choisir dans la famille IconPark (même trait, même grille) ou, à défaut, une famille entière d'une autre source, jamais un mélange ; ajouter sa ligne au tableau ; relancer `scripts/art/extract-drawings.ts` ; garder le texte de la licence dans `LICENSES/`.
+- **Aucun SVG hors du jeu sur mesure, aucun SVG sans origine listée.** Tout dessin et toute icône de `src/components/art/` (et de `public/art/`) vient de `scripts/art/icons/`, a sa ligne dans [`credits-svg.md`](credits-svg.md) (origine : généré par IA puis tracé, ou dessiné à la main ; fichier source) et son entrée dans `scripts/art/icon-origins.ts` ; aucune icône d'un jeu tiers. Un fichier ou un export nommé « generated » ne peut plus exister dans le kit ; une icône sans ligne rend la CI rouge. Ajouter une icône : la dessiner en VectorCraft sur 24 x 24 avec la ligne de 1,375 (voir « Ajouter une icône »), l'ajouter à `scripts/art/icons/`, à `icon-origins.ts` et au tableau, relancer `scripts/art/build-drawings.ts`, puis `bun run check`.
 
 - **Aucune étincelle, aucune fleur** : ni fichier, ni import, ni classe, ni nom (`sparkle`, `twinkle`, `flower`, `blossom`, `chamomile`, `anemone`, `leaf-sprig`…) dans `src/` ou `public/`. Un fichier ou un import de ce genre rend la CI rouge.
 - **Aucun rebond, aucune pulsation, aucun scintillement** : le mouvement est celui de `mouvement.md` (`transform` et `opacity`, courbes douces, jamais de `bounce`, `ping`, `pulse`).
@@ -78,25 +78,27 @@ Les routes qui peignent déjà du Bodoni et de l'Instrument Sans au-dessus de la
 | Famille | Composant | Contenu | D'où ça vient |
 |---|---|---|---|
 | Marques d'imprimerie | `PrintMark kind="plus\|ring\|dot\|dash"` | un fin plus, un cercle ouvert, un point, un trait de pinceau | dessinées à la main (originales) |
-| Icônes | `Icon name=…` | flèches, lecture, pause, loupe, repère, sceau, calendrier, chevron, menu | tirées de la maquette validée (dessinées à la main, originales) |
-| Objets de maquillage | `MakeupObject name="brush\|compact\|lipstick\|mirror\|mascara\|nail-polish\|perfume\|comb"` | contours de 48 points, un seul trait | **IconPark (ByteDance), Apache-2.0**, dessins d'origine, réduits au contour ([`credits-svg.md`](credits-svg.md)) |
-| Dessins au trait | `LineDrawing name="lips\|eye"` | contours, même famille et même trait que les objets | **IconPark**, idem |
+| Icônes | `Icon name=…` (`Icon.tsx`) | 20 icônes d'interface : flèches, chevrons, menu, fermer, loupe, repère, coche, calendrier, courriel, téléphone, site, bouclier vérifié, crayon, lecture, pause… | jeu sur mesure, dessinées à la main dans VectorCraft |
+| Objets | `MakeupObject name="brush\|compact\|lipstick\|…"` (19 noms : `credits-svg.md`) | un chemin plein sur 24, ligne de 1,375 | jeu sur mesure : 5 tracés d'une planche fal, 14 dessinés à la main |
+| Dessins au trait | `LineDrawing name="lips\|eye"` | même famille et même poids que les objets | `lips` tracé, `eye` redessiné à la main |
 | Cadres | `ArchFrame`, `CapsuleFrame` (assets), classes `.art-arch`, `.art-capsule` (utilisées par les composants) | arche avec bande décalée, pastille en pilule avec filet intérieur | dessinés à la main |
 | Badge | `RotatingBadge` | texte qui tourne autour d'un rond cliquable | dessiné à la main (texte sur un chemin SVG) |
 | Lueurs | `GlowBlob size="sm\|md\|lg" tone="rose\|indigo\|blush"` | dégradé radial très doux | dessinées à la main (CSS) |
 | Filets | `Hairline variant="line\|dots\|marks"`, `SwirlEllipse` (l'ellipse du lien actif, sans étoile) | filets, ellipse | dessinés à la main |
 
-Aucun asset ne copie une des références Dribbble. Les marques, icônes, filets et cadres sont dessinés pour le projet ; les objets et les dessins au trait sont des **icônes IconPark** (voir ci-dessous). Tous les dessins sont des composants SVG en ligne (ils prennent `currentColor` : une classe donne la couleur).
+Aucun asset ne copie une des références Dribbble. Les marques, icônes, filets et cadres sont dessinés pour le projet ; les objets, les dessins au trait et les icônes d'interface sont le **jeu sur mesure** (voir ci-dessous). Tous les dessins sont des composants SVG en ligne (ils prennent `currentColor` : une classe donne la couleur).
 
-### Les objets et les dessins au trait : une famille, une source
+### Les objets, les dessins et les icônes : un jeu sur mesure
 
-Source : IconPark, jeu « Outline » de ByteDance (<https://github.com/bytedance/IconPark>), licence **Apache-2.0**, dessinée par des personnes. Pourquoi elle : c'est la seule famille libre vérifiée qui contient à la fois le rouge à lèvres, le pinceau, le poudrier, le miroir, le mascara, le vernis, le parfum, le peigne, les lèvres et l'œil, dans un même trait (Phosphor, Tabler, Lucide, Iconoir, Remix et Material Design Icons n'ont ni mascara, ni poudrier, ni vernis ; game-icons demande une mention d'auteur et mélange les styles ; OpenMoji est en partage à l'identique ; la liste complète est dans `credits-svg.md`).
+Décision d'Andy du 26/10/2026 : après l'essai d'un pack généré par fal et fini dans VectorCraft (« ça marche vraiment super bien », sauf l'œil, refait à la main), ce jeu remplace tous les SVG décoratifs et informatifs du site public et de l'espace (hors le haut de l'accueil, qui a son propre travail). Il n'y a plus d'icône d'un jeu tiers.
 
-- **Données** : `src/components/art/drawings.ts` (formes nues sur une grille de 48, rien d'autre : ni couleur, ni style, ni lien). Il est **écrit par** `scripts/art/extract-drawings.ts` à partir d'une copie du dépôt IconPark : `bun --no-env-file scripts/art/extract-drawings.ts <dépôt IconPark>`. Le script retire les remplissages à deux tons, les couleurs, le chemin de découpe et tout ce qui n'est pas une forme (parseur HTML, aucun filtre sur le balisage).
-- **Rendu** : `Drawing` (dans `graphics.tsx`) trace chaque forme en contour `currentColor`, extrémités arrondies, avec **une seule épaisseur** pour toute la famille : la variable CSS `--art-drawing-stroke` (`.art-drawing`, 1,75 px **à l'écran, à toutes les tailles** : `vector-effect: non-scaling-stroke`, comme les filets de 1 px du kit ; sans cela, l'épaisseur d'origine de la grille de 48 donnait 12 px sur un grand objet). Même grille, même échelle, même poids : un nouveau dessin de la famille s'y range sans réglage.
-- **Poids** : environ 5,3 Ko de données pour les dix dessins (contre 52 Ko), aucun fichier de plus, aucun JavaScript.
-- **Ce qui manque** : éponge, pince à cils, profil, main qui tient un pinceau, balayages de pinceau n'existent pas en vrai SVG libre de cette famille : ils sont retirés (le parfum et le peigne prennent la place de l'éponge ; le pinceau en objet remplace la main) plutôt que dessinés à la main ou pris dans un second style.
-- **Licence** : le texte d'Apache-2.0 est dans `LICENSES/IconPark-Apache-2.0.txt`, l'auteur et la source dans `credits-svg.md`, la mention des modifications dans `credits-svg.md` et dans l'en-tête de `drawings.ts`. Aucune mention visible sur le site n'est requise.
+- **Famille** : 41 icônes, une grille de 24, **un chemin plein** par icône (`fill-rule="evenodd"`, `currentColor`), **une ligne de 1,375 unités** (5,7 % de la boîte), bouts et jointures arrondis. Aucun trait SVG : la ligne fait partie de la forme.
+- **Données** : `src/components/art/drawings.ts` (objets, dessins au trait) et `src/components/art/icons.ts` (interface), **écrits par** `scripts/art/build-drawings.ts` à partir de `scripts/art/icons/*.svg` ; l'origine de chaque icône est dans `scripts/art/icon-origins.ts` et `credits-svg.md`. Les icônes d'interface sont dans un fichier à part pour qu'un composant client (`Icon.tsx`) n'embarque pas les objets.
+- **Rendu** : `Drawing` (dans `graphics.tsx`) et `Icon` (`Icon.tsx`) posent un `<svg>` avec un seul `<path>` ; la classe donne la taille et la couleur. **Le poids suit la taille** : un grand objet a une ligne épaisse (1,375/24 de sa boîte), une icône de 16 px une ligne d'environ 0,9 px. Avant, les contours restaient à 1,75 px à l'écran à toutes les tailles ; c'est la différence la plus visible de ce changement.
+- **Tailles** : les icônes d'interface s'emploient à 16 px et plus (`h-4`) ; en dessous, la ligne passe sous 0,9 px. Un contrôle garde sa cible de 44 px (le bouton, pas l'icône).
+- **Poids des données** : environ 20 Ko de données pour 41 icônes (pas de JavaScript de plus), moins de 2 Ko par icône.
+- **Ajouter une icône** : dessiner en VectorCraft sur 24 x 24 points (`draw_path`, `draw_shape`, trait de 1,375, bouts et jointures arrondis, formes simples) ; `object.path.outlineStroke`, `object.pathfinder.unite`, `object.path.simplify` (0,05), `document.export` en SVG (`decimals` 2, `minify`, sans métadonnée) ; ramener à un seul chemin sur la grille, optimiser avec `svgo`, vérifier à 28, 72 et 150 px. Pour une forme organique, partir d'une image générée par fal (voir les prompts et réglages dans `credits-svg.md`) tracée en lignes centrales (`imageTrace.makeAndExpand`, traits seuls) plutôt que d'un tracé de contours.
+- **Droits** : aucun droit d'auteur n'est revendiqué sur les images générées par IA ; les conditions de fal et d'OpenAI sur la propriété des sorties sont à relire par Andy (`credits-svg.md`, « Droits »).
 
 ## Composants
 
@@ -191,7 +193,7 @@ Le shader WebGL n'a pas pu être vu dans le navigateur de travail (pas de WebGL)
 2. **Dessins au trait continu et balayages de pinceau à la place des fleurs**, sans rien de botanique.
 3. **Polices : déclarées une fois dans le gabarit, `preload: false`.** Le kit ne coûte rien aux pages qui ne s'en servent pas ; la paire préchargée de `direct-edit/fonts.ts` reste pour les routes qui peignent déjà du Bodoni (sinon : CLS de `/mentions-legales` à 0,16). À renverser quand toutes les pages auront pris le kit.
 4. **`Cta` devient `ArtCta`** pour les treize pages d'un coup (décision du 25/10/2026, refonte de l'accueil) : le composant partagé garde son nom et ses clics mesurés.
-5. **Dessins réels, d'une seule famille (IconPark)** à la place des dessins générés par une IA (25/10/2026, demande du mainteneur) : l'éponge, la pince à cils, le profil, la main au pinceau et les balayages sont retirés faute de vrai SVG libre de la même famille.
+5. **Un jeu d'icônes sur mesure** (26/10/2026, décision d'Andy) : les dessins d'IconPark du 25/10 sont remplacés par un jeu fait pour le site (généré par IA puis tracé, ou dessiné à la main, fini dans VectorCraft). L'éponge, le recourbe-cils et la palette de fards reviennent. Le poids des lignes suit désormais la taille des dessins.
 6. **Pas de flèches de carrousel** : le défilement par glissement (`scroll-snap`) suffit ; `RoundButton` est prêt si une page en demande.
 
 ## Pas de barre blanche

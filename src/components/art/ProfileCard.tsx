@@ -103,7 +103,7 @@ function GoArrow() {
 function Pro() {
 	return (
 		<span className="absolute bottom-4 left-3.5 z-[3] inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 font-semibold text-indigo-900 text-xs">
-			<Icon name="seal" className="h-3.5 w-3.5" />
+			<Icon name="shield-check" className="h-4 w-4" />
 			Pro
 		</span>
 	)

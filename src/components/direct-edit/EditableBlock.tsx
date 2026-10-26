@@ -2,6 +2,7 @@
 
 import { type KeyboardEvent, type ReactNode, useEffect, useId, useRef } from 'react'
 import { createPortal } from 'react-dom'
+import { Icon } from '@/components/art/Icon'
 import { blockAnchor } from '@/lib/dashboard/draft-notice'
 import { EditorFrame } from './EditorFrame'
 import { useEditSession } from './EditSession'
@@ -118,18 +119,7 @@ export function EditableBlock({
 				aria-hidden="true"
 				className={`pointer-events-none absolute ${penClassName} flex h-11 min-w-11 items-center justify-center gap-2 rounded-full border border-nude-300 bg-white px-3 font-body font-medium text-ink text-sm shadow-sm ${dimmed ? '' : 'group-focus-within:border-lipstick-800 group-focus-within:bg-lipstick-800 group-focus-within:text-white group-hover:border-lipstick-800 group-hover:bg-lipstick-800 group-hover:text-white'} ${isOpen ? 'border-lipstick-800 bg-lipstick-800 text-white' : ''}`}
 			>
-				<svg
-					width="18"
-					height="18"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					strokeWidth="2"
-					strokeLinecap="round"
-					strokeLinejoin="round"
-				>
-					<path d="M4 20h4L19 9l-4-4L4 16z" />
-				</svg>
+				<Icon name="pencil" className="h-[18px] w-[18px]" />
 				<span className={dimmed ? 'hidden' : 'hidden group-focus-within:inline group-hover:inline'}>Modifier</span>
 			</span>
 			{isOpen && session.slot !== null
