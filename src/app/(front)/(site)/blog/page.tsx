@@ -64,6 +64,7 @@ export default async function BlogPage() {
 							</p>
 						</div>
 						<div aria-hidden="true" className="relative hidden lg:block">
+							{/* TODO(1136): illustration à générer (arche 4:5 grand format, en-tête du blog; intention: conseils beauté, mariage, soin de la peau; remplace le pinceau dessiné) */}
 							<ArchImage tint="blush" band="band" mark="plus">
 								<span className="absolute inset-[18%_20%_10%] block text-indigo-900">
 									<MakeupObject name="brush" />

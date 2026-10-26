@@ -83,7 +83,7 @@ describe('Open Graph (U51)', () => {
 	test('un profil : type « profile », sa photo principale allégée à 1 200 px, absolue', () => {
 		const tags = og(profileMetadata(profile()))
 		expect(tags.type).toBe('profile')
-		expect(tags.title).toBe('Léa Imaginaire – maquilleuse mariage à Annecy | My-Makeup')
+		expect(tags.title).toBe('Léa Imaginaire, maquilleuse mariage à Annecy | My-Makeup')
 		const [image] = tags.images
 		expect(image?.url).toMatch(ABSOLUTE)
 		const url = new URL(image?.url ?? '')
@@ -103,7 +103,7 @@ describe('Open Graph (U51)', () => {
 		expect(meta.robots).toEqual({ index: false, follow: true })
 		expect(meta.alternates).toBeUndefined()
 		const tags = og(meta)
-		expect(tags.title).toBe('Léa Imaginaire – maquilleuse mariage à Annecy | My-Makeup')
+		expect(tags.title).toBe('Léa Imaginaire, maquilleuse mariage à Annecy | My-Makeup')
 		expect(tags.url).toBe('https://my-makeup.fr/profil/lea-imaginaire')
 		expect(tags.images[0]?.url).toMatch(ABSOLUTE)
 		expect(meta.twitter).toBeDefined()

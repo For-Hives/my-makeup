@@ -30,6 +30,7 @@ export default function RequestSentPage() {
 				<GlowBlob size="md" tone="indigo" className="-bottom-40 -left-60" />
 				<div className="reveal relative mx-auto grid max-w-4xl items-center gap-10 rounded-art-frame border border-nude-200 bg-white p-8 sm:p-12 md:grid-cols-[minmax(0,220px)_minmax(0,1fr)] md:gap-14">
 					<div className="mx-auto w-full max-w-[180px] pr-3 md:max-w-none">
+						{/* TODO(1136): illustration à générer (arche 4:5, ~220 px; intention: rassurance, une maquilleuse qui reçoit un message, ton doux) */}
 						<ArchImage
 							src="/assets/back/maquilleuse_metisse_white.webp"
 							alt=""

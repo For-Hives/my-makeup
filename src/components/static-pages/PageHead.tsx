@@ -21,6 +21,7 @@ export function PageHead({
 	description,
 	layout = 'split',
 	mirrored = false,
+	// TODO(1136): illustration à générer (portrait par défaut de la tête de page, arche 4:5 ~380 px, une maquilleuse; remplace l'illustration provisoire)
 	image = '/assets/back/maquilleuse_europeenne_white.webp',
 	imageAlt = 'trouver une maquilleuse professionnelle freelance',
 	tint = 'blush',
@@ -145,6 +146,7 @@ function PageArch({
 	)
 }
 
+// TODO(1136): illustration à générer (portraits en arche 4:5 pour la tête des pages; cinq variantes, une par teinte; aussi l'image par défaut de `PageHead`)
 const ILLUSTRATIONS = [
 	{ image: '/assets/back/maquilleuse_europeenne_white.webp', tint: 'blush', band: 'band' },
 	{ image: '/assets/back/maquilleuse_asiatique_white.webp', tint: 'lavender', band: 'rose' },

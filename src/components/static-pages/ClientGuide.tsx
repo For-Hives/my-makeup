@@ -4,7 +4,6 @@ import type { Tint } from '@/components/art/CapsuleImage'
 import { Cta } from '@/components/blocks/Cta'
 import { SearchBlock } from '@/components/blocks/SearchBlock'
 import { ArticleHeading, ArtLead, ArtPage, ArtSignature } from './ArtPage'
-import { TitleWithAccent } from './EditorialArticle'
 import { PageHead } from './PageHead'
 
 /** One step of a guide: a heading, then its text. */
@@ -70,9 +69,7 @@ export function ClientGuide({ contenu }: { contenu: GuideContent }) {
 								>
 									{index + 1}
 								</div>
-								<h3 className="font-display font-medium text-2xl leading-tight tracking-tight">
-									<TitleWithAccent text={etape.titre} />
-								</h3>
+								<h3 className="font-display font-medium text-2xl leading-tight tracking-tight">{etape.titre}</h3>
 								<p className="max-w-[56ch] text-base text-mute leading-7">{etape.texte}</p>
 							</li>
 						))}

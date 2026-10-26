@@ -2,7 +2,6 @@ import type { Tint } from '@/components/art/CapsuleImage'
 import { CapsuleImage } from '@/components/art/CapsuleImage'
 import type { MakeupObjectName } from '@/components/art/drawings'
 import { ArticleHeading, ArtLead, ArtSignature } from './ArtPage'
-import { TitleWithAccent } from './EditorialArticle'
 
 export interface PageSection {
 	titre: string
@@ -16,11 +15,9 @@ export interface PageContent {
 	parties: readonly PageSection[]
 }
 
-const TRAILING_EMOJI = /\s*\p{Extended_Pictographic}(?:\p{Extended_Pictographic}|\u{FE0F}|\u{200D})*$/u
-
-/** The titles of the parts without their closing emoji: the phrases a banner can carry (the page's own words, nothing new). */
+/** The titles of the parts: the phrases a banner can carry (the page's own words, nothing new). */
 export function partTitles(contenu: PageContent): string[] {
-	return contenu.parties.map(({ titre }) => titre.replace(TRAILING_EMOJI, ''))
+	return contenu.parties.map(({ titre }) => titre)
 }
 
 const OBJECTS: readonly MakeupObjectName[] = ['brush', 'lipstick', 'compact', 'mirror', 'mascara', 'perfume']
@@ -59,9 +56,7 @@ export function PageArticle({ contenu, eyebrow }: { contenu: PageContent; eyebro
 									/>
 								</span>
 								<div>
-									<h3 className="font-display font-medium text-2xl leading-snug tracking-tight">
-										<TitleWithAccent text={partie.titre} />
-									</h3>
+									<h3 className="font-display font-medium text-2xl leading-snug tracking-tight">{partie.titre}</h3>
 									<p className="mt-3 max-w-[56ch] text-base text-mute leading-7">{partie.texte}</p>
 								</div>
 							</section>
