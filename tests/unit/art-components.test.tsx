@@ -314,7 +314,10 @@ describe('titles, heads and pictures', () => {
 		expect(badge).toContain('EXPLORER LES MAQUILLEUSES')
 		expect(badge).toMatch(/<a [^>]*aria-label="Explorer les maquilleuses"/)
 		expect(badge).toContain('size-14')
-		const spin = CSS.indexOf('animation: art-spin')
+		// The kit's own rule: the home hero reuses the keyframes for the ring of its badge, earlier in the sheet, under
+		// the attribute its script sets (tests/unit/home-hero.test.tsx).
+		const spin = CSS.indexOf('animation: art-spin', CSS.indexOf('ART DIRECTION KIT'))
+		expect(spin).toBeGreaterThan(-1)
 		expect(CSS.lastIndexOf('@media (prefers-reduced-motion: no-preference)', spin)).toBeGreaterThan(
 			CSS.indexOf('ART DIRECTION KIT')
 		)

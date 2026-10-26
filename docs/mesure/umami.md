@@ -77,7 +77,7 @@ Un profil sans contact public n'a ni section ni lien, donc aucun événement. Le
 |---|---|---|
 | `search_submit` | La page de résultats d'une recherche s'affiche | `has_city` (une ville a été saisie), `results` (`0`, `1-5`, `6-20`, `21+`), `from` (`formulaire` si le formulaire vient d'être envoyé, `lien` sinon) |
 | `search_result_click` | Clic sur la carte d'un résultat | `rank` (place dans toute la liste, toutes pages comprises, à partir de 1), `pid` |
-| `cta_click` | Clic sur un appel à l'action | `where` : `cta_recherche` et `cta_inscription` (bloc de fin de page), `nav_recherche` (bouton de la barre, écran large), `nav_recherche_mobile` (le même bouton, menu déplié sous 1024 px) |
+| `cta_click` | Clic sur un appel à l'action | `where` : `cta_recherche` et `cta_inscription` (bloc de fin de page), `nav_recherche` (bouton de la barre, écran large), `nav_recherche_mobile` (le même bouton, menu déplié sous 1024 px), `accueil_explorer` (le badge « Explorer les maquilleuses » sur l'arche du haut de l'accueil, depuis le 26/10/2026) |
 | `not_found` | Une page 404 s'affiche | `kind` : `profil`, `talent`, `blog` d'après le premier segment de l'adresse, `autre` sinon |
 | `app_error` | Une page d'erreur s'affiche | `scope` (`site`, `espace`, `global`), `code` (`chunk_load` si un script n'a pas pu charger, `render` sinon) |
 

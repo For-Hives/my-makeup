@@ -39,15 +39,20 @@ const notWhole = (page: Page): Promise<number> =>
 
 /**
  * Waits for every animation and transition of the page to end (the load-in, the reveals): the page is then at rest.
- * An animation that never ends (the banner of the kit slides for ever) is not waited for.
+ * An animation that repeats forever or is paused never ends (the ring of the badge and the ribbon of the home hero,
+ * the banner of the kit): it is left out on purpose, else this would wait for ever. tests/e2e/home-hero.spec.ts checks
+ * that the two loops of the hero run, and stop at its pause button, so leaving them out here hides nothing.
  */
 function settle(page: Page): Promise<void> {
 	return page.evaluate(async () => {
-		// The loops of the kit (the sliding banner, the turning badge) never finish: they are not part of a load-in.
-		const finite = document
+		const ending = document
 			.getAnimations()
-			.filter(animation => animation.effect?.getComputedTiming().iterations !== Number.POSITIVE_INFINITY)
-		await Promise.all(finite.map(animation => animation.finished.catch(() => undefined)))
+			.filter(
+				animation =>
+					animation.playState !== 'paused' &&
+					animation.effect?.getComputedTiming().iterations !== Number.POSITIVE_INFINITY
+			)
+		await Promise.all(ending.map(animation => animation.finished.catch(() => undefined)))
 	})
 }
 

@@ -12,7 +12,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { ModerationEvents } from '@/collections/ModerationEvents'
 import { Profiles } from '@/collections/Profiles'
 import { FeaturedProfiles } from '@/components/home/FeaturedProfiles'
-import { HeroIllustration } from '@/components/home/HeroIllustration'
+import { HomeHero } from '@/components/home/HomeHero'
 import { SectionHead } from '@/components/home/SectionHead'
 import {
 	FEATURED_CANDIDATES_MAX,
@@ -25,6 +25,7 @@ import { ACTION_LABELS } from '@/lib/profile/moderation'
 import { verifyActionOf } from '@/lib/profile/verified'
 import { featuredCandidates } from '@/services/public/featured'
 import type { DirectoryProfile } from '@/services/public/profiles'
+import { mainTitles } from '../support/url-parity'
 
 const read = (file: string): string => readFileSync(join(import.meta.dir, '../..', file), 'utf8')
 
@@ -208,12 +209,14 @@ describe('1066 : le bloc « Mise en avant »', () => {
 		expect(renderToStaticMarkup(<FeaturedProfiles cartes={[]} />)).toBe('')
 	})
 
-	test('les cartes sont celles du kit, sans clic mesuré, sous une bannière qui ne dit rien de neuf', () => {
+	test('les cartes sont celles du kit, sans clic mesuré, et sans bannière : le bandeau du haut de page est le seul de l’accueil', () => {
 		const html = renderToStaticMarkup(<FeaturedProfiles cartes={many(3)} />)
 		expect(html.match(/data-profile-card/g)).toHaveLength(3)
 		expect(html).not.toContain('data-result-card')
-		expect(html).toContain('Des maquilleuses indépendantes, partout en France')
-		expect(html.indexOf('art-marquee')).toBeLessThan(html.indexOf('<section aria-labelledby'))
+		// Andy, 26/10/2026: « un seul bandeau le plus cohérent ». The kit banner that opened this section is gone.
+		expect(html).not.toContain('art-marquee')
+		expect(html).not.toContain('Des maquilleuses indépendantes, partout en France')
+		expect(html.startsWith('<section aria-labelledby="accueil-mise-en-avant"')).toBe(true)
 		expect(html).toContain('home-section')
 	})
 
@@ -249,30 +252,35 @@ describe('1066 : le bloc « Mise en avant »', () => {
 	})
 })
 
-describe('1066 : le bloc à droite du haut de page', () => {
-	const html = renderToStaticMarkup(<HeroIllustration />)
+describe('1066 : le haut de page', () => {
+	// The drawing of issue 1066 gave way to the arch (decision of 25/10/2026), and its three lines to the essential: the
+	// heading, one sentence and the search (Andy, 25/10/2026).
+	const html = renderToStaticMarkup(<HomeHero />)
 
-	test('dit en trois lignes ce que la plateforme fait pour la cliente', () => {
-		expect(html).toContain('Cherchez par événement et par lieu')
-		expect(html).toContain('Consultez des profils vérifiés')
-		expect(html).toContain('Écrivez en direct à la maquilleuse')
+	test('il ne dit plus en trois lignes ce que fait la plateforme : la phrase et la recherche le disent', () => {
+		expect(html).not.toContain('Cherchez par événement et par lieu')
+		expect(html).not.toContain('Consultez des profils vérifiés')
+		expect(html).toContain('Des maquilleuses professionnelles')
+		expect(html).toContain('action="/search"')
 	})
 
-	test('une illustration faite de composants : ni photo, ni nom, ni donnée personnelle', () => {
-		expect(html).not.toContain('<img')
+	test('ni nom, ni donnée personnelle : l’arche montre des ombres, le titre des mots seuls', () => {
 		expect(html).not.toMatch(/@|\d{2} \d{2} \d{2}/)
-		expect(html).toContain('aria-hidden="true"')
+		expect(html.match(/<img\b[^>]*aria-hidden="true"/g)).toBeNull()
 	})
 })
 
 describe('1066 : la page d’accueil', () => {
 	const page = read('src/app/(front)/(site)/home-cached/[key]/page.tsx')
 
-	test('l’accroche, le titre, les données structurées sont gardés au caractère près', () => {
-		expect(page).toContain('Trouver la maquilleuse qui vous correspond n&apos;a jamais été aussi simple')
+	test('le titre de l’onglet et les données structurées sont gardés ; le h1 est celui du haut de page en arche', () => {
+		expect(mainTitles(renderToStaticMarkup(<HomeHero />))).toEqual([
+			'Trouvez la maquilleuse qui vous correspond près de chez vous.',
+		])
 		expect(page).toContain("const TITLE = 'Maquilleuse professionnelle près de chez vous'")
 		expect(page).toContain('homeStructuredData')
-		expect(page).toContain('<GuidedSearch />')
+		expect(page).toContain('<HomeHero />')
+		expect(read('src/components/home/HomeHero.tsx')).toContain('<GuidedSearch />')
 	})
 
 	test('« Comment ça marche » n’a plus de titre ni de pli ; les trois textes restent', () => {

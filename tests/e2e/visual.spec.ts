@@ -103,6 +103,8 @@ for (const width of VISUAL_WIDTHS)
 				await expect(page).toHaveScreenshot(`${name}-${width}.png`, {
 					fullPage: true,
 					animations: 'disabled',
+					// The film of the home hero plays at its own pace (docs/accueil.md): its arch is masked, the rest is compared.
+					mask: name === 'home' ? [page.locator('.home-hero-arch')] : [],
 					caret: 'hide',
 					maxDiffPixelRatio: 0.01,
 				})

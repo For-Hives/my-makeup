@@ -8,12 +8,14 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { GuidedSearch } from '@/components/home/GuidedSearch'
+import { HomeHero } from '@/components/home/HomeHero'
 import { PUBLIC_PAGES } from '@/lib/revalidate'
 import { EVENT_CHOICES } from '@/lib/search/event-choices'
 import { readSearch, searchByWord } from '@/lib/search/input'
 import { normalizeTexts } from '@/lib/search/relevance'
 import { find } from '@/lib/search/results'
 import type { DirectoryProfile } from '@/services/public/profiles'
+import { mainTitles } from '../support/url-parity'
 
 const read = (file: string): string => readFileSync(join(import.meta.dir, '../..', file), 'utf8')
 
@@ -97,8 +99,13 @@ describe('1013 : le formulaire guidé', () => {
 describe('1013 : la page d’accueil', () => {
 	const page = read('src/app/(front)/(site)/home-cached/[key]/page.tsx')
 
-	test('le h1, le titre, les données structurées et le texte de référencement sont gardés', () => {
-		expect(page).toContain('Trouver la maquilleuse qui vous correspond n&apos;a jamais été aussi simple')
+	test('le titre de l’onglet, les données structurées et le texte de référencement sont gardés ; le h1 est celui du haut de page en arche', () => {
+		// The h1 is drawn by the hero « en arche » in lines with a picture: its rendered text is read, not the source. It
+		// changed on 25/10/2026 (register line `accueil-titre`); the title of the tab did not.
+		expect(page).toContain('<HomeHero />')
+		expect(mainTitles(renderToStaticMarkup(<HomeHero />))).toEqual([
+			'Trouvez la maquilleuse qui vous correspond près de chez vous.',
+		])
 		expect(page).toContain("const TITLE = 'Maquilleuse professionnelle près de chez vous'")
 		expect(page).toContain('homeStructuredData')
 	})

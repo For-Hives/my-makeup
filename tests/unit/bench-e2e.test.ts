@@ -5,6 +5,8 @@ import path from 'node:path'
 import { keepSevere } from '../support/axe'
 import { benchEnvironment, RefusedBench, readInstance } from '../support/bench'
 import {
+	ALONE_RUN_FIRST_SHARD,
+	aloneRunShard,
 	applicationPort,
 	applicationSilentMessage,
 	buildEnvironment,
@@ -316,7 +318,7 @@ describe('ce que « bun run test:e2e » donne au build et à Playwright', () => 
 		})
 	})
 
-	test('ce qui est demandé passe tel quel dans les trois passages : un fichier, une option, un quart', () => {
+	test('ce qui est demandé passe tel quel dans les trois passages : un fichier, une option ; le lot, décalé pour les deux passages seuls', () => {
 		const {
 			principale: main,
 			crawl,
@@ -332,8 +334,24 @@ describe('ce que « bun run test:e2e » donne au build et à Playwright', () => 
 			'--project=mobile',
 			'--pass-with-no-tests',
 		])
-		expect(crawl?.slice(0, 4)).toEqual(['test', 'tests/e2e/shell.spec.ts', '--workers=1', '--shard=2/4'])
-		expect(finale?.slice(0, 4)).toEqual(['test', 'tests/e2e/shell.spec.ts', '--workers=1', '--shard=2/4'])
+		// The shard moves around for the runs alone: shard 4 of the job plays shard 1 of the crawl, shard 3 that of the import.
+		expect(crawl?.slice(0, 4)).toEqual(['test', 'tests/e2e/shell.spec.ts', '--workers=1', '--shard=3/4'])
+		expect(finale?.slice(0, 4)).toEqual(['test', 'tests/e2e/shell.spec.ts', '--workers=1', '--shard=4/4'])
+	})
+
+	test('dans la CI, le long premier essai de chaque passage seul quitte le premier lot : le crawl au 4, l’import au 3', () => {
+		expect(ALONE_RUN_FIRST_SHARD).toEqual({ crawl: 4, finale: 3 })
+		const played = (first: number) =>
+			[1, 2, 3, 4, 5].map(shard => aloneRunShard(`--shard=${shard}/5`, first).replace(/\/5$/, ''))
+		// Each shard of the job still plays exactly one shard of the run alone.
+		expect(played(4)).toEqual(['--shard=3', '--shard=4', '--shard=5', '--shard=1', '--shard=2'])
+		expect(played(3)).toEqual(['--shard=4', '--shard=5', '--shard=1', '--shard=2', '--shard=3'])
+		expect(playwrightPhases(['--shard=4/5']).crawl).toContain('--shard=1/5')
+		expect(playwrightPhases(['--shard=3/5']).finale).toContain('--shard=1/5')
+		expect(playwrightPhases(['--shard=1/5']).principale).toContain('--shard=1/5')
+		// Fewer shards than the one named: left as it is, like any other argument.
+		expect(aloneRunShard('--shard=1/2', 4)).toBe('--shard=1/2')
+		expect(aloneRunShard('--workers=2', 4)).toBe('--workers=2')
 	})
 
 	test('un projet demandé, sous ses deux écritures, choisit son passage et ne se répète pas dans les autres', () => {

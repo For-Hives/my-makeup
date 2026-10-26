@@ -11,8 +11,8 @@ exact = true
 #    whatever the order of the files.
 # 3. The interception of outgoing HTTP (tests/support/preload-outgoing-http.ts): a service outside
 #    this machine is simulated by the test, or the test fails. No test calls the Internet.
-# 4. The faces of `next/font/google`, replaced by plain objects (tests/support/preload-fonts.ts): the module only
-#    exists inside the build of Next, and the content pages set the faces of the art direction.
+# 4. The faces of `next/font/google` and `next/font/local`, replaced by plain objects (tests/support/preload-fonts.ts):
+#    the modules only work inside the build of Next, and the content pages and the home hero set their faces.
 [test]
 preload = [
 	"./tests/support/environment-guard.ts",

@@ -113,9 +113,12 @@ describe('motion tokens (issues 1069 and the visible pass)', () => {
 		const total = ms('duration-enter') + 2 * ms('stagger-enter')
 		expect(total).toBeGreaterThanOrEqual(500)
 		expect(total).toBeLessThanOrEqual(700)
-		const hero = readFileSync(join(ROOT, 'src/components/blocks/Hero.tsx'), 'utf8')
-		expect(hero).toMatch(/enterOrder\(index: 1 \| 2\)/)
-		expect(hero).not.toMatch(/enterOrder\(\s*[3-9]/)
+		// The shared hero, and the hero « en arche » of the home page (decision of 25/10/2026).
+		for (const file of ['src/components/blocks/Hero.tsx', 'src/components/home/HomeHero.tsx']) {
+			const hero = readFileSync(join(ROOT, file), 'utf8')
+			expect(hero).toMatch(/enterOrder\(index: 1 \| 2\)/)
+			expect(hero).not.toMatch(/enterOrder\(\s*[3-9]/)
+		}
 	})
 
 	test('the reveal staggers cards by 70 ms at most five steps: 350 ms, then the 600 ms of the rise', () => {

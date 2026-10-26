@@ -4,7 +4,8 @@ import { mainTitles } from '../support/url-parity'
 
 /** The home page (ticket 097): its h1, its search block, its talents, its structured data. */
 
-const ONLINE_H1 = "Trouver la maquilleuse qui vous correspond n'a jamais été aussi simple"
+/** The h1 of the home page since 25/10/2026 (register line `accueil-titre`). */
+const HOME_H1 = 'Trouvez la maquilleuse qui vous correspond près de chez vous.'
 
 test.describe('Accueil', () => {
 	// E64, for the home page: the SEO tags of the other pages are E64 of their own tickets.
@@ -28,7 +29,7 @@ test.describe('Accueil', () => {
 			/^https:\/\/my-makeup\.fr\/assets\/.+/
 		)
 		await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1)
-		await expect(page.getByRole('heading', { level: 1, name: ONLINE_H1 })).toBeVisible()
+		await expect(page.getByRole('heading', { level: 1, name: HOME_H1 })).toBeVisible()
 	})
 
 	test('le HTML sans JavaScript porte le h1, les talents publiés avec leur lien, et les données structurées', async ({
@@ -53,7 +54,7 @@ test.describe('Accueil', () => {
 			const response = await request.get('/')
 			expect(response.status()).toBe(200)
 			const html = await response.text()
-			expect(mainTitles(html)).toEqual([ONLINE_H1])
+			expect(mainTitles(html)).toEqual([HOME_H1])
 			expect(html).toContain(title)
 			const tags = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)]
 			expect(tags).toHaveLength(1)

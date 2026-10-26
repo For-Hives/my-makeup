@@ -6,8 +6,9 @@ import { SCREENS } from '../support/e2e'
 import { refreshProfilePages } from '../support/public-pages'
 
 /**
- * The home page (issues 1013 and 1066), at 390 px and at 1440 px: a guided form with labels in sight that leads to
- * the search, the block that says what the platform does, « Mise en avant » (absent until a profile is verified,
+ * The home page (issues 1013 and 1066, hero « en arche » of 25/10/2026), at 390 px and at 1440 px: a guided form with
+ * labels in sight that leads to the search and shows its texts whole at every width, a hero reduced to the heading, one
+ * sentence and the search, « Mise en avant » (absent until a profile is verified,
  * six cards at most, drawn at random at each load, never a profile that is not publishable), and the texts of the community, unfolded and without
  * the old title « Comment ça marche ». On each screen: no horizontal scroll, every control at least 44 px tall, axe finds no
  * « serious » or « critical » violation. Set `SCREENSHOT_DIR` to keep the screenshots. All made-up people.
@@ -30,6 +31,9 @@ async function checkScreen(page: Page, label: string): Promise<void> {
 			.filter(element => {
 				const box = element.getBoundingClientRect()
 				if (box.width === 0 || box.height === 0) return false
+				// A control drawn only at the keyboard focus, as a skip link (the pause button of the hero): its size is
+				// read once it shows (tests/e2e/home-hero.spec.ts).
+				if (element.matches('.sr-only')) return false
 				if (element.tagName === 'A' && element.closest('p, li > div')) return false
 				return box.height < 44
 			})
@@ -65,6 +69,25 @@ for (const size of SIZES) {
 			expect(await page.locator('main a[href^="/profil/"]').count()).toBeGreaterThan(0)
 		})
 
+		test('en couleurs forcées (contraste élevé de Windows), les deux champs gardent un anneau de focus', async ({
+			page,
+		}) => {
+			await page.emulateMedia({ forcedColors: 'active' })
+			await page.goto('/')
+			// From the keyboard, so that :focus-visible matches the select as it does the input.
+			for (const id of ['accueil-evenement', 'accueil-lieu']) {
+				const field = page.locator(`#${id}`)
+				await page.keyboard.press('Shift')
+				await field.focus()
+				const ring = await field.evaluate(element => {
+					const style = getComputedStyle(element)
+					return { style: style.outlineStyle, width: Number.parseFloat(style.outlineWidth) }
+				})
+				expect(ring.style, id).not.toBe('none')
+				expect(ring.width, id).toBeGreaterThanOrEqual(2)
+			}
+		})
+
 		test('une ville vide est refusée par le formulaire, « Autre » ne tape aucun mot', async ({ page }) => {
 			await page.goto('/')
 			await page.getByRole('button', { name: 'Voir les maquilleuses' }).click()
@@ -75,17 +98,16 @@ for (const size of SIZES) {
 			await expect(page).toHaveURL(/\/search\?search=&city=Annecy$/)
 		})
 
-		test('le bloc de droite dit ce que fait la plateforme, sans image à charger', async ({ page }) => {
+		test('le haut de page va à l’essentiel : le titre, une phrase, la recherche', async ({ page }) => {
 			await page.goto('/')
-			for (const line of [
-				'Cherchez par événement et par lieu',
-				'Consultez des profils vérifiés',
-				'Écrivez en direct à la maquilleuse',
-			])
-				await expect(page.getByText(line)).toBeVisible()
 			await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-				"Trouver la maquilleuse qui vous correspond n'a jamais été aussi simple"
+				'Trouvez la maquilleuse qui vous correspond près de chez vous.'
 			)
+			await expect(page.locator('.home-hero-lede')).toContainText('Des maquilleuses professionnelles')
+			await expect(page.getByRole('search')).toBeVisible()
+			// Neither the eyebrow nor the three numbered lines (Andy, 25/10/2026).
+			await expect(page.locator('section.home-hero ol')).toHaveCount(0)
+			await expect(page.getByText('Maquilleuses professionnelles, partout en France')).toHaveCount(0)
 			await checkScreen(page, 'accueil')
 		})
 
@@ -105,6 +127,66 @@ for (const size of SIZES) {
 		})
 	})
 }
+
+// The search is drawn from the width of its box (container queries): a card, two fields side by side over the button,
+// one pill. At every width the text of each part shows whole (the placeholder was cut at 640-695 px once), and a city
+// of a usual length too: a much longer one scrolls in its field, as in any text field.
+test('à chaque largeur, la recherche montre en entier ses libellés, son texte indicatif, la ville tapée et son bouton', async ({
+	page,
+}) => {
+	await page.goto('/')
+	await page.locator('#accueil-lieu').fill('Aix-en-Provence')
+	for (const width of [360, 390, 480, 640, 680, 720, 768, 1024, 1100, 1180, 1280, 1366, 1440]) {
+		await page.setViewportSize({ width, height: 900 })
+		const facts = await page.evaluate(() => {
+			const context = document.createElement('canvas').getContext('2d') as CanvasRenderingContext2D
+			/** The width the text of an element takes in its own font, against the room its box gives it. */
+			const fits = (element: HTMLElement, text: string): boolean => {
+				const style = getComputedStyle(element)
+				context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`
+				context.letterSpacing = style.letterSpacing === 'normal' ? '0px' : style.letterSpacing
+				const room = element.clientWidth - Number.parseFloat(style.paddingLeft) - Number.parseFloat(style.paddingRight)
+				return context.measureText(style.textTransform === 'uppercase' ? text.toUpperCase() : text).width <= room + 0.5
+			}
+			const input = document.querySelector('#accueil-lieu') as HTMLInputElement
+			const select = document.querySelector('#accueil-evenement') as HTMLSelectElement
+			const labels = [...document.querySelectorAll<HTMLElement>('.guided-search-label')]
+			const field = (label: HTMLElement) => label.parentElement as HTMLElement
+			const button = document.querySelector('.guided-search-submit') as HTMLElement
+			const form = (document.querySelector('form.guided-search') as HTMLElement).getBoundingClientRect()
+			const column = (document.querySelector('.home-hero-text') as HTMLElement).getBoundingClientRect()
+			return {
+				placeholder: fits(input, input.placeholder),
+				typed: fits(input, input.value),
+				choice: fits(select, select.selectedOptions[0]?.textContent ?? ''),
+				// A label stands over its field from the left padding of the field to the right edge of the segment.
+				labels: labels.every(
+					label => label.getBoundingClientRect().right <= field(label).getBoundingClientRect().right
+				),
+				button: button.scrollWidth <= button.clientWidth,
+				inColumn: form.right <= column.right + 0.5,
+				layout: getComputedStyle(document.querySelector('form.guided-search') as Element).display,
+			}
+		})
+		expect(facts, `${width} px`).toMatchObject({
+			placeholder: true,
+			typed: true,
+			choice: true,
+			labels: true,
+			button: true,
+			inColumn: true,
+		})
+		expect(['flex', 'grid'], `${width} px`).toContain(facts.layout)
+	}
+	// The pill on a wide screen, the card on a phone.
+	await page.setViewportSize(SCREENS.chromium)
+	expect((await page.locator('form.guided-search').boundingBox())?.height).toBeCloseTo(72, 0)
+	await page.setViewportSize(SCREENS.mobile)
+	const [event, place] = await page
+		.locator('.guided-search-field')
+		.evaluateAll(fields => fields.map(field => field.getBoundingClientRect().top))
+	expect(place ?? 0).toBeGreaterThan(event ?? 0)
+})
 
 // The pool is a state of the whole bench: one test sets it, then looks at both screens (two tests at once, one per
 // size, would tick and untick the same profiles under each other). The bench ships one profile already verified
@@ -149,6 +231,11 @@ test('« Mise en avant » : absente sans profil vérifié, six cartes au plus ti
 			await page.goto('/')
 			const block = page.getByTestId('maquilleuses-mises-en-avant')
 			await expect(block.getByRole('heading', { name: 'Mise en avant' })).toBeVisible()
+			// One band under the hero (Andy, 26/10/2026: « un seul bandeau le plus cohérent »): the ribbon of the
+			// specialties. The kit banner, and its pause button in sight, no longer open « Mise en avant ».
+			await expect(page.locator('.home-hero-ribbon')).toHaveCount(1)
+			await expect(page.locator('.art-marquee')).toHaveCount(0)
+			await expect(page.getByRole('button', { name: 'Mettre en pause le défilement' })).toHaveCount(0)
 			const visible = (await shownSlugs(block)).length
 			expect(visible).toBeGreaterThan(0)
 			expect(visible).toBeLessThanOrEqual(6)
