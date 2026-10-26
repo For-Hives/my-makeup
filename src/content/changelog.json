@@ -1,6 +1,17 @@
 {
 	"description": "Les notes de version du site, en français : ce qu'une visiteuse ou une maquilleuse peut remarquer. Une note s'ajoute par « bun run notes:add » et attend dans « pending » ; la publication la range sous son numéro, dans « releases ». Voir docs/publication.md.",
-	"pending": [],
+	"pending": [
+		{
+			"id": "dans-la-barre-du-haut-le-menu-ou-tu-te-trouves-particulie",
+			"type": "amelioration",
+			"text": "Dans la barre du haut, le menu où tu te trouves (Particulier, Maquilleuse ou Solutions) est entouré, comme Blog, pour que tu saches où tu es."
+		},
+		{
+			"id": "au-survol-les-cartes-du-blog-et-des-maquilleuses-se-posen",
+			"type": "amelioration",
+			"text": "Au survol, les cartes du blog et des maquilleuses se posent sur un fond rose très doux qui respire autour d'elles, sans ombre dure, et les boutons de partage sous un article se remplissent en douceur."
+		}
+	],
 	"releases": [
 		{
 			"version": "3.0.20",
