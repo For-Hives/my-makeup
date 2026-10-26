@@ -94,6 +94,12 @@ export function publicationWorkflowProblems(workflow: Workflow, ci: Workflow): s
 		problems.push(
 			`${where} : une publication à la fois, jamais coupée en route (« concurrency », un groupe fixe et « cancel-in-progress: false »).`
 		)
+	else if (concurrency.queue !== 'max')
+		problems.push(
+			`${where} : les publications en attente sont toutes gardées, dans l’ordre (« queue: max ») : le job deployment tient le groupe pendant des minutes, et la file d’une seule annulerait sans bruit la publication qui attend.`
+		)
+	if (root.env !== undefined)
+		problems.push(`${where} : aucun « env » en tête du fichier : il irait dans chaque job, jeton compris.`)
 
 	const ids = Object.keys(workflow.jobs)
 	if (!sameList([...ids].sort(), ['deployment', 'publication']))
@@ -109,6 +115,7 @@ export function publicationWorkflowProblems(workflow: Workflow, ci: Workflow): s
 			problems.push(`${at} : la condition est exactement « ${CONDITIONS.join(' && ')} ».`)
 		if (!sameRecord(job.permissions, { contents: 'write', checks: 'read' }))
 			problems.push(`${at} : les permissions sont « contents: write » et « checks: read », rien d’autre.`)
+		if (job.env !== undefined) problems.push(`${at} : aucun « env » au niveau du job : la commande reçoit le sien.`)
 		if (!sameRecord(job.outputs, { 'release-commit': RELEASE_COMMIT_OUTPUT }))
 			problems.push(
 				`${at} : une seule sortie, « release-commit: ${RELEASE_COMMIT_OUTPUT} », pour le job qui vérifie la prod.`
@@ -124,9 +131,13 @@ export function publicationWorkflowProblems(workflow: Workflow, ci: Workflow): s
 				`${at} : le checkout extrait « ref: ${SOURCE} », le commit dont la CI est verte, avec « persist-credentials: false ».`
 			)
 		const commands = steps.filter(step => step.run !== undefined)
-		if (commands.length !== 1 || String(commands[0]?.run).trim() !== PUBLICATION_COMMAND)
+		if (
+			commands.length !== 1 ||
+			commands[0]?.if !== undefined ||
+			String(commands[0]?.run).trim() !== PUBLICATION_COMMAND
+		)
 			problems.push(
-				`${at} : une seule commande, « ${PUBLICATION_COMMAND} ». Pas de « bun install » : aucun code d’une dépendance ne tourne à côté du jeton.`
+				`${at} : une seule commande, « ${PUBLICATION_COMMAND} », sans condition. Pas de « bun install » : aucun code d’une dépendance ne tourne à côté du jeton.`
 			)
 		else if (!sameRecord(commands[0]?.env, { GITHUB_TOKEN: RUN_TOKEN, SOURCE_COMMIT: SOURCE }))
 			problems.push(
@@ -151,6 +162,7 @@ function deploymentJobProblems(at: string, job: Workflow['jobs'][string]): strin
 		problems.push(`${at} : la condition est exactement « needs.publication.outputs.release-commit != '' ».`)
 	if (!sameRecord(job.permissions, { contents: 'read' }))
 		problems.push(`${at} : la permission est « contents: read », rien d’autre : il ne fait que lire.`)
+	if (job.env !== undefined) problems.push(`${at} : aucun « env » au niveau du job : ni jeton ni secret.`)
 	const steps = job.steps ?? []
 	for (const step of steps.filter(candidate => candidate.uses !== undefined))
 		if (!ACTIONS.some(action => step.uses?.startsWith(action)))
@@ -159,8 +171,14 @@ function deploymentJobProblems(at: string, job: Workflow['jobs'][string]): strin
 	if (checkout?.with?.ref !== SOURCE || checkout.with['persist-credentials'] !== false)
 		problems.push(`${at} : le checkout extrait « ref: ${SOURCE} », avec « persist-credentials: false ».`)
 	const commands = steps.filter(step => step.run !== undefined)
-	if (commands.length !== 1 || String(commands[0]?.run).trim() !== DEPLOYMENT_CHECK_COMMAND)
-		problems.push(`${at} : une seule commande, « ${DEPLOYMENT_CHECK_COMMAND} », sans « bun install ».`)
+	if (
+		commands.length !== 1 ||
+		commands[0]?.if !== undefined ||
+		String(commands[0]?.run).trim() !== DEPLOYMENT_CHECK_COMMAND
+	)
+		problems.push(
+			`${at} : une seule commande, « ${DEPLOYMENT_CHECK_COMMAND} », sans condition et sans « bun install ».`
+		)
 	else if (!sameRecord(commands[0]?.env, { RELEASE_COMMIT }))
 		problems.push(`${at} : la commande reçoit RELEASE_COMMIT = ${RELEASE_COMMIT}, aucun jeton ni secret.`)
 	return problems

@@ -31,9 +31,13 @@ defaults:
   run:
     shell: bash
 
+# One publication at a time, never cut half-way, and every waiting one kept in order (`queue: max`):
+# the job that checks the deployment holds the group for minutes, and with the default queue of
+# one, a run queued behind would silently cancel the publication waiting before it.
 concurrency:
   group: publication
   cancel-in-progress: false
+  queue: max
 
 jobs:
   publication:

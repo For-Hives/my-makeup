@@ -141,9 +141,45 @@ describe('the publication depends on ci-ok', () => {
 		['two publications at once', 'cancel-in-progress: false', 'cancel-in-progress: true', 'une publication à la fois'],
 		[
 			'no queue at all',
-			'concurrency:\n  group: publication\n  cancel-in-progress: false\n',
+			'concurrency:\n  group: publication\n  cancel-in-progress: false\n  queue: max\n',
 			'',
 			'une publication à la fois',
+		],
+		[
+			'a queue of one, which cancels a waiting publication',
+			'  cancel-in-progress: false\n  queue: max\n',
+			'  cancel-in-progress: false\n',
+			'queue: max',
+		],
+		[
+			'an env for every job',
+			'concurrency:\n',
+			`env:\n  GITHUB_TOKEN: ${expression('github.token')}\n\nconcurrency:\n`,
+			'aucun « env » en tête du fichier',
+		],
+		[
+			'a publication that can be skipped',
+			'        id: publish\n',
+			"        id: publish\n        if: github.ref == 'refs/heads/other'\n",
+			'sans condition',
+		],
+		[
+			'a check that can be skipped',
+			'      - name: Wait for the production to serve the version\n',
+			'      - name: Wait for the production to serve the version\n        if: false\n',
+			'sans condition',
+		],
+		[
+			'a token given to the whole check job',
+			'    needs: publication\n',
+			`    needs: publication\n    env:\n      GITHUB_TOKEN: ${expression('github.token')}\n`,
+			'aucun « env » au niveau du job : ni jeton ni secret',
+		],
+		[
+			'an env for the whole publication job',
+			'    outputs:\n',
+			`    env:\n      OTHER: value\n    outputs:\n`,
+			'aucun « env » au niveau du job : la commande reçoit le sien',
 		],
 		[
 			'a queue per commit, which is no queue',
