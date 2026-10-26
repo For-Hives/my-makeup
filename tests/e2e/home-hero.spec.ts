@@ -4,9 +4,9 @@ import { SCREENS } from '../support/e2e'
 
 /**
  * The home hero « en arche » (decision of 25/10/2026, docs/accueil.md), in a browser, at 390 px and 1440 px: the
- * film comes once the page is loaded and the arch is seen, plays its intro then swaps to the loop; the ring of the
- * badge turns only while the film plays and the ribbon slides, and the button of the badge stops all three and
- * starts them again. With reduced motion: the end still, no video, nothing turns, no button. With Save-Data: the end
+ * film comes once the page is loaded and the arch is seen, plays its intro then swaps to the loop; the ribbon slides,
+ * and the button of the badge stops both and starts them again. With reduced motion: the end still, no video, nothing
+ * slides, no button. With Save-Data: the end
  * still, no video. Without script: the end still over the poster, the whole heading, and no loop runs. The files of
  * the film are kept a year and served by ranges.
  *
@@ -33,9 +33,7 @@ for (const size of [SCREENS.mobile, SCREENS.chromium]) {
 	test.describe(`l’accueil en arche à ${size.width} px`, () => {
 		test.use({ viewport: size })
 
-		test('le film joue, l’anneau tourne, le bandeau glisse ; le bouton du badge arrête tout, puis relance', async ({
-			page,
-		}) => {
+		test('le film joue, le bandeau glisse ; le bouton du badge arrête les deux, puis les relance', async ({ page }) => {
 			await page.goto('/')
 			const hero = page.locator('section.home-hero')
 			await expect(hero).toHaveAttribute('data-hero-motion', 'running')
@@ -43,16 +41,14 @@ for (const size of [SCREENS.mobile, SCREENS.chromium]) {
 
 			await showArch(page)
 			await expect(hero).toHaveAttribute('data-film', 'playing', { timeout: 20_000 })
-			await expect.poll(() => playState(page, '.home-hero-ring')).toBe('running')
 			const videos = page.locator('.home-hero-arch video')
 			await expect(videos).toHaveCount(2)
 			// The bundled Chromium has no H.264 decoder: it takes the AV1 file, the first of the list.
 			expect(await videos.last().evaluate(video => (video as HTMLVideoElement).currentSrc)).toContain('.av1.mp4')
 
-			// Off the screen the film pauses, and the ring with it: it turns only while the film plays.
+			// Off the screen the film pauses; the ribbon, which says nothing of the film, slides on.
 			await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight))
 			await expect(hero).not.toHaveAttribute('data-film', 'playing')
-			expect(await playState(page, '.home-hero-ring')).toBe('paused')
 			await expect(hero).toHaveAttribute('data-hero-motion', 'running')
 			await showArch(page)
 			await expect(hero).toHaveAttribute('data-film', 'playing')
@@ -61,7 +57,6 @@ for (const size of [SCREENS.mobile, SCREENS.chromium]) {
 			await expect(hero).toHaveAttribute('data-hero-motion', 'paused')
 			await expect(hero).not.toHaveAttribute('data-film', 'playing')
 			expect(await playState(page, '.home-hero-ribbon-track')).toBe('paused')
-			expect(await playState(page, '.home-hero-ring')).toBe('paused')
 			expect(await videos.evaluateAll(elements => elements.every(video => (video as HTMLVideoElement).paused))).toBe(
 				true
 			)
@@ -69,7 +64,6 @@ for (const size of [SCREENS.mobile, SCREENS.chromium]) {
 			await page.getByRole('button', { name: 'Lire le film' }).click()
 			await expect(hero).toHaveAttribute('data-film', 'playing')
 			expect(await playState(page, '.home-hero-ribbon-track')).toBe('running')
-			await expect.poll(() => playState(page, '.home-hero-ring')).toBe('running')
 		})
 
 		test('l’intro joue une fois, puis la boucle, chargée pendant l’intro, prend sa place', async ({ page }) => {
@@ -94,7 +88,7 @@ for (const size of [SCREENS.mobile, SCREENS.chromium]) {
 			await expect.poll(() => loop.evaluate(video => !(video as HTMLVideoElement).paused)).toBe(true)
 		})
 
-		test('le titre tient ses trois lignes dans sa colonne, la police d’affichage est celle du titre seul', async ({
+		test('le titre tient ses lignes dans sa colonne (quatre sur un téléphone, trois au-delà), des mots seuls, la police du titre est celle du titre seul', async ({
 			page,
 		}) => {
 			await page.goto('/')
@@ -105,26 +99,29 @@ for (const size of [SCREENS.mobile, SCREENS.chromium]) {
 			const facts = await title.evaluate(element => {
 				const style = getComputedStyle(element)
 				const column = (document.querySelector('.home-hero-text') as Element).getBoundingClientRect()
-				// The right end of the ink of each line, picture included: never past its column (the hero clips what
-				// overflows, so no horizontal scroll would tell).
-				const ends = [...element.querySelectorAll('.home-hero-line')].map(line => {
+				// The right end of the ink of each text of the heading: never past its column (the hero clips what overflows,
+				// so no horizontal scroll would tell). Text nodes, not the lines: « maquilleuse » is a block of its own on a phone.
+				const ends: number[] = []
+				const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT)
+				for (let node = walker.nextNode(); node; node = walker.nextNode()) {
 					const range = document.createRange()
-					range.selectNodeContents(line)
-					return range.getBoundingClientRect().right
-				})
+					range.selectNodeContents(node)
+					for (const rect of range.getClientRects()) if (rect.width > 0) ends.push(rect.right)
+				}
 				return {
 					lines: Math.round(element.getBoundingClientRect().height / Number.parseFloat(style.lineHeight)),
 					overflow: Math.max(...ends) - column.right,
 					family: style.fontFamily,
 					lede: getComputedStyle(document.querySelector('.home-hero-lede') as Element).fontFamily,
-					pills: [...element.querySelectorAll('img')].map(image => getComputedStyle(image).display),
+					pictures: element.querySelectorAll('img, picture, svg').length,
 				}
 			})
 			expect(facts.family).toMatch(/bodoni/i)
 			expect(facts.lede).not.toMatch(/bodoni/i)
-			expect(facts.lines).toBe(3)
+			// Under 30rem « maquilleuse » takes a line of its own: four lines, a larger headline (globals.css).
+			expect(facts.lines).toBe(size.width < 480 ? 4 : 3)
 			expect(facts.overflow).toBeLessThanOrEqual(0)
-			expect(facts.pills).toEqual(['inline-block'])
+			expect(facts.pictures).toBe(0)
 		})
 
 		test('chaque texte en Bodoni est dessiné par sa coupe du dépôt, sans un glyphe de repli', async ({ page }) => {
@@ -145,9 +142,16 @@ for (const size of [SCREENS.mobile, SCREENS.chromium]) {
 						faces.add(font.isCustomFont ? font.postScriptName : `repli ${font.familyName}`)
 				return [...faces].sort()
 			}
-			expect(await drawnBy('.home-hero-line')).toEqual(['BodoniModa-96pt', 'BodoniModaItalic-96ptItalic'])
-			// The italic line by the italic cut alone: in a family without it, the upright cut would be slanted instead.
-			expect(await drawnBy('.home-hero-title em')).toEqual(['BodoniModaItalic-96ptItalic'])
+			// The cut of the headline is the 24 pt one (`opsz` 24): the hairlines of the 96 pt cut broke up on a phone.
+			// Line by line (Chromium counts the text of the descendants too): the upright cut for the first and the last,
+			// « maquilleuse » included; the italic line by the italic cut alone (in a family without it, the upright cut
+			// would be slanted instead).
+			const line = (n: number) => `.home-hero-title > .home-hero-line:nth-of-type(${n})`
+			expect(await drawnBy(line(1))).toEqual(['BodoniModa-24pt'])
+			expect(await drawnBy('.home-hero-split')).toEqual(['BodoniModa-24pt'])
+			expect(await drawnBy(line(2))).toEqual(['BodoniModaItalic-24ptItalic'])
+			expect(await drawnBy('.home-hero-title em')).toEqual(['BodoniModaItalic-24ptItalic'])
+			expect(await drawnBy(line(3))).toEqual(['BodoniModa-24pt'])
 			expect(await drawnBy('.home-hero-ribbon-list li')).toEqual(['BodoniModaItalic-11ptItalic'])
 		})
 
@@ -179,9 +183,7 @@ test.describe('avec un mouvement réduit', () => {
 	test.use({ contextOptions: { reducedMotion: 'reduce' } })
 
 	for (const size of [SCREENS.mobile, SCREENS.chromium]) {
-		test(`à ${size.width} px : l’image de fin, aucune vidéo, rien ne tourne ni ne glisse, et pas de bouton`, async ({
-			page,
-		}) => {
+		test(`à ${size.width} px : l’image de fin, aucune vidéo, rien ne glisse, et pas de bouton`, async ({ page }) => {
 			await page.setViewportSize(size)
 			await page.goto('/')
 			await page.waitForLoadState('networkidle')
@@ -194,7 +196,6 @@ test.describe('avec un mouvement réduit', () => {
 			await expect(page.locator('section.home-hero')).not.toHaveAttribute('data-hero-motion')
 			await expect(page.locator('.home-hero-arch video')).toHaveCount(0)
 			await expect(page.locator('button.home-hero-disc')).toHaveCount(0)
-			expect(await playState(page, '.home-hero-ring')).toBe('none')
 			expect(await playState(page, '.home-hero-ribbon-track')).toBe('none')
 		})
 	}
@@ -350,8 +351,7 @@ test.describe('l’affiche de l’arche, demandée une fois, au bon moment', () 
 			})
 
 			// Wider than 768 px, but the arch is under the text, far below the first screen: no preload (it had one before).
-			// The order against the largest paint is not checked here: with motion that paint is the pill of the lips, lazy
-			// itself, painted once it has loaded, after the poster was asked.
+			// The order against the largest paint is not checked here (sideways, that paint is a line of the heading).
 			test(`à ${PHONE_SIDEWAYS.width} × ${PHONE_SIDEWAYS.height} px (téléphone couché) : l’arche sous le premier écran, rien n’est préchargé, l’image la demande elle-même, une fois`, async ({
 				page,
 			}) => {
@@ -384,9 +384,9 @@ test.describe('sans script', () => {
 		await expect(page.locator('section.home-hero')).not.toHaveAttribute('data-hero-motion')
 		expect(
 			await page
-				.locator('.home-hero-ring, .home-hero-ribbon-track')
+				.locator('.home-hero-ribbon-track')
 				.evaluateAll(elements => elements.map(element => getComputedStyle(element).animationName))
-		).toEqual(['none', 'none'])
+		).toEqual(['none'])
 		// The film that would bring the poster into focus never comes: the end still covers it.
 		const still = page.locator('.home-hero-arch noscript img')
 		await expect(still).toHaveJSProperty('complete', true)

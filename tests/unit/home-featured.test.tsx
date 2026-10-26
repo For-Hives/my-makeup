@@ -258,13 +258,13 @@ describe('1066 : le haut de page', () => {
 	test('il ne dit plus en trois lignes ce que fait la plateforme : la phrase et la recherche le disent', () => {
 		expect(html).not.toContain('Cherchez par événement et par lieu')
 		expect(html).not.toContain('Consultez des profils vérifiés')
-		expect(html).toContain('des maquilleuses professionnelles')
+		expect(html).toContain('Des maquilleuses professionnelles')
 		expect(html).toContain('action="/search"')
 	})
 
-	test('ni nom, ni donnée personnelle : l’arche montre des ombres, le titre une image décorative', () => {
+	test('ni nom, ni donnée personnelle : l’arche montre des ombres, le titre des mots seuls', () => {
 		expect(html).not.toMatch(/@|\d{2} \d{2} \d{2}/)
-		expect(html.match(/<img\b[^>]*alt=""[^>]*aria-hidden="true"/g)).toHaveLength(1)
+		expect(html.match(/<img\b[^>]*aria-hidden="true"/g)).toBeNull()
 	})
 })
 

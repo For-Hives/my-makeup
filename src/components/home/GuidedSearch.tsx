@@ -1,4 +1,5 @@
 import { SubmissionTracking } from '@/components/analytics/SubmissionTracking'
+import { Icon } from '@/components/art/graphics'
 import { EVENT_CHOICES } from '@/lib/search/event-choices'
 
 /**
@@ -10,8 +11,9 @@ import { EVENT_CHOICES } from '@/lib/search/event-choices'
  * The main action of the page, drawn by the hero « en arche » (decisions of 25/10/2026, docs/accueil.md): one white
  * pill where its box is wide enough (a container query on `.home-hero-search`), the two fields side by side over a
  * full-width button below that, and a card of two stacked fields over the button on a phone. Each field fills its
- * segment, so the select and the input are the 44 px targets; its line icon and its label sit over it without catching
- * the press. The rules are in globals.css, « Home hero ».
+ * segment, so the select and the input are the 44 px targets; its line icon (a calendar, a pin: the icons of the art
+ * direction kit, those of the search page) and its label sit over it without catching the press. The rules are in
+ * globals.css, « Home hero ».
  */
 export function GuidedSearch() {
 	return (
@@ -19,9 +21,7 @@ export function GuidedSearch() {
 		<form action="/search" method="get" role="search" className="guided-search">
 			<SubmissionTracking />
 			<div className="guided-search-field guided-search-event">
-				<svg className="guided-search-icon" viewBox="0 0 24 24" aria-hidden="true">
-					<path d="M12 4c.5 4.6 3.4 7.5 8 8-4.6.5-7.5 3.4-8 8-.5-4.6-3.4-7.5-8-8 4.6-.5 7.5-3.4 8-8Z" />
-				</svg>
+				<Icon name="calendar" className="guided-search-icon" />
 				<label htmlFor="accueil-evenement" className="guided-search-label">
 					Pour quel événement ?
 				</label>
@@ -42,10 +42,7 @@ export function GuidedSearch() {
 				</svg>
 			</div>
 			<div className="guided-search-field guided-search-place">
-				<svg className="guided-search-icon" viewBox="0 0 24 24" aria-hidden="true">
-					<path d="M12 20.5s-6.25-5.6-6.25-10.6a6.25 6.25 0 0 1 12.5 0c0 5-6.25 10.6-6.25 10.6Z" />
-					<circle cx="12" cy="9.9" r="2.25" />
-				</svg>
+				<Icon name="pin" className="guided-search-icon" />
 				<label htmlFor="accueil-lieu" className="guided-search-label">
 					Où ?
 				</label>

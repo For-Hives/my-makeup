@@ -1,13 +1,13 @@
 /**
  * The home hero « en arche » (decisions of 25/10/2026, docs/accueil.md): three elements and no more (the h1 on three
- * lines with one picture, one sentence, the guided search), the ribbon of the real specialties, the poster of the arch
+ * lines, type alone, one sentence, the guided search), the ribbon of the real specialties, the poster of the arch
  * and the rules of its film (when the videos come, when they play), the button of the badge, and the stylesheet rules
  * that keep the loops behind the script and under `no-preference`. What only a browser shows (the film playing, the
  * swap, the layout) is in tests/e2e/home-hero.spec.ts.
  */
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { JSDOM } from 'jsdom'
 import { act } from 'react'
@@ -25,7 +25,7 @@ import {
 	playsFilm,
 } from '@/components/home/film'
 import { ArchFilm, FilmButton, HeroStage } from '@/components/home/HeroFilm'
-import { HERO_PILL, HomeHero, RIBBON_WORDS } from '@/components/home/HomeHero'
+import * as homeHero from '@/components/home/HomeHero'
 import { SPECIALTY_BULLETS } from '@/lib/specialty'
 import { openWindow } from '../support/dom-react'
 import { mainTitles, sha256, titleFingerprint } from '../support/url-parity'
@@ -35,6 +35,7 @@ const read = (file: string): string => readFileSync(join(ROOT, file), 'utf8')
 /** The h1 of the home page since 25/10/2026 (register line `accueil-titre`): no longer the one of the site online. */
 const HOME_H1 = 'Trouvez la maquilleuse qui vous correspond près de chez vous.'
 const ONLINE_H1 = "Trouver la maquilleuse qui vous correspond n'a jamais été aussi simple"
+const { HomeHero, RIBBON_WORDS } = homeHero
 const html = renderToStaticMarkup(<HomeHero />)
 
 /** The opening tag and the inside of the first element whose opening tag matches. */
@@ -44,58 +45,34 @@ function element(markup: string, opening: RegExp): string {
 	return markup.slice(start)
 }
 
-describe('le titre : trois lignes, une image', () => {
+describe('le titre : trois lignes, des mots seuls', () => {
 	test('un seul h1, le nouveau titre (registre `accueil-titre`) : plus celui du site en ligne', () => {
 		expect(mainTitles(html)).toEqual([HOME_H1])
 		expect(titleFingerprint(html)).toEqual({ n: 1, sha: sha256(HOME_H1) })
 		expect(mainTitles(html)).not.toContain(ONLINE_H1)
 	})
 
-	test('le texte du h1, lu comme un navigateur, n’a ni espace en trop ni mot venu de l’image', () => {
+	test('le texte du h1, lu comme un navigateur, n’a ni espace en trop ni espace manquante entre ses lignes', () => {
 		// Parsed as a browser does, and read without collapsing the spaces: what textContent gives.
 		const document = new JSDOM(html).window.document
 		expect(document.querySelector('h1')?.textContent).toBe(HOME_H1)
 		expect([...document.querySelectorAll('h1 .home-hero-line')].map(line => line.textContent)).toEqual([
 			'Trouvez la maquilleuse',
-			'qui vous correspond ',
+			'qui vous correspond',
 			'près de chez vous.',
 		])
+		// On a narrow phone « maquilleuse » takes a line of its own (globals.css): a span, so the text keeps its space.
+		expect([...document.querySelectorAll('h1 .home-hero-split')].map(word => word.textContent)).toEqual(['maquilleuse'])
 	})
 
-	test('l’image du titre est décorative, d’une taille donnée, AVIF puis WebP, et pèse moins de 8 Ko', async () => {
+	test('aucune image dans le titre, et plus aucun fichier de pastille servi', () => {
+		// Andy, 25/10/2026: the film was « trop sensuel », two faces about to touch; the picture of the heading was a crop
+		// of it (the lips of the two profiles). The heading is type alone now, and the crop is no longer served.
 		const h1 = /<h1\b[^>]*>([\s\S]*?)<\/h1>/.exec(html)?.[1] ?? ''
-		const pictures = h1.match(/<picture>[\s\S]*?<\/picture>/g) ?? []
-		expect(pictures).toHaveLength(1)
-		expect(h1.match(/<img\b[^>]*>/g) ?? []).toHaveLength(1)
-		for (const picture of pictures) {
-			const image = /<img\b[^>]*>/.exec(picture)?.[0] ?? ''
-			expect(image).toContain('alt=""')
-			expect(image).toContain('aria-hidden="true"')
-			expect(image).toMatch(/width="342"/)
-			expect(image).toMatch(/height="171"/)
-			// Lazy: React writes no preload for it in the head, and it is asked after the first paint (LCP of P01).
-			expect(image).toContain('loading="lazy"')
-			expect(image).not.toMatch(/fetchpriority/i)
-			const webp = /src="([^"]+)"/.exec(image)?.[1] ?? ''
-			const avif = /<source srcSet="([^"]+)" type="image\/avif"\/>/.exec(picture)?.[1] ?? ''
-			expect(picture.indexOf('<source')).toBeLessThan(picture.indexOf('<img'))
-			expect(webp).toMatch(/^\/assets\/accueil\/pilule-[a-z-]+-v2\.webp$/)
-			expect(avif).toBe(webp.replace(/\.webp$/, '.avif'))
-			// Crops of the frames of the film, at three times their size on screen (1.9 × 0.95 em of a 60 px heading).
-			for (const [src, format] of [
-				[webp, 'webp'],
-				[avif, 'heif'],
-			] as const) {
-				expect(statSync(join(ROOT, 'public', src)).size).toBeLessThan(8 * 1024)
-				const meta = await sharp(join(ROOT, 'public', src)).metadata()
-				expect([src, meta.format, meta.width, meta.height]).toEqual([src, format, 342, 171])
-			}
-		}
-		expect(HERO_PILL.webp).toBe('/assets/accueil/pilule-levres-v2.webp')
-		// The drafts (crops of the concept frames), the crops of the Blender render v1, and the brush of the old heading
-		// are not served: the folder holds this picture only.
-		const pills = readdirSync(join(ROOT, 'public/assets/accueil')).filter(name => name.startsWith('pilule-'))
-		expect(pills.sort()).toEqual(['pilule-levres-v2.avif', 'pilule-levres-v2.webp'])
+		expect(h1).not.toMatch(/<(picture|img|svg)\b/)
+		expect(Object.keys(homeHero)).not.toContain('HERO_PILL')
+		expect(readdirSync(join(ROOT, 'public/assets/accueil')).filter(name => name.startsWith('pilule-'))).toEqual([])
+		expect(read('src/app/(front)/globals.css')).not.toContain('.home-hero-pill')
 	})
 
 	test('le mot « qui vous correspond » est en italique rouge, et le titre entre par son masque', () => {
@@ -105,9 +82,11 @@ describe('le titre : trois lignes, une image', () => {
 })
 
 describe('le texte et le formulaire : rien de plus', () => {
-	test('une seule phrase, avec l’espace fine avant les deux-points et l’espace insécable après « à »', () => {
+	test('une seule phrase courte, avec l’espace insécable après « à », qui ne redit pas les choix de la recherche', () => {
 		const lede = new JSDOM(html).window.document.querySelector('.home-hero-lede')?.textContent
-		expect(lede).toBe('Mariage, soirée, shooting\u202f: des maquilleuses professionnelles, à\u00a0contacter en direct.')
+		expect(lede).toBe('Des maquilleuses professionnelles, à\u00a0contacter en direct.')
+		// The events are the choices of the select and the words of the ribbon: the sentence does not list them again.
+		expect(lede).not.toMatch(/mariage|soirée|shooting/i)
 		expect(lede).not.toMatch(/\d/)
 		expect(lede).not.toMatch(/milliers|gratuit|meilleur|garanti|paiement sécurisé|avis vérifiés/i)
 		expect(html).not.toContain('Trouvez la maquilleuse spécialisée dans le domaine que vous recherchez')
@@ -136,11 +115,16 @@ describe('le texte et le formulaire : rien de plus', () => {
 		expect(form).toContain('type="submit"')
 	})
 
-	test('les deux champs ont chacun une icône décorative, sous leur libellé visible', () => {
+	test('les deux champs ont chacun une icône décorative du kit, un calendrier et un repère, sous leur libellé visible', () => {
 		const form = /<form\b[\s\S]*?<\/form>/.exec(html)?.[0] ?? ''
-		const icons = form.match(/<svg class="guided-search-icon"[^>]*>/g) ?? []
+		const icons = form.match(/<svg\b[^>]*class="guided-search-icon"[^>]*>[\s\S]*?<\/svg>/g) ?? []
 		expect(icons).toHaveLength(2)
 		for (const icon of icons) expect(icon).toContain('aria-hidden="true"')
+		// The calendar and the pin of the art direction kit (`Icon`, the icons of the search page): no four-point star,
+		// which Andy refused on 25/10/2026 (docs/direction-artistique.md).
+		expect(icons[0]).toMatch(/<rect\b/)
+		expect(icons[1]).toMatch(/<circle\b/)
+		expect(form).not.toContain('M12 4c.5 4.6')
 		expect(form).toContain('<label for="accueil-evenement" class="guided-search-label">Pour quel événement ?</label>')
 		expect(form).toContain('<label for="accueil-lieu" class="guided-search-label">Où ?</label>')
 		expect(form).not.toContain('sr-only')
@@ -239,10 +223,12 @@ describe('l’arche et son affiche', () => {
 		expect(html).not.toMatch(/<button[^>]*home-hero-disc/)
 	})
 
-	test('le titre du film fait le tour du badge, avec une espace qui ne fond pas entre la fin et le début', () => {
-		// An ordinary space at the end of an SVG text is dropped by the collapsing of white space: the dot then touched
-		// the « L » where the ring closes. A no-break space is kept, and textLength spreads it like the others.
-		expect(html).toContain(`L’OMBRE NETTE · UN FILM MY MAKEUP ·${String.fromCharCode(0xa0)}</textPath>`)
+	test('le badge n’est que le disque du film : plus de texte qui tourne autour', () => {
+		// The ring of text (« L’OMBRE NETTE · UN FILM MY MAKEUP ») was 7 to 10 px high, unreadable, and the most
+		// template-like element of the hero: it went with the picture of the heading.
+		const badge = /<div class="home-hero-badge">([\s\S]*?)<\/div>/.exec(html)?.[1] ?? ''
+		expect(badge).toMatch(/^<span class="home-hero-disc" aria-hidden="true">/)
+		expect(html).not.toMatch(/<svg[^>]*home-hero-ring|<textPath|L’OMBRE NETTE/)
 	})
 
 	test('sans script, l’image de fin, nette, couvre l’affiche du début : le film ne viendra pas la mettre au point', () => {
@@ -508,12 +494,11 @@ describe('la feuille de style du haut de page', () => {
 		expect(opacities.every(value => value === '1')).toBe(true)
 	})
 
-	test('l’anneau et le bandeau ne bougent que sous l’attribut posé par le script, et sous no-preference', () => {
+	test('le bandeau ne bouge que sous l’attribut posé par le script, et sous no-preference ; plus d’anneau qui tourne', () => {
 		const motion = block.slice(block.indexOf('@media (prefers-reduced-motion: no-preference)'))
 		expect(motion).toContain('.home-hero[data-hero-motion] .home-hero-ribbon-track {')
 		expect(motion).toContain('.home-hero[data-hero-motion="paused"] .home-hero-ribbon-track {')
-		expect(motion).toMatch(/\.home-hero\[data-hero-motion\] \.home-hero-ring \{\s*animation: [^;]*infinite paused;/)
-		expect(motion).toContain('.home-hero[data-hero-motion="running"][data-film="playing"] .home-hero-ring {')
+		expect(block).not.toMatch(/home-hero-ring/)
 		// Before the motion block, nothing declares an animation or a transition.
 		expect(block.slice(0, block.indexOf('@keyframes enter-arch'))).not.toMatch(/\b(animation|transition)\b/)
 	})
@@ -523,10 +508,14 @@ describe('la feuille de style du haut de page', () => {
 		// 680 px, the pill comes where its placeholder and its button fit, nowhere else (the placeholder was cut at 640-695 px).
 		expect(block).toMatch(/\.home-hero-search \{[^}]*container-type: inline-size;/)
 		const containers = [...block.matchAll(/@container \(min-width: ([\d.]+)rem\)/g)].map(match => Number(match[1]))
-		expect(containers).toEqual([30, 44.5])
+		expect(containers).toEqual([30, 44.5, 47])
 		const pill = block.slice(block.indexOf('@container (min-width: 44.5rem)'))
-		expect(pill).toMatch(/\.guided-search \{[^}]*height: 4\.5rem;[^}]*border-radius: 9999px;/)
+		// Up to 47rem where the column allows it (from 1366 px): the city gets room to be typed.
+		expect(pill).toMatch(/\.guided-search \{[^}]*max-width: 47rem;[^}]*height: 4\.5rem;[^}]*border-radius: 9999px;/)
 		expect(block).toMatch(/\.guided-search \{[^}]*max-width: 44\.5rem;/)
+		// The card of a phone: its radius is the button's (28 px) plus its padding (8 px), so the corners are concentric.
+		expect(block).toMatch(/\.guided-search \{[^}]*padding: 0\.5rem;[^}]*border-radius: 2\.25rem;/)
+		expect(block).toMatch(/\.guided-search-submit \{[^}]*min-height: 3\.5rem;[^}]*border-radius: 9999px;/)
 	})
 
 	test('sur un téléphone, le bloc de texte tient le premier écran : l’arche commence dessous', () => {
@@ -538,9 +527,9 @@ describe('la feuille de style du haut de page', () => {
 		)
 	})
 
-	test('un tour d’anneau en 40 s, une longueur de bandeau en 60 s', () => {
+	test('une longueur de bandeau en 60 s, et plus de jeton pour l’anneau', () => {
 		const tokens = /@theme static\s*\{([\s\S]*?)\}/.exec(css)?.[1] ?? ''
-		expect(tokens).toMatch(/--duration-ring:\s*40s;/)
+		expect(tokens).not.toMatch(/--duration-ring/)
 		expect(tokens).toMatch(/--duration-ribbon:\s*60s;/)
 	})
 })
@@ -572,6 +561,56 @@ describe('la police du haut de page', () => {
 		expect(read('src/components/direct-edit/fonts.ts')).not.toContain('opsz')
 	})
 
+	test('chaque coupe garde sa table `prep`, le contrôle des pertes qui garde les déliés de moins d’un pixel', () => {
+		// The font has no other instructions than this program (SCANCTRL, SCANTYPE). Cut with `--no-hinting`, the subsets
+		// lost it, and FreeType (Chromium on Linux and Android) dropped the bars of « e » (« maquillcusc »): docs/accueil.md,
+		// « Les déliés du titre ». The tags are read from the table directory of the WOFF2 file.
+		const KNOWN = [
+			'cmap',
+			'head',
+			'hhea',
+			'hmtx',
+			'maxp',
+			'name',
+			'OS/2',
+			'post',
+			'cvt ',
+			'fpgm',
+			'glyf',
+			'loca',
+			'prep',
+		]
+		const tagsOf = (bytes: Buffer): string[] => {
+			const tags: string[] = []
+			let at = 48
+			const base128 = () => {
+				let value = 0
+				for (let i = 0; i < 5; i++) {
+					const byte = bytes[at++] ?? 0
+					value = value * 128 + (byte & 0x7f)
+					if (!(byte & 0x80)) return value
+				}
+				throw new Error('UIntBase128 trop long')
+			}
+			for (let table = 0; table < bytes.readUInt16BE(12); table++) {
+				const flags = bytes[at++] ?? 0
+				const index = flags & 0x3f
+				let tag = KNOWN[index] ?? `#${index}`
+				if (index === 63) {
+					tag = bytes.subarray(at, at + 4).toString('latin1')
+					at += 4
+				}
+				base128()
+				const version = flags >> 6
+				if ((tag === 'glyf' || tag === 'loca') === (version === 0)) base128()
+				tags.push(tag)
+			}
+			return tags
+		}
+		for (const file of readdirSync(join(ROOT, FONTS)).filter(name => name.endsWith('.woff2')))
+			expect([file, tagsOf(readFileSync(join(ROOT, FONTS, file))).includes('prep')]).toEqual([file, true])
+	})
+
 	test('les caractères que chaque coupe dessine sont ceux de ses sous-ensembles : un texte changé demande de nouvelles coupes', () => {
 		// The cuts hold these characters only (docs/accueil.md, « La police », the recipe): a character outside them would
 		// be drawn by the fallback serif. A text of the hero that changes makes this test fail first, then the cuts are
@@ -601,7 +640,7 @@ describe('la police du haut de page', () => {
 		expect(font).toContain("fallback: ['hero-serif-text-fallback'],")
 		const css = read('src/app/(front)/globals.css').replace(/\s+/g, ' ')
 		expect(css).toContain(
-			'@font-face { font-family: hero-serif-fallback; src: local("Times New Roman"); ascent-override: 99.06%; descent-override: 35.22%; line-gap-override: 0%; size-adjust: 113.57%; }'
+			'@font-face { font-family: hero-serif-fallback; src: local("Times New Roman"); ascent-override: 98.55%; descent-override: 35.04%; line-gap-override: 0%; size-adjust: 114.16%; }'
 		)
 		expect(css).toContain(
 			'@font-face { font-family: hero-serif-text-fallback; src: local("Times New Roman"); ascent-override: 105.29%; descent-override: 37.44%; line-gap-override: 0%; size-adjust: 106.85%; }'

@@ -12,7 +12,7 @@ La première version (issues 1069 et 1088) était juste mais trop timide : une a
 - **Rien n'est caché par la feuille de style seule.** Le HTML rendu par le serveur est entier. Un bloc n'est caché (`opacity: 0`, `data-reveal="wait"`) que par le script, après l'avoir vu sous la ligne de flottaison. Sans script, sans `IntersectionObserver`, à l'impression, avec mouvement réduit et en mode édition, le contenu est là. Un test refuse tout autre `opacity: 0` hors d'une image-clé.
 - **Le LCP n'est jamais caché ni retardé.** Aucun texte ne part de `opacity: 0` : le titre est seulement masqué et décalé (`enter-mask`), le paragraphe seulement décalé (`enter`) ; seuls le formulaire, l'illustration et le bouton d'inscription (blocs sans texte de LCP) se fondent (`enter-fade`). L'image des pages fixes (le LCP, `priority`) ne bouge pas. Un essai de bout en bout rejoue la première image de l'entrée et vérifie que l'élément du LCP, lu par `PerformanceObserver`, et ses parents sont à pleine opacité.
 - **Le premier écran n'est pas révélé au défilement.** Un bloc déjà dans l'écran quand le script le voit reste tel quel (`data-reveal="seen"`). Il a, à la place, l'entrée du haut de page.
-- **Un seul langage, en CSS.** Seule l'apparition au défilement demande un script, et il est en ligne (voir « Apparition au défilement »). La transition de page passe par le composant `ViewTransition` de React. Une exception, le film de l'arche de l'accueil : un petit composant client (`src/components/home/HeroFilm.tsx`) met ses vidéos dans la page et pose les attributs sous lesquels la feuille de style fait tourner l'anneau et glisser le bandeau (voir « L'accueil en arche »). Le mouvement lui-même reste en CSS.
+- **Un seul langage, en CSS.** Seule l'apparition au défilement demande un script, et il est en ligne (voir « Apparition au défilement »). La transition de page passe par le composant `ViewTransition` de React. Une exception, le film de l'arche de l'accueil : un petit composant client (`src/components/home/HeroFilm.tsx`) met ses vidéos dans la page et pose l'attribut sous lequel la feuille de style fait glisser le bandeau (voir « L'accueil en arche »). Le mouvement lui-même reste en CSS.
 
 ## Les jetons
 
@@ -32,7 +32,6 @@ La première version (issues 1069 et 1088) était juste mais trop timide : une a
 | `--motion-zoom` | 1,05 | photo d'une carte (1,03 à 1,06) |
 | `--stagger-enter` | 80 ms | écart entre les lignes de l'entrée (60 à 100 ms) |
 | `--stagger-card` | 70 ms | écart entre les cartes d'une liste qui apparaissent ensemble (60 à 80 ms), 5 rangs au plus |
-| `--duration-ring` | 40 s | un tour de l'anneau du badge de l'accueil, pendant que le film joue |
 | `--duration-ribbon` | 60 s | une longueur de liste du bandeau des spécialités de l'accueil (environ 28 px par seconde) |
 
 `tests/unit/motion-system.test.ts` lit la feuille de style et refuse un jeton hors de sa plage. L'entrée d'une page dure `--duration-enter` plus deux écarts, soit 500 + 2 × 80 = **660 ms** (le test exige 500 à 700 ms, et que le haut de page n'ait jamais de rang 3).
@@ -110,15 +109,14 @@ Ce que fait chaque section :
 
 ## L'accueil en arche (décision du 25/10/2026)
 
-Le haut de l'accueil ([`accueil.md`](accueil.md)) a trois mouvements, tous dans le bloc « What moves in the home hero » de `globals.css`, tous sous `no-preference` :
+Le haut de l'accueil ([`accueil.md`](accueil.md)) a deux mouvements, tous deux dans le bloc « What moves in the home hero » de `globals.css` et sous `no-preference` :
 
 - **L'arche entre** avec le haut de page (`.enter-arch`, rang 1) : masque qui s'ouvre vers le bas et montée de 28 px, 600 ms (`--duration-reveal`). Jamais de fondu. Coupée pendant une transition de page et à l'impression, comme les `.enter*`.
-- **L'anneau du badge tourne** d'un tour en 40 s (`--duration-ring`), seulement pendant que le film joue (`data-film="playing"`) : l'animation est posée en pause et ne court que sous cet attribut, si bien qu'à l'arrêt l'anneau garde son angle.
 - **Le bandeau glisse** d'une longueur de sa liste en 60 s (`--duration-ribbon`), en `transform` seul, dans une bande qui rogne (aucun défilement latéral).
 
-Les deux boucles ne tournent que sous `data-hero-motion`, que le composant client pose quand il tourne et que la visiteuse n'a pas demandé moins de mouvement : sans script, rien ne boucle (WCAG 2.2.2). Le bouton du badge passe l'attribut à `paused` : le bandeau, l'anneau et le film s'arrêtent ensemble. Rien n'est transparent par `opacity` (le premier écran n'est jamais atténué) : la vidéo qui attend est cachée par `visibility`.
+Le bandeau ne glisse que sous `data-hero-motion`, que le composant client pose quand il tourne et que la visiteuse n'a pas demandé moins de mouvement : sans script, rien ne boucle (WCAG 2.2.2). Le bouton du badge passe l'attribut à `paused` : le bandeau et le film s'arrêtent ensemble. L'anneau de texte qui tournait autour du bouton (un tour en 40 s, `--duration-ring`, pendant que le film jouait) est parti le 26/10/2026 avec son texte, illisible à 7 à 10 px. Rien n'est transparent par `opacity` (le premier écran n'est jamais atténué) : la vidéo qui attend est cachée par `visibility`.
 
-Les essais qui attendent la fin de toutes les animations (`settle` de `motion.spec.ts`, `scrollThrough` de `home-sections.spec.ts`) sautent celles qui bouclent sans fin ou sont en pause, puisqu'elles ne finissent jamais ; `tests/e2e/home-hero.spec.ts` vérifie à part que le bandeau et l'anneau tournent, puis s'arrêtent au bouton.
+Les essais qui attendent la fin de toutes les animations (`settle` de `motion.spec.ts`, `scrollThrough` de `home-sections.spec.ts`) sautent celles qui bouclent sans fin ou sont en pause, puisqu'elles ne finissent jamais ; `tests/e2e/home-hero.spec.ts` vérifie à part que le bandeau glisse, puis s'arrête au bouton avec le film.
 
 ## Ce qui n'est pas fait, et pourquoi
 

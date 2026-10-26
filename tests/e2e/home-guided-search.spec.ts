@@ -100,7 +100,7 @@ for (const size of SIZES) {
 			await expect(page.getByRole('heading', { level: 1 })).toHaveText(
 				'Trouvez la maquilleuse qui vous correspond près de chez vous.'
 			)
-			await expect(page.locator('.home-hero-lede')).toContainText('des maquilleuses professionnelles')
+			await expect(page.locator('.home-hero-lede')).toContainText('Des maquilleuses professionnelles')
 			await expect(page.getByRole('search')).toBeVisible()
 			// Neither the eyebrow nor the three numbered lines (Andy, 25/10/2026).
 			await expect(page.locator('section.home-hero ol')).toHaveCount(0)

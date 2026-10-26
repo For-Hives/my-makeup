@@ -6,13 +6,14 @@ import { FILM_STILLS, FILM_VIDEOS, type FilmConditions, filmButtonName, mountsFi
 
 /**
  * The moving part of the home hero (decision of 25/10/2026, docs/accueil.md): the film in the arch, the button of the
- * badge, and the two attributes of the hero that let the stylesheet run the ring and the ribbon. A client component
- * and not an inline script: the videos are put inside markup that React owns, and they answer events (`playing`,
- * `ended`, a press on the button); a script that added them to the server HTML would fight the hydration.
+ * badge, and the two attributes of the hero that say what moves: the stylesheet slides the ribbon under the first, the
+ * tests read the second. A client component and not an inline script: the videos are put inside markup that React
+ * owns, and they answer events (`playing`, `ended`, a press on the button); a script that added them to the server HTML
+ * would fight the hydration.
  *
  * - `data-hero-motion` (`running` or `paused`) is set only once the script runs and the visitor has not asked for less
- *   motion: without it, the ribbon and the ring never move (WCAG 2.2.2, nothing loops without a way to stop it).
- * - `data-film="playing"` is set while a video plays: the ring turns only then.
+ *   motion: without it, the ribbon never moves (WCAG 2.2.2, nothing loops without a way to stop it).
+ * - `data-film="playing"` is set while a video plays.
  */
 
 interface Stage {
@@ -175,7 +176,7 @@ export function ArchFilm() {
 		if (refused) setPlaying(false)
 	}, [refused, setPlaying])
 
-	// Leaving the page: the ring no longer waits for a film that is gone.
+	// Leaving the page: the hero no longer says a film plays that is gone.
 	useEffect(() => () => setPlaying(false), [setPlaying])
 
 	const playing = () => setPlaying(true)
@@ -252,8 +253,8 @@ function Glyph({ paused }: { paused: boolean }) {
 }
 
 /**
- * The disc at the heart of the badge. With motion, a real button that stops and plays again the film, the ring and the
- * ribbon. Without script, or with less motion asked for, nothing moves: the disc is a plain mark, so no button
+ * The disc on the corner of the arch. With motion, a real button that stops and plays again the film and the ribbon.
+ * Without script, or with less motion asked for, nothing moves: the disc is a plain mark, so no button
  * promises what it cannot do.
  */
 export function FilmButton() {

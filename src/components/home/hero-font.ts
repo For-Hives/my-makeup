@@ -6,11 +6,16 @@ import localFont from 'next/font/local'
  * next/font/google carried them all, with its weights, in about 100 KB preloaded in front of the stylesheets, which
  * pushed the paint of a phone (LCP of P01) over its budget.
  *
- * - `heroSerif`, the display cut (`opsz` 96, 400): the headline, upright and italic. Its fine hairlines are made for 60 px.
+ * - `heroSerif`, the cut of the headline (`opsz` 24, 400), upright and italic. The display cut (`opsz` 96) has hairlines
+ *   made for 60 px and more; at `opsz` 24 the strokes hold at 30 px and the contrast of a Didone stays at 70 px.
  * - `heroSerifText`, the text cut (`opsz` 11, 400), italic only: the ribbon (ivory on ink at 20 px, where the hairlines
- *   of the display cut vanish, the hyphen of « auto-maquillage » with them) and the numerals of the three steps.
+ *   of the display cut vanish, the hyphen of « auto-maquillage » with them).
  *
- * Each cut holds only the characters of the text it draws (9 208 bytes for the three): every byte asked before the
+ * Each cut keeps the `prep` table of the font: its only program, the dropout control that keeps a stroke thinner than a
+ * pixel. Cut with `--no-hinting`, the subsets lost it, and FreeType (Chromium on Linux and Android) dropped the bars of
+ * « e » and the thin strokes of « v » and « z » (« maquillcusc »), even at 69 px.
+ *
+ * Each cut holds only the characters of the text it draws (9 380 bytes for the three): every byte asked before the
  * largest paint of a phone (the sentence under the headline) counts in its simulated LCP, and a font is asked as soon
  * as the page is laid out, preloaded or not. A text of the hero that changes means new cuts (the recipe is in
  * docs/accueil.md); tests/unit/home-hero.test.tsx lists the characters, tests/e2e/home-hero.spec.ts asks Chromium which
