@@ -1,12 +1,16 @@
 import { createElement } from 'react'
 import {
 	DRAWING_VIEW_BOX,
+	type IconName,
 	LINE_DRAWINGS,
 	type LineDrawingName,
 	MAKEUP_OBJECTS,
 	type MakeupObjectName,
 	type Shape,
+	UI_ICONS,
 } from './drawings'
+
+export type { IconName }
 
 /**
  * The drawn assets of the art direction (issue 1111). Every one is decoration: `aria-hidden`, no `<title>`, drawn in
@@ -16,8 +20,9 @@ import {
  *
  * - print marks (`PrintMark`): a fine plus, a small open circle, a dot, a short brush-stroke dash, like the registration
  *   marks of a printed page. Very sparse: two or three per section at most.
- * - makeup objects (`MakeupObject`) and line drawings of lips and an eye (`LineDrawing`): real, human-made outline
- *   icons of ONE family (IconPark, Apache-2.0, docs/credits-svg.md), never drawn by an AI model, never botanical.
+ * - makeup objects (`MakeupObject`), line drawings of lips and an eye (`LineDrawing`) and the small interface icons
+ *   (`Icon`): real, human-made, fine outline icons on one 24 grid and one stroke weight (IconOven and Hugeicons: MIT,
+ *   Lucide: ISC, docs/credits-svg.md), never drawn by an AI model, never botanical.
  */
 
 interface DecorProps {
@@ -50,82 +55,18 @@ export function PrintMark({ kind = 'plus', className = 'h-4 w-4' }: DecorProps &
 	)
 }
 
-/** The small interface icons of the kit: 24 px grid, 1.6 stroke, round ends. */
-export type IconName =
-	| 'arrow-right'
-	| 'arrow-left'
-	| 'play'
-	| 'pause'
-	| 'search'
-	| 'pin'
-	| 'seal'
-	| 'calendar'
-	| 'chevron-down'
-	| 'menu'
-
-const ICONS: Record<IconName, React.ReactNode> = {
-	'arrow-right': <path d="M4 12H20M14 6L20 12L14 18" />,
-	'arrow-left': <path d="M20 12H4M10 6L4 12L10 18" />,
-	play: <path d="M7 4.5L19 12L7 19.5Z" fill="currentColor" stroke="none" />,
-	pause: <path d="M8 5V19M16 5V19" />,
-	search: (
-		<>
-			<circle cx="11" cy="11" r="6.5" />
-			<path d="M16 16L21 21" />
-		</>
-	),
-	pin: (
-		<>
-			<path d="M12 21C7 15.5 5 12.5 5 9.5A7 7 0 0 1 19 9.5C19 12.5 17 15.5 12 21Z" />
-			<circle cx="12" cy="9.5" r="2.4" />
-		</>
-	),
-	seal: (
-		<>
-			<path d="M12 2.5L14.6 4.4L17.8 4.2L18.8 7.2L21.4 9.1L20.4 12L21.4 14.9L18.8 16.8L17.8 19.8L14.6 19.6L12 21.5L9.4 19.6L6.2 19.8L5.2 16.8L2.6 14.9L3.6 12L2.6 9.1L5.2 7.2L6.2 4.2L9.4 4.4Z" />
-			<path d="M8.2 12.2L11 15L16 9.4" />
-		</>
-	),
-	calendar: (
-		<>
-			<rect x="3.5" y="5" width="17" height="15" rx="3" />
-			<path d="M3.5 10H20.5M8 3V7M16 3V7" />
-		</>
-	),
-	'chevron-down': <path d="M6 9L12 15L18 9" />,
-	menu: <path d="M4 8H20M4 16H20" />,
-}
-
-export function Icon({ name, className = 'h-5 w-5' }: DecorProps & { name: IconName }) {
-	return (
-		<svg
-			aria-hidden="true"
-			focusable="false"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="1.6"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-			className={className}
-		>
-			{ICONS[name]}
-		</svg>
-	)
-}
-
 /**
- * One drawing of the family: bare shapes on a 48 grid, an outline in `currentColor` with round ends. The stroke width
+ * One drawing of the family: bare shapes on a 24 grid, an outline in `currentColor` with round ends. The stroke width
  * is the CSS variable `--art-drawing-stroke` (`.art-drawing`, globals.css), the same for every drawing, so the whole
  * set has one weight; a class on the parent may change it.
  */
-function Drawing({ shapes, className }: DecorProps & { shapes: readonly Shape[] }) {
+function Drawing({ shapes, className, filled }: DecorProps & { shapes: readonly Shape[]; filled?: boolean }) {
 	return (
 		<svg
 			aria-hidden="true"
 			focusable="false"
 			viewBox={DRAWING_VIEW_BOX}
-			fill="none"
+			fill={filled ? 'currentColor' : 'none'}
 			stroke="currentColor"
 			strokeLinecap="round"
 			strokeLinejoin="round"
@@ -135,6 +76,11 @@ function Drawing({ shapes, className }: DecorProps & { shapes: readonly Shape[] 
 			{shapes.map(({ tag, ...attributes }) => createElement(tag, { key: JSON.stringify(attributes), ...attributes }))}
 		</svg>
 	)
+}
+
+/** The small interface icons of the kit: the same grid, stroke and round ends as the drawings (`play` is solid). */
+export function Icon({ name, className = 'h-5 w-5' }: DecorProps & { name: IconName }) {
+	return <Drawing shapes={UI_ICONS[name]} className={className} filled={name === 'play'} />
 }
 
 /** A makeup object as an outline: brush, lipstick, compact, mirror, mascara, nail polish, perfume, comb. */

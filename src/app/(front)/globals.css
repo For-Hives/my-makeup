@@ -1076,7 +1076,7 @@ main:has(> .home-section) {
 
 /* The drawings (makeup objects, line drawings): one stroke for the whole family, a fixed number of screen pixels at every size (non-scaling), like the hairlines of the kit. A parent may set `--art-drawing-stroke`. */
 .art-drawing {
-	stroke-width: var(--art-drawing-stroke, 1.75px);
+	stroke-width: var(--art-drawing-stroke, 1.4px);
 }
 .art-drawing * {
 	vector-effect: non-scaling-stroke;

@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
-import { LINE_DRAWINGS, MAKEUP_OBJECTS } from '@/components/art/drawings'
+import { LINE_DRAWINGS, MAKEUP_OBJECTS, UI_ICONS } from '@/components/art/drawings'
+import { shapesOf } from '../../scripts/art/extract-drawings'
 
 /**
  * What the art direction forbids, held by the code (issue 1111). The owner did not like the 4-point sparkles and the
@@ -68,7 +69,12 @@ describe('the removed sparkle and flower assets', () => {
 describe('the drawings are real, licensed, listed', () => {
 	const credits = readFileSync(join(ROOT, 'docs/credits-svg.md'), 'utf8')
 	const ACCEPTED = ['Apache-2.0', 'MIT', 'ISC', 'CC0-1.0']
-	/** A credits row: | `name` | upstream file | author | SPDX licence | modification |. */
+	const drawingNames = [
+		...Object.keys(MAKEUP_OBJECTS),
+		...Object.keys(LINE_DRAWINGS),
+		...Object.keys(UI_ICONS).map(name => `icon:${name}`),
+	]
+	/** A credits row: | `name` | upstream icon | author | SPDX licence | modification |. */
 	const rows = credits
 		.split('\n')
 		.filter(line => line.startsWith('| `'))
@@ -90,35 +96,63 @@ describe('the drawings are real, licensed, listed', () => {
 	})
 
 	test('every drawing of the data module has a row in docs/credits-svg.md with an accepted licence and an upstream file', () => {
-		for (const name of [...Object.keys(MAKEUP_OBJECTS), ...Object.keys(LINE_DRAWINGS)]) {
+		for (const name of drawingNames) {
 			const row = rows.find(cells => cells[1] === `\`${name}\``)
 			expect(`${name}: ${row ? 'listed' : 'missing'}`).toBe(`${name}: listed`)
 			expect(ACCEPTED).toContain(row?.[4] ?? '')
-			expect(row?.[2]).toMatch(/\.svg/)
+			expect(row?.[2]).toMatch(/@iconify-json\//)
 		}
 	})
 
 	test('every SVG file of the art layer or of public/art is listed in the credits too, and nothing listed is missing from the code', () => {
 		const files = [...ART, ...PUBLIC_ART].filter(path => path.endsWith('.svg')).map(path => relative(ROOT, path))
 		for (const file of files) expect(credits).toContain(file)
-		const names = new Set([...Object.keys(MAKEUP_OBJECTS), ...Object.keys(LINE_DRAWINGS)])
+		const names = new Set(drawingNames)
 		for (const cells of rows) expect(names.has((cells[1] ?? '').replaceAll('`', ''))).toBe(true)
 	})
 
-	test('the licence texts the licences require are shipped, and the credits name the upstream commit', () => {
-		const licence = readFileSync(join(ROOT, 'LICENSES/IconPark-Apache-2.0.txt'), 'utf8')
-		expect(licence).toContain('Apache License')
-		expect(licence).toContain('Copyright 2019-present Bytedance Inc.')
+	test('the licence texts the licences require are shipped, and the credits name the upstream package versions', () => {
+		const licences: Record<string, string[]> = {
+			'IconOven-MIT.txt': ['MIT License', 'Copyright (c) 2026 Appic Marketing LLC'],
+			'Hugeicons-MIT.txt': ['MIT License', 'Copyright (c) 2025 Hugeicons'],
+			'Lucide-ISC.txt': ['ISC License', 'Lucide Icons and Contributors'],
+		}
+		for (const [file, expected] of Object.entries(licences)) {
+			const text = readFileSync(join(ROOT, 'LICENSES', file), 'utf8')
+			for (const part of expected) expect(text).toContain(part)
+			expect(credits).toContain(`LICENSES/${file}`)
+		}
+		expect(existsSync(join(ROOT, 'LICENSES/IconPark-Apache-2.0.txt'))).toBe(false)
+		for (const set of ['iconoven', 'lucide', 'hugeicons'])
+			expect(credits).toMatch(new RegExp(`@iconify-json/${set}.{1,3}\\d+\\.\\d+\\.\\d+`))
 		expect(credits).toMatch(/[0-9a-f]{40}/)
+		expect(credits).toContain('Réserve de provenance')
 	})
 
 	test('the data module holds bare outline shapes only: no fill, colour, style, link, script or event attribute', () => {
 		const data = readFileSync(join(SRC, 'components/art/drawings.ts'), 'utf8')
 		const shapes = data.slice(data.indexOf('export const MAKEUP_OBJECTS'))
+		expect(shapes).toContain('export const UI_ICONS')
 		expect(shapes).not.toMatch(/\b(fill|stroke|style|href|xlink|onload|onclick|script|foreignObject)\b/i)
 		expect(shapes).not.toMatch(/#[0-9a-f]{3,6}\b/i)
 		for (const [, tag] of shapes.matchAll(/tag: '([a-z]+)'/g))
 			expect(['path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon']).toContain(tag ?? '')
+	})
+})
+
+describe('the extraction script sanitizes every upstream icon', () => {
+	test('only bare geometry survives: no script, style, link, event, colour, stroke or fill; an icon with no stroke is refused', async () => {
+		const hostile =
+			'<g fill="red" stroke="#f00" stroke-width="9" onclick="x()"><script>alert(1)</script><style>*{}</style>' +
+			'<a href="https://example.test"><path d="M1 1h4" style="fill:red" stroke="currentColor"/></a>' +
+			'<defs><clipPath><rect width="9" height="9"/></clipPath></defs><circle cx="5" cy="5" r="2" fill="blue"/></g>'
+		const shapes = await shapesOf(hostile, 'hostile')
+		expect(shapes).toEqual([
+			{ tag: 'path', d: 'M1 1h4' },
+			{ tag: 'circle', cx: '5', cy: '5', r: '2' },
+		])
+		expect(JSON.stringify(shapes)).not.toMatch(/fill|stroke|style|href|onclick|script/i)
+		await expect(shapesOf('<path d="M1 1h4" fill="currentColor"/>', 'solid')).rejects.toThrow('no stroke')
 	})
 })
 

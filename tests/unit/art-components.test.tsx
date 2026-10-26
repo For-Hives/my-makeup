@@ -7,7 +7,14 @@ import { ArtCta } from '@/components/art/ArtCta'
 import { BlogCard } from '@/components/art/BlogCard'
 import { CapsuleImage } from '@/components/art/CapsuleImage'
 import { Chip } from '@/components/art/Chip'
-import { LINE_DRAWINGS, type LineDrawingName, MAKEUP_OBJECTS, type MakeupObjectName } from '@/components/art/drawings'
+import {
+	type IconName,
+	LINE_DRAWINGS,
+	type LineDrawingName,
+	MAKEUP_OBJECTS,
+	type MakeupObjectName,
+	UI_ICONS,
+} from '@/components/art/drawings'
 import { GlowBlob, Hairline, Icon, LineDrawing, MakeupObject, PrintMark } from '@/components/art/graphics'
 import { MarqueeBanner } from '@/components/art/MarqueeBanner'
 import { Pill } from '@/components/art/Pill'
@@ -79,18 +86,31 @@ describe('the drawn assets', () => {
 		expect(html(<PrintMark kind="plus" />)).toContain('stroke="currentColor"')
 	})
 
-	test('every makeup object and line drawing is a family of bare shapes on the same 48 grid', () => {
+	test('every makeup object and line drawing is a family of bare shapes on the same 24 grid', () => {
 		for (const name of Object.keys(MAKEUP_OBJECTS) as MakeupObjectName[]) {
 			const markup = html(<MakeupObject name={name} />)
-			expect(markup).toContain('viewBox="0 0 48 48"')
+			expect(markup).toContain('viewBox="0 0 24 24"')
 			expect(markup).toMatch(/<(path|rect|circle|ellipse|line|polyline|polygon) /)
 		}
 		for (const name of Object.keys(LINE_DRAWINGS) as LineDrawingName[])
-			expect(html(<LineDrawing name={name} />)).toContain('viewBox="0 0 48 48"')
+			expect(html(<LineDrawing name={name} />)).toContain('viewBox="0 0 24 24"')
 		expect(Object.keys(MAKEUP_OBJECTS).sort()).toEqual(
 			['brush', 'comb', 'compact', 'lipstick', 'mascara', 'mirror', 'nail-polish', 'perfume'].sort()
 		)
 		expect(Object.keys(LINE_DRAWINGS).sort()).toEqual(['eye', 'lips'])
+	})
+
+	test('every interface icon is an outline of the same family: same grid, same stroke class, only `play` is solid', () => {
+		for (const name of Object.keys(UI_ICONS) as IconName[]) {
+			const markup = html(<Icon name={name} />)
+			expect(markup).toContain('viewBox="0 0 24 24"')
+			expect(markup).toContain('class="art-drawing')
+			expect(markup).toContain(name === 'play' ? 'fill="currentColor"' : 'fill="none"')
+			expect(markup).not.toMatch(/stroke-width=|(?:href|style|onload|onclick)=/)
+		}
+		expect(Object.keys(UI_ICONS)).toEqual(
+			expect.arrayContaining(['arrow-right', 'arrow-left', 'play', 'pause', 'search', 'pin', 'seal', 'calendar'])
+		)
 	})
 
 	test('the drawing data is clean: no metadata, no background, no fill, no script, no link', () => {

@@ -1,65 +1,71 @@
 # Crédits des dessins SVG
 
-Tous les dessins de la direction artistique (objets de maquillage, dessins au trait) sont de **vraies icônes dessinées par des personnes**, d'une seule famille, sous licence libre. **Aucun n'est généré par une IA** (c'était le cas de la première version, supprimée le 25/10/2026 ; la règle est dans [`direction-artistique.md`](direction-artistique.md)). Les éléments simples du kit (marques d'imprimerie, icônes d'interface, filets, cadres) sont dessinés à la main pour le projet : ils n'ont pas de source extérieure.
+Tous les dessins de la direction artistique (objets de maquillage, dessins au trait, petites icônes d'interface) sont de **vraies icônes dessinées par des personnes**, au trait fin, sous licence libre. **Aucun n'est généré par une IA** (la règle est dans [`direction-artistique.md`](direction-artistique.md)). Les éléments simples du kit (marques d'imprimerie, filets, cadres) sont dessinés à la main pour le projet : ils n'ont pas de source extérieure. Le jeu précédent (IconPark, Apache-2.0) est remplacé depuis le 26/10/2026 : son trait était jugé trop épais (issue 1134). Le choix des jeux est expliqué dans `plans/.scratch/v3/recherche-icones.md` et dans la PR de l'issue 1134.
 
-## La source : IconPark (ByteDance)
+## Réserve de provenance (à lire)
 
-| | |
-|---|---|
-| Famille | IconPark, jeu « Outline » (grille de 48, traits arrondis) |
-| Dépôt | <https://github.com/bytedance/IconPark> |
-| Version prise | commit `8dc132da4c85671ba6a5962c87aa2bdafbf158e9` (dépôt cloné le 25/10/2026, dossier `source/`) |
-| Auteur | ByteDance Inc. (équipe IconPark) |
-| Licence | Apache License 2.0 (SPDX `Apache-2.0`), <https://www.apache.org/licenses/LICENSE-2.0> |
-| Texte de la licence | [`LICENSES/IconPark-Apache-2.0.txt`](../LICENSES/IconPark-Apache-2.0.txt), copie du fichier `LICENSE` du dépôt (« Copyright 2019-present Bytedance Inc. ») |
-| Fichier `NOTICE` | le dépôt n'en a pas : rien d'autre à reproduire (Apache-2.0, art. 4 d) |
+Sept des vingt-huit dessins (les sept objets sur huit, hors le pinceau) viennent d'**IconOven** (style Stroke, MIT). La licence est vérifiée (fichier `LICENSE` du dépôt officiel `iconoven/iconoven-swift`, © 2026 Appic Marketing LLC ; page « UI icons licence » du site : « Every icon in the Stroke style is MIT licensed »). **La paternité humaine n'est pas démontrée** : la bibliothèque est récente (premier commit public le 28/09/2026), aucun dessinateur n'est nommé, le studio revendique 85 000 icônes en 13 styles et « drawn by the same hands ». Rien ne prouve une génération par IA, rien ne l'exclut. Si le mainteneur refuse cette source, les sept objets sont retirés ou remplacés par ligne dans `SOURCES` de `scripts/art/extract-drawings.ts` ; les lèvres, l'œil, le pinceau et toutes les icônes d'interface viennent de jeux anciens et nommés (Lucide, Hugeicons).
 
-Obligations de la licence, et où elles sont tenues : texte de la licence joint (`LICENSES/`), mention de l'auteur et de la source (ce fichier), **mention des modifications** (colonne « Modification » ci-dessous et en-tête de `src/components/art/drawings.ts`, art. 4 b). La licence n'exige aucune mention visible sur le site.
+## Les sources
+
+| Famille | Jeu pris | Auteur | Licence | Texte de la licence |
+|---|---|---|---|---|
+| IconOven, style Stroke (grille de 24, trait 1,5) | `@iconify-json/iconoven` 1.2.1 (sha1 de l'archive npm `bb66ddf098bfa6a4f8659775cbf4be88b8b1d4a8`) | Appic Marketing LLC | MIT (SPDX `MIT`), <https://iconoven.com/ui-icons/licence> | [`LICENSES/IconOven-MIT.txt`](../LICENSES/IconOven-MIT.txt), copie du `LICENSE` de `iconoven/iconoven-swift` |
+| Lucide (grille de 24, trait 2) | `@iconify-json/lucide` 1.2.147 (sha1 `8ed8b556388f4c6ddfbee81e75d749a67ce8ff70`), dépôt <https://github.com/lucide-icons/lucide> | Lucide Contributors | ISC (SPDX `ISC`) | [`LICENSES/Lucide-ISC.txt`](../LICENSES/Lucide-ISC.txt), copie du `LICENSE` du dépôt |
+| Hugeicons, jeu gratuit (grille de 24, trait 1,5) | `@iconify-json/hugeicons` 1.2.35 (sha1 `53df4e7d8d9612edccd5d3455e5039346f236109`), dépôt <https://github.com/hugeicons/hugeicons> | Hugeicons | MIT (SPDX `MIT`) | [`LICENSES/Hugeicons-MIT.txt`](../LICENSES/Hugeicons-MIT.txt), copie du `LICENSE.md` du dépôt |
+
+Obligations des trois licences (MIT, ISC) : garder la mention de droits d'auteur et le texte de la licence (dossier `LICENSES/`, ce fichier) ; elles n'exigent aucune mention visible sur le site, et aucune page du site n'en porte. Les paquets `@iconify-json/*` ne sont **pas** des dépendances du site : ils sont téléchargés (`npm pack`) à côté du dépôt, lus par le script, et seules les formes qu'il en tire sont copiées dans le code.
+
+Reconstruire : télécharger les trois archives aux versions ci-dessus, extraire `package/icons.json` de chacune dans `<dossier>/iconoven/`, `<dossier>/lucide/`, `<dossier>/hugeicons/`, puis `bun --no-env-file scripts/art/extract-drawings.ts <dossier>`.
 
 ## Les dessins
 
-Les noms sont ceux du code (`MakeupObject name=…`, `LineDrawing name=…`). Le chemin est celui du fichier dans le dépôt IconPark.
+Les noms sont ceux du code (`MakeupObject name=…`, `LineDrawing name=…`, `Icon name=…` ; les icônes d'interface sont préfixées `icon:` ici).
 
-| Nom | Fichier source (`source/…`) | Auteur | Licence | Modification |
+| Nom | Icône d'origine | Auteur | Licence | Modification |
 |---|---|---|---|---|
-| `lipstick` | `Makeups/lipstick-one.svg` | ByteDance (IconPark) | Apache-2.0 | contour seul, voir « Modifications communes » |
-| `brush` | `Makeups/cosmetic-brush.svg` | ByteDance (IconPark) | Apache-2.0 | contour seul, voir « Modifications communes » |
-| `compact` | `Makeups/face-powder.svg` | ByteDance (IconPark) | Apache-2.0 | contour seul, voir « Modifications communes » |
-| `mirror` | `Makeups/mirror-two.svg` | ByteDance (IconPark) | Apache-2.0 | contour seul, voir « Modifications communes » |
-| `mascara` | `Makeups/mascara.svg` | ByteDance (IconPark) | Apache-2.0 | contour seul, voir « Modifications communes » |
-| `nail-polish` | `Makeups/nail-polish-one.svg` | ByteDance (IconPark) | Apache-2.0 | contour seul, voir « Modifications communes » |
-| `perfume` | `Clothes/perfume.svg` | ByteDance (IconPark) | Apache-2.0 | contour seul, voir « Modifications communes » |
-| `comb` | `Makeups/comb.svg` | ByteDance (IconPark) | Apache-2.0 | contour seul, voir « Modifications communes » |
-| `lips` | `Makeups/mouth.svg` | ByteDance (IconPark) | Apache-2.0 | contour seul, voir « Modifications communes » |
-| `eye` | `Makeups/eyebrow.svg` | ByteDance (IconPark) | Apache-2.0 | contour seul, voir « Modifications communes » |
+| `lipstick` | `@iconify-json/iconoven`, icône `lipstick` | IconOven (Appic Marketing) | MIT | contour seul, voir « Modifications communes » |
+| `brush` | `@iconify-json/hugeicons`, icône `blush-brush-01` | Hugeicons | MIT | contour seul, voir « Modifications communes » |
+| `compact` | `@iconify-json/iconoven`, icône `compact-mirror` | IconOven (Appic Marketing) | MIT | contour seul, voir « Modifications communes » |
+| `mirror` | `@iconify-json/iconoven`, icône `hand-mirror` | IconOven (Appic Marketing) | MIT | contour seul, voir « Modifications communes » |
+| `mascara` | `@iconify-json/iconoven`, icône `mascara` | IconOven (Appic Marketing) | MIT | contour seul, voir « Modifications communes » |
+| `nail-polish` | `@iconify-json/iconoven`, icône `nail-polish` | IconOven (Appic Marketing) | MIT | contour seul, voir « Modifications communes » |
+| `perfume` | `@iconify-json/iconoven`, icône `perfume-bottle` | IconOven (Appic Marketing) | MIT | contour seul, voir « Modifications communes » |
+| `comb` | `@iconify-json/iconoven`, icône `comb` | IconOven (Appic Marketing) | MIT | contour seul, voir « Modifications communes » |
+| `lips` | `@iconify-json/lucide`, icône `mouth` | Lucide Contributors | ISC | contour seul, voir « Modifications communes » |
+| `eye` | `@iconify-json/lucide`, icône `eye` | Lucide Contributors | ISC | contour seul, voir « Modifications communes » |
+| `icon:arrow-right` | `@iconify-json/lucide`, icône `arrow-right` | Lucide Contributors | ISC | contour seul, voir « Modifications communes » |
+| `icon:arrow-left` | `@iconify-json/lucide`, icône `arrow-left` | Lucide Contributors | ISC | contour seul, voir « Modifications communes » |
+| `icon:play` | `@iconify-json/lucide`, icône `play` | Lucide Contributors | ISC | contour seul, voir « Modifications communes » |
+| `icon:pause` | `@iconify-json/lucide`, icône `pause` | Lucide Contributors | ISC | contour seul, voir « Modifications communes » |
+| `icon:search` | `@iconify-json/lucide`, icône `search` | Lucide Contributors | ISC | contour seul, voir « Modifications communes » |
+| `icon:pin` | `@iconify-json/lucide`, icône `map-pin` | Lucide Contributors | ISC | contour seul, voir « Modifications communes » |
+| `icon:seal` | `@iconify-json/lucide`, icône `badge-check` | Lucide Contributors | ISC | contour seul, voir « Modifications communes » |
+| `icon:calendar` | `@iconify-json/lucide`, icône `calendar` | Lucide Contributors | ISC | contour seul, voir « Modifications communes » |
+| `icon:chevron-down` | `@iconify-json/lucide`, icône `chevron-down` | Lucide Contributors | ISC | contour seul, voir « Modifications communes » |
+| `icon:menu` | `@iconify-json/lucide`, icône `menu` | Lucide Contributors | ISC | contour seul, voir « Modifications communes » |
+| `icon:check` | `@iconify-json/lucide`, icône `check` | Lucide Contributors | ISC | contour seul, voir « Modifications communes » |
+| `icon:close` | `@iconify-json/lucide`, icône `x` | Lucide Contributors | ISC | contour seul, voir « Modifications communes » |
+| `icon:mail` | `@iconify-json/lucide`, icône `mail` | Lucide Contributors | ISC | contour seul, voir « Modifications communes » |
+| `icon:phone` | `@iconify-json/lucide`, icône `phone` | Lucide Contributors | ISC | contour seul, voir « Modifications communes » |
+| `icon:user` | `@iconify-json/lucide`, icône `user` | Lucide Contributors | ISC | contour seul, voir « Modifications communes » |
+| `icon:heart` | `@iconify-json/lucide`, icône `heart` | Lucide Contributors | ISC | contour seul, voir « Modifications communes » |
+| `icon:share` | `@iconify-json/lucide`, icône `share-2` | Lucide Contributors | ISC | contour seul, voir « Modifications communes » |
+| `icon:star` | `@iconify-json/lucide`, icône `star` | Lucide Contributors | ISC | contour seul, voir « Modifications communes » |
 
-### Modifications communes (Apache-2.0, art. 4 b)
+### Modifications communes
 
-Faites par `scripts/art/extract-drawings.ts`, qui relit les fichiers d'origine et réécrit `src/components/art/drawings.ts` :
+Faites par `scripts/art/extract-drawings.ts`, qui relit les icônes d'origine et réécrit `src/components/art/drawings.ts` :
 
-- les remplissages bleus à deux tons sont retirés (contour seul) ; les traits blancs de détail deviennent de simples traits ; les remplissages blancs sans trait (reflets, trous) sont retirés ;
-- les couleurs, l'épaisseur de trait d'origine (4) et les extrémités sont retirées : le composant dessine chaque forme en `currentColor`, extrémités et jointures arrondies, avec **une seule épaisseur pour toute la famille** (variable CSS `--art-drawing-stroke`, `.art-drawing` dans `globals.css`, 1,75 px à l'écran quelle que soit la taille) ;
-- le chemin de découpe (`clip-path`) de `brush` est retiré (il couvrait toute la grille, sans effet) ;
-- le balisage est réduit à des formes nues (`path`, `rect`, `circle`, `ellipse`, `line`, `polyline`, `polygon`) avec leur seule géométrie : ni script, ni style, ni lien, ni métadonnée, ni commentaire, ni espace de noms d'éditeur ;
-- la grille de 48 est gardée : tous les dessins ont la même échelle et le même poids.
-
-Ce qui est copié mot pour mot : les coordonnées des formes.
+- les couleurs, l'épaisseur de trait d'origine (1,5 ou 2), les extrémités, les groupes et les remplissages sont retirés : le composant dessine chaque forme en `currentColor`, extrémités et jointures arrondies, avec **une seule épaisseur pour toute la famille** (variable CSS `--art-drawing-stroke`, `.art-drawing` dans `globals.css`, 1,4 px à l'écran quelle que soit la taille) ; les trois jeux ont la même grille de 24 et les mêmes extrémités rondes, la différence d'épaisseur d'origine disparaît donc ;
+- un point d'origine (un tracé de longueur nulle à extrémités rondes) reste un point ; `play` est rempli par le composant ;
+- le balisage est réduit à des formes nues (`path`, `rect`, `circle`, `ellipse`, `line`, `polyline`, `polygon`) avec leur seule géométrie : ni script, ni style, ni lien, ni métadonnée, ni commentaire ;
+- aucune forme n'est redessinée : les coordonnées sont copiées telles quelles.
 
 ## Ce qui n'a pas été trouvé en vrai SVG
 
-Rien de ce qui suit n'existe dans IconPark, ni dans les autres jeux libres vérifiés (Phosphor, Tabler, Lucide, Iconoir, Remix, Material Design Icons) : plutôt que de mélanger une seconde famille ou de dessiner à la main, ils sont **retirés** :
-
-- éponge à fond de teint, pince à cils : retirées (les emplacements prennent le parfum et le peigne) ;
-- dessin « profil » et dessin « main qui tient un pinceau » : retirés (le pinceau en objet les remplace dans le pied de page et l'invitation à l'action) ;
-- balayages de pinceau (`Swash`) : retirés, aucune page ne les utilisait.
+Rien de ce qui suit n'existe en trait fin dans les jeux libres vérifiés : ces éléments sont **absents** plutôt que dessinés à la main ou pris dans un second style : éponge à fond de teint, pince à cils, profil, main qui tient un pinceau, balayages de pinceau.
 
 ## Les jeux regardés et écartés
 
-| Jeu | Licence | Pourquoi écarté |
-|---|---|---|
-| Phosphor, Tabler, Lucide, Iconoir, Remix | MIT, ISC, Apache-2.0 | ni rouge à lèvres, ni mascara, ni poudrier, ni vernis (seulement pinceau, miroir, parfum) |
-| Material Design Icons | Apache-2.0 | rouge à lèvres, pinceau, miroir seulement, trait plein, autre famille |
-| game-icons.net | CC BY 3.0 | silhouettes pleines de plusieurs auteurs (styles mélangés), mention d'auteur obligatoire |
-| OpenMoji | CC BY-SA 4.0 | partage à l'identique, refusé |
-| Streamline, Solar | CC BY 4.0 | mention obligatoire, évitée dès qu'une famille libre sans mention suffit |
-| IconOven | MIT (annoncée) | jeu récent de 18 000 icônes d'une agence : aucun fichier de licence ni auteur humain vérifiés, écarté |
+La liste complète, avec leurs licences et la raison de chaque refus, est dans `plans/.scratch/v3/recherche-icones.md`. En bref : Phosphor, Tabler, Iconoir, Solar (CC BY 4.0), MingCute, Material Symbols, Streamline gratuit (CC BY 4.0), Pinhead (CC0, silhouettes pleines), les jeux d'emoji, Flaticon, Noun Project et SVG Repo (une licence par fichier, pas de famille) n'ont ni lèvres, ni rouge à lèvres, ni mascara, ni vernis, ni poudrier dans un trait fin commun, ou demandent une mention d'auteur.

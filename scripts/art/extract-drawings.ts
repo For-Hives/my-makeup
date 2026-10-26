@@ -1,52 +1,64 @@
 /**
- * Rebuilds `src/components/art/drawings.ts` from the upstream IconPark SVG files (Apache-2.0, ByteDance).
+ * Rebuilds `src/components/art/drawings.ts` from the upstream icon files (issue 1134).
  *
- *   bun --no-env-file scripts/art/extract-drawings.ts <path to a checkout of bytedance/IconPark> [output file]
+ *   bun --no-env-file scripts/art/extract-drawings.ts <folder> [output file]
  *
- * Every file is parsed with the HTML rewriter (no pattern matching on markup), then reduced to bare shapes: only
- * path, rect, circle, ellipse, line, polyline and polygon survive, with their geometry attributes and nothing else.
- * Gradients, clip paths, masks, scripts, styles, links, metadata and comments are dropped. Colours and stroke
- * widths are not kept: the component draws every shape with `currentColor`, round ends and one stroke width.
- * The list of drawings and the upstream file of each one are below; `docs/credits-svg.md` has the same list.
+ * `<folder>` holds one sub-folder per upstream set, each with the `icons.json` of the npm package `@iconify-json/<set>`
+ * at the version pinned in `docs/credits-svg.md` (`npm pack @iconify-json/lucide@<version>`, then extract
+ * `package/icons.json` into `<folder>/lucide/`). The packages are read from disk only: none is a dependency of the site.
+ *
+ * Every icon body is wrapped in an `<svg>` and parsed with the HTML rewriter (no pattern matching on markup), then
+ * reduced to bare shapes: only path, rect, circle, ellipse, line, polyline and polygon survive, with their geometry
+ * attributes and nothing else. Colours, stroke widths, fills, line caps, groups, scripts, styles, links and metadata
+ * are dropped: the component draws every shape in `currentColor`, round ends, ONE stroke width for the whole family.
+ * A shape that is a dot (a path ending in `h.01`, drawn by the upstream as a round-capped zero-length stroke) stays a
+ * dot. A shape the upstream fills (no stroke) is refused: the family is an outline family.
+ *
+ * The list of drawings and the upstream icon of each one is `SOURCES` below; `docs/credits-svg.md` has the same list.
  */
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
+export type Upstream = readonly [set: 'iconoven' | 'lucide' | 'hugeicons', icon: string]
+
 export const SOURCES = {
 	objects: {
-		lipstick: 'Makeups/lipstick-one',
-		brush: 'Makeups/cosmetic-brush',
-		compact: 'Makeups/face-powder',
-		mirror: 'Makeups/mirror-two',
-		mascara: 'Makeups/mascara',
-		'nail-polish': 'Makeups/nail-polish-one',
-		perfume: 'Clothes/perfume',
-		comb: 'Makeups/comb',
+		lipstick: ['iconoven', 'lipstick'],
+		brush: ['hugeicons', 'blush-brush-01'],
+		compact: ['iconoven', 'compact-mirror'],
+		mirror: ['iconoven', 'hand-mirror'],
+		mascara: ['iconoven', 'mascara'],
+		'nail-polish': ['iconoven', 'nail-polish'],
+		perfume: ['iconoven', 'perfume-bottle'],
+		comb: ['iconoven', 'comb'],
 	},
 	lines: {
-		lips: 'Makeups/mouth',
-		eye: 'Makeups/eyebrow',
+		lips: ['lucide', 'mouth'],
+		eye: ['lucide', 'eye'],
 	},
-} as const
+	icons: {
+		'arrow-right': ['lucide', 'arrow-right'],
+		'arrow-left': ['lucide', 'arrow-left'],
+		play: ['lucide', 'play'],
+		pause: ['lucide', 'pause'],
+		search: ['lucide', 'search'],
+		pin: ['lucide', 'map-pin'],
+		seal: ['lucide', 'badge-check'],
+		calendar: ['lucide', 'calendar'],
+		'chevron-down': ['lucide', 'chevron-down'],
+		menu: ['lucide', 'menu'],
+		check: ['lucide', 'check'],
+		close: ['lucide', 'x'],
+		mail: ['lucide', 'mail'],
+		phone: ['lucide', 'phone'],
+		user: ['lucide', 'user'],
+		heart: ['lucide', 'heart'],
+		share: ['lucide', 'share-2'],
+		star: ['lucide', 'star'],
+	},
+} as const satisfies Record<string, Record<string, Upstream>>
 
-const GEOMETRY = [
-	'd',
-	'x',
-	'y',
-	'width',
-	'height',
-	'rx',
-	'ry',
-	'cx',
-	'cy',
-	'r',
-	'x1',
-	'y1',
-	'x2',
-	'y2',
-	'points',
-	'transform',
-]
+const GEOMETRY = ['d', 'x', 'y', 'width', 'height', 'rx', 'ry', 'cx', 'cy', 'r', 'x1', 'y1', 'x2', 'y2', 'points']
 const SHAPES = new Set(['path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon'])
 const NOT_DRAWN = new Set([
 	'defs',
@@ -62,7 +74,8 @@ const NOT_DRAWN = new Set([
 
 type Shape = Record<string, string>
 
-async function shapesOf(svg: string, name: string): Promise<Shape[]> {
+/** The shapes of one icon body, in drawing order. */
+export async function shapesOf(body: string, name: string): Promise<Shape[]> {
 	const shapes: Shape[] = []
 	let hidden = 0
 	const rewriter = new HTMLRewriter().on('*', {
@@ -76,9 +89,6 @@ async function shapesOf(svg: string, name: string): Promise<Shape[]> {
 				return
 			}
 			if (hidden > 0 || !SHAPES.has(tag)) return
-			// A shape with no stroke is a fill-only detail of the two-tone original (a white hole, a highlight): outline
-			// drawings have no fills, so it is left out.
-			if (!element.getAttribute('stroke')) return
 			const shape: Shape = { tag }
 			for (const attribute of GEOMETRY) {
 				const value = element.getAttribute(attribute)
@@ -87,23 +97,36 @@ async function shapesOf(svg: string, name: string): Promise<Shape[]> {
 			shapes.push(shape)
 		},
 	})
-	await rewriter.transform(new Response(svg)).text()
+	await rewriter
+		.transform(new Response(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">${body}</svg>`))
+		.text()
 	if (shapes.length === 0) throw new Error(`${name}: no shape`)
+	// An outline family: an icon that fills a shape (no stroke anywhere in the upstream) is not one of ours.
+	if (!/stroke=/.test(body)) throw new Error(`${name}: the upstream icon has no stroke`)
 	return shapes
 }
 
-const [, , upstream, output = 'src/components/art/drawings.ts'] = process.argv
-if (!upstream) throw new Error('usage: extract-drawings.ts <IconPark checkout> [output]')
+interface IconifySet {
+	icons: Record<string, { body: string }>
+	aliases?: Record<string, { parent: string }>
+}
+
+function bodyOf(folder: string, [set, icon]: Upstream): string {
+	const data = JSON.parse(readFileSync(join(folder, set, 'icons.json'), 'utf8')) as IconifySet
+	const found = data.icons[icon] ?? data.icons[data.aliases?.[icon]?.parent ?? '']
+	if (!found) throw new Error(`${set}:${icon} is not in the upstream set`)
+	return found.body
+}
 
 const HEADER = `/**
- * The drawings of the art direction: makeup objects and line drawings, in ONE family, the "IconPark" outline icons
- * by ByteDance, human-made, licensed Apache-2.0 (https://github.com/bytedance/IconPark, LICENSE in
- * LICENSES/IconPark-Apache-2.0.txt). Every drawing, its source file and its licence are listed in docs/credits-svg.md.
+ * The drawings of the art direction: makeup objects, line drawings and the small interface icons, human-made outline
+ * icons from three open-source families, licensed MIT (IconOven, Hugeicons) and ISC (Lucide): see docs/credits-svg.md
+ * for every drawing, its upstream icon, author and licence, and LICENSES/ for the licence texts.
  *
- * MODIFIED from the upstream files (Apache-2.0 section 4(b)): the two-tone fills are removed (outline only, the
- * white detail strokes are kept as lines), the colours, the stroke width, the line caps and the clip path are dropped
- * (the component draws every shape in currentColor, round ends, one stroke width), and the markup is reduced to bare
- * shapes. The 48 x 48 grid is kept as is, so every drawing has the same scale and weight.
+ * MODIFIED from the upstream files (the MIT and ISC licences allow it): the colours, the stroke width, the line caps,
+ * the groups and the fills are dropped (the component draws every shape in currentColor, round ends, ONE stroke width
+ * for the whole family), and the markup is reduced to bare shapes. The 24 x 24 grid is kept as is, so every drawing has
+ * the same scale and weight.
  *
  * This file is data only. It is built by scripts/art/extract-drawings.ts: do not edit it by hand.
  */
@@ -116,31 +139,38 @@ export interface Shape {
 	readonly [attribute: string]: string
 }
 
-export const DRAWING_VIEW_BOX = '0 0 48 48'
+export const DRAWING_VIEW_BOX = '0 0 24 24'
 `
 
-const body: string[] = []
-for (const [group, entries] of Object.entries(SOURCES)) {
-	body.push(`export const ${group === 'objects' ? 'MAKEUP_OBJECTS' : 'LINE_DRAWINGS'} = {`)
-	for (const [name, file] of Object.entries(entries)) {
-		const shapes = await shapesOf(readFileSync(join(upstream, 'source', `${file}.svg`), 'utf8'), name)
-		const key = /^[a-z]+$/.test(name) ? name : `'${name}'`
-		body.push(`\t${key}: [`)
-		for (const shape of shapes) {
-			const { tag, ...attrs } = shape
-			body.push(
-				`\t\t{ tag: '${tag}', ${Object.entries(attrs)
-					.map(([attribute, value]) => `${attribute}: '${value}'`)
-					.join(', ')} },`
-			)
+const EXPORTS = { objects: 'MAKEUP_OBJECTS', lines: 'LINE_DRAWINGS', icons: 'UI_ICONS' } as const
+
+if (import.meta.main) {
+	const [, , folder, output = 'src/components/art/drawings.ts'] = process.argv
+	if (!folder) throw new Error('usage: extract-drawings.ts <folder of @iconify-json icons.json files> [output]')
+	const body: string[] = []
+	for (const [group, entries] of Object.entries(SOURCES)) {
+		body.push(`export const ${EXPORTS[group as keyof typeof EXPORTS]} = {`)
+		for (const [name, upstream] of Object.entries(entries as Record<string, Upstream>)) {
+			const shapes = await shapesOf(bodyOf(folder, upstream), name)
+			const key = /^[a-z]+$/.test(name) ? name : `'${name}'`
+			body.push(`\t${key}: [`)
+			for (const shape of shapes) {
+				const { tag, ...attrs } = shape
+				body.push(
+					`\t\t{ tag: '${tag}', ${Object.entries(attrs)
+						.map(([attribute, value]) => `${attribute}: '${value}'`)
+						.join(', ')} },`
+				)
+			}
+			body.push('\t],')
 		}
-		body.push('\t],')
+		body.push('} as const satisfies Record<string, readonly Shape[]>', '')
 	}
-	body.push('} as const satisfies Record<string, readonly Shape[]>', '')
+	body.push(
+		'export type MakeupObjectName = keyof typeof MAKEUP_OBJECTS',
+		'export type LineDrawingName = keyof typeof LINE_DRAWINGS',
+		'export type IconName = keyof typeof UI_ICONS',
+		''
+	)
+	writeFileSync(output, `${HEADER}\n${body.join('\n')}`)
 }
-body.push(
-	'export type MakeupObjectName = keyof typeof MAKEUP_OBJECTS',
-	'export type LineDrawingName = keyof typeof LINE_DRAWINGS',
-	''
-)
-writeFileSync(output, `${HEADER}\n${body.join('\n')}`)
