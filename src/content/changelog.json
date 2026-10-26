@@ -5,6 +5,11 @@
 			"id": "sur-les-grands-ecrans-les-pages-prennent-plus-de-largeur",
 			"type": "amelioration",
 			"text": "Sur les grands écrans, les pages prennent plus de largeur et s'alignent sur le haut de l'accueil, et les cartes des maquilleuses et des articles ont plus d'air autour d'elles, surtout au survol."
+		},
+		{
+			"id": "le-compteur-de-vues-de-ton-espace-ne-compte-plus-deux-foi",
+			"type": "correction",
+			"text": "Le compteur de vues de ton espace ne compte plus deux fois la même journée le soir, dans les semaines qui suivent un changement d'heure."
 		}
 	],
 	"releases": [
