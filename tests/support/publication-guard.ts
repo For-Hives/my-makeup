@@ -14,6 +14,9 @@ import type { Workflow } from './ci-guardrails'
 const PUBLISHED_BRANCH = 'main'
 /** The command the publication job runs, and nothing else. */
 export const PUBLICATION_COMMAND = 'bun run release:publish --push'
+
+/** The command the job that checks the deployment runs, and nothing else (scripts/release/deployment-check.ts). */
+export const DEPLOYMENT_CHECK_COMMAND = 'bun run release:check-deployment'
 /** An expression of GitHub Actions, `\${{ … }}`, written so that it is not read as a template of this file. */
 const expression = (inner: string): string => `\${{ ${inner} }}`
 /** The commit the publication starts from: the one whose CI ended green. */
@@ -22,13 +25,19 @@ const SOURCE = expression('github.event.workflow_run.head_sha')
 const RUN_TOKEN = expression('github.token')
 /**
  * The condition of the job, clause by clause: the CI ended green, it ran for a push (never for a
- * pull request, even from a branch named main), and that push was made to this repository.
+ * pull request, even from a branch named main), that push was made to this repository, and its
+ * commit is not itself a publication: whatever token pushed it, a version never publishes a version.
  */
 const CONDITIONS = [
 	"github.event.workflow_run.conclusion == 'success'",
 	"github.event.workflow_run.event == 'push'",
 	'github.event.workflow_run.head_repository.full_name == github.repository',
+	"!startsWith(github.event.workflow_run.head_commit.message, 'chore(release):')",
 ]
+
+/** The release commit, from the publication job to the job that checks the deployment. */
+const RELEASE_COMMIT_OUTPUT = expression('steps.publish.outputs.release-commit')
+const RELEASE_COMMIT = expression('needs.publication.outputs.release-commit')
 /** The actions the publication job may use: none of them is given the token explicitly. */
 const ACTIONS = ['actions/checkout@', 'oven-sh/setup-bun@']
 
@@ -86,9 +95,12 @@ export function publicationWorkflowProblems(workflow: Workflow, ci: Workflow): s
 			`${where} : une publication à la fois, jamais coupée en route (« concurrency », un groupe fixe et « cancel-in-progress: false »).`
 		)
 
-	const jobs = Object.entries(workflow.jobs)
-	if (jobs.length !== 1) problems.push(`${where} n’a qu’un job : la publication.`)
-	for (const [id, job] of jobs) {
+	const ids = Object.keys(workflow.jobs)
+	if (!sameList([...ids].sort(), ['deployment', 'publication']))
+		problems.push(`${where} a deux jobs, et deux seulement : « publication », puis « deployment » qui vérifie la prod.`)
+	const deployment = workflow.jobs.deployment
+	if (deployment !== undefined) problems.push(...deploymentJobProblems(`${where}, job deployment`, deployment))
+	for (const [id, job] of Object.entries(workflow.jobs).filter(([id]) => id === 'publication')) {
 		const at = `${where}, job ${id}`
 		const clauses = condition(job.if)
 			.split('&&')
@@ -97,6 +109,10 @@ export function publicationWorkflowProblems(workflow: Workflow, ci: Workflow): s
 			problems.push(`${at} : la condition est exactement « ${CONDITIONS.join(' && ')} ».`)
 		if (!sameRecord(job.permissions, { contents: 'write', checks: 'read' }))
 			problems.push(`${at} : les permissions sont « contents: write » et « checks: read », rien d’autre.`)
+		if (!sameRecord(job.outputs, { 'release-commit': RELEASE_COMMIT_OUTPUT }))
+			problems.push(
+				`${at} : une seule sortie, « release-commit: ${RELEASE_COMMIT_OUTPUT} », pour le job qui vérifie la prod.`
+			)
 
 		const steps = job.steps ?? []
 		for (const step of steps.filter(candidate => candidate.uses !== undefined))
@@ -116,7 +132,37 @@ export function publicationWorkflowProblems(workflow: Workflow, ci: Workflow): s
 			problems.push(
 				`${at} : la commande reçoit GITHUB_TOKEN = ${RUN_TOKEN} et SOURCE_COMMIT = ${SOURCE}, rien d’autre.`
 			)
+		else if (commands[0]?.id !== 'publish')
+			problems.push(`${at} : l’étape de la commande porte « id: publish » : sa sortie donne le commit de la version.`)
 	}
+	return problems
+}
+
+/**
+ * The job that checks the production serves the version: after the publication, only when it gave a release
+ * commit, reading only (« contents: read », no token in its environment), and its one command is the check,
+ * with the release commit and nothing else. Like the publication, it installs nothing.
+ */
+function deploymentJobProblems(at: string, job: Workflow['jobs'][string]): string[] {
+	const problems: string[] = []
+	if (job.needs !== 'publication')
+		problems.push(`${at} : « needs: publication », il vérifie ce que la publication a poussé.`)
+	if (condition(job.if) !== "needs.publication.outputs.release-commit != ''")
+		problems.push(`${at} : la condition est exactement « needs.publication.outputs.release-commit != '' ».`)
+	if (!sameRecord(job.permissions, { contents: 'read' }))
+		problems.push(`${at} : la permission est « contents: read », rien d’autre : il ne fait que lire.`)
+	const steps = job.steps ?? []
+	for (const step of steps.filter(candidate => candidate.uses !== undefined))
+		if (!ACTIONS.some(action => step.uses?.startsWith(action)))
+			problems.push(`${at} : l’action « ${step.uses} » n’a rien à faire dans la vérification.`)
+	const checkout = steps.find(step => step.uses?.startsWith('actions/checkout@'))
+	if (checkout?.with?.ref !== SOURCE || checkout.with['persist-credentials'] !== false)
+		problems.push(`${at} : le checkout extrait « ref: ${SOURCE} », avec « persist-credentials: false ».`)
+	const commands = steps.filter(step => step.run !== undefined)
+	if (commands.length !== 1 || String(commands[0]?.run).trim() !== DEPLOYMENT_CHECK_COMMAND)
+		problems.push(`${at} : une seule commande, « ${DEPLOYMENT_CHECK_COMMAND} », sans « bun install ».`)
+	else if (!sameRecord(commands[0]?.env, { RELEASE_COMMIT }))
+		problems.push(`${at} : la commande reçoit RELEASE_COMMIT = ${RELEASE_COMMIT}, aucun jeton ni secret.`)
 	return problems
 }
 

@@ -2,11 +2,14 @@
 # CI of a push on main has ended green, ci-ok included, and the script reads the check itself
 # before publishing. Then it reserves the next number, moves the pending release notes under it
 # and pushes .release/version.json with its tag. Coolify watches that file and deploys the
-# production; no other push deploys it.
+# production; no other push deploys it. A second job, without the token's write access and
+# without any secret, then waits until the production serves that commit, and is red after
+# twenty minutes: a lost webhook or a version Coolify rolled back does not go unseen.
 #
 # Rules, enforced by tests/ci/publication.test.ts and by the guard rails of every workflow
 # (tests/ci/ci-guardrails.test.ts, C01 to C03):
-# - triggered by the end of the CI only, on main, for a push of this repository;
+# - triggered by the end of the CI only, on main, for a push of this repository, never for a
+#   commit that is itself a publication (no loop, whatever token pushes it);
 # - one publication at a time, never cancelled half-way;
 # - no `bun install`: no code of a dependency runs next to the token that pushes on main;
 # - the token is the one of the run, and only this job may write.
@@ -35,12 +38,14 @@ concurrency:
 jobs:
   publication:
     name: publication
-    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_repository.full_name == github.repository
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_repository.full_name == github.repository && !startsWith(github.event.workflow_run.head_commit.message, 'chore(release):')
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       contents: write
       checks: read
+    outputs:
+      release-commit: ${{ steps.publish.outputs.release-commit }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
@@ -50,7 +55,32 @@ jobs:
         with:
           bun-version-file: package.json
       - name: Publish the version
+        id: publish
         env:
           GITHUB_TOKEN: ${{ github.token }}
           SOURCE_COMMIT: ${{ github.event.workflow_run.head_sha }}
         run: bun run release:publish --push
+
+  # The production serves the version: read on its health route until it reports the release
+  # commit (docs/publication.md, « Le déploiement vérifié »). No secret, no write access, no
+  # `bun install`: the script imports nothing but the runtime.
+  deployment:
+    name: deployment
+    needs: publication
+    if: needs.publication.outputs.release-commit != ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - name: Wait for the production to serve the version
+        env:
+          RELEASE_COMMIT: ${{ needs.publication.outputs.release-commit }}
+        run: bun run release:check-deployment
