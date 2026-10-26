@@ -9,6 +9,7 @@ import { FILM_SIZE, FILM_STILLS, POSTER_PRELOADS, STILL_PLACEHOLDERS } from './f
 import { GuidedSearch } from './GuidedSearch'
 import { ArchFilm, HeroStage, PauseButton } from './HeroFilm'
 import { heroSerif, heroSerifText } from './hero-font'
+import { RING_DEFAULT_SPACING, RING_RADIUS } from './ring'
 
 /** The words of the ribbon: the specialties a makeup artist chooses on her page, which the search filters by. */
 export const RIBBON_WORDS: readonly string[] = SPECIALTY_BULLETS.map(bullet => bullet.label)
@@ -30,16 +31,13 @@ export const RING_TEXT = `${EXPLORE_LABEL.toUpperCase()} ·${NO_BREAK_SPACE}`
 
 /**
  * The circle the ring runs on, in the 112 units of the badge (7rem from 40rem, 6.25rem on a phone: the units are pixels
- * on a large screen): the baseline at 37 from the centre, the capitals (set at 12.5, globals.css) standing outward of
- * it, so about 9 px of air between them and the edge of the notch (56), and 9 to 11 px between them and the disc
- * (28 px on a large screen, 22 px on a phone, where the units are 0.89 px). The text is spaced to go once round the
- * circle (`textLength`), 1.3 units short of it: `lengthAdjust` spreads the space between the glyphs only, so the gap
- * where the ring closes, between the dot and the « E », gets those 1.3 units as the others get theirs (measured in
- * Chromium: with the full circle, 2.5 units there against 4 between the words).
+ * on a large screen): the baseline at `RING_RADIUS` (37) from the centre, the capitals (set at 12.5, globals.css)
+ * standing outward of it, so about 9 px of air between them and the edge of the notch (56), and 9 to 11 px between them
+ * and the disc (28 px on a large screen, 22 px on a phone, where the units are 0.89 px). The words go exactly once round
+ * the circle by their letter-spacing (ring.ts: the formula, and why not `textLength`); `HeroStage` measures them in the
+ * face the browser draws and sets it.
  */
-const RING_RADIUS = 37
 const RING_PATH = `M56 56m-${RING_RADIUS} 0a${RING_RADIUS} ${RING_RADIUS} 0 1 1 ${2 * RING_RADIUS} 0a${RING_RADIUS} ${RING_RADIUS} 0 1 1 -${2 * RING_RADIUS} 0`
-const RING_LENGTH = (2 * Math.PI * RING_RADIUS - 1.3).toFixed(1)
 
 /**
  * What the film shows, said by the arch itself (`role="img"`), which is always there: on a phone the poster stays hidden
@@ -97,10 +95,8 @@ function ExploreBadge() {
 				<defs>
 					<path id="home-hero-ring-path" d={RING_PATH} />
 				</defs>
-				<text>
-					<textPath href="#home-hero-ring-path" textLength={RING_LENGTH} lengthAdjust="spacing">
-						{RING_TEXT}
-					</textPath>
+				<text style={{ letterSpacing: `${RING_DEFAULT_SPACING}px` }}>
+					<textPath href="#home-hero-ring-path">{RING_TEXT}</textPath>
 				</text>
 			</svg>
 			<TrackedLink

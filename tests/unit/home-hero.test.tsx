@@ -31,6 +31,15 @@ import {
 } from '@/components/home/film'
 import { ArchFilm, HeroStage, PauseButton } from '@/components/home/HeroFilm'
 import * as homeHero from '@/components/home/HomeHero'
+import {
+	alongRing,
+	RING_CIRCUMFERENCE,
+	RING_DEFAULT_SPACING,
+	RING_RADIUS,
+	ringGap,
+	ringLetterSpacing,
+	ringSpacingCorrection,
+} from '@/components/home/ring'
 import { SEARCH_LINK } from '@/components/layout/links'
 import { SPECIALTY_BULLETS } from '@/lib/specialty'
 import { openWindow } from '../support/dom-react'
@@ -342,13 +351,37 @@ describe('le badge de l’arche : « Explorer les maquilleuses », son nom tourn
 		// A no-break space at the end: an ordinary one would be dropped, and the dot would touch the « E » where it closes.
 		expect(textPath?.textContent).toBe('EXPLORER LES MAQUILLEUSES · ')
 		expect(RING_TEXT).toBe(`${EXPLORE_LABEL.toUpperCase()} · `)
-		// Spaced to go once round its circle of radius 37, 1.3 short of it: `lengthAdjust` spreads the space between the
-		// glyphs only, so the gap where the ring closes, between the dot and the « E », gets those 1.3 units as the others
-		// get theirs (measured in Chromium: 2.5 units there against 4 between the words, with the full circle).
+		// Spaced by `letter-spacing`, never by `textLength`, which Firefox ignores on a path (the words then covered 84 % of
+		// the turn): the spacing measured in Chromium stands until the fonts are measured, and without script.
 		const path = ring?.querySelector(`path#${textPath?.getAttribute('href')?.slice(1)}`)
 		expect(path?.getAttribute('d')).toBe('M56 56m-37 0a37 37 0 1 1 74 0a37 37 0 1 1 -74 0')
-		expect(Number(textPath?.getAttribute('textLength'))).toBeCloseTo(2 * Math.PI * 37 - 1.3, 1)
-		expect(textPath?.getAttribute('lengthAdjust')).toBe('spacing')
+		expect(textPath?.hasAttribute('textLength')).toBe(false)
+		expect(textPath?.hasAttribute('lengthAdjust')).toBe(false)
+		expect(ring?.querySelector('text')?.getAttribute('style')).toBe(`letter-spacing:${RING_DEFAULT_SPACING}px`)
+	})
+
+	test('la formule de l’anneau : un espacement après chaque caractère, le dernier compris, et le tour est fait, raccord compris', () => {
+		expect(RING_CIRCUMFERENCE).toBeCloseTo(2 * Math.PI * RING_RADIUS, 10)
+		// The two lengths measured for the same words, in Chromium and in Firefox: each closes the turn exactly.
+		for (const natural of [206, 196.383])
+			expect(natural + 28 * ringLetterSpacing(natural, 28)).toBeCloseTo(RING_CIRCUMFERENCE, 10)
+		expect(RING_DEFAULT_SPACING).toBeCloseTo((2 * Math.PI * 37 - 206) / 28, 3)
+		// Words longer than the circle would overlap: the spacing goes negative, which a change of the words must not do.
+		expect(ringLetterSpacing(206, 28)).toBeGreaterThan(0)
+	})
+
+	test('la seconde passe, sur ce que le navigateur a dessiné : le raccord devient un écart comme les autres', () => {
+		// Lengths along the circle from its east point, clockwise on the screen: west is half a turn.
+		expect(alongRing(56 + 37, 56)).toBeCloseTo(0, 10)
+		expect(alongRing(56 - 37, 56)).toBeCloseTo(RING_CIRCUMFERENCE / 2, 10)
+		// Signed gaps within half a turn: touching ends give 0, an overlap is negative, never a whole turn.
+		expect(ringGap(10, 12)).toBeCloseTo(2, 10)
+		expect(ringGap(12, 11.4)).toBeCloseTo(-0.6, 10)
+		expect(ringGap(RING_CIRCUMFERENCE - 1, 1)).toBeCloseTo(2, 10)
+		// Chromium drew the ring 0.7 too long (the seam overlapped by 0.63 against gaps of 0.07): each of the 28 characters
+		// gives back 0.025, and the seam opens to the usual gap.
+		expect(ringSpacingCorrection(-0.63, 0.07, 28)).toBeCloseTo(-0.025, 10)
+		expect(ringSpacingCorrection(0.07, 0.07, 28)).toBe(0)
 	})
 
 	test('le clic se mesure comme les autres chemins vers la recherche : `cta_click`, à part (`accueil_explorer`)', () => {

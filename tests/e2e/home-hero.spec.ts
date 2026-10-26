@@ -159,11 +159,25 @@ for (const size of [SCREENS.mobile, SCREENS.chromium]) {
 				const text = svg.querySelector('text') as SVGTextElement
 				// What the ring would measure without the spacing that fills its circle: its letters must not touch.
 				const bare = text.cloneNode(true) as SVGTextElement
-				const path = bare.querySelector('textPath') as SVGTextPathElement
-				path.removeAttribute('textLength')
+				bare.style.letterSpacing = '0px'
 				svg.append(bare)
 				const natural = bare.getComputedTextLength()
 				bare.remove()
+				// Where each glyph starts and ends on the circle (centre 56, 56), as a length along it: the words cover the
+				// whole turn, and the gap where the ring closes is one of the gaps between the glyphs, not a blank.
+				const along = (point: DOMPoint) => {
+					const turn = (Math.atan2(point.y - 56, point.x - 56) + 2 * Math.PI) % (2 * Math.PI)
+					return (turn / (2 * Math.PI)) * 2 * Math.PI * 37
+				}
+				const count = text.getNumberOfChars()
+				const circle = 2 * Math.PI * 37
+				// Signed, within half a turn: a glyph whose end touches the next start gives about 0, never a whole turn.
+				const gap = (from: number, to: number) => ((((to - from + circle / 2) % circle) + circle) % circle) - circle / 2
+				const gaps: number[] = []
+				for (let index = 0; index < count - 1; index++)
+					gaps.push(gap(along(text.getEndPositionOfChar(index)), along(text.getStartPositionOfChar(index + 1))))
+				const seam = gap(along(text.getEndPositionOfChar(count - 1)), along(text.getStartPositionOfChar(0)))
+				const sorted = [...gaps].sort((a, b) => a - b)
 				const scale = badge.width / 112
 				// How far the ink of the capitals stands above their baseline, in the face that drew them.
 				const style = getComputedStyle(text)
@@ -177,6 +191,9 @@ for (const size of [SCREENS.mobile, SCREENS.chromium]) {
 					fontPx: Number.parseFloat(style.fontSize) * scale,
 					natural,
 					circle: 2 * Math.PI * 37,
+					seam,
+					gapMedian: sorted[Math.floor(sorted.length / 2)] ?? 0,
+					gapMax: sorted.at(-1) ?? 0,
 					// The outer edge of the letters, from the centre: the baseline runs at 37 of the 112 units.
 					outer: (37 + ascent) * scale,
 					baseline: 37 * scale,
@@ -191,6 +208,10 @@ for (const size of [SCREENS.mobile, SCREENS.chromium]) {
 			expect(facts.fontPx).toBeGreaterThanOrEqual(size.width < 640 ? 11 : 12.5)
 			expect(facts.family).toMatch(/Instrument Sans/)
 			expect(facts.natural).toBeLessThan(facts.circle * 0.97)
+			// Once round, exactly (ring.ts): the gap where the ring closes is like the others, never a blank (Andy,
+			// 26/10/2026: « que ça prenne 100 % du tour et qu'on n'ait pas de gros blanc »).
+			expect(Math.abs(facts.seam - facts.gapMedian)).toBeLessThan(0.3)
+			expect(facts.seam).toBeLessThanOrEqual(facts.gapMax + 0.3)
 			// Air between the letters and the edge of the notch, and between the letters and the disc, whose focus ring
 			// (2 px, 3 px from it) stays clear of them.
 			expect(facts.notch - facts.outer).toBeGreaterThanOrEqual(7)

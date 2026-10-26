@@ -1,6 +1,16 @@
 'use client'
 
-import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import {
+	createContext,
+	type ReactNode,
+	type RefObject,
+	useCallback,
+	useContext,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from 'react'
 import { FilmStill } from './FilmStill'
 import {
 	ARCH_OBSERVER_STEPS,
@@ -12,6 +22,7 @@ import {
 	pauseButtonName,
 	playsFilm,
 } from './film'
+import { alongRing, ringGap, ringLetterSpacing, ringSpacingCorrection } from './ring'
 
 /**
  * The moving part of the home hero (decisions of 25 and 26/10/2026, docs/accueil.md): the film in the arch, the pause
@@ -26,6 +37,9 @@ import {
  * - `data-film="playing"` is set while a video plays.
  * - `data-arch="seen"` is set once `FILM_VIEW_RATIO` of the arch has been on the screen, and stays: on a phone, the
  *   stylesheet shows the still of the arch only then (before, its blurred copy, see `STILL_PLACEHOLDERS` of film.ts).
+ *
+ * Once the fonts are ready, it also measures the words of the badge's ring in the face the browser draws and sets their
+ * letter-spacing so that they go exactly once round the circle (ring.ts).
  */
 
 interface Stage {
@@ -62,8 +76,53 @@ function useReducedMotion(): boolean {
 	return reduced
 }
 
+/**
+ * Sets the letter-spacing of the ring so that its words go exactly once round their circle, measured in the face the
+ * browser really draws (ring.ts). The length without spacing is taken from the length with the spacing in place
+ * (`natural = length − count × spacing`): a length read just after changing the spacing is stale in Chromium and in
+ * Firefox (measured 26/10/2026), so the spacing is never toggled to measure. Once the fonts are ready, and again if a
+ * face arrives later; the ring keeps the spacing of the server (Chromium's) when the browser cannot measure.
+ */
+function useRingFit(section: RefObject<HTMLElement | null>): void {
+	useEffect(() => {
+		const text = section.current?.querySelector<SVGTextElement>('.home-hero-ring text')
+		if (!text || typeof text.getComputedTextLength !== 'function' || !('fonts' in document)) return
+		let current = true
+		const spacingNow = () => Number.parseFloat(getComputedStyle(text).letterSpacing) || 0
+		// Second pass, two frames later, on the positions the browser drew: the seam becomes one gap among the others.
+		const refine = () => {
+			if (!current) return
+			const count = text.getNumberOfChars()
+			if (count < 2) return
+			const at = (point: DOMPoint) => alongRing(point.x, point.y)
+			const gaps: number[] = []
+			for (let index = 0; index < count - 1; index++)
+				gaps.push(ringGap(at(text.getEndPositionOfChar(index)), at(text.getStartPositionOfChar(index + 1))))
+			const usual = [...gaps].sort((a, b) => a - b)[Math.floor(gaps.length / 2)] ?? 0
+			const seam = ringGap(at(text.getEndPositionOfChar(count - 1)), at(text.getStartPositionOfChar(0)))
+			const correction = ringSpacingCorrection(seam, usual, count)
+			if (Math.abs(correction) > 0.001) text.style.letterSpacing = `${spacingNow() + correction}px`
+		}
+		const fit = () => {
+			if (!current) return
+			const count = text.getNumberOfChars()
+			const natural = text.getComputedTextLength() - count * spacingNow()
+			if (natural > 0 && count > 0) text.style.letterSpacing = `${ringLetterSpacing(natural, count)}px`
+			requestAnimationFrame(() => requestAnimationFrame(refine))
+		}
+		document.fonts.ready.then(fit)
+		document.fonts.addEventListener('loadingdone', fit)
+		return () => {
+			current = false
+			document.fonts.removeEventListener('loadingdone', fit)
+		}
+	}, [section])
+}
+
 /** The `<section>` of the hero, which carries the state of the motion for the stylesheet. */
 export function HeroStage({ className, children }: { className: string; children: ReactNode }) {
+	const section = useRef<HTMLElement>(null)
+	useRingFit(section)
 	const reduced = useReducedMotion()
 	const [userPaused, setUserPaused] = useState(false)
 	const [playing, setPlaying] = useState(false)
@@ -77,6 +136,7 @@ export function HeroStage({ className, children }: { className: string; children
 	return (
 		<StageContext.Provider value={stage}>
 			<section
+				ref={section}
 				className={className}
 				data-hero-motion={reduced ? undefined : userPaused ? 'paused' : 'running'}
 				data-film={!reduced && playing ? 'playing' : undefined}
