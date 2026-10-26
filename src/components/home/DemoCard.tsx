@@ -9,7 +9,7 @@ export function DemoCard({ src, coeur }: { src: string; coeur: boolean }) {
 			aria-hidden="true"
 		>
 			<div className="relative h-[120px] sm:h-[150px]">
-				<Image src={src} fill sizes="200px" className="rounded-t-xl object-cover" alt="" />
+				<Image src={src} fill sizes="200px" quality={90} className="rounded-t-xl object-cover" alt="" />
 			</div>
 			{coeur && (
 				<div className="absolute top-0 right-0 flex items-center justify-center">

@@ -3,7 +3,7 @@ import { CapsuleImage } from '@/components/art/CapsuleImage'
 import { MarqueeBanner } from '@/components/art/MarqueeBanner'
 import { TitleAccent } from '@/components/art/TitleWithCapsules'
 import { Cta } from '@/components/blocks/Cta'
-import { SearchBlock } from '@/components/blocks/SearchBlock'
+import { GuideSearch } from '@/components/search/GuideSearch'
 import { ArtPage } from '@/components/static-pages/ArtPage'
 import { CLIENT_BENEFITS, ClientBenefits } from '@/components/static-pages/ClientBenefits'
 import { PageHead } from '@/components/static-pages/PageHead'
@@ -37,7 +37,7 @@ export default function Page() {
 				description="Découvrez les avantages à utiliser notre plateforme pour développer votre activité et trouver des passionnées expérimentées !"
 			/>
 			<div className="relative z-10 mx-auto max-w-5xl px-4 pb-16 sm:px-6">
-				<SearchBlock />
+				<GuideSearch />
 			</div>
 			<ClientBenefits />
 			<div className="py-16 md:py-24">

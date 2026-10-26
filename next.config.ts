@@ -45,6 +45,9 @@ const nextConfig: NextConfig = {
 	poweredByHeader: false,
 	// `/_next/image` fetches a remote file from the media origin only: any other host gets a 400.
 	images: {
+		// 75 is the default of Next; 90 is for the photos in an arch and the cards of the home page (issue 1138). A quality
+		// that is not listed is brought back to the nearest one listed, so without 90 here every `quality={90}` was 75.
+		qualities: [75, 90],
 		remotePatterns: [mediaRemotePattern(media), ...(banc ? [banc.remotePattern] : [])],
 		...(banc && { dangerouslyAllowLocalIP: true }),
 	},

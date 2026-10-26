@@ -28,6 +28,7 @@ export function ArchImage({
 	mark = 'plus',
 	sizes = '(min-width: 768px) 33vw, 80vw',
 	priority = false,
+	quality,
 	children,
 	className = '',
 }: {
@@ -40,6 +41,11 @@ export function ArchImage({
 	mark?: PrintMarkKind | false
 	sizes?: string
 	priority?: boolean
+	/**
+	 * The encoder quality of the optimised copies. Left out: the default of Next (75), which every arch keeps (the heads
+	 * of the content pages are the LCP). A photo that shows fine detail below the fold asks for 90 (issue 1138).
+	 */
+	quality?: number
 	children?: ReactNode
 	className?: string
 }) {
@@ -58,6 +64,7 @@ export function ArchImage({
 						alt={alt}
 						fill
 						sizes={sizes}
+						quality={quality}
 						priority={priority}
 						fetchPriority={priority ? 'high' : undefined}
 						className="card-zoom object-cover object-center"

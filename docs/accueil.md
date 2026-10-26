@@ -60,3 +60,7 @@ Le script en ligne pèse 368 octets (`featuredDrawScript(24, 6)`).
 ## Tests
 
 `tests/unit/home-featured.test.tsx` (candidats, échantillon, script de tirage joué contre une fausse page, journal, énumération, bloc, page), `tests/integration/profile-verified.test.ts` (journal, candidats et lecture publique sur le banc), `tests/integration/payload-access.test.ts` et `tests/integration/profile-public-read.test.ts` (matrice d'accès : « Vérifiée » lue par la propriétaire et l'admin, écrite par l'admin ; `featured` n'existe plus), `tests/unit/access.test.ts`, `tests/e2e/home-guided-search.spec.ts` (390 et 1440 px : section absente sans profil vérifié, six cartes au plus, tirage différent avec `Math.random` fixé, six premiers sans JavaScript).
+
+## Les photos sous le haut de page (issue 1138)
+
+Les photos de la communauté, de la collaboration, du projet et les deux cartes de démonstration des spécialités sont demandées à Next avec `quality={90}` (la liste `images.qualities` de `next.config.ts` est `[75, 90]`), et les photos en arche à la largeur que leur cadre demande vraiment (`archSizes`, voir [`direction-artistique.md`](direction-artistique.md), « Des photos nettes dans l'arche »). Les classes du bloc « Vos projets, nos meilleurs talents » ne sont pas touchées : seul l'argument `quality` de `DemoCard` change.

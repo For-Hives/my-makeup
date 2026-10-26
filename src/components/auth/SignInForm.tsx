@@ -66,7 +66,7 @@ export function SignInForm({
 					Mot de passe oublié ?
 				</Link>
 			</p>
-			<div role="alert" data-testid="erreur-connexion">
+			<div role="alert" data-testid="erreur-connexion" className="empty:-mt-5">
 				{state ? <p className={ART_NOTICE.error}>{errorMessage(state.code)}</p> : null}
 			</div>
 			<button type="submit" disabled={inProgress} aria-busy={inProgress} className={ART_SUBMIT}>
