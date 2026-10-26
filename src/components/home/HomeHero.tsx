@@ -13,8 +13,12 @@ export const RIBBON_WORDS: readonly string[] = SPECIALTY_BULLETS.map(bullet => b
 /** The hidden copies that follow the list in the ribbon: enough to cover a very wide screen while it slides by one. */
 const RIBBON_COPIES = ['copy-1', 'copy-2', 'copy-3'] as const
 
-/** The poster says what the film shows: it is the picture of the hero, the film only brings it to life. */
-const POSTER_ALT = 'Ombres chinoises : une maquilleuse pose le rouge sur les lèvres de sa cliente'
+/**
+ * What the film shows, said by the arch itself (`role="img"`), which is always there: on a phone the poster stays hidden
+ * until the arch is seen, and a screen reader moving through the page would pass it first. The poster under it says
+ * nothing, so the description is read once.
+ */
+const ARCH_DESCRIPTION = 'Silhouettes à contre-jour : une maquilleuse pose le rouge sur les lèvres de sa cliente'
 
 /**
  * The box of the arch, at the shape of the film, and the blurred copies of its two stills that the stylesheet draws
@@ -89,11 +93,11 @@ export function HomeHero() {
 					</div>
 				</div>
 				<div className="home-hero-arch-wrap enter-arch" style={enterOrder(1)}>
-					<div className="home-hero-arch" style={ARCH_STYLE}>
+					<div className="home-hero-arch" role="img" aria-label={ARCH_DESCRIPTION} style={ARCH_STYLE}>
 						<FilmStill
 							still={FILM_STILLS.start}
 							reduced={FILM_STILLS.end}
-							alt={POSTER_ALT}
+							alt=""
 							loading="lazy"
 							className="absolute inset-0 h-full w-full object-cover"
 						/>

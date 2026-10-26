@@ -149,8 +149,10 @@ export interface FilmConditions {
 	reducedMotion: boolean
 	/** `navigator.connection.saveData`. */
 	saveData: boolean
-	/** Enough of the arch is on the screen right now (`archSeenBy`), not just its top. */
+	/** Enough of the arch is on the screen right now (`archSeenBy`), not just its top: what brings the film. */
 	inView: boolean
+	/** Some of the arch is on the screen (`isIntersecting`): what keeps a film that is already there playing. */
+	onScreen: boolean
 	/** The tab is in front (`document.visibilityState`). */
 	visible: boolean
 	/** The page has finished loading and the browser had a moment of rest after it. */
@@ -171,10 +173,14 @@ export function mountsFilm(conditions: FilmConditions): boolean {
 	return !reducedMotion && !saveData && !refused && !userPaused && inView && visible && settled
 }
 
-/** Whether the mounted film plays right now: on the screen, in the tab in front, and not stopped by the visitor. */
+/**
+ * Whether the mounted film plays right now: some of the arch on the screen, the tab in front, not stopped by the
+ * visitor. The share that brings the film (`inView`) does not stop it: a short scroll that leaves most of the arch in
+ * sight does not freeze it.
+ */
 export function playsFilm(conditions: FilmConditions): boolean {
-	const { reducedMotion, refused, userPaused, inView, visible } = conditions
-	return !reducedMotion && !refused && !userPaused && inView && visible
+	const { reducedMotion, refused, userPaused, onScreen, visible } = conditions
+	return !reducedMotion && !refused && !userPaused && onScreen && visible
 }
 
 /** The name of the button of the badge, which says what a press does. */

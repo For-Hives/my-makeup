@@ -170,8 +170,16 @@ describe('l’arche et son affiche', () => {
 		for (const { src, type } of FILM_STILLS.start) expect(picture).toContain(`<source srcSet="${src}" type="${type}"/>`)
 		expect(picture).toContain(`src="${FILM_STILLS.start.at(-1)?.src}"`)
 		expect(picture).toContain(`width="${FILM_SIZE.width}" height="${FILM_SIZE.height}"`)
-		expect(picture).toMatch(/alt="[^"]{20,}"/)
+		expect(picture).toContain('alt=""')
 		expect(picture).toContain('object-cover')
+	})
+
+	test('la description du film est sur l’arche, toujours là : sur un téléphone l’affiche reste cachée tant que l’arche n’est pas vue', () => {
+		// A screen reader moving through the page linearly passes the arch before it counts as seen: the description lives on
+		// the box, which is never hidden, and the poster under it says nothing, so the description is read once.
+		const box = /<div class="home-hero-arch"[^>]*>/.exec(arch)?.[0] ?? ''
+		expect(box).toContain('role="img"')
+		expect(box).toMatch(/aria-label="[^"]{20,}"/)
 	})
 
 	test('l’affiche attend son tour sur un téléphone ; là où l’arche est dans le premier écran, chaque préchargement est le fichier que la <picture> y prend', () => {
@@ -306,6 +314,7 @@ describe('quand le film vient, quand il joue', () => {
 		reducedMotion: false,
 		saveData: false,
 		inView: true,
+		onScreen: true,
 		visible: true,
 		settled: true,
 		userPaused: false,
@@ -344,8 +353,15 @@ describe('quand le film vient, quand il joue', () => {
 	test('une fois là, le film s’arrête hors de l’écran, dans un onglet derrière ou sur demande, et repart sans attendre', () => {
 		expect(playsFilm(ready)).toBe(true)
 		expect(playsFilm({ ...ready, settled: false })).toBe(true)
-		for (const missing of [{ inView: false }, { visible: false }, { userPaused: true }, { refused: true }])
+		for (const missing of [{ onScreen: false }, { visible: false }, { userPaused: true }, { refused: true }])
 			expect(playsFilm({ ...ready, ...missing })).toBe(false)
+	})
+
+	test('le film qui joue ne se fige pas quand l’arche commence à sortir de l’écran : il s’arrête quand elle en est sortie', () => {
+		// The share that brings the film (80 %) is not the one that stops it: a scroll of a few hundred pixels on a
+		// desktop leaves most of the arch in sight, and the film keeps playing until none of it is.
+		expect(playsFilm({ ...ready, inView: false, onScreen: true })).toBe(true)
+		expect(playsFilm({ ...ready, inView: false, onScreen: false })).toBe(false)
 	})
 
 	test('le bouton dit ce qu’un appui fait', () => {
@@ -356,7 +372,12 @@ describe('quand le film vient, quand il joue', () => {
 
 describe('la partie qui bouge, dans une fausse fenêtre', () => {
 	const jsdomWindow = openWindow()
-	type Entry = { intersectionRatio: number; intersectionRect: { height: number }; rootBounds: { height: number } }
+	type Entry = {
+		intersectionRatio: number
+		isIntersecting: boolean
+		intersectionRect: { height: number }
+		rootBounds: { height: number }
+	}
 	type Observer = { callback: (entries: Entry[]) => void; threshold: readonly number[] }
 	let observer: Observer | undefined
 	let calls: string[] = []
@@ -417,7 +438,12 @@ describe('la partie qui bouge, dans une fausse fenêtre', () => {
 		const ratio = shown === true ? 1 : shown === false ? 0 : shown
 		await act(async () => {
 			observer?.callback([
-				{ intersectionRatio: ratio, intersectionRect: { height: ratio * 364 }, rootBounds: { height: 844 } },
+				{
+					intersectionRatio: ratio,
+					isIntersecting: ratio > 0,
+					intersectionRect: { height: ratio * 364 },
+					rootBounds: { height: 844 },
+				},
 			])
 		})
 	}
@@ -471,8 +497,11 @@ describe('la partie qui bouge, dans une fausse fenêtre', () => {
 		await see(FILM_VIEW_RATIO)
 		expect(seen(zone)).toBe('seen')
 		await jsdomWindow.attendre(() => zone.querySelector('video'))
-		// Scrolled half out again: the still stays (seen for good), the film pauses.
+		// Scrolled half out again: the still stays (seen for good) and the film keeps playing; it pauses once the arch is out.
 		await see(0.3)
+		expect(seen(zone)).toBe('seen')
+		expect(calls.at(-1)).toBe('play intro')
+		await see(false)
 		expect(seen(zone)).toBe('seen')
 		expect(calls.at(-1)).toBe('pause intro')
 	})
@@ -613,7 +642,7 @@ describe('la feuille de style du haut de page', () => {
 		expect(block).toMatch(/\.home-hero-grid \{[^}]*padding: 2rem 1\.5rem 0;/)
 		expect(block).not.toMatch(/100svh|100vh/)
 		// Its still out of the page until the arch is seen (a lazy image out of the page is not asked for), on a phone only:
-		// there it would be the largest paint. The <noscript> still is not a child of the arch.
+		// there it would be the largest paint. The <picture> of the <noscript> still is not a direct child of the arch.
 		expect(block).toMatch(
 			/@media \(max-width: 39\.99rem\) \{\s*\.home-hero:not\(\[data-arch="seen"\]\) \.home-hero-arch > picture \{\s*display: none;\s*\}/
 		)

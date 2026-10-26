@@ -916,7 +916,7 @@ main:has(> .home-section) {
 /*
  * On a phone the still waits for the arch to be seen (`data-arch`, set by HeroFilm.tsx once FILM_VIEW_RATIO of it was
  * on the screen): out of the page, a lazy image is not even asked for, and the blurred copy holds its place in the
- * first screen. The <noscript> still is not a child of the arch, it covers it without script.
+ * first screen. The <picture> of the <noscript> still is not a direct child of the arch, it covers it without script.
  */
 @media (max-width: 39.99rem) {
 	.home-hero:not([data-arch="seen"]) .home-hero-arch > picture {

@@ -115,6 +115,7 @@ export function ArchFilm() {
 	const intro = useRef<HTMLVideoElement>(null)
 	const loop = useRef<HTMLVideoElement>(null)
 	const [inView, setInView] = useState(false)
+	const [onScreen, setOnScreen] = useState(false)
 	const [visible, setVisible] = useState(false)
 	const [settled, setSettled] = useState(false)
 	const [saveData, setSaveData] = useState(false)
@@ -143,6 +144,7 @@ export function ArchFilm() {
 					entry.rootBounds?.height ?? window.innerHeight
 				)
 				setInView(shown)
+				setOnScreen(entry.isIntersecting)
 				if (shown) seeArch()
 			},
 			{ threshold: [...ARCH_OBSERVER_STEPS] }
@@ -185,6 +187,7 @@ export function ArchFilm() {
 		reducedMotion: !motion,
 		saveData,
 		inView,
+		onScreen,
 		visible,
 		settled,
 		userPaused,

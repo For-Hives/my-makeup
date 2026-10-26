@@ -17,7 +17,9 @@ import type { FilmSource } from '../../src/components/home/film'
  * Above this distance (root mean square on the 8-bit RGB channels, from 0 to 1), two frames that should be one show a
  * jump. The film v2 (an AI video) sits under 0.0096 on every seam, its frames equal before encoding: the distance left is
  * the encoding of the grain of its backlit paper, highest at the end of the intro (one keyframe per file) in H.264. The
- * Blender render v1 sat under 0.007; the draft v0, whose loop started before the red, at 0.065.
+ * film v3 sits under 0.0098 once its clips are denoised and its loop folded onto its stillest frames (a first v3, whose
+ * loop closed on an ordinary step of its motion, reached 0.0111). The Blender render v1 sat under 0.007; the draft v0,
+ * whose loop started before the red, at 0.065.
  */
 export const SEAM_LIMIT = 0.01
 
