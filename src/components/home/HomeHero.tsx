@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react'
 import { preload } from 'react-dom'
 import { SPECIALTY_BULLETS } from '@/lib/specialty'
 import { FilmStill } from './FilmStill'
-import { FILM_SIZE, FILM_STILLS, POSTER_PRELOADS } from './film'
+import { FILM_SIZE, FILM_STILLS, POSTER_PRELOADS, STILL_PLACEHOLDERS } from './film'
 import { GuidedSearch } from './GuidedSearch'
 import { ArchFilm, FilmButton, HeroStage } from './HeroFilm'
 import { heroSerif, heroSerifText } from './hero-font'
@@ -15,6 +15,17 @@ const RIBBON_COPIES = ['copy-1', 'copy-2', 'copy-3'] as const
 
 /** The poster says what the film shows: it is the picture of the hero, the film only brings it to life. */
 const POSTER_ALT = 'Ombres chinoises : une maquilleuse pose le rouge sur les lèvres de sa cliente'
+
+/**
+ * The box of the arch, at the shape of the film, and the blurred copies of its two stills that the stylesheet draws
+ * under them (`.home-hero-arch::before`, by motion setting): in the HTML of the home page alone, not in the stylesheet
+ * every page loads.
+ */
+const ARCH_STYLE = {
+	aspectRatio: `${FILM_SIZE.width} / ${FILM_SIZE.height}`,
+	'--arch-placeholder-start': `url(${STILL_PLACEHOLDERS.start})`,
+	'--arch-placeholder-end': `url(${STILL_PLACEHOLDERS.end})`,
+} as CSSProperties
 
 /**
  * The order of the load-in (docs/mouvement.md): the heading first, then the sentence and the arch, then the search.
@@ -49,7 +60,8 @@ function RibbonList({ hidden }: { hidden: boolean }) {
  * correspond près de chez vous. », one space between words.
  */
 export function HomeHero() {
-	// The poster is lazy (below the first screen of a phone, upright or sideways). Where the arch is in the first screen
+	// The poster is lazy (a phone held upright shows it once the arch is seen, sideways it is below the first screen; on
+	// both the largest paint is a text). Where the arch is in the first screen
 	// and its poster the largest paint (`POSTER_SCREENS`: from 64rem, or a tablet held upright), these preloads in the
 	// head ask for it as early as the stylesheets, the very file its <picture> takes there (film.ts).
 	for (const { href, type, media } of POSTER_PRELOADS)
@@ -77,7 +89,7 @@ export function HomeHero() {
 					</div>
 				</div>
 				<div className="home-hero-arch-wrap enter-arch" style={enterOrder(1)}>
-					<div className="home-hero-arch" style={{ aspectRatio: `${FILM_SIZE.width} / ${FILM_SIZE.height}` }}>
+					<div className="home-hero-arch" style={ARCH_STYLE}>
 						<FilmStill
 							still={FILM_STILLS.start}
 							reduced={FILM_STILLS.end}

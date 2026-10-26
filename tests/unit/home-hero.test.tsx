@@ -14,15 +14,19 @@ import { act } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import sharp from 'sharp'
 import {
+	ARCH_OBSERVER_STEPS,
+	archSeenBy,
 	FILM_SIZE,
 	FILM_STILLS,
 	FILM_VIDEOS,
+	FILM_VIEW_RATIO,
 	type FilmConditions,
 	fallbackOf,
 	filmButtonName,
 	mountsFilm,
 	POSTER_PRELOADS,
 	playsFilm,
+	STILL_PLACEHOLDERS,
 } from '@/components/home/film'
 import { ArchFilm, FilmButton, HeroStage } from '@/components/home/HeroFilm'
 import * as homeHero from '@/components/home/HomeHero'
@@ -262,6 +266,33 @@ describe('l’arche et son affiche', () => {
 		expect(FILM_SIZE.width / FILM_SIZE.height).toBeCloseTo(0.77, 2)
 	})
 
+	test('sous chaque image fixe, sa copie floue : 10 × 13 px, quelques centaines d’octets, faite de cette image', async () => {
+		for (const [part, still] of [
+			['start', FILM_STILLS.start],
+			['end', FILM_STILLS.end],
+		] as const) {
+			const uri = STILL_PLACEHOLDERS[part]
+			expect(uri).toMatch(/^data:image\/webp;base64,[A-Za-z0-9+/]+=*$/)
+			const bytes = Buffer.from(uri.slice(uri.indexOf(',') + 1), 'base64')
+			expect(bytes.length).toBeLessThan(600)
+			const copy = await sharp(bytes).removeAlpha().raw().toBuffer({ resolveWithObject: true })
+			expect([part, copy.info.width, copy.info.height]).toEqual([part, 10, 13])
+			// A new render without new copies fails here: the copy is the still, made small (film.ts gives the recipe).
+			const made = await sharp(join(ROOT, 'public', fallbackOf(still)))
+				.resize(10, 13, { fit: 'cover' })
+				.removeAlpha()
+				.raw()
+				.toBuffer()
+			let sum = 0
+			for (let index = 0; index < made.length; index++) sum += ((copy.data[index] ?? 0) - (made[index] ?? 0)) ** 2
+			expect([part, Math.sqrt(sum / made.length) / 255 < 0.02]).toEqual([part, true])
+		}
+		// In the HTML of the arch, not in the stylesheet every page loads.
+		expect(arch).toContain(`--arch-placeholder-start:url(${STILL_PLACEHOLDERS.start})`)
+		expect(arch).toContain(`--arch-placeholder-end:url(${STILL_PLACEHOLDERS.end})`)
+		expect(read('src/app/(front)/globals.css')).not.toContain('data:image/webp')
+	})
+
 	test('les images fixes sont à la taille du rendu : nettes sur un écran de densité 2', async () => {
 		for (const { src } of [...FILM_STILLS.start, ...FILM_STILLS.end]) {
 			const { width, height } = await sharp(join(ROOT, 'public', src)).metadata()
@@ -280,6 +311,21 @@ describe('quand le film vient, quand il joue', () => {
 		userPaused: false,
 		refused: false,
 	}
+
+	test('l’arche compte comme vue à 80 % d’elle, ou à 80 % de la hauteur de l’écran : jamais son seul haut', () => {
+		// The shares a phone shows at load (measured in Chromium, film.ts): 0.40 at 412 × 823, 0.50 at 390 × 844, 0.65 at
+		// 430 × 932. None is seen: the film waits for a scroll.
+		expect(FILM_VIEW_RATIO).toBe(0.8)
+		expect(archSeenBy({ ratio: 0.395, height: 153 }, 823)).toBe(false)
+		expect(archSeenBy({ ratio: 0.503, height: 183 }, 844)).toBe(false)
+		expect(archSeenBy({ ratio: 0.645, height: 262 }, 932)).toBe(false)
+		expect(archSeenBy({ ratio: 0.8, height: 291 }, 844)).toBe(true)
+		expect(archSeenBy({ ratio: 1, height: 523 }, 900)).toBe(true)
+		// A phone held sideways (844 × 390): the arch, 539 px tall, never fits; filling the screen counts.
+		expect(archSeenBy({ ratio: 0.72, height: 390 }, 390)).toBe(true)
+		expect(archSeenBy({ ratio: 0.5, height: 270 }, 390)).toBe(false)
+		expect(archSeenBy({ ratio: 0, height: 0 }, 0)).toBe(false)
+	})
 
 	test('les vidéos ne viennent qu’avec toutes les conditions : chacune manquante les retient', () => {
 		expect(mountsFilm(ready)).toBe(true)
@@ -310,7 +356,8 @@ describe('quand le film vient, quand il joue', () => {
 
 describe('la partie qui bouge, dans une fausse fenêtre', () => {
 	const jsdomWindow = openWindow()
-	type Observer = { callback: (entries: { isIntersecting: boolean }[]) => void }
+	type Entry = { intersectionRatio: number; intersectionRect: { height: number }; rootBounds: { height: number } }
+	type Observer = { callback: (entries: Entry[]) => void; threshold: readonly number[] }
 	let observer: Observer | undefined
 	let calls: string[] = []
 	let refuse = false
@@ -333,8 +380,8 @@ describe('la partie qui bouge, dans une fausse fenêtre', () => {
 		Object.defineProperty(jsdomWindow.w.navigator, 'connection', { configurable: true, value: { saveData } })
 		if (withObserver)
 			(globalThis as Record<string, unknown>).IntersectionObserver = class {
-				constructor(callback: Observer['callback']) {
-					observer = { callback }
+				constructor(callback: Observer['callback'], options: { threshold: readonly number[] }) {
+					observer = { callback, threshold: options.threshold }
 				}
 				observe() {}
 				disconnect() {}
@@ -362,11 +409,22 @@ describe('la partie qui bouge, dans une fausse fenêtre', () => {
 			</HeroStage>
 		)
 
-	async function see(isIntersecting: boolean): Promise<void> {
+	/**
+	 * What the observer reports of an arch 364 px tall in a screen 844 px tall (390 × 844): all of it (`true`), none of
+	 * it (`false`), or a share of it, from its top (the arch peeks into the first screen of a phone).
+	 */
+	async function see(shown: boolean | number): Promise<void> {
+		const ratio = shown === true ? 1 : shown === false ? 0 : shown
 		await act(async () => {
-			observer?.callback([{ isIntersecting }])
+			observer?.callback([
+				{ intersectionRatio: ratio, intersectionRect: { height: ratio * 364 }, rootBounds: { height: 844 } },
+			])
 		})
 	}
+
+	/** The section says the arch was seen: on a phone, its still shows only then. */
+	const seen = (zone: HTMLElement): string | null | undefined =>
+		zone.querySelector('section')?.getAttribute('data-arch')
 
 	beforeEach(() => {
 		calls = []
@@ -392,6 +450,31 @@ describe('la partie qui bouge, dans une fausse fenêtre', () => {
 		expect(zone.querySelector('video')).toBeNull()
 		expect(zone.querySelector('button')).toBeNull()
 		expect(zone.querySelector('.home-hero-disc')?.getAttribute('aria-hidden')).toBe('true')
+		// The arch is still seen: on a phone its still (the end of the film) replaces the blurred copy then.
+		expect(seen(zone)).toBe('seen')
+	})
+
+	test('le haut de l’arche seul, comme un téléphone au chargement : ni vidéo ni arche vue ; au défilement, l’arche est vue pour de bon et le film vient', async () => {
+		setUp({ reduced: false })
+		const zone = await mount()
+		// Reported at every twentieth of the arch, its threshold among them.
+		expect(observer?.threshold).toEqual(ARCH_OBSERVER_STEPS)
+		expect(observer?.threshold).toContain(FILM_VIEW_RATIO)
+		// 430 × 932, the largest share a phone shows at load (0.65), past the load and the moment of rest.
+		await see(0.65)
+		await act(async () => {
+			await new Promise(done => setTimeout(done, 400))
+		})
+		expect(zone.querySelector('video')).toBeNull()
+		expect(seen(zone)).toBeNull()
+		// A scroll brings most of the arch: seen, and the film comes.
+		await see(FILM_VIEW_RATIO)
+		expect(seen(zone)).toBe('seen')
+		await jsdomWindow.attendre(() => zone.querySelector('video'))
+		// Scrolled half out again: the still stays (seen for good), the film pauses.
+		await see(0.3)
+		expect(seen(zone)).toBe('seen')
+		expect(calls.at(-1)).toBe('pause intro')
 	})
 
 	test('avec le mouvement : l’intro, puis la boucle chargée dessous ; le bouton arrête et relance tout', async () => {
@@ -457,6 +540,9 @@ describe('la partie qui bouge, dans une fausse fenêtre', () => {
 	test('Save-Data : aucune vidéo, l’image de fin à la place de l’affiche du début ; le bouton arrête encore le bandeau', async () => {
 		setUp({ reduced: false, saveData: true })
 		const zone = await mount()
+		// Not while only the top of the arch shows: in the first screen of a phone it would be the largest paint.
+		await see(0.5)
+		expect(zone.querySelector('[data-film-phase] img')).toBeNull()
 		await see(true)
 		await jsdomWindow.attendre(() => (phaseOf(zone) === 'still' ? true : null))
 		expect(zone.querySelector('video')).toBeNull()
@@ -472,6 +558,9 @@ describe('la partie qui bouge, dans une fausse fenêtre', () => {
 		const zone = await mount()
 		await jsdomWindow.attendre(() => (phaseOf(zone) === 'still' ? true : null))
 		expect(zone.querySelector('video')).toBeNull()
+		// No way to know when the arch is seen: it counts as seen, its image shows.
+		await jsdomWindow.attendre(() => zone.querySelector('[data-film-phase] img'))
+		expect(seen(zone)).toBe('seen')
 		expect(zone.querySelector('[data-film-phase] img')?.getAttribute('src')).toBe(fallbackOf(FILM_STILLS.end))
 	})
 
@@ -518,12 +607,22 @@ describe('la feuille de style du haut de page', () => {
 		expect(block).toMatch(/\.guided-search-submit \{[^}]*min-height: 3\.5rem;[^}]*border-radius: 9999px;/)
 	})
 
-	test('sur un téléphone, le bloc de texte tient le premier écran : l’arche commence dessous', () => {
-		// The svh of the phone, less the navbar and the gutters (docs/accueil.md, « Le LCP du téléphone »): the poster is
-		// never the largest paint there, and the film waits for a scroll. From 40rem the block is laid out as it comes.
-		expect(block).toMatch(/\.home-hero-text \{[^}]*min-height: calc\(100svh - 9\.5rem\);/)
+	test('sur un téléphone, le titre part 2rem sous la barre et le haut de l’arche entre dans le premier écran ; son image attend que l’arche soit vue', () => {
+		// No block as tall as the screen any more (it left two empty bands around the text): the text comes first, the
+		// arch after it, whatever the height of the phone (docs/accueil.md, « Le LCP du téléphone »).
+		expect(block).toMatch(/\.home-hero-grid \{[^}]*padding: 2rem 1\.5rem 0;/)
+		expect(block).not.toMatch(/100svh|100vh/)
+		// Its still out of the page until the arch is seen (a lazy image out of the page is not asked for), on a phone only:
+		// there it would be the largest paint. The <noscript> still is not a child of the arch.
 		expect(block).toMatch(
-			/@media \(min-width: 40rem\) \{[\s\S]*?\.home-hero-text \{\s*display: block;\s*min-height: 0;\s*padding-bottom: 0;/
+			/@media \(max-width: 39\.99rem\) \{\s*\.home-hero:not\(\[data-arch="seen"\]\) \.home-hero-arch > picture \{\s*display: none;\s*\}/
+		)
+		// Its blurred copy under it, the end of the film with reduced motion, as the still.
+		expect(block).toMatch(
+			/\.home-hero-arch::before \{[^}]*background: center \/ cover var\(--arch-placeholder-start\);[^}]*filter: blur\(10px\);/
+		)
+		expect(block).toMatch(
+			/@media \(prefers-reduced-motion: reduce\) \{\s*\.home-hero-arch::before \{\s*background-image: var\(--arch-placeholder-end\);/
 		)
 	})
 

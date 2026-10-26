@@ -1,14 +1,15 @@
 import { expect, type Page, test } from '@playwright/test'
-import { FILM_STILLS, FILM_VIDEOS } from '../../src/components/home/film'
+import { FILM_STILLS, FILM_VIDEOS, FILM_VIEW_RATIO } from '../../src/components/home/film'
 import { SCREENS } from '../support/e2e'
 
 /**
  * The home hero « en arche » (decision of 25/10/2026, docs/accueil.md), in a browser, at 390 px and 1440 px: the
  * film comes once the page is loaded and the arch is seen, plays its intro then swaps to the loop; the ribbon slides,
  * and the button of the badge stops both and starts them again. With reduced motion: the end still, no video, nothing
- * slides, no button. With Save-Data: the end
- * still, no video. Without script: the end still over the poster, the whole heading, and no loop runs. The files of
- * the film are kept a year and served by ranges.
+ * slides, no button. With Save-Data: the end still, no video. Without script: the end still over the poster, the whole
+ * heading, and no loop runs. On a phone: the headline close under the navbar, the top of the arch in the first screen
+ * with the blurred copy of its still, the still itself and the film only after a scroll. The files of the film are
+ * kept a year and served by ranges.
  *
  * The helpers that wait for every animation to end (`settle` of motion.spec.ts, `scrollThrough` of
  * home-sections.spec.ts) leave out the endless and paused animations: this file is what checks that they run.
@@ -210,10 +211,12 @@ const stillRequests = (page: Page): Promise<{ file: string; by: string }[]> =>
 	)
 
 /**
- * The last candidate of the largest paint, read before any scroll: whether it is the poster, when it was painted, and
- * when the poster was asked (`null`: not yet).
+ * The last candidate of the largest paint, read before any scroll: whether it is the poster, its element, when it was
+ * painted, and when the poster was asked (`null`: not yet).
  */
-const largestPaint = (page: Page): Promise<{ poster: boolean; paintedAt: number; posterAskedAt: number | null }> =>
+const largestPaint = (
+	page: Page
+): Promise<{ poster: boolean; element: string; paintedAt: number; posterAskedAt: number | null }> =>
 	page.evaluate(async () => {
 		const entries = await new Promise<PerformanceEntryList>(resolve =>
 			new PerformanceObserver(list => resolve(list.getEntries())).observe({
@@ -228,6 +231,7 @@ const largestPaint = (page: Page): Promise<{ poster: boolean; paintedAt: number;
 		)
 		return {
 			poster: last?.element === document.querySelector('.home-hero-arch > picture img'),
+			element: last?.element?.tagName ?? '',
 			paintedAt: last?.paintTime ?? Number.NaN,
 			posterAskedAt: asked?.startTime ?? null,
 		}
@@ -244,66 +248,106 @@ const archTop = (page: Page): Promise<{ top: number; fold: number }> =>
 		fold: innerHeight,
 	}))
 
-test.describe('sur un téléphone, le texte tient le premier écran et l’arche commence dessous', () => {
-	// The text block is as tall as the first screen less the navbar and the gutters (`min-height` in svh, globals.css):
-	// whatever the height of the phone, the poster is never its largest paint (LCP of P01, the sentence), and the film,
-	// which waits for the arch to be on the screen, is not downloaded before a scroll, as when the eyebrow and the three
-	// steps pushed the arch below.
+/** Past the moment the film waits for (the load, then the browser at rest): two idle periods, then a frame for React. */
+const pastRest = (page: Page): Promise<void> =>
+	page.evaluate(
+		() =>
+			new Promise<void>(done =>
+				requestIdleCallback(() => requestIdleCallback(() => requestAnimationFrame(() => done()), { timeout: 2000 }), {
+					timeout: 2000,
+				})
+			)
+	)
+
+/** The phones of the projects and the tallest one: the top of the arch peeks from 93 px (360 × 740) to 262 px. */
+const PHONES = [{ width: 360, height: 740 }, SCREENS.mobile, { width: 412, height: 823 }, { width: 430, height: 932 }]
+
+test.describe('sur un téléphone, le titre part sous la barre et le haut de l’arche entre dans le premier écran', () => {
+	// The headline 2rem under the navbar, then the sentence and the search, then the arch: its top in the first screen
+	// asks for the scroll (a block as tall as the screen left two empty bands around the text). Its still would be the
+	// largest paint there (LCP of P01, the sentence): it stays out of the page until the arch is seen, and its blurred
+	// copy (10 × 13 px, upscaled) holds its place, which Chromium never counts as the largest paint.
 	test.use({ contextOptions: { reducedMotion: 'reduce' } })
-	for (const phone of [
-		{ width: 360, height: 740 },
-		SCREENS.mobile,
-		{ width: 412, height: 823 },
-		{ width: 430, height: 932 },
-	])
+	for (const phone of PHONES)
 		test(`à ${phone.width} × ${phone.height} px`, async ({ page }) => {
 			await page.setViewportSize(phone)
 			await page.goto('/')
 			await page.waitForLoadState('networkidle')
-			const { top, fold } = await archTop(page)
-			expect(top).toBeGreaterThan(fold)
-			expect(top - fold).toBeLessThanOrEqual(48)
-			expect((await largestPaint(page)).poster).toBe(false)
-			const search = await page.locator('form.guided-search').boundingBox()
-			expect((search?.y ?? fold) + (search?.height ?? 0)).toBeLessThan(fold)
+			await pastRest(page)
+			const layout = await page.evaluate(() => {
+				const box = (selector: string) => document.querySelector(selector)?.getBoundingClientRect() as DOMRect
+				const arch = box('.home-hero-arch')
+				return {
+					titleGap: box('.home-hero-title').top - box('header').bottom,
+					searchBottom: box('form.guided-search').bottom,
+					archTop: arch.top,
+					share: (innerHeight - arch.top) / arch.height,
+					fold: innerHeight,
+				}
+			})
+			expect(layout.titleGap).toBeGreaterThanOrEqual(24)
+			expect(layout.titleGap).toBeLessThanOrEqual(40)
+			expect(layout.searchBottom).toBeLessThan(layout.fold)
+			// The top of the arch in the first screen, right under the search: no empty band between them.
+			expect(layout.archTop).toBeLessThan(layout.fold)
+			expect(layout.archTop - layout.searchBottom).toBeLessThanOrEqual(64)
+			// Not enough of it to count as seen (film.ts): its still, the largest paint there, is not even asked for.
+			expect(layout.share).toBeLessThan(FILM_VIEW_RATIO)
+			await expect(page.locator('section.home-hero')).not.toHaveAttribute('data-arch')
+			await expect(page.locator('.home-hero-arch > picture img')).toBeHidden()
+			expect(await stillRequests(page)).toEqual([])
+			const before = await largestPaint(page)
+			expect(before.poster).toBe(false)
+			expect(before.element).toMatch(/^(P|SPAN|EM)$/)
+			// A scroll brings the arch: seen, its still shows, asked once by the image.
+			await showArch(page)
+			await expect(page.locator('section.home-hero')).toHaveAttribute('data-arch', 'seen')
+			const poster = page.locator('.home-hero-arch > picture img')
+			await expect(poster).toHaveJSProperty('complete', true)
+			expect(await poster.evaluate(image => (image as HTMLImageElement).currentSrc)).toContain(
+				FILM_STILLS.end[0]?.src ?? 'fin'
+			)
+			expect(await stillRequests(page)).toEqual([{ file: FILM_STILLS.end[0]?.src, by: 'img' }])
 		})
 })
 
 test.describe('sur un téléphone, avec le mouvement', () => {
 	test.use({ contextOptions: { reducedMotion: 'no-preference' } })
 
-	test('aucune vidéo n’est demandée avant que l’arche entre dans l’écran', async ({ page }) => {
-		// 412 × 823, the screen of Lighthouse mobile (P01). Before the text block filled the first screen, a peek of the arch
-		// was enough for the film to come at load: 855 KB of AV1 that nobody had scrolled to.
-		await page.setViewportSize({ width: 412, height: 823 })
-		await page.goto('/')
-		await page.waitForLoadState('networkidle')
-		await expect(page.locator('section.home-hero')).toHaveAttribute('data-hero-motion', 'running')
-		// Past the moment the film waits for (the load, then the browser at rest): two idle periods, then a frame for React.
-		await page.evaluate(
-			() =>
-				new Promise<void>(done =>
-					requestIdleCallback(() => requestIdleCallback(() => requestAnimationFrame(() => done()), { timeout: 2000 }), {
-						timeout: 2000,
-					})
+	// 412 × 823, the screen of Lighthouse mobile (P01), and 430 × 932, the phone that shows the most of the arch at load
+	// (0.65 of it). A peek of the arch was once enough for the film to come at load: 855 KB of AV1 nobody had scrolled to.
+	for (const phone of [
+		{ width: 412, height: 823 },
+		{ width: 430, height: 932 },
+	])
+		test(`à ${phone.width} × ${phone.height} px : ni vidéo ni affiche avant que l’arche soit vue, puis le film`, async ({
+			page,
+		}) => {
+			await page.setViewportSize(phone)
+			await page.goto('/')
+			await page.waitForLoadState('networkidle')
+			await expect(page.locator('section.home-hero')).toHaveAttribute('data-hero-motion', 'running')
+			await pastRest(page)
+			await expect(page.locator('.home-hero-arch video')).toHaveCount(0)
+			const videos = () =>
+				page.evaluate(() =>
+					performance.getEntriesByType('resource').filter(entry => /\.mp4$/.test(new URL(entry.name).pathname))
 				)
-		)
-		await expect(page.locator('.home-hero-arch video')).toHaveCount(0)
-		const videos = () =>
-			page.evaluate(() =>
-				performance.getEntriesByType('resource').filter(entry => /\.mp4$/.test(new URL(entry.name).pathname))
-			)
-		expect(await videos()).toHaveLength(0)
-		await showArch(page)
-		await expect(page.locator('.home-hero-arch video')).toHaveCount(2, { timeout: 20_000 })
-	})
+			expect(await videos()).toHaveLength(0)
+			expect(await stillRequests(page)).toEqual([])
+			expect((await largestPaint(page)).poster).toBe(false)
+			await showArch(page)
+			await expect(page.locator('.home-hero-arch video')).toHaveCount(2, { timeout: 20_000 })
+			expect(await stillRequests(page)).toEqual([{ file: FILM_STILLS.start[0]?.src, by: 'img' }])
+		})
 })
 
 test.describe('l’affiche de l’arche, demandée une fois, au bon moment', () => {
-	// The poster is lazy: on a phone the arch shows only its top at the foot of the first screen, sideways it is below
-	// it, and a byte asked before the largest paint delays it (LCP of P01). Where the arch is in the first screen, the poster is that
-	// largest paint, and a preload in the head asks for it early (`POSTER_SCREENS` of film.ts: from 64rem, or a tablet held
-	// upright). The preload must be the very file the <picture> takes, or the browser downloads two.
+	// The poster is lazy: on a phone the arch shows only its top at the foot of the first screen (the poster waits for it
+	// to be seen), sideways it is below it, and a byte asked before the largest paint delays it (LCP of P01). Where the
+	// arch is in the first screen, the poster is that largest paint, and a preload in the head asks for it early
+	// (`POSTER_SCREENS` of film.ts: from 64rem, or a tablet held upright). The preload must be the very file the
+	// <picture> takes, or the browser downloads two.
 	for (const reducedMotion of ['no-preference', 'reduce'] as const) {
 		const still = reducedMotion === 'reduce' ? FILM_STILLS.end : FILM_STILLS.start
 		const file = still[0]?.src ?? 'avif'
@@ -330,19 +374,18 @@ test.describe('l’affiche de l’arche, demandée une fois, au bon moment', () 
 					}
 				})
 
-			test(`à ${SCREENS.mobile.width} px : rien n’est préchargé ; l’image la demande elle-même, une fois, jamais avant la plus grande peinture`, async ({
+			test(`à ${SCREENS.mobile.width} px : rien n’est préchargé ni demandé avant que l’arche soit vue ; puis l’image la demande elle-même, une fois`, async ({
 				page,
 			}) => {
 				await page.setViewportSize(SCREENS.mobile)
 				await page.goto('/')
 				await page.waitForLoadState('networkidle')
-				// Before any scroll. Lazy, the poster is asked once the page is laid out, after the paint of its largest element
-				// (with reduced motion in that very frame, after its paint and before it is shown), or not at all yet. Not lazy,
-				// the parser would ask for it long before that paint.
+				// Before any scroll the top of the arch is in the first screen, the poster out of the page: not asked at all,
+				// so nothing of it comes before the largest paint (P01). Lazy alone, it would be asked once the page is laid out.
 				const before = await largestPaint(page)
 				expect(before.poster).toBe(false)
 				expect(before.paintedAt).toBeGreaterThan(0)
-				if (before.posterAskedAt !== null) expect(before.posterAskedAt).toBeGreaterThanOrEqual(before.paintedAt)
+				expect(before.posterAskedAt).toBeNull()
 				await showArch(page)
 				const poster = page.locator('.home-hero-arch > picture img')
 				await expect(poster).toHaveJSProperty('complete', true)

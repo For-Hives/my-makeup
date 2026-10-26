@@ -794,36 +794,23 @@ main:has(> .home-section) {
 	color: var(--color-ink);
 }
 
-/* The width and the gutters of the navbar (`max-w-screen-2xl`, `px-6`, `lg:px-16`): the headline starts under the logo. */
+/*
+ * The width and the gutters of the navbar (`max-w-screen-2xl`, `px-6`, `lg:px-16`): the headline starts under the logo.
+ * On a phone the text block comes first, 2rem under the navbar, and the top of the arch peeks into the first screen
+ * under the search: the page reads as a page and asks for the scroll. There its still waits for the arch to be seen
+ * (the rules of `.home-hero-arch` below): it would be the largest paint of the phone (LCP of P01, the sentence).
+ */
 .home-hero-grid {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr);
 	row-gap: 3.5rem;
 	max-width: 96rem;
 	margin-inline: auto;
-	padding: 2.5rem 1.5rem 0;
+	padding: 2rem 1.5rem 0;
 }
 
-/*
- * On a phone the text block fills the first screen (its small height, less the navbar and the gutters): the headline,
- * the sentence and the search stand in its middle, a little above (the bottom padding), and the arch starts just below
- * the first screen, whatever the height of the phone. Its poster is then never the largest paint of a phone (LCP of
- * P01, the sentence), and the film, which waits for the arch to be on the screen, is not downloaded before a scroll.
- */
 .home-hero-text {
-	display: flex;
-	flex-direction: column;
-	justify-content: center;
 	min-width: 0;
-	min-height: calc(100svh - 9.5rem);
-	padding-bottom: 2rem;
-}
-
-/* A browser without the small viewport units (before Chrome 108 and Safari 15.4) takes the whole height. */
-@supports not (height: 1svh) {
-	.home-hero-text {
-		min-height: calc(100vh - 9.5rem);
-	}
 }
 
 /*
@@ -905,6 +892,36 @@ main:has(> .home-section) {
 	overflow: hidden;
 	border-radius: 9999px 9999px 0 0;
 	background-color: #efe5d6;
+}
+
+/*
+ * Under the still, its blurred copy (10 × 13 px, `STILL_PLACEHOLDERS` of film.ts, set on the arch by the hero): the
+ * start of the film, its end with reduced motion, as the still above it. Upscaled from its own 130 pixels, Chromium
+ * never takes it for the largest paint. Spread past the edges, so the blur does not fade them.
+ */
+.home-hero-arch::before {
+	content: "";
+	position: absolute;
+	inset: -1rem;
+	background: center / cover var(--arch-placeholder-start);
+	filter: blur(10px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.home-hero-arch::before {
+		background-image: var(--arch-placeholder-end);
+	}
+}
+
+/*
+ * On a phone the still waits for the arch to be seen (`data-arch`, set by HeroFilm.tsx once FILM_VIEW_RATIO of it was
+ * on the screen): out of the page, a lazy image is not even asked for, and the blurred copy holds its place in the
+ * first screen. The <noscript> still is not a child of the arch, it covers it without script.
+ */
+@media (max-width: 39.99rem) {
+	.home-hero:not([data-arch="seen"]) .home-hero-arch > picture {
+		display: none;
+	}
 }
 
 /* The badge sits on the bottom-left corner of the arch: a ring of the page tone around the button that stops the film. */
@@ -1278,12 +1295,6 @@ main:has(> .home-section) {
 @media (min-width: 40rem) {
 	.home-hero-grid {
 		padding-top: 3.5rem;
-	}
-
-	.home-hero-text {
-		display: block;
-		min-height: 0;
-		padding-bottom: 0;
 	}
 
 	.home-hero-title {

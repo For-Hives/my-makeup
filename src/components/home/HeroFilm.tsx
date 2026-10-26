@@ -2,7 +2,16 @@
 
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { FilmStill } from './FilmStill'
-import { FILM_STILLS, FILM_VIDEOS, type FilmConditions, filmButtonName, mountsFilm, playsFilm } from './film'
+import {
+	ARCH_OBSERVER_STEPS,
+	archSeenBy,
+	FILM_STILLS,
+	FILM_VIDEOS,
+	type FilmConditions,
+	filmButtonName,
+	mountsFilm,
+	playsFilm,
+} from './film'
 
 /**
  * The moving part of the home hero (decision of 25/10/2026, docs/accueil.md): the film in the arch, the button of the
@@ -14,6 +23,8 @@ import { FILM_STILLS, FILM_VIDEOS, type FilmConditions, filmButtonName, mountsFi
  * - `data-hero-motion` (`running` or `paused`) is set only once the script runs and the visitor has not asked for less
  *   motion: without it, the ribbon never moves (WCAG 2.2.2, nothing loops without a way to stop it).
  * - `data-film="playing"` is set while a video plays.
+ * - `data-arch="seen"` is set once `FILM_VIEW_RATIO` of the arch has been on the screen, and stays: on a phone, the
+ *   stylesheet shows the still of the arch only then (before, its blurred copy, see `STILL_PLACEHOLDERS` of film.ts).
  */
 
 interface Stage {
@@ -21,15 +32,20 @@ interface Stage {
 	motion: boolean
 	/** The visitor stopped the film with the button of the badge. */
 	userPaused: boolean
+	/** `FILM_VIEW_RATIO` of the arch has been on the screen once. */
+	archSeen: boolean
 	toggle: () => void
 	setPlaying: (playing: boolean) => void
+	seeArch: () => void
 }
 
 const StageContext = createContext<Stage>({
 	motion: false,
 	userPaused: false,
+	archSeen: false,
 	toggle: () => undefined,
 	setPlaying: () => undefined,
+	seeArch: () => undefined,
 })
 
 /** Reduced until the browser has said otherwise: the markup of the server is the one without motion. */
@@ -50,14 +66,20 @@ export function HeroStage({ className, children }: { className: string; children
 	const reduced = useReducedMotion()
 	const [userPaused, setUserPaused] = useState(false)
 	const [playing, setPlaying] = useState(false)
+	const [archSeen, setArchSeen] = useState(false)
 	const toggle = useCallback(() => setUserPaused(paused => !paused), [])
-	const stage = useMemo(() => ({ motion: !reduced, userPaused, toggle, setPlaying }), [reduced, userPaused, toggle])
+	const seeArch = useCallback(() => setArchSeen(true), [])
+	const stage = useMemo(
+		() => ({ motion: !reduced, userPaused, archSeen, toggle, setPlaying, seeArch }),
+		[reduced, userPaused, archSeen, toggle, seeArch]
+	)
 	return (
 		<StageContext.Provider value={stage}>
 			<section
 				className={className}
 				data-hero-motion={reduced ? undefined : userPaused ? 'paused' : 'running'}
 				data-film={!reduced && playing ? 'playing' : undefined}
+				data-arch={archSeen ? 'seen' : undefined}
 			>
 				{children}
 			</section>
@@ -75,18 +97,20 @@ const VIDEO = 'absolute inset-0 h-full w-full object-cover'
 
 /**
  * The film, over the poster of the arch. Its videos are put in the page only when every condition of `mountsFilm` is
- * met (the script runs, motion is welcome, no Save-Data, the arch on the screen, the tab in front, the page loaded
- * and the browser idle). The intro plays once; the loop is loaded while it plays, stacked under it, and shown when the
- * intro ends: its first frame is the last frame of the intro, so the swap has no gap. Off the screen, in a tab behind
- * or stopped by the button, the film pauses.
+ * met (the script runs, motion is welcome, no Save-Data, `FILM_VIEW_RATIO` of the arch on the screen, the tab in front,
+ * the page loaded and the browser idle). The intro plays once; the loop is loaded while it plays, stacked under it, and
+ * shown when the intro ends: its first frame is the last frame of the intro, so the swap has no gap. Off the screen,
+ * in a tab behind or stopped by the button, the film pauses.
  *
- * When the film will not come although motion is welcome, the end still covers the poster: the poster is the first
- * frame of the intro, the artists still blurred, and nothing would ever bring them into focus. That is a refused
- * `play()`, Save-Data (no byte of video), and a browser without IntersectionObserver (no way to know when the arch is
- * seen). Under reduced motion the poster already is the end still (`<source media>` of the server).
+ * When the film will not come although motion is welcome, the end still covers the poster once the arch is seen: the
+ * poster is the first frame of the intro, the artists still blurred, and nothing would ever bring them into focus.
+ * That is a refused `play()`, Save-Data (no byte of video), and a browser without IntersectionObserver (no way to know
+ * when the arch is seen: it counts as seen). Not before the arch is seen: on a phone its top peeks into the first
+ * screen, where the end still would be the largest paint. Under reduced motion the poster already is the end still
+ * (`<source media>` of the server).
  */
 export function ArchFilm() {
-	const { motion, userPaused, setPlaying } = useContext(StageContext)
+	const { motion, userPaused, archSeen, setPlaying, seeArch } = useContext(StageContext)
 	const host = useRef<HTMLDivElement>(null)
 	const intro = useRef<HTMLVideoElement>(null)
 	const loop = useRef<HTMLVideoElement>(null)
@@ -105,12 +129,27 @@ export function ArchFilm() {
 		if (!element) return
 		if (typeof IntersectionObserver === 'undefined') {
 			setObservable(false)
+			seeArch()
 			return
 		}
-		const observer = new IntersectionObserver(entries => setInView(entries.some(entry => entry.isIntersecting)))
+		// A share of the arch, not a pixel of it: on a phone its top peeks into the first screen, and the film (1 MB of
+		// video) waits for a scroll. The last entry is the latest state of the arch.
+		const observer = new IntersectionObserver(
+			entries => {
+				const entry = entries[entries.length - 1]
+				if (!entry) return
+				const shown = archSeenBy(
+					{ ratio: entry.intersectionRatio, height: entry.intersectionRect.height },
+					entry.rootBounds?.height ?? window.innerHeight
+				)
+				setInView(shown)
+				if (shown) seeArch()
+			},
+			{ threshold: [...ARCH_OBSERVER_STEPS] }
+		)
 		observer.observe(element)
 		return () => observer.disconnect()
-	}, [])
+	}, [seeArch])
 
 	useEffect(() => {
 		const read = () => setVisible(document.visibilityState === 'visible')
@@ -187,7 +226,7 @@ export function ArchFilm() {
 
 	return (
 		<div ref={host} className="absolute inset-0" data-film-phase={refused ? 'refused' : stillOnly ? 'still' : phase}>
-			{refused || stillOnly ? (
+			{refused || (stillOnly && archSeen) ? (
 				<FilmStill still={FILM_STILLS.end} alt="" className={VIDEO} />
 			) : (
 				mounted && (
