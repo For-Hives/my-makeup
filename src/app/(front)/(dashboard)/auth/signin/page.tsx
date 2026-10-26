@@ -47,10 +47,7 @@ export default async function SignInPage({
 		<AuthShell
 			title={
 				<>
-					Se{' '}
-					<TitleAccent tone="berry" italic>
-						connecter
-					</TitleAccent>
+					Se <TitleAccent tone="berry">connecter</TitleAccent>
 				</>
 			}
 			layout="split"

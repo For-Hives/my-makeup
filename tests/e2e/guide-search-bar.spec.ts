@@ -85,7 +85,7 @@ test.describe('La recherche des guides', { tag: '@mobile' }, () => {
 		await page.goto(PAGES[0].path)
 		await page.getByRole('search').scrollIntoViewIfNeeded()
 		await settled(page)
-		expect(await page.evaluate(() => (window as unknown as { __cls: number }).__cls)).toBeLessThan(0.01)
+		expect(await page.evaluate(() => (window as unknown as { __cls: number }).__cls)).toBe(0)
 		expect(await violationsSevere(page)).toEqual([])
 	})
 })

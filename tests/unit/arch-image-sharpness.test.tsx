@@ -25,16 +25,18 @@ describe('tailles demandées pour une arche', () => {
 })
 
 describe('qualité des copies', () => {
-	test('l’arche encode à 90 par défaut, et le réglage de Next en liste la valeur', () => {
+	test('l’arche garde la qualité de Next par défaut, 90 se demande, et le réglage de Next la liste', () => {
 		const config = readFileSync('next.config.ts', 'utf8')
 		expect(config).toMatch(/qualities:\s*\[[^\]]*\b90\b[^\]]*\]/)
 		expect(config).toMatch(/qualities:\s*\[[^\]]*\b75\b[^\]]*\]/)
-		expect(readFileSync('src/components/art/ArchImage.tsx', 'utf8')).toContain('quality = 90')
-		expect(renderToStaticMarkup(<ArchImage src="/assets/x.webp" alt="" />)).toContain('<img')
+		// The default stays Next's own: the heads of the content pages, the cards of the search and the profile cards use
+		// the same component, and the head is the LCP. Only the callers below the fold ask for 90.
+		expect(readFileSync('src/components/art/ArchImage.tsx', 'utf8')).not.toMatch(/quality\s*=\s*90/)
+		expect(renderToStaticMarkup(<ArchImage src="/assets/x.webp" alt="" />)).toContain('q=75')
 	})
 
 	test('les images de la maison et de la carte de démonstration demandent 90', () => {
-		for (const file of ['Presentation', 'Project', 'DemoCard']) {
+		for (const file of ['Presentation', 'Collaboration', 'Project', 'DemoCard']) {
 			const source = readFileSync(`src/components/home/${file}.tsx`, 'utf8')
 			expect(source).toContain('quality={90}')
 		}

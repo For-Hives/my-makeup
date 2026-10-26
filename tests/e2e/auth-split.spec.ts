@@ -55,7 +55,7 @@ test.describe('Connexion et inscription en deux colonnes', { tag: '@mobile' }, (
 			expect(small).toEqual([])
 			expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
 			await settled(page)
-			expect(await page.evaluate(() => (window as unknown as { __cls: number }).__cls)).toBeLessThan(0.01)
+			expect(await page.evaluate(() => (window as unknown as { __cls: number }).__cls)).toBe(0)
 			expect(await violationsSevere(page)).toEqual([])
 			await page.screenshot({
 				path: `test-results/essais/auth-split-${path.split('/').pop()}-${test.info().project.name}.png`,

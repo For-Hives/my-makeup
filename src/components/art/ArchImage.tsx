@@ -28,7 +28,7 @@ export function ArchImage({
 	mark = 'plus',
 	sizes = '(min-width: 768px) 33vw, 80vw',
 	priority = false,
-	quality = 90,
+	quality,
 	children,
 	className = '',
 }: {
@@ -41,7 +41,10 @@ export function ArchImage({
 	mark?: PrintMarkKind | false
 	sizes?: string
 	priority?: boolean
-	/** The encoder quality of the optimised copies (the default of Next, 75, smears the fine detail of a face). */
+	/**
+	 * The encoder quality of the optimised copies. Left out: the default of Next (75), which every arch keeps (the heads
+	 * of the content pages are the LCP). A photo that shows fine detail below the fold asks for 90 (issue 1138).
+	 */
 	quality?: number
 	children?: ReactNode
 	className?: string

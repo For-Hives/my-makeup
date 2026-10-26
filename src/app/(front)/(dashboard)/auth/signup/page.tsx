@@ -28,9 +28,7 @@ export default async function SignUpPage() {
 			title={
 				<>
 					S’
-					<TitleAccent tone="berry" italic>
-						inscrire
-					</TitleAccent>
+					<TitleAccent tone="berry">inscrire</TitleAccent>
 				</>
 			}
 			layout="split"

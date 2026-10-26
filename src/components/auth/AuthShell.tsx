@@ -12,7 +12,8 @@ import { body, display } from '@/components/direct-edit/fonts'
  * Two layouts. `centered` (the default) is a centred column. `split` (issue 1138, sign-in and sign-up) puts an art
  * panel on one side, with the title and a photo cut as an arch (decoration, from 1024 px up only), and the form in a
  * white card on the other; under 1024 px the title sits over the card. Both columns start at the top (never centred
- * on the page's height): a font that arrives late changes the height of a column, and a centred one would move. `footer` is what goes under the card (the
+ * on the page's height) and the title is left-aligned: the italic face arrives late, and a title that is centred, or a
+ * column that is centred, moves when its width or height changes (a layout shift). `footer` is what goes under the card (the
  * links to the other pages).
  */
 export function AuthShell({
@@ -36,7 +37,7 @@ export function AuthShell({
 				className={`relative isolate min-h-dvh overflow-hidden bg-art-paper text-ink lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] ${display.variable} ${body.variable} font-body`}
 			>
 				<GlowBlob size="lg" tone="rose" className="-right-72 -top-48 -z-10" />
-				<section className="relative flex flex-col items-center gap-10 px-4 pt-14 pb-6 text-center lg:items-start lg:bg-art-blush-50 lg:px-12 lg:py-20 lg:text-left xl:px-20">
+				<section className="relative flex flex-col items-start gap-10 px-4 pt-14 pb-6 text-left lg:items-start lg:bg-art-blush-50 lg:px-12 lg:py-20 xl:px-20">
 					<PrintMark kind="ring" className="absolute top-12 left-10 hidden h-5 w-5 text-art-line lg:block" />
 					<h1
 						className={`text-balance font-display font-medium text-4xl leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl ${titleClassName}`.trim()}

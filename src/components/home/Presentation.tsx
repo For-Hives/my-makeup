@@ -50,6 +50,7 @@ export function Presentation() {
 						band="night"
 						side="left"
 						mark="ring"
+						quality={90}
 						sizes={archSizes({ desktop: 24, mobile: 19, sourceAspect: SOURCE_ASPECTS[PHOTO] })}
 					/>
 				</div>

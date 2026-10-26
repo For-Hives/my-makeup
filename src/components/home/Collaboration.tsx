@@ -149,6 +149,7 @@ export function Collaboration() {
 									band={bloc.band}
 									side={bloc.imageAGauche ? 'left' : 'right'}
 									mark={bloc.imageAGauche ? 'ring' : 'plus'}
+									quality={90}
 									sizes={archSizes({ desktop: 24, mobile: 20, sourceAspect: SOURCE_ASPECTS[bloc.image.src] })}
 								/>
 							</div>
