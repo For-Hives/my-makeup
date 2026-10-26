@@ -1918,7 +1918,7 @@ main:has(> .home-section) {
 	translate: -50% -50%;
 }
 
-/* The drawings (makeup objects, line drawings): filled paths in `currentColor`, no stroke. Their line is part of the shape (1.375 of 24), so it scales with the drawing. */
+/* The drawings (makeup objects, line drawings): filled paths in `currentColor`, no stroke. Their line is part of the shape (about 1 of 24), so it scales with the drawing. */
 .art-drawing {
 	fill: currentColor;
 	stroke: none;

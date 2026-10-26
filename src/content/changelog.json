@@ -5,6 +5,11 @@
 			"id": "les-petits-dessins-et-les-icones-du-site-forment-maintena",
 			"type": "amelioration",
 			"text": "Les petits dessins et les icônes du site forment maintenant une seule famille dessinée pour My Makeup, avec un nouvel œil, de nouveaux objets de beauté et un courriel qui ressemble à un courriel."
+		},
+		{
+			"id": "les-petits-dessins-et-les-icones-sont-plus-fins-la-ligne",
+			"type": "amelioration",
+			"text": "Les petits dessins et les icônes sont plus fins : la ligne est amincie pour un rendu plus léger, surtout sur les grands décors."
 		}
 	],
 	"releases": [
