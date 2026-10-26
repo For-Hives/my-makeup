@@ -124,18 +124,24 @@ describe('Affichage', () => {
 		expect(html).not.toContain('<ul')
 	})
 
-	test('un article sans image a un panneau dessiné : un objet de maquillage, jamais une photo', () => {
+	test('un article a une illustration générée, décorative et sans texte ; sans illustration, le panneau dessiné reste', () => {
 		const html = renderToStaticMarkup(<ArticleList articles={[article('un', null, { titre: 'élégance du teint' })]} />)
 
-		expect(html).toMatch(/<div aria-hidden="true" data-tint="[a-z]+" data-panel="true"/)
-		expect(html).toContain('<svg')
-		expect(html).not.toMatch(/<img/)
+		expect(html).toMatch(/<div data-panel="true" data-cover="true"/)
+		expect(html).toMatch(/<img alt=""[^>]*src="[^"]*blog[^"]*"/)
+		expect(html).not.toContain('data-tint')
 		// The first letter of the title is no longer the picture.
 		expect(html).not.toContain('>É</span>')
+
+		// No illustration to show: the tinted panel with its drawn objects.
+		const drawn = renderToStaticMarkup(<BlogPanel slug="un" covers={[]} />)
+		expect(drawn).toMatch(/<div aria-hidden="true" data-tint="[a-z]+" data-panel="true"/)
+		expect(drawn).toContain('<svg')
+		expect(drawn).not.toMatch(/<img/)
 	})
 
-	test('les panneaux sont variés mais stables : un même article garde son dessin, des articles différents non', () => {
-		const panel = (slug: string) => renderToStaticMarkup(<BlogPanel slug={slug} />)
+	test('les panneaux dessinés de repli restent variés et stables', () => {
+		const panel = (slug: string) => renderToStaticMarkup(<BlogPanel slug={slug} covers={[]} />)
 		expect(panel('choisir-sa-maquilleuse')).toBe(panel('choisir-sa-maquilleuse'))
 		const slugs = ['un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit']
 		const looks = new Set(slugs.map(slug => `${blogArt(slug).tint}/${blogArt(slug).object}/${blogArt(slug).side}`))
@@ -143,12 +149,28 @@ describe('Affichage', () => {
 		for (const slug of slugs) expect(blogArt(slug).second).not.toBe(blogArt(slug).object)
 	})
 
-	test('le panneau est du décor : caché aux lecteurs d’écran, sans titre ni texte, sans étincelle ni fleur', () => {
-		const html = renderToStaticMarkup(<BlogPanel slug="un" shape="cover" />)
+	test('le panneau dessiné de repli est du décor : caché aux lecteurs d’écran, sans titre ni texte, sans étincelle ni fleur', () => {
+		const html = renderToStaticMarkup(<BlogPanel slug="un" shape="cover" covers={[]} />)
 		expect(html).not.toContain('<title')
 		expect(html).not.toMatch(/sparkle|flower|twinkle/i)
 		// No text node at all: only tags follow tags.
 		expect(html).not.toMatch(/>[^<]+</)
+	})
+
+	test('l’illustration est décorative (alt vide), à sa taille réelle, et la grande carte se charge en premier', () => {
+		const html = renderToStaticMarkup(<ArticleList articles={[article('un', null), article('deux', null)]} />)
+		const images = html.match(/<img [^>]*>/g) ?? []
+		expect(images).toHaveLength(2)
+		for (const image of images) {
+			expect(image).toContain('alt=""')
+			expect(image).toContain('width="1200"')
+			expect(image).toContain('height="800"')
+			expect(image).toContain('sizes="')
+		}
+		// The large card is the one painted first; the cards of the grid wait for the scroll.
+		expect(images[0]).toContain('fetchPriority="high"')
+		expect(images[1]).toContain('loading="lazy"')
+		expect(images[1]).not.toContain('fetchPriority')
 	})
 
 	test('le plus récent porte son étiquette, la grille a une tête de section et chaque carte une flèche décorative', () => {

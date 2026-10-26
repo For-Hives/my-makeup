@@ -156,7 +156,7 @@ export default async function ArticlePage({ params }: PageProps<'/blog/[slug]'>)
 						)}
 					</header>
 					<div className="reveal mt-10 md:mt-12">
-						<BlogPanel slug={article.slug} shape="cover" />
+						<BlogPanel slug={article.slug} shape="cover" priority />
 					</div>
 					<div className="mt-10 md:mt-14">
 						<ArticleOutline headings={outline} />

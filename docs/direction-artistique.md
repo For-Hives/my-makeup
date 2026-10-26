@@ -108,7 +108,7 @@ Tous dans `src/components/art/`, en anglais, composants serveur sauf mention. Au
 | `ProfileCard` | `profile` (**la donnée de la carte de recherche**, `ProfileCard` de `src/services/public/profiles.ts`), `rank`, `priority`, `headingLevel`, `tint`, `band` | photo en arche, nom en Bodoni (le seul lien, étiré sur la carte), zone, spécialité, deux prestations, « dès 150 € » ; reprend les règles de `ResultCard` : zone vide dite, « Coordonnées pas encore indiquées », clic mesuré seulement avec `rank`, aucune coordonnée |
 | `ProfileRowCard` | mêmes props | la même carte en ligne (liste) ; sous 720 px le prix passe sous le texte |
 | `TestimonialArch` | `quote`, `name`, `byline`, `image`, `placeholder`, `tint`, `band`, `avatar` | `<figure>` + `<blockquote>` + `<figcaption>` ; sans portrait, un objet dessiné tient la place |
-| `BlogCard` | `article` (**la donnée de la liste du blog**), `variant` (`card`, `feature`), `headingLevel` | pas de fausse photo : un panneau teinté avec un objet dessiné, choisi de façon stable par le slug |
+| `BlogCard` | `article` (**la donnée de la liste du blog**), `variant` (`card`, `feature`), `headingLevel` | l'illustration générée de l'article (choisie par le slug : `blog-cover.ts`, [`illustrations.md`](illustrations.md)), et en repli le panneau teinté avec un objet dessiné |
 | `ArtCta` | `title`, `children`, `primary` et `secondary` (`href`, `label`, `where`) | le vrai shader (voir « L'invitation à l'action ») |
 
 ### L'invitation à l'action
@@ -120,12 +120,12 @@ Tous dans `src/components/art/`, en anglais, composants serveur sauf mention. Au
 1. Le fond de la page : `bg-art-paper`, texte `text-ink`, secondaire `text-mute`.
 2. Les titres : `font-display font-medium` (Bodoni), un mot au plus en `TitleAccent`.
 3. Un bloc de page : une `SectionHead`, puis ses cartes dans des `<li className="reveal">`. Les lueurs (`GlowBlob`) se posent dans un conteneur `relative overflow-hidden` (elles débordent exprès).
-4. Pas d'image pour un texte : les articles n'ont pas de photo, les cartes de blog dessinent un objet.
+4. Pas de photo pour un texte : les articles n'ont pas d'image à eux, les cartes de blog montrent une illustration générée choisie par l'adresse (`illustrations.md`).
 5. Avant de fusionner : un test de la page, une capture à 390 px, et si le titre au-dessus de la ligne de flottaison est en Bodoni, la mesure du LCP (`preload`, voir « Polices »).
 
 ## Le blog, la barre et le pied de page
 
-- **Le panneau d'un article** (`BlogPanel`, dans `BlogCard.tsx`, choix dans `blog-art.ts` par `blogArt(slug)`) : une teinte, un liseré, une arche, un objet de maquillage incliné et un second plus petit à côté, deux marques d'imprimerie, une lueur diffuse, et pour les grands formats (`feature`, `cover`) un dessin au trait. Tout vient du `slug` : une liste variée, et un article qui garde son dessin de la liste à sa page (le même panneau couvre le haut de l'article). Aucune photo, aucun texte, décor caché aux lecteurs d'écran.
+- **L'image d'un article** (`BlogPanel`, dans `BlogCard.tsx`, choix dans `blog-cover.ts` par `blogCover(slug)`) : une illustration générée par IA (gouache éditoriale sur papier, rose, lavande, indigo ; issue 1136, demande d'Andy du 26/10/2026), 1200 x 800 en WebP, servie par `next/image` (`alt=""`, décor ; la grande carte se charge en premier, les autres au défilement). Les dix articles du site en ligne ont chacun la leur ; un autre article tire la sienne du lot de dix par un hachage de son adresse : la même de la liste à l'article. Cadres : 5:4 (carte), 4:3 (grande carte), 16:7 (haut d'article), `object-fit: cover`, `position` par fichier. Sans illustration dans le lot, le **panneau dessiné** d'avant reste le repli (`blogArt(slug)` : une teinte, un liseré, une arche, un objet de maquillage incliné et un second plus petit, deux marques d'imprimerie, une lueur, un dessin au trait pour les grands formats). Prompts, réglages et droits : [`illustrations.md`](illustrations.md).
 - **Liste** (`ArticleList`) : le dernier article en `BlogCard variant="feature"` avec l'étiquette « Dernier article », une `SectionHead` (« 02 — Le blog », « Tous les articles »), la grille de cartes dans des `<li className="reveal">`, une bannière `MarqueeBanner variant="blush"` sous le titre (les sujets de la phrase d'introduction), une arche avec un pinceau au bord du titre (ordinateur seulement), des lueurs. `ArticleCard.tsx` est supprimé.
 - **Article** : la colonne de lecture de 42 rem (`.article-prose`), le sommaire, les données structurées, les textes et les adresses sont **inchangés** ; fond papier, lueurs, lien de retour et pied de partage en pilule et puces (`Pill`, `Chip`), « À lire aussi » en `SectionHead` et `BlogCard`.
 - **Barre** : voir [`navbar.md`](navbar.md). `pillClassName` vit désormais dans `pill-class.ts` (sans import, ré-exporté par `Pill`), `SwirlEllipse` dans `SwirlEllipse.tsx` (ré-exporté par `graphics`).
@@ -205,7 +205,8 @@ Les illustrations d'aujourd'hui sont provisoires (illustrations peintes déjà s
 | À propos, première arche | `src/components/static-pages/AboutArticle.tsx` | arche 4:5, ~180 px | une maquilleuse au travail |
 | À propos, seconde arche | idem | arche 4:5, ~180 px | seconde maquilleuse, teinte lavande, plus bas |
 | Demande envoyée | `src/app/(front)/(site)/demande-envoyee/page.tsx` | arche 4:5, ~220 px | rassurance, un message reçu |
-| En-tête du blog | `src/app/(front)/(site)/blog/page.tsx` | arche 4:5, grand format | conseils beauté, mariage, soin de la peau |
+| En-tête du blog | `src/app/(front)/(site)/blog/page.tsx` | arche 4:5, grand format | conseils beauté, mariage, soin de la peau (**à décider** : les couvertures des articles sont faites, pas cette arche ; voir `illustrations.md`) |
+| **Couvertures des articles du blog** (faites le 26/10/2026) | `src/components/art/blog-cover.ts`, `BlogCard.tsx`, `public/assets/blog/` | 3:2 (1200 x 800), recadrées en 5:4, 4:3 et 16:7 | une scène par article, dix illustrations : [`illustrations.md`](illustrations.md) |
 | Avantages des deux pages « Pourquoi… » | `src/components/static-pages/Benefits.tsx` | une arche 4:5 par avantage, ~96 à 280 px | une scène par titre d'avantage |
 | Coque de connexion, d'inscription, de mot de passe | `src/components/auth/AuthShell.tsx` | libre, ~420 px (aucun visuel aujourd'hui) | accueil, espace personnel |
 

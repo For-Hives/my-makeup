@@ -5,6 +5,11 @@
 			"id": "les-petits-dessins-et-les-icones-du-site-forment-maintena",
 			"type": "amelioration",
 			"text": "Les petits dessins et les icônes du site forment maintenant une seule famille dessinée pour My Makeup, avec un nouvel œil, de nouveaux objets de beauté et un courriel qui ressemble à un courriel."
+		},
+		{
+			"id": "chaque-article-du-blog-a-maintenant-sa-propre-illustratio",
+			"type": "amelioration",
+			"text": "Chaque article du blog a maintenant sa propre illustration, dans le style du site, sur la liste comme en haut de l’article."
 		}
 	],
 	"releases": [

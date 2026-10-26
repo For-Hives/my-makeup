@@ -408,7 +408,7 @@ describe('cards', () => {
 		expect(row).toContain('data-size="sm"')
 	})
 
-	test('a blog card takes the data of the blog list: one link, a time, a drawing and no fake photo', () => {
+	test('a blog card takes the data of the blog list: one link, a time and a decorative illustration', () => {
 		const card = html(
 			<BlogCard
 				article={{
@@ -425,13 +425,13 @@ describe('cards', () => {
 		expect(card).toContain('<time dateTime="2026-10-12"')
 		expect(card).toContain('12 octobre 2026')
 		expect(card).toContain('Les questions à poser.')
-		expect(card).not.toContain('<img')
-		expect(card).toMatch(/aria-hidden="true"[^>]*data-tint=|data-tint=[^>]*aria-hidden="true"/)
-		// The same article always gets the same tint and drawing.
+		expect(card).toMatch(/<img alt=""/)
+		expect(card).not.toContain('data-tint')
+		// The same article always gets the same illustration.
 		const again = html(
 			<BlogCard article={{ slug: 'choisir-sa-maquilleuse', titre: 'x', extrait: '', publieLe: null }} />
 		)
-		expect(again.match(/data-tint="[a-z]+"/)?.[0]).toBe(card.match(/data-tint="[a-z]+"/)?.[0])
+		expect(again.match(/src="[^"]+"/)?.[0]).toBe(card.match(/src="[^"]+"/)?.[0])
 		expect(
 			html(
 				<BlogCard
