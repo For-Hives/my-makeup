@@ -14,7 +14,8 @@ import {
 } from 'react'
 import { signOut } from '@/app/(front)/(dashboard)/auth/actions'
 import { TrackedLink } from '@/components/analytics/TrackedLink'
-import { Icon } from '@/components/art/Icon'
+import { IconPath } from '@/components/art/IconPath'
+import { ICON_ARROW_RIGHT, ICON_CHEVRON_DOWN, ICON_CLOSE, ICON_MENU } from '@/components/art/icons'
 import { pillClassName } from '@/components/art/pill-class'
 import { SwirlEllipse } from '@/components/art/SwirlEllipse'
 import { currentGroup, DASHBOARD_LINK, NAVIGATION, SEARCH_LINK, SIGN_IN_LINK } from './links'
@@ -31,7 +32,7 @@ const CLOSE_DELAY = 200
 const isWide = () => window.matchMedia('(min-width: 1024px)').matches
 
 function Chevron() {
-	return <Icon name="chevron-down" className="nav-chevron h-5 w-5" />
+	return <IconPath d={ICON_CHEVRON_DOWN} className="nav-chevron h-5 w-5" />
 }
 
 /**
@@ -178,7 +179,7 @@ export function Nav() {
 					className={`flex h-11 w-11 items-center justify-center rounded-lg lg:hidden ${RING}`}
 				>
 					<span className="sr-only">Menu</span>
-					<Icon name={menuOpen ? 'close' : 'menu'} className="h-6 w-6" />
+					<IconPath d={menuOpen ? ICON_CLOSE : ICON_MENU} className="h-6 w-6" />
 				</button>
 				<div
 					id="menu-principal"
@@ -271,7 +272,7 @@ export function Nav() {
 					<div className="flex flex-col items-start gap-4 lg:flex-row lg:items-center lg:gap-4 xl:gap-6">
 						<TrackedLink href={SEARCH_LINK.href} suivi={{ nom: 'nav_recherche' }} className={SEARCH_PILL}>
 							{SEARCH_LINK.nom}
-							<Icon name="arrow-right" className="art-arrow h-5 w-5" />
+							<IconPath d={ICON_ARROW_RIGHT} className="art-arrow h-5 w-5" />
 						</TrackedLink>
 						{signedIn ? (
 							<>

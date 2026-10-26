@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { Icon } from '@/components/art/Icon'
+import { IconPath } from '@/components/art/IconPath'
+import { ICON_ALERT_CIRCLE, ICON_CHECK, ICON_LOADER, ICON_PENCIL } from '@/components/art/icons'
 import { PREVIEW_PATH } from '@/lib/dashboard/preview'
 import { useEditSession } from './EditSession'
 
@@ -48,6 +49,7 @@ export function EditBar() {
 
 /** A shape for each state, so that it is never told by its colour alone (issue 1071). */
 function StatusIcon({ kind }: { kind: 'editing' | 'saving' | 'saved' | 'error' }) {
-	const name = kind === 'saved' ? 'check' : kind === 'error' ? 'alert-circle' : kind === 'saving' ? 'loader' : 'pencil'
-	return <Icon name={name} className="h-[18px] w-[18px] shrink-0" />
+	const d =
+		kind === 'saved' ? ICON_CHECK : kind === 'error' ? ICON_ALERT_CIRCLE : kind === 'saving' ? ICON_LOADER : ICON_PENCIL
+	return <IconPath d={d} className="h-[18px] w-[18px] shrink-0" />
 }

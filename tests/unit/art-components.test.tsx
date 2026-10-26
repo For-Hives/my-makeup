@@ -9,7 +9,8 @@ import { CapsuleImage } from '@/components/art/CapsuleImage'
 import { Chip } from '@/components/art/Chip'
 import { LINE_DRAWINGS, type LineDrawingName, MAKEUP_OBJECTS, type MakeupObjectName } from '@/components/art/drawings'
 import { GlowBlob, Hairline, Icon, LineDrawing, MakeupObject, PrintMark } from '@/components/art/graphics'
-import { ICONS, type IconName } from '@/components/art/icons'
+import { IconPath } from '@/components/art/IconPath'
+import { ICON_CLOSE, ICONS, type IconName } from '@/components/art/icons'
 import { MarqueeBanner } from '@/components/art/MarqueeBanner'
 import { Pill } from '@/components/art/Pill'
 import { ProfileCard, ProfileRowCard } from '@/components/art/ProfileCard'
@@ -130,10 +131,11 @@ describe('the drawn assets', () => {
 		}
 	})
 
-	test('a client component that draws an icon does not ship the drawings', () => {
-		const icon = readFileSync(join(ROOT, 'src/components/art/Icon.tsx'), 'utf8')
-		expect(icon).not.toContain("from './drawings'")
-		expect(readFileSync(join(ROOT, 'src/components/art/MarqueePauseButton.tsx'), 'utf8')).toContain("from './Icon'")
+	test('an icon is drawn by IconPath, a server component names it, a client one imports its constant', () => {
+		const path = html(<IconPath d={ICON_CLOSE} className="h-6 w-6" />)
+		expect(path).toBe(html(<Icon name="close" className="h-6 w-6" />))
+		expect(readFileSync(join(ROOT, 'src/components/art/IconPath.tsx'), 'utf8')).not.toContain('./icons')
+		expect(readFileSync(join(ROOT, 'src/components/art/MarqueePauseButton.tsx'), 'utf8')).toContain("from './IconPath'")
 	})
 
 	test('the glow is a soft gradient, in three sizes, that never takes a click', () => {

@@ -88,11 +88,34 @@ const ICONS_HEADER = `/**
  * The interface icons of the pack (arrows, chevrons, menu, close, search, pin, check, calendar, mail, ...): the same
  * family, weight and grid as the drawings, drawn by us in VectorCraft (scripts/art/icon-origins.ts, docs/credits-svg.md).
  * One filled path each, in \`currentColor\`. A separate file from the drawings so that a client component that draws
- * an icon ships these few paths and none of the objects.
+ * an icon ships its few paths and none of the objects: it imports the constants it draws (\`ICON_…\`) and draws them with
+ * \`IconPath\`; the \`ICONS\` map and \`Icon\` (by name) are for server components, which ship nothing.
  *
  * This file is data only. It is built by scripts/art/build-drawings.ts from scripts/art/icons/*.svg: do not edit it by hand.
  */
 `
+
+/** `arrow-right` -> `ICON_ARROW_RIGHT`: the name of the constant that holds the path of one icon. */
+export const iconConstant = (name: string) => `ICON_${name.toUpperCase().replaceAll('-', '_')}`
+
+/**
+ * One exported constant per icon, then the map by name. A client component imports the constants it draws and ships
+ * only those paths; the map (`ICONS`) is for server components, which ship nothing.
+ */
+async function iconsModule(names: readonly string[]): Promise<string> {
+	const lines = [ICONS_HEADER]
+	const paths: Record<string, string> = {}
+	for (const name of names) {
+		const file = join(SOURCES, `${name}.svg`)
+		if (!existsSync(file)) throw new Error(`${name}: ${file} is missing`)
+		paths[name] = await pathOf(readFileSync(file, 'utf8'), name)
+		lines.push(`export const ${iconConstant(name)} = '${paths[name]}'`, '')
+	}
+	lines.push('export const ICONS = {')
+	for (const name of names) lines.push(`\t${/^[a-z]+$/.test(name) ? name : `'${name}'`}: ${iconConstant(name)},`)
+	lines.push('} as const satisfies Record<string, string>', '', 'export type IconName = keyof typeof ICONS', '')
+	return lines.join('\n')
+}
 
 export async function build(): Promise<{ drawings: string; icons: string }> {
 	const known = new Set([
@@ -113,12 +136,7 @@ export async function build(): Promise<{ drawings: string; icons: string }> {
 		'export type LineDrawingName = keyof typeof LINE_DRAWINGS',
 		'',
 	].join('\n')
-	const icons = [
-		ICONS_HEADER,
-		await group('ICONS', Object.keys(INTERFACE_ICON_ORIGINS)),
-		'export type IconName = keyof typeof ICONS',
-		'',
-	].join('\n')
+	const icons = await iconsModule(Object.keys(INTERFACE_ICON_ORIGINS))
 	return { drawings, icons }
 }
 

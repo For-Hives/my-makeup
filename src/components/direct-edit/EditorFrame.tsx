@@ -1,7 +1,8 @@
 'use client'
 
 import { type KeyboardEvent, type ReactNode, useEffect, useRef } from 'react'
-import { Icon } from '@/components/art/Icon'
+import { IconPath } from '@/components/art/IconPath'
+import { ICON_PENCIL } from '@/components/art/icons'
 import { useEditSession } from './EditSession'
 
 /**
@@ -44,7 +45,7 @@ export function EditorFrame({ title, buttonId, children }: { title: string; butt
 				data-testid="editor-title"
 				className="mb-5 flex items-center gap-2 border-hairline border-b pb-4 font-semibold text-base text-lipstick-800"
 			>
-				<Icon name="pencil" className="h-[18px] w-[18px]" />
+				<IconPath d={ICON_PENCIL} className="h-[18px] w-[18px]" />
 				Tu modifies : {title}
 			</p>
 			{session.confirmation !== null ? (

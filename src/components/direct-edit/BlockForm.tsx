@@ -1,7 +1,8 @@
 'use client'
 
 import { type FormEvent, type ReactNode, useEffect, useRef, useState } from 'react'
-import { Icon } from '@/components/art/Icon'
+import { IconPath } from '@/components/art/IconPath'
+import { ICON_ALERT_CIRCLE } from '@/components/art/icons'
 import { expiredSessionUrl } from '@/lib/auth/return-to'
 import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
 import { editPath } from '@/lib/direct-edit/edit-mode'
@@ -94,7 +95,7 @@ export function BlockForm({
 			<div role="alert">
 				{save.kind === 'error' || save.kind === 'expired' ? (
 					<p className="flex gap-2 rounded-2xl border border-lipstick-800 bg-lipstick-50 p-4 text-lipstick-800 text-sm">
-						<Icon name="alert-circle" className="mt-0.5 h-[18px] w-[18px] shrink-0" />
+						<IconPath d={ICON_ALERT_CIRCLE} className="mt-0.5 h-[18px] w-[18px] shrink-0" />
 						<span>
 							{save.message}
 							{save.kind === 'expired' ? (
