@@ -117,7 +117,7 @@ export default async function ArticlePage({ params }: PageProps<'/blog/[slug]'>)
 			))}
 			<GlowBlob size="md" tone="rose" className="-top-52 -right-72" />
 			<GlowBlob size="sm" tone="indigo" className="top-[60rem] -left-72 opacity-40" />
-			<div className="relative mx-auto max-w-5xl px-4 pt-10 md:px-8 md:pt-16">
+			<div className="relative mx-auto max-w-5xl px-6 pt-10 md:pt-16">
 				<article className="mx-auto max-w-3xl">
 					<header className="border-ink border-t pt-6">
 						<div className="enter flex flex-wrap items-center gap-x-4 gap-y-2" style={enterOrder(0)}>
@@ -164,8 +164,11 @@ export default async function ArticlePage({ params }: PageProps<'/blog/[slug]'>)
 						<ArticleShare title={article.titre} url={articleUrl} />
 					</div>
 				</article>
+			</div>
+			{/* The cards leave the reading column: they take the frame of the pages, like the grids of /blog and /search. */}
+			<div className="page-frame relative">
 				<RelatedArticles articles={related} />
-				<div className="mx-auto mt-4 max-w-6xl">
+				<div className="mt-4">
 					<ProfileGrid titre="Des maquilleuses près de chez vous" cartes={cards} />
 				</div>
 			</div>

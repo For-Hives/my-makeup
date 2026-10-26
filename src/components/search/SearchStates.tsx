@@ -8,9 +8,9 @@ import type { ProfileCard } from '@/services/public/profiles'
 import { SearchGrid } from './SearchGrid'
 import { SearchRefine } from './SearchRefine'
 
-const COLUMN = 'relative mx-auto flex w-full max-w-2xl flex-col items-center gap-4 px-4 py-20 text-center md:py-28'
+const COLUMN = 'relative mx-auto flex w-full max-w-2xl flex-col items-center gap-4 px-6 py-20 text-center md:py-28'
 const COLUMN_ABOVE_CARDS =
-	'relative mx-auto flex w-full max-w-2xl flex-col items-center gap-4 px-4 pt-20 pb-12 text-center md:pt-28'
+	'relative mx-auto flex w-full max-w-2xl flex-col items-center gap-4 px-6 pt-20 pb-12 text-center md:pt-28'
 const LINK = 'font-semibold text-indigo-800 underline underline-offset-4'
 /** A link on its own line: at least 44 px high to touch (ticket 295). */
 const LIST_LINK = 'inline-flex min-h-11 items-center font-semibold text-indigo-800 underline underline-offset-4'
@@ -135,7 +135,7 @@ export function NoResult({
 				</p>
 			</div>
 			{loin.length > 0 && (
-				<section aria-labelledby="recherche-titre-loin" className="mx-auto w-full max-w-6xl px-4 pb-20 md:px-16">
+				<section aria-labelledby="recherche-titre-loin" className="page-frame pb-20">
 					<h2 id="recherche-titre-loin" className="mb-6 font-display font-medium text-2xl text-ink md:text-3xl">
 						Elles se déplacent loin
 					</h2>
@@ -170,7 +170,7 @@ export function NoMatchForFilters({
 	baselineTotal?: number
 }) {
 	return (
-		<div className="mx-auto w-full max-w-6xl px-4 pt-10 pb-20 md:px-16 md:pt-14">
+		<div className="page-frame pt-10 pb-20 md:pt-14">
 			<h1 className={`${STATE_TITLE} mb-4`}>{titre}</h1>
 			<p className="mb-8 max-w-2xl text-mute">
 				Changez les filtres, ou retirez-les pour voir {baselineTotal > 0 ? `les ${baselineTotal} ` : 'toutes les '}

@@ -106,9 +106,9 @@ function blockKey(bloc: Block): string {
 
 export function Collaboration() {
 	return (
-		<section className="home-section relative overflow-hidden border-indigo-900/10 border-t bg-art-paper px-4 py-16 md:px-8 md:py-28 2xl:px-0">
+		<section className="home-section relative overflow-hidden border-indigo-900/10 border-t bg-art-paper py-16 md:py-28">
 			<GlowBlob size="md" tone="indigo" className="-top-56 -left-64 opacity-40" />
-			<div className="relative mx-auto max-w-7xl">
+			<div className="page-frame relative">
 				<SectionHead
 					display
 					align="center"
@@ -122,7 +122,7 @@ export function Collaboration() {
 					}
 				/>
 			</div>
-			<div className="relative mx-auto mt-12 max-w-7xl divide-y divide-indigo-900/10 md:mt-16">
+			<div className="page-frame relative mt-12 divide-y divide-indigo-900/10 md:mt-16">
 				{BLOCKS.map(bloc => (
 					<div key={blockKey(bloc)} className="py-14 md:py-24">
 						<div className="mx-auto grid items-center gap-14 md:grid-cols-2 md:gap-24">

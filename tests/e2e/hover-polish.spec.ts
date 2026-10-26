@@ -174,7 +174,7 @@ test.describe('le survol, sur ordinateur', () => {
 		for (const id of identifiers) await deleteContent(request, 'articles', id)
 	})
 
-	test('une carte du blog se lave au survol : aucune ombre, un fond qui déborde de 12 px, en 400 ms, rien ne bouge', async ({
+	test('une carte du blog se lave au survol : aucune ombre, un fond qui déborde de 20 px, en 400 ms, rien ne bouge', async ({
 		page,
 	}) => {
 		await page.goto('/blog')
@@ -191,7 +191,7 @@ test.describe('le survol, sur ordinateur', () => {
 			const before = await frames(page, '[data-blog-card]')
 			const rest = await washOf(card)
 			expect(rest.shadow, selector).toBe('none')
-			expect(rest.inset, selector).toBe('-12px')
+			expect(rest.inset, selector).toBe('-20px')
 			expect(rest.duration, selector).toContain('0.4s')
 
 			const box = await card.boundingBox()

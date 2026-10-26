@@ -102,6 +102,24 @@
 	--font-body: var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
+/*
+ * The frame of the public pages (26/10/2026, « plus de place en largeur, cohérent avec le hero »): the box of the home
+ * hero (`.home-hero-grid`), 96rem at most and centred, with its gutter inside it: 1.5rem, then 4rem from 64rem. Every
+ * section puts its content in it, so the text lines up from the hero to the footer, and a card grid gets 88rem from
+ * 1536 px (docs/direction-artistique.md, « Le cadre des pages »). A section keeps its background full width and gives
+ * no side padding of its own; reading columns and forms keep their own measure inside the frame. The navbar keeps
+ * 40 px from 1024 to 1279 px: its entries do not fit with 64 (the page would scroll sideways by 44 px at 1024).
+ */
+@utility page-frame {
+	width: 100%;
+	max-width: 96rem;
+	margin-inline: auto;
+	padding-inline: 1.5rem;
+	@media (width >= 64rem) {
+		padding-inline: 4rem;
+	}
+}
+
 /* Buttons of the site, as they are online. */
 @layer components {
 	.btn-primary-large {
@@ -306,8 +324,9 @@
 
 /*
  * Hover polish (issue 1137, docs/mouvement.md, « Le survol d'une carte »). A card that leads to a page shows the hover
- * with a soft wash that sits behind it and reaches 12 px past its edge, so the card breathes instead of being cut out
- * as one block. No shadow: the hard one drew a dark edge around a card with no background (profile and blog cards)
+ * with a soft wash that sits behind it and reaches 20 px past its edge, so the card breathes instead of being cut out
+ * as one block (12 px until 26/10/2026: the grids now keep 56 px between cards from 1024 px, so a hovered card stays
+ * 36 px from its neighbour, and the frame of the pages keeps 24 px around them on the sides). No shadow: the hard one drew a dark edge around a card with no background (profile and blog cards)
  * and was clipped by the rail of the search page. The wash is a pseudo-element, painted for a mouse only; the state
  * shows with reduced motion too, at once. The move (below, under no-preference) is the wash growing from 97 % to 100 %.
  */
@@ -319,9 +338,9 @@
 	.card-hover::before {
 		content: "";
 		position: absolute;
-		inset: -12px;
+		inset: -20px;
 		z-index: -1;
-		border-radius: 40px;
+		border-radius: 44px;
 		background-color: transparent;
 		pointer-events: none;
 		transform: scale(0.97);
@@ -873,7 +892,8 @@ main:has(> .home-section) {
 }
 
 /*
- * The width and the gutters of the navbar (`max-w-screen-2xl`, `px-6`, `lg:px-16`): the headline starts under the logo.
+ * The frame of the pages (`page-frame`, the same box and gutters): the headline starts under the logo from 1280 px (the
+ * navbar keeps 40 px from 1024 to 1279 px, where 64 would not fit its entries).
  * On a phone the text block comes first, 2rem under the navbar, and the top of the arch peeks into the first screen
  * under the search: the page reads as a page and asks for the scroll. There its still waits for the arch to be seen
  * (the rules of `.home-hero-arch` below): it would be the largest paint of the phone (LCP of P01, the sentence).

@@ -12,14 +12,12 @@
 import type { Payload } from 'payload'
 import { orderMostViewed } from '@/lib/search/preset'
 import { VIEWS_WINDOW_DAYS } from '@/lib/views/profile-views'
-import { parisDay } from '@/lib/weekly-stats'
-
-const DAY_MS = 86_400_000
+import { parisDayBefore } from '@/lib/weekly-stats'
 
 /** The slugs of the published profiles viewed enough over the window, most viewed first (see `orderMostViewed`). */
 export async function readMostViewedSlugs(payload: Payload, now: Date = new Date()): Promise<string[]> {
 	// The window is the same as the one of her space: today and the 29 days before it, days of Paris.
-	const first = parisDay(new Date(now.getTime() - (VIEWS_WINDOW_DAYS - 1) * DAY_MS))
+	const first = parisDayBefore(now, VIEWS_WINDOW_DAYS - 1)
 	const { rows } = await payload.db.pool.query<{ slug: string; views: string }>(
 		`SELECT p.slug AS slug, SUM(v.count) AS views
 		 FROM profile_views v

@@ -82,7 +82,7 @@ export default async function ZonePage({ params }: PageProps<'/maquilleuses/[dep
 				title={zoneTitle(code)}
 				description={`${countText(cards.length)} du département ${zoneLabel(code)} présentent leur travail et leurs tarifs. Contactez directement celle qui vous correspond.`}
 			/>
-			<section className="relative isolate overflow-hidden bg-indigo-800 px-4 py-14 text-white sm:px-6 md:py-20">
+			<section className="relative isolate overflow-hidden bg-indigo-800 px-6 py-14 text-white md:py-20">
 				<div
 					aria-hidden="true"
 					className="pointer-events-none absolute -right-6 -bottom-10 hidden text-white/15 md:block"
@@ -102,8 +102,8 @@ export default async function ZonePage({ params }: PageProps<'/maquilleuses/[dep
 					</Pill>
 				</div>
 			</section>
-			<div className="px-4 py-20 sm:px-6 md:py-28 lg:px-8">
-				<div className="mx-auto max-w-7xl">
+			<div className="py-20 md:py-28">
+				<div className="page-frame">
 					<ProfileGrid titre={`Les maquilleuses du département ${zoneLabel(code)}`} cartes={cards} />
 				</div>
 			</div>

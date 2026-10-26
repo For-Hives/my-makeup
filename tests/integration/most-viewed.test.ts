@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
 import { MOST_VIEWED_MIN_VIEWS } from '@/lib/search/preset'
-import { parisDay } from '@/lib/weekly-stats'
+import { parisDayBefore } from '@/lib/weekly-stats'
 import { readMostViewedSlugs } from '@/services/public/most-viewed'
 import { createAccount } from '../support/account-factory'
 import { emptyBase, testPayload } from '../support/payload-test'
@@ -13,8 +13,6 @@ import { emptyBase, testPayload } from '../support/payload-test'
  */
 
 afterEach(emptyBase)
-
-const DAY_MS = 86_400_000
 
 async function artist(payload: Payload, status: 'published' | 'hidden', name: string) {
 	const account = await createAccount('maquilleuse')
@@ -45,7 +43,8 @@ describe('les plus consultées : la lecture du compteur', () => {
 	test('somme sur 30 jours de Paris, plancher, profils publiés seulement, des adresses et rien d’autre', async () => {
 		const payload = await testPayload()
 		const now = new Date()
-		const day = (back: number) => parisDay(new Date(now.getTime() - back * DAY_MS))
+		// Days of the calendar, as the window counts them: a step of 24 hours shifts a day across a change of hour.
+		const day = (back: number) => parisDayBefore(now, back)
 		const popular = await artist(payload, 'published', 'Populaire')
 		const regular = await artist(payload, 'published', 'Reguliere')
 		const faint = await artist(payload, 'published', 'Discrete')

@@ -31,7 +31,7 @@ export function SiteMapBody({ profils: profiles, zones, talents, articles }: Ind
 				}
 				description="La globalité de toutes les pages qui sont présentes dans l'arborescence du site !"
 			/>
-			<div className="relative mx-auto max-w-5xl px-4 pb-24 sm:px-6">
+			<div className="relative mx-auto max-w-5xl px-6 pb-24">
 				<div className="rounded-art-frame bg-white px-6 py-10 sm:px-12 sm:py-14">
 					<article>
 						<ArticleHeading title="My-Makeup la plateforme pour les maquilleuses !" />

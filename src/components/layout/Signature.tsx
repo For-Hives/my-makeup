@@ -4,7 +4,7 @@ const LINK = 'text-mute text-sm underline hover:text-indigo-700'
 
 export function Signature() {
 	return (
-		<div className="mx-auto w-full max-w-7xl px-4 pb-10 md:px-8 2xl:px-0">
+		<div className="page-frame pb-10">
 			<p className="border-hairline border-t pt-8 text-center text-mute text-sm">
 				© {new Date().getFullYear()} My-Makeup. Tous droits réservés. Developed by{' '}
 				<Link className={LINK} href="https://andy-cinquin.fr" target="_blank" rel="noopener noreferrer">

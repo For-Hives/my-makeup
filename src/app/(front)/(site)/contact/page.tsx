@@ -42,7 +42,7 @@ export default async function PageContact() {
 				title="Contact"
 				description="Une idée, une envie de collaborer, une question ? N’hésitez pas à nous contacter !"
 			/>
-			<section className="px-4 pb-16 sm:px-6 md:pb-24">
+			<section className="page-frame pb-16 md:pb-24">
 				<div className="mx-auto max-w-3xl rounded-art-frame border border-nude-200 bg-white px-4 py-14 sm:px-10 md:py-20">
 					<div className="reveal mx-auto max-w-2xl text-center">
 						<h2 className="text-balance font-display font-medium text-3xl tracking-tight sm:text-4xl">
@@ -55,9 +55,9 @@ export default async function PageContact() {
 					<ContactForm action={sendMessage} {...(siteKey !== undefined && { siteKey })} />
 				</div>
 			</section>
-			<section className="relative isolate overflow-hidden border-nude-200 border-t px-4 py-20 sm:px-6 md:py-28">
+			<section className="relative isolate overflow-hidden border-nude-200 border-t py-20 md:py-28">
 				<GlowBlob size="lg" tone="blush" className="-right-96 top-0" />
-				<div className="relative mx-auto grid max-w-6xl gap-12 lg:grid-cols-12 lg:gap-16">
+				<div className="page-frame relative grid gap-12 lg:grid-cols-12 lg:gap-16">
 					<div className="reveal lg:col-span-5">
 						<ArtEyebrow>Contact</ArtEyebrow>
 						<h2 className="mt-4 text-balance font-display font-medium text-3xl tracking-tight sm:text-4xl lg:text-[2.6rem] lg:leading-[1.1]">

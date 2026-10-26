@@ -11,7 +11,7 @@ export function ErrorPage({ reessayer }: { reessayer?: () => void }) {
 	return (
 		<main className="relative flex w-full flex-1 flex-col justify-center bg-art-paper text-ink">
 			<meta name="robots" content="noindex, nofollow" />
-			<div className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+			<div className="page-frame py-16">
 				<div className="w-full max-w-md">
 					<h1 className="text-balance font-display font-medium text-4xl leading-[1.1] tracking-tight sm:text-5xl">
 						Un problème est survenu

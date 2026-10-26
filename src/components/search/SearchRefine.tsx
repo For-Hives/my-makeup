@@ -19,7 +19,7 @@ export function ChipGroup({ label, children }: { label: string; children: React.
 			<legend className="mb-2 p-0 font-semibold text-[13px] text-indigo-800 uppercase tracking-[0.14em]">
 				{label}
 			</legend>
-			<div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:flex-wrap md:overflow-visible md:px-0">
+			<div className="-mx-6 flex gap-2 overflow-x-auto px-6 pb-1 [scrollbar-width:none] md:mx-0 md:flex-wrap md:overflow-visible md:px-0">
 				{children}
 			</div>
 		</fieldset>

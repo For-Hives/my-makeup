@@ -207,6 +207,17 @@ export function parisDay(date: Date): string {
 	return PARIS.format(date)
 }
 
+/**
+ * The day of Paris `days` days of the calendar before the day of `now`. Counted on the date, never by steps of
+ * 24 hours from the instant: across a change of hour, such a step lands on the next day in the evening (or the day
+ * before at night), and a series of days repeats one and loses another (26/10/2026, 23:27 in Paris: 25/10 twice).
+ */
+export function parisDayBefore(now: Date, days: number): string {
+	const day = new Date(`${parisDay(now)}T12:00:00Z`)
+	day.setUTCDate(day.getUTCDate() - days)
+	return day.toISOString().slice(0, 10)
+}
+
 const inside = (date: Date, debut: Date, fin: Date): boolean => date >= debut && date < fin
 
 /**

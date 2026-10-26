@@ -8,7 +8,7 @@ import { REPORT_RETENTION_DAYS } from '../reminders/rules'
 import { runReminders, type SendReminder } from '../reminders/run'
 import { payloadReminderStore } from '../reminders/store'
 import { unsubscribeToken } from '../reminders/token'
-import { parisDay } from '../weekly-stats'
+import { parisDayBefore } from '../weekly-stats'
 import type { DailyTask } from './daily'
 
 /**
@@ -69,9 +69,8 @@ export function createRemindersTask(deps: RemindersDeps = DEFAULT_DEPS): DailyTa
 
 export const remindersTask: DailyTask = createRemindersTask()
 
-/** The day before which a report is deleted: 92 days back, counted on the day of Paris. */
-export const reportsPurgeDay = (maintenant: Date): string =>
-	parisDay(new Date(maintenant.getTime() - REPORT_RETENTION_DAYS * 86_400_000))
+/** The day before which a report is deleted: 92 days of the calendar back, counted on the day of Paris. */
+export const reportsPurgeDay = (maintenant: Date): string => parisDayBefore(maintenant, REPORT_RETENTION_DAYS)
 
 /**
  * The purge of the reports of the reminders: a row is kept 92 days, then deleted. The states of the profiles

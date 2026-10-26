@@ -40,9 +40,9 @@ const COLUMNS: readonly { image: string; alt: string; titre: string; texte: stri
  */
 export function Presentation() {
 	return (
-		<section className="home-section relative overflow-hidden border-indigo-900/10 border-t bg-art-blush-50 px-4 py-16 md:px-8 md:py-28">
+		<section className="home-section relative overflow-hidden border-indigo-900/10 border-t bg-art-blush-50 py-16 md:py-28">
 			<GlowBlob size="md" tone="blush" className="-bottom-52 -left-56" />
-			<div className="relative mx-auto grid max-w-7xl items-center gap-14 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] md:gap-20">
+			<div className="page-frame relative grid items-center gap-14 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] md:gap-20">
 				<div className="reveal mx-auto w-full max-w-[19rem] md:max-w-sm">
 					<ArchImage
 						src={PHOTO}

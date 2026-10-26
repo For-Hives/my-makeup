@@ -28,11 +28,11 @@ export const TALENTS_WITH_ICON: ReadonlySet<string> = new Set([
  */
 export function Talents({ talents }: { talents: readonly TalentPublic[] }) {
 	return (
-		<section className="home-section relative border-indigo-900/10 border-t bg-indigo-50/50 px-4 py-16 md:px-8 md:py-28 2xl:px-0">
-			<div className="mx-auto max-w-7xl">
+		<section className="home-section relative border-indigo-900/10 border-t bg-indigo-50/50 py-16 md:py-28">
+			<div className="page-frame">
 				<SectionHead align="end" titre="Vos projets, nos meilleurs talents." />
 			</div>
-			<div className="mx-auto mt-10 max-w-7xl md:mt-16">
+			<div className="page-frame mt-10 md:mt-16">
 				<div className="mx-auto flex w-full flex-col md:flex-row md:gap-24">
 					<div className="reveal relative flex h-auto items-center justify-center gap-2 pb-10 md:w-1/5 md:gap-0 md:p-0">
 						<div className="md:-translate-x-[40%] md:-translate-y-[40%] md:absolute md:top-1/2 md:left-1/2 md:z-20">

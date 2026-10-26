@@ -15,10 +15,10 @@ export function Footer() {
 		<div className="bg-art-paper text-ink">
 			<footer className="relative overflow-hidden">
 				<GlowBlob size="md" tone="rose" className="-right-72 -bottom-72" />
-				<div className="relative mx-auto flex w-full max-w-7xl flex-col gap-12 px-4 pt-12 pb-16 md:px-8 2xl:px-0">
+				<div className="page-frame relative flex flex-col gap-12 pt-12 pb-16">
 					<span
 						aria-hidden="true"
-						className="pointer-events-none absolute bottom-3 left-8 hidden h-24 w-24 text-art-line md:block 2xl:left-0"
+						className="pointer-events-none absolute bottom-3 left-6 hidden h-24 w-24 text-art-line md:block lg:left-16"
 					>
 						<MakeupObject name="brush" />
 					</span>

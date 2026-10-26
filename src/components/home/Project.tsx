@@ -26,13 +26,13 @@ const TABS = [
 
 export function Project() {
 	return (
-		<section className="home-section relative border-indigo-900/10 border-t bg-indigo-50/50 px-4 py-16 md:px-8 md:py-28 2xl:px-0">
-			<div className="mx-auto max-w-7xl">
+		<section className="home-section relative border-indigo-900/10 border-t bg-indigo-50/50 py-16 md:py-28">
+			<div className="page-frame">
 				<SectionHead titre="Gardez votre projet beauté en tête, on vous aide à trouver la bonne maquilleuse">
 					Trouvez une maquilleuse près de chez vous, comparez les profils et contactez-la directement, gratuitement.
 				</SectionHead>
 
-				<div className="mx-auto mt-12 flex max-w-7xl flex-col-reverse gap-12 md:mt-20 md:flex-row md:gap-32">
+				<div className="mt-12 flex flex-col-reverse gap-12 md:mt-20 md:flex-row md:gap-32">
 					<div className="w-full md:w-1/2">
 						<div className="flex flex-col gap-2">
 							{TABS.map(onglet => (

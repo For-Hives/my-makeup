@@ -2,6 +2,8 @@
 
 La page `/search` applique la direction artistique ([`direction-artistique.md`](direction-artistique.md)) : fond papier, titres en Bodoni, cartes du kit, puces de 44 px. Son référencement ne change pas (`noindex`, pas d'adresse canonique), ni la mesure, ni les règles de classement de [`/classement`](../src/lib/search/ranking.ts).
 
+Depuis le 26/10/2026, toute la page tient dans le cadre des pages (`page-frame`, [`direction-artistique.md`](direction-artistique.md), « Le cadre des pages ») au lieu de 72rem : la barre, les filtres, la sélection, les résultats, le message « aucune maquilleuse pour ces filtres » et les cartes lointaines partent sous le logo ; « aucun résultat » et l'échec de la recherche gardent leur colonne centrée de 42rem, avec la gouttière de 24 px du cadre. Le formulaire de la barre garde 64rem au plus, à gauche ; la grille garde ses trois colonnes et prend 56 px entre deux cartes dès 1024 px, la liste 24 px entre deux lignes, 32 px dès 768 px (plus que les 20 px du fond du survol).
+
 ## Ce qui est à l'écran
 
 | Zone | Composant | Règle |

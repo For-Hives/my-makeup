@@ -34,7 +34,7 @@ export function ArtCta({
 	secondary: ArtCtaLink
 }) {
 	return (
-		<section className="relative overflow-hidden bg-art-paper px-4 py-16 md:px-12 md:py-36">
+		<section className="relative overflow-hidden bg-art-paper px-6 py-16 md:px-12 md:py-36">
 			<GlowBlob size="lg" tone="indigo" className="-top-40 -left-96 opacity-50" />
 			<GlowBlob size="md" tone="rose" className="-right-72 -bottom-48" />
 			<div className="reveal art-cta-open relative isolate mx-auto max-w-6xl overflow-hidden rounded-art-frame bg-art-night px-6 py-20 text-center text-white md:px-24 md:py-44">

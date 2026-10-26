@@ -71,9 +71,9 @@ describe('a card is washed, not shadowed', () => {
 		expect(offenders).toEqual([])
 	})
 
-	test('the wash is a pseudo-element that reaches 12 px past the card, for a mouse only, with no lift', () => {
+	test('the wash is a pseudo-element that reaches 20 px past the card, for a mouse only, with no lift', () => {
 		const wash = body('.card-hover::before')
-		expect(wash).toMatch(/inset:\s*-12px/)
+		expect(wash).toMatch(/inset:\s*-20px/)
 		expect(wash).toMatch(/z-index:\s*-1/)
 		expect(wash).toMatch(/pointer-events:\s*none/)
 		expect(body('.card-hover')).toMatch(/isolation:\s*isolate/)
@@ -100,9 +100,23 @@ describe('a card is washed, not shadowed', () => {
 		expect(body('.card-hover.bg-white')).toMatch(/isolation:\s*auto/)
 	})
 
-	test('the rail of the search page keeps room around its cards, or the wash would be clipped', () => {
+	test('the rail of the search page keeps room around its cards, more than the 20 px of the wash, or it would be clipped', () => {
 		const grid = readFileSync(join(ROOT, 'src/components/search/SearchGrid.tsx'), 'utf8')
-		expect(grid).toMatch(/-mt-4[^']*pt-4[^']*pb-4/)
+		expect(grid).toMatch(/-mt-6[^']*pt-6[^']*pb-6/)
+	})
+
+	test('the card grids keep 56 px between cards from 1024 px: a hovered card stays 36 px from its neighbour', () => {
+		for (const file of [
+			'src/components/search/SearchGrid.tsx',
+			'src/components/blog/ArticleList.tsx',
+			'src/components/blog/RelatedArticles.tsx',
+			'src/components/home/FeaturedProfiles.tsx',
+		])
+			expect(readFileSync(join(ROOT, file), 'utf8'), file).toContain('lg:gap-x-14')
+		// The profile grid adds the 16 px of its items (`pr-4`, the room of the arch band) to its 48 px.
+		const profileGrid = readFileSync(join(ROOT, 'src/components/static-pages/ProfileGrid.tsx'), 'utf8')
+		expect(profileGrid).toContain('lg:gap-x-12')
+		expect(profileGrid).toContain('pr-4')
 	})
 })
 

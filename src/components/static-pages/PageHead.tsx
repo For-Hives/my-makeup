@@ -88,7 +88,7 @@ export function PageHead({
 				}
 			/>
 			<div
-				className={`relative mx-auto max-w-7xl px-4 pt-12 pb-16 sm:px-6 md:pt-20 md:pb-24 lg:px-8 ${split ? `grid items-center gap-12 md:gap-16 ${mirrored ? 'md:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]' : 'md:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]'}` : ''}`}
+				className={`page-frame relative pt-12 pb-16 md:pt-20 md:pb-24 ${split ? `grid items-center gap-12 md:gap-16 ${mirrored ? 'md:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]' : 'md:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]'}` : ''}`}
 			>
 				{drawing !== undefined && !split && (
 					<>

@@ -24,7 +24,7 @@ export function LegalPage({ titre, description, titreDuTexte, image, children }:
 	return (
 		<ArtPage>
 			<PageHead title={titre} description={description} {...(image ? { image } : {})} />
-			<div className="relative mx-auto max-w-4xl px-4 pb-24 sm:px-6">
+			<div className="relative mx-auto max-w-4xl px-6 pb-24">
 				<article className="rounded-art-frame bg-white px-6 py-10 sm:px-12 sm:py-14">
 					<ArticleHeading title={titreDuTexte} />
 					<div

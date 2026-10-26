@@ -25,18 +25,18 @@ export function FeaturedProfiles({ cartes }: { cartes: readonly ProfileCard[] })
 		<section
 			aria-labelledby="accueil-mise-en-avant"
 			data-testid="maquilleuses-mises-en-avant"
-			className="home-section relative overflow-hidden bg-art-paper px-4 py-16 md:px-8 md:py-28"
+			className="home-section relative overflow-hidden bg-art-paper py-16 md:py-28"
 		>
 			<GlowBlob size="md" tone="rose" className="-top-48 -right-56" />
-			<div className="relative mx-auto max-w-7xl">
-				<PrintMark kind="plus" className="absolute top-2 right-4 hidden h-6 w-6 text-art-berry md:block" />
+			<div className="page-frame relative">
+				<PrintMark kind="plus" className="absolute top-2 right-10 hidden h-6 w-6 text-art-berry md:block lg:right-20" />
 				<SectionHead id="accueil-mise-en-avant" titre="Mise en avant" display />
 				{cartes.length > FEATURED_MAX && (
 					// biome-ignore lint/security/noDangerouslySetInnerHtml: the script is built from two integers, no data of a profile.
 					<script dangerouslySetInnerHTML={{ __html: featuredDrawScript(cartes.length, FEATURED_MAX) }} />
 				)}
 				<ul
-					className={`${FEATURED_LIST_CLASS} mt-12 grid grid-cols-1 gap-x-8 gap-y-14 md:mt-16 md:grid-cols-3 md:gap-y-16`}
+					className={`${FEATURED_LIST_CLASS} mt-12 grid grid-cols-1 gap-x-8 gap-y-14 md:mt-16 md:grid-cols-3 md:gap-y-16 lg:gap-x-14`}
 				>
 					{cartes.map((carte, index) => (
 						<li key={carte.slug} className="reveal">
