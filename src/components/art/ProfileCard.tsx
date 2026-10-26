@@ -93,7 +93,7 @@ function GoArrow() {
 	return (
 		<span
 			aria-hidden="true"
-			className="inline-flex size-11 flex-none items-center justify-center rounded-full border border-ink text-ink transition-colors group-hover:bg-ink group-hover:text-white"
+			className="inline-flex size-11 flex-none items-center justify-center rounded-full hover-fade border border-ink text-ink group-hover:bg-ink group-hover:text-white"
 		>
 			<Icon name="arrow-right" className="art-arrow h-5 w-5" />
 		</span>

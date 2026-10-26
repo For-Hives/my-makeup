@@ -88,7 +88,16 @@ describe('the two buttons and the current link, in the art direction kit', () =>
 	test('the current link is ringed by the sketched ellipse, and its bar gives way to it', () => {
 		expect(SOURCE).toContain('<SwirlEllipse')
 		expect(SOURCE).toMatch(/path === entry\.href && \(\s*<SwirlEllipse/)
-		expect(body('.nav-link[aria-current="page"]::after')).toMatch(/content:\s*none/)
+		expect(body('.nav-link:is([aria-current="page"], [data-current-group])::after')).toMatch(/content:\s*none/)
+	})
+
+	test('a group that holds the current page is ringed the same way, by a data attribute and not by aria-current (issue 1137)', () => {
+		expect(SOURCE).toContain('currentGroup(path)')
+		expect(SOURCE).toMatch(/data-current-group=\{groupOfPage === entry\.nom \? '' : undefined\}/)
+		expect(SOURCE).toMatch(/groupOfPage === entry\.nom && \(\s*<SwirlEllipse/)
+		// The page itself stays announced by the link of the panel: the button of the group never claims `aria-current`.
+		expect(SOURCE).not.toMatch(/data-group=\{entry\.nom\}[^>]*aria-current/)
+		expect(body('.nav-link:is([aria-current="page"], [data-current-group])')).toMatch(/color:/)
 	})
 
 	test('the bar reads the pill and the ellipse without the drawings: neither file imports anything', () => {

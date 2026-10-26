@@ -16,7 +16,7 @@ import { signOut } from '@/app/(front)/(dashboard)/auth/actions'
 import { TrackedLink } from '@/components/analytics/TrackedLink'
 import { pillClassName } from '@/components/art/pill-class'
 import { SwirlEllipse } from '@/components/art/SwirlEllipse'
-import { DASHBOARD_LINK, NAVIGATION, SEARCH_LINK, SIGN_IN_LINK } from './links'
+import { currentGroup, DASHBOARD_LINK, NAVIGATION, SEARCH_LINK, SIGN_IN_LINK } from './links'
 
 const RING = 'focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2'
 /** The two buttons at the right of the bar, in the pills of the art direction kit (docs/navbar.md). The kit's pill ring replaces `RING`. */
@@ -79,6 +79,8 @@ export function Nav() {
 	const focusFirst = useRef(false)
 	const ids = useId()
 	const path = usePathname()
+	/** The group that holds the current page: it is ringed by the ellipse like a plain entry on its own page. */
+	const groupOfPage = currentGroup(path)
 	const signedIn = useSignedIn(path)
 
 	const settle = (next: string | null, delay: number) => {
@@ -246,10 +248,14 @@ export function Nav() {
 													group === entry.nom && pointerType.current === 'mouse' && event.detail > 0 && isWide()
 												setGroup(group === entry.nom && !keepOpen ? null : entry.nom)
 											}}
+											data-current-group={groupOfPage === entry.nom ? '' : undefined}
 											className={`nav-link ${RING}`}
 										>
 											{entry.nom}
 											<Chevron />
+											{groupOfPage === entry.nom && (
+												<SwirlEllipse className="pointer-events-none absolute inset-x-0 inset-y-0 h-full w-full text-indigo-700" />
+											)}
 										</button>
 										<div
 											id={`group-${entry.nom}`}

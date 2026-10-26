@@ -6,7 +6,7 @@
 export type PillVariant = 'outline' | 'filled' | 'light' | 'ghost-light' | 'play'
 
 const BASE =
-	'group inline-flex items-center justify-center gap-3.5 rounded-full border text-center font-medium whitespace-nowrap focus-visible:outline-2 focus-visible:outline-offset-4'
+	'group inline-flex items-center justify-center gap-3.5 rounded-full border text-center font-medium whitespace-nowrap hover:no-underline focus-visible:outline-2 focus-visible:outline-offset-4'
 
 const SIZE = { md: 'min-h-13 px-7 text-base', sm: 'min-h-11 px-5 text-[15px]' } as const
 

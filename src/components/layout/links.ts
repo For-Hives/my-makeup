@@ -69,6 +69,19 @@ export const NAVIGATION: readonly NavEntry[] = [
 	{ nom: 'Blog', href: '/blog' },
 ]
 
+/**
+ * The name of the group of the bar whose pages hold `path`, or `null` (issue 1137). The bar rings that group with the
+ * sketched ellipse, as it does a plain entry on its own page. Derived from `NAVIGATION`: a page added to a group is
+ * covered without a second list. A trailing slash is ignored; only an exact address counts.
+ */
+export function currentGroup(path: string): string | null {
+	const clean = path.length > 1 ? path.replace(/\/+$/, '') : path
+	for (const entry of NAVIGATION) {
+		if ('enfants' in entry && entry.enfants.some(child => child.href === clean)) return entry.nom
+	}
+	return null
+}
+
 export const SEARCH_LINK = { nom: 'Trouver une maquilleuse', href: '/search' }
 export const SIGN_IN_LINK = { nom: 'Me connecter', href: '/auth/signin' }
 /** What the navigation shows instead of the sign-in link when a makeup artist is signed in (ticket 078). */

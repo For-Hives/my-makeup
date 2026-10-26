@@ -49,7 +49,7 @@ export function Talents({ talents }: { talents: readonly TalentPublic[] }) {
 									href={`/talent/${talent.slug}`}
 									className="group relative flex w-full focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2"
 								>
-									<span className="flex h-full min-h-[120px] w-full items-center justify-center rounded-xl border border-indigo-900/10 px-4 py-8 text-center font-semibold text-gray-900/70 transition duration-100 ease-in group-hover:opacity-0 group-focus-visible:opacity-0">
+									<span className="flex h-full min-h-[120px] w-full items-center justify-center rounded-xl border border-indigo-900/10 px-4 py-8 text-center font-semibold text-gray-900/70 transition duration-(--duration-hover) ease-(--ease-out-soft) group-hover:opacity-0 group-focus-visible:opacity-0">
 										{talent.titre}
 									</span>
 									{TALENTS_WITH_ICON.has(talent.slug) && (
@@ -65,7 +65,7 @@ export function Talents({ talents }: { talents: readonly TalentPublic[] }) {
 									)}
 									<span
 										aria-hidden="true"
-										className="-z-10 absolute top-0 left-0 flex h-full w-full items-center justify-center rounded-xl border border-indigo-900 bg-indigo-900 px-4 py-8 text-center font-semibold text-gray-50 opacity-0 transition duration-100 ease-in group-hover:z-10 group-hover:opacity-100 group-focus-visible:z-10 group-focus-visible:opacity-100"
+										className="-z-10 absolute top-0 left-0 flex h-full w-full items-center justify-center rounded-xl border border-indigo-900 bg-indigo-900 px-4 py-8 text-center font-semibold text-gray-50 opacity-0 transition duration-(--duration-hover) ease-(--ease-out-soft) group-hover:z-10 group-hover:opacity-100 group-focus-visible:z-10 group-focus-visible:opacity-100"
 									>
 										Voir cette spécialité
 									</span>

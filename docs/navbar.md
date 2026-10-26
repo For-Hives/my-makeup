@@ -13,6 +13,7 @@ Le composant est `src/components/layout/Nav.tsx` ; ses styles sont dans un bloc 
 | « Trouver une maquilleuse » | La pilule à contour du kit (`pillClassName({ variant: 'outline', size: 'sm' })`, 44 px) avec sa flèche (`art-arrow`, 4 px de plus au survol, immobile en mouvement réduit) : au survol le contour se remplit d'encre et le texte passe au blanc (200 ms), sans soulignement de texte. Plus de loupe ni de bordure carrée. |
 | « Me connecter », « Me déconnecter » | Une pilule douce (fond `indigo-50`, sans bordure, 44 px, texte gras indigo) qui garde la mécanique d'une entrée : **un seul trait** (`.nav-link-strong`), posé sur le texte (`after:inset-x-5`). Au survol et au focus le fond passe à `indigo-100`. L'ancienne classe `btn-primary-simple` ajoutait une bordure basse permanente à la ligne que le survol global des liens soulignait : deux traits l'un sur l'autre. |
 | Page courante | Une ellipse tracée à la main (`SwirlEllipse`, sans étoile) entoure l'entrée dont l'adresse est celle de la page (`aria-current="page"`). Elle prend la place du trait, qui ne se dessine plus sur la page courante (`content: none`) : une seule marque. |
+| Groupe de la page courante (issue 1137) | Quand la page est l'une de celles d'un menu (« Particulier », « Maquilleuse », « Solutions » : les huit adresses de `NAVIGATION`), le bouton du groupe est entouré de la même ellipse, par `data-current-group` (`currentGroup(path)`, `links.ts`, dérivée de `NAVIGATION` : une page ajoutée à un menu est couverte sans seconde liste). Le trait glissant s'efface alors aussi (une seule marque, ouvert ou survolé). `aria-current="page"` reste sur le seul lien du panneau qui est la page : le bouton d'un groupe n'est pas une page. Même cible de 44 px, même intention de survol et même clavier. |
 | Version étroite (< 1024 px) | Le bouton « Menu » ouvre la liste ; les groupes se déplient sur place, sans carte ni animation. Les cibles font 44 px. |
 | Mouvement réduit | Aucune transition ni animation : le trait, la couleur et la carte apparaissent tout de suite. |
 
@@ -32,6 +33,8 @@ Les deux pilules et l'ellipse viennent du kit ([`direction-artistique.md`](direc
 
 ## Tests
 
+- `tests/unit/navbar-current-group.test.ts` : chaque adresse de chaque groupe donne son groupe, et aucun autre ; les adresses hors groupe (accueil, blog, recherche) n'en donnent aucun.
+- `tests/e2e/hover-polish.spec.ts`, à 1440 et 390 px : l'ellipse sur le bon groupe pour chacune des huit pages, sur aucun autre ; le panneau s'ouvre encore et garde son `aria-current` ; axe.
 - `tests/unit/navbar.test.ts` : les deux pilules, l'ellipse de la page courante et les fichiers du kit sans import ; le balisage (plus de carré gris, de bague ni de `btn-primary-simple`), les cibles de 44 px, les délais, les flèches, le trait en `transform`, les transitions sous `no-preference` avec les jetons, la carte du panneau.
 - `tests/e2e/navbar.spec.ts`, à 1440 et 390 px : cibles de 44 px, trait unique au survol et au focus, ouverture au survol avec délai, traversée de l'espace sans fermeture, survol de passage sans ouverture, carte propre, clavier complet, mouvement réduit, axe avec un groupe ouvert, captures.
 - `tests/e2e/layout.spec.ts` garde le menu replié au clavier.
