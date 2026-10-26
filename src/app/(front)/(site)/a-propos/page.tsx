@@ -23,7 +23,7 @@ export default function AboutPage() {
 		<ArtPage>
 			<PageHead
 				layout="centered"
-				drawing="profile"
+				drawing="lips"
 				glow="indigo"
 				title={
 					<>

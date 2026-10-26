@@ -77,7 +77,7 @@ export default async function ZonePage({ params }: PageProps<'/maquilleuses/[dep
 			))}
 			<PageHead
 				layout="centered"
-				drawing="profile"
+				drawing="eye"
 				glow="blush"
 				title={zoneTitle(code)}
 				description={`${countText(cards.length)} du département ${zoneLabel(code)} présentent leur travail et leurs tarifs. Contactez directement celle qui vous correspond.`}

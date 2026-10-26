@@ -1,6 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { GlowBlob, LineDrawing } from '@/components/art/graphics'
+import { GlowBlob, MakeupObject } from '@/components/art/graphics'
 import { FOOTER_COLUMNS, NETWORKS } from './links'
 import { Signature } from './Signature'
 
@@ -18,9 +18,9 @@ export function Footer() {
 				<div className="relative mx-auto flex w-full max-w-7xl flex-col gap-12 px-4 pt-12 pb-16 md:px-8 2xl:px-0">
 					<span
 						aria-hidden="true"
-						className="pointer-events-none absolute bottom-3 left-8 hidden h-24 w-32 text-art-line md:block 2xl:left-0"
+						className="pointer-events-none absolute bottom-3 left-8 hidden h-24 w-24 text-art-line md:block 2xl:left-0"
 					>
-						<LineDrawing name="hand-brush" />
+						<MakeupObject name="brush" />
 					</span>
 					<div className="flex flex-col gap-12 md:flex-row md:gap-10">
 						<div className="flex flex-col gap-6">

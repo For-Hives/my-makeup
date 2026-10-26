@@ -7,7 +7,8 @@ import { ArtCta } from '@/components/art/ArtCta'
 import { BlogCard } from '@/components/art/BlogCard'
 import { CapsuleImage } from '@/components/art/CapsuleImage'
 import { Chip } from '@/components/art/Chip'
-import { GlowBlob, Hairline, Icon, LineDrawing, MakeupObject, PrintMark, Swash } from '@/components/art/graphics'
+import { LINE_DRAWINGS, type LineDrawingName, MAKEUP_OBJECTS, type MakeupObjectName } from '@/components/art/drawings'
+import { GlowBlob, Hairline, Icon, LineDrawing, MakeupObject, PrintMark } from '@/components/art/graphics'
 import { MarqueeBanner } from '@/components/art/MarqueeBanner'
 import { Pill } from '@/components/art/Pill'
 import { ProfileCard, ProfileRowCard } from '@/components/art/ProfileCard'
@@ -58,7 +59,6 @@ describe('the drawn assets', () => {
 			<Icon key="e" name="arrow-right" />,
 			<MakeupObject key="f" name="lipstick" />,
 			<LineDrawing key="g" name="lips" />,
-			<Swash key="h" name="dry" />,
 			<Hairline key="i" variant="marks" />,
 		]) {
 			const markup = html(node)
@@ -68,33 +68,35 @@ describe('the drawn assets', () => {
 		}
 	})
 
-	test('the drawings take currentColor, so a class sets their colour', () => {
-		expect(html(<MakeupObject name="brush" />)).toContain('fill="currentColor"')
-		expect(html(<LineDrawing name="profile" />)).toContain('fill="currentColor"')
+	test('the drawings take currentColor, so a class sets their colour: an outline, never a filled shape', () => {
+		for (const markup of [html(<MakeupObject name="brush" />), html(<LineDrawing name="eye" />)]) {
+			expect(markup).toContain('stroke="currentColor"')
+			expect(markup).toContain('fill="none"')
+			expect(markup).toContain('class="art-drawing')
+			expect(markup).not.toContain('fill-rule')
+			expect(markup).not.toMatch(/(?:href|style|onload|onclick)=/)
+		}
 		expect(html(<PrintMark kind="plus" />)).toContain('stroke="currentColor"')
 	})
 
-	test('all eight makeup objects, four line drawings and two swashes draw a path', () => {
-		for (const name of [
-			'brush',
-			'compact',
-			'lipstick',
-			'mirror',
-			'sponge',
-			'mascara',
-			'nail-polish',
-			'eyelash-curler',
-		] as const)
-			expect(html(<MakeupObject name={name} />)).toMatch(/<path fill-rule="evenodd" d="M/)
-		for (const name of ['lips', 'eye', 'profile', 'hand-brush'] as const)
-			expect(html(<LineDrawing name={name} />)).toMatch(/<path fill-rule="evenodd" d="M/)
-		for (const name of ['dry', 'wave'] as const)
-			expect(html(<Swash name={name} />)).toMatch(/<path fill-rule="evenodd" d="M/)
+	test('every makeup object and line drawing is a family of bare shapes on the same 48 grid', () => {
+		for (const name of Object.keys(MAKEUP_OBJECTS) as MakeupObjectName[]) {
+			const markup = html(<MakeupObject name={name} />)
+			expect(markup).toContain('viewBox="0 0 48 48"')
+			expect(markup).toMatch(/<(path|rect|circle|ellipse|line|polyline|polygon) /)
+		}
+		for (const name of Object.keys(LINE_DRAWINGS) as LineDrawingName[])
+			expect(html(<LineDrawing name={name} />)).toContain('viewBox="0 0 48 48"')
+		expect(Object.keys(MAKEUP_OBJECTS).sort()).toEqual(
+			['brush', 'comb', 'compact', 'lipstick', 'mascara', 'mirror', 'nail-polish', 'perfume'].sort()
+		)
+		expect(Object.keys(LINE_DRAWINGS).sort()).toEqual(['eye', 'lips'])
 	})
 
-	test('the generated drawings are clean: no metadata, no background, no white fill, no script', () => {
-		const data = readFileSync(join(ROOT, 'src/components/art/generated-art.ts'), 'utf8').replace(/\/\*[\s\S]*?\*\//, '')
-		for (const forbidden of ['c2pa', 'metadata', 'rgb(255', '<script', 'xmlns', 'fill="#fff'])
+	test('the drawing data is clean: no metadata, no background, no fill, no script, no link', () => {
+		const source = readFileSync(join(ROOT, 'src/components/art/drawings.ts'), 'utf8')
+		const data = source.slice(source.indexOf('export const MAKEUP_OBJECTS'))
+		for (const forbidden of ['c2pa', 'metadata', 'rgb(255', '<script', 'xmlns', 'fill', 'href', 'clip-path', 'style'])
 			expect(data.toLowerCase()).not.toContain(forbidden)
 	})
 

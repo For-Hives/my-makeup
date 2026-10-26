@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { type ArchBand, ArchImage } from '@/components/art/ArchImage'
 import type { Tint } from '@/components/art/CapsuleImage'
-import type { LineDrawingName } from '@/components/art/generated-art'
+import type { LineDrawingName } from '@/components/art/drawings'
 import { GlowBlob, LineDrawing, PrintMark, type PrintMarkKind } from '@/components/art/graphics'
 import { Pill } from '@/components/art/Pill'
 

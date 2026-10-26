@@ -11,14 +11,16 @@ Le code est dans `src/components/art/`. Les jetons et les quelques règles de fe
 | Refusé le 25/10/2026 | Remplacé par |
 |---|---|
 | Les petites étoiles à quatre branches | Des **marques d'imprimerie** (`PrintMark`) : un fin plus, un petit cercle ouvert, un point, un court trait de pinceau. Très rares (deux ou trois par section), **jamais animées** |
-| Les petites fleurs et leurs pop-ups au trait | Des **dessins au trait continu** (`LineDrawing` : lèvres, œil, profil, main qui tient un pinceau) et des **balayages de pinceau** (`Swash`). Mode et éditorial, jamais botanique |
-| Les objets de maquillage faits à la main | Huit **vrais objets** vectoriels propres (`MakeupObject`), générés puis nettoyés (voir « Assets ») |
+| Les petites fleurs et leurs pop-ups au trait | Des **dessins au trait** (`LineDrawing` : lèvres, œil) de la même famille que les objets. Mode et éditorial, jamais botanique |
+| Les objets de maquillage faits à la main, puis ceux générés par une IA (refusés pour leur style disparate) | Huit **vrais objets** vectoriels d'une seule famille de contours (`MakeupObject`), dessinés par des personnes, sous licence libre (voir « Assets » et [`credits-svg.md`](credits-svg.md)) |
 | Les halos de couleur trop serrés | Des **lueurs** (`GlowBlob`) plus diffuses, plus grandes et plus larges, en trois tailles |
 | Un fond d'invitation à l'action dessiné à la main | Le **vrai shader WebGL** du site (`CtaBackdrop`), repris par `ArtCta`, plus grand, avec plus d'air |
 
 ## Interdits
 
 Ces règles n'ont pas d'exception ; `tests/unit/art-forbidden.test.ts` les tient.
+
+- **Aucun SVG généré par une IA, aucun SVG sans licence libre listée.** Tout dessin de `src/components/art/` (et de `public/art/`) est une œuvre humaine, sous CC0, MIT, ISC ou Apache-2.0, et a sa ligne dans [`credits-svg.md`](credits-svg.md) (source, auteur, licence, modification). Un fichier ou un export nommé « generated » ne peut plus exister dans le kit ; un dessin sans ligne rend la CI rouge. Ajouter un dessin : choisir dans la famille IconPark (même trait, même grille) ou, à défaut, une famille entière d'une autre source, jamais un mélange ; ajouter sa ligne au tableau ; relancer `scripts/art/extract-drawings.ts` ; garder le texte de la licence dans `LICENSES/`.
 
 - **Aucune étincelle, aucune fleur** : ni fichier, ni import, ni classe, ni nom (`sparkle`, `twinkle`, `flower`, `blossom`, `chamomile`, `anemone`, `leaf-sprig`…) dans `src/` ou `public/`. Un fichier ou un import de ce genre rend la CI rouge.
 - **Aucun rebond, aucune pulsation, aucun scintillement** : le mouvement est celui de `mouvement.md` (`transform` et `opacity`, courbes douces, jamais de `bounce`, `ping`, `pulse`).
@@ -27,7 +29,7 @@ Ces règles n'ont pas d'exception ; `tests/unit/art-forbidden.test.ts` les tient
 - **Un titre : au plus deux couleurs** parmi l'encre, l'indigo 700 et la baie, et **un seul mot en italique**.
 - **Le décor est caché aux lecteurs d'écran** (`aria-hidden`, jamais de `<title>`), et **jamais seul porteur d'un sens** : une pastille, un dessin, un rond ne disent rien que le texte ne dise.
 - **Cibles de 44 px** au moins pour tout ce qui se clique ou s'appuie ; anneau de focus visible ; textes à **4,5:1** au moins (calculé dans `tests/unit/art-tokens.test.ts`).
-- **Les composants sont des composants serveur.** Le seul code client du kit est le bouton de pause de la bannière (`MarqueePauseButton`, `'use client'`). Un test refuse un second fichier client, et refuse qu'un composant client importe les dessins générés (52 Ko de données).
+- **Les composants sont des composants serveur.** Le seul code client du kit est le bouton de pause de la bannière (`MarqueePauseButton`, `'use client'`). Un test refuse un second fichier client, et refuse qu'un composant client importe les dessins.
 
 ## Jetons (`globals.css`, bloc « ART DIRECTION KIT »)
 
@@ -65,36 +67,24 @@ Les routes qui peignent déjà du Bodoni et de l'Instrument Sans au-dessus de la
 |---|---|---|---|
 | Marques d'imprimerie | `PrintMark kind="plus\|ring\|dot\|dash"` | un fin plus, un cercle ouvert, un point, un trait de pinceau | dessinées à la main (originales) |
 | Icônes | `Icon name=…` | flèches, lecture, pause, loupe, repère, sceau, calendrier, chevron, menu | tirées de la maquette validée (dessinées à la main, originales) |
-| Objets de maquillage | `MakeupObject name="brush\|compact\|lipstick\|mirror\|sponge\|mascara\|nail-polish\|eyelash-curler"` | contours propres, un seul trait | **générés** (Recraft V4.1, texte vers vecteur), nettoyés à la main |
-| Dessins au trait | `LineDrawing name="lips\|eye\|profile\|hand-brush"` | un trait continu, mode | **générés** (même modèle), nettoyés |
-| Balayages | `Swash name="dry\|wave"` | un coup de pinceau plein | **générés** (même modèle), nettoyés |
+| Objets de maquillage | `MakeupObject name="brush\|compact\|lipstick\|mirror\|mascara\|nail-polish\|perfume\|comb"` | contours de 48 points, un seul trait | **IconPark (ByteDance), Apache-2.0**, dessins d'origine, réduits au contour ([`credits-svg.md`](credits-svg.md)) |
+| Dessins au trait | `LineDrawing name="lips\|eye"` | contours, même famille et même trait que les objets | **IconPark**, idem |
 | Cadres | `ArchFrame`, `CapsuleFrame` (assets), classes `.art-arch`, `.art-capsule` (utilisées par les composants) | arche avec bande décalée, pastille en pilule avec filet intérieur | dessinés à la main |
 | Badge | `RotatingBadge` | texte qui tourne autour d'un rond cliquable | dessiné à la main (texte sur un chemin SVG) |
 | Lueurs | `GlowBlob size="sm\|md\|lg" tone="rose\|indigo\|blush"` | dégradé radial très doux | dessinées à la main (CSS) |
 | Filets | `Hairline variant="line\|dots\|marks"`, `SwirlEllipse` (l'ellipse du lien actif, sans étoile) | filets, ellipse | dessinés à la main |
 
-Aucun asset ne copie une des références Dribbble : ce sont des dessins originaux ou générés. Tous les dessins sont des composants SVG en ligne (ils prennent `currentColor` : une classe donne la couleur).
+Aucun asset ne copie une des références Dribbble. Les marques, icônes, filets et cadres sont dessinés pour le projet ; les objets et les dessins au trait sont des **icônes IconPark** (voir ci-dessous). Tous les dessins sont des composants SVG en ligne (ils prennent `currentColor` : une classe donne la couleur).
 
-### Les dessins générés : comment, et combien
+### Les objets et les dessins au trait : une famille, une source
 
-Modèle : `fal-ai/recraft/v4.1/text-to-vector` (0,08 USD l'image), couleur d'encre `#1a1417` sur fond blanc. **Coût réel : 15 images réussies, soit 1,20 USD** (une image pilote, le lot de 13, un second essai du pinceau) ; deux essais de plus (miroir, pince à cils) ont été refusés par le compte à court de crédit et n'ont rien coûté. Le plafond de 5 USD n'a pas été approché. Le **miroir** et la **pince à cils** sont donc ceux du premier lot : le miroir est propre, la pince à cils se lit mais reste le moins réussi (voir « Décisions »).
+Source : IconPark, jeu « Outline » de ByteDance (<https://github.com/bytedance/IconPark>), licence **Apache-2.0**, dessinée par des personnes. Pourquoi elle : c'est la seule famille libre vérifiée qui contient à la fois le rouge à lèvres, le pinceau, le poudrier, le miroir, le mascara, le vernis, le parfum, le peigne, les lèvres et l'œil, dans un même trait (Phosphor, Tabler, Lucide, Iconoir, Remix et Material Design Icons n'ont ni mascara, ni poudrier, ni vernis ; game-icons demande une mention d'auteur et mélange les styles ; OpenMoji est en partage à l'identique ; la liste complète est dans `credits-svg.md`).
 
-Nettoyage (à refaire pour tout nouvel objet) : retirer le bloc `<metadata>` (manifeste C2PA de Recraft), retirer le rectangle de fond blanc, fusionner toutes les formes restantes en **un seul chemin `fill-rule="evenodd"`** (le contour et ses intérieurs blancs deviennent un trait transparent), arrondir les coordonnées à une décimale, recadrer la `viewBox` sur le dessin. Le résultat est dans `src/components/art/generated-art.ts` (données seules).
-
-Prompts (gabarit commun : « *minimalist monoline icon drawing: uniform thin black outline strokes only, no fill, no shading, no gradients, no text, perfectly clean geometry, elegant fashion editorial line art, centered on a plain white background* », 768 × 1024) :
-
-| Nom | Sujet |
-|---|---|
-| `lipstick` | a single lipstick, open tube with the bullet raised, side view |
-| `brush` | a single flat foundation makeup brush: a wide fan of soft bristles held by a metal ferrule, a long smooth handle |
-| `compact` | a single round makeup compact, open, with a round mirror in the lid and a pressed powder pan below |
-| `mirror` | a single hand mirror with an oval glass and a slim handle |
-| `sponge` | a single egg-shaped makeup blending sponge |
-| `mascara` | a single mascara tube with its wand and spiral brush pulled out beside it |
-| `nail-polish` | a single nail polish bottle with a square glass body and a rounded cap |
-| `eyelash-curler` | a single eyelash curler, closed scissor-like handles with finger loops and the curved clamp |
-| `lips`, `eye`, `profile`, `hand-brush` | « single continuous one-line drawing of » a woman's lips slightly parted / an open eye with long lashes and a sweeping eyebrow / a woman's face in profile with a long neck and a loose hair bun / a hand holding a slim makeup brush, « drawn with one thin unbroken black line, fashion editorial minimal line art » (1024 × 768 pour les lèvres et l'œil) |
-| `dry`, `wave` | a single organic calligraphic brush-stroke swash with dry-brush edges / a graceful S-shaped paint brush swoosh, thick to thin, « solid black ink on a plain white background » (1024 × 512) |
+- **Données** : `src/components/art/drawings.ts` (formes nues sur une grille de 48, rien d'autre : ni couleur, ni style, ni lien). Il est **écrit par** `scripts/art/extract-drawings.ts` à partir d'une copie du dépôt IconPark : `bun --no-env-file scripts/art/extract-drawings.ts <dépôt IconPark>`. Le script retire les remplissages à deux tons, les couleurs, le chemin de découpe et tout ce qui n'est pas une forme (parseur HTML, aucun filtre sur le balisage).
+- **Rendu** : `Drawing` (dans `graphics.tsx`) trace chaque forme en contour `currentColor`, extrémités arrondies, avec **une seule épaisseur** pour toute la famille : la variable CSS `--art-drawing-stroke` (`.art-drawing`, 1,75 px **à l'écran, à toutes les tailles** : `vector-effect: non-scaling-stroke`, comme les filets de 1 px du kit ; sans cela, l'épaisseur d'origine de la grille de 48 donnait 12 px sur un grand objet). Même grille, même échelle, même poids : un nouveau dessin de la famille s'y range sans réglage.
+- **Poids** : environ 5,3 Ko de données pour les dix dessins (contre 52 Ko), aucun fichier de plus, aucun JavaScript.
+- **Ce qui manque** : éponge, pince à cils, profil, main qui tient un pinceau, balayages de pinceau n'existent pas en vrai SVG libre de cette famille : ils sont retirés (le parfum et le peigne prennent la place de l'éponge ; le pinceau en objet remplace la main) plutôt que dessinés à la main ou pris dans un second style.
+- **Licence** : le texte d'Apache-2.0 est dans `LICENSES/IconPark-Apache-2.0.txt`, l'auteur et la source dans `credits-svg.md`, la mention des modifications dans `credits-svg.md` et dans l'en-tête de `drawings.ts`. Aucune mention visible sur le site n'est requise.
 
 ## Composants
 
@@ -135,7 +125,7 @@ Tous dans `src/components/art/`, en anglais, composants serveur sauf mention. Au
 - **Liste** (`ArticleList`) : le dernier article en `BlogCard variant="feature"` avec l'étiquette « Dernier article », une `SectionHead` (« 02 — Le blog », « Tous les articles »), la grille de cartes dans des `<li className="reveal">`, une bannière `MarqueeBanner variant="blush"` sous le titre (les sujets de la phrase d'introduction), une arche avec un pinceau au bord du titre (ordinateur seulement), des lueurs. `ArticleCard.tsx` est supprimé.
 - **Article** : la colonne de lecture de 42 rem (`.article-prose`), le sommaire, les données structurées, les textes et les adresses sont **inchangés** ; fond papier, lueurs, lien de retour et pied de partage en pilule et puces (`Pill`, `Chip`), « À lire aussi » en `SectionHead` et `BlogCard`.
 - **Barre** : voir [`navbar.md`](navbar.md). `pillClassName` vit désormais dans `pill-class.ts` (sans import, ré-exporté par `Pill`), `SwirlEllipse` dans `SwirlEllipse.tsx` (ré-exporté par `graphics`).
-- **Pied de page** (`Footer`, serveur, sans bannière ni script : la bannière ajouterait son bouton client à chaque page) : papier, **sans filet ni marge au-dessus** (le fond de la page se prolonge dans le pied : un filet à plus et une marge d'une autre couleur faisaient une barre blanche et un `hr` laid, retour d'Andy du 25/10/2026), réseaux en pastilles rondes de 44 px, colonnes avec titre en Bodoni et liens de 44 px, un dessin au trait (`hand-brush`) et une lueur. Les liens et les textes sont ceux du site.
+- **Pied de page** (`Footer`, serveur, sans bannière ni script : la bannière ajouterait son bouton client à chaque page) : papier, **sans filet ni marge au-dessus** (le fond de la page se prolonge dans le pied : un filet à plus et une marge d'une autre couleur faisaient une barre blanche et un `hr` laid, retour d'Andy du 25/10/2026), réseaux en pastilles rondes de 44 px, colonnes avec titre en Bodoni et liens de 44 px, un dessin au trait (le pinceau) et une lueur. Les liens et les textes sont ceux du site.
 
 ## La passe de cohérence (25/10/2026)
 
@@ -188,7 +178,7 @@ Le shader WebGL n'a pas pu être vu dans le navigateur de travail (pas de WebGL)
 2. **Dessins au trait continu et balayages de pinceau à la place des fleurs**, sans rien de botanique.
 3. **Polices : déclarées une fois dans le gabarit, `preload: false`.** Le kit ne coûte rien aux pages qui ne s'en servent pas ; la paire préchargée de `direct-edit/fonts.ts` reste pour les routes qui peignent déjà du Bodoni (sinon : CLS de `/mentions-legales` à 0,16). À renverser quand toutes les pages auront pris le kit.
 4. **`Cta` devient `ArtCta`** pour les treize pages d'un coup (décision du 25/10/2026, refonte de l'accueil) : le composant partagé garde son nom et ses clics mesurés.
-5. **La pince à cils** générée est la moins réussie du lot (lisible, mais proche de ciseaux) : à regénérer (0,08 USD) si elle doit servir en grand.
+5. **Dessins réels, d'une seule famille (IconPark)** à la place des dessins générés par une IA (25/10/2026, demande du mainteneur) : l'éponge, la pince à cils, le profil, la main au pinceau et les balayages sont retirés faute de vrai SVG libre de la même famille.
 6. **Pas de flèches de carrousel** : le défilement par glissement (`scroll-snap`) suffit ; `RoundButton` est prêt si une page en demande.
 
 ## Pas de barre blanche

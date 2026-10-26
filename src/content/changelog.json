@@ -9,6 +9,18 @@
 	],
 	"releases": [
 		{
+			"version": "3.0.16",
+			"date": "2026-10-26",
+			"commit": "ae4f4c93deb019c8bc7b8d5ee16005e80864d976",
+			"notes": [
+				{
+					"id": "les-dessins-du-site-pinceau-rouge-a-levres-poudrier-miroi",
+					"type": "amelioration",
+					"text": "Les dessins du site (pinceau, rouge à lèvres, poudrier, miroir, mascara, vernis, parfum, peigne, lèvres, œil) sont de vrais dessins, tous au même trait fin, au lieu d'illustrations de styles différents."
+				}
+			]
+		},
+		{
 			"version": "3.0.15",
 			"date": "2026-10-26",
 			"commit": "2f1efc3346d897b5dcf6f20d48671186518eba9d",
