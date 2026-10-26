@@ -5,7 +5,8 @@
  *   lines in VectorCraft, given the pack's one weight (outline stroke, unite, simplify), then optimised.
  * - `hand`: drawn by us as vector geometry in VectorCraft (draw_path, draw_shape), same weight, same finishing.
  *
- * Every icon is a single `<path fill-rule="evenodd">` on a 24 grid, a line of 1.375 units (5.7 % of the box), round ends.
+ * Every icon is a single `<path fill-rule="evenodd">` on a 24 grid, a line of about 0.95 units for the objects and drawings (4 %) and 1.1 for the interface icons (4.6 %), round ends.
+ * The first version had 1.375 (5.7 %); the owner found it too heavy (26/10/2026) and the finished shapes were thinned.
  * The source files are `scripts/art/icons/<name>.svg`; `scripts/art/build-drawings.ts` turns them into data.
  */
 export type IconOrigin = 'traced' | 'hand'
