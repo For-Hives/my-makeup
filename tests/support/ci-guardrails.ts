@@ -163,6 +163,8 @@ interface Job {
 	steps?: Step[]
 	uses?: string
 	permissions?: unknown
+	outputs?: unknown
+	env?: unknown
 	defaults?: unknown
 	strategy?: unknown
 	'timeout-minutes'?: unknown

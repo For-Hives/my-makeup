@@ -7,7 +7,8 @@
  * A publication reserves the next number, moves the pending release notes under it, writes
  * .release/version.json and pushes, in one atomic push, the commit that holds both files and the
  * tag of the number. Coolify watches .release/version.json on main and deploys the production
- * when it changes: nothing else deploys it.
+ * when it changes: nothing else deploys it. The step then gives the release commit to the job that
+ * checks the production serves it (scripts/release/deployment-check.ts).
  *
  * Two publications never reserve the same number:
  * - the number follows every number already taken, read on the remote: the `vX.Y.Z` tags and
@@ -418,8 +419,17 @@ function describe(result: Result, source: string): string {
 	}
 }
 
+/**
+ * The output of the step for the job that checks the deployment (`release-commit`): the commit that holds the
+ * version file, when there is one to deploy. Nothing when the publication was overtaken: the newer one checks.
+ */
+export function releaseOutput(result: Result): string | undefined {
+	return result.status === 'depassee' ? undefined : `release-commit=${result.releaseCommit}\n`
+}
+
 async function push(): Promise<void> {
-	const { GITHUB_ACTIONS, GITHUB_REPOSITORY, GITHUB_TOKEN, SOURCE_COMMIT, GITHUB_STEP_SUMMARY } = process.env
+	const { GITHUB_ACTIONS, GITHUB_REPOSITORY, GITHUB_TOKEN, SOURCE_COMMIT, GITHUB_STEP_SUMMARY, GITHUB_OUTPUT } =
+		process.env
 	if (GITHUB_ACTIONS !== 'true' || !GITHUB_REPOSITORY || !GITHUB_TOKEN || !SOURCE_COMMIT || !COMMIT.test(SOURCE_COMMIT))
 		throw new Error(
 			'« --push » ne tourne que dans le workflow de publication (GITHUB_ACTIONS, GITHUB_REPOSITORY, GITHUB_TOKEN, SOURCE_COMMIT). En local : « --dry-run ».'
@@ -440,6 +450,8 @@ async function push(): Promise<void> {
 	const said = describe(result, SOURCE_COMMIT)
 	console.log(said)
 	if (GITHUB_STEP_SUMMARY) appendFileSync(GITHUB_STEP_SUMMARY, `${said}\n`)
+	const output = releaseOutput(result)
+	if (GITHUB_OUTPUT && output) appendFileSync(GITHUB_OUTPUT, output)
 }
 
 async function main(): Promise<void> {

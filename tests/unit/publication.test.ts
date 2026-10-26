@@ -11,6 +11,7 @@ import {
 	publish,
 	RELEASE_FILE,
 	type Result,
+	releaseOutput,
 	requiredChecksRefusal,
 	requiredWorkflowChecks,
 	takenByTags,
@@ -267,6 +268,23 @@ describe('a publication', () => {
 		expect(git(remote, 'rev-parse', `${after.tip}^`)).toBe(source)
 		expect(git(remote, 'diff', '--name-only', source, after.tip).split('\n')).toEqual([RELEASE_FILE, CHANGELOG_FILE])
 		expect(git(remote, 'log', '-1', '--format=%an %s', after.tip)).toBe('github-actions[bot] chore(release): v3.0.0')
+		// Its message starts with « chore(release): », which release.yml never publishes again (no loop), and carries
+		// no « [skip ci] » nor « [skip cd] »: Coolify would skip the deployment of a push whose commits all carry one.
+		expect(git(remote, 'log', '-1', '--format=%B', after.tip)).not.toMatch(
+			/\[(skip|no) (ci|cd)\]|\[ci skip\]|\[cd skip\]/i
+		)
+	})
+
+	test('gives the release commit to the job that checks the deployment, unless it was overtaken', () => {
+		const { remote, source } = remoteWith(changelogOf([NOTE]))
+		const result = publishFrom(run(remote, source), source)
+		const tip = onRemote(remote).tip
+
+		expect(releaseOutput(result)).toBe(`release-commit=${tip}\n`)
+		expect(releaseOutput({ status: 'deja-publiee', version: '3.0.0', releaseCommit: tip })).toBe(
+			`release-commit=${tip}\n`
+		)
+		expect(releaseOutput({ status: 'depassee', tip })).toBeUndefined()
 	})
 
 	test('without a pending note, it still takes a number and deploys, and the changelog stays as it is', () => {

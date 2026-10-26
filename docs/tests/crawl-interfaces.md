@@ -64,7 +64,7 @@ Toutes les requêtes du navigateur passent par une seule route (`decide`, dans `
 - l'accès protégé de l'hôte temporaire est ajouté aux seules requêtes de cet hôte ;
 - **une requête part 500 ms au moins après la précédente**, images et scripts de la page compris : 2 par seconde au plus. Sur ce poste il n'y a pas d'attente.
 
-Un crawl d'un hôte en ligne dure donc quelques minutes, pas quelques secondes.
+Un crawl d'un hôte en ligne dure donc longtemps : sur `https://my-makeup.fr`, le 26/10/2026, 80 pages et 3 098 requêtes en 26 minutes. Laisse-lui une heure avant de le couper.
 
 ## Lire le rapport
 

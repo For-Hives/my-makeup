@@ -632,7 +632,7 @@ Le détail est dans [`docs/qualite.md`](docs/qualite.md), « Renovate » : ce qu
 
 Un changement qu'une visiteuse ou une maquilleuse peut remarquer a sa note de version, ajoutée dans le même commit : `bun run notes:add ajout "Tu peux ajouter une vidéo à ta galerie."`. Elle attend dans `src/content/changelog.json`.
 
-Quand la CI d'une poussée sur `main` est verte, `ci-ok` compris, le workflow `.github/workflows/release.yml` réserve le numéro suivant (`3.0.0`, puis `3.0.1`…), range les notes en attente dessous et pousse `.release/version.json` avec l'étiquette du numéro. Coolify surveille ce fichier pour déployer la prod. Personne ne publie à la main ; `bun run release:publish --dry-run` montre ce que ferait la prochaine publication, sans rien écrire.
+Quand la CI d'une poussée sur `main` est verte, `ci-ok` compris, le workflow `.github/workflows/release.yml` réserve le numéro suivant (`3.0.0`, puis `3.0.1`…), range les notes en attente dessous et pousse `.release/version.json` avec l'étiquette du numéro. Coolify surveille ce fichier pour déployer la prod, puis le job `deployment` attend que la prod serve la version (rouge au bout de 20 minutes). Personne ne publie à la main ; `bun run release:publish --dry-run` montre ce que ferait la prochaine publication, sans rien écrire.
 
 Rien ne se publie avant la fusion de `v3` dans `main`. Le détail, et ce qu'il reste à régler dans GitHub et Coolify : [`docs/publication.md`](docs/publication.md).
 
@@ -686,6 +686,7 @@ Rien ne se publie avant la fusion de `v3` dans `main`. Le détail, et ce qu'il r
 | `bun run perf:pool-load` | La charge du pool de connexions à la base (ticket 268), sur le banc seulement, application lancée : `--requests` requêtes simultanées sur la page d'un profil, la recherche et `/api/health`, `--rounds` vagues, `--writes` créations de comptes en plus, ou `--lock` pour prendre toutes les connexions par un verrou extérieur. Dit les erreurs, la requête la plus lente et le pic de connexions à la base. Voir [`docs/pool-connexions.md`](docs/pool-connexions.md) |
 | `bun run names:check [dossier…]` | Liste les noms du code qui sont encore français (fichiers, dossiers, noms déclarés, scripts, variables d'environnement lues, options des scripts) et sort avec le code 1 s'il en trouve hors des exceptions nommées. `--summary`, `--json` (voir [`docs/noms.md`](docs/noms.md)). Tourne dans la CI (job `qualite`), sous `ci-ok`, sans liste d'attente |
 | `bun run release:publish` | Avec `--dry-run` : montre la prochaine publication sans rien écrire. Avec `--push` : publie, dans le workflow `release.yml` seulement |
+| `bun run release:check-deployment` | Attend que la prod serve le commit de version `RELEASE_COMMIT` : dans le job `deployment` de `release.yml` seulement |
 
 Biome se lance par ces scripts ou par `bunx @biomejs/biome`, jamais par `npx biome` : c'est un paquet homonyme.
 

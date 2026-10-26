@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
+import { RELEASE_FILE } from '../../scripts/release/publication'
 import {
 	cacheDependentSteps,
 	type RequiredCheck,
@@ -10,6 +11,7 @@ import {
 	type Workflow,
 } from '../support/ci-guardrails'
 import {
+	DEPLOYMENT_CHECK_COMMAND,
 	dependencyImports,
 	dependencyImportsOnDisk,
 	PUBLICATION_COMMAND,
@@ -95,6 +97,7 @@ describe('the publication depends on ci-ok', () => {
 		const scripts = (JSON.parse(read('package.json')) as { scripts: Record<string, string> }).scripts
 
 		expect(scripts['release:publish']).toBe('bun --no-env-file scripts/release/publication.ts')
+		expect(scripts['release:check-deployment']).toBe('bun --no-env-file scripts/release/deployment-check.ts')
 	})
 
 	test.each([
@@ -138,9 +141,45 @@ describe('the publication depends on ci-ok', () => {
 		['two publications at once', 'cancel-in-progress: false', 'cancel-in-progress: true', 'une publication à la fois'],
 		[
 			'no queue at all',
-			'concurrency:\n  group: publication\n  cancel-in-progress: false\n',
+			'concurrency:\n  group: publication\n  cancel-in-progress: false\n  queue: max\n',
 			'',
 			'une publication à la fois',
+		],
+		[
+			'a queue of one, which cancels a waiting publication',
+			'  cancel-in-progress: false\n  queue: max\n',
+			'  cancel-in-progress: false\n',
+			'queue: max',
+		],
+		[
+			'an env for every job',
+			'concurrency:\n',
+			`env:\n  GITHUB_TOKEN: ${expression('github.token')}\n\nconcurrency:\n`,
+			'aucun « env » en tête du fichier',
+		],
+		[
+			'a publication that can be skipped',
+			'        id: publish\n',
+			"        id: publish\n        if: github.ref == 'refs/heads/other'\n",
+			'sans condition',
+		],
+		[
+			'a check that can be skipped',
+			'      - name: Wait for the production to serve the version\n',
+			'      - name: Wait for the production to serve the version\n        if: false\n',
+			'sans condition',
+		],
+		[
+			'a token given to the whole check job',
+			'    needs: publication\n',
+			`    needs: publication\n    env:\n      GITHUB_TOKEN: ${expression('github.token')}\n`,
+			'aucun « env » au niveau du job : ni jeton ni secret',
+		],
+		[
+			'an env for the whole publication job',
+			'    outputs:\n',
+			`    env:\n      OTHER: value\n    outputs:\n`,
+			'aucun « env » au niveau du job : la commande reçoit le sien',
 		],
 		[
 			'a queue per commit, which is no queue',
@@ -180,10 +219,60 @@ describe('the publication depends on ci-ok', () => {
 			'SOURCE_COMMIT',
 		],
 		[
-			'a second job',
+			'a third job',
 			'jobs:\n',
 			'jobs:\n  autre:\n    runs-on: ubuntu-24.04\n    timeout-minutes: 1\n',
-			'n’a qu’un job',
+			'a deux jobs, et deux seulement',
+		],
+		[
+			'no check of the deployment',
+			/\n {2}# The production serves the version[\s\S]*$/,
+			'\n',
+			'a deux jobs, et deux seulement',
+		],
+		[
+			'a release commit that publishes again',
+			" && !startsWith(github.event.workflow_run.head_commit.message, 'chore(release):')",
+			'',
+			'la condition est exactement',
+		],
+		[
+			'a publication that gives no release commit to check',
+			`      release-commit: ${expression('steps.publish.outputs.release-commit')}\n`,
+			`      version: ${expression('steps.publish.outputs.version')}\n`,
+			'une seule sortie',
+		],
+		['a step whose output nobody reads', '        id: publish\n', '', 'id: publish'],
+		['a check that runs before the publication', '    needs: publication\n', '', 'needs: publication'],
+		[
+			'a check that runs when nothing was published',
+			"    if: needs.publication.outputs.release-commit != ''\n",
+			'    if: always()\n',
+			"la condition est exactement « needs.publication.outputs.release-commit != '' »",
+		],
+		[
+			'a check that may write',
+			'    timeout-minutes: 25\n    permissions:\n      contents: read\n',
+			'    timeout-minutes: 25\n    permissions:\n      contents: write\n',
+			'la permission est « contents: read »',
+		],
+		[
+			'a check given the token',
+			`          RELEASE_COMMIT: ${expression('needs.publication.outputs.release-commit')}\n`,
+			`          RELEASE_COMMIT: ${expression('needs.publication.outputs.release-commit')}\n          GITHUB_TOKEN: ${expression('github.token')}\n`,
+			'aucun jeton ni secret',
+		],
+		[
+			'the dependencies installed for the check',
+			'      - name: Wait for the production to serve the version\n',
+			'      - name: Install\n        run: bun install --frozen-lockfile\n      - name: Wait for the production to serve the version\n',
+			`une seule commande, « ${DEPLOYMENT_CHECK_COMMAND} »`,
+		],
+		[
+			'another action in the check',
+			'      - name: Wait for the production to serve the version\n',
+			`      - uses: some/action@${'1'.repeat(40)} # v1.0.0\n      - name: Wait for the production to serve the version\n`,
+			'n’a rien à faire dans la vérification',
 		],
 	])('red on %s', (_fault, from, to, expected) => {
 		expect(publicationWorkflowProblems(broken(from, to), ci).join('\n')).toContain(expected)
@@ -196,9 +285,28 @@ describe('the publication depends on ci-ok', () => {
 	})
 })
 
+describe('nothing but the publication changes the version file', () => {
+	const step = ci.jobs.qualite?.steps?.find(candidate => candidate.name === 'Version file untouched')
+
+	test('the job qualite compares the version file of the pull request, or of the push, with its base', () => {
+		expect(step?.if).toBe(expression('!cancelled()'))
+		expect(step?.env).toEqual({ BASE: expression('github.event.pull_request.base.sha || github.event.before') })
+		expect(String(step?.run)).toContain('git diff --quiet "$BASE" HEAD -- .release/version.json')
+		expect(String(step?.run)).toContain('exit 1')
+	})
+
+	test('it watches the file Coolify watches', () => {
+		expect(String(step?.run)).toContain(RELEASE_FILE)
+	})
+})
+
 describe('no code of a dependency runs next to the token that pushes on main', () => {
 	test('the publication script imports nothing but the runtime and files of the repository', () => {
 		expect(dependencyImportsOnDisk(ROOT, 'scripts/release/publication.ts')).toEqual([])
+	})
+
+	test('neither does the check of the deployment, which runs without any installation', () => {
+		expect(dependencyImportsOnDisk(ROOT, 'scripts/release/deployment-check.ts')).toEqual([])
 	})
 
 	/** A small repository, in memory: each file and what it holds. */

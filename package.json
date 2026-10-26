@@ -50,6 +50,7 @@
 		"probes": "bun --no-env-file tests/probes/probes.ts",
 		"notes:add": "bun --no-env-file scripts/release/add-note.ts",
 		"release:publish": "bun --no-env-file scripts/release/publication.ts",
+		"release:check-deployment": "bun --no-env-file scripts/release/deployment-check.ts",
 		"cutover:check": "bun --no-env-file scripts/cutover/run-host-check.ts",
 		"cutover:ui-crawl": "bun --no-env-file scripts/cutover/run-ui-crawl.ts",
 		"indexnow:all": "bun --no-env-file scripts/seo/indexnow-all.ts",

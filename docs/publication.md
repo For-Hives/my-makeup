@@ -45,11 +45,12 @@ Elle montre ce que ferait la prochaine publication du commit extrait : le numér
 
 Personne ne publie à la main. Le workflow `release.yml` publie quand la CI d'une poussée sur `main` a fini en vert :
 
-1. Il démarre à la fin du workflow `CI` (`workflow_run`), seulement si la CI a réussi, pour une poussée (jamais une pull request) faite sur ce dépôt (jamais une copie).
+1. Il démarre à la fin du workflow `CI` (`workflow_run`), seulement si la CI a réussi, pour une poussée (jamais une pull request) faite sur ce dépôt (jamais une copie), et jamais pour un commit qui est lui-même une publication (son message commence par `chore(release):`) : une version ne publie jamais une version, quel que soit le jeton qui l'a poussée.
 2. Il extrait le commit dont la CI est verte, et lui seul.
 3. Il relit sur GitHub le check `ci-ok` de ce commit, celui qu'exige la protection de la branche (`ci/required-checks.json`). S'il n'a pas réussi, rien n'est publié et le job est rouge.
 4. Il réserve le numéro suivant, range les notes en attente dessous, écrit `.release/version.json`, commite les deux fichiers au nom de `github-actions[bot]` et pose l'étiquette `vX.Y.Z` sur ce commit.
 5. Il pousse le commit et l'étiquette en une seule fois.
+6. Un second job, `deployment`, attend que la prod serve ce commit (voir « Le déploiement vérifié »).
 
 Le job ne lance aucun `bun install` : aucun code d'une dépendance ne tourne à côté du jeton qui pousse sur `main`. Le script n'importe que des modules de bun et des fichiers du dépôt, et un garde-fou le vérifie.
 
@@ -84,11 +85,38 @@ Un numéro pris, c'est une étiquette `vX.Y.Z` du dépôt GitHub, le numéro de 
 
 L'application de prod suit la branche `main`, avec `/.release/version.json` dans ses Watch Paths (plan 01 §4.9) : une poussée sur `main` ne déploie que si elle change ce fichier, et seule la publication l'écrit. Ne le modifie jamais à la main.
 
+Réglages relevés et posés le 26/10/2026, Coolify 4.5.0 (du 23 au 26/10/2026, le déploiement automatique était resté coupé depuis la mise en place : chaque déploiement a été lancé à la main) :
+
+- **Déploiement automatique actif, sur ce seul fichier.** À chaque poussée sur `main`, GitHub prévient Coolify (application GitHub) ; Coolify compare les fichiers changés entre l'avant et l'après de la poussée et ne déploie que si `.release/version.json` en fait partie (il retire de lui-même la barre du début). Une fusion ne touche jamais ce fichier : une version, un déploiement ; une fusion seule, aucun.
+- **Pas de boucle.** La publication pousse avec le jeton du workflow, et une poussée faite avec ce jeton ne lance aucun workflow : la CI ne repart pas sur le commit de publication. L'étiquette `vX.Y.Z` n'est pas une branche : Coolify l'ignore. Un déploiement ne pousse rien.
+- **Un mauvais déploiement garde l'ancien site.** Coolify démarre la nouvelle version à côté de l'ancienne et attend le `HEALTHCHECK` du `Dockerfile` (`/api/health`) ; si elle n'est pas saine, il la retire, l'ancienne reste en ligne et le déploiement est en échec. Le contrôle de santé de Coolify lui-même reste coupé : il appelle `curl` ou `wget`, absents de l'image, et Coolify lit alors celui du `Dockerfile`.
+- **Aucun déploiement de prévisualisation** des pull requests : il tournerait avec les variables de la prod.
+- **Sauvegardes de la base**, sur le serveur : toutes les heures (48 gardées, deux jours) et chaque nuit (14 gardées, 30 jours), avec une alerte après un jour sans sauvegarde de nuit. Elles remplacent la sauvegarde faite à la main avant chaque déploiement.
+- **Savoir d'où vient un déploiement** : `coolify-api GET "/deployments/applications/<uuid de l'application>?take=3"` ; `is_webhook: true` pour un déploiement venu de GitHub, `is_api: true` pour un déploiement lancé à la main.
+
+## Le déploiement vérifié
+
+Coolify déploie quand GitHub le prévient, et GitHub ne renvoie jamais un message perdu ; Coolify garde aussi l'ancienne version quand la nouvelle n'est pas saine. Dans ces deux cas la version est publiée et la prod ne la sert pas. Le job `deployment` de `release.yml` le voit :
+
+- il démarre après la publication, quand elle a donné un commit de version (« publiée » ou « déjà publiée » ; rien quand elle est « dépassée », la plus récente vérifiera) ;
+- il lit `https://my-makeup.fr/api/health` toutes les 20 secondes, jusqu'à ce que sa `version` soit le sha court du commit de version (`bun run release:check-deployment`, `scripts/release/deployment-check.ts`) ;
+- il est vert dès qu'elle l'est, rouge au bout de 20 minutes, en disant ce que la prod sert encore ou pourquoi elle ne répond pas. GitHub prévient d'un workflow rouge par courriel.
+
+Il n'a que la lecture du dépôt, aucun jeton ni secret dans son environnement, et n'installe rien : le script n'importe que des modules de bun (garde-fous de `tests/ci/publication.test.ts`). Il tient le groupe `publication` pendant qu'il attend : la publication suivante part après lui, et ne peut pas le doubler. Le groupe garde toutes les publications en attente, dans l'ordre (`queue: max`) : avec la file d'une seule de GitHub, une exécution mise en file derrière annulerait sans bruit celle qui attend (la relance d'une ancienne CI, une pull request d'une copie dont la branche s'appelle `main`).
+
+Quand il est rouge : le journal du déploiement dans Coolify dit pourquoi (pas de déploiement : le message de GitHub s'est perdu ; « New container is not healthy » : la nouvelle version ne démarre pas). Pour relancer, déploie depuis Coolify ou par `coolify-api POST "/deploy?uuid=<uuid de l'application>"` ; ne renvoie pas le message de GitHub une fois le déploiement passé, Coolify le referait.
+
+## Les réglages de GitHub
+
+- **Une règle sur `main`** (ruleset « main », posée le 26/10/2026) : ni poussée forcée ni suppression. La publication pousse vers l'avant, elle passe. Pull request obligatoire et `ci-ok` requis n'y sont pas : la poussée de la publication n'a pas de pull request et aucune CI ne tourne sur son commit, et GitHub refuse d'en exempter l'application « GitHub Actions » (« Actor GitHub Actions integration must be part of the ruleset source or owner organization ») ; la protection classique la refusait aussi (« GH006 »), c'est pourquoi elle a été retirée le 24/10/2026. Ce qui tient lieu de garde : la publication relit elle-même `ci-ok` sur le commit avant de publier, l'étape « Version file untouched », et la fusion par squash. Pour exiger aussi une pull request et `ci-ok` sur `main`, il faudrait que la publication pousse sous une identité que GitHub accepte d'exempter (une application GitHub de l'organisation, ou une clé de déploiement) : la CI tournerait alors sur le commit de publication, et la clause `chore(release):` empêche qu'il se publie à son tour.
+- **Fusion par squash seulement** (réglé le 26/10/2026) : chaque pull request devient un seul commit sur `main`, qui ne contient que son changement. Avec une fusion classique, la poussée contient aussi les commits « Merge origin/main into … » de la branche ; quand la comparaison de GitHub échoue ou dépasse 300 fichiers, Coolify lit la liste de ces commits, y trouve `.release/version.json`, et déploierait la fusion avant que sa CI ait tourné.
+- **L'étape « Version file untouched »** du job `qualite` : une pull request ou une poussée qui change `.release/version.json` est rouge. Seule la publication l'écrit, et Coolify déploie dès qu'il change.
+
 ## Avant la bascule
 
 - **Rien ne se publie avant la fusion de `v3` dans `main`.** GitHub ne lance un workflow `workflow_run` que depuis la branche par défaut, qui porte encore l'ancien site.
-- **La protection de `main` doit laisser passer la publication.** Le commit de publication est poussé par le jeton du workflow, sans pull request : une protection qui exige `ci-ok` sur chaque poussée le refuse, et le job est rouge. À régler dans GitHub avec la protection de `main`, avant la bascule.
-- **Coolify** : Watch Paths `/.release/version.json` sur l'application de prod.
+- **La protection de `main` doit laisser passer la publication.** Le commit de publication est poussé par le jeton du workflow, sans pull request : une protection qui exige `ci-ok` sur chaque poussée le refuse, et le job est rouge. La protection classique la refusait : elle a été retirée le 24/10/2026 ; la règle posée le 26/10/2026 n'interdit que la poussée forcée et la suppression (voir « Les réglages de GitHub »).
+- **Coolify** : Watch Paths `/.release/version.json` sur l'application de prod, et le déploiement automatique rétabli (fait le 26/10/2026, voir « Ce que Coolify surveille »).
 
 ## Les garde-fous
 
@@ -96,4 +124,5 @@ L'application de prod suit la branche `main`, avec `/.release/version.json` dans
 |---|---|
 | `bun --no-env-file test tests/unit/release-notes.test.ts` | La règle d'une note, la forme du journal, et le journal du dépôt lui-même |
 | `bun --no-env-file test tests/unit/publication.test.ts` | Le numéro, la publication à blanc, la publication sur de vrais dépôts git, la lecture de `ci-ok` |
-| `bun --no-env-file test tests/ci/publication.test.ts` | Le workflow : C01 à C03, la dépendance à `ci-ok`, une seule commande, aucun `bun install`, les permissions |
+| `bun --no-env-file test tests/ci/publication.test.ts` | Le workflow : C01 à C03, la dépendance à `ci-ok`, jamais une publication d'une publication, une seule commande par job, aucun `bun install`, les permissions, le job `deployment` en lecture seule, l'étape « Version file untouched » |
+| `bun --no-env-file test tests/unit/deployment-check.test.ts` | L'attente du déploiement : la version lue, vert dès qu'elle est servie, rouge au bout du délai avec la raison |
