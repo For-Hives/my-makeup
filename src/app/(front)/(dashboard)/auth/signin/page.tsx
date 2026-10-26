@@ -3,6 +3,7 @@ import { headers } from 'next/headers'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { ART_LINK, ART_NOTICE } from '@/components/art/form-classes'
+import { TitleAccent } from '@/components/art/TitleWithCapsules'
 import { AuthShell } from '@/components/auth/AuthShell'
 import { GoogleButton } from '@/components/auth/GoogleButton'
 import { PasswordlessHelp } from '@/components/auth/PasswordlessHelp'
@@ -43,7 +44,32 @@ export default async function SignInPage({
 	const signedOut = (await headers()).get(MESSAGE_HEADER) === '1'
 
 	return (
-		<AuthShell title="Se connecter">
+		<AuthShell
+			title={
+				<>
+					Se{' '}
+					<TitleAccent tone="berry" italic>
+						connecter
+					</TitleAccent>
+				</>
+			}
+			layout="split"
+			footer={
+				<>
+					<p className="reveal">
+						Pas encore de compte ?{' '}
+						<Link className={ART_LINK} href="/auth/signup">
+							Inscris-toi
+						</Link>
+					</p>
+					<p className="reveal">
+						<Link className={ART_LINK} href="/" prefetch={false}>
+							Retour à l’accueil
+						</Link>
+					</p>
+				</>
+			}
+		>
 			<SignInPageEvents code={urlFailure?.code ?? null} />
 			{message ? (
 				<p
@@ -58,17 +84,6 @@ export default async function SignInPage({
 			{google ? <GoogleButton libelle="Se connecter avec Google" retour={returnTo} /> : null}
 			<SignInForm action={signIn} retour={returnTo} />
 			<PasswordlessHelp />
-			<p className="reveal">
-				Pas encore de compte ?{' '}
-				<Link className={ART_LINK} href="/auth/signup">
-					Inscris-toi
-				</Link>
-			</p>
-			<p className="reveal">
-				<Link className={ART_LINK} href="/" prefetch={false}>
-					Retour à l’accueil
-				</Link>
-			</p>
 		</AuthShell>
 	)
 }

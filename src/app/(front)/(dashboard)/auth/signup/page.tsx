@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { ART_LINK } from '@/components/art/form-classes'
+import { TitleAccent } from '@/components/art/TitleWithCapsules'
 import { AuthShell } from '@/components/auth/AuthShell'
 import { GoogleButton } from '@/components/auth/GoogleButton'
 import { SignUpForm } from '@/components/auth/SignUpForm'
@@ -23,20 +24,34 @@ export default async function SignUpPage() {
 	if (await signedInArtist()) redirect(DEFAULT_DASHBOARD)
 
 	return (
-		<AuthShell title="S’inscrire">
+		<AuthShell
+			title={
+				<>
+					S’
+					<TitleAccent tone="berry" italic>
+						inscrire
+					</TitleAccent>
+				</>
+			}
+			layout="split"
+			footer={
+				<>
+					<p className="reveal">
+						Déjà un compte ?{' '}
+						<Link className={ART_LINK} href="/auth/signin">
+							Connecte-toi
+						</Link>
+					</p>
+					<p className="reveal">
+						<Link className={ART_LINK} href="/" prefetch={false}>
+							Retour à l’accueil
+						</Link>
+					</p>
+				</>
+			}
+		>
 			{isGoogleActive() ? <GoogleButton libelle="S’inscrire avec Google" /> : null}
 			<SignUpForm action={signUp} />
-			<p className="reveal">
-				Déjà un compte ?{' '}
-				<Link className={ART_LINK} href="/auth/signin">
-					Connecte-toi
-				</Link>
-			</p>
-			<p className="reveal">
-				<Link className={ART_LINK} href="/" prefetch={false}>
-					Retour à l’accueil
-				</Link>
-			</p>
 		</AuthShell>
 	)
 }

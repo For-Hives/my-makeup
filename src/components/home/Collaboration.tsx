@@ -1,8 +1,10 @@
 import { ArchImage } from '@/components/art/ArchImage'
+import { archSizes } from '@/components/art/arch-sizes'
 import type { Tint } from '@/components/art/CapsuleImage'
 import { GlowBlob, PrintMark } from '@/components/art/graphics'
 import { Pill } from '@/components/art/Pill'
 import { TitleAccent, type TitleSegment, TitleWithCapsules } from '@/components/art/TitleWithCapsules'
+import { SOURCE_ASPECTS } from './photo-aspects'
 import { SectionHead } from './SectionHead'
 
 interface Block {
@@ -147,7 +149,7 @@ export function Collaboration() {
 									band={bloc.band}
 									side={bloc.imageAGauche ? 'left' : 'right'}
 									mark={bloc.imageAGauche ? 'ring' : 'plus'}
-									sizes="(min-width: 768px) 24rem, 20rem"
+									sizes={archSizes({ desktop: 24, mobile: 20, sourceAspect: SOURCE_ASPECTS[bloc.image.src] })}
 								/>
 							</div>
 						</div>

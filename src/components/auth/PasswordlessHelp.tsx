@@ -11,7 +11,7 @@ export function PasswordlessHelp() {
 	return (
 		<p
 			data-testid="aide-sans-mot-de-passe"
-			className="reveal max-w-sm rounded-art-field bg-white px-5 py-4 text-left text-sm ring-1 ring-art-line ring-inset"
+			className="reveal max-w-sm rounded-art-field bg-art-blush-50 px-5 py-4 text-left text-art-blush-ink text-sm leading-6"
 		>
 			Tu t’étais inscrite avec Facebook ? Ce bouton n’existe plus : clique sur{' '}
 			<Link

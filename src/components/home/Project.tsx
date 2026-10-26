@@ -51,6 +51,7 @@ export function Project() {
 							src="/assets/maquilleuse_project.webp"
 							alt="illustration"
 							width={500}
+							quality={90}
 							height={350}
 						/>
 					</div>

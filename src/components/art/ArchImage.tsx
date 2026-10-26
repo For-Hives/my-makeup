@@ -28,6 +28,7 @@ export function ArchImage({
 	mark = 'plus',
 	sizes = '(min-width: 768px) 33vw, 80vw',
 	priority = false,
+	quality = 90,
 	children,
 	className = '',
 }: {
@@ -40,6 +41,8 @@ export function ArchImage({
 	mark?: PrintMarkKind | false
 	sizes?: string
 	priority?: boolean
+	/** The encoder quality of the optimised copies (the default of Next, 75, smears the fine detail of a face). */
+	quality?: number
 	children?: ReactNode
 	className?: string
 }) {
@@ -58,6 +61,7 @@ export function ArchImage({
 						alt={alt}
 						fill
 						sizes={sizes}
+						quality={quality}
 						priority={priority}
 						fetchPriority={priority ? 'high' : undefined}
 						className="card-zoom object-cover object-center"

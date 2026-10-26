@@ -1,9 +1,13 @@
 import Image from 'next/image'
 import { ArchImage } from '@/components/art/ArchImage'
+import { archSizes } from '@/components/art/arch-sizes'
 import type { Tint } from '@/components/art/CapsuleImage'
 import { GlowBlob, PrintMark } from '@/components/art/graphics'
 import { TitleAccent } from '@/components/art/TitleWithCapsules'
+import { SOURCE_ASPECTS } from './photo-aspects'
 import { SectionHead } from './SectionHead'
+
+const PHOTO = '/assets/maquilleuse_blog.webp'
 
 const COLUMNS: readonly { image: string; alt: string; titre: string; texte: string; tint: Tint }[] = [
 	{
@@ -41,12 +45,12 @@ export function Presentation() {
 			<div className="relative mx-auto grid max-w-7xl items-center gap-14 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] md:gap-20">
 				<div className="reveal mx-auto w-full max-w-[19rem] md:max-w-sm">
 					<ArchImage
-						src="/assets/maquilleuse_blog.webp"
+						src={PHOTO}
 						tint="rose"
 						band="night"
 						side="left"
 						mark="ring"
-						sizes="(min-width: 768px) 24rem, 19rem"
+						sizes={archSizes({ desktop: 24, mobile: 19, sourceAspect: SOURCE_ASPECTS[PHOTO] })}
 					/>
 				</div>
 				<div>
@@ -70,7 +74,14 @@ export function Presentation() {
 									data-tint={colonne.tint}
 									className="relative size-24 flex-none overflow-hidden rounded-full bg-(--tint) ring-2 ring-white md:size-28"
 								>
-									<Image alt={colonne.alt} src={colonne.image} fill sizes="7rem" className="object-contain p-2" />
+									<Image
+										alt={colonne.alt}
+										src={colonne.image}
+										fill
+										sizes="7rem"
+										quality={90}
+										className="object-contain p-2"
+									/>
 								</span>
 								<div>
 									<h3 className="font-display font-medium text-2xl text-ink leading-tight md:text-3xl">

@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import type { ArchBand } from '@/components/art/ArchImage'
 import type { Tint } from '@/components/art/CapsuleImage'
 import { Cta } from '@/components/blocks/Cta'
-import { SearchBlock } from '@/components/blocks/SearchBlock'
+import { GuideSearch } from '@/components/search/GuideSearch'
 import { ArticleHeading, ArtLead, ArtPage, ArtSignature } from './ArtPage'
 import { PageHead } from './PageHead'
 
@@ -47,7 +47,7 @@ export function ClientGuide({ contenu }: { contenu: GuideContent }) {
 				band={contenu.band ?? 'band'}
 			/>
 			<div className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6">
-				<SearchBlock />
+				<GuideSearch />
 			</div>
 			<article className="px-4 pb-16 sm:px-6 md:pb-24 lg:px-8">
 				<div className="mx-auto max-w-7xl rounded-art-frame border border-nude-200 bg-white px-6 py-14 md:px-16 md:py-20">
