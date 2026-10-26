@@ -40,10 +40,8 @@ export const MAKEUP_OBJECTS = {
 		{ tag: 'path', d: 'M8.5 18.5h7' },
 	],
 	mirror: [
-		{ tag: 'path', d: 'M12 2.75a5.75 5.25 0 1 1 0 10.5a5.75 5.25 0 1 1 0-10.5' },
-		{ tag: 'rect', x: '10.75', y: '13.75', width: '2.5', height: '7.5', rx: '1.25' },
-		{ tag: 'path', d: 'M12 5.25a3.25 2.75 0 1 1 0 5.5a3.25 2.75 0 1 1 0-5.5' },
-		{ tag: 'path', d: 'M10.75 9.25A1.25 1.25 0 0 1 12 8' },
+		{ tag: 'rect', x: '5.75', y: '2.75', width: '12.5', height: '15.5', rx: '6.25' },
+		{ tag: 'path', d: 'm9.25 9.25l3-3m-2.5 6.5l5-5M12 18.25v3m-3.5 0h7' },
 	],
 	mascara: [
 		{ tag: 'rect', x: '10', y: '2.75', width: '4', height: '5.5', rx: '1.5' },

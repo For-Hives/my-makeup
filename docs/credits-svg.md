@@ -27,7 +27,7 @@ Les noms sont ceux du code (`MakeupObject name=…`, `LineDrawing name=…`, `Ic
 | `lipstick` | `@iconify-json/iconoven`, icône `lipstick` | IconOven (Appic Marketing) | MIT | contour seul, voir « Modifications communes » |
 | `brush` | `@iconify-json/hugeicons`, icône `blush-brush-01` | Hugeicons | MIT | contour seul, voir « Modifications communes » |
 | `compact` | `@iconify-json/iconoven`, icône `compact-mirror` | IconOven (Appic Marketing) | MIT | contour seul, voir « Modifications communes » |
-| `mirror` | `@iconify-json/iconoven`, icône `hand-mirror` | IconOven (Appic Marketing) | MIT | contour seul, voir « Modifications communes » |
+| `mirror` | `@iconify-json/iconoven`, icône `mirror` | IconOven (Appic Marketing) | MIT | contour seul, voir « Modifications communes » |
 | `mascara` | `@iconify-json/iconoven`, icône `mascara` | IconOven (Appic Marketing) | MIT | contour seul, voir « Modifications communes » |
 | `nail-polish` | `@iconify-json/iconoven`, icône `nail-polish` | IconOven (Appic Marketing) | MIT | contour seul, voir « Modifications communes » |
 | `perfume` | `@iconify-json/iconoven`, icône `perfume-bottle` | IconOven (Appic Marketing) | MIT | contour seul, voir « Modifications communes » |

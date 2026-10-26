@@ -26,7 +26,7 @@ export const SOURCES = {
 		lipstick: ['iconoven', 'lipstick'],
 		brush: ['hugeicons', 'blush-brush-01'],
 		compact: ['iconoven', 'compact-mirror'],
-		mirror: ['iconoven', 'hand-mirror'],
+		mirror: ['iconoven', 'mirror'],
 		mascara: ['iconoven', 'mascara'],
 		'nail-polish': ['iconoven', 'nail-polish'],
 		perfume: ['iconoven', 'perfume-bottle'],
