@@ -184,3 +184,22 @@ Le shader WebGL n'a pas pu être vu dans le navigateur de travail (pas de WebGL)
 ## Pas de barre blanche
 
 Le fond d'une page publique est le papier (`bg-art-paper`) ; le blanc n'est que pour de vraies cartes et de vrais panneaux (formulaire, carte de profil, cadre de texte, bouton). Relevé du 25/10/2026, corrigé : le pied de page n'a plus de marge au-dessus (elle laissait voir le gris du `body`, une bande de 96 px entre l'invitation et le pied) ni de filet ; l'invitation n'a plus de cadre blanc ; la section « Nos Avantages » des deux pages « Pourquoi… » ne peint plus de fond blanc ; les pages légales et le plan du site portent la tête du kit (`PageHead`) sur `ArtPage`, au lieu du `Hero` blanc suivi d'un article gris. `tests/unit/white-bands.test.tsx` garde ces cinq points. Restent blancs, à dessein : la tête du `Hero` de l'accueil (chantier à part) et l'en-tête d'identité d'une page de profil (carte pleine largeur de la maquilleuse).
+
+## Emplacements d'illustration à générer (issue 1136)
+
+Les illustrations d'aujourd'hui sont provisoires (illustrations peintes déjà servies par le site, objets de maquillage dessinés). Chaque emplacement porte dans le code un commentaire `// TODO(1136): illustration à générer (…)` : chercher cette chaîne. Les images seront générées avec fal (skill `fal-images`) puis déposées dans `public/assets/`. Pas d'emoji ni de texte dans les images.
+
+| Emplacement | Fichier | Ratio et taille | Intention |
+|---|---|---|---|
+| Tête de page, image par défaut | `src/components/static-pages/PageHead.tsx` (argument `image`) | arche 4:5, ~380 px | une maquilleuse, ton éditorial peint |
+| Tête de page, cinq variantes (talents, zones) | `src/components/static-pages/PageHead.tsx` (`ILLUSTRATIONS`) | arche 4:5, ~380 px | une variante par teinte, des maquilleuses d'origines variées |
+| Guide « Trouver une maquilleuse » | `src/content/static-pages/client-guides.tsx` | arche 4:5, ~380 px | trouver la maquilleuse qui correspond |
+| Guide « Centraliser ses recherches » | idem | arche 4:5, ~380 px | tout réuni en un seul endroit |
+| Guide « Explorer les profils » | idem | arche 4:5, ~380 px | profils et réalisations |
+| « Solutions pour les particuliers » | idem | arche 4:5, ~380 px | une recherche simplifiée |
+| À propos, première arche | `src/components/static-pages/AboutArticle.tsx` | arche 4:5, ~180 px | une maquilleuse au travail |
+| À propos, seconde arche | idem | arche 4:5, ~180 px | seconde maquilleuse, teinte lavande, plus bas |
+| Demande envoyée | `src/app/(front)/(site)/demande-envoyee/page.tsx` | arche 4:5, ~220 px | rassurance, un message reçu |
+| En-tête du blog | `src/app/(front)/(site)/blog/page.tsx` | arche 4:5, grand format | conseils beauté, mariage, soin de la peau |
+| Avantages des deux pages « Pourquoi… » | `src/components/static-pages/Benefits.tsx` | une arche 4:5 par avantage, ~96 à 280 px | une scène par titre d'avantage |
+| Coque de connexion, d'inscription, de mot de passe | `src/components/auth/AuthShell.tsx` | libre, ~420 px (aucun visuel aujourd'hui) | accueil, espace personnel |

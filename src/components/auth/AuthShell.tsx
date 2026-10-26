@@ -22,6 +22,7 @@ export function AuthShell({
 		<main
 			className={`relative isolate flex min-h-dvh flex-col items-center justify-center gap-6 overflow-hidden bg-art-paper px-4 py-16 text-center text-ink ${display.variable} ${body.variable} font-body`}
 		>
+			{/* TODO(1136): illustration à générer (visuel de la coque de connexion: aucun aujourd'hui; ratio libre, ~420 px, à gauche ou au-dessus du titre; intention: accueil, espace personnel) */}
 			<GlowBlob size="lg" tone="rose" className="-right-72 -top-48 -z-10" />
 			<PrintMark kind="ring" className="absolute top-16 left-10 hidden h-5 w-5 text-art-line md:block" />
 			<h1

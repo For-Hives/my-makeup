@@ -36,7 +36,7 @@ function profileDetail({ specialite: specialty, lieu, placePhrase }: ProfileDeta
 }
 
 /**
- * The title: « Nom – détail | My-Makeup » when it fits in 60 characters, else « Nom – détail », else the name
+ * The title: « Nom, détail | My-Makeup » when it fits in 60 characters, else « Nom, détail », else the name
  * and the brand, as on the old site. A profile in a zone of countries (ticket 274) has a long place phrase
  * (« en France et en Italie »): it tries two intermediate forms first, the speciality alone, then the place alone.
  * A commune keeps the old site's forms, so that no title differs from it outside the register.
@@ -47,12 +47,12 @@ export function profileTitle(profil: Pick<PublicProfile, 'nom'> & ProfileDetail)
 	const abroad = (profil.flags?.length ?? 0) > 0
 	const place = profil.placePhrase ?? (profil.lieu ? `à ${profil.lieu}` : null)
 	const candidates = [
-		`${name} – ${detail} | ${BRAND}`,
-		`${name} – ${detail}`,
+		`${name}, ${detail} | ${BRAND}`,
+		`${name}, ${detail}`,
 		...(abroad && profil.specialite
-			? [`${name} – ${profil.specialite} | ${BRAND}`, `${name} – ${profil.specialite}`]
+			? [`${name}, ${profil.specialite} | ${BRAND}`, `${name}, ${profil.specialite}`]
 			: []),
-		...(abroad && place ? [`${name} – ${place} | ${BRAND}`] : []),
+		...(abroad && place ? [`${name}, ${place} | ${BRAND}`] : []),
 		`${name} | ${BRAND}`,
 	]
 	return candidates.find(titre => titre.length <= MAX_TITLE) ?? truncate(name, MAX_TITLE)

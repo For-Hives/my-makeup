@@ -51,13 +51,13 @@ describe('titre et description du profil', () => {
 
 	test('le titre dit le nom, la spécialité et la ville, et la marque quand elle tient', () => {
 		expect(profileTitle({ nom: 'Léa Martin', specialite: 'Maquillage mariage', lieu: 'Annecy' })).toBe(
-			'Léa Martin – Maquillage mariage à Annecy | My-Makeup'
+			'Léa Martin, Maquillage mariage à Annecy | My-Makeup'
 		)
 		expect(profileTitle({ nom: 'Léa Martin', specialite: null, lieu: 'Annecy' })).toBe(
-			'Léa Martin – maquilleuse à Annecy | My-Makeup'
+			'Léa Martin, maquilleuse à Annecy | My-Makeup'
 		)
 		expect(profileTitle({ nom: 'Léa Martin', specialite: null, lieu: null })).toBe(
-			'Léa Martin – maquilleuse professionnelle | My-Makeup'
+			'Léa Martin, maquilleuse professionnelle | My-Makeup'
 		)
 		const long = profileTitle({ nom: 'A'.repeat(70), specialite: 'x', lieu: null })
 		expect(long.length).toBeLessThanOrEqual(MAX_TITLE)
@@ -72,7 +72,7 @@ describe('titre et description du profil', () => {
 		expect(String(meta.description)).not.toContain('Découvre ')
 	})
 
-	test('274 : un titre trop long essaie « Nom – spécialité | My-Makeup » avant le nom seul', () => {
+	test('274 : un titre trop long essaie « Nom, spécialité | My-Makeup » avant le nom seul', () => {
 		const name = 'Marguerite Dubonnets' // 20 characters
 		expect(name).toHaveLength(20)
 		const two = {
@@ -83,16 +83,16 @@ describe('titre et description du profil', () => {
 			flags: ['🇫🇷', '🇮🇹'],
 		}
 		const title = profileTitle(two)
-		expect(title).toBe('Marguerite Dubonnets – Maquillage mariage | My-Makeup')
+		expect(title).toBe('Marguerite Dubonnets, Maquillage mariage | My-Makeup')
 		expect(title.length).toBeLessThanOrEqual(MAX_TITLE)
 		// Nothing else fits: the name alone.
-		expect(profileTitle({ ...two, nom: 'N'.repeat(40), specialite: 'Maquillage mariage' })).toBe(
-			`${'N'.repeat(40)} | My-Makeup`
+		expect(profileTitle({ ...two, nom: 'N'.repeat(45), specialite: 'Maquillage mariage' })).toBe(
+			`${'N'.repeat(45)} | My-Makeup`
 		)
 	})
 
 	test('274 : une commune au titre trop long garde la forme de l’ancien site, le nom seul avec la marque', () => {
-		// The old site tried « Nom – détail | My-Makeup », « Nom – détail », then « Nom | My-Makeup »: no form in between.
+		// The old site tried « Nom, détail | My-Makeup », « Nom, détail », then « Nom | My-Makeup »: no form in between.
 		const municipality = {
 			nom: 'Marguerite Dubonnets',
 			specialite: 'Maquillage mariage et coiffure de cérémonie',
@@ -256,15 +256,15 @@ describe('264 : le titre prend la préposition du pays', () => {
 		const belgium = zoneType('zone-belgique')
 		const withCountry = (code: string, town: string | null = null) =>
 			profileTitle(readType(belgium, { countries: [code], town }))
-		expect(withCountry('BE')).toBe('Camille Renard – Maquillage mariage en Belgique | My-Makeup')
+		expect(withCountry('BE')).toBe('Camille Renard, Maquillage mariage en Belgique | My-Makeup')
 		// The rule of the 60 characters is the one of every title: the brand goes first when it does not fit.
-		expect(withCountry('LU')).toBe('Camille Renard – Maquillage mariage au Luxembourg')
-		expect(withCountry('NL')).toBe('Camille Renard – Maquillage mariage aux Pays-Bas | My-Makeup')
-		expect(withCountry('MT')).toBe('Camille Renard – Maquillage mariage à Malte | My-Makeup')
+		expect(withCountry('LU')).toBe('Camille Renard, Maquillage mariage au Luxembourg | My-Makeup')
+		expect(withCountry('NL')).toBe('Camille Renard, Maquillage mariage aux Pays-Bas | My-Makeup')
+		expect(withCountry('MT')).toBe('Camille Renard, Maquillage mariage à Malte | My-Makeup')
 		// A town abroad: « à », with its country in brackets, and the brand dropped when it does not fit.
-		expect(withCountry('BE', 'Bruxelles')).toBe('Camille Renard – Maquillage mariage à Bruxelles (Belgique)')
+		expect(withCountry('BE', 'Bruxelles')).toBe('Camille Renard, Maquillage mariage à Bruxelles (Belgique)')
 		expect(profileTitle(readType(zoneType('zone-france-italie')))).toBe(
-			'Elsa Marchand – Maquillage mariage en France et en Italie'
+			'Elsa Marchand, Maquillage mariage en France et en Italie'
 		)
 	})
 

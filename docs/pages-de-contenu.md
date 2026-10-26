@@ -13,7 +13,6 @@ Tout est dans `src/components/static-pages/`, une brique pour chaque besoin :
 | `ClientGuide` | Les quatre guides du particulier : étapes en liste numérotée (`<ol>`, chiffre dessiné masqué aux lecteurs d'écran, un `data-step` par ligne). |
 | `PageArticle` | À propos, partenariats, solutions pour les maquilleuses : chaque partie est une ligne (titre, texte) entre deux filets. Le paramètre `eyebrow` est le nom du menu où vit la page. |
 | `Benefits` | Les avantages des deux pages « Pourquoi… » : une liste de cartes (pastille indigo, titre, texte) ; une carte seule sur la dernière ligne prend toute la largeur. |
-| `TitleWithAccent` | Un titre qui finit par un emoji : les mots sont le titre, l'emoji est un accent décoratif masqué aux lecteurs d'écran. |
 
 ## Les règles
 
@@ -22,7 +21,8 @@ Tout est dans `src/components/static-pages/`, une brique pour chaque besoin :
 - **Mesure de lecture** de 66 caractères (`max-w-[66ch]`) ; un test de navigateur refuse un paragraphe plus large.
 - **Mouvement.** Les blocs portent `.reveal` (voir `docs/mouvement.md`) ; aucune animation n'est déclarée dans ce bloc.
 - **Polices.** `next/font` ne s'exécute pas sous `bun test` : `tests/support/preload-fonts.ts` (chargé par `bunfig.toml`) les remplace par des objets simples. Ce que font les vraies polices (échange, repli à la même taille) est mesuré en navigateur : `tests/e2e/content-pages.spec.ts` (décalage de mise en page sous 0,005, comme « Mon espace »).
-- **Sans emoji nouveau, sans photo, sans chiffre inventé.** Les accents sont des pastilles, des filets et des chiffres d'ordre.
+- **Aucun emoji, aucun tiret cadratin ni demi-cadratin de phrase** (issue 1135, 26/10/2026 : les titres des parties n'ont plus d'emoji, `TitleWithAccent` est retiré). `tests/unit/no-emoji-no-emdash.test.tsx` lit le texte rendu des pages publiques, leurs titres et descriptions, le pied de page et les fixtures de texte ; seuls `©`, `®`, `™` et un demi-cadratin sans espace (un nom composé comme « UE–États-Unis ») passent. Les articles et profils de la base ne sont pas lus. Les pages légales n'ont changé ni de mot ni de ponctuation (leurs empreintes sont inchangées).
+- **Sans photo, sans chiffre inventé.** Les accents sont des pastilles, des filets et des chiffres d'ordre.
 
 ## Le kit sur ces pages (issue 1111, 25/10/2026)
 
