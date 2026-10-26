@@ -875,8 +875,9 @@ main:has(> .home-section) {
  * The arch: a lit window of the shadow theatre, drawn like the arches of the rest of the site (`.art-arch` of the kit,
  * Andy, 26/10/2026: the nude shadow behind it did not belong to the site): the band of the kit offset right and up
  * behind it, scaled to its size (the kit's 16 and 12 px are for an arch of a card, about 300 px wide; this one is 280 to
- * 456 px), a white ring round the picture and a white hairline inside it. The margin under it leaves the same air under
- * the notch of the badge as before it grew.
+ * 456 px) and a white ring round the picture. Not the kit's hairline inside the ring: over this backlit film it drew a
+ * second white line across the artist standing on the right. The margin under it leaves the same air under the notch
+ * of the badge as before it grew.
  */
 .home-hero-arch-wrap {
 	--band-x: 0.875rem;
@@ -897,23 +898,11 @@ main:has(> .home-section) {
 }
 
 .home-hero-arch {
-	--hairline-inset: 9px;
 	position: relative;
 	overflow: hidden;
 	border-radius: 9999px 9999px 0 0;
 	background-color: #efe5d6;
 	box-shadow: 0 0 0 2px #fff;
-}
-
-/* Over the poster and the film (last in the arch, so painted over them); the notch of the badge covers its foot. */
-.home-hero-arch::after {
-	content: "";
-	position: absolute;
-	inset: var(--hairline-inset) var(--hairline-inset) 0;
-	border: 1px solid rgb(255 255 255 / 0.7);
-	border-bottom: 0;
-	border-radius: 9999px 9999px 0 0;
-	pointer-events: none;
 }
 
 /*
@@ -1381,10 +1370,6 @@ main:has(> .home-section) {
 		--band-x: 1.25rem;
 		--band-y: 0.9375rem;
 		margin-bottom: 3.5rem;
-	}
-
-	.home-hero-arch {
-		--hairline-inset: 12px;
 	}
 
 	/* Centred on the corner, as before: there is room beside the arch. */

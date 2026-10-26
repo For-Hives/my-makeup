@@ -342,10 +342,12 @@ describe('le badge de l’arche : « Explorer les maquilleuses », son nom tourn
 		// A no-break space at the end: an ordinary one would be dropped, and the dot would touch the « E » where it closes.
 		expect(textPath?.textContent).toBe('EXPLORER LES MAQUILLEUSES · ')
 		expect(RING_TEXT).toBe(`${EXPLORE_LABEL.toUpperCase()} · `)
-		// Spaced to fill its circle once: the length of the circle of radius 37 it runs on.
+		// Spaced to go once round its circle of radius 37, 1.3 short of it: `lengthAdjust` spreads the space between the
+		// glyphs only, so the gap where the ring closes, between the dot and the « E », gets those 1.3 units as the others
+		// get theirs (measured in Chromium: 2.5 units there against 4 between the words, with the full circle).
 		const path = ring?.querySelector(`path#${textPath?.getAttribute('href')?.slice(1)}`)
 		expect(path?.getAttribute('d')).toBe('M56 56m-37 0a37 37 0 1 1 74 0a37 37 0 1 1 -74 0')
-		expect(Number(textPath?.getAttribute('textLength'))).toBeCloseTo(2 * Math.PI * 37, 1)
+		expect(Number(textPath?.getAttribute('textLength'))).toBeCloseTo(2 * Math.PI * 37 - 1.3, 1)
 		expect(textPath?.getAttribute('lengthAdjust')).toBe('spacing')
 	})
 
@@ -738,11 +740,10 @@ describe('la feuille de style du haut de page', () => {
 		expect(band).toContain('inset: calc(var(--band-y) * -1) calc(var(--band-x) * -1) 0 var(--band-x);')
 		expect(band).not.toMatch(/nude|translateX/)
 		expect(block).not.toMatch(/--color-nude-200/)
-		// The white ring round the picture and the hairline inside it, as on the arch of a card (`.art-arch__img`).
+		// The white ring round the picture, as on the arch of a card (`.art-arch__img`). Not the hairline inside it: over
+		// this backlit film it drew a second white line across the artist standing on the right.
 		expect(rule('.home-hero-arch')).toContain('box-shadow: 0 0 0 2px #fff;')
-		const hairline = rule('.home-hero-arch::after')
-		expect(hairline).toContain('border: 1px solid rgb(255 255 255 / 0.7);')
-		expect(hairline).toContain('pointer-events: none;')
+		expect(block.match(/\.home-hero-arch::after|--hairline-inset/g)).toBeNull()
 	})
 
 	test('le badge : le disque garde la taille du bouton de pause (44 px, 56 px dès 40rem), son anneau se lit, de l’air autour du texte', () => {
