@@ -38,10 +38,10 @@ export function SearchGrid({
 			data-layout={layout}
 			className={
 				rail
-					? '-mx-4 -mt-4 flex snap-x snap-mandatory scroll-px-4 gap-5 overflow-x-auto px-4 pt-4 pb-4 [scrollbar-width:none] md:mx-0 md:mt-0 md:grid md:grid-cols-[repeat(3,minmax(0,1fr))] md:gap-x-8 md:gap-y-12 md:overflow-visible md:px-0 md:pt-0'
+					? '-mx-6 -mt-6 flex snap-x snap-mandatory scroll-px-6 gap-5 overflow-x-auto px-6 pt-6 pb-6 [scrollbar-width:none] md:mx-0 md:mt-0 md:grid md:grid-cols-[repeat(3,minmax(0,1fr))] md:gap-x-8 md:gap-y-12 lg:gap-x-14 md:overflow-visible md:px-0 md:pt-0'
 					: layout === 'grid'
-						? 'grid grid-cols-[minmax(0,1fr)] gap-x-8 gap-y-12 sm:grid-cols-[repeat(2,minmax(0,1fr))] lg:grid-cols-[repeat(3,minmax(0,1fr))]'
-						: 'grid grid-cols-[minmax(0,1fr)] gap-4 md:gap-5'
+						? 'grid grid-cols-[minmax(0,1fr)] gap-x-8 gap-y-12 sm:grid-cols-[repeat(2,minmax(0,1fr))] lg:grid-cols-[repeat(3,minmax(0,1fr))] lg:gap-x-14 lg:gap-y-16'
+						: 'grid grid-cols-[minmax(0,1fr)] gap-4 md:gap-8'
 			}
 		>
 			{cartes.map((carte, index) => (

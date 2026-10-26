@@ -102,8 +102,8 @@ export default async function ZonePage({ params }: PageProps<'/maquilleuses/[dep
 					</Pill>
 				</div>
 			</section>
-			<div className="px-4 py-20 sm:px-6 md:py-28 lg:px-8">
-				<div className="mx-auto max-w-7xl">
+			<div className="py-20 md:py-28">
+				<div className="page-frame">
 					<ProfileGrid titre={`Les maquilleuses du département ${zoneLabel(code)}`} cartes={cards} />
 				</div>
 			</div>

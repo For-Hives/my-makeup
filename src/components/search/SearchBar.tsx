@@ -30,14 +30,14 @@ export function SearchBar({
 			<span aria-hidden="true" className="pointer-events-none absolute top-8 right-[8%] hidden text-art-line md:block">
 				<PrintMark kind="plus" className="h-5 w-5" />
 			</span>
-			<div className="mx-auto w-full max-w-6xl px-4 py-8 md:px-16 md:py-12">
+			<div className="page-frame py-8 md:py-12">
 				{heading}
 				{/* biome-ignore lint/a11y/useSemanticElements: a <search> element is no landmark before Safari 17 and Chrome 118 */}
 				<form
 					action="/search"
 					method="get"
 					role="search"
-					className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] md:gap-4"
+					className="grid max-w-5xl gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] md:gap-4"
 				>
 					<SubmissionTracking />
 					<div className="relative">

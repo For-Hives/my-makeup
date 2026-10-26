@@ -39,10 +39,10 @@ export default async function BlogPage() {
 	const articles = await cachedArticles()
 	return (
 		<main className={`${display.variable} ${body.variable} relative bg-art-paper font-body text-ink`}>
-			<section className="relative overflow-hidden px-4 pt-14 pb-16 md:px-8 md:pt-24 md:pb-24 2xl:px-0">
+			<section className="relative overflow-hidden pt-14 pb-16 md:pt-24 md:pb-24">
 				<GlowBlob size="lg" tone="rose" className="-top-40 -right-56" />
 				<GlowBlob size="md" tone="indigo" className="-bottom-72 -left-64 opacity-40" />
-				<div className="relative mx-auto max-w-7xl">
+				<div className="page-frame relative">
 					<header className="grid items-center gap-12 lg:grid-cols-[minmax(0,1fr)_17rem] lg:gap-20">
 						<div className="max-w-3xl">
 							<p
@@ -78,9 +78,9 @@ export default async function BlogPage() {
 				</div>
 			</section>
 			<MarqueeBanner items={TOPICS} label="Les sujets du blog" variant="blush" />
-			<section className="relative overflow-hidden px-4 py-16 md:px-8 md:py-24 2xl:px-0">
+			<section className="relative overflow-hidden py-16 md:py-24">
 				<GlowBlob size="md" tone="blush" className="top-1/3 -right-72" />
-				<div className="relative mx-auto max-w-7xl">
+				<div className="page-frame relative">
 					<ArticleList articles={articles} />
 				</div>
 			</section>

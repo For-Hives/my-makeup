@@ -85,7 +85,7 @@ export default async function TalentPage({ params }: PageProps<'/talent/[slug]'>
 				title={talent.titreAffiche}
 				description={talent.presentation}
 			/>
-			<div className="px-4 pb-20 sm:px-6 md:pb-28 lg:px-8">
+			<div className="page-frame pb-20 md:pb-28">
 				<div className="mx-auto max-w-4xl rounded-art-frame border border-nude-200 bg-white px-6 py-12 md:px-16 md:py-16">
 					<article className="reveal content-prose">
 						<MarkdownContent html={html} />
@@ -95,7 +95,7 @@ export default async function TalentPage({ params }: PageProps<'/talent/[slug]'>
 						<ArtSignature />
 					</article>
 				</div>
-				<div className="mx-auto mt-20 max-w-7xl md:mt-28">
+				<div className="mt-20 md:mt-28">
 					<ProfileGrid titre={talentBlockTitle(talent.titre)} cartes={cards} specialite={talent.titre} />
 				</div>
 			</div>

@@ -9,7 +9,7 @@ export function NotFoundPage() {
 		<main
 			className={`relative flex w-full flex-1 items-center bg-art-paper text-ink ${display.variable} ${body.variable} font-body`}
 		>
-			<div className="mx-auto flex w-full max-w-7xl items-center gap-10 px-4 py-16 sm:px-6 lg:px-8">
+			<div className="page-frame flex items-center gap-10 py-16">
 				<div className="mx-auto w-full max-w-md lg:mx-0">
 					<h1 className="text-balance font-display font-medium text-4xl leading-[1.1] tracking-tight sm:text-5xl">
 						404 - Page non trouvée

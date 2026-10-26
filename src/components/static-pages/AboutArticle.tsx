@@ -16,9 +16,9 @@ const TINTS: readonly Tint[] = ['lavender', 'blush', 'sand', 'rose']
 export function AboutArticle({ contenu, eyebrow }: { contenu: PageContent; eyebrow: string }) {
 	return (
 		<article>
-			<div className="relative isolate overflow-hidden px-4 py-16 sm:px-6 md:py-28 lg:px-8">
+			<div className="relative isolate overflow-hidden py-16 md:py-28">
 				<GlowBlob size="md" tone="indigo" className="top-1/2 -right-60 -translate-y-1/2" />
-				<div className="relative mx-auto grid max-w-7xl items-center gap-12 md:grid-cols-[minmax(0,360px)_minmax(0,1fr)] md:gap-24">
+				<div className="page-frame relative grid items-center gap-12 md:grid-cols-[minmax(0,360px)_minmax(0,1fr)] md:gap-24">
 					<div className="mx-auto grid w-full max-w-[320px] grid-cols-2 gap-6 pr-3 md:mx-0 md:max-w-none">
 						{/* TODO(1136): illustration à générer (portrait en arche 4:5, petit format ~180 px, fond clair; une maquilleuse au travail, chaleureuse, style éditorial peint) */}
 						<ArchImage
@@ -54,8 +54,8 @@ export function AboutArticle({ contenu, eyebrow }: { contenu: PageContent; eyebr
 					</div>
 				</div>
 			</div>
-			<div className="px-4 pb-16 sm:px-6 md:pb-24 lg:px-8">
-				<div className="mx-auto grid max-w-7xl gap-6 md:grid-cols-2">
+			<div className="page-frame pb-16 md:pb-24">
+				<div className="grid gap-6 md:grid-cols-2">
 					{contenu.parties.map((partie, index) => (
 						<section
 							key={partie.titre}
@@ -74,7 +74,7 @@ export function AboutArticle({ contenu, eyebrow }: { contenu: PageContent; eyebr
 						</section>
 					))}
 				</div>
-				<div className="mx-auto max-w-7xl px-2">
+				<div className="px-2">
 					<ArtSignature />
 				</div>
 			</div>

@@ -54,7 +54,7 @@ export function SearchResults({
 	const localHeading = ranked && places.localTitle ? places.localTitle : null
 
 	return (
-		<div className="mx-auto w-full max-w-6xl px-4 pt-10 pb-20 md:px-16 md:pt-14">
+		<div className="page-frame pt-10 pb-20 md:pt-14">
 			<h1 className={PAGE_TITLE}>{view.title}</h1>
 			<SearchRefine
 				recherche={query}

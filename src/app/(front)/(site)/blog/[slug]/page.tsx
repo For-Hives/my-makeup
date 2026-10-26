@@ -164,8 +164,11 @@ export default async function ArticlePage({ params }: PageProps<'/blog/[slug]'>)
 						<ArticleShare title={article.titre} url={articleUrl} />
 					</div>
 				</article>
+			</div>
+			{/* The cards leave the reading column: they take the frame of the pages, like the grids of /blog and /search. */}
+			<div className="page-frame relative">
 				<RelatedArticles articles={related} />
-				<div className="mx-auto mt-4 max-w-6xl">
+				<div className="mt-4">
 					<ProfileGrid titre="Des maquilleuses près de chez vous" cartes={cards} />
 				</div>
 			</div>

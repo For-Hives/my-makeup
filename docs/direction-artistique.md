@@ -53,7 +53,17 @@ Tout ce que le site avait déjà reste tel quel (`--color-lipstick`, `--color-in
 
 L'indigo (50 à 950) est celui de Tailwind, déjà dans le site : le kit ne le redéfinit pas. Les traits du kit sont des filets de 1 px (encre pour les boutons, `--color-hairline` pour les séparations), jamais d'ombre lourde.
 
-**Le survol d'une carte (issue 1137)** : un fond rose très doux derrière la carte, qui la dépasse de 12 px, sa photo qui grandit de 5 %, et pour le blog un trait qui glisse sous « Lire l'article » avec sa flèche qui avance. Pas d'ombre dure, pas de montée. Une pastille de partage se remplit d'une teinte de son ton. Le détail et les raisons : [`mouvement.md`](mouvement.md), « Le survol d'une carte ».
+**Le survol d'une carte (issue 1137)** : un fond rose très doux derrière la carte, qui la dépasse de 20 px (12 jusqu'au 26/10/2026), sa photo qui grandit de 5 %, et pour le blog un trait qui glisse sous « Lire l'article » avec sa flèche qui avance. Pas d'ombre dure, pas de montée. Une pastille de partage se remplit d'une teinte de son ton. Le détail et les raisons : [`mouvement.md`](mouvement.md), « Le survol d'une carte ».
+
+## Le cadre des pages (26/10/2026)
+
+Demande du mainteneur : « plus de place en largeur, pour que ça soit cohérent avec le hero », des grilles de cartes plus larges et plus d'air autour des cartes au survol.
+
+- **Un seul cadre**, l'utilitaire `page-frame` (`globals.css`) : la boîte du haut de l'accueil (`.home-hero-grid`), 96rem au plus, centrée, avec sa gouttière dedans, 1,5rem (24 px), puis 4rem (64 px) dès 64rem. Le contenu fait au plus 88rem (1 408 px) ; à 1440 px il part à 64 px du bord comme le titre de l'accueil, à 1920 px à 256 px, sous le logo.
+- **Une section garde son fond sur toute la largeur et ne donne pas de marge sur les côtés** : son contenu est dans un `page-frame` (accueil, blog, recherche, pages de zone et de talent, têtes de page, pages de contenu, pied de page et signature, pages d'erreur). Jamais `2xl:px-0` : avec un cadre de 96rem, le contenu toucherait le bord dès 1536 px (`tests/unit/page-frame.test.ts` le refuse, comme un retour à `max-w-7xl` ou `max-w-6xl`).
+- **Ce qui garde sa propre mesure dans le cadre** : les colonnes de lecture (`.article-prose` à 42rem, les `max-w-[…ch]` des pages de contenu), les formulaires (le contact, la barre de la recherche, 64rem au plus, à gauche), les cartes centrées (le panneau de l'invitation à l'action, `max-w-6xl` ; les pages légales, le plan du site, le classement).
+- **Hors du cadre pour l'instant** : la page publique d'un profil et ses barres d'édition (80rem : leur HTML est figé par `tests/fixtures/direct-edit/*.golden` et des empreintes, un changement à part), et la barre de navigation entre 1024 et 1279 px, qui garde 40 px de gouttière (avec 64, ses entrées ne tiennent pas : 44 px de défilement de côté à 1024).
+- **Les grilles de cartes** gardent leurs colonnes et prennent l'air : 56 px entre deux cartes dès 1024 px (`lg:gap-x-14` ; 48 px plus les 16 px de `pr-4` pour la grille de profils), 64 px entre deux rangées. Le fond du survol déborde de 20 px : une carte survolée reste à 36 px de sa voisine. La photo d'une carte de profil est demandée à sa largeur réelle (`440px` dès 1536 px, 30vw dès 1024, 45vw dès 640, 90vw).
 
 ## Polices
 

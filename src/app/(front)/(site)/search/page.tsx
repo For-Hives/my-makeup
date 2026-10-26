@@ -86,7 +86,7 @@ export default async function SearchPage({ searchParams }: PageProps<'/search'>)
 						</div>
 					}
 				/>
-				<div className="mx-auto grid w-full max-w-6xl grid-cols-[minmax(0,1fr)] gap-14 px-4 py-12 md:px-16 md:py-16">
+				<div className="page-frame grid grid-cols-[minmax(0,1fr)] gap-14 py-12 md:py-16">
 					<ChipGroup label="Une idée pour commencer">
 						{EVENT_CHOICES.filter(choice => choice.search !== '').map(choice => (
 							<Chip key={choice.label} href={searchPageUrl({ search: choice.search })} prefetch={false}>

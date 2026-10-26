@@ -32,8 +32,8 @@ const TINTS: readonly Tint[] = ['blush', 'lavender', 'sand', 'rose']
  */
 export function PageArticle({ contenu, eyebrow }: { contenu: PageContent; eyebrow: string }) {
 	return (
-		<article className="px-4 pb-16 sm:px-6 md:pb-24 lg:px-8">
-			<div className="mx-auto grid max-w-7xl gap-12 rounded-art-frame border border-nude-200 bg-white px-6 py-14 md:px-16 md:py-20 lg:grid-cols-12 lg:gap-20">
+		<article className="page-frame pb-16 md:pb-24">
+			<div className="grid gap-12 rounded-art-frame border border-nude-200 bg-white px-6 py-14 md:px-16 md:py-20 lg:grid-cols-12 lg:gap-20">
 				<div className="lg:sticky lg:top-28 lg:col-span-5 lg:self-start">
 					<ArticleHeading eyebrow={eyebrow} title={contenu.titre} />
 					<div className="reveal mt-8">

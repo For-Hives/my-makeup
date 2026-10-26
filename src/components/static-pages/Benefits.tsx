@@ -44,9 +44,9 @@ export function Benefits({
 	palette: BenefitsPalette
 }) {
 	return (
-		<section data-benefits className="relative isolate overflow-hidden px-4 py-20 sm:px-6 md:py-28 lg:px-8">
+		<section data-benefits className="relative isolate overflow-hidden py-20 md:py-28">
 			<GlowBlob size="lg" tone="blush" className="-bottom-60 -left-80" />
-			<div className="relative mx-auto max-w-7xl">
+			<div className="page-frame relative">
 				<SectionHead eyebrow={eyebrow} title="Nos Avantages">
 					Pourquoi choisir My&nbsp;Makeup ? Voici quelques-uns de nos avantages.
 				</SectionHead>
