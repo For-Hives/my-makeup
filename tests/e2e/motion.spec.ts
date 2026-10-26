@@ -346,7 +346,7 @@ test.describe('1069 : une fiche et des résultats', () => {
 		test.describe(`à ${size.width} px`, () => {
 			test.use({ viewport: size })
 
-			test('la fiche et la liste de cartes : premier écran entier, mise en page immobile, cartes qui montent au survol', async ({
+			test('la fiche et la liste de cartes : premier écran entier, mise en page immobile, cartes lavées au survol', async ({
 				page,
 			}) => {
 				const slug = profiles.get('reference')?.slug
@@ -363,10 +363,28 @@ test.describe('1069 : une fiche et des résultats', () => {
 				if (size.width > 600) {
 					const card = cards.first()
 					await card.scrollIntoViewIfNeeded()
+					await expect
+						.poll(() => card.evaluate(element => element.closest('.reveal')?.getAttribute('data-reveal') ?? 'in'))
+						.not.toBe('wait')
+					await card.evaluate(element =>
+						Promise.all(
+							(element.closest('.reveal') ?? element)
+								.getAnimations()
+								.map(animation => animation.finished.catch(() => undefined))
+						)
+					)
+					const before = await card.boundingBox()
 					await card.hover()
-					await expect.poll(() => card.evaluate(element => getComputedStyle(element).transform)).not.toBe('none')
-					// It rises slowly (400 ms), and its photo grows as slowly.
-					expect(await card.evaluate(element => getComputedStyle(element).transitionDuration)).toContain('0.4s')
+					// A card does not lift (issue 1137): a soft wash grows behind it, in 400 ms, and no shadow is drawn.
+					await expect
+						.poll(() => card.evaluate(element => getComputedStyle(element, '::before').backgroundColor))
+						.not.toBe('rgba(0, 0, 0, 0)')
+					expect(await card.evaluate(element => getComputedStyle(element, '::before').transitionDuration)).toContain(
+						'0.4s'
+					)
+					expect(await card.evaluate(element => getComputedStyle(element).boxShadow)).toBe('none')
+					expect(await card.boundingBox()).toEqual(before)
+					// Its photo grows as slowly.
 					expect(
 						await card
 							.locator('.card-zoom')

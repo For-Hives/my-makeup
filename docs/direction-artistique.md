@@ -48,10 +48,12 @@ Tout ce que le site avait déjà reste tel quel (`--color-lipstick`, `--color-in
 | `--color-art-night` | `#1e1a4d` | le cadre sombre de l'invitation à l'action (blanc dessus : 16:1) |
 | `--color-art-line` | `#b7b0c6` | trait de décor doux |
 | `--radius-art-frame` / `-field` | 36 px / 28 px | cadres, champs ; la carte reste `--radius-card` (22 px) |
-| `--shadow-art-lift` | `0 18px 40px -26px rgb(30 26 77 / .35)` | ombre d'une carte qui se soulève |
+| `--shadow-art-lift` | `0 18px 40px -26px rgb(30 26 77 / .35)` | ombre d'une carte qui se soulève (le survol d'une carte n'en prend plus : voir ci-dessous) |
 | `--font-script` | Pinyon Script | la bannière, rien d'autre |
 
 L'indigo (50 à 950) est celui de Tailwind, déjà dans le site : le kit ne le redéfinit pas. Les traits du kit sont des filets de 1 px (encre pour les boutons, `--color-hairline` pour les séparations), jamais d'ombre lourde.
+
+**Le survol d'une carte (issue 1137)** : un fond rose très doux derrière la carte, qui la dépasse de 12 px, sa photo qui grandit de 5 %, et pour le blog un trait qui glisse sous « Lire l'article » avec sa flèche qui avance. Pas d'ombre dure, pas de montée. Une pastille de partage se remplit d'une teinte de son ton. Le détail et les raisons : [`mouvement.md`](mouvement.md), « Le survol d'une carte ».
 
 ## Polices
 

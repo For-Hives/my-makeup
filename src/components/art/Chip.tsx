@@ -34,9 +34,19 @@ export type ChipProps =
 			>)
 	| (ChipCommon & { href?: undefined; pressed: boolean } & Omit<ComponentProps<'button'>, 'className' | 'children'>)
 
+/** What a link or a button chip does under a hand (issue 1137): a soft fill of its own tone, no underline, never a block. */
+const HOVER: Record<ChipTone, string> = {
+	plain: 'hover:bg-indigo-50',
+	blush: 'hover:bg-art-rose-tint',
+	indigo: 'hover:bg-indigo-200',
+	ink: 'hover:bg-indigo-50',
+	solid: 'hover:border-indigo-900 hover:bg-indigo-900 hover:text-white',
+	seal: 'hover:bg-indigo-50',
+}
+
 const LABEL = 'inline-flex items-center gap-1.5 rounded-full border px-3.5 font-medium text-[13.5px] whitespace-nowrap'
 const TARGET =
-	'min-h-11 cursor-pointer px-[18px] text-[15px] hover:border-indigo-700 hover:text-indigo-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-700'
+	'min-h-11 cursor-pointer hover:no-underline px-[18px] text-[15px] hover:border-indigo-700 hover:text-indigo-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-700'
 
 export function Chip(props: ChipProps) {
 	const { tone = 'plain', icon, className = '', children, ...rest } = props
@@ -55,7 +65,7 @@ export function Chip(props: ChipProps) {
 			<Link
 				href={href}
 				aria-current={current ? 'true' : undefined}
-				className={`${LABEL} ${TARGET} ${TONE[tone]} ${current ? 'border-indigo-700 bg-indigo-700 text-white hover:text-white' : ''} ${className}`.trim()}
+				className={`${LABEL} ${TARGET} ${TONE[tone]} ${current ? 'border-indigo-700 bg-indigo-700 text-white hover:text-white' : HOVER[tone]} ${className}`.trim()}
 				{...linkProps}
 			>
 				{inner}
@@ -64,11 +74,12 @@ export function Chip(props: ChipProps) {
 	}
 	if (typeof props.pressed === 'boolean') {
 		const { pressed, ...buttonProps } = rest as { pressed: boolean } & ComponentProps<'button'>
+		const hover = pressed ? '' : HOVER[tone]
 		return (
 			<button
 				type="button"
 				aria-pressed={pressed}
-				className={`${LABEL} ${TARGET} ${TONE[tone]} aria-pressed:border-indigo-700 aria-pressed:bg-indigo-700 aria-pressed:text-white ${className}`.trim()}
+				className={`${LABEL} ${TARGET} ${TONE[tone]} ${hover} aria-pressed:border-indigo-700 aria-pressed:bg-indigo-700 aria-pressed:text-white ${className}`.trim()}
 				{...buttonProps}
 			>
 				{inner}

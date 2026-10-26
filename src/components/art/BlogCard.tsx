@@ -83,11 +83,8 @@ export function BlogPanel({ slug, shape = 'card' }: { slug: string; shape?: 'car
 function ReadMore() {
 	return (
 		<span aria-hidden="true" className="mt-1 inline-flex items-center gap-2.5 font-medium text-[15px] text-indigo-800">
-			Lire l&apos;article
-			<Icon
-				name="arrow-right"
-				className="h-5 w-5 motion-safe:transition-transform motion-safe:duration-200 [@media(hover:hover)]:group-hover:translate-x-1"
-			/>
+			<span className="read-more-label relative">Lire l&apos;article</span>
+			<Icon name="arrow-right" className="read-more-arrow h-5 w-5" />
 		</span>
 	)
 }

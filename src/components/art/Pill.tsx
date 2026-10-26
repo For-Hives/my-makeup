@@ -23,7 +23,7 @@ function Content({ variant, arrow, children }: Pick<PillCommon, 'variant' | 'arr
 	if (variant === 'play')
 		return (
 			<>
-				<span className="grid size-14 flex-none place-items-center rounded-full border border-ink transition-colors group-hover:bg-ink group-hover:text-white">
+				<span className="grid size-14 flex-none place-items-center rounded-full hover-fade border border-ink group-hover:bg-ink group-hover:text-white">
 					<Icon name="play" className="ml-0.5 h-4 w-4" />
 				</span>
 				{children}
