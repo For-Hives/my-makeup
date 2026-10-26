@@ -117,6 +117,45 @@ describe('the icon pack is custom, listed, with its origin', () => {
 		}
 	})
 
+	test('every SVG file of the art layer or of public/art is listed in the credits too', () => {
+		const svgFiles = [...ART, ...PUBLIC_ART].filter(path => path.endsWith('.svg')).map(path => relative(ROOT, path))
+		for (const file of svgFiles) expect(credits).toContain(file)
+	})
+
+	test('no inline <svg> outside the pack: the files that draw one are an explicit list', () => {
+		/** Each file that may write an `<svg>` itself, and why. Anything else draws an icon of the pack. */
+		const ALLOWED: Record<string, string> = {
+			'components/art/graphics.tsx': 'the drawings, the print marks, the hairline, the frames and the glow of the kit',
+			'components/art/IconPath.tsx': 'the one component that draws a path of the pack',
+			'components/art/SwirlEllipse.tsx': 'the hand-drawn ellipse of the active entry (an effect, not an icon)',
+			'components/art/RotatingBadge.tsx': 'the badge text on a circle (an effect, not an icon)',
+			'components/home/HomeHero.tsx': 'the ring of the home hero (the hero is another work)',
+			'components/home/GuidedSearch.tsx':
+				'the chevron and the arrow of the form of the home hero (the hero is another work)',
+			'components/blocks/Hero.tsx': 'the hero block, another work',
+			'components/blocks/icons.tsx':
+				'Heroicons of SearchBlock and DemoCard, left for the hero work: to replace with the pack',
+		}
+		const drawers = files(SRC)
+			.filter(path => path.endsWith('.tsx') && readFileSync(path, 'utf8').includes('<svg'))
+			.map(path => relative(SRC, path))
+			.sort()
+		expect(drawers).toEqual(Object.keys(ALLOWED).sort())
+	})
+
+	test('a client component draws an icon with IconPath and the constant it needs, never the map or the by-name Icon', () => {
+		for (const path of files(SRC).filter(file => /\.tsx$/.test(file))) {
+			const code = readFileSync(path, 'utf8')
+			if (!/^['"]use client['"]/.test(code)) continue
+			const imports = code.split('\n').filter(line => line.startsWith('import '))
+			for (const line of imports) {
+				expect(
+					`${relative(ROOT, path)}: ${/art\/Icon'|\.\/Icon'|art\/graphics'|art\/drawings|\bICONS\b/.test(line)}`
+				).toEndWith(': false')
+			}
+		}
+	})
+
 	test('no third-party icon set is left: no licence file, no IconPark code', () => {
 		expect(existsSync(join(ROOT, 'LICENSES/IconPark-Apache-2.0.txt'))).toBe(false)
 		for (const path of files(SRC).filter(file => /\.tsx?$/.test(file))) {

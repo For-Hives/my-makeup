@@ -52,7 +52,7 @@ export function ResultCard({
 				{carte.superMaquilleuse && (
 					<div className="absolute top-0 left-0 flex items-center justify-center pt-2 md:pt-4">
 						<div className="flex w-full items-center justify-center rounded-r-lg bg-fuchsia-700 px-2 py-0.5 text-center font-medium text-white text-xs italic shadow-xl md:px-3 md:py-1 md:text-sm">
-							<Icon name="shield-check" className="mr-1 h-3.5 w-3.5 md:mr-2 md:h-4 md:w-4" />
+							<Icon name="shield-check" className="mr-1 h-4 w-4 md:mr-2" />
 							Pro
 						</div>
 					</div>
