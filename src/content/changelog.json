@@ -1,13 +1,19 @@
 {
 	"description": "Les notes de version du site, en français : ce qu'une visiteuse ou une maquilleuse peut remarquer. Une note s'ajoute par « bun run notes:add » et attend dans « pending » ; la publication la range sous son numéro, dans « releases ». Voir docs/publication.md.",
-	"pending": [
-		{
-			"id": "le-haut-de-l-accueil-va-a-l-essentiel-un-nouveau-titre-pl",
-			"type": "amelioration",
-			"text": "Le haut de l'accueil va à l'essentiel : un nouveau titre, plus grand, une barre de recherche plus lisible, un court film dans une arche, avec un raccourci pour explorer les maquilleuses, et, dessous, un bandeau où défilent les spécialités."
-		}
-	],
+	"pending": [],
 	"releases": [
+		{
+			"version": "3.0.22",
+			"date": "2026-10-26",
+			"commit": "29205dc08c36638a0c6f059bc8d802c50f9ad7b1",
+			"notes": [
+				{
+					"id": "le-haut-de-l-accueil-va-a-l-essentiel-un-nouveau-titre-pl",
+					"type": "amelioration",
+					"text": "Le haut de l'accueil va à l'essentiel : un nouveau titre, plus grand, une barre de recherche plus lisible, un court film dans une arche, avec un raccourci pour explorer les maquilleuses, et, dessous, un bandeau où défilent les spécialités."
+				}
+			]
+		},
 		{
 			"version": "3.0.21",
 			"date": "2026-10-26",
