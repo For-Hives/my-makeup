@@ -2,7 +2,6 @@ import { ArchImage } from '@/components/art/ArchImage'
 import type { Tint } from '@/components/art/CapsuleImage'
 import { GlowBlob, PrintMark } from '@/components/art/graphics'
 import { ArtEyebrow, ArtSignature } from './ArtPage'
-import { TitleWithAccent } from './EditorialArticle'
 import type { PageContent } from './PageArticle'
 
 const TINTS: readonly Tint[] = ['lavender', 'blush', 'sand', 'rose']
@@ -21,6 +20,7 @@ export function AboutArticle({ contenu, eyebrow }: { contenu: PageContent; eyebr
 				<GlowBlob size="md" tone="indigo" className="top-1/2 -right-60 -translate-y-1/2" />
 				<div className="relative mx-auto grid max-w-7xl items-center gap-12 md:grid-cols-[minmax(0,360px)_minmax(0,1fr)] md:gap-24">
 					<div className="mx-auto grid w-full max-w-[320px] grid-cols-2 gap-6 pr-3 md:mx-0 md:max-w-none">
+						{/* TODO(1136): illustration à générer (portrait en arche 4:5, petit format ~180 px, fond clair; une maquilleuse au travail, chaleureuse, style éditorial peint) */}
 						<ArchImage
 							src="/assets/back/maquilleuse_italienne_white.webp"
 							alt=""
@@ -31,6 +31,7 @@ export function AboutArticle({ contenu, eyebrow }: { contenu: PageContent; eyebr
 							sizes="(min-width: 768px) 180px, 140px"
 						/>
 						<div className="mt-12">
+							{/* TODO(1136): illustration à générer (portrait en arche 4:5, petit format ~180 px, deuxième maquilleuse, teinte lavande, plus bas que la première) */}
 							<ArchImage
 								src="/assets/back/maquilleuse_africaine_white.webp"
 								alt=""
@@ -62,7 +63,7 @@ export function AboutArticle({ contenu, eyebrow }: { contenu: PageContent; eyebr
 							className="reveal relative overflow-hidden rounded-art-frame bg-(--tint) px-7 py-10 text-art-blush-ink md:px-10 md:py-12"
 						>
 							<h3 className="font-display font-medium text-2xl text-ink leading-snug tracking-tight md:text-3xl">
-								<TitleWithAccent text={partie.titre} />
+								{partie.titre}
 							</h3>
 							<p className="mt-4 max-w-[48ch] text-base text-ink/80 leading-7">{partie.texte}</p>
 							{index === 0 && (

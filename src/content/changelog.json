@@ -9,6 +9,18 @@
 	],
 	"releases": [
 		{
+			"version": "3.0.19",
+			"date": "2026-10-26",
+			"commit": "f109b80e95780a3a540794143e445b2ba0c75324",
+			"notes": [
+				{
+					"id": "les-titres-des-pages-ne-portent-plus-d-emojis-ni-de-tiret",
+					"type": "amelioration",
+					"text": "Les titres des pages ne portent plus d'émojis ni de tirets longs : les textes sont plus sobres, et le titre de l'accueil « Centralisez vos recherches dans une seule plateforme » n'est plus suivi d'une icône."
+				}
+			]
+		},
+		{
 			"version": "3.0.16",
 			"date": "2026-10-26",
 			"commit": "ae4f4c93deb019c8bc7b8d5ee16005e80864d976",

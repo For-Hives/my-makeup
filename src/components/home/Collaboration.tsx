@@ -83,7 +83,6 @@ const BLOCKS: readonly Block[] = [
 			{ text: 'Centralisez vos recherches dans une' },
 			{ text: 'seule', tone: 'berry', italic: true },
 			{ text: 'plateforme' },
-			{ capsule: { object: 'compact', tint: 'rose', shape: 'round' } },
 		],
 		tint: 'rose',
 		band: 'rose',

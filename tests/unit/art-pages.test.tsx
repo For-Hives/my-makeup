@@ -122,7 +122,7 @@ describe('« Pourquoi… » : arches étagées (disposition B)', () => {
 })
 
 describe('les pages d’articles pour les maquilleuses', () => {
-	test('partTitles : les titres des parties sans leur emoji, rien d’autre', () => {
+	test('partTitles : les titres des parties, tels quels', () => {
 		expect(partTitles(PARTNERSHIPS)).toEqual([
 			'Une page professionnelle gratuite',
 			'Partenariat : vous restez libre',
@@ -136,7 +136,7 @@ describe('les pages d’articles pour les maquilleuses', () => {
 		const markup = html(<PageArticle eyebrow="Maquilleuse" contenu={PARTNERSHIPS} />)
 		expect((markup.match(/<section[^>]*class="reveal /g) ?? []).length).toBe(PARTNERSHIPS.parties.length)
 		expect(markup.match(/data-shape="round"/g)).toHaveLength(PARTNERSHIPS.parties.length)
-		expect(markup).toMatch(/<h3[^>]*>[^<]*<span[^>]*aria-hidden="true"[^>]*>[^<]+<\/span><\/h3>/)
+		expect(markup).toMatch(/<h3[^>]*>[^<]+<\/h3>/)
 	})
 })
 

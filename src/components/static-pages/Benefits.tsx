@@ -54,6 +54,7 @@ export function Benefits({
 					{items.map((item, index) => (
 						<li key={item.titre} data-benefit className="reveal grid grid-cols-[6rem_1fr] items-start gap-x-6 sm:block">
 							<div className="w-24 pr-3 sm:w-full sm:pr-4">
+								{/* TODO(1136): illustration à générer (une arche 4:5 par avantage, petit format ~96 à 280 px; objet ou scène illustrant le titre de l'avantage; remplace l'objet de maquillage dessiné) */}
 								<ArchImage
 									tint={palette.tints[index % palette.tints.length] ?? 'blush'}
 									band={palette.bands[index % palette.bands.length] ?? 'band'}

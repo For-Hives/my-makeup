@@ -2,8 +2,7 @@ import type { ReactNode } from 'react'
 import { body, display } from '@/components/direct-edit/fonts'
 
 /**
- * The building blocks of the public content pages (issue 1102): one page shell, one eyebrow, one article layout, one
- * way to set a title that ends with an emoji. The pages (guides, fixed pages for makeup artists, À propos, legal
+ * The building blocks of the public content pages (issue 1102): one page shell, one eyebrow, one article layout. The pages (guides, fixed pages for makeup artists, À propos, legal
  * pages) are made of these, so that the type scale, the measure and the rhythm are the same everywhere.
  *
  * The two faces of the art direction are loaded by these pages only (the variables are set on the page, not on the
@@ -19,25 +18,6 @@ export function ContentPage({ children }: { children: ReactNode }) {
 export function Eyebrow({ children, className = '' }: { children: ReactNode; className?: string }) {
 	return (
 		<p className={`font-semibold text-indigo-800 text-xs uppercase tracking-[0.2em] ${className}`.trim()}>{children}</p>
-	)
-}
-
-const TRAILING_EMOJI = /^(.*?)\s*(\p{Extended_Pictographic}(?:\p{Extended_Pictographic}|️|‍)*)$/u
-
-/**
- * A title whose text ends with an emoji (« Notre histoire 📜 »): the words are the title, the emoji is a small
- * accent that a screen reader skips. The text is the same, word for word.
- */
-export function TitleWithAccent({ text }: { text: string }) {
-	const found = TRAILING_EMOJI.exec(text)
-	if (!found) return <>{text}</>
-	return (
-		<>
-			{found[1]}{' '}
-			<span aria-hidden="true" className="ml-0.5 inline-block text-[0.75em] align-middle">
-				{found[2]}
-			</span>
-		</>
 	)
 }
 

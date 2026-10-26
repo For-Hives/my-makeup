@@ -83,9 +83,9 @@ describe('la mise en forme', () => {
 	}
 
 	for (const url of ARTICLES) {
-		test(`${url} : les parties sont des sections à titre h3, chacune avec son apparition, l’emoji est décoratif`, async () => {
+		test(`${url} : les parties sont des sections à titre h3, chacune avec son apparition, sans emoji dans le titre`, async () => {
 			const html = await render(url)
-			expect(html).toMatch(/<h3[^>]*>[^<]*<span[^>]*aria-hidden="true"[^>]*>[^<]+<\/span><\/h3>/)
+			expect(html).toMatch(/<h3[^>]*>[^<]+<\/h3>/)
 			expect((html.match(/<section[^>]*class="[^"]*\breveal\b/g) ?? []).length).toBeGreaterThanOrEqual(4)
 			expect(html).toMatch(/<h2[^>]*>[^<]+<\/h2>/)
 		})
