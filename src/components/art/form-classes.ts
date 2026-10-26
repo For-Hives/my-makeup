@@ -9,7 +9,7 @@ import { pillClassName } from './pill-class'
 
 /** A text field: 28 px radius (`--radius-art-field`), a 1 px line, an indigo ring on focus, red when invalid. */
 export const ART_FIELD =
-	'block min-h-12 w-full rounded-art-field border-0 bg-art-paper px-5 py-3 text-base text-ink ring-1 ring-inset ring-art-line placeholder:text-mute focus:ring-2 focus:ring-inset focus:ring-indigo-700 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-600'
+	'block min-h-13 w-full rounded-art-field border-0 bg-art-paper px-5 py-3 text-base text-ink ring-1 ring-inset ring-art-line placeholder:text-mute hover:ring-indigo-300 focus:bg-white focus:ring-2 focus:ring-inset focus:ring-indigo-700 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-600'
 
 /** The label over a field. */
 export const ART_LABEL = 'flex flex-col gap-2 font-semibold text-ink text-sm'
@@ -26,8 +26,8 @@ export const ART_LINK =
 
 /** The notices: one radius, one tone each (the text colours keep 4.5:1 on their fill). */
 export const ART_NOTICE = {
-	error: 'rounded-art-field bg-red-50 px-5 py-3 text-red-800 text-sm',
-	info: 'rounded-art-field bg-indigo-50 px-5 py-3 text-indigo-900 text-sm',
-	success: 'rounded-art-field bg-green-50 px-5 py-3 text-green-900 text-sm',
-	soft: 'rounded-art-field bg-art-blush-50 px-5 py-3 text-art-blush-ink text-sm',
+	error: 'rounded-art-field bg-red-50 px-5 py-3 text-red-800 text-sm ring-1 ring-inset ring-red-200',
+	info: 'rounded-art-field bg-indigo-50 px-5 py-3 text-indigo-900 text-sm ring-1 ring-inset ring-indigo-200',
+	success: 'rounded-art-field bg-green-50 px-5 py-3 text-green-900 text-sm ring-1 ring-inset ring-green-200',
+	soft: 'rounded-art-field bg-art-blush-50 px-5 py-3 text-art-blush-ink text-sm ring-1 ring-inset ring-art-rose',
 } as const
