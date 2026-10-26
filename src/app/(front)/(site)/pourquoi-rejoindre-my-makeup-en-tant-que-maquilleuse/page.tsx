@@ -25,7 +25,7 @@ export default function WhyJoinPage() {
 		<ArtPage>
 			<PageHead
 				layout="centered"
-				drawing="hand-brush"
+				drawing="lips"
 				glow="rose"
 				title={
 					<>

@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
+import { LINE_DRAWINGS, MAKEUP_OBJECTS } from '@/components/art/drawings'
 
 /**
  * What the art direction forbids, held by the code (issue 1111). The owner did not like the 4-point sparkles and the
@@ -58,10 +59,66 @@ describe('the removed sparkle and flower assets', () => {
 		expect(PUBLIC_ART.filter(path => FORBIDDEN_NAME.test(path))).toEqual([])
 	})
 
-	test('the one-line drawings and the swashes are not botanical: their names are lips, eye, profile, hand-brush, dry, wave', () => {
-		const data = readFileSync(join(SRC, 'components/art/generated-art.ts'), 'utf8')
-		expect([...data.matchAll(/^export const ([A-Z_]+) = \{([\s\S]*?)^\} as const/gm)].length).toBe(3)
-		for (const name of ['lips', 'eye', 'profile', "'hand-brush'", 'dry', 'wave']) expect(data).toContain(`\t${name}: {`)
+	test('the drawings are the five kinds of the direction, none of them botanical: lips, eye and the makeup objects', () => {
+		expect(Object.keys(LINE_DRAWINGS).sort()).toEqual(['eye', 'lips'])
+		expect(Object.keys(MAKEUP_OBJECTS)).not.toContainEqual(expect.stringMatching(FORBIDDEN_NAME))
+	})
+})
+
+describe('the drawings are real, licensed, listed', () => {
+	const credits = readFileSync(join(ROOT, 'docs/credits-svg.md'), 'utf8')
+	const ACCEPTED = ['Apache-2.0', 'MIT', 'ISC', 'CC0-1.0']
+	/** A credits row: | `name` | upstream file | author | SPDX licence | modification |. */
+	const rows = credits
+		.split('\n')
+		.filter(line => line.startsWith('| `'))
+		.map(line => line.split('|').map(cell => cell.trim()))
+
+	test('no file or export of the art layer is named as generated art, and the AI-generated data file is gone', () => {
+		const offenders: string[] = []
+		for (const path of [...ART, ...PUBLIC_ART]) {
+			const name = relative(ROOT, path)
+			if (/generated|\bai[-_]/i.test(name.split('/').pop() ?? '')) offenders.push(name)
+			if (
+				/\.(tsx?|svg)$/.test(path) &&
+				/export (const|function|type|interface) \w*Generated/.test(readFileSync(path, 'utf8'))
+			)
+				offenders.push(`${name}: exported as generated art`)
+		}
+		expect(offenders).toEqual([])
+		expect(existsSync(join(SRC, 'components/art/generated-art.ts'))).toBe(false)
+	})
+
+	test('every drawing of the data module has a row in docs/credits-svg.md with an accepted licence and an upstream file', () => {
+		for (const name of [...Object.keys(MAKEUP_OBJECTS), ...Object.keys(LINE_DRAWINGS)]) {
+			const row = rows.find(cells => cells[1] === `\`${name}\``)
+			expect(`${name}: ${row ? 'listed' : 'missing'}`).toBe(`${name}: listed`)
+			expect(ACCEPTED).toContain(row?.[4] ?? '')
+			expect(row?.[2]).toMatch(/\.svg/)
+		}
+	})
+
+	test('every SVG file of the art layer or of public/art is listed in the credits too, and nothing listed is missing from the code', () => {
+		const files = [...ART, ...PUBLIC_ART].filter(path => path.endsWith('.svg')).map(path => relative(ROOT, path))
+		for (const file of files) expect(credits).toContain(file)
+		const names = new Set([...Object.keys(MAKEUP_OBJECTS), ...Object.keys(LINE_DRAWINGS)])
+		for (const cells of rows) expect(names.has((cells[1] ?? '').replaceAll('`', ''))).toBe(true)
+	})
+
+	test('the licence texts the licences require are shipped, and the credits name the upstream commit', () => {
+		const licence = readFileSync(join(ROOT, 'LICENSES/IconPark-Apache-2.0.txt'), 'utf8')
+		expect(licence).toContain('Apache License')
+		expect(licence).toContain('Copyright 2019-present Bytedance Inc.')
+		expect(credits).toMatch(/[0-9a-f]{40}/)
+	})
+
+	test('the data module holds bare outline shapes only: no fill, colour, style, link, script or event attribute', () => {
+		const data = readFileSync(join(SRC, 'components/art/drawings.ts'), 'utf8')
+		const shapes = data.slice(data.indexOf('export const MAKEUP_OBJECTS'))
+		expect(shapes).not.toMatch(/\b(fill|stroke|style|href|xlink|onload|onclick|script|foreignObject)\b/i)
+		expect(shapes).not.toMatch(/#[0-9a-f]{3,6}\b/i)
+		for (const [, tag] of shapes.matchAll(/tag: '([a-z]+)'/g))
+			expect(['path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon']).toContain(tag ?? '')
 	})
 })
 
@@ -90,11 +147,11 @@ describe('the rules of the look', () => {
 		}
 	})
 
-	test('a colour is never the only difference: the generated art data is only imported by server components', () => {
+	test('the drawing data is only imported by server components', () => {
 		for (const path of files(SRC).filter(file => /\.tsx?$/.test(file))) {
 			const code = readFileSync(path, 'utf8')
-			if (/^['"]use client['"]/.test(code) && /generated-art/.test(code))
-				throw new Error(`${relative(ROOT, path)} is a client component that imports the 52 KB drawing data`)
+			if (/^['"]use client['"]/.test(code) && /art\/drawings|\.\/drawings/.test(code))
+				throw new Error(`${relative(ROOT, path)} is a client component that imports the drawing data`)
 		}
 	})
 

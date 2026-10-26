@@ -1,5 +1,5 @@
 import Image from 'next/image'
-import type { LineDrawingName, MakeupObjectName } from './generated-art'
+import type { LineDrawingName, MakeupObjectName } from './drawings'
 import { LineDrawing, MakeupObject } from './graphics'
 
 export type Tint = 'blush' | 'rose' | 'lavender' | 'sand' | 'indigo' | 'night'

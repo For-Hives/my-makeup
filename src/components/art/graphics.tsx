@@ -1,11 +1,12 @@
+import { createElement } from 'react'
 import {
+	DRAWING_VIEW_BOX,
 	LINE_DRAWINGS,
 	type LineDrawingName,
 	MAKEUP_OBJECTS,
 	type MakeupObjectName,
-	SWASHES,
-	type SwashName,
-} from './generated-art'
+	type Shape,
+} from './drawings'
 
 /**
  * The drawn assets of the art direction (issue 1111). Every one is decoration: `aria-hidden`, no `<title>`, drawn in
@@ -15,8 +16,8 @@ import {
  *
  * - print marks (`PrintMark`): a fine plus, a small open circle, a dot, a short brush-stroke dash, like the registration
  *   marks of a printed page. Very sparse: two or three per section at most.
- * - one-line drawings of lips, an eye, a profile and a hand holding a brush (`LineDrawing`), and organic brush-stroke
- *   swashes (`Swash`): fashion and editorial, never botanical.
+ * - makeup objects (`MakeupObject`) and line drawings of lips and an eye (`LineDrawing`): real, human-made outline
+ *   icons of ONE family (IconPark, Apache-2.0, docs/credits-svg.md), never drawn by an AI model, never botanical.
  */
 
 interface DecorProps {
@@ -113,34 +114,37 @@ export function Icon({ name, className = 'h-5 w-5' }: DecorProps & { name: IconN
 	)
 }
 
-function Generated({ shape, className }: DecorProps & { shape: { viewBox: string; d: string } }) {
+/**
+ * One drawing of the family: bare shapes on a 48 grid, an outline in `currentColor` with round ends. The stroke width
+ * is the CSS variable `--art-drawing-stroke` (`.art-drawing`, globals.css), the same for every drawing, so the whole
+ * set has one weight; a class on the parent may change it.
+ */
+function Drawing({ shapes, className }: DecorProps & { shapes: readonly Shape[] }) {
 	return (
 		<svg
 			aria-hidden="true"
 			focusable="false"
-			viewBox={shape.viewBox}
-			fill="currentColor"
-			className={className}
+			viewBox={DRAWING_VIEW_BOX}
+			fill="none"
+			stroke="currentColor"
+			strokeLinecap="round"
+			strokeLinejoin="round"
+			className={`art-drawing ${className ?? ''}`.trim()}
 			preserveAspectRatio="xMidYMid meet"
 		>
-			<path fillRule="evenodd" d={shape.d} />
+			{shapes.map(({ tag, ...attributes }) => createElement(tag, { key: JSON.stringify(attributes), ...attributes }))}
 		</svg>
 	)
 }
 
-/** A makeup object drawn as a clean outline (brush, lipstick, compact, mirror, sponge, mascara, nail polish, eyelash curler). */
+/** A makeup object as an outline: brush, lipstick, compact, mirror, mascara, nail polish, perfume, comb. */
 export function MakeupObject({ name, className = 'h-full w-full' }: DecorProps & { name: MakeupObjectName }) {
-	return <Generated shape={MAKEUP_OBJECTS[name]} className={className} />
+	return <Drawing shapes={MAKEUP_OBJECTS[name]} className={className} />
 }
 
-/** A one-line drawing: lips, an eye, a profile, a hand holding a brush. */
+/** A line drawing, in the same family and weight as the objects: lips, an eye. */
 export function LineDrawing({ name, className = 'h-full w-full' }: DecorProps & { name: LineDrawingName }) {
-	return <Generated shape={LINE_DRAWINGS[name]} className={className} />
-}
-
-/** An organic brush-stroke swash, a filled stroke, to underline or to frame. */
-export function Swash({ name, className = 'h-6 w-40' }: DecorProps & { name: SwashName }) {
-	return <Generated shape={SWASHES[name]} className={className} />
+	return <Drawing shapes={LINE_DRAWINGS[name]} className={className} />
 }
 
 /** A hairline rule; `marks` puts a fine plus in the middle, `dots` three dots. */

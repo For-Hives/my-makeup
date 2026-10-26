@@ -1,5 +1,5 @@
 import type { Tint } from './CapsuleImage'
-import { LINE_DRAWINGS, type LineDrawingName, MAKEUP_OBJECTS, type MakeupObjectName } from './generated-art'
+import { LINE_DRAWINGS, type LineDrawingName, MAKEUP_OBJECTS, type MakeupObjectName } from './drawings'
 import type { PrintMarkKind } from './graphics'
 
 const TINTS: readonly Tint[] = ['blush', 'lavender', 'sand', 'rose', 'indigo']

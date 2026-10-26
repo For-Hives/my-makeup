@@ -113,9 +113,11 @@ describe('« Pourquoi… » : arches étagées (disposition B)', () => {
 	}
 
 	test('les deux pages n’ont pas le même jeu d’objets', () => {
-		const artist = html(<ArtistBenefits />).match(/<path fill-rule="evenodd" d="M [\d. ]{12}/g)
-		const client = html(<ClientBenefits />).match(/<path fill-rule="evenodd" d="M [\d. ]{12}/g)
-		expect(artist?.[0]).not.toBe(client?.[0])
+		const objects = (markup: string) => markup.match(/<svg [^>]*art-drawing[^>]*>/g)?.length
+		const artist = html(<ArtistBenefits />).split('art-drawing')
+		const client = html(<ClientBenefits />).split('art-drawing')
+		expect(objects(html(<ArtistBenefits />))).toBeGreaterThan(0)
+		expect(artist.slice(1).join('|')).not.toBe(client.slice(1).join('|'))
 	})
 })
 
