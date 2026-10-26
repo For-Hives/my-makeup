@@ -363,6 +363,16 @@ test.describe('1069 : une fiche et des résultats', () => {
 				if (size.width > 600) {
 					const card = cards.first()
 					await card.scrollIntoViewIfNeeded()
+					await expect
+						.poll(() => card.evaluate(element => element.closest('.reveal')?.getAttribute('data-reveal') ?? 'in'))
+						.not.toBe('wait')
+					await card.evaluate(element =>
+						Promise.all(
+							(element.closest('.reveal') ?? element)
+								.getAnimations()
+								.map(animation => animation.finished.catch(() => undefined))
+						)
+					)
 					const before = await card.boundingBox()
 					await card.hover()
 					// A card does not lift (issue 1137): a soft wash grows behind it, in 400 ms, and no shadow is drawn.

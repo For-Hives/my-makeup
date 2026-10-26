@@ -31,6 +31,14 @@ const hydrated = (locator: Locator) =>
 		.poll(() => locator.evaluate(element => Object.keys(element).some(key => key.startsWith('__reactProps'))))
 		.toBe(true)
 
+/** Opens the menu of the narrow bar once React has hydrated its button: an earlier click opens nothing. */
+async function openMenu(page: Page) {
+	const menu = page.getByRole('button', { name: 'Menu' })
+	await hydrated(menu)
+	await menu.click()
+	await expect(menu).toHaveAttribute('aria-expanded', 'true')
+}
+
 /** The wash behind a card: its colour, how long it takes and how far it reaches. */
 const washOf = (card: Locator) =>
 	card.evaluate(element => {
@@ -80,7 +88,7 @@ for (const size of [SCREENS.mobile, SCREENS.chromium]) {
 				test(`${path} entoure « ${group} » d’une ellipse, et d’aucun autre groupe`, async ({ page }) => {
 					await page.goto(path)
 					if (size.width < 1024) {
-						await page.getByRole('button', { name: 'Menu' }).click()
+						await openMenu(page)
 					}
 					for (const name of GROUPS) {
 						const button = nav(page).getByRole('button', { name, exact: true })
@@ -109,7 +117,7 @@ for (const size of [SCREENS.mobile, SCREENS.chromium]) {
 				page,
 			}) => {
 				await page.goto('/solutions/pour-les-particuliers')
-				if (size.width < 1024) await page.getByRole('button', { name: 'Menu' }).click()
+				if (size.width < 1024) await openMenu(page)
 				const button = nav(page).getByRole('button', { name: 'Solutions', exact: true })
 				await hydrated(button)
 				await button.click()
@@ -124,7 +132,7 @@ for (const size of [SCREENS.mobile, SCREENS.chromium]) {
 			test('sur « Blog » et hors des groupes, seul « Blog » a son ellipse', async ({ page }) => {
 				for (const path of ['/blog', '/search', '/']) {
 					await page.goto(path)
-					if (size.width < 1024) await page.getByRole('button', { name: 'Menu' }).click()
+					if (size.width < 1024) await openMenu(page)
 					for (const name of GROUPS)
 						await expect(
 							nav(page).getByRole('button', { name, exact: true }).locator('svg[viewBox="0 0 124 54"]')
@@ -175,6 +183,10 @@ test.describe('le survol, sur ordinateur', () => {
 			await card.scrollIntoViewIfNeeded()
 			await page.mouse.move(2, 2)
 			await expect.poll(async () => alpha((await washOf(card)).background)).toBe(0)
+			// The reveal flips a card from `wait` to `in` once it is seen: measure after, and after its 600 ms rise.
+			await expect
+				.poll(() => card.evaluate(element => element.closest('.reveal')?.getAttribute('data-reveal') ?? 'in'))
+				.not.toBe('wait')
 			await still(page)
 			const before = await frames(page, '[data-blog-card]')
 			const rest = await washOf(card)

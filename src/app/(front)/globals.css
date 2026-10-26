@@ -325,6 +325,10 @@
 		background-color: color-mix(in srgb, var(--color-art-blush) 42%, transparent);
 		transform: none;
 	}
+	/* A card with a face of its own (the row card of a list: white, hairline) lets its list item hold the stacking context, so the wash paints under the face and shows only around it. */
+	.card-hover.bg-white {
+		isolation: auto;
+	}
 	/* A card that clips its content (the search card) cannot hold a wash outside itself: it tints its own face instead. */
 	.card-hover.overflow-hidden::before {
 		display: none;

@@ -94,6 +94,12 @@ describe('a card is washed, not shadowed', () => {
 		expect(/\.card-zoom\s*\{([^{}]*)\}/.exec(motion)?.[1]).toContain('var(--duration-lift)')
 	})
 
+	test('a card with a face of its own is washed from the list item: the wash paints under the face and shows around it', () => {
+		const grid = readFileSync(join(ROOT, 'src/components/search/SearchGrid.tsx'), 'utf8')
+		expect(grid.match(/'reveal isolate /g)).toHaveLength(2)
+		expect(body('.card-hover.bg-white')).toMatch(/isolation:\s*auto/)
+	})
+
 	test('the rail of the search page keeps room around its cards, or the wash would be clipped', () => {
 		const grid = readFileSync(join(ROOT, 'src/components/search/SearchGrid.tsx'), 'utf8')
 		expect(grid).toMatch(/-mt-4[^']*pt-4[^']*pb-4/)

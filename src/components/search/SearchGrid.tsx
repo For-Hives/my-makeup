@@ -49,8 +49,8 @@ export function SearchGrid({
 					key={carte.slug}
 					className={
 						rail
-							? 'reveal w-[78%] max-w-sm flex-none snap-start [overflow-wrap:anywhere] md:w-auto md:max-w-none'
-							: 'reveal [overflow-wrap:anywhere]'
+							? 'reveal isolate w-[78%] max-w-sm flex-none snap-start [overflow-wrap:anywhere] md:w-auto md:max-w-none'
+							: 'reveal isolate [overflow-wrap:anywhere]'
 					}
 				>
 					<Card
