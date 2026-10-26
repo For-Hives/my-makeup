@@ -1,18 +1,24 @@
 {
 	"description": "Les notes de version du site, en français : ce qu'une visiteuse ou une maquilleuse peut remarquer. Une note s'ajoute par « bun run notes:add » et attend dans « pending » ; la publication la range sous son numéro, dans « releases ». Voir docs/publication.md.",
-	"pending": [
-		{
-			"id": "sur-les-grands-ecrans-les-pages-prennent-plus-de-largeur",
-			"type": "amelioration",
-			"text": "Sur les grands écrans, les pages prennent plus de largeur et s'alignent sur le haut de l'accueil, et les cartes des maquilleuses et des articles ont plus d'air autour d'elles, surtout au survol."
-		},
-		{
-			"id": "le-compteur-de-vues-de-ton-espace-ne-compte-plus-deux-foi",
-			"type": "correction",
-			"text": "Le compteur de vues de ton espace ne compte plus deux fois la même journée le soir, dans les semaines qui suivent un changement d'heure."
-		}
-	],
+	"pending": [],
 	"releases": [
+		{
+			"version": "3.0.25",
+			"date": "2026-10-27",
+			"commit": "8c407be8fbecf9528b7cf33064aba451b716e25f",
+			"notes": [
+				{
+					"id": "sur-les-grands-ecrans-les-pages-prennent-plus-de-largeur",
+					"type": "amelioration",
+					"text": "Sur les grands écrans, les pages prennent plus de largeur et s'alignent sur le haut de l'accueil, et les cartes des maquilleuses et des articles ont plus d'air autour d'elles, surtout au survol."
+				},
+				{
+					"id": "le-compteur-de-vues-de-ton-espace-ne-compte-plus-deux-foi",
+					"type": "correction",
+					"text": "Le compteur de vues de ton espace ne compte plus deux fois la même journée le soir, dans les semaines qui suivent un changement d'heure."
+				}
+			]
+		},
 		{
 			"version": "3.0.22",
 			"date": "2026-10-26",
