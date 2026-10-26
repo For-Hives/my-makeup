@@ -53,7 +53,7 @@ export { Icon, type IconName } from './Icon'
 
 /**
  * One drawing of the pack: a single filled path on a 24 grid in `currentColor` (no stroke, no attribute but the shape).
- * Its line is 1.375 units thick, so it grows with the drawing: a class sets the size and the colour.
+ * Its line is about 0.95 units thick (4 % of the box), so it grows with the drawing: a class sets the size and the colour.
  */
 function Drawing({ d, className }: DecorProps & { d: string }) {
 	return (
