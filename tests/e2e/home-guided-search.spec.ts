@@ -231,6 +231,11 @@ test('« Mise en avant » : absente sans profil vérifié, six cartes au plus ti
 			await page.goto('/')
 			const block = page.getByTestId('maquilleuses-mises-en-avant')
 			await expect(block.getByRole('heading', { name: 'Mise en avant' })).toBeVisible()
+			// One band under the hero (Andy, 26/10/2026: « un seul bandeau le plus cohérent »): the ribbon of the
+			// specialties. The kit banner, and its pause button in sight, no longer open « Mise en avant ».
+			await expect(page.locator('.home-hero-ribbon')).toHaveCount(1)
+			await expect(page.locator('.art-marquee')).toHaveCount(0)
+			await expect(page.getByRole('button', { name: 'Mettre en pause le défilement' })).toHaveCount(0)
 			const visible = (await shownSlugs(block)).length
 			expect(visible).toBeGreaterThan(0)
 			expect(visible).toBeLessThanOrEqual(6)

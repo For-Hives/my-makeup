@@ -209,12 +209,14 @@ describe('1066 : le bloc « Mise en avant »', () => {
 		expect(renderToStaticMarkup(<FeaturedProfiles cartes={[]} />)).toBe('')
 	})
 
-	test('les cartes sont celles du kit, sans clic mesuré, sous une bannière qui ne dit rien de neuf', () => {
+	test('les cartes sont celles du kit, sans clic mesuré, et sans bannière : le bandeau du haut de page est le seul de l’accueil', () => {
 		const html = renderToStaticMarkup(<FeaturedProfiles cartes={many(3)} />)
 		expect(html.match(/data-profile-card/g)).toHaveLength(3)
 		expect(html).not.toContain('data-result-card')
-		expect(html).toContain('Des maquilleuses indépendantes, partout en France')
-		expect(html.indexOf('art-marquee')).toBeLessThan(html.indexOf('<section aria-labelledby'))
+		// Andy, 26/10/2026: « un seul bandeau le plus cohérent ». The kit banner that opened this section is gone.
+		expect(html).not.toContain('art-marquee')
+		expect(html).not.toContain('Des maquilleuses indépendantes, partout en France')
+		expect(html.startsWith('<section aria-labelledby="accueil-mise-en-avant"')).toBe(true)
 		expect(html).toContain('home-section')
 	})
 
