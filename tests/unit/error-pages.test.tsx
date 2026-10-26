@@ -16,9 +16,9 @@ describe('pages d’erreur (069, E60)', () => {
 	test('les deux boutons de la page d’erreur ont une cible de 44 px au moins (299)', () => {
 		const html = renderToStaticMarkup(<ErrorPage reessayer={() => undefined} />)
 
-		const targets = html.match(/<(?:a|button)\b[^>]*class="[^"]*btn-primary-large[^"]*"/g) ?? []
+		const targets = html.match(/<(?:a|button)\b[^>]*class="[^"]*rounded-full[^"]*"/g) ?? []
 		expect(targets).toHaveLength(2)
-		for (const target of targets) expect(target, target).toContain('min-h-11')
+		for (const target of targets) expect(target, target).toMatch(/min-h-(11|13)/)
 	})
 
 	test('la 404 a un seul h1 et un lien vers l’accueil', () => {

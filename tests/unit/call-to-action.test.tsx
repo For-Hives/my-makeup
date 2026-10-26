@@ -1,7 +1,6 @@
 /**
- * The call to action that closes the public pages (issue 1067): two invitations, a frame in the colors of the
- * public site (indigo, white, grays: the lipstick red is for what a makeup artist can change), buttons of at
- * least 44 px, and a text that reads without the background.
+ * The call to action that closes the public pages (issue 1067, redone in the look of the kit): two invitations in
+ * a night panel, pill buttons of at least 44 px, a Bodoni title, and a text that reads without the background.
  */
 
 import { describe, expect, test } from 'bun:test'
@@ -24,16 +23,32 @@ describe('1067 : l’invitation à l’action', () => {
 		expect(html).toMatch(/<a [^>]*href="\/auth\/signup"[^>]*>[\s\S]*?Je suis maquilleuse/)
 	})
 
-	test('un titre h2 et une phrase, jamais un second h1', () => {
+	test('le titre et la phrase sont ceux du site, au mot près', () => {
+		// The text nodes between tags, in order (the markup is never stripped, only read).
+		const text = [...html.matchAll(/>([^<]+)</g)]
+			.map(match => match[1])
+			.join('')
+			.replaceAll('&nbsp;', ' ')
+			.replaceAll('\u00a0', ' ')
+			.replaceAll('&#x27;', "'")
+		expect(text).toContain('Rejoignez My-Makeup, la communauté qui fait la différence.')
+		expect(text).toContain(
+			"Que vous cherchiez une maquilleuse ou que vous le soyez : la recherche est gratuite, et la page professionnelle l'est aussi."
+		)
+	})
+
+	test('un titre h2 en Bodoni avec un seul mot en italique, jamais un second h1', () => {
 		expect(html.match(/<h2/g)).toHaveLength(1)
 		expect(html).not.toContain('<h1')
-		expect(html).toMatch(/<p[ >]/)
+		expect(html).toMatch(/<h2 [^>]*font-display/)
+		expect(html.match(/italic/g)).toHaveLength(1)
 	})
 
 	test('chaque bouton fait au moins 44 px de haut et montre son focus', () => {
 		for (const href of ['/search', '/auth/signup']) {
-			expect(link(href)).toMatch(/min-h-(11|12|14)\b/)
+			expect(link(href)).toMatch(/min-h-(11|12|13|14)\b/)
 			expect(link(href)).toContain('focus-visible:outline')
+			expect(link(href)).toContain('rounded-full')
 		}
 	})
 
@@ -43,11 +58,9 @@ describe('1067 : l’invitation à l’action', () => {
 		expect(html).not.toContain('<img')
 	})
 
-	test('la direction artistique du site public : pas de rouge à lèvres, pas de police de l’espace', () => {
-		for (const token of ['lipstick', 'blush', 'nude-', 'font-display', 'font-body', 'bg-ink']) {
-			expect(html).not.toContain(token)
-		}
-		expect(html).toContain('indigo-900')
+	test('le cadre du kit : panneau de nuit, pas de rouge à lèvres, pas de police de l’espace', () => {
+		expect(html).toContain('bg-art-night')
+		for (const token of ['lipstick', 'font-body', 'bg-ink']) expect(html).not.toContain(token)
 	})
 
 	test('les deux clics gardent leurs valeurs de mesure', () => {

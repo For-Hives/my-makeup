@@ -15,7 +15,7 @@ export function GoogleButton({ libelle, retour }: { libelle: string; retour?: st
 			<GoogleLink
 				adresse={address}
 				debutDInscription={retour === undefined}
-				className="flex min-h-11 w-full flex-nowrap items-center justify-center gap-6 rounded-md bg-white px-3 shadow-sm ring-1 ring-gray-300 ring-inset hover:bg-gray-50"
+				className="flex min-h-13 w-full flex-nowrap items-center justify-center gap-6 rounded-full bg-white px-5 ring-1 ring-art-line ring-inset hover:bg-art-blush-50"
 			>
 				<Image
 					src="/assets/signin-assets/google_logo.svg"
@@ -28,10 +28,10 @@ export function GoogleButton({ libelle, retour }: { libelle: string; retour?: st
 					{libelle}
 				</span>
 			</GoogleLink>
-			<div className="flex w-full items-center gap-3 text-neutral-500 text-sm">
-				<span className="h-px flex-1 bg-neutral-300" />
+			<div className="flex w-full items-center gap-3 text-mute text-sm">
+				<span className="h-px flex-1 bg-art-line" />
 				<span>Ou</span>
-				<span className="h-px flex-1 bg-neutral-300" />
+				<span className="h-px flex-1 bg-art-line" />
 			</div>
 		</div>
 	)

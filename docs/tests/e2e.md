@@ -145,6 +145,8 @@ bun run test:e2e tests/e2e/url-parity.spec.ts
 
 - Le cache de données de Next (`unstable_cache`, étiquettes `talents` et `profils`) est sur le disque, dans `.next/cache/fetch-cache`, et survit à un build : `bun run test:e2e` le vide avant de construire.
 - Dans un lancement, une page lue avant que les données n'existent garde ce qu'elle a vu. Un essai qui charge des données avec son propre Payload demande à l'application de rafraîchir (`tests/support/public-pages.ts` : `refreshProfilePages`, `createContent`, `deleteContent` passent par l'API REST, donc par les crochets de l'application).
+- Les profils « Page … » (`setPageProfiles`) sont chargés eux aussi par le processus d'essai : un essai qui les charge puis ouvre `/search?search=Page` appelle `refreshProfilePages` juste après (sinon « Aucun résultat pour Page » selon les fichiers du même shard ; garde : `tests/unit/e2e-search-cache.test.ts`).
+- `page.clock.install()` seul laisse le temps courir : un délai joué avec `runFor` est aussi mangé par le temps réel, et sur un poste chargé un menu de 200 ms se ferme avant que l'essai le regarde. Un essai qui installe l'horloge la met en pause (`pauseAt`, voir `handTimers` dans `tests/e2e/navbar.spec.ts` ; garde : `tests/unit/e2e-clock.test.ts`).
 - Les essais de la recherche et de la parité chargent leurs propres profils, « Essai … » (`tests/fixtures/search-profiles.ts`), sous un verrou entre les processus (`tests/support/lock.ts`), et non le jeu du banc : la fausse base de l'import (`imported-profile-slice.spec.ts`) porte les mêmes noms inventés que le jeu, et refuse leurs adresses si le jeu est déjà là.
 - L'essai de la fraîcheur (`page-freshness.spec.ts`, ticket 117) prouve qu'une page vient du cache en changeant la base **derrière le dos de l'application** : un `payload.update` du processus de l'essai n'est pas une requête de Next, rien n'est rafraîchi, et la page doit encore montrer l'ancien texte ; un enregistrement par l'API REST la rafraîchit. Chaque essai pose son propre profil (« Essai Fraicheur… », tiré du profil type « actif mais pas publiable ») et le retire par l'application.
 - L'essai des pages de la recherche (`keyword-search.spec.ts`, E41 et I29) a besoin de plus de 20 résultats, que le banc n'a pas : il crée 45 profils générés par la fabrique (`tests/support/profile-factory.ts`, `buildByApplication`) **par l'API de l'application**, pour que chaque enregistrement rafraîchisse les pages comme pour une visiteuse, et les retire à la fin. Ils sont à Lille et à Lillers (`LILLE_AREA`, à 42 km l'une de l'autre), loin d'Annecy et de Nantes, et aucun ne se déplace : les autres recherches du banc ne les voient pas, et la recherche « Lille » avec leur mot coupe ses sections entre les pages (« À Lille », puis « Plus loin, à moins de 50 km »). Chaque projet (1440 et 390 px) a son préfixe et son mot : ils ne se voient pas. La même fabrique sème, par l'API locale, les 500 profils de l'essai de charge I31 (`tests/integration/search.test.ts`).
@@ -170,12 +172,12 @@ En CI, un essai en échec est rejoué deux fois, et un essai laissé en `.only` 
 
 ## En CI
 
-Le job `e2e` de `.github/workflows/ci.yml` lance les essais en cinq lots côte à côte, de `e2e (1/5)` à `e2e (5/5)`. Chaque lot fait ce qu'on fait sur un poste :
+Le job `e2e` de `.github/workflows/ci.yml` lance les essais en six lots côte à côte, de `e2e (1/6)` à `e2e (6/6)`. Chaque lot fait ce qu'on fait sur un poste :
 
 ```sh
 bunx playwright install --with-deps chromium   # le navigateur, et les bibliothèques du système qu'il demande
 bun run bench:up
-bun run test:e2e --shard=1/5                   # son cinquième des essais ; les autres lots lancent --shard=2/5 à 5/5
+bun run test:e2e --shard=1/6                   # son sixième des essais ; les autres lots lancent --shard=2/6 à 6/6
 ```
 
 - Playwright partage les essais entre les lots ; chaque lot construit l'application lui-même, démarre son banc et ne dépend d'aucun autre. Un lot en échec n'arrête pas les autres.
@@ -184,7 +186,7 @@ bun run test:e2e --shard=1/5                   # son cinquième des essais ; les
 - GitHub règle `CI=true` : un essai en échec est rejoué deux fois, et un essai laissé en `.only` fait échouer le lancement.
 - Un lot a 10 minutes au plus : au-delà, il est arrêté, et `ci-ok` est rouge.
 - Après un échec, le lot envoie `playwright-report/` et `test-results/` : l'artefact `e2e-1` à `e2e-4` du passage, sur la page de la CI, gardé 14 jours. Le rapport s'ouvre par `bunx playwright show-report playwright-report`, une fois l'artefact décompressé.
-- Pour le rejouer sur un poste, banc démarré : `CI=true bun run test:e2e --shard=1/5 --workers=2`.
+- Pour le rejouer sur un poste, banc démarré : `CI=true bun run test:e2e --shard=1/6 --workers=2`.
 
 ## Ce qui empêche de viser la prod
 

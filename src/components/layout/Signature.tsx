@@ -1,11 +1,11 @@
 import Link from 'next/link'
 
-const LINK = 'text-gray-600 text-sm underline'
+const LINK = 'text-mute text-sm underline hover:text-indigo-700'
 
 export function Signature() {
 	return (
-		<div className="mx-auto flex w-full max-w-7xl px-4 py-20 md:px-8 2xl:px-0">
-			<p className="mx-auto text-center text-gray-600 text-sm">
+		<div className="mx-auto w-full max-w-7xl px-4 pb-10 md:px-8 2xl:px-0">
+			<p className="border-hairline border-t pt-8 text-center text-mute text-sm">
 				© {new Date().getFullYear()} My-Makeup - Tous droits réservés - Developed with ❤️ by{' '}
 				<Link className={LINK} href="https://andy-cinquin.fr" target="_blank" rel="noopener noreferrer">
 					Andy Cinquin

@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test'
+import { expect, type Locator, type Page, test } from '@playwright/test'
 import { violationsSevere } from '../support/axe'
 
 /**
@@ -11,15 +11,24 @@ import { violationsSevere } from '../support/axe'
 const nav = (page: Page) => page.getByRole('navigation', { name: 'Navigation principale' })
 
 /**
- * Puts the page's timers in the test's hands: the clock is installed, then paused, so the open and close delays only
- * run in `runFor`. Installed alone, the clock also runs on its own: on a busy page (the film of the home hero playing
- * on a loaded machine) a mouse move of four steps lasted 400 ms, and the close delay of 200 ms ran out before the
- * panel was checked.
+ * Waits for React to have hydrated the element: a pointer resting on it before is not seen as entering it once the
+ * handlers are there, so the hover of a group would open nothing.
  */
-async function driveClock(page: Page): Promise<void> {
-	await page.clock.install()
+const hydrated = (locator: Locator) =>
+	expect
+		.poll(() => locator.evaluate(element => Object.keys(element).some(key => key.startsWith('__reactProps'))))
+		.toBe(true)
+
+/**
+ * Puts the timers of the page in the hands of the test. `clock.install` alone lets the time run on at its own pace, so
+ * on a loaded machine the real time of the mouse moves added to `runFor` closes a group (200 ms) before the test
+ * has looked at it: the clock is paused, and only `runFor` makes it move.
+ */
+async function handTimers(page: Page) {
+	const start = new Date('2026-01-01T00:00:00Z')
+	await page.clock.install({ time: start })
 	await page.reload()
-	await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000))
+	await page.clock.pauseAt(new Date(start.getTime() + 1000))
 }
 
 /** Waits for the transitions and animations of the bar to end. */
@@ -83,6 +92,22 @@ test.describe('Barre de navigation, sur ordinateur', () => {
 		expect(await blog.evaluate(element => getComputedStyle(element).color)).not.toBe(colorBefore)
 	})
 
+	test('la page courante est entourée d’une ellipse, sans trait en plus, et les deux boutons sont des pilules de 44 px', async ({
+		page,
+	}) => {
+		await page.goto('/blog')
+		const blog = nav(page).getByRole('link', { name: 'Blog', exact: true })
+		await expect(blog).toHaveAttribute('aria-current', 'page')
+		await expect(blog.locator('svg')).toHaveCount(1)
+		expect(await blog.evaluate(element => getComputedStyle(element, '::after').content)).toBe('none')
+		for (const name of ['Trouver une maquilleuse', 'Me connecter']) {
+			const link = nav(page).getByRole('link', { name, exact: true })
+			const box = await link.boundingBox()
+			expect(box?.height, name).toBeGreaterThanOrEqual(44)
+			expect(await link.evaluate(element => getComputedStyle(element).borderTopLeftRadius), name).not.toBe('8px')
+		}
+	})
+
 	test('la transition du survol dure 200 ms avec le mouvement permis', async ({ page }) => {
 		const { duration } = await underlineOf(page, 'Blog')
 		expect(duration).toContain('0.2s')
@@ -113,10 +138,11 @@ test.describe('Barre de navigation, sur ordinateur', () => {
 		page,
 	}) => {
 		// The page's timers are driven by hand: the delays are played exactly, not waited for.
-		await driveClock(page)
+		await handTimers(page)
 		const trigger = nav(page).getByRole('button', { name: 'Particulier', exact: true })
 		const panel = page.locator('[data-panel="Particulier"]')
 		await expect(panel).toBeHidden()
+		await hydrated(trigger)
 		await trigger.hover()
 		await page.clock.runFor(150)
 		await expect(panel).toBeVisible()
@@ -141,8 +167,9 @@ test.describe('Barre de navigation, sur ordinateur', () => {
 	})
 
 	test('un survol qui passe sans s’arrêter n’ouvre rien', async ({ page }) => {
-		await driveClock(page)
+		await handTimers(page)
 		const trigger = nav(page).getByRole('button', { name: 'Maquilleuse', exact: true })
+		await hydrated(trigger)
 		const box = await trigger.boundingBox()
 		if (!box) throw new Error('boîte manquante')
 		await page.mouse.move(box.x + box.width / 2, box.y - 30)

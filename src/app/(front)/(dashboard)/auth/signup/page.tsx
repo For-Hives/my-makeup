@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { ART_LINK } from '@/components/art/form-classes'
+import { AuthShell } from '@/components/auth/AuthShell'
 import { GoogleButton } from '@/components/auth/GoogleButton'
 import { SignUpForm } from '@/components/auth/SignUpForm'
 import { isGoogleActive } from '@/lib/auth/google/config'
@@ -21,21 +23,20 @@ export default async function SignUpPage() {
 	if (await signedInArtist()) redirect(DEFAULT_DASHBOARD)
 
 	return (
-		<main className="flex min-h-dvh flex-col items-center justify-center gap-6 p-6 text-center">
-			<h1 className="font-semibold text-3xl">S’inscrire</h1>
+		<AuthShell title="S’inscrire">
 			{isGoogleActive() ? <GoogleButton libelle="S’inscrire avec Google" /> : null}
 			<SignUpForm action={signUp} />
 			<p className="reveal">
 				Déjà un compte ?{' '}
-				<Link className="underline" href="/auth/signin">
+				<Link className={ART_LINK} href="/auth/signin">
 					Connecte-toi
 				</Link>
 			</p>
 			<p className="reveal">
-				<Link className="underline" href="/" prefetch={false}>
+				<Link className={ART_LINK} href="/" prefetch={false}>
 					Retour à l’accueil
 				</Link>
 			</p>
-		</main>
+		</AuthShell>
 	)
 }

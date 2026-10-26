@@ -1,16 +1,32 @@
+import { LineDrawing, PrintMark } from '@/components/art/graphics'
+import { pillClassName } from '@/components/art/Pill'
 import { RankingLink } from '@/components/ranking/RankingLink'
-import type { SearchFilters } from '@/lib/search/filters'
+import type { Layout, PriceBand, SearchFilters } from '@/lib/search/filters'
 import { type Search, searchPageUrl } from '@/lib/search/input'
 import { inDepartment } from '@/lib/search/place'
 import type { ProfileCard } from '@/services/public/profiles'
-import { ResultList } from './ResultList'
+import { SearchGrid } from './SearchGrid'
 import { SearchRefine } from './SearchRefine'
 
-const COLUMN = 'mx-auto flex w-full max-w-2xl flex-col items-center gap-4 px-4 py-24 text-center'
-const COLUMN_ABOVE_CARDS = 'mx-auto flex w-full max-w-2xl flex-col items-center gap-4 px-4 pt-24 pb-12 text-center'
-const LINK = 'font-semibold text-indigo-900 underline'
+const COLUMN = 'relative mx-auto flex w-full max-w-2xl flex-col items-center gap-4 px-4 py-20 text-center md:py-28'
+const COLUMN_ABOVE_CARDS =
+	'relative mx-auto flex w-full max-w-2xl flex-col items-center gap-4 px-4 pt-20 pb-12 text-center md:pt-28'
+const LINK = 'font-semibold text-indigo-800 underline underline-offset-4'
 /** A link on its own line: at least 44 px high to touch (ticket 295). */
-const LIST_LINK = 'inline-flex min-h-[44px] items-center font-semibold text-indigo-900 underline'
+const LIST_LINK = 'inline-flex min-h-11 items-center font-semibold text-indigo-800 underline underline-offset-4'
+/** The title of a state: the kit's Bodoni. */
+const STATE_TITLE = 'enter-mask text-balance font-display font-medium text-4xl text-ink leading-[1.05] md:text-5xl'
+const STATE_TEXT = 'text-mute'
+
+/** A line drawing and a print mark above the title of an empty state: decoration, hidden from screen readers. */
+function EmptyArt() {
+	return (
+		<div aria-hidden="true" className="relative mb-2 h-24 w-40 text-art-line">
+			<LineDrawing name="lips" className="h-full w-full" />
+			<PrintMark kind="ring" className="absolute -top-1 -right-4 h-4 w-4" />
+		</div>
+	)
+}
 
 /**
  * The search could not be read (the database is cut off or too slow, ticket 100): what happened in
@@ -23,11 +39,11 @@ export function SearchFailed({
 }) {
 	return (
 		<div className={COLUMN}>
-			<h1 className="font-bold text-2xl text-gray-800">La recherche n’a pas abouti</h1>
-			<p role="alert" className="text-gray-700">
+			<h1 className={STATE_TITLE}>La recherche n’a pas abouti</h1>
+			<p role="alert" className={STATE_TEXT}>
 				Le service de recherche ne répond pas pour le moment. Réessayez dans quelques instants.
 			</p>
-			<a href={searchPageUrl(recherche)} className="btn-primary">
+			<a href={searchPageUrl(recherche)} className={pillClassName({ variant: 'filled' })}>
 				Réessayer
 			</a>
 		</div>
@@ -65,15 +81,16 @@ export function NoResult({
 	return (
 		<>
 			<div className={loin.length > 0 ? COLUMN_ABOVE_CARDS : COLUMN}>
-				<h1 className="font-bold text-2xl text-gray-800">{titre}</h1>
+				<EmptyArt />
+				<h1 className={STATE_TITLE}>{titre}</h1>
 				{codesPostaux.length > 0 && (
-					<p className="text-gray-700">
+					<p className={STATE_TEXT}>
 						Aucune maquilleuse n’est inscrite dans les communes {codesPostaux.map(code => `du ${code}`).join(' et ')}{' '}
 						pour le moment.
 					</p>
 				)}
 				{foreignCity && (
-					<p className="text-gray-700">
+					<p className={STATE_TEXT}>
 						Cette ville n’est pas une commune de France. Pour l’étranger, seuls les pays sont lus
 						{foreignCountry ? (
 							<>
@@ -89,7 +106,7 @@ export function NoResult({
 						.
 					</p>
 				)}
-				<p className="text-gray-700">
+				<p className={STATE_TEXT}>
 					Essayez un autre mot (mariage, soirée, effets spéciaux…)
 					{city ? ', une ville voisine ou la recherche sans ville' : ''}.
 				</p>
@@ -109,7 +126,7 @@ export function NoResult({
 						</li>
 					))}
 				</ul>
-				<p className="text-gray-700">
+				<p className={STATE_TEXT}>
 					Vous êtes maquilleuse professionnelle ?{' '}
 					<a href="/auth/signup" className={LINK}>
 						Créez votre profil
@@ -118,11 +135,11 @@ export function NoResult({
 				</p>
 			</div>
 			{loin.length > 0 && (
-				<section aria-labelledby="recherche-titre-loin" className="w-full px-4 pb-16 md:px-16">
-					<h2 id="recherche-titre-loin" className="mb-8 font-bold text-gray-800 text-xl">
+				<section aria-labelledby="recherche-titre-loin" className="mx-auto w-full max-w-6xl px-4 pb-20 md:px-16">
+					<h2 id="recherche-titre-loin" className="mb-6 font-display font-medium text-2xl text-ink md:text-3xl">
 						Elles se déplacent loin
 					</h2>
-					<ResultList cartes={loin} />
+					<SearchGrid cartes={loin} layout="grid" />
 					<RankingLink />
 				</section>
 			)}
@@ -139,18 +156,39 @@ export function NoMatchForFilters({
 	recherche: query,
 	filtres: filters,
 	specialites,
+	tranches,
+	layout = 'list',
+	baselineTotal = 0,
 }: {
 	titre: string
 	recherche: Pick<Search, 'search' | 'city'>
 	filtres: SearchFilters
 	specialites?: readonly { value: string; label: string }[]
+	tranches?: readonly PriceBand[]
+	layout?: Layout
+	/** What the search finds without the filters: the way out is worth that many. */
+	baselineTotal?: number
 }) {
 	return (
-		<div className="w-full px-4 pb-16 md:px-16">
-			<h1 className="mb-4 font-bold text-2xl text-gray-800">{titre}</h1>
-			<p className="mb-8 text-gray-700">Changez les filtres, ou retirez-les pour voir toutes les maquilleuses.</p>
-			<SearchRefine recherche={query} filtres={filters} specialites={specialites} />
-			<a href={searchPageUrl(query)} className={LIST_LINK}>
+		<div className="mx-auto w-full max-w-6xl px-4 pt-10 pb-20 md:px-16 md:pt-14">
+			<h1 className={`${STATE_TITLE} mb-4`}>{titre}</h1>
+			<p className="mb-8 max-w-2xl text-mute">
+				Changez les filtres, ou retirez-les pour voir {baselineTotal > 0 ? `les ${baselineTotal} ` : 'toutes les '}
+				maquilleuses de cette recherche.
+			</p>
+			<SearchRefine
+				recherche={query}
+				filtres={filters}
+				specialites={specialites}
+				tranches={tranches}
+				layout={layout}
+				total={0}
+				baselineTotal={baselineTotal}
+			/>
+			<a
+				href={searchPageUrl({ ...query, layout })}
+				className={`${pillClassName({ variant: 'outline' })} whitespace-normal! py-3 text-balance`}
+			>
 				Voir toutes les maquilleuses de cette recherche
 			</a>
 		</div>

@@ -14,9 +14,16 @@ import {
 } from 'react'
 import { signOut } from '@/app/(front)/(dashboard)/auth/actions'
 import { TrackedLink } from '@/components/analytics/TrackedLink'
+import { pillClassName } from '@/components/art/pill-class'
+import { SwirlEllipse } from '@/components/art/SwirlEllipse'
 import { DASHBOARD_LINK, NAVIGATION, SEARCH_LINK, SIGN_IN_LINK } from './links'
 
 const RING = 'focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2'
+/** The two buttons at the right of the bar, in the pills of the art direction kit (docs/navbar.md). The kit's pill ring replaces `RING`. */
+const SEARCH_PILL = `${pillClassName({ variant: 'outline', size: 'sm' })} hover:no-underline`
+/** « Me connecter »: a soft indigo pill that keeps the single sliding underline of `.nav-link`, with the bar inset to the pill's padding. */
+const SIGN_IN_PILL =
+	'nav-link-strong rounded-full bg-indigo-50 px-5 after:inset-x-5 hover:bg-indigo-100 focus-visible:bg-indigo-100'
 /** A hand that rests on a group this long opens it, and one that leaves it this long closes it: no flicker on the way across. */
 const OPEN_DELAY = 90
 const CLOSE_DELAY = 200
@@ -161,7 +168,7 @@ export function Nav() {
 			<nav
 				ref={root}
 				aria-label="Navigation principale"
-				className="relative mx-auto flex max-w-screen-2xl flex-wrap items-center justify-between gap-x-10 px-6 py-3 lg:flex-nowrap lg:px-16 lg:py-5"
+				className="relative mx-auto flex max-w-screen-2xl flex-wrap items-center justify-between gap-x-10 px-6 py-3 lg:flex-nowrap lg:px-10 lg:py-5 xl:px-16"
 			>
 				<Link href="/" prefetch={false} className={`-m-1.5 p-1.5 ${RING}`}>
 					<span className="sr-only">My-Makeup</span>
@@ -218,6 +225,9 @@ export function Nav() {
 										className={`nav-link ${RING}`}
 									>
 										{entry.nom}
+										{path === entry.href && (
+											<SwirlEllipse className="pointer-events-none absolute inset-x-0 inset-y-0 h-full w-full text-indigo-700" />
+										)}
 									</Link>
 								) : (
 									<>
@@ -269,20 +279,22 @@ export function Nav() {
 							</li>
 						))}
 					</ul>
-					<div className="flex flex-col items-start gap-4 lg:flex-row lg:items-center lg:gap-6">
-						<TrackedLink
-							href={SEARCH_LINK.href}
-							suivi={{ nom: 'nav_recherche' }}
-							className={`btn-primary-with-icon nav-search ${RING}`}
-						>
-							<svg aria-hidden="true" className="mr-2 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-								<path
-									fillRule="evenodd"
-									d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.45 4.39l3.58 3.58a.75.75 0 1 1-1.06 1.06l-3.58-3.58A7 7 0 0 1 2 9Z"
-									clipRule="evenodd"
-								/>
-							</svg>
+					<div className="flex flex-col items-start gap-4 lg:flex-row lg:items-center lg:gap-4 xl:gap-6">
+						<TrackedLink href={SEARCH_LINK.href} suivi={{ nom: 'nav_recherche' }} className={SEARCH_PILL}>
 							{SEARCH_LINK.nom}
+							<svg
+								aria-hidden="true"
+								focusable="false"
+								className="art-arrow h-5 w-5"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								strokeWidth="1.6"
+								strokeLinecap="round"
+								strokeLinejoin="round"
+							>
+								<path d="M4 12H20M14 6L20 12L14 18" />
+							</svg>
 						</TrackedLink>
 						{signedIn ? (
 							<>
@@ -290,13 +302,13 @@ export function Nav() {
 									{DASHBOARD_LINK.nom}
 								</Link>
 								<form action={signOut}>
-									<button type="submit" className={`nav-link nav-link-strong ${RING}`}>
+									<button type="submit" className={`nav-link ${SIGN_IN_PILL} ${RING}`}>
 										Me déconnecter
 									</button>
 								</form>
 							</>
 						) : (
-							<Link href={SIGN_IN_LINK.href} className={`nav-link nav-link-strong ${RING}`}>
+							<Link href={SIGN_IN_LINK.href} className={`nav-link ${SIGN_IN_PILL} ${RING}`}>
 								{SIGN_IN_LINK.nom}
 							</Link>
 						)}

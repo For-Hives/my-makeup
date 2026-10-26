@@ -1,27 +1,34 @@
 import Link from 'next/link'
+import { pillClassName } from '@/components/art/pill-class'
 
 /**
  * The content of the error page (ticket 069): a sentence for the visitor, never the message or the
- * trace of the error. It asks the search engines to leave the page alone.
+ * trace of the error. It asks the search engines to leave the page alone. In the kit's look (coherence
+ * pass): paper, Bodoni, pills. The classes come from `pill-class`, which has no import: this page is a
+ * client component's child and must not pull the drawings.
  */
 export function ErrorPage({ reessayer }: { reessayer?: () => void }) {
 	return (
-		<main className="mx-auto flex w-full max-w-7xl flex-1 flex-col justify-center px-4 py-16 sm:px-6 lg:px-20">
+		<main className="relative flex w-full flex-1 flex-col justify-center bg-art-paper text-ink">
 			<meta name="robots" content="noindex, nofollow" />
-			<div className="w-full max-w-sm">
-				<h1 className="my-8 font-semibold text-2xl text-slate-900">Un problème est survenu</h1>
-				<p className="text-gray-700">
-					Le site ne peut pas afficher cette page pour le moment. Réessayez dans quelques instants.
-				</p>
-				<div className="mt-8 flex flex-col gap-4">
-					{reessayer && (
-						<button type="button" onClick={reessayer} className="btn-primary-large min-h-11 items-center">
-							Réessayer
-						</button>
-					)}
-					<Link href="/" prefetch={false} className="btn-primary-large min-h-11 items-center">
-						Retourner à l'accueil
-					</Link>
+			<div className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+				<div className="w-full max-w-md">
+					<h1 className="text-balance font-display font-medium text-4xl leading-[1.1] tracking-tight sm:text-5xl">
+						Un problème est survenu
+					</h1>
+					<p className="mt-6 text-lg text-mute leading-8">
+						Le site ne peut pas afficher cette page pour le moment. Réessayez dans quelques instants.
+					</p>
+					<div className="mt-10 flex flex-col gap-4 sm:flex-row">
+						{reessayer && (
+							<button type="button" onClick={reessayer} className={pillClassName({ variant: 'filled' })}>
+								Réessayer
+							</button>
+						)}
+						<Link href="/" prefetch={false} className={pillClassName({ variant: 'outline' })}>
+							Retourner à l'accueil
+						</Link>
+					</div>
 				</div>
 			</div>
 		</main>

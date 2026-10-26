@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { RankingExplainer } from '@/components/ranking/RankingExplainer'
+import { ArtPage } from '@/components/static-pages/ArtPage'
 import { RANKING_PATH } from '@/lib/search/ranking'
 import { pageMetadata } from '@/lib/seo/metadata'
 
@@ -13,8 +14,8 @@ export const metadata: Metadata = pageMetadata({
 
 export default function RankingPage() {
 	return (
-		<main className="relative">
+		<ArtPage>
 			<RankingExplainer />
-		</main>
+		</ArtPage>
 	)
 }

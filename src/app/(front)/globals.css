@@ -599,7 +599,12 @@ main:focus {
 		color: var(--color-indigo-900);
 	}
 
-	/* « Me connecter » and « Me déconnecter »: the same single underline, a notch stronger. */
+	/* The current page is ringed by a hand-drawn ellipse (SwirlEllipse): it takes the place of the bar, which would double it. */
+	.nav-link[aria-current="page"]::after {
+		content: none;
+	}
+
+	/* « Me connecter » and « Me déconnecter »: a soft pill (utilities in Nav.tsx) with the same single underline, a notch stronger. */
 	.nav-link-strong {
 		color: var(--color-indigo-900);
 		font-weight: 700;
@@ -611,13 +616,6 @@ main:focus {
 
 	.nav-link[aria-expanded="true"] .nav-chevron {
 		transform: rotate(180deg);
-	}
-
-	/* « Trouver une maquilleuse »: the outline fills with indigo, the label and the glass turn white, no underline. */
-	.nav-search:hover {
-		background-color: var(--color-indigo-900);
-		color: #fff;
-		text-decoration: none;
 	}
 
 	/* The panel of a group. The transparent top padding is the bridge between the button and the card: the hand never leaves the group. */
@@ -1583,4 +1581,353 @@ main:has(> .home-section) {
 }
 .content-page .content-prose :is(p, li) {
 	max-width: 66ch;
+}
+
+/*
+ * ART DIRECTION KIT (issue 1111, docs/direction-artistique.md). One block, one name: the tokens of the kit the owner
+ * approved on 25/10/2026 (editorial and fashion: off-white paper, indigo, blush pink, Bodoni, thin ink lines), then the
+ * few rules the components in `src/components/art/` need that utilities cannot say (arch and capsule geometry, the
+ * banner, the glows, the badge). Every existing token above is untouched. The lipstick red stays reserved for what
+ * can be edited: nothing here uses it. Contrasts are held by tests/unit/art-tokens.test.ts.
+ */
+@theme static {
+	--color-art-paper: #f1ece7;
+	--color-art-blush: #f6dce3;
+	--color-art-blush-50: #fbeff2;
+	--color-art-blush-ink: #5c1a38;
+	--color-art-rose: #edb4c5;
+	--color-art-rose-tint: #f3c9d6;
+	--color-art-lavender: #d8d3f5;
+	--color-art-sand: #eadfd6;
+	--color-art-berry: #9e2f5c;
+	--color-art-band: #4f39f6;
+	--color-art-banner: #432dd7;
+	--color-art-night: #1e1a4d;
+	--color-art-line: #b7b0c6;
+	--radius-art-frame: 36px;
+	--radius-art-field: 28px;
+	--shadow-art-lift: 0 18px 40px -26px rgb(30 26 77 / 0.35);
+}
+
+@theme inline {
+	--font-script: var(--font-pinyon-script), "Playfair Display", cursive;
+}
+
+/* Arch: a photo cut as an arch, with a coloured band offset behind it (right and up by default). */
+.art-arch {
+	--band: var(--color-art-band);
+	--bx: 16px;
+	--by: -12px;
+	position: relative;
+	aspect-ratio: 4 / 5;
+	width: 100%;
+}
+.art-arch::before {
+	content: "";
+	position: absolute;
+	inset: var(--by) calc(var(--bx) * -1) 0 var(--bx);
+	background: var(--band);
+	border-radius: 999px 999px 0 0;
+}
+.art-arch[data-band="rose"] {
+	--band: var(--color-art-rose);
+}
+.art-arch[data-band="night"] {
+	--band: var(--color-art-night);
+}
+.art-arch[data-size="sm"] {
+	--bx: 10px;
+	--by: -8px;
+}
+.art-arch[data-side="left"] {
+	--bx: -16px;
+}
+.art-arch__img {
+	position: absolute;
+	inset: 0;
+	border-radius: 999px 999px 0 0;
+	overflow: hidden;
+	background: var(--tint, var(--color-art-blush));
+	box-shadow: 0 0 0 2px #fff;
+	isolation: isolate;
+}
+.art-arch__img::after {
+	content: "";
+	position: absolute;
+	inset: 9px 9px 0;
+	border: 1px solid rgb(255 255 255 / 0.7);
+	border-bottom: 0;
+	border-radius: 999px 999px 0 0;
+	pointer-events: none;
+}
+.art-arch__mark {
+	position: absolute;
+	top: 14%;
+	right: calc(var(--bx) * -1 - 14px);
+	z-index: 2;
+	pointer-events: none;
+}
+.art-arch[data-side="left"] .art-arch__mark {
+	right: auto;
+	left: -14px;
+}
+/* The mark sits outside the band: under 640 px the page gutter is 16 px, so it would push the page sideways. It is decoration: it goes. */
+@media (max-width: 39.99rem) {
+	.art-arch__mark {
+		display: none;
+	}
+}
+[data-tint="blush"] {
+	--tint: var(--color-art-blush);
+}
+[data-tint="rose"] {
+	--tint: var(--color-art-rose-tint);
+}
+[data-tint="lavender"] {
+	--tint: var(--color-art-lavender);
+}
+[data-tint="sand"] {
+	--tint: var(--color-art-sand);
+}
+[data-tint="indigo"] {
+	--tint: var(--color-indigo-100);
+}
+[data-tint="night"] {
+	--tint: var(--color-indigo-900);
+}
+
+/* Capsule (« pastille »): a pill-shaped picture sized in `em`, to sit inside a title. A white ring, a solid indigo offset, an inner hairline. */
+.art-capsule {
+	position: relative;
+	display: inline-block;
+	width: 2.3em;
+	height: 0.98em;
+	vertical-align: -0.1em;
+	margin-inline: 0.12em;
+	border-radius: 999px;
+	background: var(--tint, var(--color-art-blush));
+	box-shadow:
+		0 0 0 0.04em #fff,
+		0.07em 0.08em 0 0.045em var(--color-indigo-200);
+	font-size: inherit;
+}
+.art-capsule[data-shape="round"] {
+	width: 1.1em;
+}
+.art-capsule[data-dark] {
+	box-shadow:
+		0 0 0 0.04em #fff,
+		0.07em 0.08em 0 0.045em var(--color-indigo-300);
+}
+.art-capsule__in {
+	position: absolute;
+	inset: 0;
+	display: block;
+	overflow: hidden;
+	border-radius: inherit;
+}
+.art-capsule__in::after {
+	content: "";
+	position: absolute;
+	inset: 0.06em;
+	border: 1px solid rgb(255 255 255 / 0.75);
+	border-radius: inherit;
+}
+.art-capsule__item {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	height: 150%;
+	aspect-ratio: 64 / 96;
+	translate: -50% -50%;
+}
+
+/* Glow: a very soft coloured light behind a section. Large and wide on purpose, no hard edge. The parent clips it (`overflow-hidden`). */
+.art-glow {
+	position: absolute;
+	pointer-events: none;
+	border-radius: 9999px;
+	background: radial-gradient(closest-side, var(--glow, rgb(237 180 197 / 0.85)), transparent);
+	opacity: 0.7;
+}
+.art-glow[data-size="sm"] {
+	width: 30rem;
+	height: 22rem;
+}
+.art-glow[data-size="md"] {
+	width: 46rem;
+	height: 34rem;
+}
+.art-glow[data-size="lg"] {
+	width: 70rem;
+	height: 46rem;
+}
+.art-glow[data-tone="indigo"] {
+	--glow: rgb(163 179 255 / 0.8);
+}
+.art-glow[data-tone="blush"] {
+	--glow: rgb(246 220 227 / 0.95);
+}
+
+/*
+ * Banner: without motion it is one static line of text, wrapped and centred (the copies are hidden, the pause button
+ * too). With motion it slides on a track made of two identical groups; hover, focus and the pause button stop it
+ * (WCAG 2.2.2). Only `transform` moves.
+ */
+.art-marquee {
+	--art-marquee-bg: var(--color-art-banner);
+	position: relative;
+	overflow: hidden;
+	background: var(--art-marquee-bg);
+	color: #fff;
+}
+.art-marquee__track {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+}
+.art-marquee__group {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: center;
+}
+.art-marquee__group[aria-hidden="true"],
+.art-marquee__item[data-copy],
+.art-marquee__pause {
+	display: none;
+}
+.art-marquee__item {
+	display: flex;
+	align-items: center;
+	gap: clamp(28px, 4vw, 56px);
+	padding-inline: clamp(14px, 2vw, 28px);
+	white-space: nowrap;
+}
+.art-marquee[data-variant="band"] .art-marquee__item {
+	font-family: var(--font-pinyon-script), "Playfair Display", cursive;
+	font-size: clamp(30px, 3.2vw, 42px);
+	line-height: 1;
+	padding-block: 18px 20px;
+}
+.art-marquee[data-variant="rule"] {
+	--art-marquee-bg: transparent;
+	color: var(--color-ink);
+	border-block: 1px solid var(--color-ink);
+}
+.art-marquee[data-variant="rule"] .art-marquee__item {
+	font-family: var(--font-bodoni-moda), ui-serif, Georgia, serif;
+	font-style: italic;
+	font-size: 24px;
+	padding-block: 14px;
+}
+.art-marquee[data-variant="blush"] {
+	--art-marquee-bg: var(--color-art-blush);
+	color: var(--color-indigo-900);
+}
+.art-marquee[data-variant="blush"] .art-marquee__item {
+	font-family: var(--font-bodoni-moda), ui-serif, Georgia, serif;
+	font-weight: 500;
+	font-size: 15px;
+	letter-spacing: 0.16em;
+	text-transform: uppercase;
+	padding-block: 18px;
+}
+.art-marquee__pause {
+	position: absolute;
+	right: 12px;
+	top: 50%;
+	translate: 0 -50%;
+	z-index: 2;
+	width: 44px;
+	height: 44px;
+	place-items: center;
+	border-radius: 9999px;
+	border: 1px solid currentColor;
+	background: var(--art-marquee-bg, var(--color-art-banner));
+	color: inherit;
+}
+.art-marquee[data-variant="rule"] .art-marquee__pause {
+	background: var(--color-art-paper);
+}
+.art-marquee:focus-within :focus-visible {
+	outline-color: currentColor;
+}
+/* With scripting on, the words wait (invisible, still laid out) until the banner's typeface has arrived: no visible shift. */
+@media (scripting: enabled) {
+	.art-marquee:not([data-ready]) .art-marquee__track {
+		visibility: hidden;
+	}
+}
+
+@keyframes art-slide {
+	to {
+		transform: translateX(-50%);
+	}
+}
+
+@keyframes art-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	.art-marquee__track {
+		flex-wrap: nowrap;
+		justify-content: flex-start;
+		width: max-content;
+		animation: art-slide var(--art-marquee-duration, 46s) linear infinite var(--art-marquee-direction, normal);
+	}
+	.art-marquee[data-variant="rule"] {
+		--art-marquee-duration: 60s;
+		--art-marquee-direction: reverse;
+	}
+	.art-marquee[data-variant="blush"] {
+		--art-marquee-duration: 38s;
+	}
+	.art-marquee__group {
+		flex: none;
+		flex-wrap: nowrap;
+	}
+	.art-marquee__group[aria-hidden="true"],
+	.art-marquee__item[data-copy] {
+		display: flex;
+	}
+	.art-marquee__pause {
+		display: grid;
+	}
+	.art-marquee:hover .art-marquee__track,
+	.art-marquee:focus-within .art-marquee__track,
+	.art-marquee[data-paused="true"] .art-marquee__track {
+		animation-play-state: paused;
+	}
+	.art-spin {
+		animation: art-spin 26s linear infinite;
+	}
+	@media (hover: hover) {
+		.art-arrow {
+			transition: transform var(--duration-hover) var(--ease-out-soft);
+		}
+		:is(a, button):hover .art-arrow {
+			transform: translateX(4px);
+		}
+	}
+}
+
+/* The call to action of the kit has centred text: the side mask that keeps the left of the left-aligned one empty is lifted. */
+.art-cta-open .cta-backdrop-mask {
+	mask-image: none;
+}
+
+/*
+ * The public profile page in the kit's look (coherence pass, 25/10/2026). The HTML of the page is frozen by the golden
+ * files (tests/fixtures/direct-edit/*.golden), so the look is given by this scope only: the page wraps it in
+ * `.profile-art`. Paper behind, the card radius and the hairline of the kit on the cards. The titles stay in the sans
+ * face: Bodoni is not preloaded on this route, and its swap shifted the layout (CLS 0,0009 at 390 px, where the page
+ * is held to 0, tests/e2e/motion.spec.ts); preloading it is a decision for the owner (docs/pages-de-contenu.md).
+ */
+.profile-art section.reveal {
+	border-radius: var(--radius-card);
+	border-color: var(--color-hairline);
 }

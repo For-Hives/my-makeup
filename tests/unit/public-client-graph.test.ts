@@ -20,6 +20,7 @@ const SRC = join(import.meta.dir, '../../src')
 const PUBLIC_CLIENT_FOLDERS = [
 	'components/blocks',
 	'components/home',
+	'components/art',
 	'components/profile',
 	'components/layout',
 	'components/analytics',

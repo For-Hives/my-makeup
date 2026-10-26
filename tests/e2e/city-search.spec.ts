@@ -84,8 +84,10 @@ test.describe('Recherche par ville', () => {
 		expect(total).toBe(NEAR_ANNECY.length)
 
 		const reference = profile('reference')
-		const card = page.locator(`a[href="/profil/${reference.slug}"]`)
-		await expect(card).toHaveCount(1)
+		// The card is an article whose name is the one link, stretched over the whole card.
+		const link = page.locator(`a[href="/profil/${reference.slug}"]`)
+		await expect(link).toHaveCount(1)
+		const card = page.locator('article', { has: link })
 		await expect(card.getByRole('heading', { level: 3, name: reference.nom })).toBeVisible()
 		await expect(card).toContainText(reference.specialite ?? '')
 		await expect(card).toContainText('Annecy et 30 km autour')
@@ -277,12 +279,14 @@ test.describe('Recherche par code postal et par pays', () => {
 			await expect(page.getByRole('heading', { level: 1 })).toHaveText(
 				`1 résultat pour « ${ZONE_WORD} » à « Belgique »`
 			)
-			const card = page.locator(`a[href="/profil/${zone('zone-belgique').slug}"]`)
+			const card = page.locator('article', { has: page.locator(`a[href="/profil/${zone('zone-belgique').slug}"]`) })
 			await expect(card).toContainText('Bruxelles (Belgique)')
 			await expect(card.locator('[aria-hidden="true"]', { hasText: '🇧🇪' })).toHaveCount(1)
 
 			await page.goto(search('Italie'))
-			const several = page.locator(`a[href="/profil/${zone('zone-france-italie').slug}"]`)
+			const several = page.locator('article', {
+				has: page.locator(`a[href="/profil/${zone('zone-france-italie').slug}"]`),
+			})
 			await expect(several).toContainText('France et Italie')
 			await expect(several.locator('[aria-hidden="true"]', { hasText: '🇫🇷 🇮🇹' })).toHaveCount(1)
 			await page.setViewportSize(SCREENS.mobile)

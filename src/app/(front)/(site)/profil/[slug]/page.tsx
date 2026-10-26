@@ -71,7 +71,7 @@ export default async function ProfilePage({ params }: PageProps<'/profil/[slug]'
 		? { action: sendQuoteRequest, ...(env.turnstile && { siteKey: env.turnstile.siteKey }) }
 		: undefined
 	return (
-		<>
+		<div className="profile-art flex flex-1 flex-col bg-art-paper">
 			<script
 				type="application/ld+json"
 				// biome-ignore lint/security/noDangerouslySetInnerHtml: serializeJsonLd escapes <, > and &, so the data cannot close the tag.
@@ -79,6 +79,6 @@ export default async function ProfilePage({ params }: PageProps<'/profil/[slug]'
 			/>
 			<ProfileView profil={target.profil} {...(quote && { quote })} />
 			<ProfileViewCounter slug={target.profil.slug} />
-		</>
+		</div>
 	)
 }

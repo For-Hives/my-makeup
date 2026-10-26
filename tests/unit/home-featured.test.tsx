@@ -13,6 +13,7 @@ import { ModerationEvents } from '@/collections/ModerationEvents'
 import { Profiles } from '@/collections/Profiles'
 import { FeaturedProfiles } from '@/components/home/FeaturedProfiles'
 import { HomeHero } from '@/components/home/HomeHero'
+import { SectionHead } from '@/components/home/SectionHead'
 import {
 	FEATURED_CANDIDATES_MAX,
 	FEATURED_MAX,
@@ -208,6 +209,23 @@ describe('1066 : le bloc « Mise en avant »', () => {
 		expect(renderToStaticMarkup(<FeaturedProfiles cartes={[]} />)).toBe('')
 	})
 
+	test('les cartes sont celles du kit, sans clic mesuré, sous une bannière qui ne dit rien de neuf', () => {
+		const html = renderToStaticMarkup(<FeaturedProfiles cartes={many(3)} />)
+		expect(html.match(/data-profile-card/g)).toHaveLength(3)
+		expect(html).not.toContain('data-result-card')
+		expect(html).toContain('Des maquilleuses indépendantes, partout en France')
+		expect(html.indexOf('art-marquee')).toBeLessThan(html.indexOf('<section aria-labelledby'))
+		expect(html).toContain('home-section')
+	})
+
+	test('la tête de section garde ses classes d’origine tant que `display` n’est pas demandé (Projet et spécialités intacts)', () => {
+		const plain = renderToStaticMarkup(<SectionHead titre="Titre" />)
+		expect(plain).toContain(
+			'class="reveal mt-6 text-balance font-bold text-3xl text-gray-900 tracking-tight md:text-4xl lg:text-5xl lg:leading-[1.1]"'
+		)
+		expect(renderToStaticMarkup(<SectionHead titre="Titre" display />)).toContain('font-display')
+	})
+
 	test('jusqu’à six candidats, aucun script : rien à tirer', () => {
 		expect(renderToStaticMarkup(<FeaturedProfiles cartes={many(6)} />)).not.toContain('<script')
 	})
@@ -267,7 +285,7 @@ describe('1066 : la page d’accueil', () => {
 		expect(page).not.toContain('Comment ça marche')
 		expect(page).not.toContain('<details')
 		for (const component of ['Presentation', 'Project', 'Collaboration']) expect(page).toContain(`<${component} />`)
-		expect(read('src/components/home/Presentation.tsx')).toContain('une communauté')
+		expect(read('src/components/home/Presentation.tsx')).toContain('avant tout une')
 	})
 
 	test('« Vos projets, nos meilleurs talents » est gardé, « Récemment mises à jour » n’existe plus', () => {

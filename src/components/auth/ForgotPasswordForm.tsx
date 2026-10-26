@@ -1,6 +1,7 @@
 'use client'
 
 import { useActionState, useEffect, useRef } from 'react'
+import { ART_FIELD, ART_LABEL, ART_NOTICE, ART_SUBMIT } from '@/components/art/form-classes'
 import { type ForgotPasswordFailureCode, PASSWORD_MESSAGES } from '@/lib/auth/forgot-password'
 
 export type ForgotPasswordState = { envoyee: true } | { code: ForgotPasswordFailureCode } | null
@@ -24,11 +25,7 @@ export function ForgotPasswordForm({ action }: { action: ForgotPasswordAction })
 
 	if (state && 'envoyee' in state)
 		return (
-			<p
-				role="status"
-				data-testid="oubli-envoye"
-				className="max-w-sm rounded-md bg-indigo-50 p-3 text-indigo-900 text-sm"
-			>
+			<p role="status" data-testid="oubli-envoye" className={`max-w-sm ${ART_NOTICE.info}`}>
 				{PASSWORD_MESSAGES.envoyee}
 			</p>
 		)
@@ -41,12 +38,12 @@ export function ForgotPasswordForm({ action }: { action: ForgotPasswordAction })
 				if (lock.current) evenement.preventDefault()
 				else lock.current = true
 			}}
-			className="flex w-full max-w-sm flex-col gap-4 text-left"
+			className="flex w-full max-w-sm flex-col gap-5 text-left"
 		>
-			<p className="text-neutral-700 text-sm">
+			<p className="text-mute text-sm">
 				Indique l’adresse email de ton compte : tu recevras un lien pour choisir un nouveau mot de passe.
 			</p>
-			<label className="flex flex-col gap-1 font-medium text-sm" htmlFor="email">
+			<label className={ART_LABEL} htmlFor="email">
 				Adresse email
 				<input
 					id="email"
@@ -55,20 +52,13 @@ export function ForgotPasswordForm({ action }: { action: ForgotPasswordAction })
 					inputMode="email"
 					autoComplete="email"
 					required
-					className="min-h-11 rounded-md border border-neutral-300 bg-white px-3 py-2 font-normal text-base"
+					className={ART_FIELD}
 				/>
 			</label>
 			<div role="alert" data-testid="erreur-oubli">
-				{state && 'code' in state ? (
-					<p className="rounded-md bg-red-50 p-3 text-red-800 text-sm">{PASSWORD_MESSAGES[state.code]}</p>
-				) : null}
+				{state && 'code' in state ? <p className={ART_NOTICE.error}>{PASSWORD_MESSAGES[state.code]}</p> : null}
 			</div>
-			<button
-				type="submit"
-				disabled={inProgress}
-				aria-busy={inProgress}
-				className="min-h-11 rounded-md bg-neutral-900 px-4 py-2 font-medium text-white disabled:cursor-wait disabled:opacity-60"
-			>
+			<button type="submit" disabled={inProgress} aria-busy={inProgress} className={ART_SUBMIT}>
 				{inProgress ? 'Envoi…' : 'Recevoir un lien'}
 			</button>
 		</form>

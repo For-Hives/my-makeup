@@ -9,6 +9,93 @@
 	],
 	"releases": [
 		{
+			"version": "3.0.15",
+			"date": "2026-10-26",
+			"commit": "2f1efc3346d897b5dcf6f20d48671186518eba9d",
+			"notes": [
+				{
+					"id": "plan-du-site-classement-et-pages-legales-prennent-la-nouv",
+					"type": "amelioration",
+					"text": "Plan du site, classement et pages légales prennent la nouvelle identité visuelle ; les maquilleuses proches s'affichent en cartes en arche sous chaque article, et la page d'un profil adopte le fond du site."
+				}
+			]
+		},
+		{
+			"version": "3.0.14",
+			"date": "2026-10-26",
+			"commit": "f3efa324d76f21e40f66ee93fac16e35fb4660f1",
+			"notes": [
+				{
+					"id": "connexion-inscription-mot-de-passe-oublie-verification-de",
+					"type": "amelioration",
+					"text": "Connexion, inscription, mot de passe oublié, vérification de l'email et page introuvable prennent la nouvelle identité visuelle : fond papier, titres élégants, champs arrondis, boutons en pilule."
+				}
+			]
+		},
+		{
+			"version": "3.0.13",
+			"date": "2026-10-26",
+			"commit": "5b44a8ac309bcb08b96e2fae9ceb4d2abacb4215",
+			"notes": [
+				{
+					"id": "le-bloc-rejoignez-my-makeup-n-a-plus-de-grand-cadre-blanc",
+					"type": "amelioration",
+					"text": "Le bloc « Rejoignez My-Makeup » n'a plus de grand cadre blanc, et le bas des pages n'a plus de barre blanche ni de trait au-dessus du pied de page."
+				}
+			]
+		},
+		{
+			"version": "3.0.12",
+			"date": "2026-10-25",
+			"commit": "1ae160d1dda00d0d685ea4373aa22e382163a119",
+			"notes": [
+				{
+					"id": "l-accueil-prend-la-nouvelle-identite-visuelle-cartes-de-m",
+					"type": "amelioration",
+					"text": "L'accueil prend la nouvelle identité visuelle : cartes de « Mise en avant » en arche, bandeau sous l'en-tête, blocs de la communauté et de la collaboration remis en page, et un appel à rejoindre My-Makeup plus grand, partout sur le site, avec les mêmes textes."
+				}
+			]
+		},
+		{
+			"version": "3.0.10",
+			"date": "2026-10-25",
+			"commit": "60f9dcc3137f7d979bbdb3fde66a74dee3be43ee",
+			"notes": [
+				{
+					"id": "sur-la-recherche-les-maquilleuses-s-affichent-en-cartes-s",
+					"type": "amelioration",
+					"text": "Sur la recherche, les maquilleuses s’affichent en cartes soignées, en liste ou en grille, avec des filtres par spécialité, budget et tri qui se choisissent d’un clic et se partagent par l’adresse."
+				},
+				{
+					"id": "sans-rien-taper-la-recherche-montre-deja-une-selection-le",
+					"type": "ajout",
+					"text": "Sans rien taper, la recherche montre déjà une sélection : les maquilleuses les plus consultées ces 30 derniers jours en France, ou à défaut les mieux classées, avec le critère écrit en toutes lettres."
+				}
+			]
+		},
+		{
+			"version": "3.0.9",
+			"date": "2026-10-25",
+			"commit": "9703bab06d205dd080672a69040d12ebf98993cf",
+			"notes": [
+				{
+					"id": "le-site-prepare-une-nouvelle-identite-visuelle-plus-edito",
+					"type": "amelioration",
+					"text": "Le site prépare une nouvelle identité visuelle, plus éditoriale et plus douce : elle arrivera page par page, sans changer vos habitudes de recherche."
+				},
+				{
+					"id": "les-pages-d-aide-de-contact-de-zone-et-de-specialite-pren",
+					"type": "amelioration",
+					"text": "Les pages d'aide, de contact, de zone et de spécialité prennent un nouveau style : titres en Bodoni, arches, pastilles et boutons arrondis."
+				},
+				{
+					"id": "le-blog-la-barre-du-haut-et-le-bas-de-page-changent-de-lo",
+					"type": "amelioration",
+					"text": "Le blog, la barre du haut et le bas de page changent de look : des articles avec un dessin de maquillage, des boutons en pilule et un bandeau qui défile, sans que les textes ni les adresses changent."
+				}
+			]
+		},
+		{
 			"version": "3.0.8",
 			"date": "2026-10-25",
 			"commit": "c978a81f9f1949f197f3dd284ff4c8c654d74aa6",

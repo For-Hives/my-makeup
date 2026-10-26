@@ -1,12 +1,18 @@
-import Image from 'next/image'
-import Link from 'next/link'
+import { ArchImage } from '@/components/art/ArchImage'
+import type { Tint } from '@/components/art/CapsuleImage'
+import { GlowBlob, PrintMark } from '@/components/art/graphics'
+import { Pill } from '@/components/art/Pill'
+import { TitleAccent, type TitleSegment, TitleWithCapsules } from '@/components/art/TitleWithCapsules'
 import { SectionHead } from './SectionHead'
 
 interface Block {
-	titre: string
+	/** The title as words (the text is the site's, word for word) and one capsule of decoration. */
+	titre: readonly TitleSegment[]
+	tint: Tint
+	band: 'band' | 'rose'
 	paragraphes: readonly string[]
 	bouton: { href: string; libelle: string }
-	image: { src: string; alt: string; classe: string }
+	image: { src: string; alt: string }
 	/** The picture on the left on a large screen. */
 	imageAGauche: boolean
 }
@@ -14,7 +20,13 @@ interface Block {
 // The texts are those of the home page online, word for word.
 const BLOCKS: readonly Block[] = [
 	{
-		titre: 'Boostez votre activité',
+		titre: [
+			{ text: 'Boostez votre' },
+			{ text: 'activité', tone: 'berry', italic: true },
+			{ capsule: { object: 'lipstick', tint: 'blush' } },
+		],
+		tint: 'blush',
+		band: 'band',
 		paragraphes: [
 			'Vous cherchez à vous épanouir dans votre carrière de maquilleuse professionnelle ? Ne cherchez plus, My-Makeup est la solution idéale pour vous !',
 			'Avec My-Makeup, vous créez gratuitement votre page professionnelle : portfolio, spécialités, tarifs et coordonnées. Les particuliers qui cherchent une maquilleuse vous contactent directement.',
@@ -23,12 +35,18 @@ const BLOCKS: readonly Block[] = [
 		image: {
 			src: '/assets/maquilleuse_mariage.webp',
 			alt: 'Maquilleuse pour un mariage',
-			classe: 'rounded-xl object-cover',
 		},
 		imageAGauche: false,
 	},
 	{
-		titre: 'Pour toutes & tous !',
+		titre: [
+			{ text: 'Pour' },
+			{ text: 'toutes', tone: 'berry', italic: true },
+			{ text: '& tous !' },
+			{ capsule: { object: 'brush', tint: 'lavender', shape: 'round' } },
+		],
+		tint: 'lavender',
+		band: 'rose',
 		paragraphes: [
 			'Vous êtes spécialisée en maquillage pour les mariées ou en maquillage artistique ? Vous cherchez à travailler à Lyon, Nantes, Toulouse, Rennes, Lille, Cannes ou Paris ? Pas de problème ! Avec My-Makeup, les gens qui en ont besoin peuvent vous trouver facilement.',
 			"N'attendez plus pour rejoindre la communauté de maquilleuses professionnelles de My-Makeup. Avec notre plateforme, vous présentez votre travail à de nouvelles clientes et développez votre activité à votre rythme. Inscrivez-vous dès maintenant et commencez à construire votre avenir professionnel dès aujourd'hui !",
@@ -37,12 +55,17 @@ const BLOCKS: readonly Block[] = [
 		image: {
 			src: '/assets/maquilleuse_soiree.webp',
 			alt: 'Maquilleuse soirées',
-			classe: '-scale-x-100 transform rounded-xl object-cover',
 		},
 		imageAGauche: true,
 	},
 	{
-		titre: 'Trouvez le profil idéal en seulement deux clics',
+		titre: [
+			{ text: 'Trouvez le' },
+			{ text: 'profil', tone: 'berry', italic: true },
+			{ text: 'idéal en seulement deux clics' },
+		],
+		tint: 'sand',
+		band: 'band',
 		paragraphes: [
 			'Avec de nombreuses maquilleuses freelances talentueuses disponibles sur notre plateforme, trouvez rapidement la maquilleuse professionnelle qui répond à tous vos besoins. Recherchez parmi les meilleurs profils disponibles pour votre projet, consultez leurs expériences et leurs réalisations, et contactez-les directement.',
 			"Trouvez votre experte en maquillage pour les mariées, une maquilleuse artistique, professionnelle ou spécialisée en maquillage yeux ou en maquillage de soirée. Besoin d'une maquilleuse fx pour un projet cinéma ou d'une maquilleuse événementielle pour une soirée spéciale ? Nous avons ce qu'il vous faut !",
@@ -52,68 +75,87 @@ const BLOCKS: readonly Block[] = [
 		image: {
 			src: '/assets/maquilleuse_evenementiel.webp',
 			alt: 'Maquilleuse evenementiel',
-			classe: 'rounded-xl object-cover',
 		},
 		imageAGauche: false,
 	},
 	{
-		titre: 'Centralisez vos recherches dans une seule plateforme',
+		titre: [
+			{ text: 'Centralisez vos recherches dans une' },
+			{ text: 'seule', tone: 'berry', italic: true },
+			{ text: 'plateforme' },
+			{ capsule: { object: 'compact', tint: 'rose', shape: 'round' } },
+		],
+		tint: 'rose',
+		band: 'rose',
 		paragraphes: [
 			"Que vous cherchiez une maquilleuse pour les mariées, une maquilleuse artistique ou une maquilleuse spécialisée en maquillage yeux, nous avons tout ce qu'il vous faut. Trouvez facilement des maquilleuses expérimentées disponibles à Lyon, Nantes, Toulouse, Rennes, Lille, Cannes ou Paris, pour un maquillage professionnel ou un maquillage de soirée.",
 			"Avec My-Makeup, vous pouvez également trouver des maquilleuses fx pour vos projets cinéma ou des maquilleuses événementielles pour vos soirées spéciales. Besoin d'une maquilleuse à domicile ou pour un anniversaire ? Nous avons également des profils adaptés à vos besoins.",
 			'Profils, portfolios et tarifs indicatifs sont réunis au même endroit : comparez les maquilleuses, puis contactez directement celle qui vous plaît. La recherche est gratuite et ne demande aucune inscription.',
 		],
 		bouton: { href: '/search', libelle: 'Découvrir notre solution' },
-		image: { src: '/assets/maquilleuse_fx.webp', alt: 'Maquilleuse fx', classe: 'transform rounded-xl object-cover' },
+		image: { src: '/assets/maquilleuse_fx.webp', alt: 'Maquilleuse fx' },
 		imageAGauche: true,
 	},
 ]
 
-function BlockImage({ image, cote }: { image: Block['image']; cote: 'gauche' | 'droite' }) {
-	return (
-		<div className="reveal flex h-[250px] w-full items-center justify-center md:h-auto md:w-3/5">
-			<div
-				className={`relative flex h-full w-full items-center justify-center ${cote === 'droite' ? 'md:ml-32' : 'md:mr-32'}`}
-			>
-				<Image className={image.classe} src={image.src} fill sizes="(min-width: 768px) 50vw, 100vw" alt={image.alt} />
-			</div>
-		</div>
-	)
+/** The title of a block: its words keep the site's text, the capsule is decoration (hidden from a screen reader). */
+function blockKey(bloc: Block): string {
+	return bloc.titre.map(part => ('text' in part ? part.text : '')).join(' ')
 }
 
 export function Collaboration() {
 	return (
-		<section className="home-section relative border-indigo-900/10 border-t px-4 py-16 md:px-8 md:py-28 2xl:px-0">
-			<div className="mx-auto max-w-7xl">
-				<SectionHead align="center" titre="Vous allez adorer cette nouvelle façon de collaborer" />
+		<section className="home-section relative overflow-hidden border-indigo-900/10 border-t bg-art-paper px-4 py-16 md:px-8 md:py-28 2xl:px-0">
+			<GlowBlob size="md" tone="indigo" className="-top-56 -left-64 opacity-40" />
+			<div className="relative mx-auto max-w-7xl">
+				<SectionHead
+					display
+					align="center"
+					titre={
+						<>
+							Vous allez adorer cette nouvelle façon de{' '}
+							<TitleAccent tone="berry" italic>
+								collaborer
+							</TitleAccent>
+						</>
+					}
+				/>
 			</div>
-			<div className="mx-auto mt-12 max-w-7xl divide-y divide-indigo-900/10 md:mt-16">
+			<div className="relative mx-auto mt-12 max-w-7xl divide-y divide-indigo-900/10 md:mt-16">
 				{BLOCKS.map(bloc => (
-					<div key={bloc.titre} className="py-12 md:py-20">
-						<div
-							className={`mx-auto flex w-full gap-16 ${bloc.imageAGauche ? 'flex-col-reverse md:flex-row md:gap-0' : 'flex-col md:flex-row'}`}
-						>
-							{bloc.imageAGauche && <BlockImage image={bloc.image} cote="gauche" />}
-							<div className="relative flex h-auto w-full flex-col items-start justify-center gap-8 md:w-2/5">
-								<h3 className="reveal text-left font-bold text-4xl text-gray-900 tracking-tight sm:text-3xl">
-									{bloc.titre}
-								</h3>
-								<div className="reveal flex flex-col gap-4">
+					<div key={blockKey(bloc)} className="py-14 md:py-24">
+						<div className="mx-auto grid items-center gap-14 md:grid-cols-2 md:gap-24">
+							<div className="flex flex-col items-start gap-7">
+								<TitleWithCapsules segments={bloc.titre} as="h3" size="card" className="reveal" />
+								<div className="reveal flex flex-col gap-4 text-mute">
 									{bloc.paragraphes.map(paragraphe => (
 										<p key={paragraphe}>{paragraphe}</p>
 									))}
 								</div>
 								<div className="reveal flex">
-									<Link href={bloc.bouton.href} className="btn-primary">
+									<Pill href={bloc.bouton.href} variant="filled" arrow>
 										{bloc.bouton.libelle}
-									</Link>
+									</Pill>
 								</div>
 							</div>
-							{!bloc.imageAGauche && <BlockImage image={bloc.image} cote="droite" />}
+							<div
+								className={`reveal mx-auto w-full max-w-[20rem] md:max-w-[24rem] ${bloc.imageAGauche ? 'md:order-first' : ''}`}
+							>
+								<ArchImage
+									src={bloc.image.src}
+									alt={bloc.image.alt}
+									tint={bloc.tint}
+									band={bloc.band}
+									side={bloc.imageAGauche ? 'left' : 'right'}
+									mark={bloc.imageAGauche ? 'ring' : 'plus'}
+									sizes="(min-width: 768px) 24rem, 20rem"
+								/>
+							</div>
 						</div>
 					</div>
 				))}
 			</div>
+			<PrintMark kind="ring" className="absolute right-[6%] bottom-12 hidden h-4 w-4 text-art-berry md:block" />
 		</section>
 	)
 }

@@ -16,7 +16,8 @@ export type ReadOutcome<T> = { reussie: true; valeur: T } | { reussie: false }
 
 export async function readWithoutBlocking<T>(
 	lire: () => Promise<T>,
-	delaiMs = READ_TIMEOUT_MS
+	delaiMs = READ_TIMEOUT_MS,
+	what = 'de l’annuaire'
 ): Promise<ReadOutcome<T>> {
 	let timer: ReturnType<typeof setTimeout> | undefined
 	const timeout = new Promise<never>((_, rejeter) => {
@@ -25,7 +26,7 @@ export async function readWithoutBlocking<T>(
 	try {
 		return { reussie: true, valeur: await Promise.race([lire(), timeout]) }
 	} catch (error) {
-		console.error(`recherche : lecture de l’annuaire impossible (${error instanceof Error ? error.name : 'erreur'})`)
+		console.error(`recherche : lecture ${what} impossible (${error instanceof Error ? error.name : 'erreur'})`)
 		return { reussie: false }
 	} finally {
 		clearTimeout(timer)

@@ -67,6 +67,38 @@ describe('the navbar markup (issue 1100)', () => {
 	})
 })
 
+describe('the two buttons and the current link, in the art direction kit', () => {
+	test('« Trouver une maquilleuse » is the outline pill of the kit with its arrow, not the old bordered button', () => {
+		expect(SOURCE).toContain("pillClassName({ variant: 'outline', size: 'sm' })")
+		expect(SOURCE).toContain('art-arrow')
+		expect(SOURCE).not.toContain('btn-primary-with-icon')
+		expect(SOURCE).not.toContain('nav-search')
+		expect(CSS).not.toContain('.nav-search')
+	})
+
+	test('« Me connecter » and « Me déconnecter » are one soft pill that keeps the single sliding underline', () => {
+		expect(SOURCE.match(/\$\{SIGN_IN_PILL\}/g)).toHaveLength(2)
+		const pill = /const SIGN_IN_PILL =\s*'([^']*)'/.exec(SOURCE)?.[1] ?? ''
+		expect(pill).toContain('nav-link-strong')
+		expect(pill).toContain('rounded-full')
+		expect(pill).toContain('after:inset-x-5')
+		expect(pill).not.toMatch(/\bborder\b/)
+	})
+
+	test('the current link is ringed by the sketched ellipse, and its bar gives way to it', () => {
+		expect(SOURCE).toContain('<SwirlEllipse')
+		expect(SOURCE).toMatch(/path === entry\.href && \(\s*<SwirlEllipse/)
+		expect(body('.nav-link[aria-current="page"]::after')).toMatch(/content:\s*none/)
+	})
+
+	test('the bar reads the pill and the ellipse without the drawings: neither file imports anything', () => {
+		for (const file of ['pill-class.ts', 'SwirlEllipse.tsx']) {
+			const code = readFileSync(join(ROOT, 'src/components/art', file), 'utf8')
+			expect(code).not.toMatch(/^import /m)
+		}
+	})
+})
+
 describe('the navbar styles (issue 1100)', () => {
 	test('the underline is a bar that scales in from the left: transform only, never a width', () => {
 		const bar = body('.nav-link::after')

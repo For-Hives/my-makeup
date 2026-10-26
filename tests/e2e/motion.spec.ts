@@ -4,7 +4,7 @@ import { createAccount } from '../support/account-factory'
 import { SCREENS } from '../support/e2e'
 import { users } from '../support/lock'
 import { testPayload } from '../support/payload-test'
-import { createContent, deleteContent } from '../support/public-pages'
+import { createContent, deleteContent, refreshProfilePages } from '../support/public-pages'
 
 /**
  * The motion system (issue 1069, docs/mouvement.md), end to end, at 390 px and 1440 px: the first screen is never
@@ -39,9 +39,9 @@ const notWhole = (page: Page): Promise<number> =>
 
 /**
  * Waits for every animation and transition of the page to end (the load-in, the reveals): the page is then at rest.
- * An animation that repeats forever or is paused never ends (the ring of the badge and the ribbon of the home hero):
- * it is left out on purpose, else this would wait for ever. tests/e2e/home-hero.spec.ts checks that those two run,
- * and stop at the button of the badge, so leaving them out here hides nothing.
+ * An animation that repeats forever or is paused never ends (the ring of the badge and the ribbon of the home hero,
+ * the banner of the kit): it is left out on purpose, else this would wait for ever. tests/e2e/home-hero.spec.ts checks
+ * that the two loops of the hero run, and stop at the button of the badge, so leaving them out here hides nothing.
  */
 function settle(page: Page): Promise<void> {
 	return page.evaluate(async () => {
@@ -76,14 +76,23 @@ async function layoutShift(page: Page): Promise<number> {
 	})
 }
 
-/** Elements whose top is inside the first screen that are not fully opaque once the load-in is over. */
+/**
+ * Elements whose top is inside the first screen that are not fully opaque once the load-in is over. Decoration
+ * (`aria-hidden`, drawings: the soft glows of the kit are 70 % opaque, the echo stroke of the ellipse is lighter)
+ * holds no content and is left out.
+ */
 async function dimmedOnFirstScreen(page: Page): Promise<string[]> {
 	await settle(page)
 	return page.evaluate(() => {
 		const dimmed: string[] = []
 		for (const element of document.body.querySelectorAll('*')) {
+			// A glow is a soft light drawn with its own opacity: decoration, hidden from screen readers, it holds no content.
+			if (element.closest('.art-glow')) continue
 			const box = element.getBoundingClientRect()
 			if (box.height === 0 || box.top >= innerHeight || box.bottom <= 0) continue
+			// A glow of the kit is a translucent light on purpose (decoration, never text): it is not a block that waits.
+			if (element.closest('.art-glow')) continue
+			if (element.closest('[aria-hidden="true"], svg')) continue
 			for (let node: Element | null = element; node; node = node.parentElement)
 				if (Number(getComputedStyle(node).opacity) < 1 && getComputedStyle(node).display !== 'none') {
 					dimmed.push(`${element.tagName.toLowerCase()}.${String(element.className).slice(0, 40)}`)
@@ -311,10 +320,15 @@ test.describe('1069 : une fiche et des résultats', () => {
 
 	test.describe.configure({ mode: 'serial' })
 
-	test.beforeAll(async () => {
+	test.beforeAll(async ({ request }) => {
 		test.setTimeout(180_000)
 		await users('profils-de-page', 1)
 		profiles = await setPageProfiles()
+		// The search keeps its directory in the cache of Next: have the application refresh it now that the profiles are
+		// there, or it lists what an earlier spec of the shard cached before ("Aucun résultat pour Page").
+		const reference = profiles.get('reference')
+		if (reference)
+			await refreshProfilePages(request, { id: reference.id, specialite: reference.type.profil.specialty ?? null })
 	})
 
 	test.afterAll(async () => {
@@ -347,7 +361,7 @@ test.describe('1069 : une fiche et des résultats', () => {
 				expect(await layoutShift(page)).toBe(0)
 
 				await page.goto('/search?search=Page')
-				const cards = page.locator('a.card-hover')
+				const cards = page.locator('article.card-hover')
 				expect(await cards.count()).toBeGreaterThan(0)
 				expect(await dimmedOnFirstScreen(page)).toEqual([])
 				expect(await layoutShift(page)).toBe(0)

@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 import { SignInSucceeded } from '@/components/analytics/SignInSucceeded'
 import { WebVitals } from '@/components/analytics/WebVitals'
+import { FONT_VARIABLES } from '@/components/art/fonts'
 import { SkipLink } from '@/components/layout/SkipLink'
 import { umamiLoaderScript, umamiScriptAttributes } from '@/lib/analytics/umami'
 import { versionEnv } from '@/lib/env'
@@ -31,7 +32,7 @@ const ANALYTICS_SCRIPT = umamiLoaderScript(
 // the stylesheet imported here.
 export default function FrontLayout({ children }: { children: ReactNode }) {
 	return (
-		<html lang="fr">
+		<html lang="fr" className={FONT_VARIABLES}>
 			<head>
 				{/* Inline and first: the filter of the measure exists before the Umami script does. */}
 				<script dangerouslySetInnerHTML={{ __html: ANALYTICS_SCRIPT }} />

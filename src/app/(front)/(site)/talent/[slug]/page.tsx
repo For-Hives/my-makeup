@@ -1,14 +1,14 @@
 import config from '@payload-config'
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getPayload } from 'payload'
 import { cache } from 'react'
+import { Pill } from '@/components/art/Pill'
 import { Cta } from '@/components/blocks/Cta'
-import { Hero } from '@/components/blocks/Hero'
-import { ProfileBlock } from '@/components/blocks/ProfileBlock'
 import { MarkdownContent } from '@/components/content/MarkdownContent'
-import { ContentPage, TeamSignature } from '@/components/static-pages/EditorialArticle'
+import { ArtPage, ArtSignature } from '@/components/static-pages/ArtPage'
+import { PageHead, pickIllustration } from '@/components/static-pages/PageHead'
+import { ProfileGrid } from '@/components/static-pages/ProfileGrid'
 import { markdownToHtml } from '@/lib/markdown'
 import { breadcrumbStructuredData, SITE_NAME, serializeJsonLd } from '@/lib/seo/json-ld'
 import { editorialMetadata } from '@/lib/seo/metadata'
@@ -69,32 +69,37 @@ export default async function TalentPage({ params }: PageProps<'/talent/[slug]'>
 		{ nom: 'Accueil', url: canonicalUrl('/') },
 		{ nom: talent.titre, url: canonicalUrl(`/talent/${talent.slug}`) },
 	])
+	const art = pickIllustration(talent.slug)
 	return (
-		<ContentPage>
+		<ArtPage>
 			<script
 				type="application/ld+json"
 				// serializeJsonLd escapes <, > and &, so the data cannot close the tag.
 				dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumb) }}
 			/>
-			<Hero
-				image="/assets/back/maquilleuse_europeenne_white.webp"
-				titre={talent.titreAffiche}
+			<PageHead
+				image={art.image}
+				tint={art.tint}
+				band={art.band}
+				mark="ring"
+				title={talent.titreAffiche}
 				description={talent.presentation}
-				recherche={false}
 			/>
-			<div className="relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0">
-				<div className="mx-auto max-w-2xl">
+			<div className="px-4 pb-20 sm:px-6 md:pb-28 lg:px-8">
+				<div className="mx-auto max-w-4xl rounded-art-frame border border-nude-200 bg-white px-6 py-12 md:px-16 md:py-16">
 					<article className="reveal content-prose">
 						<MarkdownContent html={html} />
-						<Link href="/search" className="btn-primary">
+						<Pill href="/search" variant="filled" arrow>
 							Trouver une maquilleuse
-						</Link>
-						<TeamSignature />
+						</Pill>
+						<ArtSignature />
 					</article>
 				</div>
-				<ProfileBlock titre={talentBlockTitle(talent.titre)} cartes={cards} specialite={talent.titre} />
+				<div className="mx-auto mt-20 max-w-7xl md:mt-28">
+					<ProfileGrid titre={talentBlockTitle(talent.titre)} cartes={cards} specialite={talent.titre} />
+				</div>
 			</div>
 			<Cta />
-		</ContentPage>
+		</ArtPage>
 	)
 }
