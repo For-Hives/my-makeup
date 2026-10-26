@@ -1,9 +1,10 @@
 /**
  * The home hero « en arche » (decisions of 25/10/2026, docs/accueil.md): three elements and no more (the h1 on three
  * lines, type alone, one sentence, the guided search), the ribbon of the real specialties, the poster of the arch
- * and the rules of its film (when the videos come, when they play), the button of the badge, and the stylesheet rules
- * that keep the loops behind the script and under `no-preference`. What only a browser shows (the film playing, the
- * swap, the layout) is in tests/e2e/home-hero.spec.ts.
+ * and the rules of its film (when the videos come, when they play), the badge that leads to the search (26/10/2026),
+ * the pause button that shows only at the keyboard focus, and the stylesheet rules that keep the loops behind the
+ * script and under `no-preference`. What only a browser shows (the film playing, the ring turning, the swap, the
+ * layout) is in tests/e2e/home-hero.spec.ts.
  */
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
@@ -22,14 +23,15 @@ import {
 	FILM_VIEW_RATIO,
 	type FilmConditions,
 	fallbackOf,
-	filmButtonName,
 	mountsFilm,
 	POSTER_PRELOADS,
+	pauseButtonName,
 	playsFilm,
 	STILL_PLACEHOLDERS,
 } from '@/components/home/film'
-import { ArchFilm, FilmButton, HeroStage } from '@/components/home/HeroFilm'
+import { ArchFilm, HeroStage, PauseButton } from '@/components/home/HeroFilm'
 import * as homeHero from '@/components/home/HomeHero'
+import { SEARCH_LINK } from '@/components/layout/links'
 import { SPECIALTY_BULLETS } from '@/lib/specialty'
 import { openWindow } from '../support/dom-react'
 import { mainTitles, sha256, titleFingerprint } from '../support/url-parity'
@@ -39,7 +41,7 @@ const read = (file: string): string => readFileSync(join(ROOT, file), 'utf8')
 /** The h1 of the home page since 25/10/2026 (register line `accueil-titre`): no longer the one of the site online. */
 const HOME_H1 = 'Trouvez la maquilleuse qui vous correspond près de chez vous.'
 const ONLINE_H1 = "Trouver la maquilleuse qui vous correspond n'a jamais été aussi simple"
-const { HomeHero, RIBBON_WORDS } = homeHero
+const { EXPLORE_LABEL, HomeHero, RIBBON_WORDS, RING_TEXT } = homeHero
 const html = renderToStaticMarkup(<HomeHero />)
 
 /** The opening tag and the inside of the first element whose opening tag matches. */
@@ -229,18 +231,10 @@ describe('l’arche et son affiche', () => {
 		const wrap = /<div class="([^"]*home-hero-arch-wrap[^"]*)"/.exec(html)?.[1] ?? ''
 		expect(wrap).toContain('enter-arch')
 		expect(wrap).not.toContain('enter-fade')
-		// No video and no button in the HTML of the server: they come with the script, when motion is welcome.
+		// No video and no pause button in the HTML of the server: they come with the script, when motion is welcome.
 		expect(html).not.toContain('<video')
 		expect(html).not.toContain('data-hero-motion')
-		expect(html).not.toMatch(/<button[^>]*home-hero-disc/)
-	})
-
-	test('le badge n’est que le disque du film : plus de texte qui tourne autour', () => {
-		// The ring of text (« L’OMBRE NETTE · UN FILM MY MAKEUP ») was 7 to 10 px high, unreadable, and the most
-		// template-like element of the hero: it went with the picture of the heading.
-		const badge = /<div class="home-hero-badge">([\s\S]*?)<\/div>/.exec(html)?.[1] ?? ''
-		expect(badge).toMatch(/^<span class="home-hero-disc" aria-hidden="true">/)
-		expect(html).not.toMatch(/<svg[^>]*home-hero-ring|<textPath|L’OMBRE NETTE/)
+		expect(html).not.toContain('home-hero-pause')
 	})
 
 	test('sans script, l’image de fin, nette, couvre l’affiche du début : le film ne viendra pas la mettre au point', () => {
@@ -309,6 +303,60 @@ describe('l’arche et son affiche', () => {
 	})
 })
 
+describe('le badge de l’arche : « Explorer les maquilleuses », son nom tourne autour', () => {
+	// Andy, 26/10/2026: « plutôt que d'avoir un bouton pause […] une petite flèche d'explorer avec un texte tout autour ».
+	const document = new JSDOM(html).window.document
+	const badge = document.querySelector('.home-hero-badge')
+
+	test('un lien vers la recherche, celle de « Trouver une maquilleuse », nommé par les mots de son anneau', () => {
+		const links = [...(badge?.querySelectorAll('a') ?? [])]
+		expect(links).toHaveLength(1)
+		const link = links[0] as HTMLAnchorElement
+		expect(link.getAttribute('href')).toBe(SEARCH_LINK.href)
+		expect(link.getAttribute('href')).toBe('/search')
+		expect(link.getAttribute('aria-label')).toBe('Explorer les maquilleuses')
+		expect(link.className).toBe('home-hero-disc')
+		// The words a visitor reads round the disc are those of its name (WCAG 2.5.3, the label in the name).
+		expect(RING_TEXT.toLowerCase().startsWith(EXPLORE_LABEL.toLowerCase())).toBe(true)
+		// The arrow of the kit, which steps forward under the pointer (`.art-arrow`), drawn and hidden from readers.
+		const arrow = link.querySelector('svg')
+		expect(arrow?.getAttribute('class')).toBe('art-arrow home-hero-arrow')
+		expect(arrow?.getAttribute('aria-hidden')).toBe('true')
+		expect(link.textContent).toBe('')
+	})
+
+	test('le badge est hors de l’arche, qui est une image pour les lecteurs d’écran : le lien y garde son rôle', () => {
+		expect(badge?.closest('[role="img"]')).toBeNull()
+		expect(badge?.parentElement?.className).toContain('home-hero-arch-wrap')
+		// Server markup: the link works without script and with reduced motion; no button there, the pause comes with
+		// the script.
+		expect(badge?.querySelector('button')).toBeNull()
+	})
+
+	test('l’anneau : le nom en capitales, une fois autour du cercle, décor caché aux lecteurs d’écran', () => {
+		const ring = badge?.querySelector('svg.home-hero-ring')
+		expect(ring?.getAttribute('aria-hidden')).toBe('true')
+		expect(ring?.getAttribute('focusable')).toBe('false')
+		expect(ring?.getAttribute('viewBox')).toBe('0 0 112 112')
+		const textPath = ring?.querySelector('textPath')
+		// A no-break space at the end: an ordinary one would be dropped, and the dot would touch the « E » where it closes.
+		expect(textPath?.textContent).toBe('EXPLORER LES MAQUILLEUSES · ')
+		expect(RING_TEXT).toBe(`${EXPLORE_LABEL.toUpperCase()} · `)
+		// Spaced to fill its circle once: the length of the circle of radius 37 it runs on.
+		const path = ring?.querySelector(`path#${textPath?.getAttribute('href')?.slice(1)}`)
+		expect(path?.getAttribute('d')).toBe('M56 56m-37 0a37 37 0 1 1 74 0a37 37 0 1 1 -74 0')
+		expect(Number(textPath?.getAttribute('textLength'))).toBeCloseTo(2 * Math.PI * 37, 1)
+		expect(textPath?.getAttribute('lengthAdjust')).toBe('spacing')
+	})
+
+	test('le clic se mesure comme les autres chemins vers la recherche : `cta_click`, à part (`accueil_explorer`)', () => {
+		// The catalogue holds the value (tests/unit/analytics-events.test.ts); the link reports it (TrackedLink).
+		expect(read('src/components/home/HomeHero.tsx')).toContain(
+			"suivi={{ nom: 'cta_click', proprietes: { where: 'accueil_explorer' } }}"
+		)
+	})
+})
+
 describe('quand le film vient, quand il joue', () => {
 	const ready: FilmConditions = {
 		reducedMotion: false,
@@ -364,9 +412,9 @@ describe('quand le film vient, quand il joue', () => {
 		expect(playsFilm({ ...ready, inView: false, onScreen: false })).toBe(false)
 	})
 
-	test('le bouton dit ce qu’un appui fait', () => {
-		expect(filmButtonName(false)).toBe('Mettre le film en pause')
-		expect(filmButtonName(true)).toBe('Lire le film')
+	test('le bouton de pause dit ce qu’un appui fait', () => {
+		expect(pauseButtonName(false)).toBe('Mettre le film en pause')
+		expect(pauseButtonName(true)).toBe('Lire le film')
 	})
 })
 
@@ -426,7 +474,7 @@ describe('la partie qui bouge, dans une fausse fenêtre', () => {
 				<div className="home-hero-arch">
 					<ArchFilm />
 				</div>
-				<FilmButton />
+				<PauseButton />
 			</HeroStage>
 		)
 
@@ -467,7 +515,7 @@ describe('la partie qui bouge, dans une fausse fenêtre', () => {
 	const phaseOf = (zone: HTMLElement): string | null | undefined =>
 		zone.querySelector('[data-film-phase]')?.getAttribute('data-film-phase')
 
-	test('mouvement réduit : rien ne bouge, aucune vidéo, et le disque n’est pas un bouton', async () => {
+	test('mouvement réduit : rien ne bouge, aucune vidéo, et aucun bouton de pause qui ne commanderait rien', async () => {
 		setUp({ reduced: true })
 		const zone = await mount()
 		await see(true)
@@ -475,7 +523,6 @@ describe('la partie qui bouge, dans une fausse fenêtre', () => {
 		expect(section?.hasAttribute('data-hero-motion')).toBe(false)
 		expect(zone.querySelector('video')).toBeNull()
 		expect(zone.querySelector('button')).toBeNull()
-		expect(zone.querySelector('.home-hero-disc')?.getAttribute('aria-hidden')).toBe('true')
 		// The arch is still seen: on a phone its still (the end of the film) replaces the blurred copy then.
 		expect(seen(zone)).toBe('seen')
 	})
@@ -506,11 +553,17 @@ describe('la partie qui bouge, dans une fausse fenêtre', () => {
 		expect(calls.at(-1)).toBe('pause intro')
 	})
 
-	test('avec le mouvement : l’intro, puis la boucle chargée dessous ; le bouton arrête et relance tout', async () => {
+	test('avec le mouvement : l’intro, puis la boucle chargée dessous ; le bouton de pause arrête et relance tout', async () => {
 		setUp({ reduced: false })
 		const zone = await mount()
 		const section = zone.querySelector('section') as HTMLElement
 		expect(section.getAttribute('data-hero-motion')).toBe('running')
+		// A real button, named by its text (shown at the keyboard focus, globals.css), which says what a press does.
+		const pause = zone.querySelector('button') as HTMLButtonElement
+		expect(pause.className).toBe('home-hero-pause')
+		expect(pause.getAttribute('type')).toBe('button')
+		expect(pause.textContent).toBe('Mettre le film en pause')
+		expect(pause.hasAttribute('aria-label')).toBe(false)
 		expect(zone.querySelector('video')).toBeNull()
 		await see(true)
 		// After the load and a moment of rest (no requestIdleCallback in this window: a short timer).
@@ -540,7 +593,7 @@ describe('la partie qui bouge, dans une fausse fenêtre', () => {
 		expect(calls).toContain('play loop')
 		expect(intro.className).toContain('invisible')
 
-		// The button stops the film and the loops, and says so; a second press plays again.
+		// The button stops the film and the loops (the ring and the ribbon), and says so; a second press plays again.
 		await jsdomWindow.cliquer(jsdomWindow.bouton('Mettre le film en pause'))
 		expect(section.getAttribute('data-hero-motion')).toBe('paused')
 		expect(calls.at(-1)).toBe('pause loop')
@@ -612,11 +665,22 @@ describe('la feuille de style du haut de page', () => {
 		expect(opacities.every(value => value === '1')).toBe(true)
 	})
 
-	test('le bandeau ne bouge que sous l’attribut posé par le script, et sous no-preference ; plus d’anneau qui tourne', () => {
-		const motion = block.slice(block.indexOf('@media (prefers-reduced-motion: no-preference)'))
+	test('l’anneau et le bandeau ne bougent que sous l’attribut posé par le script, et sous no-preference ; le bouton les arrête, le pointeur arrête le bandeau', () => {
+		const start = block.indexOf('@media (prefers-reduced-motion: no-preference)')
+		const motion = block.slice(start)
+		// The ring turns as the kit's badge does (`art-spin`, one turn in 26 s), the ribbon slides: both only once the
+		// script has said motion is welcome (without script nothing loops, WCAG 2.2.2).
+		expect(motion).toMatch(
+			/\.home-hero\[data-hero-motion\] \.home-hero-ring \{\s*animation: art-spin var\(--duration-ring\) linear infinite;/
+		)
 		expect(motion).toContain('.home-hero[data-hero-motion] .home-hero-ribbon-track {')
-		expect(motion).toContain('.home-hero[data-hero-motion="paused"] .home-hero-ribbon-track {')
-		expect(block).not.toMatch(/home-hero-ring/)
+		// The pause button stops both with the film; like the kit's banner, the pointer and the focus stop the ribbon.
+		expect(motion).toMatch(
+			/\.home-hero\[data-hero-motion="paused"\] :is\(\.home-hero-ring, \.home-hero-ribbon-track\),\s*\.home-hero-ribbon:hover \.home-hero-ribbon-track,\s*\.home-hero-ribbon:focus-within \.home-hero-ribbon-track \{\s*animation-play-state: paused;/
+		)
+		// Before the motion block, nothing turns the ring.
+		expect(block.slice(0, start)).not.toMatch(/animation[^;]*art-spin/)
+		expect(css).toMatch(/@keyframes art-spin \{\s*to \{\s*transform: rotate\(360deg\);/)
 		// Before the motion block, nothing declares an animation or a transition.
 		expect(block.slice(0, block.indexOf('@keyframes enter-arch'))).not.toMatch(/\b(animation|transition)\b/)
 	})
@@ -655,10 +719,70 @@ describe('la feuille de style du haut de page', () => {
 		)
 	})
 
-	test('une longueur de bandeau en 60 s, et plus de jeton pour l’anneau', () => {
+	test('une longueur de bandeau en 60 s, un tour d’anneau en 26 s : l’allure du badge du kit', () => {
 		const tokens = /@theme static\s*\{([\s\S]*?)\}/.exec(css)?.[1] ?? ''
-		expect(tokens).not.toMatch(/--duration-ring/)
 		expect(tokens).toMatch(/--duration-ribbon:\s*60s;/)
+		expect(tokens).toMatch(/--duration-ring:\s*26s;/)
+		expect(css).toMatch(/\.art-spin \{\s*animation: art-spin 26s linear infinite;/)
+	})
+
+	test('l’arche se dessine comme celles du site : la bande du kit décalée à droite et en haut, plus l’ombre nude', () => {
+		const rule = (selector: string) => {
+			const at = block.indexOf(`${selector} {`)
+			expect(at).toBeGreaterThan(-1)
+			return block.slice(at, block.indexOf('}', at))
+		}
+		const band = rule('.home-hero-arch-wrap::before')
+		expect(band).toContain('background-color: var(--color-art-band);')
+		expect(band).toContain('inset: calc(var(--band-y) * -1) calc(var(--band-x) * -1) 0 var(--band-x);')
+		expect(band).not.toMatch(/nude|translateX/)
+		expect(block).not.toMatch(/--color-nude-200/)
+		// The white ring round the picture and the hairline inside it, as on the arch of a card (`.art-arch__img`).
+		expect(rule('.home-hero-arch')).toContain('box-shadow: 0 0 0 2px #fff;')
+		const hairline = rule('.home-hero-arch::after')
+		expect(hairline).toContain('border: 1px solid rgb(255 255 255 / 0.7);')
+		expect(hairline).toContain('pointer-events: none;')
+	})
+
+	test('le badge : le disque garde la taille du bouton de pause (44 px, 56 px dès 40rem), son anneau se lit, de l’air autour du texte', () => {
+		const rem = 16
+		const sizeOf = (rules: string, selector: string) =>
+			Number(new RegExp(`\\${selector} \\{[^}]*width: ([\\d.]+)rem;`).exec(rules)?.[1])
+		const wide = block.slice(block.indexOf('@media (min-width: 40rem)'))
+		const phone = sizeOf(block, '.home-hero-badge') * rem
+		const large = sizeOf(wide, '.home-hero-badge') * rem
+		const inset = Number(/\.home-hero-disc \{[^}]*inset: ([\d.]+)rem;/.exec(block)?.[1]) * rem
+		expect([phone - 2 * inset, large - 2 * inset]).toEqual([44, 56])
+		// The text of the ring, 12.5 units of the 112 of its box: 11.2 px on a phone, 12.5 px beyond (the ring that went
+		// on 26/10/2026 was 7 to 10 px, unreadable). Its baseline at 37 from the centre: air from the disc and from the
+		// edge of the notch (56), the capitals standing about 0.72 of their size (measured in Chromium in the e2e test).
+		const font = Number(/\.home-hero-ring \{[^}]*font-size: ([\d.]+)px;/.exec(block)?.[1])
+		// The type of the kit's badge: Instrument Sans, semibold (RotatingBadge), already preloaded on the route.
+		expect(block).toMatch(
+			/\.home-hero-ring \{[^}]*font-family: var\(--font-instrument-sans\), ui-sans-serif, system-ui, sans-serif;[^}]*font-weight: 600;/
+		)
+		expect(read('src/components/art/RotatingBadge.tsx')).toMatch(/font-body[\s\S]*fontWeight="600"/)
+		expect((font * phone) / 112).toBeGreaterThanOrEqual(11)
+		expect((font * large) / 112).toBeGreaterThanOrEqual(12.5)
+		for (const [box, disc] of [
+			[phone, 44],
+			[large, 56],
+		] as const) {
+			const scale = box / 112
+			const fromDisc = 37 * scale - disc / 2
+			const fromEdge = (56 - 37 - 0.72 * font) * scale
+			expect(fromDisc).toBeGreaterThanOrEqual(8)
+			expect(fromEdge).toBeGreaterThanOrEqual(7)
+		}
+	})
+
+	test('le bouton de pause : hors de la vue jusqu’au focus du clavier, jamais retiré de l’ordre du clavier', () => {
+		const at = block.indexOf('.home-hero-pause {')
+		const pause = block.slice(at, block.indexOf('}', at))
+		expect(pause).toContain('min-height: 2.75rem;')
+		expect(block).toMatch(/\.home-hero-pause:not\(:focus\) \{\s*clip-path: inset\(50%\);\s*\}/)
+		// Neither `display: none` nor `visibility: hidden`, which would take it out of the tab order, nor `opacity`.
+		expect(block).not.toMatch(/\.home-hero-pause[^{]*\{[^}]*(display: none|visibility: hidden|opacity)/)
 	})
 })
 

@@ -4,12 +4,14 @@ import { SCREENS } from '../support/e2e'
 
 /**
  * The home hero « en arche » (decision of 25/10/2026, docs/accueil.md), in a browser, at 390 px and 1440 px: the
- * film comes once the page is loaded and the arch is seen, plays its intro then swaps to the loop; the ribbon slides,
- * and the button of the badge stops both and starts them again. With reduced motion: the end still, no video, nothing
- * slides, no button. With Save-Data: the end still, no video. Without script: the end still over the poster, the whole
- * heading, and no loop runs. On a phone: the headline close under the navbar, the top of the arch in the first screen
- * with the blurred copy of its still, the still itself and the film only after a scroll. The files of the film are
- * kept a year and served by ranges.
+ * film comes once the page is loaded and the arch is seen, plays its intro then swaps to the loop; the ring of the badge
+ * turns and the ribbon slides. The badge is a link « Explorer les maquilleuses » to the search (26/10/2026); no pause
+ * button shows, but one appears at the keyboard focus, like a skip link, and stops the film, the ring and the ribbon.
+ * With reduced motion: the end still, no video, nothing turns or slides, no pause button, the link still there. With
+ * Save-Data: the end still, no video. Without script: the end still over the poster, the whole heading, the link, and
+ * no loop runs. On a phone: the headline close under the navbar, the top of the arch in the first screen with the glow
+ * of the paper, the still itself and the film only after a scroll. The files of the film are kept a year and served by
+ * ranges.
  *
  * The helpers that wait for every animation to end (`settle` of motion.spec.ts, `scrollThrough` of
  * home-sections.spec.ts) leave out the endless and paused animations: this file is what checks that they run.
@@ -30,15 +32,48 @@ async function showArch(page: Page): Promise<void> {
 	await page.locator('.home-hero-arch').scrollIntoViewIfNeeded()
 }
 
+/** The name of the badge, and the words of its ring. */
+const EXPLORE = 'Explorer les maquilleuses'
+
+/**
+ * Whether the pause button can be seen: not clipped away (`clip-path`), and the element a pointer would reach at its
+ * centre. A 1 px box or a transparent one would pass `toBeVisible()`; this does not.
+ */
+const pauseShows = (page: Page): Promise<{ shows: boolean; width: number; height: number }> =>
+	page.locator('.home-hero-pause').evaluate(element => {
+		const box = element.getBoundingClientRect()
+		const atCentre = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2)
+		return {
+			shows: getComputedStyle(element).clipPath === 'none' && atCentre === element,
+			width: box.width,
+			height: box.height,
+		}
+	})
+
+/** To the pause button by the keyboard: from the button of the search, the next stop is the pause button. */
+async function tabToPause(page: Page): Promise<void> {
+	await page.getByRole('button', { name: 'Voir les maquilleuses' }).focus()
+	await page.keyboard.press('Tab')
+}
+
 for (const size of [SCREENS.mobile, SCREENS.chromium]) {
 	test.describe(`l’accueil en arche à ${size.width} px`, () => {
 		test.use({ viewport: size })
 
-		test('le film joue, le bandeau glisse ; le bouton du badge arrête les deux, puis les relance', async ({ page }) => {
+		test('le film joue, l’anneau tourne, le bandeau glisse ; le bouton de pause, au clavier, arrête les trois, puis les relance', async ({
+			page,
+		}) => {
 			await page.goto('/')
 			const hero = page.locator('section.home-hero')
 			await expect(hero).toHaveAttribute('data-hero-motion', 'running')
 			await expect.poll(() => playState(page, '.home-hero-ribbon-track')).toBe('running')
+			await expect.poll(() => playState(page, '.home-hero-ring')).toBe('running')
+			// One turn in 26 s, as the kit's badge.
+			expect(
+				await page
+					.locator('.home-hero-ring')
+					.evaluate(element => element.getAnimations()[0]?.effect?.getTiming().duration)
+			).toBe(26_000)
 
 			await showArch(page)
 			await expect(hero).toHaveAttribute('data-film', 'playing', { timeout: 20_000 })
@@ -47,24 +82,125 @@ for (const size of [SCREENS.mobile, SCREENS.chromium]) {
 			// The bundled Chromium has no H.264 decoder: it takes the AV1 file, the first of the list.
 			expect(await videos.last().evaluate(video => (video as HTMLVideoElement).currentSrc)).toContain('.av1.mp4')
 
-			// Off the screen the film pauses; the ribbon, which says nothing of the film, slides on.
+			// Off the screen the film pauses; the ring and the ribbon, which say nothing of the film, move on.
 			await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight))
 			await expect(hero).not.toHaveAttribute('data-film', 'playing')
 			await expect(hero).toHaveAttribute('data-hero-motion', 'running')
 			await showArch(page)
 			await expect(hero).toHaveAttribute('data-film', 'playing')
 
-			await page.getByRole('button', { name: 'Mettre le film en pause' }).click()
+			// The pause button is reached by the keyboard (out of sight until then): one press stops all three.
+			await tabToPause(page)
+			const pause = page.getByRole('button', { name: 'Mettre le film en pause' })
+			await expect(pause).toBeFocused()
+			await page.keyboard.press('Enter')
 			await expect(hero).toHaveAttribute('data-hero-motion', 'paused')
 			await expect(hero).not.toHaveAttribute('data-film', 'playing')
 			expect(await playState(page, '.home-hero-ribbon-track')).toBe('paused')
+			expect(await playState(page, '.home-hero-ring')).toBe('paused')
 			expect(await videos.evaluateAll(elements => elements.every(video => (video as HTMLVideoElement).paused))).toBe(
 				true
 			)
 
-			await page.getByRole('button', { name: 'Lire le film' }).click()
+			// Its name says what the next press does; it keeps the focus, and plays all three again.
+			await expect(page.getByRole('button', { name: 'Lire le film' })).toBeFocused()
+			await page.keyboard.press('Enter')
 			await expect(hero).toHaveAttribute('data-film', 'playing')
 			expect(await playState(page, '.home-hero-ribbon-track')).toBe('running')
+			expect(await playState(page, '.home-hero-ring')).toBe('running')
+
+			// Like the kit's banner, the ribbon stops under the pointer, and slides on when it leaves.
+			await page.locator('.home-hero-ribbon').hover()
+			await expect.poll(() => playState(page, '.home-hero-ribbon-track')).toBe('paused')
+			await page.locator('h1').hover()
+			await expect.poll(() => playState(page, '.home-hero-ribbon-track')).toBe('running')
+		})
+
+		test('aucun bouton de pause à l’écran : il n’apparaît qu’au focus du clavier, sur l’arche, puis s’en va', async ({
+			page,
+		}) => {
+			await page.goto('/')
+			await expect(page.locator('section.home-hero')).toHaveAttribute('data-hero-motion', 'running')
+			await showArch(page)
+			// In the page and in the order of the keyboard, but clipped to nothing: nobody sees it, no pointer reaches it.
+			await expect(page.getByRole('button', { name: 'Mettre le film en pause' })).toHaveCount(1)
+			expect((await pauseShows(page)).shows).toBe(false)
+			// From the search, the keyboard reaches it: a pill of 44 px at least, in sight, on the arch.
+			await tabToPause(page)
+			await expect(page.getByRole('button', { name: 'Mettre le film en pause' })).toBeFocused()
+			const shown = await pauseShows(page)
+			expect(shown.shows).toBe(true)
+			expect(shown.height).toBeGreaterThanOrEqual(44)
+			const inArch = await page.evaluate(() => {
+				const pill = (document.querySelector('.home-hero-pause') as Element).getBoundingClientRect()
+				const arch = (document.querySelector('.home-hero-arch') as Element).getBoundingClientRect()
+				return pill.left >= arch.left && pill.right <= arch.right && pill.top >= arch.top && pill.bottom <= arch.bottom
+			})
+			expect(inArch).toBe(true)
+			// The next stop is the badge, and the pause button is out of sight again.
+			await page.keyboard.press('Tab')
+			await expect(page.getByRole('link', { name: EXPLORE })).toBeFocused()
+			expect((await pauseShows(page)).shows).toBe(false)
+		})
+
+		test('le badge : un lien « Explorer les maquilleuses » vers la recherche, son nom lisible tourne autour, dans l’écran', async ({
+			page,
+		}) => {
+			await page.goto('/')
+			await showArch(page)
+			const link = page.getByRole('link', { name: EXPLORE, exact: true })
+			await expect(link).toHaveCount(1)
+			await expect(link).toHaveAttribute('href', '/search')
+			await page.evaluate(() => document.fonts.ready)
+			const facts = await page.evaluate(() => {
+				const badge = (document.querySelector('.home-hero-badge') as Element).getBoundingClientRect()
+				const disc = (document.querySelector('.home-hero-disc') as Element).getBoundingClientRect()
+				const svg = document.querySelector('.home-hero-ring') as SVGSVGElement
+				const text = svg.querySelector('text') as SVGTextElement
+				// What the ring would measure without the spacing that fills its circle: its letters must not touch.
+				const bare = text.cloneNode(true) as SVGTextElement
+				const path = bare.querySelector('textPath') as SVGTextPathElement
+				path.removeAttribute('textLength')
+				svg.append(bare)
+				const natural = bare.getComputedTextLength()
+				bare.remove()
+				const scale = badge.width / 112
+				// How far the ink of the capitals stands above their baseline, in the face that drew them.
+				const style = getComputedStyle(text)
+				const context = document.createElement('canvas').getContext('2d') as CanvasRenderingContext2D
+				context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`
+				const ascent = context.measureText('EXPLORER LES MAQUILLEUSES').actualBoundingBoxAscent
+				return {
+					badge: { left: badge.left, right: badge.right, size: badge.width },
+					disc: disc.width,
+					family: style.fontFamily,
+					fontPx: Number.parseFloat(style.fontSize) * scale,
+					natural,
+					circle: 2 * Math.PI * 37,
+					// The outer edge of the letters, from the centre: the baseline runs at 37 of the 112 units.
+					outer: (37 + ascent) * scale,
+					baseline: 37 * scale,
+					notch: badge.width / 2,
+					screen: innerWidth,
+				}
+			})
+			// The disc keeps the size of the pause button it replaces: 44 px on a phone, 56 px beyond.
+			expect(facts.disc).toBe(size.width < 640 ? 44 : 56)
+			// Readable: 11 px at least on a phone, 12.5 px beyond (the ring that went on 26/10/2026 was 7 to 10 px), in the
+			// type of the kit's badge.
+			expect(facts.fontPx).toBeGreaterThanOrEqual(size.width < 640 ? 11 : 12.5)
+			expect(facts.family).toMatch(/Instrument Sans/)
+			expect(facts.natural).toBeLessThan(facts.circle * 0.97)
+			// Air between the letters and the edge of the notch, and between the letters and the disc, whose focus ring
+			// (2 px, 3 px from it) stays clear of them.
+			expect(facts.notch - facts.outer).toBeGreaterThanOrEqual(7)
+			expect(facts.baseline - facts.disc / 2).toBeGreaterThanOrEqual(8)
+			// In the screen, with air: the hero clips what overflows, so no scroll would tell.
+			expect(facts.badge.left).toBeGreaterThanOrEqual(16)
+			expect(facts.badge.right).toBeLessThanOrEqual(facts.screen - 16)
+			// It leads to the search.
+			await link.click()
+			await expect(page).toHaveURL(/\/search$/)
 		})
 
 		test('l’intro joue une fois, puis la boucle, chargée pendant l’intro, prend sa place', async ({ page }) => {
@@ -174,8 +310,9 @@ for (const size of [SCREENS.mobile, SCREENS.chromium]) {
 			await expect(page.locator('.home-hero-arch video')).toHaveCount(0)
 			const hero = page.locator('section.home-hero')
 			await expect(hero).not.toHaveAttribute('data-film', 'playing')
-			await page.getByRole('button', { name: 'Mettre le film en pause' }).click()
+			await page.getByRole('button', { name: 'Mettre le film en pause' }).press('Enter')
 			expect(await playState(page, '.home-hero-ribbon-track')).toBe('paused')
+			expect(await playState(page, '.home-hero-ring')).toBe('paused')
 		})
 	})
 }
@@ -184,7 +321,9 @@ test.describe('avec un mouvement réduit', () => {
 	test.use({ contextOptions: { reducedMotion: 'reduce' } })
 
 	for (const size of [SCREENS.mobile, SCREENS.chromium]) {
-		test(`à ${size.width} px : l’image de fin, aucune vidéo, rien ne glisse, et pas de bouton`, async ({ page }) => {
+		test(`à ${size.width} px : l’image de fin, aucune vidéo, rien ne tourne ni ne glisse, pas de bouton de pause, le lien reste`, async ({
+			page,
+		}) => {
 			await page.setViewportSize(size)
 			await page.goto('/')
 			await page.waitForLoadState('networkidle')
@@ -196,8 +335,10 @@ test.describe('avec un mouvement réduit', () => {
 			)
 			await expect(page.locator('section.home-hero')).not.toHaveAttribute('data-hero-motion')
 			await expect(page.locator('.home-hero-arch video')).toHaveCount(0)
-			await expect(page.locator('button.home-hero-disc')).toHaveCount(0)
+			await expect(page.locator('.home-hero-pause')).toHaveCount(0)
 			expect(await playState(page, '.home-hero-ribbon-track')).toBe('none')
+			expect(await playState(page, '.home-hero-ring')).toBe('none')
+			await expect(page.getByRole('link', { name: EXPLORE, exact: true })).toHaveAttribute('href', '/search')
 		})
 	}
 })
@@ -419,7 +560,7 @@ test.describe('l’affiche de l’arche, demandée une fois, au bon moment', () 
 test.describe('sans script', () => {
 	test.use({ javaScriptEnabled: false })
 
-	test('l’image de fin, nette, sur l’affiche du début ; le titre entier, et aucune boucle ne tourne', async ({
+	test('l’image de fin, nette, sur l’affiche du début ; le titre entier, le lien du badge, et aucune boucle ne tourne', async ({
 		page,
 	}) => {
 		await page.goto('/')
@@ -442,7 +583,9 @@ test.describe('sans script', () => {
 			return arch && box ? [box.width - arch.width, box.height - arch.height] : null
 		})
 		expect(covers?.map(Math.round)).toEqual([0, 0])
-		await expect(page.locator('button.home-hero-disc')).toHaveCount(0)
+		await expect(page.locator('.home-hero-pause')).toHaveCount(0)
+		expect(await playState(page, '.home-hero-ring')).toBe('none')
+		await expect(page.getByRole('link', { name: EXPLORE, exact: true })).toHaveAttribute('href', '/search')
 	})
 })
 

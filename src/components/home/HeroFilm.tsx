@@ -8,20 +8,21 @@ import {
 	FILM_STILLS,
 	FILM_VIDEOS,
 	type FilmConditions,
-	filmButtonName,
 	mountsFilm,
+	pauseButtonName,
 	playsFilm,
 } from './film'
 
 /**
- * The moving part of the home hero (decision of 25/10/2026, docs/accueil.md): the film in the arch, the button of the
- * badge, and the two attributes of the hero that say what moves: the stylesheet slides the ribbon under the first, the
- * tests read the second. A client component and not an inline script: the videos are put inside markup that React
- * owns, and they answer events (`playing`, `ended`, a press on the button); a script that added them to the server HTML
- * would fight the hydration.
+ * The moving part of the home hero (decisions of 25 and 26/10/2026, docs/accueil.md): the film in the arch, the pause
+ * button, and the attributes of the hero that say what moves: the stylesheet turns the ring of the badge and slides the
+ * ribbon under the first, the tests read the second. A client component and not an inline script: the videos are put
+ * inside markup that React owns, and they answer events (`playing`, `ended`, a press on the pause button); a script that
+ * added them to the server HTML would fight the hydration. The badge itself, a link to the search, is server markup
+ * (HomeHero.tsx): it works without script and under reduced motion.
  *
  * - `data-hero-motion` (`running` or `paused`) is set only once the script runs and the visitor has not asked for less
- *   motion: without it, the ribbon never moves (WCAG 2.2.2, nothing loops without a way to stop it).
+ *   motion: without it, neither the ring nor the ribbon moves (WCAG 2.2.2, nothing loops without a way to stop it).
  * - `data-film="playing"` is set while a video plays.
  * - `data-arch="seen"` is set once `FILM_VIEW_RATIO` of the arch has been on the screen, and stays: on a phone, the
  *   stylesheet shows the still of the arch only then (before, its blurred copy, see `STILL_PLACEHOLDERS` of film.ts).
@@ -30,7 +31,7 @@ import {
 interface Stage {
 	/** The script runs and the visitor has not asked for less motion. */
 	motion: boolean
-	/** The visitor stopped the film with the button of the badge. */
+	/** The visitor stopped the film, the ring and the ribbon with the pause button. */
 	userPaused: boolean
 	/** `FILM_VIEW_RATIO` of the arch has been on the screen once. */
 	archSeen: boolean
@@ -100,7 +101,7 @@ const VIDEO = 'absolute inset-0 h-full w-full object-cover'
  * met (the script runs, motion is welcome, no Save-Data, `FILM_VIEW_RATIO` of the arch on the screen, the tab in front,
  * the page loaded and the browser idle). The intro plays once; the loop is loaded while it plays, stacked under it, and
  * shown when the intro ends: its first frame is the last frame of the intro, so the swap has no gap. Off the screen,
- * in a tab behind or stopped by the button, the film pauses.
+ * in a tab behind or stopped by the pause button, the film pauses.
  *
  * When the film will not come although motion is welcome, the end still covers the poster once the arch is seen: the
  * poster is the first frame of the intro, the artists still blurred, and nothing would ever bring them into focus.
@@ -285,31 +286,20 @@ export function ArchFilm() {
 	)
 }
 
-/** Two bars, or a triangle: what a press of the button does. */
-function Glyph({ paused }: { paused: boolean }) {
-	return (
-		<svg viewBox="0 0 16 16" aria-hidden="true" className="home-hero-glyph">
-			{paused ? <path d="M5 3.2v9.6L13 8z" /> : <path d="M4.5 3h2.4v10H4.5zM9.1 3h2.4v10H9.1z" />}
-		</svg>
-	)
-}
-
 /**
- * The disc on the corner of the arch. With motion, a real button that stops and plays again the film and the ribbon.
- * Without script, or with less motion asked for, nothing moves: the disc is a plain mark, so no button
- * promises what it cannot do.
+ * The pause button of the hero (WCAG 2.2.2: the film loops, the ring turns and the ribbon slides for as long as the page
+ * stays open, so a visitor can stop them). Andy asked for no visible pause on 26/10/2026 (« le bouton de pause, il sert
+ * à rien »): the badge is a link now, and this button stays out of sight until it takes the keyboard focus, like a skip
+ * link; then the stylesheet shows it as a small ink pill on the arch (`.home-hero-pause`). One press stops the film, the
+ * ring and the ribbon together; its name says what the next press does. A mouse stops the ribbon by hovering it.
+ * Without script, or with less motion asked for, nothing moves: no button that commands nothing.
  */
-export function FilmButton() {
+export function PauseButton() {
 	const { motion, userPaused, toggle } = useContext(StageContext)
-	if (!motion)
-		return (
-			<span className="home-hero-disc" aria-hidden="true">
-				<span className="home-hero-seal" />
-			</span>
-		)
+	if (!motion) return null
 	return (
-		<button type="button" className="home-hero-disc" aria-label={filmButtonName(userPaused)} onClick={toggle}>
-			<Glyph paused={userPaused} />
+		<button type="button" className="home-hero-pause" onClick={toggle}>
+			{pauseButtonName(userPaused)}
 		</button>
 	)
 }

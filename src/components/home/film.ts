@@ -157,7 +157,7 @@ export interface FilmConditions {
 	visible: boolean
 	/** The page has finished loading and the browser had a moment of rest after it. */
 	settled: boolean
-	/** The visitor pressed the button of the badge to stop the film. */
+	/** The visitor stopped the film with the pause button (it shows when it takes the keyboard focus). */
 	userPaused: boolean
 	/** `play()` was refused: the end still is shown instead. */
 	refused: boolean
@@ -183,5 +183,6 @@ export function playsFilm(conditions: FilmConditions): boolean {
 	return !reducedMotion && !refused && !userPaused && onScreen && visible
 }
 
-/** The name of the button of the badge, which says what a press does. */
-export const filmButtonName = (userPaused: boolean): string => (userPaused ? 'Lire le film' : 'Mettre le film en pause')
+/** The name of the pause button, which says what a press does: it stops or plays the film, the ring and the ribbon. */
+export const pauseButtonName = (userPaused: boolean): string =>
+	userPaused ? 'Lire le film' : 'Mettre le film en pause'

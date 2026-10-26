@@ -140,7 +140,10 @@ export const CATALOG = {
 	// 4-6, 8. The search, the calls to action and the 404 (ticket 145). Never the words typed.
 	search_submit: { has_city: booleanSpec, results: oneOf(RESULT_BUCKETS), from: oneOf(['formulaire', 'lien']) },
 	search_result_click: { rank: integer(1, 999), pid },
-	cta_click: { where: oneOf(['cta_recherche', 'cta_inscription', 'nav_recherche', 'nav_recherche_mobile']) },
+	// `accueil_explorer`: the badge « Explorer les maquilleuses » on the arch of the home hero (26/10/2026).
+	cta_click: {
+		where: oneOf(['cta_recherche', 'cta_inscription', 'nav_recherche', 'nav_recherche_mobile', 'accueil_explorer']),
+	},
 	platform_contact_submit: { ok: booleanSpec, status: integer(0, 599) },
 	not_found: { kind: oneOf(['profil', 'talent', 'blog', 'autre']) },
 	// 9-12. Sign-up and sign-in (ticket 146). `code` is « ok » on a success.

@@ -1,10 +1,13 @@
 import type { CSSProperties } from 'react'
 import { preload } from 'react-dom'
+import { TrackedLink } from '@/components/analytics/TrackedLink'
+import { Icon } from '@/components/art/graphics'
+import { SEARCH_LINK } from '@/components/layout/links'
 import { SPECIALTY_BULLETS } from '@/lib/specialty'
 import { FilmStill } from './FilmStill'
 import { FILM_SIZE, FILM_STILLS, POSTER_PRELOADS, STILL_PLACEHOLDERS } from './film'
 import { GuidedSearch } from './GuidedSearch'
-import { ArchFilm, FilmButton, HeroStage } from './HeroFilm'
+import { ArchFilm, HeroStage, PauseButton } from './HeroFilm'
 import { heroSerif, heroSerifText } from './hero-font'
 
 /** The words of the ribbon: the specialties a makeup artist chooses on her page, which the search filters by. */
@@ -12,6 +15,29 @@ export const RIBBON_WORDS: readonly string[] = SPECIALTY_BULLETS.map(bullet => b
 
 /** The hidden copies that follow the list in the ribbon: enough to cover a very wide screen while it slides by one. */
 const RIBBON_COPIES = ['copy-1', 'copy-2', 'copy-3'] as const
+
+/** The name of the link of the badge, and the words of its ring: what a visitor reads is what a screen reader says. */
+export const EXPLORE_LABEL = 'Explorer les maquilleuses'
+
+/** U+00A0, written by its code point: as a character it would not show in this file. */
+const NO_BREAK_SPACE = String.fromCharCode(0xa0)
+
+/**
+ * The ring of the badge, once round its circle. It ends on a no-break space: an ordinary one, last in the text, is
+ * dropped by the collapsing of white space, and the dot would touch the « E » where the ring closes.
+ */
+export const RING_TEXT = `${EXPLORE_LABEL.toUpperCase()} ·${NO_BREAK_SPACE}`
+
+/**
+ * The circle the ring runs on, in the 112 units of the badge (7rem from 40rem, 6.25rem on a phone: the units are pixels
+ * on a large screen): the baseline at 37 from the centre, the capitals (set at 12.5, globals.css) standing outward of
+ * it, so about 9 px of air between them and the edge of the notch (56), and 9 to 11 px between them and the disc
+ * (28 px on a large screen, 22 px on a phone, where the units are 0.89 px). The text is spaced to fill the circle once
+ * round (`textLength`, its length).
+ */
+const RING_RADIUS = 37
+const RING_PATH = `M56 56m-${RING_RADIUS} 0a${RING_RADIUS} ${RING_RADIUS} 0 1 1 ${2 * RING_RADIUS} 0a${RING_RADIUS} ${RING_RADIUS} 0 1 1 -${2 * RING_RADIUS} 0`
+const RING_LENGTH = (2 * Math.PI * RING_RADIUS).toFixed(1)
 
 /**
  * What the film shows, said by the arch itself (`role="img"`), which is always there: on a phone the poster stays hidden
@@ -54,11 +80,46 @@ function RibbonList({ hidden }: { hidden: boolean }) {
 }
 
 /**
+ * The badge on the bottom-left corner of the arch (Andy, 26/10/2026): a round notch of the page tone that eats into the
+ * corner of the film, the ink disc in its middle, now a link to the search with the arrow of the kit, and its name
+ * turning slowly round it, in the type of the kit's badge. Server markup, like the kit's `RotatingBadge` it mirrors: the
+ * link works without script and under reduced motion. Not that component itself: its ring turns on CSS alone (without
+ * script, and with no way to stop it) and its centre is a 56 px link that reports nothing. Here the ring turns only
+ * under the attribute the script sets and stops with the film and the ribbon, the disc keeps the size of the pause
+ * button it replaces (44 px on a phone), and the click is measured like the other ways to the search (`cta_click`).
+ */
+function ExploreBadge() {
+	return (
+		<div className="home-hero-badge">
+			<svg className="home-hero-ring" viewBox="0 0 112 112" aria-hidden="true" focusable="false">
+				<defs>
+					<path id="home-hero-ring-path" d={RING_PATH} />
+				</defs>
+				<text>
+					<textPath href="#home-hero-ring-path" textLength={RING_LENGTH} lengthAdjust="spacing">
+						{RING_TEXT}
+					</textPath>
+				</text>
+			</svg>
+			<TrackedLink
+				href={SEARCH_LINK.href}
+				aria-label={EXPLORE_LABEL}
+				className="home-hero-disc"
+				suivi={{ nom: 'cta_click', proprietes: { where: 'accueil_explorer' } }}
+			>
+				<Icon name="arrow-right" className="art-arrow home-hero-arrow" />
+			</TrackedLink>
+		</div>
+	)
+}
+
+/**
  * The hero of the home page, « en arche » (decisions of 25/10/2026, docs/accueil.md): the headline in Bodoni on three
  * lines, type alone, one sentence, the guided search, and on the right the arch that holds the film « L'Ombre nette »,
- * the button that pauses it and, under the hero, a ribbon of the specialties. Nothing else: no eyebrow, no numbered
- * steps, no picture in the headline, no ring of text around the button (Andy, 25/10/2026: fewer elements, to the
- * essential). Only the home page uses it: the other pages keep the shared `Hero`.
+ * with the badge that leads to the search and, under the hero, a ribbon of the specialties. Nothing else: no eyebrow,
+ * no numbered steps, no picture in the headline (Andy, 25/10/2026: fewer elements, to the essential). The film plays by
+ * itself; its pause button shows only when it takes the keyboard focus (Andy, 26/10/2026). Only the home page uses it:
+ * the other pages keep the shared `Hero`.
  *
  * The lines of the h1 are spans with a space between them: its text and its name are « Trouvez la maquilleuse qui vous
  * correspond près de chez vous. », one space between words.
@@ -107,9 +168,8 @@ export function HomeHero() {
 						</noscript>
 						<ArchFilm />
 					</div>
-					<div className="home-hero-badge">
-						<FilmButton />
-					</div>
+					<PauseButton />
+					<ExploreBadge />
 				</div>
 			</div>
 			<div className="home-hero-ribbon">

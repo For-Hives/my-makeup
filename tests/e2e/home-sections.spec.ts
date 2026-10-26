@@ -33,7 +33,7 @@ async function scrollThrough(page: Page): Promise<void> {
 	})
 	// The loops of the hero (the ring of the badge, the ribbon) and the banner of the kit repeat forever or wait in pause:
 	// they never end, so they are left out on purpose. tests/e2e/home-hero.spec.ts checks that the loops of the hero run
-	// and stop at the button of the badge.
+	// and stop at the pause button.
 	await page.evaluate(async () => {
 		const ending = document
 			.getAnimations()

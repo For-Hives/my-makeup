@@ -23,8 +23,10 @@
 	--motion-zoom: 1.05;
 	--stagger-enter: 80ms;
 	--stagger-card: 70ms;
-	/* The slow loop of the home hero: one length of the ribbon of specialties. */
+	/* The slow loops of the home hero: one length of the ribbon of specialties, one turn of the ring of its badge (the
+	   pace of the kit's RotatingBadge). */
 	--duration-ribbon: 60s;
+	--duration-ring: 26s;
 }
 
 /*
@@ -869,29 +871,49 @@ main:has(> .home-section) {
 	margin-top: 2rem;
 }
 
-/* The arch: a lit window of the shadow theatre, and its cast shadow in nude behind it. */
+/*
+ * The arch: a lit window of the shadow theatre, drawn like the arches of the rest of the site (`.art-arch` of the kit,
+ * Andy, 26/10/2026: the nude shadow behind it did not belong to the site): the band of the kit offset right and up
+ * behind it, scaled to its size (the kit's 16 and 12 px are for an arch of a card, about 300 px wide; this one is 280 to
+ * 456 px), a white ring round the picture and a white hairline inside it. The margin under it leaves the same air under
+ * the notch of the badge as before it grew.
+ */
 .home-hero-arch-wrap {
+	--band-x: 0.875rem;
+	--band-y: 0.625rem;
 	position: relative;
 	justify-self: center;
 	width: 82%;
 	max-width: 26rem;
-	margin-bottom: 2.25rem;
+	margin-bottom: 2.75rem;
 }
 
 .home-hero-arch-wrap::before {
 	content: "";
 	position: absolute;
-	inset: 0;
+	inset: calc(var(--band-y) * -1) calc(var(--band-x) * -1) 0 var(--band-x);
 	border-radius: 9999px 9999px 0 0;
-	background-color: var(--color-nude-200);
-	transform: translateX(6%);
+	background-color: var(--color-art-band);
 }
 
 .home-hero-arch {
+	--hairline-inset: 9px;
 	position: relative;
 	overflow: hidden;
 	border-radius: 9999px 9999px 0 0;
 	background-color: #efe5d6;
+	box-shadow: 0 0 0 2px #fff;
+}
+
+/* Over the poster and the film (last in the arch, so painted over them); the notch of the badge covers its foot. */
+.home-hero-arch::after {
+	content: "";
+	position: absolute;
+	inset: var(--hairline-inset) var(--hairline-inset) 0;
+	border: 1px solid rgb(255 255 255 / 0.7);
+	border-bottom: 0;
+	border-radius: 9999px 9999px 0 0;
+	pointer-events: none;
 }
 
 /*
@@ -931,21 +953,45 @@ main:has(> .home-section) {
 	}
 }
 
-/* The badge sits on the bottom-left corner of the arch: a ring of the page tone around the button that stops the film. */
+/*
+ * The badge on the bottom-left corner of the arch (HomeHero.tsx, `ExploreBadge`): a notch of the page tone that eats
+ * into the corner, the ink disc in its middle (44 px on a phone, 56 px beyond, the size of the pause button it replaces),
+ * a link to the search, and its name turning round it. The notch is sized from its text: in the 112 units of its ring,
+ * the text is set at 12.5 (11.2 px on a phone, 12.5 px beyond; the ring that went on 26/10/2026 was 7 to 10 px), its
+ * baseline 37 from the centre, so the capitals keep about 9 px from the edge and 9 to 11 px from the disc. On a phone
+ * its centre sits 0.875rem inside the corner: centred on it, the notch would stand 50 px out of an arch whose edge is
+ * 48 px from the side of a 320 px screen.
+ */
 .home-hero-badge {
 	position: absolute;
 	left: 0;
 	bottom: 0;
-	width: 3.5rem;
-	height: 3.5rem;
+	width: 6.25rem;
+	height: 6.25rem;
 	border-radius: 9999px;
 	background-color: var(--color-page);
-	transform: translate(-50%, 50%);
+	transform: translate(calc(-50% + 0.875rem), calc(50% - 0.875rem));
+}
+
+/*
+ * The type of the kit's badge (`RotatingBadge`): Instrument Sans, semibold, capitals. It costs no request: the route
+ * preloads it already (the 404 of the public pages loads the pair of src/components/direct-edit/fonts.ts, and Next
+ * preloads it on every page of the segment, `/` included; measured on 26/10/2026).
+ */
+.home-hero-ring {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	font-family: var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
+	font-size: 12.5px;
+	font-weight: 600;
+	fill: var(--color-ink);
 }
 
 .home-hero-disc {
 	position: absolute;
-	inset: 0.375rem;
+	inset: 1.75rem;
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -959,17 +1005,38 @@ main:has(> .home-section) {
 	outline-offset: 3px;
 }
 
-.home-hero-glyph {
-	width: 1rem;
-	height: 1rem;
-	fill: currentColor;
+.home-hero-arrow {
+	width: 1.125rem;
+	height: 1.125rem;
 }
 
-.home-hero-seal {
-	width: 0.375rem;
-	height: 0.375rem;
+/*
+ * The pause button (HeroFilm.tsx, WCAG 2.2.2): out of sight until it takes the keyboard focus, like a skip link, then a
+ * small ink pill on the arch, above the badge. Clipped to nothing rather than hidden, so it stays in the tab order, and
+ * at its full size, so it is a 44 px target the moment it shows. Never transparent by `opacity` (this block has none).
+ */
+.home-hero-pause {
+	position: absolute;
+	z-index: 2;
+	left: 0.75rem;
+	bottom: 4.75rem;
+	min-height: 2.75rem;
+	padding-inline: 1.125rem;
 	border-radius: 9999px;
-	background-color: var(--color-lipstick);
+	background-color: var(--color-ink);
+	color: var(--hero-ivory);
+	font-size: 0.875rem;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.home-hero-pause:not(:focus) {
+	clip-path: inset(50%);
+}
+
+.home-hero-pause:focus {
+	outline: 2px solid var(--hero-ivory);
+	outline-offset: -5px;
 }
 
 /*
@@ -1189,7 +1256,7 @@ main:has(> .home-section) {
 	stroke-width: 1.5;
 }
 
-/* A hand on the mouse: the segment warms, the button lifts to a softer ink, the disc of the badge turns lipstick. */
+/* A hand on the mouse: the segment warms, the button lifts to a softer ink (the arrow of the badge: the kit's `.art-arrow`). */
 @media (hover: hover) {
 	.guided-search-field:hover {
 		background-color: var(--color-nude-100);
@@ -1207,11 +1274,6 @@ main:has(> .home-section) {
 
 	.guided-search-submit:hover {
 		background-color: #3a2e33;
-		filter: none;
-	}
-
-	button.home-hero-disc:hover {
-		background-color: var(--color-lipstick);
 		filter: none;
 	}
 }
@@ -1317,18 +1379,30 @@ main:has(> .home-section) {
 		margin-top: 2.5rem;
 	}
 
+	.home-hero-arch-wrap {
+		--band-x: 1.25rem;
+		--band-y: 0.9375rem;
+		margin-bottom: 3.5rem;
+	}
+
+	.home-hero-arch {
+		--hairline-inset: 12px;
+	}
+
+	/* Centred on the corner, as before: there is room beside the arch. */
 	.home-hero-badge {
-		width: 4.5rem;
-		height: 4.5rem;
+		width: 7rem;
+		height: 7rem;
+		transform: translate(-50%, 50%);
 	}
 
-	.home-hero-disc {
-		inset: 0.5rem;
-	}
-
-	.home-hero-glyph {
+	.home-hero-arrow {
 		width: 1.25rem;
 		height: 1.25rem;
+	}
+
+	.home-hero-pause {
+		bottom: 4.25rem;
 	}
 
 	.home-hero-ribbon-list li {
@@ -1376,10 +1450,11 @@ main:has(> .home-section) {
 
 /*
  * What moves in the home hero (docs/mouvement.md, « L'accueil en arche »). The arch rises into place with the load-in,
- * revealed by a clip (never faded: its poster may be the largest element of a wide first screen). The ribbon slides by
- * one length of its list in 60 s, only under `data-hero-motion`, which the client part of the hero sets once it runs
- * and the visitor has not asked for less motion: without script nothing loops, and the button of the badge stops the
- * ribbon with the film (`paused`).
+ * revealed by a clip (never faded: its poster may be the largest element of a wide first screen). The ring of the badge
+ * turns once in 26 s (the kit's `art-spin`) and the ribbon slides by one length of its list in 60 s, only under
+ * `data-hero-motion`, which the client part of the hero sets once it runs and the visitor has not asked for less motion:
+ * without script nothing loops, and the pause button stops the ring and the ribbon with the film (`paused`). Like the
+ * kit's banner, the ribbon also stops under the pointer and while something in it holds the focus.
  */
 @keyframes enter-arch {
 	from {
@@ -1413,10 +1488,15 @@ main:has(> .home-section) {
 		}
 	}
 
+	.home-hero[data-hero-motion] .home-hero-ring {
+		animation: art-spin var(--duration-ring) linear infinite;
+	}
 	.home-hero[data-hero-motion] .home-hero-ribbon-track {
 		animation: home-hero-ribbon var(--duration-ribbon) linear infinite;
 	}
-	.home-hero[data-hero-motion="paused"] .home-hero-ribbon-track {
+	.home-hero[data-hero-motion="paused"] :is(.home-hero-ring, .home-hero-ribbon-track),
+	.home-hero-ribbon:hover .home-hero-ribbon-track,
+	.home-hero-ribbon:focus-within .home-hero-ribbon-track {
 		animation-play-state: paused;
 	}
 

@@ -79,6 +79,19 @@ describe('U82 : chaque événement appartient au catalogue fermé et ne porte au
 		expect(eventData('login_result', { method: 'email', ok: true, code: 'un-code-inventé' })).toBeNull()
 	})
 
+	test('les appels à l’action : le bas des pages, la barre, et depuis le 26/10/2026 le badge de l’arche de l’accueil', () => {
+		expect(CATALOG.cta_click.where.values).toEqual([
+			'cta_recherche',
+			'cta_inscription',
+			'nav_recherche',
+			'nav_recherche_mobile',
+			'accueil_explorer',
+		])
+		// The badge « Explorer les maquilleuses » (src/components/home/HomeHero.tsx): a value of its own, so its clicks
+		// are not mixed with those of the call to action at the foot of the page, which also leads to the search.
+		expect(eventData('cta_click', { where: 'accueil_explorer' })).toEqual({ where: 'accueil_explorer' })
+	})
+
 	test('pid : un id de l’ancien site, ou v3-<id> ; rien d’autre', () => {
 		expect(eventData('contact_click', { pid: 12, channel: 'email' })).toEqual({ pid: 12, channel: 'email' })
 		// A numeric text is the same id: the series of the live site are numbers.

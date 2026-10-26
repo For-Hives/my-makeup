@@ -81,7 +81,7 @@ test.describe('La mesure de la recherche, des appels à l’action et de la 404'
 		expect(all).not.toContain('mariage lea')
 	})
 
-	test('un appel à l’action de la page et celui de la navigation', async ({ page }) => {
+	test('un appel à l’action de la page, le badge de l’arche de l’accueil et la navigation', async ({ page }) => {
 		await page.goto('/')
 		await page.getByRole('link', { name: 'Je suis maquilleuse' }).first().scrollIntoViewIfNeeded()
 		await page.getByRole('link', { name: 'Je suis maquilleuse' }).first().click({ noWaitAfter: true })
@@ -89,13 +89,20 @@ test.describe('La mesure de la recherche, des appels à l’action et de la 404'
 		const [cta] = await umami.envois('cta_click')
 		expect(cta ? dataOf(cta) : {}).toEqual({ where: 'cta_inscription' })
 
+		// The badge « Explorer les maquilleuses » on the arch of the hero (26/10/2026): a value of its own.
+		await page.goto('/')
+		await page.getByRole('link', { name: 'Explorer les maquilleuses', exact: true }).click({ noWaitAfter: true })
+		await expect.poll(async () => (await umami.envois('cta_click')).length, { timeout: 10_000 }).toBe(2)
+		const [, badge] = await umami.envois('cta_click')
+		expect(badge ? dataOf(badge) : {}).toEqual({ where: 'accueil_explorer' })
+
 		await page.goto('/a-propos')
 		await page
 			.getByRole('navigation', { name: 'Navigation principale' })
 			.getByRole('link', { name: 'Trouver une maquilleuse' })
 			.click()
-		await expect.poll(async () => (await umami.envois('cta_click')).length, { timeout: 10_000 }).toBe(2)
-		const [, nav] = await umami.envois('cta_click')
+		await expect.poll(async () => (await umami.envois('cta_click')).length, { timeout: 10_000 }).toBe(3)
+		const [, , nav] = await umami.envois('cta_click')
 		expect(['nav_recherche', 'nav_recherche_mobile']).toContain(nav ? dataOf(nav).where : null)
 	})
 
