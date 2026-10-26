@@ -922,6 +922,13 @@ main:has(> .home-section) {
 	.home-hero:not([data-arch="seen"]) .home-hero-arch > picture {
 		display: none;
 	}
+
+	/* Until then the top of the arch is the glow of the backlit paper (its tones, sampled on the still), not a blurred
+	   copy of the scene: dark smudges at the foot of the first screen read as a picture still loading. */
+	.home-hero:not([data-arch="seen"]) .home-hero-arch::before {
+		background: radial-gradient(120% 75% at 50% 30%, #f8e6c8 0%, #f0cf9f 38%, #cc965d 75%, #a8743f 100%);
+		filter: none;
+	}
 }
 
 /* The badge sits on the bottom-left corner of the arch: a ring of the page tone around the button that stops the film. */
