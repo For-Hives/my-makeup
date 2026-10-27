@@ -1,9 +1,11 @@
 import { describe, expect, test } from 'bun:test'
+import { existsSync } from 'node:fs'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { CapsuleImage } from '@/components/art/CapsuleImage'
 import { AboutArticle } from '@/components/static-pages/AboutArticle'
 import { ArtistBenefits } from '@/components/static-pages/ArtistBenefits'
 import { ABOUT, ARTIST_BENEFITS, PARTNERSHIPS } from '@/components/static-pages/artist-texts'
+import { ARTIST_PALETTE, Benefits, CLIENT_PALETTE } from '@/components/static-pages/Benefits'
 import { ClientBenefits } from '@/components/static-pages/ClientBenefits'
 import { ClientGuide } from '@/components/static-pages/ClientGuide'
 import { PageArticle, partTitles } from '@/components/static-pages/PageArticle'
@@ -102,22 +104,37 @@ describe('« Pourquoi… » : arches étagées (disposition B)', () => {
 		['maquilleuse', <ArtistBenefits key="a" />, ARTIST_BENEFITS.length],
 		['particulier', <ClientBenefits key="c" />, 7],
 	] as const) {
-		test(`${name} : une arche par avantage, objet dessiné et numéro cachés, étagement sur grand écran`, () => {
+		test(`${name} : une arche et une illustration par avantage, numéro caché, étagement sur grand écran`, () => {
 			const markup = html(node)
 			expect(markup.match(/<li[^>]*data-benefit/g)).toHaveLength(count)
 			expect(markup.match(/class="art-arch["\s]/g)).toHaveLength(count)
 			expect(markup.match(/<p aria-hidden="true"[^>]*>\d\d<\/p>/g)).toHaveLength(count)
 			expect(markup).toContain('lg:[&amp;&gt;li:nth-child(4n+2)]:mt-16')
-			expect(markup).not.toContain('<img')
+			expect(markup.match(/<img /g)).toHaveLength(count)
+			expect(markup).toContain('illustrations%2F')
+			expect(markup).not.toContain('art-drawing')
 		})
 	}
 
-	test('les deux pages n’ont pas le même jeu d’objets', () => {
-		const objects = (markup: string) => markup.match(/<svg [^>]*art-drawing[^>]*>/g)?.length
-		const artist = html(<ArtistBenefits />).split('art-drawing')
-		const client = html(<ClientBenefits />).split('art-drawing')
-		expect(objects(html(<ArtistBenefits />))).toBeGreaterThan(0)
-		expect(artist.slice(1).join('|')).not.toBe(client.slice(1).join('|'))
+	test('les deux pages n’ont pas le même jeu d’illustrations, et chaque fichier existe', () => {
+		const artist = new Set(ARTIST_PALETTE.images)
+		const client = new Set(CLIENT_PALETTE.images)
+		expect(artist.size).toBe(5)
+		expect(client.size).toBe(4)
+		for (const image of artist) expect(client.has(image)).toBe(false)
+		for (const image of [...artist, ...client]) expect(existsSync(`public${image}`)).toBe(true)
+	})
+
+	test('sans illustration, l’arche garde l’objet dessiné', () => {
+		const markup = html(
+			<Benefits
+				eyebrow="Test"
+				items={[{ titre: 'Un', texte: 'Deux' }]}
+				palette={{ ...CLIENT_PALETTE, images: undefined }}
+			/>
+		)
+		expect(markup).toContain('art-drawing')
+		expect(markup).not.toContain('<img')
 	})
 })
 
