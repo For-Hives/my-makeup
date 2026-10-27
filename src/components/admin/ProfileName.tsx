@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import type { DefaultServerCellComponentProps } from 'payload'
 import { cache } from 'react'
 import { type AdminListProfile, adminProfileName } from '../../lib/profile/admin-list'
@@ -50,11 +51,14 @@ function thumbnailOf(payload: Payload, picture: unknown): Promise<string | null>
 /**
  * The first cell of the list of profiles (ticket 308): her photo, then her name as a person, not her address.
  * The photo is decorative: the name beside it says who she is.
+ *
+ * It is the first column, so Payload asks it for the link to the document (`link`, `linkURL`): a custom cell has to
+ * wrap its own content, Payload does not. Without it the list could be filtered and selected, but no profile opened.
  */
-export async function ProfileName({ payload, rowData }: DefaultServerCellComponentProps) {
+export async function ProfileName({ payload, rowData, link, linkURL }: DefaultServerCellComponentProps) {
 	const profile = (rowData ?? {}) as AdminListProfile & { mainPicture?: unknown }
 	const thumbnail = await thumbnailOf(payload, profile.mainPicture)
-	return (
+	const identity = (
 		<span data-testid="profile-name" style={{ alignItems: 'center', display: 'inline-flex', gap: '0.75rem' }}>
 			{thumbnail ? (
 				// biome-ignore lint/performance/noImgElement: the admin panel is outside the site's image pipeline
@@ -79,5 +83,12 @@ export async function ProfileName({ payload, rowData }: DefaultServerCellCompone
 			)}
 			<span>{adminProfileName(profile)}</span>
 		</span>
+	)
+	if (!link) return identity
+	const href = linkURL ?? `/admin/collections/profiles/${String((rowData as { id?: unknown })?.id ?? '')}`
+	return (
+		<Link href={href} style={{ color: 'inherit', textDecoration: 'none' }}>
+			{identity}
+		</Link>
 	)
 }

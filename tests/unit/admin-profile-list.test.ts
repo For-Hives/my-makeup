@@ -141,3 +141,42 @@ describe('le choix d’une commune de la revue par un bouton', () => {
 		}
 	})
 })
+
+describe('la première colonne de la liste mène à la fiche', () => {
+	const payload = { find: async () => ({ docs: [] }) } as unknown as Payload
+	const links = (node: unknown): string[] => {
+		const found: string[] = []
+		const walk = (value: unknown): void => {
+			if (Array.isArray(value)) return value.forEach(walk)
+			if (typeof value !== 'object' || value === null) return
+			const element = value as { props?: { href?: unknown; children?: unknown } }
+			if (typeof element.props?.href === 'string') found.push(element.props.href)
+			walk(element.props?.children)
+		}
+		walk(node)
+		return found
+	}
+
+	test('avec le lien demandé par Payload, la cellule enveloppe la photo et le nom dans un lien vers la fiche', async () => {
+		const { ProfileName } = await import('../../src/components/admin/ProfileName')
+		const cell = await ProfileName({
+			payload,
+			rowData: { id: 24, firstName: 'Julie', lastName: 'Perrin' },
+			link: true,
+			linkURL: '/admin/collections/profiles/24',
+		} as never)
+		expect(links(cell)).toEqual(['/admin/collections/profiles/24'])
+	})
+
+	test('sans adresse donnée, le lien se compose avec le numéro du profil', async () => {
+		const { ProfileName } = await import('../../src/components/admin/ProfileName')
+		const cell = await ProfileName({ payload, rowData: { id: 7 }, link: true } as never)
+		expect(links(cell)).toEqual(['/admin/collections/profiles/7'])
+	})
+
+	test('sans lien demandé, rien n’est enveloppé', async () => {
+		const { ProfileName } = await import('../../src/components/admin/ProfileName')
+		const cell = await ProfileName({ payload, rowData: { id: 7 } } as never)
+		expect(links(cell)).toEqual([])
+	})
+})
