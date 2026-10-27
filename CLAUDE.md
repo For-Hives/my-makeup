@@ -180,7 +180,7 @@ Le même mot français a le même mot anglais partout (source : `PLAN-ANGLAIS.md
 | garde | `guard` | rapprochement (des médias) | `reconciliation` |
 | recherche / résultat | `search` / `result` | à blanc / réel / contrôle (import) | `dry-run` / `real` / `check` |
 | lire / enregistrer / chercher | `read` / `save` / `find` | cible / source / empreinte | `target` / `source` / `fingerprint` |
-| accueil (onboarding de l'espace) | `onboarding` | aperçu | `preview` |
+| accueil (onboarding de l'espace, supprimé le 27/10/2026 ; le nom ne reste que dans les événements retirés) | `onboarding` | aperçu | `preview` |
 | adresse (URL) | `url` ou `path` | notes de version | `releaseNotes` |
 | hôte / en-têtes | `host` / `headers` | verrou | `lock` |
 | plancher (temps minimal d'une réponse) / plafond (de session) | `floor` / `cap` | prolonger / prolongement | `extend` / `extension` |

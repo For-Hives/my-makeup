@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { MEDIAN_MINIMUM, medianPrice, OFFER_MODELS, offerMedians, offerModelOf } from '@/lib/price-median'
 
 /**
- * The market hint of the onboarding (issue 1009): the median of the amounts of the published offers
+ * The market hint (issue 1009): the median of the amounts of the published offers
  * of one model, only from a sample large enough that it names nobody.
  */
 

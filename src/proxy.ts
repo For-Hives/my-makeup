@@ -13,13 +13,14 @@ import {
 	MESSAGE_HEADER,
 } from '@/lib/auth/legacy-cookies'
 import { comesFromOtherSite, RELAY_HEADERS, relayPage } from '@/lib/auth/relay-page'
+import { signInUrl } from '@/lib/auth/return-to'
 import { REFUSAL_PATH, SIGN_UP_PATH, secondsBeforeSignUp } from '@/lib/auth/sign-up-refusal'
 import { CONTACT_PATH, CONTACT_THROTTLED_PATH, secondsBeforeThisRequestMessage } from '@/lib/contact/rate-limit'
 import { rateLimitSearch } from '@/lib/search/rate-limit'
 import { robotsForPath } from '@/lib/seo/robots'
 import { uploadRefusal } from '@/lib/upload-guard'
 import { isHomePageInternal } from '@/lib/urls/home-page'
-import { shapeRedirect } from '@/lib/urls/shape'
+import { isMovedAddress, shapeRedirect } from '@/lib/urls/shape'
 import { type CheckedFamily, type PageAnswer, urlToCheck } from '@/lib/urls/unknown-page'
 
 /**
@@ -88,13 +89,20 @@ function siteProxy(requete: NextRequest) {
 		return refusal
 	}
 	// The path as the visitor wrote it: `nextUrl.pathname` may already have lost a repeated slash.
-	const shape = shapeRedirect(writtenPath(requete.url ?? requete.nextUrl.href) ?? pathname)
+	const asked = writtenPath(requete.url ?? requete.nextUrl.href) ?? pathname
+	const shape = shapeRedirect(asked)
 	if (shape) {
+		// A removed address of the space (`/auth/init-account`) goes to her space for a visitor with a session cookie, and
+		// straight to the sign-in page for one without: never two hops. The old query means nothing there, so it is dropped.
+		// Only for an address the table moves: a plain final slash on a page of the space keeps its query and its sign-in.
+		const toPrivatePage = isMovedAddress(asked) && isPrivatePage(shape.chemin)
+		const target = !toPrivatePage
+			? `${shape.chemin}${search}`
+			: requete.cookies.get(SESSION_COOKIE)?.value
+				? shape.chemin
+				: signInUrl(shape.chemin)
 		// A new URL on the host of the request: cloning `nextUrl` would keep the final slash it had.
-		const shapeRedirect = NextResponse.redirect(
-			new URL(`${shape.chemin}${search}`, requete.url ?? requete.nextUrl.href),
-			shape.status
-		)
+		const shapeRedirect = NextResponse.redirect(new URL(target, requete.url ?? requete.nextUrl.href), shape.status)
 		const shapeDirective = robotsForPath(pathname)
 		if (shapeDirective) shapeRedirect.headers.set('X-Robots-Tag', shapeDirective)
 		return shapeRedirect

@@ -7,11 +7,14 @@ import { installAnalytics } from '@/lib/analytics/loader'
 import { track } from '@/lib/analytics/track'
 
 /** Tells the measure once for this view of the page; a reload of the page does not tell it again. */
-function useOnce(event: Extract<EventName, 'signup_wall' | 'email_confirmed'>) {
+function useOnce(
+	event: Extract<EventName, 'signup_wall' | 'email_confirmed' | 'account_arrival'>,
+	mode: 'rechargement' | 'meme-vue' = 'rechargement'
+) {
 	useEffect(() => {
 		installAnalytics()
-		if (shouldEmit(event, '', 'rechargement', realBrowser(), LAST_FUNNEL_KEY)) track(event)
-	}, [event])
+		if (shouldEmit(event, '', mode, realBrowser(), LAST_FUNNEL_KEY)) track(event)
+	}, [event, mode])
 }
 
 /**
@@ -27,5 +30,16 @@ export function SignupWallEvent() {
 /** The link of the confirmation mail was followed and the account is now active (`email_confirmed`). Renders nothing. */
 export function EmailConfirmedEvent() {
 	useOnce('email_confirmed')
+	return null
+}
+
+/**
+ * A makeup artist opens her space while her profile is still entirely empty (`account_arrival`, 27/10/2026): the
+ * arrival of a new account on her profile, now that no onboarding stands in between. It carries no property: no
+ * name, no address, no identifier. Rendered by the server only in that case. Once per tab: coming back to her space
+ * (with the back arrow, say) while it is still empty does not tell it again (`meme-vue`).
+ */
+export function AccountArrivalEvent() {
+	useOnce('account_arrival', 'meme-vue')
 	return null
 }

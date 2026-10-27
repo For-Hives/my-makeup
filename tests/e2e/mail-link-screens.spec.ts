@@ -41,7 +41,7 @@ for (const size of SIZES) {
 		test.use({ viewport: size })
 		test.beforeEach(({ context }) => context.setExtraHTTPHeaders({ 'x-forwarded-for': address(size.width) }))
 
-		test('inscription : le mur, la confirmation, un clic, puis « Prépare ton profil »', async ({ page }) => {
+		test('inscription : le mur, la confirmation, un clic, puis son espace', async ({ page }) => {
 			const email = `ecrans-311-${crypto.randomUUID()}@example.test`
 			await page.goto('/auth/signup')
 			await page.waitForLoadState('networkidle')
@@ -64,7 +64,7 @@ for (const size of SIZES) {
 
 			await page.waitForLoadState('networkidle')
 			await page.getByRole('button', { name: 'Continuer vers mon profil' }).click()
-			await expect(page).toHaveURL(/\/auth\/init-account$/)
+			await expect(page).toHaveURL(/\/auth\/profil$/)
 			await checkScreen(page, 'arrivee-apres-confirmation')
 		})
 
@@ -91,7 +91,7 @@ for (const size of SIZES) {
 			await page.getByLabel('Confirme le mot de passe').fill(NEW_PASSWORD)
 			await page.getByRole('button', { name: 'Enregistrer' }).click()
 			// The address was never confirmed: the link confirms it and opens the session, no reconnection.
-			await expect(page).toHaveURL(/\/auth\/(profil|init-account)$/)
+			await expect(page).toHaveURL(/\/auth\/profil$/)
 			expect((await page.context().cookies()).some(({ name }) => name === 'payload-token')).toBe(true)
 			await checkScreen(page, 'arrivee-apres-oubli')
 		})

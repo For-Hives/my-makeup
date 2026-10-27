@@ -8,9 +8,6 @@ const config = (moduleProxy as { config?: { matcher?: unknown } }).config
 describe('redirectionDeLEspace : la porte rapide des pages privées', () => {
 	test('sans cookie, une page privée renvoie à la connexion avec la page de retour', () => {
 		expect(dashboardRedirection('/auth/profil', '', false)).toBe('/auth/signin?callbackUrl=%2Fauth%2Fprofil')
-		expect(dashboardRedirection('/auth/init-account', '', false)).toBe(
-			'/auth/signin?callbackUrl=%2Fauth%2Finit-account'
-		)
 	})
 
 	test('la requête fait partie du retour', () => {

@@ -17,7 +17,7 @@ import { openWindow } from '../support/dom-react'
  * The zone form (ticket 123 moved from the card of her old space to the block « Zone » by issue 1023; plan 02
  * U14, U15, U16, E30, E31): the commune chosen in the list with the keyboard and with a tap, free text refused, the
  * radius out of bounds, the service of the communes down, and a single save for a double click. The form is the one
- * of the block and of the onboarding (`PlaceForm`); the send and search functions are fakes: no network.
+ * of the block (`PlaceForm`); the send and search functions are fakes: no network.
  */
 
 const jsdomWindow = openWindow()

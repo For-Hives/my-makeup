@@ -1,5 +1,5 @@
 /**
- * The flagship offer of the onboarding (issue 1009): the one offer she writes in the fifth step, a name
+ * The flagship offer (issue 1009): the one offer she writes, a name
  * (one of three models, or her own) and one price.
  *
  * - The step takes an amount, not « sur devis »: an offer without an amount does not count towards a

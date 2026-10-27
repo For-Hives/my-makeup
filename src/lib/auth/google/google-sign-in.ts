@@ -1,10 +1,8 @@
 import { timingSafeEqual } from 'node:crypto'
 import type { Payload } from 'payload'
-import { googleSignInDestination } from '../../dashboard/sign-in-destination'
 import type { EventCode, Log } from '../auth-log'
 import type { GoogleErrorCode } from '../errors'
 import { googleCallbackRateLimit, type RateLimit } from '../rate-limit'
-import { ACCOUNT_ONBOARDING_PAGE } from '../return-to'
 import { authLogRateLimit } from '../sign-up-rate-limits'
 import { openWithoutPassword } from '../token'
 import { type AccountRefusalCode, googleAccount } from './account'
@@ -34,7 +32,7 @@ export type GoogleOutcome =
 			token: string
 			/** True for a first passage: the account has just been made. */
 			nouveau: boolean
-			/** Where she goes: the onboarding for a new account, else the page she asked for. */
+			/** Where she goes: the page she asked for, else her space (a new account included). */
 			destination: string
 	  }
 	| { ok: false; code: GoogleErrorCode }
@@ -171,8 +169,6 @@ export async function finishGoogleSignIn({
 		ok: true,
 		token,
 		nouveau: account.nouveau,
-		destination: account.nouveau
-			? ACCOUNT_ONBOARDING_PAGE
-			: await googleSignInDestination(payload, account.id, request.retour),
+		destination: request.retour,
 	}
 }

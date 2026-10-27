@@ -1,9 +1,9 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
+import { AccountArrivalEvent } from '@/components/analytics/AccountFunnel'
 import { AccountDeletion } from '@/components/dashboard/AccountDeletion'
 import { AvailabilitySwitch } from '@/components/dashboard/AvailabilitySwitch'
 import { MyViews } from '@/components/dashboard/MyViews'
-import { OnboardingBanner } from '@/components/dashboard/OnboardingBanner'
 import { ActivitySummary, SignOutCard } from '@/components/dashboard/overview/AccountSummary'
 import { CARD, SECONDARY, TITLE } from '@/components/dashboard/overview/card'
 import { OverviewHeader } from '@/components/dashboard/overview/OverviewHeader'
@@ -14,16 +14,16 @@ import { QuoteRequests } from '@/components/dashboard/QuoteRequests'
 import { RefreshSession } from '@/components/dashboard/RefreshSession'
 import { body, display } from '@/components/direct-edit/fonts'
 import { readCheck } from '@/lib/activity/store'
-import { ACCOUNT_ONBOARDING_PAGE } from '@/lib/auth/return-to'
+import { signInUrl } from '@/lib/auth/return-to'
 import { requireArtist } from '@/lib/auth/session'
 import { activityView } from '@/lib/dashboard/activity'
 import { AVAILABLE_TEXT, isAvailable, OUT_OF_SEARCH_TEXT, UNAVAILABLE_TEXT } from '@/lib/dashboard/availability'
 import { readPasswordChangeMode } from '@/lib/dashboard/change-password'
 import { confirmationMode } from '@/lib/dashboard/deletion-confirmation'
+import { ensureProfile } from '@/lib/dashboard/empty-profile'
 import { greetingName } from '@/lib/dashboard/greeting'
 import { artistProfile, profileId } from '@/lib/dashboard/my-profile'
 import { readMyViews } from '@/lib/dashboard/my-views'
-import { remainingSteps } from '@/lib/dashboard/onboarding'
 import { pageIsOnline, profileProgress } from '@/lib/dashboard/progress'
 import { publicAddress } from '@/lib/dashboard/public-address'
 import { requestUser } from '@/lib/dashboard/request'
@@ -50,9 +50,11 @@ export const metadata: Metadata = { title: 'Mon espace' }
 export default async function ProfilePage() {
 	const artist = await requireArtist('/auth/profil')
 	const context = await requestUser()
-	const profile = context === null ? null : await artistProfile(context.payload, context.utilisateur)
-	// An account that came without a profile (some accounts of the old site) gets one in the onboarding (ticket 140).
-	if (context === null || profile === null) return redirect(ACCOUNT_ONBOARDING_PAGE)
+	if (context === null) return redirect(signInUrl('/auth/profil'))
+	// An account that came without a profile (some accounts of the old site) gets an empty one here, made by the server.
+	await ensureProfile(context.payload, context.utilisateur)
+	const profile = await artistProfile(context.payload, context.utilisateur)
+	if (profile === null) throw new Error('Le profil de la maquilleuse n’a pas pu être créé.')
 	const progress = profileProgress(profile)
 	// Her views of the last 30 days, once her page is published (ticket 1001): her own profile, found by her session.
 	const myProfileId = profile.status === 'published' ? await profileId(context.payload, context.utilisateur) : null
@@ -62,9 +64,6 @@ export default async function ProfilePage() {
 	const myQuotes = allProfileId === null ? [] : await readMyQuotes(context.payload, allProfileId)
 	const showQuotes =
 		(serverEnv().quoteRequests && profile.status === 'published') || myQuotes === null || myQuotes.length > 0
-	const steps = remainingSteps(profile)
-	// Not for a page the team hid, nor for the team's own account: the onboarding is not their next step.
-	const showBanner = steps.premiere !== null && progress.etat !== 'masque' && progress.etat !== 'interne'
 	// Her SIRET and where its check stands: for her eyes only (issue 1004).
 	const activity = activityView(profile.siret, await readCheck(context.payload, profile.id))
 	const available = isAvailable(profile.available)
@@ -75,12 +74,10 @@ export default async function ProfilePage() {
 		>
 			<div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
 				<RefreshSession expire={artist.expire} />
+				{progress.etat === 'vide' ? <AccountArrivalEvent /> : null}
 				<OverviewHeader
 					greeting={`Bonjour ${greetingName({ firstName: profile.firstName, accountName: artist.name })}, tu es connectée.`}
 				/>
-				{showBanner && steps.premiere !== null ? (
-					<OnboardingBanner reste={steps.reste} premiere={steps.premiere} />
-				) : null}
 				<OverviewStatus progress={progress} resume={saveMyAvailability} />
 				{pageIsOnline(progress) && profile.slug ? <PageOnline adresse={publicAddress(profile.slug)} /> : null}
 				<section

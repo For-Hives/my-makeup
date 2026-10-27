@@ -3,7 +3,7 @@ import { FLAGSHIP_MESSAGES, flagshipErrors, flagshipRows } from '@/lib/dashboard
 import type { SavedRow } from '@/lib/dashboard/list'
 
 /**
- * The flagship offer of the onboarding (issue 1009): one name, one price. It joins the offers she
+ * The flagship offer (issue 1009): one name, one price. It joins the offers she
  * already has without erasing one, and without a duplicate. Made-up offers only.
  */
 

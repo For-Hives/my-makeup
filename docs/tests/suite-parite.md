@@ -10,7 +10,7 @@ Ce document range chaque test nommé du plan de tests (`plans/02-plan-tests.md`,
 | `hors bascule` | Le test n'est pas dans le périmètre de la bascule. Le ticket qui le reprend est nommé, avec la raison |
 | `remplacé` | Le test vit sur l'ancien site (`S`, `AF-`, `RG-`). Il est remplacé par les tests de la v3 nommés, et reste sur `main` jusqu'à l'arrêt de l'ancien site (ticket 202) |
 
-Décomptes : **213 verts, 13 hors bascule, 29 remplacés**, soit 255 tests nommés.
+Décomptes : **211 verts, 13 hors bascule, 31 remplacés**, soit 255 tests nommés.
 
 ## La suite complète, lue sur la tête de `v3`
 
@@ -51,7 +51,7 @@ Elles ne sont pas sous `ci-ok` : elles tournent le lundi à 07:00 par `.github/w
 
 ## Le tableau
 
-<!-- counts: vert 213, hors bascule 13, remplacé 29 -->
+<!-- counts: vert 211, hors bascule 13, remplacé 31 -->
 <!-- table:start -->
 | Id | État | Où | Note |
 |---|---|---|---|
@@ -188,7 +188,7 @@ Elles ne sont pas sous `ci-ok` : elles tournent le lundi à 07:00 par `.github/w
 | I44 | vert | `tests/integration/import-accounts.test.ts` |  |
 | I45 | vert | `tests/unit/cutover-host-check.test.ts`, `tests/unit/talent-titles.test.ts`, `tests/e2e/artist-pages.spec.ts` (+6) |  |
 | E01 | vert | `tests/e2e/sign-up.spec.ts` | adapté |
-| E02 | vert | `tests/integration/dashboard-onboarding.test.ts`, `tests/e2e/dashboard-onboarding.spec.ts`, `tests/unit/dashboard-onboarding-panel.test.tsx` (+1) |  |
+| E02 | remplacé | `tests/e2e/sign-up.spec.ts`, `tests/unit/init-account-redirect.test.ts`, `tests/unit/sign-in-return.test.ts` | écart voulu `sans-onboarding` (27/10/2026) : plus d’accueil, la maquilleuse arrive sur son espace ; ses tests sont supprimés |
 | E03 | vert | `tests/integration/auth-sign-up-email-taken.test.ts`, `tests/e2e/sign-up.spec.ts` |  |
 | E04 | vert | `tests/integration/auth-sign-up-email-taken.test.ts`, `tests/e2e/sign-up.spec.ts` |  |
 | E05 | vert | `tests/e2e/sign-in.spec.ts` |  |
@@ -309,5 +309,5 @@ Elles ne sont pas sous `ci-ok` : elles tournent le lundi à 07:00 par `.github/w
 | RG-05 | remplacé | E68, E71 | le premier tap ouvre le panneau ; le bouton « Modifier » au focus ; reste sur `main` jusqu’à l’arrêt de l’ancien site (ticket 202) |
 | RG-08 | remplacé | E12 | session expirée : une redirection, le message ; reste sur `main` jusqu’à l’arrêt de l’ancien site (ticket 202) |
 | RG-06 | vert | `tests/e2e/dashboard-preview.spec.ts`, `tests/unit/dashboard-preview.test.tsx` | repris tel quel |
-| RG-07 | vert | `tests/e2e/dashboard-onboarding.spec.ts`, `tests/unit/dashboard-onboarding-panel.test.tsx` | repris tel quel |
+| RG-07 | remplacé | E02 | écart voulu `sans-onboarding` (27/10/2026) : l’accueil n’existe plus |
 <!-- table:end -->

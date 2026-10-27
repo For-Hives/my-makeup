@@ -86,7 +86,7 @@ Toutes ces pages répondent `noindex`. Les chemins ne changent pas : les liens d
 | Famille | Adresses | Aujourd'hui | Après la bascule | Code attendu | Ligne de 01 §6.3 |
 | --- | --- | --- | --- | --- | --- |
 | `espace-connexion` | `/auth/signin`, `/auth/signup`, `/auth/mot-de-passe-oublie`, `/auth/reinitialiser` | Connexion, inscription, mot de passe oublié, réinitialisation | Mêmes chemins, `noindex`, `private, no-store` | 200 | 7 |
-| `espace-prive` | `/auth/profil`, `/auth/apercu-profil`, `/auth/init-account` | Espace et onboarding ; sans session, une 307 en un saut vers la connexion | Mêmes chemins, `noindex`, `private, no-store` ; sans session, redirection vers `/auth/signin?callbackUrl=<chemin>` | 200 ; sans session, 307 en un saut | 7 |
+| `espace-prive` | `/auth/profil`, `/auth/apercu-profil` | Espace ; sans session, une 307 en un saut vers la connexion | Mêmes chemins, `noindex`, `private, no-store` ; sans session, redirection vers `/auth/signin?callbackUrl=<chemin>` | 200 ; sans session, 307 en un saut | 7 |
 | `espace-verification` | `/auth/verification-complete`, `/auth/verification-wall` | Mur de vérification et confirmation de l'email (`/auth/verification-*`) | Mêmes chemins, `noindex` | 200 | 8 |
 | `espace-racine` | `/auth` | Page vide en 200, puis redirection par le navigateur | Redirection par le serveur : `/auth/signin` (avec une session : `/auth/profil`) | 307 en un saut | — |
 | `espace-erreur` | `/auth/error` | Page d'erreur ; sans code, une 307 vers elle-même avec `?error=erreur-inconnue` | Page d'erreur en français, `noindex`, avec ou sans code | 200 | — |
@@ -100,6 +100,7 @@ Un chemin inconnu sous `/auth` est une adresse inconnue : 404.
 <!-- urls:familles:retirees:debut -->
 | Famille | Adresses | Aujourd'hui | Après la bascule | Code attendu | Ligne de 01 §6.3 |
 | --- | --- | --- | --- | --- | --- |
+| `espace-accueil-retire` | `/auth/init-account` | Accueil (onboarding) de la maquilleuse ; sans session, une 307 en un saut vers la connexion | Supprimé : redirection permanente, en un saut, vers son espace : `/auth/profil` ; sans session, redirection vers `/auth/signin?callbackUrl=%2Fauth%2Fprofil` | 308 en un saut ; sans session, 308 en un saut | — |
 | `api-nextauth` | `/api/auth/*` | Routes de NextAuth (200, 302 ou 404 selon la route) | Supprimées | 404 | 9 |
 | `api-sendmail` | `/api/sendMail` | Envoi du formulaire de contact, en POST seulement (un GET répond 405) | Supprimée | 404 | 9 |
 <!-- urls:familles:retirees:fin -->
@@ -179,6 +180,7 @@ Ce tableau liste les familles dont le code change pour une visiteuse sans sessio
 | `http` | `http://my-makeup.fr/*` | 302 | 301 ou 308 en un saut |
 | `www` | `https://www.my-makeup.fr/*`, `http://www.my-makeup.fr/*` | 302 | 301 ou 308 en un saut |
 | `ancienne-api` | `https://api.my-makeup.fr/*`, `http://api.my-makeup.fr/*` | 200, 302 | 301 en un saut |
+| `espace-accueil-retire` | `/auth/init-account` | 307 | 308 en un saut |
 | `espace-racine` | `/auth` | 200 | 307 en un saut |
 | `espace-erreur` | `/auth/error` | 307, 200 | 200 |
 | `espace-google` | `/auth/google`, `/auth/google/callback` | 404 | 307 en un saut |
@@ -226,7 +228,8 @@ Relevé du 14/10/2026 à 00:07 UTC : **207 adresses**, 295 requêtes GET. 91 son
 | `http` | 2 | 302 | 301 ou 308 en un saut |
 | `www` | 3 | 302 | 301 ou 308 en un saut |
 | `espace-connexion` | 4 | 200 | 200 |
-| `espace-prive` | 2 | 307 | 307 en un saut |
+| `espace-prive` | 1 | 307 | 307 en un saut |
+| `espace-accueil-retire` | 1 | 307 | 308 en un saut |
 | `espace-verification` | 2 | 200 | 200 |
 | `espace-racine` | 1 | 200 | 307 en un saut |
 | `espace-erreur` | 1 | 307, 200 | 200 |
@@ -319,7 +322,7 @@ Le relevé du 09/10/2026 comptait 206 adresses. Celui du 14/10/2026 en compte 20
 | `/blog/inexistant-inventaire-zz9` | 404 | 404 | `slug-inconnu` |
 | `/search?search=mariage&city=Annecy` | 200 | 200 | `recherche` |
 | `/auth` | 200 | 307 en un saut | `espace-racine` |
-| `/auth/init-account` | 307, puis 200 en 1 saut | 307 en un saut | `espace-prive` |
+| `/auth/init-account` | 307, puis 200 en 1 saut | 308 en un saut | `espace-accueil-retire` |
 | `/auth/mot-de-passe-oublie` | 200 | 200 | `espace-connexion` |
 | `/auth/reinitialiser` | 200 | 200 | `espace-connexion` |
 | `/auth/verification-complete` | 200 | 200 | `espace-verification` |

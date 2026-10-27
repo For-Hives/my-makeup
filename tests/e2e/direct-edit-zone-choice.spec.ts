@@ -5,7 +5,7 @@ import { EDIT_PATH } from '../support/direct-edit-e2e'
 import { testPayload } from '../support/payload-test'
 
 /**
- * The zone in the block « Zone » of her page and on the second step of the onboarding (tickets 265 and 266, moved
+ * The zone in the block « Zone » of her page (tickets 265 and 266, moved
  * to the block by issue 1022; plan 02
  * U14 to U16, PLAN-ZONES.md §3.3 and §3.4): a postal code that names one commune chooses it, a shared
  * one opens the list, a zone to review offers its communes, and a zone abroad is told with countries.

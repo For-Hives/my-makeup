@@ -7,7 +7,7 @@ import { getPayload } from 'payload'
 import type { SignUpState } from '@/components/auth/SignUpForm'
 import { authLog } from '@/lib/auth/auth-log'
 import { ipClient } from '@/lib/auth/client-ip'
-import { ACCOUNT_ONBOARDING_PAGE, VERIFICATION_WALL_PAGE } from '@/lib/auth/return-to'
+import { ACCOUNT_LANDING_PAGE, VERIFICATION_WALL_PAGE } from '@/lib/auth/return-to'
 import { setSessionCookie } from '@/lib/auth/set-session-cookie'
 import { TRAP_FIELD, validateSignUp } from '@/lib/auth/sign-up'
 import { signUpAccount } from '@/lib/auth/sign-up-payload'
@@ -27,7 +27,7 @@ const text = (valeur: FormDataEntryValue | null): string => (typeof valeur === '
  * - Confirmation on (the default, AUTH_VERIFY): she is sent to the wall of verification, signed out.
  *   She signs in once she has followed the link of the mail.
  * - Confirmation off (the operating switch): the account is confirmed at once, she is signed in and
- *   sent to the onboarding.
+ *   sent to her space.
  *
  * Against the fake accounts (ticket 084), before any account is made:
  * - The trap field (`TRAP_FIELD`), hidden from every person, is filled by scripts only. Then she is
@@ -103,7 +103,7 @@ export async function signUp(_precedent: SignUpState, formulaire: FormData): Pro
 	}).catch(() => ({ token: undefined }))
 	if (token) {
 		await setSessionCookie(payload, token)
-		redirect(ACCOUNT_ONBOARDING_PAGE)
+		redirect(ACCOUNT_LANDING_PAGE)
 	}
 	redirect('/auth/signin')
 }

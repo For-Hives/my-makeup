@@ -75,7 +75,7 @@ export interface FrozenUrlFamily {
 	/** Where a 301, 307 or 308 goes: always in one hop. */
 	redirect?: FrozenRedirect
 	/** What an anonymous visitor gets instead, when `status` needs a session. */
-	withoutSession?: { status: 307; redirect: FrozenRedirect }
+	withoutSession?: { status: 307 | 308; redirect: FrozenRedirect }
 	/** SHA-256 of the body the old site serves: the v3 must serve the same bytes. */
 	sha256?: string
 	/** Who answers: the application, or the hosting in front of it (domains, TLS). */
@@ -407,7 +407,7 @@ export const FROZEN_URL_FAMILIES: readonly FrozenUrlFamily[] = [
 		id: 'espace-prive',
 		kind: 'espace',
 		planRow: 7,
-		patterns: ['/auth/profil', '/auth/apercu-profil', '/auth/init-account'],
+		patterns: ['/auth/profil', '/auth/apercu-profil'],
 		statusToday: [307],
 		status: 200,
 		withoutSession: {
@@ -415,13 +415,30 @@ export const FROZEN_URL_FAMILIES: readonly FrozenUrlFamily[] = [
 			redirect: { to: '`/auth/signin?callbackUrl=<chemin>`', family: 'espace-connexion' },
 		},
 		servedBy: 'application',
-		today: 'Espace et onboarding ; sans session, une 307 en un saut vers la connexion',
+		today: 'Espace ; sans session, une 307 en un saut vers la connexion',
 		after: 'Mêmes chemins, `noindex`, `private, no-store`',
 		examples: [
 			{ from: '/auth/profil', to: '/auth/signin?callbackUrl=%2Fauth%2Fprofil' },
 			{ from: '/auth/apercu-profil', to: '/auth/signin?callbackUrl=%2Fauth%2Fapercu-profil' },
-			{ from: '/auth/init-account', to: '/auth/signin?callbackUrl=%2Fauth%2Finit-account' },
 		],
+	},
+	{
+		// The onboarding is gone (27/10/2026, register `sans-onboarding`). A private page cannot be the destination of a plain
+		// 308 for a visitor with no session (that would be two hops), so the proxy sends her straight to the sign-in page.
+		id: 'espace-accueil-retire',
+		kind: 'retiree',
+		patterns: ['/auth/init-account'],
+		statusToday: [307],
+		status: 308,
+		redirect: { to: '`/auth/profil`', family: 'espace-prive' },
+		withoutSession: {
+			status: 308,
+			redirect: { to: '`/auth/signin?callbackUrl=%2Fauth%2Fprofil`', family: 'espace-connexion' },
+		},
+		servedBy: 'application',
+		today: 'Accueil (onboarding) de la maquilleuse ; sans session, une 307 en un saut vers la connexion',
+		after: 'Supprimé : redirection permanente, en un saut, vers son espace',
+		examples: [{ from: '/auth/init-account', to: '/auth/signin?callbackUrl=%2Fauth%2Fprofil' }],
 	},
 	{
 		id: 'espace-verification',

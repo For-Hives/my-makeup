@@ -37,7 +37,7 @@ export interface MissingItem {
 
 /**
  * The required points of the single rule that her profile does not meet, in the order of her profile, each with its
- * words (those of the draft notice and of the end of the onboarding) and the block that completes it. Nothing is
+ * words (those of the draft notice) and the block that completes it. Nothing is
  * computed here: the points are the `requis` ones of `profileProgress`.
  */
 export function missingItems(progress: Pick<Progress, 'manques'>): MissingItem[] {

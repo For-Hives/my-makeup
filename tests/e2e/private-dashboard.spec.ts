@@ -27,10 +27,12 @@ test.describe('Pages de l’espace sans session', { tag: '@mobile' }, () => {
 		expect(suite.status()).toBe(200)
 	})
 
-	test('/auth/init-account est fermée de la même façon', async ({ request }) => {
+	test('/auth/init-account (l’accueil supprimé le 27/10/2026) : une 308, en un saut, vers la connexion qui ramène à l’espace', async ({
+		request,
+	}) => {
 		const response = await request.get('/auth/init-account', { maxRedirects: 0 })
-		expect(response.status()).toBe(307)
-		expect(response.headers().location).toBe('/auth/signin?callbackUrl=%2Fauth%2Finit-account')
+		expect(response.status()).toBe(308)
+		expect(response.headers().location).toBe('/auth/signin?callbackUrl=%2Fauth%2Fprofil')
 	})
 
 	test('un cookie qui ne vaut plus rien : une redirection, puis le formulaire, jamais de boucle', async ({

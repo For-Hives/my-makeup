@@ -3,7 +3,7 @@ import { DASHBOARD_CONTACT_DETAILS_MESSAGES } from '@/lib/dashboard/contact-deta
 import { CONTACT_STEP_MESSAGES, readContactStep } from '@/lib/dashboard/contact-step'
 
 /**
- * The contact step of the onboarding (issue 1009): what is sent, and what is kept. Made-up values only.
+ * The contact step (issue 1009): what is sent, and what is kept. Made-up values only.
  */
 
 const NONE = {

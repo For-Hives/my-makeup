@@ -11,7 +11,7 @@ import { ANNECY } from '../support/completeness-cases'
 
 /**
  * The banner of the edit mode (issue 1072): the list of what is missing is the required points of the single rule,
- * with the words of the draft notice (and of the end of the onboarding), each leading to its block; it follows the
+ * with the words of the draft notice, each leading to its block; it follows the
  * profile; the hidden, suspended and internal pages have their own words and no list. Made-up values only.
  */
 

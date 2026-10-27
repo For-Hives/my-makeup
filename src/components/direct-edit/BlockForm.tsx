@@ -48,7 +48,7 @@ export function BlockForm({
 	keepsHint: string
 	/** The words of the button that saves, when the block says more than « Enregistrer » (« Enregistrer cette prestation »). */
 	submitLabel?: string
-	/** What stands where « Annuler » does, when the form is not an editor that closes (the onboarding: « Précédent », « Plus tard »). `null` leaves nothing. */
+	/** What stands where « Annuler » does, when the form is not an editor that closes (« Précédent », « Plus tard »). `null` leaves nothing. */
 	cancel?: ReactNode
 	children: ReactNode
 }) {

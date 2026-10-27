@@ -93,15 +93,16 @@ Le `pid` d'une carte (`ProfileCard.pid`) est lu à part, par les identifiants qu
 
 Tests : `tests/unit/analytics-search-errors.test.ts`, et `tests/e2e/analytics-search-errors.spec.ts` contre le faux Umami.
 
-## L'onboarding : les étapes et l'origine déclarée (ticket 148)
+## L'onboarding : retiré le 27/10/2026, plus émis (ticket 148)
 
-| Événement | Quand | Propriétés |
+**Retirés le 27/10/2026, plus émis.** Le parcours guidé qui suivait l'inscription n'existe plus (registre `sans-onboarding`) : une maquilleuse arrive directement sur son espace, `/auth/profil`, et `/auth/init-account` redirige (308) vers lui. Les deux événements ci-dessous restent dans le catalogue, sans changer de nom, pour que leurs séries d'avant gardent leur lecture ; la question « Comment as-tu connu My Makeup ? » n'est plus posée. Ce qui garde l'entonnoir d'inscription : `account_arrival` (voir le catalogue), émis quand la maquilleuse ouvre son espace avec un profil encore entièrement vide.
+
+| Événement | Quand (jusqu'au 26/10/2026) | Propriétés |
 |---|---|---|
-| `onboarding_step` | Le serveur a répondu qu'il a enregistré une étape de `/auth/init-account` | `step` : `identite`, `zone`, `photo`, `contact`, `prestation` (les cinq étapes de l'accueil, issue 1009), et `termine` quand les trois premières, celles qui rendent le profil actif, sont enregistrées. `verification_email` et `compte_cree` restent dans la liste pour les séries de l'ancien site, la v3 ne les émet pas |
-| `onboarding_source` | La réponse à « Comment as-tu connu My Makeup ? » est choisie, et l'identité est enregistrée | `source` : `instagram`, `google`, `bouche-a-oreille`, `ecole`, `ia`, `autre` |
+| `onboarding_step` (retiré le 27/10/2026, plus émis) | Le serveur avait enregistré une étape de l'accueil | `step` : `identite`, `zone`, `photo`, `contact`, `prestation`, `termine` ; `verification_email` et `compte_cree` viennent de l'ancien site |
+| `onboarding_source` (retiré le 27/10/2026, plus émis) | La réponse à « Comment as-tu connu My Makeup ? » était choisie | `source` : `instagram`, `google`, `bouche-a-oreille`, `ecole`, `ia`, `autre` |
 
-Chaque étape est comptée une fois, la première fois que le serveur l'enregistre : une étape que le profil avait déjà, ou un « Précédent » suivi d'un nouveau « Suivant », ne recompte rien. **Le taux de profils actifs en fin d'accueil** se lit dans Umami : `termine` rapporté à `identite`, avant et après le déploiement de l'accueil en cinq étapes (le taux de profils publiables se lit en base, jamais par un événement). Les étapes `contact` et `prestation` ont un « Plus tard » : leur écart à `termine` est la part de celles qui les remettent à plus tard. et un échec du serveur n'émet rien. L'origine part une seule fois, avec l'étape `identite`, seulement si elle est choisie (une réponse effacée ne part pas). **Elle n'est stockée nulle part** : ni envoyée au serveur avec l'identité, ni dans un champ de la base ou du compte. Les origines se lisent en totaux hebdomadaires dans Umami, jamais rapprochées d'un compte. Le code est dans `src/components/dashboard/onboarding/Onboarding.tsx`. Test : `tests/unit/analytics-onboarding.test.tsx`, qui vérifie aussi qu'aucune collection n'a de champ pour la réponse.
-
+Les séries d'avant le 27/10/2026 restent lisibles dans Umami ; aucune n'est alimentée après. Les tests de l'accueil (`tests/unit/analytics-onboarding.test.tsx`) sont supprimés avec lui.
 ## Les entonnoirs : ce qui part depuis le 27/10/2026
 
 Andy veut juger sur un mois si le site plaît, avec un trafic encore faible : chaque étape d'un parcours est un **événement distinct** (Umami enchaîne des noms d'événements et des pages vues, pas des valeurs de propriété), et les propriétés servent à découper. La source de la visite (moteur, assistant IA, direct, réseaux) n'est **pas** redoublée : Umami la donne déjà par le référent et les `utm_*`, il suffit de filtrer l'entonnoir dessus.
@@ -131,8 +132,9 @@ Les événements d'avant ne changent ni de nom ni de valeur : le catalogue ne fa
 | `email_confirmed` (27/10) | Le lien du mail de confirmation est suivi et le compte est activé (pas pour « déjà confirmé », ni pour un lien invalide) | aucune | maquilleuse |
 | `login_result` | Une connexion aboutit ou échoue | `method`, `ok`, `code` | maquilleuse |
 | `auth_error`, `session_expired` | Une erreur d'authentification est montrée, une session a expiré | `code` / `where` | maquilleuse |
-| `onboarding_step` | Le serveur a enregistré une étape de l'accueil, la première fois | `step` (voir la section de l'onboarding) | maquilleuse |
-| `onboarding_source` | La réponse à « Comment as-tu connu My Makeup ? » | `source` | maquilleuse |
+| `onboarding_step` (retiré le 27/10/2026, plus émis) | Le serveur avait enregistré une étape de l'accueil, la première fois | `step` (voir la section de l'onboarding) | maquilleuse |
+| `onboarding_source` (retiré le 27/10/2026, plus émis) | La réponse à « Comment as-tu connu My Makeup ? » | `source` | maquilleuse |
+| `account_arrival` (27/10) | La maquilleuse ouvre `/auth/profil` alors que son profil est encore entièrement vide : l'arrivée d'un nouveau compte sur son espace, sans accueil entre les deux. Une fois par onglet : revenir sur l'espace encore vide, par la flèche « Retour » par exemple, ou le recharger, ne recompte pas | aucune | maquilleuse |
 | `profile_save` | Une réponse du serveur à un enregistrement de l'espace | `section`, `ok` | maquilleuse |
 | `profile_publiable` | Le serveur dit que **cet** enregistrement a rendu le profil publiable | aucune | maquilleuse |
 | `profile_indexable` (27/10) | Le serveur dit que **cet** enregistrement a rendu le profil indexable (le niveau plus riche que Google peut référencer) : une seule fois, jamais pour le chemin inverse. Un enregistrement peut donner les deux événements | aucune | maquilleuse |
@@ -179,7 +181,7 @@ Umami ne permet pas de les créer par l'API sans identifiants : voici le pas-à-
 2. Donner le nom indiqué, régler la **fenêtre** (le temps maximal, en minutes, entre la première et la dernière étape).
 3. Pour chaque étape : **Ajouter**, choisir **Page vue** (« Viewed page ») ou **Événement** (« Triggered event »), saisir la valeur exacte du tableau. Un joker d'adresse se termine par `*` (`/blog/*`).
 4. Enregistrer, puis **Exécuter**. Pour découper par source, ajouter un filtre au rapport : **Référent**, **Canal** (`organicSearch`, `social`, `direct`…) ou **`utm_source`** (les assistants IA arrivent avec leur nom, voir `plans/mesures/outil/src/origines.ts`).
-5. Une version récente d'Umami propose un **filtre par étape** (propriété = valeur) : c'est ce qui sépare `cta_click` / `where` = `cta_inscription`, `onboarding_step` / `step` = `identite` ou `termine`, ou `card_click` / `origin`. Sans ce filtre, créer l'entonnoir sans la valeur (l'étape compte alors tous les `onboarding_step`) et lire la répartition dans **Événements > Propriétés**.
+5. Une version récente d'Umami propose un **filtre par étape** (propriété = valeur) : c'est ce qui sépare `cta_click` / `where` = `cta_inscription`, ou `card_click` / `origin`. Sans ce filtre, créer l'entonnoir sans la valeur (l'étape compte alors toutes les valeurs de la propriété) et lire la répartition dans **Événements > Propriétés**.
 
 Une visiteuse est reconnue sans cookie, par un jeton calculé à partir de son adresse, de son agent et d'un sel qu'Umami renouvelle : selon la version de l'instance, la reconnaissance tient de la visite au mois, et se perd quand l'adresse change (réseau mobile, wifi). Les fenêtres ci-dessous sont des durées plausibles ; une fenêtre plus longue rattrape les gens qui reviennent le soir, au prix de quelques mélanges. À vérifier sur l'instance au premier passage.
 
@@ -201,8 +203,8 @@ Les recherches sans résultat : **Événements > `search_submit` > Propriétés 
 |---|---|---|
 | M1 Page « Pourquoi rejoindre » vers inscription | 60 min | 1. Page vue `/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse` ; 2. Événement `cta_click` (filtre `where` = `cta_inscription`) ; 3. Page vue `/auth/signup` ; 4. Événement `signup_start` |
 | M2 Partenariats vers inscription | 60 min | 1. Page vue `/maquilleuse/partenariats` ; 2. Page vue `/auth/signup` ; 3. `signup_start` |
-| M3 Du début d'inscription au profil publié | 10 080 min (7 jours) | 1. `signup_start` ; 2. `signup_wall` ; 3. `email_confirmed` ; 4. `onboarding_step` (filtre `step` = `identite`) ; 5. `onboarding_step` (filtre `step` = `termine`) ; 6. `profile_publiable` ; 7. `profile_indexable` |
-| M4 Les cinq étapes de l'accueil | 1 440 min (1 jour) | 1. `onboarding_step` (`identite`) ; 2. (`zone`) ; 3. (`photo`) ; 4. (`contact`) ; 5. (`prestation`) ; 6. (`termine`). Sans filtre par étape : lire la répartition des `step` |
+| M3 Du début d'inscription au profil publié | 10 080 min (7 jours) | 1. `signup_start` ; 2. `signup_wall` ; 3. `email_confirmed` ; 4. `account_arrival` ; 5. `profile_publiable` ; 6. `profile_indexable` (avant le 27/10/2026, `onboarding_step` `identite` et `termine` s'insérait avant `profile_publiable`) |
+| M4 Les cinq étapes de l'accueil (retiré le 27/10/2026) | 1 440 min (1 jour) | Plus alimenté : `onboarding_step` n'est plus émis. Lire les séries d'avant seulement |
 
 `signup_wall` compte des demandes d'inscription (la même page pour une adresse neuve et pour une adresse déjà inscrite) : l'écart avec `email_confirmed` mélange donc les adresses jamais confirmées et celles qui avaient déjà un compte. « Profil vérifié » n'a pas d'événement (voir plus haut).
 

@@ -249,7 +249,9 @@ describe('no chain of redirects', () => {
 
 	test('the destination family of a redirect answers 200, with or without a session', () => {
 		const destinations = FROZEN_URL_FAMILIES.flatMap(family => [
-			{ id: family.id, to: family.redirect?.family },
+			// A family with its own answer for a visitor with no session (`espace-accueil-retire`) sends her straight to
+			// the sign-in page: its `redirect` goes to a private page that only a visitor with a session takes.
+			{ id: family.id, to: family.withoutSession?.status === 308 ? undefined : family.redirect?.family },
 			{ id: family.id, to: family.withoutSession?.redirect.family },
 		]).filter(destination => destination.to !== undefined)
 		expect(destinations.length).toBeGreaterThan(0)
@@ -313,6 +315,16 @@ describe('no chain of redirects', () => {
 		expect(familyById('historiques').patterns).toContain('/profil')
 		expect(familyById('historiques').status).toBe(404)
 	})
+
+	test('the removed onboarding (`/auth/init-account`): a permanent redirect in one hop, with or without a session', () => {
+		const removed = familyById('espace-accueil-retire')
+		expect(removed.patterns).toEqual(['/auth/init-account'])
+		expect({ status: removed.status, to: removed.redirect?.to }).toEqual({ status: 308, to: '`/auth/profil`' })
+		// An anonymous visitor does not go through her space and its 307: the sign-in page, in the same single hop.
+		expect(anonymousStatus(removed)).toBe(308)
+		expect(removed.withoutSession?.redirect.family).toBe('espace-connexion')
+		expect(ids(familiesFor('/auth/init-account'))).toEqual(['espace-accueil-retire'])
+	})
 })
 
 describe('every row of plan 01 §6.3 is in the table, with its expected status', () => {
@@ -326,14 +338,7 @@ describe('every row of plan 01 §6.3 is in the table, with its expected status',
 		{
 			row: 7,
 			status: 200,
-			addresses: [
-				'/auth/signin',
-				'/auth/signup',
-				'/auth/profil',
-				'/auth/init-account',
-				'/auth/mot-de-passe-oublie',
-				'/auth/reinitialiser',
-			],
+			addresses: ['/auth/signin', '/auth/signup', '/auth/profil', '/auth/mot-de-passe-oublie', '/auth/reinitialiser'],
 		},
 		{ row: 8, status: 200, addresses: ['/auth/verification-complete', '/auth/verification-wall'] },
 		{ row: 9, status: 404, addresses: ['/api/auth/signin', '/api/auth/callback/google', '/api/sendMail'] },

@@ -1,6 +1,6 @@
 /**
  * What she has chosen in the zone field of her space, and the request it makes (tickets 265 and
- * 266). The field and the step of the onboarding share it: a commune of the list, or countries and
+ * 266). The zone field of the edit mode uses it: a commune of the list, or countries and
  * a town. The checks are those of the server (src/lib/profile/zone.ts), so that the sentence under
  * the field is the one the server would answer.
  */

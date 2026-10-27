@@ -26,6 +26,9 @@ export interface ShapeRedirect {
 	status: 301 | 308
 }
 
+/** The status the frozen table gives to the redirect of a literal address: 301 for a page moved, 308 for one removed for good. */
+const PATH_STATUSES = new Map<string, 301 | 308>()
+
 /** `/toutes-les-news` → `/blog`: the literal addresses the frozen table moves, read from it. */
 function readPathRedirects(): ReadonlyMap<string, string> {
 	const redirects = new Map<string, string>()
@@ -34,7 +37,9 @@ function readPathRedirects(): ReadonlyMap<string, string> {
 		const destination = /^`(\/[^`<>*]*)`$/.exec(family.redirect.to)?.[1]
 		if (destination === undefined) continue
 		for (const pattern of family.patterns) {
-			if (!/[<>*]/.test(pattern)) redirects.set(pattern, destination)
+			if (/[<>*]/.test(pattern)) continue
+			redirects.set(pattern, destination)
+			PATH_STATUSES.set(pattern, family.status === 308 ? 308 : 301)
 		}
 	}
 	return redirects
@@ -42,6 +47,11 @@ function readPathRedirects(): ReadonlyMap<string, string> {
 
 /** The addresses of the site the frozen table redirects to another address of the site. */
 export const PATH_REDIRECTS: ReadonlyMap<string, string> = readPathRedirects()
+
+/** True when the frozen table moves or removes this address (`/toutes-les-news`, `/auth/init-account`), slashes aside. */
+export function isMovedAddress(chemin: string): boolean {
+	return PATH_REDIRECTS.has(chemin.replace(/\/{2,}/g, '/').replace(/\/+$/, '') || '/')
+}
 
 const underFreePrefix = (chemin: string): boolean =>
 	UNFROZEN_PREFIXES.some(prefixe => chemin === prefixe || chemin.startsWith(`${prefixe}/`))
@@ -57,7 +67,11 @@ export function shapeRedirect(chemin: string): ShapeRedirect | null {
 	const trailingSlash = clean.length > 1 && clean.endsWith('/')
 	const withoutTrailingSlash = trailingSlash ? clean.replace(/\/+$/, '') || '/' : clean
 	const destination = PATH_REDIRECTS.get(withoutTrailingSlash)
-	if (destination !== undefined) return { chemin: destination, status: doubleSlash ? 301 : trailingSlash ? 308 : 301 }
+	if (destination !== undefined) {
+		// A final slash on its own is a 308 (the shape rule); otherwise the address says what it is: 301, or 308 once removed.
+		const own = PATH_STATUSES.get(withoutTrailingSlash) ?? 301
+		return { chemin: destination, status: doubleSlash ? 301 : trailingSlash ? 308 : own }
+	}
 	if (!doubleSlash && !trailingSlash) return null
 	return { chemin: withoutTrailingSlash, status: doubleSlash ? 301 : 308 }
 }

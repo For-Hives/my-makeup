@@ -30,7 +30,6 @@ describe('constat 1 : une arrivée depuis un autre site garde la session', () =>
 	test.each([
 		'/auth/profil',
 		'/auth/apercu-profil',
-		'/auth/init-account',
 		'/auth/profil/photo',
 	])('%s, cookie valide, cross-site : la page de relais, jamais mise en cache', async chemin => {
 		const response = proxy(request(`${chemin}?a=1&b=2`, headers('cross-site')))

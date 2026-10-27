@@ -12,7 +12,6 @@ import { safeReturnTo } from '@/lib/auth/return-to'
 import { setSessionCookie } from '@/lib/auth/set-session-cookie'
 import { signInWithPassword } from '@/lib/auth/sign-in'
 import { openWithPassword } from '@/lib/auth/token'
-import { passwordSignInDestination } from '@/lib/dashboard/sign-in-destination'
 
 export type SignInState = { code: ErrorCode } | null
 
@@ -45,11 +44,6 @@ export async function signIn(_precedent: SignInState, formulaire: FormData): Pro
 	;(await cookies()).set(SIGN_IN_MARK_COOKIE, 'email', markAttributes(process.env.NODE_ENV === 'production'))
 
 	const site = process.env.NEXT_PUBLIC_SITE_URL ?? requestOrigin ?? 'http://localhost'
-	const destination = await passwordSignInDestination(
-		payload,
-		result.token,
-		safeReturnTo(formulaire.get('callbackUrl'), site)
-	)
 	// `redirect` throws: it stays outside any try/catch.
-	redirect(destination)
+	redirect(safeReturnTo(formulaire.get('callbackUrl'), site))
 }

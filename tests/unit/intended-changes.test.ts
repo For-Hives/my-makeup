@@ -283,7 +283,7 @@ function familiesWithoutLine(changed: ChangedFamily[], registerLines: RegisterLi
 describe('the families of addresses that change, in URLS.md', () => {
 	const changed = readChangedFamilies(urls)
 
-	test('the table of URLS.md is read, with its thirteen families', () => {
+	test('the table of URLS.md is read, with its fourteen families', () => {
 		expect(changed.map(({ id }) => id)).toEqual([
 			'profil-non-repris',
 			'toutes-les-news',
@@ -291,6 +291,7 @@ describe('the families of addresses that change, in URLS.md', () => {
 			'http',
 			'www',
 			'ancienne-api',
+			'espace-accueil-retire',
 			'espace-racine',
 			'espace-erreur',
 			'espace-google',

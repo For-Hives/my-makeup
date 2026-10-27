@@ -1,11 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import {
-	ACCOUNT_ONBOARDING_PAGE,
-	DEFAULT_DASHBOARD,
-	destinationAfterSignIn,
-	safeReturnTo,
-	signInUrl,
-} from '@/lib/auth/return-to'
+import { ACCOUNT_LANDING_PAGE, DEFAULT_DASHBOARD, safeReturnTo, signInUrl } from '@/lib/auth/return-to'
 
 const SITE = 'https://my-makeup.fr'
 
@@ -51,24 +45,35 @@ describe('urlDeConnexion', () => {
 	})
 })
 
-describe('destinationAfterSignIn : le profil encore à accueillir passe par l’accueil (ticket 296)', () => {
-	test('sans lien précis, un accueil à faire mène à l’accueil', () => {
-		expect(destinationAfterSignIn(DEFAULT_DASHBOARD, true)).toBe(ACCOUNT_ONBOARDING_PAGE)
+describe('la destination après connexion : toujours l’espace, ou la page demandée (27/10/2026, plus d’accueil)', () => {
+	// Every way in (password, Google, confirmation mail, sign-up) ends on `safeReturnTo(...)` or on `ACCOUNT_LANDING_PAGE`.
+	test('un nouveau compte arrive sur son espace', () => {
+		expect(ACCOUNT_LANDING_PAGE).toBe('/auth/profil')
+		expect(ACCOUNT_LANDING_PAGE).toBe(DEFAULT_DASHBOARD)
 	})
 
-	test('sans lien précis, un accueil terminé (profil actif) mène à l’espace', () => {
-		expect(destinationAfterSignIn(DEFAULT_DASHBOARD, false)).toBe(DEFAULT_DASHBOARD)
+	test('sans lien précis, vide, hors site ou fermé à la boucle : l’espace, jamais l’ancien accueil', () => {
+		for (const asked of [
+			undefined,
+			'',
+			'/auth/profil',
+			'https://evil.example/x',
+			'//evil.example',
+			'/auth/signin',
+			'/auth/signup',
+			'/auth/google',
+			'/api/pros/me',
+		])
+			expect(safeReturnTo(asked, SITE)).toBe('/auth/profil')
 	})
 
-	test('un lien précis vers une page privée est respecté, accueil à faire ou non', () => {
-		for (const page of ['/auth/apercu-profil', '/auth/profil?x=1#carte-photo', '/auth/init-account']) {
-			expect(destinationAfterSignIn(page, true)).toBe(page)
-			expect(destinationAfterSignIn(page, false)).toBe(page)
-		}
+	test('un lien précis vers une page privée est respecté', () => {
+		for (const page of ['/auth/apercu-profil', '/auth/apercu-profil?mode=edition', '/auth/profil?x=1#carte-photo'])
+			expect(safeReturnTo(page, SITE)).toBe(page)
 	})
 
-	test('un lien du même site vide ou hors site retombe sur la page par défaut, puis suit la règle', () => {
-		expect(destinationAfterSignIn(safeReturnTo('https://evil.example/x', SITE), true)).toBe(ACCOUNT_ONBOARDING_PAGE)
-		expect(destinationAfterSignIn(safeReturnTo(undefined, SITE), true)).toBe(ACCOUNT_ONBOARDING_PAGE)
+	test('aucune destination ne passe par l’ancien accueil', () => {
+		expect(ACCOUNT_LANDING_PAGE).not.toContain('init-account')
+		expect(DEFAULT_DASHBOARD).not.toContain('init-account')
 	})
 })

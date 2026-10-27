@@ -11,7 +11,7 @@ import { generatedProfile } from '../support/profile-factory'
  * played at 390 and 1440 px on a full profile. The blocks each have their own spec; this one is what they
  * cannot say alone:
  *
- * - E67: axe finds no « serious » or « critical » violation on her page, on the onboarding and on every block,
+ * - E67: axe finds no « serious » or « critical » violation on her page, on her empty page and on every block,
  *   opened one after the other on the same full profile;
  * - E68 on every block: Escape closes it and gives the focus back to the button that opened it;
  * - E37: a changed main photo reaches the public profile and its `og:image`;
@@ -179,8 +179,11 @@ test.describe('142 : la recette de l’espace', { tag: '@mobile' }, () => {
 		if (folder) await page.screenshot({ fullPage: true, path: `${folder}/recette-${test.info().project.name}.png` })
 	})
 
-	test('E67 : l’accueil en trois étapes, à chaque étape : 0 violation grave', async ({ context, page }) => {
-		// A confirmed account whose profile is empty lands on the first step.
+	test('E67 : un profil entièrement vide, son espace puis sa page en édition : 0 violation grave', async ({
+		context,
+		page,
+	}) => {
+		// A new account lands on her space (no onboarding since 27/10/2026), and her page opens with its empty blocks.
 		const account = await createAccount('maquilleuse')
 		created.push(Number(account.id))
 		const payload = await testPayload()
@@ -188,16 +191,12 @@ test.describe('142 : la recette de l’espace', { tag: '@mobile' }, () => {
 		for (const { id } of docs) await payload.delete({ collection: 'profiles', id })
 		await context.addCookies(account.session.cookies)
 
-		await page.goto('/auth/init-account')
-		await expect(page).toHaveTitle(/Prépare ton profil/)
-		await expect(page.locator('#accueil-titre-etape')).toBeVisible()
+		await page.goto('/auth/profil')
+		await expect(page.getByRole('heading', { level: 1, name: 'Mon espace' })).toBeVisible()
 		expect(await violationsSevere(page)).toEqual([])
 
-		await page.getByLabel('Prénom').fill('Léa')
-		await page.getByLabel('Nom', { exact: true }).fill('Fictive')
-		await page.getByLabel('Mariage', { exact: true }).check()
-		await press(page.getByRole('button', { name: /Continuer|Suivant|Enregistrer/ }).first())
-		await expect(page.getByRole('combobox', { name: 'Où travailles-tu ?' })).toBeVisible()
+		await page.goto(EDIT_PATH)
+		await expect(page.getByRole('button', { name: 'Modifier ma photo principale', exact: true })).toBeVisible()
 		expect(await violationsSevere(page)).toEqual([])
 	})
 

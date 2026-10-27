@@ -37,7 +37,7 @@ async function setItsPassword(page: Page, email: string) {
 	await page.getByLabel('Confirme le mot de passe').fill(CHOICE)
 	await page.getByRole('button', { name: 'Enregistrer' }).click()
 	// The new password opens her session (ticket 302); she signs out, so that the test signs in with it.
-	await expect(page).toHaveURL(/\/auth\/(profil|init-account)$/)
+	await expect(page).toHaveURL(/\/auth\/profil$/)
 	await page.context().clearCookies()
 }
 

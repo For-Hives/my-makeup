@@ -1,5 +1,5 @@
 /**
- * The market hint of the onboarding (issue 1009), read from the published profiles: for each model of
+ * The market hint (issue 1009), read from the published profiles: for each model of
  * offer (bride, evening, trial), the median amount of the offers that carry one, or null when fewer than
  * `MEDIAN_MINIMUM` of them exist.
  *

@@ -5,7 +5,7 @@ import { testPayload } from '../support/payload-test'
 
 /**
  * The sign-up (ticket 082; plan 02 E01, adapted): she signs up, the wall tells her to look in her
- * mailbox, the link of the mail confirms the account, she signs in and arrives in the onboarding.
+ * mailbox, the link of the mail confirms the account, she signs in and arrives on her space.
  * Before the link, the account does not sign in, and says why.
  */
 
@@ -63,7 +63,7 @@ const mailLink = async (email: string): Promise<string> => {
 	return link
 }
 
-test.describe('E01 : inscription, mur, lien, connexion, onboarding', { tag: '@mobile' }, () => {
+test.describe('E01 : inscription, mur, lien, connexion, espace', { tag: '@mobile' }, () => {
 	test('le parcours entier', async ({ page }) => {
 		const email = url()
 
@@ -82,11 +82,11 @@ test.describe('E01 : inscription, mur, lien, connexion, onboarding', { tag: '@mo
 		// The link alone opened nothing.
 		expect((await page.context().cookies()).some(({ name }) => name === 'payload-token')).toBe(false)
 
-		// One click opens her session and leads to the onboarding: no address and no password typed again.
+		// One click opens her session and leads to her space: no address and no password typed again.
 		await page.waitForLoadState('networkidle')
 		await page.getByRole('button', { name: 'Continuer vers mon profil' }).click()
-		await expect(page).toHaveURL(/\/auth\/init-account$/)
-		await expect(page.getByRole('heading', { level: 1, name: 'Prépare ton profil' })).toBeVisible()
+		await expect(page).toHaveURL(/\/auth\/profil$/)
+		await expect(page.getByRole('heading', { level: 1, name: 'Mon espace' })).toBeVisible()
 		// Her profile and its address were made by the server, with the account.
 		const payload = await testPayload()
 		const account = (await payload.find({ collection: 'pros', depth: 0, where: { email: { equals: email } } })).docs[0]
@@ -97,7 +97,7 @@ test.describe('E01 : inscription, mur, lien, connexion, onboarding', { tag: '@mo
 })
 
 test.describe('302 : le lien ouvre la session, sur un autre appareil aussi', () => {
-	test('le lien ouvert dans un autre navigateur que celui de l’inscription, puis un clic : l’accueil, connectée', async ({
+	test('le lien ouvert dans un autre navigateur que celui de l’inscription, puis un clic : son espace, connectée', async ({
 		browser,
 		page,
 	}) => {
@@ -113,11 +113,11 @@ test.describe('302 : le lien ouvre la session, sur un autre appareil aussi', () 
 		await other.goto(link)
 		await other.waitForLoadState('networkidle')
 		await other.getByRole('button', { name: 'Continuer vers mon profil' }).click()
-		await expect(other).toHaveURL(/\/auth\/init-account$/)
-		await expect(other.getByRole('heading', { level: 1, name: 'Prépare ton profil' })).toBeVisible()
+		await expect(other).toHaveURL(/\/auth\/profil$/)
+		await expect(other.getByRole('heading', { level: 1, name: 'Mon espace' })).toBeVisible()
 		// She stays signed in on her space, and the browser of the sign-up stayed signed out.
 		await other.goto('/auth/profil')
-		await expect(other).toHaveURL(/\/auth\/(profil|init-account)$/)
+		await expect(other).toHaveURL(/\/auth\/profil$/)
 		expect((await page.context().cookies()).some(({ name }) => name === 'payload-token')).toBe(false)
 
 		// The same link again: it opened its session, it opens nothing more.
@@ -181,7 +181,7 @@ test.describe('302 : le lien ouvre la session, sur un autre appareil aussi', () 
 		await page.goto(await mailLink(email))
 		await page.waitForLoadState('networkidle')
 		await page.getByRole('button', { name: 'Continuer vers mon profil' }).click()
-		await expect(page).toHaveURL(/\/auth\/signin\?callbackUrl=%2Fauth%2Finit-account$/)
+		await expect(page).toHaveURL(/\/auth\/signin\?callbackUrl=%2Fauth%2Fprofil$/)
 		expect((await page.context().cookies()).some(({ name }) => name === 'payload-token')).toBe(false)
 	})
 })
@@ -219,7 +219,7 @@ test.describe('avant le lien', () => {
 		await expect(page.getByRole('heading', { name: /maintenant activé/ })).toBeVisible()
 		await page.waitForLoadState('networkidle')
 		await page.getByRole('button', { name: 'Continuer vers mon profil' }).click()
-		await expect(page).toHaveURL(/\/auth\/init-account$/)
+		await expect(page).toHaveURL(/\/auth\/profil$/)
 		await page.context().clearCookies()
 		await page.goto(link)
 		await expect(page.getByRole('heading', { name: 'Ton adresse email est déjà confirmée.' })).toBeVisible()
@@ -500,9 +500,10 @@ test.describe('les pages', () => {
 		}
 	})
 
-	test('l’onboarding est fermé sans session : une redirection vers la connexion', async ({ request }) => {
+	test('l’ancien accueil n’existe plus : une 308, en un saut, vers la connexion sans session', async ({ request }) => {
 		const response = await request.get('/auth/init-account', { maxRedirects: 0 })
-		expect(response.status()).toBe(307)
+		expect(response.status()).toBe(308)
+		expect(response.headers().location).toBe('/auth/signin?callbackUrl=%2Fauth%2Fprofil')
 	})
 
 	test('la connexion mène à l’inscription et l’inscription à la connexion', async ({ page }) => {

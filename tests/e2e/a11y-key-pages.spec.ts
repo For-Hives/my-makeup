@@ -12,8 +12,8 @@ import { createContent, deleteContent } from '../support/public-pages'
  *
  * - the 12 pages anyone can open: home, search, a public profile, a talent, the blog, an article, the contact
  *   page, a legal page, the sign-in, the sign-up, the forgotten-password page, and the 404;
- * - the 3 pages of her space: the space itself, the preview of her profile and the first step of the
- *   onboarding. On the space, four panels of different kinds are opened one after the other (a text, a
+ * - the 3 pages of her space: the space itself, the preview of her profile and her page in edit mode, still
+ *   empty (the onboarding that came before it is gone, 27/10/2026). On the space, four panels of different kinds are opened one after the other (a text, a
  *   commune search, a list with options, the portfolio): E67 and E68 (tests/e2e/dashboard-acceptance.spec.ts)
  *   walk all twelve and the deletion.
  *
@@ -127,7 +127,7 @@ const PUBLIC_PAGES: readonly (() => KeyPage)[] = [
 const SPACE_PAGES = [
 	{ name: 'l’espace', path: '/auth/profil' },
 	{ name: 'l’aperçu du profil', path: '/auth/apercu-profil' },
-	{ name: 'la première étape de l’accueil', path: '/auth/init-account' },
+	{ name: 'sa page en édition, profil vide', path: '/auth/apercu-profil?mode=edition' },
 ] as const
 
 test.describe('178 : l’analyse automatique des 15 pages clés', { tag: '@mobile' }, () => {
@@ -246,15 +246,19 @@ test.describe('178 : les 3 pages de l’espace, panneaux ouverts', { tag: '@mobi
 		expect(await violationsSevere(page), SPACE_PAGES[1].name).toEqual([])
 	})
 
-	test('la première étape de l’accueil : aucune violation grave', async ({ context, page }) => {
+	test('sa page en édition, profil entièrement vide : aucune violation grave', async ({ context, page }) => {
 		const account = await createAccount('maquilleuse')
 		created.push(Number(account.id))
 		const payload = await testPayload()
 		const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: account.id } } })
 		for (const { id } of docs) await payload.delete({ collection: 'profiles', id })
 		await context.addCookies(account.session.cookies)
+		// Her space makes the empty profile again (`ensureProfile`); without one, the edit address sends back to her space.
+		await page.goto(SPACE_PAGES[0].path)
+		await expect(page.getByRole('heading', { level: 1, name: 'Mon espace' })).toBeVisible()
 		await page.goto(SPACE_PAGES[2].path)
-		await expect(page.locator('#accueil-titre-etape')).toBeVisible()
+		await expect(page).toHaveURL(/\/auth\/apercu-profil\?mode=edition$/)
+		await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible()
 		expect(await violationsSevere(page), SPACE_PAGES[2].name).toEqual([])
 	})
 

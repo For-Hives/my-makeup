@@ -2,9 +2,8 @@ import { testPayload } from './payload-test'
 import { fileForPayload } from './photos'
 
 /**
- * Gives the profile of an account the three steps of the onboarding: identity, commune and a main
- * photo, so that the profile is active (ticket 296). A sign-in with no precise page then leads to her
- * space, not to the onboarding that an empty profile is offered. Made-up values only.
+ * Gives the profile of an account an identity, a commune and a main photo, so that the profile is active
+ * (ticket 296) and her space shows it filled rather than empty. Made-up values only.
  */
 export async function activateProfile(accountId: number | string): Promise<void> {
 	const payload = await testPayload()

@@ -93,13 +93,13 @@ test.describe('E08 : le mot de passe oublié de bout en bout', { tag: '@mobile' 
 		await ask(page, account.email)
 		await page.goto(await mailLink(account.email))
 		await choose(page, NEW_PASSWORD)
-		await expect(page).toHaveURL(/\/auth\/(profil|init-account)$/)
+		await expect(page).toHaveURL(/\/auth\/profil$/)
 		expect((await page.context().cookies()).some(({ name }) => name === 'payload-token')).toBe(true)
 
 		// The address is confirmed: the password alone signs her in later.
 		await page.context().clearCookies()
 		await signInAction(page, account.email, NEW_PASSWORD)
-		await expect(page).toHaveURL(/\/auth\/(profil|init-account)$/)
+		await expect(page).toHaveURL(/\/auth\/profil$/)
 	})
 
 	test('le lien ne sert qu’une fois : le rejouer dit qu’il n’est plus valable, avec le lien pour en demander un autre', async ({
@@ -111,8 +111,8 @@ test.describe('E08 : le mot de passe oublié de bout en bout', { tag: '@mobile' 
 		const link = await mailLink(account.email)
 		await page.goto(link)
 		await choose(page, NEW_PASSWORD)
-		// A profile still empty goes to the onboarding (ticket 296).
-		await expect(page).toHaveURL(/\/auth\/init-account$/)
+		// A profile still empty goes to her space, like any other (27/10/2026: no onboarding).
+		await expect(page).toHaveURL(/\/auth\/profil$/)
 
 		const browserContext = await browser.newContext({ extraHTTPHeaders: { 'x-forwarded-for': url() } })
 		const other = await browserContext.newPage()
@@ -140,7 +140,7 @@ test.describe('E08 : le mot de passe oublié de bout en bout', { tag: '@mobile' 
 		await page.getByLabel('Nouveau mot de passe').fill(NEW_PASSWORD)
 		await page.getByLabel('Confirme le mot de passe').fill(NEW_PASSWORD)
 		await page.getByRole('button', { name: 'Enregistrer' }).click()
-		await expect(page).toHaveURL(/\/auth\/init-account$/)
+		await expect(page).toHaveURL(/\/auth\/profil$/)
 	})
 })
 
