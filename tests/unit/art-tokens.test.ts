@@ -123,7 +123,7 @@ describe('contrast of the kit pairs (WCAG AA, 4.5:1 for text)', () => {
 		const writing = [...cta.matchAll(/<(?:h2|p)\s[^>]*className="([^"]*)"/g)].map(match => match[1]).join(' ')
 		expect(writing.length).toBeGreaterThan(20)
 		expect(writing).not.toMatch(/text-art-rose|text-indigo-|text-white\/\d/)
-		expect(cta).toContain('text-white md:mt-9')
+		expect(cta).toContain('text-white md:mt-6')
 	})
 })
 
