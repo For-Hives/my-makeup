@@ -53,7 +53,7 @@ Tout ce que le site avait déjà reste tel quel (`--color-lipstick`, `--color-in
 
 L'indigo (50 à 950) est celui de Tailwind, déjà dans le site : le kit ne le redéfinit pas. Les traits du kit sont des filets de 1 px (encre pour les boutons, `--color-hairline` pour les séparations), jamais d'ombre lourde.
 
-**Le survol d'une carte (issue 1137)** : une plaque blanche à 60 % cernée d'un filet derrière la carte, qui la dépasse de 14 px (sur le blog : 16 px en haut, 24 px sur les côtés, 40 px en bas), sa photo qui grandit de 5 %, et pour le blog un trait qui glisse sous « Lire l'article » avec sa flèche qui avance. Pas d'ombre dure, pas de montée. Une pastille de partage se remplit d'une teinte de son ton. Le détail et les raisons : [`mouvement.md`](mouvement.md), « Le survol d'une carte ».
+**Le survol d'une carte (issue 1137)** : une plaque blanche à 60 % cernée d'un filet derrière la carte, qui la dépasse de 14 px (cartes verticales du blog : 16 px en haut, 24 px sur les côtés, 40 px en bas ; grande carte horizontale : 24 px partout), sa photo qui grandit de 5 %, et pour le blog un trait qui glisse sous « Lire l'article » avec sa flèche qui avance. Pas d'ombre dure, pas de montée. Une pastille de partage se remplit d'une teinte de son ton. Le détail et les raisons : [`mouvement.md`](mouvement.md), « Le survol d'une carte ».
 
 ## Polices
 

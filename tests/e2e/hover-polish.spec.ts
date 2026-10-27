@@ -47,6 +47,7 @@ const washOf = (card: Locator) =>
 			background: wash.backgroundColor,
 			duration: wash.transitionDuration,
 			inset: wash.top,
+			left: wash.left,
 			bottom: wash.bottom,
 			border: wash.borderTopColor,
 			shadow: getComputedStyle(element).boxShadow,
@@ -176,7 +177,7 @@ test.describe('le survol, sur ordinateur', () => {
 		for (const id of identifiers) await deleteContent(request, 'articles', id)
 	})
 
-	test('une carte du blog se lave au survol : aucune ombre, une plaque qui déborde de 16 px en haut, 24 px sur les côtés et 40 px en bas, « Lire l’article » à 24 px au moins du bord et de l’arc, sans toucher la carte voisine, en 400 ms, rien ne bouge', async ({
+	test('une carte du blog se lave au survol : aucune ombre, une plaque qui déborde de 16 px en haut, 24 px sur les côtés et 40 px en bas (grande carte : 24 px de chaque côté, égal), « Lire l’article » à 24 px au moins du bord et de l’arc, sans toucher la carte voisine, en 400 ms, rien ne bouge', async ({
 		page,
 	}) => {
 		await page.goto('/blog')
@@ -193,8 +194,11 @@ test.describe('le survol, sur ordinateur', () => {
 			const before = await frames(page, '[data-blog-card]')
 			const rest = await washOf(card)
 			expect(rest.shadow, selector).toBe('none')
-			expect(rest.inset, selector).toBe('-16px')
-			expect(rest.bottom, selector).toBe('-40px')
+			// Vertical card: 16 above, 40 below. Wide card: level, 24 on every side.
+			const wide = selector === '[data-featured]'
+			expect(rest.inset, selector).toBe(wide ? '-24px' : '-16px')
+			expect(rest.bottom, selector).toBe(wide ? '-24px' : '-40px')
+			expect(rest.left, selector).toBe('-24px')
 			expect(rest.duration, selector).toContain('0.4s')
 
 			const box = await card.boundingBox()
@@ -208,7 +212,13 @@ test.describe('le survol, sur ordinateur', () => {
 			// (« Lire l’article ») keeps room from the bottom edge and from the rounded corner.
 			const reach = await card.evaluate(element => {
 				const own = element.getBoundingClientRect()
-				const plate = { left: own.left - 24, right: own.right + 24, top: own.top - 16, bottom: own.bottom + 40 }
+				const wide = element.hasAttribute('data-featured')
+				const plate = {
+					left: own.left - 24,
+					right: own.right + 24,
+					top: own.top - (wide ? 24 : 16),
+					bottom: own.bottom + (wide ? 24 : 40),
+				}
 				const others = [...document.querySelectorAll('[data-blog-card]')].filter(other => other !== element)
 				const touching = others.filter(other => {
 					const box = other.getBoundingClientRect()

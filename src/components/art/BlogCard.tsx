@@ -135,6 +135,17 @@ function DrawnPanel({ slug, shape }: { slug: string; shape: 'card' | 'feature' |
 	)
 }
 
+/**
+ * How far the hover plate reaches past the card (docs/mouvement.md, « Le survol d'une carte »). A vertical card has
+ * more room below (40 px) than above (16 px, where the rounded picture fills the corner), so the last line keeps off
+ * the bottom arc. The wide card is level on the left, above and below (24 px), with a radius concentric with the
+ * 28 px of its picture (24 + 28).
+ */
+const WASH = {
+	card: '[--card-wash-radius:44px] [--card-wash-side:24px] [--card-wash-top:16px] [--card-wash-bottom:40px]',
+	feature: '[--card-wash-radius:52px] [--card-wash-side:24px] [--card-wash-top:24px] [--card-wash-bottom:24px]',
+} as const
+
 /** « Lire l'article » and its arrow: decoration, the link is the title (its name is the title alone). */
 function ReadMore() {
 	return (
@@ -170,7 +181,7 @@ export function BlogCard({
 		<article
 			{...hook}
 			data-blog-card
-			className={`card-hover group relative grid content-start gap-4 [--card-wash-radius:44px] [--card-wash-side:24px] [--card-wash-top:16px] [--card-wash-bottom:40px] ${feature ? 'items-center gap-6 md:grid-cols-[minmax(0,1.08fr)_minmax(0,1fr)] md:gap-14' : ''}`}
+			className={`card-hover group relative grid content-start gap-4 ${WASH[feature ? 'feature' : 'card']} ${feature ? 'items-center gap-6 md:grid-cols-[minmax(0,1.08fr)_minmax(0,1fr)] md:gap-14' : ''}`}
 		>
 			<BlogPanel slug={article.slug} shape={feature ? 'feature' : 'card'} priority={feature} />
 			<div className={`grid gap-3 ${feature ? '' : 'content-start'}`}>
