@@ -170,7 +170,7 @@ export function BlogCard({
 		<article
 			{...hook}
 			data-blog-card
-			className={`card-hover group relative grid content-start gap-4 [--card-wash-reach:20px] ${feature ? 'items-center gap-6 md:grid-cols-[minmax(0,1.08fr)_minmax(0,1fr)] md:gap-14' : ''}`}
+			className={`card-hover group relative grid content-start gap-4 [--card-wash-radius:44px] [--card-wash-side:24px] [--card-wash-top:16px] [--card-wash-bottom:40px] ${feature ? 'items-center gap-6 md:grid-cols-[minmax(0,1.08fr)_minmax(0,1fr)] md:gap-14' : ''}`}
 		>
 			<BlogPanel slug={article.slug} shape={feature ? 'feature' : 'card'} priority={feature} />
 			<div className={`grid gap-3 ${feature ? '' : 'content-start'}`}>
