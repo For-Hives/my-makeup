@@ -5,6 +5,11 @@
 			"id": "chaque-article-du-blog-a-maintenant-sa-propre-illustratio",
 			"type": "amelioration",
 			"text": "Chaque article du blog a maintenant sa propre illustration, dans le style du site, sur la liste comme en haut de l’article."
+		},
+		{
+			"id": "au-survol-d-une-carte-du-blog-une-plaque-claire-se-pose-d",
+			"type": "amelioration",
+			"text": "Au survol d'une carte du blog, une plaque claire se pose derrière avec beaucoup plus d'air autour, en haut comme en bas, et l'illustration grandit seulement dans son cadre."
 		}
 	],
 	"releases": [

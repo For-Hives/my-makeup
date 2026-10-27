@@ -47,6 +47,8 @@ const washOf = (card: Locator) =>
 			background: wash.backgroundColor,
 			duration: wash.transitionDuration,
 			inset: wash.top,
+			bottom: wash.bottom,
+			border: wash.borderTopColor,
 			shadow: getComputedStyle(element).boxShadow,
 		}
 	})
@@ -174,7 +176,7 @@ test.describe('le survol, sur ordinateur', () => {
 		for (const id of identifiers) await deleteContent(request, 'articles', id)
 	})
 
-	test('une carte du blog se lave au survol : aucune ombre, un fond qui déborde de 20 px, en 400 ms, rien ne bouge', async ({
+	test('une carte du blog se lave au survol : aucune ombre, un fond qui déborde de 20 px partout (haut et bas égaux), sans toucher la carte voisine, en 400 ms, rien ne bouge', async ({
 		page,
 	}) => {
 		await page.goto('/blog')
@@ -192,6 +194,7 @@ test.describe('le survol, sur ordinateur', () => {
 			const rest = await washOf(card)
 			expect(rest.shadow, selector).toBe('none')
 			expect(rest.inset, selector).toBe('-20px')
+			expect(rest.bottom, selector).toBe('-20px')
 			expect(rest.duration, selector).toContain('0.4s')
 
 			const box = await card.boundingBox()
@@ -201,6 +204,19 @@ test.describe('le survol, sur ordinateur', () => {
 			// No hard shadow: the old one drew a dark edge around a card that has no background.
 			expect(hovered.shadow, selector).toBe('none')
 			expect(await frames(page, '[data-blog-card]'), selector).toEqual(before)
+			// The wash reaches 20 px past the card: inside the page, and clear of every other card.
+			const reach = await card.evaluate(element => {
+				const own = element.getBoundingClientRect()
+				const wash = { left: own.left - 20, right: own.right + 20, top: own.top - 20, bottom: own.bottom + 20 }
+				const others = [...document.querySelectorAll('[data-blog-card]')].filter(other => other !== element)
+				const touching = others.filter(other => {
+					const box = other.getBoundingClientRect()
+					return box.left < wash.right && box.right > wash.left && box.top < wash.bottom && box.bottom > wash.top
+				}).length
+				return { touching, inside: wash.left >= 0 && wash.right <= document.documentElement.clientWidth }
+			})
+			expect(reach, selector).toEqual({ touching: 0, inside: true })
+			expect((await washOf(card)).border, selector).not.toContain('rgba(0, 0, 0, 0)')
 			expect(await noSidewaysScroll(page), selector).toBe(true)
 			// The line under « Lire l’article » slides in with the hover.
 			await expect
