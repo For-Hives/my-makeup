@@ -246,11 +246,11 @@ describe('la documentation du catalogue suit le catalogue', () => {
 		if (from === -1 || to === -1) throw new Error(`la section « ${start} » n’est plus dans le document`)
 		return doc.slice(from, to)
 	}
-	const catalogue = between('### Le catalogue complet', '### Comment ça part')
+	const catalogSection = between('### Le catalogue complet', '### Comment ça part')
 	const where = between('Les valeurs de `where`', '### Comment ça part')
 
 	test('chaque événement du catalogue a sa ligne, en code, dans le tableau', () => {
-		expect(Object.keys(CATALOG).filter(nom => !catalogue.includes(`\`${nom}\``))).toEqual([])
+		expect(Object.keys(CATALOG).filter(nom => !catalogSection.includes(`\`${nom}\``))).toEqual([])
 	})
 
 	test('chaque valeur de `where` est dans le tableau des appels à l’action', () => {
