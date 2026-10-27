@@ -1,6 +1,6 @@
 /**
  * The names a profile starts with (issue 1009): she types her first and last name once, at sign-up (or
- * Google gives them), and her profile already holds them when she reaches the onboarding, which then
+ * Google gives them), and her profile already holds them when she reaches her space, which then
  * asks only for her speciality.
  *
  * The server that creates the account hands them to the creation of its profile through the context of

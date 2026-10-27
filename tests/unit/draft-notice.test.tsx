@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { DraftNotice } from '@/components/dashboard/DraftNotice'
-import { OnboardingDone } from '@/components/dashboard/onboarding/OnboardingDone'
 import type { DashboardProfile } from '@/lib/dashboard/dashboard-profile'
 import { draftNotice, googleItems } from '@/lib/dashboard/draft-notice'
 import { CRITERION_BLOCK, editBlockHref } from '@/lib/dashboard/edit-blocks'
@@ -74,22 +73,5 @@ describe('DraftNotice', () => {
 		expect(html).toContain('Compléter ma page')
 		expect(html).toContain(`href="${editBlockHref(CRITERION_BLOCK.reseaux)}"`)
 		expect(html).not.toMatch(/red|lipstick-800|role="alert"/)
-	})
-})
-
-describe('the last screen of the onboarding', () => {
-	const props = {
-		address: '',
-		resume: false,
-		editPath: '/auth/apercu-profil?mode=edition',
-		dashboardPath: '/auth/profil',
-	}
-
-	test('not publishable: the notice, never « en ligne »', () => {
-		const notice = draftNotice(profileProgress(NO_CONTACT))
-		const html = renderToStaticMarkup(<OnboardingDone {...props} online={false} notice={notice} />)
-		expect(html).toContain('En brouillon')
-		expect(html).toContain('Ta page n’est pas encore en ligne')
-		expect(html).not.toContain('Ta page est en ligne')
 	})
 })

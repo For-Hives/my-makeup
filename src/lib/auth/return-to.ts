@@ -2,7 +2,11 @@
  * Where to go after signing in, and where a closed page sends a visitor (tickets 074 and 075).
  */
 
-/** The page a makeup artist lands on after signing in. */
+/**
+ * The page a makeup artist lands on after signing in, whatever the way in (password, Google, link of the
+ * confirmation mail): `safeReturnTo` gives this page whenever no safe precise page was asked, so the
+ * destination of a sign-in is that value and nothing else. A profile still empty is no reason to go elsewhere.
+ */
 export const DEFAULT_DASHBOARD = '/auth/profil'
 
 export const SIGN_IN_PAGE = '/auth/signin'
@@ -33,16 +37,6 @@ export function safeReturnTo(brut: unknown, origine: string, defaut: string = DE
 	}
 }
 
-/**
- * Where a successful sign-in leads (ticket 296). A makeup artist who asked for no precise page (none, or
- * her space itself, which is what a closed page of her space asks for) and whose onboarding is not
- * done lands on the onboarding, so a profile still empty is offered the three steps. A precise page
- * (a private page other than her space) is always respected: nothing is forced against a link.
- */
-export function destinationAfterSignIn(returnTo: string, onboardingToDo: boolean): string {
-	return returnTo === DEFAULT_DASHBOARD && onboardingToDo ? ACCOUNT_ONBOARDING_PAGE : returnTo
-}
-
 /** The sign-in page that brings the visitor back to `chemin` (path and query of the closed page). */
 export const signInUrl = (chemin: string): string => `${SIGN_IN_PAGE}?callbackUrl=${encodeURIComponent(chemin)}`
 
@@ -52,8 +46,11 @@ export const PAGE_AFTER_SIGN_OUT = '/'
 /** The wall of verification: the page that tells a new account to look in its mailbox (ticket 082). */
 export const VERIFICATION_WALL_PAGE = '/auth/verification-wall'
 
-/** The onboarding: where a new, confirmed and signed-in account lands (ticket 082). */
-export const ACCOUNT_ONBOARDING_PAGE = '/auth/init-account'
+/**
+ * Where a new, confirmed and signed-in account lands: her space, like any sign-in. The guided onboarding
+ * is gone (27/10/2026): her space holds the progress and the checklist that lead her into the edit mode.
+ */
+export const ACCOUNT_LANDING_PAGE = DEFAULT_DASHBOARD
 
 /** The `error` of the sign-in page that says the session ended. The only code of the address that is ever shown. */
 export const EXPIRED_SESSION_ERROR = 'session-expiree'

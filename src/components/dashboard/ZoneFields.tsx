@@ -30,7 +30,7 @@ const FIELD = 'min-h-11 w-full rounded-md border border-neutral-400 bg-white px-
 const LINK = 'min-h-11 w-fit rounded-md px-1 text-left font-medium text-indigo-900 text-sm underline'
 
 /**
- * The zone of the makeup artist, as her space and the second step of the onboarding ask it (tickets
+ * The zone of the makeup artist, as the edit mode of her page asks it (tickets
  * 265 and 266; PLAN-ZONES.md §3.3 and §3.4): the question « Où travailles-tu ? », a single field that
  * proposes communes (by name or postal code) and countries, or, behind the link « Je travaille à
  * l’étranger ou dans plusieurs pays », a list of countries as chips with a town when the country is
@@ -58,7 +58,7 @@ export function ZoneFields({
 	erreurVille: string
 	erreurRayon: string | undefined
 	register: UseFormRegister<ZoneFormValues>
-	/** The step of the onboarding says « (facultatif) » beside the radius; the space does not. */
+	/** A caller can say « (facultatif) » beside the radius; the space does not. */
 	rayonFacultatif: boolean
 }) {
 	const id = useId()

@@ -121,8 +121,8 @@ export const BUDGET_USES = ['aucun', 'minimum', 'maximum', 'fourchette'] as cons
 export const RESULT_BUCKETS = ['0', '1-5', '6-20', '21+'] as const
 
 /**
- * Answers to « Comment as-tu connu My Makeup ? », in the order they are shown. Nothing is stored:
- * the answer travels in this event only.
+ * Answers to « Comment as-tu connu My Makeup ? » (question retired on 27/10/2026, no longer asked). Nothing was
+ * stored: the answer travelled in `onboarding_source` only.
  */
 export const DECLARED_ORIGINS = ['instagram', 'google', 'bouche-a-oreille', 'ecole', 'ia', 'autre'] as const
 
@@ -148,7 +148,7 @@ export const AUTH_ERROR_CODES = [
 	'google-email-non-verifie',
 ] as const
 
-/** Value of `section` of `profile_save`: one per modal of the space, plus the onboarding. */
+/** Value of `section` of `profile_save`: one per modal of the space; `onboarding` is retired (27/10/2026), no longer sent. */
 export const PROFILE_SECTIONS = [
 	'identite',
 	'description',
@@ -168,7 +168,8 @@ export const PROFILE_SECTIONS = [
 ] as const
 
 /**
- * Value of `step` of `onboarding_step` (ticket 148, issue 1009). `identite`, `zone` and `photo` are the
+ * RETIRED on 27/10/2026, no longer sent: the guided onboarding is gone. The name stays in the catalogue so that
+ * its series keep it. Value of `step` of `onboarding_step` (ticket 148, issue 1009). `identite`, `zone` and `photo` are the
  * three first steps of the onboarding of the space, `contact` and `prestation` the two that follow (how
  * to reach her, her flagship offer); each is sent once the server stored the step, the first time it did.
  * `termine` keeps its meaning: it is sent once the three essential steps are stored, that is when the
@@ -278,9 +279,12 @@ export const CATALOG = {
 	upload_error: { kind: oneOf(['size', 'type', 'server']) },
 	profile_publiable: {},
 	account_delete: {},
-	// 16-17. The onboarding (ticket 148).
+	// 16-17. The onboarding (ticket 148). RETIRED on 27/10/2026: the guided onboarding is gone, these two are no longer
+	// sent. They stay listed, never renamed, so that their series keep their names. `account_arrival` replaces them in
+	// the funnel: a makeup artist opens « Mon espace » while her profile is still entirely empty (no property).
 	onboarding_step: { step: oneOf(MEASURED_ONBOARDING_STEPS) },
 	onboarding_source: { source: oneOf(DECLARED_ORIGINS) },
+	account_arrival: {},
 	// 20-21. New in the v3: the reveal of a phone number, and an error boundary. `route`: the pattern of the page that
 	// broke (`/profil/[slug]`), never the address.
 	contact_reveal: { pid, channel: oneOf(CONTACT_CHANNELS) },

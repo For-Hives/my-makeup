@@ -1,5 +1,5 @@
 /**
- * The fourth step of the onboarding (issue 1009): how a client can reach her. Instagram first, then a
+ * How a client can reach her. Instagram first, then a
  * phone or an email she chooses to show. The two saves are those of her space (the networks, the
  * contact details); this file only decides what to send, so that the step never erases what an import or
  * an earlier visit stored.

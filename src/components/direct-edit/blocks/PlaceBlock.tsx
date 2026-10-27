@@ -81,7 +81,7 @@ export function PlaceForm({
 	title?: string
 	submitLabel?: string
 	cancel?: ReactNode
-	/** The radius may stay empty (the onboarding asks for the commune only). */
+	/** The radius may stay empty (the commune alone is enough). */
 	rayonFacultatif?: boolean
 	values: LocationValues
 	save: PlaceSave

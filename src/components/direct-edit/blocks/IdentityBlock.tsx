@@ -59,9 +59,8 @@ export function IdentityBlock({
 }
 
 /**
- * The form of the name and the speciality. The onboarding (issue 1009) uses it too: `schema` is then the
- * one that requires a speciality, `askNames` is false while the names are already known (they come from
- * the sign-up) so that only the speciality is asked, and the four values still travel together.
+ * The form of the name and the speciality. `schema` can be the one that requires a speciality, `askNames`
+ * false asks only the speciality (the names are already known), and the four values still travel together.
  */
 export function IdentityForm({
 	values,
@@ -80,7 +79,7 @@ export function IdentityForm({
 	title?: string
 	submitLabel?: string
 	cancel?: ReactNode
-	/** What stands under the speciality, inside the form (the optional question of the onboarding). */
+	/** What stands under the speciality, inside the form (an optional question). */
 	after?: ReactNode
 }) {
 	const {

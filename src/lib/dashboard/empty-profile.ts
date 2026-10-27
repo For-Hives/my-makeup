@@ -4,7 +4,7 @@ import { type DashboardUser, profileId } from './my-profile'
 /**
  * The profile of this makeup artist, created by the server when she has none (ticket 140). An
  * account comes with its empty profile (`profileOnAccountCreation`), but some accounts of the old
- * site were imported without one: the onboarding makes it, so that she is never told to write to us.
+ * site were imported without one: the space makes it on her first visit, so that she is never told to write to us.
  *
  * - Only her own account is read: `utilisateur` comes from the session, never from the request.
  * - It is idempotent. `profils.pro` is unique, so two renders at the same moment cannot make two

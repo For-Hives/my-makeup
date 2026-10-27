@@ -100,7 +100,7 @@ test.describe('E07 : connexion et inscription avec Google', { tag: '@mobile' }, 
 		await expect(page).toHaveURL(/\/auth\/profil$/)
 	})
 
-	test('une nouvelle identité s’inscrit : compte, profil, onboarding, aucun mail ; le second passage est une connexion', async ({
+	test('une nouvelle identité s’inscrit : compte, profil, son espace, aucun mail ; le second passage est une connexion', async ({
 		context,
 		page,
 	}) => {
@@ -112,8 +112,8 @@ test.describe('E07 : connexion et inscription avec Google', { tag: '@mobile' }, 
 		await page.screenshot({ path: `test-results/essais/connexion-google-signup-${test.info().project.name}.png` })
 		await page.getByRole('link', { name: 'S’inscrire avec Google' }).click()
 
-		await expect(page).toHaveURL(/\/auth\/init-account$/)
-		await expect(page.getByRole('heading', { level: 1, name: 'Prépare ton profil' })).toBeVisible()
+		await expect(page).toHaveURL(/\/auth\/profil$/)
+		await expect(page.getByRole('heading', { level: 1, name: 'Mon espace' })).toBeVisible()
 		const payload = await testPayload()
 		const accounts = await payload.find({ collection: 'pros', depth: 0, where: { email: { equals: email } } })
 		expect(accounts.docs).toHaveLength(1)
@@ -131,8 +131,8 @@ test.describe('E07 : connexion et inscription avec Google', { tag: '@mobile' }, 
 		await expect(page).toHaveURL(/\/$/)
 
 		await clickOnGoogle(page, '/auth/signup', 'S’inscrire avec Google')
-		// Her profile is still empty: the second pass is a sign-in, and it offers the welcome again (ticket 296).
-		await expect(page).toHaveURL(/\/auth\/init-account$/)
+		// The second pass is a sign-in: it leads to her space again, empty profile or not (27/10/2026: no onboarding).
+		await expect(page).toHaveURL(/\/auth\/profil$/)
 		expect((await payload.find({ collection: 'pros', depth: 0, where: { email: { equals: email } } })).totalDocs).toBe(
 			1
 		)

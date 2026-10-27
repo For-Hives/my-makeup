@@ -114,8 +114,8 @@ describe('E07 : un compte venu de Google se retrouve par son email vérifié', (
 
 		if (!issue.ok) throw new Error(`refusé : ${issue.code}`)
 		expect(issue.nouveau).toBe(false)
-		// Her profile is still empty: no precise page asked, so the welcome is offered (ticket 296).
-		expect(issue.destination).toBe('/auth/init-account')
+		// No precise page asked: her space, empty profile or not (27/10/2026: no onboarding).
+		expect(issue.destination).toBe('/auth/profil')
 		expect((await which(issue.token))?.id).toBe(Number(account.id))
 		expect((await payload.count({ collection: 'pros' })).totalDocs).toBe(before.totalDocs)
 		const profiles = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: account.id } } })
@@ -260,14 +260,14 @@ describe('tout ce qui vient de Google est vérifié avant d’être cru', () => 
 })
 
 describe('091 : une personne sans compte s’inscrit avec Google', () => {
-	test('nouvelle identité vérifiée : compte confirmé, profil avec son slug, arrivée à l’onboarding, aucun mail', async () => {
+	test('nouvelle identité vérifiée : compte confirmé, profil avec son slug, arrivée sur son espace, aucun mail', async () => {
 		const email = url('nouvelle')
 
 		const { issue } = await pass({ email, prenom: 'Léa', nomDeFamille: 'Fictive' }, { retourSouhaite: '/auth/profil' })
 
 		if (!issue.ok) throw new Error(`refusé : ${issue.code}`)
 		expect(issue.nouveau).toBe(true)
-		expect(issue.destination).toBe('/auth/init-account')
+		expect(issue.destination).toBe('/auth/profil')
 		const [pro] = await accounts(email)
 		expect(pro).toMatchObject({ name: 'Léa Fictive', _verified: true, legacyProvider: 'google' })
 		const payload = await testPayload()
@@ -294,8 +294,8 @@ describe('091 : une personne sans compte s’inscrit avec Google', () => {
 		expect(first.issue.ok && first.issue.nouveau).toBe(true)
 		if (!second.issue.ok) throw new Error(`refusé : ${second.issue.code}`)
 		expect(second.issue.nouveau).toBe(false)
-		// The profile is still empty: the welcome is offered again (ticket 296); a precise page is respected.
-		expect(second.issue.destination).toBe('/auth/init-account')
+		// No onboarding any more: her space again; a precise page is respected.
+		expect(second.issue.destination).toBe('/auth/profil')
 		const precise = await pass({ email }, { retourSouhaite: '/auth/apercu-profil' })
 		expect(precise.issue.ok && precise.issue.destination).toBe('/auth/apercu-profil')
 		expect(await accounts(email)).toHaveLength(1)

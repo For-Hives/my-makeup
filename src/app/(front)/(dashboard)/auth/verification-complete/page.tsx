@@ -10,7 +10,7 @@ import { authLog } from '@/lib/auth/auth-log'
 import { ipClient } from '@/lib/auth/client-ip'
 import { type ConfirmationResult, confirmWithRateLimit } from '@/lib/auth/confirmation'
 import { CONFIRMATION_COOKIE } from '@/lib/auth/confirmation-link'
-import { ACCOUNT_ONBOARDING_PAGE } from '@/lib/auth/return-to'
+import { ACCOUNT_LANDING_PAGE } from '@/lib/auth/return-to'
 import { confirmationRateLimit } from '@/lib/auth/sign-up-rate-limits'
 import { continueAfterConfirmation } from './actions'
 
@@ -49,7 +49,7 @@ export default async function EmailConfirmation() {
 		ipClient(await headers()),
 		authLog(payload)
 	)
-	const signIn = `/auth/signin?callbackUrl=${encodeURIComponent(ACCOUNT_ONBOARDING_PAGE)}`
+	const signIn = `/auth/signin?callbackUrl=${encodeURIComponent(ACCOUNT_LANDING_PAGE)}`
 
 	return (
 		<AuthShell title={TITLES[result]} titleClassName="max-w-2xl">

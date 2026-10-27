@@ -89,7 +89,7 @@ export function PhotoBlock({
 	)
 }
 
-/** The form of the main photo; the onboarding (issue 1009) draws it too, with its own buttons. */
+/** The form of the main photo; its buttons can be replaced (`submitLabel`, `cancel`). */
 export function PhotoForm({
 	photo,
 	save,

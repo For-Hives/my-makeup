@@ -1,5 +1,5 @@
 /**
- * The market hint of the onboarding (issue 1009): the median amount of the published offers of one
+ * The market hint (issue 1009): the median amount of the published offers of one
  * model (bride, evening, trial), shown under the price field of her flagship offer.
  *
  * - It is a median of the amounts the single price rule reads (`priceFrom`, src/lib/price.ts), never

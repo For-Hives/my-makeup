@@ -51,7 +51,17 @@ describe('U62 : la double barre et la barre finale', () => {
 	})
 
 	test('les redirections de chemin viennent de la table des adresses gelées', () => {
-		expect([...PATH_REDIRECTS]).toEqual([['/toutes-les-news', '/blog']])
+		expect([...PATH_REDIRECTS]).toEqual([
+			['/toutes-les-news', '/blog'],
+			['/auth/init-account', '/auth/profil'],
+		])
+	})
+
+	test('une adresse retirée pour de bon répond 308, une adresse déplacée 301 (`/auth/init-account`, 27/10/2026)', () => {
+		expect(shapeRedirect('/auth/init-account')).toEqual({ chemin: '/auth/profil', status: 308 })
+		expect(shapeRedirect('/auth/init-account/')).toEqual({ chemin: '/auth/profil', status: 308 })
+		expect(shapeRedirect('//auth/init-account')).toEqual({ chemin: '/auth/profil', status: 301 })
+		expect(shapeRedirect('/toutes-les-news')).toEqual({ chemin: '/blog', status: 301 })
 	})
 
 	test('chaque exemple des deux familles de forme, et ceux qui y passent, va où la table le dit', () => {

@@ -165,8 +165,8 @@ test.describe('E64 : titre unique, description, canonique, balises de partage, u
 	})
 
 	test('l’image de partage : celle du site par défaut, la photo allégée pour un profil', async ({ request }) => {
-		const onboarding = await (await request.get('/')).text()
-		expect(tag(onboarding, 'og:image')).toBe('https://my-makeup.fr/assets/og-my-makeup.jpg')
+		const home = await (await request.get('/')).text()
+		expect(tag(home, 'og:image')).toBe('https://my-makeup.fr/assets/og-my-makeup.jpg')
 		const withoutPhoto = await (await request.get(`/profil/${profiles.get('publiable-non-indexable')?.slug}`)).text()
 		const image = tag(withoutPhoto, 'og:image') ?? ''
 		expect(image === 'https://my-makeup.fr/assets/og-my-makeup.jpg' || image.includes('/_next/image?')).toBe(true)

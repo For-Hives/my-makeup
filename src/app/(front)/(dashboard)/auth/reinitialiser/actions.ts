@@ -11,7 +11,6 @@ import { resetPassword } from '@/lib/auth/password-reset-payload'
 import { DEFAULT_DASHBOARD } from '@/lib/auth/return-to'
 import { setSessionCookie } from '@/lib/auth/set-session-cookie'
 import { openWithoutPassword } from '@/lib/auth/token'
-import { passwordSignInDestination } from '@/lib/dashboard/sign-in-destination'
 
 /**
  * The second step of the forgotten password (tickets 085 and 086): the code comes from the cookie
@@ -44,6 +43,6 @@ export async function choosePassword(
 	if (!result.token) return { modifie: true }
 	await setSessionCookie(payload, result.token)
 	jar.delete({ name: PASSWORD_RESET_COOKIE, path: PASSWORD_RESET_PAGE })
-	// The same destination as a sign-in with no precise page (ticket 296). `redirect` throws: it stays outside any try/catch.
-	redirect(await passwordSignInDestination(payload, result.token, DEFAULT_DASHBOARD))
+	// The same destination as a sign-in with no precise page. `redirect` throws: it stays outside any try/catch.
+	redirect(DEFAULT_DASHBOARD)
 }
