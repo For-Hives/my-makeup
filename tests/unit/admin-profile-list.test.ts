@@ -147,7 +147,10 @@ describe('la première colonne de la liste mène à la fiche', () => {
 	const links = (node: unknown): string[] => {
 		const found: string[] = []
 		const walk = (value: unknown): void => {
-			if (Array.isArray(value)) return value.forEach(walk)
+			if (Array.isArray(value)) {
+				for (const item of value) walk(item)
+				return
+			}
 			if (typeof value !== 'object' || value === null) return
 			const element = value as { props?: { href?: unknown; children?: unknown } }
 			if (typeof element.props?.href === 'string') found.push(element.props.href)
