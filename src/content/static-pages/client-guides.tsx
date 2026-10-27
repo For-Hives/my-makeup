@@ -1,3 +1,4 @@
+import { solutionImage } from '@/components/art/solution-image'
 import { TitleAccent } from '@/components/art/TitleWithCapsules'
 import type { GuideContent } from '@/components/static-pages/ClientGuide'
 
@@ -156,8 +157,9 @@ export const GUIDE_EXPLORE_PROFILES: GuideContent = {
 }
 
 export const GUIDE_CLIENT_SOLUTIONS: GuideContent = {
-	// TODO(1136): illustration à générer (tête du guide, arche 4:5 ~380 px; intention: solutions pour les particuliers: une recherche simplifiée)
-	image: '/assets/back/maquilleuse_asiatique_white.webp',
+	// Illustration générée (docs/illustrations-solutions.md); repli : l'ancienne illustration si le fichier manque.
+	image: solutionImage('particuliers-head') ?? '/assets/back/maquilleuse_asiatique_white.webp',
+	imageAlt: '',
 	tint: 'rose',
 	band: 'band',
 	titre: (
@@ -176,21 +178,25 @@ export const GUIDE_CLIENT_SOLUTIONS: GuideContent = {
 	etapes: [
 		{
 			titre: 'Une recherche simplifiée',
+			image: solutionImage('particuliers-search') ?? undefined,
 			texte:
 				"Avec notre recherche par mot-clé et par ville, vous pouvez trouver la maquilleuse professionnelle qui correspond à vos besoins en un clin d'œil. Que vous cherchiez une experte en maquillage de mariage, une spécialiste du maquillage bio ou une artiste maquilleuse pour un événement spécial, notre plateforme vous donne accès à un large éventail de profils pour trouver votre perle rare.",
 		},
 		{
 			titre: 'Comparez et choisissez',
+			image: solutionImage('particuliers-compare') ?? undefined,
 			texte:
 				'Sur My-Makeup, vous pouvez consulter les profils détaillés des maquilleuses, y compris leurs portfolios, leurs spécialités et leurs tarifs. Cela vous permet de comparer facilement les différentes options et de choisir celle qui vous convient le mieux.',
 		},
 		{
 			titre: 'Contactez directement la maquilleuse',
+			image: solutionImage('particuliers-contact') ?? undefined,
 			texte:
 				'Une fois que vous avez trouvé la maquilleuse qui vous convient, contactez-la directement avec les coordonnées indiquées sur son profil pour convenir ensemble de la prestation, de la date et du tarif.',
 		},
 		{
 			titre: 'Des profils présentés par les maquilleuses',
+			image: solutionImage('particuliers-profils') ?? undefined,
 			texte:
 				'Chaque maquilleuse présente elle-même son parcours, ses formations et ses réalisations. My-Makeup ne gère ni les rendez-vous ni les règlements : vous convenez directement avec elle du devis et des modalités.',
 		},

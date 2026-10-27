@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import type { ArchBand } from '@/components/art/ArchImage'
 import type { Tint } from '@/components/art/CapsuleImage'
+import { SolutionPicture } from '@/components/art/solution-image'
 import { Cta } from '@/components/blocks/Cta'
 import { GuideSearch } from '@/components/search/GuideSearch'
 import { ArticleHeading, ArtLead, ArtPage, ArtSignature } from './ArtPage'
@@ -10,6 +11,8 @@ import { PageHead } from './PageHead'
 export interface GuideStep {
 	titre: string
 	texte: string
+	/** A wide illustration under the text (decoration), when the page has one. */
+	image?: string
 }
 
 /** The text of a guide page for the people looking for a makeup artist (plan 01 §3.1). */
@@ -19,6 +22,8 @@ export interface GuideContent {
 	description: ReactNode
 	/** The picture of the head block, under `public/`. */
 	image: string
+	/** The alternative text of the head picture; `""` for a decoration. Left out: the default of `PageHead`. */
+	imageAlt?: string
 	/** The tint behind the arch picture and the colour of its band. */
 	tint?: Tint
 	band?: ArchBand
@@ -43,6 +48,7 @@ export function ClientGuide({ contenu }: { contenu: GuideContent }) {
 				title={contenu.titre}
 				description={contenu.description}
 				image={contenu.image}
+				imageAlt={contenu.imageAlt}
 				tint={contenu.tint ?? 'blush'}
 				band={contenu.band ?? 'band'}
 			/>
@@ -71,6 +77,7 @@ export function ClientGuide({ contenu }: { contenu: GuideContent }) {
 								</div>
 								<h3 className="font-display font-medium text-2xl leading-tight tracking-tight">{etape.titre}</h3>
 								<p className="max-w-[56ch] text-base text-mute leading-7">{etape.texte}</p>
+								{etape.image && <SolutionPicture src={etape.image} className="mt-2" />}
 							</li>
 						))}
 					</ol>
