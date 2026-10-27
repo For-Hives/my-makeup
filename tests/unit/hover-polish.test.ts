@@ -73,7 +73,7 @@ describe('a card is washed, not shadowed', () => {
 
 	test('the wash is a pseudo-element that reaches past the card by `--card-wash-reach`, for a mouse only, with no lift', () => {
 		const wash = body('.card-hover::before')
-		expect(wash).toMatch(/inset:\s*calc\(var\(--card-wash-reach, 14px\) \* -1\)/)
+		expect(wash).toMatch(/inset:\s*calc\(var\(--card-wash-top, var\(--card-wash-reach, 14px\)\) \* -1\)/)
 		expect(wash).toMatch(/border:\s*1px solid transparent/)
 		expect(wash).toMatch(/z-index:\s*-1/)
 		expect(wash).toMatch(/pointer-events:\s*none/)
@@ -102,14 +102,18 @@ describe('a card is washed, not shadowed', () => {
 		expect(body('.card-hover.bg-white')).toMatch(/isolation:\s*auto/)
 	})
 
-	test('the blog cards reach 20 px, and the gap between two cards of a list is at least twice that, so no wash touches the next card', () => {
+	test('the blog cards give more room below than above, and no side reach touches the next card (gap 48 px)', () => {
 		const card = readFileSync(join(ROOT, 'src/components/art/BlogCard.tsx'), 'utf8')
-		expect(card).toContain('[--card-wash-reach:20px]')
+		const reach = (name: string) => Number(new RegExp(`\\[--card-wash-${name}:(\\d+)px\\]`).exec(card)?.[1])
+		expect(reach('bottom')).toBeGreaterThanOrEqual(36)
+		expect(reach('bottom')).toBeGreaterThanOrEqual(reach('top') * 2)
+		expect(reach('side')).toBeLessThanOrEqual(24)
+		expect(reach('radius')).toBeGreaterThanOrEqual(40)
 		for (const file of ['ArticleList.tsx', 'RelatedArticles.tsx']) {
 			const text = readFileSync(join(ROOT, 'src/components/blog', file), 'utf8')
-			const gap = /gap-x-(\d+)/.exec(text.slice(text.indexOf('<ul')))
-			expect(Number(gap?.[1]) * 4, file).toBeGreaterThanOrEqual(40)
-			expect(Number(/gap-y-(\d+)/.exec(text.slice(text.indexOf('<ul')))?.[1]) * 4, file).toBeGreaterThanOrEqual(40)
+			const list = text.slice(text.indexOf('<ul'))
+			expect(Number(/gap-x-(\d+)/.exec(list)?.[1]) * 4, file).toBeGreaterThanOrEqual(reach('side') * 2)
+			expect(Number(/gap-y-(\d+)/.exec(list)?.[1]) * 4, file).toBeGreaterThanOrEqual(reach('bottom') + reach('top'))
 		}
 	})
 
