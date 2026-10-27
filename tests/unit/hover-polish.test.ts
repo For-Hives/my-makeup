@@ -102,18 +102,24 @@ describe('a card is washed, not shadowed', () => {
 		expect(body('.card-hover.bg-white')).toMatch(/isolation:\s*auto/)
 	})
 
-	test('the blog cards give more room below than above, and no side reach touches the next card (gap 48 px)', () => {
+	test('a vertical blog card gives more room below than above, the wide card is level on three sides, and no reach touches the next card', () => {
 		const card = readFileSync(join(ROOT, 'src/components/art/BlogCard.tsx'), 'utf8')
-		const reach = (name: string) => Number(new RegExp(`\\[--card-wash-${name}:(\\d+)px\\]`).exec(card)?.[1])
-		expect(reach('bottom')).toBeGreaterThanOrEqual(36)
-		expect(reach('bottom')).toBeGreaterThanOrEqual(reach('top') * 2)
-		expect(reach('side')).toBeLessThanOrEqual(24)
-		expect(reach('radius')).toBeGreaterThanOrEqual(40)
+		const block = (name: string) => {
+			const line = new RegExp(`${name}: '([^']*)'`).exec(card.slice(card.indexOf('const WASH')))?.[1] ?? ''
+			const reach = (key: string) => Number(new RegExp(`\\[--card-wash-${key}:(\\d+)px\\]`).exec(line)?.[1])
+			return { top: reach('top'), side: reach('side'), bottom: reach('bottom'), radius: reach('radius') }
+		}
+		const vertical = block('card')
+		expect(vertical).toEqual({ top: 16, side: 24, bottom: 40, radius: 44 })
+		const wide = block('feature')
+		expect(wide.top).toBe(wide.side)
+		expect(wide.bottom).toBe(wide.side)
+		expect(wide.radius).toBe(wide.side + 28)
 		for (const file of ['ArticleList.tsx', 'RelatedArticles.tsx']) {
 			const text = readFileSync(join(ROOT, 'src/components/blog', file), 'utf8')
 			const list = text.slice(text.indexOf('<ul'))
-			expect(Number(/gap-x-(\d+)/.exec(list)?.[1]) * 4, file).toBeGreaterThanOrEqual(reach('side') * 2)
-			expect(Number(/gap-y-(\d+)/.exec(list)?.[1]) * 4, file).toBeGreaterThanOrEqual(reach('bottom') + reach('top'))
+			expect(Number(/gap-x-(\d+)/.exec(list)?.[1]) * 4, file).toBeGreaterThanOrEqual(vertical.side * 2)
+			expect(Number(/gap-y-(\d+)/.exec(list)?.[1]) * 4, file).toBeGreaterThanOrEqual(vertical.bottom + vertical.top)
 		}
 	})
 
