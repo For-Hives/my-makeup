@@ -378,3 +378,88 @@ describe('La migration de la zone (ticket 259) : des ajouts seulement, sur une b
 		}
 	}, 120_000)
 })
+
+describe('La migration de la publication allégée (27/10/2026) : les lignes déjà stockées sont recalculées', () => {
+	const lighter = migrations.find(({ name }) => name.endsWith('_indexable_profiles'))
+	const lighterIndex = migrations.findIndex(({ name }) => name.endsWith('_indexable_profiles'))
+	const later = migrations.slice(lighterIndex + 1)
+
+	test('la migration existe, après init', () => {
+		expect(lighter).toBeDefined()
+		expect(NAMES.indexOf(lighter?.name ?? '')).toBeGreaterThan(0)
+	})
+
+	test('sur une base vide, elle n’ajoute que deux colonnes ; son down les retire', async () => {
+		if (!lighter) throw new Error('la migration manque')
+		const args = { db: payload.db.drizzle, payload, req: {} as never }
+		try {
+			await resetBench()
+			for (const migration of [...later].reverse()) await migration.down(args)
+			const before = await baseSchema()
+			await lighter.down(args)
+			const without = await baseSchema()
+			expect(before.filter(line => !without.includes(line)).sort()).toEqual([
+				'profiles.indexable bool YES ',
+				'profiles.indexable_since timestamptz YES ',
+			])
+			await lighter.up(args)
+			expect(await baseSchema()).toEqual(before)
+		} finally {
+			await resetBench()
+		}
+	}, 60_000)
+
+	test('sur des profils déjà stockés avec l’ancienne règle : drapeaux, dates, statut et montants sont recalculés, updatedAt ne bouge pas', async () => {
+		if (!lighter) throw new Error('la migration manque')
+		const args = { db: payload.db.drizzle, payload, req: {} as never }
+		const pool = payload.db.pool
+		const flags = async () =>
+			(
+				await pool.query(
+					'SELECT id, publishable, indexable, fully_empty, status FROM profiles ORDER BY id'
+				)
+			).rows
+		const times = async () => (await pool.query('SELECT id, updated_at::text AS updated_at FROM profiles ORDER BY id')).rows
+		try {
+			await resetBench()
+			await placeDemoProfiles(payload)
+			const expectedFlags = await flags()
+
+			// Back to the day before the migration: no `indexable` column, the flags the old rule gave.
+			for (const migration of [...later].reverse()) await migration.down(args)
+			await lighter.down(args)
+			await pool.query('UPDATE profiles SET publishable = false, fully_empty = true, status = $1 WHERE status <> $2', [
+				'draft',
+				'hidden',
+			])
+			// A priced offer whose text the old rule read wrongly: « 2 h : 150 € » gave no amount.
+			const offer = await pool.query(
+				`UPDATE profiles_service_offers SET price_text = '2 h : 150 €', price_from = NULL
+				 WHERE id = (SELECT id FROM profiles_service_offers ORDER BY id LIMIT 1)`
+			)
+			expect(offer.rowCount).toBe(1)
+			const stale = await times()
+
+			await lighter.up(args)
+			for (const migration of later) await migration.up(args)
+
+			// The same state as when the set was loaded by the rule, a hidden profile still hidden, nothing moved in time.
+			expect(await flags()).toEqual(expectedFlags)
+			const after = await flags()
+			expect(after.some(row => row.indexable === true)).toBe(true)
+			expect(after.some(row => row.publishable === true && row.indexable === false)).toBe(true)
+			expect(after.some(row => row.status === 'hidden')).toBe(true)
+			expect(await times()).toEqual(stale)
+			const amount = await pool.query(
+				'SELECT price_from::float AS amount FROM profiles_service_offers WHERE price_text = $1',
+				['2 h : 150 €']
+			)
+			expect(amount.rows).toEqual([{ amount: 150 }])
+			const dates = await pool.query('SELECT count(*)::int AS total FROM profiles WHERE indexable_since IS NULL')
+			expect(dates.rows).toEqual([{ total: 0 }])
+		} finally {
+			await emptyStorage()
+			await resetBench()
+		}
+	}, 120_000)
+})

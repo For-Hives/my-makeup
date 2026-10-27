@@ -145,7 +145,7 @@ export const sourceFields = (profil: ReadProfile): ProfileFields => ({
 	network: profil.reseaux,
 })
 
-/** Whether the source itself says a profile is entirely empty: none of the six conditions. */
+/** Whether the source itself says a profile is entirely empty: none of the four conditions, no priced offer, no description of 100 characters. */
 export const emptyToSource = (profil: ReadProfile): boolean => isFullyEmpty(sourceFields(profil))
 
 /**

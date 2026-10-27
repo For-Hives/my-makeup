@@ -5,7 +5,7 @@ import { slugify } from '../slug'
  * The pages « maquilleuse près de chez vous », one by département (ticket 1015; plan 03 SEO-23, SEO-30).
  *
  * One rule decides everything about a zone: its page, its robots tag, its line in the sitemap and in the plan of
- * the site. The sitemap and the page both count the profiles that are publishable AND listed (neither
+ * the site. The sitemap and the page both count the profiles that are indexable AND listed (neither
  * unavailable nor hidden nor entirely empty), and the page shows exactly those, so a page is never indexed with
  * none of them in front of the reader.
  *
@@ -34,8 +34,8 @@ export interface ZoneProfile {
 	slug: string
 	/** The code of the département of her commune, or `null` (no commune, or a zone abroad). */
 	departement: string | null
-	/** The six conditions of a publishable profile (src/lib/profile/completeness.ts). */
-	publishable: boolean
+	/** Publishable and rich enough for Google (src/lib/profile/completeness.ts): a thin profile is in noindex, so it does not make a zone page. */
+	indexable: boolean
 	/** Neither unavailable, nor hidden, nor entirely empty (src/lib/profile/visibility.ts). */
 	listed: boolean
 	/** The ISO date of her last change, when known. */
@@ -52,7 +52,7 @@ export function zoneStatus(count: number): ZoneStatus {
 
 /** The profiles a zone page shows and counts. */
 export function zoneMembers<T extends ZoneProfile>(profils: readonly T[], code: string): T[] {
-	return profils.filter(profil => profil.publishable && profil.listed && profil.departement === code)
+	return profils.filter(profil => profil.indexable && profil.listed && profil.departement === code)
 }
 
 /**

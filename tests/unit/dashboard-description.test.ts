@@ -64,20 +64,21 @@ describe('U27 : le HTML collé est retiré', () => {
 })
 
 describe('U05 : le compteur suit la définition unique de la complétude', () => {
-	test('199 caractères ne suffisent pas, 200 suffisent', () => {
-		expect(descriptionCounter('a'.repeat(DESCRIPTION_MIN - 1))).toMatchObject({ compte: 199, assez: false })
-		expect(descriptionCounter('a'.repeat(DESCRIPTION_MIN))).toMatchObject({ compte: 200, assez: true })
+	test('99 caractères ne suffisent pas pour Google, 100 suffisent', () => {
+		expect(DESCRIPTION_MIN).toBe(100)
+		expect(descriptionCounter('a'.repeat(DESCRIPTION_MIN - 1))).toMatchObject({ compte: 99, assez: false })
+		expect(descriptionCounter('a'.repeat(DESCRIPTION_MIN))).toMatchObject({ compte: 100, assez: true })
 	})
 
 	test('espaces des bords ignorés, suite d’espaces et de sauts de ligne comptée pour un', () => {
-		const text = `  ${'a'.repeat(100)} \n\n   ${'b'.repeat(99)}  `
-		expect(descriptionCounter(text).compte).toBe(200)
+		const text = `  ${'a'.repeat(50)} \n\n   ${'b'.repeat(49)}  `
+		expect(descriptionCounter(text).compte).toBe(100)
 		expect(descriptionCounter(`${text}c`).assez).toBe(true)
 		expect(descriptionCounter(text.slice(0, -3)).assez).toBe(false)
 	})
 
 	test('le HTML ne compte pas', () => {
-		expect(descriptionCounter(`<b>${'a'.repeat(190)}</b><i></i>`)).toMatchObject({ compte: 190, assez: false })
+		expect(descriptionCounter(`<b>${'a'.repeat(90)}</b><i></i>`)).toMatchObject({ compte: 90, assez: false })
 	})
 
 	test('le compte est celui de longueurDescription, pour des textes de toute forme', () => {

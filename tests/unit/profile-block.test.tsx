@@ -36,6 +36,7 @@ function entry(slug: string, specialty: string, over: Partial<DirectoryProfile> 
 			photo: null,
 		},
 		unreachable: false,
+		publishable: true,
 		indexable: true,
 		ville: 'Annecy',
 		departement: '74',
@@ -66,7 +67,7 @@ describe('305 : les maquilleuses d’une spécialité', () => {
 		entry('a-sans-contact', 'Maquillage de mariée', { unreachable: true }),
 		entry('b-mariee', 'Maquillage de mariée'),
 		entry('c-soiree', 'Maquillage de soirée'),
-		entry('d-pas-publiable', 'Maquillage de mariée', { indexable: false }),
+		entry('d-pas-publiable', 'Maquillage de mariée', { publishable: false }),
 		entry('e-mariee', 'Mariée et soirée'),
 	]
 
@@ -146,7 +147,7 @@ describe('305 : les maquilleuses d’une spécialité', () => {
 				return { docs: [doc(1, true), doc(2, false), doc(3, null)], page: 1, totalDocs: 3, hasNextPage: false }
 			},
 		} as unknown as Payload
-		expect((await readDirectory(payload)).map(item => item.indexable)).toEqual([true, false, false])
+		expect((await readDirectory(payload)).map(item => item.publishable)).toEqual([true, false, false])
 	})
 
 	test('l’annuaire lit « Vérifiée » à part, règles ouvertes, et n’en garde que le fait (issue 1066)', async () => {
@@ -159,6 +160,7 @@ describe('305 : les maquilleuses d’une spécialité', () => {
 			city: { name: 'Annecy', inseeCode: '74010', department: '74' },
 			mainPicture: null,
 			publishable: true,
+			indexable: true,
 		})
 		const reads: { select: Record<string, unknown>; overrideAccess: unknown }[] = []
 		const payload = {

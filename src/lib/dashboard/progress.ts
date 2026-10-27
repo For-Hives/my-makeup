@@ -31,11 +31,16 @@ export interface Missing {
 	readonly critere: Criterion
 	/** What to do, in French. */
 	readonly texte: string
-	/** True when the point stands between her profile and « publiable ». */
+	/** True when the point stands between her profile and « publiable » (visible in the search). */
 	readonly requis: boolean
+	/**
+	 * True when the point stands between her published page and Google (`indexable`): a description of 100 characters,
+	 * a priced offer or a gallery photo. A suggestion, never a condition.
+	 */
+	readonly google: boolean
 }
 
-/** The gauge as she reads it (ticket 306): the six essentials first, the bonus apart. */
+/** The gauge as she reads it (ticket 306): the four essentials first, the bonus apart. */
 export interface Gauge {
 	readonly done: number
 	readonly total: number
@@ -47,14 +52,15 @@ export interface Progress {
 	/** `score` out of `sur`, rounded, 0 to 100. */
 	readonly pourcentage: number
 	/**
-	 * The six conditions of a publishable page that are met, out of 6 (ticket 306): what the gauge counts first.
-	 * Read from the six booleans of the single rule, never from the criteria: a description of 150 characters
-	 * fills a criterion but not its condition.
+	 * The four conditions of a publishable page that are met, out of 4 (ticket 306): what the gauge counts first.
+	 * Read from the booleans of the single rule, never from the criteria.
 	 */
 	readonly essentials: Gauge
-	/** The seven other criteria (names, skills, experiences, courses, languages, gallery) that are filled, out of 7: the bonus. */
+	/** The other criteria (names, description, offers, skills, experiences, courses, languages, gallery) that are filled: the bonus. */
 	readonly bonus: Gauge
 	readonly etat: DisplayedState
+	/** True when her page is publishable and Google may index it (`indexable` of the single rule). */
+	readonly indexable: boolean
 	readonly titre: string
 	/** What the state changes for her, in French. */
 	readonly consequence: string
@@ -77,24 +83,20 @@ export interface Progress {
 /** What the space says to a listed artist who shows no way to reach her (ticket 291). */
 export const RANKED_LAST_TEXT = 'Sans moyen de contact, ton profil passe après les autres dans la recherche.'
 
-/** The six conditions of « publiable », in the display order of the criteria. */
-const ESSENTIAL_CONDITIONS = [
-	'photoPrincipale',
-	'villeExploitable',
-	'specialite',
-	'offreChiffree',
-	'descriptionLongue',
-	'canalDeContact',
-] as const
+/** The four conditions of « publiable », in the display order of the criteria. */
+const ESSENTIAL_CONDITIONS = ['photoPrincipale', 'villeExploitable', 'specialite', 'canalDeContact'] as const
 
 /**
  * The percentage her space says (issues 1072 and 1073): « Ton profil est rempli à N % ». It is the share of the 13 criteria
  * of the single rule that are filled (`pourcentage`), never above 99 while a point that stands between her profile and
- * « publiable » is missing: the 13 criteria and the 6 conditions of a publishable page are not the same (a description can
- * fill its criterion and still be too short), and « 100 % » next to a missing point would be false.
+ * « publiable » or between her page and Google is missing: the 13 criteria and the conditions of a publishable page are not
+ * the same (a description can fill its criterion and still be too short for Google), and « 100 % » next to a missing
+ * point would be false.
  */
 export const gaugePercent = (progress: Pick<Progress, 'pourcentage' | 'manques'>): number =>
-	progress.manques.some(point => point.requis) ? Math.min(progress.pourcentage, 99) : progress.pourcentage
+	progress.manques.some(point => point.requis || point.google)
+		? Math.min(progress.pourcentage, 99)
+		: progress.pourcentage
 
 /** What her summary says of her page, in four codes (issue 1073). */
 export type OverviewCode = 'visible' | 'draft' | 'hidden' | 'internal'
@@ -113,7 +115,9 @@ export interface OverviewState {
  * Where her page stands, for the summary of her space (issue 1073): visible to everyone, a draft, hidden by the team (with
  * its reason), or the team's own account. Worded from the reading of the single rule (`profileProgress`), never recomputed.
  */
-export function overviewStatus(progress: Pick<Progress, 'etat' | 'titre' | 'consequence' | 'enPause'>): OverviewState {
+export function overviewStatus(
+	progress: Pick<Progress, 'etat' | 'titre' | 'consequence' | 'enPause' | 'indexable'>
+): OverviewState {
 	switch (progress.etat) {
 		case 'masque':
 			return { code: 'hidden', title: progress.titre, text: progress.consequence, paused: false }
@@ -123,7 +127,11 @@ export function overviewStatus(progress: Pick<Progress, 'etat' | 'titre' | 'cons
 			return {
 				code: 'visible',
 				title: 'Ta page est visible de toutes',
-				text: progress.enPause ? progress.consequence : 'Elle apparaît dans la recherche et Google peut la trouver.',
+				text: progress.enPause
+					? progress.consequence
+					: progress.indexable
+						? 'Elle apparaît dans la recherche et Google peut la trouver.'
+						: 'Elle apparaît dans la recherche. Pour que Google la trouve aussi, complète les points ci-dessous.',
 				paused: progress.enPause,
 			}
 		default:
@@ -144,25 +152,23 @@ const MISSING_TEXT: Record<Criterion, string> = {
 	specialite: 'Indique ta spécialité.',
 	nom_artiste: 'Ajoute ton nom d’artiste.',
 	ville: 'Choisis ta commune.',
-	description: `Écris ta description : ${DESCRIPTION_MIN} caractères au moins.`,
+	description: `Écris ta description : ${DESCRIPTION_MIN} caractères au moins pour apparaître sur Google.`,
 	photo: 'Ajoute ta photo principale.',
 	competences: 'Ajoute au moins une compétence.',
 	experiences: 'Ajoute au moins une expérience.',
 	formations: 'Ajoute au moins une formation.',
-	offres: 'Ajoute au moins une prestation, avec un prix en chiffres.',
+	offres: 'Ajoute au moins une prestation, avec un prix en chiffres : c’est facultatif, mais Google la trouve mieux.',
 	reseaux:
 		'Ajoute un moyen de te contacter : un réseau, ton site, ou ton téléphone ou ton email affichés sur ton profil.',
 	langues: 'Ajoute au moins une langue.',
-	galerie: 'Ajoute des photos à ton portfolio.',
+	galerie: 'Ajoute des photos à ton portfolio : elles aident Google à te trouver.',
 }
 
-/** Which of the six conditions of « publiable » a criterion carries, when it carries one. */
+/** Which of the four conditions of « publiable » a criterion carries, when it carries one. */
 const CRITERION_CONDITION = {
 	photo: 'photoPrincipale',
 	ville: 'villeExploitable',
 	specialite: 'specialite',
-	offres: 'offreChiffree',
-	description: 'descriptionLongue',
 	reseaux: 'canalDeContact',
 } as const satisfies Partial<Record<Criterion, keyof Completeness['conditions']>>
 
@@ -172,12 +178,20 @@ const BONUS_CRITERIA = CRITERIA.filter(critere => !(critere in CRITERION_CONDITI
 function missingText(critere: Criterion, absent: boolean, profil: DashboardProfile): string {
 	if (absent) return MISSING_TEXT[critere]
 	if (critere === 'description') {
-		return `Allonge ta description : ${DESCRIPTION_MIN} caractères au moins pour être publiable (${descriptionLength(profil.description)} aujourd’hui).`
+		return `Allonge ta description : ${DESCRIPTION_MIN} caractères au moins pour apparaître sur Google (${descriptionLength(profil.description)} aujourd’hui).`
 	}
 	if (critere === 'offres') {
-		return `Donne un prix en chiffres, entre ${PRICE_MIN} et ${PRICE_MAX.toLocaleString('fr-FR')} €, à l’une de tes prestations.`
+		return `Donne un prix en chiffres, entre ${PRICE_MIN} et ${PRICE_MAX.toLocaleString('fr-FR')} €, à l’une de tes prestations, ou ajoute des photos à ton portfolio : Google te trouve mieux.`
 	}
 	return MISSING_TEXT[critere]
+}
+
+/** Which criteria stand between a published page and Google, when the profile is not `indexable`. */
+function googlePoint(critere: Criterion, reading: Completeness): boolean {
+	if (reading.indexable) return false
+	if (critere === 'description') return !reading.richness.description
+	if (critere === 'offres' || critere === 'galerie') return !reading.richness.richContent
+	return false
 }
 
 function stateOf(lecture: Completeness): DisplayedState {
@@ -192,7 +206,7 @@ const SUSPENDED_TITLE = 'Ta page est suspendue par l’équipe My Makeup : elle 
 const TITLES: Record<DisplayedState, string> = {
 	vide: 'Ton profil est vide',
 	incomplet: 'Ton profil n’est pas encore publiable',
-	publiable: 'Ton profil est publiable',
+	publiable: 'Ton profil est publié',
 	interne: 'Compte interne My Makeup',
 	masque: 'Ta page est masquée par l’équipe My Makeup : elle n’est plus visible.',
 }
@@ -208,10 +222,14 @@ function hiddenText(reason: string | null): string {
 	return `${said}Écris-nous à ${HIDDEN_CONTACT_EMAIL} pour en parler.`
 }
 
+/** What the space says to a published artist whose page Google may not index yet. */
+const PUBLISHED_NOT_INDEXED_TEXT =
+	'Ton profil apparaît dans la recherche. Pour que Google le trouve aussi, ajoute une description d’au moins 100 caractères, et une prestation avec un prix ou des photos.'
+
 const CONSEQUENCES: Record<DisplayedState, string> = {
-	vide: 'Un profil entièrement vide n’est pas listé dans la recherche. Dès qu’un des points ci-dessous « pour être publiable » est rempli, il y apparaît.',
+	vide: 'Un profil entièrement vide n’est pas listé dans la recherche. Dès que tu ajoutes une photo, ta ville, ta spécialité ou un moyen de te contacter, il y apparaît.',
 	incomplet:
-		'Ton profil apparaît dans la recherche, mais Google ne peut pas encore te trouver : remplis les points « pour être publiable » ci-dessous.',
+		'Ton profil apparaît dans la recherche, mais il n’est pas encore publié : il te faut une photo, ta ville, ta spécialité et un moyen de te contacter, et Google ne peut pas encore te trouver.',
 	publiable: 'Ton profil apparaît dans la recherche et Google peut maintenant te trouver.',
 	interne: 'Ce compte est celui de l’équipe : son profil n’est jamais publiable, et Google ne le trouve pas.',
 	masque: '',
@@ -229,8 +247,9 @@ export function profileProgress(profil: DashboardProfile): Progress {
 		const condition =
 			critere in CRITERION_CONDITION ? CRITERION_CONDITION[critere as keyof typeof CRITERION_CONDITION] : null
 		const required = condition !== null && !reading.conditions[condition]
-		if (!(absent || required)) return []
-		return [{ critere, texte: missingText(critere, absent, profil), requis: required }]
+		const google = googlePoint(critere, reading)
+		if (!(absent || required || google)) return []
+		return [{ critere, texte: missingText(critere, absent, profil), requis: required, google }]
 	})
 	const hidden = profil.status === 'hidden'
 	const state: DisplayedState = hidden ? 'masque' : stateOf(reading)
@@ -249,9 +268,20 @@ export function profileProgress(profil: DashboardProfile): Progress {
 			total: BONUS_CRITERIA.length,
 		},
 		etat: state,
+		indexable: reading.indexable,
 		titre: hidden && profil.moderationAction === 'suspend' ? SUSPENDED_TITLE : TITLES[state],
-		consequence: hidden ? hiddenText(reason) : paused ? PAUSE_TEXT : CONSEQUENCES[state],
-		manques: [...missing.filter(m => m.requis), ...missing.filter(m => !m.requis)],
+		consequence: hidden
+			? hiddenText(reason)
+			: paused
+				? PAUSE_TEXT
+				: state === 'publiable' && !reading.indexable
+					? PUBLISHED_NOT_INDEXED_TEXT
+					: CONSEQUENCES[state],
+		manques: [
+			...missing.filter(m => m.requis),
+			...missing.filter(m => !m.requis && m.google),
+			...missing.filter(m => !m.requis && !m.google),
+		],
 		reason,
 		enPause: paused,
 		rankedLast:

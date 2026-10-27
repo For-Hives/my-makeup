@@ -8,8 +8,9 @@
  * 4. how to reach her: Instagram, then a phone or an email she chooses to show;
  * 5. her flagship offer, with a price.
  *
- * The first three make the profile `actif` (listed in the search) and are the essential ones. The last
- * two lead to a publishable profile and can wait: « Plus tard » leaves them to the space. One step is
+ * The first three make the profile `actif` (listed in the search) and are the essential ones. The fourth
+ * makes it publishable (a way to reach her), the fifth helps Google find it (`indexable`): both can wait,
+ * « Plus tard » leaves them to the space. One step is
  * saved before the next one opens, and she can leave and come back: the step to show is read from what
  * the server stored, never from what the browser remembers, and a step the profile already holds
  * (an import, a previous visit) is skipped.
@@ -30,7 +31,7 @@ export type OnboardingStep = (typeof STEPS)[number]
 /** The steps that make a profile active: a sign-in sends her back for these, and the banner counts these. */
 export const ESSENTIAL_STEPS = [1, 2, 3] as const
 
-/** The steps she can leave for later (« Plus tard »): they lead to a publishable profile. */
+/** The steps she can leave for later (« Plus tard »): the contact makes the profile publishable, the offer helps Google. */
 export const OPTIONAL_STEPS = [4, 5] as const
 
 /** Where she stands: a step still to do, or all five done. */
@@ -61,7 +62,7 @@ export function stepsDone(profil: ProfileDocument | null | undefined): Readonly<
 		2: reading.conditions.villeExploitable,
 		3: reading.conditions.photoPrincipale,
 		4: reading.conditions.canalDeContact,
-		5: reading.conditions.offreChiffree,
+		5: reading.richness.pricedOffer,
 	}
 }
 

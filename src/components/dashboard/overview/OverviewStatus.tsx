@@ -64,7 +64,8 @@ export function OverviewStatus({ progress, resume }: { progress: Progress; resum
 	const hidden = state.code === 'hidden'
 	const percent = gaugePercent(progress)
 	const required = progress.manques.filter(point => point.requis)
-	const others = progress.manques.filter(point => !point.requis)
+	const google = progress.manques.filter(point => !point.requis && point.google)
+	const others = progress.manques.filter(point => !(point.requis || point.google))
 	return (
 		<section
 			aria-labelledby="avancement-titre"
@@ -121,6 +122,7 @@ export function OverviewStatus({ progress, resume }: { progress: Progress; resum
 			{hidden ? null : (
 				<div className="mt-4 flex max-w-2xl flex-col gap-3">
 					<Points id="avancement-requis" title="Pour être publiable" points={required} />
+					<Points id="avancement-google" title="Pour apparaître sur Google" points={google} />
 					{others.length > 0 ? (
 						<details data-testid="avancement-autres-details">
 							<summary className="flex min-h-11 cursor-pointer items-center font-semibold underline underline-offset-4">

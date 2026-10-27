@@ -51,7 +51,8 @@ export async function runLight(argv: readonly string[], deps: LightDeps): Promis
 	// A made-up profile that lacks two conditions, a made-up link: no member is read.
 	const email = composerEmail(
 		membersAnnouncementContent({
-			missing: ['photoPrincipale', 'offreChiffree'],
+			missing: ['photoPrincipale', 'canalDeContact'],
+			forGoogle: ['description', 'priceOrGallery'],
 			unsubscribeLink: `${deps.site}/api/reminders/unsubscribe?token=exemple`,
 		}),
 		deps.site

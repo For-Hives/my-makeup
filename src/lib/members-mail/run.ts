@@ -115,6 +115,7 @@ export async function runMembersMail(input: RunInput): Promise<MembersMailReport
 				const email = composerEmail(
 					membersAnnouncementContent({
 						missing: recipient.missing,
+						forGoogle: recipient.forGoogle,
 						unsubscribeLink: unsubscribeLink(recipient.profileId),
 					}),
 					site

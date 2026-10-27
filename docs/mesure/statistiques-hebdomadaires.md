@@ -52,7 +52,7 @@ Ne changent pas : `version`, `total`, `slugs`, `confirmation` (un type d'événe
 - `signUps` : un élément par profil créé dans la période, avec le jour (Paris), la complétude, `active` et `publishable`. Ni nom, ni identifiant.
 - `publishable` : les adresses (`slugs`) des profils qu'une visiteuse voit, et leur nombre par département (`unknown` quand la commune n'en a pas). C'est le seul détail donné sur un profil, et seulement pour ceux-là.
 
-« Publiable » veut dire ici : les six conditions remplies **et** profil publié. Un profil masqué ou en brouillon n'est ni compté, ni nommé, même s'il remplit les six conditions.
+« Publiable » veut dire ici : les quatre conditions remplies (photo, ville, spécialité, moyen de contact, règle du 27/10/2026) **et** profil publié. Un profil masqué ou en brouillon n'est ni compté, ni nommé, même s'il remplit les quatre conditions. Les profils indexables (dans le sitemap) en sont un sous-ensemble que cette réponse ne donne pas encore.
 
 Clés facultatives (ticket 169), pour les relevés de J+1, J+7 et J+30. Un lecteur de la version 2 doit continuer à lire une réponse qui en a moins :
 

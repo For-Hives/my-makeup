@@ -4,7 +4,7 @@ Ticket 1015. Une page par département, `/maquilleuses/<département>` (par exem
 
 ## La règle, en un seul endroit
 
-`src/lib/seo/zones.ts` décide de la page, de sa balise `robots`, de sa ligne dans le sitemap et de sa ligne dans le plan du site. Une maquilleuse compte dans la zone quand elle est **publiable** (les six conditions), **visible dans la liste** (ni indisponible, ni masquée, ni entièrement vide) et que **la commune de son profil est dans le département**. Une zone à l'étranger n'est pas une zone. Une maquilleuse qui seulement se déplace dans le département (rayon) n'est pas comptée : la page ne peut pas le montrer sans le deviner.
+`src/lib/seo/zones.ts` décide de la page, de sa balise `robots`, de sa ligne dans le sitemap et de sa ligne dans le plan du site. Une maquilleuse compte dans la zone quand elle est **indexable** (publiable, avec une description de 100 caractères et une prestation chiffrée ou une photo de galerie : un profil mince est en `noindex`, il ne fait pas une page de zone), **visible dans la liste** (ni indisponible, ni masquée, ni entièrement vide) et que **la commune de son profil est dans le département**. Une zone à l'étranger n'est pas une zone. Une maquilleuse qui seulement se déplace dans le département (rayon) n'est pas comptée : la page ne peut pas le montrer sans le deviner.
 
 | Profils comptés | La page | Sitemap et plan du site |
 |---|---|---|
@@ -13,7 +13,7 @@ Ticket 1015. Une page par département, `/maquilleuses/<département>` (par exem
 
 La page montre exactement les profils qu'elle compte. Une zone qui retombe à 0 profil répond 404 et sort du sitemap au rafraîchissement suivant, sans suppression. Le seuil est la constante `ZONE_THRESHOLD` (1) : le relever à nouveau remettrait une zone en `noindex` (200, sans adresse canonique, hors sitemap) tant qu'elle est sous le seuil.
 
-**Décision du propriétaire, 24/10/2026 : le seuil passe de 3 à 1 profil publiable.** Une zone avec un seul profil est indexable ; aucun texte n'est inventé pour la remplir. Le même seuil vaudra pour la page de prestation par commune quand elle existera (ticket suivant).
+**Décision du propriétaire, 24/10/2026 : le seuil passe de 3 à 1 profil indexable.** Une zone avec un seul profil est indexable ; aucun texte n'est inventé pour la remplir. Le même seuil vaudra pour la page de prestation par commune quand elle existera (ticket suivant).
 
 ## Décisions par défaut de Claude (à corriger par Andy)
 

@@ -249,7 +249,7 @@ describe('les crochets de Payload', () => {
 		await HOOKS.apresEcriture({ context, doc: { id }, operation: 'update', previousDoc: { id }, req } as never)
 	}
 
-	const line = (status: string, publishable: boolean) => ({ id: 7, slug: 'zoe-lefevre', status, publishable })
+	const line = (status: string, indexable: boolean) => ({ id: 7, slug: 'zoe-lefevre', status, indexable })
 
 	test('un profil publiable modifié : une seule requête, une seule adresse, après l’attente', async () => {
 		const { req, journal: log } = request([line('published', true), line('published', true)])

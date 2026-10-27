@@ -78,7 +78,7 @@ const MEASURED = {
  *   A failure stays on the step, with what she typed, and says so.
  * - A step opens the next one only once the server stored hers. The page is then read again in the
  *   background (`refresh`), so that what the next steps show is what is stored.
- * - The last two steps have « Plus tard »: they lead to a publishable page and block nothing. When no
+ * - The last two steps have « Plus tard »: the contact makes the page publishable, the offer helps Google, and they block nothing. When no
  *   step is left to do, the onboarding goes to the end page, where the server says whether the page is
  *   online (`navigate`): this component never claims it.
  *

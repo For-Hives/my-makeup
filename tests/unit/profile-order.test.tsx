@@ -28,6 +28,7 @@ function readType(demo: DemoProfile, surcharge: Partial<ProfilePageData> = {}): 
 		slug: demo.attendu.slug,
 		status: demo.attendu.status,
 		publishable: demo.attendu.publishable,
+		indexable: demo.attendu.indexable,
 		...demo.profil,
 		...surcharge,
 	}

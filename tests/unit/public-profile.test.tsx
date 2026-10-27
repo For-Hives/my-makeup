@@ -23,6 +23,7 @@ function readType(type: DemoProfile, surcharge: Partial<ProfilePageData> = {}): 
 		slug: type.attendu.slug,
 		status: type.attendu.status,
 		publishable: type.attendu.publishable,
+		indexable: type.attendu.indexable,
 		...type.profil,
 		...surcharge,
 	}
@@ -151,7 +152,7 @@ describe('E44 : les sections du profil', () => {
 	})
 
 	test('un prix « sur devis » ou en texte libre reste tel qu’il a été écrit, avec une majuscule', () => {
-		const html = renderNow(readType(type('actif-non-publiable')))
+		const html = renderNow(readType(type('publiable-non-indexable')))
 
 		expect(html).toContain('Sur devis')
 		expect(html).toContain('Selon le nombre de personnes')
@@ -400,6 +401,7 @@ describe('264 : la zone hors de France sur la page du profil', () => {
 					slug: profileType.attendu.slug,
 					status: profileType.attendu.status,
 					publishable: profileType.attendu.publishable,
+					indexable: profileType.attendu.indexable,
 					...profileType.profil,
 				},
 				{ photo: null, galerie: [], coordonnees: null }

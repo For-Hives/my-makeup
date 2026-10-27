@@ -13,10 +13,15 @@ import type { Progress } from './progress'
 const LABEL_OF: Partial<Record<Criterion, string>> = {
 	specialite: 'ta spécialité',
 	ville: 'ta commune',
-	description: `une description de ${DESCRIPTION_MIN} caractères au moins`,
 	photo: 'ta photo principale',
-	offres: 'une prestation avec un prix en chiffres',
 	reseaux: 'un moyen de te contacter',
+}
+
+/** What each point that stands between a published page and Google is called (suggestions, never conditions). */
+const GOOGLE_LABEL_OF: Partial<Record<Criterion, string>> = {
+	description: `une description de ${DESCRIPTION_MIN} caractères au moins`,
+	offres: 'une prestation avec un prix',
+	galerie: 'des photos dans ton portfolio',
 }
 
 /** The anchor of a block: kept here for the blocks of the direct edition, which import it. */
@@ -41,6 +46,22 @@ export function missingItems(progress: Pick<Progress, 'manques'>): MissingItem[]
 		.map(point => ({
 			criterion: point.critere,
 			label: LABEL_OF[point.critere] ?? point.texte,
+			block: CRITERION_BLOCK[point.critere],
+			href: editBlockHref(CRITERION_BLOCK[point.critere]),
+		}))
+}
+
+/**
+ * What her page could add to be found on Google (`indexable` of the single rule): the `google` points of
+ * `profileProgress`, each with its words and its block. Empty when she is already indexable. The page is online
+ * without them: they are suggestions.
+ */
+export function googleItems(progress: Pick<Progress, 'manques'>): MissingItem[] {
+	return progress.manques
+		.filter(point => point.google)
+		.map(point => ({
+			criterion: point.critere,
+			label: GOOGLE_LABEL_OF[point.critere] ?? point.texte,
 			block: CRITERION_BLOCK[point.critere],
 			href: editBlockHref(CRITERION_BLOCK[point.critere]),
 		}))

@@ -1,5 +1,5 @@
 {
-	"description": "Cas partagés de src/lib/profil/completude (plan 02 U08) : mêmes résultats attendus sur l’existant, dans le weekly-report et dans la v3. Données fictives.",
+	"description": "Cas partagés de src/lib/profil/completude (plan 02 U08) : mêmes score, critères manquants, « actif » et « interne » que l’existant. Depuis la décision du 27/10/2026 (publication allégée), « publiable » (photo, ville, spécialité, contact) et « indexable » (publiable, description de 100 caractères, prestation chiffrée ou photo de galerie) sont ceux de la v3 et ne sont plus ceux de l’ancien site. Données fictives.",
 	"cas": [
 		{
 			"nom": "vide",
@@ -8,6 +8,7 @@
 				"score": 0,
 				"actif": false,
 				"publiable": false,
+				"indexable": false,
 				"interne": false
 			}
 		},
@@ -65,6 +66,7 @@
 				"score": 13,
 				"actif": true,
 				"publiable": true,
+				"indexable": true,
 				"interne": false
 			}
 		},
@@ -120,6 +122,7 @@
 				"score": 13,
 				"actif": true,
 				"publiable": true,
+				"indexable": true,
 				"interne": false
 			}
 		},
@@ -175,6 +178,7 @@
 				"score": 12,
 				"actif": false,
 				"publiable": false,
+				"indexable": false,
 				"interne": false
 			}
 		},
@@ -232,6 +236,7 @@
 				"score": 13,
 				"actif": false,
 				"publiable": false,
+				"indexable": false,
 				"interne": false
 			}
 		},
@@ -289,6 +294,7 @@
 				"score": 13,
 				"actif": true,
 				"publiable": true,
+				"indexable": true,
 				"interne": false
 			}
 		},
@@ -346,6 +352,7 @@
 				"score": 13,
 				"actif": false,
 				"publiable": false,
+				"indexable": false,
 				"interne": false
 			}
 		},
@@ -403,6 +410,7 @@
 				"score": 13,
 				"actif": false,
 				"publiable": false,
+				"indexable": false,
 				"interne": false
 			}
 		},
@@ -460,6 +468,7 @@
 				"score": 13,
 				"actif": false,
 				"publiable": false,
+				"indexable": false,
 				"interne": false
 			}
 		},
@@ -517,6 +526,7 @@
 				"score": 12,
 				"actif": false,
 				"publiable": false,
+				"indexable": false,
 				"interne": false
 			}
 		},
@@ -573,7 +583,8 @@
 			"attendu": {
 				"score": 13,
 				"actif": true,
-				"publiable": false,
+				"publiable": true,
+				"indexable": true,
 				"interne": false
 			}
 		},
@@ -630,7 +641,8 @@
 			"attendu": {
 				"score": 13,
 				"actif": true,
-				"publiable": false,
+				"publiable": true,
+				"indexable": true,
 				"interne": false
 			}
 		},
@@ -688,6 +700,7 @@
 				"score": 13,
 				"actif": true,
 				"publiable": true,
+				"indexable": true,
 				"interne": false
 			}
 		},
@@ -746,6 +759,7 @@
 				"score": 12,
 				"actif": true,
 				"publiable": false,
+				"indexable": false,
 				"interne": false
 			}
 		},
@@ -807,6 +821,7 @@
 				"score": 12,
 				"actif": true,
 				"publiable": true,
+				"indexable": true,
 				"interne": false
 			}
 		},
@@ -864,7 +879,1711 @@
 				"score": 13,
 				"actif": true,
 				"publiable": false,
+				"indexable": false,
 				"interne": true
+			}
+		}
+	],
+	"frontieres": [
+		{
+			"nom": "ville : code postal seul",
+			"profil": {
+				"first_name": "Testine",
+				"last_name": "Recette",
+				"speciality": "Mariage",
+				"company_artist_name": "Studio Test",
+				"city": "74000",
+				"description": "Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. ",
+				"main_picture": {
+					"data": {
+						"id": 1
+					}
+				},
+				"image_gallery": {
+					"data": [
+						{
+							"id": 2
+						}
+					]
+				},
+				"skills": [
+					{
+						"id": 1
+					}
+				],
+				"experiences": [
+					{
+						"id": 1
+					}
+				],
+				"courses": [
+					{
+						"id": 1
+					}
+				],
+				"service_offers": [
+					{
+						"price": "à partir de 120 €"
+					}
+				],
+				"network": {
+					"instagram": "studio.test"
+				},
+				"language": [
+					{
+						"id": 1
+					}
+				]
+			},
+			"attendu": {
+				"publiable": true,
+				"indexable": true,
+				"entierementVide": false
+			}
+		},
+		{
+			"nom": "ville : code postal étranger seul à quatre chiffres",
+			"profil": {
+				"first_name": "Testine",
+				"last_name": "Recette",
+				"speciality": "Mariage",
+				"company_artist_name": "Studio Test",
+				"city": "1000",
+				"description": "Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. ",
+				"main_picture": {
+					"data": {
+						"id": 1
+					}
+				},
+				"image_gallery": {
+					"data": [
+						{
+							"id": 2
+						}
+					]
+				},
+				"skills": [
+					{
+						"id": 1
+					}
+				],
+				"experiences": [
+					{
+						"id": 1
+					}
+				],
+				"courses": [
+					{
+						"id": 1
+					}
+				],
+				"service_offers": [
+					{
+						"price": "à partir de 120 €"
+					}
+				],
+				"network": {
+					"instagram": "studio.test"
+				},
+				"language": [
+					{
+						"id": 1
+					}
+				]
+			},
+			"attendu": {
+				"publiable": true,
+				"indexable": true,
+				"entierementVide": false
+			}
+		},
+		{
+			"nom": "ville : ville étrangère",
+			"profil": {
+				"first_name": "Testine",
+				"last_name": "Recette",
+				"speciality": "Mariage",
+				"company_artist_name": "Studio Test",
+				"city": "Bruxelles",
+				"description": "Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. ",
+				"main_picture": {
+					"data": {
+						"id": 1
+					}
+				},
+				"image_gallery": {
+					"data": [
+						{
+							"id": 2
+						}
+					]
+				},
+				"skills": [
+					{
+						"id": 1
+					}
+				],
+				"experiences": [
+					{
+						"id": 1
+					}
+				],
+				"courses": [
+					{
+						"id": 1
+					}
+				],
+				"service_offers": [
+					{
+						"price": "à partir de 120 €"
+					}
+				],
+				"network": {
+					"instagram": "studio.test"
+				},
+				"language": [
+					{
+						"id": 1
+					}
+				]
+			},
+			"attendu": {
+				"publiable": true,
+				"indexable": true,
+				"entierementVide": false
+			}
+		},
+		{
+			"nom": "ville : commune au nom de plus de six mots",
+			"profil": {
+				"first_name": "Testine",
+				"last_name": "Recette",
+				"speciality": "Mariage",
+				"company_artist_name": "Studio Test",
+				"city": "Pont de Montvert - Sud Mont Lozère",
+				"description": "Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. ",
+				"main_picture": {
+					"data": {
+						"id": 1
+					}
+				},
+				"image_gallery": {
+					"data": [
+						{
+							"id": 2
+						}
+					]
+				},
+				"skills": [
+					{
+						"id": 1
+					}
+				],
+				"experiences": [
+					{
+						"id": 1
+					}
+				],
+				"courses": [
+					{
+						"id": 1
+					}
+				],
+				"service_offers": [
+					{
+						"price": "à partir de 120 €"
+					}
+				],
+				"network": {
+					"instagram": "studio.test"
+				},
+				"language": [
+					{
+						"id": 1
+					}
+				]
+			},
+			"attendu": {
+				"publiable": true,
+				"indexable": true,
+				"entierementVide": false
+			}
+		},
+		{
+			"nom": "ville : commune avec son département",
+			"profil": {
+				"first_name": "Testine",
+				"last_name": "Recette",
+				"speciality": "Mariage",
+				"company_artist_name": "Studio Test",
+				"city": "Annecy (74)",
+				"description": "Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. ",
+				"main_picture": {
+					"data": {
+						"id": 1
+					}
+				},
+				"image_gallery": {
+					"data": [
+						{
+							"id": 2
+						}
+					]
+				},
+				"skills": [
+					{
+						"id": 1
+					}
+				],
+				"experiences": [
+					{
+						"id": 1
+					}
+				],
+				"courses": [
+					{
+						"id": 1
+					}
+				],
+				"service_offers": [
+					{
+						"price": "à partir de 120 €"
+					}
+				],
+				"network": {
+					"instagram": "studio.test"
+				},
+				"language": [
+					{
+						"id": 1
+					}
+				]
+			},
+			"attendu": {
+				"publiable": true,
+				"indexable": true,
+				"entierementVide": false
+			}
+		},
+		{
+			"nom": "ville : pays seul (France)",
+			"profil": {
+				"first_name": "Testine",
+				"last_name": "Recette",
+				"speciality": "Mariage",
+				"company_artist_name": "Studio Test",
+				"city": "France",
+				"description": "Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. ",
+				"main_picture": {
+					"data": {
+						"id": 1
+					}
+				},
+				"image_gallery": {
+					"data": [
+						{
+							"id": 2
+						}
+					]
+				},
+				"skills": [
+					{
+						"id": 1
+					}
+				],
+				"experiences": [
+					{
+						"id": 1
+					}
+				],
+				"courses": [
+					{
+						"id": 1
+					}
+				],
+				"service_offers": [
+					{
+						"price": "à partir de 120 €"
+					}
+				],
+				"network": {
+					"instagram": "studio.test"
+				},
+				"language": [
+					{
+						"id": 1
+					}
+				]
+			},
+			"attendu": {
+				"publiable": false,
+				"indexable": false,
+				"entierementVide": false
+			}
+		},
+		{
+			"nom": "ville : pays seul (France, en capitales)",
+			"profil": {
+				"first_name": "Testine",
+				"last_name": "Recette",
+				"speciality": "Mariage",
+				"company_artist_name": "Studio Test",
+				"city": "FRANCE",
+				"description": "Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. ",
+				"main_picture": {
+					"data": {
+						"id": 1
+					}
+				},
+				"image_gallery": {
+					"data": [
+						{
+							"id": 2
+						}
+					]
+				},
+				"skills": [
+					{
+						"id": 1
+					}
+				],
+				"experiences": [
+					{
+						"id": 1
+					}
+				],
+				"courses": [
+					{
+						"id": 1
+					}
+				],
+				"service_offers": [
+					{
+						"price": "à partir de 120 €"
+					}
+				],
+				"network": {
+					"instagram": "studio.test"
+				},
+				"language": [
+					{
+						"id": 1
+					}
+				]
+			},
+			"attendu": {
+				"publiable": false,
+				"indexable": false,
+				"entierementVide": false
+			}
+		},
+		{
+			"nom": "ville : toute la France",
+			"profil": {
+				"first_name": "Testine",
+				"last_name": "Recette",
+				"speciality": "Mariage",
+				"company_artist_name": "Studio Test",
+				"city": "Toute la France",
+				"description": "Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. ",
+				"main_picture": {
+					"data": {
+						"id": 1
+					}
+				},
+				"image_gallery": {
+					"data": [
+						{
+							"id": 2
+						}
+					]
+				},
+				"skills": [
+					{
+						"id": 1
+					}
+				],
+				"experiences": [
+					{
+						"id": 1
+					}
+				],
+				"courses": [
+					{
+						"id": 1
+					}
+				],
+				"service_offers": [
+					{
+						"price": "à partir de 120 €"
+					}
+				],
+				"network": {
+					"instagram": "studio.test"
+				},
+				"language": [
+					{
+						"id": 1
+					}
+				]
+			},
+			"attendu": {
+				"publiable": false,
+				"indexable": false,
+				"entierementVide": false
+			}
+		},
+		{
+			"nom": "ville : toute l’Europe",
+			"profil": {
+				"first_name": "Testine",
+				"last_name": "Recette",
+				"speciality": "Mariage",
+				"company_artist_name": "Studio Test",
+				"city": "Toute l’Europe",
+				"description": "Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. ",
+				"main_picture": {
+					"data": {
+						"id": 1
+					}
+				},
+				"image_gallery": {
+					"data": [
+						{
+							"id": 2
+						}
+					]
+				},
+				"skills": [
+					{
+						"id": 1
+					}
+				],
+				"experiences": [
+					{
+						"id": 1
+					}
+				],
+				"courses": [
+					{
+						"id": 1
+					}
+				],
+				"service_offers": [
+					{
+						"price": "à partir de 120 €"
+					}
+				],
+				"network": {
+					"instagram": "studio.test"
+				},
+				"language": [
+					{
+						"id": 1
+					}
+				]
+			},
+			"attendu": {
+				"publiable": false,
+				"indexable": false,
+				"entierementVide": false
+			}
+		},
+		{
+			"nom": "ville : continent seul",
+			"profil": {
+				"first_name": "Testine",
+				"last_name": "Recette",
+				"speciality": "Mariage",
+				"company_artist_name": "Studio Test",
+				"city": "Europe",
+				"description": "Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. ",
+				"main_picture": {
+					"data": {
+						"id": 1
+					}
+				},
+				"image_gallery": {
+					"data": [
+						{
+							"id": 2
+						}
+					]
+				},
+				"skills": [
+					{
+						"id": 1
+					}
+				],
+				"experiences": [
+					{
+						"id": 1
+					}
+				],
+				"courses": [
+					{
+						"id": 1
+					}
+				],
+				"service_offers": [
+					{
+						"price": "à partir de 120 €"
+					}
+				],
+				"network": {
+					"instagram": "studio.test"
+				},
+				"language": [
+					{
+						"id": 1
+					}
+				]
+			},
+			"attendu": {
+				"publiable": false,
+				"indexable": false,
+				"entierementVide": false
+			}
+		},
+		{
+			"nom": "ville : France entière",
+			"profil": {
+				"first_name": "Testine",
+				"last_name": "Recette",
+				"speciality": "Mariage",
+				"company_artist_name": "Studio Test",
+				"city": "France entière",
+				"description": "Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. ",
+				"main_picture": {
+					"data": {
+						"id": 1
+					}
+				},
+				"image_gallery": {
+					"data": [
+						{
+							"id": 2
+						}
+					]
+				},
+				"skills": [
+					{
+						"id": 1
+					}
+				],
+				"experiences": [
+					{
+						"id": 1
+					}
+				],
+				"courses": [
+					{
+						"id": 1
+					}
+				],
+				"service_offers": [
+					{
+						"price": "à partir de 120 €"
+					}
+				],
+				"network": {
+					"instagram": "studio.test"
+				},
+				"language": [
+					{
+						"id": 1
+					}
+				]
+			},
+			"attendu": {
+				"publiable": false,
+				"indexable": false,
+				"entierementVide": false
+			}
+		},
+		{
+			"nom": "ville : valeur « null »",
+			"profil": {
+				"first_name": "Testine",
+				"last_name": "Recette",
+				"speciality": "Mariage",
+				"company_artist_name": "Studio Test",
+				"city": "null",
+				"description": "Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. ",
+				"main_picture": {
+					"data": {
+						"id": 1
+					}
+				},
+				"image_gallery": {
+					"data": [
+						{
+							"id": 2
+						}
+					]
+				},
+				"skills": [
+					{
+						"id": 1
+					}
+				],
+				"experiences": [
+					{
+						"id": 1
+					}
+				],
+				"courses": [
+					{
+						"id": 1
+					}
+				],
+				"service_offers": [
+					{
+						"price": "à partir de 120 €"
+					}
+				],
+				"network": {
+					"instagram": "studio.test"
+				},
+				"language": [
+					{
+						"id": 1
+					}
+				]
+			},
+			"attendu": {
+				"publiable": false,
+				"indexable": false,
+				"entierementVide": false
+			}
+		},
+		{
+			"nom": "ville : tiret",
+			"profil": {
+				"first_name": "Testine",
+				"last_name": "Recette",
+				"speciality": "Mariage",
+				"company_artist_name": "Studio Test",
+				"city": "-",
+				"description": "Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. ",
+				"main_picture": {
+					"data": {
+						"id": 1
+					}
+				},
+				"image_gallery": {
+					"data": [
+						{
+							"id": 2
+						}
+					]
+				},
+				"skills": [
+					{
+						"id": 1
+					}
+				],
+				"experiences": [
+					{
+						"id": 1
+					}
+				],
+				"courses": [
+					{
+						"id": 1
+					}
+				],
+				"service_offers": [
+					{
+						"price": "à partir de 120 €"
+					}
+				],
+				"network": {
+					"instagram": "studio.test"
+				},
+				"language": [
+					{
+						"id": 1
+					}
+				]
+			},
+			"attendu": {
+				"publiable": false,
+				"indexable": false,
+				"entierementVide": false
+			}
+		},
+		{
+			"nom": "ville : point",
+			"profil": {
+				"first_name": "Testine",
+				"last_name": "Recette",
+				"speciality": "Mariage",
+				"company_artist_name": "Studio Test",
+				"city": ".",
+				"description": "Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. ",
+				"main_picture": {
+					"data": {
+						"id": 1
+					}
+				},
+				"image_gallery": {
+					"data": [
+						{
+							"id": 2
+						}
+					]
+				},
+				"skills": [
+					{
+						"id": 1
+					}
+				],
+				"experiences": [
+					{
+						"id": 1
+					}
+				],
+				"courses": [
+					{
+						"id": 1
+					}
+				],
+				"service_offers": [
+					{
+						"price": "à partir de 120 €"
+					}
+				],
+				"network": {
+					"instagram": "studio.test"
+				},
+				"language": [
+					{
+						"id": 1
+					}
+				]
+			},
+			"attendu": {
+				"publiable": false,
+				"indexable": false,
+				"entierementVide": false
+			}
+		},
+		{
+			"nom": "ville : texte « undefined »",
+			"profil": {
+				"first_name": "Testine",
+				"last_name": "Recette",
+				"speciality": "Mariage",
+				"company_artist_name": "Studio Test",
+				"city": "undefined",
+				"description": "Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. ",
+				"main_picture": {
+					"data": {
+						"id": 1
+					}
+				},
+				"image_gallery": {
+					"data": [
+						{
+							"id": 2
+						}
+					]
+				},
+				"skills": [
+					{
+						"id": 1
+					}
+				],
+				"experiences": [
+					{
+						"id": 1
+					}
+				],
+				"courses": [
+					{
+						"id": 1
+					}
+				],
+				"service_offers": [
+					{
+						"price": "à partir de 120 €"
+					}
+				],
+				"network": {
+					"instagram": "studio.test"
+				},
+				"language": [
+					{
+						"id": 1
+					}
+				]
+			},
+			"attendu": {
+				"publiable": false,
+				"indexable": false,
+				"entierementVide": false
+			}
+		},
+		{
+			"nom": "ville : vide",
+			"profil": {
+				"first_name": "Testine",
+				"last_name": "Recette",
+				"speciality": "Mariage",
+				"company_artist_name": "Studio Test",
+				"city": "",
+				"description": "Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. ",
+				"main_picture": {
+					"data": {
+						"id": 1
+					}
+				},
+				"image_gallery": {
+					"data": [
+						{
+							"id": 2
+						}
+					]
+				},
+				"skills": [
+					{
+						"id": 1
+					}
+				],
+				"experiences": [
+					{
+						"id": 1
+					}
+				],
+				"courses": [
+					{
+						"id": 1
+					}
+				],
+				"service_offers": [
+					{
+						"price": "à partir de 120 €"
+					}
+				],
+				"network": {
+					"instagram": "studio.test"
+				},
+				"language": [
+					{
+						"id": 1
+					}
+				]
+			},
+			"attendu": {
+				"publiable": false,
+				"indexable": false,
+				"entierementVide": false
+			}
+		},
+		{
+			"nom": "ville : rue seule, sans commune ni code postal",
+			"profil": {
+				"first_name": "Testine",
+				"last_name": "Recette",
+				"speciality": "Mariage",
+				"company_artist_name": "Studio Test",
+				"city": "3 avenue des Essais",
+				"description": "Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. ",
+				"main_picture": {
+					"data": {
+						"id": 1
+					}
+				},
+				"image_gallery": {
+					"data": [
+						{
+							"id": 2
+						}
+					]
+				},
+				"skills": [
+					{
+						"id": 1
+					}
+				],
+				"experiences": [
+					{
+						"id": 1
+					}
+				],
+				"courses": [
+					{
+						"id": 1
+					}
+				],
+				"service_offers": [
+					{
+						"price": "à partir de 120 €"
+					}
+				],
+				"network": {
+					"instagram": "studio.test"
+				},
+				"language": [
+					{
+						"id": 1
+					}
+				]
+			},
+			"attendu": {
+				"publiable": false,
+				"indexable": false,
+				"entierementVide": false
+			}
+		},
+		{
+			"nom": "ville : rue avec sa commune",
+			"profil": {
+				"first_name": "Testine",
+				"last_name": "Recette",
+				"speciality": "Mariage",
+				"company_artist_name": "Studio Test",
+				"city": "3 avenue des Essais, Annecy",
+				"description": "Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. ",
+				"main_picture": {
+					"data": {
+						"id": 1
+					}
+				},
+				"image_gallery": {
+					"data": [
+						{
+							"id": 2
+						}
+					]
+				},
+				"skills": [
+					{
+						"id": 1
+					}
+				],
+				"experiences": [
+					{
+						"id": 1
+					}
+				],
+				"courses": [
+					{
+						"id": 1
+					}
+				],
+				"service_offers": [
+					{
+						"price": "à partir de 120 €"
+					}
+				],
+				"network": {
+					"instagram": "studio.test"
+				},
+				"language": [
+					{
+						"id": 1
+					}
+				]
+			},
+			"attendu": {
+				"publiable": true,
+				"indexable": true,
+				"entierementVide": false
+			}
+		},
+		{
+			"nom": "ville : rue avec son code postal",
+			"profil": {
+				"first_name": "Testine",
+				"last_name": "Recette",
+				"speciality": "Mariage",
+				"company_artist_name": "Studio Test",
+				"city": "3 avenue des Essais 74000",
+				"description": "Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. ",
+				"main_picture": {
+					"data": {
+						"id": 1
+					}
+				},
+				"image_gallery": {
+					"data": [
+						{
+							"id": 2
+						}
+					]
+				},
+				"skills": [
+					{
+						"id": 1
+					}
+				],
+				"experiences": [
+					{
+						"id": 1
+					}
+				],
+				"courses": [
+					{
+						"id": 1
+					}
+				],
+				"service_offers": [
+					{
+						"price": "à partir de 120 €"
+					}
+				],
+				"network": {
+					"instagram": "studio.test"
+				},
+				"language": [
+					{
+						"id": 1
+					}
+				]
+			},
+			"attendu": {
+				"publiable": true,
+				"indexable": true,
+				"entierementVide": false
+			}
+		},
+		{
+			"nom": "indexable : description de 99 caractères avec prix et galerie",
+			"profil": {
+				"first_name": "Testine",
+				"last_name": "Recette",
+				"speciality": "Mariage",
+				"company_artist_name": "Studio Test",
+				"city": "Annecy",
+				"description": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+				"main_picture": {
+					"data": {
+						"id": 1
+					}
+				},
+				"image_gallery": [
+					{
+						"id": 2
+					}
+				],
+				"skills": [
+					{
+						"id": 1
+					}
+				],
+				"experiences": [
+					{
+						"id": 1
+					}
+				],
+				"courses": [
+					{
+						"id": 1
+					}
+				],
+				"service_offers": [
+					{
+						"price": "à partir de 80 €"
+					}
+				],
+				"network": {
+					"instagram": "studio.test"
+				},
+				"language": [
+					{
+						"id": 1
+					}
+				]
+			},
+			"attendu": {
+				"publiable": true,
+				"indexable": false,
+				"entierementVide": false
+			}
+		},
+		{
+			"nom": "indexable : description de 100 caractères avec prix",
+			"profil": {
+				"first_name": "Testine",
+				"last_name": "Recette",
+				"speciality": "Mariage",
+				"company_artist_name": "Studio Test",
+				"city": "Annecy",
+				"description": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+				"main_picture": {
+					"data": {
+						"id": 1
+					}
+				},
+				"image_gallery": null,
+				"skills": [
+					{
+						"id": 1
+					}
+				],
+				"experiences": [
+					{
+						"id": 1
+					}
+				],
+				"courses": [
+					{
+						"id": 1
+					}
+				],
+				"service_offers": [
+					{
+						"price": "à partir de 80 €"
+					}
+				],
+				"network": {
+					"instagram": "studio.test"
+				},
+				"language": [
+					{
+						"id": 1
+					}
+				]
+			},
+			"attendu": {
+				"publiable": true,
+				"indexable": true,
+				"entierementVide": false
+			}
+		},
+		{
+			"nom": "indexable : description de 100 caractères avec galerie seule",
+			"profil": {
+				"first_name": "Testine",
+				"last_name": "Recette",
+				"speciality": "Mariage",
+				"company_artist_name": "Studio Test",
+				"city": "Annecy",
+				"description": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+				"main_picture": {
+					"data": {
+						"id": 1
+					}
+				},
+				"image_gallery": [
+					{
+						"id": 2
+					}
+				],
+				"skills": [
+					{
+						"id": 1
+					}
+				],
+				"experiences": [
+					{
+						"id": 1
+					}
+				],
+				"courses": [
+					{
+						"id": 1
+					}
+				],
+				"service_offers": null,
+				"network": {
+					"instagram": "studio.test"
+				},
+				"language": [
+					{
+						"id": 1
+					}
+				]
+			},
+			"attendu": {
+				"publiable": true,
+				"indexable": true,
+				"entierementVide": false
+			}
+		},
+		{
+			"nom": "indexable : description de 100 caractères avec prix et galerie",
+			"profil": {
+				"first_name": "Testine",
+				"last_name": "Recette",
+				"speciality": "Mariage",
+				"company_artist_name": "Studio Test",
+				"city": "Annecy",
+				"description": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+				"main_picture": {
+					"data": {
+						"id": 1
+					}
+				},
+				"image_gallery": [
+					{
+						"id": 2
+					}
+				],
+				"skills": [
+					{
+						"id": 1
+					}
+				],
+				"experiences": [
+					{
+						"id": 1
+					}
+				],
+				"courses": [
+					{
+						"id": 1
+					}
+				],
+				"service_offers": [
+					{
+						"price": "à partir de 80 €"
+					}
+				],
+				"network": {
+					"instagram": "studio.test"
+				},
+				"language": [
+					{
+						"id": 1
+					}
+				]
+			},
+			"attendu": {
+				"publiable": true,
+				"indexable": true,
+				"entierementVide": false
+			}
+		},
+		{
+			"nom": "indexable : description de 100 caractères sans prix ni galerie",
+			"profil": {
+				"first_name": "Testine",
+				"last_name": "Recette",
+				"speciality": "Mariage",
+				"company_artist_name": "Studio Test",
+				"city": "Annecy",
+				"description": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+				"main_picture": {
+					"data": {
+						"id": 1
+					}
+				},
+				"image_gallery": null,
+				"skills": [
+					{
+						"id": 1
+					}
+				],
+				"experiences": [
+					{
+						"id": 1
+					}
+				],
+				"courses": [
+					{
+						"id": 1
+					}
+				],
+				"service_offers": null,
+				"network": {
+					"instagram": "studio.test"
+				},
+				"language": [
+					{
+						"id": 1
+					}
+				]
+			},
+			"attendu": {
+				"publiable": true,
+				"indexable": false,
+				"entierementVide": false
+			}
+		},
+		{
+			"nom": "indexable : description de 100 caractères, offre sur devis, sans galerie",
+			"profil": {
+				"first_name": "Testine",
+				"last_name": "Recette",
+				"speciality": "Mariage",
+				"company_artist_name": "Studio Test",
+				"city": "Annecy",
+				"description": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+				"main_picture": {
+					"data": {
+						"id": 1
+					}
+				},
+				"image_gallery": null,
+				"skills": [
+					{
+						"id": 1
+					}
+				],
+				"experiences": [
+					{
+						"id": 1
+					}
+				],
+				"courses": [
+					{
+						"id": 1
+					}
+				],
+				"service_offers": [
+					{
+						"price": "Sur devis"
+					}
+				],
+				"network": {
+					"instagram": "studio.test"
+				},
+				"language": [
+					{
+						"id": 1
+					}
+				]
+			},
+			"attendu": {
+				"publiable": true,
+				"indexable": false,
+				"entierementVide": false
+			}
+		},
+		{
+			"nom": "indexable : description de 100 caractères, offre sur devis, avec galerie",
+			"profil": {
+				"first_name": "Testine",
+				"last_name": "Recette",
+				"speciality": "Mariage",
+				"company_artist_name": "Studio Test",
+				"city": "Annecy",
+				"description": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+				"main_picture": {
+					"data": {
+						"id": 1
+					}
+				},
+				"image_gallery": [
+					{
+						"id": 2
+					}
+				],
+				"skills": [
+					{
+						"id": 1
+					}
+				],
+				"experiences": [
+					{
+						"id": 1
+					}
+				],
+				"courses": [
+					{
+						"id": 1
+					}
+				],
+				"service_offers": [
+					{
+						"price": "Sur devis"
+					}
+				],
+				"network": {
+					"instagram": "studio.test"
+				},
+				"language": [
+					{
+						"id": 1
+					}
+				]
+			},
+			"attendu": {
+				"publiable": true,
+				"indexable": true,
+				"entierementVide": false
+			}
+		},
+		{
+			"nom": "indexable : prix et galerie sans description",
+			"profil": {
+				"first_name": "Testine",
+				"last_name": "Recette",
+				"speciality": "Mariage",
+				"company_artist_name": "Studio Test",
+				"city": "Annecy",
+				"description": "",
+				"main_picture": {
+					"data": {
+						"id": 1
+					}
+				},
+				"image_gallery": [
+					{
+						"id": 2
+					}
+				],
+				"skills": [
+					{
+						"id": 1
+					}
+				],
+				"experiences": [
+					{
+						"id": 1
+					}
+				],
+				"courses": [
+					{
+						"id": 1
+					}
+				],
+				"service_offers": [
+					{
+						"price": "à partir de 80 €"
+					}
+				],
+				"network": {
+					"instagram": "studio.test"
+				},
+				"language": [
+					{
+						"id": 1
+					}
+				]
+			},
+			"attendu": {
+				"publiable": true,
+				"indexable": false,
+				"entierementVide": false
+			}
+		},
+		{
+			"nom": "indexable : 99 caractères comptés une fois les espaces et retours réduits",
+			"profil": {
+				"first_name": "Testine",
+				"last_name": "Recette",
+				"speciality": "Mariage",
+				"company_artist_name": "Studio Test",
+				"city": "Annecy",
+				"description": "  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n\naaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa  ",
+				"main_picture": {
+					"data": {
+						"id": 1
+					}
+				},
+				"image_gallery": null,
+				"skills": [
+					{
+						"id": 1
+					}
+				],
+				"experiences": [
+					{
+						"id": 1
+					}
+				],
+				"courses": [
+					{
+						"id": 1
+					}
+				],
+				"service_offers": [
+					{
+						"price": "à partir de 80 €"
+					}
+				],
+				"network": {
+					"instagram": "studio.test"
+				},
+				"language": [
+					{
+						"id": 1
+					}
+				]
+			},
+			"attendu": {
+				"publiable": true,
+				"indexable": false,
+				"entierementVide": false
+			}
+		},
+		{
+			"nom": "indexable : sans canal de contact, jamais indexable",
+			"profil": {
+				"first_name": "Testine",
+				"last_name": "Recette",
+				"speciality": "Mariage",
+				"company_artist_name": "Studio Test",
+				"city": "Annecy",
+				"description": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+				"main_picture": {
+					"data": {
+						"id": 1
+					}
+				},
+				"image_gallery": [
+					{
+						"id": 2
+					}
+				],
+				"skills": [
+					{
+						"id": 1
+					}
+				],
+				"experiences": [
+					{
+						"id": 1
+					}
+				],
+				"courses": [
+					{
+						"id": 1
+					}
+				],
+				"service_offers": [
+					{
+						"price": "à partir de 80 €"
+					}
+				],
+				"network": {},
+				"language": [
+					{
+						"id": 1
+					}
+				]
+			},
+			"attendu": {
+				"publiable": false,
+				"indexable": false,
+				"entierementVide": false
+			}
+		},
+		{
+			"nom": "indexable : compte interne, jamais indexable",
+			"profil": {
+				"first_name": "Testine",
+				"last_name": "Recette",
+				"speciality": "CEO/CTO My Makeup",
+				"company_artist_name": "Studio Test",
+				"city": "Annecy",
+				"description": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+				"main_picture": {
+					"data": {
+						"id": 1
+					}
+				},
+				"image_gallery": [
+					{
+						"id": 2
+					}
+				],
+				"skills": [
+					{
+						"id": 1
+					}
+				],
+				"experiences": [
+					{
+						"id": 1
+					}
+				],
+				"courses": [
+					{
+						"id": 1
+					}
+				],
+				"service_offers": [
+					{
+						"price": "à partir de 80 €"
+					}
+				],
+				"network": {
+					"instagram": "studio.test"
+				},
+				"language": [
+					{
+						"id": 1
+					}
+				]
+			},
+			"attendu": {
+				"publiable": false,
+				"indexable": false,
+				"entierementVide": false
+			}
+		},
+		{
+			"nom": "vide : une prestation chiffrée seule ne laisse pas le profil vide",
+			"profil": {
+				"first_name": "Prenom",
+				"service_offers": [
+					{
+						"price": "à partir de 80 €"
+					}
+				]
+			},
+			"attendu": {
+				"publiable": false,
+				"indexable": false,
+				"entierementVide": false
+			}
+		},
+		{
+			"nom": "vide : une description de 100 caractères seule ne laisse pas le profil vide",
+			"profil": {
+				"first_name": "Prenom",
+				"description": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+			},
+			"attendu": {
+				"publiable": false,
+				"indexable": false,
+				"entierementVide": false
+			}
+		},
+		{
+			"nom": "vide : une description de 99 caractères seule laisse le profil vide",
+			"profil": {
+				"first_name": "Prenom",
+				"description": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+			},
+			"attendu": {
+				"publiable": false,
+				"indexable": false,
+				"entierementVide": true
+			}
+		},
+		{
+			"nom": "vide : une galerie seule laisse le profil vide",
+			"profil": {
+				"first_name": "Prenom",
+				"image_gallery": [
+					{
+						"id": 2
+					}
+				]
+			},
+			"attendu": {
+				"publiable": false,
+				"indexable": false,
+				"entierementVide": true
+			}
+		},
+		{
+			"nom": "vide : une photo principale seule ne laisse pas le profil vide",
+			"profil": {
+				"main_picture": {
+					"id": 1
+				}
+			},
+			"attendu": {
+				"publiable": false,
+				"indexable": false,
+				"entierementVide": false
 			}
 		}
 	]

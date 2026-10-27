@@ -29,7 +29,7 @@ const LISTS = [
 	'ville-voisine',
 	'ville-eloignee',
 	'disponibilite-inconnue',
-	'actif-non-publiable',
+	'publiable-non-indexable',
 	'sans-contact-public',
 	'ancien-nom-accentue',
 	'verifiee',
@@ -39,7 +39,7 @@ const ABSENTS = ['indisponible', 'vide', 'masquee'] as const
 const A_ANNECY = [
 	'reference',
 	'disponibilite-inconnue',
-	'actif-non-publiable',
+	'publiable-non-indexable',
 	'sans-contact-public',
 	'verifiee',
 ] as const
@@ -146,7 +146,9 @@ test.describe('Recherche par ville', () => {
 
 	// E42, as the decisions of 09/10 and 13/10 changed it: empty, unavailable and hidden are absent; a
 	// profile that is active but cannot be published is there.
-	test('E42 : vide, indisponible et masqué sont absents ; actif non publiable est présent', async ({ page }) => {
+	test('E42 : vide, indisponible et masqué sont absents ; publiable mais non indexable est présent', async ({
+		page,
+	}) => {
 		await page.goto(find('Annecy'))
 
 		const urls = await page

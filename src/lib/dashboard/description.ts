@@ -8,7 +8,7 @@
  * - Every tag pasted into the text is removed (U27), with the content of a `script` or a `style`.
  *   The line breaks she typed are kept.
  * - The counter next to the field counts with `descriptionLength`, the single definition of the
- *   length that makes a profile publishable (U05, src/lib/profile/completeness.ts): the form never
+ *   length that lets Google index a profile (U05, src/lib/profile/completeness.ts): the form never
  *   computes its own.
  * - The server reads the same schema in its strict form: any key but `description` refuses the
  *   whole request (U32). Every message is in French.
@@ -35,13 +35,13 @@ export function removeHtml(valeur: string): string {
 	return stripMarkup(valeur.replace(/\r\n?/g, '\n'), { dropContentOf: ['script', 'style'] }).trim()
 }
 
-/** The counter under the field: how many characters count, and where she stands against 200. */
+/** The counter under the field: how many characters count, and where she stands against 100. */
 export interface Counter {
-	/** The length that counts for « publiable » (U05): runs of spaces and line breaks count once. */
+	/** The length that counts for Google (`indexable`, U05): runs of spaces and line breaks count once. */
 	readonly compte: number
 	/** The length of the text as it will be stored, against the bound of 2 000. */
 	readonly total: number
-	/** At least 200 characters count. */
+	/** At least 100 characters count. */
 	readonly assez: boolean
 }
 

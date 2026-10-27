@@ -23,6 +23,7 @@ function entry(slug: string, over: Partial<DirectoryProfile> = {}): DirectoryPro
 	return {
 		carte: { slug, pid: 1 as never, nom: slug, specialite: null, lieu: 'Annecy', superMaquilleuse: false, photo: null },
 		unreachable: false,
+		publishable: true,
 		indexable: true,
 		verified: false,
 		ville: 'Annecy',

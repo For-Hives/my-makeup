@@ -93,7 +93,7 @@ Les adresses des photos portent le port du stockage de l'instance : deux instanc
 
 ## Inventaire
 
-Les nombres de la vraie base viennent de l'instantané du 13/10/2026 ([`SCHEMA.md`](../migration/SCHEMA.md), §3) et de l'analyse du même jour pour les profils actifs et publiables. « — » : non mesuré ce jour-là. Un test compare ce tableau à l'inventaire calculé sur les données (`bun --no-env-file test tests/unit/source-strapi.test.ts`), et le test d'intégration le compare à la base créée. `bun run bench:source` l'affiche sous cette forme.
+Les nombres de la vraie base viennent de l'instantané du 13/10/2026 ([`SCHEMA.md`](../migration/SCHEMA.md), §3) et de l'analyse du même jour pour les profils actifs et publiables. « — » : non mesuré ce jour-là. La ligne « Profils publiables » est comptée par la règle du 27/10/2026 (photo, ville, spécialité, contact) pour la fausse base ; le 15 de la base réelle date de l'ancienne règle, à six conditions. Un test compare ce tableau à l'inventaire calculé sur les données (`bun --no-env-file test tests/unit/source-strapi.test.ts`), et le test d'intégration le compare à la base créée. `bun run bench:source` l'affiche sous cette forme.
 
 | Groupe | Cas | Base réelle, 13/10/2026 | Fausse base |
 |---|---|---|---|
@@ -119,7 +119,7 @@ Les nombres de la vraie base viennent de l'instantané du 13/10/2026 ([`SCHEMA.m
 | Profils | Profils sans compte, hors de cette liste | 0 | 0 |
 | Profils | Profils entièrement vides reliés à un compte | 26 | 1 |
 | Profils | Profils actifs | 41 | 3 |
-| Profils | Profils publiables | 15 | 2 |
+| Profils | Profils publiables | 15 | 3 |
 | Profils | `available` vrai | 48 | 7 |
 | Profils | `available` faux | 5 | 2 |
 | Profils | `available` nul | 48 | 18 |

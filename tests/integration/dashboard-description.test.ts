@@ -133,18 +133,18 @@ describe('U32, I02 : une requête forgée est refusée, rien ne change', () => {
 	})
 })
 
-describe('U05 : la longueur enregistrée rend le profil publiable par la définition unique', () => {
-	test('199 caractères : pas de condition remplie ; 200 : la condition « description » l’est', async () => {
+describe('U05 : la longueur enregistrée rend le profil indexable par la définition unique', () => {
+	test('99 caractères : la description ne suffit pas pour Google ; 100 : elle suffit', async () => {
 		const a = await createAccount('maquilleuse')
 		const payload = await testPayload()
 		const user = await userOf(payload, a)
-		const { publishableConditions } = await import('@/lib/profile/completeness')
+		const { richnessOf } = await import('@/lib/profile/completeness')
 		const { profileFields } = await import('@/lib/profile/state')
 
-		await saveDescription(payload, user, { description: 'a'.repeat(199) })
-		expect(publishableConditions(profileFields(await storedProfile(payload, a))).descriptionLongue).toBe(false)
+		await saveDescription(payload, user, { description: 'a'.repeat(99) })
+		expect(richnessOf(profileFields(await storedProfile(payload, a))).description).toBe(false)
 
-		await saveDescription(payload, user, { description: 'a'.repeat(200) })
-		expect(publishableConditions(profileFields(await storedProfile(payload, a))).descriptionLongue).toBe(true)
+		await saveDescription(payload, user, { description: 'a'.repeat(100) })
+		expect(richnessOf(profileFields(await storedProfile(payload, a))).description).toBe(true)
 	})
 })

@@ -3,8 +3,8 @@
  * stands for a visitor, in one banner. Pure, so the page and the tests call it.
  *
  * The three rules are the ones of the public reading, never written again here
- * (src/lib/profile/visibility.ts): visible at its address, listed, indexable. The first condition
- * that fails gives the message, from the most serious to the lightest.
+ * (src/lib/profile/visibility.ts): visible at its address, listed, publishable, indexable. The first
+ * condition that fails gives the message, from the most serious to the lightest.
  */
 
 import { type DocumentVisible, isIndexable, isList, isVisible } from '../profile/visibility'
@@ -12,7 +12,7 @@ import { type DocumentVisible, isIndexable, isList, isVisible } from '../profile
 export const PREVIEW_PATH = '/auth/apercu-profil'
 export const DASHBOARD_PATH = '/auth/profil'
 
-export type PreviewCode = 'masque' | 'vide' | 'indisponible' | 'non-publiable' | 'complet'
+export type PreviewCode = 'masque' | 'vide' | 'indisponible' | 'non-publiable' | 'non-indexable' | 'complet'
 
 export interface PreviewState {
 	readonly code: PreviewCode
@@ -44,12 +44,19 @@ export function previewState(profil: DocumentVisible): PreviewState {
 			texte:
 				'Ton profil n’apparaît pas dans les résultats de recherche, mais cette page reste visible par celles qui ont ton lien.',
 		}
-	if (!isIndexable(profil))
+	if (profil.publishable !== true)
 		return {
 			code: 'non-publiable',
 			titre: 'Ton profil n’est pas encore publiable.',
 			texte:
-				'Cette page est visible par celles qui ont ton lien, mais les moteurs de recherche ne la référencent pas encore.',
+				'Cette page est visible par celles qui ont ton lien, mais les moteurs de recherche ne la référencent pas encore : il lui faut une photo, ta ville, ta spécialité et un moyen de te contacter.',
+		}
+	if (!isIndexable(profil))
+		return {
+			code: 'non-indexable',
+			titre: 'Ton profil est publié, mais Google ne le référence pas encore.',
+			texte:
+				'Pour apparaître sur Google, ajoute une description d’au moins 100 caractères, et une prestation avec un prix ou des photos de ton travail.',
 		}
 	return {
 		code: 'complet',

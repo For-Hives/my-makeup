@@ -41,19 +41,19 @@ Chaque ligne de la table `01` §6.3 est reprise ici : la dernière colonne donne
 | `blog` | `/blog` | Liste du blog | Identique | 200 | — |
 | `article` | `/blog/<slug>` : article publié | Article du blog (10 au relevé) | Identique | 200 | 4 |
 | `talent` | `/talent/<slug>` : page talent publiée | Page talent (14 au relevé) | Identique | 200 | 4 |
-| `profil` | `/profil/<slug>` : slug d'un profil repris et visible | Profil public, adresse émise depuis le 08/10/2026 | Identique ; `noindex` tant que le profil n'est pas publiable | 200 | 1 |
+| `profil` | `/profil/<slug>` : slug d'un profil repris et visible | Profil public, adresse émise depuis le 08/10/2026 | Identique ; `noindex` tant que le profil n'est pas indexable (publiable, avec une description d'au moins 100 caractères et une prestation chiffrée ou une photo de galerie) | 200 | 1 |
 | `profil-ancien-nom` | `/profil/<ancien-nom>` : ancien nom d'utilisateur d'un profil repris, ou variante de son slug (majuscules, accents, espaces) | Ancienne forme, encodée dans l'adresse ; déjà en 308 en un saut | Redirection vers le slug du même profil : `/profil/<slug>` | 308 en un saut | 2 |
 | `profil-non-repris` | `/profil/<slug>` : l'un des 13 profils vides du spam, que l'import ne reprend pas (slug ou ancien nom) | Profil vide, servi en `noindex` (200, ou 308 depuis l'ancien nom) | Page 404 en français ; les 13 sont au registre par numéro, jamais par nom | 404 | — |
 | `slug-inconnu` | `/profil/<slug>`, `/talent/<slug>`, `/blog/<slug>` : slug inconnu, ou profil masqué | Slug inconnu | Page 404 en français, jamais 500 | 404 | 11 |
 | `recherche` | `/search` | Recherche, `/search?search=&city=`, en `noindex` | Mêmes paramètres, plus `specialite` et `page` ; `noindex` | 200 | 6 |
 | `toutes-les-news` | `/toutes-les-news` | Liste des articles, en double du blog | Redirection vers la liste du blog : `/blog` | 301 en un saut | 5 |
-| `plan-du-site` | `/site-map` | Plan du site | Régénéré depuis Payload, profils publiables seulement | 200 | 13 |
+| `plan-du-site` | `/site-map` | Plan du site | Régénéré depuis Payload, profils indexables seulement | 200 | 13 |
 | `demande-envoyee` | `/demande-envoyee` | Page de remerciement, en `noindex` | Identique, en `noindex` | 200 | — |
 | `adresse-inconnue` | `/*` | Toute autre adresse | Page 404 en français, jamais 500 | 404 | — |
 | `classement` | `/classement` | Page inexistante | Créée (issue 1012) : comment sont classées les maquilleuses, indexable, liée sous chaque liste | 200 | — |
 <!-- urls:familles:pages:fin -->
 
-Les quatre familles qui partagent le motif `/profil/<slug>` ne se distinguent que par les données : c'est la base qui sait si un slug est connu. Un profil non publiable reste joignable en 200, avec `noindex`, comme aujourd'hui.
+Les quatre familles qui partagent le motif `/profil/<slug>` ne se distinguent que par les données : c'est la base qui sait si un slug est connu. Un profil non indexable (publiable mais mince, ou non publiable) reste joignable en 200, avec `noindex`, comme aujourd'hui.
 
 ### Forme de l'adresse
 
@@ -113,7 +113,7 @@ Un chemin inconnu sous `/auth` est une adresse inconnue : 404.
 | `mesure-script` | `/u/script.js` | Script de mesure Umami, relayé par le site | Identique | 200 | — |
 | `mesure-envoi` | `/u/api/send` | Envoi des mesures à Umami, en POST seulement (un GET répond 405) | Identique : un GET répond 405, un POST est relayé | 405 | — |
 | `mesure-autre` | `/u/*` | Tout autre chemin sous `/u` | Identique : rien d'autre n'est relayé | 404 | — |
-| `sitemap` | `/sitemap.xml` | Sitemap | Régénéré depuis Payload, profils publiables seulement | 200 | 13 |
+| `sitemap` | `/sitemap.xml` | Sitemap | Régénéré depuis Payload, profils indexables seulement | 200 | 13 |
 | `robots` | `/robots.txt` | Fichier robots | Généré par le site, mêmes règles | 200 | 13 |
 | `fichiers-publics` | `/favicon.webp`, `/assets/*` : fichier présent dans `public/` | Icône du site et images de `public/assets/` | Identiques : le dossier `public/` est conservé | 200 | — |
 | `llms-txt` | `/llms.txt` | Fichier pour les assistants, jamais créé | Créé (ticket 1014) : un guide en texte, sans nom de maquilleuse, qui ne cite que des pages publiques | 200 | — |

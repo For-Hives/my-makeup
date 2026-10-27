@@ -34,9 +34,16 @@ describe('le statut du profil', () => {
 		expect(overviewStatus(profileProgress(PUBLISHABLE))).toMatchObject({ code: 'visible', paused: false })
 	})
 
+	test('publiable mais pas indexable : visible, et Google est dit à part', () => {
+		const status = overviewStatus(profileProgress({ ...PUBLISHABLE, description: 'Court.', serviceOffers: [] }))
+		expect(status.code).toBe('visible')
+		expect(status.text).toContain('Google')
+		expect(status.text).not.toContain('Google peut la trouver')
+	})
+
 	test('vide ou incomplet : en brouillon', () => {
 		expect(overviewStatus(profileProgress({ id: 2 })).code).toBe('draft')
-		expect(overviewStatus(profileProgress({ ...PUBLISHABLE, description: 'Court.' })).code).toBe('draft')
+		expect(overviewStatus(profileProgress({ ...PUBLISHABLE, networks: {} })).code).toBe('draft')
 	})
 
 	test('masqué par l’équipe : le motif, jamais « visible »', () => {
@@ -53,13 +60,15 @@ describe('le statut du profil', () => {
 })
 
 describe('l’avancement', () => {
-	const missing = (requis: boolean): Missing => ({ critere: 'description', texte: '', requis })
+	const missing = (requis: boolean, google = false): Missing => ({ critere: 'description', texte: '', requis, google })
 
 	test('le pourcentage de la règle unique, jamais 100 % tant qu’un point indispensable manque', () => {
 		expect(gaugePercent(profileProgress(PUBLISHABLE))).toBe(profileProgress(PUBLISHABLE).pourcentage)
 		expect(gaugePercent({ pourcentage: 100, manques: [missing(true)] })).toBe(99)
 		expect(gaugePercent({ pourcentage: 100, manques: [missing(false)] })).toBe(100)
 		expect(gaugePercent({ pourcentage: 40, manques: [missing(true)] })).toBe(40)
+		// a point that only Google asks for keeps the bar under 100 % too
+		expect(gaugePercent({ pourcentage: 100, manques: [missing(false, true)] })).toBe(99)
 	})
 })
 

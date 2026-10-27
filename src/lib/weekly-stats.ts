@@ -58,11 +58,11 @@ export const WeeklyStats = z.strictObject({
 	}),
 	profiles: z.strictObject({
 		total: account,
-		/** None of the six conditions: counted apart, and inside `total`. */
+		/** Entirely empty (none of the four conditions, no priced offer, no description): counted apart, and inside `total`. */
 		fullyEmpty: account,
 		/** Main photo, usable city and speciality. */
 		active: account,
-		/** The six conditions AND shown on the site: a hidden or draft profile is not counted. */
+		/** The four conditions (photo, city, speciality, contact) AND shown on the site: a hidden or draft profile is not counted. */
 		publishable: account,
 		/** Hidden by an admin. */
 		hidden: account,

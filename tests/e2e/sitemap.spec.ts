@@ -10,7 +10,7 @@ import { createContent, deleteContent, refreshProfilePages } from '../support/pu
 /**
  * The sitemap and the plan of the site, end to end (tickets 113 and 114; plan 02 E62): the addresses of
  * the sitemap are the indexable pages and those alone, each answers 200 with no redirection, and the plan
- * of the site lists the same pages, with the publishable profiles. The fictional profiles of the bench
+ * of the site lists the same pages, with the indexable profiles. The fictional profiles of the bench
  * (tests/fixtures/search-profiles.ts) say which profile belongs and which does not.
  */
 
@@ -29,12 +29,12 @@ async function profilesState(request: APIRequestContext) {
 	await refreshProfilePages(request, first)
 	return [...profiles].map(([key, profil]) => {
 		const expected = SEARCH_PROFILES.get(key)?.attendu
-		return { cle: key, slug: profil.slug, indexee: expected?.publishable === true && expected.status === 'published' }
+		return { cle: key, slug: profil.slug, indexee: expected?.indexable === true && expected.status === 'published' }
 	})
 }
 
 test.describe('E62 : /sitemap.xml', () => {
-	test('bien formé, les profils publiables, les talents, les articles et les pages fixes, et rien d’autre', {
+	test('bien formé, les profils indexables, les talents, les articles et les pages fixes, et rien d’autre', {
 		tag: '@smoke',
 	}, async ({ request, baseURL }) => {
 		test.setTimeout(180_000)
@@ -87,11 +87,11 @@ test.describe('E62 : /sitemap.xml', () => {
 				expect(loc, loc).not.toMatch(/\/(auth|api|admin|search|site-map|demande-envoyee|toutes-les-news)(\/|$)/)
 			}
 
-			// As many profiles as publishable ones.
+			// As many profiles as indexable ones.
 			const payload = await testPayload()
 			const { totalDocs } = await payload.count({
 				collection: 'profiles',
-				where: { and: [{ publishable: { equals: true } }, { status: { equals: 'published' } }] },
+				where: { and: [{ indexable: { equals: true } }, { status: { equals: 'published' } }] },
 				overrideAccess: true,
 			})
 			expect(urls.filter(loc => loc.startsWith(`${SITE_ORIGIN}/profil/`))).toHaveLength(totalDocs)
@@ -135,7 +135,7 @@ test.describe('E62 : /sitemap.xml', () => {
 
 test.describe('Plan du site (ticket 114)', () => {
 	test(
-		'un seul h1, les mêmes pages fixes que le sitemap, les profils publiables, et des liens qui répondent 200',
+		'un seul h1, les mêmes pages fixes que le sitemap, les profils indexables, et des liens qui répondent 200',
 		{ tag: '@mobile' },
 		async ({ page, request, baseURL }, testInfo) => {
 			test.setTimeout(180_000)
@@ -188,7 +188,7 @@ test.describe('Plan du site (ticket 114)', () => {
 				)
 				for (const path of fixedSitemapEntries) expect(links, path).toContain(path)
 
-				// The publishable profiles, and only them; the talents and the published articles.
+				// The indexable profiles, and only them; the talents and the published articles.
 				for (const { cle: key, slug, indexee: indexed } of state)
 					expect(links.includes(`/profil/${slug}`), key).toBe(indexed)
 				expect(links).toContain(`/talent/${talent}`)

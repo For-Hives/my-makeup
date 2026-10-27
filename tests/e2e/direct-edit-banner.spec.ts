@@ -23,49 +23,48 @@ for (const size of SIZES) {
 			await expect(banner(page)).toHaveAttribute('data-state', 'draft')
 			await expect(banner(page)).toContainText('Ton profil n’est pas encore visible.')
 			const links = banner(page).getByRole('link')
-			await expect(links).toHaveCount(6)
+			// The four conditions of a publishable page: the price and the long description are no longer asked.
+			await expect(links).toHaveCount(4)
 			for (const [criterion, anchor] of [
 				['specialite', 'identity'],
 				['ville', 'place'],
-				['description', 'about'],
 				['photo', 'photo'],
-				['offres', 'services'],
 				['reseaux', 'networks'],
 			] as const) {
 				const link = page.getByTestId(`missing-${criterion}`)
 				await expect(link).toHaveAttribute('href', `/auth/apercu-profil?mode=edition#bloc-${anchor}`)
 				expect((await link.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44)
 			}
-			await page.getByTestId('missing-description').click()
-			await expect(page).toHaveURL(/#bloc-about$/)
-			await expect(block(page, 'about')).toBeInViewport()
+			await page.getByTestId('missing-photo').click()
+			await expect(page).toHaveURL(/#bloc-photo$/)
+			await expect(block(page, 'photo')).toBeInViewport()
 			await checkScreen(page, 'brouillon')
 			await shot(page, 'brouillon')
 		})
 
 		test('incomplet : seulement ce qui manque encore', async ({ context, page }) => {
-			await open(page, context, 'actif-non-publiable')
+			await open(page, context, 'sans-contact-public')
 			await expect(banner(page)).toHaveAttribute('data-state', 'incomplete')
 			await expect(banner(page).getByRole('link')).toHaveCount(1)
-			await expect(page.getByTestId('missing-offres')).toContainText('une prestation avec un prix en chiffres')
+			await expect(page.getByTestId('missing-reseaux')).toContainText('un moyen de te contacter')
 			await checkScreen(page, 'incomplet')
 			await shot(page, 'incomplet')
 		})
 
 		test('l’enregistrement d’un bloc met la liste à jour sans recharger la page', async ({ context, page }) => {
-			await open(page, context, 'vide')
+			await open(page, context, 'sans-contact-public')
 			await page.evaluate(() => {
 				;(window as unknown as { alive: boolean }).alive = true
 			})
-			await expect(page.getByTestId('missing-description')).toBeVisible()
-			await pen(page, 'Modifier ma présentation').click()
-			await page
-				.locator('#direct-about-text')
-				.fill('Je maquille depuis huit ans, surtout des mariées et des invitées, à domicile. '.repeat(3))
+			await expect(page.getByTestId('missing-reseaux')).toBeVisible()
+			await pen(page, 'Modifier mes coordonnées').click()
+			await page.getByLabel('Afficher mon téléphone et mon email sur ma page').check()
 			await page.getByRole('button', { name: 'Enregistrer' }).click()
 			await expect(page.getByTestId('edit-status')).toHaveText('Enregistré à l’instant')
-			await expect(page.getByTestId('missing-description')).toHaveCount(0)
-			await expect(banner(page).getByRole('link')).toHaveCount(5)
+			// The last condition is done: the list is gone and the page is visible, in the same screen.
+			await expect(page.getByTestId('missing-reseaux')).toHaveCount(0)
+			await expect(banner(page)).toHaveAttribute('data-state', 'publishable')
+			await expect(banner(page).getByRole('link', { name: 'Voir ma page publique' })).toBeVisible()
 			// The page was read again, not loaded again.
 			expect(await page.evaluate(() => (window as unknown as { alive?: boolean }).alive)).toBe(true)
 		})
@@ -81,6 +80,24 @@ for (const size of SIZES) {
 			await expect(banner(page)).not.toContainText('Il manque')
 			await checkScreen(page, 'publiable')
 			await shot(page, 'publiable')
+		})
+
+		test('publiable mais pas encore sur Google : la page est visible, et ce qui l’aiderait est dit comme facultatif', async ({
+			context,
+			page,
+		}) => {
+			await open(page, context, 'publiable-non-indexable')
+			await expect(banner(page)).toHaveAttribute('data-state', 'publishable')
+			await expect(banner(page)).toContainText('Ton profil est visible')
+			await expect(banner(page)).toContainText('Pour apparaître sur Google')
+			await expect(banner(page)).toContainText('facultatif')
+			await expect(banner(page)).not.toContainText('Il manque')
+			// Her description is long enough: a priced offer, or photos, is what Google still lacks.
+			await expect(page.getByTestId('google-offres')).toBeVisible()
+			await expect(page.getByTestId('google-galerie')).toBeVisible()
+			await expect(page.getByTestId('google-description')).toHaveCount(0)
+			await checkScreen(page, 'publiable-mince')
+			await shot(page, 'publiable-mince')
 		})
 
 		test('masqué : un message à part, sans liste', async ({ context, page }) => {

@@ -190,7 +190,8 @@ export const FROZEN_URL_FAMILIES: readonly FrozenUrlFamily[] = [
 		status: 200,
 		servedBy: 'application',
 		today: 'Profil public, adresse émise depuis le 08/10/2026',
-		after: "Identique ; `noindex` tant que le profil n'est pas publiable",
+		after:
+			"Identique ; `noindex` tant que le profil n'est pas indexable (publiable, avec une description d'au moins 100 caractères et une prestation chiffrée ou une photo de galerie)",
 		examples: [{ from: '/profil/zoe-lefevre' }],
 	},
 	{
@@ -274,7 +275,7 @@ export const FROZEN_URL_FAMILIES: readonly FrozenUrlFamily[] = [
 		status: 200,
 		servedBy: 'application',
 		today: 'Plan du site',
-		after: 'Régénéré depuis Payload, profils publiables seulement',
+		after: 'Régénéré depuis Payload, profils indexables seulement',
 		examples: [{ from: '/site-map' }],
 	},
 	{
@@ -556,7 +557,7 @@ export const FROZEN_URL_FAMILIES: readonly FrozenUrlFamily[] = [
 		status: 200,
 		servedBy: 'application',
 		today: 'Sitemap',
-		after: 'Régénéré depuis Payload, profils publiables seulement',
+		after: 'Régénéré depuis Payload, profils indexables seulement',
 		examples: [{ from: '/sitemap.xml' }],
 	},
 	{

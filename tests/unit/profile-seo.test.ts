@@ -20,6 +20,7 @@ function readType(type: DemoProfile, surcharge: Partial<ProfilePageData> = {}): 
 		slug: type.attendu.slug,
 		status: type.attendu.status,
 		publishable: type.attendu.publishable,
+		indexable: type.attendu.indexable,
 		...type.profil,
 		...surcharge,
 	}
@@ -107,7 +108,7 @@ describe('titre et description du profil', () => {
 		const published = profileMetadata(readType(type('reference')))
 		expect(published.alternates?.canonical).toBe(`https://my-makeup.fr/profil/${type('reference').attendu.slug}`)
 		expect(published.robots).toBeUndefined()
-		const draft = profileMetadata(readType(type('actif-non-publiable')))
+		const draft = profileMetadata(readType(type('publiable-non-indexable')))
 		expect(draft.alternates).toBeUndefined()
 		expect(draft.robots).toEqual({ index: false, follow: true })
 	})
@@ -202,7 +203,7 @@ describe('U48 : rien de non public, rien de nul', () => {
 	})
 
 	test('un profil non publiable n’a que son fil d’Ariane, pas de personne', () => {
-		const data = profileStructuredData(readType(type('actif-non-publiable'))) as {
+		const data = profileStructuredData(readType(type('publiable-non-indexable'))) as {
 			'@graph': { '@type': string }[]
 		}
 		expect(data['@graph'].map(noeud => noeud['@type'])).toEqual(['BreadcrumbList'])
@@ -347,7 +348,7 @@ describe('264 : l’index suit « publiable »', () => {
 		for (const key of ['zone-belgique', 'zone-france-italie']) {
 			const profile = readType(zoneType(key))
 			expect(
-				isIndexable({ status: zoneType(key).attendu.status, publishable: zoneType(key).attendu.publishable }),
+				isIndexable({ status: zoneType(key).attendu.status, indexable: zoneType(key).attendu.indexable }),
 				key
 			).toBe(true)
 			const meta = profileMetadata(profile)

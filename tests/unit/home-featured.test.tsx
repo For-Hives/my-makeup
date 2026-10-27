@@ -33,6 +33,7 @@ function entry(slug: string, over: Partial<DirectoryProfile> = {}): DirectoryPro
 	return {
 		carte: { slug, pid: 1 as never, nom: slug, specialite: null, lieu: 'Annecy', superMaquilleuse: false, photo: null },
 		unreachable: false,
+		publishable: true,
 		indexable: true,
 		verified: false,
 		ville: 'Annecy',
@@ -62,7 +63,7 @@ describe('1066 : les candidats de « Mise en avant » sont les profils vérifié
 	test('un profil non publiable n’y figure jamais, même vérifié ; ni un profil sans contact', () => {
 		const directory = [
 			entry('publiable', { verified: true }),
-			entry('non-publiable', { verified: true, indexable: false }),
+			entry('non-publiable', { verified: true, publishable: false }),
 			entry('sans-contact', { verified: true, unreachable: true }),
 			entry('non-verifie'),
 		]

@@ -12,6 +12,7 @@ import * as migration_20261023_113139_quote_requests from './20261023_113139_quo
 import * as migration_20261023_155258_activity_checks from './20261023_155258_activity_checks'
 import * as migration_20261024_022750_featured from './20261024_022750_featured'
 import * as migration_20261024_161438_verified_replaces_featured from './20261024_161438_verified_replaces_featured'
+import * as migration_20261027_020507_indexable_profiles from './20261027_020507_indexable_profiles'
 
 export const migrations = [
 	{
@@ -83,5 +84,10 @@ export const migrations = [
 		up: migration_20261024_161438_verified_replaces_featured.up,
 		down: migration_20261024_161438_verified_replaces_featured.down,
 		name: '20261024_161438_verified_replaces_featured',
+	},
+	{
+		up: migration_20261027_020507_indexable_profiles.up,
+		down: migration_20261027_020507_indexable_profiles.down,
+		name: '20261027_020507_indexable_profiles',
 	},
 ]

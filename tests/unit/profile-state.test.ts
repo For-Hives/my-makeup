@@ -4,7 +4,7 @@ import { Profiles } from '@/collections/Profiles'
 import { STATE_FIELDS } from '@/collections/profiles/state'
 import { DEMO_PROFILES } from '@/demo-data/profiles'
 import { formatZone } from '@/lib/format-zone'
-import { completeness, publishableConditions, usableCity } from '@/lib/profile/completeness'
+import { completeness, publishableConditions, richnessOf, usableCity } from '@/lib/profile/completeness'
 import {
 	type ProfileDocument,
 	profileFields,
@@ -31,7 +31,7 @@ import {
 
 const DESCRIPTION = 'Maquilleuse fictive. '.repeat(10)
 
-/** A profile that meets the six conditions, as the collection holds it. */
+/** A profile that meets the four conditions and is rich enough for Google, as the collection holds it. */
 const PUBLISHABLE: ProfileDocument = {
 	firstName: 'Prénom',
 	lastName: 'Fictif',
@@ -49,7 +49,13 @@ const YESTERDAY = '2026-10-13T10:00:00.000Z'
 describe('un document de profils lu par la règle unique', () => {
 	test('un profil vide : 0 sur 13, ni actif ni publiable, entièrement vide', () => {
 		for (const empty of [{}, null, undefined])
-			expect(profileState(empty)).toEqual({ completeness: 0, active: false, publishable: false, fullyEmpty: true })
+			expect(profileState(empty)).toEqual({
+				completeness: 0,
+				active: false,
+				publishable: false,
+				indexable: false,
+				fullyEmpty: true,
+			})
 	})
 
 	test('un profil qui n’a qu’un nom reste entièrement vide', () => {
@@ -57,12 +63,32 @@ describe('un document de profils lu par la règle unique', () => {
 			completeness: 2,
 			active: false,
 			publishable: false,
+			indexable: false,
 			fullyEmpty: true,
 		})
 	})
 
-	test('les six conditions remplies : actif et publiable', () => {
-		expect(profileState(PUBLISHABLE)).toMatchObject({ active: true, publishable: true, fullyEmpty: false })
+	test('les quatre conditions remplies : actif et publiable, et indexable avec une description et un prix', () => {
+		expect(profileState(PUBLISHABLE)).toMatchObject({
+			active: true,
+			publishable: true,
+			indexable: true,
+			fullyEmpty: false,
+		})
+	})
+
+	test('publiable sans prix ni description : visible, mais pas indexable ; le prix ou la galerie, avec la description, indexe', () => {
+		const light: ProfileDocument = { ...PUBLISHABLE, description: null, serviceOffers: [] }
+		expect(profileState(light)).toMatchObject({ publishable: true, indexable: false })
+		expect(profileState({ ...light, description: 'a'.repeat(100) })).toMatchObject({
+			publishable: true,
+			indexable: false,
+		})
+		expect(profileState({ ...light, description: 'a'.repeat(100), serviceOffers: [{ priceFrom: 80 }] })).toMatchObject({
+			indexable: true,
+		})
+		expect(profileState({ ...light, description: 'a'.repeat(100), gallery: [3] })).toMatchObject({ indexable: true })
+		expect(profileState({ ...light, description: 'a'.repeat(99), gallery: [3] })).toMatchObject({ indexable: false })
 	})
 
 	test('une photo passée par son seul identifiant compte comme une photo, la galerie comme sa liste', () => {
@@ -80,11 +106,11 @@ describe('un document de profils lu par la règle unique', () => {
 			expect(profileFields({ city: city }).city).toBeNull()
 	})
 
-	test('une commune de plus de six mots est une ville exploitable : son trait d’union espacé est lu comme les autres', () => {
-		// The only name of the official list (14/10/2026) the rule refused as it is.
+	test('une commune au nom long est une ville exploitable, telle qu’elle est écrite : plus de limite de mots', () => {
+		// The name of the official list (14/10/2026) the rule refused as it was, for its seven words.
 		const montvertBridge = { name: 'Pont de Montvert - Sud Mont Lozère', inseeCode: '48116' }
 		expect(publishableConditions(profileFields({ city: montvertBridge })).villeExploitable).toBe(true)
-		expect(profileFields({ city: montvertBridge }).city).toBe('Pont de Montvert-Sud Mont Lozère')
+		expect(profileFields({ city: montvertBridge }).city).toBe('Pont de Montvert - Sud Mont Lozère')
 		expect(profileState({ city: montvertBridge, mainPicture: 3, specialty: 'Mariage' })).toMatchObject({
 			active: true,
 		})
@@ -103,7 +129,7 @@ describe('un document de profils lu par la règle unique', () => {
 
 	test('le prix chiffré d’une offre est son montant : un texte sans montant n’en est pas un', () => {
 		const offer = (serviceOffers: ProfileDocument['serviceOffers']) =>
-			publishableConditions(profileFields({ serviceOffers })).offreChiffree
+			richnessOf(profileFields({ serviceOffers })).pricedOffer
 		expect(offer([{ priceFrom: 80 }])).toBe(true)
 		expect(offer([{ priceFrom: 5 }, { priceFrom: null }])).toBe(true)
 		expect(offer([{ priceFrom: 10_000 }])).toBe(true)
@@ -138,6 +164,7 @@ describe('les cas partagés, écrits comme la v3 les tient (U01-U08)', () => {
 					completeness: expected.score,
 					active: expected.actif,
 					publishable: expected.publiable,
+					indexable: expected.indexable,
 					fullyEmpty: expected.entierementVide,
 				},
 			])
@@ -161,9 +188,9 @@ describe('les cas partagés, écrits comme la v3 les tient (U01-U08)', () => {
 				testCase.nom,
 				old.front.score - (excludedCity(testCase.profil) ? 1 : 0),
 			])
-			// The quote form counts on the old site only when it is online; nothing turns it on.
+			// « publiable » is no longer the old site's (decision of 27/10/2026); the quote form counts on the old
+			// site only when it is online, and nothing turns it on.
 			if (testCase.options?.formulaireDevis) expect([testCase.nom, state.publishable]).toEqual([testCase.nom, false])
-			else expect([testCase.nom, state.publishable]).toEqual([testCase.nom, old.front.publiable])
 		}
 	})
 })
@@ -290,9 +317,11 @@ describe('ce qu’une sauvegarde écrit : l’état, ses dates de passage, le st
 			completeness: 0,
 			active: false,
 			publishable: false,
+			indexable: false,
 			fullyEmpty: true,
 			activeSince: NOW.toISOString(),
 			publishableSince: NOW.toISOString(),
+			indexableSince: NOW.toISOString(),
 			fullyEmptySince: NOW.toISOString(),
 			status: 'draft',
 			chosenStatus: 'automatic',

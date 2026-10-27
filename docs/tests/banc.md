@@ -427,9 +427,9 @@ const { profils, crees, presents } = await poserLesProfilsDuJeu(await testPayloa
 | 3 | `ville-eloignee` | Chloé Bertin, `chloe-bertin` | Complet, à Nantes | Publiable, publié |
 | 4 | `indisponible` | Manon Faure, `manon-faure` | Complet, à Annecy, `available` faux | Publiable, publié |
 | 5 | `disponibilite-inconnue` | Jade Roussel, `jade-roussel` | Complet, à Annecy, `available` vide (nul) | Publiable, publié |
-| 6 | `vide` | Nina Perret, `nina-perret` | Rien : le profil tel que l'inscription le crée | Ni actif ni publiable, entièrement vide, brouillon, 0 sur 13 |
-| 7 | `actif-non-publiable` | Clara Dumas, `clara-dumas` | Complet, mais ses offres sont « sur devis », sans montant | Actif, pas publiable, publié |
-| 8 | `sans-contact-public` | Louise Girard, `louise-girard` | Complet, sans réseau ; téléphone et email enregistrés mais fermés au public | Actif, pas publiable, publié, 12 sur 13 |
+| 6 | `vide` | Nina Perret, `nina-perret` | Rien : le profil tel que l'inscription le crée | Ni actif ni publiable ni indexable, entièrement vide, brouillon, 0 sur 13 |
+| 7 | `publiable-non-indexable` | Clara Dumas, `clara-dumas` | Une description, des offres « sur devis » sans montant et aucune photo de galerie | Publiable, pas indexable (en `noindex`, hors du sitemap), publié, 12 sur 13 |
+| 8 | `sans-contact-public` | Louise Girard, `louise-girard` | Complet, sans réseau ; téléphone et email enregistrés mais fermés au public | Actif, ni publiable ni indexable (aucun moyen de contact), publié, 12 sur 13 |
 | 9 | `ancien-nom-accentue` | Zoé Lefèvre, `zoe-lefevre` | Complet, à Thonon-les-Bains, avec l'ancien nom d'utilisateur « zoé lefèvre » | Publiable, publié |
 | 10 | `verifiee` | Emma Chevalier, `emma-chevalier` | Complet ; vérifiée par un admin, avec le badge des cartes de la recherche | Publiable, publié |
 | 11 | `masquee` | Alice Fontaine, `alice-fontaine` | Complet ; masqué par un admin (`chosenStatus`), avec un motif | Publiable, masqué |
@@ -438,7 +438,7 @@ const { profils, crees, presents } = await poserLesProfilsDuJeu(await testPayloa
 | 14 | `code-postal-partage-b` | Sofia Lambert, `sofia-lambert` | Complet, à Hautcombe, l'autre commune du code postal 74990 | Publiable, publié |
 | 15 | `zone-belgique` | Camille Renard, `camille-renard` | Complet, zone de pays `[BE]` avec la ville Bruxelles, sans commune | Publiable, publié |
 | 16 | `zone-france-italie` | Elsa Marchand, `elsa-marchand` | Complet, zone de pays `[FR, IT]`, sans commune | Publiable, publié |
-| 17 | `zone-a-revoir` | Julie Perrin, `julie-perrin` | Zone vide et `zoneReview` posée comme l'import la pose : code postal partagé 74990, deux communes possibles | Non actif, pas publiable, publié, 11 sur 13 |
+| 17 | `zone-a-revoir` | Julie Perrin, `julie-perrin` | Zone vide et `zoneReview` posée comme l'import la pose : code postal partagé 74990, deux communes possibles | Non actif, ni publiable ni indexable, publié, 11 sur 13 |
 
 | Ce qui est fixe | Valeur |
 |---|---|

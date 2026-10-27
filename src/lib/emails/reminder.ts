@@ -26,9 +26,10 @@ export function reminderEmailContent({
 		sujet: REMINDER_SUBJECT,
 		titre: REMINDER_SUBJECT,
 		paragraphes: [
-			'Ton profil My Makeup est presque prêt à être publié. Pour que les clientes le trouvent, il lui manque :',
+			'Ton profil My Makeup est presque prêt à être publié. Pour que les clientes le trouvent dans la recherche, il lui manque :',
 			...missing.map(condition => `- ${CONDITION_TEXTS[condition]}`),
 			'Cela ne prend que quelques minutes depuis ton espace.',
+			'Une fois publié, tu pourras aussi être mieux référencée sur Google en ajoutant une description et un prix, ou des photos de ton travail.',
 		],
 		action: { libelle: 'Compléter mon profil', chemin: '/auth/profil' },
 		pied: `Tu ne veux plus recevoir ces rappels ? Ouvre ce lien, c’est immédiat : ${unsubscribeLink}`,

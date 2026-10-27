@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { OverviewStatus } from '@/components/dashboard/overview/OverviewStatus'
 import type { DashboardProfile } from '@/lib/dashboard/dashboard-profile'
 import { BLOCK_IDS, CRITERION_BLOCK, editBlockHref } from '@/lib/dashboard/edit-blocks'
-import { type Progress, pageIsOnline, profileProgress } from '@/lib/dashboard/progress'
+import { gaugePercent, overviewStatus, type Progress, pageIsOnline, profileProgress } from '@/lib/dashboard/progress'
 import { CRITERIA } from '@/lib/profile/completeness'
 import { ANNECY, caseDocument, completenessInV3, SHARED_CASE } from '../support/completeness-cases'
 import { openWindow } from '../support/dom-react'
@@ -66,10 +66,14 @@ describe('U01 : profil vide', () => {
 		for (const gap of empty.manques) expect(BLOCK_IDS).toContain(CRITERION_BLOCK[gap.critere])
 	})
 
-	test('les six points requis passent avant les autres', () => {
+	test('les quatre points requis passent avant les autres, puis ceux qui aident Google', () => {
 		const ranks = empty.manques.map(m => m.requis)
-		expect(ranks.filter(Boolean)).toHaveLength(6)
-		expect(ranks.slice(0, 6).every(Boolean)).toBe(true)
+		expect(ranks.filter(Boolean)).toHaveLength(4)
+		expect(ranks.slice(0, 4).every(Boolean)).toBe(true)
+		const google = empty.manques.filter(m => m.google).map(m => m.critere)
+		expect(google).toEqual(['description', 'offres', 'galerie'])
+		expect(empty.manques.slice(4, 7).map(m => m.critere)).toEqual(google)
+		expect(empty.manques.filter(m => m.requis && m.google)).toEqual([])
 	})
 })
 
@@ -84,32 +88,58 @@ describe('U02 : profil complet', () => {
 describe('U04-U06 : actif mais pas publiable, les manques exacts', () => {
 	const ACTIVE: DashboardProfile = { id: 3, specialty: 'Mariage', city: ANNECY, mainPicture: 5 }
 
-	test('actif seul : l’offre, la description et le contact manquent, rien d’autre de requis', () => {
+	test('actif seul : seul le contact manque pour être publiable ; la description et le prix ne sont plus requis', () => {
 		const a = profileProgress(ACTIVE)
 		expect(a.etat).toBe('incomplet')
-		expect(a.manques.filter(m => m.requis).map(m => m.critere)).toEqual(['description', 'offres', 'reseaux'])
+		expect(a.manques.filter(m => m.requis).map(m => m.critere)).toEqual(['reseaux'])
+		expect(a.manques.filter(m => m.google).map(m => m.critere)).toEqual(['description', 'offres', 'galerie'])
 	})
 
-	test('U04 : une offre sans prix en chiffres reste un manque, et le dit', () => {
-		const a = profileProgress({ ...FULL, serviceOffers: [{ name: 'Sur devis', priceText: 'Sur devis' }] })
-		expect(a.etat).toBe('incomplet')
-		expect(a.manques).toHaveLength(1)
-		expect(a.manques[0]).toMatchObject({ critere: 'offres', requis: true })
+	test('sans prix ni description, avec un contact : publié, mais pas encore trouvé par Google, et le dit', () => {
+		const a = profileProgress({ ...ACTIVE, networks: { instagram: 'studio.fictif' } })
+		expect(a.etat).toBe('publiable')
+		expect(a.indexable).toBe(false)
+		expect(a.manques.filter(m => m.requis)).toEqual([])
+		expect(a.consequence).toContain('Google')
+		expect(a.consequence).toContain('100 caractères')
+		expect(a.consequence).not.toContain('Google peut maintenant te trouver')
+		const state = overviewStatus(a)
+		expect(state.code).toBe('visible')
+		expect(state.text).toContain('Pour que Google la trouve aussi')
+		expect(gaugePercent(a)).toBeLessThan(100)
+	})
+
+	test('U04 : une offre sans prix en chiffres n’empêche plus la publication ; sans photo de galerie, Google la demande', () => {
+		const devis = { ...FULL, gallery: [], serviceOffers: [{ name: 'Sur devis', priceText: 'Sur devis' }] }
+		const a = profileProgress(devis)
+		expect(a.etat).toBe('publiable')
+		expect(a.indexable).toBe(false)
+		expect(a.manques.map(m => [m.critere, m.requis, m.google])).toEqual([
+			['offres', false, true],
+			['galerie', false, true],
+		])
 		expect(a.manques[0]?.texte).toContain('prix en chiffres')
+		expect(a.manques[0]?.texte).toContain('photos')
+		// avec une photo de galerie, la prestation sur devis suffit pour Google
+		const withGallery = profileProgress({ ...devis, gallery: [6] })
+		expect(withGallery.indexable).toBe(true)
+		expect(withGallery.manques).toEqual([])
 	})
 
-	test('U05 : 199 caractères manquent, 200 suffisent, avec le compte dans le message', () => {
-		const short = profileProgress({ ...FULL, description: ` ${'a'.repeat(199)} ` })
-		expect(short.etat).toBe('incomplet')
-		expect(short.manques[0]).toMatchObject({ critere: 'description', requis: true })
-		expect(short.manques[0]?.texte).toContain('199 aujourd’hui')
-		expect(profileProgress({ ...FULL, description: 'a'.repeat(200) }).etat).toBe('publiable')
+	test('U05 : 99 caractères ne suffisent pas pour Google, 100 suffisent, avec le compte dans le message', () => {
+		const short = profileProgress({ ...FULL, description: ` ${'a'.repeat(99)} ` })
+		expect(short.etat).toBe('publiable')
+		expect(short.indexable).toBe(false)
+		expect(short.manques[0]).toMatchObject({ critere: 'description', requis: false, google: true })
+		expect(short.manques[0]?.texte).toContain('99 aujourd’hui')
+		const enough = profileProgress({ ...FULL, description: 'a'.repeat(100) })
+		expect(enough).toMatchObject({ etat: 'publiable', indexable: true, manques: [] })
 	})
 
 	test('U06 : sans canal de contact, un manque requis qui mène aux réseaux', () => {
 		const a = profileProgress(without('networks'))
 		expect(a.manques).toHaveLength(1)
-		expect(a.manques[0]).toMatchObject({ critere: 'reseaux', requis: true })
+		expect(a.manques[0]).toMatchObject({ critere: 'reseaux', requis: true, google: false })
 	})
 
 	test('le téléphone compte seulement affiché sur le profil', () => {
@@ -138,9 +168,9 @@ describe('U04-U06 : actif mais pas publiable, les manques exacts', () => {
 	test('ce qui n’empêche pas d’être publiable passe après, sans être requis', () => {
 		const a = profileProgress(without('languages', 'gallery'))
 		expect(a.etat).toBe('publiable')
-		expect(a.manques.map(m => [m.critere, m.requis])).toEqual([
-			['langues', false],
-			['galerie', false],
+		expect(a.manques.map(m => [m.critere, m.requis, m.google])).toEqual([
+			['langues', false, false],
+			['galerie', false, false],
 		])
 		expect(a.pourcentage).toBe(85)
 	})
@@ -200,25 +230,25 @@ describe('le panneau affiché', () => {
 	})
 })
 
-describe('306 : la jauge compte d’abord les six indispensables, les bonus à part', () => {
-	test('profil vide : 0/6 et 0/7 ; profil complet : 6/6 et 7/7, la page est en ligne', () => {
+describe('306 : la jauge compte d’abord les quatre indispensables, les bonus à part', () => {
+	test('profil vide : 0/4 et 0/9 ; profil complet : 4/4 et 9/9, la page est en ligne', () => {
 		const empty = profileProgress({ id: 2 })
 		expect([empty.essentials, empty.bonus]).toEqual([
-			{ done: 0, total: 6 },
-			{ done: 0, total: 7 },
+			{ done: 0, total: 4 },
+			{ done: 0, total: 9 },
 		])
 		const full = profileProgress(FULL)
 		expect([full.essentials, full.bonus]).toEqual([
-			{ done: 6, total: 6 },
-			{ done: 7, total: 7 },
+			{ done: 4, total: 4 },
+			{ done: 9, total: 9 },
 		])
 		expect(pageIsOnline(full)).toBe(true)
 		expect(pageIsOnline(empty)).toBe(false)
 	})
 
-	test('cinq indispensables : 5/6, le manque est dit, pas de page en ligne', async () => {
+	test('trois indispensables : 3/4, le manque est dit, pas de page en ligne', async () => {
 		const progress = profileProgress(without('networks'))
-		expect(progress.essentials).toEqual({ done: 5, total: 6 })
+		expect(progress.essentials).toEqual({ done: 3, total: 4 })
 		expect(pageIsOnline(progress)).toBe(false)
 		const zone = await panel(progress)
 		expect(
@@ -226,17 +256,20 @@ describe('306 : la jauge compte d’abord les six indispensables, les bonus à p
 		).toEqual(['reseaux'])
 	})
 
-	test('les bonus ne comptent pas dans les six, et les six ne comptent pas dans les bonus', () => {
+	test('les bonus ne comptent pas dans les quatre, et les quatre ne comptent pas dans les bonus', () => {
 		const onlyBonus = profileProgress({ id: 3, languages: [{ name: 'Français' }], gallery: [6] })
 		expect([onlyBonus.essentials.done, onlyBonus.bonus.done]).toEqual([0, 2])
 		const noBonus = profileProgress({ ...FULL, languages: [], gallery: [], skills: [], courses: [], experiences: [] })
-		expect([noBonus.essentials.done, noBonus.bonus.done]).toEqual([6, 2])
+		expect([noBonus.essentials.done, noBonus.bonus.done]).toEqual([4, 4])
 	})
 
-	test('une description de 150 caractères remplit un critère mais pas un indispensable', () => {
-		const progress = profileProgress({ ...FULL, description: 'a'.repeat(150) })
-		expect(progress.essentials.done).toBe(5)
+	test('une description de 99 caractères remplit un critère et ne retire aucun indispensable ; la jauge ne dit pas 100 %', () => {
+		const progress = profileProgress({ ...FULL, description: 'a'.repeat(99) })
+		expect(progress.essentials.done).toBe(4)
 		expect(progress.score).toBe(13)
+		expect(progress.pourcentage).toBe(100)
+		expect(gaugePercent(progress)).toBe(99)
+		expect(gaugePercent(profileProgress(FULL))).toBe(100)
 	})
 
 	test('masquée par l’équipe : jamais « ta page est prête », la carte verte ne s’affiche pas', () => {
@@ -331,7 +364,7 @@ describe('292 : l’espace dit la vérité à une maquilleuse masquée ou en pau
 		expect(progress.consequence).toBe(
 			'Tu es en pause : ta page reste en ligne, mais tu n’apparais pas dans la recherche.'
 		)
-		const incomplete = profileProgress({ ...PAUSED, description: '' })
+		const incomplete = profileProgress({ ...PAUSED, networks: {} })
 		expect(incomplete.etat).toBe('incomplet')
 		expect(incomplete.consequence).toBe(progress.consequence)
 	})

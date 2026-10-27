@@ -202,6 +202,7 @@ describe('les filtres : des liens et un formulaire, sans script', () => {
 
 const DIRECTORY = Array.from({ length: 8 }, (_, i) => ({
 	carte: card(`p${i + 1}`, { startingPrice: 50 + i * 10 }),
+	publishable: true,
 	indexable: true,
 	unreachable: false,
 	departement: '74',
@@ -245,6 +246,7 @@ const row = (slug: string, extra: Partial<DirectoryProfile> = {}): Row =>
 		radiusKm: null,
 		farReach: false,
 		unreachable: false,
+		publishable: true,
 		indexable: true,
 		...extra,
 	}) as Row

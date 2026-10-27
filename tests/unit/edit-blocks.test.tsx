@@ -45,8 +45,8 @@ describe('le pourcentage', () => {
 	const missing = (requis: boolean): Missing => ({
 		critere: 'description',
 		texte: '',
-
 		requis,
+		google: false,
 	})
 
 	test('celui de la règle unique, jamais 100 % tant qu’un point indispensable manque', () => {

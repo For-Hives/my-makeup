@@ -34,7 +34,7 @@ const readZoneOnce = cache(async (segment: string) => {
 	const members = zoneMembers(
 		directory.map(profile => ({
 			departement: profile.departement,
-			publishable: profile.indexable,
+			indexable: profile.indexable,
 			listed: true,
 			slug: profile.carte.slug,
 			card: profile.carte,

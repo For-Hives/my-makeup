@@ -75,7 +75,7 @@ test.describe('E64 : les profils, titre, description, adresse canonique, un seul
 			expect(heads.titre, key).not.toMatch(/\b(?:null|undefined)\b/)
 			expect(heads.description.length, key).toBeGreaterThanOrEqual(70)
 			expect(heads.description.length, key).toBeLessThanOrEqual(155)
-			if (type.attendu.publishable) {
+			if (type.attendu.indexable) {
 				expect(heads.canonique, key).toBe(`https://my-makeup.fr/profil/${slug}`)
 				expect(heads.robots, key).toBeNull()
 			} else {
@@ -110,7 +110,7 @@ test.describe('E65 : les données structurées du profil, valides et cohérentes
 				const [page] = data['@graph']
 				const name = page?.mainEntity.name ?? ''
 				expect(html, key).toMatch(new RegExp(`<h1[^>]*>${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}</h1>`))
-			} else expect(type.attendu.publishable, key).toBe(false)
+			} else expect(type.attendu.indexable, key).toBe(false)
 		}
 	})
 

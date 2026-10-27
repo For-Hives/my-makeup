@@ -187,7 +187,7 @@ export interface PublicProfile {
 	/** Her networks, and her telephone and email only when she published them. */
 	liens: ContactLink[]
 	description: string | null
-	/** Publishable: the page may be indexed. Otherwise it is shown in noindex. */
+	/** Indexable (publishable and rich enough for Google): the page may be indexed. Otherwise it is shown in noindex. */
 	indexable: boolean
 	/** Her telephone and email, only when she published them, else `null`. */
 	coordonnees: PublicContactDetails | null
@@ -467,6 +467,7 @@ export async function readProfileUrlTarget(payload: Payload, segment: string): P
 			id: true,
 			status: true,
 			publishable: true,
+			indexable: true,
 			legacyUsername: true,
 			createdAt: true,
 		},
@@ -510,7 +511,7 @@ function activityOf(
 }
 
 /** Where her profile stands, as the preview banner says it (src/lib/dashboard/preview.ts). */
-export type ProfilePreviewState = Pick<Profile, 'status' | 'available' | 'fullyEmpty' | 'publishable'>
+export type ProfilePreviewState = Pick<Profile, 'status' | 'available' | 'fullyEmpty' | 'publishable' | 'indexable'>
 
 /**
  * Her own page as a visitor sees it (ticket 139): the same `PublicProfile` as `readProfileUrlTarget`,
@@ -526,7 +527,7 @@ export async function readProfilePreview(
 	const { docs } = await payload.find({
 		collection: 'profiles',
 		where: { id: { equals: id } },
-		select: { ...PROFILE_PAGE_FIELDS, id: true, status: true, publishable: true, fullyEmpty: true },
+		select: { ...PROFILE_PAGE_FIELDS, id: true, status: true, publishable: true, indexable: true, fullyEmpty: true },
 		depth: 0,
 		limit: 1,
 		pagination: false,
@@ -541,6 +542,7 @@ export async function readProfilePreview(
 			available: doc.available,
 			fullyEmpty: doc.fullyEmpty,
 			publishable: doc.publishable,
+			indexable: doc.indexable,
 		},
 	}
 }
@@ -580,6 +582,7 @@ export type ProfilePageData = Pick<
 	| 'experiences'
 	| 'status'
 	| 'publishable'
+	| 'indexable'
 	| 'strapiId'
 >
 
@@ -778,7 +781,9 @@ export interface DirectoryProfile extends ProfilePlace, ProfileGeometry {
 	 * home page. The box is closed to the public read, so it is read apart (`readVerified`) and only this fact stays here.
 	 */
 	verified?: boolean
-	/** True when her profile is publishable (`isIndexable`): the pages of a speciality show only those (ticket 305). */
+	/** True when her profile is publishable (a photo, a city, a speciality, a contact): the blocks of the site show only those (ticket 305). */
+	publishable: boolean
+	/** True when her profile is indexable (`isIndexable`): the zone pages count and show only those. */
 	indexable: boolean
 	/**
 	 * What she wrote that a search by a word looks into (ticket 099). Beside the card, never in it: a card
@@ -887,6 +892,7 @@ export async function readDirectory(
 			select: {
 				...(avecLesTextes ? SEARCH_FIELDS : CARD_FIELDS),
 				publishable: true,
+				indexable: true,
 				updatedAt: true,
 				specialtyBullets: true,
 			},
@@ -915,7 +921,8 @@ export async function readDirectory(
 				startingPrice: card.startingPrice ?? null,
 				specialtyBullets: profile.specialtyBullets ?? [],
 				updatedAt: Date.parse(profile.updatedAt) || 0,
-				indexable: profile.publishable === true,
+				publishable: profile.publishable === true,
+				indexable: profile.indexable === true,
 				verified: verified.has(profile.id),
 				...directoryPlace(profile),
 				...directoryGeometry(profile),

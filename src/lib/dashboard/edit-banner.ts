@@ -1,5 +1,5 @@
 import { profilePath } from '../slug'
-import { type MissingItem, missingItems } from './draft-notice'
+import { googleItems, type MissingItem, missingItems } from './draft-notice'
 import type { Progress } from './progress'
 
 /**
@@ -12,8 +12,8 @@ import type { Progress } from './progress'
 export type EditBanner =
 	/** Not visible yet: nothing, or not enough, is filled (`draft` when entirely empty). */
 	| { state: 'draft' | 'incomplete'; items: readonly MissingItem[] }
-	/** Visible to everyone: the way to the public page. `paused` when she set herself unavailable. */
-	| { state: 'publishable'; href: string; paused: boolean }
+	/** Visible to everyone: the way to the public page. `paused` when she set herself unavailable. `google`: what Google still lacks. */
+	| { state: 'publishable'; href: string; paused: boolean; google: readonly MissingItem[] }
 	/** Hidden by the team: no list, there is nothing she can fill to change it. */
 	| { state: 'hidden' | 'suspended' | 'internal'; note: string }
 
@@ -27,7 +27,12 @@ export function editBanner(
 		case 'interne':
 			return { state: 'internal', note: progress.consequence }
 		case 'publiable':
-			return { state: 'publishable', href: profilePath(profile.slug), paused: progress.enPause }
+			return {
+				state: 'publishable',
+				href: profilePath(profile.slug),
+				paused: progress.enPause,
+				google: googleItems(progress),
+			}
 		case 'vide':
 			return { state: 'draft', items: missingItems(progress) }
 		default:

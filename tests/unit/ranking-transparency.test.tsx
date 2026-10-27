@@ -75,6 +75,7 @@ const artist = (nom: string, extra: Partial<Fake> = {}): Fake => ({
 	radiusKm: null,
 	farReach: false,
 	unreachable: false,
+	publishable: true,
 	indexable: true,
 	textes: texts(),
 	...extra,
@@ -247,7 +248,7 @@ const CHECKS: Record<RankingRuleId, () => void> = {
 	blocks: () => {
 		const directory = [
 			artist('sans-contact', { unreachable: true, textes: texts('Mariage') }),
-			artist('non-publiable', { indexable: false, textes: texts('Mariage') }),
+			artist('non-publiable', { publishable: false, textes: texts('Mariage') }),
 			artist('bonne', { textes: texts('Mariage') }),
 		]
 		expect(profileBlockCards(directory, { search: 'mariage', limit: 6 }).map(card => card.slug)).toEqual(['bonne'])

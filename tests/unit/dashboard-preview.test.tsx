@@ -9,7 +9,7 @@ import { DASHBOARD_PATH, PREVIEW_PATH, previewState } from '@/lib/dashboard/prev
  * on the bench (tests/integration/dashboard-preview.test.ts, tests/e2e/dashboard-preview.spec.ts).
  */
 
-const FULL = { status: 'published', available: true, fullyEmpty: false, publishable: true } as const
+const FULL = { status: 'published', available: true, fullyEmpty: false, publishable: true, indexable: true } as const
 
 describe('139 : l’état que dit le bandeau', () => {
 	test('profil complet, publié, available : « ta page telle que les visiteuses la voient »', () => {
@@ -25,15 +25,27 @@ describe('139 : l’état que dit le bandeau', () => {
 	})
 
 	test('entièrement vide : pas listé', () => {
-		expect(previewState({ status: 'draft', available: true, fullyEmpty: true, publishable: false }).code).toBe('vide')
+		expect(
+			previewState({ status: 'draft', available: true, fullyEmpty: true, publishable: false, indexable: false }).code
+		).toBe('vide')
 	})
 
 	test('indisponible : écarté de la recherche', () => {
 		expect(previewState({ ...FULL, available: false }).code).toBe('indisponible')
 	})
 
-	test('rempli mais pas publishable : visible, pas référencé', () => {
-		expect(previewState({ ...FULL, publishable: false }).code).toBe('non-publiable')
+	test('rempli mais pas publiable : visible, pas référencé, et il lui manque photo, ville, spécialité ou contact', () => {
+		const state = previewState({ ...FULL, publishable: false, indexable: false })
+		expect(state.code).toBe('non-publiable')
+		expect(state.texte).toContain('un moyen de te contacter')
+	})
+
+	test('publiable mais pas indexable : publié, Google demande une description et un prix ou des photos', () => {
+		const state = previewState({ ...FULL, indexable: false })
+		expect(state.code).toBe('non-indexable')
+		expect(state.texte).toContain('100 caractères')
+		expect(state.texte).toContain('un prix ou des photos')
+		expect(previewState({ ...FULL, indexable: null }).code).toBe('non-indexable')
 	})
 })
 
@@ -45,6 +57,7 @@ describe('139 : le bandeau', () => {
 			{ ...FULL, fullyEmpty: true },
 			{ ...FULL, available: false },
 			{ ...FULL, publishable: false },
+			{ ...FULL, indexable: false },
 		]) {
 			const state = previewState(profile)
 			const html = renderToStaticMarkup(<PreviewBanner etat={state} />)

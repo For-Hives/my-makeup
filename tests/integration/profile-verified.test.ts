@@ -83,7 +83,7 @@ describe('La vérification d’un profil, réserve de la mise en avant (issue 10
 
 	test('un profil masqué ou non publiable n’y figure jamais, même vérifié', async () => {
 		const payload = await testPayload()
-		const keys = ['reference', 'masquee', 'actif-non-publiable', 'vide', 'sans-contact-public']
+		const keys = ['reference', 'masquee', 'publiable-non-indexable', 'vide', 'sans-contact-public']
 		for (const key of keys) {
 			const id = await profileOf(key)
 			await payload.update({ collection: 'profiles', id, data: { verified: true }, depth: 0, overrideAccess: true })

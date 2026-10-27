@@ -25,6 +25,7 @@ function reference(activity?: { checkedAt: string | null }) {
 		slug: type.attendu.slug,
 		status: type.attendu.status,
 		publishable: type.attendu.publishable,
+		indexable: type.attendu.indexable,
 		...type.profil,
 	}
 	const photo = type.photos.principale

@@ -4,7 +4,7 @@ Le ticket 219 prévient Bing et les autres moteurs du protocole IndexNow (Yandex
 
 ## Ce qui est envoyé, et quand
 
-- Un profil qui devient publiable, qui cesse de l'être, ou qui change alors qu'il l'est : l'adresse de sa page `/profil/<slug>` (l'ancienne et la nouvelle si l'adresse change).
+- Un profil qui devient indexable (publiable, avec une description d'au moins 100 caractères et une prestation chiffrée ou une photo de galerie), qui cesse de l'être, ou qui change alors qu'il l'est : l'adresse de sa page `/profil/<slug>` (l'ancienne et la nouvelle si l'adresse change).
 - Un article ou un talent publié, modifié, dépublié ou supprimé : l'adresse de sa page `/blog/<slug>` ou `/talent/<slug>`.
 - Jamais une page de liste (recherche, blog, accueil, sitemap), jamais un brouillon qui reste brouillon, jamais un profil hors sitemap.
 - L'envoi part cinq secondes après l'enregistrement, pour que la page soit déjà à jour quand un moteur la relit ; les adresses de plusieurs enregistrements proches partent dans une seule requête vers `https://api.indexnow.org/indexnow`.

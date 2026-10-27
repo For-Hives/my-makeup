@@ -40,7 +40,7 @@ test.beforeAll(async ({ request }) => {
 	test.setTimeout(240_000)
 	const types = pageProfilesUnderPrefix('Og')
 	const chosen = new Map(
-		['reference', 'ville-voisine', 'textes-maximaux', 'actif-non-publiable'].map(cle => {
+		['reference', 'ville-voisine', 'textes-maximaux', 'publiable-non-indexable'].map(cle => {
 			const type = types.get(cle)
 			if (!type) throw new Error(`pas de profil type « ${cle} »`)
 			return [cle, type] as const
@@ -117,7 +117,7 @@ function twelveUrls(): Url[] {
 			type: 'profile' as const,
 		})),
 		{ chemin: `/profil/${large.slug}`, indexable: true, type: 'profile' },
-		{ chemin: `/profil/${profile('actif-non-publiable')}`, indexable: false, type: 'profile' },
+		{ chemin: `/profil/${profile('publiable-non-indexable')}`, indexable: false, type: 'profile' },
 		{ chemin: '/search', indexable: false, type: 'website' },
 	]
 }
@@ -167,7 +167,7 @@ test.describe('E64 : titre unique, description, canonique, balises de partage, u
 	test('l’image de partage : celle du site par défaut, la photo allégée pour un profil', async ({ request }) => {
 		const onboarding = await (await request.get('/')).text()
 		expect(tag(onboarding, 'og:image')).toBe('https://my-makeup.fr/assets/og-my-makeup.jpg')
-		const withoutPhoto = await (await request.get(`/profil/${profiles.get('actif-non-publiable')?.slug}`)).text()
+		const withoutPhoto = await (await request.get(`/profil/${profiles.get('publiable-non-indexable')?.slug}`)).text()
 		const image = tag(withoutPhoto, 'og:image') ?? ''
 		expect(image === 'https://my-makeup.fr/assets/og-my-makeup.jpg' || image.includes('/_next/image?')).toBe(true)
 		const article = await (await request.get(`/blog/${articles[0]}`)).text()

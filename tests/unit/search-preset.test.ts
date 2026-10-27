@@ -14,14 +14,14 @@ import {
 
 interface Fake {
 	carte: { slug: string }
-	indexable: boolean
+	publishable: boolean
 	unreachable: boolean
 	departement: string | null
 }
 
 const profile = (slug: string, extra: Partial<Fake> = {}): Fake => ({
 	carte: { slug },
-	indexable: true,
+	publishable: true,
 	unreachable: false,
 	departement: '74',
 	...extra,
@@ -68,7 +68,7 @@ describe('selectPreset : les plus consultées quand les visites le disent', () =
 		const directory = [
 			profile('masque-ou-absent-de-lannuaire-non'),
 			profile('sans-contact', { unreachable: true }),
-			profile('non-publiable', { indexable: false }),
+			profile('non-publiable', { publishable: false }),
 			profile('belgique', { departement: null }),
 			...DIRECTORY.slice(0, 7),
 		]
@@ -103,7 +103,7 @@ describe('selectPreset : sinon, l’ordre documenté, dit tel quel', () => {
 	test('le repli applique les mêmes règles de visibilité', () => {
 		const directory = [
 			profile('sans-contact', { unreachable: true }),
-			profile('brouillon', { indexable: false }),
+			profile('brouillon', { publishable: false }),
 			...DIRECTORY,
 		]
 		expect(slugs(selectPreset(directory, null).profiles)).toEqual(['p1', 'p2', 'p3', 'p4', 'p5', 'p6'])

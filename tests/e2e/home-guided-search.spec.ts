@@ -207,7 +207,7 @@ test('« Mise en avant » : absente sans profil vérifié, six cartes au plus ti
 		}
 	}
 	const reference = profiles.get('reference')
-	const unpublishable = profiles.get('actif-non-publiable')
+	const unpublishable = profiles.get('sans-contact-public')
 	const alreadyVerified = profiles.get('verifiee')
 	if (!(reference && unpublishable && alreadyVerified)) throw new Error('profil d’essai manquant')
 	const shownSlugs = (block: Locator) =>

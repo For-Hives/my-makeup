@@ -29,8 +29,8 @@ afterEach(async () => {
 
 type Artist = TestAccount<'maquilleuse'>
 
-/** The dates of the three flags. */
-const DATES = ['activeSince', 'publishableSince', 'fullyEmptySince'] as const
+/** The dates of the four flags. */
+const DATES = ['activeSince', 'publishableSince', 'indexableSince', 'fullyEmptySince'] as const
 
 /** A makeup artist of the factory, with the identifier of the profile her account received. */
 async function artistAndItsProfile(): Promise<{ compte: Artist; profil: number }> {
@@ -46,6 +46,11 @@ async function artistAndItsProfile(): Promise<{ compte: Artist; profil: number }
 async function stored(id: number): Promise<Profile> {
 	const payload = await testPayload()
 	return payload.findByID({ collection: 'profiles', id, depth: 0 })
+}
+
+/** Whether Google may index a stored profile (`indexable`), apart from the state the other tests compare. */
+async function indexable(id: number): Promise<boolean | null | undefined> {
+	return (await stored(id)).indexable
 }
 
 /** The state of a stored profile, and its status. */
@@ -86,13 +91,16 @@ async function sendPhoto(compte: Artist): Promise<number> {
 
 const DESCRIPTION = 'Maquilleuse fictive, pour les essais du banc. '.repeat(5)
 
-/** Each of the six conditions of a publishable profile, alone, as she fills it in her space. */
+/**
+ * Each of the four conditions of a publishable profile, then a priced offer and a description of 100
+ * characters, alone, as she fills it in her space: each one takes a profile out of the draft.
+ */
 const SIX_CONDITIONS: [string, (compte: Artist) => Promise<Record<string, unknown>>][] = [
 	['photo principale', async compte => ({ mainPicture: await sendPhoto(compte) })],
 	['ville exploitable', async () => ({ city: ANNECY })],
 	['spécialité', async () => ({ specialty: 'Mariage' })],
 	['offre avec un prix chiffré', async () => ({ serviceOffers: [{ name: 'Prestation fictive', priceFrom: 80 }] })],
-	['description de 200 caractères', async () => ({ description: DESCRIPTION })],
+	['description de 100 caractères au moins', async () => ({ description: DESCRIPTION })],
 	['canal de contact', async () => ({ networks: { instagram: '@compte.fictif' } })],
 ]
 
@@ -146,9 +154,11 @@ describe('Valeurs stockées égales à la fonction unique sur les cas partagés 
 				testCase.nom,
 				old.front.score - (excludedCity(testCase.profil) ? 1 : 0),
 			])
-			expect([testCase.nom, storedOne.publishable]).toEqual([
+			// « Publiable » and « indexable » are the v3's own since 27/10/2026, not the old site's: the rule decides.
+			expect([testCase.nom, storedOne.publishable, await indexable(profile)]).toEqual([
 				testCase.nom,
-				testCase.options?.formulaireDevis ? false : old.front.publiable,
+				rule.publiable,
+				rule.indexable,
 			])
 		}
 	}, 30_000)
@@ -174,8 +184,7 @@ describe('Valeurs stockées égales à la fonction unique sur les cas partagés 
 			serviceOffers: [{ name: 'Prestation fictive', priceText: 'Sur devis' }],
 			networks: { website: 'https://example.test' },
 		})
-		expect((await state(profile)).publishable).toBe(false)
-		await modify(account, profile, { serviceOffers: [{ name: 'Prestation fictive', priceFrom: 80 }] })
+		// With a contact channel she is publishable at once: the price and the long description are not asked.
 		expect(await state(profile)).toEqual({
 			completeness: 6,
 			active: true,
@@ -183,10 +192,21 @@ describe('Valeurs stockées égales à la fonction unique sur les cas partagés 
 			fullyEmpty: false,
 			status: 'published',
 		})
+		// A description and an offer « sur devis »: not enough for Google, with no priced offer nor gallery photo.
+		expect(await indexable(profile)).toBe(false)
+		await modify(account, profile, { serviceOffers: [{ name: 'Prestation fictive', priceFrom: 80 }] })
+		expect(await indexable(profile)).toBe(true)
+		await modify(account, profile, { serviceOffers: [{ name: 'Prestation fictive', priceText: 'Sur devis' }] })
+		expect(await indexable(profile)).toBe(false)
+		await modify(account, profile, { gallery: [await sendPhoto(account)] })
+		expect(await indexable(profile)).toBe(true)
+		await modify(account, profile, { description: 'a'.repeat(99) })
+		expect(await indexable(profile)).toBe(false)
+		expect((await state(profile)).publishable).toBe(true)
 	})
 })
 
-describe('Profile créé vide : brouillon ; première des six conditions remplie : publié', () => {
+describe('Profile créé vide : brouillon ; première des conditions remplie : publié', () => {
 	test('le profil créé avec le compte est vide, en brouillon, avec ses trois dates', async () => {
 		const before = Date.now()
 		const { profil: profile } = await artistAndItsProfile()
@@ -207,13 +227,15 @@ describe('Profile créé vide : brouillon ; première des six conditions remplie
 		expect((await callRest('GET', `/api/profiles/${profile}`)).statut).toBe(404)
 	})
 
-	test('chacune des six conditions, seule, publie le profil, et le public le lit', async () => {
+	test('chacune des conditions, seule, sort le profil du brouillon, et le public le lit', async () => {
 		for (const [condition, fill] of SIX_CONDITIONS) {
 			const { compte: account, profil: profile } = await artistAndItsProfile()
 
 			await modify(account, profile, await fill(account))
 
 			expect([condition, await state(profile)]).toMatchObject([condition, { fullyEmpty: false, status: 'published' }])
+			// None of them, alone, is enough to be indexable.
+			expect([condition, await indexable(profile)]).toEqual([condition, false])
 			expect([condition, (await callRest('GET', `/api/profiles/${profile}`)).statut]).toEqual([condition, 200])
 		}
 	}, 30_000)
@@ -239,6 +261,7 @@ describe('Profile créé vide : brouillon ; première des six conditions remplie
 		const { compte: account, profil: profile } = await artistAndItsProfile()
 		await modify(account, profile, await allConditions(account))
 		expect(await state(profile)).toMatchObject({ publishable: true, status: 'published' })
+		expect(await indexable(profile)).toBe(true)
 
 		await modify(account, profile, NOTHING)
 
@@ -269,6 +292,7 @@ describe('Profile créé vide : brouillon ; première des six conditions remplie
 		const filled = await stored(profile)
 		expect(filled.activeSince).toBe(created.activeSince)
 		expect(filled.publishableSince).toBe(created.publishableSince)
+		expect(filled.indexableSince).toBe(created.indexableSince)
 		expect(Date.parse(String(filled.fullyEmptySince))).toBeGreaterThan(Date.parse(String(created.fullyEmptySince)))
 	})
 })
@@ -289,7 +313,7 @@ describe('Un profil qui n’a qu’un nom reste entièrement vide', () => {
 		expect((await callRest('GET', `/api/profiles/${profile}`)).statut).toBe(404)
 	})
 
-	test('ni les listes, ni la galerie, ni le rayon ne sont une des six conditions', async () => {
+	test('ni les listes, ni la galerie, ni le rayon, ni une prestation sur devis ne sortent du brouillon', async () => {
 		const { compte: account, profil: profile } = await artistAndItsProfile()
 
 		await modify(account, profile, {
@@ -413,9 +437,11 @@ describe('Valeurs envoyées par la maquilleuse ignorées et recalculées', () =>
 			completeness: 13,
 			active: true,
 			publishable: true,
+			indexable: true,
 			fullyEmpty: false,
 			activeSince: '2020-01-01T00:00:00.000Z',
 			publishableSince: '2020-01-01T00:00:00.000Z',
+			indexableSince: '2020-01-01T00:00:00.000Z',
 			fullyEmptySince: '2020-01-01T00:00:00.000Z',
 			status: 'published',
 			chosenStatus: 'published',
@@ -429,6 +455,7 @@ describe('Valeurs envoyées par la maquilleuse ignorées et recalculées', () =>
 			status: 'draft',
 		} as const
 		expect(await state(profile)).toEqual(expected)
+		expect(await indexable(profile)).toBe(false)
 		expect((corps as { doc: unknown }).doc).toMatchObject(expected)
 		const after = await stored(profile)
 		expect(after.chosenStatus).toBe('automatic')
@@ -442,7 +469,7 @@ describe('Valeurs envoyées par la maquilleuse ignorées et recalculées', () =>
 			...(await payload.findByID({ collection: 'pros', id: account.id, depth: 0 })),
 			collection: 'pros',
 		}
-		const sent = { completeness: 13, active: true, publishable: true, fullyEmpty: false }
+		const sent = { completeness: 13, active: true, publishable: true, indexable: true, fullyEmpty: false }
 
 		await payload.update({
 			collection: 'profiles',
@@ -452,12 +479,14 @@ describe('Valeurs envoyées par la maquilleuse ignorées et recalculées', () =>
 			user: user as never,
 		})
 		expect(await state(profile)).toMatchObject({ completeness: 0, active: false, publishable: false, fullyEmpty: true })
+		expect(await indexable(profile)).toBe(false)
 		await payload.update({ collection: 'profiles', id: profile, data: sent })
 		expect(await state(profile)).toMatchObject({ completeness: 0, active: false, publishable: false, fullyEmpty: true })
+		expect(await indexable(profile)).toBe(false)
 	})
 })
 
-describe('Une zone de pays rend le profil publiable comme sur l’ancien site (ticket 260)', () => {
+describe('Une zone de pays rend le profil publiable comme une commune (ticket 260)', () => {
 	/** Everything a publishable profile has, but its zone. */
 	async function withoutZone(compte: Artist): Promise<Record<string, unknown>> {
 		const { city: _city, ...others } = await allConditions(compte)

@@ -29,7 +29,7 @@ test.afterEach(async () => {
 })
 
 test.describe('138 : où en est le profil', { tag: '@mobile' }, () => {
-	test('U01 : profil vide, 6 points indispensables et 13 au total, chacun mène à son bloc de l’édition, aucun éditeur', async ({
+	test('U01 : profil vide, 4 points indispensables et 13 au total, chacun mène à son bloc de l’édition, aucun éditeur', async ({
 		context,
 		page,
 	}) => {
@@ -45,7 +45,9 @@ test.describe('138 : où en est le profil', { tag: '@mobile' }, () => {
 		await expect(page.getByTestId('brouillon-pastille')).toHaveText('En brouillon')
 		await expect(page.getByTestId('avancement-consequence')).toContainText('Les clientes ne la voient pas encore.')
 		await expect(block.locator('li')).toHaveCount(13)
-		await expect(block.locator('[aria-labelledby="avancement-requis"] li')).toHaveCount(6)
+		await expect(block.locator('[aria-labelledby="avancement-requis"] li')).toHaveCount(4)
+		// What only Google asks for is told apart, as optional: a description, a price, photos.
+		await expect(block.locator('[aria-labelledby="avancement-google"] li')).toHaveCount(3)
 		expect(await page.locator('h1').count()).toBe(1)
 		await block.screenshot({ path: test.info().outputPath('avancement.png') })
 
@@ -60,7 +62,7 @@ test.describe('138 : où en est le profil', { tag: '@mobile' }, () => {
 		await expect(page.locator('#bloc-photo')).toBeVisible()
 	})
 
-	test('un point manquant disparaît du résumé une fois la présentation écrite (I20)', async ({ context, page }) => {
+	test('un point pour Google disparaît du résumé une fois la présentation écrite (I20)', async ({ context, page }) => {
 		const account = await createAccount('maquilleuse')
 		created.push(Number(account.id))
 		const payload = await testPayload()
@@ -68,12 +70,16 @@ test.describe('138 : où en est le profil', { tag: '@mobile' }, () => {
 		await context.addCookies(account.session.cookies)
 		await page.goto('/auth/profil')
 		const required = page.locator('[aria-labelledby="avancement-requis"] li')
-		await expect(required).toHaveCount(6)
+		const forGoogle = page.locator('[aria-labelledby="avancement-google"] li')
+		await expect(required).toHaveCount(4)
+		await expect(forGoogle).toHaveCount(3)
 		const before = await page.getByTestId('avancement-score').innerText()
 
-		await payload.update({ collection: 'profiles', id: docs[0]?.id as number, data: { description: 'a'.repeat(200) } })
+		await payload.update({ collection: 'profiles', id: docs[0]?.id as number, data: { description: 'a'.repeat(100) } })
 		await page.reload()
-		await expect(required).toHaveCount(5)
+		// The description was never required: the four conditions stay, and it leaves the points for Google.
+		await expect(required).toHaveCount(4)
+		await expect(forGoogle).toHaveCount(2)
 		await expect(page.getByTestId('avancement-score')).not.toHaveText(before)
 		await expect(page.getByTestId('avancement').getByRole('link', { name: /^Écris ta description/ })).toHaveCount(0)
 	})
@@ -204,7 +210,7 @@ test.describe('292 : le vrai statut, masqué ou en pause', { tag: '@mobile' }, (
 test.describe('306 : la jauge honnête et « Ta page est en ligne ! »', { tag: '@mobile' }, () => {
 	const CITY = { name: 'Lille', inseeCode: '59350' } as const
 
-	/** A profile with the six essentials, but the contact channel when `contact` is false. */
+	/** A profile with the four conditions, a description and a priced offer, but the contact channel when `contact` is false. */
 	async function artist(contact: boolean) {
 		const account = await createAccount('maquilleuse')
 		created.push(Number(account.id))
@@ -234,7 +240,7 @@ test.describe('306 : la jauge honnête et « Ta page est en ligne ! »', { tag: 
 		return { account, payload, id: sheet.id, slug: profile.slug ?? '' }
 	}
 
-	test('cinq indispensables : un seul point à remplir, il mène au bloc de l’édition, aucune carte « en ligne »', async ({
+	test('trois indispensables sur quatre : un seul point à remplir, il mène au bloc de l’édition, aucune carte « en ligne »', async ({
 		context,
 		page,
 	}) => {
@@ -262,7 +268,7 @@ test.describe('306 : la jauge honnête et « Ta page est en ligne ! »', { tag: 
 		await expect(page.locator('#bloc-networks')).toBeVisible()
 	})
 
-	test('six indispensables : 6/6, la carte donne l’adresse exacte, copie le lien et annonce « Lien copié »', async ({
+	test('quatre indispensables : 4/4, la carte donne l’adresse exacte, copie le lien et annonce « Lien copié »', async ({
 		context,
 		page,
 	}) => {
