@@ -9,8 +9,7 @@ import type { GuideContent } from '@/components/static-pages/ClientGuide'
  */
 
 export const GUIDE_FIND_AN_ARTIST: GuideContent = {
-	// TODO(1136): illustration à générer (tête du guide, arche 4:5 ~380 px; intention: trouver la maquilleuse qui correspond)
-	image: '/assets/back/maquilleuse_africaine_white.webp',
+	image: '/assets/illustrations/find-greeting.webp',
 	tint: 'blush',
 	band: 'band',
 	titre: (
@@ -55,8 +54,7 @@ export const GUIDE_FIND_AN_ARTIST: GuideContent = {
 }
 
 export const GUIDE_GATHER_SEARCHES: GuideContent = {
-	// TODO(1136): illustration à générer (tête du guide, arche 4:5 ~380 px; intention: centraliser ses recherches en un seul endroit)
-	image: '/assets/back/maquilleuse_metisse_white.webp',
+	image: '/assets/illustrations/gather-card-index.webp',
 	tint: 'lavender',
 	band: 'rose',
 	titre: (
@@ -106,8 +104,7 @@ export const GUIDE_GATHER_SEARCHES: GuideContent = {
 }
 
 export const GUIDE_EXPLORE_PROFILES: GuideContent = {
-	// TODO(1136): illustration à générer (tête du guide, arche 4:5 ~380 px; intention: explorer des profils et des réalisations)
-	image: '/assets/back/maquilleuse_europeenne_white.webp',
+	image: '/assets/illustrations/explore-binders.webp',
 	tint: 'sand',
 	band: 'night',
 	titre: (

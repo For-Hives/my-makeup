@@ -31,8 +31,8 @@ Les pages de contenu portent maintenant la direction artistique ([`direction-art
 
 | Famille | Pages | Disposition du kit |
 |---|---|---|
-| Guides du particulier | trouver une maquilleuse, centraliser ses recherches, explorer les profils, solutions pour les particuliers | tête A (arche à droite, une illustration et une teinte par guide) puis E (étapes en pastilles numérotées sur un filet, dans un cadre blanc) |
-| « Pourquoi… » | maquilleuse, particulier | tête centrée avec une pastille dans le titre, puis B (arches étagées, un objet dessiné par avantage ; un jeu d'objets, de teintes et de bandes par page), bannière script (maquilleuse) ou rose (particulier) |
+| Guides du particulier | trouver une maquilleuse, centraliser ses recherches, explorer les profils, solutions pour les particuliers | tête A (arche à droite, une illustration gouache et une teinte par guide depuis le 27/10/2026) puis E (étapes en pastilles numérotées sur un filet, dans un cadre blanc) |
+| « Pourquoi… » | maquilleuse, particulier | tête centrée avec une pastille dans le titre, puis B (arches étagées, une illustration gouache par avantage depuis le 27/10/2026, partagée entre les avantages proches ; l'objet dessiné ne sert plus que de repli ; un jeu de teintes et de bandes par page), bannière script (maquilleuse) ou rose (particulier) |
 | Pages pour les maquilleuses | partenariats, solutions pour les maquilleuses | tête A inversée (arche à gauche), parties en lignes à pastille ronde, bannière « filets » ou rose qui reprend les titres des parties |
 | À propos | `/a-propos` | tête centrée, puis D (énoncé en Bodoni entre deux arches, sans guillemets : ce n'est pas une citation), quatre cartes teintées, bannière script |
 | Contact | `/contact` | formulaire en champs arrondis dans un cadre, puis F version données réelles : les quatre adresses de l'équipe en Bodoni entre des filets |

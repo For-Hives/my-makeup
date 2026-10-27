@@ -23,7 +23,7 @@ export default function PartnershipsPage() {
 		<ArtPage>
 			<PageHead
 				mirrored
-				image="/assets/back/maquilleuse_italienne_white.webp"
+				image="/assets/illustrations/partnerships-shared-table.webp"
 				tint="lavender"
 				band="rose"
 				mark="plus"

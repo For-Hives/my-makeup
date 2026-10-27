@@ -96,3 +96,65 @@ Demande d'Andy du 27/10/2026 : les trois images de la section « communauté » 
 - **Jugées au vrai format** : une planche avec chaque image dans son rond de 112 px (et 224 px pour l'écran retina) sur sa teinte. Une seule exécution par image a suffi ; le pilote (`community-clients`) a tenu à 112 px, les deux autres ont suivi la même recette.
 - **Coût** : 3 exécutions, **estimation de 0,25 USD l'image, soit environ 0,75 USD** (aucun outil ne renvoie le coût réel) ; journal dans [`illustrations-cost.txt`](illustrations-cost.txt).
 - **Droits** : les mêmes que pour les couvertures du blog (voir « Droits : à lire par Andy » plus haut) : aucun droit d'auteur revendiqué, conditions de fal et d'OpenAI à relire par Andy ; aucune personne réelle, aucun texte.
+
+## Les arches des pages de contenu (27/10/2026)
+
+Demande d'Andy du 27/10/2026 : les photos des arches ne sont pas dans le thème du reste du site ; elles sont remplacées par des illustrations générées dans le même thème. Même modèle, mêmes réglages et même gouache que les couvertures du blog et que les pages Solutions ([`illustrations-solutions.md`](illustrations-solutions.md)).
+
+### Les emplacements
+
+14 illustrations pour 20 arches (les arches des avantages qui se ressemblent en partagent une, et le nombre d'images est tenu sous 14 pour le plafond de 4,50 USD). Aucun sujet ne revient d'une page à l'autre ; les sujets ne reprennent ni les couvertures du blog ni les pages Solutions.
+
+| Page | Arche | Fichier | Sujet |
+|---|---|---|---|
+| `/blog` | tête (à droite, ordinateur seulement) | `blog-reading` | une lectrice aux cheveux gris dans un fauteuil, un magazine aux pages vides |
+| `/maquilleuse/partenariats` | tête (à gauche) | `partnerships-shared-table` | deux maquilleuses côte à côte, une mallette ouverte partagée |
+| `/particulier/trouver-une-maquilleuse` | tête | `find-greeting` | une cliente et une maquilleuse se serrent la main à la porte d'un studio |
+| `/particulier/centraliser-ses-recherches` | tête | `gather-card-index` | une femme trie des fiches dans un fichier à tiroir, un tableau de liège derrière |
+| `/particulier/explorer-les-profils` | tête | `explore-binders` | une femme ouvre un classeur dans un rayonnage de classeurs |
+| « Pourquoi… maquilleuse » | avantages 1 et 5 | `artist-grow` | une maquilleuse à son bureau, des clientes qui arrivent au loin |
+| idem | avantage 2 | `artist-skills` | une maquilleuse près d'un classeur de nuances et d'une trousse |
+| idem | avantages 3 et 8 | `artist-rates` | une maquilleuse, une valise à roulettes, une étiquette vierge, un calendrier |
+| idem | avantages 4 et 7 | `artist-share` | une maquilleuse photographie ses pinceaux et sa palette avec son téléphone |
+| idem | avantage 6 | `artist-community` | trois maquilleuses de looks différents, ensemble |
+| « Pourquoi… particulier » | avantages 1 et 5 | `client-gallery` | une jeune femme devant un mur de portraits en arche |
+| idem | avantages 2 et 7 | `client-sofa` | une femme sur un canapé, une tablette, une tasse de thé |
+| idem | avantages 3 et 6 | `client-profile-sheet` | une femme lit une fiche de profil, un éventail de nuances |
+| idem | avantage 4 | `client-moodboard` | une femme devant un tableau d'inspiration de nuances |
+
+Le choix de l'image d'un avantage se fait par sa position dans la liste (`ARTIST_PALETTE.images`, `CLIENT_PALETTE.images` dans `Benefits.tsx`) ; sans `images`, l'arche garde l'objet de maquillage dessiné. Les images des têtes sont dans le code des pages (`image=`), celle du blog dans `blog/page.tsx`. Les anciennes photos `public/assets/back/maquilleuse_*_white.webp` restent : les pages de talent, les pages de zone, À propos et l'image par défaut de `PageHead` s'en servent encore. Les alt des têtes sont inchangés ; les arches des avantages et du blog sont des décors (`alt=""`).
+
+### Les fichiers
+
+`public/assets/illustrations/<nom>.webp`, WebP qualité 82, sans métadonnées : **800 x 1000** pour les têtes (arche de 380 px), **600 x 750** pour les avantages (96 à 260 px), 17 à 36 Ko chacun (environ 330 Ko pour les quatorze). Source : PNG de 1024 x 1280 ; `magick in.png -resize 800x1000 -strip -define webp:method=6 -quality 82 out.webp`. Les têtes de page ont `priority` (LCP sur téléphone, déjà en place) ; l'arche du blog, cachée sous 1024 px, et celles des avantages, sous la ligne de flottaison, se chargent au défilement.
+
+### La recette
+
+- **Modèle** : `openai/gpt-image-2.5/flare/text-to-image`, `image_size` `{ "width": 1024, "height": 1280 }`, `quality` `high`, `background` `opaque`, `num_images` 1, `output_format` `png`. Une exécution par image, aucune refaite.
+- **Prompt** : celui des arches des pages Solutions : `Soft editorial gouache illustration, premium fashion magazine feel, tall portrait composition. {SCÈNE} Composition: the subject is centred, filling about 65% of the height and 60% of the width of the frame, with a clear band of empty paper above (at least 18%) and below, and wide empty paper on both sides, {her/their} head{s} in the upper third, so the image can be cropped to an arch shape without cutting anything. Dry-brush gouache texture with visible gentle brush strokes, flat shapes, refined and minimal. Palette strictly limited: off-white paper background (#F1ECE7), blush pink, pale lavender, and deep indigo accents; muted and calm, no saturated colours, no neon, no black splatter. Lots of empty paper space around the subject. No text, no letters, no logo, no watermark, no border, no flowers, no sparkles. Not a portrait of any real person.`
+- Date : 27/10/2026.
+
+| Fichier | Scène (telle que lancée) |
+|---|---|
+| `blog-reading` | A woman in her fifties with silver-grey wavy hair and warm medium skin, in a pale lavender knit cardigan, sits curled up in a cushioned armchair reading an open magazine with blank painted pages, a small round side table beside her holds a cup and a stack of two books. |
+| `partnerships-shared-table` | Two makeup artists work side by side at a long shared worktable, one with deep brown skin and short natural curls in a deep indigo smock, the other with light skin and a low bun in a pale lavender smock, sharing one open pale pink makeup case between them and smiling at each other, brushes in hand. |
+| `find-greeting` | A woman with tan skin and a high ponytail, in a pale blush sweater, stands in a bright studio doorway and shakes hands warmly with a makeup artist with olive skin and a sleek bob in a deep indigo smock who holds a round makeup case, a small round mirror on the wall behind them. |
+| `gather-card-index` | A woman with fair skin and short auburn hair, in a pale lavender blouse, sits at a tidy desk sorting small blank painted cards into a wooden card-index box, a pinboard behind her holding a few blank cards joined by a simple indigo string, a cup on the desk. |
+| `explore-binders` | A woman with deep brown skin and a short natural afro, in a pale blush top, stands in front of a tall bookshelf-like rack of portfolio binders in blush, lavender and indigo, pulling one binder out and opening it with curiosity. |
+| `artist-grow` | A makeup artist with light brown skin and a neat bun, in a deep indigo smock, sits at a desk and looks happily at a laptop with a blank screen, a phone with a blank screen beside it, and a few small people-shaped chairs of clients arriving in the distance as simple faceless silhouettes in blush and lavender, suggesting a growing clientele. |
+| `artist-skills` | A makeup artist with olive skin and long dark wavy hair, in a pale lavender smock, stands beside an open portfolio binder on a stand showing blank painted colour swatches and an open case of brushes, a framed certificate-like empty frame on the wall behind her; calm and proud. |
+| `artist-rates` | A makeup artist with medium skin and a short pixie cut, in a blush top, stands calmly with one hand on a rolling makeup case and the other holding a small blank price tag tied to its handle, a wall calendar of blank pages behind her and a round mirror, relaxed and in charge of her own time. |
+| `artist-share` | A makeup artist with deep brown skin and braids tied up, in a pale lavender top, sits on a sofa and takes a photo with a smartphone of a tidy flat-lay of her brushes and a palette on a blush cloth on a low table in front of her, sharing her work with a smile. |
+| `artist-community` | Three makeup artists of different looks stand close together laughing, one with deep brown skin and a headwrap, one with light skin and short red hair, one with tan skin and long straight black hair, all in indigo, lavender and blush smocks, one holding a brush, one a compact mirror, one a case. |
+| `client-gallery` | A young woman with light brown skin and a long braid, in a pale lavender dress, stands in a small gallery looking up at a wall of many arch-shaped framed faceless painted portraits in blush, lavender and indigo, arranged in a tidy grid, one hand raised toward her favourite. |
+| `client-sofa` | A woman with olive skin and a loose low bun, in a pale blush shirt, relaxes on a sofa with a cushion, a tablet with a blank screen on her lap and a cup of tea beside her, looking pleased as if she found just what she wanted. |
+| `client-profile-sheet` | A woman with medium-brown skin and short curly hair, in a pale lavender cardigan, stands at a table reading a printed profile sheet with a blank painted portrait square and neat blank lines, a fan of blush, lavender and indigo colour swatches and a small stack of sheets beside her, thoughtful and reassured. |
+| `client-moodboard` | A woman with fair skin and a wavy blonde bob, in a pale blush sweater, stands in front of a large moodboard pinboard with blank painted colour swatches in blush, lavender and indigo and a few blank painted sample squares, holding one swatch up to the light, dreaming up her beauty project. |
+
+### Ce que la génération a coûté
+
+14 exécutions de fal le 27/10/2026 (une par image, aucune refaite ; plafond de la tâche : 4,50 USD). Aucun outil ne renvoie le coût réel (facturation au jeton) : **estimation de 0,25 USD l'image, soit environ 3,50 USD**, à vérifier sur le compte fal.
+
+### Droits
+
+Les mêmes réserves que plus haut : aucun droit d'auteur n'est revendiqué, les conditions de fal et d'OpenAI sont à relire par Andy, aucune personne réelle, aucun texte dans les images.
