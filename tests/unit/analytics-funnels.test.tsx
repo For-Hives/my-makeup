@@ -4,7 +4,7 @@ import path from 'node:path'
 import { JSDOM } from 'jsdom'
 import { readDepth } from '@/components/analytics/ArticleDepth'
 import { leftPage, measureDelegatedClick } from '@/lib/analytics/delegated'
-import { CTA_PLACES, eventData } from '@/lib/analytics/events'
+import { CARD_ORIGINS, CATALOG, CTA_PLACES, eventData } from '@/lib/analytics/events'
 import { createTrack, type MeasuredWindow } from '@/lib/analytics/track'
 import { articleLinkKind, budgetUse, notFoundPath, routeOf, viewOrigin } from '@/lib/analytics/values'
 
@@ -28,6 +28,11 @@ describe('la route : le motif de la page, jamais son adresse', () => {
 		['/maquilleuses/74', '/maquilleuses/[department]'],
 		['/search?search=lea@example.test&city=Annecy', '/search'],
 		['/auth/profil', '/auth/profil'],
+		// A name is masked at any depth, and a segment that looks personal is masked even when it is encoded.
+		['/profil/zoe-fictive/extra', '/profil/[slug]'],
+		['/blog/un-article/page/2', '/blog/[slug]'],
+		['/contact/lea%40example.test', '/contact/[masqué]'],
+		['/x/06%2012%2034%2056%2078', '/x/[masqué]'],
 		['/classement', '/classement'],
 	])('%s : %s', (path, route) => {
 		expect(routeOf(path)).toBe(route)
@@ -230,5 +235,58 @@ describe('la profondeur de lecture d’un article', () => {
 		expect(readDepth(-5000, 2000, 800)).toBe(1)
 		expect(readDepth(900, 2000, 800)).toBe(0)
 		expect(readDepth(0, 0, 800)).toBe(0)
+	})
+})
+
+describe('la documentation du catalogue suit le catalogue', () => {
+	const doc = readFileSync(path.join(ROOT, 'docs/mesure/umami.md'), 'utf8')
+	const between = (start: string, end: string): string => {
+		const from = doc.indexOf(start)
+		const to = doc.indexOf(end, from)
+		if (from === -1 || to === -1) throw new Error(`la section « ${start} » n’est plus dans le document`)
+		return doc.slice(from, to)
+	}
+	const catalogue = between('### Le catalogue complet', '### Comment ça part')
+	const where = between('Les valeurs de `where`', '### Comment ça part')
+
+	test('chaque événement du catalogue a sa ligne, en code, dans le tableau', () => {
+		expect(Object.keys(CATALOG).filter(nom => !catalogue.includes(`\`${nom}\``))).toEqual([])
+	})
+
+	test('chaque valeur de `where` est dans le tableau des appels à l’action', () => {
+		expect(CTA_PLACES.filter(mot => !where.includes(`\`${mot}\``))).toEqual([])
+	})
+
+	test('chaque entonnoir du pas-à-pas ne nomme que des événements du catalogue', () => {
+		const funnels = doc.slice(doc.indexOf('## Entonnoirs à créer dans Umami'))
+		// The steps are in the third column of the tables: « Événement `nom` » or a bare `nom` between steps.
+		const rows = funnels.split('\n').filter(ligne => /^\| [VMC]\d /.test(ligne))
+		expect(rows.length).toBeGreaterThanOrEqual(10)
+		const names = new Set(Object.keys(CATALOG))
+		const unknown = rows.flatMap(ligne =>
+			[...ligne.matchAll(/`([a-z][a-z_0-9]+)`/g)]
+				.map(found => found[1] ?? '')
+				// A property or a value used as a filter of a step.
+				.filter(
+					word =>
+						!names.has(word) &&
+						!(CTA_PLACES as readonly string[]).includes(word) &&
+						![
+							'where',
+							'step',
+							'page',
+							'origin',
+							'cause',
+							...CARD_ORIGINS,
+							'identite',
+							'zone',
+							'photo',
+							'contact',
+							'prestation',
+							'termine',
+						].includes(word)
+				)
+		)
+		expect(unknown).toEqual([])
 	})
 })

@@ -53,11 +53,15 @@ const NAMED: Readonly<Record<string, string>> = {
  */
 export function routeOf(pathname: string): string {
 	const segments = bareSegments(pathname)
-	const [first, second] = segments
+	const first = segments[0]
 	if (first === undefined) return '/'
+	// A name after a prefix that takes one is replaced whatever follows it.
 	const pattern = NAMED[first.toLowerCase()]
-	if (pattern !== undefined && second !== undefined && segments.length === 2) return pattern
-	return `/${segments.slice(0, 4).join('/')}`
+	if (pattern !== undefined && segments.length > 1) return pattern
+	return `/${segments
+		.slice(0, 4)
+		.map(segment => (looksLikePersonalData(decodedSegment(segment)) ? '[masqué]' : segment))
+		.join('/')}`
 }
 
 /**

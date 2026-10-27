@@ -96,7 +96,7 @@ export function NoResult({
 							<>
 								{' '}
 								:{' '}
-								<a href={searchPageUrl({ city: foreignCountry })} className={LINK}>
+								<a href={searchPageUrl({ city: foreignCountry })} data-cta="recherche_vide_suggestion" className={LINK}>
 									cherchez « {foreignCountry} »
 								</a>
 							</>
@@ -113,14 +113,14 @@ export function NoResult({
 				<ul className="flex flex-col items-center gap-2">
 					{city && search && search.toLowerCase() !== city.toLowerCase() && (
 						<li>
-							<a href={searchPageUrl({ search })} className={LIST_LINK}>
+							<a href={searchPageUrl({ search })} data-cta="recherche_vide_suggestion" className={LIST_LINK}>
 								Chercher « {search} » partout
 							</a>
 						</li>
 					)}
 					{departements.map(code => (
 						<li key={code}>
-							<a href={searchPageUrl({ city: code })} className={LIST_LINK}>
+							<a href={searchPageUrl({ city: code })} data-cta="recherche_vide_suggestion" className={LIST_LINK}>
 								Voir les maquilleuses {inDepartment([code])}
 							</a>
 						</li>

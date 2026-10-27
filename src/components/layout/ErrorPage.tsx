@@ -25,7 +25,7 @@ export function ErrorPage({ reessayer }: { reessayer?: () => void }) {
 								Réessayer
 							</button>
 						)}
-						<Link href="/" prefetch={false} className={pillClassName({ variant: 'outline' })}>
+						<Link href="/" prefetch={false} data-cta="erreur_accueil" className={pillClassName({ variant: 'outline' })}>
 							Retourner à l'accueil
 						</Link>
 					</div>

@@ -72,6 +72,9 @@ export const CTA_PLACES = [
 	// The other pages: the search (ideas, empty state), the zone and the specialty pages, the blog, the ranking.
 	'recherche_idee',
 	'recherche_vide_inscription',
+	'recherche_vide_suggestion',
+	'introuvable_accueil',
+	'erreur_accueil',
 	'zone_recherche',
 	'talent_recherche',
 	'blog_liste_recherche',
