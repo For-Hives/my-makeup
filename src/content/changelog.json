@@ -1,13 +1,19 @@
 {
 	"description": "Les notes de version du site, en français : ce qu'une visiteuse ou une maquilleuse peut remarquer. Une note s'ajoute par « bun run notes:add » et attend dans « pending » ; la publication la range sous son numéro, dans « releases ». Voir docs/publication.md.",
-	"pending": [
-		{
-			"id": "apres-l-inscription-tu-arrives-directement-sur-ton-profil",
-			"type": "amelioration",
-			"text": "Après l'inscription, tu arrives directement sur ton profil pour le remplir, et une flèche permet de revenir en arrière."
-		}
-	],
+	"pending": [],
 	"releases": [
+		{
+			"version": "3.0.37",
+			"date": "2026-10-28",
+			"commit": "71fd86c66878a70162d1bca134e5d243b7b2093e",
+			"notes": [
+				{
+					"id": "apres-l-inscription-tu-arrives-directement-sur-ton-profil",
+					"type": "amelioration",
+					"text": "Après l'inscription, tu arrives directement sur ton profil pour le remplir, et une flèche permet de revenir en arrière."
+				}
+			]
+		},
 		{
 			"version": "3.0.36",
 			"date": "2026-10-27",
