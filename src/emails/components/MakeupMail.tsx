@@ -144,7 +144,7 @@ export function MakeupMail({
 							>
 								{title.before}{' '}
 								<span style={{ fontStyle: 'italic', color: c.berry, whiteSpace: 'nowrap' }}>{title.emphasis}</span>
-								{title.after ? ` ${title.after}` : ''}
+								{title.after ? `${/^[.,;:!?]/.test(title.after) ? '' : ' '}${title.after}` : ''}
 							</Text>
 						</Section>
 
@@ -155,28 +155,6 @@ export function MakeupMail({
 						<Section style={{ padding: '28px 40px 0', fontSize: 17, lineHeight: '27px', color: c.mute }}>
 							{children}
 						</Section>
-
-						{action ? (
-							<Section style={{ padding: '12px 40px 8px' }}>
-								<Button
-									href={action.href}
-									style={{
-										display: 'inline-block',
-										backgroundColor: c.ink,
-										color: '#ffffff',
-										fontFamily: MAIL_BODY_FONT,
-										fontSize: 16,
-										fontWeight: 600,
-										lineHeight: '24px',
-										padding: '14px 32px',
-										borderRadius: 999,
-										textDecoration: 'none',
-									}}
-								>
-									{action.label}
-								</Button>
-							</Section>
-						) : null}
 
 						{signature ? (
 							<Section style={{ padding: '28px 40px 4px' }}>
@@ -195,6 +173,28 @@ export function MakeupMail({
 								<Text style={{ margin: '2px 0 0', fontSize: 14, lineHeight: '20px', color: c.mute }}>
 									{signature.role}
 								</Text>
+							</Section>
+						) : null}
+
+						{action ? (
+							<Section style={{ padding: '24px 40px 8px' }}>
+								<Button
+									href={action.href}
+									style={{
+										display: 'inline-block',
+										backgroundColor: c.ink,
+										color: '#ffffff',
+										fontFamily: MAIL_BODY_FONT,
+										fontSize: 16,
+										fontWeight: 600,
+										lineHeight: '24px',
+										padding: '14px 32px',
+										borderRadius: 999,
+										textDecoration: 'none',
+									}}
+								>
+									{action.label}
+								</Button>
 							</Section>
 						) : null}
 
@@ -241,4 +241,18 @@ export function MakeupMail({
 /** One paragraph of the body. */
 export function MailParagraph({ children }: { children: ReactNode }) {
 	return <p style={{ margin: '0 0 18px', fontSize: 17, lineHeight: '27px', color: MAIL_COLORS.mute }}>{children}</p>
+}
+
+/** A bulleted list of the body, in the look of the paragraphs. */
+export function MailList({ items }: { items: readonly ReactNode[] }) {
+	return (
+		<ul style={{ margin: '0 0 18px', paddingLeft: 22, fontSize: 17, lineHeight: '27px', color: MAIL_COLORS.mute }}>
+			{items.map((item, index) => (
+				// biome-ignore lint/suspicious/noArrayIndexKey: a fixed list of the template, never reordered
+				<li key={index} style={{ margin: '0 0 8px' }}>
+					{item}
+				</li>
+			))}
+		</ul>
+	)
 }

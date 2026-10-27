@@ -1,6 +1,6 @@
 # Le gabarit des courriels aux maquilleuses (React Email)
 
-Un gabarit visuel pour écrire à toutes les maquilleuses (reprise du projet, grosse mise à jour). **Le design est fait ; le texte de `src/emails/annonce-maquilleuses.tsx` est provisoire** : le remplacer par celui du mainteneur. Rien n'est envoyé par ce gabarit.
+Un gabarit visuel pour écrire à toutes les maquilleuses (reprise du projet, grosse mise à jour). **Le design est fait ; le texte de `src/emails/annonce-maquilleuses.tsx` est celui du mainteneur, orthographe corrigée**. Son numéro et son adresse personnelle ne sont pas dans le dépôt (public) : variables `ANNONCE_PHONE` et `ANNONCE_EMAIL` de la machine qui rend ou envoie. Rien n'est envoyé par ce gabarit.
 
 ## Où
 
