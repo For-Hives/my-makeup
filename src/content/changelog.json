@@ -1,18 +1,24 @@
 {
 	"description": "Les notes de version du site, en français : ce qu'une visiteuse ou une maquilleuse peut remarquer. Une note s'ajoute par « bun run notes:add » et attend dans « pending » ; la publication la range sous son numéro, dans « releases ». Voir docs/publication.md.",
-	"pending": [
-		{
-			"id": "les-petits-dessins-et-les-icones-du-site-forment-maintena",
-			"type": "amelioration",
-			"text": "Les petits dessins et les icônes du site forment maintenant une seule famille dessinée pour My Makeup, avec un nouvel œil, de nouveaux objets de beauté et un courriel qui ressemble à un courriel."
-		},
-		{
-			"id": "les-petits-dessins-et-les-icones-sont-plus-fins-la-ligne",
-			"type": "amelioration",
-			"text": "Les petits dessins et les icônes sont plus fins : la ligne est amincie pour un rendu plus léger, surtout sur les grands décors."
-		}
-	],
+	"pending": [],
 	"releases": [
+		{
+			"version": "3.0.26",
+			"date": "2026-10-27",
+			"commit": "c35dbf8d3d42933f900de319f78b26914a8a83e0",
+			"notes": [
+				{
+					"id": "les-petits-dessins-et-les-icones-du-site-forment-maintena",
+					"type": "amelioration",
+					"text": "Les petits dessins et les icônes du site forment maintenant une seule famille dessinée pour My Makeup, avec un nouvel œil, de nouveaux objets de beauté et un courriel qui ressemble à un courriel."
+				},
+				{
+					"id": "les-petits-dessins-et-les-icones-sont-plus-fins-la-ligne",
+					"type": "amelioration",
+					"text": "Les petits dessins et les icônes sont plus fins : la ligne est amincie pour un rendu plus léger, surtout sur les grands décors."
+				}
+			]
+		},
 		{
 			"version": "3.0.25",
 			"date": "2026-10-27",
