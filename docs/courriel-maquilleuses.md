@@ -1,12 +1,13 @@
 # Le gabarit des courriels aux maquilleuses (React Email)
 
-Un gabarit visuel pour écrire à toutes les maquilleuses (reprise du projet, grosse mise à jour). **Le design est fait ; le texte de `src/emails/annonce-maquilleuses.tsx` est celui du mainteneur, orthographe corrigée**. Son numéro et son adresse personnelle ne sont pas dans le dépôt (public) : variables `ANNONCE_PHONE` et `ANNONCE_EMAIL` de la machine qui rend ou envoie. Rien n'est envoyé par ce gabarit.
+Un gabarit visuel pour écrire à toutes les maquilleuses. **Le dépôt est public : il ne contient que la version vide** (le design et un texte factice). Le vrai texte, avec les coordonnées personnelles du mainteneur, et le script d'envoi vivent dans `src/emails/local/`, dossier ignoré par git, sur le poste d'Andy. Rien n'est envoyé par le gabarit.
 
 ## Où
 
 - `src/emails/components/MakeupMail.tsx` : l'enveloppe (logo et nom, bandeau indigo, eyebrow, titre en Bodoni avec **un seul mot en italique baie**, filet, corps, bouton en pilule encre, signature, cadre rose avec cinq dessins au trait, pied de page avec le lien de désinscription). Tables et styles en ligne : les messageries ignorent le reste. Un `MailParagraph` pose un paragraphe.
 - `src/emails/tokens.ts` : les couleurs et polices du kit (`docs/direction-artistique.md`), écrites en dur.
-- `src/emails/annonce-maquilleuses.tsx` : le courriel : objet, aperçu, titre, paragraphes, bouton, signature.
+- `src/emails/annonce-maquilleuses.tsx` : la version vide du courriel (texte factice).
+- `src/emails/local/` (ignoré) : `annonce.tsx` (le vrai texte) et `envoyer.tsx` (l'envoi unique : tout le monde en copie cachée, trois adresses de l'équipe en copie visible, lots de 44, journal des lots envoyés, liste à blanc par défaut, `--test <adresse>`, `--send --journal <fichier>`). La clé Resend n'est jamais lue : l'appel passe par `resend-api`.
 - `public/assets/email/*.png` : le logo et cinq dessins en PNG (les messageries n'aiment pas le WebP ni le SVG). Servis par le site : **les images n'apparaissent qu'après la mise en ligne de cette PR**.
 - `bun run emails:render [dossier]` : écrit le HTML et le texte (`.emails-preview/` par défaut, ignoré par git). `EMAIL_ASSETS_BASE` pointe les images ailleurs.
 

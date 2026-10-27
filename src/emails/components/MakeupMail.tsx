@@ -31,8 +31,8 @@ export type MakeupMailProps = {
 	action?: { label: string; href: string }
 	/** Who signs, under the body. */
 	signature?: { name: string; role: string }
-	/** The unsubscribe link of the footer: one click, no sign-in (issue 1006). */
-	unsubscribeUrl: string
+	/** The unsubscribe link of the footer: one click, no sign-in (issue 1006). Without it, the footer asks to reply instead (a mail sent once to many in blind copy has no link of its own). */
+	unsubscribeUrl?: string | undefined
 	/** Where the images are served from. The preview points it at the working copy. */
 	assetsBase?: string
 }
@@ -225,11 +225,17 @@ export function MakeupMail({
 							</Link>
 						</Text>
 						<Text style={{ margin: 0, fontSize: 13, lineHeight: '20px', color: c.mute }}>
-							Tu ne veux plus recevoir nos courriels d’information ?{' '}
-							<Link href={unsubscribeUrl} style={{ color: c.blushInk, textDecoration: 'underline' }}>
-								Je me désinscris
-							</Link>
-							, c’est immédiat.
+							{unsubscribeUrl ? (
+								<>
+									Tu ne veux plus recevoir nos courriels d’information ?{' '}
+									<Link href={unsubscribeUrl} style={{ color: c.blushInk, textDecoration: 'underline' }}>
+										Je me désinscris
+									</Link>
+									, c’est immédiat.
+								</>
+							) : (
+								'Tu ne veux plus recevoir de message de ma part ? Réponds simplement « stop » à ce courriel.'
+							)}
 						</Text>
 					</Section>
 				</Container>
