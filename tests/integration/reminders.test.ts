@@ -23,7 +23,7 @@ const DAY = 86_400_000
 
 type Artist = TestAccount<'maquilleuse'>
 
-/** A profile that misses two conditions: an offer with a price, and a way to reach her. */
+/** A profile that misses one of the four conditions of a publishable page: a way to reach her. */
 async function closeToPublishable(): Promise<{ account: Artist; profileId: number; payload: Payload }> {
 	const account = await createAccount('maquilleuse')
 	const payload = await testPayload()
@@ -115,7 +115,8 @@ describe('1006 : l’envoi réel, derrière REMINDERS_SEND=on', () => {
 		const mails = await mailReceived(account.email)
 		expect(mails).toHaveLength(1)
 		expect(mails[0]?.sujet).toBe('Il te manque peu de chose pour publier ton profil')
-		expect(mails[0]?.texte).toContain('une prestation avec un prix')
+		expect(mails[0]?.texte).toContain('un moyen de te contacter')
+		expect(mails[0]?.texte).toContain('mieux référencée sur Google')
 		const link = mails[0]?.liens.find(candidate => candidate.includes('/api/reminders/unsubscribe'))
 		expect(link).toBeDefined()
 		const [state] = (await payload.find({ collection: 'reminder-states', depth: 0 })).docs

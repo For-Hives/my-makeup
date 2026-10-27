@@ -196,7 +196,7 @@ Tests : `tests/unit/profile-state.test.ts`, et sur le banc `tests/integration/pr
 
 ### La liste des profils dans l'administration
 
-La liste de `profiles` montre, dans l'ordre : l'adresse, la commune, la complétude, « publiable », le statut et la dernière modification, la plus récente d'abord (`defaultSort: '-updatedAt'`). La dernière activité d'un profil est son dernier enregistrement (`updatedAt`) : `derniereActivite` est prévue sur le compte, pas sur le profil (`docs/migration/SCHEMA.md`, §9). La recherche du panneau lit l'adresse, le prénom, le nom, le nom d'artiste et la commune. Les filtres du panneau (publiable, entièrement vide, statut, statut choisi) lisent les drapeaux stockés à chaque enregistrement : ils ne calculent rien.
+La liste de `profiles` montre, dans l'ordre : l'adresse, la commune, la complétude, « publiable », le statut et la dernière modification, la plus récente d'abord (`defaultSort: '-updatedAt'`). La dernière activité d'un profil est son dernier enregistrement (`updatedAt`) : `derniereActivite` est prévue sur le compte, pas sur le profil (`docs/migration/SCHEMA.md`, §9). La recherche du panneau lit l'adresse, le prénom, le nom, le nom d'artiste et la commune. Les filtres du panneau (publiable, indexable, entièrement vide, statut, statut choisi) lisent les drapeaux stockés à chaque enregistrement : ils ne calculent rien.
 
 Une valeur qui n'est pas un choix est refusée avec une phrase, jamais ignorée ni répondue par une erreur de la base : un admin qui envoie un `chosenStatus` inconnu reçoit un 400 « Ce statut n'existe pas », et un filtre sur un statut inconnu (`where[status][equals]=archive`) un 400 « Ce filtre nomme un statut qui n'existe pas ». Ce que la maquilleuse envoie sur ces champs reste ignoré.
 

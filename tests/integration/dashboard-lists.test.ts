@@ -330,7 +330,7 @@ describe('131 : les prestations', () => {
 		expect((await storedProfile(m.payload, m.compte)).updatedAt).toBe(before.updatedAt)
 	})
 
-	describe('U04 : une prestation chiffrée remplit le critère « publiable »', () => {
+	describe('U04 : une prestation chiffrée, avec la description, rend le profil indexable ; elle n’est plus exigée pour être publiable', () => {
 		async function allExceptOffer() {
 			const m = await artist()
 			const photo = await m.payload.create({
@@ -351,23 +351,31 @@ describe('131 : les prestations', () => {
 			})
 			return m
 		}
-		const publishable = async (m: Awaited<ReturnType<typeof artist>>) =>
-			(await storedProfile(m.payload, m.compte)).publishable
+		const stored = async (m: Awaited<ReturnType<typeof artist>>) => {
+			const profile = await storedProfile(m.payload, m.compte)
+			return { publishable: profile.publishable, indexable: profile.indexable }
+		}
 
-		test('« sur devis » seul ne suffit pas, un montant suffit, et le retirer ôte le critère', async () => {
+		test('« sur devis » seul ne suffit pas pour Google, un montant suffit, et le retirer ôte le critère ; elle publie dans tous les cas', async () => {
 			const m = await allExceptOffer()
+			expect(await stored(m)).toEqual({ publishable: true, indexable: false })
 
 			await save(m, SERVICE_OFFERS, [{ valeurs: { name: 'Mariée', description: '', price: 'sur devis' } }])
-			expect(await publishable(m)).toBe(false)
+			expect(await stored(m)).toEqual({ publishable: true, indexable: false })
 
 			const numbered = await save(m, SERVICE_OFFERS, [
 				{ valeurs: { name: 'Mariée', description: '', price: 'à partir de 80' } },
 			])
 			expect(numbered.ok).toBe(true)
-			expect(await publishable(m)).toBe(true)
+			expect(await stored(m)).toEqual({ publishable: true, indexable: true })
+
+			// A duration is not an amount: « 2 h : 150 € » is 150.
+			await save(m, SERVICE_OFFERS, [{ valeurs: { name: 'Mariée', description: '', price: '2 h : 150 €' } }])
+			expect(await stored(m)).toEqual({ publishable: true, indexable: true })
+			expect((await storedProfile(m.payload, m.compte)).serviceOffers?.[0]?.priceFrom).toBe(150)
 
 			await save(m, SERVICE_OFFERS, [])
-			expect(await publishable(m)).toBe(false)
+			expect(await stored(m)).toEqual({ publishable: true, indexable: false })
 		})
 	})
 })

@@ -13,7 +13,7 @@ import { type ProfileDocument, stateAfterSave } from '../lib/profile/state'
  * 1. adds the two columns;
  * 2. reads again the amount of every offer and option that has a text price, by the single price rule
  *    (« 2 h : 150 € » is 150, not nothing; « 45 min, 60 € » is 60, not 45);
- * 3. recomputes the flags, their dates and the status of every profile by the single rule
+ * 3. recomputes the score, the flags, their dates, the status and its choice of every profile by the single rule
  *    (`stateAfterSave`, the function a save calls), and writes them with plain SQL: no hook runs (no refresh of the
  *    pages, no IndexNow) and `updated_at` is not touched (it drives the reminders, the 24 months of inactivity and
  *    the order of the directory).
@@ -89,13 +89,17 @@ async function recomputeFlags({ db, payload, req }: Pick<MigrateUpArgs, 'db' | '
 		const write = stateAfterSave({ avant: profile, apres: profile as ProfileDocument, maintenant: now })
 		await db.execute(sql`
 			UPDATE "profiles" SET
+				"completeness" = ${write.completeness},
+				"active" = ${write.active},
+				"active_since" = ${write.activeSince},
 				"publishable" = ${write.publishable},
 				"publishable_since" = ${write.publishableSince},
 				"indexable" = ${write.indexable},
 				"indexable_since" = ${write.indexableSince},
 				"fully_empty" = ${write.fullyEmpty},
 				"fully_empty_since" = ${write.fullyEmptySince},
-				"status" = ${write.status}
+				"status" = ${write.status},
+				"chosen_status" = ${write.chosenStatus}
 			WHERE "id" = ${profile.id}`)
 	}
 }

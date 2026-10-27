@@ -366,7 +366,12 @@ describe('La migration de la zone (ticket 259) : des ajouts seulement, sur une b
 			await zone.up(args)
 			for (const migration of later) await migration.up(args)
 			expect(await baseSchema()).toEqual(afterZone)
-			expect(await profileStates()).toEqual(before)
+			// The migration of the lightened publication recomputes the stored state by the rule on what the table
+			// holds: the zones of countries were dropped by the down, so these profiles read no city any more.
+			const replayed = await profileStates()
+			const abroad = new Set(countriesProfiles.map(({ id }) => id))
+			expect(replayed.filter(({ id }) => !abroad.has(id))).toEqual(before.filter(({ id }) => !abroad.has(id)))
+			for (const row of replayed.filter(({ id }) => abroad.has(id))) expect(row.publishable).toBe(false)
 			const kinds = await payload.db.pool.query('SELECT DISTINCT zone_kind FROM profiles')
 			// Down drops the countries with their table, as its comment says: every zone is a commune again.
 			expect(kinds.rows).toEqual([{ zone_kind: 'city' }])
@@ -416,10 +421,11 @@ describe('La migration de la publication allégée (27/10/2026) : les lignes dé
 		const flags = async () =>
 			(
 				await pool.query(
-					'SELECT id, publishable, indexable, fully_empty, status FROM profiles ORDER BY id'
+					'SELECT id, completeness, active, publishable, indexable, fully_empty, status, chosen_status FROM profiles ORDER BY id'
 				)
 			).rows
-		const times = async () => (await pool.query('SELECT id, updated_at::text AS updated_at FROM profiles ORDER BY id')).rows
+		const times = async () =>
+			(await pool.query('SELECT id, updated_at::text AS updated_at FROM profiles ORDER BY id')).rows
 		try {
 			await resetBench()
 			await placeDemoProfiles(payload)
@@ -428,10 +434,10 @@ describe('La migration de la publication allégée (27/10/2026) : les lignes dé
 			// Back to the day before the migration: no `indexable` column, the flags the old rule gave.
 			for (const migration of [...later].reverse()) await migration.down(args)
 			await lighter.down(args)
-			await pool.query('UPDATE profiles SET publishable = false, fully_empty = true, status = $1 WHERE status <> $2', [
-				'draft',
-				'hidden',
-			])
+			await pool.query(
+				'UPDATE profiles SET active = false, completeness = 0, publishable = false, fully_empty = true, status = $1 WHERE status <> $2',
+				['draft', 'hidden']
+			)
 			// A priced offer whose text the old rule read wrongly: « 2 h : 150 € » gave no amount.
 			const offer = await pool.query(
 				`UPDATE profiles_service_offers SET price_text = '2 h : 150 €', price_from = NULL

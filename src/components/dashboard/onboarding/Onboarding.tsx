@@ -284,7 +284,7 @@ export function Onboarding({
 				{step === 5 ? (
 					<StepFrame
 						titre={STEPS_TITLES[5]}
-						explication="La prestation qu’on te demande le plus, avec son prix. Tu pourras en ajouter d’autres ensuite."
+						explication="La prestation qu’on te demande le plus, avec son prix. C’est facultatif : un prix aide Google à te trouver. Tu pourras en ajouter d’autres ensuite."
 						reference={title}
 					>
 						<OfferStep rows={profile.offers} medians={profile.medians} save={actions.saveServices} cancel={buttons} />

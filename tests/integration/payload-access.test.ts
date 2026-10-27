@@ -33,9 +33,11 @@ const SENT_STATE = [
 	['completeness', 13],
 	['active', true],
 	['publishable', true],
+	['indexable', true],
 	['fullyEmpty', true],
 	['activeSince', '2020-01-01T00:00:00.000Z'],
 	['publishableSince', '2020-01-01T00:00:00.000Z'],
+	['indexableSince', '2020-01-01T00:00:00.000Z'],
 	['fullyEmptySince', '2020-01-01T00:00:00.000Z'],
 ] as const
 
@@ -430,9 +432,11 @@ const MATRIX: Line[] = [
 		['completeness', ROLES],
 		['active', ROLES],
 		['publishable', ROLES],
+		['indexable', ROLES],
 		['fullyEmpty', ROLES],
 		['activeSince', OWNER_AND_ADMIN],
 		['publishableSince', OWNER_AND_ADMIN],
+		['indexableSince', OWNER_AND_ADMIN],
 		['fullyEmptySince', OWNER_AND_ADMIN],
 		['chosenStatus', OWNER_AND_ADMIN],
 	]),

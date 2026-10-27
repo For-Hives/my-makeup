@@ -81,14 +81,14 @@ describe('La vérification d’un profil, réserve de la mise en avant (issue 10
 		expect(await slugs()).toEqual([alreadyVerified()])
 	}, 60_000)
 
-	test('un profil masqué ou non publiable n’y figure jamais, même vérifié', async () => {
+	test('un profil masqué, vide ou non publiable n’y figure jamais, même vérifié ; un profil publiable mais mince, si', async () => {
 		const payload = await testPayload()
 		const keys = ['reference', 'masquee', 'publiable-non-indexable', 'vide', 'sans-contact-public']
 		for (const key of keys) {
 			const id = await profileOf(key)
 			await payload.update({ collection: 'profiles', id, data: { verified: true }, depth: 0, overrideAccess: true })
 		}
-		expect(await slugs()).toEqual([alreadyVerified(), slugOf('reference')].sort())
+		expect(await slugs()).toEqual([alreadyVerified(), slugOf('reference'), slugOf('publiable-non-indexable')].sort())
 	}, 60_000)
 })
 
