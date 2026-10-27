@@ -9,7 +9,7 @@ import Link from 'next/link'
  */
 export function PasswordlessHelp() {
 	return (
-		<p data-testid="aide-sans-mot-de-passe" className="max-w-sm text-left text-mute text-sm leading-6">
+		<p data-testid="aide-sans-mot-de-passe" className="reveal max-w-sm text-left text-mute text-sm leading-6">
 			Inscrite avec Facebook ou Google, sans mot de passe ? Clique sur{' '}
 			<Link
 				className="font-medium text-indigo-800 underline underline-offset-4 hover:text-indigo-950"
