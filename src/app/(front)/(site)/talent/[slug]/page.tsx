@@ -89,14 +89,19 @@ export default async function TalentPage({ params }: PageProps<'/talent/[slug]'>
 				<div className="mx-auto max-w-4xl rounded-art-frame border border-nude-200 bg-white px-6 py-12 md:px-16 md:py-16">
 					<article className="reveal content-prose">
 						<MarkdownContent html={html} />
-						<Pill href="/search" variant="filled" arrow>
+						<Pill href="/search" variant="filled" arrow data-cta="talent_recherche">
 							Trouver une maquilleuse
 						</Pill>
 						<ArtSignature />
 					</article>
 				</div>
 				<div className="mt-20 md:mt-28">
-					<ProfileGrid titre={talentBlockTitle(talent.titre)} cartes={cards} specialite={talent.titre} />
+					<ProfileGrid
+						titre={talentBlockTitle(talent.titre)}
+						cartes={cards}
+						specialite={talent.titre}
+						origin="talent"
+					/>
 				</div>
 			</div>
 			<Cta />

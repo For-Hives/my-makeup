@@ -11,12 +11,109 @@
  * addresses). Typed text, names, emails and phone numbers are never sent; a value that looks like
  * an email or a phone number drops the event.
  *
- * The events of the quote form (`devis_click`, `demande_envoyee`) are not in it: the form is out of
- * the project (decisions of 08/10). Renaming a value later splits its series in Umami.
+ * The quote form of the profile page (issue 1003) reuses the names of plan 04 for its two ends
+ * (`devis_click`, `demande_envoyee`) and adds two steps. Renaming a value later splits its series in
+ * Umami: a new name or a new optional property is how the catalogue grows (docs/mesure/umami.md).
  */
+
+import { SPECIALTY_VALUES } from '../specialty'
 
 /** Value of `channel`: how a visitor reaches a makeup artist. */
 export const CONTACT_CHANNELS = ['email', 'phone', 'instagram', 'facebook', 'linkedin', 'youtube', 'website'] as const
+
+/**
+ * Value of `where` of `cta_click`: one stable word per call to action of the site. Never renamed (it would cut
+ * its series): a new link gets a new word. The page the click happened on travels in `page`, so the blocks
+ * that appear on many pages (`cta_recherche`, `cta_inscription`) are told apart by it.
+ */
+export const CTA_PLACES = [
+	// The two links of the block at the foot of the pages, the search button of the bar and the badge of the home arch.
+	'cta_recherche',
+	'cta_inscription',
+	'nav_recherche',
+	'nav_recherche_mobile',
+	'accueil_explorer',
+	// The bar: the logo, the sign-in and the space, then one word per link of the menus (src/components/layout/links.ts).
+	'nav_logo',
+	'nav_connexion',
+	'nav_espace',
+	'nav_particulier_pourquoi',
+	'nav_particulier_trouver',
+	'nav_particulier_centraliser',
+	'nav_particulier_explorer',
+	'nav_maquilleuse_pourquoi',
+	'nav_maquilleuse_partenariats',
+	'nav_solutions_particuliers',
+	'nav_solutions_maquilleuses',
+	'nav_blog',
+	// The foot of the pages, one word per link (the columns of src/components/layout/links.ts), then its networks.
+	'footer_particulier_pourquoi',
+	'footer_particulier_trouver',
+	'footer_particulier_centraliser',
+	'footer_particulier_explorer',
+	'footer_maquilleuse_pourquoi',
+	'footer_maquilleuse_partenariats',
+	'footer_solutions_particuliers',
+	'footer_solutions_maquilleuses',
+	'footer_blog',
+	'footer_a_propos',
+	'footer_contact',
+	'footer_mentions_legales',
+	'footer_cgu',
+	'footer_confidentialite',
+	'footer_plan_du_site',
+	'footer_reseau',
+	// The home page: the four buttons of the community band, and the specialties of the ribbon.
+	'accueil_collab_rejoindre',
+	'accueil_collab_visibilite',
+	'accueil_collab_trouver',
+	'accueil_collab_solution',
+	'accueil_talent',
+	// The other pages: the search (ideas, empty state), the zone and the specialty pages, the blog, the ranking.
+	'recherche_idee',
+	'recherche_vide_inscription',
+	'zone_recherche',
+	'talent_recherche',
+	'blog_liste_recherche',
+	'article_retour_blog',
+	'classement_voir',
+	'classement_contact',
+	'devis_envoye_recherche',
+	'page_connexion',
+] as const
+
+/**
+ * Value of `origin` of `card_click`: the list a profile card was in outside a typed search. `plus_consultees` and
+ * `classement` are the two rows of the search page before any search (`PresetKind`), `mise_en_avant` the band of the home.
+ */
+export const CARD_ORIGINS = ['zone', 'talent', 'mise_en_avant', 'plus_consultees', 'classement', 'blog'] as const
+
+/** Value of `from` of `profile_view`: where the visitor came from, told by the page she left. */
+export const VIEW_ORIGINS = [
+	'recherche',
+	'zone',
+	'talent',
+	'classement',
+	'blog',
+	'accueil',
+	'autre_page',
+	'externe',
+	'direct',
+] as const
+
+/** Value of `kind` of `article_link_click`: what an in-text link of an article leads to. Never the address. */
+export const ARTICLE_LINK_KINDS = ['interne', 'externe', 'recherche', 'inscription', 'profil'] as const
+
+/** Value of `network` of `share_click`: the way an article is passed on. */
+export const SHARE_NETWORKS = ['email', 'linkedin', 'facebook'] as const
+
+/** Value of `cause` of `quote_error`: why a quote request did not go through, never what was typed. */
+export const QUOTE_ERROR_CAUSES = ['validation', 'trop_de_demandes', 'verification', 'indisponible', 'echec'] as const
+
+export const SORT_KEYS = ['relevance', 'price', 'recent'] as const
+
+/** Value of `budget` of `search_refine`: which ends of the price range the visitor set. */
+export const BUDGET_USES = ['aucun', 'minimum', 'maximum', 'fourchette'] as const
 
 export const RESULT_BUCKETS = ['0', '1-5', '6-20', '21+'] as const
 
@@ -109,13 +206,23 @@ type SpecNumber = { readonly type: 'number'; readonly min: number }
 type SpecList<V extends string> = { readonly type: 'enum'; readonly values: readonly V[] }
 /** A path: it starts with « / », has no query and no hash, and is cut at 99 characters. */
 type SpecPath = { readonly type: 'path' }
+/** A code of a département (`74`, `2A`, `971`) or `unknown`. */
+type SpecZone = { readonly type: 'zone' }
+/** A property an event may leave out (added later to an event that already existed: its old uses stay valid). */
+type Optional = { readonly optional: true }
 
-type Spec = SpecPid | SpecBoolean | SpecInteger | SpecNumber | SpecList<string> | SpecPath
+type Spec = (SpecPid | SpecBoolean | SpecInteger | SpecNumber | SpecList<string> | SpecPath | SpecZone) & {
+	readonly optional?: true
+}
 
 const pid: SpecPid = { type: 'pid' }
 const booleanSpec: SpecBoolean = { type: 'boolean' }
 const integer = (min: number, max: number): SpecInteger => ({ type: 'int', min, max })
 const oneOf = <const V extends string>(values: readonly V[]): SpecList<V> => ({ type: 'enum', values })
+/** The code of a département of the list, `2A`/`2B` for Corsica, or `unknown`: what the server already computed for the count of searches. */
+const zoneCode: SpecZone = { type: 'zone' }
+const pathSpec: SpecPath = { type: 'path' }
+const optional = <S extends Spec>(spec: S): S & Optional => ({ ...spec, optional: true })
 
 /** What a specification lets through, as a TypeScript type. */
 type Value<S> = S extends SpecPid
@@ -126,7 +233,7 @@ type Value<S> = S extends SpecPid
 			? number
 			: S extends SpecList<infer V>
 				? V
-				: S extends SpecPath
+				: S extends SpecPath | SpecZone
 					? string
 					: never
 
@@ -137,15 +244,22 @@ type Value<S> = S extends SpecPid
 export const CATALOG = {
 	// 1. A link to a way of reaching the artist, on a public profile (ticket 144).
 	contact_click: { pid, channel: oneOf(CONTACT_CHANNELS) },
-	// 4-6, 8. The search, the calls to action and the 404 (ticket 145). Never the words typed.
-	search_submit: { has_city: booleanSpec, results: oneOf(RESULT_BUCKETS), from: oneOf(['formulaire', 'lien']) },
-	search_result_click: { rank: integer(1, 999), pid },
-	// `accueil_explorer`: the badge « Explorer les maquilleuses » on the arch of the home hero (26/10/2026).
-	cta_click: {
-		where: oneOf(['cta_recherche', 'cta_inscription', 'nav_recherche', 'nav_recherche_mobile', 'accueil_explorer']),
+	// 4-6, 8. The search, the calls to action and the 404 (ticket 145). Never the words typed: `has_word` says only that
+	// some were, `zone` is the code of the département the search points at (or `unknown`).
+	search_submit: {
+		has_city: booleanSpec,
+		results: oneOf(RESULT_BUCKETS),
+		from: oneOf(['formulaire', 'lien']),
+		has_word: optional(booleanSpec),
+		zone: optional(zoneCode),
 	},
+	search_result_click: { rank: integer(1, 999), pid },
+	// `accueil_explorer`: the badge « Explorer les maquilleuses » on the arch of the home hero (26/10/2026). `page`: the
+	// route the click happened on (never a profile or an address typed).
+	cta_click: { where: oneOf(CTA_PLACES), page: optional(pathSpec) },
 	platform_contact_submit: { ok: booleanSpec, status: integer(0, 599) },
-	not_found: { kind: oneOf(['profil', 'talent', 'blog', 'autre']) },
+	// `path`: the address that was not found, with the profile and talent names left out (27/10/2026).
+	not_found: { kind: oneOf(['profil', 'talent', 'blog', 'autre']), path: optional(pathSpec) },
 	// 9-12. Sign-up and sign-in (ticket 146). `code` is « ok » on a success.
 	signup_start: { method: oneOf(['email', 'google']) },
 	login_result: {
@@ -164,9 +278,38 @@ export const CATALOG = {
 	// 16-17. The onboarding (ticket 148).
 	onboarding_step: { step: oneOf(MEASURED_ONBOARDING_STEPS) },
 	onboarding_source: { source: oneOf(DECLARED_ORIGINS) },
-	// 20-21. New in the v3: the reveal of a phone number, and an error boundary.
+	// 20-21. New in the v3: the reveal of a phone number, and an error boundary. `route`: the pattern of the page that
+	// broke (`/profil/[slug]`), never the address.
 	contact_reveal: { pid, channel: oneOf(CONTACT_CHANNELS) },
-	app_error: { scope: oneOf(['site', 'espace', 'global']), code: oneOf(['render', 'chunk_load', 'unknown']) },
+	app_error: {
+		scope: oneOf(['site', 'espace', 'global']),
+		code: oneOf(['render', 'chunk_load', 'unknown']),
+		route: optional(pathSpec),
+	},
+	// 27/10/2026: the funnels of the visitor. A search that was narrowed (a filter or a sort in the address), the click
+	// on a profile card outside a typed search, the view of a profile and the steps of its quote form.
+	search_refine: {
+		results: oneOf(RESULT_BUCKETS),
+		budget: oneOf(BUDGET_USES),
+		sort: oneOf(SORT_KEYS),
+		specialty: optional(oneOf(SPECIALTY_VALUES)),
+	},
+	card_click: { origin: oneOf(CARD_ORIGINS), rank: integer(1, 999), pid },
+	profile_view: { pid, from: oneOf(VIEW_ORIGINS) },
+	devis_click: { pid, from: oneOf(['profil']) },
+	quote_submit: { pid },
+	demande_envoyee: { pid, source: oneOf(['profil']) },
+	quote_error: { pid, cause: oneOf(QUOTE_ERROR_CAUSES) },
+	// 27/10/2026: the funnel of the makeup artist. The wall of verification is shown for a new address and for one that
+	// already has an account alike (ticket 083), so `signup_wall` counts requests, not accounts created.
+	signup_wall: {},
+	email_confirmed: {},
+	profile_indexable: {},
+	// 27/10/2026: the content. One name for each depth, so that a funnel can chain them; `page` is the route of the article.
+	article_depth_50: { page: pathSpec },
+	article_depth_90: { page: pathSpec },
+	article_link_click: { kind: oneOf(ARTICLE_LINK_KINDS), page: pathSpec },
+	share_click: { network: oneOf(SHARE_NETWORKS), page: pathSpec },
 	// A technical event, outside the 21: the field Web Vitals of every page load (ticket 143).
 	'web-vitals': {
 		name: oneOf(WEB_VITALS_METRICS),
@@ -178,7 +321,13 @@ export const CATALOG = {
 
 export type EventName = keyof typeof CATALOG
 
-type Properties<E> = keyof E extends never ? Record<string, never> : { -readonly [K in keyof E]: Value<E[K]> }
+type OptionalKeys<E> = { [K in keyof E]: E[K] extends Optional ? K : never }[keyof E]
+
+type Properties<E> = keyof E extends never
+	? Record<string, never>
+	: { -readonly [K in Exclude<keyof E, OptionalKeys<E>>]: Value<E[K]> } & {
+			-readonly [K in OptionalKeys<E>]?: Value<E[K]>
+		}
 
 /** The type of the properties of every event, by name. */
 export type MyMakeupEvents = { [N in EventName]: Properties<(typeof CATALOG)[N]> }
@@ -192,6 +341,7 @@ export type EventData = Record<string, string | number | boolean>
 
 const NUMERIC_PID = /^[1-9]\d{0,8}$/
 const PID_V3 = /^v3-[1-9]\d{0,8}$/
+const ZONE = /^(?:2[AB]|\d{2,3}|unknown)$/
 const LONG_DIGIT_RUN = /(\d[\s.\-()]*){9,}/
 
 /** True when a text looks like personal data: an email address, or a phone number (9 digits or more). */
@@ -222,6 +372,8 @@ function normalize(spec: Spec, valeur: unknown): string | number | boolean | und
 			if (typeof valeur !== 'string' || !valeur.startsWith('/')) return undefined
 			return (valeur.split(/[?#]/)[0] ?? '').slice(0, TEXT_MAX)
 		}
+		case 'zone':
+			return typeof valeur === 'string' && ZONE.test(valeur) ? valeur : undefined
 	}
 }
 
@@ -238,6 +390,8 @@ export function eventData(nom: string, proprietes: unknown = {}): EventData | nu
 	if (Object.keys(received).some(cle => !Object.hasOwn(specs, cle))) return null
 	const data: EventData = {}
 	for (const [key, spec] of Object.entries(specs)) {
+		// A property added to an event later may be left out: the uses of before stay valid.
+		if (spec.optional === true && received[key] === undefined) continue
 		const value = normalize(spec, received[key])
 		if (value === undefined) return null
 		if (typeof value === 'string' && looksLikePersonalData(value)) return null

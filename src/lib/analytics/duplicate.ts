@@ -11,6 +11,12 @@
 
 export const LAST_EVENT_KEY = 'mm-analytics-last'
 export const FORM_SUBMISSION_KEY = 'mm-analytics-form'
+/** Where the steps of the sign-up funnel keep their last view (`signup_wall`, `email_confirmed`). */
+export const LAST_FUNNEL_KEY = 'mm-analytics-funnel'
+/** Where `profile_view` keeps its last view: a reload of a profile is not a new view. */
+export const LAST_VIEW_KEY = 'mm-analytics-view'
+/** Where `search_refine` keeps its last view: a key of its own, so that it never hides a `search_submit` (nor the reverse). */
+export const LAST_REFINE_KEY = 'mm-analytics-refine'
 
 /** What of the browser the decision uses; the tests give their own. */
 export interface Browser {
@@ -33,11 +39,12 @@ export function shouldEmit(
 	evenement: string,
 	memeVue: string,
 	mode: 'rechargement' | 'meme-vue',
-	navigateur: Browser
+	navigateur: Browser,
+	storageKey: string = LAST_EVENT_KEY
 ): boolean {
 	const key = `${evenement}:${fingerprint(memeVue)}`
-	const last = navigateur.lire(LAST_EVENT_KEY)
-	navigateur.ecrire(LAST_EVENT_KEY, key)
+	const last = navigateur.lire(storageKey)
+	navigateur.ecrire(storageKey, key)
 	if (last !== key) return true
 	return mode === 'rechargement' ? !navigateur.rechargement() : false
 }

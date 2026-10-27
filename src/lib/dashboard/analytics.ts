@@ -7,6 +7,7 @@
  *   one request), so one gesture is one answer is one event.
  * - `profile_publiable`: only when the server says that this very save made the profile publiable
  *   (`devenuPublicable`, src/lib/dashboard/publishable-transition.ts): once, never for the way back.
+ * - `profile_indexable`: the same, for the richer level that Google may index (27/10/2026): once, never for the way back.
  * - `upload_error { kind }`: the real cause of a refused photo.
  * - `account_delete`: only once the server has deleted the account.
  * - `profile_visibility { public }`: when she switches between her space and her public view.
@@ -31,6 +32,7 @@ export type TrackedSection = MyMakeupEvents['profile_save']['section']
 /** The answer of the server to a save, as the event sees it. */
 type SaveResponse = Pick<SaveResult<Record<string, unknown>>, 'ok'> & {
 	devenuPublicable?: true
+	devenuIndexable?: true
 }
 
 /** The section of the event for a list of her space: her service offers are the « offres » of the plan, her courses the « formations ». */
@@ -45,6 +47,7 @@ export const trackedListSection = (
 export function trackSave(section: TrackedSection, reponse: SaveResponse, suivre: Track = holder.suivre): void {
 	suivre('profile_save', { section, ok: reponse.ok })
 	if (reponse.ok && reponse.devenuPublicable === true) suivre('profile_publiable')
+	if (reponse.ok && reponse.devenuIndexable === true) suivre('profile_indexable')
 }
 
 /** Counts a refused photo. A session that ended is not a refusal of the photo: nothing is counted. */

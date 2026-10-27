@@ -12,6 +12,8 @@ export type SaveResult<Valeurs extends Record<string, unknown>> =
 			valeurs: Valeurs
 			/** Set by the server when this very save made her profile « publiable » (ticket 147). */
 			devenuPublicable?: true
+			/** Set by the server when this very save made her profile « indexable » (27/10/2026). */
+			devenuIndexable?: true
 	  }
 	| {
 			ok: false

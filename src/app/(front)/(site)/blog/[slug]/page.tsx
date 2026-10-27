@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { getPayload } from 'payload'
 import { type CSSProperties, cache } from 'react'
+import { ArticleDepth } from '@/components/analytics/ArticleDepth'
 import { BlogPanel } from '@/components/art/BlogCard'
 import { GlowBlob } from '@/components/art/graphics'
 import { Pill } from '@/components/art/Pill'
@@ -121,7 +122,7 @@ export default async function ArticlePage({ params }: PageProps<'/blog/[slug]'>)
 				<article className="mx-auto max-w-3xl">
 					<header className="border-ink border-t pt-6">
 						<div className="enter flex flex-wrap items-center gap-x-4 gap-y-2" style={enterOrder(0)}>
-							<Pill href="/blog" size="sm">
+							<Pill href="/blog" size="sm" data-cta="article_retour_blog">
 								← Tous les articles
 							</Pill>
 						</div>
@@ -161,6 +162,7 @@ export default async function ArticlePage({ params }: PageProps<'/blog/[slug]'>)
 					<div className="mt-10 md:mt-14">
 						<ArticleOutline headings={outline} />
 						<ArticleBody html={html} />
+						<ArticleDepth />
 						<ArticleShare title={article.titre} url={articleUrl} />
 					</div>
 				</article>
@@ -169,7 +171,7 @@ export default async function ArticlePage({ params }: PageProps<'/blog/[slug]'>)
 			<div className="page-frame relative">
 				<RelatedArticles articles={related} />
 				<div className="mt-4">
-					<ProfileGrid titre="Des maquilleuses près de chez vous" cartes={cards} />
+					<ProfileGrid titre="Des maquilleuses près de chez vous" cartes={cards} origin="blog" />
 				</div>
 			</div>
 			<div className="mt-16 md:mt-24">

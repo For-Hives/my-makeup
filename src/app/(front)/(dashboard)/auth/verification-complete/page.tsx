@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { cookies, headers } from 'next/headers'
 import Link from 'next/link'
 import { getPayload } from 'payload'
+import { EmailConfirmedEvent } from '@/components/analytics/AccountFunnel'
 import { ART_LINK, ART_LINK_BUTTON } from '@/components/art/form-classes'
 import { AuthShell } from '@/components/auth/AuthShell'
 import { authLog } from '@/lib/auth/auth-log'
@@ -52,6 +53,7 @@ export default async function EmailConfirmation() {
 
 	return (
 		<AuthShell title={TITLES[result]} titleClassName="max-w-2xl">
+			{result === 'ok' && <EmailConfirmedEvent />}
 			<p className="max-w-sm text-mute">{TEXTS[result]}</p>
 			{sessionOffered ? (
 				<form action={continueAfterConfirmation} className="flex flex-col items-center gap-3">

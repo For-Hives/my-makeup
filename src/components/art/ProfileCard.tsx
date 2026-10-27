@@ -4,6 +4,7 @@ import { TrackedLink } from '@/components/analytics/TrackedLink'
 import { ActivityBadgePill } from '@/components/profile/ActivityBadge'
 import { ZoneText } from '@/components/profile/ZoneText'
 import { DEFAULT_PHOTO } from '@/components/search/ResultCard'
+import type { MyMakeupEvents } from '@/lib/analytics/events'
 import { ofName } from '@/lib/french-elision'
 import { formatFromShort } from '@/lib/price'
 import type { ProfileCard as ProfileCardData } from '@/services/public/profiles'
@@ -18,18 +19,36 @@ export interface ProfileCardCommonProps {
 	priority?: boolean
 	/** Rank (1-based) in a search: the click reports it with the profile. A card shown elsewhere gives none. */
 	rank?: number
+	/** The list this card is in, outside a typed search: the click is reported as `card_click` (src/lib/analytics/delegated.ts). */
+	origin?: MyMakeupEvents['card_click']['origin']
 	headingLevel?: 2 | 3
 	tint?: Tint
 	band?: ArchBand
 }
 
 /** The name of the card, as the one link that stretches over the card (so the whole card is a target, and a screen reader hears the name only). */
-function NameLink({ profile, rank, children }: { profile: ProfileCardData; rank?: number; children: ReactNode }) {
+function NameLink({
+	profile,
+	rank,
+	origin,
+	children,
+}: {
+	profile: ProfileCardData
+	rank?: number
+	origin?: ProfileCardCommonProps['origin']
+	children: ReactNode
+}) {
 	const className =
 		'inline-flex min-h-11 items-center after:absolute after:inset-0 after:z-10 focus-visible:outline-2 focus-visible:outline-indigo-700 focus-visible:outline-offset-4 hover:no-underline'
 	const href = `/profil/${profile.slug}`
 	return rank === undefined ? (
-		<Link href={href} className={className}>
+		<Link
+			href={href}
+			className={className}
+			{...(origin !== undefined && profile.pid !== null
+				? { 'data-card-origin': origin, 'data-card-pid': String(profile.pid) }
+				: {})}
+		>
 			{children}
 		</Link>
 	) : (
@@ -120,6 +139,7 @@ export function ProfileCard({
 	profile,
 	priority = false,
 	rank,
+	origin,
 	headingLevel = 3,
 	tint = 'blush',
 	band = 'band',
@@ -141,7 +161,7 @@ export function ProfileCard({
 			</div>
 			<div className="grid grid-cols-[minmax(0,1fr)] gap-2.5">
 				<Heading className="font-display font-medium text-[28px] text-ink leading-[1.1]">
-					<NameLink profile={profile} rank={rank}>
+					<NameLink profile={profile} rank={rank} origin={origin}>
 						{profile.nom}
 					</NameLink>
 				</Heading>
@@ -163,6 +183,7 @@ export function ProfileRowCard({
 	profile,
 	priority = false,
 	rank,
+	origin,
 	headingLevel = 3,
 	tint = 'blush',
 	band = 'band',
@@ -189,7 +210,7 @@ export function ProfileRowCard({
 			</div>
 			<div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-2.5">
 				<Heading className="font-display font-medium text-[22px] text-ink leading-[1.1] md:text-[26px]">
-					<NameLink profile={profile} rank={rank}>
+					<NameLink profile={profile} rank={rank} origin={origin}>
 						{profile.nom}
 					</NameLink>
 				</Heading>

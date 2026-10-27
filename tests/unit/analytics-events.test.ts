@@ -12,14 +12,42 @@ import {
 } from '@/lib/analytics/events'
 import { createTrack, type Execution, type MeasuredWindow } from '@/lib/analytics/track'
 
+/** The events, properties and values of the catalogue before the funnels of 27/10/2026: they are never renamed. */
+const BEFORE_27_OCTOBER: Record<string, Record<string, readonly string[]>> = {
+	contact_click: { pid: [], channel: ['email', 'phone', 'instagram', 'facebook', 'linkedin', 'youtube', 'website'] },
+	search_submit: { has_city: [], results: ['0', '1-5', '6-20', '21+'], from: ['formulaire', 'lien'] },
+	search_result_click: { rank: [], pid: [] },
+	cta_click: {
+		where: ['cta_recherche', 'cta_inscription', 'nav_recherche', 'nav_recherche_mobile', 'accueil_explorer'],
+	},
+	platform_contact_submit: { ok: [], status: [] },
+	not_found: { kind: ['profil', 'talent', 'blog', 'autre'] },
+	signup_start: { method: ['email', 'google'] },
+	login_result: { method: ['email', 'google'], ok: [], code: ['ok', 'identifiants-invalides', 'google-echec'] },
+	auth_error: { code: ['identifiants-invalides', 'compte-bloque'] },
+	session_expired: { where: ['api_401', 'jwt_expire', 'middleware'] },
+	profile_save: { section: ['identite', 'onboarding', 'photo'], ok: [] },
+	profile_visibility: { public: [] },
+	upload_error: { kind: ['size', 'type', 'server'] },
+	profile_publiable: {},
+	account_delete: {},
+	onboarding_step: {
+		step: ['verification_email', 'compte_cree', 'identite', 'zone', 'photo', 'contact', 'prestation', 'termine'],
+	},
+	onboarding_source: { source: ['instagram', 'google', 'bouche-a-oreille', 'ecole', 'ia', 'autre'] },
+	contact_reveal: { pid: [], channel: ['phone'] },
+	app_error: { scope: ['site', 'espace', 'global'], code: ['render', 'chunk_load', 'unknown'] },
+	'web-vitals': { name: ['CLS', 'FCP', 'INP', 'LCP', 'TTFB'], value: [], rating: ['good', 'poor'], page: [] },
+}
+
 /** One valid use of every event. A new event of the catalogue does not compile until it has its line. */
 const EXAMPLES: { [N in EventName]: MyMakeupEvents[N] } = {
 	contact_click: { pid: 12, channel: 'phone' },
-	search_submit: { has_city: true, results: '6-20', from: 'formulaire' },
+	search_submit: { has_city: true, results: '6-20', from: 'formulaire', has_word: false, zone: '74' },
 	search_result_click: { rank: 3, pid: 'v3-45' },
-	cta_click: { where: 'nav_recherche_mobile' },
+	cta_click: { where: 'nav_recherche_mobile', page: '/blog/[slug]' },
 	platform_contact_submit: { ok: false, status: 500 },
-	not_found: { kind: 'blog' },
+	not_found: { kind: 'blog', path: '/blog/article-inconnu' },
 	signup_start: { method: 'google' },
 	login_result: { method: 'email', ok: false, code: 'identifiants-invalides' },
 	auth_error: { code: 'compte-bloque' },
@@ -32,23 +60,60 @@ const EXAMPLES: { [N in EventName]: MyMakeupEvents[N] } = {
 	onboarding_step: { step: 'compte_cree' },
 	onboarding_source: { source: 'ia' },
 	contact_reveal: { pid: 7, channel: 'phone' },
-	app_error: { scope: 'site', code: 'render' },
+	app_error: { scope: 'site', code: 'render', route: '/profil/[slug]' },
+	search_refine: { results: '0', budget: 'fourchette', sort: 'price', specialty: 'wedding' },
+	card_click: { origin: 'mise_en_avant', rank: 2, pid: 9 },
+	profile_view: { pid: 'v3-3', from: 'recherche' },
+	devis_click: { pid: 4, from: 'profil' },
+	quote_submit: { pid: 4 },
+	demande_envoyee: { pid: 4, source: 'profil' },
+	quote_error: { pid: 4, cause: 'validation' },
+	signup_wall: {},
+	email_confirmed: {},
+	profile_indexable: {},
+	article_depth_50: { page: '/blog/[slug]' },
+	article_depth_90: { page: '/blog/[slug]' },
+	article_link_click: { kind: 'interne', page: '/blog/[slug]' },
+	share_click: { network: 'linkedin', page: '/blog/[slug]' },
 	'web-vitals': { name: 'LCP', value: 1234, rating: 'good', page: '/profil/exemple' },
 }
 
 describe('U82 : chaque événement appartient au catalogue fermé et ne porte aucune donnée personnelle', () => {
-	test('le catalogue est celui du plan, sans les événements du devis, avec les Web Vitals', () => {
+	test('le catalogue : les 20 événements d’avant le 27/10/2026 y sont toujours, avec leurs propriétés et leurs valeurs', () => {
 		expect(Object.keys(CATALOG).sort()).toEqual(Object.keys(EXAMPLES).sort())
-		// The 21 events of plan 04 §3.3, less the two of the quote form, plus the Web Vitals.
-		expect(Object.keys(CATALOG)).toHaveLength(20)
-		expect(Object.keys(CATALOG)).not.toContain('devis_click')
-		expect(Object.keys(CATALOG)).not.toContain('demande_envoyee')
+		// Renaming or dropping a name, a property or a value cuts its series in Umami: the catalogue only grows.
+		for (const [nameValue, properties] of Object.entries(BEFORE_27_OCTOBER)) {
+			const specs = CATALOG[nameValue as EventName] as Record<string, { type: string; values?: readonly string[] }>
+			for (const [key, values] of Object.entries(properties)) {
+				expect(specs[key], `${nameValue}.${key}`).toBeDefined()
+				for (const value of values) expect(specs[key]?.values, `${nameValue}.${key}`).toContain(value)
+			}
+		}
+		// The quote form came back with the v3 (issue 1003): its two ends take the names of plan 04.
+		expect(Object.keys(CATALOG)).toContain('devis_click')
+		expect(Object.keys(CATALOG)).toContain('demande_envoyee')
+	})
+
+	test('les usages d’avant (sans les propriétés ajoutées le 27/10/2026) passent toujours', () => {
+		expect(eventData('search_submit', { has_city: true, results: '6-20', from: 'formulaire' })).toEqual({
+			has_city: true,
+			results: '6-20',
+			from: 'formulaire',
+		})
+		expect(eventData('cta_click', { where: 'accueil_explorer' })).toEqual({ where: 'accueil_explorer' })
+		expect(eventData('not_found', { kind: 'autre' })).toEqual({ kind: 'autre' })
+		expect(eventData('app_error', { scope: 'global', code: 'render' })).toEqual({ scope: 'global', code: 'render' })
+		// An optional property, when given, is checked like any other.
+		expect(eventData('not_found', { kind: 'autre', path: 'sans-barre' })).toBeNull()
+		expect(eventData('search_submit', { has_city: true, results: '0', from: 'lien', zone: 'Annecy' })).toBeNull()
+		expect(eventData('search_submit', { has_city: true, results: '0', from: 'lien', zone: '2A' })).not.toBeNull()
+		expect(eventData('search_submit', { has_city: true, results: '0', from: 'lien', zone: 'unknown' })).not.toBeNull()
 	})
 
 	test('un nom en snake_case de 50 caractères au plus ; `web-vitals` garde son tiret, la série existe', () => {
 		for (const nameValue of Object.keys(CATALOG)) {
 			expect(nameValue.length).toBeLessThanOrEqual(NAME_MAX)
-			expect(nameValue === 'web-vitals' || /^[a-z]+(_[a-z]+)*$/.test(nameValue), nameValue).toBe(true)
+			expect(nameValue === 'web-vitals' || /^[a-z]+(_[a-z0-9]+)*$/.test(nameValue), nameValue).toBe(true)
 		}
 	})
 
@@ -60,7 +125,8 @@ describe('U82 : chaque événement appartient au catalogue fermé et ne porte au
 
 	test('un nom inconnu, une propriété en trop, une propriété manquante : l’événement tombe tout entier', () => {
 		expect(eventData('inconnu', {})).toBeNull()
-		expect(eventData('devis_click', { pid: 1, from: 'profil' })).toBeNull()
+		expect(eventData('devis_click', { pid: 1, from: 'profil', nom: 'Léa' })).toBeNull()
+		expect(eventData('devis_click', { pid: 1 })).toBeNull()
 		expect(eventData('toString', {})).toBeNull()
 		expect(eventData('cta_click', { where: 'cta_recherche', en_trop: 1 })).toBeNull()
 		expect(eventData('cta_click', {})).toBeNull()
@@ -79,14 +145,15 @@ describe('U82 : chaque événement appartient au catalogue fermé et ne porte au
 		expect(eventData('login_result', { method: 'email', ok: true, code: 'un-code-inventé' })).toBeNull()
 	})
 
-	test('les appels à l’action : le bas des pages, la barre, et depuis le 26/10/2026 le badge de l’arche de l’accueil', () => {
-		expect(CATALOG.cta_click.where.values).toEqual([
+	test('les appels à l’action : les cinq mots d’avant restent, les autres s’y ajoutent, tous distincts', () => {
+		expect(CATALOG.cta_click.where.values.slice(0, 5)).toEqual([
 			'cta_recherche',
 			'cta_inscription',
 			'nav_recherche',
 			'nav_recherche_mobile',
 			'accueil_explorer',
 		])
+		expect(new Set(CATALOG.cta_click.where.values).size).toBe(CATALOG.cta_click.where.values.length)
 		// The badge « Explorer les maquilleuses » (src/components/home/HomeHero.tsx): a value of its own, so its clicks
 		// are not mixed with those of the call to action at the foot of the page, which also leads to the search.
 		expect(eventData('cta_click', { where: 'accueil_explorer' })).toEqual({ where: 'accueil_explorer' })
@@ -355,8 +422,14 @@ describe('à la compilation : un nom inconnu ou une propriété en trop ne passe
 		followed('login_result', { method: 'google', ok: true, code: 'ok' })
 		// @ts-expect-error unknown event name
 		followed('inconnu', {})
-		// @ts-expect-error the events of the quote form are not in the catalogue
 		followed('devis_click', { pid: 1, from: 'profil' })
+		// An optional property may be left out, and is typed when given.
+		followed('not_found', { kind: 'autre' })
+		followed('not_found', { kind: 'autre', path: '/x' })
+		// @ts-expect-error an optional property is still typed
+		followed('not_found', { kind: 'autre', path: 3 })
+		// @ts-expect-error the quote form is measured with the profile
+		followed('quote_submit')
 		// @ts-expect-error extra property
 		followed('contact_click', { pid: 1, channel: 'email', nom: 'Léa' })
 		// @ts-expect-error missing property

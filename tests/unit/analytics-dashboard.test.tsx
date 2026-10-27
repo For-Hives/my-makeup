@@ -8,7 +8,7 @@ import { PhotoForm, type PhotoWork } from '@/components/direct-edit/blocks/Photo
 import { EditSession } from '@/components/direct-edit/EditSession'
 import { eventData } from '@/lib/analytics/events'
 import type { Track } from '@/lib/analytics/track'
-import { holder } from '@/lib/dashboard/analytics'
+import { holder, trackSave } from '@/lib/dashboard/analytics'
 import { MESSAGES_PHOTO } from '@/lib/dashboard/photo'
 import { uploadPhoto } from '@/lib/dashboard/photos-upload'
 import { withPublishableTransition } from '@/lib/dashboard/publishable-transition'
@@ -195,6 +195,49 @@ describe('le passage à publiable est dit par le serveur, une seule fois', () =>
 		expect(await withPublishableTransition(payload, { collection: 'pros', id: 1 } as never, async () => good)).toEqual(
 			good
 		)
+	})
+})
+
+describe('le passage à indexable est dit par le serveur, une seule fois (27/10/2026)', () => {
+	type State = { publishable: boolean; indexable: boolean }
+	function bench(etats: State[], resultat: SaveResult<{ a: string }>) {
+		const readings = [...etats]
+		const payload = {
+			find: async () => ({ docs: [{ id: 7 }] }),
+			findByID: async () => readings.shift(),
+		} as unknown as Payload
+		return withPublishableTransition(payload, { collection: 'pros', id: 1 } as never, async () => resultat)
+	}
+	const good = { ok: true, valeurs: { a: 'x' } } as const
+	const plain = { publishable: true, indexable: false }
+	const rich = { publishable: true, indexable: true }
+
+	test('publiable mais pas indexable, puis indexable : seule l’indication d’indexable est posée', async () => {
+		expect(await bench([plain, rich], good)).toEqual({ ...good, devenuIndexable: true })
+	})
+	test('un profil qui devient publiable et indexable d’un coup : les deux', async () => {
+		const empty = { publishable: false, indexable: false }
+		expect(await bench([empty, rich], good)).toEqual({ ...good, devenuPublicable: true, devenuIndexable: true })
+	})
+	test('déjà indexable, le chemin inverse, ou toujours pas : rien', async () => {
+		expect(await bench([rich, rich], good)).toEqual(good)
+		expect(await bench([rich, plain], good)).toEqual(good)
+		expect(await bench([plain, plain], good)).toEqual(good)
+	})
+	test('un enregistrement refusé : rien', async () => {
+		const refusal = { ok: false, message: FAILURE_MESSAGE } as const
+		expect(await bench([plain, rich], refusal)).toEqual(refusal)
+	})
+	test('trackSave : profile_indexable part avec profile_save, et seulement quand le serveur le dit', () => {
+		const sent: string[] = []
+		const spy = ((nom: string) => {
+			sent.push(nom)
+			return true
+		}) as unknown as Track
+		trackSave('photo', { ok: true, devenuIndexable: true }, spy)
+		trackSave('photo', { ok: true }, spy)
+		trackSave('photo', { ok: false, devenuIndexable: true } as never, spy)
+		expect(sent).toEqual(['profile_save', 'profile_indexable', 'profile_save', 'profile_save'])
 	})
 })
 

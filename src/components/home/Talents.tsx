@@ -47,6 +47,7 @@ export function Talents({ talents }: { talents: readonly TalentPublic[] }) {
 							<li key={talent.slug} className="reveal flex">
 								<Link
 									href={`/talent/${talent.slug}`}
+									data-cta="accueil_talent"
 									className="group relative flex w-full focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2"
 								>
 									<span className="flex h-full min-h-[120px] w-full items-center justify-center rounded-xl border border-indigo-900/10 px-4 py-8 text-center font-semibold text-gray-900/70 transition duration-(--duration-hover) ease-(--ease-out-soft) group-hover:opacity-0 group-focus-visible:opacity-0">

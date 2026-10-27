@@ -11,17 +11,20 @@ const BANDS: readonly ArchBand[] = ['band', 'rose', 'night']
 /**
  * The makeup artists under a zone page or a talent page, in the kit's look: the kit's arch cards in a grid (tint and band
  * cycle, so the arches differ), the link to the ranking, and the « Votre ville » field, a plain form in GET that works
- * without a script (the rules of `ProfileBlock`: the cards report no click, so the series of the search stays the
- * search; with no card there is no block and no field). `specialite` is what the search is asked for on a talent page.
+ * without a script (the cards report a `card_click` with the page as origin, never a `search_result_click`, so the series of the
+ * search stays the search; with no card there is no block and no field). `specialite` is what the search is asked for on a talent page.
  */
 export function ProfileGrid({
 	titre,
 	cartes,
 	specialite,
+	origin,
 }: {
 	titre: string
 	cartes: readonly ProfileCardData[]
 	specialite?: string
+	/** The page the grid is on: its clicks are reported as `card_click`. */
+	origin: 'zone' | 'talent' | 'blog'
 }) {
 	if (cartes.length === 0) return null
 	const headingId = 'maquilleuses-talent'
@@ -40,6 +43,7 @@ export function ProfileGrid({
 							profile={carte}
 							tint={TINTS[index % TINTS.length] ?? 'blush'}
 							band={BANDS[index % BANDS.length] ?? 'band'}
+							origin={origin}
 						/>
 					</li>
 				))}

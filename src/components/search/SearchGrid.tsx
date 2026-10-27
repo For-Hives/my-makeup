@@ -1,5 +1,5 @@
 import type { Tint } from '@/components/art/CapsuleImage'
-import { ProfileCard, ProfileRowCard } from '@/components/art/ProfileCard'
+import { ProfileCard, type ProfileCardCommonProps, ProfileRowCard } from '@/components/art/ProfileCard'
 import type { Layout } from '@/lib/search/filters'
 import type { ProfileCard as ProfileCardData } from '@/services/public/profiles'
 
@@ -21,6 +21,7 @@ export function SearchGrid({
 	premiereDeLaPage = false,
 	rangDuPremier,
 	headingLevel = 3,
+	origin,
 	rail = false,
 }: {
 	cartes: readonly ProfileCardData[]
@@ -29,6 +30,8 @@ export function SearchGrid({
 	/** Rank (1-based) of the first card in the whole list of the search, for the measure of the clicks. */
 	rangDuPremier?: number
 	headingLevel?: 2 | 3
+	/** The list of cards when it is not a typed search: their clicks are reported as `card_click`. */
+	origin?: ProfileCardCommonProps['origin']
 	/** Vertical cards on one line that slides under 768 px (a short row, not a page of results). `grid` only. */
 	rail?: boolean
 }) {
@@ -58,6 +61,7 @@ export function SearchGrid({
 						priority={premiereDeLaPage && index < PRIORITY_CARDS}
 						rank={rangDuPremier === undefined ? undefined : rangDuPremier + index}
 						headingLevel={headingLevel}
+						{...(origin !== undefined && { origin })}
 						tint={TINTS[index % TINTS.length]}
 					/>
 				</li>

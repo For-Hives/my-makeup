@@ -15,7 +15,8 @@ const TINTS = ['blush', 'lavender', 'sand'] as const
  * rule for a random six (src/lib/profile/featured.ts). It touches no node, loads no module and ships no client
  * component: the bundles do not grow, the block always holds six cards (CLS 0), and a hidden card loads no picture
  * (none is `priority`). The cards are those of the kit (`ProfileCard`, the data of the search card); their click
- * reports nothing (no rank), so the series of the search stays the search. Without a card there is no block, no
+ * is a `card_click` (origin `mise_en_avant`; the delegated listener counts the cards in view, so the drawn six are ranked 1 to 6),
+ * never a `search_result_click`, so the series of the search stays the search. Without a card there is no block, no
  * title and no empty space. The kit banner that opened the section (25/10/2026) is gone: under the hero « en arche »
  * it made a second band below the ribbon of the specialties, and Andy asked for one (26/10/2026, docs/accueil.md).
  */
@@ -40,7 +41,7 @@ export function FeaturedProfiles({ cartes }: { cartes: readonly ProfileCard[] })
 				>
 					{cartes.map((carte, index) => (
 						<li key={carte.slug} className="reveal">
-							<ArtProfileCard profile={carte} tint={TINTS[index % TINTS.length]} />
+							<ArtProfileCard profile={carte} tint={TINTS[index % TINTS.length]} origin="mise_en_avant" />
 						</li>
 					))}
 				</ul>

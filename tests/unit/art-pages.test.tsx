@@ -175,11 +175,13 @@ describe('À propos : l’énoncé et deux arches (disposition D)', () => {
 
 describe('ProfileGrid : zones et talents', () => {
 	test('sans carte, ni bloc ni champ', () => {
-		expect(html(<ProfileGrid titre="Des maquilleuses" cartes={[]} />)).toBe('')
+		expect(html(<ProfileGrid titre="Des maquilleuses" cartes={[]} origin="zone" />)).toBe('')
 	})
 
 	test('les cartes de la recherche, sans mesure de clic ; « Votre ville » en GET vers la recherche', () => {
-		const markup = html(<ProfileGrid titre="Des maquilleuses pour votre x" cartes={[CARD]} specialite="Mariage" />)
+		const markup = html(
+			<ProfileGrid titre="Des maquilleuses pour votre x" cartes={[CARD]} specialite="Mariage" origin="talent" />
+		)
 		expect(markup).toContain('data-testid="bloc-maquilleuses"')
 		expect(markup).toContain('aria-labelledby="maquilleuses-talent"')
 		expect(markup).toContain('href="/profil/zoe-fictive"')
@@ -192,6 +194,6 @@ describe('ProfileGrid : zones et talents', () => {
 	})
 
 	test('sur une page de zone : pas de spécialité dans le formulaire', () => {
-		expect(html(<ProfileGrid titre="t" cartes={[CARD]} />)).not.toContain('name="specialite"')
+		expect(html(<ProfileGrid titre="t" cartes={[CARD]} origin="zone" />)).not.toContain('name="specialite"')
 	})
 })

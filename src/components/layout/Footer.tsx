@@ -38,6 +38,7 @@ export function Footer() {
 									<li key={reseau.href}>
 										<Link
 											href={reseau.href}
+											data-cta="footer_reseau"
 											rel="noopener nofollow noreferrer"
 											aria-label={'icon' in reseau ? reseau.nom : undefined}
 											className="grid size-11 place-items-center rounded-full border border-ink hover:bg-art-blush hover:no-underline"
@@ -59,6 +60,7 @@ export function Footer() {
 									<Link
 										key={lien.href}
 										href={lien.href}
+										data-cta={lien.cta}
 										className="inline-flex min-h-11 items-center text-mute text-sm hover:text-indigo-700"
 									>
 										{lien.nom}

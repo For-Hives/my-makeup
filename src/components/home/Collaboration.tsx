@@ -4,6 +4,7 @@ import type { Tint } from '@/components/art/CapsuleImage'
 import { GlowBlob, PrintMark } from '@/components/art/graphics'
 import { Pill } from '@/components/art/Pill'
 import { TitleAccent, type TitleSegment, TitleWithCapsules } from '@/components/art/TitleWithCapsules'
+import type { MyMakeupEvents } from '@/lib/analytics/events'
 import { SOURCE_ASPECTS } from './photo-aspects'
 import { SectionHead } from './SectionHead'
 
@@ -13,7 +14,7 @@ interface Block {
 	tint: Tint
 	band: 'band' | 'rose'
 	paragraphes: readonly string[]
-	bouton: { href: string; libelle: string }
+	bouton: { href: string; libelle: string; cta: MyMakeupEvents['cta_click']['where'] }
 	image: { src: string; alt: string }
 	/** The picture on the left on a large screen. */
 	imageAGauche: boolean
@@ -33,7 +34,7 @@ const BLOCKS: readonly Block[] = [
 			'Vous cherchez à vous épanouir dans votre carrière de maquilleuse professionnelle ? Ne cherchez plus, My-Makeup est la solution idéale pour vous !',
 			'Avec My-Makeup, vous créez gratuitement votre page professionnelle : portfolio, spécialités, tarifs et coordonnées. Les particuliers qui cherchent une maquilleuse vous contactent directement.',
 		],
-		bouton: { href: '/auth/signup', libelle: 'Rejoindre la communauté' },
+		bouton: { href: '/auth/signup', libelle: 'Rejoindre la communauté', cta: 'accueil_collab_rejoindre' },
 		image: {
 			src: '/assets/maquilleuse_mariage.webp',
 			alt: 'Maquilleuse pour un mariage',
@@ -53,7 +54,7 @@ const BLOCKS: readonly Block[] = [
 			'Vous êtes spécialisée en maquillage pour les mariées ou en maquillage artistique ? Vous cherchez à travailler à Lyon, Nantes, Toulouse, Rennes, Lille, Cannes ou Paris ? Pas de problème ! Avec My-Makeup, les gens qui en ont besoin peuvent vous trouver facilement.',
 			"N'attendez plus pour rejoindre la communauté de maquilleuses professionnelles de My-Makeup. Avec notre plateforme, vous présentez votre travail à de nouvelles clientes et développez votre activité à votre rythme. Inscrivez-vous dès maintenant et commencez à construire votre avenir professionnel dès aujourd'hui !",
 		],
-		bouton: { href: '/auth/signup', libelle: "J'améliore ma visibilité" },
+		bouton: { href: '/auth/signup', libelle: "J'améliore ma visibilité", cta: 'accueil_collab_visibilite' },
 		image: {
 			src: '/assets/maquilleuse_soiree.webp',
 			alt: 'Maquilleuse soirées',
@@ -73,7 +74,7 @@ const BLOCKS: readonly Block[] = [
 			"Trouvez votre experte en maquillage pour les mariées, une maquilleuse artistique, professionnelle ou spécialisée en maquillage yeux ou en maquillage de soirée. Besoin d'une maquilleuse fx pour un projet cinéma ou d'une maquilleuse événementielle pour une soirée spéciale ? Nous avons ce qu'il vous faut !",
 			"Nous sommes là pour faciliter votre recherche de maquilleuse freelance. Une fois que vous avez trouvé la bonne personne, il ne vous reste plus qu'à la contacter. Alors n'attendez plus, lancez votre recherche dès maintenant et trouvez votre maquilleuse de rêve en quelques clics !",
 		],
-		bouton: { href: '/search', libelle: 'Trouver la maquilleuse parfaite' },
+		bouton: { href: '/search', libelle: 'Trouver la maquilleuse parfaite', cta: 'accueil_collab_trouver' },
 		image: {
 			src: '/assets/maquilleuse_evenementiel.webp',
 			alt: 'Maquilleuse evenementiel',
@@ -93,7 +94,7 @@ const BLOCKS: readonly Block[] = [
 			"Avec My-Makeup, vous pouvez également trouver des maquilleuses fx pour vos projets cinéma ou des maquilleuses événementielles pour vos soirées spéciales. Besoin d'une maquilleuse à domicile ou pour un anniversaire ? Nous avons également des profils adaptés à vos besoins.",
 			'Profils, portfolios et tarifs indicatifs sont réunis au même endroit : comparez les maquilleuses, puis contactez directement celle qui vous plaît. La recherche est gratuite et ne demande aucune inscription.',
 		],
-		bouton: { href: '/search', libelle: 'Découvrir notre solution' },
+		bouton: { href: '/search', libelle: 'Découvrir notre solution', cta: 'accueil_collab_solution' },
 		image: { src: '/assets/maquilleuse_fx.webp', alt: 'Maquilleuse fx' },
 		imageAGauche: true,
 	},
@@ -134,7 +135,7 @@ export function Collaboration() {
 									))}
 								</div>
 								<div className="reveal flex">
-									<Pill href={bloc.bouton.href} variant="filled" arrow>
+									<Pill href={bloc.bouton.href} variant="filled" arrow data-cta={bloc.bouton.cta}>
 										{bloc.bouton.libelle}
 									</Pill>
 								</div>

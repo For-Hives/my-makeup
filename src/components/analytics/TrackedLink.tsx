@@ -4,6 +4,7 @@ import Link from 'next/link'
 import type { ComponentProps } from 'react'
 import type { MyMakeupEvents } from '@/lib/analytics/events'
 import { track } from '@/lib/analytics/track'
+import { routeOf } from '@/lib/analytics/values'
 
 /** The clicks a link reports: serializable, so a server page can give it. */
 export type TrackedClick =
@@ -24,8 +25,9 @@ export function TrackedLink({ suivi, onClick, ...reste }: ComponentProps<typeof 
 			{...reste}
 			onClick={evenement => {
 				onClick?.(evenement)
-				if (suivi.nom === 'cta_click') track('cta_click', suivi.proprietes)
-				else if (suivi.nom === 'nav_recherche') track('cta_click', { where: whereIsTheButton() })
+				const page = routeOf(location.pathname)
+				if (suivi.nom === 'cta_click') track('cta_click', { ...suivi.proprietes, page })
+				else if (suivi.nom === 'nav_recherche') track('cta_click', { where: whereIsTheButton(), page })
 				else track('search_result_click', suivi.proprietes)
 			}}
 		/>

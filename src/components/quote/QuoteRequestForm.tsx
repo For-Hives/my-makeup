@@ -3,6 +3,9 @@
 import { type ReactNode, useActionState, useEffect, useMemo, useRef } from 'react'
 import { ART_FIELD, ART_NOTICE, ART_SUBMIT } from '@/components/art/form-classes'
 import { TurnstileWidget } from '@/components/contact/TurnstileWidget'
+import type { MyMakeupEvents, Pid } from '@/lib/analytics/events'
+import { profileVisitCounts } from '@/lib/analytics/my-pid'
+import { track } from '@/lib/analytics/track'
 import {
 	QUOTE_ERRORS_SUMMARY,
 	QUOTE_LIMITS,
@@ -36,6 +39,15 @@ export function withNetworkFailure(action: QuoteAction): QuoteAction {
 }
 
 const FIELD = ART_FIELD
+
+/** Why a request did not go through, as the measure words it (never what was typed). */
+function errorCause(state: NonNullable<QuoteState>): MyMakeupEvents['quote_error']['cause'] {
+	if ('errors' in state) return 'validation'
+	if ('throttled' in state) return 'trop_de_demandes'
+	if ('verification' in state) return 'verification'
+	if ('unavailable' in state) return 'indisponible'
+	return 'echec'
+}
 
 const LABELS: Record<Exclude<QuoteField, 'consent'>, string> = {
 	eventDate: 'Date de l’événement',
@@ -91,15 +103,22 @@ function Field({
  * - What she typed stays in the fields after a failure. React empties a form once its action has answered, so
  *   the fields are remounted with each answer and take her typing back as their value.
  * - Every target is 44 px high. A trap field and the Turnstile widget keep the robots out, as on the contact form.
+ * - The audience measure (27/10/2026) follows the request from its start to its end: `devis_click` at the first field she
+ *   touches, `quote_submit` when she sends it, then `demande_envoyee` or `quote_error` with the cause. Nothing typed
+ *   leaves, and the artist herself is not counted (`profileVisitCounts`). The form is given the `pid` of the profile,
+ *   which is public; the slug never goes into an event.
  */
 export function QuoteRequestForm({
 	action,
 	slug,
+	pid,
 	siteKey,
 }: {
 	action: QuoteAction
 	/** The slug of the profile the form is on. */
 	slug: string
+	/** The id the measure counts the profile under; none, nothing is measured. */
+	pid: Pid | null
 	/** The public key of the Turnstile widget. Without it, no widget. */
 	siteKey?: string
 }) {
@@ -115,6 +134,19 @@ export function QuoteRequestForm({
 	useEffect(() => {
 		if (!pending) lock.current = false
 	}, [pending, state])
+
+	// The steps of the request for the measure, once for each answer of the server.
+	const started = useRef(false)
+	useEffect(() => {
+		if (state === null || pid === null) return
+		const event = () => {
+			if ('sent' in state) track('demande_envoyee', { pid, source: 'profil' })
+			else track('quote_error', { pid, cause: errorCause(state) })
+		}
+		void profileVisitCounts(pid).then(counts => {
+			if (counts) event()
+		})
+	}, [state, pid])
 
 	// The first field in error takes the focus, once the fields are remounted.
 	useEffect(() => {
@@ -149,9 +181,23 @@ export function QuoteRequestForm({
 			action={submit}
 			noValidate
 			data-testid="devis-formulaire"
+			onFocus={() => {
+				if (started.current || pid === null) return
+				started.current = true
+				void profileVisitCounts(pid).then(counts => {
+					if (counts) track('devis_click', { pid, from: 'profil' })
+				})
+			}}
 			onSubmit={event => {
-				if (lock.current) event.preventDefault()
-				else lock.current = true
+				if (lock.current) {
+					event.preventDefault()
+					return
+				}
+				lock.current = true
+				if (pid !== null)
+					void profileVisitCounts(pid).then(counts => {
+						if (counts) track('quote_submit', { pid })
+					})
 			}}
 			className="relative"
 		>

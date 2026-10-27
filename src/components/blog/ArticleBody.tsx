@@ -9,6 +9,7 @@ export function ArticleBody({ html }: { html: string }) {
 	return (
 		<div
 			data-testid="article-body"
+			data-article-body=""
 			className="article-prose"
 			// the HTML comes from markdownToDocument, which sanitizes it (rehype-sanitize).
 			dangerouslySetInnerHTML={{ __html: html }}

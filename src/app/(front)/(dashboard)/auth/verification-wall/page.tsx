@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { SignupWallEvent } from '@/components/analytics/AccountFunnel'
 import { ART_LINK } from '@/components/art/form-classes'
 import { AuthShell } from '@/components/auth/AuthShell'
 import { ResendForm } from '@/components/auth/ResendForm'
@@ -16,6 +17,7 @@ export const metadata: Metadata = {
 export default function VerificationWall() {
 	return (
 		<AuthShell title="Vérifie ton adresse email My Makeup">
+			<SignupWallEvent />
 			<p className="max-w-sm text-mute">
 				Regarde ta boîte mail pour valider ton inscription. Tu n’as pas reçu d’email ? Regarde dans tes spams !
 			</p>

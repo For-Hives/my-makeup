@@ -128,7 +128,7 @@ export function NoResult({
 				</ul>
 				<p className={STATE_TEXT}>
 					Vous êtes maquilleuse professionnelle ?{' '}
-					<a href="/auth/signup" className={LINK}>
+					<a href="/auth/signup" data-cta="recherche_vide_inscription" className={LINK}>
 						Créez votre profil
 					</a>{' '}
 					pour apparaître dans les résultats.

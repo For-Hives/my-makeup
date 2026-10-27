@@ -69,7 +69,7 @@ export function PageHead({
 					style={{ '--enter-i': 2 } as CSSProperties}
 				>
 					{signUp && (
-						<Pill href="/auth/signin" variant="filled" arrow>
+						<Pill href="/auth/signin" variant="filled" arrow data-cta="page_connexion">
 							S&apos;inscrire sur My-Makeup
 						</Pill>
 					)}

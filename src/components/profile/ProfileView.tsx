@@ -181,6 +181,7 @@ export function ProfileView({
 						<QuoteRequestForm
 							action={quote.action}
 							slug={profil.slug}
+							pid={mesure ? profil.pid : null}
 							{...(quote.siteKey !== undefined && { siteKey: quote.siteKey })}
 						/>
 					</ProfileSection>

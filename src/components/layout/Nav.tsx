@@ -166,7 +166,7 @@ export function Nav() {
 				aria-label="Navigation principale"
 				className="relative mx-auto flex max-w-screen-2xl flex-wrap items-center justify-between gap-x-10 px-6 py-3 lg:flex-nowrap lg:px-10 lg:py-5 xl:px-16"
 			>
-				<Link href="/" prefetch={false} className={`-m-1.5 p-1.5 ${RING}`}>
+				<Link href="/" prefetch={false} data-cta="nav_logo" className={`-m-1.5 p-1.5 ${RING}`}>
 					<span className="sr-only">My-Makeup</span>
 					<Image alt="Logo My-Makeup" width={50} height={50} src="/assets/logo.webp" priority />
 				</Link>
@@ -207,6 +207,7 @@ export function Nav() {
 								{'href' in entry ? (
 									<Link
 										href={entry.href}
+										data-cta={entry.cta}
 										aria-current={path === entry.href ? 'page' : undefined}
 										className={`nav-link ${RING}`}
 									>
@@ -251,6 +252,7 @@ export function Nav() {
 													<li key={child.href}>
 														<Link
 															href={child.href}
+															data-cta={child.cta}
 															aria-labelledby={`${ids}-${entryIndex}-${childIndex}`}
 															aria-current={path === child.href ? 'page' : undefined}
 															className={`nav-sub ${RING}`}
@@ -276,7 +278,7 @@ export function Nav() {
 						</TrackedLink>
 						{signedIn ? (
 							<>
-								<Link href={DASHBOARD_LINK.href} className={`nav-link ${RING}`}>
+								<Link href={DASHBOARD_LINK.href} data-cta="nav_espace" className={`nav-link ${RING}`}>
 									{DASHBOARD_LINK.nom}
 								</Link>
 								<form action={signOut}>
@@ -286,7 +288,7 @@ export function Nav() {
 								</form>
 							</>
 						) : (
-							<Link href={SIGN_IN_LINK.href} className={`nav-link ${SIGN_IN_PILL} ${RING}`}>
+							<Link href={SIGN_IN_LINK.href} data-cta="nav_connexion" className={`nav-link ${SIGN_IN_PILL} ${RING}`}>
 								{SIGN_IN_LINK.nom}
 							</Link>
 						)}

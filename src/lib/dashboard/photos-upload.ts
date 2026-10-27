@@ -116,7 +116,7 @@ export interface PhotoToSend {
 }
 
 export type UploadOutcome<Valeurs extends Record<string, unknown>> =
-	| { ok: true; valeurs: Valeurs; devenuPublicable?: true }
+	| { ok: true; valeurs: Valeurs; devenuPublicable?: true; devenuIndexable?: true }
 	| {
 			ok: false
 			message: string
