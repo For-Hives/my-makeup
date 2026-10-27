@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Icon } from '@/components/art/Icon'
 import type { EditBanner as Banner } from '@/lib/dashboard/edit-banner'
 
 const LINK =
@@ -29,7 +30,7 @@ function content(banner: Banner) {
 		return (
 			<>
 				<p className="flex items-start gap-2 text-base text-ink">
-					<Icon kind="alert" />
+					<KindIcon kind="alert" />
 					<span>
 						<strong className="font-semibold">Ton profil n’est pas encore visible.</strong> Il manque :
 					</span>
@@ -51,7 +52,7 @@ function content(banner: Banner) {
 		return (
 			<p className="flex flex-wrap items-center gap-x-4 gap-y-2 text-base text-ink">
 				<span className="flex items-center gap-2 font-semibold text-ok">
-					<Icon kind="check" />
+					<KindIcon kind="check" />
 					Ton profil est visible
 				</span>
 				{banner.paused ? (
@@ -73,7 +74,7 @@ function content(banner: Banner) {
 				: 'Compte interne My Makeup'
 	return (
 		<p className="flex items-start gap-2 text-base text-ink">
-			<Icon kind="alert" />
+			<KindIcon kind="alert" />
 			<span>
 				<strong className="font-semibold">{title}.</strong> {banner.note}
 			</span>
@@ -81,28 +82,6 @@ function content(banner: Banner) {
 	)
 }
 
-function Icon({ kind }: { kind: 'alert' | 'check' }) {
-	return (
-		<svg
-			aria-hidden="true"
-			width="20"
-			height="20"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2.2"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-			className="mt-0.5 shrink-0"
-		>
-			{kind === 'check' ? (
-				<path d="M5 12.5l4.5 4.5L19 7.5" />
-			) : (
-				<>
-					<circle cx="12" cy="12" r="9" />
-					<path d="M12 7v6M12 16.5v.5" />
-				</>
-			)}
-		</svg>
-	)
+function KindIcon({ kind }: { kind: 'alert' | 'check' }) {
+	return <Icon name={kind === 'check' ? 'check' : 'alert-circle'} className="mt-0.5 h-5 w-5 shrink-0" />
 }

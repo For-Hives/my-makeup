@@ -1,4 +1,5 @@
 import Image from 'next/image'
+import { Icon, type IconName } from '@/components/art/Icon'
 import type { Pid } from '@/lib/analytics/events'
 import type {
 	ContactLink,
@@ -42,23 +43,35 @@ export function SectionDescription({ lignes }: { lignes: readonly string[] }) {
 export function TravelSection({ phrase }: { phrase: string }) {
 	return (
 		<p className="flex w-full min-w-0 items-center gap-3 rounded border border-gray-300 bg-white p-6 text-gray-800 sm:px-8">
-			<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className="h-6 w-6 shrink-0 text-indigo-900">
-				<path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5Z" />
-			</svg>
+			<Icon name="pin" className="h-6 w-6 shrink-0 text-indigo-900" />
 			<span className="min-w-0 break-words">{phrase}</span>
 		</p>
 	)
 }
 
-/** The icon of each channel: the files of the site online, in public/assets/brand. */
-const ICONS: Readonly<Record<ContactLink['canal'], string>> = {
+/** The mark of each social network: the official logos (trademarks), kept as they are, in public/assets/brand. */
+const BRAND_MARKS: Readonly<Partial<Record<ContactLink['canal'], string>>> = {
 	instagram: '/assets/brand/037-instagram.svg',
 	facebook: '/assets/brand/006-facebook.svg',
 	linkedin: '/assets/brand/030-linkedin.svg',
 	youtube: '/assets/brand/033-youtube.svg',
-	email: '/assets/brand/050-email.svg',
-	phone: '/assets/brand/051-phone.svg',
-	website: '/assets/brand/052-website.svg',
+}
+
+/** The other channels (an email, a telephone, a website) are not brands: they take the pack's own icons. */
+const CHANNEL_ICONS: Readonly<Partial<Record<ContactLink['canal'], IconName>>> = {
+	email: 'mail',
+	phone: 'phone',
+	website: 'globe',
+}
+
+function ChannelMark({ canal }: { canal: ContactLink['canal'] }) {
+	const brand = BRAND_MARKS[canal]
+	if (brand) return <Image src={brand} alt="" width={35} height={35} className="shrink-0" />
+	return (
+		<span className="grid size-[35px] shrink-0 place-items-center rounded-full bg-indigo-50 text-indigo-900">
+			<Icon name={CHANNEL_ICONS[canal] ?? 'globe'} className="h-5 w-5" />
+		</span>
+	)
 }
 
 /** Networks and websites open in a new tab; an email and a telephone do not. */
@@ -113,7 +126,7 @@ export function SectionContacts({
 				{liens.map(({ canal, libelle, affichage, href }) => (
 					<li key={canal} className="flex min-w-0 items-center gap-3 text-sm">
 						{/* The name of the channel is written next to the icon: the icon only decorates. */}
-						<Image src={ICONS[canal]} alt="" width={35} height={35} className="shrink-0" />
+						<ChannelMark canal={canal} />
 						<div className="min-w-0">
 							<span className="block font-semibold text-gray-700">{CHANNEL_LABELS[canal]}</span>
 							{href ? (
@@ -228,18 +241,10 @@ export function ServiceOffersSection({ prestations }: { prestations: readonly Pu
 									<details key={`${place}-${option.nom}`} className="group border-gray-300 border-t py-4">
 										<summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-gray-700 group-open:text-indigo-900 focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2">
 											<span className="min-w-0 break-words">{option.nom}</span>
-											<svg
-												viewBox="0 0 20 20"
-												fill="currentColor"
-												aria-hidden="true"
+											<Icon
+												name="chevron-right"
 												className="h-5 w-5 shrink-0 transition-transform group-open:rotate-90"
-											>
-												<path
-													fillRule="evenodd"
-													d="M7.21 14.77a.75.75 0 0 1 .02-1.06L11.17 10 7.23 6.29a.75.75 0 1 1 1.04-1.08l4.5 4.25a.75.75 0 0 1 0 1.08l-4.5 4.25a.75.75 0 0 1-1.06-.02Z"
-													clipRule="evenodd"
-												/>
-											</svg>
+											/>
 										</summary>
 										<div className="pt-4">
 											<PriceAndDescription element={option} />

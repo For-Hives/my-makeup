@@ -18,7 +18,7 @@ describe('the footer', () => {
 		}
 		for (const network of NETWORKS) {
 			expect(html).toContain(`href="${network.href}"`)
-			expect(html).toContain(`alt="${network.nom}"`)
+			expect(html).toContain('icon' in network ? `aria-label="${network.nom}"` : `alt="${network.nom}"`)
 		}
 		expect(html).toContain('Sciez,')
 		expect(html).toContain('Haute-Savoie')

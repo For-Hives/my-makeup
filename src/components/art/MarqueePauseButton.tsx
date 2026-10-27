@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Icon } from './graphics'
+import { IconPath } from './IconPath'
+import { ICON_PAUSE, ICON_PLAY } from './icons'
 
 /**
  * The pause button of the scrolling banner (WCAG 2.2.2: moving text that lasts more than five seconds can be stopped).
@@ -35,7 +36,7 @@ export function MarqueePauseButton() {
 				button.current?.closest('.art-marquee')?.setAttribute('data-paused', String(next))
 			}}
 		>
-			<Icon name={paused ? 'play' : 'pause'} className="h-4 w-4" />
+			<IconPath d={paused ? ICON_PLAY : ICON_PAUSE} className="h-4 w-4" />
 		</button>
 	)
 }

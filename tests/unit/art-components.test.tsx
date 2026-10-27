@@ -9,6 +9,8 @@ import { CapsuleImage } from '@/components/art/CapsuleImage'
 import { Chip } from '@/components/art/Chip'
 import { LINE_DRAWINGS, type LineDrawingName, MAKEUP_OBJECTS, type MakeupObjectName } from '@/components/art/drawings'
 import { GlowBlob, Hairline, Icon, LineDrawing, MakeupObject, PrintMark } from '@/components/art/graphics'
+import { IconPath } from '@/components/art/IconPath'
+import { ICON_CLOSE, ICONS, type IconName } from '@/components/art/icons'
 import { MarqueeBanner } from '@/components/art/MarqueeBanner'
 import { Pill } from '@/components/art/Pill'
 import { ProfileCard, ProfileRowCard } from '@/components/art/ProfileCard'
@@ -68,36 +70,72 @@ describe('the drawn assets', () => {
 		}
 	})
 
-	test('the drawings take currentColor, so a class sets their colour: an outline, never a filled shape', () => {
-		for (const markup of [html(<MakeupObject name="brush" />), html(<LineDrawing name="eye" />)]) {
-			expect(markup).toContain('stroke="currentColor"')
-			expect(markup).toContain('fill="none"')
-			expect(markup).toContain('class="art-drawing')
-			expect(markup).not.toContain('fill-rule')
+	test('the drawings take currentColor, so a class sets their colour: one filled path, never a stroke', () => {
+		for (const markup of [
+			html(<MakeupObject name="brush" />),
+			html(<LineDrawing name="eye" />),
+			html(<Icon name="search" />),
+		]) {
+			expect(markup).toContain('fill="currentColor"')
+			expect(markup).toContain('fill-rule="evenodd"')
+			expect(markup.match(/<path /g)).toHaveLength(1)
+			expect(markup).not.toContain('stroke')
 			expect(markup).not.toMatch(/(?:href|style|onload|onclick)=/)
 		}
+		expect(html(<MakeupObject name="brush" />)).toContain('class="art-drawing')
 		expect(html(<PrintMark kind="plus" />)).toContain('stroke="currentColor"')
 	})
 
-	test('every makeup object and line drawing is a family of bare shapes on the same 48 grid', () => {
-		for (const name of Object.keys(MAKEUP_OBJECTS) as MakeupObjectName[]) {
-			const markup = html(<MakeupObject name={name} />)
-			expect(markup).toContain('viewBox="0 0 48 48"')
-			expect(markup).toMatch(/<(path|rect|circle|ellipse|line|polyline|polygon) /)
-		}
+	test('every makeup object, line drawing and icon is a path of the same 24 grid', () => {
+		for (const name of Object.keys(MAKEUP_OBJECTS) as MakeupObjectName[])
+			expect(html(<MakeupObject name={name} />)).toContain('viewBox="0 0 24 24"')
 		for (const name of Object.keys(LINE_DRAWINGS) as LineDrawingName[])
-			expect(html(<LineDrawing name={name} />)).toContain('viewBox="0 0 48 48"')
+			expect(html(<LineDrawing name={name} />)).toContain('viewBox="0 0 24 24"')
+		for (const name of Object.keys(ICONS) as IconName[]) {
+			const markup = html(<Icon name={name} />)
+			expect(markup).toContain('viewBox="0 0 24 24"')
+			expect(markup).toContain('aria-hidden="true"')
+		}
 		expect(Object.keys(MAKEUP_OBJECTS).sort()).toEqual(
-			['brush', 'comb', 'compact', 'lipstick', 'mascara', 'mirror', 'nail-polish', 'perfume'].sort()
+			[
+				'brush',
+				'camera',
+				'comb',
+				'compact',
+				'dress',
+				'eyelash-curler',
+				'eyeliner',
+				'eyeshadow-palette',
+				'foundation',
+				'hair-dryer',
+				'lipstick',
+				'makeup-bag',
+				'mascara',
+				'mirror',
+				'nail-polish',
+				'perfume',
+				'ring',
+				'scissors',
+				'sponge',
+			].sort()
 		)
 		expect(Object.keys(LINE_DRAWINGS).sort()).toEqual(['eye', 'lips'])
 	})
 
-	test('the drawing data is clean: no metadata, no background, no fill, no script, no link', () => {
-		const source = readFileSync(join(ROOT, 'src/components/art/drawings.ts'), 'utf8')
-		const data = source.slice(source.indexOf('export const MAKEUP_OBJECTS'))
-		for (const forbidden of ['c2pa', 'metadata', 'rgb(255', '<script', 'xmlns', 'fill', 'href', 'clip-path', 'style'])
-			expect(data.toLowerCase()).not.toContain(forbidden)
+	test('the drawing data is clean: no metadata, no background, no stroke, no script, no link', () => {
+		for (const file of ['drawings.ts', 'icons.ts']) {
+			const source = readFileSync(join(ROOT, 'src/components/art', file), 'utf8')
+			const data = source.slice(source.indexOf('export const'))
+			for (const forbidden of ['c2pa', 'metadata', 'rgb(255', '<script', 'xmlns', 'fill', 'stroke', 'href', 'style'])
+				expect(data.toLowerCase()).not.toContain(forbidden)
+		}
+	})
+
+	test('an icon is drawn by IconPath, a server component names it, a client one imports its constant', () => {
+		const path = html(<IconPath d={ICON_CLOSE} className="h-6 w-6" />)
+		expect(path).toBe(html(<Icon name="close" className="h-6 w-6" />))
+		expect(readFileSync(join(ROOT, 'src/components/art/IconPath.tsx'), 'utf8')).not.toContain('./icons')
+		expect(readFileSync(join(ROOT, 'src/components/art/MarqueePauseButton.tsx'), 'utf8')).toContain("from './IconPath'")
 	})
 
 	test('the glow is a soft gradient, in three sizes, that never takes a click', () => {

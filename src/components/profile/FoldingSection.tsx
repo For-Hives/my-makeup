@@ -1,6 +1,8 @@
 'use client'
 
 import { type ReactNode, useEffect, useRef } from 'react'
+import { IconPath } from '@/components/art/IconPath'
+import { ICON_CHEVRON_RIGHT } from '@/components/art/icons'
 
 /**
  * A card of the page of a profile that folds on a phone (ticket 304): skills, languages, courses and
@@ -35,18 +37,10 @@ export function FoldingSection({ titre, children }: { titre: string; children: R
 					className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 px-6 pt-6 pb-6 group-open:pb-4 sm:px-8 sm:pt-8 md:cursor-default [&::-webkit-details-marker]:hidden focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2"
 				>
 					<h2 className="font-bold text-gray-700 text-xl">{titre}</h2>
-					<svg
-						viewBox="0 0 20 20"
-						fill="currentColor"
-						aria-hidden="true"
+					<IconPath
+						d={ICON_CHEVRON_RIGHT}
 						className="h-5 w-5 shrink-0 text-gray-700 transition-transform group-open:rotate-90 md:hidden"
-					>
-						<path
-							fillRule="evenodd"
-							d="M7.21 14.77a.75.75 0 0 1 .02-1.06L11.17 10 7.23 6.29a.75.75 0 1 1 1.04-1.08l4.5 4.25a.75.75 0 0 1 0 1.08l-4.5 4.25a.75.75 0 0 1-1.06-.02Z"
-							clipRule="evenodd"
-						/>
-					</svg>
+					/>
 				</summary>
 				<div className="flex w-full flex-col gap-4 px-6 pb-6 sm:px-8 sm:pb-8">{children}</div>
 			</details>

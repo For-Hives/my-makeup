@@ -14,6 +14,7 @@ import { JSDOM } from 'jsdom'
 import { act } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import sharp from 'sharp'
+import { ICONS } from '@/components/art/icons'
 import {
 	ARCH_OBSERVER_STEPS,
 	archSeenBy,
@@ -137,8 +138,8 @@ describe('le texte et le formulaire : rien de plus', () => {
 		for (const icon of icons) expect(icon).toContain('aria-hidden="true"')
 		// The calendar and the pin of the art direction kit (`Icon`, the icons of the search page): no four-point star,
 		// which Andy refused on 25/10/2026 (docs/direction-artistique.md).
-		expect(icons[0]).toMatch(/<rect\b/)
-		expect(icons[1]).toMatch(/<circle\b/)
+		expect(icons[0]).toContain(ICONS.calendar)
+		expect(icons[1]).toContain(ICONS.pin)
 		expect(form).not.toContain('M12 4c.5 4.6')
 		expect(form).toContain('<label for="accueil-evenement" class="guided-search-label">Pour quel événement ?</label>')
 		expect(form).toContain('<label for="accueil-lieu" class="guided-search-label">Où ?</label>')

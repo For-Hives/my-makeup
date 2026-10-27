@@ -1918,12 +1918,10 @@ main:has(> .home-section) {
 	translate: -50% -50%;
 }
 
-/* The drawings (makeup objects, line drawings): one stroke for the whole family, a fixed number of screen pixels at every size (non-scaling), like the hairlines of the kit. A parent may set `--art-drawing-stroke`. */
+/* The drawings (makeup objects, line drawings): filled paths in `currentColor`, no stroke. Their line is part of the shape (about 1 of 24), so it scales with the drawing. */
 .art-drawing {
-	stroke-width: var(--art-drawing-stroke, 1.75px);
-}
-.art-drawing * {
-	vector-effect: non-scaling-stroke;
+	fill: currentColor;
+	stroke: none;
 }
 
 /* Glow: a very soft coloured light behind a section. Large and wide on purpose, no hard edge. The parent clips it (`overflow-hidden`). */

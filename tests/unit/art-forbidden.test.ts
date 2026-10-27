@@ -2,6 +2,9 @@ import { describe, expect, test } from 'bun:test'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { LINE_DRAWINGS, MAKEUP_OBJECTS } from '@/components/art/drawings'
+import { ICONS } from '@/components/art/icons'
+import { pathOf } from '../../scripts/art/build-drawings'
+import { ALL_ICON_ORIGINS } from '../../scripts/art/icon-origins'
 
 /**
  * What the art direction forbids, held by the code (issue 1111). The owner did not like the 4-point sparkles and the
@@ -65,14 +68,15 @@ describe('the removed sparkle and flower assets', () => {
 	})
 })
 
-describe('the drawings are real, licensed, listed', () => {
+describe('the icon pack is custom, listed, with its origin', () => {
 	const credits = readFileSync(join(ROOT, 'docs/credits-svg.md'), 'utf8')
-	const ACCEPTED = ['Apache-2.0', 'MIT', 'ISC', 'CC0-1.0']
-	/** A credits row: | `name` | upstream file | author | SPDX licence | modification |. */
+	/** A credits row: | `name` | origin | source file | role |. */
 	const rows = credits
 		.split('\n')
 		.filter(line => line.startsWith('| `'))
 		.map(line => line.split('|').map(cell => cell.trim()))
+	const ORIGIN_LABEL = { traced: 'Généré par IA, tracé', hand: 'Dessiné à la main' } as const
+	const ICON_FOLDER = join(ROOT, 'scripts/art/icons')
 
 	test('no file or export of the art layer is named as generated art, and the AI-generated data file is gone', () => {
 		const offenders: string[] = []
@@ -89,36 +93,93 @@ describe('the drawings are real, licensed, listed', () => {
 		expect(existsSync(join(SRC, 'components/art/generated-art.ts'))).toBe(false)
 	})
 
-	test('every drawing of the data module has a row in docs/credits-svg.md with an accepted licence and an upstream file', () => {
-		for (const name of [...Object.keys(MAKEUP_OBJECTS), ...Object.keys(LINE_DRAWINGS)]) {
+	test('every icon has a row in docs/credits-svg.md with its origin (traced from an AI sheet, or drawn by hand) and its source file', () => {
+		for (const [name, origin] of Object.entries(ALL_ICON_ORIGINS)) {
 			const row = rows.find(cells => cells[1] === `\`${name}\``)
 			expect(`${name}: ${row ? 'listed' : 'missing'}`).toBe(`${name}: listed`)
-			expect(ACCEPTED).toContain(row?.[4] ?? '')
-			expect(row?.[2]).toMatch(/\.svg/)
+			expect(row?.[2]).toBe(ORIGIN_LABEL[origin])
+			expect(row?.[3]).toBe(`\`scripts/art/icons/${name}.svg\``)
+		}
+		for (const cells of rows) expect(Object.hasOwn(ALL_ICON_ORIGINS, (cells[1] ?? '').replaceAll('`', ''))).toBe(true)
+	})
+
+	test('the data modules hold exactly the icons of the pack, and each path is the one of its source file', async () => {
+		const data = { ...MAKEUP_OBJECTS, ...LINE_DRAWINGS, ...ICONS } as Record<string, string>
+		expect(Object.keys(data).sort()).toEqual(Object.keys(ALL_ICON_ORIGINS).sort())
+		const sources = readdirSync(ICON_FOLDER)
+			.filter(file => file.endsWith('.svg'))
+			.map(file => file.slice(0, -4))
+		expect(sources.sort()).toEqual(Object.keys(ALL_ICON_ORIGINS).sort())
+		for (const name of sources) {
+			const file = join(ICON_FOLDER, `${name}.svg`)
+			expect(statSync(file).size).toBeLessThan(6 * 1024)
+			expect(data[name]).toBe(await pathOf(readFileSync(file, 'utf8'), name))
 		}
 	})
 
-	test('every SVG file of the art layer or of public/art is listed in the credits too, and nothing listed is missing from the code', () => {
-		const files = [...ART, ...PUBLIC_ART].filter(path => path.endsWith('.svg')).map(path => relative(ROOT, path))
-		for (const file of files) expect(credits).toContain(file)
-		const names = new Set([...Object.keys(MAKEUP_OBJECTS), ...Object.keys(LINE_DRAWINGS)])
-		for (const cells of rows) expect(names.has((cells[1] ?? '').replaceAll('`', ''))).toBe(true)
+	test('every SVG file of the art layer or of public/art is listed in the credits too', () => {
+		const svgFiles = [...ART, ...PUBLIC_ART].filter(path => path.endsWith('.svg')).map(path => relative(ROOT, path))
+		for (const file of svgFiles) expect(credits).toContain(file)
 	})
 
-	test('the licence texts the licences require are shipped, and the credits name the upstream commit', () => {
-		const licence = readFileSync(join(ROOT, 'LICENSES/IconPark-Apache-2.0.txt'), 'utf8')
-		expect(licence).toContain('Apache License')
-		expect(licence).toContain('Copyright 2019-present Bytedance Inc.')
-		expect(credits).toMatch(/[0-9a-f]{40}/)
+	test('no inline <svg> outside the pack: the files that draw one are an explicit list', () => {
+		/** Each file that may write an `<svg>` itself, and why. Anything else draws an icon of the pack. */
+		const ALLOWED: Record<string, string> = {
+			'components/art/graphics.tsx': 'the drawings, the print marks, the hairline, the frames and the glow of the kit',
+			'components/art/IconPath.tsx': 'the one component that draws a path of the pack',
+			'components/art/SwirlEllipse.tsx': 'the hand-drawn ellipse of the active entry (an effect, not an icon)',
+			'components/art/RotatingBadge.tsx': 'the badge text on a circle (an effect, not an icon)',
+			'components/home/HomeHero.tsx': 'the ring of the home hero (the hero is another work)',
+			'components/home/GuidedSearch.tsx':
+				'the chevron and the arrow of the form of the home hero (the hero is another work)',
+			'components/blocks/Hero.tsx': 'the hero block, another work',
+			'components/blocks/icons.tsx':
+				'Heroicons of SearchBlock and DemoCard, left for the hero work: to replace with the pack',
+		}
+		const drawers = files(SRC)
+			.filter(path => path.endsWith('.tsx') && readFileSync(path, 'utf8').includes('<svg'))
+			.map(path => relative(SRC, path))
+			.sort()
+		expect(drawers).toEqual(Object.keys(ALLOWED).sort())
 	})
 
-	test('the data module holds bare outline shapes only: no fill, colour, style, link, script or event attribute', () => {
-		const data = readFileSync(join(SRC, 'components/art/drawings.ts'), 'utf8')
-		const shapes = data.slice(data.indexOf('export const MAKEUP_OBJECTS'))
-		expect(shapes).not.toMatch(/\b(fill|stroke|style|href|xlink|onload|onclick|script|foreignObject)\b/i)
-		expect(shapes).not.toMatch(/#[0-9a-f]{3,6}\b/i)
-		for (const [, tag] of shapes.matchAll(/tag: '([a-z]+)'/g))
-			expect(['path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon']).toContain(tag ?? '')
+	test('a client component draws an icon with IconPath and the constant it needs, never the map or the by-name Icon', () => {
+		for (const path of files(SRC).filter(file => /\.tsx$/.test(file))) {
+			const code = readFileSync(path, 'utf8')
+			if (!/^['"]use client['"]/.test(code)) continue
+			const imports = code.split('\n').filter(line => line.startsWith('import '))
+			for (const line of imports) {
+				expect(
+					`${relative(ROOT, path)}: ${/art\/Icon'|\.\/Icon'|art\/graphics'|art\/drawings|\bICONS\b/.test(line)}`
+				).toEndWith(': false')
+			}
+		}
+	})
+
+	test('no third-party icon set is left: no licence file, no IconPark code', () => {
+		expect(existsSync(join(ROOT, 'LICENSES/IconPark-Apache-2.0.txt'))).toBe(false)
+		for (const path of files(SRC).filter(file => /\.tsx?$/.test(file))) {
+			const text = readFileSync(path, 'utf8')
+			expect(`${relative(ROOT, path)}: ${/iconpark/i.test(text)}`).toEndWith(': false')
+		}
+	})
+
+	test('the credits state that the pack is custom, made with fal, finished in VectorCraft, with no copyright claim', () => {
+		expect(credits).toContain('sur mesure')
+		expect(credits).toContain('fal')
+		expect(credits).toContain('VectorCraft')
+		expect(credits).toContain('aucun droit d’auteur')
+		expect(credits).toContain('conditions de fal')
+		expect(credits).toContain('OpenAI')
+	})
+
+	test('the data modules hold bare filled paths only: no stroke, colour, style, link, script or event attribute', () => {
+		for (const file of ['drawings.ts', 'icons.ts']) {
+			const data = readFileSync(join(SRC, 'components/art', file), 'utf8')
+			const body = data.slice(data.indexOf('export const'))
+			expect(body).not.toMatch(/\b(fill|stroke|style|href|xlink|onload|onclick|script|foreignObject)\b/i)
+			expect(body).not.toMatch(/#[0-9a-f]{3,6}\b/i)
+		}
 	})
 })
 

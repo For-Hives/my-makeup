@@ -2,6 +2,8 @@
 
 import Image from 'next/image'
 import { type KeyboardEvent, useCallback, useEffect, useRef, useState } from 'react'
+import { IconPath } from '@/components/art/IconPath'
+import { ICON_CHEVRON_RIGHT } from '@/components/art/icons'
 import { ofName } from '@/lib/french-elision'
 import { DEFAULT_RATIO, ratioMedia, sizesBox } from '@/lib/image-size'
 import { altWork } from '@/lib/profile/public-view'
@@ -22,20 +24,7 @@ const POSITION_WAIT_MS = 120
 const REDUCED_MOTION = '(prefers-reduced-motion: reduce)'
 
 function Arrow({ vers }: { vers: 'gauche' | 'droite' }) {
-	return (
-		<svg
-			viewBox="0 0 20 20"
-			fill="currentColor"
-			aria-hidden="true"
-			className={`h-5 w-5 shrink-0 ${vers === 'gauche' ? 'rotate-180' : ''}`}
-		>
-			<path
-				fillRule="evenodd"
-				d="M7.21 14.77a.75.75 0 0 1 .02-1.06L11.17 10 7.23 6.29a.75.75 0 1 1 1.04-1.08l4.5 4.25a.75.75 0 0 1 0 1.08l-4.5 4.25a.75.75 0 0 1-1.06-.02Z"
-				clipRule="evenodd"
-			/>
-		</svg>
-	)
+	return <IconPath d={ICON_CHEVRON_RIGHT} className={`h-5 w-5 shrink-0 ${vers === 'gauche' ? 'rotate-180' : ''}`} />
 }
 
 /**

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { createHash } from 'node:crypto'
-import { readFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { ProfileView } from '@/components/profile/ProfileView'
@@ -392,6 +392,7 @@ describe('264 : la zone hors de France sur la page du profil', () => {
 			readFileSync(join(import.meta.dir, '../fixtures/municipality-html-hashes.json'), 'utf8')
 		) as Record<string, { profile: string; card: string }>
 		const hash = (html: string) => createHash('sha256').update(html).digest('hex')
+		const taken: Record<string, { profile: string; card: string }> = {}
 		expect(Object.keys(golden)).toEqual(DEMO_PROFILES.map(({ cle }) => cle))
 		for (const profileType of DEMO_PROFILES) {
 			const profile = publicProfileOf(
@@ -412,14 +413,19 @@ describe('264 : la zone hors de France sur la page du profil', () => {
 				superMaquilleuse: false,
 				photo: null,
 			}
-			expect(hash(renderToStaticMarkup(<ProfileView profil={profile} />)), profileType.cle).toBe(
-				golden[profileType.cle]?.profile as string
-			)
-			expect(
-				hash(renderToStaticMarkup(<ResultCard carte={card} prioritaire={false} rang={1} />)),
-				profileType.cle
-			).toBe(golden[profileType.cle]?.card as string)
+			const profileHash = hash(renderToStaticMarkup(<ProfileView profil={profile} />))
+			const cardHash = hash(renderToStaticMarkup(<ResultCard carte={card} prioritaire={false} rang={1} />))
+			taken[profileType.cle] = { profile: profileHash, card: cardHash }
+			if (process.env.UPDATE_GOLDEN === '1') continue
+			expect(profileHash, profileType.cle).toBe(golden[profileType.cle]?.profile as string)
+			expect(cardHash, profileType.cle).toBe(golden[profileType.cle]?.card as string)
 		}
+		// A change of the public page on purpose (an icon, a class) takes the hashes again: `UPDATE_GOLDEN=1`.
+		if (process.env.UPDATE_GOLDEN === '1')
+			writeFileSync(
+				join(import.meta.dir, '../fixtures/municipality-html-hashes.json'),
+				`${JSON.stringify(taken, null, '\t')}\n`
+			)
 	})
 
 	test('la carte : le drapeau dans son span aria-hidden, le nom du pays écrit ; une commune n’en a pas', () => {

@@ -14,6 +14,8 @@ import {
 } from 'react'
 import { signOut } from '@/app/(front)/(dashboard)/auth/actions'
 import { TrackedLink } from '@/components/analytics/TrackedLink'
+import { IconPath } from '@/components/art/IconPath'
+import { ICON_ARROW_RIGHT, ICON_CHEVRON_DOWN, ICON_CLOSE, ICON_MENU } from '@/components/art/icons'
 import { pillClassName } from '@/components/art/pill-class'
 import { SwirlEllipse } from '@/components/art/SwirlEllipse'
 import { currentGroup, DASHBOARD_LINK, NAVIGATION, SEARCH_LINK, SIGN_IN_LINK } from './links'
@@ -30,15 +32,7 @@ const CLOSE_DELAY = 200
 const isWide = () => window.matchMedia('(min-width: 1024px)').matches
 
 function Chevron() {
-	return (
-		<svg aria-hidden="true" className="nav-chevron h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-			<path
-				fillRule="evenodd"
-				d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z"
-				clipRule="evenodd"
-			/>
-		</svg>
-	)
+	return <IconPath d={ICON_CHEVRON_DOWN} className="nav-chevron h-5 w-5" />
 }
 
 /**
@@ -185,17 +179,7 @@ export function Nav() {
 					className={`flex h-11 w-11 items-center justify-center rounded-lg lg:hidden ${RING}`}
 				>
 					<span className="sr-only">Menu</span>
-					<svg
-						aria-hidden="true"
-						className="h-6 w-6"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						strokeWidth="2"
-						strokeLinecap="round"
-					>
-						{menuOpen ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M4 7h16M4 17h16" />}
-					</svg>
+					<IconPath d={menuOpen ? ICON_CLOSE : ICON_MENU} className="h-6 w-6" />
 				</button>
 				<div
 					id="menu-principal"
@@ -288,19 +272,7 @@ export function Nav() {
 					<div className="flex flex-col items-start gap-4 lg:flex-row lg:items-center lg:gap-4 xl:gap-6">
 						<TrackedLink href={SEARCH_LINK.href} suivi={{ nom: 'nav_recherche' }} className={SEARCH_PILL}>
 							{SEARCH_LINK.nom}
-							<svg
-								aria-hidden="true"
-								focusable="false"
-								className="art-arrow h-5 w-5"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								strokeWidth="1.6"
-								strokeLinecap="round"
-								strokeLinejoin="round"
-							>
-								<path d="M4 12H20M14 6L20 12L14 18" />
-							</svg>
+							<IconPath d={ICON_ARROW_RIGHT} className="art-arrow h-5 w-5" />
 						</TrackedLink>
 						{signedIn ? (
 							<>
