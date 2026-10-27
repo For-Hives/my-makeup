@@ -7,10 +7,10 @@ import { ChipGroup } from '@/components/search/SearchRefine'
 import { PAGE_TITLE, SearchResults } from '@/components/search/SearchResults'
 import { NoMatchForFilters, NoResult, SearchFailed } from '@/components/search/SearchStates'
 import { fingerprint } from '@/lib/analytics/duplicate'
-import { resultBucket } from '@/lib/analytics/values'
+import { budgetUse, resultBucket } from '@/lib/analytics/values'
 import { departmentOfSearch } from '@/lib/search/count'
 import { EVENT_CHOICES } from '@/lib/search/event-choices'
-import { readFilters, readLayout } from '@/lib/search/filters'
+import { filtersActive, readFilters, readLayout } from '@/lib/search/filters'
 import { readSearch, searchByCity, searchByWord, searchPageUrl } from '@/lib/search/input'
 import { readPlace } from '@/lib/search/place'
 import { resolvePlace } from '@/lib/search/place-point'
@@ -89,7 +89,12 @@ export default async function SearchPage({ searchParams }: PageProps<'/search'>)
 				<div className="page-frame grid grid-cols-[minmax(0,1fr)] gap-14 py-12 md:py-16">
 					<ChipGroup label="Une idée pour commencer">
 						{EVENT_CHOICES.filter(choice => choice.search !== '').map(choice => (
-							<Chip key={choice.label} href={searchPageUrl({ search: choice.search })} prefetch={false}>
+							<Chip
+								key={choice.label}
+								href={searchPageUrl({ search: choice.search })}
+								prefetch={false}
+								data-cta="recherche_idee"
+							>
 								{choice.label}
 							</Chip>
 						))}
@@ -119,9 +124,21 @@ export default async function SearchPage({ searchParams }: PageProps<'/search'>)
 	return (
 		<main className={MAIN}>
 			<SearchBar search={search} city={city} />
-			{/* Two facts and a hash: never the words (ticket 145). Page 1 and page 2 are the same search. */}
+			{/* Three facts and a hash: never the words (ticket 145). Page 1 and page 2 are the same search; the filters are told once each (`search_refine`). */}
 			<SearchAnalytics
 				aUneVille={city !== ''}
+				hasWord={search !== ''}
+				refinement={
+					filtersActive(filters)
+						? {
+								results: resultBucket(view.total),
+								budget: budgetUse(filters.minPrice, filters.maxPrice),
+								sort: filters.sort,
+								...(filters.specialty !== null && { specialty: filters.specialty }),
+								key: `${filters.specialty ?? ''}|${filters.minPrice ?? ''}|${filters.maxPrice ?? ''}|${filters.sort}`,
+							}
+						: null
+				}
 				resultats={resultBucket(view.baselineTotal)}
 				empreinte={fingerprint(`${search}|${city}`)}
 				departement={departmentOfSearch(city, place.genre === 'point' ? place.department : null)}

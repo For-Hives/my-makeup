@@ -46,7 +46,7 @@ export default function RequestSentPage() {
 							Nous transmettons votre demande à la maquilleuse. Si elle n&apos;est pas disponible, nous vous proposerons
 							une autre maquilleuse de votre secteur, avec votre accord.
 						</p>
-						<Pill href="/search" variant="filled" arrow>
+						<Pill href="/search" variant="filled" arrow data-cta="devis_envoye_recherche">
 							Voir d&apos;autres maquilleuses
 						</Pill>
 					</div>

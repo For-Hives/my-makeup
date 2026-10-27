@@ -53,6 +53,7 @@ export function RankingExplainer() {
 					Une erreur dans cette page, ou un résultat qui ne la suit pas ?{' '}
 					<a
 						href="/contact"
+						data-cta="classement_contact"
 						className="font-semibold text-indigo-800 underline underline-offset-4 hover:text-indigo-950"
 					>
 						Écrivez-nous

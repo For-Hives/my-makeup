@@ -51,7 +51,8 @@ test.describe('La mesure de la recherche, des appels à l’action et de la 404'
 		await expect.poll(async () => (await umami.envois('search_submit')).length, { timeout: 10_000 }).toBe(1)
 		const [submission] = await umami.envois('search_submit')
 		const data = submission ? dataOf(submission) : {}
-		expect(Object.keys(data).sort()).toEqual(['from', 'has_city', 'results'])
+		expect(Object.keys(data).sort()).toEqual(['from', 'has_city', 'has_word', 'results', 'zone'])
+		expect(data.has_word).toBe(true)
 		expect(data.from).toBe('formulaire')
 		expect(data.has_city).toBe(true)
 		expect(['0', '1-5', '6-20', '21+']).toContain(data.results)
@@ -87,14 +88,14 @@ test.describe('La mesure de la recherche, des appels à l’action et de la 404'
 		await page.getByRole('link', { name: 'Je suis maquilleuse' }).first().click({ noWaitAfter: true })
 		await expect.poll(async () => (await umami.envois('cta_click')).length, { timeout: 10_000 }).toBe(1)
 		const [cta] = await umami.envois('cta_click')
-		expect(cta ? dataOf(cta) : {}).toEqual({ where: 'cta_inscription' })
+		expect(cta ? dataOf(cta) : {}).toEqual({ where: 'cta_inscription', page: '/' })
 
 		// The badge « Explorer les maquilleuses » on the arch of the hero (26/10/2026): a value of its own.
 		await page.goto('/')
 		await page.getByRole('link', { name: 'Explorer les maquilleuses', exact: true }).click({ noWaitAfter: true })
 		await expect.poll(async () => (await umami.envois('cta_click')).length, { timeout: 10_000 }).toBe(2)
 		const [, badge] = await umami.envois('cta_click')
-		expect(badge ? dataOf(badge) : {}).toEqual({ where: 'accueil_explorer' })
+		expect(badge ? dataOf(badge) : {}).toEqual({ where: 'accueil_explorer', page: '/' })
 
 		await page.goto('/a-propos')
 		await page
@@ -112,7 +113,7 @@ test.describe('La mesure de la recherche, des appels à l’action et de la 404'
 
 		await expect.poll(async () => (await umami.envois('not_found')).length, { timeout: 10_000 }).toBe(1)
 		const [missing] = await umami.envois('not_found')
-		expect(missing ? dataOf(missing) : {}).toEqual({ kind: 'autre' })
+		expect(missing ? dataOf(missing) : {}).toEqual({ kind: 'autre', path: '/cette-page-n-existe-pas' })
 
 		await page.reload()
 		await page.waitForFunction(() => 'umami' in window)
@@ -126,7 +127,7 @@ test.describe('La mesure de la recherche, des appels à l’action et de la 404'
 
 		await expect.poll(async () => (await umami.envois('not_found')).length, { timeout: 10_000 }).toBe(1)
 		const [missing] = await umami.envois('not_found')
-		expect(missing ? dataOf(missing) : {}).toEqual({ kind: 'profil' })
+		expect(missing ? dataOf(missing) : {}).toEqual({ kind: 'profil', path: '/profil/[slug]' })
 
 		await page.reload()
 		await page.waitForFunction(() => 'umami' in window)

@@ -3,12 +3,12 @@
 import { usePathname } from 'next/navigation'
 import { useEffect } from 'react'
 import { recordSearch } from '@/app/(front)/(site)/search/actions'
-import { formSubmission, realBrowser, shouldEmit } from '@/lib/analytics/duplicate'
+import { formSubmission, LAST_REFINE_KEY, realBrowser, shouldEmit } from '@/lib/analytics/duplicate'
 import type { MyMakeupEvents } from '@/lib/analytics/events'
 import { installAnalytics } from '@/lib/analytics/loader'
 import { analyticsRefused } from '@/lib/analytics/opt-out'
 import { track } from '@/lib/analytics/track'
-import { errorCode, notFoundKind } from '@/lib/analytics/values'
+import { errorCode, notFoundKind, notFoundPath, routeOf } from '@/lib/analytics/values'
 
 function optOutStorage(): Storage | undefined {
 	try {
@@ -30,38 +30,66 @@ function optOutStorage(): Storage | undefined {
  */
 export function SearchAnalytics({
 	aUneVille,
+	hasWord,
 	resultats,
 	empreinte,
 	departement,
+	refinement,
 }: {
 	aUneVille: boolean
+	/** Some words were typed (never which). */
+	hasWord: boolean
 	resultats: MyMakeupEvents['search_submit']['results']
 	empreinte: string
 	departement: string
+	/**
+	 * The filters of the address when the search is narrowed (a speciality, a price, a sort), with the slice of the
+	 * results they leave and a key that tells two sets of filters apart; none for the search of before.
+	 */
+	refinement: (MyMakeupEvents['search_refine'] & { key: string }) | null
 }) {
 	useEffect(() => {
 		const browser = realBrowser()
 		const form = formSubmission(browser)
-		if (!shouldEmit('search_submit', empreinte, 'meme-vue', browser) && !form) return
-		track('search_submit', { has_city: aUneVille, results: resultats, from: form ? 'formulaire' : 'lien' })
-		// An automated browser (a crawler, a test) counts nothing, like the Umami event (src/lib/analytics/track.ts).
-		if (!navigator.webdriver && !analyticsRefused(optOutStorage()))
-			void recordSearch({ withCity: aUneVille, noResult: resultats === '0', department: departement })
-	}, [aUneVille, resultats, empreinte, departement])
+		if (shouldEmit('search_submit', empreinte, 'meme-vue', browser) || form) {
+			track('search_submit', {
+				has_city: aUneVille,
+				results: resultats,
+				from: form ? 'formulaire' : 'lien',
+				has_word: hasWord,
+				zone: departement,
+			})
+			// An automated browser (a crawler, a test) counts nothing, like the Umami event (src/lib/analytics/track.ts).
+			if (!navigator.webdriver && !analyticsRefused(optOutStorage()))
+				void recordSearch({ withCity: aUneVille, noResult: resultats === '0', department: departement })
+		}
+		// A narrowed search is the same search for `search_submit` (above): its filters are told once for each set.
+		if (
+			refinement !== null &&
+			shouldEmit('search_refine', `${empreinte}|${refinement.key}`, 'meme-vue', browser, LAST_REFINE_KEY)
+		) {
+			const { key: _key, ...properties } = refinement
+			track('search_refine', properties)
+		}
+	}, [aUneVille, hasWord, resultats, empreinte, departement, refinement])
 	return null
 }
 
-/** The 404 page counted once, with the kind of address it was (event `not_found`). Renders nothing. */
+/**
+ * The 404 page counted once, with the kind of address it was and the address itself, so that a broken link can be found
+ * (event `not_found`): no query, no hash, the name of a profile left out (`notFoundPath`). Renders nothing.
+ */
 export function NotFoundAnalytics() {
 	const path = usePathname()
 	useEffect(() => {
 		installAnalytics()
-		if (shouldEmit('not_found', path, 'rechargement', realBrowser())) track('not_found', { kind: notFoundKind(path) })
+		if (shouldEmit('not_found', path, 'rechargement', realBrowser()))
+			track('not_found', { kind: notFoundKind(path), path: notFoundPath(path) })
 	}, [path])
 	return null
 }
 
-/** An error page counted once (event `app_error`). Renders nothing. */
+/** An error page counted once (event `app_error`), with the route it happened on, never the address. Renders nothing. */
 export function ErrorAnalytics({
 	scope,
 	erreur,
@@ -74,7 +102,7 @@ export function ErrorAnalytics({
 		installAnalytics()
 		const view = `${scope}:${erreur.digest ?? ''}:${window.location.pathname}`
 		if (shouldEmit('app_error', view, 'rechargement', realBrowser()))
-			track('app_error', { scope, code: errorCode(erreur) })
+			track('app_error', { scope, code: errorCode(erreur), route: routeOf(window.location.pathname) })
 	}, [scope, erreur])
 	return null
 }

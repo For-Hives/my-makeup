@@ -3,22 +3,8 @@
 import { type ComponentProps, useEffect } from 'react'
 import { type ContactChannel, measureContactClick } from '@/lib/analytics/contact-click'
 import type { Pid } from '@/lib/analytics/events'
+import { myPid } from '@/lib/analytics/my-pid'
 import { track } from '@/lib/analytics/track'
-
-/** How long the answer about the visitor is kept: the clicks of one visit share a single request. */
-const RESPONSE_DURATION_MS = 10_000
-
-let response: { lueA: number; pid: Promise<Pid | null> } | null = null
-
-/** The `pid` of the profile of the visitor, if she is an artist with one (`/api/dashboard/my-pid`). */
-function myPid(): Promise<Pid | null> {
-	if (response && Date.now() - response.lueA < RESPONSE_DURATION_MS) return response.pid
-	const pid = fetch('/api/dashboard/my-pid', { cache: 'no-store', credentials: 'same-origin' })
-		.then(async r => (r.ok ? ((await r.json()) as { pid?: Pid | null }).pid : null) ?? null)
-		.catch(() => null)
-	response = { lueA: Date.now(), pid }
-	return pid
-}
 
 /**
  * A link to a way of reaching the artist, which counts its click once (ticket 144). The page is

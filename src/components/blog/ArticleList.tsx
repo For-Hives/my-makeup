@@ -18,7 +18,7 @@ export function ArticleList({ articles }: { articles: readonly ListedArticle[] }
 				<p className="max-w-[40ch] font-display font-medium text-2xl text-ink leading-snug md:text-3xl">
 					Aucun article n&apos;est publié pour le moment. Revenez bientôt !
 				</p>
-				<Pill href="/search" arrow className="mt-8">
+				<Pill href="/search" arrow className="mt-8" data-cta="blog_liste_recherche">
 					Trouver ma maquilleuse
 				</Pill>
 			</div>

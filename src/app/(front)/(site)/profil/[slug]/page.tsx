@@ -78,7 +78,7 @@ export default async function ProfilePage({ params }: PageProps<'/profil/[slug]'
 				dangerouslySetInnerHTML={{ __html: serializeJsonLd(profileStructuredData(target.profil)) }}
 			/>
 			<ProfileView profil={target.profil} {...(quote && { quote })} />
-			<ProfileViewCounter slug={target.profil.slug} />
+			<ProfileViewCounter slug={target.profil.slug} pid={target.profil.pid} />
 		</div>
 	)
 }

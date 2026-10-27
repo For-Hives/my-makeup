@@ -1,12 +1,18 @@
 /** The links of the shared template, taken from the site as it is online (ticket 068). */
 
+import type { MyMakeupEvents } from '@/lib/analytics/events'
+
+type CtaPlace = MyMakeupEvents['cta_click']['where']
+
 export interface MenuLink {
 	nom: string
 	href: string
+	/** The `where` of the click on this link (`cta_click`). */
+	cta: CtaPlace
 	description: string
 }
 
-export type NavEntry = { nom: string; href: string } | { nom: string; enfants: readonly MenuLink[] }
+export type NavEntry = { nom: string; href: string; cta: CtaPlace } | { nom: string; enfants: readonly MenuLink[] }
 
 export const NAVIGATION: readonly NavEntry[] = [
 	{
@@ -15,22 +21,26 @@ export const NAVIGATION: readonly NavEntry[] = [
 			{
 				nom: 'Pourquoi My-Makeup ?',
 				href: '/pourquoi-utiliser-my-makeup-en-tant-que-particulier',
+				cta: 'nav_particulier_pourquoi',
 				description:
 					'My-Makeup est une plateforme de mise en relation entre les particuliers et les professionnels de la beauté.',
 			},
 			{
 				nom: 'Trouver une maquilleuse',
 				href: '/particulier/trouver-une-maquilleuse',
+				cta: 'nav_particulier_trouver',
 				description: 'Trouvez la maquilleuse qui vous correspond parmi les profils disponibles.',
 			},
 			{
 				nom: 'Centraliser ses recherches',
 				href: '/particulier/centraliser-ses-recherches',
+				cta: 'nav_particulier_centraliser',
 				description: 'Centralisez vos recherches pour comparer et trouver la maquilleuse qui vous correspond.',
 			},
 			{
 				nom: 'Explorer les profils',
 				href: '/particulier/explorer-les-profils',
+				cta: 'nav_particulier_explorer',
 				description: 'Cherchez par mot-clé et par ville !',
 			},
 		],
@@ -41,12 +51,14 @@ export const NAVIGATION: readonly NavEntry[] = [
 			{
 				nom: 'Pourquoi My-Makeup ?',
 				href: '/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse',
+				cta: 'nav_maquilleuse_pourquoi',
 				description:
 					'Rejoignez la communauté My-Makeup pour développer votre activité, trouver de nouveaux clients et gagner en visibilité, gratuitement !',
 			},
 			{
 				nom: 'Communauté & Partenariats',
 				href: '/maquilleuse/partenariats',
+				cta: 'nav_maquilleuse_partenariats',
 				description: 'Une page gratuite pour présenter votre travail, et une équipe à votre écoute.',
 			},
 		],
@@ -57,16 +69,18 @@ export const NAVIGATION: readonly NavEntry[] = [
 			{
 				nom: 'Pour les particuliers',
 				href: '/solutions/pour-les-particuliers',
+				cta: 'nav_solutions_particuliers',
 				description: "Trouvez la maquilleuse de vos rêves, n'a jamais été aussi simple !",
 			},
 			{
 				nom: 'Pour les maquilleuses',
 				href: '/solutions/pour-les-maquilleuses',
+				cta: 'nav_solutions_maquilleuses',
 				description: 'Présentez votre travail et faites-vous connaître des particuliers, gratuitement.',
 			},
 		],
 	},
-	{ nom: 'Blog', href: '/blog' },
+	{ nom: 'Blog', href: '/blog', cta: 'nav_blog' },
 ]
 
 /**
@@ -89,43 +103,67 @@ export const DASHBOARD_LINK = { nom: 'Mon espace', href: '/auth/profil' }
 
 export interface FooterColumn {
 	titre: string
-	liens: readonly { nom: string; href: string }[]
+	liens: readonly { nom: string; href: string; cta: CtaPlace }[]
 }
 
 export const FOOTER_COLUMNS: readonly FooterColumn[] = [
 	{
 		titre: 'Particuliers',
 		liens: [
-			{ nom: 'Pourquoi My-Makeup ?', href: '/pourquoi-utiliser-my-makeup-en-tant-que-particulier' },
-			{ nom: 'Trouver une maquilleuse', href: '/particulier/trouver-une-maquilleuse' },
-			{ nom: 'Centraliser ses recherches', href: '/particulier/centraliser-ses-recherches' },
-			{ nom: 'Explorer les profils', href: '/particulier/explorer-les-profils' },
+			{
+				nom: 'Pourquoi My-Makeup ?',
+				href: '/pourquoi-utiliser-my-makeup-en-tant-que-particulier',
+				cta: 'footer_particulier_pourquoi',
+			},
+			{
+				nom: 'Trouver une maquilleuse',
+				href: '/particulier/trouver-une-maquilleuse',
+				cta: 'footer_particulier_trouver',
+			},
+			{
+				nom: 'Centraliser ses recherches',
+				href: '/particulier/centraliser-ses-recherches',
+				cta: 'footer_particulier_centraliser',
+			},
+			{ nom: 'Explorer les profils', href: '/particulier/explorer-les-profils', cta: 'footer_particulier_explorer' },
 		],
 	},
 	{
 		titre: 'Maquilleuses',
 		liens: [
-			{ nom: 'Pourquoi My-Makeup ?', href: '/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse' },
-			{ nom: 'Communautés & Partenariats', href: '/maquilleuse/partenariats' },
+			{
+				nom: 'Pourquoi My-Makeup ?',
+				href: '/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse',
+				cta: 'footer_maquilleuse_pourquoi',
+			},
+			{ nom: 'Communautés & Partenariats', href: '/maquilleuse/partenariats', cta: 'footer_maquilleuse_partenariats' },
 		],
 	},
 	{
 		titre: 'Ressources',
 		liens: [
-			{ nom: 'Solution pour les particuliers', href: '/solutions/pour-les-particuliers' },
-			{ nom: 'Solution pour les maquilleuses', href: '/solutions/pour-les-maquilleuses' },
-			{ nom: 'Blog', href: '/blog' },
+			{
+				nom: 'Solution pour les particuliers',
+				href: '/solutions/pour-les-particuliers',
+				cta: 'footer_solutions_particuliers',
+			},
+			{
+				nom: 'Solution pour les maquilleuses',
+				href: '/solutions/pour-les-maquilleuses',
+				cta: 'footer_solutions_maquilleuses',
+			},
+			{ nom: 'Blog', href: '/blog', cta: 'footer_blog' },
 		],
 	},
 	{
 		titre: 'My-Makeup',
 		liens: [
-			{ nom: 'À propos de My-Makeup', href: '/a-propos' },
-			{ nom: 'Contact', href: '/contact' },
-			{ nom: 'Mentions légales', href: '/mentions-legales' },
-			{ nom: "Conditions générales d'utilisation", href: '/cgu' },
-			{ nom: 'Politique de confidentialité', href: '/politique-de-confidentialite' },
-			{ nom: 'Plan du site', href: '/site-map' },
+			{ nom: 'À propos de My-Makeup', href: '/a-propos', cta: 'footer_a_propos' },
+			{ nom: 'Contact', href: '/contact', cta: 'footer_contact' },
+			{ nom: 'Mentions légales', href: '/mentions-legales', cta: 'footer_mentions_legales' },
+			{ nom: "Conditions générales d'utilisation", href: '/cgu', cta: 'footer_cgu' },
+			{ nom: 'Politique de confidentialité', href: '/politique-de-confidentialite', cta: 'footer_confidentialite' },
+			{ nom: 'Plan du site', href: '/site-map', cta: 'footer_plan_du_site' },
 		],
 	},
 ]

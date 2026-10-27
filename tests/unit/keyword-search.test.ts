@@ -296,9 +296,10 @@ describe('chercher : le mot filtre, la ville place', () => {
 
 describe('le texte saisi n’est ni journalisé ni mesuré', () => {
 	test('aucun événement de mesure de la recherche ne porte de texte', () => {
-		for (const name of ['search_submit', 'search_result_click'] as const)
+		// `zone` is the code of a département of the list (or `unknown`), never what was typed.
+		for (const name of ['search_submit', 'search_result_click', 'search_refine', 'card_click'] as const)
 			for (const spec of Object.values(CATALOG[name]))
-				expect(['boolean', 'enum', 'int', 'pid'], name).toContain(spec.type)
+				expect(['boolean', 'enum', 'int', 'pid', 'zone'], name).toContain(spec.type)
 	})
 
 	test('le code de la recherche n’écrit dans aucun journal, hors le message fixe de l’échec de lecture', () => {

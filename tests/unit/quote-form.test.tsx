@@ -18,7 +18,7 @@ const VALUES: QuoteValues = {
 }
 
 function mount(action: QuoteAction) {
-	return <QuoteRequestForm action={action} slug="profil-fictif" />
+	return <QuoteRequestForm action={action} slug="profil-fictif" pid={null} />
 }
 
 async function fill(over: Partial<QuoteValues> = {}) {

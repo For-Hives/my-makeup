@@ -97,14 +97,20 @@ export default async function ZonePage({ params }: PageProps<'/maquilleuses/[dep
 						{rest.join(' ')} dans ce département. Elles sont classées de la fiche la plus complète à la plus récemment
 						mise à jour.
 					</p>
-					<Pill href="/search" variant="light" arrow className="whitespace-normal! max-w-full">
+					<Pill
+						href="/search"
+						variant="light"
+						arrow
+						data-cta="zone_recherche"
+						className="whitespace-normal! max-w-full"
+					>
 						Chercher une prestation ou une autre ville
 					</Pill>
 				</div>
 			</section>
 			<div className="py-20 md:py-28">
 				<div className="page-frame">
-					<ProfileGrid titre={`Les maquilleuses du département ${zoneLabel(code)}`} cartes={cards} />
+					<ProfileGrid titre={`Les maquilleuses du département ${zoneLabel(code)}`} cartes={cards} origin="zone" />
 				</div>
 			</div>
 			<Cta />

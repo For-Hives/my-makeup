@@ -15,7 +15,12 @@ export function NotFoundPage() {
 						404 - Page non trouvée
 					</h1>
 					<p className="mt-6 text-lg text-mute leading-8">Oops ! La page que vous cherchez n'existe pas.</p>
-					<Link href="/" prefetch={false} className={`${pillClassName({ variant: 'filled' })} mt-10`}>
+					<Link
+						href="/"
+						prefetch={false}
+						data-cta="introuvable_accueil"
+						className={`${pillClassName({ variant: 'filled' })} mt-10`}
+					>
 						Retourner à l'accueil
 					</Link>
 				</div>
