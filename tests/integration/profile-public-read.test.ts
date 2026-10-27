@@ -45,6 +45,7 @@ const PUBLIC_KEYS = [
 	'gallery',
 	'homeService',
 	'id',
+	'indexable',
 	'languages',
 	'lastName',
 	'mainPicture',

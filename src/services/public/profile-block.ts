@@ -4,7 +4,7 @@
  * rules and the block points to the very search it summarises.
  *
  * - Only profiles that are listed (neither hidden, nor unavailable, nor empty: the directory) and
- *   publishable (`indexable`), and that show a way to be reached. A profile with no contact is not left
+ *   publishable (`publishable`), and that show a way to be reached. A profile with no contact is not left
  *   last, it is left out: this block is a promise, not a list.
  * - The speciality is found as the search finds a word: the significant words of the title of the
  *   talent, in her speciality, her texts and her offers (src/lib/search/relevance.ts). A talent
@@ -30,7 +30,7 @@ export function profileBlockCards(
 	{ search, limit }: { search: string; limit: number }
 ): ProfileCard[] {
 	return find(directory, { search, city: '' })
-		.locaux.filter(profile => profile.indexable && !profile.unreachable)
+		.locaux.filter(profile => profile.publishable && !profile.unreachable)
 		.slice(0, limit)
 		.map(profile => profile.carte)
 }

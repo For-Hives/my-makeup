@@ -34,7 +34,7 @@ const NAMES: Readonly<Record<string, string>> = {
 	indisponible: 'Delta',
 	'disponibilite-inconnue': 'Echo',
 	vide: 'Foxtrot',
-	'actif-non-publiable': 'Golf',
+	'publiable-non-indexable': 'Golf',
 	'sans-contact-public': 'Hotel',
 	'ancien-nom-accentue': 'Zoé',
 	verifiee: 'India',

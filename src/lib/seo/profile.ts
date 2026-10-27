@@ -6,7 +6,7 @@
  * The structured data says only what the page shows: her name, her speciality, her commune, her
  * skills and languages, her public networks and her offers in euros. Never an email, a telephone
  * number, a postal address or a rating, and nothing at all of a person unless the profile is
- * publishable (a profile that is not has its breadcrumb only, as on the old site).
+ * indexable (a profile that is not has its breadcrumb only: publishable but thin, it is in noindex and out of the structured data).
  */
 
 import type { Metadata } from 'next'
@@ -58,7 +58,7 @@ export function profileTitle(profil: Pick<PublicProfile, 'nom'> & ProfileDetail)
 	return candidates.find(titre => titre.length <= MAX_TITLE) ?? truncate(name, MAX_TITLE)
 }
 
-/** The meta tags of the page of a profile: not publishable means noindex and no canonical address. */
+/** The meta tags of the page of a profile: not indexable means noindex and no canonical address. */
 export function profileMetadata(profil: PublicProfile): Metadata {
 	const detail = profileDetail(profil)
 	return pageMetadata({

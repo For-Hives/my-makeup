@@ -90,12 +90,59 @@ describe('parsePrice and formatPrix (plans/02 U33-U36)', () => {
 	})
 })
 
+/**
+ * The only cases where the v3 reads another amount than the old site, on purpose (decision of 27/10/2026): a
+ * duration is not an amount. The old site read the first number, so the 45 of « 45 min, 60 € » and nothing
+ * for « 2 h : 150 € » (its 2 is under the bound of 5).
+ */
+const DURATION_DIFFERENCES: Readonly<Record<string, number>> = {
+	'45 min, 60 €': 60,
+	'45min 60€': 60,
+	'2 h : 150 €': 150,
+	'2h : 150 €': 150,
+}
+
 describe('the same amounts as the old site', () => {
 	test('the shared fictional set: prixNumerique of the branch main and parsePrice agree', () => {
 		expect(jeu.cas.length).toBeGreaterThanOrEqual(80)
 		for (const { saisie: input, montantAttendu: expectedAmount } of jeu.cas) {
-			expect(parsePrice(input).priceFrom, JSON.stringify(input)).toBe(expectedAmount)
+			expect(parsePrice(input).priceFrom, JSON.stringify(input)).toBe(DURATION_DIFFERENCES[input] ?? expectedAmount)
 		}
+	})
+
+	test('a duration is not an amount: the amount that follows is read', () => {
+		for (const input of Object.keys(DURATION_DIFFERENCES)) {
+			expect(
+				jeu.cas.some(cas => cas.saisie === input),
+				input
+			).toBe(true)
+		}
+		const cases: [string, number | null][] = [
+			['2 h : 150 €', 150],
+			['2h30 : 150 €', 150],
+			['2 h 30 : 150 €', 150],
+			['1 heure : 80 euros', 80],
+			['45 min, 60 €', 60],
+			['45 minutes 60 euros', 60],
+			['30 mn : 50 €', 50],
+			['1 h 80 €', 80],
+			['60 € / 30 min', 60],
+			['50€/h', 50],
+			['à partir de 80 € la séance de 1h', 80],
+			['1 200 € pour 3 h', 1200],
+			// a duration alone says no amount
+			['Forfait 90 min', null],
+			['2 h', null],
+			['Sur devis, 2 h', null],
+		]
+		for (const [input, amount] of cases) {
+			expect(parsePrice(input).priceFrom, input).toBe(amount)
+		}
+	})
+
+	test('the amount shown is not said twice when it follows a duration', () => {
+		expect(shown('2 h : 150 €')).toBe('2 h : 150 €')
+		expect(priceRows(parsePrice('45 min, 60 €'))).toEqual(['45 min, 60 €'])
 	})
 
 	// Ported from « numeric price read in the text » of tests/unit/completude.test.mjs (branch main)

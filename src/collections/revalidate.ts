@@ -36,7 +36,7 @@ const VISIBILITY: Readonly<Record<PublicContent, { champ: 'status' | '_status'; 
 	talents: { champ: '_status', valeur: 'published' },
 }
 
-type StoredRow = { id: number | string; slug?: unknown; publishable?: unknown } & Partial<
+type StoredRow = { id: number | string; slug?: unknown; indexable?: unknown } & Partial<
 	Record<'status' | '_status', unknown>
 >
 
@@ -51,16 +51,16 @@ async function readPublicState(
 	const row = await req.payload.db.findOne<StoredRow>({
 		collection: contenu,
 		req,
-		select: { slug: true, [field]: true, ...(contenu === 'profiles' && { publishable: true }) },
+		select: { slug: true, [field]: true, ...(contenu === 'profiles' && { indexable: true }) },
 		where: { id: { equals: id } },
 	})
 	if (!row) return null
 	const visible = row[field] === value
-	// A profile is in the sitemap when it is publishable (IndexNow, ticket 219); the others when published.
+	// A profile is in the sitemap when it is indexable (IndexNow, ticket 219); the others when published.
 	return {
 		slug: String(row.slug ?? ''),
 		visible,
-		indexable: contenu === 'profiles' ? row.publishable === true : visible,
+		indexable: contenu === 'profiles' ? row.indexable === true : visible,
 	}
 }
 

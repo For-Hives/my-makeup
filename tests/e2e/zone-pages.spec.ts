@@ -7,7 +7,7 @@ import { testPayload } from '../support/payload-test'
 import { refreshProfilePages } from '../support/public-pages'
 
 /**
- * The page of a département (ticket 1015): three publishable profiles of Annecy make `/maquilleuses/haute-savoie`
+ * The page of a département (ticket 1015): three indexable profiles of Annecy make `/maquilleuses/haute-savoie`
  * indexable (the other tests of the run may add more, never fewer), with its canonical address, its structured
  * data and its line in the sitemap and in the plan of the site; a profile that becomes unavailable leaves the page
  * at the next visit; an unknown département, or one with no profile, answers 404. The bounds 0, 1, 2, 3 and 4 are

@@ -3,7 +3,7 @@
  * the daily task, the report and the tests say the same thing. Pure: no `next` import, no Payload.
  *
  * Two lists, both only drawn up, never acted on by this file:
- * - the profiles that miss one or two of the six conditions of a publishable profile
+ * - the profiles that miss one or two of the four conditions of a publishable profile
  *   (`publishableConditions`, the single rule of src/lib/profile/completeness.ts, never recomputed here);
  * - the accounts with no activity for 24 calendar months.
  *
@@ -11,7 +11,7 @@
  */
 
 import { monthsBefore } from '../calendar'
-import { isInternal, type PublishableConditions, publishableConditions } from '../profile/completeness'
+import { isInternal, type PublishableConditions, publishableConditions, richnessOf } from '../profile/completeness'
 import { type ProfileDocument, profileFields } from '../profile/state'
 
 /** A profile she changed less than this many days ago is left in peace: she is probably still on it. */
@@ -55,14 +55,23 @@ export interface ReminderSubject {
 
 export type MissingCondition = keyof PublishableConditions
 
-/** Her words for each condition, in the tone of her space (« tu »). */
+/** Her words for each condition of a publishable profile, in the tone of her space (« tu »). */
 export const CONDITION_TEXTS: Record<MissingCondition, string> = {
 	photoPrincipale: 'une photo principale',
 	villeExploitable: 'une ville ou une zone d’intervention',
 	specialite: 'ta spécialité',
-	offreChiffree: 'une prestation avec un prix',
-	descriptionLongue: 'une description d’au moins 200 caractères',
 	canalDeContact: 'un moyen de te contacter',
+}
+
+/**
+ * What a published profile can still add to be found on Google (`indexable`): a description, and a priced offer or a
+ * photo of the gallery. Suggestions, never conditions: the page is online without them.
+ */
+export type GoogleSuggestion = 'description' | 'priceOrGallery'
+
+export const GOOGLE_TEXTS: Record<GoogleSuggestion, string> = {
+	description: 'une description d’au moins 100 caractères',
+	priceOrGallery: 'une prestation avec un prix, ou des photos dans ton portfolio',
 }
 
 const time = (value: string): number => new Date(value).getTime()
@@ -76,6 +85,17 @@ function listable(subject: ReminderSubject): boolean {
 export function unmetConditions(subject: ReminderSubject): MissingCondition[] {
 	const conditions = publishableConditions(profileFields(subject.document))
 	return (Object.keys(conditions) as MissingCondition[]).filter(name => !conditions[name])
+}
+
+/** What her profile could add to be better referenced on Google; empty when it already is, or is an internal account. */
+export function googleSuggestions(subject: ReminderSubject): GoogleSuggestion[] {
+	const fields = profileFields(subject.document)
+	if (isInternal(fields)) return []
+	const richness = richnessOf(fields)
+	return [
+		...(richness.description ? [] : ['description' as const]),
+		...(richness.richContent ? [] : ['priceOrGallery' as const]),
+	]
 }
 
 /**

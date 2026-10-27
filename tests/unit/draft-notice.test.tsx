@@ -3,7 +3,8 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { DraftNotice } from '@/components/dashboard/DraftNotice'
 import { OnboardingDone } from '@/components/dashboard/onboarding/OnboardingDone'
 import type { DashboardProfile } from '@/lib/dashboard/dashboard-profile'
-import { draftNotice } from '@/lib/dashboard/draft-notice'
+import { draftNotice, googleItems } from '@/lib/dashboard/draft-notice'
+import { CRITERION_BLOCK, editBlockHref } from '@/lib/dashboard/edit-blocks'
 import { profileProgress } from '@/lib/dashboard/progress'
 import { ANNECY } from '../support/completeness-cases'
 
@@ -26,7 +27,7 @@ const PUBLISHABLE: DashboardProfile = {
 }
 
 const EMPTY: DashboardProfile = { id: 2 }
-const SHORT: DashboardProfile = { ...PUBLISHABLE, description: 'Trop court.' }
+const NO_CONTACT: DashboardProfile = { ...PUBLISHABLE, networks: {} }
 
 describe('draftNotice', () => {
 	test('a publishable profile has no notice', () => {
@@ -38,28 +39,40 @@ describe('draftNotice', () => {
 	})
 
 	test('the lines are the required points of the rule, and the link goes to the first block missing', () => {
-		const notice = draftNotice(profileProgress(SHORT))
-		expect(notice?.lines).toHaveLength(1)
-		expect(notice?.lines[0]).toContain('200 caractères')
-		expect(notice?.href).toBe('/auth/apercu-profil?mode=edition#bloc-about')
+		const notice = draftNotice(profileProgress(NO_CONTACT))
+		expect(notice?.lines).toEqual(['un moyen de te contacter'])
+		expect(notice?.href).toBe(editBlockHref(CRITERION_BLOCK.reseaux))
 	})
 
-	test('an empty profile lists the six conditions', () => {
-		expect(draftNotice(profileProgress(EMPTY))?.lines).toHaveLength(6)
+	test('an empty profile lists the four conditions of a publishable page, not the price nor the long description', () => {
+		const lines = draftNotice(profileProgress(EMPTY))?.lines ?? []
+		expect(lines).toHaveLength(4)
+		expect(lines.join(' ')).not.toMatch(/prix|100 caractères|200 caractères/)
+	})
+
+	test('a thin profile has no notice, but Google items: a description, a price or photos, never required', () => {
+		const thin: DashboardProfile = { ...PUBLISHABLE, description: 'Court.', serviceOffers: [] }
+		expect(draftNotice(profileProgress(thin))).toBeNull()
+		expect(googleItems(profileProgress(thin)).map(item => item.label)).toEqual([
+			'une description de 100 caractères au moins',
+			'une prestation avec un prix',
+			'des photos dans ton portfolio',
+		])
+		expect(googleItems(profileProgress(PUBLISHABLE))).toEqual([])
 	})
 })
 
 describe('DraftNotice', () => {
 	test('it says the page is not online, tutoie, names the draft and has the button', () => {
-		const notice = draftNotice(profileProgress(SHORT))
+		const notice = draftNotice(profileProgress(NO_CONTACT))
 		if (notice === null) throw new Error('expected a notice')
 		const html = renderToStaticMarkup(<DraftNotice notice={notice} />)
 		expect(html).toContain('En brouillon')
 		expect(html).toContain('Ta page n’est pas encore en ligne : les clientes ne la voient pas.')
 		expect(html).toContain('Il te manque : ')
-		expect(html).toContain('une description de 200 caractères au moins.')
+		expect(html).toContain('un moyen de te contacter.')
 		expect(html).toContain('Compléter ma page')
-		expect(html).toContain('href="/auth/apercu-profil?mode=edition#bloc-about"')
+		expect(html).toContain(`href="${editBlockHref(CRITERION_BLOCK.reseaux)}"`)
 		expect(html).not.toMatch(/red|lipstick-800|role="alert"/)
 	})
 })
@@ -73,7 +86,7 @@ describe('the last screen of the onboarding', () => {
 	}
 
 	test('not publishable: the notice, never « en ligne »', () => {
-		const notice = draftNotice(profileProgress(SHORT))
+		const notice = draftNotice(profileProgress(NO_CONTACT))
 		const html = renderToStaticMarkup(<OnboardingDone {...props} online={false} notice={notice} />)
 		expect(html).toContain('En brouillon')
 		expect(html).toContain('Ta page n’est pas encore en ligne')

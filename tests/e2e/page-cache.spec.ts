@@ -24,7 +24,7 @@ const datasetType = (cle: string): DemoProfile => {
 	return type
 }
 
-const TEMPLATE = datasetType('actif-non-publiable')
+const TEMPLATE = datasetType('publiable-non-indexable')
 const REFERENCE = datasetType('reference')
 
 /** The cache state and the cache header of a page, and its HTML. */
@@ -78,7 +78,7 @@ async function removeProfile(request: APIRequestContext, profile: Awaited<Return
 }
 
 test.describe('Pages publiques en cache (269)', () => {
-	test('la seconde visite d’un profil publiable est servie du cache, et un enregistrement la rend à jour', async ({
+	test('la seconde visite d’un profil indexable est servie du cache, et un enregistrement la rend à jour', async ({
 		request,
 	}) => {
 		test.setTimeout(180_000)
@@ -108,7 +108,7 @@ test.describe('Pages publiques en cache (269)', () => {
 		}
 	})
 
-	test('un profil non publiable garde son noindex dans la page en cache, une adresse inconnue répond 404', async ({
+	test('un profil non indexable garde son noindex dans la page en cache, une adresse inconnue répond 404', async ({
 		request,
 	}) => {
 		test.setTimeout(180_000)

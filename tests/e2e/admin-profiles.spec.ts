@@ -72,8 +72,8 @@ test.describe('L’admin retrouve, corrige et masque un profil', () => {
 		await context.addCookies(await sessionDAdmin())
 		await withoutOutsideNetwork(context)
 		try {
-			// A reference profile (publishable), an empty one and one active but not publishable.
-			await Promise.all(['reference', 'vide', 'actif-non-publiable'].map(cle => setProfile(cle, suffix)))
+			// A reference profile (publishable), an empty one and one active but not publishable (no way to reach her).
+			await Promise.all(['reference', 'vide', 'sans-contact-public'].map(cle => setProfile(cle, suffix)))
 			const his = `where[and][1][pro.email][like]=-${suffix}@`
 
 			const errors: string[] = []

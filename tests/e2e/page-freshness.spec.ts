@@ -10,7 +10,7 @@ import { createContent, deleteContent } from '../support/public-pages'
  * through the application is on the public pages within a minute (here: at the next visit, the tags expire
  * at once), and a page that did not change is served from the cache of Next without a query in the database.
  *
- * Each test works on a profile of its own, made for it (the profile type « actif mais pas publiable » of
+ * Each test works on a profile of its own, made for it (the profile type « publiable mais pas indexable » of
  * the fictional set, under a name of its own), so the others do not see it. It is saved through the REST API
  * of the application, as the admin panel and the space do, so that the save reaches the cache of the server.
  * A write made with the Payload of the test (`payloadDeTest`) does not: that is how the tests prove that a
@@ -28,7 +28,7 @@ function datasetType(cle: string): DemoProfile {
 	return type
 }
 
-const TEMPLATE = datasetType('actif-non-publiable')
+const TEMPLATE = datasetType('publiable-non-indexable')
 const REFERENCE = datasetType('reference')
 
 interface FreshnessProfile {
@@ -40,7 +40,7 @@ interface FreshnessProfile {
 	entetes: { Cookie: string; Origin: string }
 }
 
-/** A profile of its own: visible, but not publishable (its offers have no price). */
+/** A profile of its own: visible and publishable, but not indexable (its offers have no price, and it has no gallery photo). */
 async function setProfile(): Promise<FreshnessProfile> {
 	const suffix = `${Date.now().toString(36)}${Math.floor(Math.random() * 1000).toString(36)}`
 	const word = `Fraicheur${suffix}`
@@ -144,11 +144,11 @@ test.describe('Fraîcheur des pages publiques (117)', () => {
 		}
 	})
 
-	test('un profil devenu publiable entre dans le sitemap et perd son noindex', async ({ request }) => {
+	test('un profil devenu indexable entre dans le sitemap et perd son noindex', async ({ request }) => {
 		test.setTimeout(180_000)
 		const profile = await setProfile()
 		try {
-			// Visible and not publishable: the page answers, in noindex, without a canonical address.
+			// Visible, publishable and not indexable: the page answers, in noindex, without a canonical address.
 			const before = await readPage(request, profile.slug)
 			expect(before.statut).toBe(200)
 			expect(before.noindex).toBe(true)

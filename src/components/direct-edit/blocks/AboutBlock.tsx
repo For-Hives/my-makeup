@@ -111,11 +111,11 @@ function AboutForm({ values, save }: { values: DescriptionValues; save: AboutSav
 					className={`font-medium text-sm ${tooLong ? 'text-lipstick-800' : 'text-mute'}`}
 				>
 					{counter.total} sur {DESCRIPTION_MAX} caractères au plus
-					{tooLong ? ` : c’est ${counter.total - DESCRIPTION_MAX} de trop` : ''}. Pour que ton profil soit publiable, il
-					en faut {DESCRIPTION_MIN} ({counter.compte} comptés).
+					{tooLong ? ` : c’est ${counter.total - DESCRIPTION_MAX} de trop` : ''}. Pour apparaître sur Google, il en faut
+					{DESCRIPTION_MIN} au moins ({counter.compte} comptés). C’est facultatif : ton profil est visible sans.
 				</p>
 				<p role="status" className="text-ok text-sm">
-					{counter.assez ? 'Ta présentation a la longueur qu’il faut pour être publiable.' : ''}
+					{counter.assez ? 'Ta présentation a la longueur qu’il faut pour apparaître sur Google.' : ''}
 				</p>
 				{error ? (
 					<p id="direct-about-error" className="text-lipstick-800 text-sm">

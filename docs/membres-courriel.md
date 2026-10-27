@@ -1,6 +1,6 @@
 # Le courriel aux membres après la bascule (issue 998)
 
-Un seul courriel aux maquilleuses : ce qui a changé avec le nouveau site, ce qu'elles doivent faire si leur compte venait de Facebook, et ce qu'il manque à **leur** profil pour être publié. Décision d'Andy du 23/10/2026 sur l'issue 998 : le texte et la liste sont prêts, **rien n'est envoyé**. C'est Andy qui lance l'envoi, plus tard, lui-même.
+Un seul courriel aux maquilleuses : ce qui a changé avec le nouveau site, ce qu'elles doivent faire si leur compte venait de Facebook, et ce qu'il manque à **leur** profil pour être publié (et, à part, ce qu'elles peuvent ajouter pour apparaître sur Google). Décision d'Andy du 23/10/2026 sur l'issue 998 : le texte et la liste sont prêts, **rien n'est envoyé**. C'est Andy qui lance l'envoi, plus tard, lui-même.
 
 Le code : `src/lib/emails/members-announcement.ts` (le texte), `src/lib/members-mail/` (la liste, les verrous, le journal d'envoi, le passage), `scripts/members/` (la commande). Tests : `tests/unit/members-mail.test.ts`, `tests/integration/members-mail.test.ts`.
 
@@ -8,7 +8,7 @@ Le code : `src/lib/emails/members-announcement.ts` (le texte), `src/lib/members-
 
 Objet : « Le nouveau My Makeup est en ligne ». Rien de personnel dans l'objet, aucun nom dans le corps, tutoiement. Le corps dit : le nouveau site depuis le 22 octobre ; l'espace qui est le profil, modifiable directement ; la connexion (adresse et mot de passe, ou Google, liens du courrier valables 24 heures) ; la connexion Facebook qui n'existe plus (« Mot de passe oublié » ou Google) ; ce qu'il manque au profil ; les devis par le site « dans un second temps », sans date ; un bouton « Ouvrir mon espace ».
 
-La liste de ce qu'il manque est celle de la règle unique du profil publiable (`publishableConditions`, `src/lib/profile/completeness.ts`), lue par `unmetConditions` (`src/lib/reminders/rules.ts`) et dite avec les mots de `CONDITION_TEXTS`, les mêmes que ceux des relances. Rien n'est recalculé. Un profil qui remplit déjà les six conditions reçoit « Bonne nouvelle : ton profil a tout ce qu'il faut pour être publié » et pas de liste. Le courriel d'une personne ne contient ni le numéro, ni le jeton, ni rien d'une autre.
+La liste de ce qu'il manque est celle de la règle unique du profil publiable (`publishableConditions`, `src/lib/profile/completeness.ts`), lue par `unmetConditions` (`src/lib/reminders/rules.ts`) et dite avec les mots de `CONDITION_TEXTS`, les mêmes que ceux des relances. Rien n'est recalculé. La liste ne porte plus que les quatre conditions de la publication (photo principale, ville, spécialité, moyen de contact) : le prix et la description ne sont plus demandés. Ce qui aide Google (`googleSuggestions`, `src/lib/reminders/rules.ts` : une description de 100 caractères, une prestation avec un prix ou des photos) est dit à part, avec « facultatif », après la liste. Un profil qui remplit déjà les quatre conditions reçoit « Bonne nouvelle : ton profil a tout ce qu'il faut pour être publié » et pas de liste. Le courriel d'une personne ne contient ni le numéro, ni le jeton, ni rien d'une autre.
 
 ## Qui le reçoit
 

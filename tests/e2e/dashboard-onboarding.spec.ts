@@ -334,23 +334,19 @@ test.describe('E02 : l’accueil en cinq étapes', { tag: '@mobile' }, () => {
 		expect(await violationsAfterTitle(page)).toEqual([])
 		await press(page.getByRole('button', { name: 'Terminer' }))
 
-		// The end page is read by the server: no description yet, so the page is not online, and it says what is missing.
+		// The end page is read by the server: photo, city, speciality and a way to reach her are enough (decision of
+		// 27/10/2026), with no description yet: the page is online. The description only helps Google.
 		await expect(page).toHaveURL(/\/auth\/init-account\?etape=fin$/, { timeout: 60_000 })
 		await expect(page.getByTestId('accueil-fin')).toBeVisible()
-		await expect(page.getByTestId('page-en-ligne')).toHaveCount(0)
-		await expect(page.getByTestId('brouillon-pastille')).toHaveText('En brouillon')
-		await expect(page.getByTestId('brouillon')).toContainText(
-			'Ta page n’est pas encore en ligne : les clientes ne la voient pas.'
-		)
-		await expect(page.getByTestId('brouillon-manques')).toContainText('200 caractères')
-		await expect(page.getByRole('link', { name: 'Compléter ma page' })).toHaveAttribute(
-			'href',
-			/mode=edition#bloc-about$/
-		)
-		await takeScreenshot(page, 'fin-non-publiable')
+		await expect(page.getByTestId('page-en-ligne')).toBeVisible()
+		await expect(page.getByTestId('brouillon')).toHaveCount(0)
+		await takeScreenshot(page, 'fin-en-ligne-sans-description')
 		await expectLayout(page)
 		expect(await violationsAfterTitle(page)).toEqual([])
-		expect((await profileOf(email)).serviceOffers?.[0]?.priceFrom).toBe(150)
+		const finished = await profileOf(email)
+		expect(finished.serviceOffers?.[0]?.priceFrom).toBe(150)
+		expect(finished.publishable).toBe(true)
+		expect(finished.indexable).toBe(false)
 
 		// Nothing left in the steps: the plain address leads to her space.
 		await page.goto(PAGE)
@@ -408,16 +404,17 @@ test.describe('E02 : l’accueil en cinq étapes', { tag: '@mobile' }, () => {
 		await page.waitForLoadState('networkidle')
 		await press(page.getByRole('button', { name: 'Plus tard' }))
 
-		// Skipped: the end page says the page is not online, with the way back to the onboarding.
+		// Skipped: she is online already, a network being a way to reach her; the price only helps Google.
 		await expect(page).toHaveURL(/\/auth\/init-account\?etape=fin$/, { timeout: 60_000 })
-		await expect(page.getByTestId('brouillon-manques')).toBeVisible()
-		await expect(page.getByRole('link', { name: 'Reprendre l’accueil' })).toBeVisible()
+		await expect(page.getByTestId('page-en-ligne')).toBeVisible()
+		await expect(page.getByTestId('brouillon-manques')).toHaveCount(0)
 		const after = await profileOf(email)
 		expect(after.networks?.facebook).toBe('https://www.facebook.com/studio.fictif')
 		expect(after.serviceOffers?.map(offer => offer.name)).toEqual(['Cours d’auto-maquillage'])
+		expect(after.publishable).toBe(true)
 
-		// « Reprendre l'accueil » opens on the step still to do; a priced model joins the offer she had.
-		await press(page.getByRole('link', { name: 'Reprendre l’accueil' }))
+		// The plain address opens on the step still to do; a priced model joins the offer she had.
+		await page.goto(PAGE)
 		await expect(title(page)).toHaveText('Ta prestation phare')
 		await page.waitForLoadState('networkidle')
 		await press(page.getByRole('button', { name: 'Modèle Soirée' }))
@@ -428,6 +425,38 @@ test.describe('E02 : l’accueil en cinq étapes', { tag: '@mobile' }, () => {
 		expect(done.serviceOffers?.map(offer => offer.name)).toEqual(['Cours d’auto-maquillage', 'Maquillage de soirée'])
 		expect(done.serviceOffers?.[0]?.description).toBe('Deux heures')
 		expect(done.serviceOffers?.[1]?.priceFrom).toBe(90)
+	})
+
+	test('sans moyen de la joindre, « Plus tard » deux fois : la page n’est pas en ligne, et la fin dit ce qui manque', async ({
+		page,
+	}) => {
+		test.setTimeout(150_000)
+		const email = await newAccount()
+		const profile = await profileOf(email)
+		await activateAndDescribe(email, profile.id)
+		await signInAction(page, email)
+		await expect(title(page)).toHaveText('Comment te joindre')
+		await page.waitForLoadState('networkidle')
+		await press(page.getByRole('button', { name: 'Plus tard' }))
+		await expect(title(page)).toHaveText('Ta prestation phare')
+		await press(page.getByRole('button', { name: 'Plus tard' }))
+
+		await expect(page).toHaveURL(/\/auth\/init-account\?etape=fin$/, { timeout: 60_000 })
+		await expect(page.getByTestId('page-en-ligne')).toHaveCount(0)
+		await expect(page.getByTestId('brouillon-pastille')).toHaveText('En brouillon')
+		await expect(page.getByTestId('brouillon')).toContainText(
+			'Ta page n’est pas encore en ligne : les clientes ne la voient pas.'
+		)
+		await expect(page.getByTestId('brouillon-manques')).toContainText('un moyen de te contacter')
+		await expect(page.getByTestId('brouillon-manques')).not.toContainText('200 caractères')
+		await expect(page.getByRole('link', { name: 'Compléter ma page' })).toHaveAttribute(
+			'href',
+			/mode=edition#bloc-networks$/
+		)
+		await expect(page.getByRole('link', { name: 'Reprendre l’accueil' })).toBeVisible()
+		await takeScreenshot(page, 'fin-non-publiable')
+		await expectLayout(page)
+		expect(await violationsAfterTitle(page)).toEqual([])
 	})
 
 	test('un téléphone montré compte comme un moyen de joindre : l’étape 4 est faite', async ({ page }) => {

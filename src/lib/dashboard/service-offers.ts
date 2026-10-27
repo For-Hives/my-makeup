@@ -34,7 +34,7 @@ const priceFromInput = (stocke: unknown): string => (typeof stocke === 'string' 
 export const SERVICE_OFFERS_MESSAGES = {
 	montant: (montant: string) => `Montant retenu pour ton profil : ${montant}.`,
 	sansMontant:
-		'Aucun montant retenu : l’offre est affichée telle quelle, mais elle ne compte pas pour rendre ton profil publiable. Écris par exemple « à partir de 80 € ».',
+		'Aucun montant retenu : l’offre est affichée telle quelle, mais elle n’aide pas ton profil à apparaître sur Google. Écris par exemple « à partir de 80 € ».',
 } as const
 
 function bounds(valeurs: RowValues): RowErrors {

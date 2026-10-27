@@ -8,7 +8,7 @@ import { DEFAULT_LIMIT, MAX_LIMIT, MembersMailRefused, readArguments, sendPermis
 import { planMembersMail } from '@/lib/members-mail/plan'
 import { type MembersMailStore, runMembersMail } from '@/lib/members-mail/run'
 import { openSendLog, SendLogRefused } from '@/lib/members-mail/send-log'
-import { CONDITION_TEXTS, type ReminderSubject } from '@/lib/reminders/rules'
+import { CONDITION_TEXTS, GOOGLE_TEXTS, type ReminderSubject } from '@/lib/reminders/rules'
 import { readUnsubscribeToken, unsubscribeToken } from '@/lib/reminders/token'
 import { runCommand } from '../../scripts/members/command'
 
@@ -47,7 +47,7 @@ function subject(profileId: number, over: Partial<ReminderSubject> = {}): Remind
 	return {
 		profileId,
 		status: 'published',
-		document: { ...completeDocument(), description: '', serviceOffers: [] },
+		document: { ...completeDocument(), mainPicture: null, networks: {} },
 		profileUpdatedAt: '2026-10-01T00:00:00.000Z',
 		account: { verified: true, blocked: false, lastSignInAt: null, createdAt: '2025-01-01T00:00:00.000Z' },
 		state: null,
@@ -60,7 +60,11 @@ const link = (profileId: number): string =>
 
 describe('the text of the mail', () => {
 	const email = composerEmail(
-		membersAnnouncementContent({ missing: ['photoPrincipale', 'offreChiffree'], unsubscribeLink: link(7) }),
+		membersAnnouncementContent({
+			missing: ['photoPrincipale', 'canalDeContact'],
+			forGoogle: ['description', 'priceOrGallery'],
+			unsubscribeLink: link(7),
+		}),
 		SITE
 	)
 
@@ -77,8 +81,19 @@ describe('the text of the mail', () => {
 		expect(email.texte).toContain('24 heures')
 		expect(email.texte).toContain('devis')
 		expect(email.texte).toContain(`- ${CONDITION_TEXTS.photoPrincipale}`)
-		expect(email.texte).toContain(`- ${CONDITION_TEXTS.offreChiffree}`)
-		expect(email.texte).not.toContain(CONDITION_TEXTS.canalDeContact)
+		expect(email.texte).toContain(`- ${CONDITION_TEXTS.canalDeContact}`)
+		expect(email.texte).not.toContain(CONDITION_TEXTS.specialite)
+	})
+
+	test('the price and the long description are suggested for Google, not asked to be published', () => {
+		expect(email.texte).toContain('mieux référencée sur Google')
+		expect(email.texte).toContain(`- ${GOOGLE_TEXTS.description}`)
+		expect(email.texte).toContain(`- ${GOOGLE_TEXTS.priceOrGallery}`)
+		const without = composerEmail(
+			membersAnnouncementContent({ missing: ['photoPrincipale'], unsubscribeLink: link(7) }),
+			SITE
+		)
+		expect(without.texte).not.toContain('mieux référencée sur Google')
 	})
 
 	test('accents come out whole in both parts, and the HTML part escapes the quotes', () => {
@@ -126,18 +141,25 @@ describe('the text of the mail', () => {
 describe('who would receive the mail', () => {
 	test('a confirmed, unblocked, subscribed account is on the list with what its profile lacks', () => {
 		const plan = planMembersMail([subject(1)], new Set())
-		expect(plan.eligible).toEqual([{ profileId: 1, missing: ['offreChiffree', 'descriptionLongue'] }])
+		expect(plan.eligible).toEqual([{ profileId: 1, missing: ['photoPrincipale', 'canalDeContact'], forGoogle: [] }])
 	})
 
 	test('a complete profile is on the list too, with nothing missing', () => {
 		const plan = planMembersMail([subject(2, { document: completeDocument() })], new Set())
-		expect(plan.eligible).toEqual([{ profileId: 2, missing: [] }])
+		expect(plan.eligible).toEqual([{ profileId: 2, missing: [], forGoogle: [] }])
 		expect(plan.completeProfiles).toBe(1)
 	})
 
-	test('a profile with none of the conditions is on the list and lacks all six', () => {
+	test('a publishable profile with no price and no description lacks nothing, and is offered the Google suggestions', () => {
+		const document = { ...completeDocument(), description: '', serviceOffers: [] }
+		const plan = planMembersMail([subject(4, { document })], new Set())
+		expect(plan.eligible).toEqual([{ profileId: 4, missing: [], forGoogle: ['description', 'priceOrGallery'] }])
+		expect(plan.completeProfiles).toBe(1)
+	})
+
+	test('a profile with none of the conditions is on the list and lacks all four', () => {
 		const plan = planMembersMail([subject(3, { document: {} })], new Set())
-		expect(plan.eligible[0]?.missing.length).toBe(6)
+		expect(plan.eligible[0]?.missing.length).toBe(4)
 	})
 
 	test('every exclusion is counted under its reason, and only once', () => {
@@ -159,8 +181,9 @@ describe('who would receive the mail', () => {
 
 	test('the lacks are counted by condition, from the single rule', () => {
 		const plan = planMembersMail([subject(1), subject(2, { document: {} })], new Set())
-		expect(plan.missingByCondition.photoPrincipale).toBe(1)
-		expect(plan.missingByCondition.offreChiffree).toBe(2)
+		expect(plan.missingByCondition.photoPrincipale).toBe(2)
+		expect(plan.missingByCondition.canalDeContact).toBe(2)
+		expect(plan.missingByCondition.specialite).toBe(1)
 	})
 })
 

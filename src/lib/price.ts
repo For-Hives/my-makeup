@@ -7,10 +7,12 @@
  * was typed, kept as it is.
  *
  * The amount is read as on the old site (numericPrice of src/lib/profil/completude.js, branch
- * main): the same text gives the same number, so a profile keeps its « offre chiffrée ». Its
- * known limits come with it: the first number of the text is the one read (« 45 min, 60 € »
- * gives 45, « 2 h : 150 € » gives nothing), and two numbers on two lines with nothing between
- * them (« 80 », then « 120 ») read as one amount out of bounds, so as nothing.
+ * main): the same text gives the same number, so a profile keeps its « offre chiffrée ». One
+ * deliberate difference (decision of 27/10/2026): a duration is not an amount. « 2 h : 150 € » and
+ * « 45 min, 60 € » give 150 and 60 (the old site read the 2 and the 45). The first number of the
+ * text, once its durations are set aside, is the one read. Its known limit stays: two numbers on two
+ * lines with nothing between them (« 80 », then « 120 ») read as one amount out of bounds, so as
+ * nothing.
  */
 
 /** An amount counts as a price between these two bounds, in euros (same bounds as the old site). */
@@ -40,6 +42,10 @@ const STOP_WORDS = new Set(['null', 'undefined', 'nan'])
 // « 1 200 »: a space between a digit and a group of three digits
 const THOUSANDS_SPACE = /(\d)\s(?=\d{3}\b)/g
 const FIRST_NUMBER = /(\d+(?:\.\d+)?)/
+// A duration: « 2 h », « 1 heure », « 2h30 », « 2 h 30 », « 45 min », « 45 minutes », « 45 mn ». The minutes of
+// « 2 h 30 » go with it, unless they are an amount (« 1 h 80 € »).
+const DURATION =
+	/\d+(?:[.,]\d+)?\s*(?:h|heures?|hrs?|min|minutes?|mn)(?![a-zà-ÿ])(?:\s?\d{1,2}(?!\d|\s*(?:€|euros?|eur(?![a-z]))))?/gi
 const THREE_DIGIT_GROUP = /\B(?=(\d{3})+$)/g
 
 // An amount and nothing else: « 50 », « 50€ », « 1 200 euros », « 50,5 € »
@@ -59,9 +65,13 @@ function enteredText(saisie: unknown): string | null {
 	return text === '' || STOP_WORDS.has(text.toLowerCase()) ? null : text
 }
 
-/** First number written in a text, whatever its size: « à partir de 80 € » → 80, « 1 200 € » → 1200. */
+/**
+ * First amount written in a text, whatever its size, durations set aside: « à partir de 80 € » → 80,
+ * « 1 200 € » → 1200, « 2 h : 150 € » → 150, « 45 min, 60 € » → 60.
+ */
 function firstNumber(texte: string): number | null {
-	const m = FIRST_NUMBER.exec(texte.replace(THOUSANDS_SPACE, '$1').replace(',', '.'))
+	const withoutDurations = texte.replace(THOUSANDS_SPACE, '$1').replace(DURATION, ' ').replace(',', '.')
+	const m = FIRST_NUMBER.exec(withoutDurations)
 	return m === null ? null : Number(m[1])
 }
 

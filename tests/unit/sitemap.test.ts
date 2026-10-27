@@ -115,11 +115,11 @@ describe('U41 : les exclus ne sont jamais là', () => {
 			expect(loc, loc).not.toMatch(/\/(auth|api|admin|search|site-map|demande-envoyee|toutes-les-news)(\/|$)/)
 	})
 
-	test('la lecture ne demande que les profils publiables, avec les règles d’accès actives', async () => {
+	test('la lecture ne demande que les profils indexables, avec les règles d’accès actives', async () => {
 		const { payload, lectures: readings } = payloadSpy({ profils: 1 })
 		await readIndexablePages(payload)
 		const [profiles] = readings.filter(({ collection }) => collection === 'profiles')
-		expect(profiles).toMatchObject({ where: { publishable: { equals: true } }, overrideAccess: false })
+		expect(profiles).toMatchObject({ where: { indexable: { equals: true } }, overrideAccess: false })
 		for (const reading of readings) expect(reading.overrideAccess, String(reading.collection)).toBe(false)
 	})
 

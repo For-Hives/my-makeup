@@ -194,7 +194,7 @@ test.describe('Les douze profils types du banc', () => {
 			expect(visibleText(html), key).not.toMatch(FORBIDDEN_WORDS)
 			expect(html, key).not.toMatch(PRIVATE_KEYS)
 			// Indexed only when the profile is publishable (E66).
-			expect(/<meta name="robots" content="noindex/.test(html), key).toBe(type.attendu.publishable !== true)
+			expect(/<meta name="robots" content="noindex/.test(html), key).toBe(type.attendu.indexable !== true)
 		}
 	})
 })
@@ -262,8 +262,8 @@ test.describe('E47 : le profil masqué, l’inconnu et l’adresse impossible', 
 	})
 })
 
-test.describe('E66 : un profil non publiable est en noindex, sans adresse canonique', { tag: '@mobile' }, () => {
-	for (const key of ['vide', 'actif-non-publiable']) {
+test.describe('E66 : un profil non indexable est en noindex, sans adresse canonique', { tag: '@mobile' }, () => {
+	for (const key of ['vide', 'publiable-non-indexable']) {
 		test(`« ${key} » répond 200, noindex, sans adresse canonique`, async ({ page, request }) => {
 			const { slug } = profile(key)
 			const html = await (await request.get(`/profil/${slug}`, { headers: { 'User-Agent': ROBOT } })).text()
@@ -277,7 +277,7 @@ test.describe('E66 : un profil non publiable est en noindex, sans adresse canoni
 		})
 	}
 
-	test('un profil publiable est indexable : adresse canonique, pas de noindex', async ({ page }) => {
+	test('un profil indexable : adresse canonique, pas de noindex', async ({ page }) => {
 		const { slug } = profile('reference')
 		await page.goto(`/profil/${slug}`)
 

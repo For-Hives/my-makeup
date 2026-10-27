@@ -33,17 +33,10 @@ const html = (profile: DashboardProfile, extra: { moderationAction?: string } = 
 	renderToStaticMarkup(<EditBanner banner={banner(profile, extra)} />)
 
 describe('editBanner', () => {
-	test('an empty profile is a draft and lists the six conditions, in the order of the rule', () => {
+	test('an empty profile is a draft and lists the four conditions, in the order of the rule', () => {
 		const result = banner({ id: 2 })
 		if (result.state !== 'draft') throw new Error(`expected draft, got ${result.state}`)
-		expect(result.items.map(item => item.criterion)).toEqual([
-			'specialite',
-			'ville',
-			'description',
-			'photo',
-			'offres',
-			'reseaux',
-		])
+		expect(result.items.map(item => item.criterion)).toEqual(['specialite', 'ville', 'photo', 'reseaux'])
 	})
 
 	test('the labels are those of the draft notice, never another wording', () => {
@@ -63,10 +56,15 @@ describe('editBanner', () => {
 		}
 	})
 
-	test('a point done leaves the list: with a short description, only the description is missing', () => {
-		const result = banner({ ...PUBLISHABLE, description: 'Trop court.' })
+	test('a point done leaves the list: with no contact, only the contact is missing', () => {
+		const result = banner({ ...PUBLISHABLE, networks: {} })
 		if (result.state !== 'incomplete') throw new Error('expected incomplete')
-		expect(result.items.map(item => item.criterion)).toEqual(['description'])
+		expect(result.items.map(item => item.criterion)).toEqual(['reseaux'])
+	})
+
+	test('a short description or no price is no longer missing for a visible page', () => {
+		expect(banner({ ...PUBLISHABLE, description: 'Trop court.' }).state).toBe('publishable')
+		expect(banner({ ...PUBLISHABLE, serviceOffers: [] }).state).toBe('publishable')
 	})
 
 	test('no point is invented: every item is a criterion of the rule', () => {
@@ -76,8 +74,19 @@ describe('editBanner', () => {
 	})
 
 	test('a publishable profile is visible, with the way to its public page', () => {
-		expect(banner(PUBLISHABLE)).toEqual({ state: 'publishable', href: '/profil/lea-fictive', paused: false })
+		expect(banner(PUBLISHABLE)).toEqual({
+			state: 'publishable',
+			href: '/profil/lea-fictive',
+			paused: false,
+			google: [],
+		})
 		expect(banner({ ...PUBLISHABLE, available: false })).toMatchObject({ state: 'publishable', paused: true })
+	})
+
+	test('a visible page that Google may not index yet says what to add, as suggestions', () => {
+		const result = banner({ ...PUBLISHABLE, description: 'Trop court.', serviceOffers: [] })
+		if (result.state !== 'publishable') throw new Error('expected publishable')
+		expect(result.google.map(item => item.criterion)).toEqual(['description', 'offres', 'galerie'])
 	})
 
 	test('hidden by the team: its own state, no list; suspended: another', () => {
@@ -97,13 +106,14 @@ describe('EditBanner', () => {
 		expect(page).toContain('</strong> Il manque :')
 		expect(page).toContain('href="/auth/apercu-profil?mode=edition#bloc-photo"')
 		expect(page).toContain('ta photo principale')
-		expect(page.match(/min-h-11/g)?.length).toBeGreaterThanOrEqual(6)
+		expect(page.match(/min-h-11/g)?.length).toBeGreaterThanOrEqual(4)
+		expect(page).not.toContain('200 caractères')
 	})
 
 	test('an incomplete profile lists only what is missing', () => {
-		const page = html({ ...PUBLISHABLE, description: 'Trop court.' })
+		const page = html({ ...PUBLISHABLE, networks: {} })
 		expect(page).toContain('data-state="incomplete"')
-		expect(page).toContain('une description de 200 caractères au moins')
+		expect(page).toContain('un moyen de te contacter')
 		expect(page).not.toContain('ta photo principale')
 	})
 
@@ -112,6 +122,18 @@ describe('EditBanner', () => {
 		expect(page).toContain('data-state="publishable"')
 		expect(page).toContain('Ton profil est visible')
 		expect(page).toContain('href="/profil/lea-fictive"')
+		expect(page).not.toContain('Il manque')
+		expect(page).not.toContain('Pour apparaître sur Google')
+	})
+
+	test('a visible page that Google may not index yet lists what to add, as optional links', () => {
+		const page = html({ ...PUBLISHABLE, description: 'Trop court.', serviceOffers: [] })
+		expect(page).toContain('data-state="publishable"')
+		expect(page).toContain('Ton profil est visible')
+		expect(page).toContain('Pour apparaître sur Google')
+		expect(page).toContain('data-testid="google-description"')
+		expect(page).toContain('data-testid="google-offres"')
+		expect(page).toContain('(facultatif)')
 		expect(page).not.toContain('Il manque')
 	})
 

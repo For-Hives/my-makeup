@@ -4,6 +4,7 @@ import { composerEmail } from '@/lib/emails/layout'
 import { reminderEmailContent } from '@/lib/emails/reminder'
 import { parseServerEnv } from '@/lib/env'
 import {
+	googleSuggestions,
 	INACTIVITY_MONTHS,
 	inactivityThreshold,
 	isInactive,
@@ -29,7 +30,7 @@ const daysAgo = (days: number): string => new Date(NOW.getTime() - days * DAY).t
 
 const LONG_TEXT = 'Maquillage de mariée et de soirée, en studio ou à domicile. '.repeat(5)
 
-/** A profile that meets the six conditions: nothing is missing. */
+/** A profile that meets the four conditions and is rich enough for Google: nothing is missing. */
 function completeDocument(): ReminderSubject['document'] {
 	return {
 		firstName: 'Fictive',
@@ -47,7 +48,7 @@ function subject(over: Partial<ReminderSubject> = {}): ReminderSubject {
 	return {
 		profileId: 1,
 		status: 'published',
-		document: { ...completeDocument(), description: '', serviceOffers: [] },
+		document: { ...completeDocument(), mainPicture: null, networks: {} },
 		profileUpdatedAt: daysAgo(REMINDER_IDLE_DAYS + 1),
 		account: { verified: true, blocked: false, lastSignInAt: daysAgo(1), createdAt: daysAgo(400) },
 		state: null,
@@ -69,7 +70,12 @@ describe('calendar months', () => {
 
 describe('the profiles that miss one or two conditions', () => {
 	test('a profile that misses two conditions is on the list, with what it misses', () => {
-		expect(missingConditions(subject(), NOW)).toEqual(['offreChiffree', 'descriptionLongue'])
+		expect(missingConditions(subject(), NOW)).toEqual(['photoPrincipale', 'canalDeContact'])
+	})
+
+	test('a profile with no price and no long description is publishable: she is not reminded for them', () => {
+		const document = { ...completeDocument(), description: '', serviceOffers: [] }
+		expect(missingConditions(subject({ document }), NOW)).toEqual([])
 	})
 
 	test('a publishable profile is not on the list', () => {
@@ -77,7 +83,7 @@ describe('the profiles that miss one or two conditions', () => {
 	})
 
 	test('a profile that misses three conditions is left alone: she is far from it', () => {
-		const document = { ...completeDocument(), description: '', serviceOffers: [], networks: {} }
+		const document = { ...completeDocument(), mainPicture: null, specialty: '', networks: {} }
 		expect(missingConditions(subject({ document }), NOW)).toEqual([])
 	})
 
@@ -114,6 +120,31 @@ describe('the profiles that miss one or two conditions', () => {
 
 	test('a profile that unsubscribed is never reminded again', () => {
 		expect(missingConditions(subject({ state: { lastSentAt: null, unsubscribedAt: daysAgo(500) } }), NOW)).toEqual([])
+	})
+})
+
+describe('what she could add to be found on Google', () => {
+	const withDocument = (document: ReminderSubject['document']) => subject({ document })
+
+	test('nothing for a profile that is already indexable', () => {
+		expect(googleSuggestions(withDocument(completeDocument()))).toEqual([])
+	})
+
+	test('a description of 100 characters, and a priced offer or a gallery photo: suggestions, never conditions', () => {
+		const bare = { ...completeDocument(), description: '', serviceOffers: [] }
+		expect(googleSuggestions(withDocument(bare))).toEqual(['description', 'priceOrGallery'])
+		expect(googleSuggestions(withDocument({ ...bare, description: 'a'.repeat(99), gallery: [4] }))).toEqual([
+			'description',
+		])
+		expect(googleSuggestions(withDocument({ ...bare, description: 'a'.repeat(100), gallery: [4] }))).toEqual([])
+		expect(googleSuggestions(withDocument({ ...bare, description: 'a'.repeat(100) }))).toEqual(['priceOrGallery'])
+		expect(
+			googleSuggestions(withDocument({ ...bare, description: 'a'.repeat(100), serviceOffers: [{ priceFrom: 60 }] }))
+		).toEqual([])
+	})
+
+	test('nothing for an internal account', () => {
+		expect(googleSuggestions(withDocument({ specialty: 'CEO/CTO My Makeup' }))).toEqual([])
 	})
 })
 
@@ -301,13 +332,16 @@ describe('the setting REMINDERS_SEND', () => {
 describe('the mail', () => {
 	test('it names what is missing in her words, with the way to unsubscribe, in the tone of « tu »', () => {
 		const content = reminderEmailContent({
-			missing: ['offreChiffree', 'descriptionLongue'],
+			missing: ['photoPrincipale', 'canalDeContact'],
 			unsubscribeLink: 'https://exemple.test/api/reminders/unsubscribe?token=1.abc',
 		})
 		const mail = composerEmail(content, 'https://exemple.test')
 		expect(mail.sujet).toBe('Il te manque peu de chose pour publier ton profil')
-		expect(mail.texte).toContain('une prestation avec un prix')
-		expect(mail.texte).toContain('une description d’au moins 200 caractères')
+		expect(mail.texte).toContain('une photo principale')
+		expect(mail.texte).toContain('un moyen de te contacter')
+		// the price and the long description are no longer asked: they are only suggested for Google
+		expect(mail.texte).not.toContain('200 caractères')
+		expect(mail.texte).toContain('mieux référencée sur Google')
 		expect(mail.texte).toContain('https://exemple.test/api/reminders/unsubscribe?token=1.abc')
 		expect(mail.lien).toBe('https://exemple.test/auth/profil')
 	})

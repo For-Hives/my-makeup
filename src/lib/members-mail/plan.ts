@@ -16,7 +16,13 @@
 
 import { isInternal } from '../profile/completeness'
 import { profileFields } from '../profile/state'
-import { type MissingCondition, type ReminderSubject, unmetConditions } from '../reminders/rules'
+import {
+	type GoogleSuggestion,
+	googleSuggestions,
+	type MissingCondition,
+	type ReminderSubject,
+	unmetConditions,
+} from '../reminders/rules'
 
 /** Why an account is left out. An account is counted under the first reason that applies, in this order. */
 export const EXCLUSION_REASONS = ['unconfirmed', 'blocked', 'unsubscribed', 'internal', 'alreadyHandled'] as const
@@ -27,8 +33,6 @@ export const CONDITIONS: readonly MissingCondition[] = [
 	'photoPrincipale',
 	'villeExploitable',
 	'specialite',
-	'offreChiffree',
-	'descriptionLongue',
 	'canalDeContact',
 ]
 
@@ -36,6 +40,8 @@ export interface Recipient {
 	profileId: number
 	/** What her profile lacks to be publishable, in the display order; empty when it lacks nothing. */
 	missing: MissingCondition[]
+	/** What she could add to be better referenced on Google (suggestions, not conditions); empty when nothing. */
+	forGoogle: GoogleSuggestion[]
 }
 
 export interface MembersPlan {
@@ -44,7 +50,7 @@ export interface MembersPlan {
 	/** The recipients, by profile number. */
 	eligible: Recipient[]
 	excluded: Record<ExclusionReason, number>
-	/** Recipients whose profile already meets the six conditions. */
+	/** Recipients whose profile already meets the four conditions. */
 	completeProfiles: number
 	/** For each condition, how many recipients lack it. */
 	missingByCondition: Record<MissingCondition, number>
@@ -77,7 +83,7 @@ export function planMembersMail(subjects: readonly ReminderSubject[], handled: R
 		const missing = unmetConditions(subject)
 		if (missing.length === 0) completeProfiles++
 		for (const condition of missing) missingByCondition[condition]++
-		eligible.push({ profileId: subject.profileId, missing })
+		eligible.push({ profileId: subject.profileId, missing, forGoogle: googleSuggestions(subject) })
 	}
 	eligible.sort((a, b) => a.profileId - b.profileId)
 	return { profilesRead: subjects.length, eligible, excluded, completeProfiles, missingByCondition }

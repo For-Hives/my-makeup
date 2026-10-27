@@ -142,7 +142,7 @@ describe('les listes d’un profil, sous les noms de Payload', () => {
 			'à partir de 80',
 			'Sur devis',
 			'Entre 60 et 90 €',
-			'2 h : 150 €',
+			'Forfait 3 personnes : 200 €',
 			'3',
 			'',
 			null,
@@ -173,7 +173,7 @@ describe('les listes d’un profil, sous les noms de Payload', () => {
 			['Sur devis', null],
 			// The old site reads the first number of the text: ported as it is (src/lib/price.ts).
 			['Entre 60 et 90 €', 60],
-			['2 h : 150 €', null],
+			['Forfait 3 personnes : 200 €', null],
 			// Out of bounds (5 to 10 000 €): no amount, the text stays.
 			['3', null],
 			['', null],
@@ -189,7 +189,7 @@ describe('les listes d’un profil, sous les noms de Payload', () => {
 		const { prices: priceValue, expected } = expectedProfiles(
 			[
 				profile(1, { prestations: [offer(1, '80'), offer(2, 'Sur devis')] }),
-				profile(2, { prestations: [offer(3, '2 h : 150 €')] }),
+				profile(2, { prestations: [offer(3, 'Forfait 3 personnes : 200 €')] }),
 				profile(3, { prestations: [offer(4, null), offer(5, '')] }),
 				profile(4, {
 					prestations: [{ ...offer(6, 'Sur devis'), options: [{ name: 'Option', description: null, price: '15 €' }] }],

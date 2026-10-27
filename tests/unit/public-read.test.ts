@@ -24,11 +24,13 @@ describe('U20 : listé, indexable, visible', () => {
 		expect(isList({ status: 'published', fullyEmpty: false })).toBe(true)
 	})
 
-	test('indexable : publiable et pas masqué ; un profil visible mais non publiable reste hors de l’index', () => {
-		expect(isIndexable({ status: 'published', publishable: true })).toBe(true)
-		expect(isIndexable({ status: 'published', publishable: false })).toBe(false)
-		expect(isIndexable({ status: 'published', publishable: null })).toBe(false)
-		expect(isIndexable({ status: 'hidden', publishable: true })).toBe(false)
+	test('indexable : assez riche pour Google et pas masqué ; un profil visible mais mince reste hors de l’index', () => {
+		expect(isIndexable({ status: 'published', publishable: true, indexable: true })).toBe(true)
+		expect(isIndexable({ status: 'published', publishable: true, indexable: false })).toBe(false)
+		expect(isIndexable({ status: 'published', publishable: true, indexable: null })).toBe(false)
+		expect(isIndexable({ status: 'published', publishable: true })).toBe(false)
+		expect(isIndexable({ status: 'hidden', publishable: true, indexable: true })).toBe(false)
+		expect(isVisible({ status: 'published', publishable: true, indexable: false })).toBe(true)
 		expect(isVisible({ status: 'published', publishable: false })).toBe(true)
 	})
 
@@ -41,7 +43,7 @@ describe('U20 : listé, indexable, visible', () => {
 		expect(LISTED_FILTER).toEqual({
 			and: [{ available: { not_equals: false } }, { fullyEmpty: { not_equals: true } }],
 		})
-		expect(INDEXABLE_FILTER).toEqual({ publishable: { equals: true } })
+		expect(INDEXABLE_FILTER).toEqual({ indexable: { equals: true } })
 	})
 })
 

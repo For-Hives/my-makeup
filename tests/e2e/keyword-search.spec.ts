@@ -99,7 +99,7 @@ test.describe('Recherche par mot, par pages', () => {
 		const urls = await page
 			.locator('main li a[href^="/profil/"]')
 			.evaluateAll(liens => liens.map(lien => lien.getAttribute('href')))
-		for (const key of ['reference', 'ville-voisine', 'actif-non-publiable', 'verifiee'])
+		for (const key of ['reference', 'ville-voisine', 'publiable-non-indexable', 'verifiee'])
 			expect(urls, key).toContain(`/profil/${profile(key).slug}`)
 		for (const key of ['indisponible', 'vide', 'masquee'])
 			expect(urls, key).not.toContain(`/profil/${profile(key).slug}`)

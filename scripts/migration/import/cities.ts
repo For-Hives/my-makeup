@@ -199,7 +199,7 @@ const askedName = (place: string): string => withoutAbbreviation(place).replace(
 
 /**
  * Whether a place typed next to a foreign country can be the town of that country: the rules of a
- * name of commune (`usableCity`, six words at most, letters, no address), and `townErrors`, which
+ * name of commune (`usableCity`, six words at most for the import, letters, no address), and `townErrors`, which
  * the collection applies at every save.
  */
 function plausibleTown(place: string, country: string): boolean {

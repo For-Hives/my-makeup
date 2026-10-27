@@ -10,7 +10,7 @@ import { type IndexableZone, zonePath } from './zones'
  *
  * - The fixed pages come from one explicit table (`STATIC_PAGES`), which the plan of the site reads too.
  *   A test fails when a page of the application is in neither this table nor the exclusions.
- * - A profile is there when it is publishable, a talent or an article when it is published: the reading
+ * - A profile is there when it is indexable (publishable and rich enough for Google), a talent or an article when it is published: the reading
  *   that gives them is src/services/public/indexable-pages.ts.
  * - No `changefreq`, no `priority`. `lastmod` is the real date of the last change of the document, and is
  *   left out when it is not known (a fixed page).
@@ -139,7 +139,7 @@ export const absoluteUrl = (chemin: string): string => {
 
 /**
  * The entries of the sitemap, without duplicates: the fixed pages that exist, then the profiles, the
- * talents and the articles, each by its slug. The caller gives the publishable profiles and the published
+ * talents and the articles, each by its slug. The caller gives the indexable profiles and the published
  * talents and articles only: this function does not judge them.
  */
 export function sitemapEntries({

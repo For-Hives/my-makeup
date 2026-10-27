@@ -177,10 +177,12 @@ describe('E02 : les cinq étapes, lues sur le profil enregistré', () => {
 		expect(onboardingPosition(done)).toBe('terminee')
 		expect((await accountProfiles(account))[0]?.serviceOffers?.[0]?.priceFrom).toBe(150)
 
-		// The rule of a profile is untouched: without the presentation of 200 characters, it is not publishable.
-		expect(completeness(profileFields(done)).publiable).toBe(false)
+		// The rule of a profile: with the contact, the page is publishable without the presentation (decision of
+		// 27/10/2026); the presentation of 100 characters and a priced offer make it indexable.
+		expect(completeness(profileFields(done)).publiable).toBe(true)
+		expect(completeness(profileFields(done)).indexable).toBe(false)
 		await payload.update({ collection: 'profiles', id, data: { description: 'Une présentation. '.repeat(14) } })
-		expect(completeness(profileFields(await artistProfile(payload, user))).publiable).toBe(true)
+		expect(completeness(profileFields(await artistProfile(payload, user))).indexable).toBe(true)
 	})
 
 	test('un téléphone caché ne fait pas l’étape 4 ; montré, si', async () => {

@@ -680,7 +680,7 @@ const SERVICE_OFFERS: readonly Component[] = [
 	{ ligne: { id: 4, name: 'Maquillage artistique', description: null, price: '80 €' }, profil: 22, ordre: 1 },
 	{ ligne: { id: 5, name: 'Shooting mode', description: null, price: 'Entre 60 et 90 €' }, profil: 23, ordre: 1 },
 	{
-		ligne: { id: 6, name: 'Tournage', description: 'Forfait demi-journée.', price: '2 h : 150 €' },
+		ligne: { id: 6, name: 'Tournage', description: 'Forfait demi-journée.', price: 'Forfait 3 personnes : 200 €' },
 		profil: 24,
 		ordre: 1,
 	},

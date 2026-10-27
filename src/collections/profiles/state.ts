@@ -48,12 +48,22 @@ export const STATE_FIELDS: Field[] = [
 	},
 	flag('active', 'Actif', 'Photo principale, ville et spécialité. Calculé par le serveur.'),
 	since('activeSince', 'Actif ou non depuis le'),
-	flag('publishable', 'Publiable', 'Les six conditions du profil publiable. Calculé par le serveur.'),
+	flag(
+		'publishable',
+		'Publiable',
+		'Photo principale, ville, spécialité et un moyen de contact : visible dans la recherche. Calculé par le serveur.'
+	),
 	since('publishableSince', 'Publiable ou non depuis le'),
+	flag(
+		'indexable',
+		'Indexable',
+		'Publiable, avec une description de 100 caractères au moins et (une prestation chiffrée ou une photo de galerie) : la page entre dans le sitemap et Google peut la montrer. Calculé par le serveur.'
+	),
+	since('indexableSince', 'Indexable ou non depuis le'),
 	flag(
 		'fullyEmpty',
 		'Entièrement vide',
-		'Aucune des six conditions : le profil reste en brouillon. Calculé par le serveur.'
+		'Aucune des quatre conditions, ni prestation chiffrée, ni description de 100 caractères : le profil reste en brouillon. Calculé par le serveur.'
 	),
 	since('fullyEmptySince', 'Entièrement vide ou non depuis le'),
 ]

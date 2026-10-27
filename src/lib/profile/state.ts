@@ -1,8 +1,8 @@
 /**
  * Where a profile stands, as the server stores it at every save (ticket 044; plan 01 §5 P3; plan
- * 02 I20; docs/migration/SCHEMA.md §9): its completeness score, whether it is active, publishable
- * or entirely empty, the date each of these three took its current value, and the status that
- * follows from them.
+ * 02 I20; docs/migration/SCHEMA.md §9): its completeness score, whether it is active, publishable,
+ * indexable or entirely empty, the date each of these flags took its current value, and the status
+ * that follows from them.
  *
  * The reading itself is the single rule ported from the old site, src/lib/profile/completeness.ts:
  * this file only maps a document of `profiles` to the fields that rule reads (`profileFields`),
@@ -18,7 +18,7 @@
 
 import { countryByCode, FRANCE_CODE, normalizedCountryCode } from '../countries'
 import { isPriceAmount } from '../price'
-import { completeness, type ProfileFields, usableCity } from './completeness'
+import { completeness, type ProfileFields } from './completeness'
 import {
 	INITIAL_CHOICE,
 	INITIAL_STATUS,
@@ -66,15 +66,13 @@ export interface ProfileDocument {
 /**
  * The city the rule reads for a commune: its name, and only next to its INSEE code.
  *
- * Every name of the official list (14/10/2026) is a usable city for the rule as it is, but one:
- * « Pont de Montvert - Sud Mont Lozère » (48116), seven words with its spaced hyphen, over the six
- * the rule allows. A name the rule refuses is so read once more with its spaced hyphens joined, as
- * the other names of the list write them (« Pont de Montvert-Sud Mont Lozère »). A name the rule
- * reads is passed as it is; a text that is no city (« France », « Partout ») stays none.
+ * Every name of the official list is a usable city for the rule, long names included (the limit of six
+ * words, which refused « Pont de Montvert - Sud Mont Lozère », is gone: decision of 27/10/2026). A text
+ * that is no city (« France », « Partout ») stays none.
  */
 function cityName(commune: ProfileDocument['city']): string | null {
 	if (!commune?.inseeCode || typeof commune.name !== 'string') return null
-	return usableCity(commune.name) ? commune.name : commune.name.replace(/\s+-\s+/g, '-')
+	return commune.name
 }
 
 /**
@@ -156,9 +154,11 @@ export interface ProfileState {
 	readonly completeness: number
 	/** Main photo, usable city and speciality */
 	readonly active: boolean
-	/** The six conditions, and not an internal account */
+	/** The four conditions (photo, city, speciality, contact), and not an internal account: visible in the search */
 	readonly publishable: boolean
-	/** None of the six conditions */
+	/** Publishable, a description of 100 characters and (a priced offer or a gallery photo): Google may index it */
+	readonly indexable: boolean
+	/** None of the four conditions, no priced offer, no description of 100 characters */
 	readonly fullyEmpty: boolean
 }
 
@@ -168,15 +168,17 @@ export function profileState(document: ProfileDocument | null | undefined): Prof
 		score,
 		actif: active,
 		publiable: publishable,
+		indexable,
 		entierementVide: completelyEmpty,
 	} = completeness(profileFields(document))
-	return { completeness: score, active: active, publishable: publishable, fullyEmpty: completelyEmpty }
+	return { completeness: score, active, publishable, indexable, fullyEmpty: completelyEmpty }
 }
 
 /** For each flag of the state, the field of the date it took its current value. */
 export const TRANSITION_DATES = {
 	active: 'activeSince',
 	publishable: 'publishableSince',
+	indexable: 'indexableSince',
 	fullyEmpty: 'fullyEmptySince',
 } as const
 
@@ -263,6 +265,7 @@ export function stateAfterSave({
 		...state,
 		activeSince: since('active'),
 		publishableSince: since('publishable'),
+		indexableSince: since('indexable'),
 		fullyEmptySince: since('fullyEmpty'),
 		...statusAfter({ avant, apres, fullyEmpty: state.fullyEmpty }),
 	}

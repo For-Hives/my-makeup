@@ -36,7 +36,7 @@ describe('La liste : le vide, l’indisponible et le masqué sont absents', () =
 		expect(totalDocs).toBe(cards.length)
 		for (const key of ['vide', 'indisponible', 'masquee']) expect(slugs, key).not.toContain(slugOf(key))
 		// Availability never set counts as available (U20); a profile that cannot be published is still listed.
-		for (const key of ['reference', 'disponibilite-inconnue', 'actif-non-publiable', 'sans-contact-public'])
+		for (const key of ['reference', 'disponibilite-inconnue', 'publiable-non-indexable', 'sans-contact-public'])
 			expect(slugs, key).toContain(slugOf(key))
 	})
 
@@ -93,7 +93,7 @@ describe('La lecture par slug', () => {
 		const payload = await testPayload()
 
 		expect((await readPublicProfile(payload, slugOf('reference')))?.indexable).toBe(true)
-		const unpublishable = await readPublicProfile(payload, slugOf('actif-non-publiable'))
+		const unpublishable = await readPublicProfile(payload, slugOf('publiable-non-indexable'))
 		expect(unpublishable).not.toBeNull()
 		expect(unpublishable?.indexable).toBe(false)
 	})

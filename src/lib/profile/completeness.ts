@@ -1,22 +1,30 @@
 /**
  * The single definition of a profile (plans/04 §2.4, plans/02 U01-U08): how complete it is, whether
- * it is entirely empty, active or publishable, and what it lacks. The schema hook, the artist's
- * space, the search and the sitemap read this file; none of them computes its own.
+ * it is entirely empty, active, publishable or indexable, and what it lacks. The schema hook, the
+ * artist's space, the search and the sitemap read this file; none of them computes its own.
  *
- * Ported as is from the old site: src/lib/profil/completude.js of the front (branch main), and, for
- * the six conditions and the entirely empty profile, src/utils/profile-conditions.js of the API
- * (the search without empty profiles, 13/10/2026). The same profile gives the same result:
+ * Ported from the old site (src/lib/profil/completude.js of the front, branch main; for the entirely
+ * empty profile, src/utils/profile-conditions.js of the API), then lightened on purpose by the
+ * decision of the maintainer of 27/10/2026 (docs/migration/CHANGEMENTS-VOULUS.md, « publication allégée »):
+ * only about 15 profiles of 100 met the six old conditions, and the price and the long description
+ * were what stopped the others.
  *
  * - score out of 13: the 13 criteria of the progress bar, for display only;
- * - the six conditions of a publishable profile: a main picture, a usable city, a speciality, an
- *   offer with a numeric price, a description of 200 characters at least, a contact channel;
+ * - the four conditions of a PUBLISHABLE profile (visible in the search and on the site): a main
+ *   picture, a usable city, a speciality, a contact channel. A page with no way to reach her is of
+ *   no use to a visitor: it is the only social requirement kept;
  * - `actif` = main picture + usable city + speciality;
- * - `publiable` = the six conditions, and not an internal account;
- * - `completelyEmpty` = none of the six conditions. A name alone leaves a profile entirely empty;
- *   one condition is enough not to be.
+ * - `publiable` = the four conditions, and not an internal account;
+ * - the richness of a profile (`richness`), which only decides whether Google may index it: a
+ *   description of 100 characters at least, an offer with a numeric price, a photo in the gallery;
+ * - `indexable` = publishable AND a description of 100 characters at least AND (an offer with a
+ *   numeric price OR a gallery photo). A publishable profile that is not indexable stays visible,
+ *   in noindex, out of the sitemap and out of the structured data;
+ * - `completelyEmpty` = none of the four conditions, no priced offer and no description of 100
+ *   characters. A name alone leaves a profile entirely empty; one of these is enough not to be.
  *
  * The quote form is no contact channel. The option `formulaireDevis` exists as on the old site,
- * where nothing turns it on, and it never counts among the six conditions.
+ * where nothing turns it on, and it never counts among the conditions.
  *
  * The fields keep their names of the old site (ProfileFields), so that the cases shared with it
  * (tests/unit/fixtures/completeness-cases.json) run unchanged. A caller maps its own document to them.
@@ -55,8 +63,8 @@ export const CHANNELS = ['youtube', 'instagram', 'facebook', 'website', 'linkedi
 
 export type Channel = (typeof CHANNELS)[number]
 
-/** Length from which a description counts for a publishable profile */
-export const DESCRIPTION_MIN = 200
+/** Length from which a description counts for Google (`indexable`) and for a profile that is not empty */
+export const DESCRIPTION_MIN = 100
 
 /** One service offer: only its price, as typed, is read */
 export interface ProfileOffer {
@@ -96,20 +104,28 @@ export interface CompletenessOptions {
 	readonly formulaireDevis?: boolean
 }
 
-/** The six conditions of a publishable profile */
+/** The four conditions of a publishable profile: visible in the search and on the site */
 export interface PublishableConditions {
 	/** A main picture */
 	readonly photoPrincipale: boolean
-	/** The public city is a commune or a postal code, not a country, a street nor free text */
+	/** The public city is a commune, a postal code or a town abroad, not a country, a street nor a void value */
 	readonly villeExploitable: boolean
 	/** A speciality */
 	readonly specialite: boolean
-	/** The first number read in the price of one offer is between 5 and 10 000 */
-	readonly offreChiffree: boolean
-	/** A description of 200 characters at least, edge spaces ignored, runs of spaces counted once */
-	readonly descriptionLongue: boolean
 	/** One of the contact channels is filled; the quote form is none */
 	readonly canalDeContact: boolean
+}
+
+/** What a publishable profile needs more to be indexed by Google (`indexable`) */
+export interface Richness {
+	/** A description of 100 characters at least, edge spaces ignored, runs of spaces counted once */
+	readonly description: boolean
+	/** The first amount read in the price of one offer is between 5 and 10 000 */
+	readonly pricedOffer: boolean
+	/** At least one photo in the gallery */
+	readonly gallery: boolean
+	/** An offer with a numeric price or a gallery photo: the second half of the indexing rule */
+	readonly richContent: boolean
 }
 
 export interface Completeness {
@@ -119,11 +135,15 @@ export interface Completeness {
 	/** Missing criteria, in display order */
 	readonly manquants: Criterion[]
 	readonly actif: boolean
+	/** The four conditions: visible in the search and on the site */
 	readonly publiable: boolean
+	/** Publishable and rich enough for Google: description of 100 characters and (a priced offer or a gallery photo) */
+	readonly indexable: boolean
 	/** Internal account of the team: never publishable */
 	readonly interne: boolean
 	readonly conditions: PublishableConditions
-	/** None of the six conditions: the search does not list such a profile */
+	readonly richness: Richness
+	/** None of the four conditions, no priced offer, no description of 100 characters: the search does not list such a profile */
 	readonly entierementVide: boolean
 }
 
@@ -149,33 +169,55 @@ export function normalize(v: unknown): string {
 		.replace(/\s+/g, ' ')
 }
 
+/** Values that say nothing, a country alone or a whole area: never a city. */
 const NOT_A_CITY = new Set([
 	'france',
 	'fr',
 	'toute la france',
+	'toute la france entiere',
+	'france entiere',
+	'france metropolitaine',
 	'partout',
 	'partout en france',
+	'partout dans le monde',
 	'monde',
+	'monde entier',
 	'europe',
 	'international',
+	'dom tom',
+	'dom-tom',
 	'null',
 	'undefined',
+	'nan',
+	'none',
+	'n/a',
 	'-',
+	'--',
 	'.',
+	'..',
+	'...',
+	'?',
 ])
+
+/** « Toute la France », « Toute l'Europe », « Partout… », « Monde… »: an area, not a place. */
+const WHOLE_AREA = /^(?:toute?s?\s+(?:la\s+|l['’]\s*)?(?:france|europe)|partout|monde)\b/
 
 /**
  * Usable city: the public place of the field (publicCity: the commune of a postal address,
- * « Annecy (74) », never its street) is a town or a postcode, not a country, not free text. An
- * address without a commune nor a postal code (« 3 avenue X ») is not usable, nor a text that
- * starts with a number other than a postal code (« 74 et alentours »).
+ * « Annecy (74) », never its street) is a place, whatever its kind: a French commune, a postal
+ * code alone, a town abroad. Refused: nothing, a value without meaning (« null », « - », « . »), a
+ * country alone or a whole area (« France », « Europe », « Toute la France »), an address without a
+ * commune nor a postal code (« 3 avenue X »), a text that starts with a number other than a postal
+ * code (« 74 et alentours »). There is no limit of length or of words: real names are long
+ * (« Pont de Montvert - Sud Mont Lozère »).
  */
 export function usableCity(city: unknown): boolean {
 	const v = normalize(publicCity(city))
-	if (v === '' || NOT_A_CITY.has(v)) return false
+	if (v === '' || NOT_A_CITY.has(v) || WHOLE_AREA.test(v)) return false
+	// a postal code alone: 5 digits in France, 4 in Belgium or Switzerland
+	if (/^\d{4,5}$/.test(v)) return true
 	if (/^\d+,? /.test(v) && !/^\d{5}\b/.test(v)) return false
-	if (!(/[a-z]/.test(v) || /\b\d{5}\b/.test(v))) return false
-	return v.split(' ').length <= 6
+	return /[a-z]/.test(v) || /\b\d{5}\b/.test(v)
 }
 
 /**
@@ -203,25 +245,38 @@ export function hasContactChannel(network: ProfileNetworks | null | undefined): 
 	return CHANNELS.some(canal => filled(network[canal]))
 }
 
-/** Which of the six conditions of a publishable profile a profile meets. */
+/** Which of the four conditions of a publishable profile a profile meets. */
 export function publishableConditions(profil: ProfileFields | null | undefined): PublishableConditions {
 	const p = profil ?? {}
-	const offers = isList(p.service_offers) ? p.service_offers : []
 	return {
 		photoPrincipale: aMedia(p.main_picture),
 		villeExploitable: usableCity(p.city),
 		specialite: filled(p.speciality),
-		offreChiffree: offers.some(offre => numericPrice(offre?.price) !== null),
-		descriptionLongue: descriptionLength(p.description) >= DESCRIPTION_MIN,
 		canalDeContact: hasContactChannel(p.network),
 	}
 }
 
-const none = (conditions: PublishableConditions): boolean => !Object.values(conditions).some(Boolean)
+/** What a profile has beyond the publication: the parts of the indexing rule, and the gallery. */
+export function richnessOf(profil: ProfileFields | null | undefined): Richness {
+	const p = profil ?? {}
+	const offers = isList(p.service_offers) ? p.service_offers : []
+	const pricedOffer = offers.some(offre => numericPrice(offre?.price) !== null)
+	const gallery = aMedia(p.image_gallery)
+	return {
+		description: descriptionLength(p.description) >= DESCRIPTION_MIN,
+		pricedOffer,
+		gallery,
+		richContent: pricedOffer || gallery,
+	}
+}
 
-/** True when a profile meets none of the six conditions. */
+/** True when a profile meets none of the four conditions and has neither a priced offer nor a description of 100 characters. */
+const noneOf = (conditions: PublishableConditions, richness: Richness): boolean =>
+	!(Object.values(conditions).some(Boolean) || richness.pricedOffer || richness.description)
+
+/** True when a profile is entirely empty: the search does not list it. */
 export function isFullyEmpty(profil: ProfileFields | null | undefined): boolean {
-	return none(publishableConditions(profil))
+	return noneOf(publishableConditions(profil), richnessOf(profil))
 }
 
 /** The whole reading of a profile: score, missing criteria, conditions and flags. */
@@ -231,6 +286,7 @@ export function completeness(
 ): Completeness {
 	const p = profil ?? {}
 	const conditions = publishableConditions(p)
+	const richness = richnessOf(p)
 	const presents: Record<Criterion, boolean> = {
 		nom: filled(p.last_name) && filled(p.first_name),
 		specialite: conditions.specialite,
@@ -244,22 +300,24 @@ export function completeness(
 		offres: list(p.service_offers),
 		reseaux: conditions.canalDeContact,
 		langues: list(p.language),
-		galerie: aMedia(p.image_gallery),
+		galerie: richness.gallery,
 	}
 	const missing = CRITERIA.filter(critere => !presents[critere])
 	const internal = isInternal(p)
 	const active = conditions.photoPrincipale && conditions.villeExploitable && conditions.specialite
 	const contact = conditions.canalDeContact || options.formulaireDevis === true
-	const publishable = active && conditions.offreChiffree && conditions.descriptionLongue && contact && !internal
+	const publishable = active && contact && !internal
 	return {
 		score: CRITERIA.length - missing.length,
 		sur: 13,
 		manquants: missing,
 		actif: active,
 		publiable: publishable,
+		indexable: publishable && richness.description && richness.richContent,
 		interne: internal,
 		conditions,
-		entierementVide: none(conditions),
+		richness,
+		entierementVide: noneOf(conditions, richness),
 	}
 }
 

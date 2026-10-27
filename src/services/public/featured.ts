@@ -22,7 +22,7 @@ export function featuredCandidates(
 	random: () => number = Math.random
 ): ProfileCard[] {
 	return sampleCandidates(
-		directory.filter(profile => profile.verified === true && profile.indexable && !profile.unreachable),
+		directory.filter(profile => profile.verified === true && profile.publishable && !profile.unreachable),
 		limit,
 		random
 	).map(profile => profile.carte)

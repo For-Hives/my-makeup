@@ -42,7 +42,7 @@ export interface Preset<T> {
 /** What the preset reads of a directory profile. */
 export interface PresetProfile {
 	carte: { slug: string }
-	indexable: boolean
+	publishable: boolean
 	unreachable: boolean
 	departement: string | null
 }
@@ -64,7 +64,7 @@ export function orderMostViewed(totals: ReadonlyMap<string, number>): string[] {
 }
 
 const eligible = (profile: PresetProfile): boolean =>
-	profile.indexable && !profile.unreachable && profile.departement !== null
+	profile.publishable && !profile.unreachable && profile.departement !== null
 
 /**
  * The preset: the most viewed candidates when enough of them have views, the first candidates of the directory order

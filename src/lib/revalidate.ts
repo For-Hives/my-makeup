@@ -26,7 +26,7 @@ export interface PublicState {
 	/** Shown to the public: a published profile (`status`), a published article or talent (`_status`). */
 	visible: boolean
 	/**
-	 * In the sitemap: a profile is there when it is publishable, a published article or talent always.
+	 * In the sitemap: a profile is there when it is indexable (publishable and rich enough for Google), a published article or talent always.
 	 * Left out, it is `visible`. Read by IndexNow only (src/lib/seo/indexnow.ts, ticket 219).
 	 */
 	indexable?: boolean

@@ -47,7 +47,15 @@ async function allMedia(): Promise<Media[]> {
 const idOf = (valeur: number | { id: number } | null | undefined) => (typeof valeur === 'object' ? valeur?.id : valeur)
 
 /** What the server writes itself at each save: its dates are not the content of the set. */
-const OUTSIDE_CONTENT = new Set(['id', 'createdAt', 'updatedAt', 'activeSince', 'publishableSince', 'fullyEmptySince'])
+const OUTSIDE_CONTENT = new Set([
+	'id',
+	'createdAt',
+	'updatedAt',
+	'activeSince',
+	'publishableSince',
+	'indexableSince',
+	'fullyEmptySince',
+])
 
 /** A document without its identifiers and its dates, at every depth: the rows of its lists included. */
 function withoutIdentity(valeur: unknown): unknown {
@@ -141,19 +149,21 @@ describe('Le jeu du banc : les 17 profils types', () => {
 				completeness: profile.completeness,
 				active: profile.active,
 				publishable: profile.publishable,
+				indexable: profile.indexable,
 				fullyEmpty: profile.fullyEmpty,
 				status: profile.status,
 			}
 
 			expect({ cle: type.cle, etat: stored }).toEqual({ cle: type.cle, etat: expected })
 			// What the server stored is what the single rule reads in what it stored.
-			const { completeness, active, publishable, fullyEmpty } = profileState(profile)
+			const { completeness, active, publishable, indexable, fullyEmpty } = profileState(profile)
 			expect({
 				completeness: stored.completeness,
 				active: stored.active,
 				publishable: stored.publishable,
+				indexable: stored.indexable,
 				fullyEmpty: stored.fullyEmpty,
-			}).toEqual({ completeness, active, publishable, fullyEmpty })
+			}).toEqual({ completeness, active, publishable, indexable, fullyEmpty })
 		}
 
 		const reference = await profileOf(summary, LOADED_DEMO_PROFILES[0] as DemoProfile)

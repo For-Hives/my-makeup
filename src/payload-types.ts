@@ -458,7 +458,7 @@ export interface Profile {
    */
   activeSince?: string | null;
   /**
-   * Les six conditions du profil publiable. Calculé par le serveur.
+   * Photo principale, ville, spécialité et un moyen de contact : visible dans la recherche. Calculé par le serveur.
    */
   publishable?: boolean | null;
   /**
@@ -466,7 +466,15 @@ export interface Profile {
    */
   publishableSince?: string | null;
   /**
-   * Aucune des six conditions : le profil reste en brouillon. Calculé par le serveur.
+   * Publiable, avec une description de 100 caractères au moins et (une prestation chiffrée ou une photo de galerie) : la page entre dans le sitemap et Google peut la montrer. Calculé par le serveur.
+   */
+  indexable?: boolean | null;
+  /**
+   * Date à laquelle la case du dessus a pris sa valeur. Posée par le serveur.
+   */
+  indexableSince?: string | null;
+  /**
+   * Aucune des quatre conditions, ni prestation chiffrée, ni description de 100 caractères : le profil reste en brouillon. Calculé par le serveur.
    */
   fullyEmpty?: boolean | null;
   /**
@@ -1216,6 +1224,8 @@ export interface ProfilesSelect<T extends boolean = true> {
   activeSince?: T;
   publishable?: T;
   publishableSince?: T;
+  indexable?: T;
+  indexableSince?: T;
   fullyEmpty?: T;
   fullyEmptySince?: T;
   updatedAt?: T;

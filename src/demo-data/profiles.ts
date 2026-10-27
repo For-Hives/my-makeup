@@ -62,6 +62,8 @@ type ServerFields =
 	| 'activeSince'
 	| 'publishable'
 	| 'publishableSince'
+	| 'indexable'
+	| 'indexableSince'
 	| 'fullyEmpty'
 	| 'fullyEmptySince'
 	| 'createdAt'
@@ -78,6 +80,7 @@ export interface ExpectedState {
 	readonly completeness: number
 	readonly active: boolean
 	readonly publishable: boolean
+	readonly indexable: boolean
 	readonly fullyEmpty: boolean
 	readonly status: ProfileStatus
 }
@@ -214,7 +217,7 @@ function fullLists(ville: string): ProfileData {
 	}
 }
 
-/** Two offers with an amount: what makes a profile publishable, with the five other conditions. */
+/** Two offers with an amount: with a description of 100 characters, what makes a profile indexable. */
 const PRICED_OFFERS: ProfileData['serviceOffers'] = [
 	{
 		name: 'Maquillage de la mariée',
@@ -224,7 +227,7 @@ const PRICED_OFFERS: ProfileData['serviceOffers'] = [
 	{ name: 'Maquillage invitée', description: 'Pour la famille et les témoins.', ...price('45 €') },
 ]
 
-/** Everything a complete profile holds: the six conditions of a publishable profile, and the 13 criteria. */
+/** Everything a complete profile holds: the four conditions of a publishable profile, what Google needs to index it, and the 13 criteria. */
 function completeProfile(identite: {
 	firstName: string
 	lastName: string
@@ -252,6 +255,7 @@ const PUBLISHED_COMPLETE = {
 	completeness: 13,
 	active: true,
 	publishable: true,
+	indexable: true,
 	fullyEmpty: false,
 	status: 'published',
 } as const satisfies Omit<ExpectedState, 'slug'>
@@ -457,15 +461,17 @@ export const DEMO_PROFILES: readonly DemoProfile[] = [
 			completeness: 0,
 			active: false,
 			publishable: false,
+			indexable: false,
 			fullyEmpty: true,
 			status: 'draft',
 		},
 	},
 	{
 		numero: 7,
-		cle: 'actif-non-publiable',
-		sertA: 'Actif mais pas publiable : ses offres sont « sur devis », sans prix chiffré (les seuils).',
-		compte: { email: profileUrl('actif-non-publiable'), nom: 'Clara Dumas' },
+		cle: 'publiable-non-indexable',
+		sertA:
+			'Publiable mais pas indexable : une description, mais des offres « sur devis » sans prix chiffré et aucune photo de galerie. Visible dans la recherche et sur sa page, en noindex, hors du sitemap (les seuils).',
+		compte: { email: profileUrl('publiable-non-indexable'), nom: 'Clara Dumas' },
 		profil: {
 			...completeProfile({
 				firstName: 'Clara',
@@ -482,8 +488,8 @@ export const DEMO_PROFILES: readonly DemoProfile[] = [
 				{ name: 'Maquillage de groupe', description: 'Pour le cortège.', ...price('Selon le nombre de personnes') },
 			],
 		},
-		photos: { principale: 'photo-6.webp', galerie: ['photo-1.webp'] },
-		attendu: { slug: 'clara-dumas', ...PUBLISHED_COMPLETE, publishable: false },
+		photos: { principale: 'photo-6.webp', galerie: [] },
+		attendu: { slug: 'clara-dumas', ...PUBLISHED_COMPLETE, completeness: 12, indexable: false },
 	},
 	{
 		numero: 8,
@@ -507,7 +513,7 @@ export const DEMO_PROFILES: readonly DemoProfile[] = [
 			publicContact: false,
 		},
 		photos: { principale: 'photo-2.webp', galerie: ['photo-4.webp'] },
-		attendu: { slug: 'louise-girard', ...PUBLISHED_COMPLETE, completeness: 12, publishable: false },
+		attendu: { slug: 'louise-girard', ...PUBLISHED_COMPLETE, completeness: 12, publishable: false, indexable: false },
 	},
 	{
 		numero: 9,
@@ -765,6 +771,7 @@ export const DEMO_ZONE_PROFILES: readonly DemoProfile[] = [
 			completeness: 11,
 			active: false,
 			publishable: false,
+			indexable: false,
 		},
 	},
 ]

@@ -50,19 +50,38 @@ function content(banner: Banner) {
 	}
 	if (banner.state === 'publishable') {
 		return (
-			<p className="flex flex-wrap items-center gap-x-4 gap-y-2 text-base text-ink">
-				<span className="flex items-center gap-2 font-semibold text-ok">
-					<KindIcon kind="check" />
-					Ton profil est visible
-				</span>
-				{banner.paused ? (
-					<span className="text-mute text-sm">Tu es en pause : tu n’apparais pas dans la recherche.</span>
+			<>
+				<p className="flex flex-wrap items-center gap-x-4 gap-y-2 text-base text-ink">
+					<span className="flex items-center gap-2 font-semibold text-ok">
+						<KindIcon kind="check" />
+						Ton profil est visible
+					</span>
+					{banner.paused ? (
+						<span className="text-mute text-sm">Tu es en pause : tu n’apparais pas dans la recherche.</span>
+					) : null}
+					{/* No prefetch: the public page is cached and shared, her own page must not warm it. */}
+					<Link href={banner.href} prefetch={false} className={LINK}>
+						Voir ma page publique
+					</Link>
+				</p>
+				{banner.google.length > 0 ? (
+					<>
+						<p className="text-base text-ink">
+							<strong className="font-semibold">Pour apparaître sur Google</strong>, tu peux ajouter (facultatif) :
+						</p>
+						<ul className="flex flex-wrap gap-2" data-testid="edit-banner-google">
+							{banner.google.map(item => (
+								<li key={item.criterion}>
+									<Link href={item.href} className={LINK} data-testid={`google-${item.criterion}`}>
+										<span aria-hidden="true" className="size-3 shrink-0 rounded-full border-2 border-nude-300" />
+										{item.label}
+									</Link>
+								</li>
+							))}
+						</ul>
+					</>
 				) : null}
-				{/* No prefetch: the public page is cached and shared, her own page must not warm it. */}
-				<Link href={banner.href} prefetch={false} className={LINK}>
-					Voir ma page publique
-				</Link>
-			</p>
+			</>
 		)
 	}
 	if (!('note' in banner)) return null

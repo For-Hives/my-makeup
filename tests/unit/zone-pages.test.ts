@@ -19,7 +19,7 @@ import { isSlug } from '../../src/lib/slug'
 import { readIndexablePages } from '../../src/services/public/indexable-pages'
 
 /**
- * Ticket 1015: a page « maquilleuse près de chez vous » by département, indexable from 1 publishable profile (owner decision of 24/10/2026).
+ * Ticket 1015: a page « maquilleuse près de chez vous » by département, indexable from 1 indexable profile (owner decision of 24/10/2026).
  * One rule (src/lib/seo/zones.ts) decides the page, the robots tag, the sitemap and the plan of the site.
  */
 
@@ -28,7 +28,7 @@ const ROOT = join(import.meta.dir, '../..')
 const profile = (n: number, extra: Partial<ZoneProfile> = {}): ZoneProfile => ({
 	slug: `artiste-${n}`,
 	departement: '74',
-	publishable: true,
+	indexable: true,
 	listed: true,
 	misAJourLe: null,
 	...extra,
@@ -50,7 +50,7 @@ describe('the threshold, at its bounds', () => {
 		expect(zoneStatus(count)).toBe(expected)
 	})
 
-	test('a zone with 0, 1 and 2 listed publishable profiles is in the list of indexable zones from 1', () => {
+	test('a zone with 0, 1 and 2 listed indexable profiles is in the list of indexable zones from 1', () => {
 		for (const [count, expected] of [
 			[0, 0],
 			[1, 1],
@@ -65,10 +65,10 @@ describe('who counts in a zone', () => {
 		expect(zoneMembers(many(3), '74')).toHaveLength(3)
 	})
 
-	test('not an unpublishable one, not one that is not listed, not another département, not one with no département', () => {
+	test('not a thin one, not one that is not listed, not another département, not one with no département', () => {
 		const profiles = [
 			...many(2),
-			profile(10, { publishable: false }),
+			profile(10, { indexable: false }),
 			profile(11, { listed: false }),
 			profile(12, { departement: '73' }),
 			profile(13, { departement: null }),
@@ -81,7 +81,7 @@ describe('who counts in a zone', () => {
 	})
 
 	test('a zone whose only profiles do not count has no page at all, never an empty one', () => {
-		const profiles = [profile(10, { listed: false }), profile(11, { publishable: false })]
+		const profiles = [profile(10, { listed: false }), profile(11, { indexable: false })]
 		expect(zoneStatus(zoneMembers(profiles, '74').length)).toBe('absent')
 		expect(indexableZones(profiles)).toEqual([])
 	})
@@ -128,7 +128,7 @@ describe('the sitemap', () => {
 		const zones = indexableZones([
 			...many(1),
 			...many(1, { departement: '73', listed: false }).map(p => ({ ...p, slug: `b-${p.slug}` })),
-			...many(1, { departement: '38', publishable: false }).map(p => ({ ...p, slug: `c-${p.slug}` })),
+			...many(1, { departement: '38', indexable: false }).map(p => ({ ...p, slug: `c-${p.slug}` })),
 		])
 		const locs = sitemapEntries({ zones }).map(({ loc }) => loc)
 		expect(locs).toContain('https://my-makeup.fr/maquilleuses/haute-savoie')

@@ -29,7 +29,7 @@ Une maquilleuse en pause n'est pas listée, et aucune date n'existe : il n'y a d
 Critère unique, écrit sur la page : **les visites de la page du profil sur les 30 derniers jours** (compteur du ticket 1001 : ni robots, ni la maquilleuse, ni l'équipe, une fois par onglet). Ce n'est ni une demande de devis, ni une note, et la page ne dit jamais « demandées ».
 
 - Lecture : `readMostViewedSlugs` (`src/services/public/most-viewed.ts`), à part de la lecture publique (la collection est réservée aux admins), un agrégat par profil ; **seul l'ordre des adresses sort**, jamais un nombre. Mis en cache (`cachedMostViewed`, étiquette `profils`, une heure) : le HTML de `/search` reste dynamique comme avant (il lit l'adresse), les lectures sont dans le cache de Next.
-- Éligibles (`src/lib/search/preset.ts`) : dans l'annuaire (donc publiées, ni masquées ni suspendues), publiables, joignables, dans une commune de France.
+- Éligibles (`src/lib/search/preset.ts`) : dans l'annuaire (donc publiées, ni masquées ni suspendues), publiables (photo, ville, spécialité, contact), joignables, dans une commune de France.
 - Planchers : 10 visites par profil, 6 profils éligibles. En dessous, ou si la lecture échoue : **« Les mieux classées »**, le début de l'ordre de l'annuaire, avec la phrase qui le dit.
 - Règle publiée sur `/classement` (`preset`), jouée par `tests/unit/ranking-transparency.test.tsx`.
 

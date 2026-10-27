@@ -67,11 +67,12 @@ describe('I20 : le bloc de l’espace égale l’état enregistré par le serveu
 		expect(afterIdentity.etat).toBe('incomplet')
 		expect(afterIdentity.manques.some(m => m.critere === 'specialite')).toBe(false)
 
-		await saveDescription(payload, user, { description: 'a'.repeat(199) })
+		await saveDescription(payload, user, { description: 'a'.repeat(99) })
 		const short = await equal()
-		expect(short.manques.find(m => m.critere === 'description')?.requis).toBe(true)
+		// Never required: the 100 characters only help Google.
+		expect(short.manques.find(m => m.critere === 'description')).toMatchObject({ requis: false, google: true })
 
-		await saveDescription(payload, user, { description: 'a'.repeat(200) })
+		await saveDescription(payload, user, { description: 'a'.repeat(100) })
 		const long = await equal()
 		expect(long.manques.some(m => m.critere === 'description')).toBe(false)
 

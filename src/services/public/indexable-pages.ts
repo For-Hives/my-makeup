@@ -1,11 +1,11 @@
 /**
  * The public reading of every page that is indexed and has its data in the database (tickets 113 and
- * 114): the publishable profiles, the published talents and the published articles. The sitemap and the
+ * 114): the indexable profiles (publishable and rich enough for Google), the published talents and the published articles. The sitemap and the
  * plan of the site both read it, so they never list different addresses.
  *
  * - The reading keeps the access rules of the collections (`overrideAccess: false`), as an anonymous
  *   visitor: a draft, and a profile that is not published, are not found. A profile is kept when it is
- *   publishable (`INDEXABLE_FILTER`); an entirely empty one never is, a hidden one is not published.
+ *   indexable (`INDEXABLE_FILTER`); an entirely empty one never is, a hidden one is not published.
  * - The fields are chosen one by one: a slug, the names of her page (`firstName`, `lastName`, `artistName`), the date
  *   of the last change. No contact detail.
  * - A list is read in pages of 100. If the pages run out of the bound, or the database fails, the reading
@@ -71,7 +71,7 @@ async function allPages<T>(lire: (page: number) => Promise<PageRead<T>>): Promis
 
 const date = (valeur: unknown): string | null => (typeof valeur === 'string' && valeur !== '' ? valeur : null)
 
-/** The publishable profiles, by slug. A slug that is no address is left out: its page would not answer. */
+/** The indexable profiles, by slug. A slug that is no address is left out: its page would not answer. */
 export async function readIndexableProfiles(payload: Payload): Promise<IndexableProfile[]> {
 	const docs = await allPages(page =>
 		payload.find({
@@ -163,6 +163,6 @@ export async function readIndexablePages(payload: Payload): Promise<IndexablePag
 		readIndexableTalents(payload),
 		readIndexableArticles(payload),
 	])
-	const zoneProfiles = profiles.map(profil => ({ ...profil, publishable: true }))
+	const zoneProfiles = profiles.map(profil => ({ ...profil, indexable: true }))
 	return { profils: profiles, zones: indexableZones(zoneProfiles), talents, articles }
 }

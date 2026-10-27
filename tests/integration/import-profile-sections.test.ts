@@ -261,7 +261,7 @@ describe('Les sections de chaque profil sont reprises dans leur ordre (ticket 06
 		// A free text keeps its text and has no amount; digits the rule does not read stay readable.
 		const free = targetPrice.filter(({ priceFrom }) => priceFrom === null)
 		expect(free.map(({ priceText }) => priceText)).toContain('Sur devis')
-		expect(free.map(({ priceText }) => priceText)).toContain('2 h : 150 €')
+		expect(free.map(({ priceText }) => priceText)).toContain('Forfait 3 personnes : 200 €')
 	})
 
 	test('aucun profil ne perd son offre chiffrée, et le rapport le dit en nombres (062)', async () => {
@@ -280,7 +280,7 @@ describe('Les sections de chaque profil sont reprises dans leur ordre (ticket 06
 			withAmount: priceLines.filter(({ priceFrom }) => priceFrom !== null).length,
 			lostPricedOffers: [],
 		})
-		// Profile 23 (60 is read) is no écart; 22 (an option at 0,50 € / km, under 5 €) and 24 (« 2 h : 150 € ») are listed.
+		// Profile 23 (60 is read) is no écart; 22 (an option at 0,50 € / km, under 5 €) and 24 (« Forfait 3 personnes : 200 € ») are listed.
 		expect(priceValue?.unreadDigits).toEqual([22, 24])
 		expect(first.gaps['prix-numerique']).toBe(
 			target.filter(({ serviceOffers }) =>

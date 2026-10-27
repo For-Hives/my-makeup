@@ -1,9 +1,9 @@
-import { CONDITION_TEXTS, type MissingCondition } from '../reminders/rules'
+import { CONDITION_TEXTS, GOOGLE_TEXTS, type GoogleSuggestion, type MissingCondition } from '../reminders/rules'
 import type { EmailContent } from './layout'
 
 /**
  * The one mail to the members after the switch to the new site (issue 998): what changed, what to do if the
- * account came from Facebook, what her profile still lacks to be published, and that the quotes come later.
+ * account came from Facebook, what her profile still lacks to be published (a photo, a city, a speciality, a way to reach her), what she could add to be better referenced on Google, and that the quotes come later.
  * It leaves by the one door of the site (src/lib/emails/send.ts), through `bun run members:mail` only.
  *
  * - The subject holds nothing of hers, and the text no name and nothing of another profile: the list is her
@@ -18,9 +18,12 @@ export const MEMBERS_ANNOUNCEMENT_SUBJECT = 'Le nouveau My Makeup est en ligne'
 
 export function membersAnnouncementContent({
 	missing,
+	forGoogle = [],
 	unsubscribeLink,
 }: {
 	missing: readonly MissingCondition[]
+	/** What she could add to be better referenced on Google: suggestions, said after the conditions. */
+	forGoogle?: readonly GoogleSuggestion[]
 	unsubscribeLink: string
 }): EmailContent {
 	return {
@@ -40,6 +43,12 @@ export function membersAnnouncementContent({
 				: [
 						'Bonne nouvelle : ton profil a tout ce qu’il faut pour être publié. Tu peux toujours l’enrichir depuis ton espace.',
 					]),
+			...(forGoogle.length > 0
+				? [
+						'Pour être mieux référencée sur Google, tu peux aussi ajouter (c’est facultatif) :',
+						...forGoogle.map(suggestion => `- ${GOOGLE_TEXTS[suggestion]}`),
+					]
+				: []),
 			'Les demandes de devis par le site arriveront dans un second temps. Nous te préviendrons.',
 			'Une question, un souci de connexion ? Écris-nous depuis la page Contact du site.',
 		],
