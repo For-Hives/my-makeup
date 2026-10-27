@@ -1,13 +1,19 @@
 {
 	"description": "Les notes de version du site, en français : ce qu'une visiteuse ou une maquilleuse peut remarquer. Une note s'ajoute par « bun run notes:add » et attend dans « pending » ; la publication la range sous son numéro, dans « releases ». Voir docs/publication.md.",
-	"pending": [
-		{
-			"id": "la-connexion-et-l-inscription-sont-plus-simples-une-seule",
-			"type": "amelioration",
-			"text": "La connexion et l'inscription sont plus simples : une seule colonne, sans décor, avec le formulaire au premier plan."
-		}
-	],
+	"pending": [],
 	"releases": [
+		{
+			"version": "3.0.36",
+			"date": "2026-10-27",
+			"commit": "b4699473b909262ee0fac39f11e8d61d6f5e3b76",
+			"notes": [
+				{
+					"id": "la-connexion-et-l-inscription-sont-plus-simples-une-seule",
+					"type": "amelioration",
+					"text": "La connexion et l'inscription sont plus simples : une seule colonne, sans décor, avec le formulaire au premier plan."
+				}
+			]
+		},
 		{
 			"version": "3.0.33",
 			"date": "2026-10-27",
