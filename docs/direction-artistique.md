@@ -198,16 +198,16 @@ Les illustrations d'aujourd'hui sont provisoires (illustrations peintes déjà s
 |---|---|---|---|
 | Tête de page, image par défaut | `src/components/static-pages/PageHead.tsx` (argument `image`) | arche 4:5, ~380 px | une maquilleuse, ton éditorial peint |
 | Tête de page, cinq variantes (talents, zones) | `src/components/static-pages/PageHead.tsx` (`ILLUSTRATIONS`) | arche 4:5, ~380 px | une variante par teinte, des maquilleuses d'origines variées |
-| Guide « Trouver une maquilleuse » | `src/content/static-pages/client-guides.tsx` | arche 4:5, ~380 px | trouver la maquilleuse qui correspond |
-| Guide « Centraliser ses recherches » | idem | arche 4:5, ~380 px | tout réuni en un seul endroit |
-| Guide « Explorer les profils » | idem | arche 4:5, ~380 px | profils et réalisations |
+| Guide « Trouver une maquilleuse » | `src/content/static-pages/client-guides.tsx` | arche 4:5, ~380 px | trouver la maquilleuse qui correspond. **Fait le 27/10/2026** : `find-greeting`, voir [`illustrations.md`](illustrations.md) |
+| Guide « Centraliser ses recherches » | idem | arche 4:5, ~380 px | tout réuni en un seul endroit. **Fait le 27/10/2026** : `gather-card-index` |
+| Guide « Explorer les profils » | idem | arche 4:5, ~380 px | profils et réalisations. **Fait le 27/10/2026** : `explore-binders` |
 | « Solutions pour les particuliers » | idem | arche 4:5, ~380 px | une recherche simplifiée. **Fait le 27/10/2026** : voir [`illustrations-solutions.md`](illustrations-solutions.md) (aussi les quatre étapes et la page « Solutions pour les maquilleuses ») |
 | À propos, première arche | `src/components/static-pages/AboutArticle.tsx` | arche 4:5, ~180 px | une maquilleuse au travail |
 | À propos, seconde arche | idem | arche 4:5, ~180 px | seconde maquilleuse, teinte lavande, plus bas |
 | Demande envoyée | `src/app/(front)/(site)/demande-envoyee/page.tsx` | arche 4:5, ~220 px | rassurance, un message reçu |
-| En-tête du blog | `src/app/(front)/(site)/blog/page.tsx` | arche 4:5, grand format | conseils beauté, mariage, soin de la peau (**à décider** : les couvertures des articles sont faites, pas cette arche ; voir `illustrations.md`) |
+| En-tête du blog | `src/app/(front)/(site)/blog/page.tsx` | arche 4:5, grand format | conseils beauté, mariage, soin de la peau **Fait le 27/10/2026** : `blog-reading` (une lectrice dans un fauteuil), voir `illustrations.md` ; la tête de `/maquilleuse/partenariats` aussi (`partnerships-shared-table`) |
 | **Couvertures des articles du blog** (faites le 26/10/2026) | `src/components/art/blog-cover.ts`, `BlogCard.tsx`, `public/assets/blog/` | 3:2 (1200 x 800), recadrées en 5:4, 4:3 et 16:7 | une scène par article, dix illustrations : [`illustrations.md`](illustrations.md) |
-| Avantages des deux pages « Pourquoi… » | `src/components/static-pages/Benefits.tsx` | une arche 4:5 par avantage, ~96 à 280 px | une scène par titre d'avantage |
+| Avantages des deux pages « Pourquoi… » | `src/components/static-pages/Benefits.tsx` | une arche 4:5 par avantage, ~96 à 280 px | une scène par titre d'avantage. **Fait le 27/10/2026** : 9 illustrations (5 pour les maquilleuses, 4 pour les particuliers, les avantages proches en partagent une), voir `illustrations.md` |
 | Coque de connexion, d'inscription, de mot de passe | `src/components/auth/AuthShell.tsx` | libre, ~420 px (aucun visuel aujourd'hui) | accueil, espace personnel |
 
 ## Des photos nettes dans l'arche (issue 1138)

@@ -12,17 +12,42 @@ export interface BenefitItem {
 /** The drawn objects, tints and bands a benefits list cycles through: one set for each of the two « Pourquoi… » pages. */
 export interface BenefitsPalette {
 	objects: readonly MakeupObjectName[]
+	/** The generated illustration of each card (by position, cycling), under `public/`; a card without one keeps its drawn object. */
+	images?: readonly string[]
 	tints: readonly Tint[]
 	bands: readonly ArchBand[]
 }
 
+const ILLUSTRATIONS = '/assets/illustrations'
+
 export const CLIENT_PALETTE: BenefitsPalette = {
+	// 7 cards, 4 illustrations: gallery (1, 5), phone on the sofa (2, 7), profile sheet (3, 6), moodboard (4); see docs/illustrations.md
+	images: [
+		`${ILLUSTRATIONS}/client-gallery.webp`,
+		`${ILLUSTRATIONS}/client-sofa.webp`,
+		`${ILLUSTRATIONS}/client-profile-sheet.webp`,
+		`${ILLUSTRATIONS}/client-moodboard.webp`,
+		`${ILLUSTRATIONS}/client-gallery.webp`,
+		`${ILLUSTRATIONS}/client-profile-sheet.webp`,
+		`${ILLUSTRATIONS}/client-sofa.webp`,
+	],
 	objects: ['compact', 'mirror', 'lipstick', 'perfume', 'brush', 'mascara', 'nail-polish'],
 	tints: ['lavender', 'blush', 'sand'],
 	bands: ['band', 'rose', 'night'],
 }
 
 export const ARTIST_PALETTE: BenefitsPalette = {
+	// 8 cards, 5 illustrations: growth (1, 5), skills (2), rates and freedom (3, 8), sharing (4, 7), community (6); see docs/illustrations.md
+	images: [
+		`${ILLUSTRATIONS}/artist-grow.webp`,
+		`${ILLUSTRATIONS}/artist-skills.webp`,
+		`${ILLUSTRATIONS}/artist-rates.webp`,
+		`${ILLUSTRATIONS}/artist-share.webp`,
+		`${ILLUSTRATIONS}/artist-grow.webp`,
+		`${ILLUSTRATIONS}/artist-community.webp`,
+		`${ILLUSTRATIONS}/artist-share.webp`,
+		`${ILLUSTRATIONS}/artist-rates.webp`,
+	],
 	objects: ['brush', 'lipstick', 'mascara', 'compact', 'nail-polish', 'comb', 'mirror', 'brush'],
 	tints: ['sand', 'rose', 'lavender'],
 	bands: ['rose', 'band', 'night'],
@@ -54,16 +79,19 @@ export function Benefits({
 					{items.map((item, index) => (
 						<li key={item.titre} data-benefit className="reveal grid grid-cols-[6rem_1fr] items-start gap-x-6 sm:block">
 							<div className="w-24 pr-3 sm:w-full sm:pr-4">
-								{/* TODO(1136): illustration à générer (une arche 4:5 par avantage, petit format ~96 à 280 px; objet ou scène illustrant le titre de l'avantage; remplace l'objet de maquillage dessiné) */}
 								<ArchImage
+									src={palette.images?.[index % palette.images.length]}
+									sizes="(min-width: 1024px) 260px, (min-width: 640px) 45vw, 96px"
 									tint={palette.tints[index % palette.tints.length] ?? 'blush'}
 									band={palette.bands[index % palette.bands.length] ?? 'band'}
 									size="sm"
 									mark={false}
 								>
-									<span aria-hidden="true" className="absolute inset-[16%_26%] text-indigo-900">
-										<MakeupObject name={palette.objects[index % palette.objects.length] ?? 'brush'} />
-									</span>
+									{palette.images === undefined && (
+										<span aria-hidden="true" className="absolute inset-[16%_26%] text-indigo-900">
+											<MakeupObject name={palette.objects[index % palette.objects.length] ?? 'brush'} />
+										</span>
+									)}
 								</ArchImage>
 							</div>
 							<div className="sm:mt-6">

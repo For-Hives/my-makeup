@@ -11,3 +11,4 @@
 2026-10-26T23:17:36+01:00 same endpoint 1536x1024 high opaque png n=1 kit-case est=0.25
 2026-10-26T23:17:37+01:00 same endpoint 1536x1024 high opaque png n=1 trends est=0.25
 2026-10-26T23:18:20+01:00 same kit-case-v2 est=0.25
+2026-10-27 14 images arches pages de contenu, openai/gpt-image-2.5/flare/text-to-image 1024x1280 high opaque png n=1 est=0.25 each, total est=3.50

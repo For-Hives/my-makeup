@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import type { CSSProperties } from 'react'
 import { ArchImage } from '@/components/art/ArchImage'
-import { GlowBlob, LineDrawing, MakeupObject } from '@/components/art/graphics'
+import { GlowBlob, LineDrawing } from '@/components/art/graphics'
 import { MarqueeBanner } from '@/components/art/MarqueeBanner'
 import { Cta } from '@/components/blocks/Cta'
 import { ArticleList } from '@/components/blog/ArticleList'
@@ -64,12 +64,13 @@ export default async function BlogPage() {
 							</p>
 						</div>
 						<div aria-hidden="true" className="relative hidden lg:block">
-							{/* TODO(1136): illustration à générer (arche 4:5 grand format, en-tête du blog; intention: conseils beauté, mariage, soin de la peau; remplace le pinceau dessiné) */}
-							<ArchImage tint="blush" band="band" mark="plus">
-								<span className="absolute inset-[18%_20%_10%] block text-indigo-900">
-									<MakeupObject name="brush" />
-								</span>
-							</ArchImage>
+							<ArchImage
+								src="/assets/illustrations/blog-reading.webp"
+								tint="blush"
+								band="band"
+								mark="plus"
+								sizes="420px"
+							/>
 							<span className="absolute -bottom-6 -left-12 block h-24 w-24 text-art-line">
 								<LineDrawing name="lips" />
 							</span>
