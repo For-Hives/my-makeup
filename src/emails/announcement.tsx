@@ -6,9 +6,9 @@ import { MAIL_SITE } from './tokens'
  * (and the personal details it holds) is NOT in the repository, which is public: it lives in the ignored
  * folder `src/emails/local/`, next to the script that sends it (docs/courriel-maquilleuses.md).
  */
-export const ANNONCE_SUBJECT = 'Sujet du message'
+export const ANNOUNCEMENT_SUBJECT = 'Sujet du message'
 
-export default function AnnonceMaquilleuses({ assetsBase }: { assetsBase?: string }) {
+export default function Announcement({ assetsBase }: { assetsBase?: string }) {
 	return (
 		<MakeupMail
 			preview="Aperçu du message."
