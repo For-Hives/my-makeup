@@ -56,14 +56,12 @@ describe('le cadre des pages', () => {
 
 	/**
 	 * The frames that keep their own width, and why: the public profile page and its editing bars (their HTML is
-	 * frozen by tests/fixtures/direct-edit/*.golden, a change of its own), the call to action panel (a card centred in
-	 * the frame), and the files no page renders any more (`blocks/Hero.tsx`, `EditorialArticle.tsx`, `ResultList.tsx`).
+	 * frozen by tests/fixtures/direct-edit/*.golden, a change of its own), and the files no page renders any more (`blocks/Hero.tsx`, `EditorialArticle.tsx`, `ResultList.tsx`).
 	 */
 	const KEPT = [
 		'src/components/profile/',
 		'src/components/direct-edit/',
 		'src/components/dashboard/',
-		'src/components/art/ArtCta.tsx',
 		'src/components/static-pages/EditorialArticle.tsx',
 		'src/components/blocks/Hero.tsx',
 		'src/components/search/ResultList.tsx',

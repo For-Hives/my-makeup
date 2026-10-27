@@ -484,22 +484,31 @@ describe('the call to action of the kit', () => {
 		expect(cta).not.toContain('<h1')
 	})
 
-	test('buttons are 52 px pills with a white focus ring, the decor is hidden and under 768 px absent', () => {
+	test('buttons are 52 px pills with a white focus ring, and nothing is drawn around the panel', () => {
 		expect(cta).toContain('min-h-13')
 		expect(cta).toContain('focus-visible:outline-white')
-		expect(cta).toContain('pointer-events-none absolute inset-0 hidden')
-		everySvgIsHidden(cta)
+		// No lips, brush, print mark or glow: the only svg left is none, and no decor layer hidden under 768 px.
+		expect(cta).not.toContain('<svg')
+		expect(cta).not.toContain('pointer-events-none absolute inset-0 hidden')
+		expect(cta).not.toMatch(/blur-|rounded-full bg-/)
+		const source = readFileSync(join(ROOT, 'src/components/art/ArtCta.tsx'), 'utf8')
+		expect(source).not.toMatch(/GlowBlob|LineDrawing|MakeupObject|PrintMark/)
 	})
 
-	test('is bigger and airier than the site call to action', () => {
-		// The shared block of the site (13 pages) now is this one: it only gives it its words and its two measured links.
+	test('follows the frame of the site and is lighter than before', () => {
+		// The shared block of the site (13 pages) is this one: it only gives it its words and its two measured links.
 		const shared = readFileSync(join(ROOT, 'src/components/blocks/Cta.tsx'), 'utf8')
 		expect(shared).toContain('<ArtCta')
 		expect(shared).not.toContain('CtaBackdrop')
-		expect(cta).toContain('md:py-44')
-		expect(cta).toContain('md:py-36')
-		expect(cta).toContain('md:px-24')
-		expect(cta).toContain('max-w-6xl')
+		// The panel sits in the one `page-frame` of the pages, with no box of its own.
+		expect(cta).toMatch(/<div class="page-frame"><div class="reveal art-cta-open /)
+		expect(cta).not.toMatch(/max-w-(6xl|7xl)/)
+		expect(cta).toContain('md:py-24')
+		expect(cta).not.toMatch(/md:py-(36|44)|md:px-24/)
+		expect(cta).toContain('lg:text-[3.25rem]')
+		expect(cta).not.toContain('lg:text-[5rem]')
+		expect(cta).toContain('max-w-[24ch]')
+		expect(cta).not.toContain('max-w-[16ch]')
 	})
 
 	test('lifts the side mask because the text is centred, and the mask stays elsewhere', () => {

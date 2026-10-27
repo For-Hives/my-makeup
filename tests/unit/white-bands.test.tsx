@@ -27,9 +27,11 @@ describe('the call to action', () => {
 		expect(html).not.toContain('border-nude-200')
 	})
 
-	test('the panel is the child of the section, which keeps the page background and wide margins', () => {
-		expect(html).toMatch(/<section class="[^"]*bg-art-paper[^"]*md:py-36[^"]*"/)
-		expect(html).toMatch(/<div class="reveal art-cta-open [^"]*rounded-art-frame[^"]*bg-art-night/)
+	test('the panel is the child of the section, which keeps the page background, and the panel sits in the frame of the site', () => {
+		expect(html).toMatch(/<section class="[^"]*bg-art-paper[^"]*md:py-20[^"]*"/)
+		expect(html).toMatch(
+			/<div class="page-frame"><div class="reveal art-cta-open [^"]*rounded-art-frame[^"]*bg-art-night/
+		)
 	})
 })
 
