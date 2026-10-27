@@ -71,13 +71,15 @@ describe('a card is washed, not shadowed', () => {
 		expect(offenders).toEqual([])
 	})
 
-	test('the wash is a pseudo-element that reaches 20 px past the card, for a mouse only, with no lift', () => {
+	test('the wash is a pseudo-element that reaches past the card by `--card-wash-reach`, for a mouse only, with no lift', () => {
 		const wash = body('.card-hover::before')
-		expect(wash).toMatch(/inset:\s*-20px/)
+		expect(wash).toMatch(/inset:\s*calc\(var\(--card-wash-top, var\(--card-wash-reach, 14px\)\) \* -1\)/)
+		expect(wash).toMatch(/border:\s*1px solid transparent/)
 		expect(wash).toMatch(/z-index:\s*-1/)
 		expect(wash).toMatch(/pointer-events:\s*none/)
 		expect(body('.card-hover')).toMatch(/isolation:\s*isolate/)
-		expect(body('.card-hover:hover::before')).toMatch(/background-color:\s*color-mix\(/)
+		expect(body('.card-hover:hover::before')).toMatch(/background-color:\s*rgb\(255 255 255 \/ 0\.6\)/)
+		expect(body('.card-hover:hover::before')).toMatch(/border-color:\s*color-mix\(/)
 		const hoverMedia = SHEET.indexOf('@media (hover: hover) {\n\t.card-hover {')
 		expect(hoverMedia).toBeGreaterThan(-1)
 		// Nothing lifts: the hovered card keeps its place.
@@ -88,7 +90,7 @@ describe('a card is washed, not shadowed', () => {
 	test('the wash and the photo move with the tokens of the site, under no-preference', () => {
 		const motion = CSS.slice(CSS.indexOf('@media (prefers-reduced-motion: no-preference)'))
 		const wash = /\.card-hover::before\s*\{([^{}]*)\}/.exec(motion)?.[1] ?? ''
-		expect(wash).toContain('transition-property: background-color, transform')
+		expect(wash).toContain('transition-property: background-color, border-color, transform')
 		expect(wash).toContain('var(--duration-lift)')
 		expect(wash).toContain('var(--ease-out-soft)')
 		expect(/\.card-zoom\s*\{([^{}]*)\}/.exec(motion)?.[1]).toContain('var(--duration-lift)')
@@ -100,7 +102,28 @@ describe('a card is washed, not shadowed', () => {
 		expect(body('.card-hover.bg-white')).toMatch(/isolation:\s*auto/)
 	})
 
-	test('the rail of the search page keeps room around its cards, more than the 20 px of the wash, or it would be clipped', () => {
+	test('a vertical blog card gives more room below than above, the wide card is level on three sides, and no reach touches the next card', () => {
+		const card = readFileSync(join(ROOT, 'src/components/art/BlogCard.tsx'), 'utf8')
+		const block = (name: string) => {
+			const line = new RegExp(`${name}: '([^']*)'`).exec(card.slice(card.indexOf('const WASH')))?.[1] ?? ''
+			const reach = (key: string) => Number(new RegExp(`\\[--card-wash-${key}:(\\d+)px\\]`).exec(line)?.[1])
+			return { top: reach('top'), side: reach('side'), bottom: reach('bottom'), radius: reach('radius') }
+		}
+		const vertical = block('card')
+		expect(vertical).toEqual({ top: 16, side: 24, bottom: 40, radius: 44 })
+		const wide = block('feature')
+		expect(wide.top).toBe(wide.side)
+		expect(wide.bottom).toBe(wide.side)
+		expect(wide.radius).toBe(wide.side + 28)
+		for (const file of ['ArticleList.tsx', 'RelatedArticles.tsx']) {
+			const text = readFileSync(join(ROOT, 'src/components/blog', file), 'utf8')
+			const list = text.slice(text.indexOf('<ul'))
+			expect(Number(/gap-x-(\d+)/.exec(list)?.[1]) * 4, file).toBeGreaterThanOrEqual(vertical.side * 2)
+			expect(Number(/gap-y-(\d+)/.exec(list)?.[1]) * 4, file).toBeGreaterThanOrEqual(vertical.bottom + vertical.top)
+		}
+	})
+
+	test('the rail of the search page keeps room around its cards, or the wash would be clipped', () => {
 		const grid = readFileSync(join(ROOT, 'src/components/search/SearchGrid.tsx'), 'utf8')
 		expect(grid).toMatch(/-mt-6[^']*pt-6[^']*pb-6/)
 	})

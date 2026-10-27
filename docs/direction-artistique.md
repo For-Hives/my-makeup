@@ -53,17 +53,7 @@ Tout ce que le site avait déjà reste tel quel (`--color-lipstick`, `--color-in
 
 L'indigo (50 à 950) est celui de Tailwind, déjà dans le site : le kit ne le redéfinit pas. Les traits du kit sont des filets de 1 px (encre pour les boutons, `--color-hairline` pour les séparations), jamais d'ombre lourde.
 
-**Le survol d'une carte (issue 1137)** : un fond rose très doux derrière la carte, qui la dépasse de 20 px (12 jusqu'au 26/10/2026), sa photo qui grandit de 5 %, et pour le blog un trait qui glisse sous « Lire l'article » avec sa flèche qui avance. Pas d'ombre dure, pas de montée. Une pastille de partage se remplit d'une teinte de son ton. Le détail et les raisons : [`mouvement.md`](mouvement.md), « Le survol d'une carte ».
-
-## Le cadre des pages (26/10/2026)
-
-Demande du mainteneur : « plus de place en largeur, pour que ça soit cohérent avec le hero », des grilles de cartes plus larges et plus d'air autour des cartes au survol.
-
-- **Un seul cadre**, l'utilitaire `page-frame` (`globals.css`) : la boîte du haut de l'accueil (`.home-hero-grid`), 96rem au plus, centrée, avec sa gouttière dedans, 1,5rem (24 px), puis 4rem (64 px) dès 64rem. Le contenu fait au plus 88rem (1 408 px) ; à 1440 px il part à 64 px du bord comme le titre de l'accueil, à 1920 px à 256 px, sous le logo.
-- **Une section garde son fond sur toute la largeur et ne donne pas de marge sur les côtés** : son contenu est dans un `page-frame` (accueil, blog, recherche, pages de zone et de talent, têtes de page, pages de contenu, pied de page et signature, pages d'erreur). Jamais `2xl:px-0` : avec un cadre de 96rem, le contenu toucherait le bord dès 1536 px (`tests/unit/page-frame.test.ts` le refuse, comme un retour à `max-w-7xl` ou `max-w-6xl`).
-- **Ce qui garde sa propre mesure dans le cadre** : les colonnes de lecture (`.article-prose` à 42rem, les `max-w-[…ch]` des pages de contenu), les formulaires (le contact, la barre de la recherche, 64rem au plus, à gauche), les cartes centrées (les pages légales, le plan du site, le classement).
-- **Hors du cadre pour l'instant** : la page publique d'un profil et ses barres d'édition (80rem : leur HTML est figé par `tests/fixtures/direct-edit/*.golden` et des empreintes, un changement à part), et la barre de navigation entre 1024 et 1279 px, qui garde 40 px de gouttière (avec 64, ses entrées ne tiennent pas : 44 px de défilement de côté à 1024).
-- **Les grilles de cartes** gardent leurs colonnes et prennent l'air : 56 px entre deux cartes dès 1024 px (`lg:gap-x-14` ; 48 px plus les 16 px de `pr-4` pour la grille de profils), 64 px entre deux rangées. Le fond du survol déborde de 20 px : une carte survolée reste à 36 px de sa voisine. La photo d'une carte de profil est demandée à sa largeur réelle ou plus (`440px` dès 1536 px, 30vw dès 1024, 45vw dès 768, 90vw : de 640 à 767 px, « Mise en avant » est encore sur une colonne). Sur un téléphone, les blocs qui gardent leur mesure (colonne de l'article, recherche des guides, bande du département, pages légales, plan du site, états vides de la recherche, demande envoyée) ont la même gouttière de 24 px que le cadre : aucun bord ne décroche.
+**Le survol d'une carte (issue 1137)** : une plaque blanche à 60 % cernée d'un filet derrière la carte, qui la dépasse de 14 px (cartes verticales du blog : 16 px en haut, 24 px sur les côtés, 40 px en bas ; grande carte horizontale : 24 px partout), sa photo qui grandit de 5 %, et pour le blog un trait qui glisse sous « Lire l'article » avec sa flèche qui avance. Pas d'ombre dure, pas de montée. Une pastille de partage se remplit d'une teinte de son ton. Le détail et les raisons : [`mouvement.md`](mouvement.md), « Le survol d'une carte ».
 
 ## Polices
 
@@ -118,7 +108,7 @@ Tous dans `src/components/art/`, en anglais, composants serveur sauf mention. Au
 | `ProfileCard` | `profile` (**la donnée de la carte de recherche**, `ProfileCard` de `src/services/public/profiles.ts`), `rank`, `priority`, `headingLevel`, `tint`, `band` | photo en arche, nom en Bodoni (le seul lien, étiré sur la carte), zone, spécialité, deux prestations, « dès 150 € » ; reprend les règles de `ResultCard` : zone vide dite, « Coordonnées pas encore indiquées », clic mesuré seulement avec `rank`, aucune coordonnée |
 | `ProfileRowCard` | mêmes props | la même carte en ligne (liste) ; sous 720 px le prix passe sous le texte |
 | `TestimonialArch` | `quote`, `name`, `byline`, `image`, `placeholder`, `tint`, `band`, `avatar` | `<figure>` + `<blockquote>` + `<figcaption>` ; sans portrait, un objet dessiné tient la place |
-| `BlogCard` | `article` (**la donnée de la liste du blog**), `variant` (`card`, `feature`), `headingLevel` | pas de fausse photo : un panneau teinté avec un objet dessiné, choisi de façon stable par le slug |
+| `BlogCard` | `article` (**la donnée de la liste du blog**), `variant` (`card`, `feature`), `headingLevel` | l'illustration générée de l'article (choisie par le slug : `blog-cover.ts`, [`illustrations.md`](illustrations.md)), et en repli le panneau teinté avec un objet dessiné |
 | `ArtCta` | `title`, `children`, `primary` et `secondary` (`href`, `label`, `where`) | le vrai shader (voir « L'invitation à l'action ») |
 
 ### L'invitation à l'action
@@ -130,12 +120,12 @@ Tous dans `src/components/art/`, en anglais, composants serveur sauf mention. Au
 1. Le fond de la page : `bg-art-paper`, texte `text-ink`, secondaire `text-mute`.
 2. Les titres : `font-display font-medium` (Bodoni), un mot au plus en `TitleAccent`.
 3. Un bloc de page : une `SectionHead`, puis ses cartes dans des `<li className="reveal">`. Les lueurs (`GlowBlob`) se posent dans un conteneur `relative overflow-hidden` (elles débordent exprès).
-4. Pas d'image pour un texte : les articles n'ont pas de photo, les cartes de blog dessinent un objet.
+4. Pas de photo pour un texte : les articles n'ont pas d'image à eux, les cartes de blog montrent une illustration générée choisie par l'adresse (`illustrations.md`).
 5. Avant de fusionner : un test de la page, une capture à 390 px, et si le titre au-dessus de la ligne de flottaison est en Bodoni, la mesure du LCP (`preload`, voir « Polices »).
 
 ## Le blog, la barre et le pied de page
 
-- **Le panneau d'un article** (`BlogPanel`, dans `BlogCard.tsx`, choix dans `blog-art.ts` par `blogArt(slug)`) : une teinte, un liseré, une arche, un objet de maquillage incliné et un second plus petit à côté, deux marques d'imprimerie, une lueur diffuse, et pour les grands formats (`feature`, `cover`) un dessin au trait. Tout vient du `slug` : une liste variée, et un article qui garde son dessin de la liste à sa page (le même panneau couvre le haut de l'article). Aucune photo, aucun texte, décor caché aux lecteurs d'écran.
+- **L'image d'un article** (`BlogPanel`, dans `BlogCard.tsx`, choix dans `blog-cover.ts` par `blogCover(slug)`) : une illustration générée par IA (gouache éditoriale sur papier, rose, lavande, indigo ; issue 1136, demande d'Andy du 26/10/2026), 1200 x 800 en WebP, servie par `next/image` (`alt=""`, décor ; la grande carte se charge en premier, les autres au défilement). Les dix articles du site en ligne ont chacun la leur ; un autre article tire la sienne du lot de dix par un hachage de son adresse : la même de la liste à l'article. Cadres : 5:4 (carte), 4:3 (grande carte), 16:7 (haut d'article), `object-fit: cover`, `position` par fichier. Sans illustration dans le lot, le **panneau dessiné** d'avant reste le repli (`blogArt(slug)` : une teinte, un liseré, une arche, un objet de maquillage incliné et un second plus petit, deux marques d'imprimerie, une lueur, un dessin au trait pour les grands formats). Prompts, réglages et droits : [`illustrations.md`](illustrations.md).
 - **Liste** (`ArticleList`) : le dernier article en `BlogCard variant="feature"` avec l'étiquette « Dernier article », une `SectionHead` (« 02 — Le blog », « Tous les articles »), la grille de cartes dans des `<li className="reveal">`, une bannière `MarqueeBanner variant="blush"` sous le titre (les sujets de la phrase d'introduction), une arche avec un pinceau au bord du titre (ordinateur seulement), des lueurs. `ArticleCard.tsx` est supprimé.
 - **Article** : la colonne de lecture de 42 rem (`.article-prose`), le sommaire, les données structurées, les textes et les adresses sont **inchangés** ; fond papier, lueurs, lien de retour et pied de partage en pilule et puces (`Pill`, `Chip`), « À lire aussi » en `SectionHead` et `BlogCard`.
 - **Barre** : voir [`navbar.md`](navbar.md). `pillClassName` vit désormais dans `pill-class.ts` (sans import, ré-exporté par `Pill`), `SwirlEllipse` dans `SwirlEllipse.tsx` (ré-exporté par `graphics`).
@@ -215,7 +205,8 @@ Les illustrations d'aujourd'hui sont provisoires (illustrations peintes déjà s
 | À propos, première arche | `src/components/static-pages/AboutArticle.tsx` | arche 4:5, ~180 px | une maquilleuse au travail |
 | À propos, seconde arche | idem | arche 4:5, ~180 px | seconde maquilleuse, teinte lavande, plus bas |
 | Demande envoyée | `src/app/(front)/(site)/demande-envoyee/page.tsx` | arche 4:5, ~220 px | rassurance, un message reçu |
-| En-tête du blog | `src/app/(front)/(site)/blog/page.tsx` | arche 4:5, grand format | conseils beauté, mariage, soin de la peau |
+| En-tête du blog | `src/app/(front)/(site)/blog/page.tsx` | arche 4:5, grand format | conseils beauté, mariage, soin de la peau (**à décider** : les couvertures des articles sont faites, pas cette arche ; voir `illustrations.md`) |
+| **Couvertures des articles du blog** (faites le 26/10/2026) | `src/components/art/blog-cover.ts`, `BlogCard.tsx`, `public/assets/blog/` | 3:2 (1200 x 800), recadrées en 5:4, 4:3 et 16:7 | une scène par article, dix illustrations : [`illustrations.md`](illustrations.md) |
 | Avantages des deux pages « Pourquoi… » | `src/components/static-pages/Benefits.tsx` | une arche 4:5 par avantage, ~96 à 280 px | une scène par titre d'avantage |
 | Coque de connexion, d'inscription, de mot de passe | `src/components/auth/AuthShell.tsx` | libre, ~420 px (aucun visuel aujourd'hui) | accueil, espace personnel |
 

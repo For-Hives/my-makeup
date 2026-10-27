@@ -47,6 +47,9 @@ const washOf = (card: Locator) =>
 			background: wash.backgroundColor,
 			duration: wash.transitionDuration,
 			inset: wash.top,
+			left: wash.left,
+			bottom: wash.bottom,
+			border: wash.borderTopColor,
 			shadow: getComputedStyle(element).boxShadow,
 		}
 	})
@@ -174,7 +177,7 @@ test.describe('le survol, sur ordinateur', () => {
 		for (const id of identifiers) await deleteContent(request, 'articles', id)
 	})
 
-	test('une carte du blog se lave au survol : aucune ombre, un fond qui déborde de 20 px, en 400 ms, rien ne bouge', async ({
+	test('une carte du blog se lave au survol : aucune ombre, une plaque qui déborde de 16 px en haut, 24 px sur les côtés et 40 px en bas (grande carte : 24 px de chaque côté, égal), « Lire l’article » à 24 px au moins du bord et de l’arc, sans toucher la carte voisine, en 400 ms, rien ne bouge', async ({
 		page,
 	}) => {
 		await page.goto('/blog')
@@ -191,7 +194,11 @@ test.describe('le survol, sur ordinateur', () => {
 			const before = await frames(page, '[data-blog-card]')
 			const rest = await washOf(card)
 			expect(rest.shadow, selector).toBe('none')
-			expect(rest.inset, selector).toBe('-20px')
+			// Vertical card: 16 above, 40 below. Wide card: level, 24 on every side.
+			const wide = selector === '[data-featured]'
+			expect(rest.inset, selector).toBe(wide ? '-24px' : '-16px')
+			expect(rest.bottom, selector).toBe(wide ? '-24px' : '-40px')
+			expect(rest.left, selector).toBe('-24px')
 			expect(rest.duration, selector).toContain('0.4s')
 
 			const box = await card.boundingBox()
@@ -201,6 +208,46 @@ test.describe('le survol, sur ordinateur', () => {
 			// No hard shadow: the old one drew a dark edge around a card that has no background.
 			expect(hovered.shadow, selector).toBe('none')
 			expect(await frames(page, '[data-blog-card]'), selector).toEqual(before)
+			// The plate reaches 16 / 24 / 40 px past the card: inside the page, clear of every other card, and the last line
+			// (« Lire l’article ») keeps room from the bottom edge and from the rounded corner.
+			const reach = await card.evaluate(element => {
+				const own = element.getBoundingClientRect()
+				const wide = element.hasAttribute('data-featured')
+				const plate = {
+					left: own.left - 24,
+					right: own.right + 24,
+					top: own.top - (wide ? 24 : 16),
+					bottom: own.bottom + (wide ? 24 : 40),
+				}
+				const others = [...document.querySelectorAll('[data-blog-card]')].filter(other => other !== element)
+				const touching = others.filter(other => {
+					const box = other.getBoundingClientRect()
+					return box.left < plate.right && box.right > plate.left && box.top < plate.bottom && box.bottom > plate.top
+				}).length
+				const text = element.querySelector('.read-more-label')?.getBoundingClientRect()
+				const radius = Number.parseFloat(getComputedStyle(element, '::before').borderBottomLeftRadius)
+				const centre = { x: plate.left + radius, y: plate.bottom - radius }
+				// Clearance of the text's bottom-left corner from the arc of the plate (or from its straight edges).
+				let corner = 0
+				if (text) {
+					const dx = centre.x - text.left
+					const dy = text.bottom - centre.y
+					corner =
+						dx > 0 && dy > 0
+							? radius - Math.hypot(dx, dy)
+							: Math.min(text.left - plate.left, plate.bottom - text.bottom)
+				}
+				return {
+					touching,
+					inside: plate.left >= 0 && plate.right <= document.documentElement.clientWidth,
+					below: text ? plate.bottom - text.bottom : 0,
+					corner,
+				}
+			})
+			expect(reach.below, selector).toBeGreaterThanOrEqual(24)
+			expect(reach.corner, selector).toBeGreaterThanOrEqual(20)
+			expect({ touching: reach.touching, inside: reach.inside }, selector).toEqual({ touching: 0, inside: true })
+			expect((await washOf(card)).border, selector).not.toContain('rgba(0, 0, 0, 0)')
 			expect(await noSidewaysScroll(page), selector).toBe(true)
 			// The line under « Lire l’article » slides in with the hover.
 			await expect

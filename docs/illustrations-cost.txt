@@ -1,0 +1,13 @@
+2026-10-26T23:12:02+01:00 openai/gpt-image-2.5/flare/text-to-image 1536x1024 quality=high opaque png n=1 trial-v1 est=0.25 USD
+2026-10-26T23:13:04+01:00 same endpoint 1536x1024 high opaque png n=1 trial-v2 (55% rule, too small) est=0.25
+2026-10-26T23:13:04+01:00 same trial-v3 (70% height rule) est=0.25
+2026-10-26T23:17:21+01:00 same endpoint 1536x1024 high opaque png n=1 wedding-morning est=0.25
+2026-10-26T23:17:23+01:00 same endpoint 1536x1024 high opaque png n=1 flat-lay est=0.25
+2026-10-26T23:17:24+01:00 same endpoint 1536x1024 high opaque png n=1 online-presence est=0.25
+2026-10-26T23:17:25+01:00 same endpoint 1536x1024 high opaque png n=1 evening-look est=0.25
+2026-10-26T23:17:27+01:00 same endpoint 1536x1024 high opaque png n=1 beginner est=0.25
+2026-10-26T23:17:33+01:00 same endpoint 1536x1024 high opaque png n=1 photo-shoot est=0.25
+2026-10-26T23:17:35+01:00 same endpoint 1536x1024 high opaque png n=1 skincare est=0.25
+2026-10-26T23:17:36+01:00 same endpoint 1536x1024 high opaque png n=1 kit-case est=0.25
+2026-10-26T23:17:37+01:00 same endpoint 1536x1024 high opaque png n=1 trends est=0.25
+2026-10-26T23:18:20+01:00 same kit-case-v2 est=0.25

@@ -35,6 +35,7 @@ My Makeup est un annuaire de maquilleuses professionnelles indépendantes. Cette
 | toucher la barre de navigation du site public (entrées, menus déroulants, survol, clavier, « Me connecter ») | [`docs/navbar.md`](docs/navbar.md) |
 | appliquer la direction artistique du site public à une page (jetons `art-`, polices, dessins, cartes, bannière, invitation à l'action ; interdits : étoiles, fleurs, rebond, néon) | [`docs/direction-artistique.md`](docs/direction-artistique.md) |
 | ajouter, changer ou retirer un dessin ou une icône SVG du kit (objets de maquillage, dessins au trait, icônes d'interface : origine, fichier source, droits) | [`docs/credits-svg.md`](docs/credits-svg.md), puis [`docs/direction-artistique.md`](docs/direction-artistique.md) |
+| générer, refaire ou ajouter une illustration par IA (couvertures du blog : modèle, prompts, réglages, cadrage, droits, coût) | [`docs/illustrations.md`](docs/illustrations.md) |
 | toucher la page de recherche (barre, filtres en liens, budget, liste ou grille, sélection « Les plus consultées en France ») | [`docs/recherche.md`](docs/recherche.md) |
 | faire autrement que le site en ligne | [`docs/migration/CHANGEMENTS-VOULUS.md`](docs/migration/CHANGEMENTS-VOULUS.md) |
 | jouer la bascule, ou savoir quoi faire à chaque étape du jour J et du retour arrière | [`docs/migration/BASCULE.md`](docs/migration/BASCULE.md) |

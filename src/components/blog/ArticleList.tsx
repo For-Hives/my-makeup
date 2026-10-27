@@ -33,7 +33,7 @@ export function ArticleList({ articles }: { articles: readonly ListedArticle[] }
 					<SectionHead variant="left" number="02" eyebrow="Le blog" title="Tous les articles" id="tous-les-articles">
 						Conseils, tendances et nouveautés, du plus récent au plus ancien.
 					</SectionHead>
-					<ul className="grid grid-cols-1 gap-x-8 gap-y-12 md:grid-cols-2 lg:grid-cols-3 lg:gap-x-14 lg:gap-y-16">
+					<ul className="grid grid-cols-1 gap-x-12 gap-y-14 md:grid-cols-2 lg:grid-cols-3 lg:gap-x-14 lg:gap-y-16">
 						{others.map(article => (
 							<li key={article.slug} className="reveal">
 								<BlogCard article={article} headingLevel={2} />

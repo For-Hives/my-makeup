@@ -19,7 +19,7 @@ export function RelatedArticles({ articles }: { articles: readonly ListedArticle
 	return (
 		<section aria-labelledby="a-lire-aussi" data-testid="articles-lies" className="mt-20 md:mt-28">
 			<SectionHead variant="left" eyebrow="Le blog" title="À lire aussi" id="a-lire-aussi" />
-			<ul className="mt-10 grid grid-cols-1 gap-x-8 gap-y-12 md:grid-cols-3 lg:gap-x-14">
+			<ul className="mt-10 grid grid-cols-1 gap-x-12 gap-y-14 md:grid-cols-3 lg:gap-x-14">
 				{articles.map(article => (
 					<li key={article.slug} className="reveal">
 						<BlogCard article={article} headingLevel={3} />
