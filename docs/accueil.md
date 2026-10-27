@@ -8,6 +8,7 @@ L'accueil (`/`, servi par `src/app/(front)/(site)/home-cached/[key]/page.tsx`) s
 2. **« Mise en avant ».** Des profils vérifiés, tirés au hasard à chaque chargement (voir plus bas). Absente tant qu'aucun profil n'est vérifié.
 3. **« Vos projets, nos meilleurs talents. »** Les spécialités, inchangées.
 4. **Les textes de la communauté**, sans titre ni pli ni étapes : « avant tout une communauté » (`Presentation`), le projet (`Project`), la collaboration (`Collaboration`). Tous visibles, mot pour mot.
+   Les trois dessins ronds de la communauté (`COLUMNS` dans `Presentation.tsx`) sont des illustrations gouache détourées (`public/assets/illustrations/community-clients.webp`, `community-artists.webp`, `community-solution.webp`, 512 px, fond transparent), posées dans le rond teinté (`data-tint`) en `object-contain p-2`. Elles remplacent, le 27/10/2026, trois visages en éclaboussures qui n'étaient pas dans le thème du site ; recette dans [`illustrations.md`](illustrations.md).
 5. **L'invitation à l'action** du bas (voir [`appel-a-l-action.md`](appel-a-l-action.md)).
 
 Chaque section sous le héros (2 à 4) s'ouvre par la même tête (`SectionHead` : filet numéroté, titre, phrase), a le même rythme (64 px d'air sur téléphone, 112 px sur grand écran, un filet en haut, un fond indigo très clair une section sur deux) et apparaît au défilement (issue 1101, voir [`mouvement.md`](mouvement.md), « Les sections de l'accueil »). Les textes de la communauté ne changent pas d'un mot ; un test les relit.
