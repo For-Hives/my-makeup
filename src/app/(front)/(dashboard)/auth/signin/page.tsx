@@ -50,18 +50,13 @@ export default async function SignInPage({
 					Se <TitleAccent tone="berry">connecter</TitleAccent>
 				</>
 			}
-			layout="split"
+			layout="card"
 			footer={
 				<>
 					<p className="reveal">
 						Pas encore de compte ?{' '}
 						<Link className={ART_LINK} href="/auth/signup">
 							Inscris-toi
-						</Link>
-					</p>
-					<p className="reveal">
-						<Link className={ART_LINK} href="/" prefetch={false}>
-							Retour à l’accueil
 						</Link>
 					</p>
 				</>

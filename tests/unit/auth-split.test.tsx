@@ -5,14 +5,14 @@ import { AuthShell } from '../../src/components/auth/AuthShell'
 import { GoogleButton } from '../../src/components/auth/GoogleButton'
 import { PasswordlessHelp } from '../../src/components/auth/PasswordlessHelp'
 
-/** Issue 1138: the sign-in and sign-up pages wear the split layout (art panel with the title, form card). */
+/** The sign-in and sign-up pages wear the simple card layout (27/10/2026: one column, no art panel). */
 const split = renderToStaticMarkup(
-	<AuthShell title="Se connecter" layout="split" footer={<p>pied</p>}>
+	<AuthShell title="Se connecter" layout="card" footer={<p>pied</p>}>
 		<p>contenu</p>
 	</AuthShell>
 )
 
-describe('coquille en deux colonnes', () => {
+describe('coquille en une colonne', () => {
 	test('une seule h1 en Bodoni, un seul <main>, le titre précède le formulaire', () => {
 		expect(split.match(/<h1/g)).toHaveLength(1)
 		expect(split.match(/<main/g)).toHaveLength(1)
@@ -20,10 +20,15 @@ describe('coquille en deux colonnes', () => {
 		expect(split.indexOf('<h1')).toBeLessThan(split.indexOf('contenu'))
 	})
 
-	test('un panneau d’art avec une arche décorative (alt vide), caché en dessous de 1024 px', () => {
-		expect(split).toContain('art-arch')
-		expect(split).toMatch(/alt=""/)
-		expect(split).toMatch(/class="[^"]*\bhidden\b[^"]*\blg:block\b[^"]*"><div data-band/)
+	test('aucune photo ni décor : pas d’arche, pas d’image, pas de pinceau', () => {
+		expect(split).not.toContain('art-arch')
+		expect(split).not.toContain('<img')
+		expect(split).not.toContain('<svg')
+	})
+
+	test('le nom du site est un lien vers l’accueil, avec une cible de 44 px au moins', () => {
+		expect(split).toMatch(/<a [^>]*href="\/"[^>]*>My Makeup<\/a>/)
+		expect(split).toContain('min-h-11')
 	})
 
 	test('le contenu est dans une carte, le pied hors de la carte', () => {
@@ -46,10 +51,10 @@ describe('coquille en deux colonnes', () => {
 		expect(centred).toContain('text-center')
 	})
 
-	test('la connexion et l’inscription passent par la mise en page en deux colonnes', () => {
+	test('la connexion et l’inscription passent par la mise en page en une colonne', () => {
 		for (const page of ['signin', 'signup']) {
 			const source = readFileSync(`src/app/(front)/(dashboard)/auth/${page}/page.tsx`, 'utf8')
-			expect(source).toContain('layout="split"')
+			expect(source).toContain('layout="card"')
 		}
 	})
 })
@@ -65,7 +70,7 @@ describe('éléments de la carte', () => {
 
 	test('l’aide sans mot de passe garde ses mots', () => {
 		const html = renderToStaticMarkup(<PasswordlessHelp />)
-		expect(html).toContain('Tu t’étais inscrite avec Facebook ? Ce bouton n’existe plus')
-		expect(html).toContain('pour recevoir un lien et choisir ton mot de passe.')
+		expect(html).toContain('Inscrite avec Facebook ou Google, sans mot de passe ?')
+		expect(html).toContain('pour en choisir un.')
 	})
 })
