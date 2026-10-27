@@ -1,18 +1,24 @@
 {
 	"description": "Les notes de version du site, en français : ce qu'une visiteuse ou une maquilleuse peut remarquer. Une note s'ajoute par « bun run notes:add » et attend dans « pending » ; la publication la range sous son numéro, dans « releases ». Voir docs/publication.md.",
-	"pending": [
-		{
-			"id": "ton-profil-est-publie-des-qu-il-a-une-photo-ta-ville-ta-s",
-			"type": "amelioration",
-			"text": "Ton profil est publié dès qu'il a une photo, ta ville, ta spécialité et un moyen de te contacter : le prix et la description ne sont plus obligatoires, ils servent à apparaître sur Google."
-		},
-		{
-			"id": "un-prix-ecrit-avec-une-duree-comme-2-h-150-ou-45-min-60-e",
-			"type": "correction",
-			"text": "Un prix écrit avec une durée, comme « 2 h : 150 € » ou « 45 min, 60 € », est maintenant lu à 150 € et à 60 €, et non plus à la durée."
-		}
-	],
+	"pending": [],
 	"releases": [
+		{
+			"version": "3.0.32",
+			"date": "2026-10-27",
+			"commit": "b080cec6d93035fa279abf6d8ce81c9e9bf05ed2",
+			"notes": [
+				{
+					"id": "ton-profil-est-publie-des-qu-il-a-une-photo-ta-ville-ta-s",
+					"type": "amelioration",
+					"text": "Ton profil est publié dès qu'il a une photo, ta ville, ta spécialité et un moyen de te contacter : le prix et la description ne sont plus obligatoires, ils servent à apparaître sur Google."
+				},
+				{
+					"id": "un-prix-ecrit-avec-une-duree-comme-2-h-150-ou-45-min-60-e",
+					"type": "correction",
+					"text": "Un prix écrit avec une durée, comme « 2 h : 150 € » ou « 45 min, 60 € », est maintenant lu à 150 € et à 60 €, et non plus à la durée."
+				}
+			]
+		},
 		{
 			"version": "3.0.31",
 			"date": "2026-10-27",
