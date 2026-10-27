@@ -31,18 +31,13 @@ export default async function SignUpPage() {
 					<TitleAccent tone="berry">inscrire</TitleAccent>
 				</>
 			}
-			layout="split"
+			layout="card"
 			footer={
 				<>
 					<p className="reveal">
 						Déjà un compte ?{' '}
 						<Link className={ART_LINK} href="/auth/signin">
 							Connecte-toi
-						</Link>
-					</p>
-					<p className="reveal">
-						<Link className={ART_LINK} href="/" prefetch={false}>
-							Retour à l’accueil
 						</Link>
 					</p>
 				</>

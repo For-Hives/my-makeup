@@ -9,19 +9,15 @@ import Link from 'next/link'
  */
 export function PasswordlessHelp() {
 	return (
-		<p
-			data-testid="aide-sans-mot-de-passe"
-			className="reveal max-w-sm rounded-art-field bg-art-blush-50 px-5 py-4 text-left text-art-blush-ink text-sm leading-6"
-		>
-			Tu t’étais inscrite avec Facebook ? Ce bouton n’existe plus : clique sur{' '}
+		<p data-testid="aide-sans-mot-de-passe" className="max-w-sm text-left text-mute text-sm leading-6">
+			Inscrite avec Facebook ou Google, sans mot de passe ? Clique sur{' '}
 			<Link
 				className="font-medium text-indigo-800 underline underline-offset-4 hover:text-indigo-950"
 				href="/auth/mot-de-passe-oublie"
 			>
 				Mot de passe oublié
 			</Link>{' '}
-			pour recevoir un lien et choisir ton mot de passe. Ça marche aussi si tu t’es inscrite avec Google et que tu veux
-			un mot de passe en plus.
+			pour en choisir un.
 		</p>
 	)
 }

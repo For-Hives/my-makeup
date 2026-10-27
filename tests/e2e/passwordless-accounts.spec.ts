@@ -71,7 +71,7 @@ test.describe('093 : la ligne d’aide de la connexion', () => {
 		await page.goto('/auth/signin')
 
 		const help = page.getByTestId('aide-sans-mot-de-passe')
-		await expect(help).toContainText('Tu t’étais inscrite avec Facebook ?')
+		await expect(help).toContainText('Inscrite avec Facebook ou Google, sans mot de passe ?')
 		await help.getByRole('link', { name: 'Mot de passe oublié' }).click()
 		await expect(page).toHaveURL(/\/auth\/mot-de-passe-oublie$/)
 
