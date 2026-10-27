@@ -22,9 +22,9 @@ export type MakeupMailProps = {
 	/** The line a mail client shows after the subject. */
 	preview: string
 	/** The small line above the title, in capitals. */
-	eyebrow: string
+	eyebrow?: string
 	/** The title, in two parts: `emphasis` is the one word set in italic and in berry. */
-	title: { before: string; emphasis: string; after?: string }
+	title?: { before: string; emphasis: string; after?: string }
 	/** The body: paragraphs, in order. */
 	children: ReactNode
 	/** The one button of the mail. `href` is absolute. */
@@ -33,6 +33,8 @@ export type MakeupMailProps = {
 	signature?: { name: string; role: string }
 	/** The unsubscribe link of the footer: one click, no sign-in (issue 1006). Without it, the footer asks to reply instead (a mail sent once to many in blind copy has no link of its own). */
 	unsubscribeUrl?: string | undefined
+	/** A plain letter: no band, no title, no pink panel of drawings, no footer. Only the logo, the body, the signature and the button. */
+	minimal?: boolean
 	/** Where the images are served from. The preview points it at the working copy. */
 	assetsBase?: string
 }
@@ -50,6 +52,7 @@ export function MakeupMail({
 	action,
 	signature,
 	unsubscribeUrl,
+	minimal = false,
 	assetsBase = `${MAIL_SITE}/assets/email`,
 }: MakeupMailProps) {
 	const c = MAIL_COLORS
@@ -100,59 +103,74 @@ export function MakeupMail({
 							padding: '0 0 8px',
 						}}
 					>
-						<Section style={{ padding: '14px 24px', backgroundColor: c.banner, borderRadius: '36px 36px 0 0' }}>
-							<Text
-								style={{
-									margin: 0,
-									textAlign: 'center',
-									fontSize: 12,
-									lineHeight: '16px',
-									letterSpacing: '0.16em',
-									textTransform: 'uppercase',
-									color: '#ffffff',
-									fontWeight: 600,
-								}}
-							>
-								Maquilleuses indépendantes · Partout en France
-							</Text>
-						</Section>
+						{!minimal && (
+							<>
+								<Section style={{ padding: '14px 24px', backgroundColor: c.banner, borderRadius: '36px 36px 0 0' }}>
+									<Text
+										style={{
+											margin: 0,
+											textAlign: 'center',
+											fontSize: 12,
+											lineHeight: '16px',
+											letterSpacing: '0.16em',
+											textTransform: 'uppercase',
+											color: '#ffffff',
+											fontWeight: 600,
+										}}
+									>
+										Maquilleuses indépendantes · Partout en France
+									</Text>
+								</Section>
+							</>
+						)}
 
-						<Section style={{ padding: '44px 40px 8px' }}>
-							<Text
-								style={{
-									margin: '0 0 18px',
-									fontSize: 12,
-									lineHeight: '16px',
-									letterSpacing: '0.18em',
-									textTransform: 'uppercase',
-									color: c.mute,
-									fontWeight: 600,
-								}}
-							>
-								{eyebrow}
-							</Text>
-							<Text
-								style={{
-									margin: 0,
-									fontFamily: MAIL_DISPLAY_FONT,
-									fontSize: 38,
-									lineHeight: '42px',
-									fontWeight: 500,
-									letterSpacing: '-0.02em',
-									color: c.ink,
-								}}
-							>
-								{title.before}{' '}
-								<span style={{ fontStyle: 'italic', color: c.berry, whiteSpace: 'nowrap' }}>{title.emphasis}</span>
-								{title.after ? `${/^[.,;:!?]/.test(title.after) ? '' : ' '}${title.after}` : ''}
-							</Text>
-						</Section>
+						{!minimal && (
+							<>
+								<Section style={{ padding: '44px 40px 8px' }}>
+									<Text
+										style={{
+											margin: '0 0 18px',
+											fontSize: 12,
+											lineHeight: '16px',
+											letterSpacing: '0.18em',
+											textTransform: 'uppercase',
+											color: c.mute,
+											fontWeight: 600,
+										}}
+									>
+										{eyebrow}
+									</Text>
+									<Text
+										style={{
+											margin: 0,
+											fontFamily: MAIL_DISPLAY_FONT,
+											fontSize: 38,
+											lineHeight: '42px',
+											fontWeight: 500,
+											letterSpacing: '-0.02em',
+											color: c.ink,
+										}}
+									>
+										{title?.before}{' '}
+										<span style={{ fontStyle: 'italic', color: c.berry, whiteSpace: 'nowrap' }}>{title?.emphasis}</span>
+										{title?.after ? `${/^[.,;:!?]/.test(title.after) ? '' : ' '}${title.after}` : ''}
+									</Text>
+								</Section>
 
-						<Section style={{ padding: '20px 40px 0' }}>
-							<Hr style={{ margin: 0, border: 'none', borderTop: `1px solid ${c.hairline}` }} />
-						</Section>
+								<Section style={{ padding: '20px 40px 0' }}>
+									<Hr style={{ margin: 0, border: 'none', borderTop: `1px solid ${c.hairline}` }} />
+								</Section>
+							</>
+						)}
 
-						<Section style={{ padding: '28px 40px 0', fontSize: 17, lineHeight: '27px', color: c.mute }}>
+						<Section
+							style={{
+								padding: minimal ? '40px 40px 0' : '28px 40px 0',
+								fontSize: 17,
+								lineHeight: '27px',
+								color: c.mute,
+							}}
+						>
 							{children}
 						</Section>
 
@@ -198,46 +216,54 @@ export function MakeupMail({
 							</Section>
 						) : null}
 
-						<Section style={{ padding: '36px 24px 8px' }}>
-							<Section style={{ backgroundColor: c.blush, borderRadius: 28, padding: '22px 12px' }}>
-								<Row>
-									{OBJECTS.map(name => (
-										<Column key={name} align="center" style={{ width: '20%' }}>
-											<Img
-												src={`${assetsBase}/${name}.png`}
-												width={44}
-												height={44}
-												alt=""
-												style={{ display: 'block', margin: '0 auto' }}
-											/>
-										</Column>
-									))}
-								</Row>
-							</Section>
-						</Section>
+						{!minimal && (
+							<>
+								<Section style={{ padding: '36px 24px 8px' }}>
+									<Section style={{ backgroundColor: c.blush, borderRadius: 28, padding: '22px 12px' }}>
+										<Row>
+											{OBJECTS.map(name => (
+												<Column key={name} align="center" style={{ width: '20%' }}>
+													<Img
+														src={`${assetsBase}/${name}.png`}
+														width={44}
+														height={44}
+														alt=""
+														style={{ display: 'block', margin: '0 auto' }}
+													/>
+												</Column>
+											))}
+										</Row>
+									</Section>
+								</Section>
+							</>
+						)}
 					</Section>
 
-					<Section style={{ padding: '28px 24px 0', textAlign: 'center' }}>
-						<Text style={{ margin: '0 0 8px', fontSize: 13, lineHeight: '20px', color: c.mute }}>
-							My Makeup, l’annuaire des maquilleuses professionnelles.{' '}
-							<Link href={MAIL_SITE} style={{ color: c.blushInk, textDecoration: 'underline' }}>
-								my-makeup.fr
-							</Link>
-						</Text>
-						<Text style={{ margin: 0, fontSize: 13, lineHeight: '20px', color: c.mute }}>
-							{unsubscribeUrl ? (
-								<>
-									Tu ne veux plus recevoir nos courriels d’information ?{' '}
-									<Link href={unsubscribeUrl} style={{ color: c.blushInk, textDecoration: 'underline' }}>
-										Je me désinscris
+					{!minimal && (
+						<>
+							<Section style={{ padding: '28px 24px 0', textAlign: 'center' }}>
+								<Text style={{ margin: '0 0 8px', fontSize: 13, lineHeight: '20px', color: c.mute }}>
+									My Makeup, l’annuaire des maquilleuses professionnelles.{' '}
+									<Link href={MAIL_SITE} style={{ color: c.blushInk, textDecoration: 'underline' }}>
+										my-makeup.fr
 									</Link>
-									, c’est immédiat.
-								</>
-							) : (
-								'Tu ne veux plus recevoir de message de ma part ? Réponds simplement « stop » à ce courriel.'
-							)}
-						</Text>
-					</Section>
+								</Text>
+								<Text style={{ margin: 0, fontSize: 13, lineHeight: '20px', color: c.mute }}>
+									{unsubscribeUrl ? (
+										<>
+											Tu ne veux plus recevoir nos courriels d’information ?{' '}
+											<Link href={unsubscribeUrl} style={{ color: c.blushInk, textDecoration: 'underline' }}>
+												Je me désinscris
+											</Link>
+											, c’est immédiat.
+										</>
+									) : (
+										'Tu ne veux plus recevoir de message de ma part ? Réponds simplement « stop » à ce courriel.'
+									)}
+								</Text>
+							</Section>
+						</>
+					)}
 				</Container>
 			</Body>
 		</Html>
