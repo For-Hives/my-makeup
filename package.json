@@ -43,6 +43,7 @@
 		"migration:import": "bun --no-env-file scripts/migration/import.ts",
 		"rehearsal": "bun --no-env-file scripts/migration/rehearsal.ts",
 		"migration:freeze": "bun --no-env-file scripts/migration/freeze.ts",
+		"emails:render": "bun --no-env-file scripts/emails/render.tsx",
 		"members:mail": "bun --no-env-file scripts/members/mail.ts",
 		"admin:create": "bun --no-env-file scripts/admin/create-admin.ts",
 		"test:integration": "bun --no-env-file scripts/bench.ts test",
@@ -69,6 +70,7 @@
 		"@payloadcms/storage-s3": "3.90.2",
 		"@payloadcms/translations": "3.90.2",
 		"@payloadcms/ui": "3.90.2",
+		"@react-email/components": "1.0.12",
 		"bcryptjs": "3.0.3",
 		"fuse.js": "7.5.0",
 		"graphql": "16.14.2",
@@ -96,6 +98,7 @@
 		"@types/react-dom": "19.2.7",
 		"jsdom": "30.1.2",
 		"msw": "2.15.0",
+		"react-email": "6.11.3",
 		"tailwindcss": "4.3.3",
 		"typescript": "6.0.3"
 	},

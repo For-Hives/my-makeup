@@ -42,3 +42,4 @@ next-env.d.ts
 
 # report and send log of `bun run members:mail` (docs/membres-courriel.md): profile numbers, local only
 /.members-mail/
+.emails-preview/
