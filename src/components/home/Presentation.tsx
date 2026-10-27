@@ -11,21 +11,21 @@ const PHOTO = '/assets/maquilleuse_blog.webp'
 
 const COLUMNS: readonly { image: string; alt: string; titre: string; texte: string; tint: Tint }[] = [
 	{
-		image: '/assets/illustrations/illustration.webp',
+		image: '/assets/illustrations/community-clients.webp',
 		alt: 'client à la recherche de maquilleuse',
 		titre: 'Des particuliers',
 		texte: "À la recherche d'une maquilleuse près de chez eux",
 		tint: 'blush',
 	},
 	{
-		image: '/assets/illustrations/illustration_2.webp',
+		image: '/assets/illustrations/community-artists.webp',
 		alt: 'des maquilleuses passionnées aux multiples compétences',
 		titre: 'Des maquilleuses professionnelles',
 		texte: 'Aux multiples spécialités et personnalités',
 		tint: 'lavender',
 	},
 	{
-		image: '/assets/illustrations/illustration_3.webp',
+		image: '/assets/illustrations/community-solution.webp',
 		alt: 'une solution dédiée pour collaborer entre particuliers et maquilleuses',
 		titre: 'Une solution dédiée',
 		texte: 'Pensée et conçue pour collaborer',

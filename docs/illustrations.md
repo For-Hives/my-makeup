@@ -2,7 +2,7 @@
 
 Ce document garde **de quoi refaire** chaque illustration générée par IA du site : le modèle, les réglages, le prompt et la date. Les dessins SVG du kit (objets, icônes) sont dans [`credits-svg.md`](credits-svg.md), la direction artistique dans [`direction-artistique.md`](direction-artistique.md).
 
-Aujourd'hui : **les dix couvertures du blog** (26/10/2026). Les autres emplacements d'illustration sont listés dans la table « Emplacements d'illustration à générer » de `direction-artistique.md`.
+Aujourd'hui : **les dix couvertures du blog** (26/10/2026) et **les trois dessins ronds de la communauté de l'accueil** (27/10/2026, section en bas de ce document). Les autres emplacements d'illustration sont listés dans la table « Emplacements d'illustration à générer » de `direction-artistique.md`.
 
 ## Les couvertures du blog
 
@@ -77,3 +77,22 @@ Le journal des exécutions (date, modèle, réglages, estimation) est [`illustra
 - **Aucun droit d'auteur n'est revendiqué** sur ces images : le droit d'auteur sur une œuvre générée par IA est incertain selon les pays. Aucune garantie d'originalité ni de droit exclusif.
 - **Les conditions de fal** (<https://fal.ai/terms>) et **celles d'OpenAI** (le modèle `gpt-image-2.5` appelé par fal) sur la propriété et l'usage commercial des sorties sont **à relire par Andy** avant de s'appuyer sur ces images (voir aussi `credits-svg.md`, « Droits »). Les conditions d'OpenAI n'ont pas pu être relues automatiquement (page en 403 le 26/10/2026).
 - Aucune marque, aucun nom de personne, aucun texte dans les prompts ; aucune personne réelle n'est visée. Les visages sont inventés.
+
+## Les trois dessins de la communauté de l'accueil (27/10/2026)
+
+Demande d'Andy du 27/10/2026 : les trois images de la section « communauté » (`COLUMNS` dans `src/components/home/Presentation.tsx`) n'étaient pas dans le thème du site (visages en éclaboussures néon sur fond noir). Elles sont remplacées par des gouaches éditoriales de la même famille que les couvertures du blog.
+
+- **Fichiers** : `public/assets/illustrations/community-clients.webp` (« Des particuliers »), `community-artists.webp` (« Des maquilleuses professionnelles »), `community-solution.webp` (« Une solution dédiée »). **512 x 512, fond transparent**, WebP qualité 88 (alpha 100) par `finir.py` du skill `fal-images` (rognés au contenu, centrés, remplissage 94 %), 49 à 53 Ko. Affichés dans un rond de 7 rem teinté (blush, lavande, sable) en `object-contain p-2` : la teinte du rond sert de fond. Les anciens `illustration.webp`, `illustration_2.webp`, `illustration_3.webp` sont supprimés (plus utilisés).
+- **Modèle** : `openai/gpt-image-2.5/flare/text-to-image`. **Réglages** : `image_size` `{ "width": 1024, "height": 1024 }`, `quality` `high`, **`background` `transparent`** (alpha réel, sans halo mesuré), `num_images` 1, `output_format` `png`. Une exécution par image, sans image de référence.
+- **Prompt** : `Soft editorial gouache illustration, premium fashion magazine feel, square composition. {SCÈNE} Bold readable shapes, readable when shrunk to a small icon. Composition: {SUJET} centred, filling about 70% of the frame, with a clear margin of empty space on all sides. Dry-brush gouache texture with visible gentle brush strokes, flat shapes, refined and minimal. Palette strictly limited: blush pink, pale lavender, and deep indigo accents; muted and calm, no saturated colours, no neon, no black splatter. Isolated on a fully transparent background, no paper, no backdrop, no shadow on the ground. No text, no letters, no logo, no watermark, no border, no flowers, no sparkles. Not a portrait of any real person.`
+- **Scènes** :
+
+| Illustration | Scène |
+|---|---|
+| `community-clients` | A young woman with light olive skin and a shoulder-length wavy chestnut bob, in a pale lavender knit top, seen from the waist up, looks down at a smartphone she holds in both hands; a large round map-pin marker in deep indigo with a blush-pink centre floats just above the phone. |
+| `community-artists` | Two professional makeup artists seen from the waist up, side by side: on the left a woman with deep brown skin and a high natural curly puff hairstyle, in a deep indigo smock, holding a soft powder brush up; on the right a woman with light skin and a sleek dark-red low bun, in a blush-pink smock, holding an open eyeshadow palette. |
+| `community-solution` | A client and a makeup artist meet and talk, seen from the waist up, facing each other: on the left a woman with medium tan skin and long straight black hair in a pale lavender top, on the right a makeup artist with light brown skin and a short natural bob, in a deep indigo smock; between and above them a single large rounded blush-pink speech bubble containing a deep indigo heart, no words. |
+
+- **Jugées au vrai format** : une planche avec chaque image dans son rond de 112 px (et 224 px pour l'écran retina) sur sa teinte. Une seule exécution par image a suffi ; le pilote (`community-clients`) a tenu à 112 px, les deux autres ont suivi la même recette.
+- **Coût** : 3 exécutions, **estimation de 0,25 USD l'image, soit environ 0,75 USD** (aucun outil ne renvoie le coût réel) ; journal dans [`illustrations-cost.txt`](illustrations-cost.txt).
+- **Droits** : les mêmes que pour les couvertures du blog (voir « Droits : à lire par Andy » plus haut) : aucun droit d'auteur revendiqué, conditions de fal et d'OpenAI à relire par Andy ; aucune personne réelle, aucun texte.
