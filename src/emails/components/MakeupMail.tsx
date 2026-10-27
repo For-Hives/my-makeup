@@ -288,3 +288,26 @@ export function MailList({ items }: { items: readonly ReactNode[] }) {
 		</ul>
 	)
 }
+
+/** The pill button, for a body that carries it itself (the `action` prop places it after the signature). */
+export function MailButton({ href, children }: { href: string; children: ReactNode }) {
+	return (
+		<Button
+			href={href}
+			style={{
+				display: 'inline-block',
+				backgroundColor: MAIL_COLORS.ink,
+				color: '#ffffff',
+				fontFamily: MAIL_BODY_FONT,
+				fontSize: 16,
+				fontWeight: 600,
+				lineHeight: '24px',
+				padding: '14px 32px',
+				borderRadius: 999,
+				textDecoration: 'none',
+			}}
+		>
+			{children}
+		</Button>
+	)
+}
