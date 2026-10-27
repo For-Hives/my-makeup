@@ -306,7 +306,7 @@
 
 /*
  * Hover polish (issue 1137, docs/mouvement.md, « Le survol d'une carte »). A card that leads to a page shows the hover
- * with a soft wash that sits behind it and reaches 12 px past its edge, so the card breathes instead of being cut out
+ * with a soft white wash and a hairline that sit behind it and reach past its edge (`--card-wash-reach`, 14 px, 20 px on the blog cards, always less than half the gap between two cards), so the card breathes instead of being cut out
  * as one block. No shadow: the hard one drew a dark edge around a card with no background (profile and blog cards)
  * and was clipped by the rail of the search page. The wash is a pseudo-element, painted for a mouse only; the state
  * shows with reduced motion too, at once. The move (below, under no-preference) is the wash growing from 97 % to 100 %.
@@ -319,15 +319,17 @@
 	.card-hover::before {
 		content: "";
 		position: absolute;
-		inset: -12px;
+		inset: calc(var(--card-wash-reach, 14px) * -1);
 		z-index: -1;
-		border-radius: 40px;
+		border: 1px solid transparent;
+		border-radius: calc(var(--card-wash-reach, 14px) + 24px);
 		background-color: transparent;
 		pointer-events: none;
 		transform: scale(0.97);
 	}
 	.card-hover:hover::before {
-		background-color: color-mix(in srgb, var(--color-art-blush) 42%, transparent);
+		background-color: rgb(255 255 255 / 0.6);
+		border-color: color-mix(in srgb, var(--color-art-line) 45%, transparent);
 		transform: none;
 	}
 	/* A card with a face of its own (the row card of a list: white, hairline) lets its list item hold the stacking context, so the wash paints under the face and shows only around it. */
@@ -477,7 +479,7 @@
 
 		/* A card does not lift: its wash grows to its size and its picture grows 5 %, slowly (400 ms), the card clips the picture, so nothing moves around it. */
 		.card-hover::before {
-			transition-property: background-color, transform;
+			transition-property: background-color, border-color, transform;
 			transition-duration: var(--duration-lift);
 			transition-timing-function: var(--ease-out-soft);
 		}

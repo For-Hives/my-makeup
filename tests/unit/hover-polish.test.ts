@@ -71,13 +71,15 @@ describe('a card is washed, not shadowed', () => {
 		expect(offenders).toEqual([])
 	})
 
-	test('the wash is a pseudo-element that reaches 12 px past the card, for a mouse only, with no lift', () => {
+	test('the wash is a pseudo-element that reaches past the card by `--card-wash-reach`, for a mouse only, with no lift', () => {
 		const wash = body('.card-hover::before')
-		expect(wash).toMatch(/inset:\s*-12px/)
+		expect(wash).toMatch(/inset:\s*calc\(var\(--card-wash-reach, 14px\) \* -1\)/)
+		expect(wash).toMatch(/border:\s*1px solid transparent/)
 		expect(wash).toMatch(/z-index:\s*-1/)
 		expect(wash).toMatch(/pointer-events:\s*none/)
 		expect(body('.card-hover')).toMatch(/isolation:\s*isolate/)
-		expect(body('.card-hover:hover::before')).toMatch(/background-color:\s*color-mix\(/)
+		expect(body('.card-hover:hover::before')).toMatch(/background-color:\s*rgb\(255 255 255 \/ 0\.6\)/)
+		expect(body('.card-hover:hover::before')).toMatch(/border-color:\s*color-mix\(/)
 		const hoverMedia = SHEET.indexOf('@media (hover: hover) {\n\t.card-hover {')
 		expect(hoverMedia).toBeGreaterThan(-1)
 		// Nothing lifts: the hovered card keeps its place.
@@ -88,7 +90,7 @@ describe('a card is washed, not shadowed', () => {
 	test('the wash and the photo move with the tokens of the site, under no-preference', () => {
 		const motion = CSS.slice(CSS.indexOf('@media (prefers-reduced-motion: no-preference)'))
 		const wash = /\.card-hover::before\s*\{([^{}]*)\}/.exec(motion)?.[1] ?? ''
-		expect(wash).toContain('transition-property: background-color, transform')
+		expect(wash).toContain('transition-property: background-color, border-color, transform')
 		expect(wash).toContain('var(--duration-lift)')
 		expect(wash).toContain('var(--ease-out-soft)')
 		expect(/\.card-zoom\s*\{([^{}]*)\}/.exec(motion)?.[1]).toContain('var(--duration-lift)')
@@ -98,6 +100,17 @@ describe('a card is washed, not shadowed', () => {
 		const grid = readFileSync(join(ROOT, 'src/components/search/SearchGrid.tsx'), 'utf8')
 		expect(grid.match(/'reveal isolate /g)).toHaveLength(2)
 		expect(body('.card-hover.bg-white')).toMatch(/isolation:\s*auto/)
+	})
+
+	test('the blog cards reach 20 px, and the gap between two cards of a list is at least twice that, so no wash touches the next card', () => {
+		const card = readFileSync(join(ROOT, 'src/components/art/BlogCard.tsx'), 'utf8')
+		expect(card).toContain('[--card-wash-reach:20px]')
+		for (const file of ['ArticleList.tsx', 'RelatedArticles.tsx']) {
+			const text = readFileSync(join(ROOT, 'src/components/blog', file), 'utf8')
+			const gap = /gap-x-(\d+)/.exec(text.slice(text.indexOf('<ul')))
+			expect(Number(gap?.[1]) * 4, file).toBeGreaterThanOrEqual(40)
+			expect(Number(/gap-y-(\d+)/.exec(text.slice(text.indexOf('<ul')))?.[1]) * 4, file).toBeGreaterThanOrEqual(40)
+		}
 	})
 
 	test('the rail of the search page keeps room around its cards, or the wash would be clipped', () => {
