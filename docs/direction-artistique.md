@@ -211,7 +211,7 @@ Les illustrations d'aujourd'hui sont provisoires (illustrations peintes déjà s
 | Guide « Trouver une maquilleuse » | `src/content/static-pages/client-guides.tsx` | arche 4:5, ~380 px | trouver la maquilleuse qui correspond |
 | Guide « Centraliser ses recherches » | idem | arche 4:5, ~380 px | tout réuni en un seul endroit |
 | Guide « Explorer les profils » | idem | arche 4:5, ~380 px | profils et réalisations |
-| « Solutions pour les particuliers » | idem | arche 4:5, ~380 px | une recherche simplifiée |
+| « Solutions pour les particuliers » | idem | arche 4:5, ~380 px | une recherche simplifiée. **Fait le 27/10/2026** : voir [`illustrations-solutions.md`](illustrations-solutions.md) (aussi les quatre étapes et la page « Solutions pour les maquilleuses ») |
 | À propos, première arche | `src/components/static-pages/AboutArticle.tsx` | arche 4:5, ~180 px | une maquilleuse au travail |
 | À propos, seconde arche | idem | arche 4:5, ~180 px | seconde maquilleuse, teinte lavande, plus bas |
 | Demande envoyée | `src/app/(front)/(site)/demande-envoyee/page.tsx` | arche 4:5, ~220 px | rassurance, un message reçu |

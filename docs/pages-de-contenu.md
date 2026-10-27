@@ -22,7 +22,7 @@ Tout est dans `src/components/static-pages/`, une brique pour chaque besoin :
 - **Mouvement.** Les blocs portent `.reveal` (voir `docs/mouvement.md`) ; aucune animation n'est déclarée dans ce bloc.
 - **Polices.** `next/font` ne s'exécute pas sous `bun test` : `tests/support/preload-fonts.ts` (chargé par `bunfig.toml`) les remplace par des objets simples. Ce que font les vraies polices (échange, repli à la même taille) est mesuré en navigateur : `tests/e2e/content-pages.spec.ts` (décalage de mise en page sous 0,005, comme « Mon espace »).
 - **Aucun emoji, aucun tiret cadratin ni demi-cadratin de phrase** (issue 1135, 26/10/2026 : les titres des parties n'ont plus d'emoji, `TitleWithAccent` est retiré). `tests/unit/no-emoji-no-emdash.test.tsx` lit le texte rendu des pages publiques, leurs titres et descriptions, le pied de page et les fixtures de texte ; seuls `©`, `®`, `™` et un demi-cadratin sans espace (un nom composé comme « UE–États-Unis ») passent. Les articles et profils de la base ne sont pas lus. Les pages légales n'ont changé ni de mot ni de ponctuation (leurs empreintes sont inchangées).
-- **Sans photo, sans chiffre inventé.** Les accents sont des pastilles, des filets et des chiffres d'ordre.
+- **Sans photo, sans chiffre inventé.** Les accents sont des pastilles, des filets et des chiffres d'ordre. Exception depuis le 27/10/2026 : les deux pages du menu « Solutions » portent des illustrations peintes générées (arche de la tête, image large sous les étapes et les parties), voir [`illustrations-solutions.md`](illustrations-solutions.md) ; ce ne sont ni des photos ni des personnes réelles.
 
 ## Le kit sur ces pages (issue 1111, 25/10/2026)
 

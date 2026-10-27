@@ -1,6 +1,7 @@
 import type { Tint } from '@/components/art/CapsuleImage'
 import { CapsuleImage } from '@/components/art/CapsuleImage'
 import type { MakeupObjectName } from '@/components/art/drawings'
+import { SolutionPicture } from '@/components/art/solution-image'
 import { ArticleHeading, ArtLead, ArtSignature } from './ArtPage'
 
 export interface PageSection {
@@ -30,7 +31,16 @@ const TINTS: readonly Tint[] = ['blush', 'lavender', 'sand', 'rose']
  * second h1 here (« 1 h1 par page »). `eyebrow` is the label of the menu the page belongs to. The capsules are
  * decoration: the words carry the meaning.
  */
-export function PageArticle({ contenu, eyebrow }: { contenu: PageContent; eyebrow: string }) {
+export function PageArticle({
+	contenu,
+	eyebrow,
+	images = [],
+}: {
+	contenu: PageContent
+	eyebrow: string
+	/** A wide illustration for the part of the same index, under its text; `null` or missing: none. */
+	images?: readonly (string | null)[]
+}) {
 	return (
 		<article className="page-frame pb-16 md:pb-24">
 			<div className="grid gap-12 rounded-art-frame border border-nude-200 bg-white px-6 py-14 md:px-16 md:py-20 lg:grid-cols-12 lg:gap-20">
@@ -42,25 +52,29 @@ export function PageArticle({ contenu, eyebrow }: { contenu: PageContent; eyebro
 				</div>
 				<div className="lg:col-span-7">
 					<div className="border-ink/20 border-t">
-						{contenu.parties.map((partie, index) => (
-							<section
-								key={partie.titre}
-								className="reveal grid grid-cols-[3.5rem_1fr] gap-x-5 gap-y-3 border-ink/20 border-b py-9 sm:grid-cols-[4.5rem_1fr] sm:gap-x-7"
-							>
-								<span aria-hidden="true" className="pt-1 text-[2.6rem] text-indigo-900 sm:text-[3.4rem]">
-									<CapsuleImage
-										shape="round"
-										tint={TINTS[index % TINTS.length] ?? 'blush'}
-										object={OBJECTS[index % OBJECTS.length] ?? 'brush'}
-										className="-ml-0.5"
-									/>
-								</span>
-								<div>
-									<h3 className="font-display font-medium text-2xl leading-snug tracking-tight">{partie.titre}</h3>
-									<p className="mt-3 max-w-[56ch] text-base text-mute leading-7">{partie.texte}</p>
-								</div>
-							</section>
-						))}
+						{contenu.parties.map((partie, index) => {
+							const picture = images[index]
+							return (
+								<section
+									key={partie.titre}
+									className="reveal grid grid-cols-[3.5rem_1fr] gap-x-5 gap-y-3 border-ink/20 border-b py-9 sm:grid-cols-[4.5rem_1fr] sm:gap-x-7"
+								>
+									<span aria-hidden="true" className="pt-1 text-[2.6rem] text-indigo-900 sm:text-[3.4rem]">
+										<CapsuleImage
+											shape="round"
+											tint={TINTS[index % TINTS.length] ?? 'blush'}
+											object={OBJECTS[index % OBJECTS.length] ?? 'brush'}
+											className="-ml-0.5"
+										/>
+									</span>
+									<div>
+										<h3 className="font-display font-medium text-2xl leading-snug tracking-tight">{partie.titre}</h3>
+										<p className="mt-3 max-w-[56ch] text-base text-mute leading-7">{partie.texte}</p>
+										{picture && <SolutionPicture src={picture} className="mt-6 max-w-[56ch]" />}
+									</div>
+								</section>
+							)
+						})}
 					</div>
 					<ArtSignature />
 				</div>

@@ -1,0 +1,10 @@
+2026-10-27T01:09:00+01:00 openai/gpt-image-2.5/flare/text-to-image 1024x1280 quality=high opaque png n=1 particuliers-head (pilot, retained) est=0.25 USD
+2026-10-27T01:11:00+01:00 same endpoint 1536x1024 high opaque png n=1 particuliers-search est=0.25
+2026-10-27T01:11:00+01:00 same particuliers-compare est=0.25
+2026-10-27T01:11:00+01:00 same particuliers-contact est=0.25
+2026-10-27T01:11:00+01:00 same particuliers-profils est=0.25
+2026-10-27T01:11:00+01:00 same endpoint 1024x1280 high opaque png n=1 artistes-head est=0.25
+2026-10-27T01:11:00+01:00 same endpoint 1536x1024 high opaque png n=1 artistes-clients est=0.25
+2026-10-27T01:11:00+01:00 same artistes-vitrine est=0.25
+2026-10-27T01:11:00+01:00 same artistes-agenda est=0.25
+total: 9 runs, est 2.25 USD (cap 4.00)

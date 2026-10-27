@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { MarqueeBanner } from '@/components/art/MarqueeBanner'
+import { solutionImage } from '@/components/art/solution-image'
 import { TitleAccent } from '@/components/art/TitleWithCapsules'
 import { Cta } from '@/components/blocks/Cta'
 import { ArtPage } from '@/components/static-pages/ArtPage'
@@ -22,7 +23,8 @@ export default function ArtistSolutionsPage() {
 		<ArtPage>
 			<PageHead
 				mirrored
-				image="/assets/back/maquilleuse_asiatique_white.webp"
+				image={solutionImage('artistes-head') ?? '/assets/back/maquilleuse_asiatique_white.webp'}
+				imageAlt=""
 				tint="rose"
 				band="night"
 				mark="ring"
@@ -37,7 +39,15 @@ export default function ArtistSolutionsPage() {
 				description="Découvrez comment My-Makeup peut aider les maquilleuses professionnelles à présenter leur travail et à se faire connaître des particuliers qui cherchent une maquilleuse, gratuitement."
 				signUp
 			/>
-			<PageArticle eyebrow="Solutions" contenu={ARTIST_SOLUTIONS} />
+			<PageArticle
+				eyebrow="Solutions"
+				contenu={ARTIST_SOLUTIONS}
+				images={[
+					solutionImage('artistes-clients'),
+					solutionImage('artistes-vitrine'),
+					solutionImage('artistes-agenda'),
+				]}
+			/>
 			<div className="pb-16 md:pb-24">
 				<MarqueeBanner variant="blush" label="Les points de la page" items={partTitles(ARTIST_SOLUTIONS)} />
 			</div>
