@@ -25,6 +25,7 @@ import { mediaUrl } from '../lib/media'
 import { photoLimits, quotaVerdict, UNREADABLE_MESSAGE } from '../lib/photo-limits'
 import { judge, NAMED_FILE_CONTEXT, unpredictableName } from '../lib/photo-upload'
 import { lockPhotoUsage, readPhotoUsage } from '../lib/photo-usage'
+import { refreshMedia } from './revalidate'
 
 /**
  * Where the object of a media is and what it is: written by the server only, from the file it
@@ -242,6 +243,8 @@ export const MEDIA_UPLOAD: UploadConfig = {
  * `where`: the hooks of the bin are added by src/collections/trash.ts (ticket 045), through
  * src/payload.config.ts.
  */
+const REFRESH = refreshMedia()
+
 export const Media: CollectionConfig<'media'> = {
 	slug: 'media',
 	labels: { singular: 'Média', plural: 'Médias' },
@@ -256,6 +259,10 @@ export const Media: CollectionConfig<'media'> = {
 	hooks: {
 		beforeOperation: [fileMetadataSetByServer, photoValidatedAndRenamed],
 		beforeChange: [fileOnCreate, ownerOnUpload, quotaOfProfile],
+		// A photo replaced, renamed or deleted refreshes the pages that show it.
+		afterChange: [REFRESH.apresEcriture],
+		beforeDelete: [REFRESH.avantSuppression],
+		afterDelete: [REFRESH.apresSuppression],
 	},
 	fields: [
 		{ name: 'alt', label: 'Texte alternatif', type: 'text' },

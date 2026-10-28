@@ -9,6 +9,18 @@
 	],
 	"releases": [
 		{
+			"version": "3.0.38",
+			"date": "2026-10-28",
+			"commit": "fd7caadf0e4730c78e4d083d1829a6b09ef3a059",
+			"notes": [
+				{
+					"id": "une-photo-de-profil-remplacee-renommee-ou-supprimee-dans",
+					"type": "correction",
+					"text": "Une photo de profil remplacée, renommée ou supprimée dans l'administration apparaît aussitôt sur la page du profil et dans les listes."
+				}
+			]
+		},
+		{
 			"version": "3.0.37",
 			"date": "2026-10-28",
 			"commit": "71fd86c66878a70162d1bca134e5d243b7b2093e",

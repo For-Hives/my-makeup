@@ -30,9 +30,38 @@ Raisons qui doivent rester dynamiques, et qui le restent :
 - **Ancienne adresse d'un profil** (ancien nom d'utilisateur, variante du slug) : le 308 vers le slug est répondu par le proxy, avec la même lecture que celle qui vérifie l'existence de la page. Levée par la page gardée dans le cache, la redirection partait avec un en-tête `Location` doublé (`/profil/x, /profil/x`), que `tests/e2e/public-profile.spec.ts` (E46) a vu.
 - **Adresse inconnue** : le proxy répond la 404 avant la page (ticket 231), la page ne garde jamais une réponse périmée pour elle.
 
+## Qui rafraîchit quoi : le tableau de l'audit du 28/10/2026
+
+Demande d'Andy : « à chaque changement Payload, il faut que ça refresh toutes les pages impactées ». Deux mécanismes, tous deux dans `src/collections/revalidate.ts` (règle pure dans `src/lib/revalidate.ts`) : une **étiquette** par lecture mise en cache (`profils`, `profil:<slug>`, `articles`, `article:<slug>`, `talents`, `talent:<slug>`), expirée tout de suite, et un **chemin** pour les pages qui ne lisent pas par une étiquette. Les lectures de l'annuaire (`cachedDirectory`, `cachedDirectoryWithTexts`, `cachedProfileBlock`, `cachedFeaturedProfiles`, `cachedMostViewed`, `cachedIndexablePages`) portent toutes `profils` : une étiquette expirée refait donc aussi les pages qui les lisent (zones, blocs de profils des pages de talent et d'article, « Mise en avant » de l'accueil), sans que leur chemin soit nommé.
+
+| Changement (admin, espace ou API) | Pages et lectures impactées | Rafraîchi ? |
+|---|---|---|
+| Profil publié : « Vérifiée », « Super maquilleuse », ville, spécialité, photo, description, prix, tout champ | `/profil/<slug>`, `/search`, `/`, `/site-map`, `/sitemap.xml` par chemin ; étiquettes `profil:<slug>` et `profils` : pages de zone `/maquilleuses/<département>`, « Mise en avant », blocs de profils des talents et des articles, recherche et ses plus consultées | oui |
+| Profil : brouillon ↔ publié, publié ↔ masqué | les mêmes, de l'ancienne et de la nouvelle version | oui |
+| Profil qui reste brouillon ou masqué | aucune page publique | rien à faire, et rien n'est fait |
+| Profil : adresse (slug) changée | l'ancienne page, la nouvelle, les listes | oui |
+| Profil supprimé (un par un, l'admin ou la maquilleuse) | ses pages et les listes | oui |
+| Actions en masse de la liste admin, profils et médias | refusées avant toute écriture (`oneAtATime`, `disableBulkEdit`, `disableBulkDelete`) | rien à rafraîchir : rien n'est écrit |
+| Article : publication, dépublication, adresse, contenu, suppression | `/blog/<slug>` (ancienne et nouvelle), `/blog`, plans, `article:<slug>`, `articles` (articles liés des autres pages) | oui |
+| Talent : mêmes cas | `/talent/<slug>`, `/`, plans, `talent:<slug>`, `talents` | oui |
+| Articles ou talents en masse (suppression, publication) | un enregistrement après l'autre : chaque document rafraîchit ses pages | oui |
+| **Média** : alt, fichier remplacé, suppression (photo d'un profil publié, image d'un article publié) | **trou comblé** : la page de chaque profil ou article publié qui porte la photo (principale ou galerie) et les listes qui la montrent | oui (avant : non, jusqu'à une heure) |
+| Média créé | aucune page ne la montre encore ; l'enregistrement du profil qui la prend rafraîchit | rien à faire |
+| Compte (`pros`) : nom, blocage | aucune page publique ne lit le compte (le profil porte son propre nom) | rien à faire |
+| Contrôle d'activité (badge « Activité vérifiée ») | carte et page du profil | par la tâche du jour, hors requête de Next : au plus une heure (filet) |
+| Import et écritures du contexte `isImport` | rien (règle gardée) | non, voulu |
+| Mise à jour en SQL d'une migration, script, Local API hors requête de Next | hors périmètre : Next refuse de rafraîchir en dehors de l'une de ses requêtes | au plus une heure (filet) |
+
+Un rafraîchissement ne fait jamais échouer l'enregistrement : la lecture de l'état, chaque étiquette et chaque chemin sont protégés un par un, l'échec est journalisé (un message d'erreur par écriture, avec la cause), les autres pages sont quand même tentées. Hors requête de Next, un message de debug, rien d'autre.
+
+**Filet de sécurité** : déjà en place avant cet audit. Toutes les lectures publiques mises en cache (`src/services/public/cached.ts`) ont `revalidate: 3600`, et les pages `/`, profil, talent, article et zone `export const revalidate = 3600` : une page périmée l'est une heure au plus. Le proxy retient « cette page existe » une minute (`MEMORY_DURATION_MS`), la page garde son propre `notFound()`.
+
+**Ce qui n'est pas rafraîchissable, et pourquoi** : une écriture hors d'une requête de Next (SQL de migration, script, tâche du jour, test) ; l'expiration se fait dans la transaction de l'enregistrement, avant sa validation : une visite dans la milliseconde qui sépare l'expiration de la validation peut remettre l'ancienne valeur en cache jusqu'à l'heure du filet.
+
 ## Les preuves
 
 - `tests/e2e/page-cache.spec.ts`, sur le banc, après `build` puis `start` : la seconde visite de `/`, d'un profil, d'un talent et d'un article répond `x-nextjs-cache: HIT` sans `no-store` ; un enregistrement par l'API change le texte lu dans le HTML à la visite suivante ; les pages `/auth/*` restent `private, no-store` ; un profil non publiable garde son `noindex` ; une adresse inconnue et l'adresse interne de l'accueil répondent 404.
+- `tests/unit/revalidate.test.ts` (le tableau ci-dessus, une ligne par changement), `tests/integration/revalidate.test.ts` (cases de l'admin, photos, actions en masse, échec de Next par l'API), et le dernier essai de `tests/e2e/page-cache.spec.ts` (page de zone et recherche refaites après un changement de profil).
 - `tests/unit/page-cache.test.ts` : la forme des quatre pages, l'absence de lecture de cookie ou d'en-tête, la réécriture de `/`, la 404 du proxy sur l'adresse interne.
 
 ## Mesure en ligne

@@ -25,16 +25,20 @@ export interface RevalidateCall {
 }
 
 let record: RevalidateCall[] | undefined
+/** A refusal that every call of the spied action meets, after being recorded (see `spyCache`). */
+let refusal: Error | undefined
 
 mock.module('next/cache.js', () => ({
 	...NEXT,
 	revalidatePath: (...[chemin, type]: Parameters<typeof NEXT.revalidatePath>) => {
 		if (!record) return NEXT.revalidatePath(chemin, type)
 		record.push({ fonction: 'revalidatePath', cible: chemin, option: type })
+		if (refusal) throw refusal
 	},
 	revalidateTag: (...[etiquette, profil]: Parameters<typeof NEXT.revalidateTag>) => {
 		if (!record) return NEXT.revalidateTag(etiquette, profil)
 		record.push({ fonction: 'revalidateTag', cible: etiquette, option: profil })
+		if (refusal) throw refusal
 	},
 }))
 
@@ -55,14 +59,19 @@ const targets = (appels: RevalidateCall[], fonction: RevalidateCall['fonction'])
 		.sort()
 
 /** Runs the action, and gives what it asked Next's cache to refresh. */
-export async function spyCache(action: () => Promise<unknown>): Promise<Refreshed> {
+export async function spyCache(
+	action: () => Promise<unknown>,
+	{ failWith }: { failWith?: Error } = {}
+): Promise<Refreshed> {
 	if (record) throw new Error('espionnerLeCache ne s’imbrique pas : une action à la fois.')
 	const calls: RevalidateCall[] = []
 	record = calls
+	refusal = failWith
 	try {
 		await action()
 	} finally {
 		record = undefined
+		refusal = undefined
 	}
 	return { chemins: targets(calls, 'revalidatePath'), etiquettes: targets(calls, 'revalidateTag'), appels: calls }
 }
