@@ -7,7 +7,8 @@ import { type Refreshed, spyCache } from '../support/cache-spy'
 import { importOnBench } from '../support/import'
 import { countMails, emptySink } from '../support/mailpit'
 import { emptyBase, testPayload } from '../support/payload-test'
-import { callRest } from '../support/rest'
+import { fileForForm } from '../support/photos'
+import { callRest, formWithFile } from '../support/rest'
 import { createSourceStrapi, eraseSourceStrapi } from '../support/source-strapi'
 
 // The bench is shared by every checkout of the machine, and a suite under load runs several times slower than alone:
@@ -151,6 +152,109 @@ describe('Un profil publié modifié rafraîchit sa page, la recherche et le sit
 		})
 
 		expect(after).toMatchObject({ status: 'published', description: 'Écrite par un script.' })
+	})
+})
+
+describe('Les cases de l’admin, les photos et les actions en masse (audit du 28/10/2026)', () => {
+	test('l’admin coche puis décoche « Vérifiée » et « Super maquilleuse » : les pages du profil, la recherche et l’accueil, à chaque fois', async () => {
+		const [admin, { profil: profile }] = await Promise.all([createAccount('admin'), publishedArtist()])
+		const headers = admin.session.enTetes
+
+		for (const corps of [{ verified: true }, { verified: false }, { superArtist: true }, { superArtist: false }]) {
+			const refreshed = await spyCache(() => write('PATCH', `/api/profiles/${profile.id}`, { enTetes: headers, corps }))
+			expect(targets(refreshed)).toEqual(profilePages(profile.slug))
+		}
+	})
+
+	test('une photo du profil renommée puis supprimée par l’admin : la page du profil et les listes, à chaque fois', async () => {
+		const [admin, { compte: account, profil: profile }] = await Promise.all([createAccount('admin'), publishedArtist()])
+		const sent = await callRest('POST', '/api/media?depth=0', {
+			enTetes: account.session.enTetes,
+			formulaire: formWithFile(fileForForm()),
+		})
+		const photo = (sent.corps as { doc: { id: number } }).doc
+		await write('PATCH', `/api/profiles/${profile.id}`, {
+			enTetes: account.session.enTetes,
+			corps: { mainPicture: photo.id },
+		})
+
+		const renamed = await spyCache(() =>
+			write('PATCH', `/api/media/${photo.id}`, {
+				enTetes: admin.session.enTetes,
+				corps: { alt: 'Un texte alternatif fictif' },
+			})
+		)
+		expect(targets(renamed)).toEqual(profilePages(profile.slug))
+
+		// A photo that nothing holds refreshes nothing.
+		const free = (
+			(
+				await callRest('POST', '/api/media?depth=0', {
+					enTetes: account.session.enTetes,
+					formulaire: formWithFile(fileForForm()),
+				})
+			).corps as { doc: { id: number } }
+		).doc
+		const unused = await spyCache(() =>
+			write('PATCH', `/api/media/${free.id}`, { enTetes: admin.session.enTetes, corps: { alt: 'Aucune page' } })
+		)
+		expect(targets(unused)).toEqual(NOTHING)
+
+		// Deleted while the profile still holds it as her main photo: the pages that showed it are refreshed.
+		const deleted = await spyCache(() => write('DELETE', `/api/media/${photo.id}`, { enTetes: admin.session.enTetes }))
+		expect(targets(deleted)).toEqual(profilePages(profile.slug))
+	})
+
+	test('les actions en masse sur les profils et les médias sont refusées avant toute écriture : rien à rafraîchir', async () => {
+		const [admin, { profil: profile }] = await Promise.all([createAccount('admin'), publishedArtist()])
+
+		const refreshed = await spyCache(async () => {
+			for (const [method, path] of [
+				['PATCH', '/api/profiles?where[slug][exists]=true'],
+				['DELETE', '/api/profiles?where[slug][exists]=true'],
+				['PATCH', '/api/media?where[id][exists]=true'],
+				['DELETE', '/api/media?where[id][exists]=true'],
+			] as const) {
+				const response = await callRest(method, path, {
+					enTetes: admin.session.enTetes,
+					corps: { description: 'Masse' },
+				})
+				expect(response.statut).toBeGreaterThanOrEqual(400)
+			}
+		})
+
+		expect(targets(refreshed)).toEqual(NOTHING)
+		expect((await profileOf(profile.pro as number)).status).toBe('published')
+	})
+
+	test('une suppression en masse d’articles par l’admin : la page et les listes de chacun', async () => {
+		const editor = await createAccount('redaction')
+		const headers = editor.session.enTetes
+		for (const slug of ['premier-article-fictif', 'second-article-fictif'])
+			await write('POST', '/api/articles', { enTetes: headers, corps: { title: slug, slug, _status: 'published' } })
+
+		const refreshed = await spyCache(() =>
+			write('DELETE', '/api/articles?where[slug][exists]=true', { enTetes: headers })
+		)
+
+		expect(refreshed.etiquettes).toEqual(
+			expect.arrayContaining(['article:premier-article-fictif', 'article:second-article-fictif', 'articles'])
+		)
+		expect(refreshed.chemins).toEqual(
+			expect.arrayContaining(['/blog/premier-article-fictif', '/blog/second-article-fictif', '/blog'])
+		)
+	})
+
+	test('Next refuse le rafraîchissement : l’enregistrement passe quand même, et la donnée est écrite', async () => {
+		const [admin, { profil: profile }] = await Promise.all([createAccount('admin'), publishedArtist()])
+
+		await spyCache(
+			() =>
+				write('PATCH', `/api/profiles/${profile.id}`, { enTetes: admin.session.enTetes, corps: { verified: true } }),
+			{ failWith: new Error('cache indisponible') }
+		)
+
+		expect((await profileOf(profile.pro as number)).verified).toBe(true)
 	})
 })
 
