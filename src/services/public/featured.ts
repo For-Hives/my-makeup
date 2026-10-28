@@ -22,7 +22,7 @@ export function featuredCandidates(
 	random: () => number = Math.random
 ): ProfileCard[] {
 	const pool = directory.filter(profile => profile.verified === true && profile.publishable && !profile.unreachable)
-	// Issue 1170: the « Super maquilleuse » ones are kept first when the pool is cut, and the draw of the browser gives
+	// Badges du 28/10/2026: the « Super maquilleuse » ones are kept first when the pool is cut, and the draw of the browser gives
 	// each of them a double weight (src/lib/profile/featured.ts). The rest is the random sample of before.
 	const supers = pool.filter(profile => profile.carte.superMaquilleuse)
 	const others = pool.filter(profile => !profile.carte.superMaquilleuse)

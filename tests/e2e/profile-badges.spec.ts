@@ -6,7 +6,7 @@ import { SCREENS } from '../support/e2e'
 import { refreshProfilePages } from '../support/public-pages'
 
 /**
- * The badges « Super maquilleuse » and « Vérifiée » (issue 1170), at 390 px and 1440 px: on a card of the search, in the
+ * The badges « Super maquilleuse » and « Vérifiée » (badges du 28/10/2026), at 390 px and 1440 px: on a card of the search, in the
  * head of a profile, and the small bonus of order. The four profiles are the ones of the search fixture (made up), their
  * two boxes set here through the administration API.
  */
@@ -38,7 +38,7 @@ test.beforeAll(async ({ request }) => {
 async function shot(page: Page, name: string): Promise<void> {
 	if (process.env.SCREENSHOT_DIR)
 		await page.screenshot({
-			path: `${process.env.SCREENSHOT_DIR}/1170-${name}-${page.viewportSize()?.width}.png`,
+			path: `${process.env.SCREENSHOT_DIR}/badges-${name}-${page.viewportSize()?.width}.png`,
 			fullPage: true,
 		})
 }

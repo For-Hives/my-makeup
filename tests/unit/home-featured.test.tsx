@@ -149,7 +149,7 @@ describe('1066 : le tirage au hasard dans le navigateur', () => {
 		expect([...seen].sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9])
 	})
 
-	test('issue 1170 : une super maquilleuse pèse double dans le tirage, sans jamais être seule', () => {
+	test('badges du 28/10/2026 : une super maquilleuse pèse double dans le tirage, sans jamais être seule', () => {
 		let seed = 99
 		const random = () => {
 			seed = (seed * 1664525 + 1013904223) % 4294967296

@@ -202,7 +202,7 @@ export interface PublicProfile {
 	 * (`null` if unknown). The key is absent without the badge, so a page without it is what it was. Never her SIRET.
 	 */
 	activityVerified?: { checkedAt: string | null }
-	/** Her two badges (issue 1170), set by an admin. Each key is absent without its badge, so a page without them is what it was. */
+	/** Her two badges (badges du 28/10/2026), set by an admin. Each key is absent without its badge, so a page without them is what it was. */
 	superMaquilleuse?: true
 	verified?: true
 }
@@ -261,7 +261,7 @@ export interface ProfileCard {
 	 */
 	activityVerified?: true
 	/**
-	 * True when an admin ticked « Vérifiée » (issue 1170): the team has read her profile. The key is absent otherwise, so
+	 * True when an admin ticked « Vérifiée » (badges du 28/10/2026): the team has read her profile. The key is absent otherwise, so
 	 * a card without the badge is what it was. The box is closed to the public read: `readVerified` reads it apart.
 	 */
 	verified?: true
@@ -955,7 +955,7 @@ export async function readDirectory(
 		}
 		if (!result.hasNextPage) break
 	}
-	// The small bonus of order (issue 1170): « Super maquilleuse », then « Vérifiée », then the others; a stable sort, so inside
+	// The small bonus of order (badges du 28/10/2026): « Super maquilleuse », then « Vérifiée », then the others; a stable sort, so inside
 	// a tier the order the page `/classement` announces (DIRECTORY_SORT) is kept. Nobody is dropped.
 	return directory.toSorted((a, b) => (b.badgeTier ?? 0) - (a.badgeTier ?? 0))
 }

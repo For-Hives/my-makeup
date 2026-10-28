@@ -67,7 +67,7 @@ function payloadSpy(surcharge: Record<string, unknown> = {}) {
 						},
 					],
 				}
-			// « Vérifiée », read apart (issue 1170): nobody has ticked it here.
+			// « Vérifiée », read apart (badges du 28/10/2026): nobody has ticked it here.
 			if ((options.select as Record<string, unknown>)?.verified === true) return { docs: [] }
 			// The id of the old site, read apart (it is a field the public does not read).
 			if (options.collection === 'profiles' && (options.select as Record<string, unknown>)?.strapiId === true)

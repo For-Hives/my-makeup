@@ -1,5 +1,5 @@
 /**
- * The two badges an admin gives a profile (issue 1170), said once: « Super maquilleuse » (`profiles.superArtist`) and
+ * The two badges an admin gives a profile (badges du 28/10/2026), said once: « Super maquilleuse » (`profiles.superArtist`) and
  * « Vérifiée » (`profiles.verified`, src/lib/profile/verified.ts). The cards, the head of a profile, the page
  * `/classement` and the admin read their words here, and a test compares the page with this file.
  *

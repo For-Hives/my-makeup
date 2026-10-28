@@ -174,7 +174,7 @@ describe('305 : les maquilleuses d’une spécialité', () => {
 			},
 		} as unknown as Payload
 		const directory = await readDirectory(payload)
-		// « Vérifiée » goes first (the small bonus of order, issue 1170), the others keep their order.
+		// « Vérifiée » goes first (the small bonus of order, badges du 28/10/2026), the others keep their order.
 		expect(directory.map(item => item.verified)).toEqual([true, false, false])
 		expect(directory.map(item => item.carte.slug)).toEqual(['p-2', 'p-1', 'p-3'])
 		// The box is closed to the public read: the listing never selects it, the apart read has the rules open.
@@ -182,7 +182,7 @@ describe('305 : les maquilleuses d’une spécialité', () => {
 		expect(listing?.select.verified).toBeUndefined()
 		expect(listing?.overrideAccess).toBe(false)
 		expect(reads.find(read => read.select.verified === true)?.overrideAccess).toBe(true)
-		// And a card carries only the fact, as a badge (issue 1170), never a date.
+		// And a card carries only the fact, as a badge (badges du 28/10/2026), never a date.
 		expect(directory.map(item => item.carte.verified)).toEqual([true, undefined, undefined])
 		expect(JSON.stringify(directory.map(item => item.carte))).not.toContain('verifiedAt')
 	})

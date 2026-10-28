@@ -1,5 +1,5 @@
 /**
- * Issue 1170: the badges « Super maquilleuse » and « Vérifiée ». The words and the tier (src/lib/profile/badges.ts), the
+ * Badges du 28/10/2026: the badges « Super maquilleuse » and « Vérifiée ». The words and the tier (src/lib/profile/badges.ts), the
  * badge on a card and in the head of a profile, the bonus of order of the directory (stable, a profile without badge
  * stays), the draw of « Mise en avant » and the texts of the admin. Made-up profiles, no database.
  */
@@ -39,7 +39,7 @@ const card = (extra: Partial<Card> = {}): Card => ({
 	...extra,
 })
 
-describe('1170 : les mots et le palier', () => {
+describe('badges : les mots et le palier', () => {
 	test('un palier par case : super 2, vérifiée 1, rien 0, et seul « vrai » compte', () => {
 		expect(badgeTier({ superArtist: true, verified: true })).toBe(2)
 		expect(badgeTier({ superArtist: true })).toBe(2)
@@ -50,7 +50,7 @@ describe('1170 : les mots et le palier', () => {
 	})
 })
 
-describe('1170 : le badge sur les cartes', () => {
+describe('badges : le badge sur les cartes', () => {
 	const kinds = {
 		grille: (c: Card) => renderToStaticMarkup(<ProfileCard profile={c} />),
 		ligne: (c: Card) => renderToStaticMarkup(<ProfileRowCard profile={c} />),
@@ -90,7 +90,7 @@ describe('1170 : le badge sur les cartes', () => {
 	})
 })
 
-describe('1170 : le badge dans l’en-tête d’un profil', () => {
+describe('badges : le badge dans l’en-tête d’un profil', () => {
 	const base = {
 		firstName: 'Une',
 		lastName: 'Maquilleuse',
@@ -124,7 +124,7 @@ describe('1170 : le badge dans l’en-tête d’un profil', () => {
 	})
 })
 
-describe('1170 : le léger coup de pouce dans l’ordre', () => {
+describe('badges : le léger coup de pouce dans l’ordre', () => {
 	const doc = (id: number, slug: string, extra: object = {}) => ({
 		id,
 		slug,
@@ -179,7 +179,7 @@ describe('1170 : le léger coup de pouce dans l’ordre', () => {
 	})
 })
 
-describe('1170 : « Mise en avant » favorise les super maquilleuses sans casser la réserve « Vérifiée »', () => {
+describe('badges : « Mise en avant » favorise les super maquilleuses sans casser la réserve « Vérifiée »', () => {
 	const entry = (slug: string, flags: { verified?: boolean; super?: boolean }): DirectoryProfile =>
 		({
 			carte: card({ slug, nom: slug, superMaquilleuse: flags.super === true }),
@@ -205,7 +205,7 @@ describe('1170 : « Mise en avant » favorise les super maquilleuses sans casser
 	})
 })
 
-describe('1170 : les cases de l’administration disent la vérité', () => {
+describe('badges : les cases de l’administration disent la vérité', () => {
 	const description = (name: string) =>
 		(Profiles.fields.find(field => 'name' in field && field.name === name) as { admin: { description: string } }).admin
 			.description

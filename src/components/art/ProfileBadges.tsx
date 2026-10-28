@@ -39,7 +39,7 @@ function VerifiedBadge() {
 }
 
 /**
- * The badges of a card (issue 1170), « Super maquilleuse » first, « Vérifiée » beside it. They sit on the picture or on the
+ * The badges of a card (badges du 28/10/2026), « Super maquilleuse » first, « Vérifiée » beside it. They sit on the picture or on the
  * top edge of the card, never in the flow, so a card keeps its height with or without them, and nothing is drawn
  * without a badge. Server component, no motion.
  * - `photo` (default): bottom left of a wide photo; `narrow` stacks them under 768 px (a small photo).

@@ -35,7 +35,7 @@ Critère unique, écrit sur la page : **les visites de la page du profil sur les
 
 Les planchers sont des constantes (`MOST_VIEWED_MIN_VIEWS`, `MOST_VIEWED_MIN_PROFILES`) : à régler quand les vrais volumes seront connus.
 
-## Les badges et le léger bonus de tri (issue 1170)
+## Les badges et le léger bonus de tri (badges du 28/10/2026)
 
 Deux cases d'un admin (`profiles.superArtist`, « Super maquilleuse », et `profiles.verified`, « Vérifiée ») posent un badge sur les cartes et sur la page du profil, et donnent un **léger bonus de tri, jamais un filtre**. Les mots sont dans `src/lib/profile/badges.ts` (une seule source : cartes, page `/classement`, administration).
 

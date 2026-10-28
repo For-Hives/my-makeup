@@ -332,7 +332,7 @@ describe('1012 : la page dit ce que dit la source, et rien d’autre', () => {
 		expect(text).toContain('Il ne dit rien de la qualité de son travail')
 	})
 
-	test('issue 1170 : la page explique les deux badges, avec les mots de la source, sans promettre une garantie', () => {
+	test('badges du 28/10/2026 : la page explique les deux badges, avec les mots de la source, sans promettre une garantie', () => {
 		expect(html).toContain(`id="${BADGES_ANCHOR}"`)
 		expect(text).toContain(BADGES_TITLE)
 		for (const paragraph of BADGES_EXPLANATION) expect(text).toContain(paragraph)
