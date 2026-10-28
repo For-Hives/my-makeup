@@ -35,6 +35,7 @@ import {
 	zoneSentence,
 } from '@/lib/format-zone'
 import { isPriceAmount, minimumPrice } from '@/lib/price'
+import { badgeTier } from '@/lib/profile/badges'
 import { displayName, text } from '@/lib/profile/display-name'
 import { profilePid as pidDeLaPage } from '@/lib/profile/pid'
 import {
@@ -121,6 +122,7 @@ export const PROFILE_PAGE_FIELDS = {
 	town: true,
 	available: true,
 	mainPicture: true,
+	superArtist: true,
 	gallery: true,
 	networks: true,
 	serviceOffers: true,
@@ -200,6 +202,9 @@ export interface PublicProfile {
 	 * (`null` if unknown). The key is absent without the badge, so a page without it is what it was. Never her SIRET.
 	 */
 	activityVerified?: { checkedAt: string | null }
+	/** Her two badges (badges du 28/10/2026), set by an admin. Each key is absent without its badge, so a page without them is what it was. */
+	superMaquilleuse?: true
+	verified?: true
 }
 
 /** Where a profile works, as the structured data says it (src/lib/seo/profile.ts). */
@@ -255,6 +260,11 @@ export interface ProfileCard {
 	 * so a card without the badge is what it was. Never her SIRET, never a date.
 	 */
 	activityVerified?: true
+	/**
+	 * True when an admin ticked « Vérifiée » (badges du 28/10/2026): the team has read her profile. The key is absent otherwise, so
+	 * a card without the badge is what it was. The box is closed to the public read: `readVerified` reads it apart.
+	 */
+	verified?: true
 }
 
 /** One page of the listed profiles. */
@@ -358,7 +368,8 @@ function cardOf(
 	profil: CardProfile,
 	photos: PhotosById,
 	pids: ReadonlyMap<number, Pid>,
-	badged: ReadonlyMap<number, string | null> = new Map()
+	badged: ReadonlyMap<number, string | null> = new Map(),
+	verified: ReadonlySet<number> = new Set()
 ): ProfileCard {
 	const identifier = photoId(profil.mainPicture)
 	const flags = zoneFlags(zoneInput(profil))
@@ -379,6 +390,7 @@ function cardOf(
 		...(offerNames.length > 0 && { offerNames }),
 		...(startingPrice !== null && { startingPrice }),
 		...(badged.has(profil.id) && { activityVerified: true as const }),
+		...(verified.has(profil.id) && { verified: true as const }),
 	}
 }
 
@@ -499,6 +511,7 @@ async function publicProfileRead(payload: Payload, profil: ProfilePageData & { i
 		galerie: ranked.flatMap(identifiant => (identifiant !== undefined && photos.get(identifiant)) || []),
 		coordonnees: await readPublishedContactDetails(payload, profil.id),
 		...activityOf(await badgedProfiles(payload, [profil.id]), profil.id),
+		verified: (await readVerified(payload, [profil])).has(profil.id),
 	})
 }
 
@@ -584,6 +597,7 @@ export type ProfilePageData = Pick<
 	| 'publishable'
 	| 'indexable'
 	| 'strapiId'
+	| 'superArtist'
 >
 
 /**
@@ -599,6 +613,8 @@ export function publicProfileOf(
 		coordonnees: PublicContactDetails | null
 		/** The date of the last answer of the registry, when the badge is held (`null` for a date unknown). */
 		activity?: { checkedAt: string | null }
+		/** True when an admin ticked « Vérifiée » (read apart: the box is closed to the public read). */
+		verified?: boolean
 	}
 ): PublicProfile {
 	const name = displayName(profil)
@@ -638,6 +654,8 @@ export function publicProfileOf(
 		offres: pricedOffers(profil.serviceOffers),
 		prixMinimal: minimumPrice(profil.serviceOffers),
 		...(lu.activity && { activityVerified: { checkedAt: lu.activity.checkedAt } }),
+		...(profil.superArtist === true && { superMaquilleuse: true as const }),
+		...(lu.verified === true && { verified: true as const }),
 	}
 }
 
@@ -697,8 +715,9 @@ export async function listProfiles(
 		payload,
 		result.docs.map(({ id }) => id)
 	)
+	const verified = await readVerified(payload, result.docs)
 	return {
-		cartes: result.docs.map(profil => cardOf(profil, photos, pids, badged)),
+		cartes: result.docs.map(profil => cardOf(profil, photos, pids, badged, verified)),
 		page: result.page ?? 1,
 		totalDocs: result.totalDocs,
 		hasNextPage: result.hasNextPage,
@@ -770,6 +789,8 @@ export interface DirectoryProfile extends ProfilePlace, ProfileGeometry {
 	carte: ProfileCard
 	/** True when her profile shows no way to reach her (ticket 291): the search ranks her after the others. */
 	unreachable: boolean
+	/** The tier of the small bonus of order (src/lib/profile/badges.ts): 2 « Super maquilleuse », 1 « Vérifiée », 0 none. */
+	badgeTier?: number
 	/** The lowest amount of her offers, in euros: what the price filter and the price sort read (issue 1011). */
 	startingPrice?: number | null
 	/** The speciality bullets she chose: what the speciality filter reads (issue 1011). */
@@ -914,7 +935,7 @@ export async function readDirectory(
 		const verified = await readVerified(payload, result.docs)
 		for (const profile of result.docs) {
 			const isUnreachable = unreachable.has(profile.id)
-			const card = cardOf(profile, photos, pids, badged)
+			const card = cardOf(profile, photos, pids, badged, verified)
 			directory.push({
 				carte: isUnreachable ? { ...card, unreachable: true } : card,
 				unreachable: isUnreachable,
@@ -924,6 +945,7 @@ export async function readDirectory(
 				publishable: profile.publishable === true,
 				indexable: profile.indexable === true,
 				verified: verified.has(profile.id),
+				badgeTier: badgeTier({ superArtist: profile.superArtist, verified: verified.has(profile.id) }),
 				...directoryPlace(profile),
 				...directoryGeometry(profile),
 				sortName: displayName(profile),
@@ -933,5 +955,7 @@ export async function readDirectory(
 		}
 		if (!result.hasNextPage) break
 	}
-	return directory
+	// The small bonus of order (badges du 28/10/2026): « Super maquilleuse », then « Vérifiée », then the others; a stable sort, so inside
+	// a tier the order the page `/classement` announces (DIRECTORY_SORT) is kept. Nobody is dropped.
+	return directory.toSorted((a, b) => (b.badgeTier ?? 0) - (a.badgeTier ?? 0))
 }

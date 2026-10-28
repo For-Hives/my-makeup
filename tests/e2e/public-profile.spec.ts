@@ -14,7 +14,7 @@ import { testPayload } from '../support/payload-test'
 
 /** The keys a page must never carry in what it sends: what is private or reserved. */
 const PRIVATE_KEYS =
-	/"(?:pro|strapiId|legacyUsername|statut|status|motif|reason|verifie|verified|verifieLe|verifiedAt|siret|noteInterne|internalNote|score|superMaquilleuse|superArtist|coordonnees|contactDetails|telephone|phone|contactPublic|publicContact|consentiLe|consentedAt|sourceConsentement|consentSource|codeInsee|inseeCode|latitude|longitude)"\s*:/
+	/"(?:pro|strapiId|legacyUsername|statut|status|motif|reason|verifie|verifieLe|verifiedAt|siret|noteInterne|internalNote|score|coordonnees|contactDetails|telephone|phone|contactPublic|publicContact|consentiLe|consentedAt|sourceConsentement|consentSource|codeInsee|inseeCode|latitude|longitude)"\s*:/
 
 const FORBIDDEN_WORDS = /\b(?:undefined|null|NaN|Invalid Date)\b|&\s*km|\bnullkm\b/
 

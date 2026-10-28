@@ -335,6 +335,8 @@ export interface DistanceOptions<T> {
 	relevance?: ReadonlyMap<T, number>
 	/** The name a tie is broken by. */
 	name?: (profil: T) => string
+	/** The tier of the small bonus of order (higher first): it breaks a tie of distance and words, before the name. */
+	tier?: (profil: T) => number
 }
 
 /**
@@ -349,7 +351,7 @@ export interface DistanceOptions<T> {
 export function sectionsByDistance<T extends ProfilePlace & ProfileGeometry>(
 	profils: readonly T[],
 	city: string,
-	{ origin, relevance, name }: DistanceOptions<T>
+	{ origin, relevance, name, tier }: DistanceOptions<T>
 ): ProfilesByPlace<T> {
 	const searched = readPlace(city)
 	if (emptyPlace(searched)) return { locaux: [...profils], parLieu: false, departements: [], sections: [] }
@@ -376,10 +378,11 @@ export function sectionsByDistance<T extends ProfilePlace & ProfileGeometry>(
 			else if (distance <= NEARBY_MAX_KM) nearby.push(profile)
 		}
 	}
-	// Distance to the tenth of a km (the profiles of one commune are at the very same distance), then the words, then the name.
+	// Distance to the tenth of a km (the profiles of one commune are at the very same distance), then the words, then the badge tier, then the name.
 	const byDistance = (a: T, b: T): number =>
 		Math.round(distanceOf(a) * 10) - Math.round(distanceOf(b) * 10) ||
 		(relevance?.get(a) ?? 0) - (relevance?.get(b) ?? 0) ||
+		(tier?.(b) ?? 0) - (tier?.(a) ?? 0) ||
 		(name?.(a) ?? '').localeCompare(name?.(b) ?? '', 'fr')
 	const ranked = (liste: T[]): T[] => liste.toSorted(byDistance)
 	const localProfiles = [...ranked(cityProfiles), ...withoutCenter]

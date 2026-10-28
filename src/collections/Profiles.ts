@@ -26,6 +26,7 @@ import {
 } from '../lib/access'
 import { deleteCheck, resetCheck } from '../lib/activity/store'
 import { GALLERY_MAX } from '../lib/media'
+import { SUPER_ADMIN_DESCRIPTION, VERIFIED_ADMIN_DESCRIPTION } from '../lib/profile/badges'
 import { chooseCity } from '../lib/profile/choose-city-route'
 import {
 	CONSENT_SOURCES,
@@ -726,8 +727,7 @@ export const Profiles: CollectionConfig<'profiles'> = {
 			access: OWNER_READ_RESERVED,
 			admin: {
 				position: 'sidebar',
-				description:
-					'Vérifiée : l’équipe a validé le profil ; les profils vérifiés sont tirés au hasard dans la Mise en avant de l’accueil.',
+				description: VERIFIED_ADMIN_DESCRIPTION,
 			},
 		},
 		{
@@ -769,13 +769,13 @@ export const Profiles: CollectionConfig<'profiles'> = {
 			},
 		},
 		{
-			// Written by an admin only, read by everyone: the badge of the cards of the search.
+			// Written by an admin only, read by everyone: the badge « Super maquilleuse » of the cards and of the page (src/lib/profile/badges.ts).
 			name: 'superArtist',
 			label: 'Super maquilleuse',
 			type: 'checkbox',
 			defaultValue: false,
 			access: { create: fieldAdminOnly, update: fieldAdminOnly },
-			admin: { position: 'sidebar', description: 'Le badge des cartes de la recherche. Public.' },
+			admin: { position: 'sidebar', description: SUPER_ADMIN_DESCRIPTION },
 		},
 		// Computed by the server at every save (ticket 044).
 		...STATE_FIELDS,

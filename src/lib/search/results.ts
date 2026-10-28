@@ -30,6 +30,8 @@ export interface SearchableProfile extends ProfilePlace, ProfileGeometry, Filter
 	farReach?: boolean
 	/** True when nothing on her profile lets a client reach her (ticket 291): she goes after the others. */
 	unreachable?: boolean
+	/** The small bonus of order (src/lib/profile/badges.ts): 2, 1 or 0. It only breaks a tie, and drops nobody. */
+	badgeTier?: number
 }
 
 const NO_TEXT = normalizeTexts({
@@ -87,6 +89,7 @@ export function find<T extends SearchableProfile>(
 					origin,
 					relevance: ranked ? new Map(ranked.map(({ profil, score }) => [profil, score])) : undefined,
 					name: profil => profil.sortName ?? '',
+					tier: profil => profil.badgeTier ?? 0,
 				})
 			: sectionsByPlace(found, recherche.city)
 	const arranged = (profils: T[]): T[] => zoneKnownFirst(reachableFirst(sortSection(profils, filters)))

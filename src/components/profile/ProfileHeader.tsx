@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import type { ReactNode } from 'react'
 import { Icon } from '@/components/art/Icon'
+import { ProfileBadges } from '@/components/art/ProfileBadges'
 import { ofName } from '@/lib/french-elision'
 import { ratioMedia, sizesBox } from '@/lib/image-size'
 import type { PublicProfile } from '@/services/public/profiles'
@@ -92,6 +93,7 @@ export function ProfileHeader({
 				<div className="flex min-w-0 flex-1 flex-col items-center gap-2 text-center md:items-start md:text-left">
 					{edit ? edit.identity(nameNodes, { missingSpecialty: !profil.specialite }) : nameNodes}
 					{edit ? edit.place(zoneNode) : zoneNode}
+					<ProfileBadges flags={profil} />
 					{profil.activityVerified && <ActivityBadge checkedAt={profil.activityVerified.checkedAt} />}
 					{action}
 				</div>

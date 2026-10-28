@@ -425,7 +425,7 @@ export interface Profile {
    */
   moderationAction?: ('hide' | 'suspend') | null;
   /**
-   * Vérifiée : l’équipe a validé le profil ; les profils vérifiés sont tirés au hasard dans la Mise en avant de l’accueil.
+   * Pose le badge « Vérifiée » sur ses cartes et sur sa page, et la fait passer avant les profils sans badge, à pertinence égale, dans la recherche et dans les zones (jamais un filtre). Elle reste la condition pour être tirée au hasard dans la Mise en avant de l’accueil. Public : la case s’affiche sur le site. Elle veut dire « profil relu par l’équipe », pas davantage : ne la coche qu’après avoir relu le profil.
    */
   verified?: boolean | null;
   verifiedAt?: string | null;
@@ -442,7 +442,7 @@ export interface Profile {
    */
   score?: number | null;
   /**
-   * Le badge des cartes de la recherche. Public.
+   * Pose le badge « Super maquilleuse » sur ses cartes (recherche, accueil, pages de zone) et sur sa page. Elle passe aussi avant les autres, à pertinence égale, dans la recherche et dans les zones : un léger coup de pouce, jamais un filtre. Si elle est aussi « Vérifiée », elle est favorisée dans le tirage de la Mise en avant de l’accueil. Public : la case s’affiche sur le site, ne la coche que pour une maquilleuse que l’équipe a choisie.
    */
   superArtist?: boolean | null;
   /**

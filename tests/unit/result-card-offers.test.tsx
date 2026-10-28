@@ -33,6 +33,8 @@ function payloadWith(serviceOffers: unknown) {
 		find: async (options: Record<string, unknown>) => {
 			readings.push(options)
 			if (options.collection === 'media') return { docs: [] }
+			// « Vérifiée », read apart (badges du 28/10/2026): nobody has ticked it here.
+			if ((options.select as Record<string, unknown>)?.verified === true) return { docs: [] }
 			if ((options.select as Record<string, unknown>)?.strapiId === true) return { docs: [{ id: 1, strapiId: 42 }] }
 			return {
 				docs: [

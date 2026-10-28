@@ -16,6 +16,7 @@ import { RankingExplainer } from '@/components/ranking/RankingExplainer'
 import { SearchResults } from '@/components/search/SearchResults'
 import { NoResult } from '@/components/search/SearchStates'
 import { BADGE_ANCHOR, BADGE_EXPLANATION, BADGE_NO_BONUS, BADGE_TITLE } from '@/lib/activity/badge-text'
+import { BADGES_ANCHOR, BADGES_EXPLANATION, BADGES_TITLE } from '@/lib/profile/badges'
 import { isList } from '@/lib/profile/visibility'
 import type { GeoPoint } from '@/lib/search/geo-distance'
 import { paginate } from '@/lib/search/pagination'
@@ -215,6 +216,21 @@ const CHECKS: Record<RankingRuleId, () => void> = {
 			'a-loin-exacte',
 		])
 	},
+	badges: () => {
+		const tiered = (nom: string, badgeTier: number, extra: Partial<Fake> = {}) => artist(nom, { badgeTier, ...extra })
+		// With a city, at the same distance and relevance, « Super maquilleuse » then « Vérifiée » then the others, before the name.
+		const same = [tiered('a-aucune', 0), tiered('b-verifiee', 1), tiered('c-super', 2)]
+		expect(names(byPoint(same).places.locaux)).toEqual(['c-super', 'b-verifiee', 'a-aucune'])
+		// Never before the distance: a nearer profile without badge stays first.
+		const far = tiered('z-super-loin', 2, { center: OLD_ANNECY })
+		expect(names(byPoint([far, tiered('a-proche', 0)]).places.locaux)).toEqual(['a-proche', 'z-super-loin'])
+		// Never a filter: everybody is still there.
+		expect(names(byPoint(same).places.locaux).toSorted()).toEqual(['a-aucune', 'b-verifiee', 'c-super'])
+		// Never before the contact: a profile nobody can reach stays after.
+		expect(
+			order(byPoint([tiered('a-super-sans-contact', 2, { unreachable: true }), tiered('b-joignable', 0)]))
+		).toEqual(['b-joignable', 'a-super-sans-contact'])
+	},
 	name: () => {
 		const directory = [artist('b-nom'), artist('a-nom')]
 		expect(names(byPoint(directory).places.locaux)).toEqual(['a-nom', 'b-nom'])
@@ -316,6 +332,15 @@ describe('1012 : la page dit ce que dit la source, et rien d’autre', () => {
 		expect(text).toContain('Il ne dit rien de la qualité de son travail')
 	})
 
+	test('badges du 28/10/2026 : la page explique les deux badges, avec les mots de la source, sans promettre une garantie', () => {
+		expect(html).toContain(`id="${BADGES_ANCHOR}"`)
+		expect(text).toContain(BADGES_TITLE)
+		for (const paragraph of BADGES_EXPLANATION) expect(text).toContain(paragraph)
+		expect(text).toContain('ne dit rien de la qualité du travail')
+		expect(text).toContain('jamais un filtre')
+		expect(BADGES_EXPLANATION.join(' ')).not.toMatch(/garantie|avis vérifiés/i)
+	})
+
 	test('les chiffres de la page sont ceux du code', () => {
 		expect(text).toContain(`à moins de ${NEARBY_MAX_KM} km`)
 		expect(text).toContain(`au plus ${FAR_TRAVELLERS_MAX} maquilleuses`)
@@ -324,14 +349,16 @@ describe('1012 : la page dit ce que dit la source, et rien d’autre', () => {
 })
 
 describe('1012 : rien de payant n’entre dans le classement', () => {
-	test('le badge Pro ne change aucun ordre', () => {
-		const make = (pro: boolean) => [
-			artist('a', { carte: { ...artist('a').carte, superMaquilleuse: pro } }),
-			artist('b'),
-			artist('c', { carte: { ...artist('c').carte, superMaquilleuse: !pro } }),
-		]
-		expect(order(byPoint(make(true)))).toEqual(order(byPoint(make(false))))
-		expect(order(noCity(make(true)))).toEqual(order(noCity(make(false))))
+	test('les badges ne font qu’un léger coup de pouce : le même ensemble de profils, avec ou sans badge', () => {
+		const make = (tier: number) => [artist('a', { badgeTier: tier }), artist('b'), artist('c', { badgeTier: 2 - tier })]
+		expect(order(byPoint(make(2))).toSorted()).toEqual(order(byPoint(make(0))).toSorted())
+		expect(order(noCity(make(2))).toSorted()).toEqual(order(noCity(make(0))).toSorted())
+	})
+
+	test('le badge « Activité vérifiée » reste à part : il ne donne aucun badge de tri', () => {
+		const plain = [artist('a'), artist('b')]
+		const withBadge = [artist('a', { carte: { ...artist('a').carte, activityVerified: true as const } }), artist('b')]
+		expect(order(noCity(withBadge))).toEqual(order(noCity(plain)))
 	})
 
 	test('issue 1004 : le badge « Activité vérifiée » ne change aucun ordre, avec ou sans ville', () => {
@@ -363,6 +390,9 @@ describe('1012 : rien de payant n’entre dans le classement', () => {
 			)
 		}
 		expect(DIRECTORY_SORT.join(' ')).not.toMatch(/super|premium|paid|sponsor/i)
+		// The only trace of a badge in the ranking code is the number of the tier, set by the read of the directory.
+		const results = readFileSync(join(import.meta.dir, '../../src/lib/search/results.ts'), 'utf8')
+		expect(results).toContain('badgeTier')
 	})
 })
 

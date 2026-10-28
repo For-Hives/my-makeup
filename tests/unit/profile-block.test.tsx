@@ -174,14 +174,17 @@ describe('305 : les maquilleuses d’une spécialité', () => {
 			},
 		} as unknown as Payload
 		const directory = await readDirectory(payload)
-		expect(directory.map(item => item.verified)).toEqual([false, true, false])
+		// « Vérifiée » goes first (the small bonus of order, badges du 28/10/2026), the others keep their order.
+		expect(directory.map(item => item.verified)).toEqual([true, false, false])
+		expect(directory.map(item => item.carte.slug)).toEqual(['p-2', 'p-1', 'p-3'])
 		// The box is closed to the public read: the listing never selects it, the apart read has the rules open.
 		const listing = reads.find(read => read.select.publishable === true)
 		expect(listing?.select.verified).toBeUndefined()
 		expect(listing?.overrideAccess).toBe(false)
 		expect(reads.find(read => read.select.verified === true)?.overrideAccess).toBe(true)
-		// And a card carries nothing of it.
-		expect(JSON.stringify(directory.map(item => item.carte))).not.toContain('verified')
+		// And a card carries only the fact, as a badge (badges du 28/10/2026), never a date.
+		expect(directory.map(item => item.carte.verified)).toEqual([true, undefined, undefined])
+		expect(JSON.stringify(directory.map(item => item.carte))).not.toContain('verifiedAt')
 	})
 
 	test('le bloc est gardé sous l’étiquette des profils : la publication d’un profil le rafraîchit', () => {
