@@ -10,7 +10,7 @@ import type {
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { isImport } from '../lib/import-context'
 import { PUBLISHED_STATUS } from '../lib/profile/status'
-import { changeTargets, type PublicContent, type PublicState, type Targets } from '../lib/revalidate'
+import { changeTargets, mergeTargets, type PublicContent, type PublicState, type Targets } from '../lib/revalidate'
 import { changedUrls, keyIfSubmitAllowed, reportLater } from '../lib/seo/indexnow'
 
 /**
@@ -103,16 +103,30 @@ export const outsideNextRequest = (erreur: unknown): boolean =>
  */
 export function revalidateChange(req: PayloadRequest, { chemins, etiquettes }: Targets): void {
 	if (chemins.length === 0 && etiquettes.length === 0) return
-	try {
-		for (const tag of etiquettes) revalidateTag(tag, { expire: 0 })
-		for (const path of chemins) revalidatePath(path)
-	} catch (error) {
-		if (outsideNextRequest(error)) {
-			req.payload.logger.debug('[revalidation] written outside of a request of Next: no page refreshed')
-			return
+	// One call at a time: a refusal of one tag or path leaves the others refreshed, and never reaches the save.
+	const calls = [
+		...etiquettes.map(tag => () => revalidateTag(tag, { expire: 0 })),
+		...chemins.map(path => () => revalidatePath(path)),
+	]
+	let failed = 0
+	let first: unknown
+	for (const call of calls) {
+		try {
+			call()
+		} catch (error) {
+			if (outsideNextRequest(error)) {
+				req.payload.logger.debug('[revalidation] written outside of a request of Next: no page refreshed')
+				return
+			}
+			failed += 1
+			first ??= error
 		}
-		req.payload.logger.error({ err: error, msg: '[revalidation] the public pages of this write were not refreshed' })
 	}
+	if (failed > 0)
+		req.payload.logger.error({
+			err: first,
+			msg: `[revalidation] ${failed} of ${calls.length} refreshes failed, the pages expire on their own: the save goes on`,
+		})
 }
 
 /**
@@ -153,31 +167,137 @@ export interface RefreshHooks {
 	apresSuppression: CollectionAfterDeleteHook
 }
 
+/**
+ * Runs one step of a refresh, and never lets it reach the save: a failure (a read of the state, Next, the
+ * queue of IndexNow) is logged, and the pages expire on their own at the end of their hour.
+ */
+async function safely<T>(req: PayloadRequest, step: string, run: () => Promise<T> | T, fallback: T): Promise<T> {
+	try {
+		return await run()
+	} catch (error) {
+		req.payload.logger.error({ err: error, msg: `[revalidation] ${step} failed: the save goes on` })
+		return fallback
+	}
+}
+
 export function refresh(contenu: PublicContent): RefreshHooks {
 	return {
 		avantEcriture: async ({ context, data, operation, originalDoc, req }) => {
 			const id = originalDoc?.id
 			if (isImport(context) || operation !== 'update' || id === undefined) return data
-			keptStates(context).set(key(contenu, id), await readPublicState(req, contenu, id))
+			const state = await safely(req, 'the read before the write', () => readPublicState(req, contenu, id), undefined)
+			if (state !== undefined) keptStates(context).set(key(contenu, id), state)
 			return data
 		},
 		apresEcriture: async ({ context, doc, operation, req }) => {
 			if (isImport(context)) return doc
 			const before = operation === 'create' ? null : resume(context, contenu, doc.id)
-			const after = await readPublicState(req, contenu, doc.id)
-			revalidateChange(req, changeTargets(contenu, before, after))
-			notifyEngines(req, contenu, before, after)
+			await safely(
+				req,
+				'the refresh',
+				async () => {
+					const after = await readPublicState(req, contenu, doc.id)
+					revalidateChange(req, changeTargets(contenu, before, after))
+					notifyEngines(req, contenu, before, after)
+				},
+				undefined
+			)
 			return doc
 		},
 		avantSuppression: async ({ context, id, req }) => {
 			if (isImport(context)) return
-			keptStates(context).set(key(contenu, id), await readPublicState(req, contenu, id))
+			const state = await safely(
+				req,
+				'the read before the deletion',
+				() => readPublicState(req, contenu, id),
+				undefined
+			)
+			if (state !== undefined) keptStates(context).set(key(contenu, id), state)
 		},
-		apresSuppression: ({ context, doc, id, req }) => {
+		apresSuppression: async ({ context, doc, id, req }) => {
 			if (isImport(context)) return doc
 			const before = resume(context, contenu, id)
-			revalidateChange(req, changeTargets(contenu, before, null))
-			notifyEngines(req, contenu, before, null)
+			await safely(
+				req,
+				'the refresh',
+				() => {
+					revalidateChange(req, changeTargets(contenu, before, null))
+					notifyEngines(req, contenu, before, null)
+				},
+				undefined
+			)
+			return doc
+		},
+	}
+}
+
+/** The most documents a photo is looked up in: a photo belongs to one profile, or to a few articles. */
+const MEDIA_USERS_MAX = 50
+
+/** The pages that show a photo: the published profiles and articles that hold it, read from the stored rows. */
+async function pagesShowing(req: PayloadRequest, id: number | string): Promise<Targets> {
+	const profiles = await req.payload.db.find<StoredRow>({
+		collection: 'profiles',
+		limit: MEDIA_USERS_MAX,
+		pagination: false,
+		req,
+		select: { slug: true, status: true },
+		where: { or: [{ mainPicture: { equals: id } }, { gallery: { equals: id } }] },
+	})
+	const articles = await req.payload.db.find<StoredRow>({
+		collection: 'articles',
+		limit: MEDIA_USERS_MAX,
+		pagination: false,
+		req,
+		select: { slug: true, _status: true },
+		where: { gallery: { equals: id } },
+	})
+	const targets = (contenu: PublicContent, rows: readonly StoredRow[]): Targets[] =>
+		rows.map(row => {
+			const state: PublicState = {
+				slug: String(row.slug ?? ''),
+				visible: row[VISIBILITY[contenu].champ] === VISIBILITY[contenu].valeur,
+			}
+			return changeTargets(contenu, state, state)
+		})
+	return mergeTargets(...targets('profiles', profiles.docs), ...targets('articles', articles.docs))
+}
+
+/** The hooks of the refresh of the media (the photos): a photo changed or deleted refreshes the pages that show it. */
+export interface MediaRefreshHooks {
+	/** `afterChange`: a replaced file or a new alternative text. A creation shows nowhere yet: the save of the document that takes the photo refreshes. */
+	apresEcriture: CollectionAfterChangeHook
+	/** `beforeDelete`: reads the pages that show the photo, which the database forgets with the deletion. */
+	avantSuppression: CollectionBeforeDeleteHook
+	/** `afterDelete`. */
+	apresSuppression: CollectionAfterDeleteHook
+}
+
+const MEDIA_KEY = 'pagesDuMediaAvantSuppression'
+
+export function refreshMedia(): MediaRefreshHooks {
+	return {
+		apresEcriture: async ({ context, doc, operation, req }) => {
+			// `skipCloudStorage` is the storage plugin writing the url of the file it has just uploaded: nothing shows it yet.
+			if (isImport(context) || operation !== 'update' || context.skipCloudStorage) return doc
+			await safely(
+				req,
+				'the refresh of a photo',
+				async () => revalidateChange(req, await pagesShowing(req, doc.id)),
+				undefined
+			)
+			return doc
+		},
+		avantSuppression: async ({ context, id, req }) => {
+			if (isImport(context)) return
+			const targets = await safely(req, 'the read of the pages of a photo', () => pagesShowing(req, id), undefined)
+			if (targets !== undefined) context[`${MEDIA_KEY}:${id}`] = targets
+		},
+		apresSuppression: async ({ context, doc, id, req }) => {
+			if (isImport(context)) return doc
+			const targets = context[`${MEDIA_KEY}:${id}`] as Targets | undefined
+			delete context[`${MEDIA_KEY}:${id}`]
+			if (targets) await safely(req, 'the refresh of a photo', () => revalidateChange(req, targets), undefined)
 			return doc
 		},
 	}

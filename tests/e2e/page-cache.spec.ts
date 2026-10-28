@@ -192,6 +192,50 @@ test.describe('Pages publiques en cache (269)', () => {
 		}
 	})
 
+	test('un changement de profil rafraîchit aussi la page de zone, la recherche et le bloc de profils d’un article (audit du 28/10/2026)', async ({
+		request,
+	}) => {
+		test.setTimeout(240_000)
+		const profile = await newProfile(true)
+		const suffix = Date.now().toString(36)
+		const articleSlug = `essai-bloc-article-${suffix}`
+		const idArticle = await createContent(request, 'articles', {
+			title: `Essai ${articleSlug}`,
+			slug: articleSlug,
+			excerpt: 'Extrait de départ.',
+			_status: 'published',
+		})
+		try {
+			const zone = '/maquilleuses/haute-savoie'
+			// The profile was placed outside of a request of Next: a first save puts it in the directory.
+			expect(
+				(
+					await request.patch(`/api/profiles/${profile.id}`, { headers: profile.entetes, data: { verified: false } })
+				).ok()
+			).toBe(true)
+			const pages = [zone, `/blog/${articleSlug}`, '/']
+			for (const path of pages) await expectCached(request, path)
+			const newName = `Renomme${profile.mot}`
+
+			const response = await request.patch(`/api/profiles/${profile.id}`, {
+				headers: profile.entetes,
+				data: { lastName: newName, verified: true, superArtist: true },
+			})
+			expect(response.ok()).toBe(true)
+
+			// The zone page and the search read the directory, the home page its « Mise en avant » (the box), the
+			// article its block of profiles: all by the tag `profils`.
+			for (const path of [zone, `/search?search=${newName}`, `/profil/${profile.slug}`])
+				await expect
+					.poll(async () => (await visit(request, path)).html.includes(newName), { timeout: ONE_MINUTE })
+					.toBe(true)
+			await expectCached(request, zone)
+		} finally {
+			await deleteContent(request, 'articles', idArticle)
+			await removeProfile(request, profile)
+		}
+	})
+
 	test('les pages de la session ne sont jamais dans un cache partagé', async ({ request }) => {
 		for (const path of ['/auth', '/auth/signin', '/auth/signup', '/auth/profil', '/auth/apercu-profil']) {
 			const page = await visit(request, path)

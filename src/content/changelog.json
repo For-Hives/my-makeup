@@ -1,6 +1,12 @@
 {
 	"description": "Les notes de version du site, en français : ce qu'une visiteuse ou une maquilleuse peut remarquer. Une note s'ajoute par « bun run notes:add » et attend dans « pending » ; la publication la range sous son numéro, dans « releases ». Voir docs/publication.md.",
-	"pending": [],
+	"pending": [
+		{
+			"id": "une-photo-de-profil-remplacee-renommee-ou-supprimee-dans",
+			"type": "correction",
+			"text": "Une photo de profil remplacée, renommée ou supprimée dans l'administration apparaît aussitôt sur la page du profil et dans les listes."
+		}
+	],
 	"releases": [
 		{
 			"version": "3.0.37",

@@ -1,7 +1,7 @@
 import { describe, expect, mock, test } from 'bun:test'
 import { revalidateTag } from 'next/cache.js'
 import type { PayloadRequest, RequestContext } from 'payload'
-import { outsideNextRequest, refresh } from '../../src/collections/revalidate'
+import { outsideNextRequest, refresh, refreshMedia } from '../../src/collections/revalidate'
 import { IMPORT_CONTEXT } from '../../src/lib/import-context'
 import { changeTargets, PUBLIC_PAGES, type PublicState, TAGS } from '../../src/lib/revalidate'
 import { spyCache } from '../support/cache-spy'
@@ -165,5 +165,232 @@ describe('les crochets de Payload', () => {
 		expect(outsideNextRequest(new Error('Invariant: static generation store missing'))).toBe(false)
 		expect(outsideNextRequest(new Error('static generation store missing in revalidateTag("x")'))).toBe(false)
 		expect(outsideNextRequest('Invariant: static generation store missing in revalidateTag("x")')).toBe(false)
+	})
+})
+
+/**
+ * The audit table of docs/seo/cache-des-pages.md, one row per change an admin or a makeup artist makes: the
+ * stored row before and after the write goes through the hooks, and Next receives the pages and tags the table
+ * promises. The pages that read the directory (zones, search, home, blocks of profiles) are refreshed by the tag
+ * `profils`: the same tag is carried by every cached read of the directory (src/services/public/cached.ts).
+ */
+describe('le tableau d’audit : un changement, les pages rafraîchies', () => {
+	const PROFILE_PAGES = (slug: string) => ({
+		chemins: ['/', `/profil/${slug}`, '/search', '/site-map', '/sitemap.xml'],
+		etiquettes: [`profil:${slug}`, 'profils'],
+	})
+
+	/** A write of a profile (or of another collection) seen by the hooks: its stored row before, then after. */
+	async function write(
+		collection: 'profiles' | 'articles' | 'talents',
+		before: Record<string, unknown> | null,
+		after: Record<string, unknown> | null
+	) {
+		const hooks = refresh(collection)
+		const { req } = request([...(before ? [before] : []), ...(after ? [after] : [])])
+		const context: RequestContext = {}
+		return spyCache(async () => {
+			if (before && after) {
+				await hooks.avantEcriture({ context, data: {}, operation: 'update', originalDoc: { id: 7 }, req } as never)
+				await hooks.apresEcriture({
+					context,
+					doc: { id: 7 },
+					operation: 'update',
+					previousDoc: { id: 7 },
+					req,
+				} as never)
+			} else if (before) {
+				await hooks.avantSuppression({ context, id: 7, req } as never)
+				await hooks.apresSuppression({ context, doc: { id: 7 }, id: 7, req } as never)
+			} else {
+				await hooks.apresEcriture({ context, doc: { id: 7 }, operation: 'create', req } as never)
+			}
+		})
+	}
+
+	const profile = (status: string, slug = 'zoe-lefevre') => ({ id: 7, slug, status, indexable: true })
+
+	// A published profile whose box, city, speciality, photo, description or prices change stays `published`: the
+	// stored row only differs by fields the hook does not read, and the page and the lists are refreshed all the same.
+	test.each([
+		['« Vérifiée » cochée ou décochée'],
+		['« Super maquilleuse » cochée ou décochée'],
+		['la ville'],
+		['la spécialité'],
+		['la photo principale ou la galerie'],
+		['la description'],
+		['les prix'],
+	])('un profil publié, %s : sa page, la recherche, l’accueil, les plans, l’étiquette de la liste', async () => {
+		const refreshed = await write('profiles', profile('published'), profile('published'))
+		expect(refreshed.chemins.sort()).toEqual(PROFILE_PAGES('zoe-lefevre').chemins)
+		expect(refreshed.etiquettes.sort()).toEqual(PROFILE_PAGES('zoe-lefevre').etiquettes)
+	})
+
+	test.each([
+		['brouillon → publié', 'draft', 'published'],
+		['publié → masqué', 'published', 'hidden'],
+		['publié → brouillon (profil vidé)', 'published', 'draft'],
+		['masqué → publié', 'hidden', 'published'],
+	])('le statut d’un profil, %s', async (_nom, from, to) => {
+		const refreshed = await write('profiles', profile(from), profile(to))
+		expect(refreshed.chemins.sort()).toEqual(PROFILE_PAGES('zoe-lefevre').chemins)
+		expect(refreshed.etiquettes.sort()).toEqual(PROFILE_PAGES('zoe-lefevre').etiquettes)
+	})
+
+	test('un profil qui reste masqué ou brouillon : rien', async () => {
+		expect(targetsOf(await write('profiles', profile('hidden'), profile('hidden')))).toEqual(NOTHING)
+		expect(targetsOf(await write('profiles', profile('draft'), profile('draft')))).toEqual(NOTHING)
+	})
+
+	test('l’adresse d’un profil publié change : l’ancienne page et la nouvelle', async () => {
+		const refreshed = await write('profiles', profile('published', 'ancien-nom'), profile('published', 'nouveau-nom'))
+		expect(refreshed.etiquettes.sort()).toEqual(['profil:ancien-nom', 'profil:nouveau-nom', 'profils'])
+		expect(refreshed.chemins).toContain('/profil/ancien-nom')
+		expect(refreshed.chemins).toContain('/profil/nouveau-nom')
+	})
+
+	test('un profil publié supprimé : sa page et les listes', async () => {
+		const refreshed = await write('profiles', profile('published'), null)
+		expect(refreshed.etiquettes.sort()).toEqual(PROFILE_PAGES('zoe-lefevre').etiquettes)
+	})
+
+	test.each([
+		['articles', 'un-article', '/blog/un-article', 'article:un-article', 'articles', '/blog'],
+		['talents', 'un-talent', '/talent/un-talent', 'talent:un-talent', 'talents', '/'],
+	] as const)('un %s : publication, dépublication, changement d’adresse', async (collection, slug, page, tag, list, listPage) => {
+		const row = (status: string, slug_: string = slug) => ({ id: 7, slug: slug_, _status: status })
+		for (const [from, to] of [
+			[null, row('published')],
+			[row('draft'), row('published')],
+			[row('published'), row('draft')],
+			[row('published'), row('published')],
+		] as const) {
+			const refreshed = await write(collection, from, to)
+			expect(refreshed.etiquettes.sort()).toEqual([tag, list].sort())
+			expect(refreshed.chemins).toEqual(expect.arrayContaining([page, listPage, '/sitemap.xml', '/site-map']))
+		}
+		const renamed = await write(collection, row('published'), row('published', `${slug}-2`))
+		expect(renamed.etiquettes.sort()).toEqual([tag, `${tag}-2`, list].sort())
+		expect(targetsOf(await write(collection, row('draft'), row('draft')))).toEqual(NOTHING)
+	})
+})
+
+const targetsOf = ({ chemins, etiquettes }: { chemins: string[]; etiquettes: string[] }) => ({ chemins, etiquettes })
+
+describe('les photos : remplacer, renommer ou supprimer une image rafraîchit les pages qui la montrent', () => {
+	/** The rows `db.find` gives for the profiles, then for the articles that hold the photo. */
+	function mediaRequest(profils: Record<string, unknown>[], articles: Record<string, unknown>[]) {
+		const answers = [{ docs: profils }, { docs: articles }]
+		const find = mock(async () => answers.shift() ?? { docs: [] })
+		const log = { debug: mock(() => {}), error: mock(() => {}) }
+		return { find, log, req: { payload: { db: { find }, logger: log } } as unknown as PayloadRequest }
+	}
+	const HOOKS_MEDIA = refreshMedia()
+
+	test('un fichier remplacé : la page du profil qui la porte, l’accueil, la recherche, le blog si un article la porte', async () => {
+		const { req, find } = mediaRequest(
+			[{ id: 1, slug: 'zoe-lefevre', status: 'published' }],
+			[{ id: 2, slug: 'un-article', _status: 'published' }]
+		)
+		const refreshed = await spyCache(async () => {
+			await HOOKS_MEDIA.apresEcriture({ context: {}, doc: { id: 9 }, operation: 'update', req } as never)
+		})
+		expect(find).toHaveBeenCalledTimes(2)
+		expect(refreshed.etiquettes.sort()).toEqual(['article:un-article', 'articles', 'profil:zoe-lefevre', 'profils'])
+		expect(refreshed.chemins).toEqual(
+			expect.arrayContaining(['/profil/zoe-lefevre', '/blog/un-article', '/blog', '/search', '/'])
+		)
+	})
+
+	test('la photo d’un profil masqué ou d’un brouillon : rien', async () => {
+		const { req } = mediaRequest(
+			[{ id: 1, slug: 'zoe-lefevre', status: 'hidden' }],
+			[{ id: 2, slug: 'un-brouillon', _status: 'draft' }]
+		)
+		const refreshed = await spyCache(async () => {
+			await HOOKS_MEDIA.apresEcriture({ context: {}, doc: { id: 9 }, operation: 'update', req } as never)
+		})
+		expect(targetsOf(refreshed)).toEqual(NOTHING)
+	})
+
+	test('une création, l’écriture interne du stockage et l’import : rien n’est lu, rien n’est rafraîchi', async () => {
+		const { req, find } = mediaRequest([{ id: 1, slug: 'zoe-lefevre', status: 'published' }], [])
+		const refreshed = await spyCache(async () => {
+			await HOOKS_MEDIA.apresEcriture({ context: {}, doc: { id: 9 }, operation: 'create', req } as never)
+			await HOOKS_MEDIA.apresEcriture({
+				context: { skipCloudStorage: true },
+				doc: { id: 9 },
+				operation: 'update',
+				req,
+			} as never)
+			await HOOKS_MEDIA.apresEcriture({
+				context: { ...IMPORT_CONTEXT },
+				doc: { id: 9 },
+				operation: 'update',
+				req,
+			} as never)
+		})
+		expect(find).not.toHaveBeenCalled()
+		expect(refreshed.appels).toEqual([])
+	})
+
+	test('une suppression : les pages sont lues avant (la base oublie le lien), rafraîchies après', async () => {
+		const { req } = mediaRequest([{ id: 1, slug: 'zoe-lefevre', status: 'published' }], [])
+		const context: RequestContext = {}
+		const refreshed = await spyCache(async () => {
+			await HOOKS_MEDIA.avantSuppression({ context, id: 9, req } as never)
+			await HOOKS_MEDIA.apresSuppression({ context, doc: { id: 9 }, id: 9, req } as never)
+		})
+		expect(refreshed.etiquettes.sort()).toEqual(['profil:zoe-lefevre', 'profils'])
+		expect(context).toEqual({})
+	})
+})
+
+describe('un rafraîchissement qui échoue ne fait jamais échouer l’enregistrement', () => {
+	test('Next refuse une étiquette : l’enregistrement passe, l’erreur est journalisée, les autres pages sont tentées', async () => {
+		const { req, journal: log } = request([
+			{ id: 7, slug: 'zoe-lefevre', status: 'published' },
+			{ id: 7, slug: 'zoe-lefevre', status: 'published' },
+		])
+		const refreshed = await spyCache(
+			async () => {
+				const { apres: after } = await update(req, {})
+				expect(after).toEqual({ id: 7 })
+			},
+			{ failWith: new Error('cache indisponible') }
+		)
+
+		expect(log.error).toHaveBeenCalled()
+		// Every tag and every path was attempted: the first refusal stops nothing.
+		expect(refreshed.appels.length).toBe(2 + 5)
+	})
+
+	test('la lecture de l’état échoue, avant ou après l’écriture : l’enregistrement passe', async () => {
+		const findOne = mock(async () => {
+			throw new Error('base indisponible')
+		})
+		const log = { debug: mock(() => {}), error: mock(() => {}) }
+		const req = { payload: { db: { findOne }, logger: log } } as unknown as PayloadRequest
+
+		const { avant: before, apres: after } = await update(req, {})
+		const hooks = refresh('profiles')
+		await hooks.avantSuppression({ context: {}, id: 7, req } as never)
+		const doc = await hooks.apresSuppression({ context: {}, doc: { id: 7 }, id: 7, req } as never)
+
+		expect(before).toEqual({ description: 'Une description' })
+		expect(after).toEqual({ id: 7 })
+		expect(doc).toEqual({ id: 7 })
+		expect(log.error).toHaveBeenCalled()
+	})
+
+	test('un échec de la file de IndexNow ou de Next sur un média : l’enregistrement passe', async () => {
+		const find = mock(async () => {
+			throw new Error('base indisponible')
+		})
+		const log = { debug: mock(() => {}), error: mock(() => {}) }
+		const req = { payload: { db: { find }, logger: log } } as unknown as PayloadRequest
+		const doc = await refreshMedia().apresEcriture({ context: {}, doc: { id: 9 }, operation: 'update', req } as never)
+		expect(doc).toEqual({ id: 9 })
+		expect(log.error).toHaveBeenCalled()
 	})
 })

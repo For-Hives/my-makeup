@@ -114,3 +114,11 @@ export function changeTargets(contenu: PublicContent, avant: PublicState | null,
 		etiquettes: [...slugs.map(pages.etiquette), pages.etiquetteDeLaListe],
 	}
 }
+
+/** The union of several sets of targets, each path and tag once. */
+export function mergeTargets(...sets: readonly Targets[]): Targets {
+	return {
+		chemins: [...new Set(sets.flatMap(({ chemins }) => chemins))],
+		etiquettes: [...new Set(sets.flatMap(({ etiquettes }) => etiquettes))],
+	}
+}
