@@ -11,6 +11,7 @@ import type { ProfileCard as ProfileCardData } from '@/services/public/profiles'
 import { type ArchBand, ArchImage } from './ArchImage'
 import type { Tint } from './CapsuleImage'
 import { Icon } from './graphics'
+import { PhotoBadges } from './ProfileBadges'
 
 export interface ProfileCardCommonProps {
 	/** The same data the search and « Mise en avant » cards take (`src/services/public/profiles.ts`). */
@@ -119,15 +120,6 @@ function GoArrow() {
 	)
 }
 
-function Pro() {
-	return (
-		<span className="absolute bottom-4 left-3.5 z-[3] inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 font-semibold text-indigo-900 text-xs">
-			<Icon name="shield-check" className="h-4 w-4" />
-			Pro
-		</span>
-	)
-}
-
 /**
  * The vertical profile card of the kit: the photo in an arch with its offset band, the name in Bodoni, where she works,
  * her speciality and her first offers as chips, and « dès 150 € » with a round arrow. Server component. It takes the
@@ -157,7 +149,7 @@ export function ProfileCard({
 					priority={priority}
 					sizes="(min-width: 1536px) 440px, (min-width: 1024px) 30vw, (min-width: 768px) 45vw, 90vw"
 				/>
-				{profile.superMaquilleuse && <Pro />}
+				<PhotoBadges flags={profile} />
 			</div>
 			<div className="grid grid-cols-[minmax(0,1fr)] gap-2.5">
 				<Heading className="font-display font-medium text-[28px] text-ink leading-[1.1]">
@@ -195,6 +187,7 @@ export function ProfileRowCard({
 			data-profile-row-card
 			className="card-hover group relative grid grid-cols-[96px_minmax(0,1fr)] items-center gap-x-[18px] gap-y-3.5 rounded-card border border-nude-200 bg-white p-[18px] md:grid-cols-[148px_minmax(0,1fr)_auto] md:gap-x-7 md:py-[22px] md:pr-7 md:pl-[22px]"
 		>
+			<PhotoBadges flags={profile} placement="edge" />
 			<div className="relative">
 				<ArchImage
 					src={photo.src}
@@ -206,7 +199,6 @@ export function ProfileRowCard({
 					priority={priority}
 					sizes="148px"
 				/>
-				{profile.superMaquilleuse && <Pro />}
 			</div>
 			<div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-2.5">
 				<Heading className="font-display font-medium text-[22px] text-ink leading-[1.1] md:text-[26px]">

@@ -2,6 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { TrackedLink } from '@/components/analytics/TrackedLink'
 import { Icon } from '@/components/art/Icon'
+import { PhotoBadges } from '@/components/art/ProfileBadges'
 import { ActivityBadgePill } from '@/components/profile/ActivityBadge'
 import { ZoneText } from '@/components/profile/ZoneText'
 import { ofName } from '@/lib/french-elision'
@@ -49,14 +50,7 @@ export function ResultCard({
 					fetchPriority={prioritaire ? 'high' : undefined}
 					className="card-zoom object-cover object-center"
 				/>
-				{carte.superMaquilleuse && (
-					<div className="absolute top-0 left-0 flex items-center justify-center pt-2 md:pt-4">
-						<div className="flex w-full items-center justify-center rounded-r-lg bg-fuchsia-700 px-2 py-0.5 text-center font-medium text-white text-xs italic shadow-xl md:px-3 md:py-1 md:text-sm">
-							<Icon name="shield-check" className="mr-1 h-4 w-4 md:mr-2" />
-							Pro
-						</div>
-					</div>
-				)}
+				<PhotoBadges flags={carte} narrow />
 			</div>
 			<div className="flex min-w-0 flex-1 flex-col gap-1 p-3 md:gap-2 md:p-4">
 				<h3 className="truncate font-extrabold text-base text-gray-900 md:text-xl">{carte.nom}</h3>

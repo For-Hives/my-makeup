@@ -11,6 +11,7 @@
  */
 
 import { BADGE_NO_BONUS } from '@/lib/activity/badge-text'
+import { SUPER_LABEL, VERIFIED_LABEL } from '@/lib/profile/badges'
 import { VIEWS_WINDOW_DAYS } from '@/lib/views/profile-views'
 import { FAR_REACH_KM } from '@/services/public/profiles'
 import { PER_PAGE } from './pagination'
@@ -24,7 +25,8 @@ const LETTERS_PER_TYPO = Math.round(1 / THRESHOLD)
 
 /**
  * How the directory is read before any search touches it: the most complete profile first, then the one changed
- * most recently, then by address. It is the last word of the order of a search without a recognised city. The
+ * most recently, then by address. The read then puts the profiles with a badge first (a stable sort, `badgeTier`: the
+ * small bonus of order), so the last word of a search without a recognised city is this order inside each tier. The
  * read in src/services/public/profiles.ts writes the same list as a literal (the check of the keys of the
  * queries cannot follow a constant), and the test compares the two.
  */
@@ -107,14 +109,19 @@ export const RANKING_RULES = [
 		text: 'Quand vous avez tapé des mots, celle dont le profil les contient le mieux passe d’abord : une ville ou une spécialité qui correspond pèse plus qu’un mot trouvé au milieu d’une description. Avec une ville reconnue, cela ne départage que les maquilleuses à la même distance.',
 	},
 	{
+		id: 'badges',
+		group: 'order',
+		text: `À distance et pertinence égales (sans ville reconnue : à pertinence égale), une maquilleuse « ${SUPER_LABEL} » passe avant une maquilleuse « ${VERIFIED_LABEL} », qui passe avant les autres. C’est un léger coup de pouce, jamais un filtre : une maquilleuse sans badge reste trouvable, et il ne passe jamais avant la zone indiquée, le moyen de contact ni la distance.`,
+	},
+	{
 		id: 'name',
 		group: 'order',
-		text: 'Avec une ville reconnue, à distance et pertinence égales, l’ordre alphabétique des noms décide.',
+		text: 'Avec une ville reconnue, à distance, pertinence et badge égaux, l’ordre alphabétique des noms décide.',
 	},
 	{
 		id: 'completeness',
 		group: 'order',
-		text: 'Sans ville reconnue, à pertinence égale, le profil le plus complet passe d’abord (nombre de rubriques remplies : présentation, photo, prestations, compétences, formations, réseaux, galerie…).',
+		text: 'Sans ville reconnue, à pertinence et badge égaux, le profil le plus complet passe d’abord (nombre de rubriques remplies : présentation, photo, prestations, compétences, formations, réseaux, galerie…).',
 	},
 	{
 		id: 'recent',
@@ -134,7 +141,7 @@ export const RANKING_RULES = [
 	{
 		id: 'preset',
 		group: 'other',
-		text: `Quand vous n’avez tapé ni mot ni ville, la page montre ${PRESET_SIZE} maquilleuses en tête. Si au moins ${MOST_VIEWED_MIN_PROFILES} maquilleuses visibles, joignables et installées dans une commune de France ont chacune au moins ${MOST_VIEWED_MIN_VIEWS} visites de leur page sur les ${VIEWS_WINDOW_DAYS} derniers jours, ce sont « Les plus consultées en France », de la plus visitée à la moins visitée (on ne compte ni les robots, ni la maquilleuse elle-même, ni l’équipe, et une visite par onglet ; aucun nombre de visites n’est affiché). Sinon, ce sont « Les mieux classées » : le début de l’ordre de l’annuaire, le profil le plus complet d’abord.`,
+		text: `Quand vous n’avez tapé ni mot ni ville, la page montre ${PRESET_SIZE} maquilleuses en tête. Si au moins ${MOST_VIEWED_MIN_PROFILES} maquilleuses visibles, joignables et installées dans une commune de France ont chacune au moins ${MOST_VIEWED_MIN_VIEWS} visites de leur page sur les ${VIEWS_WINDOW_DAYS} derniers jours, ce sont « Les plus consultées en France », de la plus visitée à la moins visitée (on ne compte ni les robots, ni la maquilleuse elle-même, ni l’équipe, et une visite par onglet ; aucun nombre de visites n’est affiché). Sinon, ce sont « Les mieux classées » : le début de l’ordre de l’annuaire, les badges d’abord, puis le profil le plus complet.`,
 	},
 	{
 		id: 'pages',
@@ -148,7 +155,7 @@ export type RankingRuleId = (typeof RANKING_RULES)[number]['id']
 /** What does not count, said on the page. Each line is checked by the test. */
 export const RANKING_EXCLUDED = [
 	'Aucun paiement, aucune publicité, aucun abonnement : rien de payant n’existe dans le classement.',
-	'Le badge « Pro » des cartes est posé par l’équipe et n’avance personne.',
+	`Les badges « ${SUPER_LABEL} » et « ${VERIFIED_LABEL} » sont posés par l’équipe : ils ne s’achètent pas, et ils ne retirent personne des résultats.`,
 	'Il n’y a pas d’avis de clientes sur My Makeup : aucune note n’entre dans le classement.',
 	BADGE_NO_BONUS,
 ] as const

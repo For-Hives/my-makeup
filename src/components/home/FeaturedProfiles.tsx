@@ -33,8 +33,16 @@ export function FeaturedProfiles({ cartes }: { cartes: readonly ProfileCard[] })
 				<PrintMark kind="plus" className="absolute top-2 right-10 hidden h-6 w-6 text-art-berry md:block lg:right-20" />
 				<SectionHead id="accueil-mise-en-avant" titre="Mise en avant" display />
 				{cartes.length > FEATURED_MAX && (
-					// biome-ignore lint/security/noDangerouslySetInnerHtml: the script is built from two integers, no data of a profile.
-					<script dangerouslySetInnerHTML={{ __html: featuredDrawScript(cartes.length, FEATURED_MAX) }} />
+					// biome-ignore lint/security/noDangerouslySetInnerHtml: the script is built from three integers, no data of a profile.
+					<script
+						dangerouslySetInnerHTML={{
+							__html: featuredDrawScript(
+								cartes.length,
+								FEATURED_MAX,
+								cartes.filter(carte => carte.superMaquilleuse).length
+							),
+						}}
+					/>
 				)}
 				<ul
 					className={`${FEATURED_LIST_CLASS} mt-12 grid grid-cols-1 gap-x-8 gap-y-14 md:mt-16 md:grid-cols-3 md:gap-y-16 lg:gap-x-14`}

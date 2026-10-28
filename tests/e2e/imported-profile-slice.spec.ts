@@ -31,7 +31,7 @@ const BENCH_REFERENCE = 'tests/fixtures/import/bench-reference.json'
 
 /** The keys a reading of a profile must never put into a page: what is private or reserved. */
 const PRIVATE_KEYS =
-	/"(?:pro|strapiId|legacyUsername|statut|status|motif|reason|verifie|verified|verifieLe|verifiedAt|siret|noteInterne|internalNote|score|superMaquilleuse|superArtist|coordonnees|contactDetails|telephone|phone|contactPublic|publicContact|consentiLe|consentedAt|sourceConsentement|consentSource)"\s*:/
+	/"(?:pro|strapiId|legacyUsername|statut|status|motif|reason|verifie|verifieLe|verifiedAt|siret|noteInterne|internalNote|score|coordonnees|contactDetails|telephone|phone|contactPublic|publicContact|consentiLe|consentedAt|sourceConsentement|consentSource)"\s*:/
 
 /**
  * Runs a command of bun in the repository, under the environment of the bench and the production

@@ -52,7 +52,7 @@ export const BEST_RANKED_TITLE = 'Les mieux classées'
 
 const MOST_VIEWED_INTRO = `Les pages de maquilleuses les plus ouvertes ces ${VIEWS_WINDOW_DAYS} derniers jours, dans toute la France.`
 const BEST_RANKED_INTRO =
-	'Les profils les plus complets, dans l’ordre décrit sur la page de classement : aucune visite n’a encore établi de palmarès.'
+	'Les profils en tête de l’annuaire (les badges d’abord, puis les plus complets), dans l’ordre décrit sur la page de classement : aucune visite n’a encore établi de palmarès.'
 
 /** The slugs the counter keeps: at least MOST_VIEWED_MIN_VIEWS views, most viewed first, alphabetical on a tie. */
 export function orderMostViewed(totals: ReadonlyMap<string, number>): string[] {

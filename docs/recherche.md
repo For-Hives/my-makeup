@@ -35,6 +35,15 @@ Critère unique, écrit sur la page : **les visites de la page du profil sur les
 
 Les planchers sont des constantes (`MOST_VIEWED_MIN_VIEWS`, `MOST_VIEWED_MIN_PROFILES`) : à régler quand les vrais volumes seront connus.
 
+## Les badges et le léger bonus de tri (issue 1170)
+
+Deux cases d'un admin (`profiles.superArtist`, « Super maquilleuse », et `profiles.verified`, « Vérifiée ») posent un badge sur les cartes et sur la page du profil, et donnent un **léger bonus de tri, jamais un filtre**. Les mots sont dans `src/lib/profile/badges.ts` (une seule source : cartes, page `/classement`, administration).
+
+- **Le badge** (`PhotoBadges`, `src/components/art/ProfileBadges.tsx`) : « Super maquilleuse » en pastille encre pleine (le plus marqué), « Vérifiée » en pastille blanche à filet avec le bouclier du kit ; du texte, aucune étoile. Sur la carte en grille et sur la carte de la recherche (`ResultCard`), il est posé sur la photo, en bas à gauche ; sur la carte en ligne, à cheval sur le bord haut de la carte (la photo de 96 px est trop petite pour les mots). Il ne prend pas de place dans la carte : sa hauteur ne change pas. « Super maquilleuse » se lit en premier, « Vérifiée » à côté. Il remplace l'ancien badge « Pro ».
+- **L'ordre** : le palier (`badgeTier` : 2 super maquilleuse, 1 vérifiée, 0 les autres) est lu une fois, à la lecture de l'annuaire (`readDirectory` : tri stable, l'ordre de la base reste l'ordre dans un palier), et la recherche par distance l'applique après la distance et la pertinence, avant le nom (`sectionsByDistance`, option `tier`). Il ne passe jamais avant « zone indiquée » ni « coordonnées » (ces regroupements viennent après). Sans ville reconnue, il est donc avant la complétude. Il agit aussi sur « Les mieux classées », les pages de zone et les blocs sous un texte, qui lisent le même annuaire. Personne n'est retiré, et la pagination coupe la même liste.
+- **L'explication** : la page `/classement` a la règle « badges » et la section « Les badges … » (ancre `#badges`, lien « Que veulent dire ces badges ? » sous les badges de la page d'un profil). Les mots restent prudents : « Vérifiée » veut dire « profil relu par l'équipe », rien sur la qualité du travail. Le badge « Activité vérifiée » (SIRET) est un autre badge, sans bonus de tri, expliqué plus bas dans la même page.
+- **Le garde** : `tests/unit/ranking-transparency.test.tsx` refuse que le code de tri nomme une case (il ne lit que le nombre `badgeTier`).
+
 ## Tests
 
 `tests/unit/search-filters.test.ts` (adresse, tranches), `search-preset.test.ts` (sélection), `search-art.test.tsx` (composants), `tests/integration/most-viewed.test.ts` (le compteur, sur le banc), `tests/e2e/search-filters.spec.ts` et `search-preset.spec.ts` (390 et 1440 px, axe, cibles de 44 px).

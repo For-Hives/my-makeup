@@ -1,5 +1,6 @@
 import { PageHead } from '@/components/static-pages/PageHead'
 import { BADGE_ANCHOR, BADGE_EXPLANATION, BADGE_TITLE } from '@/lib/activity/badge-text'
+import { BADGES_ANCHOR, BADGES_EXPLANATION, BADGES_TITLE } from '@/lib/profile/badges'
 import { RANKING_EXCLUDED, RANKING_GROUPS, RANKING_RULES } from '@/lib/search/ranking'
 
 /**
@@ -38,6 +39,16 @@ export function RankingExplainer() {
 							<li key={line}>{line}</li>
 						))}
 					</ul>
+				</section>
+				<section id={BADGES_ANCHOR} aria-labelledby="classement-badges" className="reveal mt-10 scroll-mt-6">
+					<h2 id="classement-badges" className="font-display font-medium text-2xl text-ink">
+						{BADGES_TITLE}
+					</h2>
+					<div className="mt-4 flex flex-col gap-3 text-mute leading-7">
+						{BADGES_EXPLANATION.map(paragraph => (
+							<p key={paragraph}>{paragraph}</p>
+						))}
+					</div>
 				</section>
 				<section id={BADGE_ANCHOR} aria-labelledby="classement-badge" className="reveal mt-10 scroll-mt-6">
 					<h2 id="classement-badge" className="font-display font-medium text-2xl text-ink">

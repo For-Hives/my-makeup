@@ -15,6 +15,8 @@ La page montre exactement les profils qu'elle compte. Une zone qui retombe à 0 
 
 **Décision du propriétaire, 24/10/2026 : le seuil passe de 3 à 1 profil indexable.** Une zone avec un seul profil est indexable ; aucun texte n'est inventé pour la remplir. Le même seuil vaudra pour la page de prestation par commune quand elle existera (ticket suivant).
 
+**Ordre (issue 1170).** Les cartes suivent l'ordre de l'annuaire : les super maquilleuses, puis les profils vérifiés, puis les autres, chaque palier de la fiche la plus complète à la plus récemment mise à jour. Aucun profil n'est retiré.
+
 ## Décisions par défaut de Claude (à corriger par Andy)
 
 - **Par quelles zones commencer** : toute la France, par la règle du seuil (décision du 13/10/2026, « toute la France pour le moment »). Aucune liste de zones à la main.

@@ -374,36 +374,45 @@ export const DEMO_PROFILES: readonly DemoProfile[] = [
 	{
 		numero: 2,
 		cle: 'ville-voisine',
-		sertA: 'Complet, à Annemasse, ville voisine d’Annecy : la recherche par zone, le JSON-LD.',
+		sertA:
+			'Complet, à Annemasse, ville voisine d’Annecy : la recherche par zone, le JSON-LD, le badge « Super maquilleuse » seul.',
 		compte: { email: profileUrl('ville-voisine'), nom: 'Léa Garnier' },
-		profil: completeProfile({
-			firstName: 'Léa',
-			lastName: 'Garnier',
-			artistName: 'Léa Garnier Beauté',
-			specialty: 'Maquillage mariage et soirée',
-			city: CITIES.annemasse,
-			description:
-				'Je maquille les mariées et leurs invitées entre Annemasse, le Chablais et le pays de Gex. Teint lumineux, regard travaillé, je prends le temps d’un essai pour que le jour J se passe sans surprise, et je me déplace avec tout mon matériel.',
-			pseudo: 'lea.garnier',
-		}),
+		profil: {
+			...completeProfile({
+				firstName: 'Léa',
+				lastName: 'Garnier',
+				artistName: 'Léa Garnier Beauté',
+				specialty: 'Maquillage mariage et soirée',
+				city: CITIES.annemasse,
+				description:
+					'Je maquille les mariées et leurs invitées entre Annemasse, le Chablais et le pays de Gex. Teint lumineux, regard travaillé, je prends le temps d’un essai pour que le jour J se passe sans surprise, et je me déplace avec tout mon matériel.',
+				pseudo: 'lea.garnier',
+			}),
+			superArtist: true,
+		},
 		photos: { principale: 'photo-2.webp', galerie: ['photo-3.webp'] },
 		attendu: { slug: 'lea-garnier', ...PUBLISHED_COMPLETE },
 	},
 	{
 		numero: 3,
 		cle: 'ville-eloignee',
-		sertA: 'Complet, à Nantes, loin d’Annecy : une recherche par ville hors de la zone ne le trouve pas.',
+		sertA:
+			'Complet, à Nantes, loin d’Annecy : une recherche par ville hors de la zone ne le trouve pas ; le badge « Vérifiée » seul.',
 		compte: { email: profileUrl('ville-eloignee'), nom: 'Chloé Bertin' },
-		profil: completeProfile({
-			firstName: 'Chloé',
-			lastName: 'Bertin',
-			artistName: 'Chloé Bertin Make-up',
-			specialty: 'Maquillage événementiel',
-			city: CITIES.nantes,
-			description:
-				'Maquilleuse à Nantes, je travaille pour les mariages, les séances photo et les soirées d’entreprise. J’aime les maquillages naturels comme les looks plus audacieux, et je m’adapte à chaque peau, à chaque lumière et à chaque tenue.',
-			pseudo: 'chloe.bertin',
-		}),
+		profil: {
+			...completeProfile({
+				firstName: 'Chloé',
+				lastName: 'Bertin',
+				artistName: 'Chloé Bertin Make-up',
+				specialty: 'Maquillage événementiel',
+				city: CITIES.nantes,
+				description:
+					'Maquilleuse à Nantes, je travaille pour les mariages, les séances photo et les soirées d’entreprise. J’aime les maquillages naturels comme les looks plus audacieux, et je m’adapte à chaque peau, à chaque lumière et à chaque tenue.',
+				pseudo: 'chloe.bertin',
+			}),
+			verified: true,
+			verifiedAt: DEMO_VERIFICATION,
+		},
 		photos: { principale: 'photo-3.webp', galerie: ['photo-4.webp'] },
 		attendu: { slug: 'chloe-bertin', ...PUBLISHED_COMPLETE },
 	},
@@ -539,7 +548,7 @@ export const DEMO_PROFILES: readonly DemoProfile[] = [
 	{
 		numero: 10,
 		cle: 'verifiee',
-		sertA: 'Vérifiée par un admin, avec le badge des cartes : le badge.',
+		sertA: 'Vérifiée par un admin et super maquilleuse : les deux badges ensemble.',
 		compte: { email: profileUrl('verifiee'), nom: 'Emma Chevalier' },
 		profil: {
 			...completeProfile({

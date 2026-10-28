@@ -94,8 +94,8 @@ export default async function ZonePage({ params }: PageProps<'/maquilleuses/[dep
 						<span className="mr-3 align-middle font-display font-medium text-6xl leading-none md:text-8xl">
 							{figure}
 						</span>
-						{rest.join(' ')} dans ce département. Elles sont classées de la fiche la plus complète à la plus récemment
-						mise à jour.
+						{rest.join(' ')} dans ce département. Les badges d’abord, puis de la fiche la plus complète à la plus
+						récemment mise à jour.
 					</p>
 					<Pill
 						href="/search"

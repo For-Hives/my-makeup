@@ -149,9 +149,44 @@ describe('1066 : le tirage au hasard dans le navigateur', () => {
 		expect([...seen].sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9])
 	})
 
+	test('issue 1170 : une super maquilleuse pèse double dans le tirage, sans jamais être seule', () => {
+		let seed = 99
+		const random = () => {
+			seed = (seed * 1664525 + 1013904223) % 4294967296
+			return seed / 4294967296
+		}
+		const drawnWith = (boosted: number): number[] => {
+			let css = ''
+			const document = {
+				createElement: () => ({
+					set textContent(value: string) {
+						css = value
+					},
+				}),
+				head: { appendChild: () => {} },
+			}
+			new Function('document', 'Math', featuredDrawScript(12, FEATURED_MAX, boosted))(document, {
+				floor: Math.floor,
+				random,
+			})
+			return shown(css)
+		}
+		const counts = new Array<number>(13).fill(0)
+		const others = new Set<number>()
+		for (let run = 0; run < 3000; run += 1)
+			for (const row of drawnWith(2)) {
+				counts[row] = (counts[row] ?? 0) + 1
+				if (row > 2) others.add(row)
+			}
+		// Rows 1 and 2 are the boosted ones: clearly more often than a plain row, and the others still come out.
+		expect((counts[1] ?? 0) / (counts[3] ?? 1)).toBeGreaterThan(1.3)
+		expect(others.size).toBe(10)
+		for (const run of [0.01, 0.5, 0.99]) expect(new Set(drawnWith(2).concat([run])).size).toBeGreaterThan(5)
+	})
+
 	test('le script est court et ne lit aucune donnée d’un profil', () => {
 		const script = featuredDrawScript(20, FEATURED_MAX)
-		expect(script.length).toBeLessThan(600)
+		expect(script.length).toBeLessThan(800)
 		expect(script).not.toMatch(/fetch|XMLHttpRequest|localStorage|cookie|import\(/)
 	})
 })
@@ -193,9 +228,8 @@ describe('1066 : le journal de la vérification', () => {
 		const verified = Profiles.fields.find(field => 'name' in field && field.name === 'verified') as {
 			admin: { description: string }
 		}
-		expect(verified.admin.description).toBe(
-			'Vérifiée : l’équipe a validé le profil ; les profils vérifiés sont tirés au hasard dans la Mise en avant de l’accueil.'
-		)
+		expect(verified.admin.description).toContain('Mise en avant')
+		expect(verified.admin.description).toContain('tirée au hasard')
 	})
 })
 
@@ -239,7 +273,7 @@ describe('1066 : le bloc « Mise en avant »', () => {
 		const script = html.indexOf('<script')
 		expect(script).toBeGreaterThan(-1)
 		expect(script).toBeLessThan(html.indexOf('<ul'))
-		expect(html).toContain('})(15,6)')
+		expect(html).toContain('})(15,6,0)')
 		expect(html).toContain('class="featured-list ')
 		// No client component, no state: the page ships no byte of JavaScript for the draw.
 		expect(read('src/components/home/FeaturedProfiles.tsx')).not.toMatch(/['"]use client['"]/)

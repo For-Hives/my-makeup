@@ -54,15 +54,21 @@ export function sampleCandidates<T>(candidates: readonly T[], limit: number, ran
  * while the page is being read, adds a rule that shows `show` random ones instead. It changes no node of the page
  * (React hydrates them as they came) and loads nothing: a few hundred bytes of the HTML, none in the bundles.
  * Nothing moves, since the block holds `show` cards in both cases. Not needed when `count <= show`.
+ *
+ * The first `boosted` candidates (the « Super maquilleuse » ones, put first by `featuredCandidates`) are in the draw twice:
+ * a draw without replacement where each of them weighs double. Still a draw, so a verified profile that is not
+ * « Super maquilleuse » can come out first. With `boosted` at 0 it is the plain draw of before.
  */
-export function featuredDrawScript(count: number, show: number = FEATURED_MAX): string {
+export function featuredDrawScript(count: number, show: number = FEATURED_MAX, boosted = 0): string {
 	const items = `.${FEATURED_LIST_CLASS}>li`
 	return (
-		`(function(n,k){var a=[],i,j,t,c='${items}{display:none!important}';` +
+		`(function(n,k,b){var a=[],s={},r=[],i,j,t,c='${items}{display:none!important}';` +
 		'for(i=1;i<=n;i++)a.push(i);' +
-		'for(i=n;i>1;i--){j=Math.floor(Math.random()*i);t=a[i-1];a[i-1]=a[j];a[j]=t}' +
-		`a.slice(0,k).forEach(function(i){c+='${items}:nth-child('+i+'){display:block!important}'});` +
-		"var s=document.createElement('style');s.textContent=c;document.head.appendChild(s)" +
-		`})(${Math.trunc(count)},${Math.trunc(show)})`
+		'for(i=1;i<=b;i++)a.push(i);' +
+		'for(i=a.length;i>1;i--){j=Math.floor(Math.random()*i);t=a[i-1];a[i-1]=a[j];a[j]=t}' +
+		'for(i=0;i<a.length&&r.length<k;i++)if(!s[a[i]]){s[a[i]]=1;r.push(a[i])}' +
+		`r.forEach(function(i){c+='${items}:nth-child('+i+'){display:block!important}'});` +
+		"var e=document.createElement('style');e.textContent=c;document.head.appendChild(e)" +
+		`})(${Math.trunc(count)},${Math.trunc(show)},${Math.max(0, Math.trunc(boosted))})`
 	)
 }
