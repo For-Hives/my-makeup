@@ -1,13 +1,19 @@
 {
 	"description": "Les notes de version du site, en français : ce qu'une visiteuse ou une maquilleuse peut remarquer. Une note s'ajoute par « bun run notes:add » et attend dans « pending » ; la publication la range sous son numéro, dans « releases ». Voir docs/publication.md.",
-	"pending": [
-		{
-			"id": "les-profils-relus-par-l-equipe-et-les-super-maquilleuses",
-			"type": "amelioration",
-			"text": "Les profils relus par l’équipe et les super maquilleuses ont un badge et apparaissent en premier dans la recherche."
-		}
-	],
+	"pending": [],
 	"releases": [
+		{
+			"version": "3.0.39",
+			"date": "2026-10-28",
+			"commit": "df5ae588c99351853b1a6fa185e7dff2cd44695e",
+			"notes": [
+				{
+					"id": "les-profils-relus-par-l-equipe-et-les-super-maquilleuses",
+					"type": "amelioration",
+					"text": "Les profils relus par l’équipe et les super maquilleuses ont un badge et apparaissent en premier dans la recherche."
+				}
+			]
+		},
 		{
 			"version": "3.0.38",
 			"date": "2026-10-28",
