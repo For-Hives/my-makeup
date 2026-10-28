@@ -50,12 +50,12 @@ const logLines = async (profile: number) =>
 const selection = async () => featuredCandidates(await readDirectory(await testPayload()), FEATURED_CANDIDATES_MAX)
 /** The slugs of the candidates, sorted: the order of the directory is the ranking's, not what these tests check. */
 const slugs = async (): Promise<string[]> => (await selection()).map(card => card.slug).sort()
-/** The bench dataset ships one profile already verified, with its badge (the demo profile `verifiee`). */
-const alreadyVerified = (): string => slugOf('verifiee')
+/** The bench dataset ships two profiles already verified (the demo profiles `verifiee` and `ville-eloignee`). */
+const alreadyVerified = (): string[] => [slugOf('verifiee'), slugOf('ville-eloignee')]
 
 describe('La vérification d’un profil, réserve de la mise en avant (issue 1066)', () => {
-	test('au départ, le seul candidat est le profil que le jeu fictif livre vérifié', async () => {
-		expect(await slugs()).toEqual([alreadyVerified()])
+	test('au départ, les seuls candidats sont les profils que le jeu fictif livre vérifiés', async () => {
+		expect(await slugs()).toEqual(alreadyVerified().sort())
 	}, 30_000)
 
 	test('cocher puis décocher « Vérifiée » écrit une ligne chacun, sans motif ni donnée personnelle ; un autre enregistrement n’en écrit pas', async () => {
@@ -69,7 +69,7 @@ describe('La vérification d’un profil, réserve de la mise en avant (issue 10
 		expect(again.statut).toBe(200)
 		await callRest('PATCH', `/api/profiles/${id}`, { enTetes: headers, corps: { specialty: 'Mariage' } })
 		expect((await logLines(id)).map(line => line.action)).toEqual(['verify'])
-		expect(await slugs()).toEqual([alreadyVerified(), slugOf('reference')].sort())
+		expect(await slugs()).toEqual([...alreadyVerified(), slugOf('reference')].sort())
 
 		const unticked = await callRest('PATCH', `/api/profiles/${id}`, { enTetes: headers, corps: { verified: false } })
 		expect(unticked.statut).toBe(200)
@@ -78,7 +78,7 @@ describe('La vérification d’un profil, réserve de la mise en avant (issue 10
 		expect(lines[0]).toMatchObject({ profile: id, admin: admin.id, action: 'verify' })
 		expect(lines[0]?.reason ?? null).toBeNull()
 		expect(Object.keys(lines[0] ?? {}).sort()).toEqual(['action', 'admin', 'date', 'id', 'profile', 'reason'].sort())
-		expect(await slugs()).toEqual([alreadyVerified()])
+		expect(await slugs()).toEqual(alreadyVerified().sort())
 	}, 60_000)
 
 	test('un profil masqué, vide ou non publiable n’y figure jamais, même vérifié ; un profil publiable mais mince, si', async () => {
@@ -88,7 +88,7 @@ describe('La vérification d’un profil, réserve de la mise en avant (issue 10
 			const id = await profileOf(key)
 			await payload.update({ collection: 'profiles', id, data: { verified: true }, depth: 0, overrideAccess: true })
 		}
-		expect(await slugs()).toEqual([alreadyVerified(), slugOf('reference'), slugOf('publiable-non-indexable')].sort())
+		expect(await slugs()).toEqual([...alreadyVerified(), slugOf('reference'), slugOf('publiable-non-indexable')].sort())
 	}, 60_000)
 })
 
@@ -106,7 +106,8 @@ describe('Ce que « Vérifiée » ne montre jamais (issue 1066)', () => {
 		expect('featured' in doc).toBe(false)
 		// The home page still finds her: it reads the box apart, with the rules open.
 		expect((await selection()).map(card => card.slug)).toContain(slug)
-		expect(JSON.stringify(await selection())).not.toContain('verified')
+		// A card carries only the fact (the badge), never the date.
+		expect(JSON.stringify(await selection())).not.toContain('verifiedAt')
 	}, 60_000)
 
 	test('les lignes de l’ancienne case restent dans le journal, lisibles', async () => {
