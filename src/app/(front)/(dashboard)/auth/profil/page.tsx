@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation'
 import { AccountArrivalEvent } from '@/components/analytics/AccountFunnel'
 import { AccountDeletion } from '@/components/dashboard/AccountDeletion'
 import { AvailabilitySwitch } from '@/components/dashboard/AvailabilitySwitch'
-import { MyViews } from '@/components/dashboard/MyViews'
 import { ActivitySummary, SignOutCard } from '@/components/dashboard/overview/AccountSummary'
 import { CARD, SECONDARY, TITLE } from '@/components/dashboard/overview/card'
 import { OverviewHeader } from '@/components/dashboard/overview/OverviewHeader'
@@ -23,7 +22,6 @@ import { confirmationMode } from '@/lib/dashboard/deletion-confirmation'
 import { ensureProfile } from '@/lib/dashboard/empty-profile'
 import { greetingName } from '@/lib/dashboard/greeting'
 import { artistProfile, profileId } from '@/lib/dashboard/my-profile'
-import { readMyViews } from '@/lib/dashboard/my-views'
 import { pageIsOnline, profileProgress } from '@/lib/dashboard/progress'
 import { publicAddress } from '@/lib/dashboard/public-address'
 import { requestUser } from '@/lib/dashboard/request'
@@ -56,11 +54,9 @@ export default async function ProfilePage() {
 	const profile = await artistProfile(context.payload, context.utilisateur)
 	if (profile === null) throw new Error('Le profil de la maquilleuse n’a pas pu être créé.')
 	const progress = profileProgress(profile)
-	// Her views of the last 30 days, once her page is published (ticket 1001): her own profile, found by her session.
-	const myProfileId = profile.status === 'published' ? await profileId(context.payload, context.utilisateur) : null
-	const myViews = myProfileId === null ? undefined : await readMyViews(context.payload, myProfileId)
 	// Her quote requests (issue 1003): shown when the site offers the form, and as long as she holds one.
-	const allProfileId = myProfileId ?? (await profileId(context.payload, context.utilisateur))
+	// No view counter here (05/11/2026): the views are still counted, for the team only.
+	const allProfileId = await profileId(context.payload, context.utilisateur)
 	const myQuotes = allProfileId === null ? [] : await readMyQuotes(context.payload, allProfileId)
 	const showQuotes =
 		(serverEnv().quoteRequests && profile.status === 'published') || myQuotes === null || myQuotes.length > 0
@@ -92,7 +88,6 @@ export default async function ProfilePage() {
 					</div>
 					<AvailabilitySwitch disponible={available} envoyer={saveMyAvailability} />
 				</section>
-				{myViews === undefined ? null : <MyViews jours={myViews} />}
 				{showQuotes ? <QuoteRequests quotes={myQuotes} mark={markMyQuoteRequest} /> : null}
 				<ActivitySummary view={activity} />
 				<section aria-labelledby="mon-compte" data-testid="mon-compte" className="mt-2 flex flex-col gap-5">

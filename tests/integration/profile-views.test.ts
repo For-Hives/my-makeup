@@ -2,7 +2,6 @@ import { afterEach, describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
 import { POST } from '@/app/api/profile-views/route'
 import { deleteAccountAndDependents } from '@/lib/account/deletion'
-import { readMyViews } from '@/lib/dashboard/my-views'
 import { runDailyTasks } from '@/lib/tasks/daily'
 import { purgeProfileViews } from '@/lib/tasks/profile-views'
 import { parisDay } from '@/lib/weekly-stats'
@@ -112,17 +111,6 @@ describe('1001 : le compte d’une vue', () => {
 })
 
 describe('1001 : la lecture', () => {
-	test('la maquilleuse lit les 30 jours de son profil, jamais ceux d’une autre', async () => {
-		const mine = await publishedArtist()
-		const hers = await publishedArtist()
-		await count(mine.profile.slug)
-		await count(mine.profile.slug)
-		await count(hers.profile.slug)
-		const days = await readMyViews(mine.payload, mine.profile.id)
-		expect(days).toHaveLength(30)
-		expect(days?.reduce((sum, { count: n }) => sum + n, 0)).toBe(2)
-	})
-
 	test('la route de statistiques donne le total et les jours, tous profils confondus', async () => {
 		const mine = await publishedArtist()
 		const hers = await publishedArtist()
