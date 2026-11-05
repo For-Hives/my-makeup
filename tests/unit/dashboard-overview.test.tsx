@@ -2,14 +2,12 @@ import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { MyViews } from '@/components/dashboard/MyViews'
 import { OverviewStatus } from '@/components/dashboard/overview/OverviewStatus'
 import type { DashboardProfile } from '@/lib/dashboard/dashboard-profile'
 import { blockAnchor, CRITERION_BLOCK } from '@/lib/dashboard/edit-blocks'
 import { gaugePercent, type Missing, overviewStatus, profileProgress } from '@/lib/dashboard/progress'
 import { editPath } from '@/lib/direct-edit/edit-mode'
 import { CRITERIA } from '@/lib/profile/completeness'
-import { lastViewDays } from '@/lib/views/profile-views'
 import { ANNECY } from '../support/completeness-cases'
 
 /**
@@ -83,14 +81,6 @@ describe('la liste de ce qui manque', () => {
 		// Every link goes to the edit mode, never to an editor of this page.
 		const links = [...html.matchAll(/href="([^"]+)"/g)].map(match => match[1] ?? '')
 		expect(links.filter(link => link.startsWith('#carte-') || link.startsWith('#bloc-'))).toEqual([])
-	})
-})
-
-describe('les vues', () => {
-	test('à zéro : la phrase le dit, un graphique plat, jamais « null »', () => {
-		const html = renderToStaticMarkup(<MyViews jours={lastViewDays([], new Date('2026-10-24T10:00:00Z'))} />)
-		expect(html).toContain('Ta page n’a pas encore été vue ces 30 derniers jours.')
-		expect(html).not.toMatch(/\bnull\b|undefined|NaN/)
 	})
 })
 

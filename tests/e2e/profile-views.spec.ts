@@ -1,7 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { parisDayBefore } from '../../src/lib/weekly-stats'
 import { createAccount } from '../support/account-factory'
-import { violationsSevere } from '../support/axe'
 import { testPayload } from '../support/payload-test'
 
 /**
@@ -112,38 +111,15 @@ test.describe('1001 : compter une vue par onglet', () => {
 	})
 })
 
-test.describe('1001 : ses vues dans son espace', { tag: '@mobile' }, () => {
-	test('la phrase, les jours, sans débordement, sans violation grave', async ({ context, page }) => {
+test.describe('ses vues ne sont pas dans son espace', { tag: '@mobile' }, () => {
+	test('même avec des vues comptées, « Mon espace » n’affiche aucun compteur', async ({ context, page }) => {
 		const { account, payload, id } = await publishedProfile()
-		const today = new Date()
-		for (const [back, n] of [
-			[0, 4],
-			[1, 3],
-			[40, 100],
-		] as const) {
-			// Days of the calendar, as her space counts them (a step of 24 hours shifts a day across a change of hour).
-			const day = parisDayBefore(today, back)
-			await payload.create({ collection: 'profile-views', data: { profile: id, day, count: n } })
-		}
+		const day = parisDayBefore(new Date(), 0)
+		await payload.create({ collection: 'profile-views', data: { profile: id, day, count: 4 } })
 		await context.addCookies(account.session.cookies)
 		await page.goto('/auth/profil')
-
-		await expect(page.getByTestId('mes-vues-phrase')).toHaveText('Ta page a été vue 7 fois ces 30 derniers jours.')
-		const summary = page.getByTestId('mes-vues').locator('summary')
-		const box = await summary.boundingBox()
-		expect(box?.height ?? 0).toBeGreaterThanOrEqual(44)
-		await summary.click()
-		await expect(page.getByTestId('mes-vues-jours').locator('li')).toHaveCount(30)
-		await page.getByTestId('mes-vues').screenshot({ path: test.info().outputPath('mes-vues.png') })
-		expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
-		expect(await violationsSevere(page)).toEqual([])
-	})
-
-	test('un profil qui n’est pas publié n’affiche pas la carte', async ({ context, page }) => {
-		const account = await createAccount('maquilleuse')
-		made.push(account.id)
-		await context.addCookies(account.session.cookies)
-		await page.goto('/auth/profil')
+		await expect(page.getByTestId('carte-disponibilite')).toBeVisible()
 		await expect(page.getByTestId('mes-vues')).toHaveCount(0)
+		await expect(page.getByText(/vue \d+ fois|vues de ta page/i)).toHaveCount(0)
 	})
 })

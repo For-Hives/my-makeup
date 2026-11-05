@@ -375,7 +375,6 @@ describe('the reveal reaches the pages (issue 1088)', () => {
 		['src/components/dashboard/QuoteRequests.tsx', 1, 'space'],
 		['src/components/dashboard/PasswordChange.tsx', 1, 'space'],
 		['src/components/dashboard/PageOnline.tsx', 1, 'space'],
-		['src/components/dashboard/MyViews.tsx', 2, 'space'],
 		// Below the hero of the home page (issue 1101): every section reveals its title and its blocks.
 		['src/components/home/FeaturedProfiles.tsx', 1, 'home (Mise en avant)'],
 		['src/components/home/Talents.tsx', 2, 'home (talents)'],
