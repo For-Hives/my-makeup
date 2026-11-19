@@ -47,7 +47,8 @@ import { type OpenSession, openSessionForLink } from './session-after-link'
  *   anything else is done, for every valid address, known or not, so that the journal stays the same
  *   for both. Past the cap nothing is reserved and no token is made: the link already in the mailbox
  *   keeps working. The answer does not change, since the work runs after it.
- * - Writes one journal row, `ok` whatever the address: the journal holds nothing that tells them apart.
+ * - Writes one journal row, `ok` (or `trop-de-tentatives` past the cap of the mailbox) whatever the
+ *   address: the journal holds nothing that tells them apart.
  *
  * The choice of the new password (`resetPassword`)
  * - One transaction: Payload's reset (new hash, all the sessions of the account emptied, the link
