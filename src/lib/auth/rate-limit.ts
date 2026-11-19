@@ -103,6 +103,18 @@ export const forgotPasswordRateLimit: RateLimit = createRateLimit({
 	fenetreMs: 15 * 60 * 1000,
 })
 
+/**
+ * The mails of the forgotten password to one mailbox: 5 a day, keyed by `mailboxKey` (not by client
+ * address), with the same numbers as the day brake of the sign-up and of the resending (ticket 084)
+ * but its own counters: a reset must not spend the places of a resend, whose refusal is shown, nor
+ * the reverse. Without it, rotating client addresses could send a link to one account every 15 seconds.
+ */
+export const forgotPasswordMailboxRateLimit: RateLimit = createRateLimit({
+	nom: 'mot-de-passe-oublie-boite-jour',
+	limite: 5,
+	fenetreMs: 24 * 60 * 60 * 1000,
+})
+
 /** The choice of the new password: 10 failures per address and per 15 minutes (ticket 086). */
 export const passwordResetRateLimit: RateLimit = createRateLimit({
 	nom: 'reinitialisation',

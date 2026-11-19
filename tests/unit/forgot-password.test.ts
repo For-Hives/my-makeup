@@ -140,6 +140,7 @@ describe('demanderUnLien avec un Payload de pacotille', () => {
 	const calls: string[] = []
 	const sent: { a: string; texte: string; html: string }[] = []
 	const rendered: number[] = []
+	const tokens: string[] = []
 	const payload = () =>
 		({
 			db: {
@@ -154,8 +155,10 @@ describe('demanderUnLien avec un Payload de pacotille', () => {
 					return url.startsWith('connue') ? { id: 7, email: url } : null
 				},
 			},
-			forgotPassword: async ({ disableEmail }: { disableEmail?: boolean }) => {
+			forgotPassword: async ({ data, disableEmail }: { data: { email: string }; disableEmail?: boolean }) => {
 				if (!disableEmail) throw new Error('Payload must not send the mail itself')
+				// A new token is a new link: the one already in the mailbox stops working.
+				tokens.push(data.email)
 				return 'a'.repeat(40)
 			},
 			logger: { error: () => {} },
@@ -169,6 +172,7 @@ describe('demanderUnLien avec un Payload de pacotille', () => {
 		options: {
 			echec?: boolean
 			frein?: ReturnType<typeof createRateLimit>
+			mailboxRateLimit?: ReturnType<typeof createRateLimit>
 			apres?: (t: () => Promise<void>) => void
 		} = {}
 	) => {
@@ -182,6 +186,9 @@ describe('demanderUnLien avec un Payload de pacotille', () => {
 			email,
 			apres: options.apres ?? (t => void jobs.push(t())),
 			frein: options.frein ?? createRateLimit({ nom: `unit-${Math.random()}`, limite: 100, fenetreMs: 1000 }),
+			mailboxRateLimit:
+				options.mailboxRateLimit ??
+				createRateLimit({ nom: `unit-boite-${Math.random()}`, limite: 100, fenetreMs: 1000 }),
 			journal: async e => void log.push({ type: e.type, code: e.code }),
 		})
 		const duration = Date.now() - startedAt
@@ -251,6 +258,59 @@ describe('demanderUnLien avec un Payload de pacotille', () => {
 			code: 'trop-de-tentatives',
 		})
 		expect(calls.length).toBe(before)
+	})
+
+	const dailyMailboxLimit = () =>
+		createRateLimit({ nom: `unit-boite-jour-${Math.random()}`, limite: 5, fenetreMs: 24 * 60 * 60 * 1000 })
+
+	test('5 mails par jour et par boîte : la 6e demande répond pareil, ne part pas et ne change pas le lien ; une autre boîte reçoit le sien', async () => {
+		sent.length = 0
+		tokens.length = 0
+		log.length = 0
+		const mailboxRateLimit = dailyMailboxLimit()
+		for (let i = 0; i < 5; i++) await launch('connue@example.test', { mailboxRateLimit })
+		expect(sent.map(e => e.a)).toEqual(Array(5).fill('connue@example.test'))
+
+		const sixth = await launch('connue@example.test', { mailboxRateLimit })
+		expect(sixth.resultat).toEqual({ ok: true })
+		expect(sixth.duree).toBeGreaterThanOrEqual(FORGOT_PASSWORD_FLOOR_MS - 20)
+		expect(sixth.duree).toBeLessThan(FORGOT_PASSWORD_FLOOR_MS + 200)
+		expect(sent.length).toBe(5)
+		// No sixth token either: the link already in her mailbox keeps working.
+		expect(tokens.length).toBe(5)
+		expect(log.at(-1)).toEqual({ type: 'forgot-password', code: 'trop-de-tentatives' })
+
+		await launch('connue-autre@example.test', { mailboxRateLimit })
+		expect(sent.map(e => e.a).at(-1)).toBe('connue-autre@example.test')
+		expect(sent.length).toBe(6)
+	})
+
+	test('les variantes Gmail d’une adresse comptent pour une seule boîte', async () => {
+		sent.length = 0
+		const mailboxRateLimit = dailyMailboxLimit()
+		for (const variant of ['connue.lea@gmail.com', 'connuelea+1@gmail.com', 'Connue.Lea@googlemail.com']) {
+			await launch(variant, { mailboxRateLimit })
+			await launch(variant, { mailboxRateLimit })
+		}
+		expect(sent.length).toBe(5)
+	})
+
+	test('une adresse sans compte est comptée comme une autre : le journal ne les distingue pas', async () => {
+		log.length = 0
+		const mailboxRateLimit = dailyMailboxLimit()
+		for (let i = 0; i < 6; i++) await launch('inconnue@example.test', { mailboxRateLimit })
+		for (let i = 0; i < 6; i++) await launch('connue@example.test', { mailboxRateLimit })
+		const codes = log.map(e => e.code)
+		expect(codes.slice(0, 6)).toEqual(codes.slice(6))
+		expect(codes.slice(0, 6)).toEqual([...Array(5).fill('ok'), 'trop-de-tentatives'])
+	})
+
+	test('un relais en panne rend aussi la place de la boîte', async () => {
+		sent.length = 0
+		const mailboxRateLimit = dailyMailboxLimit()
+		for (let i = 0; i < 5; i++) await launch('connue@example.test', { mailboxRateLimit, echec: true })
+		await launch('connue@example.test', { mailboxRateLimit })
+		expect(sent.map(e => e.a)).toEqual(['connue@example.test'])
 	})
 })
 
