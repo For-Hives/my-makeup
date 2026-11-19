@@ -10,6 +10,7 @@ import { composerEmail } from '../emails/layout'
 import { passwordResetEmailContent } from '../emails/password-reset'
 import type { SendEmail } from '../emails/send'
 import type { EventCode, Log } from './auth-log'
+import { mailboxKey } from './canonical-email'
 import { ipClient } from './client-ip'
 import {
 	FORGOT_PASSWORD_FLOOR_MS,
@@ -20,7 +21,12 @@ import {
 	validateNewPassword,
 } from './forgot-password'
 import { PASSWORD_RESET_CONTEXT } from './forgot-payload'
-import { forgotPasswordRateLimit, passwordResetRateLimit, type RateLimit } from './rate-limit'
+import {
+	forgotPasswordMailboxRateLimit,
+	forgotPasswordRateLimit,
+	passwordResetRateLimit,
+	type RateLimit,
+} from './rate-limit'
 import { type OpenSession, openSessionForLink } from './session-after-link'
 
 /**
@@ -37,7 +43,12 @@ import { type OpenSession, openSessionForLink } from './session-after-link'
  *   to send a mail therefore never reaches the visitor. The operation is called with its own mail
  *   off, which also switches off its interval of 15 seconds per account: `reserverLaDemande`
  *   keeps it, with the same atomic write as Payload's.
- * - Writes one journal row, `ok` whatever the address: the journal holds nothing that tells them apart.
+ * - Takes a place in the brake of the mailbox (5 a day, `forgotPasswordMailboxRateLimit`) before
+ *   anything else is done, for every valid address, known or not, so that the journal stays the same
+ *   for both. Past the cap nothing is reserved and no token is made: the link already in the mailbox
+ *   keeps working. The answer does not change, since the work runs after it.
+ * - Writes one journal row, `ok` (or `trop-de-tentatives` past the cap of the mailbox) whatever the
+ *   address: the journal holds nothing that tells them apart.
  *
  * The choice of the new password (`resetPassword`)
  * - One transaction: Payload's reset (new hash, all the sessions of the account emptied, the link
@@ -62,6 +73,8 @@ export interface ForgotPasswordInputs {
 	/** Minimum time between two mails to the same account. */
 	intervalleMs?: number
 	frein?: RateLimit
+	/** The brake of the mails to one mailbox, keyed by `mailboxKey`. */
+	mailboxRateLimit?: RateLimit
 	journal?: Log
 	plancherMs?: number
 }
@@ -119,6 +132,7 @@ export async function requestPasswordLink({
 	site,
 	intervalleMs = INTERVAL_PER_ACCOUNT_MS,
 	frein = forgotPasswordRateLimit,
+	mailboxRateLimit = forgotPasswordMailboxRateLimit,
 	journal,
 	plancherMs = FORGOT_PASSWORD_FLOOR_MS,
 }: ForgotPasswordInputs): Promise<ForgotPasswordResult> {
@@ -142,6 +156,12 @@ export async function requestPasswordLink({
 	}
 
 	const work = async () => {
+		// The cap per mailbox: rotating client addresses get past the brake above, not past this one.
+		const mailbox = mailboxKey(address.email)
+		if (!mailboxRateLimit.prendre(mailbox).autorise) {
+			await record('trop-de-tentatives', Date.now() - start)
+			return
+		}
 		let code: EventCode = 'ok'
 		let reservation: Awaited<ReturnType<typeof reserveRequest>> = null
 		try {
@@ -155,8 +175,9 @@ export async function requestPasswordLink({
 				if (token) await envoyer({ a: reservation.email, ...composerEmail(passwordResetEmailContent(token), site) })
 			}
 		} catch {
-			// The mail did not leave: the place is given back, so that she can ask again at once.
+			// The mail did not leave: the places are given back, so that she can ask again at once.
 			await reservation?.rendre().catch(() => undefined)
+			mailboxRateLimit.rendre(mailbox)
 			// No detail: the error of the relay names the address. A request that fails to send is the
 			// visitor's to repeat; what she was told does not change.
 			code = 'service-indisponible'

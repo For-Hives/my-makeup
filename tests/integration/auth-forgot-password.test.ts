@@ -47,6 +47,8 @@ function request(email: unknown, options: { frein?: ReturnType<typeof createRate
 				work.push(travail())
 			},
 			frein: options.frein ?? free(),
+			// Its own counters per request: the default brake of the mailbox lives on `globalThis` for the whole file.
+			mailboxRateLimit: free(),
 			journal: authLog(payload),
 		})
 		const duration = Date.now() - start
