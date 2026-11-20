@@ -63,7 +63,7 @@ jobs:
         run: bun run bench:up
       - name: Slow journeys
         run: bun run test:e2e --project=chromium --grep @lent
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:
           name: nuit-lent
@@ -96,7 +96,7 @@ jobs:
       - name: Visual comparison of the key pages
         run: bun run test:e2e --project=visual
       # The actual image, the reference and the difference of each page that moved.
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:
           name: nuit-visuel
