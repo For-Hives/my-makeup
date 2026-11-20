@@ -74,7 +74,7 @@
 		"bcryptjs": "3.0.3",
 		"fuse.js": "7.5.0",
 		"graphql": "16.14.2",
-		"next": "16.4.1",
+		"next": "16.4.5",
 		"payload": "3.90.2",
 		"react": "19.2.8",
 		"react-dom": "19.2.8",
